@@ -3,6 +3,8 @@
 !
 ! Main program for tgcm models.
 !
+! initial cvs import was tiegcm1
+!
       use input_module,only: input,dynamo,step
       use fields_module,only: itp
       use init_module,only: init,iyear
