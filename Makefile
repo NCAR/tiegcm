@@ -1,6 +1,7 @@
 #
 UNAMES = $(shell uname -s)
 UNAMEM = $(findstring CRAY,$(shell uname -m))
+EXEC = tiegcm1
 #
 #----------------------------------------------------------------------
 # CRAY under UNICOS (J90 or J90se):
@@ -9,7 +10,6 @@ ifeq ($(UNAMEM),CRAY)
 #ifeq ($(UNAME),unicos)
 #CRAY_begin
 #
-EXEC = tiegcm1
 FC      = f90
 #
 FFLAGS = -xmic,dir -m4 -O2 -F overindex,nofastint -I/usr/local/include \
@@ -26,7 +26,6 @@ endif
 # For ncar chinook SGI Origin 3800: 
 #
 ifeq ($(UNAMES),IRIX64)
-EXEC    = tiegcm1
 FC      = f90
 FFLAGS = -mips4 -r8 -O3 -macro_expand -I/usr/local/include \
          -DMSS -DIRIX -DMPI
@@ -40,7 +39,6 @@ endif
 # IBM SP: AIX
 #
 ifeq ($(UNAMES),AIX)
-EXEC    = tiegcm1
 #
 # For profiling:
 # Use -pg for gprof or xprofiler (must also be in LDFLAGS below)
@@ -154,7 +152,6 @@ endif
 #
 ifeq ($(UNAMES),OSF1)
 #OSF1_begin
-EXEC    = tiegcm1
 FC      = f90
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -226,7 +223,6 @@ ifeq ($(UNAMES),SunOS)
 #SunOS_begin
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # For scd k2 Sun:
-# EXEC    = tiegcm1
 # fpversion shell command says -xtarget=ultra2 can be used.
 #FC      = /opt/fsc/SUNWspro/bin/f90
 #
@@ -243,7 +239,6 @@ ifeq ($(UNAMES),SunOS)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # For hao Sun:
 #
- EXEC    = tiegcm1
  FC      = /opt/SUNWspro/bin/f90
  FFLAGS  = -g -I/opt/share/PUBLIC/include -xpp=cpp -DSUN -DMSS -xtypemap=real:64
 #FFLAGS  = -O -I/opt/share/PUBLIC/include -xpp=cpp -DSUN -DMSS -xtypemap=real:64
@@ -268,7 +263,6 @@ endif
 # Linux:
 #
 ifeq ($(UNAMES),Linux)
- EXEC = tiegcm1
  FC = pgf90
 #
 # Redhat 8 needs -Msecond_underscore, but may get undefined __ctype_b

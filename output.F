@@ -58,7 +58,7 @@
       use input_module,only:  ! input_mod.f
      |  output,      ! output file paths provided by input
      |  tempdir,     ! temporary scratch directory for saving
-     |  dispose,     ! 0/1 for do/donot save file to ncar mss
+     |  dispose,     ! dispose histories to mss if dispose == 1 or 2
      |  mxhist_prim  ! max number of histories on a primary file
       use hist_module,only:   ! hist_mod.f
      |  iprint,      ! print flag (read only)
@@ -137,6 +137,12 @@
       if (svfile.or.nhist==mxhist_prim.or.nstep==0) then
         call savefile(ncid,diskfile,output(ioutfile),tempdir,
      |    dispose,.true.,iprint)
+!
+! If writing to mss after model execution (dispose==2), update
+! csh dispose script after every disk write:
+      elseif (dispose==2) then
+        call savefile(ncid,diskfile,output(ioutfile),tempdir,
+     |    dispose,.true.,iprint)
       endif
       end subroutine output_hist
 !-----------------------------------------------------------------------
@@ -150,7 +156,7 @@
       use input_module,only:  ! input_mod.f
      |  secout,      ! output file paths provided by input
      |  tempdir,     ! temporary scratch directory for saving
-     |  dispose,     ! 0/1 for do/donot save file to ncar mss
+     |  dispose,     ! save history files to mss if dispose = 1 or 2
      |  mxhist_sech  ! max number of histories on a primary file
       use hist_module,only:   ! hist_mod.f
      |  iprint,      ! print flag (read only)
@@ -229,12 +235,19 @@
       if (svfile.or.nsech==mxhist_sech) then
         call savefile(ncidsech,diskfile,secout(isecout),tempdir,
      |    dispose,.true.,iprint)
+!
+! If writing to mss after model execution (dispose==2), update
+! csh dispose script after every disk write:
+      elseif (dispose==2) then
+        call savefile(ncidsech,diskfile,secout(isecout),tempdir,
+     |    dispose,.true.,iprint)
       endif
       end subroutine output_sechist
 !-----------------------------------------------------------------------
       subroutine savefile(ncid,diskfile,outpath,tempdir,idispose,
      |  reopen,iprint)
       use input_module,only: msreten
+      use dispose_module,only: add_dispose
       use nchist_module,only: nc_open,nc_close,nc_fileinfo
 !
 ! Save file diskfile to tempdir and/or mss.
@@ -270,11 +283,20 @@
 !     subroutine putms(mspath,dskfile,tmpdir,lnkfile,wrpass,msscomment,
 !                      msasync)
 !
+! idispose==1 -> dispose to mss from model now.
       if (idispose==1) then
         msasync = 1 ! suspicious crash (nf_create) on Cray when msasync==1
 !       msasync = 0 ! suspicious crash (nf_create) on Cray when msasync==1
         call putms(outpath,diskfile,tempdir,' ','NCARTGCM',fileinfo,
      |    msreten,msasync)
+!
+! idispose==2 -> add mswrite line to dispose script, which is executed
+! after model execution:
+      elseif (idispose==2) then
+        call add_dispose(outpath,diskfile,tempdir,' ','NCARTGCM',
+     |    fileinfo,msreten)
+!
+! idispose==0 -> do not dispose to mss, but do link to tempdir.
       else
 !
 ! Do not link to tempdir if tempdir is also cwd:

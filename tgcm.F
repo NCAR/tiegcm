@@ -6,7 +6,8 @@
 ! initial cvs import was tiegcm1
 !
       use params_module,only: tgcm_version
-      use input_module,only: input,dynamo,step
+      use input_module,only: input,dynamo,step,dispose
+      use dispose_module,only: init_dispose
       use fields_module,only: itp
       use init_module,only: init,iyear
       use hist_module,only: nstep
@@ -45,9 +46,11 @@
 #ifdef MPI
       call mp_init
       call input(mytid,ntask) ! get user input (mpi)
+      if (dispose==2.and.mytid==0) call init_dispose
       call mp_distribute
 #else
       call input(-1,0)    ! get user input (non-mpi)
+      if (dispose==2) call init_dispose
 #endif
 !
 ! Init threads if doing shared memory:

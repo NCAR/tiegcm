@@ -53,7 +53,7 @@
      |  date(3),         ! old: model starting year, day ( 2 ints yyyy,dd)
      |  calday,          ! old: starting calendar day (0-mxday)
      |  step,            ! model time step (integer seconds)
-     |  dispose,         ! dispose output files to mss if dispose==1
+     |  dispose,         ! dispose output files to mss if dispose==1 or 2
      |  difhor,          ! horizontal eddy diffusion flag 0/1
      |  iuivi,           ! ion drifts in momentum flag (replaced by dynamo flag)
      |  dynamo,          ! 0/1/2 flag for dynamo
@@ -921,9 +921,14 @@
         write(6,"(/,'Input: dispose flag not read --',
      |    ' will default to dispose=1.',/)")
         dispose = 1
-      elseif (dispose /= 0 .and. dispose /= 1) then
-        write(6,"(/,'>>> INPUT: DISPOSE flag must be 0 or 1:',
+      elseif (dispose /= 0 .and. dispose /= 1 .and. dispose /= 2) then
+        write(6,"(/,'>>> INPUT: DISPOSE flag must be 0, 1, or 2:',
      |    ' dispose = ',i4)") dispose
+        write(6,"('DISPOSE = 0 -> do not dispose to mss.')")
+        write(6,"('DISPOSE = 1 -> dispose to mss during model',
+     |    ' execution.')")
+        write(6,"('DISPOSE = 2 -> dispose to mss after model',
+     |    ' execution.')")
         stop 'DISPOSE'
       endif
 !
@@ -2004,7 +2009,7 @@
 
       write(6,"('  step    =',i4,' (model timestep (seconds))',
      |  i4)") inp%step
-      write(6,"('  dispose =',i4,' (mss dispose flag 0/1)')") 
+      write(6,"('  dispose =',i4,' (mss dispose flag 0/1/2)')") 
      |  inp%dispose
 #ifdef MPI      
       write(6,"('  ntask_lon = ',i2,' (number of mpi tasks in ',
