@@ -1,0 +1,3 @@
+
+tar cfv scripts.tar C* A* M* L* dist* tgcm_config *.job
+echo "Made scripts.tar"

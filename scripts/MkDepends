@@ -1,0 +1,222 @@
+#!/usr/bin/perl
+use Cwd;
+use File::Basename;
+#
+# Make dependencies for gmake. This script outputs the file "Depends",
+# which is included in the Makefile.
+#
+$date = `date`; chop($date);
+$cwd = cwd();
+$filepathname = shift();
+if (! $filepathname) { $filepathname = "Filepath"; }
+($prog = $0) =~ s!(.*)/!!;
+$outfile_depends  = "Depends";
+#$outfile_srcs     = "Srcfiles";
+open(FILEPATH, $filepathname) or die "$prog: Can't open file $filepathname\n";
+open(DEPENDS, "> $outfile_depends") or 
+  die "$prog: Can't open output file $outfile_depends\n";
+#open(SRCFILES,"> $outfile_srcs")   or 
+#  die "$prog: Can't open output file $outfile_srcs\n";
+#
+print STDERR "\n";
+print STDERR "$prog: Reading list of directories from $filepathname\n";
+#
+# Make list of paths to use when looking for files.
+# Prepend "." so search starts in current directory.  This default is for
+# consistency with the way GNU Make searches for dependencies.
+#
+my @file_paths = <FILEPATH>;
+close(FILEPATH);
+chomp @file_paths;
+unshift(@file_paths,'.');     # add current directory
+foreach $dir (@file_paths) {  # (could check that directories exist here)
+    $dir =~ s!/?\s*$!!;  # remove / and any whitespace at end of directory name
+    ($dir) = glob $dir;  # Expand tildes in path names.
+}
+#
+# Loop through the directories adding each filename as a hash key.  
+# This automatically eliminates redundancies.
+%src = ();
+foreach $dir (@file_paths) {
+  @filenames = (glob("$dir/*.[Fch]"), glob("$dir/*.F90"));
+  $nfiles = 0;
+  foreach $filename (@filenames) {
+    $file = basename($filename);
+    if ($file =~ /^,/) {      # ignore source files prefixed with a comma
+      print "$prog: Not using comma-prefixed source file $filename\n";
+    } else {
+      $filename =~ s!.*/!!;                   # remove part before last slash
+      if (! $src{$filename}) { $src{$filename} = "$dir"; } # use first occurrence
+      $nfiles = $nfiles+1;
+    }
+  }
+  if ($nfiles >= 0) { 
+    print STDERR "$prog: Found $nfiles source files in $dir\n";
+  } else {
+    print STDERR "$prog: No source files were found in directory $dir\n";
+  }
+}    # foreach $dir in @file_paths
+print STDERR "\n";
+#
+# Get list of all modules declared:
+#
+%modules = ();
+foreach $file (sort keys %src) {
+  $srcfile = "$src{$file}/$file"; # full path
+  open(SRCFILE,"< $srcfile") || die "Error opening source file $srcfile\n";
+  while (<SRCFILE>) {
+    if (/^      module (.*)/) {
+      $modules{$srcfile} .= $1 . ' ';
+    }
+  }
+}
+#
+# Build dependencies for each source file:
+#
+foreach $file (sort keys %src) {
+  $srcdir  = $src{$file};     # directory
+  $srcfile = "$srcdir/$file"; # full path
+  $object = $file; $object =~ s/\.[fF]$/\.o/; 
+  $object =~ s/\.F90$/\.o/; # for freeform *.F90 source files
+
+  undef(@module_deps);	# module dependencies for each source file
+  undef(@include_deps);	# include dependencies for each source file
+  undef(@file_deps);	# file dependencies for each source file
+#
+# Read source file, building list of modules used and files included:
+#
+  open(SRCFILE,"< $srcfile") || die "Error opening source file $srcfile\n";
+  while (<SRCFILE>) {
+#
+# Build list of modules used by this source:
+    if (/^\s*use (\w*)/) {
+      $module = $1;
+      if ($module =~ /(\w*[^,])[,]/) { $module = $1; } 
+      if (&findmember($module,@module_deps) < 0) {
+        push(@module_deps,$module);
+      }
+    } # use statement
+#
+# Check for include statements:
+#
+# Fortran style include statement:
+    if ( /^\s+include\s+[<"'](.*)[>"']/ ) {
+      $hdrfile = $1;
+      $hdrfile = "$src{$hdrfile}/$hdrfile";
+      if (&findmember($hdrfile,@include_deps) < 0) {
+        push(@include_deps,$hdrfile);
+      }
+    }
+#
+# cpp style include statement:
+    if ( /^#include\s+[<"'](.*)[>"']/ ) {
+      $hdrfile = $1;
+      $hdrfile = "$src{$hdrfile}/$hdrfile";
+      if (&findmember($hdrfile,@include_deps) < 0) {
+        push(@include_deps,$hdrfile);
+      }
+    }
+  } # while (<SRCFILE>)
+#
+# Find file dependencies:
+#
+  push(@file_deps,$srcfile); # first file dep is its own source file
+#
+# Add object files containing modules used by the source file:
+#
+  if (@module_deps) {
+    foreach $module (@module_deps) {
+      undef($filedep);
+      foreach $filename (sort keys %src) {
+        $filepath = "$src{$filename}/$filename";
+        @modules_in_src = split(' ',$modules{$filepath});
+        if (&findmember($module,@modules_in_src) >= 0) {
+          $filedep = $filename; 
+          $filedep =~ s/\.[fF]$/\.o/; 
+          $filedep =~ s/\.F90$/\.o/; # for freeform *.F90 files
+          push(@file_deps,$filedep);
+        }
+      }
+      if (! $filedep) {
+#       print STDERR "WARNING: could not find module $module (used by source file $filepath)\n";  
+      }
+    }
+  } # if @module_deps
+#
+# Add included header files to list of file dependencies:
+#
+  if (@include_deps) {
+    foreach $hdrfile (@include_deps) {
+      if (-e $hdrfile) { 
+        push(@file_deps,$hdrfile); 
+      } else {
+#       print STDERR "WARNING: could not find header file $hdrfile (included by source file $srcfile)\n";
+      }
+    }
+  }
+
+  close($srcfile);
+#
+# Remove any "self" (redundant) dependencies, 
+#   (i.e., file.o not a dependency of file.o).
+# This avoids circular dependency warnings from the compiler.
+#
+  undef(@deps_final);	# final file dependencies for each source file
+  foreach $dep (@file_deps) {
+    if ($dep ne $object and basename($dep) ne $object) { 
+      push(@deps_final,$dep); 
+    }
+  }
+
+# print "----------------------------------------------------------------\n";
+# print "File    = $file\n";
+# print "Path    = $srcfile\n";
+# print "Object  = $object\n";
+# print "\n";
+# print "Include dependencies = @include_deps\n";
+# print "Module dependencies  = @module_deps\n";
+# print "File dependencies    = @file_deps\n";
+
+#
+# Write Depends file:
+  print DEPENDS "$object: @deps_final\n";
+# print "$object: @deps_final\n";
+
+} # each source file
+
+# print STDERR "$prog: Wrote dependency file $outfile_depends\n";
+#
+# Write Srcfiles file:
+# foreach $file (sort keys %src) { print SRCFILES "$file\n"; }
+# print "$prog: Wrote source list file $outfile_srcs\n";
+# print STDERR "\n";
+
+exit;
+
+#-------------------------------------------------------------------------
+sub findmember {
+#
+# Given a string $member, and a list @list, search for $member in @list
+# and if found return index of $member in @list, otherwise return -1:
+#
+# (Note this routine also in $TGCMROOT/bin/util.pl)
+#
+  local ($member,@list) = @_;
+  local ($offset);
+  $offset = 0;
+  foreach $ele (@list) {
+    if ($ele eq $member) {
+      return $offset
+    }
+    $offset++;
+  }
+  $offset = -1;
+  return $offset;
+}
+#-------------------------------------------------------------------------
+sub usage {
+die <<EOF
+Please provide name of file containing list of directories.
+EOF
+}
+#-------------------------------------------------------------------------

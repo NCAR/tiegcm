@@ -1,0 +1,101 @@
+#!/usr/bin/perl
+#
+# Copy requested files from model source directory to cwd.
+#
+use Getopt::Long;
+use File::Copy;
+use File::Basename;
+$help = 0;
+&GetOptions(
+   "tgcmroot=s" => \$tgcmroot,
+   "m|model=s"  => \$model,
+   "srcdir=s"   => \$srcdir,
+   "h|help"     => \$help,
+) or usage();
+if ($help) { usage(); } # provide usage if help was requested
+#
+# Model is required:
+if (! defined $model && ! defined $srcdir) {
+  print "\n>>> $0: Need model name (-model=model) or ";
+  print "source directory (-srcdir=srcdir)\n";
+  usage();
+}
+#
+# Order of precedence for determining tgcmroot is: 
+#   1: Option to this program (-tgcmroot)
+#   2: Environment variable $TGCMROOT
+#   3: The default directory on hao or scd systems.
+#  
+$tgcmroot_default_hao = "/home/tgcm";
+$tgcmroot_default_scd = "/fis/hao/tgcm";
+if (! defined $tgcmroot or $tgcmroot eq "") {
+  if (defined $ENV{TGCMROOT}) { $tgcmroot = $ENV{TGCMROOT}; 
+    print "\n$0: Using tgcmroot from TGCMROOT env var: $tgcmroot\n";
+  } elsif (-d $tgcmroot_default_hao) { $tgcmroot = $tgcmroot_default_hao;
+    print "\n$0: Using default tgcmroot at HAO: $tgcmroot\n";
+  } elsif (-d $tgcmroot_default_scd) { $tgcmroot = $tgcmroot_default_scd;
+    print "\n$0: Using default tgcmroot at SCD: $tgcmroot\n"; 
+  } else { 
+    die "\n>>> $0: Could not determine tgcmroot (please use -tgcmroot option)\n\n";
+  }
+}
+#
+# Source directory:
+if (! defined $srcdir) { $srcdir = "$tgcmroot/$model/src"; }
+if (! -d $srcdir) {
+  print "\n>>> $0: Cannot find source code directory for model $model\n";
+  print "Looked for $srcdir\n\n";
+  exit 1;
+} else {
+  print "\n$0: Model = $model  Source directory = $srcdir\n";
+}
+if (! @ARGV) {
+  @fileglob = glob("$srcdir/*");
+  foreach $file (@fileglob) {
+    push(@files,basename($file));
+  }
+  print "\n>>> $0: No files requested: Following is a list of files in $srcdir:\n\n";
+  print "@files\n\n";
+  exit;
+}
+#
+while (@ARGV) {
+  $filearg = shift;
+  @files = glob("$srcdir/$filearg");
+  foreach $file (@files) {
+    if (-e $file) {
+      copy($file,".") || die "\n>>> $0: Error copying $file to .\n";
+      print "Copied file $file\n"; 
+    } else {
+      print ">>> WARNING: Cannot find file $file\n";
+    }
+  }
+}
+#
+#-----------------------------------------------------------------------
+sub usage {
+  die <<EOF;
+
+SYNOPSIS
+  $0 [-model=model OR -srcdir=srcdir] [-help] [file1 file2 file3 ...]
+
+DESCRIPTION
+  Copy files from model source code directory to cwd.
+
+OPTIONS
+  -model	Name of model from which to copy source files.
+                (usually tiegcm or timegcm, with optional version suffix)
+
+  -srcdir    	Path to source directory (Default is \$TGCMROOT/\$model/src)
+
+  Either -model or -srcdir must be provided (if both are given, model is ignored)
+
+  -help		Print usage message and quit.
+
+  file1 file2.. List of files to copy. Wildcards are allowed, but must
+                be escaped with backslash, e.g., \"tgcm\\*\"
+                If no files are requested, a list of files in srcdir
+                will be printed.
+
+EOF
+}

@@ -1,0 +1,130 @@
+!
+      subroutine comp_o2o(tn,o2,o1,barm,op,no,n4s,n2d,o2p,ne,
+     |  n2p,nplus,nop,lev0,lev1,lon0,lon1,lat)
+!
+! Calculates fs array which gives sources and sinks for comp (o2,o). 
+!
+      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,p0,
+     |  expz,boltz,rmass_no,rmass_n4s,rmass_n2d,rmass_o2,rmass_o1
+      use qrj_module,only: rj,qo2p,qop
+      use chemrates_module,only: rk4,rk5,rk6,rk7,rk8,rk9,rk10,beta2,
+     |  beta6,ra1,ra2,beta3,beta8,rk1,beta1,rkm12,rk3,fs
+      implicit none
+!
+! Args:
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+!
+! All input arrays are at current time step (itp): 
+      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
+     |  tn,    ! neutral temperature (deg K) 
+     |  o2,    ! O2 (mmr)
+     |  o1,    ! O1 (mmr)
+     |  barm,  ! mean molecular weight
+     |  op,    ! O+
+     |  no,    ! nitric oxide
+     |  n4s,   ! N(4s)
+     |  n2d,   ! N(2d)
+     |  o2p,   ! O2+
+     |  ne,    ! electron density
+     |  n2p,   ! N(2p)
+     |  nplus, ! N+
+     |  nop    ! NO+
+!
+! Local:
+      integer :: k,i,nk
+      real,dimension(lev0:lev1,lon0:lon1) ::
+     |  rji,            ! RJ at interfaces (qrj module)
+     |  qo2pi,          ! O2+ ionization at interfaces (qrj module)
+     |  qopi,           ! O+ ionization at interfaces
+     |  xnmbar,         ! p0*e(-z)*barm
+     |  pox1,pox2,      ! OX production terms
+     |  lox1,lox2,lox3, ! OX loss terms
+     |  po21,po22,po23, ! O2 production terms
+     |  lo21,lo22       ! O2 loss terms
+!
+      nk = lev1-lev0+1
+!
+! Loop over subdomain at current latitude:
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+!
+! Qrj ionization rates at interfaces:
+          rji  (k,i) = 0.5*(rj(k,i,lat)+rj(k+1,i,lat))
+          qo2pi(k,i) = 0.5*(qo2p(k,i,lat)+qo2p(k+1,i,lat))
+          qopi (k,i) = 0.5*(qop(k,i,lat)+qop(k+1,i,lat))
+!
+! n*mbar (k+1/2):
+          xnmbar(k,i) = expz(k)*p0/(boltz*tn(k,i)*(o2(k,i)*rmassinv_o2+
+     |      o1(k,i)*rmassinv_o1+(1.-o2(k,i)-o1(k,i))*rmassinv_n2))
+!
+! OX production:
+! s1
+          pox1(k,i) = xnmbar(k,i)**2*
+     |      (beta3(k,i,lat)*n4s(k,i)/rmass_n4s*no(k,i)/rmass_no+
+     |      beta6*n2d(k,i)/rmass_n2d*no(k,i)/rmass_no)+
+     |      0.5*(beta8(k,i,lat)+beta8(k+1,i,lat))*
+     |      no(k,i)/rmass_no*xnmbar(k,i)+xnmbar(k,i)*
+     |      (rk4*o2p(k,i)*n4s(k,i)/rmass_n4s+
+     |      rk10*op(k,i)*n2d(k,i)/rmass_n2d)+
+     |      (ra1(k,i,lat)*nop(k,i)+2.*ra2(k,i,lat)*o2p(k,i))*
+     |      sqrt(ne(k,i)*ne(k+1,i))
+! s2
+          pox2(k,i) = xnmbar(k,i)*(beta1(k,i,lat)*n4s(k,i)/rmass_n4s+
+     |      beta2*n2d(k,i)/rmass_n2d)+rk1(k,i,lat)*op(k,i)+rk7*
+     |      nplus(k,i)+2.*rji(k,i)
+!
+! OX loss:
+          lox1(k,i) = 2.*rkm12(k,i,lat)*xnmbar(k,i)/
+     |      (.5*(barm(k,i)+barm(k+1,i)))
+          lox2(k,i) = rk3(k,i,lat)*n2p(k,i)+rk8*nplus(k,i)
+          lox3(k,i) = qopi(k,i)
+!
+! O2 production:
+          po21(k,i) = rkm12(k,i,lat)*xnmbar(k,i)/
+     |      (.5*(barm(k,i)+barm(k+1,i)))
+!
+          po22(k,i) = 0.
+          po23(k,i) = rk5*no(k,i)/rmass_no*o2p(k,i)*xnmbar(k,i)
+!
+! O2 loss:
+          lo21(k,i) = xnmbar(k,i)*(beta1(k,i,lat)*n4s(k,i)/rmass_n4s+
+     |      beta2*n2d(k,i)/rmass_n2d)+rk1(k,i,lat)*op(k,i)+(rk6+rk7)*
+     |      nplus(k,i)+rk9*n2p(k,i)+rji(k,i)
+!
+          lo22(k,i) = qo2pi(k,i)
+!
+! Matrix coefficients for O-O2-N2 solution:
+          fs(i,k,1,1,lat) = -lo21(k,i)
+          fs(i,k,1,2,lat) = xnmbar(k,i)*po21(k,i)*o1(k,i)*rmassinv_o1*
+     |      rmass_o2*rmassinv_o1
+          fs(i,k,2,1,lat) = pox2(k,i)*rmass_o1*rmassinv_o2
+          fs(i,k,2,2,lat) = -lox2(k,i)-lox1(k,i)*o1(k,i)*rmassinv_o1*
+     |      xnmbar(k,i)
+          fs(i,k,1,0,lat) = (po23(k,i)-lo22(k,i))*rmass_o2/xnmbar(k,i)
+          fs(i,k,2,0,lat) = (pox1(k,i)-lox3(k,i))*rmass_o1/xnmbar(k,i)
+        enddo ! k=lev0,lev1-1
+      enddo ! i=lon0,lon1
+
+!     do k=lev0,lev1-1
+!       write(6,"('comp_o2o: lat=',i3,' k=',i3)") lat,k
+!       write(6,"('fs(:,k,1,1,lat)=',/,(6e12.4))") fs(:,k,1,1,lat)
+!       write(6,"('fs(:,k,1,2,lat)=',/,(6e12.4))") fs(:,k,1,2,lat)
+!       write(6,"('fs(:,k,2,1,lat)=',/,(6e12.4))") fs(:,k,2,1,lat)
+!       write(6,"('fs(:,k,2,2,lat)=',/,(6e12.4))") fs(:,k,2,2,lat)
+!       write(6,"('fs(:,k,1,0,lat)=',/,(6e12.4))") fs(:,k,1,0,lat)
+!       write(6,"('fs(:,k,2,0,lat)=',/,(6e12.4))") fs(:,k,2,0,lat)
+!     enddo ! k=lev0,lev1-1
+
+!     call addfsech('XNMBAR',' ',' ',xnmbar,lon0,lon1,nk,nk-1,lat) ! s15
+!     call addfsech('POX1',' ',' ',pox1,lon0,lon1,nk,nk-1,lat) ! s1
+!     call addfsech('POX2',' ',' ',pox2,lon0,lon1,nk,nk-1,lat) ! s2
+!     call addfsech('LOX1',' ',' ',lox1,lon0,lon1,nk,nk-1,lat) ! s3
+!     call addfsech('LOX2',' ',' ',lox2,lon0,lon1,nk,nk-1,lat) ! s4
+!     call addfsech('LOX3',' ',' ',lox3,lon0,lon1,nk,nk-1,lat) ! s5
+!     call addfsech('PO21',' ',' ',po21,lon0,lon1,nk,nk-1,lat) ! s6
+!     call addfsech('PO22',' ',' ',po22,lon0,lon1,nk,nk-1,lat) ! s9
+!     call addfsech('PO23',' ',' ',po23,lon0,lon1,nk,nk-1,lat) ! s10
+!     call addfsech('LO21',' ',' ',lo21,lon0,lon1,nk,nk-1,lat) ! s13
+!     call addfsech('LO22',' ',' ',lo22,lon0,lon1,nk,nk-1,lat) ! s14
+
+      end subroutine comp_o2o

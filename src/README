@@ -1,0 +1,44 @@
+
+10/21/04: Changed #include statements from "file.h" to <file.h>.
+Used perl /home/foster/tgcm/scripts/change_incs_bracks.
+
+10/29/04:
+Small change to print format statement in advance.F.
+Fixed dispose.F to correct password problem in mscomment (see save/dispose.old)
+
+!-----------------------------------------------------------------------
+
+1/10/05:
+Copied source from /home/tgcm/tiegcm1.6/src and scripts from ~/tgcm/scripts.
+Modifying source for lightning linux cluster, like ~/tgcm/timegcm/src.
+This is currently not a CVS working directory -- CVS working directory
+is ~/tiegcm/tiegcm, but this dir (from /home/tgcm/tiegcm/src) is more
+up to date. At some point (when code is working on lightning), this
+should become the CVS working dir.
+
+1/10/05:
+Removed nc_xxxx routines from nchist.F, replacing them with the netcdf
+functions nf_xxxx. The routine nc_get_var_real (nf_get_var_double) was
+being used incorrectly (getting scalar when var is a vector with time
+dimension). Now using nf_get_var1_double to get scalar at time itime. 
+(see, e.g., reading f107a, f107d, etc). Same for ints that are dimensioned
+in time.
+
+1/11/05:
+Determined that -fastsse does not work for dynamo (problem w/ rhs).
+So mpif90 optimization should be -O2 -fast.
+
+1/12/05:
+Cleaning up for lighting: added shutdown routine (util.F), and several
+other routines in util.F. Changed output, nchist, etc so that disk
+file names can be used for SOURCE, OUTPUT, or SECOUT.
+
+Changed some dimensions to avoid out-of-bounds check by the compiler.
+Can now use -g -C to check for out-of-bounds. (see esp, dynamo.F, where
+array() was changed to wkarray(), and put in module data).
+
+Removed "old" dynamo option (dynamo_old.F). Now the namelist read parameter
+DYNAMO <= 0 -> no dynamo, or
+DYNAMO >  0 -> dynamo ("new" only)
+
+tempdir can now be blank (which has same effect as tempdir==.).

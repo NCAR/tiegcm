@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+use File::Basename;
+#
+($prog = $0) =~ s!(.*)/!!;
+$filepathname = shift();
+if (! $filepathname) { $filepathname = "Filepath"; }
+open(FILEPATH, $filepathname) or die "$prog: Can't open file $filepathname\n";
+my @paths = <FILEPATH>;
+close(FILEPATH);
+chomp @paths;
+unshift(@paths,'.');     # add current directory
+
+foreach $dir (@paths) {
+    $dir =~ s!/?\s*$!!;  # remove / and any whitespace at end of directory name
+    ($dir) = glob $dir;  # Expand tildes in path names.
+}
+#
+$outfile_srcs     = "Srcfiles";
+open(SRCFILES,"> $outfile_srcs")   or 
+  die "$prog: Can't open output file $outfile_srcs\n";
+#
+%src = ();
+foreach $dir (@paths) {
+  @filenames = (glob("$dir/*.[Fc]"), glob("$dir/*.F90"));
+  foreach $filename (@filenames) {
+    $file = basename($filename);
+    if ($file =~ /^,/) {
+      print "MkSrcfiles: Not using comma-prefixed source file $filename\n";
+    } else {
+      $filename =~ s!.*/!!;                   # remove part before last slash
+      $src{$filename} = "";
+    }
+  }
+}
+
+foreach $file (sort keys %src) { print SRCFILES "$file\n"; }

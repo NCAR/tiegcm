@@ -1,0 +1,113 @@
+#!/usr/bin/perl
+#
+# Make tar file of a tgcm model distribution $tgcmroot/$model.
+#
+use Getopt::Long;
+use File::Basename;
+#
+($progname = $0) =~ s!(.*)/!!;
+&GetOptions(
+   "m|model=s"     => \$model,
+   "tgcmroot:s"    => \$tgcmroot,
+   "usr_srcdirs:s" => \$usr_srcdirs,
+   "h|help"        => \$help
+) or usage();
+if ($help) { usage(); } # provide usage if help was requested
+# 
+if (! defined $model or $model eq "") {
+  print "\n>>> Please specfiy desired model by using the -model option.\n";
+  usage();
+}
+#
+# Order of precedence for determining tgcmroot is: 
+#   1: Option to this program (-tgcmroot)
+#   2: Environment variable $TGCMROOT
+#   3: The default directory on hao or scd systems.
+#  
+$tgcmroot_default_hao = "/home/tgcm";
+$tgcmroot_default_scd = "/fis/hao/tgcm";
+if (! defined $tgcmroot or $tgcmroot eq "") {
+  if (defined $ENV{TGCMROOT}) { $tgcmroot = $ENV{TGCMROOT}; 
+    print "\n$0: Using tgcmroot from TGCMROOT env var: $tgcmroot\n";
+  } elsif (-d $tgcmroot_default_hao) { $tgcmroot = $tgcmroot_default_hao;
+    print "\n$0: Using default tgcmroot at HAO: $tgcmroot\n";
+  } elsif (-d $tgcmroot_default_scd) { $tgcmroot = $tgcmroot_default_scd;
+    print "\n$0: Using default tgcmroot at SCD: $tgcmroot\n"; 
+  } else { 
+    die "\n>>> $0: Could not determine tgcmroot (please use -tgcmroot option)\n\n";
+  }
+}
+
+if (defined $usr_srcdirs) {
+  if ($usr_srcdirs eq '') { 
+    print ">>> $progname: empty usr_srcdirs\n";
+  } else {
+    my @dirs = split(',', $usr_srcdirs);
+    my @paths;
+    while (my $dir = shift @dirs) {
+      if (-d $dir) { 
+        push(@usrpaths,"$dir"); 
+      } else {
+        die "\n>>> $progname: Cannot find user source directory $dir\n";
+      }
+    }
+#   print "usrpaths=@usrpaths\n";
+  }
+}
+#
+# Make tar file of model from tgcmroot:
+#
+#$stat = system("tar cvf $model.tar $model");
+$stat = system("tar cf $model.tar -C $tgcmroot $model");
+if ($stat != 0) {
+  die "Error from the following command:\n tar cvf $model.tar $model\n";
+} else {
+  print "$progname: Wrote tar file $model.tar\n";
+}
+#
+#
+#
+if (@usrpaths) {
+  foreach $dir (@usrpaths) {
+    $basedir = basename($dir);
+    $stat = system("tar uf $model.tar -C $dir/.. $basedir");
+    if ($stat != 0) {
+      die "Error updating $model.tar with directory $dir\n";
+    } else {
+      print "$progname: Updated $model.tar with directory $dir\n";
+    }
+  }
+}
+print "$progname: Completed writing file $model.tar\n\n";
+exit;
+#-------------------------------------------------------------------------
+sub usage {
+  die <<EOF;
+
+DESCIPTION
+  $0 makes a tar file of \$tgcmroot/\$model, leaving \$model.tar in the cwd.
+
+SYNOPSIS
+  $0 [options]
+
+OPTIONS
+  -model	Name of requested model (required).
+                (may begin with "tiegcm" or "timegcm").
+
+  -tgcmroot  	TGCM root distribution containing \$model subdirectory.
+                If tgcmroot is not provided, program will use env var 
+                TGCMROOT. If env var is not set, program will use default 
+                HAO or SCD tgcmroot directories. 
+
+                Note \$tgcmroot/\$model dir should contain src/ and scripts/ 
+                subdirectories containing source code and utility scripts
+                respectively.
+
+  -usr_srcdirs  List of comma-separated directories to be included in the
+                tar file (e.g., dirs containing new or modified source).
+                (no whitespace, please)
+
+  -help		Print usage message and quit.
+
+EOF
+}

@@ -1,0 +1,198 @@
+#!/usr/bin/perl
+use Getopt::Long;
+use File::Copy;
+use File::Basename;
+use Cwd;
+#
+$date = `date`; chop($date);
+$cwd = getcwd();
+print "\n$0 executing from $cwd at $date\n\n";
+$help = 0;
+&GetOptions(
+   "tgcmroot=s" => \$tgcmroot,
+   "m|model=s"  => \$model,
+   "srcdir=s"   => \$srcdir,
+   "h|help"     => \$help,
+) or usage();
+if ($help) { usage(); } # provide usage if help was requested
+#
+# Model is required:
+if (! defined $model && ! defined $srcdir) {
+  print "\n>>> $0: Need model name (-model=model) or ";
+  print "source directory (-srcdir=srcdir)\n";
+  usage();
+}
+#
+# Order of precedence for determining tgcmroot is: 
+#   1: Option to this program (-tgcmroot)
+#   2: Environment variable $TGCMROOT
+#   3: The default directory on hao or scd systems.
+#  
+$tgcmroot_default_hao = "/home/tgcm";
+$tgcmroot_default_scd = "/fis/hao/tgcm";
+if (! defined $tgcmroot or $tgcmroot eq "") {
+  if (defined $ENV{TGCMROOT}) { $tgcmroot = $ENV{TGCMROOT}; 
+    print "Using tgcmroot from TGCMROOT env var: $tgcmroot\n";
+  } elsif (-d $tgcmroot_default_hao) { $tgcmroot = $tgcmroot_default_hao;
+    print "Using default tgcmroot at HAO: $tgcmroot\n";
+  } elsif (-d $tgcmroot_default_scd) { $tgcmroot = $tgcmroot_default_scd;
+    print "Using default tgcmroot at SCD: $tgcmroot\n"; 
+  } else { 
+    die "\n>>> $0: Could not determine tgcmroot (please use -tgcmroot option)\n\n";
+  }
+}
+#
+# Source directory:
+#
+if (! defined $srcdir) { $srcdir = "$tgcmroot/$model/src"; }
+if (! -d $srcdir) {
+  print "\n>>> $0: Cannot find source code directory $srcdir\n";
+  print "Looked for directory $srcdir\n\n";
+  exit 1;
+} else {
+  print "Source code directory = $srcdir\n\n";
+}
+#
+while (@ARGV) {
+  $filearg = shift;
+  $usrfile = absolute_path($filearg);
+# print "usrfile=$usrfile\n";
+  if (-e $usrfile) {
+    $file = basename($filearg);
+    $srcfile = "$srcdir/$file";
+    if (-e $srcfile) {
+      printdiffs($srcfile,$usrfile);  
+    } else {
+      print "=" x 72,"\n";
+      print ">>> WARNING: Cannot find source file $srcfile\n";
+    }
+  } else {
+    print "=" x 72,"\n";
+    print ">>> WARNING: Cannot find user file $usrfile\n";
+  }
+}
+#-----------------------------------------------------------------------
+sub printdiffs {
+  my ($srcfile,$usrfile) = @_;
+  select(STDOUT);
+  $| = 1;
+  print "=" x 72,"\n";
+  print "Diff of $srcfile and $usrfile\n";
+  $stat = system("diff $srcfile $usrfile");
+  if ($stat == 0) { print "$srcfile and $usrfile are identical\n"; }
+}
+#-----------------------------------------------------------------------
+sub absolute_path {
+#
+# Convert a pathname into an absolute pathname, expanding any . or .. characters.
+# Assumes pathnames refer to a local filesystem.
+# Assumes the directory separator is "/".
+#
+  my $path = shift;
+  my $cwd = getcwd();  # current working directory
+  my $abspath;         # resulting absolute pathname
+#
+# Strip off any leading or trailing whitespace.  
+# (This pattern won't match if there's embedded whitespace.
+#
+  $path =~ s!^\s*(\S*)\s*$!$1!;
+#
+# Convert relative to absolute path.
+#
+  if ($path =~ m!^\.$!) {          # path is "."
+      return $cwd;
+  } elsif ($path =~ m!^\./!) {     # path starts with "./"
+      $path =~ s!^\.!$cwd!;
+  } elsif ($path =~ m!^\.\.$!) {   # path is ".."
+      $path = "$cwd/..";
+  } elsif ($path =~ m!^\.\./!) {   # path starts with "../"
+      $path = "$cwd/$path";
+  } elsif ($path =~ m!^[^/]!) {    # path starts with non-slash character
+      $path = "$cwd/$path";
+  }
+  my ($dir, @dirs2);
+#
+# The -1 prevents split from stripping trailing nulls
+# This enables correct processing of the input "/".
+#
+  my @dirs = split "/", $path, -1;   
+
+  my $i;
+  # Remove any "" that are not leading.
+  for ($i=0; $i<=$#dirs; ++$i) {
+      if ($i == 0 or $dirs[$i] ne "") {
+          push @dirs2, $dirs[$i];
+      }  
+  }
+  @dirs = ();
+
+  # Remove any "."
+  foreach $dir (@dirs2) {
+      unless ($dir eq ".") {
+          push @dirs, $dir;
+      }  
+  }
+  @dirs2 = ();
+
+  # Remove the "subdir/.." parts.
+  foreach $dir (@dirs) {
+    if ( $dir !~ /^\.\.$/ ) {
+        push @dirs2, $dir;
+    } else {
+        pop @dirs2;   # remove previous dir when current dir is ..
+    }
+  }  
+  if ($#dirs2 == 0 and $dirs2[0] eq "") { return "/"; }
+  $abspath = join '/', @dirs2;
+  return( $abspath );
+}
+#-------------------------------------------------------------------------
+sub usage {
+  die <<EOF;
+
+DESCIPTION
+  $0 prints differences between files given as arguments, and equivalent
+  files in the source directory for the given model (source directory 
+  will be either $TGCMROOT/$model/src or directory given by -srcdir).
+
+  You must set either -model or -srcdir. If you set -model, then the
+  source directory will be $tgcmroot/$model/src. If you set -srcdir,
+  it will be used as the source directory.
+
+SYNOPSIS
+  $0 [options] file1,file2,...
+
+OPTIONS
+  -model	Name of requested model (required if -srcdir not set).
+
+  -tgcmroot  	TGCM root distribution containing \$model subdirectory.
+                If tgcmroot is not provided, program will use env var 
+                TGCMROOT. If env var is not set, program will use default 
+                HAO or SCD tgcmroot directories. 
+
+                Note the directory $tgcmroot/$model/src should contain
+                source code for the given model.
+
+  -srcdir       Directory containing source code to be differenced
+                against files given as arguments to this command.
+                (if not provided, source directory will be $tgcmroot/$model)
+
+  -help		Print usage message and quit.
+
+ARGUMENTS
+  List of user files to be compared with source directory 
+  (wildcards are allowed).
+
+EXAMPLES
+  Print diffs local files *.h *.F, and equivalent source files for model tiegcm:
+    Diffsrc -model=tiegcm *.h *.F
+
+  Print diffs of local files *.F with equivalent files in /mydir/src:
+    Diffsrc -srcdir=/mydir/src *.F
+
+  Print diffs of *.F files in directory ./modsrc, with timegcm1.1 model source,
+  and redirect output to local file timegcm.diffs:
+    Diffsrc -model=timegcm1.1 modsrc/*.F >&! timegcm.diffs
+
+EOF
+}

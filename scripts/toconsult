@@ -1,0 +1,43 @@
+
+partial contents of my run script:
+...
+
+#
+# Execute from execdir:
+# 
+cd $execdir || echo ">>> Error from cd to execdir $execdir" && exit 1
+set exec = $execdir/$model       # model binary executable
+set output = $wrkdir/$model.out  # model stdout file
+#
+# Must make a separate exec script for the linux cluster "lightning",
+# so that mpirun.lsf will send stdout to separate files for each mpi task:
+#
+#cat << EOF > mpiexec.$$
+##! /bin/csh
+#  set stdin = $namelist
+#  set stdout = ${output}_task\$GMPI_ID.out
+#  set exec = $execdir/$model
+#  \$exec < \$stdin > \$stdout
+#EOF
+#chmod +x mpiexec.$$
+#
+# Compile C program from Platform for labeling stdout i/o w/ task ids.
+# This is used in the mpirun execution statement below.
+#
+cc -O $utildir/mpilabel.c -o mpilabel || \
+  echo ">>> ${0} Compile of mpilabel.c failed" && exit 1
+echo "Compiled mpilabel.c"
+ls -lF mpilabel
+#
+# Execute model with mpirun:
+#
+ echo "" ; echo "Executing model $exec from `pwd` at `date`"
+#echo "" ; echo "Executing model $model from `pwd` at `date`"
+#echo "Model output will go to ${output}_task[xxx].out"
+echo "Model output will go to $output.."
+#mpirun.lsf mpiexec.$$ || \
+mpirun.lsf mpilabel $exec < $namelist >&! $output || \
+  echo ">>> ${0} Execution of $exec FAILED at `date`" && \
+  echo "See output in $output"
+echo "Run of $model completed at `date`"
+

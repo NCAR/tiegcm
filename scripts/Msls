@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+#!/opt/local/bin/perl
+require "ctime.pl";
+#
+# Get msls listing of mspath and parse out file info and comment field.
+#
+if (! $ARGV[0]) {
+  print "\n$0: Need mss path:\n";
+  &usage;
+  exit 2;
+}
+while (@ARGV) {
+  $mspath = shift;
+  push(@mspaths,$mspath);
+}
+#print "mspaths = @mspaths\n";
+
+foreach $mspath (@mspaths) {
+  $date = &ctime(time); chop($date);
+  print "\nMss listing of $mspath as of $date\n";
+  $mspath =~ s/\*/\\\*/g;		# escape wild cards
+  $msopts = "-FRx";
+  $command = "msls $msopts $mspath";
+  if (-x "/opt/local/bin/msls") {
+    $command = "/opt/local/bin/msls $msopts $mspath"; # at hao
+  }
+  print "Using command: $command\n\n";
+  @mslist = `$command`;
+
+# print "mslist = @mslist\n";
+
+  foreach $ls (@mslist) {
+  chop $ls;
+  if ($ls =~ /^d/) {		# is a subdirectory
+#   if ($short == 0) {
+#     print "$file (directory)\n";
+#     if ($comment =~ /\S/) { print "$comment\n"; }
+#   }
+    next;
+  }
+  if (!($ls =~ /\S/)) {		# blank line before subdir listing
+    $idir = 1;
+    print "\n";
+    next;
+  }
+  if ($idir) {
+    if ($idir <= 2) {		# "total" and subdir path
+      if ($idir != 2) {		# skip "total", print subdir path
+        print "$ls\n";
+      }
+      $idir++;
+      next;
+    } else { 
+      $idir = 0;
+    }
+  }
+#
+  $ls =~ /(.*)  :(.*)/;		# file and comment are separated by "  :"
+  $file = $1; $comment = $2;
+  if (!($file)) { next; }
+  if ($short > 0) { 		# just file name, strip date and other file info
+    @file_info = split /\s+/, $file;
+    $file = $file_info[$#file_info];
+  }
+  if ($short > 0) { 
+    print "$file";
+    print ": ";
+  } else {
+    print "$file";
+    print "\n";
+  }
+  if ($comment =~ /\S/) { print "$comment\n"; }
+}
+print "\n";
+} # foreach mspath in mspaths
+
+#
+#-------------------------------------------------------------------------
+#
+sub usage {
+  print "\n","-" x 72,"\n";
+  print "msls: Print listing of NCAR mass store files.\n";
+  print "      If file has a comment, it is printed after the file info.\n";
+  print "\nUsage: Msls msspath [msspath1 msspath2 ...]\n";
+  print "\nIf msspath contains wild cards it must be enclosed in single quotes.\n";
+  print "  (or escape each wildcard with a backslash)\n";
+  print "-" x 72,"\n\n";
+  exit 1;
+}

@@ -1,0 +1,8 @@
+
+12/17/04:
+Under Linux, the CPPFLAGS were repeated twice in each compilation 
+statement.  Apparently, under linux, gmake includes both CPPFLAGS 
+and FFLAGS in the target execution statement. This is not the case 
+under AIX and SGI, where gmake apparently includes only FFLAGS.
+Removing CPPFLAGS from the FFLAGS definition in Linux sections of
+the Makefile cleaned this up.
