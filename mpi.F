@@ -74,6 +74,7 @@
      |        rtc0_scatterlons_f3d , rtcmp_scatterlons_f3d =0.,
      |        rtc0_periodic_f4d    , rtcmp_periodic_f4d    =0.,
      |        rtc0_periodic_f3d    , rtcmp_periodic_f3d    =0.,
+     |        rtc0_periodic_f2d    , rtcmp_periodic_f2d    =0.,
      |        rtc0_dynpot          , rtcmp_dynpot          =0.
 !
 ! If not an mpi job, this module contains no subroutines.
@@ -2241,6 +2242,115 @@
       call vtend(109,ier)
 #endif
       end subroutine mp_periodic_f3d
+!-----------------------------------------------------------------------
+      subroutine mp_periodic_f2d(f,lon0,lon1,lat0,lat1)
+!
+! Define periodic points for field f(lon0:lon1,lat0:lat1):
+! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
+!
+! Args:
+      integer,intent(in) :: lon0,lon1,lat0,lat1
+      real,intent(inout) :: f(lon0:lon1,lat0:lat1)
+!
+! Local:
+      integer :: j,idest,isrc,isend,irecv,ier,len,nlons,nlats
+      real,allocatable :: sndbuf(:,:),rcvbuf(:,:) ! (2,nlats)
+!
+! The restriction that every task must carry at least 4 longitudes
+! means that tasks with mytidi==0 will have lons 1->4 and tasks 
+! with mytidi==ntaski-1 will have lons nlonp4-3->nlonp4.
+!
+      if (mytidi /= 0 .and. mytidi /= ntaski-1) return
+#ifdef VT
+!     call vtsymdef(109, 'mp_periodic_f2d','Communication',ier)
+      call vtbegin(109,ier)
+#endif
+      if (do_rtc_mpi) call timer(rtc0_periodic_f2d,tsec,'begin')
+!
+! Allocate send and receive buffers:
+      nlons = lon1-lon0+1
+      nlats = lat1-lat0+1
+      allocate(sndbuf(2,nlats),stat=ier)
+      if (ier /= 0)
+     |  write(6,"('>>> mp_periodic_f2d: error allocating sndbuf:',
+     |    ' nlats=',i3,' ier=',i4)") nlats,ier
+      allocate(rcvbuf(2,nlats),stat=ier)
+      if (ier /= 0)
+     |  write(6,"('>>> mp_periodic_f2d: error allocating rcvbuf:',
+     |    ' nlats=',i3,' ier=',i4)") nlats,ier
+      len = 2*nlats
+!
+! Send lons 3,4 to lons nlonp4-1,nlonp4 at task with mytidi==ntaski-1,
+! and receive lons 1,2 from the same task.
+      if (mytidi==0) then
+        idest = itask_table(ntaski-1,mytidj)
+
+        do j=lat0,lat1
+          sndbuf(1:2,j-lat0+1) = f(3:4,j)
+        enddo ! j=lat0,lat1
+
+        call mpi_isend(sndbuf,len,MPI_REAL8,idest,1,MPI_COMM_WORLD,
+     |    isend,ier)
+        if (ier /= 0) 
+     |    call handle_mpi_err(ier,'mp_periodic_f2d send to idest')
+        isrc  = idest
+        call mpi_irecv(rcvbuf,len,MPI_REAL8,isrc,1,MPI_COMM_WORLD,
+     |    irecv,ier)
+        if (ier /= 0) 
+     |    call handle_mpi_err(ier,'mp_periodic_f2d recv fm isrc')
+!
+! Send lons nlonp4-3,nlonp4-2 to lons 1,2 at task with mytidi==0,
+! and receive lons nlonp4-1,nlonp4 from same task:
+      elseif (mytidi==ntaski-1) then
+        idest = itask_table(0,mytidj)
+
+        do j=lat0,lat1
+          sndbuf(1:2,j-lat0+1) = f(nlonp4-3:nlonp4-2,j)
+        enddo ! j=lat0,lat1
+
+        call mpi_isend(sndbuf,len,MPI_REAL8,idest,1,MPI_COMM_WORLD,
+     |    isend,ier)
+        if (ier /= 0) 
+     |    call handle_mpi_err(ier,'mp_periodic_f2d send to idest')
+        isrc  = idest
+        call mpi_irecv(rcvbuf,len,MPI_REAL8,isrc,1,MPI_COMM_WORLD,
+     |    irecv,ier)
+        if (ier /= 0) 
+     |    call handle_mpi_err(ier,'mp_periodic_f2d recv fm isrc')
+      endif
+!
+! Wait for completions:
+      call mpi_wait(isend,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_periodic_f2d wait for send')
+      call mpi_wait(irecv,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_periodic_f2d wait for recv')
+!
+! Copy from receive buffer:
+      if (mytidi==0) then
+        do j=lat0,lat1
+          f(1:2,j) = rcvbuf(1:2,j-lat0+1)
+        enddo ! j=lat0,lat1
+      elseif (mytidi==ntaski-1) then
+        do j=lat0,lat1
+          f(nlonp4-1:nlonp4,j) = rcvbuf(1:2,j-lat0+1)
+        enddo ! j=lat0,lat1
+      endif  
+!
+! Free local buffer space:
+      deallocate(sndbuf)
+      deallocate(rcvbuf)
+! 
+      if (do_rtc_mpi) then
+        call timer(rtc0_periodic_f2d,tsec,'end')
+        rtcmp_periodic_f2d = rtcmp_periodic_f2d+tsec
+      endif
+#ifdef VT
+!     call vtsymdef(109, 'mp_periodic_f2d','Communication',ier)
+      call vtend(109,ier)
+#endif
+      end subroutine mp_periodic_f2d
 !-----------------------------------------------------------------------
       subroutine mp_dynpot(ixt)
 !

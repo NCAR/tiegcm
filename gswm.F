@@ -1,6 +1,7 @@
 !      
       module gswm_module
-      use params_module,only: nlon,nlat,nlonp4
+      use params_module,only: nlon,nlat,nlonp4,nlonp2
+      use mpi_module,only: lon0,lon1,lat0,lat1
 !      
 ! module used to read in output data from the GSWM model (Z,TN,UN and VN)
 ! Z [m] TN [K} UN,VN [m/s]
@@ -9,6 +10,10 @@
 ! so far the GSWM output for the whole year (one day per month) is read
 ! can be changed to only part of the year- however the interpolation 
 ! subroutines getgswmdi & getgswmsdi will change too
+!
+! am 11/27/02: for using the double TIEGCM resolution grid together with the
+! GSWM input, the GSWM grid is set to the double resolution grid and for
+! single TIEGCM resolution only every second GSWM grid point is used
 !
       implicit none
 !
@@ -21,12 +26,15 @@
 ! Global gswm data read from gswm data file:
 !  (assume always one day of hourly values for each month and one year)
       integer,parameter :: 
-     |  mxgswmyear = 1,  ! maximum number of years  of gswm data
-     |  mxgswmmonth= 12, ! maximum number of months of gswm data
-     |  mxgswmhour = 24  ! maximum number of hours  of gswm data
+     |  mxgswmyear = 1,    ! maximum number of years  of gswm data
+     |  mxgswmmonth= 12,   ! maximum number of months of gswm data
+     |  mxgswmhour = 24,   ! maximum number of hours  of gswm data
+     |  mxgswmlon  = nlon, ! maximum number of longitudinal grid points
+     |  mxgswmlat  = nlat  ! maximum number of latitudinal grid points
       integer :: 
-     |  ngswmmonth,      ! number of months of gswm data
-     |  ngswmtime        ! number of hourly gswm data
+     |  ngswmmonth,        ! number of months of gswm data
+     |  ngswmtime          ! number of hourly gswm data
+!     
       real ::
      |  gswm_di_z(nlon,nlat,mxgswmmonth,mxgswmhour),    ! diurnal tides data
      |  gswm_di_tn(nlon,nlat,mxgswmmonth,mxgswmhour),   ! diurnal tides data
@@ -44,6 +52,7 @@
      |  gswm_nmisdi_tn(nlon,nlat,mxgswmmonth,mxgswmhour),! nonmigrating semidiurnal tides data
      |  gswm_nmisdi_un(nlon,nlat,mxgswmmonth,mxgswmhour),! nonmigrating semidiurnal tides data
      |  gswm_nmisdi_vn(nlon,nlat,mxgswmmonth,mxgswmhour),! nonmigrating semidiurnal tides data
+!
      |  zdi_gswm(nlonp4,nlat),tndi_gswm(nlonp4,nlat),    ! diurnal tides boundary
      |  undi_gswm(nlonp4,nlat),vndi_gswm(nlonp4,nlat),   ! diurnal tides boundary
      |  zsdi_gswm(nlonp4,nlat),tnsdi_gswm(nlonp4,nlat),  ! semidiurnal tides boundary
@@ -65,9 +74,15 @@
 !
 ! Local:
       character(len=80) :: dskfile
-      integer :: istat,ncid,i,j,ier
+      integer :: istat,ncid,i,j,ier,i2,j2
       integer :: id_nmonth,id_ntime,id_nlon,id_nlat,idv_z,idv_tn,
-     |    idv_un,idv_vn,ngswmlon,ngswmlat
+     |    idv_un,idv_vn,ngswmlon,ngswmlat,lonbeg,lonend,latbeg,
+     |    lonbeg_dhz,latbeg_dhz
+      real ::
+     |  gswm_z(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour),   ! diurnal tides data org.grid
+     |  gswm_tn(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour),  ! diurnal tides data org.grid
+     |  gswm_un(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour),  ! diurnal tides data org.grid
+     |  gswm_vn(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour)   ! diurnal tides data org.grid
 !
 ! Acquire mss file:
       call mkdiskflnm(gswm_di_ncfile,dskfile)
@@ -113,10 +128,10 @@
       istat = nf_inq_dimlen(ncid,id_nlon,ngswmlon)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmdi: Error getting lon dimension')
-      if (ngswmlon /= nlon) then
+      if (ngswmlon /= mxgswmlon) then
         write(6,"(/,'>>> rdgswmdi: longitudinal dim does not fit: ',
-     |    'nlon(GSWM)=',i8,' nlon(TIEGCM)=',i8)") ngswmlon,
-     |    nlon
+     |    'nlon(GSWM)=',i8,' mxgswmlon=',i8)") ngswmlon,
+     |    mxgswmlon
         stop 'rdgswmdi'
       endif
 !
@@ -125,27 +140,28 @@
       istat = nf_inq_dimlen(ncid,id_nlat,ngswmlat)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmdi: Error getting lat dimension')
-      if (ngswmlat /= nlat) then
+      if (ngswmlat /= mxgswmlat) then
         write(6,"(/,'>>> rdgswmdi: latitudinal dim does not fit: ',
-     |    'nlat(GSWM)=',i8,' nlat(TIEGCM)=',i8)") ngswmlat,
-     |    nlat
+     |    'nlat(GSWM)=',i8,' mxgswmlat=',i8)") ngswmlat,
+     |    mxgswmlat
         stop 'rdgswmdi'
       endif
 !
+! read whole domain
 ! Get Z (geopotential height perturbation [m]:
       istat = nf_inq_varid(ncid,'Z',idv_z)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmdi: Error getting Z var id')
-      istat = nf_get_var_double(ncid,idv_z,gswm_di_z)
+      istat = nf_get_var_double(ncid,idv_z,gswm_z)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable Z')
-      gswm_di_z = gswm_di_z*100. 	! convert to cm
+      gswm_z = gswm_z*100. 	! convert to cm
 !
 ! Get TN (neutral temperature perturbation [deg K]:
       istat = nf_inq_varid(ncid,'TN',idv_tn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmdi: Error getting TN var id')
-      istat = nf_get_var_double(ncid,idv_tn,gswm_di_tn)
+      istat = nf_get_var_double(ncid,idv_tn,gswm_tn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable TN')
 !
@@ -153,24 +169,60 @@
       istat = nf_inq_varid(ncid,'UN',idv_un)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmdi: Error getting UN var id')
-      istat = nf_get_var_double(ncid,idv_un,gswm_di_un)
+      istat = nf_get_var_double(ncid,idv_un,gswm_un)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable UN')
-      gswm_di_un = gswm_di_un*100. 	! convert to cm/s
+      gswm_un = gswm_un*100. 	! convert to cm/s
 !
 ! Get VN (neutral meridional wind perturbation [m/s]:
       istat = nf_inq_varid(ncid,'VN',idv_vn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmdi: Error getting VN var id')
-      istat = nf_get_var_double(ncid,idv_vn,gswm_di_vn)
+      istat = nf_get_var_double(ncid,idv_vn,gswm_vn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable VN')
-      gswm_di_vn = gswm_di_vn*100. 	! convert to cm/s
+      gswm_vn = gswm_vn*100. 	! convert to cm/s
 !
 ! Close the file:
       call nc_close(ncid)
       write(6,"('Completed read from GSWMDI data file ',a)")
      |   trim(dskfile)
+! 
+! check for the TIEGCM dimension of the grid
+! if necessary copy data to right sized arrays
+! copy into subdomain
+!
+      lonbeg = lon0
+      if (lon0==1) lonbeg = 3
+      lonend = lon1
+      if (lon1==nlonp4) lonend = lon1-2
+      
+      if(nlat == mxgswmlat) then  ! same dimension nlon=144,nlat=72
+       do i = lonbeg,lonend
+         do j = lat0,lat1
+           gswm_di_z(i,j,:,:)  = gswm_z(i-2,j,:,:)
+           gswm_di_tn(i,j,:,:) = gswm_tn(i-2,j,:,:)
+           gswm_di_un(i,j,:,:) = gswm_un(i-2,j,:,:)
+           gswm_di_vn(i,j,:,:) = gswm_vn(i-2,j,:,:)
+         enddo
+       enddo
+      else		         ! half dimension nlon=72,nlat=36
+
+	lonbeg_dhz = lonbeg*2-1
+	latbeg_dhz = lat0*2-1
+	i2 = lonbeg_dhz
+        do i = lonbeg,lonend
+	  j2 = latbeg_dhz
+	  do j = lat0,lat1
+            gswm_di_z(i,j,:,:)  = gswm_z(i2-4,j2,:,:)
+            gswm_di_tn(i,j,:,:) = gswm_tn(i2-4,j2,:,:)
+            gswm_di_un(i,j,:,:) = gswm_un(i2-4,j2,:,:)
+            gswm_di_vn(i,j,:,:) = gswm_vn(i2-4,j2,:,:)
+	    j2 = j2+2
+	  enddo
+	  i2 = i2+2
+	enddo
+      endif
       write(6,"(72('-'),/)")
       
       end subroutine rdgswmdi
@@ -185,9 +237,15 @@
 !
 ! Local:
       character(len=80) :: dskfile
-      integer :: istat,ncid,i,j,ier
+      integer :: istat,ncid,i,j,ier,i2,j2
       integer :: id_nmonth,id_ntime,id_nlon,id_nlat,idv_z,idv_tn,
-     |   idv_un,idv_vn,ngswmlon,ngswmlat
+     |   idv_un,idv_vn,ngswmlon,ngswmlat,lonbeg,lonend,latbeg,
+     |    lonbeg_dhz,latbeg_dhz
+      real :: 
+     |  gswm_z(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour),  ! semidiurnal tides data org.grid
+     |  gswm_tn(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour), ! semidiurnal tides data org.grid
+     |  gswm_un(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour), ! semidiurnal tides data org.grid
+     |  gswm_vn(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour)  ! semidiurnal tides data org.grid
 !
 ! Acquire mss file:
       call mkdiskflnm(gswm_sdi_ncfile,dskfile)
@@ -233,10 +291,10 @@
       istat = nf_inq_dimlen(ncid,id_nlon,ngswmlon)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmsdi: Error getting lon dimension')
-      if (ngswmlon /= nlon) then
+      if (ngswmlon /= mxgswmlon) then
         write(6,"(/,'>>> rdgswmsdi: longitudinal dim does not fit: ',
-     |    'nlon(GSWM)=',i8,' nlon(TIEGCM)=',i8)") ngswmlon,
-     |    nlon
+     |    'nlon(GSWM)=',i8,' mxgswmlon=',i8)") ngswmlon,
+     |    mxgswmlon
         stop 'rdgswmsdi'
       endif
 !
@@ -245,27 +303,28 @@
       istat = nf_inq_dimlen(ncid,id_nlat,ngswmlat)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmsdi: Error getting lat dimension')
-      if (ngswmlat /= nlat) then
+      if (ngswmlat /= mxgswmlat) then
         write(6,"(/,'>>> rdgswmsdi: latitudinal dim does not fit: ',
-     |    'nlat(GSWM)=',i8,' nlat(TIEGCM)=',i8)") ngswmlat,
-     |    nlat
+     |    'nlat(GSWM)=',i8,' mxgswmlat=',i8)") ngswmlat,
+     |    mxgswmlat
         stop 'rdgswmsdi'
       endif
 !
+! read whole domain
 ! Get Z (geopotential height perturbation [m]:
       istat = nf_inq_varid(ncid,'Z',idv_z)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmsdi: Error getting Z var id')
-      istat = nf_get_var_double(ncid,idv_z,gswm_sdi_z)
+      istat = nf_get_var_double(ncid,idv_z,gswm_z)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmsdi: Error getting variable Z')
-      gswm_sdi_z = gswm_sdi_z*100. 	! convert to cm
+      gswm_z = gswm_z*100. 	! convert to cm
 !
 ! Get TN (neutral temperature perturbation [deg K]:
       istat = nf_inq_varid(ncid,'TN',idv_tn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmdi: Error getting TN var id')
-      istat = nf_get_var_double(ncid,idv_tn,gswm_sdi_tn)
+      istat = nf_get_var_double(ncid,idv_tn,gswm_tn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmsdi: Error getting variable TN')
 !
@@ -273,24 +332,60 @@
       istat = nf_inq_varid(ncid,'UN',idv_un)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmdi: Error getting UN var id')
-      istat = nf_get_var_double(ncid,idv_un,gswm_sdi_un)
+      istat = nf_get_var_double(ncid,idv_un,gswm_un)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmsdi: Error getting variable UN')
-      gswm_sdi_un = gswm_sdi_un*100. 	! convert to cm/s
+      gswm_un = gswm_un*100. 	! convert to cm/s
 !
 ! Get VN (neutral meridional wind perturbation [m/s]:
       istat = nf_inq_varid(ncid,'VN',idv_vn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmdi: Error getting VN var id')
-      istat = nf_get_var_double(ncid,idv_vn,gswm_sdi_vn)
+      istat = nf_get_var_double(ncid,idv_vn,gswm_vn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmsdi: Error getting variable VN')
-      gswm_sdi_vn = gswm_sdi_vn*100. 	! convert to cm/s
+      gswm_vn = gswm_vn*100. 	! convert to cm/s
 !
 ! Close the file:
       call nc_close(ncid)
       write(6,"('Completed read from GSWMSDI data file ',a)")
      |   trim(dskfile)
+     
+! check for the TIEGCM dimension of the grid
+! if necessary copy data to right sized arrays
+! copy into subdomain
+!
+      lonbeg = lon0
+      if (lon0==1) lonbeg = 3
+      lonend = lon1
+      if (lon1==nlonp4) lonend = lon1-2
+      
+      if(nlat == mxgswmlat) then  ! same dimension nlon=144,nlat=72
+       do i = lonbeg,lonend
+         do j = lat0,lat1
+           gswm_sdi_z(i,j,:,:)  = gswm_z(i-2,j,:,:)
+           gswm_sdi_tn(i,j,:,:) = gswm_tn(i-2,j,:,:)
+           gswm_sdi_un(i,j,:,:) = gswm_un(i-2,j,:,:)
+           gswm_sdi_vn(i,j,:,:) = gswm_vn(i-2,j,:,:)
+         enddo
+       enddo
+      else		         ! half dimension nlon=72,nlat=36
+
+	lonbeg_dhz = lonbeg*2-1
+	latbeg_dhz = lat0*2-1
+	i2 = lonbeg_dhz
+        do i = lonbeg,lonend
+	  j2 = latbeg_dhz
+	  do j = lat0,lat1
+            gswm_sdi_z(i,j,:,:)  = gswm_z(i2-4,j2,:,:)
+            gswm_sdi_tn(i,j,:,:) = gswm_tn(i2-4,j2,:,:)
+            gswm_sdi_un(i,j,:,:) = gswm_un(i2-4,j2,:,:)
+            gswm_sdi_vn(i,j,:,:) = gswm_vn(i2-4,j2,:,:)
+	    j2 = j2+2
+	  enddo
+	  i2 = i2+2
+	enddo
+      endif
       write(6,"(72('-'),/)")
       end subroutine rdgswmsdi
 
@@ -305,9 +400,15 @@
 !
 ! Local:
       character(len=80) :: dskfile
-      integer :: istat,ncid,i,j,ier
+      integer :: istat,ncid,i,j,ier,i2,j2
       integer :: id_nmonth,id_ntime,id_nlon,id_nlat,idv_z,idv_tn,
-     |    idv_un,idv_vn,ngswmlon,ngswmlat
+     |    idv_un,idv_vn,ngswmlon,ngswmlat,lonbeg,lonend,latbeg,
+     |    lonbeg_dhz,latbeg_dhz
+      real :: 	! org. GSWM grid
+     |  gswm_z(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour),  ! nonmigrating diurnal tides data
+     |  gswm_tn(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour), ! nonmigrating diurnal tides data
+     |  gswm_un(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour), ! nonmigrating diurnal tides data
+     |  gswm_vn(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour)  ! nonmigrating diurnal tides data
 !
 ! Acquire mss file:
       call mkdiskflnm(gswm_nmidi_ncfile,dskfile)
@@ -354,10 +455,10 @@
       istat = nf_inq_dimlen(ncid,id_nlon,ngswmlon)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting lon dimension')
-      if (ngswmlon /= nlon) then
+      if (ngswmlon /= mxgswmlon) then
         write(6,"(/,'>>> rdgswmnmidi: longitudinal dim does not fit: ',
-     |    'nlon(GSWM)=',i8,' nlon(TIEGCM)=',i8)") ngswmlon,
-     |    nlon
+     |    'nlon(GSWM)=',i8,' mxgswmlon=',i8)") ngswmlon,
+     |    mxgswmlon
         stop 'rdgswmnmidi'
       endif
 !
@@ -366,27 +467,28 @@
       istat = nf_inq_dimlen(ncid,id_nlat,ngswmlat)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting lat dimension')
-      if (ngswmlat /= nlat) then
+      if (ngswmlat /= mxgswmlat) then
         write(6,"(/,'>>> rdgswmnmidi: latitudinal dim does not fit: ',
-     |    'nlat(GSWM)=',i8,' nlat(TIEGCM)=',i8)") ngswmlat,
-     |    nlat
+     |    'nlat(GSWM)=',i8,' mxgswmlat=',i8)") ngswmlat,
+     |    mxgswmlat
         stop 'rdgswmnmidi'
       endif
 !
+! read whole domain
 ! Get Z (geopotential height perturbation [m]:
       istat = nf_inq_varid(ncid,'Z',idv_z)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting Z var id')
-      istat = nf_get_var_double(ncid,idv_z,gswm_nmidi_z)
+      istat = nf_get_var_double(ncid,idv_z,gswm_z)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting variable Z')
-      gswm_nmidi_z = gswm_nmidi_z*100. 	! convert to cm
+      gswm_z = gswm_z*100. 	! convert to cm
 !
 ! Get TN (neutral temperature perturbation [deg K]:
       istat = nf_inq_varid(ncid,'TN',idv_tn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting TN var id')
-      istat = nf_get_var_double(ncid,idv_tn,gswm_nmidi_tn)
+      istat = nf_get_var_double(ncid,idv_tn,gswm_tn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting variable TN')
 !
@@ -394,24 +496,61 @@
       istat = nf_inq_varid(ncid,'UN',idv_un)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting UN var id')
-      istat = nf_get_var_double(ncid,idv_un,gswm_nmidi_un)
+      istat = nf_get_var_double(ncid,idv_un,gswm_un)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting variable UN')
-      gswm_nmidi_un = gswm_nmidi_un*100. 	! convert to cm/s
+      gswm_un = gswm_un*100. 	! convert to cm/s
 !
 ! Get VN (neutral meridional wind perturbation [m/s]:
       istat = nf_inq_varid(ncid,'VN',idv_vn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting VN var id')
-      istat = nf_get_var_double(ncid,idv_vn,gswm_nmidi_vn)
+      istat = nf_get_var_double(ncid,idv_vn,gswm_vn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmidi: Error getting variable VN')
-      gswm_nmidi_vn = gswm_nmidi_vn*100. 	! convert to cm/s
+      gswm_vn = gswm_vn*100. 	! convert to cm/s
 !
 ! Close the file:
       call nc_close(ncid)
       write(6,"('Completed read from GSWMNMIDI data file ',a)")
      |   trim(dskfile)
+     
+! check for the TIEGCM dimension of the grid
+! if necessary copy data to right sized arrays
+! copy into subdomain
+!
+      lonbeg = lon0
+      if (lon0==1) lonbeg = 3
+      lonend = lon1
+      if (lon1==nlonp4) lonend = lon1-2
+      
+      if(nlat == mxgswmlat) then  ! same dimension nlon=144,nlat=72
+       do i = lonbeg,lonend
+         do j = lat0,lat1
+           gswm_nmidi_z(i,j,:,:)  = gswm_z(i-2,j,:,:)
+           gswm_nmidi_tn(i,j,:,:) = gswm_tn(i-2,j,:,:)
+           gswm_nmidi_un(i,j,:,:) = gswm_un(i-2,j,:,:)
+           gswm_nmidi_vn(i,j,:,:) = gswm_vn(i-2,j,:,:)
+         enddo
+       enddo
+      else		         ! half dimension nlon=72,nlat=36
+
+	lonbeg_dhz = lonbeg*2-1
+	latbeg_dhz = lat0*2-1
+	i2 = lonbeg_dhz
+	
+        do i = lon0,lon1
+	  j2 = latbeg_dhz
+	  do j = lat0,lat1
+            gswm_nmidi_z(i,j,:,:)  = gswm_z(i2-4,j2,:,:)
+            gswm_nmidi_tn(i,j,:,:) = gswm_tn(i2-4,j2,:,:)
+            gswm_nmidi_un(i,j,:,:) = gswm_un(i2-4,j2,:,:)
+            gswm_nmidi_vn(i,j,:,:) = gswm_vn(i2-4,j2,:,:)
+	    j2 = j2+2
+	  enddo
+	  i2 = i2+2
+	enddo
+      endif
       write(6,"(72('-'),/)")
       
       end subroutine rdgswmnmidi
@@ -427,9 +566,15 @@
 !
 ! Local:
       character(len=80) :: dskfile
-      integer :: istat,ncid,i,j,ier
+      integer :: istat,ncid,i,j,ier,i2,j2
       integer :: id_nmonth,id_ntime,id_nlon,id_nlat,idv_z,idv_tn,
-     |    idv_un,idv_vn,ngswmlon,ngswmlat
+     |    idv_un,idv_vn,ngswmlon,ngswmlat,lonbeg,lonend,latbeg,
+     |    lonbeg_dhz,latbeg_dhz
+      real :: 
+     |  gswm_z(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour), ! nonmigrating semidiurnal tides data
+     |  gswm_tn(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour),! nonmigrating semidiurnal tides data
+     |  gswm_un(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour),! nonmigrating semidiurnal tides data
+     |  gswm_vn(mxgswmlon,mxgswmlat,mxgswmmonth,mxgswmhour)! nonmigrating semidiurnal tides data
 !
 ! Acquire mss file:
       call mkdiskflnm(gswm_nmisdi_ncfile,dskfile)
@@ -476,10 +621,10 @@
       istat = nf_inq_dimlen(ncid,id_nlon,ngswmlon)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting lon dimension')
-      if (ngswmlon /= nlon) then
+      if (ngswmlon /= mxgswmlon) then
         write(6,"(/,'>>> rdgswmnmisdi: longitudinal dim does not ',
-     |    'fit: nlon(GSWM)=',i8,' nlon(TIEGCM)=',i8)") ngswmlon,
-     |    nlon
+     |    'fit: nlon(GSWM)=',i8,' mxgswmlon=',i8)") ngswmlon,
+     |    mxgswmlon
         stop 'rdgswmnmisdi'
       endif
 !
@@ -488,27 +633,28 @@
       istat = nf_inq_dimlen(ncid,id_nlat,ngswmlat)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting lat dimension')
-      if (ngswmlat /= nlat) then
+      if (ngswmlat /= mxgswmlat) then
         write(6,"(/,'>>> rdgswmnmisdi: latitudinal dim does not fit: ',
-     |    'nlat(GSWM)=',i8,' nlat(TIEGCM)=',i8)") ngswmlat,
-     |    nlat
+     |    'nlat(GSWM)=',i8,' mxgswmlat=',i8)") ngswmlat,
+     |    mxgswmlat
         stop 'rdgswmnmisdi'
       endif
 !
+! read whole domain
 ! Get Z (geopotential height perturbation [m]:
       istat = nf_inq_varid(ncid,'Z',idv_z)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting Z var id')
-      istat = nf_get_var_double(ncid,idv_z,gswm_nmisdi_z)
+      istat = nf_get_var_double(ncid,idv_z,gswm_z)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting variable Z')
-      gswm_nmisdi_z = gswm_nmisdi_z*100. 	! convert to cm
+      gswm_z = gswm_z*100. 	! convert to cm
 !
 ! Get TN (neutral temperature perturbation [deg K]:
       istat = nf_inq_varid(ncid,'TN',idv_tn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting TN var id')
-      istat = nf_get_var_double(ncid,idv_tn,gswm_nmisdi_tn)
+      istat = nf_get_var_double(ncid,idv_tn,gswm_tn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting variable TN')
 !
@@ -516,24 +662,59 @@
       istat = nf_inq_varid(ncid,'UN',idv_un)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting UN var id')
-      istat = nf_get_var_double(ncid,idv_un,gswm_nmisdi_un)
+      istat = nf_get_var_double(ncid,idv_un,gswm_un)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting variable UN')
-      gswm_nmisdi_un = gswm_nmisdi_un*100. 	! convert to cm/s
+      gswm_un = gswm_un*100. 	! convert to cm/s
 !
 ! Get VN (neutral meridional wind perturbation [m/s]:
       istat = nf_inq_varid(ncid,'VN',idv_vn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting VN var id')
-      istat = nf_get_var_double(ncid,idv_vn,gswm_nmisdi_vn)
+      istat = nf_get_var_double(ncid,idv_vn,gswm_vn)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswmnmisdi: Error getting variable VN')
-      gswm_nmisdi_vn = gswm_nmisdi_vn*100. 	! convert to cm/s
+      gswm_vn = gswm_vn*100. 	! convert to cm/s
 !
 ! Close the file:
       call nc_close(ncid)
       write(6,"('Completed read from GSWMNMISDI data file ',a)")
      |   trim(dskfile)
+     
+! check for the TIEGCM dimension of the grid
+! if necessary copy data to right sized arrays
+!
+      lonbeg = lon0
+      if (lon0==1) lonbeg = 3
+      lonend = lon1
+      if (lon1==nlonp4) lonend = lon1-2
+      
+      if(nlat == mxgswmlat) then  ! same dimension nlon=144,nlat=72
+       do i = lonbeg,lonend
+         do j = lat0,lat1
+           gswm_nmisdi_z(i,j,:,:)  = gswm_z(i-2,j,:,:)
+           gswm_nmisdi_tn(i,j,:,:) = gswm_tn(i-2,j,:,:)
+           gswm_nmisdi_un(i,j,:,:) = gswm_un(i-2,j,:,:)
+           gswm_nmisdi_vn(i,j,:,:) = gswm_vn(i-2,j,:,:)
+         enddo
+       enddo
+      else		         ! half dimension nlon=72,nlat=36
+      
+	lonbeg_dhz = lonbeg*2-1
+	latbeg_dhz = lat0*2-1
+	i2 = lonbeg_dhz
+        do i = lonbeg,lonend
+	  j2 = latbeg_dhz
+	  do j = lat0,lat1
+            gswm_nmisdi_z(i,j,:,:)  = gswm_z(i2-4,j2,:,:)
+            gswm_nmisdi_tn(i,j,:,:) = gswm_tn(i2-4,j2,:,:)
+            gswm_nmisdi_un(i,j,:,:) = gswm_un(i2-4,j2,:,:)
+            gswm_nmisdi_vn(i,j,:,:) = gswm_vn(i2-4,j2,:,:)
+	    j2 = j2+2
+	  enddo
+	  i2 = i2+2
+	enddo
+      endif
       write(6,"(72('-'),/)")
       
       end subroutine rdgswmnmisdi
@@ -549,20 +730,30 @@
 ! interpolated to the modelday
 !
       use hist_module,only: modeltime
+#ifdef MPI
+      use mpi_module,only: mp_periodic_f2d
+#endif
 !
 ! Args:
       integer,intent(in) :: iyear,iday,iutsec,iprint
 !
 ! Local:
       integer :: i,j,ndmon_nl(13),ndmon_lp(13),nonleap,
-     |   mon_cur,mon_nxt,ihr_cur,ihr_nxt,nointp=0
+     |   mon_cur,mon_nxt,ihr_cur,ihr_nxt,nointp=0,
+     |   lonbeg,lonend
       real :: difsec,difday,sec,secint,dayint,
-     |   z_curmo(nlon,nlat)=0.,z_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   tn_curmo(nlon,nlat)=0.,tn_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   un_curmo(nlon,nlat)=0.,un_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   vn_curmo(nlon,nlat)=0.,vn_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   z_tmp(nlon,nlat)=0.,tn_tmp(nlon,nlat)=0.,	! tmp 
-     |   un_tmp(nlon,nlat)=0.,vn_tmp(nlon,nlat)=0.	! tmp 
+     |   z_curmo(lon0:lon1,lat0:lat1),
+     |   z_nxtmo(lon0:lon1,lat0:lat1),       ! UT interpolation
+     |   tn_curmo(lon0:lon1,lat0:lat1),
+     |   tn_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   un_curmo(lon0:lon1,lat0:lat1),
+     |   un_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   vn_curmo(lon0:lon1,lat0:lat1),
+     |   vn_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   z_tmp(lon0:lon1,lat0:lat1),
+     |   tn_tmp(lon0:lon1,lat0:lat1),	     ! tmp 
+     |   un_tmp(lon0:lon1,lat0:lat1),
+     |   vn_tmp(lon0:lon1,lat0:lat1)	     ! tmp 
 
 !   
 ! Data: GSWM data given at the middle of each month 
@@ -613,42 +804,42 @@
 ! Interpolate to modeltime iutsec for each month: mon_cur mon_nxt
       
       if (iutsec==0) then      ! no interpolation
-        z_curmo(:,:)  = gswm_di_z(:,:,mon_cur,ihr_cur+1)  ! current month
-        tn_curmo(:,:) = gswm_di_tn(:,:,mon_cur,ihr_cur+1)
-        un_curmo(:,:) = gswm_di_un(:,:,mon_cur,ihr_cur+1)
-        vn_curmo(:,:) = gswm_di_vn(:,:,mon_cur,ihr_cur+1)
-        z_nxtmo(:,:)  = gswm_di_z(:,:,mon_nxt,ihr_cur+1)  ! next month
-        tn_nxtmo(:,:) = gswm_di_tn(:,:,mon_nxt,ihr_cur+1)
-        un_nxtmo(:,:) = gswm_di_un(:,:,mon_nxt,ihr_cur+1)
-        vn_nxtmo(:,:) = gswm_di_vn(:,:,mon_nxt,ihr_cur+1)
+        z_curmo(:,:) =gswm_di_z (lon0:lon1,lat0:lat1,mon_cur,ihr_cur+1)  ! current month
+        tn_curmo(:,:)=gswm_di_tn(lon0:lon1,lat0:lat1,mon_cur,ihr_cur+1)
+        un_curmo(:,:)=gswm_di_un(lon0:lon1,lat0:lat1,mon_cur,ihr_cur+1)
+        vn_curmo(:,:)=gswm_di_vn(lon0:lon1,lat0:lat1,mon_cur,ihr_cur+1)
+        z_nxtmo(:,:) =gswm_di_z (lon0:lon1,lat0:lat1,mon_nxt,ihr_cur+1)  ! next month
+        tn_nxtmo(:,:)=gswm_di_tn(lon0:lon1,lat0:lat1,mon_nxt,ihr_cur+1)
+        un_nxtmo(:,:)=gswm_di_un(lon0:lon1,lat0:lat1,mon_nxt,ihr_cur+1)
+        vn_nxtmo(:,:)=gswm_di_vn(lon0:lon1,lat0:lat1,mon_nxt,ihr_cur+1)
       else
         difsec = 60.*60. ! difference in sec between ihr_cur and ihr_nxt
         secint = float(modeltime(3)*60 + modeltime(4))	! interpolation time [sec]
 	
-        call timeliper_array(gswm_di_z(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_di_z(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,z_curmo,1)
-        call timeliper_array(gswm_di_tn(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_di_tn(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,tn_curmo,1)
-        call timeliper_array(gswm_di_un(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_di_un(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,un_curmo,1)
-        call timeliper_array(gswm_di_vn(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_di_vn(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,vn_curmo,1)
-        call timeliper_array(gswm_di_z(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_di_z(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,z_nxtmo,1)
-        call timeliper_array(gswm_di_tn(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_di_tn(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,tn_nxtmo,1)
-        call timeliper_array(gswm_di_un(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_di_un(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,un_nxtmo,1)
-        call timeliper_array(gswm_di_vn(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_di_vn(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,vn_nxtmo,1)
+        call timeliper_array(gswm_di_z(lon0:lon1,lat0:lat1,mon_cur,  ! cur. month
+     |    ihr_cur+1),gswm_di_z(lon0:lon1,lat0:lat1,mon_cur,ihr_nxt+1),
+     |    difsec,secint,z_curmo,1)
+        call timeliper_array(gswm_di_tn(lon0:lon1,lat0:lat1,mon_cur, ! cur. month
+     |    ihr_cur+1),gswm_di_tn(lon0:lon1,lat0:lat1,mon_cur,ihr_nxt+1),
+     |    difsec,secint,tn_curmo,1)
+        call timeliper_array(gswm_di_un(lon0:lon1,lat0:lat1,mon_cur, ! cur. month
+     |    ihr_cur+1),gswm_di_un(lon0:lon1,lat0:lat1,mon_cur,ihr_nxt+1),
+     |    difsec,secint,un_curmo,1)
+        call timeliper_array(gswm_di_vn(lon0:lon1,lat0:lat1,mon_cur, ! cur. month
+     |    ihr_cur+1),gswm_di_vn(lon0:lon1,lat0:lat1,mon_cur,ihr_nxt+1),
+     |    difsec,secint,vn_curmo,1)
+        call timeliper_array(gswm_di_z(lon0:lon1,lat0:lat1,mon_nxt, ! next month
+     |    ihr_cur+1),gswm_di_z(lon0:lon1,lat0:lat1,mon_nxt,ihr_nxt+1),
+     |    difsec,secint,z_nxtmo,1)
+        call timeliper_array(gswm_di_tn(lon0:lon1,lat0:lat1,mon_nxt, ! next month
+     |    ihr_cur+1),gswm_di_tn(lon0:lon1,lat0:lat1,mon_nxt,ihr_nxt+1),
+     |    difsec,secint,tn_nxtmo,1)
+        call timeliper_array(gswm_di_un(lon0:lon1,lat0:lat1,mon_nxt, ! next month
+     |    ihr_cur+1),gswm_di_un(lon0:lon1,lat0:lat1,mon_nxt,ihr_nxt+1),
+     |    difsec,secint,un_nxtmo,1)
+        call timeliper_array(gswm_di_vn(lon0:lon1,lat0:lat1,mon_nxt, ! next month
+     |    ihr_cur+1),gswm_di_vn(lon0:lon1,lat0:lat1,mon_nxt,ihr_nxt+1),
+     |    difsec,secint,vn_nxtmo,1)
       endif  
 !
 ! Interpolate to modelday (iday)
@@ -689,33 +880,46 @@
         call timeliper_array(vn_curmo,vn_nxtmo,difday,dayint,
      |           vn_tmp,1)
       elseif(nointp == 1) then    ! no interpolation same day as current month
-        zdi_gswm(3:74,:)  = z_curmo
-	tndi_gswm(3:74,:) = tn_curmo
-	undi_gswm(3:74,:) = un_curmo
-	vndi_gswm(3:74,:) = vn_curmo
+        zdi_gswm (lon0:lon1,lat0:lat1) = z_curmo
+	tndi_gswm(lon0:lon1,lat0:lat1) = tn_curmo
+	undi_gswm(lon0:lon1,lat0:lat1) = un_curmo
+	vndi_gswm(lon0:lon1,lat0:lat1) = vn_curmo
 	goto 30
       elseif(nointp == 2) then    ! no interpolation same day as next month
-        zdi_gswm(3:74,:)  = z_nxtmo
-	tndi_gswm(3:74,:) = tn_nxtmo
-	undi_gswm(3:74,:) = un_nxtmo
-	vndi_gswm(3:74,:) = vn_nxtmo
+        zdi_gswm (lon0:lon1,lat0:lat1) = z_nxtmo
+	tndi_gswm(lon0:lon1,lat0:lat1) = tn_nxtmo
+	undi_gswm(lon0:lon1,lat0:lat1) = un_nxtmo
+	vndi_gswm(lon0:lon1,lat0:lat1) = vn_nxtmo
 	goto 30
       endif
 !
-      zdi_gswm(3:74,:)  =  z_tmp
-      tndi_gswm(3:74,:) = tn_tmp
-      undi_gswm(3:74,:) = un_tmp
-      vndi_gswm(3:74,:) = vn_tmp
-! periodic points
- 30   zdi_gswm(1:2,:)  = z_tmp(71:72,:)
-      tndi_gswm(1:2,:) = tn_tmp(71:72,:)
-      undi_gswm(1:2,:) = un_tmp(71:72,:)
-      vndi_gswm(1:2,:) = vn_tmp(71:72,:)
-      zdi_gswm(75:76,:)  = z_tmp(1:2,:)
-      tndi_gswm(75:76,:) = tn_tmp(1:2,:)
-      undi_gswm(75:76,:) = un_tmp(1:2,:)
-      vndi_gswm(75:76,:) = vn_tmp(1:2,:)
+      zdi_gswm (lon0:lon1,lat0:lat1) =  z_tmp
+      tndi_gswm(lon0:lon1,lat0:lat1) = tn_tmp
+      undi_gswm(lon0:lon1,lat0:lat1) = un_tmp
+      vndi_gswm(lon0:lon1,lat0:lat1) = vn_tmp
+   30 continue
 !      
+! do mpi periodic points exchange for gswm with f2d(:) 
+! Moved here from sub getgswm* because mpi necessary when f2d data
+!  is allocated only for task-local subdomain block.
+! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
+
+#ifdef MPI
+      call mp_periodic_f2d(zdi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(tndi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(undi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(vndi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+# else
+      set_periodic_f2d(zdi_gswm)
+      set_periodic_f2d(tndi_gswm)
+      set_periodic_f2d(undi_gswm)
+      set_periodic_f2d(vndi_gswm)
+#endif 
+ 
       if (iprint > 0) then
         write(6,"('GSWM diurnal tidal pertubation interpolated to ',
      |    'date and time')")
@@ -734,20 +938,30 @@
 ! interpolated to the modelday
 !
       use hist_module,only: modeltime
+#ifdef MPI
+      use mpi_module,only: mp_periodic_f2d
+#endif
 !
 ! Args:
       integer,intent(in) :: iyear,iday,iutsec,iprint
 !
 ! Local:
       integer :: i,j,ndmon_nl(13),ndmon_lp(13),nonleap,
-     |   mon_cur,mon_nxt,ihr_cur,ihr_nxt,nointp=0
+     |   mon_cur,mon_nxt,ihr_cur,ihr_nxt,nointp=0,
+     |   lonbeg,lonend
       real :: difsec,difday,sec,secint,dayint,
-     |   z_curmo(nlon,nlat)=0.,z_nxtmo(nlon,nlat)=0.,	 ! UT interpolation
-     |   tn_curmo(nlon,nlat)=0.,tn_nxtmo(nlon,nlat)=0.,	 ! UT interpolation
-     |   un_curmo(nlon,nlat)=0.,un_nxtmo(nlon,nlat)=0.,	 ! UT interpolation
-     |   vn_curmo(nlon,nlat)=0.,vn_nxtmo(nlon,nlat)=0.,	 ! UT interpolation
-     |   z_tmp(nlon,nlat)=0.,tn_tmp(nlon,nlat)=0.,	! tmp 
-     |   un_tmp(nlon,nlat)=0.,vn_tmp(nlon,nlat)=0.	! tmp 
+     |   z_curmo(lon0:lon1,lat0:lat1),
+     |   z_nxtmo(lon0:lon1,lat0:lat1),       ! UT interpolation
+     |   tn_curmo(lon0:lon1,lat0:lat1),
+     |   tn_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   un_curmo(lon0:lon1,lat0:lat1),
+     |   un_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   vn_curmo(lon0:lon1,lat0:lat1),
+     |   vn_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   z_tmp(lon0:lon1,lat0:lat1),
+     |   tn_tmp(lon0:lon1,lat0:lat1),	     ! tmp 
+     |   un_tmp(lon0:lon1,lat0:lat1),
+     |   vn_tmp(lon0:lon1,lat0:lat1)	     ! tmp 
 !   
 ! Data: GSWM data given at the middle of each month 
 !       -> day of year for this data assuming non-leap year
@@ -797,42 +1011,50 @@
 ! Interpolate to modeltime iutsec for each month: mon_cur mon_nxt
       
       if (iutsec==0) then      ! no interpolation
-        z_curmo(:,:)  = gswm_sdi_z(:,:,mon_cur,ihr_cur+1)  ! current month
-        tn_curmo(:,:) = gswm_sdi_tn(:,:,mon_cur,ihr_cur+1)
-        un_curmo(:,:) = gswm_sdi_un(:,:,mon_cur,ihr_cur+1)
-        vn_curmo(:,:) = gswm_sdi_vn(:,:,mon_cur,ihr_cur+1)
-        z_nxtmo(:,:)  = gswm_sdi_z(:,:,mon_nxt,ihr_cur+1)  ! next month
-        tn_nxtmo(:,:) = gswm_sdi_tn(:,:,mon_nxt,ihr_cur+1)
-        un_nxtmo(:,:) = gswm_sdi_un(:,:,mon_nxt,ihr_cur+1)
-        vn_nxtmo(:,:) = gswm_sdi_vn(:,:,mon_nxt,ihr_cur+1)
+        z_curmo(:,:) =gswm_sdi_z (lon0:lon1,lat0:lat1, ! current month
+     |      mon_cur,ihr_cur+1)  			
+        tn_curmo(:,:)=gswm_sdi_tn(lon0:lon1,lat0:lat1,
+     |      mon_cur,ihr_cur+1)
+        un_curmo(:,:)=gswm_sdi_un(lon0:lon1,lat0:lat1,
+     |      mon_cur,ihr_cur+1)
+        vn_curmo(:,:)=gswm_sdi_vn(lon0:lon1,lat0:lat1,
+     |      mon_cur,ihr_cur+1)
+        z_nxtmo(:,:) =gswm_sdi_z (lon0:lon1,lat0:lat1, ! next month
+     |      mon_nxt,ihr_cur+1)  		
+        tn_nxtmo(:,:)=gswm_sdi_tn(lon0:lon1,lat0:lat1,
+     |      mon_nxt,ihr_cur+1)
+        un_nxtmo(:,:)=gswm_sdi_un(lon0:lon1,lat0:lat1,
+     |      mon_nxt,ihr_cur+1)
+        vn_nxtmo(:,:)=gswm_sdi_vn(lon0:lon1,lat0:lat1,
+     |      mon_nxt,ihr_cur+1)
       else
         difsec = 60.*60. ! difference in sec between ihr_cur and ihr_nxt
         secint = float(modeltime(3)*60 + modeltime(4))	! interpolation time [sec]
 	
-        call timeliper_array(gswm_sdi_z(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_sdi_z(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,z_curmo,1)
-        call timeliper_array(gswm_sdi_tn(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_sdi_tn(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,tn_curmo,1)
-        call timeliper_array(gswm_sdi_un(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_sdi_un(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,un_curmo,1)
-        call timeliper_array(gswm_sdi_vn(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_sdi_vn(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,vn_curmo,1)
-        call timeliper_array(gswm_sdi_z(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_sdi_z(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,z_nxtmo,1)
-        call timeliper_array(gswm_sdi_tn(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_sdi_tn(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,tn_nxtmo,1)
-        call timeliper_array(gswm_sdi_un(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_sdi_un(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,un_nxtmo,1)
-        call timeliper_array(gswm_sdi_vn(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_sdi_vn(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,vn_nxtmo,1)
+        call timeliper_array(gswm_sdi_z(lon0:lon1,lat0:lat1,mon_cur, ! cur. month
+     |   ihr_cur+1),gswm_sdi_z(lon0:lon1,lat0:lat1,mon_cur,ihr_nxt+1),
+     |   difsec,secint,z_curmo,1)
+        call timeliper_array(gswm_sdi_tn(lon0:lon1,lat0:lat1,mon_cur, ! cur. month
+     |   ihr_cur+1),gswm_sdi_tn(lon0:lon1,lat0:lat1,mon_cur,ihr_nxt+1),
+     |   difsec,secint,tn_curmo,1)
+        call timeliper_array(gswm_sdi_un(lon0:lon1,lat0:lat1,mon_cur, ! cur. month
+     |   ihr_cur+1),gswm_sdi_un(lon0:lon1,lat0:lat1,mon_cur,ihr_nxt+1),
+     |   difsec,secint,un_curmo,1)
+        call timeliper_array(gswm_sdi_vn(lon0:lon1,lat0:lat1,mon_cur, ! cur. month
+     |   ihr_cur+1),gswm_sdi_vn(lon0:lon1,lat0:lat1,mon_cur,ihr_nxt+1),
+     |   difsec,secint,vn_curmo,1)
+        call timeliper_array(gswm_sdi_z(lon0:lon1,lat0:lat1,mon_nxt, ! next month
+     |   ihr_cur+1),gswm_sdi_z(lon0:lon1,lat0:lat1,mon_nxt,ihr_nxt+1),
+     |   difsec,secint,z_nxtmo,1)
+        call timeliper_array(gswm_sdi_tn(lon0:lon1,lat0:lat1,mon_nxt, ! next month
+     |   ihr_cur+1),gswm_sdi_tn(lon0:lon1,lat0:lat1,mon_nxt,ihr_nxt+1),
+     |   difsec,secint,tn_nxtmo,1)
+        call timeliper_array(gswm_sdi_un(lon0:lon1,lat0:lat1,mon_nxt, ! next month
+     |   ihr_cur+1),gswm_sdi_un(lon0:lon1,lat0:lat1,mon_nxt,ihr_nxt+1),
+     |   difsec,secint,un_nxtmo,1)
+        call timeliper_array(gswm_sdi_vn(lon0:lon1,lat0:lat1,mon_nxt, ! next month
+     |   ihr_cur+1),gswm_sdi_vn(lon0:lon1,lat0:lat1,mon_nxt,ihr_nxt+1),
+     |   difsec,secint,vn_nxtmo,1)
       endif 
 !
 ! Interpolate to modelday (iday)
@@ -872,34 +1094,46 @@
         call timeliper_array(vn_curmo,vn_nxtmo,difday,dayint,
      |           vn_tmp,1)
       elseif(nointp == 1) then    ! no interpolation same day as current month
-        zsdi_gswm(3:74,:)  = z_curmo
-	tnsdi_gswm(3:74,:) = tn_curmo
-	unsdi_gswm(3:74,:) = un_curmo
-	vnsdi_gswm(3:74,:) = vn_curmo
+        zsdi_gswm (lon0:lon1,lat0:lat1) = z_curmo
+	tnsdi_gswm(lon0:lon1,lat0:lat1) = tn_curmo
+	unsdi_gswm(lon0:lon1,lat0:lat1) = un_curmo
+	vnsdi_gswm(lon0:lon1,lat0:lat1) = vn_curmo
 	goto 30
       elseif(nointp == 2) then    ! no interpolation same day as next month
-        zsdi_gswm(3:74,:)  = z_nxtmo
-	tnsdi_gswm(3:74,:) = tn_nxtmo
-	unsdi_gswm(3:74,:) = un_nxtmo
-	vnsdi_gswm(3:74,:) = vn_nxtmo
+        zsdi_gswm (lon0:lon1,lat0:lat1) = z_nxtmo
+	tnsdi_gswm(lon0:lon1,lat0:lat1) = tn_nxtmo
+	unsdi_gswm(lon0:lon1,lat0:lat1) = un_nxtmo
+	vnsdi_gswm(lon0:lon1,lat0:lat1) = vn_nxtmo
 	goto 30
       endif
 !
-      zsdi_gswm(3:74,:)  =  z_tmp
-      tnsdi_gswm(3:74,:) = tn_tmp
-      unsdi_gswm(3:74,:) = un_tmp
-      vnsdi_gswm(3:74,:) = vn_tmp
-!
-! periodic points
-  30  zsdi_gswm(1:2,:)  = z_tmp(71:72,:)
-      tnsdi_gswm(1:2,:) = tn_tmp(71:72,:)
-      unsdi_gswm(1:2,:) = un_tmp(71:72,:)
-      vnsdi_gswm(1:2,:) = vn_tmp(71:72,:)
-      zsdi_gswm(75:76,:)  = z_tmp(1:2,:)
-      tnsdi_gswm(75:76,:) = tn_tmp(1:2,:)
-      unsdi_gswm(75:76,:) = un_tmp(1:2,:)
-      vnsdi_gswm(75:76,:) = vn_tmp(1:2,:)
+      zsdi_gswm (lon0:lon1,lat0:lat1) =  z_tmp
+      tnsdi_gswm(lon0:lon1,lat0:lat1) = tn_tmp
+      unsdi_gswm(lon0:lon1,lat0:lat1) = un_tmp
+      vnsdi_gswm(lon0:lon1,lat0:lat1) = vn_tmp
+   30 continue
 !      
+! do mpi periodic points exchange for gswm with f2d(:) 
+! Moved here from sub getgswm* because mpi necessary when f2d data
+!  is allocated only for task-local subdomain block.
+! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
+
+#ifdef MPI
+      call mp_periodic_f2d(zsdi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(tnsdi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(unsdi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(vnsdi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+# else
+      set_periodic_f2d(zsdi_gswm)
+      set_periodic_f2d(tnsdi_gswm)
+      set_periodic_f2d(unsdi_gswm)
+      set_periodic_f2d(vnsdi_gswm)
+#endif 
+!
       if (iprint > 0) then
         write(6,"('GSWM semidiurnal tidal pertubation interpolated ',
      |    'to date and time')")
@@ -917,20 +1151,30 @@
 ! interpolated to the modelday
 !
       use hist_module,only: modeltime
+#ifdef MPI
+      use mpi_module,only: mp_periodic_f2d
+#endif
 !
 ! Args:
       integer,intent(in) :: iyear,iday,iutsec,iprint
 !
 ! Local:
       integer :: i,j,ndmon_nl(13),ndmon_lp(13),nonleap,
-     |   mon_cur,mon_nxt,ihr_cur,ihr_nxt,nointp=0
+     |   mon_cur,mon_nxt,ihr_cur,ihr_nxt,nointp=0,
+     |   lonbeg,lonend
       real :: difsec,difday,sec,secint,dayint,
-     |   z_curmo(nlon,nlat)=0.,z_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   tn_curmo(nlon,nlat)=0.,tn_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   un_curmo(nlon,nlat)=0.,un_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   vn_curmo(nlon,nlat)=0.,vn_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   z_tmp(nlon,nlat)=0.,tn_tmp(nlon,nlat)=0.,	! tmp 
-     |   un_tmp(nlon,nlat)=0.,vn_tmp(nlon,nlat)=0.	! tmp 
+     |   z_curmo(lon0:lon1,lat0:lat1),
+     |   z_nxtmo(lon0:lon1,lat0:lat1),       ! UT interpolation
+     |   tn_curmo(lon0:lon1,lat0:lat1),
+     |   tn_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   un_curmo(lon0:lon1,lat0:lat1),
+     |   un_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   vn_curmo(lon0:lon1,lat0:lat1),
+     |   vn_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   z_tmp(lon0:lon1,lat0:lat1),
+     |   tn_tmp(lon0:lon1,lat0:lat1),	     ! tmp 
+     |   un_tmp(lon0:lon1,lat0:lat1),
+     |   vn_tmp(lon0:lon1,lat0:lat1)	     ! tmp 
 
 !   
 ! Data: GSWM data given at the middle of each month 
@@ -981,42 +1225,50 @@
 ! Interpolate to modeltime iutsec for each month: mon_cur mon_nxt
       
       if (iutsec==0) then      ! no interpolation
-        z_curmo(:,:)  = gswm_nmidi_z(:,:,mon_cur,ihr_cur+1)  ! current month
-        tn_curmo(:,:) = gswm_nmidi_tn(:,:,mon_cur,ihr_cur+1)
-        un_curmo(:,:) = gswm_nmidi_un(:,:,mon_cur,ihr_cur+1)
-        vn_curmo(:,:) = gswm_nmidi_vn(:,:,mon_cur,ihr_cur+1)
-        z_nxtmo(:,:)  = gswm_nmidi_z(:,:,mon_nxt,ihr_cur+1)  ! next month
-        tn_nxtmo(:,:) = gswm_nmidi_tn(:,:,mon_nxt,ihr_cur+1)
-        un_nxtmo(:,:) = gswm_nmidi_un(:,:,mon_nxt,ihr_cur+1)
-        vn_nxtmo(:,:) = gswm_nmidi_vn(:,:,mon_nxt,ihr_cur+1)
+        z_curmo(:,:)  = gswm_nmidi_z (lon0:lon1,lat0:lat1,  ! current month
+     |     mon_cur,ihr_cur+1)
+        tn_curmo(:,:) = gswm_nmidi_tn(lon0:lon1,lat0:lat1,
+     |     mon_cur,ihr_cur+1)
+        un_curmo(:,:) = gswm_nmidi_un(lon0:lon1,lat0:lat1,
+     |     mon_cur,ihr_cur+1)
+        vn_curmo(:,:) = gswm_nmidi_vn(lon0:lon1,lat0:lat1,
+     |     mon_cur,ihr_cur+1)
+        z_nxtmo(:,:)  = gswm_nmidi_z (lon0:lon1,lat0:lat1,  ! next month
+     |     mon_nxt,ihr_cur+1)
+        tn_nxtmo(:,:) = gswm_nmidi_tn(lon0:lon1,lat0:lat1,
+     |     mon_nxt,ihr_cur+1)
+        un_nxtmo(:,:) = gswm_nmidi_un(lon0:lon1,lat0:lat1,
+     |     mon_nxt,ihr_cur+1)
+        vn_nxtmo(:,:) = gswm_nmidi_vn(lon0:lon1,lat0:lat1,
+     |     mon_nxt,ihr_cur+1)
       else
         difsec = 60.*60. ! difference in sec between ihr_cur and ihr_nxt
         secint = float(modeltime(3)*60 + modeltime(4))	! interpolation time [sec]
 	
-        call timeliper_array(gswm_nmidi_z(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_nmidi_z(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,z_curmo,1)
-        call timeliper_array(gswm_nmidi_tn(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_nmidi_tn(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,tn_curmo,1)
-        call timeliper_array(gswm_nmidi_un(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_nmidi_un(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,un_curmo,1)
-        call timeliper_array(gswm_nmidi_vn(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_nmidi_vn(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,vn_curmo,1)
-        call timeliper_array(gswm_nmidi_z(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_nmidi_z(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,z_nxtmo,1)
-        call timeliper_array(gswm_nmidi_tn(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_nmidi_tn(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,tn_nxtmo,1)
-        call timeliper_array(gswm_nmidi_un(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_nmidi_un(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,un_nxtmo,1)
-        call timeliper_array(gswm_nmidi_vn(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_nmidi_vn(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,vn_nxtmo,1)
+        call timeliper_array(gswm_nmidi_z(lon0:lon1,lat0:lat1, ! cur. month
+     |    mon_cur,ihr_cur+1),gswm_nmidi_z(lon0:lon1,lat0:lat1,mon_cur,
+     |    ihr_nxt+1),difsec,secint,z_curmo,1)
+        call timeliper_array(gswm_nmidi_tn(lon0:lon1,lat0:lat1, ! cur. month
+     |    mon_cur,ihr_cur+1),gswm_nmidi_tn(lon0:lon1,lat0:lat1,mon_cur,
+     |    ihr_nxt+1),difsec,secint,tn_curmo,1)
+        call timeliper_array(gswm_nmidi_un(lon0:lon1,lat0:lat1, ! cur. month
+     |    mon_cur,ihr_cur+1),gswm_nmidi_un(lon0:lon1,lat0:lat1,mon_cur,
+     |    ihr_nxt+1),difsec,secint,un_curmo,1)
+        call timeliper_array(gswm_nmidi_vn(lon0:lon1,lat0:lat1, ! cur. month
+     |    mon_cur,ihr_cur+1),gswm_nmidi_vn(lon0:lon1,lat0:lat1,mon_cur,
+     |    ihr_nxt+1),difsec,secint,vn_curmo,1)
+        call timeliper_array(gswm_nmidi_z(lon0:lon1,lat0:lat1, ! next month
+     |    mon_nxt,ihr_cur+1),gswm_nmidi_z(lon0:lon1,lat0:lat1,mon_nxt,
+     |    ihr_nxt+1),difsec,secint,z_nxtmo,1)
+        call timeliper_array(gswm_nmidi_tn(lon0:lon1,lat0:lat1, ! next month
+     |    mon_nxt,ihr_cur+1),gswm_nmidi_tn(lon0:lon1,lat0:lat1,mon_nxt,
+     |    ihr_nxt+1),difsec,secint,tn_nxtmo,1)
+        call timeliper_array(gswm_nmidi_un(lon0:lon1,lat0:lat1, ! next month
+     |    mon_nxt,ihr_cur+1),gswm_nmidi_un(lon0:lon1,lat0:lat1,mon_nxt,
+     |    ihr_nxt+1),difsec,secint,un_nxtmo,1)
+        call timeliper_array(gswm_nmidi_vn(lon0:lon1,lat0:lat1, ! next month
+     |    mon_nxt,ihr_cur+1),gswm_nmidi_vn(lon0:lon1,lat0:lat1,mon_nxt,
+     |    ihr_nxt+1),difsec,secint,vn_nxtmo,1)
       endif  
 !
 ! Interpolate to modelday (iday)
@@ -1057,32 +1309,45 @@
         call timeliper_array(vn_curmo,vn_nxtmo,difday,dayint,
      |           vn_tmp,1)
       elseif(nointp == 1) then    ! no interpolation same day as current month
-        znmidi_gswm(3:74,:)  = z_curmo
-	tnnmidi_gswm(3:74,:) = tn_curmo
-	unnmidi_gswm(3:74,:) = un_curmo
-	vnnmidi_gswm(3:74,:) = vn_curmo
+        znmidi_gswm (lon0:lon1,lat0:lat1) = z_curmo
+	tnnmidi_gswm(lon0:lon1,lat0:lat1) = tn_curmo
+	unnmidi_gswm(lon0:lon1,lat0:lat1) = un_curmo
+	vnnmidi_gswm(lon0:lon1,lat0:lat1) = vn_curmo
 	goto 30
       elseif(nointp == 2) then    ! no interpolation same day as next month
-        znmidi_gswm(3:74,:)  = z_nxtmo
-	tnnmidi_gswm(3:74,:) = tn_nxtmo
-	unnmidi_gswm(3:74,:) = un_nxtmo
-	vnnmidi_gswm(3:74,:) = vn_nxtmo
+        znmidi_gswm (lon0:lon1,lat0:lat1) = z_nxtmo
+	tnnmidi_gswm(lon0:lon1,lat0:lat1) = tn_nxtmo
+	unnmidi_gswm(lon0:lon1,lat0:lat1) = un_nxtmo
+	vnnmidi_gswm(lon0:lon1,lat0:lat1) = vn_nxtmo
 	goto 30
       endif
 !
-      znmidi_gswm(3:74,:)  =  z_tmp
-      tnnmidi_gswm(3:74,:) = tn_tmp
-      unnmidi_gswm(3:74,:) = un_tmp
-      vnnmidi_gswm(3:74,:) = vn_tmp
-! periodic points
- 30   znmidi_gswm(1:2,:)   = z_tmp(71:72,:)
-      tnnmidi_gswm(1:2,:)  = tn_tmp(71:72,:)
-      unnmidi_gswm(1:2,:)  = un_tmp(71:72,:)
-      vnnmidi_gswm(1:2,:)  = vn_tmp(71:72,:)
-      znmidi_gswm(75:76,:) = z_tmp(1:2,:)
-      tnnmidi_gswm(75:76,:)= tn_tmp(1:2,:)
-      unnmidi_gswm(75:76,:)= un_tmp(1:2,:)
-      vnnmidi_gswm(75:76,:)= vn_tmp(1:2,:)
+      znmidi_gswm (lon0:lon1,lat0:lat1) =  z_tmp
+      tnnmidi_gswm(lon0:lon1,lat0:lat1) = tn_tmp
+      unnmidi_gswm(lon0:lon1,lat0:lat1) = un_tmp
+      vnnmidi_gswm(lon0:lon1,lat0:lat1) = vn_tmp
+   30 continue
+!      
+! do mpi periodic points exchange for gswm with f2d(:) 
+! Moved here from sub getgswm* because mpi necessary when f2d data
+!  is allocated only for task-local subdomain block.
+! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
+
+#ifdef MPI
+      call mp_periodic_f2d(znmidi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(tnnmidi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(unnmidi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(vnnmidi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+# else
+      set_periodic_f2d(znmidi_gswm)
+      set_periodic_f2d(tnnmidi_gswm)
+      set_periodic_f2d(unnmidi_gswm)
+      set_periodic_f2d(vnnmidi_gswm)
+#endif 
 !      
       if (iprint > 0) then
         write(6,"('GSWM nonmigrating diurnal tidal pertubation ',
@@ -1102,20 +1367,30 @@
 ! interpolated to the modelday
 !
       use hist_module,only: modeltime
+#ifdef MPI
+      use mpi_module,only: mp_periodic_f2d
+#endif
 !
 ! Args:
       integer,intent(in) :: iyear,iday,iutsec,iprint
 !
 ! Local:
       integer :: i,j,ndmon_nl(13),ndmon_lp(13),nonleap,
-     |   mon_cur,mon_nxt,ihr_cur,ihr_nxt,nointp=0
+     |   mon_cur,mon_nxt,ihr_cur,ihr_nxt,nointp=0,
+     |   lonbeg,lonend
       real :: difsec,difday,sec,secint,dayint,
-     |   z_curmo(nlon,nlat)=0.,z_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   tn_curmo(nlon,nlat)=0.,tn_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   un_curmo(nlon,nlat)=0.,un_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   vn_curmo(nlon,nlat)=0.,vn_nxtmo(nlon,nlat)=0.,	! UT interpolation
-     |   z_tmp(nlon,nlat)=0.,tn_tmp(nlon,nlat)=0.,	! tmp 
-     |   un_tmp(nlon,nlat)=0.,vn_tmp(nlon,nlat)=0.	! tmp 
+     |   z_curmo(lon0:lon1,lat0:lat1),
+     |   z_nxtmo(lon0:lon1,lat0:lat1),       ! UT interpolation
+     |   tn_curmo(lon0:lon1,lat0:lat1),
+     |   tn_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   un_curmo(lon0:lon1,lat0:lat1),
+     |   un_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   vn_curmo(lon0:lon1,lat0:lat1),
+     |   vn_nxtmo(lon0:lon1,lat0:lat1),      ! UT interpolation
+     |   z_tmp(lon0:lon1,lat0:lat1),
+     |   tn_tmp(lon0:lon1,lat0:lat1),	     ! tmp 
+     |   un_tmp(lon0:lon1,lat0:lat1),
+     |   vn_tmp(lon0:lon1,lat0:lat1)	     ! tmp 
 
 !   
 ! Data: GSWM data given at the middle of each month 
@@ -1166,42 +1441,50 @@
 ! Interpolate to modeltime iutsec for each month: mon_cur mon_nxt
       
       if (iutsec==0) then      ! no interpolation
-        z_curmo(:,:)  = gswm_nmisdi_z(:,:,mon_cur,ihr_cur+1)  ! current month
-        tn_curmo(:,:) = gswm_nmisdi_tn(:,:,mon_cur,ihr_cur+1)
-        un_curmo(:,:) = gswm_nmisdi_un(:,:,mon_cur,ihr_cur+1)
-        vn_curmo(:,:) = gswm_nmisdi_vn(:,:,mon_cur,ihr_cur+1)
-        z_nxtmo(:,:)  = gswm_nmisdi_z(:,:,mon_nxt,ihr_cur+1)  ! next month
-        tn_nxtmo(:,:) = gswm_nmisdi_tn(:,:,mon_nxt,ihr_cur+1)
-        un_nxtmo(:,:) = gswm_nmisdi_un(:,:,mon_nxt,ihr_cur+1)
-        vn_nxtmo(:,:) = gswm_nmisdi_vn(:,:,mon_nxt,ihr_cur+1)
+        z_curmo(:,:)  = gswm_nmisdi_z (lon0:lon1,lat0:lat1,  ! current month
+     |     mon_cur,ihr_cur+1)
+        tn_curmo(:,:) = gswm_nmisdi_tn(lon0:lon1,lat0:lat1,
+     |     mon_cur,ihr_cur+1)
+        un_curmo(:,:) = gswm_nmisdi_un(lon0:lon1,lat0:lat1,
+     |     mon_cur,ihr_cur+1)
+        vn_curmo(:,:) = gswm_nmisdi_vn(lon0:lon1,lat0:lat1,
+     |     mon_cur,ihr_cur+1)
+        z_nxtmo(:,:)  = gswm_nmisdi_z (lon0:lon1,lat0:lat1,  ! next month
+     |     mon_nxt,ihr_cur+1)
+        tn_nxtmo(:,:) = gswm_nmisdi_tn(lon0:lon1,lat0:lat1,
+     |     mon_nxt,ihr_cur+1)
+        un_nxtmo(:,:) = gswm_nmisdi_un(lon0:lon1,lat0:lat1,
+     |     mon_nxt,ihr_cur+1)
+        vn_nxtmo(:,:) = gswm_nmisdi_vn(lon0:lon1,lat0:lat1,
+     |     mon_nxt,ihr_cur+1)
       else
         difsec = 60.*60. ! difference in sec between ihr_cur and ihr_nxt
         secint = float(modeltime(3)*60 + modeltime(4))	! interpolation time [sec]
 	
-        call timeliper_array(gswm_nmisdi_z(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_nmisdi_z(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,z_curmo,1)
-        call timeliper_array(gswm_nmisdi_tn(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_nmisdi_tn(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,tn_curmo,1)
-        call timeliper_array(gswm_nmisdi_un(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_nmisdi_un(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,un_curmo,1)
-        call timeliper_array(gswm_nmisdi_vn(:,:,mon_cur,ihr_cur+1), ! cur. month
-     |    gswm_nmisdi_vn(:,:,mon_cur,ihr_nxt+1),difsec,
-     |    secint,vn_curmo,1)
-        call timeliper_array(gswm_nmisdi_z(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_nmisdi_z(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,z_nxtmo,1)
-        call timeliper_array(gswm_nmisdi_tn(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_nmisdi_tn(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,tn_nxtmo,1)
-        call timeliper_array(gswm_nmisdi_un(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_nmisdi_un(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,un_nxtmo,1)
-        call timeliper_array(gswm_nmisdi_vn(:,:,mon_nxt,ihr_cur+1), ! next month
-     |    gswm_nmisdi_vn(:,:,mon_nxt,ihr_nxt+1),difsec,
-     |    secint,vn_nxtmo,1)
+        call timeliper_array(gswm_nmisdi_z(lon0:lon1,lat0:lat1, ! cur. month
+     |   mon_cur,ihr_cur+1),gswm_nmisdi_z(lon0:lon1,lat0:lat1,mon_cur,
+     |   ihr_nxt+1),difsec,secint,z_curmo,1)
+        call timeliper_array(gswm_nmisdi_tn(lon0:lon1,lat0:lat1, ! cur. month
+     |   mon_cur,ihr_cur+1),gswm_nmisdi_tn(lon0:lon1,lat0:lat1,mon_cur,
+     |   ihr_nxt+1),difsec,secint,tn_curmo,1)
+        call timeliper_array(gswm_nmisdi_un(lon0:lon1,lat0:lat1, ! cur. month
+     |   mon_cur,ihr_cur+1),gswm_nmisdi_un(lon0:lon1,lat0:lat1,mon_cur,
+     |   ihr_nxt+1),difsec,secint,un_curmo,1)
+        call timeliper_array(gswm_nmisdi_vn(lon0:lon1,lat0:lat1, ! cur. month
+     |   mon_cur,ihr_cur+1),gswm_nmisdi_vn(lon0:lon1,lat0:lat1,mon_cur,
+     |   ihr_nxt+1),difsec,secint,vn_curmo,1)
+        call timeliper_array(gswm_nmisdi_z(lon0:lon1,lat0:lat1, ! next month
+     |   mon_nxt,ihr_cur+1),gswm_nmisdi_z(lon0:lon1,lat0:lat1,mon_nxt,
+     |   ihr_nxt+1),difsec,secint,z_nxtmo,1)
+        call timeliper_array(gswm_nmisdi_tn(lon0:lon1,lat0:lat1, ! next month
+     |   mon_nxt,ihr_cur+1),gswm_nmisdi_tn(lon0:lon1,lat0:lat1,mon_nxt,
+     |   ihr_nxt+1),difsec,secint,tn_nxtmo,1)
+        call timeliper_array(gswm_nmisdi_un(lon0:lon1,lat0:lat1, ! next month
+     |   mon_nxt,ihr_cur+1),gswm_nmisdi_un(lon0:lon1,lat0:lat1,mon_nxt,
+     |   ihr_nxt+1),difsec,secint,un_nxtmo,1)
+        call timeliper_array(gswm_nmisdi_vn(lon0:lon1,lat0:lat1, ! next month
+     |   mon_nxt,ihr_cur+1),gswm_nmisdi_vn(lon0:lon1,lat0:lat1,mon_nxt,
+     |   ihr_nxt+1),difsec,secint,vn_nxtmo,1)
       endif  
 !
 ! Interpolate to modelday (iday)
@@ -1241,33 +1524,46 @@
         call timeliper_array(vn_curmo,vn_nxtmo,difday,dayint,
      |           vn_tmp,1)
       elseif(nointp == 1) then    ! no interpolation same day as current month
-        znmisdi_gswm(3:74,:)  = z_curmo
-	tnnmisdi_gswm(3:74,:) = tn_curmo
-	unnmisdi_gswm(3:74,:) = un_curmo
-	vnnmisdi_gswm(3:74,:) = vn_curmo
+        znmisdi_gswm (lon0:lon1,lat0:lat1) = z_curmo
+	tnnmisdi_gswm(lon0:lon1,lat0:lat1) = tn_curmo
+	unnmisdi_gswm(lon0:lon1,lat0:lat1) = un_curmo
+	vnnmisdi_gswm(lon0:lon1,lat0:lat1) = vn_curmo
 	goto 30
       elseif(nointp == 2) then    ! no interpolation same day as next month
-        znmisdi_gswm(3:74,:)  = z_nxtmo
-	tnnmisdi_gswm(3:74,:) = tn_nxtmo
-	unnmisdi_gswm(3:74,:) = un_nxtmo
-	vnnmisdi_gswm(3:74,:) = vn_nxtmo
+        znmisdi_gswm (lon0:lon1,lat0:lat1) = z_nxtmo
+	tnnmisdi_gswm(lon0:lon1,lat0:lat1) = tn_nxtmo
+	unnmisdi_gswm(lon0:lon1,lat0:lat1) = un_nxtmo
+	vnnmisdi_gswm(lon0:lon1,lat0:lat1) = vn_nxtmo
 	goto 30
       endif
 !
-      znmisdi_gswm(3:74,:)  =  z_tmp
-      tnnmisdi_gswm(3:74,:) = tn_tmp
-      unnmisdi_gswm(3:74,:) = un_tmp
-      vnnmisdi_gswm(3:74,:) = vn_tmp
-! periodic points
- 30   znmisdi_gswm(1:2,:)   = z_tmp(71:72,:)
-      tnnmisdi_gswm(1:2,:)  = tn_tmp(71:72,:)
-      unnmisdi_gswm(1:2,:)  = un_tmp(71:72,:)
-      vnnmisdi_gswm(1:2,:)  = vn_tmp(71:72,:)
-      znmisdi_gswm(75:76,:) = z_tmp(1:2,:)
-      tnnmisdi_gswm(75:76,:)= tn_tmp(1:2,:)
-      unnmisdi_gswm(75:76,:)= un_tmp(1:2,:)
-      vnnmisdi_gswm(75:76,:)= vn_tmp(1:2,:)
+      znmisdi_gswm (lon0:lon1,lat0:lat1) =  z_tmp
+      tnnmisdi_gswm(lon0:lon1,lat0:lat1) = tn_tmp
+      unnmisdi_gswm(lon0:lon1,lat0:lat1) = un_tmp
+      vnnmisdi_gswm(lon0:lon1,lat0:lat1) = vn_tmp
+   30 continue
 !      
+! do mpi periodic points exchange for gswm with f2d(:) 
+! Moved here from sub getgswm* because mpi necessary when f2d data
+!  is allocated only for task-local subdomain block.
+! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
+
+#ifdef MPI
+      call mp_periodic_f2d(znmisdi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(tnnmisdi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(unnmisdi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(vnnmisdi_gswm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+# else
+      set_periodic_f2d(znmisdi_gswm)
+      set_periodic_f2d(tnnmisdi_gswm)
+      set_periodic_f2d(unnmisdi_gswm)
+      set_periodic_f2d(vnnmisdi_gswm)
+#endif 
+!
       if (iprint > 0) then
         write(6,"('GSWM nonmigrating semidiurnal tidal pertubation ',
      |    'interpolated to date and time')")
@@ -1288,8 +1584,9 @@ c   fout is defined at difint
 c
 ! Args:
       integer,intent(in) :: iprnt
-      real,intent(in)  :: difd1d2,difint,d1(nlon,nlat),d2(nlon,nlat)
-      real,intent(out) :: fout(nlon,nlat)
+      real,intent(in)  :: difd1d2,difint,d1(lon0:lon1,lat0:lat1),
+     |   d2(lon0:lon1,lat0:lat1)
+      real,intent(out) :: fout(lon0:lon1,lat0:lat1)
 !
 ! Local:
       integer :: i,j
@@ -1307,12 +1604,24 @@ c
 !  fout = (d2-d1)*frac0 + d1 - (d2-d1)*difd1d2_inv*x(d1)
 ! (d2-d1)*difd1d2_inv*x(d1) = 0 since x(d1) = 0
       
-      do i = 1,nlon
-        do j = 1,nlat
+      do i = lon0,lon1
+        do j = lat0,lat1
           fout(i,j) = (d2(i,j)-d1(i,j))*frac0 + d1(i,j)
 	enddo
       enddo
       
       end subroutine timeliper_array
+!-----------------------------------------------------------------------
+      subroutine set_periodic_f2d(f)
+!
+! Set periodic points for all f2d fields (serial or non-mpi only):
+!
+      real,intent(inout) :: f(nlonp4,nlat)
+
+! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
+      f(1:2,:)              = f(nlonp4-3:nlonp4-2,:)
+      f(nlonp4-1:nlonp4,:)  = f(3:4,:)
+      
+      end subroutine set_periodic_f2d
       
       end module gswm_module

@@ -1,33 +1,34 @@
 !
-! Include the option of setting the lower boundary by using GSWM output
-! this affects subroutine addiag
-!
-!
       subroutine advance
 !
 ! Advance the model nstep time steps.
 !
       use fields_module
       use hist_module,only: nstep,modeltime,nsource
+      use heelis_module,only: heelis,colath
+      use weimer_module,only: weimer01
       use input_module,only: start,step,iaurora=>aurora,idynamo=>dynamo,
-     |  f107,f107a,ctpoten,power,calendar_advance
+     |  f107,f107a,ctpoten,power,calendar_advance,ntimes_ctpoten,
+     |  ctpoten_time,ntimes_power,power_time,potential_model
       use init_module,only: istep,uthr,iter,secs,iday,iyear,igetgpi,
      |  igetgswmdi,igetgswmsdi,igetgswmnmidi,igetgswmnmisdi
-      use cons_module,only: dt,re,cs,racs,kut
+      use cons_module,only: dt,re,cs,racs,kut,ylatm,rtd
       use filter_module,only: filter
       use qrj_module,only: init_sflux
       use magfield_module,only: sunloc
       use efield_module,only: efield
-      use aurora_module,only: aurora_cons
+      use aurora_module,only: aurora_cons,cusp2d,drzl2d,alfa2d,nflx2d
       use hdif_module,only: hdif1,hdif2
       use timing_module
-      use dynamo_module,only: prep_dynamo,dynamo
-      use dynamo_old_module,only: prep_dynamo_old,dynamo_old
+      use dynamo_module,only: prep_dynamo,prep_dynamo_dyn0,dynamo,
+     |  nodynamo,phihm,nmlat0
+      use dynamo_old_module,only: prep_dynamo_old,dynamo_old,
+     |  phihm_old=>phihm
       use gpi_module,only: rdgpi,getgpi
       use gswm_module,only: rdgswmdi,rdgswmsdi,rdgswmnmidi,
      |  rdgswmnmisdi,getgswmdi,getgswmsdi,getgswmnmidi,
      |  getgswmnmisdi
-      use params_module,only: nlon,nlat,nmlev
+      use params_module,only: nlonp4,nlat
 !
 ! Timing stats from mpi module:
       use mpi_module,only: 
@@ -43,6 +44,7 @@
      |  rtcmp_scatterlons_f3d ,
      |  rtcmp_periodic_f4d    ,
      |  rtcmp_periodic_f3d    ,
+     |  rtcmp_periodic_f2d    ,
      |  rtcmp_dynpot
 #ifdef MPI
       use mpi_module,only: 
@@ -172,6 +174,14 @@
       call sunloc(iday,secs) ! locate sun's longitude
       if (debug) write(6,"('advance after sunloc')")
 !
+! Interpolate power and/or ctpoten to current model time, if time-dependent
+! values were read from input:
+      if (ntimes_ctpoten > 0) 
+     |  call set_index(ctpoten_time,ntimes_ctpoten,nsecs,ctpoten,
+     |    'ctpoten')
+      if (ntimes_power > 0) 
+     |  call set_index(power_time,ntimes_power,nsecs,power,'power')
+!
 ! Get gpi data if necessary:
       if (igetgpi > 0) then
         if (istep==1) call rdgpi ! read gpi data
@@ -222,17 +232,16 @@
             write(6,"('Step ',i6,' of ',i6,' mtime=',2i4,2i3,
      |        ' rtc secs/step=',f6.2,' elapsed mins=',f8.2)") 
      |        istep,nstep,modeltime,rtc_elapstep,rtc_elapsteps/60.
-            if (igetgpi > 0) write(6,"('gpi: f107=',f7.2,' f107a=',f7.2,
-     |        ' ctpoten=',f7.2,' power=',f7.2)") 
-     |        f107,f107a,ctpoten,power
           else
             write(6,"('Step ',i6,' of ',i6,' mtime=',2i4,2i3,
      |        ' secs/step=',f6.2,' elapsed mins=',f8.2)")
      |        istep,nstep,modeltime,elapsed_step,elapsed_steps/60.
-            if (igetgpi > 0) write(6,"('gpi: f107=',f7.2,' f107a=',f7.2,
-     |        ' ctpoten=',f7.2,' power=',f7.2)") 
-     |        f107,f107a,ctpoten,power
           endif
+          if (igetgpi > 0) write(6,"('gpi: f107=',f7.2,' f107a=',f7.2,
+     |      ' ctpoten=',f7.2,' power=',f7.2)") 
+     |      f107,f107a,ctpoten,power
+          if (ntimes_ctpoten > 0.or.ntimes_power > 0) 
+     |      write(6,"('ctpoten=',f8.2,' power=',f8.2)") ctpoten,power
         endif
       endif
 !
@@ -386,6 +395,27 @@
      |    f10.2)") istep,tsec
       endif
 !
+! Dynamo calls Heelis (heelis.F), Weimer (wei01gcm.F), or neither
+!   for high latitude electric potential, according to user-provided
+!   "model_potential".
+! Get high latitude (Heelis or other) colatitudes, NH pfrac, and poten phihm.
+!  If Weimer is used, then theta0,phid etc is changed before use in aurora
+!   in dynamics.
+!
+      if (potential_model == 'WEIMER') then
+        call weimer01
+      elseif (potential_model == 'HEELIS') then
+        call heelis
+      else  !  potential_model='NONE'
+        do j=1,nmlat0
+          do i=1,nmlonp1
+	    phihm(i,j) = 0.
+	    phihm_old(i,j) = 0.
+          enddo ! i=1,nmlonp1
+        enddo ! j=1,nmlat0
+        call colath
+      endif
+!
 ! Model dynamics. Sub dynamics calls physics, chemistry, and dynamics
 ! routines for current time step:
 !
@@ -398,9 +428,20 @@
      |    f10.2)") istep,tsec
       endif
 !
-! Call dynamo if namelist input flag is set:
+! Save Cusp, drizzle, alfa and nflux to secondary history to plot later
+      call addfsech_ij ('CUSP','2D CUSP','0-1',cusp2d,1,nlonp4,
+     |  1,nlat)
+      call addfsech_ij ('DRIZZLE','2D DRIZZLE','0-1',drzl2d,1,
+     |  nlonp4,1,nlat)
+      call addfsech_ij ('ALFA','2D ALFA','keV',alfa2d,1,
+     |  nlonp4,1,nlat)
+      call addfsech_ij ('NFLUX','2D NFLUX','#/cm3?',nflx2d,1,
+     |  nlonp4,1,nlat)
 !
-      if (idynamo > 0) then
+! Call dynamo if namelist input flag is set:
+! am_11/03 if dynamo = 0 need zpoten3d for subroutine threed
+!
+      if (idynamo >= 0) then
         if (do_rtc) call timer(rtc_dynamo,tsec,'begin')
 !
 ! Prepare inputs to dynamo, and gather them to the root task:
@@ -416,6 +457,11 @@
      |      hall   (levd0,lond0,latd0),     ! from lamdas.F
      |      1,nlevp1,lon0,lon1,lat0,lat1)
             if (debug) write(6,"('advance after prep_dynamo_old')")
+        else if (idynamo==0) then
+          call prep_dynamo_dyn0(
+     |      z      (levd0,lond0,latd0,itp),
+     |      1,nlevp1,lon0,lon1,lat0,lat1)
+            if (debug) write(6,"('advance after prep_dynamo_dyn0')")
         else
           call prep_dynamo(
      |      tn     (levd0,lond0,latd0,itp),
@@ -439,6 +485,12 @@
           if (idynamo==1) then
             call dynamo_old
             if (debug) write(6,"('advance after dynamo_old')")
+!
+! Call only part of the new dynamo to get the high-lat potential into E
+! fields if idynamo = 0  (high lat potential can be Heelis, Weimer, or None)
+          else if (idynamo==0) then ! no dynamo
+            call nodynamo
+            if (debug) write(6,"('advance after nodynamo')")
           else
             call dynamo
             if (debug) write(6,"('advance after dynamo')")
@@ -595,6 +647,8 @@
      |    rtcmp_scatterlons
         write(6,"('Total rtc secs in mp_scatterlons_f3d = ',f8.2)") 
      |    rtcmp_scatterlons_f3d
+        write(6,"('Total rtc secs in mp_periodic_f2d    = ',f8.2)")
+     |    rtcmp_periodic_f2d
         write(6,"('Total rtc secs in mp_periodic_f3d    = ',f8.2)") 
      |    rtcmp_periodic_f3d
         write(6,"('Total rtc secs in mp_periodic_f4d    = ',f8.2)") 
@@ -663,3 +717,80 @@
      |   e12.4)") idayprev,iyearprev,iday,iyear,sfeps
       endif
       end subroutine advance_day
+!-----------------------------------------------------------------------
+      subroutine set_index(rindex,ntimes,msecs,outindex,name)
+!
+! User has provided time-dependent ctpoten (ctpoten_time) and/or
+!   power (power_time) via namelist input. This routine interpolates
+!   these inputs to the current model time msecs, returning outindex.
+! This routine is called separately (from advance) for ctpoten and power,
+!   (i.e., rindex will be either ctpoten_time or power_time from input).
+! Note times in seconds are 8-byte integers.
+!
+      use params_module,only: 
+     |  mxind_time ! max number of time-dependent solar index points
+      implicit none
+!
+! Args:
+      real,intent(in) :: 
+     |  rindex(4,mxind_time) ! user input times and values (day,hour,min,value)
+      integer,intent(in) :: 
+     |  ntimes  ! number of valid time/values in rindex(:,1:ntimes)
+      integer(kind=8),intent(in) ::
+     |  msecs   ! current model time in seconds
+      real,intent(out) :: outindex ! output interpolated value
+      character(len=*),intent(in) :: name
+!
+! Local:
+      integer :: i
+      integer(kind=8) :: nsec0,nsec1
+!
+! External:
+      integer(kind=8),external :: mtime_to_nsec
+      real,external :: finterp_bigints
+!
+! If model time is beyond last rindex time, use last rindex time:
+      nsec1 = mtime_to_nsec(int(rindex(1:3,ntimes)))
+      if (msecs > nsec1) then
+        outindex = rindex(4,ntimes)
+        goto 100
+      endif 
+!
+! Bracket model time:
+      do i=1,ntimes-1
+        nsec0 = mtime_to_nsec(int(rindex(1:3,i)))
+        nsec1 = mtime_to_nsec(int(rindex(1:3,i+1)))
+!
+! If model time is at a provided time, interpolation is not necessary:
+        if (nsec0 == msecs) then
+          outindex = rindex(4,i)
+          goto 100
+        endif
+        if (nsec1 == msecs) then
+          outindex = rindex(4,i+1)
+          goto 100
+        endif
+!
+! Interpolate to model time msecs:
+        if (msecs >= nsec0 .and. msecs <= nsec1) then
+          outindex = finterp_bigints(rindex(4,i),rindex(4,i+1),nsec0,
+     |      nsec1,msecs)
+          goto 100
+        endif
+      enddo ! i=1,ntimes-1
+!
+! Error if model time could not be bracketed. This should not happen,
+! but you never know...
+      write(6,"(/,'>>> set_index: could not bracket model time ',
+     |  i10)") msecs
+      write(6,"('ntimes=',i3)") ntimes
+      do i=1,ntimes
+        write(6,"('  i=',i3,' ntimes=',i3,' day,hr,min=',3f7.2,
+     |    ' value=',e12.4)") i,ntimes,rindex(1:3,i),rindex(4,i)
+      enddo
+      stop 'set_index'
+!
+! Report to stdout:
+ 100  continue
+!     write(6,"('set_index: ',a,' = ',e12.4)") name,outindex
+      end subroutine set_index

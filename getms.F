@@ -79,7 +79,7 @@ c B. Foster 2/95
 !
 #include "mpif.h"
       if (mytid /= 0) goto 100
-      write(6,"('getms: MPI master task: mspath = ',a)") trim(mspath) 
+!     write(6,"('getms: MPI master task: mspath = ',a)") trim(mspath) 
 #endif 
 c
 c If any of the first 3 arguments have zero length, stop with error msg:
@@ -111,7 +111,7 @@ c
       endif
 #if (MSS == 0)
       call get_diskfile(diskfile,tmpdir) 
-      return
+      goto 100
 #endif
 c
 c Construct full tmp path with file name (tmpfile = tmpdir/diskfile, if

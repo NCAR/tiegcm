@@ -1,45 +1,43 @@
 !
-      subroutine heelis(colatc,pfrac,phihm,nmlat0,nmlon0,nmlat,nmlon,
-     |  nmlonp1)
+      module heelis_module
+!
+! Module used to calculcate the Heelis model potential in both hemispheres
+! Byimf, Ctpoten and Power at a minimum using paramaters from aurora_cons
+!
+      use params_module,only: nmlat,nmlonp1,nmlon,nmlonp1
+      use dynamo_module,only: nmlat0,pfrac,phihm
+      implicit none
+      contains 
+!-----------------------------------------------------------------------
+      subroutine heelis
 !
 ! Heelis driver, called from sub dynamo (dynamo module, dynamo.F).
-! These routines return colatc, pfrac, and phihm to the dynamo.
+! These routines return pfrac and phihm to the dynamo.
 !   (see argument descriptions below). 
-! This is not a module because of difficulties with circular dependencies
-!   with the dynamo. Instead, fields are passed through argument lists.
 !
       implicit none
 !
 ! Args:
-! colatc: Colatitudes of northern geomagnetic grid points: 
 ! pfrac:  Fractional presence of dynamo equation given critical 
-!           colatitudes crit(2).
+!           convection colatitudes crit(2).
 ! phihm:  Heelis potential in magnetic coordinates (single level).
 !
-      integer,intent(in) :: nmlat0,nmlon0,nmlon,nmlat,nmlonp1
-      real,dimension(nmlonp1,nmlat0),intent(out) :: colatc
-      real,dimension(nmlon0,nmlat0),intent(out) :: pfrac
-      real,dimension(nmlonp1,nmlat),intent(out) :: phihm
+! Calculate pfrac fractional presence of dynamo equation using critical
+!  convection colatitudes crit(2).  (crit is in cons module)
 !
-! Define colatc with northern auroral colatitudes corresponding to
-! each northern geomagnetic grid point. Also calculate fractional 
-! presence of dynamo equation given critical colatitudes crit(2).
-! (crit is in cons module)
-!
-      call colath(colatc,pfrac,nmlat0,nmlon0,nmlonp1)
+      call colath
 !
 ! Calculate  the heelis potential phihm in geomagnetic coordinates:
 ! (potm calls sub flwv32)
 !
-      call potm(phihm,nmlon,nmlonp1,nmlat)
+      call potm
 !
       end subroutine heelis
 !-----------------------------------------------------------------------
-      subroutine colath(colatc,pfrac,nmlat0,nmlon0,nmlonp1)
+      subroutine colath
 !
-! Define colatc with northern auroral circle coordinates, corresponding 
-! to each northern geomagnetic grid point. Also calculate fractional 
-! presence of dynamo equation given critical colatitudes crit(2).
+! Calculate pfrac fractional presence of dynamo equation using critical
+!  convection colatitudes crit(2).  (crit is in cons module)
 !
       use aurora_module,only: dskofc, offc ! see aurora.F
       use magfield_module,only: sunlons 
@@ -49,9 +47,10 @@
       implicit none
 !
 ! Args:
-      integer,intent(in) :: nmlat0,nmlon0,nmlonp1
-      real,intent(out) :: colatc(nmlonp1,nmlat0)
-      real,intent(out) :: pfrac(nmlon0,nmlat0)
+!     integer,intent(in) :: nmlat0,nmlonp1
+!     real,intent(out) :: pfrac(nmlonp1,nmlat0)
+
+      real,dimension(nmlonp1,nmlat0) :: colatc
 !
 ! Local:
       integer :: i,j
@@ -62,8 +61,12 @@
       cosofc = cos(ofdc)
       sinofc = sin(ofdc)
       aslonc = asin(dskofc(2)/ofdc)
+! TEMP
+!       write (6,"(1x,'COLATH: crit1,2 dskofc offc deg=',6e12.4)")
+!    |   crit(1)*rtd,crit(2)*rtd,dskofc(1)*rtd,offc(1)*rtd,
+!    |   dskofc(2)*rtd,offc(2)*rtd
 !
-! Define colatc with colatitude values:
+! Define colatc with northern convection circle coordinates
 ! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc)
 !
       do j=1,nmlat0
@@ -75,17 +78,17 @@
         enddo ! i=1,nmlonp1
 
 !       write(6,"('colath: j=',i3,' colatc(:,j)=',/,(6e12.4))")
-!    |    j,colatc(:,j)
+!    |    j,colatc(:,j)*rtd
 
 !
 ! Calculate fractional presence of dynamo equation at each northern
-! hemisphere geomagnetic grid point. Output in pfrac(nmlon0,nmlat0)
+! hemisphere geomagnetic grid point. Output in pfrac(nmlonp1,nmlat0)
 !
-        do i=1,nmlon0
+	do i=1,nmlonp1
           pfrac(i,j) = (colatc(i,j)-crit(1))/(crit(2)-crit(1))
           if (pfrac(i,j) < 0.) pfrac(i,j) = 0.
           if (pfrac(i,j) >= 1.) pfrac(i,j) = 1.
-        enddo ! i=1,nmlon0
+	enddo ! i=1,nmlonp1
 
 !       write(6,"('colath: j=',i3,' pfrac(:,j)=',/,(6e12.4))")
 !    |    j,pfrac(:,j)
@@ -94,7 +97,7 @@
 
       end subroutine colath
 !-----------------------------------------------------------------------
-      subroutine potm(phihm,nmlon,nmlonp1,nmlat)
+      subroutine potm
       use magfield_module,only: sunlons 
       use cons_module,only: 
      |  ylonm,ylatm, ! magnetic grid lons, lats
@@ -102,10 +105,6 @@
       implicit none
 !
 ! Calculate heelis potential in geomagnetic coordinates.
-!
-! Args:
-      integer,intent(in) :: nmlon,nmlonp1,nmlat
-      real,intent(out) :: phihm(nmlonp1,nmlat)
 !
 ! Local:
       integer :: i,j
@@ -302,3 +301,5 @@
 !    |  mlat,ihem,poten   
 
       end subroutine flwv32
+!-----------------------------------------------------------------------
+      end module heelis_module

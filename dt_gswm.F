@@ -84,9 +84,19 @@
 ! First latitude scan for dt:
       do lat=lat0,lat1
       
-      do k=lev0,lev1
-     	tnlbc_diag(k,:) = tnlbc(:,lat)
-      enddo
+! am 5/27/03
+! test for blob in meridional zonal mean winds if this is caused by the
+! inconsistent LBC of vertical winds and Tn
+!
+      do i=lon0,lon1
+        tnlbc(i,lat) = tn(2,i,lat)
+      enddo ! i=lon0,lon1
+!      
+! end  am 5/27/03  
+!   
+!      do k=lev0,lev1
+!     	tnlbc_diag(k,:) = tnlbc(:,lat)
+!      enddo
 !      call addfsech('TNLBC','TNLBC','[K]',tnlbc_diag,lon0,lon1,
 !     |    nk,nkm1,lat)
 !

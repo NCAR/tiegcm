@@ -87,12 +87,17 @@
       do lat=lat0,lat1
 !
 ! Lower boundary condition:
+! am 5/27/03
+! test for blob in meridional zonal mean winds if this is caused by the
+! inconsistent LBC of vertical winds and Tn
+!
       do i=lon0,lon1
-        tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound    ! semidiurnal tide
-        tnlbc(i,lat) = tnlbc(i,lat)+
-     |    real(tb2(lat)*bnd2(i)*expt2) ! diurnal tide
-        tnlbc(i,lat) = tnlbc(i,lat)+
-     |    real(tba(lat)*bnda(i)*expta) ! annual tide
+!        tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound    ! semidiurnal tide
+!        tnlbc(i,lat) = tnlbc(i,lat)+
+!     |    real(tb2(lat)*bnd2(i)*expt2) ! diurnal tide
+!        tnlbc(i,lat) = tnlbc(i,lat)+
+!     |    real(tba(lat)*bnda(i)*expta) ! annual tide
+        tnlbc(i,lat) = tn(2,i,lat)
       enddo ! i=lon0,lon1
 
 !     write(6,"('dt: lat=',i3,' tnlbc=',/,(6e12.4))") lat,tnlbc(:,lat)

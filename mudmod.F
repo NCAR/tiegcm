@@ -22,10 +22,10 @@ c                       MUDPACK version 5.0
 ! Use-associate coefficients cee and cofum from dynamo module in tiegcm1 
 ! (dynamo.F).
 !
-      subroutine mudmod(pe,jntl)
+      subroutine mudmod(pe,jntl,ier)
       use dynamo_module,only: cee
       implicit none
-      integer jntl
+      integer jntl,ier  ! output: not converged ier < 0
 c
 c     set grid size params
 c
@@ -189,6 +189,8 @@ c
      +/' intl = ',i2, ' method = ',i2,' iguess = ',i2)
       
       call mud2cm(iprm,fprm,work,rhs,phi,mgopt,ierror)
+      ier = ierror ! ier < 0 not converged
+      if(ier < 0 )  goto 108
       
 !     write (*,107) ierror
   107 format(' ierror = ',i2)
@@ -205,6 +207,7 @@ C
 	END DO
       END DO
       
+  108 continue   
       end
 C-------------------------------------------------------------------
       subroutine mud2cm(iparm,fparm,work,rhs,phi,mgopt,

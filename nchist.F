@@ -654,6 +654,7 @@
       use hist_module,only: h,nsource,nsecsource
       use init_module,only: glon,glat,plev,gmlon,gmlat,pmlev
       use cons_module,only: pi,ylatmagphr,ylonmagphr
+      use input_module,only: potential_model
 !
 ! Args:
       integer,intent(in) :: ncid
@@ -1301,6 +1302,15 @@
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nc_put_att_int ',
      |    'for delhist_mins global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+!
+! Potential model used (weimer, heelis, or none):
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"potential_model",
+     |  len_trim(potential_model),trim(potential_model))
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error return from nf_put_att_text ',
+     |    'for potential_model global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !

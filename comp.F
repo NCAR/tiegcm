@@ -5,7 +5,7 @@
 !
 ! Advance major species O2 and O.
 !
-      use params_module,only: dz,nlonp4,nlat
+      use params_module,only: dz,nlonp4,nlat,dlat
       use input_module,only: difhor
       use init_module,only: glat
       use cons_module,only: pi,hor,dtr,rmassinv_o2,rmassinv_o1,
@@ -100,7 +100,7 @@
 ! (dfactor was in sub dfact in earlier versions)
 !
       if (difhor > 0) then
-        rlat = (glat(1)+(lat-1)*5.)*dtr
+        rlat = (glat(1)+(lat-1)*dlat)*dtr
         if (abs(rlat)-pi/4.5 >= 0.) then
           dfactor(:) = hor(lat)+1.
         else

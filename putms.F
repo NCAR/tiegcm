@@ -113,6 +113,16 @@ c If tmpdir does not exist, create it with global permissions:
 c
 #if defined(OSF1) 
 !
+! 12/9/02 bf: Currently, the only OSF system being used is lemieux.psc.edu.
+! Lemieux's frontend archive storage is a machine named golem.psc.edu. The
+! Below links and rcp attempt do not work from the lemieux compute nodes,
+! and may be using unnecessary wallclock time, so am not using them. Storage
+! of history output to golem will be via rcp in the job script after model 
+! execution (e.g, see job script tiegcm1lx.job)
+! 
+      write(6,"('PUTMS returning because this is an OSF job.')")
+      return
+!
 ! Inquire(file=name,exist=exists) statement under OSF always returns false
 ! if "name" is a directory (presumably it must be a file name). Therefore,
 ! to test existence of the directory tmpdir we attempt to create a file in 
@@ -231,6 +241,14 @@ c
           write(6,"('Mss retention period is ',i5,' days.')") msreten
         endif
 #endif
+!
+! MSS not set -- try rcp. For now, assume target is golem.psc.edu
+!   (for job running on lemieux.psc.edu)
+!
+#else
+        write(6,"('putms calling rcpfile: dskfile=',a)")
+     |    trim(dskfile)
+        call rcpfile(dskfile,'golem.psc.edu:'//trim(dskfile))
 #endif
       endif ! lmspath > 0
 c

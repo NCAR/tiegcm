@@ -102,8 +102,16 @@
 !
 ! phim: Single level dynamo potential in geomagnetic coordinates, as
 !   output by PDE solver mud (formerly in dynphi.h):
+! The dynamo is symmetric about the magnetic equator, but the high latitude
+!  is anti-symmetric in both hemispheres.  However, since Mudpack uses the
+!  NH potential pattern, then the SH potential pattern must be added
+!  back into the 2-D phim before the call threed, and before it is
+!  transformed to geographic coordinates.
+! jn index for NH part of potential (nmlat down to ~nmlat0)
+! jp index for NH pfrac (nmlat0 down to 1), the fraction of the dynamo
 !
       real,dimension(nmlonp1,nmlat) :: phim
+      integer :: jn,jp
 !
 ! Inputs to the dynamo on the geographic grid. (formerly in dynamo.h):
       real,dimension(nlonp4,nlat,nlevp1) ::
@@ -144,6 +152,14 @@
 !
 ! 3-d geopotential heights in geomagnetic space (was zzm in dynphi.h)
       real,dimension(nmlonp1,nmlat,-2:nlevp1) :: zpotenm3d
+!
+! For dot products:
+      real,parameter :: unitvm(nmlon)=1., unitv(nlon)=1.
+!
+! Electric potential from heelis or weimer:
+      real,dimension(nmlonp1,nmlat0) ::
+     |   pfrac, ! NH fraction of potential
+     |   phihm  ! potential in magnetic
       contains
 !-----------------------------------------------------------------------
       subroutine dynamo_old
@@ -154,9 +170,10 @@
 ! electron temperatures (> 5000 deg) after less than 6 hours model 
 ! time. This is executed by master task only. 
 !
-      use cons_module,only: pi_dyn,dlonm,dlatm
+      use cons_module,only: pi_dyn,dlonm,dlatm,ylatm,rtd
       use magfield_module,only: im,jm,dim,djm
       use fields_module,only: dynpot,phim3d
+      use input_module,only: potential_model
 !
 ! Local:
       real :: array(-15:nmlon0+16,nmlat0),cs(nmlat0)
@@ -164,11 +181,6 @@
       integer :: i,j,jj,jjj,j0,jntl,k
       real :: sym,wk(nmlon0,3)
       real,dimension(nmlonp1,nlevp1) :: phim_plt, phihm_plt
-!
-! Heelis potential, and related:
-      real,dimension(nmlonp1,nmlat0)  :: colatc ! colatitudes
-      real,dimension(nmlon0 ,nmlat0)  :: pfrac  ! fraction of potential
-      real,dimension(nmlonp1,nmlat)   :: phihm  ! potential in magnetic
       real,dimension(nlonp1,0:nlatp1) :: phih   ! potential in geographic
 !
 !     write(6,"('Enter dynamo.')")
@@ -272,21 +284,25 @@
         c0(i,nmlat0,10) = 1.
       enddo
 !
-! Get heelis colatitudes, pfrac, and potential phihm:
-!
-      call heelis(colatc,pfrac,phihm,nmlat0,nmlon0,nmlat,nmlon,nmlonp1)
-!
 ! Save single-level heelis potential:
-      do j=1,nmlat
-        do i=1,nmlonp1
-          phihm_plt(i,:) = phihm(i,j)
-        enddo ! i=1,nmlonp1
+!     do j=1,nmlat
+!       do i=1,nmlonp1
+!         phihm_plt(i,:) = phihm(i,j)
+!       enddo ! i=1,nmlonp1
 !       call addfsech_ik('PHIHM'  ,' ',' ',phihm_plt,
 !    |    1,nmlonp1,nmlev,nmlev-1,j)
-      enddo ! j=1,nmlat
+!     enddo ! j=1,nmlat
 !
 ! Modify stencils and RHS so that heelis potential is inserted at
-! high latitude.
+! high latitude. The SH high lat potential will be added back later.
+!  pfrac = fraction of dynamo in solution in the NH. = 1 low lat, = 0 hi lat
+!    cons_module: crit(1)=15, crit(2)=30 deg colats, or hi-lat > 75 deg,
+!      dynamo < 60 deg, and combination between 60-75 mag lat.
+! The dynamo is symmetric about the magnetic equator, but the high latitude
+!  is anti-symmetric in both hemispheres.  However, since Mudpack uses the
+!  NH potential pattern, then the SH potential pattern must be added
+!  back into the 2-D phim before the call threed, and before it is
+!  transformed to geographic coordinates.
 !
       ncc = 1
       nmaglon = nmlon0
@@ -305,25 +321,44 @@
       call mud(rim,jntl,-1)
 !
 ! Copy output potential from rim to phim(nmlonp1,nmlat):
-      do j=1,nmlat
+!  Correct the SH potential for the anti-symmetric imposed NH high lat poten
+!  pfrac = fraction of dynamo in solution in the NH. = 1 low lat, = 0 hi lat
+!    cons_module: crit(1)=15, crit(2)=30 deg colats, or hi-lat > 75 deg,
+!      dynamo < 60 deg, and combination between 60-75 mag lat.
+!  ie, need (1.-pfrac(i,nmlat0)) at phim(i,1), etc
+! jn index for NH part of potential (nmlat down to ~nmlat0)
+! jp index for NH pfrac (nmlat0 down to 1)
+      do j=1,nmlat0
+        jn = nmlat - j + 1
+        jp = nmlat0 - j + 1
+        do i=1,nmlonp1
+          phim(i,j)=rim(i,j,1)+(1.-pfrac(i,jp))*(phihm(i,j)-phihm(i,jn))
+        enddo ! i=1,nmlonp1
+!       write(6,"('dynamo: j=',3i3,' rim phim s,n,frac=',/,(5e12.4))")
+!    |    j,jn,jp,(rim(i,j,1),phim(i,j),phihm(i,j),phihm(i,jn),
+!    |    pfrac(i,jp),i=1,nmlonp1,20)
+      enddo ! j=1,nmlat0
+      do j=nmlat0+1,nmlat
+        jp = j - nmlat0
         do i=1,nmlonp1
           phim(i,j) = rim(i,j,1)
         enddo ! i=1,nmlonp1
-!       write(6,"('dynamo: j=',i3,' phim(:,j)=',/,(6e12.4))")
-!    |    j,phim(:,j)
+!       write(6,"('dynamo: j=',2i3,' phim n,frac=',/,(6e12.4))")
+!    |    j,jp,(phim(i,j),phihm(i,j),pfrac(i,jp),i=1,nmlonp1,20)
       enddo ! j=1,nmlat
 !
-! Save single-level potential to secondary histories (mag grid):
+! Save correct single-level potential to secondary histories (mag grid):
 !     do j=1,nmlat
 !       do i=1,nmlonp1
-!         phim_plt(i,:) = phim(i,j)
+!         phim_plt(i,:) = phimsn(i,j)
 !       enddo ! i=1,nmlonp1
 !       call addfsech_ik('PHIM'  ,' ',' ',phim_plt,
 !    |    1,nmlonp1,nmlev,nmlev-1,j)
 !     enddo ! j=1,nmlat
 !
-! Generate 3-d potential array phim3d in geomagnetic coordinates from
-!   2-d mudpack output phim. phim3d is in fields.F.
+! Call threed to generate 3-d potential array in geomagnetic coordinates
+!   from 2-d solver output phim, corrected for the SH potential.
+!   phim3d(nmlonp1,nmlat,-2:nlevp1) is in fields.F.
 !
       call threed
 !
@@ -866,7 +901,7 @@
 !
 ! Local:
       integer :: k,kk,i,ii,j,jj,n,lat,iprint
-      real,parameter :: unitv(nmlon)=1.
+      real :: fmin,fmax
       real,parameter ::
      |  rl1=5.e5,
      |  rl2=3.e5,
@@ -1067,6 +1102,14 @@
         ssigma1(1,nlatp1,k) = 
      |    (9.*sddot(nlon,unitv,ssigma1(1,nlat  ,k))-
      |        sddot(nlon,unitv,ssigma1(1,nlat-1,k)))/(8.*float(nlon))
+
+!       write(6,"(/,'k=',i3,' nlon=',i3,' ssigma1(1,1,k)=',e12.4,
+!    |    ' (1,2,k)=',e12.4)") k,nlon,ssigma1(1,1,k),ssigma1(1,2,k)
+!       write(6,"('k=',i3,' nlat=',i3,' ssigma1(1,nlat,k)=',e12.4,
+!    |    ' (1,nlat-1,k)=',e12.4)") k,nlat,
+!    |    ssigma1(1,nlat,k),ssigma1(1,nlat-1,k)
+!       write(6,"('ssigma1(1,0,k)=',e12.4,' ssigma1(1,nlatp1,k)=',
+!    |    e12.4)") ssigma1(1,0,k),ssigma1(1,nlatp1,k)
 
         ssigma2(1,0,k) = 
      |    (9.*sddot(nlon,unitv,ssigma2(1,1,k))-
@@ -1276,28 +1319,17 @@
 ! Save fields on magnetic grid to secondary history:
 !
 ! Periodic point:
-!       do k=-2,nlev
-!         sigma_pedm (nmlonp1,k)   = sigma_pedm (1,k)
-!         sigma_hallm(nmlonp1,k)   = sigma_hallm(1,k)
-!         wnvelm     (nmlonp1,k)   = wnvelm     (1,k)
-!         vxbm       (nmlonp1,k)   = vxbm       (1,k)
-!         zpotenm    (nmlonp1,k)   = zpotenm    (1,k)
-!         adotvm     (nmlonp1,k,1) = adotvm     (1,k,1)
-!         adotvm     (nmlonp1,k,2) = adotvm     (1,k,2)
-!         axvm       (nmlonp1,k,1) = axvm       (1,k,1)
-!         axvm       (nmlonp1,k,2) = axvm       (1,k,2)
-!       enddo ! k=-2,nlev
-!
-!       call addfsech_ik('SIGMA1M'  ,' ',' ',sigma_pedm,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('SIGMA2M'  ,' ',' ',sigma_hallm,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('WNVELM'   ,' ',' ',wnvelm,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('VXBM'     ,' ',' ',vxbm,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('ZPOTENM'  ,' ',' ',zpotenm,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
+        do k=-2,nlev
+          sigma_pedm (nmlonp1,k)   = sigma_pedm (1,k)
+          sigma_hallm(nmlonp1,k)   = sigma_hallm(1,k)
+          wnvelm     (nmlonp1,k)   = wnvelm     (1,k)
+          vxbm       (nmlonp1,k)   = vxbm       (1,k)
+          zpotenm    (nmlonp1,k)   = zpotenm    (1,k)
+          adotvm     (nmlonp1,k,1) = adotvm     (1,k,1)
+          adotvm     (nmlonp1,k,2) = adotvm     (1,k,2)
+          axvm       (nmlonp1,k,1) = axvm       (1,k,1)
+          axvm       (nmlonp1,k,2) = axvm       (1,k,2)
+        enddo ! k=-2,nlev
 !
 ! Magnetic field line integrals:
 ! Sub fieldline_integrals calculates PDE coefficients
@@ -1317,11 +1349,11 @@
 !
 ! Polar values for Z:
         zpotenm3d(1,1,k) = 
-     |    (4.*sddot(nmlon,unitv,zpotenm3d(1,2,k))-
-     |        sddot(nmlon,unitv,zpotenm3d(1,3,k)))/(3.*float(nmlon))
+     |    (4.*sddot(nmlon,unitvm,zpotenm3d(1,2,k))-
+     |        sddot(nmlon,unitvm,zpotenm3d(1,3,k)))/(3.*float(nmlon))
         zpotenm3d(1,nmlat,k) = 
-     |    (4.*sddot(nmlon,unitv,zpotenm3d(1,nmlat-1,k))-
-     |        sddot(nmlon,unitv,zpotenm3d(1,nmlat-2,k)))/
+     |    (4.*sddot(nmlon,unitvm,zpotenm3d(1,nmlat-1,k))-
+     |        sddot(nmlon,unitvm,zpotenm3d(1,nmlat-2,k)))/
      |    (3.*float(nmlon))
 !
 ! Extend Z over longitude:
@@ -1358,14 +1390,14 @@
       enddo ! j=2,nmlath
 !
 ! Pole:
-      zigm11(1,nmlat) = (4.*sddot(nmlon,unitv,zigm11(1,nmlat-1))-
-     |  sddot(nmlon,unitv,zigm11(1,nmlat-2)))/(3.*float(nmlon))
-      zigmc (1,nmlat) = (4.*sddot(nmlon,unitv,zigmc (1,nmlat-1))-
-     |  sddot(nmlon,unitv,zigmc (1,nmlat-2)))/(3.*float(nmlon))
-      zigm2 (1,nmlat) = (4.*sddot(nmlon,unitv,zigm2 (1,nmlat-1))-
-     |  sddot(nmlon,unitv,zigm2 (1,nmlat-2)))/(3.*float(nmlon))
-      zigm22(1,nmlat) = (4.*sddot(nmlon,unitv,zigm22(1,nmlat-1))-
-     |  sddot(nmlon,unitv,zigm22(1,nmlat-2)))/(3.*float(nmlon))
+      zigm11(1,nmlat) = (4.*sddot(nmlon,unitvm,zigm11(1,nmlat-1))-
+     |  sddot(nmlon,unitvm,zigm11(1,nmlat-2)))/(3.*float(nmlon))
+      zigmc (1,nmlat) = (4.*sddot(nmlon,unitvm,zigmc (1,nmlat-1))-
+     |  sddot(nmlon,unitvm,zigmc (1,nmlat-2)))/(3.*float(nmlon))
+      zigm2 (1,nmlat) = (4.*sddot(nmlon,unitvm,zigm2 (1,nmlat-1))-
+     |  sddot(nmlon,unitvm,zigm2 (1,nmlat-2)))/(3.*float(nmlon))
+      zigm22(1,nmlat) = (4.*sddot(nmlon,unitvm,zigm22(1,nmlat-1))-
+     |  sddot(nmlon,unitvm,zigm22(1,nmlat-2)))/(3.*float(nmlon))
 !
       do i=1,nmlon                    !  i=1,80               ! do 47
         ii = 1+mod(i-1+nmlon/2,nmlon) ! ii=41:80,1:40
@@ -1462,7 +1494,7 @@
 !
 ! Now deal with nmlat:
       rhs(1,nmlath) = -2./float(nmlon)*
-     |  sddot(nmlon,unitv,rim(1,nmlat-1,2))/tint1(nmlat-1)
+     |  sddot(nmlon,unitvm,rim(1,nmlat-1,2))/tint1(nmlat-1)
 !
 ! Equator:
       do i=1,nmlon
@@ -1861,7 +1893,6 @@
       real :: cosltm,pi,phimn,phims
       real,dimension(nmlonp1) :: thetam,pslot,qslot
       integer,dimension(nmlonp1) :: islot,jslot
-      real,parameter :: unitv(nmlon)=1.
 !
 ! Externals:
       real,external :: sddot ! in util.F
@@ -1902,8 +1933,8 @@
       enddo ! k=-2,nlevp1
 !
 ! Calculate value of phim3d at geomagnetic poles:
-      phims = sddot(nmlon,unitv,phim(1,1))/float(nmlon)
-      phimn = sddot(nmlon,unitv,phim(1,nmlat))/float(nmlon)
+      phims = sddot(nmlon,unitvm,phim(1,1))/float(nmlon)
+      phimn = sddot(nmlon,unitvm,phim(1,nmlat))/float(nmlon)
       do k = -2,nlevp1
         do i = 1,nmlon
           phim3d(i,1,k) = phims

@@ -15,13 +15,13 @@ c     the common subroutine file "mudcom.f" is attached to the end
 ! 5/02 B. Foster:
 ! Use-associate coefficients from dynamo module in tiegcm1 (dynamo.F).
 !
-      subroutine mud(pe,jntl,isolve)
+      subroutine mud(pe,jntl,isolve,ier)
 !
       use dynamo_old_module,only: nc_old,cee0
       use dynamo_module,only: nc,cee
 !
       implicit none
-      integer jntl
+      integer jntl,ier ! output: not converged ier < 0
       integer,intent(in) :: isolve
 c
 c     set grid size params
@@ -193,6 +193,9 @@ c
   106 format(/' approximation call to mud2cr',
      +/' intl = ',i2, ' method = ',i2,' iguess = ',i2)
       call mud2cr(iprm,fprm,work,rhs,phi,mgopt,ierror,isolve)
+      ier = ierror ! < 0 not converged
+      if(ier < 0 )  goto 108
+      
 !     write (*,107) ierror
   107 format(' ierror = ',i2)
       if (ierror.gt.0) call exit(0)
@@ -207,15 +210,9 @@ C
 	  PE(I,JJJ) = PHI(I,J)
 	END DO
       END DO
-C     ITRANS = 0
-C     CALL EZCNTR(PE(1,JMX0),IMX0,JMX0)
-C     ITRANS = 1
-C     CALL SET(.05,.95,.05,.95,-1.,1.,-1.,1.,1)
-C     CALL CONREC(PE(1,JMX0),IMX0,IMX0,JMX0,0.,0.,0.,1,0,-1430B)
-C     CALL FRAME
-C     ITRANS = 0
-C     CALL EZCNTR(PE(1,JMX0),IMX0,JMX0)
-C     ITRANS = 1
+      
+  108 continue
+  
       end
 !-----------------------------------------------------------------------
 c
@@ -424,7 +421,10 @@ c
       iparm(17) = itero
       if (tolmax.gt.0.0) then   ! check for convergence
 	fparm(6) = relmax
-	if (relmax.gt.tolmax) ierror = -1   ! flag convergenc failure
+	if (relmax.gt.tolmax) then
+	   write(6,*) "no convergence with mud"
+	   ierror = -1   ! flag convergenc failure
+        end if
       end if
       return
       end

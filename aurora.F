@@ -167,6 +167,9 @@
      |  flux(nlonp4), flux2(nlonp4), flux3(nlonp4), ! particle flux
      |  drizl(nlonp4),cusp(nlonp4),                 ! polar drizzle and cusp
      |  qteaur(nlonp4,nlat)                         ! for electron temperature
+! TEMP
+      real :: cusp2d(nlonp4,nlat),drzl2d(nlonp4,nlat),
+     |        alfa2d(nlonp4,nlat),nflx2d(nlonp4,nlat)
 !
 ! aureff = vertical profile for auroral heating efficiency (used by qjion)
 ! 
@@ -286,8 +289,12 @@
 !     alfa_2 = 1.2 + 0.095*plevel
       alfa0 = 0.5*(alfa_1+alfa_2)
       ralfa = (alfa_2-alfa_1) / (alfa_1+alfa_2+e)
-      roth = (12.18 - 0.89 * plevel) * 15.
-      rote = ( 2.62 - 0.55 * plevel) * 15.
+!
+! btf 1/22/04: correct rotation by removing the *15.:
+!     roth = (12.18 - 0.89 * plevel) * 15.
+!     rote = ( 2.62 - 0.55 * plevel) * 15.
+      roth = (12.18 - 0.89 * plevel)
+      rote = ( 2.62 - 0.55 * plevel)
       rroth = roth * dtr
       rrote = rote * dtr
       h0 = 0.5 * (h1 + h2) * dtr
@@ -447,6 +454,15 @@
 !
 ! Make alfa, flux, and drizzle:
       call aurora_heat(lat)
+
+! TEMP
+! Save aurora oval on exit to full arrays so can save later to secondary history
+      do i=lon0,lon1
+      cusp2d(i,lat)=cusp(i)
+      drzl2d(i,lat)=drizl(i)
+      alfa2d(i,lat)=alfa(i)
+      nflx2d(i,lat)=flux(i)
+      enddo
 !
 ! Auroral additions to ionization rates:
 ! Sub aurora_ions is a standalone subroutine, i.e., not in aurora_module.

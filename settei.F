@@ -565,13 +565,6 @@
 !
 ! Periodic points:
 !     call periodic_f2d(te_out(:,lon0:lon1),lon0,lon1,lev1-lev0+1)
-!
-! Te must be >= Tn:
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          if (te_out(k,i) < tn(k,i)) te_out(k,i) = tn(k,i)
-        enddo
-      enddo
 
 !     call addfsech('TE_SOLV',' ',' ',te_out(:,lon0:lon1),
 !    |  lon0,lon1,nk,nkm1,lat)
@@ -580,6 +573,15 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
           te_out(k,i) = te_out(k,i)**(2./7.)
+        enddo
+      enddo
+!
+! 10/21/03 btf: make this check after te*(2/7), rather than before.
+!
+! Te must be >= Tn:
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+          if (te_out(k,i) < tn(k,i)) te_out(k,i) = tn(k,i)
         enddo
       enddo
 !

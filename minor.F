@@ -6,7 +6,7 @@
 ! Advance minor species fcomp by one time step.
 ! This is called from comp_no and comp_n4s.
 !
-      use params_module,only: nlat,nlon,nlonp4
+      use params_module,only: nlat,nlon,nlonp4,dlat
       use bndry_module,only: b,fb ! b(nlonp4,2,2), fb(nlonp4,2)
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  boltz,p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
@@ -329,7 +329,7 @@
 ! (dfactor was in sub dfact in earlier versions)
 !
       if (difhor > 0) then
-        rlat = (glat(1)+(lat-1)*5.)*dtr
+        rlat = (glat(1)+(lat-1)*dlat)*dtr
         if (abs(rlat)-pi/4.5 >= 0.) then
           dfactor(:) = hor(lat)+1.
         else

@@ -122,40 +122,40 @@
 !
 ! Calculate exponentials
 !      
-      expt=cexp(ci*freq_semidi*dt*iter)
-      expt = cexp(ci*.5*freq_semidi*dt*iter)
-      expt = 1.
+      expt  = cexp(ci*freq_semidi*dt*iter)
+      expt2 = cexp(ci*.5*freq_semidi*dt*iter)
+      expta = 1.
 !
       if(igetgswmdi == 1.and.igetgswmsdi == 1) then
 	do j = lat0,lat1
 	  do i=lon0,lon1
 	    z(i,j) = zsdi_gswm(i,j)		  ! semidiurnal tide
 	    z(i,j) = z(i,j)+ zdi_gswm(i,j)	    ! diurnal tide
-	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expt) ! annual tide
+	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
 	  enddo
 	enddo
       elseif(igetgswmdi == 0.and.igetgswmsdi == 1) then
 	do j = lat0,lat1
 	  do i=lon0,lon1
 	    z(i,j) = zsdi_gswm(i,j)		  ! semidiurnal tide
-	    z(i,j) = z(i,j)+real(zb2(j)*bnd2(i)*expt)! diurnal tide
-	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expt) ! annual tide
+	    z(i,j) = z(i,j)+real(zb2(j)*bnd2(i)*expt2)! diurnal tide
+	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
 	  enddo
 	enddo
       elseif(igetgswmdi == 1.and.igetgswmsdi == 0) then
 	do j = lat0,lat1
 	  do i=lon0,lon1
-	    z(i,j) = real(zb(j)*bnd(i)*expt)	      ! semidiurnal tide
-	    z(i,j) = z(i,j)+ zdi_gswm(i,j)	      ! diurnal tide
-	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expt) ! annual tide
+	    z(i,j) = real(zb(j)*bnd(i)*expt)	       ! semidiurnal tide
+	    z(i,j) = z(i,j)+ zdi_gswm(i,j)	       ! diurnal tide
+	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
 	  enddo
 	enddo
       else
         do j = lat0,lat1
           do i=lon0,lon1
-            z(i,j) = real(zb(j)*bnd(i)*expt)	      ! semidiurnal tide
-            z(i,j) = z(i,j)+real(zb2(j)*bnd2(i)*expt) ! diurnal tide
-            z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expt) ! annual tide
+            z(i,j) = real(zb(j)*bnd(i)*expt)	       ! semidiurnal tide
+            z(i,j) = z(i,j)+real(zb2(j)*bnd2(i)*expt2) ! diurnal tide
+            z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
           enddo
         enddo
       endif

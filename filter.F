@@ -5,7 +5,7 @@
 !
 ! Coefficients and factors for fft.
 ! Setfft is called once per run from init (see init_module.F)
-!   Setfft calls set99, which returns trigs and ifix. 
+!   Setfft calls set99, which returns trigs and ifax. 
 !   Trigs and ifax are used by fftrans (see util.F) calls by filter.f 
 !     and filter2.f.
 !
@@ -14,7 +14,6 @@
 !
       contains
 !-----------------------------------------------------------------------
-!
       subroutine filter(f,lev0,lev1,kutj,lat)
 !
 ! Remove longitudinal waves of prognostic variables with global fft.
@@ -79,30 +78,30 @@
       real,intent(inout) :: f(nlonp4,lev0:lev1)
 !
 ! Local:
-      integer,parameter :: nlond4 = nlon/4
+      integer,parameter :: nlond4 = nlon/4, nlond4_5 = 72/4
       integer :: nn(nlond4),nlevs,k,i
-      integer :: nn_5(72/4) ! for 5 deg in lon
+      integer :: nn_5(nlond4_5) ! for 5 deg in lon
       real :: fx(nlonp4,2*(lev1-lev0+1)),
      |        wfft((nlonp4+1)*2*(lev1-lev0+1))
 !
 ! For 5 degree resolution: 
       nn_5=(/45,20,11, 7, 5,4,3,2,2,1,1,1,1,1,1,1,1,1/) ! 5 deg grid
+!     nn_5=(/90,40,22,14,10,8,6,4,2,1,1,1,1,1,1,1,1,1/) ! 5 deg grid
       if (dlon==5.0) then
         do i=1,nlond4
           nn(i)=nn_5(i)
         enddo
-      elseif (dlon==2.5) then ! 2.5 deg res
-        do i=1,nlond4
+!
+! For 2.5 degree grid:
+      elseif (dlon==2.5) then
+        do i=1,nlond4_5
           nn(i*2-1) = nn_5(i)
           nn(i*2) = nn_5(i)
         enddo
-!       write(6,"('filter2: nlon=',i3,' nlon/4=',i3,' nn=',/,
-!    |    (12i4))") nlon,nlon/4,nn
       else
         write(6,"('filter2: unsupported dlon=',f8.2)") dlon
         stop 'dlon'
       endif
-
 !
       nlevs = lev1-lev0+1
       if (kutj > nlat/2) return

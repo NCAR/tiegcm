@@ -249,9 +249,6 @@
 !
 ! Summation over wavelength:
       do l=l1,lmax     ! 16,59 (44 wavelengths)
-
-        if (debug) write(6,"('qrj: l=',i3,' lat=',i3)") l,lat
-
         sum1(:,:) = 0. ! sum(o2,o,n2)(sigma*chapman)
         sum2(:,:) = 0. ! sum(o2,o,n2)(sigma*psi/rmass)
         sum3(:,:) = 0. ! sum(o2,o,n2,n4s)(sigmas)
@@ -394,7 +391,7 @@
 !
 ! Summation over wave length:
       sum1(:,:) = 0.
-      do l=1,l1-1
+      do l=1,l1-1 ! 1->15
         do i=lon0,lon1
           do k=lev0,lev1
 !
@@ -522,8 +519,23 @@
         nn = n+15
         feuv(nn) = euvflx(n)*sfeps
       enddo
+!
+!     write(6,"('  n   wave1   wave2       sflux      ',
+!    |  'euvflx        fsrc        feuv')")
+!     do n=1,lmax                   ! 1->59
+!       if (n < l1) then            ! 1->15
+!         write(6,"(i3,2f8.2,e12.4,12x,e12.4,e12.4)") 
+!    |      n,wave1(n),wave2(n),sflux(n),fsrc(n),feuv(n)
+!       elseif (n < l1+neuv-1) then ! 16->52
+!         write(6,"(i3,2f8.2,e12.4,e12.4,12x,e12.4)") 
+!    |      n,wave1(n),wave2(n),sflux(n),euvflx(n-l1+1),feuv(n)
+!       else                        ! 53->59
+!         write(6,"(i3,2f8.2,e12.4,12x,12x,e12.4)") 
+!    |      n,wave1(n),wave2(n),sflux(n),feuv(n)
+!       endif 
+!     enddo
       end subroutine init_sflux
-!---------------------------------------------------------------
+!-----------------------------------------------------------------------
       subroutine init_qrj
 !
 ! Called once per run, from init_module.
@@ -871,11 +883,12 @@ c O2 -> O+
 !
 ! Args:
       real,intent(in) :: f107,f107a
-      real,intent(out) :: euvflx(37)
+      real,intent(out) :: euvflx(neuv)
 !
 ! Local:
       integer :: i
-      real :: AFAC(37),F74113(37),flxfac
+      real :: AFAC(neuv),F74113(neuv),flxfac
+      real :: afac_tmp(neuv),f74113_tmp(neuv)
 !
 ! F74113 reference spectrum (doubled below 150-250 A, tripled <150)
 ! Will be multiplied by 1.0E9 later
@@ -898,11 +911,20 @@ c O2 -> O+
      |   5.6750E-03,4.9833E-03,3.9417E-03,4.4167E-03,5.1833E-03,
      |   5.2833E-03,4.3750E-03/)
 !
+! 6/20/03 bf: Reverse order of F74113 and AFAC to correspond to descending
+! wavelength bins (as in wleuv1,2 and WAVEL,WAVES):
+      do i=1,neuv
+        afac_tmp(i) = afac(neuv-i+1)  
+        f74113_tmp(i) = f74113(neuv-i+1)  
+      enddo
+      afac = afac_tmp      ! whole array
+      f74113 = f74113_tmp
+!
 ! Loop through the wavelengths calculating the scaling factors and
 !   the resulting solar flux.
 ! The scaling factors are restricted to be greater than 0.8
 !
-      DO 50 I=1,37
+      DO 50 I=1,neuv
         FLXFAC=(1.0 + AFAC(I) * (0.5*(F107+F107A) - 80.0))
         IF(FLXFAC.LT.0.8) FLXFAC=0.8
         EUVFLX(I)=F74113(I) * FLXFAC * 1.0E9

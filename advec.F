@@ -5,7 +5,7 @@
 !
       use fields_module,only: un,vn,itp
       use cons_module,only: dlamda_2div3,dlamda_1div12,racs,
-     |  dphi_1div12,re_inv
+     |  dphi_1div12,dphi_2div3,re_inv
       use params_module,only: nlonp4
       implicit none
 !
@@ -67,8 +67,22 @@
       do i=lonbeg,lonend
         do k=lev0,lev1-1
 !
+! 2nd order finite difference in latitude (j+1,j-1):
+!
+! (10/21/03 btf: 2nd order diffs (next 2 statements) were missing 
+!    in tgcm13,14,15, and tiegcm1 until this date.)
+!
+! VBARP = (V(J+1)+V(J-1))/2
+          vbarp(k,i) = (vn(k,i,lat+1,itp)+
+     |                  vn(k,i,lat-1,itp))*0.5
+!
+! D2X = dphi_2div3*(X(J+1)-X(J-1))
+          d2x(k,i) = ((f(k,i,lat+1)-f(k,i,lat-1))*dphi_2div3)*
+     |      vbarp(k,i)
+!
+! Fourth order finite difference in latitude (j+2,j-2):
+!
 ! VBARP = (V(J+2)+V(J-2))/2 
-! (comment in tgcm15 apparently wrong: VBARP = (V(J+1)+V(J-1))/2)
           vbarp(k,i) = (vn(k,i,lat+2,itp)+
      |                  vn(k,i,lat-2,itp))*0.5
 !

@@ -14,11 +14,11 @@
       do lu=7,99
         inquire(lu,opened=isopen)
         if (.not.isopen) then
-          if (lureq(lu)<=0) then   ! do not use previously returned lu
+!         if (lureq(lu)<=0) then   ! do not use previously returned lu
             nextlu = lu
             lureq(lu) = lu
             return
-          endif
+!         endif
         endif
       enddo
       write(6,"(/'>>> nextlu: all logical units apparently in use')")
@@ -240,6 +240,20 @@
 !
       finterp = f0+(f1-f0)*float(isec-isec0)/float(isec1-isec0)
       end function finterp
+!-------------------------------------------------------------------
+      real function finterp_bigints(f0,f1,isec0,isec1,isec)
+!
+! Do linear interpolation between f0 (which is at isec0) and 
+! f1 (which is at isec1) to isec. Same as finterp except integer
+! parameters are 8-byte.
+!
+! Args:
+      real,intent(in) :: f0,f1
+      integer(kind=8),intent(in) :: isec0,isec1,isec
+!
+      finterp_bigints = 
+     |  f0+(f1-f0)*float(isec-isec0)/float(isec1-isec0)
+      end function finterp_bigints
 !-------------------------------------------------------------------
       real function sddot(n,x,y)
       implicit none
@@ -840,97 +854,6 @@
 #endif
       end subroutine gethostsname
 !-----------------------------------------------------------------------
-      logical function isadigit(s)
-      implicit none
-      character(len=1),intent(in) :: s
-      character(len=1) :: digits(10)=
-     +  (/'0','1','2','3','4','5','6','7','8','9'/)
-      integer :: i
-      isadigit = .false.
-      do i=1,10
-        if (s==digits(i)) then
-          isadigit = .true.
-          exit
-        endif
-      enddo
-      end function isadigit
-!-----------------------------------------------------------------------
-      integer function decode_int(str,sout)
-      implicit none
-!
-! Return integer decoded from digits in string str.
-! Only use digits from end of str. Also return string
-! sout, with integers replaced by dollar signs.
-!
-! Args:
-      character(len=*),intent(in) :: str
-      character(len=*),intent(out) :: sout
-!
-! Local:
-      character(len=len(str)) :: snum,s
-      character(len=8) :: format
-      integer :: i,ipos,slen
-!
-! External:
-      logical,external :: isadigit
-!
-      decode_int = -1
-      s = adjustl(str)
-      slen = len_trim(s)
-      if (slen>9999) then
-        write(6,"('>>> decode_int: string too long:',
-     +    ' slen=',i10)") slen
-        return
-      endif
-      ipos = 0
-      snum = ' '
-      sout = trim(s)
-      do i=slen,1,-1
-        if (.not.isadigit(s(i:i))) exit
-        ipos = ipos+1
-        snum(slen-ipos+1:slen-ipos+1) = s(i:i)
-        sout(i:i) = '$'
-      enddo
-      if (ipos==0) return
-      snum = adjustl(snum)
-      write(format,"('(i',i4,')')") len_trim(snum)
-!     read(trim(snum),format,err=100) decode_int ! IBM does not like this
-      read(snum,format,err=100) decode_int
-      return
- 100  write(6,"('>>> decode_int: error making integer from ',
-     +  'string: ',a)") trim(snum)
-      decode_int = -1
-      end function decode_int
-!-----------------------------------------------------------------------
-      subroutine encode_str(str,num)
-      implicit none
-!
-! Given str containing n characters '$', return
-! same string, but with the '$' replaced by num.
-!
-      character(len=*),intent(inout) :: str
-      character(len=len(str)) :: newstr
-      integer,intent(in) :: num
-      integer :: i,ipos,ndollar
-      character(len=16) :: format
-!
-      ndollar = 0
-      do i=1,len(str)
-        if (str(i:i)=='$') ndollar = ndollar+1
-      enddo
-      if (ndollar==0) return
-      newstr = str
-      write(format,"('(i',i4,'.',i4,')')") ndollar,ndollar
-      format = trim(adjustl(format))
-      ipos = index(str,'$')
-      write(newstr(ipos:ipos+ndollar-1),format,err=100) num
-      str = newstr
-      return
- 100  write(6,"('>>> encode_str: error writing integer ',
-     +  'num=',i12,' to string.')") num
-      return
-      end subroutine encode_str
-!-----------------------------------------------------------------------
       integer function strloc(strarray,nstr,str)
       implicit none
 !
@@ -1092,3 +1015,39 @@
 #endif
       endif
       end subroutine timer
+!-----------------------------------------------------------------------
+      subroutine rcpfile(source,target)
+!
+! Do remote copy of source to target.
+!
+      implicit none
+!
+! Args:
+      character(len=*),intent(in) :: source,target
+!
+! Local:
+      integer,parameter :: maxlen=1024
+      character(len=maxlen) :: command
+      integer :: len,ier
+!
+! External:
+      integer,external :: isystem
+!
+      len = len_trim(source)+len_trim(target)+5
+      if (len > maxlen) then
+        write(6,"(/,'>>> WARNING rcpfile: len(source)+len(target)+5=',
+     |    i6,' is > maxlen=',i6)") len,maxlen
+        write(6,"('Please increase maxlen in sub rcpfile to at least ',
+     |    i6,' -- no rcp done.')") len
+        return
+      endif
+      write(command,"('rcp ',a,' ',a)") trim(source),trim(target)
+      ier = isystem(command)
+      if (ier==0) then
+        write(6,"('rcpfile: successful rcp of ',a,' to ',a)")
+     |    trim(source),trim(target)
+      else
+        write(6,"('>>> rcpfile: Error from rcp of ',a,' to ',a)")
+     |    trim(source),trim(target)
+      endif
+      end subroutine rcpfile
