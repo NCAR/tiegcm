@@ -156,9 +156,9 @@
 !     call addfsech('XNMBARM' ,' ',' ',xnmbarm,i0,i1,nk,nkm1,lat)
 !     call addfsech('NPLUS'   ,' ',' ',nplus(:,i0:i1),i0,i1,nk,nkm1,lat)
 !     call addfsech('A_COEF'  ,' ',' ',a      ,i0,i1,nk,nkm1,lat)
-      call addfsech('B_COEF'  ,' ',' ',b      ,i0,i1,nk,nkm1,lat)
+!     call addfsech('B_COEF'  ,' ',' ',b      ,i0,i1,nk,nkm1,lat)
 !     call addfsech('C_COEF'  ,' ',' ',c      ,i0,i1,nk,nkm1,lat)
-      call addfsech('D_COEF'  ,' ',' ',d      ,i0,i1,nk,nkm1,lat)
+!     call addfsech('D_COEF'  ,' ',' ',d      ,i0,i1,nk,nkm1,lat)
 !     call addfsech('E_COEF'  ,' ',' ',e      ,i0,i1,nk,nkm1,lat)
 !     call addfsech('FG_COEF' ,' ',' ',fg     ,i0,i1,nk,nkm1,lat)
 !     call addfsech('H_COEF'  ,' ',' ',h      ,i0,i1,nk,nkm1,lat)
@@ -203,7 +203,7 @@
 ! not seen in any plots.
 !     call addfsech('NPLUSb' ,' ',' ',nplus(:,i0:i1),i0,i1,nk,nkm1,lat)
 !     call addfsech('N2P_ELD',' ',' ',n2p  (:,i0:i1),i0,i1,nk,nkm1,lat)
-      call addfsech('O2P_ELD',' ',' ',o2p  (:,i0:i1),i0,i1,nk,nkm1,lat)
+!     call addfsech('O2P_ELD',' ',' ',o2p  (:,i0:i1),i0,i1,nk,nkm1,lat)
 !     call addfsech('NOP_ELD',' ',' ',nop  (:,i0:i1),i0,i1,nk,nkm1,lat)
 !
 ! Transfer root to electrons output array:

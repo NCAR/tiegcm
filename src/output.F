@@ -28,7 +28,6 @@
      |  wrprim,  save_prim, newseries_prim,
      |  wrsech,  save_sech, newseries_sech
       integer :: icount
-      real :: elapsed
 !
 ! External:
       logical,external :: wrhist
@@ -42,18 +41,12 @@
 !
 ! Write primary history:
       if (wrprim) then
-        call start_timing(icount,'write primary history',0)
         call output_hist(save_prim,newseries_prim)
-        call end_timing(icount,elapsed,0)
-        elapsed_prim = elapsed_prim+elapsed
       endif
 !
 ! Write secondary history:
       if (wrsech) then
-        call start_timing(icount,'write secondary history',0)
         call output_sechist(save_sech,newseries_sech)
-        call end_timing(icount,elapsed,0)
-        elapsed_sech = elapsed_sech+elapsed
       endif
       end subroutine outhist
 !-----------------------------------------------------------------------

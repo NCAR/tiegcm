@@ -11,14 +11,16 @@
       use fields_module,only: itp
       use init_module,only: init,iyear
       use hist_module,only: nstep
+      use advance_module,only: advance
       use cons_module,only: init_cons
       use bndry_module,only: lowbound
       use qrj_module,only: init_sigmas,init_qrj,init_euvac
       use magfield_module,only: magfield
       use apex_module,only: apxparm
-      use timing_module
+      use timing_module,only: timer,timer_report,init_timer
+      use mpi_module,only: mytid,ntask
 #ifdef MPI
-      use mpi_module,only: mp_init,mp_close,mytid,ntask,mp_distribute
+      use mpi_module,only: mp_init,mp_close,mp_distribute
 #endif
 #ifdef OMP
 !     use omp_module,only: init_omp
@@ -27,17 +29,27 @@
 !
 ! Local:
       integer :: ier,icount_tgcm,icount_apex,nsecs
-      real :: elapsed,cpu1,cpu2
+      real :: cpu1,cpu2
       character(len=8) ::
      |  rundate,           ! current local date
      |  runtime            ! current local time
+      real ::
+     |  time0,     time1,
+     |  time0_apx, time1_apx,
+     |  time0_run, time1_run,
+     |  time0_init,time1_init
       real,external :: cputime  ! util.F
 !
 ! Report starting time and other info to stdout:
       call startup_message
 !
-! Initialize timing for entire run (see also start_timing below):
-      cpu1 = cputime()
+! Initialize timing for entire run:
+#ifndef IRIX
+      call cpu_time(cpu1)
+#endif
+!
+! Initialize timing (must be called after mp_init):
+      call init_timer
 !
 ! Get user input. If MPI job, init mpi and set up 2-d decomposition
 !   across tasks. Start timing contains an mpi_barrier, so must be
@@ -45,23 +57,19 @@
 !
 #ifdef MPI
       call mp_init
-      call start_timing(icount_tgcm,'total run',1)
+#endif
+!
+! Init timing for the run, get cwd, get user input,
+!   set up 2d decomposition.
+!
+      call timer(time0_run,time1_run,'RUN',0,0)    ! start run timing
+      call timer(time0_init,time1_init,'INIT',0,0) ! start init timing
       call getcwd(cwd)
       write(6,"('Current working directory (cwd) = ',a,/)") trim(cwd)
       call input(mytid,ntask) ! get user input (mpi)
       if (mytid==0) call init_dispose(dispose)
+#ifdef MPI
       call mp_distribute
-#else
-      call start_timing(icount_tgcm,'total run',1)
-      call getcwd(cwd)
-      write(6,"('Current working directory (cwd) = ',a,/)") trim(cwd)
-      call input(-1,0)    ! get user input (non-mpi)
-      call init_dispose(dispose)
-#endif
-!
-! Init threads if doing shared memory:
-#ifdef OMP
-      call init_omp
 #endif
 !
 ! Do initialization:
@@ -79,12 +87,8 @@
 !
 ! Call apex code if doing new dynamo (should eliminate some of the
 ! magfield calls if this is set).
-!     if (dynamo == 2) then
       if (dynamo > 0) then
-        call start_timing(icount_apex,'apxparm',1)
         call apxparm(real(iyear))
-        call end_timing(icount_apex,elapsed,1)
-        write(6,"('Elapsed secs for apxparm=',f6.3)") elapsed
       endif
 !
 ! Read magnetic data file and set magnetic field parameters:
@@ -95,44 +99,38 @@
 !
 ! Set lower boundaries:
       call lowbound
+      call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
 !
 ! Advance the model (timing in main time-step loop is done in advance):
       call advance
 !
-! Report timing stats:
-!
+! Report to stdout:
       write(6,"(' ')")
+#ifdef MPI
+      write(6,"('MPI run with ntask = ',i3)") ntask
+#endif
+      write(6,"('nstep=',i5,' step=',i5)") nstep,step
       nsecs = nstep*step
       write(6,"('Model simulation time = ',i8,' secs ',/,
-     |  '  (minutes=',f8.2,', hours=',f8.2,', days=',f6.2,')')") 
+     |  '  (minutes=',f8.2,', hours=',f8.2,', days=',f10.6,')')")
      |  nsecs,float(nsecs)/60.,float(nsecs)/3600.,
      |  float(nsecs)/(24.*3600.)
-      write(6,"('Elapsed secs for ',i6,' time-steps = ',f10.2,
-     |  ' (ave per step=',f6.2,')')") nstep,elapsed_steps,
-     |  elapsed_steps/real(nstep)
-#ifdef MPI
-      write(6,"('Elapsed secs for gather2root=',f10.2)") elapsed_mpi
-#endif
-      write(6,"('Elapsed secs for writing primary histories=',f10.2)")
-     |  elapsed_prim
-      write(6,"('Elapsed secs for writing secondary histories=',f10.2)")
-     |  elapsed_sech
-      call end_timing(icount_tgcm,elapsed,1)
+!
+! End timing:
+!
 #ifndef IRIX
       call cpu_time(cpu2)
-      write(6,"('Elapsed secs for run = ',f10.2,' (minutes=',f10.2,
-     |  ', hours=',f8.2,')')") elapsed,elapsed/60.,elapsed/3600.
       write(6,"('Cpu time for run = ',f10.2)") cpu2-cpu1
 #endif
-      write(6,"('Total elapsed minutes per simulated day = ',f8.2)")
-     |  (elapsed_steps/(float(nsecs)/(24.*3600.)))/60.
+      call timer(time0_run,time1_run,'RUN',1,0) ! end total run timing
 !
-! If MPI job, finalize mpi:
+! Finalize mpi:
 !
 #ifdef MPI
       call mp_close
-      write(6,"('MPI run with ntask = ',i3)") ntask
 #endif
+      call timer_report
+!
       call final_message
       write(6,"('NORMAL EXIT')")
       end program tgcm

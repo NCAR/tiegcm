@@ -42,3 +42,17 @@ DYNAMO <= 0 -> no dynamo, or
 DYNAMO >  0 -> dynamo ("new" only)
 
 tempdir can now be blank (which has same effect as tempdir==.).
+
+2/2/05: This is now a CVS working directory for project tiegcm,
+including scripts and src directories. Repository is /home/tgcm/cvs/tiegcm.
+
+Feb, 2005: Rewrote timing module, as in timegcm1.2. See timing.F, and
+calls in advance.F and dynamics.F.
+
+2/10/05: Copied updated scripts from ~foster/tgcm/scripts to ~foster/tgcmtiegcm/scripts.
+
+2/10-11/05: Verified that results are the same as 1.6: got 0 diffs between
+1.6 and 1.7 runs on the same platform, and near-zero (1.e-5) diffs between
+platforms.
+
+2/11/05: Committing to CVS repository, and tagging as tiegcm1.7.

@@ -1,5 +1,5 @@
 !
-      subroutine dynamics(istep,do_rtc)
+      subroutine dynamics(nstep,istep)
 !
 ! Call dynamics layer of the model for current time step.
 ! Routines that do not have to do message-passing are generally called
@@ -27,11 +27,13 @@
       use hdif_module,only: hdif3,hdif_bndlons,hdif_periodic
       use init_module,only: igetgswmdi,igetgswmsdi, ! GSWM input lower boundary
      |   igetgswmnmidi,igetgswmnmisdi
+      use timing_module,only: timer,timing
+      use advance_module,only: time2print
+!
       implicit none
 !
 ! Args:
-      integer,intent(in) :: istep
-      logical,intent(in) :: do_rtc
+      integer,intent(in) :: nstep,istep
 !
 ! VT vampir tracing:
 !
@@ -44,7 +46,7 @@
       integer :: i0,i1,nk,nkm1,nlats
       logical,parameter :: debug=.false. ! add prints to stdout
       logical,parameter :: diags=.false. ! put fields on sec hist
-      real :: time0,tsec,rtc0_qrj,rtc_qrj
+      real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor
 !
       if (debug) write(6,"(/,'Enter dynamics.')")
       i0=lon0 ; i1=lon1 ; nk=nlevp1 ; nkm1=nk-1 ! for addfsech
@@ -56,7 +58,6 @@
 ! Calculate specific heat and molecular viscosity.
 ! f4d itp fields are input, f3d fields are output.
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       do lat=lat0,lat1
         call cpktkm(
      |    tn(levd0,lond0,lat,itp), ! 4d input
@@ -68,11 +69,6 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after cpktkm')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for cpktkm=',f8.2)")
-     |    istep,tsec 
-      endif
       if (diags) then
         do lat=lat0,lat1
           call addfsech('CP' ,' ',' ',cp(:,i0:i1,lat),
@@ -87,7 +83,6 @@
 ! Calculate omega for vertical velocity:
 ! (latitude scan is inside swdot)
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       if (debug) write(6,"('dynamics before swdot')")
       call swdot(
      |  un(levd0,lond0,latd0,itp), ! un input
@@ -95,11 +90,6 @@
      |  w (levd0,lond0,latd0,itc), ! omega output
      |  1,nlevp1,lon0,lon1,lat0,lat1,lat0,lat1)
       if (debug) write(6,"('dynamics after swdot')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for swdot=',f8.2)")
-     |    istep,tsec 
-      endif
       if (diags) then
         do lat=lat0,lat1
           call addfsech('OMEGA' ,' ',' ',w(:,i0:i1,lat,itc),
@@ -109,7 +99,6 @@
 !
 ! Calculate ExB ion drift velocities from electric field:
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       call ionvel(
      |  z (levd0,lond0,latd0,itc), ! geopotential input
      |  ui(levd0,lond0,latd0),     ! U ion velocity output
@@ -117,11 +106,6 @@
      |  wi(levd0,lond0,latd0),     ! W ion velocity output
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after ionvel')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for ionvel=',f8.2)")
-     |    istep,tsec 
-      endif
       if (diags) then
         do lat=lat0,lat1
           call addfsech('UIVEL' ,' ',' ',ui(:,i0:i1,lat),
@@ -137,7 +121,6 @@
 ! Prognostics z,tn,o2,o1,barm are input, diagnostics vo2,vo1,vn2,
 !   sco2,sco1,scn2 are output.
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       do lat=lat0,lat1
         call chapman(
      |    z   (levd0,lond0,lat,itc), ! updated Z from addiag
@@ -154,11 +137,6 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after chapman')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for chapman=',f8.2)")
-     |    istep,tsec 
-      endif
       if (diags) then
         do lat=lat0,lat1
           call addfsech('SCO2' ,' ',' ',sco2(:,i0:i1,lat),
@@ -172,7 +150,6 @@
 !
 ! Calculate temperature dependent reaction rates (chemrates_module): 
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       do lat=lat0,lat1
         call chemrates_tdep(
      |    tn  (levd0,lond0,lat,itp),
@@ -183,18 +160,8 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo
       if (debug) write(6,"('dynamics after chemrates_tdep')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for chemrates=',
-     |    f8.2)") istep,tsec 
-      endif
 !
 ! Latitude scan for qrj, qinite, xray and aurora.
-!
-      if (do_rtc) then
-        call timer(time0,tsec,'begin')
-        rtc_qrj = 0.
-      endif
 !
 #ifdef VT
 !     code = 122 ; state = 'ions' ; activity='ModelCode'
@@ -203,11 +170,9 @@
       do lat=lat0,lat1
 !
 ! Calculate ionization and heating rates:
-! Note timer has barrier calls, and timing for qrj is
-!   inside j-loop.
 !
-        if (do_rtc) call timer(rtc0_qrj,tsec,'begin')
-!       if (debug) write(6,"('dynamics call qrj: lat=',i3)") lat
+        if (debug) write(6,"('dynamics call qrj: lat=',i3)") lat
+        call timer(time0,time1,'QRJ',0,0) ! start qrj timing for current lat
         call qrj(
      |    sco2(levd0,lond0,lat),
      |    sco1(levd0,lond0,lat),
@@ -219,11 +184,9 @@
      |    n4s (levd0,lond0,lat,itp),
      |    xnmbari(levd0,lond0,lat),
      |    1,nlevp1,lon0,lon1,lat)
+        call timer(time0,time1,'QRJ',1,0) ! end qrj timing for current lat
+        time1_qrj = time1_qrj+time1
         if (debug) write(6,"('dynamics after qrj: lat=',i3)") lat
-        if (do_rtc) then
-          call timer(rtc0_qrj,tsec,'end')
-          rtc_qrj = rtc_qrj+tsec
-        endif
         if (diags) then
           call addfsech('QTOTAL' ,' ',' ',qtotal(:,i0:i1,lat),
      |      i0,i1,nk,nkm1,lat)
@@ -276,13 +239,10 @@
       enddo ! lat=lat0,lat1 for qrj, qinite, xray, and aurora
       if (debug) write(6,"('dynamics after qrj,qinite,xray,aurora')")
 !
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for qrj+qinite+',
-     |    'xray+aurora=',f8.2)") istep,tsec 
-        write(6,"('Dynamics step ',i4,': rtc time for qrj only=',
-     |    f8.2)") istep,rtc_qrj
-      endif
+! Report timing from above latitude loop:
+      if (timing%level >= 2.and.time2print(nstep,istep))
+     |  write(6,"('Time in QRJ =          ',
+     |    f12.2,' Dynamics: step ',i5)") time1_qrj,istep
 !
 #ifdef VT
 !     code = 122 ; state = 'ions' ; activity='ModelCode'
@@ -294,36 +254,35 @@
 !   mp_gatherlons_f3d, and mp_scatterlons_f3.
 ! Full task subdomains (including ghost cells) are passed.
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
-        call oplus(
-     |    tn    (levd0,lond0,latd0,itp),
-     |    te    (levd0,lond0,latd0,itp),
-     |    ti    (levd0,lond0,latd0,itp),
-     |    o2    (levd0,lond0,latd0,itp),
-     |    o1    (levd0,lond0,latd0,itp),
-     |    n2d   (levd0,lond0,latd0,itp),
-     |    ne    (levd0,lond0,latd0,itp),
-     |    un    (levd0,lond0,latd0,itp),
-     |    vn    (levd0,lond0,latd0,itp),
-     |    w     (levd0,lond0,latd0,itp),
-     |    barm  (levd0,lond0,latd0,itp),
-     |    ui    ,
-     |    vi    ,
-     |    wi    ,
-     |    xnmbar,
-     |    op    (levd0,lond0,latd0,itp),
-     |    op_nm (levd0,lond0,latd0,itp),
-     |    op    (levd0,lond0,latd0,itc), ! out
-     |    op_nm (levd0,lond0,latd0,itc), ! out
-     |    xiop2p,                        ! out
-     |    xiop2d,                        ! out
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
+      call timer(time0,time1,'OPLUS',0,0) ! start oplus timing
+      call oplus(
+     |  tn    (levd0,lond0,latd0,itp),
+     |  te    (levd0,lond0,latd0,itp),
+     |  ti    (levd0,lond0,latd0,itp),
+     |  o2    (levd0,lond0,latd0,itp),
+     |  o1    (levd0,lond0,latd0,itp),
+     |  n2d   (levd0,lond0,latd0,itp),
+     |  ne    (levd0,lond0,latd0,itp),
+     |  un    (levd0,lond0,latd0,itp),
+     |  vn    (levd0,lond0,latd0,itp),
+     |  w     (levd0,lond0,latd0,itp),
+     |  barm  (levd0,lond0,latd0,itp),
+     |  ui    ,
+     |  vi    ,
+     |  wi    ,
+     |  xnmbar,
+     |  op    (levd0,lond0,latd0,itp),
+     |  op_nm (levd0,lond0,latd0,itp),
+     |  op    (levd0,lond0,latd0,itc), ! out
+     |  op_nm (levd0,lond0,latd0,itc), ! out
+     |  xiop2p,                        ! out
+     |  xiop2d,                        ! out
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after oplus')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for oplus=',
-     |    f8.2)") istep,tsec 
-      endif
+      call timer(time0,time1,'OPLUS',1,0) ! end oplus timing
+      if (timing%level >= 2.and.time2print(nstep,istep))
+     |  write(6,"('Time in OPLUS =        ',
+     |    f12.2,' Dynamics: step ',i5)") time1,istep
       if (diags) then
         do lat=lat0,lat1
           call addfsech('OPLUS' ,' ',' ',op(:,i0:i1,lat,itc),
@@ -337,7 +296,6 @@
 !
 ! Electron density:
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       do lat=lat0,lat1
         call elden(
      |    tn    (levd0,lond0,lat,itp),
@@ -359,11 +317,6 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after oplus')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for elden=',
-     |    f8.2)") istep,tsec 
-      endif
       do lat=lat0,lat1
         if (diags) then
           call addfsech('NPLUS'  ,' ',' ',nplus(:,i0:i1,lat),
@@ -382,7 +335,6 @@
 !
 ! Lamda ion drag coefficients:
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       do lat=lat0,lat1
         call lamdas(
      |    tn  (levd0,lond0,lat,itp),
@@ -422,6 +374,7 @@
         if (debug) write(6,"('dynamics after qtieff: lat=',i3)") lat
 !
 ! Calculate n2d:
+        call timer(time0,time1,'CMPMINOR',0,0) ! start comp minor timing
         call comp_n2d(
      |    o2  (levd0,lond0,lat,itp),
      |    o1  (levd0,lond0,lat,itp),
@@ -437,11 +390,8 @@
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after comp_n2d: lat=',i3)") lat
       enddo ! lat=lat0,lat1
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for lamdas+qtieff+',
-     |    'comp_n2d=',f8.2)") istep,tsec 
-      endif
+      call timer(time0,time1,'CMPMINOR',1,0) ! suspend comp minor timing
+      time1_cmpminor = time1_cmpminor+time1
       if (diags) then
         call addfsech('CMP_N2D',' ',' ',n2d(:,i0:i1,lat,itc),
      |    i0,i1,nk,nkm1,lat)
@@ -449,7 +399,7 @@
 !
 ! Advance n4s:
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
+      call timer(time0,time1,'CMPMINOR',0,0) ! resume comp minor timing
       do lat=lat0,lat1
         call comp_n4s(
      |    tn     (levd0,lond0,lat,itp),  ! TN (deg K)
@@ -468,16 +418,10 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1 
       if (debug) write(6,"('dynamics after comp_n4s')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for comp_n4s=',f8.2)")
-     |    istep,tsec 
-      endif
 !
 ! Minor_n4s calls sub minor, which has 3d mpi calls, including gather/scatter
 ! for fft filtering. Full 3d task subdomains are passed.
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       call minor_n4s(
      |    tn     (levd0,lond0,latd0,itp),  ! TN (deg K)
      |    o2     (levd0,lond0,latd0,itp),  ! O2 (mmr)
@@ -488,19 +432,16 @@
      |    n4s_nm (levd0,lond0,latd0,itc),  ! output n4s at time n-1
      |    1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after minor_n4s')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for minor_n4s=',
-     |    f8.2)") istep,tsec 
-      endif
+      call timer(time0,time1,'CMPMINOR',1,0) ! suspend comp minor timing
+      time1_cmpminor = time1_cmpminor+time1
       if (diags) then
-        call addfsech('CMP_N2D',' ',' ',n4s(:,i0:i1,lat,itc),
+        call addfsech('CMP_N4S',' ',' ',n4s(:,i0:i1,lat,itc),
      |    i0,i1,nk,nkm1,lat)
       endif
 ! 
 ! Advance NO: 
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
+      call timer(time0,time1,'CMPMINOR',0,0) ! resume comp minor timing
       do lat=lat0,lat1
         call comp_no(
      |    tn     (levd0,lond0,lat,itp),
@@ -515,14 +456,8 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1 
       if (debug) write(6,"('dynamics after comp_no')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for comp_no=',f8.2)")
-     |    istep,tsec 
-      endif
 !
 ! Minor_no calls minor, which has 3d mpi calls:
-      if (do_rtc) call timer(time0,tsec,'begin')
       call minor_no(
      |    tn   (levd0,lond0,latd0,itp),  ! TN (deg K)
      |    o2   (levd0,lond0,latd0,itp),  ! O2 (mmr)
@@ -533,11 +468,11 @@
      |    no_nm(levd0,lond0,latd0,itc),  ! output no at time n-1
      |    1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after minor_no')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for minor_no=',f8.2)")
-     |    istep,tsec 
-      endif
+      call timer(time0,time1,'CMPMINOR',1,0) ! suspend comp minor timing
+      time1_cmpminor = time1_cmpminor+time1
+      if (timing%level >= 2.and.time2print(nstep,istep))
+     |  write(6,"('Time in CMPMINOR =     ',f12.2,
+     |    ' Dynamics: step ',i5)") time1_cmpminor,istep
       if (diags) then
         call addfsech('CMP_NO',' ',' ',no(:,i0:i1,lat,itc),
      |    i0,i1,nk,nkm1,lat)
@@ -546,7 +481,6 @@
 ! Calculate additions to neutral gas heating and O2 dissociation
 ! due to N, NO chemistry:
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       do lat=lat0,lat1
         call qjnno(
      |    tn   (levd0,lond0,lat,itp),
@@ -560,16 +494,10 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo
       if (debug) write(6,"('dynamics after qjnno')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for qjnno=',f8.2)")
-     |    istep,tsec 
-      endif
 !
 ! Calculate ion chemistry contribution to neutral gas heating
 !   and O2 dissociation:
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       do lat=lat0,lat1
         call qjion(
      |    tn    (levd0,lond0,lat,itp),
@@ -590,15 +518,9 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after qjion')")
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for qjion=',f8.2)")
-     |    istep,tsec 
-      endif
 !
 ! Electron and Ion temperatures:
 !
-      if (do_rtc) call timer(time0,tsec,'begin')
       do lat=lat0,lat1
 !
 ! Joule heating for ion temperature:
@@ -614,6 +536,10 @@
      |    qji_ti(levd0,lond0,lat),  ! ion joule heating output
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after qjoule_ti: lat=',i3)")lat
+        if (diags) then
+          call addfsech('QJI_TI',' ',' ',qji_ti(:,i0:i1,lat),
+     |      i0,i1,nk,nkm1,lat)
+        endif
 !
         call settei(
      |    tn  (levd0,lond0,lat,itp),
@@ -632,11 +558,6 @@
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after settei: lat=',i3)") lat
       enddo ! lat=lat0,lat1
-      if (do_rtc) then
-        call timer(time0,tsec,'end')
-        write(6,"('Dynamics step ',i4,': rtc time for ',
-     |    'qjoule_ti+settei=',f8.2)") istep,tsec 
-      endif
       if (diags) then
         do lat=lat0,lat1
           call addfsech('TE_UPD',' ',' ',te(:,i0:i1,lat,itc),
@@ -723,14 +644,20 @@
      |    lyx(levd0,lond0,lat),     ! yx ion drag coefficient
      |    qji_tn(levd0,lond0,lat),  ! ion joule heating output
      |    1,nlevp1,lon0,lon1,lat)
+        if (diags) then
+          call addfsech('QJI_TN',' ',' ',qji_tn(:,i0:i1,lat),
+     |      i0,i1,nk,nkm1,lat)
+        endif
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after qjoule_tn')")
+
 !    
       if( igetgswmdi==0.and.igetgswmsdi==0.and.      ! no GSWM input used 
      |  igetgswmnmidi==0.and.igetgswmnmisdi==0) then
 !
 ! Advance neutral temperature:
 !
+        call timer(time0,time1,'DT',0,0) ! start dt timing
         call dt(
      |    tn	(levd0,lond0,latd0,itp),
      |    tn_nm (levd0,lond0,latd0,itp),
@@ -751,9 +678,14 @@
      |    tn_nm (levd0,lond0,latd0,itc),    ! output updated tn at time n-1
      |    1,nlevp1,lon0,lon1,lat0,lat1)
         if (debug) write(6,"('dynamics after dt')")
+        call timer(time0,time1,'DT',1,0) ! end dt timing
+        if (timing%level >= 2.and.time2print(nstep,istep))
+     |    write(6,"('Time in DT =           ',f12.2,
+     |      ' Dynamics: step ',i5)") time1,istep
 !
 ! Advance neutral velocities:
 !
+        call timer(time0,time1,'DUV',0,0) ! start duv timing
         call duv(
      |    tn	(levd0,lond0,latd0,itp), ! neutral temperature
      |    tn	(levd0,lond0,latd0,itc), ! updated neutral temperature (dt.F)
@@ -780,11 +712,16 @@
      |    vn_nm (levd0,lond0,latd0,itc), ! output updated vn at time n-1
      |    1,nlevp1,lon0,lon1,lat0,lat1)
         if (debug) write(6,"('dynamics after duv')")
+        call timer(time0,time1,'DUV',1,0) ! end duv timing
+        if (timing%level >= 2.and.time2print(nstep,istep))
+     |    write(6,"('Time in DUV =          ',f12.2,
+     |      ' Dynamics: step ',i5)") time1,istep
 !     
       else  				! GSWM input used 
 !
 ! Advance neutral temperature:
 !
+        call timer(time0,time1,'DT',0,0) ! start dt timing
         call dt_gswm(
      |    tn	(levd0,lond0,latd0,itp),
      |    tn_nm (levd0,lond0,latd0,itp),
@@ -805,9 +742,14 @@
      |    tn_nm (levd0,lond0,latd0,itc),    ! output updated tn at time n-1
      |    1,nlevp1,lon0,lon1,lat0,lat1)
         if (debug) write(6,"('dynamics after dt_gswm')")
+        call timer(time0,time1,'DT',1,0) ! end dt timing
+        if (timing%level >= 2.and.time2print(nstep,istep))
+     |    write(6,"('Time in DT =           ',f12.2,
+     |      ' Dynamics: step ',i5)") time1,istep
 !
 ! Advance neutral velocities:
 !
+        call timer(time0,time1,'DUV',0,0) ! start duv timing
         call duv_gswm(
      |    tn	(levd0,lond0,latd0,itp), ! neutral temperature
      |    tn	(levd0,lond0,latd0,itc), ! updated neutral temperature (dt.F)
@@ -834,12 +776,13 @@
      |    vn_nm (levd0,lond0,latd0,itc), ! output updated vn at time n-1
      |    1,nlevp1,lon0,lon1,lat0,lat1)
         if (debug) write(6,"('dynamics after duv_gswm')")
-      
+        call timer(time0,time1,'DUV',1,0) ! end duv timing
+        if (timing%level >= 2.and.time2print(nstep,istep))
+     |    write(6,"('Time in DUV =          ',f12.2,
+     |      ' Dynamics: step ',i5)") time1,istep
       endif	! endif for GSWM input
 !
 ! Sources and sinks for major species composition O2, O:
-!     subroutine comp_o2o(tn,o2,o1,barm,op,no,n4s,n2d,o2p,ne,
-!    |  n2p,nplus,nop,lev0,lev1,lon0,lon1,lat)
 !
       do lat=lat0,lat1
         call comp_o2o(
@@ -861,10 +804,9 @@
       if (debug) write(6,"('dynamics after comp_o2o')")
 !
 ! Advance O2, O:
-!     subroutine comp(tn,o2,o2_nm,o1,o1_nm,un,vn,w,hdo2,hdo1,
-!    |                o2_upd,o2nm_upd,o1_upd,o1nm_upd,
-!    |                lev0,lev1,lon0,lon1,lat0,lat1)
 !
+      time1_cmpmajor = 0.
+      call timer(time0,time1,'CMPMAJOR',0,0) ! start comp major timing
       call comp(
      |  tn    (levd0,lond0,latd0,itp), ! neutral temperature
      |  o2    (levd0,lond0,latd0,itp), ! O2 (mmr)
@@ -882,6 +824,14 @@
      |  o1_nm (levd0,lond0,latd0,itc), ! output: O1 updated for previous step
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after comp')")
-
+      call timer(time0,time1,'CMPMAJOR',1,0) ! suspend comp major timing
+      time1_cmpmajor = time1_cmpmajor+time1
+      if (timing%level >= 2.and.time2print(nstep,istep))
+     |  write(6,"('Time in COMP=          ',f12.2,
+     |    ' Dynamics: step ',i5)") time1,istep
+!
+      if (timing%level >= 2.and.time2print(nstep,istep))
+     |  write(6,"('Time in CMPMAJOR =     ',f12.2,
+     |    ' Dynamics: step ',i5)") time1_cmpmajor,istep
       if (debug) write(6,"('dynamics returning')")
       end subroutine dynamics

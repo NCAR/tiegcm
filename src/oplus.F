@@ -139,10 +139,10 @@
 !    |    nlevs,nlevs-1,lat)
 !       call addfsech('OP_OPLUS',' ',' ',op(:,lon0:lon1,lat),lon0,lon1,
 !    |    nlevs,nlevs-1,lat)
-        call addfsech('UI_OP',' ',' ',ui(:,lon0:lon1,lat),lon0,lon1,
-     |    nlevs,nlevs-1,lat)
-        call addfsech('VI_OP',' ',' ',vi(:,lon0:lon1,lat),lon0,lon1,
-     |    nlevs,nlevs-1,lat)
+!       call addfsech('UI_OP',' ',' ',ui(:,lon0:lon1,lat),lon0,lon1,
+!    |    nlevs,nlevs-1,lat)
+!       call addfsech('VI_OP',' ',' ',vi(:,lon0:lon1,lat),lon0,lon1,
+!    |    nlevs,nlevs-1,lat)
 !       call addfsech('WI_OP',' ',' ',wi(:,lon0:lon1,lat),lon0,lon1,
 !    |    nlevs,nlevs-1,lat)
       enddo ! lat=lat0,lat1
@@ -765,10 +765,10 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-      call addfsech('XIOP2P',' ',' ',xiop2p(lev0:lev1,lon0:lon1,lat),
-     |  lon0,lon1,nlevs,nlevs,lat)
-      call addfsech('XIOP2D',' ',' ',xiop2d(lev0:lev1,lon0:lon1,lat),
-     |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfsech('XIOP2P',' ',' ',xiop2p(lev0:lev1,lon0:lon1,lat),
+!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfsech('XIOP2D',' ',' ',xiop2d(lev0:lev1,lon0:lon1,lat),
+!    |  lon0,lon1,nlevs,nlevs,lat)
 !     call addfsech('OP_LOSS',' ',' ',op_loss(lev0:lev1,lon0:lon1),
 !    |  lon0,lon1,nlevs,nlevs,lat)
 !     call addfsech('OP_QOP',' ',' ',qop(lev0:lev1,lon0:lon1,lat),

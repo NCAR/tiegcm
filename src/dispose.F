@@ -247,9 +247,9 @@
         i = line_in_script('mscomment',mspath)
         if (i > 0) then
           call update_mscomment(i,mscomment_cmd)
-          write(6,"('Dispose: updated mscomment on dispose script',
-     |      ' for file ',a)") trim(diskfile)
-          write(6,"('  mscomment_cmd=',a)") trim(mscomment_cmd)
+!         write(6,"('Dispose: updated mscomment on dispose script',
+!    |      ' for file ',a)") trim(diskfile)
+!         write(6,"('  ',a)") trim(mscomment_cmd)
 !
 ! Otherwise (mscomment line not present), add it for current file:
         else
@@ -259,7 +259,7 @@
           close(lu_dispose)
           write(6,"('Dispose: added mscomment on dispose script',
      |      ' for file ',a)") trim(diskfile)
-          write(6,"('  mscomment_cmd=',a)") trim(mscomment_cmd)
+          write(6,"('  ',a)") trim(mscomment_cmd)
         endif
       endif ! len_trim(mscomment) > 0
       end subroutine add_dispose      
