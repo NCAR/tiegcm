@@ -1,3 +1,0 @@
-#
-tar cf tiegcm.tar *.h *.F *.inp *.job M* mkdep mktar README scripts
-echo "Made tiegcm.tar"
