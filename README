@@ -1,0 +1,54 @@
+
+11/8/2002:
+
+Latest version of TIEGCM, tiegcm1. Fixed source is in hao /home/tgcm/tiegcm1,
+including tar file tiegcm1_src.tar.Z.
+
+Default resolution: 5x5 degree horizontal, 0.5 Zp vertical. See defs.h to
+set alternate resolutions in both horizontal and vertical.
+
+This code uses a 2d domain decomposition in latitude and longitude.
+The parallelization is distributed memory MPI only. Recommended number
+of processors for production runs is 32 (8 4-processor nodes).
+
+This model includes the new dynamo (set DYNAMO=2 in namelist input).
+
+To build and execute batch jobs:
+  1. Copy *.inp and *.job files from /home/tgcm/tiegcm1.
+  2. Modify input and job files for the desired run.
+  3. Submit to remote machine using "submit file.job" (submit script is
+     in hao /home/tgcm/bld/submit) 
+
+To build and execute interactively:
+  1. Extract the source tar file (tiegcm1_src.tar) in an empty directory.
+  2. Execute "perl mkdep" to make dependencies for Makefile.
+  3. For non-ncar systems (without mass store): 
+      a. Remove -DMSS from FFLAGS in Makefile.
+      b. Put SOURCE history and MAGVOL netcdf files in execution directory,
+         and specify their names in the namelist input file (tiegcm1.inp).
+  4. Run "gmake" or "gnumake" to compile.
+  5. Use "tiegcm1 < tiegcm1.inp" to execute, or whatever command is
+     appropriate for MPI runs (e.g., mpirun, prun, etc).
+
+A copy of the source (with Makefile) is on the NCAR mss in
+/TGCM/tiegcm1/tiegcm1_src.tar.Z. Object and binaries are NOT saved,
+so the code needs to be completely built before execution.
+
+-----------------------------------------------------------------------
+
+8/20/03: Changed /home/tgcm/tiegcm1/input.F to fix bug that occurred
+when no secondary histories were requested. See also modsrc/README.
+
+-----------------------------------------------------------------------
+
+8/28/03: Fix bug in addfsechik_geo (addfsech_ik.F) in which k-loop
+must be used instead of :'s.
+
+-----------------------------------------------------------------------
+
+
+-----------------------------------------------------------------------
+Ben Foster		      	High Altitude Observatory (HAO)
+foster@ucar.edu			phone: 303-497-1595  fax: 303-497-1589  
+Nat. Center for Atmos. Res.     P.O. Box 3000 Boulder CO 80307 USA
+-----------------------------------------------------------------------

@@ -1,0 +1,252 @@
+#! /bin/csh
+#
+# Job script to run "tiegcm1" on IBM system.
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# To submit:
+#   1. Set env vars below (JOB,EXEC,OUTPUT,REMOTE,POSTCLEAN)
+#      (REMOTE might be the only one you have to change)
+#   2. Include namelist input file (see "$input" below)
+#   3. Optionally change path to source and Makefile (see INCLUDEs below)
+#   4. Set class (queue) for loadleveler (see "# @ class" below)
+#      (optionally set other loadleveler commands for IBM job)
+#   5. Use the "submit" command (/home/tgcm/bld/submit) to submit the job.
+#
+# JOB   : Job name (will be used in tmpdir name, input file name, etc)
+# EXEC  : Name of executable built by make (see Makefile).
+# OUTPUT: File name of stdout output file.
+# REMOTE: Machine:path directory where OUTPUT is to be sent via rcp.
+#         (typically on the local workstation from which this script was submitted)
+# POSTCLEAN: Set to 1 to remove execution directory after job completion,
+#            or set to 0 to save execution directory.
+#
+setenv JOB tiegcm1
+setenv EXEC tiegcm1
+setenv REMOTE vishnu.hao:/home/foster/ntwk
+setenv OUTPUT $JOB.$$.out
+#
+setenv POSTCLEAN 0
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Determine operating system (AIX is only OS for this script):
+#
+setenv HOST `uname -n`
+set os = `uname -s`
+if ($os =~ *'AIX'*) then
+  set os = AIX
+else
+  echo " "
+  echo ">>> Unknown OS: uname -s = $os"
+  echo "Job $JOB NOT submitted."
+  exit
+endif
+setenv OS $os
+#
+# Set up a tmpdir and go there:
+#
+set tmpdir = /ptmp/$user/$JOB.$$
+if (! -e $tmpdir) then
+  echo "Making tmpdir $tmpdir"
+  set err = 0
+  mkdir -p $tmpdir || set err = 1
+  if ($err == 1) then
+    echo " "
+    echo "WARNING Error making tmpdir $tmpdir."
+    echo "Job $JOB NOT submitted."
+    echo " "
+  endif
+else
+  echo "NOTE: tmpdir $tmpdir already exists."
+endif
+setenv EXECDIR $tmpdir
+cd $EXECDIR
+echo "Moved to submit dir $EXECDIR"
+#
+# Init output file:
+#
+touch $OUTPUT
+#
+echo " "
+echo "JOB       = $JOB"
+echo "OS        = $os"
+echo "HOST      = $HOST"
+echo "EXECDIR   = $EXECDIR"
+echo "DATE      = `date`"
+#
+echo " "                      >> $OUTPUT
+echo "JOB       = $JOB"       >> $OUTPUT
+echo "OS        = $os"        >> $OUTPUT
+echo "HOST      = $HOST"      >> $OUTPUT
+echo "EXECDIR   = $EXECDIR"   >> $OUTPUT
+echo "POSTCLEAN = $POSTCLEAN" >> $OUTPUT
+echo "DATE      = `date`"     >> $OUTPUT
+echo " "                      >> $OUTPUT
+#
+# Set some env vars for AIX parallel job:
+#
+setenv MP_LABELIO YES
+setenv MP_PGMMODEL SPMD
+setenv MP_SHARED_MEMORY YES
+#
+# Make loadleveler command file:
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+cat << 'EOF_LL' >! loadlev.job
+#
+# Loadleveler job step to build and execute:
+#
+# Example: With total_tasks=32, node=8, and DYNAMO=2, a 1-day run at 
+#   STEP=180 (480 iters) takes about 9 mins wallclock, NOT including 
+#   mss access, and without secondary histories.
+#
+#
+# @ job_name         = tiegcm1
+## @ account_no      = 28103032
+# @ step_name        = exec
+## @ class            = share
+# @ class            = com_reg
+## @ class            = com_pr
+# @ wall_clock_limit = 02:00:00
+# @ job_type         = parallel
+# @ network.MPI      = csss,shared,us
+# @ node             = 8
+# @ total_tasks      = 32
+## @ node             = 2
+## @ total_tasks      = 8
+# @ node_usage       = not_shared
+# @ environment      = COPY_ALL
+# @ executable       = $(step_name).csh
+# @ notification     = error
+# @ queue
+#
+# Loadleveler job step for cleanup:
+#
+# @ step_name        = cleanup
+# @ class            = interactive
+# @ wall_clock_limit = 00:00:30
+# @ job_type         = serial
+# @ executable       = $(step_name).csh
+# @ notification     = complete
+# @ requirements     = (Machine == "$(hostname)")
+# @ dependency       = (exec == 0) || (exec != 0)
+# @ queue
+#
+'EOF_LL'
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Build make and exec script:
+#
+cat << 'EXEC_STEP' >! exec.csh
+#! /bin/csh
+#
+# Shell script for loadleveler execution step:
+# Build and execute tiegcm1. 
+#
+cd $EXECDIR
+echo " "
+echo "Host = $HOST"
+echo "OS   = $OS"
+echo "Current working directory = $EXECDIR"
+echo " "
+#
+# Get source and Makefile:
+# (INCLUDE statements are resolved by "submit" script (hao:/home/tgcm/bld/submit))
+#
+INCLUDE -h /home/tgcm/tiegcm1/*.F /home/tgcm/tiegcm1/*.h
+INCLUDE -h /home/tgcm/tiegcm1/Makefile /home/tgcm/tiegcm1/mkdep
+INCLUDE -h /home/tgcm/bld/mklogs
+#INCLUDE -h mklogs
+#
+# Overlay mods (-ignore dups means these mods will override previously
+#   INCLUDEd files with the same names):
+#
+#INCLUDE -h -ignore_dups modsrc.henry/*.F
+#
+# Include user's input file:
+#
+set input = $JOB.inp
+cat << 'EOFINP' >! $input
+INCLUDE tiegcm1.inp
+'EOFINP'
+#
+# Build executable:
+#
+perl mkdep >& /dev/null
+set err = 0
+gmake $EXEC >>& $OUTPUT || set err = 1
+if ($err == 0) then
+  echo "Successful gnu make." >> $OUTPUT
+else
+  echo "Error from gnu make." >> $OUTPUT
+  exit $err
+endif
+#
+# Execute:
+#
+set err = 0
+timex $EXEC < $JOB.inp >>& $OUTPUT || set err = 1
+if ($err == 0) then
+  echo "Completed execution of $EXEC." >> $OUTPUT
+else
+  echo ">>> Error executing $EXEC." >> $OUTPUT
+endif
+'EXEC_STEP'
+chmod u+x exec.csh
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Build cleanup script:
+#
+cat << 'EOF_CLEANUP' >! cleanup.csh
+#! /bin/csh
+#
+# Shell script for loadleveler cleanup step:
+#
+# Run mklogs to separate tasks stdout, and send output from task 0:
+#
+echo "cleanup: EXECDIR=$EXECDIR OUTPUT=$OUTPUT"
+cd $EXECDIR
+set err = 0
+chmod u+x mklogs
+perl mklogs $OUTPUT || set err = 1
+if ($err == 1) then
+  echo ">>> Error from mklogs -- will return full output $OUTPUT" >> $OUTPUT
+else
+  cp *task0.out $OUTPUT
+  echo "Completed mklogs, sending output from task 0." >> $OUTPUT
+endif  
+#
+# Remote copy output and remove submitdir.
+#
+echo " " >> $OUTPUT
+echo "Execution directory submitdir = $EXECDIR" >> $OUTPUT
+ls -l $OUTPUT >> $OUTPUT
+echo "Preparing to rcp output $OUTPUT from submitdir to remote $REMOTE" >> $OUTPUT
+if ($POSTCLEAN == 1) then
+  echo "NOTE: submitdir and its contents will be removed after the rcp"
+endif
+#
+set err = 0
+rcp $OUTPUT $REMOTE >>& $OUTPUT || set err = 1
+#/usr/bsd/rcp $OUTPUT $REMOTE || set err = 1
+if ($err != 0) then
+  echo " " >> $OUTPUT
+  echo ">>> WARNING: error from rcp of output $OUTPUT to $REMOTE" >> $OUTPUT
+  echo "    Will save $OUTPUT to /home/$user"
+  cp $OUTPUT /home/$user || \
+    echo ">>> WARNING: error copying $OUTPUT to /home/$user"
+endif
+#
+# Clean submit directory:
+#
+if ($POSTCLEAN == 1) then
+  cd
+  rm -r $EXECDIR
+endif
+exit
+'EOF_CLEANUP'
+chmod u+x cleanup.csh
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Submit the job:
+#
+llsubmit loadlev.job

@@ -1,0 +1,21 @@
+#
+# @ job_name         = tiegcm1
+## @ account_no      = 28103032
+# @ step_name        = exec
+## @ class            = share
+# @ class            = com_reg
+## @ class            = com_pr
+# @ wall_clock_limit = 02:00:00
+# @ job_type         = parallel
+# @ network.MPI      = csss,shared,us
+# @ node             = 8
+# @ total_tasks      = 32
+## @ node             = 2
+## @ total_tasks      = 8
+# @ node_usage       = not_shared
+# @ environment      = COPY_ALL
+# @ executable       = $(step_name).csh
+# @ notification     = error
+# @ queue
+#
+

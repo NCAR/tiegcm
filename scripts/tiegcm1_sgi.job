@@ -1,0 +1,91 @@
+#
+# Resources for SGI (e.g., chinook):
+#
+# QSUB -s /bin/csh
+## QSUB -lT 5:00:00    # total per-request cpu time limit
+## QSUB -lt 3:00:00    # per-process cpu time limit
+## QSUB -q ded_16      # ded_16 queue
+## QSUB -q share_16    # share_16 queue
+# QSUB -q ded_32      # ded_32 queue
+# QSUB -l mpp_p=36    # total system procs (SGI_NTASKS+4)
+# QSUB -eo            # merge stdout and stderr
+# QSUB -J m           # Appends the job log to stdout
+# QSUB
+#
+set JOB = tiegcm1
+set EXEC = tiegcm1
+set EXECDIR = /ptmp/foster/$JOB.$$
+set POSTCLEAN = 0
+set SGI_NTASKS = 32
+#
+# Make and move to an exec directory:
+# (EXECDIR should be under /ptmp)
+#
+if (-d $EXECDIR) then
+  echo "Removing existing EXECDIR $EXECDIR"
+  /usr/bin/rm -rf $EXECDIR
+endif
+mkdir -p $EXECDIR
+cd $EXECDIR
+#
+echo " "
+echo Begin $JOB job at `date`
+echo JOB       = $JOB
+echo EXEC      = $EXEC
+echo EXECDIR   = $EXECDIR
+echo POSTCLEAN = $POSTCLEAN
+echo " "
+#
+# Load modules:
+#
+module purge
+module load MIPSpro mpt scsl nqe modules
+module list
+#
+# Source code and related files:
+#
+INCLUDE -h /home/tgcm/tiegcm1/*.F /home/tgcm/tiegcm1/*.h
+INCLUDE -h /home/tgcm/tiegcm1/Makefile /home/tgcm/tiegcm1/mkdep
+INCLUDE -h /home/tgcm/bld/mklogs
+#INCLUDE -h -ignore_dups modsrc.henry/*.F
+#
+cat << 'EOFINP' >! $JOB.inp
+INCLUDE tiegcm1.inp
+'EOFINP'
+#
+# Build:
+#
+set err = 0
+perl mkdep || set err = 1
+if ($err != 0) then
+  echo ">>> Error making dependencies with perl mkdep"
+endif
+set err = 0
+gnumake $EXEC || set err = 1
+if ($err == 0) then
+  echo "Successful gnu make."
+else
+  echo ">>> Error from gnu make."
+  exit $err
+endif
+#
+# Execute:
+# SGI_NTASKS is number of mpi tasks. Must be at least 4 less than
+#   number of procs in the queue, e.g., SGI_NTASKS=12 for ded_16,
+#   OR 4 less than QSUB -l mpp_p
+#
+set err = 0
+#echo " " ; echo -n "Environment:" ; env ; echo " "
+echo -n "Executing mpirun $EXEC with $SGI_NTASKS MPI tasks at " ; date
+timex mpirun -prefix "%g:" -v -nt $SGI_NTASKS $EXEC < $JOB.inp \
+  || set err = 1
+if ($err == 0) then
+  echo "Completed execution of $EXEC."
+else
+  echo ">>> Error executing $EXEC."
+endif
+if ($POSTCLEAN == 1) then
+  echo "Removing EXECDIR $EXECDIR."
+  rm -rf $EXECDIR
+endif
+exit
