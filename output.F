@@ -129,7 +129,7 @@
 !
 ! Report to stdout:
       call mkdiskflnm(output(ioutfile),diskfile)
-      write(6,"('Wrote primary   history ',i3,',',i2,',',i2,
+      write(6,"(/,'Wrote primary   history ',i3,',',i2,',',i2,
      |  ' to ',a,' (',i3,' of ',i3,')')") modeltime(1:3),
      |  trim(diskfile),ihist_total,nhist_total
 !
@@ -221,7 +221,7 @@
 !
 ! Report to stdout:
       call mkdiskflnm(secout(isecout),diskfile)
-      write(6,"('Wrote secondary history ',i3,',',i2,',',i2,
+      write(6,"(/,'Wrote secondary history ',i3,',',i2,',',i2,
      |  ' to ',a,' (',i3,' of ',i3,')')") modeltime(1:3),
      |  trim(diskfile),ihist_total,nsech_total
 !

@@ -338,16 +338,14 @@
 !
 ! Save single-level high latitude potential:
 !     if (potential_model == 'WEIMER') then
-!     call addfsech_ij('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
-!    |  'VOLTS', phihm,1,nmlonp1,1,nmlat)
+!       call addfsech_ij('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
+!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
+!     elseif (potential_model == 'HEELIS') then
+!       call addfsech_ij('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
+!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
 !     else
-!      if (potential_model == 'HEELIS') then
-!     call addfsech_ij('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
-!    |  'VOLTS', phihm,1,nmlonp1,1,nmlat)
-!      else
-!     call addfsech_ij('PHIHM2D','2D ZERO ELECTRIC POTENTIAL',
-!    |  'VOLTS', phihm,1,nmlonp1,1,nmlat)
-!      endif
+!       call addfsech_ij('PHIHM2D','2D ZERO ELECTRIC POTENTIAL',
+!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
 !     endif
 !
 ! Save correct single-level potential to secondary histories (mag grid):
@@ -687,7 +685,7 @@
       elseif (isolve==1) then
         call muh(rim,jntl)        	! solver in muh2cr.F
       elseif (isolve==2) then
-        call mudmod(rim,jntl,ier)     	! solver in mudmod.F
+        call mudmod(rim,jntl,isolve,ier)! solver in mudmod.F
         if(ier < 0 ) then 	! not converged
 	  write(6,*) 'muh: use direct solver'
 	  call muh(rim,jntl) 		! solver in mud.F
@@ -1550,6 +1548,12 @@
 ! Folding south on to northern hemisphere and calculation of RHS has 
 !   been moved to subroutine dynamo.
 !
+! Save 3d potential on magnetic grid to secondary history:
+! PLEASE DO NOT COMMENT THIS OUT -- ZMAG is a mandatory mag field for sech
+       do j=1,nmlat
+         call addfsech_ik('ZMAG','ZMAG','CM',zpotenm3d(:,j,:),
+     | 	   1,nmlonp1,nmlev,nmlev,j)
+       enddo ! j=1,nmlat
       end subroutine transf
 !-----------------------------------------------------------------------
       subroutine fieldline_integrals(latm)
@@ -1597,7 +1601,7 @@
           rrm(i,k) = r0+zpotenm(i,k)-z0
 !
 ! rtramr = ra-r if +ive, zero otherwise
-          rtramrm(i,k) = amax1(0.,ra-rrm(i,k))
+          rtramrm(i,k) = max(0.,ra-rrm(i,k))
           rtramrm(i,k) = sqrt(rtramrm(i,k))
         enddo ! i=1,nmlon
       enddo ! k=-2,nlevp1
@@ -1629,7 +1633,7 @@
         do i=1,nmlon
 !
 ! (R_E+h)/(R_E+h_A) < 1 -> h_A > h
-          rora = amin1(1.,rrm(i,k)/ra) 
+          rora = min(1.,rrm(i,k)/ra) 
 !
 ! (lam_m - lam) / lam_m = 
 ! sqrt(1-r_0/r_A)sqrt(r/r_A) - sqrt(r_0/r_A)sqrt(1-r/r_A)
@@ -2733,6 +2737,7 @@
       enddo
       end subroutine geo2mag
 !-----------------------------------------------------------------------
+#ifdef MPI
       subroutine mp_dynamo_gather
       use mpi_module,only: mytid,lon0,lon1,lat0,lat1,mxlat,mxlon,
      |  ntask,mpi_comm_world,mpi_real8,irstat,tasks,handle_mpi_err
@@ -2851,6 +2856,7 @@
       deallocate(sndbuf)
 !
       end subroutine mp_dynamo_gather
+#endif
 !-----------------------------------------------------------------------
       subroutine transf_dyn0
 ! am_11/03     
@@ -3003,10 +3009,11 @@
       enddo ! k=-2,nlevp1
 !
 ! Save 3d potential on magnetic grid to secondary history:
-!      do j=1,nmlat
-!        call addfsech_ik('ZPOTEN3D','ZPOTEN3D','[cm]',zpotenm3d(:,j,:),
-!     |	   1,nmlonp1,nmlev,nmlev,j)
-!      enddo ! j=1,nmlat
+! PLEASE DO NOT COMMENT THIS OUT -- ZMAG is a mandatory mag field for sech
+       do j=1,nmlat
+         call addfsech_ik('ZMAG','ZMAG','CM',zpotenm3d(:,j,:),
+     | 	   1,nmlonp1,nmlev,nmlev,j)
+       enddo ! j=1,nmlat
 !
       end subroutine transf_dyn0
 !-----------------------------------------------------------------------

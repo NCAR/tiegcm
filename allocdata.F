@@ -58,5 +58,19 @@
      |      nlevp1,nlonp4,nlat,nf4d,len,len*8
         endif
       endif
+#else
+      allocate(foutput(nlevp1,nlonp4,nlat,nf4d),stat=istat)
+      if (istat /= 0) then
+        write(6,"('>>> allocdata: error allocating 3d data for ',
+     |    'all fields on root task: nlevp1=',i3,' nlonp4=',i3,
+     |    ' nlat=',i3,' nf4d=',i3,' istat=',i3)")
+     |    nlevp1,nlonp4,nlat,nf4d,istat
+      else
+        write(6,"('Allocated 3d data for all fields on root task:')")
+        len = nlevp1*nlonp4*nlat*nf4d
+        write(6,"('  nlevp1*nlonp4*nlat*nf4d = ',i3,'*',i3,'*',
+     |    i3,'*',i3,' = ',i8,' words *8 = ',i8,' bytes.')")
+     |    nlevp1,nlonp4,nlat,nf4d,len,len*8
+      endif
 #endif
       end subroutine allocdata

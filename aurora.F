@@ -254,7 +254,7 @@
       e1 = (1.0 + 0.10 * power)
       e2 = (1.0 + 0.40 * power)
 ! Values from corrections to Emery et al Parameterization report:
-!     e1 = amax1(0.50, -2.15 + 0.62*plevel)
+!     e1 = max(0.50, -2.15 + 0.62*plevel)
 !     e2 = 0.95 + 0.117 * power
 !
       e0 = 0.5 * (e1 + e2)
@@ -265,7 +265,7 @@
       h1 = 2. + 0.05 * power
       h2 = 3. + 0.40 * power
 ! Values from corrections to Emery et al Parameterization report:
-!     h1 = amin1(2.35, 0.83 + 0.33*plevel)
+!     h1 = min(2.35, 0.83 + 0.33*plevel)
 !     h2 = 2.87 + 0.15*plevel
       rh = (h2 - h1) / (h1 + h2)
 !
@@ -285,7 +285,7 @@
       alfa_1 = 2. 
       alfa_2 = 2.
 ! Values from 10/05/94 HPI estimates (50% or more higher than old estimates):
-!     alfa_1 = amin1(1.5,1.25+0.05*plevel)
+!     alfa_1 = min(1.5,1.25+0.05*plevel)
 !     alfa_2 = 1.2 + 0.095*plevel
       alfa0 = 0.5*(alfa_1+alfa_2)
       ralfa = (alfa_2-alfa_1) / (alfa_1+alfa_2+e)

@@ -33,7 +33,7 @@ FFLAGS = -mips4 -r8 -O3 -macro_expand -I/usr/local/include \
 LIBS = \
   -L /usr/lib32/mips4 -lffio -lcomplib.sgimath -lblas_mp -lfpe \
   -L /usr/local/lib32/r4i4 -lmss -lnetcdf -lmpi \
-  -L /usr/local/dcs-3.2/lib -ldcs
+  -L /usr/local/dcs-3.3/lib -ldcs
 LDFLAGS = -mips4 -r10000 -O3
 endif
 #----------------------------------------------------------------------
@@ -263,6 +263,22 @@ ifeq ($(UNAMES),SunOS)
  LIBS    = -L/opt/share/PUBLIC/lib.SunOS -lnetcdf3 -lm \
            -L/opt/local/lib -ldcs -xlic_lib=sunperf
 #SunOS_end
+endif
+#----------------------------------------------------------------------
+# Linux:
+#
+ifeq ($(UNAMES),Linux)
+ EXEC = tiegcm1
+ FC = pgf90
+#
+# Redhat 8 needs -Msecond_underscore, but may get undefined __ctype_b
+#FFLAGS = -I/opt/local/include -Msecond_underscore
+#LIBS = -L/opt/local/lib -lnetcdf
+#
+# Redhat 9 works (do not use -Msecond_underscore):
+ FFLAGS = -r8 -O2 -I/opt/local/include -DMSS -DLINUX
+#FFLAGS = -g -r8 -I/opt/local/include -DMSS -DLINUX
+ LIBS = -L/opt/local/rh9/lib -lnetcdf -L /opt/local/dcs-3.3/rh9/lib -ldcs
 endif
 #----------------------------------------------------------------------
 #EXEC_begin

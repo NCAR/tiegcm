@@ -15,7 +15,7 @@
 # JOB   : Job name (will be used in tmpdir name, input file name, etc)
 # EXEC  : Name of executable built by make (see Makefile).
 # OUTPUT: File name of stdout output file.
-# REMOTE: Machine:path directory where OUTPUT is to be sent via rcp.
+# REMOTE: Machine:path directory where OUTPUT is to be sent via scp.
 #         (typically on the local workstation from which this script was submitted)
 # POSTCLEAN: Set to 1 to remove execution directory after job completion,
 #            or set to 0 to save execution directory.
@@ -166,7 +166,7 @@ INCLUDE -h /home/tgcm/bld/mklogs
 #
 set input = $JOB.inp
 cat << 'EOFINP' >! $input
-INCLUDE tiegcm1.inp
+INCLUDE /home/foster/tiegcm/tiegcm/tiegcm.inp
 'EOFINP'
 #
 # Build executable:
@@ -220,17 +220,16 @@ endif
 echo " " >> $OUTPUT
 echo "Execution directory submitdir = $EXECDIR" >> $OUTPUT
 ls -l $OUTPUT >> $OUTPUT
-echo "Preparing to rcp output $OUTPUT from submitdir to remote $REMOTE" >> $OUTPUT
+echo "Preparing to scp output $OUTPUT from submitdir to remote $REMOTE" >> $OUTPUT
 if ($POSTCLEAN == 1) then
-  echo "NOTE: submitdir and its contents will be removed after the rcp"
+  echo "NOTE: submitdir and its contents will be removed after the scp"
 endif
 #
 set err = 0
-rcp $OUTPUT $REMOTE >>& $OUTPUT || set err = 1
-#/usr/bsd/rcp $OUTPUT $REMOTE || set err = 1
+scp $OUTPUT $REMOTE >>& $OUTPUT || set err = 1
 if ($err != 0) then
   echo " " >> $OUTPUT
-  echo ">>> WARNING: error from rcp of output $OUTPUT to $REMOTE" >> $OUTPUT
+  echo ">>> WARNING: error from scp of output $OUTPUT to $REMOTE" >> $OUTPUT
   echo "    Will save $OUTPUT to /home/$user"
   cp $OUTPUT /home/$user || \
     echo ">>> WARNING: error copying $OUTPUT to /home/$user"

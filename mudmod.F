@@ -22,10 +22,11 @@ c                       MUDPACK version 5.0
 ! Use-associate coefficients cee and cofum from dynamo module in tiegcm1 
 ! (dynamo.F).
 !
-      subroutine mudmod(pe,jntl,ier)
+      subroutine mudmod(pe,jntl,isolve,ier)
       use dynamo_module,only: cee
       implicit none
       integer jntl,ier  ! output: not converged ier < 0
+      integer,intent(in) :: isolve
 c
 c     set grid size params
 c
@@ -176,7 +177,7 @@ c     intialization call
 c
 !     write(*,104) intl
   104 format(/' discretization call to mud2cr', ' intl = ', i2)
-      call mud2cm(iprm,fprm,work,rhs,phi,mgopt,ierror)
+      call mud2cm(iprm,fprm,work,rhs,phi,mgopt,ierror,isolve)
 !     write (*,200) ierror,iprm(16)
   200 format(' ierror = ',i2, ' minimum work space = ',i7)
       if (ierror.gt.0) call exit(0)
@@ -188,7 +189,7 @@ c
   106 format(/' approximation call to mud2cr',
      +/' intl = ',i2, ' method = ',i2,' iguess = ',i2)
       
-      call mud2cm(iprm,fprm,work,rhs,phi,mgopt,ierror)
+      call mud2cm(iprm,fprm,work,rhs,phi,mgopt,ierror,isolve)
       ier = ierror ! ier < 0 not converged
       if(ier < 0 )  goto 108
       
@@ -211,8 +212,9 @@ C
       end
 C-------------------------------------------------------------------
       subroutine mud2cm(iparm,fparm,work,rhs,phi,mgopt,
-     +                  ierror)
+     +                  ierror,isolve)
       implicit none
+      integer,intent(in) :: isolve
       integer iparm,mgopt,ierror
       integer intl,nxa,nxb,nyc,nyd,ixp,jyq,iex,jey,nfx,nfy,iguess,
      +             maxcy,method,nwork,lwork,itero,ngrid,klevel,kcur,
@@ -359,7 +361,7 @@ c
 	  ity = ktybgn(k)
 	  klevel = k
 	  call dismd2cr(nx,ny,work(ic),work(itx),work(ity),
-     +                  work,ierror)
+     +                  work,ierror,isolve)
 	  end do
 	return
       end if   ! end of intl=0 initialization call block
@@ -498,8 +500,8 @@ c
 	    jj = j*(nfx+2)
 	    do i=1,nfx
 	      ij = jj+i+1
-	      phmax = amax1(phmax,abs(wk(ij)))
-	      relmax = amax1(relmax,abs(wk(ij)-phif(i,j)))
+	      phmax = max(phmax,abs(wk(ij)))
+	      relmax = max(relmax,abs(wk(ij)-phif(i,j)))
 	      
 	      phif(i,j) = wk(ij)
 	    end do

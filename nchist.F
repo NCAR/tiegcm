@@ -591,16 +591,13 @@
 !
 ! If number of levels in source history (h%nlev) is > number of
 ! levels in model (nlevp1), then store t,u,v bottom boundaries in
-! top (nlevp1) slot. This is important esp for u,v, so that the
+! top slot (nlevp1). This is important esp for u,v, so that the
 ! model tuvbnd.F will calculate u,v bottom boundaries correctly.
 !
       if (h%nlev > nlevp1 .and. any(names_lbc_intop==name)) then
         write(6,"('rdf4d: nlevp1=',i3,' h%nlev=',i3,' field=',
      |    a,' -- storing bottom boundary in top level.')")
      |    nlevp1,h%nlev,trim(name)
-! data(i,k,j):
-!       f4d(ix)%data(nlevp1,:,1:nlat,itp) = 
-!    |  f4d(ix)%data(1     ,:,1:nlat,itp)
 ! data(k,i,j):
         f4d(ix)%data(nlevp1,:,1:nlat,itp) = 
      |  f4d(ix)%data(1     ,:,1:nlat,itp)
@@ -1208,7 +1205,6 @@
 !
 ! Mss path to source history file:
       if (nsource > 0) then ! initial source file
-        write(6,"('h%mss_source=',a)") h%mss_source
         istat = nf_put_att_text(ncid,NF_GLOBAL,"mss_source",
      |    len_trim(h%mss_source)+10,trim(h%mss_source)//' (initial)')
       else ! continuation source file

@@ -194,10 +194,10 @@
 !       call addfsech('VNLBC',' ',' ',vnlbc_diag,lon0,lon1,nk,nkm1,lat)
 !
 ! Save 2d lon,lat boundaries to secondary history:
-        call addfsech_ij('UNLBC','UN Lower boundary','cm/s',unlbc_ij,
-     |    lon0,lon1,lat0,lat1)
-        call addfsech_ij('VNLBC','VN Lower boundary','cm/s',vnlbc_ij,
-     |    lon0,lon1,lat0,lat1)
+!       call addfsech_ij('UNLBC','UN Lower boundary','cm/s',unlbc_ij,
+!    |    lon0,lon1,lat0,lat1)
+!       call addfsech_ij('VNLBC','VN Lower boundary','cm/s',vnlbc_ij,
+!    |    lon0,lon1,lat0,lat1)
 !
         do i=lonbeg,lonend
           do k=lev0,lev1-1
@@ -463,12 +463,12 @@
 !     call mp_periodic_f3d(vn_upd(:,lon0:lon1,lat0-1:lat1+1),
 !    |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
 #endif
-      do lat=lat0,lat1
-        call addfsech('UN_FINAL',' ',' ',un_upd(:,lon0:lon1,lat),
-     |    lon0,lon1,nk,nk-1,lat)
-        call addfsech('VN_FINAL',' ',' ',vn_upd(:,lon0:lon1,lat),
-     |    lon0,lon1,nk,nk-1,lat)
-      enddo ! lat=lat0,lat1
+!     do lat=lat0,lat1
+!       call addfsech('UN_FINAL',' ',' ',un_upd(:,lon0:lon1,lat),
+!    |    lon0,lon1,nk,nk-1,lat)
+!       call addfsech('VN_FINAL',' ',' ',vn_upd(:,lon0:lon1,lat),
+!    |    lon0,lon1,nk,nk-1,lat)
+!     enddo ! lat=lat0,lat1
       end subroutine duv
 !-----------------------------------------------------------------------
       subroutine glp(tn,tn_upd,tn_nm,barm,z,zl,zp,

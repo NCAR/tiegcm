@@ -218,6 +218,8 @@
      |   'O2              ',
      |   'O1              ',
      |   'Z               '/)
+      character(len=16) :: secfmag_mandatory(1) =
+     | (/'ZMAG            '/)
 !
       contains
 !-------------------------------------------------------------------
@@ -469,7 +471,7 @@
 ! Tide:
       n = size(tide)-count(tide==spval)
       if (n /= 10) then
-        write(6,"(/'>>> INPUT: must have 10 entries for TIDE,',
+        write(6,"(/,'>>> INPUT: must have 10 entries for TIDE,',
      |    ' got ',i3)") n
         stop 'TIDE'
       endif
@@ -573,7 +575,7 @@
 !
 ! Daily f10.7 cm flux:
       if (f107 /= spval .and. f107 <= 0.) then
-        write(6,"(/'>>> INPUT: f107 must be positive: f107=',
+        write(6,"(/,'>>> INPUT: f107 must be positive: f107=',
      |    e12.4)") f107
         stop 'F107'
       endif
@@ -582,7 +584,7 @@
 !
 ! 80-day mean f10.7 flux:
       if (f107a /= spval .and. f107a <= 0.) then
-        write(6,"(/'>>> INPUT: f107a must be positive: f107a=',
+        write(6,"(/,'>>> INPUT: f107a must be positive: f107a=',
      |    e12.4)") f107a
         stop 'F107A'
       endif
@@ -608,14 +610,14 @@
 !
 ! Validate cross-tail potential constant, if provided:
       if (ctpoten /= spval .and. ctpoten <= 0.) then
-        write(6,"(/'>>> INPUT: ctpoten must be positive: ctpoten=',
+        write(6,"(/,'>>> INPUT: ctpoten must be positive: ctpoten=',
      |    e12.4)") ctpoten
         stop 'CTPOTEN'
       endif
 !
 ! Validate hemispheric power constant, if provided:
       if (power /= spval .and. power <= 0.) then
-        write(6,"(/'>>> INPUT: power must be positive: power=',
+        write(6,"(/,'>>> INPUT: power must be positive: power=',
      |    e12.4)") power
         stop 'POWER'
       endif
@@ -711,17 +713,27 @@
 !
 ! Check electric potential model:
       if (potential_model == 'WEIMER') then
-        write (6,"(4x,'Will use the Weimer 2001 electric potential',
-     |    ' model')")
-        if (len_trim(weimer_ncfile)==0) then
-          write(6,"(4x,'Since Weimer coef data file WEIMER_NCFILE was ',
-     |      'NOT provided,',/,4x,'I will use the default ',
-     |      'WEIMER_NCFILE: ',a)") trim(weimer_ncfiledef)
-          weimer_ncfile = weimer_ncfiledef
-        else
-          write(6,"(4x,'Will use user-provided path to Weimer coefs',
-     |      ' Weimer_NCFILE = ',a)") trim(weimer_ncfile)
-        endif
+
+! 5/7/04 btf: Weimer is not working. Setmodel01 in weimer01.F produces
+!             NaNs for Coef(). (coefficients read from netcdf file appear
+!             to be ok)
+!
+        write(6,"('>>> Potential_model WEIMER is not available -- ',
+     |    'sub setmodel01 in weimer01.F produces NaNs for coeffs.')")
+        stop 'weimer'
+!
+!       write (6,"(4x,'Will use the Weimer 2001 electric potential',
+!    |    ' model')")
+!       if (len_trim(weimer_ncfile)==0) then
+!         write(6,"(4x,'Since Weimer coef data file WEIMER_NCFILE was ',
+!    |      'NOT provided,',/,4x,'I will use the default ',
+!    |      'WEIMER_NCFILE: ',a)") trim(weimer_ncfiledef)
+!         weimer_ncfile = weimer_ncfiledef
+!       else
+!         write(6,"(4x,'Will use user-provided path to Weimer coefs',
+!    |      ' Weimer_NCFILE = ',a)") trim(weimer_ncfile)
+!       endif
+
       elseif (potential_model == 'HEELIS') then
         write (6,"(4x,'Will use the Heelis param electric potential',
      |    ' model')")
@@ -737,7 +749,7 @@
 !
 ! BY component of solar IMF magnetic field:
       if (byimf==spval) then
-        write(6,"(/'>>> INPUT: need 1 value for byimf',
+        write(6,"(/,'>>> INPUT: need 1 value for byimf',
      |    ' e.g.: BYIMF=0.')")
         write(6,"('NOTE: multiple (time-dependent) values for CTPOTEN',
      |    ' not yet supported')")
@@ -747,12 +759,12 @@
 ! Limits on By NOT necessary for Weimer (or for NONE)
       if (potential_model == 'HEELIS') then
         if (byimf > 7.) then
-          write(6,"(/'>>> INPUT: byimf too big (must be <= 7.):',
+          write(6,"(/,'>>> INPUT: byimf too big (must be <= 7.):',
      |      ' byimf=',e12.4)") byimf
           stop 'BYIMF'
         endif
         if (byimf < -11.) then
-          write(6,"(/'>>> INPUT: byimf too small (must be >= -11.):',
+          write(6,"(/,'>>> INPUT: byimf too small (must be >= -11.):',
      |      ' byimf=',e12.4)") byimf
           stop 'BYIMF'
         endif
@@ -760,45 +772,36 @@
 !
 ! Bz component of solar IMF magnetic field:
       if (bzimf==spval) then
-        write(6,"(/'>>> INPUT: need 1 value for bzimf',
-     |    ' e.g.: BZIMF=0.')")
-        write(6,"('NOTE: multiple (time-dependent) values for BZIMF',
-     |    ' not yet supported')")
-        stop 'BZIMF'
+        write(6,"('Input: Using default BZIMF=0.')")
+        bzimf = 0.
       endif
 !
 ! Solar wind velocity:
       if (swvel==spval) then
-        write(6,"(/'>>> INPUT: Use default value for swvel=400 km/s')")
-        write(6,"('NOTE: multiple (time-dependent) values for SWVEL',
-     |    ' not yet supported')")
+        write(6,"('Input: Using default SWVEL=400 km/s')")
         swvel = 400.
       endif
 !
 ! Solar wind density:
       if (swden==spval) then
-        write(6,"(/'>>> INPUT: Use default value for swden=4 #/cm3')")
-        write(6,"('NOTE: multiple (time-dependent) values for SWDEN',
-     |    ' not yet supported')")
+        write(6,"('Input: Using default SWDEN=4 #/cm3')")
         swden = 4.
       endif
 !
 ! AL, lower auroral magnetic activity index:
       if (AL==spval) then
-        write(6,"(/'>>> INPUT: AL missing, set AL=-20. ALUSE=FALSE')")
-        write(6,"('NOTE: multiple (time-dependent) values for AL',
-     |    ' not yet supported')")
-        AL = -20.
-        ALUSE = .FALSE.
+        write(6,"('Input: Using default AL=-20., ALUSE=FALSE')")
+        al = -20.
+        aluse = .false.
       else
-        write(6,"(/'Input: AL given, setting ALUSE=TRUE')")
-        ALUSE = .TRUE.
+        write(6,"('Input: AL provided, setting ALUSE=TRUE')")
+        write(6,"('       AL = ',e12.4)") al
+        aluse = .true.
       endif
 !
 ! Collision factor:
       if (colfac==spval) then
-        write(6,"(/,'Input: no value read for colfac. Using default',
-     |    ' colfac = 1.5')")
+        write(6,"('Input: Using default colfac = 1.5')")
         colfac = 1.5
       endif
 !
@@ -1330,7 +1333,7 @@
 ! Validate secondary history inputs:
 !
 ! Local:
-      integer :: n,i,nstarts,nstops,nhists,nsaves,nout,nsteps,
+      integer :: n,i,ii,nstarts,nstops,nhists,nsaves,nout,nsteps,
      |  nsteps_hist(mxseries_sech),nsteps_save(mxseries_sech),
      |  nsechs_total,nseriesp,nflds_sech,nhists_total,
      |  nfiles_sech,nonblank
@@ -1341,6 +1344,7 @@
       character(len=80) :: hvols(mxhvols)
       character(len=16) ::
      |  secflds_tmp(mxfsech)
+      logical :: found
 !
 ! External:
       integer,external :: numfiles
@@ -1753,6 +1757,26 @@
           secfmag(i) = ch80
         enddo
       endif 
+!
+! Add mandatory 3d magnetic fields to secondary history:
+      do i=1,size(secfmag_mandatory)
+        write(6,"('i=',i3,' Mandatory secfmag field ',a)") 
+     |    i,trim(secfmag_mandatory(i))
+        found = .false.
+        if (nflds_sech > 0) then
+          do ii=1,nflds_sech
+            if (trim(secfmag(ii))==trim(secfmag_mandatory(i))) then
+              found = .true.
+            endif
+          enddo
+        endif
+        if (.not.found) then
+          write(6,"('Input: adding mandatory mag field ',a,
+     |      ' to secondary history.')")
+          nflds_sech = nflds_sech+1
+          secfmag(nflds_sech) = secfmag_mandatory(i)
+        endif
+      enddo
 !
 ! Secondary history fields on the geographic 2d grid:
       nflds_sech = count(len_trim(secfgeo2d) > 0)

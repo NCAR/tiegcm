@@ -172,8 +172,8 @@
       fmin = 1.e36
       fmax = -1.e36
       do i=1,n
-        fmin = amin1(f(i),fmin)
-        fmax = amax1(f(i),fmax)
+        fmin = min(f(i),fmin)
+        fmax = max(f(i),fmax)
       enddo
       end subroutine fminmax
 !-------------------------------------------------------------------
@@ -195,8 +195,8 @@
       fmax = -1.e36
       do i=1,n
         if (f(i) /= spv) then
-          fmin = amin1(f(i),fmin)
-          fmax = amax1(f(i),fmax)
+          fmin = min(f(i),fmin)
+          fmax = max(f(i),fmax)
         endif
       enddo
       end subroutine fminmaxspv
@@ -284,6 +284,8 @@
       sddot = dot_product(x,y)
 #elif OSF1
       sddot = dot_product(x,y)
+#elif LINUX
+      sddot = dot_product(x,y)
 #else
       write(6,"('>>> WARNING sddot: unresolved OS pre-processor',
      |  ' directive.')")
@@ -309,8 +311,10 @@
       vsum = sum(v,n)
 #elif OSF1
       vsum = sum(v,n) ! a wild guess
+#elif LINUX
+      vsum = sum(v,n) ! another guess
 #else
-      write(6,"('>>> WARNING sddot: OS system cpp directive',
+      write(6,"('>>> WARNING vsum: OS system cpp directive',
      |  ' not found.')")
 #endif
       end function vsum
@@ -330,6 +334,8 @@
       sdcmplx = cmplx(x1,x2)
 #elif OSF1
       sdcmplx = cmplx(x1,x2)
+#elif LINUX
+      sdcmplx = cmplx(x1,x2)
 #else
       write(6,"('>>> WARNING sddot: OS system cpp directive',
      |  ' not found.')")
@@ -346,7 +352,7 @@
       real,parameter :: xmin=-708., xmax=+709., 
      |  big=.1e305, small=.1e-305
 !
-#if defined(IRIX) || defined(AIX) || defined(OSF1) || defined(SUN)
+#if defined(IRIX) || defined(AIX) || defined(OSF1) || defined(SUN) || defined(LINUX)
       if (x >= xmin .and. x <= xmax) then
         expo = exp(x)
       elseif (x < xmin) then
@@ -382,6 +388,9 @@
 #elif defined(SUN)
       integer,external :: system
       isystem = system(trim(command))
+#elif defined(LINUX)
+      integer,external :: system
+      isystem = system(trim(command))
 #endif
       end function isystem
 !-------------------------------------------------------------------
@@ -396,7 +405,7 @@
 #if defined(UNICOS) || defined(IRIX)
       real(kind=4),external :: second
       cputime = second()
-#elif AIX
+#elif AIX || LINUX
 !
 ! IBM AIX uses sub cpu_time
 ! To use other than default time type use setrteopts, e.g.:
@@ -409,7 +418,7 @@
 #elif OSF1
       cputime = 0. ! don't know of one on OSF, except in ncaru
 #elif SUN
-      cputime = 0. ! don't know of one on OSF, except in ncaru
+      cputime = 0. ! don't know of one on SUN, except in ncaru
 #endif
       end function cputime 
 !-------------------------------------------------------------------
@@ -422,7 +431,6 @@
 !
 ! External:
       integer,external :: link
-!
 #if defined(UNICOS) || defined(IRIX) || defined(SUN) || defined(OSF1)
       ilink = link(trim(from),trim(to))
       if (ilink.eq.0) then
@@ -433,7 +441,7 @@
      |    ' failed: ierror=',i3,/)") trim(from),trim(to),ilink
 !       stop 'ilink'
       endif
-#elif defined(AIX) 
+#elif defined(AIX) || defined(LINUX)
 !
 ! Note: link will fail if executing from different file system
 !       than tmpdir (e.g., executing from /home but tmpdir is
@@ -466,7 +474,7 @@
      |    write(6,"('Note: unlink of ',a,' failed',
      |      ' (possibly non-existant file).')") trim(file)
       endif
-#elif AIX
+#elif AIX || LINUX
       iunlink = unlink(trim(file)//"\0")
       if (iunlink.eq.0) then
         if (iprint > 0) 
@@ -700,6 +708,8 @@
       system = 'OSF1'
 #elif SUN
       system = 'SUN'
+#elif LINUX
+      system = 'LINUX'
 #else
       write(6,"('>>> WARNING setosys: unresolved OS cpp directive.')")
       system = 'unknown'
@@ -741,6 +751,8 @@
 !     tmpdir = '/home/tgcm/dev/hist/hist'
 !     tmpdir = '/e/foster/tgcm15'
       tmpdir = '/e/foster/tiegcm1/tmpdir'
+#elif LINUX
+      tmpdir = './tmpdir'
 #else
       write(6,"('>>> WARNING settmpdir: unresolved OS cpp directive.')")
       write(6,"('            Will set to cwd (tempdir = ''.'')')")
@@ -841,7 +853,7 @@
      |    'QSUB_HOST environment variables.',/)")
         host = 'unknown'
       endif
-#elif defined(SUN)
+#elif defined(SUN) || defined(LINUX)
       call getenv('HOST',host)
       if (len_trim(host)==0) then
         write(6,"(/,'>>> gethost: Cannot get HOST environment ',

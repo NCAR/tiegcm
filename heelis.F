@@ -176,8 +176,8 @@
         aslonc(n) = asin(dskofc(n)/ofdc)
 !
         if (phin(n) < phid(n)) phin(n) = phin(n)+pi2  ! modifies aurora phin
-        phdpmx(n) = .5*amin1(pi,(phin(n)-phid(n)))
-        phnpmx(n) = .5*amin1(pi,(phid(n)-phin(n)+pi2))
+        phdpmx(n) = .5*min(pi,(phin(n)-phid(n)))
+        phnpmx(n) = .5*min(pi,(phid(n)-phin(n)+pi2))
         phnmmx(n) = phdpmx(n)
         phdmmx(n) = phnpmx(n)
       enddo ! n=1,2
@@ -196,7 +196,7 @@
 !
 ! Set ihem=1,2 for South,North hemisphere:
 !
-      ihem = ifix(dlat(max0(1,nlon/2))*2./3.1416+2.) 
+      ihem = int(dlat(max0(1,nlon/2))*2./3.1416+2.) 
       sinth0 = sin(theta0(ihem))
 !
 ! Average amie results show r1=-2.6 for 11.3 degrees
@@ -229,13 +229,13 @@
 ! Boundaries for longitudinal function:
 !
         wk1(i) = ((colat(i)-theta0(ihem))/theta0(ihem))**2
-        phi(i,4)=phid(ihem)+eps-amin1(phidm0(ihem)+wk1(i)*
+        phi(i,4)=phid(ihem)+eps-min(phidm0(ihem)+wk1(i)*
      |    (pih-phidm0(ihem)),phdmmx(ihem))
-        phi(i,5)=phid(ihem)-eps+amin1(phidp0(ihem)+wk1(I)*
+        phi(i,5)=phid(ihem)-eps+min(phidp0(ihem)+wk1(I)*
      |    (pih-phidp0(ihem)),phdpmx(ihem))
-        phi(i,6)=phin(ihem)+eps-amin1(phinm0(ihem)+wk1(i)*
+        phi(i,6)=phin(ihem)+eps-min(phinm0(ihem)+wk1(i)*
      |    (pih-phinm0(ihem)),phnmmx(ihem))
-        phi(i,7)=phin(ihem)-eps+amin1(phinp0(ihem)+wk1(i)*
+        phi(i,7)=phin(ihem)-eps+min(phinp0(ihem)+wk1(i)*
      |    (pih-phinp0(ihem)),phnpmx(ihem))
         phi(i,1)=phi(i,5)-pi2
         phi(i,2)=phi(i,6)-pi2
@@ -282,8 +282,8 @@
      |      theta0(ihem))**2 + 0.75*(phifun(i)-phifn2(i))*(colat(i)/
      |      theta0(ihem)) + pcen(ihem)
         else
-          poten(i) = phifun(i)*(amax1(sin(colat(i)),
-     |      sinth0)/sinth0)**rr1(ihem)*exp(7.*(1.-amax1(sin(colat(i)),
+          poten(i) = phifun(i)*(max(sin(colat(i)),
+     |      sinth0)/sinth0)**rr1(ihem)*exp(7.*(1.-max(sin(colat(i)),
      |      sinthr1)/sinthr1))
         endif
       enddo

@@ -182,7 +182,12 @@ c
             write(6,"('Begin wait for completion of previous ',
      |        'asynchronous mss write of disk file',/,'  ',a,
      |        ' at ',a,' ',a)") trim(dskfile_prev),curdate,curtime
+#ifdef LINUX
+            write(6,"('>>> Must set msasync = 0 on Linux systems..')")
+            stop 'msasync'
+#else
             call msrecall(trim(dskfile_prev))
+#endif
             call datetime(curdate,curtime)
             write(6,"('Completed wait at ',a,' ',a)") curdate,curtime
           endif

@@ -394,7 +394,7 @@
 	offcx = abs(latinx(ixp3,2)) - abs(latinx(ixm3,2))
 !  07/03:  Correction to make sure offset is at least 0.5 deg towards 0 MLT
 !       offcdeg = 0.5*(offcn+offcx)
-	offcdeg = amax1(0.5,0.5*(offcn+offcx))
+	offcdeg = max(0.5,0.5*(offcn+offcx))
 	offc(ih) = offcdeg / rtd
 	offa(ih) = offcdeg / rtd
 !       write (6,"(1x,'min/max latd3,n3 offc =',8e12.4)")
@@ -422,7 +422,7 @@
 !    |   sinl06,cosl06,cosm06,colat06,asin(dskof/ofdc)
 	crad = 0.5*(colat18+colat06)
 !  Make sure crad is largest of crad and crad0
-	craduse = amax1(crad,crad0)
+	craduse = max(crad,crad0)
 	if (craduse .gt. crad) write (6,"(1x,'Used crad0 from 6-18',
      |   'instead of calc crad =',2e12.4)") crad0,crad
 	arad = craduse + 2.
@@ -432,10 +432,10 @@
 !    |    colat18,colat06,crad,arad,theta0(ih),rrad(ih)
 !
 ! Print out revised values:
-	write (6,"('Revised convection/oval params (hem,By,off,dsk,',
-     |    'rad,phid,n=',i2,9e12.4)")ih,byimf,offc(ih)*rtd,offa(ih)*rtd,
-     |    dskofc(ih)*rtd,dskofa(ih)*rtd,theta0(ih)*rtd,rrad(ih)*rtd,
-     |    phid(ih)*rtd/15.+12.,phin(ih)*rtd/15.+12.
+!       write (6,"('Revised convection/oval params (hem,By,off,dsk,',
+!    |    'rad,phid,n=',i2,9e12.4)")ih,byimf,offc(ih)*rtd,offa(ih)*rtd,
+!    |    dskofc(ih)*rtd,dskofa(ih)*rtd,theta0(ih)*rtd,rrad(ih)*rtd,
+!    |    phid(ih)*rtd/15.+12.,phin(ih)*rtd/15.+12.
       enddo  ! ih=1,2
       return
       end subroutine calccloc
@@ -474,8 +474,8 @@
 !     integer,intent(in) :: nmlat0,nmlon,nmlat,nmlonp1
 !     real,dimension(nmlonp1,nmlat0)  :: pfrac  ! fraction of potential
 !     real,dimension(nmlonp1,nmlat)   :: phihm  ! potential in magnetic
-      LOGICAL USEAL
       implicit none
+      LOGICAL USEAL
       real :: r2d,by,bz,sws,swd,alind,bt,angl,tilt,ut,hem,htilt,hangl,
      |        rmlt
      |        ,gmlt,rmlat,blats,blatn,phikvs,phikvn,ets,etn,eps,epn
@@ -510,11 +510,14 @@
       USEAL = ALUSE
       BT    = SQRT (BY*BY + BZ*BZ)
       ANGL  = ATAN2 (BY,BZ)*R2D
-      IYR   = h.year
+!     IYR   = h.year
+      IYR   = h%year
 !  Convert from day number to month and day
-      nda = h.day
+!     nda = h.day
+      nda = h%day
       call CVT2MD(6,IYR,NDA,IMO,IDA)
-      ut = h.ut
+!     ut = h.ut
+      ut = h%ut
       TILT = GET_TILT (IYR,IMO,ida,ut)
 
 ! In epotval01, we find blat=BoundaryLat(rmlt), below which the potential
@@ -525,14 +528,19 @@
       HTILT = HEM * TILT
       HANGL = HEM * ANGL
       CALL SETMODEL01 (HANGL,BT,HTILT,SWS,SWD,ALind,USEAL)
+!     write(6,"('weimer01 after setmodel01: coef=',/,(6e12.4))") coef
 
       do j=1,nmlat0
-       do i=1,nmlon
+        do i=1,nmlon
 ! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc) in rad
-	 rmlt = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
+          rmlt = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
 !  Convert from kV to V
-	 phihm(i,j) = epotval01(abs(ylatm(j))*rtd,rmlt) * 1000.
+          phihm(i,j) = epotval01(abs(ylatm(j))*rtd,rmlt) * 1000.
        enddo ! i=1,nmlon
+
+!      write(6,"('weimer01: j=',i3,' SH phihm(:,j)=',/,(6e12.4))") 
+!    |   j,phihm(:,j)
+
       enddo ! j=1,nmlat0
 
 !  Do NH calculation
@@ -548,7 +556,12 @@
 !  Convert from kV to V
 	 phihm(i,j) = epotval01(abs(ylatm(j))*rtd,rmlt) * 1000.
        enddo ! i=1,nmlon
+
+!      write(6,"('weimer01: j=',i3,' NH phihm(:,j)=',/,(6e12.4))") 
+!    |   j,phihm(:,j)
+
       enddo ! j=nmlat0+1,nmlat
+
 !
 ! Periodic points:
       do j=1,nmlat
@@ -1086,6 +1099,9 @@ CNCAR
 			    acoef=acoef + PSS(0) + PSS(1)*ALindex
 			ENDIF
 			Coef(k,l,m)=acoef
+! 5/7/04 btf: Coef is NaNs and zeroes.
+!                       write(6,"('setmodel01: k=',i3,' l=',i3,' m=',i3,
+!    |                    ' coef=',e12.4)") k,l,m,coef(k,l,m)
 		  ENDDO
 	    ENDDO
 	ENDDO
@@ -1116,8 +1132,7 @@ CNCAR
 		  BoundFit(k,n)=acoef
 	    ENDDO
 	ENDDO
-	RETURN
-!       END
+!       write(6,"('end setmodel01: Coef=',/,(6e12.4))") Coef
 	end subroutine setmodel01
 ****************** Copyright 1996, 2001, Dan Weimer/MRC ***********************
 	FUNCTION BoundaryLat(gmlt)
@@ -1170,7 +1185,7 @@ C          (a function of MLT), limit the latitude used to never be less
 C          than the model minimum, thus returning a constant potential for
 C          points at and equatorward of BoundaryLat (gmlt).
 C     IF (glat .GT. blat) THEN
-      glatlim = amax1 (glat,blat)
+      glatlim = max (glat,blat)
 CNCAR
 
       Phi = DBLE (gMLT)*dpi/12.D0
@@ -1186,6 +1201,9 @@ CNCAR
       Z  = DC
       O  = DC
       ct = DCOS(x)
+
+!     write(6,"('epotval01: init z=',e12.4,' o=',e12.4)") z,o
+
 !NCAR   Nov 02:  change 0.D0 to dPlm and dOPlm and .FALSE. to derivative
       CALL DLegendre (ct,   MaxL,MaxM,Plm ,dPlm,derivative)
 !     CALL DLegendre (ct,Plm ,dPlm,.FALSE.)
@@ -1195,6 +1213,11 @@ C          Also find value at outer boundary at angle Pi, or cos(pi)=-1.
       CALL DLegendre (-1.D0,MaxL,MaxM,OPlm ,dOPlm,derivative)
 !     CALL DLegendre (-1.D0,OPlm ,dOPlm,derivative)
       DO l=1,MaxL
+
+! btf 5/7/04: coef(0,l,0) is NaN
+!       write(6,"('epotval01: l=',i4,' plm(l,0)=',e12.4,' coef(0,l,0)=',
+!    |    e12.4)") l,plm(l,0),coef(0,l,0)
+
 	Z = Z +  Plm(l,0)*DBLE(Coef(0,l,0))
 	O = O + OPlm(l,0)*DBLE(Coef(0,l,0))
 	mlimit = MIN(l,MaxM)
@@ -1203,6 +1226,10 @@ C          Also find value at outer boundary at angle Pi, or cos(pi)=-1.
 	  Z = Z + Plm(l,m)*(DBLE(Coef(0,l,m))*DCOS(Phim) +
      $                      DBLE(Coef(1,l,m))*DSIN(Phim) )
 	  O = O +OPlm(l,m)*DBLE(Coef(0,l,m))
+
+!         write(6,"('epotval01: l=',i4,' m=',i3,' z=',e12.4,' o=',
+!    |      e12.4)") l,m,z,o
+
 	ENDDO
       ENDDO
 CNCAR

@@ -649,7 +649,7 @@ C         JST .NE. 0 is assumed to mean read beyond last record
 	WRITE (MSGU,9170) CALNM(1:LCN),DATE,TL,FILNAM(1:LFN)
 	IST = -1
       ELSE
-	DATD = AMIN1 (DATE-TO,TL-DATE)
+	DATD = min (DATE-TO,TL-DATE)
 	IF (DATD .GT. DATIMX) THEN
 	  WRITE (MSGU,9180) CALNM(1:LCN),DATE,TB,TL,FILNAM(1:LFN),DATD
 	  IST = -1
@@ -706,8 +706,8 @@ C         JST .NE. 0 is assumed to mean read beyond last record
 
 C          Establish for this grid polar latitude limits beyond which east-west
 C          gradients are computed differently to avoid potential underflow
-  300 GLALMX = AMAX1 ( GLATLIM,WK(LLA+NLA-2))
-      GLALMN = AMIN1 (-GLATLIM,WK(LLA+1))
+  300 GLALMX = max ( GLATLIM,WK(LLA+NLA-2))
+      GLALMN = min (-GLATLIM,WK(LLA+1))
 
       RETURN
 
@@ -899,8 +899,8 @@ C          in direction of grad(DIST2), by amount ANGDIST.
       SLP = SLM*CAD + COSLM*SAD*CAL
 
 C          Old code (below) introduced truncation errors near geographic poles
-C     SLP = AMIN1 (SLP,SGLAN) ; sglan = sin(wk(lla+nla-1))*dtor)
-C     SLP = AMAX1 (SLP,SGLAS) ; sglas = sin(wk(lla))      *dtor)
+C     SLP = min (SLP,SGLAN) ; sglan = sin(wk(lla+nla-1))*dtor)
+C     SLP = max (SLP,SGLAS) ; sglas = sin(wk(lla))      *dtor)
 C     CLP = SQRT(1. - SLP*SLP)
 C     YLAT = ASIN(SLP)*RTOD
 
@@ -909,15 +909,15 @@ C     YLAT = ASIN(SLP)*RTOD
       SAD2 = SAD*SAD
       CAL2 = CAL*CAL
       CLP2 = CLM2 + SLM2*SAD2 - 2.*SLM*CAD*COSLM*SAD*CAL -CLM2*SAD2*CAL2
-      CLP = SQRT (AMAX1(0.,CLP2))
+      CLP = SQRT (max(0.,CLP2))
       YLAT = ATAN2(SLP,CLP)*RTOD
 
 C          Restrict latitude iterations to stay within the interpolation grid
 C          limits, but let INTRP find any longitude exceedence.  This is only
 C          an issue when the interpolation grid does not cover the entire
 C          magnetic pole region.
-      YLAT = AMIN1(YLAT,WK(LLA+NLA-1))
-      YLAT = AMAX1(YLAT,WK(LLA))
+      YLAT = min(YLAT,WK(LLA+NLA-1))
+      YLAT = max(YLAT,WK(LLA))
 
       DYLON = ATAN2 (SAD*SAL,CAD*COSLM-SAD*SLM*CAL)*RTOD
 C          Old formula (replaced Mar 99) had truncation problem near poles
@@ -1724,7 +1724,7 @@ C          stmspm is pseudodipole component of y
       RP = 1. + GPALT(K)/RE
       V(I,J,K) = VNOR*RP*RP + CTM
       REQAM1 = REQ*(A-1.)
-      SLP = SQRT(AMAX1(REQAM1-GPALT(K),0.)/(REQAM1+RE))
+      SLP = SQRT(max(REQAM1-GPALT(K),0.)/(REQAM1+RE))
 C          Reverse sign of slp in southern magnetic hemisphere
       IF (ZDOWN.LT.0.) SLP = -SLP
       CLP = SQRT (RP/(REQORE*A-RQORM1))
@@ -1801,8 +1801,8 @@ C
       STM = COS(GMLAT*DTOR)
       CTM = SIN(GMLAT*DTOR)
       CTC = CTP*CTM - STP*STM*COS(GMLON*DTOR)
-      CTC = AMIN1(CTC,1.)
-      CTC = AMAX1(CTC,-1.)
+      CTC = min(CTC,1.)
+      CTC = max(CTC,-1.)
       GCLAT = ASIN(CTC)*RTOD
       GCLON = ATAN2(STP*STM*SIN(GMLON*DTOR),CTM-CTP*CTC)
       GCLON = GCLON*RTOD + ELON
@@ -1958,7 +1958,7 @@ C     SINGML = .98*SIN(GCLAT*DTOR) + .199*COS(GCLAT*DTOR)*
      +                                             COS((GLON-ELON)*DTOR)
 
 C          May 99: avoid possible divide by zero (when SINGML = 1.)
-      CGML2 = AMAX1 (0.25,1.-SINGML*SINGML)
+      CGML2 = max (0.25,1.-SINGML*SINGML)
       DS = .06*R/CGML2 - 370.
 Cold:      Limit DS to its value at 60 deg gm latitude.
 Cold: DS = .06*R/(1.-SINGML*SINGML) - 370.
@@ -2210,7 +2210,7 @@ C     ****     FIND APEX HEIGHT BY INTERPOLATION
 C     ****
       CALL FINT(Z(1),Z(2),Z(3),HT(1),HT(2),HT(3),0.,XINTER)
 C          Ensure that XINTER is not less than original starting altitude (ALT)
-      XINTER = AMAX1(ALT,XINTER)
+      XINTER = max(ALT,XINTER)
       A = (REQ+XINTER)/(REQ)
 C     ****
 C     ****     FIND APEX COORDINATES , GIVING ALAT SIGN OF DIP AT

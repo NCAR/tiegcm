@@ -21,7 +21,7 @@
       use hdif_module,only: hdif1,hdif2
       use timing_module
       use dynamo_module,only: prep_dynamo,prep_dynamo_dyn0,dynamo,
-     |  nodynamo,phihm,nmlat0
+     |  nodynamo,phihm,nmlat0,zpotenm3d
       use dynamo_old_module,only: prep_dynamo_old,dynamo_old,
      |  phihm_old=>phihm
       use gpi_module,only: rdgpi,getgpi
@@ -48,8 +48,7 @@
      |  rtcmp_dynpot
 #ifdef MPI
       use mpi_module,only: 
-     |  mytid,mytidi,mytidj,mp_close,mp_gather2root,
-     |  mp_bndlats,ntask,lat0,lat1,lon0,lon1,ntaskj,
+     |  mytid,mp_gather2root,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
      |  mp_bndlons,mp_gatherlons,mp_scatterlons,mp_polelats,
      |  mp_periodic_f4d,mp_updatephi
 !
@@ -58,7 +57,7 @@
 #else
       implicit none
       integer :: lat0=1,lat1=nlat, lon0=1,lon1=nlonp4
-      integer :: mytid,mytidi,ntask
+      integer :: mytid=0,ntask=1
 #endif
 #ifdef VT
 #include "VT.inc"
@@ -129,6 +128,10 @@
         call mp_gather2root(itc,'prim')
         if (mytid==0) call outhist(istep,modeltime)
 #else
+        do i=1,nf4d
+          foutput(:,lon0:lon1,lat0:lat1,i) =
+     |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
+        enddo
         call outhist(istep,modeltime)
 #endif
 !
@@ -224,16 +227,16 @@
 !
 ! Report to stdout:
       if (istep == 1) then
-        write(6,"('Step ',i6,' of ',i6,' mtime=',2i4,2i3)")
+        write(6,"(/,'Step ',i6,' of ',i6,' mtime=',2i4,2i3)")
      |    istep,nstep,modeltime
       else
         if (nstep <= 100 .or. (nstep > 100 .and. mod(istep,10)==0)) then
           if (do_rtc) then
-            write(6,"('Step ',i6,' of ',i6,' mtime=',2i4,2i3,
+            write(6,"(/,'Step ',i6,' of ',i6,' mtime=',2i4,2i3,
      |        ' rtc secs/step=',f6.2,' elapsed mins=',f8.2)") 
      |        istep,nstep,modeltime,rtc_elapstep,rtc_elapsteps/60.
           else
-            write(6,"('Step ',i6,' of ',i6,' mtime=',2i4,2i3,
+            write(6,"(/,'Step ',i6,' of ',i6,' mtime=',2i4,2i3,
      |        ' secs/step=',f6.2,' elapsed mins=',f8.2)")
      |        istep,nstep,modeltime,elapsed_step,elapsed_steps/60.
           endif
@@ -303,6 +306,7 @@
 ! Define boundary latitudes -1,0 across the south pole, and
 !   nlat+1,nlat+2 across the north pole:
 !
+#ifdef MPI
       if (do_rtc) call timer(rtc_polelat,tsec,'begin')
       call mp_polelats(itp)
       if (do_rtc) then
@@ -311,13 +315,10 @@
      |    istep,tsec 
       endif
 !
-#ifdef MPI
-!
 ! Update ghost cell boundary lats and lons.
 ! Bndlats is called first to exchange lat0-1,2 and lat1+1,2 at lon0->lon1, 
 !   then bndlons is called  to exchange lon0-1,2 and lon1+1,2 at lat0-2->lat1+2).
 !
-!     if (istep==1) then
       f4d(:)%mpi = .true. 
       if (do_rtc) call timer(rtc_bndlats,tsec,'begin')
       call mp_bndlats(f4d,nf4d,itp)
@@ -334,6 +335,11 @@
         write(6,"('Advance step ',i4,': rtc time for mp_bndlons=',
      |    f10.2,' (beginning of step)')") istep,tsec
       endif
+#else
+      call mk_polelat(0     ,1     ,itp)
+      call mk_polelat(-1    ,2     ,itp)
+      call mk_polelat(lat1+1,lat1  ,itp)
+      call mk_polelat(lat1+2,lat1-1,itp)
 #endif
 !
 ! For Z, itc==itp (itp was set by addiag):
@@ -404,8 +410,10 @@
 !
       if (potential_model == 'WEIMER') then
         call weimer01
+        if (debug) write(6,"('advance after weimer01: istep=',i4)")istep
       elseif (potential_model == 'HEELIS') then
         call heelis
+        if (debug) write(6,"('advance after heelis: istep=',i4)") istep
       else  !  potential_model='NONE'
         do j=1,nmlat0
           do i=1,nmlonp1
@@ -429,23 +437,41 @@
       endif
 !
 ! Save Cusp, drizzle, alfa and nflux to secondary history to plot later
-      call addfsech_ij ('CUSP','2D CUSP','0-1',cusp2d,1,nlonp4,
-     |  1,nlat)
-      call addfsech_ij ('DRIZZLE','2D DRIZZLE','0-1',drzl2d,1,
-     |  nlonp4,1,nlat)
-      call addfsech_ij ('ALFA','2D ALFA','keV',alfa2d,1,
-     |  nlonp4,1,nlat)
-      call addfsech_ij ('NFLUX','2D NFLUX','#/cm3?',nflx2d,1,
-     |  nlonp4,1,nlat)
+!     call addfsech_ij ('CUSP','2D CUSP','0-1',cusp2d,1,nlonp4,
+!    |  1,nlat)
+!     call addfsech_ij ('DRIZZLE','2D DRIZZLE','0-1',drzl2d,1,
+!    |  nlonp4,1,nlat)
+!     call addfsech_ij ('ALFA','2D ALFA','keV',alfa2d,1,
+!    |  nlonp4,1,nlat)
+!     call addfsech_ij ('NFLUX','2D NFLUX','#/cm3?',nflx2d,1,
+!    |  nlonp4,1,nlat)
 !
 ! Call dynamo if namelist input flag is set:
-! am_11/03 if dynamo = 0 need zpoten3d for subroutine threed
 !
-      if (idynamo >= 0) then
-        if (do_rtc) call timer(rtc_dynamo,tsec,'begin')
+! zpotenm3d is 3-d geopotential height in mag coords. This field is forced
+! on the secondary histories. Here init to zero:
 !
-! Prepare inputs to dynamo, and gather them to the root task:
-        if (idynamo==1) then
+      zpotenm3d = 0. ! whole array init (this field forced onto secondary hist)
+      if (do_rtc.and.idynamo > 0) call timer(rtc_dynamo,tsec,'begin')
+      select case (idynamo)
+!
+! idynamo==0 -> Do not call dynamo. However, if potential_model is
+!               requested, set electric potential accordingly.
+        case (0) 
+          if (trim(potential_model) /= 'NONE') then
+            call prep_dynamo_dyn0(
+     |        z      (levd0,lond0,latd0,itp),
+     |        1,nlevp1,lon0,lon1,lat0,lat1)
+              if (debug) write(6,"('advance after prep_dynamo_dyn0')")
+            if (mytid==0) then 
+              call nodynamo
+              if (debug) write(6,"('advance after nodynamo')")
+            endif
+          endif   ! potential_model /= NONE
+!
+! idynamo==1 -> All tasks call prep_dynamo_old, and master task calls 
+!               "old" dynamo.
+        case (1) 
           call prep_dynamo_old(
      |      tn     (levd0,lond0,latd0,itp),
      |      un     (levd0,lond0,latd0,itp),
@@ -457,12 +483,12 @@
      |      hall   (levd0,lond0,latd0),     ! from lamdas.F
      |      1,nlevp1,lon0,lon1,lat0,lat1)
             if (debug) write(6,"('advance after prep_dynamo_old')")
-        else if (idynamo==0) then
-          call prep_dynamo_dyn0(
-     |      z      (levd0,lond0,latd0,itp),
-     |      1,nlevp1,lon0,lon1,lat0,lat1)
-            if (debug) write(6,"('advance after prep_dynamo_dyn0')")
-        else
+          if (mytid==0) call dynamo_old
+          if (debug) write(6,"('advance after dynamo_old')")
+!
+! idynamo==2 -> All tasks call prep_dynamo, and master task calls dynamo:
+!
+        case (2) 
           call prep_dynamo(
      |      tn     (levd0,lond0,latd0,itp),
      |      un     (levd0,lond0,latd0,itp),
@@ -474,37 +500,15 @@
      |      hall   (levd0,lond0,latd0),     ! from lamdas.F
      |      1,nlevp1,lon0,lon1,lat0,lat1)
             if (debug) write(6,"('advance after prep_dynamo')")
-        endif
+          if (mytid==0) call dynamo
+          if (debug) write(6,"('advance after dynamo')")
 !
-! Dynamo itself is executed by master task only:
-! (if rtc timer is called by master task only, then barrier calls
-!  in sub timer (util.F) should be commented out)
+! Unknown idynamo flag:
 !
-        if (mytid==0) then
-!         call timer(rtc_dynamo,tsec,'begin')
-          if (idynamo==1) then
-            call dynamo_old
-            if (debug) write(6,"('advance after dynamo_old')")
-!
-! Call only part of the new dynamo to get the high-lat potential into E
-! fields if idynamo = 0  (high lat potential can be Heelis, Weimer, or None)
-          else if (idynamo==0) then ! no dynamo
-            call nodynamo
-            if (debug) write(6,"('advance after nodynamo')")
-          else
-            call dynamo
-            if (debug) write(6,"('advance after dynamo')")
-          endif
-!         call timer(rtc_dynamo,tsec,'end')
-!         write(6,"('Advance step ',i4,': rtc time for dynamo ',i2,
-!    |      ' = ',f10.2,' secs')") istep,idynamo,tsec
-        endif
-        if (do_rtc) then
-          call timer(rtc_dynamo,tsec,'end')
-          write(6,"('Advance step ',i4,': rtc time for dynamo ',i2,
-     |      ' = ',f10.2,' secs')") istep,idynamo,tsec
-        endif
-      endif ! idynamo > 0
+        case default
+          write(6,"('>>> advance: unknown idynamo = ',i3)") idynamo
+      end select
+      if (do_rtc.and.idynamo > 0) call timer(rtc_dynamo,tsec,'end')
 !
 ! Update time-step timing before any history i/o:
       call end_timing(icount_step,elapsed_step)
@@ -526,7 +530,9 @@
 ! and slave tasks as a consequence of the serial dynamo. (slaves will
 ! be blocked here until the master is done with the dynamo)
 !
+#ifdef MPI
       if (idynamo > 0) call mp_updatephi
+#endif
 !
 ! Write output history if necessary (output writes data%(:,:,:,itc)).
 !
@@ -538,28 +544,40 @@
 ! data from slave tasks before writing the history. This is done
 ! by sub mp_gather2root. Only root task writes to the history.
 !
+#ifdef MPI
       if (time2write.and.ntask > 1) then
         call start_timing(icount_mpi,'mp_gather2root')
         if (do_rtc) call timer(rtc_gather2root,tsec,'begin')
-#ifdef MPI
         call mp_gather2root(itc,'prim')
         if (debug) write(6,"('advance after mp_gather2root')")
-!
-! Comment this mp_gather2root call if sech fields were written by 
-!   the master task only (e.g. from serial dynamo).
-! This call can also be commented out if only pronostics are saved
-!   on secondary histories (i.e., addfsech was not called)
-!
-       if (wrsech) call mp_gather2root(itc,'sech')
-#endif
         if (do_rtc) then
           call timer(rtc_gather2root,tsec,'end')
           write(6,"('Advance step ',i4,': rtc time for gather2root=',
      |      f10.2)") istep,tsec
         endif
+!
+! Comment this mp_gather2root call if sech fields were written by 
+!   the master task only (e.g. from serial dynamo).
+! This call can also be commented out if only progostics are saved
+!   on secondary histories (i.e., addfsech was not called)
+!
+        if (wrsech) call mp_gather2root(itc,'sech')
         call end_timing(icount_mpi,elapsed_gather2root)
         elapsed_mpi = elapsed_mpi+elapsed_gather2root
       endif
+#else
+!
+! Update foutput if serial non-MPI run:
+!
+      if (time2write) then
+        do i=1,nf4d
+          foutput(:,lon0:lon1,lat0:lat1,i) =
+     |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
+        enddo
+      endif
+#endif
+!
+! Write the history to output file:
       if (mytid==0) then
         call outhist(istep,modeltime)
         if (debug) write(6,"('advance after outhist')")
@@ -571,13 +589,13 @@
 ! first 2 (lat0,lat0+1) and last 2 (lat1,lat1-1) updated lats
 ! to the appropriate "adjacent" tasks.
 !
-      f4d(:)%mpi = .true. 
 #ifdef MPI
+      f4d(:)%mpi = .true. 
       if (do_rtc) call timer(rtc_bndlats,tsec,'begin')
 
       call mp_bndlats(f4d,nf4d,itc)
-      if (debug) write(6,"('advance after mp_bndlats')")
 
+      if (debug) write(6,"('advance after mp_bndlats')")
       if (do_rtc) then
         call timer(rtc_bndlats,tsec,'end')
         write(6,"('Advance step ',i4,': rtc time for mp_bndlats=',
@@ -587,8 +605,8 @@
       if (do_rtc) call timer(rtc_bndlons,tsec,'begin')
 
       call mp_bndlons(f4d,nf4d,itc)
-      if (debug) write(6,"('advance after mp_bndlons')")
 
+      if (debug) write(6,"('advance after mp_bndlons')")
       if (do_rtc) then
         call timer(rtc_bndlons,tsec,'end')
         write(6,"('Advance step ',i4,': rtc time for mp_bndlons=',
@@ -597,6 +615,13 @@
 !
 ! Periodic points for all updated fields:
       call mp_periodic_f4d(itc)
+#else
+! Non-mpi serial run:
+      call mk_polelat(0     ,1     ,itc)
+      call mk_polelat(-1    ,2     ,itc)
+      call mk_polelat(lat1+1,lat1  ,itc)
+      call mk_polelat(lat1+2,lat1-1,itc)
+      call set_periodic_f4d(itc)
 #endif
 !
 ! Swap field data time indices, so current updated data becomes previous
@@ -683,8 +708,8 @@
       integer :: idayit,idayprev,iyearprev,iyr4,iyr100,lpyr,ienda
       real :: delta,theta0
 !
-      idayit = iter*ifix(dt)/86400
-      if (idayit*86400 == iter*ifix(dt)) then
+      idayit = iter*int(dt)/86400
+      if (idayit*86400 == iter*int(dt)) then
         idayprev = iday
         iyearprev = iyear
         iday = iday + 1

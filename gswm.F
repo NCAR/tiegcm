@@ -914,10 +914,10 @@
       call mp_periodic_f2d(vndi_gswm(lon0:lon1,lat0:lat1),
      |  lon0,lon1,lat0,lat1)
 # else
-      set_periodic_f2d(zdi_gswm)
-      set_periodic_f2d(tndi_gswm)
-      set_periodic_f2d(undi_gswm)
-      set_periodic_f2d(vndi_gswm)
+      call set_periodic_f2d(zdi_gswm)
+      call set_periodic_f2d(tndi_gswm)
+      call set_periodic_f2d(undi_gswm)
+      call set_periodic_f2d(vndi_gswm)
 #endif 
  
       if (iprint > 0) then
@@ -1128,10 +1128,10 @@
       call mp_periodic_f2d(vnsdi_gswm(lon0:lon1,lat0:lat1),
      |  lon0,lon1,lat0,lat1)
 # else
-      set_periodic_f2d(zsdi_gswm)
-      set_periodic_f2d(tnsdi_gswm)
-      set_periodic_f2d(unsdi_gswm)
-      set_periodic_f2d(vnsdi_gswm)
+      call set_periodic_f2d(zsdi_gswm)
+      call set_periodic_f2d(tnsdi_gswm)
+      call set_periodic_f2d(unsdi_gswm)
+      call set_periodic_f2d(vnsdi_gswm)
 #endif 
 !
       if (iprint > 0) then
@@ -1343,10 +1343,10 @@
       call mp_periodic_f2d(vnnmidi_gswm(lon0:lon1,lat0:lat1),
      |  lon0,lon1,lat0,lat1)
 # else
-      set_periodic_f2d(znmidi_gswm)
-      set_periodic_f2d(tnnmidi_gswm)
-      set_periodic_f2d(unnmidi_gswm)
-      set_periodic_f2d(vnnmidi_gswm)
+      call set_periodic_f2d(znmidi_gswm)
+      call set_periodic_f2d(tnnmidi_gswm)
+      call set_periodic_f2d(unnmidi_gswm)
+      call set_periodic_f2d(vnnmidi_gswm)
 #endif 
 !      
       if (iprint > 0) then
@@ -1558,10 +1558,10 @@
       call mp_periodic_f2d(vnnmisdi_gswm(lon0:lon1,lat0:lat1),
      |  lon0,lon1,lat0,lat1)
 # else
-      set_periodic_f2d(znmisdi_gswm)
-      set_periodic_f2d(tnnmisdi_gswm)
-      set_periodic_f2d(unnmisdi_gswm)
-      set_periodic_f2d(vnnmisdi_gswm)
+      call set_periodic_f2d(znmisdi_gswm)
+      call set_periodic_f2d(tnnmisdi_gswm)
+      call set_periodic_f2d(unnmisdi_gswm)
+      call set_periodic_f2d(vnnmisdi_gswm)
 #endif 
 !
       if (iprint > 0) then

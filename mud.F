@@ -533,8 +533,8 @@ c
 	    jj = j*(nfx+2)
 	    do i=1,nfx
 	      ij = jj+i+1
-	      phmax = amax1(phmax,abs(wk(ij)))
-	      relmax = amax1(relmax,abs(wk(ij)-phif(i,j)))
+	      phmax = max(phmax,abs(wk(ij)))
+	      relmax = max(relmax,abs(wk(ij)-phif(i,j)))
 	      phif(i,j) = wk(ij)
 	    end do
 	  end do

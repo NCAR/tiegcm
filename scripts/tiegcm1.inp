@@ -1,7 +1,7 @@
 &tgcm_input
 ;
  LABEL='tiegcm1 '
- TEMPDIR = '/ptmp/foster/tiegcm1/tmpdir'
+;TEMPDIR = '/ptmp/foster/tiegcm1/tmpdir'
 ;
 ;NTASK_LON = 1
 ;NTASK_LAT = 4
@@ -17,9 +17,9 @@
  SOURCE_START = 180,0,0
 ;
  START= 180,0,0
- STOP=  181,0,0
- HIST=    1,0,0
- SAVE=    1,0,0
+ STOP=  180,1,0
+ HIST=    0,1,0
+ SAVE=    0,1,0
 ;
  STEP= 180
 ;
@@ -27,22 +27,23 @@
  MXHIST_PRIM = 10 ; default max hist on primary file = 8
 ;
  SECSTART = 180,0,0
- SECSTOP  = 181,0,0
- SECHIST  =   0,1,0 
- SECSAVE  =   0,6,0
+ SECSTOP  = 180,1,0
+ SECHIST  =   0,1,0
+ SECSAVE  =   0,1,0
  SECOUT='/FOSTER/tiegcm1/seqsm41.nc'
  MXHIST_SECH = 48 ; default max hist on secondary file = 20
 ;
 ;SECFLDS    = 'UN_FINAL','VN_FINAL','DYNPOT'
- SECFLDS = 'TN','UN','VN','W','O1','O2','NO','NE','TE',
-           'O2P','POTEN'
+;SECFLDS = 'TN','UN','VN','W','O1','O2','NO','NE','TE',
+;          'O2P','POTEN'
+ SECFLDS = 'TN','POTEN','DYNPOT','SIGMAPED', 'SIGMAHAL', 'ZPOTEN', 'SCHEIGHT',
+           'UNVEL', 'VNVEL', 'WNVEL'
  SECFMAG    = 'PHIM3D'
- SECFGEO2D  = 'UNLBC','VNLBC','PHIH2D'
  SECFMAG2D  = 'PHIHM2D','PHIM2D','ZIGM11','ZIGMC','ZIGM2','ZIGM22',
               'RIM1', 'RIM2'
 ;SECFMAGPHR =
 ;
- DISPOSE=1
+ DISPOSE=0
  MAG=-74.5,127.,79.,-70.
  DIFHOR=0
 ;
@@ -74,10 +75,12 @@
  TIDE2 = 0.,0.
 ;
 ;GSWM_DI_NCFILE: File with gswm migrating diurnal
- GSWM_DI_NCFILE  = '/TGCM/data/gswm/tgcm-ztuv-diurn-lbc99km.nc'
+;GSWM_DI_NCFILE  = '/TGCM/data/gswm/old/tgcm-ztuv-diurn-lbc99km.nc'
+ GSWM_DI_NCFILE  = '/TGCM/data/gswm/gswm_diurn_5.0d_99km.nc'
 ;
 ;GSWM_SDI_NCFILE: File with gswm migrating semidiurnal
- GSWM_SDI_NCFILE = '/TGCM/data/gswm/tgcm-ztuv-semi-lbc99km.nc'
+;GSWM_SDI_NCFILE = '/TGCM/data/gswm/old/tgcm-ztuv-semi-lbc99km.nc'
+ GSWM_SDI_NCFILE = '/TGCM/data/gswm/gswm_semi_5.0d_99km.nc'
 ;
  TIDEANN=0
  AURORA=1
@@ -95,6 +98,7 @@
 ;POWER = 16.
 ;CTPOTEN = 45.
 ;
- GPI_NCFILE = '/TGCM/data/gpi_1979001-2002181.nc'
+ GPI_NCFILE = '/TGCM/data/gpi_1979001-2004060.nc'
  BYIMF=0.
+ BZIMF=0.
 /

@@ -191,7 +191,7 @@ c
 !
 ! Callable dcs commands are in libdcs:
 !
-#if defined(SUN) || defined(IRIX)
+#if defined(SUN) || defined(IRIX) || defined(LINUX)
           call msrcp(ier,'mss:'//trim(mspath)//' '//trim(diskfile),
      |      dcs_output)
 #else
@@ -218,10 +218,10 @@ c
         endif   ! is or is not in tmpdir
       endif     ! is or is not in cwd
       write(6,"(72('-'),/)")
+ 100  continue
 #ifdef MPI
 !
 ! If mpi job, slave tasks jump down here and wait for master proc:
- 100  continue
       call mpi_barrier(MPI_COMM_WORLD,ier)
 !     if (mytid==0) then
 !       write(6,"('getms MPI: master passed barrier after ',

@@ -135,6 +135,7 @@
 !
       iyear = start_year ! from input
       iday  = start_day  ! from input
+      write(6,"('init: iyear=',i5,' iday=',i5)") iyear,iday
       sfeps = 1.
 !
 ! If model is being advanced in calendar time, initialize orbital 

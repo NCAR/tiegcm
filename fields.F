@@ -238,7 +238,7 @@
       allocate(op(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('O+ ION')")
       f4d(n)%short_name = ("OP")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "CM^3"
       f4d(n)%data => op
       i_op = n ; n = n+1
 !

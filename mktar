@@ -1,3 +1,3 @@
 #
-tar cf tiegcm1.tar *.h *.F *.inp *.job M* mkdep mktar README
+tar cf tiegcm1.tar *.h *.F *.inp *.job M* mkdep mktar README scripts
 echo "Made tiegcm1.tar"

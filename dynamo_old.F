@@ -177,7 +177,7 @@
 !
 ! Local:
       real :: array(-15:nmlon0+16,nmlat0),cs(nmlat0)
-      integer :: n,ncc,nmaglon,nmaglat
+      integer :: n,ncc,nmaglon,nmaglat,isolve,ier
       integer :: i,j,jj,jjj,j0,jntl,k
       real :: sym,wk(nmlon0,3)
       real,dimension(nmlonp1,nlevp1) :: phim_plt, phihm_plt
@@ -318,7 +318,8 @@
 ! Call mudpack to solve PDE. Solution is returned in rim:
 ! (3rd arg to mud indicates to mud to use cee0 and nc_old)
       jntl = 0
-      call mud(rim,jntl,-1)
+      isolve = -1  ! for subroutine ceee
+      call mud(rim,jntl,isolve,ier)
 !
 ! Copy output potential from rim to phim(nmlonp1,nmlat):
 !  Correct the SH potential for the anti-symmetric imposed NH high lat poten
@@ -804,7 +805,7 @@
 ! Gather dynamo input fields to the root task, defining module data 
 ! above at the global domain on the root task:
 !
-      call mp_dynamo_gather
+      call mp_dynamo_gather_old
 #endif
       end subroutine prep_dynamo_old
 !-----------------------------------------------------------------------
@@ -1956,7 +1957,45 @@
 !     enddo ! j=1,nmlat
       end subroutine threed
 !-----------------------------------------------------------------------
-      subroutine mp_dynamo_gather
+!-----------------------------------------------------------------------
+      subroutine print_cee
+      integer :: n,j
+!
+      do n=1,10
+        do j=1,nmlat0
+          write(6,"('print_cee: j=',i3,' nmlat0=',i3,' n=',i2,
+     |      ' c0(:,j,n)=',/,(6e12.4))") j,nmlat0,n,c0(:,j,n)
+        enddo ! j=1,nmlat0
+      enddo ! n=1,10
+      do n=1,9
+        do j=1,nmlat1
+          write(6,"('print_cee: j=',i3,' nmlat1=',i3,' n=',i2,
+     |      ' c1(:,j,n)=',/,(6e12.4))") j,nmlat1,n,c1(:,j,n)
+        enddo ! j=1,nmlat1
+      enddo ! n=1,9
+      do n=1,9
+        do j=1,nmlat2
+          write(6,"('print_cee: j=',i3,' nmlat2=',i3,' n=',i2,
+     |      ' c2(:,j,n)=',/,(6e12.4))") j,nmlat2,n,c2(:,j,n)
+        enddo ! j=1,nmlat2
+      enddo ! n=1,9
+      do n=1,9
+        do j=1,nmlat3
+          write(6,"('print_cee: j=',i3,' nmlat3=',i3,' n=',i2,
+     |      ' c3(:,j,n)=',/,(6e12.4))") j,nmlat3,n,c3(:,j,n)
+        enddo ! j=1,nmlat3
+      enddo ! n=1,9
+      do n=1,9
+        do j=1,nmlat4
+          write(6,"('print_cee: j=',i3,' nmlat4=',i3,' n=',i2,
+     |      ' c4(:,j,n)=',/,(6e12.4))") j,nmlat4,n,c4(:,j,n)
+        enddo ! j=1,nmlat4
+      enddo ! n=1,9
+
+      end subroutine print_cee
+!-----------------------------------------------------------------------
+#ifdef MPI
+      subroutine mp_dynamo_gather_old
 !
 ! Input fields to the dynamo have been prepared on the geographic grid
 ! at task subdomains (see sub prep_dynamo). Now these must be gathered
@@ -1984,12 +2023,12 @@
 ! (mxlon,mxlat are max number of lons,lats held by all tasks)
       allocate(rcvbuf(mxlon,mxlat,nlevp1,nfld),stat=ier)
       if (ier /= 0)
-     |  write(6,"('>>> mp_dynamo_gather: error allocating rcvbuf:',
+     |  write(6,"('>>> mp_dynamo_gather_old: error allocating rcvbuf:',
      |    ' mxlon=',i3,' mxlat=',i3,' nlevp1=',i3,' nfld=',i3,
      |    ' ier=',i4)") mxlon,mxlat,nlevp1,nfld,ier
       allocate(sndbuf(mxlon,mxlat,nlevp1,nfld),stat=ier)
       if (ier /= 0)
-     |  write(6,"('>>> mp_dynamo_gather: error allocating sndbuf:',
+     |  write(6,"('>>> mp_dynamo_gather_old: error allocating sndbuf:',
      |    ' mxlon=',i3,' mxlat=',i3,' nlevp1=',i3,' nfld=',i3,
      |    ' ier=',i4)") mxlon,mxlat,nlevp1,nfld,ier
       len = mxlon*mxlat*nlevp1*nfld ! buffer length
@@ -2003,14 +2042,15 @@
           call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,MPI_COMM_WORLD,
      |      ireqrecv,ier)
           if (ier /= 0)
-     |      call handle_mpi_err(ier,'mp_dynamo_gather irecv from n')
+     |      call handle_mpi_err(ier,'mp_dynamo_gather_old irecv from n')
 !
 ! Wait for receives to complete:
           call mpi_wait(ireqrecv,irstat,ier)
           if (ier /= 0) then
-            call handle_mpi_err(ier,'mp_dynamo_gather wait for n')
+            call handle_mpi_err(ier,'mp_dynamo_gather_old wait for n')
           else
-!           write(6,"('mp_dynamo_gather: root recvd from task ',i3)") n
+!           write(6,"('mp_dynamo_gather_old: root recvd from task ',
+!    |        i3)") n
           endif
 !
 ! Transfer from receive buffer to fields:
@@ -2048,7 +2088,7 @@
             end select
 !           call fminmax(rcvbuf(1:nlons,1:nlats,:,ifld),
 !    |        nlons*nlats*nlevp1,fmin,fmax)
-!           write(6,"('mp_dynamo_gather: rcvbuf for field ',
+!           write(6,"('mp_dynamo_gather_old: rcvbuf for field ',
 !    |        a,': min,max=',2e12.4)") fnames(ifld),fmin,fmax
           enddo ! ifld=1,nfld
         enddo ! n=1,ntask-1 (receive from slaves only)
@@ -2086,7 +2126,7 @@
           end select
 !         call fminmax(sndbuf(1:nlons,1:nlats,:,ifld),
 !    |      nlons*nlats*nlevp1,fmin,fmax)
-!         write(6,"('mp_dynamo_gather: sndbuf for field ',
+!         write(6,"('mp_dynamo_gather_old: sndbuf for field ',
 !    |      a,': min,max=',2e12.4)") fnames(ifld),fmin,fmax
         enddo
 !
@@ -2095,13 +2135,13 @@
         call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,MPI_COMM_WORLD,
      |    ireqsend,ier)
         if (ier /= 0)
-     |    call handle_mpi_err(ier,'mp_dynamo_gather isend to root')
+     |    call handle_mpi_err(ier,'mp_dynamo_gather_old isend to root')
 !
 ! Wait for send to complete:
         call mpi_wait(ireqsend,irstat,ier)
         if (ier /= 0) then
           call handle_mpi_err(ier,
-     |    'mp_dynamo_gather wait for send to root')
+     |    'mp_dynamo_gather_old wait for send to root')
         endif
       endif ! mytid==0 (root or slave)
 !
@@ -2124,7 +2164,7 @@
 !         case(7)
 !           call fminmax(wnvel,nlonp4*nlat*nlevp1,fmin,fmax)
 !         end select
-!         write(6,"('mp_dynamo_gather: field ',a,' global min,max=',
+!         write(6,"('mp_dynamo_gather_old: field ',a,' global min,max=',
 !    |      2e12.4)") fnames(ifld),fmin,fmax
 !       enddo ! ifld=1,nfld
 !     endif
@@ -2132,41 +2172,7 @@
 ! Release local buffer space:
       deallocate(rcvbuf)
       deallocate(sndbuf)
-      end subroutine mp_dynamo_gather
+      end subroutine mp_dynamo_gather_old
+#endif
 !-----------------------------------------------------------------------
-      subroutine print_cee
-      integer :: n,j
-!
-      do n=1,10
-        do j=1,nmlat0
-          write(6,"('print_cee: j=',i3,' nmlat0=',i3,' n=',i2,
-     |      ' c0(:,j,n)=',/,(6e12.4))") j,nmlat0,n,c0(:,j,n)
-        enddo ! j=1,nmlat0
-      enddo ! n=1,10
-      do n=1,9
-        do j=1,nmlat1
-          write(6,"('print_cee: j=',i3,' nmlat1=',i3,' n=',i2,
-     |      ' c1(:,j,n)=',/,(6e12.4))") j,nmlat1,n,c1(:,j,n)
-        enddo ! j=1,nmlat1
-      enddo ! n=1,9
-      do n=1,9
-        do j=1,nmlat2
-          write(6,"('print_cee: j=',i3,' nmlat2=',i3,' n=',i2,
-     |      ' c2(:,j,n)=',/,(6e12.4))") j,nmlat2,n,c2(:,j,n)
-        enddo ! j=1,nmlat2
-      enddo ! n=1,9
-      do n=1,9
-        do j=1,nmlat3
-          write(6,"('print_cee: j=',i3,' nmlat3=',i3,' n=',i2,
-     |      ' c3(:,j,n)=',/,(6e12.4))") j,nmlat3,n,c3(:,j,n)
-        enddo ! j=1,nmlat3
-      enddo ! n=1,9
-      do n=1,9
-        do j=1,nmlat4
-          write(6,"('print_cee: j=',i3,' nmlat4=',i3,' n=',i2,
-     |      ' c4(:,j,n)=',/,(6e12.4))") j,nmlat4,n,c4(:,j,n)
-        enddo ! j=1,nmlat4
-      enddo ! n=1,9
-
-      end subroutine print_cee
       end module dynamo_old_module

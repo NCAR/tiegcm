@@ -176,7 +176,7 @@
 	  dim(i,j) = xlonmi - float(im(i,j))
 	  im(i,j) = im(i,j) + 1
 	  if (im(i,j) >= nmlonp1) im(i,j) = im(i,j) - nmlon
-	  alatm(i,j) = amin1(alatm(i,j),ylatm(nmlat))
+	  alatm(i,j) = min(alatm(i,j),ylatm(nmlat))
           do jjm=2,nmlat
             if (alatm(i,j) > ylatm(jjm)) cycle
             jm(i,j) = jjm - 1
@@ -228,7 +228,7 @@
 	  frki = xlongi - float(ig(i,j))
 	  ig(i,j) = ig(i,j) + 1
 	  if (ig(i,j) >= nlonp1) ig(i,j) = ig(i,j) - nlon
-	  gdlat = amin1(gdlat,ylatg(nlatp1))
+	  gdlat = min(gdlat,ylatg(nlatp1))
 	  do jjg=1,nlatp1
 	    if (gdlat > ylatg(jjg)) cycle
 	    jg(i,j) = jjg - 1

@@ -26,7 +26,7 @@
 !   cross-tail potential (ctpoten) are calculated from the gpi
 !   3-hourly kp(8). First, fkp = interpolation of 3-hourly kp to
 !   current model time (using previous and next days), then:
-!   power = amax1(3.,-2.78+9.33*fkp)
+!   power = max(3.,-2.78+9.33*fkp)
 !   ctpoten = 29.+11.*fkp
 !
       implicit none
@@ -292,11 +292,11 @@
 ! calculate power and/or ctpoten from the interpolated kp:
 !
       if (ipower > 0 .or. ictpoten > 0) then
-        isecmin = ifix(1.5*3600.)
-        isecmax = ifix(22.5*3600.)
+        isecmin = int(1.5*3600.)
+        isecmax = int(22.5*3600.)
         if (iutsec >= isecmin .and. iutsec <= isecmax) then ! current day
           do i=1,7
-            isec0 = ifix((float(i-1)*3.+1.5)*3600.)
+            isec0 = int((float(i-1)*3.+1.5)*3600.)
             isec1 = isec0 + isecmin*2
             if (iutsec >= isec0 .and. iutsec <= isec1) then
               fkp0 = fkp_cur(i)
@@ -311,14 +311,14 @@
           fkp1 = fkp_cur(1)
         else                           ! use next day
           isec0 = isecmax
-          isec1 = isecmax+ifix(3.*3600.)
+          isec1 = isecmax+int(3.*3600.)
           fkp0 = fkp_cur(8)
           fkp1 = fkp_nxt(1)
         endif
         fkp = finterp(fkp0,fkp1,isec0,isec1,iutsec)
 !
 ! Set minimum hemispheric power to 3 gw:
-        if (ipower > 0) power = amax1(3.,-2.78+9.33*fkp)
+        if (ipower > 0) power = max(3.,-2.78+9.33*fkp)
 !
 ! Formula for potential:
         if (ictpoten > 0) ctpoten = 29.+11.*fkp

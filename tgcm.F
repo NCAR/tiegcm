@@ -5,6 +5,7 @@
 !
 ! initial cvs import was tiegcm1
 !
+      use params_module,only: tgcm_version
       use input_module,only: input,dynamo,step
       use fields_module,only: itp
       use init_module,only: init,iyear
@@ -26,13 +27,17 @@
 ! Local:
       integer :: ier,icount_tgcm,icount_apex,nsecs
       real :: elapsed,cpu1,cpu2
+      character(len=8) ::
+     |  rundate,           ! current local date
+     |  runtime            ! current local time
+      real,external :: cputime  ! util.F
 !
 ! Report starting time and other info to stdout:
       call startup_message
 !
 ! Initialize timing for entire run:
       call start_timing(icount_tgcm,'total run')
-      call cpu_time(cpu1)
+      cpu1 = cputime()
 !
 ! Get user input. If MPI job, init mpi and set up 2-d decomposition
 !   across tasks.
@@ -67,7 +72,6 @@
 ! magfield calls if this is set).
       if (dynamo == 2) then
         call start_timing(icount_apex,'apxparm')
-        write(6,"('tgcm: dynamo=',i2,' -- calling apxparm.')") dynamo
         call apxparm(real(iyear))
         call end_timing(icount_apex,elapsed)
         write(6,"('Elapsed secs for apxparm=',f6.3)") elapsed
@@ -113,14 +117,19 @@
      |  elapsed_sech
 !
       call end_timing(icount_tgcm,elapsed)
-      call cpu_time(cpu2)
+      cpu2 = cputime()
       write(6,"('Elapsed secs for run = ',f10.2,' (minutes=',f10.2, 
      |  ', hours=',f8.2,')')") elapsed,elapsed/60.,elapsed/3600.
       write(6,"('Cpu time for run = ',f10.2)") cpu2-cpu1
+!
+      call datetime(rundate,runtime) 
+      write(6,"('End execution of ',a,' at ',a,'  ',a)")
+     |  tgcm_version,rundate,runtime
       write(6,"('NORMAL EXIT')")
       end program tgcm
 !-----------------------------------------------------------------------
       subroutine startup_message
+      use params_module,only: tgcm_version
       character(len=8) ::
      |  rundate,           ! current local date
      |  runtime            ! current local time
@@ -136,8 +145,8 @@
       call getenv('LOGNAME',logname)
       if (len_trim(logname)==0) logname = "unknown"
       write(6,"(/,72('='))")
-      write(6,"('Begin execution of TIEGCM at ',a,'  ',a)")
-     |  rundate,runtime
+      write(6,"('Begin execution of ',a,' at ',a,'  ',a)")
+     |  tgcm_version,rundate,runtime
       write(6,"('  Host    = ',a)") trim(host)
       write(6,"('  System  = ',a)") trim(system)
       write(6,"('  Logname = ',a)") trim(logname)
