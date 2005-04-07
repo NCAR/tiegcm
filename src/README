@@ -120,8 +120,8 @@ Broke init_fields (fields.F) into 2 routines: init_4d and init_3d.
 This allows compilation on certain flavors of pgf90 (e.g., on HAO Callisto)
 Changes to fields.F and init.F.
 
-Doing a cvs commit, and tagging as tiegcm1-8-1: this is essentially tiegcm1-7 
-plus the following:
+Doing a cvs commit, and tagging as tiegcm1-8dev1: this is leading up
+to a pre-release of tiegcm1-8: essentially tiegcm1-7 plus the following:
   -- maute dynamo mods
   -- lqian euv/qrj and SEE data option
   -- foster gswm mods (combine dt.F and dt_gswm.F, etc.)
