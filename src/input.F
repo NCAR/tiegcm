@@ -95,16 +95,12 @@
                           ! data indices file.  see comments in hrindices_mod.f
      |  hrindices_ncfiledef, ! default path to hrly indices data file
 !
-     |  gpi_ncfile,       ! mss path or file path to netcdf gpi data file
-                          ! see comments in gpi_mod.f
-     |  gswm_di_ncfile,   ! mss path or file path to netcdf gswm data file
-                          ! for diurnal tides see comments in gswm_mod.f
-     |  gswm_sdi_ncfile,  ! mss path or file path to netcdf gswm data file
-                          ! for semidirurnal tides see comments in gswm_mod.f
-     |  gswm_nmidi_ncfile,! mss path or file path to netcdf gswm data file
-                          ! for nonmigrating diurnal tides see comments in gswm_mod.f
-     |  gswm_nmisdi_ncfile,! mss path or file path to netcdf gswm data file
-                           ! for nonmigrating semidiurnal tides see comments in gswm_mod.f
+     |  gpi_ncfile,        ! mss path or file path to netcdf gpi data file
+     |  sd_ncfile,         ! mss path or file path to netcdf SEE flux data file
+     |  gswm_di_ncfile,    ! gswm migrating diurnal data file
+     |  gswm_sdi_ncfile,   ! gswm migrating semi-diurnal data file
+     |  gswm_nmdi_ncfile,  ! gswm non-migrating diurnal data file
+     |  gswm_nmsdi_ncfile, ! gswm non-migrating semi-diurnal data file
 !
 ! Non-input gpi variables:
      |  gpi_ncfiledef     ! default path to gpi data file
@@ -154,8 +150,8 @@
       type input_type
         character(len=80) :: 
      |    label, tempdir, magvol, amievol, gpi_ncfile,
-     |     gswm_di_ncfile, gswm_sdi_ncfile, gswm_nmidi_ncfile,
-     |     gswm_nmisdi_ncfile, potential_model, weimer_ncfile,
+     |     gswm_di_ncfile, gswm_sdi_ncfile, gswm_nmdi_ncfile,
+     |     gswm_nmsdi_ncfile, potential_model, weimer_ncfile,
      |     hrindices_ncfile
         integer ::
      |    step,start_day,start_year,calendar_advance,
@@ -208,9 +204,9 @@
      |  mag,difhor,iuivi,dynamo,nmc,tide,tide2,tide3m3,f107,f107a,
      |  power,ctpoten,byimf,bzimf,swvel,swden,al,colfac,tideann,aurora,
      |  magphr,gpi_ncfile,gswm_di_ncfile,gswm_sdi_ncfile,
-     |  gswm_nmidi_ncfile,gswm_nmisdi_ncfile,mxhist_prim,mxhist_sech,
+     |  gswm_nmdi_ncfile,gswm_nmsdi_ncfile,mxhist_prim,mxhist_sech,
      |  msreten,ntask_lat,ntask_lon,start_day,start_year,
-     |  calendar_advance,ctpoten_time,power_time
+     |  calendar_advance,sd_ncfile,ctpoten_time,power_time
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(4) =
@@ -272,6 +268,7 @@
 !     write(gpi_ncfiledef,"('/TGCM/data/gpi_1979001-2002181.nc')")
       write(gpi_ncfiledef,"('/TGCM/data/gpi_1979001-2002365.nc')")
       gpi_vars(:) = spval
+      sd_ncfile = ' '        ! solar flux data (see module in soldata.F)
 !
       weimer_ncfile = ' '     ! user input weimer coef file path
       weimer_ncfiledef = ' '  ! default weimer coef file path
@@ -284,8 +281,8 @@
 !
       gswm_di_ncfile = ' '  ! diurnal tide: user input gswm file path
       gswm_sdi_ncfile= ' '  ! semidiurnal tide: user input gswm file path
-      gswm_nmidi_ncfile= ' '  ! nonmigrating diurnal tide: user input gswm file path
-      gswm_nmisdi_ncfile= ' ' ! nonmigrating semidiurnal tide: user input gswm file path
+      gswm_nmdi_ncfile= ' '  ! nonmigrating diurnal tide: user input gswm file path
+      gswm_nmsdi_ncfile= ' ' ! nonmigrating semidiurnal tide: user input gswm file path
 !
       date(:) = ispval ! old
       calday  = ispval ! old
@@ -456,6 +453,8 @@
 ! 12/01: Dimension names in /TGCM/data/magdat.nc were changed to match
 !        parameter names in tiegcm1, writing new file /TGCM/data/magfield.nc
 !        (/TGCM/data/magdat.nc was unchanged). This is still for 5.0h resolution.
+!
+! 4/05: Restoring magfield for runs with DYNAMO==0 (tiegcm1.8)
 !
       n = len_trim(magvol)
       if (n <= 0) then
@@ -767,6 +766,12 @@
         write(6,"('NOTE: multiple (time-dependent) values for CTPOTEN',
      |    ' not yet supported')")
         call shutdown('BYIMF')
+      endif
+!
+! SEE flux data file:
+      if (len_trim(sd_ncfile) > 0) then
+         write(6,"('INPUT: will read SEE flux data file ',a)")
+     |    trim(sd_ncfile)
       endif
 !
 ! Limits on By NOT necessary for Weimer (or for NONE)
@@ -1898,8 +1903,8 @@
       inp%gpi_ncfile = gpi_ncfile
       inp%gswm_di_ncfile    = gswm_di_ncfile
       inp%gswm_sdi_ncfile   = gswm_sdi_ncfile
-      inp%gswm_nmidi_ncfile = gswm_nmidi_ncfile
-      inp%gswm_nmisdi_ncfile= gswm_nmisdi_ncfile
+      inp%gswm_nmdi_ncfile = gswm_nmdi_ncfile
+      inp%gswm_nmsdi_ncfile= gswm_nmsdi_ncfile
       inp%start_day  = start_day
       inp%start_year = start_year
       inp%calendar_advance = calendar_advance
@@ -1988,18 +1993,20 @@
      |        trim(weimer_ncfile)
       if (len_trim(gpi_ncfile) > 0)
      |  write(6,"('  gpi run: gpi_ncfile = ',a)") trim(gpi_ncfile)  
+      if (len_trim(sd_ncfile) > 0)
+     |  write(6,"('  SEE run: sd_ncfile = ',a)") trim(sd_ncfile)
       if (len_trim(gswm_di_ncfile) > 0)
      |  write(6,"('  gswm run diurnal tides: gswm_di_ncfile = ',a)") 
      |        trim(gswm_di_ncfile)
       if (len_trim(gswm_sdi_ncfile) > 0)
      |  write(6,"('  gswm run semidiurnal tides: gswm_sdi_ncfile = ' 
      |        ,a)") trim(gswm_sdi_ncfile)
-      if (len_trim(gswm_nmidi_ncfile) > 0)
+      if (len_trim(gswm_nmdi_ncfile) > 0)
      |  write(6,"('  gswm run nonmigrating diurnal tides: ',
-     |    'gswm_nmidi_ncfile = ',a)") trim(gswm_nmidi_ncfile)
-      if (len_trim(gswm_nmisdi_ncfile) > 0)
+     |    'gswm_nmdi_ncfile = ',a)") trim(gswm_nmdi_ncfile)
+      if (len_trim(gswm_nmsdi_ncfile) > 0)
      |  write(6,"('  gswm run nonmigrating semidiurnal tides: ',
-     |    'gswm_nmisdi_ncfile = ',a)") trim(gswm_nmisdi_ncfile)
+     |    'gswm_nmsdi_ncfile = ',a)") trim(gswm_nmsdi_ncfile)
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(inp%amievol)

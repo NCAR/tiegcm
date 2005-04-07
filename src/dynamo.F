@@ -1,5 +1,9 @@
 !
       module dynamo_module
+!----------------------------------------------------------------------- 
+! BOP
+! !MODULE: dynamo_module
+! !DESCRIPTION: 
 !
 ! Module for electrodynamic dynamo (the "e" in tiegcm). 
 !
@@ -17,11 +21,8 @@
 ! subdomain data from other tasks for input fields to the dynamo 
 ! (on the geographic grid). These fields are exchanged via sub 
 ! mp_dynamo_gather which is called from prep_dynamo below.
-!
-! 1/05 btf: Changed array() to wkarray(), put it in module data below,
-!           and removed it from argument lists.
-! 1/05 btf: Removed old dynamo option.
-!
+! 
+! !USES:
       use params_module,only: 
      |  nlon,   ! number of geographic longitudes (at 5 deg, nlon==72)
      |  nlonp1, ! nlon+1
@@ -37,7 +38,15 @@
      |  nmlatp1,! nmlat+1
      |  nmlath, ! (nmlat+1)/2 (index to magnetic equator)
      |  nmlev   ! number of geomagnetic pressure levels (nmlev==nlevp1+3)
-      implicit none
+!    
+! J(mag.pressure, gravity) to dynamo RHS
+      use magpres_g_module,only: j_pg,tpg1,tpg2,je1oD_geo,je2oD_geo
+
+! !PUBLIC TYPES:
+	    implicit none
+!
+! !PUBLIC MEMBER FUNCTIONS:
+! !PUBLIC DATA MEMBERS:
 !
 ! Dimensions of the 5 grid resolutions for the multi-grid PDE:
       integer,parameter ::
@@ -123,7 +132,8 @@
      |  sigma_hall,       ! Hall conductivity     (see lamdas.F)
      |  zpoten,           ! geopotential height
      |  scheight,         ! scale height RT/(MBAR*G)
-     |  unvel,vnvel,wnvel ! u,v,w neutral velocities (cm/s)
+     |  unvel,vnvel,wnvel,! u,v,w neutral velocities (cm/s)
+     |  je1oD_full,je2oD_full ! J(mag.pres,gravity) on full domain
 !
 ! Fields on geomagnetic grid (at a single latitude):
 ! (suffix "m" is for "mag")
@@ -139,6 +149,10 @@
       real,dimension(nmlonp1,-2:nlev,2) :: adotvm
       real,dimension(nmlonp1,2)         :: adotam
       real,dimension(nmlonp1)           :: a1a2m, siniam, bmodm, pm
+      
+      real,dimension(nmlonp1,-2:nlev) :: ! J(mag.pres,gravity) mag. grid
+     |  je1_pg,	 ! J(gravity)
+     |  je2_pg	 ! J(mag.pres)
 !
 ! Coefficients and RHS terms for PDE on geomagnetic grid:
 ! (formerly in coefm.h)
@@ -161,7 +175,7 @@
 ! isolve = 1 -> muh hybrid solver (only as direct solver -- slow)
 ! isolve = 2 -> modified mudpack solver (mudmod)
 ! Default is isolve=2 for DYNAMO=2 (new dynamo), however under SGI/IRIX,
-!   the hybrid solver is used because SGI crashes in mudmod if isolve==2. 
+!   the hybrid solver is used because SGI cr
 !
 #ifdef IRIX
       integer,parameter :: isolve = 1
@@ -170,23 +184,75 @@
 !     integer,parameter :: isolve = 1 
 !     integer,parameter :: isolve = 0 ! no longer available
 #endif
+! 
+! Flag for original Heelis contribution to dynamo
+!  p*rhs = (1-p)[ sigma(phi,phi)/cos(lam_m)*(delta lam_m/delta phi_m)^2 + 
+!  sigma(lam,lam)*cos(lam_m) ]1/w^2* [poten_H - poten]
+!
+! or simplified
+!  add to rhs: - d /d phi_m * [sigma_R /cos lam_m * d (poten-poten_R)/d phi_m]-
+!     - d /d lam_m * [sigma_R *cos lam_m * d (poten-poten_R)/d lam_m]
+!    
+      logical,parameter :: mod_heelis = .false.   ! true == modified
+      real ::  zigm_r(nmlonp1,nmlat),! sigma_r
+     |  rim_r(nmlonp1,nmlat,2),      ! right-hand side 
+     |  nsrim_r1(nmlon0,nmlat,10),   ! difference stencil for rim_r(1)
+     |  nsrim_r2(nmlon0,nmlat,10),   ! difference stencil for rim_r(2)
+                                     ! 10 dimension added for using nsstencil
+     |  rhs_r(nmlonp1,nmlat)         ! right-hand side 
+!
+! Flag for J_rR contribution to dynamo
+! J_rR = d / d phi_m [ f zigm_phiphi/ cos(lam_m)* d /d |lam_m| poten +
+!        f zigm_philam   d /d phi_m poten ] + d / d |lam_m| [ f*zigm_lamphi*
+!        d /d phi_m poten + f*zigm_lamlam*cos(lam_m)*d /d |lam_m| poten ]
+!    
+      logical,parameter :: J_rR = .false.   
+!
+! Flag for sigma_M (equivalent magnetic cond.) contribution to dynamo
+! add to the conductances: Sigma^T_phiphi + Sigma_phiphi^M
+!			   Sigma^T_philam + Sigma_H^M
+!			   Sigma^T_lamphi - Sigma_H^M
+! Sigma_phiphi^M: equivalent magnetospheric zonal Pedersen conductance
+! Sigma_H^M: equivalent magnetospheric Hall conductance
+! - acts on below the convection reversal boundary
+! 
+      logical,parameter :: eqMgCnd = .false.
+      real,parameter :: eqMg_crit = 0.314159266 ! 18 deg colatitude where C_r,C_i start
+      real ::  zigmc_r(nmlonp1,nmlat),  ! C_r/ Sigma_phiphi^M on tiegcm grid
+     |   zigmc_i(nmlonp1,nmlat)         ! C_i/ Sigma_H^M on tiegcm grid
+     
+! values for equivalent magnet. conductances in 1deg increasing colatitude
+! [ Peymirat, Richmond 1993: JGR, Vol98, pp.15467, fig. 4 ]    
+      real :: c_r(15),c_i(15)
+      data c_r/0.,1.4,3.,5.,8.9,14.9,21.9,    ! Sigma_phiphi^M [S]
+     |   29.9,29.7,25.5,17.5,8.5,1.,.7,0./
+      data c_i/25.8,25.8,23.7,20.9,17.3,      ! Sigma_H^M  [S]
+     |   13.6,9.7,6.1,3.5,1.7,.8,0.,0.,0.,0./ 
 !
 ! Flag for calculation of K_(q,lam)
 !   icalkqlam = 1 -> will be calculated
 !   icalkqlam = 0 -> will NOT be calculated
 !
-      integer,parameter :: icalkqlam = 0
+      integer,parameter :: icalkqlam = 0    
+      
+      real ::
+     |  je13d(nmlonp1,nmlat,-2:nlevp1),    ! 3d je1 magnetic
+     |  je13d_geo(nlonp1,0:nlatp1,nlevp1), ! 3d je1 geographic
+     |  je23d(nmlonp1,nmlat,-2:nlevp1),    ! 3d je2 magnetic
+     |  je23d_geo(nlonp1,0:nlatp1,nlevp1)  ! 3d je2 geographic
 !
 ! 3d arrays for calculation of height-integrated sheet-current density
 ! K_(q,lam) (if icalkqlam==1)
 !
       real,dimension(nmlonp1,nmlat,-2:nlevp1) :: 
-     |  sigma1m3d, sigma2m3d, adotv1m3d, adotv2m3d, ed13d, ed23d
+     |  sigma1m3d, sigma2m3d, adotv1m3d, adotv2m3d, ed13d, ed23d,
+     |  je1oD_pg3d ! plasma pressure, gravity (j_pg=true) a/cm^2
       real,dimension(nmlonp1,nmlat) :: 
      |  bmodm3d,a1a2m3d,adotam3d,sinim3d
 !
 ! Equatorial quantities:
-      real,dimension(nmlonp1,-2:nlev)   :: sigma1e,sigma2e
+      real,dimension(nmlonp1,-2:nlev)   :: sigma1e,sigma2e,
+     |  je1_pge,je2_pge ! j_pg = .true. J(mag.pressure, gravity)
       real,dimension(nmlonp1,-2:nlev,2) :: adotve
 !
 ! For current density code (current.F) (icalkqlam==1):
@@ -198,6 +264,12 @@
 ! Electric potential from heelis or weimer:
       real,dimension(nmlonp1,nmlat0) :: pfrac  ! NH fraction of potential
       real,dimension(nmlonp1,nmlat)  :: phihm  ! potential in magnetic
+! 
+! !REVISION HISTORY:
+! 05.02.04  <Astrid Maute> <include headers> 
+! 
+! EOP
+!-----------------------------------------------------------------------
 !
 ! Work array (private to this module)
       real :: wkarray(-15:nmlon0+16,nmlat0)
@@ -206,16 +278,18 @@
 !
       contains
 !-----------------------------------------------------------------------
+!
+! BOP
+! !IROUTINE: prep_dynamo 
+! !INTERFACE:
       subroutine prep_dynamo(tn,un,vn,w,z,barm,ped,hall,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
-!
-! Prepare geographic-grid fields for input to the dynamo, and gather them
-! to the root task. This is executed by all tasks, and is called from 
-! advance before the dynamo itself (which is executed by master task only).
-!
+! !USES:
       use cons_module,only: gask,grav
-!
-! Args:
+
+! !RETURN VALUE:
+! !PARAMETERS: 
+! !ARGUMENTS:
       integer :: lev0,lev1,lon0,lon1,lat0,lat1
       real :: fmin,fmax
 !
@@ -225,11 +299,23 @@
      |  tn,   ! neutral temperature (deg K)
      |  un,   ! neutral zonal velocity (cm/s)
      |  vn,   ! neutral meridional velocity (cm/s)
-     |  w,    ! vertical velocity
-     |  z,    ! geopotential height
-     |  barm, ! mean molecular mass
-     |  ped,  ! pedersen conductivity (lamdas.F)
-     |  hall  ! hall conductivity     (lamdas.F)
+     |  w,    ! dimensionless vertical velocity (1/s)
+     |  z,    ! geopotential height (cm)
+     |  barm, ! mean molecular mass (g/mole)
+     |  ped,  ! pedersen conductivity (lamdas.F) (S)
+     |  hall  ! hall conductivity     (lamdas.F) (S)	  
+
+! !DESCRIPTION: 
+! Prepare geographic-grid fields for input to the dynamo, and gather them
+! to the root task. This is executed by all tasks, and is called from 
+! advance before the dynamo itself (which is executed by master task only).
+! calculate vertical velocity at half pressure level
+! 
+! !REVISION HISTORY:
+! 05.02.04  <Astrid Maute> <include header> 
+! 
+! EOP
+!
 !
 ! Local:
       integer :: k,i,lat,nk,lonbeg,lonend
@@ -260,6 +346,8 @@
             vnvel     (i,lat,k) = vn  (k,i,lat)
             wnvel     (i,lat,k) = .5*(w(k,i,lat)+w(k+1,i,lat))*
      |        scheight(i,lat,k)
+            je1oD_full(i,lat,k) = je1oD_geo  (k,i,lat) ! [A/cm^2]
+            je2oD_full(i,lat,k) = je2oD_geo  (k,i,lat) ! [A/cm^2]
           enddo ! k=lev0,lev1
           zpoten(i,lat,lev1) = z(lev1,i,lat)
         enddo ! i=lon0,lon1
@@ -282,25 +370,20 @@
 !    |    lon0,lon1,nk,nk-1,lat)
 !       call addfsech_ik('WNVEL'   ,' ',' ',wnvel(lon0:lon1,lat,:),
 !    |    lon0,lon1,nk,nk-1,lat)
+!       call addfsech_ik('JE1oD_F',' ','A/cm^2',je1oD_full(lon0:
+!    |    lon1,lat,:),lon0,lon1,nk,nk-1,lat)
+!       call addfsech_ik('JE2oD_F',' ','A/cm^2',je2oD_full(lon0:
+!    |    lon1,lat,:),lon0,lon1,nk,nk-1,lat)
 
-!       do k=lev0,lev1-1
-!         write(6,"('prep_dynamo: k=',i3,' lat=',i3,
-!    |      ' zpoten(lonbeg:lonend,lat,k)=',
-!    |      /,(6e12.4))") k,lat,zpoten(lonbeg:lonend,lat,k)
-!       enddo ! k=lev0,lev1-1
+!       call addfsech('UNPREP',' ',' ',un(:,lon0:lon1,lat),
+!    |    lon0,lon1,nk,nk-1,lat)
+!       call addfsech('VNPREP',' ',' ',vn(:,lon0:lon1,lat),
+!    |    lon0,lon1,nk,nk-1,lat)
+!       call addfsech('ZPREP' ,' ',' ',z (:,lon0:lon1,lat),
+!    |    lon0,lon1,nk,nk-1,lat)
 
       enddo ! lat=lat0,lat1
-
-!     call fminmax(z(1:nlevp1,lon0:lon1,lat0:lat1),
-!    |  nlevp1*(lon1-lon0+1)*(lat1-lat0+1),fmin,fmax)
-!     write(6,"('prep_dynamo: z subd min,max=',2e12.4)") fmin,fmax
-
-! zpoten(nlonp4,nlat,nlevp1) ::
-!     call fminmax(zpoten(lonbeg:lonend,lat0:lat1,:),
-!    |  (lonend-lonbeg+1)*(lat1-lat0+1)*nlevp1,fmin,fmax)
-!     write(6,"('prep_dynamo: zpoten subdomain min,max=',2e12.4)")
-!    |  fmin,fmax
-
+!
 #ifdef MPI
 !
 ! Gather dynamo input fields to the root task, defining module data 
@@ -311,17 +394,32 @@
       if (debug) write(6,"('Exit prep_dynamo..')")
       end subroutine prep_dynamo
 !-----------------------------------------------------------------------
+!
+! BOP
+!
+! !IROUTINE: nodynamo
+! !INTERFACE:
       subroutine nodynamo
 !
+! !DESCRIPTION: 
 ! 12/02:  This routine solves for the 3-D electric potential and fields
 !       when the dynamo flag is off (idynamo=0).  Hence, the low-latitude
 !       potential is zero, while the high-latitude potential is set
 !       with potential_model='HEELIS','WEIMER', or 'NONE'.
 !
+! !USES:
       use input_module,only: potential_model
       use cons_module,only: dlatm,dlonm,pi_dyn,ylatm,rtd
       use magfield_module,only: im,jm,dim,djm
       use fields_module,only: dynpot,phim3d
+!
+! !RETURN VALUE:
+! !PARAMETERS: 
+! 
+! !REVISION HISTORY:
+! 05.02.04  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: i,j,k
@@ -337,35 +435,6 @@
 !  transform geopotential height to mag. grid (used in subroutine threed)
       call transf_dyn0
 !
-! TEMP
-!     do j=1,21,2
-!      write (6,"(1x,'j phihm =',i2,5e12.4)")j,ylatm(j)*rtd,
-!    | (phihm(i,j),i=1,nmlon,20)
-!     enddo
-!     do j=51,nmlat,2
-!      write (6,"(1x,'j phihm =',i2,5e12.4)")j,ylatm(j)*rtd,
-!    | (phihm(i,j),i=1,nmlon,20)
-!     enddo
-!
-! Save single-level high latitude potential:
-!     if (potential_model == 'WEIMER') then
-!       call addfsech_ij('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
-!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
-!     elseif (potential_model == 'HEELIS') then
-!       call addfsech_ij('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
-!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
-!     else
-!       call addfsech_ij('PHIHM2D','2D ZERO ELECTRIC POTENTIAL',
-!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
-!     endif
-!
-! Save correct single-level potential to secondary histories (mag grid):
-!     call addfsech_ij('PHIM2D','2D ELECTRIC POTENTIAL','VOLTS',
-!    |  phim,1,nmlonp1,1,nmlat)
-!
-!  am_02/02: calculate current for both hemisphere:
-!                      R**2 * J_mr / dt0dts /rcos0s
-       if(icalkqlam.eq.1) call nosocrrt
 !
 ! Call threed to generate 3-d potential array in geomagnetic coordinates
 !   from 2-d solver output phim, corrected for the SH potential.
@@ -373,16 +442,6 @@
 !
       call threed
 
-! Save 3d mag electric potential:
-! phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
-!
-!     do j=1,nmlat
-!       call addfsech_ik('PHIM3D','ELECTRIC POTENTIAL (MAG)','VOLTS',
-!    |    phim3d(:,j,:),1,nmlonp1,nmlev,nmlev-1,j)
-!     enddo
-!
-! am_02/02: calculate  Je_1,  K_(q,phi), K_(q,lam)
-      if(icalkqlam.eq.1) call nosocrdens
 !
 ! Transform phim3d to geographic coordinates in dynpot (fields.F):
 !   phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
@@ -429,26 +488,40 @@
 !     endif
       end subroutine nodynamo
 !-----------------------------------------------------------------------
+!
+! BOP
+! !IROUTINE: dynamo 
+! !INTERFACE:
       subroutine dynamo
+! !USES:
       use cons_module,only: dlatm,dlonm,pi_dyn,ylatm,rtd
       use magfield_module,only: im,jm,dim,djm
       use fields_module,only: dynpot,phim3d
       use input_module,only: potential_model
+      use init_module,only: istep	! for sigma_R high latitudes
 !
-! Transform needed fields to geomagnetic coordinates
-! Perform field-line integrations
-! Evaluate PDE coefficients and RHS
-! The PDE is divided by 1/ DT0DTS (in dyncal divided by 1/cos(theta_0)
-! Sigma_(phi phi) = zigm11/ rcos0s * dt0dts
-! Sigma_(lam lam) = zigm22 * rcos0s / dt0dts
-! Sigma_(phi lam) = +-(zigm2-zigmc)
-! Sigma_(lam phi) = -+(zigm2+zigmc)
-! K_(m phi)^D     =   rim(1) * dt0dts
-! K_(m lam)^D     = +-rim(2) * rcos0s
+! !DESCRIPTION:
+!     Transform needed fields to geomagnetic coordinates
+!     Perform field-line integrations
+!     Evaluate PDE coefficients and RHS
+!     The PDE is divided by 1/ DT0DTS (in dyncal divided by 1/cos(theta_0)
+!     Sigma_(phi phi) = zigm11/ rcos0s * dt0dts
+!     Sigma_(lam lam) = zigm22 * rcos0s / dt0dts
+!     Sigma_(phi lam) = +-(zigm2-zigmc)
+!     Sigma_(lam phi) = -+(zigm2+zigmc)
+!     K_(m phi)^D     =   rim(1) * dt0dts
+!     K_(m lam)^D     = +-rim(2) * rcos0s
+!
+! !RETURN VALUE:
+! !PARAMETERS: 
+! !REVISION HISTORY:
+! 05.02.04  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: i,j,jj,jjj,j0,jntl,k,n,ncc,nmaglat,nmaglon,ier
-      real :: sym
+      real :: sym,fac
       real :: cs(nmlat0)
       real,dimension(nlonp1,0:nlatp1) :: phih  ! potential in geographic
 !
@@ -458,45 +531,57 @@
       call transf
       if (debug) write(6,"('dynamo after call transf..')")
 !
+! values calculated in transf:
+! zigm11 = Sigma_(phi phi)(0)= Sigma_(phi phi)(m) * cos lam_0 /cos lam_m * d lam_m /d lam_0
+! zigm22 = Sigma_(lam lam)(0)= Sigma_(lam lam)(m) * cos lam_m /cos lam_0 * d lam_0 /d lam_m
+! +-(zigm2-zigmc)= Sigma_(phi lam)(0) = Sigma_(phi lam)(m)
+! -+(zigm2+zigmc)= Sigma_(lam phi)(0) = Sigma_(lam phi)(m)
+! rim(1) = K_(m phi)^D(0)    = K_(m phi)^D(m) * d lam_m /d lam_0   
+! rim(2) = +/-K_(m lam)^D(0) = +/-K_(m lam)^D(m) * cos lam_m /cos lam_0 
+!
 ! Calculate coefficient of PDE for each hemisphere if K_(q,lam) is 
 !   calculated
 !
       if (icalkqlam==1) call nosocoef
 !
-! Fold southern hemisphere over on to northern  (was in transf.F version tgcm15)
-! Value at the equator is also folded therefore at the equatorial boundary
-! Condition factor 1/2 introduced
-! Size of arrays 49,97 from equator to poles (added)
-! Southern hemisphere 1,49 original values
+! Fold southern hemisphere onto northern hemisphere 
+! -Value at the equator is also folded therefore at the equatorial boundary
+!  factor of 1/2 introduced
+! -added values in array index 49-97 from equator to poles
+! -SH array (1-49) has original SH values
+! -reverse sign of zigmc (to be compatible with Cicely's) 
+! -sign of K_(m lam)^D in southern hemisphere is reversed, therefore 
+!     K_(m lam)^N - (- K_(m lam)^S)
+!
+! zigm11 = Sigma_(phi phi)(0)^T
+! zigm22 = Sigma_(lam lam)(0)^T
+! zigmc  =-Sigma_c(0)^T 
+! zigm2  = Sigma_h(0)^T 
+! rim(1) = K_(m phi)^D(0)^T
+! rim(2) = K_(m lam)^D(0)^T
 !
       do j=1,nmlath
         do i=1,nmlonp1
           zigm11(i,nmlatp1-j) = (zigm11(i,nmlatp1-j)+zigm11(i,j))
           zigmc(i,nmlatp1-j)  =  zigmc(i,nmlatp1-j)+zigmc(i,j)
-!
-! Reverse sign of zigmc to be compatible with Cicely's
           zigmc(i,nmlat+1-j)  = -zigmc(i,nmlat+1-j)
 !
           zigm2(i,nmlat+1-j)  =  zigm2(i,nmlat+1-J)+zigm2(i,j)
           zigm22(i,nmlat+1-j) = (zigm22(i,nmlat+1-J)+zigm22(i,j))
-!
-! Sign of K_(m lam)^D in southern hemisphere remains reversed; 
-!   therefore + sign
           rim(i,nmlatp1-j,1)  = (rim(i,nmlat+1-j,1)+rim(i,j,1))
           rim(i,nmlatp1-j,2)  = (rim(i,nmlat+1-j,2)+rim(i,j,2))  
         enddo ! i=1,nmlonp1
       enddo ! j=1,nmlath
 !
-! Calculate RHS of PDE from rim(1) and rim(2) (was in transf.F version tgcm15)
-!  [( d K_(m phi)^D / d phi /(cos(theta_m)?) +
-!  (d [ K_(m lam)^D * cos(lam_m)]/ d lam_m ) /cos ( lam_m) ] * R / (RCOS0S*DT0DTS)
-! ~ J_(Mr)*r^2*cos(theta_m)/cos(theta_0)/DT0DTS
+! calculate RHS of PDE from rim(1) and rim(2)
+!  R_0 * d lam_m/d lam_0 * 1/cos lam_0 [ d K_(m phi)^DT(0) / d phi  +
+!  (d [ K_(m lam)^DT(0) * cos(lam_0)]/ d lam_0  ] 
 !
-! 1/12/05 btf: see comments re pgi optimization in rhspde.
       call rhspde
 !
-! Set index array nc and magnetic latitude cosine array:
+! Set index array nc array:
 ! nc pointes to the start of the coefficient array for each level
+!
       nc(1) = nc0
       nc(2) = nc1
       nc(3) = nc2
@@ -506,28 +591,32 @@
 !
 ! Use pi_dyn from cons module rather than 4*atan(1) to avoid small
 ! differences generated by the atan in -lmass lib (-lmass was not
-! used in earlier versions).
+! used in earlier versions)
+! set magnetic latitude cosine array: cos lam_0
 !
       do j=1,nmlat0
         cs(j) = cos(pi_dyn/2.-(nmlat0-j)*dlatm)
       enddo ! j=1,nmlat0
 !
-! Set up difference coefficients. Replace zigm11 by A, zigm22 by B,
-! zigmc by C, and zigm2 by D.
+! Set up difference coefficients. 
 !
+! mixed terms: factor 4 from 5-point diff. stencil
+! "NH" array index 49:97 equator to pole
+! zigmc  = Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
+! zigm2  = Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
+! zigm22 = Sigma_(lam lam)^T(0)*cos(lam_0)/d lam_0^2
+! zigm11 = Sigma_(phi phi)^T(0)/ cos(lam_0) / d lon^2 )
+!
+! "SH" array index 49:1 equator to pole
+! zigmc  = -Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
+! zigm2  = -Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
+! zigm22 = Sigma_(lam lam)^T(0)*cos(lam_0)/d lam_0^2
+! zigm11 = Sigma_(phi phi)^T(0)/ cos(lam_0) / d lon^2 )
+! 
       j0 = nmlat0-nmlath
-      do j=1,nmlath       !  1,49 (assuming nmlat=97)
-        jj = nmlath+j-1   ! 49,97
+      do j=1,nmlath       !  1,49 
+        jj = nmlath+j-1   ! 49,97  added values ()^T 
         jjj = nmlath-j+1  ! 49,1
-!
-! factor 4 from 5-point diff. stencil
-! Sigma_(phi lam)/( 4*Delta lam* Delta lon )
-! Sigma_(phi lam)/( 4*Delta lam* Delta lon )
-! Sigma_(lam lam)*cos(lam_m)*DT0DTS/(Delta lam)^2
-! -zigmc_north = southern hemis. 49,1 equator-pole
-! -zigm2_north = southern hemis. 49,1 equator-pole
-!  zigm22 = southern hemis. 49,1 equator-pole
-!
         do i=1,nmlonp1
           zigmc(i,jj)   = (zigmc(i,jj) +zigm2(i,jj))/(4.*dlatm*dlonm)
           zigm2(i,jj)   = zigmc(i,jj)-2.*zigm2(i,jj)/(4.*dlatm*dlonm)
@@ -537,10 +626,6 @@
           zigm22(i,jjj) = zigm22(i,jj)
         enddo ! i=1,nmlonp1
         if (j /= nmlath) then
-!
-! Sigma_(phi phi)/( cos(lam_m)*DT0DTS*(Delta lon)^2 )
-! zigm11 = southern hemis. 49,1 equator-pole
-!
           do i = 1,nmlonp1
             zigm11(i,jj) = zigm11(i,jj)/(cs(j0+j)*dlonm**2)
             zigm11(i,jjj) = zigm11(i,jj)
@@ -548,81 +633,99 @@
         endif
       enddo ! j=1,nmlath
 !
-! Set zigm11 to zero at megnetic poles to avoid floating exception 
+! Set zigm11 to zero at magnetic poles to avoid floating exception 
 ! (values at poles are not used):
 !
-      do i = 1,nmlonp1
-        zigm11(i,1) = 0.0
+      do i = 1,nmlonp1  
+        zigm11(i,1)     = 0.0
         zigm11(i,nmlat) = 0.0
       enddo
+!      
+! for J_rR only contribution to rhs
+!      
+      if(J_rR) call calrhs_jrr(phihm)
+!
+! for modified heelis: 
+!      
+      if(mod_heelis) then
+         if(istep == 1) call set_zigmar ! set sigma_R
+	 call add_zigmar    		! diff. sigma_R; add to sigmas
+	 call diff_rimr(phihm)	    	! differentiate rim_R; calculate rhs_r
+	 call add_rimr	                ! add rhs_r of rhs
+      endif
+!
+! for equivalent magnet. conductances: 
+      if(eqMgCnd) then
+         if(istep == 1) call set_cicr   ! interpolate C_i, C_r to grid
+	 call add_cicr    		! diff. C_i,C_r; add to sigmas
+      endif
 !
 ! Save 2d (mlon,mlat) fields to secondary histories:
-      call addfsech_ij('ZIGM11',' ',' ',zigm11,1,nmlonp1,1,nmlat)
-      call addfsech_ij('ZIGMC' ,' ',' ',zigmc ,1,nmlonp1,1,nmlat)
-      call addfsech_ij('ZIGM2' ,' ',' ',zigm2 ,1,nmlonp1,1,nmlat)
-      call addfsech_ij('ZIGM22',' ',' ',zigm22,1,nmlonp1,1,nmlat)
-      call addfsech_ij('RIM1'  ,' ',' ',rim(:,:,1),1,nmlonp1,1,nmlat)
-      call addfsech_ij('RIM2'  ,' ',' ',rim(:,:,2),1,nmlonp1,1,nmlat)
 !
-! Clear array for difference stencils at all levels:
+!     call addfsech_ij('ZIGM11',' ',' ',zigm11,1,nmlonp1,1,nmlat)
+!     call addfsech_ij('ZIGMC' ,' ',' ',zigmc ,1,nmlonp1,1,nmlat)
+!     call addfsech_ij('ZIGM2' ,' ',' ',zigm2 ,1,nmlonp1,1,nmlat)
+!     call addfsech_ij('ZIGM22',' ',' ',zigm22,1,nmlonp1,1,nmlat)
+!     call addfsech_ij('RIM1'  ,' ',' ',rim(:,:,1),1,nmlonp1,1,nmlat)
+!     call addfsech_ij('RIM2'  ,' ',' ',rim(:,:,2),1,nmlonp1,1,nmlat)
+!
+! Clear array cee for difference stencils at all levels:
       if (debug) write(6,"('dynamo before call clearcee)..')")
       call clearcee(cee,nmlon0,nmlat0)
 !
+! Calculate contribution to stencils from each PDE coefficient
 ! isolve = 0 -> original mud version 5.
 ! isolve = 1 -> muh hybrid solver (only as direct solver -- slow)
 ! isolve = 2 -> modified mudpack solver
 !
-! isolve = 2 -> modified mudpack solver (modified and unmodified coefficients)
+! isolve = 2 -> modified mudpack solver (modified and unmodified coefficient
+!               stencil)
       if (debug) write(6,"('dynamo call stencmd: isolve=',i3)..')")
      |  isolve
+! for Sigma_(phi lam)(0)/( 4*d lam_0* d lon ) & 
+!     Sigma_(lam phi)(0)/( 4*d lam_0* d lon )
+! at the equator it's the value from SH -> sign change since NH is used
+! sign changed back in case value is used somewhere else
+!
       if (isolve==2) then
         cofum(:,:,:) = 0. ! init
 !
-! Calculate contribution to stencils from each PDE coefficient
-!     subroutine stencmd(zigm,cs,nlon0,nlat0,sym,cee,array,ncoef)
+! Sigma_(phi phi)(0)/( cos(lam_0)*(d lon)^2 )
+        call stencmd(zigm11(1,nmlat0),nmlon0,nmlat0,cee,1)
 !
-! Sigma_(phi phi)/( cos(lam_m)*dt0dts*(Delta lon)^2 )
-!       array(1,1) = 1.
-        sym = 1.
-        call stencmd(zigm11,cs,nmlon0,nmlat0,sym,cee,1)
+! Sigma_(lam lam)(0)*cos(lam_0)/(d lam_0)^2
+        call stencmd(zigm22(1,nmlat0),nmlon0,nmlat0,cee,4)
 !
-! Sigma_(lam lam)*cos(lam_m)*dt0dts/(Delta lam)^2
-!       array(1,1) = 4.                                 
-        sym = 1.
-        call stencmd(zigm22,cs,nmlon0,nmlat0,sym,cee,4)
+! Sigma_(phi lam)(0)/( 4*d lam_0* d lon )
+	zigmc(:,nmlat0) = -zigmc(:,nmlat0)
+        call stencmd(zigmc(1,nmlat0),nmlon0,nmlat0,cee,2)
+	zigmc(:,nmlat0) = -zigmc(:,nmlat0)
 !
-! Sigma_(phi lam)/( 4*Delta lam* Delta lon )
-!       array(1,1) = 2.                                 
-        sym = -1.
-        call stencmd(zigmc,cs,nmlon0,nmlat0,sym,cee,2)
+! Sigma_(lam phi)(0)/( 4*d lam_0* d lon )
+	zigm2(:,nmlat0) = -zigm2(:,nmlat0)
+        call stencmd(zigm2(1,nmlat0),nmlon0,nmlat0,cee,3)
+	zigm2(:,nmlat0) = -zigm2(:,nmlat0)
 !
-! Sigma_(lam phi)/( 4*Delta lam* Delta lon )
-!       array(1,1) = 3.                                 
-        sym = -1.
-        call stencmd(zigm2,cs,nmlon0,nmlat0,sym,cee,3)
+! isolve /= 2: original or hybrid solver (only modified stencil).
 !
-! isolve /= 2: original or hybrid solver.
       else
 !
-! Sigma_(phi phi)/( cos(lam_m)*DT0DTS*(Delta lon)^2 )
-!       array(1,1) = 1.
-        sym = 1.
-        call stencil(zigm11,nmlon0,nmlat0,sym,cee,1)
+! Sigma_(phi phi)(0)/( cos(lam_0)*(d lon)^2 )
+        call stencil(zigm11(1,nmlat0),nmlon0,nmlat0,cee,1)
 !
-! Sigma_(lam lam)*cos(lam_m)*DT0DTS/(Delta lam)^2
-!       array(1,1) = 4.
-        sym = 1.
-        call stencil(zigm22,nmlon0,nmlat0,sym,cee,4)
+! Sigma_(lam lam)(0)*cos(lam_0)*/(d lam_0)^2
+        call stencil(zigm22(1,nmlat0),nmlon0,nmlat0,cee,4)
 !
-! Sigma_(phi lam)/( 4*Delta lam* Delta lon )
-!       array(1,1) = 2.
-        sym = -1.
-        call stencil(zigmc,nmlon0,nmlat0,sym,cee,2)
+! Sigma_(phi lam)(0)/( 4*d lam_0* d lon )
+	zigmc(:,nmlat0) = -zigmc(:,nmlat0)
+        call stencil(zigmc(1,nmlat0),nmlon0,nmlat0,cee,2)
+	zigmc(:,nmlat0) = -zigmc(:,nmlat0)
 !
-! Sigma_(lam phi)/( 4*Delta lam* Delta lon )
-!       array(1,1) = 3.
-        sym = -1.
-        call stencil(zigm2,nmlon0,nmlat0,sym,cee,3)
+! Sigma_(lam phi)(0)/( 4*d lam_0* d lon )
+	zigm2(:,nmlat0) = -zigm2(:,nmlat0)
+        call stencil(zigm2(1,nmlat0),nmlon0,nmlat0,cee,3)
+	zigm2(:,nmlat0) = -zigm2(:,nmlat0)
+!
       endif ! isolve
 !
 ! Insert RHS in finest stencil (formerly sub rths):
@@ -643,7 +746,7 @@
       if (isolve==2) 
      |  call edges(cofum,nmlon0,nmlat0)
 !
-! Divide stencils by cos(lam_0) (not rhs):
+! Divide stencils by cos(lam_0) (not rhs already divided):
       if (debug) write(6,"('dynamo call divide..')")
       call divide(c0,nmlon0,nmlat0,nmlon0,nmlat0,cs,1)
       call divide(c1,nmlon1,nmlat1,nmlon0,nmlat0,cs,1)
@@ -659,7 +762,7 @@
       enddo
 !
 ! Modify stencils and RHS so that the NH high lat potential is inserted at
-!  high latitude.  The SH high lat potential will be added back later.
+!  high latitude -> phihm(1,nmlat0). The SH high lat potential will be added back later.
 !  pfrac = fraction of dynamo in solution in the NH. = 1 low lat, = 0 hi lat
 !    cons_module: crit(1)=15, crit(2)=30 deg colats, or hi-lat > 75 deg,
 !      dynamo < 60 deg, and combination between 60-75 mag lat.
@@ -669,20 +772,22 @@
 !  back into the 2-D phim before the call threed, and before it is
 !  transformed to geographic coordinates.
 !
-      ncc = 1
-      nmaglon = nmlon0
-      nmaglat = nmlat0
-      do n=1,5
-        if (isolve==2) then
-          call stenmd(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),pfrac)
-        else
-          call stenmod(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),pfrac)
-        endif
-        ncc = ncc+9*nmaglon*nmaglat
-        if (n==1) ncc = ncc+nmaglon*nmaglat ! rhs is in 10th slot
-        nmaglon = (nmaglon+1)/2
-        nmaglat = (nmaglat+1)/2
-      enddo ! n=1,5
+      if(.not.mod_heelis) then   ! original heelis
+        ncc = 1
+        nmaglon = nmlon0
+        nmaglat = nmlat0
+        do n=1,5
+          if (isolve==2) then
+            call stenmd(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),pfrac)
+          else
+            call stenmod(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),pfrac)
+          endif
+          ncc = ncc+9*nmaglon*nmaglat
+          if (n==1) ncc = ncc+nmaglon*nmaglat ! rhs is in 10th slot
+          nmaglon = (nmaglon+1)/2
+          nmaglat = (nmaglat+1)/2
+        enddo ! n=1,5
+      endif
 !
       jntl = 0
 !
@@ -694,22 +799,25 @@
 !   isolve = 2  modified mud      (residual calculated with unmodified stencils
 !                                  same solution as with direct solver, if same
 !                                  coefficient matrix is used)
+! ouput rim: electric potential from south to north pole
+!       ier: 0 if converged, <0 not converged
+!
       if (debug) write(6,"('dynamo call solver: isolve=',i3)") isolve
+!
       ier = 0 
       if(isolve==0) then
         call mud(rim,jntl,isolve,ier)	 ! solver in mud.F
         if(ier < 0 ) then 	! not converged
 	  write(6,*) 'muh: use direct solver'
-	  call muh(rim,jntl) 		! solver in mud.F
+	  call muh(rim,jntl) 		! solver in muh2cr.F
 	endif
       elseif (isolve==1) then
         call muh(rim,jntl)        	! solver in muh2cr.F
       elseif (isolve==2) then
-! rim(nmlonp1,nmlat)
-        call mudmod(rim,jntl,isolve,ier)! solver in mudmod.F
+        call mudmod(rim,jntl,isolve,ier)     	! solver in mudmod.F
         if(ier < 0 ) then 	! not converged
 	  write(6,*) 'muh: use direct solver'
-	  call muh(rim,jntl) 		! solver in mud.F
+	  call muh(rim,jntl) 		! solver in muh2cr.F
 	endif
       else
         write(6,*) 'dynamo: solver type ',isolve,' not implemented.'
@@ -717,24 +825,30 @@
       endif
       if (debug) write(6,"('dynamo after solver..')")
 !
-! Copy output potential from rim to phim(nmlonp1,nmlat):
-!  Correct the SH potential for the anti-symmetric imposed NH high lat poten
+! Copy output potential from rim to phim(nmlonp1,nmlat)
+! for weimer - heelis (is hemispherical symmetric):
+!    Correct the SH potential for the anti-symmetric imposed NH high lat potential
+!    electrodynamo equation was solved with NH Heelis potential -> call stenmod
+!
+! modified Heelis: no correction since symmetric
+!
 !  pfrac = fraction of dynamo in solution in the NH. = 1 low lat, = 0 hi lat
 !    cons_module: crit(1)=15, crit(2)=30 deg colats, or hi-lat > 75 deg,
 !      dynamo < 60 deg, and combination between 60-75 mag lat.
 !  ie, need (1.-pfrac(i,nmlat0)) at phim(i,1), etc
 ! jn index for NH part of potential (nmlat down to ~nmlat0)
 ! jp index for NH pfrac (nmlat0 down to 1)
-!
-      do j=1,nmlat0
-        jn = nmlat - j + 1
+! 
+      if(.not.mod_heelis) fac = 0.   ! modified heelis
+      do j=1,nmlat0		! SH
+        jn = nmlat  - j + 1
         jp = nmlat0 - j + 1
         do i=1,nmlonp1
-          phim(i,j)=rim(i,j,1)+(1.-pfrac(i,jp))*(phihm(i,j)-phihm(i,jn))
+          phim(i,j)=rim(i,j,1)+fac*(1.-pfrac(i,jp))*(phihm(i,j)-
+     |        phihm(i,jn))
         enddo ! i=1,nmlonp1
       enddo ! j=1,nmlat0
-      do j=nmlat0+1,nmlat
-        jp = j - nmlat0
+      do j=nmlat0+1,nmlat	! NH
         do i=1,nmlonp1
           phim(i,j) = rim(i,j,1)
         enddo ! i=1,nmlonp1
@@ -745,16 +859,16 @@
 !       call addfsech_ij('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
 !    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
 !     elseif (potential_model == 'HEELIS') then
-        call addfsech_ij('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
-     |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
+!       call addfsech_ij('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
+!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
 !     else
 !       call addfsech_ij('PHIHM2D','2D ZERO ELECTRIC POTENTIAL',
 !    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
 !     endif
 !
 ! Save correct single-level potential to secondary histories (mag grid):
-      call addfsech_ij('PHIM2D','2D ELECTRIC POTENTIAL','VOLTS',
-     |  phim,1,nmlonp1,1,nmlat)
+!     call addfsech_ij('PHIM2D','2D ELECTRIC POTENTIAL','VOLTS',
+!    |  phim,1,nmlonp1,1,nmlat)
 !
 !  am_02/02: calculate current for both hemisphere:
 !                      R**2 * J_mr / dt0dts /rcos0s
@@ -766,14 +880,15 @@
 !
       if (debug) write(6,"('dynamo call threed..')")
       call threed
+      if (debug) write(6,"('dynamo after threed..')")
 !
 ! Save 3d mag electric potential:
 ! phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
 !
-      do j=1,nmlat
-        call addfsech_ik('PHIM3D','ELECTRIC POTENTIAL (MAG)','VOLTS',
-     |    phim3d(:,j,:),1,nmlonp1,nmlev,nmlev-1,j)
-      enddo
+!     do j=1,nmlat
+!       call addfsech_ik('PHIM3D','ELECTRIC POTENTIAL (MAG)','VOLTS',
+!    |    phim3d(:,j,:),1,nmlonp1,nmlev,nmlev-1,j)
+!     enddo
 !
 ! am_02/02: calculate  Je_1,  K_(q,phi), K_(q,lam)
       if(icalkqlam.eq.1) call nosocrdens
@@ -785,20 +900,30 @@
       do k=1,nlevp1
         call mag2geo(phim3d(1,1,k),dynpot(1,0,k),im(1,0),jm(1,0),
      |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+        call mag2geo(je13d(1,1,k),je13d_geo(1,0,k),im(1,0),jm(1,0),
+     |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+        call mag2geo(je23d(1,1,k),je23d_geo(1,0,k),im(1,0),jm(1,0),
+     |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
       enddo ! k=1,nlevp1
 !
 ! Periodic point:
       do k=1,nlevp1
         do j=0,nlatp1
-          dynpot(nlonp1,j,k) = dynpot(1,j,k)
+          dynpot(nlonp1,j,k)    = dynpot(1,j,k)
+          je13d_geo(nlonp1,j,k) = je13d_geo(1,j,k)
+          je23d_geo(nlonp1,j,k) = je23d_geo(1,j,k)
         enddo ! j=0,nlatp1
       enddo ! k=1,nlevp1
 !
 ! Save electric potential on geographic coords to secondary history:
-      do j=1,nlat
-        call addfsech_ik('DYNPOT',' ',' ',dynpot(:,j,:),
-     |    1,nlonp1,nlevp1,nlevp1-1,j)
-      enddo ! j=1,nlat
+!     do j=1,nlat
+!       call addfsech_ik('DYNPOT',' ',' ',dynpot(:,j,:),
+!    |    1,nlonp1,nlevp1,nlevp1-1,j)
+!       call addfsech_ik('JE13D_GEO','je13d_geo','A/m^2',
+!    |	 je13d_geo(:,j,:),1,nlonp1,nlevp1,nlevp1,j)
+!       call addfsech_ik('JE23D_GEO','je23d_geo','A/m^2',
+!    |	 je23d_geo(:,j,:),1,nlonp1,nlevp1,nlevp1,j)
+!     enddo ! j=1,nlat
 !
 ! Transform single-level heelis magnetic potential phihm to geographic 
 ! in phih:
@@ -824,7 +949,11 @@
       if (debug) write(6,"('dynamo returning..')")
       end subroutine dynamo
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: transf
+! !INTERFACE:
       subroutine transf
+! !USES:
       use cons_module,only: h0,r0,dt1dts,rcos0s
       use magfield_module,only: 
      |  alatm,    ! (nlonp1,0:nlatp1)
@@ -838,17 +967,34 @@
      |  dvec,     ! (nlonp1,nlat,3,2)
      |  dddarr    ! (nlonp1,nlat)
 !
+! !RETURN VALUE:
+! !PARAMETERS: 
+! !DESCRIPTION: -maps the geographic fields to the geomagnetic coordinate
+!         system
+!       - call the fieldline integration routine to calculate the
+!         conductances as well as the height integrated current density for the
+!         right hand side
+!       - include the boundary condition at the equator
+!       - transformation from lam_m to lam_0 (regular grid)
+!
+! !REVISION HISTORY:
+! 05.02.04  <Astrid Maute> <include header> 
+! 
+! EOP
+!
 ! Local:
       integer :: i,ii,k,kk,j,jj,lat,n
       real :: z0,sinalat,r0or,rat,corfac
       real,dimension(nlonp1,nlat) :: clm2
-      real,dimension(nlonp1,0:nlatp1)        :: a1dta2,sini,be3
+      real,dimension(nlonp1,0:nlatp1) :: a1dta2,sini,be3
 !
 ! Fields to be transformed to geomagnetic space (formerly in transmag.h):
 ! (these will be input to the geographic to magnetic transformation). 
       real,dimension(nlonp1,0:nlatp1,-2:nlev) ::
-     |  ssigma1,  ! pedersen conductivity
-     |  ssigma2   ! hall conductivity
+     |  ssigma1,   ! pedersen conductivity
+     |  ssigma2,   ! hall conductivity
+     |  je1oDtrn,  ! J_ed1/D [A/cm^2]
+     |  je2oDtrn   ! J_ed2/D [A/cm^2]
       real,dimension(nlonp1,0:nlatp1,-2:nlevp1) :: zz
       real,dimension(nlonp1,0:nlatp1,-2:nlev,2) :: adotv
       real,dimension(nlonp1,0:nlatp1,2)         :: adota
@@ -884,55 +1030,21 @@
           unvel     (i,lat,:) = unvel     (ii,lat,:)
           vnvel     (i,lat,:) = vnvel     (ii,lat,:)
           wnvel     (i,lat,:) = wnvel     (ii,lat,:)
+          je1oD_full(i,lat,:) = je1oD_full(ii,lat,:)
+          je2oD_full(i,lat,:) = je2oD_full(ii,lat,:)
         enddo ! i=1,nlonp4-3
       enddo ! lat=1,nlat
 !
-! Small diffs with tgcm15 in sigma_ped and sigma_hall
-!     do lat=1,nlat
-!       do k=1,nlev
-!         do i=1,nlonp1
-!           ped_plt(i+2,k) = sigma_ped(i,lat,k)
-!           hall_plt(i+2,k) = sigma_hall(i,lat,k)
-!           z_plt(i+2,k) = zpoten(i,lat,k)
-!           h_plt(i+2,k) = scheight(i,lat,k)
-!           u_plt(i+2,k) = unvel(i,lat,k)
-!           v_plt(i+2,k) = vnvel(i,lat,k)
-!           w_plt(i+2,k) = wnvel(i,lat,k)
-!         enddo ! i=1,nlonp1
-!       enddo
-!       call addfsech_ik('SIGMAPED',' ',' ',ped_plt,
-!    |    1,nlonp4,nlevp1,nlev,lat)
-!       call addfsech_ik('SIGMAHAL',' ',' ',hall_plt,
-!    |    1,nlonp4,nlevp1,nlev,lat)
-!       call addfsech_ik('ZPOTEN'  ,' ',' ',z_plt,
-!    |    1,nlonp4,nlevp1,nlev,lat)
-!       call addfsech_ik('SCHEIGHT',' ',' ',h_plt,
-!    |    1,nlonp4,nlevp1,nlev,lat)
-!       call addfsech_ik('UNVEL'   ,' ',' ',u_plt,
-!    |    1,nlonp4,nlevp1,nlev,lat)
-!       call addfsech_ik('VNVEL'   ,' ',' ',v_plt,
-!    |    1,nlonp4,nlevp1,nlev,lat)
-!       call addfsech_ik('WNVEL'   ,' ',' ',w_plt,
-!    |    1,nlonp4,nlevp1,nlev,lat)
-!     enddo ! lat=1,nlat
-!
-      z0 = h0
+      z0 = h0  ! 90 km 
 !
       do j=1,nlat
         do i=1,nlonp1
           sinalat = sin(alatm(i,j))         ! sin(lam)
           clm2(i,j) = 1. - sinalat*sinalat  ! cos^2(lam)
           sini(i,j) = zb(i,j)/bmod(i,j)     ! sin(I_m)
-          be3(i,j) = 1.e-9*be3arr(i,j)      ! be3 is in T (be3arr in nT)
+          be3(i,j)  = 1.e-9*be3arr(i,j)     ! be3 is in T (be3arr in nT)
 
         enddo ! i=1,nlonp1
-!       write(6,"('transf: j=',i3,' sinalat=',e12.4)") j,sinalat
-!       write(6,"('transf: j=',i3,' clm2(:,j)=',/,(6e12.4))") 
-!    |    j,clm2(:,j)
-!       write(6,"('transf: j=',i3,' sini(:,j)=',/,(6e12.4))") 
-!    |    j,sini(:,j)
-!       write(6,"('transf: j=',i3,' be3(:,j)=',/,(6e12.4))") 
-!    |    j,be3(:,j)
       enddo ! j=1,nlat
 !
 ! Calculate quantities to be transformed to geomagnetic space:
@@ -943,6 +1055,8 @@
             ssigma2(i,j,k) = sigma_hall(i,j,k)
             zz(i,j,k) = zpoten(i,j,k)
 !           ww(i,j,k) = wnvel (i,j,k)
+            je1oDtrn(i,j,k) = je1oD_full(i,j,k)  ! [A/cm^2]
+            je2oDtrn(i,j,k) = je2oD_full(i,j,k)  ! [A/cm^2]
           enddo ! i=1,nlonp1
         enddo ! j=1,nlat
       enddo ! k=1,nlev        
@@ -952,7 +1066,8 @@
         enddo ! i=1,nlonp1
       enddo ! j=1,nlat
 !
-! Extend fields down to 90 km inserting 3 extra levels. 
+! Extend fields down to 90 km inserting 3 extra levels.
+! 90 km is assumed to be the lower boundary of the ionosphere. 
 ! Set three equally spaced levels for Z, take U, V, and W
 !   to be constant, and extrapolate sigmas exponentially.
 !
@@ -964,6 +1079,10 @@
      |        zz(i,j,1)-zz(i,j,2))/(2.*rl1))
             ssigma2(i,j,k) = ssigma2(i,j,1)*exp((zz(i,j,k)+zz(i,j,k+1)-
      |        zz(i,j,1)-zz(i,j,2))/(2.*rl2))
+            je1oDtrn(i,j,k) = je1oDtrn(i,j,1)*exp((zz(i,j,k)+zz
+     |        (i,j,k+1)-zz(i,j,1)-zz(i,j,2))/(2.*rl2))
+            je2oDtrn(i,j,k) = je2oDtrn(i,j,1)*exp((zz(i,j,k)+zz
+     |        (i,j,k+1)-zz(i,j,1)-zz(i,j,2))/(2.*rl2))
           enddo ! i=1,nlonp1
         enddo ! j=1,nlat
       enddo ! k=0,-2,-1
@@ -975,6 +1094,8 @@
         do j=1,nlat
           do i=1,nlonp1
 !
+! am 6/04: d_1,D_2,D are referenced to h_0 (90 km) s. apex.F
+! in the following they are scaled from h_0 to the actual altitude
 ! d_1 = (R_0/R)^1.5
             r0or = r0/(r0 + .5*(zz(i,j,k)+zz(i,j,k+1)) - z0)    
             rat = 1.e-2*r0or**1.5 ! 1/100 convertion in cm
@@ -1040,12 +1161,34 @@
 ! Calculate velocity distribution also at the poles.
 ! Used later for calculating K_{q lam}
 !
-        adotv(1,0,k,1) = (9.*adotv(1,1,k,1) - adotv(1,2,k,1))/8.
-        adotv(1,nlatp1,k,1) =  (9.*adotv(1,nlat  ,k,1) -
-     |                             adotv(1,nlat-1,k,1))/8.
-        adotv(1,0,k,2) = (9.*adotv(1,1,k,2) - adotv(1,2,k,2))/8.
-        adotv(1,nlatp1,k,2) = (9.*adotv(1,nlat  ,k,2) -
-     |                            adotv(1,nlat-1,k,2))/8.
+        adotv(1,0,k,1) =  
+     |     (9.*sddot(nlon,unitv,adotv(1,1,k,1)) - 
+     |      sddot(nlon,unitv,adotv(1,2,k,1)))/(8.*float(nlon))
+        adotv(1,nlatp1,k,1) =   
+     |     (9.*sddot(nlon,unitv,adotv(1,nlat  ,k,1)) -
+     |      sddot(nlon,unitv,adotv(1,nlat-1,k,1)))/(8.*float(nlon))
+        adotv(1,0,k,2) =  
+     |     (9.*sddot(nlon,unitv,adotv(1,1,k,2)) - 
+     |      sddot(nlon,unitv,adotv(1,2,k,2)))/(8.*float(nlon))
+        adotv(1,nlatp1,k,2) =  
+     |     (9.*sddot(nlon,unitv,adotv(1,nlat  ,k,2)) -
+     |      sddot(nlon,unitv,adotv(1,nlat-1,k,2)))/(8.*float(nlon))
+!
+! Calculate J(grad p, g) also at the poles.
+! Used later for calculating K_{q lam}     
+        je1oDtrn(1,0,k) = 
+     |    (9.*sddot(nlon,unitv,je1oDtrn(1,1,k))-
+     |        sddot(nlon,unitv,je1oDtrn(1,2,k)))/(8.*float(nlon))
+        je1oDtrn(1,nlatp1,k) = 
+     |    (9.*sddot(nlon,unitv,je1oDtrn(1,nlat  ,k))-
+     |        sddot(nlon,unitv,je1oDtrn(1,nlat-1,k)))/(8.*float(nlon))   
+        je2oDtrn(1,0,k) = 
+     |    (9.*sddot(nlon,unitv,je2oDtrn(1,1,k))-
+     |        sddot(nlon,unitv,je2oDtrn(1,2,k)))/(8.*float(nlon))
+        je2oDtrn(1,nlatp1,k) = 
+     |    (9.*sddot(nlon,unitv,je2oDtrn(1,nlat  ,k))-
+     |        sddot(nlon,unitv,je2oDtrn(1,nlat-1,k)))/(8.*float(nlon))
+
 !
 ! Extend in longitude:
         do i = 2,nlon
@@ -1055,14 +1198,14 @@
           ssigma1(i,nlatp1,k)   = ssigma1(1,nlatp1,k)
           ssigma2(i,0,k)        = ssigma2(1,0,k)
           ssigma2(i,nlatp1,k)   = ssigma2(1,nlatp1,k)
-          adotv(i,0,k,1)        = (9.*adotv(i,1,k,1) -
-     |                                adotv(i,2,k,1))/8.
-          adotv(i,nlatp1,k,1)   = (9.*adotv(i,nlat,k,1)-
-     |                                adotv(i,nlat-1,k,1))/8.
-          adotv(i,0,k,2)        = (9.*adotv(i,1,k,2) -
-     |                                adotv(i,2,k,2))/8.
-          adotv(i,nlatp1,k,2)   = (9.*adotv(i,nlat,k,2) -
-     |                                adotv(i,nlat-1,k,2))/8.
+	  adotv(i,nlatp1,k,1)   = adotv(1,nlatp1,k,1)
+	  adotv(i,nlatp1,k,2)   = adotv(1,nlatp1,k,2)
+	  adotv(i,0,k,1)        = adotv(1,0,k,1)
+	  adotv(i,0,k,2)        = adotv(1,0,k,2)
+          je1oDtrn(i,0,k)	= je1oDtrn(1,0,k)
+          je1oDtrn(i,nlatp1,k)  = je1oDtrn(1,nlatp1,k)
+          je2oDtrn(i,0,k)	= je2oDtrn(1,0,k)
+          je2oDtrn(i,nlatp1,k)  = je2oDtrn(1,nlatp1,k)
         enddo ! i = 2,nlon
       enddo ! k=-2,nlev
 !
@@ -1134,6 +1277,8 @@
            ssigma2(nlonp1,j,k) = ssigma2(1,j,k)
            adotv(nlonp1,j,k,1) = adotv(1,j,k,1)
            adotv(nlonp1,j,k,2) = adotv(1,j,k,2)
+           je1oDtrn(nlonp1,j,k)= je1oDtrn(1,j,k)
+           je2oDtrn(nlonp1,j,k)= je2oDtrn(1,j,k)
         enddo ! k = -2,nlev
         zz(nlonp1,j,nlevp1)= zz(1,j,nlevp1)
         adota(nlonp1,j,1) = adota(1,j,1)
@@ -1142,37 +1287,6 @@
         sini(nlonp1,j)    = sini(1,j)
         be3(nlonp1,j)     = be3(1,j)
       enddo ! j = 0,nlatp1
-!
-! Save to secondary histories:
-!     real,dimension(nlonp1,0:nlatp1,-2:nlev) :: ssigma1,ssigma2
-!     real,dimension(nlonp1,0:nlatp1,-2:nlev,2) :: adotv
-!     real,dimension(nlonp4,nlevp1) :: sigma1_plt,...
-!
-!     sigma1_plt(:,:) = 0.
-!     sigma2_plt(:,:) = 0.
-!     zz_plt(:,:) = 0.
-!     do j=1,nlat
-!       do k=1,nlev
-!         do i=1,nlon
-!           sigma1_plt(i,k) = ssigma1(i,j,k)
-!           sigma2_plt(i,k) = ssigma2(i,j,k)
-!           zz_plt(i,k)     = zpoten(i,j,k)
-!           adotv1_plt(i,k) = adotv(i,j,k,1)
-!           adotv2_plt(i,k) = adotv(i,j,k,2)
-!         enddo
-!       enddo
-!       call addfsech_ik('SIGMA1',' ',' ',sigma1_plt,
-!    |    1,nlonp4,nlevp1,nlev,j)
-!       call addfsech_ik('SIGMA2',' ',' ',sigma2_plt,
-!    |    1,nlonp4,nlevp1,nlev,j)
-!       call addfsech_ik('ZZ'    ,' ',' ',zz_plt,
-!    |    1,nlonp4,nlevp1,nlev,j)
-!       call addfsech_ik('ADOTV1',' ',' ',adotv1_plt,
-!    |    1,nlonp4,nlevp1,nlev,j)
-!       call addfsech_ik('ADOTV2',' ',' ',adotv2_plt,
-!    |    1,nlonp4,nlevp1,nlev,j)
-!     enddo ! j=1,nlat
-
 !
 ! Transform needed fields to geomagnetic coordinate system, one latitude
 ! at a time. 
@@ -1200,44 +1314,75 @@
         call geo2mag(adotve(1,k,2),adotv(1,0,k,2),ig,jg,wt,nlonp1,
      |    nmlonp1,nmlon,nmlat,jj)
         adotve(nmlonp1,k,2) = adotve(1,k,2) ! periodic point
+!	
+        if(j_pg) then               ! for magnetic perturbation
+          call geo2mag(je1_pge(1,k),je1oDtrn(1,0,k),ig,jg,wt,
+     |      nlonp1,nmlonp1,nmlon,nmlat,jj)
+          call geo2mag(je2_pge(1,k),je2oDtrn(1,0,k),ig,jg,wt,
+     |      nlonp1,nmlonp1,nmlon,nmlat,jj)
+          je1_pge(nmlonp1,k) = je1_pge(1,k)  ! periodic point
+          je2_pge(nmlonp1,k) = je2_pge(1,k)
+        endif
       enddo ! k=-2,nlev
 !
-! Magnetic latitude loop:
+! Magnetic latitude loop for field line integration: 
+!
       maglat_loop: do j=2,nmlat-1
+!      
+! mapping from geographic grid to geomagnetic grid      
+! height varying: sigma_ped, sigma_hall, u_e1, u_e2, z
+! indepent of height: d_1^2/D, d_2^2/D, d_1*d_2/D, sin I_m, B_e3
+!
         do k=-2,nlev
           call geo2mag(sigma_pedm(1,k),ssigma1(1,0,k),ig,jg,wt,nlonp1,
      |      nmlonp1,nmlon,nmlat,j)
           call geo2mag(sigma_hallm(1,k),ssigma2(1,0,k),ig,jg,wt,nlonp1,
      |      nmlonp1,nmlon,nmlat,j)
+          call geo2mag(zpotenm(1,k),zz(1,0,k),ig,jg,wt,nlonp1,
+     |      nmlonp1,nmlon,nmlat,j)
           do n=1,2
             call geo2mag(adotvm(1,k,n),adotv(1,0,k,n),ig,jg,wt,nlonp1,
      |        nmlonp1,nmlon,nmlat,j)
           enddo ! n=1,2
-          sigma_pedm(nmlonp1,k) = sigma_pedm(1,k) ! periodic point
+          sigma_pedm(nmlonp1,k)  = sigma_pedm(1,k) ! periodic point
           sigma_hallm(nmlonp1,k) = sigma_hallm(1,k)
+!	
+!  current due to plasma gradient and gravity je1_pg,je2_pg [A/cm^2] 
+          if(j_pg) then
+            call geo2mag(je1_pg(1,k),je1oDtrn(1,0,k),ig,jg,wt,
+     |        nlonp1,nmlonp1,nmlon,nmlat,j)
+            call geo2mag(je2_pg(1,k),je2oDtrn(1,0,k),ig,jg,wt,
+     |        nlonp1,nmlonp1,nmlon,nmlat,j)
+            je1_pg(nmlonp1,k) = je1_pg(1,k)  ! periodic point
+            je2_pg(nmlonp1,k) = je2_pg(1,k)
+          endif
+!	  
         enddo ! k=-2,nlev
-
-!       call addfsech_ik('SIGMA1M'  ,' ',' ',sigma_pedm,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('SIGMA2M'  ,' ',' ',sigma_hallm,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-
+!
+        k=nlevp1
+        call geo2mag(zpotenm(1,k),zz(1,0,k),ig,jg,wt,nlonp1,
+     |    nmlonp1,nmlon,nmlat,j)
+!
         do n=1,2
           call geo2mag(adotam(1,n),adota(1,0,n),ig,jg,wt,nlonp1,
      |      nmlonp1,nmlon,nmlat,j)
         enddo ! n=1,2
-
-        do k=-2,nlevp1
-          call geo2mag(zpotenm(1,k),zz(1,0,k),ig,jg,wt,nlonp1,
-     |      nmlonp1,nmlon,nmlat,j)
-        enddo ! k=-2,nlevp1
-
-        call geo2mag(a1a2m ,a1dta2,ig,jg,wt,nlonp1,nmlonp1,nmlon,nmlat,
-     |    j)
-        call geo2mag(siniam,sini  ,ig,jg,wt,nlonp1,nmlonp1,nmlon,nmlat,
-     |    j)
-        call geo2mag(bmodm ,be3   ,ig,jg,wt,nlonp1,nmlonp1,nmlon,nmlat,
-     |    j)
+!
+        call geo2mag(a1a2m ,a1dta2,ig,jg,wt,nlonp1,nmlonp1,nmlon,
+     |    nmlat,j)
+        call geo2mag(siniam,sini  ,ig,jg,wt,nlonp1,nmlonp1,nmlon,
+     |    nmlat,j)
+        call geo2mag(bmodm ,be3   ,ig,jg,wt,nlonp1,nmlonp1,nmlon,
+     |    nmlat,j)
+!	
+!       call addfsech_ik('je1_pg' ,'je1_pg','A/cm^2',je1_pg,
+!    |	 1,nmlonp1,nmlev,nmlev-1,j)
+!       call addfsech_ik('je2_pg' ,'je2_pg','A/cm^2',je2_pg,
+!    |	 1,nmlonp1,nmlev,nmlev-1,j)
+!       call addfsech_ik('SIGMA1M'  ,' ',' ',sigma_pedm,
+!    |	  1,nmlonp1,nmlev,nmlev-1,j)
+!       call addfsech_ik('SIGMA2M'  ,' ',' ',sigma_hallm,
+!    |	  1,nmlonp1,nmlev,nmlev-1,j)
 !
 ! Calculation of k_(q,lam)
 !
@@ -1252,7 +1397,7 @@
 ! Save geopotential in 3d array (both are module data above):
           do k=-2,nlev
             do i=1,nmlon
-              if (zpotenm(i,k) < z0) zpotenm(i,k) = z0
+              if (zpotenm(i,k) < z0) zpotenm(i,k) = z0 
               zpotenm3d(i,j,k) = zpotenm(i,k)
 !
 ! Store 3d arrays in magnetic coordinates for postprocessing of the
@@ -1262,6 +1407,8 @@
               sigma2m3d(i,j,k) = sigma_hallm(i,k)
               adotv1m3d(i,j,k) = adotvm(i,k,1)
               adotv2m3d(i,j,k) = adotvm(i,k,2)
+!	                    ! gravity + plasma pressure [A/cm^2]
+              je1oD_pg3d(i,j,k) = je1_pg(i,k)  
             enddo ! i=1,nmlon
 !
 ! Periodic point:
@@ -1273,6 +1420,8 @@
             sigma2m3d(nmlonp1,j,:) = sigma2m3d(1,j,:)
             adotv1m3d(nmlonp1,j,:) = adotv1m3d(1,j,:)
             adotv2m3d(nmlonp1,j,:) = adotv2m3d(1,j,:)
+	                     ! gravity + mag.pressure [A/cm^2]  
+            je1oD_pg3d(nmlonp1,j,:)= je1oD_pg3d(1,j,:) 
           enddo ! k=-2,nlevp1
 !
 ! Upper boundary:
@@ -1283,24 +1432,16 @@
             sigma2m3d(i,j,nlevp1) = sigma_hallm(i,nlev)
             adotv1m3d(i,j,nlevp1) = adotvm(i,nlev,1)
             adotv2m3d(i,j,nlevp1) = adotvm(i,nlev,2)
+	                    ! gravity + mag.pressure [A/cm^2]  
+            je1oD_pg3d(i,j,nlevp1)  = je1_pg(i,nlev)
           enddo ! i=1,nmlon
 !
 ! Without calculation of k_(q,lam)
-! 1/13/05 btf: change loop order for efficiency (i.e., i-loop inside k-loop) 
-!
         else  ! icalkqlam /= 1
- 
-!         do i=1,nmlon  
-!           do k=-2,nlev
-!             if (zpotenm(i,k) < z0) zpotenm(i,k) = z0
-!             zpotenm3d(i,j,k) = zpotenm(i,k)
-!           enddo ! k=-2,nlev
-!           if (zpotenm(i,nlevp1) < z0) zpotenm(i,nlevp1) = z0
-!           zpotenm3d(i,j,nlevp1) = zpotenm(i,nlevp1)
-!         enddo ! i=1,nmlon  
 
           do k=-2,nlev
             do i=1,nmlon  
+
               if (zpotenm(i,k) < z0) zpotenm(i,k) = z0
               zpotenm3d(i,j,k) = zpotenm(i,k)
             enddo ! i=1,nmlon  
@@ -1347,6 +1488,16 @@
 ! Periodic points:
             sigma_pedm(nmlonp1,k) = sigma_pedm(1,k)
             sigma_hallm(nmlonp1,k) = sigma_hallm(1,k)
+!	  
+            if(j_pg) then
+              call geo2mag(je1_pg(1,k),je1oDtrn(1,0,k),ig,jg,wt,
+     |      	nlonp1,nmlonp1,nmlon,nmlat,j)
+              call geo2mag(je2_pg(1,k),je2oDtrn(1,0,k),ig,jg,wt,
+     |      	nlonp1,nmlonp1,nmlon,nmlat,j)
+              je1_pg(nmlonp1,k) = je1_pg(1,k)  ! periodic point
+              je2_pg(nmlonp1,k) = je2_pg(1,k)
+            endif
+!	  
           enddo ! k=-2,nlev
 !
           do i = 1,nmlon
@@ -1359,6 +1510,8 @@
               sigma2m3d(i,j,k) = sigma_hallm(i,k)
               adotv1m3d(i,j,k) = adotvm(i,k,1)
               adotv2m3d(i,j,k) = adotvm(i,k,2)
+!	      
+              je1oD_pg3d(i,j,k)  = je1_pg(i,k)  ! gravity + mag.pressure
             enddo
             sigma1m3d(i,j,nlevp1) = sigma_pedm(i,nlev)
             sigma2m3d(i,j,nlevp1) = sigma_hallm(i,nlev)
@@ -1376,6 +1529,7 @@
           sigma2m3d(nmlonp1,j,:) = sigma2m3d(1,j,:)
           adotv1m3d(nmlonp1,j,:) = adotv1m3d(1,j,:)
           adotv2m3d(nmlonp1,j,:) = adotv2m3d(1,j,:)
+          je1oD_pg3d(nmlonp1,j,:)  = je1oD_pg3d(1,j,:)  ! gravity + mag.pressure
         enddo ! jj=1,2
       endif ! calkqlam==1
 !
@@ -1385,12 +1539,12 @@
 !   zigmc  is int[sig_p*d_1*d_2/D] ds, i.e. Sigma_c
 !   zigm2  is int[sigma_h] ds,         i.e. Sigma_h
 !
-!   rim1 is int[(sigma_h-sigma_p*d_1*d_2/D)u_e1 + sigma_p*d_1^2/D u_e2] *A(h_r)*
-!                B_e3 ds, i.e.  K_(m phi)^D/abs(sin Im)
-!   rim2 is int[(sigma_h+sigma_p*d_1*d_2/D)u_e2 - sigma_p*d_2^2/D u_e1] *A(h_r)*
-!                B_e3 ds, K_(m lam)^D ( minus in northern hemisphere
-!   Change sign of RIM(2) in S. hemisphere to be compatible with transf
-! At this point, rim2 is +-K_(m lam)^D
+!   rim1 is int[(sigma_h-sigma_p*d_1*d_2/D)u_e1 + sigma_p*d_1^2/D u_e2]*B_e3 ds,
+!           i.e.  K_(m phi)^D/abs(sin Im)
+!   rim2 is -/-int[(sigma_h+sigma_p*d_1*d_2/D)u_e2 - sigma_p*d_2^2/D u_e1]*B_e3 ds, 
+!          i.e. +/- K_(m lam)^D 
+!         (minus sign in northern hemisphere
+!          SH same minus sign but should be plus -> take care of this in transf)
 !
 ! Equatorial values:
 ! Assume that quantities primarily dependent on Pedersen conductivity
@@ -1400,6 +1554,8 @@
 !   field lines.  Exact values chosen should not be important for potential
 !   calculation, as long as they are physically reasonable and not too
 !   different from adjacent values.
+! add factor 1/2 for the equatorial values since both hemispheres are
+! added together - two physical points but equator is only one point
 !
       j = nmlat/2+1
       do i = 1,nmlon
@@ -1413,11 +1569,16 @@
 !
 ! Include the boundary condition at the equator eq.(5.30) in
 ! Richmond (1995) Ionospheric Electrodynamics use. Mag. Apex Coord. 
-!   J.Goemag.Geoelectr. 47,191-212
-! Sig_phiphi/abs(sin Im) = 0.5*Sig_cowling/abs(sin Im)
-!              = 0.5/abs(sin Im)*(Sig_phiphi - Sig_philam*sig_lamphi/Sig_lamlam)
-!              = 0.5/abs(sin Im)*(Sig_phiphi + (Sig_h-sig_c)*(Sig_h+sig_c)/Sig_lamlam)
-!  rim(1) / |sin I_m| = I_1 = R/2*(K_mphi - Sig_philam/Sig_lamlam*K_mlam)
+!   
+! Sigma_(phi phi)/|sin Im| = 0.5*Sigma_cowling/|sin Im|
+!        = 0.5/ |sin Im|*[Simag_(phi phi) -
+!                        Sigma_(phi lam)*Sigma_(lam phi)/Sigma_(lam lam)]
+!        = 0.5/|sin Im|*[Simag_(phi phi) + 
+!                       (Sigma_h-Sigma_c)*(Sigma_h + Sigma_c)/Sigma_(lam lam)]
+!  K_(m phi)^D / |sin I_m| =  1/2/|sin Im|*(K_(m phi) - 
+!                       Sigma_(phi lam)/Sigma_(lam lam)*K_(m lam)^D)
+! factor 1/2 is taken care of above when the conductances at the
+! equator are set
 !
       j = nmlath      ! nmlath = (nmlat+1)/2
       do i = 1,nmlon
@@ -1425,34 +1586,34 @@
      |                (zigm2(i,j)+zigmc(i,j))/zigm22(i,j)
         rim(i,j,1)  = rim(i,j,1) - (zigm2(i,j)-zigmc(i,j))/
      |                zigm22(i,j)*rim(i,j,2)
-        zigm11(i,j) = 0.5*zigm11(i,j)
-        rim(i,j,1)  = 0.5*rim(i,j,1)
+        zigm11(i,j) = zigm11(i,j) 
+        rim(i,j,1)  = rim(i,j,1)  
       enddo
 
 !           
 ! Using notation of Richmond (1995) on right-hand side below:
-! Sigma_(phi phi) = zigm11*abs(sin I_m)
-! Sigma_(lam lam) = zigm22/abs(sin I_m)
-! Sigma_(phi lam) = +-(zigm2-zigmc)
-! Sigma_(lam phi) = -+(zigm2+zigmc)
-! K_(m phi)^D     = rim(1)*abs(sin I_m)
-! K_(m lam)^D     = +-rim(2)
+! Sigma_(phi phi)/ |sin I_m|  = zigm11
+! Sigma_(lam lam) * |sin I_m| = zigm22
+! Sigma_(phi lam)             = +/-(zigm2-zigmc)
+! Sigma_(lam phi)             = -/+(zigm2+zigmc)
+! K_(m phi)^D / |sin I_m|     = rim(1)
+! K_(m lam)^D                 = +/-rim(2)
 !
-! Transforming PDE from original apex (theta_a) to new apex grid (theta_0)
-!   which is equally spaced in magnetic latitude
-! SCALE quantities to modified (0) magnetic latitude system, multiplying or 
-!   dividing by abs(sin I_m) [inverse contained in DT1DTS] as necessary.  
-! Sign of K_(m lam)^D in southern hemisphere remains reversed.
-! for the mixed terms the transformation from the integration and differentiation
-! canceled out (zigmc, zigm2)
-! DT1DTS : d theta_0/ d theta_a / abs(sin I_m)
-! RCOS0S : cos(theta_0)/ cos(theta_a)
+! Transforming PDE from original apex (lam_m) to new apex grid (lam_0)
+!     lam_m is irregular spaced in latitude
+!     lam_0 is regular spaced in latitude (used for derivatives)
+! the whole PDE is divided by d lam_m /d lam_0
+! 
+! sign of K_(m lam)^D in southern hemisphere remains reversed.
+! for the mixed terms the transformation factors cancel out (zigmc, zigm2)
+! DT1DTS : d lam_0/ d lam_m / |sin I_m|
+! RCOS0S : cos(lam_0)/ cos(lam_m)
 !
-! corfac: abs(I_m)*d theta_a/d theta_0 * cos(theta_0)/ cos(theta_a)
-! zigm11: abs(I_m)*d theta_a/d theta_0 * cos(theta_0)/ cos(theta_a)
-! zigm22: 1/abs(I_m)*d theta_0/d theta_a * cos(theta_a)/ cos(theta_0)
-! rim(1): abs(I_m)*d theta_a/d theta_0
-! rim(2): cos(theta_a)/ cos(theta_0)
+! corfac: |sin I_m|*d lam_m/d lam_0 * cos(lam_0)/ cos(lam_m)
+! zigm11: |sin I_m|*d lam_m/d lam_0 * cos(lam_0)/ cos(lam_m)
+! zigm22: 1/|sin I_m|*d lam_0/d lam_m * cos(lam_m)/ cos(lam_0)
+! rim(1): |sin I_m|*d lam_m/d lam_0
+! rim(2): cos(lam_m)/ cos(lam_0)
 !
       do j=2,nmlat-1
         corfac = rcos0s(j)/dt1dts(j)
@@ -1473,13 +1634,12 @@
         rim(nmlonp1,j,:)  = rim(1,j,:)
       enddo ! j=1,nmlat
 !
-! the PDE is divided by 1/ DT0DTS
-! Sigma_(phi phi) = zigm11/ rcos0s * dt0dts
-! Sigma_(lam lam) = zigm22 * rcos0s / dt0dts
-! Sigma_(phi lam) = +-(zigm2-zigmc)
-! Sigma_(lam phi) = -+(zigm2+zigmc)
-! K_(m phi)^D     =   rim(1) * dt0dts
-! K_(m lam)^D     = +-rim(2) * rcos0s
+! zigm11 = Sigma_(phi phi)(0)= Sigma_(phi phi)(m) * cos lam_0 /cos lam_m * d lam_m /d lam_0
+! zigm22 = Sigma_(lam lam)(0)= Sigma_(lam lam)(m) * cos lam_m /cos lam_0 * d lam_0 /d lam_m
+! +-(zigm2-zigmc)= Sigma_(phi lam)(0) = Sigma_(phi lam)(m)
+! -+(zigm2+zigmc)= Sigma_(lam phi)(0) = Sigma_(lam phi)(m)
+! rim(1) = K_(m phi)^D(0)    = K_(m phi)^D(m) * d lam_m /d lam_0   
+! rim(2) = +/-K_(m lam)^D(0) = +/-K_(m lam)^D(m) * cos lam_m /cos lam_0 
 !
 ! Polar values for Z:
       do k=-2,nlevp1
@@ -1553,37 +1713,7 @@
         rim(nmlonp1,j,:)  = rim(1,j,:)
       enddo ! j=1,nmlat
 !
-! Save to secondary history:
-!     real,dimension(nmlonp1,nmlat) ::
-!    |  zigm11,  ! sigma11*cos(theta0)
-!    |  zigmc,   ! sigmac
-!    |  zigm2,   ! sigma2
-!    |  zigm22   ! sigma22/cos(theta0)
-!
-!     do j=1,nmlat
-!       do i=1,nmlonp1
-!         zigm11_plt(i,:) = zigm11(i,j)
-!         zigmc_plt (i,:) = zigmc (i,j)
-!         zigm2_plt (i,:) = zigm2 (i,j)
-!         zigm22_plt(i,:) = zigm22(i,j)
-!         rim1_plt  (i,:) = rim   (i,j,1)
-!         rim2_plt  (i,:) = rim   (i,j,2)
-!       enddo ! i=1,nmlonp1
-!       call addfsech_ik('ZIGM11'  ,' ',' ',zigm11_plt,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('ZIGMC'   ,' ',' ',zigmc_plt,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('ZIGM2'   ,' ',' ',zigm2_plt,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('ZIGM22'  ,' ',' ',zigm22_plt,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('RIM1'    ,' ',' ',rim1_plt,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('RIM2'    ,' ',' ',rim2_plt,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!     enddo ! i=1,nmlat
-! 
-! Folding south on to northern hemisphere and calculation of RHS has 
+! Folding south onto northern hemisphere and calculation of RHS has 
 !   been moved to subroutine dynamo.
 !
 ! Save 3d potential on magnetic grid to secondary history:
@@ -1592,21 +1722,45 @@
          call addfsech_ik('ZMAG','ZMAG','CM',zpotenm3d(:,j,:),
      | 	   1,nmlonp1,nmlev,nmlev,j)
        enddo ! j=1,nmlat
+!
       end subroutine transf
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: fieldline_integrals
+! !INTERFACE:
       subroutine fieldline_integrals(latm)
-      use cons_module,only: h0,r0,ylatm
+! !USES:
+      use cons_module,only: h0,       ! h0 = 90 km
+     |      re,    !  earth radius= 6.37122e8 (cm)
+     |      r0,    ! re+h0
+     |      ylatm  ! magnetic latitudes
 !
-! Perform approximate field line quadratures at geomagnetic grid.
+! !RETURN VALUE:
+! !ARGUMENTS:
+      integer,intent(in) :: latm ! latitude index of field line
+! !PARAMETERS: 
+! !DESCRIPTION: 
+!        Perform approximated field line integration at geomagnetic grid
+!        zigm11 is int[sig_p*d_1^2/D] ds,   i.e. Sigma_(phi phi)/abs(sin Im)
+!        zigm22 is int[sig_p*d_2^2/D] ds,   i.e. Sigma_(lam lam)*abs(sin Im)
+!        zigmc  is int[sig_p*d_1*d_2/D] ds, i.e. Sigma_c
+!        zigm2  is int[sigma_h] ds,         i.e. Sigma_h
 !
-! Args:
-      integer,intent(in) :: latm
+!        rim1 [A/m] is int[(sigma_h-sigma_p*d_1*d_2/D)u_e1 + sigma_p*d_1^2/D u_e2] *A(h_r)*
+!                B_e3 ds, i.e.  K_(m phi)^D/abs(sin Im)
+!        rim2 [A/m] is -/- int[(sigma_h+sigma_p*d_1*d_2/D)u_e2 - sigma_p*d_2^2/D u_e1] *A(h_r)*
+!                B_e3 ds, i.e. +/- K_(m lam)^D 
+!        
+! !REVISION HISTORY:
+! 08.02.04  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: i,k
-      real :: z0
       real :: sinlm,clm2,absinim,ra,sqomrra,sqrra,afac,htfac
-      real :: rtrmn,rora,del,omdel,sig1,sig2,ue1,ue2
+      real :: rtrmn,rora,del,omdel,sig1,sig2,ue1,ue2,jgr,jmp,fac,
+     |  je1pg,je2pg
       real,dimension(nmlonp1) :: sindm, cosdm, ram, aam, cosiam,
      |  csthdam, rtadram
       real,dimension(nmlonp1,-2:nlevp1) :: rrm, sinidm, cosidm,
@@ -1615,18 +1769,18 @@
 ! Quantities needed for field-line integration:
       real,dimension(nmlonp1,-2:nlev) :: htfunc, htfunc2
 !
-      z0 = h0
+! values at reference height h0
       sinlm   = sin(ylatm(latm))             ! sin(lam_m)
       clm2    = 1. - sinlm*sinlm             ! cos^2(lam_m)
       absinim = abs(sinlm)/sqrt(1.-.75*clm2) ! | sin I_m |
-      ra      = r0/clm2                      ! (R_E + H_0)/cos^2(lam_m)
-      sqomrra = sqrt(1.-r0/ra)               ! sqrt(1/ R_0/R_A) = sin(lam_m)
-      sqrra   = sqrt(r0/ra)                  ! sqrt(R_0/R_A)
+      ra      = r0/clm2                      ! R_A = (R_E + h_0)/cos^2(lam_m)
+      sqomrra = sqrt(1.-r0/ra)               ! sqrt(1 - R_0/R_A) = sin(lam_m) 
+      sqrra   = sqrt(r0/ra)                  ! sqrt(R_0/R_A) = cos(lam_m) 
       afac    = 2.*sqrt(ra-r0)               ! 2*sqrt(R_A-R_0)
-      htfac   = sqrt(ra-.75*r0)              ! sqrt(R_A -3/4*R_0)    
-                                             ! ds = (A dh) / (2*sqrt(h_A-h))
+      htfac   = sqrt(ra-.75*r0)              ! sqrt(R_A -3/4*R_0) 
 !
-! 2*sqrt( h_A - h_0 )/ |sin I_m | w.r to reference height A(h_R)
+! A(h)=A(h0)*htfunc height varying factor for ds = -A(h) d sqrt(h_A-h)
+! A(h_0) = 2*sqrt(h_A-h_0)/ |sin I_m| 
       do i=1,nmlon
         aam(i) = afac/abs(siniam(i))
       enddo ! i=1,nmlon
@@ -1634,19 +1788,16 @@
 ! Evaluate 3d fields:
       do k=-2,nlevp1
         do i=1,nmlon
-!
-! rr = r0+z-z0 radius of magnetic point
-          rrm(i,k) = r0+zpotenm(i,k)-z0
-!
-! rtramr = ra-r if +ive, zero otherwise
-          rtramrm(i,k) = max(0.,ra-rrm(i,k))
-          rtramrm(i,k) = sqrt(rtramrm(i,k))
+          rrm(i,k) = re+zpotenm(i,k)          ! R = R_E + h
+          rtramrm(i,k) = max(0.,ra-rrm(i,k))  ! h_A - h
+          rtramrm(i,k) = sqrt(rtramrm(i,k))   ! sqrt( h_A - h )
         enddo ! i=1,nmlon
       enddo ! k=-2,nlevp1
 !
-! Interpolation to the middle of horizontal slices:
-! htfunc = factor by which to multiply AAM(I)*d(sqrt(ra-r)) = ds
-
+! rrm: R interpolation to the middle of horizontal slices
+! rtramrm: -d sqrt(h_A-h) 
+! htfunc = factor by which to multiply ds = -A(h0)*htfunc* d sqrt(h_A-h) 
+!
       do k=-2,nlev
         do i=1,nmlon
           rrm(i,k)     = .5*(rrm(i,k)+rrm(i,k+1))
@@ -1664,22 +1815,32 @@
         zigmc (i,latm) = 0.
         rim(i,latm,1)  = 0.
         rim(i,latm,2)  = 0.
+!	
+	tpg1(i,latm) = 0.
+	tpg2(i,latm) = 0.
       enddo ! i=1,nmlon
 !
 ! Compute integrals:
+! rora :  R/R_A always <1 since h_A > h
+!
+! assumption for linear interpolation to field line value x(fl)
+!    x(fl) = wgt_eq*x(eq)+ wgt_m*x(m)
+!  (lam_m- lam)/lam_m ~ (sin lam_m - sin lam) / lam_m for (lam_m- lam) small
+!  use dipole approximation cos^2 lam = R/R_A
+!  leads to 
+!  (lam_m- lam)/lam_m ~ [sqrt(1-R_0/R_A)sqrt(R/R_A) - sqrt(R_0/R_A)sqrt(1-R/R_A)]/lam_m
+!
+! del  : wgt_eq - weighting factor for equator value
+! omdel: wgt_m  - weighting factor for fieldline footpoint value
+!
       do k=-2,nlev
         do i=1,nmlon
-!
-! (R_E+h)/(R_E+h_A) < 1 -> h_A > h
           rora = min(1.,rrm(i,k)/ra) 
-!
-! (lam_m - lam) / lam_m = 
-! sqrt(1-r_0/r_A)sqrt(r/r_A) - sqrt(r_0/r_A)sqrt(1-r/r_A)
           del = (sqomrra*sqrt(rora)-sqrra*sqrt(1.-rora))/
-     |      abs(ylatm(latm))
+     |           abs(ylatm(latm))
           omdel = 1. - del
 !
-! Interpolate conductivities and winds in latitude along field line, assuming
+! Interpolate conductivities and winds in latitude, assuming
 !   linear variation between foot of field line and magnetic equator.
 !   (For field lines other than those near the magnetic equator, del is nearly
 !   zero, so that the interpolated values are essentially the values for the
@@ -1691,37 +1852,53 @@
           ue1  = omdel*adotvm(i,k,1) + del*adotve(i,k,1)
           ue2  = omdel*adotvm(i,k,2) + del*adotve(i,k,2)
 !
-! height varying factors: ds = aam*htfunc
+! height varying factors: 
+! (note that the factors for d and from ds can cancel)
+!    ds        = -A(h0)*htfunc*d sqrt(h_A-h) [cm]
 !    d_1^2/D   = 1/htfunc * adotam(i,1)
 !    d_2^2/D   = htfunc   * adotam(i,2)
 !    d_1*d_2/D = 1        * a1a2m(i)
 !
-! int (sigma_p*d_1^2/D) ds : d_1^2/D s. below loop 11
-          zigm11(i,latm) = zigm11(i,latm) + sig1*rtramrm(i,k)
+! zigm11: int (sigma_p*d_1^2/D) ds : d_1^2/D & A(h0) outside height loop
+! zigm22: int (sigma_p*d_2^2/D) ds : d_2^2/D & A(h0) outside height loop
+! zigmc:  int (sigma_p*d_1*d_2/D) ds: d_1*d_2/D & A(h0) outside height loop
+! zigm2:  int (sigma_h) ds: A(h0) outside height loop
+! rim(1): int Be3[sigma_p*d_1^2/D u_e2+(sigma_h-(sigma_p*d_1*d_2)/D) u_e1] ds: 
+!             Be3& A(h0) outside height loop
+! rim(2): -/- int Be3[(sigma_h+sigma_p*d_1*d_2/D) u_e2-sigma_p*d_2^2/D u_e1 ] ds: 
+!              Be3& A(h0) outside height loop
 !
-! int (sigma_p*d_2^2/D) ds : d_2^2/D s. below loop 11
+          zigm11(i,latm) = zigm11(i,latm) + sig1*rtramrm(i,k)
           zigm22(i,latm) = zigm22(i,latm) + sig1*rtramrm(i,k)*
      |      htfunc2(i,k)
-!
-! Following uses Richmond convention for sign of zigmc 
-! (= -zigmc of Ridley)
-!
-! zigmc: int (sigma_p*d_1*d_2/D) ds
-! zigm2: int (sigma_h) ds
-! rim(1): int [sigma_p*d_1^2/D u_e2+(sigma_h-(sigma_p*d_1*d_2)/D) u_e1] ds
-! rim(2): int [(sigma_h+sigma_p*d_1*d_2/D) u_e2-sigma_p*d_2^2/D u_e1 ] ds
-!
           zigmc(i,latm) = zigmc(i,latm) + sig1*rtramrm(i,k)*htfunc(i,k)
           zigm2(i,latm) = zigm2(i,latm) + sig2*rtramrm(i,k)*htfunc(i,k)
           rim(i,latm,1) = rim(i,latm,1) + (sig1*adotam(i,1)*ue2 +(sig2 -
      |      sig1*a1a2m(i))*htfunc(i,k)*ue1)*rtramrm(i,k)
           rim(i,latm,2) = rim(i,latm,2)+(sig1*adotam(i,2)*htfunc2(i,k)*
      |      ue1-(sig2 + sig1*a1a2m(i))*htfunc(i,k)*ue2)*rtramrm(i,k)
+!     
+! rim1 add = 1/B_e3 * int [-k(ti+te)*grad Ne + rho*g]xB / B^2*d1/D ds
+! rim2 add = 1/B_e3 * int [-k(ti+te)*grad Ne + rho*g]xB / B^2*d2/D ds
+! je1pg & je2pg [A/cm^2]
+!     
+	  if(j_pg) then
+	    fac = bmodm(i) ! 1/be3
+	    fac = rtramrm(i,k)*htfunc(i,k)/fac !   ds/be3/aam
+!	    
+            je1pg  = omdel*je1_pg(i,k) + del*je1_pge(i,k)
+            je2pg  = omdel*je2_pg(i,k) + del*je2_pge(i,k)
+!	    
+            rim(i,latm,1) = rim(i,latm,1)+ 1.e4*je1pg*fac ! 1e4 for A/cm^2 -> A/m^2
+            rim(i,latm,2) = rim(i,latm,2)+ 1.e4*je2pg*fac ! 1e4 for A/cm^2 -> A/m^2
+! only for testing	    
+!	    tpg1(i,latm) = tpg1(i,latm)+1.e2*je1pg*fac*aam(i)*bmodm(i)  ! A/m 1e4*1e-2
+!	    tpg2(i,latm) = tpg2(i,latm)+1.e2*je2pg*fac*aam(i)*bmodm(i)  ! A/m 1e4*1e-2	
+	  endif
         enddo ! i=1,nmlon
       enddo ! k=-2,nlev
 !
-! Complete calculation and place result in /coefm/ zigm's
-!   rim's are in A/m multiply by 1/100 to convert from [cm] to [m]
+! Complete calculation
 !
 ! At this point, 
 !   zigm11 is int[sig_p*d_1^2/D] ds,   i.e. Sigma_(phi phi)/abs(sin Im)
@@ -1729,32 +1906,47 @@
 !   zigmc  is int[sig_p*d_1*d_2/D] ds, i.e. Sigma_c
 !   zigm2  is int[sigma_h] ds,         i.e. Sigma_h
 !
-!   rim1 is int[(sigma_h-sigma_p*d_1*d_2/D)u_e1 + sigma_p*d_1^2/D u_e2] *A(h_r)*
+!   rim1 is int[(sigma_h-sigma_p*d_1*d_2/D)u_e1 + sigma_p*d_1^2/D u_e2] *
 !                B_e3 ds, i.e.  K_(m phi)^D/abs(sin Im)
-!   rim2 is int[(sigma_h+sigma_p*d_1*d_2/D)u_e2 - sigma_p*d_2^2/D u_e1] *A(h_r)*
-!                B_e3 ds, K_(m lam)^D ( minus in northern hemisphere
-!   Change sign of RIM(2) in S. hemisphere to be compatible with transf
-! At this point, rim2 is +-K_(m lam)^D
+!   rim2 is -/-int[(sigma_h+sigma_p*d_1*d_2/D)u_e2 - sigma_p*d_2^2/D u_e1] *
+!                B_e3 ds, i.e. +/- K_(m lam)^D (minus sign in northern hemisphere
+!                SH same minus sign but should be plus -> take care of this in transf)
+!
+!   ds [cm] therefore convert from [cm] to [m] by multiplying with 1/100
 !
       do i = 1,nmlon
         zigm11(i,latm) = 1.e-2*zigm11(i,latm)*aam(i)*adotam(i,1)
         zigm22(i,latm) = 1.e-2*zigm22(i,latm)*aam(i)*adotam(i,2)
         zigmc(i,latm)  = 1.e-2*zigmc(i,latm)*aam(i)*a1a2m(i)
         zigm2(i,latm)  = 1.e-2*zigm2(i,latm)*aam(i)
-        rim(i,latm,1)  = 1.e-2*rim(i,latm,1)*aam(i)*bmodm(i)
-        rim(i,latm,2)  = 1.e-2*rim(i,latm,2)*aam(i)*bmodm(i)
+        rim(i,latm,1)  = 1.e-2*rim(i,latm,1)*aam(i)*bmodm(i)  ! [A/m]
+        rim(i,latm,2)  = 1.e-2*rim(i,latm,2)*aam(i)*bmodm(i)  ! [A/m]
       enddo ! i = 1,nmlon
+!      
       end subroutine fieldline_integrals
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: rhspde
+! !INTERFACE:
       subroutine rhspde
+! !USES:
       use cons_module,only: pi_dyn,dlatm,dlonm,r0
 !
-! am_02/02  calculate the RHS of the PDE from rim(1) and rim(2)
-! this part was in transf.F before- seems to be more logical here
+! !RETURN VALUE:
+! !PARAMETERS: 
+! !DESCRIPTION:
+!  differentiate RHS 
+!  R_0 * d lam_m/d lam_0 * 1/cos lam_0 [ d K_(m phi)^DT(0) / d phi  +
+!  (d [ K_(m lam)^DT(0) * cos(lam_0)]/ d lam_0  ] 
+!
+! !REVISION HISTORY:
+! 05.02.16  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: i,j,jj
-      real :: pi
+      real :: pi,fac
       real,dimension(nmlat) :: tint1,tint2,tint3
       real,dimension(-1:nmlonp1+1) :: tint33
 !
@@ -1763,42 +1955,38 @@
 !
       pi = pi_dyn
 !
-! Calculate right hand side of PDE from rim:
+! cos lam_0:
       do j=1,nmlat
         tint1(j) = cos(-pi/2.+(j-1)*dlatm)
       enddo ! j=1,nmlat
 !
-! nmlat=97, nmlath=(nmlat+1)/2=49
-      do j=2,nmlath-1   !  2,48                              ! do 45
+! Perform differentiation (1/ cos lam0 ) * d K_(m phi)^DT(0)/ d phi
+! central differencing
+! rhs(i,j) = 1/ cos lam0(j) *  [K_(m phi)^DT(0)(i+1,j)-K_(m phi)^DT(0)(i-1,j)]/ (2 d lon)
+! rim(1) =  K_(m phi)^DT(0)
+! copy rim(1) into tint33 and set up wrap around points
+!
+      do j=2,nmlath-1   !  2,48                             
         jj = j+nmlath-1 ! 49,96
         do i=1,nmlon
-          tint33(i) = rim(i,jj,1)         ! tint33(1:nmlon)
+          tint33(i) = rim(i,jj,1)             ! tint33(1:nmlon)
         enddo ! i=1,nmlon
-        do i=1,2
-          tint33(i-2) = tint33(i-2+nmlon) ! -1:0 <= nmlon-1:nmlon
-          tint33(i+nmlon) = tint33(i)     ! nmlon+1:nmlon+2 <= 1,2
+        do i=1,2                              ! wrap around points
+          tint33(i-2)     = tint33(i-2+nmlon) ! -1:0 <= nmlon-1:nmlon
+          tint33(i+nmlon) = tint33(i)         ! nmlon+1:nmlon+2 <= 1,2
         enddo ! i=1,2
-!
-! Perform differentiation of rim(1) w.r.t. lamda:
-! ( d K_(m phi)^D / d phi )/ (cos (lam_0) / (d lam_0/ d lam_m) =
-! ( d K_(m phi)^D / d phi )/ cos(lam_m) / DT0DTS / RCOS0S =
-! ( d K_(m phi)^D(0) / d phi )/ cos(theta_0)
-!
-! 1/12/05 btf: Possible problem here when pgi compiler flags -O2 -fastsse 
-!              are set.  Use -O2 -fast instead.
-!
-        do i=1,nmlon                                         ! do 40
+        do i=1,nmlon                                         
           rhs(i,j) = 1./(dlonm*tint1(nmlath+j-1))*
-     |      .5*(tint33(i+1)-tint33(i-1))  ! tint33 2:nmlon+1 and 0:nmlon-1
+     |      .5*(tint33(i+1)-tint33(i-1))      ! tint33 2:nmlon+1 and 0:nmlon-1
         enddo ! i=1,nmlon
       enddo ! j=2,nmlath-1
 !
-! Perform differentiation of rim(2) w.r.t. lam_0:
-!  +/- (d [ K_(m lam)^D * cos(lam_m)]/ d lam_0 ) /cos ( lam_0) =
-!  + (d [ K_(m lam)^D * cos(lam_m)]/ d lam_m ) /cos ( lam_m) / (RCOS0S*DT0DTS) =
-!  +/- (d [ K_(m lam)^D(0) * cos(lam_0)]/ d lam_0 ) /cos ( lam_0) =
+! Perform differentiation (1/ cos lam0 ) * d [K_(m lam)^DT(0) cos lam_0]/ d lam_0:
+! central differencing
+! rhs(i,j) = rhs(i,j) + 1/ cos lam0(j) *  
+!  [K_(m lam)^DT(0)(i,j+1)cos lam0(j+1)-K_(m lam)^DT(0)(i,j-1)cos lam0(j-1)]/ (2 d lat)
 !
-      do j=nmlath+1,nmlat-1 ! 50,96                          ! do 41
+      do j=nmlath+1,nmlat-1 ! 50,96                        
         jj = j-nmlath+1     !  2,48
         do i=1,nmlon
           rhs(i,jj) = rhs(i,jj)+1./(dlatm*tint1(j))*
@@ -1806,20 +1994,15 @@
         enddo ! i=1,nmlon
       enddo ! j=nmlath+1,nmlat-1
 !
-! Now deal with nmlat:
+! polar value:
       rhs(1,nmlath) = -2./float(nmlon)*
      |  sddot(nmlon,unitvm,rim(1,nmlat-1,2))/tint1(nmlat-1)
 !
-! Equator:
-! Include the boundary condition at the equator.
-! rhs(equator)/R = d (K_mphi^DT(0) - sig_philam/sig_lamlam*K_mlam^DT(0)) / d phi_m
-!                + d (cos lam_0 * K_mlam^DT(0))/ d lam_0
-! from Cicely's notes:
-! I_1 = 0.5*(K_(m phi)^DT(0) - Sig_(phi lam)/Sig_(lam lam)*K_(ml am)^DT(0))
-! I_2 = K_(m lam)^DT(0)
-! differentiate
-! rhs = (I_1(i+1/2,j)-I_1(i-1/2,j))/dlonm +
-!       (2*cos(lam_0)_(j+1/2)*I_2(i,j+1/2))/dlat_0
+! equatorial value:
+! [K_(m phi)^DT(0)(i+1,j)-K_(m phi)^DT(0)(i-1,j)]/ (2 d lon) +
+! [K_(m lam)^DT(0)(i,j+1/2)cos lam0(j+1/2)-0]/ ( d lat/2)
+!   with   -  K_(m lam)^DT(0)(i,j_eq) = 0
+!          -  cos lam0(j_eq) =1
 !
       i = 1
       rhs(i,1) = 0.5/dlonm*(rim(i+1,nmlath,1)-rim(nmlon,nmlath,1))
@@ -1829,7 +2012,7 @@
         rhs(i,1) = 0.5/dlonm*(rim(i+1,nmlath,1)-rim(i-1,nmlath,1))
         rhs(i,1) = rhs(i,1)+1./dlatm*(tint1(nmlath)*rim(i,nmlath,2)+
      |                              tint1(nmlath+1)*rim(i,nmlath+1,2))
-      enddo ! i = 2,nmlon-1
+      enddo   
       i = nmlon
       rhs(i,1) = 0.5/dlonm*(rim(1,nmlath,1)-rim(i-1,nmlath,1))
       rhs(i,1) = rhs(i,1)+1./dlatm*(tint1(nmlath)*rim(i,nmlath,2)+
@@ -1845,45 +2028,40 @@
         rhs(nmlonp1,j) = rhs(1,j)
       enddo ! j=1,nmlath
 !
-! scale (multiply by earth radius in meter  = R0*1.E-2)
-![( d K_(m phi)^D / d phi /(cos(theta_m)?) +
-! (d [ K_(m lam)^D * cos(lam_m)]/ d lam_m ) /cos ( lam_m) ] * R / (RCOS0S*DT0DTS)
-! ~ J_(Mr)*r^2*cos(theta_m)/cos(theta_0)/DT0DTS
-! theta_m = theta_s
+! multiply by earth radius + h_0 in meter  = R0*1.E-2 
+!  R_0 * d lam_m/d lam_0 * 1/cos lam_0 [ d K_(m phi)^DT(0) / d phi  +
+!  (d [ K_(m lam)^DT(0) * cos(lam_0)]/ d lam_0  ] 
 !
+      fac= r0*1.e-2
       do j=1,nmlath
         do i=1,nmlonp1
-          rhs(i,j) = rhs(i,j)*r0*1.e-2
+          rhs(i,j) = rhs(i,j)*fac
         enddo ! i=1,nmlonp1
       enddo ! j=1,nmlath
 !
-! Save rhs to secondary histories (redundant in vertical and
-!  zero in north hem):
-!     real,dimension(nmlonp1,nmlath)  :: rhs ! right-hand side 
-!     real,dimension(nmlonp1,-2:nlev) :: rhs_plt ! diag
-!
-!     rhs_plt = 0.
-!     do j=1,nmlat
-!       if (j <= nmlath) then
-!         do i=1,nmlonp1
-!           rhs_plt(i,:) = rhs(i,j)
-!         enddo
-!       endif
-!       call addfsech_ik('RHS',' ',' ',rhs_plt,
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!     enddo ! j=1,nmlat
       end subroutine rhspde
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: clearce
+! !INTERFACE:
       subroutine clearcee(cee,nlon0,nlat0)
 !
+! !USES:
+! !DESCRIPTION:
 ! Zero C arrays for stencil coefficients.
 ! Cee will contain:
 !   c0(nmlon0,nmlat0,10), c1(nmlon1,nmlat1,9), c2(nmlon2,nmlat2,9),
 !   c3(nmlon3,nmlat3,9),  c4(nmlon4,nmlat4,9)
 !
-! Args:
+! !PARAMETERS: 
       integer,intent(in) :: nlon0,nlat0
+! !RETURN VALUE:
       real,intent(out) :: cee(*)
+!
+! !REVISION HISTORY:
+! 05.03.8  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: nlon,nlat,n,m,i
@@ -1905,31 +2083,42 @@
       enddo
       end subroutine clearcee
 !-----------------------------------------------------------------------
-      subroutine stencil(zigm,nlon0,nlat0,sym,cee,ncoef)
+! BOP
+! !IROUTINE: stencil
+! !INTERFACE:
+      subroutine stencil(zigm,nlon0,nlat0,cee,ncoef)
 !
-! Calculate contribution fo 3 by 3 stencil from coefficient zigm
+! !USES:
+! !DESCRIPTION:
+! Calculate contribution for 3 by 3 stencil from coefficient zigm
 ! at each grid point and level.
 !
-! Args:
+! !PARAMETERS: 
       integer,intent(in) :: 
      |  nlon0, ! longitude dimension of finest grid level
      |  nlat0, ! latitude dimension of finest grid level
      |  ncoef   ! integer identifier of coefficient
       real,intent(in) :: 
-     |  zigm(nlon0,nlat0), ! coefficients (nlon0+1/2,(nlat0+1)/2) 
-     |  sym                  !  1. if zigm symmetric w.r.t. equator 
-                             ! -1. for antisymmetry
+     |  zigm(nlon0,nlat0)  ! coefficients (nlon0+1/2,(nlat0+1)/2) 
+!     
+! !RETURN VALUE:
       real,intent(inout) :: 
      |  cee(*)  ! output stencil array consisting of c0,c1,c2,c3,c4
 !
+! !REVISION HISTORY:
+! 05.03.8  <Astrid Maute> <include header> 
+! 
+! EOP
+! 
 ! Local:
       integer :: nc,nlon,nlat,n
 !
-! Perform half-way interpolation and extend zigm in wkarray:
+! copy Sigma into array and extend in longitude
 !
-      call htrpex(zigm,nlon0,nlat0,sym)
+      call htrpex(zigm,nlon0,nlat0)
 !
 ! Calculate contribution to stencil for each grid point and level:
+!
       nc = 1
       nlon = nlon0
       nlat = nlat0
@@ -1942,30 +2131,39 @@
       enddo ! n=1,5
       end subroutine stencil
 !-----------------------------------------------------------------------
-      subroutine stencmd(zigm,cs,nlon0,nlat0,sym,cee,ncoef)
+! BOP
+! !IROUTINE: stencmd
+! !INTERFACE:
+      subroutine stencmd(zigm,nlon0,nlat0,cee,ncoef)
 !
-! Calculate contribution fo 3 by 3 stencil from coefficient zigm
-! at each grid point and level.
+! !USES:
+! !DESCRIPTION: 
+! Calculate contribution for 3 by 3 stencil from coefficients Sigma
+! at each grid point and grid level. 
 !
-! Args:
+! !ARGUMENTS:
       integer,intent(in) :: 
      |  nlon0, ! longitude dimension of finest grid level
      |  nlat0, ! latitude dimension of finest grid level
      |  ncoef  ! integer identifier of coefficient
       real,intent(in) :: 
-     |  zigm(nlon0,nlat0), ! coefficients (nlon0+1/2,(nlat0+1)/2) 
-     |  sym,               !  1. if zigm symmetric w.r.t. equator 
-                           ! -1. for antisymmetry
-     |  cs(nlat0)
+     |  zigm(nlon0,nlat0)   ! coefficients (nlon0,(nlat+1)/2) 
+!     
+! !RETURN VALUE:
       real,intent(inout) :: 
      |  cee(*)  ! output stencil array consisting of c0,c1,c2,c3,c4
+!        
+! !REVISION HISTORY:
+! 18.02.05  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: nc,nlon,nlat,n
 !
 ! Perform half-way interpolation and extend zigm in wkarray:
 !
-      call htrpex(zigm,nlon0,nlat0,sym)
+      call htrpex(zigm,nlon0,nlat0)
 !
 ! Calculate contribution to stencil for each grid point and level:
 !
@@ -1991,55 +2189,83 @@
       enddo ! n=1,5
       end subroutine stencmd
 !-----------------------------------------------------------------------
-      subroutine htrpex(coeff,nmlon0,nmlat0,sym)
+! BOP
+! !IROUTINE: htrpex
+! !INTERFACE:
+      subroutine htrpex(coeff,nmlon0,nmlat0)
 !
-! Perform half-way interpolation on array coeff and extend over 16 grid
-! points. Result returned in wkarray.
+! !USES:
+! !DESCRIPTION: 
+! copy coefficients into array and
+! extend array over 16 grid points for the wrap around points
+! on the 5 different grid levels. 
+! Result returned in array(1:nmlath) - equator to pole.
 !
-! Args:
-      integer,intent(in) :: nmlon0,nmlat0
-      real,intent(in) :: coeff(nmlon0,nmlat0),sym
+! !ARGUMENTS:
+      integer,intent(in) :: nmlon0,nmlat0        ! nmlon, nmlath
+      real,intent(in) :: coeff(nmlon0,nmlat0)    ! Sigma(SH) pole to equator
+!        
+! !REVISION HISTORY:
+! 18.02.05  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: i,j,jj
 !
-! Copy coeff into positions in wkarray:
-      do j=1,nmlat0
-        jj = nmlat0-j+1
+! Copy coeff into positions in array:
+! MODIFY: NO SYM. USE NH VALUES
+!
+      do j=1,nmlat0       ! 1:nmlath
         do i=1,nmlon0
-          wkarray(i,j) = sym*coeff(i,jj)
+          wkarray(i,j) = coeff(i,j)
         enddo ! i=1,nmlon0
       enddo ! j=1,nmlat0
 !
-! Extend over 32 grid spaces to allow for a total of 5 grid levels:
+! Extend over 32 grid spaces to allow for wrap around points for
+! a total of 5 grid levels:
+!
       do i=1,16
         do j=1,nmlat0
-          wkarray(1-i,j) = wkarray(nmlon0-i,j) 
+          wkarray(1-i,j)      = wkarray(nmlon0-i,j) 
           wkarray(nmlon0+i,j) = wkarray(1+i,j)
         enddo ! j=1,nmlat0
       enddo ! i=1,16
+!
       end subroutine htrpex
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: cnm
+! !INTERFACE:
       subroutine cnm(nlon0,nlat0,nlon,nlat,c,ncoef)
 !
-! Compute contribution to stencil from zigm(ncoef) on grid nlon by nlat,
+! !USES:
+! !DESCRIPTION: 
+! Compute contribution to stencil from Sigma (array) on grid nlon by nlat,
 ! Finest grid is nlon0 by nlat0.
+! uses upwinding method if diagonal dominance is not preserved
 !
-! Args:
+! ncoef: integer id of Sigma coefficient:
+! ncoef = 1 for zigm11 Sigma_(phi phi)
+! ncoef = 2 for zigmc  Sigma_(phi lam)
+! ncoef = 3 for zigm2  Sigma_(lam phi)
+! ncoef = 4 for zigm22 Sigma_(lam lam)
+!
+! !ARGUMENTS:
       integer,intent(in) :: 
-     |  nlon0,nlat0, ! finest grid dimensions
-     |  nlon,nlat    ! output grid dimensions
-!
-! ncoef: integer id of coefficient:
-! ncoef = 1 for zigm11
-! ncoef = 2 for zigm12 (=zigmc+zigm2)
-! ncoef = 3 for zigm21 (=zigmc-zigm2)
-! ncoef = 4 for zigm22
-!
-      integer,intent(in) :: ncoef
+     |  nlon0,nlat0,      ! finest grid dimensions
+     |  nlon,nlat         ! output grid dimensions
+      integer,intent(in) :: ncoef ! flag for type of Sigma
+
+! !RETURN VALUE:
       real,intent(inout) :: 
      |  c(nlon,nlat,*)    ! output array for grid point stencils at
                           ! resolution nlon x nlat
+!        
+! !REVISION HISTORY:
+! 18.02.05  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: i,j,nint,i0,j0
@@ -2057,8 +2283,7 @@
       i0 = 1-nint
       j0 = 1-nint
 !
-! zigm11:
-! am 2001-6-27 include boundary condition at equator
+! zigm11 Sigma_(phi phi)
       if (ncoef==1) then
         do j = 1,nlat-1
           do i = 1,nlon
@@ -2072,7 +2297,7 @@
           enddo ! i = 1,nlon
         enddo ! j = 2,nlat-1
 !
-! zigm12 (=zigmc+zigm2)
+! zigmc Sigma_(phi lam)
       elseif (ncoef==2) then
         do j = 2,nlat-1
           do i = 1,nlon
@@ -2095,7 +2320,7 @@
           enddo ! i = 1,nlon
         enddo ! j = 2,nlat-1
 !
-! zigm21 (=zigmc-zigm2)
+! zigm2  Sigma_(lam phi)
       elseif (ncoef==3) then
         do j = 2,nlat-1
           do i = 1,nlon
@@ -2135,7 +2360,7 @@
           c(i,j,9) = c(i,j,9)-2.*wk(i,3)
         enddo ! i=1,nlon
 !
-! zigm22:
+! zigm22 Sigma_(lam lam)
       elseif (ncoef==4) then
         do j = 2,nlat-1
           do i = 1,nlon
@@ -2160,26 +2385,39 @@
       endif ! ncoef
       end subroutine cnm
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: cnmmod
+! !INTERFACE:
       subroutine cnmmod(nlon0,nlat0,nlon,nlat,c,ncoef)
 !
-! Compute contribution to stencil from zigm(ncoef) on grid nlon by nlat,
-! Finest grid is nlon0 by nlat0.
+! !USES:
+! !DESCRIPTION: 
+! Compute contribution to stencil from zigm(ncoef) on finest grid nlon0 by nlat0.
+! calculates the stencil with (c) and without (cofum)
+! the use of upwinding method if diagonal dominance is not preserved
+! output: c     ( upwinding)
+!         cofum (no upwinding)
 !
-! Args:
+! ncoef: integer id of Sigma coefficient:
+! ncoef = 1 for zigm11 Sigma_(phi phi)
+! ncoef = 2 for zigmc  Sigma_(phi lam)
+! ncoef = 3 for zigm2  Sigma_(lam phi)
+! ncoef = 4 for zigm22 Sigma_(lam lam)
+!
+! !ARGUMENTS:
       integer,intent(in) :: 
      |  nlon0,nlat0, ! finest grid dimensions
      |  nlon,nlat    ! output grid dimensions
-!
-! ncoef: integer id of coefficient:
-! ncoef = 1 for zigm11
-! ncoef = 2 for zigm12 (=zigmc+zigm2)
-! ncoef = 3 for zigm21 (=zigmc-zigm2)
-! ncoef = 4 for zigm22
-!
-      integer,intent(in) :: ncoef
+      integer,intent(in) :: ncoef  ! flag for type of Sigma coeff.
+! !RETURN VALUE:
       real,intent(inout) :: 
      |  c(nlon,nlat,*)    ! output array for grid point stencils at
                           ! resolution nlon x nlat
+!        
+! !REVISION HISTORY:
+! 18.02.05  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: i,j,nint,i0,j0
@@ -2197,8 +2435,7 @@
       i0 = 1-nint
       j0 = 1-nint
 !
-! zigm11:
-! am 2001-6-27 include boundary condition at equator
+! zigm11: Sigma_(phi phi)
       if (ncoef==1) then
         do j = 1,nlat-1
           do i = 1,nlon
@@ -2222,7 +2459,7 @@
           enddo ! i = 1,nlon
         enddo ! j = 2,nlat-1
 !
-! zigm12 (=zigmc+zigm2)
+! zigmc Sigma_(phi lam)
       elseif (ncoef==2) then
         do j = 2,nlat-1
           do i = 1,nlon
@@ -2244,7 +2481,7 @@
             cofum(i,j,8) = c(i,j,8)
             cofum(i,j,3) = cofum(i,j,3)+wk(i,1)
             cofum(i,j,7) = cofum(i,j,7)-wk(i,1)
-!
+! test for upwinding
             wk(i,2) = (c(i,j,3)+wk(i,1))*(c(i,j,7)-wk(i,1))
             wk(i,3) = sign(wk(i,1),c(i,j,3)+c(i,j,7))
             if (wk(i,2) >= 0.) wk(i,3) = 0.
@@ -2254,7 +2491,7 @@
           enddo ! i = 1,nlon
         enddo ! j = 2,nlat-1
 !
-! zigm21 (=zigmc-zigm2)
+! zigm2 Sigma_(lam phi)
       elseif (ncoef==3) then
         do j = 2,nlat-1
           do i = 1,nlon
@@ -2276,7 +2513,7 @@
             cofum(i,j,8) = c(i,j,8)
             cofum(i,j,1) = cofum(i,j,1)+wk(i,1)
             cofum(i,j,5) = cofum(i,j,5)-wk(i,1)
-!
+! test for upwinding
             wk(i,2) = (c(i,j,1)+wk(i,1))*(c(i,j,5)-wk(i,1))
             wk(i,3) = sign(wk(i,1),c(i,j,1)+c(i,j,5))
             if (wk(i,2) >= 0.) wk(i,3) = 0.
@@ -2309,7 +2546,7 @@
           c(i,j,9) = c(i,j,9)-2.*wk(i,3)
         enddo ! i=1,nlon
 !
-! zigm22:
+! zigm22: Sigma_(lam lam)
       elseif (ncoef==4) then
         do j = 2,nlat-1
           do i = 1,nlon
@@ -2347,16 +2584,31 @@
 
         enddo ! i=1,nlon
       endif ! ncoef
+!
       end subroutine cnmmod
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: divide
+! !INTERFACE:
       subroutine divide(c,nlon,nlat,nlon0,nlat0,cs,igrid)
 !
+! !USES:
+! !DESCRIPTION: 
 ! Divide stencil C by cos(theta(i,j))
 !
-! Args:
-      integer,intent(in) :: nlon,nlat,nlon0,nlat0,igrid
-      real,intent(in) :: cs(*)
-      real,intent(out) :: c(nlon,nlat,*)
+! !ARGUMENTS:
+      integer,intent(in) :: nlon,nlat,   ! dim. of finest grid
+     |    nlon0,nlat0,                   ! dim. of actual grid
+     |    igrid                          ! flag for divide by cos lam_0
+      real,intent(in) :: cs(*)           ! cos lam_0
+! !RETURN VALUE:
+      real,intent(out) :: c(nlon,nlat,*) ! coefficient array for grid level
+!        
+! !REVISION HISTORY:
+! 21.02.05  <Astrid Maute> <include header> 
+!                          <remove 1/cos of RHS at the equator> 
+! 
+! EOP
 !
 ! Local:
       integer :: nint,j0,n,j,i
@@ -2371,20 +2623,27 @@
         enddo ! j = 1,nlat-1
       enddo ! n = 1,9
 !
-      if (nint==1.and.igrid > 0) then
-        do i = 1,nlon
-          c(i,1,10) = c(i,1,10)/cs(1)
-        enddo ! i = 1,nlon
-      endif
       end subroutine divide
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: edges
+! !INTERFACE:
       subroutine edges(c,nlon,nlat)
 !
-! Insert equatorial and polar boundary conditions in stencil c(nlon,nlat,9)
+! !USES:
+! !DESCRIPTION: 
+! Insert polar boundary conditions in stencil c(nlon,nlat,9)
+!    c(:,nlat,1:8) = 0 & diagonal term c(:,nlat,9) = 1.
 !
-! Args:
-      integer,intent(in) :: nlon,nlat
-      real,intent(out) :: c(nlon,nlat,*)
+! !ARGUMENTS:
+      integer,intent(in) :: nlon,nlat    ! dimension of coeff. array
+! !RETURN VALUE:
+      real,intent(out) :: c(nlon,nlat,*) ! coefficient array
+!        
+! !REVISION HISTORY:
+! 21.02.05  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: n,i
@@ -2399,17 +2658,37 @@
       enddo
       end subroutine edges
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: stenmod
+! !INTERFACE:
       subroutine stenmod(inlon,inlat,c,phihm,pfrac)
       use cons_module,only: dlatm,dtr
 !
-! Modify stencil to set potential to heelis value within auroral circle.
+! !USES:
 !
-! Args:
+! !DESCRIPTION:
+! Modify stencil c and cofum to set potential to heelis value within auroral circle.
+!    c     is the stencil w   upwinding
+! pfrac set up in heelis module: fractional presence of dynamo equation
+!        pfrac = 1  for |colam_m| < crit(2)
+!        pfrac = 0  for |colam_m| > crit(1)
+!        pfrac = (colat_m-crit(1))/(crit(2)-crit(1))  
+!                                for crit(2) < |lam_m| < crit(1)
+! to ensure diagonal dominance only the diogonal element c(9) is used
+! factor of (dlatm/(10.*dtr))**2 to eliminate dependence on grid spacing
+! for c(9)
+!
+! !PARAMETERS: 
       integer,intent(in) :: inlon,inlat
-      real,intent(inout) :: c(inlon,inlat,*)
       real,dimension(nmlon0,nmlat0),intent(in) :: 
      |  phihm,  ! heelis potential (from subs potm, flwv32)
      |  pfrac   ! fractional presence of dynamo (from sub colath)
+! !RETURN VALUE:
+      real,intent(inout) :: c(inlon,inlat,*)
+! !REVISION HISTORY:
+! 05.03.10  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: nint,i0,j0,i,j,n,jj
@@ -2449,17 +2728,37 @@
 
       end subroutine stenmod
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: stenmd
+! !INTERFACE:
       subroutine stenmd(inlon,inlat,c,phihm,pfrac)
+! !USES:
       use cons_module,only: dlatm,dtr
 !
-! Modify stencil to set potential to heelis value within auroral circle.
+! !DESCRIPTION:
+! Modify stencil c and cofum to set potential to heelis value within auroral circle.
+!    c     is the stencil w   upwinding
+!    cofum is the stencil w/o upwinding
+! pfrac set up in heelis module: fractional presence of dynamo equation
+!        pfrac = 1  for |colam_m| < crit(2)
+!        pfrac = 0  for |colam_m| > crit(1)
+!        pfrac = (colat_m-crit(1))/(crit(2)-crit(1))  
+!                                for crit(2) < |lam_m| < crit(1)
+! to ensure diagonal dominance only the diogonal element c(9) is used
+! factor of (dlatm/(10.*dtr))**2 to eliminate dependence on grid spacing
+! for c(9)
 !
-! Args:
+! !PARAMETERS: 
       integer,intent(in) :: inlon,inlat
-      real,intent(inout) :: c(inlon,inlat,*)
       real,dimension(nmlon0,nmlat0),intent(in) :: 
      |  phihm,  ! heelis potential (from subs potm, flwv32)
      |  pfrac   ! fractional presence of dynamo (from sub colath)
+! !RETURN VALUE:
+      real,intent(inout) :: c(inlon,inlat,*)
+! !REVISION HISTORY:
+! 05.03.8  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: nint,i0,j0,i,j,n,jj
@@ -2518,16 +2817,27 @@
       endif ! nint
       end subroutine stenmd
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: ceee
+! !INTERFACE:
       subroutine ceee(cee,nx,ny,cf)
+! !USES:
 !
+! !DESCRIPTION:
 ! Called from mudpack solvers to transfer coefficients.
 !
       save
+! !PARAMETERS: 
       integer,intent(in) :: nx,ny
-!     real,intent(in) :: cee(nx,ny,1)
-!     real,intent(out) :: cf(nx,ny,1)
       real,intent(in) :: cee(nx,ny,9)
+! !RETURN VALUE:
       real,intent(out) :: cf(nx,ny,9)
+!
+! !REVISION HISTORY:
+! 05.02.16  <Astrid Maute> <include header> 
+! 
+! EOP
+!
       integer :: i,j,n
       do n = 1,9
         do j = 1,ny
@@ -2540,14 +2850,30 @@
       enddo
       end subroutine ceee
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: threed
+! !INTERFACE:
       subroutine threed
+!
+! !USES:
       use cons_module,only: ylatm,r0,r00,pi_dyn,table,dlatm,dlonm,
      |  rcos0s,re,dt1dts
       use fields_module,only: phim3d ! phim3d(nmlonp1,nmlat,-2:nlevp1)
 !
-! Calculate 3-d dynamo potential phim3d in geomagnetic coordinates from
-!   2-d potential phim output by the PDE solver mudpack.
-! On input, phim(nmlonp1,nmlat) is defined from mud.
+! !DESCRIPTION: 
+! calculates electric field 
+!      E_d1 = -1/(R cos lam_m) d Phi/ d phi_m
+!      E_d2 = 1/ (R |sinI_m|)  d Phi/ d lam_m
+! calculate 3D electric potential and electric field assuming
+! that the fieldlines are dipolar and with constant electric potential
+! along the field line
+
+! !ARGUMENTS:
+! !RETURN VALUE:
+! !REVISION HISTORY:
+! 07.03.05  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: k,i,j,ip1f,ip2f,ip3f
@@ -2555,14 +2881,14 @@
       real,dimension(nmlonp1) :: thetam,pslot,qslot
       integer,dimension(nmlonp1) :: islot,jslot
       real,dimension(nmlonp1,nmlat) :: ed1,ed2
-      real,dimension(nmlonp1,nmlat,-2:nlevp1) :: ed13d,ed23d
 !
 ! Externals:
       real,external :: sddot ! in util.F
 !
       pi = pi_dyn
 !
-! Calculate ed1,ed2 components of electric field:
+! Calculate E_d1, E_d2 components of electric field:
+! E_d1 = -1/(R cos lam_0)* (cos lam_0/cos lam_m) d Phi/ d phi_m
       do j=2,nmlat-1
         csth0 = cos(-pi/2.+(j-1)*dlatm)
         do i=2,nmlon
@@ -2574,6 +2900,7 @@
         ed1(nmlonp1,j) = ed1(1,j)
       enddo ! j=2,nmlat-1
 !
+! E_d2 = +/- 1/(R |sinI_m|) d Phi/d lam_0* (d lam_0/ (d lam_m*|sin I_m|))
 ! Southern hemisphere:
       do j=2,nmlath-1
         do i=1,nmlonp1
@@ -2590,7 +2917,7 @@
         enddo ! i=1,nmlonp1
       enddo ! j=nmlath+1,nmlat-1
 !
-! Poles:
+! Poles: average over four surounding points
       do i = 1,nmlonp1
         ip1f = i + nmlon/4
         if (ip1f > nmlonp1) ip1f = ip1f - nmlon
@@ -2607,13 +2934,13 @@
         ed2(i,nmlat) = .25*(ed2(i,nmlat-1) - ed2(ip2f,nmlat-1) -
      |                      ed1(ip1f,nmlat-1) + ed1(ip3f,nmlat-1))
 !
-! Equator
-        ed2(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
-     |     -3.*phim(i,nmlath))/(2.*dlatm)/(R0*1.e-2)
-        ed2(i,nmlath+1) = (4.*phim(i,nmlath+2)-phim(i,nmlath+3)
-     |     -3.*phim(i,nmlath+1))/(2.*dlatm)/(R0*1.e-2)
-        ed2(i,nmlath-1) = (4.*phim(i,nmlath-2)-phim(i,nmlath-3)
-     |     -3.*phim(i,nmlath-1))/(2.*dlatm)/(R0*1.e-2)
+! Equator: derivative of quadratic polynomial (3 given points)
+       ed2(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
+     |    -3.*phim(i,nmlath))/(2.*dlatm)/(R0*1.e-2)
+       ed2(i,nmlath+1) = (4.*phim(i,nmlath+2)-phim(i,nmlath+3)
+     |    -3.*phim(i,nmlath+1))/(2.*dlatm)/(R0*1.e-2)
+       ed2(i,nmlath-1) = (4.*phim(i,nmlath-2)-phim(i,nmlath-3)
+     |    -3.*phim(i,nmlath-1))/(2.*dlatm)/(R0*1.e-2)
       enddo ! i = 1,nmlonp1
 !
 ! Comment from tgcm15 (threed.F):
@@ -2626,53 +2953,46 @@
 !
       do k=-2,nlevp1
         do j=2,nmlat-1
-          cosltm = cos(ylatm(j))
-          sym = 1.                   ! sym in new dynamo only
-          if (j < nmlath) sym = -1.
+          cosltm = cos(ylatm(j))     ! dipole latitude
+          sym = 1.                   ! northern hemisphere
+          if (j < nmlath) sym = -1.  ! southern hemisphere
           do i=1,nmlon
 !
-! Thetam(i) = thetas for each value of i:
-! (note old dynamo incorrectly uses r00 instead of re here) 
+! latitude lam_m of footpoint
+! cos lam_m = cos lam_q [(R_E+h_0)/R_E+h]^0.5 
 !
-            ctm = sqrt(r0/(re+zpotenm3d(i,j,k)))*cosltm
+            ctm = sqrt(r0/(re+zpotenm3d(i,j,k)))*cosltm 
             thetam(i) = acos(ctm)
 !
-! Find position of thetam in table of theta0 vs thetas:
+! Find position of lam_m in table of lam_m vs lam_0
+! table is spaced 1 deg in lam_m
+! Determine lam_0 (theta0) by interpolation in table:
             pslot(i) = thetam(i)*180./pi+1.
             islot(i) = int(pslot(i))
             pslot(i) = pslot(i)-float(islot(i))
-!
-! Determine theta0 by interpolation in table:
-! bf 9/7/02 bugfix: added parens at beginning of statement and 
-!    before *sym
-!
             thetam(i) = ((1.-pslot(i))*table(islot(i),2)+pslot(i)*
      |        table(islot(i)+1,2))*sym ! thetam negative for south hem
 !
-! Now identify geomagnetic grid element in which the point lies in phim:
+! Now identify geomagnetic grid element in which the point lies:
+! longitudinal grid point are the same
             islot(i) = i
-            pslot(i) = 0.
             qslot(i) = (thetam(i)+pi/2.)/dlatm+1.
             jslot(i) = qslot(i)
             qslot(i) = qslot(i)-float(jslot(i))
 !
-! Interpolate in phim using bilinear interpolation:
-            phim3d(i,j,k) = (1.-qslot(i))*((1.-pslot(i))*
-     |        phim(islot(i)  ,jslot(i))  +pslot(i)*
-     |        phim(islot(i)+1,jslot(i))) +qslot(i)*((1.-pslot(i))*
-     |        phim(islot(i)  ,jslot(i)+1)+pslot(i)*
-     |        phim(islot(i)+1,jslot(i)+1))
+! Interpolate in phim using linear interpolation in latitude:
+! no interpolation necessary in longitude
+            phim3d(i,j,k) = (1.-qslot(i))*
+     |        phim(islot(i)  ,jslot(i)) +qslot(i)*
+     |        phim(islot(i)  ,jslot(i)+1)
 !
-            ed13d(i,j,k) = (1.-qslot(i))*((1.-pslot(i))*
-     |        ed1(islot(i),jslot(i))+pslot(i)*
-     |        ed1(islot(i)+1,jslot(i)))+qslot(i)*((1.-pslot(i))*
-     |        ed1(islot(i),jslot(i)+1)+pslot(i)*
-     |        ed1(islot(i)+1,jslot(i)+1))
-            ed23d(i,j,k) = (1.-qslot(i))*((1.-pslot(i))*
-     |        ed2(islot(i),jslot(i))+pslot(i)*
-     |        ed2(islot(i)+1,jslot(i)))+qslot(i)*((1.-pslot(i))*
-     |        ed2(islot(i),jslot(i)+1)+pslot(i)*
-     |        ed2(islot(i)+1,jslot(i)+1))
+            ed13d(i,j,k) = (1.-qslot(i))*
+     |        ed1(islot(i),jslot(i))+qslot(i)*
+     |        ed1(islot(i),jslot(i)+1)
+!
+            ed23d(i,j,k) = (1.-qslot(i))*
+     |        ed2(islot(i),jslot(i))+qslot(i)*
+     |        ed2(islot(i),jslot(i)+1)
           enddo ! i=1,nmlon
         enddo ! j=2,nmlat-1
       enddo ! k=-2,nlevp1
@@ -2703,27 +3023,37 @@
 !
 ! Save 3d electric potential on magnetic grid to secondary history:
 !     do j=1,nmlat
-!       call addfsech_ik('PHIM3D_IK','PHIM3D_IK','[V]',phim3d(:,j,:),
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!
-! Save electric field diagnostic:
-!       call addfsech_ik('ED1M3D'  ,' ',' ',ed13d(:,j,:),
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('ED2M3D'  ,' ',' ',ed23d(:,j,:),
-!    |    1,nmlonp1,nmlev,nmlev-1,j)
+! 	call addfsech_ik('ED1M3D'  ,'ed_1 (magn.)','[V/m]',
+!    |    ed13d(:,j,:),1,nmlonp1,nmlev,nmlev,j)
+! 	call addfsech_ik('ED2M3D'  ,'ed_2 (magn.)','[V/m]',
+!    |    ed23d(:,j,:),1,nmlonp1,nmlev,nmlev,j)
+!       call addfsech_ik('ZPOTEN3D','ZPOTEN3D','[cm]',
+!    |    zpotenm3d(:,j,:),1,nmlonp1,nmlev,nmlev,j)
 !     enddo ! j=1,nmlat
-!     call addfsech_ij('PHIM3D_IJ','PHIM3D_IJ','[V]',phim3d(:,:,1),
-!    |   1,nmlonp1,1,nmlat)
+!      
       end subroutine threed
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: mag2geo
+! !INTERFACE:
       subroutine mag2geo(am,ag,im,jm,dim,djm,lg,lm,nlong,nlatg,nlonm,
      |  nlatm)
+! !USES:
+! !DESCRIPTION:
+! Transform field am on geomagnetic grid to ag on the geographic grid using
+!   indices im,jm and weights am. Return field ag on geographic grid.
 !
-! Args:
+! !PARAMETERS: 
       integer,intent(in) :: lg,lm,nlong,nlatg,nlonm,nlatm
       integer,intent(in) :: im(lg,*),jm(lg,*)
       real,intent(in) :: am(lm,*),dim(lg,*),djm(lg,*)
+! !RETURN VALUE:
       real,intent(out) :: ag(lg,*)
+!
+! !REVISION HISTORY:
+! 05.03.11  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: ig,jg
@@ -2739,19 +3069,28 @@
       enddo ! jg=1,nlatg 
       end subroutine mag2geo
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: geo2mag
+! !INTERFACE:
       subroutine geo2mag(fmag,fgeo,long,latg,wght,nlonp1_geo,nlonp1_mag,
      |  nlon_mag,nlat_mag,lat)
+! !USES:
 !
+! !DESCRIPTION:
 ! Transform field fgeo on geographic grid to geomagnetic grid using
 !   indices long,latg and weights wght. Return field fmag on magnetic grid.
-! This routine is similiar to sub geo2mag in dynamo.F.
 !
-! Args:
+! !PARAMETERS: 
       integer,intent(in) :: nlonp1_geo,nlonp1_mag,nlon_mag,nlat_mag,lat
       integer,dimension(nlonp1_mag,nlat_mag),intent(in) :: long,latg
       real,intent(in) :: fgeo(nlonp1_geo,*),wght(4,nlonp1_mag,nlat_mag)
+! !RETURN VALUE:
       real,intent(out) :: fmag(nlonp1_mag,*)
-!     integer,intent(in) :: iprint
+!
+! !REVISION HISTORY:
+! 05.03.8  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: i
@@ -2775,7 +3114,7 @@
      |  ntask,mpi_comm_world,mpi_real8,irstat,tasks,handle_mpi_err
 !
 ! Local:
-      integer,parameter :: nfld=7
+      integer,parameter :: nfld=9
       integer :: k,i,j,n,nn,ier,len,nlons,nlats,ifld,msgtag,ireqrecv,
      |  ireqsend,ilon0,ilon1,ilat0,ilat1
       integer :: idest = 0
@@ -2785,7 +3124,7 @@
      |  sndbuf(:,:,:,:)    ! Send buffer for slave tasks (i,j,k,ifld)
       character(len=8) :: fnames(nfld) =
      |  (/'SIGMAPED','SIGMAHAL','ZPOTEN  ','SCHEIGHT','UNVEL   ',
-     |    'VNVEL   ','WNVEL   '/)
+     |    'VNVEL   ','WNVEL   ','JE1oD_F ','JE2oD_F '/)
 !
 ! Allocate send buffer for each task, and a receive buffer for the 
 ! root task. (mxlon,mxlat are max number of lons,lats held by all tasks)
@@ -2831,6 +3170,12 @@
           case(7)
             sndbuf(1:nlons,1:nlats,:,ifld) = 
      |        wnvel(lon0:lon1,lat0:lat1,:)
+          case(8)
+            sndbuf(1:nlons,1:nlats,:,ifld) = 
+     |        je1oD_full(lon0:lon1,lat0:lat1,:)
+          case(9)
+            sndbuf(1:nlons,1:nlats,:,ifld) = 
+     |        je2oD_full(lon0:lon1,lat0:lat1,:)
           end select
         enddo
       endif
@@ -2878,6 +3223,12 @@
             case(7)
               wnvel(ilon0:ilon1,ilat0:ilat1,:) =
      |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
+            case(8)
+              je1oD_full(ilon0:ilon1,ilat0:ilat1,:) =
+     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
+            case(9)
+              je2oD_full(ilon0:ilon1,ilat0:ilat1,:) =
+     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
             end select
           enddo ! ifld=1,nfld
         enddo ! n=1,ntask-1 (receive from slaves only)
@@ -2890,17 +3241,28 @@
       end subroutine mp_dynamo_gather
 #endif
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: transf_dyn0
+! !INTERFACE:
       subroutine transf_dyn0
-! am_11/03     
-! used only if dynamo = 0
-! need zpoten3d in magnetic coordinates for subroutine threed
 !
+! !USES:
       use cons_module,only: h0,r0
       use magfield_module,only: 
      |  zb,       ! (nlonp1,0:nlatp1)
      |  ig,       ! (nmlonp1,nmlat) geog lon at each geomag grid point
      |  jg,       ! (nmlonp1,nmlat) geog lat at each geomag grid point
      |  wt        ! (4,nmlonp1,nmlat) interpolation weights
+!     
+! !RETURN VALUE:
+! !PARAMETERS: 
+! !DESCRIPTION:
+! am_11/03  used only if dynamo = 0
+! need zpoten3d in magnetic coordinates for subroutine threed
+! !REVISION HISTORY:
+! 05.03.8  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: i,ii,k,kk,j,jj,lat,n
@@ -3049,25 +3411,36 @@
 !
       end subroutine transf_dyn0
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: prep_dynamo_dyn0
+! !INTERFACE:
       subroutine prep_dynamo_dyn0(z,lev0,lev1,lon0,lon1,lat0,lat1)
+!      
+! !USES:
+      use cons_module,only: gask,grav
+!      
+! !DESCRIPTION:
 ! am_11/03: if dynamo = 0 need zpoten3d for subroutine threed
 ! Prepare geographic-grid fields for input to the dynamo, and gather them
 ! to the root task. This is executed by all tasks, and is called from 
 ! advance before the dynamo itself (which is executed by master task only).
 !
-      use cons_module,only: gask,grav
-!
-! Args:
+! !PARAMETERS: 
       integer :: lev0,lev1,lon0,lon1,lat0,lat1
-      real :: fmin,fmax
 !
 ! Input fields at task subdomains. These are from current (not updated)
 ! fields (itp):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
      |  z     ! geopotential height
+!     
+! !REVISION HISTORY:
+! 05.03.8  <Astrid Maute> <include header> 
+! 
+! EOP
 !
 ! Local:
       integer :: k,i,lat,nk,lonbeg,lonend
+      real :: fmin,fmax
 !
       nk = lev1-lev0+1
       lonbeg = lon0

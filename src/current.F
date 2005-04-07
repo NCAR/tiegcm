@@ -9,17 +9,29 @@
 !   circular dependency with the dynamo module.
 !
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: nosocoef
+! !INTERFACE:
       subroutine nosocoef
 !
+! !DESCRIPTION:
 ! am_02/02: calculate the coefficient stencil for both hemisphere which 
 !   is used to calculate the height integrated current densities 
 !   K_(q,phi)K_(q,lam)
 !      
+! !USES:
       use params_module,only: nmlon,nmlonp1,nmlat,nmlath
       use cons_module,only: dlonm,dlatm,pi,r0
       use dynamo_module,only: nmlon0,zigm11,zigmc,zigm2,zigm22,rim,
-     |  nscoef
+     |  nscoef,unitvm
       implicit none
+! !PARAMETERS:
+! !RETURN VALUE:
+!
+! !REVISION HISTORY:
+! 05.03.15  <Astrid Maute> <include header> 
+! 
+! EOP 
 !
 ! Calculate coefficients for dynamo pde for both hemisphere
 !     
@@ -29,7 +41,6 @@
       real :: nszigm11(nmlonp1,nmlat),nszigm22(nmlonp1,nmlat)
       real :: nsrhs(nmlonp1,nmlat)
       real :: dfac,dfac1n,dfac1s,dfac2n,dfac2s
-      real,parameter :: unitv(nmlon)=1.
       integer :: j,je,jj,jjj,i,n
 ! Externals:
       real,external :: sddot ! in util.F
@@ -181,9 +192,9 @@
 ! Calculate value at the poles by averaging over i:nmlon
 !    
       nsrhs(1,nmlat) = -2./float(nmlon)*
-     |                  sddot(nmlon,unitv,rim(1,nmlat-1,2))/cs(nmlat-1)
+     |                  sddot(nmlon,unitvm,rim(1,nmlat-1,2))/cs(nmlat-1)
       nsrhs(1,1)     = -2./float(nmlon)*
-     |                  sddot(nmlon,unitv,rim(1,2,2))/cs(2)
+     |                  sddot(nmlon,unitvm,rim(1,2,2))/cs(2)
 !
 ! Extend over longitude
 !
@@ -247,20 +258,33 @@
 !
       end subroutine nosocoef
 !----------------------------------------------------------------------------
+! BOP
+! !IROUTINE: nsstencil
+! !INTERFACE:
       subroutine nsstencil(zigm,nmlon0,nmlat,nscoef,array,ncoef,nmlath)
       implicit none
 !
-! Args:
+! !DESCRIPTION: set up the differencing stencil for coefficient zigm. 
+!     the output is the stencil nscoef
+!     in contrast to subroutine stencil in dynamo module it's done
+!     for both hemispheres
+!
+! !PARAMETERS: 
       integer,intent(in):: nmlon0,nmlat,ncoef,nmlath
       real,intent(in)   :: zigm(nmlon0,nmlat)
+! !RETURN VALUE:
       real,intent(out)  :: 
      |  nscoef(nmlon0,nmlat,10),array(0:nmlon0+1,nmlat)
+!
+! !REVISION HISTORY:
+! 05.03.09  <Astrid Maute> <include header> 
+! 
+! EOP 
 !
 ! Local:
       integer :: i,j
 !
-! Copy zigm (south to north pole) into array (south to north pole)
-!   check: is this change necessary?
+! Copy coefficients (south to north pole) into array (south to north pole)
 ! 
       do j = 1,nmlat    ! 1,97
         do i = 1,nmlon0
@@ -268,12 +292,12 @@
         enddo
       enddo
 !
-! Extend over 32 grid spaces to alow a total of five grid levels
-!   check: is this necessary because no solving with these coefficients?
+! Extend one additional grid point on both sides of the array for
+! differencing
 !     
       i = 1
       do j = 1,nmlat
-        array(i-1,j)	= array(nmlon0-i,j)
+        array(i-1,j)	  = array(nmlon0-i,j)
         array(nmlon0+i,j) = array(1+i,j)
       enddo
 !      
@@ -283,13 +307,17 @@
 !  
       end subroutine nsstencil
 !----------------------------------------------------------------------------
+! BOP
+! !IROUTINE: nscnm
+! !INTERFACE:
       subroutine nscnm(array,nmlon0,nmlat,nsc,ncoef,nmlath)
       implicit none
 !      
+! !DESCRIPTION: 
 !      calculate contribution for each zigm
 !      the diagonial dominance of the stencil is not checked
 !      since the coefficients are not used for solving
-!      one reason for difference between added north-south
+!      one reason for the difference between added north-south
 !      and seperated north south hemisphere
 !
 !      stencil for southern hemisphere changed, since
@@ -304,11 +332,18 @@
 !      hemisphere- only one stencil and later in nscrrt equally  
 !      distributed to northern and southern hemisphere
 !
-! Args:
+! !PARAMETERS: 
       integer,intent(in) :: nmlon0,nmlat,ncoef,nmlath
       real,intent(in)    :: array(0:nmlon0+1,nmlat)
+! !RETURN VALUE:
       real,intent(out)   :: nsc(nmlon0,nmlat,10)
 !
+!
+! !REVISION HISTORY:
+! 05.03.09  <Astrid Maute> <include header> 
+! 
+! EOP  
+! 
 ! Local:
       integer :: i,j,jj,jjj
 !
@@ -460,25 +495,37 @@
 	   nsc(i,jj,9)=nsc(i,jj,9)-.25*(array(i,jjj-1)+array(i,jjj))
         enddo
       endif
+!      
       end subroutine nscnm
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: nosocrrt
+! !INTERFACE:
       subroutine nosocrrt
 !
-! am_02/02: calculate current for both hemispheres
-!
-      use params_module,only: nmlon,nmlonp1,nmlat,nmlath,nlev,nlevp1
-      use cons_module,only: dt0dts,rcos0s,pi,r0,re,ylatm
-      use dynamo_module,only: nscrrt,nscoef,phim,nmlon0
-      implicit none
-!
+! !DESCRIPTION:
+! am_02/02: 
 ! Calculate current for both hemisphere: 
 ! [stencil*potential -RHS] = R**2 * J_mr / dt0dts / rcos0s
+!
+! !USES:
+      use params_module,only: nmlon,nmlonp1,nmlat,nmlath,nlev,nlevp1
+      use cons_module,only: dt0dts,rcos0s,pi,r0,re,ylatm
+      use dynamo_module,only: nscrrt,nscoef,phim,nmlon0,unitvm
+      implicit none
+!
+! !PARAMETERS:
+! !RETURN VALUE:
+!
+! !REVISION HISTORY:
+! 05.03.15  <Astrid Maute> <include header> 
+! 
+! EOP 
 !
 ! Local:
       real ::    vtmp,r0sq,fac,facmax,lat,lmin,lmax,pol
       real :: tout(nmlonp1,nmlat,-2:nlevp1)
       integer :: j,jj,jjj,i,k,n,jmod,jmin,jmax
-      real,parameter :: unitv(nmlon)=1.
 !
 ! External:
       real,external :: sddot ! in util.F
@@ -595,16 +642,22 @@
 !
 ! Poles
 !      
-      nscrrt(1,1)    = sddot(nmlon,unitv,nscrrt(1,2))/float(nmlon)
-      nscrrt(1,nmlat)= sddot(nmlon,unitv,nscrrt(1,nmlat-1))/float(nmlon)
+      nscrrt(1,1) = (9.*sddot(nmlon,unitvm,nscrrt(1,2))-
+     |                   sddot(nmlon,unitvm,nscrrt(1,3)))/
+     |                   (8.*float(nmlon))
+      nscrrt(1,nmlat) = (9.*sddot(nmlon,unitvm,nscrrt(1,nmlat-1))-
+     |                   sddot(nmlon,unitvm,nscrrt(1,nmlat-2)))/
+     |                   (8.*float(nmlon))
       nscrrt(:,1)     = nscrrt(1,1)		! extend in longitude
       nscrrt(:,nmlat) = nscrrt(1,nmlat)
       do j = 1,nmlat
        lat = ylatm(j)
-       if(lat.le.-pi/18.) then
+!       if(lat.le.-pi/18.) then
+       if(lat.le.-pi/15.) then
          lmin = lat
 	 jmin = j
-       elseif(lat.gt.pi/18.) then
+!       elseif(lat.gt.pi/18.) then
+       elseif(lat.gt.pi/15.) then
          lmax = lat
 	 jmax = j
 	 goto 300
@@ -648,22 +701,42 @@
 !       call addfsech('NSCRRT','J_mr (magnetic)','A/m^2 ',
 !    |       tout(:,j,:),nmlonp1,nlevp1+3,nlevp1+3,j)
       enddo 		! enddo j-loop
+!	
+!     call addfsech_ij('JQR',' j_qr (magnetic)','[A/m^2]',
+!    |      nscrrt(:,:),1,nmlonp1,1,nmlat)
+!     
       end subroutine nosocrrt
 !-----------------------------------------------------------------------
+! BOP
+! !IROUTINE: nosocrdens
+! !INTERFACE:
       subroutine nosocrdens
 !
-! am_02/02: calculate current desnity J_e1, K_(q,phi) & K_(q,lam)
+! !DESCRIPTION:
+! am_02/02: calculate current density J_e1 (half level)
+!  K_(q,phi) & K_(q,lam) (full level)
 !
-      use params_module,only: nmlon,nmlonp1,nmlat,nmlath,nlev,nlevp1
+      use params_module,only: nmlon,nmlonp1,nmlat,nmlath,nlev,nlevp1,
+     |  nmlev
       use cons_module,only: dlonm,re,r0,ylatm
       use dynamo_module,only: ed23d,ed13d,bmodm3d,sinim3d,sigma2m3d,
      |  adotv2m3d,a1a2m3d,sigma1m3d,adotam3d,adotv1m3d,zpotenm3d,
-     |  nscrrt
+     |  nscrrt,
+     |  je13d,je23d,
+     |  je1oD_pg3d                     ! J_e1/D (plasma pressure + gravity)
+      use magpres_g_module,only: j_pg  ! flag for mag.pressure and gravity 
       implicit none
 !
+! !PARAMETERS: 
+! !RETURN VALUE:
+!
+! !REVISION HISTORY:
+! 05.03.15  <Astrid Maute> <include header> 
+! 
+! EOP 
+!
 ! Local:
-      real :: je13d(nmlonp1,nmlat,-2:nlevp1),
-     |        kqphi(nmlonp1,nmlat,-2:nlevp1)
+      real :: kqphi_int(nmlonp1,nmlat,-2:nlevp1)
       real :: kqphi3d(nmlonp1,nmlat),dkqphi(nmlonp1,nmlat)
       real :: kqlam(nmlonp1,nmlat)
       real :: fac,lamm,sinlamm,sinim,dh,act,actpk,facq,facsin
@@ -671,6 +744,7 @@
       real :: fsumn(nmlat),afsumn(nmlat),epsn,difflm
       real :: fsums(nmlat),afsums(nmlat),epss
       real :: fmin,fmax
+      real :: adotam23d
       integer :: i,j,jj,k,l,ip1f,ip2f,ip3f
 !  
 ! Calculate current density component Je1 (Richmond: Ionospheric
@@ -682,7 +756,13 @@
 !   je1/d = (sig_ped * d_1**2/D * (ed1 + ue2*be3) + 
 !           (sig_ped* d1*d2/D - sig_hall) * (ed2 - ue1*be3)
 !   je13d = je1/d 
+!   je2/d = (sig_ped * d_2**2/D * (ed2 - ue1*be3) + 
+!           (sig_ped* d1*d2/D + sig_hall) * (ed2 + ue1*be3)
+!   je23d = je2/d 
+!   for j_pg: je1/D=(rho*g-grad p)xB/B_mag^2* d_1/D ! gravity and plasma pressure
+!         units A/cm^2  factor of 1e4 to convert from A/cm^2 ->A/m^2
 !
+      adotam23d = 1.0  ! approximation of d_2^2
       do j = 1,nmlat
         do  k = -2,nlev
           do i = 1,nmlonp1
@@ -694,14 +774,30 @@
             ed2h = 0.5*(ed23d(i,j,k)+ed23d(i,j,k+1))	! ed2 at half level
 	    je13d(i,j,k) = je13d(i,j,k) + fac*(ed2h-
      |  		       adotv1m3d(i,j,k)*bmodm3d(i,j))
+!           
+	    fac = sigma1m3d(i,j,k)*adotam23d
+	    je23d(i,j,k) = fac*(ed2h-
+     |  		       adotv1m3d(i,j,k)*bmodm3d(i,j))
+	    fac = sigma1m3d(i,j,k)*a1a2m3d(i,j) + sigma2m3d(i,j,k)
+	    je23d(i,j,k) = je23d(i,j,k) + fac*(ed1h+
+     |  		       adotv2m3d(i,j,k)*bmodm3d(i,j))
+!           
+!           je13d(i,j,k) = 0.  ! only contribution due to pressure/gravity
+	    if(j_pg) je13d(i,j,k) = je13d(i,j,k)+1e4*je1oD_pg3d(i,j,k) ! convert cm -> m
 	  enddo
 	  je13d(nmlonp1,j,k) = je13d(1,j,k)
-	enddo 
-!       call addfsech('JE13D',' J_e1/D (magnetic)','A/m^2? ',
-!    |       je13d(:,j,:),nmlonp1,nlevp1+3,nlevp1+3,j) 
+	  je23d(nmlonp1,j,k) = je23d(1,j,k)
+	enddo
+	je13d(:,j,nlevp1) = je13d(:,j,nlev)
+	je23d(:,j,nlevp1) = je23d(:,j,nlev) 
+!       call addfsech_ik('JE13D',' J_e1/D (magnetic)','A/m^2',
+!    |	    je13d(:,j,:),1,nmlonp1,nmlev,nmlev,j) 
       enddo
+!      
+!     call addfsech_ij('bmodm3d','bmodm3d (magnetic)',' ',
+!    |      bmodm3d(:,:),1,nmlonp1,1,nmlat)  
 !  
-! Calculate K_(q,phi) (Richmond: Ionospheric
+! Calculate K_(q,phi) (Richmond: Ionospheric at full level
 ! Electrodynamics using magnetic apex coordinates pp.208 (eq 7.4))
 !   K_(q,phi) = int_(h_l)^(h_u) [( [R_0/R]^0.5 * 
 !               * je1/D * sin(lam_q)/sin(lam_m) sin(I_m)/sin(I)*D] dh
@@ -748,9 +844,9 @@
             act   = fac*facq			
 	  endif
 !
-	  kqphi3d(i,j) = 0.0 
+	  kqphi3d(i,j)     = 0.0 
+          kqphi_int(i,j,:) = 0.0   
 	  do k = -2,nlev  			! height integration from k=-2 to nlev
-            kqphi(i,j,k) = 0.0    
 ! (R_e + h)/R_0  : R_0 = R_e + h0 ; h0 = 9.e6 cm
             fac  = r0/(re + zpotenm3d(i,j,k+1))	! R_0 / R
 	    lamm = acos(sqrt(coslamq2*fac))	! cos^2(lam_m) = R_0/R*cos^2(lam_q)
@@ -770,24 +866,27 @@
 ! integration value at 1/2 level
             kqphi3d(i,j) = kqphi3d(i,j) + 0.5*(actpk+act)*	
      |                     je13d(i,j,k)*dh
+            kqphi_int(i,j,k+1) = kqphi3d(i,j)
 	    act = actpk
           enddo
+! lowest level integration value is zero since this is below the 
+! ionospheric current layer 110 km it doesn't matter
+	  kqphi_int(i,j,0)  = 0.  
         enddo
+!       if(j_pg) call addfsech_ik('KQPHI_TOT','kqphi_int (u,E,g,p)',
+!    |	    '[A/m]',kqphi_int(:,j,:),1,nmlonp1,nmlev,nmlev,j) 
+!       if(.not.j_pg) call addfsech_ik('KQPHI_UE','kqphi_int (u,E)',
+!    |	    '[A/m]',kqphi_int(:,j,:),1,nmlonp1,nmlev,nmlev,j)
+!       call addfsech_ik('zpotm3d','zpotm3d',
+!    |	    'cm',zpotenm3d(:,j,:),1,nmlonp1,nmlev,nmlev,j)
       enddo
 ! 
-! save on secondary history       
-!     do j= 1,nmlat
-!       do k = -2,nlev     
-!          kqphi(:,j,k) = kqphi3d(:,j)
-!       enddo
-!       call addfsech('KQPHI',' kqphi (magnetic)',' ',
-!    |       kqphi(:,j,:),nmlonp1,nlevp1+3,nlevp1+3,j) 
-!       call fminmax(kqphi(:,j,:),nmlonp1*(nlevp1+3),fmin,fmax)
-!       write(6,"('current j=',i3,': kqphi min,max=',2e12.4)")
-!    |    j,fmin,fmax
-!     enddo
+! save on secondary history 
+!     call addfsech_ij('KQPHI',' kqphi (magnetic)','[A/m]',
+!    |      kqphi3d(:,:),1,nmlonp1,1,nmlat)  
+!                
 !  
-! Calculate K_(q,lam) (Richmond: Ionospheric
+! Calculate K_(q,lam) (Richmond: Ionospheric at full level
 ! Electrodynamics using magnetic apex coordinates pp.208 (eq 7.5))
 !   K_(q,lam) = -1/cos(lam_q) int_(-pi/2)^(lam_q) [J_mr*R*cos(lam_q) + 
 !                d(K_(q,phi))/d(phi_q) ] d(lam_q)
@@ -883,13 +982,9 @@
 	kqlam(i,j)= kqlam(i,j)/cos(ylatm(j))	
        enddo
       enddo ! end of i-loop
-!     do j= 1,nmlat
-!       do i = 1,nmlonp1
-!         do k = -2,nlev      
-!           kqphi(i,j,k) = kqlam(i,j)
-!         enddo
-!       enddo
-!       call addfsech('KQLAM',' kqlam(magnetic)',' ',
-!    |       kqphi(:,j,:),nmlonp1,nlevp1+3,nlevp1+3,j) 
-!     enddo
+!      
+!     call addfsech_ij('KQLAM',' kqlam (magnetic)','[A/m]',
+!    |      kqlam(:,:),1,nmlonp1,1,nmlat)
+!     
       end subroutine nosocrdens
+!-----------------------------------------------------------------------

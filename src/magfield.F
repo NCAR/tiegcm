@@ -140,23 +140,23 @@
 !              code is always called if DYNAMO=1. (i.e., there is no
 !              "old dynamo", and the "new dynamo" always uses apex code.
 !
-!#if (MSS == 0)
-!     dskfile = magvol
-!     call get_diskfile(dskfile,' ') 
-!#else
-!     dskfile = ' '
-!     call getfile(magvol,dskfile)
-!#endif
+#if (MSS == 0)
+      dskfile = magvol
+      call get_diskfile(dskfile,' ') 
+#else
+      dskfile = ' '
+      call getfile(magvol,dskfile)
+#endif
 !
-! If dynamo==2, then new dynamo will be called. The new dynamo uses
+! If dynamo==1, then dynamo will be called. The dynamo uses
 ! apxparm (apex.F), so nc_rdmag is not necessary in this case.
 !
-!     if (dynamo /= 2) then
-!       call nc_rdmag(dskfile)
-!     else
-!       write(6,"('magfield: nc_rdmag not called because dynamo=',
-!    |    i2)") dynamo
-!     endif
+      if (dynamo <= 0) then
+        call nc_rdmag(dskfile)
+      else
+        write(6,"('magfield: nc_rdmag not called because dynamo=',
+     |    i2)") dynamo
+      endif
 !
       call magdyn
       if (dynamo > 0) call dynpotmag

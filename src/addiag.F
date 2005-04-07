@@ -6,8 +6,8 @@
 !
       use cons_module,only: cs,rmassinv,dz,dzgrav,freq_semidi,dt,p0,
      |  boltz,expz,expzmid,expzmid_inv
-      use bndry_module,only: zb,zb2,zba,bnd,bnd2,bnda,ci
-      use init_module,only: iter
+      use bndry_module,only: lbc_gswm_addiag,zb,zb2,zba,bnd,bnd2,bnda,ci
+      use init_module,only: iter,igetgswm
       implicit none
 !
 ! Input args:
@@ -52,8 +52,15 @@
 #endif
       nlevs = lev1-lev0+1
 !
+! Use GSWM lbc for geopotential height if requested:
+      if (igetgswm > 0)
+     |  call lbc_gswm_addiag(z(1,lon0:lon1,lat0:lat1),lon0,lon1,
+     |    lat0,lat1)
+!
 ! Latitude scan:
       do j=lat0,lat1
+!	call addfsech('ZLBC','ZLBC','[cm]',z(:,lon0:lon1,j),lon0,lon1,
+!     |    nlevs,nlevs-1,j)
 !
 ! vc = cos(phi)*v
 !
@@ -149,25 +156,29 @@
         enddo
 !       call addfsech('W1c',' ',' ',w1,lon0,lon1,nlevs,nlevs-1,j)
 !
+! If not using gswm lbc, add in tidal components:
+        if (igetgswm <= 0) then
+!
 ! z(1) = zb
-        expt=cexp(ci*freq_semidi*dt*iter)
-        do i=lon0,lon1
-          z(1,i,j) = real(zb(j)*bnd(i)*expt) 
-        enddo
+          expt=cexp(ci*freq_semidi*dt*iter)
+          do i=lon0,lon1
+            z(1,i,j) = real(zb(j)*bnd(i)*expt) 
+          enddo
 !
 ! Add in effect of (1,1) tidal component to lbc
 !
-        expt = cexp(ci*.5*freq_semidi*dt*iter)
-        do i=lon0,lon1
-          z(1,i,j) = z(1,i,j)+real(zb2(j)*bnd2(i)*expt)
-        enddo
+          expt = cexp(ci*.5*freq_semidi*dt*iter)
+          do i=lon0,lon1
+            z(1,i,j) = z(1,i,j)+real(zb2(j)*bnd2(i)*expt)
+          enddo
 !
 ! Add in effect of annual tidal component to lbc
 !
-        expt = 1.
-        do i=lon0,lon1
-          z(1,i,j) = z(1,i,j)+real(zba(j)*bnda(i)*expt)
-        enddo
+          expt = 1.
+          do i=lon0,lon1
+            z(1,i,j) = z(1,i,j)+real(zba(j)*bnda(i)*expt)
+          enddo
+        endif ! igetgswm
 !
 ! z(k+1)=s1(k)+z(k)
 !

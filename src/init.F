@@ -32,16 +32,12 @@
 ! getgpi flag must go here rather than in gpi_mod to avoid circular 
 ! module dependency with nchist_mod and init_mod.
 !
-      integer :: igetgpi    ! 0/1 flag to get GPI data (see gpi_ncfile
-                            ! in input_mod.f. Set in init_mod.f)
-      integer :: igetgswmdi ! 0/1 flag to get GSWM data diurnal tides 
-                            !(see gswm_di_ncfilein input_mod.f. Set in init_mod.f)
-      integer :: igetgswmsdi! 0/1 flag to get GSWM data semidiurnal tides
-                            !(see gswm_sdi_ncfilein input_mod.f. Set in init_mod.f)
-      integer :: igetgswmnmidi ! 0/1 flag to get GSWM data nonmigrating diurnal tides
-                               !(see gswm_nmidi_ncfilein input_mod.f. Set in init_mod.f)
-      integer :: igetgswmnmisdi! 0/1 flag to get GSWM data nonmigrating semidiurnal tides
-                               !(see gswm_nmisdi_ncfilein input_mod.f. Set in init_mod.f)
+      integer :: igetgpi       ! 0/1 flag for GPI data (see gpi_ncfile
+      integer :: igetgswmdi    ! 0/1 flag for GSWM data diurnal tide
+      integer :: igetgswmsdi   ! 0/1 flag for GSWM data semidiurnal tide
+      integer :: igetgswmnmdi  ! 0/1 flag for GSWM data nonmigrating diurnal tide
+      integer :: igetgswmnmsdi ! 0/1 flag for GSWM data nonmigrating semidiurnal tide
+      integer :: igetgswm ! will be 1 only if at least one of the above flags are set
 !
       character(len=16) ::
      |  host,              ! host machine
@@ -73,17 +69,19 @@
 !
       use input_module,only: start,step,secflds,secfmag,secfmagphr,
      |  start_year,start_day,calendar_advance,gpi_ncfile,gswm_di_ncfile,
-     |  gswm_sdi_ncfile,gswm_nmidi_ncfile,gswm_nmisdi_ncfile,
-     |  mxhist_prim,mxhist_sech,output,secout,mkhvols,nmc,source_start
+     |  gswm_sdi_ncfile,gswm_nmdi_ncfile,gswm_nmsdi_ncfile,
+     |  mxhist_prim,mxhist_sech,output,secout,mkhvols,nmc,source_start,
+     |  sd_ncfile
       use hist_module,only: hist_init,isechist,nfsech_geo,nfsech_mag,
      |  nfsech_geo2d,nfsech_mag2d,nfsech_magphr,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
      |  nfiles_sech
-      use fields_module,only: set_fsech,init_fields,
+      use fields_module,only: set_fsech,init_4d,init_3d,
      |  fsech,fsechmag,fsech2d,fsechmag2d,fsechmagphr2d
       use cons_module,only: pi,init_cons
       use filter_module,only: trigs,ntrigs,ifax
       use mpi_module,only: lon0,lon1,lat0,lat1,mytid
+      use soldata_module,only: rd_soldata
 !
 ! External:
       integer,external :: mtime_to_nstep
@@ -108,7 +106,7 @@
       if (len_trim(logname)==0) then
         write(6,"(/,'>>> init: Cannot get LOGNAME environment ',
      |    'variable.',/)")
-        stop 'LOGNAME'
+        call shutdown('LOGNAME')
       endif
 !
 ! Get host name:
@@ -169,16 +167,22 @@
       if (igetgswmsdi > 0) 
      |  write(6,"('  gswm_sdi_ncfile = ',a)") trim(gswm_sdi_ncfile)
 ! Set GSWM flag for nonmigrating diurnal tides:
-      igetgswmnmidi = 0
-      if (len_trim(gswm_nmidi_ncfile) > 0) igetgswmnmidi = 1
-      if (igetgswmnmidi > 0) 
-     |  write(6,"('  gswm_nmidi_ncfile = ',a)") trim(gswm_nmidi_ncfile)
+      igetgswmnmdi = 0
+      if (len_trim(gswm_nmdi_ncfile) > 0) igetgswmnmdi = 1
+      if (igetgswmnmdi > 0) 
+     |  write(6,"('  gswm_nmdi_ncfile = ',a)") trim(gswm_nmdi_ncfile)
 ! Set GSWM flag for nonmigrating semidiurnal tides:
-      igetgswmnmisdi = 0
-      if (len_trim(gswm_nmisdi_ncfile) > 0) igetgswmnmisdi = 1
-      if (igetgswmnmisdi > 0) 
-     |  write(6,"('  gswm_nmisdi_ncfile = ',a)")  
-     |  trim(gswm_nmisdi_ncfile)
+      igetgswmnmsdi = 0
+      if (len_trim(gswm_nmsdi_ncfile) > 0) igetgswmnmsdi = 1
+      if (igetgswmnmsdi > 0) 
+     |  write(6,"('  gswm_nmsdi_ncfile = ',a)")  
+     |  trim(gswm_nmsdi_ncfile)
+!
+! If any gswm tides are used, set igetgswm==1:
+      igetgswm = 0
+      if (igetgswmdi>0   .or. igetgswmsdi>0 .or.
+     |    igetgswmnmdi>0 .or. igetgswmnmsdi>0) igetgswm = 1
+
 !
 ! ixtimep is 4th dimension index to fg-array for previous time step
 ! ixtimec is 4th dimension index to fg-array for current time step
@@ -189,6 +193,11 @@
 !
 ! Initialize amie, and get amie file if necessary:
 !     call init_amie
+!
+! Read SEE data file:
+      if (len_trim(sd_ncfile) > 0) then
+         call rd_soldata
+      endif
 !
 ! Initialize non-input history variables for beginning of run:
       call hist_init
@@ -203,7 +212,8 @@
 !
 ! Initialize field structures:
       iprintf = 0
-      call init_fields(lon0,lon1,lat0,lat1,mytid,iprintf)
+      call init_4d(lon0,lon1,lat0,lat1,mytid,iprintf)
+      call init_3d(lon0,lon1,lat0,lat1,mytid,iprintf)
 !
 ! Initialize secondary history fields:
       if (isechist > 0) then
@@ -245,12 +255,12 @@
       write(6,"('  igetgswmsdi= ',i6,4x,
      |  '(If > 0, GSWM semidiurnal tidal database will be used.)')")
      |  igetgswmsdi
-      write(6,"('  igetgswmnmidi= ',i6,4x,
+      write(6,"('  igetgswmnmdi= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating diurnal tidal database will',
-     |  ' be used.)')") igetgswmnmidi
-      write(6,"('  igetgswmnmisdi= ',i6,4x,
+     |  ' be used.)')") igetgswmnmdi
+      write(6,"('  igetgswmnmsdi= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating semidiurnal tidal database will',
-     |  ' be used.)')") igetgswmnmisdi
+     |  ' be used.)')") igetgswmnmsdi
 !
 ! ncep/nmc are in time-gcm only:
 !     write(6,"('  ncep    = ',i6,4x,

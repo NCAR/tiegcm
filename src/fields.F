@@ -159,7 +159,7 @@
       contains
 !-----------------------------------------------------------------------
 !
-      subroutine init_fields(lon0,lon1,lat0,lat1,mytid,iprint)
+      subroutine init_4d(lon0,lon1,lat0,lat1,mytid,iprint)
 !
 ! Set names, units, indices and pointers for f4d and f3d field structures,
 ! and allocate 3d and 4d field arrays. Also make other data allocations.
@@ -398,7 +398,30 @@
         enddo
       endif
 !
-!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+! Report to stdout:
+      if (iprint > 0) then
+        write(6,"(/,'There are ',i3,' 4-d fields:')") nf4d
+        do n=1,nf4d
+          call print_f4d(f4d(n),n)
+        enddo
+      endif
+!
+! Do other allocations:
+!     call allocdata
+      end subroutine init_4d
+!-----------------------------------------------------------------------
+      subroutine init_3d(lon0,lon1,lat0,lat1,mytid,iprint)
+!
+! Set names, units, indices and pointers for f4d and f3d field structures,
+! and allocate 3d and 4d field arrays. Also make other data allocations.
+!
+      implicit none
+!
+! Args:
+      integer,intent(in) :: lon0,lon1,lat0,lat1,mytid,iprint
+!
+! Local:
+      integer :: n,istat
 !
       n = 1
 !
@@ -700,9 +723,9 @@
         enddo
       endif
 !
-! Do other allocations:
+! Do other allocations (see allocdata.F):
       call allocdata
-      end subroutine init_fields
+      end subroutine init_3d
 !-----------------------------------------------------------------------
       subroutine set_fsech
       use input_module,only: secflds,secfmag,secfgeo2d,secfmag2d,

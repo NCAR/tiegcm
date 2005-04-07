@@ -519,8 +519,8 @@
 !     call periodic_f2d(explicit,lon0,lon1,nlevs)
 !
 ! Some very small diffs at couple of grid points, probably from BY:
-      call addfsech('EXPLIC1',' ',' ',explicit,lon0,lon1,nlevs,nlevs-1,
-     |  lat)
+!     call addfsech('EXPLIC1',' ',' ',explicit,lon0,lon1,nlevs,nlevs-1,
+!    |  lat)
 
       do i=lon0,lon1
         dvb(i,lat) = dvb(i,lat)/bz(i,lat)

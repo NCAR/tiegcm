@@ -1,7 +1,17 @@
 #include <defs.h>
 !
       module apex_module
-!
+!----------------------------------------------------------------------- 
+! BOP
+! !MODULE: apex_module
+! !DESCRIPTION: calculate apex quantities for one specific date without
+!       changing during the model run since differences are expected to 
+!       be small.
+!       reference: 
+!          Richmond, A. D., Ionospheric Electrodynamics Using Magnetic Apex
+!          Coordinates, J. Geomag. Geoelectr., 47, 191-212, 1995.
+!  
+! !USES:
       use params_module,only:
      |  nlon,   ! number of geographic longitudes (at 5 deg, nlon=72)
      |  nlonp1, ! nlon+1 
@@ -11,6 +21,10 @@
      |  nmlon,  ! number of geomagnetic longitudes
      |  nmlonp1,! nmlon+1
      |  nmlat   ! number of geomagnetic latitudes
+!      
+! !PUBLIC TYPES:
+! !PUBLIC MEMBER FUNCTIONS:
+! !PUBLIC DATA MEMBERS:
       implicit none
       integer,parameter :: 
      |  nalt=2,
@@ -22,24 +36,33 @@
 !
 ! (formerly in common /dvecddd/)
       real,dimension(nlonp1,nlat,3,2) :: dvec
-      real,dimension(nlonp1,nlat) :: dddarr,be3arr
+      real,dimension(nlonp1,nlat) :: dddarr,be3arr  ! [nT]
       real,dimension(nlatp1) :: gplat
       real,dimension(nlonp2) :: gplon
       real,dimension(nalt)   :: gpalt
       real,dimension(lwk)    :: wk
+! 
+! !REVISION HISTORY:
+! 05.02.04  <Astrid Maute> <include headers> 
+! EOP
 !
       contains
 !-----------------------------------------------------------------------
       subroutine apxparm(date)
-      use cons_module,only: re_dyn,h0,hs,rtd,dtr,ylatg,ylong,dlong,
+!
+! BOP
+! !IROUTINE: apxparm
+! !INTERFACE:
+! !USES:
+      use cons_module,only: re,h0,rtd,dtr,ylatg,ylong,dlong,
      |  dlonm,ylonm,ylatm
       use magfield_module,only:
      |  alatm,   ! geomagnetic latitude at each geographic grid point (radians)
      |  alonm,   ! geomagnetic longitude at each geographic grid point (radians)
-     |  xb,      ! northward component of magnetic field
-     |  yb,      ! eastward component of magnetic field
-     |  zb,      ! downward component of magnetic field
-     |  bmod,    ! magnitude of magnetic field (gauss?)
+     |  xb,      ! northward component of magnetic field [Gaus]
+     |  yb,      ! eastward component of magnetic field [Gaus]
+     |  zb,      ! downward component of magnetic field [Gaus]
+     |  bmod,    ! magnitude of magnetic field [Gaus]
      |  rjac,    ! (nlonp1,0:nlatp1,2,2) scaled derivatives of mag coords wrt geog
      |  rjacd,   ! determinant of rjac
      |  p,
@@ -60,13 +83,25 @@
      |  av,      ! (nlonp1,0:nlatp1,3,2) the two magnetic vectors a1,a2
      |  wt       ! (4,nmlonp1,nmlat) weights for geo2mag interpolation
 !
-! Original file for this subroutine 
-! ~richmond/prog/tgcmtst/modsrc/apxparm.mk was copied on 2/25/00.
+! !DESCRIPTION: calculates apex quantities for reference height of
+!         h_0 (90km)
+!         Original file for this subroutine 
+!         ~richmond/prog/tgcmtst/modsrc/apxparm.mk was copied on 2/25/00.
 !
-! 5/02 B.Foster: adapted for tiegcm1.
+!         5/02 B.Foster: adapted for tiegcm1.
 !
-! Args:
-      real,intent(in) :: date
+! !RETURN VALUE:
+! !PARAMETERS:
+      real,intent(in) :: date 
+ !     
+! !REVISION HISTORY:
+! 05.02.04  <Astrid Maute> <include header> 
+! 07.02.04  <Astrid Maute> <use the mean Earth radius for apex Re=6371.22km
+!                           use reference height of 90 km instead 130km
+!                           therefore values don't have to be scaled down to
+!                           90 km anymore
+!                           difference in electr. potential 1-2%> 
+! EOP
 !
 ! Local:
 !
@@ -81,9 +116,9 @@
 ! Local:
       integer :: j,i,ii,ist,jjm,jjg
       integer :: iplot=0
-      real :: rekm,h0km,alt,hr,ror03,glat,glon,dellat,bmag,alon,xlatm,
+      real :: alt,hr,glat,glon,dellat,bmag,alon,xlatm,
      |  vmp,w,d,be3,sim,xlatqd,f,xlonmi,qdlon,qdlat,gdlat,xlongi,frki,
-     |  frkj,dellon,si,gdlon,date1(1),re
+     |  frkj,dellon,si,gdlon,date1(1),sinalat,clm2
       character(len=80) :: title
 !
 ! Non-scalar arguments returned by APXMALL:
@@ -94,7 +129,6 @@
      |  f1(2),f2(2)
 !
 ! Specify grid values
-! Center min, max altitudes about 130 km
 !
       gpalt(1) =  90.
       gpalt(2) = 170.
@@ -124,15 +158,11 @@
       if (ist /= 0) call shutdown('apxmka')
 !
 ! Compute dvec, ddd
-! re_dyn, h0, hs, rtd, dtr, ylatg, ylong are in constants module (cons.F)
+! re, h0, rtd, dtr, ylatg, ylong are in constants module (cons.F)
 ! cslatg, snlatg, alatm, alonm are in magfield module (magfield.F)
 !
-      re = re_dyn
-      rekm = re*1.e-5
-      h0km = h0*1.e-5
-      alt  = hs*1.e-5
+      alt= h0*1.e-5
       hr = alt
-      ror03= ((rekm + alt)/(rekm + h0km))**3
       do j = 0,nlatp1
 	glat = ylatg(j)*rtd
 	cslatg(j) = cos(ylatg(j))
@@ -146,6 +176,9 @@
      |      xlatm,vmp,w,d,be3,sim,d1,d2,d3,e1,e2,e3,  !Mod Apx
      |      xlatqd,f,f1,f2 , ist)                     !Qsi-Dpl
           if (ist .ne. 0) call shutdown('apex ist')
+!
+          sinalat   = sin(xlatm*dtr)   ! sin(lam)
+          clm2 = 1. - sinalat*sinalat  ! cos^2(lam)  
 !
 ! Define several fields in magfield module (magfield.F) from apxmall
 ! output:
@@ -193,8 +226,7 @@
 	    dvec(i,j,3,2) = d2(3)
 	    dddarr(i,j)   = d
 !
-! Scale be3 from 130 km to a reference height of 90 km.
-	    be3arr(I,J)   = be3*ror03
+	    be3arr(I,J)   = be3
 !
             cslatm(i,j) = cos(alatm(i,j))
             snlatm(i,j) = sin(alatm(i,j))

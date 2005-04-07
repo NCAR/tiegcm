@@ -6,7 +6,7 @@
 ! (this was old sub vdrift2)
 !
       use params_module,only: nlon,nlonp2,nlonp4
-      use cons_module,only: r00
+      use cons_module,only: re
       use efield_module,only: ex,ey,ez ! at subdomains
       use magfield_module,only: rjac,xb,yb,zb,bmod
 #ifdef MPI
@@ -51,11 +51,11 @@
       do lat=lat0,lat1
 
 ! These are ok, only very small diffs in ey (s.a. efield.F):
-      do i=lon0,lon1
-        extmp(:,i) = ex(:,i,lat)
-        eytmp(:,i) = ey(:,i,lat)
-        eztmp(:,i) = ez(:,i,lat)
-      enddo
+!      do i=lon0,lon1
+!        extmp(:,i) = ex(:,i,lat)
+!        eytmp(:,i) = ey(:,i,lat)
+!        eztmp(:,i) = ez(:,i,lat)
+!      enddo
 !     call addfsech('EX_IONV',' ',' ',ex(:,lon0:lon1,lat),
 !    |  lon0,lon1,nlevs,nlevs,lat)
 !     call addfsech('EY_IONV',' ',' ',ey(:,lon0:lon1,lat),
@@ -72,7 +72,7 @@
       do i=lonbeg,lonend
         do k=lev0,lev1
           eex(k,i) = (rjac(i-2,lat,1,1)*ex(k,i,lat)+
-     |                rjac(i-2,lat,2,1)*ey(k,i,lat))/(r00+z(k,i,lat))
+     |                rjac(i-2,lat,2,1)*ey(k,i,lat))/(re+z(k,i,lat))
 
 !         if (mod(nlat,lat)==6) 
 !    |    write(6,"(/,'ionvel: 'lat=',i2,' k=',i2,' i=',i2,' rjac=',
@@ -81,7 +81,7 @@
 !    |      ey(k,i,lat),z(k,i,lat),eex(k,i)
 
           eey(k,i) = (rjac(i-2,lat,1,2)*ex(k,i,lat)+
-     |                rjac(i-2,lat,2,2)*ey(k,i,lat))/(r00+z(k,i,lat))
+     |                rjac(i-2,lat,2,2)*ey(k,i,lat))/(re+z(k,i,lat))
 
 !         if (mod(nlat,lat)==6) 
 !    |    write(6,"(/,'ionvel: 'lat=',i2,' k=',i2,' i=',i2,' rjac=',
@@ -111,9 +111,9 @@
         eez(lev1,i) = 2.*eez(lev1-1,i)-eez(lev1-2,i)
       enddo
 
-!     call addfsech('EEX',' ',' ',eex,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('EEY',' ',' ',eey,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('EEZ',' ',' ',eez,lon0,lon1,nlevs,nlevs,lat)
+!      call addfsech('EEX','E_x','V/cm',eex,lon0,lon1,nlevs,nlevs,lat)
+!      call addfsech('EEY','E_y','V/cm',eey,lon0,lon1,nlevs,nlevs,lat)
+!      call addfsech('EEZ','E_z','V/cm',eez,lon0,lon1,nlevs,nlevs,lat)
 
 !
 ! ion velocities = (e x b/b**2) (x 1.e6 for m/sec)
@@ -178,12 +178,12 @@
 #endif
 !
 !     do lat=lat0,lat1
-!       call addfsech('UI_VEL',' ',' ',ui(:,lon0:lon1,lat),
-!    |    lon0,lon1,nlevs,nlevs,lat)
-!       call addfsech('VI_VEL',' ',' ',vi(:,lon0:lon1,lat),
-!    |    lon0,lon1,nlevs,nlevs,lat)
-!       call addfsech('WI_VEL',' ',' ',wi(:,lon0:lon1,lat),
-!    |    lon0,lon1,nlevs,nlevs,lat)
+!      call addfsech('UI_VEL','UI','cm/s',ui(:,lon0:lon1,lat),
+!    |     lon0,lon1,nlevs,nlevs,lat)
+!      call addfsech('VI_VEL','VI','cm/s',vi(:,lon0:lon1,lat),
+!    |     lon0,lon1,nlevs,nlevs,lat)
+!      call addfsech('WI_VEL','WI','cm/s',wi(:,lon0:lon1,lat),
+!    |     lon0,lon1,nlevs,nlevs,lat)
 !     enddo ! lat=lat0,lat1
 !
 #ifdef VT

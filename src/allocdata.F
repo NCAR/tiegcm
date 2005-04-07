@@ -13,6 +13,7 @@
       use efield_module,only: alloc_e
       use n4s_module,only: alloc_n4s
       use no_module,only: alloc_no
+      use magpres_g_module,only: alloc_pg
       implicit none
 !
 ! Local:
@@ -23,6 +24,9 @@
 !
 ! Allocate ionization rates (qrj module):
       call alloc_q(lon0,lon1,lat0,lat1)
+!
+! Allocate J(mag.pressure,gravity (magpres_g module):
+      call alloc_pg(lon0,lon1,lat0,lat1)
 !
 ! Allocate electric field (efield module):
       call alloc_e(lon0,lon1,lat0,lat1)

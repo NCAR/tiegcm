@@ -12,7 +12,8 @@
      |  qop,   ! o+  ionization
      |  qn2p,  ! n2+ ionization
      |  qnp,   ! n+  ionization
-     |  qnop   ! no+ ionization
+     |  qnop,  ! no+ ionization
+     |  qtef   ! n production rate
       use chemrates_module,only: beta9n
       implicit none
 !
@@ -111,6 +112,8 @@
      |      xnmbari(k,i)
           qn2p(k,i,lat) = qn2p(k,i,lat)+0.86*qbn2(k,i)*xnmbari(k,i)
           qnp (k,i,lat) = qnp (k,i,lat)+0.14*qbn2(k,i)*xnmbari(k,i)
+          qtef(k,i,lat) = qtef(k,i,lat)+
+     |                    1.57*(0.86*qbn2(k,i)*xnmbari(k,i))
         enddo
       enddo
 !

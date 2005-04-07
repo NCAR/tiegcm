@@ -50,7 +50,7 @@
       if (istat /= 0) write(6,"('>>> alloc_no: error allocating',
      |  ' no_prod: stat=',i3)") istat
 
-      write(6,"('alloc_no: allocated module data')")
+!     write(6,"('alloc_no: allocated module data')")
 !
       end subroutine alloc_no
 !-----------------------------------------------------------------------

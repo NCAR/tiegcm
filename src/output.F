@@ -379,11 +379,11 @@
       use input_module,only: output,secout,date,step,power,ctpoten,
      |  byimf,f107,f107a,mag,tide,tide2,colfac,source,hist,sechist,
      |  calendar_advance,secsource,gswm_di_ncfile,gswm_sdi_ncfile,
-     |  gswm_nmidi_ncfile,gswm_nmisdi_ncfile,dynamo
+     |  gswm_nmdi_ncfile,gswm_nmsdi_ncfile,dynamo
 
       use init_module,only: rundate,runtime,logname,host,system,
      |  iyear,iday,istep,igetgpi,igetgswmdi,igetgswmsdi,start_mtime,
-     |  igetgswmnmidi,igetgswmnmisdi
+     |  igetgswmnmdi,igetgswmnmsdi
       use fields_module,only: nf4d,f4d,fsech,fsechmag,fsech2d,
      |  fsechmag2d,fsechmagphr2d
       use cons_module,only: p0
@@ -563,8 +563,8 @@
       h%gpi       = igetgpi
       h%gswmdi    = igetgswmdi
       h%gswmsdi   = igetgswmsdi
-      h%gswmnmidi = igetgswmnmidi
-      h%gswmnmisdi= igetgswmnmisdi
+      h%gswmnmdi  = igetgswmnmdi
+      h%gswmnmsdi = igetgswmnmsdi
       h%missing_value = spval
       h%nlat = nlat
       h%nlon = nlon

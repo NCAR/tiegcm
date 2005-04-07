@@ -172,7 +172,7 @@
 !
       call vquart(a0,a1,a2,a3,a4,root,lev0,lev1,lon0,lon1,lat)
 
-      call addfsech('ROOT',' ',' ',root,i0,i1,nk,nkm1,lat)
+!     call addfsech('ROOT',' ',' ',root,i0,i1,nk,nkm1,lat)
 !
 ! Insure positive Ne (at least 3100):
 !     where(root < 3.1e3) root = 3.1e3

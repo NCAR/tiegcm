@@ -17,8 +17,7 @@
       use input_module,only: start,step,iaurora=>aurora,idynamo=>dynamo,
      |  f107,f107a,ctpoten,power,calendar_advance,ntimes_ctpoten,
      |  ctpoten_time,ntimes_power,power_time,potential_model
-      use init_module,only: istep,uthr,iter,secs,iday,iyear,igetgpi,
-     |  igetgswmdi,igetgswmsdi,igetgswmnmidi,igetgswmnmisdi
+      use init_module,only: istep,uthr,iter,secs,iday,iyear,igetgpi
       use cons_module,only: dt,re,cs,racs,kut,ylatm,rtd
       use filter_module,only: filter
       use qrj_module,only: init_sflux
@@ -30,11 +29,12 @@
       use dynamo_module,only: prep_dynamo,prep_dynamo_dyn0,dynamo,
      |  nodynamo,phihm,nmlat0,zpotenm3d
       use gpi_module,only: rdgpi,getgpi
-      use gswm_module,only: rdgswmdi,rdgswmsdi,rdgswmnmidi,
-     |  rdgswmnmisdi,getgswmdi,getgswmsdi,getgswmnmidi,
-     |  getgswmnmisdi
+      use gswm_module,only: getgswm
       use params_module,only: nlonp4,nlat
       use output,only: outhist
+!      
+! current due to plasma pressure & gravity -> add to RHS of dynamo    
+      use magpres_g_module, only: magpres_grav,j_pg
 !
 #ifdef MPI
       use mpi_module,only: 
@@ -190,37 +190,9 @@
         call getgpi(iyear,iday,int(secs),iprint)
       endif
 !
-! Get gswm diurnal tidal data if necessary:
-      if (igetgswmdi > 0) then
-        if (istep==1) call rdgswmdi ! read gswm diurnal tidal data
-        iprint = 0
-        if (istep==1) iprint = 1
-        call getgswmdi(iyear,iday,int(secs),iprint)
-      endif
+! Get GSWM tidal boundary data:
 !
-! Get gswm semidiurnal tidal data if necessary:
-      if (igetgswmsdi > 0) then
-        if (istep==1) call rdgswmsdi ! read gswm semidiurnal tidal data
-        iprint = 0
-        if (istep==1) iprint = 1
-        call getgswmsdi(iyear,iday,int(secs),iprint)
-      endif
-!
-! Get gswm nonmigrating diurnal tidal data if necessary:
-      if (igetgswmnmidi > 0) then
-        if (istep==1) call rdgswmnmidi ! read gswm nonmigrating diurnal tidal data
-        iprint = 0
-        if (istep==1) iprint = 1
-        call getgswmnmidi(iyear,iday,int(secs),iprint)
-      endif
-!
-! Get gswm nonmigrating semidiurnal tidal data if necessary:
-      if (igetgswmnmisdi > 0) then
-        if (istep==1) call rdgswmnmisdi ! read gswm nonmigrating semidiurnal tidal data
-        iprint = 0
-        if (istep==1) iprint = 1
-        call getgswmnmisdi(iyear,iday,int(secs),iprint)
-      endif
+      call getgswm(istep,iyear,iday,secs)
 !
 ! Update aurora parameters:
       iprint = 0
@@ -238,36 +210,19 @@
 !
 ! Calculate vc, barm, xnmbar, and z (tn,o2,o1,vn are input).
 !
-      if(igetgswmdi==0.and.igetgswmsdi==0.and.
-     |   igetgswmnmidi==0.and.igetgswmnmisdi==0) then ! no GSWM input used 
-        call addiag(
-     |    tn	 (levd0,lond0,latd0,itp),     ! in
-     |    o2	 (levd0,lond0,latd0,itp),     ! in
-     |    o1	 (levd0,lond0,latd0,itp),     ! in
-     |    vn	 (levd0,lond0,latd0,itp),     ! in
-     |    vc	 (levd0,lond0,latd0,itp),     ! out
-     |    barm   (levd0,lond0,latd0,itp),     ! out
-     |    xnmbar (levd0,lond0,latd0),	      ! out
-     |    xnmbari(levd0,lond0,latd0),	      ! out
-     |    xnmbarm(levd0,lond0,latd0),	      ! out
-     |    z	 (levd0,lond0,latd0,itp),     ! out (note itp is output)
-     |    lon0,lon1,1,nlevp1,lat0,lat1)
+      call addiag(
+     |  tn	 (levd0,lond0,latd0,itp),     ! in
+     |  o2	 (levd0,lond0,latd0,itp),     ! in
+     |  o1	 (levd0,lond0,latd0,itp),     ! in
+     |  vn	 (levd0,lond0,latd0,itp),     ! in
+     |  vc	 (levd0,lond0,latd0,itp),     ! out
+     |  barm   (levd0,lond0,latd0,itp),     ! out
+     |  xnmbar (levd0,lond0,latd0),	      ! out
+     |  xnmbari(levd0,lond0,latd0),	      ! out
+     |  xnmbarm(levd0,lond0,latd0),	      ! out
+     |  z	 (levd0,lond0,latd0,itp),     ! out (note itp is output)
+     |  lon0,lon1,1,nlevp1,lat0,lat1)
 !   
-      else 				             ! GSWM input used 
-        call addiag_gswm(
-     |    tn	 (levd0,lond0,latd0,itp),     ! in
-     |    o2	 (levd0,lond0,latd0,itp),     ! in
-     |    o1	 (levd0,lond0,latd0,itp),     ! in
-     |    vn	 (levd0,lond0,latd0,itp),     ! in
-     |    vc	 (levd0,lond0,latd0,itp),     ! out
-     |    barm   (levd0,lond0,latd0,itp),     ! out
-     |    xnmbar (levd0,lond0,latd0),	      ! out
-     |    xnmbari(levd0,lond0,latd0),	      ! out
-     |    xnmbarm(levd0,lond0,latd0),	      ! out
-     |    z	 (levd0,lond0,latd0,itp),     ! out (note itp is output)
-     |    lon0,lon1,1,nlevp1,lat0,lat1)
-      endif
-!      
       if (debug) write(6,"('advance after addiag')")
 !
 ! Define boundary latitudes -1,0 across the south pole, and
@@ -397,6 +352,26 @@
 ! idynamo==2 -> All tasks call prep_dynamo, and master task calls dynamo:
 !
       else
+!
+! calculate addition to electrodynamo RHS (current due to plasma 
+! pressure and gravity)
+!
+        if(j_pg) then	
+	  call magpres_grav (
+     |    z	(levd0,lond0,latd0,itp),   ! geopotential input
+     |    te	(levd0,lond0,latd0,itp),   ! electron temperature K
+     |    ti	(levd0,lond0,latd0,itp),   ! ion temperature K
+     |    ne	(levd0,lond0,latd0,itp),   ! electron density 1/cm^3
+     |    op	(levd0,lond0,latd0,itp),   ! O+ 1/cm^3
+     |    nplus (levd0,lond0,latd0),	   ! N+  1/cm^3
+     |    n2p	(levd0,lond0,latd0),	   ! N2+ 1/cm^3
+     |    nop	(levd0,lond0,latd0),	   ! NO+  1/cm^3
+     |    o2p	(levd0,lond0,latd0,itp),   ! O2+  1/cm^3
+     |    1,nlevp1,lon0,lon1,lat0,lat1)
+          if (debug) write(6,"('advance after magpres_grav: istep=',
+     |    i4)") istep
+        endif 
+! 
         call prep_dynamo(
      |    tn     (levd0,lond0,latd0,itp),
      |    un     (levd0,lond0,latd0,itp),

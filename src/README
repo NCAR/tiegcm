@@ -55,4 +55,74 @@ calls in advance.F and dynamics.F.
 1.6 and 1.7 runs on the same platform, and near-zero (1.e-5) diffs between
 platforms.
 
-2/11/05: Committing to CVS repository, and tagging as tiegcm1.7.
+2/11/05: Committing to CVS repository, and tagging as tiegcm1-7.
+
+!-----------------------------------------------------------------------
+
+Changes from tiegcm1.7 to tiegcm1.8:
+
+2/28/05: Using k instead of k+1 in mbar calculation in dt.F.
+
+3/18/05: 
+Added check_nans, see util.F and nchist.F. Finding nans when
+writing prognostic fields is fatal, see nanfatal in nchist.F.  
+
+Putting read of magfield data file back in for use only when
+dynamo==0 (was crashing on lightning). See tgcm.F and magfield.F.
+
+Swapped loop order for efficiency near top of sub nodynamo (dynamo.F).
+
+3/28/05:
+Merged Astrid's mods to dynamo (/callisto/i/maute/teTex.d/merge_w1.7).
+This included 2 new source files: highlatpoten.F and magpres_g.F.
+Extensive changes to dynamo.F, current.F, apex.F.
+
+4/4/05 btf:
+Added gswm options to bndry.F, addiag.F, dt.F, and duv.F. This eliminates
+source files bndry_gswm.F, addiag_gswm.F, dt_gswm.F, and duv_gswm.F.
+Did "cvs remove" on the eliminated files. This will take effect with
+the next cvs commit.
+Also consolidated gswm calls from advance.F to sub getgswm in gswm.F.
+Also changed gswm flags and file names for non-migrating tides
+(i.e., gswmnmidi and gswmnmisdi changed to gswmnmdi and gswmnmsdi).
+
+4/6/05:
+CVS tagged code with "cvs -q tag tiegcm1-7+gswm+maute".
+I.e., mods to tiegcm1-7 so far, including gswm and maute mods,
+but prior to merging lqian code.
+
+4/6/05:
+Merged Liying's mods (lqian/):
+Mods to: aurora.F, chemrates.F, dynamics.F, init.F, input.F, newton.F,
+qinite.F, qrj.F, tgcm.F, util.F. Removed files xray.F and qtieff.F,
+and added new source file soldata.F. There is a new namelist parameter
+SD_NCFILE, specifying SEE data netcdf file. The default SEE data file
+is $TGCMDATA/see__L3_merged_2005007_007.nc. 
+
+Added this default file to scripts/MkNamelist for tiegcm (commented out). 
+Also added copy of this file to exec dir by scripts/tgcm_config. The new 
+MkNamelist and tgcm_config were distributed to model scripts directories 
+at both hao and scd.
+
+Added new global file attribute for sd_ncfile to histories (nchist.F).
+If sd_ncfile is not in use, the attribute value is "[none]".
+
+Commented many addfsech calls (mostly in maute code dynamo, hightlat*, 
+magpres*, etc.)
+
+CVS tagged code with "cvs -q tag tiegcm1-7+gswm+maute+lqian", but this
+turned out to be incorrect -- it tags the current repository, not the
+working directory from which the tag command is given. One must do a
+commit, *then* save a tag.  Consequently, we do not have a version from 
+after maute dynamo mods but before lqian qrj and SEE data mods.
+
+Broke init_fields (fields.F) into 2 routines: init_4d and init_3d.
+This allows compilation on certain flavors of pgf90 (e.g., on HAO Callisto)
+Changes to fields.F and init.F.
+
+Doing a cvs commit, and tagging as tiegcm1-8-1: this is essentially tiegcm1-7 
+plus the following:
+  -- maute dynamo mods
+  -- lqian euv/qrj and SEE data option
+  -- foster gswm mods (combine dt.F and dt_gswm.F, etc.)
+

@@ -103,10 +103,8 @@
      |  xmue(nlev+1)    ! eddy viscosity (?)
 !
 ! Constants for dynamo and electric field calculations:
-      real,parameter :: re_dyn = 6.378165e8  ! earth radius (cm)
       real,parameter :: h00=9.7e6, r00=re+h00	! use mean earth radius
       real,parameter :: h0 =9.0e6, r0 =re+h0	! use mean earth radius
-      real,parameter :: hs=1.3e7
       real :: 
      |  dlatg, dlong, dlatm, dlonm,dmagphrlon,
      |  ylatm(nmlat),    ! magnetic latitudes (radians)

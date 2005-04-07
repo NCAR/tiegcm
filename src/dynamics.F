@@ -16,7 +16,7 @@
       use mpi_module,only: distribute_1d,mp_close
 #endif
       use bndry_module,only: bndcmp
-      use chemrates_module,only: chemrates_tdep,disn2p
+      use chemrates_module,only: chemrates_tdep
       use qrj_module,only: qrj,qtotal,qop,qo2p,qn2p,qnp,qnop
       use chapman_module,only: chapman
       use oplus_module,only: oplus
@@ -25,8 +25,6 @@
       use n4s_module,only: comp_n4s,minor_n4s
       use no_module,only: comp_no,minor_no
       use hdif_module,only: hdif3,hdif_bndlons,hdif_periodic
-      use init_module,only: igetgswmdi,igetgswmsdi, ! GSWM input lower boundary
-     |   igetgswmnmidi,igetgswmnmisdi
       use timing_module,only: timer,timing
       use advance_module,only: time2print
 !
@@ -161,7 +159,7 @@
       enddo
       if (debug) write(6,"('dynamics after chemrates_tdep')")
 !
-! Latitude scan for qrj, qinite, xray and aurora.
+! Latitude scan for qrj, qinite, and aurora.
 !
 #ifdef VT
 !     code = 122 ; state = 'ions' ; activity='ModelCode'
@@ -214,18 +212,6 @@
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after qinite: lat=',i3)") lat
 !
-! Ionization from xrays:
-        call xray(
-     |    tn  (levd0,lond0,lat,itp),
-     |    o2  (levd0,lond0,lat,itp),
-     |    o1  (levd0,lond0,lat,itp),
-     |    barm(levd0,lond0,lat,itp),
-     |    sco2(levd0,lond0,lat),
-     |    sco1(levd0,lond0,lat),
-     |    scn2(levd0,lond0,lat),
-     |    1,nlevp1,lon0,lon1,lat)
-        if (debug) write(6,"('dynamics after xray: lat=',i3)") lat
-!
 ! Add aurora particle precip and ionization:
         if (iaurora > 0) then
           call aurora(
@@ -236,8 +222,8 @@
      |      1,nlevp1,lon0,lon1,lat)
           if (debug) write(6,"('dynamics after aurora: lat=',i3)") lat
         endif
-      enddo ! lat=lat0,lat1 for qrj, qinite, xray, and aurora
-      if (debug) write(6,"('dynamics after qrj,qinite,xray,aurora')")
+      enddo ! lat=lat0,lat1 for qrj, qinite, and aurora
+      if (debug) write(6,"('dynamics after qrj,qinite,aurora')")
 !
 ! Report timing from above latitude loop:
       if (timing%level >= 2.and.time2print(nstep,istep))
@@ -368,10 +354,6 @@
           call addfsech('SIGMAHAL',' ',' ',hall(:,i0:i1,lat),
      |      i0,i1,nk,nkm1,lat)
         endif
-!
-! Add qn2p to qtef:
-        call qtieff(1,nlevp1,lon0,lon1,lat)
-        if (debug) write(6,"('dynamics after qtieff: lat=',i3)") lat
 !
 ! Calculate n2d:
         call timer(time0,time1,'CMPMINOR',0,0) ! start comp minor timing
@@ -650,138 +632,69 @@
         endif
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after qjoule_tn')")
-
-!    
-      if( igetgswmdi==0.and.igetgswmsdi==0.and.      ! no GSWM input used 
-     |  igetgswmnmidi==0.and.igetgswmnmisdi==0) then
 !
 ! Advance neutral temperature:
 !
-        call timer(time0,time1,'DT',0,0) ! start dt timing
-        call dt(
-     |    tn	(levd0,lond0,latd0,itp),
-     |    tn_nm (levd0,lond0,latd0,itp),
-     |    un	(levd0,lond0,latd0,itp),
-     |    vn	(levd0,lond0,latd0,itp),
-     |    o2	(levd0,lond0,latd0,itp),
-     |    o1	(levd0,lond0,latd0,itp),
-     |    barm  (levd0,lond0,latd0,itp),    ! mean molecular weight
-     |    cp	(levd0,lond0,latd0),	    ! specific heat	   (cpktkm.F)
-     |    kt	(levd0,lond0,latd0),	    ! molecular diffusion  (cpktkm.F)
-     |    km	(levd0,lond0,latd0),	    ! molecular viscosity  (cpktkm.F)
-     |    hdt	(levd0,lond0,latd0),	    ! horizontal diffusion (hdif.F)
-     |    qji_tn(levd0,lond0,latd0),	    ! joule heating (sub qjoule_tn)
-     |    cool_implicit(levd0,lond0,latd0), ! implicit cooling (newton.F)
-     |    cool_explicit(levd0,lond0,latd0), ! explicit cooling (newton.F)
-     |    w	(levd0,lond0,latd0,itc),    ! updated W (swdot.F)
-     |    tn	(levd0,lond0,latd0,itc),    ! output updated tn
-     |    tn_nm (levd0,lond0,latd0,itc),    ! output updated tn at time n-1
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
-        if (debug) write(6,"('dynamics after dt')")
-        call timer(time0,time1,'DT',1,0) ! end dt timing
-        if (timing%level >= 2.and.time2print(nstep,istep))
-     |    write(6,"('Time in DT =           ',f12.2,
-     |      ' Dynamics: step ',i5)") time1,istep
+      call timer(time0,time1,'DT',0,0) ! start dt timing
+      call dt(
+     |  tn	(levd0,lond0,latd0,itp),
+     |  tn_nm (levd0,lond0,latd0,itp),
+     |  un	(levd0,lond0,latd0,itp),
+     |  vn	(levd0,lond0,latd0,itp),
+     |  o2	(levd0,lond0,latd0,itp),
+     |  o1	(levd0,lond0,latd0,itp),
+     |  barm  (levd0,lond0,latd0,itp),    ! mean molecular weight
+     |  cp	(levd0,lond0,latd0),	    ! specific heat	   (cpktkm.F)
+     |  kt	(levd0,lond0,latd0),	    ! molecular diffusion  (cpktkm.F)
+     |  km	(levd0,lond0,latd0),	    ! molecular viscosity  (cpktkm.F)
+     |  hdt	(levd0,lond0,latd0),	    ! horizontal diffusion (hdif.F)
+     |  qji_tn(levd0,lond0,latd0),	    ! joule heating (sub qjoule_tn)
+     |  cool_implicit(levd0,lond0,latd0), ! implicit cooling (newton.F)
+     |  cool_explicit(levd0,lond0,latd0), ! explicit cooling (newton.F)
+     |  w	(levd0,lond0,latd0,itc),    ! updated W (swdot.F)
+     |  tn	(levd0,lond0,latd0,itc),    ! output updated tn
+     |  tn_nm (levd0,lond0,latd0,itc),    ! output updated tn at time n-1
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
+      if (debug) write(6,"('dynamics after dt')")
+      call timer(time0,time1,'DT',1,0) ! end dt timing
+      if (timing%level >= 2.and.time2print(nstep,istep))
+     |  write(6,"('Time in DT =           ',f12.2,
+     |    ' Dynamics: step ',i5)") time1,istep
 !
 ! Advance neutral velocities:
 !
-        call timer(time0,time1,'DUV',0,0) ! start duv timing
-        call duv(
-     |    tn	(levd0,lond0,latd0,itp), ! neutral temperature
-     |    tn	(levd0,lond0,latd0,itc), ! updated neutral temperature (dt.F)
-     |    tn_nm (levd0,lond0,latd0,itp), ! tn at time n-1
-     |    un	(levd0,lond0,latd0,itp), ! zonal velocity
-     |    vn	(levd0,lond0,latd0,itp), ! meridional velocity
-     |    un_nm (levd0,lond0,latd0,itp), ! zonal velocity at time n-1
-     |    vn_nm (levd0,lond0,latd0,itp), ! meridional velocity at time n-1
-     |    w	(levd0,lond0,latd0,itc), ! updated vertical velocity (swdot.F)
-     |    barm  (levd0,lond0,latd0,itp), ! mean molecular weight
-     |    z	(levd0,lond0,latd0,itp), ! geopotential height
-     |    hdu	(levd0,lond0,latd0),	 ! horizontal diffusion of U (hdif3.F)
-     |    hdv	(levd0,lond0,latd0),	 ! horizontal diffusion of V (hdif3.F)
-     |    ui	(levd0,lond0,latd0),	 ! zonal ion velocity input
-     |    vi	(levd0,lond0,latd0),	 ! meridional ion velocity input
-     |    lxx	(levd0,lond0,latd0),	 ! xx ion drag coefficient
-     |    lyy	(levd0,lond0,latd0),	 ! yy ion drag coefficient
-     |    lxy	(levd0,lond0,latd0),	 ! xy ion drag coefficient
-     |    lyx	(levd0,lond0,latd0),	 ! yx ion drag coefficient
-     |    km	(levd0,lond0,latd0),	 ! molecular viscosity  (cpktkm.F)
-     |    un	(levd0,lond0,latd0,itc), ! output updated un
-     |    un_nm (levd0,lond0,latd0,itc), ! output updated un at time n-1
-     |    vn	(levd0,lond0,latd0,itc), ! output updated vn
-     |    vn_nm (levd0,lond0,latd0,itc), ! output updated vn at time n-1
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
-        if (debug) write(6,"('dynamics after duv')")
-        call timer(time0,time1,'DUV',1,0) ! end duv timing
-        if (timing%level >= 2.and.time2print(nstep,istep))
-     |    write(6,"('Time in DUV =          ',f12.2,
-     |      ' Dynamics: step ',i5)") time1,istep
+      call timer(time0,time1,'DUV',0,0) ! start duv timing
+      call duv(
+     |  tn	(levd0,lond0,latd0,itp), ! neutral temperature
+     |  tn	(levd0,lond0,latd0,itc), ! updated neutral temperature (dt.F)
+     |  tn_nm (levd0,lond0,latd0,itp), ! tn at time n-1
+     |  un	(levd0,lond0,latd0,itp), ! zonal velocity
+     |  vn	(levd0,lond0,latd0,itp), ! meridional velocity
+     |  un_nm (levd0,lond0,latd0,itp), ! zonal velocity at time n-1
+     |  vn_nm (levd0,lond0,latd0,itp), ! meridional velocity at time n-1
+     |  w	(levd0,lond0,latd0,itc), ! updated vertical velocity (swdot.F)
+     |  barm  (levd0,lond0,latd0,itp), ! mean molecular weight
+     |  z	(levd0,lond0,latd0,itp), ! geopotential height
+     |  hdu	(levd0,lond0,latd0),	 ! horizontal diffusion of U (hdif3.F)
+     |  hdv	(levd0,lond0,latd0),	 ! horizontal diffusion of V (hdif3.F)
+     |  ui	(levd0,lond0,latd0),	 ! zonal ion velocity input
+     |  vi	(levd0,lond0,latd0),	 ! meridional ion velocity input
+     |  lxx	(levd0,lond0,latd0),	 ! xx ion drag coefficient
+     |  lyy	(levd0,lond0,latd0),	 ! yy ion drag coefficient
+     |  lxy	(levd0,lond0,latd0),	 ! xy ion drag coefficient
+     |  lyx	(levd0,lond0,latd0),	 ! yx ion drag coefficient
+     |  km	(levd0,lond0,latd0),	 ! molecular viscosity  (cpktkm.F)
+     |  un	(levd0,lond0,latd0,itc), ! output updated un
+     |  un_nm (levd0,lond0,latd0,itc), ! output updated un at time n-1
+     |  vn	(levd0,lond0,latd0,itc), ! output updated vn
+     |  vn_nm (levd0,lond0,latd0,itc), ! output updated vn at time n-1
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
+      if (debug) write(6,"('dynamics after duv')")
+      call timer(time0,time1,'DUV',1,0) ! end duv timing
+      if (timing%level >= 2.and.time2print(nstep,istep))
+     |  write(6,"('Time in DUV =          ',f12.2,
+     |    ' Dynamics: step ',i5)") time1,istep
 !     
-      else  				! GSWM input used 
-!
-! Advance neutral temperature:
-!
-        call timer(time0,time1,'DT',0,0) ! start dt timing
-        call dt_gswm(
-     |    tn	(levd0,lond0,latd0,itp),
-     |    tn_nm (levd0,lond0,latd0,itp),
-     |    un	(levd0,lond0,latd0,itp),
-     |    vn	(levd0,lond0,latd0,itp),
-     |    o2	(levd0,lond0,latd0,itp),
-     |    o1	(levd0,lond0,latd0,itp),
-     |    barm  (levd0,lond0,latd0,itp),    ! mean molecular weight
-     |    cp	(levd0,lond0,latd0),	    ! specific heat	   (cpktkm.F)
-     |    kt	(levd0,lond0,latd0),	    ! molecular diffusion  (cpktkm.F)
-     |    km	(levd0,lond0,latd0),	    ! molecular viscosity  (cpktkm.F)
-     |    hdt	(levd0,lond0,latd0),	    ! horizontal diffusion (hdif.F)
-     |    qji_tn(levd0,lond0,latd0),	    ! joule heating (sub qjoule_tn)
-     |    cool_implicit(levd0,lond0,latd0), ! implicit cooling (newton.F)
-     |    cool_explicit(levd0,lond0,latd0), ! explicit cooling (newton.F)
-     |    w	(levd0,lond0,latd0,itc),    ! updated W (swdot.F)
-     |    tn	(levd0,lond0,latd0,itc),    ! output updated tn
-     |    tn_nm (levd0,lond0,latd0,itc),    ! output updated tn at time n-1
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
-        if (debug) write(6,"('dynamics after dt_gswm')")
-        call timer(time0,time1,'DT',1,0) ! end dt timing
-        if (timing%level >= 2.and.time2print(nstep,istep))
-     |    write(6,"('Time in DT =           ',f12.2,
-     |      ' Dynamics: step ',i5)") time1,istep
-!
-! Advance neutral velocities:
-!
-        call timer(time0,time1,'DUV',0,0) ! start duv timing
-        call duv_gswm(
-     |    tn	(levd0,lond0,latd0,itp), ! neutral temperature
-     |    tn	(levd0,lond0,latd0,itc), ! updated neutral temperature (dt.F)
-     |    tn_nm (levd0,lond0,latd0,itp), ! tn at time n-1
-     |    un	(levd0,lond0,latd0,itp), ! zonal velocity
-     |    vn	(levd0,lond0,latd0,itp), ! meridional velocity
-     |    un_nm (levd0,lond0,latd0,itp), ! zonal velocity at time n-1
-     |    vn_nm (levd0,lond0,latd0,itp), ! meridional velocity at time n-1
-     |    w	(levd0,lond0,latd0,itc), ! updated vertical velocity (swdot.F)
-     |    barm  (levd0,lond0,latd0,itp), ! mean molecular weight
-     |    z	(levd0,lond0,latd0,itp), ! geopotential height
-     |    hdu	(levd0,lond0,latd0),	 ! horizontal diffusion of U (hdif3.F)
-     |    hdv	(levd0,lond0,latd0),	 ! horizontal diffusion of V (hdif3.F)
-     |    ui	(levd0,lond0,latd0),	 ! zonal ion velocity input
-     |    vi	(levd0,lond0,latd0),	 ! meridional ion velocity input
-     |    lxx	(levd0,lond0,latd0),	 ! xx ion drag coefficient
-     |    lyy	(levd0,lond0,latd0),	 ! yy ion drag coefficient
-     |    lxy	(levd0,lond0,latd0),	 ! xy ion drag coefficient
-     |    lyx	(levd0,lond0,latd0),	 ! yx ion drag coefficient
-     |    km	(levd0,lond0,latd0),	 ! molecular viscosity  (cpktkm.F)
-     |    un	(levd0,lond0,latd0,itc), ! output updated un
-     |    un_nm (levd0,lond0,latd0,itc), ! output updated un at time n-1
-     |    vn	(levd0,lond0,latd0,itc), ! output updated vn
-     |    vn_nm (levd0,lond0,latd0,itc), ! output updated vn at time n-1
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
-        if (debug) write(6,"('dynamics after duv_gswm')")
-        call timer(time0,time1,'DUV',1,0) ! end duv timing
-        if (timing%level >= 2.and.time2print(nstep,istep))
-     |    write(6,"('Time in DUV =          ',f12.2,
-     |      ' Dynamics: step ',i5)") time1,istep
-      endif	! endif for GSWM input
-!
 ! Sources and sinks for major species composition O2, O:
 !
       do lat=lat0,lat1

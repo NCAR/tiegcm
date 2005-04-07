@@ -56,10 +56,12 @@
           endif
 !
 ! b(co2) (s12):
-          if (tn(k,i) >= 300.) then
-            bco2(k,i) = avto*(tn(k,i)/300.)
+          if (tn(k,i) < 260.) then
+             bco2(k,i) = 1.56e-12
+          elseif (tn(k,i) >= 260..and.tn(k,i) <= 300.) then
+             bco2(k,i) = (2.6-0.004*tn(k,i))*1.0e-12
           else
-            bco2(k,i) = avto
+             bco2(k,i) = 1.4e-12
           endif
 !
 ! Co2 cooling (s12):
@@ -70,7 +72,7 @@
 ! a(no) (s11):
           ano(k,i) = 
      |      .5*(barm(k,i)+barm(k+1,i))*avo*p0*expz(k)/(gask*tn(k,i))*
-     |      (6.5e-11*o1(k,i)*rmassinv_o1+
+     |      (4.2e-11*o1(k,i)*rmassinv_o1+
      |       2.4e-14*o2(k,i)*rmassinv_o2)
 !
 ! No cooling (s11):

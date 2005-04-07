@@ -2403,7 +2403,8 @@ C          set of coefficients came from a NGDC web page
 C
       PARAMETER (RTOD=5.72957795130823E1,DTOR=1.745329251994330E-2)
       DOUBLE PRECISION F,F0
-      COMMON /MAGCOF/ NMAX,G(144),GV(144),ICHG
+      COMMON /MAGCOF/ G(144),GV(144)
+      COMMON /MAGCOF_int/ NMAX,ICHG
 !     DATA NMAX,ICHG /10,-99999/
  
 !      PARAMETER (NDGY=6 , NYT = NDGY+1 , NGH = 144*NDGY)
@@ -3074,7 +3075,8 @@ C                    of 6371.2 km
  
       PARAMETER (RTOD=5.72957795130823E1 , DTOR=1.745329251994330E-2,
      +           RE=6371.2, REQ=6378.160)
-      COMMON /MAGCOF/ NMAX,G(144),GV(144),ICHG
+      COMMON /MAGCOF/ G(144),GV(144)
+      COMMON /MAGCOF_int/ NMAX,ICHG
  
 C          Compute geographic colatitude and longitude of the north pole of
 C          earth centered dipole
@@ -3146,7 +3148,8 @@ C          Oct 95 (Barnes): Added ICHG
  
       PARAMETER (RTOD=57.2957795130823, DTOR=0.01745329251994330,
      +           RE=6371.2, REQ=6378.160)
-      COMMON /MAGCOF/ NMAX,GB(144),GV(144),ICHG
+      COMMON /MAGCOF/ GB(144),GV(144)
+      COMMON /MAGCOF_int/ NMAX,ICHG
       DIMENSION XI(3),H(144),G(144)
       SAVE IENTYP, G
       DATA IENTYP/-10000/
@@ -3386,6 +3389,7 @@ C          Geocentric to geodetic
       implicit none
       integer :: nmax,ichg
       real :: g,gv
-      COMMON /MAGCOF/ NMAX,G(144),GV(144),ICHG
+      COMMON /MAGCOF/ G(144),GV(144)
+      COMMON /MAGCOF_int/ NMAX,ICHG
       DATA NMAX,ICHG /10,-99999/
       end block data blkmagcof

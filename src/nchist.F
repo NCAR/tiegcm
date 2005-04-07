@@ -41,12 +41,21 @@
      |  idv_magphrlon,idv_magphrlat,
      |  idv_step,idv_iter,idv_year,idv_day,idv_p0,
      |  idv_hpower,idv_ctpoten,idv_byimf,idv_colfac,idv_ncep,
-     |  idv_gpi,idv_gswmdi,idv_gswmsdi,idv_gswmnmidi,idv_gswmnmisdi,
+     |  idv_gpi,idv_gswmdi,idv_gswmsdi,idv_gswmnmdi,idv_gswmnmsdi,
      |  idv_f107d,idv_f107a,
      |  idv_mag,idv_dtide,idv_sdtide,idv_nflds,idv_f4d(nf4d),
      |  idv_alfa30,idv_e30,idv_ed2,idv_alfad2
       integer,allocatable :: idv_sech(:)
 !
+! If check_nan is set, check for presence of NaN's in data when writing 
+!   history. Sub check_nans (util.F) will be called from subs wrf4d, wrf3d, 
+!   wrf2d, and rdf4d. This sub works only on IBM-AIX.
+!
+#ifdef AIX
+      logical :: check_nan = .true.
+#else
+      logical :: check_nan = .false.
+#endif
       contains
 !-----------------------------------------------------------------------
       subroutine nc_open(ncid,flnm,status,rdwr)
@@ -147,7 +156,7 @@
 !
 ! Args:
       integer,intent(in) :: ncid,mtime(3)
-      character(len=*) :: diskfile
+      character(len=*),intent(in) :: diskfile
       integer,intent(out) :: itime,ier
 !
 ! Local:
@@ -471,16 +480,29 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gswmsdi')
             h%gswmsdi = iscalar
-          case('gswmnmidi')
+
+          case('gswmnmdi')
+            istat = nf_get_var1_int(ncid,i,itime,iscalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading gswmnmdi')
+            h%gswmnmdi = iscalar
+          case('gswmnmsdi')
+            istat = nf_get_var1_int(ncid,i,itime,iscalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading gswmnmsdi')
+            h%gswmnmsdi = iscalar
+!
+! Check for gswm names prior to tiegcm1.8:
+          case('gswmnmidi')           ! histories prior to tiegcm1.8
             istat = nf_get_var1_int(ncid,i,itime,iscalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gswmnmidi')
-            h%gswmnmidi = iscalar
-          case('gswmnmisdi')
+            h%gswmnmdi = iscalar
+          case('gswmnmisdi')           ! histories prior to tiegcm1.8
             istat = nf_get_var1_int(ncid,i,itime,iscalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gswmnmisdi')
-            h%gswmnmisdi = iscalar
+            h%gswmnmsdi = iscalar
           case('maglon')
 
           case('maglat')
@@ -525,7 +547,7 @@
 !
 ! Local:
       integer :: i,ii,j,k,istat,idvar,itype,ndims,iddims(4),natts,
-     |  iscalar,idimsizes(4),nx,nxk,lonbeg,lonend
+     |  iscalar,idimsizes(4),nx,nxk,lonbeg,lonend,nnans
       character(len=16) :: rdname,tmpname
       character(len=120) :: char120
       real :: fakevar(1,1,1),fmin,fmax,fmin1,fmax1
@@ -608,6 +630,14 @@
      +    ' for field var ',a,' itime=',i2)") name,itime
         call handle_ncerr(istat,char120)
       endif
+!
+! Check for NaNs in the source history:
+!     subroutine check_nans(f,id1,id2,id3,name,n_total,ispval,spval,
+!    |  iprint,ifatal)
+! real :: f3drd(nlon,nlat,nlevp1) ! (i,j,k) as on history 
+!
+      if (check_nan)
+     |  call check_nans(f3drd,nlon,nlat,nlevp1,name(1:8),nnans,0,0.,1,0)
 !
 ! Transform from f3drd(i,j,k) to f4d(k,i,j):
       lonbeg = lon0
@@ -718,7 +748,7 @@
       use hist_module,only: h,nsource,nsecsource
       use init_module,only: glon,glat,plev,gmlon,gmlat,pmlev
       use cons_module,only: pi,ylatmagphr,ylonmagphr
-      use input_module,only: potential_model
+      use input_module,only: potential_model,sd_ncfile
       use params_module,only: tgcm_name,tgcm_version
 !
 ! Args:
@@ -1094,29 +1124,29 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining long_name of gswmsdi variable')
 !
-! 7/18/02: Adding gswmnmidi flag:
-      istat = nf_def_var(ncid,"gswmnmidi",NF_INT,1,ids1,idv_gswmnmidi)
+! 7/18/02: Adding gswmnmdi flag:
+      istat = nf_def_var(ncid,"gswmnmdi",NF_INT,1,ids1,idv_gswmnmdi)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining gswmnmidi variable')
+     |  'Error defining gswmnmdi variable')
       write(char120,
-     |  "('GSWMNMIDI flag (1 if using GSWM nonmigrating diurnal ',
+     |  "('GSWMNMDI flag (1 if using GSWM nonmigrating diurnal ',
      |  'tides as boundary for Z,TN,UN,VN)')") 
-      istat = nf_put_att_text(ncid,idv_gswmnmidi,"long_name",
+      istat = nf_put_att_text(ncid,idv_gswmnmdi,"long_name",
      |  len_trim(char120),trim(char120))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining long_name of gswmnmidi variable')
+     |  'Error defining long_name of gswmnmdi variable')
 !
-! 7/19/02: Adding gswmnmisdi flag:
-      istat=nf_def_var(ncid,"gswmnmisdi",NF_INT,1,ids1,idv_gswmnmisdi)
+! 7/19/02: Adding gswmnmsdi flag:
+      istat=nf_def_var(ncid,"gswmnmsdi",NF_INT,1,ids1,idv_gswmnmsdi)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining gswmnmisdi variable')
+     |  'Error defining gswmnmsdi variable')
       write(char120,
-     |  "('GSWMNMISDI flag (1 if using GSWM nonmigrating semidiurnal ',
+     |  "('GSWMNMSDI flag (1 if using GSWM nonmigrating semidiurnal ',
      |  'tides as boundary for Z,TN,UN,VN)')") 
-      istat = nf_put_att_text(ncid,idv_gswmnmisdi,"long_name",
+      istat = nf_put_att_text(ncid,idv_gswmnmsdi,"long_name",
      |  len_trim(char120),trim(char120))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining long_name of gswmnmisdi variable')
+     |  'Error defining long_name of gswmnmsdi variable')
 !
 ! 2/14/01: Add auroral parameters (from input):
 !
@@ -1377,6 +1407,21 @@
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
      |    'for potential_model global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+!
+! TIMED SEE data file:
+      if (len_trim(sd_ncfile) > 0) then
+        istat = nf_put_att_text(ncid,NF_GLOBAL,"sd_ncfile",
+     |    len_trim(sd_ncfile),trim(sd_ncfile))
+      else
+        istat = nf_put_att_text(ncid,NF_GLOBAL,"sd_ncfile",
+     |    6,'[none]')
+      endif
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error return from nf_put_att_text ',
+     |    'for sd_ncfile global attribute: sd_ncfile=',a)") 
+     |    trim(sd_ncfile)
         call handle_ncerr(istat,char120)
       endif
 !
@@ -1864,24 +1909,24 @@
      |   h%gswmsdi
         call handle_ncerr(istat,char120)
       endif
-! gswmnmidi flag for nonmigrating diurnal tides:
-      if (idv_gswmnmidi <= 0) istat = nf_inq_varid(ncid,"gswmnmidi",
-     |  idv_gswmnmidi)
-      istat = nf_put_var1_int(ncid,idv_gswmnmidi,h%ihist,h%gswmnmidi)
+! gswmnmdi flag for nonmigrating diurnal tides:
+      if (idv_gswmnmdi <= 0) istat = nf_inq_varid(ncid,"gswmnmdi",
+     |  idv_gswmnmdi)
+      istat = nf_put_var1_int(ncid,idv_gswmnmdi,h%ihist,h%gswmnmdi)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_int defining ',
-     |   'gswmnmidi at h%ihist=',i3,': h%gswmnmidi=',i3)") h%ihist,
-     |   h%gswmnmidi
+     |   'gswmnmdi at h%ihist=',i3,': h%gswmnmdi=',i3)") h%ihist,
+     |   h%gswmnmdi
         call handle_ncerr(istat,char120)
       endif
-! gswmnmisdi flag for nonmigrating semidiurnal tides:
-      if (idv_gswmnmisdi <= 0) istat = nf_inq_varid(ncid,"gswmnmisdi",
-     |  idv_gswmnmisdi)
-      istat = nf_put_var1_int(ncid,idv_gswmnmisdi,h%ihist,h%gswmnmisdi)
+! gswmnmsdi flag for nonmigrating semidiurnal tides:
+      if (idv_gswmnmsdi <= 0) istat = nf_inq_varid(ncid,"gswmnmsdi",
+     |  idv_gswmnmsdi)
+      istat = nf_put_var1_int(ncid,idv_gswmnmsdi,h%ihist,h%gswmnmsdi)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_int defining ',
-     |   'gswmnmisdi at h%ihist=',i3,': h%gswmnmisdi=',i3)") h%ihist,
-     |   h%gswmnmisdi
+     |   'gswmnmsdi at h%ihist=',i3,': h%gswmnmsdi=',i3)") h%ihist,
+     |   h%gswmnmsdi
         call handle_ncerr(istat,char120)
       endif
 !
@@ -2039,7 +2084,7 @@
 !
 ! Local:
       integer :: k,i,j,istat,idvar,itype,ndims,iddims(2),natts,
-     |  idimsizes(2)
+     |  idimsizes(2),nnans
       character(len=120) :: char120
       character(len=80) :: char80
       character(len=16) :: rdname
@@ -2054,7 +2099,7 @@
       if (fake) then
         istat = nf_inq_varid(ncid,f%short_name,idvar)
         if (istat /= NF_NOERR) then
-          write(char120,"('wrf3d: Error getting id of field var ',a)")
+          write(char120,"('wrf2d: Error getting id of field var ',a)")
      |      trim(f%short_name)
           call handle_ncerr(istat,char120)
         endif
@@ -2170,6 +2215,9 @@
      |      trim(f%short_name),itime
           call handle_ncerr(istat,char80)
         endif
+        if (check_nan) 
+     |    call check_nans(f2dgeo,nlon,nlat,1,f%short_name,nnans,
+     |      0,0.,1,0)
       elseif (.not.f%magnetos) then ! magnetic grid
         count_3d(1) = nmlonp1
         count_3d(2) = nmlat
@@ -2180,6 +2228,9 @@
      |      trim(f%short_name),itime
           call handle_ncerr(istat,char80)
         endif
+        if (check_nan) 
+     |    call check_nans(f2dmag,nmlonp1,nmlat,1,f%short_name,nnans,
+     |      0,0.,1,0)
       else                      ! magnetospheric grid
         count_3d(1) = nmagphrlon
         count_3d(2) = nmagphrlat
@@ -2191,6 +2242,8 @@
      |      trim(f%short_name),itime
           call handle_ncerr(istat,char80)
         endif
+        if (check_nan) call check_nans(f2dmag,nmagphrlon,nmagphrlat,
+     |    1,f%short_name,nnans,0,0.,1,0)
       endif
 !
 ! If model has executed one or more time steps, the long_name and
@@ -2231,7 +2284,7 @@
 ! Write min,max of each field:
 !     if (istep /= 0) then
 !       call fminmaxspv(f3diag,nlon*nlat*nlev,fmin,fmax,spval)
-!       write(6,"('wrf3d: Wrote field ',a,' istep=',i3,
+!       write(6,"('wrf2d: Wrote field ',a,' istep=',i3,
 !    |    ' 3d min,max=',2e12.4)") f%short_name(1:8),istep,fmin,fmax
 !     endif
       end subroutine wrf2d
@@ -2255,7 +2308,7 @@
 !
 ! Local:
       integer :: k,i,j,istat,idvar,itype,ndims,iddims(4),natts,
-     |  idimsizes(4)
+     |  idimsizes(4),nnans
       character(len=120) :: char120
       character(len=80) :: char80
       character(len=16) :: rdname
@@ -2398,6 +2451,9 @@
      |      trim(f%short_name),itime
           call handle_ncerr(istat,char80)
         endif
+        if (check_nan) call check_nans(f3diag,nlon,nlat,
+     |    nlevp1,f%short_name,nnans,0,0.,1,0)
+
       else                      ! magnetic grid
         count_4d(1) = nmlonp1
         count_4d(2) = nmlat
@@ -2409,6 +2465,8 @@
      |      trim(f%short_name),itime
           call handle_ncerr(istat,char80)
         endif
+        if (check_nan) call check_nans(f3dmag,nmlonp1,nmlat,
+     |    nmlev,f%short_name,nnans,0,0.,1,0)
       endif
 !
 ! If model has executed one or more time steps, the long_name and
@@ -2478,7 +2536,7 @@
       logical,intent(in) :: fake
 !
 ! Local:
-      integer :: nxk,k,i,j,idvar,istat,lonbeg,lonend
+      integer :: nxk,k,i,j,idvar,istat,lonbeg,lonend,nnans,nanfatal
       real :: f3d(nlon,nlat,nlevp1) ! note i,j,k for history
       character(len=120) :: char120
       real :: fakevar(1,1,1),fmin,fmax
@@ -2565,6 +2623,12 @@
 !       write(6,"('wrf4d: Wrote field ',a,' istep=',i3,
 !    |    ' 3d min,max=',2e12.4)") name(1:8),istep,fmin,fmax
 !     endif
+!
+! Check for NaNs:
+      nanfatal = 1 ! abort if nans are found
+      if (check_nan) 
+     |  call check_nans(f3d,nlon,nlat,nlevp1,name(1:8),nnans,
+     |    0,0.,1,nanfatal)
       end subroutine wrf4d
 !-------------------------------------------------------------------
       subroutine nc_fileinfo(ncid,fileinfo)

@@ -1300,3 +1300,178 @@
 #endif
       stop 'shutdown'
       end subroutine shutdown
+!-----------------------------------------------------------------------
+      integer function b_search(inarray,first,last,key)
+      implicit none    
+!
+! inarray is a sorted array in asending order. The binary search routine search
+! for the beginning index where the value of key fall within in inarray (or the index
+! where the value of array[index] equals to key).
+!
+! Args:  
+      real,dimension(first:last),intent(in) :: inarray
+      integer,intent(in)::first,last
+      real,intent(in)::key
+!
+! Local: 
+      integer :: nmid,nmin,nmax
+!
+      nmin=first 
+      nmax=last
+      do 
+         if (nmin > nmax) then
+            b_search=nmin-1
+            exit
+         end if
+         nmid=(nmin+nmax)/2
+         if (key > inarray(nmid)) then
+           nmin=nmid+1 
+         else if (key < inarray(nmid)) then
+           nmax=nmid-1 
+         else
+           b_search=nmid 
+           exit  
+         end if
+      end do
+ 
+      end function b_search
+!-----------------------------------------------------------------------
+      subroutine check_nans(f,id1,id2,id3,name,n_total,ispval,spval,
+     |  iprint,ifatal)
+!
+! Check for existence of +/-INF and NaN's in field f(id1,id2,id3).
+!   If ispval > 0 -> replace any INF or NaNs with spval
+!   If iprint==1  -> print warnings only if INF or NaNs are found
+!   If iprint==2  -> always print number of INF and NaNs found
+!   If ifatal > 0 -> stop program when first INF or NaNs are found
+! Note: Can distinguish between +/-INF (not really NaNs), but cannot 
+!       distinguish between types of actual NaNs (+/-NaNQ and NaNS).
+! IBM only. See pp318-319 User's Guide Version 8 XL Fortran for AIX
+!
+      implicit none
+!
+! Args:
+      integer,intent(in) :: id1,id2,id3,iprint,ifatal,ispval
+      integer,intent(out) :: n_total ! total number of +/-INF+NaNs
+      real,intent(inout) :: f(id1,id2,id3)
+      real,intent(in) :: spval
+      character(len=*),intent(in) :: name 
+!
+! Local:
+      real :: plus_inf,minus_inf,plus_nanq,minus_nanq,sig_nan
+!
+! For double precision 8-byte reals (-qrealsize=8):
+      data plus_inf   /z'7ff0000000000000'/  ! INF   (overflow)
+      data minus_inf  /z'fff0000000000000'/  ! -INF  (underflow)
+      data plus_nanq  /z'7ff8000000000000'/  ! NaNQ  (plus quiet NaN)
+      data minus_nanq /z'fff8000000000000'/  ! -NaNQ (minus quiet NaN)
+      data sig_nan    /z'7ff0000000000001'/  ! NaNS  (signalling NaN)
+!
+! For single precision (4-byte) reals:
+!     data plus_inf   /z'7f800000'/  ! INF   (overflow)
+!     data minus_inf  /z'ff800000'/  ! -INF  (underflow)
+!     data plus_nanq  /z'7fc00000'/  ! NaNQ  (plus quiet NaN)
+!     data minus_nanq /z'ffc00000'/  ! -NaNQ (minus quiet NaN)
+!     data sig_nan    /z'7f800001'/  ! NaNS  (signalling NaN)
+!
+      integer :: i1,i2,i3
+      integer :: 
+     |  n_plus_inf,   ! number of INF
+     |  n_minus_inf,  ! number of -INF
+     |  n_nan         ! total number of NaNs (+/-NaNQ and NaNS)
+!
+! Init:
+      n_plus_inf = 0
+      n_minus_inf = 0
+      n_nan = 0
+      n_total = 0
+!
+! Scan array:
+      do i3=1,id3
+        do i2=1,id2
+!
+! +/-INF are detected by simple comparison:
+          n_plus_inf   = n_plus_inf   + count(f(:,i2,i3)==plus_inf) 
+          n_minus_inf  = n_minus_inf  + count(f(:,i2,i3)==minus_inf) 
+!
+! NaNs (NaNQ or NaNS) are detected by (a /= a):
+          n_nan        = n_nan        + count(f(:,i2,i3)/=f(:,i2,i3))
+          n_total = n_plus_inf+n_minus_inf+n_nan
+!
+!         write(6,"('i3=',i3,' i2=',i3,' n_plus_inf=',i8,' n_minus_inf='
+!    |      ,i8,' n_nan=',i8,' n_total=',i8)") i3,i2,n_plus_inf,
+!    |      n_minus_inf,n_nan,n_total
+!
+! Fatal when first INF or NaN is found:
+          if (ifatal > 0 .and. n_total > 0) then
+            write(6,"(/,'>>> FATAL: Found INF and/or NaNs in field ',
+     |        a)") name
+            write(6,"('  Dimensions id1,id2,id3=',3i4)") id1,id2,id3
+            write(6,"('  First INF or NaN found at id2=',i4,', id3=',
+     |        i4)") i2,i3
+            write(6,"('  n_plus_inf   = ',i6)") n_plus_inf
+            write(6,"('  n_minus_inf  = ',i6)") n_minus_inf
+            write(6,"('  n_nan (NaNS or NaNQ) = ',i6)") n_nan
+            write(6,"('  data(:,',i3,',',i3,') = ',/,(6e12.4))") 
+     |        i2,i3,f(:,i2,i3)
+            call shutdown('check_nans')
+          endif ! ifatal > 0
+!
+! Replace any INF or NaNs with spval:
+          if (ispval > 0 .and. n_total > 0) then
+            do i1=1,id1
+              if (f(i1,i2,i3)==plus_inf.or.f(i1,i2,i3)==minus_inf.or.
+     |            f(i1,i2,i3)/=f(i1,i2,i3)) f(i1,i2,i3) = spval
+            enddo
+          endif 
+        enddo ! i2=1,id2
+      enddo ! i3=1,id3
+!
+! Print level 1 (print warnings only if INF or NaNs are found):
+      if (iprint==1) then
+        if (n_plus_inf > 0) write(6,"('>>> WARNING: found ',
+     |    i6,' INF values in field ',a,' (id1,2,3=',3i4,')')") 
+     |    n_plus_inf,name,id1,id2,id3
+        if (n_minus_inf > 0) write(6,"('>>> WARNING: found ',
+     |    i6,' -INF values in field ',a,' (id1,2,3=',3i4,')')") 
+     |    n_minus_inf,name,id1,id2,id3
+        if (n_nan > 0) write(6,"('>>> WARNING: found ',i6,
+     |    ' NaNS or NaNQ values in field ',a,' (id1,2,3=',3i4,')')") 
+     |    n_nan,name,id1,id2,id3
+!       if (ispval > 0 .and. n_total > 0) 
+!    |    write(6,"('>>> Replaced ',i8,' values with spval ',e12.4)")
+!    |      n_total,spval
+!
+! Print level 2 (always print number of nans found):
+      elseif (iprint==2) then 
+        write(6,"('Checking for INF and NaNs in field ',a,' id1,2,3=',
+     |    3i4)") name,id1,id2,id3
+        print *,'  n_plus_inf   (',plus_inf,  ') = ',n_plus_inf
+        print *,'  n_minus_inf  (',minus_inf, ') = ',n_minus_inf
+        print *,'  n_nan        (',plus_nanq,'+',sig_nan,') = ',n_nan
+        print *,'  n_total      (total INF+NaNs) = ',n_total
+!       if (ispval > 0)
+!    |  print *,'  Replaced ',n_total,' values with spval ',spval
+      endif
+      end subroutine check_nans
+!-------------------------------------------------------------------
+      subroutine finterpb(f0,f1,fout,n,isec0,isec1,isec)
+!
+! Do linear interpolation between f0 (which is at isec0) and
+! f1 (which is at isec1) to isec. f0,f1,and fout are arrays
+! dimensions n.
+!
+! Args:
+      integer,intent(in) :: n
+      real,intent(in) :: isec0,isec1,isec
+      real,intent(in) :: f0(n),f1(n)
+      real,intent(out) :: fout(n)
+!
+! Local:
+      integer :: i
+!       
+      do i=1,n
+        fout(i) = f0(i)+(f1(i)-f0(i))*(isec-isec0)/
+     |    (isec1-isec0)
+      enddo
+      end subroutine finterpb

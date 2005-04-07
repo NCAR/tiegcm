@@ -1,49 +1,57 @@
 !#include "dims.h"
-c
-c     file mud2cr.f
-c
-C  am 01/03/22 new version mudpack5.0:  
-c  am 01/04/16 mudpack modified:-residual calculated with unmodified stencils
-c                             converged to same solution as with direct solver
-c                            -the number of restriction and prolongation      
-c				mgopt(2) = 3
-c       			mgopt(3) = 2 
-c                             has to be increased in order to get convergence
-c                             another possibility would be to use a
-c			      preconditioner (so far not necessary and therefore
-c			      not implemented)     
-c                            -unmodified stencil saved in: 
-c                             common/mudmd/cofum(1) 
-c 
-C
-c                       MUDPACK version 5.0 
+!
+!     file mud2cr.f
 !
 ! 5/02 B. Foster:
 ! Use-associate coefficients cee and cofum from dynamo module in tiegcm1 
 ! (dynamo.F).
+!----------------------------------------------------------------------------
+! BOP
+! !IROUTINE: mudmod
+! !INTERFACE:
 !
       subroutine mudmod(pe,jntl,isolve,ier)
+! !USES:
       use dynamo_module,only: cee
       implicit none
-      integer jntl,ier  ! output: not converged ier < 0
-      integer,intent(in) :: isolve
+!
+! !DESCRIPTION: multigrid solver with modified stencil
+!     input 
+!       int jntl: error check first (0/1)
+!       int isolve: type of solver (here 2)
+!     output
+!        pe: electric potential
+!        ier: not converged ier <0
+!  am 01/03/22 new version mudpack5.0:  
+!  am 01/04/16 mudpack modified:-residual calculated with unmodified stencils
+!      converged to same solution as direct solver
+!     -the number of restriction and prolongation      
+!	mgopt(2) = 3
+!	mgopt(3) = 2 
+!      another possibility would be to use a
+!      has to be increased in order to get convergence
+!      another possibility would be to use a
+!      preconditioner (so far not necessary and therefore
+!      not implemented)     
+!     -unmodified stencil saved in: 
+!      common/mudmd/cofum(1)  
+!
+! !ARGUMENTS:
+      integer jntl         ! error check first
+      integer,intent(in) :: isolve  ! type of solver here isolve =0
+! !RETURN VALUE:
+      integer  ier             ! output: not converged ier < 0
+!
+! !REVISION HISTORY:
+! 21.02.05  <Astrid Maute> <include header> 
+! 
+! EOP
 c
 c     set grid size params
 c
       integer iixp,jjyq,iiex,jjey,nnx,nny,llwork
       parameter (iixp = 5 , jjyq = 3, iiex = 5, jjey = 5 )
       parameter (nnx=iixp*2**(iiex-1)+1, nny=jjyq*2**(jjey-1)+1)
-!
-!     integer imx0, jmx0, imx1, jmx1,imx2,jmx2,imx3,jmx3,imx4,jmx4
-!     PARAMETER(IMX0=NNX,JMX0=NNY,IMX1=(IMX0+1)/2,JMX1=(JMX0+1)/2,
-!    1  IMX2=(IMX1+1)/2,JMX2=(JMX1+1)/2,IMX3=(IMX2+1)/2,
-!    2  JMX3=(JMX2+1)/2,IMX4=(IMX3+1)/2,JMX4=(JMX3+1)/2)
-!     integer nc0,nc1,nc2,nc3,nc4,ncee,nny2
-!     PARAMETER (NC0=1,NC1=NC0+10*(IMX0*JMX0),NC2=NC1+9*(IMX1*JMX1),
-!    1  NC3=NC2+9*(IMX2*JMX2),NC4=NC3+9*(IMX3*JMX3),
-!    2  NCEE=NC4+9*(IMX4*JMX4)-1)
-!     PARAMETER (NNY2=2*NNY+1)
-!#include "ceee.h"
 c
 c     estimate work space for point relaxation (see mud2cr.d)
 c

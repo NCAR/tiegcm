@@ -15,30 +15,39 @@ c     the common subroutine file "mudcom.f" is attached to the end
 ! 5/02 B. Foster:
 ! Use-associate coefficients from dynamo module in tiegcm1 (dynamo.F).
 !
+! BOP
+! !IROUTINE: mud
+! !INTERFACE:
       subroutine mud(pe,jntl,isolve,ier)
 !
+! !USES:
       use dynamo_module,only: nc,cee
 !
+! !DESCRIPTION: multigrid solver with modified stencil
+!     input 
+!       int jntl: error check first (0/1)
+!       int isolve: type of solver (here 0)
+!     output
+!        pe: electric potential
+!        ier: not converged ier <0
+!
       implicit none
-      integer jntl,ier ! output: not converged ier < 0
-      integer,intent(in) :: isolve
+! !ARGUMENTS:
+      integer jntl         ! error check first
+      integer,intent(in) :: isolve  ! type of solver here isolve =0
+! !RETURN VALUE:
+      integer  ier             ! output: not converged ier < 0
+!        
+! !REVISION HISTORY:
+! 21.02.05  <Astrid Maute> <include header> 
+! 
+! EOP
 c
 c     set grid size params
 c
       integer iixp,jjyq,iiex,jjey,nnx,nny,llwork
       parameter (iixp = 5 , jjyq = 3, iiex = 5, jjey = 5 )
       parameter (nnx=iixp*2**(iiex-1)+1, nny=jjyq*2**(jjey-1)+1)
-!
-!     integer imx0, jmx0, imx1, jmx1,imx2,jmx2,imx3,jmx3,imx4,jmx4
-!     PARAMETER(IMX0=NNX,JMX0=NNY,IMX1=(IMX0+1)/2,JMX1=(JMX0+1)/2,
-!    1  IMX2=(IMX1+1)/2,JMX2=(JMX1+1)/2,IMX3=(IMX2+1)/2,
-!    2  JMX3=(JMX2+1)/2,IMX4=(IMX3+1)/2,JMX4=(JMX3+1)/2)
-!     integer nc0,nc1,nc2,nc3,nc4,ncee,nny2
-!     PARAMETER (NC0=1,NC1=NC0+10*(IMX0*JMX0),NC2=NC1+9*(IMX1*JMX1),
-!    1  NC3=NC2+9*(IMX2*JMX2),NC4=NC3+9*(IMX3*JMX3),
-!    2  NCEE=NC4+9*(IMX4*JMX4)-1)
-!     PARAMETER (NNY2=2*NNY+1)
-!#include "ceee.h"
 c
 c     estimate work space for point relaxation (see mud2cr.d)
 c
@@ -145,18 +154,9 @@ c
       else                 ! isolve < 0 -> called from dynamo_old
         write(6,"('>>> mud: invalid isolve=',i3)") isolve
         call shutdown('isolve')
-!       do i=1,nx
-!         do j=1,ny
-!           RHS(I,J) = CEE0(I+(J-1)*NX+9*NX*NY)
-!           phi(i,j) = 0.0
-!         end do
-!       end do
 c
 c     set specified boundaries in phi
 c
-!       DO I=1,NX
-!         PHI(I,NY) = RHS(I,NY)/CEE0(I+(NY-1)*NX+8*NX*NY)
-!       END DO
       endif ! isolve
 !     write(*,100)
   100 format(//' mud2cr test ')

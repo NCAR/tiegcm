@@ -14,7 +14,7 @@
       use advance_module,only: advance
       use cons_module,only: init_cons
       use bndry_module,only: lowbound
-      use qrj_module,only: init_sigmas,init_qrj,init_euvac
+      use qrj_module,only: init_qrj
       use magfield_module,only: magfield
       use apex_module,only: apxparm
       use timing_module,only: timer,timer_report,init_timer
@@ -79,22 +79,14 @@
 ! (this is not in init_module to avoid circular dependency between
 !  init_module and qrj_module)
       call init_qrj
-      call init_euvac
-      call init_sigmas
 !
 ! Read source history:
       call readsource(ier)
 !
-! Call apex code if doing new dynamo (should eliminate some of the
-! magfield calls if this is set).
-      if (dynamo > 0) then
-        call apxparm(real(iyear))
-      endif
+! Call apex code if doing dynamo.
+      if (dynamo > 0) call apxparm(real(iyear))
 !
-! Read magnetic data file and set magnetic field parameters:
-! (data file not read if dynamo==2, since in this case apxparm
-!  was called above)
-!
+! Set up magnetic field data (read from magfield file if dynamo<=0) 
       call magfield(dynamo)
 !
 ! Set lower boundaries:

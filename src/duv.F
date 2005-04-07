@@ -7,8 +7,9 @@
 !
       use params_module,only: nlonp4,dz,nlat
 !     use input_module,only: iuivi ! no longer in use (see dynamo input flag)
-      use init_module,only: iter
-      use bndry_module,only: ub,ub2,uba,vb,vb2,vba,bnd,bnd2,bnda,ci
+      use init_module,only: iter,igetgswm
+      use bndry_module,only: ub,ub2,uba,vb,vb2,vba,bnd,bnd2,bnda,ci,
+     |  lbc_gswm_duv
       use cons_module,only: freq_semidi,dt,dtx2inv,expz,p0,gask,grav,
      |  xmue,cor,tanphi=>tn,re,kut_5,set_wave_filter,dtsmooth_div2,
      |  dtsmooth
@@ -169,26 +170,34 @@
 !    |    lon0,lon1,nk,nkm1,lat)
 !       call addfsech('VNSMOOTH',' ',' ',vnm_smooth(:,:,lat),
 !    |    lon0,lon1,nk,nkm1,lat)
+
+        if (igetgswm > 0) then
 !
-! U,V bottom boundary:
+! Use GSWM lbc:
+          call lbc_gswm_duv(unlbc,vnlbc,unlbc_diag,vnlbc_diag,
+     |      lon0,lon1,lat,lev0,lev1,expt,expt2,expta)
+!
+! U,V bottom boundary (non-gswm):
+        else ! non-gswm
 !
 ! Semidiurnal tide:
-        do i=lon0,lon1
-          unlbc(i) = real(ub(lat)*bnd(i)*expt)  ! t1
-          vnlbc(i) = real(vb(lat)*bnd(i)*expt)  ! t2
+          do i=lon0,lon1
+            unlbc(i) = real(ub(lat)*bnd(i)*expt)  ! t1
+            vnlbc(i) = real(vb(lat)*bnd(i)*expt)  ! t2
 !
 ! Diurnal tide:
-          unlbc(i) = unlbc(i) + real(ub2(lat)*bnd2(i)*expt2)
-          vnlbc(i) = vnlbc(i) + real(vb2(lat)*bnd2(i)*expt2)
+            unlbc(i) = unlbc(i) + real(ub2(lat)*bnd2(i)*expt2)
+            vnlbc(i) = vnlbc(i) + real(vb2(lat)*bnd2(i)*expt2)
 !
 ! Annual tide:
-          unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta)
-          vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
+            unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta)
+            vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
 !
 ! Define unlbc_ij for diagnostic:
-          unlbc_ij(i,lat) = unlbc(i)
-          vnlbc_ij(i,lat) = vnlbc(i)
-        enddo ! i=lon0,lon1
+            unlbc_ij(i,lat) = unlbc(i)
+            vnlbc_ij(i,lat) = vnlbc(i)
+          enddo ! i=lon0,lon1
+        endif ! igetgswm
 
 !       call addfsech('UNLBC',' ',' ',unlbc_diag,lon0,lon1,nk,nkm1,lat)
 !       call addfsech('VNLBC',' ',' ',vnlbc_diag,lon0,lon1,nk,nkm1,lat)

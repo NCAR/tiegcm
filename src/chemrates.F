@@ -40,7 +40,7 @@
 !
 ! Neutral chemistry:
      |  beta2 = 5.0E-12,  ! N2D + O2 -> NO  + O1D + 1.84 eV
-     |  beta4 = 5.0E-13,  ! N2D + O  -> N4S + O   + 2.38 eV
+     |  beta4 = 7.0E-13,  ! N2D + O  -> N4S + O   + 2.38 eV
      |  beta6 = 7.0E-11,  ! N2D + NO -> N2  + O   + 5.63 eV
      |  beta7 = 1.06E-5   ! N2D      -> N4S + hv
 !
@@ -72,8 +72,7 @@
      |  rk20,  ! O+(2P) + e -> O+(2O) + e + 1.69 eV
      |  rk25,  ! O+(2D) + e -> O+(4S) + e + 3.31 eV
      |  rkm12, ! O + O + N2 -> O2 + N2
-     |  tvib,
-     |  disn2p
+     |  tvib
 !
 ! Matrices for O2,O (set by comp_o2o.F, used by comp.F) 
       real,allocatable :: fs(:,:,:,:,:) ! (i,k,2,0:2,j)
@@ -142,9 +141,6 @@
       allocate(tvib(nlevp1,lon0:lon1,lat0:lat1),stat=istat)
       if (istat /= 0) write(6,"('>>> alloc_tdep: error allocating',
      |  ' tvib: stat=',i3)") istat
-      allocate(disn2p(nlevp1,lon0:lon1,lat0:lat1),stat=istat)
-      if (istat /= 0) write(6,"('>>> alloc_tdep: error allocating',
-     |  ' disn2p: stat=',i3)") istat
 !
       allocate(fs(lon0:lon1,nlevp1,2,0:2,lat0:lat1),stat=istat)
       if (istat /= 0) write(6,"('>>> alloc_tdep: error allocating',
@@ -253,7 +249,7 @@
           beta1(k,i,lat) = 1.5E-11*exp(-3600./tn(k,i))
 !
 ! beta3: N4S + NO -> N2  + O + 3.25 eV
-          beta3(k,i,lat) = 2.5E-10*sqrt(tn(k,i)/300.)*exp(-600./tn(k,i))
+          beta3(k,i,lat) =3.4e-11*sqrt(tn(k,i)/300.)
 !
 ! beta5: N2D + e  -> N4S + e + 2.38 eV
           beta5(k,i,lat) = 3.6E-10*sqrt(te(k,i)/300.)

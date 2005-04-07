@@ -111,8 +111,8 @@
      |    gpi,               ! gpi flag (0 or 1)
      |    gswmdi,            ! gswm flag diurnal tides(0 or 1)
      |    gswmsdi,           ! gswm flag semidiurnal tides (0 or 1)
-     |    gswmnmidi,         ! gswm flag nonmigrationg diurnal tides (0 or 1)
-     |    gswmnmisdi,        ! gswm flag nonmigrationg semidiurnal tides (0 or 1)
+     |    gswmnmdi,          ! gswm flag nonmigrationg diurnal tides (0 or 1)
+     |    gswmnmsdi,         ! gswm flag nonmigrationg semidiurnal tides (0 or 1)
      |    initial_year,      ! initial starting year
      |    initial_day,       ! initial starting day
      |    initial_mtime(3),  ! initial starting model time
@@ -203,8 +203,8 @@
       h%gpi  =  0
       h%gswmdi    = 0
       h%gswmsdi   = 0
-      h%gswmnmidi = 0
-      h%gswmnmisdi= 0
+      h%gswmnmdi = 0
+      h%gswmnmsdi= 0
       h%nflds  =-1
       h%dynamo = .false.
       h%coupled_ccm = .false.
@@ -267,7 +267,9 @@
       endif
 !
       write(6,"(2x,'model_name    = ',a)") trim(h%model_name)
+
       write(6,"(2x,'model_version = ',a)") trim(h%model_version)
+
       write(6,"(2x,'rundate    = ',a)") trim(h%rundate)
 !     write(6,"(2x,'createdate = ',a)") trim(h%createdate)
 !     write(6,"(2x,'writedate  = ',a)") trim(h%writedate)
@@ -335,12 +337,12 @@
      |  h%gswmdi
       write(6,"(2x,'gswmsdi = ',i2,' (GSWM flag semidiurnal tides)')") 
      |  h%gswmsdi
-      write(6,"(2x,'gswmnmidi = ',i2,' (GSWM flag nonmigrating',
+      write(6,"(2x,'gswmnmdi = ',i2,' (GSWM flag nonmigrating',
      |  ' diurnal tides)')") 
-     |  h%gswmnmidi
-      write(6,"(2x,'gswmnmisdi = ',i2,' (GSWM flag nonmigrating',
+     |  h%gswmnmdi
+      write(6,"(2x,'gswmnmsdi = ',i2,' (GSWM flag nonmigrating',
      |  ' semidiurnal tides)')") 
-     |  h%gswmnmisdi
+     |  h%gswmnmsdi
       write(6,"(2x,'nflds   = ',i3,' (number of model fields)')")
      |  h%nflds
 !

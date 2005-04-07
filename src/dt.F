@@ -4,15 +4,16 @@
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Advance neutral temperature at current latitude: 
+! 4/4/05 btf: added gswm lbc option (eliminated dt_gswm.F)
 !
       use params_module,only: nlonp4,dz,nlat
       use input_module,only: step
-      use init_module,only: iter
+      use init_module,only: iter,igetgswm
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
      |  gask,expzmid,expzmid_inv,dift,kut_5,set_wave_filter,dtsmooth,
      |  dtsmooth_div2
-      use bndry_module,only: tb,tb2,tba,bnd,bnd2,bnda,ci
+      use bndry_module,only: tb,tb2,tba,bnd,bnd2,bnda,ci,lbc_gswm_dt
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
 #ifdef MPI
@@ -78,49 +79,54 @@
       nk = lev1-lev0+1
       nkm1 = nk-1
       nlevs = nk
-      rstep = float(step)
-      expt = cexp(ci*freq_semidi*rstep*iter)
-      expt2 = cexp(ci*.5*freq_semidi*rstep*iter)
-      expta = 1.
+! 
+! GSWM lower boundary condition:
+!
+      if (igetgswm > 0) then
+        call lbc_gswm_dt(tnlbc,lon0,lon1,lat0,lat1)
+      else ! no gswm
+        rstep = float(step)
+        expt = cexp(ci*freq_semidi*rstep*iter)
+        expt2 = cexp(ci*.5*freq_semidi*rstep*iter)
+        expta = 1.
+      endif
 !
 ! First latitude scan for dt:
       do lat=lat0,lat1
 !
-! Lower boundary condition:
-! am 5/27/03
-! test for blob in meridional zonal mean winds if this is caused by the
-! inconsistent LBC of vertical winds and Tn
+! Calculate lbc if gswm was not used (see above):
 !
-      do i=lon0,lon1
-!        tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound    ! semidiurnal tide
-!        tnlbc(i,lat) = tnlbc(i,lat)+
-!     |    real(tb2(lat)*bnd2(i)*expt2) ! diurnal tide
-!        tnlbc(i,lat) = tnlbc(i,lat)+
-!     |    real(tba(lat)*bnda(i)*expta) ! annual tide
-        tnlbc(i,lat) = tn(2,i,lat)
-      enddo ! i=lon0,lon1
+        if (igetgswm <= 0) then
+          do i=lon0,lon1
+            tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound    ! semidiurnal tide
+            tnlbc(i,lat) = tnlbc(i,lat)+
+     |        real(tb2(lat)*bnd2(i)*expt2) ! diurnal tide
+            tnlbc(i,lat) = tnlbc(i,lat)+
+     |        real(tba(lat)*bnda(i)*expta) ! annual tide
+          enddo ! i=lon0,lon1
+        endif
 
-!     write(6,"('dt: lat=',i3,' tnlbc=',/,(6e12.4))") lat,tnlbc(:,lat)
-!     do k=lev0,lev1
-!       tnlbc_diag(k,:) = tnlbc(:,lat)
-!     enddo
-!     call addfsech('TNLBC',' ',' ',tnlbc_diag,lon0,lon1,nk,nkm1,lat)
+!       write(6,"('dt: lat=',i3,' tnlbc=',/,(6e12.4))") lat,tnlbc(:,lat)
+!       do k=lev0,lev1
+!         tnlbc_diag(k,:) = tnlbc(:,lat)
+!       enddo
+!       call addfsech('TNLBC',' ',' ',tnlbc_diag,lon0,lon1,nk,nkm1,lat)
 !
 ! Horizontal advection (pass k vs i slices at full task subdomain 
 ! longitudes, and the 5 latitudes centered over the current latitude).
 !
-      call advec(tn(:,:,lat-2:lat+2),advec_tn(:,:,lat),
-     |  lev0,lev1,lon0,lon1,lat)
+        call advec(tn(:,:,lat-2:lat+2),advec_tn(:,:,lat),
+     |    lev0,lev1,lon0,lon1,lat)
 
-!     call addfsech('HADVECTN',' ',' ',advec_tn(:,:,lat),
-!    |  lon0,lon1,nk,nkm1,lat)
+!       call addfsech('HADVECTN',' ',' ',advec_tn(:,:,lat),
+!    |    lon0,lon1,nk,nkm1,lat)
 !
 ! Vertical advection. Sub advecv adds vertical advection to advec_tn.
-      call advecv(tn(:,:,lat),tnlbc(:,lat),advec_tn(:,:,lat),
-     |  lev0,lev1,lon0,lon1,lat)
+        call advecv(tn(:,:,lat),tnlbc(:,lat),advec_tn(:,:,lat),
+     |    lev0,lev1,lon0,lon1,lat)
 
-!     call addfsech('ADVEC_TN',' ',' ',advec_tn(:,:,lat),
-!    |  lon0,lon1,nk,nkm1,lat)
+!       call addfsech('ADVEC_TN',' ',' ',advec_tn(:,:,lat),
+!    |    lon0,lon1,nk,nkm1,lat)
 !
 ! End first latitude scan:
       enddo ! lat=lat0,lat1
@@ -141,8 +147,14 @@
         do k=lev0,lev1-1
           cptn(k,i) = .5*(cp(k,i,lat)+cp(k+1,i,lat))*expz(k)*
      |      (advec_tn(k,i,lat)-dtx2inv*tnsmooth(k,i,lat))
-          mbar(k,i) = 1./(o2(k+1,i,lat)*rmassinv_o2 + 
-     |      o1(k+1,i,lat)*rmassinv_o1+(1.-o2(k+1,i,lat)-o1(k+1,i,lat))*
+!         mbar(k,i) = 1./(o2(k+1,i,lat)*rmassinv_o2 + 
+!    |      o1(k+1,i,lat)*rmassinv_o1+(1.-o2(k+1,i,lat)-o1(k+1,i,lat))*
+!    |      rmassinv_n2)
+!
+! 2/28/05 btf: Use k rather than k+1 in mbar calculation
+!              (as in recent versions of time-gcm, e.g., timegcm1.2)
+          mbar(k,i) = 1./(o2(k,i,lat)*rmassinv_o2 +
+     |      o1(k,i,lat)*rmassinv_o1+(1.-o2(k,i,lat)-o1(k,i,lat))*
      |      rmassinv_n2)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
@@ -172,7 +184,7 @@
      |      rmassinv_o1)**2*avo/mbar(k,i)
 !
 ! Add ion joule heating (from sub qjoule_tn, qjoule.F)
-	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)*2.0
+	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)*1.5
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !     call addfsech('HEATING',' ',' ',total_heat,lon0,lon1,nk,nkm1,lat)
