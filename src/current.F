@@ -702,8 +702,8 @@
 !    |       tout(:,j,:),nmlonp1,nlevp1+3,nlevp1+3,j)
       enddo 		! enddo j-loop
 !	
-!     call addfsech_ij('JQR',' j_qr (magnetic)','[A/m^2]',
-!    |      nscrrt(:,:),1,nmlonp1,1,nmlat)
+      call addfsech_ij('JQR',' j_qr (magnetic)','[A/m^2]',
+     |      nscrrt(:,:),1,nmlonp1,1,nmlat)
 !     
       end subroutine nosocrrt
 !-----------------------------------------------------------------------
@@ -790,8 +790,8 @@
 	enddo
 	je13d(:,j,nlevp1) = je13d(:,j,nlev)
 	je23d(:,j,nlevp1) = je23d(:,j,nlev) 
-!       call addfsech_ik('JE13D',' J_e1/D (magnetic)','A/m^2',
-!    |	    je13d(:,j,:),1,nmlonp1,nmlev,nmlev,j) 
+        call addfsech_ik('JE13D',' J_e1/D (magnetic)','A/m^2',
+     |	    je13d(:,j,:),1,nmlonp1,nmlev,nmlev,j) 
       enddo
 !      
 !     call addfsech_ij('bmodm3d','bmodm3d (magnetic)',' ',
@@ -873,17 +873,17 @@
 ! ionospheric current layer 110 km it doesn't matter
 	  kqphi_int(i,j,0)  = 0.  
         enddo
-!       if(j_pg) call addfsech_ik('KQPHI_TOT','kqphi_int (u,E,g,p)',
-!    |	    '[A/m]',kqphi_int(:,j,:),1,nmlonp1,nmlev,nmlev,j) 
-!       if(.not.j_pg) call addfsech_ik('KQPHI_UE','kqphi_int (u,E)',
-!    |	    '[A/m]',kqphi_int(:,j,:),1,nmlonp1,nmlev,nmlev,j)
+        if(j_pg) call addfsech_ik('KQPHI_TOT','kqphi_int (u,E,g,p)',
+     |	   '[A/m]',kqphi_int(:,j,:),1,nmlonp1,nmlev,nmlev,j) 
+        if(.not.j_pg) call addfsech_ik('KQPHI_UE','kqphi_int (u,E)',
+     |	   '[A/m]',kqphi_int(:,j,:),1,nmlonp1,nmlev,nmlev,j)
 !       call addfsech_ik('zpotm3d','zpotm3d',
 !    |	    'cm',zpotenm3d(:,j,:),1,nmlonp1,nmlev,nmlev,j)
       enddo
 ! 
 ! save on secondary history 
-!     call addfsech_ij('KQPHI',' kqphi (magnetic)','[A/m]',
-!    |      kqphi3d(:,:),1,nmlonp1,1,nmlat)  
+      call addfsech_ij('KQPHI',' kqphi (magnetic)','[A/m]',
+     |      kqphi3d(:,:),1,nmlonp1,1,nmlat)  
 !                
 !  
 ! Calculate K_(q,lam) (Richmond: Ionospheric at full level
@@ -983,8 +983,8 @@
        enddo
       enddo ! end of i-loop
 !      
-!     call addfsech_ij('KQLAM',' kqlam (magnetic)','[A/m]',
-!    |      kqlam(:,:),1,nmlonp1,1,nmlat)
+      call addfsech_ij('KQLAM',' kqlam (magnetic)','[A/m]',
+     |      kqlam(:,:),1,nmlonp1,1,nmlat)
 !     
       end subroutine nosocrdens
 !-----------------------------------------------------------------------

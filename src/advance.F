@@ -349,7 +349,7 @@
           endif
         endif   ! potential_model /= NONE
 !
-! idynamo==2 -> All tasks call prep_dynamo, and master task calls dynamo:
+! idynamo > 0 -> All tasks call prep_dynamo, and master task calls dynamo:
 !
       else
 !

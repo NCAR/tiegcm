@@ -162,6 +162,7 @@
 !-----------------------------------------------------------------------
       subroutine init_cons
       use input_module,only: step
+      use params_module,only: tgcm_version
 !
 ! Set derived constants (this is called from sub init in init_module)
 !
@@ -255,7 +256,7 @@
 !
 ! Report to stdout:
 !     write(6,"(/,'Model name    = ',a)") tgcm_name
-!     write(6,"(  'Model version = ',a)") tgcm_version
+      write(6,"(  'Model version = ',a)") tgcm_version
       write(6,"(/,'Set constants:')")
       write(6,"('  nlat=',i3,' nlon=',i3,' nlev=',i3)") nlat,nlon,nlev
       write(6,"('  zst=',f8.2,' plev1=',f8.2,' dlev=',f5.2)") 

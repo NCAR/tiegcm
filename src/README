@@ -1,4 +1,16 @@
 
+
+!======================================================================
+
+Oct 04 -> Apr 05:
+
+Development on tiegcm1.6 leading to tiegcm1.7, tiegcm1.8dev1, and 
+tiegcm1.8dev2
+
+!======================================================================
+
+
+
 10/21/04: Changed #include statements from "file.h" to <file.h>.
 Used perl /home/foster/tgcm/scripts/change_incs_bracks.
 
@@ -120,9 +132,26 @@ Broke init_fields (fields.F) into 2 routines: init_4d and init_3d.
 This allows compilation on certain flavors of pgf90 (e.g., on HAO Callisto)
 Changes to fields.F and init.F.
 
+4/7/05:
 Doing a cvs commit, and tagging as tiegcm1-8dev1: this is leading up
-to a pre-release of tiegcm1-8: essentially tiegcm1-7 plus the following:
+to a pre-release of tiegcm1-8. This code is essentially tiegcm1-7 plus 
+the following:
   -- maute dynamo mods
   -- lqian euv/qrj and SEE data option
   -- foster gswm mods (combine dt.F and dt_gswm.F, etc.)
 
+4/19-20/05:
+Copied Liying's new ~lqian/aurora.F, with qtef fix. This was causing
+problems on lightning with 8 processors.
+
+4/21/05: Made 2 10-day runs, one with periodic points and boundary
+longitudes set in dt.F, and one without. Making these calls was
+recommended by Wenbin (see ~foster/tgcm/tiegcm/doc/wenbin). However,
+there were zero differences in all major fields after 10 days,
+according to tgcmproc_f90. 
+
+Uncommented mp_bndlons_f3d and mp_periodic_f3d in dt.F, as per
+Wenbin's request.
+
+4/22/05: 
+Saving this code as "tiegcm1.8dev2", CVS tag "tiegcm1-8dev2".

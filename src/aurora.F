@@ -839,6 +839,8 @@
      |      qn2p_aur(k-1,i))
           qnp (k,i,lat) = qnp (k,i,lat)+
      |      .22/.7 * sqrt(qn2p_aur(k,i)*qn2p_aur(k-1,i))
+          qtef(k,i,lat) = qtef(k,i,lat)+1.57*sqrt(qn2p_aur(k,i)*
+     |      qn2p_aur(k-1,i))
         enddo ! k=lev0+2,lev1-1
 !
 ! Extrapolate lower boundary:
@@ -850,6 +852,8 @@
      |    0.5*qn2p_aur(lev0+1,i)        
         qnp (lev0,i,lat) = qnp (lev0,i,lat)+ .22/.7 * 
      |    (1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i))
+        qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
+     |    0.5*qn2p_aur(lev0+1,i))        
 !
 ! Extrapolate upper boundary:
         qo2p(lev1,i,lat)= qo2p(lev1,i,lat)+1.5*qo2p_aur(lev1-1,i)-
@@ -860,13 +864,8 @@
      |    0.5*qn2p_aur(lev1-2,i)
         qnp (lev1,i,lat)= qnp (lev1,i,lat)+ .22/.7 * 
      |    (1.5*qn2p_aur(lev1-1,i)-0.5*qn2p_aur(lev1-2,i))
-      enddo ! i=lon0,lon1
-
-      ! add aurora dissociation of N2
-      do i=lon0,lon1
-         do k=lev0,lev1
-            qtef(k,i,lat) = qtef(k,i,lat)+1.57*qn2p_aur(k,i)
-         enddo ! k=lev0,lev1
+        qtef(lev1,i,lat) = qtef(lev1,i,lat)+1.57*
+     |    (1.5*qn2p_aur(lev1-1,i)-0.5*qn2p_aur(lev1-2,i))
       enddo ! i=lon0,lon1
 
 !     call addfsech('QO2P',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
