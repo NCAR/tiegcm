@@ -155,3 +155,28 @@ Wenbin's request.
 
 4/22/05: 
 Saving this code as "tiegcm1.8dev2", CVS tag "tiegcm1-8dev2".
+
+Executed:
+cvs commit -m "tag tiegcm1-8dev2: dynamo currents and high-latitude options, new EUV/qrj parameterization, Timed SEE data option, updated chemrates"
+
+cvs tag tiegcm1-8dev2
+!-----------------------------------------------------------------------
+
+5/3/05:
+Added sub expand_path in util.F, called by getfile, so user can imbed
+env vars in file paths (e.g. in SOURCE, GPI_FILE, etc). E.g.:
+
+ SOURCE='$TGCMDATA/TGCM.tiegcm.p001-2002-080.nc'
+ SOURCE='$MYDIR/FOSTER.tiegcm1.8.peqnx_001.nc'
+ SOURCE='/hao/$MYSUBDIR/FOSTER.tiegcm1.8.peqnx_001.nc'
+ SOURCE='$MYDIR/$MYSUBDIR/FOSTER.tiegcm1.8.peqnx_001.nc'
+ SOURCE='/TGCM/data/TGCM.tiegcm.p001-2002-080.nc'
+
+Note expand_path is recursive, so multiple env vars can be imbedded in
+the path, as in example 4 above. If a '$' is not found in the path,
+expand_path simply returns without changing path, e.g., in the last
+example above.
+
+Committing this to CVS, and giving it to Ray for tuning prior to
+the "pre-release" to hao AIM. This model is saved in
+$TGCMROOT/dev/tiegcm1.8/ at both hao and scd.

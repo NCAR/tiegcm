@@ -1456,6 +1456,7 @@
       end subroutine check_nans
 !-------------------------------------------------------------------
       subroutine finterpb(f0,f1,fout,n,isec0,isec1,isec)
+      implicit none
 !
 ! Do linear interpolation between f0 (which is at isec0) and
 ! f1 (which is at isec1) to isec. f0,f1,and fout are arrays
@@ -1475,3 +1476,73 @@
      |    (isec1-isec0)
       enddo
       end subroutine finterpb
+!-------------------------------------------------------------------
+      recursive subroutine expand_path(path)
+!
+! Expand any environment variables in path, return expanded path.
+!   If '$' is found, then an env var is defined as that part of path
+!   following the '$' until the next slash. If no '$' is found,
+!   return without changing path.
+! Example:
+!   Here, "TGCMDATA" is considered the env var:
+!   path = '$TGCMDATA/dir1/file'
+! This routine is recursive, so multiple env vars can be used, e.g.:
+!   path = '$MYDIR/$MYSUBDIR/file.nc'
+!
+      implicit none
+!
+! Args:
+      character(len=*),intent(inout) :: path
+!
+! Local:
+      character(len=224) :: path_out,envvar_value
+      character(len=80) :: envvar_name
+      integer :: i,idollar,islash
+!
+      if (len_trim(path)==0) then
+        write(6,"('>>> WARNING expand_path: path is empty.')")
+        return
+      endif
+!
+!     write(6,"('Enter expand_path: path=',a)") trim(path)
+!
+      idollar = index(path,'$')
+      if (idollar <= 0) return ! no env var in path
+!
+! Env var is between idollar and next slash 
+! (or end of path if there is no slash after idollar):
+!
+      islash = index(path(idollar+1:len_trim(path)),'/')
+      if (islash <= 0) islash = len_trim(path)
+      islash = islash+idollar
+      envvar_name = path(idollar+1:islash-1)
+!
+! Get value of env var (getenv is f90 intrinsic):
+      call getenv(trim(envvar_name),envvar_value)
+      if (len_trim(envvar_value) <= 0) then
+        write(6,"('>>> WARNING expand_path: error retrieving ',
+     |    'value for env var ',a)") trim(envvar_name)
+        return
+      endif
+!
+! Put together expanded output path:
+      if (idollar > 1) then
+        if (islash < len_trim(path)) then
+          path_out = path(1:idollar-1)//trim(envvar_value)//
+     |      path(islash:len_trim(path))
+        else
+          path_out = path(1:idollar-1)//trim(envvar_value)
+        endif
+      else     ! idollar == 1
+        if (islash < len_trim(path)) then
+          path_out = trim(envvar_value)//path(islash:len_trim(path))
+        else
+          path_out = trim(envvar_value)
+        endif
+      endif
+!
+! Return new path, and make recursive call for more env vars:
+      path = trim(path_out)
+      call expand_path(path) ! expand next env var
+!
+      end subroutine expand_path

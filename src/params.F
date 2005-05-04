@@ -48,7 +48,7 @@
      |  magphrlon1 = -180.
 !
 ! For modules hist_mod and input_mod:
-      character(len=16),parameter :: tgcm_version = 'tiegcm1.8dev2   '
+      character(len=16),parameter :: tgcm_version = 'tiegcm1.8       '
 !
 ! tgcm_name is either "tiegcm" or "time-gcm"
       character(len=8),parameter :: tgcm_name    = 'tiegcm'

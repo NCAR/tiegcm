@@ -117,6 +117,9 @@
 !
       write(6,"('Getfile: remote=',a)") trim(remote)
       write(6,"('         local =',a)") trim(local)
+
+      call expand_path(remote) ! expand any env vars imbedded in remote (util.F)
+      write(6,"('Getfile after expand_path: remote=',a)") trim(remote)
 !
 ! Check for existence of remote as provided:
       inquire(file=trim(remote),exist=exists)
