@@ -180,3 +180,5 @@ example above.
 Committing this to CVS, and giving it to Ray for tuning prior to
 the "pre-release" to hao AIM. This model is saved in
 $TGCMROOT/dev/tiegcm1.8/ at both hao and scd.
+
+5/5/05: Ray says this is ok for tuning version. Tagging as tiegcm1-8tune
