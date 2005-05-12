@@ -93,6 +93,9 @@
       modeltime(4) = 0
       call modeltime_to_nsecs(modeltime,nsecs) ! sets nsecs, includes day
 !
+      timing_type = 'sys'
+      if (timing%rtc) timing_type = 'rtc'
+!
 ! Echo source history to primary history output if an initial run,
 !   and write initial secondary history if necessary (istep==0).
 ! Source history will not be written if a continuation run (i.e., if
@@ -124,11 +127,9 @@
       if (nstep==0) then
         write(6,"(/,'ADVANCE: model is not advanced in time because ',
      |    ' start==stop.')")
+        call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
         return
       endif
-!
-      timing_type = 'sys'
-      if (timing%rtc) timing_type = 'rtc'
 !
 ! Reswap indices, so model reads itp data and updates itc data:
       itmp = itp

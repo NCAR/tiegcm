@@ -2,10 +2,10 @@
 
 !======================================================================
 
-Oct 04 -> Apr 05:
+Oct 04 -> May 05:
 
-Development on tiegcm1.6 leading to tiegcm1.7, tiegcm1.8dev1, and 
-tiegcm1.8dev2
+Development on tiegcm1.6 leading to tiegcm1.7, tiegcm1.8dev1, 
+tiegcm1.8dev2, and the tiegcm1.8 "tuning release", dev/tiegcm1.8: 
 
 !======================================================================
 
@@ -181,4 +181,18 @@ Committing this to CVS, and giving it to Ray for tuning prior to
 the "pre-release" to hao AIM. This model is saved in
 $TGCMROOT/dev/tiegcm1.8/ at both hao and scd.
 
-5/5/05: Ray says this is ok for tuning version. Tagging as tiegcm1-8tune
+5/5/05: Ray says this is ok for tuning release. Tagging as tiegcm1-8tune.
+Source is in $TGCMDATA/dev/tiegcm1.8/ (HAO and SCD). Also tar file is
+/toshi/ftp/pub/tgcm/tar/tiegcm1.8tune.tar.
+
+5/5/05: Allow "/TGCM/" to be an mspath (in addition to "/LOGNAME/" in 
+function is_mspath (util.F)
+
+Enable env var to be included in file path names, e.g.,
+SOURCE = '$TGCMDATA/...'
+
+5/11/05: Removed mpi_barrier call in putms to prevent job from hanging
+when DISPOSE=1 (putms is called by master task only).
+
+5/12/05: Preparing tiegcm1.8 "tuning release", see doc/README_1.8tune
+CVS tag will be tiegcm1.8tune, source in $TGCMROOT/dev/tiegcm1.8.

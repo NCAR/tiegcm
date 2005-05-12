@@ -184,11 +184,10 @@
      |          ' istat=',i8)") istat
           endif
 !
-! msrcp failed:
+! my_msrcp returned error:
         else
-          write(6,"(/,'>>> WARNING putms: Error ',i4,' from msrcp.')") 
-     |      istat
-          write(6,"(' msrcp command was: ',a)") trim(cmd)
+          write(6,"('>>> WARNING putms: Error return from my_msrcp: ',
+     |      'istat=',i10)") istat
         endif
 !
 ! End #ifdef MSS

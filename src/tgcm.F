@@ -119,7 +119,7 @@
 ! Finalize mpi:
 !
 #ifdef MPI
-      call mp_close
+      call mp_close ! mpi.F
 #endif
       call timer_report
 !

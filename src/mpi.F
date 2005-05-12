@@ -2505,9 +2505,10 @@
 !-----------------------------------------------------------------------
       subroutine mp_close
       integer :: ier
+!
       call mpi_finalize(ier)
       if (ier /= 0) then
-        write(6,"(/,'>>> WARNING: error from mp_close: ier=',i3)") ier
+        write(6,"(/,'>>> WARNING: error from mp_finalize: ier=',i3)")ier
       endif
       end subroutine mp_close
 !-----------------------------------------------------------------------

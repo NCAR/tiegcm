@@ -136,8 +136,12 @@
       integer :: istat
 !
       istat = nf_close(ncid)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error return from nf_close')
+      if (istat /= NF_NOERR) then
+        call handle_ncerr(istat,
+     |    'Error return from nf_close')
+      else
+!       write(6,"('nc_close: closed ncid ',i3)") ncid
+      endif
       end subroutine nc_close
 !-----------------------------------------------------------------------
       subroutine nc_rdhist(ncid,diskfile,mtime,itime,ier)

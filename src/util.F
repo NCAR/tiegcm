@@ -1093,11 +1093,7 @@
       end subroutine getcwd
 !-----------------------------------------------------------------------
       integer function my_msrcp(opts,src,dest)
-      use mpi_module,only: mytid
       implicit none
-#ifdef MPI
-#include <mpif.h>
-#endif
 !
 ! Build and execute msrcp command to the shell. Assume "mss:" prefixes
 ! either src (for a get) or dest (for a put).
@@ -1121,31 +1117,24 @@
       endif
 !
 ! Only master task does the msrcp:
-      if (mytid==0) then
-        if (src(1:4) == "mss:") then
-          write(6,"('my_msrcp: Obtaining file ',a,' from mss.')")
-     |      src(5:len_trim(src))
-        else
-          write(6,"('my_msrcp: Disposing file ',a,' to mss.')")
-     |      dest(5:len_trim(dest))
-        endif
-        cmd = ' '
-        cmd = "msrcp "//trim(opts)//' '//trim(src)//' '//trim(dest)
-        write(6,"('my_msrcp: Executing ',a)") trim(cmd)
-        my_msrcp = isystem(cmd)
-        write(6,"(a)") trim(cmd)
+      if (src(1:4) == "mss:") then
+        write(6,"('my_msrcp: Obtaining file ',a,' from mss.')")
+     |    src(5:len_trim(src))
       else
-        write(6,"('my_msrcp: Waiting for master task...')")
-        my_msrcp = 0
+        write(6,"('my_msrcp: Disposing file ',a,' to mss.')")
+     |    dest(5:len_trim(dest))
       endif
-#ifdef MPI
-      call mpi_barrier(MPI_COMM_WORLD,ier)
-#endif
+      cmd = ' '
+      cmd = "msrcp "//trim(opts)//' '//trim(src)//' '//trim(dest)
+      write(6,"('my_msrcp: Executing ',a)") trim(cmd)
+      my_msrcp = isystem(cmd)
+      write(6,"(a)") trim(cmd)
       end function my_msrcp
 !-----------------------------------------------------------------------
       logical function is_mspath(path)
 !
-! Return true if input path begins with "/LOGNAME/", otherwise false.
+! Return true if input path begins with "/LOGNAME/" or "/TGCM/", 
+! otherwise return false.
 !
       implicit none
 !
@@ -1178,11 +1167,18 @@
 !
       lognamedir = '/'//trim(logname)//'/'
       if (path(1:len_trim(lognamedir))==lognamedir) is_mspath = .true.
+      if (is_mspath) return
+!
+! Try /TGCM/:
+      lognamedir = '/'//'TGCM'//'/'
+      if (path(1:len_trim(lognamedir))==lognamedir) is_mspath = .true.
+!
       end function is_mspath
 !-----------------------------------------------------------------------
       subroutine check_mspath(mspathin,mspathout)
 !
-! Check validity of mspathin as an mss path (must begin with /LOGNAME)
+! Check validity of mspathin as an mss path 
+! (must begin with /LOGNAME or /TGCM)
 !
       implicit none
 !
@@ -1226,7 +1222,8 @@
       logname = trcase(logname) ! translate from lower to upper case
 !
 ! Mss path must begin with /LOGNAME:
-      if (mspathout(2:len_trim(logname)+1) /= trim(logname)) then
+      if (mspathout(2:len_trim(logname)+1) /= trim(logname).and.
+     |    mspathout(2:5) /= 'TGCM') then
         if (len(mspathout) < len_trim(mspathout)+len_trim(logname)+1) 
      |    then
           write(6,"('>>> WARNING check_mspath: length of mspathout',
