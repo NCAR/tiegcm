@@ -15,7 +15,7 @@
       integer,parameter :: 
      |  nf4d          = 26, ! number of 4-d fields
      |  nf4d_hist     = 24, ! number of 4-d fields on primary histories
-     |  nf3d          = 40  ! number of 3-d fields
+     |  nf3d          = 41  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
       integer,parameter :: 
@@ -90,7 +90,7 @@
      |  i_lxx    ,i_lyy     ,i_lxy     ,i_lyx   ,i_qji_ti,
      |  i_qji_tn ,i_cool_implicit      ,i_cool_explicit  ,
      |  i_hdt    ,i_hdu     ,i_hdv     ,i_hdo2  ,i_hdo1  ,
-     |  i_ped    ,i_hall
+     |  i_ped    ,i_hall    ,i_lam1
 !
 ! Allocatable target arrays 3-d:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 )
@@ -105,7 +105,7 @@
      |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti  ,
      |  qji_tn   ,cool_implicit      ,cool_explicit     ,
      |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1    ,
-     |  ped      ,hall
+     |  ped      ,hall     ,lam1
 !
 ! 2-d field type (used for 2d secondary history fields):
       type fields_2d
@@ -708,6 +708,13 @@
       f3d(n)%units = " "
       f3d(n)%data => hall
       i_hall = n ; n = n+1
+!
+      allocate(lam1(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('LAMDA ION DRAG 1')")
+      f3d(n)%short_name = "LAM1"
+      f3d(n)%units = " "
+      f3d(n)%data => lam1
+      i_lam1 = n ; n = n+1
 !
 ! f3d fields are diagnostics:
       f3d%prognostic = .false.

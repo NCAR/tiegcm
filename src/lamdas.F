@@ -1,11 +1,14 @@
 !
       subroutine lamdas(tn,barm,o2,o1,ti,te,o2p,op,nop, lxx,lyy,lxy,lyx,
-     |  ped_out,hall_out,lev0,lev1,lon0,lon1,lat)
+     |  lamda1,ped_out,hall_out,lev0,lev1,lon0,lon1,lat)
 !
-! Compute ion drag coefficients lxx,lyy,lxy, and lyx.
+! Compute ion drag coefficients 
+!      in geographic direction lxx, lyy, lxy, and lyx [1/s] (full levels)
+!      in magnetic direction lamda1 [1/s] (full levels)
+! Pedersen/ Hall conductivities [S/m] (half levels)
 !
       use params_module,only: nlonp4
-      use magfield_module,only: bmod2,sn2dec,sncsdc
+      use magfield_module,only: bmod2,sn2dec,sncsdc,csdec,sndec
       use cons_module,only: dipmin,rmassinv_o2,rmassinv_o1,rmassinv_n2,
      |  p0,expz,rmass_o2,rmass_o1,boltz,avo
       use magfield_module,only: dipmag
@@ -18,345 +21,342 @@
      |  tn,   ! neutral temperature (deg K)
      |  barm, ! mean molecular mass
      |  o2,   ! molecular oxygen (mmr)
-     |  o1,   ! atomic oxygen (mmr)
+     |  o1,   ! atomic oxygen    (mmr)
      |  ti,   ! ion temperature (deg K)
      |  te,   ! electron temperature (deg K)
-     |  o2p,  ! O2+
-     |  op,   ! O+
-     |  nop   ! NO+
+     |  o2p,  ! O2+ number density (1/cm3)
+     |  op,   ! O+  number density (1/cm3)
+     |  nop   ! NO+ number density (1/cm3)
 !
 ! Output args:
-      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) ::
-     |  lxx,     ! lamda XX term
-     |  lyy,     ! lamda YY term
-     |  lxy,     ! lamda XY term
-     |  lyx,     ! lamda YX term
-     |  ped_out, ! pedersen conductivity (will be input to dynamo)
-     |  hall_out ! hall conductivity (will be input to dynamo)
+      real,dimension(lev0:lev1,lo n0-2:lon1+2),intent(out) ::
+     |  lxx,     ! lamda XX term [1/s] 
+     |  lyy,     ! lamda YY term [1/s] 
+     |  lxy,     ! lamda XY term [1/s] 
+     |  lyx,     ! lamda YX term [1/s] 
+     |  lamda1,  ! lamda_1 (sigma_p * B^2) / rho [1/s] magnetic eastward direction
+     |  ped_out, ! pedersen conductivity (siemens/m) (will be input to dynamo)
+     |  hall_out ! hall conductivity (siemens/m) (will be input to dynamo)
 !
 ! Local:
       integer :: k,i,l,nlevs,lonbeg,lonend
       integer ::i0,i1,nk,nkm1 ! for addfsech
-      real :: sqrt_te,xn2tmp
-      real,parameter :: qe=1.602e-19
-      real,parameter :: rmass_nop = 30.
+      real :: sqrt_te         ! sqrt(te)
+      real,parameter :: qe=1.602e-19,  ! electron charge (coulomb)
+     |    qeomeo10 =  1.7588028E7,     ! qe/m_e/10 [C/g]
+     |    qeoNao10 =  9.6489E3         ! qe/N_a/10 [C/mol]
+      real,parameter :: rmass_nop = 30.! [g/mol]
+      real,parameter :: rmassinv_nop=1./rmass_nop ! inverted rmass
       real,dimension(lev0:lev1,lon0:lon1) :: ped_plt,hall_plt
 !
-! (lon):
+! Local (lon):
       real,dimension(lon0:lon1) :: 
-     |  bgauss,omega_i,omega_e,sindip,sindip2
+     |  bgauss, qe_fac, sindip, cosdip, cos2dip, sin2dip, cos2dec,
+     |  omega_o2p    ,omega_op    ,omega_nop,
+     |  omega_o2p_inv,omega_op_inv,omega_nop_inv,
+     |  omega_e      ,omega_e_inv
 !
-! (lev,lon):
+! Local (lev,lon):
       real,dimension(lev0:lev1,lon0:lon1) ::
-     |  xnmbarm,    ! for conversion to volume density
-     |  vo2,vo,vn2, ! inputs to sub nufac (these were v1,v2,v3)
-     |  vt,         ! input to sub nufac ti+tn (was v6)
-     |  xn2,        ! N2 (1-o2-o)
-     |  rnu_omega,  ! nu/omega_e (was v4)
-     |  pedxions,hallxions, ! ped*ions, hall*ions
-     |  wk1,wk2,wk3 ! work arrays
+     |  xnmbar,     ! for conversion to volume density
+     |  xn2,        ! N2 (1-o2-o mmr)
+     |  tnti,       ! average of tn and ti
+     |  o2_cm3, o1_cm3, n2_cm3, ! major species number densities (cm3)
+     |  sigma_ped,  ! pedersen conductivity (siemens/m)
+     |  sigma_hall, ! hall conductivity (siemens/m)
+     |  ne,         ! electron density (assume o2p+op+nop)
+     |  lamda2,     ! sighal*b**2/rho
+     |  lamda1tmp,  ! temporary lamda1
+     |  lamda2tmp,  ! temporary lamda2
+     |  lxxnorot,   ! XX before rotation
+     |  lyynorot,   ! YY before rotation
+     |  lxynorot,   ! XY before rotation
+     |  lyxnorot,   ! YX before rotation
 !
-! (lev,lon,3):
-      real,dimension(lev0:lev1,lon0:lon1,3) ::
-     |  rmo2,rmo,rmn2, ! numerical factors output by sub nufac
-     |  ped,hall,      ! pedersen and hall factors
-     |  xions          ! holding array for ions o2p,op,nop
+! Ion-neutral momentum transfer collision frequencies:
+!
+     |  rnu_o2p_o2, ! O2+ ~ O2 collision freq (resonant, temperature dependent)
+     |  rnu_op_o2 , ! O+  ~ O2 collision freq (non-resonant)
+     |  rnu_nop_o2, ! NO+ ~ O2 collision freq (non-resonant)
+!
+     |  rnu_o2p_o,  ! O2+ ~ O  collision freq (non-resonant)
+     |  rnu_op_o ,  ! O+  ~ O  collision freq (resonant, temperature dependent)
+     |  rnu_nop_o,  ! NO+ ~ O  collision freq (non-resonant)
+!
+     |  rnu_o2p_n2, ! O2+ ~ N2 collision freq (non-resonant)
+     |  rnu_op_n2 , ! O+  ~ N2 collision freq (non-resonant)
+     |  rnu_nop_n2, ! NO+ ~ N2 collision freq (non-resonant)
+!
+     |  rnu_o2p,    ! [[o2p~o2]n(o2)+[o2p~o]n(o)+[o2p~n2]n(n2)]/w(o2p)
+     |  rnu_op,     ! [[op ~o2]n(o2)+[op ~o]n(o)+[op ~n2]n(n2)]/w(op )
+     |  rnu_nop,    ! [[nop~o2]n(o2)+[nop~o]n(o)+[nop~n2]n(n2)]/w(nop)
+! 
+     |  rnu_ne      ! electron~neutral
 !
 ! Convenience ints for addfsech calls:
-      i0 = lon0
-      i1 = lon1
-      nk = lev1-lev0+1
-      nkm1 = nk-1
-      nlevs = nk
+      i0 = lon0 ; i1 = lon1 ; nk = lev1-lev0+1 ; nkm1 = nk-1; nlevs = nk
 
+! Save input ions to secondary history:
+!
 !     call addfsech('O2P_LAM',' ',' ',o2p(:,i0:i1),i0,i1,nk,nkm1,lat)
 !     call addfsech('OP_LAM' ,' ',' ',op (:,i0:i1),i0,i1,nk,nkm1,lat)
 !     call addfsech('NOP_LAM',' ',' ',nop(:,i0:i1),i0,i1,nk,nkm1,lat)
 !
 ! Set local needs:
       do i=lon0,lon1
-        bgauss(i) = bmod2(i,lat)
-        omega_i(i) = 9.6489E3*bgauss(i)
-        omega_e(i) = 1.7588028E7*bgauss(i)
+        bgauss(i) = bmod2(i,lat) ! magnetic field strength [Gauss]
 !
-! dipmag is in magfield module, dipmin is in cons module:
+!  e/B  [C/T 10^6 cm^3/m^3]
+! 1.e10 for SI units = 1.e6 (cm3->m3) * 1.e4 (gauss->tesla)
+!
+        qe_fac(i) = qe*1.e10/bgauss(i) 
+! 
+! gyrofrequencies: omega_i = eB/m_i  [1/s]
+!                  omega_e = eB/m_e  [1/s]
+! with qeoNao10 = e/Na [C/mol T/kg g/Gauss]
+!      qeomeo10 = e/m_e [C/g T/kg g/Gauss]
+! 1/10 in qeoNao10 and qeomeo10 for conversion from Gauss/g to T/kg
+!
+        omega_op (i)    = qeoNao10*bgauss(i)*rmassinv_o1
+        omega_o2p(i)    = qeoNao10*bgauss(i)*rmassinv_o2
+        omega_nop(i)    = qeoNao10*bgauss(i)*rmassinv_nop
+        omega_op_inv (i)= 1./omega_op(i)
+        omega_o2p_inv(i)= 1./omega_o2p(i)
+        omega_nop_inv(i)= 1./omega_nop(i)
+        omega_e(i)      = qeomeo10*bgauss(i)
+        omega_e_inv(i)  = 1./omega_e(i)
+!
+! Sin and cos for rotation of lamdas:
+!   dipmag (magnetic dip angle) is in magfield module (magfield.F), 
+!   dipmin (minimum dip angle) is in cons module (cons.F) approx. 10 deg.
         if (abs(dipmag(i,lat)) >= dipmin) then
           sindip(i) = sin(dipmag(i,lat))
+          cosdip(i) = cos(dipmag(i,lat))
         else
-          sindip(i) = sin(dipmin)
+          if (dipmag(i,lat) >= 0.) then
+            sindip(i) = sin(dipmin)
+            cosdip(i) = cos(dipmin)
+          else
+            sindip(i) = sin(-dipmin)
+            cosdip(i) = cos(-dipmin)
+          endif
         endif
-        sindip2(i) = sindip(i)**2
+        cos2dip(i) = cosdip(i)**2
+        sin2dip(i) = sindip(i)**2
+        cos2dec(i) = csdec(i,lat)**2
       enddo ! i=lon0,lon1
 !
-! vo2,vo,vn2:
+! Ion-neutral momentum transfer collision frequencies [cm^3/s]:
+! (Defines "NU" matrix, formerly sub new.F)
+!
       do i=lon0,lon1
         do k=lev0,lev1-1
-          vo2(k,i) = o2(k,i)*rmassinv_o2
-          vo (k,i) = o1(k,i)*rmassinv_o1
-          xn2(k,i) = (1.-o2(k,i)-o1(k,i))
-          vn2(k,i) = xn2(k,i)*rmassinv_n2
-          if (vn2(k,i) < 1.e-20) vn2(k,i) = 1.e-20
-          vt (k,i) = 0.5*(ti(k,i)+tn(k,i))
+          tnti(k,i) = 0.5*(ti(k,i)+tn(k,i))           ! ave of tn & ti
+!
+! O2 collision frequencies:
+          rnu_o2p_o2(k,i) = 2.59E-11*sqrt(tnti(k,i))* ! O2+ ~ O2 (resonant)
+     |      (1.-0.073*alog10(tnti(k,i)))**2
+          rnu_op_o2 (k,i) = 6.64E-10                  ! O+  ~ O2
+          rnu_nop_o2(k,i) = 4.27E-10                  ! NO+ ~ O2
+!
+! O collision frequencies:
+          rnu_o2p_o(k,i) = 2.31E-10                   ! O2+ ~ O
+          rnu_op_o (k,i) = 3.67e-11*sqrt(tnti(k,i))*  ! O+  ~ O (resonant)
+     |      (1.-0.064*alog10(tnti(k,i)))**2*colfac    
+          rnu_nop_o(k,i) = 2.44E-10                   ! NO+ ~ O
+!
+! N2 collision frequencies:
+          rnu_o2p_n2(k,i) = 4.13E-10                  ! O2+ ~ N2
+          rnu_op_n2 (k,i) = 6.82E-10                  ! O+  ~ N2
+          rnu_nop_n2(k,i) = 4.34E-10                  ! NO+ ~ N2
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-
-!     call addfsech('VO2',' ',' ',vo2,i0,i1,nk,nkm1,lat)
-!     call addfsech('VO' ,' ',' ',vo ,i0,i1,nk,nkm1,lat)
-!     call addfsech('VN2',' ',' ',vn2,i0,i1,nk,nkm1,lat)
-!     call addfsech('VT' ,' ',' ',vt ,i0,i1,nk,nkm1,lat)
 !
-! Generate numerical factors in rmo2,rmo,rmn2 (lev0:lev1,lon0:lon1,3):
-! (this was sub new.F in earlier versions)
+! Major species number densities [1/cm^3]:
+! mass density [g/cm^3/mol]: xnmbar half levels
+! pressure at half level: p0*expz(k) [dyn/cm^2]
+! mean molecular weight at full level: barm [g/mol]
+! Boltzmann constant [erg/K]
+! neutral temperature [K]
+! mass mixing rations[-]: o2, o1, xn2
+! inverse of mean molecular weight [mol/g]:rmassinv_o2, rmassinv_o1, rmassinv_n2
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-!
-! O2:
-          rmo2(k,i,1)=2.59E-11*sqrt(vt(k,i))*       ! O2+ - O2
-     |                (1.-0.073*alog10(vt(k,i)))**2
-          rmo2(k,i,2)=6.64E-10                      ! O+  - O2
-          rmo2(k,i,3)=4.27E-10                      ! NO+ - O2
-!
-! O:
-          rmo(k,i,1)=2.31E-10                       ! O2+ - O
-          rmo(k,i,2)=3.67e-11*sqrt(vt(k,i))*        ! O+  - O
-     |      (1.-0.064*alog10(vt(k,i)))**2*colfac    
-          rmo(k,i,3)=2.44E-10                       ! NO+ - O
-!
-! N2:
-          rmn2(k,i,1)=4.13E-10                      ! O2+ - N2
-          rmn2(k,i,2)=6.82E-10                      ! O+  - N2
-          rmn2(k,i,3)=4.34E-10                      ! NO+ - N2
-        enddo ! k=lev0,lev1-1
-      enddo ! i=lon0,lon1
-
-!     call addfsech('RMO2_1',' ',' ',rmo2(lev0:lev1,lon0:lon1,1),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('RMO2_2',' ',' ',rmo2(lev0:lev1,lon0:lon1,2),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('RMO2_3',' ',' ',rmo2(lev0:lev1,lon0:lon1,3),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('RMO_1' ,' ',' ',rmo(lev0:lev1,lon0:lon1,1) ,
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('RMO_2' ,' ',' ',rmo(lev0:lev1,lon0:lon1,2) ,
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('RMO_3' ,' ',' ',rmo(lev0:lev1,lon0:lon1,3) ,
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('RMN2_1',' ',' ',rmn2(lev0:lev1,lon0:lon1,1),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('RMN2_2',' ',' ',rmn2(lev0:lev1,lon0:lon1,2),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('RMN2_3',' ',' ',rmn2(lev0:lev1,lon0:lon1,3),
-!    |  i0,i1,nk,nkm1,lat)
-!
-! Multiply by major species number densities:
-      do l=1,3
-        do i=lon0,lon1
-          do k=lev0,lev1-1
-            rmo2(k,i,l) = rmo2(k,i,l)*vo2(k,i)
-            rmo (k,i,l) = rmo (k,i,l)*vo (k,i)
-            rmn2(k,i,l) = rmn2(k,i,l)*vn2(k,i)
-          enddo ! k=lev0,lev1-1
-        enddo ! i=lon0,lon1
-      enddo ! l=1,3
-!
-! vo2,vo,vn2 = sum(rmo2(l)+rmo(l)+rmn2(l))
-      vo2(:,:) = 0.
-      vo (:,:) = 0.
-      vn2(:,:) = 0.
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          vo2(k,i) = vo2(k,i)+rmo2(k,i,1)+rmo(k,i,1)+rmn2(k,i,1)
-          vo (k,i) = vo (k,i)+rmo2(k,i,2)+rmo(k,i,2)+rmn2(k,i,2)
-          vn2(k,i) = vn2(k,i)+rmo2(k,i,3)+rmo(k,i,3)+rmn2(k,i,3)
-        enddo ! k=lev0,lev1-1
-      enddo ! i=lon0,lon1
-
-!     call addfsech('VO2',' ',' ',vo2,i0,i1,nk,nkm1,lat)
-!     call addfsech('VO' ,' ',' ',vo ,i0,i1,nk,nkm1,lat)
-!     call addfsech('VN2',' ',' ',vn2,i0,i1,nk,nkm1,lat)
-!
-! Convert to number densities:
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          xnmbarm(k,i) = p0*expz(k)*.5*(barm(k,i)+barm(k+1,i))/
+          xnmbar(k,i) = p0*expz(k)*.5*(barm(k,i)+barm(k+1,i))/
      |      (boltz*tn(k,i))
-          vo2(k,i) = vo2(k,i)*xnmbarm(k,i)*rmass_o2/omega_i(i)
-          vo (k,i) = vo (k,i)*xnmbarm(k,i)*rmass_o1/omega_i(i)
-!
-! N2 is a minor contributor to condumctivity in lower thermosphere,
-! and NO+ is the major ion. Using rmass_nop instead of rmass_n2.
-          vn2(k,i) = vn2(k,i)*xnmbarm(k,i)*rmass_nop/omega_i(i)
+          o2_cm3(k,i) = o2(k,i)*xnmbar(k,i)*rmassinv_o2
+          o1_cm3(k,i) = o1(k,i)*xnmbar(k,i)*rmassinv_o1
+          xn2(k,i) = (1.-o2(k,i)-o1(k,i))
+          xn2(k,i) = xn2(k,i)*rmassinv_n2            ! this part varies from timegcm
+          if (xn2(k,i) < 1.e-20) xn2(k,i) = 1.e-20   ! done as in tiegcm
+          n2_cm3(k,i) = xn2(k,i)*xnmbar(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('XNMBARM',' ',' ',xnmbarm,i0,i1,nk,nkm1,lat)
-!     call addfsech('VO2',' ',' ',vo2,i0,i1,nk,nkm1,lat)
-!     call addfsech('VO' ,' ',' ',vo ,i0,i1,nk,nkm1,lat)
-!     call addfsech('VN2',' ',' ',vn2,i0,i1,nk,nkm1,lat)
+!     call addfsech('O2_CM3',' ',' ',o2_cm3,i0,i1,nk,nkm1,lat)
+!     call addfsech('O_CM3' ,' ',' ',o1_cm3 ,i0,i1,nk,nkm1,lat)
+!     call addfsech('N2_CM3',' ',' ',n2_cm3,i0,i1,nk,nkm1,lat)
 !
-! rnu_omega = nu/omega_e
+! collision frequency nu_in for each ion [1/s]
+!    by multiplying with neutral number density [1/cm^3] and sum over neutrals
+! nu_in is divided by gyrofrequency omega_i
+! nu_in/omega_i [-]:
+! rnu_o2p = [[o2p~o2]n(o2)+[o2p~o]n(o)+[o2p~n2]n(n2)]/w(o2p)
+! rnu_op  = [[op ~o2]n(o2)+[op ~o]n(o)+[op ~n2]n(n2)]/w(op )
+! rnu_nop = [[nop~o2]n(o2)+[nop~o]n(o)+[nop~n2]n(n2)]/w(nop)
+!
       do i=lon0,lon1
         do k=lev0,lev1-1
+          rnu_o2p(k,i) = (rnu_o2p_o2(k,i)*o2_cm3(k,i) +
+     |                    rnu_o2p_o (k,i)*o1_cm3(k,i) +
+     |                    rnu_o2p_n2(k,i)*n2_cm3(k,i))*omega_o2p_inv(i)
+          rnu_op (k,i) = (rnu_op_o2 (k,i)*o2_cm3(k,i) +
+     |                    rnu_op_o  (k,i)*o1_cm3(k,i) +
+     |                    rnu_op_n2 (k,i)*n2_cm3(k,i))*omega_op_inv(i)
+          rnu_nop(k,i) = (rnu_nop_o2(k,i)*o2_cm3(k,i) +
+     |                    rnu_nop_o (k,i)*o1_cm3(k,i) +
+     |                    rnu_nop_n2(k,i)*n2_cm3(k,i))*omega_nop_inv(i)
+!
+! neutral~electron collision frequency (from Banks & Kockards) nu_en
+! divided by gyrofrequency omega_2:
+! nu_en/omega_e [-]
+!
           sqrt_te = sqrt(te(k,i))
-          xn2tmp = xn2(k,i)*rmassinv_n2
-          if (xn2tmp < 1.e-20) xn2tmp = 1.e-20
-!
-! Original Banks & Kockards:
-          rnu_omega(k,i) = xnmbarm(k,i)*(2.33e-11*xn2tmp*te(k,i)*
-     |      (1.-1.21e-4*te(k,i))+1.82e-10*o2(k,i)*rmassinv_o2*
-     |      sqrt_te*(1.+3.6e-2*sqrt_te)+8.9e-11*o1(k,i)*rmassinv_o1*
-     |      sqrt_te*(1.+5.7e-4*te(k,i)))
-          rnu_omega(k,i) = rnu_omega(k,i)/omega_e(i)
+          rnu_ne(k,i) = 
+     |      (2.33e-11*n2_cm3(k,i)*te(k,i)*(1.-1.21e-4*te(k,i))+
+     |       1.82e-10*o2_cm3(k,i)*sqrt_te*(1.+3.60e-2*sqrt_te)+
+     |       8.90e-11*o1_cm3(k,i)*sqrt_te*(1.+5.70e-4*te(k,i)))*
+     |       omega_e_inv(i)
+
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('NU_OMEGA',' ',' ',rnu_omega,i0,i1,nk,nkm1,lat)
+!     call addfsech('RNU_O2P',' ',' ',rnu_o2p,i0,i1,nk,nkm1,lat)
+!     call addfsech('RNU_OP' ,' ',' ',rnu_op ,i0,i1,nk,nkm1,lat)
+!     call addfsech('RNU_NOP',' ',' ',rnu_nop,i0,i1,nk,nkm1,lat)
+!     call addfsech('RNU_NE' ,' ',' ',rnu_ne ,i0,i1,nk,nkm1,lat)
+
 !
-! Pedersen and Hall factors:
+! Pedersen and Hall conductivities (siemens/m):
+! Qe_fac includes conversion from CGS to SI units 
+!  -> e/B [C/T 10^6 m^3/cm^3], see above.
+! number densities [1/cm^3]
+!
       do i=lon0,lon1
         do k=lev0,lev1-1
-          ped(k,i,1) = rnu_omega(k,i)/(1.+rnu_omega(k,i)**2)+
-     |      vo2(k,i)/(1.+vo2(k,i)**2)
-          ped(k,i,2) = rnu_omega(k,i)/(1.+rnu_omega(k,i)**2)+
-     |      vo (k,i)/(1.+vo (k,i)**2)
-          ped(k,i,3) = rnu_omega(k,i)/(1.+rnu_omega(k,i)**2)+
-     |      vn2(k,i)/(1.+vn2(k,i)**2)
 !
-          hall(k,i,1) = 1./(1.+rnu_omega(k,i)**2)-1./(1.+vo2(k,i)**2)
-          hall(k,i,2) = 1./(1.+rnu_omega(k,i)**2)-1./(1.+vo (k,i)**2)
-          hall(k,i,3) = 1./(1.+rnu_omega(k,i)**2)-1./(1.+vn2(k,i)**2)
+! ne = electron density assuming charge equilibrium [1/cm3]:
+          ne(k,i) = op(k,i)+o2p(k,i)+nop(k,i) 
+!
+! Pedersen conductivity [S/m] (half level):
+          sigma_ped(k,i) = qe_fac(i)*
+     |      ((op (k,i)*rnu_op (k,i)/(1.+rnu_op (k,i)**2))+
+     |       (o2p(k,i)*rnu_o2p(k,i)/(1.+rnu_o2p(k,i)**2))+
+     |       (nop(k,i)*rnu_nop(k,i)/(1.+rnu_nop(k,i)**2))+
+     |       (ne (k,i)*rnu_ne (k,i)/(1.+rnu_ne (k,i)**2)))
+!
+! Hall conductivity [S/m] (half level):
+          sigma_hall(k,i) = qe_fac(i)*
+     |      (ne (k,i)/(1.+rnu_ne (k,i)**2)-
+     |       op (k,i)/(1.+rnu_op (k,i)**2)-
+     |       o2p(k,i)/(1.+rnu_o2p(k,i)**2)-
+     |       nop(k,i)/(1.+rnu_nop(k,i)**2))
+
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('PED_1',' ',' ',ped(lev0:lev1,lon0:lon1,1),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('PED_2',' ',' ',ped(lev0:lev1,lon0:lon1,2),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('PED_3',' ',' ',ped(lev0:lev1,lon0:lon1,3),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('HALL_1',' ',' ',hall(lev0:lev1,lon0:lon1,1),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('HALL_2',' ',' ',hall(lev0:lev1,lon0:lon1,2),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('HALL_3',' ',' ',hall(lev0:lev1,lon0:lon1,3),
-!    |  i0,i1,nk,nkm1,lat)
+!     call addfsech('ELECDEN' ,' ',' ',ne        ,i0,i1,nk,nkm1,lat)
+!     call addfsech('SIGMAPED',' ',' ',sigma_ped ,i0,i1,nk,nkm1,lat)
+!     call addfsech('SIGMAHAL',' ',' ',sigma_hall,i0,i1,nk,nkm1,lat)
 !
-! pedxions = ped*ions, hallxions = hall*ions
-      pedxions(:,:) = 0.  
-      hallxions(:,:) = 0.  
-      xions(:,lon0:lon1,1) = o2p(:,lon0:lon1)
-      xions(:,lon0:lon1,2) = op (:,lon0:lon1)
-      xions(:,lon0:lon1,3) = nop(:,lon0:lon1)
-      do l=1,3
-        do i=lon0,lon1
-          do k=lev0,lev1-1
-            pedxions (k,i) = pedxions (k,i)+ped (k,i,l)*xions(k,i,l)
-            hallxions(k,i) = hallxions(k,i)+hall(k,i,l)*xions(k,i,l)
-          enddo ! k=lev0,lev1-1
-        enddo ! i=lon0,lon1
-      enddo ! l=1,3
+! ion drag coefficients lamda1,2 [1/s] (full level)
+! Pedersen/ Hall conductivity [S/m]: sigma_ped, sigma_hall (half level)
+! mass density [g/cm^3/mol]: xnmbar (half level)
+! magnetic field [Gauss]: bgauss
+! Na Avoagdro number [1/mol]
+! conversion: tesla = 1.e-4*bgauss
+!             kg/m3 = 1.e-3*g/(1.e-6*cm^3) = 1.e3*g/cm3
 !
-! small (3e-8) "diamond diff" ~tgcm15 in pedxions:
-!     call addfsech('XNMBARM',' ',' ' ,xnmbarm  ,i0,i1,nk,nkm1,lat)
-!     call addfsech('PEDXIONS',' ',' ',pedxions ,i0,i1,nk,nkm1,lat)
-!     call addfsech('HALXIONS',' ',' ',hallxions,i0,i1,nk,nkm1,lat)
-!
-! Set lxx, lyy, lxy:
       do i=lon0,lon1
         do k=lev0,lev1-1
-          wk1(k,i) = pedxions(k,i)*bgauss(i)*1.e-1*qe*avo/xnmbarm(k,i)
-          wk2(k,i) = wk1(k,i)*sindip2(i)
-          wk3(k,i) = hallxions(k,i)*bgauss(i)*1.e-1*qe*avo/xnmbarm(k,i)
+          lamda1tmp(k,i) = (sigma_ped(k,i)*(1.e-4*bgauss(i))**2)*avo/
+     |                     (1.e3*xnmbar(k,i))
+          lamda2tmp(k,i) = (sigma_hall(k,i)*(1.e-4*bgauss(i))**2)*avo/
+     |                     (1.e3*xnmbar(k,i))
         enddo ! k=lev0,lev1-1
+!
+! Lamda1,2 to full (interface) levels:
         do k=lev0,lev1-2
-          lxx(k+1,i) = sqrt(wk1(k,i)*wk1(k+1,i))
-          lyy(k+1,i) = sqrt(wk2(k,i)*wk2(k+1,i))
-          lxy(k+1,i) = sqrt(wk3(k,i)*wk3(k+1,i))
-        enddo ! k=lev0,lev1-2
 !
-! Lower boundary:
-        lxx(lev0,i) = sqrt(wk1(lev0,i)**3/wk1(lev0+1,i))
-        lyy(lev0,i) = sqrt(wk2(lev0,i)**3/wk2(lev0+1,i))
-        lxy(lev0,i) = sqrt(wk3(lev0,i)**3/wk3(lev0+1,i))
+! 5/17/04 btf: FP invalid here on SGI dataproc due to negative lamda1tmp
+!              at k==lev1 (reference to lamda1tmp at k+1):
+!         write(6,"('lamdas: lat=',i3,' i=',i3,' k=',i3,' lamda1tmp=',
+!    |      e12.4,' lamda1tmp(k+1,i)=',e12.4)") lat,i,k,
+!    |      lamda1tmp(k,i),lamda1tmp(k+1,i)         
+
+          lamda1(k+1,i) = sqrt(lamda1tmp(k,i)*lamda1tmp(k+1,i))
+          lamda2(k+1,i) = sqrt(lamda2tmp(k,i)*lamda2tmp(k+1,i))
+        enddo ! k=lev0,lev1-1
+! Bottom boundary:
+        lamda1(lev0,i) = sqrt(lamda1tmp(lev0,i)**3/lamda1tmp(lev0+1,i))
+        lamda2(lev0,i) = sqrt(lamda2tmp(lev0,i)**3/lamda2tmp(lev0+1,i))
+! Top boundary:
+        lamda1(lev1,i)= sqrt(lamda1tmp(lev1-1,i)**3/lamda1tmp(lev1-2,i))
+        lamda2(lev1,i)= sqrt(lamda2tmp(lev1-1,i)**3/lamda2tmp(lev1-2,i))
 !
-! Upper boundary:
-        lxx(lev1,i) = sqrt(wk1(lev1-1,i)**3/wk1(lev1-2,i))
-        lyy(lev1,i) = sqrt(wk2(lev1-1,i)**3/wk2(lev1-2,i))
-        lxy(lev1,i) = sqrt(wk3(lev1-1,i)**3/wk3(lev1-2,i))
-      enddo ! i=lon0,lon1
-!
-! lxy = lxy*sindip:
-      do i=lon0,lon1
+! Non-rotated lamdas:
         do k=lev0,lev1
-          lxy(k,i) = lxy(k,i)*sindip(i)
+          lxxnorot(k,i) = lamda1(k,i)
+          lyynorot(k,i) = lamda1(k,i)*sin2dip(i)
+          lxynorot(k,i) = lamda2(k,i)*sindip(i)
+          lyxnorot(k,i) = lxynorot(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('LXX',' ',' ',lxx(:,i0:i1),i0,i1,nk,nk,lat)
-!     call addfsech('LYY',' ',' ',lyy(:,i0:i1),i0,i1,nk,nk,lat)
-!     call addfsech('LXY',' ',' ',lxy(:,i0:i1),i0,i1,nk,nk,lat)
-!     call addfsech('LYX',' ',' ',lxy(:,i0:i1),i0,i1,nk,nk,lat)
-
+!     call addfsech('LAMDA1',' ',' ',lamda1,i0,i1,nk,nk,lat)
+!     call addfsech('LAMDA2',' ',' ',lamda2,i0,i1,nk,nk,lat)
+!     call addfsech('LXXNOROT',' ',' ',lxxnorot,i0,i1,nk,nk,lat)
+!     call addfsech('LYYNOROT',' ',' ',lyynorot,i0,i1,nk,nk,lat)
+!     call addfsech('LXYNOROT',' ',' ',lxynorot,i0,i1,nk,nk,lat)
+!     call addfsech('LYXNOROT',' ',' ',lyxnorot,i0,i1,nk,nk,lat)
 !
-! Define 3-d fields for dynamo (in old dynamo.h) (do this later)
-
+! Rotate lamdas for displacement of geomagnetic and geographic poles:
+! (full levels)
 !
-! Rotate lamdas (formerly sub rotate.F):
       do i=lon0,lon1
         do k=lev0,lev1
-          wk1(k,i) = lxx(k,i)*(1.-sn2dec(i,lat))+lyy(k,i)*sn2dec(i,lat)
-          wk2(k,i) = lyy(k,i)*(1.-sn2dec(i,lat))+lxx(k,i)*sn2dec(i,lat)
-          lyx(k,i) = lxy(k,i)-(lyy(k,i)-lxx(k,i))*sncsdc(i,lat)
-          lxy(k,i) = lxy(k,i)+(lyy(k,i)-lxx(k,i))*sncsdc(i,lat)
-          lxx(k,i) = wk1(k,i)
-          lyy(k,i) = wk2(k,i)
-        enddo ! k=lev0,lev1
+          lxx(k,i)= lxxnorot(k,i)*cos2dec(i)+lyynorot(k,i)*sn2dec(i,lat)
+          lyy(k,i)= lyynorot(k,i)*cos2dec(i)+lxxnorot(k,i)*sn2dec(i,lat)
+          lyx(k,i)= lxynorot(k,i)-(lyynorot(k,i)-lxxnorot(k,i))*
+     |      sndec(i,lat)*csdec(i,lat)
+          lxy(k,i)= lxynorot(k,i)+(lyynorot(k,i)-lxxnorot(k,i))*
+     |      sndec(i,lat)*csdec(i,lat)
+        enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-!
-! Periodic points:
-! Probably not necessary:
-!     call periodic_f2d(lxx,lon0,lon1,nlevs)
-!     call periodic_f2d(lyy,lon0,lon1,nlevs)
-!     call periodic_f2d(lxy,lon0,lon1,nlevs)
-!     call periodic_f2d(lyx,lon0,lon1,nlevs)
+ 
+      call addfsech('LXX','LXX','Hz',lxx(:,i0:i1),i0,i1,nk,nk,lat)
+      call addfsech('LYY','LYY','Hz',lyy(:,i0:i1),i0,i1,nk,nk,lat)
+      call addfsech('LXY','LXY','Hz',lxy(:,i0:i1),i0,i1,nk,nk,lat)
+      call addfsech('LYX','LYX','Hz',lyx(:,i0:i1),i0,i1,nk,nk,lat)
+      call addfsech('LAMDA1','LAMDA1 ','Hz',lamda1,i0,i1,nk,nk,lat)
 
-! (For tgcm15, these are from rotate.F, not lamdas.F)
-!     call addfsech('LXX',' ',' ',lxx(:,i0:i1),i0,i1,nk,nk,lat)
-!     call addfsech('LYY',' ',' ',lyy(:,i0:i1),i0,i1,nk,nk,lat)
-!     call addfsech('LXY',' ',' ',lxy(:,i0:i1),i0,i1,nk,nk,lat)
-!     call addfsech('LYX',' ',' ',lyx(:,i0:i1),i0,i1,nk,nk,lat)
-!
-! Return pedersen and hall conductivities for use in the dynamo:
-! This is not strictly necessary unless user input flag DYNAMO is set,
-!   but do it anyway, to save the 3d ped and hall fields.
-! Note tgcm15 (lamdas.F) assigned do i=1,imax+1: f(i) <= f(i+2),
-!   so to match that ped_out and hall_out would need to be rotated
-!   2 lon points to the "left", i.e., do i=1,nlon+1: f(i) = f(i+2)
-!
       lonbeg = lon0
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==nlonp4) lonend = nlonp4-2
-
+!
+! Output conductivities [S/m] (half levels):
       do i=lonbeg,lonend
         do k=lev0,lev1
-          ped_out (k,i) = pedxions (k,i)*1.e10*qe/bgauss(i)
-          hall_out(k,i) = hallxions(k,i)*1.e10*qe/bgauss(i)
-        enddo ! k=lev0,lev1
-      enddo ! i=lon0,lon1
+          ped_out(k,i)  = sigma_ped(k,i)
+          hall_out(k,i) = sigma_hall(k,i)
+        enddo
+      enddo
 
-!     call addfsech('SPED_LAM',' ',' ',ped_out(:,i0:i1),i0,i1,nk,nk,
-!    |  lat)
-!     call addfsech('SHAL_LAM',' ',' ',hall_out(:,i0:i1),i0,i1,nk,nk,
-!    |  lat)
-     
-!     real,dimension(lev0:lev1,lon0:lon1) :: ped_plt,hall_plt
-!     do i=lon0,lon1
-!       ped_plt(:,i)  = ped_out(:,i)
-!       hall_plt(:,i) = hall_out(:,i)
-!     enddo
-!     call addfsech('SIGMAPED',' ',' ',ped_plt,i0,i1,nk,nk,lat)
-!     call addfsech('SIGMAHAL',' ',' ',hall_plt,i0,i1,nk,nk,lat)
+      call addfsech('SIGMAPED' ,'SIGMAPED','S/m ',ped_out (:,i0:i1),
+     |  i0,i1,nk,nkm1,lat)
+      call addfsech('SIGMAHAL','SIGMAHAL','S/m ',hall_out(:,i0:i1),
+     |  i0,i1,nk,nkm1,lat)
 
       end subroutine lamdas

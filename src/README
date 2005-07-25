@@ -196,3 +196,9 @@ when DISPOSE=1 (putms is called by master task only).
 
 5/12/05: Preparing tiegcm1.8 "tuning release", see doc/README_1.8tune
 CVS tag will be tiegcm1.8tune, source in $TGCMROOT/dev/tiegcm1.8.
+
+7/25/07: am
+rewritten lamdas.F; correct Joule heating for ions qjoule.F; include vertical 
+velocity difference for Joule heating calculation which goes into neutrals 
+qjoule.F
+

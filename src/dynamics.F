@@ -10,6 +10,10 @@
 ! Include the option of setting the lower boundary by using GSWM output
 ! this affects subroutine dt and duv
 !
+! am 6/06: change call to qjoule_ti to include ion and neutral density
+!          factors, include vertical component
+!          change call to qjoule_tn to include vertical velocity
+!
       use fields_module
       use mpi_module,only: lon0,lon1,lat0,lat1,mytidi
 #ifdef MPI
@@ -336,6 +340,7 @@
      |    lyy (levd0,lond0,lat), ! LYY output
      |    lxy (levd0,lond0,lat), ! LXY output
      |    lyx (levd0,lond0,lat), ! LYX output
+     |    lam1(levd0,lond0,lat), ! LAM1 output
      |    ped (levd0,lond0,lat), ! pedersen conductivity output
      |    hall(levd0,lond0,lat), ! hall conductivity output
      |    1,nlevp1,lon0,lon1,lat)
@@ -348,6 +353,8 @@
           call addfsech('LXY',' ',' ',lxy(:,i0:i1,lat),
      |      i0,i1,nk,nkm1,lat)
           call addfsech('LYX',' ',' ',lyx(:,i0:i1,lat),
+     |      i0,i1,nk,nkm1,lat)
+          call addfsech('LAM1','lam1','1/s',lam1(:,i0:i1,lat),
      |      i0,i1,nk,nkm1,lat)
           call addfsech('SIGMAPED',' ',' ',ped(:,i0:i1,lat),
      |      i0,i1,nk,nkm1,lat)
@@ -509,12 +516,18 @@
         call qjoule_ti(
      |    un (levd0,lond0,lat,itp), ! zonal neutral velocity input
      |    vn (levd0,lond0,lat,itp), ! meridional velocity input
-     |    ui (levd0,lond0,lat),     ! zonal ion velocity input
-     |    vi (levd0,lond0,lat),     ! meridional ion velocity input
-     |    lxx(levd0,lond0,lat),     ! xx ion drag coefficient
-     |    lyy(levd0,lond0,lat),     ! yy ion drag coefficient
-     |    lxy(levd0,lond0,lat),     ! xy ion drag coefficient
-     |    lyx(levd0,lond0,lat),     ! yx ion drag coefficient
+     |    w  (levd0,lond0,lat,itp), ! vertical velocity input
+     |    ui (levd0,lond0,lat),     ! zonal ion velocity input (ExB)
+     |    vi (levd0,lond0,lat),     ! meridional ion velocity input (ExB)
+     |    wi (levd0,lond0,lat),     ! vertical ion velocity input (ExB)
+     |    lam1(levd0,lond0,lat),    ! lambda_1 ion drag coefficient [1/s]
+     |    op (levd0,lond0,lat,itp), ! O+ 1/cm^3
+     |    nplus(levd0,lond0,lat),   ! N+  1/cm^3
+     |    n2p(levd0,lond0,lat),     ! N2+ 1/cm^3
+     |    nop(levd0,lond0,lat),     ! NO+  1/cm^3
+     |    o2p(levd0,lond0,lat,itp), ! O2+  1/cm^3
+     |    barm(levd0,lond0,lat,itp),! mean molecular weight
+     |    tn  (levd0,lond0,lat,itp),! neutral temperature
      |    qji_ti(levd0,lond0,lat),  ! ion joule heating output
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after qjoule_ti: lat=',i3)")lat
@@ -618,12 +631,13 @@
         call qjoule_tn(
      |    un (levd0,lond0,lat,itp), ! zonal neutral velocity input
      |    vn (levd0,lond0,lat,itp), ! meridional velocity input
+     |    w  (levd0,lond0,lat,itp), ! vertical velocity input
      |    ui (levd0,lond0,lat),     ! zonal ion velocity input
      |    vi (levd0,lond0,lat),     ! meridional ion velocity input
-     |    lxx(levd0,lond0,lat),     ! xx ion drag coefficient
-     |    lyy(levd0,lond0,lat),     ! yy ion drag coefficient
-     |    lxy(levd0,lond0,lat),     ! xy ion drag coefficient
-     |    lyx(levd0,lond0,lat),     ! yx ion drag coefficient
+     |    wi (levd0,lond0,lat),     ! vertical ion velocity input
+     |    lam1(levd0,lond0,lat),    ! lambda_1 ion drag coefficient
+     |    barm(levd0,lond0,lat,itp),! mean molecular weight
+     |    tn  (levd0,lond0,lat,itp),! neutral temperature
      |    qji_tn(levd0,lond0,lat),  ! ion joule heating output
      |    1,nlevp1,lon0,lon1,lat)
         if (diags) then
