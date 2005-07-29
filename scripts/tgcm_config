@@ -606,7 +606,8 @@ EOF
              gswm_nmidi_ncfile  => "gswm_nonmig_diurn_5.0d_99km.nc",
              gswm_nmisdi_ncfile => "gswm_nonmig_semi_5.0d_99km.nc" ,
              magfield_file      => "magfield.nc"             ,  # ~1  MB
-             gpi_file           => "gpi_1979001-2004060.nc"  ,  # 0.7 MB
+             gpi_file           => "gpi_1979001-2005059.nc"  ,  # 0.7 MB
+             sd_file            => "see__L3_merged_2005007_007.nc"  ,  # 336 KB
              hist_source        => $hist_source);
 #
 # High hres tiegcm:
@@ -628,8 +629,8 @@ EOF
              gswm_msdi_ncfile     => "gswm_semi_5.0d_32km.nc"   , # 24  MB
              gswm_nmidi_ncfile    => "gswm_nonmig_diurn_5.0d_32km.nc",
              gswm_nmisdi_ncfile   => "gswm_nonmig_semi_5.0d_32km.nc" ,
-             gpi_file             => "gpi_1979001-2004060.nc"   , # 0.7 MB
-             ncep_file            => "ncep_1979001-2004060.nc"  , # 391 MB
+             gpi_file             => "gpi_1979001-2005059.nc"   , # 0.7 MB
+             ncep_file            => "ncep_1979001-2005120.nc"  , # 409 MB
              hist_source          => $hist_source);
 #
 # High hres for timegcm:
@@ -766,11 +767,19 @@ sub write_makefile {
       $nodename = `uname -n`; chop $nodename;
       if ($nodename =~ /^ln/) {              # SCD linux cluster "lightning"
         $OS = $OS . '-mpi';
+<<<<<<< tgcm_config
+#       $lib_netcdf = "/usr/local/lib";
+#       $inc_netcdf = "/usr/local/include";
+# 5/27/05, after lightning OS upgrade:
+        $lib_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/lib";
+        $inc_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/include";
+=======
 #       $lib_netcdf = "/usr/local/lib";
 #       $inc_netcdf = "/usr/local/include";
 # 7/21/05 btf: new netcdf locations on lightning after OS upgrade:
         $lib_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/lib";
         $inc_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/include";
+>>>>>>> 1.2
       } else {                               # Generic linux (probably HAO)
         $lib_netcdf = "/opt/local/rh9/lib";
         $inc_netcdf = "/opt/local/include";

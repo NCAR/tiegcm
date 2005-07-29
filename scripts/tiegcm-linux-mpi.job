@@ -163,6 +163,8 @@ endif
 #
 cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
 echo "" ; echo "Begin building $model in `pwd` at `date`..."
+set PGI=/usr/local/pgi
+set LM_LICENSE_FILE=/usr/local/pgi/license.dat
 gmake -j4 || echo ">>> Error return from gmake" && exit 1
 echo "End building $model at `date`..."
 #

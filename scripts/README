@@ -6,3 +6,31 @@ and FFLAGS in the target execution statement. This is not the case
 under AIX and SGI, where gmake apparently includes only FFLAGS.
 Removing CPPFLAGS from the FFLAGS definition in Linux sections of
 the Makefile cleaned this up.
+
+2/2/05: 
+Importing to CVS as new project "tgcm_scripts".
+This is after tiegcm-linux-mpi.job and timegcm-linux-mpi.job, but
+before removing reference to blackforest and dave.
+
+2/2: Removed references to blackforest and dave, and committed
+to repository. Also updated scripts directories for all models
+under TGCMROOT at hao and scd (using the distribute scripts).
+
+The distribute command was used from /home/tgcm/scripts at hao,
+and from /fis/hao/tgcm/scripts at scd. This included job files
+for lightning, and changes for lightning in other scripts.
+
+3/28/05: Changed MkNamelist for section on tiegcm: DYNAMO is now
+either 1 or 0 for dynamo or no-dynamo.
+
+4/6/05:
+Changes to MkNamelist and tgcm_config for Liying's SEE data file
+for tiegcm1.8. This has new namelist parameter SD_FILE. Put a default
+SD_FILE in $TGCMDATA (both hao and scd). This default file
+($TGCMDATA/see__L3_merged_2005007_007.nc) is now copied to exec dif
+by tgcm_config. The new namelist parameter is added to tiegcm section
+of MkNamelist. The new files MkNamelist and tgcm_config were distributed
+to model scripts directories at both hao and scd.
+
+4/22/05: In MkNamelist, for all most recent versions of both models , 
+DYNAMO is 1 or 0 for or dynamo no-dynamo.

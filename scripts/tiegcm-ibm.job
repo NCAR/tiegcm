@@ -31,19 +31,7 @@
 # @ total_tasks      = 16
 # @ node_usage       = not_shared
 #
-# Blackforest (4 procs per node) (typically node=4, total_tasks=16):
-## @ class            = com_reg
-## @ node             = 4
-## @ total_tasks      = 16
-## @ node_usage       = not_shared
-#
-# Dave (test runs, typically node=1, total_tasks=4):
-## @ class            = dv_reg
-## @ node             = 1
-## @ total_tasks      = 4
-## @ node_usage       = not_shared
-#
-# All machines (wall-clock limit in non-share queues is usually 6 hours):
+# Wall-clock limit in non-share queues is usually 6 hours:
 # @ wall_clock_limit = 01:00:00
 # @ job_type         = parallel
 # @ network.MPI      = csss,shared,us

@@ -156,9 +156,10 @@ CPPFLAGS := -DLINUX -DMPI -DMSS
 ifeq ($(DEBUG),TRUE)
   CPPFLAGS += -DDEBUG
   OPTIM    := -g
-# OPTIM    := -g -Mbounds -Ktrap=fp # check array bounds and trap fpe's
 endif
-cpp_path += -I/opt/mpich-gm/include
+# 5/31/05: path to mpif.h was changed from /opt to /usr after lightning OS upgrade:
+#cpp_path += -I/opt/mpich-gm/include
+cpp_path += -I/usr/local/mpich-gm/include
 #
 # Note: Apparently gmake under Linux includes both FFLAGS and CPPFLAGS by 
 #       default, so CPPFLAGS is not included in FFLAGS here.
@@ -166,7 +167,8 @@ cpp_path += -I/opt/mpich-gm/include
 FFLAGS   := $(cpp_path) $(OPTIM) -r8
 #
 # dcs lib can be removed when all models use my_msrcp instead of call msrcp.
- LIBS     += -L/usr/local/dcs-ssg-3.3/lib64 -ldcs
+#LIBS     += -L/usr/local/dcs-ssg-3.3/lib64 -ldcs
+ LIBS    += -L/usr/local/dcs/lib -ldcs
 #LDFLAGS +=
 #FC      := pgf90
 FC       := mpif90

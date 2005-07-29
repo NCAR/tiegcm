@@ -138,8 +138,8 @@ DESCRIPTION
   Link given files to directories.
 
 OPTIONS
-  -model:s	Distribute only to directories beginning with $model
-  -chmod:s      Do chmod on file after linking 
+  -model=model 	Distribute only to directories beginning with the string model
+  -chmod=chmod  Do chmod on file after linking 
   -remove	Remove (unlink) files rather than distributing
   -list         Only list files in each scripts directory (file args are ignored)
 

@@ -3,9 +3,9 @@
       use input_module,only: tempdir,sd_ncfile
       implicit none
 #ifdef SUN
-#include "netcdf3.inc"
+#include <netcdf3.inc>
 #else
-#include "netcdf.inc"
+#include <netcdf.inc>
 #endif
       integer :: 
      |  nstruct,    ! # of structure_elements (unlimited dim)
@@ -46,7 +46,6 @@
       diskfile =sd_ncfile
       call get_diskfile(diskfile,' ')
 #else
- 
       diskfile = ' '
       call getfile(sd_ncfile,diskfile)
       write(6,"('Acquired SEE solar data file ',a,
@@ -254,6 +253,9 @@
 ! Get index to requested time:
 
       index=b_search(yfrac(:,istruct),1,ndate,iyfrac)
+      if (index == -1) then
+         call shutdown('soldata: no SEE data available for the date')
+      endif
 !      write(12,"('index=',i4,'date(index)=',i8)") index,date(index)
 !
 ! make sure that the solar fluxes of both sides of the bracket are not 
@@ -295,6 +297,7 @@
 
       call finterpb(sflux1,sflux2,soldata,nwave,yfrac(index1,istruct),
      |              yfrac(index2,istruct),iyfrac)
+
 
       end subroutine get_soldata
 !-------------------------------------------------------------------

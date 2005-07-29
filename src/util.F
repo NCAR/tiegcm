@@ -44,7 +44,7 @@
       character(len=1) :: comchar
       logical isopen
       integer :: i,lens,ios,compos,nline,nlcfields
-      character*80 line
+      character(len=6400) :: line
       character(len=64) :: newcfields(30)
 !
       if (luin <= 0) then
@@ -1093,7 +1093,13 @@
       end subroutine getcwd
 !-----------------------------------------------------------------------
       integer function my_msrcp(opts,src,dest)
+#ifdef MPI
+      use mpi_module,only: mytid
+#endif
       implicit none
+#ifdef MPI
+#include <mpif.h>
+#endif
 !
 ! Build and execute msrcp command to the shell. Assume "mss:" prefixes
 ! either src (for a get) or dest (for a put).
@@ -1117,6 +1123,12 @@
       endif
 !
 ! Only master task does the msrcp:
+#ifdef MPI
+      if (mytid/=0) then
+        my_msrcp = 0
+        goto 100
+      endif
+#endif
       if (src(1:4) == "mss:") then
         write(6,"('my_msrcp: Obtaining file ',a,' from mss.')")
      |    src(5:len_trim(src))
@@ -1129,6 +1141,10 @@
       write(6,"('my_msrcp: Executing ',a)") trim(cmd)
       my_msrcp = isystem(cmd)
       write(6,"(a)") trim(cmd)
+ 100  continue
+#ifdef MPI
+      call mpi_barrier(MPI_COMM_WORLD,ier)
+#endif
       end function my_msrcp
 !-----------------------------------------------------------------------
       logical function is_mspath(path)
@@ -1299,38 +1315,43 @@
       end subroutine shutdown
 !-----------------------------------------------------------------------
       integer function b_search(inarray,first,last,key)
-      implicit none    
+      implicit none
 !
-! inarray is a sorted array in asending order. The binary search routine search
+! inarray is a sorted array in asending order. The binary search routine search 
 ! for the beginning index where the value of key fall within in inarray (or the index
 ! where the value of array[index] equals to key).
 !
-! Args:  
-      real,dimension(first:last),intent(in) :: inarray
+! Args:
       integer,intent(in)::first,last
+      real,dimension(first:last),intent(in) :: inarray
       real,intent(in)::key
 !
-! Local: 
+! Local:
       integer :: nmid,nmin,nmax
 !
-      nmin=first 
+      if ((key < inarray(first)) .or. (key > inarray(last))) then
+          b_search=-1
+          return
+      endif
+
+      nmin=first
       nmax=last
-      do 
+      do
          if (nmin > nmax) then
             b_search=nmin-1
-            exit
+	    exit
          end if
          nmid=(nmin+nmax)/2
-         if (key > inarray(nmid)) then
-           nmin=nmid+1 
+	 if (key > inarray(nmid)) then
+	   nmin=nmid+1
          else if (key < inarray(nmid)) then
-           nmax=nmid-1 
+	   nmax=nmid-1
          else
-           b_search=nmid 
-           exit  
-         end if
+	   b_search=nmid
+	   exit
+         end if 
       end do
- 
+
       end function b_search
 !-----------------------------------------------------------------------
       subroutine check_nans(f,id1,id2,id3,name,n_total,ispval,spval,

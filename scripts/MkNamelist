@@ -86,11 +86,13 @@ if ($model =~ /^timegcm/) {
     $gswm_msdi_ncfile   = 'gswm_semi_5.0d_99km.nc';
     $gswm_nmidi_ncfile  = 'gswm_nonmig_diurn_5.0d_99km.nc';
     $gswm_nmisdi_ncfile = 'gswm_nonmig_semi_5.0d_99km.nc';
+    $sd_ncfile          = 'see__L3_merged_2005007_007.nc';
   } elsif ($hres == 2.5) {
     $gswm_mdi_ncfile    = 'gswm_diurn_2.5d_99km.nc';
     $gswm_msdi_ncfile   = 'gswm_semi_2.5d_99km.nc';
     $gswm_nmidi_ncfile  = 'gswm_nonmig_diurn_2.5d_99km.nc';
     $gswm_nmisdi_ncfile = 'gswm_nonmig_semi_2.5d_99km.nc';
+    $sd_ncfile          = 'see__L3_merged_2005007_007.nc';
   }
 }
 #
@@ -225,7 +227,8 @@ print OUTFILE <<EOF;
  SECOUT='$hist_secout'
 ;MXHIST_SECH = 25 ; default max #histories per sech file is 24
  SECFLDS = 'TN','UN','VN','W','O3','O1','OX','NO','NO2','NOZ','H2O',
-           'OH','HO2','H','HOX','CO2','CO','CH4','NE','TE','TI','Z'
+           'OH','HO2','H','HOX','CO2','CO','CH4','NE','TE','TI','Z',
+           'POTEN'
 ;
 ;DISPOSE = 0 ; no dispose to mss
 ;DISPOSE = 1 ; dispose to mss during model execution
@@ -242,7 +245,7 @@ print OUTFILE <<EOF;
  ZATMOS_FILE = 'zatmos_bndry.nc'
 ;
 ; Comment any of these to turn off, uncomment to turn on.
-;NCEP_NCFILE     = 'ncep_1979001-2004060.nc'  ; ncep boundary
+;NCEP_NCFILE     = 'ncep_1979001-2005120.nc'  ; ncep boundary
 ;
 ; By default, use gswm migrating diurnal and semi-diurnal tides:
  GSWM_MDI_FILE   = '$gswm_mdi_ncfile'
@@ -250,7 +253,7 @@ print OUTFILE <<EOF;
 ;GSWM_NMDI_FILE  = '$gswm_nmidi_ncfile'
 ;GSWM_NMSDI_FILE = '$gswm_nmisdi_ncfile'
 ;
-;GPI_NCFILE      = 'gpi_1979001-2004060.nc'   ; gpi data
+;GPI_NCFILE      = 'gpi_1979001-2005059.nc' ; gpi data file
 ;
 ; If GPI_NCFILE is provided, f107, f107a, power, and ctpoten
 ; should be commented out (they will be provided by gpi_ncfile).
@@ -292,7 +295,7 @@ print OUTFILE <<EOF;
  STOP=  $start_day,1,0
  HIST=   0,1,0
  SAVE=   0,1,0
- STEP= 240
+ STEP= 180
 ;
  OUTPUT='$hist_output'
 ;MXHIST_PRIM = 13 ; default max #histories per primary file is 10
@@ -321,7 +324,8 @@ print OUTFILE <<EOF;
  GSWM_SDI_NCFILE   = '$gswm_msdi_ncfile'
 ;GSWM_NMIDI_NCFILE  = '$gswm_nmidi_ncfile'
 ;GSWM_NMISDI_NCFILE = '$gswm_nmisdi_ncfile'
-;GPI_NCFILE       = 'gpi_1979001-2004060.nc'   ; gpi data
+;GPI_NCFILE = 'gpi_1979001-2005059.nc'   ; gpi data file
+;SD_NCFILE  = '$sd_ncfile'               ; SEE data file
 ;
 ; If GPI_NCFILE is provided, f107, f107a, power, and ctpoten
 ; should be commented out (they will be provided by gpi_ncfile).
@@ -333,7 +337,7 @@ print OUTFILE <<EOF;
  MAGVOL = '$magvol'
  MAG=-74.5,127.,79.,-70.
  DIFHOR=1
- DYNAMO=2 ; 1 or 2 for old or new dynamo
+ DYNAMO=1 ; 1 or 0 for dynamo or no-dynamo
  AURORA=1
  COLFAC=1.5
  BYIMF = 0.
@@ -469,7 +473,8 @@ print OUTFILE <<EOF;
  SECOUT='$hist_secout'
 ;MXHIST_SECH = 25 ; default max #histories per sech file is 24
  SECFLDS = 'TN','UN','VN','W','O3','O1','OX','NO','NO2','NOZ','H2O',
-           'OH','HO2','H','HOX','CO2','CO','CH4','NE','TE','TI','Z'
+           'OH','HO2','H','HOX','CO2','CO','CH4','NE','TE','TI','Z',
+           'POTEN'
 ;
 ;DISPOSE = 0 ; no dispose to mss
 ;DISPOSE = 1 ; dispose to mss during model execution
@@ -484,11 +489,11 @@ print OUTFILE <<EOF;
  TIDE3M3=0.,0.
 ;
  NCEP = 0 ; ncep Z,T lower boundaries
-;NCEP_NCFILE = '/TGCM/data/ncep_1979001-2003059.nc'
+;NCEP_NCFILE = '/TGCM/data/ncep_1979001-2005120.nc'
 ;
 ; If GPI_NCFILE is provided, f107, f107a, power, and ctpoten
 ; should be commented out (they will be provided by gpi_ncfile).
-;GPI_NCFILE      = 'gpi_1979001-2004060.nc'   ; gpi data
+;GPI_NCFILE      = 'gpi_1979001-2005059.nc' ; gpi data file
 ;
  F107 = 150.
  F107A =150.

@@ -20,13 +20,14 @@
 #BSUB -a mpich_gm       # select the MPICH_GM esub
 #BSUB -x 		# exclusive use of the node
 #BSUB -n 4              # number of MPI tasks
-#BSUB -q premium        # queue (premium and regular are available)
-##BSUB -q debug         # debug queue is available during the day (3 hr limit)
+#BSUB -q regular        # queue (premium and regular are available)
+##BSUB -q debug         # debug queue is available during the day (30 min limit)
 #BSUB -o timegcm.%J.out # stdout filename
 #BSUB -e timegcm.%J.out # stderr filename
 #BSUB -N                # send mail when job finishes
 #BSUB -u $LOGNAME@ucar.edu # email address
-#BSUB -W 1:00           # wallclock limit (hh:mm)
+#BSUB -W 3:00           # wallclock limit (hh:mm) (3 hrs for prem or reg)
+##BSUB -W 0:30          # 30 min limit for debug queue
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #        USER EDIT SHELL VARIABLES (for batch and interactive jobs)
 #
