@@ -767,19 +767,11 @@ sub write_makefile {
       $nodename = `uname -n`; chop $nodename;
       if ($nodename =~ /^ln/) {              # SCD linux cluster "lightning"
         $OS = $OS . '-mpi';
-<<<<<<< tgcm_config
-#       $lib_netcdf = "/usr/local/lib";
-#       $inc_netcdf = "/usr/local/include";
-# 5/27/05, after lightning OS upgrade:
-        $lib_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/lib";
-        $inc_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/include";
-=======
 #       $lib_netcdf = "/usr/local/lib";
 #       $inc_netcdf = "/usr/local/include";
 # 7/21/05 btf: new netcdf locations on lightning after OS upgrade:
         $lib_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/lib";
         $inc_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/include";
->>>>>>> 1.2
       } else {                               # Generic linux (probably HAO)
         $lib_netcdf = "/opt/local/rh9/lib";
         $inc_netcdf = "/opt/local/include";
