@@ -1497,15 +1497,43 @@
 !-------------------------------------------------------------------
       recursive subroutine expand_path(path)
 !
-! Expand any environment variables in path, return expanded path.
-!   If '$' is found, then an env var is defined as that part of path
-!   following the '$' until the next slash. If no '$' is found,
-!   return without changing path.
-! Example:
-!   Here, "TGCMDATA" is considered the env var:
-!   path = '$TGCMDATA/dir1/file'
-! This routine is recursive, so multiple env vars can be used, e.g.:
-!   path = '$MYDIR/$MYSUBDIR/file.nc'
+! Expand any environment variables imbedded in path, and return 
+!   expanded path. 
+! Procedure:
+!   If '$' is found in input path, then an env var is defined as 
+!   that part of path following the '$' up to (not including) the 
+!   next delimiter. The value of the env var is substituted in place 
+!   of the env var string. If no '$' is found, the routine returns 
+!   without changing path. 
+! Environment vars can be set (using setenv) in the user's .cshrc file, 
+!   in the job script (e.g., setenv from a shell var), or set manually 
+!   in the shell before executing the model.
+!
+! The 7 recognized delimiters (meaning end of env var name) are:
+!   '/' (forward slash), 
+!   '.' (dot), 
+!   '_' (underscore), 
+!   '-' (dash), 
+!   ':' (colon), 
+!   '#' (pound sign), and 
+!   '%' (percent sign)
+!
+! This routine is recursive, so multiple env vars can be used in the
+!   same path, and in combination with different delimiters, see 
+!   examples below.
+!
+! Examples:
+!   path = '$TGCMDATA/dir1/file.nc'   (the env var is $TGCMDATA)
+!   path = '$MYDIR/$MYSUBDIR/file.nc' (env vars are $MYDIR, $MYSUBDIR)
+!   path = '$USER.$MODEL_$NUM.nc'     (3 env vars and different delims)
+!   path = '$FILEPATH'                (entire path in one env var)
+! Last example:
+!   In the job script:
+!     set model = $tiegcm  ! set a shell var
+!     setenv MODEL $model  ! set env var from shell var
+!   In the namelist input:
+!     histfile = '$TGCMDATA/TGCM.$MODEL.p001-2002-080.nc' or
+!     histfile = '$TGCMDATA/TGCM.$MODEL.p001-$YEAR-$DAY.nc'
 !
       implicit none
 !
@@ -1515,7 +1543,10 @@
 ! Local:
       character(len=224) :: path_out,envvar_value
       character(len=80) :: envvar_name
-      integer :: i,idollar,islash
+      integer,parameter :: ndelim=7
+      character(len=1) :: delimiters(ndelim) = 
+     |  (/ '/', '.', '-', '_', ':', '#', '%'/)
+      integer :: i,idollar,idelim
 !
       if (len_trim(path)==0) then
         write(6,"('>>> WARNING expand_path: path is empty.')")
@@ -1530,30 +1561,43 @@
 ! Env var is between idollar and next slash 
 ! (or end of path if there is no slash after idollar):
 !
-      islash = index(path(idollar+1:len_trim(path)),'/')
-      if (islash <= 0) islash = len_trim(path)
-      islash = islash+idollar
-      envvar_name = path(idollar+1:islash-1)
+      idelim = 0
+      do i=idollar+1,len_trim(path) ! find next delimiter
+        if (any(delimiters==path(i:i))) then
+          idelim = i
+          exit
+        endif
+      enddo
+      if (idelim <= 0) idelim = len_trim(path)+1
+      envvar_name = path(idollar+1:idelim-1)
+
+!     write(6,"('expand_path: path=',a,' idollar=',i3,
+!    |  ' idelim=',i3,' envvar_name=',a)") 
+!    |  trim(path),idollar,idelim,trim(envvar_name)
+
 !
 ! Get value of env var (getenv is f90 intrinsic):
       call getenv(trim(envvar_name),envvar_value)
       if (len_trim(envvar_value) <= 0) then
         write(6,"('>>> WARNING expand_path: error retrieving ',
-     |    'value for env var ',a)") trim(envvar_name)
+     |    'value for env var ''',a,'''')") trim(envvar_name)
         return
+      else
+!       write(6,"('expand_path: envvar=',a,' value=',a)")
+!    |    trim(envvar_name),trim(envvar_value)
       endif
 !
-! Put together expanded output path:
+! Put together the expanded output path:
       if (idollar > 1) then
-        if (islash < len_trim(path)) then
+        if (idelim < len_trim(path)) then
           path_out = path(1:idollar-1)//trim(envvar_value)//
-     |      path(islash:len_trim(path))
+     |      path(idelim:len_trim(path))
         else
           path_out = path(1:idollar-1)//trim(envvar_value)
         endif
       else     ! idollar == 1
-        if (islash < len_trim(path)) then
-          path_out = trim(envvar_value)//path(islash:len_trim(path))
+        if (idelim < len_trim(path)) then
+          path_out = trim(envvar_value)//path(idelim:len_trim(path))
         else
           path_out = trim(envvar_value)
         endif
@@ -1561,6 +1605,9 @@
 !
 ! Return new path, and make recursive call for more env vars:
       path = trim(path_out)
+      write(6,"('expand_path returning path = ''',a,'''')") trim(path)
+!
+! Recursive call to expand any additional env vars:
       call expand_path(path) ! expand next env var
 !
       end subroutine expand_path

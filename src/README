@@ -242,3 +242,9 @@ velocity difference for Joule heating calculation which goes into neutrals
 qjoule.F
 
 >>>>>>> 1.9
+
+9/22/05: Updated apex_subs.F from Astrid -- this has new apex coefficients
+for 1995, 2000, 2005.. Copied her file from /home/maute/apex.d/modsrc_apexmod.
+
+Also improved expand_path (util.F) for expanding env vars used in
+file specs in namelist read. 
