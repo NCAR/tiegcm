@@ -216,7 +216,7 @@
 ! Sigma_H^M: equivalent magnetospheric Hall conductance
 ! - acts on below the convection reversal boundary
 ! 
-      logical,parameter :: eqMgCnd = .true.
+      logical,parameter :: eqMgCnd = .false.
       real,parameter :: eqMg_crit = 0.314159266 ! 18 deg colatitude where C_r,C_i start
       real ::  zigmc_r(nmlonp1,nmlat),  ! C_r/ Sigma_phiphi^M on tiegcm grid
      |   zigmc_i(nmlonp1,nmlat)         ! C_i/ Sigma_H^M on tiegcm grid

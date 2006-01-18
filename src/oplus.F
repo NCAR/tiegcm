@@ -1035,9 +1035,10 @@
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
 !
 ! Local:
-      integer :: k,i,mgr,k1,k2
+      integer :: k,i,k1,k2
+      real :: mgr
 !
-      mgr = int(rmass_op*grav/gask)
+      mgr = rmass_op*grav/gask
       do i=lon0,lon1
         do k=lev0,lev1-2
           k1 = k+1

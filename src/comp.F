@@ -178,13 +178,9 @@
 !
 ! WKS1=MBAR/M3*(T00/(T0+T))*0.25/(TAU*DET) AT LEVEL 1/2
 ! tn lower boundary is stored in top slot tn(lev1..). 
-! 6/10/05 btf tn lbc no longer stored in top slot:
       do i=lon0,lon1
         wks1(i) = 0.5*(embar0(i)+embar(i,lev0))*rmassinv_n2*
-
-!    |    (t00/tn(lev1,i,lat))**0.25/(tau*(ak(i,1,1,kp)*ak(i,2,2,kp)-
-     |    (t00/tn(lev0,i,lat))**0.25/(tau*(ak(i,1,1,kp)*ak(i,2,2,kp)-
-
+     |    (t00/tn(lev1,i,lat))**0.25/(tau*(ak(i,1,1,kp)*ak(i,2,2,kp)-
      |    ak(i,1,2,kp)*ak(i,2,1,kp)))
       enddo ! i=lon0,lon1
 !     write(6,"('comp: lat=',i3,' wks1=',/,(6e12.4))") lat,wks1

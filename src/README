@@ -248,3 +248,10 @@ for 1995, 2000, 2005.. Copied her file from /home/maute/apex.d/modsrc_apexmod.
 
 Also improved expand_path (util.F) for expanding env vars used in
 file specs in namelist read. 
+
+1/18/06: 
+  Fix "mgr bug" in oplus 
+  Reference lev1 (rather than lev0) for tn lbc in comp.F, because lbc is
+    still in top slot.
+
+Doing cvs commit to update these 2 changes and the new apex.F. 
