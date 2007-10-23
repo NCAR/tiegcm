@@ -255,3 +255,22 @@ file specs in namelist read.
     still in top slot.
 
 Doing cvs commit to update these 2 changes and the new apex.F. 
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+10/23/07  am
+  Minor correction to dynamo.F, pointed out by Wenbin:
+  dynamo.F: line 843-844
+  correct the hemispherical adjustment of the high latitude electric potential
+  This adjustment is done for asymmetric high latitude potential pattern for
+  HEELIS and Weimer (not working at the moment).
+  Therefore, fac = 1 (line 842)
+  Heelis pattern is hemispherically symmetric, therfore 
+  phihm(i,southH_n)-phihm(i,northH_n) = 0
+  For modified Heelis (mod_heelis=.true.), we don't want this correction, 
+  since it's symmetric anyway,
+  therefore fac = 0.
+
+  This was an error in the code, but since we had only hemispherically 
+  symmetric potential pattern, we didn't get wrong results.
+
+ 
