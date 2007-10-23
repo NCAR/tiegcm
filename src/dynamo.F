@@ -839,7 +839,8 @@
 ! jn index for NH part of potential (nmlat down to ~nmlat0)
 ! jp index for NH pfrac (nmlat0 down to 1)
 ! 
-      if(.not.mod_heelis) fac = 0.   ! modified heelis
+      fac = 1.0
+      if(mod_heelis) fac = 0.   ! modified heelis
       do j=1,nmlat0		! SH
         jn = nmlat  - j + 1
         jp = nmlat0 - j + 1
