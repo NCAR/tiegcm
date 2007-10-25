@@ -7,11 +7,31 @@
 #   1) Set script variables below.
 #   2) Copy to a large working directory on the target machine.
 #   3) Assuming this script is called "jobfile", then:
-#      To run interactively (in background), use "jobfile >&! jobfile.out &"
+#      a) If on lightning, use "bsub < jobfile"
+#      b) To run interactively on non-lightning Linux system (e.g. at hao),
+#         use "jobfile >&! jobfile.out &"
 #
 # See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more information.
 # If you need to customize the configuration beyond the shell vars here, 
 #   add or change options to the tgcm_config call below. 
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#    USER EDIT BATCH JOB (LSF) RESOURCES (for Linux lightning cluster)
+#
+#BSUB -J tiegcm         # job name
+##BSUB -q regular       # queue (premium and regular are available)
+##BSUB -x 	        # exclusive use of the node
+##BSUB -n 16            # number of MPI tasks
+##BSUB -W 3:00          # wallclock limit (hh:mm) (3 hrs for prem or reg)
+#
+#BSUB -q debug          # debug queue is available during the day (30 min limit)
+#BSUB -n 16             # number of MPI tasks
+#BSUB -W 0:30           # 30 min limit for debug queue
+#
+#BSUB -o tiegcm.%J.out  # stdout filename
+#BSUB -e tiegcm.%J.out  # stderr filename
+#BSUB -N                # send mail when job finishes
+#BSUB -u $LOGNAME@ucar.edu # email address
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #        USER EDIT SHELL VARIABLES (for batch and interactive jobs)
@@ -20,6 +40,7 @@
 # wrkdir:      User's working directory (default is `pwd`, i.e., the cwd)
 # usr_srcdirs: List of user source directories (optional)
 # input:       Namelist input file (if not given, a default will be created)
+# output:      Name of stdout file relative to the wrkdir (default is $model.out)
 # tgcmroot:    Root directory of distribution (default env var $TGCMROOT)
 # tgcmdata:    Root directory containing input data files (default $TGCMDATA)
 # execdir:     Directory in which to build and execute 
@@ -29,20 +50,20 @@
 # hres:        Horizontal resolution can be either 5.0 (default), or 2.5 degrees
 # vres:        Vertical resolution can be either 0.5 (default), or 0.25 (ln(p0/p))
 #
-# Model stdout will be written to $wrkdir.
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm1.8
+ set model       = tiegcm
  set wrkdir      = .
 #set wrkdir      = $model-$$
-#set input       = tiegcm.inp
+#set input       = $model.inp
+#set output      = $model.out
 #set usr_srcdirs = modsrc
-#set tgcmroot    = /fis/hao/tgcm
-#set tgcmdata    = /hao/tgcm/data
-#set execdir     = $wrkdir/run
-#set utildir     = $tgcmroot/$model/scripts
-#set hres = 5.0
-#set vres = 0.5
+#set tgcmroot    = .
+#set tgcmdata    = $TGCMDATA
+#set execdir     = $model-linux
+#set utildir     = $TGCMROOT/$model/scripts
+#set hres        = 2.5    # horizontal resolution (default is 5.0 deg)
+#set vres        = 0.25   # vertical resolution (default is 0.5)
 #
 #             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
 #             (except maybe to customize tgcm_config below)
@@ -74,7 +95,7 @@ if (! $?hres) set hres = 5.0
 if (! $?vres) set vres = 0.5
 #
 # Set utility dir from shell var $tgcmroot, or env var $TGCMROOT:
-# (must contain Abspath, MakeNamelist, MkLogs, etc) 
+# (must contain Abspath, MakeNamelist, Mklogs, etc) 
 #
 if (! $?utildir) then
   if ($tgcmroot != "") then    # shell var from above (if set, trumps env var)
@@ -125,8 +146,8 @@ perl $utildir/tgcm_config -model=$model -wrkdir=$wrkdir -execdir=$execdir \
 #
 if (! $?input) then
   set input = \
-    `perl $utildir/MkNamelist -model=$model -hres=$hres -vres=$vres` || \
-     echo "${0}: Error from MkNamelist: fileout = $input" && exit 1
+    `perl $utildir/Mknamelist -model=$model -hres=$hres -vres=$vres` || \
+     echo "${0}: Error from Mknamelist: fileout = $input" && exit 1
   echo "Made default namelist input file $input" 
 else
   echo "Using user provided namelist input file $input"
@@ -144,27 +165,67 @@ gmake -j4 || echo ">>> Error return from gmake" && exit 1
 echo "End building $model at `date`..."
 cd $mycwd  # return to original cwd
 #
+# Default stdout file is $model.out in the wrkdir:
+#
+if (! $?output) then
+  set output = $wrkdir/$model.out
+else
+  set output = `perl $utildir/Abspath $wrkdir/$output`
+endif
+#
 # Execute from execdir:
 # 
-set output = $wrkdir/$model.out  # model stdout to user's wrkdir (full path)
 cd $execdir || echo ">>> Error from cd to execdir $execdir" && exit 1
 echo "" ; echo "Executing model $model from `pwd` at `date`"
-echo "Model output will go to $output"
-$execdir/$model < $namelist >&! $output || \
-  echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
-  echo "See output in $output"
-echo "Run of $model completed at `date`"
+if (-e dispose.csh) then
+  echo "Removing dispose.csh prior to execution."
+  /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
+endif
+set unamen = `uname -n`
+#
+#- - - - - - - - - - - - - - - lightning - - - - - - - - - - - - - -
+if ($unamen =~ ln*) then
+#
+# Must make a separate exec script for the linux cluster "lightning",
+# so that mpirun.lsf will send stdout to separate files for each mpi task:
+#
+  cat << EOF > mpiexec.$$
+#! /bin/csh
+  set stdin = $namelist
+  set stdout = ${output}_task\$GMPI_ID.out
+  if ($output:e == 'out') then
+    set stdout = $output:r_task\$GMPI_ID.out
+  endif
+  set exec = $execdir/$model
+  \$exec < \$stdin > \$stdout
+EOF
+  chmod +x mpiexec.$$
+#
+  echo "Model output will go to ${output}_task[n].out"
+  mpirun.lsf mpiexec.$$ || \
+    echo ">>> ${0} Execution of $execdir/$model FAILED at `date`"
+#
+#-  - - - - - - - - - - - non-lightning linux - - - - - - - - - - - -
+else # is not lightning
+#
+  echo "Model output will go to $output"
+  $execdir/$model < $namelist >&! $output || \
+    echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
+    echo "See output in $output"
+  echo "Run of $model completed at `date`"
 #
 # Separate output files by MPI task:
 # (we are still in $execdir, but $output contains full path to $wrkdir)
 #
-perl $utildir/MkLogs $output || \
-  echo ">>> ${0}: Error from $execdir/MkLogs on output $output"
+perl $utildir/Mklogs $output || \
+  echo ">>> ${0}: Error from $execdir/Mklogs on output $output"
+#
+#-  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+endif # lightning or non-lightning linux
 #
 # Execute dispose.csh, if it exists:
 # This script was created by the model to dispose history files
 #   to the mss if model namelist DISPOSE=2.
-# It is important to remain in $execdir when running dispose.csh.
 #
 if (-e dispose.csh) then
   echo "" ; echo "Contents of dispose.csh: " ; cat $execdir/dispose.csh ; echo ""

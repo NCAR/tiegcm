@@ -73,7 +73,7 @@
 # Model stdout will be written to $wrkdir.
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm1.8
+ set model       = tiegcm
  set wrkdir      = .
 #set wrkdir      = $model-$$
 #set input       = tiegcm.inp
@@ -195,6 +195,10 @@ cd $mycwd  # return to original cwd
 # 
 set output = $wrkdir/$model.out  # model stdout to user's wrkdir (full path)
 cd $execdir || echo ">>> Error from cd to execdir $execdir" && exit 1
+if (-e dispose.csh) then
+  echo "Removing dispose.csh prior to execution."
+  /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
+endif
 echo "" ; echo "Executing model $model from `pwd` at `date`"
 echo "Model output will go to $output"
 timex mpirun -prefix "%g:" -v -nt $SGI_NTASKS $execdir/$model \
@@ -212,27 +216,13 @@ perl $utildir/MkLogs $output || \
 # Execute dispose.csh, if it exists:
 # This script was created by the model to dispose history files
 #   to the mss if model namelist DISPOSE=2.
-# It is important to remain in $execdir when running dispose.csh.
-# If batch job, make dispose.job (use MkDispose), and submit to NQE.
 #
-#if (-e dispose.csh) then
-#  echo "" ; echo "Contents of dispose.csh: " ; cat $execdir/dispose.csh ; echo ""
-#  if ($?ENVIRONMENT) then # batch job
-#    echo "Batch job: preparing dispose.job.."
-#    perl $utildir/MkDispose dispose.csh || \
-#      echo ">>> WARNING: Error from MkDispose.."
-#    echo "Submitting dispose.job to NQE.."
-#    qsub dispose.job || echo ">>> WARNING: Error submitting dispose.job.."
-#  else
-#    echo "Starting dispose.csh in background.." ; dispose.csh &
-#  endif
-#endif
-#
-# Prepare and submit mss dispose job (MkDispose will make and submit 
-# dispose.job only if dispose.csh exists in execdir, i.e., model was 
-# run with DISPOSE=2):
-#
-perl $utildir/MkDispose -submit
+if (-e $execdir/dispose.csh) then
+  echo "" ; echo "Contents of dispose.csh: " 
+  cat $execdir/dispose.csh ; echo ""
+  echo "Executing dispose.csh in background at `date`"
+  $execdir/dispose.csh >&! $execdir/dispose.out &
+endif
 #
 cd $mycwd # return to original cwd
 echo "" ; echo "${0}: Completed execution at `date`"

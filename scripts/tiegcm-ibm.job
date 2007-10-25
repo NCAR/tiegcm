@@ -1,29 +1,32 @@
 #! /bin/csh
 #
 # This is an example job script to configure, build, and execute a tgcm 
-#   model on an IBM system, via the Load Sharing Facility.
+#   model on an IBM system. This script is submitted to the LSF batch system.
 #
+# To use:
 #   1) Set LSF commands (#BSUB) below for batch job.
-#      (you must provide a valid project number at #BSUB -P)
 #   2) Set script variables below (at least $model and $wrkdir)
 #   3) Copy to a large working directory on the target machine.
-#   4) Assuming this script is called "jobfile", then submit the
-#      job to LSF with the command: "bsub < jobfile"
+#   4) Assuming this script is called "jobfile", then submit
+#      with the command: "bsub < jobfile"
 #
 # See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more information.
 # If you need to customize the configuration beyond the shell vars here, 
 #   add or change options to the tgcm_config call below. 
 #
+# 2/8/07 btf: Eliminate support for LoadLeveler (former batch system on bluesky)
+#
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#    USER EDIT BATCH JOB (LSF) RESOURCES (for bluevista LSF)
+#
+#                 USER EDIT RESOURCES FOR LSF BATCH JOB
 #
 #BSUB -J tiegcm         # job name
 #
-# Regular queue (6-hour limit):
-# -x requests exclusive use of the node (not allowed in debug queue)
+##BSUB -P 28100036       # NCAR project account number (8-digit)
+#BSUB -P 24100004
 #
-##BSUB -q regular        # queue (premium and regular are available)
-##BSUB -x 		
+##BSUB -q regular        # queue (6-hour wallclock limit if not debug queue)
+##BSUB -x 		# exclusive use of nodes (not available in debug queue)
 #
 ##BSUB -n 48                 # 48 procs
 ##BSUB -R "span[ptile=16]"   # 3 nodes w/ SMT (Symmetric Multi-Threading)
@@ -31,27 +34,24 @@
 ##BSUB -n 32                # 32 procs
 ##BSUB -R "span[ptile=16]"  # 2 nodes w/ SMT
 #
+##BSUB -n 16                # 16  procs
+##BSUB -R "span[ptile=16]"  # 1 nodes w/ SMT
+#
 # Debug queue (30 min wallclock limit, and -x not allowed)
 #
-#BSUB -n 4              # number of MPI tasks
-#BSUB -q debug         # debug queue is available during the day (30 min limit)
+#BSUB -n 4                 # number of MPI tasks
+#BSUB -q debug             # debug queue (30 min wallclock limit)
 #
-#BSUB -o tiegcm.%J.out # stdout filename
-#BSUB -e tiegcm.%J.out # stderr filename
-#BSUB -N                # send mail when job finishes
-#BSUB -u $LOGNAME@ucar.edu # email address
+#BSUB -o tiegcm.%J.out     # stdout filename
+#BSUB -e tiegcm.%J.out     # stderr filename
+#BSUB -N                    # send mail when job finishes
+#BSUB -u $LOGNAME@ucar.edu  # email address
 #
-##BSUB -W 1:00          # wallclock limit (hh:mm) (up to 6 hrs for prem or reg)
-##BSUB -W 6:00          # wallclock limit (hh:mm) (up to 6 hrs for prem or reg)
-#BSUB -W 0:30          # 30 min limit for debug queue
-##
-## 10/4/06 btf:
-## As of Nov 6, 2006, scd is requiring explicit project numbers
-## on all LSF jobs. I am including 28100036 here, but users who
-## are not authorized on this project will have to change it.
-##
-##BSUB -P 28100036
-#BSUB -P 24100004
+# Wallclock limit hh:mm (usually 6-hours, except only 30 mins for debug queue)
+#
+##BSUB -W 1:00
+##BSUB -W 6:00
+#BSUB -W 0:30
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #        USER EDIT SHELL VARIABLES (for batch and interactive jobs)
@@ -60,6 +60,7 @@
 # wrkdir:      User's working directory (default is `pwd`, i.e., the cwd)
 # usr_srcdirs: List of user source directories (optional)
 # input:       Namelist input file (if not given, a default will be created)
+# output:      Name of stdout file relative to the wrkdir (default is $model.out)
 # tgcmroot:    Root directory of distribution (default env var $TGCMROOT)
 # tgcmdata:    Root directory containing input data files (default $TGCMDATA)
 # execdir:     Directory in which to build and execute 
@@ -69,27 +70,29 @@
 # hres:        Horizontal resolution can be either 5.0 (default), or 2.5 degrees
 # vres:        Vertical resolution can be either 0.5 (default), or 0.25 (ln(p0/p))
 #
-# Model stdout will be written to $wrkdir.
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm1.8
+ set model       = tiegcm
  set wrkdir      = .
-#set wrkdir      = $model-$$
 #set input       = $model.inp
+#set output      = $model.out     # relative to wrkdir
 #set usr_srcdirs = modsrc
-#set tgcmroot    = /fis/hao/tgcm
-#set tgcmdata    = /hao/tgcm/data
-#set execdir     = $wrkdir/run
-#set utildir     = $tgcmroot/$model/scripts
-#set hres = 5.0
-#set vres = 0.5
+#set tgcmroot    = .
+#set tgcmdata    = $TGCMDATA
+#set execdir     = $model-ibm
+#set utildir     = $TGCMROOT/$model/scripts
+#set hres        = 2.5
+#set vres        = 0.25
 #
 #             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
 #             (except maybe to customize tgcm_config below)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
 set os = `uname -s | tr "[A-Z]" "[a-z]"`
 set nodename = `uname -n`
 echo os = $os  nodename = $nodename
+#
+# Env vars for AIX:
 #
 setenv MP_LABELIO YES
 setenv MP_STDINMODE 0
@@ -97,6 +100,7 @@ setenv MP_SHARED_MEMORY yes
 setenv MEMORY_AFFINITY MCM
 setenv AIXTHREAD_SCOPE S
 setenv MALLOCMULTIHEAP true
+setenv MP_TIMEOUT 100
 #
 set mycwd = `pwd`
 echo " "
@@ -123,8 +127,13 @@ if (! $?usr_srcdirs) set usr_srcdirs = ""
 if (! $?hres) set hres = 5.0
 if (! $?vres) set vres = 0.5
 #
+# If debug is on, request info from poe
+#if ($debug == 1) then
+#  setenv MP_INFOLEVEL 6   
+#endif
+#
 # Set utility dir from shell var $tgcmroot, or env var $TGCMROOT:
-# (must contain Abspath, MakeNamelist, MkLogs, etc) 
+# (must contain Abspath, MakeNamelist, Mklogs, etc) 
 #
 if (! $?utildir) then
   if ($tgcmroot != "") then    # shell var from above (if set, trumps env var)
@@ -154,28 +163,33 @@ echo "  Wrkdir = $wrkdir"
 # Set exec directory if necessary (wrkdir/model-os):
 #
 if (! $?execdir) then
+  set os = `uname -s | tr "[A-Z]" "[a-z]"`
   set execdir = $wrkdir/$model-$os # if does not exist, will be created by config
 endif
 set execdir = `perl $utildir/Abspath $execdir`  # full path to execdir
 echo "  Execdir = $execdir"
-if (! -x $utildir/tgcm_config) \
-  echo ">>> WARNING: Cannot find config script $utildir/tgcm_config"
 #
 # Configure (pass shell vars to tgcm_config):
 # See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more
 #   options to tgcm_config.
 #
+if (! -x $utildir/tgcm_config) \
+  echo ">>> WARNING: Cannot find config script $utildir/tgcm_config"
 perl $utildir/tgcm_config -model=$model -wrkdir=$wrkdir -execdir=$execdir \
   -tgcmroot=$tgcmroot -tgcmdata=$tgcmdata -usr_srcdirs=$usr_srcdirs \
   -utildir=$utildir -hres=$hres -vres=$vres || \
   echo ">>> ${0}: Error from tgcm_config" && exit 1
 #
+# Copy Mkdepends script to execdir for manual gmake (or default Makefile):
+cp $utildir/Mkdepends $execdir || \
+  echo "WARNING: Error copying $utildir/Mkdepends to exec dir $execdir"
+#
 # Make default namelist input if not provided by user:
 #
 if (! $?input) then
   set input = \
-    `perl $utildir/MkNamelist -model=$model -hres=$hres -vres=$vres` || \
-     echo "${0}: Error from MkNamelist: fileout = $input" && exit 1
+    `perl $utildir/Mknamelist -model=$model -hres=$hres -vres=$vres` || \
+     echo "${0}: Error from Mknamelist: fileout = $input" && exit 1
   echo "Made default namelist input file $input" 
 else
   echo "Using user provided namelist input file $input"
@@ -189,40 +203,56 @@ endif
 #
 cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
 echo "" ; echo "Begin building $model in `pwd` at `date`..."
-gmake -j4 || echo ">>> Error return from gmake" && exit 1
+/usr/local/bin/gmake -j4 || echo ">>> Error return from gmake" && exit 1
 echo "End building $model at `date`..."
 cd $mycwd  # return to original cwd
 #
+# Default stdout file is $model.out in the wrkdir:
+#
+if (! $?output) then
+  set output = $wrkdir/$model.out
+else
+  set output = `perl $utildir/Abspath $wrkdir/$output`
+endif
+#
 # Execute from execdir:
 # 
-set output = $wrkdir/$model.out  # model stdout to user's wrkdir (full path)
 cd $execdir || echo ">>> Error from cd to execdir $execdir" && exit 1
 if (-e dispose.csh) then
   echo "Removing dispose.csh prior to execution."
   /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
 endif
-echo "" ; echo "Executing model $model from `pwd` at `date`"
-echo "Model output will go to $output"
-mpirun.lsf $execdir/$model < $namelist >&! $output || \
-  echo ">>> ${0} Execution of mpirun.lsf $execdir/$model FAILED at `date`" && \
-  echo "See output in $output"
+#
+if ($?LSF_ENVDIR) then     # LSF batch
+  echo "" ; echo "Executing model $model with mpirun.lsf from `pwd` at `date`"
+  echo "Model output will go to $output"
+  mpirun.lsf $execdir/$model < $namelist >&! $output || \
+    echo ">>> ${0} Execution of mpirun.lsf $execdir/$model FAILED at `date`" && \
+    echo "See output in $output"
+else                       # attempt interactive execution
+  echo "" ; echo "Executing model $model on command line from `pwd` at `date`"
+  echo "Model output will go to $output"
+  $execdir/$model < $namelist >&! $output || \
+    echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
+    echo "See output in $output"
+endif          
 echo "Run of $model completed at `date`"
 #
 # Separate output files by MPI task:
 # (we are still in $execdir, but $output contains full path to $wrkdir)
 #
-perl $utildir/MkLogs $output || \
-  echo ">>> ${0}: Error from $execdir/MkLogs on output $output"
+perl $utildir/Mklogs $output || \
+  echo ">>> ${0}: Error from $execdir/Mklogs on output $output"
 #
 # Execute dispose.csh, if it exists:
 # This script was created by the model to dispose history files
 #   to the mss if model namelist DISPOSE=2.
 #
 if (-e $execdir/dispose.csh) then
-  echo "" ; echo "Contents of dispose.csh: "
+  echo "" ; echo "Contents of dispose.csh: " 
   cat $execdir/dispose.csh ; echo ""
   echo "Executing dispose.csh in background at `date`"
-  $execdir/dispose.csh >&! $execdir/dispose.out
+  $execdir/dispose.csh >&! $execdir/dispose.out &
 endif
 #
 cd $mycwd # return to original cwd

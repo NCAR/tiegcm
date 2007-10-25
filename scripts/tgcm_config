@@ -107,10 +107,6 @@ SWITCH: {
 $fp_filename = "Filepath";
 @srcdirs = write_filepath($usr_srcdirs, $model_srcdir, "$execdir/$fp_filename");
 #
-# Copy needed scripts to execdir:
-#
-&copy_scripts($model_scripts, $execdir);
-#
 # Copy source code if requested:
 #
 if ($copysrc) { &copy_model_src(@srcdirs, $execdir); }
@@ -690,25 +686,6 @@ EOF
   }               # foreach filespec in %data
 } # end sub link_model_data
 #-----------------------------------------------------------------------
-sub copy_scripts {
-#
-# Copy Makefile, MakeDepends, and MakeLogs from scripts dir to build dir:
-# Make all but Makefile executable.
-#
-  my ($scriptsdir, $blddir) = @_;
-  my @scripts = ("MkSrcfiles","MkDepends","MkDispose","MkLogs","MkNamelist");
-  foreach $script (@scripts) {
-    $stat = copy("$scriptsdir/$script","$blddir");
-    if ($stat != 1) { 
-      print ">>> WARNING: Error copying $scriptsdir/$script to $blddir\n"; 
-    } else {
-      print "Copied $script to $blddir\n";
-      chmod(0755, "$blddir/$script") ||
-        die ">>> Error from chmod 0755 $blddir/$script\n";
-    }
-  }
-}
-#-----------------------------------------------------------------------
 sub write_filepath {
   my ($usr_srcdirs, $model_srcdir, $fileout) = @_;
   my $fh = new IO::File;
@@ -773,7 +750,7 @@ sub write_makefile {
         $lib_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/lib";
         $inc_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/include";
       } else {                               # Generic linux (probably HAO)
-        $lib_netcdf = "/opt/local/rh9/lib";
+        $lib_netcdf = "/opt/local/lib";
         $inc_netcdf = "/opt/local/include";
       }
       last SWITCH;
@@ -797,6 +774,7 @@ sub write_makefile {
 UNAMES     := $OS
 EXECNAME   := $model
 EXECDIR    := $execdir
+UTILDIR    := $utildir
 LIB_NETCDF := $lib_netcdf
 INC_NETCDF := $inc_netcdf
 DEBUG      := $mkdebug
@@ -813,6 +791,7 @@ EOF
     UNAMES     := $OS
     EXECNAME   := $model
     EXECDIR    := $execdir
+    UTILDIR    := $utildir
     LIB_NETCDF := $lib_netcdf
     INC_NETCDF := $inc_netcdf
     DEBUG      := $mkdebug
