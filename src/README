@@ -196,7 +196,6 @@ when DISPOSE=1 (putms is called by master task only).
 
 5/12/05: Preparing tiegcm1.8 "tuning release", see doc/README_1.8tune
 CVS tag will be tiegcm1.8tune, source in $TGCMROOT/dev/tiegcm1.8.
-<<<<<<< README
 
 !-----------------------------------------------------------------------
 Mods after tiegcm1.8 tuning release (i.e., after 3:30 pm, May 12, 2005):
@@ -234,14 +233,11 @@ new locations for lightning netcdf libs,etc).
 
 7/29/05: Made default test runs on callisto (hao), bluesky, lightning,
 and tempest.  Doing cvs commit, and tagging this as tiegcm1-8tune2.
-=======
 
 7/25/07: am
 rewritten lamdas.F; correct Joule heating for ions qjoule.F; include vertical 
 velocity difference for Joule heating calculation which goes into neutrals 
 qjoule.F
-
->>>>>>> 1.9
 
 9/22/05: Updated apex_subs.F from Astrid -- this has new apex coefficients
 for 1995, 2000, 2005.. Copied her file from /home/maute/apex.d/modsrc_apexmod.
@@ -255,6 +251,16 @@ file specs in namelist read.
     still in top slot.
 
 Doing cvs commit to update these 2 changes and the new apex.F. 
+
+#-----------------------------------------------------------------------
+4/2/07: See dynamo mod by Astrid, in ../consult/astrid.dynamo.
+See also $TGCMROOT/tiegcm1.8/src/modsrc/dynamo.F and README.
+
+8/13/07 btf:
+Changed init of dynpot lons from nlonp4 to nlonp1 in sub set_dynpot
+(rdsource.F) because dynpot is dimensioned nlonp1 (fields.F). This
+subroutine is called only for non-mpi serial runs. This was pointed
+out by George Millward.
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 10/23/07  am
@@ -273,4 +279,3 @@ Doing cvs commit to update these 2 changes and the new apex.F.
   This was an error in the code, but since we had only hemispherically 
   symmetric potential pattern, we didn't get wrong results.
 
- 

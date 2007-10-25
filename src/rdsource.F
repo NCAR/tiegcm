@@ -222,7 +222,9 @@
       integer :: k,i,j
 !
       do j=1,nlat
-        do i=1,nlonp4 
+!
+! 8/13/07 btf: changed nlonp4 to nlonp1 for dynpot lon dimension
+        do i=1,nlonp1 
           do k=1,nlevp1
             dynpot(i,j,k) = poten(k,i,j,itx) 
           enddo ! k=1,nlevp1
