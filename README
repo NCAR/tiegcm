@@ -279,3 +279,5 @@ out by George Millward.
   This was an error in the code, but since we had only hemispherically 
   symmetric potential pattern, we didn't get wrong results.
 
+10/25/07 btf
+Updated scripts directory from hao:$TGCMROOT/tiegcm1.8/scripts and commit
