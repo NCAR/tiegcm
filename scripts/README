@@ -1,36 +1,55 @@
 
-12/17/04:
-Under Linux, the CPPFLAGS were repeated twice in each compilation 
-statement.  Apparently, under linux, gmake includes both CPPFLAGS 
-and FFLAGS in the target execution statement. This is not the case 
-under AIX and SGI, where gmake apparently includes only FFLAGS.
-Removing CPPFLAGS from the FFLAGS definition in Linux sections of
-the Makefile cleaned this up.
+1/10/06 btf:
 
-2/2/05: 
-Importing to CVS as new project "tgcm_scripts".
-This is after tiegcm-linux-mpi.job and timegcm-linux-mpi.job, but
-before removing reference to blackforest and dave.
+These were copied directly from $TGCMROOT/dev/tiegcm1-8tune2/scripts,
+then tiegcm-ibm.job and MkDispose were changed to allow submission to
+bluevista as well as bluesky.
 
-2/2: Removed references to blackforest and dave, and committed
-to repository. Also updated scripts directories for all models
-under TGCMROOT at hao and scd (using the distribute scripts).
+To submit to bluesky, use LoadLeveler command "llsubmit tiegcm-ibm.job"
 
-The distribute command was used from /home/tgcm/scripts at hao,
-and from /fis/hao/tgcm/scripts at scd. This included job files
-for lightning, and changes for lightning in other scripts.
+To submit to bluevista, use LSF command "bsub < tiegcm-ibm.job" 
 
-3/28/05: Changed MkNamelist for section on tiegcm: DYNAMO is now
-either 1 or 0 for dynamo or no-dynamo.
+6/27/06 btf:
+Added "#BSUB -n 1" to MkDispose to satisfy new LSF on bluevista.
 
-4/6/05:
-Changes to MkNamelist and tgcm_config for Liying's SEE data file
-for tiegcm1.8. This has new namelist parameter SD_FILE. Put a default
-SD_FILE in $TGCMDATA (both hao and scd). This default file
-($TGCMDATA/see__L3_merged_2005007_007.nc) is now copied to exec dif
-by tgcm_config. The new namelist parameter is added to tiegcm section
-of MkNamelist. The new files MkNamelist and tgcm_config were distributed
-to model scripts directories at both hao and scd.
+10/4/06 btf:
+Added the following to *ibm.job and MkDispose:
 
-4/22/05: In MkNamelist, for all most recent versions of both models , 
-DYNAMO is 1 or 0 for or dynamo no-dynamo.
+##
+## 10/4/06 btf:
+## As of Nov 6, 2006, scd is requiring explicit project numbers
+## on all LSF jobs. I am including 28100036 here, but users who
+## are not authorized on this project will have to change it.
+##
+#BSUB -P 28100036
+
+11/29/06: Added following env vars in tiegcm-ibm.job. These were
+suggested by Siddhartha:
+
+if ($nodename =~ bv*) then # bluevista
+  setenv MP_STDINMODE 0
+  setenv MP_SHARED_MEMORY yes
+  setenv MEMORY_AFFINITY MCM
+  setenv AIXTHREAD_SCOPE S
+  setenv MALLOCMULTIHEAP true
+endif
+
+Also added examples of how to use SMT on bluevista:
+
+#
+#BSUB -n 48                 # 48 procs
+#BSUB -R "span[ptile=16]"   # 3 nodes w/ SMT (Symmetric Multi-Threading)
+#
+##BSUB -n 32                # 32 procs
+##BSUB -R "span[ptile=16]"  # 2 nodes w/ SMT
+#
+
+1/3/07:
+Changed Makefile to specify -L/usr/local/lib64/r4i4 -lmss because
+mpxlf_r was using /usr/local/lib32/r4i4, which is incorrect on bluevista.
+
+2/13/07: Eliminate dcs and mss libs from Makefile.
+
+-------------------------------------------------------------------
+10/25/07:
+Update from $TGCMROOT/tiegcm1.8/scripts and commit to cvs.

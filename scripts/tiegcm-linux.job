@@ -32,7 +32,7 @@
 # Model stdout will be written to $wrkdir.
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm
+ set model       = tiegcm1.8
  set wrkdir      = .
 #set wrkdir      = $model-$$
 #set input       = tiegcm.inp

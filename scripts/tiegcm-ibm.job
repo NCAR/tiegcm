@@ -1,58 +1,57 @@
 #! /bin/csh
 #
 # This is an example job script to configure, build, and execute a tgcm 
-#   model on an IBM system (interactive or batch).
+#   model on an IBM system, via the Load Sharing Facility.
 #
-# To use:
-#   1) Set loadleveler commands (#@) below for batch job, or env vars (setenv) 
-#      for interactive run (#@ commands are ignored by interactive runs).
+#   1) Set LSF commands (#BSUB) below for batch job.
+#      (you must provide a valid project number at #BSUB -P)
 #   2) Set script variables below (at least $model and $wrkdir)
-#   2) Copy to a large working directory on the target machine.
-#   3) Assuming this script is called "jobfile", then:
-#      To submit to a batch queue, use "llsubmit jobfile"
-#      To run interactively (in background), use "jobfile >&! jobfile.out &"
+#   3) Copy to a large working directory on the target machine.
+#   4) Assuming this script is called "jobfile", then submit the
+#      job to LSF with the command: "bsub < jobfile"
 #
 # See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more information.
 # If you need to customize the configuration beyond the shell vars here, 
 #   add or change options to the tgcm_config call below. 
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#               USER EDIT LOADLEVELER COMMANDS (for batch jobs only)
+#    USER EDIT BATCH JOB (LSF) RESOURCES (for bluevista LSF)
 #
-# @ step_name        = tiegcm_ibm_$(jobid)
-## @ account_no      = 28103032
+#BSUB -J tiegcm         # job name
 #
-# Share class has 30-min wallclock limit
-## @ class            = share
+# Regular queue (6-hour limit):
+# -x requests exclusive use of the node (not allowed in debug queue)
 #
-# Bluesky (8 procs per node) (typically node=2, total_tasks=16):
-# @ class            = com_rg8
-# @ node             = 2
-# @ total_tasks      = 16
-# @ node_usage       = not_shared
+##BSUB -q regular        # queue (premium and regular are available)
+##BSUB -x 		
 #
-# Wall-clock limit in non-share queues is usually 6 hours:
-# @ wall_clock_limit = 01:00:00
-# @ job_type         = parallel
-# @ network.MPI      = csss,shared,us
-# @ environment      = COPY_ALL
-# @ output           = $(step_name).out
-# @ error            = $(step_name).out
-# @ notification     = complete
-## @ ja_report        = yes
-# @ queue
+##BSUB -n 48                 # 48 procs
+##BSUB -R "span[ptile=16]"   # 3 nodes w/ SMT (Symmetric Multi-Threading)
 #
-# MP_ and PAL_ env vars are for interactive runs only 
-# (they are ignored by loadleveler):
+##BSUB -n 32                # 32 procs
+##BSUB -R "span[ptile=16]"  # 2 nodes w/ SMT
 #
-setenv MP_PROCS 4
-setenv MP_TASKS_PER_NODE 4
-setenv MP_RMPOOL 1
-setenv MP_PGMMODEL SPMD
-setenv MP_LABELIO YES
-setenv MP_SHARED_MEMORY YES
-setenv PAL_ROOT /usr/local/vampir
-setenv PAL_LICENSEFILE /usr/local/vampir/etc/license.dat
+# Debug queue (30 min wallclock limit, and -x not allowed)
+#
+#BSUB -n 4              # number of MPI tasks
+#BSUB -q debug         # debug queue is available during the day (30 min limit)
+#
+#BSUB -o tiegcm.%J.out # stdout filename
+#BSUB -e tiegcm.%J.out # stderr filename
+#BSUB -N                # send mail when job finishes
+#BSUB -u $LOGNAME@ucar.edu # email address
+#
+##BSUB -W 1:00          # wallclock limit (hh:mm) (up to 6 hrs for prem or reg)
+##BSUB -W 6:00          # wallclock limit (hh:mm) (up to 6 hrs for prem or reg)
+#BSUB -W 0:30          # 30 min limit for debug queue
+##
+## 10/4/06 btf:
+## As of Nov 6, 2006, scd is requiring explicit project numbers
+## on all LSF jobs. I am including 28100036 here, but users who
+## are not authorized on this project will have to change it.
+##
+##BSUB -P 28100036
+#BSUB -P 24100004
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #        USER EDIT SHELL VARIABLES (for batch and interactive jobs)
@@ -73,10 +72,10 @@ setenv PAL_LICENSEFILE /usr/local/vampir/etc/license.dat
 # Model stdout will be written to $wrkdir.
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm
+ set model       = tiegcm1.8
  set wrkdir      = .
 #set wrkdir      = $model-$$
-#set input       = tiegcm.inp
+#set input       = $model.inp
 #set usr_srcdirs = modsrc
 #set tgcmroot    = /fis/hao/tgcm
 #set tgcmdata    = /hao/tgcm/data
@@ -88,6 +87,16 @@ setenv PAL_LICENSEFILE /usr/local/vampir/etc/license.dat
 #             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
 #             (except maybe to customize tgcm_config below)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+set os = `uname -s | tr "[A-Z]" "[a-z]"`
+set nodename = `uname -n`
+echo os = $os  nodename = $nodename
+#
+setenv MP_LABELIO YES
+setenv MP_STDINMODE 0
+setenv MP_SHARED_MEMORY yes
+setenv MEMORY_AFFINITY MCM
+setenv AIXTHREAD_SCOPE S
+setenv MALLOCMULTIHEAP true
 #
 set mycwd = `pwd`
 echo " "
@@ -145,7 +154,6 @@ echo "  Wrkdir = $wrkdir"
 # Set exec directory if necessary (wrkdir/model-os):
 #
 if (! $?execdir) then
-  set os = `uname -s | tr "[A-Z]" "[a-z]"`
   set execdir = $wrkdir/$model-$os # if does not exist, will be created by config
 endif
 set execdir = `perl $utildir/Abspath $execdir`  # full path to execdir
@@ -189,10 +197,14 @@ cd $mycwd  # return to original cwd
 # 
 set output = $wrkdir/$model.out  # model stdout to user's wrkdir (full path)
 cd $execdir || echo ">>> Error from cd to execdir $execdir" && exit 1
+if (-e dispose.csh) then
+  echo "Removing dispose.csh prior to execution."
+  /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
+endif
 echo "" ; echo "Executing model $model from `pwd` at `date`"
 echo "Model output will go to $output"
-$execdir/$model < $namelist >&! $output || \
-  echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
+mpirun.lsf $execdir/$model < $namelist >&! $output || \
+  echo ">>> ${0} Execution of mpirun.lsf $execdir/$model FAILED at `date`" && \
   echo "See output in $output"
 echo "Run of $model completed at `date`"
 #
@@ -202,11 +214,16 @@ echo "Run of $model completed at `date`"
 perl $utildir/MkLogs $output || \
   echo ">>> ${0}: Error from $execdir/MkLogs on output $output"
 #
-# Prepare and submit mss dispose job (MkDispose will make and submit 
-# dispose.job only if dispose.csh exists in execdir, i.e., model was 
-# run with DISPOSE=2):
+# Execute dispose.csh, if it exists:
+# This script was created by the model to dispose history files
+#   to the mss if model namelist DISPOSE=2.
 #
-perl $utildir/MkDispose -submit
+if (-e $execdir/dispose.csh) then
+  echo "" ; echo "Contents of dispose.csh: "
+  cat $execdir/dispose.csh ; echo ""
+  echo "Executing dispose.csh in background at `date`"
+  $execdir/dispose.csh >&! $execdir/dispose.out
+endif
 #
 cd $mycwd # return to original cwd
 echo "" ; echo "${0}: Completed execution at `date`"

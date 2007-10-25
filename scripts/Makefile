@@ -76,11 +76,8 @@ endif
 FFLAGS     := $(cpp_path) $(CPPFLAGS) $(OPTIM) $(DBGFLAGS) -qarch=auto -qrealsize=8
 FREEFLAGS  := -qsuffix=f=f90:cpp=F90
 FIXEDFLAGS := -qfixed
-#
-# dcs lib can be removed when all models use my_msrcp instead of call msrcp.
-LIBS       += -L/usr/local/dcs-3.3/lib -ldcs -lmss -lmass
-ifeq ($(DEBUG),TRUE)
-  LIBS     += -L/usr/local/dcs-3.3/lib -ldcs -lmss # no -lmass if debug
+ifeq ($(DEBUG),FALSE)
+  LIBS       += -L/usr/local/lib64/r4i4 -lmass
 endif
 LDFLAGS    += -bloadmap:loadmap -bmaxdata:0X70000000
 FC         := mpxlf_r
@@ -107,10 +104,7 @@ endif
 FFLAGS     := $(cpp_path) $(OPTIM) -r8 -macro_expand -OPT:Olimit=4479 \
               $(CPPFLAGS) -v
 LIBS       += -L/usr/lib32/mips4 -lffio -lcomplib.sgimath -lblas_mp -lfpe
-LIBS       += -L/lusr/local/lib32/r4i4 -lmpi -lmss
-#
-# dcs lib can be removed when all models use my_msrcp instead of call msrcp.
-LIBS       += -L/usr/local/dcs-3.3/lib -ldcs
+LIBS       += -L/lusr/local/lib32/r4i4 -lmpi
 LDFLAGS    += -mips4 -r10000
 FC         := f90
 
@@ -134,10 +128,6 @@ endif
 #       default, so CPPFLAGS is not included in FFLAGS here.
 #
 FFLAGS   := $(cpp_path) $(OPTIM) -r8
-#
-# dcs lib can be removed when all models use my_msrcp instead of call msrcp.
-LIBS     += -L/opt/local/dcs-3.3/rh9/lib -ldcs
-#LDFLAGS +=
 FC       := pgf90
 
 gw_drag.o: gw_drag.F
@@ -165,11 +155,6 @@ cpp_path += -I/usr/local/mpich-gm/include
 #       default, so CPPFLAGS is not included in FFLAGS here.
 #
 FFLAGS   := $(cpp_path) $(OPTIM) -r8
-#
-# dcs lib can be removed when all models use my_msrcp instead of call msrcp.
-#LIBS     += -L/usr/local/dcs-ssg-3.3/lib64 -ldcs
- LIBS    += -L/usr/local/dcs/lib -ldcs
-#LDFLAGS +=
 #FC      := pgf90
 FC       := mpif90
 

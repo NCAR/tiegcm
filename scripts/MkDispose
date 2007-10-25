@@ -57,6 +57,10 @@ my $sysname = $uname[1];
 if ($sysname =~ /^bs/) {
   $mach = "bluesky";
   $class = "com_pr8";
+} elsif ($sysname =~ /^bv/) {
+  $mach = "bluevista";
+  $class = "regular";
+  if ($wallclock eq "03:00:00") { $wallclock = "03:00"; }
 } elsif ($sysname eq "tempest") {
   $mach = "tempest";
   $class = "ded_1";
@@ -67,7 +71,7 @@ if ($sysname =~ /^bs/) {
 } else {
   die <<"EOF"
 Unrecognized sysname: $sysname
-Known machine names: bluesky, tempest, lightning
+Known machine names: bluesky, bluevista, tempest, lightning
 EOF
 }
 if (defined $queue) { $class = $queue; }
@@ -77,9 +81,10 @@ $stdout = "dispose.out";
 # Set batch system commands. Batch system will be loadleveler for IBM SP, 
 #   NQS for SGI, or LSF for Linux.
 #
-# IBM SP systems run loadleveler (#@ commands):
+# IBM bluesky uses LoadLeveler (#@ commands):
 #
-if ($OS eq "AIX") {
+if ($mach eq "bluesky") {
+  print "making LL script for mach=$mach..\n";
   $submit_cmd = "llsubmit";
   print $fh_out <<"EOF"
 #! /usr/bin/csh
@@ -94,9 +99,10 @@ if ($OS eq "AIX") {
 #
 EOF
 #
-# SGI systems run NQE (#QSUB commands):
+# SGI tempest uses NQE (#QSUB commands):
 #
-} elsif ($OS eq "SGI" or $OS eq "IRIX64") {
+} elsif ($mach eq "tempest") {
+  print "making NQE script for mach=$mach\n";
   $submit_cmd = "qsub";
   print $fh_out <<"EOF"
 #
@@ -114,9 +120,10 @@ cd \$mycwd
 #
 EOF
 #
-# Linux clusters (e.g., lightning) run LSF (#BSUB commands):
+# Linux clusters lightning and IBM bluevista use LSF (#BSUB commands):
 #
-} else {  # Linux (lightning cluster)
+} elsif ($mach eq "lightning" or $mach eq "bluevista") {
+  print "making LSF script for mach=$mach\n";
   $submit_cmd = "bsub";
   print $fh_out <<"EOF"
 #
@@ -124,7 +131,15 @@ EOF
 #BSUB -o $stdout
 #BSUB -e $stdout
 #BSUB -N
+#BSUB -n 1
 #BSUB -W $wallclock
+##
+## 10/4/06 btf:
+## As of Nov 6, 2006, scd is requiring explicit project numbers
+## on all LSF jobs. I am including 28100036 here, but users who
+## are not authorized on this project will have to change it.
+##
+#BSUB -P 28100036
 #
 EOF
 }
