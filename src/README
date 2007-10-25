@@ -281,3 +281,11 @@ out by George Millward.
 
 10/25/07 btf
 Updated scripts directory from hao:$TGCMROOT/tiegcm1.8/scripts and commit
+
+
+10/25/07 am
+  modifications to use directly the calculated electric field from 
+  the electrodynamo part instead of starting from the electric potential
+  in efield.F.
+  NOTE: mpi is done for each field separately instead of combining the
+    field and then do one passing (see ).

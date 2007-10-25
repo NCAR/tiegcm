@@ -42,7 +42,11 @@
 !
       use cons_module,only: pi,dlatm,dlonm,dt0dts,rcos0s,table
       use magfield_module,only: alatm,alonm
-      use fields_module,only: phim3d ! 3d electric potential on magnetic grid
+      use fields_module,only: phim3d, ! 3d electric potential on magnetic grid
+     |  emphi3d,   ! 3d eastward electric field magnetic
+     |  emlam3d,   ! 3d equatorw. electric field magnetic
+     |  emz3d      ! 3d upward (?) electric field magnetic
+      use init_module,only: istep
 #ifdef MPI
       use mpi_module,only: mp_periodic_f3d
 #endif
@@ -83,33 +87,35 @@
 !    |      1,nmlonp1,nmlev,nmlev-1,j)
 !       enddo ! j=1,nmlat
 !
+      if(istep == 1) then ! do only for the first timestep at the moment
+!
 ! Copy phim3d to local phi3d. Phim3d is dimensioned in fields.F, and is 
 ! defined from electric potential dynpot (geographic electric potential
 ! from source history), by sub dynpotmag in magfield.F.
 !
-      do k=1,nlevp1
-        do j=1,nmlat
-          do i=1,nmlonp1 
-            phi3d(i,j,k) = phim3d(i,j,k)
-          enddo ! i=1,nmlonp1 
-        enddo ! j=1,nmlat
-      enddo ! k=1,nlevp1
+        do k=1,nlevp1
+          do j=1,nmlat
+            do i=1,nmlonp1 
+              phi3d(i,j,k) = phim3d(i,j,k)
+            enddo ! i=1,nmlonp1 
+          enddo ! j=1,nmlat
+        enddo ! k=1,nlevp1
 !
 ! Add points corresponding to j=0 and j=nmlat+1 performing extrapolation
 !   across the poles.
 !
-      do k=1,nlevp1
-        do i=1,nmlonp1
-          phi3d(i,0,k) = phi3d(1+mod(i-1+nmlonh,nmlon),2,k)
-          phi3d(i,nmlatp1,k) = phi3d(1+mod(i-1+nmlonh,nmlon),nmlat-1,k)
-        enddo ! i=1,nmlonp1
+        do k=1,nlevp1
+          do i=1,nmlonp1
+            phi3d(i,0,k) = phi3d(1+mod(i-1+nmlonh,nmlon),2,k)
+            phi3d(i,nmlatp1,k)=phi3d(1+mod(i-1+nmlonh,nmlon),nmlat-1,k)
+          enddo ! i=1,nmlonp1
 !
 ! Periodic points for phi3d: 
-        do j=0,nmlatp1
-          phi3d(0,j,k) = phi3d(nmlon,j,k)
-          phi3d(nmlonp2,j,k) = phi3d(2,j,k)
-        enddo ! j=0,nmlatp1
-      enddo ! k=1,nlevp1
+          do j=0,nmlatp1
+            phi3d(0,j,k) = phi3d(nmlon,j,k)
+            phi3d(nmlonp2,j,k) = phi3d(2,j,k)
+          enddo ! j=0,nmlatp1
+        enddo ! k=1,nlevp1
 !
 ! Save phi3d to secondary history from root task:
 !     if (mytid==0) then
@@ -123,41 +129,56 @@
 !   geomagnetic grid points. The factor dt0dts converts from the 
 !   latitudinally distorted geomagnetic grid to standard apex latitudes.
 !
-      do k=1,nlevp1 
-        do j=1,nmlat
-          do i=1,nmlonp1
-            emy(i,j,k) = -(phi3d(i,j+1,k)-phi3d(i,j-1,k))/
+        do k=1,nlevp1 
+          do j=1,nmlat
+            do i=1,nmlonp1
+              emy(i,j,k) = -(phi3d(i,j+1,k)-phi3d(i,j-1,k))/
      |        (2.*dlatm)*dt0dts(j)
-          enddo ! i=1,nmlonp1
-        enddo ! j=1,nmlat
+            enddo ! i=1,nmlonp1
+          enddo ! j=1,nmlat
 !
 ! Emx is the zonal electric field for all geomagnetic grid points.
 !   The factor rcos0s converts from the latitudinally distorted 
 !   geomagnetic grid to standard apex latitudes.
 !
-        do j=2,nmlat-1
-          csth0 = cos(-pi/2.+float(j-1)*dlatm)
-          do i=1,nmlonp1
-            emx(i,j,k) = -(phi3d(i+1,j,k)-phi3d(i-1,j,k))/
-     |        (2.*dlonm*csth0)*rcos0s(j)
-          enddo ! i=1,nmlonp1
-        enddo ! j=2,nmlat-1
+          do j=2,nmlat-1
+            csth0 = cos(-pi/2.+float(j-1)*dlatm)
+            do i=1,nmlonp1
+              emx(i,j,k) = -(phi3d(i+1,j,k)-phi3d(i-1,j,k))/
+     |   	(2.*dlonm*csth0)*rcos0s(j)
+            enddo ! i=1,nmlonp1
+          enddo ! j=2,nmlat-1
 !
 ! Polar values for emx:
-        do i=1,nmlonp1
-          emx(i,1,k) = emy(1+mod(i-1+(nmlon/4),nmlon),1,k)
-          emx(i,nmlat,k) = emy(1+mod(i-1+((3*nmlon)/4),nmlon),nmlat,k)
-        enddo ! i=1,nmlonp1
-      enddo ! k=1,nlevp1 
+          do i=1,nmlonp1
+            emx(i,1,k) = emy(1+mod(i-1+(nmlon/4),nmlon),1,k)
+            emx(i,nmlat,k) = emy(1+mod(i-1+((3*nmlon)/4),nmlon),nmlat,k)
+          enddo ! i=1,nmlonp1
+        enddo ! k=1,nlevp1 
 !
 ! Emz = d(phi)/dz
-      do k=2,nlev
-        do j=1,nmlat
-          do i=1,nmlonp1
-            emz(i,j,k) = -(phim3d(i,j,k+1)-phi3d(i,j,k-1))
-          enddo ! i=1,nmlonp1
-        enddo ! j=1,nmlat
-      enddo ! k=2,nlev
+        do k=2,nlev
+          do j=1,nmlat
+            do i=1,nmlonp1
+              emz(i,j,k) = -(phim3d(i,j,k+1)-phi3d(i,j,k-1))
+            enddo ! i=1,nmlonp1
+          enddo ! j=1,nmlat
+        enddo ! k=2,nlev
+      
+      else  ! not the first step use fields from dynamo subroutine threed
+      
+! copy fields emphi3d, emlam3d, emz3d into emx, emy, emz
+        do k=1,nlevp1 
+          do j=1,nmlat
+            do i=1,nmlonp1
+              emx(i,j,k) = emphi3d(i,j,k)
+              emy(i,j,k) = emlam3d(i,j,k)
+              emz(i,j,k) = emz3d(i,j,k)
+            enddo ! i=1,nmlonp1
+          enddo ! j=1,nmlat
+        enddo ! k=1,nlevp1
+        
+      endif  ! first step
 
 !     do j=1,nmlat
 !       call addfsech_ik('EMX',' ',' ',emx(:,j,:),1,nmlonp1,nmlev,

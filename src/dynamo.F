@@ -2858,8 +2858,11 @@
 !
 ! !USES:
       use cons_module,only: ylatm,r0,r00,pi_dyn,table,dlatm,dlonm,
-     |  rcos0s,re,dt1dts
-      use fields_module,only: phim3d ! phim3d(nmlonp1,nmlat,-2:nlevp1)
+     |  rcos0s,re,dt1dts,dt0dts
+      use fields_module,only: phim3d, ! phim3d(nmlonp1,nmlat,-2:nlevp1)
+     |  emphi3d,   ! 3d eastward electric field magnetic
+     |  emlam3d,   ! 3d equatorw. electric field magnetic
+     |  emz3d      ! 3d upward (?) electric field magnetic
 !
 ! !DESCRIPTION: 
 ! calculates electric field 
@@ -2868,6 +2871,12 @@
 ! calculate 3D electric potential and electric field assuming
 ! that the fieldlines are dipolar and with constant electric potential
 ! along the field line
+! 
+! calculates the electric field (used in subroutine efield)
+!      R E_phi = -1/(cos lam_m) d Phi/ d phi_m
+!      R E_lam = d Phi/ d lam_m
+!        E_z   = d Phi/ d zp
+! with R the Erath radius
 
 ! !ARGUMENTS:
 ! !RETURN VALUE:
@@ -2882,6 +2891,7 @@
       real,dimension(nmlonp1) :: thetam,pslot,qslot
       integer,dimension(nmlonp1) :: islot,jslot
       real,dimension(nmlonp1,nmlat) :: ed1,ed2
+      real,dimension(nmlonp1,nmlat) :: ephi,elam
 !
 ! Externals:
       real,external :: sddot ! in util.F
@@ -2895,10 +2905,13 @@
         do i=2,nmlon
           ed1(i,j) = -(phim(i+1,j)-phim(i-1,j))/(2.*dlonm*csth0)*
      |      rcos0s(j)/(r0*1.e-2)
+          ephi(i,j)= ed1(i,j)*(r0*1.e-2)
         enddo ! i=2,nmlon
         ed1(1,j) = -(phim(2,j)-phim(nmlon,j))/(2.*dlonm*csth0)*
      |      rcos0s(j)/(r0*1.e-2)
         ed1(nmlonp1,j) = ed1(1,j)
+        ephi(1,j)      = ed1(1,j)*(r0*1.e-2)
+        ephi(nmlonp1,j)= ed1(nmlonp1,j)*(r0*1.e-2)
       enddo ! j=2,nmlat-1
 !
 ! E_d2 = +/- 1/(R |sinI_m|) d Phi/d lam_0* (d lam_0/ (d lam_m*|sin I_m|))
@@ -2907,6 +2920,7 @@
         do i=1,nmlonp1
           ed2(i,j) = -(phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt1dts(j)/
      |      (r0*1.e-2)
+          elam(i,j)= -(phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt0dts(j)
         enddo ! i=1,nmlonp1
       enddo ! j=2,nmlath-1
 !
@@ -2915,6 +2929,7 @@
         do i=1,nmlonp1
           ed2(i,j) = (phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt1dts(j)/
      |      (r0*1.e-2)
+          elam(i,j)= -(phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt0dts(j)
         enddo ! i=1,nmlonp1
       enddo ! j=nmlath+1,nmlat-1
 !
@@ -2934,6 +2949,15 @@
      |                  ed1(ip1f,2) + ed1(ip3f,2))
         ed2(i,nmlat) = .25*(ed2(i,nmlat-1) - ed2(ip2f,nmlat-1) -
      |                      ed1(ip1f,nmlat-1) + ed1(ip3f,nmlat-1))
+!     
+        ephi(i,1) = .25*(ephi(i,2) - ephi(ip2f,2) +
+     |                  elam(ip1f,2) - elam(ip3f,2))
+        ephi(i,nmlat) = .25*(ephi(i,nmlat-1) - ephi(ip2f,nmlat-1) +
+     |                      elam(ip1f,nmlat-1) - elam(ip3f,nmlat-1))
+        elam(i,1) = .25*(elam(i,2) - elam(ip2f,2) -
+     |                  ephi(ip1f,2) + ephi(ip3f,2))
+        elam(i,nmlat) = .25*(elam(i,nmlat-1) - elam(ip2f,nmlat-1) -
+     |                      ephi(ip1f,nmlat-1) + ephi(ip3f,nmlat-1))
 !
 ! Equator: derivative of quadratic polynomial (3 given points)
        ed2(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
@@ -2942,6 +2966,9 @@
      |    -3.*phim(i,nmlath+1))/(2.*dlatm)/(R0*1.e-2)
        ed2(i,nmlath-1) = (4.*phim(i,nmlath-2)-phim(i,nmlath-3)
      |    -3.*phim(i,nmlath-1))/(2.*dlatm)/(R0*1.e-2)
+!     
+       elam(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
+     |    -3.*phim(i,nmlath))/(2.*dlatm)
       enddo ! i = 1,nmlonp1
 !
 ! Comment from tgcm15 (threed.F):
@@ -2978,7 +3005,7 @@
 ! longitudinal grid point are the same
             islot(i) = i
             qslot(i) = (thetam(i)+pi/2.)/dlatm+1.
-            jslot(i) = qslot(i)
+            jslot(i) = int(qslot(i))
             qslot(i) = qslot(i)-float(jslot(i))
 !
 ! Interpolate in phim using linear interpolation in latitude:
@@ -2994,6 +3021,14 @@
             ed23d(i,j,k) = (1.-qslot(i))*
      |        ed2(islot(i),jslot(i))+qslot(i)*
      |        ed2(islot(i),jslot(i)+1)
+!
+            emphi3d(i,j,k) = (1.-qslot(i))*
+     |        ephi(islot(i),jslot(i))+qslot(i)*
+     |        ephi(islot(i),jslot(i)+1)
+!
+            emlam3d(i,j,k) = (1.-qslot(i))*
+     |        elam(islot(i),jslot(i))+qslot(i)*
+     |        elam(islot(i),jslot(i)+1)
           enddo ! i=1,nmlon
         enddo ! j=2,nmlat-1
       enddo ! k=-2,nlevp1
@@ -3010,8 +3045,21 @@
           ed13d(i,nmlat,k) = ed1(i,nmlat)
           ed23d(i,1,k)     = ed2(i,1)
           ed23d(i,nmlat,k) = ed2(i,nmlat)
+!	  
+          emphi3d(i,1,k)     = ephi(i,1)
+          emphi3d(i,nmlat,k) = ephi(i,nmlat)
+          emlam3d(i,1,k)     = elam(i,1)
+          emlam3d(i,nmlat,k) = elam(i,nmlat)
         enddo ! i = 1,nmlon
       enddo ! k = -2,nlevp1
+!          
+      do k=2,nlevp1-1
+        do j=1,nmlat
+          do i=1,nmlon
+             emz3d(i,j,k) = -(phim3d(i,j,k+1)-phim3d(i,j,k-1))
+          enddo ! i=1,nmlon
+        enddo ! j=2,nmlat-1
+      enddo ! k=1,nlevp1  
 !
 ! Periodic point:
       do k=1,nlevp1
@@ -3019,6 +3067,9 @@
           phim3d(nmlonp1,j,k) = phim3d(1,j,k)
           ed13d(nmlonp1,j,k)  = ed13d(1,j,k)
           ed23d(nmlonp1,j,k)  = ed23d(1,j,k)
+          emphi3d(nmlonp1,j,k)= emphi3d(1,j,k)
+          emlam3d(nmlonp1,j,k)= emlam3d(1,j,k)
+          emz3d(nmlonp1,j,k)  = emz3d(1,j,k)
         enddo ! j=1,nmlat
       enddo ! k=1,nlevp1
 !

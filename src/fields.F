@@ -126,7 +126,10 @@
 ! (full domains until dynamo is parallelized)
       real ::
      |  dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
-     |  phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
+     |  phim3d(nmlonp1,nmlat,-2:nlevp1), ! 3d electric potential magnetic
+     |  emphi3d(nmlonp1,nmlat,nlevp1),   ! 3d eastward electric field magnetic
+     |  emlam3d(nmlonp1,nmlat,nlevp1),   ! 3d equatorw. electric field magnetic
+     |  emz3d(nmlonp1,nmlat,nlevp1)      ! 3d upward (?) electric field magnetic
 !
 ! Secondary history fields (runtime user defined 3-d fields):
 !
