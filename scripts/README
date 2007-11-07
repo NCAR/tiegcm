@@ -53,3 +53,7 @@ mpxlf_r was using /usr/local/lib32/r4i4, which is incorrect on bluevista.
 -------------------------------------------------------------------
 10/25/07:
 Update from $TGCMROOT/tiegcm1.8/scripts and commit to cvs.
+
+11/7/07:
+Changed lib_netcdf for AIX in tgcm_config from /usr/local/lib32/r4i4
+to /usr/local/lib (the lib32/r4i4 dir does not exist on blueice).
