@@ -726,7 +726,7 @@ sub write_makefile {
   $OS = `uname -s`; chop $OS; ($os = $OS) =~ tr/A-Z/a-z/;
   SWITCH: {
     if ($os eq "aix") { 
-      $lib_netcdf = "/usr/local/lib32/r4i4";
+      $lib_netcdf = "/usr/local/lib";
       $inc_netcdf = "/usr/local/include";
       last SWITCH;
     }
