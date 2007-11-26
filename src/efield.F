@@ -86,8 +86,6 @@
 ! Thereafter, emphi3d,emlam3d,emz3d are calculated in dynamo on the
 !   mag grid, and copied into emx,y,z below.
 !
-      if (istep==1) then ! do only for the first timestep at the moment
-!
       if(istep == 1) then ! do only for the first timestep at the moment
 !
 ! Copy phim3d to local phi3d. Phim3d is dimensioned in fields.F, and is 

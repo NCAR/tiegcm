@@ -57,13 +57,9 @@
       if(igswm_mi_sdi == 0) call bndry_semidiurnal  ! check for GSWM semidiurnal
       if(igswm_mi_di  == 0) call bndry_diurnal      ! check for GSWM diurnal
       dday = float(iday)+amod(float(iter)*float(step),86400.)/86400.
-
-! am 4/06 annual tide -> from MSIS
+!
       call bndry_annual(dday)
 !
-! 7/18/06 btf: add cco2gr module for co2 cooling (see cco2gr.F and radcool.F)
-!     call set_cco2_data
-!     call cco2gr(co2mix)
       write(6,"(72('-'),/)")
 !
 ! t0==0:
