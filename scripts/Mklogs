@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+$logfile = $ARGV[0];
+print "logfile = $logfile\n";
+open(LOGFILE,"< $logfile") || 
+  die "Could not open input file $logfile\n\n";
+$ifile = 0;
+$found = 1;
+while ($found > 0) {
+  $found = 0;
+  while (<LOGFILE>) {
+    if (/^\s*$ifile\:/) {
+      $found++;
+      if ($found==1) {
+        &mktasklog($logfile,$ifile,$tasklog);
+        open(TASKLOG,"> $tasklog") || 
+          die "Could not open output file $tasklog\n\n";
+      }
+      print TASKLOG;
+    }
+  }
+  if ($found==0) { exit; }
+  close (TASKLOG);
+  print "Wrote file $tasklog\n";
+  seek LOGFILE,0,0;
+  $ifile++;
+}
+#-----------------------------------------------------------------------
+sub mktasklog {
+local ($logfile, $ifile) = @_;
+local ($pos,$dotpos);
+#
+$tasklog = $logfile;
+$pos = -1;
+while (($pos = index($tasklog,'.',$pos)) > -1) {
+  $dotpos = $pos;
+  $pos++;
+}
+substr($tasklog,$dotpos) = "";
+$tasklog = $tasklog . '_task' . $ifile . '.out';
+}

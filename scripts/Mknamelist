@@ -1,0 +1,623 @@
+#!/usr/bin/perl
+use Getopt::Long;
+#
+# Make a default namelist input file for desired model:
+#
+$progname = $0;
+#
+$user  = $ENV{"LOGNAME"};
+$hres  = 5.0;  $vres = 0.5;
+&GetOptions(
+   "model=s"     => \$model,
+   "fileout=s"   => \$fileout,
+   "user=s"      => \$user,
+   "hres=f"      => \$hres,
+   "vres=f"      => \$vres,
+   "h|help"      => \$help,
+) or usage();
+if ($help) { usage(); } # provide usage if help was requested
+#
+# Check for unparsed arguments:
+if (@ARGV) {
+    print STDERR ">>> $progname: unrecognized arguments: @ARGV\n";
+    usage();
+}
+#
+($USER = $user) =~ tr/a-z/A-Z/;
+#
+if ($model !~ /^tiegcm|timegcm|tgcm24|mtgcm|titan|glbmean/) {
+  print STDERR "\n>>> WARNING $progname: Unrecognized model: $model -- using \"tgcm\"\n";
+  $model = "tgcm";
+}
+#
+# Model class:
+$model_class = "tgcm";
+SWITCH: {
+  if ($model =~ /^tiegcm/)  { $model_class = "tiegcm"  ; last SWITCH; }
+  if ($model =~ /^timegcm/) { $model_class = "timegcm" ; last SWITCH; }
+  if ($model =~ /^tgcm24/)  { $model_class = "timegcm" ; last SWITCH; } # old version
+  if ($model =~ /^mtgcm/)   { $model_class = "mtgcm"   ; last SWITCH; }
+  if ($model =~ /^titan/)   { $model_class = "titan"   ; last SWITCH; }
+  if ($model =~ /^glbmean/) { $model_class = "glbmean" ; last SWITCH; }
+}
+if ($model !~ /^glbmean/) {
+  if ($hres != 5.0 and $hres != 2.5) {
+    print STDERR 
+      "\n>>> WARNING $progname: Unknown horizontal resolution hres = $hres\n";
+  }
+  if ($vres != 0.5 and $vres != 0.25) {
+    print STDERR 
+      "\n>>> WARNING $progname: Unknown vertical resolution vres = $vres\n";
+  }
+}
+if (! defined $fileout) {
+  $fileout = "$model\_default.inp"; 
+  if ($model !~ /^glbmean/) {
+    if ($hres != 5.0 or $vres != 0.5) {
+      if ($hres == 5.0)  { $hresname = "5.0" ; }
+      if ($hres == 2.5)  { $hresname = "2.5" ; }
+      if ($vres == 0.50) { $vresname = "0.50"; }
+      if ($vres == 0.25) { $vresname = "0.25"; }
+      $fileout = "$model\_h$hresname" . "v$vresname" . "\_default.inp";
+    }
+  }
+}
+#
+# Source history and output history files are defined by sub set_hist:
+#
+# For now, allow default to day 80 files:
+$start_year = "2002";
+$start_day = "80";
+$start_day_hist = "080";
+$source_start = "80";
+#
+&set_hist($model,$model_class,$start_year,$start_day_hist,$hres,$vres);
+#
+$step = 180;
+if ($hres==2.5 and $vres==0.25) { $step = 90; }
+#
+#print STDERR "hist_output = $hist_output  hist_secout = $hist_secout\n";
+#
+# gswm data files:
+#
+if ($model =~ /^timegcm/) {
+  if ($hres == 5.0) {
+    $gswm_mdi_ncfile    = '$TGCMDATA/gswm_diurn_5.0d_32km.nc';
+    $gswm_msdi_ncfile   = '$TGCMDATA/gswm_semi_5.0d_32km.nc';
+    $gswm_nmidi_ncfile  = '$TGCMDATA/gswm_nonmig_diurn_5.0d_32km.nc';
+    $gswm_nmisdi_ncfile = '$TGCMDATA/gswm_nonmig_semi_5.0d_32km.nc';
+  } elsif ($hres == 2.5) {
+    $gswm_mdi_ncfile    = '$TGCMDATA/gswm_diurn_2.5d_32km.nc';
+    $gswm_msdi_ncfile   = '$TGCMDATA/gswm_semi_2.5d_32km.nc';
+    $gswm_nmidi_ncfile  = '$TGCMDATA/gswm_nonmig_diurn_2.5d_32km.nc';
+    $gswm_nmisdi_ncfile = '$TGCMDATA/gswm_nonmig_semi_2.5d_32km.nc';
+  }
+} elsif ($model =~ /^tiegcm/) {
+  if ($hres == 5.0) {
+    $gswm_mdi_ncfile    = '$TGCMDATA/gswm_diurn_5.0d_99km.nc';
+    $gswm_msdi_ncfile   = '$TGCMDATA/gswm_semi_5.0d_99km.nc';
+    $gswm_nmidi_ncfile  = '$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc';
+    $gswm_nmisdi_ncfile = '$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc';
+    $see_ncfile         = '$TGCMDATA/see__L3_merged_2005007_007.nc';
+  } elsif ($hres == 2.5) {
+    $gswm_mdi_ncfile    = '$TGCMDATA/gswm_diurn_2.5d_99km.nc';
+    $gswm_msdi_ncfile   = '$TGCMDATA/gswm_semi_2.5d_99km.nc';
+    $gswm_nmidi_ncfile  = '$TGCMDATA/gswm_nonmig_diurn_2.5d_99km.nc';
+    $gswm_nmisdi_ncfile = '$TGCMDATA/gswm_nonmig_semi_2.5d_99km.nc';
+    $see_ncfile         = '$TGCMDATA/see__L3_merged_2005007_007.nc';
+  }
+
+# if ($hres == 5.0) {
+#   $gswm_mdi_ncfile    = '$TGCMDATA/gswm_diurn_5.0d_99km.nc';
+#   $gswm_msdi_ncfile   = '$TGCMDATA/gswm_semi_5.0d_99km.nc';
+#   $gswm_nmidi_ncfile  = '$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc';
+#   $gswm_nmisdi_ncfile = '$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc';
+#   $see_ncfile         = '$TGCMDATA/see__L3_merged_2005007_007.nc';
+# } elsif ($hres == 2.5) {
+#   $gswm_mdi_ncfile    = '$TGCMDATA/gswm_diurn_2.5d_99km.nc';
+#   $gswm_msdi_ncfile   = '$TGCMDATA/gswm_semi_2.5d_99km.nc';
+#   $gswm_nmidi_ncfile  = '$TGCMDATA/gswm_nonmig_diurn_2.5d_99km.nc';
+#   $gswm_nmisdi_ncfile = '$TGCMDATA/gswm_nonmig_semi_2.5d_99km.nc';
+#   $see_ncfile         = '$TGCMDATA/see__L3_merged_2005007_007.nc';
+# }
+
+}
+#
+# Magvol:
+$magvol = "magfield.nc";
+if ($hres == 2.5) { $magvol = "magfield_2.5h.nc"; }
+$magvol = '$TGCMDATA/' . $magvol;
+#
+# gpi file:
+#$gpi_ncfile = '$TGCMDATA/gpi_1979001-2005059.nc';
+ $gpi_ncfile = '$TGCMDATA/gpi_1979001-2005273.nc'; # updated 12/6/05 by btf
+#
+#print STDERR "\n$0: model=$model user=$user USER=$USER hres=$hres vres=$vres\n";
+#print STDERR "$model gswm files:\n";
+#print STDERR "  $gswm_mdi_ncfile\n  $gswm_msdi_ncfile\n  $gswm_nmidi_ncfile\n  $gswm_nmisdi_ncfile\n\n";
+&make_default($fileout,$model);
+#
+# Return last print to STDOUT -- calling C-script may need this (e.g., user job script)
+print STDERR "\n$progname wrote default input file $fileout\n"; 
+print "$fileout\n";
+exit;
+#
+#-------------------------------------------------------------------------
+#
+sub usage {
+  die <<EOF;
+
+Make a default namelist input file for tiegcm or timegcm:
+
+SYNOPSIS
+  $0 [options]
+OPTIONS
+  -model	Name of requested model (may begin with "tiegcm" or "timegcm").
+  -fileout	Name of namelist file to create (default: \$model.inp).
+  -user		Name of user who will use the namelist file 
+  -help		Print usage message and quit.
+EXAMPLES
+  MkNamelist -model=timegcm 
+  MkNamelist -model=tiegcm hres=2.5 vres=0.25
+  MkNamelist -model=timegcm -fileout=my_timegcm.inp
+
+EOF
+}
+#-------------------------------------------------------------------------
+sub set_hist {
+#
+# Set default source and output history file names given model class and 
+# grid resolution. ($modelclass is the model name without extension)
+# For model classes tiegcm, timegcm or tgcm (i.e., unrecognized model name), 
+#   given hres and vres, the source file name should resolve to one of the 
+#   following:
+#
+#   TGCM.$modelclass.p001-2002-080.nc            # default hres, default vres
+#   TGCM.$modelclass_h5.0v0.25.p001-2002-080.nc  # default hres, double vres
+#   TGCM.$modelclass_h2.5v0.50.p001-2002-080.nc  # double hres, default vres
+#   TGCM.$modelclass_h2.5v0.25.p001-2002-080.nc  # double hres, double vres
+#
+# Primary and secondary output files are expressed as mss paths:
+#   /$USER/$model/ptest001.nc             (stest001.nc)
+#   /$USER/$model_h5.0v0.25/ptest001.nc   (stest001.nc)
+#   /$USER/$model_h2.5v0.50/ptest001.nc   (stest001.nc)
+#   /$USER/$model_h2.5v0.25/ptest001.nc   (stest001.nc)
+#
+  my ($model,$modelclass,$start_year,$start_day_hist,$hres,$vres) = @_;
+#
+  my $sourcefile = "p001-$start_year-$start_day_hist.nc";
+#
+# Source history file name for default hres and vres:
+#
+  $hist_source =     '$TGCMDATA/' . "TGCM.$modelclass.$sourcefile";
+  $hist_source_mss = "/TGCM/$modelclass/$sourcefile";
+#
+#
+  $hist_output =     "/$USER/$model/ptest001.nc";
+  $hist_secout =     "/$USER/$model/stest001.nc";
+#
+# Source history file name for non-default grid resolutions hres or vres:
+# (make string equiv of hres and vres, so zeroes are consistent in file name):
+#
+  if ($hres != 5.0 or $vres != 0.5) {
+    if ($hres == 5.0)  { $hresname = "5.0" ; }
+    if ($hres == 2.5)  { $hresname = "2.5" ; }
+    if ($vres == 0.50) { $vresname = "0.50"; }
+    if ($vres == 0.25) { $vresname = "0.25"; }
+#
+#   $hist_source = '$TGCMDATA/' . "TGCM.$modelclass" . "_h$hresname" 
+#                  . "v$vresname" . ".$sourcefile";
+#   $hist_source_mss = 
+#     "/TGCM/$modelclass" . "_h$hresname" . "v$vresname" . "/$sourcefile";
+#
+# double vertical and horizontal res now available:
+#   $hist_source = '$TGCMDATA/' . "TGCM.${modelclass}_zbot-10_dres.p001.nc"; 
+#
+# 8/7/06 btf: Default tiegcm at zbot -10 is double res equinox: 
+    $hist_source =     '$TGCMDATA/' . "TGCM.${modelclass}_zbot-10_dres.peq001.nc";
+    $hist_source_mss = "/TGCM/${modelclass}_zbot-10_dres/peq001.nc";
+#
+    $hist_output = "/$USER/$model" . "_h$hresname" . "v$vresname" . "/ptest001.nc";
+    $hist_secout = "/$USER/$model" . "_h$hresname" . "v$vresname" . "/stest001.nc";
+  }
+#
+# Odd models (i.e., not tiegcm or timegcm):
+#
+# Mars TGCM:
+  if ($modelclass eq "mtgcm") { 
+    $hist_source = '$TGCMDATA/' . "TGCM.SWBM04.p1DC98RSb.nc";
+    $hist_source_mss = "/TGCM/SWBM04/p1DC98RSb.nc";
+  }
+#
+# Global Mean 1-d model:
+  if ($modelclass eq "glbmean") { 
+    $hist_source = '$TGCMDATA/' . "TGCM.glbmean.nc";
+    $hist_source_mss = "/TGCM/glbmean/TGCM.glbmean.nc";
+    $hist_output =     "$USER.glbmean_001.nc";
+    $guydat_ncfile = '$TGCMDATA/' . "TGCM.glbmean.guyprof.nc";
+
+# This print statement will cause problems if called from csh script like *.job.
+#   print "\nMkNamelist sethist: guydat_ncfile = $guydat_ncfile\n";
+  }
+
+# print STDERR "\nDefault source history disk file name: $hist_source\n";
+# print STDERR "Default source history mss file: $hist_source_mss\n";
+}
+#-------------------------------------------------------------------------
+sub make_default {
+my ($file, $model) = @_;
+$date = `date`; chop $date;
+open (OUTFILE,"> $file") || die "make_default cannot open file $file";
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                     DEFAULT TIMEGCM NAMELIST
+if ($model =~ /^timegcm/) {
+print OUTFILE <<EOF;
+&tgcm_input
+;
+; Example namelist read file for TGCM model $model
+; This file was made by $0 on $date
+;
+ LABEL='$model'
+ START_YEAR = $start_year  ; starting year
+ START_DAY  = $start_day   ; starting day of year (1->365)
+ CALENDAR_ADVANCE = 1      ; if > 0, calendar time will be advanced
+;
+; SOURCE: source history file
+; SOURCE_START:  source history model time to read
+;
+ SOURCE='$hist_source'           
+ SOURCE_START = $start_day,0,0
+;
+ START= $start_day,0,0
+ STOP=  $start_day,1,0
+ HIST=   0,1,0
+ SAVE=   0,1,0
+ STEP= $step
+;
+ OUTPUT='$hist_output'
+;MXHIST_PRIM = 13 ; default max #histories per primary file is 10
+;
+ SECSTART = $start_day,0,0
+ SECSTOP =  $start_day,1,0
+ SECHIST =   0,0,12
+ SECSAVE =   0,1,0
+ SECOUT='$hist_secout'
+;MXHIST_SECH = 25 ; default max #histories per sech file is 24
+ SECFLDS = 'TN','UN','VN','OMEGA','O3','O1','OX','NO','NO2','NOZ','H2O',
+           'OH','HO2','H','HOX','CO2','CO','CH4','NE','TE','TI','Z',
+           'POTEN'
+;
+;DISPOSE = 0 ; no dispose to mss
+;DISPOSE = 1 ; dispose to mss during model execution
+;DISPOSE = 2 ; dispose to mss after model execution
+ DISPOSE = 0
+;
+; Set TIDEs = 0. if using GSWM below.
+ TIDE    = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
+ TIDE2   = 0.,0.
+ TIDE3M3 = 0.,0.
+;
+ SOLGAR_BNDRY_FILE  = 'solgar_bndry.nc'
+ SOLGAR_IMPORT_FILE = 'solgar_import.nc'
+ ZATMOS_FILE = 'zatmos_bndry.nc'
+;
+; Comment any of these to turn off, uncomment to turn on.
+;NCEP_NCFILE     = 'ncep_1979001-2005120.nc'  ; ncep boundary
+;
+; By default, use gswm migrating diurnal and semi-diurnal tides:
+ GSWM_MDI_NCFILE = '$gswm_mdi_ncfile'
+ GSWM_MSDI_FILE  = '$gswm_msdi_ncfile'
+;GSWM_NMDI_FILE  = '$gswm_nmidi_ncfile'
+;GSWM_NMSDI_FILE = '$gswm_nmisdi_ncfile'
+;
+; GPI_NCFILE: Use time-dependent geophysical indices data file.
+; If GPI_NCFILE is provided, f107, f107a, power, and ctpoten
+; should be commented out (they will be provided by gpi_ncfile).
+;GPI_NCFILE = '$gpi_ncfile'  ; GPI data file
+;
+ F107 = 150.
+ F107A =150.
+ POWER= 16.
+ CTPOTEN=45.
+;
+ MAGVOL = '$magvol'
+ MAG=-74.5,127.,79.,-70.
+ DIFHOR=1
+ DYNAMO=1 ; 1 or 0 for dynamo or no-dynamo
+ AURORA=1
+ COLFAC=1.5
+ BYIMF = 0.
+ BZIMF = 0.
+/
+EOF
+#                   END  DEFAULT TIMEGCM NAMELIST
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+} elsif ($model =~ /^tiegcm/) {
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                      DEFAULT TIEGCM NAMELIST
+print OUTFILE <<EOF;
+&tgcm_input
+;
+; Example namelist read file for TGCM model $model
+; This file was made by $0 on $date
+;
+ LABEL='$model'
+ START_YEAR = $start_year        ; starting year
+ START_DAY  = $start_day          ; starting day of year (1->365)
+ CALENDAR_ADVANCE = 0     ; if > 0, calendar time will be advanced
+;
+; SOURCE: source history file
+; SOURCE_START:  source history model time to read
+;
+ SOURCE='$hist_source'
+;SOURCE='$hist_source_mss'
+ SOURCE_START = $source_start,0,0
+;
+ START= $start_day,0,0
+ STOP=  $start_day,1,0
+ HIST=   0,1,0
+ SAVE=   0,1,0
+ STEP= $step
+;
+ OUTPUT='$hist_output'
+;MXHIST_PRIM = 13 ; default max #histories per primary file is 10
+;
+ SECSTART = $start_day,0,0
+ SECSTOP =  $start_day,1,0
+ SECHIST =   0,0,12
+ SECSAVE =   0,1,0
+ SECOUT='$hist_secout'
+;MXHIST_SECH = 25 ; default max #histories per sech file is 24
+ SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI',
+           'O2','O2P','OMEGA','POTEN'
+;
+;DISPOSE = 0 ; no dispose to mss
+;DISPOSE = 1 ; dispose to mss during model execution
+;DISPOSE = 2 ; dispose to mss after model execution
+ DISPOSE = 0
+;
+; Set TIDEs = 0. if using GSWM below.
+ TIDE    = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
+ TIDE2   = 0.,0.
+ TIDE3M3 = 0.,0.
+;
+; By default, use gswm migrating diurnal and semi-diurnal tides:
+ GSWM_MI_DI_NCFILE  = '$gswm_mdi_ncfile'
+ GSWM_MI_SDI_NCFILE = '$gswm_msdi_ncfile'
+;GSWM_NM_DI_NCFILE  = '$gswm_nmidi_ncfile'
+;GSWM_NM_SDI_NCFILE = '$gswm_nmisdi_ncfile'
+;
+; GPI_NCFILE: Use time-dependent geophysical indices data file.
+; If GPI_NCFILE is provided, f107, f107a, power, and ctpoten below
+; should be commented out (they will be provided by gpi_ncfile).
+;GPI_NCFILE = '$gpi_ncfile'
+;
+ F107 = 150.
+ F107A =150.
+ POWER= 16.
+ CTPOTEN=45.
+;
+; SEE data file:
+;SEE_NCFILE  = '$see_ncfile'
+;
+ MAGVOL = '$magvol'
+ MAG=-74.5,127.,79.,-70.
+ DIFHOR=1
+ DYNAMO=1 ; 1 or 0 for dynamo or no-dynamo
+ AURORA=1
+ COLFAC=1.5
+ BYIMF = 0.
+ BZIMF = 0.
+/
+EOF
+#                   END  DEFAULT TIEGCM NAMELIST
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+} elsif ($model =~ /^mtgcm/) {
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                      DEFAULT MTGCM NAMELIST
+print OUTFILE <<EOF;
+&tgcm_input
+ TEMPDIR = '/ptmp/$USER/$model/tmpdir'
+ LABEL = '$model'
+ DATE=1999,150
+ CALDAY = 0
+;
+; Ls = 90+-30; TES-YR1; F10.7 = 70, 130, 200  
+ SOURCE='$hist_source'           ; mtgcm source history file
+ SOURCE_START = 150,0,0
+; ------------------------------------------------------------------
+; Latest Corrected (Best) Valverde NIR datasets (March 1, 2004)
+ DATA = '/TGCM/SWBM04/MLVI090c.nc'
+;
+; NLTE_FILE: name of file containing tabulation for Miguel's NLTE
+;  CO2 15-micron cooling scheme (12/4/02)
+; See nlte_mod.F: nlte_mod does *not* obtain and read the file.
+; Instead it uses pre-made array constructors.
+; If NLTE_FILE is blank, values will be set to zeros.
+;
+ NLTE_FILE = 'NLTECOOL.DATA.v1c'
+; ------------------------------------------------------------------
+;
+; ZKM_FILE: name of file containing MGCM height LBC for zkmbot(zjmx).
+; See zkmdat_mod.F: zkmdat_mod does *not* obtain and read the file.
+; Instead it uses pre-made array constructors.
+; If ZKM_FILE is blank, zkmbot will be set to zeros.
+;
+ ZKM_FILE = 'ZKMT.98_04.LS090B'
+;
+;------------------------------------------------------
+; MGCM_LBC_FILE: name of file containing MGCM z,t,u,v data at 1.32 mb
+;   for import to LBC of mtgcm.
+; TES-YR1 :  Ls = seasonal  (MRO MARSGRAM CASES)
+;MGCM_LBC_FILE = 'TGCM_lbnd_comp_TESyr1_filt12.Ls090.nc'
+;
+; ------------------------------------------------------------------
+; SFLUX_FILE: name of file containing euv(80) data for qrjint.
+; See sfluxdat_mod.F: sfluxdat_mod does *not* obtain and read the file 
+; Instead it uses pre-made array constructors.
+; If SFLUX_FILE is blank, euv will be set to zeros.
+; MARSGRAM CASES 
+ SFLUX_FILE = 'FLX130R'
+;
+; ------------------------------------------------------------------
+; Primary history timing and output
+; DDHHMM=1,0,0 INTERVALS for 8-SOL (COMPOSITE)
+; Ls = 75.5
+ START=   150,0,0
+ STOP=    150,0,2
+ HIST=      0,0,2
+ SAVE=      0,0,2
+ STEP= $step
+;
+; NSECUPD = number of seconds between qrjint updates (1 day == 86400)
+ NSECUPD = 86400
+;
+ OUTPUT='$hist_output'
+; -----------------------------------
+; Secondary history timing and output
+; MXHIST_SECH = 20 ; default mxhist_sech==20
+; DDHHMM=1,0,0 INTERVALS for 8-SOL (COMPOSITE)
+;
+; --- SUT/DIAGNOSTICS FOR 8-SOL RUN
+; Ls = 75.5
+ SECSTART =   150,0,0
+ SECSTOP  =   150,0,2
+ SECHIST  =   0,0,2
+ SECSAVE  =   0,0,2
+ SECOUT='$hist_secout'
+;
+; 6-dtuv    (HEAT BALANCES : NT, COND, TIRCOOL, THEAT, XHYDRO, ADIA)
+ SECFLDS = 'cond', 'xhydro', 'adia', 'theat', 'tircool', 'NT_NJNP'
+; ------------------------------------------------------------------
+ DISPOSE=0
+ MAG=0.,0.,0.,0.
+ DIFHOR=0
+ IUIVI=0
+ TIDE=0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
+ TIDE2 = 0.,0.
+ TIDEANN=0
+ AURORA=0
+ COLFAC=1.5
+ F107=0.
+ F107A=0.
+ POWER=0.
+ CTPOTEN=0.
+ BYIMF=0.
+/
+EOF
+#                   END DEFAULT MTGCM NAMELIST
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+} elsif ($model =~ /^glbmean/) {  # global mean model
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                      DEFAULT GLBMEAN NAMELIST
+print OUTFILE <<EOF;
+&glbmean_input
+;
+; Namelist read input file for global mean model:
+;
+ SOURCE = '$hist_source'
+ START_DAY = 80     ; starting calendar day
+ START_YEAR = 2000  ; starting year
+ NDAYS = 5          ; number of days (time loop)
+ NUTPDAY = 4        ; number of ut's per day (inner time loop)
+ HIST = 1           ; write history every HIST ut's (mod(nutpday,hist)==0)
+ OUTPUT = '$hist_output'
+ IAURORA = 1        ; 0/1: donot/do include aurora (default 1)
+ ISOLPROTON = 0     ; 0/1: donot/do include solar protons (default 0) 
+;GUYDAT_NCFILE = '$TGCMDATA/TGCM.glbmean.guyprof.nc'
+ GUYDAT_NCFILE  = '$guydat_ncfile'
+;
+; Geophysical inputs:
+;
+ F107 = 150.
+ F107a = 150.
+ AP = 4.
+ RZUR = 0.
+/
+EOF
+#                   END DEFAULT GLBMEAN NAMELIST
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+} elsif ($model =~ /^tgcm/) {  # for older codes, e.g., tgcm24 (tgcm24.1)
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                      DEFAULT TGCM NAMELIST
+print OUTFILE <<EOF;
+&tgcm_input
+;
+; Example namelist read file for TGCM model $model
+; This file was made by $0 on $date
+;
+ LABEL='tgcm24.1'
+ DATE = 2002,80
+ CALDAY = 80
+;
+; SOURCE: source history file
+; SOURCE_START:  source history model time to read
+;
+ SOURCE='$hist_source'
+ SOURCE_START = $start_day,0,0
+;
+ START= 80,0,0
+ STOP=  80,1,0
+ HIST=   0,1,0
+ SAVE=   0,1,0
+ STEP= $step
+;
+ OUTPUT='$hist_output'
+;MXHIST_PRIM = 13 ; default max #histories per primary file is 10
+;
+ SECSTART = 80,0,0
+ SECSTOP =  80,1,0
+ SECHIST =   0,0,12
+ SECSAVE =   0,1,0
+ SECOUT='$hist_secout'
+;MXHIST_SECH = 25 ; default max #histories per sech file is 24
+ SECFLDS = 'TN','UN','VN','OMEGA','O3','O1','OX','NO','NO2','NOZ','H2O',
+           'OH','HO2','H','HOX','CO2','CO','CH4','NE','TE','TI','Z',
+           'POTEN'
+;
+;DISPOSE = 0 ; no dispose to mss
+;DISPOSE = 1 ; dispose to mss during model execution
+;DISPOSE = 2 ; dispose to mss after model execution
+ DISPOSE = 0
+;
+; Set TIDEs = 0. if using GSWM below.
+ TIDE=
+  0.0000E+04, 0.0000E+04, 0.0000E+04, 0.0000E+04, 0.0000E+04,
+  0.0000E+02, 0.0000E+01, 0.0000E+01, 0.0000E+01, 0.0000E+01
+ TIDE2 = 0.0E+4,0.0
+ TIDE3M3=0.,0.
+;
+ NCEP = 0 ; ncep Z,T lower boundaries
+;NCEP_NCFILE = '/TGCM/data/ncep_1979001-2005120.nc'
+;
+; GPI_NCFILE: Use time-dependent geophysical indices data file.
+; If GPI_NCFILE is provided, f107, f107a, power, and ctpoten
+; should be commented out (they will be provided by gpi_ncfile).
+;GPI_NCFILE = '$gpi_ncfile'  ; GPI data file
+;
+ F107 = 150.
+ F107A =150.
+ POWER= 16.
+ CTPOTEN=45.
+;
+ MAGVOL = '$magvol'
+ MAG=-74.5,127.,79.,-70.
+ DIFHOR=1
+ DYNAMO=1 ; 1 or 0 for dynamo or no-dynamo
+ AURORA=1
+ COLFAC=1.5
+ BYIMF = 0.
+;BZIMF = 0.
+ ALFA30= 40.
+ E30=0.05
+;E30=1.E-20
+ ED2=1.E-20
+ ALFAD2=10.
+/
+EOF
+#                   END DEFAULT TGCM NAMELIST
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+} # model class (tiegcm, timegcm, mtgcm)
+#print "Wrote default namelist file $file\n";
+} # end sub make_default

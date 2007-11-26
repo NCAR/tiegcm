@@ -1,0 +1,184 @@
+#!/usr/bin/perl
+#
+# Given a dispose.csh file (written by the model when namelist DISPOSE=2,
+#   containing msrcp and mscomment commands), make an output file (dispose.job)
+#   containing the dispose.csh commands prepended with batch commands 
+#   appropriate to the current system. If the -submit option is set,
+#   dispose.job is submitted to the queue. 
+#
+# Current machines supported: bluevista, blueice, tempest, lightning.
+#   Only these machines are supported because they each have different
+#   queue names, etc.
+# However, default queue can be overridden with the -queue option.
+# Wallclock limit can also be set with -wallclock option (default is 3 hrs)
+#
+# 2/8/07 btf: Remove support for bluesky. This eliminates need to 
+#             support Loadleveler. Add blueice as an LSF system.
+#             Add $project option, to be passed from job script.
+#
+use Getopt::Long;
+use IO::File;
+#
+# Set default option values:
+#
+($prog = $0) =~ s!(.*)/!!;
+my $infile    = "dispose.csh";
+my $outfile   = "dispose.job";
+my $wallclock = "03:00:00";
+my $project   = "28100036";
+my $help      = 0;
+my $submit    = 0;
+&GetOptions(
+   "i|infile=s"   => \$infile,
+   "o|outfile=s"  => \$outfile,
+   "queue=s"      => \$queue,
+   "wallclock=s"  => \$wallclock,
+   "project=s"    => \$project,
+   "submit"       => \$submit,
+   "h|help"       => \$help,
+) or usage();
+if ($help) { usage(); } # provide usage if help was requested
+#
+# Single argument is input file (probably dispose.csh):
+#
+if (@ARGV) { $infile = shift; }
+
+if (! -e $infile) { exit; }
+#  die "\n$prog quitting because input file $infile was not found\n\n"; }
+
+$date = `date`; chop $date; print "\n$prog starting at $date\n";
+print "$prog: infile = $infile outfile = $outfile\n";
+my $fh_out = new IO::File;
+$fh_out->open(">$outfile") || die ">>> can't open output file $outfile\n";
+#
+$OS = `uname -s`; chop $OS;
+if ($OS ne "AIX" and $OS ne "IRIX64" and $OS ne "Linux") {
+  die "I do not know how to make batch dispose script under OS $OS.\n"; }
+#
+# Determine specific machine:
+#
+my $uname = `uname -a`; chop $uname;
+my @uname = split(' ',$uname);
+my $sysname = $uname[1];
+if ($sysname =~ /^bv/) {
+  $mach = "bluevista";
+  $class = "regular";
+  if ($wallclock eq "03:00:00") { $wallclock = "03:00"; }
+} elsif ($sysname =~ /^bl/) {
+  $mach = "blueice";
+  $class = "regular";
+  if ($wallclock eq "03:00:00") { $wallclock = "03:00"; }
+} elsif ($sysname eq "tempest") {
+  $mach = "tempest";
+  $class = "ded_1";
+} elsif ($sysname =~ /^ln/) {
+  $mach = "lightning";
+  $class = "regular";
+  if ($wallclock eq "03:00:00") { $wallclock = "03:00"; }
+} else {
+  die <<"EOF"
+Unrecognized sysname: $sysname
+Known machine names: bluevista, blueice, tempest, lightning
+EOF
+}
+if (defined $queue) { $class = $queue; }
+print "$prog: sysname=$sysname  machine=$mach  queue=$class  wallclock=$wallclock\n";
+$stdout = "dispose.out";
+#
+# Set batch system commands. Batch system will be LSF for IBM SP or Linux,
+#   NQS for SGI.
+#
+# SGI tempest uses NQE (#QSUB commands):
+#
+if ($mach eq "tempest") {
+  print "making NQE script for mach=$mach\n";
+  $submit_cmd = "qsub";
+  print $fh_out <<"EOF"
+#
+# QSUB -s /bin/csh
+# QSUB -lt $wallclock
+# QSUB -q $class
+# QSUB -eo
+# QSUB
+#
+set mycwd = `pwd`
+if (\$\?ENVIRONMENT) then # batch job
+  set mycwd = \$QSUB_WORKDIR
+endif
+cd \$mycwd
+#
+EOF
+#
+# Linux clusters lightning and IBM machines use LSF (#BSUB commands):
+#
+} elsif ($mach eq "lightning" or $mach eq "bluevista" or $mach eq "blueice") {
+  print "making LSF script for mach=$mach\n";
+  $submit_cmd = "bsub";
+  print $fh_out <<"EOF"
+#
+#BSUB -P $project
+#BSUB -q $class
+#BSUB -o $stdout
+#BSUB -e $stdout
+#BSUB -N
+#BSUB -n 1
+#BSUB -W $wallclock
+#
+EOF
+}
+print $fh_out "echo \"Begin execution of $outfile at `date`\"\n";
+#
+my $fh_in = new IO::File;
+$fh_in->open("<$infile") || die ">>> can't open input file $infile\n";
+while (<$fh_in>) {
+  if (! /^#\!/) {
+    print $fh_out "$_";
+  }
+}
+print $fh_out "\necho \"End execution of $outfile at `date`\"\n";
+close($fh_in);
+close($fh_out);
+print "$prog: Wrote dispose script $outfile\n";
+$contents = `cat $outfile`;
+print "\n------------------ Contents of $outfile ------------------\n";
+print "$contents\n";
+print "---------------- End contents of $outfile ----------------\n\n";
+#
+# Submit job to queue, if requested:
+#
+if ($submit) {
+  if (-e $stdout) {  # remove pre-existing script output file:
+    $stat = unlink("$stdout") || 
+      print ">>> WARNING: Error from unlink of $stdout\n\n";
+  }
+  print "$prog: Submitting $outfile to batch system $submit_cmd.\n"; 
+  print "($submit_cmd script output will be written to $stdout)\n";
+  if ($submit_cmd eq "bsub") {
+    $submit_out = `$submit_cmd < $outfile` || 
+      die ">>> $prog: Error submitting $outfile to $OS: submit command=$submit_cmd\n";
+    print "$submit_out\n";
+  } else {
+    $submit_out = `$submit_cmd $outfile` || 
+      die ">>> $prog: Error submitting $outfile to $OS: submit command=$submit_cmd\n";
+    print "$submit_out\n";
+  }
+}
+$date = `date`; chop $date; print "$prog done at $date\n\n";
+exit;
+#-------------------------------------------------------------------------
+sub usage {
+  die <<EOF;
+
+SYNOPSIS
+  $0 [options]
+OPTIONS
+  -infile 	Input file name (default is dispose.csh)
+  -outfile	Output file name (default is dispose.job)
+  -queue	Queue in which to submit (default is machine dependent) 
+  -wallclock	Wallclock limit (hh:mm:ss) (default is 3 hours)
+  -project	NCAR project number (8-digit account number)
+  -submit	If set, submit job to batch queue (LL on IBM or NQE on SGI)
+
+EOF
+}
+#-----------------------------------------------------------------------
