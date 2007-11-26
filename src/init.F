@@ -1,13 +1,16 @@
 !
       module init_module
       use params_module,only: nlon,nlat,nlevp1,nlonp4,nmlonp1,nmlat,
-     |  nmlev,glon1,dlon,glat1,dlat,nlev,plev1,dlev
+     |  glon1,dlon,glat1,dlat,nlev,zmbot,dlev,zibot,zmbot,
+     |  nmlev,nmlevp1,nimlev,nimlevp1
       implicit none
 !
 ! Initialize and store model non-input variables and constants:
 !
-      real :: glon(nlon),glat(nlat),plev(nlevp1)
-      real :: gmlon(nmlonp1),gmlat(nmlat),pmlev(nmlev)
+      real :: glon(nlon),glat(nlat),zpmid(nlevp1),zpint(nlevp1)
+      real :: gmlon(nmlonp1),gmlat(nmlat),
+     |        zpmag_mid(nmlevp1),zpmag_int(nimlevp1)
+!    |        zpmag_mid(nmlev),zpmag_int(nimlev)
 !
 ! istep: the current time step index. istep is initialized
 ! to 0, then incremented before each time step (see advance.f).
@@ -29,14 +32,10 @@
       integer :: 
      |  start_mtime(3)     ! starting model time (day,hr,min)
 !
-! getgpi flag must go here rather than in gpi_mod to avoid circular 
-! module dependency with nchist_mod and init_mod.
-!
-      integer :: igetgpi       ! 0/1 flag for GPI data (see gpi_ncfile
-      integer :: igetgswmdi    ! 0/1 flag for GSWM data diurnal tide
-      integer :: igetgswmsdi   ! 0/1 flag for GSWM data semidiurnal tide
-      integer :: igetgswmnmdi  ! 0/1 flag for GSWM data nonmigrating diurnal tide
-      integer :: igetgswmnmsdi ! 0/1 flag for GSWM data nonmigrating semidiurnal tide
+      integer :: igswm_mi_di  ! 0/1 flag for GSWM data diurnal tide
+      integer :: igswm_mi_sdi ! 0/1 flag for GSWM data semidiurnal tide
+      integer :: igswm_nm_di  ! 0/1 flag for GSWM data nonmigrating diurnal tide
+      integer :: igswm_nm_sdi ! 0/1 flag for GSWM data nonmigrating semidiurnal tide
       integer :: igetgswm ! will be 1 only if at least one of the above flags are set
 !
       character(len=16) ::
@@ -67,17 +66,17 @@
 ! Initialize (this is called by tgcm.F after input):
 ! Some init also takes place in inp_model (input_mod.f)
 !
-      use input_module,only: start,step,secflds,secfmag,secfmagphr,
-     |  start_year,start_day,calendar_advance,gpi_ncfile,gswm_di_ncfile,
-     |  gswm_sdi_ncfile,gswm_nmdi_ncfile,gswm_nmsdi_ncfile,
+      use input_module,only: start,step,secflds,
+     |  start_year,start_day,calendar_advance,gpi_ncfile,
+     |  gswm_mi_di_ncfile,
+     |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,output,secout,mkhvols,nmc,source_start,
-     |  sd_ncfile
-      use hist_module,only: hist_init,isechist,nfsech_geo,nfsech_mag,
-     |  nfsech_geo2d,nfsech_mag2d,nfsech_magphr,nstep,nhist_total,
+     |  see_ncfile
+      use hist_module,only: hist_init,isechist,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
-     |  nfiles_sech
-      use fields_module,only: set_fsech,init_4d,init_3d,
-     |  fsech,fsechmag,fsech2d,fsechmag2d,fsechmagphr2d
+     |  nfiles_sech,nfsech
+      use fields_module,only: init_4d,init_3d,init_lbc,init_fsech,
+     |  fsechist
       use cons_module,only: pi,init_cons
       use filter_module,only: trigs,ntrigs,ifax
       use mpi_module,only: lon0,lon1,lat0,lat1,mytid
@@ -150,39 +149,36 @@
 !     alfalp = 10.
 !     efluxlp = 1.e-20
 !
-! Set GPI flag:
-      igetgpi = 0
-      if (len_trim(gpi_ncfile) > 0) igetgpi = 1
-      if (igetgpi > 0) 
-     |  write(6,"('  gpi_ncfile = ',a)") trim(gpi_ncfile)
-!
+! GSWM integer flags. 11/2/05 btf: these have been taken off
+!   the histories (replaced by the 4 file names, see input.F
+!   and nchist.F)
+! 
 ! Set GSWM flag for diurnal tides:
-      igetgswmdi = 0
-      if (len_trim(gswm_di_ncfile) > 0) igetgswmdi = 1
-      if (igetgswmdi > 0) 
-     |  write(6,"('  gswm_di_ncfile = ',a)") trim(gswm_di_ncfile)
+      igswm_mi_di = 0
+      if (len_trim(gswm_mi_di_ncfile) > 0) igswm_mi_di = 1
+      if (igswm_mi_di > 0) 
+     |  write(6,"('  gswm_mi_di_ncfile = ',a)") trim(gswm_mi_di_ncfile)
 ! Set GSWM flag for semidiurnal tides:
-      igetgswmsdi = 0
-      if (len_trim(gswm_sdi_ncfile) > 0) igetgswmsdi = 1
-      if (igetgswmsdi > 0) 
-     |  write(6,"('  gswm_sdi_ncfile = ',a)") trim(gswm_sdi_ncfile)
+      igswm_mi_sdi = 0
+      if (len_trim(gswm_mi_sdi_ncfile) > 0) igswm_mi_sdi = 1
+      if (igswm_mi_sdi > 0) 
+     |  write(6,"('  gswm_mi_sdi_ncfile = ',a)")trim(gswm_mi_sdi_ncfile)
 ! Set GSWM flag for nonmigrating diurnal tides:
-      igetgswmnmdi = 0
-      if (len_trim(gswm_nmdi_ncfile) > 0) igetgswmnmdi = 1
-      if (igetgswmnmdi > 0) 
-     |  write(6,"('  gswm_nmdi_ncfile = ',a)") trim(gswm_nmdi_ncfile)
+      igswm_nm_di = 0
+      if (len_trim(gswm_nm_di_ncfile) > 0) igswm_nm_di = 1
+      if (igswm_nm_di > 0) 
+     |  write(6,"('  gswm_nm_di_ncfile = ',a)") trim(gswm_nm_di_ncfile)
 ! Set GSWM flag for nonmigrating semidiurnal tides:
-      igetgswmnmsdi = 0
-      if (len_trim(gswm_nmsdi_ncfile) > 0) igetgswmnmsdi = 1
-      if (igetgswmnmsdi > 0) 
-     |  write(6,"('  gswm_nmsdi_ncfile = ',a)")  
-     |  trim(gswm_nmsdi_ncfile)
+      igswm_nm_sdi = 0
+      if (len_trim(gswm_nm_sdi_ncfile) > 0) igswm_nm_sdi = 1
+      if (igswm_nm_sdi > 0) 
+     |  write(6,"('  gswm_nm_sdi_ncfile = ',a)")  
+     |  trim(gswm_nm_sdi_ncfile)
 !
 ! If any gswm tides are used, set igetgswm==1:
       igetgswm = 0
-      if (igetgswmdi>0   .or. igetgswmsdi>0 .or.
-     |    igetgswmnmdi>0 .or. igetgswmnmsdi>0) igetgswm = 1
-
+      if (igswm_mi_di>0 .or. igswm_mi_sdi>0 .or.
+     |    igswm_nm_di>0 .or. igswm_nm_sdi>0) igetgswm = 1
 !
 ! ixtimep is 4th dimension index to fg-array for previous time step
 ! ixtimec is 4th dimension index to fg-array for current time step
@@ -195,7 +191,7 @@
 !     call init_amie
 !
 ! Read SEE data file:
-      if (len_trim(sd_ncfile) > 0) then
+      if (len_trim(see_ncfile) > 0) then
          call rd_soldata
       endif
 !
@@ -216,9 +212,10 @@
       call init_3d(lon0,lon1,lat0,lat1,mytid,iprintf)
 !
 ! Initialize secondary history fields:
-      if (isechist > 0) then
-        call set_fsech
-      endif
+      if (isechist > 0) call init_fsech ! fields.F
+!
+! Allocate lbc for t,u,v:
+      call init_lbc(lon0,lon1,lat0,lat1)
 !
 ! Initialize sun's declination:
       sundec=atan(tan(23.5*pi/180.)*sin(2.*pi*float(iday-80)/365.))
@@ -232,8 +229,19 @@
       do i=1,nlat
         glat(i) = glat1+(i-1)*dlat
       enddo
-      do i=1,nlev
-        plev(i) = plev1+(i-1)*dlev
+      do i=1,nlevp1
+        zpmid(i) = zmbot+(i-1)*dlev  ! midpoint levels
+        zpint(i) = zibot+(i-1)*dlev  ! interface levels
+      enddo
+!
+! Define magnetic zp grid:
+! For 97 km boundary, zpmag starts 3 zp levels below geographic fields
+!   (at dzp=0.5, this is -8.5 instead of -7.0)
+! zpmag_mid(nmlevp1), zpmag_int(nimlevp1)
+!     do i=1,nmlev
+      do i=1,nmlevp1
+        zpmag_mid(i) = zmbot-(3.*dlev)+(i-1)*dlev  ! midpoint levels
+        zpmag_int(i) = zpmag_mid(i)-0.5*dlev
       enddo
 !
 ! Report to stdout:
@@ -246,21 +254,26 @@
      |  '(Beginning calendar year)')") iyear
       write(6,"('  iday       = ',i6,4x,
      |  '(Beginning calendar day)')") iday
-      write(6,"('  igetgpi = ',i6,4x,
-     |  '(If > 0, geophysical indices database will be used.)')")
-     |  igetgpi
-      write(6,"('  igetgswmdi = ',i6,4x,
+      write(6,"('  igswm_mi_di = ',i6,4x,
      |  '(If > 0, GSWM diurnal tidal database will be used.)')")
-     |  igetgswmdi
-      write(6,"('  igetgswmsdi= ',i6,4x,
+     |  igswm_mi_di
+      write(6,"('  igswm_mi_sdi= ',i6,4x,
      |  '(If > 0, GSWM semidiurnal tidal database will be used.)')")
-     |  igetgswmsdi
-      write(6,"('  igetgswmnmdi= ',i6,4x,
+     |  igswm_mi_sdi
+      write(6,"('  igswm_nm_di= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating diurnal tidal database will',
-     |  ' be used.)')") igetgswmnmdi
-      write(6,"('  igetgswmnmsdi= ',i6,4x,
+     |  ' be used.)')") igswm_nm_di
+      write(6,"('  igswm_nm_sdi= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating semidiurnal tidal database will',
-     |  ' be used.)')") igetgswmnmsdi
+     |  ' be used.)')") igswm_nm_sdi
+      write(6,"('  nlev       = ',i6,4x,
+     |  '(Number of levels (midpoints and interfaces))')") nlev
+      write(6,"(/,'  zpmid (midpoint  levels) = ',/,(10f7.3))") zpmid
+      write(6,"(/,'  zpint (interface levels) = ',/,(10f7.3))") zpint
+      write(6,"(/,'  nmlevp1=',i4,' zpmag_mid (mag midpoint  levels) = '
+     |  ,/,(10f7.3))") nmlevp1,zpmag_mid
+      write(6,"(/,'  nmlevp1=',i4,' zpmag_int (mag interface levels) = '
+     |  ,/,(10f7.3))") nmlevp1,zpmag_int
 !
 ! ncep/nmc are in time-gcm only:
 !     write(6,"('  ncep    = ',i6,4x,
@@ -306,56 +319,11 @@
         write(6,"('  mxhist_sech   = ',i5,2x,
      |    '(Maximum number of secondary histories per file)')")
      |    mxhist_sech
-        write(6,"('  nfsech_geo    = ',i5,2x,
-     |    '(Number of secondary history fields on geographic grid)')") 
-     |    nfsech_geo
-        write(6,"('  nfsech_mag    = ',i5,2x,
-     |    '(Number of secondary history fields on magnetic grid)')") 
-     |    nfsech_mag
-        write(6,"('  nfsech_geo2d    = ',i5,2x,
-     |    '(Number of secondary history fields on geographic ',
-     |    '2d grid)')")nfsech_geo2d
-        write(6,"('  nfsech_mag2d    = ',i5,2x,
-     |    '(Number of secondary history fields on magnetic 2d grid)')")
-     |    nfsech_mag2d
-        write(6,"('  nfsech_magphr   = ',i5,2x,
-     |   '(Number of secondary history fields on magnetoshere grid)')")
-     |    nfsech_magphr
-!
-! Report secondary history fields: 
-        write(6,"(/,'Secondary history fields on geographic grid ',
-     |    ' (number of fields =',i3,'):')") nfsech_geo
-        do i=1,nfsech_geo
-          if (len_trim(fsech(i)%long_name)>0) then
-            write(6,"('  Field ',a,' (',a,')')") 
-     |        fsech(i)%short_name(1:8),trim(fsech(i)%long_name)
-          else
-            write(6,"('  Field ',a)") fsech(i)%short_name(1:8)
-          endif
-        enddo
-        write(6,"(/,'Secondary history fields on magnetic ',
-     |    'grid (number of fields =',i3,'):')") nfsech_mag
-        do i=1,nfsech_mag
-          write(6,"('  Mag field ',a,' (diagnostic)')") 
-     |      fsechmag(i)%short_name
-        enddo
-        write(6,"(/,'Secondary history fields on geographic 2d grid ',
-     |    ' (number of fields =',i3,'):')") nfsech_geo2d
-        do i=1,nfsech_geo2d
-          write(6,"('  Field ',a,' (diagnostic)')")
-     |      fsech2d(i)%short_name
-        enddo
-        write(6,"(/,'Secondary history fields on magnetic ',
-     |    '2d grid (number of fields =',i3,'):')") nfsech_mag2d
-        do i=1,nfsech_mag2d
-          write(6,"('  Mag 2d field ',a,' (diagnostic)')")
-     |      fsechmag2d(i)%short_name
-        enddo
-        write(6,"(/,'Secondary history fields on magnetospheric ',
-     |    '2d grid  (number of fields =',i3,'):')") nfsech_magphr
-        do i=1,nfsech_magphr
-          write(6,"('  Magphr field ',a,' (diagnostic)')")
-     |      fsechmagphr2d(i)%short_name
+        write(6,"('  nfsech        = ',i5,2x,
+     |    '(Number of requested secondary history fields)')") nfsech
+        do i=1,nfsech
+          write(6,"('  secondary history field ',i3,': ',a)") 
+     |      i,fsechist(i)%short_name
         enddo
       endif
       end subroutine init

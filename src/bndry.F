@@ -6,11 +6,16 @@
 ! from the GSWM is provided. Therefore a check is included for
 ! the tidal contribution (diurnal, semi-diurnal)
 !
-! 4/4/05 btf: added gswm routines (eliminating bndry_gswm.F)
-!
       use cons_module,only: t0,pi,atm_amu,gask,grav,freq_semidi,
      |  re,dlamda,tbound,tgrad,cs,cor,tn,freq_ann
-      use params_module,only: nlat,nlonp4,nlevp1,dz
+      use params_module,only: nlat,nlonp4,nlevp1,dz,zibot
+!
+! GSWM boundary perturbation (see gswm.F):
+      use gswm_module,only:  
+     |  gswm_mi_di_z, gswm_mi_sdi_z, gswm_nm_di_z, gswm_nm_sdi_z,
+     |  gswm_mi_di_t, gswm_mi_sdi_t, gswm_nm_di_t, gswm_nm_sdi_t,
+     |  gswm_mi_di_u, gswm_mi_sdi_u, gswm_nm_di_u, gswm_nm_sdi_u,
+     |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
       implicit none
 !
       complex,parameter :: ci=(0.,1.)
@@ -21,18 +26,27 @@
      |  vb(nlat),vb2(nlat),vba(nlat),
      |  bnd(nlonp4),bnd2(nlonp4),bnda(nlonp4)
 !
-      real :: b(nlonp4,2,2),fb(nlonp4,2)
+      real :: b(nlonp4,2,2),fb(nlonp4,2)            ! for bndry_comp
+!
+! OX bottom boundary (set in sub comp_ox, and used in sub bndry_comp):
+!     real :: xoxlb(nlonp4,nlat)
 !
       contains
 !-----------------------------------------------------------------------
       subroutine lowbound
 !
-      use init_module,only: igetgswmdi,igetgswmsdi	! GSWM input flags
+      use init_module,only: igswm_mi_di,igswm_mi_sdi,	! GSWM input flags
+     |   iday,iter		! for dday calculation
+      use input_module,only: step
+!     use chemrates_module,only: co2mix
+!     use cco2gr_module,only: cco2gr,set_cco2_data
+!
 ! Call the lower boundary routines. This is called once per model run
 ! from main tgcm.F.
 !
 ! Local:
       integer :: k
+      real :: dday
 !
 ! tbound = value of T at lower boundary, and tgrad = gradient
 !
@@ -40,15 +54,23 @@
       write(6,"('Set Lower Boundary Conditions:')")
       t0(1) = tbound
       t0(2) = tbound+dz*tgrad
-      if(igetgswmsdi == 0) call bndry_semidiurnal  ! check for GSWM semidiurnal
-      if(igetgswmdi == 0)  call bndry_diurnal      ! check for GSWM diurnal
-      call bndry_annual
+      if(igswm_mi_sdi == 0) call bndry_semidiurnal  ! check for GSWM semidiurnal
+      if(igswm_mi_di  == 0) call bndry_diurnal      ! check for GSWM diurnal
+      dday = float(iday)+amod(float(iter)*float(step),86400.)/86400.
+
+! am 4/06 annual tide -> from MSIS
+      call bndry_annual(dday)
+!
+! 7/18/06 btf: add cco2gr module for co2 cooling (see cco2gr.F and radcool.F)
+!     call set_cco2_data
+!     call cco2gr(co2mix)
       write(6,"(72('-'),/)")
 !
 ! t0==0:
       do k=1,nlevp1
         t0(K)=0.
       enddo
+ !     
       end subroutine lowbound
 !-----------------------------------------------------------------------
       subroutine bndry_semidiurnal
@@ -296,7 +318,7 @@ C     ****      CALCULATE LONGITUDINAL STRUCTURE
     9 CONTINUE
       end subroutine bndry_diurnal
 !-----------------------------------------------------------------------
-      subroutine bndry_annual
+      subroutine bndry_annual(dday)
 !
 ! 2/00: 1998 spherepack lib code (sphpac.f) replaces old lib 
 !       alfpac.f for legendre polynomials and Hough functions.
@@ -305,7 +327,11 @@ C     ****      CALCULATE LONGITUDINAL STRUCTURE
 C     ****     TIDAL BOUNDARY CONDITION FOR ANNUAL MODE
 !
       use input_module,only: tideann
-      use init_module,only: iday
+!    
+! am 1/06 add dday to advance the day for annual tides, only done
+! if calendar day is also advanced 
+! Args:
+      real,intent(in) :: dday
 !
 ! For 1998 spherepack lib code (sphpac.f)
 ! (replaces old alfpac.f)
@@ -454,7 +480,7 @@ C     ****
 C     ****     SUMMATION OVER FREQUENCY, K, CALCULATION OF PHASE FACTOR
 C     ****
       DO 7 K = 0,6
-        EXPT = CEXP(CI*FLOAT(K*(IDAY-1))*86400.*freq_ann)
+        EXPT = CEXP(CI*FLOAT(K)*(DDAY-1)*86400.*freq_ann)
 C       ****
 C       ****     SUMMATION OVER ORDER, N
 C       ****
@@ -478,7 +504,17 @@ C     ****
 C     ****     ZERO BOUNDARY CONDITION
 C     ****
       DO 12 J = 1,nlat
-        ZBA(J) = CC(0,0)*1./RT2*1.E5
+! am 10/20/05 only temporary to get the geopotential height to approx. 80 km
+! btf 1/17/06: Check zibot to determine zba bottom boundary:
+        if (zibot==-7.) then
+          ZBA(J) = CC(0,0)*1./RT2*1.E5
+        elseif (zibot==-10.) then
+	  ZBA(J) = 80./96.37*CC(0,0)*1./RT2*1.E5
+        else
+          write(6,"('>>> bndry_annual: unknown zibot=',e12.4)") zibot
+          call shutdown('bad zibot in bndry_annual')
+        endif
+!     
         TBA(J) = 0.
         UBA(J) = 0.
         VBA(J) = 0.
@@ -648,12 +684,9 @@ C     ****
       subroutine lbc_gswm_dt(tnlbc,lon0,lon1,lat0,lat1)
       
       use input_module,only: step
-      use init_module,only:  iter,igetgswmdi,igetgswmsdi,
-     |   igetgswmnmdi,igetgswmnmsdi
-!     use bndry_module,only: tb,tb2,tba,bnd,bnd2,bnda,ci
+      use init_module,only:  iter,igswm_mi_di,igswm_mi_sdi,
+     |   igswm_nm_di,igswm_nm_sdi
       use cons_module,only:  freq_semidi,tbound
-      use gswm_module,only:  tndi_gswm,tnsdi_gswm,     ! GSWM tides
-     |   tnnmidi_gswm,tnnmisdi_gswm 
       
       implicit none
       
@@ -674,66 +707,71 @@ C     ****
       expt2 = cexp(ci*.5*freq_semidi*rstep*iter)
       expta = 1.
 !
-      if(igetgswmdi == 1.and.igetgswmsdi == 1) then
+! GSWM migrating diurnal and semi-diurnal:
+      if(igswm_mi_di == 1.and.igswm_mi_sdi == 1) then
 	do lat=lat0,lat1
 	  do i=lon0,lon1
-	    tnlbc(i,lat) = tnsdi_gswm(i,lat)+tbound	 ! semidiurnal tide
-	    tnlbc(i,lat) = tnlbc(i,lat)+ tndi_gswm(i,lat)! diurnal tide
-	    tnlbc(i,lat) = tnlbc(i,lat)+
+ 	    tnlbc(i,lat) = gswm_mi_sdi_t(i,lat)+tbound	     ! semidiurnal tide
+	    tnlbc(i,lat) = tnlbc(i,lat)+ gswm_mi_di_t(i,lat) ! diurnal tide
+ 	    tnlbc(i,lat) = tnlbc(i,lat)+
      |        real(tba(lat)*bnda(i)*expta)		 ! annual tide
 	  enddo   ! i=lon0,lon1
 	enddo	 ! j=lat0,lat1
 !      
-      elseif(igetgswmdi == 0.and.igetgswmsdi == 1) then
+! GSWM migrating semi-diurnal:
+      elseif(igswm_mi_di == 0.and.igswm_mi_sdi == 1) then
 	do lat=lat0,lat1
 	  do i=lon0,lon1
-	    tnlbc(i,lat) = tnsdi_gswm(i,lat)+tbound    ! semidiurnal tide
+ 	    tnlbc(i,lat) = gswm_mi_sdi_t(i,lat)+tbound    ! semidiurnal tide
 	    tnlbc(i,lat) = tnlbc(i,lat)+
      |        real(tb2(lat)*bnd2(i)*expt2)	       ! diurnal tide
-	    tnlbc(i,lat) = tnlbc(i,lat)+
+ 	    tnlbc(i,lat) = tnlbc(i,lat)+
      |        real(tba(lat)*bnda(i)*expta)	       ! annual tide
 	  enddo   ! i=lon0,lon1
 	enddo	 ! j=lat0,lat1
 !      
-      elseif(igetgswmdi == 1.and.igetgswmsdi == 0) then
+! GSWM migrating diurnal:
+      elseif(igswm_mi_di == 1.and.igswm_mi_sdi == 0) then
 	do lat=lat0,lat1
 	  do i=lon0,lon1
-	    tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound  ! semidiurnal tide
-	    tnlbc(i,lat) = tnlbc(i,lat)+ tndi_gswm(i,lat)    ! diurnal tide
-	    tnlbc(i,lat) = tnlbc(i,lat)+
+ 	    tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound  ! semidiurnal tide
+	    tnlbc(i,lat) = tnlbc(i,lat)+ gswm_mi_di_t(i,lat)    ! diurnal tide
+ 	    tnlbc(i,lat) = tnlbc(i,lat)+
      |        real(tba(lat)*bnda(i)*expta)		     ! annual tide
 	  enddo   ! i=lon0,lon1
 	enddo	 ! j=lat0,lat1
       else
 ! 
+! No gswm:
         do lat=lat0,lat1
           do i=lon0,lon1
-            tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound ! semidiurnal tide
+             tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound ! semidiurnal tide
             tnlbc(i,lat) = tnlbc(i,lat)+
      |        real(tb2(lat)*bnd2(i)*expt2) 		    ! diurnal tide
-            tnlbc(i,lat) = tnlbc(i,lat)+
-     |        real(tba(lat)*bnda(i)*expta) 		    ! annual tide
+             tnlbc(i,lat) = tnlbc(i,lat)+
+     |         real(tba(lat)*bnda(i)*expta) 		    ! annual tide
           enddo   ! i=lon0,lon1
         enddo	  ! j=lat0,lat1
       endif
 !
-      if(igetgswmnmdi == 1) then  ! nonmigrating diurnal tide
+! GSWM non-migrating diurnal:
+      if(igswm_nm_di == 1) then  ! nonmigrating diurnal tide
 	do lat=lat0,lat1
 	  do i=lon0,lon1
-	    tnlbc(i,lat) = tnlbc(i,lat)+ tnnmidi_gswm(i,lat)
+	    tnlbc(i,lat) = tnlbc(i,lat)+ gswm_nm_di_t(i,lat)
 	  enddo   ! i=lon0,lon1
 	enddo	 ! j=lat0,lat1
       endif
 !
-      if(igetgswmnmsdi == 1) then  ! nonmigrating semidiurnal tide
+! GSWM non-migrating semi-diurnal:
+      if(igswm_nm_sdi == 1) then  ! nonmigrating semidiurnal tide
 	do lat=lat0,lat1
 	  do i=lon0,lon1
-	    tnlbc(i,lat) = tnlbc(i,lat)+ tnnmisdi_gswm(i,lat)
+	    tnlbc(i,lat) = tnlbc(i,lat)+ gswm_nm_sdi_t(i,lat)
 	  enddo   ! i=lon0,lon1
 	enddo	 ! j=lat0,lat1
       endif
 !      
-      
       end subroutine lbc_gswm_dt
 !
 !-----------------------------------------------------------------------
@@ -743,12 +781,9 @@ C     ****
       subroutine lbc_gswm_addiag(z,lon0,lon1,lat0,lat1)
 !      
       use input_module,only: step
-      use init_module,only:  iter,igetgswmdi,igetgswmsdi,
-     |   igetgswmnmdi,igetgswmnmsdi
-!     use bndry_module,only: zb,zb2,zba,bnd,bnd2,bnda,ci
+      use init_module,only:  iter,igswm_mi_di,igswm_mi_sdi,
+     |   igswm_nm_di,igswm_nm_sdi
       use cons_module,only:  freq_semidi,dt
-      use gswm_module,only:  zdi_gswm,zsdi_gswm,        ! GSWM tides
-     |   znmidi_gswm,znmisdi_gswm
 !      
       implicit none
 !     
@@ -767,72 +802,74 @@ C     ****
       expt2 = cexp(ci*.5*freq_semidi*dt*iter)
       expta = 1.
 !
-      if(igetgswmdi == 1.and.igetgswmsdi == 1) then
+! GSWM migrating diurnal and semi-diurnal:
+      if(igswm_mi_di == 1.and.igswm_mi_sdi == 1) then
 	do j = lat0,lat1
 	  do i=lon0,lon1
-	    z(i,j) = zsdi_gswm(i,j)		  ! semidiurnal tide
-	    z(i,j) = z(i,j)+ zdi_gswm(i,j)	    ! diurnal tide
-	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
+	    z(i,j) = gswm_mi_sdi_z(i,j)		  ! semidiurnal tide
+	    z(i,j) = z(i,j)+ gswm_mi_di_z(i,j)	    ! diurnal tide
+ 	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
 	  enddo
 	enddo
-      elseif(igetgswmdi == 0.and.igetgswmsdi == 1) then
+!
+! GSWM migrating semi-diurnal:
+      elseif(igswm_mi_di == 0.and.igswm_mi_sdi == 1) then
 	do j = lat0,lat1
 	  do i=lon0,lon1
-	    z(i,j) = zsdi_gswm(i,j)		  ! semidiurnal tide
-	    z(i,j) = z(i,j)+real(zb2(j)*bnd2(i)*expt2)! diurnal tide
-	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
+	    z(i,j) = gswm_mi_sdi_z(i,j)		  ! semidiurnal tide
+	    z(i,j) = z(i,j)+real(zb2(j)*bnd2(i)*expt2) ! diurnal tide
+ 	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
 	  enddo
 	enddo
-      elseif(igetgswmdi == 1.and.igetgswmsdi == 0) then
+!
+! GSWM migrating diurnal:
+      elseif(igswm_mi_di == 1.and.igswm_mi_sdi == 0) then
 	do j = lat0,lat1
 	  do i=lon0,lon1
 	    z(i,j) = real(zb(j)*bnd(i)*expt)	       ! semidiurnal tide
-	    z(i,j) = z(i,j)+ zdi_gswm(i,j)	       ! diurnal tide
-	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
+	    z(i,j) = z(i,j)+ gswm_mi_di_z(i,j)	       ! diurnal tide
+ 	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
 	  enddo
 	enddo
+!
+! No gswm:
       else
         do j = lat0,lat1
           do i=lon0,lon1
             z(i,j) = real(zb(j)*bnd(i)*expt)	       ! semidiurnal tide
             z(i,j) = z(i,j)+real(zb2(j)*bnd2(i)*expt2) ! diurnal tide
-            z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
+             z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
           enddo
         enddo
       endif
 !     
-      if(igetgswmnmdi == 1) then	! nonmigrating diurnal tide
+! GSWM non-migrating diurnal:
+      if(igswm_nm_di == 1) then	! nonmigrating diurnal tide
 	do j = lat0,lat1
 	  do i=lon0,lon1
-	    z(i,j) = z(i,j)+ znmidi_gswm(i,j)
+	    z(i,j) = z(i,j)+ gswm_nm_di_z(i,j)
 	  enddo
 	enddo
       endif
 !     
-      if(igetgswmnmsdi == 1) then	! nonmigrating semidiurnal tide
+! GSWM non-migrating semi-diurnal:
+      if(igswm_nm_sdi == 1) then	! nonmigrating semidiurnal tide
 	do j = lat0,lat1
 	  do i=lon0,lon1
-	    z(i,j) = z(i,j)+ znmisdi_gswm(i,j)
+	    z(i,j) = z(i,j)+ gswm_nm_sdi_z(i,j)
 	  enddo
 	enddo
       endif
-!      
       end subroutine lbc_gswm_addiag
 !-----------------------------------------------------------------------
       subroutine lbc_gswm_duv(unlbc,vnlbc,unlbc_diag,vnlbc_diag,
      |    lon0,lon1,lat,lev0,lev1,expt,expt2,expta)
-      
-      use init_module,only:  igetgswmdi,igetgswmsdi,
-     |   igetgswmnmdi,igetgswmnmsdi
-!     use bndry_module,only: ub,ub2,uba,vb,vb2,vba,bnd,bnd2,bnda,ci
-      use gswm_module,only:  			! GSWM tides
-     |   undi_gswm,unsdi_gswm,unnmidi_gswm,unnmisdi_gswm,
-     |   vndi_gswm,vnsdi_gswm,vnnmidi_gswm,vnnmisdi_gswm
-      
+      use init_module,only:  igswm_mi_di,igswm_mi_sdi,
+     |   igswm_nm_di,igswm_nm_sdi
+!     
       implicit none
-      
-      
- ! Args:
+! 
+! Args:
       integer,intent(in) :: lon0,lon1,lat,lev0,lev1  ! dimension for lbc    
       complex,intent(in) :: expt,expt2,expta 
       real,intent(out) :: unlbc(lon0:lon1),	! lower boundary condition
@@ -842,43 +879,46 @@ C     ****
 ! Local:
       integer :: i
 !     
-! 
-      if(igetgswmdi == 1.and.igetgswmsdi == 1) then
+! GSWM migrating diurnal and semi-diurnal:
+      if(igswm_mi_di == 1.and.igswm_mi_sdi == 1) then
         do i=lon0,lon1
-          unlbc(i) = unsdi_gswm(i,lat)  	       ! semidiurnal tide
-          vnlbc(i) = vnsdi_gswm(i,lat)
-          unlbc(i) = unlbc(i) + undi_gswm(i,lat)           ! diurnal tide
-          vnlbc(i) = vnlbc(i) + vndi_gswm(i,lat)
+          unlbc(i) = gswm_mi_sdi_u(i,lat)  	       ! semidiurnal tide
+          vnlbc(i) = gswm_mi_sdi_v(i,lat)
+          unlbc(i) = unlbc(i) + gswm_mi_di_u(i,lat)    ! diurnal tide
+          vnlbc(i) = vnlbc(i) + gswm_mi_di_v(i,lat)
           unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta)! annual tide
           vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
-!
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1
-      elseif(igetgswmdi == 0.and.igetgswmsdi == 1) then
+!
+! GSWM migrating semi-diurnal:
+      elseif(igswm_mi_di == 0.and.igswm_mi_sdi == 1) then
         do i=lon0,lon1
-          unlbc(i) = unsdi_gswm(i,lat)  	         ! semidiurnal tide
-          vnlbc(i) = vnsdi_gswm(i,lat)
+          unlbc(i) = gswm_mi_sdi_u(i,lat)  	         ! semidiurnal tide
+          vnlbc(i) = gswm_mi_sdi_v(i,lat)
           unlbc(i) = unlbc(i) + real(ub2(lat)*bnd2(i)*expt2) ! diurnal tide
           vnlbc(i) = vnlbc(i) + real(vb2(lat)*bnd2(i)*expt2)
           unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta) ! annual tide
           vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
-!
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1
-      elseif(igetgswmdi == 1.and.igetgswmsdi == 0) then
+!
+! GSWM migrating diurnal:
+      elseif(igswm_mi_di == 1.and.igswm_mi_sdi == 0) then
         do i=lon0,lon1
           unlbc(i) =  real(ub(lat)*bnd(i)*expt)         ! semidiurnal tide
           vnlbc(i) =  real(vb(lat)*bnd(i)*expt)
-          unlbc(i) = unlbc(i) + undi_gswm(i,lat)            ! diurnal tide
-          vnlbc(i) = vnlbc(i) + vndi_gswm(i,lat)
+          unlbc(i) = unlbc(i) + gswm_mi_di_u(i,lat)            ! diurnal tide
+          vnlbc(i) = vnlbc(i) + gswm_mi_di_v(i,lat)
           unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta)! annual tide
           vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
-!
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1
+!
+! No gswm:
       else
         do i=lon0,lon1
           unlbc(i) = real(ub(lat)*bnd(i)*expt)          ! Semidiurnal tide
@@ -887,32 +927,30 @@ C     ****
           vnlbc(i) = vnlbc(i) + real(vb2(lat)*bnd2(i)*expt2)
           unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta)! annual tide
           vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
-!
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1
       endif
 !    
-      if(igetgswmnmdi == 1) then      ! nonmigrating diurnal tide
+! GSWM non-migrating diurnal:
+      if(igswm_nm_di == 1) then      ! nonmigrating diurnal tide
         do i=lon0,lon1
-          unlbc(i) = unlbc(i) + unnmidi_gswm(i,lat)
-          vnlbc(i) = vnlbc(i) + vnnmidi_gswm(i,lat)
-!
+          unlbc(i) = unlbc(i) + gswm_nm_di_u(i,lat)
+          vnlbc(i) = vnlbc(i) + gswm_nm_di_v(i,lat)
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1
       endif
 !    
-      if(igetgswmnmsdi == 1) then      ! nonmigrating semidiurnal tide
+! GSWM non-migrating semi-diurnal:
+      if(igswm_nm_sdi == 1) then      ! nonmigrating semidiurnal tide
         do i=lon0,lon1
-          unlbc(i) = unlbc(i) + unnmisdi_gswm(i,lat)
-          vnlbc(i) = vnlbc(i) + vnnmisdi_gswm(i,lat)
-!
+          unlbc(i) = unlbc(i) + gswm_nm_sdi_u(i,lat)
+          vnlbc(i) = vnlbc(i) + gswm_nm_sdi_v(i,lat)
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1
       endif
-!		
       end subroutine lbc_gswm_duv
 !-----------------------------------------------------------------------
       end module bndry_module

@@ -21,6 +21,7 @@
      |  qn2p,  ! n2+ ionization
      |  qnp,   ! n+  ionization
      |  qnop   ! no+ ionization
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args (all input):
@@ -36,9 +37,6 @@
      |  no,      ! nitric oxide
      |  ne,      ! electron density (cm3)
      |  barm   , ! p0*e(-z)*barm/kT
-!    |  xnmbar , ! p0*e(-z)*barm/kT
-!    |  xnmbarm, ! p0*e(-z)*barm/kT at midpoints  ("K")     (s12)
-!    |  xnmbari, ! p0*e(-z)*barm/kT at interfaces ("K+1/2") (s11)
      |  n2p,     ! N2+ (from elden)
      |  nplus,   ! N+  (from elden)
      |  nop,     ! NO+ (from elden)
@@ -46,7 +44,7 @@
      |  xiop2d   ! from oplus
 !
 ! Local:
-      integer :: k,i,nk,nkm1
+      integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  qtot,    ! total ionization rate                 (s1)
      |  qphoto,  ! photo-electron heating of neutral gas (s2)
@@ -56,21 +54,8 @@
      |  xnmbari  ! p0*e(-z)*barm/kT ("(K+1/2)" -- not averaged (s11)
       real,dimension(lev0:lev1) :: aureff
 !
-      nk = lev1-lev0+1
-      nkm1 = nk-1
-!
       aureff(:) = 0.05 ! this is local (not the aureff from aurora module).
 !
-! Cannot get any of these 3 xnmbar's from f3d to match s11 or s12 in
-!   old version of qjion (xnmbari matches s11 and s12 in except for 
-!   bottom boundary). So must reproduce s11 as local xnmbari (averaged
-!   in the column "(K)") and s12 as local xnmbarm (not averaged in column
-!   "(K+1/2")).
-!
-!     call addfsech('XNMBAR'  ,' ',' ',xnmbar ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('XNMBARM' ,' ',' ',xnmbarm,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('XNMBARI' ,' ',' ',xnmbari,lon0,lon1,nk,nkm1,lat)
-
       do i=lon0,lon1
         do k=lev0,lev1-1
           xnmbarm(k,i) = p0*expz(k)*.5*(barm(k,i)+barm(k+1,i))/    ! s12 (K+1/2)
@@ -85,14 +70,14 @@
         xnmbari(lev1,i) = p0*expzmid*expz(lev1-1)*barm(lev1,i)/    ! s11 top
      |    (boltz*.5*(3.*tn(lev1-1,i)-tn(lev1-2,i)))
       enddo ! i=lon0,lon1
-
 !
 ! xnmbari = xnmbar at interfaces (averaged in the column == S11 (K))
 ! xnmbarm = xnmbar at interfaces (NOT averaged in the column == S12 (K+1/2))
 !
-!     call addfsech('XNMBARI' ,' ',' ',xnmbari,lon0,lon1,nk,nk  ,lat) ! s11
-!     call addfsech('XNMBARM' ,' ',' ',xnmbarm,lon0,lon1,nk,nkm1,lat) ! s12
-
+!     call addfld('XNMBARM' ,' ',' ',xnmbarm,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('XNMBARI' ,' ',' ',xnmbari,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! qtot = total ionization rate = sum(Qxx) = 
 ! (QO2+) + (QO+) + (QN2+) + (QNO+) + (QN+) + (QO+(2D)) + (QO+(2P))
@@ -106,7 +91,8 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
-!     call addfsech('QTOT' ,' ',' ',qtot,lon0,lon1,nk,nk,lat)
+!     call addfld('QTOT',' ',' ',qtot,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       do i=lon0,lon1
         do k=lev0,lev1
@@ -145,8 +131,10 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('QPHOTO' ,' ',' ',qphoto,lon0,lon1,nk,nk,lat)
-!     call addfsech('QIC'    ,' ',' ',qic   ,lon0,lon1,nk,nk,lat)
+!     call addfld('QPHOTO' ,' ',' ',qphoto,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QIC'    ,' ',' ',qic   ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Add qphoto and qic to Q (reuse qtot = qphoto+qic):
       do i=lon0,lon1
@@ -163,7 +151,7 @@
         qtotal(lev1,i,lat) = qtotal(lev1,i,lat)+qtot(lev1,i)
       enddo ! i=lon0,lon1
 
-!     call addfsech('QTOTAL' ,' ',' ',qtotal(:,:,lat),lon0,lon1,
-!    |  nk,nk,lat)
+!     call addfld('QTOTAL' ,' ',' ',qtotal(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       end subroutine qjion

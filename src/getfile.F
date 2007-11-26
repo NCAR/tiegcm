@@ -119,7 +119,7 @@
       write(6,"('         local =',a)") trim(local)
 
       call expand_path(remote) ! expand any env vars imbedded in remote (util.F)
-      write(6,"('Getfile after expand_path: remote=',a)") trim(remote)
+!     write(6,"('Getfile after expand_path: remote=',a)") trim(remote)
 !
 ! Check for existence of remote as provided:
       inquire(file=trim(remote),exist=exists)
@@ -158,15 +158,23 @@
           call shutdown('Getfile: links and copy failed.')
         endif
 !
-! Remote as given does not exist. If remote is an absolute path,
-! try obtaining from mss (if MSS macro is set), otherwise give up.
+! Remote as given does not exist. First check for existence of 
+! mkdiskflnm(remote,local). If that does not exist, try obtaining 
+! from mss (if MSS macro is set), otherwise give up.
 !
       else  ! remote does not exist
+        if (len_trim(local)==0) then
+          call mkdiskflnm(remote,local) ! in util.F
+        endif
+        inquire(file=trim(local),exist=exists)
+        if (exists) then
+          write(6,"('Getfile: Found file ',a)") trim(local)
+          write(6,"('  (this file was not copied or linked)')")
+          goto 100
+        endif
+
         if (remote(1:1)=='/') then ! is absolute path --> try mss
 #ifdef MSS
-          if (len_trim(local)==0) then
-            call mkdiskflnm(remote,local) ! in util.F
-          endif
 !
 ! -noreplace option to msrcp means use local if it already exists:
           istat=my_msrcp('-noreplace','mss:'//trim(remote),trim(local)) 

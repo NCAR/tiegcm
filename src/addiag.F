@@ -1,6 +1,6 @@
 !
       subroutine addiag(tn,o2,o1,vn,vc,barm,xnmbar,xnmbari,xnmbarm,z,
-     |  lon0,lon1,lev0,lev1,lat0,lat1)
+     |  zg,lon0,lon1,lev0,lev1,lat0,lat1)
 !
 ! Calculate needed terms vc, barm, xnmbar[i,m], and Z:
 !
@@ -8,11 +8,12 @@
      |  boltz,expz,expzmid,expzmid_inv
       use bndry_module,only: lbc_gswm_addiag,zb,zb2,zba,bnd,bnd2,bnda,ci
       use init_module,only: iter,igetgswm
+      use fields_module,only: tlbc
+      use addfld_module,only: addfld
       implicit none
 !
 ! Input args:
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat0,lat1
-!     real,dimension(lev0:lev1,lon0  :lon1  ,lat0  :lat1  ),intent(in):: 
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in):: 
      |  tn, ! neutral temperature (deg K)
      |  o2, ! molecular oxygen (mmr)
@@ -20,12 +21,12 @@
      |  vn  ! meridional wind velocity (cm/s)
 !
 ! Output args:
-!     real,dimension(lev0:lev1,lon0  :lon1  ,lat0  :lat1  ),
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(out) ::
      |  vc  ,
      |  barm,
      |  z   ,
+     |  zg  ,
      |  xnmbar , 
      |  xnmbari,
      |  xnmbarm
@@ -52,15 +53,24 @@
 #endif
       nlevs = lev1-lev0+1
 !
+! Save inputs:
+!     do j=lat0,lat1
+!       call addfld('diag_tn',' ',' ',tn(lev0:lev1-1,lon0:lon1,j),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+!       call addfld('diag_o2',' ',' ',o2(lev0:lev1-1,lon0:lon1,j),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+!       call addfld('diag_o1',' ',' ',o1(lev0:lev1-1,lon0:lon1,j),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+!     enddo
+!
 ! Use GSWM lbc for geopotential height if requested:
-      if (igetgswm > 0)
-     |  call lbc_gswm_addiag(z(1,lon0:lon1,lat0:lat1),lon0,lon1,
+      if (igetgswm > 0) then
+        call lbc_gswm_addiag(z(1,lon0:lon1,lat0:lat1),lon0,lon1,
      |    lat0,lat1)
+      endif
 !
 ! Latitude scan:
       do j=lat0,lat1
-!	call addfsech('ZLBC','ZLBC','[cm]',z(:,lon0:lon1,j),lon0,lon1,
-!     |    nlevs,nlevs-1,j)
 !
 ! vc = cos(phi)*v
 !
@@ -69,7 +79,8 @@
             vc(k,i,j) = cs(j)*vn(k,i,j)
           enddo
         enddo
-!       call addfsech('diag_vc',' ',' ',vc,lon0,lon1,nlevs,nlevs-1,j)
+!       call addfld('diag_vc',' ',' ',vc(lev0:lev1-1,lon0:lon1,j),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
 !
 ! barm = mean molecular weight (k+1/2):
 !
@@ -88,6 +99,8 @@
         do i=lon0,lon1
           barm1(i) = 1.5*barm(1,i,j)-0.5*barm(2,i,j)
         enddo
+!       call addfld('barm',' ',' ',barm(:,lon0:lon1,j),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
 !
 ! barm(k) = 0.5*(barm(k+1/2)+barm(k-1/2)), k = kmaxp1,2,1
 !
@@ -102,7 +115,6 @@
         do i=lon0,lon1
           barm(lev0,i,j) = barm1(i)
         enddo
-!       call addfsech('barm',' ',' ',barm,lon0,lon1,nlevs,nlevs-1,j)
 !
 ! xnmbar = p0*e(-z)*barm/kT at midpoints (used in conversion from mmr to cm3).
 ! (used by oplus)
@@ -115,7 +127,8 @@
 !
 ! xnmbari = p0*e(-z)*barm/kT at interfaces (used by qrj and qinite):
         do i=lon0,lon1
-          tni(1,i) = tn(lev1,i,j) ! tn bottom boundary is stored in top slot
+!         tni(1,i) = tn(lev1,i,j) ! tn bottom boundary is stored in top slot
+          tni(lev0,i) = tlbc(i,j)    ! Lower boundary is in tlbc
           expzi(1,i) = expzmid_inv*expz(1)
           do k=lev0+1,lev1-1
             tni(k,i) = .5*(tn(k-1,i,j)+tn(k,i,j))
@@ -128,7 +141,10 @@
      |        (boltz*tni(k,i))
           enddo
         enddo
-!       call addfsech('XNMBARI',' ',' ',xnmbari,lon0,lon1,nlevs,nlevs,j)
+!       call addfld('XNMBARI',' ',' ',xnmbari(:,lon0:lon1,j),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+!       call addfld('TNI','TNI from addiag','K',
+!    |    tni(:,:),'ilev',lev0,lev1,'lon',lon0,lon1,j)
 !
 ! w1 = barm
         do i=lon0,lon1
@@ -136,7 +152,7 @@
             w1(k,i) = (barm(k,i,j)+barm(k+1,i,j))*0.5
           enddo
         enddo
-!       call addfsech('W1a',' ',' ',w1,lon0,lon1,nlevs,nlevs-1,j)
+!       call addfld('W1a',' ',' ',w1,'lev',lev0,lev1,'lon',lon0,lon1,j)
 !
 ! w1 = tn/w1 (old model comment: s1=s2/s1=(t+t0)/m)
         do i=lon0,lon1
@@ -144,8 +160,9 @@
             w1(k,i) = tn(k,i,j)/w1(k,i)
           enddo
         enddo
-!       call addfsech('TNa',' ',' ',tn,lon0,lon1,nlevs,nlevs-1,j)
-!       call addfsech('W1b',' ',' ',w1,lon0,lon1,nlevs,nlevs-1,j)
+!       call addfld('TNa',' ',' ',tn(:,lon0:lon1,j),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+!       call addfld('W1b',' ',' ',w1,'lev',lev0,lev1,'lon',lon0,lon1,j)
 !
 ! w1=(ds*r/g)*w1
 !
@@ -154,7 +171,7 @@
             w1(k,i) = (dz/dzgrav) * w1(k,i)
           enddo
         enddo
-!       call addfsech('W1c',' ',' ',w1,lon0,lon1,nlevs,nlevs-1,j)
+!       call addfld('W1c',' ',' ',w1,'lev',lev0,lev1,'lon',lon0,lon1,j)
 !
 ! If not using gswm lbc, add in tidal components:
         if (igetgswm <= 0) then
@@ -187,8 +204,8 @@
             z(k+1,i,j) = w1(k,i)+z(k,i,j)
           enddo
         enddo
-!       call addfsech('ADIAG_Z',' ',' ',z(:,lon0:lon1,j),
-!    |    lon0,lon1,nlevs,nlevs-1,j)
+!       call addfld('ADIAG_Z','Geopotential from addiag',
+!    |    'cm',z(:,lon0:lon1,j),'ilev',lev0,lev1,'lon',lon0,lon1,j)
 
 !       do k=lev0,lev1-1
 !         write(6,"('addiag: k=',i3,' j=',i3,' z(k,lon0:lon1,j)=',
@@ -197,8 +214,73 @@
 
       enddo ! j=lat0,lat1
 !
+! Calculate geopotential zg, with varying gravity:
+      call calczg(tn,o2,o1,z,zg,lon0,lon1,lev0,lev1,lat0,lat1)
+!
 #ifdef VT
 !     code = 116 ; state = 'addiag' ; activity='ModelCode'
       call vtend(116,ier)
 #endif
       end subroutine addiag
+!-----------------------------------------------------------------------
+      subroutine calczg(tn,o2,o1,z,zg,lon0,lon1,lev0,lev1,lat0,lat1)
+!
+! Given geopotential z (calculated with the model constant gravity),
+!   calculate geopotential zg with varying gravity. This is taken from
+!   tgcmproc_f90, routines calchts and glatf in proclat.F.
+! ZG will be put on secondary histories, along with the regular Z.
+!
+      use params_module,only: dz
+      use init_module,only: glat
+      use cons_module,only: boltz
+      use addfld_module,only: addfld
+!
+! Args:
+      integer,intent(in) :: lon0,lon1,lev0,lev1,lat0,lat1
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in):: 
+     |  tn, ! neutral temperature (deg K)
+     |  o2, ! molecular oxygen (mmr)
+     |  o1, ! atomic oxygen (mmr)
+     |  z   ! geopotential calculated with constant gravity (from addiag)
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+     |  intent(out) :: 
+     |  zg  ! output geopotential calculated with varying gravity
+!
+! Local:
+      integer :: i,j,k
+      real :: g0,r0,c2
+      real,dimension(lev0:lev1) :: xmas,g,n2
+      real,parameter :: dgtr=1.74533E-2
+!
+! Latitude scan:
+      do j=lat0,lat1
+        c2 = cos(2.*dgtr*float(j))
+        g0 = 980.616*(1.-.0026373*c2)
+        r0 = 2.*g0/(3.085462e-6 + 2.27e-9*c2) ! effective earth radius
+!
+! Longitude scan:
+        do i=lon0,lon1
+          g(1)=g0*(r0/(r0+0.5*(z(1,i,j)+z(2,i,j))))**2
+          n2(:) = (1.-o2(:,i,j)-o1(:,i,j))
+          xmas(:) = 1./(o1(:,i,j)/16.+o2(:,i,j)/32.+n2(:)/28.)*1.66e-24
+!         write(6,"('calczg: j=',i3,' i=',i3,' xmas=',/,(6e12.4))")
+!    |      j,i,xmas
+!
+! Levels:
+          zg(1,i,j) = z(1,i,j)
+          do k=lev0+1,lev1-1
+            zg(k,i,j) = zg(k-1,i,j) + boltz*dz*tn(k-1,i,j) / 
+     |        (xmas(k-1)*g(k-1))
+            g(k)=g0*(r0/(r0+0.5*(zg(k,i,j)+z(k+1,i,j))))**2
+          enddo ! k=lev0+1,lev1-1
+          zg(lev1,i,j) = 1.5*zg(lev1-1,i,j)-0.5*zg(lev1-2,i,j)
+
+        enddo ! i=lon0,lon1
+!
+! Save ZG to secondary histories:
+! PLEASE DO NOT COMMENT THIS OUT -- ZG IS A MANDATORY FIELD ON SECH HISTORIES
+!
+        call addfld('ZG','Geopotential calculated with varying gravity',
+     |    'cm',zg(:,lon0:lon1,j),'ilev',lev0,lev1,'lon',lon0,lon1,j)
+      enddo ! j=lat0,lat1
+      end subroutine calczg

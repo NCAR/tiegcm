@@ -54,6 +54,7 @@
      |  dtr,  ! degrees to radians (pi/180)
      |  pi    ! 4.*atan(1.)
       use params_module,only: nlon,nlonp4,nlevp1,nlat
+      use addfld_module,only: addfld
       implicit none
 !
 ! VT vampir tracing:
@@ -365,9 +366,9 @@
       use magfield_module,only: 
      |  rlatm,rlonm, ! magnetic latitude,longitude grid (radians)
      |  sunlons      ! sun's mag longitudes (see sub sunloc, magfield.F) 
-      use params_module,only: nlat,zsb,dz
+      use params_module,only: nlat,zibot,dz
 !
-      use qrj_module,only:      ! for addfsech debug only
+      use qrj_module,only:       ! for diag only
      |  qo2p,  ! o2+ ionization
      |  qop,   ! o+  ionization
      |  qn2p,  ! n2+ ionization
@@ -385,7 +386,7 @@
      |  barm   ! mean molecular weight (see sub addiag)
 !
 ! Local:
-      integer :: i,nlevs,ier
+      integer :: i,ier
       integer,parameter :: nlond2 = max(1,nlon/2)
       real :: aurlat  ! boundary lat below which auroral is not calculated
                       ! (32.5 degrees at 5 degree resolution)
@@ -396,15 +397,13 @@
       call vtbegin(130,ier)
 #endif
 !
-      nlevs = lev1-lev0+1 ! for addfsech calls
-!
 ! Save ionization rates on entry to secondary history:
-!     call addfsech('QO2P_PRE',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QOP_PRE' ,' ',' ',qop(lev0:lev1,lon0:lon1,lat) ,
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QN2P_PRE',' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('QO2P_PRE',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOP_PRE' ,' ',' ',qop(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QN2P_PRE',' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Check latitude, and return if below aurlat (32.5 deg at 5 deg res):
 !
@@ -475,7 +474,7 @@
      |  drizl(lon0:lon1), cusp (lon0:lon1),
      |  alfa (lon0:lon1), alfa2(lon0:lon1), alfa3(lon0:lon1),
      |  flux (lon0:lon1), flux2(lon0:lon1), flux3(lon0:lon1),
-     |  tn,o2,o1,barm,zsb,dz,lev0,lev1,lon0,lon1,lat)
+     |  tn,o2,o1,barm,zibot,dz,lev0,lev1,lon0,lon1,lat)
 !
 #ifdef VT
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
@@ -658,6 +657,7 @@
 ! Auroral parameters:
       use aurora_module,only: alfac, alfad, alfa_sp, ec,ed, fc,fd,
      |  flx_sp, e30, add_sproton, add_helectron
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -683,7 +683,6 @@
      |  falfa1, falfa2, fcusp, fdrizl, falfa_sp, falfa3
       real :: qia(5) ! low energy proton source (not in use, 1/02)
 !
-      nlevs = lev1-lev0+1 ! for addfsech calls
       qia(:) = 0.
 !
 !     write(6,"('aurora_ions: lat=',i2,' alfa1=',/,(6e12.4))")
@@ -732,14 +731,14 @@
       call aion(xcusp ,cusp_ion ,lev0,lev1,lon0,lon1,lat) ! s9,s5
       call aion(xdrizl,drizl_ion,lev0,lev1,lon0,lon1,lat) ! s10,s6
 
-!     call addfsech('ALFA1',' ',' ',alfa1_ion,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('ALFA2',' ',' ',alfa2_ion,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('CUSP' ,' ',' ',cusp_ion ,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('DRIZL',' ',' ',drizl_ion,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
+!     call addfld('ALFA1',' ',' ',alfa1_ion,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('ALFA2',' ',' ',alfa2_ion,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('CUSP',' ',' ',cusp_ion,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('DRIZL',' ',' ',drizl_ion,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
 !
 ! Solar protons:
       if (flx_sp > 1.e-19)
@@ -807,25 +806,18 @@
 !     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' fdrizl=',/,
 !    |  (6e12.4))") lat,lon0,lon1,fdrizl
 
-!     call addfsech('BARMT'   ,' ',' ',barm_t  ,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('QSUM'    ,' ',' ',qsum    ,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('DENOM'   ,' ',' ',denom   ,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('QO2P_AUR',' ',' ',qo2p_aur,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('QOP_AUR' ,' ',' ',qop_aur ,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('QN2P_AUR',' ',' ',qn2p_aur,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-
-!     call addfsech('QO2P_PRE',' ',' ',qo2p(:,:,lat),lon0,lon1,nlevs,
-!    |  nlevs,lat)
-!     call addfsech('QOP_PRE' ,' ',' ',qop (:,:,lat),lon0,lon1,nlevs,
-!    |  nlevs,lat)
-!     call addfsech('QN2P_PRE',' ',' ',qn2p(:,:,lat),lon0,lon1,nlevs,
-!    |  nlevs,lat)
+!     call addfld('BARMT'   ,' ',' ',barm_t(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('QSUM'    ,' ',' ',qsum    ,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('DENOM'   ,' ',' ',denom(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('QO2P_AUR',' ',' ',qo2p_aur(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('QOP_AUR' ,' ',' ',qop_aur(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('QN2P_AUR',' ',' ',qn2p_aur(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Add auroral to total ionization rates for o2+, o+, and n2+
 ! (see qrj_module)
@@ -868,14 +860,14 @@
      |    (1.5*qn2p_aur(lev1-1,i)-0.5*qn2p_aur(lev1-2,i))
       enddo ! i=lon0,lon1
 
-!     call addfsech('QO2P',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QOP' ,' ',' ',qop (lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QN2P',' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QNP' ,' ',' ',qnp (lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('QO2P',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOP' ,' ',' ',qop(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QN2P' ,' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QNP' ,' ',' ',qnp(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       end subroutine aurora_ions
 !-----------------------------------------------------------------------

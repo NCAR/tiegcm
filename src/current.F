@@ -24,6 +24,7 @@
       use cons_module,only: dlonm,dlatm,pi,r0
       use dynamo_module,only: nmlon0,zigm11,zigmc,zigm2,zigm22,rim,
      |  nscoef,unitvm
+      use addfld_module,only: addfld
       implicit none
 ! !PARAMETERS:
 ! !RETURN VALUE:
@@ -512,6 +513,7 @@
       use params_module,only: nmlon,nmlonp1,nmlat,nmlath,nlev,nlevp1
       use cons_module,only: dt0dts,rcos0s,pi,r0,re,ylatm
       use dynamo_module,only: nscrrt,nscoef,phim,nmlon0,unitvm
+      use addfld_module,only: addfld
       implicit none
 !
 ! !PARAMETERS:
@@ -698,13 +700,11 @@
 	  nscrrt(i,j) = tout(i,j,1) 
 	  tout(i,j,:) = nscrrt(i,j) ! copy for secondary history field
         enddo 		! endo i-loop
-!       call addfsech('NSCRRT','J_mr (magnetic)','A/m^2 ',
-!    |       tout(:,j,:),nmlonp1,nlevp1+3,nlevp1+3,j)
       enddo 		! enddo j-loop
 !	
-      call addfsech_ij('JQR',' j_qr (magnetic)','[A/m^2]',
-     |      nscrrt(:,:),1,nmlonp1,1,nmlat)
-!     
+!      call addfld('JQR',' j_qr (magnetic)','[A/m^2]',
+!    |   nscrrt(:,:),'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!
       end subroutine nosocrrt
 !-----------------------------------------------------------------------
 ! BOP
@@ -725,6 +725,7 @@
      |  je13d,je23d,
      |  je1oD_pg3d                     ! J_e1/D (plasma pressure + gravity)
       use magpres_g_module,only: j_pg  ! flag for mag.pressure and gravity 
+      use addfld_module,only: addfld
       implicit none
 !
 ! !PARAMETERS: 
@@ -790,12 +791,12 @@
 	enddo
 	je13d(:,j,nlevp1) = je13d(:,j,nlev)
 	je23d(:,j,nlevp1) = je23d(:,j,nlev) 
-        call addfsech_ik('JE13D',' J_e1/D (magnetic)','A/m^2',
-     |	    je13d(:,j,:),1,nmlonp1,nmlev,nmlev,j) 
+!        call addfld('JE13D',' J_e1/D (magnetic)','A/m^2',
+!    |     je13d(:,j,:),'mlon',1,nmlonp1,'mlev',1,nlevp1,j)
       enddo
 !      
-!     call addfsech_ij('bmodm3d','bmodm3d (magnetic)',' ',
-!    |      bmodm3d(:,:),1,nmlonp1,1,nmlat)  
+!     call addfld('bmodm3d','bmodm3d (magnetic)',' ',
+!    |  bmodm3d(:,:),'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !  
 ! Calculate K_(q,phi) (Richmond: Ionospheric at full level
 ! Electrodynamics using magnetic apex coordinates pp.208 (eq 7.4))
@@ -873,17 +874,17 @@
 ! ionospheric current layer 110 km it doesn't matter
 	  kqphi_int(i,j,0)  = 0.  
         enddo
-        if(j_pg) call addfsech_ik('KQPHI_TOT','kqphi_int (u,E,g,p)',
-     |	   '[A/m]',kqphi_int(:,j,:),1,nmlonp1,nmlev,nmlev,j) 
-        if(.not.j_pg) call addfsech_ik('KQPHI_UE','kqphi_int (u,E)',
-     |	   '[A/m]',kqphi_int(:,j,:),1,nmlonp1,nmlev,nmlev,j)
-!       call addfsech_ik('zpotm3d','zpotm3d',
-!    |	    'cm',zpotenm3d(:,j,:),1,nmlonp1,nmlev,nmlev,j)
+!        if(j_pg) call addfld('KQPHI_TOT','kqphi_int (u,E,g,p)',
+!    |    '[A/m]',kqphi_int(:,j,:),'mlon',1,nmlonp1,'imlev',1,nlevp1,j)
+!        if(.not.j_pg) call addfld('KQPHI_UE','kqphi_int (u,E)',
+!    |    '[A/m]',kqphi_int(:,j,:),'mlon',1,nmlonp1,'imlev',1,nlevp1,j)
+!        call addfld('zpotm3d','zpotm3d','cm',
+!    |     zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nlevp1,j)
       enddo
 ! 
 ! save on secondary history 
-      call addfsech_ij('KQPHI',' kqphi (magnetic)','[A/m]',
-     |      kqphi3d(:,:),1,nmlonp1,1,nmlat)  
+!      call addfld('KQPHI',' kqphi (magnetic)','[A/m]',
+!    |    kqphi3d(:,:),'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !                
 !  
 ! Calculate K_(q,lam) (Richmond: Ionospheric at full level
@@ -983,8 +984,8 @@
        enddo
       enddo ! end of i-loop
 !      
-      call addfsech_ij('KQLAM',' kqlam (magnetic)','[A/m]',
-     |      kqlam(:,:),1,nmlonp1,1,nmlat)
+!      call addfld('KQLAM',' kqlam (magnetic)','[A/m]',
+!    |      kqlam(:,:),'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !     
       end subroutine nosocrdens
 !-----------------------------------------------------------------------

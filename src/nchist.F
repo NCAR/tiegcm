@@ -1,13 +1,22 @@
 !
       module nchist_module
-      use params_module,only: nlon,nlev,nmlev,nlat,nlevp1,spval,nlonp4,
-     |  nlonp1,nmlonp1,nmlat,nmlon,nmagphrlon,nmagphrlat
-      use fields_module,only: nf4d,nf4d_hist,f4d,fakeflds,shortname_len,
-     |  fsech,fsechmag,fsech2d,fsechmag2d,fsechmagphr2d,
-     |  itc,itp,fields_4d,fields_3d,fields_2d,poten,foutput
-      implicit none
 !
 ! Module to create, read and write netcdf history files:
+!
+      use params_module,only: nlon,nlev,nmlev,nimlev,nmlevp1,nimlevp1,
+     |  nlat,nlevp1,spval,nlonp4,nlonp2,nmlonp1,nmlat,nmlon,zmbot,zmtop,
+     |  zibot,zitop,mxfsech
+      use fields_module,only: nf4d,nf4d_hist,f4d,fakeflds,shortname_len,
+     |  fsechist,itc,itp,fields_4d,fields_3d,fields_2d,poten,foutput,
+     |  tlbc,ulbc,vlbc,tlbc_glb,ulbc_glb,vlbc_glb,
+     |  tlbc_nm,ulbc_nm,vlbc_nm,tlbc_nm_glb,ulbc_nm_glb,vlbc_nm_glb,
+     |  nf3d,fzg
+      use input_module,only: mxlen_filename,
+     |  gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, 
+     |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile
+      use init_module,only: glon,glat,zpmid,zpint,gmlon,gmlat,istep,
+     |  start_mtime,zpmag_mid,zpmag_int
+      implicit none
 !
 #ifdef SUN
 #include <netcdf3.inc>
@@ -17,15 +26,18 @@
 !
       integer,private ::
      |  id_time,                   ! dimension id for time (unlimited)
-     |  id_mtime,                  ! dimension id for model time (3)
-     |  id_lon,id_lat,id_lev,      ! dimension ids for 3d model grid
-     |  id_mlon,id_mlat,id_mlev,   ! dimension ids for 3d magnetic grid
-     |  id_magphrlon,id_magphrlat, ! dimension ids for 2d magnetosphere grid
+     |  id_mtimedim,               ! dimension id for model time (3)
+     |  id_lon,id_lat,             ! horizontal dimension ids
+     |  id_lev,id_ilev,            ! vertical dimension ids (midpoints,interfaces)
+     |  id_mlon,id_mlat,           ! horizontal dimension ids for magnetic grid
+     |  id_mlev,id_imlev,          ! vertical dimension ids for magnetic grid
      |  id_latlon,                 ! dimension id for coords (2)
      |  id_dtide,                  ! dimension id for dtide (2)
      |  id_sdtide,                 ! dimension id for sdtide (10)
      |  id_fake,                   ! fake dimension id (1)
-     |  ids1(1),ids2(2),ids3(3),ids4(4),	! vectors of dim id's
+     |  id_datelen,                ! length of date and time
+     |  id_filelen,                ! max length of a file name
+     |  ids1(1),ids2(2),ids3(3),ids4(4),! vectors of dim id's
      |  start_2d(2),count_2d(2),	! start loc and count for 2d vars
      |  start_3d(3),count_3d(3),        ! start loc and count for 3d vars
      |  start_4d(4),count_4d(4),	! start loc and count for 4d vars
@@ -35,21 +47,25 @@
 ! Variables starting at mtime are "primary" variables.
 ! idv_f4d(nf4d) are id's for prognostic 4d fields.
 !
-     |  idv_time,idv_mtime,idv_ut,      ! variable id's
-     |  idv_lon,idv_lat,idv_lev,
-     |  idv_mlon,idv_mlat,idv_mlev,
-     |  idv_magphrlon,idv_magphrlat,
-     |  idv_step,idv_iter,idv_year,idv_day,idv_p0,
-     |  idv_hpower,idv_ctpoten,idv_byimf,idv_colfac,idv_ncep,
-     |  idv_gpi,idv_gswmdi,idv_gswmsdi,idv_gswmnmdi,idv_gswmnmsdi,
+     |  idv_time,idv_mtime,idv_ut,idv_calendar_adv,
+     |  idv_lon,idv_lat,idv_lev,idv_ilev,
+     |  idv_lbc,idv_tlbc,idv_ulbc,idv_vlbc,
+     |  idv_tlbc_nm,idv_ulbc_nm,idv_vlbc_nm,
+     |  idv_mlon,idv_mlat,idv_mlev,idv_imlev,idv_p0_model,
+     |  idv_step,idv_iter,idv_year,idv_day,idv_p0,idv_grav,
+     |  idv_zg,idv_hpower,idv_ctpoten,idv_byimf,idv_colfac,
+     |  idv_gswm_mi_di_ncfile,idv_gswm_mi_sdi_ncfile,
+     |  idv_gswm_nm_di_ncfile,idv_gswm_nm_sdi_ncfile,
+     |  idv_see_ncfile,idv_gpi_ncfile,idv_ncep_ncfile,
      |  idv_f107d,idv_f107a,
-     |  idv_mag,idv_dtide,idv_sdtide,idv_nflds,idv_f4d(nf4d),
-     |  idv_alfa30,idv_e30,idv_ed2,idv_alfad2
+     |  idv_mag,idv_dtide,idv_sdtide,idv_f4d(nf4d),
+     |  idv_alfa30,idv_e30,idv_ed2,idv_alfad2,
+     |  idv_writedate
       integer,allocatable :: idv_sech(:)
+      integer :: idv_fsech(mxfsech)
 !
 ! If check_nan is set, check for presence of NaN's in data when writing 
-!   history. Sub check_nans (util.F) will be called from subs wrf4d, wrf3d, 
-!   wrf2d, and rdf4d. This sub works only on IBM-AIX.
+!   history. 
 !
 #ifdef AIX
       logical :: check_nan = .true.
@@ -124,7 +140,7 @@
         ncid = 0
       endif
       end subroutine nc_open
-!-------------------------------------------------------------------
+!-----------------------------------------------------------------------
       subroutine nc_close(ncid)
 !
 ! Close a netcdf dataset file:
@@ -152,10 +168,8 @@
 !   Prognostic fields are transferred to global fg-array (wrf4d).
 ! If there is a problem (e.g., mtime not found), return ier > 0
 !
-      use hist_module,only: h,hist_initype,hist_print,nsource,
+      use hist_module,only: sh,hist_initype,hist_print,nsource,
      |  nsecsource
-      use init_module,only: istep,start_mtime,glon,glat,plev,
-     |  gmlon,gmlat,pmlev
       use input_module,only: start_day,start_year
 !
 ! Args:
@@ -165,12 +179,20 @@
 !
 ! Local:
       integer,parameter :: mxdims=20 ! assume <= mxdims dimensions
-      integer :: istat,id_time,id_mtime,mtime_read(3),ntimes,
-     |  i,ix,istart2(2),icount2(2),j,irdf4d(nf4d_hist)
+      integer :: istat,id_time,id_mtimedim,mtime_read(3),ntimes,
+     |  i,ix,istart2(2),icount2(2),j,i4dims(4)
       integer :: ndims,nvars,ngatts,idunlim,itype,natts,len,
      |  iddims(mxdims),iscalar
       character(len=80) :: varname
-      real :: scalar,var1(1),var22(2,2),var2(2),var10(10)
+      real :: scalar,var1(1),var22(2,2),var2(2),var10(10),varlbc
+      real,dimension(nlevp1) :: zpmid_rd,zpint_rd
+!
+      integer,parameter :: mxf4d=100
+      character(len=16) :: f4dnames(mxf4d) ! list of 4d fields read
+      logical :: found 
+!
+! External:
+      logical,external :: arrayeq ! util.F
 !
       write(6,"('Reading source history from diskfile ',a,':')")
      |  trim(diskfile)
@@ -220,51 +242,47 @@
 ! Define history structure from netcdf vars:
 !
 ! Initialize history structure:
-      call hist_initype(h,istep)  ! initialize history structure
+      call hist_initype(sh,istep)  ! initialize history structure
 !
 ! Define vars already found above:
-      h%ihist = itime
-      h%modeltime(1:3) = mtime
-      h%modeltime(4) = 0
+      sh%ihist = itime
+      sh%modeltime(1:3) = mtime
+      sh%modeltime(4) = 0
 !
 ! Read global attributes:
-      istat = nf_get_att_text(ncid,NF_GLOBAL,"rundate",h%rundate)
-      istat = nf_get_att_text(ncid,NF_GLOBAL,"logname",h%logname)
-      istat = nf_get_att_text(ncid,NF_GLOBAL,"host",h%host)
-      istat = nf_get_att_text(ncid,NF_GLOBAL,"system",h%system)
-      istat = nf_get_att_text(ncid,NF_GLOBAL,"model_name",h%model_name)
+      istat = nf_get_att_text(ncid,NF_GLOBAL,"label",sh%label)
+      istat = nf_get_att_text(ncid,NF_GLOBAL,"create_date",
+     |  sh%create_date)
+      istat = nf_get_att_text(ncid,NF_GLOBAL,"logname",sh%logname)
+      istat = nf_get_att_text(ncid,NF_GLOBAL,"host",sh%host)
+      istat = nf_get_att_text(ncid,NF_GLOBAL,"system",sh%system)
+      istat = nf_get_att_text(ncid,NF_GLOBAL,"model_name",sh%model_name)
       istat = nf_get_att_text(ncid,NF_GLOBAL,"model_version",
-     |  h%model_version)
-      istat = nf_get_att_text(ncid,NF_GLOBAL,"mss_path",h%mss_path)
-      istat = nf_get_att_text(ncid,NF_GLOBAL,"mss_source",h%mss_source)
-      istat = nf_get_att_text(ncid,NF_GLOBAL,"mss_secsource",
-     |  h%mss_secsource)
-!
-! If this is a continuation run, read initial time from the history.
-! Otherwise (this is an initial run) the initial time was set to the 
-! model start time by hist_initype.
-!
-      if (nsource <= 0) then
-        istat=nf_get_att_int(ncid,NF_GLOBAL,"initial_year",
-     |    h%initial_year)
-        if (istat /= NF_NOERR) istat=nf_get_att_int(ncid,NF_GLOBAL,
-     |    "start_year" ,h%initial_year)
-
-        istat=nf_get_att_int(ncid,NF_GLOBAL,"initial_day",h%initial_day)
-        if (istat /= NF_NOERR) istat=nf_get_att_int(ncid,NF_GLOBAL,
-     |    "start_day" ,h%initial_day)
-
-        istat=nf_get_att_int(ncid,NF_GLOBAL,"initial_mtime",
-     |    h%initial_mtime)
-        if (istat /= NF_NOERR) istat=nf_get_att_int(ncid,NF_GLOBAL,
-     |    "start_mtime",h%initial_mtime)
-
-        istat=nf_get_att_int(ncid,NF_GLOBAL,"source_mtime",
-     |    h%source_mtime)
-      endif
+     |  sh%model_version)
+      istat = nf_get_att_int(ncid,NF_GLOBAL,"source_mtime",
+     |  sh%source_mtime)
+      istat = nf_get_att_text(ncid,NF_GLOBAL,"initial_file",
+     |  sh%initial_file)
+      if (istat /= NF_NOERR) ! was not on "old" histories
+     |  sh%initial_file = ' '
 !
 ! History_type is either "primary" or "secondary":
-      istat = nf_get_att_text(ncid,NF_GLOBAL,"history_type",h%type)
+      istat=nf_get_att_text(ncid,NF_GLOBAL,"history_type",sh%hist_type)
+!
+! Check for tuv_lbc_intop (lbc of t,u,v stored in top slot)
+!   tuv_lbc_intop == 0 --> new history (tuv lbc *not* stored in top slot)
+!   tuv_lbc_intop == 1 --> old history (tuv lbc *is*  stored in top slot)
+! If tuv_lbc_intop global attribute is not on the file, assume
+! "old" history, i.e., tuv_lbc_intop==1:
+!
+      istat=nf_get_att_int(ncid,NF_GLOBAL,"tuv_lbc_intop",
+     |  sh%tuv_lbc_intop)
+      if (istat /= NF_NOERR) then ! old hist
+        write(6,"('nc_rdhist: did not find tuv_lbc_intop in source',
+     |    ' history ',a,' --> assuming tuv_lbc_intop==1')") 
+     |    trim(diskfile)
+        sh%tuv_lbc_intop = 1
+      endif
 !
 ! Get number of dims, vars, atts, and id of unlimited dimension:
       istat = nf_inq(ncid,ndims,nvars,ngatts,idunlim)
@@ -282,7 +300,7 @@
             write(6,"('  len=',i4,' nlon=',i4)") len,nlon
             call shutdown('nlon')
           endif
-          h%nlon = len
+          sh%nlon = len
         endif
         if (trim(varname)=='lat') then
           if (len /= nlat) then
@@ -291,7 +309,7 @@
             write(6,"('  len=',i4,' nlat=',i4)") len,nlat
             call shutdown('nlat')
           endif
-          h%nlat = len
+          sh%nlat = len
         endif
         if (trim(varname)=='lev') then
 !
@@ -299,8 +317,11 @@
 ! number of levels allocated in the model (nlev), this is fatal:
 !
           if (len < nlevp1) then
-            write(6,"(/,'>>> nc_rdhist: length of lev dimension',
-     |        ' of history read is less than model parameter nlevp1.')")
+            write(6,"(/,'>>> FATAL: source history vertical dimension',
+     |        ' does not match model levels dimension.')")
+            write(6,"(/,'nc_rdhist: length of lev dimension',
+     |        ' on source history is less than model parameter ',
+     |        'nlevp1.')")
             write(6,"('  len=',i4,' nlevp1=',i4)") len,nlevp1
             call shutdown('nlevp1')
 !
@@ -317,13 +338,18 @@
             write(6,"('  Will read the first ',i3,' levels from the',
      |        ' source into the history buffer.')") nlevp1
           endif
-          h%nlev = len
+          sh%nlev = len
         endif
       enddo
 !
 ! Get variables (should not need to get coord vars lat,lon,lev)
       do i=1,nvars
         istat = nf_inq_var(ncid,i,varname,itype,ndims,iddims,natts)
+        if (istat /= NF_NOERR) then
+          write(6,"('>>> nc_rdhist: error ',
+     |      'inquiring about var: i=',i4,' nvars=',i4)") i,nvars
+          call handle_ncerr(istat,'inquiring about a var')
+        endif
         select case(trim(varname))
           case('lon')
             istat = nf_get_var_double(ncid,i,glon)
@@ -333,10 +359,79 @@
             istat = nf_get_var_double(ncid,i,glat)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading glat')
+!
+! New hist: lev(lev) is midpoints
           case('lev')
-            istat = nf_get_var_double(ncid,i,plev)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading plev')
+            if (sh%tuv_lbc_intop <= 0) then ! new hist (lev is midpoints)
+              istat = nf_get_var_double(ncid,i,zpmid_rd)
+              if (istat /= NF_NOERR) 
+     |          call handle_ncerr(istat,'reading zpmid (new history)')
+
+!             write(6,"('nc_rdhist sh%nlev=',i3,': read zpmid from new',
+!    |          ' hist: zpmid_rd=',/,(10f7.3))") sh%nlev,zpmid_rd
+
+              if (.not.arrayeq(zpmid,zpmid_rd,nlevp1)) then
+                write(6,"(/,'>>> nc_rdhist: zpmid_rd (as read from new',
+     |            ' history) is not equal to model zpmid')")
+                write(6,"('nlevp1=',i3,' zpmid_rd=',/,(10f7.3))") 
+     |            nlevp1,zpmid_rd
+                write(6,"('nlevp1=',i3,' zpmid   =',/,(10f7.3))")
+     |            nlevp1,zpmid
+                call shutdown('zpmid')
+              endif
+!
+! Old hist lev(lev) is interfaces:
+            else                         ! old hist (lev is interfaces)
+              istat = nf_get_var_double(ncid,i,zpint_rd)
+              if (istat /= NF_NOERR) 
+     |          call handle_ncerr(istat,'reading zpint (old history)')
+
+!             write(6,"('nc_rdhist sh%nlev=',i3,': read zpint from old',
+!    |          ' hist: zpint_rd=',/,(10f7.3))") sh%nlev,zpint_rd
+
+              if (.not.arrayeq(zpint,zpint_rd,nlevp1)) then
+                write(6,"(/,'>>> nc_rdhist: zpint_rd (as read from old',
+     |            ' history) is not equal to model zpint')")
+                write(6,"('nlevp1=',i3,' zpint_rd=',/,(10f7.3))") 
+     |            nlevp1,zpint_rd
+                write(6,"('nlevp1=',i3,' zpint   =',/,(10f7.3))")
+     |            nlevp1,zpint
+                call shutdown('zpint')
+              endif
+            endif
+!
+! ilev(ilev) interface levels are on new histories, or histories written
+! by mksrc.ncl (i.e., new lbc from old histories):
+          case('ilev')
+            if (sh%tuv_lbc_intop <= 0) then ! new hist (lev is midpoints)
+              istat = nf_get_var_double(ncid,i,zpint_rd)
+              if (istat /= NF_NOERR) 
+     |          call handle_ncerr(istat,'reading zpint (new history)')
+              if (.not.arrayeq(zpint,zpint_rd,nlevp1)) then
+                write(6,"(/,'>>> nc_rdhist: zpint_rd (as read from new',
+     |            ' history) is not equal to model zpint')")
+                write(6,"('nlevp1=',i3,' zpint_rd=',/,(10f7.3))") 
+     |            nlevp1,zpint_rd
+                write(6,"('nlevp1=',i3,' zpint   =',/,(10f7.3))")
+     |            nlevp1,zpint
+                call shutdown('zpint')
+              endif
+            else  ! old hist ilev interfaces (probably written by mksrc.ncl)
+              istat = nf_get_var_double(ncid,i,zpint_rd)
+              if (istat /= NF_NOERR) 
+     |          call handle_ncerr(istat,'reading zpint (old history)')
+              if (.not.arrayeq(zpint,zpint_rd,nlevp1)) then
+                write(6,"(/,'>>> nc_rdhist: zpint_rd (as read from new',
+     |            ' history) is not equal to model zpint')")
+                write(6,"('nlevp1=',i3,' zpint_rd=',/,(10f7.3))") 
+     |            nlevp1,zpint_rd
+                write(6,"('nlevp1=',i3,' zpint   =',/,(10f7.3))")
+     |            nlevp1,zpint
+                call shutdown('zpint')
+              endif
+            endif
+!
+! Magnetic coordinates:
           case('mlon')
             istat = nf_get_var_double(ncid,i,gmlon)
             if (istat /= NF_NOERR) 
@@ -345,193 +440,367 @@
             istat = nf_get_var_double(ncid,i,gmlat)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gmlat')
-          case('mlev')
-            istat = nf_get_var_double(ncid,i,pmlev)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading pmlev')
+          case('mlev')  ! mag midpoints
+!           istat = nf_get_var_double(ncid,i,zpmag) ! zpmag is in init module
+!           if (istat /= NF_NOERR) 
+!    |        call handle_ncerr(istat,'reading zpmag')
+!           write(6,"('nc_rdhist: read zpmag=',/,(8f8.2))") zpmag
+
+          case('imlev') ! mag interfaces
+!           istat = nf_get_var_double(ncid,i,zpimag) ! zpimag is in init module
+!           if (istat /= NF_NOERR) 
+!    |        call handle_ncerr(istat,'reading zpimag')
+!
+! Time:
           case('time')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading time')
-            h%time = scalar
+            sh%time = scalar
+!
+! If this is a continuation run, read initial times
+! (If an initial run, initial times were set by sub hist_initype (hist.F))
+!
+            if (nsource <= 0) then
+              istat=nf_get_att_int(ncid,i,"initial_year",
+     |          sh%initial_year)
+              istat=nf_get_att_int(ncid,i,"initial_mtime",
+     |          sh%initial_mtime)
+            endif
+!
           case('mtime') ! already got it from hist search above
           case('year')
             istat = nf_get_var1_int(ncid,i,itime,iscalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading year')
-            h%year = iscalar
+            sh%year = iscalar
           case('day')
             istat = nf_get_var1_int(ncid,i,itime,iscalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading day')
-            h%day = iscalar
+            sh%day = iscalar
           case('iter')
             istat = nf_get_var1_int(ncid,i,itime,iscalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading iter')
-            h%iter = iscalar
+            sh%iter = iscalar
           case('ut')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading ut')
-            h%ut = scalar
+            sh%ut = scalar
           case('mag')
             istat = nf_get_var_double(ncid,i,var22)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading mag')
-            h%mag(:,:) = var22(:,:)
+            sh%mag(:,:) = var22(:,:)
           case('dtide')
             istart2(1) = 1
-            istart2(2) = h%ihist
+            istart2(2) = sh%ihist
             icount2(1) = 2 
             icount2(2) = 1
             istat = nf_get_vara_double(ncid,i,istart2,icount2,var2)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading dtide')
-            h%dtide(:) = var2(:)
+            sh%dtide(:) = var2(:)
           case('sdtide')
             istart2(1) = 1
-            istart2(2) = h%ihist
+            istart2(2) = sh%ihist
             icount2(1) = 10
             icount2(2) = 1
             istat = nf_get_vara_double(ncid,i,istart2,icount2,var10)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading sdtide')
-            h%sdtide(:) = var10(:)
+            sh%sdtide(:) = var10(:)
           case('f107d')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading f107d')
-            h%f107d = scalar
+            sh%f107d = scalar
           case('f107a')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading f107a')
-            h%f107a = scalar
+            sh%f107a = scalar
           case('hpower')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading hpower')
-            h%hpower = scalar
+            sh%hpower = scalar
           case('ctpoten')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading ctpoten')
-            h%ctpoten = scalar
+            sh%ctpoten = scalar
           case('byimf')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading byimf')
-            h%byimf = scalar
+            sh%byimf = scalar
           case('colfac')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading colfac')
-            h%colfac = scalar
+            sh%colfac = scalar
           case('alfa30')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading alfa30')
-            h%alfa30 = scalar
+            sh%alfa30 = scalar
           case('e30')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading e30')
-            h%e30 = scalar
+            sh%e30 = scalar
           case('ed2')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading ed2')
-            h%ed2 = scalar
+            sh%ed2 = scalar
           case('alfad2')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading alfad2')
-            h%alfad2 = scalar
+            sh%alfad2 = scalar
           case('p0')
             istat = nf_get_var_double(ncid,i,var1)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading p0')
-            h%p0 = var1(1)
+            sh%p0 = var1(1)
+          case('p0_model')
+            istat = nf_get_var_double(ncid,i,var1)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading p0_model')
+            sh%p0_model = var1(1)
+          case('grav')
+            istat = nf_get_var_double(ncid,i,var1)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading grav')
+            sh%grav = var1(1)
           case('timestep')
             istat = nf_get_var_int(ncid,i,iscalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading timestep')
-            h%step = iscalar
-          case('nflds')
-            istat = nf_get_var_int(ncid,i,iscalar)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading nflds')
-            h%nflds = iscalar
-! ncep is time-gcm only, but leave here for time being..
-          case('ncep') ! time-gcm only
-            istat = nf_get_var1_int(ncid,i,itime,iscalar)
-            if (istat /= NF_NOERR)
-     |        call handle_ncerr(istat,'reading ncep')
-            h%ncep = iscalar
-          case('gpi')
-            istat = nf_get_var1_int(ncid,i,itime,iscalar)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gpi')
-            h%gpi = iscalar
-          case('gswmdi')
-            istat = nf_get_var1_int(ncid,i,itime,iscalar)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswmdi')
-            h%gswmdi = iscalar
-          case('gswmsdi')
-            istat = nf_get_var1_int(ncid,i,itime,iscalar)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswmsdi')
-            h%gswmsdi = iscalar
-
-          case('gswmnmdi')
-            istat = nf_get_var1_int(ncid,i,itime,iscalar)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswmnmdi')
-            h%gswmnmdi = iscalar
-          case('gswmnmsdi')
-            istat = nf_get_var1_int(ncid,i,itime,iscalar)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswmnmsdi')
-            h%gswmnmsdi = iscalar
+            sh%step = iscalar
 !
-! Check for gswm names prior to tiegcm1.8:
-          case('gswmnmidi')           ! histories prior to tiegcm1.8
-            istat = nf_get_var1_int(ncid,i,itime,iscalar)
+! GPI data file: gpi_ncfile(time,filelen), where filelen=mxlen_filename
+          case('gpi_ncfile')                               ! new histories
+            start_2d(1) = 1
+            start_2d(2) = sh%ihist
+            count_2d(1) = mxlen_filename
+            count_2d(2) = 1
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%gpi_ncfile)
+            if (istat /= NF_NOERR)
+     |        call handle_ncerr(istat,'reading gpi_ncfile')
+            if (len_trim(sh%gpi_ncfile)==0) sh%gpi_ncfile='[none]'
+!
+! NCEP data file: ncep_ncfile(time,filelen), where filelen=mxlen_filename
+! (ncep files used only by timegcm -- will always be '[none]' for tiegcm)
+          case('ncep_ncfile')                               ! new histories
+            start_2d(1) = 1
+            start_2d(2) = sh%ihist
+            count_2d(1) = mxlen_filename
+            count_2d(2) = 1
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%ncep_ncfile)
+            if (istat /= NF_NOERR)
+     |        call handle_ncerr(istat,'reading ncep_ncfile')
+            if (len_trim(sh%ncep_ncfile)==0) sh%ncep_ncfile='[none]'
+!
+! SEE data file: see_ncfile(time,filelen), where filelen=mxlen_filename
+          case('see_ncfile')                               ! new histories
+            start_2d(1) = 1
+            start_2d(2) = sh%ihist
+            count_2d(1) = mxlen_filename
+            count_2d(2) = 1
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%see_ncfile)
+            if (istat /= NF_NOERR)
+     |        call handle_ncerr(istat,'reading see_ncfile')
+            if (len_trim(sh%see_ncfile)==0) sh%see_ncfile='[none]'
+!
+! GSWM data files (from namelist input):
+!   character(len=mxlen_filename) ::
+!   gswm_mi_di_ncfile, ! GSWM migrating diurnal data file
+!   gswm_mi_sdi_ncfile,! GSWM migrating semi-diurnal data file
+!   gswm_nm_di_ncfile, ! GSWM non-migrating diurnal data file
+!   gswm_nm_sdi_ncfile,! GSWM non-migrating semi-diurnal data file
+!
+! gswm_mi_di_ncfile:
+          case('gswm_mi_di_ncfile')
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%gswm_mi_di_ncfile)
             if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswmnmidi')
-            h%gswmnmdi = iscalar
-          case('gswmnmisdi')           ! histories prior to tiegcm1.8
-            istat = nf_get_var1_int(ncid,i,itime,iscalar)
+     |        call handle_ncerr(istat,'reading gswm_mi_di_ncfile')
+!
+! gswm_mi_sdi_ncfile:
+          case('gswm_mi_sdi_ncfile')
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%gswm_mi_sdi_ncfile)
             if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswmnmisdi')
-            h%gswmnmsdi = iscalar
+     |        call handle_ncerr(istat,'reading gswm_mi_sdi_ncfile')
+!
+! gswm_nm_di_ncfile:
+          case('gswm_nm_di_ncfile')
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%gswm_nm_di_ncfile)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading gswm_nm_di_ncfile')
+!
+! gswm_nm_sdi_ncfile:
+          case('gswm_nm_sdi_ncfile')
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%gswm_nm_sdi_ncfile)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading gswm_nm_sdi_ncfile')
+
           case('maglon')
-
           case('maglat')
-
+!
+! Interface level of lower boundary (scalar coord for TLBC,ULBC,VLBC):
+          case('LBC')
+            istat = nf_get_var1_double(ncid,i,itime,varlbc)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading LBC')
+            if (varlbc /= zibot) then
+              write(6,"(/,'>>> WARNING nc_rdhist read LBC: varlbc=',
+     |          f8.2,' but should equal zibot=',f8.2)") varlbc,zibot
+            else
+              sh%lbc = varlbc
+              write(6,"('Read LBC from source history: i=',i3,
+     |          ' sh%lbc=',f8.2)") i,sh%lbc
+            endif
+!
+! Read lbc's for t,u,v. See fields.F. These will exist on source history 
+!   only if sh%tuv_lbc_intop==0, i.e., "new histories"). Read into global 
+!   arrays, then store subdomains.
+!
+          case('TLBC')
+            call rdlbc(ncid,i,tlbc,varname,itime)
+          case('ULBC')
+            call rdlbc(ncid,i,ulbc,varname,itime)
+          case('VLBC')
+            call rdlbc(ncid,i,vlbc,varname,itime)
+          case('TLBC_NM')
+            call rdlbc(ncid,i,tlbc_nm,varname,itime)
+          case('ULBC_NM')
+            call rdlbc(ncid,i,ulbc_nm,varname,itime)
+          case('VLBC_NM')
+            call rdlbc(ncid,i,vlbc_nm,varname,itime)
+!
+! Check for variable name in 4-d fields:
           case default
             if (any(f4d(1:nf4d_hist)%short_name==varname)) then
               do j=1,nf4d_hist
                 if (trim(varname)==f4d(j)%short_name) then
-                  irdf4d(j) = 1
                   call rdf4d(ncid,varname,itime,j)
                 endif
               enddo
+!
+! 10/27/05 btf: This conditional covers "W" from old histories.
+! (var name "W" has been changed to "OMEGA" on the new histories)
+!
+            elseif (varname=='W') then
+              do j=1,nf4d_hist
+                if (f4d(j)%short_name=='OMEGA')
+     |            call rdf4d(ncid,varname,itime,j)
+              enddo
+!
+! Variable is unknown to the model:
             else
-              write(6,"('Note nc_rdhist: unknown variable: ',a)") 
+              write(6,"('Note nc_rdhist: unused variable: ',a)") 
      |          trim(varname)
             endif
         end select
       enddo ! i=1,nvars
-      h%zptop = plev(nlevp1)
-      h%zpbot = plev(1)
+!
+      sh%zmtop = zmtop
+      sh%zmbot = zmbot
+      sh%zitop = zitop
+      sh%zibot = zibot
 !
 ! Report to stdout:
-      call hist_print(h,'READ',diskfile)
+      call hist_print(sh,'READ',diskfile)
 !     
       end subroutine nc_rdhist
+!-----------------------------------------------------------------------
+      subroutine rdlbc(ncid,idv,flbc,vname,itime)
+!
+! Read global TLBC, ULBC, or VLBC from current history, and transfer to
+!  subdomains tlbc, ulbc, or vlbc (fields.F).
+!
+      use mpi_module,only: lon0,lon1,lat0,lat1
+      use fields_module,only: lond0,lond1,latd0,latd1
+! Routine to add fields to secondary histories:
+      use addfld_module,only: addfld
+      implicit none
+!
+! Args:
+      integer,intent(in) :: ncid,idv,itime
+      character(len=*),intent(in) :: vname
+      real,intent(out) :: flbc(lond0:lond1,latd0:latd1)
+!
+! Local:
+      integer :: istat,i,j,lonbeg,lonend
+      real,dimension(nlon,nlat) :: glbc ! lbc at global domain
+      character(len=80) :: char80
+!
+      start_3d(1:2) = 1
+      start_3d(3) = itime
+      count_3d(1) = nlon
+      count_3d(2) = nlat
+      count_3d(3) = 1
+!
+! Read global domain into local glbc:
+      istat = nf_get_vara_double(ncid,idv,start_3d,count_3d,glbc)
+      if (istat /= NF_NOERR) then
+        write(char80,"('Error reading ',a,' ncid=',i3)") 
+     |    trim(vname),ncid
+        call handle_ncerr(istat,trim(char80))
+      endif
+!
+! Store subdomain in flbc (actual arg is tlbc, ulbc, or vlbc):
+      lonbeg = lon0
+      if (lon0==1) lonbeg = 3
+      lonend = lon1
+      if (lon1==nlonp4) lonend = lon1-2
+      do j=lat0,lat1
+        do i=lonbeg,lonend
+          flbc(i,j) = glbc(i-2,j)
+        enddo
+      enddo
+      
+#ifndef MPI
+! Periodic points for non-MPI runs:
+      flbc(1:2,:)              = flbc(nlonp4-3:nlonp4-2,:)
+      flbc(nlonp4-1:nlonp4,:)  = flbc(3:4,:)
+#endif
+ 
+      write(6,"('Read ',a,' subdomain from source history: min,max=',
+     |  2f8.2)")  trim(vname), minval(flbc(lon0:lon1,lat0:lat1)),
+     |                         maxval(flbc(lon0:lon1,lat0:lat1))
+
+!      if (trim(vname)=='TLBC') then
+!       do i=lon0,lon1
+!	 write(6,"('rdlbc: i=',i3,' lat0,1=',2i3,' tlbc(i,lat0:lat1)=',
+!     |      /,(6e12.4))") i,lat0,lat1,tlbc(i,lat0:lat1)
+!       enddo ! j=lat0,lat1
+!      endif
+!      if (trim(vname)=='ULBC') then
+!       do i=lon0,lon1
+!	 write(6,"('rdlbc: i=',i3,' lat0,1=',2i3,' ulbc(i,lat0:lat1)=',
+!     |      /,(6e12.4))") i,lat0,lat1,ulbc(i,lat0:lat1)
+!       enddo ! j=lat0,lat1
+!      endif
+!      if (trim(vname)=='VLBC') then
+!       do i=lon0,lon1
+!	 write(6,"('rdlbc: i=',i3,' lat0,1=',2i3,' vlbc(i,lat0:lat1)=',
+!     |      /,(6e12.4))") i,lat0,lat1,vlbc(i,lat0:lat1)
+!       enddo ! j=lat0,lat1
+!      endif
+ 
+      end subroutine rdlbc
 !-----------------------------------------------------------------------
       subroutine rdf4d(ncid,name,itime,ix)
 !
@@ -541,8 +810,7 @@
 ! only the subdomain directly from the file rather than the full domain.
 !
       use input_module,only: dynamo
-      use hist_module,only: h
-      use init_module,only: glat
+      use hist_module,only: sh
       use mpi_module,only: lon0,lon1,lat0,lat1
 !
 ! Args:
@@ -551,18 +819,12 @@
 !
 ! Local:
       integer :: i,ii,j,k,istat,idvar,itype,ndims,iddims(4),natts,
-     |  iscalar,idimsizes(4),nx,nxk,lonbeg,lonend,nnans
+     |  iscalar,idimsizes(4),nx,nxk,lonbeg,lonend,nnans,nanfatal
       character(len=16) :: rdname,tmpname
       character(len=120) :: char120
       real :: fakevar(1,1,1),fmin,fmax,fmin1,fmax1
       real :: f3drd(nlon,nlat,nlevp1) ! (i,j,k) as on history 
       real :: zmj2,zmj1,fac
-!
-! Fields whose lower boundary condition is stored in the top
-! pressure slot (k==nlev==nlevp1) (see dt.F and duv.F in model):
-      character(len=shortname_len) :: names_lbc_intop(6) = 
-     |  (/'TN              ','UN              ','VN              ',
-     |    'TN_NM           ','UN_NM           ','VN_NM           '/)
 !
 ! External:
       integer,external :: strloc
@@ -582,23 +844,17 @@
 !
 ! Check dimension sizes against current model grid resolution:
       if (.not.fakeflds) then
-        if (idimsizes(1) /= nlon .or. idimsizes(2) /= nlat) then
+        if (idimsizes(1) /= nlon .or. idimsizes(2) /= nlat .or.
+     |      idimsizes(3) /= nlevp1) then
           write(6,"(/,'>>> WARNING rdf4d: bad dimension sizes',
-     |      ' for prognostic ',a)") trim(rdname)
-          write(6,"('  idimsizes(1:2)=',2i4,' but should be ',
-     |      'nlon,nlat=',2i4)") idimsizes(1:2),nlon,nlat
-        endif
-!
-! Error if number of levels in source history is less than number
-! of levels in model run (not an error if number of levels in source
-! history is greater than nlevp1).
-!
-        if (idimsizes(3) < nlevp1) then
-          write(6,"(/,'>>> WARNING rdf4d: bad idimsizes(3)=',
-     |      i4,' nlevp1=',i4,' field ',a)") idimsizes(3),nlevp1,
-     |      trim(rdname)
+     |      ' for field ',a)") trim(rdname)
+          write(6,"('  idimsizes(1:3)=',3i4,' but should be ',
+     |      'nlon,nlat,nlevp1=',3i4)") idimsizes(1:3),nlon,nlat,
+     |      nlevp1
+          call shutdown('source history coordinate dimensions')
         endif
       endif
+!
       if (fakeflds) then
         start_4d(1:3) = 1
         start_4d(4) = itime
@@ -621,7 +877,7 @@
         return
       endif
 !
-! Read field into data component of field structure:
+! Read field into local f3drd:
       start_4d(1:3) = 1
       start_4d(4) = itime
       count_4d(1) = nlon
@@ -640,21 +896,16 @@
 !    |  iprint,ifatal)
 ! real :: f3drd(nlon,nlat,nlevp1) ! (i,j,k) as on history 
 !
+      nanfatal = 0 ! reading nans from source history is non-fatal
       if (check_nan)
-     |  call check_nans(f3drd,nlon,nlat,nlevp1,name(1:8),nnans,0,0.,1,0)
+     |  call check_nans(f3drd,nlon,nlat,nlevp1,name(1:8),nnans,0,0.,1,
+     |    nanfatal)
 !
 ! Transform from f3drd(i,j,k) to f4d(k,i,j):
       lonbeg = lon0
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==nlonp4) lonend = lon1-2
-
-!     call fminmax(f3drd(lonbeg-2:lonend-2,lat0:lat1,:),
-!    |  nlevp1*((lonend-2)-(lonbeg-2)+1)*(lat1-lat0+1),fmin,fmax)
-!     write(6,"('rdf4d: lonbeg,end=',2i3,' lat0,1=',2i3,
-!    |  ' f3drd min,max=',2e12.4)") lonbeg,lonend,lat0,lat1,fmin,fmax
-
-      ii = 1
       do j=lat0,lat1
         do i=lonbeg,lonend
           do k=1,nlevp1
@@ -664,76 +915,79 @@
 !
             f4d(ix)%data(k,i,j,itp) = f3drd(i-2,j,k)
           enddo ! k=1,nlevp1
-          ii = ii+1
         enddo ! i=lonbeg,lonend  
       enddo ! j=lat0,lat1
-
+!
+! Define t,u,v lbc subdomains from top slot if tuv_lbc_intop==1: 
+! If tuv_lbc_intop==0, these arrays were read by nc_rdhist.
+! These arrays are in fields.F, allocated by sub init_lbc as
+!   (lond0:lond1,latd0:latd1)
+! 
+!
+      if (sh%tuv_lbc_intop > 0) then ! (is "old" history)
+        select case(trim(name))
+          case('TN')
+            do j=lat0,lat1
+              tlbc(:,j) = f4d(ix)%data(nlevp1,:,j,itp)
+            enddo ! j=lat0,lat1
+            write(6,"('rdf4d: tlbc from top slot min,max=',2f10.2)")
+     |        minval(tlbc(lon0:lon1,lat0:lat1)),
+     |        maxval(tlbc(lon0:lon1,lat0:lat1))
+            f4d(ix)%data(nlevp1,:,:,itp) = spval ! top slot is now missing data
+          case('UN')
+            do j=lat0,lat1
+              ulbc(:,j) = f4d(ix)%data(nlevp1,:,j,itp)
+            enddo
+            write(6,"('rdf4d: ulbc from top slot min,max=',2f10.2)")
+     |        minval(ulbc(lon0:lon1,lat0:lat1)),
+     |        maxval(ulbc(lon0:lon1,lat0:lat1))
+            f4d(ix)%data(nlevp1,:,:,itp) = spval ! top slot is now missing data
+          case('VN')
+            do j=lat0,lat1
+              vlbc(:,j) = f4d(ix)%data(nlevp1,:,j,itp)
+            enddo
+            write(6,"('rdf4d: vlbc from top slot min,max=',2f10.2)")
+     |        minval(vlbc(lon0:lon1,lat0:lat1)),
+     |        maxval(vlbc(lon0:lon1,lat0:lat1))
+            f4d(ix)%data(nlevp1,:,:,itp) = spval ! top slot is now missing data
+	    
+          case('TN_NM')
+            do j=lat0,lat1
+              tlbc_nm(:,j) = f4d(ix)%data(nlevp1,:,j,itp)
+            enddo ! j=lat0,lat1
+            write(6,"('rdf4d: tlbc_nm from top slot min,max=',2f10.2)")
+     |        minval(tlbc_nm(lon0:lon1,lat0:lat1)),
+     |        maxval(tlbc_nm(lon0:lon1,lat0:lat1))
+            f4d(ix)%data(nlevp1,:,:,itp) = spval ! top slot is now missing data
+          case('UN_NM')
+            do j=lat0,lat1
+              ulbc_nm(:,j) = f4d(ix)%data(nlevp1,:,j,itp)
+            enddo
+            write(6,"('rdf4d: ulbc_nm from top slot min,max=',2f10.2)")
+     |        minval(ulbc_nm(lon0:lon1,lat0:lat1)),
+     |        maxval(ulbc_nm(lon0:lon1,lat0:lat1))
+            f4d(ix)%data(nlevp1,:,:,itp) = spval ! top slot is now missing data
+          case('VN_NM')
+            do j=lat0,lat1
+              vlbc_nm(:,j) = f4d(ix)%data(nlevp1,:,j,itp)
+            enddo
+            write(6,"('rdf4d: vlbc_nm from top slot min,max=',2f10.2)")
+     |        minval(vlbc_nm(lon0:lon1,lat0:lat1)),
+     |        maxval(vlbc_nm(lon0:lon1,lat0:lat1))
+            f4d(ix)%data(nlevp1,:,:,itp) = spval ! top slot is now missing data
+          case default ! do nothing if not one of these fields
+        end select ! case(trim(name))
+      endif ! if (sh%tuv_lbc_intop > 0)
+!
+! Report to stdout:
+!
       call fminmax(f4d(ix)%data(:,lonbeg:lonend,lat0:lat1,itp),
      |  nlevp1*(lonend-lonbeg+1)*(lat1-lat0+1),fmin,fmax)
 
-!     write(6,"('lonbeg,lonend=',2i3)") lonbeg,lonend
-      write(6,"('Read field ',a,' 3d min,max=',2e12.4)") 
+!     write(6,"('lonbeg,lonend=',2i3,' lat0,1=',2i4)") 
+!    |  lonbeg,lonend,lat0,lat1
+      write(6,"('Read field ',a,' 3d subdomain min,max=',2e12.4)") 
      |  f4d(ix)%short_name,fmin,fmax
-!
-! Do periodic points later, when all fields can be loaded into
-! mpi messages, e.g., after call nc_rdhist, see rdsource.F
-!
-! Periodic points for data(k,i,j):
-!      f4d(ix)%data(:,1     ,1:nlat,itp) =   ! 1 <- nlon+1 (73)
-!    | f4d(ix)%data(:,nlon+1,1:nlat,itp)  
-!      f4d(ix)%data(:,2     ,1:nlat,itp) =   ! 2 <- nlon+2 (74)
-!    | f4d(ix)%data(:,nlon+2,1:nlat,itp)
-!      f4d(ix)%data(:,nlon+3,1:nlat,itp) =   ! nlon+3 (75) <- 3
-!    | f4d(ix)%data(:,3     ,1:nlat,itp)
-!      f4d(ix)%data(:,nlon+4,1:nlat,itp) =   ! nlon+4 (76) <- 4
-!    | f4d(ix)%data(:,4     ,1:nlat,itp)
-!
-
-!
-! If number of levels in source history (h%nlev) is > number of
-! levels in model (nlevp1), then store t,u,v bottom boundaries in
-! top slot (nlevp1). This is important esp for u,v, so that the
-! model tuvbnd.F will calculate u,v bottom boundaries correctly.
-!
-      if (h%nlev > nlevp1 .and. any(names_lbc_intop==name)) then
-        write(6,"('rdf4d: nlevp1=',i3,' h%nlev=',i3,' field=',
-     |    a,' -- storing bottom boundary in top level.')")
-     |    nlevp1,h%nlev,trim(name)
-! data(k,i,j):
-        f4d(ix)%data(nlevp1,:,1:nlat,itp) = 
-     |  f4d(ix)%data(1     ,:,1:nlat,itp)
-      endif
-!
-! New models (tiegcmxx or timegcmxx) do not store bottom boundary
-! of t,u,v in top slot. If reading an "old" model history (tgcmxx),
-! put top slot into bottom boundary: 
-!     if (h%model_version(1:4) == 'tgcm'.and.any(names_lbc_intop==name)) 
-!    |  then
-!!       f4d(ix)%data(:,1     ,1:nlat,itp) = 
-!!    |  f4d(ix)%data(:,nlevp1,1:nlat,itp)
-!       f4d(ix)%data(1     ,:,1:nlat,itp) = 
-!    |  f4d(ix)%data(nlevp1,:,1:nlat,itp)
-!     endif
-!
-! In old cray-blocked histories, NOPNM was not defined at the
-! top level. Define it here with spval for compatability with
-! old sources (s.a., read_oldsrc). This is not strictly necessary,
-! but is convenient for debug and comparisons between old and new 
-! histories with fminmax, etc.
-!
-!     if (trim(name)=='OP_NM') then
-!       f4d(ix)%data(nlevp1,:,1:nlat,itp) = spval
-!     endif
-
-!     call fminmax(f4d(ix)%data(:,lon0:lon1,lat0:lat1,itp),
-!    |  nlevp1*(lon1-lon0+1)*(lat1-lat0+1),fmin,fmax)
-!     write(6,"('Read field ',a,' 3d min,max=',2e12.4)") 
-!    |  f4d(ix)%short_name,fmin,fmax
-!
-! In earlier versions, full-domain dynpot was defined here from poten.
-! In this version, subdomains of poten are read from the source history
-! by this routine, then mp_dynpot is called (from readsource) to define 
-! dynpot at the full domain for each task.
 !
       end subroutine rdf4d
 !-----------------------------------------------------------------------
@@ -749,24 +1003,24 @@
 !   Values are given to the dimension variables, and the file
 !     is taken out of define mode (ready to receive histories)
 !
-      use hist_module,only: h,nsource,nsecsource
-      use init_module,only: glon,glat,plev,gmlon,gmlat,pmlev
-      use cons_module,only: pi,ylatmagphr,ylonmagphr
-      use input_module,only: potential_model,sd_ncfile
+      use hist_module,only: h,sh,nsource,nsecsource
+      use cons_module,only: pi
+      use input_module,only: potential_model,ncep_ncfile
       use params_module,only: tgcm_name,tgcm_version
 !
 ! Args:
       integer,intent(in) :: ncid
 !
 ! Local:
-      integer :: i,istat,idum,ivar1(1),imo,ida,startmtime(4)
+      integer :: i,ii,istat,idum,ivar1(1),imo,ida,startmtime(4)
       character(len=120) :: char120
       character(len=80) :: char80
-      real :: var1(1),rmins
+      character(len=24) :: create_date,create_time
+      real :: var1(1),rdays
       real,external :: mtime_to_datestr
 !
 ! Define dimensions (field vars will be (time,lev,lat,lon) in
-! CDL notation. Mag fields will be (time,mlev,mlat,mlon): 
+! CDL notation. Mag fields will be (time,[mlev or imlev],mlat,mlon): 
 !
       istat = nf_def_dim(ncid,"time",NF_UNLIMITED,id_time)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
@@ -779,10 +1033,16 @@
       istat = nf_def_dim(ncid,"lat",nlat,id_lat)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error defining latitude dimension')
-!     istat = nf_def_dim(ncid,"lev",nlev,id_lev)
-      istat = nf_def_dim(ncid,"lev",nlevp1,id_lev)
+!
+! Midpoint levels dimension "lev"=nlevp1:
+      istat = nf_def_dim(ncid,"lev",nlevp1,id_lev)     ! midpoint levels dimension
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining levels dimension')
+     |  'Error defining midpoint levels dimension')
+!
+! Interface levels dimension "ilev"=nlevp1:
+      istat = nf_def_dim(ncid,"ilev",nlevp1,id_ilev)   ! interface levels dimension
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining interface levels dimension')
 !
 ! Magnetic grid dimensions:
       istat = nf_def_dim(ncid,"mlon",nmlonp1,id_mlon)
@@ -791,19 +1051,32 @@
       istat = nf_def_dim(ncid,"mlat",nmlat,id_mlat)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error defining magnetic latitude dimension')
-      istat = nf_def_dim(ncid,"mlev",nlevp1+3,id_mlev)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining magnetic levels dimension')
 !
-! am_09/02 magnetosphere grid dimensions:
-      istat = nf_def_dim(ncid,"magphrlon",nmagphrlon,id_magphrlon)
+! Mag midpoint levels dimension:
+! 11/07 btf: mlev should be nmlev, not nmlevp1 (?)
+
+      istat = nf_def_dim(ncid,"mlev",nmlevp1,id_mlev)
+      write(6,"('nc_wrhist: set mlev = ',i3)") nmlevp1
+
+!     istat = nf_def_dim(ncid,"mlev",nmlev,id_mlev)
+!     write(6,"('nc_wrhist: set mlev = ',i3)") nmlev
+
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining magnetosphere longitude dimension')
-      istat = nf_def_dim(ncid,"magphrlat",nmagphrlat,id_magphrlat)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |    'Error defining magnetosphere latitude dimension')
+     |  'Error defining magnetic midpoints levels dimension')
 !
-      istat = nf_def_dim(ncid,"mtime",3,id_mtime)
+! Mag interface levels dimension:
+! 11/07 btf: imlev should be nimlev, not nmlevp1 (?)
+
+      istat = nf_def_dim(ncid,"imlev",nimlevp1,id_imlev)
+      write(6,"('nc_wrhist: set imlev =',i4)") nimlevp1
+
+!     istat = nf_def_dim(ncid,"imlev",nimlev,id_imlev)
+!     write(6,"('nc_wrhist: set imlev =',i4)") nimlev
+
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining magnetic interface levels dimension')
+!
+      istat = nf_def_dim(ncid,"mtimedim",3,id_mtimedim)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining mtime dimension')
       istat = nf_def_dim(ncid,"latlon",2,id_latlon)
@@ -821,7 +1094,45 @@
      +    'Error defining fakedim dimension')
       endif
 !
+! String length of date and time:
+      istat = nf_def_dim(ncid,"datelen",len(h%write_date),id_datelen)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining datelen dimension')
+!
+! String length of file names (mxlen_filename is parameter in input.F):
+      istat = nf_def_dim(ncid,"filelen",mxlen_filename,id_filelen)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining filelen dimension')
+!
 ! Define dimension (coordinate) variables and attributes:
+!
+! Time (coordinate variable time(time)). This is days since
+! the initial run's start time. The units string is: yyyy-m-d, 
+! where yyyy is the year, m is month, and d is day of the source
+! start time.
+!
+      ids1(1) = id_time	! for 1d time-unlimited vars
+      istat = nf_def_var(ncid,"time",NF_DOUBLE,1,ids1,idv_time)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining time dimension variable')
+      startmtime(1:3) = sh%initial_mtime(1:3) ; startmtime(4) = 0
+      rdays = mtime_to_datestr(sh%initial_year,startmtime,imo,ida,
+     |  char80)
+      istat = nf_put_att_text(ncid,idv_time,"long_name",4,"time")
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining long_name of time dimension variable')
+      istat = nf_put_att_text(ncid,idv_time,"units",len_trim(char80),
+     |  trim(char80))
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining units of time dimension variable')
+      istat = nf_put_att_int(ncid,idv_time,"initial_year",NF_INT,1,
+     |  h%initial_year)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining initial_year attribute of time coord var')
+      istat = nf_put_att_int(ncid,idv_time,"initial_mtime",NF_INT,3,
+     |  h%initial_mtime)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining initial_mtime attribute of time coord var')
 !
 ! Geographic longitude (deg) (coordinate variable lon(lon)):
       ids1(1) = id_lon
@@ -851,19 +1162,91 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining units of latitude dimension variable')
 !
-! Vertical levels (log pressure) (coordinate variable lev(lev)):
+! Midpoint levels coordinate variable lev(lev):
       ids1(1) = id_lev
       istat = nf_def_var(ncid,"lev",NF_DOUBLE,1,ids1,idv_lev)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining levels dimension variable')
-      write(char80,"('log pressure levels')")
+     |  'Error defining midpoint levels coordinate variable lev(lev)')
+! long name of lev coord var:
+      write(char80,"('midpoint levels')")
       istat = nf_put_att_text(ncid,idv_lev,"long_name",
-     +  len_trim(char80),trim(char80))
+     |  len_trim(char80),trim(char80))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining long_name of levels dimension variable')
-      istat = nf_put_att_text(ncid,idv_lev,"units",8,'ln(p0/p)')
+     |'Error defining long_name of midpoint levels coordinate variable')
+! short name = ln(p0/p)
+      istat = nf_put_att_text(ncid,idv_lev,"short_name",
+     |  8,"ln(p0/p)")
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining units of levels dimension variable')
+     |  'Error defining short_name of midpoint levels coord var')
+! lev coord var is unitless:
+      istat = nf_put_att_text(ncid,idv_lev,"units",0," ")
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining units of midpoint levels coord var')
+! positive='up'
+      istat = nf_put_att_text(ncid,idv_lev,"positive",2,'up')
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining positive attribute of midpoint levels coord var')
+! standard name of midpoints lev coord var:
+      write(char80,"('atmosphere_ln_pressure_coordinate')")
+      istat = nf_put_att_text(ncid,idv_lev,"standard_name",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining standard_name of midpoint levels coord var')
+! formula terms for midpoints lev coord var:
+      write(char80,"('p0: p0 lev: lev')")
+      istat = nf_put_att_text(ncid,idv_lev,"formula_terms",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining formula terms of midpoint levels coord var')
+! formula to obtain pressure from midpoint lev:
+      write(char80,"('p(k) = p0 * exp(-lev(k))')")
+      istat = nf_put_att_text(ncid,idv_lev,"formula",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining formula for midpoint levels coord var')
+!
+! Interface levels coordinate array:
+      ids1(1) = id_ilev
+      istat = nf_def_var(ncid,"ilev",NF_DOUBLE,1,ids1,idv_ilev)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining interface levels coordinate variable ilev(ilev)')
+! long name of ilev coord var:
+      write(char80,"('interface levels')")
+      istat = nf_put_att_text(ncid,idv_ilev,"long_name",
+     |  len_trim(char80),trim(char80))
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |'Error defining long_name of interface levels coordinate var')
+! short name = ln(p0/p)
+      istat = nf_put_att_text(ncid,idv_ilev,"short_name",
+     |  8,"ln(p0/p)")
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining short_name of interface levels coord var')
+! ilev coord var is unitless:
+      istat = nf_put_att_text(ncid,idv_ilev,"units",0," ")
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining units of interface levels coord var')
+! positive='up'
+      istat = nf_put_att_text(ncid,idv_ilev,"positive",2,'up')
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |'Error defining positive attribute of interface levels coord var')
+! standard name of interface ilev coord var:
+      write(char80,"('atmosphere_ln_pressure_coordinate')")
+      istat = nf_put_att_text(ncid,idv_ilev,"standard_name",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining standard_name of interface levels coord var')
+! formula terms for interface ilev coord var:
+      write(char80,"('p0: p0 lev: ilev')")
+      istat = nf_put_att_text(ncid,idv_ilev,"formula_terms",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining formula terms of interface levels coord var')
+! formula to obtain pressure from interface ilev:
+      write(char80,"('p(k) = p0 * exp(-ilev(k))')")
+      istat = nf_put_att_text(ncid,idv_ilev,"formula",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining formula for interface levels coord var')
 !
 ! Magnetic longitude (deg) (coordinate variable mlon(mlon)):
       ids1(1) = id_mlon
@@ -875,7 +1258,7 @@
      +  len_trim(char80),trim(char80))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining long_name of mag longitude dimension variable')
-      istat = nf_put_att_text(ncid,idv_lon,"units",12,'degrees_east')
+      istat = nf_put_att_text(ncid,idv_mlon,"units",12,'degrees_east')
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining units of magnetic longitude dimension variable')
 !
@@ -893,88 +1276,110 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining units of magnetic latitude dimension variable')
 !
-! Magnetic levels (log pressure) (coordinate variable mlev(mlev)):
+! Magnetic midpoint coordinate variable mlev(mlev)):
       ids1(1) = id_mlev
       istat = nf_def_var(ncid,"mlev",NF_DOUBLE,1,ids1,idv_mlev)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining magnetic levels dimension variable')
-      write(char80,"('log pressure levels (magnetic grid)')")
+     +  'Error defining magnetic levels coord variable mlev')
+! long name of mlev:
+      write(char80,"('magnetic midpoint levels')")
       istat = nf_put_att_text(ncid,idv_mlev,"long_name",
      +  len_trim(char80),trim(char80))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining long_name of mag levels dimension variable')
-      istat = nf_put_att_text(ncid,idv_mlev,"units",8,'ln(p0/p)')
+     +  'Error defining long_name of mlev coordinate variable')
+! short name = ln(p0/p)
+      istat = nf_put_att_text(ncid,idv_mlev,"short_name",
+     |  8,"ln(p0/p)")
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining units of magnetic levels dimension variable')
+     |  'Error defining short_name of mlev levels coord var')
+! units of mlev (unitless):
+      istat = nf_put_att_text(ncid,idv_mlev,"units",0," ")
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining units of mlev coordinate variable')
+! positive attribute of mlev:
+      istat = nf_put_att_text(ncid,idv_mlev,"positive",2,'up')
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining positive attribute for mlev coord var')
+! standard_name of mlev:
+      write(char80,"('atmosphere_ln_pressure_coordinate')")
+      istat = nf_put_att_text(ncid,idv_mlev,"standard_name",
+     |  len_trim(char80),trim(char80))
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining standard_name attribute for mlev coord var')
+! formula terms for mlev:
+      write(char80,"('p0: p0 lev: mlev')")
+      istat = nf_put_att_text(ncid,idv_mlev,"formula_terms",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining formula terms of mlev coord var')
+! formula to obtain pressure from mlev:
+      write(char80,"('p(k) = p0 * exp(-mlev(k))')")
+      istat = nf_put_att_text(ncid,idv_mlev,"formula",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining formula for mlev coord var')
 !
-! Magnetospheric longitude (deg) (coordinate variable magphrlon(magphrlon)):
-      ids1(1) = id_magphrlon
-      istat = nf_def_var(ncid,"maglon",NF_DOUBLE,1,ids1,idv_magphrlon)
+! Magnetic interface coordinate variable imlev(imlev)):
+      ids1(1) = id_imlev
+      istat = nf_def_var(ncid,"imlev",NF_DOUBLE,1,ids1,idv_imlev)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining magnetospheric longitude dimension variable')
-      write(char80,"('magnetospheric longitude (-west, +east)')")
-      istat = nf_put_att_text(ncid,idv_magphrlon,"long_name",
+     +  'Error defining magnetic levels coord variable imlev')
+! long name of imlev:
+      write(char80,"('magnetic interface levels')")
+      istat = nf_put_att_text(ncid,idv_imlev,"long_name",
      +  len_trim(char80),trim(char80))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     + 'Error defining long_name of magnetospheric long. dim. var.')
-      istat = nf_put_att_text(ncid,idv_magphrlon,"units",7,'degrees')
+     +  'Error defining long_name of imlev coordinate variable')
+! short name = ln(p0/p)
+      istat = nf_put_att_text(ncid,idv_imlev,"short_name",
+     |  8,"ln(p0/p)")
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     + 'Error defining units of magnetospheric longitude dim. var.')
-!
-! Magnetospheric latitude (deg) (coordinate variable magphrlat(magphrlat)):
-      ids1(1) = id_magphrlat
-      istat = nf_def_var(ncid,"magphrlat",NF_DOUBLE,1,ids1,
-     |   idv_magphrlat)
+     |  'Error defining short_name of imlev levels coord var')
+! units of imlev (unitless):
+      istat = nf_put_att_text(ncid,idv_imlev,"units",0," ")
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining magnetospheric latitude dimension variable')
-      write(char80,"('magnetospheric latitude (-south, +north)')")
-      istat = nf_put_att_text(ncid,idv_magphrlat,"long_name",
-     +  len_trim(char80),trim(char80))
+     +  'Error defining units of imlev coordinate variable')
+! positive attribute of imlev:
+      istat = nf_put_att_text(ncid,idv_imlev,"positive",2,'up')
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     + 'Error defining long_name of magnetospheric latitude dim. var.')
-      istat = nf_put_att_text(ncid,idv_magphrlat,"units",7,'degrees')
+     +  'Error defining positive attribute for imlev coord var')
+! standard_name of imlev:
+      write(char80,"('atmosphere_ln_pressure_coordinate')")
+      istat = nf_put_att_text(ncid,idv_imlev,"standard_name",
+     |  len_trim(char80),trim(char80))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining units of magnetospheric latitude dim. var.')
+     +  'Error defining standard_name attribute for imlev coord var')
+! formula terms for imlev:
+      write(char80,"('p0: p0 lev: imlev')")
+      istat = nf_put_att_text(ncid,idv_imlev,"formula_terms",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining formula terms of imlev coord var')
+! formula to obtain pressure from imlev:
+      write(char80,"('p(k) = p0 * exp(-imlev(k))')")
+      istat = nf_put_att_text(ncid,idv_imlev,"formula",
+     |  len_trim(char80),trim(char80)) 
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     | 'Error defining formula for imlev coord var')
 !
 ! ids1(1) is id of time dimension for the following defines:
       ids1(1) = id_time	! for 1d time-unlimited vars
 !
-! Time (coordinate variable time(time)). This is minutes since
-! the run's source history start time. The units string is: yyyy-m-d, 
-! where yyyy is the year, m is month, and d is day of the source
-! start time.
-!
-      istat = nf_def_var(ncid,"time",NF_DOUBLE,1,ids1,idv_time)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining time dimension variable')
-      startmtime(1) = h%initial_day
-      startmtime(2:3) = h%initial_mtime(2:3) ; startmtime(4) = 0
-      rmins = mtime_to_datestr(h%initial_year,startmtime,imo,ida,char80)
-      istat = nf_put_att_text(ncid,idv_time,"long_name",4,"time")
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining long_name of time dimension variable')
-      istat = nf_put_att_text(ncid,idv_time,"units",len_trim(char80),
-     |  trim(char80))
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining units of time dimension variable')
-!
 ! Source date and time are attributes of time var 
 ! (they are also global file attributes):
       istat = nf_put_att_int(ncid,idv_time,"initial_year",NF_INT,1,
-     |  h%initial_year)
-      istat = nf_put_att_int(ncid,idv_time,"initial_day",NF_INT,1,
-     |  h%initial_day)
+     |  sh%initial_year)
       istat = nf_put_att_int(ncid,idv_time,"initial_mtime",NF_INT,3,
-     |  h%initial_mtime)
+     |  sh%initial_mtime)
 !
 ! Define "primary" (non-coordinate) time dependent variables:
 ! (these variables get a value for each history) 
 !
 ! Model time variable mtime(3,time), where 3 is the mtime dimension 
-! (id_mtime) (day,hour,minute), and time is the unlimited dimension 
+! (id_mtimedim) (day,hour,minute), and time is the unlimited dimension 
 ! (id_time):
 !
-      ids2(1) = id_mtime
+      ids2(1) = id_mtimedim
       ids2(2) = id_time
       istat = nf_def_var(ncid,"mtime",NF_INT,2,ids2,idv_mtime)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
@@ -1007,6 +1412,30 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining long_name of calendar day variable')
 !
+! Calendar advance:
+      istat = nf_def_var(ncid,"calendar_advance",NF_INT,1,ids1,
+     |  idv_calendar_adv)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining integer calendar advance variable')
+      write(char80,"('calendar advance flag',
+     |  ' (1 if advancing calendar time)')")
+      istat = nf_put_att_text(ncid,idv_calendar_adv,"long_name",
+     |  len_trim(char80),trim(char80))
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining long_name of calendar advance variable')
+!
+! Date each history was written:
+      ids2(1) = id_datelen
+      ids2(2) = id_time
+      istat= nf_def_var(ncid,"write_date",NF_CHAR,2,ids2,idv_writedate)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining history write_date variable')
+      write(char80,"('Date and time each history was written')")
+      istat = nf_put_att_text(ncid,idv_writedate,"long_name",
+     |  len_trim(char80),trim(char80))
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining long_name of write_date')
+!
 ! Number of time steps from model time 0,0,0 to current model time
 ! (iter(time)):
       istat = nf_def_var(ncid,"iter",NF_INT,1,ids1,idv_iter)
@@ -1034,18 +1463,21 @@
      +  'Error defining units of timestep variable')
 !
 ! f107 daily and f107 average solar fluxes:
+! 9/30/05: change units as suggested by John Caron (s.a. Udunits)
       call defvar_time_dbl(ncid,"f107d",ids1,idv_f107d,
-     |  "Daily 10.7 cm solar flux","W/m^2Hz*1.e-22")
+!    |  "Daily 10.7 cm solar flux","W/m^2Hz*1.e-22")
+     |  "Daily 10.7 cm solar flux","1.e-22 kg.s-4")
       call defvar_time_dbl(ncid,"f107a",ids1,idv_f107a,
-     |  "81-day average 10.7 cm solar flux","W/m^2Hz*1.e-22")
+!    |  "81-day average 10.7 cm solar flux","W/m^2Hz*1.e-22")
+     |  "81-day average 10.7 cm solar flux","1.e-22 kg.s-4")
 !
 ! Hemispheric power: 
       call defvar_time_dbl(ncid,"hpower",ids1,idv_hpower,
-     |  "Hemispheric power","Gw")
+     |  "Hemispheric power","gw")
 !
 ! Cross-tail potential:
       call defvar_time_dbl(ncid,"ctpoten",ids1,idv_ctpoten,
-     |  "Cross-tail potential","Volts")
+     |  "Cross-tail potential","volts")
 !
 ! Byimf:
       call defvar_time_dbl(ncid,"byimf",ids1,idv_byimf,
@@ -1062,7 +1494,7 @@
       istat = nf_def_var(ncid,"dtide",NF_DOUBLE,2,ids2,idv_dtide)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining variable dtide')
-      write(char80,"('amplitude and phase of diurnal tide')")
+      write(char80,"('amplitude and phase of diurnal tide mode (1,1)')")
       istat = nf_put_att_text(ncid,idv_dtide,"long_name",
      |  len_trim(char80),trim(char80))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
@@ -1074,85 +1506,46 @@
       istat = nf_def_var(ncid,"sdtide",NF_DOUBLE,2,ids2,idv_sdtide)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining variable sdtide')
-      write(char80,"('amplitude and phase of semi-diurnal tide')")
+      write(char80,"('amplitudes and phases of semi-diurnal tide')")
       istat = nf_put_att_text(ncid,idv_sdtide,"long_name",
      |  len_trim(char80),trim(char80))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining long_name attribute of variable sdtide')
 !
-! 1/31/01: Adding ncep flag:
-! Is time-gcm only, but add it anyway for processors.
-      istat = nf_def_var(ncid,"ncep",NF_INT,1,ids1,idv_ncep)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining ncep variable')
-      write(char80,
-     |  "('NCEP/NMC flag (1 if using ncep boundaries for t and z)')")
-      istat = nf_put_att_text(ncid,idv_ncep,"long_name",
-     |  len_trim(char80),trim(char80))
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining long_name of ncep variable')
+! Define ncep data file (used by timegcm only):
+      call define_ncfile(ncid,"ncep_ncfile",idv_ncep_ncfile,
+     |  "long_name","ncep data file",
+     |  "data","10 mb lower boundary for TN and Z")
 !
-! 2/08/01: Adding gpi flag:
-      istat = nf_def_var(ncid,"gpi",NF_INT,1,ids1,idv_gpi)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining gpi variable')
-      write(char120,
-     |  "('GPI flag (1 if using geophysical indices database for ',
-     |  'f107d, f107a, hpower, and ctpoten)')") 
-      istat = nf_put_att_text(ncid,idv_gpi,"long_name",
-     |  len_trim(char120),trim(char120))
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining long_name of gpi variable')
+! Define gpi data file:
+      call define_ncfile(ncid,"gpi_ncfile",idv_gpi_ncfile,
+     |  "long_name","GeoPhysical Indices data file",
+     |  "data","f107, f107a, ctpoten, power") 
 !
-! 7/04/02: Adding gswmdi flag:
-      istat = nf_def_var(ncid,"gswmdi",NF_INT,1,ids1,idv_gswmdi)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining gswm variable')
-      write(char120,
-     |  "('GSWMDI flag (1 if using GSWM diurnal tides as boundary ',
-     |  'for Z,TN,UN,VN)')") 
-      istat = nf_put_att_text(ncid,idv_gswmdi,"long_name",
-     |  len_trim(char120),trim(char120))
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining long_name of gswmdi variable')
+! Define TIMED SEE data file:
+      call define_ncfile(ncid,"see_ncfile",idv_see_ncfile,
+     |  "long_name","TIMED SEE data file",
+     |  "data","Solar flux data")
 !
-! 7/04/02: Adding gswmsdi flag:
-      istat = nf_def_var(ncid,"gswmsdi",NF_INT,1,ids1,idv_gswmsdi)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining gswmsdi variable')
-      write(char120,
-     |  "('GSWMSDI flag (1 if using GSWM semidiurnal tides as ',
-     |  'boundary for Z,TN,UN,VN)')") 
-      istat = nf_put_att_text(ncid,idv_gswmsdi,"long_name",
-     |  len_trim(char120),trim(char120))
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining long_name of gswmsdi variable')
+! Define gswm data files:
+      call define_ncfile(ncid,"gswm_mi_di_ncfile",
+     |  idv_gswm_mi_di_ncfile,
+     | "long_name","GSWM migrating diurnal tides data file",
+     | "data","lower boundary perturbations for TN, UN, VN, and Z")
+      call define_ncfile(ncid,"gswm_mi_sdi_ncfile",
+     |  idv_gswm_mi_sdi_ncfile,
+     | "long_name","GSWM migrating semi-diurnal tides data file",
+     | "data","lower boundary perturbations for TN, UN, VN, and Z")
+      call define_ncfile(ncid,"gswm_nm_di_ncfile",
+     |  idv_gswm_nm_di_ncfile,
+     | "long_name","GSWM non-migrating diurnal tides data file",
+     | "data","lower boundary perturbations for TN, UN, VN, and Z")
+      call define_ncfile(ncid,"gswm_nm_sdi_ncfile",
+     |  idv_gswm_nm_sdi_ncfile,
+     | "long_name","GSWM non-migrating semi-diurnal tides data file",
+     | "data","lower boundary perturbations for TN, UN, VN, and Z")
 !
-! 7/18/02: Adding gswmnmdi flag:
-      istat = nf_def_var(ncid,"gswmnmdi",NF_INT,1,ids1,idv_gswmnmdi)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining gswmnmdi variable')
-      write(char120,
-     |  "('GSWMNMDI flag (1 if using GSWM nonmigrating diurnal ',
-     |  'tides as boundary for Z,TN,UN,VN)')") 
-      istat = nf_put_att_text(ncid,idv_gswmnmdi,"long_name",
-     |  len_trim(char120),trim(char120))
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining long_name of gswmnmdi variable')
-!
-! 7/19/02: Adding gswmnmsdi flag:
-      istat=nf_def_var(ncid,"gswmnmsdi",NF_INT,1,ids1,idv_gswmnmsdi)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining gswmnmsdi variable')
-      write(char120,
-     |  "('GSWMNMSDI flag (1 if using GSWM nonmigrating semidiurnal ',
-     |  'tides as boundary for Z,TN,UN,VN)')") 
-      istat = nf_put_att_text(ncid,idv_gswmnmsdi,"long_name",
-     |  len_trim(char120),trim(char120))
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error defining long_name of gswmnmsdi variable')
-!
-! 2/14/01: Add auroral parameters (from input):
+! Auroral parameters (alfa30, e30, alfad2, ed2 are timegcm only)
 !
 ! alfa30:
       call defvar_time_dbl(ncid,"alfa30",ids1,idv_alfa30,
@@ -1174,8 +1567,6 @@
      |  "Energy flux of solar protons in the polar cap",
      |  "ergs/cm2/s")
 !
-! Time-independent "primary" variables:
-!
 ! Magnetic pole coordinates (real(2,2)):
       ids2(1) = id_latlon
       ids2(2) = id_latlon
@@ -1192,45 +1583,116 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining units of variable mag')  
 !
-! Standard pressure:
+! Reference pressure used to convert ln(p0/p) to pressure (millibars (hPa)):
       istat = nf_def_var(ncid,"p0",NF_DOUBLE,0,idum,idv_p0)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining variable p0')
       istat = nf_put_att_text(ncid,idv_p0,"long_name",
-     |  17,"Standard pressure")
+     |  18,"Reference pressure") ! for conversion of vertical coordinates
 !
-! Number of fields (will be nf4d for primary histories):
-      istat = nf_def_var(ncid,"nflds",NF_INT,0,idum,idv_nflds)
+! 4/26/06 btf: p0 units can be either hPa or millibars. Using the latter
+!              now to be consistent w/ microbar units of p0_model
+      istat = nf_put_att_text(ncid,idv_p0,"units",9,"millibars")
+!     istat = nf_put_att_text(ncid,idv_p0,"units",3,"hPA")
+!
+! Reference pressure used by the model (dynes/cm2):
+! p0_model units can be either dynes/cm2 or microbars. Using the latter 
+!   to be consistent w/ 1981 paper by Dickinson, Ridley, and Roble
+!
+      istat = nf_def_var(ncid,"p0_model",NF_DOUBLE,0,idum,idv_p0_model)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining nflds variable')
-      write(char80,"('number of 3-d model fields')")
-      istat = nf_put_att_text(ncid,idv_nflds,"long_name",
+     +  'Error defining variable p0')
+      char80 = ' ' 
+      write(char80,"('Reference pressure (as used by the model)')")
+      istat = nf_put_att_text(ncid,idv_p0_model,"long_name",
      |  len_trim(char80),trim(char80))
+      istat = nf_put_att_text(ncid,idv_p0_model,"units",9,"microbars")
+!     istat = nf_put_att_text(ncid,idv_p0_model,"units",9,"dynes/cm2")
+!
+! Gravity (constant used in the model, independent of height):
+      istat = nf_def_var(ncid,"grav",NF_DOUBLE,0,idum,idv_grav)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining long_name attribute of variable nflds')
+     +  'Error defining variable grav')
+      istat = nf_put_att_text(ncid,idv_grav,"long_name",
+     |  26,"gravitational acceleration")
+      istat = nf_put_att_text(ncid,idv_grav,"units",
+     |  4,"cm/s")
+      write(char80,"('constant used in the model, independent of ',
+     |  'height')")
+      istat = nf_put_att_text(ncid,idv_grav,"info",
+     |  len_trim(char80),trim(char80))
 !
 ! All prognostic fields are on primary history:
-      if (h%type(1:3)=='pri') then
-        do i=1,nf4d
+      if (h%hist_type(1:3)=='pri') then
+        do i=1,nf4d_hist
           call defvar_f4d(ncid,f4d(i),idv_f4d(i))
+!
+! Add ZG after Z (zg was calculated by sub calczg in addiag.F):
+!         if (trim(f4d(i)%short_name)=='Z') then
+!           do ii=1,nf3d
+!             if (trim(f3d(ii)%short_name)=='ZG') then
+!               call defvar_f3d(ncid,f3d(ii),idv_zg)
+!             endif
+!           enddo
+!         endif
         enddo
 !
-! Define secondary history fields (geographic, magnetic and magnetospheric):
-      elseif (h%type(1:3)=='sec') then
-        call defvar_sech(ncid,h%nfgeo,h%nfmag,h%nfgeo2d,h%nfmag2d,
-     |    h%nfmagphr)
+! Define secondary history fields (geographic or magnetic):
+      elseif (h%hist_type(1:3)=='sec') then
+        call def_fsech(ncid)
       else
-        write(6,"('>>> nc_define: unknown h%type=',a)") h%type
+        write(6,"('>>> nc_define: unknown h%hist_type=',a)") h%hist_type
       endif
+!
+! Define lower boundaries of t,u,v (both secondary and primary):
+      call deflbc(ncid,"TLBC",idv_tlbc)
+      call deflbc(ncid,"ULBC",idv_ulbc)
+      call deflbc(ncid,"VLBC",idv_vlbc)
+      call deflbc(ncid,"TLBC_NM",idv_tlbc_nm)
+      call deflbc(ncid,"ULBC_NM",idv_ulbc_nm)
+      call deflbc(ncid,"VLBC_NM",idv_vlbc_nm)
+!
+! Define LBC: bottom interface level (scalar coord of TLBC,ULBC,VLBC):
+      istat = nf_def_var(ncid,"LBC",NF_DOUBLE,0,idum,idv_lbc)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining var LBC')
+      write(char80,
+     |  "('Interface level of t,u,v lower boundary condition')")
+      istat = nf_put_att_text(ncid,idv_lbc,"long_name",
+     |  len_trim(char80),trim(char80))
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining long_name attribute of variable LBC')
+!     write(6,"('defined LBC: idv_lbc=',i3)") idv_lbc
 !
 ! Define global file attributes:
 !
-! Run date and time:
-      istat = nf_put_att_text(ncid,NF_GLOBAL,"rundate",
-     +  len_trim(h%rundate),trim(h%rundate))
+! CF Conventions:
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"Conventions",6,"CF-1.0")
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
-     +    'for rundate global attribute')")
+     |    'for Conventions global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+!
+! User-defined job comment (namelist parameter "label"):
+      if (len_trim(h%label) > 0) then
+        istat = nf_put_att_text(ncid,NF_GLOBAL,"label",
+     |    len_trim(h%label),trim(h%label))
+        if (istat /= NF_NOERR) then
+          write(char120,"('Error return from nf_put_att_text ',
+     |      'for label global attribute')")
+          call handle_ncerr(istat,char120)
+        endif
+      endif
+
+! Create date and time:
+      call datetime(create_date,create_time)
+      h%create_date = trim(create_date)//' '//trim(create_time)
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"create_date",
+     +  len_trim(h%create_date),trim(h%create_date))
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error return from nf_put_att_text ',
+     +    'for create_date global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
@@ -1279,110 +1741,107 @@
         call handle_ncerr(istat,char120)
       endif
 !
+! This is not written to new history files (see output_file below)
 ! Mss path to history file:
-      istat = nf_put_att_text(ncid,NF_GLOBAL,"mss_path",
-     |  len_trim(h%mss_path),trim(h%mss_path))
+!     istat = nf_put_att_text(ncid,NF_GLOBAL,"mss_path",
+!    |  len_trim(h%mss_path),trim(h%mss_path))
+!     if (istat /= NF_NOERR) then
+!       write(char120,"('Error return from nf_put_att_text ',
+!    |    'for mss_path global attribute')")
+!       call handle_ncerr(istat,char120)
+!     endif
+!
+! Output path (from namelist):
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"output_file",
+     |  len_trim(h%output_file),trim(h%output_file))
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
-     |    'for mss_path global attribute')")
+     |    'for output_file global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
-! Primary or Secondary histories:
-      if (h%type(1:3)=='pri') then
-        istat = nf_put_att_text(ncid,NF_GLOBAL,"history_type",
-     |    7,'primary')
-      elseif (h%type(1:3)=='sec') then
-        istat = nf_put_att_text(ncid,NF_GLOBAL,"history_type",
-     |    9,'secondary')
-      else
-        write(6,"('>>> nc_define: unknown h%type=',a)") h%type
-        istat = nf_put_att_text(ncid,NF_GLOBAL,"history_type",
-     |    7,'unknown')
-      endif
+! Primary or Secondary histories (h%hist_type):
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"history_type",
+     |  len_trim(h%hist_type),trim(h%hist_type))
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
      |    'for history_type global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
-! Mss path to source history file:
+! Run type ('initial' or 'continuation')
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"run_type",
+     |  len_trim(h%run_type),trim(h%run_type))
+      if (istat /= NF_NOERR) then
+        write(char120,"('nc_define: Error return from nf_put_att_text ',
+     |    'for run_type global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+!
+! Source history file (for this run, either initial or continuation):
       if (nsource > 0) then ! initial source file
-        istat = nf_put_att_text(ncid,NF_GLOBAL,"mss_source",
-     |    len_trim(h%mss_source)+10,trim(h%mss_source)//' (initial)')
+        istat = nf_put_att_text(ncid,NF_GLOBAL,"source_file",
+     |    len_trim(h%source_file)+10,trim(h%source_file)//' (initial)')
       else ! continuation source file
-        istat = nf_put_att_text(ncid,NF_GLOBAL,"mss_source",
-     |    len_trim(h%mss_source)+15,
-     |    trim(h%mss_source)//' (continuation)')
+        istat = nf_put_att_text(ncid,NF_GLOBAL,"source_file",
+     |    len_trim(h%source_file)+15,
+     |    trim(h%source_file)//' (continuation)')
       endif
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
-     |    'for mss_source global attribute')")
+     |    'for source_file global attribute')")
         call handle_ncerr(istat,char120)
       endif
-      istat = nf_put_att_int(ncid,idv_time,"source_mtime",NF_INT,3,
+!
+! Source model time (will be same as start time for this run,
+! whether initial or continuation)
+      istat = nf_put_att_int(ncid,NF_GLOBAL,"source_mtime",NF_INT,3,
      |  h%source_mtime)
       if (istat /= NF_NOERR) then
-        write(char120,"('Error return from nf_put_att_int ',
-     |    'for source_mtime=',3i4,' global attribute')") h%source_mtime
+        write(char120,"('Error return from nf_put_att_text ',
+     |    'for source_mtime global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
-! Mss path to secsource history file (magnetospheric model only):
-      if (nsecsource > 0) then ! initial secsource file
-        istat = nf_put_att_text(ncid,NF_GLOBAL,"mss_secsource",
-     |    len_trim(h%mss_secsource)+10,trim(h%mss_secsource)//
-     |    ' (initial)')
-      endif
+! Initial file (source file from the initial run)
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"initial_file",
+     |  len_trim(h%initial_file),trim(h%initial_file))
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
-     |    'for mss_secsource global attribute')")
+     |    'for initial_file global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
-! Start date and time of initial run:
-      istat = nf_put_att_int(ncid,NF_GLOBAL,"initial_year",NF_INT,1,
-     |  h%initial_year)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error return from nf_put_att_int ',
-     |    'for start_year global attribute: h%initial_year=',i4)")
-     |    h%initial_year
-        call handle_ncerr(istat,char120)
-      endif
-      istat = nf_put_att_int(ncid,NF_GLOBAL,"initial_day",NF_INT,1,
-     |  h%initial_day)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error return from nf_put_att_int ',
-     |    'for start_day global attribute: h%initial_day=',i4)")
-     |    h%initial_day
-        call handle_ncerr(istat,char120)
-      endif
+! Initial mtime (this is also an attribute of the time coord var)
       istat = nf_put_att_int(ncid,NF_GLOBAL,"initial_mtime",NF_INT,3,
      |  h%initial_mtime)
       if (istat /= NF_NOERR) then
-        write(char120,"('Error return from nf_put_att_int ',
-     |    'for start_mtime global attribute: h%initial_mtime=',i4)")
-     |    h%initial_mtime
+        write(char120,"('Error return from nf_put_att_text ',
+     |    'for initial_mtime global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
-! Missing value:
-      var1(1) = spval
-      istat = nf_put_att_double(ncid,NF_GLOBAL,"missing_value",
-     |  NF_DOUBLE,1,var1)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error return from nf_put_att_double ',
-     |    'for missing_value global attribute')")
-        call handle_ncerr(istat,char120)
-      endif
+! Method 1 for conversion from lev (ln(p0/p)) to pressure in hPa 
+!   (millibars), using p0:
 !
-! Conversion from lev (ln(p0/p)) to pressure mb:
-      write(char80,"('p0*e(-lev(k))*1.e-3')")
-      istat = nf_put_att_text(ncid,NF_GLOBAL,"lev_to_mb",
+      write(char80,"('p0*exp(-lev(k))')")
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"lev_to_hPa_method1",
      |  len_trim(char80),trim(char80))
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
-     |    'for lev_to_mb global attribute')")
+     |    'for lev_to_hPa_method1 global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+!
+! Method 2 for conversion from lev (ln(p0/p)) to pressure in hPa 
+!   (millibars), using p0_model:
+!
+      write(char80,"('p0_model*1.e-3*exp(-lev(k))')")
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"lev_to_hPa_method2",
+     |  len_trim(char80),trim(char80))
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error return from nf_put_att_text ',
+     |    'for lev_to_hPa_method2 global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
@@ -1405,6 +1864,17 @@
         call handle_ncerr(istat,char120)
       endif
 !
+! Missing_value (this can be used by procs if the field does not
+! have its own missing_value attribute)
+      var1(1) = spval
+      istat = nf_put_att_double(ncid,NF_GLOBAL,"missing_value",
+     |  NF_DOUBLE,1,var1)
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error return from ',
+     |    'nf_put_att_double for missing_value global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+!
 ! Potential model used (weimer, heelis, or none):
       istat = nf_put_att_text(ncid,NF_GLOBAL,"potential_model",
      |  len_trim(potential_model),trim(potential_model))
@@ -1414,18 +1884,14 @@
         call handle_ncerr(istat,char120)
       endif
 !
-! TIMED SEE data file:
-      if (len_trim(sd_ncfile) > 0) then
-        istat = nf_put_att_text(ncid,NF_GLOBAL,"sd_ncfile",
-     |    len_trim(sd_ncfile),trim(sd_ncfile))
-      else
-        istat = nf_put_att_text(ncid,NF_GLOBAL,"sd_ncfile",
-     |    6,'[none]')
-      endif
+! tuv_lbc_intop==0 (lbc of t,u,v are not stored in top k-slot)
+! (only "old" histories stored lbc of t,u,v in top slot)
+      ivar1(1) = h%tuv_lbc_intop ! see init in hist.F
+      istat = nf_put_att_int(ncid,NF_GLOBAL,"tuv_lbc_intop",
+     |  NF_INT,1,ivar1)
       if (istat /= NF_NOERR) then
-        write(char120,"('Error return from nf_put_att_text ',
-     |    'for sd_ncfile global attribute: sd_ncfile=',a)") 
-     |    trim(sd_ncfile)
+        write(char120,"('Error return from nf_put_att_int ',
+     |    'for tuv_lbc_intop global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
@@ -1434,59 +1900,107 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error return from nf_enddef')
 !
-! Mag grid coordinates (consdyn.h) were set in init_consdyn (cons_mod.F)
-! (convert to degrees):
-!     do i=1,nmlonp1
-!       gmlon(i) = ylonm(i)*rtdeg
-!     enddo
-!     do i=1,nmlat
-!       gmlat(i) = ylatm(i)*rtdeg
-!     enddo
-!     do i=1,nlev
-!       pmlev(i+3) = plev(i)
-!     enddo
-!     do i=3,1,-1
-!       pmlev(i) = pmlev(i+1)-dlev
-!     enddo
+! Give values to coordinate variables:
 !
-! Give values to dimension variables:
-!
-! Geographic:
+! Geographic horizontal:
       istat = nf_put_var_double(ncid,idv_lon,glon)
+      if (istat /= NF_NOERR)
+     |  call handle_ncerr(istat,'Error giving values to glon coord var')
       istat = nf_put_var_double(ncid,idv_lat,glat)
-      istat = nf_put_var_double(ncid,idv_lev,plev)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error return from nf_put_var_double ',
-     +    ' to assign values to geographic dimension vars')")
-        call handle_ncerr(istat,char120)
-      endif
+      if (istat /= NF_NOERR)
+     |  call handle_ncerr(istat,'Error giving values to glat coord var')
+!
+! Vertical:
+      istat = nf_put_var_double(ncid,idv_lev,zpmid)  ! midpoint levels
+      if (istat /= NF_NOERR)
+     | call handle_ncerr(istat,'Error giving values to zpmid coord var')
+      istat = nf_put_var_double(ncid,idv_ilev,zpint) ! interface levels
+      if (istat /= NF_NOERR)
+     | call handle_ncerr(istat,'Error giving values to zpint coord var')
+!
+! Bottom interface level LBC for t,u,v lbc:
+      istat = nf_put_var_double(ncid,idv_lbc,zibot)
+      if (istat /= NF_NOERR)
+     | call handle_ncerr(istat,'Error giving value to LBC scalar var')
 !
 ! Magnetic:
       istat = nf_put_var_double(ncid,idv_mlon,gmlon)
       istat = nf_put_var_double(ncid,idv_mlat,gmlat)
-      istat = nf_put_var_double(ncid,idv_mlev,pmlev)
+!
+! 11/07 btf: mag midpoints  are zpmag_mid(nmlev), and
+!            mag interfaces are zpmag_int(nimlev)
+! (see init.F)
+!
+      istat = nf_put_var_double(ncid,idv_mlev,zpmag_mid) 
+      istat = nf_put_var_double(ncid,idv_imlev,zpmag_int)
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_var_double ',
      +    ' to assign values to magnetic dimension vars')")
         call handle_ncerr(istat,char120)
       endif
+
+      write(6,"('nc_define: mag midpoints zpmag_mid=',/,(8f8.2))")
+     |  zpmag_mid
+      write(6,"('nc_define: mag interfaces zpmag_int=',/,(8f8.2))") 
+     |  zpmag_int
+
+      end subroutine nc_define
+!-----------------------------------------------------------------------
+      subroutine define_ncfile(ncid,name,idv,att1name,att1val,
+     |  att2name,att2val)
 !
-! Magnetospheric:
-      istat = nf_put_var_double(ncid,idv_magphrlon,ylonmagphr)
-      istat = nf_put_var_double(ncid,idv_magphrlat,ylatmagphr)
+! Args:
+      integer,intent(in) :: ncid
+      integer,intent(out) :: idv
+      character(len=*),intent(in) :: name,att1name,att1val,
+     |  att2name,att2val
+!
+! Local:
+      integer :: istat,ids2(2)
+      character(len=120) :: char120
+!
+      if (len_trim(name) <= 0) then
+        write(6,"('>>> define_ncfile: empty name! returning..')")
+        return
+      endif
+!
+      ids2(1) = id_filelen
+      ids2(2) = id_time
+!
+! Define time-dependent char variable:
+      istat= nf_def_var(ncid,name,NF_CHAR,2,ids2,idv)
       if (istat /= NF_NOERR) then
-        write(char120,"('Error return from nf_put_var_double ',
-     +    ' to assign values to magnetospheric dimension vars')")
+        write(char120,"('Error defining file var ',a)") trim(name)
         call handle_ncerr(istat,char120)
       endif
-      end subroutine nc_define
-!-------------------------------------------------------------------
+!
+! First attribute:
+      if (len_trim(att1name) > 0.and.len_trim(att1val) > 0) then
+        istat = nf_put_att_text(ncid,idv,att1name,len_trim(att1val),
+     |    trim(att1val))
+        if (istat /= NF_NOERR) then
+          write(char120,"('Error defining ',a,' attribute to var ',
+     |      a,': attribute value=',a)") trim(name),trim(att1name),
+     |      trim(att1val)
+          call handle_ncerr(istat,char120)
+        endif
+      endif
+!
+! Second attribute:
+      if (len_trim(att2name) > 0.and.len_trim(att2val) > 0) then
+        istat = nf_put_att_text(ncid,idv,att2name,len_trim(att2val),
+     |    trim(att2val))
+        if (istat /= NF_NOERR) then
+          write(char120,"('Error defining ',a,' attribute to var ',
+     |      a,': attribute value=',a)") trim(name),trim(att2name),
+     |      trim(att2val)
+          call handle_ncerr(istat,char120)
+        endif
+      endif
+      end subroutine define_ncfile
+!-----------------------------------------------------------------------
       subroutine defvar_time_dbl(ncid,name,idtime,idvar,
      |  longname,units)
-
-!     call defvar_time_dbl(ncid,"ut",ids1,idv_ut,
-!    |  "universal time (from model time hour and minute)",
-!    |  "hours")
 !
 ! Define time-dependent variable "name" on open netcdf file ncid.
 ! Variable has a single dimension in time (e.g., ut(time)).
@@ -1530,75 +2044,218 @@
       endif
       end subroutine defvar_time_dbl
 !-----------------------------------------------------------------------
-      subroutine defvar_sech(ncid,nfgeo,nfmag,nfgeo2d,nfmag2d,nfmagphr)
+      subroutine deflbc(ncid,vname,idv)
 !
-! Define secondary history fields on currently open ncid
-! (not data -- see wrf3d for data write)
+! Define t, u, or v lbc on current history file. Return new varialbe
+!   id in idv. (vname should be TLBC, ULBC, or VLBC)
 !
 ! Args:
-      integer,intent(in) :: 
-     |  ncid,    ! netcdf file id
-     |  nfgeo,   ! number of fields on geographic grid
-     |  nfmag,   ! number of fields on magnetic grid
-     |  nfgeo2d, ! number of fields on geographic grid 2d
-     |  nfmag2d, ! number of fields on magnetic grid 2d
-     |  nfmagphr ! number of fields on magnetospheric grid
+      integer,intent(in) :: ncid
+      integer,intent(out) :: idv
+      character(len=*),intent(in) :: vname
 !
 ! Local:
-      integer :: i,ii,ier,istat,iprog
+      integer :: istat,len
+      character(len=80) :: char80,units
+!
+      ids3(1) = id_lon
+      ids3(2) = id_lat
+      ids3(3) = id_time
+!
+! Define variable:
+      istat = nf_def_var(ncid,trim(vname),NF_DOUBLE,3,ids3,idv)
+      if (istat /= NF_NOERR) then
+        write(char80,"('Error defining 2-d var ',a)") trim(vname)
+        call handle_ncerr(istat,trim(char80))
+      endif
+!
+! Long name attribute:
+! (Variable names ending in '_NM' are at previous time n-1)
+!
+      write(char80,"('Lower boundary condition of ',a,'N')") vname(1:1)
+      len = len_trim(vname)
+      if (vname(len-2:len)=='_NM') 
+     |  char80 = trim(char80)//' (TIME N-1)'
+!
+      istat = nf_put_att_text(ncid,idv,"long_name",
+     |  len_trim(char80),trim(char80))
+      if (istat /= NF_NOERR) then
+        write(char80,"('Error defining long_name attribute of ',
+     |    'variable ',a)") trim(vname)
+        call handle_ncerr(istat,trim(char80))
+      endif
+!
+! Units attribute:
+      units = 'cm/s'
+      if (vname(1:1)=='T') units = 'K'
+      istat = nf_put_att_text(ncid,idv,"units",len_trim(units),
+     |  trim(units))
+      if (istat /= NF_NOERR) then
+        write(char80,"('Error defining units attribute of variable ',
+     |    a)") trim(vname)
+        call handle_ncerr(istat,trim(char80))
+      endif
+!
+! Coordinates attribute:
+      istat = nf_put_att_text(ncid,idv,"coordinates",3,'LBC')
+      if (istat /= NF_NOERR) then
+        write(char80,"('Error defining coordinates attribute of ',
+     |    'variable',a)") trim(vname)
+        call handle_ncerr(istat,trim(char80))
+      endif
+!     write(6,"('deflbc: defined var ',a,' idv=',i3)") trim(vname),idv
+      end subroutine deflbc
+!-----------------------------------------------------------------------
+      subroutine def_fsech(ncid)
+!
+! Define secondary history fields (geo or mag, 2d+time or 3d+time):
+!
+      use fields_module,only: fsechist
+      use hist_module,only: nsech,isecout
+      implicit none
+!
+! Args:
+      integer,intent(in) :: ncid
+!
+! Local:
+      integer :: ix,istat,iprog,idimids(4)
       character(len=80) :: char80
+      real :: var1(1)
 !
 ! External:
-       integer,external :: strloc
+      integer,external :: strloc
 !
-      if (allocated(idv_sech)) deallocate(idv_sech)
-      allocate(idv_sech(nfgeo+nfmag+nfgeo2d+nfmag2d+nfmagphr),stat=ier)
-      if (ier /= 0) then
-        write(6,"(/,'>>> WARNING defvar_sech: ',
-     |  'error return from allocate for idv_sech: nfgeo=',i3,
-     |  ' nfmag=',i3,' nfgeo2dr=',i3,
-     |  ' nfmag2d=',i3,' nfmagphr=',i3,' ier=',i4)")
-     |  nfgeo,nfmag,nfgeo2d,nfmag2d,nfmagphr,ier
-      endif
-      if (nfgeo > 0) then
-        do i=1,nfgeo
-          iprog = strloc(f4d%short_name,size(f4d),fsech(i)%short_name)
+      if (nsech==2) istat = nf_redef(ncid) ! put dataset in define mode
+!
+! Fields loop:
+      floop: do ix=1,mxfsech
+        if (len_trim(fsechist(ix)%short_name)==0) cycle floop
+!
+! Define prognostic only if this is 1st history on this file:
+        iprog=strloc(f4d%short_name,size(f4d),fsechist(ix)%short_name)
+        if (iprog > 0.and.nsech==1) then
 !
 ! Define prognostic secondary history field:
-          if (iprog > 0) then
-            call defvar_f4d(ncid,f4d(iprog),idv_sech(i))
+          call defvar_f4d(ncid,f4d(iprog),idv_fsech(ix))
 !
-! Define secondary history field:
-          else
-            call defvar_f3d(ncid,fsech(i),idv_sech(i))
-          endif
-        enddo
-      endif
-      if (nfmag > 0) then
-        do i=1,nfmag
-          call defvar_f3d(ncid,fsechmag(i),idv_sech(nfgeo+i))
-        enddo
-      endif
-!     subroutine defvar_f2d(ncid,f,idvar)
-      if (nfgeo2d > 0) then
-        do i=1,nfgeo2d
-          call defvar_f2d(ncid,fsech2d(i),idv_sech(nfgeo+nfmag+i))
-        enddo
-      endif
-      if (nfmag2d > 0) then
-        do i=1,nfmag2d
-          call defvar_f2d(ncid,fsechmag2d(i),idv_sech(nfgeo+nfmag+
-     |       nfgeo2d+i))
-        enddo
-      endif
-      if (nfmagphr > 0) then
-        do i=1,nfmagphr
-          call defvar_f2d(ncid,fsechmagphr2d(i),idv_sech(nfgeo+nfmag+
-     |       nfgeo2d+nfmag2d+i))
-        enddo
-      endif
-      end subroutine defvar_sech
-!-------------------------------------------------------------------
+! 10/27/05 btf: Assume user-requested 'W' refers to "old hist" W, i.e. OMEGA:
+!
+        elseif (nsech==1.and.fsechist(ix)%short_name=='W') then
+          write(6,"('Note: defining requested secondary history ',
+     |      'variable ''W'' as prognostic ''OMEGA''')") 
+          iprog = strloc(f4d%short_name,size(f4d),'OMEGA')
+          call defvar_f4d(ncid,f4d(iprog),idv_fsech(ix))
+          cycle floop
+        endif ! iprog and nsech
+!
+! Define diagostics only if not first timestep (because in that case, 
+! diags have not yet been allocated by addfld):
+        if (istep==0.or.iprog > 0) cycle floop
+!
+! If data pointer is not associated, addfld was probably never called
+! for this field. In this case, do not define the field. (subs def_fsech
+! and wrfsech will also check this pointer, see nchist.F, and sub
+! mp_gather2root_fsech in mpi.F)
+!
+        if (.not.associated(fsechist(ix)%data)) then
+          write(6,"('>>> WARNING: Field ',a,' will not be defined',
+     |      ' on secondary histories because',/,4x,'data was not ',
+     |      'allocated. (addfld was probably not called for this ',
+     |      'field)')") trim(fsechist(ix)%short_name)
+          cycle floop
+        endif
+!
+! Get dim id's for 3 dimensions (geo or mag):
+        if (fsechist(ix)%dimsizes(3) /= 0) then ! 3d var (lon,lat,lev,time)
+          istat=nf_inq_dimid(ncid,fsechist(ix)%dimnames(1),idimids(1)) 
+          if (istat /= NF_NOERR) then
+            write(char80,"('def_fsech: Error getting id for dim ',
+     |        a,' (1st of 3)')") trim(fsechist(ix)%dimnames(1))
+            call handle_ncerr(istat,trim(char80))
+          endif 
+          istat=nf_inq_dimid(ncid,fsechist(ix)%dimnames(2),idimids(2)) 
+          if (istat /= NF_NOERR) then
+            write(char80,"('def_fsech: Error getting id for dim ',
+     |        a,' (2nd of 3)')") trim(fsechist(ix)%dimnames(2))
+            call handle_ncerr(istat,trim(char80))
+          endif 
+          istat=nf_inq_dimid(ncid,fsechist(ix)%dimnames(3),idimids(3)) 
+          if (istat /= NF_NOERR) then
+            write(char80,"('def_fsech: Error getting id for dim ',
+     |        a,' (3rd of 3)')") trim(fsechist(ix)%dimnames(3))
+            call handle_ncerr(istat,trim(char80))
+          endif 
+          idimids(4) = id_time
+!
+! Define 3d var (lon,lat,lev,time)
+          istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
+     |      4,idimids,idv_fsech(ix)) ! returns idv_fsech(ix)
+          if (istat /= NF_NOERR) then
+
+            write(6,"('>>> def_fsech: Error defining 3d field ',a,
+     |        ' idv_fsech(ix)=',i4,'idimids=',4i4)") 
+     |        trim(fsechist(ix)%short_name),idv_fsech(ix),idimids
+
+            write(char80,"('def_fsech: Error defining 3d field ',a)")
+     |        trim(fsechist(ix)%short_name)
+            call handle_ncerr(istat,trim(char80))
+          endif 
+!
+! Get dim id's for 2 dimensions (geo or mag):
+        else                              ! 2d var (lon,lat,time)
+          istat=nf_inq_dimid(ncid,fsechist(ix)%dimnames(1),idimids(1)) 
+          if (istat /= NF_NOERR) then
+            write(char80,"('def_fsech: Error getting id for dim ',
+     |        a,' (1st of 2)')") trim(fsechist(ix)%dimnames(1))
+            call handle_ncerr(istat,trim(char80))
+          endif 
+          istat=nf_inq_dimid(ncid,fsechist(ix)%dimnames(2),idimids(2)) 
+          if (istat /= NF_NOERR) then
+            write(char80,"('def_fsech: Error getting id for dim ',
+     |        a,' (2nd of 2)')") trim(fsechist(ix)%dimnames(2))
+            call handle_ncerr(istat,trim(char80))
+          endif 
+          idimids(3) = id_time
+!
+! Define 2d var (lon,lat,time)
+          istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
+     |      3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
+          if (istat /= NF_NOERR) then
+            write(char80,"('def_fsech: Error defining 2d field ',a)")
+     |        fsechist(ix)%short_name 
+            call handle_ncerr(istat,trim(char80))
+          endif 
+        endif  ! 2d or 3d
+!       write(6,"('def_fsech: defined sech field ',a,': dimnames=',
+!    |    a,',',a,',',a,' dimsizes=',3i4)") fsechist(ix)%short_name,
+!    |    trim(fsechist(ix)%dimnames(1)),trim(fsechist(ix)%dimnames(2)),
+!    |    trim(fsechist(ix)%dimnames(3)),fsechist(ix)%dimsizes
+!
+! Attributes:
+        if (len_trim(fsechist(ix)%long_name) > 0) then
+          istat = nf_put_att_text(ncid,idv_fsech(ix),"long_name",
+     |    len_trim(fsechist(ix)%long_name),trim(fsechist(ix)%long_name))
+        endif
+        if (len_trim(fsechist(ix)%units) > 0) then
+          istat = nf_put_att_text(ncid,idv_fsech(ix),"units",
+     |    len_trim(fsechist(ix)%units),trim(fsechist(ix)%units))
+        endif
+!
+! Missing value:
+        var1(1) = spval
+        istat = nf_put_att_double(ncid,idv_fsech(ix),"missing_value",
+     |    NF_DOUBLE,1,var1)
+        if (istat /= NF_NOERR) then
+          write(char80,"('def_fsech: Error return from ',
+     |      'nf_put_att_double for missing_value var attribute')")
+          call handle_ncerr(istat,char80)
+        endif
+!
+! End field loop:
+      enddo floop ! i=1,mxfsech
+      if (nsech==2) istat = nf_enddef(ncid) ! take out of define mode
+      end subroutine def_fsech
+!-----------------------------------------------------------------------
       subroutine defvar_f4d(ncid,f,idvar)
 !
 ! Define a prognostic variable on current netcdf history file:
@@ -1613,12 +2270,14 @@
       integer :: istat,idimids(4)
       character(len=80) :: char80
       character(len=160) :: char160
+      real :: var1(1)
 !
 ! Prognostics are dimensioned (lon,lat,lev,time):
       if (.not.fakeflds) then
         idimids(1) = id_lon
         idimids(2) = id_lat
-        idimids(3) = id_lev
+        idimids(3) = id_lev                             ! midpoints
+        if (f%vcoord(1:3)=='int') idimids(3) = id_ilev  ! interfaces
         idimids(4) = id_time
       else
         idimids(1:3) = id_fake
@@ -1646,6 +2305,9 @@
       endif
 !
 ! Add units attribute:
+! 1/18/06 btf: Use f%units for densities) instead of "fraction" or "1",
+!              and do not add alternate units.
+!
       istat = nf_put_att_text(ncid,idvar,"units",len_trim(f%units),
      |  f%units)
       if (istat /= NF_NOERR) then
@@ -1654,102 +2316,138 @@
      |    trim(f%units)
         call handle_ncerr(istat,trim(char80))
       endif
+!
+! 10/27/05 btf: Add former_name attribute to OMEGA to indicate it
+!               was previously known as W:
+      if (f%short_name=='OMEGA') then
+        istat = nf_put_att_text(ncid,idvar,"former_name",1,"W")
+      endif
+!
+! Add missing_value attribute:
+      var1(1) = spval
+      istat = nf_put_att_double(ncid,idvar,"missing_value",
+     |  NF_DOUBLE,1,var1)
+      if (istat /= NF_NOERR) then
+        write(char160,"('defvar_f4d: Error return from ',
+     |    'nf_put_att_double for missing_value var attribute')")
+        call handle_ncerr(istat,char160)
+      endif
       end subroutine defvar_f4d
-!-------------------------------------------------------------------
+!-----------------------------------------------------------------------
       subroutine defvar_f3d(ncid,f,idvar)
 !
-! Define a diagnostic variable (geographic and magnetic)
-! on the current netcdf history file:
+! Define a prognostic variable on current netcdf history file:
+! (not data -- see wrf3d for data write)
 !
 ! Args:
       integer,intent(in)  :: ncid
       integer,intent(out) :: idvar
-      type(fields_3d),intent(inout) :: f
+      type(fields_3d),intent(in) :: f
 !
 ! Local:
-      integer :: istat,idimids(4),ndims
+      integer :: istat,idimids(4)
       character(len=80) :: char80
+      character(len=160) :: char160
+      real :: var1(1)
 !
+! Prognostics are dimensioned (lon,lat,lev,time):
       if (.not.fakeflds) then
-        if (.not.f%magnetos.and..not.f%magnetic) then ! field is on geographic grid
-          ndims = 4
-          idimids(1) = id_lon
-          idimids(2) = id_lat
-          idimids(3) = id_lev
-          idimids(4) = id_time
-        elseif (.not.f%magnetos) then    ! field is on magnetic grid
-          ndims = 4
-          idimids(1) = id_mlon
-          idimids(2) = id_mlat
-          idimids(3) = id_mlev
-          idimids(4) = id_time
-        endif
+        idimids(1) = id_lon
+        idimids(2) = id_lat
+        idimids(3) = id_lev                             ! midpoints
+        if (f%vcoord(1:3)=='int') idimids(3) = id_ilev  ! interfaces
+        idimids(4) = id_time
       else
         idimids(1:3) = id_fake
         idimids(4) = id_time
       endif
-!
-      istat = nf_def_var(ncid,f%short_name,NF_DOUBLE,ndims,
-     |   idimids,idvar)
+! This call returns the variable id, idvar.
+      istat = nf_def_var(ncid,f%short_name,NF_DOUBLE,4,idimids,idvar)
       if (istat /= NF_NOERR) then
-        write(char80,"('Error defining diagnostic field ',a)") 
+        write(char80,"('Error defining 4-d field ',a)") 
      |    f%short_name
         call handle_ncerr(istat,trim(char80))
-!     else
-!       write(6,"('defvar_f3d: defined diagnostic field ',a)")
-!    |    f%short_name
+      endif
+!
+! Add long_name attribute:
+      istat = nf_put_att_text(ncid,idvar,"long_name",
+     |  len_trim(f%long_name),trim(f%long_name))
+!
+! Cray apparently crashed here after 1380 steps 
+! (char80 was used)
+      if (istat /= NF_NOERR) then
+        write(char160,"('Error defining long_name of 4-d',
+     |    ' variable ',a,': long_name = ',/,a)") trim(f%short_name),
+     |    trim(f%long_name)
+        call handle_ncerr(istat,trim(char160))
+      endif
+!
+! Add units attribute:
+! We may be writing to primary or secondary histories here (secondaries
+!   only if this is a "prognostic" field (i.e., also on primary histories)).
+! To comply with Unidata's udunits, if f%units==MMR (or mmr), set units
+!   to "1" (fractional). Then add alternate_units attribute with the
+!   value of f%units (i.e., alternate_units="MMR" or "mmr")
+! 10/5/05 btf: using "fraction" instead of "1" (despite non-valid udunits)
+!
+      if (trim(f%units)=='MMR'.or.trim(f%units)=='mmr') then
+
+!       write(6,"('Note: changing units of ',a,' from ',a,' to ''1''', 
+!    |    ' and adding alternate_units=''',a,'''')")
+!    |    trim(f%short_name),trim(f%units),trim(f%units)
+!       write(6,"('Note: changing units of ',a,' from ',a,' to ',
+!    |    '''fraction'' and adding alternate_units=''',a,'''')")
+!    |    trim(f%short_name),trim(f%units),trim(f%units)
+
+!       istat = nf_put_att_text(ncid,idvar,"units",1,'1')
+        istat = nf_put_att_text(ncid,idvar,"units",8,'fraction')
+        if (istat /= NF_NOERR) then
+!         write(char80,"('Error setting units of ',a,' to ''1''')")
+!    |      trim(f%short_name)
+          write(char80,"('Error setting units of ',a,' to ',
+     |      '''fraction''')") trim(f%short_name)
+          call handle_ncerr(istat,trim(char80))
+        endif
+        istat = nf_put_att_text(ncid,idvar,"alternate_units",
+     |    len_trim(f%units),f%units)
+        if (istat /= NF_NOERR) then
+          write(char80,"('Error adding attribute alternate_units=',a,
+     |      ' to var ',a)") trim(f%units),trim(f%short_name)
+          call handle_ncerr(istat,trim(char80))
+        endif
+      else
+        istat = nf_put_att_text(ncid,idvar,"units",len_trim(f%units),
+     |    f%units)
+        if (istat /= NF_NOERR) then
+          write(char80,"('Error defining units of 4-d',
+     |      ' variable ',a,': units = ',a)") trim(f%short_name),
+     |      trim(f%units)
+          call handle_ncerr(istat,trim(char80))
+        endif
+      endif
+!
+! 10/27/05 btf: Add former_name attribute to OMEGA to indicate it
+!               was previously known as W:
+      if (f%short_name=='OMEGA') then
+        istat = nf_put_att_text(ncid,idvar,"former_name",1,"W")
+      endif
+!
+! Add missing_value attribute:
+      var1(1) = spval
+      istat = nf_put_att_double(ncid,idvar,"missing_value",
+     |  NF_DOUBLE,1,var1)
+      if (istat /= NF_NOERR) then
+        write(char160,"('defvar_f4d: Error return from ',
+     |    'nf_put_att_double for missing_value var attribute')")
+        call handle_ncerr(istat,char160)
       endif
       end subroutine defvar_f3d
-!-------------------------------------------------------------------
-      subroutine defvar_f2d(ncid,f,idvar)
-!
-! Define a diagnostic variable (geographic, magnetic or magnetosphere)
-! on the current netcdf history file:
-!
-! Args:  
-      integer,intent(in)  :: ncid
-      integer,intent(out) :: idvar
-      type(fields_2d),intent(inout) :: f
-!
-! Local: 
-      integer :: istat,idimids(3),ndims
-      character(len=80) :: char80
-!
-      if (.not.fakeflds) then
-        if (.not.f%magnetos.and..not.f%magnetic) then ! 2d geographic
-          idimids(1) = id_lon
-          idimids(2) = id_lat
-        elseif (.not.f%magnetos) then    ! field is on magnetic 2d grid
-          idimids(1) = id_mlon
-          idimids(2) = id_mlat
-        else                             ! field is on magnetospheric 2d grid
-          idimids(1) = id_magphrlon
-          idimids(2) = id_magphrlat
-         endif
-         ndims = 3
-         idimids(3) = id_time
-      else
-        idimids(1:2) = id_fake
-        idimids(3) = id_time
-      endif
-!
-      istat = nf_def_var(ncid,f%short_name,NF_DOUBLE,ndims,
-     |   idimids,idvar)
-      if (istat /= NF_NOERR) then
-        write(char80,"('Error defining diagnostic field ',a)")
-     |    f%short_name
-        call handle_ncerr(istat,trim(char80))
-!     else
-!       write(6,"('defvar_f3d: defined diagnostic field ',a)")
-!    |    f%short_name
-      endif
-      end subroutine defvar_f2d
-!-------------------------------------------------------------------
+!-----------------------------------------------------------------------
       subroutine nc_wrhist(ncid,diskfile,iprint)
 !
 ! Write current history structure to open netcdf output file:
 !
-      use hist_module,only: h,hist_print
+      use hist_module,only: sh,h,hist_print
       use input_module,only: start,secstart
 !
 ! Args:
@@ -1757,47 +2455,42 @@
       character(len=*),intent(in) :: diskfile
 !
 ! Local:
-      integer :: mins,istat,ivar1(1),i,j,iprog,imo,ida,mtimetmp(4)
+      integer :: mins,istat,ivar1(1),i,j,iprog,imo,ida,mtimeinit(4),
+     |  ivar2(2),ii
       character(len=120) :: char120
+      character(len=240) :: char240
       character(len=80) :: char80
       integer :: ndims,nvars,ngatts,unlimdimid
-      real :: var1(1),var22(2,2),var2(2),var10(10),rmins,rmins1(1)
+      real :: var1(1),var22(2,2),var2(2),var10(10),rmins,rdays
 !
 ! External:
       integer,external :: strloc
       real,external :: mtime_delta
 !
-! Total model time in minutes:
-! Normally time is current model time (mins) since start_day,mtime
-!   (i.e., since start time of the initial run), however if model time 
-!   is earlier than initial start time, use time since start time of 
-!   current run.
+! Time: decimal days since start time of initial run:
+! h%initial_mtime was set by sub hist_initype (if initial run),
+! or was read from source history (if continuation run). 
 ! 
-      mtimetmp(1) = h%initial_day
-      mtimetmp(2:3) = h%initial_mtime(2:3) ; mtimetmp(4) = 0
-      rmins = mtime_delta(mtimetmp,h%modeltime)
-      if (rmins < 0.) then ! use time since start time of the run
-        if (h%type(1:3)=='pri') then
-          mtimetmp(1:3) = start(:,1) ; mtimetmp(4) = 0
-          rmins = mtime_delta(mtimetmp,h%modeltime)
-        elseif (h%type(1:3)=='sec') then
-          mtimetmp(1:3) = secstart(:,1) ; mtimetmp(4) = 0
-          rmins = mtime_delta(mtimetmp,h%modeltime)
-        else
-          write(6,"(/,'>>> WARNING nc_wrhist: unknown h%type=',a)") 
-     |      h%type
-          rmins = 0.
-        endif
+      mtimeinit(1:3) = sh%initial_mtime(1:3) ; mtimeinit(4) = 0
+      rmins = mtime_delta(mtimeinit,h%modeltime)
+      rdays = rmins/1440.
+      if (rmins < 0.) then
+        write(6,"(/,'>>> nc_wrhist: time from initial start must be',
+     |    ' >= 0: mtimeinit=',3i4,'  h%modeltime=',3i4,' delta (mins)=',
+     |    f10.2)") mtimeinit(1:3),h%modeltime(1:3),rmins
+        call shutdown('delta time from init run')
+      else
+!       write(6,"('nc_wrhist: mtimeinit=',3i4,' h%modeltime=',3i4,
+!    |    ' delta (mins)=',f10.2,' delta (days)=',f8.2)")
+!    |    mtimeinit(1:3),h%modeltime(1:3),rmins,rdays
       endif
       if (idv_time <= 0) istat = nf_inq_varid(ncid,"time",idv_time)
-      istat = nf_put_var1_double(ncid,idv_time,h%ihist,rmins)
+      istat = nf_put_var1_double(ncid,idv_time,h%ihist,rdays)
       if (istat /= NF_NOERR) then
-        write(char120,"('Error from nf_put_var1_double defining ',
-     |    'time at h%modeltime=',4i4,' rmins=',e12.4,
-     |    ' h%initial_mtime=',3i4,' start(:,1)=',3i4,' secstart(:,1)=',
-     |    3i4)") h%modeltime,rmins,h%initial_mtime,start(:,1),
-     |    secstart(:,1)
-        call handle_ncerr(istat,char120)
+        write(char240,"('Error from nf_put_var1_double defining ',
+     |    'time at h%modeltime=',4i4,' mtimeinit=',3i4,
+     |    ' delta (days)=',f8.2)") h%modeltime,rdays,mtimeinit(1:3)
+        call handle_ncerr(istat,char240)
       endif
 !
 ! Model time (day,hour,minute):
@@ -1833,6 +2526,33 @@
         write(char120,"('Error from nf_put_var1_int defining ',
      |    'calendar day at h%ihist=',i3,': h%day=',i5)") 
      |    h%ihist,h%day
+        call handle_ncerr(istat,char120)
+      endif
+!
+! Calendar advance:
+      if (idv_calendar_adv <= 0) 
+     |  istat = nf_inq_varid(ncid,"calendar_advance",idv_calendar_adv)
+      istat = nf_put_var1_int(ncid,idv_calendar_adv,h%ihist,
+     |  h%calendar_advance)
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error from nf_put_var1_int defining ',
+     |    'calendar advance flag at h%ihist=',i3,
+     |    ': h%calendar_advance=',i5)") h%ihist,h%calendar_advance
+        call handle_ncerr(istat,char120)
+      endif
+!
+! Date and time history was written:
+      if (idv_writedate <= 0) istat = nf_inq_varid(ncid,"write_date",
+     |  idv_writedate)
+      start_2d(1) = 1
+      start_2d(2) = h%ihist
+      count_2d(1) = len(h%write_date) 
+      count_2d(2) = 1
+      istat = nf_put_vara_text(ncid,idv_writedate,start_2d,count_2d,
+     |  h%write_date)
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error from nf_put_vara_text writing ',
+     |    'h%write_date=',a)") trim(h%write_date)
         call handle_ncerr(istat,char120)
       endif
 !
@@ -1875,64 +2595,27 @@
       istat = nf_put_vara_double(ncid,idv_sdtide,start_2d,count_2d,
      |  var10)
 !
-! ncep/nmc flag:
-! time-gcm only, but leave it for processors.
-      if (idv_ncep <= 0) istat = nf_inq_varid(ncid,"ncep",idv_ncep)
-      istat = nf_put_var1_int(ncid,idv_ncep,h%ihist,h%ncep)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error from nf_put_var1_int defining ',
-     +    'ncep at h%ihist=',i3,': h%ncep=',i3)") h%ihist,h%ncep
-        call handle_ncerr(istat,char120)
-      endif
+! Update gpi_ncfile:
+      call update_ncfile(ncid,"gpi_ncfile",h%gpi_ncfile,idv_gpi_ncfile,
+     |  h%ihist)
 !
-! gpi flag:
-      if (idv_gpi <= 0) istat = nf_inq_varid(ncid,"gpi",idv_gpi)
-      istat = nf_put_var1_int(ncid,idv_gpi,h%ihist,h%gpi)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error from nf_put_var1_int defining ',
-     +    'gpi at h%ihist=',i3,': h%gpi=',i3)") h%ihist,h%gpi
-        call handle_ncerr(istat,char120)
-      endif
+! Update ncep_ncfile:
+      call update_ncfile(ncid,"ncep_ncfile",h%ncep_ncfile,
+     |  idv_ncep_ncfile,h%ihist)
 !
-! gswmdi flag for diurnal tides:
-      if (idv_gswmdi <= 0) istat = nf_inq_varid(ncid,"gswmdi",
-     |  idv_gswmdi)
-      istat = nf_put_var1_int(ncid,idv_gswmdi,h%ihist,h%gswmdi)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error from nf_put_var1_int defining ',
-     |   'gswmdi at h%ihist=',i3,': h%gswmdi=',i3)") h%ihist,h%gswmdi
-        call handle_ncerr(istat,char120)
-      endif
-! gswmsdi flag for semidiurnal tides:
-      if (idv_gswmsdi <= 0) istat = nf_inq_varid(ncid,"gswmsdi",
-     |  idv_gswmsdi)
-      istat = nf_put_var1_int(ncid,idv_gswmsdi,h%ihist,h%gswmsdi)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error from nf_put_var1_int defining ',
-     |   'gswmsdi at h%ihist=',i3,': h%gswmsdi=',i3)") h%ihist,
-     |   h%gswmsdi
-        call handle_ncerr(istat,char120)
-      endif
-! gswmnmdi flag for nonmigrating diurnal tides:
-      if (idv_gswmnmdi <= 0) istat = nf_inq_varid(ncid,"gswmnmdi",
-     |  idv_gswmnmdi)
-      istat = nf_put_var1_int(ncid,idv_gswmnmdi,h%ihist,h%gswmnmdi)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error from nf_put_var1_int defining ',
-     |   'gswmnmdi at h%ihist=',i3,': h%gswmnmdi=',i3)") h%ihist,
-     |   h%gswmnmdi
-        call handle_ncerr(istat,char120)
-      endif
-! gswmnmsdi flag for nonmigrating semidiurnal tides:
-      if (idv_gswmnmsdi <= 0) istat = nf_inq_varid(ncid,"gswmnmsdi",
-     |  idv_gswmnmsdi)
-      istat = nf_put_var1_int(ncid,idv_gswmnmsdi,h%ihist,h%gswmnmsdi)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error from nf_put_var1_int defining ',
-     |   'gswmnmsdi at h%ihist=',i3,': h%gswmnmsdi=',i3)") h%ihist,
-     |   h%gswmnmsdi
-        call handle_ncerr(istat,char120)
-      endif
+! Update see_ncfile:
+      call update_ncfile(ncid,"see_ncfile",h%see_ncfile,idv_see_ncfile,
+     |  h%ihist)
+!
+! Update gswm files:
+      call update_ncfile(ncid,"gswm_mi_di_ncfile",h%gswm_mi_di_ncfile,
+     |  idv_gswm_mi_di_ncfile,h%ihist)
+      call update_ncfile(ncid,"gswm_mi_sdi_ncfile",h%gswm_mi_sdi_ncfile,
+     |  idv_gswm_mi_sdi_ncfile,h%ihist)
+      call update_ncfile(ncid,"gswm_nm_di_ncfile",h%gswm_nm_di_ncfile,
+     |  idv_gswm_nm_di_ncfile,h%ihist)
+      call update_ncfile(ncid,"gswm_nm_sdi_ncfile",h%gswm_nm_sdi_ncfile,
+     |  idv_gswm_nm_sdi_ncfile,h%ihist)
 !
 ! f107d and f107a (daily and average solar fluxes):
       if (idv_f107d <= 0) istat = nf_inq_varid(ncid,"f107d",
@@ -1979,9 +2662,20 @@
       if (idv_ed2 <= 0) istat = nf_inq_varid(ncid,"ed2",idv_ed2)
       istat = nf_put_var1_double(ncid,idv_ed2,h%ihist,h%ed2)
 !
-! Standard pressure:
+! Reference pressure used to convert ln(p0/p) to pressure (hPa):
+! (h%p0 was set in sub define_hist, output.F)
       if (idv_p0 <= 0) istat = nf_inq_varid(ncid,"p0",idv_p0)
       istat = nf_put_var1_double(ncid,idv_p0,h%ihist,h%p0)
+!
+! Reference pressure used by the model (microbars):
+! (h%p0_model was set in sub define_hist, output.F)
+      if (idv_p0_model <= 0) istat = nf_inq_varid(ncid,"p0_model",
+     |  idv_p0_model)
+      istat = nf_put_var1_double(ncid,idv_p0_model,h%ihist,h%p0_model)
+!
+! Gravitational constant used in the model:
+      if (idv_grav <= 0) istat = nf_inq_varid(ncid,"grav",idv_grav)
+      istat = nf_put_var1_double(ncid,idv_grav,h%ihist,h%grav)
 !
 ! Timestep (seconds):
       if (idv_step <= 0) istat = nf_inq_varid(ncid,"timestep",idv_step)
@@ -1992,6 +2686,41 @@
         call handle_ncerr(istat,char120)
       endif
 !
+! Update run_type (initial or continuation):
+      istat = nf_redef(ncid) ! put dataset in define mode
+
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"run_type",
+     |  len_trim(h%run_type),trim(h%run_type))
+      if (istat /= NF_NOERR) then
+        write(char120,"('nc_wrhist: Error return from nf_put_att_text ',
+     |    'for run_type global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+!
+! Update source_file and source mtime:
+      if (h%run_type(1:4)=='init') then ! initial source file
+        istat = nf_put_att_text(ncid,NF_GLOBAL,"source_file",
+     |    len_trim(h%source_file)+10,trim(h%source_file)//' (initial)')
+      elseif (h%run_type(1:4)=='cont') then ! continuation source file
+        istat = nf_put_att_text(ncid,NF_GLOBAL,"source_file",
+     |    len_trim(h%source_file)+15,
+     |    trim(h%source_file)//' (continuation)')
+      endif
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error return from nf_put_att_text ',
+     |    'for source_file global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+      istat = nf_put_att_int(ncid,NF_GLOBAL,"source_mtime",NF_INT,3,
+     |  h%source_mtime)
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error return from nf_put_att_text ',
+     |    'for source_mtime global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+
+      istat = nf_enddef(ncid) ! take out of define mode
+!
 ! Update number of histories on the file (global attribute):
       ivar1(1) = h%ihist
       istat = nf_put_att_int(ncid,NF_GLOBAL,"nhist",NF_INT,1,ivar1)
@@ -2001,537 +2730,342 @@
         call handle_ncerr(istat,char120)
       endif
 !
-! Number of fields (scalar):
-      if (idv_nflds <= 0) istat = nf_inq_varid(ncid,"nflds",idv_nflds)
-!     istat = nf_put_var1_int(ncid,idv_nflds,h%ihist,h%nflds)
-      istat = nf_put_var_int(ncid,idv_nflds,h%nflds)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error from nf_put_var_int defining ',
-     +    'nflds: h%nflds=',i4)") h%nflds
-        call handle_ncerr(istat,char120)
-      endif
-!
 ! Add fields data to primary history:
 ! Currently (2/00), only prognostic fields are written to the
 !   primary histories:
 !
-      if (h%type(1:3)=='pri') then
+      idv_tlbc = 0 ; idv_ulbc = 0 ; idv_vlbc = 0          ! forces wrlbc to inquire
+      idv_tlbc_nm = 0 ; idv_ulbc_nm = 0 ; idv_vlbc_nm = 0 ! forces wrlbc to inquire
+      if (h%hist_type(1:3)=='pri') then
         do i=1,nf4d_hist
           call wrf4d(ncid,f4d(i)%short_name,h%ihist,fakeflds,i)
-        enddo
+!
+! Write ZG after Z (zg was calculated by sub calczg in addiag.F,
+! then gathered to fzg by mp_gather2root_f3d):
+! 3/1/06 btf: do not write ZG to primary histories.
+!         if (trim(f4d(i)%short_name)=='Z')
+!    |      call wrf3d(ncid,fzg,h%ihist,'ZG',idv_zg)
+        enddo ! i=1,nf4d_hist
+!
+! Update t,u,v lbc to primary history: 
+! Global arrays t,u,vlbc_glb were gathered from subdomains for history 
+!   output by sub mp_gather2root_lbc (mpi.F).
+!
+        call wrlbc(ncid,"TLBC",tlbc_glb,h%ihist,idv_tlbc,'pri')
+        call wrlbc(ncid,"ULBC",ulbc_glb,h%ihist,idv_ulbc,'pri')
+        call wrlbc(ncid,"VLBC",vlbc_glb,h%ihist,idv_vlbc,'pri')
+!
+        call wrlbc(ncid,"TLBC_NM",tlbc_nm_glb,h%ihist,idv_tlbc_nm,'pri')
+        call wrlbc(ncid,"ULBC_NM",ulbc_nm_glb,h%ihist,idv_ulbc_nm,'pri')
+        call wrlbc(ncid,"VLBC_NM",vlbc_nm_glb,h%ihist,idv_vlbc_nm,'pri')
 !
 ! Add fields data to secondary history:
-! If a prognostic field, write field from fg to the history 
-!   (sub wrf4d).
-! If a diagnostic field, write field from fsech%data
-!   (fsech%data was init to spval by sub set_fsech. If istep > 0,
-!    then fsech%data should have been defined by addfsech.
+      elseif (h%hist_type(1:3)=='sec') then
+        call wrfsech(ncid,h%ihist) ! write secondary prog and diag fields
 !
-      elseif (h%type(1:3)=='sec') then
-        if (h%nfgeo > 0) then
-          do i=1,h%nfgeo ! geographic fields
-            iprog = strloc(f4d%short_name,nf4d,fsech(i)%short_name)
-            if (iprog > 0) then
-              call wrf4d(ncid,fsech(i)%short_name,h%ihist,fakeflds,
-     |          iprog)
-            else
-              call wrf3d(ncid,fsech(i),h%ihist,fakeflds)
-            endif
-          enddo
-        endif
-        if (h%nfmag > 0) then
-          do i=1,h%nfmag ! magnetic fields
-            call wrf3d(ncid,fsechmag(i),h%ihist,fakeflds)
-          enddo
-        endif
-        if (h%nfgeo2d > 0) then
-          do i=1,h%nfgeo2d ! geographic 2d fields
-            call wrf2d(ncid,fsech2d(i),h%ihist,fakeflds)
-          enddo
-        endif
-        if (h%nfmag2d > 0) then
-          do i=1,h%nfmag2d ! magnetic 2d fields
-            call wrf2d(ncid,fsechmag2d(i),h%ihist,fakeflds)
-          enddo
-        endif
-        if (h%nfmagphr > 0) then
-          do i=1,h%nfmagphr ! magnetospheric 2d fields
-            call wrf2d(ncid,fsechmagphr2d(i),h%ihist,fakeflds)
-          enddo
-        endif
+! Update t,u,v lbc to secondary history:
+        call wrlbc(ncid,"TLBC",tlbc_glb,h%ihist,idv_tlbc,'sec')
+        call wrlbc(ncid,"ULBC",ulbc_glb,h%ihist,idv_ulbc,'sec')
+        call wrlbc(ncid,"VLBC",vlbc_glb,h%ihist,idv_vlbc,'sec')
+        call wrlbc(ncid,"TLBC_NM",tlbc_nm_glb,h%ihist,idv_tlbc_nm,'sec')
+        call wrlbc(ncid,"ULBC_NM",ulbc_nm_glb,h%ihist,idv_ulbc_nm,'sec')
+        call wrlbc(ncid,"VLBC_NM",vlbc_nm_glb,h%ihist,idv_vlbc_nm,'sec')
       else
-        write(6,"(/,'>>> WARNING nc_wrhist: unknown h%type=',a)") 
-     |    h%type
+        write(6,"(/,'>>> WARNING nc_wrhist: unknown h%hist_type=',a)") 
+     |    h%hist_type
       endif
 !
 ! Report to stdout:
 !     write(6,"('nc_wrhist: iprint=',i3)") iprint
       if (iprint > 0) call hist_print(h,'WRITE',diskfile)
       end subroutine nc_wrhist
-!-------------------------------------------------------------------
-      subroutine wrf2d(ncid,f,itime,fake)
+!-----------------------------------------------------------------------
+      subroutine wrfsech(ncid,itime)
 !
-! Write diagnostic field to current open history file:
+! Write data values of secondary history fields to ncfile.
+! (fields were defined on the file by def_fsech)
+! Data was gathered to root task by mp_gather2root_sechist (nchist.F)
 !
-! f%data should be allocated and defined.
-! If the model has taken at least one timestep (istep > 0), then 
-!   f%data should have been defined by user-called sub addfsech. 
-! If istep==0, then f%data was init to spval by set_fsech at beginning 
-!   of run.
-!
-      use init_module,only: istep
+      use fields_module,only: fsechist,shortname_len
+      use hist_module,only: nsech,h
+      implicit none
 !
 ! Args:
       integer,intent(in) :: ncid,itime
-      type(fields_2d),intent(in) :: f 
-      logical,intent(in) :: fake
 !
 ! Local:
-      integer :: k,i,j,istat,idvar,itype,ndims,iddims(2),natts,
-     |  idimsizes(2),nnans
-      character(len=120) :: char120
+      integer :: ix,iprog,istat,idvar,iddims(4),itype,ndims,natts,i
       character(len=80) :: char80
-      character(len=16) :: rdname
-      real :: f2dgeo(nlon,nlat),
-     |   f2dmag(nmlonp1,nmlat),
-     |   f2dmagphr(nmagphrlon,nmagphrlat) ! note i,j
-      real :: fmin,fmax
-      real :: fakevar(1,1)
+      real,allocatable :: f2d(:,:),f3d(:,:,:)
 !
-! Fake means 2d fields are dimensioned (1,1) for testing:
-! (see fakeflds in fields.F)
-      if (fake) then
-        istat = nf_inq_varid(ncid,f%short_name,idvar)
-        if (istat /= NF_NOERR) then
-          write(char120,"('wrf2d: Error getting id of field var ',a)")
-     |      trim(f%short_name)
-          call handle_ncerr(istat,char120)
-        endif
-        start_3d(1:2) = 1
-        start_3d(3) = itime
-        count_3d(1) = 1
-        count_3d(2) = 1
-        count_3d(3) = 1
-        fakevar(1,1) = 0.
-        istat = nf_put_vara_double(ncid,idvar,start_4d,count_4d,fakevar)
-        if (istat /= NF_NOERR) then
-          write(char120,"('Error return from nf_put_vara_double',
-     +      ' for fake field var ',a,' itime=',i2)") f%short_name,itime
-          call handle_ncerr(istat,char120)
-        endif
-        return
-      endif
+! External:
+      integer,external :: strloc
 !
-      if (istep > 0) then
-        if (any(f%data(:,:) /= spval)) then ! was defined
-
-        else
-          write(6,"(/,'>>> WARNING wrf2d: field ',a,' apparently not ',
-     |      'defined by addfsech.')") trim(f%short_name) 
+!     write(6,"('Enter wrfsech: nsech=',i3,' itime=',i3)") nsech,itime
+      floop: do ix=1,mxfsech
+        if (len_trim(fsechist(ix)%short_name)==0) cycle floop
+!
+! Write prognostic:
+        iprog=strloc(f4d%short_name,size(f4d),fsechist(ix)%short_name)
+        if (iprog > 0) then
+          call wrf4d(ncid,fsechist(ix)%short_name,h%ihist,fakeflds,
+     |      iprog)
+          cycle floop
+        elseif (fsechist(ix)%short_name=='W') then
+          write(6,"('Note: defining requested secondary history ',
+     |      'variable ''W'' as prognostic ''OMEGA''')") 
+          iprog = strloc(f4d%short_name,size(f4d),'OMEGA')
+          call wrf4d(ncid,'OMEGA',h%ihist,fakeflds,iprog)
+          cycle floop
         endif
-      else  ! istep == 0
-
-      endif
+!
+! Wrote diagnostic only if not first timestep:
+        if (istep==0) cycle floop
+!
+! If addfld was never called for this field, data will not be
+! allocated -- in this case, leave the field defined on the
+! history, but do not write data (netcdf will default to _Fillvalue)
+!
+        if (.not.associated(fsechist(ix)%data)) then
+!         write(6,"('>>> WARNING: sechist field ',a,': data not',
+!    |      ' allocated.')") trim(fsechist(ix)%short_name)
+          cycle floop
+        endif
 !
 ! Get field id:
-      istat = nf_inq_varid(ncid,f%short_name,idvar)
-      if (istat /= NF_NOERR) then
-        write(char80,"('wrf2d: Error getting id of field var ',a)")
-     |    trim(f%short_name)
-        call handle_ncerr(istat,char80)
-      endif
-!
-! Get info about the field: 
-      istat = nf_inq_var(ncid,idvar,rdname,itype,ndims,iddims,natts)
-      if (ndims /= 3) then
-        write(6,"(/,'>>> WARNING wrf2d: bad ndims=',i3,
-     |    ' (every diagnostic should have 3 dimensions)')") ndims
-      endif
-!
-! Get info about dimensions:
-      do i=1,ndims
-        istat = nf_inq_dim(ncid,iddims(i),rdname,idimsizes(i))
-      enddo
-!
-! Check dimension sizes:
-      if (.not.fakeflds) then
-        if (.not.f%magnetic.and..not.f%magnetos) then ! geographic grid
-          if (idimsizes(1) /= nlon .or. idimsizes(2) /= nlat) then
-            write(6,"(/,'>>> WARNING wrf2d: bad dimension sizes',
-     |        ' for geographic 2d diagnostic field ',a)") trim(rdname)
-            write(6,"('  dim sizes=',2i4,' but should be ',
-     |        'nlon,nlat=',2i4)") idimsizes(1:2),nlon,nlat
-          endif
-        elseif (.not.f%magnetos) then ! magnetic grid
-          if (idimsizes(1) /= nmlonp1 .or. idimsizes(2) /= nmlat) then
-            write(6,"(/,'>>> WARNING wrf2d: bad dimension sizes',
-     |        ' for magnetic 2d diagnostic field ',a)") trim(rdname)
-            write(6,"('  dim sizes=',2i4,' but should be ',
-     |        'nmlonp1,nmlat=',2i4)") idimsizes(1:2),nmlonp1,nmlat
-          endif
-        else                      ! magnetospheric grid
-          if (idimsizes(1) /= nmagphrlon .or.
-     |        idimsizes(2) /= nmagphrlat) then
-            write(6,"(/,'>>> WARNING wrf2d: bad dimension sizes',
-     |        ' for magnetospheric diagnostic field ',a)") trim(rdname)
-            write(6,"('  dim sizes=',2i4,' but should be ',
-     |        'nmagphrlon,nmagphrlat=',3i4)") idimsizes(1:2),
-     |        nmagphrlon,nmagphrlat
-          endif
-
+        istat = nf_inq_varid(ncid,fsechist(ix)%short_name,idvar)
+        if (istat /= NF_NOERR) then
+          write(char80,"('wrfsech: Error getting var id of field ',a)")
+     |      trim(fsechist(ix)%short_name)
+          call handle_ncerr(istat,char80)
         endif
-      endif
 !
-! Define f2d from f%data (netcdf does not like the pointer f%data):
-!     local: real :: f2dgeo(nlonp4,nlat)
-!     local: real :: f2dmag(nmlonp1,nmlat)
-!     local: real :: f2dmagphr(nmagphrlon,nmagphrlat)
-!     field.F:  allocate(fsech2d(i)%data(nlonp4,nlat))
-!               allocate(fsechmag2d(i)%data(nmlonp1,nmlat))
-!               allocate(fsechmagphr2d(i)%data(nmagphrlon,nmagphrlat))
+! 3d+time field:
+        if (fsechist(ix)%dimsizes(3) > 0) then
 !
-      if (.not.f%magnetic.and..not.f%magnetos) then ! geographic grid
-          do i=1,nlon
-            f2dgeo(i,:) = f%data(i+2,:)  ! 1->nlon <= 3->nlon+2
-          enddo
+! Allocate and transfer to local 3d output array:
+          allocate(f3d(fsechist(ix)%dimsizes(1),
+     |                 fsechist(ix)%dimsizes(2),
+     |                 fsechist(ix)%dimsizes(3)),stat=istat)
+          if (istat /= 0) then
+            write(6,"(/,'>>> wrfsech: Error allocating f3d: ',
+     |        'dimsizes=',3i4)") fsechist(ix)%dimsizes
+            call shutdown('wrfsech')
+          endif
+          f3d = fsechist(ix)%data
+!
+! Write values for 3d+time var (lon,lat,lev,time)
+          start_4d(1:3) = 1
+          start_4d(4) = itime
+          count_4d(2:3) = fsechist(ix)%dimsizes(2:3)
+          count_4d(4) = 1
+!
+! Write 3d+time geo field:
+! (write only 3:nlonp2 to exclude periodic points):
+          if (fsechist(ix)%geo) then    ! 3d geo
+            count_4d(1) = nlon
 
-      elseif (.not.f%magnetos) then ! magnetic grid
-          do i=1,nmlonp1
-            f2dmag(i,:) = f%data(i,:) 
-          enddo
-      else                      ! magnetospheric grid
-          do i=1,nmagphrlon
-            f2dmag(i,:) = f%data(i,:)
-          enddo
-      endif
+!         write(6,"('wrfsech: writing 3d sech field ',a,'(',a,'=',i3,
+!    |      ',',a,'=',i3,',',a,'=',i3,'): min,max=',2e12.4)") 
+!    |      fsechist(ix)%short_name(1:10),
+!    |      trim(fsechist(ix)%dimnames(1)),fsechist(ix)%dimsizes(1),
+!    |      trim(fsechist(ix)%dimnames(2)),fsechist(ix)%dimsizes(2),
+!    |      trim(fsechist(ix)%dimnames(3)),fsechist(ix)%dimsizes(3),
+!    |      minval(f3d(3:nlonp2,:,:)),maxval(f3d(3:nlonp2,:,:))
+
+            istat = nf_put_vara_double(ncid,idvar,start_4d,count_4d,
+     |        f3d(3:nlonp2,:,:))
 !
-! Write data to the file:
+! Write 3d+time mag field:
+          else                          ! 3d mag
+            count_4d(1) = nmlonp1
+
+!         write(6,"('wrfsech: writing 3d sech mag field ',a,'(',a,'=',
+!    |      i3,' ',a,'=',i3,',',a,'=',i3,'): min,max=',2e12.4)") 
+!    |      trim(fsechist(ix)%short_name),
+!    |      trim(fsechist(ix)%dimnames(1)),fsechist(ix)%dimsizes(1),
+!    |      trim(fsechist(ix)%dimnames(2)),fsechist(ix)%dimsizes(2),
+!    |      trim(fsechist(ix)%dimnames(3)),fsechist(ix)%dimsizes(3),
+!    |      minval(f3d),maxval(f3d)
+
+            istat = nf_put_vara_double(ncid,idvar,start_4d,count_4d,
+     |        f3d)
+          endif                         ! geo or mag
+          if (istat /= NF_NOERR) then
+            write(char80,"('wrfsech: Error writing 3d+time field ',a)")
+     |        trim(fsechist(ix)%short_name)
+            call handle_ncerr(istat,char80)
+          endif
+!
+! Write 2d+time var (lon,lat,time):
+        else
+!
+! Allocate and transfer to local 2d array:
+          allocate(f2d(fsechist(ix)%dimsizes(1),
+     |                 fsechist(ix)%dimsizes(2)),stat=istat)
+          if (istat /= 0) then
+            write(6,"(/,'>>> wrfsech: Error allocating f2d: ',
+     |        'dimsizes=',3i4)") fsechist(ix)%dimsizes(1:2)
+            call shutdown('wrfsech')
+          endif
+          f2d = fsechist(ix)%data(:,:,1)
+!
+! Write values for 2d+time var (lon,lat,time)
+          start_3d(1:2) = 1
+          start_3d(3) = itime
+          count_3d(2) = fsechist(ix)%dimsizes(2)
+          count_3d(3) = 1
+!
+! Write 2d+time geo field:
+! (write only 3:nlonp2 to exclude periodic points):
+          if (fsechist(ix)%geo) then      ! 2d geo
+            count_3d(1) = nlon
+
+!         write(6,"('wrfsech: writing 2d geo sech field ',a,'(',a,'=',
+!    |      i3,',',a,'=',i3,'): min,max=',2e12.4)") 
+!    |      fsechist(ix)%short_name(1:10),
+!    |      trim(fsechist(ix)%dimnames(1)),fsechist(ix)%dimsizes(1),
+!    |      trim(fsechist(ix)%dimnames(2)),fsechist(ix)%dimsizes(2),
+!    |      minval(f2d(3:nlonp2,:)),maxval(f2d(3:nlonp2,:))
+
+            istat = nf_put_vara_double(ncid,idvar,start_3d,count_3d,
+     |        f2d(3:nlonp2,:))
+!
+! Write 2d+time mag field:
+          else                           ! 2d mag
+            count_3d(1) = nmlonp1
+
+!         write(6,"('wrfsech: writing 2d mag sech field ',a,'(',a,'=',
+!    |      i3,',',a,'=',i3,'): min,max=',2e12.4)") 
+!    |      trim(fsechist(ix)%short_name),
+!    |      trim(fsechist(ix)%dimnames(1)),fsechist(ix)%dimsizes(1),
+!    |      trim(fsechist(ix)%dimnames(2)),fsechist(ix)%dimsizes(2),
+!    |      minval(f2d),maxval(f2d)
+
+            istat = nf_put_vara_double(ncid,idvar,start_3d,count_3d,
+     |        f2d)
+          endif
+          if (istat /= NF_NOERR) then
+            write(char80,"('wrfsech: Error writing 2d+time field ',a)")
+     |        trim(fsechist(ix)%short_name)
+            call handle_ncerr(istat,char80)
+          endif
+        endif
+        if (allocated(f2d)) deallocate(f2d)
+        if (allocated(f3d)) deallocate(f3d)
+      enddo floop ! ix=1,mxfsech
+      end subroutine wrfsech
+!-----------------------------------------------------------------------
+      subroutine update_ncfile(ncid,vname,ncfile,idv,ihist)
+!
+! Update file text var vname for history ihist. 
+! Value of the variable to write is ncfile.
+!
+      implicit none
+!
+! Args:
+      integer,intent(in) :: ncid,ihist
+      integer,intent(inout) :: idv
+      character(len=*),intent(in) :: vname,ncfile
+!
+! Local:
+      integer :: istat,start(2),count(2)
+      character(len=len(ncfile)) :: file
+      character(len=120) :: char120
+!
+      if (idv <= 0) 
+     |  istat = nf_inq_varid(ncid,vname,idv)
+      start(1) = 1
+      start(2) = ihist
+      count(2) = 1
+      file = ncfile
+      if (len_trim(ncfile) <= 0) file = '[none]'
+      count(1) = len(ncfile)
+      istat = nf_put_vara_text(ncid,idv,start,count,file)
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error from nf_put_vara_text to update ncfile ',
+     |    a)") trim(file)
+        call handle_ncerr(istat,char120)
+      else
+!       write(6,"('Updated var ',a,' for ihist=',i3,' file=',a)")
+!    |    trim(vname),ihist,trim(file) 
+      endif
+
+      end subroutine update_ncfile
+!-----------------------------------------------------------------------
+      subroutine wrlbc(ncid,vname,flbc,itime,idv,type)
+      implicit none
+!
+! Update global lbc of t,u,v (TLBC,ULBC,VLBC (lon,lat,time)) to 
+!   current history (may be primary or secondary history).
+! This is executed by master task only (subdomains were gathered
+!   into flbc by mp_gather2root_lbc)
+!
+! Args:
+      integer,intent(in) :: ncid,itime
+      integer,intent(inout) :: idv
+      character(len=*),intent(in) :: vname,type
+      real,intent(in) :: flbc(nlonp4,nlat) ! data to save on file
+!
+! Local:
+      integer :: istat,j
+      character(len=80) :: char80
+      character(len=120) :: char120
+      real :: fglb(nlon,nlat) ! local for write to history
+!
       start_3d(1:2) = 1
       start_3d(3) = itime
+      count_3d(1) = nlon
+      count_3d(2) = nlat
       count_3d(3) = 1
-      if (.not.f%magnetic.and..not.f%magnetos) then ! geographic grid
-        count_3d(1) = nlon
-        count_3d(2) = nlat
-        istat = nf_put_vara_double(ncid,idvar,start_3d,count_3d,f2dgeo)
+!
+! idv may be 0 for primary continuation file: 
+      if (idv <= 0) then
+        istat = nf_inq_varid(ncid,trim(vname),idv)
         if (istat /= NF_NOERR) then
-          write(char80,"(/,'>>> wrf2d: error return from ',
-     |      'nf_put_vara_double for geo2d field var ',a,' itime=',i2)") 
-     |      trim(f%short_name),itime
+          write(char80,"('Error getting var id for ',a,
+     |      ' (ncid=',i3,')')") trim(vname),ncid
           call handle_ncerr(istat,char80)
-        endif
-        if (check_nan) 
-     |    call check_nans(f2dgeo,nlon,nlat,1,f%short_name,nnans,
-     |      0,0.,1,0)
-      elseif (.not.f%magnetos) then ! magnetic grid
-        count_3d(1) = nmlonp1
-        count_3d(2) = nmlat
-        istat = nf_put_vara_double(ncid,idvar,start_3d,count_3d,f2dmag)
-        if (istat /= NF_NOERR) then
-          write(char80,"(/,'>>> wrf2d: error return from ',
-     |      'nf_put_vara_double for mag2d field var ',a,' itime=',i2)") 
-     |      trim(f%short_name),itime
-          call handle_ncerr(istat,char80)
-        endif
-        if (check_nan) 
-     |    call check_nans(f2dmag,nmlonp1,nmlat,1,f%short_name,nnans,
-     |      0,0.,1,0)
-      else                      ! magnetospheric grid
-        count_3d(1) = nmagphrlon
-        count_3d(2) = nmagphrlat
-        istat = nf_put_vara_double(ncid,idvar,start_3d,count_3d,f2dmag)
-        if (istat /= NF_NOERR) then
-          write(char80,"(/,'>>> wrf2d: error return from ',
-     |      'nf_put_vara_double for magphr2d field var ',a,
-     |      ' itime=',i2)") 
-     |      trim(f%short_name),itime
-          call handle_ncerr(istat,char80)
-        endif
-        if (check_nan) call check_nans(f2dmag,nmagphrlon,nmagphrlat,
-     |    1,f%short_name,nnans,0,0.,1,0)
-      endif
-!
-! If model has executed one or more time steps, the long_name and
-! units of the diagnostic sech field may have been defined by the
-! user-called addfsech routine:
-!
-      if (istep > 0) then
-        if (len_trim(f%long_name) > 0 .or. len_trim(f%units) > 0) then
-          istat = nf_redef(ncid) ! put dataset in define mode
-          if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +      'Error return from nf_redef')
-          if (len_trim(f%long_name) > 0) then
-            istat = nf_put_att_text(ncid,idvar,"long_name",
-     |        len_trim(f%long_name),f%long_name)
-            if (istat /= NF_NOERR) then
-              write(char80,"('Error defining long_name of diagnostic',
-     |          ' variable ',a,': long_name = ',a)") 
-     |          trim(f%short_name),trim(f%long_name)
-              call handle_ncerr(istat,trim(char80))
-            endif
-          endif
-          if (len_trim(f%units) > 0) then
-            istat = nf_put_att_text(ncid,idvar,"units",
-     |        len_trim(f%units),f%units)
-            if (istat /= NF_NOERR) then
-              write(char80,"('Error defining units of diagnostic',
-     |          ' variable ',a,' units = ',a)") 
-     |          trim(f%short_name),trim(f%units)
-              call handle_ncerr(istat,trim(char80))
-            endif
-          endif
-          istat = nf_enddef(ncid) ! end define mode
-          if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |      'Error return from nf_enddef')
-        endif ! long_name or units defined
-      endif   ! istep > 0
-!
-! Write min,max of each field:
-!     if (istep /= 0) then
-!       call fminmaxspv(f3diag,nlon*nlat*nlev,fmin,fmax,spval)
-!       write(6,"('wrf2d: Wrote field ',a,' istep=',i3,
-!    |    ' 3d min,max=',2e12.4)") f%short_name(1:8),istep,fmin,fmax
-!     endif
-      end subroutine wrf2d
-!-------------------------------------------------------------------
-      subroutine wrf3d(ncid,f,itime,fake)
-!
-! Write diagnostic field to current open history file:
-!
-! f%data should be allocated and defined.
-! If the model has taken at least one timestep (istep > 0), then 
-!   f%data should have been defined by user-called sub addfsech. 
-! If istep==0, then f%data was init to spval by set_fsech at beginning 
-!   of run.
-!
-      use init_module,only: istep
-!
-! Args:
-      integer,intent(in) :: ncid,itime
-      type(fields_3d),intent(in) :: f 
-      logical,intent(in) :: fake
-!
-! Local:
-      integer :: k,i,j,istat,idvar,itype,ndims,iddims(4),natts,
-     |  idimsizes(4),nnans
-      character(len=120) :: char120
-      character(len=80) :: char80
-      character(len=16) :: rdname
-      real :: f3diag(nlon,nlat,nlevp1),f3dmag(nmlonp1,nmlat,nmlev) ! note i,j,k
-      real :: fmin,fmax
-      real :: fakevar(1,1,1)
-!
-! Fake means 3d fields are dimensioned (1,1,1) for testing:
-! (see fakeflds in flds_mod.f)
-      if (fake) then
-        istat = nf_inq_varid(ncid,f%short_name,idvar)
-        if (istat /= NF_NOERR) then
-          write(char120,"('wrf3d: Error getting id of field var ',a)")
-     |      trim(f%short_name)
-          call handle_ncerr(istat,char120)
-        endif
-        start_4d(1:3) = 1
-        start_4d(4) = itime
-        count_4d(1) = 1
-        count_4d(2) = 1
-        count_4d(3) = 1
-        count_4d(4) = 1
-        fakevar(1,1,1) = 0.
-        istat = nf_put_vara_double(ncid,idvar,start_4d,count_4d,fakevar)
-        if (istat /= NF_NOERR) then
-          write(char120,"('Error return from nf_put_vara_double',
-     +      ' for fake field var ',a,' itime=',i2)") f%short_name,itime
-          call handle_ncerr(istat,char120)
-        endif
-        return
-      endif
-!
-! If the following flags are set, the any() statement can fail with NaNS.
-! FFLAGS= -qinitauto=7FF7FFFF -qfloat=nans -qflttrap=invalid:enable 
-!   -qsigtrap=xl__trcedump
-!
-      if (istep > 0) then
-        if (any(f%data(:,:,:) /= spval)) then ! was defined
- 
         else
-          write(6,"(/,'>>> WARNING wrf3d: field ',a,' apparently not ',
-     |      'defined by addfsech.')") trim(f%short_name) 
+!         write(6,"('wrlbc: vname=',a,' idv=',i3,' (idv was 0 on ',
+!    |      'input)')") trim(vname),idv
         endif
+      else
+!       write(6,"('wrlbc: vname=',a,' idv on input=',i3)") 
+!    |    trim(vname),idv
       endif
 !
-! Get field id:
-      istat = nf_inq_varid(ncid,f%short_name,idvar)
+      fglb(:,:) = flbc(3:nlon+2,:)
+      istat = nf_put_vara_double(ncid,idv,start_3d,count_3d,fglb)
       if (istat /= NF_NOERR) then
-        write(char80,"('wrf3d: Error getting id of field var ',a)")
-     |    trim(f%short_name)
+        write(6,"('>>> wrlbc: error writing ',a,': itime=',i4,
+     |    ' type=',a,' global (nlon,nlat) min,max=',2f8.2)") 
+     |    trim(vname),itime,trim(type),minval(fglb),maxval(fglb)
+        write(char80,"('Error return from nf_put_vara_double for ',
+     |    'var ',a,': itime=',i2,' type=',a)") trim(vname),itime,
+     |    trim(type)
         call handle_ncerr(istat,char80)
+      else
+!       write(6,"('wrlbc: wrote ',a,': itime=',i4,' type=',a,
+!    |    ' global (nlon,nlat) min,max=',2f8.2)") trim(vname),
+!    |    itime,trim(type),minval(fglb),maxval(fglb)
       endif
-!
-! Get info about the field: 
-      istat = nf_inq_var(ncid,idvar,rdname,itype,ndims,iddims,natts)
-      if (ndims /= 4) then
-        write(6,"(/,'>>> WARNING wrf3d: bad ndims=',i3,
-     |    ' (every diagnostic should have 4 dimensions)')") ndims
-      endif
-!
-! Get info about dimensions:
-      do i=1,ndims
-        istat = nf_inq_dim(ncid,iddims(i),rdname,idimsizes(i))
-      enddo
-!
-! Check dimension sizes:
-      if (.not.fakeflds) then
-        if (.not.f%magnetic) then ! geographic grid
-          if (idimsizes(1) /= nlon .or. idimsizes(2) /= nlat) then
-            write(6,"(/,'>>> WARNING wrf3d: bad dimension sizes',
-     |        ' for geographic diagnostic field ',a)") trim(rdname)
-            write(6,"('  dim sizes=',3i4,' but should be ',
-     |        'nlon,nlat,nlev=',3i4)") idimsizes(1:3),nlon,nlat,nlev
-          endif
-        else                      ! magnetic grid
-          if (idimsizes(1) /= nmlonp1 .or. idimsizes(2) /= nmlat) then
-            write(6,"(/,'>>> WARNING wrf3d: bad dimension sizes',
-     |        ' for magnetic diagnostic field ',a)") trim(rdname)
-            write(6,"('  dim sizes=',3i4,' but should be ',
-     |        'nmlonp1,nmlat,nmlev=',3i4)") idimsizes(1:3),nmlonp1,
-     |        nmlat,nmlev
-          endif
 
-        endif
-        if (idimsizes(3) < nlev) then
-          write(6,"(/,'>>> WARNING wrf3d: dimsize(3) < nlev:',
-     |      ' idimsizes(3)=',i4,' nlev=',i4)") idimsizes(3),nlev
-        endif
-      endif
-!
-! Define f3diag from f%data (netcdf does not like the pointer f%data):
-!
-      if (.not.f%magnetic) then ! geographic grid
-        do k=1,nlevp1
-          do i=1,nlon
-            f3diag(i,:,k) = f%data(k,i+2,:) ! 1->nlon <= 3->nlon+2
-          enddo
-          
-!         if (itime==2) then
-!         do j=1,nlat
-!           write(6,"('wrf3d: j=',i3,' k=',i3,' itime=',i3,' f3diag=',
-!    |        /,(6e12.4))") j,k,itime,f3diag(:,j,k)
-!         enddo
-!         endif
-
-        enddo
- 
-!       call fminmax(f3diag(:,:,:),nlevp1*nlon*nlat,fmin,fmax)
-!       write(6,"('wrf3d: mag field ',a,' fmin,max=',2e12.4)") 
-!    |    f%short_name,fmin,fmax
-
-      else                      ! magnetic grid
-!
-! Secondary history array: fsechmag(n)%data(nlevp1+3,nmlonp1,nmlat)
-!   (see allocation in set_fsech in fields.F)
-! Local f3dmag(nmlonp1,nmlat,nmlev) ! note i,j,k
-! Note nmlev==nlevp1+3 for extra levels at bottom, see transf in dynamo.F.
-!   (mag fields in dynamo are (nmlonp1,-2:nlev))
-! Transform from (k,i,j) to (i,j,k) for secondary history.
-!
-        do k=1,nmlev  ! nmlev = nlevp1+3
-          do i=1,nmlonp1
-            f3dmag(i,:,k) = f%data(k,i,:)
-          enddo
-        enddo
-      endif
-!
-! Write data to the file:
-      start_4d(1:3) = 1
-      start_4d(4) = itime
-      count_4d(4) = 1
-      if (.not.f%magnetic) then ! geographic grid
-        count_4d(1) = nlon
-        count_4d(2) = nlat
-        count_4d(3) = nlevp1
-        istat = nf_put_vara_double(ncid,idvar,start_4d,count_4d,f3diag)
-        if (istat /= NF_NOERR) then
-          write(char80,"(/,'>>> wrf3d: error return from ',
-     |      'nf_put_vara_double for geo field var ',a,' itime=',i2)") 
-     |      trim(f%short_name),itime
-          call handle_ncerr(istat,char80)
-        endif
-        if (check_nan) call check_nans(f3diag,nlon,nlat,
-     |    nlevp1,f%short_name,nnans,0,0.,1,0)
-
-      else                      ! magnetic grid
-        count_4d(1) = nmlonp1
-        count_4d(2) = nmlat
-        count_4d(3) = nmlev
-        istat = nf_put_vara_double(ncid,idvar,start_4d,count_4d,f3dmag)
-        if (istat /= NF_NOERR) then
-          write(char80,"(/,'>>> wrf3d: error return from ',
-     |      'nf_put_vara_double for mag field var ',a,' itime=',i2)") 
-     |      trim(f%short_name),itime
-          call handle_ncerr(istat,char80)
-        endif
-        if (check_nan) call check_nans(f3dmag,nmlonp1,nmlat,
-     |    nmlev,f%short_name,nnans,0,0.,1,0)
-      endif
-!
-! If model has executed one or more time steps, the long_name and
-! units of the diagnostic sech field may have been defined by the
-! user-called addfsech routine:
-!
-      if (istep > 0) then
-        if (len_trim(f%long_name) > 0 .or. len_trim(f%units) > 0) then
-          istat = nf_redef(ncid) ! put dataset in define mode
-          if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |      'Error return from nf_redef')
-          if (len_trim(f%long_name) > 0) then
-            istat = nf_put_att_text(ncid,idvar,"long_name",
-     |        len_trim(f%long_name),f%long_name)
-            if (istat /= NF_NOERR) then
-              write(char80,"('Error defining long_name of diagnostic',
-     |          ' variable ',a,': long_name = ',a)") 
-     |          trim(f%short_name),trim(f%long_name)
-              call handle_ncerr(istat,trim(char80))
-            endif
-          endif
-          if (len_trim(f%units) > 0) then
-            istat = nf_put_att_text(ncid,idvar,"units",
-     |        len_trim(f%units),f%units)
-            if (istat /= NF_NOERR) then
-              write(char80,"('Error defining units of diagnostic',
-     |          ' variable ',a,' units = ',a)") 
-     |          trim(f%short_name),trim(f%units)
-              call handle_ncerr(istat,trim(char80))
-            endif
-          endif
-          istat = nf_enddef(ncid) ! end define mode
-          if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |      'Error return from nf_enddef')
-        endif ! long_name or units defined
-      endif   ! istep > 0
-!
-! Write min,max of each field:
-!     if (istep /= 0) then
-!       if (.not.f%magnetic) then
-!         call fminmaxspv(f3diag,nlon*nlat*nlev,fmin,fmax,spval)
-!         write(6,"('wrf3d: Wrote geo field ',a,' istep=',i3,
-!    |      ' 3d min,max=',2e12.4)") 
-!    |      f%short_name(1:8),istep,fmin,fmax
-!       else
-!         call fminmaxspv(f3diag,nlon*nlat*nlev,fmin,fmax,spval)
-!         write(6,"('wrf3d: Wrote mag field ',a,' istep=',i3,
-!    |      ' 3d min,max=',2e12.4)") 
-!    |      f%short_name(1:8),istep,fmin,fmax
-!       endif
+!     if (trim(vname)=='TLBC') then
+!       do j=1,nlat
+!         write(6,"('wrlbc: j=',i3,' tlbc(:,j)=',/,(6e12.4))") 
+!    |      j,fglb(:,j)
+!       enddo
 !     endif
-      end subroutine wrf3d
-!-------------------------------------------------------------------
+
+      end subroutine wrlbc
+!-----------------------------------------------------------------------
       subroutine wrf4d(ncid,name,itime,fake,ix)
 !
 ! Write prognostic field type f%data to current netcdf output 
 ! history file attached to ncid:
 !
       use input_module,only: dynamo
-      use init_module,only: istep
-      use mpi_module,only: lon0,lon1,lat0,lat1
       use fields_module,only: dynpot
 !
 ! Args:
@@ -2563,7 +3097,7 @@
         fakevar(1,1,1) = 0.
         istat = nf_put_vara_double(ncid,idvar,start_4d,count_4d,fakevar)
         if (istat /= NF_NOERR) then
-          write(char120,"('Error return from nf_put_vara_double',
+          write(char120,"('wrf4d: Error return from nf_put_vara_double',
      +      ' for fake field var ',a,' itime=',i2)") name,itime
           call handle_ncerr(istat,char120)
         endif
@@ -2629,12 +3163,68 @@
 !     endif
 !
 ! Check for NaNs:
-      nanfatal = 1 ! abort if nans are found
+!     nanfatal = 1 ! abort if nans are found (this is normal default)
+      nanfatal = 0 ! temporary: allow NaNs for debug
       if (check_nan) 
      |  call check_nans(f3d,nlon,nlat,nlevp1,name(1:8),nnans,
      |    0,0.,1,nanfatal)
       end subroutine wrf4d
-!-------------------------------------------------------------------
+!-----------------------------------------------------------------------
+      subroutine wrf3d(ncid,f,itime,name,idv)
+!
+! Write global 3d field type f(k,i,j) to current netcdf output history 
+! file attached to ncid:
+!
+! Args:
+      integer,intent(in) :: ncid,itime,idv
+      real :: f(nlevp1,nlonp4,nlat)
+      character(len=*),intent(in) :: name
+!
+! Local:
+      integer :: nxk,k,i,j,istat,lonbeg,lonend,nnans,nanfatal
+      real :: f3d(nlon,nlat,nlevp1) ! note i,j,k for history
+      character(len=120) :: char120
+      real :: fmin,fmax
+!
+! Transform from (k,i,j) to (i,j,k) for the history.
+! f3d(nlon,nlat,nlevp1)            ! note i,j,k for history
+!
+      do j=1,nlat
+        do k=1,nlevp1
+          f3d(:,j,k) = f(k,3:nlon+2,j)
+        enddo
+      enddo
+!
+! Put data onto netcdf file (this is where the majority of output
+!   i/o happens). 
+!
+      start_4d(1:3) = 1
+      start_4d(4) = itime
+      count_4d(1) = nlon
+      count_4d(2) = nlat
+      count_4d(3) = nlevp1
+      count_4d(4) = 1
+      istat = nf_put_vara_double(ncid,idv,start_4d,count_4d,f3d)
+      if (istat /= NF_NOERR) then
+        write(char120,"('wrf3d: Error return from nf_put_vara_double',
+     +    ' for field var ',a,' itime=',i2)") name,itime
+        call handle_ncerr(istat,char120)
+      endif
+!
+! Write min,max of each field if not echoing source history:
+!     if (istep /= 0) then
+!       call fminmaxspv(f3d,nlon*nlev*nlat,fmin,fmax,spval)
+!       write(6,"('wrf3d: Wrote field ',a,' istep=',i3,
+!    |    ' 3d min,max=',2e12.4)") name,istep,fmin,fmax
+!     endif
+!
+! Check for NaNs:
+      nanfatal = 1 ! abort if nans are found
+      if (check_nan) 
+     |  call check_nans(f3d,nlon,nlat,nlevp1,name,nnans,
+     |    0,0.,1,nanfatal)
+      end subroutine wrf3d
+!-----------------------------------------------------------------------
       subroutine nc_fileinfo(ncid,fileinfo)
 !
 ! A netcdf file on ncid has been written and is ready to be
@@ -2732,7 +3322,7 @@
       istat = nf_enddef(ncid)
 !     write(6,"('nc_fileinfo: fileinfo=',a)") trim(fileinfo)
       end subroutine nc_fileinfo
-!-------------------------------------------------------------------
+!-----------------------------------------------------------------------
       subroutine handle_ncerr(istat,msg)
 !
 ! Handle a netcdf lib error:
@@ -2748,5 +3338,5 @@
       write(6,"(72('-')/)")
       return
       end subroutine handle_ncerr
-!-------------------------------------------------------------------
+!-----------------------------------------------------------------------
       end module nchist_module

@@ -6,7 +6,8 @@
 ! avoid circular module dependencies.
 !
       use params_module,only: nlevp1,nlonp4,nlat
-      use fields_module,only: f4d,f3d,nf4d,nf3d,field_initval,foutput
+      use fields_module,only: f4d,f3d,nf4d,nf3d,field_initval,foutput,
+     |  fzg
       use mpi_module,only: lon0,lon1,lat0,lat1,mytid
       use chemrates_module,only: alloc_tdep
       use qrj_module,only: alloc_q
@@ -61,6 +62,9 @@
      |      i3,'*',i3,' = ',i8,' words *8 = ',i8,' bytes.')")
      |      nlevp1,nlonp4,nlat,nf4d,len,len*8
         endif
+        allocate(fzg(nlevp1,nlonp4,nlat),stat=istat)
+        if (istat /= 0) 
+     |    write(6,"('>>> allocdata: error allocating fzg')")
       endif
 #else
       allocate(foutput(nlevp1,nlonp4,nlat,nf4d),stat=istat)
@@ -76,5 +80,8 @@
      |    i3,'*',i3,' = ',i8,' words *8 = ',i8,' bytes.')")
      |    nlevp1,nlonp4,nlat,nf4d,len,len*8
       endif
+      allocate(fzg(nlevp1,nlonp4,nlat),stat=istat)
+      if (istat /= 0) 
+     |  write(6,"('>>> allocdata: error allocating fzg')")
 #endif
       end subroutine allocdata

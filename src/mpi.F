@@ -4,14 +4,13 @@
 ! Perform message-passing and related operations in distributed memory 
 !   system, e.g., AIX.
 !
-      use params_module,only: nlat,nlonp4,nlon,nlevp1,ispval,nmlonp1,
-     |  nmlat,nmlev,nmagphrlat,nmagphrlon
-      use fields_module,only: fields_4d,fields_3d,f4d,f3d,
-     |  nf4d,nf4d_hist,fsech,fsechmag,fsech2d,fsechmag2d,fsechmagphr2d,
-     |  dynpot,phim3d,i_poten,foutput,emphi3d,
-     |  emlam3d,emz3d
-      use hist_module,only: nfsech_geo,nfsech_mag,nfsech_geo2d,
-     |  nfsech_mag2d,nfsech_magphr
+      use params_module
+      use fields_module,only: fields_4d,fields_3d,f4d,f3d,nf3d,
+     |  nf4d,nf4d_hist,fsechist,dynpot,phim3d,i_poten,foutput,
+     |  tlbc,ulbc,vlbc,tlbc_glb,ulbc_glb,vlbc_glb,emphi3d,
+     |  emlam3d,emz3d,fzg,tlbc_nm,ulbc_nm,vlbc_nm,tlbc_nm_glb,
+     |  ulbc_nm_glb,vlbc_nm_glb
+      use hist_module,only: nfsech
       use input_module,only: ntask_lat,ntask_lon
       implicit none
 #ifdef MPI
@@ -66,8 +65,10 @@
       real :: rtc0_gather2root     , rtcmp_gather2root     =0.,
      |        rtc0_bndlats         , rtcmp_bndlats         =0.,
      |        rtc0_bndlats_f3d     , rtcmp_bndlats_f3d     =0.,
+     |        rtc0_bndlats_f2d     , rtcmp_bndlats_f2d     =0.,
      |        rtc0_bndlons         , rtcmp_bndlons         =0.,
      |        rtc0_bndlons_f3d     , rtcmp_bndlons_f3d     =0.,
+     |        rtc0_bndlons_f2d     , rtcmp_bndlons_f2d     =0.,
      |        rtc0_polelat         , rtcmp_polelat         =0.,
      |        rtc0_gatherlons      , rtcmp_gatherlons      =0.,
      |        rtc0_gatherlons_f3d  , rtcmp_gatherlons_f3d  =0.,
@@ -107,6 +108,7 @@
       call mpi_comm_rank(MPI_COMM_WORLD,mytid,ier)
       if (ier /= 0) write(6,"('>>> WARNING: error from mpi_comm_rank:',
      |  ' ier=',i4)") ier
+      write(6,"('mp_init: ntask=',i3,' mytid=',i3)") ntask,mytid
 !
 ! Allocate array of tasks (user defined type(task)):
       allocate(tasks(0:ntask-1),stat=ier)
@@ -386,18 +388,31 @@
 !
       character(len=*),intent(in) :: type
 !
+! Local:
+      integer :: i
+!
       if (do_rtc_mpi) call timer(rtc0_gather2root,tsec,'begin')
 !
-! Dividing collecting into primary and secondary histories
+! Gather for either primary and secondary histories.
+! If primary, also gather f3d field subdomains zg to global fzg.
       if (trim(type)=='prim') then
-         call mp_gather2root_prim(ixt,type)
+         call mp_gather2root_prim(ixt)
+         do i=1,nf3d
+           if (trim(f3d(i)%short_name)=='ZG') then
+             call mp_gather2root_f3d(f3d(i),fzg)
+           endif
+         enddo
       elseif(trim(type)=='sech') then
-         call mp_gather2root_sech(ixt,type)
+         call mp_gather2root_sechist(ixt)
       else
         write(6,"('mp_gather2root: unknown type ',a,' should be prim ',
      |    'or sech')")
         call shutdown('mp_gather2root')
       endif
+!
+! Gather lower boundary condition arrays tlbc,ulbc,vlbc and 
+! tlbc_nm,ulbc_nm,vlbc_nm:
+      call mp_gather2root_lbc(ixt)
 !
       if (do_rtc_mpi) then
         call timer(rtc0_gather2root,tsec,'end')
@@ -406,19 +421,14 @@
 !
       end subroutine mp_gather2root
 !-----------------------------------------------------------------------      
-      subroutine mp_gather2root_prim(ixt,type)
+      subroutine mp_gather2root_prim(ixt)
 !
 ! Master task must collect all data (except its own) into its prognostic 
 !   fields f4d(:)%data prior to writing a history. Slaves send their 
 !   (lon0:lon1,nlevp1,lat0:lat1) data to the root task.
-! If type == 'prim', pass prognostics f4d(:)%data for primay histories.
 !
 ! Args:
       integer,intent(in) :: ixt
-!
-! type=='prim' if primary history data (f4d(:))
-!
-      character(len=*),intent(in) :: type 
 !
 ! Local:
       integer :: isrc,ireqrecv,ireqsend,ier,n,i,j,k,l,len,
@@ -433,16 +443,15 @@
 ! Prognostics (primary history data f4d(i)%data(k,i,j,ixt):
       allocate(rcvbuf(nlevp1,mxlon,mxlat,nf4d),stat=ier)
       if (ier /= 0)
-     |  write(6,"('>>> mp_gather2root: error allocating rcvbuf:',
+     |  write(6,"('>>> mp_gather2root_prim: error allocating rcvbuf:',
      |    ' mxlon=',i3,' nlevp1=',i3,' mxlat=',i3,' nf4d=',i3,
      |    ' ier=',i4)") mxlon,nlevp1,mxlat,nf4d,ier
       allocate(sndbuf(nlevp1,mxlon,mxlat,nf4d),stat=ier)
       if (ier /= 0)
-     |  write(6,"('>>> mp_gather2root: error allocating sndbuf:',
+     |  write(6,"('>>> mp_gather2root_prim: error allocating sndbuf:',
      |    ' mxlon=',i3,' nlevp1=',i3,' mxlat=',i3,' nf4d=',i3,
      |    ' ier=',i4)") mxlon,nlevp1,mxlat,nf4d,ier
       len = nlevp1*mxlon*mxlat*nf4d ! buffer length
-!
 !
 ! Root receives from all other tasks:
       if (mytid==0) then ! root task
@@ -454,7 +463,7 @@
 !         call fminmax(
 !    |      foutput(:,lon0:lon1,lat0:lat1,i),
 !    |      (lon1-lon0+1)*nlevp1*(lat1-lat0+1),fmin,fmax)
-!         write(6,"('Root copies its own domain into foutput: i=',
+!         write(6,"('Root copied its own domain into foutput: i=',
 !    |      i3,' min,max=',2e12.4)") i,fmin,fmax
         enddo
 !
@@ -493,7 +502,7 @@
 !    |        foutput(:,ilon0:ilon1,ilat0:ilat1,i),nlons*nlevp1*nlats,
 !    |   	fmin,fmax)
 !           if (i==1) write(6,"(' ')")
-!           write(6,"('mp_gather2root: received field ',i3,
+!           write(6,"('mp_gather2root_prim: received field ',i3,
 !    |        ' from task ',i3,' fmin,max=',2e12.4)") i,n,fmin,fmax
           enddo ! i=1,nf4d
 !
@@ -513,8 +522,9 @@
      |      f4d(i)%data(:,lon0:lon1,lat0:lat1,ixt)
 !         call fminmax(sndbuf(:,1:nlons,1:nlats,i),nlons*nlevp1*nlats,
 !    |      fmin,fmax)
-!         write(6,"('mp_gather2root: task ',i3,' sending prog field ',
-!    |      i2,' to root: fmin,max=',2e12.4)") mytid,i,fmin,fmax
+!         write(6,"('mp_gather2root_prim: task ',i3,' sending prog ',
+!    |      'field ',i2,' to root: fmin,max=',2e12.4)") 
+!    |      mytid,i,fmin,fmax
         enddo
 !
 ! Send to root:
@@ -522,13 +532,13 @@
         call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,MPI_COMM_WORLD,
      |    ireqsend,ier)
         if (ier /= 0) 
-     |    call handle_mpi_err(ier,'mp_gather2root isend to root')
+     |    call handle_mpi_err(ier,'mp_gather2root_prim isend to root')
 !
 ! Wait for send to complete: 
         call mpi_wait(ireqsend,irstat,ier)
         if (ier /= 0) then
           call handle_mpi_err(ier,
-     |    'mp_gather2root wait for send to root')
+     |    'mp_gather2root_prim wait for send to root')
         endif
       endif ! root or slave
 !
@@ -537,63 +547,177 @@
       deallocate(sndbuf)
 !      
       end subroutine mp_gather2root_prim
-!-----------------------------------------------------------------------
-      subroutine mp_gather2root_sech(ixt,type)
+!-----------------------------------------------------------------------      
+      subroutine mp_gather2root_f3d(f3d,fout)
 !
 ! Master task must collect all data (except its own) into its prognostic 
 !   fields f4d(:)%data prior to writing a history. Slaves send their 
 !   (lon0:lon1,nlevp1,lat0:lat1) data to the root task.
-! If type == 'sech', pass diagnostic fsech(:)%data for secondary histories.
 !
 ! Args:
-      integer,intent(in) :: ixt
-!
-! secondary ('sech') data (fsech(:)) otherwise. 
-!
-      character(len=*),intent(in) :: type 
+      type(fields_3d),intent(in) :: f3d
+      real,intent(out) :: fout(nlevp1,nlonp4,nlat) ! see allocdata.F
 !
 ! Local:
       integer :: isrc,ireqrecv,ireqsend,ier,n,i,j,k,l,len,
-     |  ilon0,ilon1,ilat0,ilat1,nlons,nlats,msgtag,
-     |  mx_nfsech,mxlev,start_nf,end_nf,dif_nf
+     |  ilon0,ilon1,ilat0,ilat1,nlons,nlats,msgtag
       integer :: idest = 0
       real :: fmin,fmax
-      real,allocatable :: rcvbuf(:,:,:,:),sndbuf(:,:,:,:)
-!      
+      real,allocatable :: rcvbuf(:,:,:),sndbuf(:,:,:)
+!
 ! Allocate send and receive buffers:
 ! (mxlon,mxlat are max number of lons,lats held by all tasks)
-! check for magnetic coordinates nmlat,nmlon & magnetospheric
-! nmagphrlat,nmagphrlon and also number of height levels
-! since dynamo is not parallel so far don't take coord size from tasks
-! calculate size of rcvbuf
 !
-      mxlev = nlevp1
-      mx_nfsech = nfsech_geo + nfsech_geo2d     
-!
-! secondary history data fsech(i)%data(nlevp1,nlonp4,nlat)
-! fsechmag(i)%data(nlevp1+3,nmlonp1,nmlat)
-! fsech2d(i)%data(nlonp4,nlat)
-! fsechmag2d(i)%data(nmlonp1,nmlat)
-! fsechmagphr2d(i)%data(nmagphrlon,nmagphrlat)
-!
-      allocate(rcvbuf(mxlev,mxlon,mxlat,mx_nfsech),stat=ier)
+      allocate(rcvbuf(nlevp1,mxlon,mxlat),stat=ier)
       if (ier /= 0)
-     |  write(6,"('>>> mp_gather2root_sech: error allocating rcvbuf:',
-     |    ' mxlon=',i3,' mxlev=',i3,' mxlat=',i3,' mx_nfsech=',
-     |    i3,' ier=',i4)") mxlon,mxlev,mxlat,mx_nfsech,ier
-      allocate(sndbuf(mxlev,mxlon,mxlat,mx_nfsech),stat=ier)
+     |  write(6,"('>>> mp_gather2root_f3d: error allocating rcvbuf:',
+     |    ' mxlon=',i3,' nlevp1=',i3,' mxlat=',i3,' ier=',i4)") 
+     |    mxlon,nlevp1,mxlat,ier
+      allocate(sndbuf(nlevp1,mxlon,mxlat),stat=ier)
       if (ier /= 0)
-     |  write(6,"('>>> mp_gather2root_sech: error allocating sndbuf:',
-     |    ' mxlon=',i3,' mxlev=',i3,' mxlat=',i3,' mx_nfsech=',
-     |    i3,' ier=',i4)") mxlon,mxlev,mxlat,mx_nfsech,ier
-      len = mxlev*mxlon*mxlat*mx_nfsech ! buffer length
+     |  write(6,"('>>> mp_gather2root_f3d: error allocating sndbuf:',
+     |    ' mxlon=',i3,' nlevp1=',i3,' mxlat=',i3,' ier=',i4)") 
+     |    mxlon,nlevp1,mxlat,ier
+      len = nlevp1*mxlon*mxlat ! buffer length
 !
 ! Root receives from all other tasks:
       if (mytid==0) then ! root task
 !
+! If primary history, root task defines foutput at its own subdomain:
+        fout(:,lon0:lon1,lat0:lat1) =
+     |    f3d%data(:,lon0:lon1,lat0:lat1)
+!       call fminmax(
+!    |    fout(:,lon0:lon1,lat0:lat1),
+!    |    (lon1-lon0+1)*nlevp1*(lat1-lat0+1),fmin,fmax)
+!       write(6,"('Root copied its own domain into foutput: ',
+!    |    ' min,max=',2e12.4)") fmin,fmax
+!
 ! Receive subdomains from slave tasks:
-! don't process the mag & magphr fields, since they are only known by the
+        do n=1,ntask-1   ! receive from slaves only
+          msgtag = n
+          call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,MPI_COMM_WORLD,
+     |      ireqrecv,ier)
+          if (ier /= 0) 
+     |      call handle_mpi_err(ier,'mp_gather2root_f3d irecv from n')
+!
+! Wait for receives to complete:
+          call mpi_wait(ireqrecv,irstat,ier)
+          if (ier /= 0) then
+            call handle_mpi_err(ier,'mp_gather2root_f3d wait for n')
+          else
+!           write(6,"('mp_gather2root_f3d: root received from task ',
+!    |        i3)") n
+          endif
+!
+! Transfer from receive buffer to fields:
+          ilon0 = tasks(n)%lon0
+          ilon1 = tasks(n)%lon1
+          ilat0 = tasks(n)%lat0
+          ilat1 = tasks(n)%lat1
+          nlons = ilon1-ilon0+1 
+          nlats = ilat1-ilat0+1 
+!
+! Root task stores data in full 3d grid array foutput. This is a pointer
+! declared in fields module (fields.F), and allocated by the root task 
+! only in sub allocdata: foutput(nlevp1,nlonp4,nlat,nf4d).
+!
+          fout(:,ilon0:ilon1,ilat0:ilat1) = rcvbuf(:,1:nlons,1:nlats)
+ 
+!         call fminmax(
+!    |      fout(:,ilon0:ilon1,ilat0:ilat1),nlons*nlevp1*nlats,
+!    |        fmin,fmax)
+!         write(6,"('mp_gather2root_f3d: received field',
+!    |      ' from task ',i3,' fmin,max=',2e12.4)") n,fmin,fmax
+ 
+        enddo ! n=1,ntask-1
+!
+! Non-root tasks send to master:
+      else
+!
+! Load send buffer:
+        sndbuf(:,:,:) = 0.
+        nlons = lon1-lon0+1 
+        nlats = lat1-lat0+1 
+!
+! Prognostic fields:
+        sndbuf(:,1:nlons,1:nlats) = f3d%data(:,lon0:lon1,lat0:lat1)
+
+!       call fminmax(sndbuf(:,1:nlons,1:nlats),nlons*nlevp1*nlats,
+!    |    fmin,fmax)
+!       write(6,"('mp_gather2root_f3d: task ',i3,' sending prog ',
+!    |    'field to root: fmin,max=',2e12.4)") mytid,fmin,fmax
+ 
+! Send to root:
+        msgtag = mytid
+        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,MPI_COMM_WORLD,
+     |    ireqsend,ier)
+        if (ier /= 0) 
+     |    call handle_mpi_err(ier,'mp_gather2root_f3d isend to root')
+!
+! Wait for send to complete: 
+        call mpi_wait(ireqsend,irstat,ier)
+        if (ier /= 0) then
+          call handle_mpi_err(ier,
+     |    'mp_gather2root_f3d wait for send to root')
+        endif
+      endif ! root or slave
+!
+! Release local buffer space: 
+      deallocate(rcvbuf)
+      deallocate(sndbuf)
+!      
+      end subroutine mp_gather2root_f3d
+!-----------------------------------------------------------------------
+      subroutine mp_gather2root_sechist(ixt)
+!
+! Master task must collect all data (except its own) into its prognostic 
+!   fields f4d(:)%data prior to writing a history. Slaves send their 
+!   (lon0:lon1,nlevp1,lat0:lat1) data to the root task.
+!
+! 11/11/05 btf: rewritten for new addfld (this replaces old mp_gather2root_sech)
+!
+! Args:
+      integer,intent(in) :: ixt
+!
+! Local:
+      integer :: isrc,ireqrecv,ireqsend,ier,n,i,j,k,l,len,
+     |  ilon0,ilon1,ilat0,ilat1,ilev0,ilev1,msgtag,mxlev
+      integer :: idest = 0
+      real :: fmin,fmax
+      real,allocatable :: rcvbuf(:,:,:,:),sndbuf(:,:,:,:)
+      integer :: ilat,ilev ! debug only
+!      
+! Allocate send and receive buffers:
+!
+! 11/14/07 btf: Must use ilev1==mxlev==nlevp1 because nmlev > nlevp1
+!               (extra points below lbc for dynamo)
+!     mxlev = maxval((/nlevp1,nilevp1,nmlev,nimlev,nmlevp1/))
+!     ilev0 = 1 ; ilev1 = mxlev
+      mxlev = nlevp1
+      ilev0 = 1 ; ilev1 = mxlev
+!
+! secondary history data fsechhist(i)%data(lon,lat,lev) (mag or geo)
+!
+      allocate(rcvbuf(mxlon,mxlat,mxlev,nfsech),stat=ier)
+      if (ier /= 0)
+     |  write(6,"('>>> mp_gather2root_sech: error allocating rcvbuf:',
+     |    ' mxlon=',i3,' mxlat=',i3,' mxlev=',i3,' nfsech=',
+     |    i3,' ier=',i4)") mxlon,mxlat,mxlev,nfsech,ier
+!
+      allocate(sndbuf(mxlon,mxlat,mxlev,nfsech),stat=ier)
+      if (ier /= 0)
+     |  write(6,"('>>> mp_gather2root_sech: error allocating sndbuf:',
+     |    ' mxlon=',i3,' mxlat=',i3,' mxlev=',i3,' nfsech=',
+     |    i3,' ier=',i4)") mxlon,mxlat,mxlev,nfsech,ier
+      len = mxlon*mxlat*mxlev*nfsech ! buffer length
+!
+! Root receives from all other tasks:
+      if (mytid==0) then !-------------- root task (receive) -------------
+!
+! Receive subdomains from slave tasks:
+! don't process the mag fields, since they are only known by the
 ! master task - so the gather is not done
+!
         do n=1,ntask-1   ! receive from slaves only
           msgtag = n
           call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,MPI_COMM_WORLD,
@@ -614,71 +738,51 @@
           ilon1 = tasks(n)%lon1
           ilat0 = tasks(n)%lat0
           ilat1 = tasks(n)%lat1
-          nlons = ilon1-ilon0+1 
-          nlats = ilat1-ilat0+1
 !
-! Load 3d geographic secondary history fields from receive buffer:
-	  start_nf = 1
-	  end_nf   = nfsech_geo
-          do i= start_nf,end_nf
-            if (.not.fsech(i)%task0_only) then
-              do j=1,nlats
-                do l=1,nlons
-                  fsech(i)%data(1:nlevp1,ilon0+l-1,ilat0+j-1) =
-     |      	    rcvbuf(1:nlevp1,l,j,i)
-                enddo
-              enddo
-            endif
-          enddo ! i=1,nfsech_geo
-	  start_nf = nfsech_geo+1
-	  end_nf   = nfsech_geo+nfsech_geo2d
-	  dif_nf   = nfsech_geo
-          do i= start_nf,end_nf
-            if (.not.fsech2d(i)%task0_only) then
-              do j=1,nlats
-                do l=1,nlons
-                  fsech2d(i-dif_nf)%data(ilon0+l-1,ilat0+j-1) =
-     |              rcvbuf(1,l,j,i)
-                enddo
-              enddo
-            endif
-          enddo ! nfsech_geo2d
-        enddo ! n=1,ntask-1
+! Load secondary history fields from receive buffer:
+          do i = 1,nfsech
+            if (.not.fsechist(i)%prognostic.and. 
+     |          .not.fsechist(i)%task0_only.and.
+     |          associated(fsechist(i)%data)) then
+!
+! 3d field (lon,lat,lev):
+              if (fsechist(i)%ndims==3) then 
+                fsechist(i)%data(ilon0:ilon1,ilat0:ilat1,ilev0:ilev1)=
+     |      	          rcvbuf(ilon0:ilon1,ilat0:ilat1,ilev0:ilev1,i)
+              else 
+!
+! 2d field (lon,lat):
+                fsechist(i)%data(ilon0:ilon1,ilat0:ilat1,1)=
+     |      	          rcvbuf(ilon0:ilon1,ilat0:ilat1,1,i)
+              endif ! 2d or 3d
+            endif ! not prognostic and not task0 only
+          enddo ! i=1,nfsech
+        enddo  ! 1,ntask-1 receive loop
 !
 ! Non-root tasks send to master:
-      else
+      else              !-------------- non-root task (send) -----------
 !
 ! Load send buffer:
         sndbuf(:,:,:,:) = 0.
-        nlons = lon1-lon0+1 
-        nlats = lat1-lat0+1 
 !
-! Load 3d geographic secondary history fields to send buffer:
-	start_nf = 1
-	end_nf   = nfsech_geo
-        do i= start_nf,end_nf
-          if (.not.fsech2d(i)%task0_only) then
-            do j=1,nlats
-              do l=1,nlons
-                sndbuf(1:nlevp1,l,j,i) = 
-     |    	  fsech(i)%data(1:nlevp1,lon0+l-1,lat0+j-1)
-              enddo
-            enddo
+! Load 3d secondary history field subdomains to send buffer:
+        do i = 1,nfsech  
+          if (.not.fsechist(i)%prognostic.and. 
+     |        .not.fsechist(i)%task0_only.and.
+     |        associated(fsechist(i)%data)) then
+!
+! 3d send buffer:
+            if (fsechist(i)%ndims==3) then     ! 3d send buffer
+                        sndbuf(lon0:lon1,lat0:lat1,ilev0:ilev1,i) =
+     |        fsechist(i)%data(lon0:lon1,lat0:lat1,ilev0:ilev1)
+            else                               ! 2d send buffer
+!
+! 2d send buffer:
+                        sndbuf(lon0:lon1,lat0:lat1,1,i) =
+     |        fsechist(i)%data(lon0:lon1,lat0:lat1,1)
+            endif
           endif
-        enddo  ! i=1,nfsech_geo
-	start_nf = nfsech_geo+1
-	end_nf   = nfsech_geo+nfsech_geo2d
-	dif_nf   = nfsech_geo
-        do i= start_nf,end_nf
-          if (.not.fsech2d(i-dif_nf)%task0_only) then
-            do j=1,nlats
-              do l=1,nlons
-                sndbuf(1,l,j,i) = 
-     |            fsech2d(i-dif_nf)%data(lon0+l-1,lat0+j-1)
-              enddo
-            enddo
-          endif
-        enddo  ! nfsech_geo2d
+        enddo ! i = 1,nfsech
 !
 ! Send to root:
         msgtag = mytid
@@ -699,7 +803,116 @@
       deallocate(rcvbuf)
       deallocate(sndbuf)
 !
-      end subroutine mp_gather2root_sech
+      end subroutine mp_gather2root_sechist
+!-----------------------------------------------------------------------
+      subroutine mp_gather2root_lbc(ixt)
+!
+! Gather t,u,v lbc at t and t-1 to root task (tlbc,ulbc,vlbc subdomains are gathered
+! to tlbc_glb,ulbc_glb,vlbc_glb and tlbc_nm_glb,ulbc_nm_glb,vlbc_nm_glb , see fields.F)
+!
+! Args:
+      integer,intent(in) :: ixt
+!
+! Local:
+      integer :: ier,len,msgtag,ireqrecv,nlats,nlons,ireqsend,
+     |  ilat1,ilon0,n,ilat0,ilon1
+      integer :: idest = 0
+      real :: fmin,fmax
+      real,allocatable :: rcvbuf(:,:,:),sndbuf(:,:,:)
+!
+! Allocate send and receive buffers:
+      allocate(rcvbuf(mxlon,mxlat,6),stat=ier)
+      if (ier /= 0)
+     |  write(6,"('>>> mp_gather2root_lbc: error allocating rcvbuf:',
+     |    ' mxlon=',i3,' mxlat=',i3,' ier=',i4)") mxlon,mxlat,ier
+      allocate(sndbuf(mxlon,mxlat,6),stat=ier)
+      if (ier /= 0)
+     |  write(6,"('>>> mp_gather2root_lbc: error allocating sndbuf:',
+     |    ' mxlon=',i3,' mxlat=',i3,' ier=',i4)") mxlon,mxlat,ier
+      len = mxlon*mxlat*6 ! buffer length
+!
+! Root receives from all other tasks:
+      if (mytid==0) then ! root task
+!
+! Root task defines output at its own subdomain:
+        tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
+        ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
+        vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
+        tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
+        ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
+        vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
+!
+! Receive subdomains from slave tasks:
+        do n=1,ntask-1   ! receive from slaves only
+          msgtag = n
+          call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,MPI_COMM_WORLD,
+     |      ireqrecv,ier)
+          if (ier /= 0) 
+     |      call handle_mpi_err(ier,'mp_gather2root_lbc irecv from n')
+!
+! Wait for receives to complete:
+          call mpi_wait(ireqrecv,irstat,ier)
+          if (ier /= 0) then
+            call handle_mpi_err(ier,'mp_gather2root_lbc wait for n')
+          else
+!           write(6,"('mp_gather2root_lbc: root received from task ',
+!    |        i3)") n
+          endif
+!
+! Transfer from receive buffer to fields:
+          ilon0 = tasks(n)%lon0
+          ilon1 = tasks(n)%lon1
+          ilat0 = tasks(n)%lat0
+          ilat1 = tasks(n)%lat1
+          nlons = ilon1-ilon0+1 
+          nlats = ilat1-ilat0+1 
+!
+! Root task stores data in full 3d grid arrays tlbc_glb,ulbc_glb,vlbc_glb. 
+! (see fields.F)
+!
+          tlbc_glb(ilon0:ilon1,ilat0:ilat1) = rcvbuf(1:nlons,1:nlats,1)
+          ulbc_glb(ilon0:ilon1,ilat0:ilat1) = rcvbuf(1:nlons,1:nlats,2)
+          vlbc_glb(ilon0:ilon1,ilat0:ilat1) = rcvbuf(1:nlons,1:nlats,3)
+          tlbc_nm_glb(ilon0:ilon1,ilat0:ilat1)=rcvbuf(1:nlons,1:nlats,4)
+          ulbc_nm_glb(ilon0:ilon1,ilat0:ilat1)=rcvbuf(1:nlons,1:nlats,5)
+          vlbc_nm_glb(ilon0:ilon1,ilat0:ilat1)=rcvbuf(1:nlons,1:nlats,6)
+        enddo ! n=1,ntask-1
+!
+! Non-root tasks send to master:
+      else
+!
+! Load send buffer:
+        sndbuf(:,:,:) = 0.
+        nlons = lon1-lon0+1 
+        nlats = lat1-lat0+1 
+!
+! Define send buffer:
+        sndbuf(1:nlons,1:nlats,1) = tlbc(lon0:lon1,lat0:lat1)
+        sndbuf(1:nlons,1:nlats,2) = ulbc(lon0:lon1,lat0:lat1)
+        sndbuf(1:nlons,1:nlats,3) = vlbc(lon0:lon1,lat0:lat1)
+        sndbuf(1:nlons,1:nlats,4) = tlbc_nm(lon0:lon1,lat0:lat1)
+        sndbuf(1:nlons,1:nlats,5) = ulbc_nm(lon0:lon1,lat0:lat1)
+        sndbuf(1:nlons,1:nlats,6) = vlbc_nm(lon0:lon1,lat0:lat1)
+!
+! Send to root:
+        msgtag = mytid
+        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,MPI_COMM_WORLD,
+     |    ireqsend,ier)
+        if (ier /= 0) 
+     |    call handle_mpi_err(ier,'mp_gather2root_lbc isend to root')
+!
+! Wait for send to complete: 
+        call mpi_wait(ireqsend,irstat,ier)
+        if (ier /= 0) then
+          call handle_mpi_err(ier,
+     |    'mp_gather2root_lbc wait for send to root')
+        endif
+      endif ! root or slave
+!
+! Release local buffer space: 
+      deallocate(rcvbuf)
+      deallocate(sndbuf)
+      end subroutine mp_gather2root_lbc
 !-----------------------------------------------------------------------
       subroutine mp_bndlats(f,mxf,ixt)
 !
@@ -766,12 +979,6 @@
           nn = nn+1
           sndbuf0(:,:,:,nn) = f(n)%data(:,lon0:lon1,lat0:lat0+1,ixt)
           sndbuf1(:,:,:,nn) = f(n)%data(:,lon0:lon1,lat1-1:lat1,ixt)
-!         call fminmax(sndbuf0(:,:,:,nn),lendat,fmin,fmax)
-!         write(6,"('bndlats: sndbuf0 field ',a,' min,max=',2e12.4)")
-!    |      f(n)%short_name(1:8),fmin,fmax
-!         call fminmax(sndbuf1(:,:,:,nn),lendat,fmin,fmax)
-!         write(6,"('bndlats: sndbuf1 field ',a,' min,max=',2e12.4)")
-!    |      f(n)%short_name(1:8),fmin,fmax
         endif
       enddo
 !
@@ -813,18 +1020,10 @@
           if (lat0 /= 1) then
             f(n)%data(:,lon0:lon1,lat0-2:lat0-1,ixt) = 
      |        rcvbuf0(:,:,:,nn)
-!           call fminmax(f(n)%data(lon0:lon1,:,lat0-2:lat0-1,ixt),
-!    |        lendat,fmin,fmax)
-!           write(6,"('bndlats: rcvbuf0 field ',a,' min,max=',2e12.4)")
-!    |        f(n)%short_name(1:8),fmin,fmax
           endif
           if (lat1 /= nlat) then
             f(n)%data(:,lon0:lon1,lat1+1:lat1+2,ixt) = 
      |        rcvbuf1(:,:,:,nn)
-!           call fminmax(f(n)%data(lon0:lon1,:,lat1+1:lat1+2,ixt),
-!    |        lendat,fmin,fmax)
-!           write(6,"('bndlats: rcvbuf1 field ',a,' min,max=',2e12.4)")
-!    |        f(n)%short_name(1:8),fmin,fmax
           endif
         endif
       enddo
@@ -898,12 +1097,12 @@
       do n=1,nf
         sndbuf0(:,:,:,n) = f(:,i0:i1,j0  :j0+1,n)
         sndbuf1(:,:,:,n) = f(:,i0:i1,j1-1:j1  ,n)
-        call fminmax(sndbuf0(:,:,:,n),lendat,fmin,fmax)
-        write(6,"('bndlats_f3d: sndbuf0 field ',i2,' min,max=',2e12.4)")
-     |    n,fmin,fmax
-        call fminmax(sndbuf1(:,:,:,n),lendat,fmin,fmax)
-        write(6,"('bndlats_f3d: sndbuf1 field ',i2,' min,max=',2e12.4)")
-     |    n,fmin,fmax
+!       call fminmax(sndbuf0(:,:,:,n),lendat,fmin,fmax)
+!       write(6,"('bndlats_f3d: sndbuf0 field ',i2,' min,max=',2e12.4)")
+!    |    n,fmin,fmax
+!       call fminmax(sndbuf1(:,:,:,n),lendat,fmin,fmax)
+!       write(6,"('bndlats_f3d: sndbuf1 field ',i2,' min,max=',2e12.4)")
+!    |    n,fmin,fmax
       enddo
 !
 ! Send j0:j0+1 (sndbuf0) to jprev:
@@ -948,15 +1147,15 @@
       do n=1,nf
         if (j0 /= 1) then
           f(:,i0:i1,j0-2:j0-1,n) = rcvbuf0(:,:,:,n)
-          call fminmax(f(:,i0:i1,j0-2:j0-1,n),lendat,fmin,fmax)
-          write(6,"('bndlats_f3d: rcvbuf0 field ',i2,' min,max=',
-     |      2e12.4)") n,fmin,fmax
+!         call fminmax(f(:,i0:i1,j0-2:j0-1,n),lendat,fmin,fmax)
+!         write(6,"('bndlats_f3d: rcvbuf0 field ',i2,' min,max=',
+!    |      2e12.4)") n,fmin,fmax
         endif
         if (j1 /= nlat) then
           f(:,i0:i1,j1+1:j1+2,n) = rcvbuf1(:,:,:,n)
-          call fminmax(f(:,i0:i1,j1+1:j1+2,n),lendat,fmin,fmax)
-          write(6,"('bndlats_f3d: rcvbuf1 field ',i2,' min,max=',
-     |      2e12.4)") n,fmin,fmax
+!         call fminmax(f(:,i0:i1,j1+1:j1+2,n),lendat,fmin,fmax)
+!         write(6,"('bndlats_f3d: rcvbuf1 field ',i2,' min,max=',
+!    |      2e12.4)") n,fmin,fmax
         endif
       enddo
 !
@@ -975,6 +1174,137 @@
       call vtend(100,ier)
 #endif
       end subroutine mp_bndlats_f3d
+!-----------------------------------------------------------------------
+      subroutine mp_bndlats_f2d(f,i0,i1,j0,j1,nf)
+!
+! Exchange boundary latitude data between tasks. 
+! Each task sends its lat0,lat0+1 data to task jprev, and its lat1-1,lat1
+!   data to jnext.
+! Each task receives its lat0-2,lat0-1 data from task jprev, and its
+!   lat1+1,lat1+2 data from task jnext.
+!
+! Args:
+      integer,intent(in) :: i0,i1,j0,j1,nf
+      real,intent(inout) :: f(i0:i1,j0-2:j1+2,nf)
+!
+! Local:
+      integer :: n,nn,nlons,ier,len,jnext,jprev,nflds,jsend0,jsend1,
+     |  jrecv0,jrecv1,lendat
+      real,allocatable :: 
+     |  sndbuf0(:,:,:), ! send buffer for j0  ,j0+1 (i,2,nf)
+     |  sndbuf1(:,:,:), ! send buffer for j1-1,j1   (i,2,nf)
+     |  rcvbuf0(:,:,:), ! recv buffer for j0-2,j0-1 (i,2,nf)
+     |  rcvbuf1(:,:,:)  ! recv buffer for j1+1,j1+2 (i,2,nf)
+      real :: fmin,fmax
+!
+#ifdef VT
+!     call vtsymdef(100, 'mp_bndlats_f3d','Communication',ier)
+      call vtbegin(100,ier)
+#endif
+      if (do_rtc_mpi) call timer(rtc0_bndlats_f2d,tsec,'begin')
+!
+! Allocate send and receive buffers (only fields with %mpi==true):
+      nlons = i1-i0+1
+      allocate(sndbuf0(nlons,2,nf),stat=ier)
+      if (ier /= 0) 
+     |  write(6,"('>>> mp_bndlats_f2d: error allocating sndbuf0.')")
+      allocate(sndbuf1(nlons,2,nf),stat=ier)
+      if (ier /= 0) 
+     |  write(6,"('>>> mp_bndlats_f2d: error allocating sndbuf1.')")
+      allocate(rcvbuf0(nlons,2,nf),stat=ier)
+      if (ier /= 0) 
+     |  write(6,"('>>> mp_bndlats_f2d: error allocating rcvbuf0.')")
+      allocate(rcvbuf1(nlons,2,nf),stat=ier)
+      if (ier /= 0) 
+     |  write(6,"('>>> mp_bndlats_f2d: error allocating rcvbuf1.')")
+      len    = nlons*2*nf 
+      lendat = nlons*2
+!
+! Locate adjacent tasks (includes null tasks top and bottom)
+      jprev = itask_table(mytidi,mytidj-1) ! task above (south)
+      jnext = itask_table(mytidi,mytidj+1) ! task below (north)
+!
+! Load sndbuf0 with j0,j0+1 and sndbuf1 with j1-1,j1:
+      do n=1,nf
+        sndbuf0(:,:,n) = f(i0:i1,j0  :j0+1,n)
+        sndbuf1(:,:,n) = f(i0:i1,j1-1:j1  ,n)
+!       call fminmax(sndbuf0(:,:,n),lendat,fmin,fmax)
+!       write(6,"('bndlats_f2d: sndbuf0 field ',i2,' min,max=',2e12.4)")
+!    |    n,fmin,fmax
+!       call fminmax(sndbuf1(:,:,n),lendat,fmin,fmax)
+!       write(6,"('bndlats_f2d: sndbuf1 field ',i2,' min,max=',2e12.4)")
+!    |    n,fmin,fmax
+      enddo
+!
+! Send j0:j0+1 (sndbuf0) to jprev:
+      call mpi_isend(sndbuf0,len,MPI_REAL8,jprev,1,MPI_COMM_WORLD,
+     |  jsend0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f2d send0 to jprev')
+!
+! Send j1-1:j1 (sndbuf1) to jnext:
+      call mpi_isend(sndbuf1,len,MPI_REAL8,jnext,1,MPI_COMM_WORLD,
+     |  jsend1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f2d send1 to jnext')
+!
+! Receive j0-2:j0-1 (rcvbuf0) from jprev:
+      call mpi_irecv(rcvbuf0,len,MPI_REAL8,jprev,1,MPI_COMM_WORLD,
+     |  jrecv0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f2d recv0 fm jprev')
+!
+! Receive j1+1:j1+2 (rcvbuf1) from jnext:
+      call mpi_irecv(rcvbuf1,len,MPI_REAL8,jnext,1,MPI_COMM_WORLD,
+     |  jrecv1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f2d recv1 fm jnext')
+!
+! Wait for completions:
+      call mpi_wait(jsend0,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f2d wait for send0')
+      call mpi_wait(jsend1,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f2d wait for send1')
+      call mpi_wait(jrecv0,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f2d wait for recv0')
+      call mpi_wait(jrecv1,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f2d wait for recv1')
+!
+! Copy j0-2:j0-1 from rcvbuf0, and j1+1:j1+2 from rcvbuf1:
+      do n=1,nf
+        if (j0 /= 1) then
+          f(i0:i1,j0-2:j0-1,n) = rcvbuf0(:,:,n)
+!         call fminmax(f(i0:i1,j0-2:j0-1,n),lendat,fmin,fmax)
+!         write(6,"('bndlats_f2d: rcvbuf0 field ',i2,' min,max=',
+!    |      2e12.4)") n,fmin,fmax
+        endif
+        if (j1 /= nlat) then
+          f(i0:i1,j1+1:j1+2,n) = rcvbuf1(:,:,n)
+!         call fminmax(f(i0:i1,j1+1:j1+2,n),lendat,fmin,fmax)
+!         write(6,"('bndlats_f2d: rcvbuf1 field ',i2,' min,max=',
+!    |      2e12.4)") n,fmin,fmax
+        endif
+      enddo
+!
+! Release local buffer space:
+      deallocate(sndbuf0)
+      deallocate(sndbuf1)
+      deallocate(rcvbuf0)
+      deallocate(rcvbuf1)
+!
+      if (do_rtc_mpi) then
+        call timer(rtc0_bndlats_f2d,tsec,'end')
+        rtcmp_bndlats_f2d = rtcmp_bndlats_f3d+tsec
+      endif
+#ifdef VT
+!     call vtsymdef(100, 'mp_bndlats_f2d','Communication',ier)
+      call vtend(100,ier)
+#endif
+      end subroutine mp_bndlats_f2d
 !-----------------------------------------------------------------------
       subroutine mp_bndlons(f,mxf,ixt)
 !
@@ -1093,18 +1423,10 @@
           if (lon0 /= 1) then
             f(n)%data(:,lon0-2:lon0-1,lat0-2:lat1+2,ixt) = 
      |        rcvbuf0(:,:,:,nn)
-!           call fminmax(f(n)%data(:,lon0-2:lon0-1,lat0-2:lat1+2,ixt),
-!    |        lendat,fmin,fmax)
-!           write(6,"('bndlons: rcvbuf0 field ',a,' min,max=',2e12.4)")
-!    |        f(n)%short_name(1:8),fmin,fmax
           endif
           if (lon1 /= nlonp4) then
             f(n)%data(:,lon1+1:lon1+2,lat0-2:lat1+2,ixt) = 
      |        rcvbuf1(:,:,:,nn)
-!           call fminmax(f(n)%data(:,lon1+1:lon1+2,lat0-2:lat1+2,ixt),
-!    |        lendat,fmin,fmax)
-!           write(6,"('bndlons: rcvbuf1 field ',a,' min,max=',2e12.4)")
-!    |        f(n)%short_name(1:8),fmin,fmax
           endif
         endif
       enddo
@@ -1190,12 +1512,6 @@
           sndbuf0(:,:,j,n) = f(:,i0:i0+1,j,n)
           sndbuf1(:,:,j,n) = f(:,i1-1:i1,j,n)
         enddo
-!       call fminmax(sndbuf0(:,:,:,n),lendat,fmin,fmax)
-!       write(6,"('bndlons_f3d: sndbuf0 field ',i2,' min,max=',2e12.4)")
-!    |    n,fmin,fmax
-!       call fminmax(sndbuf1(:,:,:,n),lendat,fmin,fmax)
-!       write(6,"('bndlons_f3d: sndbuf1 field ',i2,' min,max=',2e12.4)")
-!    |    n,fmin,fmax
       enddo
 !
 ! Send i0:i0+1 (sndbuf0) to task iprev:
@@ -1242,17 +1558,11 @@
           do j=j0,j1
             f(:,i0-2:i0-1,j,n) = rcvbuf0(:,:,j,n)
           enddo
-!         call fminmax(f(:,i0-2:i0-1,:,n),lendat,fmin,fmax)
-!         write(6,"('bndlons_f3d: rcvbuf0 field ',i2,' min,max=',
-!    |      2e12.4)") n,fmin,fmax
         endif
         if (i1 /= nlonp4) then
           do j=j0,j1
             f(:,i1+1:i1+2,j,n) = rcvbuf1(:,:,j,n)
           enddo
-!         call fminmax(f(:,i1+1:i1+2,:,n),lendat,fmin,fmax)
-!         write(6,"('bndlons_f3d: rcvbuf1 field ',i2,' min,max=',
-!    |      2e12.4)") n,fmin,fmax
         endif
       enddo
 !
@@ -1271,6 +1581,141 @@
       call vtend(102,ier)
 #endif
       end subroutine mp_bndlons_f3d
+!-----------------------------------------------------------------------
+      subroutine mp_bndlons_f2d(f,i0,i1,j0,j1,nf)
+!
+!
+! Exchange boundary longitude data of 2-d fields between tasks.
+! Each task sends its i0,i0+1 data to task iprev, and its i1-1,i1
+!   data to inext.
+! Each task receives its i0-2,i0-1 data from task iprev, and its
+!   i1+1,i1+2 data from task inext.
+! Because of periodic points, lons -1,0 and nlonp4+1,nlonp4+2 are not
+!   necessary. Therefore, tasks with mytidi==0 send/recv with dummy iprev 
+!   tasks, and tasks with mytidi==ntaski-1 send/recv with dummy inext tasks. 
+!   (dummy tasks have mytid==MPI_PROC_NULL, so comm does not take place).
+! Note that f must be dimensioned (i0-2:i1+2,j0:j1).
+!
+! E.g., as called from duv.F:
+!     real,dimension(lon0-2:lon1+2,lat0:lat1) ::
+!    |  ulbc ! lat diffs (includes lon boundaries) (s8)
+!     call mp_bndlons_f2d(ulbc,lon0,lon1,lat0-2,lat1+2,1)
+!
+! Args:
+      integer,intent(in) :: i0,i1,j0,j1,nf
+      real,intent(inout) :: f(i0-2:i1+2,j0:j1,nf) ! lons include boundaries
+!
+! Local:
+      integer :: n,ier,len,inext,iprev,isend0,isend1,nlats,j,
+     |  irecv0,irecv1,lendat
+      real,allocatable :: 
+     |  sndbuf0(:,:,:), ! send buffer for i0  ,i0+1 (2,j0:j1,nf)
+     |  sndbuf1(:,:,:), ! send buffer for i1-1,i1   (2,j0:j1,nf)
+     |  rcvbuf0(:,:,:), ! recv buffer for i0-2,i0-1 (2,j0:j1,nf)
+     |  rcvbuf1(:,:,:)  ! recv buffer for i1+1,i1+2 (2,j0:j1,nf)
+      real :: fmin,fmax
+#ifdef VT
+!     call vtsymdef(102, 'mp_bndlons_f2d','Communication',ier)
+      call vtbegin(102,ier)
+#endif
+      if (do_rtc_mpi) call timer(rtc0_bndlons_f2d,tsec,'begin')
+!
+! Allocate send and receive buffers (only fields with %mpi==true):
+      allocate(sndbuf0(2,j0:j1,nf),stat=ier)
+      if (ier /= 0) 
+     |  write(6,"('>>> mp_bndlons_f2d: error allocating sndbuf0.')")
+      allocate(sndbuf1(2,j0:j1,nf),stat=ier)
+      if (ier /= 0) 
+     |  write(6,"('>>> mp_bndlons_f2d: error allocating sndbuf1.')")
+      allocate(rcvbuf0(2,j0:j1,nf),stat=ier)
+      if (ier /= 0) 
+     |  write(6,"('>>> mp_bndlons_f2d: error allocating rcvbuf0.')")
+      allocate(rcvbuf1(2,j0:j1,nf),stat=ier)
+      if (ier /= 0) 
+     |  write(6,"('>>> mp_bndlons_f2d: error allocating rcvbuf1.')")
+      nlats = j1-j0+1
+      len    = 2*nlats*nf
+      lendat = 2*nlats
+!
+! Locate adjacent tasks (includes null tasks on either side):
+      iprev = itask_table(mytidi-1,mytidj) ! task to left (west)
+      inext = itask_table(mytidi+1,mytidj) ! task to right (east)
+!
+! Load sndbuf0 with i0,i0+1 and sndbuf1 with i1-1,i1:
+      do n=1,nf
+        do j=j0,j1
+          sndbuf0(:,j,n) = f(i0:i0+1,j,n)
+          sndbuf1(:,j,n) = f(i1-1:i1,j,n)
+        enddo
+      enddo
+!
+! Send i0:i0+1 (sndbuf0) to task iprev:
+      call mpi_isend(sndbuf0,len,MPI_REAL8,iprev,1,MPI_COMM_WORLD,
+     |  isend0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlons_f2d send0 to iprev')
+!
+! Send i1-1:i1 (sndbuf1) to task inext:
+      call mpi_isend(sndbuf1,len,MPI_REAL8,inext,1,MPI_COMM_WORLD,
+     |  isend1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlons_f2d send1 to inext')
+!
+! Receive i0-2:i0-1 (rcvbuf0) from task iprev:
+      call mpi_irecv(rcvbuf0,len,MPI_REAL8,iprev,1,MPI_COMM_WORLD,
+     |  irecv0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlons_f2d recv0 fm iprev')
+!
+! Receive i1+1:i1+2 (rcvbuf1) from task inext:
+      call mpi_irecv(rcvbuf1,len,MPI_REAL8,inext,1,MPI_COMM_WORLD,
+     |  irecv1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlons_f2d recv1 fm inext')
+!
+! Wait for completions:
+      call mpi_wait(isend0,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlons_f2d wait for send0')
+      call mpi_wait(isend1,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlons_f2d wait for send1')
+      call mpi_wait(irecv0,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlons_f2d wait for recv0')
+      call mpi_wait(irecv1,irstat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlons_f2d wait for recv1')
+!
+! Copy i0-2:i0-1 from rcvbuf0, and i1+1:i1+2 from rcvbuf1:
+      do n=1,nf
+        if (i0 /= 1) then
+          do j=j0,j1
+            f(i0-2:i0-1,j,n) = rcvbuf0(:,j,n)
+          enddo
+        endif
+        if (i1 /= nlonp4) then
+          do j=j0,j1
+            f(i1+1:i1+2,j,n) = rcvbuf1(:,j,n)
+          enddo
+        endif
+      enddo
+!
+! Release local buffer space:
+      deallocate(sndbuf0)
+      deallocate(sndbuf1)
+      deallocate(rcvbuf0)
+      deallocate(rcvbuf1)
+!
+      if (do_rtc_mpi) then
+        call timer(rtc0_bndlons_f2d,tsec,'end')
+        rtcmp_bndlons_f2d = rtcmp_bndlons_f2d+tsec
+      endif
+#ifdef VT
+!     call vtsymdef(102, 'mp_bndlons_f3d','Communication',ier)
+      call vtend(102,ier)
+#endif
+      end subroutine mp_bndlons_f2d
 !-----------------------------------------------------------------------
       subroutine mp_polelats(ixt)
 !
@@ -1404,17 +1849,6 @@
       enddo ! i=0,ntaski-1  
       where(irecvfm==9999) irecvfm = -1
       where(isendto==9999) isendto = -1
-
-!     do i=0,ntask-1
-!       if (irecvfm(1,i) /= -1 .or. irecvfm(2,i) /= -1)
-!    |    write(6,"('Will receive i0,i1=',2i3,' from task ',i2)")
-!    |    irecvfm(:,i),i
-!     enddo
-!     do i=0,ntask-1
-!       if (isendto(1,i) /= -1 .or. isendto(2,i) /= -1)
-!    |    write(6,"('Will send    i0,i1=',2i3,' to   task ',i2)")
-!    |    isendto(:,i),i
-!     enddo
 !
 ! Determine how many tasks will be sent to and received from:
 !
@@ -1485,8 +1919,6 @@
           call mpi_isend(sndbuf(1,1,1,1,iit),lensend,MPI_REAL8,it,1,
      |      MPI_COMM_WORLD,isend(iit),ier)
           if (ier /= 0) call handle_mpi_err(ier,'mp_polelats send')
-!         write(6,"('Posted send of lons ',i3,'-',i3,' to task ',i3,
-!    |      ' iit=',i2)") isendto(1:2,it),it,iit
         endif
       enddo
 !
@@ -1499,8 +1931,6 @@
           call mpi_irecv(rcvbuf(1,1,1,1,iit),lenrecv,MPI_REAL8,it,1,
      |      MPI_COMM_WORLD,irecv(iit),ier)
           if (ier /= 0) call handle_mpi_err(ier,'mp_polelats recv')
-!         write(6,"('Posted recv of lons ',i3,'-',i3,' fm task ',i3,
-!    |      ' iit=',i2)") irecvfm(1:2,it),it,iit
         endif
       enddo
 !
@@ -1509,7 +1939,6 @@
         call mpi_wait(isend(it),irstat,ier)
         if (ier /= 0) 
      |    call handle_mpi_err(ier,'mp_polelats wait for send')
-!       write(6,"('Completed wait for send: it=',i2)") it
       enddo
 !
 ! Wait for completion of receives:
@@ -1517,7 +1946,6 @@
         call mpi_wait(irecv(it),irstat,ier)
         if (ier /= 0) 
      |    call handle_mpi_err(ier,'mp_polelats wait for recv')
-!       write(6,"('Completed wait for recv: it=',i2)") it
       enddo
 !
 ! Define f4d at new latitudes from recvbuf:
@@ -1640,11 +2068,6 @@
               nn=nn+1
               f(n)%data(:,lonrecv0:lonrecv1,lat0:lat1,ixt) = 
      |          rcvbuf(:,:,:,nn)
-!             call fminmax(f(n)%data(:,lonrecv0:lonrecv1,lat0:lat1,ixt),
-!    |          nlevp1*(lonrecv1-lonrecv0+1)*nlats,fmin,fmax)
-!             write(6,"('gatherlons recv from task ',i2,': field ',a,
-!    |          ' lonrecv0,1=',2i3,' min,max=',2e12.4)") 
-!    |          isrc,f(n)%short_name(1:8),lonrecv0,lonrecv1,fmin,fmax
             endif
           enddo
         enddo
@@ -1658,10 +2081,6 @@
             nn=nn+1
             sndbuf(:,1:nlons,:,nn) = f(n)%data(:,lon0:lon1,lat0:lat1,
      |        ixt) 
-!           call fminmax(sndbuf(1:nlevp1,1:nlons,1:nlats,nn),
-!    |        nlons*nlevp1*nlats,fmin,fmax)
-!           write(6,"('gatherlons send to task ',i2,': field ',a,
-!    |        ' min,max=',2e12.4)") idest,f(n)%short_name(1:8),fmin,fmax
           endif
         enddo
         mtag = idest+mytid
@@ -2005,6 +2424,12 @@
       real,allocatable :: sndbuf(:,:,:,:) ! (nlevp1,nlats,nf4d_hist,2)
       real,allocatable :: rcvbuf(:,:,:,:) ! (nlevp1,nlats,nf4d_hist,2)
 !
+#ifdef VT
+!     call vtsymdef(108, 'mp_periodic_f4d','Communication',ier)
+      call vtbegin(108,ier)
+#endif
+      if (do_rtc_mpi) call timer(rtc0_periodic_f4d,tsec,'begin')
+!
 ! Use assignment and return in the special case of a serial run:
       if (ntask == 1) then     ! lon0,lon1 == 1,nlonp4
         do n=1,nf4d_hist       ! loop for fields on history at time ixt
@@ -2013,6 +2438,13 @@
      |        f4d(n)%data(:,nlon+1:nlon+2,j,ixt)
             f4d(n)%data(:,lon1-1:lon1,j,ixt) =     ! e.g.: 75,76 <= 3,4
      |        f4d(n)%data(:,lon0+2:lon0+3,j,ixt)
+
+!           write(6,"(/,'mp_periodic_f4d ntask=',i2,' j=',i3,' n=',i3,
+!    |        ' field ',a,'(:,lon1-1,j)=',/,(6e12.4))") ntask,j,n,
+!    |        trim(f4d(n)%short_name),f4d(n)%data(:,lon1-1,j,ixt)
+!           write(6,"('  field ',a,'(:,lon1,j)=',/,(6e12.4))")
+!    |        trim(f4d(n)%short_name),f4d(n)%data(:,lon1,j,ixt)
+
           enddo
         enddo
         return
@@ -2023,11 +2455,6 @@
 ! with mytidi==ntaski-1 will have lons nlonp4-3->nlonp4.
 !
       if (mytidi /= 0 .and. mytidi /= ntaski-1) return
-#ifdef VT
-!     call vtsymdef(108, 'mp_periodic_f4d','Communication',ier)
-      call vtbegin(108,ier)
-#endif
-      if (do_rtc_mpi) call timer(rtc0_periodic_f4d,tsec,'begin')
 !
 ! Allocate send and receive buffers:
       nlats = mxlat+4 ! +4 is to cover lat0-1,lat0-2,lat1+1,lat1+2
@@ -2139,16 +2566,26 @@
       integer :: k,j,idest,isrc,isend,irecv,ier,len,nlevs,nlons,nlats
       real,allocatable :: sndbuf(:,:,:),rcvbuf(:,:,:) ! (nlevs,2,nlats)
 !
-! The restriction that every task must carry at least 4 longitudes
-! means that tasks with mytidi==0 will have lons 1->4 and tasks 
-! with mytidi==ntaski-1 will have lons nlonp4-3->nlonp4.
-!
-      if (mytidi /= 0 .and. mytidi /= ntaski-1) return
 #ifdef VT
 !     call vtsymdef(109, 'mp_periodic_f3d','Communication',ier)
       call vtbegin(109,ier)
 #endif
       if (do_rtc_mpi) call timer(rtc0_periodic_f3d,tsec,'begin')
+!
+! Use assignment and return in the special case of a serial run:
+      if (ntask == 1) then
+        do j=lat0,lat1       ! latitude
+          f(:,lon0:lon0+1,j) = f(:,nlon+1:nlon+2,j) ! e.g.: 1,2 <= 73,74
+          f(:,lon1-1:lon1,j) = f(:,lon0+2:lon0+3,j) ! e.g.: 75,76 <= 3,4
+        enddo
+        return
+      endif
+!
+! The restriction that every task must carry at least 4 longitudes
+! means that tasks with mytidi==0 will have lons 1->4 and tasks 
+! with mytidi==ntaski-1 will have lons nlonp4-3->nlonp4.
+!
+      if (mytidi /= 0 .and. mytidi /= ntaski-1) return
 !
 ! Allocate send and receive buffers:
       nlevs = lev1-lev0+1
@@ -2257,16 +2694,26 @@
       integer :: j,idest,isrc,isend,irecv,ier,len,nlons,nlats
       real,allocatable :: sndbuf(:,:),rcvbuf(:,:) ! (2,nlats)
 !
-! The restriction that every task must carry at least 4 longitudes
-! means that tasks with mytidi==0 will have lons 1->4 and tasks 
-! with mytidi==ntaski-1 will have lons nlonp4-3->nlonp4.
-!
-      if (mytidi /= 0 .and. mytidi /= ntaski-1) return
 #ifdef VT
 !     call vtsymdef(109, 'mp_periodic_f2d','Communication',ier)
       call vtbegin(109,ier)
 #endif
       if (do_rtc_mpi) call timer(rtc0_periodic_f2d,tsec,'begin')
+!
+! Use assignment and return in the special case of a serial run:
+      if (ntask == 1) then
+        do j=lat0,lat1       ! latitude
+          f(lon0:lon0+1,j) = f(nlon+1:nlon+2,j) ! e.g.: 1,2 <= 73,74
+          f(lon1-1:lon1,j) = f(lon0+2:lon0+3,j) ! e.g.: 75,76 <= 3,4
+        enddo
+        return
+      endif
+!
+! The restriction that every task must carry at least 4 longitudes
+! means that tasks with mytidi==0 will have lons 1->4 and tasks 
+! with mytidi==ntaski-1 will have lons nlonp4-3->nlonp4.
+!
+      if (mytidi /= 0 .and. mytidi /= ntaski-1) return
 !
 ! Allocate send and receive buffers:
       nlons = lon1-lon0+1
@@ -2286,6 +2733,7 @@
       if (mytidi==0) then
         idest = itask_table(ntaski-1,mytidj)
 
+!       write(6,"(' ')")
         do j=lat0,lat1
           sndbuf(1:2,j-lat0+1) = f(3:4,j)
         enddo ! j=lat0,lat1
@@ -2304,7 +2752,6 @@
 ! and receive lons nlonp4-1,nlonp4 from same task:
       elseif (mytidi==ntaski-1) then
         idest = itask_table(0,mytidj)
-
         do j=lat0,lat1
           sndbuf(1:2,j-lat0+1) = f(nlonp4-3:nlonp4-2,j)
         enddo ! j=lat0,lat1
@@ -2439,15 +2886,6 @@
         enddo ! j=lat0,lat1
       enddo ! n=0,ntask-1
 !
-! dynpot(nlonp1,0:nlatp1,nlevp1) should now be defined except for j==0
-! and j==nlatp1:
-!
-!     do j=1,nlat
-!       call fminmax(dynpot(:,j,:),(nlon+1)*nlevp1,fmin,fmax)
-!       write(6,"('mp_dynpot: j=',i2,' dynpot min,max=',2e12.4)")
-!    |    j,fmin,fmax
-!     enddo
-!
 ! Free local buffer space:
       deallocate(sndbuf)
       deallocate(rcvbuf)
@@ -2467,7 +2905,7 @@
 ! Dynamo has been calculated by the master task. Now send dynamo output
 !   field phim3d (mag coords) to the slaves (phim3d is use-associated
 !   from fields module at top of this module). Phim3d is dimensioned at
-!   the global mag grid by all tasks: phim3d(nmlonp1,nmlat,-2:nlevp1),
+!   the global mag grid by all tasks: phim3d(nmlonp1,nmlat,nlevp1),
 !   but it is calculated in the dynamo by only the master task.  
 !
 ! Local:
@@ -2502,7 +2940,121 @@
 !    |      'from master: global min,max=',2e12.4)") mytid,fmin,fmax
         endif
       endif
-      end subroutine mp_updatephi
+      end subroutine mp_updatephi      
+!-----------------------------------------------------------------------
+      subroutine mp_updateemphi
+!
+! Dynamo has been calculated by the master task. Now send dynamo output
+!   field emphi3d (mag coords) to the slaves (emphi3d is use-associated
+!   from fields module at top of this module). Emphi3d is dimensioned at
+!   the global mag grid by all tasks: emphi3d(nmlonp1,nmlat,nlevp1),
+!   but it is calculated in the dynamo by only the master task.  
+!
+! Local:
+      integer :: n,msgtag,ier
+      real :: fmin,fmax
+!
+      if (mytid==0) then ! master send to slaves
+        do n=1,ntask-1
+          msgtag = n
+          call mpi_send(emphi3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,n,
+     |      msgtag,MPI_COMM_WORLD,ier)
+          if (ier /= 0) then
+            write(6,"('>>> mp_updatephi: error sending',
+     |        ' emphi3d from master to task ',i3,' msgtag=',i3)")
+     |        n,msgtag
+          else
+!           write(6,"('mp_updatephi: master sent emphi3d to task',
+!    |        i3)") n
+          endif
+        enddo
+      else               ! slave receive from master
+        msgtag = mytid
+        call mpi_recv(emphi3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,0,
+     |    msgtag,MPI_COMM_WORLD,irstat,ier)
+        if (ier /= 0) then
+          write(6,"('>>> mp_updatephi: error receiving',
+     |      ' emphi3d from master at task mytid=',i3,' msgtag=',i3)")
+     |      mytid,msgtag
+        endif
+      endif
+      end subroutine mp_updateemphi
+!-----------------------------------------------------------------------
+      subroutine mp_updateemlam
+!
+! Dynamo has been calculated by the master task. Now send dynamo output
+!   field emlam3d (mag coords) to the slaves (emlam3d is use-associated
+!   from fields module at top of this module). Emlam3d is dimensioned at
+!   the global mag grid by all tasks: emlam3d(nmlonp1,nmlat,nlevp1),
+!   but it is calculated in the dynamo by only the master task.  
+!
+! Local:
+      integer :: n,msgtag,ier
+      real :: fmin,fmax
+!
+      if (mytid==0) then ! master send to slaves
+        do n=1,ntask-1
+          msgtag = n
+          call mpi_send(emlam3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,n,
+     |      msgtag,MPI_COMM_WORLD,ier)
+          if (ier /= 0) then
+            write(6,"('>>> mp_updatemlam: error sending',
+     |        ' emlam3d from master to task ',i3,' msgtag=',i3)")
+     |        n,msgtag
+          else
+!           write(6,"('mp_updatemlam: master sent emlam3d to task',
+!    |        i3)") n
+          endif
+        enddo
+      else               ! slave receive from master
+        msgtag = mytid
+        call mpi_recv(emlam3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,0,
+     |    msgtag,MPI_COMM_WORLD,irstat,ier)
+        if (ier /= 0) then
+          write(6,"('>>> mp_updatemlam: error receiving',
+     |      ' emlam3d from master at task mytid=',i3,' msgtag=',i3)")
+     |      mytid,msgtag
+        endif
+      endif
+      end subroutine mp_updateemlam      
+!-----------------------------------------------------------------------
+      subroutine mp_updateemz
+!
+! Dynamo has been calculated by the master task. Now send dynamo output
+!   field emz3d (mag coords) to the slaves (emz3d is use-associated
+!   from fields module at top of this module). Emz3d is dimensioned at
+!   the global mag grid by all tasks: emz3d(nmlonp1,nmlat,nlevp1),
+!   but it is calculated in the dynamo by only the master task.  
+!
+! Local:
+      integer :: n,msgtag,ier
+      real :: fmin,fmax
+!
+      if (mytid==0) then ! master send to slaves
+        do n=1,ntask-1
+          msgtag = n
+          call mpi_send(emz3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,n,
+     |      msgtag,MPI_COMM_WORLD,ier)
+          if (ier /= 0) then
+            write(6,"('>>> mp_updateemz: error sending',
+     |        ' emz3d from master to task ',i3,' msgtag=',i3)")
+     |        n,msgtag
+          else
+!           write(6,"('mp_updatemz: master sent emz3d to task',
+!    |        i3)") n
+          endif
+        enddo
+      else               ! slave receive from master
+        msgtag = mytid
+        call mpi_recv(emz3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,0,
+     |    msgtag,MPI_COMM_WORLD,irstat,ier)
+        if (ier /= 0) then
+          write(6,"('>>> mp_updateemz: error receiving',
+     |      ' emz3d from master at task mytid=',i3,' msgtag=',i3)")
+     |      mytid,msgtag
+        endif
+      endif
+      end subroutine mp_updateemz
 !-----------------------------------------------------------------------
       subroutine mp_updateemphi
 !

@@ -10,6 +10,7 @@
       use chemrates_module,only: rk1,rk2,rk3,rk4,rk5,rk6,rk7,rk8,
      |  rk9,rk10,rk16,rk23,rk26,beta9,ra1,ra2,ra3
       use qrj_module,only: qnp,qnop,qo2p,qn2p
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -38,8 +39,7 @@
      |  electrons  ! electron density (output to f4d(ne))
 !
 ! Local:
-      integer :: k,i
-      integer ::i0,i1,nk,nkm1 ! for addfsech
+      integer :: k,i,i0,i1
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  xnmbarm,        ! for conversion from mmr to cm3
      |  a0,a1,a2,a3,a4, ! coefficients for quartic solver
@@ -48,26 +48,30 @@
      |  root            ! output from quartic solver
 
 !     write(6,"('enter elden: lat=',i2)") lat
+      i0 = lon0 ; i1 = lon1
 !
-! Convenience ints for addfsech calls:
-      i0 = lon0
-      i1 = lon1
-      nk = lev1-lev0+1
-      nkm1 = nk-1
-
-!
-! Bad OP1_ELD
-!     call addfsech('TN_ELD' ,' ',' ',tn    (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('BAR_ELD',' ',' ',barm  (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('OP_ELD' ,' ',' ',op    (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('OP1_ELD',' ',' ',op_upd(:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('O2_ELD' ,' ',' ',o2    (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('O1_ELD' ,' ',' ',o1    (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('N2D_ELD',' ',' ',n2d   (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('NO_ELD' ,' ',' ',no    (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('N4S_ELD',' ',' ',n4s   (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('XIOP2P' ,' ',' ',xiop2p(:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('XIOP2D' ,' ',' ',xiop2d(:,i0:i1),i0,i1,nk,nkm1,lat)
+!     call addfld('TN_ELD' ,' ',' ',tn    (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('BAR_ELD',' ',' ',barm  (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('OP_ELD' ,' ',' ',op    (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('OP1_ELD',' ',' ',op_upd(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O2_ELD' ,' ',' ',o2    (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O1_ELD' ,' ',' ',o1    (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('N2D_ELD',' ',' ',n2d   (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('NO_ELD' ,' ',' ',no    (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('N4S_ELD',' ',' ',n4s   (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('XIOP2P' ,' ',' ',xiop2p(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('XIOP2D' ,' ',' ',xiop2d(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -153,26 +157,33 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !
-!     call addfsech('XNMBARM' ,' ',' ',xnmbarm,i0,i1,nk,nkm1,lat)
-!     call addfsech('NPLUS'   ,' ',' ',nplus(:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('A_COEF'  ,' ',' ',a      ,i0,i1,nk,nkm1,lat)
-!     call addfsech('B_COEF'  ,' ',' ',b      ,i0,i1,nk,nkm1,lat)
-!     call addfsech('C_COEF'  ,' ',' ',c      ,i0,i1,nk,nkm1,lat)
-!     call addfsech('D_COEF'  ,' ',' ',d      ,i0,i1,nk,nkm1,lat)
-!     call addfsech('E_COEF'  ,' ',' ',e      ,i0,i1,nk,nkm1,lat)
-!     call addfsech('FG_COEF' ,' ',' ',fg     ,i0,i1,nk,nkm1,lat)
-!     call addfsech('H_COEF'  ,' ',' ',h      ,i0,i1,nk,nkm1,lat)
-!     call addfsech('A0'      ,' ',' ',a0     ,i0,i1,nk,nkm1,lat)
-!     call addfsech('A1'      ,' ',' ',a1     ,i0,i1,nk,nkm1,lat)
-!     call addfsech('A2'      ,' ',' ',a2     ,i0,i1,nk,nkm1,lat)
-!     call addfsech('A3'      ,' ',' ',a3     ,i0,i1,nk,nkm1,lat)
-!     call addfsech('A4'      ,' ',' ',a4     ,i0,i1,nk,nkm1,lat)
+!     call addfld('XNMBARM' ,' ',' ',xnmbarm,
+!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('NPLUS'   ,' ',' ',nplus(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('A_COEF'  ,' ',' ',a,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('B_COEF'  ,' ',' ',b,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('C_COEF'  ,' ',' ',c,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('D_COEF'  ,' ',' ',d,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('E_COEF'  ,' ',' ',e,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('FG_COEF' ,' ',' ',fg,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('H_COEF'  ,' ',' ',h,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('A0'      ,' ',' ',a0(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('A1'      ,' ',' ',a1(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('A2'      ,' ',' ',a2(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('A3'      ,' ',' ',a3(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('A4'      ,' ',' ',a4(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
 !
 ! Solve quartic. Vquart returns electron density Ne in root:
 !
       call vquart(a0,a1,a2,a3,a4,root,lev0,lev1,lon0,lon1,lat)
 
-!     call addfsech('ROOT',' ',' ',root,i0,i1,nk,nkm1,lat)
+!     call addfld('ROOT',' ',' ',root,'lev',lev0,lev1,'lon',i0,i1,lat)
 !
 ! Insure positive Ne (at least 3100):
 !     where(root < 3.1e3) root = 3.1e3
@@ -199,12 +210,14 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1      
 !
-! Small diffs in O2P reported as "global diffs" in tgcmproc, but
-! not seen in any plots.
-!     call addfsech('NPLUSb' ,' ',' ',nplus(:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('N2P_ELD',' ',' ',n2p  (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('O2P_ELD',' ',' ',o2p  (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('NOP_ELD',' ',' ',nop  (:,i0:i1),i0,i1,nk,nkm1,lat)
+!     call addfld('NPLUSb' ,' ',' ',nplus(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('N2P_ELD',' ',' ',n2p  (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('O2P_ELD',' ',' ',o2p  (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('NOP_ELD',' ',' ',nop  (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
 !
 ! Transfer root to electrons output array:
       do i=lon0,lon1
@@ -217,12 +230,13 @@
         electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
       enddo ! i=lon0,lon1
 
-!     call addfsech('NE_ELDEN',' ',' ',electrons(:,i0:i1),
-!    |  i0,i1,nk,nk,lat)
+!     call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
 
       end subroutine elden
 !-----------------------------------------------------------------------
       subroutine vquart(a0,a1,a2,a3,a4,root,lev0,lev1,lon0,lon1,lat)
+      use addfld_module,only: addfld
       implicit none
 !
 ! Determines five roots of the equation:
@@ -239,11 +253,12 @@
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: root
 !
 ! Local:
-      integer :: k,i,nlevs
+      integer :: k,i,nlevs,i0,i1
       real,dimension(lev0:lev1,lon0:lon1) :: w1,w2,w3 ! work arrays
       real,parameter :: e=1.e-300 ! largest exponent on ieee is about 307
 !
       nlevs = lev1-lev0+1
+      i0 = lon0 ; i1 = lon1
       do i=lon0,lon1
         do k=lev0,lev1-1
 !
@@ -293,9 +308,9 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('W1'    ,' ',' ',w1,lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('W2'    ,' ',' ',w2,lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('W3'    ,' ',' ',w3,lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('VQROOT',' ',' ',root,lon0,lon1,nlevs,nlevs-1,lat)
+!     call addfld('W1'    ,' ',' ',w1,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('W2'    ,' ',' ',w2,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('W3'    ,' ',' ',w3,'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('VQROOT',' ',' ',root,'lev',lev0,lev1,'lon',i0,i1,lat)
 
       end subroutine vquart

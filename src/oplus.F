@@ -2,6 +2,7 @@
       module oplus_module
       use params_module,only: nlat,nlonp4,dz,nlon,dlev
       use magfield_module,only: bx,by,bz,bmod2 ! (nlonp4,-1:nlat+2)
+      use addfld_module,only: addfld
 !
 ! VT vampir tracing:
 !
@@ -63,7 +64,7 @@
      |  xiop2p,xiop2d
 !
 ! Local:
-      integer :: k,i,nlevs,lonbeg,lonend,lat,ier
+      integer :: k,i,lonbeg,lonend,lat,ier,nlevs
       integer :: jm2,jm1,j0,jp1,jp2 ! lat-2, lat-1, lat, lat+1, lat+2 
       real,dimension(lon0:lon1,lat0:lat1) :: 
      |  opflux,    ! upward number flux of O+ (returned by sub oplus_flux) (t7)
@@ -89,8 +90,6 @@
      |  op_loss,          ! was s13
      |  tp                ! te+ti
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
-! For diagnostics:
-!     real,dimension(lev0:lev1,lon0:lon1) :: bx_ik,by_ik
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
@@ -111,41 +110,28 @@
 #endif
 !
 ! Number of pressure levels (this will equal nlevp1):
-      nlevs = lev1-lev0+1
-
-!     real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
-!    |  intent(in) ::
-!    |  tn, te, ti, ! neutral, electron, and ion temperatures (deg K)
-!    |  o2, o1,     ! o2, o mass mixing ratios
-!    |  n2d,        ! n2d
-!    |  ne,         ! electron density
-!    |  u,v,w,      ! neutral wind velocities (zonal, meridional, omega)
-!    |  barm,       ! mean molecular mass
-!    |  optm1,      ! O+ at time n-1
-!    |  op,         ! O+ ion
-!    |  ui,vi,wi,   ! zonal, meridional, and vertical ion velocities
-!    |  xnmbar      ! p0*e(-z)*barm/kT
+      nlevs = lev1-lev0+1 ! for bndlons calls
 !
-      do lat=lat0,lat1
-!       call addfsech('TE_OP',' ',' ',te(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
-!       call addfsech('TI_OP',' ',' ',ti(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
-!       call addfsech('N2D_OP',' ',' ',n2d(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
-!       call addfsech('NE_OP',' ',' ',ne(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
-!       call addfsech('OPTM1',' ',' ',optm1(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
-!       call addfsech('OP_OPLUS',' ',' ',op(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
-!       call addfsech('UI_OP',' ',' ',ui(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
-!       call addfsech('VI_OP',' ',' ',vi(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
-!       call addfsech('WI_OP',' ',' ',wi(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
-      enddo ! lat=lat0,lat1
+!     do lat=lat0,lat1
+!       call addfld('TE_OP',' ',' ',te(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('TI_OP',' ',' ',ti(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('N2D_OP',' ',' ',n2d(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('NE_OP',' ',' ',ne(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('OPTM1',' ',' ',optm1(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('OP_OPLUS',' ',' ',op(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('UI_OP',' ',' ',ui(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('VI_OP',' ',' ',vi(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('WI_OP',' ',' ',wi(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     enddo ! lat=lat0,lat1
 
 !
 ! Set kut for wave filtering according to dlat (2.5 or 5.0 degrees):
@@ -177,13 +163,6 @@
           tpj(k,i,jp1) = 0.5*(te(k,i,jp1)+ti(k,i,jp1))
         enddo
       enddo
-
-!     call addfsech('TPJM1',' ',' ',tpj(:,lon0:lon1,jm1),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('TP   ',' ',' ',tpj(:,lon0:lon1,lat  ),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('TPJP1',' ',' ',tpj(:,lon0:lon1,jp1),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
 !
 ! rrk returns djm1,dj,djp1:
 !     subroutine rrk(t,rms,ps1,ps2,tp,ans,lon0,lon1,lev0,lev1,lat)
@@ -205,12 +184,12 @@
      |  lon0,lon1,lev0,lev1,lat)
       if (debug) write(6,"('oplus after rrk: lat=',i3)") lat
 
-!     call addfsech('DJM1',' ',' ',djm1(:,lon0:lon1,jm1),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('DJ  ',' ',' ',dj  (:,lon0:lon1,lat),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('DJP1',' ',' ',djp1(:,lon0:lon1,jp1),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
+!     call addfld('DJM1',' ',' ',dj(:,lon0:lon1,jm1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('DJ  ',' ',' ',dj(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('DJP1',' ',' ',dj(:,lon0:lon1,jp1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -233,12 +212,12 @@
       enddo
       if (debug) write(6,"('oplus after hj: lat=',i3)") lat
 
-!     call addfsech('HJM1',' ',' ',hjm1(:,:,jm1),lon0,lon1,
-!    |  nlevs,nlevs-1,lat)
-!     call addfsech('HJ  ',' ',' ',hj  (:,:,lat  ),lon0,lon1,
-!    |  nlevs,nlevs-1,lat)
-!     call addfsech('HJP1',' ',' ',hjp1(:,:,jp1),lon0,lon1,
-!    |  nlevs,nlevs-1,lat)
+!     call addfld('HJM1',' ',' ',hj(lev0:lev1-1,:,jm1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('HJ  ',' ',' ',hj(lev0:lev1-1,:,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('HJP1',' ',' ',hj(lev0:lev1-1,:,jp1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! bvel @ jm1 = (B.U)*N(O+)    (J-1) (was s6)
 ! bvel @ j   = (B.U)*N(O+)      (J) (was s7)
@@ -262,12 +241,12 @@
       enddo ! i=lon0,lon1
       if (debug) write(6,"('oplus after bvel: lat=',i3)") lat
 
-!     call addfsech('BVEL_JM1',' ',' ',bvel(:,lon0:lon1,jm1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('BVEL_J'  ,' ',' ',bvel(:,lon0:lon1,j0),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('BVEL_JP1',' ',' ',bvel(:,lon0:lon1,jp1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
+!     call addfld('BVEL_JM1',' ',' ',bvel(lev0:lev1-1,lon0:lon1,jm1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('BVEL_J'  ,' ',' ',bvel(lev0:lev1-1,lon0:lon1,j0),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('BVEL_JP1',' ',' ',bvel(lev0:lev1-1,lon0:lon1,jp1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
 !     subroutine diffus(tp,en,hj,ans,lon0,lon1,lev0,lev1,lat)
 !     real,dimension(lev0:lev1,lon0:lon1),intent(in) :: tp,en,hj
@@ -285,12 +264,12 @@
      |  diffj(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,lat)
 
       if (debug) write(6,"('oplus after diffus: lat=',i3)") lat
-!     call addfsech('DIFFJM1',' ',' ',diffj(:,lon0:lon1,jm1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('DIFFJ  ',' ',' ',diffj(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('DIFFJP1',' ',' ',diffj(:,lon0:lon1,jp1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
+!     call addfld('DIFFJM1',' ',' ',diffj(:,lon0:lon1,jm1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('DIFFJ  ',' ',' ',diffj(:,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('DIFFJP1',' ',' ',diffj(:,lon0:lon1,jp1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! tpjm2 = 2.*TP*N(O+)    (J-2)
 ! tpjm1 = 2.*TP*N(O+)    (J-1)
@@ -309,16 +288,16 @@
       enddo ! i=lon0,lon1
       if (debug) write(6,"('oplus after tpj2: lat=',i3)") lat
 
-!     call addfsech('TPJM2',' ',' ',tpj(:,lon0:lon1,jm2),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('TPJM1',' ',' ',tpj(:,lon0:lon1,jm1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('TP   ',' ',' ',tpj(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('TPJP1',' ',' ',tpj(:,lon0:lon1,jp1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('TPJP2',' ',' ',tpj(:,lon0:lon1,jp2),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
+!     call addfld('TPJM2',' ',' ',tpj(lev0:lev1-1,lon0:lon1,jm2),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('TPJM1',' ',' ',tpj(lev0:lev1-1,lon0:lon1,jm1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('TP   ',' ',' ',tpj(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('TPJP1',' ',' ',tpj(lev0:lev1-1,lon0:lon1,jp1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('TPJP2',' ',' ',tpj(lev0:lev1-1,lon0:lon1,jp2),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Shapiro smoother: optm1 is O+ at time n-1 (optm1_smooth was s1)
 ! optm1_smooth will be used in explicit terms below.
@@ -381,9 +360,8 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('BDOTDH',' ',' ',bdotdh_op(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-
+!     call addfld('BDOTDH',' ',' ',bdotdh_op(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! bdotdh_opjm1 = (B(H).DEL(H))*2.*TP*N(O+)    (J-1)
 ! bdotdh_opj   = (B(H).DEL(H))*2.*TP*N(O+)      (J)
@@ -449,15 +427,14 @@
      |  bdotdh_opj(:,lon0:lon1,jp1),
      |  bdotdh_diff(:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
 
-!     call addfsech('BDOT_DIF',' ',' ',bdotdh_diff(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('BDOT_JM1',' ',' ',bdotdh_opj(:,lon0:lon1,jm1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('BDOT_J'  ,' ',' ',bdotdh_opj(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('BDOT_JP1',' ',' ',bdotdh_opj(:,lon0:lon1,jp1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-
+!     call addfld('BDOT_DIF',' ',' ',bdotdh_diff(lev0:lev1-1,lon0:lon1,
+!    |  lat),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('BDOT_JM1',' ',' ',bdotdh_opj(lev0:lev1-1,lon0:lon1,
+!    |  jm1),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('BDOT_J'  ,' ',' ',bdotdh_opj(lev0:lev1-1,lon0:lon1,
+!    |  lat),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('BDOT_JP1',' ',' ',bdotdh_opj(lev0:lev1-1,lon0:lon1,
+!    |  jp1),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! bdzdvb_op = (BZ*D/(H*DZ)+DIV(*B))*S2
 ! bdzdvb returns bdzdvb_op.
@@ -465,9 +442,8 @@
       call bdzdvb(bdotdh_opj(:,lon0:lon1,lat),dvb(:,lat),hj(:,:,lat),
      |  bdzdvb_op,lev0,lev1,lon0,lon1,lat)
 
-!     call addfsech('BDZDVB',' ',' ',bdzdvb_op,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-
+!     call addfld('BDZDVB',' ',' ',bdzdvb_op(lev0:lev1-1,:),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Collect explicit terms:
       do i=lon0,lon1
@@ -475,23 +451,19 @@
           explicit(k,i) = -explic*(bdzdvb_op(k,i)+bdotdh_diff(k,i,lat)+
      |      bdotdh_op(k,i,lat))
         enddo ! k=lev0,lev1-1
-
-!       bx_ik(:,i) = bx(i,lat)
-!       by_ik(:,i) = by(i,lat)
-
       enddo ! i=lon0,lon1
 
-!     call addfsech('EXPLIC0',' ',' ',explicit,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('BX',' ',' ',bx_ik(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('BY',' ',' ',by_ik(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('UI_VEL',' ',' ',ui(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('VI_VEL',' ',' ',vi(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!
+!     call addfld('EXPLIC0',' ',' ',explicit(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('BX',' ',' ',bx(lon0:lon1,:),
+!    |  'lon',lon0,lon1,'lat',lat,lat,0)
+!     call addfld('BY',' ',' ',by(lon0:lon1,:),
+!    |  'lon',lon0,lon1,'lat',lat,lat,0)
+!     call addfld('UI_VEL',' ',' ',ui(:,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('VI_VEL',' ',' ',vi(:,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+ 
       lonbeg = lon0
       if (lon0==1) lonbeg = 3
       lonend = lon1
@@ -517,10 +489,8 @@
 ! Periodic points for explicit terms.
 ! This is apparently unnecessary:
 !     call periodic_f2d(explicit,lon0,lon1,nlevs)
-!
-! Some very small diffs at couple of grid points, probably from BY:
-!     call addfsech('EXPLIC1',' ',' ',explicit,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
+!     call addfld('EXPLIC1',' ',' ',explicit(lev0:lev1-1,:),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       do i=lon0,lon1
         dvb(i,lat) = dvb(i,lat)/bz(i,lat)
@@ -532,10 +502,8 @@
           tp(k,i) = 0.5*(ti(k,i,j0)+te(k,i,j0))     ! s14
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-
-!     call addfsech('HDZ',' ',' ',hdz,lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('TP' ,' ',' ',tp ,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
+!     call addfld('HDZ',' ',' ',hdz(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! gmr = G*M(O+)/(2.*R)
       gmr = grav*rmass_op/(2.*gask)
@@ -560,8 +528,10 @@
      |                   (1.5*hdz(lev1-1,i)-0.5*hdz(lev1-2,i))-gmr
       enddo ! i=lon0,lon1
 
-!     call addfsech('TPHDZ1',' ',' ',tphdz1,lon0,lon1,nlevs,nlevs,lat) ! s13
-!     call addfsech('TPHDZ0',' ',' ',tphdz0,lon0,lon1,nlevs,nlevs,lat) ! s12
+!     call addfld('TPHDZ1',' ',' ',tphdz1,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TPHDZ0',' ',' ',tphdz0,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! djint = dj at interfaces:
       do i=lon0,lon1
@@ -571,9 +541,8 @@
         djint(lev0,i) = (1.5*dj(lev0  ,i,lat)-0.5*dj(lev0+1,i,lat))
         djint(lev1,i) = (1.5*dj(lev1-1,i,lat)-0.5*dj(lev1-2,i,lat))
       enddo ! i=lon0,lon1
-
-!     call addfsech('DJINT' ,' ',' ',djint ,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
+!     call addfld('DJINT' ,' ',' ',djint,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! divbz = (DIV(B)+(DH*D*BZ)/(D*BZ) (was s7)
       do i=lonbeg,lonend
@@ -592,9 +561,8 @@
 ! Set periodic points to zero to avoid NaNS trap:
       if (lon0==1) divbz(:,lon0:lon0+1) = 0.
       if (lon1==nlonp4) divbz(:,lon1-1:lon1) = 0.
-
-!     call addfsech('DIVBZ' ,' ',' ',divbz ,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
+!     call addfld('DIVBZ' ,' ',' ',divbz(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! hdzmbz = (1./(H*DZ)-(DIV(B)+DH*D*BZ/(D*BZ))/(2*BZ))*BZ**2 (was s10)
 ! hdzpbz = (1./(H*DZ)+(DIV(B)+DH*D*BZ/(D*BZ))/(2*BZ))*BZ**2 (was s9 )
@@ -606,10 +574,10 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('HDZMBZ' ,' ',' ',hdzmbz,lon0,lon1,nlevs,
-!    |  nlevs-1,lat) ! s10
-!     call addfsech('HDZPBZ' ,' ',' ',hdzpbz,lon0,lon1,nlevs,
-!    |  nlevs-1,lat) ! s9
+!     call addfld('HDZMBZ' ,' ',' ',hdzmbz(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('HDZPBZ' ,' ',' ',hdzpbz(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Sum O+ at time n-1 to explicit terms: N(O+)/(2*DT) (N-1) (was s4)
 ! Boundary longitudes for optm1_smooth were obtained after first
@@ -625,11 +593,11 @@
         enddo ! k=lev0,lev1
       enddo ! i=lonbeg,lonend
 
-!     call addfsech('OPTM1_SM' ,' ',' ',optm1_smooth(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('EXPLIC2' ,' ',' ',explicit,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-
+!     call addfld('OPTM1_SM' ,' ',' ',
+!    |  optm1_smooth(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('EXPLIC2' ,' ',' ',explicit(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Begin coefficients p_coeff, q_coeff, r_coeff  (s1,s2,s3)
       do i=lon0,lon1
@@ -641,13 +609,12 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('P_COEFF0',' ',' ',p_coeff,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('Q_COEFF0',' ',' ',q_coeff,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('R_COEFF0',' ',' ',r_coeff,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-
+!     call addfld('P_COEFF0',' ',' ',p_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEFF0',' ',' ',q_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('R_COEFF0',' ',' ',r_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! bdotu = B.U (s7)
       do i=lon0,lon1
@@ -656,9 +623,8 @@
      |      hj(k,i,lat)*bz(i,lat)*0.5*(w(k,i,j0)+w(k+1,i,j0))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-
-!     call addfsech('BDOTU' ,' ',' ',bdotu,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
+!     call addfld('BDOTU' ,' ',' ',bdotu(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Continue coefficients with vertical ion velocity:
       do i=lon0,lon1
@@ -673,12 +639,12 @@
         enddo ! k=lev0,lev1-2
       enddo ! i=lon0,lon1
 !
-!     call addfsech('P_COEFF1',' ',' ',p_coeff,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('Q_COEFF1',' ',' ',q_coeff,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('R_COEFF1',' ',' ',r_coeff,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
+!     call addfld('P_COEFF1',' ',' ',p_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEFF1',' ',' ',q_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('R_COEFF1',' ',' ',r_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Upper and lower boundaries:
       do i=lon0,lon1
@@ -716,25 +682,23 @@
         r_coeff(lev1-1,i) = 0.
       enddo ! i=lon0,lon1
 
-!     call addfsech('EXPLIC3',' ',' ',explicit,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('P_COEFF2',' ',' ',p_coeff,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('Q_COEFF2',' ',' ',q_coeff,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('R_COEFF2',' ',' ',r_coeff,lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
+!     call addfld('EXPLIC3',' ',' ',explicit(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('P_COEFF2',' ',' ',p_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEFF2',' ',' ',q_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('R_COEFF2',' ',' ',r_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
-!     call addfsech('QOP2P_OP',' ',' ',qop2p(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('QOP2D_OP',' ',' ',qop2d(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('RK20',' ',' ',rk20(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('RK25',' ',' ',rk25(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('NE_OP',' ',' ',ne(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
+!     call addfld('QOP2P_OP',' ',' ',qop2p(:,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOP2D_OP',' ',' ',qop2d(:,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('RK20',' ',' ',rk20(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('RK25',' ',' ',rk25(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Sources and sinks (xiop2p and xiop2d are outputs):
 !
@@ -765,27 +729,26 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('XIOP2P',' ',' ',xiop2p(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('XIOP2D',' ',' ',xiop2d(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('OP_LOSS',' ',' ',op_loss(lev0:lev1,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('OP_QOP',' ',' ',qop(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('OP_NE' ,' ',' ',ne(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('OP_O1' ,' ',' ',o1(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('OP_TN' ,' ',' ',tn(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('OP_BARM' ,' ',' ',barm(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('OP_RK19' ,' ',' ',rk19(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('OP_RK25' ,' ',' ',rk25(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-
+!     call addfld('XIOP2P',' ',' ',xiop2p(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('XIOP2D',' ',' ',xiop2d(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('OP_LOSS',' ',' ',op_loss(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('OP_QOP',' ',' ',qop(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('OP_NE' ,' ',' ',ne(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('OP_O1' ,' ',' ',o1(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('OP_TN' ,' ',' ',tn(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('OP_BARM' ,' ',' ',barm(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('OP_RK19' ,' ',' ',rk19(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('OP_RK25' ,' ',' ',rk25(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Add source term to RHS (explicit terms):
       do i=lon0,lon1
@@ -799,10 +762,8 @@
      |      barm(k+1,i,j0))/(boltz*tn(k,i,j0))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-
-!     call addfsech('EXPLIC4',' ',' ',explicit,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-
+!     call addfld('EXPLIC4',' ',' ',explicit(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Lower boundary condition N(O+) = Q/L:
       do i=lon0,lon1
@@ -812,14 +773,14 @@
         p_coeff(lev0,i) = 0.
       enddo ! i=lon0,lon1
 
-!     call addfsech('P_COEFF',' ',' ',p_coeff,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('Q_COEFF',' ',' ',q_coeff,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('R_COEFF',' ',' ',r_coeff,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
-!     call addfsech('EXPLIC5',' ',' ',explicit,lon0,lon1,nlevs,nlevs-1,
-!    |  lat)
+!     call addfld('P_COEFF',' ',' ',p_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEFF',' ',' ',q_coeff(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('R_COEFF',' ',' ',r_coeff(lev0:lev1-2,:),
+!    |  'lev',lev0,lev1-2,'lon',lon0,lon1,lat)
+!     call addfld('EXPLIC5',' ',' ',explicit(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Tridiagonal solver returns updated O+ in opout (all other args are input):
 !     subroutine trsolv(a,b,c,f,x,lev0,lev1,k1,k2,lon0,lon1,lonmax,lat,
@@ -829,8 +790,8 @@
      |  opout(:,lon0:lon1,lat),lev0,lev1,lev0,lev1-1,lon0,lon1,nlonp4,
      |  lat,0)
 !
-!     call addfsech('OP_SOLV',' ',' ',opout(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
+!     call addfld('OP_SOLV',' ',' ',opout(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
         if (debug) 
      |    write(6,"('oplus end third lat scan: lat=',i3)") lat
@@ -847,9 +808,8 @@
         if (debug) 
      |    write(6,"('oplus begin fourth lat scan: lat=',i3)") lat
 !
-! Very small "diamond diffs" with tgcm15:
-!     call addfsech('OP_FILT',' ',' ',opout(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
+!     call addfld('OP_FILT',' ',' ',opout(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Time smoothing:
 !
@@ -877,16 +837,6 @@
         enddo ! k=lev0,lev1-1      
       enddo ! i=lon0,lon1
 !
-! Very small "diamond diffs" with tgcm15:
-! (This may be related to small diffs in mag field bx,by,bz and/or small
-!  diffs in ion velocities, esp WI. This may also be related to use of
-!  -lmass in tiegcm1, which is not used in tgcm15, e.g. see pi_dyn)
-!
-!     call addfsech('OPOUT',' ',' ',opout(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('OPTM1',' ',' ',optm1out(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!
 ! End fourth and final latitude scan:
       enddo ! lat=lat0,lat1
 !
@@ -900,10 +850,10 @@
 !
 ! Save outputs on secondary history for diagnostics:
 !     do lat=lat0,lat1
-!       call addfsech('OPOUT',' ',' ',opout(:,lon0:lon1,lat),
-!    |    lon0,lon1,nlevs,nlevs,lat)
-!       call addfsech('OPTM1',' ',' ',optm1out(:,lon0:lon1,lat),
-!    |    lon0,lon1,nlevs,nlevs,lat)
+!       call addfld('OPOUT',' ',' ',opout(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('OPOUTM1',' ',' ',optm1out(lev0:lev1-1,lon0:lon1,
+!    |    lat),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     enddo ! lat=lat0,lat1
 #ifdef VT
 !     code = 113 ; state = 'oplus' ; activity='ModelCode'

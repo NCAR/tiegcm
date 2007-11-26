@@ -1,8 +1,7 @@
 !
       module cons_module
       use params_module,only: dlat,dz,nlon,nlonp1,nlonp4,nlat,nlatp1,
-     |  dlev,nlev,nmlat,nmlon,nmlonp1,nmagphrlat,nmagphrlon,
-     |  magphrlat1,magphrlat2,magphrlon1,plev1,zst
+     |  dlev,nlev,nmlat,nmlon,nmlonp1,zmbot,zmtop,zibot,zitop
       implicit none
 !
 ! Define model constants. 
@@ -106,11 +105,9 @@
       real,parameter :: h00=9.7e6, r00=re+h00	! use mean earth radius
       real,parameter :: h0 =9.0e6, r0 =re+h0	! use mean earth radius
       real :: 
-     |  dlatg, dlong, dlatm, dlonm,dmagphrlon,
+     |  dlatg, dlong, dlatm, dlonm,
      |  ylatm(nmlat),    ! magnetic latitudes (radians)
      |  ylonm(nmlonp1),  ! magnetic longitudes (radians)
-     |  ylatmagphr(nmagphrlat),  ! magnetosphere latitudes (radians)
-     |  ylonmagphr(nmagphrlon),  ! magnetosphere longitudes (radians)
      |  rcos0s(nmlat),   ! cos(theta0)/cos(thetas)
      |  dt0dts(nmlat),   ! d(theta0)/d(thetas)
      |  dt1dts(nmlat),   ! dt0dts/abs(sinim) (non-zero at equator)
@@ -183,15 +180,16 @@
       dlamda = 2.*pi/float(nlon)      ! C(1)
       dlamda_2div3 = 2./(3.*dlamda)   ! C(10)
       dlamda_1div12 = 1./(12.*dlamda) ! C(11)
+
 !
 ! expz(kmax) is exp(-zp) at midpoints:
 ! expz (will replace EXPS) (expz(nlev+1) not used).
 !
       expz(:) = 0. ! init
 !
-! bottom midpoint z = plev1 + 1/2 deltaz (deltaz==dz==0.5 or 0.25)
-! (plev1 and dz are in params.h)
-      z = plev1+.5*dlev     
+! bottom midpoint z = zibot + 1/2 deltaz (deltaz==dz==0.5 or 0.25)
+! (zibot and dz are in params.h)
+      z = zibot+.5*dlev
       expz(1) = exp(-z)
       expdz = exp(-dlev)
       difk(1) = 5.0e-6
@@ -234,16 +232,7 @@
       freq_ann = freq_semidi/(2.*365.25) ! was C(25)
 !
 ! Set gravity according to lower boundary:
-      if (plev1==-17.) then     ! time-gcm
-        grav = 945.
-      elseif (plev1==-7.) then  ! tiegcm
-        grav = 870.
-      else
-        write(6,"(/,'>>> WARNING: do not know how to assign gravity',
-     |    ' constant with plev1=',f10.2)") plev1
-        grav = 945.
-        write(6,"('  Default to grav=',f10.2,/)") grav
-      endif
+      grav = 870. ! (is 945. in time-gcm)
       dzgrav = grav/gask   ! C(65)
 !
 ! Set kut for wave filtering according to dlat (2.5 or 5.0):
@@ -259,8 +248,11 @@
       write(6,"(  'Model version = ',a)") tgcm_version
       write(6,"(/,'Set constants:')")
       write(6,"('  nlat=',i3,' nlon=',i3,' nlev=',i3)") nlat,nlon,nlev
-      write(6,"('  zst=',f8.2,' plev1=',f8.2,' dlev=',f5.2)") 
-     |  zst,plev1,dlev
+      write(6,"('  dz = ',f5.2)") dz
+      write(6,"('  zmbot, zmtop = ',2f8.3,
+     |  ' (bottom,top midpoint levels)')") zmbot,zmtop
+      write(6,"('  zibot, zitop = ',2f8.3,
+     |  ' (bottom,top interface levels)')") zibot,zitop
       write(6,"('  dt = ',f8.2,' secs')") dt
       write(6,"('  grav = ',f10.2)") grav
       write(6,"('  freq_3m3 = ',e10.4,'  freq_semidi=',e10.4,
@@ -316,14 +308,13 @@
      |  theta0(nmlat),
      |  hamh0(nmlat)
       real :: dtheta,table2(91,3:5),tanths2
-      real :: fac,rmin,rmax,rmag
+      real :: rmin,rmax,rmag
 !
 ! Set grid deltas:
       dlatg = pi/float(nlat)
       dlong = 2.*pi/float(nlon)
       dlatm = pi_dyn/float(nmlat-1) ! note use of pi_dyn
       dlonm = 2.*pi_dyn/float(nmlon) 
-      dmagphrlon = 360./float(nmagphrlon)
 !
 ! Set geographic latitude array ylatg:
       do j=1,nlat
@@ -402,18 +393,6 @@
      |      alfa)
         enddo ! i=2,90
       enddo ! n=1,7
-
-! Define magnetospheric grid vars
-      do i=1,nmagphrlon
-        ylonmagphr(i) = magphrlon1+(i-1)*dmagphrlon
-      enddo
-      fac = pi/180.
-      rmax = 1./(cos(magphrlat1*fac))**2
-      rmin = 1./(cos(magphrlat2*fac))**2
-      do i=1,nmagphrlat
-        rmag = (rmax-(rmax-rmin)/(nmagphrlat-1)*real(i-1))
-        ylatmagphr(i) = acos(sqrt(1./rmag))/fac
-      enddo
 !
 !     write(6,"(/,'consdyn: ylatg =',/,(6e12.4))") ylatg
 !     write(6,"(  'consdyn: ylong =',/,(6e12.4))") ylong

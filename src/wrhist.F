@@ -15,7 +15,7 @@
 ! The current time series number is returned in iseries_p for primary
 ! histories, and iseries_s for secondaries. These are on the stack so
 ! this routine can be called from single (e.g., from sub outhist) or 
-! multiple threads/tasks (e.g. advnce and addfsech).
+! multiple threads/tasks (e.g. advnce and addfld).
 !
       use input_module,only: step,start,stop,hist,save,
      |  secstart,secstop,sechist,secsave

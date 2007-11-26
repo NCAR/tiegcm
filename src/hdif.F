@@ -2,6 +2,7 @@
       module hdif_module
       use params_module,only: nlevp1,nlonp4,nlat
       use mpi_module,only: lon0,lon1,lat0,lat1
+      use addfld_module,only: addfld
       implicit none
 !
 ! An extra latitude is needed in fnrh and fkmh: 
@@ -37,7 +38,7 @@
      |  barm   ! mean molecular weight
 !
 ! Local:
-      integer :: k,ii,i,j,ip1,ip1k,nlons,nlevs,lat,ier
+      integer :: k,ii,i,j,ip1,ip1k,lat,ier
       real :: fmin,fmax
       real :: abcsj,abcsjp,con1,con2,con3,delt,dels
       real :: cp2 = 0.2
@@ -46,9 +47,6 @@
 !     code = 119 ; state = 'hdif1' ; activity='ModelCode'
       call vtbegin(119,ier)
 #endif
-!
-      nlons = lon1-lon0+1
-      nlevs = lev1-lev0+1
 !
 ! Latitude loop starts at lat0-3. Inputs are referenced only through
 ! lat+2, but kmh and nrh are defined from lat0-3 to lat1.
@@ -104,10 +102,6 @@
             fkmh(k,i,lat) = con3*sqrt(dels*dels+delt*delt)
           enddo ! i=lon0,lon1
         enddo ! k=lev0,lev1-1
-
-!       if (lat >= lat0)
-!    |    call addfsech('FKMH',' ',' ',fkmh(:,lon0:lon1,lat),lon0,lon1,
-!    |      nlevs,nlevs-1,lat)
 !
 ! NRH = ((barm(k)+barm(k+1))*0.5) / (tnm(k)+(t0(k)+t0(k+1))*0.5)
         do i=lon0,lon1
@@ -116,11 +110,6 @@
      |                      (tn_nm(k,i,lat+1)+((t0(k)+t0(k+1))*.5))
           enddo
         enddo
-!
-!       if (lat >= lat0)
-!    |    call addfsech('FNRH',' ',' ',fnrh(:,lon0:lon1,lat),lon0,lon1,
-!    |      nlevs,nlevs-1,lat)
-
       enddo ! lat=lat0-3,lat1
 #ifdef MPI
 !
@@ -129,10 +118,10 @@
       call mp_bndlons_kmh(lev0,lev1,lon0,lon1,lat0,lat1)
 #endif
 !     do j=lat0,lat1
-!         call addfsech('FNRH',' ',' ',fnrh(:,lon0:lon1,j),lon0,lon1,
-!    |      nlevs,nlevs-1,j)
-!         call addfsech('FKMH',' ',' ',fkmh(:,lon0:lon1,j),lon0,lon1,
-!    |      nlevs,nlevs-1,j)
+!         call addfld('FNRH',' ',' ',fnrh(lev0:lev1-1,lon0:lon1,j),
+!    |      'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+!         call addfld('FKMH',' ',' ',fkmh(lev0:lev1-1,lon0:lon1,j),
+!    |      'lev',lev0,lev1-1,'lon',lon0,lon1,j)
 !     enddo ! j=lat0,lat1
 !
 #ifdef VT
@@ -169,7 +158,7 @@
      |  fkldo2  ! o2 horizontal diffusion term
 !
 ! Local:
-      integer :: k,i,ip1,ip1k,nlevs,lonbeg,lonend,lat,ier
+      integer :: k,i,ip1,ip1k,lonbeg,lonend,lat,ier
       real :: 
      |  avkmh (lev0:lev1,lon0:lon1), ! average kmh
      |  rhokmh(lev0:lev1,lon0:lon1)  ! nrh*avkmh
@@ -188,7 +177,6 @@
 ! Allocation of fkmh in sub init_kmh_nrh (fields_module.F):
 !     allocate(fkmh%data3d(nlevp1,nlonp4+1,-2:nlat),stat=ier)
 !
-      nlevs = lev1-lev0+1 ! for addfsech calls
       do i=lon0,lon1
         do k=lev0,lev1-1
           avkmh(k,i) = ((fkmh(k,i-1,lat-1)+fkmh(k,i,lat-1)+
@@ -196,8 +184,8 @@
         enddo
       enddo
 !     if (lat > 0)
-!    |  call addfsech('AVKMH',' ',' ',avkmh(lon0:lon1,:),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
+!    |  call addfld('AVKMH',' ',' ',avkmh(lev0:lev1-1,lon0:lon1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! rhokmh = rho*avg(kmh)
       do i=lon0,lon1
@@ -208,8 +196,8 @@
       enddo
 !
 !     if (lat > 0)
-!    |  call addfsech('RHOKMH',' ',' ',rhokmh(lon0:lon1,:),lon0,lon1,
-!    |    nlevs,nlevs-1,lat)
+!    |  call addfld('RHOKMH',' ',' ',rhokmh(lev0:lev1-1,lon0:lon1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! CALC RHO*KMH*(L*L(D*D)(PSI)) AT J+1 AND N-1
 !
@@ -234,8 +222,8 @@
         enddo
       enddo
 !     if (lat > 0)
-!    |  call addfsech('FKLDU',' ',' ',fkldu(:,lon0:lon1,lat+1),
-!    |    lon0,lon1,nlevs,nlevs-1,lat)
+!    |  call addfld('FKLDU',' ',' ',fkldu(lev0:lev1-1,lon0:lon1,lat+1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! FOR PSI = V
       call lsqdsq(vn_nm(lev0:lev1,lonbeg-1:lonend+1,lat+2),
@@ -249,8 +237,8 @@
         enddo
       enddo
 !     if (lat > 0)
-!    |  call addfsech('FKLDV',' ',' ',fkldv(:,lon0:lon1,lat+1),
-!    |    lon0,lon1,nlevs,nlevs-1,lat)
+!    |  call addfld('FKLDV',' ',' ',fkldv(lev0:lev1-1,lon0:lon1,lat+1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! FOR PSI = T
       call lsqdsq(tn_nm(lev0:lev1,lonbeg-1:lonend+1,lat+2),
@@ -264,8 +252,8 @@
         enddo
       enddo
 !     if (lat > 0)
-!    |  call addfsech('FKLDT',' ',' ',fkldt(:,lon0:lon1,lat+1),
-!    |    lon0,lon1,nlevs,nlevs-1,lat)
+!    |  call addfld('FKLDT',' ',' ',fkldt(lev0:lev1-1,lon0:lon1,lat+1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! FOR PSI = O2
       call lsqdsq(o2_nm(lev0:lev1,lonbeg-1:lonend+1,lat+2),
@@ -279,8 +267,8 @@
         enddo
       enddo
 !     if (lat > 0)
-!    |  call addfsech('FKLDO2',' ',' ',fkldo2(:,lon0:lon1,lat+1),
-!    |    lon0,lon1,nlevs,nlevs-1,lat)
+!    |  call addfld('FKLDO2',' ',' ',fkldo2(lev0:lev1-1,lon0:lon1,lat+1)
+!    |    ,'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! FOR PSI = O
       call lsqdsq(o1_nm(lev0:lev1,lonbeg-1:lonend+1,lat+2),
@@ -294,8 +282,8 @@
         enddo
       enddo
 !     if (lat > 0)
-!    |  call addfsech('FKLDO1',' ',' ',fkldo1(:,lon0:lon1,lat+1),
-!    |    lon0,lon1,nlevs,nlevs-1,lat)
+!    |  call addfld('FKLDO1',' ',' ',fkldo1(lev0:lev1-1,lon0:lon1,lat+1)
+!    |    ,'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
       enddo ! lat=lat0-2,lat1
 !
@@ -367,11 +355,9 @@
      |  hdt ,hdu ,hdv ,hdo2 ,hdo1  ! output
 !
 ! Local:
-      integer :: k,i,lonbeg,lonend,nlevs
+      integer :: k,i,lonbeg,lonend
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  fnrh_inv, hdout, cpi 
-!
-      nlevs = lev1-lev0+1
 !
 ! fnrh is eddy viscosity (hdif module data), output by hdif1:
       do i=lon0,lon1
@@ -398,9 +384,8 @@
         enddo ! k=lev0,lev1-1
         hdu(lev1,i) = 0.
       enddo ! i=lonbeg,lonend
-
-!     call addfsech('HDU',' ',' ',hdu(:,lon0:lon1),lon0,lon1,
-!    |  nlevs,nlevs-1,lat)
+!     call addfld('HDU',' ',' ',hdu(lev0:lev1-1,lon0:lon1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Make hdv from kldv (hdv was nfph):
       call lsqdsq(kldv(lev0:lev1,lonbeg-1:lonend+1,lat+1),
@@ -414,8 +399,8 @@
         enddo ! k=lev0,lev1-1
         hdv(lev1,i) = 0.
       enddo ! i=lonbeg,lonend
-!     call addfsech('HDV',' ',' ',hdv(:,lon0:lon1),lon0,lon1,
-!    |  nlevs,nlevs-1,lat)
+!     call addfld('HDV',' ',' ',hdv(lev0:lev1-1,lon0:lon1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Make hdt from kldt (was nqdh):
       call lsqdsq(kldt(lev0:lev1,lonbeg-1:lonend+1,lat+1),
@@ -434,8 +419,8 @@
         enddo ! k=lev0,lev1-1
         hdt(lev1,i) = 0.
       enddo ! i=lonbeg,lonend
-!     call addfsech('HDT',' ',' ',hdt(:,lon0:lon1),lon0,lon1,
-!    |  nlevs,nlevs-1,lat)
+!     call addfld('HDT',' ',' ',hdt(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Make hdo2 from kldo2 (was npsdh):
       call lsqdsq(kldo2(lev0:lev1,lonbeg-1:lonend+1,lat+1),
@@ -449,8 +434,8 @@
         enddo ! k=lev0,lev1-1
         hdo2(lev1,i) = 0.
       enddo ! i=lonbeg,lonend
-!     call addfsech('HDO2',' ',' ',hdo2(:,lon0:lon1),lon0,lon1,
-!    |  nlevs,nlevs-1,lat)
+!     call addfld('HDO2',' ',' ',hdo2(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Make hdo1 from kldo1 (was npsdh2):
       call lsqdsq(kldo1(lev0:lev1,lonbeg-1:lonend+1,lat+1),
@@ -464,8 +449,8 @@
         enddo ! k=lev0,lev1-1
         hdo1(lev1,i) = 0.
       enddo ! i=lonbeg,lonend
-!     call addfsech('HDO1',' ',' ',hdo1(:,lon0:lon1),lon0,lon1,
-!    |  nlevs,nlevs-1,lat)
+!     call addfld('HDO1',' ',' ',hdo1(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
       end subroutine hdif3
 !-----------------------------------------------------------------------
       subroutine hdif_periodic(hdt,hdu,hdv,hdo2,hdo1,

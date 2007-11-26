@@ -20,6 +20,7 @@
      |  qn2p,  ! n2+ ionization
      |  qnp,   ! n+  ionization
      |  qnop   ! no+ ionization
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -101,8 +102,8 @@
      |  fe,        ! heat flux at upper boundary
      |  sindipmag  ! sin(dipmag)
 !
-! For diagnostic plotting (addfsech):
-      real,dimension(lev0:lev1,lon0:lon1) ::
+! For diagnostic plotting:
+      real,dimension(lev0:lev1-1,lon0:lon1) ::
      |  a_ki,        ! for diagnostic plotting of a
      |  fed_ki,      ! for diagnostic plotting of fed
      |  fen_ki,      ! for diagnostic plotting of fen
@@ -125,7 +126,8 @@
       nk = lev1-lev0+1
       nkm1 = nk-1
 
-!     call addfsech('QJI_TI',' ',' ',qji_ti,lon0,lon1,nk,nkm1,lat)
+!     call addfld('QJI_TI',' ',' ',qji_ti(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
       do i=lon0,lon1
         if (abs(rlatm(i,lat))-pi/4.5 >= 0.) then
@@ -154,7 +156,7 @@
 ! Add fpolar if magnetic latitude >= 60 degrees:
         if (abs(rlatm(i,lat))-pi/3.>=0.) fe(i) = fe(i)+fpolar*evergs
 !
-! For plotting:
+! For plotting (first dimension is lev0:lev1-1):
         a_ki  (:,i) = a(i)
         chi_ki(:,i) = chi(i,lat)
         qteaur_ki(:,i) = qteaur(i,lat)
@@ -163,12 +165,18 @@
         fe_ki (:,i) = fe(i)
       enddo ! i=lon0,lon1
 
-!     call addfsech('MAGLAT',' ',' ',a_ki     ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('CHI'   ,' ',' ',chi_ki   ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('QTEAUR',' ',' ',qteaur_ki,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('FED'   ,' ',' ',fed_ki   ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('FEN'   ,' ',' ',fen_ki   ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('FE'    ,' ',' ',fe_ki    ,lon0,lon1,nk,nkm1,lat)
+!     call addfld('MAGLAT',' ',' ',a_ki     ,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('CHI'   ,' ',' ',chi_ki   ,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('QTEAUR',' ',' ',qteaur_ki,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('FED'   ,' ',' ',fed_ki   ,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('FEN'   ,' ',' ',fen_ki   ,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('FE'    ,' ',' ',fe_ki    ,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
 !     write(6,"('settei: lat=',i2,' fed=',/,(6e12.4))") lat,fed
 !     write(6,"('settei: lat=',i2,' fen=',/,(6e12.4))") lat,fen
@@ -203,11 +211,16 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
-!     call addfsech('TE_INT'  ,' ',' ',te_int,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('O2_INT'  ,' ',' ',o2n   ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('O1_INT'  ,' ',' ',o1n   ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('TN_INT'  ,' ',' ',tn_int,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('N2_INT'  ,' ',' ',n2n   ,lon0,lon1,nk,nkm1,lat)
+!     call addfld('TE_INT'  ,' ',' ',te_int,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O2_INT'  ,' ',' ',o2n   ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O1_INT'  ,' ',' ',o1n   ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TN_INT'  ,' ',' ',tn_int,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('N2_INT'  ,' ',' ',n2n   ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Convert o2,o,n2 to number density (interfaces):
       do k=lev0,lev1-1
@@ -233,11 +246,10 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
-!     call addfsech('XNMBARI',' ',' ',xnmbar,lon0,lon1,nk,nk,lat) ! s8
-!     call addfsech('O2_INT' ,' ',' ',o2n   ,lon0,lon1,nk,nk,lat) ! s13
-!     call addfsech('O1_INT' ,' ',' ',o1n   ,lon0,lon1,nk,nk,lat) ! s12
-!     call addfsech('N2_INT' ,' ',' ',n2n   ,lon0,lon1,nk,nk,lat) ! s11
-!     call addfsech('TEK0'   ,' ',' ',tek0  ,lon0,lon1,nk,nk,lat) ! s15
+!     call addfld('XNMBARI',' ',' ',xnmbar,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TEK0'   ,' ',' ',tek0  ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -248,9 +260,10 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
-!     call addfsech('H_MID'   ,' ',' ',h_mid,lon0,lon1,nk,nkm1,lat) ! s7
-!     call addfsech('H_INT'   ,' ',' ',h_int,lon0,lon1,nk,nk  ,lat) ! s6
-
+!     call addfld('H_MID'   ,' ',' ',h_mid(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('H_INT'   ,' ',' ',h_int,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       do i=lon0,lon1
         if (abs(dipmag(i,lat)) >= dipmin) then
@@ -286,28 +299,38 @@
         sindipmag_ki(:,i) = sindipmag(i)
       enddo
 
-!     call addfsech('DIPMAG' ,' ',' ',dipmag_ki,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('SINDIPM',' ',' ',sindipmag_ki,lon0,lon1,nk,nkm1,
-!    |  lat)
+!     call addfld('DIPMAG' ,' ',' ',dipmag_ki,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('SINDIPM',' ',' ',sindipmag_ki,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
-!     call addfsech('P_COEF' ,' ',' ',p_coef,lon0,lon1,nk,nkm1,lat) ! s1
-!     call addfsech('Q_COEF' ,' ',' ',q_coef,lon0,lon1,nk,nkm1,lat) ! s2
-!     call addfsech('R_COEF' ,' ',' ',r_coef,lon0,lon1,nk,nkm1,lat) ! s3
-!     call addfsech('RHS0'   ,' ',' ',rhs   ,lon0,lon1,nk,nkm1,lat) ! s4
+!     call addfld('P_COEFa' ,' ',' ',p_coef(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEFa' ,' ',' ',q_coef(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('R_COEFa' ,' ',' ',r_coef(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('RHS0'   ,' ',' ',rhs   (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
 !
 ! qtot = total ionization rate = sum(Qxx) = 
 ! (QO2+) + (QO+) + (QN2+) + (QNO+) + (QN+) + (QO+(2D)) + (QO+(2P))
 !
-
-!     call addfsech('QO2P' ,' ',' ',qo2p (:,:,lat),lon0,lon1,nk,nk,lat)
-!     call addfsech('QOP'  ,' ',' ',qop  (:,:,lat),lon0,lon1,nk,nk,lat)
-!     call addfsech('QN2P' ,' ',' ',qn2p (:,:,lat),lon0,lon1,nk,nk,lat)
-!     call addfsech('QNOP' ,' ',' ',qnop (:,:,lat),lon0,lon1,nk,nk,lat)
-!     call addfsech('QNP'  ,' ',' ',qnp  (:,:,lat),lon0,lon1,nk,nk,lat)
-!     call addfsech('QOP2D',' ',' ',qop2d(:,:,lat),lon0,lon1,nk,nk,lat)
-!     call addfsech('QOP2P',' ',' ',qop2p(:,:,lat),lon0,lon1,nk,nk,lat)
-
+!     call addfld('QO2P' ,' ',' ',qo2p (:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOP'  ,' ',' ',qop  (:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QN2P' ,' ',' ',qn2p (:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QNOP' ,' ',' ',qnop (:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QNP'  ,' ',' ',qnp  (:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOP2D',' ',' ',qop2d(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOP2P',' ',' ',qop2p(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Note re comparison with tgcm15: Because the check for qtot < 1.e-20
 ! is inside the reduction operation loop, tiegcm1 must sum separately
@@ -344,7 +367,8 @@
         enddo
       enddo ! n=1,7
 
-!     call addfsech('QTOT_SUM',' ',' ',qtot,lon0,lon1,nk,nk,lat) ! s11
+!     call addfld('QTOT_SUM',' ',' ',qtot,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -352,9 +376,8 @@
         enddo
         qtot(lev1,i) = 0.
       enddo ! i=lon0,lon1
-
-!     call addfsech('QTOT',' ',' ',qtot   ,lon0,lon1,nk,nk,lat) ! s11
-
+!     call addfld('QTOT',' ',' ',qtot   ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Set Ne (midpoints "(K+1/2)"):
 !
@@ -365,8 +388,8 @@
           root_ne(k,i) = sqrt(root_ne(k,i))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-
-!     call addfsech('ROOT_NE',' ',' ',root_ne,lon0,lon1,nk,nkm1,lat) ! s15
+!     call addfld('ROOT_NE',' ',' ',root_ne(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Set up o2,o,n2 number densities at midpoints:
 !
@@ -412,14 +435,18 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1 (end DO 20)
 
-!     call addfsech('XNMBARM',' ',' ',xnmbar,lon0,lon1,nk,nkm1,lat) ! s6
-!     call addfsech('O2N'    ,' ',' ',o2n   ,lon0,lon1,nk,nkm1,lat) ! s14
-!     call addfsech('O1N'    ,' ',' ',o1n   ,lon0,lon1,nk,nkm1,lat) ! s13
-!     call addfsech('N2N'    ,' ',' ',n2n   ,lon0,lon1,nk,nkm1,lat) ! s12
-
-!     call addfsech('C_EN2V'  ,' ',' ',coll_en2v,lon0,lon1,nk,nkm1,lat) ! s9
-!     call addfsech('L_EN2V'  ,' ',' ',loss_en2v,lon0,lon1,nk,nkm1,lat) ! s10
-
+!     call addfld('XNMBARM',' ',' ',xnmbar(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('O2N'    ,' ',' ',o2n(lev0:lev1-1,:)   ,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('O1N'    ,' ',' ',o1n(lev0:lev1-1,:)   ,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('N2N'    ,' ',' ',n2n(lev0:lev1-1,:)   ,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('C_EN2V'  ,' ',' ',coll_en2v(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('L_EN2V'  ,' ',' ',loss_en2v(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Calculate and sum cooling rates (heat loss) due to interactions between
 ! electrons/neutrals, electrons/ions, ions/neutrals
@@ -505,16 +532,26 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1 (end DO 500)
 
-!     call addfsech('L_EN2'  ,' ',' ',loss_en2 ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('L_EO2'  ,' ',' ',loss_eo2 ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('L_EO1D' ,' ',' ',loss_eo1d,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('L_EO1'  ,' ',' ',loss_eo1 ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('L_XEN'  ,' ',' ',loss_xen ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('L_EN'   ,' ',' ',loss_en  ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('L_EI'   ,' ',' ',loss_ei  ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('L_IN'   ,' ',' ',loss_in  ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('Q_COEF' ,' ',' ',q_coef   ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('RHS1'   ,' ',' ',rhs      ,lon0,lon1,nk,nkm1,lat)
+!     call addfld('L_EN2'  ,' ',' ',loss_en2 (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('L_EO2'  ,' ',' ',loss_eo2 (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('L_EO1D' ,' ',' ',loss_eo1d(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('L_EO1'  ,' ',' ',loss_eo1 (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('L_XEN'  ,' ',' ',loss_xen (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('L_EN'   ,' ',' ',loss_en  (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('L_EI'   ,' ',' ',loss_ei  (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('L_IN'   ,' ',' ',loss_in  (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEFb' ,' ',' ',q_coef   (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('RHS1'   ,' ',' ',rhs      (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Calculate heating due to electron/neutral and electron/ion collisions
 ! (ergs/sec/gm):
@@ -531,7 +568,8 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1 (end DO 24)
 
-!     call addfsech('Q_ENI',' ',' ',q_eni,lon0,lon1,nk,nkm1,lat) ! s7
+!     call addfld('Q_ENI',' ',' ',q_eni(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Add collisional heating to Q for use in thermodynamic equation.
       do i=lon0,lon1 ! (DO 27)
@@ -547,27 +585,31 @@
      |    0.5*q_eni(lev1-2,i)
       enddo ! i=lon0,lon1 ! (DO 27)
 
-!     call addfsech('Q_TOT',' ',' ',qtotal(:,:,lat),lon0,lon1,
-!    |  nk,nk,lat)
+!     call addfld('Q_TOT',' ',' ',qtotal(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Solve tridiagonal system:
 !
-!     call addfsech('P_COEF' ,' ',' ',p_coef,lon0,lon1,nk,nkm1,lat) ! s1
-!     call addfsech('Q_COEF' ,' ',' ',q_coef,lon0,lon1,nk,nkm1,lat) ! s2
-!     call addfsech('R_COEF' ,' ',' ',r_coef,lon0,lon1,nk,nkm1,lat) ! s3
-!     call addfsech('RHS2'   ,' ',' ',rhs   ,lon0,lon1,nk,nkm1,lat) ! s4
+!     call addfld('P_COEF' ,' ',' ',p_coef(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEF' ,' ',' ',q_coef(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('R_COEF' ,' ',' ',r_coef(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('RHS2'   ,' ',' ',rhs   (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 !     subroutine trsolv(a,b,c,f,x,lev0,lev1,k1,k2,lon0,lon1,lonmax,lat,
 !    |  idebug)
 
       call trsolv(p_coef,q_coef,r_coef,rhs,te_out(:,lon0:lon1),
-     |  lev0,lev1,lev0,lev1-1,lon0,lon1,nlonp4,lat,1)
+     |  lev0,lev1,lev0,lev1-1,lon0,lon1,nlonp4,lat,0)
 !
 ! Periodic points:
 !     call periodic_f2d(te_out(:,lon0:lon1),lon0,lon1,lev1-lev0+1)
 
-!     call addfsech('TE_SOLV',' ',' ',te_out(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
+!     call addfld('TE_SOLV',' ',' ',te_out(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Te = Te**(2./7.):
       do i=lon0,lon1
@@ -586,8 +628,8 @@
       enddo
 !
 ! Te is not defined at lev1 (only up to lev1-1)
-!     call addfsech('TE_OUT',' ',' ',te_out(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
+!     call addfld('TE_OUT',' ',' ',te_out(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Set ion temperature output. Use joule heating qji_ti from sub 
 ! qjoule_ti (see qjoule.F). lev1 not calculated.
@@ -602,8 +644,8 @@
           if (ti_out(k,i) < tn(k,i)) ti_out(k,i) = tn(k,i)
         enddo
       enddo
-!     call addfsech('TI_OUT',' ',' ',ti_out(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
+!     call addfld('TI_OUT',' ',' ',ti_out(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 #ifdef VT
 !     code = 126 ; state = 'settei' ; activity='ModelCode'

@@ -8,6 +8,7 @@
       use cons_module,only: rmass_co2,p0,expz,expzmid_inv,boltz,
      |  avto,avo,rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no,
      |  gask
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -31,7 +32,6 @@
      |  co2_cool,        ! co2 contribution to cooling
      |  no_cool          ! no contribution to cooling
       integer :: k,i
-      integer :: nk,nkm1 ! for addfsech
 !
 ! Integral(m(co2)*dz/mbar) (s10).
 ! Low boundary: 
@@ -87,18 +87,16 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !
-      nk = lev1-lev0+1
-      nkm1 = nk-1
-!     call addfsech('XMCO2',' ',' ',xmco2(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
-!     call addfsech('CO2_COOL',' ',' ',co2_cool(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
-!     call addfsech('NO_COOL' ,' ',' ',no_cool(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
-!     call addfsech('COOL_IMP' ,' ',' ',cool_implicit(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
-!     call addfsech('COOL_EXP' ,' ',' ',cool_explicit(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
+!     call addfld('XMCO2',' ',' ',xmco2(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('CO2_COOL',' ',' ',co2_cool(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('NO_COOL' ,' ',' ',no_cool(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('COOL_IMP' ,' ',' ',cool_implicit(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('COOL_EXP' ,' ',' ',cool_explicit(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
       end subroutine newton
 !-----------------------------------------------------------------------
       subroutine newto3p(tn,o1,cp,cool_implicit,cool_explicit,
@@ -109,6 +107,7 @@
 !
       use params_module,only: dz
       use cons_module,only: avo,rmassinv_o1,expz
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -123,7 +122,6 @@
 !
 ! Local:
       integer :: k,i
-      integer :: nk,nkm1 ! for addfsech
 !
 ! Change O(3P) cooling factor from 0.5 to 1.0 of the Bates expression.
       real,parameter :: 
@@ -191,11 +189,9 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !
-      nk = lev1-lev0+1
-      nkm1 = nk-1
-!     call addfsech('COOL_IMP' ,' ',' ',cool_implicit(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
-!     call addfsech('COOL_EXP' ,' ',' ',cool_explicit(:,lon0:lon1),
-!    |  lon0,lon1,nk,nkm1,lat)
+!     call addfld('COOLIMP' ,' ',' ',cool_implicit(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('COOLEXP' ,' ',' ',cool_explicit(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
       end subroutine newto3p

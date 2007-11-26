@@ -1,13 +1,8 @@
 !
       module no_module
       use params_module,only: nlevp1,nlonp4,nlat
+      use addfld_module,only: addfld
       implicit none
-!
-!     real,dimension(nlonp4,nlat)   :: no_ubc   ! upper boundary
-!     real,dimension(nlonp4,3,nlat) :: no_lbc   ! lower boundary
-!     real,dimension(nlevp1,nlonp4,nlat) ::
-!    |  no_prod,  ! production of no
-!    |  no_loss   ! loss of no
 !
 ! Boundary conditions and production and loss terms are allocated
 ! subdomains by sub alloc_no (called from allocdata.F).
@@ -64,6 +59,7 @@
      |  rmassinv_o1,rmassinv_n2
       use chemrates_module,only: beta1,beta2,beta3,beta6,beta8,beta9,
      |  beta9n,beta17,rk5
+      use fields_module,only: tlbc ! lower boundary interface level of TN
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
@@ -79,7 +75,7 @@
 !
 ! Local:
       integer :: k,i
-      integer ::i0,i1,nk,nkm1 ! for addfsech
+      integer ::i0,i1,nk,nkm1
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  xn2       ! N2 (mmr)
 !
@@ -97,7 +93,9 @@
 !
         no_lbc(i,1,lat) = 0.
         no_lbc(i,2,lat) = 1.
-        no_lbc(i,3,lat) = -nob(lat)*rmass_no*boltz*tn(lev1,i)/
+!       no_lbc(i,3,lat) = -nob(lat)*rmass_no*boltz*tn(lev1,i)/
+!    |    (p0*expzmid_inv*expz(lev0)*barm(lev0,i))
+        no_lbc(i,3,lat) = -nob(lat)*rmass_no*boltz*tlbc(i,lat)/
      |    (p0*expzmid_inv*expz(lev0)*barm(lev0,i))
       enddo ! i=lon0,lon1
 !
@@ -124,11 +122,12 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('XNMBAR' ,' ',' ',xnmbar     ,i0,i1,nk,nkm1,lat)
-!     call addfsech('NO_PROD',' ',' ',no_prod(:,i0:i1,lat),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('NO_LOSS',' ',' ',no_loss(:,i0:i1,lat),
-!    |  i0,i1,nk,nkm1,lat)
+!     call addfld('MBAR_NO' ,' ',' ',xnmbar(lev0:lev1-1,i0:i1),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('NO_PROD',' ',' ',no_prod(lev0:lev1-1,i0:i1,lat),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('NO_LOSS',' ',' ',no_loss(lev0:lev1-1,i0:i1,lat),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
 !
       end subroutine comp_no
 !-----------------------------------------------------------------------
@@ -153,10 +152,6 @@
 !
 ! Local:
       integer :: lat
-      integer ::nk,nkm1 ! for addfsech
-!
-      nk = lev1-lev0+1
-      nkm1 = nk-1
 !
 ! Minor returns no_out and no_nm1_out. Module data no_prod,
 ! no_loss, etc, were defined by comp_no.
@@ -170,10 +165,12 @@
      |  lev0,lev1,lon0,lon1,lat0,lat1,0)
 
 !     do lat=lat0,lat1
-!       call addfsech('NO_OUT' ,' ',' ',no_out(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-!       call addfsech('NO_TM1' ,' ',' ',no_nm1_out(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('NO_OUT' ,' ',' ',
+!    |    no_out(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('NO_TM1' ,' ',' ',
+!    |    no_nm1_out(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     enddo ! lat=lat0,lat1
 
       end subroutine minor_no

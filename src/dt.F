@@ -6,7 +6,7 @@
 ! Advance neutral temperature at current latitude: 
 ! 4/4/05 btf: added gswm lbc option (eliminated dt_gswm.F)
 !
-      use params_module,only: nlonp4,dz,nlat
+      use params_module,only: nlonp4,dz,nlat,spval
       use input_module,only: step
       use init_module,only: iter,igetgswm
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
@@ -16,6 +16,8 @@
       use bndry_module,only: tb,tb2,tba,bnd,bnd2,bnda,ci,lbc_gswm_dt
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
+      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm
+      use addfld_module,only: addfld
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
 #endif
@@ -106,11 +108,11 @@
           enddo ! i=lon0,lon1
         endif
 
-!       write(6,"('dt: lat=',i3,' tnlbc=',/,(6e12.4))") lat,tnlbc(:,lat)
-!       do k=lev0,lev1
-!         tnlbc_diag(k,:) = tnlbc(:,lat)
-!       enddo
-!       call addfsech('TNLBC',' ',' ',tnlbc_diag,lon0,lon1,nk,nkm1,lat)
+        do k=lev0,lev1
+          tnlbc_diag(k,:) = tnlbc(:,lat)
+        enddo
+!       call addfld('TNLBC1',' ',' ',tnlbc_diag,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Horizontal advection (pass k vs i slices at full task subdomain 
 ! longitudes, and the 5 latitudes centered over the current latitude).
@@ -118,15 +120,15 @@
         call advec(tn(:,:,lat-2:lat+2),advec_tn(:,:,lat),
      |    lev0,lev1,lon0,lon1,lat)
 
-!       call addfsech('HADVECTN',' ',' ',advec_tn(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('HADVECTN',' ',' ',advec_tn(lev0:lev1-1,:,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Vertical advection. Sub advecv adds vertical advection to advec_tn.
         call advecv(tn(:,:,lat),tnlbc(:,lat),advec_tn(:,:,lat),
      |    lev0,lev1,lon0,lon1,lat)
 
-!       call addfsech('ADVEC_TN',' ',' ',advec_tn(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('ADVEC_TN',' ',' ',advec_tn(lev0:lev1-1,:,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! End first latitude scan:
       enddo ! lat=lat0,lat1
@@ -159,14 +161,16 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('CP'   ,' ',' ',cp(:,lon0:lon1,lat),
-!    |  lon0,lon1,nk,nkm1,lat)
-!     call addfsech('TNSMOOTH'   ,' ',' ',tnsmooth(:,:,lat),
-!    |  lon0,lon1,nk,nkm1,lat)
-!     call addfsech('ADVEC_TN',' ',' ',advec_tn(:,:,lat),
-!    |  lon0,lon1,nk,nkm1,lat)
-!     call addfsech('CPTN0',' ',' ',cptn,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('MBAR' ,' ',' ',mbar,lon0,lon1,nk,nkm1,lat)
+!     call addfld('CP'   ,' ',' ',cp(:,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TNSMOOTH'   ,' ',' ',tnsmooth(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('ADVEC_TNa',' ',' ',advec_tn(lev0:lev1-1,:,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('CPTN0',' ',' ',cptn,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('MBAR' ,' ',' ',mbar(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Total heat sources are in total_heat (s5).
       do i=lon0,lon1
@@ -187,7 +191,8 @@
 	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)*1.5
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-!     call addfsech('HEATING',' ',' ',total_heat,lon0,lon1,nk,nkm1,lat)
+!     call addfld('HEATING1',' ',' ',total_heat(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Add heating due to molecular diffusion:
 ! du/dz and dv/dz (s10, s11):
@@ -200,10 +205,16 @@
 ! Lower boundary:
 ! (recall that level lev1 contains values of u and v at bottom boundary,
 !  i.e., bottom boundary is in top slot)
+!       dudz(1,i) = (un(1,i,lat)+1./3.*un(2,i,lat)-4./3.*
+!    |    un(lev1,i,lat))/dz
+!       dvdz(1,i) = (vn(1,i,lat)+1./3.*vn(2,i,lat)-4./3.*
+!    |    vn(lev1,i,lat))/dz
+!
+! Lower boundary is in ulbc,vlbc: 
         dudz(1,i) = (un(1,i,lat)+1./3.*un(2,i,lat)-4./3.*
-     |    un(lev1,i,lat))/dz
+     |    ulbc(i,lat))/dz
         dvdz(1,i) = (vn(1,i,lat)+1./3.*vn(2,i,lat)-4./3.*
-     |    vn(lev1,i,lat))/dz
+     |    vlbc(i,lat))/dz
 !
 ! Upper boundary:
         dudz(lev1-1,i) = dudz(lev1-2,i)/3.
@@ -224,9 +235,14 @@
           cptn(k,i) = cptn(k,i)-expz(k)*total_heat(k,i) ! s1
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-!     call addfsech('CPTN',' ',' ',cptn,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('QM'     ,' ',' ',qm        ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('HEATING',' ',' ',total_heat,lon0,lon1,nk,nkm1,lat)
+
+!     call addfld('CPTN',' ',' ',cptn,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QM'     ,' ',' ',qm(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('HEATING2',' ',' ',total_heat(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+
 !
 ! H = R*T/(M*g)                            (s4)
 ! rho = p0*exp(-s)*M/(R*T)                 (s5)
@@ -242,7 +258,9 @@
         enddo ! k=lev0+1,lev1-1
 !
 ! Boundaries:
-        tni(lev0,i) = tn(lev1,i,lat)      ! bottom boundary is in top slot
+!       tni(lev0,i) = tn(lev1,i,lat)      ! bottom boundary is in top slot
+
+        tni(lev0,i) = tlbc(i,lat)         ! Lower boundary is in tlbc = tn(itp)
         tni(lev1,i) = tn(lev1-1,i,lat)
         h(lev0,i) = gask*tni(lev0,i)/barm(lev0,i,lat)
         h(lev1,i) = gask*tni(lev1,i)/barm(lev1,i,lat)
@@ -261,11 +279,13 @@
         enddo ! k=lev0,lev1-1 
       enddo ! i=lon0,lon1
 
-!     call addfsech('TNI',' ',' ',tni,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('H'  ,' ',' ',h  ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('DEN',' ',' ',rho,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('G'  ,' ',' ',g  ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('F'  ,' ',' ',f  ,lon0,lon1,nk,nkm1,lat)
+!     call addfld('TNI',' ',' ',tni,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('HG' ,' ',' ',h  ,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('DEN',' ',' ',rho,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('G'  ,' ',' ',g(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('F'  ,' ',' ',f(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
 !
 ! Coefficients for trsolv:
@@ -284,14 +304,18 @@
         rhs(lev1-1,i) = cptn(lev1-1,i)
       enddo ! i=lon0,lon1
 
-!     call addfsech('P_COEF0' ,' ',' ',p,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('Q_COEF0' ,' ',' ',q,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('R_COEF0' ,' ',' ',r,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('RHS0'    ,' ',' ',rhs,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('COOL_IMP',' ',' ',cool_imp(:,lon0:lon1,lat),
-!    |  lon0,lon1,nk,nkm1,lat)
-!     call addfsech('COOL_EXP',' ',' ',cool_exp(:,lon0:lon1,lat),
-!    |  lon0,lon1,nk,nkm1,lat)
+!     call addfld('P_COEF0' ,' ',' ',p,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEF0' ,' ',' ',q,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('R_COEF0' ,' ',' ',r,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('RHS0'    ,' ',' ',rhs,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('COOL_IMP',' ',' ',cool_imp(:,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('COOL_EXP',' ',' ',cool_exp(:,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! qpart = cp*(1/(2*Dt)+ai/cp+w*R/(cp*M))
       do i=lon0,lon1
@@ -304,13 +328,17 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('QPART'  ,' ',' ',qpart,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('Q_COEF1',' ',' ',q    ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('RHS1'   ,' ',' ',rhs  ,lon0,lon1,nk,nkm1,lat)
+!     call addfld('QPART'  ,' ',' ',qpart(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEF1',' ',' ',q    ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('RHS1'   ,' ',' ',rhs  ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     do k=lev0,lev1
 !       tnlbc_diag(k,:) = tnlbc(:,lat)
 !     enddo
-!     call addfsech('TNLBC',' ',' ',tnlbc_diag,lon0,lon1,nk,nkm1,lat)
+!     call addfld('TNLBC2',' ',' ',tnlbc_diag,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Lower boundary:
       do i=lon0,lon1
@@ -321,11 +349,14 @@
         p(lev0,i) = 0.
       enddo ! i=lon0,lon1
 
-!     call addfsech('P_COEF2',' ',' ',p,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('Q_COEF2',' ',' ',q,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('R_COEF2',' ',' ',r,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('RHS2'   ,' ',' ',rhs,lon0,lon1,nk,nkm1,lat)
-
+!     call addfld('P_COEF2',' ',' ',p,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEF2',' ',' ',q,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('R_COEF2',' ',' ',r,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('RHS2'   ,' ',' ',rhs,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Solve tridiagonal system for new tn:
 !     subroutine trsolv(a,b,c,f,x,lev0,lev1,k1,k2,lon0,lon1,lonmax,lat,
@@ -334,8 +365,8 @@
       call trsolv(p,q,r,rhs,tn_upd(:,lon0:lon1,lat),lev0,lev1,
      |  lev0,lev1-1,lon0,lon1,nlonp4,lat,0)
 
-!     call addfsech('TN_SOLV',' ',' ',tn_upd(:,lon0:lon1,lat),
-!    |  lon0,lon1,nk,nkm1,lat)
+!     call addfld('TN_SOLV','Updated TN from trsolv','K',
+!    |  tn_upd(:,lon0:lon1,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End second latitude scan:
       enddo ! lat=lat0,lat1
@@ -348,9 +379,8 @@
 !
 ! Third latitude scan:
       do lat=lat0,lat1
-
-!       call addfsech('TN_FILT',' ',' ',tn_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('TN_FILT',' ',' ',tn_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Smooth updated tn:
         do i=lon0,lon1 
@@ -359,11 +389,19 @@
      |        tn_upd(k,i,lat)) + dtsmooth*tn(k,i,lat)
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1 
-!       call addfsech('TN_NMOUT',' ',' ',tn_nm_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('TN_NMOUT',' ',' ',tn_nm_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Store lower boundary in top slot:
-        tn_upd(lev1,lon0:lon1,lat) = tnlbc(:,lat)
+!       tn_upd(lev1,lon0:lon1,lat) = tnlbc(:,lat)
+!
+! Put spval in top nlevp1 level:
+        tn_upd(lev1,lon0:lon1,lat)    = spval
+        tn_nm_upd(lev1,lon0:lon1,lat) = spval
+!
+! Lower boundary is saved in tlbc (fields.F):
+        tlbc_nm(lon0:lon1,lat) = tlbc(lon0:lon1,lat)
+        tlbc(lon0:lon1,lat)    = tnlbc(:,lat)
 !
 #ifdef MPI
 !
@@ -387,8 +425,8 @@
             if (tn_upd(k,i,lat) < 100.) tn_upd(k,i,lat) = 100.
           enddo
         enddo
-!       call addfsech('TN_FINAL',' ',' ',tn_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('TN_FINAL',' ',' ',tn_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End third lat scan:
       enddo ! lat=lat0,lat1

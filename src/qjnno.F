@@ -9,6 +9,7 @@
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2d,expz
       use chemrates_module,only: beta1,beta2,beta3,beta4,beta5,beta6
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -24,11 +25,8 @@
      |  xnmbar ! p0*e(-z)*barm/kT
 !
 ! Local:
-      integer :: k,i,nk,nkm1
+      integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) :: deltaq,dq
-!
-      nk = lev1-lev0+1
-      nkm1 = nk-1
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -43,10 +41,10 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('DELTAQ' ,' ',' ',deltaq,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('QRJ_Q'  ,' ',' ',qtotal(:,:,lat),lon0,lon1,
-!    |  nk,nkm1,lat)
-
+!     call addfld('DELTAQ' ,' ',' ',deltaq(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('QRJ_Q'  ,' ',' ',qtotal(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Add delta(q) to q:
       do i=lon0,lon1
@@ -63,7 +61,7 @@
      |    1.5*deltaq(lev1-1,i)-0.5*deltaq(lev1-2,i)
       enddo ! i=lon0,lon1
 
-!     call addfsech('QJNNO_Q' ,' ',' ',qtotal(:,:,lat),lon0,lon1,
-!    |  nk,nk,lat)
+!     call addfld('QJNNO_Q' ,' ',' ',qtotal(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       end subroutine qjnno

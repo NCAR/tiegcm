@@ -10,6 +10,7 @@
       use chemrates_module,only: rk3,ra1,ra3,beta2,beta4,beta5,beta6,
      |  beta7,rk10
       use qrj_module,only: qtef
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -34,12 +35,12 @@
 !
 ! Local:
       integer :: k,i
-      integer ::i0,i1,nk,nkm1 ! for addfsech
+      integer ::i0,i1,nk,nkm1
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  n2d_prod, ! n2d production
      |  n2d_loss  ! n2d production
 !
-! For addfsech:
+! For addfld:
       i0 = lon0
       i1 = lon1
       nk = lev1-lev0+1
@@ -67,9 +68,11 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('N2D_PROD' ,' ',' ',n2d_prod,i0,i1,nk,nkm1,lat)
-!     call addfsech('N2D_LOSS' ,' ',' ',n2d_loss,i0,i1,nk,nkm1,lat)
-!     call addfsech('N2D_UPD'  ,' ',' ',n2d(:,lon0:lon1),
-!    |  i0,i1,nk,nkm1,lat)
+!     call addfld('N2D_PROD' ,' ',' ',n2d_prod(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('N2D_LOSS' ,' ',' ',n2d_loss(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('N2D_UPD'  ,' ',' ',n2d(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
 
       end subroutine comp_n2d

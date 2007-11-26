@@ -4,6 +4,7 @@
 ! Calculate omega for vertical velocity W (s.a., divrg.F):
 !
       use cons_module,only: expzmid,dz
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -16,18 +17,15 @@
      |  w(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
 !
 ! Local:
-      integer :: k,i,nlevs,lat
+      integer :: k,i,lat
       real :: w_divrg(lev0:lev1,lon0:lon1)
-!
-      nlevs = lev1-lev0+1 ! for addfsech
 !
 ! Latitude scan:
       do lat=lat0,lat1
-
-!       call addfsech('UN_SWDOT',' ',' ',un(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs,lat)
-!       call addfsech('VC_SWDOT',' ',' ',vc(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs,lat)
+!       call addfld('UN_SWDOT',' ',' ',un(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('VC_SWDOT',' ',' ',vc(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! W=DIVRG(V)
 !
@@ -45,18 +43,16 @@
             w(k,i,lat) = expzmid*(expzmid*w(k+1,i,lat)+dz*w_divrg(k,i))
           enddo
         enddo
-
-!       call addfsech('W_SWDOT',' ',' ',w(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs,lat)
-
+!       call addfld('W_SWDOT',' ',' ',w(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
       enddo ! lat=lat0,lat1
 !
 ! Filter W (3-d):
       call filter_w(w,lev0,lev1,lon0,lon1,lat0,lat1)
 
 !     do lat=lat0,lat1
-!       call addfsech('W_FILT',' ',' ',w(:,lon0:lon1,lat),lon0,lon1,
-!    |    nlevs,nlevs,lat)
+!       call addfld('W_FILT',' ',' ',w(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     enddo
 
       end subroutine swdot
@@ -85,7 +81,7 @@
 #endif
 !
 ! Local:
-      integer :: i,j,nlevs,nlons,nlats
+      integer :: i,j
       real :: w_ik(nlonp4,lev0:lev1),w_kij(lev0:lev1,nlonp4,lat0:lat1)
       real :: fmin,fmax
 !
@@ -93,10 +89,6 @@
 !     code = 125 ; state = 'filter_w' ; activity='Filtering'
       call vtbegin(125,ier)
 #endif
-!
-      nlevs = lev1-lev0+1
-      nlons = lon1-lon0+1
-      nlats = lat1-lat0+1
 !
 ! Define lons in w_ki from current task:
       w_kij = 0.

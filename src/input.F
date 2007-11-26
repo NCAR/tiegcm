@@ -60,7 +60,6 @@
      |  nmc,             ! flag to use NMC boundary conditions 0/1
      |  tideann,         ! 0/1 flag for annual tide
      |  aurora,          ! 0/1 flag for aurora
-     |  magphr,          ! 0/1 flag for magnetosphere
      |  ntask_lat,       ! number of tasks in latitude  dimension
      |  ntask_lon        ! number of tasks in longitude dimension
       real ::
@@ -83,7 +82,10 @@
                          ! if present, ALUSE=true; if absent, AL=-20, ALUSE=false
      |  colfac           ! collision factor
         logical :: aluse ! logical to use AL in Weimer model or not
-      character(len=80) ::
+!
+! Import data file names:
+      integer,parameter :: mxlen_filename=80
+      character(len=mxlen_filename) ::
      |  potential_model,  ! electric potential model used
                           !  Values can be 'HEELIS', 'WEIMER', or 'NONE'
                           !  If absent, the default value is set to 'HEELIS'
@@ -95,12 +97,13 @@
                           ! data indices file.  see comments in hrindices_mod.f
      |  hrindices_ncfiledef, ! default path to hrly indices data file
 !
-     |  gpi_ncfile,        ! mss path or file path to netcdf gpi data file
-     |  sd_ncfile,         ! mss path or file path to netcdf SEE flux data file
-     |  gswm_di_ncfile,    ! gswm migrating diurnal data file
-     |  gswm_sdi_ncfile,   ! gswm migrating semi-diurnal data file
-     |  gswm_nmdi_ncfile,  ! gswm non-migrating diurnal data file
-     |  gswm_nmsdi_ncfile, ! gswm non-migrating semi-diurnal data file
+     |  gpi_ncfile,         ! mss path or file path to netcdf gpi data file
+     |  ncep_ncfile,        ! ncep data file (time-gcm only)
+     |  see_ncfile,         ! mss path or file path to netcdf SEE flux data file
+     |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
+     |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
+     |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
+     |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
 !
 ! Non-input gpi variables:
      |  gpi_ncfiledef     ! default path to gpi data file
@@ -131,11 +134,7 @@
      |  secsource,            ! file containing source sec_history (for mhd)
      |  secout(mxhvols)       ! secondary history output file(s)
       character(len=16) ::
-     |  secflds(mxfsech),     ! secondary history output fields
-     |  secfmag(mxfsech),     ! secondary output fields on magnetic grid
-     |  secfgeo2d(mxfsech),   ! secondary output fields on geographic 2d grid
-     |  secfmag2d(mxfsech),   ! secondary output fields on magnetic 2d grid
-     |  secfmagphr(mxfsech)   ! secondary output fields on magnetospheric 2d grid
+     |  secflds(mxfsech)      ! secondary history output fields
       integer ::
      |  secstart(3,mxseries), ! secondary history model start time(s)
      |  secstop(3,mxseries),  ! secondary history model stop time(s)
@@ -150,12 +149,12 @@
       type input_type
         character(len=80) :: 
      |    label, tempdir, magvol, amievol, gpi_ncfile,
-     |     gswm_di_ncfile, gswm_sdi_ncfile, gswm_nmdi_ncfile,
-     |     gswm_nmsdi_ncfile, potential_model, weimer_ncfile,
+     |     gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, gswm_nm_di_ncfile,
+     |     gswm_nm_sdi_ncfile, potential_model, weimer_ncfile,
      |     hrindices_ncfile
         integer ::
      |    step,start_day,start_year,calendar_advance,
-     |    dispose, difhor, iuivi, dynamo, nmc, tideann, aurora, magphr,
+     |    dispose, difhor, iuivi, dynamo, nmc, tideann, aurora,
      |    ntask_lat,ntask_lon
         real ::
      |    mag(2,2), tide(10),tide2(2),tide3m3(2),
@@ -179,10 +178,6 @@
         character(len=80) :: secsource ! (for mhd model)
         character(len=80) :: secout(mxhvols)
         character(len=16) :: secflds(mxfsech)
-        character(len=16) :: secfmag(mxfsech)
-        character(len=16) :: secfgeo2d(mxfsech)
-        character(len=16) :: secfmag2d(mxfsech)
-        character(len=16) :: secfmagphr(mxfsech)
         integer ::
      |    secstart(3,mxseries),
      |    secstop(3,mxseries),
@@ -200,23 +195,21 @@
      |  label,tempdir,magvol,amievol,date,calday,step,dispose,
      |  source,source_start,output,start,stop,hist,save,
      |  secout,secstart,secstop,sechist,secsave,secflds,
-     |  secfmag,secfgeo2d,secfmag2d,secfmagphr,potential_model,
-     |  mag,difhor,iuivi,dynamo,nmc,tide,tide2,tide3m3,f107,f107a,
-     |  power,ctpoten,byimf,bzimf,swvel,swden,al,colfac,tideann,aurora,
-     |  magphr,gpi_ncfile,gswm_di_ncfile,gswm_sdi_ncfile,
-     |  gswm_nmdi_ncfile,gswm_nmsdi_ncfile,mxhist_prim,mxhist_sech,
+     |  potential_model,mag,difhor,iuivi,dynamo,nmc,tide,tide2,tide3m3,
+     |  f107,f107a,power,ctpoten,byimf,bzimf,swvel,swden,al,colfac,
+     |  tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,
+     |  gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,mxhist_prim,mxhist_sech,
      |  msreten,ntask_lat,ntask_lon,start_day,start_year,
-     |  calendar_advance,sd_ncfile,ctpoten_time,power_time
+     |  calendar_advance,see_ncfile,ctpoten_time,power_time
 !
 ! List of fields that are always written to secondary histories:
-      character(len=16) :: secflds_mandatory(4) =
+      character(len=16) :: secflds_mandatory(6) =
      | (/'TN              ',
      |   'O2              ',
      |   'O1              ',
-     |   'Z               '/)
-      character(len=16) :: secfmag_mandatory(1) =
-     | (/'ZMAG            '/)
-!
+     |   'Z               ',
+     |   'ZG              ',    ! see sub calczg in addiag.F
+     |   'ZMAG            '/)   ! see sub transf in dynamo.F
 !
 ! Current working (execution) directory (set by tgcm.F):
       character(len=120) :: cwd  ! current working directory
@@ -262,28 +255,28 @@
       amievol = ' '
 !
       gpi_ncfile = ' '      ! user input gpi file path
+      ncep_ncfile = ' '     ! (time-gcm only)
       gpi_ncfiledef = ' '   ! default gpi file path
 !     write(gpi_ncfiledef,"('/TGCM/data/gpi_1979-2000.nc')")
 !     write(gpi_ncfiledef,"('/TGCM/data/gpi_1979001-2001031.nc')")
 !     write(gpi_ncfiledef,"('/TGCM/data/gpi_1979001-2002181.nc')")
       write(gpi_ncfiledef,"('/TGCM/data/gpi_1979001-2002365.nc')")
       gpi_vars(:) = spval
-      sd_ncfile = ' '        ! solar flux data (see module in soldata.F)
+      see_ncfile = ' '        ! solar flux data (see module in soldata.F)
 !
       weimer_ncfile = ' '     ! user input weimer coef file path
       weimer_ncfiledef = ' '  ! default weimer coef file path
-      write(weimer_ncfiledef,"('/TGCM/data/weimer2001_coeffs.nc')")
+      write(weimer_ncfiledef,"('$TGCMDATA/weimer2001_coeffs.nc')")
 !
       hrindices_ncfile = ' '    ! user input hrly indices data file path
       hrindices_ncfiledef = ' ' ! default hrly indices data file path
 !     write(hrindices_ncfiledef,
 !    |  "('/TGCM/data/hrindices_1988001-2002181.nc')")
 !
-      gswm_di_ncfile = ' '  ! diurnal tide: user input gswm file path
-      gswm_sdi_ncfile= ' '  ! semidiurnal tide: user input gswm file path
-      gswm_nmdi_ncfile= ' '  ! nonmigrating diurnal tide: user input gswm file path
-      gswm_nmsdi_ncfile= ' ' ! nonmigrating semidiurnal tide: user input gswm file path
-!
+      gswm_mi_di_ncfile = ' ' ! diurnal tide: user input gswm file path
+      gswm_mi_sdi_ncfile= ' ' ! semidiurnal tide: user input gswm file path
+      gswm_nm_di_ncfile= ' '  ! nonmigrating diurnal tide: user input gswm file path
+      gswm_nm_sdi_ncfile= ' ' ! nonmigrating semidiurnal tide: user input gswm file path !
       date(:) = ispval ! old
       calday  = ispval ! old
 !
@@ -303,7 +296,6 @@
       tide3m3(:) = spval
       tideann = ispval
       aurora  = ispval
-      magphr  = ispval
       ntask_lat = ispval
       ntask_lon = ispval
       f107    = spval
@@ -334,10 +326,6 @@
       secout(:)  = ' '
       secsource  = ' '
       secflds(:) = ' '
-      secfmag(:) = ' '
-      secfgeo2d(:)  = ' '
-      secfmag2d(:)  = ' '
-      secfmagphr(:) = ' '
       secstart(:,:) = ispval
       secstop(:,:)  = ispval
       sechist(:,:)  = ispval
@@ -532,7 +520,7 @@
 !
 ! Annual tide flag:
       if (tideann==ispval) then
-        tideann = 1 ! default is on
+        tideann = 0 ! default is off
       elseif (tideann /= 0 .and. tideann /= 1) then
         write(6,"(/,'>>> INPUT: TIDEANN must be either 0 or 1:',
      |    ' tideann=',i5)") tideann
@@ -543,12 +531,6 @@
       if (aurora==ispval) then
         write(6,"(/,'Input: setting default AURORA = 0')")
         aurora = 0
-      endif
-!
-! Magnetospheric flag:
-      if (magphr==ispval) then
-        write(6,"(/,'Input: setting default MAGPHR = 0')")
-        magphr = 0
       endif
 !
 ! Number of tasks in lat,lon dimensions (ntask_lat*ntask_lon must == ntask):
@@ -676,8 +658,8 @@
      |      a)") trim(gpi_ncfiledef)
           gpi_ncfile = gpi_ncfiledef
         else
-          write(6,"(4x,'Will use user-provided path to GPI data',
-     |      ' GPI_NCFILE = ',a)") trim(gpi_ncfile)
+          call expand_path(gpi_ncfile)
+          write(6,"(4x,'Will use GPI data file ',a)") trim(gpi_ncfile)
         endif
 !
 ! Model must advance in calendar time for GPI database to be used:
@@ -768,11 +750,21 @@
         call shutdown('BYIMF')
       endif
 !
+! ncep data file:
+      if (len_trim(ncep_ncfile) > 0) call expand_path(ncep_ncfile)
+!
 ! SEE flux data file:
-      if (len_trim(sd_ncfile) > 0) then
-         write(6,"('INPUT: will read SEE flux data file ',a)")
-     |    trim(sd_ncfile)
-      endif
+      if (len_trim(see_ncfile) > 0) call expand_path(see_ncfile)
+!
+! GSWM data files:
+      if (len_trim(gswm_mi_di_ncfile) > 0) 
+     |  call expand_path(gswm_mi_di_ncfile)
+      if (len_trim(gswm_mi_sdi_ncfile) > 0) 
+     |  call expand_path(gswm_mi_sdi_ncfile)
+      if (len_trim(gswm_nm_di_ncfile) > 0) 
+     |  call expand_path(gswm_nm_di_ncfile)
+      if (len_trim(gswm_nm_sdi_ncfile) > 0) 
+     |  call expand_path(gswm_nm_sdi_ncfile)
 !
 ! Limits on By NOT necessary for Weimer (or for NONE)
       if (potential_model == 'HEELIS') then
@@ -1201,6 +1193,9 @@
 ! Source history file (optional):
       nsrc = len_trim(source)
 !
+! Expand any env vars embedded in path to source file:
+      if (nsrc > 0) call expand_path(source)
+!
 ! Source start time (must be given if SOURCE file was provided):
       n = size(source_start)-count(source_start==ispval)
       if (nsrc > 0 .and. n <= 0) then
@@ -1300,6 +1295,15 @@
       endif
       output = hvols
 !
+! Expand any env vars imbedded in output:
+      do i=1,mxhvols
+        if (len_trim(output(i)) > 0) then
+          call expand_path(output(i))
+!         write(6,"('Input: Expanded output file ',a,' to ',/,'  ',a)")
+!    |      trim(hvols(i)),trim(output(i))
+        endif
+      enddo
+!
 ! Max number of histories per primary file:
 ! (mxhist_prim is an input parameter with default = 13).
       if (mxhist_prim < 0) then
@@ -1377,11 +1381,7 @@
      |    size(secstop) -count(secstop==ispval)  +
      |    size(sechist) -count(sechist==ispval)  +
      |    size(secsave) -count(secsave==ispval)  +
-     |    size(secflds) -count(len_trim(secflds)==0) +
-     |    size(secfmag) -count(len_trim(secfmag)==0) +
-     |    size(secfgeo2d) -count(len_trim(secfgeo2d)==0)+
-     |    size(secfmag2d) -count(len_trim(secfmag2d)==0)+
-     |    size(secfmagphr)-count(len_trim(secfmagphr)==0)
+     |    size(secflds) -count(len_trim(secflds)==0)
 !
 ! Secondary output volumes:
 ! (integer function mkhvols either echoes histvols to hvols, or if 
@@ -1396,6 +1396,16 @@
         call shutdown('SECOUT')
       endif
       secout = hvols
+!
+! Expand any env vars imbedded in secout:
+      do i=1,mxhvols
+        if (len_trim(secout(i)) > 0) then
+          call expand_path(secout(i))
+          write(6,"('Input: Expanded secout file ',a,' to ',/,'  ',a)")
+     |      trim(hvols(i)),trim(secout(i))
+        endif
+      enddo
+!
       n = n+nout
       if (n <= 0) return
 !
@@ -1746,146 +1756,6 @@
         endif
         secflds(i) = ch80
       enddo
-!
-! Secondary history fields on the magnetic grid:
-      nflds_sech = count(len_trim(secfmag) > 0)
-!
-! Pack names so no blank names occur from 1->nflds_sech
-      call packstr(secfmag,mxfsech,nonblank)
-      if (nonblank /= nflds_sech) then
-        write(6,"('>>> WARNING: Input after packstr(secfmag): ',
-     |    'nonblank /= nflds_sech: nonblank=',i3,' nflds_sech=',i3)")
-     |    nonblank,nflds_sech
-        write(6,"('secfmag(mxfsech=',i3,')=')") mxfsech
-        do i=1,mxfsech
-          write(6,"('secfmag(',i2,')=',a)") i,secfmag(i)
-        enddo
-      endif
-!
-! Check for dups of secfmag field names:
-      if (nflds_sech > 0) then
-        ch80 = ' '
-        do i=1,nflds_sech
-          ch80 = secfmag(i)
-          secfmag(i) = 'dummy'
-          if (any(secfmag==ch80)) then
-            write(6,"(/,'>>> INPUT: Duplicate SECFMAG field names = ',
-     |        a,/)") trim(ch80)
-            call shutdown('SECFMAG')
-          endif
-          secfmag(i) = ch80
-        enddo
-      endif 
-!
-! Add mandatory 3d magnetic fields to secondary history:
-      do i=1,size(secfmag_mandatory)
-        write(6,"('i=',i3,' Mandatory secfmag field ',a)") 
-     |    i,trim(secfmag_mandatory(i))
-        found = .false.
-        if (nflds_sech > 0) then
-          do ii=1,nflds_sech
-            if (trim(secfmag(ii))==trim(secfmag_mandatory(i))) then
-              found = .true.
-            endif
-          enddo
-        endif
-        if (.not.found) then
-          write(6,"('Input: adding mandatory mag field ',a,
-     |      ' to secondary history.')")
-          nflds_sech = nflds_sech+1
-          secfmag(nflds_sech) = secfmag_mandatory(i)
-        endif
-      enddo
-!
-! Secondary history fields on the geographic 2d grid:
-      nflds_sech = count(len_trim(secfgeo2d) > 0)
-!
-! Pack names so no blank names occur from 1->nflds_sech
-      call packstr(secfgeo2d,mxfsech,nonblank)
-      if (nonblank /= nflds_sech) then
-        write(6,"('>>> WARNING: Input after packstr(secfgeo2d): ',
-     |    'nonblank /= nflds_sech: nonblank=',i3,' nflds_sech=',i3)")
-     |    nonblank,nflds_sech
-        write(6,"('secgeo2d(mxfsech=',i3,')=')") mxfsech
-        do i=1,mxfsech
-          write(6,"('secfgeo2d(',i2,')=',a)") i,secfgeo2d(i)
-        enddo
-      endif
-!
-! Check for dups of secfgeo2d field names:
-      if (nflds_sech > 0) then
-        ch80 = ' '
-        do i=1,nflds_sech
-          ch80 = secfgeo2d(i)
-          secfgeo2d(i) = 'dummy'
-          if (any(secfgeo2d==ch80)) then
-            write(6,"(/,'>>> INPUT: Duplicate SECFGEO2D field names = ',
-     |        a,/)") trim(ch80)
-            call shutdown('SECFGEO2D')
-          endif
-          secfgeo2d(i) = ch80
-        enddo
-      endif
-!
-! Secondary history fields on the magnetic 2d grid:
-      nflds_sech = count(len_trim(secfmag2d) > 0)
-!
-! Pack names so no blank names occur from 1->nflds_sech
-      call packstr(secfmag2d,mxfsech,nonblank)
-      if (nonblank /= nflds_sech) then
-        write(6,"('>>> WARNING: Input after packstr(secfmag2d): ',
-     |    'nonblank /= nflds_sech: nonblank=',i3,' nflds_sech=',i3)")
-     |    nonblank,nflds_sech
-        write(6,"('secfmag2d(mxfsech=',i3,')=')") mxfsech
-        do i=1,mxfsech
-          write(6,"('secfmag2d(',i2,')=',a)") i,secfmag2d(i)
-        enddo
-      endif
-!
-! Check for dups of secfmag 2d field names:
-      if (nflds_sech > 0) then
-        ch80 = ' '
-        do i=1,nflds_sech
-          ch80 = secfmag2d(i)
-          secfmag2d(i) = 'dummy'
-          if (any(secfmag2d==ch80)) then
-            write(6,"(/,'>>> INPUT: Duplicate SECFMAG2D field names = ',
-     |        a,/)") trim(ch80)
-            call shutdown('SECFMAG2D')
-          endif
-          secfmag2d(i) = ch80
-        enddo
-      endif
-!
-! Secondary history fields on the magnetospheric grid:
-      nflds_sech = count(len_trim(secfmagphr) > 0)
-!
-! Pack names so no blank names occur from 1->nflds_sech
-      call packstr(secfmagphr,mxfsech,nonblank)
-      if (nonblank /= nflds_sech) then
-        write(6,"('>>> WARNING: Input after packstr(secfmagphr): ',
-     |    'nonblank /= nflds_sech: nonblank=',i3,' nflds_sech=',i3)")
-     |    nonblank,nflds_sech
-        write(6,"('secfmagphr(mxfsech=',i3,')=')") mxfsech
-        do i=1,mxfsech
-          write(6,"('secfmagphr(',i2,')=',a)") i,secfmagphr(i)
-        enddo
-      endif
-!
-! Check for dups of secfmagphr field names:
-      if (nflds_sech > 0) then
-        ch80 = ' '
-        do i=1,nflds_sech
-          ch80 = secfmagphr(i)
-          secfmagphr(i) = 'dummy'
-          if (any(secfmagphr==ch80)) then
-            write(6,"(/,'>>> INPUT: Duplicate SECFMAGPHR field
-     |        names',' = ', a,/)") trim(ch80)
-            call shutdown('SECFMAGPHR')
-          endif
-          secfmagphr(i) = ch80
-        enddo
-      endif
       end subroutine inp_sechist
 !-----------------------------------------------------------------------
       subroutine inp_deftyp
@@ -1901,10 +1771,10 @@
       inp%hrindices_ncfile = hrindices_ncfile
       inp%weimer_ncfile = weimer_ncfile
       inp%gpi_ncfile = gpi_ncfile
-      inp%gswm_di_ncfile    = gswm_di_ncfile
-      inp%gswm_sdi_ncfile   = gswm_sdi_ncfile
-      inp%gswm_nmdi_ncfile = gswm_nmdi_ncfile
-      inp%gswm_nmsdi_ncfile= gswm_nmsdi_ncfile
+      inp%gswm_mi_di_ncfile    = gswm_mi_di_ncfile
+      inp%gswm_mi_sdi_ncfile   = gswm_mi_sdi_ncfile
+      inp%gswm_nm_di_ncfile = gswm_nm_di_ncfile
+      inp%gswm_nm_sdi_ncfile= gswm_nm_sdi_ncfile
       inp%start_day  = start_day
       inp%start_year = start_year
       inp%calendar_advance = calendar_advance
@@ -1952,10 +1822,6 @@
       inp%sechist  = sechist
       inp%secsave  = secsave
       inp%secflds  = secflds
-      inp%secfmag  = secfmag
-      inp%secfgeo2d= secfgeo2d
-      inp%secfmag2d= secfmag2d
-      inp%secfmagphr  = secfmagphr
       inp%mxhist_sech = mxhist_sech
       end subroutine inp_deftyp
 !-------------------------------------------------------------------
@@ -1993,20 +1859,22 @@
      |        trim(weimer_ncfile)
       if (len_trim(gpi_ncfile) > 0)
      |  write(6,"('  gpi run: gpi_ncfile = ',a)") trim(gpi_ncfile)  
-      if (len_trim(sd_ncfile) > 0)
-     |  write(6,"('  SEE run: sd_ncfile = ',a)") trim(sd_ncfile)
-      if (len_trim(gswm_di_ncfile) > 0)
-     |  write(6,"('  gswm run diurnal tides: gswm_di_ncfile = ',a)") 
-     |        trim(gswm_di_ncfile)
-      if (len_trim(gswm_sdi_ncfile) > 0)
-     |  write(6,"('  gswm run semidiurnal tides: gswm_sdi_ncfile = ' 
-     |        ,a)") trim(gswm_sdi_ncfile)
-      if (len_trim(gswm_nmdi_ncfile) > 0)
-     |  write(6,"('  gswm run nonmigrating diurnal tides: ',
-     |    'gswm_nmdi_ncfile = ',a)") trim(gswm_nmdi_ncfile)
-      if (len_trim(gswm_nmsdi_ncfile) > 0)
-     |  write(6,"('  gswm run nonmigrating semidiurnal tides: ',
-     |    'gswm_nmsdi_ncfile = ',a)") trim(gswm_nmsdi_ncfile)
+      if (len_trim(see_ncfile) > 0)
+     |  write(6,"('  SEE data: see_ncfile = ',a)") trim(see_ncfile)
+
+      if (len_trim(gswm_mi_di_ncfile) > 0)
+     |  write(6,"('  gswm migrating diurnal file: ',
+     |    'gswm_mi_di_ncfile = ',a)") trim(gswm_mi_di_ncfile)
+      if (len_trim(gswm_mi_sdi_ncfile) > 0)
+     |  write(6,"('  gswm migrating semi-diurnal file: ',
+     |    'gswm_mi_sdi_ncfile = ',a)") trim(gswm_mi_sdi_ncfile)
+      if (len_trim(gswm_nm_di_ncfile) > 0)
+     |  write(6,"('  gswm non-migrating diurnal file: ',
+     |    'gswm_nm_di_ncfile = ',a)") trim(gswm_nm_di_ncfile)
+      if (len_trim(gswm_nm_sdi_ncfile) > 0)
+     |  write(6,"('  gswm non-migrating semi-diurnal file: ',
+     |    'gswm_nm_sdi_ncfile = ',a)") trim(gswm_nm_sdi_ncfile)
+
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(inp%amievol)
@@ -2100,22 +1968,6 @@
       if (n > 0)
      |  write(6,"('  secflds (secondary history fields)',
      |    ' =',/,(4x,5a12))") (inp%secflds(i),i=1,n)
-      n = (size(inp%secfmag)-count(len_trim(inp%secfmag)==0))
-      if (n > 0)
-     |  write(6,"('  secfmag (secondary history fields on magnetic ',
-     |    'grid) =',/,(4x,5a12))") (inp%secfmag(i),i=1,n)
-      n = (size(inp%secfgeo2d)-count(len_trim(inp%secfgeo2d)==0))
-      if (n > 0)
-     |  write(6,"('  secfgeo2d (secondary history fields on geo. ',
-     |    '2d grid) =',/,(4x,5a12))") (inp%secfgeo2d(i),i=1,n)
-      n = (size(inp%secfmag2d)-count(len_trim(inp%secfmag2d)==0))
-      if (n > 0)
-     |  write(6,"('  secfmag2d (secondary history fields on magnetic ',
-     |    '2d grid) =',/,(4x,5a12))") (inp%secfmag2d(i),i=1,n)
-      n = (size(inp%secfmagphr)-count(len_trim(inp%secfmagphr)==0))
-      if (n > 0)
-     |  write(6,"('secfmagphr (secondary history fields on magnetphr',
-     |    'grid) =',/,(4x,5a12))") (inp%secfmagphr(i),i=1,n)
       write(6,"('  Maximum number of histories per secondary file = ',
      |  i3)") inp%mxhist_sech
 !
@@ -2148,8 +2000,6 @@
       write(6,"('  tideann = ',i2,' (0/1 flag for annual tides)')")
      |  inp%tideann
       write(6,"('  aurora  = ',i2,' (0/1 flag for aurora)')") inp%aurora
-      write(6,"('  magphr  = ',i2,' (0/1 flag for magnetosphere)')")
-     |  inp%magphr
 !
 ! If any of f107,f107a,power,ctpoten are spval, this means GPI database
 ! will be used for those indices, otherwise will use user-provided

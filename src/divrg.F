@@ -6,6 +6,10 @@
       use cons_module,only: dlamda_2div3,dlamda_1div12,
      |  dphi_2div3,dphi_1div12,racs
       use params_module,only: nlonp4
+      use addfld_module,only: addfld
+#ifdef MPI
+      use mpi_module,only: mp_periodic_f2d
+#endif
       implicit none
 !
 ! Args:
@@ -17,19 +21,17 @@
 !
 ! Local:
       real,dimension(lev0:lev1,lon0:lon1) :: d2u,d4u,d2vc,d4vc
-      integer :: k,i,lonbeg,lonend,nlevs
+      integer :: k,i,lonbeg,lonend
 
 !     do i=lon0,lon1
 !       write(6,"('divrg: lat=',i3,' i=',i3,' un(:,i)=',/,(6e12.4))")
 !    |    lat,i,un(:,i)
 !     enddo ! i=lon0,lon1
 
-!     call addfsech('DVG_UN',' ',' ',un(lev0:lev1,lon0:lon1),
-!    |  lon0,lon1,lev1-lev0+1,lev1-lev0,lat)
-!     call addfsech('DVG_VC',' ',' ',vc(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,lev1-lev0+1,lev1-lev0,lat)
-      
-      nlevs = lev1-lev0+1
+!     call addfld('DVG_UN',' ',' ',un(lev0:lev1,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('DVG_VC',' ',' ',vc(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Do not use un,vc at lons -1, 0, nlonp4+1, or nlonp4+2:
 ! (define lons 3->nlonp4-2; periodic points are defined later)
@@ -64,21 +66,18 @@
 
       enddo
 !
-! Set periodic points in fields that need them (for addfsech):
-!#ifdef MPI
-!      call mp_periodic_f2d(d2u,lon0,lon1,lev1-lev0+1)
-!      call mp_periodic_f2d(d4u,lon0,lon1,lev1-lev0+1)
-!      call mp_periodic_f2d(w  ,lon0,lon1,lev1-lev0+1)
-!#else
-!     call addfsech('DVG_D2U' ,' ',' ',d2u,lon0,lon1,lev1-lev0+1,
-!    |  lev1-lev0,lat)
-!     call addfsech('DVG_D4U' ,' ',' ',d4u,lon0,lon1,lev1-lev0+1,
-!    |  lev1-lev0,lat)
-!     call addfsech('DVG_W2'   ,' ',' ',w   ,lon0,lon1,lev1-lev0+1,
-!    |  lev1-lev0,lat)
-!#endif
-
-!     call addfsech('DVG_W'   ,' ',' ',w(:,lon0:lon1),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
+! Set periodic points in fields that need them 
+! subroutine mp_periodic_f2d(f,lon0,lon1,lat0,lat1)
+#ifdef MPI
+      call mp_periodic_f2d(d2u,lon0,lon1,lat,lat)
+      call mp_periodic_f2d(d4u,lon0,lon1,lat,lat)
+      call mp_periodic_f2d(w  ,lon0,lon1,lat,lat)
+#endif
+!     call addfld('DVG_D2U' ,' ',' ',d2u(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('DVG_D4U' ,' ',' ',d4u(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('DVG_W' ,' ',' ',w(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine divrg

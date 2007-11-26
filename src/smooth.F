@@ -9,6 +9,7 @@
 !
       use params_module,only: nlonp4
       use cons_module,only: shapiro
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -39,8 +40,8 @@
         enddo ! i=i0,i1
 
         if (isave > 0)
-     |    call addfsech('SMOO1',' ',' ',ftmp(:,i0:i1),
-     |      i0,i1,k1-k0+1,k1-k0,j)
+     |    call addfld('SMOO1',' ',' ',ftmp(:,i0:i1),
+     |      'lev',k0,k1,'lon',i0,i1,j)
 !
 ! Zonal smoothing (differences in longitude):
         do i=ibeg,iend
@@ -56,8 +57,8 @@
         if (i1==nlonp4) fout(:,i1-1:i1,j) = 0.
 
         if (isave > 0)
-     |    call addfsech('SMOO2',' ',' ',fout(:,i0:i1,j),
-     |      i0,i1,k1-k0+1,k1-k0,j)
+     |    call addfld('SMOO2',' ',' ',fout(:,i0:i1,j),
+     |      'lev',k0,k1,'lon',i0,i1,j)
 
       enddo ! j=j0,j1
       end subroutine smooth

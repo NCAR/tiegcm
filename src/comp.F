@@ -13,6 +13,8 @@
      |  difk,dtx2inv,kut_5,set_wave_filter,dtsmooth,dtsmooth_div2
       use chemrates_module,only: fs ! from sub comp_o2o
       use bndry_module,only: b,fb
+      use fields_module,only: tlbc
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -35,7 +37,7 @@
 !
 ! Local:
       integer :: k,kk,i,lat,isp,km,kp,ktmp,m,lonbeg,lonend,kutt(nlat)
-      integer :: nk,nkm1
+      integer :: nk,nkm1,i0,i1,k0,k1
       integer,parameter :: io2=1,io1=2 ! indices to O2, O, respectively
       real,dimension(lon0:lon1,lev0:lev1,2,2) :: gama
       real,dimension(lon0:lon1,lev0:lev1,2)   :: zz
@@ -52,8 +54,8 @@
      |  o2_advec   , o1_advec      ! horizontal advection
       real,dimension(lev0:lev1,lon0:lon1,2) :: upd
 ! For diagnostics:
-!     real,dimension(lev0:lev1,lon0:lon1,2) :: zz_ki
-!     real,dimension(lev0:lev1,lon0:lon1,2,2) :: gama_ki
+      real,dimension(lev0:lev1,lon0:lon1,2) :: zz_ki
+      real,dimension(lev0:lev1,lon0:lon1,2,2) :: gama_ki
 !
       phi(:,1)=(/0.  ,0.673/)
       phi(:,2)=(/1.35,0.   /)
@@ -63,6 +65,7 @@
       delta(:,2)=(/0.,1./)
       t00=273.
       small = 1.e-6
+      i0=lon0 ; i1=lon1 ; k0=lev0 ; k1=lev1
 !
       nk = lev1-lev0+1
       nkm1 = nk-1
@@ -80,10 +83,10 @@
       call smooth(o1_nm,o1nm_smooth,lev0,lev1,lon0,lon1,lat0,lat1,0)
 
 !     do lat=lat0,lat1
-!       call addfsech('O2SMOOTH',' ',' ',o2nm_smooth(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-!       call addfsech('O1SMOOTH',' ',' ',o1nm_smooth(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('O2SMOOTH','O2SMOOTH',' ',o2nm_smooth(:,i0:i1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
+!       call addfld('O1SMOOTH','O1SMOOTH',' ',o1nm_smooth(:,i0:i1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
 !     enddo ! lat=lat0,lat1
 !
 ! Begin latitude scan:
@@ -122,14 +125,16 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
-!     call addfsech('EMBAR',' ',' ',embar,lon0,lon1,nk,nk,lat)
+! real,dimension(lon0:lon1,lev0:lev1)     :: embar
+!     call addfld('EMBAR',' ',' ',embar(i0:i1,:),
+!    |  'lon',i0,i1,'lev',k0,k1,lat)
 !
 ! ps0 and embar0:
       do i=lon0,lon1
         ps0(i,io2) = 
-     |    b(i,1,1)*o2(lev0,i,lat)+b(i,1,2)*o1(lev0,i,lat)+fb(i,1) 
+     |    b(i,1,1)*o2(lev0,i,lat)+b(i,1,2)*o1(lev0,i,lat)+fb(i,1)
         ps0(i,io1) = 
-     |    b(i,2,1)*o2(lev0,i,lat)+b(i,2,2)*o1(lev0,i,lat)+fb(i,2) 
+     |    b(i,2,1)*o2(lev0,i,lat)+b(i,2,2)*o1(lev0,i,lat)+fb(i,2)
         embar0(i) = 1./(ps0(i,io2)*rmassinv_o2+ps0(i,io1)*rmassinv_o1+
      |              (1.-ps0(i,io2)-ps0(i,io1))*rmassinv_n2)
 ! WKS4 = .5*(DMBAR/DZ)/MBAR
@@ -179,8 +184,12 @@
 ! WKS1=MBAR/M3*(T00/(T0+T))*0.25/(TAU*DET) AT LEVEL 1/2
 ! tn lower boundary is stored in top slot tn(lev1..). 
       do i=lon0,lon1
+!       wks1(i) = 0.5*(embar0(i)+embar(i,lev0))*rmassinv_n2*
+!    |    (t00/tn(lev1,i,lat))**0.25/(tau*(ak(i,1,1,kp)*ak(i,2,2,kp)-
+!    |    ak(i,1,2,kp)*ak(i,2,1,kp)))
+! Lower boundary of tn is now in tlbc:
         wks1(i) = 0.5*(embar0(i)+embar(i,lev0))*rmassinv_n2*
-     |    (t00/tn(lev1,i,lat))**0.25/(tau*(ak(i,1,1,kp)*ak(i,2,2,kp)-
+     |    (t00/tlbc(i,lat))**0.25/(tau*(ak(i,1,1,kp)*ak(i,2,2,kp)-
      |    ak(i,1,2,kp)*ak(i,2,1,kp)))
       enddo ! i=lon0,lon1
 !     write(6,"('comp: lat=',i3,' wks1=',/,(6e12.4))") lat,wks1
@@ -469,26 +478,26 @@
 !     real,dimension(lev0:lev1,lon0:lon1,2) :: zz_ki
 !     real,dimension(lev0:lev1,lon0:lon1,2,2) :: gama_ki
 !
-!     do k=lev0,lev1
-!       zz_ki(k,:,io2) = zz(:,k,io2)
-!       zz_ki(k,:,io1) = zz(:,k,io1)
-!       do m=1,2
-!         gama_ki(k,:,io2,m) = gama(:,k,io2,m)
-!         gama_ki(k,:,io1,m) = gama(:,k,io1,m)
-!       enddo
-!     enddo
-!     call addfsech('ZZ_O2',' ',' ',zz_ki(:,:,io2),
-!    |  lon0,lon1,nk,nk,lat)
-!     call addfsech('ZZ_O1',' ',' ',zz_ki(:,:,io1),
-!    |  lon0,lon1,nk,nk,lat)
-!     call addfsech('GAMAO2M1',' ',' ',gama_ki(:,:,io2,1),
-!    |  lon0,lon1,nk,nk,lat)
-!     call addfsech('GAMAO2M2',' ',' ',gama_ki(:,:,io2,2),
-!    |  lon0,lon1,nk,nk,lat)
-!     call addfsech('GAMAO1M1',' ',' ',gama_ki(:,:,io1,1),
-!    |  lon0,lon1,nk,nk,lat)
-!     call addfsech('GAMAO1M2',' ',' ',gama_ki(:,:,io1,2),
-!    |  lon0,lon1,nk,nk,lat)
+      do k=lev0,lev1
+        zz_ki(k,:,io2) = zz(:,k,io2)
+        zz_ki(k,:,io1) = zz(:,k,io1)
+        do m=1,2
+          gama_ki(k,:,io2,m) = gama(:,k,io2,m)
+          gama_ki(k,:,io1,m) = gama(:,k,io1,m)
+        enddo
+      enddo
+!       call addfld('ZZ_O2',' ',' ',zz_ki(k0:k1-1,:,io2),
+!    |    'lev',k0,k1-1,'lon',i0,i1,lat)
+!       call addfld('ZZ_O1',' ',' ',zz_ki(k0:k1-1,:,io1),
+!    |    'lev',k0,k1-1,'lon',i0,i1,lat)
+!       call addfld('GAMAO2M1',' ',' ',gama_ki(k0:k1-1,:,io2,1),
+!    |    'lev',k0,k1-1,'lon',i0,i1,lat)
+!       call addfld('GAMAO2M2',' ',' ',gama_ki(k0:k1-1,:,io2,2),
+!    |    'lev',k0,k1-1,'lon',i0,i1,lat)
+!       call addfld('GAMAO1M1',' ',' ',gama_ki(k0:k1-1,:,io1,1),
+!    |    'lev',k0,k1-1,'lon',i0,i1,lat)
+!       call addfld('GAMAO1M2',' ',' ',gama_ki(k0:k1-1,:,io1,2),
+!    |    'lev',k0,k1-1,'lon',i0,i1,lat)
 !
 ! Set upper boundary to zero:
       do i=lon0,lon1
@@ -528,11 +537,11 @@
      |    (1.+.5*ep(i,io1,kp)*dz)/
      |    (1.-.5*ep(i,io1,kp)*dz)*o1_upd(lev1-1,i,lat)
       enddo ! i=lon0,lon1
-
-!     call addfsech('O2_SOLV',' ',' ',o2_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk,lat)
-!     call addfsech('O1_SOLV',' ',' ',o1_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk,lat)
+!
+!       call addfld('O2_SOLV',' ',' ',o2_upd(:,lon0:lon1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
+!       call addfld('O1_SOLV',' ',' ',o1_upd(:,lon0:lon1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
 !
 ! End latitude scan:
       enddo ! lat=lat0,lat1
@@ -548,11 +557,10 @@
 !
 ! Resume latitude scan:
       do lat=lat0,lat1
-
-!       call addfsech('O2_FILT',' ',' ',o2_upd(:,lon0:lon1,lat),
-!    |      lon0,lon1,nk,nk,lat)
-!       call addfsech('O1_FILT',' ',' ',o1_upd(:,lon0:lon1,lat),
-!    |      lon0,lon1,nk,nk,lat)
+!       call addfld('O2_FILT',' ',' ',o2_upd(:,lon0:lon1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
+!       call addfld('O1_FILT',' ',' ',o1_upd(:,lon0:lon1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
 !
 ! Time smoothing:
         do i=lon0,lon1 
@@ -564,11 +572,11 @@
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1 
 
-!       call addfsech('O2NM_OUT',' ',' ',o2nm_upd(:,lon0:lon1,lat),
-!    |      lon0,lon1,nk,nk,lat)
-!       call addfsech('O1NM_OUT',' ',' ',o1nm_upd(:,lon0:lon1,lat),
-!    |      lon0,lon1,nk,nk,lat)
-!
+!       call addfld('O2NM_OUT',' ',' ',o2nm_upd(:,lon0:lon1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
+!       call addfld('O1NM_OUT',' ',' ',o1nm_upd(:,lon0:lon1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
+
       enddo ! lat=lat0,lat1
 #ifdef MPI
 !
@@ -602,14 +610,14 @@
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
 
-!       call addfsech('O2_FINAL',' ',' ',o2_upd(:,lon0:lon1,lat),
-!    |      lon0,lon1,nk,nk,lat)
-!       call addfsech('O1_FINAL',' ',' ',o1_upd(:,lon0:lon1,lat),
-!    |      lon0,lon1,nk,nk,lat)
-!       call addfsech('O2MFINAL',' ',' ',o2nm_upd(:,lon0:lon1,lat),
-!    |      lon0,lon1,nk,nk,lat)
-!       call addfsech('O1MFINAL',' ',' ',o1nm_upd(:,lon0:lon1,lat),
-!    |      lon0,lon1,nk,nk,lat)
+!       call addfld('O2_OUT',' ',' ',o2_upd(:,i0:i1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
+!       call addfld('O1_OUT',' ',' ',o1_upd(:,i0:i1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
+!       call addfld('O2_NMOUT',' ',' ',o2nm_upd(:,i0:i1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
+!       call addfld('O1_NMOUT',' ',' ',o1nm_upd(:,i0:i1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
 !
       enddo ! lat=lat0,lat1
       end subroutine comp

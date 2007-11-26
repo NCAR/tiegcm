@@ -9,6 +9,7 @@
       use qrj_module,only: rj,qo2p,qop
       use chemrates_module,only: rk4,rk5,rk6,rk7,rk8,rk9,rk10,beta2,
      |  beta6,ra1,ra2,beta3,beta8,rk1,beta1,rkm12,rk3,fs
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -115,16 +116,27 @@
 !       write(6,"('fs(:,k,2,0,lat)=',/,(6e12.4))") fs(:,k,2,0,lat)
 !     enddo ! k=lev0,lev1-1
 
-!     call addfsech('XNMBAR',' ',' ',xnmbar,lon0,lon1,nk,nk-1,lat) ! s15
-!     call addfsech('POX1',' ',' ',pox1,lon0,lon1,nk,nk-1,lat) ! s1
-!     call addfsech('POX2',' ',' ',pox2,lon0,lon1,nk,nk-1,lat) ! s2
-!     call addfsech('LOX1',' ',' ',lox1,lon0,lon1,nk,nk-1,lat) ! s3
-!     call addfsech('LOX2',' ',' ',lox2,lon0,lon1,nk,nk-1,lat) ! s4
-!     call addfsech('LOX3',' ',' ',lox3,lon0,lon1,nk,nk-1,lat) ! s5
-!     call addfsech('PO21',' ',' ',po21,lon0,lon1,nk,nk-1,lat) ! s6
-!     call addfsech('PO22',' ',' ',po22,lon0,lon1,nk,nk-1,lat) ! s9
-!     call addfsech('PO23',' ',' ',po23,lon0,lon1,nk,nk-1,lat) ! s10
-!     call addfsech('LO21',' ',' ',lo21,lon0,lon1,nk,nk-1,lat) ! s13
-!     call addfsech('LO22',' ',' ',lo22,lon0,lon1,nk,nk-1,lat) ! s14
+!     call addfld('MBAR_O2O',' ',' ',xnmbar,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('POX1',' ',' ',pox1,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('POX2',' ',' ',pox2,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('LOX1',' ',' ',lox1,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('LOX2',' ',' ',lox2,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('LOX3',' ',' ',lox3,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('PO21',' ',' ',po21,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('PO22',' ',' ',po22,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('PO23',' ',' ',po23,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('LO21',' ',' ',lo21,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('LO22',' ',' ',lo22,'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
 
       end subroutine comp_o2o

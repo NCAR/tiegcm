@@ -57,3 +57,9 @@ Update from $TGCMROOT/tiegcm1.8/scripts and commit to cvs.
 11/7/07:
 Changed lib_netcdf for AIX in tgcm_config from /usr/local/lib32/r4i4
 to /usr/local/lib (the lib32/r4i4 dir does not exist on blueice).
+After this commit, copied tgcm_config from /home/foster/tgcm/tiegcm-hist-lbc/scripts,
+in order to use new params.F w/ interfaces/midpoints, etc.
+
+11/20/07:
+Added debug and mpi options to .job scripts (tgcm_config handles these).
+Debug flag was working nicely on blueice, actually helped the debug process.

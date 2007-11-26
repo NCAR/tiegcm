@@ -597,36 +597,11 @@
       enddo ! k=1,nlevp1
 !
 ! Periodic point:
-!     do k=1,nlevp1
-!       do j=1,nmlat
-!         phim3d(nmlonp1,j,k) = phim3d(1,j,k)
-!       enddo ! j=1,nmlat
-!     enddo ! k=1,nlevp1
-!
-! Save to secondary history from root task:
-! addfsech will not work because this routine is called once per run,
-!   so write to stdout.
-!
-!     if (mytid==0) then
-!       do j=0,nlatp1
-!         call addfsech_ik('DYNPOT_0',' ',' ',dynpot(:,j,:),
-!    |      1,nlonp1,nlevp1,nlevp1-1,j)
-!
-!  dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
-!         call fminmax(dynpot(:,j,:),nlonp1*nlevp1,fmin,fmax)
-!         write(6,"('dynpotmag: j=',i3,' dynpot min,max=',2e12.4)")
-!    |      j,fmin,fmax 
-!       enddo ! j=1,nlat
-!       do j=1,nmlat
-!         call addfsech_ik('PHIM3D_0',' ',' ',phim3d(:,j,:),
-!    |      1,nmlonp1,nmlev,nmlev-1,j)
-!
-!    |  phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
-!         call fminmax(phim3d(:,j,:),nmlonp1*nmlev,fmin,fmax)
-!         write(6,"('dynpotmag: j=',i3,' phim3d min,max=',2e12.4)")
-!    |      j,fmin,fmax 
-!       enddo ! j=1,nmlat
-!     endif
+      do k=1,nlevp1
+        do j=1,nmlat
+          phim3d(nmlonp1,j,k) = phim3d(1,j,k)
+        enddo ! j=1,nmlat
+      enddo ! k=1,nlevp1
       end subroutine dynpotmag
 !-----------------------------------------------------------------------
       subroutine sunloc(iday,secs)

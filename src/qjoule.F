@@ -18,13 +18,12 @@
 !     now
 !       Q_JI = m_n/(m_n+m_i) * lambda_1 * [ (u_i-u_n)^2 + (v_i-v_n)^2+ (w_i-w_n)^2]
 !
-!
       use cons_module,only: avo,        ! avogadro number 6.023e23 particles / mole
      |  grav,   ! acceler. due to gravity at lower boundary [cm/s^2]
      |  gask,   ! gas konstant 8.314e7 [ergs/K/mol]
      |  rmass_o2 , rmass_o1, rmass_n2,  ! 32,16,28 [g/mol]
      |  rmass_n4s, rmass_no, rmass_op   ! 14,30,16 [g/mol]
-!
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -45,20 +44,11 @@
      |  qji_ti          ! ion joule heating for ti (output) [ergs/s/g]
 !
 ! Local:
-      integer :: k,i,nlevs
+      integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  vert_vel,        ! scale height  
      |  uii,vii,wii      ! ion velocities at interfaces
       real :: m_i,m_n,mfac
-!
-      nlevs = lev1-lev0+1
-
-!     call addfsech('QJI_UI',' ',' ',ui(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QJI_VI',' ',' ',vi(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QJI_LAM1',' ',' ',lam1(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
 !
 ! Task subdomain:
       do i=lon0,lon1
@@ -93,8 +83,8 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-       call addfsech('QJI_TI','QJI_TI ',' ',qji_ti(:,lon0:lon1),
-     |  lon0,lon1,nlevs,nlevs-1,lat)
+!     call addfld('QJI_TI','QJI_TI ',' ',qji_ti(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine qjoule_ti
 !-----------------------------------------------------------------------
@@ -117,7 +107,7 @@
       use cons_module,only:
      |  grav,   ! acceler. due to gravity at lower boundary [cm/s^2]
      |  gask    ! gas konstant 8.314e7 [ergs/K/mol]
-!
+      use addfld_module,only: addfld
       implicit none
 !     
 ! Args:
@@ -133,12 +123,10 @@
      |  qji_tn          ! ion joule heating for tn (output)
 !
 ! Local:
-      integer :: k,i,nlevs
+      integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) ::vel_zonal,vel_merid,
      |  vel_vert,scheight        ! scale height  
       integer :: iuivi=1
-      
-      nlevs = lev1-lev0+1
 !
 ! iuivi used to be an input flag, but has been replaced by the dynamo
 !   input flag. iuivi is set locally here, so ui,vi are always used in
@@ -182,27 +170,23 @@
      |       vel_vert(k,i)**2)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-
-      nlevs = lev1-lev0+1
 !
-! xlf8.1 bug: QJI_LXX has spike at geog pole in 2nd time step
-! (tgcm15 does not)
-!
-!     call addfsech('QJI_UN','QJI_UN','cm/s',un(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('QJI_VN','QJI_VN','cm/s',vn(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('QJI_W','QJI_W','cm/s',vn(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('QJI_UI','QJI_UI','cm/s',ui(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('QJI_VI','QJI_VI','cm/s',vi(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!     call addfsech('QJI_WI','QJI_WI','cm/s',wi(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs-1,lat)
-!      call addfsech('QJI_LAM1','QJI_LAM','1/s',lam1(:,lon0:lon1),
-!     |  lon0,lon1,nlevs,nlevs-1,lat)
-!      call addfsech('QJI_TN','QJI_TN','ergs/s/g',qji_tn(:,lon0:lon1),
-!     |  lon0,lon1,nlevs,nlevs-1,lat)
+!     call addfld('QJI_UN','QJI_UN','cm/s',un(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QJI_VN','QJI_VN','cm/s',vn(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QJI_W','QJI_W','cm/s',vn(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QJI_UI','QJI_UI','cm/s',ui(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QJI_VI','QJI_VI','cm/s',vi(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QJI_WI','QJI_WI','cm/s',wi(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QJI_LAM1','QJI_LAM','1/s',lam1(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QJI_TN','QJI_TN','ergs/s/g',
+!    |  qji_tn(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine qjoule_tn

@@ -10,12 +10,12 @@
 !   without the final time dimension. 
 !
       use params_module,only: nlonp1,nlonp4,nlat,nlatp1,nlevp1,
-     |  mxfsech,spval,nmlat,nmlonp1,nmagphrlon,nmagphrlat
+     |  mxfsech,spval,nmlat,nmlonp1
       implicit none
       integer,parameter :: 
      |  nf4d          = 26, ! number of 4-d fields
      |  nf4d_hist     = 24, ! number of 4-d fields on primary histories
-     |  nf3d          = 41  ! number of 3-d fields
+     |  nf3d          = 42  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
       integer,parameter :: 
@@ -31,9 +31,9 @@
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
         character(len=units_len)     :: units
+        character(len=16)            :: vcoord ! midpoints or interfaces
         logical                      :: 
      |    magnetic,    ! true if field is on magnetic 3d grid
-     |    magnetos,    ! true if field is on magnetospheric grid
      |    prognostic,  ! true if prognostic (diagnostic if false)
      |    mpi          ! flag used by some mpi routines
         real                         :: polesign
@@ -69,9 +69,10 @@
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
         character(len=units_len)     :: units
+        character(len=16)            :: vcoord ! midpoints or interfaces
+        character(len=8)             :: dimnames(3) ! e.g., lat,lon,lev, or lat,lon,' '
         logical                      :: 
      |    magnetic,    ! true if field is on magnetic 3d grid 
-     |    magnetos,    ! true if field is on magnetospheric grid
      |    prognostic,  ! true if prognostic (diagnostic if false)
      |    mpi,         ! flag used by some mpi routines
      |    task0_only   ! if true, field was defined at root task only
@@ -83,14 +84,14 @@
 ! 3-d fields and indices, e.g., reference f3d(kldt)%data
       integer :: 
      |  i_kldt   ,i_kldu    ,i_kldv    ,i_kldo2 ,i_kldo1 ,
-     |  i_xnmbar ,i_xnmbari ,i_xnmbarm ,i_cp    ,i_kt    , 
-     |  i_km     ,i_ui      ,i_vi      ,i_wi    ,i_vo2   , 
+     |  i_xnmbar ,i_xnmbari ,i_xnmbarm ,i_cp    ,i_kt    ,
+     |  i_km     ,i_ui      ,i_vi      ,i_wi    ,i_vo2   ,
      |  i_vo1    ,i_vn2     ,i_sco2    ,i_sco1  ,i_scn2  ,
      |  i_xiop2p ,i_xiop2d  ,i_nplus   ,i_n2p   ,i_nop   ,
      |  i_lxx    ,i_lyy     ,i_lxy     ,i_lyx   ,i_qji_ti,
      |  i_qji_tn ,i_cool_implicit      ,i_cool_explicit  ,
      |  i_hdt    ,i_hdu     ,i_hdv     ,i_hdo2  ,i_hdo1  ,
-     |  i_ped    ,i_hall    ,i_lam1
+     |  i_ped    ,i_hall    ,i_lam1    ,i_zg
 !
 ! Allocatable target arrays 3-d:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 )
@@ -98,14 +99,15 @@
 !
       real,dimension(:,:,:),target,allocatable :: ! (k,i,j)
      |  kldt     ,kldu     ,kldv     ,kldo2    ,kldo1   ,
-     |  xnmbar   ,xnmbari  ,xnmbarm  ,cp       ,kt      , 
-     |  km       ,ui       ,vi       ,wi       ,vo2     , 
+     |  xnmbar   ,xnmbari  ,xnmbarm  ,cp       ,kt      ,
+     |  km       ,ui       ,vi       ,wi       ,vo2     ,
      |  vo1      ,vn2      ,sco2     ,sco1     ,scn2    ,
      |  xiop2p   ,xiop2d   ,nplus    ,n2p      ,nop     ,
      |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti  ,
      |  qji_tn   ,cool_implicit      ,cool_explicit     ,
      |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1    ,
-     |  ped      ,hall     ,lam1
+     |  ped      ,hall     ,lam1     ,zg
+
 !
 ! 2-d field type (used for 2d secondary history fields):
       type fields_2d
@@ -114,7 +116,6 @@
         character(len=units_len)     :: units
         logical                      :: 
      |    magnetic,    ! true if field is on magnetic 3d grid 
-     |    magnetos,    ! true if field is on magnetospheric grid
      |    prognostic,  ! true if prognostic (diagnostic if false)
      |    mpi,         ! flag used by some mpi routines
      |    task0_only   ! if true, field was defined at root task only
@@ -125,19 +126,27 @@
 ! Electric potential on geographic and magnetic grids:
 ! (full domains until dynamo is parallelized)
       real ::
-     |  dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
-     |  phim3d(nmlonp1,nmlat,-2:nlevp1), ! 3d electric potential magnetic
-     |  emphi3d(nmlonp1,nmlat,nlevp1),   ! 3d eastward electric field magnetic
-     |  emlam3d(nmlonp1,nmlat,nlevp1),   ! 3d equatorw. electric field magnetic
-     |  emz3d(nmlonp1,nmlat,nlevp1)      ! 3d upward (?) electric field magnetic
+     |  dynpot(nlonp1,0:nlatp1,nlevp1),   ! 3d electric potential geographic
+     |  phim3d(nmlonp1,nmlat,-2:nlevp1),  ! 3d electric potential magnetic
+     |  emphi3d(nmlonp1,nmlat,-2:nlevp1), ! 3d eastward electric field magnetic
+     |  emlam3d(nmlonp1,nmlat,-2:nlevp1), ! 3d equatorw. electric field magnetic
+     |  emz3d(nmlonp1,nmlat,-2:nlevp1)    ! 3d upward (?) electric field magnetic
 !
-! Secondary history fields (runtime user defined 3-d fields):
-!
-      type(fields_3d) :: fsech(mxfsech)         ! geographic
-      type(fields_3d) :: fsechmag(mxfsech)      ! geomagnetic
-      type(fields_2d) :: fsech2d(mxfsech)       ! 2-d geographic 
-      type(fields_2d) :: fsechmag2d(mxfsech)    ! 2-d magnetic
-      type(fields_2d) :: fsechmagphr2d(mxfsech) ! 2-d magnetosphere
+! Secondary history field structures.
+! These are initialized in sub init_fsech, and data is set in addfld.F.
+      type fields_sech
+        character(len=longname_len)  :: long_name
+        character(len=shortname_len) :: short_name
+        character(len=units_len)     :: units
+        logical                      :: task0_only
+        logical                      :: prognostic
+        logical                      :: mag,geo
+        integer                      :: ndims        ! 2d or 3d
+        character(len=8)             :: dimnames(3)  ! dims on history
+        integer                      :: dimsizes(3)  ! dim sizes on history
+        real,pointer                 :: data(:,:,:)  ! allocated by addfld
+      end type fields_sech
+      type(fields_sech) :: fsechist(mxfsech)
 !
 ! Time indices for rightmost dimension of 4d data, itp for current timestep, 
 ! itc for next timestep. Fields at the previous timestep (time n-1) are
@@ -154,10 +163,19 @@
      |  fnrh,  ! eddy viscosity
      |  fkmh   ! M/T
 !
+! Lower boundary conditions (bottom interface level) for t,u,v from 
+! source history, and at current model time:
+      real,allocatable,dimension(:,:) ::
+     |  tlbc,     ulbc,     vlbc,     ! subdomains (lond0:lond1,latd0:latd1)
+     |  tlbc_nm,  ulbc_nm,  vlbc_nm,  ! subdomains (lond0:lond1,latd0:latd1)
+     |  tlbc_glb, ulbc_glb, vlbc_glb, ! global (nlonp4,nlat)
+     |  tlbc_nm_glb, ulbc_nm_glb, vlbc_nm_glb  ! global (nlonp4,nlat)
+!
 ! Full 3d grid with all primary history fields for writing to netcdf
 ! history files. This will be allocated only on the root task 
 ! (see allocdata):
       real,allocatable :: foutput(:,:,:,:) ! (nlevp1,nlonp4,nlat,nf4d_hist)
+      real,allocatable :: fzg(:,:,:)       ! (nlevp1,nlonp4,nlat)
 !
       contains
 !-----------------------------------------------------------------------
@@ -173,7 +191,7 @@
       integer,intent(in) :: lon0,lon1,lat0,lat1,mytid,iprint
 !
 ! Local:
-      integer :: n,istat
+      integer :: n,istat,i
 !
 ! Fields are allocated at full task subdomain, including ghost cells:
       levd0 = 1      ; levd1 = nlevp1
@@ -193,167 +211,201 @@
       write(f4d(n)%long_name,"('NEUTRAL TEMPERATURE')")
       f4d(n)%short_name = "TN"
       f4d(n)%units = "K"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => tn
       i_tn = n ; n = n+1
 !
       allocate(un(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('NEUTRAL ZONAL WIND')")
+      write(f4d(n)%long_name,"('NEUTRAL ZONAL WIND (+EAST)')")
       f4d(n)%short_name = "UN"
-      f4d(n)%units = "CM/S"
+      f4d(n)%units = "cm/s"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => un
       i_un = n ; n = n+1
 !
       allocate(vn(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('NEUTRAL MERIDIONAL WIND')")
+      write(f4d(n)%long_name,"('NEUTRAL MERIDIONAL WIND (+NORTH)')")
       f4d(n)%short_name = "VN"
-      f4d(n)%units = "CM/S"
+      f4d(n)%units = "cm/s"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => vn
       i_vn = n ; n = n+1
 !
       allocate(o2(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('MOLECULAR OXYGEN')")
       f4d(n)%short_name = ("O2")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => o2
       i_o2 = n ; n = n+1
 !
       allocate(o1(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('ATOMIC OXYGEN')")
       f4d(n)%short_name = ("O1")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => o1
       i_o1 = n ; n = n+1
 !
       allocate(n4s(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('N4S')")
       f4d(n)%short_name = ("N4S")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => n4s
       i_n4s = n ; n = n+1
 !
       allocate(no(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('NITRIC OXIDE')")
       f4d(n)%short_name = ("NO")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => no
       i_no = n ; n = n+1
 !
       allocate(op(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('O+ ION')")
       f4d(n)%short_name = ("OP")
-      f4d(n)%units = "CM^3"
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => op
       i_op = n ; n = n+1
 !
       allocate(n2d(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('N2D')")
       f4d(n)%short_name = ("N2D")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => n2d
       i_n2d = n ; n = n+1
 !
       allocate(ti(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('ION TEMPERATURE')")
       f4d(n)%short_name = ("TI")
-      f4d(n)%units = "DEG K"
+      f4d(n)%units = "K"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => ti
       i_ti = n ; n = n+1
 !
       allocate(te(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('ELECTRON TEMPERATURE')")
       f4d(n)%short_name = ("TE")
-      f4d(n)%units = "DEG K"
+      f4d(n)%units = "K"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => te
       i_te = n ; n = n+1
 !
       allocate(ne(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('ELECTRON DENSITY')")
       f4d(n)%short_name = ("NE")
-      f4d(n)%units = "CM^3"
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "interfaces"
       f4d(n)%data => ne
       i_ne = n ; n = n+1
 !
       allocate(o2p(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('O2+ ION')")
       f4d(n)%short_name = ("O2P")
-      f4d(n)%units = "CM^3"
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => o2p
       i_o2p = n ; n = n+1
 !
+! 10/27/05 btf: "W" is replaced by "OMEGA":
+!
+!     allocate(w(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+!     write(f4d(n)%long_name,"('VERTICAL VELOCITY (PLUS UP)')")
+!     f4d(n)%short_name = ("W")
+!     f4d(n)%units = "cm/s"
+!     f4d(n)%vcoord = "interfaces"
+!     f4d(n)%data => w
+!     i_w = n ; n = n+1
+!
       allocate(w(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('VERTICAL VELOCITY (PLUS UP)')")
-      f4d(n)%short_name = ("W")
-      f4d(n)%units = "CM/S"
+      write(f4d(n)%long_name,"('VERTICAL MOTION')")
+      f4d(n)%short_name = ("OMEGA")
+      f4d(n)%units = "s-1"
+      f4d(n)%vcoord = "interfaces"
       f4d(n)%data => w
       i_w = n ; n = n+1
 !
       allocate(z(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('GEOPOTENTIAL HEIGHT')")
       f4d(n)%short_name = ("Z")
-      f4d(n)%units = "CM"
+      f4d(n)%units = "cm"
+      f4d(n)%vcoord = "interfaces"
       f4d(n)%data => z
       i_z = n ; n = n+1
 !
       allocate(poten(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('ELECTRIC POTENTIAL')")
       f4d(n)%short_name = ("POTEN")
-      f4d(n)%units = "VOLTS"
+      f4d(n)%units = "volts"
+      f4d(n)%vcoord = "interfaces"
       f4d(n)%data => poten
       i_poten = n ; n = n+1
 !
       allocate(tn_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('NEUTRAL TEMPERATURE (TIME N-1)')")
       f4d(n)%short_name = ("TN_NM")
-      f4d(n)%units = "DEG K"
+      f4d(n)%units = "K"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => tn_nm
       i_tn_nm = n ; n = n+1
 !
       allocate(un_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('NEUTRAL ZONAL WIND (TIME N-1)')")
       f4d(n)%short_name = ("UN_NM")
-      f4d(n)%units = "CM/S"
+      f4d(n)%units = "cm/s"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => un_nm
       i_un_nm = n ; n = n+1
 !
       allocate(vn_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('NEUTRAL MERIDIONAL WIND (TIME N-1)')")
       f4d(n)%short_name = ("VN_NM")
-      f4d(n)%units = "CM/S"
+      f4d(n)%units = "cm/s"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => vn_nm
       i_vn_nm = n ; n = n+1
 !
       allocate(o2_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('MOLECULAR OXYGEN (TIME N-1)')")
       f4d(n)%short_name = ("O2_NM")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => o2_nm
       i_o2_nm = n ; n = n+1
 !
       allocate(o1_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('ATOMIC OXYGEN (TIME N-1)')")
       f4d(n)%short_name = ("O1_NM")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => o1_nm
       i_o1_nm = n ; n = n+1
 !
       allocate(n4s_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('N4S (TIME N-1)')")
       f4d(n)%short_name = ("N4S_NM")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => n4s_nm
       i_n4s_nm = n ; n = n+1
 !
       allocate(no_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('NO (TIME N-1)')")
       f4d(n)%short_name = ("NO_NM")
-      f4d(n)%units = "MMR"
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => no_nm
       i_no_nm = n ; n = n+1
 !
       allocate(op_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('OP (TIME N-1)')")
       f4d(n)%short_name = ("OP_NM")
-      f4d(n)%units = "CM^3"
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => op_nm
       i_op_nm = n ; n = n+1
 !
@@ -361,6 +413,7 @@
       write(f4d(n)%long_name,"('MEAN MOLECULAR WEIGHT')")
       f4d(n)%short_name = ("BARM")
       f4d(n)%units = ' '
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => barm
       i_barm = n ; n = n+1
 !
@@ -368,6 +421,7 @@
       write(f4d(n)%long_name,"('COS(PHI)*VN')")
       f4d(n)%short_name = ("VC")
       f4d(n)%units = ' '
+      f4d(n)%vcoord = "midpoints"
       f4d(n)%data => vc
       i_vc = n ; n = n+1
 !
@@ -377,7 +431,22 @@
       itc = 2
 !
 ! Set polesign for crossing the poles (see mk_polelats and mp_bndlats)
-      f4d%polesign = 1.
+!
+! 11/05 btf: Getting the following error here, attempting to initialize
+!            f4d(:)%polesign, from hao (callisto) pgf90 5.1-6:
+!
+! Lowering Error: symbol data$sd is a member reference
+! Lowering Error: symbol data$sd is a member reference
+! PGF90-F-0000-Internal compiler error. Errors in Lowering      21 (/home/foster/tgcm/tiegcm-hist-lbc/src/fields.F: 437)
+! PGF90/any Linux/x86 5.1-6: compilation aborted
+!
+! However, this error does not occur if fields.F is local!
+!
+!     f4d(:)%polesign = 1. ! 11/05 btf: pgf90 at hao does not like this
+!     do i=1,size(f4d)
+      do i=1,nf4d
+        f4d(i)%polesign = 1.
+      enddo
       f4d(i_un)%polesign = -1.
       f4d(i_un_nm)%polesign = -1.
       f4d(i_vn)%polesign = -1.
@@ -388,7 +457,6 @@
 !
 ! All f4d fields are on geographic grid:
       f4d%magnetic = .false.
-      f4d%magnetos = .false.
 !
 ! f4d fields are "prognostic":
       f4d%prognostic = .true.
@@ -719,11 +787,21 @@
       f3d(n)%data => lam1
       i_lam1 = n ; n = n+1
 !
+      allocate(zg(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Z calculated with varying gravity')")
+      f3d(n)%short_name = "ZG"
+      f3d(n)%units = "cm"
+      f3d(n)%data => zg
+      i_zg = n ; n = n+1
+!
 ! f3d fields are diagnostics:
       f3d%prognostic = .false.
       f3d%magnetic = .false.
-      f3d%magnetos = .false.
       f3d%task0_only = .false.
+      f3d%vcoord = 'midpoints'
+      do n=1,nf3d
+        if (trim(f3d(n)%short_name)=='ZG') f3d(n)%vcoord='interfaces' 
+      enddo
 !
 ! Report to stdout:
       if (iprint > 0) then
@@ -737,169 +815,107 @@
       call allocdata
       end subroutine init_3d
 !-----------------------------------------------------------------------
-      subroutine set_fsech
-      use input_module,only: secflds,secfmag,secfgeo2d,secfmag2d,
-     |   secfmagphr
-      use hist_module,only: nfsech_geo,nfsech_mag,nfsech_geo2d,
-     |   nfsech_mag2d,nfsech_magphr
+      subroutine init_fsech
 !
-! Initialize secondary history fields (to be defined at runtime by 
-! user-callable subroutine addfsech):
+! Initialize secondary history field structures. This does not include
+! data, which is allocated and defined by sub addfld (addfld.F).
+!
+      use input_module,only: secflds
+      use hist_module,only: nfsech
+      implicit none
 !
 ! Local:
-      integer :: i,iprog,idiag,ier
+      integer :: i,iprog,ier
 !
 ! External:
       integer,external :: strloc
 !
-! Secondary history fields on geographic grid:
-      fsech(:)%long_name = ' '
-      fsech(:)%short_name= ' '
-      fsech(:)%units     = ' '
-      fsech(:)%magnetic  = .false.
-      fsech(:)%magnetos  = .false.
-!
-      do i=1,nfsech_geo
+! Secondary history fields:
+      fsechist(:)%long_name = ' '
+      fsechist(:)%short_name= ' '
+      fsechist(:)%units     = ' '
+      fsechist(:)%prognostic  = .false.
+      fsechist(:)%task0_only  = .false.
+      fsechist(:)%mag = .false.
+      fsechist(:)%geo = .false.
+
+      do i=1,nfsech
         if (len_trim(secflds(i)) > 0) then
           iprog = strloc(f4d%short_name,nf4d,secflds(i))
 !
 ! Is a prognostic: define fsech(i) from f4d(iprog):
 !
           if (iprog > 0) then
-            fsech(i)%prognostic = .true.
-            fsech(i)%short_name = f4d(iprog)%short_name
-            fsech(i)%long_name  = f4d(iprog)%long_name
-            fsech(i)%units      = f4d(iprog)%units
+            fsechist(i)%prognostic = .true.
+            fsechist(i)%short_name = f4d(iprog)%short_name
+            fsechist(i)%long_name  = f4d(iprog)%long_name
+            fsechist(i)%units      = f4d(iprog)%units
 !
 ! Is a diagnostic: define fsech(i)%name from input field name.
 ! Set units and long_name blank (will be optionally defined in
-! user called sub addfsech)
+! user called sub addfld)
 !
           else ! is diagnostic
-            fsech(i)%long_name = secflds(i)
-            fsech(i)%short_name = secflds(i)
-            fsech(i)%units = ' '
-            fsech(i)%long_name = ' '
+            fsechist(i)%long_name = secflds(i)
+            fsechist(i)%short_name = secflds(i)
+            fsechist(i)%units = ' '
+            fsechist(i)%long_name = ' '
           endif
-!
-! Allocate pointer to data for 3d diagnostic field and initialize
-! the data to spval. The field should be defined later by user-called
-! sub addfsech. 
-!
-          allocate(fsech(i)%data(nlevp1,nlonp4,nlat),stat=ier)
-          if (ier /= 0) then
-            write(6,"(/,'>>> WARNING set_fsech:',
-     |        ' error allocating fsech(i)%data: i=',i3)") i
-          else
-            write(6,"('Allocated (nlevp1=',i3,
-     |        ',nlonp4=',i3,',nlat=',i3,') for geographic field ',a)") 
-     |        nlevp1,nlonp4,nlat,trim(fsech(i)%short_name)
-          endif
-          fsech(i)%data = spval ! array op
         endif
-      enddo 
+      enddo ! i=1,nfsech
+      end subroutine init_fsech
+!-----------------------------------------------------------------------
+      subroutine init_lbc(lon0,lon1,lat0,lat1)
+      implicit none
 !
-! 3d secondary history fields on magnetic grid:
-      fsechmag(:)%long_name = ' '
-      fsechmag(:)%short_name= ' '
-      fsechmag(:)%units     = ' '
-      fsechmag(:)%magnetic  = .true.
-      fsechmag(:)%magnetos  = .false.
-      fsechmag(:)%prognostic = .true.
-      fsechmag(:)%task0_only = .false.
-      do i=1,nfsech_mag
-        if (len_trim(secfmag(i)) > 0) then
-          fsechmag(i)%long_name = secfmag(i)
-          fsechmag(i)%short_name = secfmag(i)
-          allocate(fsechmag(i)%data(nlevp1+3,nmlonp1,nmlat),stat=ier)
-          if (ier /= 0) then
-            write(6,"(/,'>>> WARNING set_fsech:',
-     |        ' error allocating fsechmag(i)%data: i=',i3)") i
-          else
-            write(6,"('Allocated sechist data(nlevp1+3=',i3,
-     |        ' nmlonp1=',i3,',nmlat=',i3,') for mag field ',a)") 
-     |        nlevp1+3,nmlonp1,nmlat,trim(fsechmag(i)%short_name)
-          endif
-          fsechmag(i)%data = spval ! array op
-        endif
-      enddo
+! Arg:
+      integer,intent(in) :: lon0,lon1,lat0,lat1
 !
-! 2d secondary history fields geographic fields:
-      fsech2d(:)%long_name = ' '
-      fsech2d(:)%short_name= ' '
-      fsech2d(:)%units     = ' '
-      fsech2d(:)%magnetic  = .false.  ! will be determined from addfsech
-      fsech2d(:)%magnetos  = .false.
-      fsech2d(:)%prognostic = .false.
-      fsech2d(:)%task0_only = .false.
-      do i=1,nfsech_geo2d
-        if (len_trim(secfgeo2d(i)) > 0) then
-          fsech2d(i)%long_name = secfgeo2d(i)
-          fsech2d(i)%short_name = secfgeo2d(i)
-          allocate(fsech2d(i)%data(nlonp4,nlat),stat=ier)
-          if (ier /= 0) then
-            write(6,"(/,'>>> WARNING set_fsech:',
-     |        ' error allocating fsech2d(i)%data: i=',i3)") i
-          else
-            write(6,"('Allocated sechist data(nlonp4=',i3,
-     |        ' nlat=',i3,') for geo2d field ',a)") 
-     |        nlonp4,nlat,trim(fsech2d(i)%short_name)
-          endif
-          fsech2d(i)%data = spval ! array op
-        endif
-      enddo
+! Local:
+      integer :: istat
 !
-! 2d secondary history magnetic fields:
-      fsechmag2d(:)%long_name = ' '
-      fsechmag2d(:)%short_name= ' '
-      fsechmag2d(:)%units     = ' '
-      fsechmag2d(:)%magnetic  = .true.
-      fsechmag2d(:)%magnetos  = .false.
-      fsechmag2d(:)%prognostic = .false.
-      fsechmag2d(:)%task0_only = .false.
-      do i=1,nfsech_mag2d
-        if (len_trim(secfmag2d(i)) > 0) then
-          fsechmag2d(i)%long_name  = secfmag2d(i)
-          fsechmag2d(i)%short_name = secfmag2d(i)
-          allocate(fsechmag2d(i)%data(nmlonp1,nmlat),stat=ier)
-          if (ier /= 0) then
-            write(6,"(/,'>>> WARNING set_fsech:',
-     |        ' error allocating fsechmag2d(i)%data: i=',i3)") i
-          else
-            write(6,"('Allocated sechist data(nmlonp1=',i3,
-     |        ' nmlat=',i3,') for mag2d field ',a)") 
-     |        nmlonp1,nmlat,trim(fsechmag2d(i)%short_name)
-          endif
-          fsechmag2d(i)%data = spval ! array op
-        endif
-      enddo
+! Allocate t,u,v lbc (t,u,v at bottom interface level)
+! These will be read from source history, then set in dt.F and duv.F.
 !
-! 2d secondary history magnetospheric fields:
-      fsechmagphr2d(:)%long_name = ' '
-      fsechmagphr2d(:)%short_name= ' '
-      fsechmagphr2d(:)%units     = ' '
-      fsechmagphr2d(:)%magnetic  = .false.
-      fsechmagphr2d(:)%magnetos  = .true.
-      fsechmagphr2d(:)%prognostic= .false.
-      fsechmagphr2d(:)%task0_only= .false.
-      do i=1,nfsech_magphr
-        if (len_trim(secfmagphr(i)) > 0) then
-          fsechmagphr2d(i)%long_name  = secfmagphr(i)
-          fsechmagphr2d(i)%short_name = secfmagphr(i)
-          allocate(fsechmagphr2d(i)%data(nmagphrlon,nmagphrlat),
-     |       stat=ier)
-          if (ier /= 0) then
-            write(6,"(/,'>>> WARNING set_fsech:',
-     |        ' error allocating fsechmagphr2d(i)%data: i=',i3)") i
-          else
-            write(6,"('Allocated sechist data(nmagphrlon=',i3,
-     |        ' nmagphrlat=',i3,') for magphr field ',a)") 
-     |        nmagphrlon,nmagphrlat,trim(fsechmagphr2d(i)%short_name)
-          endif
-          fsechmagphr2d(i)%data = spval ! array op
-        endif
-      enddo
-      end subroutine set_fsech
+! Subdomains:
+      allocate(tlbc(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of tlbc')
+      allocate(ulbc(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of ulbc')
+      allocate(vlbc(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of vlbc')
+      write(6,"('init_lbc: allocated subdomains tlbc, ulbc, vlbc')")
+      
+      allocate(tlbc_nm(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of tlbc_nm')
+      allocate(ulbc_nm(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of ulbc_nm')
+      allocate(vlbc_nm(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of vlbc_nm')
+      write(6,"('init_lbc_nm: allocated subdomains tlbc_nm, ulbc_nm,',
+     |  ' vlbc_nm')")
+!
+! Global domain (subdomains will be gathered into these arrays
+! for writing to the history, see sub mp_gather2root_lbc in mpi.F):
+      allocate(tlbc_glb(nlonp4,nlat),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of tlbc_glb')
+      allocate(ulbc_glb(nlonp4,nlat),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of ulbc_glb')
+      allocate(vlbc_glb(nlonp4,nlat),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of vlbc_glb')
+      write(6,"('init_lbc: allocated globals tlbc_glb, ulbc_glb,',
+     |  ' vlbc_glb: nlonp4=',i3,' nlat=',i3)") nlonp4,nlat
+     
+      allocate(tlbc_nm_glb(nlonp4,nlat),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of tlbc_nm_glb')
+      allocate(ulbc_nm_glb(nlonp4,nlat),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of ulbc_nm_glb')
+      allocate(vlbc_nm_glb(nlonp4,nlat),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of vlbc_nm_glb')
+      write(6,"('init_lbc: allocated globals tlbc_nm_glb, ulbc_nm_glb,',
+     |  ' vlbc_nm_glb: nlonp4=',i3,' nlat=',i3)") nlonp4,nlat
+!
+      end subroutine init_lbc
 !-----------------------------------------------------------------------
       subroutine print_f4d(f,n)
       implicit none

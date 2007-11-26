@@ -9,9 +9,11 @@
       integer,parameter :: 
      |  nlat = NLAT,                 ! number of latitudes
      |  nlon = NLON,                 ! number of longitudes
-     |  nlev = NLEV,                 ! number of midpoint levels
-     |  nlevp1 = nlev+1,             ! number of interface levels
+     |  nlev = NLEV,                 ! number of midpoint levels 
+     |  nilev = NLEV,                ! number of interface levels
      |  nlonp4 = nlon+4,             ! includes periodic points in lon
+     |  nlevp1 = nlev+1,
+     |  nilevp1 = nilev+1,
      |  nlonp1=nlon+1, nlatp1=nlat+1,
      |  nlonp2=nlon+2, nlatp2=nlat+2
       real,parameter ::
@@ -19,11 +21,12 @@
      |  dlat  = DLAT,                ! delta latitude
      |  glon1 = GLON1,               ! first longitude
      |  dlon  = DLON,                ! delta longitude
-     |  plev1 = ZBOT,                ! bottom level
-     |  dlev  = (ZTOP-ZBOT)/NLEV,    ! delta level
+     |  dlev  = (ZITOP-ZIBOT)/NLEV,  ! delta level (same for midpoints and interfaces)
      |  dz    = dlev,                ! delta level (alias for dlev)
-     |  zsb   = ZBOT,                ! bottom level (alias for plev1)
-     |  zst   = ZTOP                 ! top level
+     |  zmtop = ZMTOP,               ! top midpoint level
+     |  zmbot = ZMBOT,               ! bottom midpoint level
+     |  zitop = ZITOP,               ! top interface level
+     |  zibot = ZIBOT                ! bottom interface level
       real,parameter ::
      |  spval = 1.e36
       integer,parameter ::
@@ -37,18 +40,26 @@
      |  nmlonp2=nmlon+2,
      |  nmlatp1=nmlat+1,
      |  nmlath=(nmlat+1)/2, ! index to magnetic equator
-     |  nmlev = nlevp1+3    ! number of vertical levels of mag fields (-2,nlev)
+     |  nmlev = nlev+3,   ! number of vertical levels of mag fields (-2,nlev)
+     |  nimlev  = nmlev,    ! number of interface levels of mag fields (-2,nlev)
+     |  nmlevp1 = nmlev+1,  ! 
+     |  nimlevp1= nimlev+1  ! 
 !
-! Magnetospheric grid:
-      integer,parameter ::
-     |  nmagphrlat = 31,
-     |  nmagphrlon = 40
-      real,parameter ::
-     |  magphrlat1 = 71.97, magphrlat2 = 10.14,
-     |  magphrlon1 = -180.
+! kbotdyn is zp k-index at which upward dynamo integrals begin (dynamo.F):
+! For zp -8 at dzp=0.5,  kbotdyn = 5 
+! For zp -8 at dzp=0.25, kbotdyn = 9 
+!
+! -7 to +7 by 0.50 ("normal" vertical resolution)
+#if (NLEV==28)
+!     integer,parameter :: kbotdyn = 1
+!
+! -7 to +7 by 0.25 ("double" vertical resolution)
+#elif (NLEV==56) 
+!     integer,parameter :: kbotdyn = 1
+#endif
 !
 ! For modules hist_mod and input_mod:
-      character(len=16),parameter :: tgcm_version = 'tiegcm1.8       '
+      character(len=16),parameter :: tgcm_version = 'tiegcm1.81      '
 !
 ! tgcm_name is either "tiegcm" or "time-gcm"
       character(len=8),parameter :: tgcm_name    = 'tiegcm'
@@ -58,7 +69,7 @@
      |  mxhvols = 100,     ! max number of output history files
      |  mxseries = 10,     ! max number of time series for primary histories
      |  mxseries_sech = 50,! max number of secondary history time series
-     |  mxfsech = 50,      ! max number of fields on secondary histories
+     |  mxfsech = 100,     ! max number of fields on secondary histories
      |  mxind_time = 100   ! max number of time-dependent solar index points
 !
       end module params_module

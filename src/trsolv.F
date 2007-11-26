@@ -1,6 +1,7 @@
 !
       subroutine trsolv(a,b,c,f,x,lev0,lev1,k1,k2,lon0,lon1,lonmax,lat,
      |  idebug)
+      use addfld_module,only: addfld
       implicit none
 !
 ! Tri-diagonal solver.
@@ -18,7 +19,7 @@
      |  x  ! output
 !
 ! Local:
-      integer :: k,kk,i,lonbeg,lonend,nlevs
+      integer :: k,kk,i,lonbeg,lonend
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  w1,w2,w3  ! work arrays
 !
@@ -27,7 +28,6 @@
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==lonmax) lonend = lon1-2
-      nlevs = lev1-lev0+1
 !
 ! Lower boundary (W(K1)=B(K1):
       do i=lonbeg,lonend
@@ -49,10 +49,12 @@
         enddo ! k=k1+1,k2
       enddo ! i=lon0,lon1
 
-!     if (idebug > 0) then
-!       call addfsech('W1',' ',' ',w1,lon0,lon1,nlevs,nlevs-1,lat)
-!       call addfsech('W2',' ',' ',w2,lon0,lon1,nlevs,nlevs-1,lat)
-!     endif
+      if (idebug > 0) then
+        call addfld('W1',' ',' ',w1(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('W2',' ',' ',w2(lev0:lev1-2,:),
+     |    'lev',lev0,lev1-2,'lon',lon0,lon1,lat)
+      endif
 !
 ! Lower boundary (W(2*KF+K1)=F(K1)/W(K1)):
       do i=lonbeg,lonend
@@ -72,10 +74,9 @@
           w3(k,i) = w3(k,i) / w1(k,i)
         enddo ! k=k1+1,k2
       enddo ! i=lonbeg,lonend
-
-!     if (idebug > 0)
-!    |  call addfsech('W3',' ',' ',w3,lon0,lon1,nlevs,nlevs-1,lat)
-
+      if (idebug > 0)
+     |  call addfld('W3',' ',' ',w3(lev0:lev1-2,:),
+     |    'lev',lev0,lev1-2,'lon',lon0,lon1,lat)
 !
 ! Upper boundary (X(K2)=W(2*KF+K2)):
       do i=lonbeg,lonend
@@ -94,7 +95,8 @@
         enddo ! k=k1+1,k2
       enddo ! i=lonbeg,lonend
 
-!     if (idebug > 0)
-!    |  call addfsech('X',' ',' ',x,lon0,lon1,nlevs,nlevs-1,lat)
+      if (idebug > 0)
+     |  call addfld('X',' ',' ',x(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine trsolv

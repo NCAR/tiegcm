@@ -1,6 +1,7 @@
 !
       module chapman_module
       use params_module,only: nlonp4,nlat,dz
+      use addfld_module,only: addfld
       implicit none
       real,dimension(nlonp4,nlat) :: 
      |  chi,         ! solar zenith angle
@@ -17,6 +18,7 @@
       use init_module,only: secs,sin_sundec,cos_sundec,idn,uthr
       use cons_module,only: pi,dphi,dlamda,re,rmass_o2,rmass_o1,rmass_n2
       use hist_module,only: modeltime ! for diag
+      use fields_module,only: tlbc
 !
 ! Calculate line integrals for o2,o n2:
 !
@@ -44,14 +46,12 @@
      |        ti(lev0:lev1,lon0:lon1)  ! tn at interfaces
       real :: 
      |        n2(lev0:lev1,lon0-2:lon1+2)  ! n2
-      integer :: nlevs
-!     real,dimension(lev0:lev1,lon0:lon1) :: ! for diagnostic plotting
-!    |  chi_plt, slt_plt, idn_plt
+      real,dimension(lev0:lev1,lon0:lon1) :: ! for diagnostic plotting
+     |  chi_plt, slt_plt, idn_plt
 !
 ! Set up sun related geometry according to current model date and time.
 ! Also set day/night index idn (init_module).
 !
-      nlevs = lev1-lev0+1 ! for addfsech
       rtpi = sqrt(pi)
       rlat = -.5*pi+(float(lat-1)+.5)*dphi
       coslat=cos(rlat)
@@ -66,9 +66,9 @@
         rt_sinchi(i,lat) = sqrt(sin_chi(i,lat))
         if (chi(i,lat) > 1.8326) idn(i) = 0
 
-!       chi_plt(:,i) = chi(i,lat)
-!       slt_plt(:,i) = slt(i,lat)
-!       idn_plt(:,i) = idn(i)
+        chi_plt(:,i) = chi(i,lat)
+        slt_plt(:,i) = slt(i,lat)
+        idn_plt(:,i) = idn(i)
       enddo                
 
 !     write(6,"('chapman: lat=',i3,' modeltime=',4i4,
@@ -77,32 +77,38 @@
 !     write(6,"('slt=',(12f5.2))") slt(:,lat)
 !     write(6,"('idn=',(12i2))") idn(:)
 
-!     call addfsech('CHI',' ',' ',chi_plt,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('SLT',' ',' ',slt_plt,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('IDN',' ',' ',idn_plt,lon0,lon1,nlevs,nlevs,lat)
-
+!     call addfld('CHI',' ',' ',chi_plt,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('SLT',' ',' ',slt_plt,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('IDN',' ',' ',idn_plt,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! rp = z+re
       do k=lev0,lev1
         rp(k,:) = z(k,lon0:lon1)+re
       enddo
-!     call addfsech('RP',' ',' ',rp,lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('RP',' ',' ',rp,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! ti is tn at interfaces:
-      ti(1,:) = tn(lev1,lon0:lon1) ! tn bottom boundary is stored in top slot
+!     ti(1,:) = tn(lev1,lon0:lon1) ! tn bottom boundary is stored in top slot
+      ti(1,:) = tlbc(lon0:lon1,lat) ! Lower boundary is in tlbc
       do k=lev0+1,lev1-1
         ti(k,:) = .5*(tn(k-1,lon0:lon1)+tn(k,lon0:lon1))
       enddo
       ti(lev1,:) = tn(lev1-1,lon0:lon1) ! nlevp1 <- nlev
-!     call addfsech('TNI',' ',' ',ti,lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('TNI',' ',' ',ti,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Make n2 mmr:
       do k=lev0,lev1
         n2(k,lon0:lon1) = 1.-o2(k,lon0:lon1)-o1(k,lon0:lon1)
       enddo
-!     call addfsech('CHAP_O2',' ',' ',o2,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('CHAP_O1',' ',' ',o1,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('CHAP_N2',' ',' ',n2,lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('CHAP_O2',' ',' ',o2,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('CHAP_O1',' ',' ',o1,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('CHAP_N2',' ',' ',n2(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Calculate line integrals (vo[x] and sco[x] are output):
 !
@@ -120,20 +126,20 @@
      |  lon0,lon1,lev0,lev1,lat,3)
 !
 ! Save column number densities:
-!     call addfsech('VO2',' ',' ',vo2(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('VO1',' ',' ',vo1(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('VN2',' ',' ',vn2(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('VO2',' ',' ',vo2(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('VO1',' ',' ',vo1(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('VN2',' ',' ',vn2(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Save slant line integrals:
-!     call addfsech('SCO2',' ',' ',sco2(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('SCO1',' ',' ',sco1(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('SCN2',' ',' ',scn2(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('SCO2',' ',' ',sco2(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('SCO1',' ',' ',sco1(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('SCN2',' ',' ',scn2(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
       end subroutine chapman
 !-----------------------------------------------------------------------
@@ -164,15 +170,13 @@
 !
 ! Local:
       real,parameter :: big=1.e80
-      integer :: k,i,nlevs
+      integer :: k,i
       real :: factor,rtpi,exparg
       real :: 
      |  rtrp(lev0:lev1,lon0:lon1),      ! sqrt(rp/2hp) (S6)
      |  yp  (lev0:lev1,lon0:lon1),      ! yp and ip    (S5)
      |  r2ig(lev0:lev1,lon0:lon1)       ! 2.*ig        (S4)
       real,external :: expo
-!
-      nlevs = lev1-lev0+1 ! for addfsech
 !
 ! Top:
       factor = avo*p0*expz(lev1-1)*exp(-.5*dz)/(fmass**2*grav)

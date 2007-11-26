@@ -5,7 +5,7 @@
 !
 ! Advance neutral velocities for current time step:
 !
-      use params_module,only: nlonp4,dz,nlat
+      use params_module,only: nlonp4,dz,nlat,spval,nlonp2,nlon
 !     use input_module,only: iuivi ! no longer in use (see dynamo input flag)
       use init_module,only: iter,igetgswm
       use bndry_module,only: ub,ub2,uba,vb,vb2,vba,bnd,bnd2,bnda,ci,
@@ -13,8 +13,11 @@
       use cons_module,only: freq_semidi,dt,dtx2inv,expz,p0,gask,grav,
      |  xmue,cor,tanphi=>tn,re,kut_5,set_wave_filter,dtsmooth_div2,
      |  dtsmooth
+      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
+      use addfld_module,only: addfld
 #ifdef MPI
-      use mpi_module,only: mp_periodic_f3d
+      use mpi_module,only: mp_periodic_f3d,mp_periodic_f2d,
+     |  mp_bndlons_f2d,mp_bndlats_f2d
 #endif
       implicit none
 !
@@ -52,7 +55,7 @@
      |  vnm_upd  ! updated meridional velocity at time n-1
 !
 ! Local:
-      integer :: k,i,lat,lonbeg,lonend,kutt(nlat)
+      integer :: k,i,j,lat,lonbeg,lonend,kutt(nlat)
       integer :: nk,nkm1,nlevs
       complex :: expt,expt2,expta
       real :: 
@@ -89,7 +92,7 @@
       real,dimension(2,lev0:lev1,lon0:lon1) :: 
      |  ss,xx,yy
 !
-! For addfsech:
+! For addfld:
       nk = lev1-lev0+1
       nkm1 = nk-1
       nlevs = nk
@@ -118,11 +121,10 @@
         call advec(vn(:,:,lat-2:lat+2),advec_vn(:,:,lat), 
      |    lev0,lev1,lon0,lon1,lat)
 
-!       call addfsech('ADVEC_U0',' ',' ',advec_un(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-!       call addfsech('ADVEC_V0',' ',' ',advec_vn(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-
+!       call addfld('ADVEC_U0','ADVEC_U0',' ',advec_un(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('ADVEC_V0','ADVEC_V0',' ',advec_vn(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End first latitude scan:
       enddo ! lat=lat0,lat1
@@ -136,8 +138,10 @@
 ! Second latitude scan:
       do lat=lat0,lat1
 
-!       call addfsech('ZL',' ',' ',zl(:,:,lat),lon0,lon1,nk,nkm1,lat)
-!       call addfsech('ZP',' ',' ',zp(:,:,lat),lon0,lon1,nk,nkm1,lat)
+!      call addfld('ZL','ZL',' ',zl(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!      call addfld('ZP','ZP',' ',zp(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 
         do i=lon0,lon1
           do k=lev0,lev1-1
@@ -148,10 +152,10 @@
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
-!       call addfsech('ADVEC_U1',' ',' ',advec_un(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-!       call addfsech('ADVEC_V1',' ',' ',advec_vn(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('ADVEC_U1','ADVEC_U1',' ',advec_un(:,:,lat),
+!    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('ADVEC_V1','ADVEC_V1',' ',advec_vn(:,:,lat),
+!    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End second lat scan:
       enddo ! lat=lat0,lat1
@@ -166,10 +170,14 @@
 ! Start third latitude scan:
       do lat=lat0,lat1
 
-!       call addfsech('UNSMOOTH',' ',' ',unm_smooth(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-!       call addfsech('VNSMOOTH',' ',' ',vnm_smooth(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('UNSMOOTH','UNSMOOTH',' ',unm_smooth(:,:,lat),
+!    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('VNSMOOTH','VNSMOOTH',' ',vnm_smooth(:,:,lat),
+!    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('UN_NM_DUV','UN_NM_DUV',' ',un_nm(:,lon0:lon1,lat),
+!    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('VN_NM_DUV','VN_NM_DUV',' ',vn_nm(:,lon0:lon1,lat),
+!    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 
         if (igetgswm > 0) then
 !
@@ -199,15 +207,11 @@
           enddo ! i=lon0,lon1
         endif ! igetgswm
 
-!       call addfsech('UNLBC',' ',' ',unlbc_diag,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('VNLBC',' ',' ',vnlbc_diag,lon0,lon1,nk,nkm1,lat)
-!
-! Save 2d lon,lat boundaries to secondary history:
-!       call addfsech_ij('UNLBC','UN Lower boundary','cm/s',unlbc_ij,
-!    |    lon0,lon1,lat0,lat1)
-!       call addfsech_ij('VNLBC','VN Lower boundary','cm/s',vnlbc_ij,
-!    |    lon0,lon1,lat0,lat1)
-!
+!       call addfld('UNLBC_DUV','UNLBC_DUV',' ',unlbc_ij,
+!    |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+!       call addfld('VNLBC_DUV','VNLBC_DUV',' ',vnlbc_ij,
+!    |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+
         do i=lonbeg,lonend
           do k=lev0,lev1-1
             advec_un(k,i,lat) = advec_un(k,i,lat)-
@@ -217,10 +221,10 @@
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
 
-!       call addfsech('ADVEC_U2',' ',' ',advec_un(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-!       call addfsech('ADVEC_V2',' ',' ',advec_vn(:,:,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('ADVEC_U2','ADVEC_U2',' ',advec_un(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('ADVEC_V2','ADVEC_V2',' ',advec_vn(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 
         do i=lon0,lon1
           do k=lev0,lev1-1
@@ -235,8 +239,10 @@
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
-!       call addfsech('SS_UN',' ',' ',ss_un,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('SS_VN',' ',' ',ss_vn,lon0,lon1,nk,nkm1,lat)
+!       call addfld('SS_UN',' ',' ',ss_un,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('SS_VN',' ',' ',ss_vn,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
 !
 ! xmue = eddy viscosity (cons.F). rtxmue = sqrt(xmue)
@@ -254,9 +260,9 @@
 ! Boundaries:
         rtxmue(lev0) = sqrt(xmue(lev0)**3/xmue(lev0+1))
         rtxmue(lev1) = sqrt(xmue(lev1-1)**3/xmue(lev1-2))
-!       write(6,"('duv: lat=',i2,' rtxmue=',/,(6e12.4))") lat,rtxmue
         do i=lon0,lon1
-          tni(lev0,i) = tn(lev1,i,lat) ! lbc of tn is stored in top slot
+!         tni(lev0,i) = tn(lev1,i,lat) ! lbc of tn is stored in top slot
+          tni(lev0,i) = tlbc_nm(i,lat)    ! Lower boundary is in tlbc_nm
           tni(lev1,i) = tn(lev1-1,i,lat)
 !
 ! G = g*KM/(P0*H*Ds**2) = g**2*(kM+XMUE)*MBAR*/(P0*R*T*DS**2)
@@ -266,8 +272,11 @@
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
 
-!       call addfsech('TNI'  ,' ',' ',tni,lon0,lon1,nk,nk,lat)
-!       call addfsech('DUV_G',' ',' ',g  ,lon0,lon1,nk,nk,lat)
+!       call addfld('TNI'  ,' ',' ',tni,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('DUV_G',' ',' ',g  ,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+
 !
 ! dwdz = exp(-s)*w(k+1/2)/(2.*Ds)
         do i=lon0,lon1
@@ -277,7 +286,9 @@
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
-!       call addfsech('DWDZ',' ',' ',dwdz,lon0,lon1,nk,nkm1,lat)
+!       call addfld('DWDZ',' ',' ',dwdz,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+
 !
 ! P = -(G(k-1/2,n) + exp(-s)*w(k,n)/   |1., 0.|
 !                            (2.*Ds)) *|0., 1.|
@@ -368,20 +379,34 @@
 !       qq21(:,:) = qq(2,1,:,:) ; qq22(:,:) = qq(2,2,:,:)
 !       rr11(:,:) = rr(1,1,:,:) ; rr12(:,:) = rr(1,2,:,:)
 !       rr21(:,:) = rr(2,1,:,:) ; rr22(:,:) = rr(2,2,:,:)
-!       call addfsech('PP11',' ',' ',pp11,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('PP12',' ',' ',pp12,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('PP21',' ',' ',pp21,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('PP22',' ',' ',pp22,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('QQ11',' ',' ',qq11,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('QQ12',' ',' ',qq12,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('QQ21',' ',' ',qq21,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('QQ22',' ',' ',qq22,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('RR11',' ',' ',rr11,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('RR12',' ',' ',rr12,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('RR21',' ',' ',rr21,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('RR22',' ',' ',rr22,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('SS_UN',' ',' ',ss_un,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('SS_VN',' ',' ',ss_vn,lon0,lon1,nk,nkm1,lat)
+!       call addfld('PP11',' ',' ',pp11,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('PP12',' ',' ',pp12,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('PP21',' ',' ',pp21,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('PP22',' ',' ',pp22,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('QQ11',' ',' ',qq11,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('QQ12',' ',' ',qq12,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('QQ21',' ',' ',qq21,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('QQ22',' ',' ',qq22,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('RR11',' ',' ',rr11,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('RR12',' ',' ',rr12,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('RR21',' ',' ',rr21,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('RR22',' ',' ',rr22,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('SS_UN',' ',' ',ss_un,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('SS_VN',' ',' ',ss_vn,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Invoke tridiagonal (2x2) block matrix solver for U and V: 
 ! pp,qq,rr,ss are input, beta,gamma,yy,xx are output.
@@ -397,30 +422,39 @@
             vn_upd(k,i,lat) = xx(2,k,i)
           enddo ! k=lev0,lev1-1
 !
-! Store lower boundary conditions for U and V in top slot:
-          un_upd(lev1,i,lat) = unlbc(i)
-          vn_upd(lev1,i,lat) = vnlbc(i)
+! Put spval in top nlevp1 level:
+          un_upd(lev1,i,lat) = spval
+          vn_upd(lev1,i,lat) = spval
+!
+! Lower boundary is in ulbc,vlbc (fields.F):
+          ulbc_nm(i,lat) = ulbc(i,lat)  ! LB for un_nm(itc) = un(itp) 
+          vlbc_nm(i,lat) = vlbc(i,lat)  ! LB for vn_nm(itc) = vn(itp) 
+          ulbc(i,lat) = unlbc(i)        ! LB for un(itc)
+          vlbc(i,lat) = vnlbc(i)        ! LB for vn(itc) 
 
 !         write(6,"('duv: i=',i3,' lat=',i3,' unlbc=',e12.4,' vnlbc=',
 !    |      e12.4)") i,lat,unlbc(i),vnlbc(i)
 
         enddo ! i=lonbeg,lonend 
 
-!       call addfsech('UNLBC',' ',' ',unlbc_diag,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('VNLBC',' ',' ',vnlbc_diag,lon0,lon1,nk,nkm1,lat)
+!       call addfld('UNLBC',' ',' ',unlbc_diag,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('VNLBC',' ',' ',vnlbc_diag,
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
-!       call addfsech('UN_SOLV',' ',' ',un_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk,lat)
-!       call addfsech('VN_SOLV',' ',' ',vn_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk,lat)
+!       call addfld('UN_SOLV',' ',' ',un_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('VN_SOLV',' ',' ',vn_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End third latitude scan:
       enddo ! lat=lat0,lat1
 
-!     call addfsech_ij('UNLBC_IJ','UNLBC_IJ','[cm/s]',unlbc_diag_ij,
-!    |   lon0,lon1,lat0,lat1)
-!     call addfsech_ij('VNLBC_IJ','VNLBC_IJ','[cm/s]',vnlbc_diag_ij,
-!    |   lon0,lon1,lat0,lat1)
+!     call addfld('UNLBC_IJ','UNLBC_IJ','[cm/s]',unlbc_ij,
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('VNLBC_IJ','VNLBC_IJ','[cm/s]',vnlbc_ij,
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+
 !
 ! Set kut for wave filtering according to dlat (2.5 or 5.0):
       call set_wave_filter(36,kut_5,nlat,kutt)
@@ -434,17 +468,11 @@
 ! Fourth latitude scan:
       do lat=lat0,lat1
 
-!       call addfsech('UN_FILT',' ',' ',un_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk,lat)
-!       call addfsech('VN_FILT',' ',' ',vn_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk,lat)
+!       call addfld('UN_FILT',' ',' ',un_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('VN_FILT',' ',' ',vn_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
-!
-! Store lower boundary conditions for U and V in top slot:
-!       do i=lon0,lon1 
-!         un_upd(lev1,i,lat) = unlbc(i)
-!         vn_upd(lev1,i,lat) = vnlbc(i)
-!       enddo ! i=lon0,lon1 
 !
 ! Smooth updated un,vn:
         do i=lon0,lon1 
@@ -454,29 +482,66 @@
             vnm_upd(k,i,lat) = dtsmooth_div2*(vn_nm(k,i,lat)+
      |        vn_upd(k,i,lat)) + dtsmooth*vn(k,i,lat)
           enddo ! k=lev0,lev1-1
+!
+! put spval in top nlevp1 level:
+          unm_upd(lev1,i,lat) = spval
+          vnm_upd(lev1,i,lat) = spval
         enddo ! i=lon0,lon1 
 
-!       call addfsech('UN_NMOUT',' ',' ',unm_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-!       call addfsech('VN_NMOUT',' ',' ',vnm_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('UN_NMOUT',' ',' ',unm_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('VN_NMOUT',' ',' ',vnm_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End fourth latitude scan:
       enddo ! lat=lat0,lat1
-!
 #ifdef MPI
 !
+! Boundary longitudes and periodic points for ulbc:
+      call mp_bndlats_f2d(ulbc,lon0-2,lon1+2,lat0,lat1,1)
+      call mp_bndlats_f2d(vlbc,lon0-2,lon1+2,lat0,lat1,1)
+      call mp_bndlats_f2d(ulbc_nm,lon0-2,lon1+2,lat0,lat1,1)
+      call mp_bndlats_f2d(vlbc_nm,lon0-2,lon1+2,lat0,lat1,1)
+      
+      call mp_bndlons_f2d(ulbc,lon0,lon1,lat0-2,lat1+2,1)
+      call mp_bndlons_f2d(vlbc,lon0,lon1,lat0-2,lat1+2,1)
+      call mp_bndlons_f2d(ulbc_nm,lon0,lon1,lat0-2,lat1+2,1)
+      call mp_bndlons_f2d(vlbc_nm,lon0,lon1,lat0-2,lat1+2,1)
+      
+      call mp_periodic_f2d(ulbc(lon0:lon1,lat0:lat1),
+     |       lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(vlbc(lon0:lon1,lat0:lat1),
+     |       lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(ulbc_nm(lon0:lon1,lat0:lat1),
+     |       lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(vlbc_nm(lon0:lon1,lat0:lat1),
+     |       lon0,lon1,lat0,lat1)
+
 ! Periodic points:
 !     call mp_periodic_f3d(un_upd(:,lon0:lon1,lat0-1:lat1+1),
 !    |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
 !     call mp_periodic_f3d(vn_upd(:,lon0:lon1,lat0-1:lat1+1),
 !    |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
+#else
+      do j=lat0,lat1
+        do i=1,2
+          ulbc(i,j)        = ulbc(nlon+i,j)
+          ulbc(nlonp2+i,j) = ulbc(i+2,j) 
+          vlbc(i,j)        = vlbc(nlon+i,j)
+          vlbc(nlonp2+i,j) = vlbc(i+2,j)  
+          ulbc_nm(i,j)        = ulbc_nm(nlon+i,j)
+          ulbc_nm(nlonp2+i,j) = ulbc_nm(i+2,j) 
+          vlbc_nm(i,j)        = vlbc_nm(nlon+i,j)
+          vlbc_nm(nlonp2+i,j) = vlbc_nm(i+2,j)  
+        enddo
+      enddo    
 #endif
+!
 !     do lat=lat0,lat1
-!       call addfsech('UN_FINAL',' ',' ',un_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech('VN_FINAL',' ',' ',vn_upd(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk-1,lat)
+!       call addfld('UN_FINAL',' ',' ',un_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('VN_FINAL',' ',' ',vn_upd(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     enddo ! lat=lat0,lat1
       end subroutine duv
 !-----------------------------------------------------------------------
@@ -489,6 +554,7 @@
       use cons_module,only: dz,dzgrav,freq_semidi,dt,grav,racs,re_inv
       use init_module,only: iter
       use bndry_module,only: zb,zb2,zba,bnd,bnd2,bnda,ci
+      use addfld_module,only: addfld
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_bndlats_f3d, 
      |  mp_periodic_f3d
@@ -528,7 +594,7 @@
       lonend = lon1
       if (lon1==nlonp4) lonend = nlonp4-2
 
-      nk = lev1-lev0+1 ; nkm1=nk-1 ; nlevs = nk ! for addfsech
+      nk = lev1-lev0+1 ; nkm1=nk-1 ; nlevs = nk ! for addfld
 !
 ! Latitude scan:
 !
@@ -541,10 +607,8 @@
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
-!       if (lat <= lat1 .and. lat >= lat0) then
-!         call addfsech('TBAR',' ',' ',tbar(:,lon0:lon1),
-!    |      lon0,lon1,nk,nkm1,lat)
-!       endif
+!       call addfld('TBAR',' ',' ',tbar(:,lon0:lon1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
         do i=lon0,lon1
           do k=lev0,lev1-1
@@ -553,11 +617,8 @@
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
-!       if (lat >= lat0 .and. lat <= lat1) then
-!         call addfsech('DZTBAR',' ',' ',dztbar(:,lon0:lon1),
-!    |      lon0,lon1,nk,nkm1,lat)
-!       endif
-
+!       call addfld('DZTBAR',' ',' ',dztbar(:,lon0:lon1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! In earlier model versions, geopotential bottom boundary was recalculated
 ! here. In this code, it is just copied from z, where it is already available:
@@ -571,12 +632,6 @@
             ztmp(k+1,i,lat) = dztbar(k,i)+ztmp(k,i,lat)
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
-
-!       if (lat >= lat0 .and. lat <= lat1) then
-!         call addfsech('ZTMP',' ',' ',ztmp(:,lon0:lon1,lat),
-!    |      lon0,lon1,nk,nkm1,lat)
-!       endif
-
       enddo
 !
 #ifdef MPI
@@ -591,8 +646,8 @@
 
 #endif
 !     do lat=lat0,lat1
-!       call addfsech('ZTMP',' ',' ',ztmp(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
+!       call addfld('ZTMP',' ',' ',ztmp(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     enddo ! lat=lat0,lat1
 !
 ! Calculate latitudinal and longitudinal derivatives in zl,zp:
@@ -629,6 +684,7 @@
       use params_module,only: nlonp4
       use cons_module,only: dlamda_1div12,dlamda_2div3,
      |  dphi_2div3,dphi_1div12
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -661,8 +717,8 @@
 ! Longitudinal derivatives:
       do lat=lat0,lat1
 
-!       call addfsech('DLDP_ZIN',' ',' ',zin(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk-1,lat)
+!       call addfld('DLDP_ZIN',' ',' ',zin(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
         do i=lonbeg,lonend
           do k=lev0,lev1
@@ -703,19 +759,18 @@
 
         enddo ! i=lonbeg,lonend
 
-!       call addfsech('Z_JM2',' ',' ',z(:,lon0:lon1,lat-2),lon0,lon1,
-!    |    nk,nk-1,lat)
-!       call addfsech('Z_JM1',' ',' ',z(:,lon0:lon1,lat-1),lon0,lon1,
-!    |    nk,nk-1,lat)
-!       call addfsech('Z_JP1',' ',' ',z(:,lon0:lon1,lat+1),lon0,lon1,
-!    |    nk,nk-1,lat)
-!       call addfsech('Z_JP2',' ',' ',z(:,lon0:lon1,lat+2),lon0,lon1,
-!    |    nk,nk-1,lat)
-
-!       call addfsech('DLDP_ZL',' ',' ',zl(:,:,lat),lon0,lon1,
-!    |    nk,nk-1,lat)
-!       call addfsech('DLDP_ZP',' ',' ',zp(:,:,lat),lon0,lon1,
-!    |    nk,nk-1,lat)
+!       call addfld('Z_JM2',' ',' ',z(:,lon0:lon1,lat-2),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('Z_JM1',' ',' ',z(:,lon0:lon1,lat-1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('Z_JP1',' ',' ',z(:,lon0:lon1,lat+1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('Z_JP2',' ',' ',z(:,lon0:lon1,lat+2),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('DLDP_ZL',' ',' ',zl(:,:,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('DLDP_ZP',' ',' ',zp(:,:,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       enddo ! lat=lat0,lat1
       end subroutine dldp

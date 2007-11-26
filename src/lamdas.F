@@ -13,6 +13,7 @@
      |  p0,expz,rmass_o2,rmass_o1,boltz,avo
       use magfield_module,only: dipmag
       use input_module,only: colfac
+      use addfld_module,only: addfld
       implicit none
 !
 ! Input args:
@@ -39,8 +40,7 @@
      |  hall_out ! hall conductivity (siemens/m) (will be input to dynamo)
 !
 ! Local:
-      integer :: k,i,l,nlevs,lonbeg,lonend
-      integer ::i0,i1,nk,nkm1 ! for addfsech
+      integer :: k,i,l,lonbeg,lonend,i0,i1
       real :: sqrt_te         ! sqrt(te)
       real,parameter :: qe=1.602e-19,  ! electron charge (coulomb)
      |    qeomeo10 =  1.7588028E7,     ! qe/m_e/10 [C/g]
@@ -93,14 +93,15 @@
 ! 
      |  rnu_ne      ! electron~neutral
 !
-! Convenience ints for addfsech calls:
-      i0 = lon0 ; i1 = lon1 ; nk = lev1-lev0+1 ; nkm1 = nk-1; nlevs = nk
-
 ! Save input ions to secondary history:
 !
-!     call addfsech('O2P_LAM',' ',' ',o2p(:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('OP_LAM' ,' ',' ',op (:,i0:i1),i0,i1,nk,nkm1,lat)
-!     call addfsech('NOP_LAM',' ',' ',nop(:,i0:i1),i0,i1,nk,nkm1,lat)
+      i0 = lon0 ; i1 = lon1
+!     call addfld('O2P_LAM',' ',' ',o2p(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('OP_LAM' ,' ',' ',op (:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('NOP_LAM',' ',' ',nop(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Set local needs:
       do i=lon0,lon1
@@ -194,9 +195,12 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('O2_CM3',' ',' ',o2_cm3,i0,i1,nk,nkm1,lat)
-!     call addfsech('O_CM3' ,' ',' ',o1_cm3 ,i0,i1,nk,nkm1,lat)
-!     call addfsech('N2_CM3',' ',' ',n2_cm3,i0,i1,nk,nkm1,lat)
+!     call addfld('O2_CM3',' ',' ',o2_cm3,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O_CM3' ,' ',' ',o1_cm3,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('N2_CM3',' ',' ',n2_cm3,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! collision frequency nu_in for each ion [1/s]
 !    by multiplying with neutral number density [1/cm^3] and sum over neutrals
@@ -232,11 +236,14 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('RNU_O2P',' ',' ',rnu_o2p,i0,i1,nk,nkm1,lat)
-!     call addfsech('RNU_OP' ,' ',' ',rnu_op ,i0,i1,nk,nkm1,lat)
-!     call addfsech('RNU_NOP',' ',' ',rnu_nop,i0,i1,nk,nkm1,lat)
-!     call addfsech('RNU_NE' ,' ',' ',rnu_ne ,i0,i1,nk,nkm1,lat)
-
+!     call addfld('RNU_O2P',' ',' ',rnu_o2p,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('RNU_OP' ,' ',' ',rnu_op ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('RNU_NOP',' ',' ',rnu_nop,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('RNU_NE' ,' ',' ',rnu_ne ,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Pedersen and Hall conductivities (siemens/m):
 ! Qe_fac includes conversion from CGS to SI units 
@@ -266,9 +273,12 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('ELECDEN' ,' ',' ',ne        ,i0,i1,nk,nkm1,lat)
-!     call addfsech('SIGMAPED',' ',' ',sigma_ped ,i0,i1,nk,nkm1,lat)
-!     call addfsech('SIGMAHAL',' ',' ',sigma_hall,i0,i1,nk,nkm1,lat)
+!     call addfld('ELECDEN' ,' ',' ',ne,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('SIGPEDin',' ',' ',sigma_ped(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('SIGHALin',' ',' ',sigma_hall(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! ion drag coefficients lamda1,2 [1/s] (full level)
 ! Pedersen/ Hall conductivity [S/m]: sigma_ped, sigma_hall (half level)
@@ -314,12 +324,18 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('LAMDA1',' ',' ',lamda1,i0,i1,nk,nk,lat)
-!     call addfsech('LAMDA2',' ',' ',lamda2,i0,i1,nk,nk,lat)
-!     call addfsech('LXXNOROT',' ',' ',lxxnorot,i0,i1,nk,nk,lat)
-!     call addfsech('LYYNOROT',' ',' ',lyynorot,i0,i1,nk,nk,lat)
-!     call addfsech('LXYNOROT',' ',' ',lxynorot,i0,i1,nk,nk,lat)
-!     call addfsech('LYXNOROT',' ',' ',lyxnorot,i0,i1,nk,nk,lat)
+!     call addfld('LAMDA1',' ',' ',lamda1,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('LAMDA2',' ',' ',lamda2,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('LXXNOROT',' ',' ',lxxnorot,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('LYYNOROT',' ',' ',lyynorot,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('LXYNOROT',' ',' ',lxynorot,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('LYXNOROT',' ',' ',lyxnorot,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Rotate lamdas for displacement of geomagnetic and geographic poles:
 ! (full levels)
@@ -335,11 +351,14 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
  
-      call addfsech('LXX','LXX','Hz',lxx(:,i0:i1),i0,i1,nk,nk,lat)
-      call addfsech('LYY','LYY','Hz',lyy(:,i0:i1),i0,i1,nk,nk,lat)
-      call addfsech('LXY','LXY','Hz',lxy(:,i0:i1),i0,i1,nk,nk,lat)
-      call addfsech('LYX','LYX','Hz',lyx(:,i0:i1),i0,i1,nk,nk,lat)
-      call addfsech('LAMDA1','LAMDA1 ','Hz',lamda1,i0,i1,nk,nk,lat)
+!     call addfld('LXX','LXX','Hz',lxx(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('LYY','LYY','Hz',lyy(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('LXY','LXY','Hz',lxy(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('LYX','LYX','Hz',lyx(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       lonbeg = lon0
       if (lon0==1) lonbeg = 3
@@ -354,9 +373,11 @@
         enddo
       enddo
 
-      call addfsech('SIGMAPED' ,'SIGMAPED','S/m ',ped_out (:,i0:i1),
-     |  i0,i1,nk,nkm1,lat)
-      call addfsech('SIGMAHAL','SIGMAHAL','S/m ',hall_out(:,i0:i1),
-     |  i0,i1,nk,nkm1,lat)
+!     call addfld('SIGMAPED' ,'SIGMAPED','S/m ',
+!    |  ped_out(lev0:lev1-1,i0:i1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('SIGMAHAL','SIGMAHAL','S/m ',
+!    |  hall_out(lev0:lev1-1,i0:i1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine lamdas

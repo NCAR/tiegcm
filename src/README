@@ -279,13 +279,52 @@ out by George Millward.
   This was an error in the code, but since we had only hemispherically 
   symmetric potential pattern, we didn't get wrong results.
 
-10/25/07 btf
-Updated scripts directory from hao:$TGCMROOT/tiegcm1.8/scripts and commit
-
-
 10/25/07 am
   modifications to use directly the calculated electric field from 
   the electrodynamo part instead of starting from the electric potential
   in efield.F.
   NOTE: mpi is done for each field separately instead of combining the
     field and then do one passing (see ).
+
+10/25/07 btf
+Updated scripts directory from hao:$TGCMROOT/tiegcm1.8/scripts and commit
+
+11/7/07 btf: Changed use-assoc from params module in heelis.F to avoid
+conflict w/ dummy args. This is for the IRIX compiler (it was not a 
+problem under AIX).
+
+!--------------------------------------------------------------------------
+11/7/07 btf:
+Begin major revision to use history mechanism and other improvements from 
+tiegcm-hist-lbc, but retain 97 km lbc.
+
+11/9/07 btf: Many changes, including copying several files from tiegcm-hist-lbc
+model (nchist.F, output.F, hist.F, etc). This code runs but produces bad output
+(NaNs, 0's, etc).  The "top slot" convention for t,u,v has not yet been removed. 
+Saved this as tiegcm_runs1.tar. This code has removed addfsech, and has addfld, 
+but the addfsech calls have not yet been converted to addfld calls.
+
+11/14/07: Is running now and results look ok. "Top slot" convention has been
+removed. Removed OX and O3, and 3d fields gswm_rfu,rfv, eddy, vo3, sco3, o1d.
+Am now completing conversion of addfsech calls to addfld.
+
+Had to set mxlev==ilev1==nlevp1 in mp_gather2root_sech in mpi.F because
+nmlev > nlevp1 because of extra levels below lbc in dynamo.
+
+11/19/07: Added Astrid's electric field calcs in dynamo, w/ changes to efield.
+Now emx,emy,emz are calculated in efield only in first timestep, then efield is
+calculated in dynamo as emphi3d, emlam3d, and ez3d, and copied to emx,y,z in
+efield.
+
+11/20/07: All addfsech calls are now converted to addfld.
+Saved /oreo/d/foster/tiegcm/tiegcm1.81.tar
+
+11/26/07: Have now made a full year 2002 run w/ this code. All primary files,
+and selected secondary files, w/ utproc plots are in /aim/d/tgcm/tiegcm1.81_yr02.
+
+Now preparing to do a commit, and will save tag tiegcm1-81. 
+This code does *not* include most of the mods from $TGCMROOT/tiegcm1.8/src/modsrc.
+Will notify the "dev" group about this commit, and suggest a meeting
+to decide next steps, like including changes from tiegcm1.8/src/modsrc.
+=======
+

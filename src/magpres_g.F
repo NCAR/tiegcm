@@ -38,6 +38,7 @@
      |  nlonp4, ! nmlon+4
      |  nlat,   ! number of latitudes
      |  nmlat   ! number of geomagnetic grid latitudes
+      use addfld_module,only: addfld
 !      
 ! !PUBLIC TYPES:
       implicit none
@@ -130,7 +131,7 @@
 ! EOP
 !
 ! Local:
-      integer :: i0,i1,nk,nkm1,i,k,lat,lonbeg,lonend
+      integer :: i0,i1,i,k,lat,lonbeg,lonend
       real :: rho,sumt,gne,fac,sumtm,sumtp,halfne,halfz,
      |  tk,tkp,gt,fac_horlon,fac_horlat,fac_hgt,oB2,
      |  horlon_ne,horlon_t,horlat_ne,horlat_t,
@@ -153,12 +154,8 @@
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==nlonp4) lonend = lon1-2
-!      
-! Convenience ints for addfsech calls:
       i0 = lon0
       i1 = lon1
-      nk = lev1-lev0+1
-      nkm1 = nk-1
 !      
       fac = 10.*grav*matm ! g*mass per atomic weight factor gauss,kg -> T,g
       
@@ -368,46 +365,44 @@
 #endif
 !      
 !     do lat=lat0,lat1
-!       call addfsech('JGRAV' ,'J(G)','kg/m^2/s^2',plt_grav
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('JGNE' ,'J(GNE_Z)','kg/m^2/s^2',plt_gne
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('JGT' ,'J(GT_Z)','kg/m^2/s^2',plt_gt
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('JNEHLON' ,'J(NE_horlon)','kg/m^2/s^2',
-!    |     plt_ne_horlon(:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('JTHLON' ,'J(T_horlon)','kg/m^2/s^2',plt_t_horlon
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('JNEHLAT' ,'J(NE_horlat)','kg/m^2/s^2',
-!    |     plt_ne_horlat(:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('JTHLAT' ,'J(T_horlat)','kg/m^2/s^2',plt_t_horlat
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       
-!       call addfsech('je1oD_pg_geo' ,'je1oD_pg_geo','A/cm^2',je1oD_geo
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('je2oD_pg_geo' ,'je2oD_pg_geo','A/cm^2',je2oD_geo
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!    
-!       call addfsech('RHO_M' ,'RHO_M','g/cm^3',plt_rho
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('OP_M' ,'OP_M','1/cm^3',op
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('O2P_M' ,'O2P_M','1/cm^3',o2p
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('NPLUS_M' ,'NPLUS_M','1/cm^3',nplus
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('N2P_M' ,'N2P_M','1/cm^3',n2p
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('NOP_M' ,'NOP_M','1/cm^3',nop
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('NE_M' ,'NE_M','1/cm^3',ne
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('Z_M' ,'Z_M','cm',z
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('TE_M' ,'TE_M','K',te
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('TI_M' ,'TI_M','K',ti
-!    |     (:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
+!       call addfld('JGRAV','J(G)','kg/m^2/s^2',plt_grav(:,i0:i1,lat),
+!    |    'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('JGNE','J(GNE_Z)','kg/m^2/s^2',plt_gne(:,i0:i1,lat),
+!    |    'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('JGT','J(GT_Z)','kg/m^2/s^2',plt_gt(:,i0:i1,lat),
+!    |    'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('JNEHLON','J(NE_horlon)','kg/m^2/s^2',
+!    |    plt_ne_horlon(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('JTHLON' ,'J(T_horlon)','kg/m^2/s^2',
+!    |    plt_t_horlon(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('JNEHLAT' ,'J(NE_horlat)','kg/m^2/s^2',
+!    |    plt_ne_horlat(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('JTHLAT' ,'J(T_horlat)','kg/m^2/s^2',
+!    |    plt_t_horlat(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('je1oD_pg_geo' ,'je1oD_pg_geo','A/cm^2',
+!    |    je1oD_geo(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('je2oD_pg_geo' ,'je2oD_pg_geo','A/cm^2',
+!    |    je2oD_geo(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('RHO_M' ,'RHO_M','g/cm^3',
+!    |    plt_rho(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('OP_M' ,'OP_M','1/cm^3',
+!    |    op(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('O2P_M' ,'O2P_M','1/cm^3',
+!    |    o2p(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('NPLUS_M' ,'NPLUS_M','1/cm^3',
+!    |    nplus(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('N2P_M' ,'N2P_M','1/cm^3',
+!    |    n2p(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('NOP_M' ,'NOP_M','1/cm^3',
+!    |    nop(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('NE_M' ,'NE_M','1/cm^3',
+!    |    ne(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('Z_M' ,'Z_M','cm',
+!    |    z(:,i0:i1,lat),'lev',lev0,lev1,'lon',i0,i1,lat)
+!       call addfld('TE_M' ,'TE_M','K',
+!    |    te(lev0:lev1-1,i0:i1,lat),'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!       call addfld('TI_M' ,'TI_M','K',
+!    |    ti(lev0:lev1-1,i0:i1,lat),'lev',lev0,lev1-1,'lon',i0,i1,lat)
 !     enddo
 !      
       end subroutine magpres_grav

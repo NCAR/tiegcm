@@ -14,9 +14,11 @@
      |  set_wave_filter,dtsmooth,dtsmooth_div2
       use init_module,only: glat
       use input_module,only: difhor
-      use fields_module,only: w,itc,itp
+      use fields_module,only: w,itc,itp,tlbc
+      use addfld_module,only: addfld
 #ifdef MPI
-      use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
+      use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
+     |  mp_periodic_f2d
 #endif
 !
 ! VT means vampir tracing:
@@ -193,24 +195,29 @@
      |  lat)
 !
 ! Periodic points for advection:
-!     call periodic_f2d(hadvec,lon0,lon1,nk)
+#ifdef MPI
+      call mp_periodic_f2d(hadvec,lon0,lon1,lat,lat)
+#endif
 !
 ! Set periodic points to zero:
-      if (lon0==1) hadvec(:,lon0:lon0+1) = 0.
-      if (lon1==nlonp4) hadvec(:,lon1-1:lon1) = 0.
+!     if (lon0==1) hadvec(:,lon0:lon0+1) = 0.
+!     if (lon1==nlonp4) hadvec(:,lon1-1:lon1) = 0.
 
-!     if (idebug > 0) then
-!       call addfsech('HADVEC',' ',' ',hadvec,lon0,lon1,nk,nkm1,lat)
-!       call addfsech('SLOSS' ,' ',' ',sloss(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-!       call addfsech('SPROD' ,' ',' ',sprod(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat)
-!     endif
+      if (idebug > 0) then
+        call addfld('HADVEC',' ',' ',hadvec(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('SLOSS' ,' ',' ',sloss(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('SPROD' ,' ',' ',sprod(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      endif
 
       do i=lon0,lon1
-        bo2(i) = b(i,1,1)*o2(lev0,i,lat)+b(i,1,2)*o1(lev0,i,lat)+fb(i,1) ! t4
-        bo1(i) = b(i,2,1)*o2(lev0,i,lat)+b(i,2,2)*o1(lev0,i,lat)+fb(i,2) ! t5
-        xmbari(i) = 1./(bo2(i)*rmassinv_o2+bo1(i)*rmassinv_o1+   ! t6
+        bo2(i) = b(i,1,1)*o2(lev0,i,lat)+b(i,1,2)*o1(lev0,i,lat)+
+     |    fb(i,1)
+        bo1(i) = b(i,2,1)*o2(lev0,i,lat)+b(i,2,2)*o1(lev0,i,lat)+
+     |    fb(i,2)
+        xmbari(i) = 1./(bo2(i)*rmassinv_o2+bo1(i)*rmassinv_o1+
      |    (1.-bo2(i)-bo1(i))*rmassinv_n2)
       enddo ! i=lon0,lon1
 !
@@ -247,23 +254,32 @@
 !
 ! tni = tn at interfaces:
       do i=lon0,lon1
-        tni(lev0,i) = tn(lev1,i,lat) ! assumes bottom boundary of tn in top slot
+!       tni(lev0,i) = tn(lev1,i,lat) ! assumes bottom boundary of tn in top slot
+        tni(lev0,i) = tlbc(i,lat) 
         tni(lev1,i) = tn(lev1-1,i,lat)
         do k=lev0+1,lev1-1
           tni(k,i) = .5*(tn(k,i,lat)+tn(k-1,i,lat))
         enddo ! k=lev0+1,lev1-1
       enddo ! i=lon0,lon1
 
-!     if (idebug > 0) then
-!       call addfsech('XMBAR_KH',' ',' ',xmbar_kh,lon0,lon1,nk,nkm1,lat) ! s12
-!       call addfsech('XMBAR_K' ,' ',' ',xmbar_k ,lon0,lon1,nk,nkm1,lat) ! s11
-!       call addfsech('DMDZ0'   ,' ',' ',dmdz    ,lon0,lon1,nk,nkm1,lat) ! s10
-!       call addfsech('PSO1'    ,' ',' ',pso1    ,lon0,lon1,nk,nkm1,lat) ! s9
-!       call addfsech('PSO2'    ,' ',' ',pso2    ,lon0,lon1,nk,nkm1,lat) ! s8
-!       call addfsech('DO1DZ'   ,' ',' ',do1dz   ,lon0,lon1,nk,nkm1,lat) ! s7
-!       call addfsech('DO2DZ'   ,' ',' ',do2dz   ,lon0,lon1,nk,nkm1,lat) ! s6
-!       call addfsech('TNI'     ,' ',' ',tni     ,lon0,lon1,nk,nkm1,lat) ! s5
-!     endif
+      if (idebug > 0) then
+        call addfld('XMBAR_KH',' ',' ',xmbar_kh,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('XMBAR_K' ,' ',' ',xmbar_k ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('DMDZ0'   ,' ',' ',dmdz    ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('PSO1'    ,' ',' ',pso1    ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('PSO2'    ,' ',' ',pso2    ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('DO1DZ'   ,' ',' ',do1dz   ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('DO2DZ'   ,' ',' ',do2dz   ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('TNI'     ,' ',' ',tni     ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      endif
  
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -296,16 +312,24 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
-!     if (idebug > 0) then
-!       call addfsech('S0PROD',' ',' ',s0prod,lon0,lon1,nk,nkm1,lat) ! s15
-!       call addfsech('ALFA11',' ',' ',alfa11,lon0,lon1,nk,nk,lat) ! s1
-!       call addfsech('ALFA12',' ',' ',alfa12,lon0,lon1,nk,nk,lat) ! s2
-!       call addfsech('ALFA21',' ',' ',alfa21,lon0,lon1,nk,nk,lat) ! s3
-!       call addfsech('ALFA22',' ',' ',alfa22,lon0,lon1,nk,nk,lat) ! s4
-!       call addfsech('EX'    ,' ',' ',ex    ,lon0,lon1,nk,nk,lat) ! s12
-!       call addfsech('DMDZ1' ,' ',' ',dmdz  ,lon0,lon1,nk,nk,lat) ! s10
-!       call addfsech('AX0'   ,' ',' ',ax    ,lon0,lon1,nk,nk,lat) ! s11
-!     endif
+      if (idebug > 0) then
+        call addfld('S0PROD',' ',' ',s0prod,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('ALFA11',' ',' ',alfa11,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('ALFA12',' ',' ',alfa12,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('ALFA21',' ',' ',alfa21,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('ALFA22',' ',' ',alfa22,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('EX'    ,' ',' ',ex    ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('DMDZ1' ,' ',' ',dmdz  ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('AX0'   ,' ',' ',ax    ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      endif
 !
 ! thdiff = EX-ALFAX*D/DS(LN(T(TOT))  (Thermal diffusion term) (s12)
       do i=lon0,lon1
@@ -319,8 +343,9 @@
      |    (dzp*tni(lev1,i))
       enddo ! i=lon0,lon1
 
-!     if (idebug > 0) 
-!    |  call addfsech('THDIFF0',' ',' ',thdiff,lon0,lon1,nk,nk,lat) ! s12
+      if (idebug > 0) 
+     |  call addfld('THDIFF0',' ',' ',thdiff,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! If difhor flag was by user (see input_module):
 ! dfactor = 
@@ -383,20 +408,27 @@
         f_rhs (lev1,i) = -grav*rmx*fubc(i,lat)*dzp/(p0*ax(lev1,i)*avo)
       enddo ! i=lon0,lon1
 
-!     if (idebug > 0) then
-!       call addfsech('AX1'    ,' ',' ',ax         ,lon0,lon1,nk,nk,lat) ! s11
-!       call addfsech('DMDZ2'  ,' ',' ',dmdz       ,lon0,lon1,nk,nk,lat) ! s9
-!       call addfsech('THDIFF1',' ',' ',thdiff     ,lon0,lon1,nk,nk,lat) ! s12
-!       call addfsech('FSMOOTH',' ',' ',ftm1_smooth(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nkm1,lat) ! s10
-!       call addfsech('W_OMEGA',' ',' ',w(lev0:lev1,lon0:lon1,
-!    |    lat,itc),lon0,lon1,nk,nkm1,lat) ! s10
-!
-!       call addfsech('P_COEF' ,' ',' ',p_coef     ,lon0,lon1,nk,nk,lat) ! s1
-!       call addfsech('R_COEF' ,' ',' ',r_coef     ,lon0,lon1,nk,nk,lat) ! s3
-!       call addfsech('Q_COEF' ,' ',' ',q_coef     ,lon0,lon1,nk,nk,lat) ! s2
-!       call addfsech('F_RHS'  ,' ',' ',f_rhs      ,lon0,lon1,nk,nk,lat) ! s4
-!     endif
+      if (idebug > 0) then
+        call addfld('AX1'    ,' ',' ',ax         ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('DMDZ2'  ,' ',' ',dmdz       ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('THDIFF1',' ',' ',thdiff     ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('FSMOOTH',' ',' ',
+     |    ftm1_smooth(lev0:lev1-1,lon0:lon1,lat),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('W_OMEGA',' ',' ',w(lev0:lev1,lon0:lon1,lat,itc),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('P_COEF' ,' ',' ',p_coef(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('R_COEF' ,' ',' ',r_coef(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('Q_COEF' ,' ',' ',q_coef(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('F_RHS'  ,' ',' ',f_rhs      ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      endif
 !
 ! Solve tridiagonal system (fcomp_out is allocated at full subdomain):
 !
@@ -406,9 +438,9 @@
       call trsolv(p_coef,q_coef,r_coef,f_rhs,fcomp_out(:,lon0:lon1,lat),
      |  lev0,lev1,lev0,lev1,lon0,lon1,nlonp4,lat,0)
 
-!     if (idebug > 0)
-!    |  call addfsech('MNR_SOLV'  ,' ',' ',fcomp_out(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk,lat)
+      if (idebug > 0)
+     |  call addfld('MNR_SOLV'  ,' ',' ',fcomp_out(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       enddo ! lat=lat0,lat1
 !----------------------- End second latitude scan ----------------------
@@ -424,9 +456,9 @@
       do lat=lat0,lat1
 !       write(6,"('Minor third latitude scan: lat=',i3)") lat
 
-!       if (idebug > 0)
-!    |    call addfsech('MNR_FILT'  ,' ',' ',fcomp_out(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk,lat)
+        if (idebug > 0)
+     |    call addfld('MNR_FILT'  ,' ',' ',fcomp_out(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Time smoothing:
         do i=lonbeg,lonend
@@ -436,9 +468,10 @@
           enddo ! k=lev0,lev1
         enddo ! i=lonbeg,lonend
 
-!       if (idebug > 0)
-!    |    call addfsech('MNR_SMOO'  ,' ',' ',
-!    |      fcomp_tm1_out(:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
+        if (idebug > 0)
+     |    call addfld('MNR_SMOO'  ,' ',' ',
+     |      fcomp_tm1_out(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
       enddo ! lat=lat0,lat1
 !----------------------- End third latitude scan ----------------------
@@ -477,12 +510,12 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
-!     if (idebug > 0) then
-!       call addfsech('MNR_OUT'  ,' ',' ',
-!    |    fcomp_out(:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!       call addfsech('MNR_TM1'  ,' ',' ',
-!    |    fcomp_tm1_out(:,lon0:lon1,lat),lon0,lon1,nk,nk,lat)
-!     endif
+      if (idebug > 0) then
+        call addfld('MNR_OUT'  ,' ',' ',fcomp_out(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('MNR_TM1'  ,' ',' ',fcomp_tm1_out(:,lon0:lon1,lat)
+     |    ,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      endif
 !
 ! End fourth and final latitude loop:
       enddo ! lat=lat0,lat1

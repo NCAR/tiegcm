@@ -1,6 +1,7 @@
 !
       module n4s_module
       use params_module,only: nlevp1,nlonp4,nlat
+      use addfld_module,only: addfld
       implicit none
 !
 ! Boundary conditions, production and loss for N4S are defined
@@ -72,6 +73,7 @@
      |  rmassinv_n2,rmassinv_no
       use chemrates_module,only: beta1,beta3,beta4,beta5,beta7,
      |  beta8,beta17,ra1,ra3,rk2,rk4,rk6,rk8
+      use fields_module,only: tlbc ! lower boundary interface level of TN
 !
 ! Input args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
@@ -92,7 +94,7 @@
 !
 ! Local:
       integer :: k,i
-      integer ::i0,i1,nk,nkm1 ! for addfsech
+      integer ::i0,i1,nk,nkm1
       real :: xnmbar_lbc
       real,dimension(lev0:lev1,lon0:lon1) :: xn2 ! n2 (mmr)
 !
@@ -108,8 +110,10 @@
 ! Note tn(lev1,i) assumes tn bottom boundary is stored in top slot.
 !
       do i=lon0,lon1
+!       xnmbar_lbc = p0*expz(1)*expzmid_inv*barm(lev0,i)/
+!    |    (boltz*tn(lev1,i))
         xnmbar_lbc = p0*expz(1)*expzmid_inv*barm(lev0,i)/
-     |    (boltz*tn(lev1,i))
+     |    (boltz*tlbc(i,lat))
 !
 ! Value at bottom given by photochemical equilibrium.
         n4s_lbc(i,1,lat) = 0.
@@ -155,13 +159,13 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfsech('XNMBAR'  ,' ',' ',xnmbarm(:,i0:i1),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('N4S_PROD',' ',' ',n4s_prod(:,i0:i1,lat),
-!    |  i0,i1,nk,nkm1,lat)
-!     call addfsech('N4S_LOSS',' ',' ',n4s_loss(:,i0:i1,lat),
-!    |  i0,i1,nk,nkm1,lat)
-!
+!     call addfld('MBAR_N4S'  ,' ',' ',xnmbarm(lev0:lev1-1,i0:i1),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('N4S_PROD',' ',' ',n4s_prod(lev0:lev1-1,i0:i1,lat),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('N4S_LOSS',' ',' ',n4s_loss(lev0:lev1-1,i0:i1,lat),
+!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+ 
       end subroutine comp_n4s
 !-----------------------------------------------------------------------
       subroutine minor_n4s(tn,o2,o1,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
@@ -186,13 +190,8 @@
 !
 ! Local:
       integer :: lat
-      integer ::i0,i1,nk,nkm1 ! for addfsech
 !
 !     write(6,"('enter minor_n4s')")
-      i0 = lon0
-      i1 = lon1
-      nk = lev1-lev0+1
-      nkm1 = nk-1
 !
 ! Minor returns n4s_out and n4s_nm1_out. Module data n4s_prod,
 ! n4s_loss, etc, were defined by comp_n4s.  
@@ -206,10 +205,12 @@
      |  alfa_n4s,lev0,lev1,lon0,lon1,lat0,lat1,0)
 
 !     do lat=lat0,lat1
-!       call addfsech('N4S_OUT' ,' ',' ',n4s_out(:,i0:i1,lat),
-!    |    i0,i1,nk,nkm1,lat)
-!       call addfsech('N4S_TM1' ,' ',' ',n4s_nm1_out(:,i0:i1,lat),
-!    |    i0,i1,nk,nkm1,lat)
+!       call addfld('N4S_OUT' ,' ',' ',
+!    |    n4s_out(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('N4S_TM1' ,' ',' ',
+!    |    n4s_nm1_out(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     enddo ! lat=lat0,lat1
  
       end subroutine minor_n4s

@@ -27,6 +27,7 @@
      |  nlon,   ! number of geographic longitudes (at 5 deg, nlon==72)
      |  nlonp1, ! nlon+1
      |  nlonp4, ! nlon+4
+     |  nlonp2, ! nlon+2
      |  nlev,   ! number of pressure levels (e.g., 28)
      |  nlevp1, ! nlev+1
      |  nlat,   ! number of geographic latitudes (at 5 deg, nlat==36)
@@ -37,10 +38,16 @@
      |  nmlat,  ! number of geomagnetic grid latitudes
      |  nmlatp1,! nmlat+1
      |  nmlath, ! (nmlat+1)/2 (index to magnetic equator)
-     |  nmlev   ! number of geomagnetic pressure levels (nmlev==nlevp1+3)
+     |  nmlev,  ! number of geomagnetic pressure levels (nmlev==nlevp1+3)
+     |  nmlevp1,! number of geomagnetic midpoint levels
+     |  nimlevp1,! number of geomagnetic interface levels
+     |  spval
 !    
 ! J(mag.pressure, gravity) to dynamo RHS
       use magpres_g_module,only: j_pg,tpg1,tpg2,je1oD_geo,je2oD_geo
+!
+! Routine to add fields to secondary histories:
+      use addfld_module,only: addfld
 
 ! !PUBLIC TYPES:
 	    implicit none
@@ -233,13 +240,16 @@
 !   icalkqlam = 1 -> will be calculated
 !   icalkqlam = 0 -> will NOT be calculated
 !
-      integer,parameter :: icalkqlam = 0    
+      integer,parameter :: icalkqlam = 0
       
       real ::
      |  je13d(nmlonp1,nmlat,-2:nlevp1),    ! 3d je1 magnetic
      |  je13d_geo(nlonp1,0:nlatp1,nlevp1), ! 3d je1 geographic
      |  je23d(nmlonp1,nmlat,-2:nlevp1),    ! 3d je2 magnetic
      |  je23d_geo(nlonp1,0:nlatp1,nlevp1)  ! 3d je2 geographic
+      real ::
+     |  je13d_diag(nlonp4,nlat,nlevp1), ! 3d je1 geographic for addfld
+     |  je23d_diag(nlonp4,nlat,nlevp1)  ! 3d je1 geographic for addfld
 !
 ! 3d arrays for calculation of height-integrated sheet-current density
 ! K_(q,lam) (if icalkqlam==1)
@@ -264,6 +274,7 @@
 ! Electric potential from heelis or weimer:
       real,dimension(nmlonp1,nmlat0) :: pfrac  ! NH fraction of potential
       real,dimension(nmlonp1,nmlat)  :: phihm  ! potential in magnetic
+      real,dimension(nlonp4,nlat,nlevp1) :: dynpot_diag
 ! 
 ! !REVISION HISTORY:
 ! 05.02.04  <Astrid Maute> <include headers> 
@@ -286,7 +297,6 @@
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 ! !USES:
       use cons_module,only: gask,grav
-
 ! !RETURN VALUE:
 ! !PARAMETERS: 
 ! !ARGUMENTS:
@@ -352,36 +362,34 @@
           zpoten(i,lat,lev1) = z(lev1,i,lat)
         enddo ! i=lon0,lon1
 !
-! (In tgcm15, these calls are in lamdas.F)
-! This is executed by all mpi tasks, so the second mp_gather2root call
-!   in advance should be executed: call mp_gather2root(itc,'prim')
+!      call addfld('SIGMAPED','sigma-ped','S/m',
+!    |   sigma_ped(lon0:lon1,lat,:),'lon',lon0,lon1,'lev',
+!    |   lev0,lev1,lat)
+!      call addfld('SIGMAHAL','sigma-hall','S/m',
+!    |   sigma_hall(lon0:lon1,lat,:),'lon',lon0,lon1,'lev',
+!    |   lev0,lev1,lat)
+!      call addfld('ZPOTEN','geop.height','cm',
+!    |   zpoten(lon0:lon1,lat,:),'lon',lon0,lon1,'ilev',
+!    |   lev0,lev1,lat)
+!      call addfld('SCHEIGHT','scl.Height','cm',
+!    |   scheight(lon0:lon1,lat,:),'lon',lon0,lon1,'lev',
+!    |   lev0,lev1,lat)
+!      call addfld('UNVEL','zonal neutral wind','cm/s',
+!    |   unvel(lon0:lon1,lat,:),'lon',lon0,lon1,'lev',
+!    |   lev0,lev1,lat)
+!      call addfld('VNVEL','merid. neutral wind','cm/s',
+!    |   vnvel(lon0:lon1,lat,:),'lon',lon0,lon1,'lev',
+!    |   lev0,lev1,lat)
+!      call addfld('WNVEL','upward neutral wind','cm/s',
+!    |   wnvel(lon0:lon1,lat,:),'lon',lon0,lon1,'lev',
+!    |   lev0,lev1,lat)
+!      call addfld('JE1oD_PG','Je1(p,g)','A/cm^2',
+!    |   je1oD_full(lon0:lon1,lat,:),'lon',lon0,lon1,'lev',
+!    |   lev0,lev1,lat)
+!      call addfld('JE2oD_PG','Je1(p,g)','A/cm^2',
+!    |   je2oD_full(lon0:lon1,lat,:),'lon',lon0,lon1,'lev',
+!    |   lev0,lev1,lat)
 !
-!       call addfsech_ik('SIGMAPED',' ',' ',sigma_ped(lon0:lon1,lat,:),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech_ik('SIGMAHAL',' ',' ',sigma_hall(lon0:lon1,lat,:),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech_ik('ZPOTEN'  ,' ',' ',zpoten(lon0:lon1,lat,:),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech_ik('SCHEIGHT',' ',' ',scheight(lon0:lon1,lat,:),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech_ik('UNVEL'   ,' ',' ',unvel(lon0:lon1,lat,:),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech_ik('VNVEL'   ,' ',' ',vnvel(lon0:lon1,lat,:),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech_ik('WNVEL'   ,' ',' ',wnvel(lon0:lon1,lat,:),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech_ik('JE1oD_F',' ','A/cm^2',je1oD_full(lon0:
-!    |    lon1,lat,:),lon0,lon1,nk,nk-1,lat)
-!       call addfsech_ik('JE2oD_F',' ','A/cm^2',je2oD_full(lon0:
-!    |    lon1,lat,:),lon0,lon1,nk,nk-1,lat)
-
-!       call addfsech('UNPREP',' ',' ',un(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech('VNPREP',' ',' ',vn(:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk-1,lat)
-!       call addfsech('ZPREP' ,' ',' ',z (:,lon0:lon1,lat),
-!    |    lon0,lon1,nk,nk-1,lat)
-
       enddo ! lat=lat0,lat1
 !
 #ifdef MPI
@@ -435,13 +443,11 @@
 !  transform geopotential height to mag. grid (used in subroutine threed)
       call transf_dyn0
 !
-!
 ! Call threed to generate 3-d potential array in geomagnetic coordinates
 !   from 2-d solver output phim, corrected for the SH potential.
 !   phim3d(nmlonp1,nmlat,-2:nlevp1) is in fields.F.
 !
       call threed
-
 !
 ! Transform phim3d to geographic coordinates in dynpot (fields.F):
 !   phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
@@ -460,9 +466,16 @@
       enddo ! k=1,nlevp1
 !
 ! Save electric potential on geographic coords to secondary history:
+! dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
+! dynpot_diag(nlonp4,nlat,nlevp1)  ! for addfld
+!
 !     do j=1,nlat
-!       call addfsech_ik('DYNPOT',' ',' ',dynpot(:,j,:),
-!    |    1,nlonp1,nlevp1,nlevp1-1,j)
+!       dynpot_diag(:,:,:) = spval
+!       dynpot_diag(3:nlonp2,j,:) = dynpot(1:nlon,j,:)               ! 3,74 <= 1,72
+!       dynpot_diag(1:2,j,:)      = dynpot_diag(nlonp1:nlonp2,j,:)   ! 1,2 <= 73,74
+!       dynpot_diag(nlonp4-1:nlonp4,j,:) = dynpot_diag(3:4,j,:)      ! 75,76 <= 3,4
+!       call addfld('DYNPOT','elect. potential (geo)','V',
+!    |    dynpot_diag(:,j,:),'lon',1,nlonp4,'ilev',1,nlevp1,j)
 !     enddo ! j=1,nlat
 !
 ! Transform single-level heelis magnetic potential phihm to geographic 
@@ -476,16 +489,16 @@
       enddo ! j=0,nlatp1  
 !
 ! Save 2d heelis potential on geographic grid:
-!     if (potential_model == 'WEIMER') then
-!       call addfsech_ij('PHIH2D','2D WEIMER01 POTENTIAL (GEOG)','VOLTS'
-!    |    ,phih,1,nlonp1,1,nlat)
-!     elseif (potential_model == 'HEELIS') then
-!       call addfsech_ij('PHIH2D','2D HEELIS POTENTIAL (GEOG)','VOLTS',
-!    |    phih,1,nlonp1,1,nlat)
-!     else
-!       call addfsech_ij('PHIH2D','2D ZERO POTENTIAL (GEOG)','VOLTS',
-!    |    phih,1,nlonp1,1,nlat)
-!     endif
+!      if (potential_model == 'WEIMER') then
+!       call addfld('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
+!    |    'V', phih,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!      elseif (potential_model == 'HEELIS') then
+!       call addfld('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
+!    |    'V',phih,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!      else
+!       call addfld('PHIHM2D','2D ZERO ELECTRIC POTENTIAL',
+!    |    'V',phih,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!      endif
       end subroutine nodynamo
 !-----------------------------------------------------------------------
 !
@@ -524,6 +537,7 @@
       real :: sym,fac
       real :: cs(nmlat0)
       real,dimension(nlonp1,0:nlatp1) :: phih  ! potential in geographic
+      real,dimension(nlonp4,nlat) :: phih_diag
 !
 ! First transform fields to geomagnetic grid, and perform field line
 ! integrations:
@@ -662,12 +676,18 @@
 !
 ! Save 2d (mlon,mlat) fields to secondary histories:
 !
-!     call addfsech_ij('ZIGM11',' ',' ',zigm11,1,nmlonp1,1,nmlat)
-!     call addfsech_ij('ZIGMC' ,' ',' ',zigmc ,1,nmlonp1,1,nmlat)
-!     call addfsech_ij('ZIGM2' ,' ',' ',zigm2 ,1,nmlonp1,1,nmlat)
-!     call addfsech_ij('ZIGM22',' ',' ',zigm22,1,nmlonp1,1,nmlat)
-!     call addfsech_ij('RIM1'  ,' ',' ',rim(:,:,1),1,nmlonp1,1,nmlat)
-!     call addfsech_ij('RIM2'  ,' ',' ',rim(:,:,2),1,nmlonp1,1,nmlat)
+!     call addfld('ZIGM11','Sig^T_phiphi/cos lam0/d^2phi','S',
+!    |  zigm11,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!     call addfld('ZIGM22','Sig^T_lamlam*cos lam0/d^2lam','S',
+!    |  zigm22,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!     call addfld('ZIGMC','Sig^T_philam/(4dlam dphi)','S',
+!    |  zigmc,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!     call addfld('ZIGM2','Sig^T_lamphi/(4dlam dphi)','S',
+!    |  zigm2,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!     call addfld('RIM1','K_mphi^DT','A/m',
+!    |  rim(:,:,1),'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!     call addfld('RIM2','K_mlam^DT','A/m',
+!    |  rim(:,:,2),'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
 ! Clear array cee for difference stencils at all levels:
       if (debug) write(6,"('dynamo before call clearcee)..')")
@@ -857,19 +877,19 @@
 !
 ! Save single-level high latitude potential:
 !     if (potential_model == 'WEIMER') then
-!       call addfsech_ij('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
-!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
+!       call addfld('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
+!    |    'V', phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !     elseif (potential_model == 'HEELIS') then
-!       call addfsech_ij('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
-!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
+!       call addfld('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
+!    |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !     else
-!       call addfsech_ij('PHIHM2D','2D ZERO ELECTRIC POTENTIAL',
-!    |    'VOLTS', phihm,1,nmlonp1,1,nmlat)
+!       call addfld('PHIHM2D','2D ELECTRIC POTENTIAL',
+!    |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !     endif
 !
 ! Save correct single-level potential to secondary histories (mag grid):
-!     call addfsech_ij('PHIM2D','2D ELECTRIC POTENTIAL','VOLTS',
-!    |  phim,1,nmlonp1,1,nmlat)
+!     call addfld('PHIM2D','2D ELECTRIC POTENTIAL','VOLTS',phim,
+!    |    'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
 !  am_02/02: calculate current for both hemisphere:
 !                      R**2 * J_mr / dt0dts /rcos0s
@@ -887,8 +907,8 @@
 ! phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
 !
 !     do j=1,nmlat
-!       call addfsech_ik('PHIM3D','ELECTRIC POTENTIAL (MAG)','VOLTS',
-!    |    phim3d(:,j,:),1,nmlonp1,nmlev,nmlev-1,j)
+!       call addfld('PHIM3D','El.Poten','V',
+!    |    phim3d(:,j,1:nmlev),'mlon',1,nmlonp1,'imlev',1,nmlev,j)
 !     enddo
 !
 ! am_02/02: calculate  Je_1,  K_(q,phi), K_(q,lam)
@@ -917,14 +937,25 @@
       enddo ! k=1,nlevp1
 !
 ! Save electric potential on geographic coords to secondary history:
-!     do j=1,nlat
-!       call addfsech_ik('DYNPOT',' ',' ',dynpot(:,j,:),
-!    |    1,nlonp1,nlevp1,nlevp1-1,j)
-!       call addfsech_ik('JE13D_GEO','je13d_geo','A/m^2',
-!    |	 je13d_geo(:,j,:),1,nlonp1,nlevp1,nlevp1,j)
-!       call addfsech_ik('JE23D_GEO','je23d_geo','A/m^2',
-!    |	 je23d_geo(:,j,:),1,nlonp1,nlevp1,nlevp1,j)
-!     enddo ! j=1,nlat
+! dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
+! dynpot_diag(nlonp4,nlat,nlevp1)  ! for addfld
+!
+!      do j=1,nlat
+!        dynpot_diag(:,:,:) = spval
+!        dynpot_diag(3:nlonp2,j,:) = dynpot(1:nlon,j,:)         ! 3,74 <= 1,72
+!        dynpot_diag(1:2,j,:) = dynpot_diag(nlonp1:nlonp2,j,:)   ! 1,2 <= 73,74
+!        dynpot_diag(nlonp4-1:nlonp4,j,:) = dynpot_diag(3:4,j,:) ! 75,76 <= 3,4
+!        call addfld('DYNPOT','elec. potential (geo)','V',
+!    |     dynpot_diag(:,j,:),'lon',1,nlonp4,'ilev',1,nlevp1,j)
+! 
+! je13d_diag(nlonp4,nlat,nlevp1), ! 3d je1 geographic for addfld
+!        je13d_diag(:,:,:) = spval
+!        je13d_diag(3:nlonp2,j,:) = je13d_geo(1:nlon,j,:)      ! 3,74 <= 1,72
+!        je13d_diag(1:2,j,:) = je13d_diag(nlonp1:nlonp2,j,:)   ! 1,2 <= 73,74
+!        je13d_diag(nlonp4-1:nlonp4,j,:) = je13d_diag(3:4,j,:) ! 75,76 <= 3,4
+!        call addfld('JE13D','J_e1(p,g)','A/m^2',
+!    |     je13d_diag(:,j,:),'lon',1,nlonp4,'lev',1,nlevp1,j)
+!      enddo ! j=1,nlat
 !
 ! Transform single-level heelis magnetic potential phihm to geographic 
 ! in phih:
@@ -936,17 +967,16 @@
         phih(nlonp1,j) = phih(1,j)
       enddo ! j=0,nlatp1  
 !
-! Save 2d potential on geographic grid:
-!     if (potential_model == 'WEIMER') then
-!       call addfsech_ij('PHIH2D','2D WEIMER01 POTENTIAL (GEOG)','VOLTS'
-!    |    ,phih,1,nlonp1,1,nlat)
-!     elseif (potential_model == 'HEELIS') then
-!       call addfsech_ij('PHIH2D','2D HEELIS POTENTIAL (GEOG)','VOLTS',
-!    |    phih,1,nlonp1,1,nlat)
-!     else
-!       call addfsech_ij('PHIH2D','2D ZERO POTENTIAL (GEOG)','VOLTS',
-!    |    phih,1,nlonp1,1,nlat)
-!     endif
+! real,dimension(nlonp4,nlat) :: phih_diag
+!
+!     do j=1,nlat
+!       phih_diag(3:nlonp4-2,j) = phih(1:nlon,j)
+!       phih_diag(1:2,j) = phih_diag(nlon+1:nlon+2,j)
+!       phih_diag(nlon+3:nlon+4,j) = phih_diag(3:4,j)
+!     enddo
+!     call addfld('PHIH2D','elec. potential (geo)','V',
+!    |    phih,'lon',1,nlonp4,'lat',1,nlat,0)
+!
       if (debug) write(6,"('dynamo returning..')")
       end subroutine dynamo
 !-----------------------------------------------------------------------
@@ -1376,14 +1406,18 @@
         call geo2mag(bmodm ,be3   ,ig,jg,wt,nlonp1,nmlonp1,nmlon,
      |    nmlat,j)
 !	
-!       call addfsech_ik('je1_pg' ,'je1_pg','A/cm^2',je1_pg,
-!    |	 1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('je2_pg' ,'je2_pg','A/cm^2',je2_pg,
-!    |	 1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('SIGMA1M'  ,' ',' ',sigma_pedm,
-!    |	  1,nmlonp1,nmlev,nmlev-1,j)
-!       call addfsech_ik('SIGMA2M'  ,' ',' ',sigma_hallm,
-!    |	  1,nmlonp1,nmlev,nmlev-1,j)
+! real,dimension(nmlonp1,-2:nlev) :: ! J(mag.pres,gravity) mag. grid
+!  je1_pg,	 ! J(gravity)
+!  je2_pg	 ! J(mag.pres)
+!
+!       call addfld('je1_pg' ,'je1_pg','A/cm^2',je1_pg(:,1:nmlev),
+!    |    'mlon',1,nmlonp1,'mlev',1,nmlev,j)
+!       call addfld('je2_pg' ,'je2_pg','A/cm^2',je2_pg(:,1:nmlev),
+!    |    'mlon',1,nmlonp1,'mlev',1,nmlev,j)
+!       call addfld('SIGMA1M','sig_ped','S/m',sigma_pedm(:,1:nmlev),
+!    |    'mlon',1,nmlonp1,'mlev',1,nmlev,j)
+!       call addfld('SIGMA2M','sig_hall','S/m',sigma_hallm(:,1:nmlev),
+!    |    'mlon',1,nmlonp1,'mlev',1,nmlev,j)
 !
 ! Calculation of k_(q,lam)
 !
@@ -1439,10 +1473,8 @@
 !
 ! Without calculation of k_(q,lam)
         else  ! icalkqlam /= 1
-
           do k=-2,nlev
             do i=1,nmlon  
-
               if (zpotenm(i,k) < z0) zpotenm(i,k) = z0
               zpotenm3d(i,j,k) = zpotenm(i,k)
             enddo ! i=1,nmlon  
@@ -1719,10 +1751,12 @@
 !
 ! Save 3d potential on magnetic grid to secondary history:
 ! PLEASE DO NOT COMMENT THIS OUT -- ZMAG is a mandatory mag field for sech
-       do j=1,nmlat
-         call addfsech_ik('ZMAG','ZMAG','CM',zpotenm3d(:,j,:),
-     | 	   1,nmlonp1,nmlev,nmlev,j)
-       enddo ! j=1,nmlat
+! real,dimension(nmlonp1,nmlat,-2:nlevp1) :: zpotenm3d
+!
+      do j=1,nmlat
+        call addfld('ZMAG','GEOPOTENTIAL HEIGHT (MAGNETIC)','CM',
+     |    zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nimlevp1,j)
+      enddo ! j=1,nmlat
 !
       end subroutine transf
 !-----------------------------------------------------------------------
@@ -2859,10 +2893,11 @@
 ! !USES:
       use cons_module,only: ylatm,r0,r00,pi_dyn,table,dlatm,dlonm,
      |  rcos0s,re,dt1dts,dt0dts
-      use fields_module,only: phim3d, ! phim3d(nmlonp1,nmlat,-2:nlevp1)
+      use fields_module,only: phim3d,
      |  emphi3d,   ! 3d eastward electric field magnetic
      |  emlam3d,   ! 3d equatorw. electric field magnetic
      |  emz3d      ! 3d upward (?) electric field magnetic
+      use init_module,only: istep	! for debug
 !
 ! !DESCRIPTION: 
 ! calculates electric field 
@@ -2905,13 +2940,13 @@
         do i=2,nmlon
           ed1(i,j) = -(phim(i+1,j)-phim(i-1,j))/(2.*dlonm*csth0)*
      |      rcos0s(j)/(r0*1.e-2)
-          ephi(i,j)= ed1(i,j)*(r0*1.e-2)
+          ephi(i,j) = ed1(i,j)*(r0*1.e-2)
         enddo ! i=2,nmlon
         ed1(1,j) = -(phim(2,j)-phim(nmlon,j))/(2.*dlonm*csth0)*
      |      rcos0s(j)/(r0*1.e-2)
         ed1(nmlonp1,j) = ed1(1,j)
-        ephi(1,j)      = ed1(1,j)*(r0*1.e-2)
-        ephi(nmlonp1,j)= ed1(nmlonp1,j)*(r0*1.e-2)
+        ephi(1,j)       = ed1(1,j)*(r0*1.e-2)
+        ephi(nmlonp1,j) = ed1(nmlonp1,j)*(r0*1.e-2)
       enddo ! j=2,nmlat-1
 !
 ! E_d2 = +/- 1/(R |sinI_m|) d Phi/d lam_0* (d lam_0/ (d lam_m*|sin I_m|))
@@ -2920,7 +2955,7 @@
         do i=1,nmlonp1
           ed2(i,j) = -(phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt1dts(j)/
      |      (r0*1.e-2)
-          elam(i,j)= -(phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt0dts(j)
+          elam(i,j) = -(phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt0dts(j)
         enddo ! i=1,nmlonp1
       enddo ! j=2,nmlath-1
 !
@@ -2929,7 +2964,7 @@
         do i=1,nmlonp1
           ed2(i,j) = (phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt1dts(j)/
      |      (r0*1.e-2)
-          elam(i,j)= -(phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt0dts(j)
+          elam(i,j) = -(phim(i,j+1)-phim(i,j-1))/(2.*dlatm)*dt0dts(j)
         enddo ! i=1,nmlonp1
       enddo ! j=nmlath+1,nmlat-1
 !
@@ -2949,7 +2984,6 @@
      |                  ed1(ip1f,2) + ed1(ip3f,2))
         ed2(i,nmlat) = .25*(ed2(i,nmlat-1) - ed2(ip2f,nmlat-1) -
      |                      ed1(ip1f,nmlat-1) + ed1(ip3f,nmlat-1))
-!     
         ephi(i,1) = .25*(ephi(i,2) - ephi(ip2f,2) +
      |                  elam(ip1f,2) - elam(ip3f,2))
         ephi(i,nmlat) = .25*(ephi(i,nmlat-1) - ephi(ip2f,nmlat-1) +
@@ -2960,14 +2994,13 @@
      |                      ephi(ip1f,nmlat-1) + ephi(ip3f,nmlat-1))
 !
 ! Equator: derivative of quadratic polynomial (3 given points)
-       ed2(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
+        ed2(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
      |    -3.*phim(i,nmlath))/(2.*dlatm)/(R0*1.e-2)
-       ed2(i,nmlath+1) = (4.*phim(i,nmlath+2)-phim(i,nmlath+3)
+        ed2(i,nmlath+1) = (4.*phim(i,nmlath+2)-phim(i,nmlath+3)
      |    -3.*phim(i,nmlath+1))/(2.*dlatm)/(R0*1.e-2)
-       ed2(i,nmlath-1) = (4.*phim(i,nmlath-2)-phim(i,nmlath-3)
+        ed2(i,nmlath-1) = (4.*phim(i,nmlath-2)-phim(i,nmlath-3)
      |    -3.*phim(i,nmlath-1))/(2.*dlatm)/(R0*1.e-2)
-!     
-       elam(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
+        elam(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
      |    -3.*phim(i,nmlath))/(2.*dlatm)
       enddo ! i = 1,nmlonp1
 !
@@ -3045,7 +3078,7 @@
           ed13d(i,nmlat,k) = ed1(i,nmlat)
           ed23d(i,1,k)     = ed2(i,1)
           ed23d(i,nmlat,k) = ed2(i,nmlat)
-!	  
+!
           emphi3d(i,1,k)     = ephi(i,1)
           emphi3d(i,nmlat,k) = ephi(i,nmlat)
           emlam3d(i,1,k)     = elam(i,1)
@@ -3061,8 +3094,16 @@
         enddo ! j=2,nmlat-1
       enddo ! k=1,nlevp1  
 !
+      do k=-1,nlev
+        do j=1,nmlat
+          do i=1,nmlon
+             emz3d(i,j,k) = -(phim3d(i,j,k+1)-phim3d(i,j,k-1))
+          enddo ! i=1,nmlon
+        enddo ! j=2,nmlat-1
+      enddo ! k=1,nlevp1
+!
 ! Periodic point:
-      do k=1,nlevp1
+      do k=-2,nlevp1
         do j=1,nmlat
           phim3d(nmlonp1,j,k) = phim3d(1,j,k)
           ed13d(nmlonp1,j,k)  = ed13d(1,j,k)
@@ -3074,14 +3115,33 @@
       enddo ! k=1,nlevp1
 !
 ! Save 3d electric potential on magnetic grid to secondary history:
-!     do j=1,nmlat
-! 	call addfsech_ik('ED1M3D'  ,'ed_1 (magn.)','[V/m]',
-!    |    ed13d(:,j,:),1,nmlonp1,nmlev,nmlev,j)
-! 	call addfsech_ik('ED2M3D'  ,'ed_2 (magn.)','[V/m]',
-!    |    ed23d(:,j,:),1,nmlonp1,nmlev,nmlev,j)
-!       call addfsech_ik('ZPOTEN3D','ZPOTEN3D','[cm]',
-!    |    zpotenm3d(:,j,:),1,nmlonp1,nmlev,nmlev,j)
-!     enddo ! j=1,nmlat
+! From fields.F:
+! Electric potential on geographic and magnetic grids:
+!     real ::
+!    |  dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
+!    |  phim3d(nmlonp1,nmlat,nlevp1),    ! 3d electric potential magnetic
+!    |  emphi3d(nmlonp1,nmlat,nlevp1),   ! 3d eastward electric field magnetic
+!    |  emlam3d(nmlonp1,nmlat,nlevp1),   ! 3d equatorw. electric field magnetic
+!    |  emz3d(nmlonp1,nmlat,nlevp1)      ! 3d upward (?) electric field magnetic
+! Local:
+! real,dimension(nmlonp1,nmlat,-2:nlevp1) :: zpotenm3d
+!
+      do j=1,nmlat
+!       call addfld('EMPHI3D','R E_mphi','[V/m*m]',
+!    |   emphi3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!       call addfld('EMLAM3D','R E_mlam','[V/m*m]',
+!    |   emlam3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!       call addfld('EMZ3D','E_mZ','[V/m*m]',
+!    |   emz3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('ED1M3D','ed_1 (magn.)','[V/m]',
+!    |   ed13d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('ED2M3D'  ,'ed_2 (magn.)','[V/m]',
+!    |   ed23d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+       call addfld('PHIM3D','El.Poten','V',
+     |    phim3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('ZPOTEN3D','ZPOTEN3D','[cm]',
+!    |    zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+      enddo ! j=1,nmlat
 !      
       end subroutine threed
 !-----------------------------------------------------------------------
@@ -3456,10 +3516,12 @@
 !
 ! Save 3d potential on magnetic grid to secondary history:
 ! PLEASE DO NOT COMMENT THIS OUT -- ZMAG is a mandatory mag field for sech
-       do j=1,nmlat
-         call addfsech_ik('ZMAG','ZMAG','CM',zpotenm3d(:,j,:),
-     | 	   1,nmlonp1,nmlev,nmlev,j)
-       enddo ! j=1,nmlat
+! real,dimension(nmlonp1,nmlat,-2:nlevp1) :: zpotenm3d
+!
+      do j=1,nmlat
+        call addfld('ZMAG','GEOPOTENTIAL HEIGHT (MAGNETIC)','CM',
+     |    zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nimlevp1,j)
+      enddo ! j=1,nmlat
 !
       end subroutine transf_dyn0
 !-----------------------------------------------------------------------

@@ -4,7 +4,6 @@
 ! Module used to calculcate the Heelis model potential in both hemispheres
 ! Byimf, Ctpoten and Power at a minimum using paramaters from aurora_cons
 !
-      use params_module,only: nmlat,nmlonp1,nmlon,nmlonp1
       use dynamo_module,only: nmlat0,pfrac,phihm
       implicit none
       contains 
@@ -39,6 +38,7 @@
 ! Calculate pfrac fractional presence of dynamo equation using critical
 !  convection colatitudes crit(2).  (crit is in cons module)
 !
+      use params_module,only: nmlonp1
       use aurora_module,only: dskofc, offc ! see aurora.F
       use magfield_module,only: sunlons 
       use cons_module,only: rtd,
@@ -46,15 +46,10 @@
      |  ylonm,ylatm  ! magnetic grid lons, lats
       implicit none
 !
-! Args:
-!     integer,intent(in) :: nmlat0,nmlonp1
-!     real,intent(out) :: pfrac(nmlonp1,nmlat0)
-
-      real,dimension(nmlonp1,nmlat0) :: colatc
-!
 ! Local:
       integer :: i,j
       real :: sinlat,coslat,aslonc,ofdc,cosofc,sinofc
+      real,dimension(nmlonp1,nmlat0) :: colatc
 !
 ! offc(2), dskofc(2) are for northern hemisphere aurora (see aurora.F)
       ofdc = sqrt(offc(2)**2+dskofc(2)**2)
@@ -98,6 +93,7 @@
       end subroutine colath
 !-----------------------------------------------------------------------
       subroutine potm
+      use params_module,only: nmlat,nmlon,nmlonp1
       use magfield_module,only: sunlons 
       use cons_module,only: 
      |  ylonm,ylatm, ! magnetic grid lons, lats

@@ -1611,3 +1611,18 @@
       call expand_path(path) ! expand next env var
 !
       end subroutine expand_path
+!-----------------------------------------------------------------------
+      logical function arrayeq(a0,a1,n)
+      implicit none
+      real,intent(in) :: a0(n),a1(n) 
+      integer,intent(in) :: n
+      integer :: i
+!     
+      arrayeq = .true.
+      do i=1,n
+        if (a0(i) /= a1(i)) then
+          arrayeq = .false.
+          return 
+        endif
+      enddo
+      end function arrayeq

@@ -2,7 +2,8 @@
       module efield_module
       use params_module,only: nlon,nlev,nlat,nlonp4,nmlon,nmlat,nmlonp1,
      |  nmlonp2,nlevp1,nlonp2,nmlatp1,nmlev
-      use mpi_module,only: mytid ! for condx on addfsech call only
+      use mpi_module,only: mytid ! for condx on addfld call only
+      use addfld_module,only: addfld
       implicit none
 !
 ! Electric field components ex,ey,ez on geographic grid are allocated at 
@@ -42,7 +43,8 @@
 !
       use cons_module,only: pi,dlatm,dlonm,dt0dts,rcos0s,table
       use magfield_module,only: alatm,alonm
-      use fields_module,only: phim3d, ! 3d electric potential on magnetic grid
+      use fields_module,only: 
+     |  phim3d,    ! 3d electric potential on magnetic grid
      |  emphi3d,   ! 3d eastward electric field magnetic
      |  emlam3d,   ! 3d equatorw. electric field magnetic
      |  emz3d      ! 3d upward (?) electric field magnetic
@@ -72,7 +74,6 @@
       integer :: 
      |  islot(nlonp4),
      |  jslot(nlonp4)
-      real,dimension(nlevp1,nlonp4) :: extmp,eytmp,eztmp ! for addfsech
 !
 #ifdef VT
 !     code = 117 ; state = 'efield' ; activity='ModelCode'
@@ -80,12 +81,12 @@
 #endif
 !     write(6,"('enter efield: lon0,1=',2i3,' lat0,1=',2i3)")
 !    |  lon0,lon1,lat0,lat1
-
-! fields.F: phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
-!       do j=1,nmlat
-!         call addfsech_ik('PHIM3D',' ',' ',phim3d(:,j,:),
-!    |      1,nmlonp1,nmlev,nmlev-1,j)
-!       enddo ! j=1,nmlat
+!
+! Electric field emx,y,z is calculated from phi at the first timestep.
+! Thereafter, emphi3d,emlam3d,emz3d are calculated in dynamo on the
+!   mag grid, and copied into emx,y,z below.
+!
+      if (istep==1) then ! do only for the first timestep at the moment
 !
       if(istep == 1) then ! do only for the first timestep at the moment
 !
@@ -117,14 +118,6 @@
           enddo ! j=0,nmlatp1
         enddo ! k=1,nlevp1
 !
-! Save phi3d to secondary history from root task:
-!     if (mytid==0) then
-!       do j=1,nmlat
-!         call addfsech_ik('PHI3D',' ',' ',phi3d(:,j,:),
-!    |      1,nmlonp1,nmlev,nmlev-1,j)
-!       enddo ! j=1,nmlat
-!     endif ! (mytid==0) then
-!
 ! Emy is the meridional component of the electric field, at all 
 !   geomagnetic grid points. The factor dt0dts converts from the 
 !   latitudinally distorted geomagnetic grid to standard apex latitudes.
@@ -133,7 +126,7 @@
           do j=1,nmlat
             do i=1,nmlonp1
               emy(i,j,k) = -(phi3d(i,j+1,k)-phi3d(i,j-1,k))/
-     |        (2.*dlatm)*dt0dts(j)
+     |          (2.*dlatm)*dt0dts(j)
             enddo ! i=1,nmlonp1
           enddo ! j=1,nmlat
 !
@@ -145,7 +138,7 @@
             csth0 = cos(-pi/2.+float(j-1)*dlatm)
             do i=1,nmlonp1
               emx(i,j,k) = -(phi3d(i+1,j,k)-phi3d(i-1,j,k))/
-     |   	(2.*dlonm*csth0)*rcos0s(j)
+     |          (2.*dlonm*csth0)*rcos0s(j)
             enddo ! i=1,nmlonp1
           enddo ! j=2,nmlat-1
 !
@@ -164,11 +157,12 @@
             enddo ! i=1,nmlonp1
           enddo ! j=1,nmlat
         enddo ! k=2,nlev
-      
-      else  ! not the first step use fields from dynamo subroutine threed
-      
-! copy fields emphi3d, emlam3d, emz3d into emx, emy, emz
-        do k=1,nlevp1 
+!
+! istep > 1: copy to emx,y,z:
+      else
+!
+! Copy fields emphi3d, emlam3d, emz3d into emx, emy, emz
+        do k=1,nlevp1
           do j=1,nmlat
             do i=1,nmlonp1
               emx(i,j,k) = emphi3d(i,j,k)
@@ -177,16 +171,14 @@
             enddo ! i=1,nmlonp1
           enddo ! j=1,nmlat
         enddo ! k=1,nlevp1
-        
-      endif  ! first step
-
+      endif ! istep
 !     do j=1,nmlat
-!       call addfsech_ik('EMX',' ',' ',emx(:,j,:),1,nmlonp1,nmlev,
-!    |    nmlev-1,j)
-!       call addfsech_ik('EMY',' ',' ',emy(:,j,:),1,nmlonp1,nmlev,
-!    |    nmlev-1,j)
-!       call addfsech_ik('EMZ',' ',' ',emz(:,j,:),1,nmlonp1,nmlev,
-!    |    nmlev-1,j)
+!       call addfld('EMX',' ',' ',emx(:,j,lev0:lev1-1),
+!    |    'mlon',1,nmlonp1,'mlev',1,nmlev-1,j)
+!       call addfld('EMY',' ',' ',emy(:,j,lev0:lev1-1),
+!    |    'mlon',1,nmlonp1,'mlev',1,nmlev-1,j)
+!       call addfld('EMZ',' ',' ',emz(:,j,lev0:lev1-1),
+!    |    'mlon',1,nmlonp1,'mlev',1,nmlev-1,j)
 !     enddo ! j=1,nmlat
 !
 ! Transform emx,emy,emz to geographic space. For each geographic grid 
@@ -258,7 +250,7 @@
 !       endif
 
         do i=lonbeg,lonend
-          do k=2,nlev
+          do k=1,nlevp1
             ez(k,i,j) = 
      |        (1.-pslot(i))*(1.-qslot(i))*emz(islot(i)  ,jslot(i)  ,k)+
      |            pslot(i) *(1.-qslot(i))*emz(islot(i)+1,jslot(i)  ,k)+
@@ -266,29 +258,9 @@
      |        (1.-pslot(i))*    qslot(i) *emz(islot(i)  ,jslot(i)+1,k)
           enddo ! i=1,nlon
         enddo ! k=2,nlev
-
+      enddo ! j=lat0,lat1
 !
 ! Periodic points:
-!       do i=1,2
-!         ex(i,j,:) = ex(nlon+i,j,:)
-!         ey(i,j,:) = ey(nlon+i,j,:)
-!         ez(i,j,:) = ez(nlon+i,j,:)
-!         ex(nlonp2+i,j,:) = ex(i+2,j,:)
-!         ey(nlonp2+i,j,:) = ey(i+2,j,:)
-!         ez(nlonp2+i,j,:) = ez(i+2,j,:)
-!       enddo
-!
-! These are ok, only very small diffs in eytmp around equator.
-!       do i=1,nlonp4
-!         extmp(:,i) = ex(i,j,:)
-!         eytmp(:,i) = ey(i,j,:)
-!         eztmp(:,i) = ez(i,j,:)
-!       enddo
-!       call addfsech('EX',' ',' ',extmp,1,nlonp4,nlevp1,nlev,j)
-!       call addfsech('EY',' ',' ',eytmp,1,nlonp4,nlevp1,nlev,j)
-!       call addfsech('EZ',' ',' ',eztmp,1,nlonp4,nlevp1,nlev,j)
-
-      enddo ! j=lat0,lat1
 
 #ifdef MPI
       call mp_periodic_f3d(ex(:,lon0:lon1,lat0:lat1),
@@ -310,12 +282,12 @@
       enddo
 #endif
 !     do j=lat0,lat1
-!       call addfsech('EX',' ',' ',ex(:,lon0:lon1,j),lon0,lon1,
-!    |    nlevp1,nlev,j)
-!       call addfsech('EY',' ',' ',ey(:,lon0:lon1,j),lon0,lon1,
-!    |    nlevp1,nlev,j)
-!       call addfsech('EZ',' ',' ',ez(:,lon0:lon1,j),lon0,lon1,
-!    |    nlevp1,nlev,j)
+!       call addfld('EX',' ',' ',ex(lev0:lev1-1,lon0:lon1,j),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+!       call addfld('EY',' ',' ',ex(lev0:lev1-1,lon0:lon1,j),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+!       call addfld('EZ',' ',' ',ex(lev0:lev1-1,lon0:lon1,j),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
 !     enddo ! j=lat0,lat1
 !
 #ifdef VT

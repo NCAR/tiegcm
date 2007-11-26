@@ -7,6 +7,7 @@
       use cons_module,only: dlamda_2div3,dlamda_1div12,racs,
      |  dphi_1div12,dphi_2div3,re_inv
       use params_module,only: nlonp4
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -24,8 +25,8 @@
       nk = lev1-lev0+1
       nkm1 = nk-1
 
-!     call addfsech('F_IN',' ',' ',f(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nk,nkm1,lat)
+!     call addfld('F_IN',' ',' ',f(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
       lonbeg = lon0
       if (lon0==1) lonbeg = 3
@@ -57,11 +58,15 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lonbeg,lonend
 
-!     call addfsech('UBARL',' ',' ',ubarl,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('D2X'  ,' ',' ',d2x  ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('D4X'  ,' ',' ',d4x  ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('WK   ',' ',' ',wk   ,lon0,lon1,nk,nkm1,lat)
-
+!     call addfld('UBARL',' ',' ',ubarl(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('D2X'  ,' ',' ',d2x(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('D4X'  ,' ',' ',d4x(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('WK   ',' ',' ',wk (lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!
 !
 ! Finite difference in latitude:
       do i=lonbeg,lonend
@@ -106,10 +111,14 @@
       if (lon0==1) hadvec(:,lon0:lon0+1) = 0.
       if (lon1==nlonp4) hadvec(:,lon1-1:lon1) = 0.
 
-!     call addfsech('VBARP' ,' ',' ',vbarp ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('D4XJ'  ,' ',' ',d4x   ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('D2XJ'  ,' ',' ',d2x   ,lon0,lon1,nk,nkm1,lat)
-!     call addfsech('HADVEC',' ',' ',hadvec,lon0,lon1,nk,nkm1,lat)
+!     call addfld('VBARP' ,' ',' ',vbarp(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('D4XJ'  ,' ',' ',d4x(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('D2XJ'  ,' ',' ',d2x(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('HADVEC',' ',' ',hadvec(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine advec
 !-----------------------------------------------------------------------
@@ -119,6 +128,7 @@
 !
       use params_module,only: dz,nlonp4
       use fields_module,only: w,itc
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -168,6 +178,7 @@
       if (lon0==1) advecv_out(:,lon0:lon0+1) = 0.
       if (lon1==nlonp4) advecv_out(:,lon1-1:lon1) = 0.
 
-!     call addfsech('ADVECV',' ',' ',advecv_out,lon0,lon1,nk,nk-1,lat)
+!     call addfld('ADVECV',' ',' ',advecv_out(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine advecv

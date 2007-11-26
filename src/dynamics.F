@@ -15,6 +15,7 @@
 !          change call to qjoule_tn to include vertical velocity
 !
       use fields_module
+      use params_module,only: dz
       use mpi_module,only: lon0,lon1,lat0,lat1,mytidi
 #ifdef MPI
       use mpi_module,only: distribute_1d,mp_close
@@ -31,7 +32,9 @@
       use hdif_module,only: hdif3,hdif_bndlons,hdif_periodic
       use timing_module,only: timer,timing
       use advance_module,only: time2print
-!
+      use addfld_module,only: addfld
+      use init_module,only: iyear,secs
+      use hist_module,only: modeltime
       implicit none
 !
 ! Args:
@@ -44,14 +47,31 @@
 #endif
 !
 ! Local:
-      integer :: i,j,n,lat,ier
-      integer :: i0,i1,nk,nkm1,nlats
-      logical,parameter :: debug=.false. ! add prints to stdout
+      integer :: i,j,k,n,lat,ier
+      integer :: i0,i1,nk,nkm1,nlats,k0,k1
+      logical,parameter :: debug=.false.  ! add prints to stdout
+      real,parameter ::
+     |  zpm9  = -9.,        ! zp -9.0 level
+     |  zpm5  = -5.         ! zp -5.0 level
+      integer :: nzpm9m5    ! number of levels from zp -9 to zp -5
+!
+! If diags is set true, the following fields will be written to
+! secondary histories:
+!
+! SECFLDS = 'CP','KT','KM','W_OMEGA','UI_ExB','VI_ExB','WI_ExB',
+!           'SCO2','SCO1','SCN2','QTOTAL','QOP','QO2P','QN2P','QNP',
+!           'QNOP','OPLUS','XIOP2P','XIOP2D','NP_diag','N2P_diag',
+!           'NOP_diag','O2P_diag','ELDEN','LXX','LYY','LXY','LYX',
+!           'LAM1','SIGMAPED','SIGMAHAL','CMP_N4S','CMP_NO','QJI_TI',
+!           'T_ELEC','T_ION','COOL_IMPLICIT','COOL_EXPLICIT',
+!           'QJI_TN','TN_UPD','UN_UPD','VN_UPD','O2_UPD','O1_UPD'
+!
       logical,parameter :: diags=.false. ! put fields on sec hist
       real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor
 !
       if (debug) write(6,"(/,'Enter dynamics.')")
-      i0=lon0 ; i1=lon1 ; nk=nlevp1 ; nkm1=nk-1 ! for addfsech
+      i0=lon0 ; i1=lon1 ; nk=nlevp1 ; nkm1=nk-1 ! for addfld
+      k0=1 ; k1=nlevp1
       nlats = lat1-lat0+1
 !
       call bndcmp
@@ -73,12 +93,12 @@
       if (debug) write(6,"('dynamics after cpktkm')")
       if (diags) then
         do lat=lat0,lat1
-          call addfsech('CP' ,' ',' ',cp(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('KT' ,' ',' ',kt(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('KM' ,' ',' ',km(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('CP','CP',' ',cp(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('KT','KT',' ',kt(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('KM','KM',' ',km(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
         enddo
       endif
 !
@@ -90,12 +110,12 @@
      |  un(levd0,lond0,latd0,itp), ! un input
      |  vc(levd0,lond0,latd0,itp), ! vc input
      |  w (levd0,lond0,latd0,itc), ! omega output
-     |  1,nlevp1,lon0,lon1,lat0,lat1,lat0,lat1)
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after swdot')")
       if (diags) then
         do lat=lat0,lat1
-          call addfsech('OMEGA' ,' ',' ',w(:,i0:i1,lat,itc),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('W_OMEGA','VERTICAL MOTION (DZp/DT)',
+     |    's-1',w(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
         enddo
       endif
 !
@@ -110,12 +130,12 @@
       if (debug) write(6,"('dynamics after ionvel')")
       if (diags) then
         do lat=lat0,lat1
-          call addfsech('UIVEL' ,' ',' ',ui(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('VIVEL' ,' ',' ',vi(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('WIVEL' ,' ',' ',wi(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('UI_ExB','Zonal ExB Ion Drift','cm/s',
+     |      ui(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('VI_ExB','Meridional ExB Ion Drift','cm/s',
+     |      vi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('WI_ExB','Vertical ExB Ion Drift','cm/s',
+     |      wi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         enddo
       endif
 !
@@ -140,13 +160,17 @@
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after chapman')")
       if (diags) then
+!
+! Post-processors cannot read 1.e80, so change these to
+! 1.e36 if saving on secondary histories (then change back
+! for rest of model):
         do lat=lat0,lat1
-          call addfsech('SCO2' ,' ',' ',sco2(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('SCO1' ,' ',' ',sco1(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('SCN2' ,' ',' ',scn2(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('SCO2','Chapman slant-column O2',' ',
+     |      sco2(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('SCO1','Chapman slant-column O1',' ',
+     |      sco1(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('SCN2','Chapman slant-column N2',' ',
+     |      scn2(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         enddo
       endif
 !
@@ -169,39 +193,44 @@
 !     code = 122 ; state = 'ions' ; activity='ModelCode'
       call vtbegin(122,ier)
 #endif
+      time1_qrj = 0.
       do lat=lat0,lat1
 !
 ! Calculate ionization and heating rates:
+!     subroutine qrj(sco2,sco1,scn2,tn,no,o2,o1,n4s,xnmbari,
+!    |  lev0,lev1,lon0,lon1,lat)
 !
-        if (debug) write(6,"('dynamics call qrj: lat=',i3)") lat
-        call timer(time0,time1,'QRJ',0,0) ! start qrj timing for current lat
-        call qrj(
-     |    sco2(levd0,lond0,lat),
-     |    sco1(levd0,lond0,lat),
-     |    scn2(levd0,lond0,lat),
-     |    tn  (levd0,lond0,lat,itp),
-     |    no  (levd0,lond0,lat,itp),
-     |    o2  (levd0,lond0,lat,itp),
-     |    o1  (levd0,lond0,lat,itp),
-     |    n4s (levd0,lond0,lat,itp),
-     |    xnmbari(levd0,lond0,lat),
-     |    1,nlevp1,lon0,lon1,lat)
-        call timer(time0,time1,'QRJ',1,0) ! end qrj timing for current lat
-        time1_qrj = time1_qrj+time1
-        if (debug) write(6,"('dynamics after qrj: lat=',i3)") lat
+!       if (mod(istep,nstepqrj)==0) then
+          if (debug) write(6,"('dynamics call qrj: lat=',i3)") lat
+          call timer(time0,time1,'QRJ',0,0) ! start qrj timing for current lat
+          call qrj(
+     |      sco2(levd0,lond0,lat),
+     |      sco1(levd0,lond0,lat),
+     |      scn2(levd0,lond0,lat),
+     |      tn  (levd0,lond0,lat,itp),
+     |      no  (levd0,lond0,lat,itp),
+     |      o2  (levd0,lond0,lat,itp),
+     |      o1  (levd0,lond0,lat,itp),
+     |      n4s (levd0,lond0,lat,itp),
+     |      xnmbari(levd0,lond0,lat),
+     |      1,nlevp1,lon0,lon1,lat)
+          call timer(time0,time1,'QRJ',1,0) ! end qrj timing for current lat
+          time1_qrj = time1_qrj+time1
+          if (debug) write(6,"('dynamics after qrj: lat=',i3)") lat
+!       endif
         if (diags) then
-          call addfsech('QTOTAL' ,' ',' ',qtotal(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('QOP'    ,' ',' ',qop(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('QO2P'   ,' ',' ',qo2p(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('QN2P'   ,' ',' ',qn2p(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('QNP'    ,' ',' ',QNP(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('QNOP'   ,' ',' ',qnop(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('QTOTAL','Total Heating',' ',
+     |      qtotal(:,i0:i1,lat),'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('QOP'   ,'QO+ from QRJ',' ',
+     |      qop(:,i0:i1,lat),'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('QO2P'  ,'QO2+ from QRJ',' ',
+     |      qo2p(:,i0:i1,lat),'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('QN2P'  ,'QN2+ from QRJ',' ',
+     |      qn2p(:,i0:i1,lat),'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('QNP'   ,'QN+ from QRJ',' ',
+     |      qnp(:,i0:i1,lat),'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('QNOP'  ,'QNO+ from QRJ',' ',
+     |      qnop(:,i0:i1,lat),'ilev',k0,k1,'lon',i0,i1,lat)
         endif
 !
 ! Calculate background (nightime) ionization:
@@ -275,12 +304,12 @@
      |    f12.2,' Dynamics: step ',i5)") time1,istep
       if (diags) then
         do lat=lat0,lat1
-          call addfsech('OPLUS' ,' ',' ',op(:,i0:i1,lat,itc),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('XIOP2P',' ',' ',xiop2p(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('XIOP2D',' ',' ',xiop2d(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('OPLUS' ,'O+ Ion',' ',op(:,i0:i1,lat,itc),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('XIOP2P','O+(2P)',' ',xiop2p(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('XIOP2D','O+(2D)',' ',xiop2d(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
         enddo
       endif
 !
@@ -307,24 +336,26 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after oplus')")
+!
+! Ions and electron density are at interface levels (ilev):
       do lat=lat0,lat1
         if (diags) then
-          call addfsech('NPLUS'  ,' ',' ',nplus(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('ELD_N2P',' ',' ',n2p(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('ELD_NOP',' ',' ',nop(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('ELD_O2P',' ',' ',o2p(:,i0:i1,lat,itc),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('ELD_NE' ,' ',' ',ne (:,i0:i1,lat,itc),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('NP_diag' ,'N+ Ion' ,'cm^3',nplus(:,i0:i1,lat),
+     |      'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('N2P_diag','N2+ Ion','cm^3',n2p(:,i0:i1,lat),
+     |      'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('NOP_diag','NO+ Ion','cm^3',nop(:,i0:i1,lat),
+     |      'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('O2P_diag','O2+ Ion','cm^3',o2p(:,i0:i1,lat,itc),
+     |      'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('ELDEN' ,'Electron Density','cm-3',
+     |      ne (:,i0:i1,lat,itc),'ilev',k0,k1,'lon',i0,i1,lat)
         endif
       enddo ! lat=lat0,lat1
-
 !
 ! Lamda ion drag coefficients:
 !
+      time1_cmpminor = 0.
       do lat=lat0,lat1
         call lamdas(
      |    tn  (levd0,lond0,lat,itp),
@@ -346,20 +377,20 @@
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after lamdas: lat=',i3)") lat
         if (diags) then
-          call addfsech('LXX',' ',' ',lxx(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('LYY',' ',' ',lyy(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('LXY',' ',' ',lxy(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('LYX',' ',' ',lyx(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('LAM1','lam1','1/s',lam1(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('SIGMAPED',' ',' ',ped(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('SIGMAHAL',' ',' ',hall(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('LXX','Lamda XX',' ',lxx(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('LYY','Lamda YY',' ',lyy(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('LXY','Lamda XY',' ',lxy(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('LYX','Lamda YX',' ',lyx(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('LAM1','LAM1','1/s',lam1(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('SIGMAPED','Pedersen Conductivity','S/m',
+     |      ped(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('SIGMAHAL','Hall Conductivity','S/m',
+     |      hall(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         endif
 !
 ! Calculate n2d:
@@ -382,8 +413,8 @@
       call timer(time0,time1,'CMPMINOR',1,0) ! suspend comp minor timing
       time1_cmpminor = time1_cmpminor+time1
       if (diags) then
-        call addfsech('CMP_N2D',' ',' ',n2d(:,i0:i1,lat,itc),
-     |    i0,i1,nk,nkm1,lat)
+        call addfld('CMP_N2D',' ',' ',n2d(:,i0:i1,lat,itc),
+     |    'lev',k0,k1,'lon',i0,i1,lat)
       endif
 !
 ! Advance n4s:
@@ -424,8 +455,10 @@
       call timer(time0,time1,'CMPMINOR',1,0) ! suspend comp minor timing
       time1_cmpminor = time1_cmpminor+time1
       if (diags) then
-        call addfsech('CMP_N4S',' ',' ',n4s(:,i0:i1,lat,itc),
-     |    i0,i1,nk,nkm1,lat)
+        do lat=lat0,lat1
+          call addfld('CMP_N4S','N4S density','mmr',
+     |      n4s(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
+        enddo
       endif
 ! 
 ! Advance NO: 
@@ -463,8 +496,10 @@
      |  write(6,"('Time in CMPMINOR =     ',f12.2,
      |    ' Dynamics: step ',i5)") time1_cmpminor,istep
       if (diags) then
-        call addfsech('CMP_NO',' ',' ',no(:,i0:i1,lat,itc),
-     |    i0,i1,nk,nkm1,lat)
+        do lat=lat0,lat1
+          call addfld('CMP_NO','NO density','mmr',
+     |      no(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
+        enddo
       endif
 !
 ! Calculate additions to neutral gas heating and O2 dissociation
@@ -483,6 +518,7 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo
       if (debug) write(6,"('dynamics after qjnno')")
+
 !
 ! Calculate ion chemistry contribution to neutral gas heating
 !   and O2 dissociation:
@@ -532,8 +568,8 @@
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after qjoule_ti: lat=',i3)")lat
         if (diags) then
-          call addfsech('QJI_TI',' ',' ',qji_ti(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('QJI_TI','Joule Heating for TI',' ',
+     |      qji_ti(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         endif
 !
         call settei(
@@ -552,15 +588,13 @@
      |    ti  (levd0,lond0,lat,itc), ! output
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after settei: lat=',i3)") lat
+        if (diags) then
+          call addfld('T_ELEC','Electron Temperature','K',
+     |      te(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('T_ION' ,'Ion Temperature','K',
+     |      ti(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
+        endif
       enddo ! lat=lat0,lat1
-      if (diags) then
-        do lat=lat0,lat1
-          call addfsech('TE_UPD',' ',' ',te(:,i0:i1,lat,itc),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('TI_UPD',' ',' ',ti(:,i0:i1,lat,itc),
-     |      i0,i1,nk,nkm1,lat)
-        enddo
-      endif
 !
 ! Implicit and explicit cooling terms:
       do lat=lat0,lat1
@@ -568,8 +602,8 @@
      |    tn  (levd0,lond0,lat,itp),
      |    o2  (levd0,lond0,lat,itp),
      |    o1  (levd0,lond0,lat,itp),
-     |    no  (levd0,lond0,lat,itp),
-     |    barm(levd0,lond0,lat,itp),
+     |    no  (levd0,lond0,lat,itp), 
+     |    barm(levd0,lond0,lat,itp), 
      |    cp  (levd0,lond0,lat),
      |    cool_implicit(levd0,lond0,lat), ! output implicit cooling
      |    cool_explicit(levd0,lond0,lat), ! output explicit cooling
@@ -589,10 +623,10 @@
       if (debug) write(6,"('dynamics after newton,newto3p')")
       if (diags) then
         do lat=lat0,lat1
-          call addfsech('COOL_IMP',' ',' ',cool_implicit(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
-          call addfsech('COOL_EXP',' ',' ',cool_explicit(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('COOL_IMP',' ',' ',cool_implicit(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('COOL_EXP',' ',' ',cool_explicit(:,i0:i1,lat),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
         enddo
       endif
 !
@@ -641,8 +675,8 @@
      |    qji_tn(levd0,lond0,lat),  ! ion joule heating output
      |    1,nlevp1,lon0,lon1,lat)
         if (diags) then
-          call addfsech('QJI_TN',' ',' ',qji_tn(:,i0:i1,lat),
-     |      i0,i1,nk,nkm1,lat)
+          call addfld('QJI_TN','Joule Heating for TN',' ',
+     |      qji_ti(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         endif
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after qjoule_tn')")
@@ -674,6 +708,12 @@
       if (timing%level >= 2.and.time2print(nstep,istep))
      |  write(6,"('Time in DT =           ',f12.2,
      |    ' Dynamics: step ',i5)") time1,istep
+      if (diags) then
+        do lat=lat0,lat1
+          call addfld('TN_UPD','Updated TN','K',
+     |      tn(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
+        enddo
+      endif
 !
 ! Advance neutral velocities:
 !
@@ -708,7 +748,15 @@
       if (timing%level >= 2.and.time2print(nstep,istep))
      |  write(6,"('Time in DUV =          ',f12.2,
      |    ' Dynamics: step ',i5)") time1,istep
-!     
+      if (diags) then
+        do lat=lat0,lat1
+          call addfld('UN_UPD','Updated UN','cm/s',
+     |      un(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('VN_UPD','Updated VN','cm/s',
+     |      vn(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
+        enddo
+      endif
+!
 ! Sources and sinks for major species composition O2, O:
 !
       do lat=lat0,lat1
@@ -760,5 +808,6 @@
       if (timing%level >= 2.and.time2print(nstep,istep))
      |  write(6,"('Time in CMPMAJOR =     ',f12.2,
      |    ' Dynamics: step ',i5)") time1_cmpmajor,istep
+      if (debug) write(6,"('dynamics returning')")
       if (debug) write(6,"('dynamics returning')")
       end subroutine dynamics

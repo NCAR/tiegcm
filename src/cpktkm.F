@@ -4,6 +4,7 @@
 ! Define diagnostics CP, KT, and KM.
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,gask,t0
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -27,13 +28,13 @@
       nlons = lon1-lon0+1
       nlevs = lev1-lev0+1
 
-!     call addfsech('tn_cp',' ',' ',tn(:,lon0:lon1),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('o2_cp',' ',' ',o2(:,lon0:lon1),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!     call addfsech('o1_cp',' ',' ',o1(:,lon0:lon1),lon0,lon1,nlevs,
-!    |  nlevs-1,lat)
-!
+!     call addfld('tn_cp',' ',' ',tn(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('o2_cp',' ',' ',o2(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('o1_cp',' ',' ',o1(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+
       do i=lon0,lon1
         do k=lev0,lev1
           fmbar(k,i) = 1./(o2(k,i)*rmassinv_o2 + o1(k,i)*rmassinv_o1 +
@@ -47,10 +48,14 @@
           fkt(k,i) = (po2(k,i)+pn2(k,i))*56. + po1(k,i)*75.9
         enddo
       enddo      
-!     call addfsech('fcp1',' ',' ',fcp,nlons,nlevs,nlevs,lat)
-!     call addfsech('fkm1',' ',' ',fkm,nlons,nlevs,nlevs,lat)
-!     call addfsech('fkt1',' ',' ',fkt,nlons,nlevs,nlevs,lat)
-!
+
+!     call addfld('fcp1',' ',' ',fcp(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('fkm1',' ',' ',fkm(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('fkt1',' ',' ',fkt(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+
       do i=lon0,lon1
         do k=lev0,lev1-1
           fkm(k,i) = fkm(k,i)*(tn(k,i)+.5*(t0(k)+t0(k+1)))**0.69*1.e-6
@@ -63,9 +68,13 @@
         fkt(lev1,i) =       fkt(lev1,i)*(tn(lev1-1,i)+
      |                1.5*t0(lev1)-.5*t0(lev1-1))**0.69
       enddo
-!     call addfsech('fcp2',' ',' ',fcp,nlons,nlevs,nlevs,lat)
-!     call addfsech('fkm2',' ',' ',fkm,nlons,nlevs,nlevs,lat)
-!     call addfsech('fkt2',' ',' ',fkt,nlons,nlevs,nlevs,lat)
+
+!     call addfld('fcp2',' ',' ',fcp(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('fkm2',' ',' ',fkm(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('fkt2',' ',' ',fkt(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
 
       do i=lon0,lon1
         do k=lev1,lev0+1,-1
@@ -80,11 +89,11 @@
         fkt(1,i) = 2.*fkt(1,i)-fkt(2,i)
       enddo
 
-!     call addfsech('CP',' ',' ',fcp(:,lon0:lon1),lon0,lon1,nlevs,
-!    |  nlevs,lat)
-!     call addfsech('KT',' ',' ',fkt(:,lon0:lon1),lon0,lon1,nlevs,
-!    |  nlevs,lat)
-!     call addfsech('KM',' ',' ',fkm(:,lon0:lon1),lon0,lon1,nlevs,
-!    |  nlevs,lat)
+!     call addfld('CP',' ',' ',fcp(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('KT',' ',' ',fkt(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('KM',' ',' ',fkm(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
 
       end subroutine cpktkm

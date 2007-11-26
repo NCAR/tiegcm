@@ -5,9 +5,11 @@
      |  nc_define,   ! subroutine to define vars in a new netcdf file
      |  nc_wrhist,   ! subroutine to write history to an open netcdf file
      |  nc_close,    ! subroutine to close a netcdf file
-     |  nc_fileinfo
+     |  nc_fileinfo,
+     |  def_fsech
 !
       contains
+!-----------------------------------------------------------------------
       subroutine outhist(istep,modeltime)
 !
 ! Determine if its time to write a history, and if so call
@@ -145,8 +147,8 @@
 ! Define current history structure:
       nhist = nhist+1 ! increment number of histories on current file
       call define_hist('primary')
-      if (newseries.or.fullfile) 
-     |  call nc_define(ncid)  ! define new file
+      if (newseries.or.fullfile)
+     |  call nc_define(ncid)  ! define new primary history file
 !
 ! Write the history:
       call nc_wrhist(ncid,diskfile,iprinthist)  ! write the history
@@ -154,7 +156,7 @@
 !
 ! Report to stdout:
       write(6,"('Wrote primary   history ',i3,',',i2,',',i2,
-     |  ' to ',a,' (',i3,' of ',i3,')')") modeltime(1:3),
+     |  ' to ',a,' (',i4,' of ',i4,')')") modeltime(1:3),
      |  trim(diskfile),ihist_total,nhist_total
 !
 ! Save file if necessary:
@@ -267,7 +269,13 @@
 !    |  ncidsech,nsech,newseries,fullfile
 
       if (newseries.or.fullfile) 
-     |  call nc_define(ncidsech)  ! define new file
+     |  call nc_define(ncidsech)  ! define new secondary history file
+!
+! First history of first secondary file does not define diags because
+! addfld has not been called yet. Therefore, if this is the 2nd history
+! of the first file, define diags now:
+!
+      if (isecout==1.and.nsech==2) call def_fsech(ncidsech)
 !
 ! Write the history:
       call nc_wrhist(ncidsech,diskfile,iprinthist)  ! write the history
@@ -275,7 +283,7 @@
 !
 ! Report to stdout:
       write(6,"('Wrote secondary history ',i3,',',i2,',',i2,
-     |  ' to ',a,' (',i3,' of ',i3,')')") modeltime(1:3),
+     |  ' to ',a,' (',i4,' of ',i4,')')") modeltime(1:3),
      |  trim(diskfile),ihist_total,nsech_total
 !
 ! Save file if necessary:
@@ -365,37 +373,36 @@
       if (reopen) call nc_open(ncid,diskfile,'OLD','APPEND')
       end subroutine savefile
 !-----------------------------------------------------------------------
-      subroutine define_hist(type)
+      subroutine define_hist(hist_type)
 !
 ! Define history structure h in hist_module.F, prior to 
 !   writing history file.
-! On input, type is either "prim" or "sech" for primary or
+! On input, hist_type is either "prim" or "sech" for primary or
 !   secondary histories.
 !
       use params_module,only: tgcm_name,tgcm_version,spval,nlat,
-     |  nlon,nlevp1,zst,zsb
-      use hist_module,only: h,hist_initype,nhist,nsech,modeltime,
+     |  nlon,nlevp1,zibot,zitop,zmbot,zmtop
+      use hist_module,only: sh,h,hist_initype,nhist,nsech,modeltime,
      |  isecout,ioutfile,nsource,nsecsource,iseries_prim,iseries_sech
       use input_module,only: output,secout,date,step,power,ctpoten,
      |  byimf,f107,f107a,mag,tide,tide2,colfac,source,hist,sechist,
-     |  calendar_advance,secsource,gswm_di_ncfile,gswm_sdi_ncfile,
-     |  gswm_nmdi_ncfile,gswm_nmsdi_ncfile,dynamo
+     |  calendar_advance,secsource,gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,
+     |  gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,dynamo,source_start,start,
+     |  gpi_ncfile,see_ncfile,ncep_ncfile,label
 
-      use init_module,only: rundate,runtime,logname,host,system,
-     |  iyear,iday,istep,igetgpi,igetgswmdi,igetgswmsdi,start_mtime,
-     |  igetgswmnmdi,igetgswmnmsdi
-      use fields_module,only: nf4d,f4d,fsech,fsechmag,fsech2d,
-     |  fsechmag2d,fsechmagphr2d
-      use cons_module,only: p0
+      use init_module,only: logname,host,system,iyear,iday,istep,
+     |  start_mtime
+      use fields_module,only: nf4d_hist,f4d,fsechist
+      use cons_module,only: p0,grav
 !     use aurora_module,only: alfa30,e30,alfa_sp,e_sp
       implicit none
 !
 ! Args:
-      character(len=*),intent(in) :: type ! primary or secondary
+      character(len=*),intent(in) :: hist_type ! primary or secondary
 !
 ! Local:
       integer :: i,ier,imo,ida,sourceyear,sourceday,sourcemtime(3)
-      character(len=8) :: writedate,writetime
+      character(len=8) :: write_date,write_time
       character(len=80) :: char80
 !
 ! External:
@@ -406,23 +413,28 @@
 !
       call hist_initype(h,istep)
 !
+      h%hist_type  = hist_type
+      if (nsource > 0) then ! initial run
+        h%run_type = 'initial'
+        h%source_file = source
+        h%source_mtime = source_start
+      else ! continuation run
+        h%run_type = 'continuation'
+        h%source_file = output(1)
+        h%source_mtime = start(:,1)
+      endif
+!
 ! Define primary or secondary history structure (hist_mod.f):
-      select case(type)
+      select case(hist_type)
         case ('primary')
           h%ihist = nhist
           h%delhmins = mtime_to_mins(hist(:,iseries_prim))
-          h%mss_path = output(ioutfile)
-          if (nsource > 0) then ! initial run
-            h%mss_source = source
-          else ! continuation run
-            h%mss_source = output(1)
-          endif
-          if (nsecsource > 0) then ! initial run
-            h%mss_secsource = secsource
-          else ! continuation run
-            h%mss_secsource = ' '
-          endif
-          h%nflds = nf4d ! is parameter for now
+          h%mss_path = output(ioutfile)   ! this does not go on new hist files
+
+          h%output_file = output(ioutfile)
+          call expand_path(h%output_file)
+
+          h%nflds = nf4d_hist ! is parameter for now
           if (associated(h%fnames)) deallocate(h%fnames)
           if (h%nflds > 0) then
             allocate(h%fnames(h%nflds),stat=ier)
@@ -439,100 +451,29 @@
           h%nfmag = 0       ! no magnetic fields on primary history
           h%nfgeo2d = 0     ! no geographic 2d fields on primary history
           h%nfmag2d  = 0    ! no magnetic 2d fields on primary history
-          h%nfmagphr = 0    ! no magnetospheric 2d fields on primary history
         case ('secondary')
-          if (nsource > 0) then ! initial run
-            h%mss_source = source
-          else ! continuation run
-            h%mss_source = output(1)
-          endif
-          if (nsecsource > 0) then ! initial run
-            h%mss_secsource = secsource
-          else ! continuation run
-            h%mss_secsource = ' not defined '
-          endif
           h%ihist = nsech
           h%delhmins = mtime_to_mins(sechist(:,iseries_sech))
-          h%mss_path = secout(isecout)
-          if (nsource > 0) then ! initial run
-            h%mss_source = source
-          else ! continuation run
-            h%mss_source = output(1)
-          endif
-!
-! h%nfgeo:    # geographic fields
-! h%nfmag:    # magnetic fields
-! h%nfgeo2d:  # geographic 2d fields           
-! h%nfmag2d:  # magnetic 2d fields       
-! h%nfmagphr: # magnetospheric fields   
-!
-          h%nfgeo = count(len_trim(fsech%short_name) > 0)
-          h%nfmag = count(len_trim(fsechmag%short_name) > 0)
-          h%nfgeo2d  = count(len_trim(fsech2d%short_name) > 0)
-          h%nfmag2d  = count(len_trim(fsechmag2d%short_name) > 0)   
-          h%nfmagphr = count(len_trim(fsechmagphr2d%short_name) > 0)
-          h%nflds = h%nfgeo+h%nfmag+h%nfgeo2d+h%nfmag2d+h%nfmagphr
-          if (h%nflds > 0 .and. .not.associated(h%fnames)) then
-!           write(6,"('define_hist allocating sech h%fnames with ',
-!    |        'h%nflds=',i3)") h%nflds
-            allocate(h%fnames(h%nflds),stat=ier)
-            if (ier /= 0) then
-              write(6,"('>>> define_hist: error allocating h%fnames',
-     |          ' for secondary history: h%nflds=',i3)") h%nflds
-            else
-              if (h%nfgeo > 0) then
-                do i=1,h%nfgeo
-                  h%fnames(i) = fsech(i)%short_name
-                enddo
-              endif
-              if (h%nfmag > 0) then
-                do i=1,h%nfmag
-                  h%fnames(h%nfgeo+i) = fsechmag(i)%short_name
-                enddo
-              endif
-              if (h%nfgeo2d > 0) then
-                do i=1,h%nfgeo2d
-                  h%fnames(h%nfgeo+h%nfmag+i) =fsech2d(i)%short_name
-                enddo
-              endif
-              if (h%nfmag2d > 0) then
-                do i=1,h%nfmag2d
-                  h%fnames(h%nfgeo+h%nfmag+h%nfgeo2d+i) =
-     |                fsechmag2d(i)%short_name
-                enddo
-              endif
-              if (h%nfmagphr > 0) then
-                do i=1,h%nfmagphr
-                  h%fnames(h%nfgeo+h%nfmag+h%nfgeo2d+h%nfmag2d+i) =
-     |                fsechmagphr2d(i)%short_name
-                enddo
-              endif
-            endif
-          endif
+          h%mss_path = secout(isecout)    ! this does not go on new hist files
+          h%output_file = secout(isecout)
+          call expand_path(h%output_file)
         case default
-          write(6,"('>>> define_hist: unknown type = ',a)") type
+          write(6,"('>>> define_hist: unknown hist_type = ',a)") 
+     |      hist_type
       end select
 !
+      h%label   = label
       h%year    = iyear
-!     h%calday  = iday
       h%day     = iday
       h%calendar_advance = calendar_advance
-!
-! Rundate and runtime were set by init and are saved in init module.
-! H%createdate will be defined by nc_wrhist.
-! Writedate is defined here.
-! 
-      h%rundate = rundate//' '//runtime
-      call datetime(writedate,writetime)
-      h%writedate = writedate//' '//writetime
+      call datetime(write_date,write_time)
+      h%write_date = write_date//' '//write_time
       h%logname = logname
       h%host    = host
       h%system  = system
       h%model_name    = tgcm_name
       h%model_version = tgcm_version
-      h%type  = type
       h%modeltime = modeltime
-!     h%time  = mtime_to_mins(modeltime(1:3))
       h%time = mtime_to_datestr(h%year,h%modeltime,imo,ida,char80)
       h%iter  = mtime_to_nstep(modeltime(1:3),step)
       h%ut    = float(modeltime(2))+float(modeltime(3))/60.+
@@ -541,36 +482,74 @@
       h%dtide(:)  = tide2(:)
       h%sdtide(:) = tide(:)
 !
-! If istep==0, then h%f107, etc were defined from source history,
+! If istep==0, then h%f107, etc were defined from source history (sh),
 ! otherwise (istep > 0), at least one step has been taken and 
 ! f107, etc were defined either by user or by getgpi.
 !
-      if (istep > 0) then
+      if (istep == 0) then
+        h%f107d     = sh%f107d
+        h%f107a     = sh%f107a
+        h%hpower    = sh%hpower
+        h%ctpoten   = sh%ctpoten
+        h%byimf     = sh%byimf
+        h%colfac    = sh%colfac
+      else
         h%f107d     = f107
         h%f107a     = f107a
         h%hpower    = power
         h%ctpoten   = ctpoten
+        h%byimf     = byimf
+        h%colfac    = colfac
       endif
-      h%byimf     = byimf
-      h%colfac    = colfac
+
 ! time-gcm only:
 !     h%alfa30    = alfa30
 !     h%e30       = e30
 !     h%alfad2    = alfa_sp ! was alfad2
 !     h%ed2       = e_sp    ! was ed2
-      h%p0        = p0
+
+      h%p0_model  = p0       !  5.e-4 ubars (cons.F)
+      h%p0        = p0*1.e-3 !  5.e-7 millibars (hPa)
+      h%grav      = grav
       h%step      = step
-      h%gpi       = igetgpi
-      h%gswmdi    = igetgswmdi
-      h%gswmsdi   = igetgswmsdi
-      h%gswmnmdi  = igetgswmnmdi
-      h%gswmnmsdi = igetgswmnmsdi
+
+      h%gpi_ncfile= gpi_ncfile
+      if (len_trim(gpi_ncfile) == 0) h%gpi_ncfile = '[none]'
+      h%see_ncfile= see_ncfile
+      if (len_trim(see_ncfile) == 0) h%see_ncfile = '[none]'
+      h%ncep_ncfile= ncep_ncfile
+      if (len_trim(ncep_ncfile) == 0) h%ncep_ncfile = '[none]'
+
+      h%gswm_mi_di_ncfile= gswm_mi_di_ncfile
+      if (len_trim(gswm_mi_di_ncfile) == 0) 
+     |  h%gswm_mi_di_ncfile = '[none]'
+
+      h%gswm_mi_sdi_ncfile= gswm_mi_sdi_ncfile
+      if (len_trim(gswm_mi_sdi_ncfile) == 0) 
+     |  h%gswm_mi_sdi_ncfile = '[none]'
+
+      h%gswm_nm_di_ncfile= gswm_nm_di_ncfile
+      if (len_trim(gswm_nm_di_ncfile) == 0) 
+     |  h%gswm_nm_di_ncfile = '[none]'
+
+      h%gswm_nm_sdi_ncfile= gswm_nm_sdi_ncfile
+      if (len_trim(gswm_nm_sdi_ncfile) == 0) 
+     |  h%gswm_nm_sdi_ncfile = '[none]'
+
+! 11/2/05 btf: Integer gswm flags no longer in use
+!     h%gswmdi    = igswm_mi_di
+!     h%gswmsdi   = igswm_mi_sdi
+!     h%gswmnmdi  = igswm_nm_di
+!     h%gswmnmsdi = igswm_nm_sdi
+
       h%missing_value = spval
       h%nlat = nlat
       h%nlon = nlon
       h%nlev = nlevp1
-      h%zptop = zst
-      h%zpbot = zsb
+      h%zmtop = zmtop
+      h%zmbot = zmbot
+      h%zitop = zitop
+      h%zibot = zibot
       h%dynamo = .false.
       if (dynamo > 0) h%dynamo = .true.
       end subroutine define_hist

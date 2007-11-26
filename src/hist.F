@@ -1,5 +1,7 @@
 !
       module hist_module
+      use input_module,only: mxlen_filename
+      use params_module,only: spval,ispval
       implicit none
 !
 ! History module contains non-user input variables to control
@@ -69,31 +71,37 @@
      |  nsecsource,     ! number of secsource files given (for mhd model)
      |  nsech_total,    ! number of sech histories written during run
      |  isecout,        ! secout(isecout) is current open hist file name
-     |  nfsech_mag,     ! number of sech fields on magnetic grid
-     |  nfsech_geo,     ! number of sech fields on geographic grid
-     |  nfsech_geo2d,   ! number of sech fields on geographic 2d grid
-     |  nfsech_mag2d,   ! number of sech fields on magnetic 2d grid
-     |  nfsech_magphr   ! number of sech fields on magnetospheric 2d grid
+     |  nfsech          ! number of secondary history fields (SECFLDS)
 !
 ! History structure type:
 !
       type history
+        character(len=80) ::
+     |    label              ! user-defined job comment (from namelist)
         character(len=16) ::
      |    model_version,     ! version string (e.g., tgcm24)
      |    model_name         ! model name (e.g., time-gcm)
         character(len=16) ::
-     |    type,              ! 'primary' or 'secondary'
+     |    hist_type,         ! 'primary' or 'secondary'
+     |    run_type,          ! 'initial' or 'continuation'
      |    host,              ! host machine (getenv of 'HOST')
      |    system,            ! operating system (pre-proc macro)
      |    logname            ! user login (getenv of 'LOGNAME')
         character(len=24) ::
-     |    rundate,           ! local date of run
-     |    createdate,        ! date history file was created
-     |    writedate          ! most recent date file was written to
-        character(len=80) ::
+     |    create_date,       ! date history file was created
+     |    write_date         ! date current history was written
+        character(len=mxlen_filename) ::
      |    mss_path,          ! mss path to file containing this history
-     |    mss_source,        ! mss path to source history file
-     |    mss_secsource      ! mss path to secsource history file
+     |    source_file,       ! source file (this run)
+     |    initial_file,      ! initial file (initial run)
+     |    output_file,       ! output file (from namelist read)
+     |    see_ncfile,        ! SEE data file
+     |    gpi_ncfile,        ! gpi data file
+     |    ncep_ncfile,       ! ncep data file (timegcm only)
+     |    gswm_mi_di_ncfile, ! GSWM migrating diurnal data file
+     |    gswm_mi_sdi_ncfile,! GSWM migrating semi-diurnal data file
+     |    gswm_nm_di_ncfile, ! GSWM non-migrating diurnal data file
+     |    gswm_nm_sdi_ncfile ! GSWM non-migrating semi-diurnal data file
         integer ::
      |    nlat,              ! number of latitude grid points
      |    nlon,              ! number of longitude grid points
@@ -103,27 +111,24 @@
      |    modeltime(4),      ! model time (day,hour,minute,seconds)
      |    iter,              ! iteration (# steps from 0,0,0)
      |    year,              ! 4-digit year
-!    |    calday,            ! calendar day (1-367)
      |    day,               ! calendar day (1-367)
      |    calendar_advance,  ! 0/1
      |    step,              ! time step (seconds)
-     |    ncep,              ! nmc/ncep flag (0 or 1)
-     |    gpi,               ! gpi flag (0 or 1)
-     |    gswmdi,            ! gswm flag diurnal tides(0 or 1)
-     |    gswmsdi,           ! gswm flag semidiurnal tides (0 or 1)
-     |    gswmnmdi,          ! gswm flag nonmigrationg diurnal tides (0 or 1)
-     |    gswmnmsdi,         ! gswm flag nonmigrationg semidiurnal tides (0 or 1)
      |    initial_year,      ! initial starting year
-     |    initial_day,       ! initial starting day
      |    initial_mtime(3),  ! initial starting model time
-     |    source_mtime(3)    ! start time of source history
+     |    source_mtime(3),   ! start time of source history
+     |    tuv_lbc_intop      ! 1 (old histories), or 0 (new histories)
         real :: 
      |    ut,                ! ut (decimal hours, from modeltime)
      |    time,              ! model time ("minutes since yyyy-m-d")
      |    missing_value,     ! missing value (usually spval)
-     |    zptop,             ! top Zp level
-     |    zpbot,             ! bottom Zp level
-     |    p0,                ! reference pressure
+     |    zmtop,             ! top midpoint level
+     |    zmbot,             ! bottom midpoint level
+     |    zitop,             ! top interface level
+     |    zibot,             ! bottom interface level
+     |    p0,                ! reference pressure (5.e-7 mb (or hPa))
+     |    p0_model,          ! reference pressure used in the model (5.e-4 ubars)
+     |    grav,              ! gravity constant used in model
      |    hpower,            ! hemispheric power
      |    ctpoten,           ! cross-cap potential
      |    byimf,             ! by imf
@@ -133,44 +138,51 @@
      |    dtide(2),          ! diurnal tide (tide2(2) from input)
      |    sdtide(10),        ! semi-diurnal tide (tide(10) from input)
      |    colfac,            ! collision factor
-     |    alfa30,e30,alfad2,ed2 ! auroral parameters from input
+     |    alfa30,e30,alfad2,ed2, ! auroral parameters from input
+     |    lbc                ! lower boundary interface level
         logical dynamo       ! if true, is dynamo history
         logical coupled_ccm  ! if true, run was coupled with ccm
         integer :: nflds,    ! total number of fields on history
-                             ! nflds = nfgeo+nfmag+nfgeo2d+nfmag2d+nfmagphr
+                             ! nflds = nfgeo+nfmag+nfgeo2d+nfmag2d
      |             nfgeo,    ! number of fields on geographic grid
      |             nfmag,    ! number of fields on magnetic grid
      |             nfgeo2d,  ! number of fields on geographic grid 2d
-     |             nfmag2d,  ! number of fields on magnetic grid 2d
-     |             nfmagphr  ! number of fields on magnetospheric grid
+     |             nfmag2d   ! number of fields on magnetic grid 2d
         character(len=16),
      |    pointer :: fnames(:) ! pointer to field names on this history
       end type history
 !
 ! Global history structure variable:
-      type(history) :: h
+      type(history) :: 
+     |  h,	! output histories (primary or secondary)
+     |  sh	! source history (input)
+!
+! Initialization values:
+      real :: real_init = spval ! initialization value for real vars
       contains
 !-------------------------------------------------------------------
       subroutine hist_initype(h,istep)
+      use params_module,only: zibot
       use input_module,only: start_year,start_day,start,
-     |  calendar_advance,source_start
+     |  calendar_advance,source_start,source
 !
 ! Initialize a history structure:
 !
       type(history),intent(out) :: h
       integer,intent(in) :: istep
 !
+      h%label = ' '
       h%model_name = ' '
       h%model_version = ' '
       h%logname = ' '
       h%host = ' '
       h%system = ' '
-      h%type = "unknown"
-      h%rundate = ' '
-      h%createdate = ' '
-      h%writedate = ' '
-      h%mss_source = ' '
-      h%mss_secsource = ' '
+      h%hist_type = ' '
+      h%run_type = ' '
+      h%create_date = ' '
+      h%write_date = ' '
+      h%source_file = ' '    ! set by sub output
+      h%output_file = ' '    ! set by sub output
       h%mss_path = ' '
 !
 ! If this is an initial run, set initial calendar time to model 
@@ -179,8 +191,8 @@
 !
       if (nsource > 0) then
         h%initial_year  = start_year
-        h%initial_day   = start_day 
         h%initial_mtime = start(:,1)
+        h%initial_file = source
         h%source_mtime  = source_start
       endif
 
@@ -190,43 +202,58 @@
       h%nlat = 0
       h%nlon = 0
       h%nlev = 0
-      h%zptop = 0.
-      h%zpbot = 0.
+      h%zmtop = 0.
+      h%zmbot = 0.
+      h%zitop = 0.
+      h%zibot = 0.
       h%time = -1
       h%iter = -1
       h%year = -1
       h%day = -1
       h%calendar_advance = calendar_advance
-      h%ut   = -1.
+      h%ut   = real_init
       h%step = -1
-      h%ncep =  0
-      h%gpi  =  0
-      h%gswmdi    = 0
-      h%gswmsdi   = 0
-      h%gswmnmdi = 0
-      h%gswmnmsdi= 0
-      h%nflds  =-1
+
+      h%see_ncfile = '[none]'
+      h%gpi_ncfile = '[none]'
+      h%ncep_ncfile = '[none]'
+
+      h%gswm_mi_di_ncfile  = '[none]'
+      h%gswm_mi_sdi_ncfile = '[none]'
+      h%gswm_nm_di_ncfile  = '[none]'
+      h%gswm_nm_sdi_ncfile = '[none]'
+
+!     h%gswmdi    = 0
+!     h%gswmsdi   = 0
+!     h%gswmnmdi = 0
+!     h%gswmnmsdi= 0
+ 
+      h%nflds  = ispval
       h%dynamo = .false.
       h%coupled_ccm = .false.
+      h%tuv_lbc_intop = 0 ! this version writes "new" histories
+      h%lbc = zibot
 !
 ! If istep==0, h%f107, etc were defined from source history: 
       if (istep > 0) then
-        h%hpower = -1.
-        h%ctpoten = -1.
-        h%f107d = -1.
-        h%f107a = -1.
+        h%hpower  = real_init
+        h%ctpoten = real_init
+        h%f107d   = real_init
+        h%f107a   = real_init
       endif
-      h%byimf = -1.
-      h%mag(:,1) = (/-1.,-1./)
-      h%mag(:,2) = (/-1.,-1./)
-      h%dtide = (/-1.,-1./)
-      h%sdtide = (/-1.,-1.,-1.,-1.,-1.,-1.,-1.,-1.,-1.,-1./)
-      h%colfac = -1.
-      h%p0     = -1.
-      h%alfa30 = -1.
-      h%e30    = -1.
-      h%alfad2 = -1.
-      h%ed2    = -1.
+      h%byimf = real_init
+      h%mag(:,1) = (/real_init,real_init/)
+      h%mag(:,2) = (/real_init,real_init/)
+      h%dtide = (/real_init,real_init/)
+      h%sdtide(:) = real_init
+      h%colfac = real_init
+      h%p0     = real_init
+      h%p0_model = real_init
+      h%grav   = real_init
+      h%alfa30 = real_init
+      h%e30    = real_init
+      h%alfad2 = real_init
+      h%ed2    = real_init
       if (associated(h%fnames)) deallocate(h%fnames)
       end subroutine hist_initype
 !-------------------------------------------------------------------
@@ -242,20 +269,20 @@
       integer :: i
 !
       write(6,"(/,72('-'))")
-      if (h%type(1:3)=='pri') then
+      if (h%hist_type(1:3)=='pri') then
         if (rdwr=='WRITE') then
-          write(6,"('Write TGCM PRIMARY HISTORY (diskfile=',a,'):')")
+          write(6,"('Write TGCM PRIMARY HISTORY',/,'Diskfile: ',a)") 
      |      trim(diskfile)
         else
           write(6,"('Read TGCM PRIMARY HISTORY (source history)',
-     |       ' (diskfile=',a,')')") trim(diskfile)
+     |       /,'Diskfile: ',a)") trim(diskfile)
         endif
-      elseif (h%type(1:3)=='sec') then
+      elseif (h%hist_type(1:3)=='sec') then
         if (rdwr=='WRITE') then
-          write(6,"('Write TGCM SECONDARY HISTORY (diskfile=',a,'):')")
+          write(6,"('Write TGCM SECONDARY HISTORY',/,'Diskfile: ',a)")
      |      trim(diskfile)
         else ! don't generally read sech, but you never know..
-          write(6,"('Read TGCM SECONDARY HISTORY (diskfile=',a,'):')")
+          write(6,"('Read TGCM SECONDARY HISTORY',/,'Diskfile=',a)")
      |      trim(diskfile)
           write(6,"('WARNING: Why am I reading a secondary history?')")
           write(6,"(9x,'The model will not start from secondary ',
@@ -266,24 +293,22 @@
      |    'not primary or secondary.')")
       endif
 !
+      write(6,"(2x,'label         = ',a)") trim(h%label)
       write(6,"(2x,'model_name    = ',a)") trim(h%model_name)
-
       write(6,"(2x,'model_version = ',a)") trim(h%model_version)
-
-      write(6,"(2x,'rundate    = ',a)") trim(h%rundate)
-!     write(6,"(2x,'createdate = ',a)") trim(h%createdate)
-!     write(6,"(2x,'writedate  = ',a)") trim(h%writedate)
+      write(6,"(2x,'create_date= ',a)") trim(h%create_date)
+      write(6,"(2x,'write_date = ',a)") trim(h%write_date)
       write(6,"(2x,'logname    = ',a)") trim(h%logname)
       write(6,"(2x,'host       = ',a)") trim(h%host)
       write(6,"(2x,'system     = ',a)") trim(h%system)
+      write(6,"(2x,'run_type   = ',a)") trim(h%run_type)
       write(6,"(2x,'mss_path   = ',a)") trim(h%mss_path)
-      write(6,"(2x,'mss_source = ',a)") trim(h%mss_source)
-      write(6,"(2x,'mss_secsource = ',a)") trim(h%mss_secsource)
+      write(6,"(2x,'source_file  = ',a)") trim(h%source_file)
+      write(6,"(2x,'output_file  = ',a)") trim(h%output_file)
       write(6,"(2x,'source_mtime = ',3i4)") h%source_mtime
       write(6,"(2x,'initial_year = ',i4)") h%initial_year
-      write(6,"(2x,'initial_day  = ',i4)") h%initial_day
       write(6,"(2x,'initial_mtime= ',3i4)") h%initial_mtime
-      write(6,"(2x,'type       = ',a)") trim(h%type)
+      write(6,"(2x,'type       = ',a)") trim(h%hist_type)
       write(6,"(2x,'ihist      = ',i3,
      |  ' (nth history on history file)')") h%ihist
       write(6,"(2x,'delhmins= ',i4,
@@ -310,8 +335,12 @@
       write(6,"(2x,'nlat    = ',i4,' (number of latitudes)')") h%nlat
       write(6,"(2x,'nlon    = ',i4,' (number of longitudes)')") h%nlon
       write(6,"(2x,'nlev    = ',i4,' (number of levels)')") h%nlev
-      write(6,"(2x,'zptop   = ',f6.2,' (top Zp level)')") h%zptop
-      write(6,"(2x,'zpbot   = ',f6.2,' (bottom Zp level)')") h%zpbot
+      write(6,"(2x,'zmtop   = ',f7.3,' (top midpoint level)')") h%zmtop
+      write(6,"(2x,'zmbot   = ',f7.3,' (bottom midpoint level)')") 
+     |  h%zmbot
+      write(6,"(2x,'zitop   = ',f7.3,' (top interface level)')") h%zitop
+      write(6,"(2x,'zibot   = ',f7.3,' (bottom interface level)')") 
+     |  h%zibot
       write(6,"(2x,'mag     = ',4f7.2,' (magnetic pole coords)')") 
      |  h%mag
       write(6,"(2x,'dtide   = ',e8.1,' ',f5.1,
@@ -323,28 +352,52 @@
       write(6,"(2x,'hpower  = ',f5.2,' (Gw)')") h%hpower
       write(6,"(2x,'ctpoten = ',f5.2,' (Volts)')") h%ctpoten
       write(6,"(2x,'byimf   = ',f5.2)") h%byimf
-      write(6,"(2x,'alfa30  = ',e8.2,' (KeV) (same as alfa_sp)')") 
-     |  h%alfa30
-      write(6,"(2x,'e30     = ',e8.2,' (ergs/cm2/s) (same as e_sp)')") 
-     |  h%e30
-      write(6,"(2x,'alfad2  = ',e8.2,' (KeV)')") h%alfad2
-      write(6,"(2x,'ed2     = ',e8.2,' (ergs/cm2/s)')") h%ed2
+      if (h%alfa30 /= real_init)
+     |  write(6,"(2x,'alfa30  = ',e8.2,' (KeV) (same as alfa_sp)')") 
+     |    h%alfa30
+      if (h%e30 /= real_init)
+     |  write(6,"(2x,'e30     = ',e8.2,' (ergs/cm2/s) (same as e_sp)')") 
+     |    h%e30
+      if (h%alfad2 /= real_init) 
+     |  write(6,"(2x,'alfad2  = ',e8.2,' (KeV)')") h%alfad2
+      if (h%ed2 /= real_init)
+     |  write(6,"(2x,'ed2     = ',e8.2,' (ergs/cm2/s)')") h%ed2
       write(6,"(2x,'colfac  = ',f5.2)") h%colfac
       write(6,"(2x,'p0      = ',e8.2)") h%p0
-      write(6,"(2x,'ncep    = ',i2,' (NMC/NCEP flag)')") h%ncep
-      write(6,"(2x,'gpi     = ',i2,' (GPI flag)')") h%gpi
-      write(6,"(2x,'gswmdi  = ',i2,' (GSWM flag diurnal tides)')") 
-     |  h%gswmdi
-      write(6,"(2x,'gswmsdi = ',i2,' (GSWM flag semidiurnal tides)')") 
-     |  h%gswmsdi
-      write(6,"(2x,'gswmnmdi = ',i2,' (GSWM flag nonmigrating',
-     |  ' diurnal tides)')") 
-     |  h%gswmnmdi
-      write(6,"(2x,'gswmnmsdi = ',i2,' (GSWM flag nonmigrating',
-     |  ' semidiurnal tides)')") 
-     |  h%gswmnmsdi
+      if (h%p0_model /= real_init) write(6,"(2x,'p0_model= ',e8.2)") 
+     |  h%p0_model
+      if (h%grav /= real_init)
+     |  write(6,"(2x,'grav    = ',e8.2)") h%grav
+
+!     write(6,"(2x,'gswmdi  = ',i2,' (GSWM flag diurnal tides)')") 
+!    |  h%gswmdi
+!     write(6,"(2x,'gswmsdi = ',i2,' (GSWM flag semidiurnal tides)')") 
+!    |  h%gswmsdi
+!     write(6,"(2x,'gswmnmdi = ',i2,' (GSWM flag nonmigrating',
+!    |  ' diurnal tides)')") 
+!    |  h%gswmnmdi
+!     write(6,"(2x,'gswmnmsdi = ',i2,' (GSWM flag nonmigrating',
+!    |  ' semidiurnal tides)')") 
+!    |  h%gswmnmsdi
+
+      write(6,"(2x,'gswm_mi_di_ncfile  = ',a)")
+     |  trim(h%gswm_mi_di_ncfile)
+      write(6,"(2x,'gswm_mi_sdi_ncfile = ',a)")
+     |  trim(h%gswm_mi_sdi_ncfile)
+      write(6,"(2x,'gswm_nm_di_ncfile  = ',a)")
+     |  trim(h%gswm_nm_di_ncfile)
+      write(6,"(2x,'gswm_nm_sdi_ncfile = ',a)")
+     |  trim(h%gswm_nm_sdi_ncfile)
+
       write(6,"(2x,'nflds   = ',i3,' (number of model fields)')")
      |  h%nflds
+      write(6,"(2x,'see_ncfile   = ',a)") trim(h%see_ncfile)
+      write(6,"(2x,'gpi_ncfile   = ',a)") trim(h%gpi_ncfile)
+      write(6,"(2x,'ncep_ncfile  = ',a)") trim(h%ncep_ncfile)
+      write(6,"(2x,'tuv_lbc_intop=',i3,' (if 1, then lbc of t,u,v',
+     |  ' are stored in top k slot (old histories))')") h%tuv_lbc_intop
+      write(6,"(2x,'LBC = ',f8.2,' (lower boundary interface ',
+     |  'level)')") h%lbc
 !
       if (associated(h%fnames)) then
         write(6,"('  There are ',i3,' fields on this history,',
@@ -364,11 +417,10 @@
 ! user inputs from the input module:
 ! (this routine is called from init module after input validation)
 !
-      use params_module,only: mxseries,mxhvols,ispval
+      use params_module,only: mxseries,mxhvols
       use input_module,only: start,stop,step,source,output,mkhvols,
      |  hist,save,secsource,secstart,secstop,sechist,secsave,secout,
-     |  secflds,secfmag,secfgeo2d,secfmag2d,secfmagphr,mxhist_prim,
-     |  mxhist_sech
+     |  secflds,mxhist_prim,mxhist_sech
 !
 ! Local:
       integer :: nh,nsteps,i,secs_hist,nsteps_hist,n
@@ -441,26 +493,8 @@
         secs_stop(i)  = mtime_to_nsec(secstop(:,i))
       enddo
 !
-! Number of fields on magnetic grid to be written to secondary histories:
-      nfsech_mag = size(secfmag)-count(len_trim(secfmag)==0)
-!
-! Number of fields on geographic grid to be written to secondary histories:
-      nfsech_geo = size(secflds)-count(len_trim(secflds)==0)
-!
-! Number of fields on geographic 2d grid to be written to secondary histories:
-      nfsech_geo2d = size(secfgeo2d)-count(len_trim(secfgeo2d)==0)
-!
-! Number of fields on magnetic 2d grid to be written to secondary histories:
-      nfsech_mag2d = size(secfmag2d)-count(len_trim(secfmag2d)==0)
-!
-! Number of fields on magnetospheric grid to be written to secondary histories:
-      nfsech_magphr = size(secfmagphr)-count(len_trim(secfmagphr)==0)
-!
-! Number of secondary files to be written (nfiles_sech), and
-! total secondary histories to be written (nsech_total):
-!
+      nfsech = size(secflds)-count(len_trim(secflds)==0)
       nfiles_sech = numfiles('sech',nseries_sech,1,0,nsech_total)
-!
       end subroutine hist_init
 !-------------------------------------------------------------------
       end module hist_module

@@ -1,27 +1,22 @@
 !
       module qrj_module
       use params_module,only: nlevp1,nlonp4
-!
+      use addfld_module,only: addfld
       implicit none
-!
-! Coefficients for wavelength scans in qrj.
-!     call addfsech('ZN4S',' ',' ',zn4s,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('ZN4S',' ',' ',zn4s,lon0,lon1,nlevs,nlevs,lat)
-! These are referenced in routines qrj, init_sflux, init_qrj
 !
       integer,parameter :: lmax=37  ! number of bins from 0.5A-1750A
       integer,parameter :: l1=15    ! number of bins in (1050-1750A)
       real :: 
-     |  euveff(nlevp1),  !
-     |  sigeuv(3,lmax),  !
-     |  rlmeuv(lmax),    !
-     |  feuv(lmax),      !
-     |  fsrc(l1),      !
-     |  sigsrc(l1),    !
-     |  rlmsrc(l1),    !
-     |  sigin4s(lmax),   !
-     |  quench(4),       !
-     |  sflux(lmax)      !
+     |  euveff(nlevp1),
+     |  sigeuv(3,lmax),
+     |  rlmeuv(lmax),
+     |  feuv(lmax),
+     |  fsrc(l1),
+     |  sigsrc(l1),
+     |  rlmsrc(l1),
+     |  sigin4s(lmax),
+     |  quench(4),
+     |  sflux(lmax)
 !
 ! Branching ratios for photon are branching ratios from photon absorption rate.
 ! Branching ratios for photolectron are branching ratios from photoionization rate.
@@ -74,6 +69,7 @@
      |  expzmid_inv,p0,check_exp
       use bndry_module,only: fb,b
       use chemrates_module,only: beta9
+      use fields_module,only: tlbc
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
@@ -89,7 +85,7 @@
 #endif
 !
 ! Local:
-      integer :: k,i,l,nlevs,ier
+      integer :: k,i,l,ier
       real,parameter ::
      |  do2=8.203E-12   ,
      |  do22=1.1407E-11 ,   
@@ -147,10 +143,8 @@
 #endif
 !
 ! Exec:
-      nlevs = lev1-lev0+1
-
-!     call addfsech('XNMBARI',' ',' ',xnmbari(:,lon0:lon1),
-!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('XNMBARI',' ',' ',xnmbari(:,lon0:lon1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Will multiply by inverses:
       do i=1,lmax
@@ -171,8 +165,10 @@
 !
 ! Bottom boundary:
       do i=lon0,lon1
-        o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+fb(i,1))
-        o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+fb(i,2))
+        o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+
+     |    fb(i,1))
+        o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+
+     |    fb(i,2))
         n4si(1,i) = 0.
       enddo
 !
@@ -191,9 +187,12 @@
         enddo
       enddo
 !	 
-!     call addfsech('O2I'  ,' ',' ',o2i,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('O1I'  ,' ',' ',o1i,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('N2I'  ,' ',' ',n2i,lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('O2I'  ,' ',' ',o2i,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O1I'  ,' ',' ',o1i,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('N2I'  ,' ',' ',n2i,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Initialize ionization/dissociation arrays on current processor domain:
 ! (global module data for use by other routines)
@@ -275,14 +274,16 @@
         enddo
       enddo ! l=l1+1,lmax
 !
-!     call addfsech('QOP2P' ,' ',' ', qop2p(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QOP2D' ,' ',' ', qop2d(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('SUM1' ,' ',' ', sum1,lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('Q0'  ,' ',' ',qtotal(:,:,lat),lon0,lon1,
-!    |  nlevs,nlevs,lat)
-!     call addfsech('R_QRJ',' ',' ',r,lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('QOP2P' ,' ',' ', qop2p(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOP2D' ,' ',' ', qop2d(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('SUM1' ,' ',' ', sum1,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('Q0'  ,' ',' ',qtotal(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('RJ_QRJ',' ',' ',rj(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Multiply Q by efficiency factor:
       do i=lon0,lon1
@@ -290,8 +291,8 @@
           qtotal(k,i,lat) = qtotal(k,i,lat)*euveff(k)*avo
         enddo
       enddo
-!     call addfsech('Q1'  ,' ',' ',qtotal(:,:,lat),lon0,lon1,
-!    |  nlevs,nlevs,lat)
+!     call addfld('Q1'  ,' ',' ',qtotal(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! transfer frequency (s^-1) to production rates (cm^-3 s^-1)
       do i=lon0,lon1
@@ -312,8 +313,8 @@
         enddo
       enddo
 !
-!     call addfsech('QOP',' ',' ',qop(:,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('QOP',' ',' ',qop(:,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 ! 
 ! Add no ionization to qnop:
       do i=lon0,lon1
@@ -329,7 +330,8 @@
 !
 ! tn at interfaces:
       do i=lon0,lon1
-        tni(1,i) = tn(lev1,i) ! tn bottom boundary is stored in top slot
+!       tni(1,i) = tn(lev1,i) ! tn bottom boundary is stored in top slot
+        tni(lev0,i) = tlbc(i,lat)
         do k=lev0+1,lev1-1
           tni(k,i) = .5*(tn(k-1,i)+tn(k,i))
         enddo
@@ -380,8 +382,8 @@
         enddo
       enddo
 !
-!     call addfsech('Q2'  ,' ',' ',qtotal(:,:,lat),lon0,lon1,
-!    |  nlevs,nlevs,lat)
+!     call addfld('Q2'  ,' ',' ',qtotal(:,:,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Contributions from schumann runge bands:
       do i=lon0,lon1
@@ -397,26 +399,26 @@
           rj(k,i,lat) = rj(k,i,lat)+p3f(k,i)/do2
         enddo
       enddo
-!     call addfsech('Q'     ,' ',' ',qtotal(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('RJ'    ,' ',' ',rj(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QOP2P' ,' ',' ', qop2p(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QOP2D' ,' ',' ', qop2d(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QTEF'  ,' ',' ',  qtef(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QO2P'  ,' ',' ',  qo2p(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QN2P'  ,' ',' ',  qn2p(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QNP'   ,' ',' ',   qnp(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QOP'   ,' ',' ',   qop(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
-!     call addfsech('QNOP'  ,' ',' ',  qnop(lev0:lev1,lon0:lon1,lat),
-!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfld('Q'     ,' ',' ',qtotal(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('RJ'    ,' ',' ',rj(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOP2Pa' ,' ',' ',qop2p(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOP2Da' ,' ',' ', qop2d(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QTEF'  ,' ',' ',  qtef(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QO2P'  ,' ',' ',  qo2p(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QN2P'  ,' ',' ',  qn2p(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QNP'   ,' ',' ',   qnp(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QOPa'   ,' ',' ',  qop(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('QNOP'  ,' ',' ',  qnop(lev0:lev1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 #ifdef VT
 !     code = 118 ; state = 'qrj' ; activity='ModelCode'
@@ -426,7 +428,7 @@
       end subroutine qrj
 !---------------------------------------------------------------
       subroutine init_sflux
-      use input_module,only: f107,f107a,sd_ncfile
+      use input_module,only: f107,f107a,see_ncfile
       use init_module,only: sfeps,iday,iyear,secs,istep
       use soldata_module,only: get_soldata,soldata,nwavesd=>nwave,
      |                          wave1sd=>wave1,wave2sd=>wave2
@@ -440,7 +442,7 @@
 ! WAVE2    shortwave bound of intervals (= WAVE1 for indiv. lines)
 ! SFLUX    scaled solar flux returned by subroutine (photons cm-2 s-1)
 !
-      if (len_trim(sd_ncfile) == 0) then
+      if (len_trim(see_ncfile) == 0) then
          call ssflux(f107,f107a,wave1,wave2,sflux)
          do n = l1+1,lmax
               feuv(n) = sflux(n)*sfeps

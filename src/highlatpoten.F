@@ -18,6 +18,7 @@
       use dynamo_module,only: zigm_r
       use aurora_module,only: 
      |  theta0          ! convection reversal boundary in radians
+      use addfld_module,only: addfld
 !
 ! !DESCRIPTION: 
 ! set conductances Sigma^R for prescribed potential at high latitudes
@@ -106,6 +107,7 @@
      |  zigm22,    !  +/+Sigma_(lam lam)^T(0)*cos(lam_0)/d lam_0^2
      |  zigm_r,    ! Sigma^R reference conductance
      |  rim_r      ! rhs^R for reference potential
+      use addfld_module,only: addfld
 !
       implicit none
 !
@@ -122,8 +124,9 @@
       integer :: i,j,jj,jjj
       real :: corfac,cs(nmlat),dfac1n,dfac1s,dfac2n
 !  
-!     call addfsech_ij('ZIGM_R','zigm_r','S',
-!    |      zigm_r,1,nmlonp1,1,nmlat) 
+! real ::  zigm_r(nmlonp1,nmlat),! sigma_r
+!     call addfld('ZIGM_R','zigm_r','S',zigm_r,
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
 ! Transforming PDE from original apex (lam_m) to new apex grid (lam_0)
 !     lam_m is irregular spaced in latitude
@@ -240,10 +243,10 @@
       enddo ! j=1,nmlat
       
 ! output to secondary history      
-!     call addfsech_ij('RIM_R1','rim_r1',' ',rim_r(:,:,1),1,
-!    |   nmlonp1,1,nmlat)
-!     call addfsech_ij('RIM_R2','rim_r2',' ',rim_r(:,:,2),1,
-!    |   nmlonp1,1,nmlat)
+!     call addfld('RIM_R1','rim_r1',' ',rim_r(:,:,1),
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!     call addfld('RIM_R2','rim_r2',' ',rim_r(:,:,2),
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
       end subroutine add_zigmar
 !----------------------------------------------------------------------------
@@ -272,6 +275,7 @@
      |  nsrim_r1,   ! difference stencil for rim_r(1)
      |  nsrim_r2,   ! difference stencil for rim_r(2)
      |  rhs_r       ! right-hand side 
+      use addfld_module,only: addfld
 !     
       implicit none
       
@@ -316,12 +320,14 @@
 !
       rhs_r = 0.0
       call insert_pot(nsrim_r1,rhs_r,phihm)
-!     call addfsech_ij('RHS_R1','rhs_r1',' ',rhs_r(:,:),1,
-!    |   nmlonp1,1,nmlat)
+
+!     call addfld('RHS_R1','rhs_r1',' ',rhs_r(:,:),
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !     
       call insert_pot(nsrim_r2,rhs_r,phihm)
-!     call addfsech_ij('RHS_R1R2','rhs_r1r2',' ',rhs_r(:,:),1,
-!    |   nmlonp1,1,nmlat)
+
+!     call addfld('RHS_R1R2','rhs_r1r2',' ',rhs_r(:,:),
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
       end subroutine diff_rimr
 !----------------------------------------------------------------------------
@@ -337,7 +343,6 @@
 ! !USES: 
       use params_module,only: nmlon,nmlonp1,nmlat,nmlath
       use dynamo_module,only: nmlon0,nmlat0
-!     
       implicit none
 !     
 ! !PARAMETERS: 
@@ -548,6 +553,7 @@
      |  zigmc,     ! +/-Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
      |  zigm2,     ! +/-Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
      |  rhs        ! right-hand side (1:49) equator to north pole
+      use addfld_module,only: addfld
 !     
       implicit none
 ! !RETURN VALUE:
@@ -660,8 +666,8 @@
       rhs(:,nmlath) = rhs(:,nmlath) + rhs_jrr(:,1)         ! add to rhs
       
 ! output secondary history 2d mag     
-!     call addfsech_ij('RIM_JRR','rim_jrr',' ',rhs_jrr,1,
-!    |      nmlonp1,1,nmlat)
+!     call addfld('RIM_JRR','rim_jrr',' ',rhs_jrr,
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
       end subroutine calrhs_jrr
 !------------------------------------------------------------------------------
@@ -797,7 +803,7 @@
      |  zigm2,     !Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
      |  zigmc_r,   ! C_r on tiegcm grid
      |  zigmc_i    ! C_i on tiegcm grid 
-!
+      use addfld_module,only: addfld
       implicit none
 !
 ! !RETURN VALUE:
@@ -812,10 +818,10 @@
       real :: corfac,cs(nmlat),dfac1n,dfac1s,dfac2n,fac,
      |   zig11(nmlonp1,nmlat),zig12(nmlonp1,nmlat)
 !  
-!     call addfsech_ij('ZIGMC_R','zigmc_r','S',
-!    |      zigmc_r,1,nmlonp1,1,nmlat) 
-!     call addfsech_ij('ZIGMC_I','zigmc_i','S',
-!    |      zigmc_i,1,nmlonp1,1,nmlat)         
+!     call addfld('ZIGMC_R','zigmc_r','S',zigmc_r,
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!     call addfld('ZIGMC_I','zigmc_i','S',zigmc_i,
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
 ! Transforming PDE from original apex (lam_m) to new apex grid (lam_0)
 !     lam_m is irregular spaced in latitude
@@ -896,10 +902,10 @@
       enddo
       
 ! output to secondary history      
-!     call addfsech_ij('RIMC_11M','rimc_11M',' ',zig11(:,:),1,
-!    |   nmlonp1,1,nmlat)
-!     call addfsech_ij('RIMC_12M','rimc_12M',' ',zig12(:,:),1,
-!    |   nmlonp1,1,nmlat)     
+!     call addfld('RIMC_11M','rimc_11M',' ',zig11(:,:),
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!     call addfld('RIMC_12M','rimc_12M',' ',zig12(:,:),
+!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
       end subroutine add_cicr
 !----------------------------------------------------------------------------

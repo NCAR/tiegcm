@@ -13,13 +13,17 @@ $cwd = cwd();
 #
 # Set option defaults (local):
 #
-my $wrkdir      = $cwd;        # user's root working dir (default is cwd)
-my $copysrc     = 0;           # default is not to copy source
-my $hres        = 5.0;         # default horizontal resolution
-my $vres        = 0.5;         # default vertical resolution
-my $debug       = 0;           # default is no debug run
-my $nomake      = 0;           # default is to make a Makefile
-my $help        = 0;           # default is no help
+my $wrkdir      = $cwd;   # user's root working dir (default is cwd)
+my $copysrc     = 0;      # default is not to copy source
+my $hres        = 5.0;    # default horizontal resolution
+my $vres        = 0.5;    # default vertical resolution
+my $debug       = 0;      # default is no debug run
+my $nomake      = 0;      # default is to make a Makefile
+my $mpi         = '';     # default parallel vs serial is system dependent
+my $help        = 0;      # default is no help
+my $debug       = 0;      # default is no debug
+   $lib_netcdf  = '';     # default netcdf lib location is system dependent
+   $inc_netcdf  = '';     # default netcdf inc location is system dependent
 #
 # Parse arguments:
 #
@@ -34,8 +38,11 @@ my $help        = 0;           # default is no help
    "copysrc!"       => \$copysrc,
    "hres=f"         => \$hres,
    "vres=f"         => \$vres,
-   "debug"          => \$debug,
+   "debug:i"        => \$debug,
    "nomake"         => \$nomake,
+   "mpi:s"          => \$mpi,
+   "lib_netcdf:s"   => \$lib_netcdf,
+   "inc_netcdf:s"   => \$inc_netcdf,
    "h|help"         => \$help,
 ) or usage();
 #
@@ -73,6 +80,9 @@ $progname executing in $cwd at $date:
   copysrc     = $copysrc
   hres        = $hres
   vres        = $vres
+  mpi         = $mpi
+  lib_netcdf  = $lib_netcdf
+  inc_netcdf  = $inc_netcdf
   debug       = $debug
 
 EOF
@@ -83,23 +93,16 @@ $model_srcdir = "$tgcmroot/$model/src";
 if (! -d $model_srcdir) { 
   print ">>> WARNING $progname: could not find source directory $model_srcdir\n"; }
 #
-# Model scripts directory:
-#
-$model_scripts = "$tgcmroot/$model/scripts";
-if (defined $utildir) { $model_scripts = $utildir; }
-if (! -d $model_scripts) {
-  print ">>> WARNING $progname: could not find scripts directory $model_srcdir\n"; }
-#
 #print "Using model source directory model_srcdir   = $model_srcdir\n";
-#print "Using model scripts directory model_scripts = $model_scripts\n";
 #
 # Model class:
 $model_class = "tgcm";
 SWITCH: {
-  if ($model =~ /^tiegcm/)  { $model_class = "tiegcm" ; last SWITCH; }
-  if ($model =~ /^timegcm/) { $model_class = "timegcm"; last SWITCH; }
-  if ($model =~ /^mtgcm/)   { $model_class = "mtgcm"  ; last SWITCH; }
-  if ($model =~ /^titan/)   { $model_class = "titan"  ; last SWITCH; }
+  if ($model =~ /^tiegcm/)  { $model_class = "tiegcm"  ; last SWITCH; }
+  if ($model =~ /^timegcm/) { $model_class = "timegcm" ; last SWITCH; }
+  if ($model =~ /^mtgcm/)   { $model_class = "mtgcm"   ; last SWITCH; }
+  if ($model =~ /^titan/)   { $model_class = "titan"   ; last SWITCH; }
+  if ($model =~ /^glbmean/) { $model_class = "glbmean" ; last SWITCH; }
 }
 #
 # Build list of source directories and write list to file $execdir/$fp_filename:
@@ -116,26 +119,12 @@ if ($copysrc) { &copy_model_src(@srcdirs, $execdir); }
 #
 &write_defs_h("$execdir/defs.h",$hres,$vres,$model);
 #
-# Establish source history file names (to be linked by link_model_data):
-#
-&set_hist_source($model_class,$hres,$vres);
-#
-# Link input data files to execdir:
-#
-#print "config before -d test on tgcmdata..\n";
-if (-d $tgcmdata) {
-  &link_model_data($tgcmdata, $execdir, $model);
-} else {
-  print ">>> $0: Not linking data files because tgcmdata directory\n";
-  print "        $tgcmdata does not exist\n";
-}
-#
 # Write macros to Makefile:
 #
 if ($nomake) {
   print "$progname: Not making Makefile because -nomake option was set.\n";
 } else {
-  &write_makefile("$model_scripts/Makefile", "$execdir/Makefile", $debug);
+  &write_makefile("$utildir/Makefile", "$execdir/Makefile", $debug);
 }
 #
 # Successful exit:
@@ -162,60 +151,11 @@ OPTIONS
   -copysrc      If copysrc=1, copy source code to build dir (default is 0)
   -hres         Horizontal resolution (float, either 5.0 or 2.5 degrees)
   -vres         Vertical resolution (float, either 0.5 or 0.25 delta log pressure)
-  -debug	Configure Makefile for a debug run.
+  -debug	If > 0, configure Makefile for a debug run (fpe trapping, etc).
+  -mpi          TRUE, FALSE, or DEFAULT (default is system and model dependent)
   -help		Print usage message and quit.
 
 EOF
-}
-#-----------------------------------------------------------------------
-sub set_hist_source {
-#
-# Set default source history file name given model class and grid resolution:
-# ($modelclass is the model name without extension)
-# If this file exists in $TGCMDATA, it will be linked to users execdir
-#   by sub link_model_data.
-# For model classes tiegcm, timegcm or tgcm (i.e., unrecognized model name), 
-#   the file name should resolve to one of the following:
-#
-#   TGCM.$modelclass.p001-2002-080.nc            # default hres, default vres
-#   TGCM.$modelclass_h5.0v0.25.p001-2002-080.nc  # default hres, double vres
-#   TGCM.$modelclass_h2.5v0.50.p001-2002-080.nc  # double hres, default vres
-#   TGCM.$modelclass_h2.5v0.25.p001-2002-080.nc  # double hres, double vres
-#
-  my ($modelclass,$hres,$vres) = @_;
-#
-# Four dates should be available (one for each solstice and equinox).
-# Use day 80 as default:
-#
-  my @dates = ("2002-080","2002-170","2002-260","2002-350");
-  my $filename = "p001-$dates[0].nc"; # use default day 80
-#
-# Source history file name for default hres and vres:
-#
-  $hist_source = "TGCM.$modelclass.$filename";
-  $hist_source_mss = "/TGCM/$modelclass/$filename";
-#
-# Source history file name for non-default grid resolutions hres or vres:
-# (make string equiv of hres and vres, so zeroes are consistent in file name):
-#
-  if ($hres != 5.0 or $vres != 0.5) {
-    if ($hres == 5.0)  { $hresname = "5.0" ; }
-    if ($hres == 2.5)  { $hresname = "2.5" ; }
-    if ($vres == 0.50) { $vresname = "0.50"; }
-    if ($vres == 0.25) { $vresname = "0.25"; }
-    $hist_source = "TGCM.$modelclass" . "_h$hresname" . "v$vresname" . ".$filename";
-    $hist_source_mss = 
-      "/TGCM/$modelclass" . "_h$hresname" . "v$vresname" . "/$filename";
-  }
-#
-# Odd models (i.e., not tiegcm or timegcm):
-  if ($modelclass eq "mtgcm") { 
-    $hist_source = "TGCM.SWBM04.p1DC98RSb.nc";
-    $hist_source_mss = "/TGCM/SWBM04/p1DC98RSb.nc";
-  }
-
-  print "\nDefault source history disk file name: $hist_source\n";
-  print "Default source history mss file: $hist_source_mss\n";
 }
 #-----------------------------------------------------------------------
 sub validate_options {
@@ -268,17 +208,19 @@ sub validate_options {
 #
 # Build/Execution directory (default is $wrkdir/$model-$os):
 # (If Linux and machine is lightning, set OS to linux-mpi)
+# 6/05: Makefile file now does this.
 #
   $OS = `uname -s`; chop $OS; 
-  if ($OS =~ 'Linux') {
-    $nodename = `uname -n`; chop $nodename;
-    if ($nodename =~ /^ln/) { $OS = $OS . '-mpi'; }
-  }
+# if ($OS =~ 'Linux') {
+#   $nodename = `uname -n`; chop $nodename;
+#   if ($nodename =~ /^ln/) { $OS = $OS . '-mpi'; }
+# }
   ($os = $OS) =~ tr/A-Z/a-z/;
+  print "tgcm_config: OS=$OS os=$os\n";
 #
   if (! defined $execdir or $execdir eq "") {
     $execdir = "$wrkdir/$model-$os"; # default
-    print "$progname: OS=$OS  Set execdir = $execdir\n";
+    print "$progname: Set execdir = $execdir\n";
   }
   $execdir = abspath($execdir);
   if (! -d $execdir) {
@@ -366,6 +308,24 @@ EOF
     print "\n>>> Bad vres = $vres (vres must be either 0.5 or 0.25)\n\n";
     usage();
   }
+#
+# Option mpi can be TRUE, FALSE, or DEFAULT.
+  SWITCH: {
+    if (not $mpi)     { $mpi = "DEFAULT"; last SWITCH; }
+    if ($mpi =~ /^T/) { $mpi = "TRUE"   ; last SWITCH; }
+    if ($mpi =~ /^F/) { $mpi = "FALSE"  ; last SWITCH; }
+    if ($mpi =~ /^D/) { $mpi = "DEFAULT"; last SWITCH; }
+    $nothing = 1;
+    print "\n>>> Bad mpi = $mpi (can be null, TRUE, FALSE, or DEFAULT)\n\n";
+    print "If mpi == TRUE,  MPI libraries will be linked for parallel run.\n";
+    print "If mpi == FALSE, MPI libraries will NOT be linked (serial run).\n";
+    print "If mpi == DEFAULT (or is not provided), then mpi is set as follows:\n";
+    print "   1) mpi = TRUE\n";
+    print "   2) if system is non-lightning Linux, then mpi = FALSE\n";
+    print "   3) if model is glbmean, then mpi = FALSE\n";
+    usage();
+  } # switch
+  $mpiflag = $mpi;
 } # end sub validate_options
 #-----------------------------------------------------------------------
 sub abspath {
@@ -484,7 +444,7 @@ sub write_defs_h {
 #
   my ($file, $hres, $vres, $model) = @_;
 #
-# Grids for timegcm:
+# --------------------------- Grids for timegcm ---------------------
 #
 if ($model =~ /^timegcm/) {
 #
@@ -504,14 +464,13 @@ if ($model =~ /^timegcm/) {
     $nlev=88; $zbot ="-17.0"; $ztop="5.0";
   }
 #
-# Grids for tiegcm:
+# --------------------------- Grids for tiegcm ---------------------
 #
 } elsif ($model =~ /^tiegcm/) {
 #
-# Standard resolution for tiegcm:
+# Standard horizontal resolution for tiegcm:
   $nlat=36; $glat1="-87.5" ; $dlat="5.0";
   $nlon=72; $glon1="-180.0"; $dlon="5.0"; 
-  $nlev=28; $zbot ="-7.0"  ; $ztop="7.0";
 #
 # Double horizontal res for tiegcm:
   if ($hres == 2.5) {
@@ -519,10 +478,23 @@ if ($model =~ /^timegcm/) {
     $nlon=144; $glon1="-180.0"; $dlon="2.5"; 
   }
 #
-# Double vertical res for tiegcm:
-  if ($vres == 0.25) { 
-    $nlev=56; $zbot ="-7.0"; $ztop="7.0";
-  }
+# Top interface boundary is zp +7.0 for tiegcm:
+  $zitop="7.0";
+  $zibot="-7.0";
+#
+# Number of levels 
+  $nlev = ($zitop - $zibot) / $vres;
+#
+# Midpoints are 0.5*dz above interfaces:
+  $zmbot = $zibot + (0.5 * $vres);
+  $zmtop = $zitop + (0.5 * $vres);
+#
+# -------------------------------------------------------------------
+# 
+# Global Mean model -- defs.h not needed:
+} elsif ($model =~ /^glbmean/) {
+  print "Header file $file is not needed for model $model.\n";
+  return;
 #
 # Unrecognized model:
 } else {
@@ -539,26 +511,31 @@ if ($model =~ /^timegcm/) {
       if (/NLAT\s+\((\S+)\)/) { $nlat_rd = $1 };
       if (/NLON\s+\((\S+)\)/) { $nlon_rd = $1 };
       if (/NLEV\s+\((\S+)\)/) { $nlev_rd = $1 };
+      if (/ZIBOT\s+\((\S+)\)/) { $zibot_rd = $1 };
     }
     $fh->close;
     if ($nlat_rd == $nlat &&
         $nlon_rd == $nlon &&
-        $nlev_rd == $nlev) {
+        $nlev_rd == $nlev &&
+        $zibot_rd == $zibot) {
       print "NOT writing new defs.h for $model because it is already set for\n";
       print "  the desired resolution of hres=$hres  vres=$vres (nlat=$nlat nlon=$nlon nlev=$nlev)\n";
+      print "  and zibot = $zibot\n";
       return;
     }
   }
 #
 # Write new file:
 #
-  print "Making header file $file\n  for hres=$hres vres=$vres\n";
+  print "Making header file $file for model $model at hres=$hres vres=$vres\n";
+  print "  nlat=$nlat  nlon=$nlon  nlev=$nlev\n";
+  print "  zibot=$zibot  zitop=$zitop  zmbot=$zmbot  zmtop=$zmtop\n";
   my $fh = new IO::File;
   $fh->open(">$file") || die ">>> can't open header file: $file\n";
   $date = `date`; chop($date);
   print $fh <<"EOF";
 !
-! Grid parameters definitions for $model (see params.F).
+! Grid parameter definitions for $model (see params.F).
 ! Horizontal resolution = $hres  Vertical resolution = $vres
 !
 ! hres = $hres
@@ -571,120 +548,27 @@ if ($model =~ /^timegcm/) {
 #define GLON1 ($glon1)
 #define DLON  ($dlon)
 !
+EOF
+if ($model =~ /^timegcm/) {
+  print $fh <<"EOF";
 ! vres = $vres
 #define ZBOT ($zbot)
 #define ZTOP ($ztop)
 #define NLEV ($nlev)
-!
-! This file was generated by $progname on $date
-!
 EOF
+} elsif ($model =~ /^tiegcm/) {
+  print $fh <<"EOF";
+! vres = $vres
+! Define interface and midpoint levels
+#define ZIBOT ($zibot)
+#define ZITOP ($zitop)
+#define ZMBOT ($zmbot)
+#define ZMTOP ($zmtop)
+#define NLEV ($nlev)
+EOF
+}  # end model type
+  $fh->close;
 }  # end sub write_defs_h
-#-----------------------------------------------------------------------
-  sub link_model_data {
-#
-# Link input data files from $datadir (TGCMDATA) to $execdir
-# (do not link if file already exists in $execdir):
-#
-  my ($datadir, $execdir, $model) = @_;
-#
-# Set data file names for model and resolution.
-#
-# History source file was determined by sub set_hist_source according
-#   to model and grid resolutions. Some other file names (notably gswm) 
-#   need to be hardwired according to model and resolution:
-#
-# Data files for tiegcm:
-#
-  if ($model =~ /^tiegcm/) {
-    %data = (gswm_mdi_ncfile    => "gswm_diurn_5.0d_99km.nc" ,  # 24  MB
-             gswm_msdi_ncfile   => "gswm_semi_5.0d_99km.nc"  ,  # 24  MB
-             gswm_nmidi_ncfile  => "gswm_nonmig_diurn_5.0d_99km.nc",
-             gswm_nmisdi_ncfile => "gswm_nonmig_semi_5.0d_99km.nc" ,
-             magfield_file      => "magfield.nc"             ,  # ~1  MB
-             gpi_file           => "gpi_1979001-2005059.nc"  ,  # 0.7 MB
-             sd_file            => "see__L3_merged_2005007_007.nc"  ,  # 336 KB
-             hist_source        => $hist_source);
-#
-# High hres tiegcm:
-    if ($hres == 2.5) {
-      $data{"gswm_mdi_ncfile"}    = "gswm_diurn_2.5d_99km.nc";          # 95  MB
-      $data{"gswm_msdi_ncfile"}   = "gswm_semi_2.5d_99km.nc";           # 95  MB
-      $data{"gswm_nmidi_ncfile"}  = "gswm_nonmig_diurn_2.5d_99km.nc";
-      $data{"gswm_nmisdi_ncfile"} = "gswm_nonmig_semi_2.5d_99km.nc";
-      $data{"magfield_file"}      = "magfield_2.5h.nc";                 # 2.8 MB
-    } 
-#
-# Data files for timegcm:
-#
-  } elsif ($model =~ /^timegcm/) {
-    %data = (solgar_bndry_file    => "solgar_bndry.nc"          , # 92  KB
-             solgar_import_file   => "solgar_import.nc"         , # 0.5 MB
-             zatmos_file          => "zatmos_bndry.nc"          , # 0.3 MB
-             gswm_mdi_ncfile      => "gswm_diurn_5.0d_32km.nc"  , # 24  MB
-             gswm_msdi_ncfile     => "gswm_semi_5.0d_32km.nc"   , # 24  MB
-             gswm_nmidi_ncfile    => "gswm_nonmig_diurn_5.0d_32km.nc",
-             gswm_nmisdi_ncfile   => "gswm_nonmig_semi_5.0d_32km.nc" ,
-             gpi_file             => "gpi_1979001-2005059.nc"   , # 0.7 MB
-             ncep_file            => "ncep_1979001-2005120.nc"  , # 409 MB
-             hist_source          => $hist_source);
-#
-# High hres for timegcm:
-    if ($hres == 2.5) {
-      $data{"gswm_mdi_ncfile"}    = "gswm_diurn_2.5d_32km.nc";          # 95 MB
-      $data{"gswm_msdi_ncfile"}   = "gswm_semi_2.5d_32km.nc";           # 95 MB
-      $data{"gswm_nmidi_ncfile"}  = "gswm_nonmig_diurn_2.5d_32km.nc";
-      $data{"gswm_nmisdi_ncfile"} = "gswm_nonmig_semi_2.5d_32km.nc";
-    } 
-#
-# Data files for mtgcm:
-  } elsif ($model =~ /^mtgcm/) {
-    %data = (datavol       => "TGCM.SWBM04.MLVI090c.nc",           # 4.3  MB
-             hist_source   => $hist_source);
-#
-# Old tgcm24 version of timegcm:
-  } elsif ($model =~ /^tgcm24/) {
-    %data = (hist_source => "TGCM.timegcm.p001-2002-080.nc");
-#
-# Unknown model:
-  } else {
-    print "\n>>> WARNING: Unknown model type: $model\n";
-    print   "             Not linking any input data files.\n";
-  }
-#
-# Loop over data files, linking to user's execdir:
-# (Failed links are non-fatal, but a warning message is issued)
-# Wildcards in %data are expanded using glob (not currently necessary)
-#
-  @data_files = values(%data);
-  foreach $filespec (@data_files) {
-    @paths = glob "$datadir/$filespec"; # expands wildcards in data_files
-    foreach $path (@paths) {
-      $file = basename($path);
-
-#     print "\nlink data: file=$file\n";
-#     print "           path=$path\n";
-#     print "           execdir=$execdir\n";
-
-      if (-e $path) {                  # path to data file found in distribution
-        if (! -e "$execdir/$file") {   # data file not in user exec dir
-#
-# Link from $datadir (TGCMDATA) to user's execdir:
-#
-          $stat = symlink($path,"$execdir/$file");        # perl symlink
-          if ($stat != 1) {
-            print ">>> Error linking $path to $execdir\n";
-          } else { 
-            print "Linked data file $path to $execdir\n"; 
-          }
-#       } else { print "Did NOT link $path to because it already exists in execdir.\n";
-        }         # if data is not in user's execdir
-      } else {    # data not found in distribution
-        print ">>> Could not find data file $path\n"; 
-      }           # if data file exists in distribution
-    }             # foreach path in @paths
-  }               # foreach filespec in %data
-} # end sub link_model_data
 #-----------------------------------------------------------------------
 sub write_filepath {
   my ($usr_srcdirs, $model_srcdir, $fileout) = @_;
@@ -721,43 +605,83 @@ sub write_makefile {
   my ($file_in, $file_out, $debugarg) = @_;
   my $fh_in = new IO::File;
   my $fh_out = new IO::File;
+  my $nodename = `uname -n`; chop $nodename;
   $fh_out->open(">$file_out") or die ">>> Can't open file: $file_out\n";
   $date = `date`; chop($date);
   $OS = `uname -s`; chop $OS; ($os = $OS) =~ tr/A-Z/a-z/;
-  SWITCH: {
-    if ($os eq "aix") { 
-      $lib_netcdf = "/usr/local/lib";
-      $inc_netcdf = "/usr/local/include";
-      last SWITCH;
-    }
-    if ($os eq "irix64") { 
-      $lib_netcdf = "/usr/local/lib32/r4i4";
-      $inc_netcdf = "/usr/local/include";
-      last SWITCH;
-    }
-    if ($os eq "linux") { 
 #
-# Distinguish between SCD linux system "lightning", and
-# other (hao) linux systems, using the node name.
-# If lightning, then set OS to linux-mpi.
+# Default MPI is true. MPI is set false below if serial linux is 
+# suspected, or the model is glbmean. User can override by setting
+# mpi option either T or F.
 #
-      $nodename = `uname -n`; chop $nodename;
-      if ($nodename =~ /^ln/) {              # SCD linux cluster "lightning"
-        $OS = $OS . '-mpi';
-#       $lib_netcdf = "/usr/local/lib";
-#       $inc_netcdf = "/usr/local/include";
-# 7/21/05 btf: new netcdf locations on lightning after OS upgrade:
-        $lib_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/lib";
-        $inc_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/include";
-      } else {                               # Generic linux (probably HAO)
-        $lib_netcdf = "/opt/local/lib";
-        $inc_netcdf = "/opt/local/include";
-      }
-      last SWITCH;
+  if ($mpi eq "DEFAULT") { $mpiflag = "TRUE"; }
+  if ($os eq "linux") { 
+    if ($nodename !~ /^ln/) {
+      if ($mpi eq "DEFAULT") { $mpiflag = "FALSE"; }
     }
-    $nothing = 1;
   }
-  print "write_makefile: OS=$OS lib_netcdf=$lib_netcdf inc_netcdf=$inc_netcdf\n";
+  if ($model =~ /^glbmean/) {
+    if ($mpi eq "DEFAULT") { 
+      $mpiflag = "FALSE"; 
+      print "Note tgcm_config: model $model is serial -- setting mpi FALSE.\n";
+    }
+  }
+  print "write_makefile: os=$os mpi=$mpi mpiflag=$mpiflag\n";
+#
+# Location of netcdf lib:
+#
+  if ($lib_netcdf eq '') {
+    SWITCH: {
+      if ($os eq "aix") { 
+        $lib_netcdf = "/usr/local/lib";
+        last SWITCH;
+      }
+      if ($os eq "irix64") { 
+        $lib_netcdf = "/usr/local/lib32/r4i4";
+        last SWITCH;
+      }
+      if ($os eq "linux") { 
+        $nodename = `uname -n`; chop $nodename;
+        if ($nodename =~ /^ln/) {              # SCD linux cluster "lightning"
+# Lightning location changed 2/9/06 (should use env var LIB_NETCDF here)
+#         $lib_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/lib";
+          $lib_netcdf = "/usr/local/apps/netcdf-3.6.0-p1/lib";
+        } else {                               # Generic linux (probably HAO)
+          $lib_netcdf = "/opt/local/lib";
+        }
+        last SWITCH;
+      }
+    $nothing = 1;
+    } # end switch
+  } # end lib_netcdf == ''
+#
+# Location of netcdf include file:
+#
+  if ($inc_netcdf eq '') {
+    SWITCH: {
+      if ($os eq "aix") { 
+        $inc_netcdf = "/usr/local/include";
+        last SWITCH;
+      }
+      if ($os eq "irix64") { 
+        $inc_netcdf = "/usr/local/include";
+        last SWITCH;
+      }
+      if ($os eq "linux") { 
+        if ($nodename =~ /^ln/) {              # SCD linux cluster "lightning"
+# Lightning location changed 2/9/06 (should use env var INC_NETCDF here)
+#         $inc_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/include";
+          $inc_netcdf = "/usr/local/apps/netcdf-3.6.0-p1/include";
+        } else {                               # Generic linux (probably HAO)
+          $inc_netcdf = "/opt/local/include";
+        }
+        last SWITCH;
+      }
+    $nothing = 1;
+    } # end switch
+  } # end inc_netcdf == ''
+#
+# print "write_makefile: OS=$OS lib_netcdf=$lib_netcdf inc_netcdf=$inc_netcdf\n";
 #
   $mkdebug = "FALSE";
   if ($debugarg) {
@@ -773,11 +697,13 @@ sub write_makefile {
 #
 UNAMES     := $OS
 EXECNAME   := $model
+MODEL_CLASS:= $model_class
 EXECDIR    := $execdir
 UTILDIR    := $utildir
 LIB_NETCDF := $lib_netcdf
 INC_NETCDF := $inc_netcdf
 DEBUG      := $mkdebug
+MPI        := $mpiflag
 EOF
 #
 # Copy template and close files:
@@ -790,11 +716,11 @@ EOF
   print << "EOF";
     UNAMES     := $OS
     EXECNAME   := $model
+    MODEL_CLASS:= $model_class
     EXECDIR    := $execdir
-    UTILDIR    := $utildir
     LIB_NETCDF := $lib_netcdf
     INC_NETCDF := $inc_netcdf
     DEBUG      := $mkdebug
-
+    MPI        := $mpiflag
 EOF
 }

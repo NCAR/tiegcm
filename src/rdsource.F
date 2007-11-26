@@ -6,9 +6,10 @@
       use input_module,only: source,tempdir,source_start,output,start,
      |  f107,f107a,power,ctpoten,dynamo
       use hist_module,only: nsource,nhist,ioutfile,ncid,iprint,h
+      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
 #ifdef MPI
       use mpi_module,only: mp_periodic_f4d,mp_dynpot,lat0,lat1,lon0,
-     |  lon1
+     |  lon1,mp_periodic_f2d
 #endif
       use fields_module,only: itp,poten,un,f4d
       implicit none
@@ -67,6 +68,36 @@
 !
 #ifdef MPI
       call mp_periodic_f4d(itp)
+!
+! Periodic points for t,u,v lbc
+! These are dimensioned (lond0:lond1,latd0:latd1) (see fields.F):
+
+!     write(6,"('readsource: call mp_periodic_f2d for tlbc,ulbc,',
+!    |  'vlbc: lon0,1=',2i3,' lat0,1=',2i3)") lon0,lon1,lat0,lat1
+
+!     do j=lat0,lat1
+!       write(6,"('rdsource before periodic_f2d: j=',i3,
+!    |    ' tlbc(lon0:lon1,j)=',/,(6e12.4))") j,tlbc(lon0:lon1,j)
+!     enddo
+
+      call mp_periodic_f2d(tlbc(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(ulbc(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(vlbc(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(tlbc_nm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(ulbc_nm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(vlbc_nm(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+
+!     do j=lat0,lat1
+!       write(6,"('rdsource after periodic_f2d:  tlbc(lon0:lon1,j)=',/,
+!    |    (6e12.4))") j,tlbc(lon0:lon1,j)
+!     enddo
+
 !
 ! Define dynpot(nlonp1,0:nlatp1,nlevp1) from electric potential
 ! subdomains, which were read from source history. Do this only
