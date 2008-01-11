@@ -1,4 +1,5 @@
 !
+#include <defs.h>
       module cons_module
       use params_module,only: dlat,dz,nlon,nlonp1,nlonp4,nlat,nlatp1,
      |  dlev,nlev,nmlat,nmlon,nmlonp1,zmbot,zmtop,zibot,zitop
@@ -22,8 +23,16 @@
      |  boltz = 1.38E-16,    ! boltzman's constant                C(84)
      |  p0   = 5.0e-4,       ! standard pressure                  C(81)
      |  gask = 8.314e7,      ! gas constant                       C(57)
-!    |  dipmin = .005,       ! minimum mag dip angle (tiegcm) (tgcm15=.005)
-     |  dipmin = 0.17,       ! minimum mag dip angle (tiegcm)
+!
+! dipmin should be same as sin10 (see magfield.F):
+!
+#if (NLAT==36 && NLON==72)
+     |  dipmin = 0.17,       ! minimum mag dip angle (5.0 deg horizontal res)
+#elif (NLAT==72 && NLON==144)
+     |  dipmin = 0.24,       ! minimum mag dip angle (2.5 deg horizontal res)
+#else
+      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
+#endif
      |  brn2d = 0.6,         !
      |  tbound = 181.0,      ! background tn at lower boundary (tiegcm)
      |  atm_amu = 28.9,      ! mean mass of surface atmosphere    C(24)
@@ -122,18 +131,30 @@
       real,parameter :: 
      |  crit(2) = (/0.261799387, 0.523598775/)
 !
-! For filtering longitudinal waves (see filter.F):  
-!     integer,parameter :: kut(nlat) =
-!    |  (/1,2,3,5,6,7,9,10,11,13,14,15,17,17,17,17,17,17,17,17,17,17,17,
-!    |    17,15,14,13,11,10,9,7,6,5,3,2,1/)
+! Kut is used in filtering longitudinal waves (see filter.F):
 !
-! kut for wave numbers to filter:
-      integer :: kut(nlat)
-!
-! kut for tiegcm at dlat 5.0 degrees:
-      integer,parameter :: kut_5(36) =
+#if (NLAT==36 && NLON==72)                 /* 5.0 deg horizontal resolution */
+      integer,parameter :: kut(nlat) =
      |  (/1,2,3,5,6,7,9,10,11,13,14,15,17,17,17,17,17,17,17,17,17,17,17,
      |    17,15,14,13,11,10,9,7,6,5,3,2,1/)
+#elif (NLAT==72 && NLON==144)              /* 2.5 deg horizontal resolution */
+       integer,parameter :: kut(nlat) =
+     |   (/1  ,1  ,2  ,2  ,4  ,4  ,8  ,8  ,10 ,10 ,12 ,12,
+     |     15 ,15 ,18 ,18 ,22 ,22 ,26 ,26 ,30 ,30 ,32 ,32,
+     |     34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34,
+     |     34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34,
+     |     32 ,32 ,30 ,30 ,26 ,26 ,22 ,22 ,18 ,18 ,15 ,15,
+     |     12 ,12 ,10 ,10 ,8  ,8  ,4  ,4  ,2  ,2  ,1  ,1/)
+!      integer,parameter :: kut(nlat) =
+!    |   (/0  ,0  ,1  ,2  ,3  ,4  ,5  ,6  , 7 , 8 , 9 ,10,
+!    |     15 ,15 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17,
+!    |     17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17,
+!    |     17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17,
+!    |     17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,15 ,15,
+!    |     10 , 9 , 8 , 7 ,6  ,5  ,4  ,3  ,2  ,1  ,0  ,0/)
+#else
+      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
+#endif
 !
 ! If check_exp is set true, certain routines will use expo() (util.F)
 ! instead of exp(). expo checks for out of range arguments to the
@@ -235,11 +256,6 @@
       grav = 870. ! (is 945. in time-gcm)
       dzgrav = grav/gask   ! C(65)
 !
-! Set kut for wave filtering according to dlat (2.5 or 5.0):
-      call set_wave_filter(36,kut_5,nlat,kut)
-      write(6,"('init_cons: dlat=',f6.2,' nlat=',i3,' kut=',/,(12i4))")
-     |  dlat,nlat,kut
-!
 ! Set dynamo constants:
       call consdyn
 !
@@ -259,40 +275,9 @@
      |  '  freq_ann=',e12.4)") freq_3m3,freq_semidi,freq_ann
       write(6,"('  dipmin = ',f8.3)") dipmin
       write(6,"('  check_exp = ',l1)") check_exp
-
-!     write(6,"('kut     = ',36i3)") kut
-!     write(6,"('2*kut+3 = ',36i3)") 2*kut(:)+3
+      write(6,"('  kut (for filtering) = ',36i3)") kut
 !
       end subroutine init_cons
-!-----------------------------------------------------------------------
-      subroutine set_wave_filter(nlat5,kut5,nlat,kut)
-!
-! Args:
-      integer,intent(in) :: nlat5,nlat
-      integer,intent(in) :: kut5(nlat5)
-      integer,intent(out) :: kut(nlat)
-!
-! Local:
-      integer :: j
-!
-      if (nlat==nlat5) then ! nlat==nlat5==36 (5x5 degree res)
-        do j=1,nlat
-          kut(j) = kut5(j)
-        enddo
-      elseif (nlat==nlat5*2) then ! nlat==72 (2.5x2.5 degree res)
-        do j=1,nlat5-1
-          kut(j*2-1) = kut5(j) ! 1,3,5,...,65,67,69
-          kut(j*2)   = kut5(j) ! 2,4,6,...,66,68,70
-        enddo
-        kut(nlat) = kut5(nlat5)
-        kut(nlat-1) = kut5(nlat5)
-      else
-        write(6,"('set_wave_filter: nlat=',i3,' dlat=',f8.3,
-     |    ' not supported.')") nlat,dlat
-        call shutdown('dlat')
-      endif
-!     write(6,"('set_wave_filter: nlat=',i3,' kut=',/,(12i4))") nlat,kut
-      end subroutine set_wave_filter
 !-----------------------------------------------------------------------
       subroutine consdyn
       use input_module,only: dynamo

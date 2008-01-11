@@ -10,8 +10,7 @@
       use bndry_module,only: b,fb ! b(nlonp4,2,2), fb(nlonp4,2)
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  boltz,p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
-     |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,
-     |  set_wave_filter,dtsmooth,dtsmooth_div2
+     |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,dtsmooth_div2
       use init_module,only: glat
       use input_module,only: difhor
       use fields_module,only: w,itc,itp,tlbc
@@ -105,11 +104,6 @@
 !
       real :: phi(2,3)
 !
-! Wave number limits for filtering (kut from cons not used):
-      integer,parameter :: kutt_5(36) = ! for 5 degree latitude resolution
-     | (/1,2,3,5,6,7,9,10,11,13,14,15,17,17,17,17,17,17,17,17,17,17,
-     |   17,17,15,14,13,11,10,9,7,6,5,3,2,1/)
-      integer :: kutt(nlat)
 #ifdef VT
 !     code = 114 ; state = 'minor' ; activity='ModelCode'
       call vtbegin(114,ier)
@@ -133,9 +127,6 @@
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==nlonp4) lonend = lon1-2 ! nlonp4==nlonp4
-!
-! Set kut for wave filtering according to dlat (2.5 or 5.0):
-      call set_wave_filter(36,kutt_5,nlat,kutt)
 !
 ! Latitude scan over task subdomain:
       do lat=lat0,lat1
@@ -450,7 +441,7 @@
 ! not including ghost cells.
 !
       call filter_minor(fcomp_out(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,kutt)
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 !----------------------- Begin third latitude scan --------------------
       do lat=lat0,lat1
@@ -526,7 +517,7 @@
 !
       end subroutine minor
 !-----------------------------------------------------------------------
-      subroutine filter_minor(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
+      subroutine filter_minor(fout,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Filter minor species (called from minor after trsolv)
 !
@@ -543,7 +534,6 @@
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      integer,intent(in) :: kut(nlat)
       real,intent(inout) :: fout(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! VT vampir tracing:
@@ -585,7 +575,6 @@
 !
 ! Loop through subdomain latitudes:
         latscan: do j=lat0,lat1
-          if (kut(j) >= nlon/2) cycle latscan
 !
 ! Define 2d array with all longitudes for filter2:
           do i=1,nlonp4
@@ -593,7 +582,7 @@
           enddo ! i=1,nlonp4
 !
 ! Do the filtering (requires fft):
-          call filter2(f_ik,lev0,lev1,kut(j),j)
+          call filter2(f_ik,lev0,lev1,j)
 !
 ! Return filtered array to f_kij:
           do i=1,nlonp4

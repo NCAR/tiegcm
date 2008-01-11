@@ -4,7 +4,7 @@
 !
 ! Calculate electron and ion temperatures.
 !
-      use params_module,only: dz,nlonp4
+      use params_module,only: dz,nlonp4,spval
       use cons_module,only: pi,rtd,evergs,p0,expz,expzmid,expzmid_inv,
      |  boltz,rmassinv_o2,rmassinv_o1,rmassinv_n2,gask,grav,dipmin,avo
       use input_module,only: f107
@@ -627,6 +627,9 @@
         enddo
       enddo
 !
+! 1/9/08 btf: put spval in top level of te:
+      te_out(lev1,:) = spval
+!
 ! Te is not defined at lev1 (only up to lev1-1)
 !     call addfld('TE_OUT',' ',' ',te_out(lev0:lev1-1,lon0:lon1),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
@@ -644,6 +647,10 @@
           if (ti_out(k,i) < tn(k,i)) ti_out(k,i) = tn(k,i)
         enddo
       enddo
+!
+! 1/9/08 btf: put spval in top level of ti:
+      ti_out(lev1,:) = spval
+!
 !     call addfld('TI_OUT',' ',' ',ti_out(lev0:lev1-1,lon0:lon1),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !

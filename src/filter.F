@@ -74,42 +74,36 @@
       enddo
       end subroutine filter
 !-----------------------------------------------------------------------
-      subroutine filter2(f,lev0,lev1,kutj,lat)
+#include <defs.h>
+      subroutine filter2(f,lev0,lev1,lat)
       use cons_module,only: dlamda
       use params_module,only: nlon,dlon
 !
 ! Args:
-      integer,intent(in) :: kutj,lev0,lev1,lat
+      integer,intent(in) :: lev0,lev1,lat
       real,intent(inout) :: f(nlonp4,lev0:lev1)
 !
 ! Local:
-      integer,parameter :: nlond4 = nlon/4, nlond4_5 = 72/4
-      integer :: nn(nlond4),nlevs,k,i,nx,nw
-      integer :: nn_5(nlond4_5) ! for 5 deg in lon
+      integer :: nn(nlat),nlevs,k,i,j,nx,nw
       real :: fx(nlonp4,2*(lev1-lev0+1)),
      |        wfft((nlonp4+1)*2*(lev1-lev0+1))
 !
-! For 5 degree resolution: 
-      nn_5=(/45,20,11, 7, 5,4,3,2,2,1,1,1,1,1,1,1,1,1/) ! 5 deg grid
-!     nn_5=(/90,40,22,14,10,8,6,4,2,1,1,1,1,1,1,1,1,1/) ! 5 deg grid
-      if (dlon==5.0) then
-        do i=1,nlond4
-          nn(i)=nn_5(i)
-        enddo
+! 1/8/08 btf: Define nn for 5.0 or 2.5 degree resolution:
 !
-! For 2.5 degree grid:
-      elseif (dlon==2.5) then
-        do i=1,nlond4_5
-          nn(i*2-1) = nn_5(i)
-          nn(i*2) = nn_5(i)
-        enddo
-      else
-        write(6,"('filter2: unsupported dlon=',f8.2)") dlon
-        call shutdown('dlon')
-      endif
+#if (NLAT==36 && NLON==72)
+      nn=(/43,18, 9, 5, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+     |      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 9,18,43/) ! 5.0 deg
+#elif (NLAT==72 && NLON==144)
+      nn=(/90,90,40,40,22,22,14,14,10,10, 8, 8, 6, 6, 4, 4, 2, 2,
+     |      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+     |      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+     |      2, 2, 4, 4, 6, 6, 8, 8,10,10,14,14,22,22,40,40,90,90/) ! 2.5 deg
+#else
+      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
+#endif
 !
+! Load field data into fx (1-nlon <- 3-nlonp2)
       nlevs = lev1-lev0+1
-      if (kutj > nlat/2) return
       do k=lev0,lev1
         do i=1,nlon
           fx(i,k) = f(i+2,k)
@@ -131,7 +125,7 @@
 ! Multiply by smoothing function:
       do k=lev0,lev1
         do i=1,nlon
-          fx(i+2,k) = fx(i+2,k)*cos(((i+1)/2)*dlamda/2.)**(2*nn(kutj))
+          fx(i+2,k) = fx(i+2,k)*cos(((i+1)/2)*dlamda/2.)**(2*nn(lat))
         enddo ! i=1,nlon
       enddo ! k=lev0,lev1
 !

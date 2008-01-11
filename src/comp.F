@@ -10,7 +10,7 @@
       use init_module,only: glat
       use cons_module,only: pi,hor,dtr,rmassinv_o2,rmassinv_o1,
      |  rmassinv_n2,rmass_o2,rmass_o1,expz,expzmid,expzmid_inv,
-     |  difk,dtx2inv,kut_5,set_wave_filter,dtsmooth,dtsmooth_div2
+     |  difk,dtx2inv,dtsmooth,dtsmooth_div2
       use chemrates_module,only: fs ! from sub comp_o2o
       use bndry_module,only: b,fb
       use fields_module,only: tlbc
@@ -36,7 +36,7 @@
      |  o2nm_upd ,o1nm_upd ! output: O2,O updated for previous timestep
 !
 ! Local:
-      integer :: k,kk,i,lat,isp,km,kp,ktmp,m,lonbeg,lonend,kutt(nlat)
+      integer :: k,kk,i,lat,isp,km,kp,ktmp,m,lonbeg,lonend
       integer :: nk,nkm1,i0,i1,k0,k1
       integer,parameter :: io2=1,io1=2 ! indices to O2, O, respectively
       real,dimension(lon0:lon1,lev0:lev1,2,2) :: gama
@@ -548,12 +548,9 @@
 !
 ! Filter the new composition species:
 !
-! Set kut for wave filtering according to dlat (2.5 or 5.0):
-      call set_wave_filter(36,kut_5,nlat,kutt)
-!
 ! Fourier smoothing of O2 and O:
-      call filter_o2o(o2_upd,lev0,lev1,lon0,lon1,lat0,lat1,kutt)
-      call filter_o2o(o1_upd,lev0,lev1,lon0,lon1,lat0,lat1,kutt)
+      call filter_o2o(o2_upd,lev0,lev1,lon0,lon1,lat0,lat1)
+      call filter_o2o(o1_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Resume latitude scan:
       do lat=lat0,lat1
@@ -674,12 +671,13 @@
 
       end subroutine advecl
 !-----------------------------------------------------------------------
-      subroutine filter_o2o(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
+      subroutine filter_o2o(fout,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Filter updated W omega:
 !
       use params_module,only: nlat,nlonp4,nlon
       use filter_module,only: filter
+      use cons_module,only: kut ! kut(nlat)
 #ifdef MPI
       use mpi_module,only: mp_gatherlons_f3d,mp_scatterlons_f3d,mytidi
       implicit none
@@ -689,7 +687,7 @@
 #endif
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1,kut(nlat)
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
       real,intent(inout) :: fout(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
 !
 ! VT vampir tracing:
@@ -734,13 +732,13 @@
 !
 ! Define 2d array with all longitudes for filter at each latitude:
         latscan: do j=lat0,lat1
-          if (kut(j) >= nlon/2) cycle latscan
           do i=1,nlonp4
             fik(i,:) = fkij(:,i,j)
           enddo ! i=1,nlonp4
 !
 ! Remove wave numbers > kut(lat):
-          call filter(fik,lev0,lev1,kut(j),j)
+          call filter(fik,lev0,lev1,kut(j),j) ! tiegcm
+!         call filter2(fik,lev0,lev1,j)       ! timegcm
 !
 ! Return filtered array to fkij:
           do i=1,nlonp4

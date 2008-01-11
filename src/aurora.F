@@ -49,6 +49,10 @@
 !   3) subs aurora_cusp and aurora_heat called from sub aurora.
 !   4) sub aurora_ions called from sub aurora. 
 !
+! 1/4/08 btf: Updating with Liying and Wenbin's mods, see e1,e2, h1,h2,
+!             and mods to gpi.F. Wenbin may have additional recommendations
+!             for alfad,ed, alfac, ec.
+!
       use cons_module,only: ! see cons.F
      |  dphi, ! delta latitude geographic (radians)
      |  dtr,  ! degrees to radians (pi/180)
@@ -74,14 +78,20 @@
 !   fd   : Electron particle flux of drizzle electrons (particles/cm**2/s)
 !
       real,parameter ::
-     |  alfad = 2.0, 
-     |  ed = 0.5     
+!    |  alfad = 2.0, 
+!    |  ed = 0.5     
+! Reduce the drizl intensity - G. Lu, July 28, 2006
+! 1/4/08 btf: Wenbin says these are still too high.
+     |  alfad = 2.0,
+     |  ed = 0.11
       real :: fd ! set in sub aurora_ions
 !
 ! Polar cusp parameters:
 !   alfac: Characteristic Maxwellian energy of polar cusp electons (keV)
 !   ec   : Column energy input of polar cusp electrons (ergs/cm**2/s)
 !   fc   : Electron particle flux of polar cusp electrons (particles/cm**2/s)
+!
+! 1/4/08 btf: Wenbin will have recommendations for cusp
 !
       real,parameter ::
      |  alfac = 1.0, 
@@ -248,26 +258,34 @@
 #endif
 !
       plevel = 0.
-      if (power >= 0.01) plevel = 2.09*alog(power)
+! 8/1/06 btf: change conditional as per Richmond suggestion:
+!     if (power >= 0.01) plevel = 2.09*alog(power)
+      if (power >= 1.00) plevel = 2.09*alog(power)
 !
 ! e1 = energy flux in the noon sector of the aurora (ergs/cm**2/s)
 ! e2 = energy flux in the midnight sector of the aurora (ergs/cm**2/s)
-      e1 = (1.0 + 0.10 * power)
-      e2 = (1.0 + 0.40 * power)
-! Values from corrections to Emery et al Parameterization report:
-!     e1 = max(0.50, -2.15 + 0.62*plevel)
-!     e2 = 0.95 + 0.117 * power
-!
+!      e1 = (0.5 + 0.15 * power)
+!      e2 = (1.5 + 0.25 * power)
+! 
+! modified by LQIAN, 2007
+! produce realistic oval compared to NOAA empirical auroral oval and TIMED/GUVI
+! e1 formula given by Wenbin base on POLARVIS image;
+! e2 formula based on Emery et al original auroral parameterization report
+      e1 = max(0.50, -2.15 + 0.62*plevel)
+      e2=1.+0.11*power
       e0 = 0.5 * (e1 + e2)
       ree = (e2 - e1) / (e1 + e2)
 !
 ! h1 = Gaussian half-width of the noon auroral oval in degrees
 ! h2 = Gaussian half-width of the midnight auroral oval in degrees
-      h1 = 2. + 0.05 * power
-      h2 = 3. + 0.40 * power
-! Values from corrections to Emery et al Parameterization report:
-!     h1 = min(2.35, 0.83 + 0.33*plevel)
-!     h2 = 2.87 + 0.15*plevel
+!      h1 = 2. + 0.05 * power
+!      h2 = 3. + 0.20 * power
+! modified by LQIAN, 2007
+! produce realistic oval compared to NOAA empirical auroral oval and TIMED/GUVI
+! h1 formula given by Wenbin base on POLARVIS image;
+! h2 formula based on Emery et al original auroral parameterization report
+      h1 = min(2.35, 0.83 + 0.33*plevel)
+      h2=2.5+0.025*max(power,55.)+0.01*min(0.,power-55.)
       rh = (h2 - h1) / (h1 + h2)
 !
       theta0(isouth) = (-3.80+8.48*(ctpoten**0.1875))*dtr
@@ -283,7 +301,10 @@
       arad(inorth) = max(rcp,rhp)
       rrad(isouth) = arad(isouth)*dtr 
       rrad(inorth) = arad(inorth)*dtr
-      alfa_1 = 2. 
+!     alfa_1 = 2. 
+!     alfa_2 = 2.
+! 1/4/08 btf: Wenbin has recommended changes for these.
+      alfa_1 = 1.5
       alfa_2 = 2.
 ! Values from 10/05/94 HPI estimates (50% or more higher than old estimates):
 !     alfa_1 = min(1.5,1.25+0.05*plevel)

@@ -745,7 +745,7 @@
       if (byimf==spval) then
         write(6,"(/,'>>> INPUT: need 1 value for byimf',
      |    ' e.g.: BYIMF=0.')")
-        write(6,"('NOTE: multiple (time-dependent) values for CTPOTEN',
+        write(6,"('NOTE: multiple (time-dependent) values for BYIMF',
      |    ' not yet supported')")
         call shutdown('BYIMF')
       endif

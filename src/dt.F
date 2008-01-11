@@ -11,8 +11,7 @@
       use init_module,only: iter,igetgswm
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
-     |  gask,expzmid,expzmid_inv,dift,kut_5,set_wave_filter,dtsmooth,
-     |  dtsmooth_div2
+     |  gask,expzmid,expzmid_inv,dift,dtsmooth,dtsmooth_div2,kut
       use bndry_module,only: tb,tb2,tba,bnd,bnd2,bnda,ci,lbc_gswm_dt
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
@@ -49,7 +48,7 @@
      |  tn_nm_upd ! updated tn at time n-1 (output)
 !
 ! Local:
-      integer :: k,i,lonbeg,lonend,lat,kutt(nlat)
+      integer :: k,i,lonbeg,lonend,lat
       integer :: nk,nkm1,nlevs
       complex :: expt,expt2,expta
       real :: rstep
@@ -372,10 +371,10 @@
       enddo ! lat=lat0,lat1
 !
 ! Set kut for wave filtering according to dlat (2.5 or 5.0):
-      call set_wave_filter(36,kut_5,nlat,kutt)
+!     call set_wave_filter(36,kut_5,nlat,kutt)
 !
 ! Filter updated tn:
-      call filter_tn(tn_upd,lev0,lev1,lon0,lon1,lat0,lat1,kutt)
+      call filter_tn(tn_upd,lev0,lev1,lon0,lon1,lat0,lat1,kut)
 !
 ! Third latitude scan:
       do lat=lat0,lat1

@@ -10,6 +10,11 @@
 #include <VT.inc>
 #endif
       implicit none
+!
+! 1/8/08 btf: add option to call filter() and/or filter2() for oplus.
+! Default for tiegcm is callfilt1=.false. and callfilt2=.true.
+      logical :: callfilt1=.false.  ! if true, call filter()
+      logical :: callfilt2=.true.   ! if true, call filter2()
       contains
 !-----------------------------------------------------------------------
       subroutine oplus(tn,te,ti,o2,o1,n2d,ne,u,v,w,barm,ui,vi,wi,
@@ -22,9 +27,9 @@
 ! There are 4 latitude scans, with 3d mpi calls in between the loops.
 !   (see also 3d gather/scatter calls in sub filter_op).
 !
-      use cons_module,only: set_wave_filter,rmass_op,gask,grav,re,cs,
-     |  dphi,dlamda,shapiro,dtx2inv,boltz,expz,rmassinv_o2,rmassinv_o1,
-     |  rmassinv_n2,rmassinv_n2d,p0,dtsmooth,dtsmooth_div2
+      use cons_module,only: rmass_op,gask,grav,re,cs,dphi,dlamda,
+     |  shapiro,dtx2inv,boltz,expz,rmassinv_o2,rmassinv_o1,
+     |  rmassinv_n2,rmassinv_n2d,p0,dtsmooth,dtsmooth_div2,kut
       use qrj_module,only: 
      |  qop2p, ! O+(2p) ionization from qrj, used in xiop2p
      |  qop2d, ! O+(2d) ionization from qrj, used in xiop2d
@@ -71,10 +76,6 @@
      |  dvb        ! output of sub divb
       real,dimension(lon0:lon1) :: 
      |  ubca, ubcb ! O+ upper boundary condition (were t2,t3)
-      integer,parameter :: kutt_5(36) = ! for 5 degree latitude resolution
-     |  (/1,2,3,5,6,7,9,10,11,13,14,15,17,17,17,17,17,17,17,17,17,17,17,
-     |   17,15,14,13,11,10,9,7,6,5,3,2,1/)
-      integer :: kutt(nlat) ! see sub set_wave_filter, set for current resolution
       real :: explic = 1., gmr
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  psi_n2,           ! n2 mass mixing ratio (1-o2-o)
@@ -132,10 +133,6 @@
 !       call addfld('WI_OP',' ',' ',wi(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     enddo ! lat=lat0,lat1
-
-!
-! Set kut for wave filtering according to dlat (2.5 or 5.0 degrees):
-      call set_wave_filter(36,kutt_5,nlat,kutt)
 !
 ! Sub oplus_flux returns upward number flux of O+ in 
 !   opflux(lon0:lon1,lat0:lat1):
@@ -801,7 +798,7 @@
 ! Filter updated O+:
 ! 
       call filter_op(opout(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,kutt)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,kut)
 !
 !----------------------- Begin fourth latitude scan ---------------------
       do lat=lat0,lat1
@@ -1082,7 +1079,7 @@
 ! Filter updated O+. This is called from outside latitude loop,
 ! i.e., once per timestep.
 !
-      use filter_module,only: filter2
+      use filter_module,only: filter,filter2
 #ifdef MPI
       use mpi_module,only: mytidi,mp_gatherlons_f3d,mp_scatterlons_f3d
 #else
@@ -1126,7 +1123,6 @@
 !
 ! Loop through subdomain latitudes:
           latscan: do j=lat0,lat1
-            if (kut(j) >= nlon/2) cycle latscan
 !
 ! Define 2d array at all longitudes for filter2:
             do i=1,nlonp4
@@ -1134,7 +1130,14 @@
             enddo ! i=1,nlonp4
 !
 ! Do the filtering (requires fft):
-            call filter2(op_ik,lev0,lev1,kut(j),j)
+! call filter and/or filter2 according to module logicals callfilt1,callfilt2:
+!
+! If requested, call filter2(), as in composition comp_major and minor:
+            if (callfilt2) call filter2(op_ik,lev0,lev1,j)
+!
+! If requested, call filter(), as in dt,duv,etc:
+!
+            if (callfilt1) call filter(op_ik,lev0,lev1,kut(j),j)
 !
 ! Return filtered array to op_kij:
             do i=1,nlonp4

@@ -11,8 +11,7 @@
       use bndry_module,only: ub,ub2,uba,vb,vb2,vba,bnd,bnd2,bnda,ci,
      |  lbc_gswm_duv
       use cons_module,only: freq_semidi,dt,dtx2inv,expz,p0,gask,grav,
-     |  xmue,cor,tanphi=>tn,re,kut_5,set_wave_filter,dtsmooth_div2,
-     |  dtsmooth
+     |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,kut
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
       use addfld_module,only: addfld
 #ifdef MPI
@@ -55,7 +54,7 @@
      |  vnm_upd  ! updated meridional velocity at time n-1
 !
 ! Local:
-      integer :: k,i,j,lat,lonbeg,lonend,kutt(nlat)
+      integer :: k,i,j,lat,lonbeg,lonend
       integer :: nk,nkm1,nlevs
       complex :: expt,expt2,expta
       real :: 
@@ -457,13 +456,13 @@
 
 !
 ! Set kut for wave filtering according to dlat (2.5 or 5.0):
-      call set_wave_filter(36,kut_5,nlat,kutt)
+!     call set_wave_filter(36,kut_5,nlat,kutt)
 !
 ! Fourier smoothing of U and V:
       call filter_uv(un_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
-     |  lat0,lat1,kutt)
+     |  lat0,lat1,kut)
       call filter_uv(vn_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
-     |  lat0,lat1,kutt)
+     |  lat0,lat1,kut)
 !
 ! Fourth latitude scan:
       do lat=lat0,lat1
@@ -643,7 +642,11 @@
       call mp_bndlons_f3d(ztmp,nlevs,lon0,lon1,lat0-2,lat1+2,1)
       call mp_periodic_f3d(ztmp(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1)
-
+#else
+!
+! Set periodic points for serial run:
+      ztmp(:,1:2,:) = ztmp(:,lonend-2:lonend-1,:)
+      ztmp(:,lonend+1:lonend+2,:) = ztmp(:,3:4,:)
 #endif
 !     do lat=lat0,lat1
 !       call addfld('ZTMP',' ',' ',ztmp(:,lon0:lon1,lat),
@@ -909,7 +912,7 @@
 #endif
 !
 ! Local:
-      integer :: i,j,nlevs,nlons,nlats
+      integer :: i,j,nlevs
       real :: fik(nlonp4,lev0:lev1),fkij(lev0:lev1,nlonp4,lat0:lat1)
       real :: fmin,fmax
 !
@@ -919,8 +922,6 @@
 #endif
 !
       nlevs = lev1-lev0+1
-      nlons = lon1-lon0+1
-      nlats = lat1-lat0+1
 !
 ! Define lons in w_ki from current task:
       fkij = 0.

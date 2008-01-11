@@ -846,7 +846,8 @@
       if (debug) write(6,"('dynamo after solver..')")
 !
 ! Copy output potential from rim to phim(nmlonp1,nmlat)
-! for weimer - heelis (is hemispherical symmetric):
+! for weimer - heelis (is hemispherical symmetric-> correction would be not
+!        necessary):
 !    Correct the SH potential for the anti-symmetric imposed NH high lat potential
 !    electrodynamo equation was solved with NH Heelis potential -> call stenmod
 !

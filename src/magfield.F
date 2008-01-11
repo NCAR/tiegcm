@@ -434,11 +434,22 @@
 !     write(6,"('rd2dfld: ',a,' fmin,max=',2e12.4)") name,fmin,fmax
       end subroutine rd2dfld
 !-----------------------------------------------------------------------
+#include <defs.h>
       subroutine magdyn
 !
 ! Local:
-      real,parameter :: sin10=0.17   ! should be equal to dipmin
+!     real,parameter :: sin10=0.17   ! should be equal to dipmin
       real :: cos10
+!
+! sin10 should be the same as dipmin (see cons.F)
+!
+#if (NLAT==36 && NLON==72)
+      real,parameter :: sin10=0.17   ! 5.0 deg horizontal resolution
+#elif (NLAT==72 && NLON==144)
+      real,parameter :: sin10=0.24   ! 2.5 deg horizontal resolution
+#else
+      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
+#endif
 !
 ! Field are calculated in local arrays dimensioned -1:nlonp2, then transferred 
 !   to module data bx,by,bz,bmod2 at 1:nlonp4 for use in the model.
@@ -452,7 +463,7 @@
           rlatm(i+2,j) = alatm(i,j)
           rlonm(i+2,j) = alonm(i,j)
           dipmag(i+2,j) = atan(zb(i,j)/sqrt(xb(i,j)**2+yb(i,j)**2))
-          decmag(i+2,j) = -atan2(yb(i,j),xb(i,j))
+          decmag(i+2,j) = atan2(yb(i,j),xb(i,j))
           sndec(i+2,j) = sin(decmag(i+2,j))
           csdec(i+2,j) = cos(decmag(i+2,j))
           sn2dec(i+2,j) = sndec(i+2,j)**2

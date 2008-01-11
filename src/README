@@ -326,5 +326,134 @@ Now preparing to do a commit, and will save tag tiegcm1-81.
 This code does *not* include most of the mods from $TGCMROOT/tiegcm1.8/src/modsrc.
 Will notify the "dev" group about this commit, and suggest a meeting
 to decide next steps, like including changes from tiegcm1.8/src/modsrc.
-=======
 
+--------------------------------------------------------------------------------
+1/7/08: Changes to 1.81, toward 1.82:
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+aurora.F
+  - ed reduced from 0.5 to 0.11 (Gang Lu mod from July 28, 2006)
+
+> ! 8/1/06 btf: change conditional as per Richmond suggestion:
+> !     if (power >= 0.01) plevel = 2.09*alog(power)
+>       if (power >= 1.00) plevel = 2.09*alog(power)
+
+> !      e1 = (0.5 + 0.15 * power)
+> !      e2 = (1.5 + 0.25 * power)
+> ! modified by LQIAN, 2007
+> ! produce realistic oval compared to NOAA empirical auroral oval and TIMED/GUVI
+> ! e1 formula given by Wenbin base on POLARVIS image;
+> ! e2 formula based on Emery et al original auroral parameterization report
+>       e1 = max(0.50, -2.15 + 0.62*plevel)
+>       e2=1.+0.11*power
+
+> !      h1 = 2. + 0.05 * power
+> !      h2 = 3. + 0.20 * power
+> ! modified by LQIAN, 2007
+> ! produce realistic oval compared to NOAA empirical auroral oval and TIMED/GUVI
+> ! h1 formula given by Wenbin base on POLARVIS image;
+> ! h2 formula based on Emery et al original auroral parameterization report
+>       h1 = min(2.35, 0.83 + 0.33*plevel)
+>       h2=2.5+0.025*max(power,55.)+0.01*min(0.,power-55.)
+
+> !     alfa_1 = 2. 
+>       alfa_1 = 1.5
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+duv.F
+> #else
+> !
+> ! Set periodic points for serial run:
+>       ztmp(:,1:2,:) = ztmp(:,lonend-2:lonend-1,:)
+>       ztmp(:,lonend+1:lonend+2,:) = ztmp(:,3:4,:)
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+gpi.F
+
+322,324d321
+< ! Set minimum hemispheric power to 3 gw:
+<         if (ipower > 0) power = max(3.,-2.78+9.33*fkp)
+< !
+326c323,337
+<         if (ictpoten > 0) ctpoten = 29.+11.*fkp
+---
+> ! modified by LQIAN, 2007
+> ! formula given by Wenbin based on data fitting
+>         if (ictpoten > 0) ctpoten = 15.+15.*fkp + 0.8*fkp**2
+> !
+> ! Formula for hemispheric power:
+> ! modified by LQIAN, 2007
+> ! for fkp<=7: formula given by Zhang Yongliang based on TIMED/GUVI
+> ! for fkp>7: power is 153.13 when fkp=7 from Zhang's formula, 
+> ! assume power is 300.(based on NOAA satellites) when fkp=9 
+> ! do linear interporation in between
+>         if (ipower > 0)  then
+>             if (fkp <=7.) power = 16.82*exp(0.32*fkp)-4.86
+>             if (fkp > 7.) power = 153.13 + 
+>      |                            (fkp-7.)/(9.-7.)*(300.-153.13)
+>         endif
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+lamdas.F
+
+237a238,247
+> !
+> ! 6/2/06 btf: Multiply rnu_ne by 4, as per Richmond:
+> !
+> ! The effective electron-neutral collision frequency is increased in 
+> ! an an hoc manner by a factor of 4 in order for the model to produce
+> ! electric fields and currents below 105 km that agree better with
+> ! observations, as recommended by Gagnepain et al. (J. Atmos. Terr. 
+> ! Phys., 39, 1119-1124, 1977).
+> !
+>       rnu_ne = rnu_ne*4.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+magfield.F
+
+455c455
+<           decmag(i+2,j) = -atan2(yb(i,j),xb(i,j))
+---
+>           decmag(i+2,j) = atan2(yb(i,j),xb(i,j))
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+qrj.F
+ - Liying changes to ssflux call (wave1,wave2,sflux), and data initialization
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+soldata.F
+228c228
+<       integer,external::b_search
+---
+>       integer,external::real_bsearch
+235c235,239
+<       iyfrac=iyear+(iday-1+(iuttime/24.))/365.
+---
+>       if (mod(iyear,4) == 0) then
+>          iyfrac=iyear+(iday-1+(iuttime/24.))/366.
+>       else
+>          iyfrac=iyear+(iday-1+(iuttime/24.))/365.
+>       endif
+250c254
+<       index=b_search(yfrac(:,istruct),1,ndate,iyfrac)
+---
+>       index=real_bsearch(yfrac(:,istruct),1,ndate,iyfrac)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+util.F
+ Added Liying functions: 
+      integer function real_bsearch(inarray,first,last,key)
+      integer function long_bsearch(inarray,first,last,key)
+      integer function int_bsearch(inarray,first,last,key)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+1/7/08: Added #if conditionals around dipmin parameter, see cons.F and magfields.F.
+
+1/8/08: Changed filtering mechanism to the simpler method used in timegcm,
+i.e., #if to set kut in cons according to horizontal resolution. Removed
+sub set_wave_filter. Added option to call filter and/or filter2 in oplus.
+S.a. changes to sub filter in filter.F.
+
+1/8/08: Model now runs at double resolution, but timestep must be reduced
+to 60 seconds. Blueice took almost 1/2 hour to make a 1-day run at 60 sec
+step (ave 1.16 secs/step) with 32 processors (dynamo used 44% of wallclock!)
+
+1/11/08: Doing cvs commit and tagging as tiegcm1-82. (version name in params.F
+changed from 1.81 to 1.82).
+
+--------------------------------------------------------------------------------

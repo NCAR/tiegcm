@@ -1314,7 +1314,7 @@
       stop 'shutdown'
       end subroutine shutdown
 !-----------------------------------------------------------------------
-      integer function b_search(inarray,first,last,key)
+      integer function real_bsearch(inarray,first,last,key)
       implicit none
 !
 ! inarray is a sorted array in asending order. The binary search routine search 
@@ -1322,15 +1322,15 @@
 ! where the value of array[index] equals to key).
 !
 ! Args:
-      integer,intent(in)::first,last
       real,dimension(first:last),intent(in) :: inarray
+      integer,intent(in)::first,last
       real,intent(in)::key
 !
 ! Local:
       integer :: nmid,nmin,nmax
 !
       if ((key < inarray(first)) .or. (key > inarray(last))) then
-          b_search=-1
+          real_bsearch=-1
           return
       endif
 
@@ -1338,7 +1338,7 @@
       nmax=last
       do
          if (nmin > nmax) then
-            b_search=nmin-1
+            real_bsearch=nmin-1
 	    exit
          end if
          nmid=(nmin+nmax)/2
@@ -1347,12 +1347,92 @@
          else if (key < inarray(nmid)) then
 	   nmax=nmid-1
          else
-	   b_search=nmid
+	   real_bsearch=nmid
 	   exit
          end if 
       end do
 
-      end function b_search
+      end function real_bsearch
+!-----------------------------------------------------------------------
+      integer function long_bsearch(inarray,first,last,key)
+      implicit none
+!
+! inarray is a sorted array in asending order. The binary search routine search 
+! for the beginning index where the value of key fall within in inarray (or the index
+! where the value of array[index] equals to key).
+!
+! Args:
+      integer(kind=8),dimension(first:last),intent(in) :: inarray
+      integer,intent(in)::first,last
+      integer(kind=8),intent(in)::key
+!
+! Local:
+      integer :: nmid,nmin,nmax
+!
+      if ((key < inarray(first)) .or. (key > inarray(last))) then
+          long_bsearch=-1
+          return
+      endif
+
+      nmin=first
+      nmax=last
+      do
+         if (nmin > nmax) then
+            long_bsearch=nmin-1
+	    exit
+         end if
+         nmid=(nmin+nmax)/2
+	 if (key > inarray(nmid)) then
+	   nmin=nmid+1
+         else if (key < inarray(nmid)) then
+	   nmax=nmid-1
+         else
+	   long_bsearch=nmid
+	   exit
+         end if 
+      end do
+
+      end function long_bsearch
+!-----------------------------------------------------------------------
+      integer function int_bsearch(inarray,first,last,key)
+      implicit none
+!
+! inarray is a sorted array in asending order. The binary search routine search 
+! for the beginning index where the value of key fall within in inarray (or the index
+! where the value of array[index] equals to key).
+!
+! Args:
+      integer,dimension(first:last),intent(in) :: inarray
+      integer,intent(in)::first,last
+      integer,intent(in)::key
+!
+! Local:
+      integer :: nmid,nmin,nmax
+!
+      if ((key < inarray(first)) .or. (key > inarray(last))) then
+          int_bsearch=-1
+          return
+      endif
+
+      nmin=first
+      nmax=last
+      do
+         if (nmin > nmax) then
+            int_bsearch=nmin-1
+	    exit
+         end if
+         nmid=(nmin+nmax)/2
+	 if (key > inarray(nmid)) then
+	   nmin=nmid+1
+         else if (key < inarray(nmid)) then
+	   nmax=nmid-1
+         else
+	   int_bsearch=nmid
+	   exit
+         end if 
+      end do
+
+      end function int_bsearch
 !-----------------------------------------------------------------------
       subroutine check_nans(f,id1,id2,id3,name,n_total,ispval,spval,
      |  iprint,ifatal)

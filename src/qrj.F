@@ -16,7 +16,11 @@
      |  rlmsrc(l1),
      |  sigin4s(lmax),
      |  quench(4),
-     |  sflux(lmax)
+     |  wave1(lmax),     !       short bound of wave bins
+     |  wave2(lmax),     !       long bound of wave bins 
+     |  sfmin(lmax),     !       reference solar minimum flux of EUVAC model
+     |  afac(lmax),      !       The A factor of EUVAC model
+     |  sflux(lmax)      !       Solar flux for each time step
 !
 ! Branching ratios for photon are branching ratios from photon absorption rate.
 ! Branching ratios for photolectron are branching ratios from photoionization rate.
@@ -145,8 +149,11 @@
 ! Exec:
 !     call addfld('XNMBARI',' ',' ',xnmbari(:,lon0:lon1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfsech('XNMBARI',' ',' ',xnmbari(:,lon0:lon1),
+!    |  lon0,lon1,nlevs,nlevs,lat)
 !
-! Will multiply by inverses:
+!  calculate inverse of wave length
+!
       do i=1,lmax
         rlmeuvinv(i) = 1./rlmeuv(i)
       enddo
@@ -430,20 +437,16 @@
       subroutine init_sflux
       use input_module,only: f107,f107a,see_ncfile
       use init_module,only: sfeps,iday,iyear,secs,istep
-      use soldata_module,only: get_soldata,soldata,nwavesd=>nwave,
-     |                          wave1sd=>wave1,wave2sd=>wave2
+      use soldata_module,only: get_soldata,soldata,nwave
 !
 ! Flux initialization once per time step, called from advance.
 !
 ! Local:
-      real :: wave1(lmax),wave2(lmax)
       integer :: n
-! WAVE1    longwave bound of spectral intervals (Angstroms)
-! WAVE2    shortwave bound of intervals (= WAVE1 for indiv. lines)
-! SFLUX    scaled solar flux returned by subroutine (photons cm-2 s-1)
+! sflu: scaled solar flux returned by subroutine ssflux() (photons cm-2 s-1)
 !
       if (len_trim(see_ncfile) == 0) then
-         call ssflux(f107,f107a,wave1,wave2,sflux)
+         call ssflux(f107,f107a)
          do n = l1+1,lmax
               feuv(n) = sflux(n)*sfeps
          enddo
@@ -453,6 +456,12 @@
          enddo
       else
          call get_soldata(iyear,iday,int(secs),istep)
+         if (nwave /= lmax) then
+            write(6,"('init_sflux(): wave bins mismatch: nwave=',i4,
+     |         ' lmax=',i4)") nwave,lmax
+            call shutdown('init_sflux')
+         endif
+
          do n=1,l1
             fsrc(n)=soldata(n)
          enddo
@@ -468,6 +477,56 @@
 !
 ! Called once per run, from tgcm.F
 !
+! Initialize bins (37 bins)
+!
+      wave1 = (/1700.00, 1650.00, 1600.00, 1550.00, 1500.00,
+     |          1450.00, 1400.00, 1350.00, 1300.00, 1250.00,
+     |          1200.00, 1215.67, 1150.00, 1100.00, 1050.00,
+     |          1027.00,  987.00,  975.00,  913.00,  913.00,
+     |           913.00,  798.00,  798.00,  798.00,  650.00,
+     |           650.00,  540.00,  320.00,  290.00,  224.00,
+     |           155.00,   70.00,   32.00,   18.00,    8.00,
+     |             4.00,    0.50/)
+      wave2 = (/1750.00, 1700.00, 1650.00, 1600.00, 1550.00,
+     |          1500.00, 1450.00, 1400.00, 1350.00, 1300.00,
+     |          1250.00, 1215.67, 1200.00, 1150.00, 1100.00,
+     |          1050.00, 1027.00,  987.00,  975.00,  975.00,
+     |           975.00,  913.00,  913.00,  913.00,  798.00,
+     |           798.00,  650.00,  540.00,  320.00,  290.00,
+     |           224.00,  155.00,   70.00,   32.00,   18.00,
+     |             8.00,    4.00/)
+!
+! Solar spectrum based on EUVAC and glow for wave length less than 1050 A
+! and Woods for wavelength greater than 1050 A
+!
+! solar minimum flux (when P_index=80, unit:photon cm^-2 S^-1)
+!
+      sfmin=(/3.397e+11, 1.998e+11, 1.055e+11, 7.260e+10,
+     |        5.080e+10, 2.802e+10, 1.824e+10, 1.387e+10,
+     |        2.659e+10, 7.790e+09, 1.509e+10, 3.940e+11,
+     |        8.399e+09, 3.200e+09, 3.298e+09, 4.235e+09,
+     |        4.419e+09, 4.482e+09, 7.156e+08, 1.028e+09,
+     |        3.818e+08, 8.448e+08, 3.655e+09, 2.364e+09,
+     |        1.142e+09, 1.459e+09, 4.830e+09, 2.861e+09,
+     |        8.380e+09, 4.342e+09, 5.612e+09, 1.270e+09,
+     |        5.326e+08, 2.850e+07, 2.000e+06, 1.000e+04,
+     |        5.010e+01/)
+!
+! scaling factor A as defined in EUVAC model
+!
+      afac=(/5.937e-04, 6.089e-04, 1.043e-03, 1.125e-03,
+     |       1.531e-03, 1.202e-03, 1.873e-03, 2.632e-03,
+     |       2.877e-03, 2.610e-03, 3.739e-03, 4.230e-03,
+     |       2.541e-03, 2.099e-03, 3.007e-03, 4.825e-03,
+     |       5.021e-03, 3.950e-03, 4.422e-03, 4.955e-03,
+     |       4.915e-03, 5.437e-03, 5.261e-03, 5.310e-03,
+     |       3.680e-03, 5.719e-03, 5.857e-03, 1.458e-02,
+     |       7.059e-03, 2.575e-02, 1.433e-02, 9.182e-03,
+     |       1.343e-02, 6.247e-02, 2.000e-01, 3.710e-01,
+     |       6.240e-01/)
+!
+!   0.5*(wave1+wave2) in centimeter
+!
       rlmeuv=(/1.725e-05, 1.675e-05, 1.625e-05, 1.575e-05,
      |         1.525e-05, 1.475e-05, 1.425e-05, 1.375e-05,
      |         1.325e-05, 1.275e-05, 1.225e-05, 1.216e-05,
@@ -480,6 +539,7 @@
      |         2.250e-08/)
 !
 ! O2 absorption coefficient:
+!
       sigeuv(1,:) = (/
      |          5.00e-01, 1.50e+00, 3.40e+00, 6.00e+00, 1.00e+01,
      |          1.30e+01, 1.50e+01, 1.20e+01, 2.20e+00, 4.00e-01,
@@ -491,7 +551,7 @@
      |          3.40e-02, 4.54e-03/)
 !
 ! O absorption coefficient:
- 
+!
       sigeuv(2,:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -503,7 +563,7 @@
      |          1.70e-02, 2.27e-03/)
 !
 ! N2 absorption coefficient:
- 
+!
       sigeuv(3,:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -517,7 +577,7 @@
 ! The three major species' ionization branching ratio (off absorption):
 !
 ! O2 
- 
+!
       BPhotonI(1,:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -529,7 +589,7 @@
      |          1.00e+00, 1.00e+00/)
 !
 ! O
- 
+!
       BPhotonI(2,:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -541,7 +601,7 @@
      |          1.00e+00, 1.00e+00/)
 !
 ! N2
- 
+!
       BPhotonI(3,:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -556,7 +616,7 @@
 ! (off O photon ionization)
 !
 ! O+(2p)
- 
+!
       brop2pPh(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -568,7 +628,7 @@
      |          2.24e-01, 2.24e-01/)
 !
 ! O+(2d)
- 
+!
       brop2dPh(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -580,7 +640,7 @@
      |          3.78e-01, 3.78e-01/)
 !
 ! O+(4s)
- 
+!
       brop4sPh(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -592,7 +652,7 @@
      |          3.90e-01, 3.90e-01/)
 !
 ! O2 photon dissociation braching ratio
- 
+!
       bro2DPh(:) = (/
      |          1.00e+00, 1.00e+00, 1.00e+00, 1.00e+00, 1.00e+00,
      |          1.00e+00, 1.00e+00, 1.00e+00, 1.00e+00, 1.00e+00,
@@ -604,7 +664,7 @@
      |          0.00e+00, 0.00e+00/)
 !
 ! n2 photon dissociation braching ratio for n(2d)
- 
+!
       brn2DPh(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -616,7 +676,7 @@
      |          0.00e+00, 0.00e+00/)
 !
 ! O2 photon dissociative ionization braching ratio
- 
+!
       bro2DIPh(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -628,7 +688,7 @@
      |          1.00e+00, 1.00e+00/)
 !
 ! n2 photon dissociative ionization braching ratio
- 
+!
       brn2DIPh(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -640,7 +700,7 @@
      |          9.60e-01, 9.60e-01/)
 !
 ! n(4s) photoionization cross section
- 
+!
       sigin4s(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -655,6 +715,7 @@
 ! off its photon ionization rate
 !
 ! O2
+!
       BElectronI(1,:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -666,7 +727,7 @@
      |          5.02e+01, 2.11e+02/)
 !
 ! O
- 
+!
       BElectronI(2,:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -678,7 +739,7 @@
      |          5.06e+01, 2.17e+02/)
 !
 ! N2
- 
+!
       BElectronI(3,:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -693,7 +754,7 @@
 ! (off O photon ionization)
 !
 ! O+(2p)
- 
+!
       brop2pEl(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -705,7 +766,7 @@
      |          1.10e+01, 4.74e+01/)
 !
 ! O+(2d)      
- 
+!
       brop2dEl(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -717,7 +778,7 @@
      |          2.07e+01, 8.85e+01/)
 !
 ! O+(4s)      
- 
+!
       brop4sEl(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -729,7 +790,7 @@
      |          1.89e+01, 8.12e+01/)
 !
 ! photoelectron dissociative ionization branching ratio of O2
- 
+!
       bro2DIEl(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -741,7 +802,7 @@
      |          1.79e+01, 7.61e+01/)
 !
 ! photoelectron dissociative ionization branching ratio of N2
- 
+!
       brn2DIEl(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -753,7 +814,7 @@
      |          1.83e+01, 7.87e+01/)
 !
 ! photoelectron dissociation branching ratio of N2
- 
+!
       brn2DEl(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -765,7 +826,7 @@
      |          5.21e+01, 2.45e+02/)
 !
 ! photoelectron dissociation branching ratio of o2
- 
+!
       bro2DEl(:) = (/
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
      |          0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00, 0.00e+00,
@@ -798,63 +859,14 @@
 
       end subroutine init_qrj
 !---------------------------------------------------------------
-      subroutine ssflux (f107, f107a,wave1, wave2, sflux)
+      subroutine ssflux (f107, f107a)
 !
 ! Args:
       real,intent(in) :: f107,f107a
-      real,intent(out) :: wave1(lmax),wave2(lmax),sflux(lmax) 
 !
 ! Local:
-      real ::
-     |          pind,
-     |          wavel(lmax), waves(lmax), 
-     |          sfmin(lmax), afac(lmax)
+      real ::  pind
       integer :: l
-!
-! Initialize bins (37 bins)
-      wavel = (/1750.00, 1700.00, 1650.00, 1600.00, 1550.00,
-     |          1500.00, 1450.00, 1400.00, 1350.00, 1300.00,
-     |          1250.00, 1215.67, 1200.00, 1150.00, 1100.00,
-     |          1050.00, 1027.00,  987.00,  975.00,  975.00,
-     |           975.00,  913.00,  913.00,  913.00,  798.00,
-     |           798.00,  650.00,  540.00,  320.00,  290.00,
-     |           224.00,  155.00,   70.00,   32.00,   18.00,
-     |             8.00,    4.00/)
-      waves = (/1700.00, 1650.00, 1600.00, 1550.00, 1500.00,
-     |          1450.00, 1400.00, 1350.00, 1300.00, 1250.00,
-     |          1200.00, 1215.67, 1150.00, 1100.00, 1050.00,
-     |          1027.00,  987.00,  975.00,  913.00,  913.00,
-     |           913.00,  798.00,  798.00,  798.00,  650.00,
-     |           650.00,  540.00,  320.00,  290.00,  224.00,
-     |           155.00,   70.00,   32.00,   18.00,    8.00,
-     |             4.00,    0.50/)
-!
-! Solar spectrum based on EUVAC and glow for wave length less than 1050 A
-! and Woods for wavelength greater than 1050 A
-!
-! solar minimum flux (when P_index=80, unit:photon cm^-2 S^-1)
-      sfmin=(/3.397e+11, 1.998e+11, 1.055e+11, 7.260e+10,
-     |        5.080e+10, 2.802e+10, 1.824e+10, 1.387e+10,
-     |        2.659e+10, 7.790e+09, 1.509e+10, 3.940e+11,
-     |        8.399e+09, 3.200e+09, 3.298e+09, 4.235e+09,
-     |        4.419e+09, 4.482e+09, 7.156e+08, 1.028e+09,
-     |        3.818e+08, 8.448e+08, 3.655e+09, 2.364e+09,
-     |        1.142e+09, 1.459e+09, 4.830e+09, 2.861e+09,
-     |        8.380e+09, 4.342e+09, 5.612e+09, 1.270e+09,
-     |        5.326e+08, 2.850e+07, 2.000e+06, 1.000e+04,
-     |        5.010e+01/)
-!
-! scaling factor A as defined in EUVAC model
-      afac=(/5.937e-04, 6.089e-04, 1.043e-03, 1.125e-03,
-     |       1.531e-03, 1.202e-03, 1.873e-03, 2.632e-03,
-     |       2.877e-03, 2.610e-03, 3.739e-03, 4.230e-03,
-     |       2.541e-03, 2.099e-03, 3.007e-03, 4.825e-03,
-     |       5.021e-03, 3.950e-03, 4.422e-03, 4.955e-03,
-     |       4.915e-03, 5.437e-03, 5.261e-03, 5.310e-03,
-     |       3.680e-03, 5.719e-03, 5.857e-03, 1.458e-02,
-     |       7.059e-03, 2.575e-02, 1.433e-02, 9.182e-03,
-     |       1.343e-02, 6.247e-02, 2.000e-01, 3.710e-01,
-     |       6.240e-01/)
 !
 ! solar model is the same as EUVAC, i.e., solar flux at 
 ! (f107,f107a) is scale as: sflux=sfmin(1+afac(P-80.)) 
@@ -863,14 +875,9 @@
       pind=0.5*(f107+f107a)
       do l=1,lmax
          sflux(l)=sfmin(l)*(1+afac(l)*(pind-80.))
-      enddo
-!
-! bins
-!
-      do L=1,LMAX
-        WAVE1(L) = WAVEL(L)
-        WAVE2(L) = WAVES(L)
-        IF (SFLUX(L) .LT. 0.0) SFLUX(L) = 0.0
+         ! set solar flux  to be 80% of the value when pind=80
+         ! if it becomes negative
+         if (sflux(l) .le. 0.8*sfmin(l)) sflux(l) = 0.8*sfmin(l)
       enddo
 !
       end subroutine ssflux

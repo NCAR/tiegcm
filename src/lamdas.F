@@ -232,6 +232,20 @@
      |       1.82e-10*o2_cm3(k,i)*sqrt_te*(1.+3.60e-2*sqrt_te)+
      |       8.90e-11*o1_cm3(k,i)*sqrt_te*(1.+5.70e-4*te(k,i)))*
      |       omega_e_inv(i)
+!
+! 6/2/06 btf: Multiply rnu_ne by 4, as per Richmond:
+! The effective electron-neutral collision frequency is increased in 
+! an an hoc manner by a factor of 4 in order for the model to produce
+! electric fields and currents below 105 km that agree better with
+! observations, as recommended by Gagnepain et al. (J. Atmos. Terr. 
+! Phys., 39, 1119-1124, 1977).
+!
+          rnu_ne(k,i) = rnu_ne(k,i)*4.
+
+!         write(6,"('lamdas: lat=',i3,' k=',i3,' i=',i3,' te=',
+!    |      e12.4,' n2=',e12.4,' o2=',e12.4,' o1=',e12.4,' omega_e_inv='
+!    |      ,e12.4,' rnu_ne=',e12.4)") lat,k,i,te(k,i),n2_cm3(k,i),
+!    |      o2_cm3(k,i),o1_cm3(k,i),omega_e_inv(i),rnu_ne(k,i)
 
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1

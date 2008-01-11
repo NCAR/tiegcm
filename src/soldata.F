@@ -225,14 +225,18 @@
       integer,parameter :: istruct = 1
 !
 ! External:
-      integer,external::b_search
+      integer,external::real_bsearch
 !
 !     write(6,"('get_soldata: iyear=',i5,' iday=',i4,' iutsec=',
 !    |  i8)") iyear,iday,iutsec
 !
 ! calculate the fractional year value for the model time
       iuttime= iutsec/3600.
-      iyfrac=iyear+(iday-1+(iuttime/24.))/365.
+      if (mod(iyear,4) == 0) then
+         iyfrac=iyear+(iday-1+(iuttime/24.))/366.
+      else
+         iyfrac=iyear+(iday-1+(iuttime/24.))/365.
+      endif
 !
 ! Check that requested date is available:
       if (iyfrac < yfrac(1,istruct) .or. 
@@ -247,10 +251,11 @@
 !
 ! Get index to requested time:
 
-      index=b_search(yfrac(:,istruct),1,ndate,iyfrac)
+      index=real_bsearch(yfrac(:,istruct),1,ndate,iyfrac)
       if (index == -1) then
          call shutdown('soldata: no SEE data available for the date')
       endif
+
 !      write(12,"('index=',i4,'date(index)=',i8)") index,date(index)
 !
 ! make sure that the solar fluxes of both sides of the bracket are not 
@@ -292,8 +297,6 @@
 
       call finterpb(sflux1,sflux2,soldata,nwave,yfrac(index1,istruct),
      |              yfrac(index2,istruct),iyfrac)
-
-
       end subroutine get_soldata
 !-------------------------------------------------------------------
       subroutine handle_ncerr(istat,msg)

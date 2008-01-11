@@ -319,11 +319,22 @@
         endif
         fkp = finterp(fkp0,fkp1,isec0,isec1,iutsec)
 !
-! Set minimum hemispheric power to 3 gw:
-        if (ipower > 0) power = max(3.,-2.78+9.33*fkp)
-!
 ! Formula for potential:
-        if (ictpoten > 0) ctpoten = 29.+11.*fkp
+! modified by LQIAN, 2007
+! formula given by Wenbin based on data fitting
+        if (ictpoten > 0) ctpoten = 15.+15.*fkp + 0.8*fkp**2
+!
+! Formula for hemispheric power:
+! modified by LQIAN, 2007
+! for fkp<=7: formula given by Zhang Yongliang based on TIMED/GUVI
+! for fkp>7: power is 153.13 when fkp=7 from Zhang's formula, 
+! assume power is 300.(based on NOAA satellites) when fkp=9 
+! do linear interporation in between
+        if (ipower > 0)  then
+            if (fkp <=7.) power = 16.82*exp(0.32*fkp)-4.86
+            if (fkp > 7.) power = 153.13 + 
+     |                            (fkp-7.)/(9.-7.)*(300.-153.13)
+        endif
       endif ! doing power or ctpoten
 !
       if (iprint > 0) then
