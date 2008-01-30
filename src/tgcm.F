@@ -104,7 +104,7 @@
       write(6,"('nstep=',i5,' step=',i5)") nstep,step
       nsecs = nstep*step
       write(6,"('Model simulation time = ',i8,' secs ',/,
-     |  '  (minutes=',f8.2,', hours=',f8.2,', days=',f10.6,')')")
+     |  '  (minutes=',f10.2,', hours=',f8.2,', days=',f10.6,')')")
      |  nsecs,float(nsecs)/60.,float(nsecs)/3600.,
      |  float(nsecs)/(24.*3600.)
 !

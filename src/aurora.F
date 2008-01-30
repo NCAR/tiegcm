@@ -1,6 +1,4 @@
 !
-! Pre-processor macros for grid resolution:
-!
       module aurora_module
 !
 ! Auroral oval parameterization. See reference:
@@ -50,8 +48,8 @@
 !   4) sub aurora_ions called from sub aurora. 
 !
 ! 1/4/08 btf: Updating with Liying and Wenbin's mods, see e1,e2, h1,h2,
-!             and mods to gpi.F. Wenbin may have additional recommendations
-!             for alfad,ed, alfac, ec.
+!             and mods to gpi.F. 
+! 1/24/08 btf:Changed alfad,ed, alfac,ec as per Wenbin.
 !
       use cons_module,only: ! see cons.F
      |  dphi, ! delta latitude geographic (radians)
@@ -76,14 +74,10 @@
 !   alfad: Characteristic Maxwellian energy of drizzle electrons (keV)
 !   ed   : Column energy input of drizzle electrons (ergs/cm**2/s)
 !   fd   : Electron particle flux of drizzle electrons (particles/cm**2/s)
+! 1/24/08 btf: reduce alfad to 0.5, as per Wenbin:
 !
-      real,parameter ::
-!    |  alfad = 2.0, 
-!    |  ed = 0.5     
-! Reduce the drizl intensity - G. Lu, July 28, 2006
-! 1/4/08 btf: Wenbin says these are still too high.
-     |  alfad = 2.0,
-     |  ed = 0.11
+      real,parameter :: alfad = 0.5
+      real :: ed ! set in sub aurora_cons as function of hem power
       real :: fd ! set in sub aurora_ions
 !
 ! Polar cusp parameters:
@@ -91,11 +85,13 @@
 !   ec   : Column energy input of polar cusp electrons (ergs/cm**2/s)
 !   fc   : Electron particle flux of polar cusp electrons (particles/cm**2/s)
 !
-! 1/4/08 btf: Wenbin will have recommendations for cusp
+! 1/24/08 btf: As per Wenbin: alfac = 0.1 (old tiegcm1.8 value was 1.0), 
+!              and ec is set as function of hemispheric power in aurora_cons 
+!              (old tiegcm1.8 value for ec was 0.5)
 !
-      real,parameter ::
-     |  alfac = 1.0, 
-     |  ec = 0.5
+      real,parameter :: alfac = 0.1
+      real :: ec ! set in sub aurora_cons (function of hem power)
+!
       real :: fc ! set in sub aurora_ions
 !
 ! e1: Peak energy flux in noon sector of the aurora (ergs/cm**2/s)
@@ -264,9 +260,6 @@
 !
 ! e1 = energy flux in the noon sector of the aurora (ergs/cm**2/s)
 ! e2 = energy flux in the midnight sector of the aurora (ergs/cm**2/s)
-!      e1 = (0.5 + 0.15 * power)
-!      e2 = (1.5 + 0.25 * power)
-! 
 ! modified by LQIAN, 2007
 ! produce realistic oval compared to NOAA empirical auroral oval and TIMED/GUVI
 ! e1 formula given by Wenbin base on POLARVIS image;
@@ -276,10 +269,12 @@
       e0 = 0.5 * (e1 + e2)
       ree = (e2 - e1) / (e1 + e2)
 !
+! 1/24/08 btf: Set ec and ed as function of power, as per Wenbin:
+      ec=(0.24+0.0067*power)/5. 
+      ed=0.0012+0.0006*power
+!
 ! h1 = Gaussian half-width of the noon auroral oval in degrees
 ! h2 = Gaussian half-width of the midnight auroral oval in degrees
-!      h1 = 2. + 0.05 * power
-!      h2 = 3. + 0.20 * power
 ! modified by LQIAN, 2007
 ! produce realistic oval compared to NOAA empirical auroral oval and TIMED/GUVI
 ! h1 formula given by Wenbin base on POLARVIS image;
@@ -301,20 +296,13 @@
       arad(inorth) = max(rcp,rhp)
       rrad(isouth) = arad(isouth)*dtr 
       rrad(inorth) = arad(inorth)*dtr
-!     alfa_1 = 2. 
-!     alfa_2 = 2.
-! 1/4/08 btf: Wenbin has recommended changes for these.
+!
+! 1/4/08 btf: New values for alfa_1 and alfa_2, as per Wenbin
       alfa_1 = 1.5
       alfa_2 = 2.
-! Values from 10/05/94 HPI estimates (50% or more higher than old estimates):
-!     alfa_1 = min(1.5,1.25+0.05*plevel)
-!     alfa_2 = 1.2 + 0.095*plevel
       alfa0 = 0.5*(alfa_1+alfa_2)
       ralfa = (alfa_2-alfa_1) / (alfa_1+alfa_2+e)
 !
-! btf 1/22/04: correct rotation by removing the *15.:
-!     roth = (12.18 - 0.89 * plevel) * 15.
-!     rote = ( 2.62 - 0.55 * plevel) * 15.
       roth = (12.18 - 0.89 * plevel)
       rote = ( 2.62 - 0.55 * plevel)
       rroth = roth * dtr

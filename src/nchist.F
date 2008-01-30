@@ -59,7 +59,8 @@
      |  idv_see_ncfile,idv_gpi_ncfile,idv_ncep_ncfile,
      |  idv_f107d,idv_f107a,
      |  idv_mag,idv_dtide,idv_sdtide,idv_f4d(nf4d),
-     |  idv_alfa30,idv_e30,idv_ed2,idv_alfad2,
+!    |  idv_alfa30,idv_e30,idv_ed2,idv_alfad2,
+     |  idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,idv_ec,idv_alfad,idv_ed,
      |  idv_writedate
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
@@ -542,26 +543,63 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading colfac')
             sh%colfac = scalar
-          case('alfa30')
+
+!         case('alfa30')
+!           istat = nf_get_var1_double(ncid,i,itime,scalar)
+!           if (istat /= NF_NOERR) 
+!    |        call handle_ncerr(istat,'reading alfa30')
+!           sh%alfa30 = scalar
+!         case('e30')
+!           istat = nf_get_var1_double(ncid,i,itime,scalar)
+!           if (istat /= NF_NOERR) 
+!    |        call handle_ncerr(istat,'reading e30')
+!           sh%e30 = scalar
+!         case('ed2')
+!           istat = nf_get_var1_double(ncid,i,itime,scalar)
+!           if (istat /= NF_NOERR) 
+!    |        call handle_ncerr(istat,'reading ed2')
+!           sh%ed2 = scalar
+!         case('alfad2')
+!           istat = nf_get_var1_double(ncid,i,itime,scalar)
+!           if (istat /= NF_NOERR) 
+!    |        call handle_ncerr(istat,'reading alfad2')
+!           sh%alfad2 = scalar
+
+          case('e1')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) call handle_ncerr(istat,'reading e1')
+            sh%e1 = scalar
+          case('e2')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) call handle_ncerr(istat,'reading e2')
+            sh%e2 = scalar
+          case('h1')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) call handle_ncerr(istat,'reading h1')
+            sh%h1 = scalar
+          case('h2')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) call handle_ncerr(istat,'reading h2')
+            sh%h2 = scalar
+          case('ec')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) call handle_ncerr(istat,'reading ec')
+            sh%ec = scalar
+          case('ed')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) call handle_ncerr(istat,'reading ed')
+            sh%ed = scalar
+          case('alfac')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading alfa30')
-            sh%alfa30 = scalar
-          case('e30')
+     |        call handle_ncerr(istat,'reading alfac')
+            sh%alfac = scalar
+          case('alfad')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading e30')
-            sh%e30 = scalar
-          case('ed2')
-            istat = nf_get_var1_double(ncid,i,itime,scalar)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading ed2')
-            sh%ed2 = scalar
-          case('alfad2')
-            istat = nf_get_var1_double(ncid,i,itime,scalar)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading alfad2')
-            sh%alfad2 = scalar
+     |        call handle_ncerr(istat,'reading alfad')
+            sh%alfad = scalar
+
           case('p0')
             istat = nf_get_var_double(ncid,i,var1)
             if (istat /= NF_NOERR) 
@@ -1016,7 +1054,7 @@
       character(len=120) :: char120
       character(len=80) :: char80
       character(len=24) :: create_date,create_time
-      real :: var1(1),rdays
+      real :: var1(1),rdays,rmins
       real,external :: mtime_to_datestr
 !
 ! Define dimensions (field vars will be (time,lev,lat,lon) in
@@ -1116,7 +1154,9 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining time dimension variable')
       startmtime(1:3) = sh%initial_mtime(1:3) ; startmtime(4) = 0
-      rdays = mtime_to_datestr(sh%initial_year,startmtime,imo,ida,
+!     rdays = mtime_to_datestr(sh%initial_year,startmtime,imo,ida,
+!    |  char80)
+      rmins = mtime_to_datestr(sh%initial_year,startmtime,imo,ida,
      |  char80)
       istat = nf_put_att_text(ncid,idv_time,"long_name",4,"time")
       if (istat /= NF_NOERR) call handle_ncerr(istat,
@@ -1548,24 +1588,59 @@
 ! Auroral parameters (alfa30, e30, alfad2, ed2 are timegcm only)
 !
 ! alfa30:
-      call defvar_time_dbl(ncid,"alfa30",ids1,idv_alfa30,
-     |  "Characteristic energy of high-energy auroral electrons",
-     |  "KeV")
+!     call defvar_time_dbl(ncid,"alfa30",ids1,idv_alfa30,
+!    |  "Characteristic energy of high-energy auroral electrons",
+!    |  "KeV")
 !
 ! e30:
-      call defvar_time_dbl(ncid,"e30",ids1,idv_e30,
-     |  "Energy flux of high-energy auroral electrons",
-     |  "ergs/cm2/s")
+!     call defvar_time_dbl(ncid,"e30",ids1,idv_e30,
+!    |  "Energy flux of high-energy auroral electrons",
+!    |  "ergs/cm2/s")
 !
 ! alfad2:
-      call defvar_time_dbl(ncid,"alfad2",ids1,idv_alfad2,
-     |  "Characteristic energy of solar protons in the polar cap",
-     |  "KeV")
+!     call defvar_time_dbl(ncid,"alfad2",ids1,idv_alfad2,
+!    |  "Characteristic energy of solar protons in the polar cap",
+!    |  "KeV")
 !
 ! ed2:
-      call defvar_time_dbl(ncid,"ed2",ids1,idv_ed2,
-     |  "Energy flux of solar protons in the polar cap",
+!     call defvar_time_dbl(ncid,"ed2",ids1,idv_ed2,
+!    |  "Energy flux of solar protons in the polar cap",
+!    |  "ergs/cm2/s")
+!
+! 1/24/08 btf: Auroral parameters:
+!
+! e1:
+      call defvar_time_dbl(ncid,"e1",ids1,idv_e1,
+     |  "Peak energy flux in noon sector of the aurora",
      |  "ergs/cm2/s")
+! e2:
+      call defvar_time_dbl(ncid,"e2",ids1,idv_e2,
+     |  "Peak energy flux in midnight sector of the aurora",
+     |  "ergs/cm2/s")
+! h1:
+      call defvar_time_dbl(ncid,"h1",ids1,idv_h1,
+     |  "Gaussian half-width of the noon auroral oval",
+     |  "degrees")
+! h2:
+      call defvar_time_dbl(ncid,"h2",ids1,idv_h2,
+     |  "Gaussian half-width of the midnight auroral oval",
+     |  "degrees")
+! alfac:
+      call defvar_time_dbl(ncid,"alfac",ids1,idv_alfac,
+     |  "Characteristic Maxwellian energy of polar cusp electons",
+     |  "keV")
+! ec:
+      call defvar_time_dbl(ncid,"ec",ids1,idv_ec,
+     |  "Column energy input of polar cusp electrons",
+     |  "ergs/cm**2/s")
+! alfad:
+      call defvar_time_dbl(ncid,"alfad",ids1,idv_alfad,
+     |  "Characteristic Maxwellian energy of drizzle electrons",
+     |  "keV")
+! ed:
+      call defvar_time_dbl(ncid,"ed",ids1,idv_ed,
+     |  "Column energy input of drizzle electrons",
+     |  "ergs/cm**2/s")
 !
 ! Magnetic pole coordinates (real(2,2)):
       ids2(1) = id_latlon
@@ -2485,7 +2560,10 @@
 !    |    mtimeinit(1:3),h%modeltime(1:3),rmins,rdays
       endif
       if (idv_time <= 0) istat = nf_inq_varid(ncid,"time",idv_time)
-      istat = nf_put_var1_double(ncid,idv_time,h%ihist,rdays)
+! 1/29/08 btf: Use minutes rather than days 
+!              (see time units "minutes since.." above)
+!     istat = nf_put_var1_double(ncid,idv_time,h%ihist,rdays)
+      istat = nf_put_var1_double(ncid,idv_time,h%ihist,rmins)
       if (istat /= NF_NOERR) then
         write(char240,"('Error from nf_put_var1_double defining ',
      |    'time at h%modeltime=',4i4,' mtimeinit=',3i4,
@@ -2643,24 +2721,46 @@
       if (idv_colfac <= 0) istat = nf_inq_varid(ncid,"colfac",
      |  idv_colfac)
       istat = nf_put_var1_double(ncid,idv_colfac,h%ihist,h%colfac)
-!
+ 
 ! alfa30:
-      if (idv_alfa30 <= 0) istat = nf_inq_varid(ncid,"alfa30",
-     |  idv_alfa30)
-      istat = nf_put_var1_double(ncid,idv_alfa30,h%ihist,h%alfa30)
+!     if (idv_alfa30 <= 0) istat = nf_inq_varid(ncid,"alfa30",
+!    |  idv_alfa30)
+!     istat = nf_put_var1_double(ncid,idv_alfa30,h%ihist,h%alfa30)
 !
 ! e30:
-      if (idv_e30 <= 0) istat = nf_inq_varid(ncid,"e30",idv_e30)
-      istat = nf_put_var1_double(ncid,idv_e30,h%ihist,h%e30)
+!     if (idv_e30 <= 0) istat = nf_inq_varid(ncid,"e30",idv_e30)
+!     istat = nf_put_var1_double(ncid,idv_e30,h%ihist,h%e30)
 !
 ! alfad2:
-      if (idv_alfad2 <= 0) istat = nf_inq_varid(ncid,"alfad2",
-     |  idv_alfad2)
-      istat = nf_put_var1_double(ncid,idv_alfad2,h%ihist,h%alfad2)
+!     if (idv_alfad2 <= 0) istat = nf_inq_varid(ncid,"alfad2",
+!    |  idv_alfad2)
+!     istat = nf_put_var1_double(ncid,idv_alfad2,h%ihist,h%alfad2)
 !
 ! ed2:
-      if (idv_ed2 <= 0) istat = nf_inq_varid(ncid,"ed2",idv_ed2)
-      istat = nf_put_var1_double(ncid,idv_ed2,h%ihist,h%ed2)
+!     if (idv_ed2 <= 0) istat = nf_inq_varid(ncid,"ed2",idv_ed2)
+!     istat = nf_put_var1_double(ncid,idv_ed2,h%ihist,h%ed2)
+
+! e1,e2:
+      if (idv_e1 <= 0) istat = nf_inq_varid(ncid,"e1",idv_e1)
+      istat = nf_put_var1_double(ncid,idv_e1,h%ihist,h%e1)
+      if (idv_e2 <= 0) istat = nf_inq_varid(ncid,"e2",idv_e2)
+      istat = nf_put_var1_double(ncid,idv_e2,h%ihist,h%e2)
+! h1,h2:
+      if (idv_h1 <= 0) istat = nf_inq_varid(ncid,"h1",idv_h1)
+      istat = nf_put_var1_double(ncid,idv_h1,h%ihist,h%h1)
+      if (idv_h2 <= 0) istat = nf_inq_varid(ncid,"h2",idv_h2)
+      istat = nf_put_var1_double(ncid,idv_h2,h%ihist,h%h2)
+! alfac,ec:
+      if (idv_alfac <= 0) istat = nf_inq_varid(ncid,"alfac",idv_alfac)
+      istat = nf_put_var1_double(ncid,idv_alfac,h%ihist,h%alfac)
+      if (idv_ec <= 0) istat = nf_inq_varid(ncid,"ec",idv_ec)
+      istat = nf_put_var1_double(ncid,idv_ec,h%ihist,h%ec)
+! alfad,ed:
+      if (idv_alfad <= 0) istat = nf_inq_varid(ncid,"alfad",idv_alfad)
+      istat = nf_put_var1_double(ncid,idv_alfad,h%ihist,h%alfad)
+      if (idv_ed <= 0) istat = nf_inq_varid(ncid,"ed",idv_ed)
+      istat = nf_put_var1_double(ncid,idv_ed,h%ihist,h%ed)
+
 !
 ! Reference pressure used to convert ln(p0/p) to pressure (hPa):
 ! (h%p0 was set in sub define_hist, output.F)

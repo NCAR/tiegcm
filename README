@@ -457,3 +457,48 @@ step (ave 1.16 secs/step) with 32 processors (dynamo used 44% of wallclock!)
 changed from 1.81 to 1.82).
 
 --------------------------------------------------------------------------------
+1/14/08: Changed format of "Elapsed run time" in sub timer_report (timing.F).
+
+1/24/08 btf: mods from Astrid:
+am 1/22/08 (qinite.F, elden.F)
+  change the flux in qinite
+  from
+        real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)
+  to     
+        real,parameter :: al(3)=(/0.75E7,0.75E6,0.75E6/)
+  The new triple values are from TIME-GCM.
+  In addition remove the minimum electron density in elden.F
+ 
+  Motivation:    
+  the usage of the minimum electron density in elden.F was not consistent
+  with the later ion calculation,
+  and was leading to an unbalance in electrons and ions.
+  It was decided that having a minimum electron density shouldn't
+  be necessary if we have a better nighttime ionosphere. However,
+  implementing formulations like Titheridge suggested was postponed for
+  later. We looked at this a few years ago, and it wasn't straight forward to
+  implement. So increasing the night time flux of the three lines (1026,304,584)
+  seems reasonable, also TIME-GCM is using the same values.
+  The nighttime NE at plev=-2 is around log(Ne)=3.2 at low latitudes. The
+  prereversal enhancement is decreasing a bit (around 3-4 m/s) at JRO.
+
+1/24/08 btf: aurora mods from Wenbin:
+      EC=(0.24+0.0067*HP)/5   ! wb version
+      ALFAC=0.1                                                             TAIL.114
+      ED=0.0012+0.0006*HP  ! wb version
+      ALFAD=0.50       ! wb version                                       TAIL.116
+
+Added the following auroral parameters to the histories (single dimension in time,
+see nchist.F)
+     |    e1,e2,             ! peak auroral energy flux
+     |    h1,h2,             ! gaussian half-width for aurora
+     |    alfac,ec,          ! aurora cusp energy
+     |    alfad,ed,          ! aurora drizzle energy
+
+Removed alfa30,e30,alfad2,ed2 from the history (timegcm only)
+
+Small change to print of timing results at end of program (sub timer_report
+in timing.F)
+
+Will remake tiegcm1-82 (including the cvs tag) with these changes.
+--------------------------------------------------------------------------------

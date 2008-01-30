@@ -303,10 +303,9 @@
       elseif (timing%rtc) then
         write(6,"('TIMER (AIX rtc):')")
       endif
-      write(6,"('Elapsed run time      = ',f8.2,' (secs)',
-     |  ' (',f5.3,' hrs) (init+step+i/o = ',f8.2,')')") 
-     |  timing%run, timing%run/3600., 
-     |  timing%init + timing%step+ timing%io
+      write(6,"('Elapsed run time      = ',f10.2,' (secs)  ',
+     |  f6.2,' (mins)  ',f5.2,' (hrs)')")
+     |  timing%run, timing%run/60., timing%run/3600.
       write(6,"(' ')")
 
       write(6,"('Elapsed init time     = ',f8.2,' secs, ',

@@ -395,6 +395,7 @@
       use fields_module,only: nf4d_hist,f4d,fsechist
       use cons_module,only: p0,grav
 !     use aurora_module,only: alfa30,e30,alfa_sp,e_sp
+      use aurora_module,only: e1,e2,h1,h2,alfac,ec,alfad,ed
       implicit none
 !
 ! Args:
@@ -507,6 +508,15 @@
 !     h%e30       = e30
 !     h%alfad2    = alfa_sp ! was alfad2
 !     h%ed2       = e_sp    ! was ed2
+
+      h%e1 = e1
+      h%e2 = e2
+      h%h1 = h1
+      h%h2 = h2
+      h%alfac = alfac
+      h%alfad = alfad
+      h%ec = ec
+      h%ed = ed
 
       h%p0_model  = p0       !  5.e-4 ubars (cons.F)
       h%p0        = p0*1.e-3 !  5.e-7 millibars (hPa)

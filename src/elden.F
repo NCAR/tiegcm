@@ -185,19 +185,24 @@
 
 !     call addfld('ROOT',' ',' ',root,'lev',lev0,lev1,'lon',i0,i1,lat)
 !
+! 1/24/08 btf, maute: Minimum Ne is replaced by new values for flux 
+!                     parameter al in qinite.F
+!
 ! Insure positive Ne (at least 3100):
 !     where(root < 3.1e3) root = 3.1e3
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          if (root(k,i) < 3.1e3) root(k,i) = 3.1e3
-        enddo 
-      enddo
+!      do i=lon0,lon1
+!        do k=lev0,lev1-1
+!          if (root(k,i) < 3.1e3) root(k,i) = 3.1e3
+!        enddo 
+!      enddo
 !
 ! Calculate N2+, O2+, NO+ (cm3)
 !
       do i=lon0,lon1      
         do k=lev0,lev1-1
-          n2p(k,i) = d(k,i)/(e(k,i)+ra3(k,i,lat)*root(k,i))    
+          if (root(k,i) < 1.) root(k,i) = 1.0  ! insure positive Ne from solver
+	                                       ! in case there is a problem
+           n2p(k,i) = d(k,i)/(e(k,i)+ra3(k,i,lat)*root(k,i))    
           o2p(k,i) = (b(k,i)+h(k,i)*d(k,i)/(e(k,i)+ra3(k,i,lat)*
      |      root(k,i)))/(c(k,i)+ra2(k,i,lat)*root(k,i))
 !

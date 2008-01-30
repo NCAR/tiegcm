@@ -138,7 +138,11 @@
      |    dtide(2),          ! diurnal tide (tide2(2) from input)
      |    sdtide(10),        ! semi-diurnal tide (tide(10) from input)
      |    colfac,            ! collision factor
-     |    alfa30,e30,alfad2,ed2, ! auroral parameters from input
+!    |    alfa30,e30,alfad2,ed2, ! auroral parameters from input
+     |    e1,e2,             ! peak auroral energy flux
+     |    h1,h2,             ! gaussian half-width for aurora
+     |    alfac,ec,          ! aurora cusp energy
+     |    alfad,ed,          ! aurora drizzle energy
      |    lbc                ! lower boundary interface level
         logical dynamo       ! if true, is dynamo history
         logical coupled_ccm  ! if true, run was coupled with ccm
@@ -250,10 +254,21 @@
       h%p0     = real_init
       h%p0_model = real_init
       h%grav   = real_init
-      h%alfa30 = real_init
-      h%e30    = real_init
-      h%alfad2 = real_init
-      h%ed2    = real_init
+
+!     h%alfa30 = real_init
+!     h%e30    = real_init
+!     h%alfad2 = real_init
+!     h%ed2    = real_init
+
+      h%e1 = real_init
+      h%e2 = real_init
+      h%h1 = real_init
+      h%h2 = real_init
+      h%alfac = real_init
+      h%ec = real_init
+      h%alfad = real_init
+      h%ed = real_init
+!
       if (associated(h%fnames)) deallocate(h%fnames)
       end subroutine hist_initype
 !-------------------------------------------------------------------
@@ -352,16 +367,21 @@
       write(6,"(2x,'hpower  = ',f5.2,' (Gw)')") h%hpower
       write(6,"(2x,'ctpoten = ',f5.2,' (Volts)')") h%ctpoten
       write(6,"(2x,'byimf   = ',f5.2)") h%byimf
-      if (h%alfa30 /= real_init)
-     |  write(6,"(2x,'alfa30  = ',e8.2,' (KeV) (same as alfa_sp)')") 
-     |    h%alfa30
-      if (h%e30 /= real_init)
-     |  write(6,"(2x,'e30     = ',e8.2,' (ergs/cm2/s) (same as e_sp)')") 
-     |    h%e30
-      if (h%alfad2 /= real_init) 
-     |  write(6,"(2x,'alfad2  = ',e8.2,' (KeV)')") h%alfad2
-      if (h%ed2 /= real_init)
-     |  write(6,"(2x,'ed2     = ',e8.2,' (ergs/cm2/s)')") h%ed2
+      write(6,"(2x,'e1,e2   = ',2e12.4,' (ergs/cm2/s)')") h%e1,h%e2
+      write(6,"(2x,'alfac,alfad  = ',2e12.4,' (keV)')") h%alfac,h%alfad
+      write(6,"(2x,'ec,ed = ',2e12.4,' (ergs/cm2/s)')") h%ec,h%ed
+
+!     if (h%alfa30 /= real_init)
+!    |  write(6,"(2x,'alfa30  = ',e8.2,' (KeV) (same as alfa_sp)')") 
+!    |    h%alfa30
+!     if (h%e30 /= real_init)
+!    |  write(6,"(2x,'e30     = ',e8.2,' (ergs/cm2/s) (same as e_sp)')") 
+!    |    h%e30
+!     if (h%alfad2 /= real_init) 
+!    |  write(6,"(2x,'alfad2  = ',e8.2,' (KeV)')") h%alfad2
+!     if (h%ed2 /= real_init)
+!    |  write(6,"(2x,'ed2     = ',e8.2,' (ergs/cm2/s)')") h%ed2
+
       write(6,"(2x,'colfac  = ',f5.2)") h%colfac
       write(6,"(2x,'p0      = ',e8.2)") h%p0
       if (h%p0_model /= real_init) write(6,"(2x,'p0_model= ',e8.2)") 
