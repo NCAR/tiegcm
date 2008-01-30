@@ -501,4 +501,7 @@ Small change to print of timing results at end of program (sub timer_report
 in timing.F)
 
 Will remake tiegcm1-82 (including the cvs tag) with these changes.
+
+1/30/08: Fixed path to double res tiegcm source file in Mknamelist.
+Redo cvs commit and retag tiegcm1-82.
 --------------------------------------------------------------------------------

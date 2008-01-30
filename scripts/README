@@ -63,3 +63,7 @@ in order to use new params.F w/ interfaces/midpoints, etc.
 11/20/07:
 Added debug and mpi options to .job scripts (tgcm_config handles these).
 Debug flag was working nicely on blueice, actually helped the debug process.
+
+1/30/08:
+Fixed path to double-res tiegcm for default input file (Mknamelist).
+This will be included in remake of tiegcm1-82.

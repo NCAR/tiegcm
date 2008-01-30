@@ -205,17 +205,14 @@ sub set_hist {
     if ($vres == 0.50) { $vresname = "0.50"; }
     if ($vres == 0.25) { $vresname = "0.25"; }
 #
-#   $hist_source = '$TGCMDATA/' . "TGCM.$modelclass" . "_h$hresname" 
-#                  . "v$vresname" . ".$sourcefile";
-#   $hist_source_mss = 
-#     "/TGCM/$modelclass" . "_h$hresname" . "v$vresname" . "/$sourcefile";
-#
-# double vertical and horizontal res now available:
-#   $hist_source = '$TGCMDATA/' . "TGCM.${modelclass}_zbot-10_dres.p001.nc"; 
-#
-# 8/7/06 btf: Default tiegcm at zbot -10 is double res equinox: 
-    $hist_source =     '$TGCMDATA/' . "TGCM.${modelclass}_zbot-10_dres.peq001.nc";
-    $hist_source_mss = "/TGCM/${modelclass}_zbot-10_dres/peq001.nc";
+# Double-resolution source files:
+#   $hist_source =     '$TGCMDATA/' . 'TGCM.${modelclass}_h2.5v0.25.p001-2002-080.nc';
+#   $hist_source_mss = '/TGCM/${modelclass}_h2.5v0.25.p001-2002-080.nc';
+
+    $hist_source = '$TGCMDATA/' . "TGCM.${modelclass}_h$hresname" . "v$vresname" . 
+       ".p001-2002-080.nc";
+    $hist_source_mss = "/TGCM/${modelclass}_h$hresname" . "v$vresname" . 
+       ".p001-2002-080.nc";
 #
     $hist_output = "/$USER/$model" . "_h$hresname" . "v$vresname" . "/ptest001.nc";
     $hist_secout = "/$USER/$model" . "_h$hresname" . "v$vresname" . "/stest001.nc";
