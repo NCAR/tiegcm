@@ -445,7 +445,6 @@
       subroutine weimer01
       use heelis_module,only: colath
       use input_module,only: weimer_ncfile
-      use hist_module,only: h
 ! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc)
       use magfield_module,only: sunlons 
       use cons_module,only: rtd,
@@ -458,6 +457,7 @@
      |  AL,      ! AL lower magnetic auroral activity index in nT
 		 !   if present, ALUSE=true;  if absent, AL=-20, ALUSE=false
      |  ALUSE    ! locigal to use AL in Weimer model or not (false if no AL)
+      use init_module,only: iyear,iday,uthr
 !
 ! Weimer driver, called from sub advance.F
 ! These routines return pfrac, and phihm to the dynamo, and re-calculates
@@ -510,14 +510,17 @@
       USEAL = ALUSE
       BT    = SQRT (BY*BY + BZ*BZ)
       ANGL  = ATAN2 (BY,BZ)*R2D
-!     IYR   = h.year
-      IYR   = h%year
+      IYR   = iyear
 !  Convert from day number to month and day
-!     nda = h.day
-      nda = h%day
+      nda = iday
+
+!     write(6,"('weimer01: iyr=',i5,' nda=',i4)") iyr,nda
+!     write(6,"('weimer01: by=',e12.4,' bz=',e12.4,' sws=',e12.4,
+!    |  ' swd=',e12.4,' alind=',e12.4,' useal=',l1)") 
+!    |  by,bz,sws,swd,alind,useal
+
       call CVT2MD(6,IYR,NDA,IMO,IDA)
-!     ut = h.ut
-      ut = h%ut
+      ut = uthr
       TILT = GET_TILT (IYR,IMO,ida,ut)
 
 ! In epotval01, we find blat=BoundaryLat(rmlt), below which the potential
@@ -815,7 +818,6 @@ CNCAR      NCAR changes are delimited by "CNCAR"
 !
       subroutine rd_weimer_coeffs(ncfile)
       use nchist_module,only: handle_ncerr
-      use input_module,only: tempdir
       implicit none
 !
 #ifdef SUN
@@ -851,8 +853,6 @@ C            STP2  = Denominator in gradient calc
      +            R2D = 57.2957795130823208767981548147)
 !
 ! Acquire mss or disk file:
-!     call mkdiskflnm(ncfile,dskfile)
-!     call getms(ncfile,dskfile,tempdir,' ')
       dskfile = ' '
       call getfile(ncfile,dskfile)
 !

@@ -61,7 +61,6 @@
 !
       use input_module,only:  ! input_mod.f
      |  output,      ! output file paths provided by input
-     |  tempdir,     ! temporary scratch directory for saving
      |  dispose,     ! dispose histories to mss if dispose == 1 or 2
      |  mxhist_prim  ! max number of histories on a primary file
       use hist_module,only:   ! hist_mod.f
@@ -161,13 +160,13 @@
 !
 ! Save file if necessary:
       if (svfile.or.nhist==mxhist_prim.or.nstep==0) then
-        call savefile(ncid,diskfile,output(ioutfile),tempdir,
+        call savefile(ncid,diskfile,output(ioutfile),
      |    dispose,.true.,iprint)
 !
 ! If writing to mss after model execution (dispose==2), update
 ! csh dispose script after every disk write:
       elseif (dispose==2) then
-        call savefile(ncid,diskfile,output(ioutfile),tempdir,
+        call savefile(ncid,diskfile,output(ioutfile),
      |    dispose,.true.,iprint)
       endif
       call nc_close(ncid)
@@ -182,7 +181,6 @@
 !
       use input_module,only:  ! input_mod.f
      |  secout,      ! output file paths provided by input
-     |  tempdir,     ! temporary scratch directory for saving
      |  dispose,     ! save history files to mss if dispose = 1 or 2
      |  mxhist_sech  ! max number of histories on a primary file
       use hist_module,only:   ! hist_mod.f
@@ -290,39 +288,32 @@
       if (svfile.or.nsech==mxhist_sech) then
 !       write(6,"('output_sechist calling savefile: nsech=',i3)")
 !    |    nsech
-        call savefile(ncidsech,diskfile,secout(isecout),tempdir,
+        call savefile(ncidsech,diskfile,secout(isecout),
      |    dispose,.true.,iprint)
 !
 ! If writing to mss after model execution (dispose==2), update
 ! csh dispose script after every disk write:
       elseif (dispose==2) then
-        call savefile(ncidsech,diskfile,secout(isecout),tempdir,
+        call savefile(ncidsech,diskfile,secout(isecout),
      |    dispose,.true.,iprint)
       endif
       call nc_close(ncidsech)
       end subroutine output_sechist
 !-----------------------------------------------------------------------
-      subroutine savefile(ncid,diskfile,outpath,tempdir,idispose,
-     |  reopen,iprint)
+      subroutine savefile(ncid,diskfile,outpath,idispose,reopen,iprint)
       use input_module,only: msreten
       use dispose_module,only: add_dispose
-!
-! Save file diskfile to tempdir and/or mss.
-!
       implicit none
 !
 ! Args:
       integer,intent(in) :: idispose,iprint
       integer,intent(inout) :: ncid
       logical,intent(in) :: reopen
-      character(len=*),intent(in) :: diskfile,outpath,tempdir
+      character(len=*),intent(in) :: diskfile,outpath
 !
 ! Local:
       integer :: istat,ier
       character(len=80) :: fileinfo,msspath
-!
-! External:
-      integer,external :: ilink,iunlink
 !
 ! Make fileinfo string for mss comment field and add as a
 ! global file attribute:
@@ -333,8 +324,8 @@
 ! Close file:
       call nc_close(ncid)
 !
-! Dispose to mss only if dispose flag is set 1 or 2, otherwise 
-! save link on tempdir.
+! Dispose to mss only if dispose flag is set 1 or 2 (do nothing
+! if it is 0).
 !
 ! idispose==1 -> Dispose to mss from model now.  
 ! idispose==2 -> Defer disposes to mss until after model execution.
@@ -343,30 +334,9 @@
 !
       call check_mspath(outpath,msspath)  ! msspath is returned
       if (idispose==1) then       ! dispose now
-        call putms(msspath,diskfile,tempdir,'NCARTGCM',fileinfo,
-     |    msreten)
+        call putms(msspath,diskfile,'NCARTGCM',fileinfo,msreten)
       elseif (idispose==2) then   ! add msrcp command to dispose script
-        call add_dispose(msspath,diskfile,tempdir,' ','NCARTGCM',
-     |    fileinfo,msreten)
-!
-! idispose==0 -> do not dispose to mss, but do link to tempdir.
-      else
-!
-! Do not link to tempdir if tempdir is also cwd:
-        if (len_trim(tempdir) > 0.and.trim(tempdir) /= '.') then
-          istat = iunlink(trim(tempdir)//'/'//trim(diskfile),iprint)
-!
-! Let ilink report to stdout regardless of iprint:
-          istat = ilink(diskfile,trim(tempdir)//'/'//trim(diskfile),1)
-          if (istat /= 0) 
-     |      write(6,"('>>> savefile: error ',i3,' from ilink.')") istat
-          if (iprint > 0)
-     |      write(6,"('(File was NOT disposed to mss)')")
-        else
-!         write(6,"('savefile: NOT linking file ',a,' to tempdir ',
-!    |      'because tempdir is either blank or same as cwd')") 
-!    |      trim(diskfile)
-        endif
+        call add_dispose(msspath,diskfile,'NCARTGCM',fileinfo,msreten)
       endif
 !
 ! Reopen file for appending:
@@ -385,9 +355,10 @@
       use hist_module,only: sh,h,hist_initype,nhist,nsech,modeltime,
      |  isecout,ioutfile,nsource,nsecsource,iseries_prim,iseries_sech
       use input_module,only: output,secout,date,step,power,ctpoten,
-     |  byimf,f107,f107a,mag,tide,tide2,colfac,source,hist,sechist,
-     |  calendar_advance,secsource,gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,
-     |  gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,dynamo,source_start,start,
+     | byimf,bzimf,swvel,swden,al,f107,f107a,mag,tide,tide2,colfac,
+     |  source,hist,sechist,calendar_advance,secsource,
+     |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
+     |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label
 
       use init_module,only: logname,host,system,iyear,iday,istep,
@@ -493,6 +464,10 @@
         h%hpower    = sh%hpower
         h%ctpoten   = sh%ctpoten
         h%byimf     = sh%byimf
+        h%bzimf     = sh%bzimf
+        h%swvel     = sh%swvel
+        h%swden     = sh%swden
+        h%al        = sh%al
         h%colfac    = sh%colfac
       else
         h%f107d     = f107
@@ -500,6 +475,10 @@
         h%hpower    = power
         h%ctpoten   = ctpoten
         h%byimf     = byimf
+        h%bzimf     = bzimf
+        h%swvel     = swvel
+        h%swden     = swden
+        h%al        = al
         h%colfac    = colfac
       endif
 

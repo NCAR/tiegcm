@@ -1,6 +1,6 @@
 !
       module soldata_module
-      use input_module,only: tempdir,see_ncfile
+      use input_module,only: see_ncfile
       implicit none
 #ifdef SUN
 #include <netcdf3.inc>

@@ -68,6 +68,7 @@
 # utildir:     Directory containing config script and needed utilities
 #              (default is $tgcmroot/$model/scripts)
 # mpi:         Load MPI libraries (can be TRUE, FALSE, or DEFAULT)
+# mss:         Availability of NCAR Mass Store (TRUE or FALSE)
 # hres:        Horizontal resolution can be either 5.0 (default), or 2.5 degrees
 # vres:        Vertical resolution can be either 0.5 (default), or 0.25 (ln(p0/p))
 # debug:       If debug=1, configure Makefile for a debug run (default is 0)
@@ -75,16 +76,17 @@
 # Model stdout will be written to $wrkdir.
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm
+ set model       = tiegcm1-82
  set wrkdir      = .
 #set wrkdir      = $model-$$
 #set input       = tiegcm.inp
 #set usr_srcdirs = modsrc
-#set tgcmroot    = /fis/hao/tgcm
+#set tgcmroot    = .
 #set tgcmdata    = /hao/tgcm/data
 #set execdir     = $wrkdir/run
 #set utildir     = $tgcmroot/$model/scripts
-#set mpi         = FALSE
+#set mpi         = TRUE
+#set mss         = TRUE
 #set hres = 5.0
 #set vres = 0.5
 #set debug       = 1
@@ -124,10 +126,11 @@ if (! $?usr_srcdirs) set usr_srcdirs = ""
 if (! $?hres) set hres = 5.0
 if (! $?vres) set vres = 0.5
 if (! $?mpi) set mpi = ""
+if (! $?mss) set mss = "TRUE"
 if (! $?debug) set debug = 0
 #
 # Set utility dir from shell var $tgcmroot, or env var $TGCMROOT:
-# (must contain Abspath, MakeNamelist, MkLogs, etc) 
+# (must contain Abspath, Makenamelist, Mklogs, etc) 
 #
 if (! $?utildir) then
   if ($tgcmroot != "") then    # shell var from above (if set, trumps env var)
@@ -171,15 +174,15 @@ if (! -x $utildir/tgcm_config) \
 #
 perl $utildir/tgcm_config -model=$model -wrkdir=$wrkdir -execdir=$execdir \
   -tgcmroot=$tgcmroot -tgcmdata=$tgcmdata -usr_srcdirs=$usr_srcdirs \
-  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -debug=$debug || \
+  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -mss=$mss -debug=$debug || \
   echo ">>> ${0}: Error from tgcm_config" && exit 1
 #
 # Make default namelist input if not provided by user:
 #
 if (! $?input) then
   set input = \
-    `perl $utildir/MkNamelist -model=$model -hres=$hres -vres=$vres` || \
-     echo "${0}: Error from MkNamelist: fileout = $input" && exit 1
+    `perl $utildir/Mknamelist -model=$model -hres=$hres -vres=$vres` || \
+     echo "${0}: Error from Mknamelist: fileout = $input" && exit 1
   echo "Made default namelist input file $input" 
 else
   echo "Using user provided namelist input file $input"
@@ -216,8 +219,8 @@ echo "Run of $model completed at `date`"
 # Separate output files by MPI task:
 # (we are still in $execdir, but $output contains full path to $wrkdir)
 #
-perl $utildir/MkLogs $output || \
-  echo ">>> ${0}: Error from $execdir/MkLogs on output $output"
+perl $utildir/Mklogs $output || \
+  echo ">>> ${0}: Error from $execdir/Mklogs on output $output"
 #
 # Execute dispose.csh, if it exists:
 # This script was created by the model to dispose history files

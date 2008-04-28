@@ -137,15 +137,13 @@
       istat = isystem(command)
       end subroutine update_mscomment
 !-----------------------------------------------------------------------
-      subroutine add_dispose(mspath,diskfile,tmpdir,lnkfile,wrpass,
-     |  mscomment,msreten)
+      subroutine add_dispose(mspath,diskfile,wrpass,mscomment,msreten)
 !
 ! Add mswrite and mscomment lines for the current dispose request to the 
 !   dispose script. This is called from sub savefile (output.F).
 !
 ! Args:
-      character(len=*),intent(in) ::
-     |  mspath,diskfile,tmpdir,lnkfile,wrpass
+      character(len=*),intent(in) :: mspath,diskfile,wrpass
       character(len=*),intent(in) :: mscomment
       integer,intent(in) :: msreten
 !
@@ -154,22 +152,12 @@
       character(len=120) :: opts,reten
       character(len=lenrec) :: msrcp_cmd, mscomment_cmd
       character(len=8) :: wpass
+      logical :: exists
 !
-! External:
-      integer,external :: ilink,iunlink
-!
-! Link file to tmpdir:
-      if (len_trim(tmpdir) > 0.and.trim(tmpdir) /= '.') then
-        istat = iunlink(trim(tmpdir)//'/'//trim(diskfile),iprint)
-        istat = ilink(diskfile,trim(tmpdir)//'/'//trim(diskfile),0)
-        if (istat /= 0)
-     |    write(6,"('>>> WARNING dispose: error ',i3,' from ilink.')")
-     |      istat
-      else
-!       write(6,"('Dispose: NOT linking file ',a,
-!    |    ' to tmpdir because tmpdir is either blank or cwd.')")
-!    |    trim(diskfile)
-      endif
+! Print warning if diskfile does not exist:
+      inquire(file=trim(diskfile),exist=exists)
+      if (.not.exists) write(6,"(/,'>>> WARNING add_dispose: ',
+     |  ' disk file ',a,' does not exist.')") trim(diskfile)
 !
 ! Check password:
       wpass = ' '
@@ -235,9 +223,9 @@
       write(lu_dispose,"(' ')") ! space for readability
       write(lu_dispose,"(a)") trim(msrcp_cmd)
       close(lu_dispose)
-      write(6,"('Dispose: added msrcp of file ',a,
-     |  ' to dispose script.')") trim(diskfile)
-      write(6,"('  msrcp_cmd=',a)") trim(msrcp_cmd)
+!     write(6,"('Dispose: added msrcp of file ',a,
+!    |  ' to dispose script.')") trim(diskfile)
+!     write(6,"('  msrcp_cmd=',a)") trim(msrcp_cmd)
 !
 ! Jump to here if msrcp command was present in script for current file.
  100  continue
@@ -257,9 +245,9 @@
      |      position='APPEND')
           write(lu_dispose,"(a)") trim(mscomment_cmd)
           close(lu_dispose)
-          write(6,"('Dispose: added mscomment on dispose script',
-     |      ' for file ',a)") trim(diskfile)
-          write(6,"('  ',a)") trim(mscomment_cmd)
+!         write(6,"('Dispose: added mscomment on dispose script',
+!    |      ' for file ',a)") trim(diskfile)
+!         write(6,"('  ',a)") trim(mscomment_cmd)
         endif
       endif ! len_trim(mscomment) > 0
       end subroutine add_dispose      

@@ -7,13 +7,6 @@
 !
 #ifdef SUN
       use input_module
-!     namelist/tgcm_input/ 
-!    |  label,tempdir,magvol,amievol,date,calday,step,dispose,
-!    |  source,source_start,output,start,stop,hist,save,
-!    |  secout,secstart,secstop,sechist,secsave,secflds,secfmag,
-!    |  mag,difhor,iuivi,nmc,tide,tide2,tide3m3,f107,f107a,
-!    |  power,ctpoten,byimf,colfac,tideann,aurora,gpi_ncfile,
-!    |  mxhist_prim,mxhist_sech,msreten
 #else
       use input_module,only: tgcm_input
 #endif

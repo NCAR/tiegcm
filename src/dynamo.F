@@ -1,9 +1,6 @@
 !
       module dynamo_module
 !----------------------------------------------------------------------- 
-! BOP
-! !MODULE: dynamo_module
-! !DESCRIPTION: 
 !
 ! Module for electrodynamic dynamo (the "e" in tiegcm). 
 !
@@ -22,7 +19,6 @@
 ! (on the geographic grid). These fields are exchanged via sub 
 ! mp_dynamo_gather which is called from prep_dynamo below.
 ! 
-! !USES:
       use params_module,only: 
      |  nlon,   ! number of geographic longitudes (at 5 deg, nlon==72)
      |  nlonp1, ! nlon+1
@@ -48,12 +44,7 @@
 !
 ! Routine to add fields to secondary histories:
       use addfld_module,only: addfld
-
-! !PUBLIC TYPES:
-	    implicit none
-!
-! !PUBLIC MEMBER FUNCTIONS:
-! !PUBLIC DATA MEMBERS:
+      implicit none
 !
 ! Dimensions of the 5 grid resolutions for the multi-grid PDE:
       integer,parameter ::
@@ -276,30 +267,20 @@
       real,dimension(nmlonp1,nmlat)  :: phihm  ! potential in magnetic
       real,dimension(nlonp4,nlat,nlevp1) :: dynpot_diag
 ! 
-! !REVISION HISTORY:
-! 05.02.04  <Astrid Maute> <include headers> 
-! 
-! EOP
-!-----------------------------------------------------------------------
-!
 ! Work array (private to this module)
       real :: wkarray(-15:nmlon0+16,nmlat0)
-!
       logical,parameter :: debug = .false. ! add print statements to stdout
-!
       contains
 !-----------------------------------------------------------------------
-!
-! BOP
-! !IROUTINE: prep_dynamo 
-! !INTERFACE:
       subroutine prep_dynamo(tn,un,vn,w,z,barm,ped,hall,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
-! !USES:
+!
+! Prepare geographic-grid fields for input to the dynamo, and gather them
+! to the root task. This is executed by all tasks, and is called from 
+! advance before the dynamo itself (which is executed by master task only).
+! calculate vertical velocity at half pressure level
+! 
       use cons_module,only: gask,grav
-! !RETURN VALUE:
-! !PARAMETERS: 
-! !ARGUMENTS:
       integer :: lev0,lev1,lon0,lon1,lat0,lat1
       real :: fmin,fmax
 !
@@ -314,18 +295,6 @@
      |  barm, ! mean molecular mass (g/mole)
      |  ped,  ! pedersen conductivity (lamdas.F) (S)
      |  hall  ! hall conductivity     (lamdas.F) (S)	  
-
-! !DESCRIPTION: 
-! Prepare geographic-grid fields for input to the dynamo, and gather them
-! to the root task. This is executed by all tasks, and is called from 
-! advance before the dynamo itself (which is executed by master task only).
-! calculate vertical velocity at half pressure level
-! 
-! !REVISION HISTORY:
-! 05.02.04  <Astrid Maute> <include header> 
-! 
-! EOP
-!
 !
 ! Local:
       integer :: k,i,lat,nk,lonbeg,lonend
@@ -402,135 +371,24 @@
       if (debug) write(6,"('Exit prep_dynamo..')")
       end subroutine prep_dynamo
 !-----------------------------------------------------------------------
-!
-! BOP
-!
-! !IROUTINE: nodynamo
-! !INTERFACE:
-      subroutine nodynamo
-!
-! !DESCRIPTION: 
-! 12/02:  This routine solves for the 3-D electric potential and fields
-!       when the dynamo flag is off (idynamo=0).  Hence, the low-latitude
-!       potential is zero, while the high-latitude potential is set
-!       with potential_model='HEELIS','WEIMER', or 'NONE'.
-!
-! !USES:
-      use input_module,only: potential_model
-      use cons_module,only: dlatm,dlonm,pi_dyn,ylatm,rtd
-      use magfield_module,only: im,jm,dim,djm
-      use fields_module,only: dynpot,phim3d
-!
-! !RETURN VALUE:
-! !PARAMETERS: 
-! 
-! !REVISION HISTORY:
-! 05.02.04  <Astrid Maute> <include header> 
-! 
-! EOP
-!
-! Local:
-      integer :: i,j,k
-      real,dimension(nlonp1,0:nlatp1) :: phih   ! potential in geographic
-!
-!  Set phim=phihm of the chosen high-latitude model
-      do i=1,nmlonp1
-        do j=1,nmlat
-          phim(i,j) = phihm(i,j)
-        enddo  ! j=1,nmlat
-      enddo  ! i=1,nmlonp1
-!
-!  transform geopotential height to mag. grid (used in subroutine threed)
-      call transf_dyn0
-!
-! Call threed to generate 3-d potential array in geomagnetic coordinates
-!   from 2-d solver output phim, corrected for the SH potential.
-!   phim3d(nmlonp1,nmlat,-2:nlevp1) is in fields.F.
-!
-      call threed
-!
-! Transform phim3d to geographic coordinates in dynpot (fields.F):
-!   phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
-!   dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
-!
-      do k=1,nlevp1
-        call mag2geo(phim3d(1,1,k),dynpot(1,0,k),im(1,0),jm(1,0),
-     |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
-      enddo ! k=1,nlevp1
-!
-! Periodic point:
-      do k=1,nlevp1
-        do j=0,nlatp1
-          dynpot(nlonp1,j,k) = dynpot(1,j,k)
-        enddo ! j=0,nlatp1
-      enddo ! k=1,nlevp1
-!
-! Save electric potential on geographic coords to secondary history:
-! dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
-! dynpot_diag(nlonp4,nlat,nlevp1)  ! for addfld
-!
-!     do j=1,nlat
-!       dynpot_diag(:,:,:) = spval
-!       dynpot_diag(3:nlonp2,j,:) = dynpot(1:nlon,j,:)               ! 3,74 <= 1,72
-!       dynpot_diag(1:2,j,:)      = dynpot_diag(nlonp1:nlonp2,j,:)   ! 1,2 <= 73,74
-!       dynpot_diag(nlonp4-1:nlonp4,j,:) = dynpot_diag(3:4,j,:)      ! 75,76 <= 3,4
-!       call addfld('DYNPOT','elect. potential (geo)','V',
-!    |    dynpot_diag(:,j,:),'lon',1,nlonp4,'ilev',1,nlevp1,j)
-!     enddo ! j=1,nlat
-!
-! Transform single-level heelis magnetic potential phihm to geographic 
-! in phih:
-      call mag2geo(phihm(1,1),phih(1,0),im(1,0),jm(1,0),dim(1,0),
-     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
-!
-! Periodic point:
-      do j=0,nlatp1  
-        phih(nlonp1,j) = phih(1,j)
-      enddo ! j=0,nlatp1  
-!
-! Save 2d heelis potential on geographic grid:
-!      if (potential_model == 'WEIMER') then
-!       call addfld('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
-!    |    'V', phih,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-!      elseif (potential_model == 'HEELIS') then
-!       call addfld('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
-!    |    'V',phih,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-!      else
-!       call addfld('PHIHM2D','2D ZERO ELECTRIC POTENTIAL',
-!    |    'V',phih,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-!      endif
-      end subroutine nodynamo
-!-----------------------------------------------------------------------
-!
-! BOP
-! !IROUTINE: dynamo 
-! !INTERFACE:
       subroutine dynamo
-! !USES:
+!
+! Transform needed fields to geomagnetic coordinates
+! Perform field-line integrations
+! Evaluate PDE coefficients and RHS
+! The PDE is divided by 1/ DT0DTS (in dyncal divided by 1/cos(theta_0)
+! Sigma_(phi phi) = zigm11/ rcos0s * dt0dts
+! Sigma_(lam lam) = zigm22 * rcos0s / dt0dts
+! Sigma_(phi lam) = +-(zigm2-zigmc)
+! Sigma_(lam phi) = -+(zigm2+zigmc)
+! K_(m phi)^D     =   rim(1) * dt0dts
+! K_(m lam)^D     = +-rim(2) * rcos0s
+!
       use cons_module,only: dlatm,dlonm,pi_dyn,ylatm,rtd
       use magfield_module,only: im,jm,dim,djm
       use fields_module,only: dynpot,phim3d
       use input_module,only: potential_model
       use init_module,only: istep	! for sigma_R high latitudes
-!
-! !DESCRIPTION:
-!     Transform needed fields to geomagnetic coordinates
-!     Perform field-line integrations
-!     Evaluate PDE coefficients and RHS
-!     The PDE is divided by 1/ DT0DTS (in dyncal divided by 1/cos(theta_0)
-!     Sigma_(phi phi) = zigm11/ rcos0s * dt0dts
-!     Sigma_(lam lam) = zigm22 * rcos0s / dt0dts
-!     Sigma_(phi lam) = +-(zigm2-zigmc)
-!     Sigma_(lam phi) = -+(zigm2+zigmc)
-!     K_(m phi)^D     =   rim(1) * dt0dts
-!     K_(m lam)^D     = +-rim(2) * rcos0s
-!
-! !RETURN VALUE:
-! !PARAMETERS: 
-! !REVISION HISTORY:
-! 05.02.04  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: i,j,jj,jjj,j0,jntl,k,n,ncc,nmaglat,nmaglon,ier
@@ -700,8 +558,7 @@
 !
 ! isolve = 2 -> modified mudpack solver (modified and unmodified coefficient
 !               stencil)
-      if (debug) write(6,"('dynamo call stencmd: isolve=',i3)..')")
-     |  isolve
+      if (debug) write(6,"('dynamo call stencmd: isolve=',i3)") isolve
 ! for Sigma_(phi lam)(0)/( 4*d lam_0* d lon ) & 
 !     Sigma_(lam phi)(0)/( 4*d lam_0* d lon )
 ! at the equator it's the value from SH -> sign change since NH is used
@@ -877,8 +734,11 @@
       enddo ! j=1,nmlat
 !
 ! Save single-level high latitude potential:
-!     if (potential_model == 'WEIMER') then
+!     if (potential_model == 'WEIMER01') then
 !       call addfld('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
+!    |    'V', phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!     elseif (potential_model == 'WEIMER05') then
+!       call addfld('PHIHM2D','2D WEIMER05 ELECTRIC POTENTIAL',
 !    |    'V', phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !     elseif (potential_model == 'HEELIS') then
 !       call addfld('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
@@ -981,11 +841,16 @@
       if (debug) write(6,"('dynamo returning..')")
       end subroutine dynamo
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: transf
-! !INTERFACE:
       subroutine transf
-! !USES:
+!
+! -maps the geographic fields to the geomagnetic coordinate
+!  system
+! - call the fieldline integration routine to calculate the
+!   conductances as well as the height integrated current density for the
+!   right hand side
+! - include the boundary condition at the equator
+! - transformation from lam_m to lam_0 (regular grid)
+!
       use cons_module,only: h0,r0,dt1dts,rcos0s
       use magfield_module,only: 
      |  alatm,    ! (nlonp1,0:nlatp1)
@@ -998,21 +863,6 @@
      |  be3arr,   ! (nlonp1,nlat), 
      |  dvec,     ! (nlonp1,nlat,3,2)
      |  dddarr    ! (nlonp1,nlat)
-!
-! !RETURN VALUE:
-! !PARAMETERS: 
-! !DESCRIPTION: -maps the geographic fields to the geomagnetic coordinate
-!         system
-!       - call the fieldline integration routine to calculate the
-!         conductances as well as the height integrated current density for the
-!         right hand side
-!       - include the boundary condition at the equator
-!       - transformation from lam_m to lam_0 (regular grid)
-!
-! !REVISION HISTORY:
-! 05.02.04  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: i,ii,k,kk,j,jj,lat,n
@@ -1761,36 +1611,24 @@
 !
       end subroutine transf
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: fieldline_integrals
-! !INTERFACE:
       subroutine fieldline_integrals(latm)
-! !USES:
+!
+! Perform approximated field line integration at geomagnetic grid
+! zigm11 is int[sig_p*d_1^2/D] ds,   i.e. Sigma_(phi phi)/abs(sin Im)
+! zigm22 is int[sig_p*d_2^2/D] ds,   i.e. Sigma_(lam lam)*abs(sin Im)
+! zigmc  is int[sig_p*d_1*d_2/D] ds, i.e. Sigma_c
+! zigm2  is int[sigma_h] ds,         i.e. Sigma_h
+!
+! rim1 [A/m] is int[(sigma_h-sigma_p*d_1*d_2/D)u_e1 + sigma_p*d_1^2/D u_e2] *A(h_r)*
+!         B_e3 ds, i.e.  K_(m phi)^D/abs(sin Im)
+! rim2 [A/m] is -/- int[(sigma_h+sigma_p*d_1*d_2/D)u_e2 - sigma_p*d_2^2/D u_e1] *A(h_r)*
+!         B_e3 ds, i.e. +/- K_(m lam)^D 
+!        
       use cons_module,only: h0,       ! h0 = 90 km
      |      re,    !  earth radius= 6.37122e8 (cm)
      |      r0,    ! re+h0
      |      ylatm  ! magnetic latitudes
-!
-! !RETURN VALUE:
-! !ARGUMENTS:
       integer,intent(in) :: latm ! latitude index of field line
-! !PARAMETERS: 
-! !DESCRIPTION: 
-!        Perform approximated field line integration at geomagnetic grid
-!        zigm11 is int[sig_p*d_1^2/D] ds,   i.e. Sigma_(phi phi)/abs(sin Im)
-!        zigm22 is int[sig_p*d_2^2/D] ds,   i.e. Sigma_(lam lam)*abs(sin Im)
-!        zigmc  is int[sig_p*d_1*d_2/D] ds, i.e. Sigma_c
-!        zigm2  is int[sigma_h] ds,         i.e. Sigma_h
-!
-!        rim1 [A/m] is int[(sigma_h-sigma_p*d_1*d_2/D)u_e1 + sigma_p*d_1^2/D u_e2] *A(h_r)*
-!                B_e3 ds, i.e.  K_(m phi)^D/abs(sin Im)
-!        rim2 [A/m] is -/- int[(sigma_h+sigma_p*d_1*d_2/D)u_e2 - sigma_p*d_2^2/D u_e1] *A(h_r)*
-!                B_e3 ds, i.e. +/- K_(m lam)^D 
-!        
-! !REVISION HISTORY:
-! 08.02.04  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: i,k
@@ -1961,24 +1799,13 @@
 !      
       end subroutine fieldline_integrals
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: rhspde
-! !INTERFACE:
       subroutine rhspde
-! !USES:
-      use cons_module,only: pi_dyn,dlatm,dlonm,r0
 !
-! !RETURN VALUE:
-! !PARAMETERS: 
-! !DESCRIPTION:
 !  differentiate RHS 
 !  R_0 * d lam_m/d lam_0 * 1/cos lam_0 [ d K_(m phi)^DT(0) / d phi  +
 !  (d [ K_(m lam)^DT(0) * cos(lam_0)]/ d lam_0  ] 
 !
-! !REVISION HISTORY:
-! 05.02.16  <Astrid Maute> <include header> 
-! 
-! EOP
+      use cons_module,only: pi_dyn,dlatm,dlonm,r0
 !
 ! Local:
       integer :: i,j,jj
@@ -2077,27 +1904,15 @@
 !
       end subroutine rhspde
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: clearce
-! !INTERFACE:
       subroutine clearcee(cee,nlon0,nlat0)
 !
-! !USES:
-! !DESCRIPTION:
 ! Zero C arrays for stencil coefficients.
 ! Cee will contain:
 !   c0(nmlon0,nmlat0,10), c1(nmlon1,nmlat1,9), c2(nmlon2,nmlat2,9),
 !   c3(nmlon3,nmlat3,9),  c4(nmlon4,nmlat4,9)
 !
-! !PARAMETERS: 
       integer,intent(in) :: nlon0,nlat0
-! !RETURN VALUE:
       real,intent(out) :: cee(*)
-!
-! !REVISION HISTORY:
-! 05.03.8  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: nlon,nlat,n,m,i
@@ -2119,33 +1934,20 @@
       enddo
       end subroutine clearcee
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: stencil
-! !INTERFACE:
       subroutine stencil(zigm,nlon0,nlat0,cee,ncoef)
 !
-! !USES:
-! !DESCRIPTION:
 ! Calculate contribution for 3 by 3 stencil from coefficient zigm
 ! at each grid point and level.
 !
-! !PARAMETERS: 
       integer,intent(in) :: 
      |  nlon0, ! longitude dimension of finest grid level
      |  nlat0, ! latitude dimension of finest grid level
      |  ncoef   ! integer identifier of coefficient
       real,intent(in) :: 
      |  zigm(nlon0,nlat0)  ! coefficients (nlon0+1/2,(nlat0+1)/2) 
-!     
-! !RETURN VALUE:
       real,intent(inout) :: 
      |  cee(*)  ! output stencil array consisting of c0,c1,c2,c3,c4
 !
-! !REVISION HISTORY:
-! 05.03.8  <Astrid Maute> <include header> 
-! 
-! EOP
-! 
 ! Local:
       integer :: nc,nlon,nlat,n
 !
@@ -2167,33 +1969,21 @@
       enddo ! n=1,5
       end subroutine stencil
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: stencmd
-! !INTERFACE:
       subroutine stencmd(zigm,nlon0,nlat0,cee,ncoef)
 !
-! !USES:
-! !DESCRIPTION: 
 ! Calculate contribution for 3 by 3 stencil from coefficients Sigma
 ! at each grid point and grid level. 
 !
-! !ARGUMENTS:
+! Args:
       integer,intent(in) :: 
      |  nlon0, ! longitude dimension of finest grid level
      |  nlat0, ! latitude dimension of finest grid level
      |  ncoef  ! integer identifier of coefficient
       real,intent(in) :: 
      |  zigm(nlon0,nlat0)   ! coefficients (nlon0,(nlat+1)/2) 
-!     
-! !RETURN VALUE:
       real,intent(inout) :: 
      |  cee(*)  ! output stencil array consisting of c0,c1,c2,c3,c4
 !        
-! !REVISION HISTORY:
-! 18.02.05  <Astrid Maute> <include header> 
-! 
-! EOP
-!
 ! Local:
       integer :: nc,nlon,nlat,n
 !
@@ -2225,27 +2015,16 @@
       enddo ! n=1,5
       end subroutine stencmd
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: htrpex
-! !INTERFACE:
       subroutine htrpex(coeff,nmlon0,nmlat0)
 !
-! !USES:
-! !DESCRIPTION: 
-! copy coefficients into array and
-! extend array over 16 grid points for the wrap around points
-! on the 5 different grid levels. 
+! Copy coefficients into array and extend array over 16 grid points 
+! for the wrap around points on the 5 different grid levels. 
 ! Result returned in array(1:nmlath) - equator to pole.
 !
-! !ARGUMENTS:
+! Args:
       integer,intent(in) :: nmlon0,nmlat0        ! nmlon, nmlath
       real,intent(in) :: coeff(nmlon0,nmlat0)    ! Sigma(SH) pole to equator
 !        
-! !REVISION HISTORY:
-! 18.02.05  <Astrid Maute> <include header> 
-! 
-! EOP
-!
 ! Local:
       integer :: i,j,jj
 !
@@ -2270,13 +2049,8 @@
 !
       end subroutine htrpex
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: cnm
-! !INTERFACE:
       subroutine cnm(nlon0,nlat0,nlon,nlat,c,ncoef)
 !
-! !USES:
-! !DESCRIPTION: 
 ! Compute contribution to stencil from Sigma (array) on grid nlon by nlat,
 ! Finest grid is nlon0 by nlat0.
 ! uses upwinding method if diagonal dominance is not preserved
@@ -2287,22 +2061,15 @@
 ! ncoef = 3 for zigm2  Sigma_(lam phi)
 ! ncoef = 4 for zigm22 Sigma_(lam lam)
 !
-! !ARGUMENTS:
+! Args:
       integer,intent(in) :: 
      |  nlon0,nlat0,      ! finest grid dimensions
      |  nlon,nlat         ! output grid dimensions
       integer,intent(in) :: ncoef ! flag for type of Sigma
-
-! !RETURN VALUE:
       real,intent(inout) :: 
      |  c(nlon,nlat,*)    ! output array for grid point stencils at
                           ! resolution nlon x nlat
 !        
-! !REVISION HISTORY:
-! 18.02.05  <Astrid Maute> <include header> 
-! 
-! EOP
-!
 ! Local:
       integer :: i,j,nint,i0,j0
       real,parameter :: pi=3.141592654
@@ -2421,13 +2188,8 @@
       endif ! ncoef
       end subroutine cnm
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: cnmmod
-! !INTERFACE:
       subroutine cnmmod(nlon0,nlat0,nlon,nlat,c,ncoef)
 !
-! !USES:
-! !DESCRIPTION: 
 ! Compute contribution to stencil from zigm(ncoef) on finest grid nlon0 by nlat0.
 ! calculates the stencil with (c) and without (cofum)
 ! the use of upwinding method if diagonal dominance is not preserved
@@ -2440,21 +2202,15 @@
 ! ncoef = 3 for zigm2  Sigma_(lam phi)
 ! ncoef = 4 for zigm22 Sigma_(lam lam)
 !
-! !ARGUMENTS:
+! Args:
       integer,intent(in) :: 
      |  nlon0,nlat0, ! finest grid dimensions
      |  nlon,nlat    ! output grid dimensions
       integer,intent(in) :: ncoef  ! flag for type of Sigma coeff.
-! !RETURN VALUE:
       real,intent(inout) :: 
      |  c(nlon,nlat,*)    ! output array for grid point stencils at
                           ! resolution nlon x nlat
 !        
-! !REVISION HISTORY:
-! 18.02.05  <Astrid Maute> <include header> 
-! 
-! EOP
-!
 ! Local:
       integer :: i,j,nint,i0,j0
       real,parameter :: pi=3.141592654
@@ -2623,29 +2379,16 @@
 !
       end subroutine cnmmod
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: divide
-! !INTERFACE:
       subroutine divide(c,nlon,nlat,nlon0,nlat0,cs,igrid)
 !
-! !USES:
-! !DESCRIPTION: 
 ! Divide stencil C by cos(theta(i,j))
 !
-! !ARGUMENTS:
       integer,intent(in) :: nlon,nlat,   ! dim. of finest grid
      |    nlon0,nlat0,                   ! dim. of actual grid
      |    igrid                          ! flag for divide by cos lam_0
       real,intent(in) :: cs(*)           ! cos lam_0
-! !RETURN VALUE:
       real,intent(out) :: c(nlon,nlat,*) ! coefficient array for grid level
 !        
-! !REVISION HISTORY:
-! 21.02.05  <Astrid Maute> <include header> 
-!                          <remove 1/cos of RHS at the equator> 
-! 
-! EOP
-!
 ! Local:
       integer :: nint,j0,n,j,i
 !
@@ -2661,26 +2404,14 @@
 !
       end subroutine divide
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: edges
-! !INTERFACE:
       subroutine edges(c,nlon,nlat)
 !
-! !USES:
-! !DESCRIPTION: 
 ! Insert polar boundary conditions in stencil c(nlon,nlat,9)
 !    c(:,nlat,1:8) = 0 & diagonal term c(:,nlat,9) = 1.
 !
-! !ARGUMENTS:
       integer,intent(in) :: nlon,nlat    ! dimension of coeff. array
-! !RETURN VALUE:
       real,intent(out) :: c(nlon,nlat,*) ! coefficient array
 !        
-! !REVISION HISTORY:
-! 21.02.05  <Astrid Maute> <include header> 
-! 
-! EOP
-!
 ! Local:
       integer :: n,i
 !
@@ -2694,15 +2425,9 @@
       enddo
       end subroutine edges
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: stenmod
-! !INTERFACE:
       subroutine stenmod(inlon,inlat,c,phihm,pfrac)
       use cons_module,only: dlatm,dtr
 !
-! !USES:
-!
-! !DESCRIPTION:
 ! Modify stencil c and cofum to set potential to heelis value within auroral circle.
 !    c     is the stencil w   upwinding
 ! pfrac set up in heelis module: fractional presence of dynamo equation
@@ -2714,17 +2439,11 @@
 ! factor of (dlatm/(10.*dtr))**2 to eliminate dependence on grid spacing
 ! for c(9)
 !
-! !PARAMETERS: 
       integer,intent(in) :: inlon,inlat
       real,dimension(nmlon0,nmlat0),intent(in) :: 
      |  phihm,  ! heelis potential (from subs potm, flwv32)
      |  pfrac   ! fractional presence of dynamo (from sub colath)
-! !RETURN VALUE:
       real,intent(inout) :: c(inlon,inlat,*)
-! !REVISION HISTORY:
-! 05.03.10  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: nint,i0,j0,i,j,n,jj
@@ -2761,17 +2480,11 @@
      |      (dlatm*float(nint)/(10.*dtr))**2
         enddo ! i = 1,inlon
       enddo ! j=1,inlat
-
       end subroutine stenmod
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: stenmd
-! !INTERFACE:
       subroutine stenmd(inlon,inlat,c,phihm,pfrac)
-! !USES:
       use cons_module,only: dlatm,dtr
 !
-! !DESCRIPTION:
 ! Modify stencil c and cofum to set potential to heelis value within auroral circle.
 !    c     is the stencil w   upwinding
 !    cofum is the stencil w/o upwinding
@@ -2784,17 +2497,11 @@
 ! factor of (dlatm/(10.*dtr))**2 to eliminate dependence on grid spacing
 ! for c(9)
 !
-! !PARAMETERS: 
       integer,intent(in) :: inlon,inlat
       real,dimension(nmlon0,nmlat0),intent(in) :: 
      |  phihm,  ! heelis potential (from subs potm, flwv32)
      |  pfrac   ! fractional presence of dynamo (from sub colath)
-! !RETURN VALUE:
       real,intent(inout) :: c(inlon,inlat,*)
-! !REVISION HISTORY:
-! 05.03.8  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: nint,i0,j0,i,j,n,jj
@@ -2853,26 +2560,14 @@
       endif ! nint
       end subroutine stenmd
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: ceee
-! !INTERFACE:
       subroutine ceee(cee,nx,ny,cf)
-! !USES:
 !
-! !DESCRIPTION:
 ! Called from mudpack solvers to transfer coefficients.
 !
       save
-! !PARAMETERS: 
       integer,intent(in) :: nx,ny
       real,intent(in) :: cee(nx,ny,9)
-! !RETURN VALUE:
       real,intent(out) :: cf(nx,ny,9)
-!
-! !REVISION HISTORY:
-! 05.02.16  <Astrid Maute> <include header> 
-! 
-! EOP
 !
       integer :: i,j,n
       do n = 1,9
@@ -2886,12 +2581,7 @@
       enddo
       end subroutine ceee
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: threed
-! !INTERFACE:
       subroutine threed
-!
-! !USES:
       use cons_module,only: ylatm,r0,r00,pi_dyn,table,dlatm,dlonm,
      |  rcos0s,re,dt1dts,dt0dts
       use fields_module,only: phim3d,
@@ -2900,7 +2590,6 @@
      |  emz3d      ! 3d upward (?) electric field magnetic
       use init_module,only: istep	! for debug
 !
-! !DESCRIPTION: 
 ! calculates electric field 
 !      E_d1 = -1/(R cos lam_m) d Phi/ d phi_m
 !      E_d2 = 1/ (R |sinI_m|)  d Phi/ d lam_m
@@ -2913,13 +2602,6 @@
 !      R E_lam = d Phi/ d lam_m
 !        E_z   = d Phi/ d zp
 ! with R the Erath radius
-
-! !ARGUMENTS:
-! !RETURN VALUE:
-! !REVISION HISTORY:
-! 07.03.05  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: k,i,j,ip1f,ip2f,ip3f
@@ -3127,7 +2809,7 @@
 ! Local:
 ! real,dimension(nmlonp1,nmlat,-2:nlevp1) :: zpotenm3d
 !
-      do j=1,nmlat
+!     do j=1,nmlat
 !       call addfld('EMPHI3D','R E_mphi','[V/m*m]',
 !    |   emphi3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
 !       call addfld('EMLAM3D','R E_mlam','[V/m*m]',
@@ -3138,35 +2820,25 @@
 !    |   ed13d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
 !      call addfld('ED2M3D'  ,'ed_2 (magn.)','[V/m]',
 !    |   ed23d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-       call addfld('PHIM3D','El.Poten','V',
-     |    phim3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('PHIM3D','El.Poten','V',
+!    |    phim3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
 !      call addfld('ZPOTEN3D','ZPOTEN3D','[cm]',
 !    |    zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-      enddo ! j=1,nmlat
+!     enddo ! j=1,nmlat
 !      
       end subroutine threed
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: mag2geo
-! !INTERFACE:
       subroutine mag2geo(am,ag,im,jm,dim,djm,lg,lm,nlong,nlatg,nlonm,
      |  nlatm)
-! !USES:
-! !DESCRIPTION:
+!
 ! Transform field am on geomagnetic grid to ag on the geographic grid using
 !   indices im,jm and weights am. Return field ag on geographic grid.
 !
-! !PARAMETERS: 
+! Args:
       integer,intent(in) :: lg,lm,nlong,nlatg,nlonm,nlatm
       integer,intent(in) :: im(lg,*),jm(lg,*)
       real,intent(in) :: am(lm,*),dim(lg,*),djm(lg,*)
-! !RETURN VALUE:
       real,intent(out) :: ag(lg,*)
-!
-! !REVISION HISTORY:
-! 05.03.11  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: ig,jg
@@ -3182,28 +2854,17 @@
       enddo ! jg=1,nlatg 
       end subroutine mag2geo
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: geo2mag
-! !INTERFACE:
       subroutine geo2mag(fmag,fgeo,long,latg,wght,nlonp1_geo,nlonp1_mag,
      |  nlon_mag,nlat_mag,lat)
-! !USES:
 !
-! !DESCRIPTION:
 ! Transform field fgeo on geographic grid to geomagnetic grid using
 !   indices long,latg and weights wght. Return field fmag on magnetic grid.
 !
-! !PARAMETERS: 
+! Args:
       integer,intent(in) :: nlonp1_geo,nlonp1_mag,nlon_mag,nlat_mag,lat
       integer,dimension(nlonp1_mag,nlat_mag),intent(in) :: long,latg
       real,intent(in) :: fgeo(nlonp1_geo,*),wght(4,nlonp1_mag,nlat_mag)
-! !RETURN VALUE:
       real,intent(out) :: fmag(nlonp1_mag,*)
-!
-! !REVISION HISTORY:
-! 05.03.8  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: i
@@ -3353,240 +3014,5 @@
 !
       end subroutine mp_dynamo_gather
 #endif
-!-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: transf_dyn0
-! !INTERFACE:
-      subroutine transf_dyn0
-!
-! !USES:
-      use cons_module,only: h0,r0
-      use magfield_module,only: 
-     |  zb,       ! (nlonp1,0:nlatp1)
-     |  ig,       ! (nmlonp1,nmlat) geog lon at each geomag grid point
-     |  jg,       ! (nmlonp1,nmlat) geog lat at each geomag grid point
-     |  wt        ! (4,nmlonp1,nmlat) interpolation weights
-!     
-! !RETURN VALUE:
-! !PARAMETERS: 
-! !DESCRIPTION:
-! am_11/03  used only if dynamo = 0
-! need zpoten3d in magnetic coordinates for subroutine threed
-! !REVISION HISTORY:
-! 05.03.8  <Astrid Maute> <include header> 
-! 
-! EOP
-!
-! Local:
-      integer :: i,ii,k,kk,j,jj,lat,n
-      real :: z0
-!
-! Fields to be transformed to geomagnetic space (formerly in transmag.h):
-! (these will be input to the geographic to magnetic transformation). 
-      real,dimension(nlonp1,0:nlatp1,-2:nlevp1) :: zz
-!
-      real,dimension(nlonp4,nlevp1) :: zz_plt
-!
-! External:
-      real,external :: sddot ! in util.F
-!
-! Set constants:
-!   z0 is lowest level for start of field line integration set in h0 
-!     (h0 in cons module)
-!
-!
-! Pack inputs from 3->nlon+3 to 1->nlon+1, as in tgcm15 (end of sub lamdas):
-      do lat=1,nlat
-        do i=1,nlon+1
-          ii = i+2
-          zpoten(i,lat,:) = zpoten(ii,lat,:)
-        enddo ! i=1,nlonp4-3
-      enddo ! lat=1,nlat
-!
-      z0 = h0
-!
-! Calculate quantities to be transformed to geomagnetic space:
-      do k=1,nlev        
-        do j=1,nlat
-          do i=1,nlonp1
-            zz(i,j,k) = zpoten(i,j,k)
-          enddo ! i=1,nlonp1
-        enddo ! j=1,nlat
-      enddo ! k=1,nlev        
-      do j=1,nlat
-        do i=1,nlonp1
-          zz(i,j,nlevp1) = zpoten(i,j,nlevp1)
-        enddo ! i=1,nlonp1
-      enddo ! j=1,nlat
-!
-! Extend fields down to 90 km inserting 3 extra levels. 
-! Set three equally spaced levels for Z, take U, V, and W
-!   to be constant, and extrapolate sigmas exponentially.
-!
-      do k=0,-2,-1
-        do j=1,nlat
-          do i=1,nlonp1
-            zz(i,j,k) = z0+float(k+2)*(zz(i,j,1)-z0)/3.
-          enddo ! i=1,nlonp1
-        enddo ! j=1,nlat
-      enddo ! k=0,-2,-1
-!
-! Values at poles:
-      do k=-2,nlev
-        zz(1,0,k) = 
-     |    (9.*sddot(nlon,unitv,zz(1,1,k))-
-     |        sddot(nlon,unitv,zz(1,2,k)))/(8.*float(nlon))
-        zz(1,nlatp1,k) = 
-     |    (9.*sddot(nlon,unitv,zz(1,nlat  ,k))-
-     |        sddot(nlon,unitv,zz(1,nlat-1,k)))/(8.*float(nlon))
-!
-! Extend in longitude:
-        do i = 2,nlon
-          zz(i,0,k)             = zz(1,0,k)
-          zz(i,nlatp1,k)        = zz(1,nlatp1,k)
-        enddo ! i = 2,nlon
-      enddo ! k=-2,nlev
-!
-! Values at the poles:
-      zz(1,0,nlevp1)= (9.*sddot(nlon,unitv,zz(1,1,nlevp1))-
-     |                  sddot(nlon,unitv,zz(1,2,nlevp1)))/
-     |                  (8.*float(nlon))
-      zz(1,nlatp1,nlevp1) =  (9.*
-     |                  sddot(nlon,unitv,zz(1,nlat,nlevp1))-
-     |                  sddot(nlon,unitv,zz(1,nlat-1,nlevp1)))/
-     |                  (8.*float(nlon))
-!
-! Extend in longitude:
-      do i = 2,nlon
-        zz(i,0,nlevp1)     = zz(1,0,nlevp1)
-        zz(i,nlatp1,nlevp1)= zz(1,nlatp1,nlevp1)
-      enddo ! i = 2,nlon
-!
-! Periodic points:
-      do j = 0,nlatp1
-        do k = -2,nlev
-           zz(nlonp1,j,k)      = zz(1,j,k)
-        enddo ! k = -2,nlev
-        zz(nlonp1,j,nlevp1)= zz(1,j,nlevp1)
-      enddo ! j = 0,nlatp1
-!
-! Transform needed fields to geomagnetic coordinate system, one latitude
-! at a time. 
-!
-! subroutine geo2mag(fmag,fgeo,long,latg,wght,nlonp1_geo,nlonp1_mag,
-!|  nlon_mag,nlat_mag,lat)
-!
-! Magnetic latitude loop:
-      maglat_loop: do j=2,nmlat-1
-        do k=-2,nlevp1
-          call geo2mag(zpotenm(1,k),zz(1,0,k),ig,jg,wt,nlonp1,
-     |      nmlonp1,nmlon,nmlat,j)
-        enddo ! k=-2,nlevp1
-! Without calculation of k_(q,lam)
-        do i=1,nmlon  
-          do k=-2,nlev
-            if (zpotenm(i,k) < z0) zpotenm(i,k) = z0
-            zpotenm3d(i,j,k) = zpotenm(i,k)
-          enddo ! k=-2,nlev
-          if (zpotenm(i,nlevp1) < z0) zpotenm(i,nlevp1) = z0
-          zpotenm3d(i,j,nlevp1) = zpotenm(i,nlevp1)
-        enddo ! i=1,nmlon 
-      enddo maglat_loop ! j=2,nmlat-1 Main magnetic latitude loop
-!
-! Polar values for Z:
-      do k=-2,nlevp1
-        zpotenm3d(1,1,k) = 
-     |    (4.*sddot(nmlon,unitvm,zpotenm3d(1,2,k))-
-     |        sddot(nmlon,unitvm,zpotenm3d(1,3,k)))/(3.*float(nmlon))
-        zpotenm3d(1,nmlat,k) = 
-     |    (4.*sddot(nmlon,unitvm,zpotenm3d(1,nmlat-1,k))-
-     |        sddot(nmlon,unitvm,zpotenm3d(1,nmlat-2,k)))/
-     |    (3.*float(nmlon))
-!
-! Extend Z over longitude:
-        do i=1,nmlon
-          zpotenm3d(i,1,k) = zpotenm3d(1,1,k)
-          zpotenm3d(i,nmlat,k) = zpotenm3d(1,nmlat,k)
-        enddo ! i=1,nmlon
-!
-! Periodic points:
-        do j=1,nmlat
-          zpotenm3d(nmlonp1,j,k) = zpotenm3d(1,j,k)
-        enddo ! j=1,nmlat
-      enddo ! k=-2,nlevp1
-!
-! Save 3d potential on magnetic grid to secondary history:
-! PLEASE DO NOT COMMENT THIS OUT -- ZMAG is a mandatory mag field for sech
-! real,dimension(nmlonp1,nmlat,-2:nlevp1) :: zpotenm3d
-!
-      do j=1,nmlat
-        call addfld('ZMAG','GEOPOTENTIAL HEIGHT (MAGNETIC)','CM',
-     |    zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nimlevp1,j)
-      enddo ! j=1,nmlat
-!
-      end subroutine transf_dyn0
-!-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: prep_dynamo_dyn0
-! !INTERFACE:
-      subroutine prep_dynamo_dyn0(z,lev0,lev1,lon0,lon1,lat0,lat1)
-!      
-! !USES:
-      use cons_module,only: gask,grav
-!      
-! !DESCRIPTION:
-! am_11/03: if dynamo = 0 need zpoten3d for subroutine threed
-! Prepare geographic-grid fields for input to the dynamo, and gather them
-! to the root task. This is executed by all tasks, and is called from 
-! advance before the dynamo itself (which is executed by master task only).
-!
-! !PARAMETERS: 
-      integer :: lev0,lev1,lon0,lon1,lat0,lat1
-!
-! Input fields at task subdomains. These are from current (not updated)
-! fields (itp):
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
-     |  z     ! geopotential height
-!     
-! !REVISION HISTORY:
-! 05.03.8  <Astrid Maute> <include header> 
-! 
-! EOP
-!
-! Local:
-      integer :: k,i,lat,nk,lonbeg,lonend
-      real :: fmin,fmax
-!
-      nk = lev1-lev0+1
-      lonbeg = lon0
-      if (lon0==1) lonbeg = 3
-      lonend = lon1
-      if (lon1==nlonp4) lonend = nlonp4-1
-!
-! Define subdomain part of dynamo input fields (geographic):
-! Also transform from (k,i,lat) to (i,lat,k). The latter is used
-!   in the dynamo code, whereas the former is used in the rest
-!   of the model.
-! (In earlier versions, this was in lamdas, where 1-73 <= 3-75.
-!  Here, 3-75 <= 3-75)
-!
-      do lat=lat0,lat1
-        do i=lonbeg,lonend
-          do k=lev0,lev1-1
-            zpoten    (i,lat,k) = z   (k,i,lat)
-          enddo ! k=lev0,lev1
-          zpoten(i,lat,lev1) = z(lev1,i,lat)
-        enddo ! i=lon0,lon1
-!
-      enddo ! lat=lat0,lat1
-
-#ifdef MPI
-!
-! Gather dynamo input fields to the root task, defining module data 
-! above at the global domain on the root task:
-!
-      call mp_dynamo_gather
-#endif
-      end subroutine prep_dynamo_dyn0
 !-----------------------------------------------------------------------
       end module dynamo_module

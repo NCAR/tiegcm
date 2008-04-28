@@ -68,13 +68,14 @@
 # utildir:     Directory containing config script and needed utilities
 #              (default is $tgcmroot/$model/scripts)
 # mpi:         Load MPI libraries (can be TRUE, FALSE, or DEFAULT)
+# mss:         Availability of NCAR Mass Store (TRUE or FALSE)
 # hres:        Horizontal resolution can be either 5.0 (default), or 2.5 degrees
 # vres:        Vertical resolution can be either 0.5 (default), or 0.25 (ln(p0/p))
 # debug:       If debug=1, configure Makefile for a debug run (default is 0)
 #
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm
+ set model       = tiegcm1-82
  set wrkdir      = .
 #set input       = $model.inp
 #set output      = $model.out     # relative to wrkdir
@@ -83,7 +84,8 @@
 #set tgcmdata    = $TGCMDATA
 #set execdir     = $model-ibm
 #set utildir     = $TGCMROOT/$model/scripts
-#set mpi         = FALSE
+#set mpi         = TRUE
+#set mss         = TRUE
 #set hres        = 2.5
 #set vres        = 0.25
 #set debug       = 1
@@ -131,6 +133,7 @@ if (! $?usr_srcdirs) set usr_srcdirs = ""
 if (! $?hres) set hres = 5.0
 if (! $?vres) set vres = 0.5
 if (! $?mpi) set mpi = ""
+if (! $?mss) set mss = "TRUE"
 if (! $?debug) set debug = 0
 #
 # If debug is on, request info from poe
@@ -183,7 +186,7 @@ if (! -x $utildir/tgcm_config) \
   echo ">>> WARNING: Cannot find config script $utildir/tgcm_config"
 perl $utildir/tgcm_config -model=$model -wrkdir=$wrkdir -execdir=$execdir \
   -tgcmroot=$tgcmroot -tgcmdata=$tgcmdata -usr_srcdirs=$usr_srcdirs \
-  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -debug=$debug || \
+  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -mss=$mss -debug=$debug || \
   echo ">>> ${0}: Error from tgcm_config" && exit 1
 #
 # Copy Mkdepends script to execdir for manual gmake (or default Makefile):

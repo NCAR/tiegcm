@@ -12,13 +12,6 @@
 !   "use input_module" statements in model subprograms.
 ! This module is dependent on the model header file "params.h"
 !
-! The model may reference either the module variables or the input_type
-!   structure inp (e.g., inp%label, inp%f107, etc). Both methods
-!   use "use input_module" statements, e.g.: 
-!   use input_module                  ! include entire module
-!   use input_module,only: f107,f107a ! include only solar fluxes 
-!   use input_module,only: inp        ! include input_type structure
-!
 ! Procedure to add new input parameters:
 !   0. Add any necessary parameter declarations in params.h
 !      (these are generally for dimensioning input variables)
@@ -27,9 +20,8 @@
 !   2. Declare corresponding components of input_type (use same names)
 !   3. Add variables to namelist/tgcm_input/
 !   4. Initialize variables in inp_init
-!   5. Define tgcm_type components in inp_deftyp (from module variables)
-!   6. Add to stdout print in inp_print
-!   7. Validate values read in appropriate routine (e.g., inp_hist, etc)
+!   5. Add to stdout print in inp_print
+!   6. Validate values read in appropriate routine (e.g., inp_hist, etc)
 !      (validation may include setting non-input variables related
 !       to the input values. These may be referenced from included
 !       header files or other modules).
@@ -57,7 +49,6 @@
      |  difhor,          ! horizontal eddy diffusion flag 0/1
      |  iuivi,           ! ion drifts in momentum flag (replaced by dynamo flag)
      |  dynamo,          ! 0/1 flag for dynamo
-     |  nmc,             ! flag to use NMC boundary conditions 0/1
      |  tideann,         ! 0/1 flag for annual tide
      |  aurora,          ! 0/1 flag for aurora
      |  ntask_lat,       ! number of tasks in latitude  dimension
@@ -70,28 +61,46 @@
      |  tide3m3(2),      ! 2-day wave amplitude and phase
      |  f107,            ! 10.7 cm daily solar flux
      |  f107a,           ! 10.7 cm average (81-day) solar flux
+     |  colfac           ! collision factor
+!
+! Input parameters that can be either constant or time-dependent:
+      real ::
      |  power,           ! hemispheric power (gw) (hpower on histories)
      |  ctpoten,         ! cross-cap potential (volts)
-     |  power_time(4,mxind_time),   ! time-dependent hemispheric power input
-     |  ctpoten_time(4,mxind_time), ! time-dependent cross tail potential input
      |  byimf,           ! BY component of IMF
-     |  bzimf,           ! Bz component of IMF in nT
+     |  bzimf,           ! BZ component of IMF in nT
      |  swvel,           ! Solar wind velocity in km/s
      |  swden,           ! Solar wind density in #/cm3
-     |  AL,              ! AL lower magnetic auroral activity index in nT
-                         ! if present, ALUSE=true; if absent, AL=-20, ALUSE=false
-     |  colfac           ! collision factor
-        logical :: aluse ! logical to use AL in Weimer model or not
+     |  al               ! AL lower magnetic auroral activity index in nT
+      real,dimension(4,mxind_time) :: power_time,ctpoten_time,
+     |  byimf_time,bzimf_time,swvel_time,swden_time,al_time
+      integer :: 
+     |  ntimes_ctpoten,ntimes_power,ntimes_byimf,ntimes_bzimf,
+     |  ntimes_swden,ntimes_swvel,ntimes_al
+      logical :: aluse   ! logical to use AL in Weimer 2001 model or not
+!
+! If indices_interp==1, time-dependent indices (power_time, ctpoten_time, etc)
+! will be interpolated to model time, otherwise they will change only
+! when the given values change. This has no effect on indices given as constants.
+!
+      integer :: indices_interp=1 
 !
 ! Import data file names:
-      integer,parameter :: mxlen_filename=80
+      integer,parameter :: mxlen_filename=240
       character(len=mxlen_filename) ::
+!
+! 4/2/08 btf: Introducing Weimer 2005 model (wei05sc.F).
+!             Retain ability to call either the 2001 or 2005 weimer models
+!             for now, to facilitate comparison runs, so potential_model
+!             can be either WEIMER01 or WEIMER05.
+!
      |  potential_model,  ! electric potential model used
                           !  Values can be 'HEELIS', 'WEIMER', or 'NONE'
                           !  If absent, the default value is set to 'HEELIS'
      |  weimer_ncfile,    ! mss path or file path to netcdf weimer coef file
                           ! see comments in weimer_mod.f
      |  weimer_ncfiledef, ! default path to weimer coef data file
+     |  wei05sc_ncfile,   ! path to ascii data files for weimer05 model
 ! hrindices_ncfile NOT MADE YET! 11/15/02:
      |  hrindices_ncfile, ! mss path or file path to netcdf hourly geophysical
                           ! data indices file.  see comments in hrindices_mod.f
@@ -111,9 +120,6 @@
       real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
       character(len=16) ::
      |  gpi_names(ngpivars)      ! names of gpi_vars
-      integer :: 
-     |  ntimes_ctpoten,    ! number of times provided in ctpoten_time
-     |  ntimes_power       ! number of times provided in power_time
 !
 ! Primary history user input (dimension parameters are in params.h):
       character(len=80) :: 
@@ -142,65 +148,19 @@
      |  secsave(3,mxseries),  ! secondary history file save frequency
      |  mxhist_sech           ! max number of histories per secondary file
 !
-! Define input structure type: 
-! (Use same names as variables above)
-!
-! Model-wide input:
-      type input_type
-        character(len=80) :: 
-     |    label, tempdir, magvol, amievol, gpi_ncfile,
-     |     gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, gswm_nm_di_ncfile,
-     |     gswm_nm_sdi_ncfile, potential_model, weimer_ncfile,
-     |     hrindices_ncfile
-        integer ::
-     |    step,start_day,start_year,calendar_advance,
-     |    dispose, difhor, iuivi, dynamo, nmc, tideann, aurora,
-     |    ntask_lat,ntask_lon
-        real ::
-     |    mag(2,2), tide(10),tide2(2),tide3m3(2),
-     |    f107,f107a, power,ctpoten,byimf,colfac,bzimf,swvel,swden,al,
-     |    power_time(4,mxind_time),ctpoten_time(4,mxind_time)
-! 
-! Primary histories:
-        character(len=80) :: 
-     |    source, 
-     |    output(mxhvols)
-        integer ::
-     |    source_start(3),
-     |    start(3,mxseries),
-     |    stop(3,mxseries),
-     |    hist(3,mxseries),
-     |    save(3,mxseries),
-     |    mxhist_prim,
-     |    msreten
-!
-! Secondary histories:
-        character(len=80) :: secsource ! (for mhd model)
-        character(len=80) :: secout(mxhvols)
-        character(len=16) :: secflds(mxfsech)
-        integer ::
-     |    secstart(3,mxseries),
-     |    secstop(3,mxseries),
-     |    sechist(3,mxseries),
-     |    secsave(3,mxseries),
-     |    mxhist_sech
-      end type input_type
-!
-! inp is module variable of type input_type:
-! (is defined from namelist input vars)
-      type(input_type) :: inp
-!
 ! Namelist for read:
       namelist/tgcm_input/ 
      |  label,tempdir,magvol,amievol,date,calday,step,dispose,
      |  source,source_start,output,start,stop,hist,save,
      |  secout,secstart,secstop,sechist,secsave,secflds,
-     |  potential_model,mag,difhor,iuivi,dynamo,nmc,tide,tide2,tide3m3,
+     |  potential_model,mag,difhor,iuivi,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,byimf,bzimf,swvel,swden,al,colfac,
      |  tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,
      |  gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,mxhist_prim,mxhist_sech,
      |  msreten,ntask_lat,ntask_lon,start_day,start_year,
-     |  calendar_advance,see_ncfile,ctpoten_time,power_time
+     |  calendar_advance,see_ncfile,ctpoten_time,power_time,
+     |  byimf_time,bzimf_time,swden_time,swvel_time,al_time,
+     |  indices_interp
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -237,9 +197,6 @@
       call inp_primhist
       call inp_sechist
 !
-! Define type(input_typ) inp from validated inputs:
-      call inp_deftyp
-! 
 ! Print type(input_typ) inp:
       call inp_print(ntask)
 !
@@ -267,6 +224,7 @@
       weimer_ncfile = ' '     ! user input weimer coef file path
       weimer_ncfiledef = ' '  ! default weimer coef file path
       write(weimer_ncfiledef,"('$TGCMDATA/weimer2001_coeffs.nc')")
+      write(wei05sc_ncfile,"('$TGCMDATA/wei05sc.nc')")
 !
       hrindices_ncfile = ' '    ! user input hrly indices data file path
       hrindices_ncfiledef = ' ' ! default hrly indices data file path
@@ -290,7 +248,6 @@
       difhor  = ispval
       iuivi   = ispval
       dynamo  = ispval
-      nmc     = 0      ! default is no nmc boundaries
       tide(:) = spval
       tide2(:)= spval
       tide3m3(:) = spval
@@ -302,13 +259,18 @@
       f107a   = spval
       power   = spval
       ctpoten = spval
-      power_time(:,:) = spval
-      ctpoten_time(:,:) = spval
       byimf   = spval
       bzimf   = spval
       swvel   = spval
       swden   = spval
       al      = spval
+      power_time(:,:) = spval
+      ctpoten_time(:,:) = spval
+      byimf_time(:,:) = spval
+      bzimf_time(:,:) = spval
+      swden_time(:,:) = spval
+      swvel_time(:,:) = spval
+      al_time(:,:) = spval
       colfac  = spval
 !
       potential_model = ' '
@@ -344,8 +306,6 @@
       character(len=16) :: logname
       real :: rday,rhour,rmin,rval
 !
-! Set temporary directory (settmpdir is in util.F):
-!
 ! Get login name:
       logname = ' '
       call getenv('LOGNAME',logname)
@@ -355,15 +315,12 @@
         call shutdown('LOGNAME')
       endif
 !
-! If tempdir is same as execution directory (cwd), turn off tempdir:
-      if (trim(tempdir)=='.'.or.trim(tempdir)==trim(cwd)) then
-        write(6,"(/,'NOTE: Temporary scratch directory tempdir (',
-     |    a,')')") trim(cwd)
-        write(6,"('      is same as execution directory -- will',
-     |    ' use only cwd.')")
-        tempdir = ' '
+! 4/08: tempdir is deprecated:
+      if (len_trim(tempdir) > 0) then
+        write(6,"('>>> WARNING input: namelist read parameter ',
+     |    '''TEMPDIR'' is deprecated. The value ',a,' will be ',
+     |    'ignored.')") trim(tempdir) 
       endif
-      write(6,"('input: tempdir = ',a)") trim(tempdir)
 !
 ! Model time step (secs):
 ! If step < 60, it is assumed to be in minutes (enforce step <= 10 
@@ -455,19 +412,6 @@
      |    trim(magvol)
       endif
 ! 
-! NMC boundaries for T and Z are not supported in tiegcm:
-! If nmc boundaries are not used, zero out znmc and tnmc.
-! 5/01: eliminating nmc.h.
-!
-!     if (nmc > 0) then
-!       write(6,"(/,'>>> INPUT: NMC boundaries not supported ',
-!    |    'in model ',a,/)") trim(tgcm_version)
-!       call shutdown('NMC')
-!     else 
-!       znmc = 0.
-!       tnmc = 0.
-!     endif
-!
 ! Tide:
       n = size(tide)-count(tide==spval)
       if (n /= 10) then
@@ -583,45 +527,31 @@
         call shutdown('F107A')
       endif
 !
+! Validate times and values in user-provided time series:
+!     subroutine validate_timedep(constant,timedep,mxtimes,ntimes,name)
+!
+      call validate_timedep(ctpoten,ctpoten_time,mxind_time,
+     |  ntimes_ctpoten,'ctpoten')
+      call validate_timedep(power,power_time,mxind_time,
+     |  ntimes_power,'power')
+      call validate_timedep(byimf,byimf_time,mxind_time,
+     |  ntimes_byimf,'byimf')
+      call validate_timedep(bzimf,bzimf_time,mxind_time,
+     |  ntimes_bzimf,'bzimf')
+      call validate_timedep(swden,swden_time,mxind_time,
+     |  ntimes_swden,'swden')
+      call validate_timedep(swvel,swvel_time,mxind_time,
+     |  ntimes_swvel,'swvel')
+      call validate_timedep(al,al_time,mxind_time,
+     |  ntimes_al,'al')
+      aluse = .true.
+      if (al == spval) aluse = .false.
+!
+! Inputs for GPI runs (GeoPhysical Indices)
 ! There are 3 input options for ctpoten and power:
 !   1) Constants are provided by the user (ctpoten, power)
 !   2) Time series are provided by the user (ctpoten_time, power_time)
 !   3) GPI database (neither constans nor time series were provided)
-!
-! Cannot provide both constant and time series:
-      if (ctpoten /= spval .and. any(ctpoten_time /= spval)) then
-        write(6,"(/,'>>> INPUT: you cannot provide both a constant',
-     |    '(CTPOTEN) and a time-series (CTPOTEN_TIME) for cross-',
-     |    'tail potential.')")
-        call shutdown('CTPOTEN')
-      endif
-      if (power /= spval .and. any(power_time /= spval)) then
-        write(6,"(/,'>>> INPUT: you cannot provide both a constant',
-     |    ' (POWER) and a time-series (POWER_TIME) for hemispheric',
-     |    ' power.')")
-        call shutdown('POWER')
-      endif
-!
-! Validate cross-tail potential constant, if provided:
-      if (ctpoten /= spval .and. ctpoten <= 0.) then
-        write(6,"(/,'>>> INPUT: ctpoten must be positive: ctpoten=',
-     |    e12.4)") ctpoten
-        call shutdown('CTPOTEN')
-      endif
-!
-! Validate hemispheric power constant, if provided:
-      if (power /= spval .and. power <= 0.) then
-        write(6,"(/,'>>> INPUT: power must be positive: power=',
-     |    e12.4)") power
-        call shutdown('POWER')
-      endif
-!
-! Validate times and values in user-provided time series for
-! crosstail potential and hemispheric power:
-      call validate_indices_time(ctpoten_time,ntimes_ctpoten,
-     |  'CTPOTEN_TIME')
-      call validate_indices_time(power_time,ntimes_power,
-     |  'POWER_TIME')
 !
 ! gpi_names and gpi_vars must be in the same order:
       gpi_names(1) = "f107            "
@@ -706,48 +636,43 @@
 ! Check to see if have hrindices_ncfile (when avail! 11/15/02)
 !
 ! Check electric potential model:
-      if (potential_model == 'WEIMER') then
-
-! 5/7/04 btf: Weimer is not working. Setmodel01 in weimer01.F produces
-!             NaNs for Coef(). (coefficients read from netcdf file appear
-!             to be ok)
+! 4/08 btf: Add wiemer05 option
+! 4/25/08 btf: default potential_model is still heelis:
 !
-        write(6,"('>>> Potential_model WEIMER is not available -- ',
-     |    'sub setmodel01 in weimer01.F produces NaNs for coeffs.')")
-        call shutdown('weimer')
-!
-!       write (6,"(4x,'Will use the Weimer 2001 electric potential',
-!    |    ' model')")
-!       if (len_trim(weimer_ncfile)==0) then
-!         write(6,"(4x,'Since Weimer coef data file WEIMER_NCFILE was ',
-!    |      'NOT provided,',/,4x,'I will use the default ',
-!    |      'WEIMER_NCFILE: ',a)") trim(weimer_ncfiledef)
-!         weimer_ncfile = weimer_ncfiledef
-!       else
-!         write(6,"(4x,'Will use user-provided path to Weimer coefs',
-!    |      ' Weimer_NCFILE = ',a)") trim(weimer_ncfile)
-!       endif
-
+      if (len_trim(potential_model)==0) then
+        write (6,"(4x,'Will use default Heelis elecric potential',
+     |    ' model')")
+        potential_model='HEELIS'
+!       potential_model='WEIMER05'
+      endif
+      if (potential_model == 'WEIMER01') then
+        write (6,"(4x,'Will use the Weimer 2001 electric potential',
+     |    ' model')")
+        if (len_trim(weimer_ncfile)==0) then
+          write(6,"(4x,'Since Weimer coef data file WEIMER_NCFILE was ',
+     |      'NOT provided,',/,4x,'I will use the default ',
+     |      'WEIMER_NCFILE: ',a)") trim(weimer_ncfiledef)
+          weimer_ncfile = weimer_ncfiledef
+        else
+          write(6,"(4x,'Will use user-provided path to Weimer coefs',
+     |      ' Weimer_NCFILE = ',a)") trim(weimer_ncfile)
+        endif
+        call expand_path(weimer_ncfile)
+      elseif (potential_model == 'WEIMER05') then
+        write (6,"(4x,'Will use the Weimer 2005 electric potential',
+     |    ' model')")
+        call expand_path(wei05sc_ncfile)
+        i = len_trim(wei05sc_ncfile)
+      elseif (potential_model == 'WEIMER') then
+        write(6,"(4x,'Will use the Weimer 2005 electric potential',
+     |    ' model')")
+        potential_model = 'WEIMER05'
       elseif (potential_model == 'HEELIS') then
         write (6,"(4x,'Will use the Heelis param electric potential',
      |    ' model')")
       elseif (potential_model == 'NONE') then
         write (6,"(4x,'Will use NONE (ie zero) electric potential',
      |    ' model')")
-      endif
-      if (len_trim(potential_model)==0) then
-        write (6,"(4x,'Will use default Heelis elecric potential',
-     |    ' model')")
-        potential_model='HEELIS'
-      endif
-!
-! BY component of solar IMF magnetic field:
-      if (byimf==spval) then
-        write(6,"(/,'>>> INPUT: need 1 value for byimf',
-     |    ' e.g.: BYIMF=0.')")
-        write(6,"('NOTE: multiple (time-dependent) values for BYIMF',
-     |    ' not yet supported')")
-        call shutdown('BYIMF')
       endif
 !
 ! ncep data file:
@@ -765,49 +690,6 @@
      |  call expand_path(gswm_nm_di_ncfile)
       if (len_trim(gswm_nm_sdi_ncfile) > 0) 
      |  call expand_path(gswm_nm_sdi_ncfile)
-!
-! Limits on By NOT necessary for Weimer (or for NONE)
-      if (potential_model == 'HEELIS') then
-        if (byimf > 7.) then
-          write(6,"(/,'>>> INPUT: byimf too big (must be <= 7.):',
-     |      ' byimf=',e12.4)") byimf
-          call shutdown('BYIMF')
-        endif
-        if (byimf < -11.) then
-          write(6,"(/,'>>> INPUT: byimf too small (must be >= -11.):',
-     |      ' byimf=',e12.4)") byimf
-          call shutdown('BYIMF')
-        endif
-      endif
-!
-! Bz component of solar IMF magnetic field:
-      if (bzimf==spval) then
-        write(6,"('Input: Using default BZIMF=0.')")
-        bzimf = 0.
-      endif
-!
-! Solar wind velocity:
-      if (swvel==spval) then
-        write(6,"('Input: Using default SWVEL=400 km/s')")
-        swvel = 400.
-      endif
-!
-! Solar wind density:
-      if (swden==spval) then
-        write(6,"('Input: Using default SWDEN=4 #/cm3')")
-        swden = 4.
-      endif
-!
-! AL, lower auroral magnetic activity index:
-      if (AL==spval) then
-        write(6,"('Input: Using default AL=-20., ALUSE=FALSE')")
-        al = -20.
-        aluse = .false.
-      else
-        write(6,"('Input: AL provided, setting ALUSE=TRUE')")
-        write(6,"('       AL = ',e12.4)") al
-        aluse = .true.
-      endif
 !
 ! Collision factor:
       if (colfac==spval) then
@@ -910,8 +792,7 @@
      |  nout,nhists_total,modeltime(4),nfiles_prim
       integer(kind=8) :: step8,
      |  nsec_start(mxseries),nsec_stop(mxseries),
-     |  nsec_hist (mxseries),nsec_save(mxseries),
-     |  nsec_index,nsec0
+     |  nsec_hist (mxseries),nsec_save(mxseries)
       character(len=80) :: ch80
       character(len=80) :: hvols(mxhvols)
 !
@@ -1226,61 +1107,6 @@
           call shutdown('START')
         endif
       endif
-!
-! Validate that times given by ctpoten_time and/or power_time are
-! within start and stop times (the times themselves were validated 
-! in inp_model). Note user must provide a value for each start time.
-!
-      if (ntimes_ctpoten > 0) then
-!
-! Must provide first ctpoten_time(:,1) same as START time.
-        nsec0 = mtime_to_nsec(int(ctpoten_time(1:3,1)))
-        if (nsec0 /= nsec_start(1)) then
-          write(6,"(/,'>>> INPUT: Please provide first CTPOTEN_TIME',
-     |      ' time equal to first START time.')")
-          call shutdown('starting ctpoten_time')
-        endif
-!
-! All ctpoten times must be within start and stop times:
-        do i=1,ntimes_ctpoten
-          nsec_index = mtime_to_nsec(int(ctpoten_time(1:3,i)))
-          if (nsec_index < nsec_start(1) .or. 
-     |        nsec_index > nsec_stop(1)) then
-            write(6,"(/,'>>> INPUT: CTPOTEN_TIME ',3i4,' is outside ',
-     |        'model START/STOP times: START=',3i4,' STOP=',3i4)")
-     |        int(ctpoten_time(1:3,i)),start(:,1),stop(:,1)
-            call shutdown('ctpoten_time')
-          endif 
-        enddo
-!
-! Init:
-        ctpoten = ctpoten_time(4,1)
-      endif ! ntimes_ctpoten
-      if (ntimes_power > 0) then
-!
-! Must provide first power_time(:,1) same as START time.
-        nsec0 = mtime_to_nsec(int(power_time(1:3,1)))
-        if (nsec0 /= nsec_start(1)) then
-          write(6,"(/,'>>> INPUT: Please provide first POWER_TIME',
-     |      ' time equal to first START time.')")
-          call shutdown('starting power_time')
-        endif
-!
-! All power times must be within start and stop times:
-        do i=1,ntimes_power
-          nsec_index = mtime_to_nsec(int(power_time(1:3,i)))
-          if (nsec_index < nsec_start(1) .or. 
-     |        nsec_index > nsec_stop(1)) then
-            write(6,"(/,'>>> INPUT: POWER_TIME ',3i4,' is outside ',
-     |        'model START/STOP times: START=',3i4,' STOP=',3i4)")
-     |        int(power_time(1:3,i)),start(:,1),stop(:,1)
-            call shutdown('power_time')
-          endif 
-        enddo
-!
-! Init:
-        power = power_time(4,1)
-      endif ! ntimes_power
 !
 ! Primary output volumes:
 ! (integer function mkhvols either echoes histvols to hvols, or if 
@@ -1758,73 +1584,6 @@
       enddo
       end subroutine inp_sechist
 !-----------------------------------------------------------------------
-      subroutine inp_deftyp
-!
-! Define inp (type(input_type)) from validated namelist input 
-!   module variables:
-!
-      inp%label   = label
-      inp%tempdir = tempdir
-      inp%magvol  = magvol
-      inp%amievol = amievol
-      inp%potential_model = potential_model
-      inp%hrindices_ncfile = hrindices_ncfile
-      inp%weimer_ncfile = weimer_ncfile
-      inp%gpi_ncfile = gpi_ncfile
-      inp%gswm_mi_di_ncfile    = gswm_mi_di_ncfile
-      inp%gswm_mi_sdi_ncfile   = gswm_mi_sdi_ncfile
-      inp%gswm_nm_di_ncfile = gswm_nm_di_ncfile
-      inp%gswm_nm_sdi_ncfile= gswm_nm_sdi_ncfile
-      inp%start_day  = start_day
-      inp%start_year = start_year
-      inp%calendar_advance = calendar_advance
-      inp%step    = step
-      inp%dispose = dispose
-      inp%ntask_lon = ntask_lon
-      inp%ntask_lat = ntask_lat
-      inp%mag     = mag
-      inp%difhor  = difhor
-      inp%iuivi   = iuivi
-      inp%dynamo  = dynamo
-      inp%nmc     = nmc
-      inp%tide(:) = tide(:)
-      inp%tide2(:)= tide2(:)
-      inp%tide3m3(:) = tide3m3(:)
-      inp%tideann = tideann
-      inp%aurora  = aurora
-      inp%f107    = f107
-      inp%f107a   = f107a
-      inp%power   = power
-      inp%ctpoten = ctpoten
-      inp%power_time(:,:) = power_time(:,:)
-      inp%ctpoten_time(:,:) = ctpoten_time(:,:)
-      inp%byimf   = byimf
-      inp%bzimf   = bzimf
-      inp%swvel   = swvel
-      inp%swden   = swden
-      inp%AL      = AL
-      inp%colfac  = colfac
-!
-      inp%source  = source
-      inp%output  = output
-      inp%source_start  = source_start
-      inp%start   = start
-      inp%stop    = stop
-      inp%hist    = hist
-      inp%save    = save
-      inp%mxhist_prim = mxhist_prim
-      inp%msreten = msreten
-!
-      inp%secsource= secsource
-      inp%secout   = secout
-      inp%secstart = secstart
-      inp%secstop  = secstop
-      inp%sechist  = sechist
-      inp%secsave  = secsave
-      inp%secflds  = secflds
-      inp%mxhist_sech = mxhist_sech
-      end subroutine inp_deftyp
-!-------------------------------------------------------------------
       subroutine inp_print(ntask)
 !
 ! Print values of inp (input_type):
@@ -1840,14 +1599,14 @@
 ! Model-wide:
       if (len_trim(label) > 0)
      |  write(6,"('  label  = ',a,/,4x,'(optional text label for',
-     |    ' current run)')") trim(inp%label)      
+     |    ' current run)')") trim(label)      
       if (len_trim(tempdir) > 0)
      |  write(6,"('  tempdir = ',a,' (runtime temporary directory)')") 
-     |    trim(inp%tempdir)      
+     |    trim(tempdir)      
       if (len_trim(magvol) > 0)
      |  write(6,"('  magvol = ',a,/,4x,
      |    '(file or mss path containing magnetic data)')")
-     |    trim(inp%magvol)      
+     |    trim(magvol)      
       if (len_trim(potential_model) > 0)
      |  write(6,"('  high-lat electric potential model:  ',
      |        'potential_model = ',a)") trim(potential_model)
@@ -1857,6 +1616,9 @@
       if (len_trim(weimer_ncfile) > 0)
      |  write(6,"('  weimer coefs: weimer_ncfile = ',a)")
      |        trim(weimer_ncfile)
+      if (len_trim(wei05sc_ncfile) > 0)
+     |  write(6,"('  weimer05 data file: wei05sc_ncfile = ',a)")
+     |        trim(wei05sc_ncfile)
       if (len_trim(gpi_ncfile) > 0)
      |  write(6,"('  gpi run: gpi_ncfile = ',a)") trim(gpi_ncfile)  
       if (len_trim(see_ncfile) > 0)
@@ -1877,24 +1639,24 @@
 
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
-     |    '(file or mss path containing amie data)')") trim(inp%amievol)
+     |    '(file or mss path containing amie data)')") trim(amievol)
       write(6,"('  start_year = ',i4,' (starting calendar day)')")
-     |  inp%start_year
+     |  start_year
       write(6,"('  start_day  = ',i4,' (starting calendar year)')")
-     |  inp%start_day
-      if (inp%calendar_advance /= 0) then
+     |  start_day
+      if (calendar_advance /= 0) then
         write(6,"('  calendar_advance =',i2,' (model will be advanced ',
      |    'in calendar time starting on this day)')") 
-     |    inp%calendar_advance
+     |    calendar_advance
       else
         write(6,"('  calendar_advance  =',i1,' (model will NOT be ',
-     |    'advanced in calendar time)')") inp%calendar_advance
+     |    'advanced in calendar time)')") calendar_advance
       endif
 
       write(6,"('  step    =',i4,' (model timestep (seconds))',
-     |  i4)") inp%step
+     |  i4)") step
       write(6,"('  dispose =',i4,' (mss dispose flag 0/1/2)')") 
-     |  inp%dispose
+     |  dispose
 #ifdef MPI      
       write(6,"('  ntask_lon = ',i2,' (number of mpi tasks in ',
      |  'longitude dimension.')") ntask_lon
@@ -1905,101 +1667,99 @@
 #endif
 !
 ! Primary histories:
-      if (len_trim(inp%source) > 0) then
+      if (len_trim(source) > 0) then
         write(6,"('  source  = ',a,/,4x,'(file or mss path',
-     |    ' containing source history)')") trim(inp%source)      
+     |    ' containing source history)')") trim(source)      
         write(6,"('  source_start = ',(i3,',',i2,',',i2),
      |    ' (model time of source history)')")
-     |    inp%source_start
+     |    source_start
       endif
       n = size(output)-count(output==' ')
       write(6,"('  output (primary history output files) = ',
      |  /,(4x,a,', ',a))") 
-     |  (trim(inp%output(i)),i=1,n)
-      n = (size(inp%start)-count(inp%start==ispval))/3
+     |  (trim(output(i)),i=1,n)
+      n = (size(start)-count(start==ispval))/3
       write(6,"('  start (model start times) =',
-     |  /,4(4x,i3,',',i2,',',i2))") (inp%start(:,i),i=1,n)
-      n = (size(inp%stop)-count(inp%stop==ispval))/3
+     |  /,4(4x,i3,',',i2,',',i2))") (start(:,i),i=1,n)
+      n = (size(stop)-count(stop==ispval))/3
       write(6,"('  stop (model stop times) =',
-     |  /,4(4x,i3,',',i2,',',i2))") (inp%stop(:,i),i=1,n)
-      n = (size(inp%hist)-count(inp%hist==ispval))/3
+     |  /,4(4x,i3,',',i2,',',i2))") (stop(:,i),i=1,n)
+      n = (size(hist)-count(hist==ispval))/3
       write(6,"('  hist (primary history disk write frequencies) =',
-     |  /,4(4x,i3,',',i2,',',i2))") (inp%hist(:,i),i=1,n)
-      n = (size(inp%save)-count(inp%save==ispval))/3
+     |  /,4(4x,i3,',',i2,',',i2))") (hist(:,i),i=1,n)
+      n = (size(save)-count(save==ispval))/3
       write(6,"('  save (primary history file save frequencies) =',
-     |  /,4(4x,i3,',',i2,',',i2))") (inp%save(:,i),i=1,n)
+     |  /,4(4x,i3,',',i2,',',i2))") (save(:,i),i=1,n)
       write(6,"('  Maxmimum number of histories per primary file = ',
-     |  i3)") inp%mxhist_prim
+     |  i3)") mxhist_prim
       write(6,"('  Mass store retention period for history files = ',
-     |  i5)") inp%msreten
+     |  i5)") msreten
 !
 ! Secondary histories:
-      if (len_trim(inp%secsource) > 0) then
+      if (len_trim(secsource) > 0) then
         write(6,"('  secsource  = ',a,/,4x,'(file or mss path',
-     |    ' containing secsource history)')") trim(inp%secsource)
+     |    ' containing secsource history)')") trim(secsource)
         write(6,"('  secsource_start = ',(i3,',',i2,',',i2),
      |    ' (model time of secsource history)')")
-     |    inp%source_start
+     |    source_start
       endif
       n = size(secout)-count(secout==' ')
       if (n > 0)
      |  write(6,"('  secout (secondary history output files)=',
      |    /,(4x,a,', ',a))") 
-     |    (trim(inp%secout(i)),i=1,n)
-      n = (size(inp%secstart)-count(inp%secstart==ispval))/3
+     |    (trim(secout(i)),i=1,n)
+      n = (size(secstart)-count(secstart==ispval))/3
       if (n > 0)
      |  write(6,"('  secstart (secondary history start times) =',
-     |    /,4(4x,i3,',',i2,',',i2))") (inp%secstart(:,i),i=1,n)
-      n = (size(inp%secstop)-count(inp%secstop==ispval))/3
+     |    /,4(4x,i3,',',i2,',',i2))") (secstart(:,i),i=1,n)
+      n = (size(secstop)-count(secstop==ispval))/3
       if (n > 0)
      |  write(6,"('  secstop (secondary history stop times) =',
-     |    /,4(4x,i3,',',i2,',',i2))") (inp%secstop(:,i),i=1,n)
-      n = (size(inp%sechist)-count(inp%sechist==ispval))/3
+     |    /,4(4x,i3,',',i2,',',i2))") (secstop(:,i),i=1,n)
+      n = (size(sechist)-count(sechist==ispval))/3
       if (n > 0)
      |  write(6,"('  sechist (secondary history disk write',
      |    ' frequencies) =',/,4(4x,i3,',',i2,',',i2))") 
-     |    (inp%sechist(:,i),i=1,n)
-      n = (size(inp%secsave)-count(inp%secsave==ispval))/3
+     |    (sechist(:,i),i=1,n)
+      n = (size(secsave)-count(secsave==ispval))/3
       if (n > 0)
      |  write(6,"('  secsave (secondary history file save',
      |    ' frequencies) =',/,4(4x,i3,',',i2,',',i2))") 
-     |    (inp%secsave(:,i),i=1,n)
-      n = (size(inp%secflds)-count(len_trim(inp%secflds)==0))
+     |    (secsave(:,i),i=1,n)
+      n = (size(secflds)-count(len_trim(secflds)==0))
       if (n > 0)
      |  write(6,"('  secflds (secondary history fields)',
-     |    ' =',/,(4x,5a12))") (inp%secflds(i),i=1,n)
+     |    ' =',/,(4x,5a12))") (secflds(i),i=1,n)
       write(6,"('  Maximum number of histories per secondary file = ',
-     |  i3)") inp%mxhist_sech
+     |  i3)") mxhist_sech
 !
 ! More model-wide inputs:
       write(6,"('  mag (lat,lon of south,north magnetic poles) =',
-     |  /,4x,4f8.2)") inp%mag
+     |  /,4x,4f8.2)") mag
       write(6,"('  difhor = ',i2,' (horizontal eddy diffusion flag)')")
-     |  inp%difhor
+     |  difhor
 !
 ! iuivi flag is replaced by dynamo flag:
 !     write(6,"('  iuivi  = ',i2,' (ion drifts momentum flag)')")
-!    |  inp%iuivi
-      if (inp%dynamo <= 0) then
+!    |  iuivi
+      if (dynamo <= 0) then
         write(6,"('  dynamo = ',i2,' (dynamo will NOT be calculated)')")
-     |    inp%dynamo
+     |    dynamo
         write(6,"(14x,
      |    '(electric potential and ion drifts will be zero')")
       else
         write(6,"('  dynamo = ',i2,' (dynamo will be calculated)')")
-     |    inp%dynamo
+     |    dynamo
       endif
-      write(6,"('  nmc    = ',i2,' (flag for NMC boundary',
-     |  ' conditions)')") inp%nmc
       write(6,"('  tide (amplitudes and phases of semidiurnal tide) =',
-     |  /,4x,5e8.1,5f6.2)") inp%tide
+     |  /,4x,5e8.1,5f6.2)") tide
       write(6,"('  tide2 (amplitude and phase of diurnal tide) =',
-     |  /,4x,e8.1,f6.2)") inp%tide2
+     |  /,4x,e8.1,f6.2)") tide2
       write(6,"('  tide3m3 (amplitude and phase of 2-day wave)=',
-     |  /,4x,e8.1,f6.2)") inp%tide3m3
+     |  /,4x,e8.1,f6.2)") tide3m3
       write(6,"('  tideann = ',i2,' (0/1 flag for annual tides)')")
-     |  inp%tideann
-      write(6,"('  aurora  = ',i2,' (0/1 flag for aurora)')") inp%aurora
+     |  tideann
+      write(6,"('  aurora  = ',i2,' (0/1 flag for aurora)')") aurora
 !
 ! If any of f107,f107a,power,ctpoten are spval, this means GPI database
 ! will be used for those indices, otherwise will use user-provided
@@ -2007,7 +1767,7 @@
 !
       if (f107 /= spval) then
         write(6,"('  f107    = ',f9.3,' (daily 10.7 cm solar flux)')")
-     |    inp%f107
+     |    f107
       elseif (len_trim(gpi_ncfile) > 0) then
         write(6,"('  f107 not provided:',
      |    ' will use gpi data file ',a)") trim(gpi_ncfile)
@@ -2015,7 +1775,7 @@
 !
       if (f107a /= spval) then
         write(6,"('  f107a   = ',f9.3,' (81-day ave 10.7 cm solar',
-     |    ' flux)')") inp%f107a
+     |    ' flux)')") f107a
       elseif (len_trim(gpi_ncfile) > 0) then
         write(6,"('  f107a not provided:',
      |    ' will use gpi data file ',a)") trim(gpi_ncfile)
@@ -2024,10 +1784,10 @@
       if (power /= spval) then
         if (ntimes_power==0) then
           write(6,"('  power   = ',f9.3,' (hemispheric power (gw)')")
-     |      inp%power
+     |      power
         else
           write(6,"('  power   = ',f9.3,' (hemispheric power (gw)',
-     |      ' (user provided time series)')") inp%power
+     |      ' (user provided time series)')") power
         endif
       elseif (len_trim(gpi_ncfile) > 0) then
         write(6,"('  power not provided:',
@@ -2037,10 +1797,10 @@
       if (ctpoten /= spval) then
         if (ntimes_ctpoten==0) then
           write(6,"('  ctpoten = ',f9.3,' (cross-cap potential ',
-     |      '(volts)')") inp%ctpoten
+     |      '(volts)')") ctpoten
         else
           write(6,"('  ctpoten = ',f9.3,' (cross-cap potential ',
-     |      '(volts) (user provided time series)')") inp%ctpoten
+     |      '(volts) (user provided time series)')") ctpoten
         endif
       elseif (len_trim(gpi_ncfile) > 0) then
         write(6,"('  ctpoten not provided:',
@@ -2048,17 +1808,17 @@
       endif
 !
       write(6,"('  byimf   = ',f9.3,' (BY component of IMF)')")
-     |  inp%byimf
+     |  byimf
       write(6,"('  bzimf   = ',f9.3,' (Bz component of IMF)')")
-     |  inp%bzimf
+     |  bzimf
       write(6,"('  swvel   = ',f9.3,' (solar wind velocity)')")
-     |  inp%swvel
+     |  swvel
       write(6,"('  swden   = ',f9.3,' (solar wind density)')")
-     |  inp%swden
+     |  swden
       write(6,"('  AL      = ',f9.3,' (AL, lower auroral mag index)')")
-     |  inp%AL
+     |  AL
       write(6,"('  colfac  = ',f9.3,' (collision factor)')")
-     |  inp%colfac
+     |  colfac
 !
       write(6,"('END USER INPUT PARAMETERS')")
       write(6,"(72('-'),/)")
@@ -2126,68 +1886,162 @@
       enddo 
       end subroutine usage_calendar
 !-----------------------------------------------------------------------
-      subroutine validate_indices_time(rindex,ntimes,name)
-!
-! Validate user provided time series for solar index "name". Rindex will
-! be either ctpoten_time or power_time, from namelist input.
+      subroutine validate_timedep(constant,timedep,mxtimes,ntimes,name)
 !
 ! Args:
-      real,intent(in) :: rindex(4,mxind_time)
+      real,intent(inout) :: constant
+      integer,intent(in) :: mxtimes              ! mxind_time
+      real,intent(in) :: timedep(4,mxtimes)
       integer,intent(out) :: ntimes
       character(len=*),intent(in) :: name
 !
 ! Local:
       integer :: i,ii,n
-      integer(kind=8) :: nsec0,nsec1
+      integer(kind=8) :: nsec,nsec0,nsec1,nsec_start,nsec_stop
 !
 ! External:
       integer(kind=8),external :: mtime_to_nsec
 !
 ! Validate times and values in user provided time series:
       ntimes = 0
-      if (any(rindex /= spval)) then
+      if (any(timedep /= spval)) then
 !
 ! Time series must be provided in groups of 4 (day,hr,min,value):
         n = 0
-        do i=1,mxind_time
+        do i=1,mxtimes
           do ii=1,4
-            if (rindex(ii,i) /= spval) n = n+1
+            if (timedep(ii,i) /= spval) n = n+1
           enddo
         enddo
         if (mod(n,4) /= 0) then
           write(6,"('>>> INPUT: must provide ',a,' in groups',
      |      ' of 4: n=',i5,' mod(n,4)=',i5)") name,n,mod(n,4)
-          call shutdown('validate_indices_time')
+          call shutdown('validate_timedep')
         endif
-        do i=1,mxind_time
-          if (any(rindex(:,i) /= spval)) then
-            call validate_mtime(int(rindex(1:3,i)),mxday,name)
-            if (rindex(4,i) <= 0.) then
-              write(6,"(/,'>>> INPUT: ',a,' values must be ',
-     |          'positive: i=',i3,' rindex(4,i)=',e12.4)")
-     |          name,i,rindex(4,i)
-              call shutdown('validate_indices_time')
-            endif 
+        do i=1,mxtimes
+          if (any(timedep(:,i) /= spval)) then
+            call validate_mtime(int(timedep(1:3,i)),mxday,name)
             ntimes = ntimes+1
           endif
-        enddo ! i=1,mxind_time
+        enddo ! i=1,mxtimes
+        nsec_start = mtime_to_nsec(start(:,1)) ! model start time
+        nsec_stop = mtime_to_nsec(stop(:,1))   ! model stop time
+!
+! First time must be model start time:
+        if (ntimes > 0) then
+          nsec = mtime_to_nsec(int(timedep(1:3,1)))
+          if (nsec /= nsec_start) then
+            write(6,"(/,'>>> INPUT: Please provide first value of ',a,
+     |        ' at model START time.')") trim(name)
+            call shutdown('validate_timedep')
+          endif
+!
+! All times must be between START and STOP times:
+          do i=1,ntimes
+            nsec = mtime_to_nsec(int(timedep(1:3,i)))
+            if (nsec < nsec_start .or. 
+     |          nsec > nsec_stop) then
+              write(6,"(/,'>>> INPUT: ',a,' time ',3i4,' is outside ',
+     |          'model START/STOP times: START=',3i4,' STOP=',3i4)")
+     |          trim(name),int(timedep(1:3,i)),start(:,1),stop(:,1)
+              call shutdown('validate_timedep')
+            endif 
+          enddo
+        endif ! ntimes > 0
 !
 ! Times must be increasing (assume non-spvals are from 1 to ntimes, 
 ! i.e., not interspersed with spvals):
         if (ntimes > 1) then
-          nsec0 = mtime_to_nsec(int(rindex(1:3,1)))
+          nsec0 = mtime_to_nsec(int(timedep(1:3,1)))
           do i=2,ntimes
-            nsec1 = mtime_to_nsec(int(rindex(1:3,i)))
+            nsec1 = mtime_to_nsec(int(timedep(1:3,i)))
             if (nsec0 >= nsec1) then
               write(6,"(/,'>>> INPUT: ',a,' times must increase',
      |          '. Check time at i=',i3,' day,hr,min=',3i4,' and the',
-     |          ' time previous to i.')") name,i,int(rindex(1:3,i)) 
-              call shutdown('validate_indices_time')
+     |          ' time previous to i.')") name,i,int(timedep(1:3,i)) 
+              call shutdown('validate_timedep')
             endif
             nsec0 = nsec1
           enddo ! i=1,ntimes
         endif ! ntimes > 1
-      endif ! ctpoten_time
-      end subroutine validate_indices_time
+      endif ! any(timedep /= spval)
+!
+! User cannot provide both a constant and time-dependent values:
+      if (ntimes > 0 .and. constant /= spval) then
+        write(6,"('>>> INPUT: Please provide either constant or ',
+     |    'time-dependent values for ',a,' (not both)')") trim(name)
+        write(6,"(a,'=',e12.4,' ',a,'_time=',/,(6e12.4))")
+     |    trim(name),constant,trim(name),timedep(4,:)
+        call shutdown('validate_timedep')
+      endif
+!
+! Set default constant values if necessary:
+      if (ntimes == 0) then
+        if (constant == spval) then
+          select case (trim(name))
+            case('power')
+              if (len_trim(gpi_ncfile)==0) then ! not a GPI run
+                constant = 10.
+                write(6,"('INPUT: set default power = ',f6.2)") constant
+              endif
+            case('ctpoten')
+              if (len_trim(gpi_ncfile)==0) then
+                constant = 100.
+                write(6,"('INPUT: set default ctpoten = ',f6.2)") 
+     |            constant
+              endif
+            case('byimf')
+              constant = 0.
+              write(6,"('INPUT: set default byimf = ',f6.2)") constant
+            case('bzimf')
+              constant = 0.
+              if (potential_model == 'WEIMER') constant = 1.
+              write(6,"('INPUT: set default bzimf = ',f6.2)") constant
+            case('swden')
+              constant = 4.
+              write(6,"('INPUT: set default swden = ',f6.2)") constant
+            case('swvel')
+              constant = 400.
+              write(6,"('INPUT: set default swvel = ',f6.2)") constant
+            case('al')
+              constant = -20.
+              write(6,"('INPUT: set default al = ',f6.2)") constant
+            case default
+              write(6,"('>>> validate_timedep: unknown parameter ',a)")
+     |          trim(name)
+          end select
+        endif ! constant==spval
+!
+! Enforce some limitations:
+! - ctpoten and power must be positive.
+! - at least one of by,bz must be non-zero if Weimer is used.
+!   (this one must be checked after all calls to this routine)
+!
+        if (trim(name)=='ctpoten'.and.constant < 0.) then
+          write(6,"('>>> INPUT: ctpoten must be positive: ctpoten=',
+     |      e12.4)") constant
+          call shutdown('ctpoten')
+        endif
+        if (trim(name)=='power'.and.constant < 0.) then
+          write(6,"('>>> INPUT: power must be positive: power=',
+     |      e12.4)") constant
+          call shutdown('power')
+        endif
+
+      else  ! ntimes > 0
+        if (trim(name)=='ctpoten'.and.any(timedep(4,:) < 0.)) then
+          write(6,"('>>> INPUT: ctpoten must be positive: ctpoten_time='
+     |      ,/,(6e12.4))") timedep(4,:)
+          call shutdown('ctpoten_time')
+        endif
+        if (trim(name)=='power'.and.any(timedep(4,:) < 0.)) then
+          write(6,"('>>> INPUT: power must be positive: power_time=',
+     |      /,(6e12.4))") timedep(4,:)
+          call shutdown('power_time')
+        endif
+        constant = timedep(4,1) ! init constant
+
+      endif ! ntimes
+      end subroutine validate_timedep
 !-----------------------------------------------------------------------
       end module input_module

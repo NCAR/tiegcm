@@ -19,7 +19,8 @@ my $hres        = 5.0;    # default horizontal resolution
 my $vres        = 0.5;    # default vertical resolution
 my $debug       = 0;      # default is no debug run
 my $nomake      = 0;      # default is to make a Makefile
-my $mpi         = '';     # default parallel vs serial is system dependent
+my $mpi         = '';     # default parallel vs serial is system dependent (T/F)
+my $mss         = '';     # availablity of NCAR mass store (default is TRUE)
 my $help        = 0;      # default is no help
 my $debug       = 0;      # default is no debug
    $lib_netcdf  = '';     # default netcdf lib location is system dependent
@@ -41,6 +42,7 @@ my $debug       = 0;      # default is no debug
    "debug:i"        => \$debug,
    "nomake"         => \$nomake,
    "mpi:s"          => \$mpi,
+   "mss:s"          => \$mss,
    "lib_netcdf:s"   => \$lib_netcdf,
    "inc_netcdf:s"   => \$inc_netcdf,
    "h|help"         => \$help,
@@ -81,6 +83,7 @@ $progname executing in $cwd at $date:
   hres        = $hres
   vres        = $vres
   mpi         = $mpi
+  mss         = $mss
   lib_netcdf  = $lib_netcdf
   inc_netcdf  = $inc_netcdf
   debug       = $debug
@@ -153,6 +156,7 @@ OPTIONS
   -vres         Vertical resolution (float, either 0.5 or 0.25 delta log pressure)
   -debug	If > 0, configure Makefile for a debug run (fpe trapping, etc).
   -mpi          TRUE, FALSE, or DEFAULT (default is system and model dependent)
+  -mss          TRUE, FALSE, or DEFAULT (default is system and model dependent)
   -help		Print usage message and quit.
 
 EOF
@@ -211,6 +215,7 @@ sub validate_options {
 # 6/05: Makefile file now does this.
 #
   $OS = `uname -s`; chop $OS; 
+  $nodename = `uname -n`; chop $nodename;
 # if ($OS =~ 'Linux') {
 #   $nodename = `uname -n`; chop $nodename;
 #   if ($nodename =~ /^ln/) { $OS = $OS . '-mpi'; }
@@ -326,6 +331,20 @@ EOF
     usage();
   } # switch
   $mpiflag = $mpi;
+#
+# Option mss can be TRUE, FALSE, or DEFAULT.
+  SWITCH: {
+    if (not $mss)     { $mss = "TRUE"   ; last SWITCH; }
+    if ($mss =~ /^T/) { $mss = "TRUE"   ; last SWITCH; }
+    if ($mss =~ /^F/) { $mss = "FALSE"  ; last SWITCH; }
+    $nothing = 1;
+    print "\n>>> Bad mss = $mss (can be null, TRUE or FALSE)\n\n";
+    print "If mss == TRUE,  NCAR Mass Store is available.\n";
+    print "If mss == FALSE, NCAR Mass Store is NOT available.\n";
+    print "Default mss == TRUE\n";
+    usage();
+  } # switch
+  $mssflag = $mss;
 } # end sub validate_options
 #-----------------------------------------------------------------------
 sub abspath {
@@ -602,13 +621,15 @@ sub write_makefile {
 #
 # Write macros to Makefile:
 #
+  $OS = `uname -s`; chop $OS; ($os = $OS) =~ tr/A-Z/a-z/;
+  $nodename = `uname -n`; chop $nodename;
+  if ($nodename =~ /^ln/) { $nodename = 'lightning' }
+  $date = `date`; chop($date);
+#
   my ($file_in, $file_out, $debugarg) = @_;
   my $fh_in = new IO::File;
   my $fh_out = new IO::File;
-  my $nodename = `uname -n`; chop $nodename;
   $fh_out->open(">$file_out") or die ">>> Can't open file: $file_out\n";
-  $date = `date`; chop($date);
-  $OS = `uname -s`; chop $OS; ($os = $OS) =~ tr/A-Z/a-z/;
 #
 # Default MPI is true. MPI is set false below if serial linux is 
 # suspected, or the model is glbmean. User can override by setting
@@ -616,7 +637,7 @@ sub write_makefile {
 #
   if ($mpi eq "DEFAULT") { $mpiflag = "TRUE"; }
   if ($os eq "linux") { 
-    if ($nodename !~ /^ln/) {
+    if ($nodename ne "lightning") {
       if ($mpi eq "DEFAULT") { $mpiflag = "FALSE"; }
     }
   }
@@ -641,11 +662,10 @@ sub write_makefile {
         last SWITCH;
       }
       if ($os eq "linux") { 
-        $nodename = `uname -n`; chop $nodename;
-        if ($nodename =~ /^ln/) {              # SCD linux cluster "lightning"
-# Lightning location changed 2/9/06 (should use env var LIB_NETCDF here)
-#         $lib_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/lib";
-          $lib_netcdf = "/usr/local/apps/netcdf-3.6.0-p1/lib";
+        if ($nodename eq "lightning") {         # SCD linux cluster "lightning"
+          $lib_netcdf = "/usr/local/lib";
+        } elsif ($nodename eq 'gale') {         # CISL Linux machine "gale"
+          $lib_netcdf = "/fs/local/lib";     
         } else {                               # Generic linux (probably HAO)
           $lib_netcdf = "/opt/local/lib";
         }
@@ -668,10 +688,10 @@ sub write_makefile {
         last SWITCH;
       }
       if ($os eq "linux") { 
-        if ($nodename =~ /^ln/) {              # SCD linux cluster "lightning"
-# Lightning location changed 2/9/06 (should use env var INC_NETCDF here)
-#         $inc_netcdf = "/usr/local/netcdf/3.5.1-pgi5.2-64/include";
-          $inc_netcdf = "/usr/local/apps/netcdf-3.6.0-p1/include";
+        if ($nodename eq "lightning") {         # SCD linux cluster "lightning"
+          $inc_netcdf = "/usr/local/include";
+        } elsif ($nodename eq 'gale') {         # CISL Linux machine "gale"
+          $inc_netcdf = "/fs/local/include";
         } else {                               # Generic linux (probably HAO)
           $inc_netcdf = "/opt/local/include";
         }
@@ -696,6 +716,7 @@ sub write_makefile {
 # Macros for model $model, written by $progname at $date
 #
 UNAMES     := $OS
+UNAMEN     := $nodename
 EXECNAME   := $model
 MODEL_CLASS:= $model_class
 EXECDIR    := $execdir
@@ -704,6 +725,7 @@ LIB_NETCDF := $lib_netcdf
 INC_NETCDF := $inc_netcdf
 DEBUG      := $mkdebug
 MPI        := $mpiflag
+MSS        := $mssflag
 EOF
 #
 # Copy template and close files:
@@ -715,6 +737,7 @@ EOF
   print "\nWrote Makefile $file_out:\n";
   print << "EOF";
     UNAMES     := $OS
+    UNAMEN     := $nodename
     EXECNAME   := $model
     MODEL_CLASS:= $model_class
     EXECDIR    := $execdir
@@ -722,5 +745,6 @@ EOF
     INC_NETCDF := $inc_netcdf
     DEBUG      := $mkdebug
     MPI        := $mpiflag
+    MSS        := $mssflag
 EOF
 }

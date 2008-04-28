@@ -16,7 +16,7 @@
 !
       use params_module,only: nmlonp1,nmlat,nlat,nlonp4,nlatp2,nlonp2,
      |  nlon,nlonp1,nlevp1,nmlon,nlatp1,nmlev
-      use input_module,only: tempdir,magvol
+      use input_module,only: magvol
       use nchist_module,only: nc_open,nc_close,handle_ncerr
       implicit none
 !
@@ -135,27 +135,16 @@
 ! 9/00: In new getms, if MPI, only master proc actually acquires mspath.
 ! For systems without ncar mss (MSS==0), MAGVOL given in user input file 
 !   should be a local file name, e.g., MAGVOL='TGCM.data.magfield.nc'
-
-! btf 1/14/05: Removing calls to acquire and read magvol, since apex coord
-!              code is always called if DYNAMO=1. (i.e., there is no
-!              "old dynamo", and the "new dynamo" always uses apex code.
+! 4/08: Magvol is called only if DYNAMO=0
 !
-#if (MSS == 0)
-      dskfile = magvol
-      call get_diskfile(dskfile,' ') 
-#else
-      dskfile = ' '
-      call getfile(magvol,dskfile)
-#endif
 !
 ! If dynamo==1, then dynamo will be called. The dynamo uses
 ! apxparm (apex.F), so nc_rdmag is not necessary in this case.
 !
       if (dynamo <= 0) then
+        dskfile = ' '
+        call getfile(magvol,dskfile)
         call nc_rdmag(dskfile)
-      else
-        write(6,"('magfield: nc_rdmag not called because dynamo=',
-     |    i2)") dynamo
       endif
 !
       call magdyn

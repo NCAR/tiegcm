@@ -53,7 +53,8 @@
      |  idv_tlbc_nm,idv_ulbc_nm,idv_vlbc_nm,
      |  idv_mlon,idv_mlat,idv_mlev,idv_imlev,idv_p0_model,
      |  idv_step,idv_iter,idv_year,idv_day,idv_p0,idv_grav,
-     |  idv_zg,idv_hpower,idv_ctpoten,idv_byimf,idv_colfac,
+     |  idv_zg,idv_hpower,idv_ctpoten,idv_byimf,idv_bzimf,
+     |  idv_colfac,idv_swden,idv_swvel,idv_al,
      |  idv_gswm_mi_di_ncfile,idv_gswm_mi_sdi_ncfile,
      |  idv_gswm_nm_di_ncfile,idv_gswm_nm_sdi_ncfile,
      |  idv_see_ncfile,idv_gpi_ncfile,idv_ncep_ncfile,
@@ -538,6 +539,26 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading byimf')
             sh%byimf = scalar
+          case('bzimf')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading bzimf')
+            sh%bzimf = scalar
+          case('swvel')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading swvel')
+            sh%swvel = scalar
+          case('swden')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading swden')
+            sh%swden = scalar
+          case('al')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading al')
+            sh%al = scalar
           case('colfac')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
@@ -1094,7 +1115,7 @@
 ! 11/07 btf: mlev should be nmlev, not nmlevp1 (?)
 
       istat = nf_def_dim(ncid,"mlev",nmlevp1,id_mlev)
-      write(6,"('nc_wrhist: set mlev = ',i3)") nmlevp1
+!     write(6,"('nc_wrhist: set mlev = ',i3)") nmlevp1
 
 !     istat = nf_def_dim(ncid,"mlev",nmlev,id_mlev)
 !     write(6,"('nc_wrhist: set mlev = ',i3)") nmlev
@@ -1106,7 +1127,7 @@
 ! 11/07 btf: imlev should be nimlev, not nmlevp1 (?)
 
       istat = nf_def_dim(ncid,"imlev",nimlevp1,id_imlev)
-      write(6,"('nc_wrhist: set imlev =',i4)") nimlevp1
+!     write(6,"('nc_wrhist: set imlev =',i4)") nimlevp1
 
 !     istat = nf_def_dim(ncid,"imlev",nimlev,id_imlev)
 !     write(6,"('nc_wrhist: set imlev =',i4)") nimlev
@@ -1519,9 +1540,21 @@
       call defvar_time_dbl(ncid,"ctpoten",ids1,idv_ctpoten,
      |  "Cross-tail potential","volts")
 !
-! Byimf:
+! BY,BZ:
       call defvar_time_dbl(ncid,"byimf",ids1,idv_byimf,
-     |  "BY component of IMF"," ")
+     |  "BY component of IMF","nT")
+      call defvar_time_dbl(ncid,"bzimf",ids1,idv_bzimf,
+     |  "BZ component of IMF","nT")
+!
+! swvel,swden:
+      call defvar_time_dbl(ncid,"swvel",ids1,idv_swvel,
+     |  "Solar wind velocity","km/s")
+      call defvar_time_dbl(ncid,"swden",ids1,idv_swden,
+     |  "Solar wind density","cm3")
+!
+! al:
+      call defvar_time_dbl(ncid,"al",ids1,idv_al,
+     |  "Lower magnetic auroral activity index","nT")
 !
 ! Collision factor:
       call defvar_time_dbl(ncid,"colfac",ids1,idv_colfac,
@@ -2014,10 +2047,10 @@
         call handle_ncerr(istat,char120)
       endif
 
-      write(6,"('nc_define: mag midpoints zpmag_mid=',/,(8f8.2))")
-     |  zpmag_mid
-      write(6,"('nc_define: mag interfaces zpmag_int=',/,(8f8.2))") 
-     |  zpmag_int
+!     write(6,"('nc_define: mag midpoints zpmag_mid=',/,(8f8.2))")
+!    |  zpmag_mid
+!     write(6,"('nc_define: mag interfaces zpmag_int=',/,(8f8.2))") 
+!    |  zpmag_int
 
       end subroutine nc_define
 !-----------------------------------------------------------------------
@@ -2713,9 +2746,21 @@
      |  idv_ctpoten)
       istat = nf_put_var1_double(ncid,idv_ctpoten,h%ihist,h%ctpoten)
 !
-! BY imf:
+! BY,BZ imf:
       if (idv_byimf <= 0) istat = nf_inq_varid(ncid,"byimf",idv_byimf)
       istat = nf_put_var1_double(ncid,idv_byimf,h%ihist,h%byimf)
+      if (idv_bzimf <= 0) istat = nf_inq_varid(ncid,"bzimf",idv_bzimf)
+      istat = nf_put_var1_double(ncid,idv_bzimf,h%ihist,h%bzimf)
+!
+! swvel,swden:
+      if (idv_swvel <= 0) istat = nf_inq_varid(ncid,"swvel",idv_swvel)
+      istat = nf_put_var1_double(ncid,idv_swvel,h%ihist,h%swvel)
+      if (idv_swden <= 0) istat = nf_inq_varid(ncid,"swden",idv_swden)
+      istat = nf_put_var1_double(ncid,idv_swden,h%ihist,h%swden)
+!
+! al:
+      if (idv_al <= 0) istat = nf_inq_varid(ncid,"swden",idv_al)
+      istat = nf_put_var1_double(ncid,idv_al,h%ihist,h%al)
 !
 ! Collision factor:
       if (idv_colfac <= 0) istat = nf_inq_varid(ncid,"colfac",

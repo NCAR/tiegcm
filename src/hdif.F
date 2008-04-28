@@ -1,7 +1,6 @@
 ! 
       module hdif_module
       use params_module,only: nlevp1,nlonp4,nlat
-      use mpi_module,only: lon0,lon1,lat0,lat1
       use addfld_module,only: addfld
       implicit none
 !
@@ -332,6 +331,7 @@
      |  kldt,kldu,kldv,kldo2,kldo1,     ! input
      |  hdt ,hdu ,hdv ,hdo2 ,hdo1,      ! output
      |  lev0,lev1,lon0,lon1,lat)
+      use mpi_module,only: lat0,lat1
 !
 ! Calculate horizontal diffusion terms for t,u,v,o2,o1 at current latitude, 
 ! using coefficients that were output by hdif2. (hdif2 is called from advance, 

@@ -132,6 +132,10 @@
      |    hpower,            ! hemispheric power
      |    ctpoten,           ! cross-cap potential
      |    byimf,             ! by imf
+     |    bzimf,             ! bz imf
+     |    swvel,             ! solar wind velocity
+     |    swden,             ! solar wind density
+     |    al,                ! solar activity index
      |    f107d,             ! daily f10.7 cm flux
      |    f107a,             ! 81-day average f10.7 cm flux
      |    mag(2,2),          ! magnetic pole coordinates
@@ -246,6 +250,10 @@
         h%f107a   = real_init
       endif
       h%byimf = real_init
+      h%bzimf = real_init
+      h%swvel = real_init
+      h%swden = real_init
+      h%al = real_init
       h%mag(:,1) = (/real_init,real_init/)
       h%mag(:,2) = (/real_init,real_init/)
       h%dtide = (/real_init,real_init/)
@@ -367,6 +375,10 @@
       write(6,"(2x,'hpower  = ',f5.2,' (Gw)')") h%hpower
       write(6,"(2x,'ctpoten = ',f5.2,' (Volts)')") h%ctpoten
       write(6,"(2x,'byimf   = ',f5.2)") h%byimf
+      write(6,"(2x,'bzimf   = ',f5.2)") h%bzimf
+      write(6,"(2x,'swvel   = ',f5.2)") h%swvel
+      write(6,"(2x,'swden   = ',f5.2)") h%swden
+      write(6,"(2x,'al      = ',f5.2)") h%al
       write(6,"(2x,'e1,e2   = ',2e12.4,' (ergs/cm2/s)')") h%e1,h%e2
       write(6,"(2x,'alfac,alfad  = ',2e12.4,' (keV)')") h%alfac,h%alfad
       write(6,"(2x,'ec,ed = ',2e12.4,' (ergs/cm2/s)')") h%ec,h%ed

@@ -422,77 +422,6 @@
 #endif
       end function cputime 
 !-------------------------------------------------------------------
-      integer function isymlink(from,to,iprint)
-      implicit none
-!
-! Args:
-      character(len=*),intent(in) :: from,to
-      integer,intent(in) :: iprint
-!
-! Local:
-      logical :: exists
-      integer :: istat
-      integer,parameter :: maxlen=1024
-      character(len=maxlen) :: command
-!
-! External:
-      integer,external :: isystem
-!
-! Check for existence of "from" file:
-      inquire(file=trim(from),exist=exists)
-!     write(6,"('isymlink: Linking from=',a,' to=',a,' exists=',l1)")
-!    |  trim(from),trim(to),exists
-!
-! Make symbolic link:
-      write(command,"('ln -s -f ',a,' ',a)") trim(from),trim(to)
-      isymlink = isystem(command)
-      if (isymlink == 0) then
-        if (iprint > 0)
-     |    write(6,"('Made symbolic link of ',a,' to ',a)")
-     |      trim(from),trim(to)
-      else
-        write(6,"('>>> WARNING: symbolic link of ',a,' to ',a,
-     |    ' failed: ierror=',i3,/)") trim(from),trim(to),isymlink
-!       call shutdown('isymlink')
-      endif
-      end function isymlink
-!-------------------------------------------------------------------
-      integer function ilink(from,to,iprint)
-      implicit none
-!
-! Args:
-      character(len=*),intent(in) :: from,to
-      integer,intent(in) :: iprint
-!
-! External:
-      integer,external :: link
-#if defined(UNICOS) || defined(IRIX) || defined(SUN) || defined(OSF1)
-      ilink = link(trim(from),trim(to))
-      if (ilink.eq.0) then
-        if (iprint > 0) 
-     |  write(6,"('Linked file ',a,' to ',a)") trim(from),trim(to)
-      else
-        write(6,"(/,'>>> WARNING: link command of ',a,' to ',a,
-     |    ' failed: ierror=',i3,/)") trim(from),trim(to),ilink
-!       call shutdown('ilink')
-      endif
-#elif defined(AIX) || defined(LINUX)
-!
-! Note: link will fail if executing from different file system
-!       than tmpdir (e.g., executing from /home but tmpdir is
-!       in /ptmp)
-!
-      ilink = link(trim(from)//"\0",trim(to)//"\0")
-      if (ilink.eq.0) then
-        if (iprint > 0) 
-     |    write(6,"('Linked file ',a,' to ',a)") trim(from),trim(to)
-      else
-        write(6,"('>>> WARNING: link command of ',a,' to ',a,
-     |    ' failed: ierror=',i3)") trim(from),trim(to),ilink
-      endif
-#endif
-      end function ilink
-!-------------------------------------------------------------------
       integer function iunlink(file,iprint)
       implicit none
       character(len=*),intent(in) :: file
@@ -1322,8 +1251,8 @@
 ! where the value of array[index] equals to key).
 !
 ! Args:
-      real,dimension(first:last),intent(in) :: inarray
       integer,intent(in)::first,last
+      real,dimension(first:last),intent(in) :: inarray
       real,intent(in)::key
 !
 ! Local:
@@ -1362,8 +1291,8 @@
 ! where the value of array[index] equals to key).
 !
 ! Args:
-      integer(kind=8),dimension(first:last),intent(in) :: inarray
       integer,intent(in)::first,last
+      integer(kind=8),dimension(first:last),intent(in) :: inarray
       integer(kind=8),intent(in)::key
 !
 ! Local:
@@ -1402,8 +1331,8 @@
 ! where the value of array[index] equals to key).
 !
 ! Args:
-      integer,dimension(first:last),intent(in) :: inarray
       integer,intent(in)::first,last
+      integer,dimension(first:last),intent(in) :: inarray
       integer,intent(in)::key
 !
 ! Local:

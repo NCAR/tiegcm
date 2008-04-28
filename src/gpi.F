@@ -58,7 +58,7 @@
 ! and kp. These data are obtained in ascii format from NGDC. See comments 
 ! below.  If mpi job, only the master task executes this routine.
 !
-      use input_module,only: tempdir,gpi_ncfile
+      use input_module,only: gpi_ncfile
       use nchist_module,only: nc_open,nc_close,handle_ncerr
 !
 ! Local:
@@ -67,8 +67,6 @@
       integer :: id_ndays,id_nkp,idv_iyd,idv_f107d,idv_f107a,idv_kp
 !
 ! Acquire mss file:
-!     call mkdiskflnm(gpi_ncfile,dskfile)
-!     call getms(gpi_ncfile,dskfile,tempdir,' ')
       dskfile = ' '
       call getfile(gpi_ncfile,dskfile)
 !

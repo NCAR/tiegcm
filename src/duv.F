@@ -672,15 +672,38 @@
 !
 ! Set periodic points zero to avoid NaNS fpe in duv.
 ! (earlier versions actually set periodic points here)
-        if (lon0==1) then
-          zl(:,lon0:lon0+1,lat) = 0.
-          zp(:,lon0:lon0+1,lat) = 0.
-        endif
-        if (lon1==nlonp4) then
-          zl(:,lon1-1:lon1,lat) = 0.
-          zp(:,lon1-1:lon1,lat) = 0.
-        endif
+!        if (lon0==1) then
+!          zl(:,lon0:lon0+1,lat) = 0.
+!          zp(:,lon0:lon0+1,lat) = 0.
+!        endif
+!        if (lon1==nlonp4) then
+!          zl(:,lon1-1:lon1,lat) = 0.
+!          zp(:,lon1-1:lon1,lat) = 0.
+!        endif
       enddo ! lat=lat0,lat1
+!
+! This part is modified to restore the periodic boundary conditions
+! for zl and zp. zl and zp are horizontal pressure gradients. NaNs occurred before
+! because values at periodic points (lon=1,2 and 75,76) of tn_upd in dt.F were not given. 
+! They are used in subroutine dldp to preform fouth order finite difference. 
+! Now the halo longtudinal periodic boundary for tn_upd is set in dt.F, 
+! so the forth order differencing in dldp can be made betwen lon=3 to 74 
+! (for 5 degree resolution), and so the values of periodic 
+! points of zl and zp are now no longer NaNs.
+!                                                   Wenbin  04/24/08
+#ifdef MPI
+      call mp_periodic_f3d(zl(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      call mp_periodic_f3d(zp(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
+#else
+!
+! Set periodic points for serial run:
+      zl(:,1:2,:) = zl(:,lonend-2:lonend-1,:)
+      zl(:,lonend+1:lonend+2,:) = zp(:,3:4,:)
+      zp(:,1:2,:) = zl(:,lonend-2:lonend-1,:)
+      zp(:,lonend+1:lonend+2,:) = zp(:,3:4,:)
+#endif
       end subroutine glp
 !-----------------------------------------------------------------------
       subroutine dldp(zin,z,zl,zp,lev0,lev1,lon0,lon1,lat0,lat1)

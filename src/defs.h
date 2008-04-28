@@ -36,13 +36,18 @@
 ! -7     5   0.5    28  "normal resolution" 2 grid points per scale height
 ! -7     5   0.25   56  "double resolution" 4 grid points per scale height
 !
+! Define interface and midpoint levels
 ! Vertical column -7 to +7 by 0.50 ("normal")
-#define ZBOT (-7.)
-#define ZTOP (7.)
+#define ZIBOT (-7.0)
+#define ZITOP (7.0)
+#define ZMBOT (-6.75)
+#define ZMTOP (7.25)
 #define NLEV (28)
 !
 ! Vertical column -7 to +7 by 0.25 ("double")
-!#define ZBOT (-7.)
-!#define ZTOP (7.)
+!#define ZIBOT (-7.0)
+!#define ZITOP (7.0)
+!#define ZMBOT (-6.75)
+!#define ZMTOP (7.25)
 !#define NLEV (56)
 !

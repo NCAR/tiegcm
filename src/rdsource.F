@@ -3,7 +3,7 @@
 !
 ! Read source history.
 !
-      use input_module,only: source,tempdir,source_start,output,start,
+      use input_module,only: source,source_start,output,start,
      |  f107,f107a,power,ctpoten,dynamo
       use hist_module,only: nsource,nhist,ioutfile,ncid,iprint,h
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
@@ -29,14 +29,14 @@
 !
 ! Source was provided -- read source history from source file:
       if (nsource==1) then 
-        call rdsource(source,tempdir,source_start,ncid,nth,
+        call rdsource(source,source_start,ncid,nth,
      |    .false.,iprint)
         nhist  = 0         ! no histories on output file
         ioutfile = 0       ! no output file currently in use
 !
 ! Source file was not provided -- search 1st output file:
       else
-        call rdsource(output(1),tempdir,start(:,1),ncid,nth,.true.,
+        call rdsource(output(1),start(:,1),ncid,nth,.true.,
      |    iprint)
         nhist  = nth       ! number of histories on current output file
         ioutfile = 1       ! current output file name is output(ioutfile)
@@ -145,14 +145,13 @@
 !     enddo
       end subroutine readsource
 !-------------------------------------------------------------------
-      subroutine rdsource(filepath,tempdir,mtime,ncid,nthist,
+      subroutine rdsource(filepath,mtime,ncid,nthist,
      |  reopen_append,iprint)
 !
 ! Acquire and read source history:
 !
 ! On input:
 !   filepath = mss path to history file
-!   tempdir  = path to a temporary directory
 !   mtime(3) = model time of requested source history
 !   reopen_append: if true, reopen the file for later writing after
 !                  reading the history.
@@ -167,7 +166,7 @@
       implicit none
 ! 
 ! Args:
-      character(len=*),intent(in) :: filepath,tempdir
+      character(len=*),intent(in) :: filepath
       integer,intent(in) :: mtime(3),iprint
       integer,intent(out) :: nthist,ncid
       logical,intent(in) :: reopen_append
@@ -181,20 +180,10 @@
       character(len=120) :: diskfile
 !
 ! Acquire source file:
-! For systems without ncar mss (MSS==0), SOURCE given in user input file 
-!   should be a local file name, e.g., SOURCE='ROBLE.tgcm15r.peqsm41.nc'
-!
-#if (MSS == 0)
-      diskfile = filepath
-      call get_diskfile(diskfile,' ') 
-#else
-!     call mkdiskflnm(filepath,diskfile)
-!     call getms(filepath,diskfile,tempdir,' ')
       diskfile = ' '
       call getfile(filepath,diskfile)
       write(6,"('Acquired source history file ',a,
      |  /,'  (disk file is ',a,')')") trim(filepath),trim(diskfile)
-#endif
 !
 ! Open existing netcdf file for read-only:
       call nc_open(ncid,diskfile,'OLD','READ')

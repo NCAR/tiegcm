@@ -185,12 +185,16 @@ sub set_hist {
 #
   my ($model,$modelclass,$start_year,$start_day_hist,$hres,$vres) = @_;
 #
-  my $sourcefile = "p001-$start_year-$start_day_hist.nc";
+# my $sourcefile = "p001-$start_year-$start_day_hist.nc";
+  my $sourcefile = "FOSTER.tiegcm1-82.py2s004.nc";
 #
 # Source history file name for default hres and vres:
 #
-  $hist_source =     '$TGCMDATA/' . "TGCM.$modelclass.$sourcefile";
-  $hist_source_mss = "/TGCM/$modelclass/$sourcefile";
+# $hist_source =     '$TGCMDATA/' . "TGCM.$modelclass.$sourcefile";
+# $hist_source_mss = "/TGCM/$modelclass/$sourcefile";
+#
+  $hist_source =     '$TGCMDATA/' . "$sourcefile";
+  $hist_source_mss = "/FOSTER/tiegcm1-82/py2s004.nc";
 #
 #
   $hist_output =     "/$USER/$model/ptest001.nc";
@@ -342,7 +346,7 @@ print OUTFILE <<EOF;
  LABEL='$model'
  START_YEAR = $start_year        ; starting year
  START_DAY  = $start_day          ; starting day of year (1->365)
- CALENDAR_ADVANCE = 0     ; if > 0, calendar time will be advanced
+ CALENDAR_ADVANCE = 1     ; if > 0, calendar time will be advanced
 ;
 ; SOURCE: source history file
 ; SOURCE_START:  source history model time to read

@@ -13,10 +13,20 @@
       use fields_module
       use hist_module,only: nstep,modeltime,nsource
       use heelis_module,only: heelis,colath
-      use weimer_module,only: weimer01
+      use weimer_module,only: weimer01  ! Weimer 2001 model
+      use wei05sc,only: weimer05,       ! Weimer 2005 model
+     |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
       use input_module,only: start,step,iaurora=>aurora,idynamo=>dynamo,
-     |  f107,f107a,ctpoten,power,calendar_advance,ntimes_ctpoten,
-     |  ctpoten_time,ntimes_power,power_time,potential_model,gpi_ncfile
+     |  f107,f107a,calendar_advance,gpi_ncfile,potential_model,
+     |  wei05sc_ncfile
+      use input_module,only: 
+     |  power  ,power_time  ,ntimes_power,
+     |  ctpoten,ctpoten_time,ntimes_ctpoten,
+     |  byimf  ,byimf_time  ,ntimes_byimf,
+     |  bzimf  ,bzimf_time  ,ntimes_bzimf,
+     |  swden  ,swden_time  ,ntimes_swden,
+     |  swvel  ,swvel_time  ,ntimes_swvel,
+     |  al     ,al_time     ,ntimes_al
       use init_module,only: istep,uthr,iter,secs,iday,iyear
       use cons_module,only: dt,re,cs,racs,ylatm,rtd
       use filter_module,only: filter
@@ -26,8 +36,9 @@
       use aurora_module,only: aurora_cons,cusp2d,drzl2d,alfa2d,nflx2d
       use hdif_module,only: hdif1,hdif2
       use timing_module,only: timer,timing
-      use dynamo_module,only: prep_dynamo,prep_dynamo_dyn0,dynamo,
-     |  nodynamo,phihm,nmlat0,zpotenm3d
+      use dynamo_module,only: prep_dynamo,dynamo,
+     |  phihm,nmlat0,zpotenm3d
+      use nodynamo_module,only: nodynamo,prep_nodynamo
       use gpi_module,only: rdgpi,getgpi
       use gswm_module,only: getgswm
       use params_module,only: nlonp4,nlat,nlev
@@ -37,9 +48,6 @@
 !      
 ! current due to plasma pressure & gravity -> add to RHS of dynamo    
       use magpres_g_module, only: magpres_grav,j_pg
-
-      use hist_module,only: nfsech     ! for debug only
-      use fields_module,only: fsechist ! for debug only
 !
 #ifdef MPI
       use mpi_module,only: 
@@ -197,13 +205,25 @@
         call bndry_annual(dday) ! tba,zba
       endif
 !
-! Interpolate power and/or ctpoten to current model time, if time-dependent
-! values were read from input:
+! Interpolate power and/or ctpoten, and other indices to current model time, 
+! if time-dependent values were read from input. If namelist read parameter 
+! indices_interp is zero, interpolation is not done.
+!
       if (ntimes_ctpoten > 0) 
      |  call set_index(ctpoten_time,ntimes_ctpoten,nsecs,ctpoten,
      |    'ctpoten')
       if (ntimes_power > 0) 
      |  call set_index(power_time,ntimes_power,nsecs,power,'power')
+      if (ntimes_byimf > 0) 
+     |  call set_index(byimf_time,ntimes_byimf,nsecs,byimf,'byimf')
+      if (ntimes_bzimf > 0) 
+     |  call set_index(bzimf_time,ntimes_bzimf,nsecs,bzimf,'bzimf')
+      if (ntimes_swden > 0) 
+     |  call set_index(swden_time,ntimes_swden,nsecs,swden,'swden')
+      if (ntimes_swvel > 0) 
+     |  call set_index(swvel_time,ntimes_swvel,nsecs,swvel,'swvel')
+      if (ntimes_al > 0) 
+     |  call set_index(al_time,ntimes_al,nsecs,al,'al')
 !
 ! Get gpi data if necessary:
       if (len_trim(gpi_ncfile) > 0) then
@@ -311,13 +331,44 @@
 ! Dynamo calls Heelis (heelis.F), Weimer (wei01gcm.F), or neither
 !   for high latitude electric potential, according to user-provided
 !   "model_potential".
-! Get high latitude (Heelis or other) colatitudes, NH pfrac, and poten phihm.
+! Get high latitude (Heelis or Weimer) colatitudes, NH pfrac, and poten phihm.
 !  If Weimer is used, then theta0,phid etc is changed before use in aurora
 !   in dynamics.
 !
-      if (potential_model == 'WEIMER') then
+      if (potential_model == 'WEIMER01') then
+        if (byimf==0..and.bzimf==0.) then
+          write(6,"(/,'>>> WARNING: byimf and bzimf are both zero',
+     |      ' before call to weimer01.',/,'This will cause the ',
+     |      'weimer model to produce NaNs, so I am setting bzimf ',
+     |      'to .01')") 
+          bzimf = .01
+        endif
         call weimer01
         if (debug) write(6,"('advance after weimer01: istep=',i4)")istep
+
+!       write(6,"('wei01: mtime=',i3,',',i2,',',i2,' by,bz=',2f6.2,
+!    |    ' swvel=',f8.2,' swden=',f6.2,' al=',f8.2,' phihm min,max=',
+!    |    2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,al,
+!    |    minval(phihm),maxval(phihm)
+
+      elseif (potential_model == 'WEIMER05') then
+!
+! sub weimer05 (wei05sc.F), calculates mag electric potential in phihm.
+! (if byimf==bzimf==0, then weimer05 will set bzimf = .01)
+!
+        call weimer05(byimf,bzimf,swvel,swden,wei05sc_ncfile,istep)
+        if (debug) write(6,"('advance after weimer05: istep=',i4)")istep
+
+!       write(6,"('wei05: mtime=',i3,',',i2,',',i2,' by,bz=',2f8.2,
+!    |    ' swvel=',f8.2,' swden=',f6.2,' phihm min,max=',
+!    |    2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,
+!    |    minval(phihm),maxval(phihm)
+
+        call addfld ('W05_EPOT','Weimer05 Electric Potential',
+     |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+        call addfld ('W05_FAC','Weimer05 Field-Aligned Current',
+     |    ' ',wei05sc_fac,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+
       elseif (potential_model == 'HEELIS') then
         call heelis
         if (debug) write(6,"('advance after heelis: istep=',i4)") istep
@@ -365,10 +416,9 @@
 !               requested, set electric potential accordingly.
       if (idynamo <= 0) then
         if (trim(potential_model) /= 'NONE') then
-          call prep_dynamo_dyn0(
-     |      z      (levd0,lond0,latd0,itp),
+          call prep_nodynamo(z(levd0,lond0,latd0,itp),
      |      1,nlevp1,lon0,lon1,lat0,lat1)
-            if (debug) write(6,"('advance after prep_dynamo_dyn0')")
+            if (debug) write(6,"('advance after prep_nodynamo')")
           if (mytid==0) then 
             call nodynamo
             if (debug) write(6,"('advance after nodynamo')")
@@ -631,6 +681,7 @@
 !
       use params_module,only: 
      |  mxind_time ! max number of time-dependent solar index points
+      use input_module,only: indices_interp
       implicit none
 !
 ! Args:
@@ -675,8 +726,12 @@
 !
 ! Interpolate to model time msecs:
         if (msecs >= nsec0 .and. msecs <= nsec1) then
-          outindex = finterp_bigints(rindex(4,i),rindex(4,i+1),nsec0,
-     |      nsec1,msecs)
+          if (indices_interp > 0) then
+            outindex = finterp_bigints(rindex(4,i),rindex(4,i+1),nsec0,
+     |        nsec1,msecs)
+          else
+            outindex = rindex(4,i)
+          endif
           goto 100
         endif
       enddo ! i=1,ntimes-1
