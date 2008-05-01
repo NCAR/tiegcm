@@ -12,7 +12,7 @@
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
      |  gask,expzmid,expzmid_inv,dift,dtsmooth,dtsmooth_div2,kut
-      use bndry_module,only: tb,tb2,tba,bnd,bnd2,bnda,ci,lbc_gswm_dt
+      use bndry_module,only: tb,tb2,bnd,bnd2,ci,lbc_gswm_dt
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm
@@ -50,7 +50,7 @@
 ! Local:
       integer :: k,i,lonbeg,lonend,lat
       integer :: nk,nkm1,nlevs
-      complex :: expt,expt2,expta
+      complex :: expt,expt2
       real :: rstep
       real :: tnlbc(lon0:lon1,lat0:lat1) ! lower boundary condition
 !
@@ -89,7 +89,6 @@
         rstep = float(step)
         expt = cexp(ci*freq_semidi*rstep*iter)
         expt2 = cexp(ci*.5*freq_semidi*rstep*iter)
-        expta = 1.
       endif
 !
 ! First latitude scan for dt:
@@ -102,8 +101,6 @@
             tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound    ! semidiurnal tide
             tnlbc(i,lat) = tnlbc(i,lat)+
      |        real(tb2(lat)*bnd2(i)*expt2) ! diurnal tide
-            tnlbc(i,lat) = tnlbc(i,lat)+
-     |        real(tba(lat)*bnda(i)*expta) ! annual tide
           enddo ! i=lon0,lon1
         endif
 

@@ -381,13 +381,10 @@ print OUTFILE <<EOF;
 ; Set TIDEs = 0. if using GSWM below.
  TIDE    = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2   = 0.,0.
- TIDE3M3 = 0.,0.
 ;
 ; By default, use gswm migrating diurnal and semi-diurnal tides:
  GSWM_MI_DI_NCFILE  = '$gswm_mdi_ncfile'
  GSWM_MI_SDI_NCFILE = '$gswm_msdi_ncfile'
-;GSWM_NM_DI_NCFILE  = '$gswm_nmidi_ncfile'
-;GSWM_NM_SDI_NCFILE = '$gswm_nmisdi_ncfile'
 ;
 ; GPI_NCFILE: Use time-dependent geophysical indices data file.
 ; If GPI_NCFILE is provided, f107, f107a, power, and ctpoten below

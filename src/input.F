@@ -49,7 +49,7 @@
      |  difhor,          ! horizontal eddy diffusion flag 0/1
      |  iuivi,           ! ion drifts in momentum flag (replaced by dynamo flag)
      |  dynamo,          ! 0/1 flag for dynamo
-     |  tideann,         ! 0/1 flag for annual tide
+     |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
      |  aurora,          ! 0/1 flag for aurora
      |  ntask_lat,       ! number of tasks in latitude  dimension
      |  ntask_lon        ! number of tasks in longitude dimension
@@ -86,7 +86,7 @@
       integer :: indices_interp=1 
 !
 ! Import data file names:
-      integer,parameter :: mxlen_filename=240
+      integer,parameter :: mxlen_filename=80
       character(len=mxlen_filename) ::
 !
 ! 4/2/08 btf: Introducing Weimer 2005 model (wei05sc.F).
@@ -440,34 +440,25 @@
         call shutdown('TIDE2')
       endif
 !
-! Tide3m3 (in time-gcm only, not in tiegcm):
-      n = size(tide3m3)-count(tide3m3==spval)
-      if (n > 0) then
-        if (tgcm_name /= "time-gcm") then
-          write(6,"(/,'>>> INPUT: there is no 2-day wave in ',a)")
-     |      trim(tgcm_name)
-          write(6,"( '           (tide3m3 is ignored)')")
-        else
-          if (n /= 2) then
-            write(6,"(/,'>>> INPUT: need 2 real values for TIDE3M3')")
-            write(6,"(' (amplitude and phase of 2-day wave)')")
-            call shutdown('TIDE3M3')
-          endif
+! Tide3m3 not in tiegcm:
+      if (any(tide3m3(:) /= spval)) then
+        if (any(tide3m3(:) > 0.)) then
+          write(6,"('>>> INPUT: tide3m3=',2f8.2)") tide3m3
+          write(6,"('2-day wave not available in tiegcm.')")
+          write(6,"('Please remove TIDE3M3 from the namelist ',
+     |      'read file.')")
+          call shutdown('TIDE3M3')
         endif
       endif
-      if (n <= 0 .and. tgcm_name=="time-gcm") then
-        write(6,"(/,'>>> WARNING INPUT: did not read input parameter',
-     |    'TIDE3M3 -- am setting TIDE3M3 = 0. (no 2-day wave)')")
-        tide3m3(:) = 0.
-      endif
-      if (any(tide3m3==spval)) tide3m3(:) = 0.
 !
 ! Annual tide flag:
-      if (tideann==ispval) then
-        tideann = 0 ! default is off
-      elseif (tideann /= 0 .and. tideann /= 1) then
-        write(6,"(/,'>>> INPUT: TIDEANN must be either 0 or 1:',
-     |    ' tideann=',i5)") tideann
+! 5/1/08 btf: Annual tide is removed from versions later than 1-83:
+!
+      if (tideann /= 0 .and. tideann /= ispval) then
+        write(6,"(/,'>>> INPUT: TIDEANN=',i3)") tideann
+        write(6,"('Annual tide is no longer available in ',
+     |    'tiegcm versions later than v1-83.',/,' Please ',
+     |    'remove TIDEANN from the namelist read file.')")
         call shutdown('TIDEANN')
       endif
 !

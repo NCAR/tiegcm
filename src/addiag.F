@@ -5,8 +5,8 @@
 ! Calculate needed terms vc, barm, xnmbar[i,m], and Z:
 !
       use cons_module,only: cs,rmassinv,dz,dzgrav,freq_semidi,dt,p0,
-     |  boltz,expz,expzmid,expzmid_inv
-      use bndry_module,only: lbc_gswm_addiag,zb,zb2,zba,bnd,bnd2,bnda,ci
+     |  boltz,expz,expzmid,expzmid_inv,zbound
+      use bndry_module,only: lbc_gswm_addiag,zb,zb2,bnd,bnd2,ci
       use init_module,only: iter,igetgswm
       use fields_module,only: tlbc
       use addfld_module,only: addfld
@@ -62,12 +62,6 @@
 !       call addfld('diag_o1',' ',' ',o1(lev0:lev1-1,lon0:lon1,j),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
 !     enddo
-!
-! Use GSWM lbc for geopotential height if requested:
-      if (igetgswm > 0) then
-        call lbc_gswm_addiag(z(1,lon0:lon1,lat0:lat1),lon0,lon1,
-     |    lat0,lat1)
-      endif
 !
 ! Latitude scan:
       do j=lat0,lat1
@@ -145,6 +139,39 @@
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
 !       call addfld('TNI','TNI from addiag','K',
 !    |    tni(:,:),'ilev',lev0,lev1,'lon',lon0,lon1,j)
+      enddo ! j=lat0,lat1
+!
+! Calculate geopotential Z:
+!
+! Use GSWM lbc for geopotential height if requested:
+      if (igetgswm > 0) then
+        call lbc_gswm_addiag(z(1,lon0:lon1,lat0:lat1),lon0,lon1,
+     |    lat0,lat1)
+      endif
+      do j=lat0,lat1
+!
+! If not using gswm lbc, add in tidal components:
+        if (igetgswm <= 0) then
+!
+! z(1) = zb
+          expt=cexp(ci*freq_semidi*dt*iter)
+          do i=lon0,lon1
+            z(1,i,j) = real(zb(j)*bnd(i)*expt) 
+          enddo
+!
+! Add in effect of (1,1) tidal component to lbc
+!
+          expt = cexp(ci*.5*freq_semidi*dt*iter)
+          do i=lon0,lon1
+            z(1,i,j) = z(1,i,j)+real(zb2(j)*bnd2(i)*expt)
+          enddo
+        endif ! igetgswm
+!
+! Add background lower boundary of Z (zbound is in cons.F):
+!
+        z(1,lon0:lon1,j) = z(1,lon0:lon1,j)+zbound
+!
+! Complete calculation of geopotential Z:
 !
 ! w1 = barm
         do i=lon0,lon1
@@ -173,48 +200,22 @@
         enddo
 !       call addfld('W1c',' ',' ',w1,'lev',lev0,lev1,'lon',lon0,lon1,j)
 !
-! If not using gswm lbc, add in tidal components:
-        if (igetgswm <= 0) then
-!
-! z(1) = zb
-          expt=cexp(ci*freq_semidi*dt*iter)
-          do i=lon0,lon1
-            z(1,i,j) = real(zb(j)*bnd(i)*expt) 
-          enddo
-!
-! Add in effect of (1,1) tidal component to lbc
-!
-          expt = cexp(ci*.5*freq_semidi*dt*iter)
-          do i=lon0,lon1
-            z(1,i,j) = z(1,i,j)+real(zb2(j)*bnd2(i)*expt)
-          enddo
-!
-! Add in effect of annual tidal component to lbc
-!
-          expt = 1.
-          do i=lon0,lon1
-            z(1,i,j) = z(1,i,j)+real(zba(j)*bnda(i)*expt)
-          enddo
-        endif ! igetgswm
-!
-! z(k+1)=s1(k)+z(k)
-!
+! Extend Z upward:
         do i=lon0,lon1
           do k=lev0,lev1-1
             z(k+1,i,j) = w1(k,i)+z(k,i,j)
           enddo
         enddo
-!       call addfld('ADIAG_Z','Geopotential from addiag',
-!    |    'cm',z(:,lon0:lon1,j),'ilev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('ADIAG_Z','Geopotential from addiag',
+     |    'cm',z(:,lon0:lon1,j),'ilev',lev0,lev1,'lon',lon0,lon1,j)
 
 !       do k=lev0,lev1-1
 !         write(6,"('addiag: k=',i3,' j=',i3,' z(k,lon0:lon1,j)=',
 !    |      /,(6e12.4))") k,j,z(k,lon0:lon1,j)
 !       enddo ! k=lev0,lev1-1
-
       enddo ! j=lat0,lat1
 !
-! Calculate geopotential zg, with varying gravity:
+! Calculate diagnostic geopotential zg, with varying gravity:
       call calczg(tn,o2,o1,z,zg,lon0,lon1,lev0,lev1,lat0,lat1)
 !
 #ifdef VT

@@ -20,11 +20,11 @@
 !
       complex,parameter :: ci=(0.,1.)
       complex ::
-     |  zb(nlat),zb2(nlat),zba(nlat),
-     |  tb(nlat),tb2(nlat),tba(nlat),
-     |  ub(nlat),ub2(nlat),uba(nlat),
-     |  vb(nlat),vb2(nlat),vba(nlat),
-     |  bnd(nlonp4),bnd2(nlonp4),bnda(nlonp4)
+     |  zb(nlat),zb2(nlat),
+     |  tb(nlat),tb2(nlat),
+     |  ub(nlat),ub2(nlat),
+     |  vb(nlat),vb2(nlat),
+     |  bnd(nlonp4),bnd2(nlonp4)
 !
       real :: b(nlonp4,2,2),fb(nlonp4,2)            ! for bndry_comp
 !
@@ -57,9 +57,6 @@
       if(igswm_mi_sdi == 0) call bndry_semidiurnal  ! check for GSWM semidiurnal
       if(igswm_mi_di  == 0) call bndry_diurnal      ! check for GSWM diurnal
       dday = float(iday)+amod(float(iter)*float(step),86400.)/86400.
-!
-      call bndry_annual(dday)
-!
       write(6,"(72('-'),/)")
 !
 ! t0==0:
@@ -314,216 +311,6 @@ C     ****      CALCULATE LONGITUDINAL STRUCTURE
     9 CONTINUE
       end subroutine bndry_diurnal
 !-----------------------------------------------------------------------
-      subroutine bndry_annual(dday)
-!
-! 2/00: 1998 spherepack lib code (sphpac.f) replaces old lib 
-!       alfpac.f for legendre polynomials and Hough functions.
-! This routine calculates complex ZBA,TBA,UBA,VBA.
-!
-C     ****     TIDAL BOUNDARY CONDITION FOR ANNUAL MODE
-!
-      use input_module,only: tideann
-!    
-! am 1/06 add dday to advance the day for annual tides, only done
-! if calendar day is also advanced 
-! Args:
-      real,intent(in) :: dday
-!
-! For 1998 spherepack lib code (sphpac.f)
-! (replaces old alfpac.f)
-!
-      integer,parameter :: nalf=24, malf=2
-!
-! Local:
-      real :: p(nlat,nalf,malf),hough(nlat,0:6,2),cp(nalf/2+1)
-      complex :: dzb(nlat),zzb(nlat)
-      real :: B(6,24),RL(0:6),scale,rt2,rm,factor,xdot(24),ydot(24),
-     |  pi,ptscal,ptjm(2*nlat+1),theta,w(nlat)
-      integer :: n,l,m,k,i,jm,mp1,ld,j
-      COMPLEX CC(0:6,0:6),CL(0:6),EXPT
-!
-      DATA ((B(I,J),I = 1,6),J = 1,12)/
-     1-0.882922, 0.000000,-0.345087, 0.000000,-0.202228, 0.000000,
-     2 0.000000,-0.930826, 0.000000,-0.301357, 0.000000,-0.152720,
-     3-0.466226, 0.000000, 0.567457, 0.000000, 0.407114, 0.000000,
-     4 0.000000,-0.362673, 0.000000, 0.694431, 0.000000, 0.438014,
-     5-0.055436, 0.000000, 0.711847, 0.000000,-0.163050, 0.000000,
-     6 0.000000,-0.044983, 0.000000, 0.625545, 0.000000,-0.325772,
-     7-0.002909, 0.000000, 0.225723, 0.000000,-0.749160, 0.000000,
-     8 0.000000,-0.002773, 0.000000, 0.186467, 0.000000,-0.723674,
-     9-0.000086, 0.000000, 0.034940, 0.000000,-0.435919, 0.000000,
-     * 0.000000,-0.000103, 0.000000, 0.029425, 0.000000,-0.379254,
-     1-0.000002, 0.000000, 0.003267, 0.000000,-0.122687, 0.000000,
-     2 0.000000,-0.000003, 0.000000, 0.002928, 0.000000,-0.104008/
-      DATA ((B(I,J),I = 1,6),J = 13,24)/
-     3 0.0     , 0.000000, 0.000206, 0.000000,-0.021267, 0.000000,
-     4 0.0     , 0.0     , 0.000000, 0.000202, 0.000000,-0.018228,
-     5 0.0     , 0.0     , 0.000009, 0.000000,-0.002540, 0.000000,
-     6 0.0     , 0.0     , 0.000000, 0.000010, 0.000000,-0.002252,
-     7 0.0     , 0.0     , 0.0     , 0.000000,-0.000223, 0.000000,
-     8 0.0     , 0.0     , 0.0     , 0.0     , 0.000000,-0.000208,
-     9 0.0     , 0.0     , 0.0     , 0.0     ,-0.000015, 0.000000,
-     * 0.0     , 0.0     , 0.0     , 0.0     , 0.000000,-0.000015,
-     1 0.0     , 0.0     , 0.0     , 0.0     ,-0.000001, 0.000000,
-     2 0.0     , 0.0     , 0.0     , 0.0     , 0.000000,-0.000001,
-     3 0.0     , 0.0     , 0.0     , 0.0     , 0.0     , 0.000000,
-     4 0.0     , 0.0     , 0.0     , 0.0     , 0.0     , 0.0     /
-      DATA (RL(N),N=1,6)/
-     1  -10.8409E5,-7.0243E5,-2.4874E5,-1.9696E5,-1.0694E5,
-     2  -0.9119E5/
-C     ****
-C     ****     ANNUAL BOUNDARY COEFFICIENTS FOR LOWER BOUNDARY AT
-C     ****       Z = -7.
-C     ****
-      DATA((CC(K,N),N=0,6),K=0,3)/
-     1  ( 0.136291E+03, 0.000000E+00),(-0.200536E-01, 0.000000E+00),
-     2  ( 0.423456E+00, 0.000000E+00),(-0.143623E-02, 0.000000E+00),
-     3  ( 0.262889E+00, 0.000000E+00),( 0.365122E-02, 0.000000E+00),
-     4  ( 0.102716E+00, 0.000000E+00),( 0.826209E+00,-0.116536E-01),
-     5  (-0.455993E+00,-0.311380E-02),( 0.271258E-01,-0.373420E-01),
-     6  (-0.433095E-01, 0.165546E-01),( 0.713386E-02,-0.112538E-01),
-     7  (-0.153849E-01, 0.103063E-01),( 0.214366E-02,-0.570878E-02),
-     8  (-0.316298E+00, 0.115053E+00),(-0.159072E-01,-0.245495E-02),
-     9  ( 0.302211E+00,-0.132446E-01),( 0.230750E-02, 0.170566E-03),
-     *  ( 0.100434E+00,-0.299227E-02),( 0.264555E-02,-0.137723E-03),
-     1  ( 0.499098E-01,-0.110255E-02),(-0.520584E-03,-0.114124E-02),
-     2  ( 0.178599E-01, 0.561092E-02),( 0.557591E-03, 0.176165E-02),
-     3  (-0.148151E-02, 0.749397E-03),(-0.617325E-03, 0.778743E-03),
-     4  (-0.530835E-03, 0.641767E-03),(-0.964206E-03, 0.551394E-03)/
-      DATA((CC(K,N),N=0,6),K=4,6)/
-     1  (-0.137927E-02, 0.866386E-03),(-0.242825E-02, 0.441184E-03),
-     2  ( 0.120715E-02,-0.136729E-02),( 0.122657E-03, 0.316213E-04),
-     3  ( 0.390769E-03,-0.162978E-03),( 0.378377E-03,-0.195668E-04),
-     4  ( 0.366912E-03,-0.681579E-04),(-0.470068E-03,-0.118650E-05),
-     5  ( 0.120025E-02,-0.797459E-03),( 0.622700E-03,-0.424648E-04),
-     6  (-0.537275E-03, 0.101658E-03),( 0.222407E-03,-0.828812E-05),
-     7  (-0.209097E-03, 0.828365E-04),( 0.945940E-04, 0.317248E-04),
-     8  ( 0.341903E-03, 0.192246E-04),( 0.129833E-03, 0.247156E-04),
-     9  (-0.610206E-03, 0.591081E-06),(-0.102160E-03,-0.434110E-04),
-     *  ( 0.196672E-04,-0.305687E-04),(-0.905354E-04,-0.813929E-04),
-     1  ( 0.569460E-05,-0.116661E-03)/
-C******************************
-      DATA SCALE/1./
-C******************************
-      real,external :: sddot ! in util.F
-!
-      RT2 = SQRT(2.)
-      if (tideann==0) goto 13
-      JM = 2*nlat+1
-C     ****
-C     ****     HEIGHT VARIATION
-C     ****
-      DO 1 N = 1,6
-        CL(N) = -CSQRT(CMPLX(gask/(atm_amu*grav*RL(N))*
-     1    (T0(1)*2./7.+(T0(2)-T0(1))/dz)-.25))-.5*CI
-    1 CONTINUE
-      CL(0) = 0.
-C     ****
-C     ****     SET UP LEGENDRE POLYNOMIALS
-C     ****
-! 
-! Using new (1998) spherepack (sphpac.f):
-! (nalf=24, see cbndrya.h)
-!
-      pi = 4.*atan(1.)
-      do n=1,nalf
-        do m=0,1
-          mp1=m+1
-          call alfk(n,m,cp)
-          do j=1,jm
-            theta = float(j-1)*pi/float(jm-1)
-            call lfpt(n,m,theta,cp,ptscal)
-            ptjm(j) = ptscal
-          enddo
-          do j=1,nlat
-            p(j,n,mp1) = ptjm(2*(nlat+1-j))
-          enddo
-        enddo
-        m = 0
-        rm = float(m)
-        do j=1,nlat
-          p(j,n,2)=sqrt(float(n*(n+1)-m*(m+1)))*p(j,n,2)-rm*tn(j)*
-     |      p(j,n,1)
-        enddo
-      enddo
-C     ****
-C     ****     NOW EVALUATE HOUGH FUNCTIONS
-C     ****
-      DO 4 L=1,6
-        DO 4 LD=1,2
-          DO 4 J=1,nlat
-            xdot(:) = p(j,:,ld)
-            ydot(:) = b(l,:)
-            HOUGH(J,L,LD)=sddot(24,xdot,ydot)
-    4 CONTINUE
-C     ****
-C     ****     HOUGH FUNCTION OF ORDE ZERO`
-C     ****
-      DO 5 J =1,nlat
-        HOUGH(J,0,1) = 1./RT2
-        HOUGH(J,0,2) = 0.
-    5 CONTINUE
-C     ****
-C     ****     GENERATE ZBA, TBA, UBA, VBA
-C     ****
-      DO 6 J = 1,nlat
-        ZBA(J) = 0.
-        TBA(J) = 0.
-        UBA(J) = 0.
-        VBA(J) = 0.
-    6 CONTINUE
-C     ****
-C     ****     SUMMATION OVER FREQUENCY, K, CALCULATION OF PHASE FACTOR
-C     ****
-      DO 7 K = 0,6
-        EXPT = CEXP(CI*FLOAT(K)*(DDAY-1)*86400.*freq_ann)
-C       ****
-C       ****     SUMMATION OVER ORDER, N
-C       ****
-        DO 7 N = 0,6
-          FACTOR = SCALE
-          IF(K.EQ.0.AND.N.EQ.0)FACTOR = 1.
-          DO 7 J = 1,nlat
-            ZZB(J) = CC(K,N)*HOUGH(J,N,1)*EXPT*1.E5*FACTOR
-            DZB(J) = CC(K,N)*HOUGH(J,N,2)*EXPT*1.E5*FACTOR
-            W(J) = grav/(re*((FLOAT(K)*freq_ann)**2-COR(J)**2))
-            ZBA(J) = ZBA(J)+ZZB(J)
-            TBA(J) = TBA(J)+CI*atm_amu*grav/gask*CL(N)*ZZB(J)
-            UBA(J) = UBA(J)+W(J)*(COR(J)*DZB(J)-RM*FLOAT(K)*freq_ann/
-     1        CS(J)*ZZB(J))
-            VBA(J) = VBA(J)+CI*W(J)*(FLOAT(K)*freq_ann*DZB(J)-RM*COR(J)/
-     1        CS(J)*ZZB(J))
-    7 CONTINUE
-      GO TO 11
-   13 CONTINUE
-C     ****
-C     ****     ZERO BOUNDARY CONDITION
-C     ****
-      DO 12 J = 1,nlat
-! am 10/20/05 only temporary to get the geopotential height to approx. 80 km
-! btf 1/17/06: Check zibot to determine zba bottom boundary:
-        if (zibot==-7.) then
-          ZBA(J) = CC(0,0)*1./RT2*1.E5
-        elseif (zibot==-10.) then
-	  ZBA(J) = 80./96.37*CC(0,0)*1./RT2*1.E5
-        else
-          write(6,"('>>> bndry_annual: unknown zibot=',e12.4)") zibot
-          call shutdown('bad zibot in bndry_annual')
-        endif
-!     
-        TBA(J) = 0.
-        UBA(J) = 0.
-        VBA(J) = 0.
-   12 CONTINUE
-   11 CONTINUE
-C     ****
-C     ****     LONGITUDINAL STRUCTURE
-C     ****
-      DO 8 I = 1,nlonp4
-        BNDA(I) = 1.
-    8 CONTINUE
-      end subroutine bndry_annual
-!-----------------------------------------------------------------------
       subroutine bndcmp
 C     ****
 C     ****     CALCULATE MATRICES B(nlonp4,2,2) AND VECTORS FB(nlonp4,2)
@@ -709,8 +496,6 @@ C     ****
 	  do i=lon0,lon1
  	    tnlbc(i,lat) = gswm_mi_sdi_t(i,lat)+tbound	     ! semidiurnal tide
 	    tnlbc(i,lat) = tnlbc(i,lat)+ gswm_mi_di_t(i,lat) ! diurnal tide
- 	    tnlbc(i,lat) = tnlbc(i,lat)+
-     |        real(tba(lat)*bnda(i)*expta)		 ! annual tide
 	  enddo   ! i=lon0,lon1
 	enddo	 ! j=lat0,lat1
 !      
@@ -721,8 +506,6 @@ C     ****
  	    tnlbc(i,lat) = gswm_mi_sdi_t(i,lat)+tbound    ! semidiurnal tide
 	    tnlbc(i,lat) = tnlbc(i,lat)+
      |        real(tb2(lat)*bnd2(i)*expt2)	       ! diurnal tide
- 	    tnlbc(i,lat) = tnlbc(i,lat)+
-     |        real(tba(lat)*bnda(i)*expta)	       ! annual tide
 	  enddo   ! i=lon0,lon1
 	enddo	 ! j=lat0,lat1
 !      
@@ -732,8 +515,6 @@ C     ****
 	  do i=lon0,lon1
  	    tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound  ! semidiurnal tide
 	    tnlbc(i,lat) = tnlbc(i,lat)+ gswm_mi_di_t(i,lat)    ! diurnal tide
- 	    tnlbc(i,lat) = tnlbc(i,lat)+
-     |        real(tba(lat)*bnda(i)*expta)		     ! annual tide
 	  enddo   ! i=lon0,lon1
 	enddo	 ! j=lat0,lat1
       else
@@ -744,8 +525,6 @@ C     ****
              tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound ! semidiurnal tide
             tnlbc(i,lat) = tnlbc(i,lat)+
      |        real(tb2(lat)*bnd2(i)*expt2) 		    ! diurnal tide
-             tnlbc(i,lat) = tnlbc(i,lat)+
-     |         real(tba(lat)*bnda(i)*expta) 		    ! annual tide
           enddo   ! i=lon0,lon1
         enddo	  ! j=lat0,lat1
       endif
@@ -804,7 +583,6 @@ C     ****
 	  do i=lon0,lon1
 	    z(i,j) = gswm_mi_sdi_z(i,j)		  ! semidiurnal tide
 	    z(i,j) = z(i,j)+ gswm_mi_di_z(i,j)	    ! diurnal tide
- 	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
 	  enddo
 	enddo
 !
@@ -814,7 +592,6 @@ C     ****
 	  do i=lon0,lon1
 	    z(i,j) = gswm_mi_sdi_z(i,j)		  ! semidiurnal tide
 	    z(i,j) = z(i,j)+real(zb2(j)*bnd2(i)*expt2) ! diurnal tide
- 	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
 	  enddo
 	enddo
 !
@@ -824,7 +601,6 @@ C     ****
 	  do i=lon0,lon1
 	    z(i,j) = real(zb(j)*bnd(i)*expt)	       ! semidiurnal tide
 	    z(i,j) = z(i,j)+ gswm_mi_di_z(i,j)	       ! diurnal tide
- 	    z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
 	  enddo
 	enddo
 !
@@ -834,7 +610,6 @@ C     ****
           do i=lon0,lon1
             z(i,j) = real(zb(j)*bnd(i)*expt)	       ! semidiurnal tide
             z(i,j) = z(i,j)+real(zb2(j)*bnd2(i)*expt2) ! diurnal tide
-             z(i,j) = z(i,j)+real(zba(j)*bnda(i)*expta) ! annual tide
           enddo
         enddo
       endif
@@ -882,8 +657,6 @@ C     ****
           vnlbc(i) = gswm_mi_sdi_v(i,lat)
           unlbc(i) = unlbc(i) + gswm_mi_di_u(i,lat)    ! diurnal tide
           vnlbc(i) = vnlbc(i) + gswm_mi_di_v(i,lat)
-          unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta)! annual tide
-          vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1
@@ -895,8 +668,6 @@ C     ****
           vnlbc(i) = gswm_mi_sdi_v(i,lat)
           unlbc(i) = unlbc(i) + real(ub2(lat)*bnd2(i)*expt2) ! diurnal tide
           vnlbc(i) = vnlbc(i) + real(vb2(lat)*bnd2(i)*expt2)
-          unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta) ! annual tide
-          vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1
@@ -908,8 +679,6 @@ C     ****
           vnlbc(i) =  real(vb(lat)*bnd(i)*expt)
           unlbc(i) = unlbc(i) + gswm_mi_di_u(i,lat)            ! diurnal tide
           vnlbc(i) = vnlbc(i) + gswm_mi_di_v(i,lat)
-          unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta)! annual tide
-          vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1
@@ -921,8 +690,6 @@ C     ****
           vnlbc(i) = real(vb(lat)*bnd(i)*expt)
           unlbc(i) = unlbc(i) + real(ub2(lat)*bnd2(i)*expt2)! diurnal tide
           vnlbc(i) = vnlbc(i) + real(vb2(lat)*bnd2(i)*expt2)
-          unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta)! annual tide
-          vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
           unlbc_diag(:,i) = unlbc(i)	! for output
           vnlbc_diag(:,i) = vnlbc(i)
         enddo ! i=lon0,lon1

@@ -627,3 +627,31 @@ Changed tgcm_version from tiegcm1-82 to tiegcm1-83 in params.F.
 
 4/28/08: Preparing for cvs commit and tag as tiegcm1-83.
 --------------------------------------------------------------------------------
+
+4/30-5/1/08:
+Removed sub bndry_annual and related zba,tba,uba,vba. This involved changes to
+bndry.F, addiag.F, advance.F, dt.F, duv.F, cons.F. Introduced new constant
+zbound as lower boundary background Z (cons.F). This is added to the tidal 
+perturbations in Z (addiag.F). Zbound takes the place of ZBA=CC(0,0)*1./RT2*1.e5, 
+which was set in bndry_annual, even with TIDEANN was 0. 
+
+Tested against 1-83 with gswm migrating (TIDE==0), and with TIDE,TIDE2 set 
+(no gswm).  Tgcmproc reported 0 diffs in both cases, so it appears to be
+working.
+
+Print warning and shutdown if input reads a non-ispval value > 0 for namelist 
+read parameter TIDEANN. No action is taken if TIDEANN=0.,0.  to support use of 
+old namelist read files. Did the same for TIDE3M3 (no 2-day wave in tiegcm).
+
+Removed TIDE3M3 and gswm non-migrating files from tiegcm default namelist read 
+file (Mknamelist).
+
+Reset format of prints of certain history vars (bzimf, etc), so they come
+out e12.4 instead of ***** when they are spval (sub hist_print in hist.F).
+
+Went back to mxlen_filename = 80, because the 240 setting (changed in 1-83)
+was causing problems reading source histories. All paths to input data files
+(gpi, see, gswm, etc) must be <= 80 chars in length.
+
+5/1/08: Preparing a cvs commit, but will not make new tag at this time.
+--------------------------------------------------------------------------------

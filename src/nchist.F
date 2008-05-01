@@ -643,7 +643,7 @@
             sh%step = iscalar
 !
 ! GPI data file: gpi_ncfile(time,filelen), where filelen=mxlen_filename
-          case('gpi_ncfile')                               ! new histories
+          case('gpi_ncfile')
             start_2d(1) = 1
             start_2d(2) = sh%ihist
             count_2d(1) = mxlen_filename

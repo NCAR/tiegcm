@@ -312,7 +312,7 @@
      |      'history.')")
         endif
       else
-        write(6,"('>>> print_hist: unknown type (apparently ',
+        write(6,"('>>> hist_print: unknown type (apparently ',
      |    'not primary or secondary.')")
       endif
 !
@@ -370,15 +370,15 @@
      |  ' (amp/phase of diurnal tide)')") h%dtide
       write(6,"(2x,'sdtide  = ',5e8.1,' ',5f5.1,/,
      |  4x,'(amp/phase of semi-diurnal tide)')") h%sdtide
-      write(6,"(2x,'f107d   = ',f6.2,' (daily solar flux)')") h%f107d
-      write(6,"(2x,'f107a   = ',f6.2,' (average solar flux)')") h%f107a
-      write(6,"(2x,'hpower  = ',f5.2,' (Gw)')") h%hpower
-      write(6,"(2x,'ctpoten = ',f5.2,' (Volts)')") h%ctpoten
-      write(6,"(2x,'byimf   = ',f5.2)") h%byimf
-      write(6,"(2x,'bzimf   = ',f5.2)") h%bzimf
-      write(6,"(2x,'swvel   = ',f5.2)") h%swvel
-      write(6,"(2x,'swden   = ',f5.2)") h%swden
-      write(6,"(2x,'al      = ',f5.2)") h%al
+      write(6,"(2x,'f107d   = ',e12.4,' (daily solar flux)')") h%f107d
+      write(6,"(2x,'f107a   = ',e12.4,' (average solar flux)')") h%f107a
+      write(6,"(2x,'hpower  = ',e12.4,' (Gw)')") h%hpower
+      write(6,"(2x,'ctpoten = ',e12.4,' (Volts)')") h%ctpoten
+      write(6,"(2x,'byimf   = ',e12.4)") h%byimf
+      write(6,"(2x,'bzimf   = ',e12.4)") h%bzimf
+      write(6,"(2x,'swvel   = ',e12.4)") h%swvel
+      write(6,"(2x,'swden   = ',e12.4)") h%swden
+      write(6,"(2x,'al      = ',e12.4)") h%al
       write(6,"(2x,'e1,e2   = ',2e12.4,' (ergs/cm2/s)')") h%e1,h%e2
       write(6,"(2x,'alfac,alfad  = ',2e12.4,' (keV)')") h%alfac,h%alfad
       write(6,"(2x,'ec,ed = ',2e12.4,' (ergs/cm2/s)')") h%ec,h%ed

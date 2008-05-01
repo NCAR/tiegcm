@@ -43,7 +43,6 @@
       use gswm_module,only: getgswm
       use params_module,only: nlonp4,nlat,nlev
       use output,only: outhist
-      use bndry_module,only: bndry_annual
       use addfld_module,only: addfld
 !      
 ! current due to plasma pressure & gravity -> add to RHS of dynamo    
@@ -199,11 +198,7 @@
       if (calendar_advance > 0) call advance_day
       call sunloc(iday,secs) ! locate sun's longitude
       if (debug) write(6,"('advance after sunloc')")
-!
-      if (calendar_advance > 0) then
-        dday = float(iday)+secs/86400.
-        call bndry_annual(dday) ! tba,zba
-      endif
+      if (calendar_advance > 0) dday = float(iday)+secs/86400.
 !
 ! Interpolate power and/or ctpoten, and other indices to current model time, 
 ! if time-dependent values were read from input. If namelist read parameter 

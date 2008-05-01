@@ -481,7 +481,7 @@
         h%al        = al
         h%colfac    = colfac
       endif
-
+!
 ! time-gcm only:
 !     h%alfa30    = alfa30
 !     h%e30       = e30

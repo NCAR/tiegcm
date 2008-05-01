@@ -70,12 +70,6 @@
      |  rmassinv_no  = 1./rmass_no,
      |  rmassinv_op  = 1./rmass_op
 !
-! 2/00: these were in modsrc.snoe (tgcm13mt), but were unused.
-! Low-energy protons:
-!     real,parameter ::
-!       alfalp = 10.,
-!       efluxlp = 1.e-20
-!
 ! Model derived constants (see sub init_cons in this module):
 !
       real ::
@@ -93,7 +87,6 @@
      |  dtx2inv,        ! 1./(2*dt)             C(7)
      |  freq_3m3,       ! frequency of 2-day wave (rad/sec)       C(21)
      |  freq_semidi,    ! frequency of semidiurnal tide (rad/sec) C(23)
-     |  freq_ann,       ! frequency of annual tide                C(25)
      |  expz(nlev+1),   ! exp(-z) at midpoints
      |  expzmid,        ! exp(-.5*dz)                             C(86)
      |  expzmid_inv,    ! 1./expzmid                              C(87)
@@ -108,7 +101,8 @@
      |  dzgrav,         ! grav/gask C(65)
      |  difk(nlev+1),   ! background eddy diffusion
      |  dift(nlev+1),   ! background thermal conductivity
-     |  xmue(nlev+1)    ! eddy viscosity (?)
+     |  xmue(nlev+1),   ! eddy viscosity (?)
+     |  zbound          ! background low bound of Z (formerly ZBA in annual tide)
 !
 ! Constants for dynamo and electric field calculations:
       real,parameter :: h00=9.7e6, r00=re+h00	! use mean earth radius
@@ -190,9 +184,6 @@
       integer :: k,i,j,nfsech,js
 !
       pi = 4.*atan(1.)                ! C(110)
-
-!     print *,' init_cons: pi=',pi
-
       rtd = 180./pi                   ! radians to degrees
       dtr = pi/180.                   ! degrees to radians
       dphi = pi/float(nlat)           ! C(2)
@@ -201,7 +192,7 @@
       dlamda = 2.*pi/float(nlon)      ! C(1)
       dlamda_2div3 = 2./(3.*dlamda)   ! C(10)
       dlamda_1div12 = 1./(12.*dlamda) ! C(11)
-
+      zbound = 136.291/sqrt(2.)*1.e5  ! background lower boundary of Z (cm)
 !
 ! expz(kmax) is exp(-zp) at midpoints:
 ! expz (will replace EXPS) (expz(nlev+1) not used).
@@ -250,7 +241,6 @@
       dtx2inv = 1./dtx2                  ! was C(7)
       freq_3m3 = 2.*pi/(49.7789*60.*60.) ! was C(21)
       freq_semidi = 4.*pi/(24.*60.*60.)  ! was C(23)
-      freq_ann = freq_semidi/(2.*365.25) ! was C(25)
 !
 ! Set gravity according to lower boundary:
       grav = 870. ! (is 945. in time-gcm)
@@ -265,14 +255,15 @@
       write(6,"(/,'Set constants:')")
       write(6,"('  nlat=',i3,' nlon=',i3,' nlev=',i3)") nlat,nlon,nlev
       write(6,"('  dz = ',f5.2)") dz
+      write(6,"('  zbound (cm) = ',e12.6)") zbound
       write(6,"('  zmbot, zmtop = ',2f8.3,
      |  ' (bottom,top midpoint levels)')") zmbot,zmtop
       write(6,"('  zibot, zitop = ',2f8.3,
      |  ' (bottom,top interface levels)')") zibot,zitop
       write(6,"('  dt = ',f8.2,' secs')") dt
       write(6,"('  grav = ',f10.2)") grav
-      write(6,"('  freq_3m3 = ',e10.4,'  freq_semidi=',e10.4,
-     |  '  freq_ann=',e12.4)") freq_3m3,freq_semidi,freq_ann
+      write(6,"('  freq_3m3 = ',e10.4,'  freq_semidi=',e10.4)")
+     |  freq_3m3,freq_semidi
       write(6,"('  dipmin = ',f8.3)") dipmin
       write(6,"('  check_exp = ',l1)") check_exp
       write(6,"('  kut (for filtering) = ',36i3)") kut

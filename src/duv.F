@@ -8,8 +8,7 @@
       use params_module,only: nlonp4,dz,nlat,spval,nlonp2,nlon
 !     use input_module,only: iuivi ! no longer in use (see dynamo input flag)
       use init_module,only: iter,igetgswm
-      use bndry_module,only: ub,ub2,uba,vb,vb2,vba,bnd,bnd2,bnda,ci,
-     |  lbc_gswm_duv
+      use bndry_module,only: ub,ub2,vb,vb2,bnd,bnd2,ci,lbc_gswm_duv
       use cons_module,only: freq_semidi,dt,dtx2inv,expz,p0,gask,grav,
      |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,kut
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
@@ -195,10 +194,6 @@
 ! Diurnal tide:
             unlbc(i) = unlbc(i) + real(ub2(lat)*bnd2(i)*expt2)
             vnlbc(i) = vnlbc(i) + real(vb2(lat)*bnd2(i)*expt2)
-!
-! Annual tide:
-            unlbc(i) = unlbc(i) + real(uba(lat)*bnda(i)*expta)
-            vnlbc(i) = vnlbc(i) + real(vba(lat)*bnda(i)*expta)
 !
 ! Define unlbc_ij for diagnostic:
             unlbc_ij(i,lat) = unlbc(i)
@@ -552,7 +547,7 @@
       use params_module,only: nlonp4,nlat
       use cons_module,only: dz,dzgrav,freq_semidi,dt,grav,racs,re_inv
       use init_module,only: iter
-      use bndry_module,only: zb,zb2,zba,bnd,bnd2,bnda,ci
+      use bndry_module,only: zb,zb2,bnd,bnd2,ci
       use addfld_module,only: addfld
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_bndlats_f3d, 
