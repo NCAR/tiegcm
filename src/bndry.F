@@ -7,7 +7,7 @@
 ! the tidal contribution (diurnal, semi-diurnal)
 !
       use cons_module,only: t0,pi,atm_amu,gask,grav,freq_semidi,
-     |  re,dlamda,tbound,tgrad,cs,cor,tn,freq_ann
+     |  re,dlamda,tbound,tgrad,cs,cor,tn
       use params_module,only: nlat,nlonp4,nlevp1,dz,zibot
 !
 ! GSWM boundary perturbation (see gswm.F):

@@ -23,6 +23,10 @@
 ! Netcdf data file wei05sc.nc was written from original IDL save files
 !   W05scBndy.xdr, W05scEpot.xdr, W05scBpot.xdr, and SCHAtable.dat
 !
+! May 10-12, 2008 bae and btf: 
+!   Correct angle by/bz for different hemispheres (change sign)
+!   (see bt, angle, and setmodel and setboundary calls)
+!
       use params_module,only: nmlat,nmlon,nmlonp1
       implicit none
 !
@@ -72,6 +76,7 @@
       integer,intent(in) :: istep
 !
 ! Local:
+      real :: angl,angle,bt
       integer :: i,j
       real :: rmlt,mlat,tilt,htilt,hem,ut
       real,parameter :: fill=0.
@@ -83,6 +88,9 @@
      |    ' when calling the Weimer model: am setting bz=0.01')")
         bz = 0.01 ! note intent(inout) above
       endif
+!
+      bt = sqrt(by**2+bz**2)
+      angl = atan2(by,bz)*rtd
 !
 ! Read netcdf data file if this is first step:
       if (istep==1) call read_wei05sc_ncfile(wei05sc_ncfile)
@@ -100,7 +108,8 @@
 ! Call Weimer model for southern hemisphere epot:
       hem = -1.
       htilt = hem * tilt
-      call setmodel(by,bz,htilt,swvel,swden,'epot')
+      angle = hem * angl
+      call setmodel(angle,bt,htilt,swvel,swden,'epot')
       do j=1,nmlat0
         do i=1,nmlon
 !
@@ -115,7 +124,7 @@
       enddo ! j=1,nmlat0
 !
 ! Call Weimer model for southern hemisphere fac:
-      call setmodel(by,bz,htilt,swvel,swden,'bpot')
+      call setmodel(angle,bt,htilt,swvel,swden,'bpot')
       do j=1,nmlat0
         do i=1,nmlon
           rmlt = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
@@ -127,7 +136,8 @@
 ! Call Weimer model for northern hemisphere epot:
       hem = 1.
       htilt = hem * tilt
-      call setmodel(by,bz,htilt,swvel,swden,'epot')
+      angle = hem * angl
+      call setmodel(angle,bt,htilt,swvel,swden,'epot')
       do j=nmlat0+1,nmlat
         do i=1,nmlon
 !
@@ -142,7 +152,7 @@
       enddo ! j=1,nmlat0+1,nmlat
 !
 ! Call Weimer model for northern hemisphere fac:
-      call setmodel(by,bz,htilt,swvel,swden,'bpot')
+      call setmodel(angle,bt,htilt,swvel,swden,'bpot')
       do j=nmlat0+1,nmlat
         do i=1,nmlon
           rmlt = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
@@ -383,7 +393,7 @@
 
       end subroutine read_wei05sc_ncfile
 !-----------------------------------------------------------------------
-      subroutine setmodel(by,bz,tilt,swvel,swden,model)
+      subroutine setmodel(angle,bt,tilt,swvel,swden,model)
 !
 ! Calculate the complete set of the models' SCHA coeficients,
 !   given an aribitrary IMF angle (degrees from northward toward +Y),
@@ -392,12 +402,12 @@
       implicit none
 !
 ! Args:
-      real,intent(in) :: by,bz,tilt,swvel,swden
+      real,intent(in) :: angle,bt,tilt,swvel,swden
       character(len=*),intent(in) :: model
 !
 ! Local:
       integer :: i,j
-      real :: bt,angle,pi,stilt,stilt2,sw,swp,swe,c0,
+      real :: pi,stilt,stilt2,sw,swp,swe,c0,
      |  rang,cosa,sina,cos2a,sin2a
       real :: a(n_schfits)
 !
@@ -408,16 +418,13 @@
         stop 'setmodel' 
       endif
 !
-!     write(6,"('wei05sc setmodel: model=',a,' by=',f8.2,' bz=',f8.2,
+!     write(6,"('wei05sc setmodel: model=',a,' bt=',f8.2,' angl=',f8.2,
 !    |  ' tilt=',f8.2,' swvel=',f8.2,' swden=',f8.2)") trim(model),
-!    |  by,bz,tilt,swvel,swden
+!    |  bt,angle,tilt,swvel,swden
 !
       pi = 4.*atan(1.)
       rad2deg = 180./pi
       deg2rad = pi/180.
-!
-      bt = sqrt(by**2+bz**2)
-      angle = atan2(by,bz)*rad2deg
       call setboundary(angle,bt,tilt,swvel,swden)
 !
       stilt = sin(tilt*deg2rad)
@@ -643,10 +650,11 @@
       real,intent(out) :: nlm
 !
 ! Local:
-      integer :: tablesize,istat,i,j,l,m,skip
+      integer :: istat,i,j,l,m,skip
       real :: th0,out(1),colata(1),plm1
       real :: cth(mxtablesize)
       real,save :: prevth0=1.e36
+      integer,save :: tablesize
 !
       scplm = 0.
       th0 = bndyfitr
