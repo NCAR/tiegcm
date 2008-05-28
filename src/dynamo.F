@@ -766,10 +766,11 @@
 !
 ! Save 3d mag electric potential:
 ! phim3d(nmlonp1,nmlat,-2:nlevp1)  ! 3d electric potential magnetic
+! Note nmlev = nlevp1, so 1:nmlev cannot be used in the addfld call.
 !
 !     do j=1,nmlat
 !       call addfld('PHIM3D','El.Poten','V',
-!    |    phim3d(:,j,1:nmlev),'mlon',1,nmlonp1,'imlev',1,nmlev,j)
+!    |    phim3d(:,j,1:nlevp1),'mlon',1,nmlonp1,'imlev',1,nlevp1,j)
 !     enddo
 !
 ! am_02/02: calculate  Je_1,  K_(q,phi), K_(q,lam)

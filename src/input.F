@@ -1746,10 +1746,10 @@
      |  /,4x,5e8.1,5f6.2)") tide
       write(6,"('  tide2 (amplitude and phase of diurnal tide) =',
      |  /,4x,e8.1,f6.2)") tide2
-      write(6,"('  tide3m3 (amplitude and phase of 2-day wave)=',
-     |  /,4x,e8.1,f6.2)") tide3m3
-      write(6,"('  tideann = ',i2,' (0/1 flag for annual tides)')")
-     |  tideann
+!     write(6,"('  tide3m3 (amplitude and phase of 2-day wave)=',
+!    |  /,4x,e8.1,f6.2)") tide3m3
+!     write(6,"('  tideann = ',i2,' (0/1 flag for annual tides)')")
+!    |  tideann
       write(6,"('  aurora  = ',i2,' (0/1 flag for aurora)')") aurora
 !
 ! If any of f107,f107a,power,ctpoten are spval, this means GPI database

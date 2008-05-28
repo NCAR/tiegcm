@@ -50,14 +50,11 @@
 !
 ! tbound = value of T at lower boundary, and tgrad = gradient
 !
-      write(6,"(/,72('-'))")
-      write(6,"('Set Lower Boundary Conditions:')")
       t0(1) = tbound
       t0(2) = tbound+dz*tgrad
       if(igswm_mi_sdi == 0) call bndry_semidiurnal  ! check for GSWM semidiurnal
       if(igswm_mi_di  == 0) call bndry_diurnal      ! check for GSWM diurnal
       dday = float(iday)+amod(float(iter)*float(step),86400.)/86400.
-      write(6,"(72('-'),/)")
 !
 ! t0==0:
       do k=1,nlevp1

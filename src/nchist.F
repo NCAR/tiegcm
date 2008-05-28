@@ -1040,11 +1040,8 @@
 !
 ! Report to stdout:
 !
-      call fminmax(f4d(ix)%data(:,lonbeg:lonend,lat0:lat1,itp),
-     |  nlevp1*(lonend-lonbeg+1)*(lat1-lat0+1),fmin,fmax)
-
-!     write(6,"('lonbeg,lonend=',2i3,' lat0,1=',2i4)") 
-!    |  lonbeg,lonend,lat0,lat1
+      call fminmaxspv(f4d(ix)%data(:,lonbeg:lonend,lat0:lat1,itp),
+     |  nlevp1*(lonend-lonbeg+1)*(lat1-lat0+1),fmin,fmax,spval)
       write(6,"('Read field ',a,' 3d subdomain min,max=',2e12.4)") 
      |  f4d(ix)%short_name,fmin,fmax
 !
@@ -1115,11 +1112,6 @@
 ! 11/07 btf: mlev should be nmlev, not nmlevp1 (?)
 
       istat = nf_def_dim(ncid,"mlev",nmlevp1,id_mlev)
-!     write(6,"('nc_wrhist: set mlev = ',i3)") nmlevp1
-
-!     istat = nf_def_dim(ncid,"mlev",nmlev,id_mlev)
-!     write(6,"('nc_wrhist: set mlev = ',i3)") nmlev
-
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining magnetic midpoints levels dimension')
 !
@@ -1127,14 +1119,8 @@
 ! 11/07 btf: imlev should be nimlev, not nmlevp1 (?)
 
       istat = nf_def_dim(ncid,"imlev",nimlevp1,id_imlev)
-!     write(6,"('nc_wrhist: set imlev =',i4)") nimlevp1
-
-!     istat = nf_def_dim(ncid,"imlev",nimlev,id_imlev)
-!     write(6,"('nc_wrhist: set imlev =',i4)") nimlev
-
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining magnetic interface levels dimension')
-!
       istat = nf_def_dim(ncid,"mtimedim",3,id_mtimedim)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining mtime dimension')
@@ -1660,7 +1646,7 @@
      |  "degrees")
 ! alfac:
       call defvar_time_dbl(ncid,"alfac",ids1,idv_alfac,
-     |  "Characteristic Maxwellian energy of polar cusp electons",
+     |  "Characteristic Maxwellian energy of polar cusp electrons",
      |  "keV")
 ! ec:
       call defvar_time_dbl(ncid,"ec",ids1,idv_ec,
@@ -1734,15 +1720,6 @@
       if (h%hist_type(1:3)=='pri') then
         do i=1,nf4d_hist
           call defvar_f4d(ncid,f4d(i),idv_f4d(i))
-!
-! Add ZG after Z (zg was calculated by sub calczg in addiag.F):
-!         if (trim(f4d(i)%short_name)=='Z') then
-!           do ii=1,nf3d
-!             if (trim(f3d(ii)%short_name)=='ZG') then
-!               call defvar_f3d(ncid,f3d(ii),idv_zg)
-!             endif
-!           enddo
-!         endif
         enddo
 !
 ! Define secondary history fields (geographic or magnetic):
@@ -2220,20 +2197,25 @@
 !
       use fields_module,only: fsechist
       use hist_module,only: nsech,isecout
+      use input_module,only: secout
       implicit none
 !
 ! Args:
       integer,intent(in) :: ncid
 !
 ! Local:
-      integer :: ix,istat,iprog,idimids(4)
+      integer :: ix,istat,iprog,idimids(4),idv
       character(len=80) :: char80
       real :: var1(1)
 !
 ! External:
       integer,external :: strloc
 !
-      if (nsech==2) istat = nf_redef(ncid) ! put dataset in define mode
+      if (nsech==2) then
+        istat = nf_redef(ncid) ! put dataset in define mode
+        if (istat /= NF_NOERR)
+     |    call handle_ncerr(istat,'error from nf_redef')
+      endif
 !
 ! Fields loop:
       floop: do ix=1,mxfsech
@@ -2296,18 +2278,16 @@
           idimids(4) = id_time
 !
 ! Define 3d var (lon,lat,lev,time)
-          istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
-     |      4,idimids,idv_fsech(ix)) ! returns idv_fsech(ix)
-          if (istat /= NF_NOERR) then
-
-            write(6,"('>>> def_fsech: Error defining 3d field ',a,
-     |        ' idv_fsech(ix)=',i4,'idimids=',4i4)") 
-     |        trim(fsechist(ix)%short_name),idv_fsech(ix),idimids
-
-            write(char80,"('def_fsech: Error defining 3d field ',a)")
-     |        trim(fsechist(ix)%short_name)
-            call handle_ncerr(istat,trim(char80))
-          endif 
+          istat = nf_inq_varid(ncid,fsechist(ix)%short_name,idv)
+          if (istat /= NF_NOERR) then  ! var has not been defined
+            istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
+     |        4,idimids,idv_fsech(ix)) ! returns idv_fsech(ix)
+            if (istat /= NF_NOERR) then
+              write(char80,"('def_fsech: Error defining 3d field ',a)")
+     |          trim(fsechist(ix)%short_name)
+              call handle_ncerr(istat,trim(char80))
+            endif 
+          endif
 !
 ! Get dim id's for 2 dimensions (geo or mag):
         else                              ! 2d var (lon,lat,time)
@@ -2326,14 +2306,18 @@
           idimids(3) = id_time
 !
 ! Define 2d var (lon,lat,time)
-          istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
-     |      3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
-          if (istat /= NF_NOERR) then
-            write(char80,"('def_fsech: Error defining 2d field ',a)")
-     |        fsechist(ix)%short_name 
-            call handle_ncerr(istat,trim(char80))
-          endif 
+          istat = nf_inq_varid(ncid,fsechist(ix)%short_name,idv)
+          if (istat /= NF_NOERR) then  ! var has not been defined
+            istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
+     |        3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
+            if (istat /= NF_NOERR) then
+              write(char80,"('def_fsech: Error defining 2d field ',a)")
+     |          fsechist(ix)%short_name 
+              call handle_ncerr(istat,trim(char80))
+            endif 
+          endif
         endif  ! 2d or 3d
+
 !       write(6,"('def_fsech: defined sech field ',a,': dimnames=',
 !    |    a,',',a,',',a,' dimsizes=',3i4)") fsechist(ix)%short_name,
 !    |    trim(fsechist(ix)%dimnames(1)),trim(fsechist(ix)%dimnames(2)),

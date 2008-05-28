@@ -633,7 +633,7 @@ Removed sub bndry_annual and related zba,tba,uba,vba. This involved changes to
 bndry.F, addiag.F, advance.F, dt.F, duv.F, cons.F. Introduced new constant
 zbound as lower boundary background Z (cons.F). This is added to the tidal 
 perturbations in Z (addiag.F). Zbound takes the place of ZBA=CC(0,0)*1./RT2*1.e5, 
-which was set in bndry_annual, even with TIDEANN was 0. 
+which was set in bndry_annual, even when TIDEANN was 0. 
 
 Tested against 1-83 with gswm migrating (TIDE==0), and with TIDE,TIDE2 set 
 (no gswm).  Tgcmproc reported 0 diffs in both cases, so it appears to be
@@ -654,4 +654,32 @@ was causing problems reading source histories. All paths to input data files
 (gpi, see, gswm, etc) must be <= 80 chars in length.
 
 5/1/08: Preparing a cvs commit, but will not make new tag at this time.
---------------------------------------------------------------------------------
+
+5/12/08: Fixed wei05sc.F to call setmodel with correct angle by/bz for 
+different hemispheres (change sign), as per Barb (see bt, angle, and setmodel 
+and setboundary calls)
+
+5/12/08: Remove use-assoc of freq_ann from cons.F by bndry.F (freq_ann is
+no longer in cons, since annual tide was removed from the code).
+
+5/13/08: Save local tablesize in function scplm (wei05sc.F). This bug was
+pointed out by Tomoko (Dan Weimer gave her my f90 translated code to use).
+
+5/14/08: Doing cvs commit of wei05sc.F, bndry.F, and README to save the
+above 3 changes. No new tag. 
+
+5/27/08:
+Sub mp_gather2root_sechist in mpi.F was improperly referencing ilon0,ilon1 
+and ilat0,ilat1 in the send and receive buffers (sndbuf and rcvbuf). Fixed 
+this to use nlons and nlats, similiar to sub mp_gather2root_prim. This bug 
+was apparently introduced in November, 2005, when mp_gather2root_sechist was 
+rewritten for the addfld method. See also ~/tgcm/timegcm/src/mpi.F.
+
+5/28/08: Errors were coming out of sub def_sech (nchist.F) when starting 
+secondary histories after start time (i.e. SECSTART > START). Fixed this 
+by adding nf_inq_varid to see if the var is already defined. 
+
+Some other minor changes to stdout, print statements, etc (bndry.F, nchist.F,
+output.F)
+
+5/28/08: Doing cvs commit, but still no new tag.

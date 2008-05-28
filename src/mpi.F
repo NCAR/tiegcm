@@ -670,34 +670,29 @@
 !-----------------------------------------------------------------------
       subroutine mp_gather2root_sechist(ixt)
 !
-! Master task must collect all data (except its own) into its prognostic 
-!   fields f4d(:)%data prior to writing a history. Slaves send their 
-!   (lon0:lon1,nlevp1,lat0:lat1) data to the root task.
+! Master task must collect all data (except its own) into its secondary 
+!   fields array fsechist(:)%data prior to writing a history. Slaves send 
+!   their data to the root task.
 !
 ! 11/11/05 btf: rewritten for new addfld (this replaces old mp_gather2root_sech)
+! 5/27/08 btf: Corrected use of sndbuf and rcvbuf to use 1:nlons,1:nlats
+!              instead of ilon0:ilon1,ilat0:ilat1. This was causing slave
+!              tasks to hang on deallocation of sndbuf.
 !
 ! Args:
       integer,intent(in) :: ixt
 !
 ! Local:
-      integer :: isrc,ireqrecv,ireqsend,ier,n,i,j,k,l,len,
-     |  ilon0,ilon1,ilat0,ilat1,ilev0,ilev1,msgtag,mxlev
+      integer :: isrc,ireqrecv,ireqsend,ier,n,i,j,k,l,len,ilon0,ilon1,
+     |  ilat0,ilat1,msgtag,mxlev,nlons,nlats
       integer :: idest = 0
       real :: fmin,fmax
       real,allocatable :: rcvbuf(:,:,:,:),sndbuf(:,:,:,:)
-      integer :: ilat,ilev ! debug only
 !      
 ! Allocate send and receive buffers:
+! Secondary history data fsechhist(i)%data(lon,lat,lev) (mag or geo)
 !
-! 11/14/07 btf: Must use ilev1==mxlev==nlevp1 because nmlev > nlevp1
-!               (extra points below lbc for dynamo)
-!     mxlev = maxval((/nlevp1,nilevp1,nmlev,nimlev,nmlevp1/))
-!     ilev0 = 1 ; ilev1 = mxlev
       mxlev = nlevp1
-      ilev0 = 1 ; ilev1 = mxlev
-!
-! secondary history data fsechhist(i)%data(lon,lat,lev) (mag or geo)
-!
       allocate(rcvbuf(mxlon,mxlat,mxlev,nfsech),stat=ier)
       if (ier /= 0)
      |  write(6,"('>>> mp_gather2root_sech: error allocating rcvbuf:',
@@ -709,6 +704,7 @@
      |  write(6,"('>>> mp_gather2root_sech: error allocating sndbuf:',
      |    ' mxlon=',i3,' mxlat=',i3,' mxlev=',i3,' nfsech=',
      |    i3,' ier=',i4)") mxlon,mxlat,mxlev,nfsech,ier
+
       len = mxlon*mxlat*mxlev*nfsech ! buffer length
 !
 ! Root receives from all other tasks:
@@ -738,6 +734,8 @@
           ilon1 = tasks(n)%lon1
           ilat0 = tasks(n)%lat0
           ilat1 = tasks(n)%lat1
+          nlons = ilon1-ilon0+1
+          nlats = ilat1-ilat0+1
 !
 ! Load secondary history fields from receive buffer:
           do i = 1,nfsech
@@ -747,13 +745,13 @@
 !
 ! 3d field (lon,lat,lev):
               if (fsechist(i)%ndims==3) then 
-                fsechist(i)%data(ilon0:ilon1,ilat0:ilat1,ilev0:ilev1)=
-     |      	          rcvbuf(ilon0:ilon1,ilat0:ilat1,ilev0:ilev1,i)
+                fsechist(i)%data(ilon0:ilon1,ilat0:ilat1,:)=
+     |      	          rcvbuf(1:nlons,1:nlats,:,i)
               else 
 !
 ! 2d field (lon,lat):
                 fsechist(i)%data(ilon0:ilon1,ilat0:ilat1,1)=
-     |      	          rcvbuf(ilon0:ilon1,ilat0:ilat1,1,i)
+     |      	          rcvbuf(1:nlons,1:nlats,1,i)
               endif ! 2d or 3d
             endif ! not prognostic and not task0 only
           enddo ! i=1,nfsech
@@ -766,6 +764,8 @@
         sndbuf(:,:,:,:) = 0.
 !
 ! Load 3d secondary history field subdomains to send buffer:
+        nlons = lon1-lon0+1
+        nlats = lat1-lat0+1
         do i = 1,nfsech  
           if (.not.fsechist(i)%prognostic.and. 
      |        .not.fsechist(i)%task0_only.and.
@@ -773,12 +773,12 @@
 !
 ! 3d send buffer:
             if (fsechist(i)%ndims==3) then     ! 3d send buffer
-                        sndbuf(lon0:lon1,lat0:lat1,ilev0:ilev1,i) =
-     |        fsechist(i)%data(lon0:lon1,lat0:lat1,ilev0:ilev1)
+                        sndbuf(1:nlons,1:nlats,:,i) =
+     |        fsechist(i)%data(lon0:lon1,lat0:lat1,:)
             else                               ! 2d send buffer
 !
 ! 2d send buffer:
-                        sndbuf(lon0:lon1,lat0:lat1,1,i) =
+                        sndbuf(1:nlons,1:nlats,1,i) =
      |        fsechist(i)%data(lon0:lon1,lat0:lat1,1)
             endif
           endif
@@ -793,16 +793,13 @@
 !
 ! Wait for send to complete: 
         call mpi_wait(ireqsend,irstat,ier)
-        if (ier /= 0) then
-          call handle_mpi_err(ier,
+        if (ier /= 0) call handle_mpi_err(ier,
      |    'mp_gather2root wait for send to root')
-        endif
       endif ! root or slave
 !
 ! Release local buffer space: 
       deallocate(rcvbuf)
       deallocate(sndbuf)
-!
       end subroutine mp_gather2root_sechist
 !-----------------------------------------------------------------------
       subroutine mp_gather2root_lbc(ixt)
