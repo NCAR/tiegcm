@@ -157,14 +157,13 @@
       subroutine getgpi(iyear,iday,iutsec,iprint)
 !
 ! Use gpi data read from gpi.dat file to return geophysical indices
-! at current date and time. Return only those indices in input_mod
-! (f107, f107a, power, and/or ctpoten) for which the corresponding 
-! gpi_vars(i)==spval. Only the input vars are defined, the gpi_vars 
-! are unchanged.
+! at current date and time. Return only those indices from input
+! (f107, f107a, power, and/or ctpoten) which are spval.
 !
       use params_module,only: spval
-      use input_module,only: f107,f107a,power,ctpoten,
-     |  ngpivars,gpi_vars,gpi_names,gpi_ncfile
+      use input_module,only: f107,f107a,power,ctpoten,gpi_ncfile,
+     |  rd_f107,rd_f107a,rd_power,rd_ctpoten,ntimes_power,
+     |  ntimes_ctpoten
 !
 ! Args:
       integer,intent(in) :: iyear,iday,iutsec,iprint
@@ -185,14 +184,26 @@
 !
       if (iprint > 0) then
         write(6,"(/,72('-'))")
-        write(6,"('GETGPI: get geophysical indices from database:')")
+        write(6,"('GETGPI: get geophysical indices from data file ',a
+     |    )") trim(gpi_ncfile)
+
         write(6,"('Initial requested iyear=',i4,' iday=',i3,' iutsec=',
      |    i10)") iyear,iday,iutsec
       endif
 !
-      if (.not.any(gpi_vars==spval)) then
+! Determine which indices to return:
+! (Check params originally read by namelist read)
+!
+      if107=0 ; if107a=0 ; ipower=0 ; ictpoten=0
+      if (rd_f107   == spval) if107=1
+      if (rd_f107a  == spval) if107a=1
+      if (rd_power  == spval.and.ntimes_power==0) ipower=1
+      if (rd_ctpoten== spval.and.ntimes_ctpoten==0) ictpoten=1
+      if (if107==0.and.if107a==0.and.ipower==0.and.ictpoten==0) then
         write(6,"('>>> WARNING getgpi: gpi_vars already provided',
      |    ' by user -- gpi data NOT used.')")
+        write(6,"('f107 =',e12.4,' f107a  =',e12.4)") f107,f107a
+        write(6,"('power=',e12.4,' ctpoten=',e12.4)") power,ctpoten
         write(6,"(72('-'),/)")
         return
       endif
@@ -207,19 +218,6 @@
         write(6,"(72('-'),/)")
         call shutdown('GPI')
       endif
-!
-! Determine which indices to return:
-      if107=0 ; if107a=0 ; ipower=0 ; ictpoten=0
-      do i=1,ngpivars
-        if (trim(gpi_names(i))=='f107' .and.gpi_vars(i)==spval) 
-     |    if107=1
-        if (trim(gpi_names(i))=='f107a'.and.gpi_vars(i)==spval) 
-     |    if107a=1
-        if (trim(gpi_names(i))=='power'.and.gpi_vars(i)==spval) 
-     |    ipower=1
-        if (trim(gpi_names(i))=='ctpoten'.and.gpi_vars(i)==spval) 
-     |    ictpoten=1
-      enddo
 !
 ! Get data for current day:
       call getdat(iyd_cur,f107_cur,f107a_cur,fkp_cur,loc)

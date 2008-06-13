@@ -651,6 +651,10 @@ sub write_makefile {
 #
 # Location of netcdf lib:
 #
+  if ($lib_netcdf ne '') {
+    if (! -d $lib_netcdf) { 
+      print "\n>>> WARNING: Could not find lib_netcdf $lib_netcdf\n"; }
+  }
   if ($lib_netcdf eq '') {
     SWITCH: {
       if ($os eq "aix") { 
@@ -677,6 +681,10 @@ sub write_makefile {
 #
 # Location of netcdf include file:
 #
+  if ($inc_netcdf ne '') {
+    if (! -d $inc_netcdf) { 
+      print "\n>>> WARNING: Could not find inc_netcdf $inc_netcdf\n"; }
+  }
   if ($inc_netcdf eq '') {
     SWITCH: {
       if ($os eq "aix") { 

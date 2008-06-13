@@ -48,6 +48,7 @@
      |  tn_nm_upd ! updated tn at time n-1 (output)
 !
 ! Local:
+      real,parameter :: joulefac = 1.5 ! joule heating multiplication factor
       integer :: k,i,lonbeg,lonend,lat
       integer :: nk,nkm1,nlevs
       complex :: expt,expt2
@@ -184,7 +185,7 @@
      |      rmassinv_o1)**2*avo/mbar(k,i)
 !
 ! Add ion joule heating (from sub qjoule_tn, qjoule.F)
-	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)*1.5
+	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)*joulefac
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !     call addfld('HEATING1',' ',' ',total_heat(lev0:lev1-1,:),

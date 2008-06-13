@@ -47,15 +47,12 @@
      |  step,            ! model time step (integer seconds)
      |  dispose,         ! dispose output files to mss if dispose==1 or 2
      |  difhor,          ! horizontal eddy diffusion flag 0/1
-     |  iuivi,           ! ion drifts in momentum flag (replaced by dynamo flag)
      |  dynamo,          ! 0/1 flag for dynamo
      |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
      |  aurora,          ! 0/1 flag for aurora
      |  ntask_lat,       ! number of tasks in latitude  dimension
      |  ntask_lon        ! number of tasks in longitude dimension
       real ::
-     |  mag(2,2),        ! lat,lon of south,north magnetic poles
-                         ! (this is vestigal -- can be removed)
      |  tide(10),        ! semidiurnal tide amplitudes and phases
      |  tide2(2),        ! diurnal tide amplitude and phase
      |  tide3m3(2),      ! 2-day wave amplitude and phase
@@ -67,17 +64,22 @@
       real ::
      |  power,           ! hemispheric power (gw) (hpower on histories)
      |  ctpoten,         ! cross-cap potential (volts)
+     |  bximf,           ! BX component of IMF
      |  byimf,           ! BY component of IMF
      |  bzimf,           ! BZ component of IMF in nT
      |  swvel,           ! Solar wind velocity in km/s
      |  swden,           ! Solar wind density in #/cm3
      |  al               ! AL lower magnetic auroral activity index in nT
       real,dimension(4,mxind_time) :: power_time,ctpoten_time,
-     |  byimf_time,bzimf_time,swvel_time,swden_time,al_time
+     |  bximf_time,byimf_time,bzimf_time,swvel_time,swden_time,al_time
       integer :: 
-     |  ntimes_ctpoten,ntimes_power,ntimes_byimf,ntimes_bzimf,
-     |  ntimes_swden,ntimes_swvel,ntimes_al
+     |  ntimes_ctpoten,ntimes_power,ntimes_bximf,ntimes_byimf,
+     |  ntimes_bzimf,ntimes_swden,ntimes_swvel,ntimes_al
       logical :: aluse   ! logical to use AL in Weimer 2001 model or not
+!
+! Parameters as read from namelist:
+      real :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,rd_byimf,
+     |  rd_bzimf,rd_swvel,rd_swden
 !
 ! If indices_interp==1, time-dependent indices (power_time, ctpoten_time, etc)
 ! will be interpolated to model time, otherwise they will change only
@@ -97,29 +99,21 @@
      |  potential_model,  ! electric potential model used
                           !  Values can be 'HEELIS', 'WEIMER', or 'NONE'
                           !  If absent, the default value is set to 'HEELIS'
-     |  weimer_ncfile,    ! mss path or file path to netcdf weimer coef file
-                          ! see comments in weimer_mod.f
-     |  weimer_ncfiledef, ! default path to weimer coef data file
-     |  wei05sc_ncfile,   ! path to ascii data files for weimer05 model
-! hrindices_ncfile NOT MADE YET! 11/15/02:
-     |  hrindices_ncfile, ! mss path or file path to netcdf hourly geophysical
-                          ! data indices file.  see comments in hrindices_mod.f
-     |  hrindices_ncfiledef, ! default path to hrly indices data file
-!
+     |  weimer_ncfile,    ! path to netcdf weimer01 coefficients file
+     |  wei05sc_ncfile,   ! path to netcdf data files for weimer05 model
      |  gpi_ncfile,         ! mss path or file path to netcdf gpi data file
      |  ncep_ncfile,        ! ncep data file (time-gcm only)
      |  see_ncfile,         ! mss path or file path to netcdf SEE flux data file
+     |  imf_ncfile,         ! mss path or disk file path to netcdf IMF data file
      |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
      |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
-     |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
-!
-! Non-input gpi variables:
-     |  gpi_ncfiledef     ! default path to gpi data file
-      integer,parameter :: ngpivars = 4
-      real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
-      character(len=16) ::
-     |  gpi_names(ngpivars)      ! names of gpi_vars
+     |  gswm_nm_sdi_ncfile  ! gswm non-migrating semi-diurnal data file
+
+!     integer,parameter :: ngpivars = 4
+!     real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
+!     character(len=16) ::
+!    |  gpi_names(ngpivars)      ! names of gpi_vars
 !
 ! Primary history user input (dimension parameters are in params.h):
       character(len=80) :: 
@@ -153,14 +147,14 @@
      |  label,tempdir,magvol,amievol,date,calday,step,dispose,
      |  source,source_start,output,start,stop,hist,save,
      |  secout,secstart,secstop,sechist,secsave,secflds,
-     |  potential_model,mag,difhor,iuivi,dynamo,tide,tide2,tide3m3,
-     |  f107,f107a,power,ctpoten,byimf,bzimf,swvel,swden,al,colfac,
-     |  tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,
-     |  gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,mxhist_prim,mxhist_sech,
-     |  msreten,ntask_lat,ntask_lon,start_day,start_year,
-     |  calendar_advance,see_ncfile,ctpoten_time,power_time,
-     |  byimf_time,bzimf_time,swden_time,swvel_time,al_time,
-     |  indices_interp
+     |  potential_model,difhor,dynamo,tide,tide2,tide3m3,
+     |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
+     |  colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
+     |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
+     |  mxhist_prim,mxhist_sech,msreten,ntask_lat,ntask_lon,
+     |  start_day,start_year,calendar_advance,see_ncfile,
+     |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
+     |  swden_time,swvel_time,al_time,indices_interp,imf_ncfile
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -211,25 +205,13 @@
       magvol  = ' '
       amievol = ' '
 !
-      gpi_ncfile = ' '      ! user input gpi file path
-      ncep_ncfile = ' '     ! (time-gcm only)
-      gpi_ncfiledef = ' '   ! default gpi file path
-!     write(gpi_ncfiledef,"('/TGCM/data/gpi_1979-2000.nc')")
-!     write(gpi_ncfiledef,"('/TGCM/data/gpi_1979001-2001031.nc')")
-!     write(gpi_ncfiledef,"('/TGCM/data/gpi_1979001-2002181.nc')")
-      write(gpi_ncfiledef,"('/TGCM/data/gpi_1979001-2002365.nc')")
-      gpi_vars(:) = spval
-      see_ncfile = ' '        ! solar flux data (see module in soldata.F)
+      gpi_ncfile  = ' '       ! user input gpi file path
+      ncep_ncfile = ' '       ! (time-gcm only)
+      see_ncfile  = ' '       ! solar flux data (see module in soldata.F)
 !
-      weimer_ncfile = ' '     ! user input weimer coef file path
-      weimer_ncfiledef = ' '  ! default weimer coef file path
-      write(weimer_ncfiledef,"('$TGCMDATA/weimer2001_coeffs.nc')")
+      imf_ncfile = ' '        ! user input imf data file, used to drive weimer
+      write(weimer_ncfile ,"('$TGCMDATA/weimer2001_coeffs.nc')")
       write(wei05sc_ncfile,"('$TGCMDATA/wei05sc.nc')")
-!
-      hrindices_ncfile = ' '    ! user input hrly indices data file path
-      hrindices_ncfiledef = ' ' ! default hrly indices data file path
-!     write(hrindices_ncfiledef,
-!    |  "('/TGCM/data/hrindices_1988001-2002181.nc')")
 !
       gswm_mi_di_ncfile = ' ' ! diurnal tide: user input gswm file path
       gswm_mi_sdi_ncfile= ' ' ! semidiurnal tide: user input gswm file path
@@ -244,9 +226,7 @@
 !
       step    = ispval
       dispose = ispval
-      mag(:,:)= spval
       difhor  = ispval
-      iuivi   = ispval
       dynamo  = ispval
       tide(:) = spval
       tide2(:)= spval
@@ -255,23 +235,27 @@
       aurora  = ispval
       ntask_lat = ispval
       ntask_lon = ispval
+      colfac  = spval
+
       f107    = spval
       f107a   = spval
       power   = spval
       ctpoten = spval
+      bximf   = spval
       byimf   = spval
       bzimf   = spval
       swvel   = spval
       swden   = spval
       al      = spval
+
       power_time(:,:) = spval
       ctpoten_time(:,:) = spval
+      bximf_time(:,:) = spval
       byimf_time(:,:) = spval
       bzimf_time(:,:) = spval
       swden_time(:,:) = spval
       swvel_time(:,:) = spval
       al_time(:,:) = spval
-      colfac  = spval
 !
       potential_model = ' '
       source = ' '
@@ -401,16 +385,16 @@
 !
 ! 4/05: Restoring magfield for runs with DYNAMO==0 (tiegcm1.8)
 !
-      n = len_trim(magvol)
-      if (n <= 0) then
-        write(6,"('Input: did not read value for MAGVOL',
-     |    ' (magnetic field data file)')")
-        write(magvol,"('/TGCM/data/magfield.nc')")
-        write(6,"('  Will use default MAGVOL = ',a)") magvol
-      else
-        write(6,"('Input: will use magnetic data file ',a)") 
-     |    trim(magvol)
-      endif
+!     n = len_trim(magvol)
+!     if (n <= 0) then
+!       write(6,"('Input: did not read value for MAGVOL',
+!    |    ' (magnetic field data file)')")
+!       write(magvol,"('/TGCM/data/magfield.nc')")
+!       write(6,"('  Will use default MAGVOL = ',a)") magvol
+!     else
+!       write(6,"('Input: will use magnetic data file ',a)") 
+!    |    trim(magvol)
+!     endif
 ! 
 ! Tide:
       n = size(tide)-count(tide==spval)
@@ -497,175 +481,6 @@
       endif
 #endif
 !
-! Geophysical indices (s.a., /ingpi/ in ingpi.h)
-! Note: as of 2/99, requiring only 1 value for each, i.e., not
-!       yet allowing time-dependent multiple valued input and
-!       not yet using sub getgpi to get indices from mss database.
-!
-! Daily f10.7 cm flux:
-      if (f107 /= spval .and. f107 <= 0.) then
-        write(6,"(/,'>>> INPUT: f107 must be positive: f107=',
-     |    e12.4)") f107
-        call shutdown('F107')
-      endif
-! c(61) is replaced by f107 from input_mod.
-!     c(61) = f107 ! this may get reset later by getgpi or tail
-!
-! 80-day mean f10.7 flux:
-      if (f107a /= spval .and. f107a <= 0.) then
-        write(6,"(/,'>>> INPUT: f107a must be positive: f107a=',
-     |    e12.4)") f107a
-        call shutdown('F107A')
-      endif
-!
-! Validate times and values in user-provided time series:
-!     subroutine validate_timedep(constant,timedep,mxtimes,ntimes,name)
-!
-      call validate_timedep(ctpoten,ctpoten_time,mxind_time,
-     |  ntimes_ctpoten,'ctpoten')
-      call validate_timedep(power,power_time,mxind_time,
-     |  ntimes_power,'power')
-      call validate_timedep(byimf,byimf_time,mxind_time,
-     |  ntimes_byimf,'byimf')
-      call validate_timedep(bzimf,bzimf_time,mxind_time,
-     |  ntimes_bzimf,'bzimf')
-      call validate_timedep(swden,swden_time,mxind_time,
-     |  ntimes_swden,'swden')
-      call validate_timedep(swvel,swvel_time,mxind_time,
-     |  ntimes_swvel,'swvel')
-      call validate_timedep(al,al_time,mxind_time,
-     |  ntimes_al,'al')
-      aluse = .true.
-      if (al == spval) aluse = .false.
-!
-! Inputs for GPI runs (GeoPhysical Indices)
-! There are 3 input options for ctpoten and power:
-!   1) Constants are provided by the user (ctpoten, power)
-!   2) Time series are provided by the user (ctpoten_time, power_time)
-!   3) GPI database (neither constans nor time series were provided)
-!
-! gpi_names and gpi_vars must be in the same order:
-      gpi_names(1) = "f107            "
-      gpi_names(2) = "f107a           "
-      gpi_names(3) = "power           "
-      gpi_names(4) = "ctpoten         "
-!
-      gpi_vars(1) = f107
-      gpi_vars(2) = f107a
-      gpi_vars(3) = power
-      gpi_vars(4) = ctpoten
-      if (any(power_time /= spval)) gpi_vars(3) = 0.   ! dummy non-spval
-      if (any(ctpoten_time /= spval)) gpi_vars(4) = 0. ! dummy non-spval
-!
-! User did NOT provide one or more gpi_vars, meaning user wants
-!   to use GPI database for those missing indices. In this case, 
-!   if the user provided gpi_ncfile, use it, otherwise use the 
-!   default file gpi_ncfiledef.
-! (If the user DID provide some of these indices, then those values
-!  will be used for those indices)
-!
-      if (any(gpi_vars==spval)) then
-        write(6,"(/,'Input: The following GPI inputs were NOT ',
-     |    'provided by the user:')")
-        do i=1,ngpivars
-          if (gpi_vars(i)==spval) write(6,"(4x,a)",advance='no')
-     |      trim(gpi_names(i))          
-        enddo
-        write(6,"(/,4x,'The GPI database will be used to provide ',
-     |    'values for these indices.')")
-        if (len_trim(gpi_ncfile)==0) then
-          write(6,"(4x,'Since gpi data file GPI_NCFILE was also NOT',
-     |      ' provided,',/,4x,'I will use the default GPI_NCFILE: ',
-     |      a)") trim(gpi_ncfiledef)
-          gpi_ncfile = gpi_ncfiledef
-        else
-          call expand_path(gpi_ncfile)
-          write(6,"(4x,'Will use GPI data file ',a)") trim(gpi_ncfile)
-        endif
-!
-! Model must advance in calendar time for GPI database to be used:
-! (see calday verification above)
-!
-!       if (calday==0) then
-        if (calendar_advance <= 0) then
-          write(6,"(/,'>>> INPUT: Model must advance in calendar',
-     |      ' time if GPI database is to be used.')")
-          write(6,"('  To make a GPI run, you must set ',
-     |      'CALENDAR_ADVANCE = 1')")
-          call shutdown('GPI')
-        endif
-!
-! User provided *all* gpi_vars:
-! In this case, use the provided values. If user the also provided a
-!   gpi_ncfile, then stop with error message.
-!
-      else
-        write(6,"(/,'Input: User provided all gpi input ',
-     |    'variables:')")
-        do i=1,ngpivars
-          if ((trim(gpi_names(i))=="ctpoten".and.ntimes_ctpoten > 0).or.
-     |      (trim(gpi_names(i))=="ctpoten".and.ntimes_ctpoten > 0)) then
-            write(6,"('  ',a,' = (time series)')") gpi_names(i)
-          else
-            write(6,"('  ',a,' = ',f10.2)") gpi_names(i),gpi_vars(i)
-          endif
-        enddo
-        if (len_trim(gpi_ncfile) > 0) then
-          write(6,"(/,'>>> INPUT: User provided all gpi input but',
-     |      ' ALSO provided gpi data file path:',/,
-     |      '  GPI_NCFILE = ',a)") trim(gpi_ncfile)
-          write(6,"('  If you want to use the provided gpi values ',
-     |      'please do NOT provide GPI_NCFILE.')")
-          write(6,"('  If you want to make a GPI run (i.e., use GPI',
-     |      ' data file), please comment out',/,4x,'(i.e., do NOT ',
-     |      'provide) those gpi vars you want to get from ',/,4x,
-     |      'the GPI database.',/)")
-          call shutdown('GPI_NCFILE')
-        endif
-      endif
-!
-! Check to see if have hrindices_ncfile (when avail! 11/15/02)
-!
-! Check electric potential model:
-! 4/08 btf: Add wiemer05 option
-! 4/25/08 btf: default potential_model is still heelis:
-!
-      if (len_trim(potential_model)==0) then
-        write (6,"(4x,'Will use default Heelis elecric potential',
-     |    ' model')")
-        potential_model='HEELIS'
-!       potential_model='WEIMER05'
-      endif
-      if (potential_model == 'WEIMER01') then
-        write (6,"(4x,'Will use the Weimer 2001 electric potential',
-     |    ' model')")
-        if (len_trim(weimer_ncfile)==0) then
-          write(6,"(4x,'Since Weimer coef data file WEIMER_NCFILE was ',
-     |      'NOT provided,',/,4x,'I will use the default ',
-     |      'WEIMER_NCFILE: ',a)") trim(weimer_ncfiledef)
-          weimer_ncfile = weimer_ncfiledef
-        else
-          write(6,"(4x,'Will use user-provided path to Weimer coefs',
-     |      ' Weimer_NCFILE = ',a)") trim(weimer_ncfile)
-        endif
-        call expand_path(weimer_ncfile)
-      elseif (potential_model == 'WEIMER05') then
-        write (6,"(4x,'Will use the Weimer 2005 electric potential',
-     |    ' model')")
-        call expand_path(wei05sc_ncfile)
-        i = len_trim(wei05sc_ncfile)
-      elseif (potential_model == 'WEIMER') then
-        write(6,"(4x,'Will use the Weimer 2005 electric potential',
-     |    ' model')")
-        potential_model = 'WEIMER05'
-      elseif (potential_model == 'HEELIS') then
-        write (6,"(4x,'Will use the Heelis param electric potential',
-     |    ' model')")
-      elseif (potential_model == 'NONE') then
-        write (6,"(4x,'Will use NONE (ie zero) electric potential',
-     |    ' model')")
-      endif
-!
 ! ncep data file:
       if (len_trim(ncep_ncfile) > 0) call expand_path(ncep_ncfile)
 !
@@ -688,34 +503,37 @@
         colfac = 1.5
       endif
 !
-! iuivi and dynamo flags:
-! iuivi is no longer used -- is replaced by dynamo flag:
-      if (iuivi /= ispval) then
-        write(6,"(/,'Input: IUIVI flag is no longer used.')") 
-        write(6,"('Please use DYNAMO flag to turn dynamo on or off.')")
-        write(6,"('If DYNAMO=0, then dynamo is NOT called, and ',
-     |    'electric potential and ion drifts will be zero.')")
-        write(6,"('If DYNAMO=1, then dynamo IS called, and ',
-     |    'electric potential and ion drifts are calculated.')")
-        write(6,"('Default is DYNAMO=1')")
-        call shutdown('IUIVI')
-      endif
-!
 ! 1/12/05 btf: removed old dynamo (was in dynamo_old.F)
-! dynamo <= 0 -> no dynamo (dynamo routines are not called, poten==0)
-! dynamo >  0 -> "new" dynamo (dynamo module in dynamo.F)
+! 6/11/08 btf: remove dynamo==0 option
 !
       if (dynamo==ispval) then
         dynamo = 1
       else
         if (dynamo <= 0) then
-          write(6,"('Input: dynamo=',i3,' --> dynamo will NOT be ',
-     |      'called.')") dynamo
-        else
-          write(6,"('Input: dynamo=',i3,' --> new dynamo will be ',
-     |      'called.')") dynamo
+          write(6,"(/,'>>> Input: dynamo=',i3,': no-dynamo is no ',
+     |      'longer an option.')") dynamo
+          write(6,"('Please set DYNAMO=1, or remove DYNAMO ',
+     |      'from the namelist input file.')") dynamo
+          call shutdown('DYNAMO=0')
         endif
       endif
+!
+! Save certain params as originally read by namelist read:
+      rd_ctpoten = ctpoten
+      rd_power = power
+      rd_f107  = f107
+      rd_f107a = f107a
+      rd_bximf = bximf
+      rd_byimf = byimf
+      rd_bzimf = bzimf
+      rd_swvel = swvel
+      rd_swden = swden
+!
+! Sub check_solar validates combinations of potential_model, gpi_ncfile,
+! imf_ncfile, and power,ctpoten,f107,f107a,bximf,byimf,bzimf,swden,swvel,
+! and their time-dependent equivalents.
+!
+      call check_solar
       end subroutine inp_model
 !-----------------------------------------------------------------------
       subroutine mkntask(ntask,ntask_lat,ntask_lon,ier)
@@ -850,7 +668,6 @@
 ! If advancing in calendar time (calday > 0), then the starting model 
 !   day must be the same as the starting calendar day (calday):
 !
-!     if (calday /= 0) then
       if (calendar_advance > 0) then
         if (start(1,1) /= start_day) then
           write(6,"(/,'>>> INPUT: Starting calendar day START_DAY =',
@@ -1598,22 +1415,23 @@
      |  write(6,"('  magvol = ',a,/,4x,
      |    '(file or mss path containing magnetic data)')")
      |    trim(magvol)      
-      if (len_trim(potential_model) > 0)
-     |  write(6,"('  high-lat electric potential model:  ',
-     |        'potential_model = ',a)") trim(potential_model)
-      if (len_trim(hrindices_ncfile) > 0)
-     |  write(6,"('  hrly indices:  hrindices_ncfile = ',a)")
-     |        trim(hrindices_ncfile)
-      if (len_trim(weimer_ncfile) > 0)
-     |  write(6,"('  weimer coefs: weimer_ncfile = ',a)")
-     |        trim(weimer_ncfile)
-      if (len_trim(wei05sc_ncfile) > 0)
-     |  write(6,"('  weimer05 data file: wei05sc_ncfile = ',a)")
-     |        trim(wei05sc_ncfile)
+
+      write(6,"('  High-lat electric potential model:  ',
+     |      'potential_model = ',a)") trim(potential_model)
+      if (trim(potential_model)=='WEIMER01')
+     |  write(6,"('  weimer coefs: weimer_ncfile = ',a)") 
+     |    trim(weimer_ncfile)
+      if (trim(potential_model)=='WEIMER'.or.
+     |    trim(potential_model)=='WEIMER05')
+     |  write(6,"('  weimer coefs: wei05sc_ncfile = ',a)") 
+     |    trim(wei05sc_ncfile)
+
       if (len_trim(gpi_ncfile) > 0)
      |  write(6,"('  gpi run: gpi_ncfile = ',a)") trim(gpi_ncfile)  
       if (len_trim(see_ncfile) > 0)
      |  write(6,"('  SEE data: see_ncfile = ',a)") trim(see_ncfile)
+      if (len_trim(imf_ncfile) > 0)
+     |  write(6,"('  imf run: imf_ncfile = ',a)") trim(imf_ncfile)  
 
       if (len_trim(gswm_mi_di_ncfile) > 0)
      |  write(6,"('  gswm migrating diurnal file: ',
@@ -1725,23 +1543,8 @@
      |  i3)") mxhist_sech
 !
 ! More model-wide inputs:
-      write(6,"('  mag (lat,lon of south,north magnetic poles) =',
-     |  /,4x,4f8.2)") mag
       write(6,"('  difhor = ',i2,' (horizontal eddy diffusion flag)')")
      |  difhor
-!
-! iuivi flag is replaced by dynamo flag:
-!     write(6,"('  iuivi  = ',i2,' (ion drifts momentum flag)')")
-!    |  iuivi
-      if (dynamo <= 0) then
-        write(6,"('  dynamo = ',i2,' (dynamo will NOT be calculated)')")
-     |    dynamo
-        write(6,"(14x,
-     |    '(electric potential and ion drifts will be zero')")
-      else
-        write(6,"('  dynamo = ',i2,' (dynamo will be calculated)')")
-     |    dynamo
-      endif
       write(6,"('  tide (amplitudes and phases of semidiurnal tide) =',
      |  /,4x,5e8.1,5f6.2)") tide
       write(6,"('  tide2 (amplitude and phase of diurnal tide) =',
@@ -1751,70 +1554,27 @@
 !     write(6,"('  tideann = ',i2,' (0/1 flag for annual tides)')")
 !    |  tideann
       write(6,"('  aurora  = ',i2,' (0/1 flag for aurora)')") aurora
+      write(6,"('  colfac = ',f9.3,' (collision factor)')") colfac
 !
-! If any of f107,f107a,power,ctpoten are spval, this means GPI database
-! will be used for those indices, otherwise will use user-provided
-! values:
-!
-      if (f107 /= spval) then
-        write(6,"('  f107    = ',f9.3,' (daily 10.7 cm solar flux)')")
-     |    f107
-      elseif (len_trim(gpi_ncfile) > 0) then
-        write(6,"('  f107 not provided:',
-     |    ' will use gpi data file ',a)") trim(gpi_ncfile)
-      endif
-!
-      if (f107a /= spval) then
-        write(6,"('  f107a   = ',f9.3,' (81-day ave 10.7 cm solar',
-     |    ' flux)')") f107a
-      elseif (len_trim(gpi_ncfile) > 0) then
-        write(6,"('  f107a not provided:',
-     |    ' will use gpi data file ',a)") trim(gpi_ncfile)
-      endif
-!
-      if (power /= spval) then
-        if (ntimes_power==0) then
-          write(6,"('  power   = ',f9.3,' (hemispheric power (gw)')")
-     |      power
-        else
-          write(6,"('  power   = ',f9.3,' (hemispheric power (gw)',
-     |      ' (user provided time series)')") power
-        endif
-      elseif (len_trim(gpi_ncfile) > 0) then
-        write(6,"('  power not provided:',
-     |    ' will use gpi data file ',a)") trim(gpi_ncfile)
-      endif
-!
-      if (ctpoten /= spval) then
-        if (ntimes_ctpoten==0) then
-          write(6,"('  ctpoten = ',f9.3,' (cross-cap potential ',
-     |      '(volts)')") ctpoten
-        else
-          write(6,"('  ctpoten = ',f9.3,' (cross-cap potential ',
-     |      '(volts) (user provided time series)')") ctpoten
-        endif
-      elseif (len_trim(gpi_ncfile) > 0) then
-        write(6,"('  ctpoten not provided:',
-     |    ' will use gpi data file ',a)") trim(gpi_ncfile)
-      endif
-!
-      write(6,"('  byimf   = ',f9.3,' (BY component of IMF)')")
-     |  byimf
-      write(6,"('  bzimf   = ',f9.3,' (Bz component of IMF)')")
-     |  bzimf
-      write(6,"('  swvel   = ',f9.3,' (solar wind velocity)')")
-     |  swvel
-      write(6,"('  swden   = ',f9.3,' (solar wind density)')")
-     |  swden
-      write(6,"('  AL      = ',f9.3,' (AL, lower auroral mag index)')")
-     |  AL
-      write(6,"('  colfac  = ',f9.3,' (collision factor)')")
-     |  colfac
+      write(6,"('If any of the following are spval (',e12.4,'),',
+     |  ' they will be calculated',/,'during the simulation on a per ',
+     |  'timestep basis:')") spval
+      write(6,"('  power  = ',e12.4,' (Hemispheric Power)')") power
+      write(6,"('  ctpoten= ',e12.4,' (Cross-cap potential)')") ctpoten
+      write(6,"('  f107   = ',e12.4,' (F10.7 solar flux)')") f107
+      write(6,"('  f107a  = ',e12.4,' (81-day ave F10.7 flux)')") f107
+      write(6,"('  bximf  = ',e12.4,' (BX component of IMF)')") bximf
+      write(6,"('  byimf  = ',e12.4,' (BY component of IMF)')") byimf
+      write(6,"('  bzimf  = ',e12.4,' (Bz component of IMF)')") bzimf
+      write(6,"('  swvel  = ',e12.4,' (solar wind velocity)')") swvel
+      write(6,"('  swden  = ',e12.4,' (solar wind density)')")  swden
+!     write(6,"('  al     = ',e12.4,' (AL, lower auroral mag index)')")
+!    |  al
 !
       write(6,"('END USER INPUT PARAMETERS')")
       write(6,"(72('-'),/)")
       end subroutine inp_print
-!-------------------------------------------------------------------
+!-----------------------------------------------------------------------
       subroutine validate_mtime(mtime,mxday,label)
 !
 ! Validate a model time (day,hr,min) from input.
@@ -1879,10 +1639,11 @@
 !-----------------------------------------------------------------------
       subroutine validate_timedep(constant,timedep,mxtimes,ntimes,name)
 !
+! Validate times and values in user provided time series.
+!
 ! Args:
-      real,intent(inout) :: constant
-      integer,intent(in) :: mxtimes              ! mxind_time
-      real,intent(in) :: timedep(4,mxtimes)
+      real,intent(in) :: constant,timedep(4,mxtimes)
+      integer,intent(in) :: mxtimes
       integer,intent(out) :: ntimes
       character(len=*),intent(in) :: name
 !
@@ -1965,74 +1726,270 @@
      |    trim(name),constant,trim(name),timedep(4,:)
         call shutdown('validate_timedep')
       endif
-!
-! Set default constant values if necessary:
-      if (ntimes == 0) then
-        if (constant == spval) then
-          select case (trim(name))
-            case('power')
-              if (len_trim(gpi_ncfile)==0) then ! not a GPI run
-                constant = 10.
-                write(6,"('INPUT: set default power = ',f6.2)") constant
-              endif
-            case('ctpoten')
-              if (len_trim(gpi_ncfile)==0) then
-                constant = 100.
-                write(6,"('INPUT: set default ctpoten = ',f6.2)") 
-     |            constant
-              endif
-            case('byimf')
-              constant = 0.
-              write(6,"('INPUT: set default byimf = ',f6.2)") constant
-            case('bzimf')
-              constant = 0.
-              if (potential_model == 'WEIMER') constant = 1.
-              write(6,"('INPUT: set default bzimf = ',f6.2)") constant
-            case('swden')
-              constant = 4.
-              write(6,"('INPUT: set default swden = ',f6.2)") constant
-            case('swvel')
-              constant = 400.
-              write(6,"('INPUT: set default swvel = ',f6.2)") constant
-            case('al')
-              constant = -20.
-              write(6,"('INPUT: set default al = ',f6.2)") constant
-            case default
-              write(6,"('>>> validate_timedep: unknown parameter ',a)")
-     |          trim(name)
-          end select
-        endif ! constant==spval
-!
-! Enforce some limitations:
-! - ctpoten and power must be positive.
-! - at least one of by,bz must be non-zero if Weimer is used.
-!   (this one must be checked after all calls to this routine)
-!
-        if (trim(name)=='ctpoten'.and.constant < 0.) then
-          write(6,"('>>> INPUT: ctpoten must be positive: ctpoten=',
-     |      e12.4)") constant
-          call shutdown('ctpoten')
-        endif
-        if (trim(name)=='power'.and.constant < 0.) then
-          write(6,"('>>> INPUT: power must be positive: power=',
-     |      e12.4)") constant
-          call shutdown('power')
-        endif
-
-      else  ! ntimes > 0
-        if (trim(name)=='ctpoten'.and.any(timedep(4,:) < 0.)) then
-          write(6,"('>>> INPUT: ctpoten must be positive: ctpoten_time='
-     |      ,/,(6e12.4))") timedep(4,:)
-          call shutdown('ctpoten_time')
-        endif
-        if (trim(name)=='power'.and.any(timedep(4,:) < 0.)) then
-          write(6,"('>>> INPUT: power must be positive: power_time=',
-     |      /,(6e12.4))") timedep(4,:)
-          call shutdown('power_time')
-        endif
-        constant = timedep(4,1) ! init constant
-
-      endif ! ntimes
       end subroutine validate_timedep
+!-----------------------------------------------------------------------
+      subroutine check_solar
+!
+! Validate combinations of potential_model, gpi_ncfile, imf_ncfile, and 
+! power,ctpoten,f107,f107a,bximf,byimf,bzimf,swden,swvel, and their 
+! time-dependent equivalents.
+!
+! The rules for these namelist read parameters are as follows:
+!   1. Potential_model must be 'HEELIS','WEIMER','WEIMER01','WEIMER05', or 'NONE'
+!      (if 'WEIMER', then the 2005 model will be called)
+!      (if potential_model is not provided, it defaults to 'HEELIS')
+!   2. gpi_ncfile data file can be provided only with Heelis potential model.
+!      (data file has 3-hourly Kp and daily f107,f107a)
+!   3. imf_ncfile data file can be provided only with Weimer potential model.
+!      (data file has hourly bx,by,bz,swvel,swden,kp, and daily f107,f107a)
+!   4. User cannot provide both gpi_ncfile and imf_ncfile in a single run.
+!   5. User can provide the following parameters as either constants or 
+!      time-dependent values: ctpoten,power,bximf,byimf,bzimf,swden,swvel
+!      (time-dependent keywords are xxxx_time, e.g., ctpoten_time)
+!      Time-dependent namelist f107,f107a are not yet available.
+!      Valid ranges for user-provided parameters are not enforced.
+!
+! If (potential_model == 'HEELIS') then
+!   [user does not need to provide bx,by,bz,swvel,swden]
+!   if (gpi_ncfile is NOT provided) then
+!     [user must provide hp,cp,f107,f107a]
+!   elseif (gpi_ncfile is provided) then
+!     [user must NOT provide at least one of hp,cp,f107,f107a]
+!     [parameters not provided will be taken or calculated from the data]
+!   endif
+! Endif
+!
+! If (potential_model == 'WEIMER') then
+!   [user is not allowed to provide ctpoten (derived from Weimer potential)]
+!   [if user does not provide power, it will be calculated from bz,swvel]
+!   if (imf_ncfile is NOT provided) then
+!     [user must provide bximf,byimf,bzimf,swden,swvel,f107,f107a]
+!   elseif (imf_ncfile is provided) then 
+!     [user must NOT provide at least one of bx,by,bz,swden,swvel,f107,f107a]
+!     [parameters not provided will be taken from the data]
+!   endif
+! Endif
+!
+! If time-dependent values are given, sub validate_timedep validates
+! the times, and returns ntimes_xxxx. If only constants are given,
+! it returns ntimes_xxxx == 0
+!
+      call validate_timedep(ctpoten,ctpoten_time,mxind_time,
+     |  ntimes_ctpoten,'ctpoten')
+      call validate_timedep(power,power_time,mxind_time,
+     |  ntimes_power,'power')
+      call validate_timedep(byimf,byimf_time,mxind_time,
+     |  ntimes_byimf,'byimf')
+      call validate_timedep(bzimf,bzimf_time,mxind_time,
+     |  ntimes_bzimf,'bzimf')
+      call validate_timedep(swden,swden_time,mxind_time,
+     |  ntimes_swden,'swden')
+      call validate_timedep(swvel,swvel_time,mxind_time,
+     |  ntimes_swvel,'swvel')
+      call validate_timedep(al,al_time,mxind_time,
+     |  ntimes_al,'al')
+      aluse = .true.
+      if (al == spval) aluse = .false.
+!
+! Check electric potential model:
+! 4/08 btf: Add wiemer05 option
+! 4/25/08 btf: default potential_model is still heelis:
+!
+      if (len_trim(potential_model)==0) then
+        write (6,"(4x,'Will use default Heelis elecric potential',
+     |    ' model')")
+        potential_model='HEELIS'
+      endif
+      select case (trim(potential_model))
+        case('WEIMER01')
+          write(6,"('Will use the Weimer 2001 potential model')")
+          call expand_path(weimer_ncfile)  ! coeffs file
+          write(6,"('weimer_ncfile=',a)") trim(weimer_ncfile)
+        case('WEIMER05')
+          write(6,"('Will use the Weimer 2005 potential model')")
+          call expand_path(wei05sc_ncfile) ! coeffs file
+          write(6,"('  wei05sc_ncfile=',a)") trim(wei05sc_ncfile)
+        case('WEIMER')
+          write(6,"('Will use the Weimer 2005 potential model')")
+          call expand_path(wei05sc_ncfile) ! coeffs file
+          write(6,"('wei05sc_ncfile=',a)") trim(wei05sc_ncfile)
+        case('HEELIS')
+          write (6,"('Will use the Heelis potential model')")
+        case('NONE')
+          write(6,"('Will NOT use an empirical potential model')")
+          write(6,"('High-lat convection will be zero.)')")
+        case default
+          write(6,"(/,'>>> INPUT: unknown potential_model: ',a)")
+     |      trim(potential_model)
+          write(6,"('potential_model can be one of the following:')")
+          write(6,"('''HEELIS''',',','''WEIMER01''',',',
+     |      '''WEIMER05''',',','''WEIMER''',',','''NONE''')")
+          call shutdown('POTENTIAL_MODEL')
+      end select
+!
+! Cannot specify both imf and gpi data in same run:
+      if (len_trim(gpi_ncfile) > 0.and.len_trim(imf_ncfile) > 0) then
+        write(6,"(/,'>>> INPUT: User cannot request both GPI ',
+     |    '(gpi_ncfile) and IMF (imf_ncfile) data runs.')")
+        call shutdown('GPI and IMF not allowed')
+      endif
+!
+! Check parameters needed for Heelis potential model:
+      if (trim(potential_model)=='HEELIS') then
+!
+! IMF data not allowed with Heelis potential model:
+        if (len_trim(imf_ncfile) > 0) then
+          write(6,"(/,'>>> INPUT: IMF data runs (imf_ncfile) can',
+     |      ' be requested only with WEIMER potential model.')")
+          call shutdown('IMF with HEELIS')
+        endif
+!
+! Heelis non-gpi run: user must provide power,ctpoten,f107,f107a:
+! Later, an alternative would be for the user to provide IMF data 
+!   then use empirical calculation to get power, etc from the IMF.
+! Note: namelist time-dependent f107 is not available.
+!
+        if (len_trim(gpi_ncfile)==0) then
+          if (power==spval.and.ntimes_power==0) then
+            write(6,"(/,'>>> INPUT: POWER or POWER_TIME must be ',
+     |        'provided for non-GPI run with Heelis potential model.')")
+            call shutdown('POWER')
+          endif
+          if (ctpoten==spval.and.ntimes_ctpoten==0) then
+            write(6,"(/,'>>> INPUT: CTPOTEN or CTPOTEN_TIME must be ',
+     |        'provided for non-GPI run with Heelis potential model.')")
+            call shutdown('CTPOTEN')
+          endif
+          if (f107==spval) then
+            write(6,"(/,'>>> INPUT: F107 must be provided for non-GPI',
+     |        ' run with Heelis potential model.')")
+            call shutdown('F107')
+          endif
+          if (f107a==spval) then
+            write(6,"(/,'>>> INPUT: F107a must be provided for non-GPI',
+     |        ' run with Heelis potential model.')")
+            call shutdown('F107a')
+          endif
+!
+! Heelis gpi run: 
+!
+        else ! gpi run
+!
+! At least one of the gpi params must NOT be provided:
+! (i.e., at least one parameter will come from the gpi data file)
+!
+          if ((power  /= spval.or.ntimes_power > 0).and.
+     |        (ctpoten/= spval.or.ntimes_ctpoten > 0).and.
+     |        (f107   /= spval.and.f107a /= spval)) then
+            write(6,"(/,'>>> INPUT: At least one of power, ctpoten,',
+     |        ' f107 or f107a must NOT be provided for a gpi run.')")
+            call shutdown('GPI params')
+          endif
+
+        endif ! gpi data run
+      endif ! heelis potential model
+!
+! Check parameters needed for Weimer potential model:
+!
+      if (potential_model(1:6)=='WEIMER') then
+!
+! GPI data not allowed with Weimer potential model:
+        if (len_trim(gpi_ncfile) > 0) then
+          write(6,"(/,'>>> INPUT: GPI data runs (gpi_ncfile) can',
+     |      ' be requested only with HEELIS potential model.')")
+          call shutdown('GPI with WEIMER')
+        endif
+!
+! ctpoten cannot be provided by the user, since it will be
+! calculated from the Weimer potential:
+        if (ctpoten /= spval .or. ntimes_ctpoten > 0) then
+          write(6,"(/,'>>> INPUT: Cannot provide CTPOTEN with',
+     |      ' Weimer potential model')")
+          write(6,"('(ctpoten is calculated from the Weimer',
+     |      ' electric potential)')")
+          call shutdown('ctpoten and Weimer') 
+        endif
+!
+! Weimer non-imf data run:
+        if (len_trim(imf_ncfile)==0) then
+!
+! User must provide bx,by,bz,swden,swvel,f107,f107a for non-IMF data run:
+! (if power is not provided, it will be calculated from bzimf,swvel)
+!
+          if ((bximf==spval.and.ntimes_bximf==0).or.
+     |        (byimf==spval.and.ntimes_byimf==0).or.
+     |        (bzimf==spval.and.ntimes_bzimf==0)) then
+            write(6,"(/,'>>> INPUT: bximf, byimf, and bzimf must be ',
+     |        'provided for non-IMF run with Weimer potential model.')")
+            call shutdown('IMF params')
+          endif
+          if ((swden==spval.and.ntimes_swden==0).or.
+     |        (swvel==spval.and.ntimes_swvel==0)) then
+            write(6,"(/,'>>> INPUT: swvel and swden must be provided',
+     |        ' for non-IMF run with Weimer potential model.')")
+            call shutdown('IMF params')
+          endif
+          if (f107==spval.and.f107a==spval) then
+            write(6,"(/,'>>> INPUT: f107 and f107a must be provided',
+     |        ' for non-IMF run with Weimer potential model.')")
+            call shutdown('f107,f107a params')
+          endif
+!
+! Weimer IMF data run:
+        else ! imf data run
+!
+! At least one of the imf params must NOT be provided:
+! (i.e., at least one parameter will come from the imf data file)
+!
+          if ((bximf /= spval.or.ntimes_bximf > 0).and.
+     |        (byimf /= spval.or.ntimes_byimf > 0).and.
+     |        (bzimf /= spval.or.ntimes_bzimf > 0).and.
+     |        (swvel /= spval.or.ntimes_swvel > 0).and.
+     |        (swden /= spval.or.ntimes_swden > 0)) then
+            write(6,"(/,'>>> INPUT: At least one of bximf,byimf,',
+     |        'bzimf,swvel or swden must NOT be provided for an ',
+     |        'imf run.')")
+            write(6,"('(i.e., at least one parameter must come',
+     |        ' from the imf data file)')")
+            call shutdown('IMF params')
+          endif
+
+        endif ! imf run
+      endif ! weimer potential model
+!
+! Calendar must be advanced if using gpi or imf data:
+      if (len_trim(gpi_ncfile) > 0) then
+        if (calendar_advance <= 0) then
+          write(6,"(/,'>>> INPUT: Model must advance in calendar',
+     |      ' time if GPI database is to be used.')")
+          write(6,"('  To make a GPI run, you must set ',
+     |      'CALENDAR_ADVANCE = 1')")
+          call shutdown('calendar_advance')
+        endif
+      endif
+      if (len_trim(imf_ncfile) > 0) then
+        if (calendar_advance <= 0) then
+          write(6,"(/,'>>> INPUT: Model must advance in calendar',
+     |      ' time if IMF database is to be used.')")
+          write(6,"('  To make an IMF run, you must set ',
+     |      'CALENDAR_ADVANCE = 1')")
+          call shutdown('calendar_advance')
+        endif
+      endif
+!
+! Report to stdout for debug: 
+!     write(6,"(/,'check_solar returning:')")
+!     write(6,"('potential_model=',a)") trim(potential_model)
+!     if (len_trim(gpi_ncfile) > 0) 
+!    |  write(6,"('gpi_ncfile=',a)") trim(gpi_ncfile)
+!     if (len_trim(imf_ncfile) > 0) 
+!    |  write(6,"('imf_ncfile=',a)") trim(imf_ncfile)
+!     write(6,"('power=',e12.4,' ctpoten=',e12.4)") power,ctpoten
+!     write(6,"('f107 =',e12.4,' f107a  =',e12.4)") f107,f107a
+!     write(6,"('bximf=',e12.4,' byimf  =',e12.4,' bzimf=',e12.4)") 
+!    |  bximf,byimf,bzimf
+!     write(6,"('swden=',e12.4,' swvel  =',e12.4)") swden,swvel
+
+      end subroutine check_solar
 !-----------------------------------------------------------------------
       end module input_module

@@ -170,14 +170,14 @@
       enddo
 #endif
 !
-!     do lat=lat0,lat1
-!      call addfld('UI_VEL','UI','cm/s',ui(:,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!      call addfld('VI_VEL','VI','cm/s',vi(:,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!      call addfld('WI_VEL','WI','cm/s',wi(:,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     enddo ! lat=lat0,lat1
+      do lat=lat0,lat1
+       call addfld('UI_VEL','UI','cm/s',ui(:,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+       call addfld('VI_VEL','VI','cm/s',vi(:,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+       call addfld('WI_VEL','WI','cm/s',wi(:,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      enddo ! lat=lat0,lat1
 !
 #ifdef VT
 !     code = 121 ; state = 'ionvel' ; activity='ModelCode'

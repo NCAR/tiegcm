@@ -53,16 +53,14 @@
      |  idv_tlbc_nm,idv_ulbc_nm,idv_vlbc_nm,
      |  idv_mlon,idv_mlat,idv_mlev,idv_imlev,idv_p0_model,
      |  idv_step,idv_iter,idv_year,idv_day,idv_p0,idv_grav,
-     |  idv_zg,idv_hpower,idv_ctpoten,idv_byimf,idv_bzimf,
+     |  idv_zg,idv_hpower,idv_ctpoten,idv_bximf,idv_byimf,idv_bzimf,
      |  idv_colfac,idv_swden,idv_swvel,idv_al,
      |  idv_gswm_mi_di_ncfile,idv_gswm_mi_sdi_ncfile,
      |  idv_gswm_nm_di_ncfile,idv_gswm_nm_sdi_ncfile,
      |  idv_see_ncfile,idv_gpi_ncfile,idv_ncep_ncfile,
-     |  idv_f107d,idv_f107a,
-     |  idv_mag,idv_dtide,idv_sdtide,idv_f4d(nf4d),
-!    |  idv_alfa30,idv_e30,idv_ed2,idv_alfad2,
-     |  idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,idv_ec,idv_alfad,idv_ed,
-     |  idv_writedate
+     |  idv_f107d,idv_f107a,idv_imf_ncfile,idv_mag,idv_dtide,
+     |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
+     |  idv_ec,idv_alfad,idv_ed,idv_writedate
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
 !
@@ -491,11 +489,6 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading ut')
             sh%ut = scalar
-          case('mag')
-            istat = nf_get_var_double(ncid,i,var22)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading mag')
-            sh%mag(:,:) = var22(:,:)
           case('dtide')
             istart2(1) = 1
             istart2(2) = sh%ihist
@@ -534,6 +527,11 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading ctpoten')
             sh%ctpoten = scalar
+          case('bximf')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading bximf')
+            sh%bximf = scalar
           case('byimf')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
@@ -564,28 +562,6 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading colfac')
             sh%colfac = scalar
-
-!         case('alfa30')
-!           istat = nf_get_var1_double(ncid,i,itime,scalar)
-!           if (istat /= NF_NOERR) 
-!    |        call handle_ncerr(istat,'reading alfa30')
-!           sh%alfa30 = scalar
-!         case('e30')
-!           istat = nf_get_var1_double(ncid,i,itime,scalar)
-!           if (istat /= NF_NOERR) 
-!    |        call handle_ncerr(istat,'reading e30')
-!           sh%e30 = scalar
-!         case('ed2')
-!           istat = nf_get_var1_double(ncid,i,itime,scalar)
-!           if (istat /= NF_NOERR) 
-!    |        call handle_ncerr(istat,'reading ed2')
-!           sh%ed2 = scalar
-!         case('alfad2')
-!           istat = nf_get_var1_double(ncid,i,itime,scalar)
-!           if (istat /= NF_NOERR) 
-!    |        call handle_ncerr(istat,'reading alfad2')
-!           sh%alfad2 = scalar
-
           case('e1')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) call handle_ncerr(istat,'reading e1')
@@ -678,6 +654,18 @@
             if (istat /= NF_NOERR)
      |        call handle_ncerr(istat,'reading see_ncfile')
             if (len_trim(sh%see_ncfile)==0) sh%see_ncfile='[none]'
+!
+! IMF data file: imf_ncfile(time,filelen), where filelen=mxlen_filename
+          case('imf_ncfile')                               ! new histories
+            start_2d(1) = 1
+            start_2d(2) = sh%ihist
+            count_2d(1) = mxlen_filename
+            count_2d(2) = 1
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%imf_ncfile)
+            if (istat /= NF_NOERR)
+     |        call handle_ncerr(istat,'reading imf_ncfile')
+            if (len_trim(sh%imf_ncfile)==0) sh%imf_ncfile='[none]'
 !
 ! GSWM data files (from namelist input):
 !   character(len=mxlen_filename) ::
@@ -1526,7 +1514,9 @@
       call defvar_time_dbl(ncid,"ctpoten",ids1,idv_ctpoten,
      |  "Cross-tail potential","volts")
 !
-! BY,BZ:
+! BX,BY,BZ:
+      call defvar_time_dbl(ncid,"bximf",ids1,idv_bximf,
+     |  "BX component of IMF","nT")
       call defvar_time_dbl(ncid,"byimf",ids1,idv_byimf,
      |  "BY component of IMF","nT")
       call defvar_time_dbl(ncid,"bzimf",ids1,idv_bzimf,
@@ -1585,6 +1575,11 @@
       call define_ncfile(ncid,"see_ncfile",idv_see_ncfile,
      |  "long_name","TIMED SEE data file",
      |  "data","Solar flux data")
+!
+! Define imf data file:
+      call define_ncfile(ncid,"imf_ncfile",idv_imf_ncfile,
+     |  "long_name","IMF data file",
+     |  "data","Bx,By,Bz,Swvel,Swden,Kp,f107,f107a")
 !
 ! Define gswm data files:
       call define_ncfile(ncid,"gswm_mi_di_ncfile",
@@ -2664,11 +2659,6 @@
       if (idv_ut <= 0) istat = nf_inq_varid(ncid,"ut",idv_ut)
       istat = nf_put_var1_double(ncid,idv_ut,h%ihist,h%ut)
 !
-! Magnetic pole coords:
-      if (idv_mag <= 0) istat = nf_inq_varid(ncid,"mag",idv_mag)
-      var22(:,:) = h%mag(:,:)
-      istat = nf_put_var_double(ncid,idv_mag,var22)
-!
 ! 1/31/01: tides are now time dependent 2d vars:
 ! Diurnal tide (dtide(time,2):
       start_2d(1) = 1
@@ -2702,6 +2692,10 @@
       call update_ncfile(ncid,"see_ncfile",h%see_ncfile,idv_see_ncfile,
      |  h%ihist)
 !
+! Update imf_ncfile:
+      call update_ncfile(ncid,"imf_ncfile",h%imf_ncfile,idv_imf_ncfile,
+     |  h%ihist)
+!
 ! Update gswm files:
       call update_ncfile(ncid,"gswm_mi_di_ncfile",h%gswm_mi_di_ncfile,
      |  idv_gswm_mi_di_ncfile,h%ihist)
@@ -2730,7 +2724,9 @@
      |  idv_ctpoten)
       istat = nf_put_var1_double(ncid,idv_ctpoten,h%ihist,h%ctpoten)
 !
-! BY,BZ imf:
+! BX,BY,BZ imf:
+      if (idv_bximf <= 0) istat = nf_inq_varid(ncid,"bximf",idv_bximf)
+      istat = nf_put_var1_double(ncid,idv_bximf,h%ihist,h%bximf)
       if (idv_byimf <= 0) istat = nf_inq_varid(ncid,"byimf",idv_byimf)
       istat = nf_put_var1_double(ncid,idv_byimf,h%ihist,h%byimf)
       if (idv_bzimf <= 0) istat = nf_inq_varid(ncid,"bzimf",idv_bzimf)

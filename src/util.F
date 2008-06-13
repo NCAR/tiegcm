@@ -1614,7 +1614,7 @@
 !
 ! Return new path, and make recursive call for more env vars:
       path = trim(path_out)
-      write(6,"('expand_path returning path = ''',a,'''')") trim(path)
+!     write(6,"('expand_path returning path = ''',a,'''')") trim(path)
 !
 ! Recursive call to expand any additional env vars:
       call expand_path(path) ! expand next env var
@@ -1635,3 +1635,27 @@
         endif
       enddo
       end function arrayeq
+!-----------------------------------------------------------------------
+      real function hp_from_bz_swvel(bz,swvel)
+!
+! Calculate hemispheric power from bz, swvel:
+! Emery, et.al., (2008, in press, JGR)
+! 6/3/08: Enforce minimum hp of 4.0 before *fac.
+! 6/6/08: Reset minimum hp from 4.0 to 2.5 before *fac,
+!         as per Emery email of 6/5/08.
+!
+      implicit none
+      real,intent(in) :: bz,swvel  ! in
+      real :: hp                   ! out
+      real :: fac = 2.0
+!
+      if (bz < 0.) then
+        hp = 6.0 + 3.3*abs(bz) + (0.05 + 0.003*abs(bz))*
+     |    (min(swvel,700.)-300.)
+      else
+        hp = 5.0 + 0.05 * (min(swvel,700.)-300.)
+      endif
+!     hp = max(4.0,hp)*fac
+      hp = max(2.5,hp)*fac
+      hp_from_bz_swvel = hp
+      end function hp_from_bz_swvel

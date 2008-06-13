@@ -98,6 +98,7 @@
      |    see_ncfile,        ! SEE data file
      |    gpi_ncfile,        ! gpi data file
      |    ncep_ncfile,       ! ncep data file (timegcm only)
+     |    imf_ncfile,        ! IMF data file
      |    gswm_mi_di_ncfile, ! GSWM migrating diurnal data file
      |    gswm_mi_sdi_ncfile,! GSWM migrating semi-diurnal data file
      |    gswm_nm_di_ncfile, ! GSWM non-migrating diurnal data file
@@ -131,6 +132,7 @@
      |    grav,              ! gravity constant used in model
      |    hpower,            ! hemispheric power
      |    ctpoten,           ! cross-cap potential
+     |    bximf,             ! bx imf
      |    byimf,             ! by imf
      |    bzimf,             ! bz imf
      |    swvel,             ! solar wind velocity
@@ -138,11 +140,9 @@
      |    al,                ! solar activity index
      |    f107d,             ! daily f10.7 cm flux
      |    f107a,             ! 81-day average f10.7 cm flux
-     |    mag(2,2),          ! magnetic pole coordinates
      |    dtide(2),          ! diurnal tide (tide2(2) from input)
      |    sdtide(10),        ! semi-diurnal tide (tide(10) from input)
      |    colfac,            ! collision factor
-!    |    alfa30,e30,alfad2,ed2, ! auroral parameters from input
      |    e1,e2,             ! peak auroral energy flux
      |    h1,h2,             ! gaussian half-width for aurora
      |    alfac,ec,          ! aurora cusp energy
@@ -231,11 +231,6 @@
       h%gswm_nm_di_ncfile  = '[none]'
       h%gswm_nm_sdi_ncfile = '[none]'
 
-!     h%gswmdi    = 0
-!     h%gswmsdi   = 0
-!     h%gswmnmdi = 0
-!     h%gswmnmsdi= 0
- 
       h%nflds  = ispval
       h%dynamo = .false.
       h%coupled_ccm = .false.
@@ -254,8 +249,6 @@
       h%swvel = real_init
       h%swden = real_init
       h%al = real_init
-      h%mag(:,1) = (/real_init,real_init/)
-      h%mag(:,2) = (/real_init,real_init/)
       h%dtide = (/real_init,real_init/)
       h%sdtide(:) = real_init
       h%colfac = real_init
@@ -364,8 +357,6 @@
       write(6,"(2x,'zitop   = ',f7.3,' (top interface level)')") h%zitop
       write(6,"(2x,'zibot   = ',f7.3,' (bottom interface level)')") 
      |  h%zibot
-      write(6,"(2x,'mag     = ',4f7.2,' (magnetic pole coords)')") 
-     |  h%mag
       write(6,"(2x,'dtide   = ',e8.1,' ',f5.1,
      |  ' (amp/phase of diurnal tide)')") h%dtide
       write(6,"(2x,'sdtide  = ',5e8.1,' ',5f5.1,/,
@@ -452,7 +443,7 @@
       use params_module,only: mxseries,mxhvols
       use input_module,only: start,stop,step,source,output,mkhvols,
      |  hist,save,secsource,secstart,secstop,sechist,secsave,secout,
-     |  secflds,mxhist_prim,mxhist_sech
+     |  secflds
 !
 ! Local:
       integer :: nh,nsteps,i,secs_hist,nsteps_hist,n

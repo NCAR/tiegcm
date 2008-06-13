@@ -16,12 +16,13 @@
       use weimer_module,only: weimer01  ! Weimer 2001 model
       use wei05sc,only: weimer05,       ! Weimer 2005 model
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
-      use input_module,only: start,step,iaurora=>aurora,idynamo=>dynamo,
-     |  f107,f107a,calendar_advance,gpi_ncfile,potential_model,
-     |  wei05sc_ncfile
+      use input_module,only: start,step,idynamo=>dynamo,f107,f107a,
+     |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
+     |  imf_ncfile
       use input_module,only: 
-     |  power  ,power_time  ,ntimes_power,
+     |  power  ,power_time  ,ntimes_power, rd_power,
      |  ctpoten,ctpoten_time,ntimes_ctpoten,
+     |  bximf  ,bximf_time  ,ntimes_bximf,
      |  byimf  ,byimf_time  ,ntimes_byimf,
      |  bzimf  ,bzimf_time  ,ntimes_bzimf,
      |  swden  ,swden_time  ,ntimes_swden,
@@ -38,8 +39,8 @@
       use timing_module,only: timer,timing
       use dynamo_module,only: prep_dynamo,dynamo,
      |  phihm,nmlat0,zpotenm3d
-      use nodynamo_module,only: nodynamo,prep_nodynamo
       use gpi_module,only: rdgpi,getgpi
+      use imf_module,only: rdimf,getimf
       use gswm_module,only: getgswm
       use params_module,only: nlonp4,nlat,nlev
       use output,only: outhist
@@ -90,6 +91,7 @@
 !
 ! External:
       logical,external :: wrhist
+      real,external :: hp_from_bz_swvel
 !
 #ifdef VT
 !     code = 115 ; state = 'advance' ; activity='ModelCode'
@@ -180,18 +182,6 @@
       uthr = secs/3600.
       if (debug) write(6,"('advance after update time params..')")
 !
-! Report to stdout (data is actually from previous step):
-      if (time2print(nstep,istep)) then
-        if (istep > 1) then
-          write(6,"('Step ',i6,' of ',i6,' mtime=',4i3,
-     |      ' secs/step (',a,') =',f6.2)") istep,nstep,modeltime,
-     |      timing_type,secs_per_step
-        else
-          write(6,"('Step ',i6,' of ',i6,' mtime=',3i3)")
-     |      istep,nstep,modeltime(1:3)
-        endif
-      endif ! time2print
-!
 ! Update calendar day and sun's location and declination:
 ! (sub advance_day also updates sfeps)
 !
@@ -200,15 +190,17 @@
       if (debug) write(6,"('advance after sunloc')")
       if (calendar_advance > 0) dday = float(iday)+secs/86400.
 !
-! Interpolate power and/or ctpoten, and other indices to current model time, 
-! if time-dependent values were read from input. If namelist read parameter 
-! indices_interp is zero, interpolation is not done.
+! Interpolate input parameters to current model time, if time-dependent 
+! values were read from input. If namelist read parameter indices_interp 
+! is zero, interpolation is not done.
 !
       if (ntimes_ctpoten > 0) 
      |  call set_index(ctpoten_time,ntimes_ctpoten,nsecs,ctpoten,
      |    'ctpoten')
       if (ntimes_power > 0) 
      |  call set_index(power_time,ntimes_power,nsecs,power,'power')
+      if (ntimes_bximf > 0) 
+     |  call set_index(bximf_time,ntimes_bximf,nsecs,bximf,'bximf')
       if (ntimes_byimf > 0) 
      |  call set_index(byimf_time,ntimes_byimf,nsecs,byimf,'byimf')
       if (ntimes_bzimf > 0) 
@@ -228,9 +220,45 @@
         call getgpi(iyear,iday,int(secs),iprint)
       endif
 !
+! Get imf data if necessary:
+      if (len_trim(imf_ncfile) > 0) then
+        iprint = 0
+        if (istep==1) iprint = 1
+        call getimf(iyear,iday,int(secs),istep,iprint)
+      endif
+!
+! If the potential model is Weimer and power was not provided
+! by namelist, then calculate power from bz and swvel.
+      if (potential_model(1:6)=='WEIMER'.and.
+     |  rd_power==spval) then
+        power = hp_from_bz_swvel(bzimf,swvel)
+      endif
+!
 ! Get GSWM tidal boundary data:
 !
       call getgswm(istep,iyear,iday,secs)
+!
+! Report to stdout:
+      if (time2print(nstep,istep)) then
+        if (istep > 1) then
+          write(6,"('Step ',i6,' of ',i6,' mtime=',4i3,
+     |      ' secs/step (',a,') =',f6.2)") istep,nstep,modeltime,
+     |      timing_type,secs_per_step
+        else
+          write(6,"('Step ',i6,' of ',i6,' mtime=',3i3)")
+     |      istep,nstep,modeltime(1:3)
+        endif
+        if (len_trim(gpi_ncfile) > 0) then
+          write(6,"('GPI run: power=',f7.2,' ctpoten=',f7.2,' f107=',
+     |      f7.2,' f107a=',f7.2)") power,ctpoten,f107,f107a
+        endif
+        if (len_trim(imf_ncfile) > 0) then
+          write(6,"('IMF run: bx=',f7.2,' by=',f7.2,' bz=',f7.2,
+     |      ' swvel=',f7.2,' swden=',f7.2,' ctpoten=',f7.2,
+     |      ' power=',f7.2)") bximf,byimf,bzimf,swvel,swden,
+     |      ctpoten,power
+        endif
+      endif ! time2print
 !
 ! Update aurora parameters:
       iprint = 0
@@ -346,7 +374,8 @@
 !    |    2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,al,
 !    |    minval(phihm),maxval(phihm)
 
-      elseif (potential_model == 'WEIMER05') then
+      elseif (potential_model == 'WEIMER05'.or.
+     |        potential_model == 'WEIMER') then
 !
 ! sub weimer05 (wei05sc.F), calculates mag electric potential in phihm.
 ! (if byimf==bzimf==0, then weimer05 will set bzimf = .01)
@@ -407,28 +436,11 @@
 !
       zpotenm3d = 0. ! whole array init (this field forced onto secondary hist)
 !
-! idynamo==0 -> Do not call dynamo. However, if potential_model is
-!               requested, set electric potential accordingly.
-      if (idynamo <= 0) then
-        if (trim(potential_model) /= 'NONE') then
-          call prep_nodynamo(z(levd0,lond0,latd0,itp),
-     |      1,nlevp1,lon0,lon1,lat0,lat1)
-            if (debug) write(6,"('advance after prep_nodynamo')")
-          if (mytid==0) then 
-            call nodynamo
-            if (debug) write(6,"('advance after nodynamo')")
-          endif
-        endif   ! potential_model /= NONE
-!
-! idynamo > 0 -> All tasks call prep_dynamo, and master task calls dynamo:
-!
-      else
-!
-! calculate addition to electrodynamo RHS (current due to plasma 
+! Calculate addition to electrodynamo RHS (current due to plasma 
 ! pressure and gravity)
 !
-        if(j_pg) then	
-	  call magpres_grav (
+      if(j_pg) then	
+        call magpres_grav (
      |    z	(levd0,lond0,latd0,itp),   ! geopotential input
      |    te	(levd0,lond0,latd0,itp),   ! electron temperature K
      |    ti	(levd0,lond0,latd0,itp),   ! ion temperature K
@@ -441,27 +453,26 @@
      |    1,nlevp1,lon0,lon1,lat0,lat1)
           if (debug) write(6,"('advance after magpres_grav: istep=',
      |    i4)") istep
-        endif 
-  
-!       do j=lat0,lat1
-!         call addfld('Z_ADV',' ','[cm]',z(1:nlev,lon0:lon1,j,itp),
-!    |      'lev',1,nlev,'lon',lon0,lon1,j)
-!       enddo
-
-        call prep_dynamo(
-     |    tn     (levd0,lond0,latd0,itp),
-     |    un     (levd0,lond0,latd0,itp),
-     |    vn     (levd0,lond0,latd0,itp),
-     |    w      (levd0,lond0,latd0,itp),
-     |    z      (levd0,lond0,latd0,itp),
-     |    barm   (levd0,lond0,latd0,itp),
-     |    ped    (levd0,lond0,latd0),     ! from lamdas.F
-     |    hall   (levd0,lond0,latd0),     ! from lamdas.F
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
-          if (debug) write(6,"('advance after prep_dynamo')")
-        if (mytid==0) call dynamo
-        if (debug) write(6,"('advance after dynamo')")
-      endif
+      endif 
+!
+! Prepare inputs to dynamo and gather to master task:
+!  
+      call prep_dynamo(
+     |  tn     (levd0,lond0,latd0,itp),
+     |  un     (levd0,lond0,latd0,itp),
+     |  vn     (levd0,lond0,latd0,itp),
+     |  w      (levd0,lond0,latd0,itp),
+     |  z      (levd0,lond0,latd0,itp),
+     |  barm   (levd0,lond0,latd0,itp),
+     |  ped    (levd0,lond0,latd0),     ! from lamdas.F
+     |  hall   (levd0,lond0,latd0),     ! from lamdas.F
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
+!
+! Only master task calls dynamo: 
+!
+      if (debug) write(6,"('advance after prep_dynamo')")
+      if (mytid==0) call dynamo
+      if (debug) write(6,"('advance after dynamo')")
 !
 #ifdef VT
 !       code = 127 ; state = 'timestep' ; activity='ModelCode'
@@ -480,12 +491,10 @@
 ! be blocked here until the master is done with the dynamo)
 !
 #ifdef MPI
-      if (idynamo > 0) then
-        call mp_updatephi
-        call mp_updateemphi  ! am 12/12/05 should be gathered if we stick to this
-        call mp_updateemlam
-        call mp_updateemz
-      endif
+      call mp_updatephi
+      call mp_updateemphi  ! am 12/12/05 should be gathered if we stick to this
+      call mp_updateemlam
+      call mp_updateemz
 #endif
 !
 ! Write output history if necessary (output writes data%(:,:,:,itc)).

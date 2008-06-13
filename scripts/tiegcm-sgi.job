@@ -72,24 +72,28 @@
 # hres:        Horizontal resolution can be either 5.0 (default), or 2.5 degrees
 # vres:        Vertical resolution can be either 0.5 (default), or 0.25 (ln(p0/p))
 # debug:       If debug=1, configure Makefile for a debug run (default is 0)
+# lib_netcdf:  Full path to directory containing netcdf library libnetcdf.a
+# inc_netcdf:  Full path to directory containing netcdf include file netcdf.inc
 #
 # Model stdout will be written to $wrkdir.
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm1-83
+ set model       = tiegcm1-84
  set wrkdir      = .
 #set wrkdir      = $model-$$
 #set input       = tiegcm.inp
 #set usr_srcdirs = modsrc
-#set tgcmroot    = .
-#set tgcmdata    = /hao/tgcm/data
-#set execdir     = $wrkdir/run
+#set tgcmroot    = $TGCMROOT
+#set tgcmdata    = $TGCMDATA
+#set execdir     = $model-sgi
 #set utildir     = $tgcmroot/$model/scripts
 #set mpi         = TRUE
 #set mss         = TRUE
 #set hres = 5.0
 #set vres = 0.5
 #set debug       = 1
+#set lib_netcdf  = 
+#set inc_netcdf  = 
 #
 #             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
 #             (except maybe to customize tgcm_config below)
@@ -128,6 +132,8 @@ if (! $?vres) set vres = 0.5
 if (! $?mpi) set mpi = ""
 if (! $?mss) set mss = "TRUE"
 if (! $?debug) set debug = 0
+if (! $?lib_netcdf) set lib_netcdf = ""
+if (! $?inc_netcdf) set inc_netcdf = ""
 #
 # Set utility dir from shell var $tgcmroot, or env var $TGCMROOT:
 # (must contain Abspath, Makenamelist, Mklogs, etc) 
@@ -174,7 +180,8 @@ if (! -x $utildir/tgcm_config) \
 #
 perl $utildir/tgcm_config -model=$model -wrkdir=$wrkdir -execdir=$execdir \
   -tgcmroot=$tgcmroot -tgcmdata=$tgcmdata -usr_srcdirs=$usr_srcdirs \
-  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -mss=$mss -debug=$debug || \
+  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -mss=$mss -debug=$debug \
+  -lib_netcdf=$lib_netcdf -inc_netcdf=$inc_netcdf || \
   echo ">>> ${0}: Error from tgcm_config" && exit 1
 #
 # Make default namelist input if not provided by user:

@@ -126,43 +126,20 @@
       integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) ::vel_zonal,vel_merid,
      |  vel_vert,scheight        ! scale height  
-      integer :: iuivi=1
-!
-! iuivi used to be an input flag, but has been replaced by the dynamo
-!   input flag. iuivi is set locally here, so ui,vi are always used in
-!   joule heating calculation. But if dynamo==0 (no dynamo), then ui,vi 
-!   will be zero, resulting in the same result as if iuivi==0.
 ! 
 ! scheight: scale height H [cm] to convert omega [1/s] to vertical 
 ! neutral wind [cm/s] on half level	  
 !
-      if (iuivi==0) then ! never executed, assuming local iuivi==1.
-        do i=lon0,lon1
-          do k=lev0,lev1-1
-           scheight(k,i) = gask*tn(k,i)/
-     |          (.5*(barm(k,i)+barm(k+1,i))*grav)
-            vel_zonal(k,i) = -un(k,i)   ! s2
-            vel_merid(k,i) = -vn(k,i)   ! s3
-            vel_vert(k,i)  = -0.5*scheight(i,k)*(w(k,i)+w(k+1,i))  
-          enddo ! k=lev0,lev1-1
-        enddo ! i=lon0,lon1
-      else
-        do i=lon0,lon1
-          do k=lev0,lev1-1
-            scheight(k,i) = gask*tn(k,i)/
-     |          (.5*(barm(k,i)+barm(k+1,i))*grav)
-            vel_zonal(k,i) = .5*(ui(k,i)+ui(k+1,i))-un(k,i)  ! s2
-            vel_merid(k,i) = .5*(vi(k,i)+vi(k+1,i))-vn(k,i)  ! s3
-            vel_vert(k,i)  = .5*(wi(k,i)+wi(k+1,i)-scheight(k,i)*
-     |           ( w(k,i)-w(k+1,i)) )
-          enddo ! k=lev0,lev1-1
-        enddo ! i=lon0,lon1
-      endif
-!
-!       S4(I,1) = .5*(S2(I,1)**2*(F(I,NLXXK)+F(I,NLXXK+1))+S2(I,1)*
-!    1    S3(I,1)*(F(I,NLXYK)+F(I,NLXYK+1)-F(I,NLYXK)-F(I,NLYXK+1))+
-!    2    S3(I,1)**2*(F(I,NLYYK)+F(I,NLYYK+1)))
-
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+          scheight(k,i) = gask*tn(k,i)/
+     |        (.5*(barm(k,i)+barm(k+1,i))*grav)
+          vel_zonal(k,i) = .5*(ui(k,i)+ui(k+1,i))-un(k,i)  ! s2
+          vel_merid(k,i) = .5*(vi(k,i)+vi(k+1,i))-vn(k,i)  ! s3
+          vel_vert(k,i)  = .5*(wi(k,i)+wi(k+1,i)-scheight(k,i)*
+     |         ( w(k,i)-w(k+1,i)) )
+        enddo ! k=lev0,lev1-1
+      enddo ! i=lon0,lon1
       do i=lon0,lon1
         do k=lev0,lev1-1
           qji_tn(k,i) = .5*(lam1(k,i)+lam1(k+1,i))*

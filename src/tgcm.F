@@ -84,10 +84,10 @@
       call readsource(ier)
 !
 ! Call apex code if doing dynamo.
-      if (dynamo > 0) call apxparm(real(iyear))
+      call apxparm(real(iyear))
 !
 ! Set up magnetic field data (read from magfield file if dynamo<=0) 
-      call magfield(dynamo)
+      call magfield
 !
 ! Set lower boundaries:
       call lowbound

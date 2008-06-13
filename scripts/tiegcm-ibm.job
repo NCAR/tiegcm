@@ -20,30 +20,29 @@
 #
 #                 USER EDIT RESOURCES FOR LSF BATCH JOB
 #
-#BSUB -J tiegcm         # job name
+#BSUB -J tiegcm          # job name
 #
 ##BSUB -P 28100036       # NCAR project account number (8-digit)
 #BSUB -P 24100004
 #
 ##BSUB -q regular        # queue (6-hour wallclock limit if not debug queue)
-##BSUB -x 		# exclusive use of nodes (not available in debug queue)
+##BSUB -x 		 # exclusive use of nodes (not available in debug queue)
 #
-##BSUB -n 48                 # 48 procs
-##BSUB -R "span[ptile=16]"   # 3 nodes w/ SMT (Symmetric Multi-Threading)
+##BSUB -n 64                 # 48 procs
+##BSUB -R "span[ptile=32]"   # SMT (Symmetric Multi-Threading)
 #
-##BSUB -n 32                # 32 procs
-##BSUB -R "span[ptile=16]"  # 2 nodes w/ SMT
+##BSUB -n 32                 # 32 procs
+##BSUB -R "span[ptile=32]"   # SMT (Symmetric Multi-Threading)
 #
 ##BSUB -n 16                # 16  procs
-##BSUB -R "span[ptile=16]"  # 1 nodes w/ SMT
 #
 # Debug queue (30 min wallclock limit, and -x not allowed)
 #
 #BSUB -n 4                 # number of MPI tasks
 #BSUB -q debug             # debug queue (30 min wallclock limit)
 #
-#BSUB -o tiegcm.%J.out     # stdout filename
-#BSUB -e tiegcm.%J.out     # stderr filename
+#BSUB -o tiegcm.%J.out      # stdout filename
+#BSUB -e tiegcm.%J.out      # stderr filename
 #BSUB -N                    # send mail when job finishes
 #BSUB -u $LOGNAME@ucar.edu  # email address
 #
@@ -57,7 +56,7 @@
 #        USER EDIT SHELL VARIABLES (for batch and interactive jobs)
 #
 # model:       Desired model name (Required. Use ListModels to see valid models)
-# wrkdir:      User's working directory (default is `pwd`, i.e., the cwd)
+# wrkdir:      User's working directory (default is ".", i.e., the cwd)
 # usr_srcdirs: List of user source directories (optional)
 # input:       Namelist input file (if not given, a default will be created)
 # output:      Name of stdout file relative to the wrkdir (default is $model.out)
@@ -72,23 +71,27 @@
 # hres:        Horizontal resolution can be either 5.0 (default), or 2.5 degrees
 # vres:        Vertical resolution can be either 0.5 (default), or 0.25 (ln(p0/p))
 # debug:       If debug=1, configure Makefile for a debug run (default is 0)
+# lib_netcdf:  Full path to directory containing netcdf library libnetcdf.a
+# inc_netcdf:  Full path to directory containing netcdf include file netcdf.inc
 #
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm1-83
+ set model       = tiegcm1-84
  set wrkdir      = .
 #set input       = $model.inp
 #set output      = $model.out     # relative to wrkdir
 #set usr_srcdirs = modsrc
-#set tgcmroot    = .
+#set tgcmroot    = $TGCMROOT
 #set tgcmdata    = $TGCMDATA
 #set execdir     = $model-ibm
 #set utildir     = $TGCMROOT/$model/scripts
 #set mpi         = TRUE
 #set mss         = TRUE
-#set hres        = 2.5
-#set vres        = 0.25
+#set hres        = 5.0
+#set vres        = 0.5
 #set debug       = 1
+#set lib_netcdf  = /usr/local/lib
+#set inc_netcdf  = /usr/local/include
 #
 #             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
 #             (except maybe to customize tgcm_config below)
@@ -135,6 +138,8 @@ if (! $?vres) set vres = 0.5
 if (! $?mpi) set mpi = ""
 if (! $?mss) set mss = "TRUE"
 if (! $?debug) set debug = 0
+if (! $?lib_netcdf) set lib_netcdf = ""
+if (! $?inc_netcdf) set inc_netcdf = ""
 #
 # If debug is on, request info from poe
 #if ($debug == 1) then
@@ -186,7 +191,8 @@ if (! -x $utildir/tgcm_config) \
   echo ">>> WARNING: Cannot find config script $utildir/tgcm_config"
 perl $utildir/tgcm_config -model=$model -wrkdir=$wrkdir -execdir=$execdir \
   -tgcmroot=$tgcmroot -tgcmdata=$tgcmdata -usr_srcdirs=$usr_srcdirs \
-  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -mss=$mss -debug=$debug || \
+  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -mss=$mss -debug=$debug \
+  -lib_netcdf=$lib_netcdf -inc_netcdf=$inc_netcdf || \
   echo ">>> ${0}: Error from tgcm_config" && exit 1
 #
 # Copy Mkdepends script to execdir for manual gmake (or default Makefile):

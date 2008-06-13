@@ -355,11 +355,11 @@
       use hist_module,only: sh,h,hist_initype,nhist,nsech,modeltime,
      |  isecout,ioutfile,nsource,nsecsource,iseries_prim,iseries_sech
       use input_module,only: output,secout,date,step,power,ctpoten,
-     | byimf,bzimf,swvel,swden,al,f107,f107a,mag,tide,tide2,colfac,
-     |  source,hist,sechist,calendar_advance,secsource,
+     |  bximf,byimf,bzimf,swvel,swden,al,f107,f107a,tide,tide2,
+     |  colfac,source,hist,sechist,calendar_advance,secsource,
      |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
-     |  gpi_ncfile,see_ncfile,ncep_ncfile,label
+     |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile
 
       use init_module,only: logname,host,system,iyear,iday,istep,
      |  start_mtime
@@ -450,7 +450,6 @@
       h%iter  = mtime_to_nstep(modeltime(1:3),step)
       h%ut    = float(modeltime(2))+float(modeltime(3))/60.+
      |          float(modeltime(4))/3600.
-      h%mag(:,:)  = mag(:,:)
       h%dtide(:)  = tide2(:)
       h%sdtide(:) = tide(:)
 !
@@ -463,6 +462,7 @@
         h%f107a     = sh%f107a
         h%hpower    = sh%hpower
         h%ctpoten   = sh%ctpoten
+        h%bximf     = sh%bximf
         h%byimf     = sh%byimf
         h%bzimf     = sh%bzimf
         h%swvel     = sh%swvel
@@ -474,6 +474,7 @@
         h%f107a     = f107a
         h%hpower    = power
         h%ctpoten   = ctpoten
+        h%bximf     = bximf
         h%byimf     = byimf
         h%bzimf     = bzimf
         h%swvel     = swvel
@@ -508,6 +509,8 @@
       if (len_trim(see_ncfile) == 0) h%see_ncfile = '[none]'
       h%ncep_ncfile= ncep_ncfile
       if (len_trim(ncep_ncfile) == 0) h%ncep_ncfile = '[none]'
+      h%imf_ncfile= imf_ncfile
+      if (len_trim(imf_ncfile) == 0) h%imf_ncfile = '[none]'
 
       h%gswm_mi_di_ncfile= gswm_mi_di_ncfile
       if (len_trim(gswm_mi_di_ncfile) == 0) 
