@@ -1,6 +1,10 @@
 !
       module bndry_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Lower boundary conditions: diurnal, semi-diurnal, annual are
 ! lower boundary is only set in these subroutines if no input file
 ! from the GSWM is provided. Therefore a check is included for

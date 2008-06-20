@@ -5,6 +5,10 @@
 !
       module params_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Geographic grid parameters:
       integer,parameter :: 
      |  nlat = NLAT,                 ! number of latitudes
@@ -59,7 +63,7 @@
 #endif
 !
 ! For modules hist_mod and input_mod:
-      character(len=16),parameter :: tgcm_version = 'tiegcm1-84      '
+      character(len=16),parameter :: tgcm_version = 'tiegcm1.9       '
 !
 ! tgcm_name is either "tiegcm" or "time-gcm"
       character(len=8),parameter :: tgcm_name    = 'tiegcm'

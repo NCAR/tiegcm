@@ -1,5 +1,10 @@
 !
       module oplus_module
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
       use params_module,only: nlat,nlonp4,dz,nlon,dlev
       use magfield_module,only: bx,by,bz,bmod2 ! (nlonp4,-1:nlat+2)
       use addfld_module,only: addfld

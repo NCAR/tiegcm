@@ -1,6 +1,10 @@
 !
       module aurora_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Auroral oval parameterization. See reference:
 ! R.G. Roble, E.C. Ridley
 ! An auroral model for the NCAR thermospheric general circulation model (TGCM)

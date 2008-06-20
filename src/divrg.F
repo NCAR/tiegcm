@@ -1,6 +1,10 @@
 !
       subroutine divrg(un,vc,w,lon0,lon1,lev0,lev1,lat0,lat1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Called from swdot for vertical velocity W:
 !
       use cons_module,only: dlamda_2div3,dlamda_1div12,

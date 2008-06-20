@@ -1,6 +1,10 @@
 !
       subroutine smooth(fin,fout,k0,k1,i0,i1,j0,j1,isave)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! 2-part shapiro smoother, called from dt for tn_nm, and from duv for
 !   un_nm, vn_nm. 
 ! Input field fin is defined at full subdomain (including halo cells).

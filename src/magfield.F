@@ -1,6 +1,10 @@
 !
       module magfield_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Read and calculate magnetic field data used for transformation 
 !   between geographic and geomagnetic coordinate systems. 
 !   Sub magfield is called once per run from main tgcm.F.

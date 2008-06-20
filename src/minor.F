@@ -3,6 +3,10 @@
      |  sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,lon0,lon1,lat0,
      |  lat1,idebug)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Advance minor species fcomp by one time step.
 ! This is called from comp_no and comp_n4s.
 !

@@ -2,6 +2,10 @@
       subroutine lamdas(tn,barm,o2,o1,ti,te,o2p,op,nop, lxx,lyy,lxy,lyx,
      |  lamda1,ped_out,hall_out,lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Compute ion drag coefficients 
 !      in geographic direction lxx, lyy, lxy, and lyx [1/s] (full levels)
 !      in magnetic direction lamda1 [1/s] (full levels)

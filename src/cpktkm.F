@@ -1,6 +1,10 @@
 !
       subroutine cpktkm(tn,o2,o1,fcp,fkt,fkm,lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Define diagnostics CP, KT, and KM.
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,gask,t0

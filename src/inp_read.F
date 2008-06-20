@@ -1,6 +1,10 @@
 !
       subroutine inp_read(mytid)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Read input namelist. The ONLY reason this is not in input_mod.f
 ! is so mpi_mod can be recompiled easily (i.e., avoid MPI dependency
 ! in input_mod.F.

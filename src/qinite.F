@@ -2,6 +2,10 @@
       subroutine qinite(o2,o1,no,xnmbari,vo2,vo1,vn2,
      |  lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculate background ionization rates and add to rates from qrj. 
 !
       use bndry_module,only: fb,b

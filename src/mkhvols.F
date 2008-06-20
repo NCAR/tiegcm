@@ -1,9 +1,13 @@
 !
       module mk_hvols
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Enable history mss path file name expansion, e.g.:
-! "/FOSTER/file1","to","/FOSTER/file5","by","1" becomes
-! "/FOSTER/file1","/FOSTER/file2",...,"/FOSTER/file5" 
+! "/USER/file1","to","/USER/file5","by","1" becomes
+! "/USER/file1","/USER/file2",...,"/USER/file5" 
 ! See function mkhvols. This is called from input.
 !
       contains

@@ -1,5 +1,10 @@
 !
       subroutine mk_polelat(jnew,jold,ixt)
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
       use params_module,only: nlon,nlevp1
       use fields_module,only: nf4d,f4d
       use mpi_module,only: lon0,lon1

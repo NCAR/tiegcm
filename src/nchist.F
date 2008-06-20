@@ -1,6 +1,10 @@
 !
       module nchist_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Module to create, read and write netcdf history files:
 !
       use params_module,only: nlon,nlev,nmlev,nimlev,nmlevp1,nimlevp1,

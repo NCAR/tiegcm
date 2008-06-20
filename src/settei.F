@@ -2,6 +2,10 @@
       subroutine settei(tn,o2,o1,ne,te,ti,op,o2p,nop,barm,qji_ti,
      |  te_out,ti_out,lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculate electron and ion temperatures.
 !
       use params_module,only: dz,nlonp4,spval

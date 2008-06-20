@@ -2,6 +2,10 @@
       subroutine qjion(tn,o2,o1,o2p,op,n4s,n2d,no,ne,barm,
      |  n2p,nplus,nop,xiop2p,xiop2d, lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculate ion chemistry contribution to neutral gas heating
 !   and O2 dissociation. 
 ! This routine modifies Q(k,i) from qrj module (all args are input).

@@ -1,5 +1,10 @@
 ! 
       module hdif_module
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
       use params_module,only: nlevp1,nlonp4,nlat
       use addfld_module,only: addfld
       implicit none

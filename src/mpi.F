@@ -1,6 +1,10 @@
 !
       module mpi_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Perform message-passing and related operations in distributed memory 
 !   system, e.g., AIX.
 !

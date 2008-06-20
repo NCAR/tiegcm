@@ -1,6 +1,10 @@
 !
       module dispose_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! DISPOSE=2 in the model namelist input file means the user wants to dispose 
 !   history files *after* model execution. In this case, sub input calls sub
 !   init_dispose, which opens a csh script "dispose.csh" in the cwd which 

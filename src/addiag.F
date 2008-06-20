@@ -1,6 +1,9 @@
-!
       subroutine addiag(tn,o2,o1,vn,vc,barm,xnmbar,xnmbari,xnmbarm,z,
      |  zg,lon0,lon1,lev0,lev1,lat0,lat1)
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
 !
 ! Calculate needed terms vc, barm, xnmbar[i,m], and Z:
 !

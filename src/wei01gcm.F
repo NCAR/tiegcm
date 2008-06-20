@@ -1,5 +1,9 @@
 !      
       module weimer_module
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
 !      
 ! module used to calculate the Weimer 2001 model potential in both
 !  hemispheres from Bz, By, Sws, Swd, and AL.

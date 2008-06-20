@@ -28,13 +28,16 @@
 ##BSUB -q regular        # queue (6-hour wallclock limit if not debug queue)
 ##BSUB -x 		 # exclusive use of nodes (not available in debug queue)
 #
-##BSUB -n 64                 # 48 procs
-##BSUB -R "span[ptile=32]"   # SMT (Symmetric Multi-Threading)
+# Bluefire has 32-way nodes, so span[ptile=64] means 64 procs per node
+#
+##BSUB -n 32                 # 32 procs (1 node w/o SMT on bluefire)
+##BSUB -n 64                 # 64 procs
+##BSUB -R "span[ptile=64]"   # SMT (Symmetric Multi-Threading)
+#
+# Bluevista has 8-way nodes, so span[ptile=16] means 16 procs per node
 #
 ##BSUB -n 32                 # 32 procs
-##BSUB -R "span[ptile=32]"   # SMT (Symmetric Multi-Threading)
-#
-##BSUB -n 16                # 16  procs
+##BSUB -R "span[ptile=16]"   # SMT (Symmetric Multi-Threading)
 #
 # Debug queue (30 min wallclock limit, and -x not allowed)
 #
@@ -76,7 +79,7 @@
 #
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm1-84
+ set model       = tiegcm1.9
  set wrkdir      = .
 #set input       = $model.inp
 #set output      = $model.out     # relative to wrkdir

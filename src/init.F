@@ -1,5 +1,10 @@
 !
       module init_module
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
       use params_module,only: nlon,nlat,nlevp1,nlonp4,nmlonp1,nmlat,
      |  glon1,dlon,glat1,dlat,nlev,zmbot,dlev,zibot,zmbot,
      |  nmlev,nmlevp1,nimlev,nimlevp1

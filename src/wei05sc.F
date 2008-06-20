@@ -1,6 +1,15 @@
 !-----------------------------------------------------------------------
       module wei05sc
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
+! The Weimer model of high-latitude potential is the intellectual property of 
+! Daniel Weimer and may not be extracted, distributed, or used for any purpose 
+! other than as implemented in the TIE-GCM.  For further information concerning 
+! this model, please contact Dan Weimer.
+!
 ! 2005 Version of the electric and magnetic potential (FAC) models
 ! by Dan Weimer.  Uses Spherical Cap Harmonic Analysis (SCHA) functions.
 ! Model description is in:

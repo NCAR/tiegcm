@@ -2,6 +2,10 @@
       subroutine comp_n2d(o2,o1,no,n4s,ne,op,n2p,nop,sco2,xnmbarm,
      |  n2d,lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculates psi(n2d) (mmr)  assuming photochemical equilibrium,
 ! at current latitude (lat).
 !

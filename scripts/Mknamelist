@@ -191,7 +191,8 @@ sub set_hist {
 #
 # my $sourcefile = "p001-$start_year-$start_day_hist.nc";
 # my $sourcefile = "FOSTER.tiegcm1-82.py2s004.nc";
-  my $sourcefile = "FOSTER.tiegcm1-84.peqnx001.nc";
+# my $sourcefile = "FOSTER.tiegcm1-84.peqnx001.nc";
+  my $sourcefile = "TGCM.tiegcm1.9.peqnx001.nc";
 #
 # Source history file name for default hres and vres:
 #
@@ -200,7 +201,8 @@ sub set_hist {
 #
   $hist_source =     '$TGCMDATA/' . "$sourcefile";
 # $hist_source_mss = "/FOSTER/tiegcm1-82/py2s004.nc";
-  $hist_source_mss = "/FOSTER/tiegcm1-84/peqnx001.nc";
+# $hist_source_mss = "/FOSTER/tiegcm1-84/peqnx001.nc";
+  $hist_source_mss = "/FOSTER/tiegcm1.9/peqnx001.nc";
 #
 #
   $hist_output =     "/$USER/$model/ptest001.nc";
@@ -392,10 +394,10 @@ print OUTFILE <<EOF;
  POTENTIAL_MODEL = 'HEELIS'
 ;GPI_NCFILE = '$gpi_ncfile'
 ;
-; Uncomment GPI_NCFILE to calculate power and ctpoten from
-; Kp data, and to use data for f107 flux. gpi_ncfile can be 
-; used only when potential_model='HEELIS'. If gpi_ncfile is 
-; specified, one or more of power,ctpoten,f107,f107a must be 
+; Uncomment GPI_NCFILE to calculate POWER and CTPOTEN from
+; Kp data, and to use data for f10.7 flux. GPI_NCFILE can be 
+; used only when potential_model='HEELIS'. If GPI_NCFILE is 
+; specified, one or more of POWER,CTPOTEN,F107,F107A must be 
 ; commented out (data will be used for those that are commented 
 ; out, otherwise the user-provided values will be used).
 ;
@@ -405,22 +407,22 @@ print OUTFILE <<EOF;
  F107A =150.
 ;
 ;POTENTIAL_MODEL = 'WEIMER05'
-;IMF_NCFILE = $imf_ncfile
+;IMF_NCFILE = '$imf_ncfile'
 ;
 ; Uncomment IMF_NCFILE to read IMF parameters from the data.
-; imf_ncfile can be used only when potential_model='WEIMER05'.
-; If imf_ncfile is specified, one or more of bximf,byimf,bzimf,
-; swvel,swden,f107,f107a must be commented out (data will be
-; used). If imf_ncfile is specifiedand power is not provided,
-; it will be calculated from bz,swvel. Also, if imf_ncfile is
-; used, the user cannot provide ctpoten (it will be calculated
+; IMF_NCFILE can be used only when potential_model='WEIMER05'.
+; If IMF_NCFILE is specified, one or more of BXIMF,BYIMF,BZIMF,
+; SWVEL,SWDEN,F107,F107A must be commented out (data will be
+; used). If IMF_NCFILE is specified and POWER is not provided,
+; it will be calculated from BZ,SWVEL. Also, if IMF_NCFILE is
+; used, the user cannot provide CTPOTEN (it will be calculated
 ; from the Weimer potential).
 ;
 ;BXIMF = 0.
 ;BYIMF = 0.
 ;BZIMF = -5.
 ;SWVEL = 400.
-;SWDEN = 4.
+;SWDEN = 4.  ; try this if problems with missing IMF SWDEN data
 ;
 ; SEE data file:
 ;SEE_NCFILE  = '$see_ncfile'

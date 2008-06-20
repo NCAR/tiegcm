@@ -1,6 +1,11 @@
 !
 #include <defs.h>
       module cons_module
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
       use params_module,only: dlat,dz,nlon,nlonp1,nlonp4,nlat,nlatp1,
      |  dlev,nlev,nmlat,nmlon,nmlonp1,zmbot,zmtop,zibot,zitop
       implicit none

@@ -2,6 +2,10 @@
       subroutine qjnno(tn,o2,o1,ne,no,n4s,n2d,xnmbar,
      |  lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculates additions to neutral gas heating and O2 dissociation
 ! due to N, NO chemistry.
 !

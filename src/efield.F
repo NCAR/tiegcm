@@ -1,5 +1,10 @@
 !
       module efield_module
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
       use params_module,only: nlon,nlev,nlat,nlonp4,nmlon,nmlat,nmlonp1,
      |  nmlonp2,nlevp1,nlonp2,nmlatp1,nmlev
       use mpi_module,only: mytid ! for condx on addfld call only

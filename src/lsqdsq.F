@@ -1,6 +1,10 @@
 !
       subroutine lsqdsq(fjp,fj,fjm,fout,lonbeg,lonend,lev0,lev1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Subroutine to calculate L**2DEL**2(PSI)
 ! On input:
 !   lat is current latitude index

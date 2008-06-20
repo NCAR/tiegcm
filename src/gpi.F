@@ -2,6 +2,10 @@
 !
       module gpi_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Module to use NGDC data for geophysical indices f107, f107a, 
 !   power, and/or ctpoten. These 4 variables are optionally provided
 !   by the user at input. Any of these that are NOT provided by

@@ -2,6 +2,10 @@
       subroutine qjoule_ti(un,vn,w,ui,vi,wi,lam1,op,nplus,
      |    n2p,nop,o2p,barm,tn,qji_ti,lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculate ion joule heating for use in ion temperature.
 ! This is called from sub dynamics before settei. Qji_ti output from
 !   here is passed to settei for ion temperature calculation.

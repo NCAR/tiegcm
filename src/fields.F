@@ -1,6 +1,10 @@
 !
       module fields_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! There are allocatable arrays and an array of field structures for 
 !   3-d and 4-d fields. Subdomains are allocated to the allocatable 
 !   arrays, and structure data pointers point to the allocatable arrays,

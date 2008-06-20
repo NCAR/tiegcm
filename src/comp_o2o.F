@@ -2,6 +2,10 @@
       subroutine comp_o2o(tn,o2,o1,barm,op,no,n4s,n2d,o2p,ne,
      |  n2p,nplus,nop,lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculates fs array which gives sources and sinks for comp (o2,o). 
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,p0,

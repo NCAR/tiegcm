@@ -1,6 +1,10 @@
 !
       subroutine ionvel(z,ui,vi,wi,lev0,lev1,lon0,lon1,lat0,lat1)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculate ExB ion velocities from electric field.
 ! (electric field ex,ey,ez was calculated in efield module, efield.F)
 ! (this was old sub vdrift2)

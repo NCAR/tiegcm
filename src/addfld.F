@@ -1,6 +1,10 @@
 !
       module addfld_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Save fields to secondary history (B. Foster: November, 2005)
 ! This module replaces the old addfsech routines.
 !

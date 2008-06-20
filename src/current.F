@@ -1,6 +1,10 @@
 !
 #include <defs.h>
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! bf 6/02: Modified for tiegcm1 from Astrid Maute tgcm15 mod files 
 !          nscoef.F, nscrdens.F, and nscrrt.F.
 !

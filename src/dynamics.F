@@ -1,6 +1,10 @@
 !
       subroutine dynamics(nstep,istep)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Call dynamics layer of the model for current time step.
 ! Routines that do not have to do message-passing are generally called
 !   from inside a latitude scan in this routine. Routines that do have

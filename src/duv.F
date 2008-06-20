@@ -3,6 +3,10 @@
      |  hdu,hdv,ui,vi,lxx,lyy,lxy,lyx,km,un_upd,unm_upd,vn_upd,vnm_upd,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Advance neutral velocities for current time step:
 !
       use params_module,only: nlonp4,dz,nlat,spval,nlonp2,nlon

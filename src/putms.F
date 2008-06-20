@@ -1,5 +1,10 @@
 !
       subroutine putms(mspath,dskfile,wrpass,mscomment,msreten)
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
       use input_module,only: cwd ! current working directory
       implicit none
 !

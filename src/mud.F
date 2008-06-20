@@ -1,5 +1,9 @@
 !#include "dims.h"
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! 2/99 B. Foster:
 ! Introducing new mudpack v4.0.
 !

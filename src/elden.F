@@ -2,6 +2,10 @@
       subroutine elden(tn,barm,op,op_upd,o2,o1,n2d,no,n4s,xiop2p,xiop2d,
      |  nplus,n2p,nop,o2p,electrons,lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Solve for electron density.
 ! Also calculate ions N+ (nplus), N2+ (n2p), NO+ (nop), and O2+ (o2p).
 !

@@ -2,6 +2,10 @@
       subroutine newton(tn,o2,o1,no,barm,cp,cool_implicit,cool_explicit,
      |  lev0,lev1,lon0,lon1,lat)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculate implicit and explicit cooling terms.
 !
       use params_module,only: dz

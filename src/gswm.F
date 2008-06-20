@@ -1,5 +1,9 @@
 !      
       module gswm_module
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
 !      
 ! Read GSWM boundary perturbations Z, T, U, V, and interpolate
 !   to model grid and time.

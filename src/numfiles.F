@@ -2,6 +2,10 @@
       integer function numfiles(type,nseries,nsource,nhist_output1,
      |  nhist_total)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Determine number of history files needed (primary if type=='prim',
 ! or secondary if type=='sech'). A new file will be needed whenever 
 ! a new time series is started, or a file is full (i.e., has 

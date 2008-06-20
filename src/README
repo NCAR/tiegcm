@@ -719,3 +719,21 @@ Removed subs and call in magfield related to reading the magvol file.
 - Other minor changes to job scripts and Mknamelist (default namelist file) 
 
 6/13/08: Preparing to cvs commit and save tag tiegcm1-84.
+
+6/16/08: 
+Added the following academic license reference at top of each source file:
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
+File tiegcmlicense.txt is new, and will be added to the cvs repository
+in the src directory.
+
+6/18/08: Added Dan Weimer intellectual property statement at top of wei05sc.F,
+along w/ the academic license reference.
+
+>>>>>>>>>>>>>>>>>>  Commit and release of tiegcm1.9 <<<<<<<<<<<<<<<<<<<
+6/20/08:
+cvs commit -F commit_notes/tiegcm1.9 
+cvs tag tiegcm1-9

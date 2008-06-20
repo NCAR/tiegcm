@@ -3,6 +3,10 @@
      |  wrprim, save_prim,  newseries_prim, iseries_p,
      |  wrsech, save_sech,  newseries_sech, iseries_s)
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Return true if it is time to write a primary or secondary history, 
 !   given current istep and modeltime(4).
 ! Return wrprim true if its time to write a primary history.

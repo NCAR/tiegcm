@@ -1,5 +1,10 @@
 !
       module output
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
       use nchist_module,only: ! nchist_mod.F
      |  nc_open,     ! subroutine to open a netcdf file
      |  nc_define,   ! subroutine to define vars in a new netcdf file

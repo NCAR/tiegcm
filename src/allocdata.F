@@ -1,6 +1,10 @@
 !
       subroutine allocdata
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Allocate msc data. Main fields are not allocated here, see
 ! init_fields in fields.F. This is not in field.F in order to 
 ! avoid circular module dependencies.

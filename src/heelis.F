@@ -1,6 +1,10 @@
 !
       module heelis_module
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Module used to calculcate the Heelis model potential in both hemispheres
 ! Byimf, Ctpoten and Power at a minimum using paramaters from aurora_cons
 !

@@ -1,4 +1,8 @@
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! 1/00:
 ! This is source for fft991 from lib ecmfft (fft99f.f)
 !   This source does NOT work under multi-tasked unicos -- must 

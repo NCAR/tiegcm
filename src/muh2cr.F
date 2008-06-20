@@ -1,5 +1,9 @@
 !#include "dims.h"
-c
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 c     file muh2cr.f
 !     am 01/04/16 runs only as direct solver or with modified stencils
 !                 it's very slow
