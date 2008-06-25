@@ -97,3 +97,5 @@ hereby expressly excluded.
 between the parties with respect to the use of the Software and supersedes 
 all prior or contemporaneous understandings regarding such subject matter. 
 
+See also online version of this file: 
+http://www.hao.ucar.edu/modeling/tgcm/download/files/tiegcmlicense.txt
