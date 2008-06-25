@@ -13,7 +13,7 @@ source code obtained from a variety of public domain sources.  The Weimer
 model of high-latitude potential is the intellectual property of Daniel
 Weimer and may not be extracted, distributed, or used for any purpose other
 than as implemented in the TIE-GCM.  For further information concerning this
-model, please contact Dan Weimer.
+model, please contact Dan Weimer (dweimer@vt.edu).
 
 3. Restrictions and Use. 
 a. No Sales.  You shall not sell, or license or transfer for a fee the 
