@@ -73,7 +73,7 @@
 #
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm1.9
+ set model       = tiegcm1.91
  set wrkdir      = .
 #set input       = $model.inp
 #set output      = $model.out     # relative to wrkdir
