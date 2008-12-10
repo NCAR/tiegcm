@@ -870,3 +870,9 @@ They were not being set correctly and made the code crash in sub copyhist
 12/8/08 btf: Change model_version from tiegcm1.9 to tiegcm1.91 (params.F)
 
 12/8/08 btf: Stan's "final" aurora.F, copied from /home/stans/aurorascs.F.
+
+----------------------------------------------------------------------
+12/10/08:
+>>>>>>>>>>>>>>>>>>  Commit and release of tiegcm1.91 <<<<<<<<<<<<<<<<<<<
+cvs commit -F commit_notes/tiegcm1.91 
+cvs tag tiegcm1-91
