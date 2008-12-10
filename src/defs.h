@@ -1,4 +1,8 @@
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Definitions of grid parameters for pre-processor.
 ! See parameters.h.
 !
@@ -47,7 +51,7 @@
 ! Vertical column -7 to +7 by 0.25 ("double")
 !#define ZIBOT (-7.0)
 !#define ZITOP (7.0)
-!#define ZMBOT (-6.75)
-!#define ZMTOP (7.25)
+!#define ZMBOT (-6.875)
+!#define ZMTOP (7.125)
 !#define NLEV (56)
 !

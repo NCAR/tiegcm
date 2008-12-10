@@ -120,6 +120,7 @@
      |    day,               ! calendar day (1-367)
      |    calendar_advance,  ! 0/1
      |    step,              ! time step (seconds)
+     |    initial_day,       ! initial starting day
      |    initial_year,      ! initial starting year
      |    initial_mtime(3),  ! initial starting model time
      |    source_mtime(3),   ! start time of source history
@@ -204,6 +205,7 @@
 !
       if (nsource > 0) then
         h%initial_year  = start_year
+        h%initial_day   = start_day 
         h%initial_mtime = start(:,1)
         h%initial_file = source
         h%source_mtime  = source_start
@@ -236,7 +238,7 @@
       h%gswm_nm_di_ncfile  = '[none]'
       h%gswm_nm_sdi_ncfile = '[none]'
 
-      h%nflds  = ispval
+      h%nflds  = 0
       h%dynamo = .false.
       h%coupled_ccm = .false.
       h%tuv_lbc_intop = 0 ! this version writes "new" histories
@@ -328,6 +330,7 @@
       write(6,"(2x,'output_file  = ',a)") trim(h%output_file)
       write(6,"(2x,'source_mtime = ',3i4)") h%source_mtime
       write(6,"(2x,'initial_year = ',i4)") h%initial_year
+      write(6,"(2x,'initial_day  = ',i4)") h%initial_day
       write(6,"(2x,'initial_mtime= ',3i4)") h%initial_mtime
       write(6,"(2x,'type       = ',a)") trim(h%hist_type)
       write(6,"(2x,'ihist      = ',i3,
@@ -524,5 +527,32 @@
       nfsech = size(secflds)-count(len_trim(secflds)==0)
       nfiles_sech = numfiles('sech',nseries_sech,1,0,nsech_total)
       end subroutine hist_init
+!-------------------------------------------------------------------
+      subroutine copyhist(hsrc,hdest)
+!
+! Copy history structure hsrc to hdest
+!
+      implicit none
+!
+! Args:
+      type(history),intent(in) :: hsrc    ! input source history
+      type(history),intent(out) :: hdest  ! output destination history
+!
+! Local:
+      integer :: istat
+!
+! Copy structure wholesale:
+      hdest = hsrc
+!
+! Allocate hdest%fnames and assign from hsrc:
+      if (hsrc%nflds > 0) then
+        allocate(hdest%fnames(hsrc%nflds),stat=istat)
+      else
+        write(6,"('>>> copyhist: hsrc%nflds=',i3)") hsrc%nflds
+      endif
+      hdest%fnames = hsrc%fnames
+      write(6,"('Copied history structure at modeltime ',
+     |  3i4)") hdest%modeltime(1:3)
+      end subroutine copyhist
 !-------------------------------------------------------------------
       end module hist_module

@@ -737,3 +737,136 @@ along w/ the academic license reference.
 6/20/08:
 cvs commit -F commit_notes/tiegcm1.9 
 cvs tag tiegcm1-9
+
+=============================================================================
+am 8/7/08
+  for the calculation of J_e2 there was an inconsistency
+  because J_pg was added to J_e1 but not J_e2
+  (only for output - for the dynamo equation both components
+  were added) have to use icalkqlam=1 flag.
+  files: dynamo.F
+         current.F
+----------------------------------------------------------------------
+8/25/08 btf:
+Added initial_day attribute to the time variable.
+See hist.F and nchist.F.
+
+----------------------------------------------------------------------
+8/29/08:
+Revised gswm.F for intel compiler on gale: nf_get_var_double does not
+work when array subsection is passed, e.g. the following seg faults on
+gale (but works fine under xlf and pgf90):
+
+      real,dimension(nlonp4,nlat,nmonth,nhour) :: t,u,v,z
+      istat = nf_get_var_double(ncid,idv_z,z(3:nlon+2,:,:,:))
+
+This was replaced with the following, which works on gale:
+
+      real,dimension(nlonp4,nlat,nmonth,nhour) :: t,u,v,z
+      real,dimension(nlon,nlat,nmonth,nhour) :: tmp
+      istat = nf_get_var_double(ncid,idv_z,tmp)
+      z(3:nlon+2,:,:,:) = tmp(:,:,:,:)
+
+----------------------------------------------------------------------
+9/3/08 btf:
+Fixed commented addfld calls for 2d fields in advance after dynamics call.
+The fix was that the fields must specify (lon0:lon1,lat0:lat1), e.g.:
+
+!     call addfld ('CUSP','2D CUSP','0-1',
+!    |  cusp2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+
+----------------------------------------------------------------------
+9/5/08 btf:
+Add logical function ismissing (imf.F) for use reading imf data.
+
+----------------------------------------------------------------------
+9/10/08 btf:
+Barb's new sub wei05loc in wei05sc.F to position the aurora wrt Weimer
+2005 potential. See test runs in download.hao.ucar.edu/pub/tgcm/tiegcm1.9_w05loc
+(this is linked from the wiki). Tiegcm dev group meeting today approved
+this mod.
+
+Mods to better detect missing data in imf.F.
+
+----------------------------------------------------------------------
+9/17/08 btf:
+Added option for asychronous msrcp in putms.F, but not activating
+it yet, since cannot call dcswait or dcsq without linking the dcs lib.
+
+10/11/08 btf:
+Removed sub defvar_f3d from nchist.F, since it is not called.
+
+10/29/08 btf:
+Realized that source history structure sh was not being written to the 
+first history of an initial run (the fields data, which is not part of
+the history struct, was being copied correctly). To fix this, added 
+subroutine copyhist in hist.F. This is used to copy sh into h (instead of 
+calling define_hist) then call nc_define (which writes h to the file). 
+See output.F.
+
+----------------------------------------------------------------------
+10/31/08 btf:
+Fixed error print statement re rdays in nchist.F (see line 2584).
+
+Fixed defs.h in commented-out section of vres=0.25:
+
+!#define ZMBOT (-6.875)
+!#define ZMTOP (7.125)
+
+(they were -6.75 and 7.25). tgcm_config does set these correctly
+when vres=0.25 is passed, but they should be fixed in the default
+defs.h, even tho they are commented-out, in case people change
+defs.h manually and don't notice they are wrong.
+
+----------------------------------------------------------------------
+11/4/08 btf:
+If model day mtime(1) > 365, then write model day mtime(1)-365 to the
+output history. E.g., if a run is made to day 366 (i.e., Jan 1 of
+the next year), in preparation for an initial run starting Jan 1,
+it will be written to output as model day 1 (mtime 1,0,0), and can
+be used as a source history for the initial run starting Jan 1.
+
+11/7/08 btf: TO DO: set trap and error message if SOURCE is a
+secondary history. This should be done in sub nc_rdhist (nchist.F),
+using the global file attribute "history_type". Currently, if a
+secondary history is used, the model will seg fault (Wenbin experienced
+this). 
+
+----------------------------------------------------------------------
+12/2/08 btf:
+Mods to aurora.F from Wenbin, Barb, and Liying. Explanation from Wenbin:
+
+Four things have been added to the auroral module:
+
+1) asymmetric dawn and dusk convection cells and IMF By effect
+
+2) a limit on By (-11<By<7)
+
+3) I added a few lines of comments just before rote and rote to indicate
+that we are not going to multiple rote and roth with  the MLT to degree
+factor (15) in the current version of TIEGCM (TIEGCM 1.9.1). We will add
+them back after we complete our test with comparisons with GUVI and DMSP
+data in the next version.
+
+4) A variable named "eflux2d" is included in aurora.F by Barbary to
+output energy flux in secondary history files.
+
+Wenbin
+
+----------------------------------------------------------------------
+12/3/08 btf:
+Add lines to qrj.F and qinite.F to insure non-negative N2 at interfaces.
+Search on "fix for CISM". This was recommended by Wenbin via 10/23/08 email.
+
+Set max number of time-dependent namelist read parameters (e.g., bx,by,etc)
+from 100 up to 500. See params.F:
+mxind_time = 500   ! max number of time-dependent solar index points
+
+12/4/08 btf:
+Set sh%nflds and sh%fnames when reading source history (nchist.F).
+They were not being set correctly and made the code crash in sub copyhist
+(hist.F) on hao linux (altho it was working correctly on bluefire).
+
+12/8/08 btf: Change model_version from tiegcm1.9 to tiegcm1.91 (params.F)
+
+12/8/08 btf: Stan's "final" aurora.F, copied from /home/stans/aurorascs.F.

@@ -63,7 +63,7 @@
 #endif
 !
 ! For modules hist_mod and input_mod:
-      character(len=16),parameter :: tgcm_version = 'tiegcm1.9       '
+      character(len=16),parameter :: tgcm_version = 'tiegcm1.91      '
 !
 ! tgcm_name is either "tiegcm" or "time-gcm"
       character(len=8),parameter :: tgcm_name    = 'tiegcm'
@@ -74,6 +74,6 @@
      |  mxseries = 10,     ! max number of time series for primary histories
      |  mxseries_sech = 50,! max number of secondary history time series
      |  mxfsech = 100,     ! max number of fields on secondary histories
-     |  mxind_time = 100   ! max number of time-dependent solar index points
+     |  mxind_time = 500   ! max number of time-dependent solar index points
 !
       end module params_module

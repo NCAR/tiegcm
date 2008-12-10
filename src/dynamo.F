@@ -252,7 +252,8 @@
 !
       real,dimension(nmlonp1,nmlat,-2:nlevp1) :: 
      |  sigma1m3d, sigma2m3d, adotv1m3d, adotv2m3d, ed13d, ed23d,
-     |  je1oD_pg3d ! plasma pressure, gravity (j_pg=true) a/cm^2
+     |  je1oD_pg3d, ! plasma pressure, gravity (j_pg=true) a/cm^2
+     |  je2oD_pg3d  ! plasma pressure, gravity (j_pg=true) a/cm^2
       real,dimension(nmlonp1,nmlat) :: 
      |  bmodm3d,a1a2m3d,adotam3d,sinim3d
 !
@@ -1301,6 +1302,7 @@
               adotv2m3d(i,j,k) = adotvm(i,k,2)
 !	                    ! gravity + plasma pressure [A/cm^2]
               je1oD_pg3d(i,j,k) = je1_pg(i,k)  
+              je2oD_pg3d(i,j,k) = je2_pg(i,k)  
             enddo ! i=1,nmlon
 !
 ! Periodic point:
@@ -1313,7 +1315,8 @@
             adotv1m3d(nmlonp1,j,:) = adotv1m3d(1,j,:)
             adotv2m3d(nmlonp1,j,:) = adotv2m3d(1,j,:)
 	                     ! gravity + mag.pressure [A/cm^2]  
-            je1oD_pg3d(nmlonp1,j,:)= je1oD_pg3d(1,j,:) 
+            je1oD_pg3d(nmlonp1,j,:)= je1oD_pg3d(1,j,:)  
+            je2oD_pg3d(nmlonp1,j,:)= je2oD_pg3d(1,j,:) 
           enddo ! k=-2,nlevp1
 !
 ! Upper boundary:
@@ -1326,6 +1329,7 @@
             adotv2m3d(i,j,nlevp1) = adotvm(i,nlev,2)
 	                    ! gravity + mag.pressure [A/cm^2]  
             je1oD_pg3d(i,j,nlevp1)  = je1_pg(i,nlev)
+            je2oD_pg3d(i,j,nlevp1)  = je2_pg(i,nlev)
           enddo ! i=1,nmlon
 !
 ! Without calculation of k_(q,lam)
@@ -1402,6 +1406,7 @@
               adotv2m3d(i,j,k) = adotvm(i,k,2)
 !	      
               je1oD_pg3d(i,j,k)  = je1_pg(i,k)  ! gravity + mag.pressure
+              je2oD_pg3d(i,j,k)  = je2_pg(i,k)  ! gravity + mag.pressure
             enddo
             sigma1m3d(i,j,nlevp1) = sigma_pedm(i,nlev)
             sigma2m3d(i,j,nlevp1) = sigma_hallm(i,nlev)
@@ -1420,6 +1425,7 @@
           adotv1m3d(nmlonp1,j,:) = adotv1m3d(1,j,:)
           adotv2m3d(nmlonp1,j,:) = adotv2m3d(1,j,:)
           je1oD_pg3d(nmlonp1,j,:)  = je1oD_pg3d(1,j,:)  ! gravity + mag.pressure
+          je2oD_pg3d(nmlonp1,j,:)  = je2oD_pg3d(1,j,:)  ! gravity + mag.pressure
         enddo ! jj=1,2
       endif ! calkqlam==1
 !

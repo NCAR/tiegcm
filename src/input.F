@@ -1849,6 +1849,14 @@
           call shutdown('IMF with HEELIS')
         endif
 !
+! 12/3/08 btf: User may set BY to test BY effect on Heelis (see aurora.F)
+! 
+        if (byimf == spval) then
+          write(6,"('Note input: Setting BY to 0 with HEELIS ',
+     |      'potential model.')")
+          byimf = 0.
+        endif
+!
 ! Heelis non-gpi run: user must provide power,ctpoten,f107,f107a:
 ! Later, an alternative would be for the user to provide IMF data 
 !   then use empirical calculation to get power, etc from the IMF.

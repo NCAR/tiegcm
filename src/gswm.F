@@ -116,6 +116,7 @@
       integer :: idv_z, idv_t, idv_u, idv_v
       character(len=240) :: char240
       real,dimension(nlonp4,nlat,nmonth,nhour) :: t,u,v,z
+      real,dimension(nlon,nlat,nmonth,nhour) :: tmp
 !
       dskfile = ' '
       call getfile(ncfile,dskfile)
@@ -196,7 +197,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting Z var id')
       z = 0. ! init
-      istat = nf_get_var_double(ncid,idv_z,z(3:nlon+2,:,:,:))
+      istat = nf_get_var_double(ncid,idv_z,tmp)
+      z(3:nlon+2,:,:,:) = tmp(:,:,:,:)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable Z')
       z = z*100. 	! convert from m to cm
@@ -209,7 +211,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting TN var id')
       t = 0.
-      istat = nf_get_var_double(ncid,idv_t,t(3:nlon+2,:,:,:))
+      istat = nf_get_var_double(ncid,idv_t,tmp)
+      t(3:nlon+2,:,:,:) = tmp(:,:,:,:)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable TN')
       write(6,"('rdgswm ',a,': tn min,max=',2e12.4)") 
@@ -221,7 +224,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting UN var id')
       u = 0.
-      istat = nf_get_var_double(ncid,idv_u,u(3:nlon+2,:,:,:))
+      istat = nf_get_var_double(ncid,idv_u,tmp)
+      u(3:nlon+2,:,:,:) = tmp(:,:,:,:)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable UN')
       u = u*100. 	! convert to cm/s
@@ -234,7 +238,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting VN var id')
       v = 0.
-      istat = nf_get_var_double(ncid,idv_v,v(3:nlon+2,:,:,:))
+      istat = nf_get_var_double(ncid,idv_v,tmp)
+      v(3:nlon+2,:,:,:) = tmp(:,:,:,:)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable VN')
       v = v*100. 	! convert to cm/s

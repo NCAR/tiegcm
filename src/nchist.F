@@ -183,11 +183,13 @@
 !
 ! Local:
       integer,parameter :: mxdims=20 ! assume <= mxdims dimensions
+      integer,parameter :: mxvars=100 ! max # 4d vars
       integer :: istat,id_time,id_mtimedim,mtime_read(3),ntimes,
      |  i,ix,istart2(2),icount2(2),j,i4dims(4)
       integer :: ndims,nvars,ngatts,idunlim,itype,natts,len,
      |  iddims(mxdims),iscalar
       character(len=80) :: varname
+      character(len=80) :: varnames(mxvars)=' '
       real :: scalar,var1(1),var22(2,2),var2(2),var10(10),varlbc
       real,dimension(nlevp1) :: zpmid_rd,zpint_rd
 !
@@ -468,6 +470,8 @@
             if (nsource <= 0) then
               istat=nf_get_att_int(ncid,i,"initial_year",
      |          sh%initial_year)
+              istat=nf_get_att_int(ncid,i,"initial_day",
+     |          sh%initial_day)
               istat=nf_get_att_int(ncid,i,"initial_mtime",
      |          sh%initial_mtime)
             endif
@@ -746,6 +750,8 @@
               do j=1,nf4d_hist
                 if (trim(varname)==f4d(j)%short_name) then
                   call rdf4d(ncid,varname,itime,j)
+                  sh%nflds = sh%nflds+1
+                  varnames(sh%nflds) = varname
                 endif
               enddo
 !
@@ -754,8 +760,11 @@
 !
             elseif (varname=='W') then
               do j=1,nf4d_hist
-                if (f4d(j)%short_name=='OMEGA')
-     |            call rdf4d(ncid,varname,itime,j)
+                if (f4d(j)%short_name=='OMEGA') then
+                  call rdf4d(ncid,varname,itime,j)
+                  sh%nflds = sh%nflds+1
+                  varnames(sh%nflds) = varname
+                endif
               enddo
 !
 ! Variable is unknown to the model:
@@ -770,6 +779,21 @@
       sh%zmbot = zmbot
       sh%zitop = zitop
       sh%zibot = zibot
+      if (associated(sh%fnames)) deallocate(sh%fnames)
+      if (sh%nflds > 0) then
+        allocate(sh%fnames(sh%nflds),stat=ier)
+        if (ier /= 0) then
+          write(6,"('>>> nc_rdhist: error allocating sh%fnames with ',
+     |      ' sh%nflds=',i4)") sh%nflds
+          call shutdown('source hist nflds')
+        endif
+      else
+        write(6,"('>>> sh%nflds=',i4)") sh%nflds
+        call shutdown('sh%nflds')
+      endif
+      do i=1,sh%nflds
+        sh%fnames(i) = varnames(i)
+      enddo
 !
 ! Report to stdout:
       call hist_print(sh,'READ',diskfile)
@@ -1158,20 +1182,14 @@
       rmins = mtime_to_datestr(sh%initial_year,startmtime,imo,ida,
      |  char80)
       istat = nf_put_att_text(ncid,idv_time,"long_name",4,"time")
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining long_name of time dimension variable')
       istat = nf_put_att_text(ncid,idv_time,"units",len_trim(char80),
      |  trim(char80))
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining units of time dimension variable')
       istat = nf_put_att_int(ncid,idv_time,"initial_year",NF_INT,1,
      |  h%initial_year)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining initial_year attribute of time coord var')
+      istat = nf_put_att_int(ncid,idv_time,"initial_day",NF_INT,1,
+     |  h%initial_day)
       istat = nf_put_att_int(ncid,idv_time,"initial_mtime",NF_INT,3,
      |  h%initial_mtime)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     +  'Error defining initial_mtime attribute of time coord var')
 !
 ! Geographic longitude (deg) (coordinate variable lon(lon)):
       ids1(1) = id_lon
@@ -1408,6 +1426,8 @@
 ! (they are also global file attributes):
       istat = nf_put_att_int(ncid,idv_time,"initial_year",NF_INT,1,
      |  sh%initial_year)
+      istat = nf_put_att_int(ncid,idv_time,"initial_day",NF_INT,1,
+     |  sh%initial_day)
       istat = nf_put_att_int(ncid,idv_time,"initial_mtime",NF_INT,3,
      |  sh%initial_mtime)
 !
@@ -2425,115 +2445,6 @@
       endif
       end subroutine defvar_f4d
 !-----------------------------------------------------------------------
-      subroutine defvar_f3d(ncid,f,idvar)
-!
-! Define a prognostic variable on current netcdf history file:
-! (not data -- see wrf3d for data write)
-!
-! Args:
-      integer,intent(in)  :: ncid
-      integer,intent(out) :: idvar
-      type(fields_3d),intent(in) :: f
-!
-! Local:
-      integer :: istat,idimids(4)
-      character(len=80) :: char80
-      character(len=160) :: char160
-      real :: var1(1)
-!
-! Prognostics are dimensioned (lon,lat,lev,time):
-      if (.not.fakeflds) then
-        idimids(1) = id_lon
-        idimids(2) = id_lat
-        idimids(3) = id_lev                             ! midpoints
-        if (f%vcoord(1:3)=='int') idimids(3) = id_ilev  ! interfaces
-        idimids(4) = id_time
-      else
-        idimids(1:3) = id_fake
-        idimids(4) = id_time
-      endif
-! This call returns the variable id, idvar.
-      istat = nf_def_var(ncid,f%short_name,NF_DOUBLE,4,idimids,idvar)
-      if (istat /= NF_NOERR) then
-        write(char80,"('Error defining 4-d field ',a)") 
-     |    f%short_name
-        call handle_ncerr(istat,trim(char80))
-      endif
-!
-! Add long_name attribute:
-      istat = nf_put_att_text(ncid,idvar,"long_name",
-     |  len_trim(f%long_name),trim(f%long_name))
-!
-! Cray apparently crashed here after 1380 steps 
-! (char80 was used)
-      if (istat /= NF_NOERR) then
-        write(char160,"('Error defining long_name of 4-d',
-     |    ' variable ',a,': long_name = ',/,a)") trim(f%short_name),
-     |    trim(f%long_name)
-        call handle_ncerr(istat,trim(char160))
-      endif
-!
-! Add units attribute:
-! We may be writing to primary or secondary histories here (secondaries
-!   only if this is a "prognostic" field (i.e., also on primary histories)).
-! To comply with Unidata's udunits, if f%units==MMR (or mmr), set units
-!   to "1" (fractional). Then add alternate_units attribute with the
-!   value of f%units (i.e., alternate_units="MMR" or "mmr")
-! 10/5/05 btf: using "fraction" instead of "1" (despite non-valid udunits)
-!
-      if (trim(f%units)=='MMR'.or.trim(f%units)=='mmr') then
-
-!       write(6,"('Note: changing units of ',a,' from ',a,' to ''1''', 
-!    |    ' and adding alternate_units=''',a,'''')")
-!    |    trim(f%short_name),trim(f%units),trim(f%units)
-!       write(6,"('Note: changing units of ',a,' from ',a,' to ',
-!    |    '''fraction'' and adding alternate_units=''',a,'''')")
-!    |    trim(f%short_name),trim(f%units),trim(f%units)
-
-!       istat = nf_put_att_text(ncid,idvar,"units",1,'1')
-        istat = nf_put_att_text(ncid,idvar,"units",8,'fraction')
-        if (istat /= NF_NOERR) then
-!         write(char80,"('Error setting units of ',a,' to ''1''')")
-!    |      trim(f%short_name)
-          write(char80,"('Error setting units of ',a,' to ',
-     |      '''fraction''')") trim(f%short_name)
-          call handle_ncerr(istat,trim(char80))
-        endif
-        istat = nf_put_att_text(ncid,idvar,"alternate_units",
-     |    len_trim(f%units),f%units)
-        if (istat /= NF_NOERR) then
-          write(char80,"('Error adding attribute alternate_units=',a,
-     |      ' to var ',a)") trim(f%units),trim(f%short_name)
-          call handle_ncerr(istat,trim(char80))
-        endif
-      else
-        istat = nf_put_att_text(ncid,idvar,"units",len_trim(f%units),
-     |    f%units)
-        if (istat /= NF_NOERR) then
-          write(char80,"('Error defining units of 4-d',
-     |      ' variable ',a,': units = ',a)") trim(f%short_name),
-     |      trim(f%units)
-          call handle_ncerr(istat,trim(char80))
-        endif
-      endif
-!
-! 10/27/05 btf: Add former_name attribute to OMEGA to indicate it
-!               was previously known as W:
-      if (f%short_name=='OMEGA') then
-        istat = nf_put_att_text(ncid,idvar,"former_name",1,"W")
-      endif
-!
-! Add missing_value attribute:
-      var1(1) = spval
-      istat = nf_put_att_double(ncid,idvar,"missing_value",
-     |  NF_DOUBLE,1,var1)
-      if (istat /= NF_NOERR) then
-        write(char160,"('defvar_f4d: Error return from ',
-     |    'nf_put_att_double for missing_value var attribute')")
-        call handle_ncerr(istat,char160)
-      endif
-      end subroutine defvar_f3d
-!-----------------------------------------------------------------------
       subroutine nc_wrhist(ncid,diskfile,iprint)
 !
 ! Write current history structure to open netcdf output file:
@@ -2583,7 +2494,7 @@
       if (istat /= NF_NOERR) then
         write(char240,"('Error from nf_put_var1_double defining ',
      |    'time at h%modeltime=',4i4,' mtimeinit=',3i4,
-     |    ' delta (days)=',f8.2)") h%modeltime,rdays,mtimeinit(1:3)
+     |    ' delta (days)=',f8.2)") h%modeltime,mtimeinit(1:3),rdays
         call handle_ncerr(istat,char240)
       endif
 !
@@ -2593,6 +2504,17 @@
       count_2d(1) = 3
       count_2d(2) = 1
       if (idv_mtime <= 0) istat = nf_inq_varid(ncid,"mtime",idv_mtime)
+!
+! If model day is > 365, write actual day of year, i.e. day-365
+! (e.g., if model day is 366, write model day 1 to the history)
+!
+      if (h%modeltime(1) > 365) then
+        write(6,"('Note: Changed model day from ',i4,' to ',i4,
+     |    ' before writing to history file.')")
+     |    h%modeltime(1), h%modeltime(1)-365
+        h%modeltime(1) = h%modeltime(1)-365
+      endif
+!
       istat = nf_put_vara_int(ncid,idv_mtime,start_2d,count_2d,
      |  h%modeltime(1:3))
       if (istat /= NF_NOERR) then

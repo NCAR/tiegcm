@@ -38,13 +38,14 @@
       use qrj_module,only: init_sflux
       use magfield_module,only: sunloc
       use efield_module,only: efield
-      use aurora_module,only: aurora_cons,cusp2d,drzl2d,alfa2d,nflx2d
+      use aurora_module,only: aurora_cons,cusp2d,drzl2d,alfa2d,nflx2d,
+     |  eflux2d
       use hdif_module,only: hdif1,hdif2
       use timing_module,only: timer,timing
       use dynamo_module,only: prep_dynamo,dynamo,
      |  phihm,nmlat0,zpotenm3d
       use gpi_module,only: rdgpi,getgpi
-      use imf_module,only: rdimf,getimf
+      use imf_module,only: getimf
       use gswm_module,only: getgswm
       use params_module,only: nlonp4,nlat,nlev
       use output,only: outhist
@@ -423,14 +424,16 @@
      |    ' Advance: step ',i5)") time1_dynamics,istep
 !
 ! Save Cusp, drizzle, alfa and nflux to secondary history to plot later
-!     call addfld ('CUSP','2D CUSP','0-1',cusp2d,'lon',lon0,lon1,
-!    |  'lat',lat0,lat1,0)
-!     call addfld ('DRIZZLE','2D DRIZZLE','0-1',drzl2d,'lon',lon0,lon1,
-!    |  'lat',lat0,lat1,0)
-!     call addfld ('ALFA','2D ALFA','keV',alfa2d,'lon',lon0,lon1,
-!    |  'lat',lat0,lat1,0)
-!     call addfld ('NFLUX','2D NFLUX','#/cm3?',nflx2d,'lon',lon0,lon1,
-!    |  'lat',lat0,lat1,0)
+!     call addfld ('CUSP','2D CUSP','0-1',
+!    |  cusp2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld ('DRIZZLE','2D DRIZZLE','0-1',
+!    |  drzl2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld ('ALFA','2D ALFA','keV',
+!    |  alfa2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld ('NFLUX','2D NFLUX','#/cm2-s',
+!    |  nflx2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld ('EFLUX','2D EFLUX','mW/m^2',
+!    |  eflux2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
 ! Call dynamo if namelist input flag is set:
       call timer(time0_dynamo,time1_dynamo,'DYNAMO',0,0)

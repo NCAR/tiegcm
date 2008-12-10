@@ -87,7 +87,10 @@ ifeq ($(UNAMES),AIX)
   endif
   CPPFLAGS := $(subst $(space),$(comma),$(CPPFLAGS))
   FFLAGS     := $(cpp_path) $(OPTIM) $(DBGFLAGS) -qarch=auto -qrealsize=8 -q64
-  LDFLAGS    += -bloadmap:loadmap -q64
+#
+# 11/21/08: Add 64K page sizes:
+  LDFLAGS    += -bloadmap:loadmap -q64 $(OPTIM)
+  LDFLAGS    += -bdatapsize:64K -bstackpsize:64K -btextpsize:64K
 endif # AIX
 #-----------------------------------------------------------------------
 #

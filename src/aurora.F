@@ -27,7 +27,7 @@
 ! There is provision for a proton (MeV) aurora, but the flux is usually
 !  set to zero (1.e-20).
 ! The drizzle is a constant low energy electron flux over the polar cap,
-!  which goes to 1/e over twice the half-width of the aurora at the
+!  which goes to 1/e over twice the 1/e-width of the aurora at the
 !  radius of the aurora.
 ! The cusp is a low energy electron flux centered over the dayside convection
 !  entrance at phid at the convection reversal boundary theta0.  The cusp
@@ -69,6 +69,11 @@
 #include <VT.inc>
 #endif
 !
+! 11/08 EMERY added eflux=flux*fac_p2e*alfa   (fac_p2e=2*1.602e-9, so 2*alfa in this factor)
+      real, parameter:: fac_p2e = 3.204e-9 ! convert from particle to energy flux
+
+      real,parameter :: h2deg = 15.     ! convert from hours to degrees
+
 ! Grid dimensions:
       logical :: do_aurora ! flag to calculate aurora at current lat
       integer :: ihem      ! hemisphere at current latitude (1=SH,2=NH)
@@ -100,8 +105,8 @@
 !
 ! e1: Peak energy flux in noon sector of the aurora (ergs/cm**2/s)
 ! e2: Peak energy flux in midnight sector of the aurora (ergs/cm**2/s)
-! h1: Gaussian half-width of the noon auroral oval in degrees
-! h2: Gaussian half-width of the midnight auroral oval in degrees
+! h1: Gaussian 1/e-width of the noon auroral oval in degrees
+! h2: Gaussian 1/e-width of the midnight auroral oval in degrees
 !
       real ::
      |  e1,e2, ! set in sub aurora_cons (function of hem power)
@@ -139,37 +144,40 @@
      |  theta0(2),    ! convection reversal boundary in radians
      |  offa(2),      ! offset of oval towards 0 MLT relative to magnetic pole (rad)
      |  dskofa(2),    ! offset of oval in radians towards 18 MLT (f(By))
-     |  phid(2),      ! dayside convection entrance in MLT converted to radians (f(By))
-     |  phin(2),      ! night convection entrance in MLT converted to radians (f(By))
+     |  phid(2),      ! dayside convection entrance in MLT (subtract 12h since 0=noon) converted to radians (f(By))
+     |  phin(2),      ! night convection entrance in MLT (subtract 12h since 0=noon) converted to radians (f(By))
      |  rrad(2),      ! radius of auroral circle in radians
      |  alfa0,        ! average of noon and midnight characteristic Maxw energies
      |  ralfa,ralfa2, ! difference ratios of characteristic energies
-     |  rrote,        ! clockwise rotation from noon of peak dayside energy flux (e1)
-     |  rroth,        ! clockwise rotation from noon of dayside h1 Gaussian half-width
-     |  h0,           ! average of noon and midnight Gaussian half-widths
-     |  rh,           ! difference ratio of half-widths (rh=(h2-h1)/(h2+h1))
+     |  rrote,        ! MLT of maximum auroral energy flux converted to radians
+     |  rroth,        ! MLT of maximum auroral Gaussian 1/e-width converted to radians
+     |  h0,           ! average of noon and midnight Gaussian 1/e-widths
+     |  rh,           ! difference ratio of 1/e-widths (rh=(h2-h1)/(h2+h1))
      |  e0,e20,       ! e0 = average of noon and midnight electrons
      |  ree,re2,      ! difference ratios of peak energy fluxes (ree=(e2-e1)/(e2+e1))
      |  alfa20        ! average of noon and midnight char energies for high alt aurora
 !
 ! The following parameters are used only by heelis module for dynamo:
       real ::
-     |  offc(2),      !
-     |  dskofc(2),    !
-     |  psim(2),      ! 
-     |  psie(2),      !
-     |  pcen(2),      !
-     |  phidp0(2),    !
-     |  phidm0(2),    !
-     |  phinp0(2),    !
-     |  phinm0(2),    !
-     |  rr1(2)
+     |  offc(2),      ! offset of convection towards 0 MLT relative to magnetic pole (rad)
+     |  dskofc(2),    ! offset of convection in radians towards 18 MLT (f(By))
+     |  psim(2),      ! maximum potential in the morning cell (V)
+     |  psie(2),      ! minimum potential in the evening cell (V)
+     |  pcen(2),      ! potential at the center (offc,dskofc) of the convection pattern (V, f(By))
+     |  phidp0(2),    ! angle curvature of convection on plus side of dayside entrance (rad)
+     |  phidm0(2),    ! angle curvature of convection on minus side of dayside entrance (rad)
+     |  phinp0(2),    ! angle curvature of convection on plus side of nightside entrance (rad)
+     |  phinm0(2),    ! angle curvature of convection on minus side of nightside entrance (rad)
+     |  rr1(2)        ! exponential fall-off of convection from convection radius
 !
 ! Auroral circle coordinates (see sub aurora):
       real ::
-     |  dlat_aur(nlon), dlon_aur(nlon),
-     |  colat(nlon),  sinlat(nlon), coslat(nlon),
-     |  coslon(nlon), sinlon(nlon), alon(nlon)
+     |  dlat_aur(nlon), ! = rlatm = magnetic latitude (radians)
+     |  dlon_aur(nlon), ! = rlonm-sunlons = magnetic longitude (or MLT-12 where 0=noon) converted to radians
+     |  colat(nlon),    ! auroral magnetic co-latitude from offset center (radians)
+     |  sinlat(nlon), coslat(nlon),     ! sin,cos of dlat_aur (rlatm) magnetic latitude
+     |  coslon(nlon), sinlon(nlon),     ! sin,cos of dlon_aur+offset
+     |  alon(nlon)                      ! auroral magnetic longitude where 0=noon shifted by -offset (radians)
 !
 ! Local-time dependent energy and particle fluxes:
 ! (see subs aurora_heat and aurora_cusp)
@@ -177,10 +185,12 @@
      |  alfa(nlonp4), alfa2(nlonp4), alfa3(nlonp4), ! characteristic energy
      |  flux(nlonp4), flux2(nlonp4), flux3(nlonp4), ! particle flux
      |  drizl(nlonp4),cusp(nlonp4),                 ! polar drizzle and cusp
-     |  qteaur(nlonp4,nlat)                         ! for electron temperature
-! TEMP
+     |  qteaur(nlonp4,nlat),                        ! for electron temperature
+     |  eflux(nlonp4),eflux2(nlonp4),eflux3(nlonp4) ! energy flux
+! 11/08 EMERY added energy flux eflux and eflux2d
       real :: cusp2d(nlonp4,nlat),drzl2d(nlonp4,nlat),
-     |        alfa2d(nlonp4,nlat),nflx2d(nlonp4,nlat)
+     |        alfa2d(nlonp4,nlat),nflx2d(nlonp4,nlat),
+     |        eflux2d(nlonp4,nlat)
 !
 ! aureff = vertical profile for auroral heating efficiency (used by qjion)
 ! 
@@ -199,7 +209,8 @@
       use input_module,only:  ! from user input
      |  byimf,   ! BY component of IMF (nT)      (e.g., 0.)
      |  ctpoten, ! cross-cap potential (kV)      (e.g., 45.)
-     |  power    ! hemispheric power   (GW)      (e.g., 16.)
+     |  power,   ! hemispheric power   (GW)      (e.g., 16.)
+     |  potential_model  ! electric potential model used
 !
 ! Args:
       integer,intent(in) :: iprint
@@ -209,6 +220,7 @@
       real :: alfa_1,alfa_2,plevel,roth,rote,rcp,rhp,
      |  alfa21,alfa22,e21,e22
       real :: arad(2)
+      real :: byloc   ! local by
       real,parameter :: e=1.e-10
 !
 ! Auroral heating efficiency (nlevp1) according to vertical resolution 
@@ -257,6 +269,15 @@
         call shutdown('aurora dz')
 #endif
 !
+! Add limits to byimf if use the Heelis convection pattern,this is to have 
+! asymmetric dawn and dusk convection cells and By effect. --Wenbin Wang 12/02/2008
+!
+      byloc = byimf ! init local from original namelist input
+      If (potential_model == 'HEELIS') then
+        if (byloc > 7.0) byloc = 7.0
+        if (byloc < -11.0) byloc = -11.0         
+      endif
+
       plevel = 0.
 ! 8/1/06 btf: change conditional as per Richmond suggestion:
 !     if (power >= 0.01) plevel = 2.09*alog(power)
@@ -277,8 +298,8 @@
       ec=(0.24+0.0067*power)/5. 
       ed=0.0012+0.0006*power
 !
-! h1 = Gaussian half-width of the noon auroral oval in degrees
-! h2 = Gaussian half-width of the midnight auroral oval in degrees
+! h1 = Gaussian 1/e-width of the noon auroral oval in degrees
+! h2 = Gaussian 1/e-width of the midnight auroral oval in degrees
 ! modified by LQIAN, 2007
 ! produce realistic oval compared to NOAA empirical auroral oval and TIMED/GUVI
 ! h1 formula given by Wenbin base on POLARVIS image;
@@ -306,11 +327,22 @@
       alfa_2 = 2.
       alfa0 = 0.5*(alfa_1+alfa_2)
       ralfa = (alfa_2-alfa_1) / (alfa_1+alfa_2+e)
-!
-      roth = (12.18 - 0.89 * plevel)
-      rote = ( 2.62 - 0.55 * plevel)
-      rroth = roth * dtr
-      rrote = rote * dtr
+
+! 12/8/08 scs: In-lined rotation units and cleaned up comments
+!              Old rotation angles were:  roth = 12.18 - 0.89 * plevel
+!                                         rote =  2.62 - 0.55 * plevel
+
+! roth = MLT of max width of aurora in hours
+! rote = MLT of max energy flux of aurora in hours
+
+      roth = 0.81 - 0.06 * plevel
+      rote = 0.17 - 0.04 * plevel
+
+!  Convert MLT from hours to degrees to radians
+
+      rroth = roth * h2deg * dtr
+      rrote = rote * h2deg * dtr
+
       h0 = 0.5 * (h1 + h2) * dtr
       alfa21 = 0.075
       alfa22 = 0.075
@@ -334,18 +366,40 @@
 ! The following parameters (offc through rr1) are used only in heelis 
 !   potential calculation for the dynamo (see heelis.F)
 !
-      offc(isouth) = 1.*dtr
-      offc(inorth) = 1.*dtr
-      dskofc(isouth) = 0.
-      dskofc(inorth) = 0.
-      phid(isouth) = 0.
-      phid(inorth) = 0.
-      phin(isouth) = 180.*dtr
-      phin(inorth) = 180.*dtr
-      psim(:) =  0.50 * ctpoten * 1000.
-      psie(:) = -0.50 * ctpoten * 1000.
-      pcen(isouth) = 0.
-      pcen(inorth) = 0.
+!  tiegcm1.9
+!     offc(isouth) = 1.*dtr
+!     offc(inorth) = 1.*dtr
+!     dskofc(isouth) = 0.
+!     dskofc(inorth) = 0.
+!     phid(isouth) = 0.
+!     phid(inorth) = 0.
+!     phin(isouth) = 180.*dtr
+!     phin(inorth) = 180.*dtr
+!     psim(:) =  0.50 * ctpoten * 1000.
+!     psie(:) = -0.50 * ctpoten * 1000.
+!     pcen(isouth) = 0.
+!     pcen(inorth) = 0.
+!     phidp0(:) = 90.*dtr
+!     phidm0(:) = 90.*dtr
+!     phinp0(:) = 90.*dtr
+!     phinm0(:) = 90.*dtr
+!     rr1(:) = -2.6
+!
+! tiegcm original with assymmetry and By effect
+!     write(6,"(/,'byloc (local by)=',f8.3)") byloc
+
+      offc(isouth) = 1.1*dtr
+      offc(inorth) = 1.1*dtr
+      dskofc(isouth) = (-0.08 + 0.15*byloc)*dtr
+      dskofc(inorth) = (-0.08 - 0.15*byloc)*dtr
+      phid(isouth) = (9.39 + 0.21*byloc - 12.) * h2deg * dtr
+      phid(inorth) = (9.39 - 0.21*byloc - 12.) * h2deg * dtr
+      phin(isouth) = (23.50 + 0.15*byloc - 12.) * h2deg * dtr
+      phin(inorth) = (23.50 - 0.15*byloc - 12.) * h2deg * dtr
+      psim(:) =  0.44 * ctpoten * 1000.
+      psie(:) = -0.56 * ctpoten * 1000.
+      pcen(isouth) = (-0.168 + 0.027*byloc) * ctpoten * 1000.
+      pcen(inorth) = (-0.168 - 0.027*byloc) * ctpoten * 1000.
       phidp0(:) = 90.*dtr
       phidm0(:) = 90.*dtr
       phinp0(:) = 90.*dtr
@@ -359,7 +413,9 @@
      |    alfac,ec,fc
         write(6,"('  drizzle: alfad=',f8.3,' ed=',f8.3,' fd=',e10.4)")
      |    alfad,ed,fd
-        write(6,"('  half-widths = h1,h2=',2f10.3)") h1,h2
+	write(6,"('  auroral radius = max of rhp,rcp=',2f10.3)") rhp,rcp
+	write(6,"('  roth, rote (MLT) =',2f10.3)") roth,rote
+	write(6,"('  1/e-widths = h1,h2=',2f10.3)") h1,h2
         write(6,"('  energy flux = e1,e2=',2f10.3)") e1,e2
         write(6,"('  add_sproton = ',l1)") add_sproton
         if (add_sproton) write(6,"('  solar protons: alfa_sp=',f8.3,
@@ -467,13 +523,13 @@
 ! Make alfa, flux, and drizzle:
       call aurora_heat(lat)
 
-! TEMP
 ! Save aurora oval on exit to full arrays so can save later to secondary history
       do i=lon0,lon1
       cusp2d(i,lat)=cusp(i)
       drzl2d(i,lat)=drizl(i)
       alfa2d(i,lat)=alfa(i)
       nflx2d(i,lat)=flux(i)
+      eflux2d(i,lat)=eflux(i)
       enddo
 !
 ! Auroral additions to ionization rates:
@@ -483,9 +539,11 @@
 !     subroutine aurora_ions(drizl,cusp,alfa1,alfa2,flux1,flux2,
 !    |  tn,o2,o1,barm,zpbot,dzp,lev0,lev1,lon0,lon1,lat)
 !
-      call aurora_ions(
+! 11/08 EMERY added eflux=flux*fac_p2e*alfa - (better for falfa1 if alfa quite variable)
+      call aurora_ions(fac_p2e,
      |  drizl(lon0:lon1), cusp (lon0:lon1),
      |  alfa (lon0:lon1), alfa2(lon0:lon1), alfa3(lon0:lon1),
+     |  eflux(lon0:lon1), eflux2(lon0:lon1), eflux3(lon0:lon1),
      |  flux (lon0:lon1), flux2(lon0:lon1), flux3(lon0:lon1),
      |  tn,o2,o1,barm,zibot,dz,lev0,lev1,lon0,lon1,lat)
 !
@@ -559,8 +617,9 @@
       integer :: i
       real,dimension(nlon) :: 
      |  coslamda,  ! cos(angle from throat)
-     |  halfwidth, ! oval half-width
+     |  halfwidth, ! oval 1/e-width
      |  dtheta     ! latitudinal variation (Gaussian)
+
 !
 ! Low-energy protons:
 !     alfap0 = 0.5*(alfap1+alfap2)
@@ -576,7 +635,7 @@
           coslamda(i) = cos(atan2(sin(alon(i)-rrote),
      |                            cos(alon(i)-rrote)))
 !
-! Auroral oval half-width (equation (1) in Roble,1987):
+! Auroral oval 1/e-width (equation (1) in Roble,1987):
           halfwidth(i)=h0*(1.-rh*cos(atan2(sin(alon(i)-rroth),
      |      cos(alon(i)-rroth))))
           dtheta(i) = colat(i)-rrad(ihem)
@@ -609,14 +668,18 @@
 ! Energy flux (equation (3) in Roble,1987):
         flux(i+2) = e0*(1.-ree*coslamda(i))*exp(-(dtheta(i)/
      |    halfwidth(i))**2) / (2.*alfa(i+2)*1.602e-9)
+! 11/08 EMERY added eflux=flux*fac_p2e*alfa
+	eflux(i+2) = flux(i+2)*fac_p2e*alfa(i+2)
         drizl(i+2) = exp(-((dtheta(i)+abs(dtheta(i)))/(2.*h0))**2)
         alfa2(i+2) = alfa20*(1.-ralfa2*coslamda(i))
         flux2(i+2) = e20*(1.-re2*coslamda(i))*exp(-(dtheta(i)/
      |    halfwidth(i))**2) / (2.*alfa2(i+2)*1.602E-9)
+	eflux2(i+2) = flux2(i+2)*fac_p2e*alfa2(i+2)
 !
 ! Alfa3, flux3 for high energy electrons:
         alfa3(i+2) = alfa30
         flux3(i+2) = e30*exp(-(dtheta(i)/halfwidth(i))**2)/1.602e-6
+	eflux3(i+2) = flux3(i+2)*fac_p2e*alfa3(i+2)
 !
 ! For electron temperature (used in settei):  
         qteaur(i+2,lat) = -7.e+8*exp(-(dtheta(i)/halfwidth(i))**2)
@@ -626,25 +689,34 @@
       do i=1,2
         alfa  (i) = alfa (nlon+i)
         flux  (i) = flux (nlon+i)
+	eflux (i) = eflux(nlon+i)
         drizl (i) = drizl(nlon+i)
         alfa2 (i) = alfa2(nlon+i)
         alfa3 (i) = alfa3(nlon+i)
         flux2 (i) = flux2(nlon+i)
         flux3 (i) = flux3(nlon+i)
+	eflux2 (i) = eflux2(nlon+i)
+	eflux3 (i) = eflux3(nlon+i)
         qteaur(i,lat)= qteaur(nlon+i,lat)
         alfa  (nlonp2+i) = alfa (i+2)
         flux  (nlonp2+i) = flux (i+2)
+	eflux (nlonp2+i) = eflux(i+2)
         drizl (nlonp2+i) = drizl(i+2)
         alfa2 (nlonp2+i) = alfa2(i+2)
         alfa3 (nlonp2+i) = alfa3(i+2)
+	flux2 (nlonp2+i) = flux2(i+2)
         flux3 (nlonp2+i) = flux3(i+2)
+	eflux2 (nlonp2+i) = eflux2(i+2)
+	eflux3 (nlonp2+i) = eflux3(i+2)
         qteaur(nlonp2+i,lat)= qteaur(i+2,lat)
       enddo
       end subroutine aurora_heat
       end module aurora_module
 !-----------------------------------------------------------------------
-      subroutine aurora_ions(drizl,cusp,alfa1,alfa2,alfa3,flux1,flux2,
-     |  flux3,tn,o2,o1,barm,zpbot,dzp,lev0,lev1,lon0,lon1,lat)
+! 11/08 EMERY added eflux=flux*fac_p2e*alfa (better when alfa quite variable)
+      subroutine aurora_ions (fac_p2e,drizl,cusp,alfa1,alfa2,alfa3,
+     |  eflux1,eflux2,eflux3,flux1,flux2,flux3,
+     |  tn,o2,o1,barm,zpbot,dzp,lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate aroral additions to ionization rates.
 ! Note this routine is standalone, not in aurora_module.
@@ -674,9 +746,11 @@
       implicit none
 !
 ! Args:
+      real,intent(in) :: fac_p2e                ! convert from particle to energy flux
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lon0:lon1) :: 
-     |  drizl,cusp,alfa1,alfa2,alfa3,flux1,flux2,flux3
+      real,intent(in),dimension(lon0:lon1) :: drizl,cusp,
+     |  alfa1,alfa2,alfa3,eflux1,eflux2,eflux3,flux1,flux2,flux3
+! 11/08 EMERY added eflux=flux*fac_p2e*alfa as eflux1
       real,intent(in) :: zpbot,dzp
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
      |  tn,o2,o1,barm
@@ -762,11 +836,15 @@
      |  call aion(xalfa3, alfa3_ion,lev0,lev1,lon0,lon1,lat)
 !
       do i=lon0,lon1
-        falfa1(i) = alfa1(i)*flux1(i)  ! s7
-        falfa2(i) = alfa2(i)*flux2(i)  ! s8
+! 11/08 EMERY added eflux=flux*fac_p2e*alfa;  eflux1 better than flux1 if alfa quite variable
+	falfa1(i) = eflux1(i)/fac_p2e  ! s7  This should be equivalent to alfa1*flux1
+!       falfa1(i) = alfa1(i)*flux1(i)  ! s7
+	falfa2(i) = eflux2(i)/fac_p2e  ! s8  This should be equivalent to alfa2*flux2
+!       falfa2(i) = alfa2(i)*flux2(i)  ! s8
         fcusp (i) = cusp(i)*alfac*fc   ! s9
         fdrizl(i) = drizl(i)*alfad*fd  ! s10
-        falfa3(i) = alfa3(i)*flux3(i)  ! s13 (high energy electrons)
+	falfa3(i) = eflux3(i)/fac_p2e  ! s13 This should be equivalent to alfa3*flux3
+!       falfa3(i) = alfa3(i)*flux3(i)  ! s13 (high energy electrons)
 !
 ! Pressure column, bottom to top:
         do k=lev0,lev1-1

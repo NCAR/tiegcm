@@ -1052,6 +1052,7 @@
      |    'dest')")
         write(6,"('src=',a)") trim(src)
         write(6,"('dest=',a)") trim(dest)
+        write(6,"('opts=',a)") trim(opts)
         call shutdown('my_msrcp')
       endif
 !

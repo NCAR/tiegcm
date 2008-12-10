@@ -7,7 +7,7 @@
 ! tiegcmlicense.txt.
 !
       use params_module,only: dlat,dz,nlon,nlonp1,nlonp4,nlat,nlatp1,
-     |  dlev,nlev,nmlat,nmlon,nmlonp1,zmbot,zmtop,zibot,zitop
+     |  dlev,nlev,nmlat,nmlon,nmlonp1,zmbot,zmtop,zibot,zitop,dlon
       implicit none
 !
 ! Define model constants. 
@@ -259,7 +259,8 @@
       write(6,"(  'Model version = ',a)") tgcm_version
       write(6,"(/,'Set constants:')")
       write(6,"('  nlat=',i3,' nlon=',i3,' nlev=',i3)") nlat,nlon,nlev
-      write(6,"('  dz = ',f5.2)") dz
+      write(6,"('  dz= ',f5.2)") dz
+      write(6,"('  dlat=',f6.2,' dlon=',f6.2)") dlat,dlon
       write(6,"('  zbound (cm) = ',e12.6)") zbound
       write(6,"('  zmbot, zmtop = ',2f8.3,
      |  ' (bottom,top midpoint levels)')") zmbot,zmtop

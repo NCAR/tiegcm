@@ -18,6 +18,7 @@
       character(len=520) :: opts,testfile,cmd,tempfile
       character(len=8),save :: curdate,curtime
       integer :: ier,istat
+      logical :: async = .false. ! for asynchronous msrcp
 !
 ! External:
       integer,external :: isystem,my_msrcp
@@ -58,6 +59,9 @@
 ! Set mss class-of-service reliability to economy. 
 ! This means only one copy of the mss file will be written. 
         opts = '-class reliability=econ'
+!
+! Optionally do asynchonous msrcp (logical async is local above)
+        if (async) opts = trim(opts)//' -async'
 !
 ! Write password:
         if (len_trim(wrpass) > 0) 

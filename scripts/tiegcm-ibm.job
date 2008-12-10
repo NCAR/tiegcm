@@ -30,14 +30,8 @@
 #
 # Bluefire has 32-way nodes, so span[ptile=64] means 64 procs per node
 #
-##BSUB -n 32                 # 32 procs (1 node w/o SMT on bluefire)
-##BSUB -n 64                 # 64 procs
+##BSUB -n 16
 ##BSUB -R "span[ptile=64]"   # SMT (Symmetric Multi-Threading)
-#
-# Bluevista has 8-way nodes, so span[ptile=16] means 16 procs per node
-#
-##BSUB -n 32                 # 32 procs
-##BSUB -R "span[ptile=16]"   # SMT (Symmetric Multi-Threading)
 #
 # Debug queue (30 min wallclock limit, and -x not allowed)
 #
@@ -244,7 +238,10 @@ endif
 if ($?LSF_ENVDIR) then     # LSF batch
   echo "" ; echo "Executing model $model with mpirun.lsf from `pwd` at `date`"
   echo "Model output will go to $output"
-  mpirun.lsf $execdir/$model < $namelist >&! $output || \
+#
+# 11/21/08: Add processor binding for bluefire:
+  setenv TARGET_CPU_LIST "-1"
+  mpirun.lsf /usr/local/bin/launch $execdir/$model < $namelist >&! $output || \
     echo ">>> ${0} Execution of mpirun.lsf $execdir/$model FAILED at `date`" && \
     echo "See output in $output"
 else                       # attempt interactive execution

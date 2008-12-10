@@ -48,7 +48,7 @@
 !
 ! Write primary history:
       if (wrprim) then
-        call output_hist(save_prim,newseries_prim)
+        call output_hist(istep,save_prim,newseries_prim)
       endif
 !
 ! Write secondary history:
@@ -57,7 +57,7 @@
       endif
       end subroutine outhist
 !-----------------------------------------------------------------------
-      subroutine output_hist(svfile,newseries)
+      subroutine output_hist(istep,svfile,newseries)
 !
 ! Write a primary history to current output disk file. 
 ! If svfile==T, save the file *after* writing the history.
@@ -78,11 +78,14 @@
      |  nsource,     ! 0/1 number of source files provided (read only)
      |  nsecsource,  ! 0/1 number of secsource files provided (read only)
      |  nstep,       ! total number of steps this run
-     |  iseries_prim ! current primary time series (read only)
-      use init_module,only: istep ! current time-step
+     |  iseries_prim,! current primary time series (read only)
+     |  copyhist,    ! subroutine to copy history structures
+     |  h,sh
+      use init_module,only: iyear,iday
       implicit none
 !
 ! Args:
+      integer,intent(in) :: istep
       logical,intent(in) :: 
      |  newseries, ! if true, open new file before writing history
      |  svfile     ! if true, save current output file after writing history
@@ -149,8 +152,30 @@
       endif ! newseries
 !
 ! Define current history structure:
+! If writing source history, copy sh into h instead of calling define_hist,
+!   and before calling nc_define. (sub copyhist is in hist.F)
+!
       nhist = nhist+1 ! increment number of histories on current file
-      call define_hist('primary')
+      if (istep == 0) then ! echo source history at beginning of initial run
+        sh%ihist = nhist
+!
+! Set source history model time, day and year from user's
+! namelist read for first history of the intial run.
+! This may be different than the original source history.
+! (i.e., SOURCE_START may be different than START and START_DAY,
+!  and START_YEAR may be different that year on the source history)
+!
+        sh%modeltime = modeltime
+        sh%year    = iyear
+        sh%day     = iday
+        call copyhist(sh,h) ! copy source history sh into h
+        write(6,"('output_hist: copied source history structure sh to ',
+     |    'history structure h (nhist=',i3,')')") nhist
+      else
+        call define_hist('primary')
+      endif
+!
+! Define new nc file with history h:
       if (newseries.or.fullfile)
      |  call nc_define(ncid)  ! define new primary history file
 !

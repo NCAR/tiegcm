@@ -727,7 +727,8 @@
      |  adotv2m3d,a1a2m3d,sigma1m3d,adotam3d,adotv1m3d,zpotenm3d,
      |  nscrrt,
      |  je13d,je23d,
-     |  je1oD_pg3d                     ! J_e1/D (plasma pressure + gravity)
+     |  je1oD_pg3d,                    ! J_e1/D (plasma pressure + gravity)
+     |  je2oD_pg3d                     ! J_e2/D (plasma pressure + gravity)
       use magpres_g_module,only: j_pg  ! flag for mag.pressure and gravity 
       use addfld_module,only: addfld
       implicit none
@@ -789,14 +790,17 @@
 !           
 !           je13d(i,j,k) = 0.  ! only contribution due to pressure/gravity
 	    if(j_pg) je13d(i,j,k) = je13d(i,j,k)+1e4*je1oD_pg3d(i,j,k) ! convert cm -> m
+	    if(j_pg) je23d(i,j,k) = je23d(i,j,k)+1e4*je2oD_pg3d(i,j,k) ! convert cm -> m
 	  enddo
 	  je13d(nmlonp1,j,k) = je13d(1,j,k)
 	  je23d(nmlonp1,j,k) = je23d(1,j,k)
 	enddo
 	je13d(:,j,nlevp1) = je13d(:,j,nlev)
 	je23d(:,j,nlevp1) = je23d(:,j,nlev) 
-!        call addfld('JE13D',' J_e1/D (magnetic)','A/m^2',
-!    |     je13d(:,j,:),'mlon',1,nmlonp1,'mlev',1,nlevp1,j)
+	call addfld('JE13D',' J_e1/D (magnetic)','A/m^2',
+     |	   je13d(:,j,:),'mlon',1,nmlonp1,'mlev',1,nlevp1,j) 
+	call addfld('JE23D',' J_e2/D (magnetic)','A/m^2',
+     |	   je23d(:,j,:),'mlon',1,nmlonp1,'mlev',1,nlevp1,j)
       enddo
 !      
 !     call addfld('bmodm3d','bmodm3d (magnetic)',' ',
@@ -805,7 +809,7 @@
 ! Calculate K_(q,phi) (Richmond: Ionospheric at full level
 ! Electrodynamics using magnetic apex coordinates pp.208 (eq 7.4))
 !   K_(q,phi) = int_(h_l)^(h_u) [( [R_0/R]^0.5 * 
-!               * je1/D * sin(lam_q)/sin(lam_m) sin(I_m)/sin(I)*D] dh
+!               * je1/D * sin(lam_q)/sin(lam_m)* sin(I_m)/sin(I)*D] dh
 !   with F = D*sin(lam_m)/sin(lam_q)*sin(I)/sin(I_m)*[R/R_0]^3
 !  
       do j = 1,nmlat

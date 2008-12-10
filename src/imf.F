@@ -86,28 +86,28 @@
 !   the user has provided namelist read values (constant or
 !   time-dependent): 
 !
-        if ((bx(index1)==missing.or.bx(index2)==missing).and.
-     |    bximf == spval) then
+        if ((ismissing(bx(index1)).or.ismissing(bx(index2))).and.
+     |       ismissing(rd_bximf)) then
           call printmissing(index1,index2,'BX')
           call shutdown('Missing BX')
         endif
-        if ((by(index1)==missing.or.by(index2)==missing).and.
-     |    byimf == spval) then
+        if ((ismissing(by(index1)).or.ismissing(by(index2))).and.
+     |       ismissing(rd_byimf)) then
           call printmissing(index1,index2,'BY')
           call shutdown('Missing BY')
         endif
-        if ((bz(index1)==missing.or.bz(index2)==missing).and.
-     |    bzimf == spval) then
+        if ((ismissing(bz(index1)).or.ismissing(bz(index2))).and.
+     |       ismissing(rd_bzimf)) then
           call printmissing(index1,index2,'BZ')
           call shutdown('Missing BZ')
         endif
-        if ((swvel(index1)==missing.or.swvel(index2)==missing).and.
-     |    swvel_inp == spval) then
+        if ((ismissing(swvel(index1)).or.ismissing(swvel(index2))).and.
+     |       ismissing(rd_swvel)) then
           call printmissing(index1,index2,'SWVEL')
           call shutdown('Missing SWVEL')
         endif
-        if ((swden(index1)==missing.or.swden(index2)==missing).and.
-     |    swden_inp == spval) then
+        if ((ismissing(swden(index1)).or.ismissing(swden(index2))).and.
+     |       ismissing(rd_swden)) then
           call printmissing(index1,index2,'SWDEN')
           call shutdown('Missing SWDEN')
         endif
@@ -324,9 +324,9 @@
      |  ' data file (missing=',e12.4,'):')") trim(name),missing
       write(6,"('mtime=',3i4)") modeltime(1:3)
       write(6,"('imf data file = ',a)") trim(imf_ncfile)
-      write(6,"('index1=',i8,' date(index1)=',i8,' uttime(index1)=',
+      write(6,"('index1=',i8,' date(index1)=',f12.4,' uttime(index1)=',
      |  f8.3)") i0,date(i0),uttime(i0)
-      write(6,"('index2=',i8,' date(index2)=',i8,' uttime(index2)=',
+      write(6,"('index2=',i8,' date(index2)=',f12.4,' uttime(index2)=',
      |  f8.3)") i1,date(i1),uttime(i1)
       write(6,"('bx(index1)=',e12.4,' bx(index2)=',e12.4)")bx(i0),bx(i1)
       write(6,"('by(index1)=',e12.4,' by(index2)=',e12.4)")by(i0),by(i1)
@@ -337,6 +337,19 @@
      |  swden(i0),swden(i1)
 
       end subroutine printmissing
+!-----------------------------------------------------------------------
+      logical function ismissing(x)
+      use params_module,only: spval
+      implicit none
+      real,intent(in) :: x
+      ismissing = .false.
+      if (x == spval .or. 
+     |   (x >= spval-.1*spval .and. x <= spval+.1)) then
+        ismissing = .true. 
+!       write(6,"('issmissing true: x=',e12.4,' spval=',e12.4)")
+!    |    x,spval
+      endif
+      end function ismissing
 !-----------------------------------------------------------------------
       end module imf_module
 
