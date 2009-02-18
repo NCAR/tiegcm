@@ -143,12 +143,6 @@
           vi(:,i,lat) = vi(:,i,lat)*100.
           wi(:,i,lat) = wi(:,i,lat)*100.
         enddo 
-!       call addfld('UI_VEL1',' ',' ',ui(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('VI_VEL1',' ',' ',vi(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('WI_VEL1',' ',' ',wi(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End latitude scan:
       enddo ! lat=lat0,lat1
