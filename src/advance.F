@@ -50,6 +50,10 @@
       use params_module,only: nlonp4,nlat,nlev
       use output,only: outhist
       use addfld_module,only: addfld
+#if defined(INTERCOMM) || defined(CISMAH)
+      use cism_coupling_module,only: import, export, geng,gflx
+#endif
+
 !      
 ! current due to plasma pressure & gravity -> add to RHS of dynamo    
       use magpres_g_module, only: magpres_grav,j_pg
@@ -75,6 +79,9 @@
 ! Local:
       integer :: i,j,k,lat,itmp,icount_step,nlatlocal,icount_mpi,ier,
      |  iprint
+#if defined(INTERCOMM) || defined(CISMAH)
+      integer :: cmodeltime(4) !CISM coupling time
+#endif
       real :: fmin,fmax
       integer(kind=8) :: nsecs ! current model time in seconds,
                                ! including model day
@@ -182,6 +189,9 @@
       iter=iter+1
       istep = istep+1
       nsecs = nsecs+step
+#if defined(INTERCOMM) || defined(CISMAH)
+      cmodeltime=modeltime             !!! CISM ad hoc coupling
+#endif
       call nsecs_to_modeltime(nsecs,modeltime) ! increments modeltime(4)
       secs = mod(iter*int(dt),86400)
       uthr = secs/3600.
@@ -242,6 +252,22 @@
 ! Get GSWM tidal boundary data:
 !
       call getgswm(istep,iyear,iday,secs)
+#if defined(INTERCOMM) || defined(CISMAH)
+!
+! Receive aurora parameters from the M-I coupler for CISM
+!
+      if (mytid==0) call import
+!
+! Scatter data to other tasks if using MPI, periodic points already added
+! in ci_receive. Only need to scatter auroral characteristic energy and
+! flux, potential is used in dynamo which is a serial code
+!
+#ifdef MPI
+      call cism_scatter(geng,lon0,lon1,lat0,lat1)
+      call cism_scatter(gflx,lon0,lon1,lat0,lat1)
+#endif
+#endif
+
 !
 ! Report to stdout:
       if (time2print(nstep,istep)) then
@@ -480,7 +506,12 @@
       if (debug) write(6,"('advance after prep_dynamo')")
       if (mytid==0) call dynamo
       if (debug) write(6,"('advance after dynamo')")
+#if defined(INTERCOMM) || defined(CISMAH)
 !
+! Send conductance and neutral wind current to M-I coupler for CISM
+!
+      if (mytid==0) call export(cmodeltime)
+#endif
 #ifdef VT
 !       code = 127 ; state = 'timestep' ; activity='ModelCode'
         call vtend(127,ier)

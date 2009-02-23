@@ -876,3 +876,35 @@ They were not being set correctly and made the code crash in sub copyhist
 >>>>>>>>>>>>>>>>>>  Commit and release of tiegcm1.91 <<<<<<<<<<<<<<<<<<<
 cvs commit -F commit_notes/tiegcm1.91 
 cvs tag tiegcm1-91
+----------------------------------------------------------------------
+
+2/18/09:
+Liying realized that an old version of qrj.F was inadvertently used in
+the tiegcm1.91 tag (and in $TGCMROOT/tiegcm1.91/src/qrj.F). The "new"
+version was correct in tiegcm1.9. This "new" qrj.F is copied here,
+and cvs commit was made w/ -m message explanation. Diffs were mostly
+"optimization" of the code, but also included:
+         sflux(l)=sfmin(l)*(1+afac(l)*(pind-80.))
+         if (sflux(l) .le. 0.8*sfmin(l)) sflux(l) = 0.8*sfmin(l)
+The old version had:
+        IF (SFLUX(L) .LT. 0.0) SFLUX(L) = 0.0
+So results might differ if sflux < 80.
+Put copy of the updated qrj.F in $TGCMROOT/tiegcm1.91/modsrc.
+
+2/23/09: 
+Confirmed that using the "new" qrj.F (from tiegcm1.9) and the "old" qrj.F 
+from tiegcm1.91 show zero differences in results after changing the "old" 
+version to use tlbc for tn interfaces, instead of finding the T lbc in 
+"top slot". These runs used constant f107=150., so the condition described 
+above did not occur.
+
+Now using the new qrj.F while testing the code w/ CISM pre-proc macros
+included in the source code (received from Pete Schmitt), but not turned 
+on by the Makefile, i.e., still standalone. Added COUPLING := NO and
+COUPLING conditionals on pre-proc macros in scripts/Makefile, to indicate 
+that CISM flags are not to be set for stand-alone tiegcm.
+CISM mods were taken from revision 783 of the LTR-para repository.
+
+Code was tested on bluefire, gale, and oreo.
+Committing and tagging as tiegcm1-92
+----------------------------------------------------------------------

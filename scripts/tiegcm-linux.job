@@ -11,7 +11,7 @@
 #      b) To run interactively on non-lightning Linux system (e.g. at hao),
 #         use "jobfile >&! jobfile.out &"
 #
-# See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more information.
+# See http://www.hao.ucar.edu/modeling/tgcm/userguide/ for more information.
 # If you need to customize the configuration beyond the shell vars here, 
 #   add or change options to the tgcm_config call below. 
 #

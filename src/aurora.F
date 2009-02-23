@@ -609,6 +609,9 @@
 ! Calculate alfa, flux, and drizzle.
 !
       use params_module,only: nlon,nlonp2
+#if defined(INTERCOMM) || defined(CISMAH)
+      use cism_coupling_module,only: geng,gflx     !CISM
+#endif
 !
 ! Args:
       integer,intent(in) :: lat
@@ -710,6 +713,23 @@
 	eflux3 (nlonp2+i) = eflux3(i+2)
         qteaur(nlonp2+i,lat)= qteaur(i+2,lat)
       enddo
+!
+! Replacing with M-I coupler values. Warning: alfa and flux can not be
+! zero, otherwise the model will blow up. Set to small values here. This
+! will not change simulations.
+!                                                        Wenbin  wang
+!
+#if defined(INTERCOMM) || defined(CISMAH)
+      do i=1,nlonp4
+       alfa(i)=geng(i,lat)+0.01
+       flux(i)=gflx(i,lat)+0.01
+       if(alfa(i)<=0.)alfa(i)=0.01
+       if(flux(i)<=0.)flux(i)=0.01
+       eflux(i) = flux(i)*fac_p2e*alfa(i)
+!       write(6,*)alfa(i),flux(i),i,lat
+      enddo
+#endif
+
       end subroutine aurora_heat
       end module aurora_module
 !-----------------------------------------------------------------------
@@ -927,6 +947,29 @@
         enddo ! k=lev0+2,lev1-1
 !
 ! Extrapolate lower boundary:
+! TIEGCM-1.9x bug fix from Wenbin's old LTR/CMIT-2.5 code
+#if defined(INTERCOMM) || defined(CISMAH)
+        if(1.5*qo2p_aur(lev0,i) > 0.5*qo2p_aur(lev0+1,i))then
+         qo2p(lev0,i,lat) = qo2p(lev0,i,lat)+1.5*qo2p_aur(lev0,i)-
+     |     0.5*qo2p_aur(lev0+1,i)
+        endif                         !!! CISM fix
+        if(1.5*qop_aur (lev0,i) > 0.5*qop_aur (lev0+1,i))then
+         qop (lev0,i,lat) = qop (lev0,i,lat)+1.5*qop_aur (lev0,i)-
+     |     0.5*qop_aur (lev0+1,i)
+        endif
+        if(1.5*qn2p_aur(lev0,i) > 0.5*qn2p_aur(lev0+1,i))then
+         qn2p(lev0,i,lat) = qn2p(lev0,i,lat)+1.5*qn2p_aur(lev0,i)-
+     |     0.5*qn2p_aur(lev0+1,i)
+        endif
+        if(1.5*qn2p_aur(lev0,i) > 0.5*qn2p_aur(lev0+1,i))then
+         qnp (lev0,i,lat) = qnp (lev0,i,lat)+ .22/.7 *
+     |     (1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i))
+        endif
+        if(1.5*qn2p_aur(lev0,i) > 0.5*qn2p_aur(lev0+1,i))then
+         qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
+     |     0.5*qn2p_aur(lev0+1,i))
+        endif
+#else
         qo2p(lev0,i,lat) = qo2p(lev0,i,lat)+1.5*qo2p_aur(lev0,i)-
      |    0.5*qo2p_aur(lev0+1,i)        
         qop (lev0,i,lat) = qop (lev0,i,lat)+1.5*qop_aur (lev0,i)-
@@ -937,6 +980,7 @@
      |    (1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i))
         qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
      |    0.5*qn2p_aur(lev0+1,i))        
+#endif
 !
 ! Extrapolate upper boundary:
         qo2p(lev1,i,lat)= qo2p(lev1,i,lat)+1.5*qo2p_aur(lev1-1,i)-

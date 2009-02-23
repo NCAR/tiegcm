@@ -54,6 +54,9 @@ OBJS     := $(addsuffix .o, $(basename $(SOURCES)))
 LIBS     := -L$(LIB_NETCDF) -lnetcdf
 LDFLAGS  :=
 #
+# This is tiegcm stand-alone, so no coupling with cism:
+COUPLING := NO 
+#
 # Note FFLAGS and CPPFLAGS are included by gmake.
 #
 $(EXECDIR)/$(EXECNAME): $(OBJS)
@@ -69,6 +72,12 @@ ifeq ($(UNAMES),AIX)
   endif
   ifeq ($(MSS),TRUE)
     CPPFLAGS += -DMSS
+  endif
+  ifeq ($(COUPLING), INTERCOMM)
+    CPPFLAGS += -DINTERCOMM
+  endif
+  ifeq ($(COUPLING), ADHOC)
+    CPPFLAGS += -DCISMAH
   endif
   OPTIM    := -O3 -qstrict
   ifeq ($(DEBUG),TRUE)
@@ -131,6 +140,12 @@ ifeq ($(UNAMES),Linux)
   endif
   ifeq ($(MSS),TRUE)
     CPPFLAGS += -DMSS
+  endif
+  ifeq ($(COUPLING), INTERCOMM)
+    CPPFLAGS += -DINTERCOMM
+  endif
+  ifeq ($(COUPLING), ADHOC)
+    CPPFLAGS += -DCISMAH
   endif
   OPTIM    := -O2
   ifeq ($(DEBUG),TRUE)

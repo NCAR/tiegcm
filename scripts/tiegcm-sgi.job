@@ -12,7 +12,7 @@
 #      To submit to a batch queue, use "qsub jobfile"
 #      To run interactively (in background), use "jobfile >&! jobfile.out &"
 #
-# See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more information.
+# See http://www.hao.ucar.edu/modeling/tgcm/userguide/ for more information.
 #
 # See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more information.
 # If you need to customize the configuration beyond the shell vars here,

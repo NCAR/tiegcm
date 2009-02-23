@@ -10,7 +10,7 @@
 #   4) Assuming this script is called "jobfile", then submit
 #      with the command: "bsub < jobfile"
 #
-# See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more information.
+# See http://www.hao.ucar.edu/modeling/tgcm/userguide/ for more information.
 # If you need to customize the configuration beyond the shell vars here, 
 #   add or change options to the tgcm_config call below. 
 #

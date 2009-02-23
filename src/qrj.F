@@ -342,7 +342,6 @@
 !
 ! tn at interfaces:
       do i=lon0,lon1
-!       tni(1,i) = tn(lev1,i) ! tn bottom boundary is stored in top slot
         tni(lev0,i) = tlbc(i,lat)
         do k=lev0+1,lev1-1
           tni(k,i) = .5*(tn(k-1,i)+tn(k,i))

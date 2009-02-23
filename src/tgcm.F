@@ -26,6 +26,9 @@
 #ifdef MPI
       use mpi_module,only: mp_init,mp_close,mp_distribute
 #endif
+#if defined(INTERCOMM) || defined(CISMAH)
+      use cism_coupling_module,only: initialize,finalize
+#endif
 #ifdef OMP
 !     use omp_module,only: init_omp
 #endif
@@ -75,6 +78,15 @@
 #ifdef MPI
       call mp_distribute
 #endif
+#if defined(INTERCOMM) || defined(CISMAH)
+!
+! Initialize code coupling communication framework 
+! (i.e. InterComm or AdHoc file exchanges)
+!
+      if(mytid==0) call initialize
+#endif
+
+!
 !
 ! Do initialization:
       call init
@@ -119,6 +131,14 @@
       write(6,"('Cpu time for run = ',f10.2)") cpu2-cpu1
 #endif
       call timer(time0_run,time1_run,'RUN',1,0) ! end total run timing
+#if defined(INTERCOMM) || defined(CISMAH)
+!
+! Finalize code coupling communication framework 
+! (i.e. InterComm or AdHoc file exchanges)
+!
+      if (mytid==0)call finalize
+#endif
+
 !
 ! Finalize mpi:
 !

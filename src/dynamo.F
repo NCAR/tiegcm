@@ -165,6 +165,18 @@
      |  zigmc,   ! sigmac
      |  zigm2,   ! sigma2
      |  zigm22   ! sigma22/cos(theta0)
+#if defined(INTERCOMM) || defined(CISMAH)
+      real,dimension(nmlonp1,nmlat) :: Zigm1 ! CISM, height-intergrated
+!                                            ! Pedersen conductivity
+!
+! Parameters to be passed to LFM for CISM. Note the dimension of these variables is
+! defined to match mag2geo specifications, see detial in cons.F and Apex.F.
+!
+      real,dimension(nlonp1,0:nlatp1) ::
+     |  gzigm2,   ! sigma2    ! CISM height integrated Hall conductivity geographic
+     |  gzigm1,   ! sigma1    ! CISM height integrated Pedersen conductivity geographic
+     |  gnsrhs    ! nsrsh     ! CISM height integrated neutral wind currents geographic
+#endif
 !
 ! rim(1)=id(1), rim(2)=id(2)/cos(theta0)
       real,dimension(nmlonp1,nmlat,2) :: rim 
@@ -203,6 +215,9 @@
      |  nsrim_r2(nmlon0,nmlat,10),   ! difference stencil for rim_r(2)
                                      ! 10 dimension added for using nsstencil
      |  rhs_r(nmlonp1,nmlat)         ! right-hand side 
+#if defined(INTERCOMM) || defined(CISMAH)
+      real :: nsrhs(nmlonp1,nmlat)         ! CISM current
+#endif
 !
 ! Flag for J_rR contribution to dynamo
 ! J_rR = d / d phi_m [ f zigm_phiphi/ cos(lam_m)* d /d |lam_m| poten +
@@ -395,6 +410,9 @@
       use fields_module,only: dynpot,phim3d
       use input_module,only: potential_model
       use init_module,only: istep	! for sigma_R high latitudes
+#if defined(INTERCOMM) || defined(CISMAH)
+!      use cism_coupling_module,only: cism_pot2mag
+#endif
 !
 ! Local:
       integer :: i,j,jj,jjj,j0,jntl,k,n,ncc,nmaglat,nmaglon,ier
@@ -416,6 +434,23 @@
 ! -+(zigm2+zigmc)= Sigma_(lam phi)(0) = Sigma_(lam phi)(m)
 ! rim(1) = K_(m phi)^D(0)    = K_(m phi)^D(m) * d lam_m /d lam_0   
 ! rim(2) = +/-K_(m lam)^D(0) = +/-K_(m lam)^D(m) * cos lam_m /cos lam_0 
+!
+#if defined(INTERCOMM) || defined(CISMAH)
+!
+! Calculate global neutral winds generated current to transfer to CISM M-I couplier
+!
+      call cism_ucurrent
+!
+! Transform height-integrated parameters from APEX coordinates to geographic
+! coordinates to be passed to the M-I coupled in the CISM
+!
+       call mag2geo(zigm1(1,1),gzigm1(1,0),im(1,0),jm(1,0),dim(1,0),
+     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+       call mag2geo(zigm2(1,1),gzigm2(1,0),im(1,0),jm(1,0),dim(1,0),
+     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+       call mag2geo(nsrhs(1,1),gnsrhs(1,0),im(1,0),jm(1,0),dim(1,0),
+     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+#endif
 !
 ! Calculate coefficient of PDE for each hemisphere if K_(q,lam) is 
 !   calculated
@@ -643,6 +678,17 @@
       do i=1,nmlon0
         c0(i,nmlat0,10) = 1.
       enddo
+#if defined(INTERCOMM) || defined(CISMAH)
+!
+! Convert LFM geographic potential to geomagnetic coordinates
+!
+      call cism_pot2mag
+c      do jj=1,nmlat
+c       do i=1,nmlonp1
+c        write(6,*)phihm(i,jj),i,jj
+c       enddo
+c      enddo
+#endif
 !
 ! Modify stencils and RHS so that the NH high lat potential is inserted at
 !  high latitude -> phihm(1,nmlat0). The SH high lat potential will be added back later.
@@ -1458,6 +1504,9 @@
         zigm11(i,j)= .125*(zigm11(i,j-1)+ zigm11(i,j+1))
         zigm22(i,j)= .125*(zigm22(i,j-1)+ zigm22(i,j+1))
         zigmc(i,j) = .125*(zigmc(i,j-1) + zigmc(i,j+1))
+#if defined(INTERCOMM) || defined(CISMAH)
+        zigm1(i,j) = .06 *(zigm1(i,j-1) + zigm1(i,j+1))     ! cism
+#endif
         zigm2(i,j) = .06 *(zigm2(i,j-1) + zigm2(i,j+1))
         rim(i,j,1) = .06 *(rim(i,j-1,1) + rim(i,j+1,1))
         rim(i,j,2) = .06 *(rim(i,j-1,2) + rim(i,j+1,2))
@@ -1525,6 +1574,9 @@
       do j=1,nmlat
         zigm11(nmlonp1,j) = zigm11(1,j)
         zigmc (nmlonp1,j) = zigmc (1,j)
+#if defined(INTERCOMM) || defined(CISMAH)
+        zigm1 (nmlonp1,j) = zigm1 (1,j)     ! cism
+#endif
         zigm2 (nmlonp1,j) = zigm2 (1,j)
         zigm22(nmlonp1,j) = zigm22(1,j)
         rim(nmlonp1,j,:)  = rim(1,j,:)
@@ -1569,6 +1621,12 @@
      1  sddot(nmlon,unitvm,zigmc(1,      3)))/(3.*float(nmlon))
       zigmc(1,nmlat) = (4.*sddot(nmlon,unitvm,zigmc(1,nmlat-1))-
      1  sddot(nmlon,unitvm,zigmc(1,nmlat-2)))/(3.*float(nmlon))
+#if defined(INTERCOMM) || defined(CISMAH)
+      zigm1(1,    1) = (4.*sddot(nmlon,unitvm,zigm1(1,      2))-     ! cism
+     1  sddot(nmlon,unitvm,zigm1(1,      3)))/(3.*float(nmlon))
+      zigm1(1,nmlat) = (4.*sddot(nmlon,unitvm,zigm1(1,nmlat-1))-      ! cism
+     1  sddot(nmlon,unitvm,zigm1(1,nmlat-2)))/(3.*float(nmlon))
+#endif
       zigm2(1,    1) = (4.*sddot(nmlon,unitvm,zigm2(1,      2))-
      1  sddot(nmlon,unitvm,zigm2(1,      3)))/(3.*float(nmlon))
       zigm2(1,nmlat) = (4.*sddot(nmlon,unitvm,zigm2(1,nmlat-1))-
@@ -1584,6 +1642,10 @@
         zigm11(i,nmlat)  = zigm11(1,nmlat)
         zigmc(i,     1)  = zigmc(1,     1)
         zigmc(i, nmlat)  = zigmc(1, nmlat)
+#if defined(INTERCOMM) || defined(CISMAH)
+        zigm1(i,     1)  = zigm1(1,     1)     ! cism
+        zigm1(i, nmlat)  = zigm1(1, nmlat)     ! cism
+#endif
         zigm2(i,     1)  = zigm2(1,     1)
         zigm2(i, nmlat)  = zigm2(1, nmlat)
         zigm22(i,     1) = zigm22(1,    1)
@@ -1604,6 +1666,9 @@
       do j=1,nmlat
         zigm11(nmlonp1,j) = zigm11(1,j)
         zigmc (nmlonp1,j) = zigmc (1,j)
+#if defined(INTERCOMM) || defined(CISMAH)
+        zigm1 (nmlonp1,j) = zigm1 (1,j)        ! cism
+#endif
         zigm2 (nmlonp1,j) = zigm2 (1,j)
         zigm22(nmlonp1,j) = zigm22(1,j)
         rim(nmlonp1,j,:)  = rim(1,j,:)
@@ -1630,6 +1695,9 @@
 ! zigm22 is int[sig_p*d_2^2/D] ds,   i.e. Sigma_(lam lam)*abs(sin Im)
 ! zigmc  is int[sig_p*d_1*d_2/D] ds, i.e. Sigma_c
 ! zigm2  is int[sigma_h] ds,         i.e. Sigma_h
+#if defined(INTERCOMM) || defined(CISMAH)
+!        zigm1  is int[sigma_p] ds,         i.e. Sigma_p !CISM
+#endif
 !
 ! rim1 [A/m] is int[(sigma_h-sigma_p*d_1*d_2/D)u_e1 + sigma_p*d_1^2/D u_e2] *A(h_r)*
 !         B_e3 ds, i.e.  K_(m phi)^D/abs(sin Im)
@@ -1699,6 +1767,9 @@
         zigm22(i,latm) = 0.
         zigm2 (i,latm) = 0.
         zigmc (i,latm) = 0.
+#if defined(INTERCOMM) || defined(CISMAH)
+        zigm1 (i,latm) = 0.     ! CISM
+#endif
         rim(i,latm,1)  = 0.
         rim(i,latm,2)  = 0.
 !	
@@ -1759,6 +1830,9 @@
      |      htfunc2(i,k)
           zigmc(i,latm) = zigmc(i,latm) + sig1*rtramrm(i,k)*htfunc(i,k)
           zigm2(i,latm) = zigm2(i,latm) + sig2*rtramrm(i,k)*htfunc(i,k)
+#if defined(INTERCOMM) || defined(CISMAH)
+          zigm1(i,latm) = zigm1(i,latm) + sig1*rtramrm(i,k)*htfunc(i,k)     ! CISM
+#endif
           rim(i,latm,1) = rim(i,latm,1) + (sig1*adotam(i,1)*ue2 +(sig2 -
      |      sig1*a1a2m(i))*htfunc(i,k)*ue1)*rtramrm(i,k)
           rim(i,latm,2) = rim(i,latm,2)+(sig1*adotam(i,2)*htfunc2(i,k)*
@@ -1805,6 +1879,9 @@
         zigm22(i,latm) = 1.e-2*zigm22(i,latm)*aam(i)*adotam(i,2)
         zigmc(i,latm)  = 1.e-2*zigmc(i,latm)*aam(i)*a1a2m(i)
         zigm2(i,latm)  = 1.e-2*zigm2(i,latm)*aam(i)
+#if defined(INTERCOMM) || defined(CISMAH)
+        zigm1(i,latm)  = 1.e-2*zigm1(i,latm)*aam(i)     ! CISM
+#endif
         rim(i,latm,1)  = 1.e-2*rim(i,latm,1)*aam(i)*bmodm(i)  ! [A/m]
         rim(i,latm,2)  = 1.e-2*rim(i,latm,2)*aam(i)*bmodm(i)  ! [A/m]
       enddo ! i = 1,nmlon
@@ -3025,6 +3102,159 @@
       deallocate(sndbuf)
 !
       end subroutine mp_dynamo_gather
+#endif
+!-----------------------------------------------------------------------
+#if defined(INTERCOMM) || defined(CISMAH)
+!FIXME:  cism_ucurrent should go in the "cism_coupling" module...
+! BOP
+! IROUTINE: cism_ucurrent
+! INTERFACE:
+!
+      subroutine cism_ucurrent
+!
+! DESCRIPTION:
+!
+! This subroutine calculate height-integrated neutral wind generated
+! field-aligned current (dynamo) to be passed to the M-I coupler to
+! solve electric potential. This subroutine is based on the subroutine
+! 'nosocoef' in 'current.F' written by Astrid Maute.
+! The height-integrated neutral wind field-alined current is calculated in a
+! Quisi-Dipole Coordinate that is defined in detail in Richmond (1995). This
+! coordinate system removes the 1/|sinI_m| factor in the partial differential
+! equation for the electric potential in the Modified Apex Coordinate system.
+! 1/|sinI_m| is not defined at magnetic equator in the Modified Apex
+! Coordinate system, but is well defined in the Quisi-Dipole Coordinate system
+! (I still need to see how this works).
+! The neutral dynamo currents are already calculted in subroutine
+! 'fieldline-integrals' in the 'dynamo.F' as a global variable
+! 'rim(nmlonp1,nmlat,2)'. Subroutine 'rshpde' has the formula to calculate
+! height-integrated neutral wind current, but the current there is the sum
+! of two hemispheres. We want a global distribution of this current for the M-I
+! coupler. Thus the code here is an expanded version of that in "rhspde", but a
+! stripped version of "nosocoef". 'nosocoef' also calculates other
+! coefficients (lhs) for the potential equation to obtain total field-aligned currents
+! including both magnetosphere and thermosphere originated currents. We only need
+! thermospheric originated currents for the CISM M-I coupler.
+!
+! This subroutine is called by subroutine 'dynamo' after 'call transfer'
+! in 'dynamo.F'
+!                                                  ---------- Wenbin Wang 09/20/05
+! USES
+!
+      use cons_module,only: dlonm,dlatm,pi,r0
+
+!
+! PARAMETERS:
+! RETURN VALUE: nsrhs(nmlonp1,nmlat)   ! defined as a global variable above
+!
+! !REVISION HISTORY:
+!
+! EOP
+!
+! Calculate height-integrated field-aligned neutral wind currents for both hemisphere
+!
+! Local:
+!
+      real :: cs(nmlat)
+      real :: dfac
+      integer :: j,je,jj,i,n
+!
+! Externals:
+!
+      real,external :: sddot ! in util.F
+!
+! Calculate coefficients for dynamo pde for both hemisphere
+!
+!
+! Clear arrays
+!
+      nsrhs(:,:)    = 0.0
+!
+! Calculate magnetic latitude cosin array
+!
+      do j = 1,nmlat     ! -pi/2 to pi/2
+        cs(j) = cos(-pi/2.+(j-1)*dlatm)
+      enddo
+!
+! Calculate right hand side of pde from rim(1) and rim(2)
+!
+      do j = 2,nmlath-1  ! 2,48  south pole-1 to equator-1
+        jj = j+nmlath-1     ! 50,96 equator+1 to north pole-1
+!
+! Differentiate rim(1) w.r.t lamda
+!
+        do i = 2,nmlon-1
+          nsrhs(i,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim(i+1,j,1)-rim(i-1,j,1))
+          nsrhs(i,jj) = 1.0/(dlonm*cs(jj))*
+     |                      0.5*(rim(i+1,jj,1)-rim(i-1,jj,1))
+       enddo
+!
+! Values at longitudinal boundaries
+!
+        nsrhs(1,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim(2,j,1)-rim(nmlon,j,1))
+        nsrhs(1,jj) = 1.0/(dlonm*cs(jj))*
+     |                      0.5*(rim(2,jj,1)-rim(nmlon,jj,1))
+        nsrhs(nmlon,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim(1,j,1)-rim(nmlon-1,j,1))
+        nsrhs(nmlon,jj) = 1.0/(dlonm*cs(jj))*
+     |                      0.5*(rim(1,jj,1)-rim(nmlon-1,jj,1))
+      enddo
+!
+! Differentiate rim(2) w.r.t theta0
+!
+      do j = 2,nmlath-1  ! 2,48  south pole -1 to equator-1 "negative sigh"
+       jj = j+nmlath-1  ! 50,96 equator+1 to north pole-1
+       do i = 1,nmlon
+        nsrhs(i,j)  = nsrhs(i,j) - 1.0/(dlatm*cs(j))*0.5*
+     |               (rim(i,j+1,2)*cs(j+1)-rim(i,j-1,2)*cs(j-1))
+        nsrhs(i,jj) = nsrhs(i,jj) + 1.0/(dlatm*cs(jj))*0.5*
+     |               (rim(i,jj+1,2)*cs(jj+1)-rim(i,jj-1,2)*cs(jj-1))
+       enddo
+      enddo
+!
+! Calculate value at the poles by averaging over i:nmlon
+!
+      nsrhs(1,nmlat) = -2./float(nmlon)*
+     |                  sddot(nmlon,unitvm,rim(1,nmlat-1,2))/cs(nmlat-1)
+      nsrhs(1,1)     = -2./float(nmlon)*
+     |                  sddot(nmlon,unitvm,rim(1,2,2))/cs(2)
+!
+! Extend over longitude
+!
+      nsrhs(:,nmlat) = nsrhs(1,nmlat)
+      nsrhs(:,1)     = nsrhs(1,1)
+!
+! Calculate equator values
+!
+      je = nmlath
+      i = 1
+      nsrhs(i,je) = 0.5/dlonm*(rim(i+1,je,1)-rim(nmlon,je,1))
+      nsrhs(i,je) = nsrhs(i,je) + 1./dlatm*(cs(je)*
+     |                 rim(i,je,2)+ cs(je+1)*rim(i,je+1,2))
+!
+      do i = 2,nmlon-1
+        nsrhs(i,je) = 0.5/dlonm*(rim(i+1,je,1)-rim(i-1,je,1))
+       nsrhs(i,je) = nsrhs(i,je) + 1./dlatm*(cs(je)*
+     |                    rim(i,je,2)+ cs(je+1)*rim(i,je+1,2))
+      enddo
+!
+      i = nmlon
+      nsrhs(i,je) = 0.5/dlonm*(rim(1,je,1)-rim(i-1,je,1))
+      nsrhs(i,je) = nsrhs(i,je) + 1./dlatm*(cs(je)*
+     |                 rim(i,je,2)+ cs(je+1)*rim(i,je+1,2))
+!
+! Periodic points
+!
+      nsrhs(nmlonp1,:) = nsrhs(1,:)
+!
+! Scale rhs by refernce radius (R_E + H0) in meters dfac = r0*1e-2
+!
+      dfac = r0*1.0e-2
+      nsrhs(:,:) = -1.*nsrhs(:,:)/dfac
+!
+      end subroutine cism_ucurrent
 #endif
 !-----------------------------------------------------------------------
       end module dynamo_module
