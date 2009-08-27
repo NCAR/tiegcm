@@ -908,3 +908,41 @@ CISM mods were taken from revision 783 of the LTR-para repository.
 Code was tested on bluefire, gale, and oreo.
 Committing and tagging as tiegcm1-92
 ----------------------------------------------------------------------
+
+8/27/09 btf and am:
+Increase night time electron densities in qinite.F:
+
+!
+! al is sometimes adjusted for different conditions ("tuning knob"):
+!      real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)  !org 1.1.1
+! Using these timegcm values allows removal of minimum Ne in elden.F:
+      real,parameter :: al(3)=(/1.5E7,1.5E6,1.5E6/) ! timegcm version
+
+This was in tiegcm1.9, but apparently left out of 1.91 and 1.92.
+
+Original README notes from January, 2008:
+
+1/24/08 btf: mods from Astrid:
+am 1/22/08 (qinite.F, elden.F)
+  change the flux in qinite
+  from
+        real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)
+  to
+        real,parameter :: al(3)=(/0.75E7,0.75E6,0.75E6/)
+  The new triple values are from TIME-GCM.
+  In addition remove the minimum electron density in elden.F
+
+  Motivation:
+  the usage of the minimum electron density in elden.F was not consistent
+  with the later ion calculation,
+  and was leading to an unbalance in electrons and ions.
+  It was decided that having a minimum electron density shouldn't
+  be necessary if we have a better nighttime ionosphere. However,
+  implementing formulations like Titheridge suggested was postponed for
+  later. We looked at this a few years ago, and it wasn't straight forward to
+  implement. So increasing the night time flux of the three lines (1026,304,584)
+  seems reasonable, also TIME-GCM is using the same values.
+  The nighttime NE at plev=-2 is around log(Ne)=3.2 at low latitudes. The
+  prereversal enhancement is decreasing a bit (around 3-4 m/s) at JRO.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
