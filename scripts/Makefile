@@ -21,6 +21,7 @@
 # DEBUG      := [TRUE or FALSE]
 # MPI        := [TRUE if running parallel code]
 # MSS        := [TRUE if NCAR mass store is available]
+# NBIT       := [32 or 64 bit Linux machine]
 #
 null  :=
 space := $(null) $(null)
@@ -164,6 +165,18 @@ ifeq ($(UNAMES),Linux)
     LIBS   += -L/usr/local/lib -lmpich
   endif
 #
+# 64-bit netcdf4 hdf libs:
+  ifeq ($(NBIT),64)
+    LIBS += -L$(LIB_NETCDF) -lhdf5_hl -lhdf5 -lsz -L/usr/lib64 -lz
+#
+# Default is pgf90 (e.g., serial linux systems at HAO),
+# or mpif90 if MPI is set:
+#
+    ifeq ($(MPI),TRUE)
+      FC := mpif90
+    endif
+  endif
+#
 # SCD Linux system "gale" (serial):
 #
   ifeq ($(UNAMEN),gale)                     # CISL/DASG Linux "gale" (no mpi)
@@ -181,6 +194,7 @@ ifeq ($(UNAMES),Linux)
     endif
     cpp_path += -I/usr/local/mpich/include
     FFLAGS := $(cpp_path) $(OPTIM) -r8
+    LIBS := -L$(LIB_NETCDF) -lnetcdf -L/usr/lib64 -lz
     LIBS += -L/usr/local/mpich/lib -lmpich
   endif
 endif # linux
