@@ -946,3 +946,7 @@ am 1/22/08 (qinite.F, elden.F)
   prereversal enhancement is decreasing a bit (around 3-4 m/s) at JRO.
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+10/5/09:
+- Fix Mknamelist to make tiegcm compatable input file for generic "TGCM" model.
+- Update version flags from tiegcm1.91 to tiegcm1.92. See scripts/*.job, and
+  src/params.F.
