@@ -238,7 +238,7 @@
 !   from 4d field poten(levd0:levd1,lond0:lond1,latd0:latd1,2) that has
 !   been read from source history.
 !
-      use params_module,only: nlat,nlonp4,nlevp1
+      use params_module,only: nlat,nlonp1,nlevp1
       use fields_module,only: poten,dynpot
       integer,intent(in) :: itx
 !
