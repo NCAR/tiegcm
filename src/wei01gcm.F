@@ -1738,7 +1738,7 @@ C	ADJUST AN ANGLE IN DEGREES TO BE IN RANGE OF 0 TO 360.
       implicit none
       integer :: igreg, iyyy, mm, id, jy, jm, ja, julday
       PARAMETER (IGREG=15+31*(10+12*1582))
-      IF (IYYY.EQ.0) PAUSE 'There is no Year Zero.'
+      IF (IYYY.EQ.0) call shutdown('There is no Year Zero.')
       IF (IYYY.LT.0) IYYY=IYYY+1
       IF (MM.GT.2) THEN
         JY=IYYY

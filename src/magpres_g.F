@@ -57,7 +57,7 @@
 ! used by dynamo but calculated on the geographic grid to avoid transfering to
 ! many fields
 ! These are allocated for task subdomains by alloc_pg (called from allocdata)   
-      real,dimension(:,:,:),allocatable :: 
+      real,dimension(:,:,:),allocatable,save :: 
      |  je1oD_geo,  ! J_e1(pg)/D [A/cm^2]
      |  je2oD_geo   ! J_e2(pg)/D [A/cm^2]
 !       

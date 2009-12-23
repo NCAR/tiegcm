@@ -1310,7 +1310,7 @@ C	ADJUST AN ANGLE IN DEGREES TO BE IN RANGE OF 0 TO 360.
       implicit none
       integer :: igreg, iyyy, mm, id, jy, jm, ja, julday
       PARAMETER (IGREG=15+31*(10+12*1582))
-      IF (IYYY.EQ.0) PAUSE 'There is no Year Zero.'
+      IF (IYYY.EQ.0) call shutdown('There is no Year Zero.')
       IF (IYYY.LT.0) IYYY=IYYY+1
       IF (MM.GT.2) THEN
         JY=IYYY
@@ -1361,6 +1361,51 @@ C          into the appropriate month and day of month (integers)
       RETURN
 !     END
 	end subroutine cvt2md
+
+CNCAR      Routines added to work around non-ANSI trig functions which
+C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
+
+      FUNCTION SIND (DEG)
+      implicit none
+      real :: sind,d2r,r2d,deg
+      PARAMETER ( D2R =  0.0174532925199432957692369076847 ,
+     +            R2D = 57.2957795130823208767981548147)
+      SIND = SIN (DEG * D2R)
+      RETURN
+!     END
+	end function sind
+
+      FUNCTION COSD (DEG)
+      implicit none
+      real :: cosd,d2r,r2d,deg
+      PARAMETER ( D2R =  0.0174532925199432957692369076847 ,
+     +            R2D = 57.2957795130823208767981548147)
+
+      COSD = COS (DEG * D2R)
+      RETURN
+!     END
+	end function cosd
+
+      FUNCTION ASIND (RNUM)
+      implicit none
+      real :: asind,d2r,r2d,rnum
+      PARAMETER ( D2R =  0.0174532925199432957692369076847 ,
+     +            R2D = 57.2957795130823208767981548147)
+      ASIND = R2D * ASIN (RNUM)
+      RETURN
+!     END
+	end function asind
+
+      FUNCTION ATAN2D (RNUM1,RNUM2)
+      implicit none
+      real :: atan2d,d2r,r2d,rnum1,rnum2
+      PARAMETER ( D2R =  0.0174532925199432957692369076847 ,
+     +            R2D = 57.2957795130823208767981548147)
+      ATAN2D = R2D * ATAN2 (RNUM1,RNUM2)
+      RETURN
+!     END
+	end function atan2d
+
 !-----------------------------------------------------------------------
       subroutine wei05loc (ih)
 ! ih=1,2 for SH,NH called from weimer05

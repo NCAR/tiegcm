@@ -950,3 +950,14 @@ am 1/22/08 (qinite.F, elden.F)
 - Fix Mknamelist to make tiegcm compatable input file for generic "TGCM" model.
 - Update version flags from tiegcm1.91 to tiegcm1.92. See scripts/*.job, and
   src/params.F.
+
+Fix two bugs, pointed out by John Ritterer:
+- Use-associate nlonp1 rather than nlonp4 in sub set_dynpot, rdsource.F
+- Add ntrigs argument to FFT99B call from sub FFT99, fft9.F
+
+12/23/09:
+In wei05sc.F:
+CNCAR      Routines added to work around non-ANSI trig functions which
+C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
+In wei05sc.F and wei01sc.F: replace PAUSE statement with call shutdown.
+magpres_g: add save attribute to allocatables je1oD_geo and je2oD_geo
