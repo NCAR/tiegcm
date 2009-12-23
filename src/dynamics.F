@@ -24,7 +24,6 @@
 #ifdef MPI
       use mpi_module,only: distribute_1d,mp_close
 #endif
-      use bndry_module,only: bndcmp
       use chemrates_module,only: chemrates_tdep
       use qrj_module,only: qrj,qtotal,qop,qo2p,qn2p,qnp,qnop
       use chapman_module,only: chapman
@@ -77,9 +76,6 @@
       i0=lon0 ; i1=lon1 ; nk=nlevp1 ; nkm1=nk-1 ! for addfld
       k0=1 ; k1=nlevp1
       nlats = lat1-lat0+1
-!
-      call bndcmp
-      if (debug) write(6,"('dynamics after bndcmp')")
 !
 ! Calculate specific heat and molecular viscosity.
 ! f4d itp fields are input, f3d fields are output.

@@ -9,10 +9,10 @@
 !
       use cons_module,only: cs,rmassinv,dz,dzgrav,freq_semidi,dt,p0,
      |  boltz,expz,expzmid,expzmid_inv,zbound
-      use bndry_module,only: lbc_gswm_addiag,zb,zb2,bnd,bnd2,ci
       use init_module,only: iter,igetgswm
       use fields_module,only: tlbc
       use addfld_module,only: addfld
+      use lbc,only: z_lbc
       implicit none
 !
 ! Input args:
@@ -146,33 +146,8 @@
 !
 ! Calculate geopotential Z:
 !
-! Use GSWM lbc for geopotential height if requested:
-      if (igetgswm > 0) then
-        call lbc_gswm_addiag(z(1,lon0:lon1,lat0:lat1),lon0,lon1,
-     |    lat0,lat1)
-      endif
       do j=lat0,lat1
-!
-! If not using gswm lbc, add in tidal components:
-        if (igetgswm <= 0) then
-!
-! z(1) = zb
-          expt=cexp(ci*freq_semidi*dt*iter)
-          do i=lon0,lon1
-            z(1,i,j) = real(zb(j)*bnd(i)*expt) 
-          enddo
-!
-! Add in effect of (1,1) tidal component to lbc
-!
-          expt = cexp(ci*.5*freq_semidi*dt*iter)
-          do i=lon0,lon1
-            z(1,i,j) = z(1,i,j)+real(zb2(j)*bnd2(i)*expt)
-          enddo
-        endif ! igetgswm
-!
-! Add background lower boundary of Z (zbound is in cons.F):
-!
-        z(1,lon0:lon1,j) = z(1,lon0:lon1,j)+zbound
+        z(1,lon0:lon1,j) = z_lbc(lon0:lon1,j)
 !
 ! Complete calculation of geopotential Z:
 !

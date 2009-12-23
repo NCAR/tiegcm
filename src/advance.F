@@ -36,7 +36,7 @@
       use cons_module,only: dt,re,cs,racs,ylatm,rtd
       use filter_module,only: filter
       use qrj_module,only: init_sflux
-      use magfield_module,only: sunloc
+      use magfield_module,only: sunloc_apex
       use efield_module,only: efield
       use aurora_module,only: aurora_cons,cusp2d,drzl2d,alfa2d,nflx2d,
      |  eflux2d
@@ -50,6 +50,7 @@
       use params_module,only: nlonp4,nlat,nlev
       use output,only: outhist
       use addfld_module,only: addfld
+      use lbc,only: tuvz_lbc
 #if defined(INTERCOMM) || defined(CISMAH)
       use cism_coupling_module,only: import, export, geng,gflx
 #endif
@@ -201,7 +202,7 @@
 ! (sub advance_day also updates sfeps)
 !
       if (calendar_advance > 0) call advance_day
-      call sunloc(iday,secs) ! locate sun's longitude
+      call sunloc_apex(iyear,iday,secs)! locate sun's longitude
       if (debug) write(6,"('advance after sunloc')")
       if (calendar_advance > 0) dday = float(iday)+secs/86400.
 !
@@ -252,6 +253,11 @@
 ! Get GSWM tidal boundary data:
 !
       call getgswm(istep,iyear,iday,secs)
+!
+! Update lower boundaries of t,u,v,z:
+!
+      call tuvz_lbc
+!
 #if defined(INTERCOMM) || defined(CISMAH)
 !
 ! Receive aurora parameters from the M-I coupler for CISM
@@ -566,6 +572,12 @@
           foutput(:,lon0:lon1,lat0:lat1,i) =
      |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
         enddo
+        tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
+        ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
+        vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
+        tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
+        ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
+        vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
       endif
 #else
       call timer(time0_phist,time1_phist,'PHIST',0,0) ! non-MPI
@@ -581,6 +593,9 @@
         tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
         ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
         vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
+        tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
+        ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
+        vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
       endif
 #endif
 !

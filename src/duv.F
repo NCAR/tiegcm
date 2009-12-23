@@ -10,10 +10,9 @@
 ! Advance neutral velocities for current time step:
 !
       use params_module,only: nlonp4,dz,nlat,spval,nlonp2,nlon
-!     use input_module,only: iuivi ! no longer in use (see dynamo input flag)
       use init_module,only: iter,igetgswm
-      use bndry_module,only: ub,ub2,vb,vb2,bnd,bnd2,ci,lbc_gswm_duv
-      use cons_module,only: freq_semidi,dt,dtx2inv,expz,p0,gask,grav,
+      use lbc,only: u_lbc,v_lbc
+      use cons_module,only: dtx2inv,expz,p0,gask,grav,
      |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,kut
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
       use addfld_module,only: addfld
@@ -59,7 +58,6 @@
 ! Local:
       integer :: k,i,j,lat,lonbeg,lonend
       integer :: nk,nkm1,nlevs
-      complex :: expt,expt2,expta
       real :: 
      |  unlbc(lon0:lon1), ! un lower boundary (t1)
      |  vnlbc(lon0:lon1)  ! vn lower boundary (t2)
@@ -81,9 +79,6 @@
      |  vnlbc_diag,   ! vn lbc redundant in vertical, for diagnostic
      |  ss_un,ss_vn,  ! also for diagnostics
      |  pp11,pp12,pp21,pp22, qq11,qq12,qq21,qq22, rr11,rr12,rr21,rr22
-      real,dimension(lon0:lon1,lat0:lat1) ::
-     |  unlbc_ij,     ! un lbc , for diagnostic ij
-     |  vnlbc_ij      ! vn lbc , for diagnostic ij
 !
 ! pp, qq, rr, beta AND gamma are (2 x 2) matrices defined for 
 !   k = 3/2, K-1/2, 1 and i = 3, IMAX+2, 1
@@ -103,11 +98,6 @@
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==nlonp4) lonend = nlonp4-2
-!
-! Complex constants:
-      expt  = cexp(ci*freq_semidi*dt*iter)
-      expt2 = cexp(ci*.5*freq_semidi*dt*iter)
-      expta = 1.
 !
 ! First latitude scan:
       do lat=lat0,lat1
@@ -180,34 +170,18 @@
 !    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('VN_NM_DUV','VN_NM_DUV',' ',vn_nm(:,lon0:lon1,lat),
 !    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-
-        if (igetgswm > 0) then
 !
-! Use GSWM lbc:
-          call lbc_gswm_duv(unlbc,vnlbc,unlbc_diag,vnlbc_diag,
-     |      lon0,lon1,lat,lev0,lev1,expt,expt2,expta)
+! Lower boundaries u_lbc,v_lbc were calculated by sub tuvz_lbc (lbc.F)
+        unlbc(:) = u_lbc(lon0:lon1,lat)
+        vnlbc(:) = v_lbc(lon0:lon1,lat)
+        do k=lev0,lev1
+          unlbc_diag(k,:) = unlbc(:)
+          vnlbc_diag(k,:) = vnlbc(:)
+        enddo
 !
-! U,V bottom boundary (non-gswm):
-        else ! non-gswm
-!
-! Semidiurnal tide:
-          do i=lon0,lon1
-            unlbc(i) = real(ub(lat)*bnd(i)*expt)  ! t1
-            vnlbc(i) = real(vb(lat)*bnd(i)*expt)  ! t2
-!
-! Diurnal tide:
-            unlbc(i) = unlbc(i) + real(ub2(lat)*bnd2(i)*expt2)
-            vnlbc(i) = vnlbc(i) + real(vb2(lat)*bnd2(i)*expt2)
-!
-! Define unlbc_ij for diagnostic:
-            unlbc_ij(i,lat) = unlbc(i)
-            vnlbc_ij(i,lat) = vnlbc(i)
-          enddo ! i=lon0,lon1
-        endif ! igetgswm
-
-!       call addfld('UNLBC_DUV','UNLBC_DUV',' ',unlbc_ij,
+!       call addfld('UNLBC_DUV','UNLBC_DUV',' ',unlbc_diag,
 !    |    'lon',lon0,lon1,'lat',lat0,lat1,0)
-!       call addfld('VNLBC_DUV','VNLBC_DUV',' ',vnlbc_ij,
+!       call addfld('VNLBC_DUV','VNLBC_DUV',' ',vnlbc_diag,
 !    |    'lon',lon0,lon1,'lat',lat0,lat1,0)
 
         do i=lonbeg,lonend
@@ -549,9 +523,8 @@
 ! Horizontal pressure forcing for un,vn: 
 !
       use params_module,only: nlonp4,nlat
-      use cons_module,only: dz,dzgrav,freq_semidi,dt,grav,racs,re_inv
+      use cons_module,only: dz,dzgrav,grav,racs,re_inv
       use init_module,only: iter
-      use bndry_module,only: zb,zb2,bnd,bnd2,ci
       use addfld_module,only: addfld
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_bndlats_f3d, 
@@ -582,10 +555,6 @@
      |  ztmp
       real,dimension(lev0:lev1,lon0-2:lon1+2) ::
      |  tbar,barmi,dztbar
-!
-      expt1 = cexp(ci*   freq_semidi*dt*iter) 
-      expt2 = cexp(ci*.5*freq_semidi*dt*iter)
-      expta = 1.
 !
       lonbeg = lon0
       if (lon0==1) lonbeg = 3

@@ -497,10 +497,37 @@
      |  call expand_path(gswm_mi_di_ncfile)
       if (len_trim(gswm_mi_sdi_ncfile) > 0) 
      |  call expand_path(gswm_mi_sdi_ncfile)
-      if (len_trim(gswm_nm_di_ncfile) > 0) 
-     |  call expand_path(gswm_nm_di_ncfile)
-      if (len_trim(gswm_nm_sdi_ncfile) > 0) 
-     |  call expand_path(gswm_nm_sdi_ncfile)
+!
+! Non-migrating gswm tides are not allowed at 5 deg resolution:
+      if (len_trim(gswm_nm_di_ncfile) > 0) then
+        if (dlat == 5.0) then
+          write(6,"(/,'>>> Non-migrating GSWM tides are not',
+     |      ' supported in the 5 deg resolution model.')")
+          call shutdown('non-migrating gswm not allowed at 5 deg res')
+        else
+          call expand_path(gswm_nm_di_ncfile)
+        endif
+      endif
+      if (len_trim(gswm_nm_sdi_ncfile) > 0) then
+        if (dlat == 5.0) then
+          write(6,"(/,'>>> Non-migrating GSWM tides are not',
+     |      ' supported in the 5 deg resolution model.')")
+          call shutdown('non-migrating gswm not allowed at 5 deg res')
+        else
+          call expand_path(gswm_nm_sdi_ncfile)
+        endif
+      endif
+!
+! Cannot request both gswm and Hough mode tides:
+      if ((len_trim(gswm_mi_di_ncfile ) > 0.or.
+     |     len_trim(gswm_mi_sdi_ncfile) > 0.or.
+     |     len_trim(gswm_nm_di_ncfile ) > 0.or.
+     |     len_trim(gswm_nm_sdi_ncfile) > 0) .and.
+     |   (any(tide /= 0).or.any(tide2 /= 0))) then
+        write(6,"(/,'>>> Cannot request both GSWM and Hough mode',
+     |    ' tides.')") 
+        call shutdown('both GSWM and Hough mode tides not allowed')
+      endif ! both gswm and Hough modes were requested
 !
 ! Collision factor:
       if (colfac==spval) then

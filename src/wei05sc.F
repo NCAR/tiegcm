@@ -928,9 +928,9 @@
       endif
       do i=1,nu
         ix = value_locate(x,u(i))
-        if (ix <= 1.or.ix >= nu) then
+        if (ix <= 1.or.ix >= nx) then ! bug fix by btf 12/23/09
           p(i) = 0.
-          continue
+          cycle                       ! bug fix by btf 12/23/09
         endif
         x1 = x(ix)
         x0 = x(ix-1)

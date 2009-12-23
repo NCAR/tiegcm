@@ -3237,4 +3237,186 @@ C          Geocentric to geodetic
       COMMON /MAGCOF/ G(ncoef),GV(ncoef)
       COMMON /MAGCOF_int/ NMAX,ICHG
       DATA NMAX,ICHG /13,-99999/
-      end block data blkmagcof
+      end block data blkmagcof    
+!-----------------------------------------------------------------------  
+      SUBROUTINE SUBSOL (IYR,IDAY,IHR,IMN,SEC,SBSLLAT,SBSLLON)
+C          Find subsolar geographic latitude and longitude given the
+C          date and time (Universal Time).
+C
+C          This is based on formulas in Astronomical Almanac for the
+C          year 1996, p.  C24. (U.S.  Government Printing Office,
+C          1994).  According to the Almanac, results are good to at
+C          least 0.01 degree latitude and 0.025 degree longitude
+C          between years 1950 and 2050.  Accuracy for other years has
+C          not been tested although the algorithm has been designed to
+C          accept input dates from 1601 to 2100.  Every day is assumed
+C          to have exactly 86400 seconds; thus leap seconds that
+C          sometimes occur on June 30 and December 31 are ignored:
+C          their effect is below the accuracy threshold of the algorithm.
+C
+C          961026 A. D. Richmond, NCAR
+C
+C          INPUTS:
+C            IYR  = Year (e.g., 1994). IYR must be in the range: 1601 to 2100.
+C            IDAY = Day number of year (e.g., IDAY = 32 for Feb 1)
+C            IHR  = Hour of day    (e.g., 13 for 13:49)
+C            IMN  = Minute of hour (e.g., 49 for 13:49)
+C            SEC  = Second and fraction after the hour/minute.
+C          Note:  While IYR is bounds tested, there is no constraint
+C                 placed on values: IDAY,IHR,IMN,SEC; e.g., IHR=25 is
+C                 properly interpreted.
+C          RETURNS:
+C            SBSLLAT = geographic latitude of subsolar point (degrees)
+C            SBSLLON = geographic longitude of subsolar point (degrees,
+C                      between -180 and +180)
+
+      PARAMETER (D2R=0.0174532925199432957692369076847 ,
+     +           R2D=57.2957795130823208767981548147)
+      PARAMETER (MSGUN=6)
+      INTEGER IYR,YR,IDAY,IHR,IMN,NLEAP,NCENT,NROT
+      REAL SEC,SBSLLAT,SBSLLON,L0,G0,DF,LF,GF,L,G,LAMBDA,EPSILON,N
+     1   ,GRAD,LAMRAD,SINLAM,EPSRAD,DELTA,UT,ETDEG
+C
+C Number of years from 2000 to IYR (negative if IYR < 2000):
+      YR = IYR - 2000
+C
+C NLEAP (final) = number of leap days from (2000 January 1) to (IYR January 1)
+C                 (negative if IYR is before 1997)
+      NLEAP = (IYR-1601)/4
+      NLEAP = NLEAP - 99
+      IF (IYR.LE.1900) THEN
+	IF (IYR.LE.1600) THEN
+	 WRITE(MSGUN,*) 'SUBSOLR INVALID BEFORE 1601: INPUT YEAR = ',IYR       
+	 STOP
+	ENDIF
+	NCENT = (IYR-1601)/100
+	NCENT = 3 - NCENT 
+	NLEAP = NLEAP + NCENT
+      ENDIF
+      IF (IYR.GE.2101) THEN
+	WRITE(MSGUN,*) 'SUBSOLR INVALID AFTER 2100:  INPUT YEAR = ',IYR
+	STOP
+      ENDIF
+C
+C L0 = Mean longitude of Sun at 12 UT on January 1 of IYR:
+C     L0 = 280.461 + .9856474*(365*(YR-NLEAP) + 366*NLEAP) 
+C	   - (ARBITRARY INTEGER)*360.
+C        = 280.461 + .9856474*(365*(YR-4*NLEAP) + (366+365*3)*NLEAP) 
+C	   - (ARBITRARY INTEGER)*360.
+C        = (280.461 - 360.) + (.9856474*365 - 360.)*(YR-4*NLEAP) 
+C	   + (.9856474*(366+365*3) - 4*360.)*NLEAP,
+C  where ARBITRARY INTEGER = YR+1.  This gives:
+      L0 = -79.549 + (-.238699*(YR-4*NLEAP) + 3.08514E-2*NLEAP)
+C
+C G0 = Mean anomaly at 12 UT on January 1 of IYR:
+C     G0 = 357.528 + .9856003*(365*(YR-NLEAP) + 366*NLEAP) 
+C	   - (ARBITRARY INTEGER)*360.
+C        = 357.528 + .9856003*(365*(YR-4*NLEAP) + (366+365*3)*NLEAP) 
+C	   - (ARBITRARY INTEGER)*360.
+C        = (357.528 - 360.) + (.9856003*365 - 360.)*(YR-4*NLEAP) 
+C	   + (.9856003*(366+365*3) - 4*360.)*NLEAP,
+C  where ARBITRARY INTEGER = YR+1.  This gives:
+      G0 = -2.472 + (-.2558905*(YR-4*NLEAP) - 3.79617E-2*NLEAP)
+C
+C Universal time in seconds:
+      UT = FLOAT(IHR*3600 + IMN*60) + SEC
+C
+C Days (including fraction) since 12 UT on January 1 of IYR:
+      DF = (UT/86400. - 1.5) + IDAY
+C
+C Addition to Mean longitude of Sun since January 1 of IYR:
+      LF = .9856474*DF
+C
+C Addition to Mean anomaly since January 1 of IYR:
+      GF = .9856003*DF
+C
+C Mean longitude of Sun:
+      L = L0 + LF
+C
+C Mean anomaly:
+      G = G0 + GF
+      GRAD = G*D2R
+C
+C Ecliptic longitude:
+      LAMBDA = L + 1.915*SIN(GRAD) + .020*SIN(2.*GRAD)
+      LAMRAD = LAMBDA*D2R
+      SINLAM = SIN(LAMRAD)
+C
+C Days (including fraction) since 12 UT on January 1 of 2000:
+      N = DF + FLOAT(365*YR + NLEAP)
+C
+C Obliquity of ecliptic:
+      EPSILON = 23.439 - 4.E-7*N
+      EPSRAD = EPSILON*D2R
+C
+C Right ascension:
+      ALPHA = ATAN2(COS(EPSRAD)*SINLAM,COS(LAMRAD))*R2D
+C
+C Declination:
+      DELTA = ASIN(SIN(EPSRAD)*SINLAM)*R2D
+C
+C Subsolar latitude:
+      SBSLLAT = DELTA
+C
+C Equation of time (degrees):
+      ETDEG = L - ALPHA
+      NROT = NINT(ETDEG/360.)
+      ETDEG = ETDEG - FLOAT(360*NROT)
+C
+C Apparent time (degrees):
+      APTIME = UT/240. + ETDEG
+C          Earth rotates one degree every 240 s.
+C
+C Subsolar longitude:
+      SBSLLON = 180. - APTIME
+      NROT = NINT(SBSLLON/360.)
+      SBSLLON = SBSLLON - FLOAT(360*NROT)
+C
+      RETURN
+      END
+!-----------------------------------------------------------------------     
+      SUBROUTINE SOLGMLON (XLAT,XLON,COLAT,ELON,MLON)
+C Computes geomagnetic longitude of the point with geocentric spherical
+C  latitude and longitude of XLAT and XLON, respectively.
+C 940719 A. D. Richmond, NCAR
+C Inputs:
+C   XLAT  = geocentric spherical latitude (deg)
+C   XLON  = geocentric spherical longitude (deg)
+C   COLAT = Geocentric colatitude of geomagnetic dipole north pole (deg)
+C   ELON  = East longitude of geomagnetic dipole north pole (deg)
+C Output:
+C   MLON  = Geomagnetic dipole longitude of the point (deg, -180. to 180.)
+
+      REAL MLON
+      PARAMETER (RTOD=5.72957795130823E1,DTOR=1.745329251994330E-2)
+
+C Algorithm:
+C   Use spherical coordinates.
+C   Let GP be geographic pole.
+C   Let GM be geomagnetic pole (colatitude COLAT, east longitude ELON).
+C   Let XLON be longitude of point P.
+C   Let TE be colatitude of point P.
+C   Let ANG be longitude angle from GM to P.
+C   Let TP be colatitude of GM.
+C   Let TF be arc length between GM and P.
+C   Let PA = MLON be geomagnetic longitude, i.e., Pi minus angle measured
+C     counterclockwise from arc GM-P to arc GM-GP.
+C   Then, using notation C=cos, S=sin, spherical-trigonometry formulas
+C     for the functions of the angles are as shown below.  Note: STFCPA,
+C     STFSPA are sin(TF) times cos(PA), sin(PA), respectively.
+
+      CTP = COS(COLAT*DTOR)
+      STP = SQRT(1. - CTP*CTP)
+      ANG = (XLON-ELON)*DTOR
+      CANG = COS(ANG)
+      SANG = SIN(ANG)
+      CTE = SIN(XLAT*DTOR)
+      STE = SQRT(1.-CTE*CTE)
+      STFCPA = STE*CTP*CANG - CTE*STP
+      STFSPA = SANG*STE
+      MLON = ATAN2(STFSPA,STFCPA)*RTOD
+      RETURN
+      END
+
+C   alon, and the geomagnetic dipole longitude of the subsolar point.
+C

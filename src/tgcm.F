@@ -17,7 +17,7 @@
       use hist_module,only: nstep
       use advance_module,only: advance
       use cons_module,only: init_cons
-      use bndry_module,only: lowbound
+      use lbc,only: bndry_diurnal, bndry_semidiurnal, bndcmp
       use qrj_module,only: init_qrj
       use magfield_module,only: magfield
       use apex_module,only: apxparm
@@ -105,8 +105,11 @@
 ! Set up magnetic field data (read from magfield file if dynamo<=0) 
       call magfield
 !
-! Set lower boundaries:
-      call lowbound
+! Set lower boundary Hough mode functions:
+      call bndry_diurnal
+      call bndry_semidiurnal
+      call bndcmp
+
       call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
 !
 ! Advance the model (timing in main time-step loop is done in advance):

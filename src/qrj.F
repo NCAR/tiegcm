@@ -76,7 +76,7 @@
       use cons_module,only: t0,expz,avo,rmassinv_n4s,rmassinv_no,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,expzmid,gask,
      |  expzmid_inv,p0,check_exp
-      use bndry_module,only: fb,b
+      use lbc,only: fb,b
       use chemrates_module,only: beta9
       use fields_module,only: tlbc
 !
@@ -187,7 +187,10 @@
 ! N2 at interfaces:
       do k=lev0,lev1
         n2i(k,:) = 1.-o2i(k,:)-o1i(k,:)
-      enddo 
+        do i=lon0,lon1                       !!! temporal fix CISM
+          if(n2i(k,i)<=0.)n2i(k,i)=1.e-5     !!! temporal fix CISM
+        enddo                                !!! temporal fix CISM
+      enddo
 !
 ! calculate variables for transferring mass density to number density
       do i=lon0,lon1

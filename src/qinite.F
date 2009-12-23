@@ -8,7 +8,7 @@
 !
 ! Calculate background ionization rates and add to rates from qrj. 
 !
-      use bndry_module,only: fb,b
+      use lbc,only: fb,b
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,
      |  rmassinv_no
       use qrj_module,only:
@@ -19,7 +19,6 @@
      |  qnop,  ! no+ ionization
      |  qtef   ! n production rate
       use chemrates_module,only: beta9n
-      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -36,13 +35,13 @@
 #endif
 !
 ! Local:
-      integer :: i,k,l,i0,i1,k0,k1
+      integer :: i,k,l,nlevs,ier
       real :: sa(3,3),si(3,3)
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  o2i,    ! o2  at interfaces
      |  o1i,    ! o   at interfaces
      |  n2i,    ! n2  at interfaces
-     |  tau,    !
+     |  tau,    ! 
      |  qbo2,   ! o2 background ionization
      |  qbo1,   ! o  background ionization
      |  qbn2    ! n2 background ionization
@@ -65,7 +64,8 @@
       si(:,2) = (/22.0E-18, 10.24E-18, 23.11E-18/)
       si(:,3) = (/16.0E-18,  8.40E-18, 11.61E-18/)
 !
-      i0=lon0 ; i1=lon1 ; k0=lev0 ; k1=lev1
+! Number of levels for addfsech calls:
+      nlevs = lev1-lev0+1
 !
 ! o2,o at interface levels:
       do k=lev0,lev1-1
@@ -75,15 +75,16 @@
 !
 ! Bottom boundary for o2i, o1i:
       do i=lon0,lon1
-        o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+
-     |    fb(i,1))
-        o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+
-     |    fb(i,2))
+        o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+fb(i,1))
+        o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+fb(i,2))
       enddo
 !
 ! n2 at interfaces:
       do k=lev0,lev1
         n2i(k,:) = 1.-o2i(k,:)-o1i(k,:)
+        do i=lon0,lon1                       !!! temporal fix CISM
+         if(n2i(k,i)<=0.)n2i(k,i)=1.e-5      !!! temporal fix CISM
+        enddo                                !!! temporal fix CISM
       enddo 
 !
 ! Summation over wavelength:
@@ -107,10 +108,10 @@
         enddo
       enddo ! l=1,3
 !
-!     call addfld('TAU' ,' ',' ',tau ,'lev',k0,k1,'lon',i0,i1,lat)
-!     call addfld('QBO2',' ',' ',qbo2,'lev',k0,k1,'lon',i0,i1,lat)
-!     call addfld('QBO1',' ',' ',qbo1,'lev',k0,k1,'lon',i0,i1,lat)
-!     call addfld('QBN2',' ',' ',qbn2,'lev',k0,k1,'lon',i0,i1,lat)
+!     call addfsech('TAU' ,' ',' ',tau ,lon0,lon1,nlevs,nlevs,lat)
+!     call addfsech('QBO2',' ',' ',qbo2,lon0,lon1,nlevs,nlevs,lat)
+!     call addfsech('QBO1',' ',' ',qbo1,lon0,lon1,nlevs,nlevs,lat)
+!     call addfsech('QBN2',' ',' ',qbn2,lon0,lon1,nlevs,nlevs,lat)
 !
 ! Add contributions to o2+, o+, n2+, n+, and no+ ionization rates:
       do i=lon0,lon1
@@ -140,16 +141,16 @@
         enddo ! i=lon0,lon1
       enddo ! k=2,lev1
  
-!     call addfld('QO2P',' ',' ',qo2p(k0:k1,i0:i1,lat),
-!    |  'lev',k0,k1,'lon',i0,i1,lat)
-!     call addfld('QOP' ,' ',' ',qop (k0:k1,i0:i1,lat),
-!    |  'lev',k0,k1,'lon',i0,i1,lat)
-!     call addfld('QN2P',' ',' ',qn2p(k0:k1,i0:i1,lat),
-!    |  'lev',k0,k1,'lon',i0,i1,lat)
-!     call addfld('QNP' ,' ',' ',qnp (k0:k1,i0:i1,lat),
-!    |  'lev',k0,k1,'lon',i0,i1,lat)
-!     call addfld('QNOP',' ',' ',qnop(k0:k1,i0:i1,lat),
-!    |  'lev',k0,k1,'lon',i0,i1,lat)
+!     call addfsech('QO2P',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
+!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfsech('QOP' ,' ',' ',qop (lev0:lev1,lon0:lon1,lat),
+!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfsech('QN2P',' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
+!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfsech('QNP' ,' ',' ',qnp (lev0:lev1,lon0:lon1,lat),
+!    |  lon0,lon1,nlevs,nlevs,lat)
+!     call addfsech('QNOP',' ',' ',qnop(lev0:lev1,lon0:lon1,lat),
+!    |  lon0,lon1,nlevs,nlevs,lat)
 !
 #ifdef VT
 !     code = 128 ; state = 'qinite' ; activity='ModelCode'

@@ -955,9 +955,46 @@ Fix two bugs, pointed out by John Ritterer:
 - Use-associate nlonp1 rather than nlonp4 in sub set_dynpot, rdsource.F
 - Add ntrigs argument to FFT99B call from sub FFT99, fft9.F
 
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 12/23/09:
-In wei05sc.F:
+In wei05sc.F (Original mods ~Oct 14):
 CNCAR      Routines added to work around non-ANSI trig functions which
 C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 In wei05sc.F and wei01sc.F: replace PAUSE statement with call shutdown.
 magpres_g: add save attribute to allocatables je1oD_geo and je2oD_geo
+(did svn commit here)
+
+12/23/09:
+Updating svn trunk with several mods, mainly from $TGCMROOT/tiegcm1.92/src/modsrc:
+(see also $TGCMROOT/tiegcm1.92/src/modsrc/README)
+
+New sub sunloc_apex (Original mods by Astrid, 5/22/09)
+  files: advance.F  apex_subs.F  magfield.F
+    new subroutine sunloc_apex
+  change the the calculation of the 
+  sun's location from dipole coordinates to apex. This is now conform with 
+  the apex coordinate system (the difference is minor 1-3 degrees)
+
+New lower boundary scheme, with new module lbc.F replacing bndry.F
+This involved many (about 15) source files.
+(Original mods by Foster, 6/26/09)
+
+Increase night time electron densities in qinite.F
+(Original mods by Foster and Maute, 8/27/09)
+  change the flux in qinite
+  from
+        real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)
+  to
+        real,parameter :: al(3)=(/0.75E7,0.75E6,0.75E6/)
+
+Update version flags from tiegcm1.91 to tiegcm1.92, see src/params.F.
+Fix two bugs, pointed out by John Ritterer:
+- Use-associate nlonp1 rather than nlonp4 in sub set_dynpot, rdsource.F
+- Add ntrigs argument to FFT99B call from sub FFT99, fft9.F
+(Original mods by Foster, 11/14/09)
+
+Bugfix in sub interpol_quad (wei05sc.F). This was found by Tzu-Wei
+in December, 2009. See "bug fix by btf" in wei05sc.F.
+
+Doing svn commit here, 12/23/09.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

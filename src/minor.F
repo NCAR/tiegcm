@@ -11,7 +11,7 @@
 ! This is called from comp_no and comp_n4s.
 !
       use params_module,only: nlat,nlon,nlonp4,dlat
-      use bndry_module,only: b,fb ! b(nlonp4,2,2), fb(nlonp4,2)
+      use lbc,only: b,fb ! b(nlonp4,2,2), fb(nlonp4,2)
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  boltz,p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
      |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,dtsmooth_div2
