@@ -998,3 +998,7 @@ in December, 2009. See "bug fix by btf" in wei05sc.F.
 
 Doing svn commit here, 12/23/09.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+1/5/10:
+Use mpi_bcast in sub mp_updatephi (mpi.F), as in timegcm. This
+resulted in a modest performance improvement (not as much as in
+timegcm).
