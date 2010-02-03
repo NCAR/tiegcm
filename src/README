@@ -1031,3 +1031,6 @@ Revision 293
 2/3/10:
 Now planning to start full year runs with saber/tidi lbc for Qian.
 Will set svn tag tiegcm_sabertidi, so these runs can be duplicated later.
+
+Minor fix in sub inp_solar.
+Revision 295

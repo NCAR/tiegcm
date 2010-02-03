@@ -2003,7 +2003,7 @@
 !   then use empirical calculation to get power, etc from the IMF.
 ! Note: namelist time-dependent f107 is not available.
 !
-        if (len_trim(gpi_ncfile)==0.and.kp==0.and.ntimes_kp==0) then
+        if (len_trim(gpi_ncfile)==0) then
           if (power==spval.and.ntimes_power==0) then
             write(6,"(/,'>>> INPUT: POWER or POWER_TIME must be ',
      |        'provided for non-GPI run with Heelis potential model.')")
