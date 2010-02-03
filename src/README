@@ -1019,6 +1019,15 @@ Revision 292
 
 2/3/10 btf:
 Merged mods to add Kp to namelist read. If kp is specified, it will
-be used to calculate hpower and/or ctpoten (see functions hp_from_kp
-and ctpoten_from_kp in util.F). For now, KP cannot be specified in
-a gpi or weimer potential run.
+  be used to calculate hpower and/or ctpoten (see functions hp_from_kp
+  and ctpoten_from_kp in util.F). For now, KP cannot be specified in
+  a gpi or weimer potential run.
+Added commented out KP and description in default namelist input file
+  (scripts/Mknamelist).
+Added prints of time-dependent solar inputs (power, ctpoten, etc)
+  in input.F.
+Revision 293
+
+2/3/10:
+Now planning to start full year runs with saber/tidi lbc for Qian.
+Will set svn tag tiegcm_sabertidi, so these runs can be duplicated later.
