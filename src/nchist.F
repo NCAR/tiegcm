@@ -64,7 +64,8 @@
      |  idv_see_ncfile,idv_gpi_ncfile,idv_ncep_ncfile,
      |  idv_f107d,idv_f107a,idv_imf_ncfile,idv_mag,idv_dtide,
      |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
-     |  idv_ec,idv_alfad,idv_ed,idv_writedate
+     |  idv_ec,idv_alfad,idv_ed,idv_writedate,idv_saber_ncfile,
+     |  idv_tidi_ncfile
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
 !
@@ -637,6 +638,30 @@
             if (istat /= NF_NOERR)
      |        call handle_ncerr(istat,'reading gpi_ncfile')
             if (len_trim(sh%gpi_ncfile)==0) sh%gpi_ncfile='[none]'
+!
+! SABER data file:
+          case('saber_ncfile')
+            start_2d(1) = 1
+            start_2d(2) = sh%ihist
+            count_2d(1) = mxlen_filename
+            count_2d(2) = 1
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%saber_ncfile)
+            if (istat /= NF_NOERR)
+     |        call handle_ncerr(istat,'reading saber_ncfile')
+            if (len_trim(sh%saber_ncfile)==0) sh%saber_ncfile='[none]'
+!
+! TIDI data file:
+          case('tidi_ncfile')
+            start_2d(1) = 1
+            start_2d(2) = sh%ihist
+            count_2d(1) = mxlen_filename
+            count_2d(2) = 1
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%tidi_ncfile)
+            if (istat /= NF_NOERR)
+     |        call handle_ncerr(istat,'reading tidi_ncfile')
+            if (len_trim(sh%tidi_ncfile)==0) sh%tidi_ncfile='[none]'
 !
 ! NCEP data file: ncep_ncfile(time,filelen), where filelen=mxlen_filename
 ! (ncep files used only by timegcm -- will always be '[none]' for tiegcm)
@@ -1594,6 +1619,16 @@
       call define_ncfile(ncid,"gpi_ncfile",idv_gpi_ncfile,
      |  "long_name","GeoPhysical Indices data file",
      |  "data","f107, f107a, ctpoten, power") 
+!
+! Define saber data file:
+      call define_ncfile(ncid,"saber_ncfile",idv_saber_ncfile,
+     |  "long_name","SABER lbc data file",
+     |  "data","T,Z") 
+!
+! Define tidi data file:
+      call define_ncfile(ncid,"tidi_ncfile",idv_tidi_ncfile,
+     |  "long_name","TIDI lbc data file",
+     |  "data","U,V") 
 !
 ! Define TIMED SEE data file:
       call define_ncfile(ncid,"see_ncfile",idv_see_ncfile,
@@ -2631,6 +2666,14 @@
      |  idv_gswm_nm_di_ncfile,h%ihist)
       call update_ncfile(ncid,"gswm_nm_sdi_ncfile",h%gswm_nm_sdi_ncfile,
      |  idv_gswm_nm_sdi_ncfile,h%ihist)
+!
+! Update saber_ncfile:
+      call update_ncfile(ncid,"saber_ncfile",h%saber_ncfile,
+     |  idv_saber_ncfile,h%ihist)
+!
+! Update tidi_ncfile:
+      call update_ncfile(ncid,"tidi_ncfile",h%tidi_ncfile,
+     |  idv_tidi_ncfile,h%ihist)
 !
 ! f107d and f107a (daily and average solar fluxes):
       if (idv_f107d <= 0) istat = nf_inq_varid(ncid,"f107d",

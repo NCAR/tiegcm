@@ -103,7 +103,7 @@
       logical :: debug=.false.
 !
 ! External:
-      logical,external :: wrhist
+      logical,external :: wrhist,time2print
       real,external :: hp_from_bz_swvel
 !
 #ifdef VT
@@ -808,14 +808,5 @@
  100  continue
 !     write(6,"('set_index: ',a,' = ',e12.4)") name,outindex
       end subroutine set_index
-!-----------------------------------------------------------------------
-!
-      logical function time2print(nstep,istep)
-      implicit none
-        integer,intent(in) :: nstep,istep
-        time2print = .false.
-        if (nstep <= 100 .or. (nstep > 100 .and. mod(istep,10)==0))
-     |    time2print = .true.
-      end function time2print
 !-----------------------------------------------------------------------
       end module advance_module

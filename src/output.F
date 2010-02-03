@@ -390,7 +390,8 @@
      |  colfac,source,hist,sechist,calendar_advance,secsource,
      |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
-     |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile
+     |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
+     |  saber_ncfile,tidi_ncfile
 
       use init_module,only: logname,host,system,iyear,iday,istep,
      |  start_mtime
@@ -559,11 +560,10 @@
       if (len_trim(gswm_nm_sdi_ncfile) == 0) 
      |  h%gswm_nm_sdi_ncfile = '[none]'
 
-! 11/2/05 btf: Integer gswm flags no longer in use
-!     h%gswmdi    = igswm_mi_di
-!     h%gswmsdi   = igswm_mi_sdi
-!     h%gswmnmdi  = igswm_nm_di
-!     h%gswmnmsdi = igswm_nm_sdi
+      h%saber_ncfile= saber_ncfile
+      if (len_trim(saber_ncfile) == 0) h%saber_ncfile = '[none]'
+      h%tidi_ncfile= tidi_ncfile
+      if (len_trim(saber_ncfile) == 0) h%tidi_ncfile = '[none]'
 
       h%missing_value = spval
       h%nlat = nlat

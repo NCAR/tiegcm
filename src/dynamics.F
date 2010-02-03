@@ -34,7 +34,6 @@
       use no_module,only: comp_no,minor_no
       use hdif_module,only: hdif3,hdif_bndlons,hdif_periodic
       use timing_module,only: timer,timing
-      use advance_module,only: time2print
       use addfld_module,only: addfld
       use init_module,only: iyear,secs
       use hist_module,only: modeltime
@@ -71,6 +70,7 @@
 !
       logical,parameter :: diags=.false. ! put fields on sec hist
       real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor
+      logical,external :: time2print
 !
       if (debug) write(6,"(/,'Enter dynamics.')")
       i0=lon0 ; i1=lon1 ; nk=nlevp1 ; nkm1=nk-1 ! for addfld

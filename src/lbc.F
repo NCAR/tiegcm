@@ -47,6 +47,10 @@
      |  gswm_mi_di_t, gswm_mi_sdi_t, gswm_nm_di_t, gswm_nm_sdi_t,
      |  gswm_mi_di_u, gswm_mi_sdi_u, gswm_nm_di_u, gswm_nm_sdi_u,
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
+      use input_module,only: saber_ncfile, tidi_ncfile
+      use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
+     |  tidi_u,tidi_v
+      use hist_module,only: modeltime
       implicit none
       integer :: i,j
       real :: rstep
@@ -64,6 +68,9 @@
       u_lbc(lon0:lon1,lat0:lat1) = 0.
       v_lbc(lon0:lon1,lat0:lat1) = 0.
       z_lbc(lon0:lon1,lat0:lat1) = zbound
+
+      if (len_trim(saber_ncfile) > 0 .or.
+     |    len_trim(tidi_ncfile) > 0) goto 100
 !
 ! Add gswm or Hough mode perturbations:
 !
@@ -135,6 +142,37 @@
             z_lbc(i,j) = z_lbc(i,j)+gswm_nm_sdi_z(i,j)
           enddo
         enddo
+      endif
+!
+! Add SABER and/or TIDI perturbations:
+ 100  continue
+      if (len_trim(saber_ncfile) > 0 .or.
+     |    len_trim(tidi_ncfile) > 0)
+     |  call get_saber_tidi(modeltime)
+
+      if (len_trim(saber_ncfile) > 0) then
+        do j=lat0,lat1
+          do i=lon0,lon1
+            t_lbc(i,j) = t_lbc(i,j)+saber_t(i,j)
+            z_lbc(i,j) = z_lbc(i,j)+saber_z(i,j)
+          enddo
+        enddo
+
+!       write(6,"('tuvz_lbc: added saber_t,z to t_lbc,z_lbc')")
+!       write(6,"('tuvz_lbc: saber_z min,max=',2e12.4)") 
+!    |    minval(saber_z),maxval(saber_z)
+!       write(6,"('tuvz_lbc: z_lbc min,max=',2e12.4)") 
+!    |    minval(z_lbc),maxval(z_lbc)
+
+      endif
+      if (len_trim(tidi_ncfile) > 0) then
+        do j=lat0,lat1
+          do i=lon0,lon1
+            u_lbc(i,j) = u_lbc(i,j)+tidi_u(i,j)
+            v_lbc(i,j) = v_lbc(i,j)+tidi_v(i,j)
+          enddo
+        enddo
+!       write(6,"('tuvz_lbc: added tidi_u,v to u_lbc,v_lbc')")
       endif
 !
 ! Save 2d boundaries to secondary histories:

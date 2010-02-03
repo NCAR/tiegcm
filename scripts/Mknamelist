@@ -391,6 +391,10 @@ print OUTFILE <<EOF;
  GSWM_MI_DI_NCFILE  = '$gswm_mdi_ncfile'
  GSWM_MI_SDI_NCFILE = '$gswm_msdi_ncfile'
 ;
+; SABER (T,Z) and/or TIDI (U,V) data files for lbc perturbations:
+;SABER_NCFILE = '$TGCMDATA/2002_saber_5.0deg.nc'
+;TIDI_NCFILE  = '$TGCMDATA/2002_tidi_5.0deg.nc'
+;
  POTENTIAL_MODEL = 'HEELIS'
 ;GPI_NCFILE = '$gpi_ncfile'
 ;

@@ -107,7 +107,9 @@
      |    gswm_mi_di_ncfile, ! GSWM migrating diurnal data file
      |    gswm_mi_sdi_ncfile,! GSWM migrating semi-diurnal data file
      |    gswm_nm_di_ncfile, ! GSWM non-migrating diurnal data file
-     |    gswm_nm_sdi_ncfile ! GSWM non-migrating semi-diurnal data file
+     |    gswm_nm_sdi_ncfile,! GSWM non-migrating semi-diurnal data file
+     |    saber_ncfile,      ! SABER U,Z lbc data file
+     |    tidi_ncfile        ! TIDI U,V lbc data file
         integer ::
      |    nlat,              ! number of latitude grid points
      |    nlon,              ! number of longitude grid points
@@ -237,6 +239,9 @@
       h%gswm_mi_sdi_ncfile = '[none]'
       h%gswm_nm_di_ncfile  = '[none]'
       h%gswm_nm_sdi_ncfile = '[none]'
+
+      h%saber_ncfile = '[none]'
+      h%tidi_ncfile = '[none]'
 
       h%nflds  = 0
       h%dynamo = .false.
@@ -419,6 +424,9 @@
      |  trim(h%gswm_nm_di_ncfile)
       write(6,"(2x,'gswm_nm_sdi_ncfile = ',a)")
      |  trim(h%gswm_nm_sdi_ncfile)
+
+      write(6,"(2x,'saber_ncfile   = ',a)") trim(h%saber_ncfile)
+      write(6,"(2x,'tidi_ncfile   = ',a)") trim(h%tidi_ncfile)
 
       write(6,"(2x,'nflds   = ',i3,' (number of model fields)')")
      |  h%nflds

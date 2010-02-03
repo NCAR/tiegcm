@@ -1664,3 +1664,11 @@
       hp = max(2.5,hp)*fac
       hp_from_bz_swvel = hp
       end function hp_from_bz_swvel
+!-----------------------------------------------------------------------
+      logical function time2print(nstep,istep)
+      implicit none
+        integer,intent(in) :: nstep,istep
+        time2print = .false.
+        if (nstep <= 100 .or. (nstep > 100 .and. mod(istep,10)==0))
+     |    time2print = .true.
+      end function time2print

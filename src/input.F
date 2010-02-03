@@ -113,7 +113,9 @@
      |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
      |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
-     |  gswm_nm_sdi_ncfile  ! gswm non-migrating semi-diurnal data file
+     |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
+     |  saber_ncfile,       ! SABER data (T,Z)
+     |  tidi_ncfile         ! TIDI data (U,V)
 
 !     integer,parameter :: ngpivars = 4
 !     real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
@@ -159,7 +161,8 @@
      |  mxhist_prim,mxhist_sech,msreten,ntask_lat,ntask_lon,
      |  start_day,start_year,calendar_advance,see_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
-     |  swden_time,swvel_time,al_time,indices_interp,imf_ncfile
+     |  swden_time,swvel_time,al_time,indices_interp,imf_ncfile,
+     |  saber_ncfile,tidi_ncfile
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -192,9 +195,18 @@
 ! (this can be split out into separate routines later)
       call inp_model(ntask)
 !
+! Sub inp_solar validates combinations of potential_model, gpi_ncfile,
+! imf_ncfile, and power,ctpoten,f107,f107a,bximf,byimf,bzimf,swden,swvel,
+! and their time-dependent equivalents.
+!
+      call inp_solar
+!
 ! Validate history input:
       call inp_primhist
       call inp_sechist
+!
+! Validate lower boundary options:
+       call inp_lbc
 !
 ! Print type(input_typ) inp:
       call inp_print(ntask)
@@ -222,6 +234,10 @@
       gswm_mi_sdi_ncfile= ' ' ! semidiurnal tide: user input gswm file path
       gswm_nm_di_ncfile= ' '  ! nonmigrating diurnal tide: user input gswm file path
       gswm_nm_sdi_ncfile= ' ' ! nonmigrating semidiurnal tide: user input gswm file path !
+
+      saber_ncfile = ' '      ! SABER data file
+      tidi_ncfile = ' '       ! TIDI data file
+
       date(:) = ispval ! old
       calday  = ispval ! old
 !
@@ -518,16 +534,9 @@
         endif
       endif
 !
-! Cannot request both gswm and Hough mode tides:
-      if ((len_trim(gswm_mi_di_ncfile ) > 0.or.
-     |     len_trim(gswm_mi_sdi_ncfile) > 0.or.
-     |     len_trim(gswm_nm_di_ncfile ) > 0.or.
-     |     len_trim(gswm_nm_sdi_ncfile) > 0) .and.
-     |   (any(tide /= 0).or.any(tide2 /= 0))) then
-        write(6,"(/,'>>> Cannot request both GSWM and Hough mode',
-     |    ' tides.')") 
-        call shutdown('both GSWM and Hough mode tides not allowed')
-      endif ! both gswm and Hough modes were requested
+! SABER and/or TIDI data files:
+      if (len_trim(saber_ncfile) > 0) call expand_path(saber_ncfile)
+      if (len_trim(tidi_ncfile) > 0)  call expand_path(tidi_ncfile)
 !
 ! Collision factor:
       if (colfac==spval) then
@@ -560,12 +569,6 @@
       rd_bzimf = bzimf
       rd_swvel = swvel
       rd_swden = swden
-!
-! Sub check_solar validates combinations of potential_model, gpi_ncfile,
-! imf_ncfile, and power,ctpoten,f107,f107a,bximf,byimf,bzimf,swden,swvel,
-! and their time-dependent equivalents.
-!
-      call check_solar
       end subroutine inp_model
 !-----------------------------------------------------------------------
       subroutine mkntask(ntask,ntask_lat,ntask_lon,ier)
@@ -1478,6 +1481,11 @@
      |  write(6,"('  gswm non-migrating semi-diurnal file: ',
      |    'gswm_nm_sdi_ncfile = ',a)") trim(gswm_nm_sdi_ncfile)
 
+      if (len_trim(saber_ncfile) > 0) write(6,"('  SABER data file: ',
+     |    'saber_ncfile = ',a)") trim(saber_ncfile)
+      if (len_trim(tidi_ncfile) > 0) write(6,"('  TIDI data file: ',
+     |    'tidi_ncfile = ',a)") trim(tidi_ncfile)
+
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amievol)
@@ -1500,9 +1508,9 @@
      |  dispose
 #ifdef MPI      
       write(6,"('  ntask_lon = ',i2,' (number of mpi tasks in ',
-     |  'longitude dimension.')") ntask_lon
+     |  'longitude dimension)')") ntask_lon
       write(6,"('  ntask_lat = ',i2,' (number of mpi tasks in ',
-     |  'latitude  dimension.')") ntask_lat
+     |  'latitude  dimension)')") ntask_lat
       write(6,"('  total tasks = ntask_lon*ntask_lat = ',i4)")
      |  ntask
 #endif
@@ -1760,7 +1768,7 @@
       endif
       end subroutine validate_timedep
 !-----------------------------------------------------------------------
-      subroutine check_solar
+      subroutine inp_solar
 !
 ! Validate combinations of potential_model, gpi_ncfile, imf_ncfile, and 
 ! power,ctpoten,f107,f107a,bximf,byimf,bzimf,swden,swvel, and their 
@@ -2018,7 +2026,7 @@
       endif
 !
 ! Report to stdout for debug: 
-!     write(6,"(/,'check_solar returning:')")
+!     write(6,"(/,'inp_solar returning:')")
 !     write(6,"('potential_model=',a)") trim(potential_model)
 !     if (len_trim(gpi_ncfile) > 0) 
 !    |  write(6,"('gpi_ncfile=',a)") trim(gpi_ncfile)
@@ -2030,6 +2038,57 @@
 !    |  bximf,byimf,bzimf
 !     write(6,"('swden=',e12.4,' swvel  =',e12.4)") swden,swvel
 
-      end subroutine check_solar
+      end subroutine inp_solar
+!-----------------------------------------------------------------------
+      subroutine inp_lbc
+!
+! Validate lower boundary options:
+!
+      implicit none
+      integer :: igswm, isaber, itidi, ihough
+      igswm = 0
+      if (len_trim(gswm_mi_di_ncfile ) > 0.or.
+     |    len_trim(gswm_mi_sdi_ncfile) > 0.or.
+     |    len_trim(gswm_nm_di_ncfile ) > 0.or.
+     |    len_trim(gswm_nm_sdi_ncfile) > 0) igswm = 1
+      isaber = 0
+      if (len_trim(saber_ncfile) > 0.) isaber = 1
+      itidi = 0
+      if (len_trim(tidi_ncfile) > 0.) itidi = 1
+      ihough = 0
+      if (any(tide2 /= 0).or.any(tide  /= 0.)) ihough = 1
+!
+! Hough-modes, gswm, and saber/tidi are mutually exclusive: 
+!
+      if (igswm==1) then
+        if (isaber==1.or.itidi==1.or.ihough==1) then
+          write(6,"('GSWM must be exclusive of SABER,TIDI,HOUGH')")
+          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
+     |      ' ihough=',i2)") igswm,isaber,itidi,ihough
+          call shutdown('inp_lbc')
+        endif 
+      endif
+      if (ihough==1) then
+        if (isaber==1.or.itidi==1.or.igswm==1) then
+          write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM')")
+          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
+     |      ' ihough=',i2)") igswm,isaber,itidi,ihough
+          call shutdown('inp_lbc')
+        endif 
+      endif
+!
+! saber and tidi can be specified separately or together,
+! but either are exclusive of gswm and hough. 
+      if (isaber==1.or.itidi==1) then
+        if (igswm==1.or.ihough==1) then
+          write(6,"('SABER/TIDI must be exclusive of GSWM,HOUGH')")
+          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
+     |      ' ihough=',i2)") igswm,isaber,itidi,ihough
+          call shutdown('inp_lbc')
+        endif 
+      endif
+
+      end subroutine inp_lbc
+!-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
       end module input_module

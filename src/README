@@ -1009,3 +1009,9 @@ Changed c2 = cos(2.*dgtr*float(j)) to
         c2 = cos(2.*dgtr*glat(j))
 A 1-day test of tiegcm showed this changed ZG by max of ~3 km near the 
 top of the model (much smaller lower, e.g., .125 km diff at zp -4).
+
+2/3/10 btf:
+Merged mods for saber/tidi lower boundary option. Several files
+  modified, and addition of new source file saber_tidi.F. Also added
+  commented saber/tidi ncfiles to default input file (scripts/Mknamelist)
+Will commit this before merging mods to add Kp to namelist read.
