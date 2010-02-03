@@ -1665,6 +1665,50 @@
       hp_from_bz_swvel = hp
       end function hp_from_bz_swvel
 !-----------------------------------------------------------------------
+      real function hp_from_kp(kp)
+!
+! Calculate hemispheric power from Kp.
+!
+      implicit none
+      real,intent(in) :: kp
+!
+      hp_from_kp = 0.
+      if (kp < 0..or.kp > 9.) then
+        write(6,"('>>> hp_from_kp: Bad kp=',e12.4)")
+        call shutdown('hp_from_kp')
+      endif
+!
+! Formula for hemispheric power:
+! modified by LQIAN, 2007
+! for fkp<=7: formula given by Zhang Yongliang based on TIMED/GUVI
+! for fkp>7: power is 153.13 when fkp=7 from Zhang's formula, 
+! assume power is 300.(based on NOAA satellites) when fkp=9 
+! do linear interporation in between
+!
+      if (kp <=7.) hp_from_kp = 16.82*exp(0.32*kp)-4.86
+      if (kp > 7.) hp_from_kp = 153.13 + (kp-7.)/(9.-7.)*(300.-153.13)
+      end function hp_from_kp
+!-----------------------------------------------------------------------
+      real function ctpoten_from_kp(kp)
+!
+! Calculate cross-tail potential from Kp.
+!
+      implicit none
+      real,intent(in) :: kp
+!
+      ctpoten_from_kp = 0.
+      if (kp < 0..or.kp > 9.) then
+        write(6,"('>>> ctpoten_from_kp: Bad kp=',e12.4)")
+        call shutdown('ctpoten_from_kp')
+      endif
+!
+! Formula for potential:
+! modified by LQIAN, 2007
+! formula given by Wenbin based on data fitting
+!
+      ctpoten_from_kp = 15.+15.*kp + 0.8*kp**2
+      end function ctpoten_from_kp
+!-----------------------------------------------------------------------
       logical function time2print(nstep,istep)
       implicit none
         integer,intent(in) :: nstep,istep

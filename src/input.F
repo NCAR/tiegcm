@@ -74,17 +74,19 @@
      |  bzimf,           ! BZ component of IMF in nT
      |  swvel,           ! Solar wind velocity in km/s
      |  swden,           ! Solar wind density in #/cm3
-     |  al               ! AL lower magnetic auroral activity index in nT
+     |  al,              ! AL lower magnetic auroral activity index in nT
+     |  kp               ! Kp index
       real,dimension(4,mxind_time) :: power_time,ctpoten_time,
-     |  bximf_time,byimf_time,bzimf_time,swvel_time,swden_time,al_time
+     |  bximf_time,byimf_time,bzimf_time,swvel_time,swden_time,al_time,
+     |  kp_time
       integer :: 
      |  ntimes_ctpoten,ntimes_power,ntimes_bximf,ntimes_byimf,
-     |  ntimes_bzimf,ntimes_swden,ntimes_swvel,ntimes_al
+     |  ntimes_bzimf,ntimes_swden,ntimes_swvel,ntimes_al,ntimes_kp
       logical :: aluse   ! logical to use AL in Weimer 2001 model or not
 !
 ! Parameters as read from namelist:
       real :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,rd_byimf,
-     |  rd_bzimf,rd_swvel,rd_swden
+     |  rd_bzimf,rd_swvel,rd_swden,rd_kp
 !
 ! If indices_interp==1, time-dependent indices (power_time, ctpoten_time, etc)
 ! will be interpolated to model time, otherwise they will change only
@@ -156,13 +158,13 @@
      |  secout,secstart,secstop,sechist,secsave,secflds,
      |  potential_model,difhor,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
-     |  colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
+     |  kp,colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,msreten,ntask_lat,ntask_lon,
      |  start_day,start_year,calendar_advance,see_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
-     |  swden_time,swvel_time,al_time,indices_interp,imf_ncfile,
-     |  saber_ncfile,tidi_ncfile
+     |  kp_time,al_time,swden_time,swvel_time,indices_interp,
+     |  imf_ncfile,saber_ncfile,tidi_ncfile
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -268,6 +270,7 @@
       swvel   = spval
       swden   = spval
       al      = spval
+      kp      = spval
 
       power_time(:,:) = spval
       ctpoten_time(:,:) = spval
@@ -277,6 +280,7 @@
       swden_time(:,:) = spval
       swvel_time(:,:) = spval
       al_time(:,:) = spval
+      kp_time(:,:) = spval
 !
       potential_model = ' '
       source = ' '
@@ -569,6 +573,15 @@
       rd_bzimf = bzimf
       rd_swvel = swvel
       rd_swden = swden
+      rd_kp    = kp
+
+      if (rd_kp /= spval) then
+        if (rd_kp < 0..or.rd_kp > 9.0) then
+          write(6,"('>>> INPUT: Bad KP = ',e12.4,' (must be between',
+     |      ' 0 and 7)')") rd_kp
+          call shutdown('namelist input KP')
+        endif
+      endif
       end subroutine inp_model
 !-----------------------------------------------------------------------
       subroutine mkntask(ntask,ntask_lat,ntask_lon,ier)
@@ -1595,21 +1608,74 @@
 !    |  tideann
       write(6,"('  aurora  = ',i2,' (0/1 flag for aurora)')") aurora
       write(6,"('  colfac = ',f9.3,' (collision factor)')") colfac
-!
+
       write(6,"('If any of the following are spval (',e12.4,'),',
      |  ' they will be calculated',/,'during the simulation on a per ',
      |  'timestep basis:')") spval
-      write(6,"('  power  = ',e12.4,' (Hemispheric Power)')") power
-      write(6,"('  ctpoten= ',e12.4,' (Cross-cap potential)')") ctpoten
+
+      if (ntimes_power == 0) then
+        write(6,"('  power  = ',e12.4,' (Hemispheric Power)')") power
+      else
+        write(6,"('  time-dependent power: ntimes = ',i4,' power_time=',
+     |    /,(3f4.0,e12.4))") ntimes_power,power_time(:,1:ntimes_power)
+      endif
+
+      if (ntimes_ctpoten == 0) then
+        write(6,"('  ctpoten= ',e12.4,' (Cross-cap potential)')") 
+     |    ctpoten
+      else
+        write(6,"('  time-dependent ctpoten: ntimes = ',i4,
+     |    ' ctpoten_time=',/,(3f4.0,e12.4))") ntimes_ctpoten,
+     |    ctpoten_time(:,1:ntimes_ctpoten)
+      endif
+
+      if (ntimes_kp == 0) then
+        write(6,"('  kp     = ',e12.4,' (Kp index)')") kp
+      else
+        write(6,"('  time-dependent Kp: ntimes = ',i4,' kp_time=',
+     |    /,(3f4.0,e12.4))") ntimes_kp,kp_time(:,1:ntimes_kp)
+      endif
+
+      if (ntimes_bximf == 0) then
+        write(6,"('  bximf  = ',e12.4,' (BX component of IMF)')") bximf
+      else
+        write(6,"('  time-dependent bximf: ntimes = ',i4,' bximf_time=',
+     |    /,(3f4.0,e12.4))") ntimes_bximf,bximf_time(:,1:ntimes_bximf)
+      endif
+
+      if (ntimes_byimf == 0) then
+        write(6,"('  byimf  = ',e12.4,' (BY component of IMF)')") byimf
+      else
+        write(6,"('  time-dependent byimf: ntimes = ',i4,' byimf_time=',
+     |    /,(3f4.0,e12.4))") ntimes_byimf,byimf_time(:,1:ntimes_byimf)
+      endif
+
+      if (ntimes_bzimf == 0) then
+        write(6,"('  bzimf  = ',e12.4,' (Bz component of IMF)')") bzimf
+      else
+        write(6,"('  time-dependent bzimf: ntimes = ',i4,' bzimf_time=',
+     |    /,(3f4.0,e12.4))") ntimes_bzimf,bzimf_time(:,1:ntimes_bzimf)
+      endif
+
+      if (ntimes_swvel == 0) then
+        write(6,"('  swvel  = ',e12.4,' (solar wind velocity)')") swvel
+      else
+        write(6,"('  time-dependent swvel: ntimes = ',i4,' swvel_time=',
+     |    /,(3f4.0,e12.4))") ntimes_swvel,swvel_time(:,1:ntimes_swvel)
+      endif
+
+      if (ntimes_swden == 0) then
+        write(6,"('  swden  = ',e12.4,' (solar wind density)')")  swden
+      else
+        write(6,"('  time-dependent swden: ntimes = ',i4,' swden_time=',
+     |    /,(3f4.0,e12.4))") ntimes_swden,swden_time(:,1:ntimes_swden)
+      endif
+!
       write(6,"('  f107   = ',e12.4,' (F10.7 solar flux)')") f107
       write(6,"('  f107a  = ',e12.4,' (81-day ave F10.7 flux)')") f107
-      write(6,"('  bximf  = ',e12.4,' (BX component of IMF)')") bximf
-      write(6,"('  byimf  = ',e12.4,' (BY component of IMF)')") byimf
-      write(6,"('  bzimf  = ',e12.4,' (Bz component of IMF)')") bzimf
-      write(6,"('  swvel  = ',e12.4,' (solar wind velocity)')") swvel
-      write(6,"('  swden  = ',e12.4,' (solar wind density)')")  swden
-!     write(6,"('  al     = ',e12.4,' (AL, lower auroral mag index)')")
-!    |  al
+
+      write(6,"('  al     = ',e12.4,' (AL, lower auroral mag index)')")
+     |  al
 !
       write(6,"('END USER INPUT PARAMETERS')")
       write(6,"(72('-'),/)")
@@ -1788,6 +1854,9 @@
 !      (time-dependent keywords are xxxx_time, e.g., ctpoten_time)
 !      Time-dependent namelist f107,f107a are not yet available.
 !      Valid ranges for user-provided parameters are not enforced.
+!   6. KP can be provided only if non-gpi run, and at least one of hpower
+!      and ctpoten are NOT provided. KP cannot be specified in a Weimer
+!      potential run.
 !
 ! If (potential_model == 'HEELIS') then
 !   [user does not need to provide bx,by,bz,swvel,swden]
@@ -1830,6 +1899,8 @@
      |  ntimes_al,'al')
       aluse = .true.
       if (al == spval) aluse = .false.
+      call validate_timedep(kp,kp_time,mxind_time,
+     |  ntimes_kp,'kp')
 !
 ! Check electric potential model:
 ! 4/08 btf: Add wiemer05 option
@@ -1874,6 +1945,41 @@
         call shutdown('GPI and IMF not allowed')
       endif
 !
+! Kp was specified:
+      if (kp /= spval.or.ntimes_kp > 0) then
+!
+! Cannot provide KP input for a GPI run:
+        if (len_trim(gpi_ncfile) > 0) then
+          write(6,"(/,'>>> INPUT: Cannot provide KP namelist input',
+     |      ' with a GPI run.')")
+          call shutdown('KP input')
+        endif
+!
+! Cannot provide KP input for a Weimer run:
+! (altho later, we might make it possible to use the Kp in an
+!  IMF data file, with a Weimer run)
+!
+        if (potential_model(1:6)=='WEIMER') then
+          write(6,"(/,'>>> INPUT: Cannot provide KP namelist input',
+     |      ' with a WEIMER run.')")
+          call shutdown('KP input')
+        endif
+!
+! If KP is provided, then at least one of power and ctpoten must NOT 
+! be provided, because the given KP will be used to calculate power 
+! and/or ctpoten.
+!
+        if ((ctpoten/=spval.or.ntimes_ctpoten>0).and.
+     |      (power  /=spval.or.ntimes_power>0)) then
+          write(6,"(/,'>>> INPUT: Cannot provide namelist KP and both',
+     |      ' POWER and CTPOTEN')")
+          write(6,"(/,'If KP is provided, then at least one of ',
+     |      ' POWER and CTPOTEN must NOT be provided (KP will be used',
+     |      ' to calculate POWER and/or CTPOTEN)')")
+          call shutdown('KP input')
+        endif
+      endif ! Kp provided
+!
 ! Check parameters needed for Heelis potential model:
       if (trim(potential_model)=='HEELIS') then
 !
@@ -1897,7 +2003,7 @@
 !   then use empirical calculation to get power, etc from the IMF.
 ! Note: namelist time-dependent f107 is not available.
 !
-        if (len_trim(gpi_ncfile)==0) then
+        if (len_trim(gpi_ncfile)==0.and.kp==0.and.ntimes_kp==0) then
           if (power==spval.and.ntimes_power==0) then
             write(6,"(/,'>>> INPUT: POWER or POWER_TIME must be ',
      |        'provided for non-GPI run with Heelis potential model.')")

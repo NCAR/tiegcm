@@ -385,7 +385,7 @@
      |  nlon,nlevp1,zibot,zitop,zmbot,zmtop
       use hist_module,only: sh,h,hist_initype,nhist,nsech,modeltime,
      |  isecout,ioutfile,nsource,nsecsource,iseries_prim,iseries_sech
-      use input_module,only: output,secout,date,step,power,ctpoten,
+      use input_module,only: output,secout,date,step,power,ctpoten,kp,
      |  bximf,byimf,bzimf,swvel,swden,al,f107,f107a,tide,tide2,
      |  colfac,source,hist,sechist,calendar_advance,secsource,
      |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
@@ -494,6 +494,7 @@
         h%f107a     = sh%f107a
         h%hpower    = sh%hpower
         h%ctpoten   = sh%ctpoten
+        h%kp        = sh%kp
         h%bximf     = sh%bximf
         h%byimf     = sh%byimf
         h%bzimf     = sh%bzimf
@@ -506,6 +507,7 @@
         h%f107a     = f107a
         h%hpower    = power
         h%ctpoten   = ctpoten
+        h%kp        = kp
         h%bximf     = bximf
         h%byimf     = byimf
         h%bzimf     = bzimf

@@ -25,13 +25,14 @@
      |  imf_ncfile
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
-     |  ctpoten,ctpoten_time,ntimes_ctpoten,
+     |  ctpoten,ctpoten_time,ntimes_ctpoten, rd_ctpoten,
      |  bximf  ,bximf_time  ,ntimes_bximf,
      |  byimf  ,byimf_time  ,ntimes_byimf,
      |  bzimf  ,bzimf_time  ,ntimes_bzimf,
      |  swden  ,swden_time  ,ntimes_swden,
      |  swvel  ,swvel_time  ,ntimes_swvel,
-     |  al     ,al_time     ,ntimes_al
+     |  al     ,al_time     ,ntimes_al,
+     |  kp     ,kp_time     ,ntimes_kp
       use init_module,only: istep,uthr,iter,secs,iday,iyear
       use cons_module,only: dt,re,cs,racs,ylatm,rtd
       use filter_module,only: filter
@@ -104,7 +105,7 @@
 !
 ! External:
       logical,external :: wrhist,time2print
-      real,external :: hp_from_bz_swvel
+      real,external :: hp_from_bz_swvel,hp_from_kp,ctpoten_from_kp
 !
 #ifdef VT
 !     code = 115 ; state = 'advance' ; activity='ModelCode'
@@ -227,6 +228,8 @@
      |  call set_index(swvel_time,ntimes_swvel,nsecs,swvel,'swvel')
       if (ntimes_al > 0) 
      |  call set_index(al_time,ntimes_al,nsecs,al,'al')
+      if (ntimes_kp > 0) 
+     |  call set_index(kp_time,ntimes_kp,nsecs,kp,'kp')
 !
 ! Get gpi data if necessary:
       if (len_trim(gpi_ncfile) > 0) then
@@ -248,6 +251,21 @@
       if (potential_model(1:6)=='WEIMER'.and.
      |  rd_power==spval) then
         power = hp_from_bz_swvel(bzimf,swvel)
+      endif
+!
+! If Kp was provided, calculate power and/or ctpoten
+! (see also sub check_solar in input.F)
+      if (kp /= spval) then
+        if (potential_model(1:6)/='WEIMER'.and.rd_power==spval) then
+          power = hp_from_kp(kp)
+!         write(6,"('Advance calculated power from Kp: ',
+!    |      ' KP=',f5.2,' POWER=',f8.2)") kp,power
+        endif
+        if (rd_ctpoten==spval) then
+          ctpoten = ctpoten_from_kp(kp)
+!         write(6,"('Advance calculated ctpoten from Kp: ',
+!    |      ' KP=',f5.2,' CTPOTEN=',f8.2)") kp,ctpoten
+        endif
       endif
 !
 ! Get GSWM tidal boundary data:

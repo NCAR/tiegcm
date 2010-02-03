@@ -58,7 +58,7 @@
      |  idv_mlon,idv_mlat,idv_mlev,idv_imlev,idv_p0_model,
      |  idv_step,idv_iter,idv_year,idv_day,idv_p0,idv_grav,
      |  idv_zg,idv_hpower,idv_ctpoten,idv_bximf,idv_byimf,idv_bzimf,
-     |  idv_colfac,idv_swden,idv_swvel,idv_al,
+     |  idv_colfac,idv_swden,idv_swvel,idv_al,idv_kp,
      |  idv_gswm_mi_di_ncfile,idv_gswm_mi_sdi_ncfile,
      |  idv_gswm_nm_di_ncfile,idv_gswm_nm_sdi_ncfile,
      |  idv_see_ncfile,idv_gpi_ncfile,idv_ncep_ncfile,
@@ -536,6 +536,11 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading ctpoten')
             sh%ctpoten = scalar
+          case('Kp')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading Kp')
+            sh%kp = scalar
           case('bximf')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
@@ -1563,6 +1568,9 @@
       call defvar_time_dbl(ncid,"ctpoten",ids1,idv_ctpoten,
      |  "Cross-tail potential","volts")
 !
+! Kp index:
+      call defvar_time_dbl(ncid,"Kp",ids1,idv_kp,"Kp index"," ")
+!
 ! BX,BY,BZ:
       call defvar_time_dbl(ncid,"bximf",ids1,idv_bximf,
      |  "BX component of IMF","nT")
@@ -1618,7 +1626,7 @@
 ! Define gpi data file:
       call define_ncfile(ncid,"gpi_ncfile",idv_gpi_ncfile,
      |  "long_name","GeoPhysical Indices data file",
-     |  "data","f107, f107a, ctpoten, power") 
+     |  "data","Kp, f107, f107a, ctpoten, power") 
 !
 ! Define saber data file:
       call define_ncfile(ncid,"saber_ncfile",idv_saber_ncfile,
@@ -2692,6 +2700,10 @@
       if (idv_ctpoten <= 0) istat = nf_inq_varid(ncid,"ctpoten",
      |  idv_ctpoten)
       istat = nf_put_var1_double(ncid,idv_ctpoten,h%ihist,h%ctpoten)
+!
+! Kp index:
+      if (idv_kp <= 0) istat = nf_inq_varid(ncid,"Kp",idv_kp)
+      istat = nf_put_var1_double(ncid,idv_kp,h%ihist,h%kp)
 !
 ! BX,BY,BZ imf:
       if (idv_bximf <= 0) istat = nf_inq_varid(ncid,"bximf",idv_bximf)

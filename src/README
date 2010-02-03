@@ -1015,3 +1015,10 @@ Merged mods for saber/tidi lower boundary option. Several files
   modified, and addition of new source file saber_tidi.F. Also added
   commented saber/tidi ncfiles to default input file (scripts/Mknamelist)
 Will commit this before merging mods to add Kp to namelist read.
+Revision 292
+
+2/3/10 btf:
+Merged mods to add Kp to namelist read. If kp is specified, it will
+be used to calculate hpower and/or ctpoten (see functions hp_from_kp
+and ctpoten_from_kp in util.F). For now, KP cannot be specified in
+a gpi or weimer potential run.

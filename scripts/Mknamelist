@@ -405,6 +405,10 @@ print OUTFILE <<EOF;
 ; commented out (data will be used for those that are commented 
 ; out, otherwise the user-provided values will be used).
 ;
+; If KP is specified, and POWER and/or CTPOTEN are commented,
+; then the given KP will be used to calculate POWER and/or CTPOTEN
+;
+;KP = 4.0
  POWER= 16.
  CTPOTEN=45.
  F107 = 150.
