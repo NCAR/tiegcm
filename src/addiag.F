@@ -232,8 +232,9 @@
       real,parameter :: dgtr=1.74533E-2
 !
 ! Latitude scan:
+! 1/20/10 btf: changed float(j) to glat(j) in cos of c2 calculation
       do j=lat0,lat1
-        c2 = cos(2.*dgtr*float(j))
+        c2 = cos(2.*dgtr*glat(j))
         g0 = 980.616*(1.-.0026373*c2)
         r0 = 2.*g0/(3.085462e-6 + 2.27e-9*c2) ! effective earth radius
 !

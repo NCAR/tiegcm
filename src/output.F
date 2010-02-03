@@ -171,6 +171,7 @@
         call copyhist(sh,h) ! copy source history sh into h
         write(6,"('output_hist: copied source history structure sh to ',
      |    'history structure h (nhist=',i3,')')") nhist
+        h%tuv_lbc_intop = 0 ! this code always writes new histories
       else
         call define_hist('primary')
       endif

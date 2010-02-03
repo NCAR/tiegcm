@@ -1001,4 +1001,11 @@ Doing svn commit here, 12/23/09.
 1/5/10:
 Use mpi_bcast in sub mp_updatephi (mpi.F), as in timegcm. This
 resulted in a modest performance improvement (not as much as in
-timegcm).
+timegcm). Committed revision 288.
+
+1/20/10 btf:
+Fix minor bug in sub calczg, addiag.F. 
+Changed c2 = cos(2.*dgtr*float(j)) to
+        c2 = cos(2.*dgtr*glat(j))
+A 1-day test of tiegcm showed this changed ZG by max of ~3 km near the 
+top of the model (much smaller lower, e.g., .125 km diff at zp -4).
