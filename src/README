@@ -1034,3 +1034,8 @@ Will set svn tag tiegcm_sabertidi, so these runs can be duplicated later.
 
 Minor fix in sub inp_solar.
 Revision 295
+
+2/4/10 maute:
+  include IGRF11 from http://www.ngdc.noaa.gov/IAGA/vmod/igrf.html
+  file: apex_subs.F
+
