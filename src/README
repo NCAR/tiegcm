@@ -928,7 +928,7 @@ am 1/22/08 (qinite.F, elden.F)
   from
         real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)
   to
-        real,parameter :: al(3)=(/0.75E7,0.75E6,0.75E6/)
+        real,parameter :: al(3)=(/1.5E7,1.5E6,1.5E6/)
   The new triple values are from TIME-GCM.
   In addition remove the minimum electron density in elden.F
 
@@ -1038,4 +1038,12 @@ Revision 295
 2/4/10 maute:
   include IGRF11 from http://www.ngdc.noaa.gov/IAGA/vmod/igrf.html
   file: apex_subs.F
+Revision 296
 
+Saved svn tag tiegcm1.92_r296 and put it in $TGCMROOT for testing
+by the group.
+
+2/11/10:
+Barb's fix to wei01gcm.F: set weictpoten(2) as function of vnx for
+each hemisphere, and set ctpoten to average of weictpoten.
+This will be r297.
