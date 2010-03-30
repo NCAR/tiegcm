@@ -2904,30 +2904,44 @@
       subroutine mp_updatephi
 !
 ! Dynamo has been calculated by the master task. Now send dynamo output
-!   field phim3d (mag coords) to the non-root tasks . Phim3d is
-!   dimensioned at the global mag grid by all tasks (see fields.F):
-!   phim3d(nmlonp1,nmlat,nmlev), but it is calculated in the dynamo by
-!   only the master task.
-!
-! 11/4/09 btf: Using a simple mpi_bcast call here instead of mpi_send/
-!   mpi_recv is *much* faster, e.g., with 64 procs running timegcm on
-!   bluefire, bcast showed 12% speedup overall at double-res, and 25%
-!   speedup at single-res.
+!   field phim3d (mag coords) to the slaves (phim3d is use-associated
+!   from fields module at top of this module). Phim3d is dimensioned at
+!   the global mag grid by all tasks: phim3d(nmlonp1,nmlat,nlevp1),
+!   but it is calculated in the dynamo by only the master task.  
 !
 ! Local:
-      integer :: ier,len
+      integer :: n,msgtag,ier
       real :: fmin,fmax
 !
-      len = nmlonp1*nmlat*nmlev
-      call mpi_bcast(phim3d,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
-      if (ier /= 0)
-     |  call handle_mpi_err(ier,'mp_updatephi call mpi_bcast')
-!     if (mytid /= 0) then
-!       call fminmax(phim3d,len,fmin,fmax)
-!       write(6,"('mp_updatephi: task ',i3,' received phim3d ',
-!    |    'from master: global min,max=',2e12.4)") mytid,fmin,fmax
-!     endif
-      end subroutine mp_updatephi
+      if (mytid==0) then ! master send to slaves
+        do n=1,ntask-1
+          msgtag = n
+          call mpi_send(phim3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
+     |      msgtag,MPI_COMM_WORLD,ier)
+          if (ier /= 0) then
+            write(6,"('>>> mp_updatephi: error sending',
+     |        ' phim3d from master to task ',i3,' msgtag=',i3)")
+     |        n,msgtag
+          else
+!           write(6,"('mp_updatephi: master sent phim3d to task',
+!    |        i3)") n
+          endif
+        enddo
+      else               ! slave receive from master
+        msgtag = mytid
+        call mpi_recv(phim3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
+     |    msgtag,MPI_COMM_WORLD,irstat,ier)
+        if (ier /= 0) then
+          write(6,"('>>> mp_updatephi: error receiving',
+     |      ' phim3d from master at task mytid=',i3,' msgtag=',i3)")
+     |      mytid,msgtag
+        else         
+!         call fminmax(phim3d,nmlonp1*nmlat*(nlevp1+3),fmin,fmax)
+!         write(6,"('mp_updatephi: task ',i3,' received phim3d ',
+!    |      'from master: global min,max=',2e12.4)") mytid,fmin,fmax
+        endif
+      endif
+      end subroutine mp_updatephi      
 !-----------------------------------------------------------------------
       subroutine mp_updateemphi
 !
@@ -2944,7 +2958,7 @@
       if (mytid==0) then ! master send to slaves
         do n=1,ntask-1
           msgtag = n
-          call mpi_send(emphi3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,n,
+          call mpi_send(emphi3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
      |      msgtag,MPI_COMM_WORLD,ier)
           if (ier /= 0) then
             write(6,"('>>> mp_updatephi: error sending',
@@ -2957,7 +2971,7 @@
         enddo
       else               ! slave receive from master
         msgtag = mytid
-        call mpi_recv(emphi3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,0,
+        call mpi_recv(emphi3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
      |    msgtag,MPI_COMM_WORLD,irstat,ier)
         if (ier /= 0) then
           write(6,"('>>> mp_updatephi: error receiving',
@@ -2982,7 +2996,7 @@
       if (mytid==0) then ! master send to slaves
         do n=1,ntask-1
           msgtag = n
-          call mpi_send(emlam3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,n,
+          call mpi_send(emlam3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
      |      msgtag,MPI_COMM_WORLD,ier)
           if (ier /= 0) then
             write(6,"('>>> mp_updatemlam: error sending',
@@ -2995,7 +3009,7 @@
         enddo
       else               ! slave receive from master
         msgtag = mytid
-        call mpi_recv(emlam3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,0,
+        call mpi_recv(emlam3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
      |    msgtag,MPI_COMM_WORLD,irstat,ier)
         if (ier /= 0) then
           write(6,"('>>> mp_updatemlam: error receiving',
@@ -3020,7 +3034,7 @@
       if (mytid==0) then ! master send to slaves
         do n=1,ntask-1
           msgtag = n
-          call mpi_send(emz3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,n,
+          call mpi_send(emz3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
      |      msgtag,MPI_COMM_WORLD,ier)
           if (ier /= 0) then
             write(6,"('>>> mp_updateemz: error sending',
@@ -3033,7 +3047,7 @@
         enddo
       else               ! slave receive from master
         msgtag = mytid
-        call mpi_recv(emz3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,0,
+        call mpi_recv(emz3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
      |    msgtag,MPI_COMM_WORLD,irstat,ier)
         if (ier /= 0) then
           write(6,"('>>> mp_updateemz: error receiving',

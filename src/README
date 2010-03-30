@@ -1046,4 +1046,21 @@ by the group.
 2/11/10:
 Barb's fix to wei01gcm.F: set weictpoten(2) as function of vnx for
 each hemisphere, and set ctpoten to average of weictpoten.
-This will be r297.
+This will be r298.
+
+am 3/11/10
+  mpi.F: update send and receive for fields emphi3d,emlam3d,emz3d
+     to include the top 3 levels since nmlev = nlev+3
+     subroutines mp_updateemphi, mp_updateemlam, mp_updateemz
+  efield.F: update addfld call for EMX,EMY,EMZ to put into the right
+  height levels (4,nmlevp1). The bottom levels are not used in the
+  geographic framework. 
+
+3/24/10:
+Bug fixes as per Astrid:
+1. dynamo.F subroutine threed: the E_lam wasn't mapped in the horizontal
+   plane which gave wrong results close to the geomagnetic equator at
+   higher pressure levels (therefore EXB drift was also wrong)
+2. efield.F in the mapping from magnetic to geographic grid real values
+   are put into integer w/o explicit conversion from real to integer.
+   This led to wrong mapping on HAO machine arc.

@@ -801,8 +801,8 @@ c      enddo
 !     endif
 !
 ! Save correct single-level potential to secondary histories (mag grid):
-!     call addfld('PHIM2D','2D ELECTRIC POTENTIAL','VOLTS',phim,
-!    |    'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+      call addfld('PHIM2D','2D ELECTRIC POTENTIAL','VOLTS',phim,
+     |    'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
 !  am_02/02: calculate current for both hemisphere:
 !                      R**2 * J_mr / dt0dts /rcos0s
@@ -2672,7 +2672,7 @@ c      enddo
 !-----------------------------------------------------------------------
       subroutine threed
       use cons_module,only: ylatm,r0,r00,pi_dyn,table,dlatm,dlonm,
-     |  rcos0s,re,dt1dts,dt0dts
+     |  rcos0s,re,dt1dts,dt0dts,rtd,ylonm
       use fields_module,only: phim3d,
      |  emphi3d,   ! 3d eastward electric field magnetic
      |  emlam3d,   ! 3d equatorw. electric field magnetic
@@ -2694,7 +2694,7 @@ c      enddo
 !
 ! Local:
       integer :: k,i,j,ip1f,ip2f,ip3f
-      real :: cosltm,pi,phimn,phims,csth0,sym,ctm
+      real :: cosltm,pi,phimn,phims,csth0,sym,ctm,sinltm,siniq
       real,dimension(nmlonp1) :: thetam,pslot,qslot
       integer,dimension(nmlonp1) :: islot,jslot
       real,dimension(nmlonp1,nmlat) :: ed1,ed2
@@ -2767,11 +2767,11 @@ c      enddo
 !
 ! Equator: derivative of quadratic polynomial (3 given points)
         ed2(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
-     |    -3.*phim(i,nmlath))/(2.*dlatm)/(R0*1.e-2)
+     |    -3.*phim(i,nmlath))/(2.*dlatm)*dt1dts(nmlath)/(R0*1.e-2)
         ed2(i,nmlath+1) = (4.*phim(i,nmlath+2)-phim(i,nmlath+3)
-     |    -3.*phim(i,nmlath+1))/(2.*dlatm)/(R0*1.e-2)
+     |    -3.*phim(i,nmlath+1))/(2.*dlatm)*dt1dts(nmlath+1)/(R0*1.e-2)
         ed2(i,nmlath-1) = (4.*phim(i,nmlath-2)-phim(i,nmlath-3)
-     |    -3.*phim(i,nmlath-1))/(2.*dlatm)/(R0*1.e-2)
+     |    -3.*phim(i,nmlath-1))/(2.*dlatm)*dt1dts(nmlath-1)/(R0*1.e-2)
         elam(i,nmlath) = (4.*phim(i,nmlath+1)-phim(i,nmlath+2)
      |    -3.*phim(i,nmlath))/(2.*dlatm)
       enddo ! i = 1,nmlonp1
@@ -2783,10 +2783,17 @@ c      enddo
 !   Recalling that the model assumes constant electric potential
 !   along each field line, interpolation in the 2d array phim gives
 !   the potential at the original grid point.
+! ar 3/2010
+! For calculating electric fields and ExB drifts as a function of
+!  height, neglect height variations of R_E+h, except when those height
+!  variations cause large height variations in functions like
+!  arccos{sqrt[(R_E+h_0)/(R_E+h)]}.  Consistent with this assumption,
+!  neglect height variations of the geomagnetic-field strength.
 !
       do k=-2,nlevp1
         do j=2,nmlat-1
-          cosltm = cos(ylatm(j))     ! dipole latitude
+          cosltm = cos(ylatm(j))     ! dipole latitude          
+	  sinltm = sin(ylatm(j))
           sym = 1.                   ! northern hemisphere
           if (j < nmlath) sym = -1.  ! southern hemisphere
           do i=1,nmlon
@@ -2796,6 +2803,7 @@ c      enddo
 !
             ctm = sqrt(r0/(re+zpotenm3d(i,j,k)))*cosltm 
             thetam(i) = acos(ctm)
+	    siniq = 2.*sinltm/sqrt(4.-3.*cosltm**2)
 !
 ! Find position of lam_m in table of lam_m vs lam_0
 ! table is spaced 1 deg in lam_m
@@ -2829,11 +2837,10 @@ c      enddo
 !
             emphi3d(i,j,k) = (1.-qslot(i))*
      |        ephi(islot(i),jslot(i))+qslot(i)*
-     |        ephi(islot(i),jslot(i)+1)
-!
-            emlam3d(i,j,k) = (1.-qslot(i))*
-     |        elam(islot(i),jslot(i))+qslot(i)*
-     |        elam(islot(i),jslot(i)+1)
+     |        ephi(islot(i),jslot(i)+ 1)   
+            emlam3d(i,j,k) = -siniq*(r0*1.e-2)*( (1.-qslot(i))*
+     |        ed2(islot(i),jslot(i))+qslot(i)*
+     |        ed2(islot(i),jslot(i)+1) )
           enddo ! i=1,nmlon
         enddo ! j=2,nmlat-1
       enddo ! k=-2,nlevp1
@@ -2852,9 +2859,9 @@ c      enddo
           ed23d(i,nmlat,k) = ed2(i,nmlat)
 !
           emphi3d(i,1,k)     = ephi(i,1)
-          emphi3d(i,nmlat,k) = ephi(i,nmlat)
-          emlam3d(i,1,k)     = elam(i,1)
-          emlam3d(i,nmlat,k) = elam(i,nmlat)
+          emphi3d(i,nmlat,k) = ephi(i,nmlat)          
+	  emlam3d(i,1,k)     =  ed2(i,1)*(r0*1.e-2)
+	  emlam3d(i,nmlat,k) = -ed2(i,nmlat)*(r0*1.e-2) 
         enddo ! i = 1,nmlon
       enddo ! k = -2,nlevp1
 !          
@@ -2898,22 +2905,22 @@ c      enddo
 ! Local:
 ! real,dimension(nmlonp1,nmlat,-2:nlevp1) :: zpotenm3d
 !
-!     do j=1,nmlat
-!       call addfld('EMPHI3D','R E_mphi','[V/m*m]',
-!    |   emphi3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-!       call addfld('EMLAM3D','R E_mlam','[V/m*m]',
-!    |   emlam3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-!       call addfld('EMZ3D','E_mZ','[V/m*m]',
-!    |   emz3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-!      call addfld('ED1M3D','ed_1 (magn.)','[V/m]',
-!    |   ed13d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-!      call addfld('ED2M3D'  ,'ed_2 (magn.)','[V/m]',
-!    |   ed23d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-!      call addfld('PHIM3D','El.Poten','V',
-!    |    phim3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-!      call addfld('ZPOTEN3D','ZPOTEN3D','[cm]',
-!    |    zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-!     enddo ! j=1,nmlat
+      do j=1,nmlat
+        call addfld('EMPHI3D','R E_mphi','[V/m*m]',
+     |	emphi3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+       call addfld('EMLAM3D','R E_mlam','[V/m*m]',
+     |	emlam3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+       call addfld('EMZ3D','E_mZ','[V/m*m]',
+     |	emz3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+       call addfld('ED1M3D','ed_1 (magn.)','[V/m]',
+     |	ed13d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+       call addfld('ED2M3D'  ,'ed_2 (magn.)','[V/m]',
+     |	ed23d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+       call addfld('PHIM3D','El.Poten','V',
+     |	 phim3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+       call addfld('ZPOTEN3D','ZPOTEN3D','[cm]',
+     |	 zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+      enddo ! j=1,nmlat
 !      
       end subroutine threed
 !-----------------------------------------------------------------------
