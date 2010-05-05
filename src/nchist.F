@@ -1114,7 +1114,7 @@
       integer,intent(in) :: ncid
 !
 ! Local:
-      integer :: i,ii,istat,idum,ivar1(1),imo,ida,startmtime(4)
+      integer :: i,ii,istat,idum,ivar1(1),imo,ida,startmtime(4),nbytes
       character(len=120) :: char120
       character(len=80) :: char80
       character(len=24) :: create_date,create_time
@@ -1780,8 +1780,9 @@
 !
 ! All prognostic fields are on primary history:
       if (h%hist_type(1:3)=='pri') then
+        nbytes = 8
         do i=1,nf4d_hist
-          call defvar_f4d(ncid,f4d(i),idv_f4d(i))
+          call defvar_f4d(ncid,f4d(i),idv_f4d(i),nbytes)
         enddo
 !
 ! Define secondary history fields (geographic or magnetic):
@@ -1792,12 +1793,12 @@
       endif
 !
 ! Define lower boundaries of t,u,v (both secondary and primary):
-      call deflbc(ncid,"TLBC",idv_tlbc)
-      call deflbc(ncid,"ULBC",idv_ulbc)
-      call deflbc(ncid,"VLBC",idv_vlbc)
-      call deflbc(ncid,"TLBC_NM",idv_tlbc_nm)
-      call deflbc(ncid,"ULBC_NM",idv_ulbc_nm)
-      call deflbc(ncid,"VLBC_NM",idv_vlbc_nm)
+      call deflbc(ncid,"TLBC",idv_tlbc,h%hist_type)
+      call deflbc(ncid,"ULBC",idv_ulbc,h%hist_type)
+      call deflbc(ncid,"VLBC",idv_vlbc,h%hist_type)
+      call deflbc(ncid,"TLBC_NM",idv_tlbc_nm,h%hist_type)
+      call deflbc(ncid,"ULBC_NM",idv_ulbc_nm,h%hist_type)
+      call deflbc(ncid,"VLBC_NM",idv_vlbc_nm,h%hist_type)
 !
 ! Define LBC: bottom interface level (scalar coord of TLBC,ULBC,VLBC):
       istat = nf_def_var(ncid,"LBC",NF_DOUBLE,0,idum,idv_lbc)
@@ -2191,15 +2192,17 @@
       endif
       end subroutine defvar_time_dbl
 !-----------------------------------------------------------------------
-      subroutine deflbc(ncid,vname,idv)
+      subroutine deflbc(ncid,vname,idv,type)
+      use input_module,only: sech_nbyte
 !
 ! Define t, u, or v lbc on current history file. Return new varialbe
 !   id in idv. (vname should be TLBC, ULBC, or VLBC)
+! If defining a secondary history, check sech_nbyte.
 !
 ! Args:
       integer,intent(in) :: ncid
       integer,intent(out) :: idv
-      character(len=*),intent(in) :: vname
+      character(len=*),intent(in) :: vname,type
 !
 ! Local:
       integer :: istat,len
@@ -2210,7 +2213,18 @@
       ids3(3) = id_time
 !
 ! Define variable:
-      istat = nf_def_var(ncid,trim(vname),NF_DOUBLE,3,ids3,idv)
+! Always write doubles to primary files. For secondary files, write
+!   4-byte floats if sech_nbyte=4, or 8-byte doubles if sech_nbyte=8
+!
+      if (trim(type)=='primary') then
+        istat = nf_def_var(ncid,trim(vname),NF_DOUBLE,3,ids3,idv)
+      else
+        if (sech_nbyte==4) then
+          istat = nf_def_var(ncid,trim(vname),NF_REAL,3,ids3,idv)
+        else
+          istat = nf_def_var(ncid,trim(vname),NF_DOUBLE,3,ids3,idv)
+        endif
+      endif
       if (istat /= NF_NOERR) then
         write(char80,"('Error defining 2-d var ',a)") trim(vname)
         call handle_ncerr(istat,trim(char80))
@@ -2259,14 +2273,14 @@
 !
       use fields_module,only: fsechist
       use hist_module,only: nsech,isecout
-      use input_module,only: secout
+      use input_module,only: secout,sech_nbyte
       implicit none
 !
 ! Args:
       integer,intent(in) :: ncid
 !
 ! Local:
-      integer :: ix,istat,iprog,idimids(4),idv
+      integer :: ix,istat,iprog,idimids(4),idv,isdef
       character(len=80) :: char80
       real :: var1(1)
 !
@@ -2288,7 +2302,7 @@
         if (iprog > 0.and.nsech==1) then
 !
 ! Define prognostic secondary history field:
-          call defvar_f4d(ncid,f4d(iprog),idv_fsech(ix))
+          call defvar_f4d(ncid,f4d(iprog),idv_fsech(ix),sech_nbyte)
 !
 ! 10/27/05 btf: Assume user-requested 'W' refers to "old hist" W, i.e. OMEGA:
 !
@@ -2296,7 +2310,7 @@
           write(6,"('Note: defining requested secondary history ',
      |      'variable ''W'' as prognostic ''OMEGA''')") 
           iprog = strloc(f4d%short_name,size(f4d),'OMEGA')
-          call defvar_f4d(ncid,f4d(iprog),idv_fsech(ix))
+          call defvar_f4d(ncid,f4d(iprog),idv_fsech(ix),sech_nbyte)
           cycle floop
         endif ! iprog and nsech
 !
@@ -2341,15 +2355,24 @@
 !
 ! Define 3d var (lon,lat,lev,time)
           istat = nf_inq_varid(ncid,fsechist(ix)%short_name,idv)
-          if (istat /= NF_NOERR) then  ! var has not been defined
-            istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
-     |        4,idimids,idv_fsech(ix)) ! returns idv_fsech(ix)
+          isdef = 0                  ! assume var is not yet defined
+          if (istat == 0) isdef = 1  ! var is already defined -- cannot redef
+          if (isdef == 0) then ! safe to define
+            if (sech_nbyte == 4) then ! write 4-byte reals
+              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_REAL,
+     |          4,idimids,idv_fsech(ix)) ! returns idv_fsech(ix)
+            else                      ! write 8-byte doubles
+              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
+     |          4,idimids,idv_fsech(ix)) ! returns idv_fsech(ix)
+            endif
             if (istat /= NF_NOERR) then
               write(char80,"('def_fsech: Error defining 3d field ',a)")
      |          trim(fsechist(ix)%short_name)
               call handle_ncerr(istat,trim(char80))
-            endif 
-          endif
+            endif
+!           write(6,"('def_fsech: defined 3d var ',a)")
+!    |        fsechist(ix)%short_name
+          endif  ! if var not yet defined
 !
 ! Get dim id's for 2 dimensions (geo or mag):
         else                              ! 2d var (lon,lat,time)
@@ -2368,15 +2391,17 @@
           idimids(3) = id_time
 !
 ! Define 2d var (lon,lat,time)
-          istat = nf_inq_varid(ncid,fsechist(ix)%short_name,idv)
-          if (istat /= NF_NOERR) then  ! var has not been defined
+          if (sech_nbyte == 4) then ! write 4-byte reals
+            istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_REAL,
+     |        3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
+          else
             istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
      |        3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
-            if (istat /= NF_NOERR) then
-              write(char80,"('def_fsech: Error defining 2d field ',a)")
-     |          fsechist(ix)%short_name 
-              call handle_ncerr(istat,trim(char80))
-            endif 
+          endif
+          if (istat /= NF_NOERR) then
+            write(char80,"('def_fsech: Error defining 2d field ',a)")
+     |        fsechist(ix)%short_name
+            call handle_ncerr(istat,trim(char80))
           endif
         endif  ! 2d or 3d
 
@@ -2410,13 +2435,13 @@
       if (nsech==2) istat = nf_enddef(ncid) ! take out of define mode
       end subroutine def_fsech
 !-----------------------------------------------------------------------
-      subroutine defvar_f4d(ncid,f,idvar)
+      subroutine defvar_f4d(ncid,f,idvar,nbytes)
 !
 ! Define a prognostic variable on current netcdf history file:
 ! (not data -- see wrf4d for data write)
 !
 ! Args:
-      integer,intent(in)  :: ncid
+      integer,intent(in)  :: ncid,nbytes
       integer,intent(out) :: idvar
       type(fields_4d),intent(in) :: f
 !
@@ -2437,11 +2462,19 @@
         idimids(1:3) = id_fake
         idimids(4) = id_time
       endif
+!
 ! This call returns the variable id, idvar.
-      istat = nf_def_var(ncid,f%short_name,NF_DOUBLE,4,idimids,idvar)
+!   nbytes == 4 means write 4-byte reals (to secondary files), otherwise
+!   nbytes == 8 means write 8-byte doubles (either secondary or primary files).
+!
+      if (nbytes == 4) then     ! write 4-byte reals
+        istat = nf_def_var(ncid,f%short_name,NF_REAL,4,idimids,idvar)
+      else                      ! write 8-byte doubles
+        istat = nf_def_var(ncid,f%short_name,NF_DOUBLE,4,idimids,idvar)
+      endif
       if (istat /= NF_NOERR) then
-        write(char80,"('Error defining 4-d field ',a)") 
-     |    f%short_name
+        write(char80,"('defvar_f4d: Error defining 4-d field ',a,
+     |    ' nbytes=',i2)") f%short_name,nbytes
         call handle_ncerr(istat,trim(char80))
       endif
 !

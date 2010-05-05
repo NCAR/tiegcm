@@ -90,13 +90,14 @@ ifeq ($(UNAMES),AIX)
   else
     LIBS     += -lmass       # IBM optimized lib
   endif
+  FFLAGS     := $(cpp_path) $(OPTIM) $(DBGFLAGS) -qarch=auto -qrealsize=8 -q64
   ifeq ($(MPI),TRUE)
      FC         := mpxlf_r
    else
      FC         := xlf90
+     FFLAGS     += -qfixed
   endif
   CPPFLAGS := $(subst $(space),$(comma),$(CPPFLAGS))
-  FFLAGS     := $(cpp_path) $(OPTIM) $(DBGFLAGS) -qarch=auto -qrealsize=8 -q64
 #
 # 11/21/08: Add 64K page sizes:
   LDFLAGS    += -bloadmap:loadmap -q64 $(OPTIM)

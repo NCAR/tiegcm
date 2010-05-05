@@ -149,7 +149,8 @@
      |  secstop(3,mxseries),  ! secondary history model stop time(s)
      |  sechist(3,mxseries),  ! secondary history disk write frequency
      |  secsave(3,mxseries),  ! secondary history file save frequency
-     |  mxhist_sech           ! max number of histories per secondary file
+     |  mxhist_sech,          ! max number of histories per secondary file
+     |  sech_nbyte            ! 4 or 8: write real or double values to secondary file
 !
 ! Namelist for read:
       namelist/tgcm_input/ 
@@ -164,7 +165,7 @@
      |  start_day,start_year,calendar_advance,see_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
-     |  imf_ncfile,saber_ncfile,tidi_ncfile
+     |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -303,6 +304,7 @@
       secsave(:,:)  = ispval
       mxhist_sech = 24 ! default max number of histories per sech file
       if (dlat == 2.5) mxhist_sech = 10 ! 2.5 degree horizontal resolution 
+      sech_nbyte    = ispval
       end subroutine inp_init
 !-------------------------------------------------------------------
       subroutine inp_model(ntask)
@@ -1438,6 +1440,18 @@
         endif
         secflds(i) = ch80
       enddo
+!
+! Number of bytes for values of 4d fields on secondary histories:
+! Must be either 4 (reals) or 8 (doubles). Default is 4, i.e.,
+! write 4-byte reals to secondary histories.
+!
+      if (sech_nbyte == ispval) then
+        sech_nbyte = 4
+      elseif (sech_nbyte /= 4 .and. sech_nbyte /= 8) then
+        write(6,"('>>> INPUT: sech_nbyte=',i4,' but must be either ',
+     |    '4 (write real to sech) or 8 (write double to sech)')")
+        call shutdown('sech_nbyte')
+      endif
       end subroutine inp_sechist
 !-----------------------------------------------------------------------
       subroutine inp_print(ntask)
@@ -1594,6 +1608,8 @@
      |    ' =',/,(4x,5a12))") (secflds(i),i=1,n)
       write(6,"('  Maximum number of histories per secondary file = ',
      |  i3)") mxhist_sech
+      write(6,"('  Number of bytes for values of fields on secondary',
+     |  ' histories (sech_nbyte) = ',i3)") sech_nbyte
 !
 ! More model-wide inputs:
       write(6,"('  difhor = ',i2,' (horizontal eddy diffusion flag)')")

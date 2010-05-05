@@ -1048,6 +1048,7 @@ Barb's fix to wei01gcm.F: set weictpoten(2) as function of vnx for
 each hemisphere, and set ctpoten to average of weictpoten.
 This will be r298.
 
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 am 3/11/10
   mpi.F: update send and receive for fields emphi3d,emlam3d,emz3d
      to include the top 3 levels since nmlev = nlev+3
@@ -1064,3 +1065,23 @@ Bug fixes as per Astrid:
 2. efield.F in the mapping from magnetic to geographic grid real values
    are put into integer w/o explicit conversion from real to integer.
    This led to wrong mapping on HAO machine arc.
+
+4/21/10:
+Add -qfixed to FFLAGS when using xlf90 (i.e., compiling without MPI).
+See AIX section of scripts/Makefile.
+
+Add implicit none to sub set_dynpot in rdsource.F. (in tiegcm1.92 tag,
+nlonp1 was not defined in set_dynpot and without implicit none, it
+was seg-faulting on bluefire). 
+
+5/4/10:
+Added ability to specify 4-byte floats or 8-byte doubles for 4d fields
+on secondary histories. New namelist parameter SECH_NBYTE can be either
+4 or 8. Default is 4-byte floats. This option does not affect primary
+histories. 4-byte secondary files will be about 1/2 the size of 8-byte
+files. Before this option, all 4d secondary fields were 8-byte doubles.
+
+Either type of file can be read by f90 and IDL post-processors because
+the post-procs always read 4-byte floats regardless of the precision on
+the file. tgcmproc_f90 gave straight zeroes for diffs between a 4-byte 
+and 8-byte history after a 1-day run.
