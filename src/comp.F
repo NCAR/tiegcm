@@ -16,7 +16,7 @@
      |  rmassinv_n2,rmass_o2,rmass_o1,expz,expzmid,expzmid_inv,
      |  difk,dtx2inv,dtsmooth,dtsmooth_div2
       use chemrates_module,only: fs ! from sub comp_o2o
-      use bndry_module,only: b,fb
+      use lbc,only: b,fb
       use fields_module,only: tlbc
       use addfld_module,only: addfld
       implicit none

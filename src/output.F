@@ -171,6 +171,7 @@
         call copyhist(sh,h) ! copy source history sh into h
         write(6,"('output_hist: copied source history structure sh to ',
      |    'history structure h (nhist=',i3,')')") nhist
+        h%tuv_lbc_intop = 0 ! this code always writes new histories
       else
         call define_hist('primary')
       endif
@@ -384,12 +385,13 @@
      |  nlon,nlevp1,zibot,zitop,zmbot,zmtop
       use hist_module,only: sh,h,hist_initype,nhist,nsech,modeltime,
      |  isecout,ioutfile,nsource,nsecsource,iseries_prim,iseries_sech
-      use input_module,only: output,secout,date,step,power,ctpoten,
+      use input_module,only: output,secout,date,step,power,ctpoten,kp,
      |  bximf,byimf,bzimf,swvel,swden,al,f107,f107a,tide,tide2,
      |  colfac,source,hist,sechist,calendar_advance,secsource,
      |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
-     |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile
+     |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
+     |  saber_ncfile,tidi_ncfile
 
       use init_module,only: logname,host,system,iyear,iday,istep,
      |  start_mtime
@@ -492,6 +494,7 @@
         h%f107a     = sh%f107a
         h%hpower    = sh%hpower
         h%ctpoten   = sh%ctpoten
+        h%kp        = sh%kp
         h%bximf     = sh%bximf
         h%byimf     = sh%byimf
         h%bzimf     = sh%bzimf
@@ -504,6 +507,7 @@
         h%f107a     = f107a
         h%hpower    = power
         h%ctpoten   = ctpoten
+        h%kp        = kp
         h%bximf     = bximf
         h%byimf     = byimf
         h%bzimf     = bzimf
@@ -558,11 +562,10 @@
       if (len_trim(gswm_nm_sdi_ncfile) == 0) 
      |  h%gswm_nm_sdi_ncfile = '[none]'
 
-! 11/2/05 btf: Integer gswm flags no longer in use
-!     h%gswmdi    = igswm_mi_di
-!     h%gswmsdi   = igswm_mi_sdi
-!     h%gswmnmdi  = igswm_nm_di
-!     h%gswmnmsdi = igswm_nm_sdi
+      h%saber_ncfile= saber_ncfile
+      if (len_trim(saber_ncfile) == 0) h%saber_ncfile = '[none]'
+      h%tidi_ncfile= tidi_ncfile
+      if (len_trim(saber_ncfile) == 0) h%tidi_ncfile = '[none]'
 
       h%missing_value = spval
       h%nlat = nlat

@@ -35,7 +35,8 @@
       integer :: iday      ! Current model calendar day
       real :: uthr         ! Current ut (decimal hours)
       integer :: 
-     |  start_mtime(3)     ! starting model time (day,hr,min)
+     |  start_mtime(3),    ! starting model time (day,hr,min)
+     |  stop_mtime(3)      ! stop model time (day,hr,min)
 !
       integer :: igswm_mi_di  ! 0/1 flag for GSWM data diurnal tide
       integer :: igswm_mi_sdi ! 0/1 flag for GSWM data semidiurnal tide
@@ -71,7 +72,7 @@
 ! Initialize (this is called by tgcm.F after input):
 ! Some init also takes place in inp_model (input_mod.f)
 !
-      use input_module,only: start,step,secflds,
+      use input_module,only: start,stop,step,secflds,
      |  start_year,start_day,calendar_advance,gpi_ncfile,
      |  gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
@@ -210,6 +211,7 @@
 !
 ! Init starting model time:
       start_mtime = start(:,1)
+      stop_mtime = stop(:,1)
 !
 ! Initialize field structures:
       iprintf = 0

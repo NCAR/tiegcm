@@ -2958,7 +2958,7 @@
       if (mytid==0) then ! master send to slaves
         do n=1,ntask-1
           msgtag = n
-          call mpi_send(emphi3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,n,
+          call mpi_send(emphi3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
      |      msgtag,MPI_COMM_WORLD,ier)
           if (ier /= 0) then
             write(6,"('>>> mp_updatephi: error sending',
@@ -2971,7 +2971,7 @@
         enddo
       else               ! slave receive from master
         msgtag = mytid
-        call mpi_recv(emphi3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,0,
+        call mpi_recv(emphi3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
      |    msgtag,MPI_COMM_WORLD,irstat,ier)
         if (ier /= 0) then
           write(6,"('>>> mp_updatephi: error receiving',
@@ -2996,7 +2996,7 @@
       if (mytid==0) then ! master send to slaves
         do n=1,ntask-1
           msgtag = n
-          call mpi_send(emlam3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,n,
+          call mpi_send(emlam3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
      |      msgtag,MPI_COMM_WORLD,ier)
           if (ier /= 0) then
             write(6,"('>>> mp_updatemlam: error sending',
@@ -3009,7 +3009,7 @@
         enddo
       else               ! slave receive from master
         msgtag = mytid
-        call mpi_recv(emlam3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,0,
+        call mpi_recv(emlam3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
      |    msgtag,MPI_COMM_WORLD,irstat,ier)
         if (ier /= 0) then
           write(6,"('>>> mp_updatemlam: error receiving',
@@ -3034,7 +3034,7 @@
       if (mytid==0) then ! master send to slaves
         do n=1,ntask-1
           msgtag = n
-          call mpi_send(emz3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,n,
+          call mpi_send(emz3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
      |      msgtag,MPI_COMM_WORLD,ier)
           if (ier /= 0) then
             write(6,"('>>> mp_updateemz: error sending',
@@ -3047,7 +3047,7 @@
         enddo
       else               ! slave receive from master
         msgtag = mytid
-        call mpi_recv(emz3d,nmlonp1*nmlat*(nlevp1),MPI_REAL8,0,
+        call mpi_recv(emz3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
      |    msgtag,MPI_COMM_WORLD,irstat,ier)
         if (ier /= 0) then
           write(6,"('>>> mp_updateemz: error receiving',

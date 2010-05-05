@@ -1,0 +1,93 @@
+&tgcm_input
+;
+; Namelist read input file for model tiegcm1.92
+; Mknamelist Wed Mar 24 14:34:02 MDT 2010
+;
+ LABEL='tiegcm1.92'
+ START_YEAR = 2002   ; starting year
+ START_DAY  = 80    ; starting day of year (1->365)
+ CALENDAR_ADVANCE = 1       ; if > 0, calendar time will be advanced
+ STEP= 120
+;
+; SOURCE: source history file
+; SOURCE_START:  source history model time to read
+;
+ SOURCE='$TGCMDATA/TGCM.tiegcm1.9.peqnx001.nc'
+ SOURCE_START = 80,0,0
+;
+ START= 80,0,0
+ STOP=  80,1,0
+ HIST=   0,1,0
+ SAVE=   0,1,0
+ OUTPUT='/FOSTER/tiegcm1.92/ptest001.nc'
+;MXHIST_PRIM = 10 ; maximum histories per primary file
+;
+ SECSTART = 80,0,0
+ SECSTOP =  80,1,0
+ SECHIST =   0,0,12
+ SECSAVE =   0,1,0
+ SECOUT='/FOSTER/tiegcm1.92/stest001.nc'
+;MXHIST_SECH = 24 ; maximum histories per secondary file
+ SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI',
+           'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL'
+;
+ DISPOSE = 0 ; no dispose to mss
+;DISPOSE = 1 ; dispose to mss during model execution
+;DISPOSE = 2 ; dispose to mss after model execution
+;
+; Set TIDEs = 0. if using GSWM below.
+ TIDE    = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
+ TIDE2   = 0.,0.
+;
+; By default, use gswm migrating diurnal and semi-diurnal tides:
+ GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_5.0d_99km.nc'
+ GSWM_MI_SDI_NCFILE = '$TGCMDATA/gswm_semi_5.0d_99km.nc'
+;
+; SABER (T,Z) and/or TIDI (U,V) data files for lbc perturbations:
+;SABER_NCFILE = '/2002_saber_5.0deg.nc'
+;TIDI_NCFILE  = '/2002_tidi_5.0deg.nc'
+;
+ POTENTIAL_MODEL = 'HEELIS'
+;GPI_NCFILE = '$TGCMDATA/gpi_1979001-2005273.nc'
+;
+; Uncomment GPI_NCFILE to calculate POWER and CTPOTEN from
+; Kp data, and to use data for f10.7 flux. GPI_NCFILE can be 
+; used only when potential_model='HEELIS'. If GPI_NCFILE is 
+; specified, one or more of POWER,CTPOTEN,F107,F107A must be 
+; commented out (data will be used for those that are commented 
+; out, otherwise the user-provided values will be used).
+;
+; If KP is specified, and POWER and/or CTPOTEN are commented,
+; then the given KP will be used to calculate POWER and/or CTPOTEN
+;
+;KP = 4.0
+ POWER= 16.
+ CTPOTEN=45.
+ F107 = 150.
+ F107A =150.
+;
+;POTENTIAL_MODEL = 'WEIMER05'
+;IMF_NCFILE = '$TGCMDATA/imf_2000001-2006365.nc'
+;
+; Uncomment IMF_NCFILE to read IMF parameters from the data.
+; IMF_NCFILE can be used only when potential_model='WEIMER05'.
+; If IMF_NCFILE is specified, one or more of BXIMF,BYIMF,BZIMF,
+; SWVEL,SWDEN,F107,F107A must be commented out (data will be
+; used). If IMF_NCFILE is specified and POWER is not provided,
+; it will be calculated from BZ,SWVEL. Also, if IMF_NCFILE is
+; used, the user cannot provide CTPOTEN (it will be calculated
+; from the Weimer potential).
+;
+;BXIMF = 0.
+;BYIMF = 0.
+;BZIMF = -5.
+;SWVEL = 400.
+;SWDEN = 4.  ; try this if problems with missing IMF SWDEN data
+;
+; SEE data file:
+;SEE_NCFILE  = '$TGCMDATA/see__L3_merged_2005007_007.nc'
+;
+ DIFHOR=1
+ AURORA=1
+ COLFAC=1.5
+/

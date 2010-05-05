@@ -184,7 +184,7 @@
       integer,parameter :: isecnoon = 12*60*60   ! secs at noon 
 ! 
 ! External:
-      real,external :: finterp
+      real,external :: finterp,hp_from_kp,ctpoten_from_kp
 !
       if (iprint > 0) then
         write(6,"(/,72('-'))")
@@ -319,22 +319,10 @@
         endif
         fkp = finterp(fkp0,fkp1,isec0,isec1,iutsec)
 !
-! Formula for potential:
-! modified by LQIAN, 2007
-! formula given by Wenbin based on data fitting
-        if (ictpoten > 0) ctpoten = 15.+15.*fkp + 0.8*fkp**2
-!
-! Formula for hemispheric power:
-! modified by LQIAN, 2007
-! for fkp<=7: formula given by Zhang Yongliang based on TIMED/GUVI
-! for fkp>7: power is 153.13 when fkp=7 from Zhang's formula, 
-! assume power is 300.(based on NOAA satellites) when fkp=9 
-! do linear interporation in between
-        if (ipower > 0)  then
-            if (fkp <=7.) power = 16.82*exp(0.32*fkp)-4.86
-            if (fkp > 7.) power = 153.13 + 
-     |                            (fkp-7.)/(9.-7.)*(300.-153.13)
-        endif
+! Use empirical formulas to calculate ctpoten and hemispheric power 
+! from kp (functions are in util.F):
+        if (ictpoten > 0) ctpoten = ctpoten_from_kp(fkp)
+        if (ipower > 0) power = hp_from_kp(fkp)
       endif ! doing power or ctpoten
 !
       if (iprint > 0) then

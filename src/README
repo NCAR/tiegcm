@@ -908,3 +908,180 @@ CISM mods were taken from revision 783 of the LTR-para repository.
 Code was tested on bluefire, gale, and oreo.
 Committing and tagging as tiegcm1-92
 ----------------------------------------------------------------------
+
+8/27/09 btf and am:
+Increase night time electron densities in qinite.F:
+
+!
+! al is sometimes adjusted for different conditions ("tuning knob"):
+!      real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)  !org 1.1.1
+! Using these timegcm values allows removal of minimum Ne in elden.F:
+      real,parameter :: al(3)=(/1.5E7,1.5E6,1.5E6/) ! timegcm version
+
+This was in tiegcm1.9, but apparently left out of 1.91 and 1.92.
+
+Original README notes from January, 2008:
+
+1/24/08 btf: mods from Astrid:
+am 1/22/08 (qinite.F, elden.F)
+  change the flux in qinite
+  from
+        real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)
+  to
+        real,parameter :: al(3)=(/1.5E7,1.5E6,1.5E6/)
+  The new triple values are from TIME-GCM.
+  In addition remove the minimum electron density in elden.F
+
+  Motivation:
+  the usage of the minimum electron density in elden.F was not consistent
+  with the later ion calculation,
+  and was leading to an unbalance in electrons and ions.
+  It was decided that having a minimum electron density shouldn't
+  be necessary if we have a better nighttime ionosphere. However,
+  implementing formulations like Titheridge suggested was postponed for
+  later. We looked at this a few years ago, and it wasn't straight forward to
+  implement. So increasing the night time flux of the three lines (1026,304,584)
+  seems reasonable, also TIME-GCM is using the same values.
+  The nighttime NE at plev=-2 is around log(Ne)=3.2 at low latitudes. The
+  prereversal enhancement is decreasing a bit (around 3-4 m/s) at JRO.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+10/5/09:
+- Fix Mknamelist to make tiegcm compatable input file for generic "TGCM" model.
+- Update version flags from tiegcm1.91 to tiegcm1.92. See scripts/*.job, and
+  src/params.F.
+
+Fix two bugs, pointed out by John Ritterer:
+- Use-associate nlonp1 rather than nlonp4 in sub set_dynpot, rdsource.F
+- Add ntrigs argument to FFT99B call from sub FFT99, fft9.F
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+12/23/09:
+In wei05sc.F (Original mods ~Oct 14):
+CNCAR      Routines added to work around non-ANSI trig functions which
+C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
+In wei05sc.F and wei01sc.F: replace PAUSE statement with call shutdown.
+magpres_g: add save attribute to allocatables je1oD_geo and je2oD_geo
+(did svn commit here)
+
+12/23/09:
+Updating svn trunk with several mods, mainly from $TGCMROOT/tiegcm1.92/src/modsrc:
+(see also $TGCMROOT/tiegcm1.92/src/modsrc/README)
+
+New sub sunloc_apex (Original mods by Astrid, 5/22/09)
+  files: advance.F  apex_subs.F  magfield.F
+    new subroutine sunloc_apex
+  change the the calculation of the 
+  sun's location from dipole coordinates to apex. This is now conform with 
+  the apex coordinate system (the difference is minor 1-3 degrees)
+
+New lower boundary scheme, with new module lbc.F replacing bndry.F
+This involved many (about 15) source files.
+(Original mods by Foster, 6/26/09)
+
+Increase night time electron densities in qinite.F
+(Original mods by Foster and Maute, 8/27/09)
+  change the flux in qinite
+  from
+        real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)
+  to
+        real,parameter :: al(3)=(/0.75E7,0.75E6,0.75E6/)
+
+Update version flags from tiegcm1.91 to tiegcm1.92, see src/params.F.
+Fix two bugs, pointed out by John Ritterer:
+- Use-associate nlonp1 rather than nlonp4 in sub set_dynpot, rdsource.F
+- Add ntrigs argument to FFT99B call from sub FFT99, fft9.F
+(Original mods by Foster, 11/14/09)
+
+Bugfix in sub interpol_quad (wei05sc.F). This was found by Tzu-Wei
+in December, 2009. See "bug fix by btf" in wei05sc.F.
+
+Doing svn commit here, 12/23/09.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+1/5/10:
+Use mpi_bcast in sub mp_updatephi (mpi.F), as in timegcm. This
+resulted in a modest performance improvement (not as much as in
+timegcm). Committed revision 288.
+
+1/20/10 btf:
+Fix minor bug in sub calczg, addiag.F. 
+Changed c2 = cos(2.*dgtr*float(j)) to
+        c2 = cos(2.*dgtr*glat(j))
+A 1-day test of tiegcm showed this changed ZG by max of ~3 km near the 
+top of the model (much smaller lower, e.g., .125 km diff at zp -4).
+
+2/3/10 btf:
+Merged mods for saber/tidi lower boundary option. Several files
+  modified, and addition of new source file saber_tidi.F. Also added
+  commented saber/tidi ncfiles to default input file (scripts/Mknamelist)
+Will commit this before merging mods to add Kp to namelist read.
+Revision 292
+
+2/3/10 btf:
+Merged mods to add Kp to namelist read. If kp is specified, it will
+  be used to calculate hpower and/or ctpoten (see functions hp_from_kp
+  and ctpoten_from_kp in util.F). For now, KP cannot be specified in
+  a gpi or weimer potential run.
+Added commented out KP and description in default namelist input file
+  (scripts/Mknamelist).
+Added prints of time-dependent solar inputs (power, ctpoten, etc)
+  in input.F.
+Revision 293
+
+2/3/10:
+Now planning to start full year runs with saber/tidi lbc for Qian.
+Will set svn tag tiegcm_sabertidi, so these runs can be duplicated later.
+
+Minor fix in sub inp_solar.
+Revision 295
+
+2/4/10 maute:
+  include IGRF11 from http://www.ngdc.noaa.gov/IAGA/vmod/igrf.html
+  file: apex_subs.F
+Revision 296
+
+Saved svn tag tiegcm1.92_r296 and put it in $TGCMROOT for testing
+by the group.
+
+2/11/10:
+Barb's fix to wei01gcm.F: set weictpoten(2) as function of vnx for
+each hemisphere, and set ctpoten to average of weictpoten.
+This will be r298.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+am 3/11/10
+  mpi.F: update send and receive for fields emphi3d,emlam3d,emz3d
+     to include the top 3 levels since nmlev = nlev+3
+     subroutines mp_updateemphi, mp_updateemlam, mp_updateemz
+  efield.F: update addfld call for EMX,EMY,EMZ to put into the right
+  height levels (4,nmlevp1). The bottom levels are not used in the
+  geographic framework. 
+
+3/24/10:
+Bug fixes as per Astrid:
+1. dynamo.F subroutine threed: the E_lam wasn't mapped in the horizontal
+   plane which gave wrong results close to the geomagnetic equator at
+   higher pressure levels (therefore EXB drift was also wrong)
+2. efield.F in the mapping from magnetic to geographic grid real values
+   are put into integer w/o explicit conversion from real to integer.
+   This led to wrong mapping on HAO machine arc.
+
+4/21/10:
+Add -qfixed to FFLAGS when using xlf90 (i.e., compiling without MPI).
+See AIX section of scripts/Makefile.
+
+Add implicit none to sub set_dynpot in rdsource.F. (in tiegcm1.92 tag,
+nlonp1 was not defined in set_dynpot and without implicit none, it
+was seg-faulting on bluefire). 
+
+5/4/10:
+Added ability to specify 4-byte floats or 8-byte doubles for 4d fields
+on secondary histories. New namelist parameter SECH_NBYTE can be either
+4 or 8. Default is 4-byte floats. This option does not affect primary
+histories. 4-byte secondary files will be about 1/2 the size of 8-byte
+files. Before this option, all 4d secondary fields were 8-byte doubles.
+
+Either type of file can be read by f90 and IDL post-processors because
+the post-procs always read 4-byte floats regardless of the precision on
+the file. tgcmproc_f90 gave straight zeroes for diffs between a 4-byte 
+and 8-byte history after a 1-day run.

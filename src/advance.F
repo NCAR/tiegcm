@@ -25,18 +25,19 @@
      |  imf_ncfile
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
-     |  ctpoten,ctpoten_time,ntimes_ctpoten,
+     |  ctpoten,ctpoten_time,ntimes_ctpoten, rd_ctpoten,
      |  bximf  ,bximf_time  ,ntimes_bximf,
      |  byimf  ,byimf_time  ,ntimes_byimf,
      |  bzimf  ,bzimf_time  ,ntimes_bzimf,
      |  swden  ,swden_time  ,ntimes_swden,
      |  swvel  ,swvel_time  ,ntimes_swvel,
-     |  al     ,al_time     ,ntimes_al
+     |  al     ,al_time     ,ntimes_al,
+     |  kp     ,kp_time     ,ntimes_kp
       use init_module,only: istep,uthr,iter,secs,iday,iyear
       use cons_module,only: dt,re,cs,racs,ylatm,rtd
       use filter_module,only: filter
       use qrj_module,only: init_sflux
-      use magfield_module,only: sunloc
+      use magfield_module,only: sunloc_apex
       use efield_module,only: efield
       use aurora_module,only: aurora_cons,cusp2d,drzl2d,alfa2d,nflx2d,
      |  eflux2d
@@ -50,6 +51,7 @@
       use params_module,only: nlonp4,nlat,nlev
       use output,only: outhist
       use addfld_module,only: addfld
+      use lbc,only: tuvz_lbc
 #if defined(INTERCOMM) || defined(CISMAH)
       use cism_coupling_module,only: import, export, geng,gflx
 #endif
@@ -102,8 +104,8 @@
       logical :: debug=.false.
 !
 ! External:
-      logical,external :: wrhist
-      real,external :: hp_from_bz_swvel
+      logical,external :: wrhist,time2print
+      real,external :: hp_from_bz_swvel,hp_from_kp,ctpoten_from_kp
 !
 #ifdef VT
 !     code = 115 ; state = 'advance' ; activity='ModelCode'
@@ -201,7 +203,7 @@
 ! (sub advance_day also updates sfeps)
 !
       if (calendar_advance > 0) call advance_day
-      call sunloc(iday,secs) ! locate sun's longitude
+      call sunloc_apex(iyear,iday,secs)! locate sun's longitude
       if (debug) write(6,"('advance after sunloc')")
       if (calendar_advance > 0) dday = float(iday)+secs/86400.
 !
@@ -226,6 +228,8 @@
      |  call set_index(swvel_time,ntimes_swvel,nsecs,swvel,'swvel')
       if (ntimes_al > 0) 
      |  call set_index(al_time,ntimes_al,nsecs,al,'al')
+      if (ntimes_kp > 0) 
+     |  call set_index(kp_time,ntimes_kp,nsecs,kp,'kp')
 !
 ! Get gpi data if necessary:
       if (len_trim(gpi_ncfile) > 0) then
@@ -249,9 +253,29 @@
         power = hp_from_bz_swvel(bzimf,swvel)
       endif
 !
+! If Kp was provided, calculate power and/or ctpoten
+! (see also sub check_solar in input.F)
+      if (kp /= spval) then
+        if (potential_model(1:6)/='WEIMER'.and.rd_power==spval) then
+          power = hp_from_kp(kp)
+!         write(6,"('Advance calculated power from Kp: ',
+!    |      ' KP=',f5.2,' POWER=',f8.2)") kp,power
+        endif
+        if (rd_ctpoten==spval) then
+          ctpoten = ctpoten_from_kp(kp)
+!         write(6,"('Advance calculated ctpoten from Kp: ',
+!    |      ' KP=',f5.2,' CTPOTEN=',f8.2)") kp,ctpoten
+        endif
+      endif
+!
 ! Get GSWM tidal boundary data:
 !
       call getgswm(istep,iyear,iday,secs)
+!
+! Update lower boundaries of t,u,v,z:
+!
+      call tuvz_lbc
+!
 #if defined(INTERCOMM) || defined(CISMAH)
 !
 ! Receive aurora parameters from the M-I coupler for CISM
@@ -566,6 +590,12 @@
           foutput(:,lon0:lon1,lat0:lat1,i) =
      |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
         enddo
+        tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
+        ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
+        vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
+        tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
+        ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
+        vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
       endif
 #else
       call timer(time0_phist,time1_phist,'PHIST',0,0) ! non-MPI
@@ -581,6 +611,9 @@
         tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
         ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
         vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
+        tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
+        ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
+        vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
       endif
 #endif
 !
@@ -793,14 +826,5 @@
  100  continue
 !     write(6,"('set_index: ',a,' = ',e12.4)") name,outindex
       end subroutine set_index
-!-----------------------------------------------------------------------
-!
-      logical function time2print(nstep,istep)
-      implicit none
-        integer,intent(in) :: nstep,istep
-        time2print = .false.
-        if (nstep <= 100 .or. (nstep > 100 .and. mod(istep,10)==0))
-     |    time2print = .true.
-      end function time2print
 !-----------------------------------------------------------------------
       end module advance_module

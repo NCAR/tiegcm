@@ -238,8 +238,9 @@
 !   from 4d field poten(levd0:levd1,lond0:lond1,latd0:latd1,2) that has
 !   been read from source history.
 !
-      use params_module,only: nlat,nlonp4,nlevp1
+      use params_module,only: nlat,nlonp1,nlevp1
       use fields_module,only: poten,dynpot
+      implicit none
       integer,intent(in) :: itx
 !
 ! Local: 
@@ -252,7 +253,7 @@
           do k=1,nlevp1
             dynpot(i,j,k) = poten(k,i,j,itx) 
           enddo ! k=1,nlevp1
-        enddo ! i=1,nlonp4 
+        enddo ! i=1,nlonp1 
       enddo ! j=1,nlat
 
       end subroutine set_dynpot

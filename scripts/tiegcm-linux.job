@@ -57,7 +57,7 @@
 #
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm1.91
+ set model       = tiegcm1.92
  set wrkdir      = .
 #set wrkdir      = $model-$$
 #set input       = $model.inp
@@ -68,6 +68,7 @@
 #set execdir     = $model-linux
 #set utildir     = $TGCMROOT/$model/scripts
 #set mpi         = TRUE
+#set nproc       = 4      # linux mpi runs only
 #set mss         = TRUE
 #set hres        = 5.0
 #set vres        = 0.5
@@ -197,6 +198,21 @@ if (-e dispose.csh) then
   echo "Removing dispose.csh prior to execution."
   /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
 endif
+#
+# Create machines.ini file:
+#
+if ($mpi == TRUE) then
+  if (! $?nproc) then
+    set nproc = 2
+  endif
+  echo `hostname`  >!  machines.ini
+  @ i = 1
+  while ($i < $nproc)
+    echo i = $i
+    echo `hostname` >> machines.ini
+    @ i++
+  end
+endif
 set unamen = `uname -n`
 #
 #- - - - - - - - - - - - - - - lightning - - - - - - - - - - - - - -
@@ -225,10 +241,24 @@ EOF
 else # is not lightning
 #
   echo "Model output will go to $output"
-  $execdir/$model < $namelist >&! $output || \
-    echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
-    echo "See output in $output"
-  echo "Run of $model completed at `date`"
+  echo "Linux job: mpi = $mpi"
+#
+# Execute linux mpi job (s.a., gmake above):
+  if ($mpi == TRUE) then
+    echo "Executing mpirun -np $nproc for Linux MPI run."
+    mpirun -np $nproc -machinefile machines.ini $execdir/$model < $namelist >&! $output || \
+      echo ">>> ${0} mpirun execution of $execdir/$model FAILED at `date`" && \
+      echo "See output in $output"
+    echo "Linux MPI run of $model completed at `date`"
+#
+# Execute linux non-mpi job:
+  else
+    echo "Executing $model for Linux non-MPI run."
+    $execdir/$model < $namelist >&! $output || \
+      echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
+      echo "See output in $output"
+    echo "Linux non-MPI run of $model completed at `date`"
+  endif
 #
 # Separate output files by MPI task:
 # (we are still in $execdir, but $output contains full path to $wrkdir)
