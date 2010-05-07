@@ -1109,3 +1109,5 @@ than mpxlf_r), the xlf90 compiler does not accept mod(iyyyy,4), where
 iyyyy is an 8-byte integer (see imf.F). To fix this, a new local 4-byte 
 integer iyyyy4 is delcared (sub getimf, imf.F), which is then used in 
 the mod function call.  This was not necessary under mpxlf_r.
+
+Minor changes to scripts/tiegcm-ibm.job to accomodate mpi=FALSE under AIX.

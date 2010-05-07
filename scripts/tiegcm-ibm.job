@@ -132,7 +132,7 @@ if (! $?tgcmdata) set tgcmdata = ""
 if (! $?usr_srcdirs) set usr_srcdirs = ""
 if (! $?hres) set hres = 5.0
 if (! $?vres) set vres = 0.5
-if (! $?mpi) set mpi = ""
+if (! $?mpi) set mpi = "TRUE"
 if (! $?mss) set mss = "TRUE"
 if (! $?debug) set debug = 0
 if (! $?lib_netcdf) set lib_netcdf = ""
@@ -235,7 +235,7 @@ if (-e dispose.csh) then
   /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
 endif
 #
-if ($?LSF_ENVDIR) then     # LSF batch
+if ($?LSF_ENVDIR && $mpi == "TRUE") then  # non-MPI LSF job
   echo "" ; echo "Executing model $model with mpirun.lsf from `pwd` at `date`"
   echo "Model output will go to $output"
 #
