@@ -32,7 +32,7 @@
 !
 ! Local:
       real :: model_uttime,model_yfrac,model_dfrac,ut
-      integer :: index,index1,index2,i
+      integer :: index,index1,index2,i,iyyyy4
       real :: model_bx,model_by,model_bz,model_swvel,model_swden,
      |  model_kp,model_f107d,model_f107a
       integer(kind=8) :: iyearday,iyyyy,iddd
@@ -58,7 +58,8 @@
         iyyyy = iyearday/1000               ! yyyy
         iddd = iyearday-iyyyy*1000          ! ddd
         ut = (date(i)-float(iyearday))*24.  ! ut (hrs)
-        if (mod(iyyyy,4) == 0) then
+        iyyyy4 = iyyyy
+        if (mod(iyyyy4,4) == 0) then
            yfrac(i) = float(iyyyy)+(float(iddd-1)+ut/24.)/366.
         else
            yfrac(i) = float(iyyyy)+(float(iddd-1)+ut/24.)/365.
