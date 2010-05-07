@@ -707,7 +707,7 @@
       implicit none
 !
 ! Local:
-      integer :: idayit,idayprev,iyearprev,iyr4,iyr100,lpyr,ienda
+      integer :: idayit,idayprev,iyearprev,iyr4,iyr100,iyr400,lpyr,ienda
       real :: delta,theta0
 !
       idayit = iter*int(dt)/86400
@@ -719,8 +719,10 @@
 ! lpyr = 1(0) if is (not) a leap year
         iyr4 = iyear/4
         iyr100 = iyear/100
+        iyr400 = iyear/400
         lpyr = 0
-        if (iyr4*4 == iyear .and. iyr100*100 /= iyear) lpyr=1
+        if((iyr4*4 == iyear .and. iyr100*100 /= iyear).or.
+     |     (iyr400*400 == iyear)) lpyr=1
         ienda = 365 + lpyr
         if (iday > ienda) then
           iyear = iyear + 1

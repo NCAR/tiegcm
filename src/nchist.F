@@ -175,7 +175,7 @@
 !
       use hist_module,only: sh,hist_initype,hist_print,nsource,
      |  nsecsource
-      use input_module,only: start_day,start_year
+      use input_module,only: start_day
 !
 ! Args:
       integer,intent(in) :: ncid,mtime(3)
@@ -2526,7 +2526,7 @@
 ! Write current history structure to open netcdf output file:
 !
       use hist_module,only: sh,h,hist_print
-      use input_module,only: start,secstart
+      use input_module,only: start,secstart,start_year
 !
 ! Args:
       integer,intent(in) :: ncid,iprint
@@ -2534,7 +2534,7 @@
 !
 ! Local:
       integer :: mins,istat,ivar1(1),i,j,iprog,imo,ida,mtimeinit(4),
-     |  ivar2(2),ii
+     |  ivar2(2),ii,mfinal
       character(len=120) :: char120
       character(len=240) :: char240
       character(len=80) :: char80
@@ -2548,10 +2548,18 @@
 ! Time: decimal days since start time of initial run:
 ! h%initial_mtime was set by sub hist_initype (if initial run),
 ! or was read from source history (if continuation run). 
+
+!>>> nc_wrhist: time from initial start must be >= 0: mtimeinit= 365   0   0  
+!    h%modeltime=   1   1   0 delta (mins)=-524100.00
 ! 
       mtimeinit(1:3) = sh%initial_mtime(1:3) ; mtimeinit(4) = 0
       rmins = mtime_delta(mtimeinit,h%modeltime)
+      if (mtimeinit(1) >= 365) then
+        mtimeinit(1) = 0
+        rmins = mtime_delta(mtimeinit,h%modeltime)
+      endif
       rdays = rmins/1440.
+      
       if (rmins < 0.) then
         write(6,"(/,'>>> nc_wrhist: time from initial start must be',
      |    ' >= 0: mtimeinit=',3i4,'  h%modeltime=',3i4,' delta (mins)=',
@@ -2583,12 +2591,19 @@
 !
 ! If model day is > 365, write actual day of year, i.e. day-365
 ! (e.g., if model day is 366, write model day 1 to the history)
+! Check for leap-year.
 !
-      if (h%modeltime(1) > 365) then
+      if((mod(start_year,4).eq.0.and.mod(start_year,100).ne.0).or.
+     |   (mod(start_year,400).eq.0)) then
+         mfinal=366
+      else
+         mfinal=365
+      endif
+      if (h%modeltime(1) > mfinal) then
         write(6,"('Note: Changed model day from ',i4,' to ',i4,
      |    ' before writing to history file.')")
-     |    h%modeltime(1), h%modeltime(1)-365
-        h%modeltime(1) = h%modeltime(1)-365
+     |    h%modeltime(1), h%modeltime(1)-mfinal
+        h%modeltime(1) = h%modeltime(1)-mfinal
       endif
 !
       istat = nf_put_vara_int(ncid,idv_mtime,start_2d,count_2d,

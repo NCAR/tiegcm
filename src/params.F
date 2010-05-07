@@ -69,7 +69,6 @@
       character(len=8),parameter :: tgcm_name    = 'tiegcm'
 !
       integer,parameter ::
-     |  mxday=366,         ! max allowed calendar day
      |  mxhvols = 100,     ! max number of output history files
      |  mxseries = 10,     ! max number of time series for primary histories
      |  mxseries_sech = 50,! max number of secondary history time series

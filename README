@@ -1085,3 +1085,20 @@ Either type of file can be read by f90 and IDL post-processors because
 the post-procs always read 4-byte floats regardless of the precision on
 the file. tgcmproc_f90 gave straight zeroes for diffs between a 4-byte 
 and 8-byte history after a 1-day run.
+
+5/6/10:
+Add env vars to tiegcm-linux.job to set up MPI for PGI pgf90 compiler.
+(as in ~foster/.cshrc).
+
+5/7/10:
+Add extra day for end of a leap year. To run to end of the year:
+
+Non-leap years: Run to mtime 366,0,0. This history will be written to
+  the file as 1,0,0, with the year incremented by 1, and can be
+  used to start the new year.
+
+Leap years: Run to mtime 367,0,0. This history will be written to
+  the file as 1,0,0, with the year incremented by 1, and can be
+  used to start the new year.
+
+Changes to advance.F, input.F, nchist.F, params.F

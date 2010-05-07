@@ -7,7 +7,7 @@
 !
       use params_module,only: mxhvols,mxseries,mxseries_sech,mxfsech,
      |  nlat,nlon,nlev,glat1,dlat,glon1,dlon,tgcm_version,tgcm_name,
-     |  spval,ispval,mxday,nlonp4,mxind_time
+     |  spval,ispval,nlonp4,mxind_time
       use mk_hvols,only: mkhvols
       implicit none
 !
@@ -49,6 +49,7 @@
      |  calendar_advance,! if > 0, advance calendar day from start_day
      |  date(3),         ! old: model starting year, day ( 2 ints yyyy,dd)
      |  calday,          ! old: starting calendar day (0-mxday)
+     |  mxday,           ! calendar day (0-mxday)
      |  step,            ! model time step (integer seconds)
      |  dispose,         ! dispose output files to mss if dispose==1 or 2
      |  difhor,          ! horizontal eddy diffusion flag 0/1
@@ -381,11 +382,11 @@
       endif
       if (start_day==ispval) then
         write(6,"(/,'>>> INPUT: need START_DAY (integer calendar ',
-     |    'starting day of year (0->365))')")
+     |    'starting day of year (0->366))')")
         call usage_calendar
         call shutdown('start_day')
       endif
-      if (start_day <= 0.or.start_day > 365) then
+      if (start_day <= 0.or.start_day > 366) then
         write(6,"(/,'>>> INPUT: bad START_DAY=',i4,' (must be between',
      |    ' 1 and 365)')") start_day
         call shutdown('start_day')
@@ -661,6 +662,14 @@
 !
 ! 8-byte integer step:
       step8 = step
+!
+!mxday:
+      if((mod(start_year,4).eq.0.and.mod(start_year,100).ne.0).or.
+     |   (mod(start_year,400).eq.0)) then
+        mxday=367
+      else
+        mxday=366
+      endif
 !
 ! Dispose flag:
       if (dispose==ispval) then

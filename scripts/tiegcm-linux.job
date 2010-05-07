@@ -59,7 +59,6 @@
 #
  set model       = tiegcm1.92
  set wrkdir      = .
-#set wrkdir      = $model-$$
 #set input       = $model.inp
 #set output      = $model.out
 #set usr_srcdirs = modsrc
@@ -79,6 +78,19 @@
 #             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
 #             (except maybe to customize tgcm_config below)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Set up MPI for PGI pgf90 compiler:
+#
+setenv PROCESSOR `uname -p`
+setenv PGI /opt/local/pgi-7.2
+if ( "$PROCESSOR" == "x86_64" ) then    
+    setenv PGI_PATH $PGI/linux86-64/7.2
+else
+    setenv PGI_PATH $PGI/linux86/7.2
+endif
+setenv MPI $PGI_PATH/mpi/mpich
+setenv PATH $PGI_PATH/bin:$MPI/bin:$PATH
+setenv LD_LIBRARY_PATH $PGI_PATH/lib:$MPI/lib:$LD_LIBRARY_PATH
 #
 set mycwd = `pwd`
 echo " "
