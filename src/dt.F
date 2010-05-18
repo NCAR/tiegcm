@@ -12,7 +12,7 @@
 !
       use params_module,only: nlonp4,dz,nlat,spval
       use input_module,only: step
-      use init_module,only: iter,igetgswm
+      use init_module,only: iter,igetgswm,iday
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
      |  gask,expzmid,expzmid_inv,dift,dtsmooth,dtsmooth_div2,kut
@@ -258,8 +258,9 @@
 !
         do k=lev0,lev1-1 
           g(k,i) = grav*(kt(k,i,lat)+h(k,i)**2*rho(k,i)*cp(k,i,lat)*
-     |      dift(k))/(p0*h(k,i)*dz**2)
-          f(k,i)=grav**2*dift(k)*h(k,i)**2*rho(k,i)/(tni(k,i)*p0*2.*dz)
+     |      dift(k,iday))/(p0*h(k,i)*dz**2)
+          f(k,i)=grav**2*dift(k,iday)*h(k,i)**2*rho(k,i)/(tni(k,i)*
+     |      p0*2.*dz)
         enddo ! k=lev0,lev1-1 
       enddo ! i=lon0,lon1
 

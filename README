@@ -1111,3 +1111,20 @@ integer iyyyy4 is delcared (sub getimf, imf.F), which is then used in
 the mod function call.  This was not necessary under mpxlf_r.
 
 Minor changes to scripts/tiegcm-ibm.job to accomodate mpi=FALSE under AIX.
+
+5/10/10:
+Change tgcm_version to "tiegcm_trunk" in params.F, to indicate
+the svn trunk development line.  This parameter will be changed 
+at the time of release, e.g., to tiegcm1.93.
+
+5/18/10:
+Add Liying's DOY-dependent eddy diffusion. New namelist read parameter
+EDDY_DIF is 0/1 flag for whether or not to use the DOY-dependent diffusion.
+difk, dift, and xmue are now dimensioned (nlev+1,366).  Current default
+is EDDY_DIF=0.  Changes to cons.F, comp.F, dt.F, duv.F, minor.F, input.F. 
+
+Deprecating DIFHOR as a namelist input parameter. It is forced to be
+on (i.e., difhor=1). If the user sets difhor <= 0, the model will stop
+w/ error. See input.F. Later versions will eliminate the flag entirely.
+
+Set tgcm_version = 'tiegcm_trunk' in params.F.

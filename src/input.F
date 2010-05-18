@@ -52,7 +52,8 @@
      |  mxday,           ! calendar day (0-mxday)
      |  step,            ! model time step (integer seconds)
      |  dispose,         ! dispose output files to mss if dispose==1 or 2
-     |  difhor,          ! horizontal eddy diffusion flag 0/1
+     |  difhor,          ! horizontal eddy diffusion flag 0/1 (DEPRECATED)
+     |  eddy_dif,	 ! 0/1 flag for DOY dependent eddy diffusion (difk, dift, xmue)
      |  dynamo,          ! 0/1 flag for dynamo
      |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
      |  aurora,          ! 0/1 flag for aurora
@@ -158,7 +159,7 @@
      |  label,tempdir,magvol,amievol,date,calday,step,dispose,
      |  source,source_start,output,start,stop,hist,save,
      |  secout,secstart,secstop,sechist,secsave,secflds,
-     |  potential_model,difhor,dynamo,tide,tide2,tide3m3,
+     |  potential_model,difhor,eddy_dif,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
      |  kp,colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
@@ -251,7 +252,8 @@
 !
       step    = ispval
       dispose = ispval
-      difhor  = ispval
+      difhor  = ispval   ! deprecated
+      eddy_dif = ispval  ! new as of 4/10
       dynamo  = ispval
       tide(:) = spval
       tide2(:)= spval
@@ -564,6 +566,27 @@
      |      'from the namelist input file.')") dynamo
           call shutdown('DYNAMO=0')
         endif
+      endif
+!
+! difhor flag is deprecated as a namelist input (must be on):
+      if (difhor == ispval) then
+        difhor = 1
+      elseif (difhor <= 0) then
+        write(6,"('>>> INPUT: Cannot set DIFHOR ',i3,
+     |    ' Namelist input DIFHOR is deprecated. Please remove ',
+     |    'it from the namelist input file, or set it to 1')") difhor
+        call shutdown('DIFHOR')
+      endif
+!
+! 
+! eddy_dif = 1 -> use DOY-dependent eddy diffusion
+! eddy_dif = 0 -> use constant eddy diffusion
+!
+! 4/18/10: eddy_dif turned off by default:
+      if (eddy_dif == ispval.or.eddy_dif <= 0) then
+        eddy_dif = 0
+      else
+        eddy_dif = 1
       endif
 !
 ! Save certain params as originally read by namelist read:
@@ -1621,8 +1644,10 @@
      |  ' histories (sech_nbyte) = ',i3)") sech_nbyte
 !
 ! More model-wide inputs:
-      write(6,"('  difhor = ',i2,' (horizontal eddy diffusion flag)')")
-     |  difhor
+!     write(6,"('  difhor = ',i2,' (horizontal eddy diffusion flag)')")
+!    |  difhor
+      write(6,"('  eddy_dif = ',i2,' (DOY-dependent eddy diffusion ',
+     |  'flag)')") eddy_dif
       write(6,"('  tide (amplitudes and phases of semidiurnal tide) =',
      |  /,4x,5e8.1,5f6.2)") tide
       write(6,"('  tide2 (amplitude and phase of diurnal tide) =',

@@ -220,7 +220,7 @@ if ($mpi == TRUE) then
   echo `hostname`  >!  machines.ini
   @ i = 1
   while ($i < $nproc)
-    echo i = $i
+    echo i = $i  nproc = $nproc
     echo `hostname` >> machines.ini
     @ i++
   end

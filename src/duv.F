@@ -10,7 +10,7 @@
 ! Advance neutral velocities for current time step:
 !
       use params_module,only: nlonp4,dz,nlat,spval,nlonp2,nlon
-      use init_module,only: iter,igetgswm
+      use init_module,only: iter,igetgswm,iday
       use lbc,only: u_lbc,v_lbc
       use cons_module,only: dtx2inv,expz,p0,gask,grav,
      |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,kut
@@ -219,7 +219,7 @@
 !
 ! xmue = eddy viscosity (cons.F). rtxmue = sqrt(xmue)
         do k=lev0+1,lev1-1          
-          rtxmue(k) = sqrt(xmue(k-1)*xmue(k))
+          rtxmue(k) = sqrt(xmue(k-1,iday)*xmue(k,iday))
         enddo ! k=lev0+1,lev1-1          
 !
 ! tni = tn at interfaces:
@@ -230,8 +230,10 @@
         enddo ! i=lon0,lon1
 !
 ! Boundaries:
-        rtxmue(lev0) = sqrt(xmue(lev0)**3/xmue(lev0+1))
-        rtxmue(lev1) = sqrt(xmue(lev1-1)**3/xmue(lev1-2))
+        rtxmue(lev0) = sqrt(xmue(lev0,iday)**3/
+     |                      xmue(lev0+1,iday))
+        rtxmue(lev1) = sqrt(xmue(lev1-1,iday)**3/
+     |                      xmue(lev1-2,iday))
         do i=lon0,lon1
 !         tni(lev0,i) = tn(lev1,i,lat) ! lbc of tn is stored in top slot
           tni(lev0,i) = tlbc_nm(i,lat)    ! Lower boundary is in tlbc_nm
