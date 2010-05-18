@@ -126,7 +126,8 @@
      |    initial_year,      ! initial starting year
      |    initial_mtime(3),  ! initial starting model time
      |    source_mtime(3),   ! start time of source history
-     |    tuv_lbc_intop      ! 1 (old histories), or 0 (new histories)
+     |    tuv_lbc_intop,     ! 1 (old histories), or 0 (new histories)
+     |    ntask_mpi          ! number of mpi tasks this run
         real :: 
      |    ut,                ! ut (decimal hours, from modeltime)
      |    time,              ! model time ("minutes since yyyy-m-d")
@@ -249,6 +250,7 @@
       h%coupled_ccm = .false.
       h%tuv_lbc_intop = 0 ! this version writes "new" histories
       h%lbc = zibot
+      h%ntask_mpi = 0
 !
 ! If istep==0, h%f107, etc were defined from source history: 
       if (istep > 0) then
@@ -441,6 +443,8 @@
      |  ' are stored in top k slot (old histories))')") h%tuv_lbc_intop
       write(6,"(2x,'LBC = ',f8.2,' (lower boundary interface ',
      |  'level)')") h%lbc
+      write(6,"(2x,'ntask_mpi    =',i4,' (number of MPI tasks)')")
+     |  h%ntask_mpi
 !
       if (associated(h%fnames)) then
         write(6,"('  There are ',i3,' fields on this history,',

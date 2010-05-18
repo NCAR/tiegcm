@@ -56,7 +56,7 @@
      |  idv_lbc,idv_tlbc,idv_ulbc,idv_vlbc,
      |  idv_tlbc_nm,idv_ulbc_nm,idv_vlbc_nm,
      |  idv_mlon,idv_mlat,idv_mlev,idv_imlev,idv_p0_model,
-     |  idv_step,idv_iter,idv_year,idv_day,idv_p0,idv_grav,
+     |  idv_step,idv_iter,idv_ntask,idv_year,idv_day,idv_p0,idv_grav,
      |  idv_zg,idv_hpower,idv_ctpoten,idv_bximf,idv_byimf,idv_bzimf,
      |  idv_colfac,idv_swden,idv_swvel,idv_al,idv_kp,
      |  idv_gswm_mi_di_ncfile,idv_gswm_mi_sdi_ncfile,
@@ -493,6 +493,11 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading iter')
             sh%iter = iscalar
+          case('ntask_mpi')
+            istat = nf_get_var1_int(ncid,i,idv_ntask,iscalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading ntask_mpi')
+            sh%ntask_mpi = iscalar
           case('ut')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
@@ -1534,6 +1539,15 @@
      |  42,'number of time steps from model time 0,0,0')
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining long_name of iter variable')
+!
+! Number of MPI tasks:
+      istat = nf_def_var(ncid,"ntask_mpi",NF_INT,1,ids1,idv_ntask)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining ntask_mpi variable')
+      istat = nf_put_att_text(ncid,idv_ntask,"long_name",
+     |  19,'Number of MPI tasks')
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     +  'Error defining long_name of ntask_mpi variable')
 !
 ! Decimal ut(time) (ids1==id_time is unlimited time dimension):
       call defvar_time_dbl(ncid,"ut",ids1,idv_ut,
@@ -2669,6 +2683,17 @@
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_int defining ',
      +    'iter at h%ihist=',i3,': h%iter=',i8)") h%ihist,h%iter
+        call handle_ncerr(istat,char120)
+      endif
+!
+! Number of mpi tasks:
+      if (idv_ntask <= 0) istat = nf_inq_varid(ncid,"ntask_mpi",
+     |  idv_ntask)
+      istat = nf_put_var1_int(ncid,idv_ntask,h%ihist,h%ntask_mpi)
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error from nf_put_var1_int defining ',
+     |    'ntask_mpi at h%ihist=',i3,': h%ntask_mpi=',i8)") h%ihist,
+     |    h%ntask_mpi
         call handle_ncerr(istat,char120)
       endif
 !

@@ -1128,3 +1128,7 @@ on (i.e., difhor=1). If the user sets difhor <= 0, the model will stop
 w/ error. See input.F. Later versions will eliminate the flag entirely.
 
 Set tgcm_version = 'tiegcm_trunk' in params.F.
+
+5/18/10:
+Add ntask_mpi to history files. This is number of MPI tasks used when
+history was written. Changes to nchist.F, output.F, and hist.F.

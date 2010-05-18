@@ -392,6 +392,7 @@
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
      |  saber_ncfile,tidi_ncfile
+      use mpi_module,only: ntask
 
       use init_module,only: logname,host,system,iyear,iday,istep,
      |  start_mtime
@@ -577,5 +578,6 @@
       h%zibot = zibot
       h%dynamo = .false.
       if (dynamo > 0) h%dynamo = .true.
+      h%ntask_mpi = ntask
       end subroutine define_hist
       end module output
