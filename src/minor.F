@@ -14,9 +14,9 @@
       use lbc,only: b,fb ! b(nlonp4,2,2), fb(nlonp4,2)
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  boltz,p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
-     |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,dtsmooth_div2
+     |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,
+     |  dtsmooth_div2,difhor
       use init_module,only: glat,iday
-      use input_module,only: difhor
       use fields_module,only: w,itc,itp,tlbc
       use addfld_module,only: addfld
 #ifdef MPI
@@ -342,7 +342,7 @@
      |  call addfld('THDIFF0',' ',' ',thdiff,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
-! If difhor flag was by user (see input_module):
+! difhor flag is a parameter flag set to 1 in cons.F
 ! dfactor = 
 !   .5*(1.+SIN(PI*(ABS(RLATM)-PI/6.)/(PI/3.))) FOR ABS(RLATM).LT.PI/3.
 ! dfactor = 1. FOR  ABS(RLATM).GE.PI/3

@@ -1148,3 +1148,11 @@ svn.log, and README (linked from trunk dir).
 
 Minor changes to job scripts for v1.93. 
 Default SOURCE file is $TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc
+
+5/27/10:
+Completely remove DIFHOR from namelist (input.F). Now set integer
+parameter difhor=1 in cons.F. This is use-assoc by comp.F and minor.F.
+Now, if the user has DIFHOR in the namelist input file, the model
+will not recognize it and will stop with an input error. If a model
+developer wants to change the flag, they will have to change it in
+cons.F and recompile.

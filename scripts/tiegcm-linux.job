@@ -59,7 +59,7 @@
  set model       = tiegcm1.93
  set wrkdir      = .
  set mpi         = TRUE
- set nproc       = 4      # linux mpi runs only
+ set nproc       = 8      # linux mpi runs only
 #set input       = $model.inp
 #set output      = $model.out
 #set usr_srcdirs = modsrc

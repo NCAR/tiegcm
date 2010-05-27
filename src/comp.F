@@ -10,11 +10,10 @@
 ! Advance major species O2 and O.
 !
       use params_module,only: dz,nlonp4,nlat,dlat
-      use input_module,only: difhor
       use init_module,only: glat,iday
       use cons_module,only: pi,hor,dtr,rmassinv_o2,rmassinv_o1,
      |  rmassinv_n2,rmass_o2,rmass_o1,expz,expzmid,expzmid_inv,
-     |  difk,dtx2inv,dtsmooth,dtsmooth_div2
+     |  difk,dtx2inv,dtsmooth,dtsmooth_div2,difhor
       use chemrates_module,only: fs ! from sub comp_o2o
       use lbc,only: b,fb
       use fields_module,only: tlbc
@@ -100,7 +99,7 @@
         dfactor(i) = 1.
       enddo
 !
-! If difhor flag was by user (see input_module):
+! difhor flag is a parameter flag set to 1 in cons.F
 ! dfactor = 
 !   .5*(1.+SIN(PI*(ABS(RLATM)-PI/6.)/(PI/3.))) FOR ABS(RLATM).LT.PI/3.
 ! dfactor = 1. FOR  ABS(RLATM).GE.PI/3
