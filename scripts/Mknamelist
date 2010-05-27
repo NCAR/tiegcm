@@ -131,7 +131,8 @@ $magvol = '$TGCMDATA/' . $magvol;
 #
 # gpi file:
 #$gpi_ncfile = '$TGCMDATA/gpi_1979001-2005059.nc';
- $gpi_ncfile = '$TGCMDATA/gpi_1979001-2005273.nc'; # updated 12/6/05 by btf
+#$gpi_ncfile = '$TGCMDATA/gpi_1979001-2005273.nc'; # updated 12/6/05 by btf
+ $gpi_ncfile = '$TGCMDATA/gpi_2000001-2009031.nc';
 #
 # imf file:
  $imf_ncfile = '$TGCMDATA/imf_2000001-2006365.nc'; # added for tiegcm1.9 6/11/08
@@ -192,7 +193,9 @@ sub set_hist {
 # my $sourcefile = "p001-$start_year-$start_day_hist.nc";
 # my $sourcefile = "FOSTER.tiegcm1-82.py2s004.nc";
 # my $sourcefile = "FOSTER.tiegcm1-84.peqnx001.nc";
-  my $sourcefile = "TGCM.tiegcm1.9.peqnx001.nc";
+# my $sourcefile = "TGCM.tiegcm1.9.peqnx001.nc";
+# my $sourcefile = "TGCM.tiegcm1.9.peqnx02_solmin.nc";
+  my $sourcefile = "TGCM.tiegcm1.93.pcntr_eqnx_smin.nc";
 #
 # Source history file name for default hres and vres:
 #
@@ -202,7 +205,8 @@ sub set_hist {
   $hist_source =     '$TGCMDATA/' . "$sourcefile";
 # $hist_source_mss = "/FOSTER/tiegcm1-82/py2s004.nc";
 # $hist_source_mss = "/FOSTER/tiegcm1-84/peqnx001.nc";
-  $hist_source_mss = "/FOSTER/tiegcm1.9/peqnx001.nc";
+# $hist_source_mss = "/FOSTER/tiegcm1.9/peqnx001.nc";
+  $hist_source_mss = "/TGCM/tiegcm1.93/pcntr_eqnx_smin.nc";
 #
 #
   $hist_output =     "/$USER/$model/ptest001.nc";
@@ -377,7 +381,7 @@ print OUTFILE <<EOF;
  SECOUT='$hist_secout'
 ;MXHIST_SECH = 24 ; maximum histories per secondary file
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI',
-           'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL'
+           'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'
 ;
  DISPOSE = 0 ; no dispose to mss
 ;DISPOSE = 1 ; dispose to mss during model execution
@@ -435,7 +439,6 @@ print OUTFILE <<EOF;
 ; SEE data file:
 ;SEE_NCFILE  = '$see_ncfile'
 ;
- DIFHOR=1
  AURORA=1
  COLFAC=1.5
 /
@@ -602,7 +605,7 @@ print OUTFILE <<EOF;
  SECOUT='$hist_secout'
 ;MXHIST_SECH = 24 ; maximum histories per secondary file
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI',
-           'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL'
+           'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'
 ;
  DISPOSE = 0 ; no dispose to mss
 ;DISPOSE = 1 ; dispose to mss during model execution

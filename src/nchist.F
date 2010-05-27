@@ -2568,9 +2568,16 @@
 ! 
       mtimeinit(1:3) = sh%initial_mtime(1:3) ; mtimeinit(4) = 0
       rmins = mtime_delta(mtimeinit,h%modeltime)
-      if (mtimeinit(1) >= 365) then
-        mtimeinit(1) = 0
+
+!     write(6,"('nc_wrhist calc rmins: h%year=',i5,' h%modeltime=',
+!    |  4i4,' sh%year=',i5,' mtimeinit=',4i4,' rmins=',f12.2)") 
+!    |  h%year,h%modeltime,sh%year,mtimeinit,rmins 
+
+      if (mtimeinit(1) > h%modeltime(1)) then
+        mtimeinit(:) = h%modeltime(:)
         rmins = mtime_delta(mtimeinit,h%modeltime)
+        write(6,"('nc_wrhist: reset mtimeinit = h%modeltime = ',4i5)")
+     |    mtimeinit
       endif
       rdays = rmins/1440.
       

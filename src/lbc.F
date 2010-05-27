@@ -1,6 +1,10 @@
 
       module lbc
 !
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
 ! Calculate lower boundary conditions for T,U,V,Z
 !
       use params_module,only: nlonp4,nlat,nlev,dz

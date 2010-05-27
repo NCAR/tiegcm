@@ -64,7 +64,7 @@
 !
 ! For modules hist_mod and input_mod:
 !     character(len=16),parameter :: tgcm_version = 'tiegcm1.92      '
-      character(len=16),parameter :: tgcm_version = 'tiegcm_trunk    '
+      character(len=16),parameter :: tgcm_version = 'tiegcm1.93      '
 !
 ! tgcm_name is either "tiegcm" or "time-gcm"
       character(len=8),parameter :: tgcm_name    = 'tiegcm'

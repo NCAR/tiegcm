@@ -1,9 +1,9 @@
 &tgcm_input
 ;
-; Namelist read input file for model tiegcm1.92
-; Mknamelist Wed Mar 24 14:34:02 MDT 2010
+; Namelist read input file for model tiegcm
+; Mknamelist Wed May 26 21:38:16 MDT 2010
 ;
- LABEL='tiegcm1.92'
+ LABEL='tiegcm'
  START_YEAR = 2002   ; starting year
  START_DAY  = 80    ; starting day of year (1->365)
  CALENDAR_ADVANCE = 1       ; if > 0, calendar time will be advanced
@@ -12,24 +12,24 @@
 ; SOURCE: source history file
 ; SOURCE_START:  source history model time to read
 ;
- SOURCE='$TGCMDATA/TGCM.tiegcm1.9.peqnx001.nc'
+ SOURCE='$TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc'
  SOURCE_START = 80,0,0
 ;
  START= 80,0,0
  STOP=  80,1,0
  HIST=   0,1,0
  SAVE=   0,1,0
- OUTPUT='/FOSTER/tiegcm1.92/ptest001.nc'
+ OUTPUT='/FOSTER/tiegcm/ptest001.nc'
 ;MXHIST_PRIM = 10 ; maximum histories per primary file
 ;
  SECSTART = 80,0,0
  SECSTOP =  80,1,0
  SECHIST =   0,0,12
  SECSAVE =   0,1,0
- SECOUT='/FOSTER/tiegcm1.92/stest001.nc'
+ SECOUT='/FOSTER/tiegcm/stest001.nc'
 ;MXHIST_SECH = 24 ; maximum histories per secondary file
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI',
-           'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL'
+           'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'
 ;
  DISPOSE = 0 ; no dispose to mss
 ;DISPOSE = 1 ; dispose to mss during model execution
@@ -48,7 +48,7 @@
 ;TIDI_NCFILE  = '/2002_tidi_5.0deg.nc'
 ;
  POTENTIAL_MODEL = 'HEELIS'
-;GPI_NCFILE = '$TGCMDATA/gpi_1979001-2005273.nc'
+;GPI_NCFILE = '$TGCMDATA/gpi_2000001-2009031.nc'
 ;
 ; Uncomment GPI_NCFILE to calculate POWER and CTPOTEN from
 ; Kp data, and to use data for f10.7 flux. GPI_NCFILE can be 
@@ -87,7 +87,6 @@
 ; SEE data file:
 ;SEE_NCFILE  = '$TGCMDATA/see__L3_merged_2005007_007.nc'
 ;
- DIFHOR=1
  AURORA=1
  COLFAC=1.5
 /

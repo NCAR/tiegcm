@@ -394,29 +394,13 @@
      |  'read_tidi: Error getting variable U')
 !
       istat = nf_get_att_double(ncid,idv_u,'missing_data',spval_u)
-      if (any(tidi_data_u==spval_u)) then
-
-        write(6,"('>>> Missing data ',e12.4,' found in TIDI U data.')")
-     |    spval_u
-        write(6,"('    Between file time indicies ',i6,' and ',i6)") 
-     |    istart_tidi,istop_tidi
-        write(6,"('    mtime0=',3i4,' mtime1=',3i4)") mtime0,mtime1
-        do itime=1,ntime
-          if (any(tidi_data_u(:,:,itime)==spval_u)) then
-            write(6,"('Found spval_u=',e12.4,' at data itime=',i6)") 
-     |        spval_u,itime
-            do j=1,nlat
-              write(6,"('itime=',i6,' j=',i4,' tidi_data_u(:,j,i)=',
-     |          /,(6e12.4))") itime,j,tidi_data_u(:,j,itime)
-            enddo
-          else
-            write(6,"('No spval data found at itime=',i6,' min,max=',
-     |        2e12.4)") itime,minval(tidi_data_u(:,:,itime)),
-     |                        maxval(tidi_data_u(:,:,itime))
-          endif
-        enddo
-
-        call shutdown('Missing TIDI U data')
+      if (istat == NF_NOERR) then
+        if (any(tidi_data_u==spval_u)) then
+          write(6,"('>>> Missing data found in TIDI U data')")
+          write(6,"('    Between file time indicies ',i6,' and ',i6)") 
+     |      istart_tidi,istop_tidi
+!         call shutdown('Missing TIDI U data')
+        endif
       endif
 !
 ! Check units of U:
@@ -438,11 +422,13 @@
      |  'read_tidi: Error getting variable V')
 !
       istat = nf_get_att_double(ncid,idv_v,'missing_data',spval_v)
-      if (any(tidi_data_v==spval_v)) then
-        write(6,"('>>> Missing data found in TIDI V data.')")
-        write(6,"('    Between file time indicies ',i6,' and ',i6)") 
-     |    istart_tidi,istop_tidi
-        call shutdown('Missing TIDI V data')
+      if (istat == NF_NOERR) then
+        if (any(tidi_data_v==spval_v)) then
+          write(6,"('>>> Missing data found in TIDI V data')")
+          write(6,"('    Between file time indicies ',i6,' and ',i6)") 
+     |      istart_tidi,istop_tidi
+          call shutdown('Missing TIDI V data')
+        endif
       endif
 !
 ! Check units of V:
