@@ -3,20 +3,35 @@ Release notes for tiegcm1.93
 May 26, 2010
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Bug fixes:
+
+  - qinite.F : increase night-time ionization rates which is necessary
+    because the minimum electron density was removed in the previous versions
+    (elden.F)
+
+  - dynamo.F subroutine threed: the E_lam wasn't mapped in the horizontal
+    plane which gave wrong results close to the geomagnetic equator at
+    higher pressure levels (as a consequence EXB drift was wrong)
+
+  - efield.F in the mapping from magnetic to geographic grid real values
+    are put into integer w/o explicit conversion from real to integer.
+    This led to wrong mapping on 64-bit Linux systems.
+
+  - addiag.F: Use glat(j) instead of float(j) in calculation of c2, sub calczg.
+    Sub calczg calculates gravity-varying geopotential (geometric height) 
+    field ZG.
+
+  - fft9.F: Add ntrigs argument to FFT99B call from sub FFT99
+
+  - Weimer05 model:wei05sc.F: Fix error in f90 translation in sub interpol_quad 
+      (see comments in wei05sc.F). Also add routines to work around non-ANSI 
+      trig functions.
+     
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 New namelist read parameter KP:
   - KP can be specified either as a constant or multiple time-dependent values.
   - If provided, empirical formulas will use the given KP to calculate CTPOTEN 
     and/or POWER. 
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Increase night-time electron densities in qinite.F:
-  - v1.92 qinite.F: real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)
-  - v1.93 qinite.F: real,parameter :: al(3) = (/1.5E7,1.5E6,1.5E6/)
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Weimer05 model:
-  - wei05sc.F: Fix error in f90 translation in sub interpol_quad (see comments)
-  - Add routines to work around non-ANSI trig functions
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Change calculation of the sun's location from dipole coordinates to apex.
@@ -28,23 +43,6 @@ Option to write 4-byte floats or 8-byte doubles to secondary histories:
     4-byte floats), or 8 (to write 8-byte doubles).
   - Default is SECH_NBYTE = 4
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Bug fixes:
-
-  - dynamo.F subroutine threed: the E_lam wasn't mapped in the horizontal
-    plane which gave wrong results close to the geomagnetic equator at
-    higher pressure levels (therefore EXB drift was also wrong)
-
-  - efield.F in the mapping from magnetic to geographic grid real values
-    are put into integer w/o explicit conversion from real to integer.
-    This led to wrong mapping on HAO machine arc.
-
-  - addiag.F: Use glat(j) instead of float(j) in calculation of c2, sub calczg.
-    Sub calczg calculates gravity-varying geopotential (geometric height) 
-    field ZG.
-
-  - fft9.F: Add ntrigs argument to FFT99B call from sub FFT99
-     
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Script changes to enable parallel runs on hao 64-bit Linux systems:
   - Changes to tiegcm-linux.job and tgcm_config in the scripts directory.

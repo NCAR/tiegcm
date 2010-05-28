@@ -1,4 +1,33 @@
 ------------------------------------------------------------------------
+r336 | foster | 2010-05-27 11:46:11 -0600 (Thu, 27 May 2010) | 10 lines
+
+Completely remove DIFHOR from namelist (input.F). Now setting integer
+parameter difhor=1 in cons.F. This is use-assoc by comp.F and minor.F.
+Now, if the user has DIFHOR in the namelist input file, the model
+will not recognize it and will stop with an input error. If a model
+developer wants to change the flag, they can change it in cons.F and 
+recompile.
+
+Changed default nproc for 64-bit Linux MPI runs from 4 to 8.
+
+
+------------------------------------------------------------------------
+r335 | foster | 2010-05-26 21:43:33 -0600 (Wed, 26 May 2010) | 13 lines
+
+- Set tgcm_version = tiegcm1.93 (params.F)
+- Some changes to saber_tidi.F re missing data and shutdown
+- Fixing problem w/ rmins at year-end (mtimeinit, h%modeltime) (nchist.F)
+- Add academic license text at top of lbc.F
+
+Add doc/ subdir to repository.  Currently contains Release_Notes,
+svn.log, and README (linked from main dir).
+
+Minor changes to job scripts for v1.93. 
+Default SOURCE file is $TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc
+
+Working to release tiegcm1.93 soon.
+
+------------------------------------------------------------------------
 r332 | foster | 2010-05-18 14:26:59 -0600 (Tue, 18 May 2010) | 4 lines
 
 5/18/10:
