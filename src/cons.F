@@ -16,10 +16,9 @@
 ! Derived constants are cons_module module data, and are calculated
 !   in sub init_cons (contained in cons_module). 
 !   Sub init_cons is called by sub init (init_mod.F).
-! Parameters referenced here are in params.h (s.a., dims.h)
+! Parameter constants:
 !
-! Real parameter constants:
-!
+      integer,parameter :: ndays =366  ! maximum number of days in a year
       real,parameter ::
      |  dzp  = dz,           ! alias for dz (also dlev)
      |  re   = 6.37122e8,    ! earth radius (cm)                  C(51)
@@ -104,9 +103,9 @@
      |  cor(nlat),
      |  grav,           ! accel due to gravity (dependent on lower boundary)
      |  dzgrav,         ! grav/gask C(65)
-     |  difk(nlev+1),   ! background eddy diffusion
-     |  dift(nlev+1),   ! background thermal conductivity
-     |  xmue(nlev+1),   ! eddy viscosity (?)
+     |  difk(nlev+1,ndays),   ! background eddy diffusion
+     |  dift(nlev+1,ndays),   ! background thermal conductivity
+     |  xmue(nlev+1,ndays),   ! eddy viscosity (?)
      |  zbound          ! background low bound of Z (formerly ZBA in annual tide)
 !
 ! Constants for dynamo and electric field calculations:
@@ -174,11 +173,13 @@
 !
       real,parameter ::
      |  pi_dyn=3.14159265358979312
+
+      integer,parameter :: difhor=1
 !
       contains
 !-----------------------------------------------------------------------
       subroutine init_cons
-      use input_module,only: step
+      use input_module,only: step,eddy_dif
       use params_module,only: tgcm_version
 !
 ! Set derived constants (this is called from sub init in init_module)
@@ -186,7 +187,86 @@
 ! Local:
       real :: z,expdz,phi
       real :: omega = 7.292E-5
-      integer :: k,i,j,nfsech,js
+      integer :: m,k,i,j,nfsech,js
+      integer :: calday(ndays)         ! calenday day in a year
+      real :: coeff(9)
+      real :: theta(ndays)
+!
+! Begin calculation of eddy diffusivity:
+      if (eddy_dif > 0) then ! use DOY-dependent eddy diffusion
+!
+! The 9 coefficient of the semiannual eddy diffusivity parameterization:
+        coeff(:)=(/4.06e-06, -8.77e-07, -2.28e-06, 1.77e-06, 2.15e-06,
+     |            -3.05e-07, -2.66e-07,  4.08e-07, 1.59e-07/)
+!
+! set up calendar days
+        do m=1,ndays
+           calday(m)=m
+        enddo
+!
+! set up the theta array
+        do m=1,ndays
+           theta(m)=2.*3.14*(calday(m)-1.)/(ndays-1.)
+        enddo
+!      
+! calculate difk, dift, and xmue at first model level(bottom) in s^-1 for all
+! the days in a year
+!
+        do m=1,ndays
+           difk(1,m) = coeff(1) 
+     |             + coeff(2)*sin(theta(m))+coeff(3)*cos(theta(m))
+     |             + coeff(4)*sin(2.*theta(m))+coeff(5)*cos(2.*theta(m)) 
+     |             + coeff(6)*sin(3.*theta(m))+coeff(7)*cos(3.*theta(m)) 
+     |             + coeff(8)*sin(4.*theta(m))+coeff(9)*cos(4.*theta(m)) 
+           dift(1,m) = difk(1,m)/prndtl
+           xmue(1,m) = difk(1,m)
+        enddo
+!
+!  calculate the rest of the levels
+!
+        expdz = exp(-dlev)
+        do m=1,ndays
+           do k=2,nlev+1
+              difk(k,m) = difk(k-1,m)*expdz
+              dift(k,m) = dift(k-1,m)*expdz
+              if (k == nlev+1) then
+                 xmue(k,m) = difk(k-1,m)
+              else
+                 xmue(k,m) = difk(k,m)
+              endif
+           enddo
+        enddo
+!
+! Use constants if eddy_dif <= 0:
+!
+      else ! eddy_dif is off
+        expz(:) = 0. ! init
+        z = zibot+.5*dlev
+        expz(1) = exp(-z)
+        expdz = exp(-dlev)
+        difk(1,:) = 5.0e-6
+        dift(1,:) = 5.0e-6/prndtl
+        xmue(1,:) = 5.0e-6
+        do k=2,nlev
+          expz(k) = expz(k-1)*expdz
+          difk(k,:) = difk(k-1,:)*expdz
+          dift(k,:) = dift(k-1,:)*expdz
+          xmue(k,:) = difk(k,:)
+        enddo
+        difk(nlev+1,:) = difk(nlev,:)*expdz
+        dift(nlev+1,:) = dift(nlev,:)*expdz
+        xmue(nlev+1,:) = difk(nlev,:)
+      endif  ! eddy_dif on or off
+!
+      write(6,"('init_cons: eddy_dif=',i3)") eddy_dif
+      write(6,"('min,max: difk=',2e12.4,' dift=',2e12.4,' xmue=',
+     |  2e12.4)") minval(difk),maxval(difk),minval(dift),maxval(dift),
+     |            minval(xmue),maxval(xmue)
+      write(6,"('difk(:,1)=',/,(6e12.4))") difk(:,1)
+      write(6,"('dift(:,1)=',/,(6e12.4))") dift(:,1)
+      write(6,"('xmue(:,1)=',/,(6e12.4))") xmue(:,1)
+!
+! end calculation of eddy diffusivity
 !
       pi = 4.*atan(1.)                ! C(110)
       rtd = 180./pi                   ! radians to degrees
@@ -208,19 +288,9 @@
 ! (zibot and dz are in params.h)
       z = zibot+.5*dlev
       expz(1) = exp(-z)
-      expdz = exp(-dlev)
-      difk(1) = 5.0e-6
-      dift(1) = 5.0e-6/prndtl
-      xmue(1) = 5.0e-6
       do k=2,nlev
         expz(k) = expz(k-1)*expdz
-        difk(k) = difk(k-1)*expdz
-        xmue(k) = difk(k)
-        dift(k) = dift(k-1)*expdz
       enddo
-      difk(nlev+1) = difk(nlev)*expdz
-      dift(nlev+1) = dift(nlev)*expdz
-      xmue(nlev+1) = difk(nlev)
       expzmid = exp(-.5*dlev)
       expzmid_inv = 1./expzmid
       do i=1,3

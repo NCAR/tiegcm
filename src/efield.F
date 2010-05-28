@@ -46,7 +46,8 @@
 ! This routine is called once per time step from sub advance.
 ! This routine is a rewritten version of the old sub vdrift.
 !
-      use cons_module,only: pi,dlatm,dlonm,dt0dts,rcos0s,table
+      use cons_module,only: pi,dlatm,dlonm,dt0dts,rcos0s,table,rtd,
+     |  ylatg,ylong
       use magfield_module,only: alatm,alonm
       use fields_module,only: 
      |  phim3d,    ! 3d electric potential on magnetic grid
@@ -54,6 +55,9 @@
      |  emlam3d,   ! 3d equatorw. electric field magnetic
      |  emz3d      ! 3d upward (?) electric field magnetic
       use init_module,only: istep
+      use params_module,only: 
+     |  nmlev,  ! number of geomagnetic pressure levels (nmlev==nlevp1+3)
+     |  nmlevp1 ! number of geomagnetic midpoint levels
 #ifdef MPI
       use mpi_module,only: mp_periodic_f3d
 #endif
@@ -175,14 +179,17 @@
           enddo ! j=1,nmlat
         enddo ! k=1,nlevp1
       endif ! istep
-!     do j=1,nmlat
-!       call addfld('EMX',' ',' ',emx(:,j,lev0:lev1-1),
-!    |    'mlon',1,nmlonp1,'mlev',1,nmlev-1,j)
-!       call addfld('EMY',' ',' ',emy(:,j,lev0:lev1-1),
-!    |    'mlon',1,nmlonp1,'mlev',1,nmlev-1,j)
-!       call addfld('EMZ',' ',' ',emz(:,j,lev0:lev1-1),
-!    |    'mlon',1,nmlonp1,'mlev',1,nmlev-1,j)
-!     enddo ! j=1,nmlat
+! am 3/10 start with lev=4 since not all mlec are copied over      
+      do j=1,nmlat
+        call addfld('EMX',' ',' ',emx(:,j,:),
+     |	 'mlon',1,nmlonp1,'imlev',4,nmlevp1,j)
+        call addfld('EMPHI_EF',' ',' ',emphi3d(:,j,:),
+     |	 'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+        call addfld('EMY',' ',' ',emy(:,j,:),
+     |	 'mlon',1,nmlonp1,'mlev',4,nmlevp1,j)
+        call addfld('EMZ',' ',' ',emz(:,j,:),
+     |	 'mlon',1,nmlonp1,'mlev',4,nmlevp1,j)
+      enddo ! j=1,nmlat
 !
 ! Transform emx,emy,emz to geographic space. For each geographic grid 
 !   point, determine the corresponding theta0 in the distorted magnetic
@@ -202,7 +209,7 @@
         do i=lonbeg,lonend
           ii = i-2
           pslot(i) = abs(alatm(ii,j))*180./pi+1.
-          islot(i) = pslot(i)
+          islot(i) = int(pslot(i))
           pslot(i) = pslot(i)-float(islot(i))
 !
 ! Interpolate for theta0 in table using linear interpolation:
@@ -211,10 +218,10 @@
 !
 ! Locate magnetic grid element containing geographic grid point (i,j):
           pslot(i) = (alonm(ii,j)+pi)/dlonm+1.
-          islot(i) = pslot(i)
+          islot(i) = int(pslot(i))
           pslot(i) = pslot(i)-float(islot(i))
           qslot(i) = (thetam(i)+pi/2.)/dlatm+1.
-          jslot(i) = qslot(i)
+          jslot(i) = int(qslot(i))
           qslot(i) = qslot(i)-float(jslot(i))
         enddo ! i=lon0,lon1
 !
@@ -232,6 +239,7 @@
      |            pslot(i) *(1.-qslot(i))*emy(islot(i)+1,jslot(i)  ,k)+
      |            pslot(i) *    qslot(i) *emy(islot(i)+1,jslot(i)+1,k)+
      |        (1.-pslot(i))*    qslot(i) *emy(islot(i)  ,jslot(i)+1,k)
+     
           enddo ! k=1,nlevp1
         enddo ! i=lon0,lon1
 

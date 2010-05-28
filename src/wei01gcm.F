@@ -37,6 +37,9 @@
 !  Were integer*4 on Sun, but keep just integer on IBM
       integer :: MaxJ,MaxL,MaxM,MaxN,MaxO
 !
+! 01/10 bae:  Have ctpoten from both hemispheres from Weimer 2001
+      real :: weictpoten(2)
+
       contains 
 !-----------------------------------------------------------------------
 !     subroutine calccloc(phihm)
@@ -127,6 +130,8 @@
 	    endif
 	  enddo  !  i=1,nmlonp1-1
 	enddo  !  j=j1,j2
+! 02/10: Calculate weictpoten in kV from Weimer model min/max in V
+	weictpoten(ih) = 0.001 * (vnx(ih,2) - vnx(ih,1))
 !       write (6,"(1x,'ih min/max pot,lat,mlt=',i2,3e12.4,2x,3e12.4))")
 !    |    ih,(vnx(ih,i),ylatm(jnx(ih,i)),(ylonm(inx(ih,i))-sunlons(1))
 !    |    * rtd/15.+12.,i=1,2)
@@ -447,6 +452,9 @@
 !
 !     subroutine weimer01(pfrac,phihm,nmlat0,nmlat,nmlon,nmlonp1)
       subroutine weimer01
+
+! 01/10:  Added ctpoten to store average weictpoten from calccloc
+      use input_module,only: ctpoten
       use heelis_module,only: colath
       use input_module,only: weimer_ncfile
 ! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc)
@@ -579,6 +587,10 @@
 !     call calccloc(phihm,nmlat,nmlonp1,nmlat0)
 !     call calccloc(phihm)
       call calccloc
+! 01/10 bae:  Return the average of the weictpoten from the SH and NH in ctpoten
+      ctpoten = 0.5*(weictpoten(1)+weictpoten(2))
+!     write (6,"(1x,'weimer01: CPS,N ctpoten=',3f8.1)") weictpoten,
+!    |    ctpoten
 !
 ! Calculate pfrac fractional presence of dynamo equation using critical
 !  convection colatitudes crit(2).  (crit is in cons module)
@@ -1738,7 +1750,7 @@ C	ADJUST AN ANGLE IN DEGREES TO BE IN RANGE OF 0 TO 360.
       implicit none
       integer :: igreg, iyyy, mm, id, jy, jm, ja, julday
       PARAMETER (IGREG=15+31*(10+12*1582))
-      IF (IYYY.EQ.0) PAUSE 'There is no Year Zero.'
+      IF (IYYY.EQ.0) call shutdown('There is no Year Zero.')
       IF (IYYY.LT.0) IYYY=IYYY+1
       IF (MM.GT.2) THEN
         JY=IYYY

@@ -7,17 +7,14 @@
 #   1) Set LSF commands (#BSUB) below for batch job.
 #   2) Set script variables below (at least $model and $wrkdir)
 #   3) Copy to a large working directory on the target machine.
-#   4) Assuming this script is called "jobfile", then submit
-#      with the command: "bsub < jobfile"
+#   4) Assuming this script is called "tiegcm-ibm.job", then submit
+#      with the command: "bsub < tiegcm-ibm.job"
 #
 # See http://www.hao.ucar.edu/modeling/tgcm/userguide/ for more information.
 # If you need to customize the configuration beyond the shell vars here, 
 #   add or change options to the tgcm_config call below. 
 #
-# 2/8/07 btf: Eliminate support for LoadLeveler (former batch system on bluesky)
-#
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
 #                 USER EDIT RESOURCES FOR LSF BATCH JOB
 #
 #BSUB -J tiegcm          # job name
@@ -28,9 +25,10 @@
 ##BSUB -q regular        # queue (6-hour wallclock limit if not debug queue)
 ##BSUB -x 		 # exclusive use of nodes (not available in debug queue)
 #
-# Bluefire has 32-way nodes, so span[ptile=64] means 64 procs per node
+# Bluefire has 32-way nodes.
 #
 ##BSUB -n 16
+##BSUB -n 32
 ##BSUB -R "span[ptile=64]"   # SMT (Symmetric Multi-Threading)
 #
 # Debug queue (30 min wallclock limit, and -x not allowed)
@@ -73,7 +71,7 @@
 #
 # Model output history files will be written to $execdir.
 #
- set model       = tiegcm1.91
+ set model       = tiegcm1.93
  set wrkdir      = .
 #set input       = $model.inp
 #set output      = $model.out     # relative to wrkdir
@@ -132,7 +130,7 @@ if (! $?tgcmdata) set tgcmdata = ""
 if (! $?usr_srcdirs) set usr_srcdirs = ""
 if (! $?hres) set hres = 5.0
 if (! $?vres) set vres = 0.5
-if (! $?mpi) set mpi = ""
+if (! $?mpi) set mpi = "TRUE"
 if (! $?mss) set mss = "TRUE"
 if (! $?debug) set debug = 0
 if (! $?lib_netcdf) set lib_netcdf = ""
@@ -235,7 +233,7 @@ if (-e dispose.csh) then
   /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
 endif
 #
-if ($?LSF_ENVDIR) then     # LSF batch
+if ($?LSF_ENVDIR && $mpi == "TRUE") then  # non-MPI LSF job
   echo "" ; echo "Executing model $model with mpirun.lsf from `pwd` at `date`"
   echo "Model output will go to $output"
 #

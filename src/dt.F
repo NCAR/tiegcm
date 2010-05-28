@@ -12,11 +12,12 @@
 !
       use params_module,only: nlonp4,dz,nlat,spval
       use input_module,only: step
-      use init_module,only: iter,igetgswm
+      use init_module,only: iter,igetgswm,iday
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
      |  gask,expzmid,expzmid_inv,dift,dtsmooth,dtsmooth_div2,kut
-      use bndry_module,only: tb,tb2,bnd,bnd2,ci,lbc_gswm_dt
+!     use bndry_module,only: tb,tb2,bnd,bnd2,ci,lbc_gswm_dt
+      use lbc,only: t_lbc
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm
@@ -86,29 +87,11 @@
       nkm1 = nk-1
       nlevs = nk
 ! 
-! GSWM lower boundary condition:
-!
-      if (igetgswm > 0) then
-        call lbc_gswm_dt(tnlbc,lon0,lon1,lat0,lat1)
-      else ! no gswm
-        rstep = float(step)
-        expt = cexp(ci*freq_semidi*rstep*iter)
-        expt2 = cexp(ci*.5*freq_semidi*rstep*iter)
-      endif
-!
 ! First latitude scan for dt:
       do lat=lat0,lat1
 !
-! Calculate lbc if gswm was not used (see above):
-!
-        if (igetgswm <= 0) then
-          do i=lon0,lon1
-            tnlbc(i,lat) = real(tb(lat)*bnd(i)*expt)+tbound    ! semidiurnal tide
-            tnlbc(i,lat) = tnlbc(i,lat)+
-     |        real(tb2(lat)*bnd2(i)*expt2) ! diurnal tide
-          enddo ! i=lon0,lon1
-        endif
-
+! Lower boundary t_lbc was calculated by sub tuvz_lbc (lbc.F)
+        tnlbc(:,lat) = t_lbc(lon0:lon1,lat)
         do k=lev0,lev1
           tnlbc_diag(k,:) = tnlbc(:,lat)
         enddo
@@ -275,8 +258,9 @@
 !
         do k=lev0,lev1-1 
           g(k,i) = grav*(kt(k,i,lat)+h(k,i)**2*rho(k,i)*cp(k,i,lat)*
-     |      dift(k))/(p0*h(k,i)*dz**2)
-          f(k,i)=grav**2*dift(k)*h(k,i)**2*rho(k,i)/(tni(k,i)*p0*2.*dz)
+     |      dift(k,iday))/(p0*h(k,i)*dz**2)
+          f(k,i)=grav**2*dift(k,iday)*h(k,i)**2*rho(k,i)/(tni(k,i)*
+     |      p0*2.*dz)
         enddo ! k=lev0,lev1-1 
       enddo ! i=lon0,lon1
 

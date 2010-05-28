@@ -1,6 +1,6 @@
 !
       subroutine elden(tn,barm,op,op_upd,o2,o1,n2d,no,n4s,xiop2p,xiop2d,
-     |  nplus,n2p,nop,o2p,electrons,lev0,lev1,lon0,lon1,lat)
+     |  z,nplus,n2p,nop,o2p,electrons,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -32,7 +32,8 @@
      |  no,    ! nitric oxide
      |  n4s,   ! n4s
      |  xiop2p,! from oplus
-     |  xiop2d ! from oplus
+     |  xiop2d,! from oplus
+     |  z      ! geopotential
 !
 ! Output args (particles/cm3):
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) :: 
@@ -50,6 +51,8 @@
      |  a,b,c,d,e,fg,h, ! terms for quartic coefficients
      |  xn2,            ! n2 (mmr) (1-o2-o)
      |  root            ! output from quartic solver
+      real,dimension(lon0:lon1) ::
+     |  tec		! diagnostic total electron content
 
 !     write(6,"('enter elden: lat=',i2)") lat
       i0 = lon0 ; i1 = lon1
@@ -238,9 +241,18 @@
         electrons(lev0,i) = sqrt(root(lev0  ,i)**3/root(lev0+1,i))
         electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
       enddo ! i=lon0,lon1
-
-!     call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
-!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
+      call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
+     |  'lev',lev0,lev1,'lon',i0,i1,lat)
+!
+! Save tec:
+      tec(:) = 0. ! init tec for current latitude
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+          tec(i) = tec(i)+(z(k+1,i)-z(k,i))*electrons(k,i)
+        enddo
+      enddo
+      call addfld('TEC',' ',' ',tec(:),
+     |  'lon',lon0,lon1,'lat',lat,lat,0)
 
       end subroutine elden
 !-----------------------------------------------------------------------

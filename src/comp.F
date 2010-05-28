@@ -10,13 +10,12 @@
 ! Advance major species O2 and O.
 !
       use params_module,only: dz,nlonp4,nlat,dlat
-      use input_module,only: difhor
-      use init_module,only: glat
+      use init_module,only: glat,iday
       use cons_module,only: pi,hor,dtr,rmassinv_o2,rmassinv_o1,
      |  rmassinv_n2,rmass_o2,rmass_o1,expz,expzmid,expzmid_inv,
-     |  difk,dtx2inv,dtsmooth,dtsmooth_div2
+     |  difk,dtx2inv,dtsmooth,dtsmooth_div2,difhor
       use chemrates_module,only: fs ! from sub comp_o2o
-      use bndry_module,only: b,fb
+      use lbc,only: b,fb
       use fields_module,only: tlbc
       use addfld_module,only: addfld
       implicit none
@@ -100,7 +99,7 @@
         dfactor(i) = 1.
       enddo
 !
-! If difhor flag was by user (see input_module):
+! difhor flag is a parameter flag set to 1 in cons.F
 ! dfactor = 
 !   .5*(1.+SIN(PI*(ABS(RLATM)-PI/6.)/(PI/3.))) FOR ABS(RLATM).LT.PI/3.
 ! dfactor = 1. FOR  ABS(RLATM).GE.PI/3
@@ -278,19 +277,19 @@
               ak(i,isp,m,kp) = ak(i,isp,m,kp)*wks1(i)
 
               pk(i,isp,m) = (ak(i,isp,m,km)*(1./dz+ep(i,m,km)/2.)-
-     |          expz(k)*(expzmid_inv*difk(k)*dfactor(i)*(1./dz-
+     |          expz(k)*(expzmid_inv*difk(k,iday)*dfactor(i)*(1./dz-
      |          wks3(i))+0.25*(w(k,i,lat)+w(k+1,i,lat)))*
      |          delta(isp,m))/dz
 
               rk(i,isp,m) = (ak(i,isp,m,kp)*(1./dz-ep(i,m,kp)/2.)-
-     |          expz(k)*(expzmid*difk(k+1)*dfactor(i)*(1./dz+
+     |          expz(k)*(expzmid*difk(k+1,iday)*dfactor(i)*(1./dz+
      |          wks4(i))-0.25*(w(k,i,lat)+w(k+1,i,lat)))*
      |          delta(isp,m))/dz
    
               qk(i,isp,m) = -(ak(i,isp,m,km)*(1./dz-ep(i,m,km)/2.)+
      |          ak(i,isp,m,kp)*(1./dz+ep(i,m,kp)/2.))/dz+expz(k)*
-     |          (((expzmid*difk(k+1)*(1./dz-wks4(i))+expzmid_inv*
-     |          difk(k)*(1./dz+wks3(i)))*dfactor(i)/dz+dtx2inv)*
+     |          (((expzmid*difk(k+1,iday)*(1./dz-wks4(i))+expzmid_inv*
+     |          difk(k,iday)*(1./dz+wks3(i)))*dfactor(i)/dz+dtx2inv)*
      |          delta(isp,m)-fs(i,k,isp,m,lat))
 
             enddo ! i=lon0,lon1

@@ -2412,6 +2412,10 @@ C          to TIEGCM (model in fortran software)
 C          Include the parameter ncoef which defines the dimension of
 C          G, GV which should be ncoef = nmax*nmax+1+2*nmax
 C
+C          Jan. 2010 (MAUTE) update IGRF with IGRF 11 from website
+C           http://www.ngdc.noaa.gov/IAGA/vmod/igrf.html
+C           same comments as for Sep 05
+C
 
 C
 C      implicit double precision (a-h,o-z)
@@ -2422,18 +2426,20 @@ C      implicit double precision (a-h,o-z)
       COMMON /MAGCOF_int/ NMAX,ICHG
       SAVE DATEL
       DATA DATEL /-999./
-      dimension gh(3060),g0(120),g1(120),g2(120),g3(120),g4(120),
+      dimension gh(3256),g0(120),g1(120),g2(120),g3(120),g4(120),
      1          g5(120),g6(120),g7(120),g8(120),g9(120),ga(120),
      2          gb(120),gc(120),gd(120),ge(120),gf(120),gg(120),
      3          gi(120),gj(120),gk(195),gl(195),gm(195),gp(195),
-     4          p(105),q(105),cl(13),sl(13)
-      equivalence (g0,gh(  1)),(g1,gh(121)),(g2,gh(241)),(g3,gh(361)),
+     4          gq(195),
+     5          p(105),q(105),cl(13),sl(13)
+      equivalence (g0,gh(1)),(g1,gh(121)),(g2,gh(241)),(g3,gh(361)),
      1            (g4,gh(481)),(g5,gh(601)),(g6,gh(721)),(g7,gh(841)),
      2            (g8,gh(961)),(g9,gh(1081)),(ga,gh(1201)),
      3            (gb,gh(1321)),(gc,gh(1441)),(gd,gh(1561)),
      4            (ge,gh(1681)),(gf,gh(1801)),(gg,gh(1921)),
      5            (gi,gh(2041)),(gj,gh(2161)),(gk,gh(2281)),
-     6            (gl,gh(2476)),(gm,gh(2671)),(gp,gh(2866))
+     6            (gl,gh(2476)),(gm,gh(2671)),(gp,gh(2866)),
+     7            (gq,gh(3061))
 c
       data g0/ -31543.,-2298., 5922., -677., 2905.,-1061.,  924., 1121., 1900
      1           1022.,-1469., -330., 1256.,    3.,  572.,  523.,  876., 1900
@@ -2764,45 +2770,79 @@ c
      p             -0.4,   -0.4,    1.3,   -1.0,   -0.4,   -0.1,    0.7, 2000
      q              0.7,   -0.4,    0.3,    0.3,    0.6,   -0.1,    0.3, 2000
      r              0.4,   -0.2,    0.0,   -0.5,    0.1,   -0.9/         2000
-      data gm/ -29556.8,-1671.8, 5080.0,-2340.5, 3047.0,-2594.9, 1656.9, 2005
-     1           -516.7, 1335.7,-2305.3, -200.4, 1246.8,  269.3,  674.4, 2005
-     2           -524.5,  919.8,  798.2,  281.4,  211.5, -225.8, -379.5, 2005
-     3            145.7,  100.2, -304.7, -227.6,  354.4,   42.7,  208.8, 2005
-     4            179.8, -136.6, -123.0, -168.3,  -19.5,  -14.1,  103.6, 2005
-     5             72.9,   69.6,  -20.2,   76.6,   54.7, -151.1,   63.7, 2005
-     6            -15.0,  -63.4,   14.7,    0.0,  -86.4,   50.3,   79.8, 2005
-     7            -74.4,  -61.4,   -1.4,  -22.5,   38.6,    6.9,   12.3, 2005
-     8             25.4,    9.4,   10.9,    5.5,  -26.4,    2.0,   -4.8, 2005
-     9             24.8,    7.7,   11.2,  -11.4,  -21.0,   -6.8,    9.7, 2005
-     a            -18.0,  -19.8,   10.0,   16.1,    9.4,    7.7,  -11.4, 2005
-     b            -12.8,   -5.0,   -0.1,    5.6,    9.8,  -20.1,    3.6, 2005
-     c             12.9,   -7.0,   12.7,    5.0,   -6.7,  -10.8,   -8.1, 2005
-     d             -1.3,    8.1,    8.7,    2.9,   -6.7,   -7.9,   -9.2, 2005
-     e              5.9,   -2.2,   -6.3,    2.4,    1.6,    0.2,   -2.5, 2005
-     f              4.4,   -0.1,    4.7,    3.0,   -6.5,    0.3,   -1.0, 2005
-     g              2.1,   -3.4,    3.9,   -0.9,   -0.1,   -2.3,   -2.2, 2005
-     h             -8.0,    2.9,   -1.6,    0.3,   -1.7,    1.4,    1.5, 2005
-     i             -0.7,   -0.2,   -2.4,    0.2,    0.9,   -0.7,   -0.6, 2005
-     j              0.5,   -2.7,    1.8,   -1.0,    0.1,   -1.5,    1.0, 2005
-     k             -2.0,    4.1,   -1.4,   -2.2,   -0.3,   -0.5,    0.3, 2005
-     l              0.3,    0.9,    2.3,   -0.4,   -2.7,    1.0,    0.6, 2005
-     m             -0.4,    0.4,    0.5,    0.0,   -0.3,    0.0,   -0.4, 2005
-     n              0.3,    0.0,   -0.8,   -0.4,   -0.4,    0.0,    1.0, 2005
-     o             -0.2,   -0.9,   -0.7,    0.3,    0.3,    0.3,    1.7, 2005
-     p             -0.4,   -0.5,    1.2,   -1.0,   -0.4,    0.0,    0.7, 2005
-     q              0.7,   -0.3,    0.2,    0.4,    0.6,   -0.1,    0.4, 2005
-     r              0.4,   -0.2,   -0.1,   -0.5,   -0.3,   -1.0/         2005
-      data gp/     8.8,  10.8, -21.3, -15.0,  -6.9, -23.3,  -1.0, -14.0, 2007
-     1            -0.3,  -3.1,   5.4,  -0.9,  -6.5,  -6.8,  -2.0,  -2.5, 2007
-     2             2.8,   2.0,  -7.1,   1.8,   5.9,   5.6,  -3.2,   0.0, 2007
-     3            -2.6,   0.4,   0.1,  -3.0,   1.8,  -1.2,   2.0,   0.2, 2007
-     4             4.5,  -0.6,  -1.0,  -0.8,   0.2,  -0.4,  -0.2,  -1.9, 2007
-     5             2.1,  -0.4,  -2.1,  -0.4,  -0.4,  -0.2,   1.3,   0.9, 2007
-     6            -0.4,   0.0,   0.8,  -0.2,   0.4,   1.1,   0.1,   0.6, 2007
-     7             0.2,   0.4,  -0.9,  -0.5,  -0.3,   0.9,   0.3,  -0.2, 2007
-     8             0.2,  -0.2,  -0.2,   0.2,   0.2,   0.2,  -0.2,   0.4, 2007
-     9             0.2,   0.2,   0.5,  -0.3,  -0.7,   0.5,   0.5,   0.4, 2007
-     a         115*0.0/                                                  2007
+      data gm/-29554.63,-1669.05, 5077.99,-2337.24, 3047.69,-2594.50,    2005
+     1          1657.76, -515.43, 1336.30,-2305.83, -198.86, 1246.39,    2005
+     2           269.72,  672.51, -524.72,  920.55,  797.96,  282.07,    2005
+     3           210.65, -225.23, -379.86,  145.15,  100.00, -305.36,    2005
+     4          -227.00,  354.41,   42.72,  208.95,  180.25, -136.54,    2005
+     5          -123.45, -168.05,  -19.57,  -13.55,  103.85,   73.60,    2005
+     6            69.56,  -20.33,   76.74,   54.75, -151.34,   63.63,    2005
+     7           -14.58,  -63.53,   14.58,    0.24,  -86.36,   50.94,    2005
+     8            79.88,  -74.46,  -61.14,   -1.65,  -22.57,   38.73,    2005
+     9             6.82,   12.30,   25.35,    9.37,   10.93,    5.42,    2005
+     a           -26.32,    1.94,   -4.64,   24.80,    7.62,   11.20,    2005
+     b           -11.73,  -20.88,   -6.88,    9.83,  -18.11,  -19.71,    2005
+     c            10.17,   16.22,    9.36,    7.61,  -11.25,  -12.76,    2005
+     d            -4.87,   -0.06,    5.58,    9.76,  -20.11,    3.58,    2005
+     e            12.69,   -6.94,   12.67,    5.01,   -6.72,  -10.76,    2005
+     f            -8.16,   -1.25,    8.10,    8.76,    2.92,   -6.66,    2005
+     g            -7.73,   -9.22,    6.01,   -2.17,   -6.12,    2.19,    2005
+     h             1.42,    0.10,   -2.35,    4.46,   -0.15,    4.76,    2005
+     i             3.06,   -6.58,    0.29,   -1.01,    2.06,   -3.47,    2005
+     j             3.77,   -0.86,   -0.21,   -2.31,   -2.09,   -7.93,    2005
+     k             2.95,   -1.60,    0.26,   -1.88,    1.44,    1.44,    2005
+     l            -0.77,   -0.31,   -2.27,    0.29,    0.90,   -0.79,    2005
+     m            -0.58,    0.53,   -2.69,    1.80,   -1.08,    0.16,    2005
+     n            -1.58,    0.96,   -1.90,    3.99,   -1.39,   -2.15,    2005
+     o            -0.29,   -0.55,    0.21,    0.23,    0.89,    2.38,    2005
+     p            -0.38,   -2.63,    0.96,    0.61,   -0.30,    0.40,    2005
+     q             0.46,    0.01,   -0.35,    0.02,   -0.36,    0.28,    2005
+     r             0.08,   -0.87,   -0.49,   -0.34,   -0.08,    0.88,    2005
+     s            -0.16,   -0.88,   -0.76,    0.30,    0.33,    0.28,    2005
+     t             1.72,   -0.43,   -0.54,    1.18,   -1.07,   -0.37,    2005
+     u            -0.04,    0.75,    0.63,   -0.26,    0.21,    0.35,    2005
+     v             0.53,   -0.05,    0.38,    0.41,   -0.22,   -0.10,    2005
+     w            -0.57,   -0.18,   -0.82/                               2005
+      data gp/-29496.5,-1585.9, 4945.1,-2396.6, 3026.0,-2707.7, 1668.6,  2010
+     1          -575.4, 1339.7,-2326.3, -160.5, 1231.7,  251.7,  634.2,  2010
+     2          -536.8,  912.6,  809.0,  286.4,  166.6, -211.2, -357.1,  2010
+     3           164.4,   89.7, -309.2, -231.1,  357.2,   44.7,  200.3,  2010
+     4           188.9, -141.2, -118.1, -163.1,    0.1,   -7.7,  100.9,  2010
+     5            72.8,   68.6,  -20.8,   76.0,   44.2, -141.4,   61.5,  2010
+     6           -22.9,  -66.3,   13.1,    3.1,  -77.9,   54.9,   80.4,  2010
+     7           -75.0,  -57.8,   -4.7,  -21.2,   45.3,    6.6,   14.0,  2010
+     8            24.9,   10.4,    7.0,    1.6,  -27.7,    4.9,   -3.4,  2010
+     9            24.3,    8.2,   10.9,  -14.5,  -20.0,   -5.7,   11.9,  2010
+     a           -19.3,  -17.4,   11.6,   16.7,   10.9,    7.1,  -14.1,  2010
+     b           -10.8,   -3.7,    1.7,    5.4,    9.4,  -20.5,    3.4,  2010
+     c            11.6,   -5.3,   12.8,    3.1,   -7.2,  -12.4,   -7.4,  2010
+     d            -0.8,    8.0,    8.4,    2.2,   -8.4,   -6.1,  -10.1,  2010
+     e             7.0,   -2.0,   -6.3,    2.8,    0.9,   -0.1,   -1.1,  2010
+     f             4.7,   -0.2,    4.4,    2.5,   -7.2,   -0.3,   -1.0,  2010
+     g             2.2,   -4.0,    3.1,   -2.0,   -1.0,   -2.0,   -2.8,  2010
+     h            -8.3,    3.0,   -1.5,    0.1,   -2.1,    1.7,    1.6,  2010
+     i            -0.6,   -0.5,   -1.8,    0.5,    0.9,   -0.8,   -0.4,  2010
+     j             0.4,   -2.5,    1.8,   -1.3,    0.2,   -2.1,    0.8,  2010
+     k            -1.9,    3.8,   -1.8,   -2.1,   -0.2,   -0.8,    0.3,  2010
+     l             0.3,    1.0,    2.2,   -0.7,   -2.5,    0.9,    0.5,  2010
+     m            -0.1,    0.6,    0.5,    0.0,   -0.4,    0.1,   -0.4,  2010
+     n             0.3,    0.2,   -0.9,   -0.8,   -0.2,    0.0,    0.8,  2010
+     o            -0.2,   -0.9,   -0.8,    0.3,    0.3,    0.4,    1.7,  2010
+     p            -0.4,   -0.6,    1.1,   -1.2,   -0.3,   -0.1,    0.8,  2010
+     q             0.5,   -0.2,    0.1,    0.4,    0.5,    0.0,    0.4,  2010
+     r             0.4,   -0.2,   -0.3,   -0.5,   -0.3,   -0.8/          2010
+      data gq/    11.4,   16.7,  -28.8,  -11.3,   -3.9,  -23.0,    2.7,  2012
+     1           -12.9,    1.3,   -3.9,    8.6,   -2.9,   -2.9,   -8.1,  2012
+     2            -2.1,   -1.4,    2.0,    0.4,   -8.9,    3.2,    4.4,  2012
+     3             3.6,   -2.3,   -0.8,   -0.5,    0.5,    0.5,   -1.5,  2012
+     4             1.5,   -0.7,    0.9,    1.3,    3.7,    1.4,   -0.6,  2012
+     5            -0.3,   -0.3,   -0.1,   -0.3,   -2.1,    1.9,   -0.4,  2012
+     6            -1.6,   -0.5,   -0.2,    0.8,    1.8,    0.5,    0.2,  2012
+     7            -0.1,    0.6,   -0.6,    0.3,    1.4,   -0.2,    0.3,  2012
+     8            -0.1,    0.1,   -0.8,   -0.8,   -0.3,    0.4,    0.2,  2012
+     9            -0.1,    0.1,    0.0,   -0.5,    0.2,    0.3,    0.5,  2012
+     a            -0.3,    0.4,    0.3,    0.1,    0.2,   -0.1,   -0.5,  2012
+     b             0.4,    0.2,    0.4,115*0.0/                          2012
 c
 C          Do not need to load new coefficients if date has not changed
       ICHG = 0
@@ -2810,12 +2850,12 @@ C          Do not need to load new coefficients if date has not changed
       DATEL = DATE
       ICHG = 1
       
-      if (date.lt.1900.0.or.date.gt.2015.0) go to 11
-      if (date.gt.2010.0) write (6,960) date
+      if (date.lt.1900.0.or.date.gt.2020.0) go to 11
+      if (date.gt.2015.0) write (6,960) date
   960 format (/' This version of the IGRF is intended for use up',
-     1        ' to 2010.0.'/' values for',f9.3,' will be computed',
+     1        ' to 2015.0.'/' values for',f9.3,' will be computed',
      2        ' but may be of reduced accuracy'/)
-      if (date.ge.2005.0) go to 1
+      if (date.ge.2010.0) go to 1
       t     = 0.2*(date - 1900.0)                                             
       ll    = t
       one   = ll
@@ -2839,13 +2879,13 @@ C          Do not need to load new coefficients if date has not changed
       end if
       go to 2
 c
-    1 t     = date - 2005.0
+    1 t     = date - 2010.0
       tc    = 1.0
       if (isv.eq.1) then
        t = 1.0
        tc = 0.0
       end if
-      ll    = 2670
+      ll    = 2865
       nmx   = 13
       nc    = nmx*(nmx+2)
       kmx   = (nmx+1)*(nmx+2)/2
@@ -2892,7 +2932,7 @@ C          Error trap diagnostics:
       write (6,961) date
   961 format (/' This subroutine will not work with a date of',
      1        f9.3,'.  Date must be in the range 1900.0.ge.date',
-     2        '.le.2015.0.  On return f = 1.0d8., x = y = z = 0.')
+     2        '.le.2020.0.  On return f = 1.0d8., x = y = z = 0.')
       return
       END
  
@@ -3237,4 +3277,186 @@ C          Geocentric to geodetic
       COMMON /MAGCOF/ G(ncoef),GV(ncoef)
       COMMON /MAGCOF_int/ NMAX,ICHG
       DATA NMAX,ICHG /13,-99999/
-      end block data blkmagcof
+      end block data blkmagcof    
+!-----------------------------------------------------------------------  
+      SUBROUTINE SUBSOL (IYR,IDAY,IHR,IMN,SEC,SBSLLAT,SBSLLON)
+C          Find subsolar geographic latitude and longitude given the
+C          date and time (Universal Time).
+C
+C          This is based on formulas in Astronomical Almanac for the
+C          year 1996, p.  C24. (U.S.  Government Printing Office,
+C          1994).  According to the Almanac, results are good to at
+C          least 0.01 degree latitude and 0.025 degree longitude
+C          between years 1950 and 2050.  Accuracy for other years has
+C          not been tested although the algorithm has been designed to
+C          accept input dates from 1601 to 2100.  Every day is assumed
+C          to have exactly 86400 seconds; thus leap seconds that
+C          sometimes occur on June 30 and December 31 are ignored:
+C          their effect is below the accuracy threshold of the algorithm.
+C
+C          961026 A. D. Richmond, NCAR
+C
+C          INPUTS:
+C            IYR  = Year (e.g., 1994). IYR must be in the range: 1601 to 2100.
+C            IDAY = Day number of year (e.g., IDAY = 32 for Feb 1)
+C            IHR  = Hour of day    (e.g., 13 for 13:49)
+C            IMN  = Minute of hour (e.g., 49 for 13:49)
+C            SEC  = Second and fraction after the hour/minute.
+C          Note:  While IYR is bounds tested, there is no constraint
+C                 placed on values: IDAY,IHR,IMN,SEC; e.g., IHR=25 is
+C                 properly interpreted.
+C          RETURNS:
+C            SBSLLAT = geographic latitude of subsolar point (degrees)
+C            SBSLLON = geographic longitude of subsolar point (degrees,
+C                      between -180 and +180)
+
+      PARAMETER (D2R=0.0174532925199432957692369076847 ,
+     +           R2D=57.2957795130823208767981548147)
+      PARAMETER (MSGUN=6)
+      INTEGER IYR,YR,IDAY,IHR,IMN,NLEAP,NCENT,NROT
+      REAL SEC,SBSLLAT,SBSLLON,L0,G0,DF,LF,GF,L,G,LAMBDA,EPSILON,N
+     1   ,GRAD,LAMRAD,SINLAM,EPSRAD,DELTA,UT,ETDEG
+C
+C Number of years from 2000 to IYR (negative if IYR < 2000):
+      YR = IYR - 2000
+C
+C NLEAP (final) = number of leap days from (2000 January 1) to (IYR January 1)
+C                 (negative if IYR is before 1997)
+      NLEAP = (IYR-1601)/4
+      NLEAP = NLEAP - 99
+      IF (IYR.LE.1900) THEN
+	IF (IYR.LE.1600) THEN
+	 WRITE(MSGUN,*) 'SUBSOLR INVALID BEFORE 1601: INPUT YEAR = ',IYR       
+	 STOP
+	ENDIF
+	NCENT = (IYR-1601)/100
+	NCENT = 3 - NCENT 
+	NLEAP = NLEAP + NCENT
+      ENDIF
+      IF (IYR.GE.2101) THEN
+	WRITE(MSGUN,*) 'SUBSOLR INVALID AFTER 2100:  INPUT YEAR = ',IYR
+	STOP
+      ENDIF
+C
+C L0 = Mean longitude of Sun at 12 UT on January 1 of IYR:
+C     L0 = 280.461 + .9856474*(365*(YR-NLEAP) + 366*NLEAP) 
+C	   - (ARBITRARY INTEGER)*360.
+C        = 280.461 + .9856474*(365*(YR-4*NLEAP) + (366+365*3)*NLEAP) 
+C	   - (ARBITRARY INTEGER)*360.
+C        = (280.461 - 360.) + (.9856474*365 - 360.)*(YR-4*NLEAP) 
+C	   + (.9856474*(366+365*3) - 4*360.)*NLEAP,
+C  where ARBITRARY INTEGER = YR+1.  This gives:
+      L0 = -79.549 + (-.238699*(YR-4*NLEAP) + 3.08514E-2*NLEAP)
+C
+C G0 = Mean anomaly at 12 UT on January 1 of IYR:
+C     G0 = 357.528 + .9856003*(365*(YR-NLEAP) + 366*NLEAP) 
+C	   - (ARBITRARY INTEGER)*360.
+C        = 357.528 + .9856003*(365*(YR-4*NLEAP) + (366+365*3)*NLEAP) 
+C	   - (ARBITRARY INTEGER)*360.
+C        = (357.528 - 360.) + (.9856003*365 - 360.)*(YR-4*NLEAP) 
+C	   + (.9856003*(366+365*3) - 4*360.)*NLEAP,
+C  where ARBITRARY INTEGER = YR+1.  This gives:
+      G0 = -2.472 + (-.2558905*(YR-4*NLEAP) - 3.79617E-2*NLEAP)
+C
+C Universal time in seconds:
+      UT = FLOAT(IHR*3600 + IMN*60) + SEC
+C
+C Days (including fraction) since 12 UT on January 1 of IYR:
+      DF = (UT/86400. - 1.5) + IDAY
+C
+C Addition to Mean longitude of Sun since January 1 of IYR:
+      LF = .9856474*DF
+C
+C Addition to Mean anomaly since January 1 of IYR:
+      GF = .9856003*DF
+C
+C Mean longitude of Sun:
+      L = L0 + LF
+C
+C Mean anomaly:
+      G = G0 + GF
+      GRAD = G*D2R
+C
+C Ecliptic longitude:
+      LAMBDA = L + 1.915*SIN(GRAD) + .020*SIN(2.*GRAD)
+      LAMRAD = LAMBDA*D2R
+      SINLAM = SIN(LAMRAD)
+C
+C Days (including fraction) since 12 UT on January 1 of 2000:
+      N = DF + FLOAT(365*YR + NLEAP)
+C
+C Obliquity of ecliptic:
+      EPSILON = 23.439 - 4.E-7*N
+      EPSRAD = EPSILON*D2R
+C
+C Right ascension:
+      ALPHA = ATAN2(COS(EPSRAD)*SINLAM,COS(LAMRAD))*R2D
+C
+C Declination:
+      DELTA = ASIN(SIN(EPSRAD)*SINLAM)*R2D
+C
+C Subsolar latitude:
+      SBSLLAT = DELTA
+C
+C Equation of time (degrees):
+      ETDEG = L - ALPHA
+      NROT = NINT(ETDEG/360.)
+      ETDEG = ETDEG - FLOAT(360*NROT)
+C
+C Apparent time (degrees):
+      APTIME = UT/240. + ETDEG
+C          Earth rotates one degree every 240 s.
+C
+C Subsolar longitude:
+      SBSLLON = 180. - APTIME
+      NROT = NINT(SBSLLON/360.)
+      SBSLLON = SBSLLON - FLOAT(360*NROT)
+C
+      RETURN
+      END
+!-----------------------------------------------------------------------     
+      SUBROUTINE SOLGMLON (XLAT,XLON,COLAT,ELON,MLON)
+C Computes geomagnetic longitude of the point with geocentric spherical
+C  latitude and longitude of XLAT and XLON, respectively.
+C 940719 A. D. Richmond, NCAR
+C Inputs:
+C   XLAT  = geocentric spherical latitude (deg)
+C   XLON  = geocentric spherical longitude (deg)
+C   COLAT = Geocentric colatitude of geomagnetic dipole north pole (deg)
+C   ELON  = East longitude of geomagnetic dipole north pole (deg)
+C Output:
+C   MLON  = Geomagnetic dipole longitude of the point (deg, -180. to 180.)
+
+      REAL MLON
+      PARAMETER (RTOD=5.72957795130823E1,DTOR=1.745329251994330E-2)
+
+C Algorithm:
+C   Use spherical coordinates.
+C   Let GP be geographic pole.
+C   Let GM be geomagnetic pole (colatitude COLAT, east longitude ELON).
+C   Let XLON be longitude of point P.
+C   Let TE be colatitude of point P.
+C   Let ANG be longitude angle from GM to P.
+C   Let TP be colatitude of GM.
+C   Let TF be arc length between GM and P.
+C   Let PA = MLON be geomagnetic longitude, i.e., Pi minus angle measured
+C     counterclockwise from arc GM-P to arc GM-GP.
+C   Then, using notation C=cos, S=sin, spherical-trigonometry formulas
+C     for the functions of the angles are as shown below.  Note: STFCPA,
+C     STFSPA are sin(TF) times cos(PA), sin(PA), respectively.
+
+      CTP = COS(COLAT*DTOR)
+      STP = SQRT(1. - CTP*CTP)
+      ANG = (XLON-ELON)*DTOR
+      CANG = COS(ANG)
+      SANG = SIN(ANG)
+      CTE = SIN(XLAT*DTOR)
+      STE = SQRT(1.-CTE*CTE)
+      STFCPA = STE*CTP*CANG - CTE*STP
+      STFSPA = SANG*STE
+      MLON = ATAN2(STFSPA,STFCPA)*RTOD
+      RETURN
+      END
+
+C   alon, and the geomagnetic dipole longitude of the subsolar point.
+C

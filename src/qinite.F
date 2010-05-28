@@ -8,7 +8,7 @@
 !
 ! Calculate background ionization rates and add to rates from qrj. 
 !
-      use bndry_module,only: fb,b
+      use lbc,only: fb,b
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,
      |  rmassinv_no
       use qrj_module,only:
@@ -47,7 +47,9 @@
      |  qbn2    ! n2 background ionization
 !
 ! al is sometimes adjusted for different conditions ("tuning knob"):
-      real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)
+!      real,parameter :: al(3) = (/5.E4, 5.E3, 5.E3/)  !org 1.1.1
+! Using these timegcm values allows removal of minimum Ne in elden.F:
+      real,parameter :: al(3)=(/1.5E7,1.5E6,1.5E6/) ! timegcm version
 !
 #ifdef VT
 !     code = 128 ; state = 'qinite' ; activity='ModelCode'

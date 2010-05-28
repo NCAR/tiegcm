@@ -107,7 +107,9 @@
      |    gswm_mi_di_ncfile, ! GSWM migrating diurnal data file
      |    gswm_mi_sdi_ncfile,! GSWM migrating semi-diurnal data file
      |    gswm_nm_di_ncfile, ! GSWM non-migrating diurnal data file
-     |    gswm_nm_sdi_ncfile ! GSWM non-migrating semi-diurnal data file
+     |    gswm_nm_sdi_ncfile,! GSWM non-migrating semi-diurnal data file
+     |    saber_ncfile,      ! SABER U,Z lbc data file
+     |    tidi_ncfile        ! TIDI U,V lbc data file
         integer ::
      |    nlat,              ! number of latitude grid points
      |    nlon,              ! number of longitude grid points
@@ -124,7 +126,8 @@
      |    initial_year,      ! initial starting year
      |    initial_mtime(3),  ! initial starting model time
      |    source_mtime(3),   ! start time of source history
-     |    tuv_lbc_intop      ! 1 (old histories), or 0 (new histories)
+     |    tuv_lbc_intop,     ! 1 (old histories), or 0 (new histories)
+     |    ntask_mpi          ! number of mpi tasks this run
         real :: 
      |    ut,                ! ut (decimal hours, from modeltime)
      |    time,              ! model time ("minutes since yyyy-m-d")
@@ -144,6 +147,7 @@
      |    swvel,             ! solar wind velocity
      |    swden,             ! solar wind density
      |    al,                ! solar activity index
+     |    kp,                ! solar activity index
      |    f107d,             ! daily f10.7 cm flux
      |    f107a,             ! 81-day average f10.7 cm flux
      |    dtide(2),          ! diurnal tide (tide2(2) from input)
@@ -238,16 +242,21 @@
       h%gswm_nm_di_ncfile  = '[none]'
       h%gswm_nm_sdi_ncfile = '[none]'
 
+      h%saber_ncfile = '[none]'
+      h%tidi_ncfile = '[none]'
+
       h%nflds  = 0
       h%dynamo = .false.
       h%coupled_ccm = .false.
       h%tuv_lbc_intop = 0 ! this version writes "new" histories
       h%lbc = zibot
+      h%ntask_mpi = 0
 !
 ! If istep==0, h%f107, etc were defined from source history: 
       if (istep > 0) then
         h%hpower  = real_init
         h%ctpoten = real_init
+        h%kp      = real_init
         h%f107d   = real_init
         h%f107a   = real_init
       endif
@@ -256,6 +265,7 @@
       h%swvel = real_init
       h%swden = real_init
       h%al = real_init
+      h%kp = real_init
       h%dtide = (/real_init,real_init/)
       h%sdtide(:) = real_init
       h%colfac = real_init
@@ -373,6 +383,7 @@
       write(6,"(2x,'f107a   = ',e12.4,' (average solar flux)')") h%f107a
       write(6,"(2x,'hpower  = ',e12.4,' (Gw)')") h%hpower
       write(6,"(2x,'ctpoten = ',e12.4,' (Volts)')") h%ctpoten
+      write(6,"(2x,'kp      = ',e12.4,' ()')") h%kp
       write(6,"(2x,'byimf   = ',e12.4)") h%byimf
       write(6,"(2x,'bzimf   = ',e12.4)") h%bzimf
       write(6,"(2x,'swvel   = ',e12.4)") h%swvel
@@ -420,6 +431,9 @@
       write(6,"(2x,'gswm_nm_sdi_ncfile = ',a)")
      |  trim(h%gswm_nm_sdi_ncfile)
 
+      write(6,"(2x,'saber_ncfile   = ',a)") trim(h%saber_ncfile)
+      write(6,"(2x,'tidi_ncfile   = ',a)") trim(h%tidi_ncfile)
+
       write(6,"(2x,'nflds   = ',i3,' (number of model fields)')")
      |  h%nflds
       write(6,"(2x,'see_ncfile   = ',a)") trim(h%see_ncfile)
@@ -429,6 +443,8 @@
      |  ' are stored in top k slot (old histories))')") h%tuv_lbc_intop
       write(6,"(2x,'LBC = ',f8.2,' (lower boundary interface ',
      |  'level)')") h%lbc
+      write(6,"(2x,'ntask_mpi    =',i4,' (number of MPI tasks)')")
+     |  h%ntask_mpi
 !
       if (associated(h%fnames)) then
         write(6,"('  There are ',i3,' fields on this history,',

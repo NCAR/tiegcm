@@ -372,7 +372,7 @@ C     POSTPROCESSING (ISIGN=-1):
 C     --------------------------
 C
   130 CONTINUE
-      CALL FFT99B(WORK,nw,A,na,TRIGS,INC,JUMP,N,LOT)
+      CALL FFT99B(WORK,nw,A,na,TRIGS,ntrigs,INC,JUMP,N,LOT)
 C
   140 CONTINUE
       RETURN

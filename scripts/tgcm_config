@@ -212,16 +212,16 @@ sub validate_options {
 #
 # Build/Execution directory (default is $wrkdir/$model-$os):
 # (If Linux and machine is lightning, set OS to linux-mpi)
-# 6/05: Makefile file now does this.
 #
   $OS = `uname -s`; chop $OS; 
+
+  $hardware = `uname -i`; chop $hardware;
+  $nbit     = 32;
+  if ($hardware =~ 64) { $nbit = 64; } # 64-bit linux
+
   $nodename = `uname -n`; chop $nodename;
-# if ($OS =~ 'Linux') {
-#   $nodename = `uname -n`; chop $nodename;
-#   if ($nodename =~ /^ln/) { $OS = $OS . '-mpi'; }
-# }
   ($os = $OS) =~ tr/A-Z/a-z/;
-  print "tgcm_config: OS=$OS os=$os\n";
+  print "tgcm_config: OS=$OS os=$os nbit=$nbit\n";
 #
   if (! defined $execdir or $execdir eq "") {
     $execdir = "$wrkdir/$model-$os"; # default
@@ -672,6 +672,7 @@ sub write_makefile {
           $lib_netcdf = "/fs/local/lib";     
         } else {                               # Generic linux (probably HAO)
           $lib_netcdf = "/opt/local/lib";
+          if ($nbit eq 64) { $lib_netcdf = "/opt/local/netcdf/linux86-64/lib"; }
         }
         last SWITCH;
       }
@@ -702,6 +703,7 @@ sub write_makefile {
           $inc_netcdf = "/fs/local/include";
         } else {                               # Generic linux (probably HAO)
           $inc_netcdf = "/opt/local/include";
+          if ($nbit eq 64) { $inc_netcdf = "/opt/local/netcdf/linux86-64/include"; }
         }
         last SWITCH;
       }
@@ -734,6 +736,7 @@ INC_NETCDF := $inc_netcdf
 DEBUG      := $mkdebug
 MPI        := $mpiflag
 MSS        := $mssflag
+NBIT       := $nbit
 EOF
 #
 # Copy template and close files:
@@ -754,5 +757,6 @@ EOF
     DEBUG      := $mkdebug
     MPI        := $mpiflag
     MSS        := $mssflag
+    NBIT       := $nbit
 EOF
 }

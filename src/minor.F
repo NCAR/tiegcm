@@ -11,12 +11,12 @@
 ! This is called from comp_no and comp_n4s.
 !
       use params_module,only: nlat,nlon,nlonp4,dlat
-      use bndry_module,only: b,fb ! b(nlonp4,2,2), fb(nlonp4,2)
+      use lbc,only: b,fb ! b(nlonp4,2,2), fb(nlonp4,2)
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  boltz,p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
-     |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,dtsmooth_div2
-      use init_module,only: glat
-      use input_module,only: difhor
+     |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,
+     |  dtsmooth_div2,difhor
+      use init_module,only: glat,iday
       use fields_module,only: w,itc,itp,tlbc
       use addfld_module,only: addfld
 #ifdef MPI
@@ -342,7 +342,7 @@
      |  call addfld('THDIFF0',' ',' ',thdiff,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
-! If difhor flag was by user (see input_module):
+! difhor flag is a parameter flag set to 1 in cons.F
 ! dfactor = 
 !   .5*(1.+SIN(PI*(ABS(RLATM)-PI/6.)/(PI/3.))) FOR ABS(RLATM).LT.PI/3.
 ! dfactor = 1. FOR  ABS(RLATM).GE.PI/3
@@ -369,20 +369,20 @@
         do k=lev0,lev1-1
 ! s1
           p_coef(k,i) = ax(k,i)/dzp*(1./dzp+.5*thdiff(k,i))-expz(k)*
-     |      (expzmid_inv*difk(k)*dfactor(i)*(1./dzp-.5*dmdz(k,i))+
+     |      (expzmid_inv*difk(k,iday)*dfactor(i)*(1./dzp-.5*dmdz(k,i))+
      |      0.25*(w(k,i,lat,itc)+w(k+1,i,lat,itc)))/
      |      dzp
 ! s3
           r_coef(k,i) = ax(k+1,i)/dzp*(1./dzp-.5*thdiff(k+1,i))-expz(k)*
-     |      (expzmid*difk(k+1)*dfactor(i)*(1./dzp+.5*dmdz(k+1,i))-
+     |      (expzmid*difk(k+1,iday)*dfactor(i)*(1./dzp+.5*dmdz(k+1,i))-
      |      0.25*(w(k,i,lat,itc)+w(k+1,i,lat,itc)))/
      |      dzp
 ! s2
           q_coef(k,i) = 
      |      -(ax(k  ,i)/dzp*(1./dzp-.5*thdiff(k  ,i)) +
      |        ax(k+1,i)/dzp*(1./dzp+.5*thdiff(k+1,i)))+
-     |      expz(k)*((expzmid_inv*difk(k)*(1./dzp+.5*dmdz(k,i))+
-     |      expzmid*difk(k+1)*(1./dzp-.5*dmdz(k+1,i)))*
+     |      expz(k)*((expzmid_inv*difk(k,iday)*(1./dzp+.5*dmdz(k,i))+
+     |      expzmid*difk(k+1,iday)*(1./dzp-.5*dmdz(k+1,i)))*
      |      dfactor(i)/dzp-sloss(k,i,lat)+dtx2inv)
 ! s4
           f_rhs(k,i) = expz(k)*(ftm1_smooth(k,i,lat)*

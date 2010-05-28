@@ -24,7 +24,6 @@
 #ifdef MPI
       use mpi_module,only: distribute_1d,mp_close
 #endif
-      use bndry_module,only: bndcmp
       use chemrates_module,only: chemrates_tdep
       use qrj_module,only: qrj,qtotal,qop,qo2p,qn2p,qnp,qnop
       use chapman_module,only: chapman
@@ -35,7 +34,6 @@
       use no_module,only: comp_no,minor_no
       use hdif_module,only: hdif3,hdif_bndlons,hdif_periodic
       use timing_module,only: timer,timing
-      use advance_module,only: time2print
       use addfld_module,only: addfld
       use init_module,only: iyear,secs
       use hist_module,only: modeltime
@@ -72,14 +70,12 @@
 !
       logical,parameter :: diags=.false. ! put fields on sec hist
       real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor
+      logical,external :: time2print
 !
       if (debug) write(6,"(/,'Enter dynamics.')")
       i0=lon0 ; i1=lon1 ; nk=nlevp1 ; nkm1=nk-1 ! for addfld
       k0=1 ; k1=nlevp1
       nlats = lat1-lat0+1
-!
-      call bndcmp
-      if (debug) write(6,"('dynamics after bndcmp')")
 !
 ! Calculate specific heat and molecular viscosity.
 ! f4d itp fields are input, f3d fields are output.
@@ -332,6 +328,7 @@
      |    n4s   (levd0,lond0,lat,itp),
      |    xiop2p(levd0,lond0,lat),      ! from oplus
      |    xiop2d(levd0,lond0,lat),      ! from oplus
+     |    z     (levd0,lond0,lat,itc),  ! updated Z from addiag
      |    nplus (levd0,lond0,lat),      ! N+  output
      |    n2p   (levd0,lond0,lat),      ! N2+ output
      |    nop   (levd0,lond0,lat),      ! NO+ output
