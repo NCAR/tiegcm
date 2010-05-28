@@ -1,7 +1,7 @@
 &tgcm_input
 ;
 ; Namelist read input file for model tiegcm
-; Mknamelist Thu May 27 21:30:32 MDT 2010
+; Mknamelist Fri May 28 09:45:17 MDT 2010
 ;
  LABEL='tiegcm'
  START_YEAR = 2002   ; starting year
@@ -42,10 +42,6 @@
 ; By default, use gswm migrating diurnal and semi-diurnal tides:
  GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_5.0d_99km.nc'
  GSWM_MI_SDI_NCFILE = '$TGCMDATA/gswm_semi_5.0d_99km.nc'
-;
-; SABER (T,Z) and/or TIDI (U,V) data files for lbc perturbations:
-;SABER_NCFILE = '/2002_saber_5.0deg.nc'
-;TIDI_NCFILE  = '/2002_tidi_5.0deg.nc'
 ;
  POTENTIAL_MODEL = 'HEELIS'
 ;GPI_NCFILE = '$TGCMDATA/gpi_2000001-2009031.nc'
