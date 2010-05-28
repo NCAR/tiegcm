@@ -1156,3 +1156,8 @@ Now, if the user has DIFHOR in the namelist input file, the model
 will not recognize it and will stop with an input error. If a model
 developer wants to change the flag, they will have to change it in
 cons.F and recompile.
+
+5/27/10:
+Add TEC diagnostic to secondary histories. NE is integrated in
+elden.F (using Z) and calls addfld to save TEC. Default namelist file
+includes TEC in SECFLDS.

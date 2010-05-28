@@ -328,6 +328,7 @@
      |    n4s   (levd0,lond0,lat,itp),
      |    xiop2p(levd0,lond0,lat),      ! from oplus
      |    xiop2d(levd0,lond0,lat),      ! from oplus
+     |    z     (levd0,lond0,lat,itc),  ! updated Z from addiag
      |    nplus (levd0,lond0,lat),      ! N+  output
      |    n2p   (levd0,lond0,lat),      ! N2+ output
      |    nop   (levd0,lond0,lat),      ! NO+ output

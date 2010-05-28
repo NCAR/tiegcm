@@ -380,7 +380,7 @@ print OUTFILE <<EOF;
  SECSAVE =   0,1,0
  SECOUT='$hist_secout'
 ;MXHIST_SECH = 24 ; maximum histories per secondary file
- SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI',
+ SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'
 ;
  DISPOSE = 0 ; no dispose to mss
