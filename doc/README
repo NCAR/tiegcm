@@ -1163,3 +1163,9 @@ elden.F (using Z) and calls addfld to save TEC. Default namelist file
 includes TEC in SECFLDS.
 
 5/28/10: Saving tag tiegcm1.93
+
+5/28/10: Recommitted after excluding SABER_NCFILE, TIDI_NCFILE from the
+default namelist (see Mknamelist, tiegcm_default.inp) because they are
+unsupported in the Community release. Also recommit tags/tiegcm1.93.
+They were commented out, but remove them completely so they will not be seen.
+However, they remain in the default namelist in local dirs $TGCMROOT/tiegcm1.93.
