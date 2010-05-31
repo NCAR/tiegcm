@@ -494,7 +494,7 @@
      |        call handle_ncerr(istat,'reading iter')
             sh%iter = iscalar
           case('ntask_mpi')
-            istat = nf_get_var1_int(ncid,i,idv_ntask,iscalar)
+            istat = nf_get_var1_int(ncid,i,itime,iscalar)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading ntask_mpi')
             sh%ntask_mpi = iscalar
