@@ -58,13 +58,13 @@
 #
  set model       = tiegcm1.93
  set wrkdir      = .
+ set tgcmroot    = .
+ set tgcmdata    = ${model}_data
  set mpi         = TRUE
  set nproc       = 8      # linux mpi runs only
 #set input       = $model.inp
 #set output      = $model.out
 #set usr_srcdirs = modsrc
-#set tgcmroot    = $TGCMROOT
-#set tgcmdata    = $TGCMDATA
 #set execdir     = $model-linux
 #set utildir     = $TGCMROOT/$model/scripts
 #set mss         = TRUE

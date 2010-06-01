@@ -73,11 +73,11 @@
 #
  set model       = tiegcm1.93
  set wrkdir      = .
+ set tgcmroot    = .
+ set tgcmdata    = ${model}_data
 #set input       = $model.inp
 #set output      = $model.out     # relative to wrkdir
 #set usr_srcdirs = modsrc
-#set tgcmroot    = $TGCMROOT
-#set tgcmdata    = $TGCMDATA
 #set execdir     = $model-ibm
 #set utildir     = $TGCMROOT/$model/scripts
 #set mpi         = TRUE

@@ -126,7 +126,7 @@
 !    |  gpi_names(ngpivars)      ! names of gpi_vars
 !
 ! Primary history user input (dimension parameters are in params.h):
-      character(len=80) :: 
+      character(len=240) :: 
      |  source,            ! file containing source history (optional)
      |  output(mxhvols)    ! output file(s) (required)
       integer ::
@@ -140,7 +140,7 @@
      |  noutput            ! number of output files given
 !
 ! Secondary history user input (dimension parameters are in params.h):
-      character(len=80) :: 
+      character(len=240) :: 
      |  secsource,            ! file containing source sec_history (for mhd)
      |  secout(mxhvols)       ! secondary history output file(s)
       character(len=16) ::
