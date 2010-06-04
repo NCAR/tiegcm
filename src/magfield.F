@@ -289,7 +289,7 @@
      |                  sddot(nlonp1,unitv,dynpot(1,nlat,k))
         dynpot(1,0,k)     = 1./float(nlonp1)*
      |                  sddot(nlonp1,unitv,dynpot(1,1,k))
-        do i=2,nmlon
+        do i=2,nlonp1
 	  dynpot(i,nlatp1,k)= dynpot(1,nlatp1,k)
           dynpot(i,0,k)     =  dynpot(1,0,k)
 	enddo

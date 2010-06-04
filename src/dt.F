@@ -266,7 +266,7 @@
 
 !     call addfld('TNI',' ',' ',tni,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('HG' ,' ',' ',h  ,'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('DEN',' ',' ',rho,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('DEN',' ',' ',rho,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('G'  ,' ',' ',g(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('F'  ,' ',' ',f(lev0:lev1-1,:),
