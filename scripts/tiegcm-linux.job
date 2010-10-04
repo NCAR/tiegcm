@@ -5,9 +5,16 @@
  set model        = tiegcm_newbuild
  set wrkdir       = .
  set tgcmroot     = .
- set make_machine = $model/scripts/Make.generic_hao64
+#
+# Setup for 64-bit Linux MPI job (next 3 lines):
+ set make_machine = Make.generic_hao64
  set mpi          = TRUE
  set nproc        = 8
+#
+# Setup for 32-bit Linux serial non-MPI job (next 2 lines):
+#set make_machine = Make.generic_hao32
+#set mpi          = FALSE
+#
  set mss          = TRUE
  set hres         = 5.0
  set vres         = 0.5
@@ -56,6 +63,7 @@ if ($mpi == FALSE) set nproc = 0
 set wrkdir       = `perl $utildir/Abspath $wrkdir`
 set utildir      = `perl $utildir/Abspath $utildir`
 set srcdir       = `perl $utildir/Abspath $tgcmroot/$model/src`
+if (! -e $make_machine && -e $utildir/$make_machine) set make_machine = $utildir/$make_machine
 set make_machine = `perl $utildir/Abspath $make_machine`
 if (! -e $make_machine) then
   echo ">>> Cannot find make_machine file $make_machine"
@@ -152,7 +160,11 @@ if (-e dispose.csh) then
   /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
 endif
 #
-# Create machines.ini file:
+echo "Model output will go to $output"
+echo "Linux job: mpi=$mpi nproc=$nproc"
+#
+# Execute Linux mpi job:
+# (first create machines.ini file)
 #
 if ($mpi == TRUE) then
   echo `hostname`  >!  machines.ini
@@ -162,14 +174,6 @@ if ($mpi == TRUE) then
     echo `hostname` >> machines.ini
     @ i++
   end
-endif
-#
-echo "Model output will go to $output"
-echo "Linux job: mpi=$mpi nproc=$nproc"
-#
-# Execute Linux mpi job:
-#
-if ($mpi == TRUE) then
   echo "Executing mpirun -np $nproc for Linux MPI run."
   mpirun -np $nproc -machinefile machines.ini $execdir/$model < $namelist >&! $output || \
     echo ">>> ${0} mpirun execution of $execdir/$model FAILED at `date`" && \

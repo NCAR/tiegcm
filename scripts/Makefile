@@ -64,6 +64,8 @@ endif
 ifeq ($(DEBUG),TRUE)
   CPPFLAGS += -DDEBUG
   OPTIM    := -g
+else
+  DBGFLAGS := $(null)
 endif
 
 ifeq ($(OS),Linux)

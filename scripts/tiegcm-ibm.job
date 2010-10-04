@@ -7,7 +7,7 @@
 ##BSUB -P 28100036       # NCAR project account number (8-digit)
 #BSUB -P 24100004
 #
-##BSUB -q regular        # queue (6-hour wallclock limit if not debug queue)
+##BSUB -q regular        # there is a 6-hour wallclock limit in regular queue
 ##BSUB -x 		 # exclusive use of nodes (not available in debug queue)
 #
 # Bluefire has 32-way nodes.
@@ -18,8 +18,8 @@
 #
 # Debug queue (30 min wallclock limit, and -x not allowed)
 #
-#BSUB -n 4                 # number of MPI tasks
 #BSUB -q debug             # debug queue (30 min wallclock limit)
+#BSUB -n 4                 # number of MPI tasks
 #
 #BSUB -o tiegcm.%J.out      # stdout filename
 #BSUB -e tiegcm.%J.out      # stderr filename
@@ -38,7 +38,7 @@
  set model        = tiegcm_newbuild
  set wrkdir       = .
  set tgcmroot     = .
- set make_machine = $model/scripts/Make.bluefire
+ set make_machine = Make.bluefire
  set mpi          = TRUE
  set mss          = TRUE
  set hres         = 5.0
@@ -97,6 +97,7 @@ if (! $?debug) set debug = "FALSE"
 set wrkdir       = `perl $utildir/Abspath $wrkdir`
 set utildir      = `perl $utildir/Abspath $utildir`
 set srcdir       = `perl $utildir/Abspath $tgcmroot/$model/src`
+if (! -e $make_machine && -e $utildir/$make_machine) set make_machine = $utildir/$make_machine
 set make_machine = `perl $utildir/Abspath $make_machine`
 if (! -e $make_machine) then
   echo ">>> Cannot find make_machine file $make_machine"
