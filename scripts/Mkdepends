@@ -11,23 +11,12 @@ $cwd = cwd();
 ($prog = $0) =~ s!(.*)/!!;
 print STDERR "\n";
 #
-# Read list of directories from file $filepathname (default "Filepath").
-# If $filepathname cannot be opened, set list to single dir cwd ('.').
-#
-$filepathname = shift();
-if (! $filepathname) { $filepathname = "Filepath"; }
-if (open FILEPATH, $filepathname) {
-  print "$prog: Reading list of directories from $filepathname\n";
-  @file_paths = <FILEPATH>;
-  close(FILEPATH);
-  chomp @file_paths;
-  unshift(@file_paths,'.');     # add current directory
-} else {
-  print "$prog: Could not find $filepathname -- will assume only cwd\n";
-  @file_paths = (".");
+while (@ARGV) {
+  $dir = shift();
+  push(@file_paths,$dir);
 }
-#print "$prog: file_paths = "; foreach $dir (@file_paths) { print "$dir "; }
-#print "\n";
+print "$prog: file_paths = "; foreach $dir (@file_paths) { print "$dir "; }
+print "\n";
 #
 # Make list of source files (returns src list and makes file ./Srcfiles):
 #

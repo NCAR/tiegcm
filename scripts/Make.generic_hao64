@@ -1,0 +1,15 @@
+#
+# Included makefile for generic 64-bit HAO machines.
+#
+# Compilers and flags:
+#
+F90    = pgf90
+MPIF90 = mpif90
+FFLAGS = -r8
+OPTIM  = -O3
+MSS    = TRUE
+#
+# Library and Include file paths:
+#
+LIB_NETCDF = /opt/local/netcdf/linux86-64/lib
+INC_NETCDF = /opt/local/netcdf/linux86-64/include

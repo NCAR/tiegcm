@@ -1,19 +1,4 @@
 #! /bin/csh
-#
-# This is an example job script to configure, build, and execute a tgcm 
-#   model on an IBM system. This script is submitted to the LSF batch system.
-#
-# To use:
-#   1) Set LSF commands (#BSUB) below for batch job.
-#   2) Set script variables below (at least $model and $wrkdir)
-#   3) Copy to a large working directory on the target machine.
-#   4) Assuming this script is called "tiegcm-ibm.job", then submit
-#      with the command: "bsub < tiegcm-ibm.job"
-#
-# See http://www.hao.ucar.edu/modeling/tgcm/userguide/ for more information.
-# If you need to customize the configuration beyond the shell vars here, 
-#   add or change options to the tgcm_config call below. 
-#
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                 USER EDIT RESOURCES FOR LSF BATCH JOB
 #
@@ -22,19 +7,19 @@
 ##BSUB -P 28100036       # NCAR project account number (8-digit)
 #BSUB -P 24100004
 #
-##BSUB -q regular        # queue (6-hour wallclock limit if not debug queue)
-##BSUB -x 		 # exclusive use of nodes (not available in debug queue)
+#BSUB -q regular        # queue (6-hour wallclock limit if not debug queue)
+#BSUB -x 		 # exclusive use of nodes (not available in debug queue)
 #
 # Bluefire has 32-way nodes.
 #
 ##BSUB -n 16
-##BSUB -n 32
+#BSUB -n 32
 ##BSUB -R "span[ptile=64]"   # SMT (Symmetric Multi-Threading)
 #
 # Debug queue (30 min wallclock limit, and -x not allowed)
 #
-#BSUB -n 4                 # number of MPI tasks
-#BSUB -q debug             # debug queue (30 min wallclock limit)
+##BSUB -n 4                 # number of MPI tasks
+##BSUB -q debug             # debug queue (30 min wallclock limit)
 #
 #BSUB -o tiegcm.%J.out      # stdout filename
 #BSUB -e tiegcm.%J.out      # stderr filename
@@ -48,53 +33,29 @@
 #BSUB -W 0:30
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#        USER EDIT SHELL VARIABLES (for batch and interactive jobs)
+#        USER EDIT SHELL VARIABLES for IBM/AIX job
 #
-# model:       Desired model name (Required. Use ListModels to see valid models)
-# wrkdir:      User's working directory (default is ".", i.e., the cwd)
-# usr_srcdirs: List of user source directories (optional)
-# input:       Namelist input file (if not given, a default will be created)
-# output:      Name of stdout file relative to the wrkdir (default is $model.out)
-# tgcmroot:    Root directory of distribution (default env var $TGCMROOT)
-# tgcmdata:    Root directory containing input data files (default $TGCMDATA)
-# execdir:     Directory in which to build and execute 
-#              (default is $wrkdir/$model-$os)
-# utildir:     Directory containing config script and needed utilities
-#              (default is $tgcmroot/$model/scripts)
-# mpi:         Load MPI libraries (can be TRUE, FALSE, or DEFAULT)
-# mss:         Availability of NCAR Mass Store (TRUE or FALSE)
-# hres:        Horizontal resolution can be either 5.0 (default), or 2.5 degrees
-# vres:        Vertical resolution can be either 0.5 (default), or 0.25 (ln(p0/p))
-# debug:       If debug=1, configure Makefile for a debug run (default is 0)
-# lib_netcdf:  Full path to directory containing netcdf library libnetcdf.a
-# inc_netcdf:  Full path to directory containing netcdf include file netcdf.inc
-#
-# Model output history files will be written to $execdir.
-#
- set model       = tiegcm1.93
- set wrkdir      = .
-#set input       = $model.inp
-#set output      = $model.out     # relative to wrkdir
-#set usr_srcdirs = modsrc
-#set tgcmroot    = $TGCMROOT
-#set tgcmdata    = $TGCMDATA
-#set execdir     = $model-ibm
-#set utildir     = $TGCMROOT/$model/scripts
-#set mpi         = TRUE
-#set mss         = TRUE
-#set hres        = 5.0
-#set vres        = 0.5
-#set debug       = 1
-#set lib_netcdf  = /usr/local/lib
-#set inc_netcdf  = /usr/local/include
+ set model        = tiegcm_trunk
+ set wrkdir       = .
+ set tgcmroot     = .
+#set utildir      = $tgcmroot/$model/scripts       # old scripts dir
+ set utildir      = scripts                        # new scripts dir
+ set input        = tiegcm.inp
+#set make_machine = scripts/Make.generic_hao64
+ set make_machine = scripts/Make.bluefire
+#set usr_srcdirs  = (modsrc0 modsrc1)
+ set usr_srcdirs  = modsrc0
+ set mpi          = TRUE
+ set mss          = TRUE
+ set hres         = 5.0
+ set vres         = 0.5
+#set output       = $model.out
+#set tgcmdata     = $TGCMDATA
+#set execdir      = $model-aix
+ set debug        = FALSE
 #
 #             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
-#             (except maybe to customize tgcm_config below)
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-set os = `uname -s | tr "[A-Z]" "[a-z]"`
-set nodename = `uname -n`
-echo os = $os  nodename = $nodename
 #
 # Env vars for AIX:
 #
@@ -125,74 +86,55 @@ endif
 echo "  Model: $model"
 #
 if (! $?wrkdir) set wrkdir = `pwd`     # default working dir is cwd
-if (! $?tgcmroot) set tgcmroot = ""
-if (! $?tgcmdata) set tgcmdata = ""
+if (! $?tgcmroot) set tgcmroot = $TGCMROOT
+if (! $?tgcmdata) set tgcmdata = $TGCMDATA
+if (! $?utildir) set utildir = $tgcmroot/$model/scripts
+if (! $?make_machine) set make_machine = $utildir/Make.generic_hao64
 if (! $?usr_srcdirs) set usr_srcdirs = ""
 if (! $?hres) set hres = 5.0
 if (! $?vres) set vres = 0.5
 if (! $?mpi) set mpi = "TRUE"
-if (! $?mss) set mss = "TRUE"
-if (! $?debug) set debug = 0
-if (! $?lib_netcdf) set lib_netcdf = ""
-if (! $?inc_netcdf) set inc_netcdf = ""
+if (! $?mss) set mss = ""
+if (! $?debug) set debug = "FALSE"
 #
-# If debug is on, request info from poe
-#if ($debug == 1) then
-#  setenv MP_INFOLEVEL 6   
-#endif
-#
-# Set utility dir from shell var $tgcmroot, or env var $TGCMROOT:
-# (must contain Abspath, MakeNamelist, Mklogs, etc) 
-#
-if (! $?utildir) then
-  if ($tgcmroot != "") then    # shell var from above (if set, trumps env var)
-    set utildir = $tgcmroot/$model/scripts
-  else if ($?TGCMROOT) then    # env var
-    set utildir = $TGCMROOT/$model/scripts
-  else
-    echo "" ; echo ">>> WARNING: cannot determine utility directory."
-    echo "" ; echo "Please set either shell var tgcmroot, or env var TGCMROOT"
-    echo "  such that the directory tgcmroot/$model/scripts contains"
-    echo "  the configuration script tgcm_config, and other needed utilities."
-    echo "  See $userguide for more information."
-    echo "" ; exit 1
-  endif
-else     # user provided utildir -- it must exist
-  if (! -d $utildir) then
-    echo ">>> Cannot find utility directory $utildir" && exit 1
-  endif
+set wrkdir       = `perl $utildir/Abspath $wrkdir`
+set utildir      = `perl $utildir/Abspath $utildir`
+set srcdir       = `perl $utildir/Abspath $tgcmroot/$model/src`
+set make_machine = `perl $utildir/Abspath $make_machine`
+if (! -e $make_machine) then
+  echo ">>> Cannot find make_machine file $make_machine"
+  exit 1
 endif
-if (! -x $utildir/Abspath) echo ">>> Cannot find command $utildir/Abspath"
-set utildir = `perl $utildir/Abspath $utildir` # full path to utildir
-echo "  Utildir = $utildir"
-#
-set wrkdir = `perl $utildir/Abspath $wrkdir`  # full path to wrkdir
-echo "  Wrkdir = $wrkdir"
+
+@ i = 1
+foreach dir ($usr_srcdirs)
+  set abspath = `perl $utildir/Abspath $dir`
+  set usr_srcdirs[$i] = $abspath
+  @ i++
+end
+
+echo " "
+echo "  Wrkdir       = $wrkdir"
+echo "  Utildir      = $utildir"
+echo "  Make_machine = $make_machine"
+echo "  Srcdir       = $srcdir"
+echo "  Usr_srcdirs  = $usr_srcdirs"
 #
 # Set exec directory if necessary (wrkdir/model-os):
 #
 if (! $?execdir) then
   set os = `uname -s | tr "[A-Z]" "[a-z]"`
-  set execdir = $wrkdir/$model-$os # if does not exist, will be created by config
+  set execdir = $wrkdir/$model-$os
 endif
 set execdir = `perl $utildir/Abspath $execdir`  # full path to execdir
+if (! -d $execdir) mkdir $execdir
 echo "  Execdir = $execdir"
 #
-# Configure (pass shell vars to tgcm_config):
-# See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more
-#   options to tgcm_config.
+# Copy Makefile and Make.$machine file to execdir:
 #
-if (! -x $utildir/tgcm_config) \
-  echo ">>> WARNING: Cannot find config script $utildir/tgcm_config"
-perl $utildir/tgcm_config -model=$model -wrkdir=$wrkdir -execdir=$execdir \
-  -tgcmroot=$tgcmroot -tgcmdata=$tgcmdata -usr_srcdirs=$usr_srcdirs \
-  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -mss=$mss -debug=$debug \
-  -lib_netcdf=$lib_netcdf -inc_netcdf=$inc_netcdf || \
-  echo ">>> ${0}: Error from tgcm_config" && exit 1
-#
-# Copy Mkdepends script to execdir for manual gmake (or default Makefile):
-cp $utildir/Mkdepends $execdir || \
-  echo "WARNING: Error copying $utildir/Mkdepends to exec dir $execdir"
+cp $make_machine $execdir
+cp $utildir/Mkdepends $execdir
+if (! -e $execdir/Makefile) cp $utildir/Makefile $execdir
 #
 # Make default namelist input if not provided by user:
 #
@@ -209,14 +151,6 @@ if (! -e $namelist) then
   echo "${0}: Cannot find namelist input file $namelist" && exit 1
 endif
 #
-# Build model in execdir:
-#
-cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
-echo "" ; echo "Begin building $model in `pwd` at `date`..."
-/usr/local/bin/gmake -j4 || echo ">>> Error return from gmake" && exit 1
-echo "End building $model at `date`..."
-cd $mycwd  # return to original cwd
-#
 # Default stdout file is $model.out in the wrkdir:
 #
 if (! $?output) then
@@ -225,31 +159,63 @@ else
   set output = `perl $utildir/Abspath $wrkdir/$output`
 endif
 #
-# Execute from execdir:
-# 
-cd $execdir || echo ">>> Error from cd to execdir $execdir" && exit 1
+# Build model in execdir:
+#
+cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
+echo "" ; echo "Begin building $model in `pwd` at `date`..."
+#
+# Copy defs header file to execdir according to requested resolution:
+#
+if (! -e defs.h) then
+  if ($hres == 5.0) then
+    cp $srcdir/defs.5.0 $execdir/defs.h
+  else if ($hres == 2.5) then
+    cp $srcdir/defs.2.5 $execdir/defs.h
+  else
+    echo ">>> Unknown hres: $hres (must be either 5.0 or 2.5)" && exit 1
+  endif
+endif
+#
+# Build Make.env file in exec dir, containing needed env vars for Makefile:
+#
+cat << EOF >! Make.env
+MAKE_MACHINE = $make_machine:t
+DIRS         = . $usr_srcdirs $srcdir 
+MPI          = $mpi
+EXECNAME     = $model
+DEBUG        = $debug
+EOF
+#
+# Build the model:
+#
+gmake -j4 || echo ">>> Error return from gmake" && exit 1
+#
+# Remove dispose.csh from previous job:
+#
 if (-e dispose.csh) then
   echo "Removing dispose.csh prior to execution."
   /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
 endif
 #
-if ($?LSF_ENVDIR && $mpi == "TRUE") then  # non-MPI LSF job
+echo "Model output will go to $output"
+echo "$os job: mpi=$mpi"
+#
+# Load Sharing Facility batch job execution:
+#
+if ($?LSF_ENVDIR && $mpi == "TRUE") then  # MPI LSF job
   echo "" ; echo "Executing model $model with mpirun.lsf from `pwd` at `date`"
   echo "Model output will go to $output"
-#
-# 11/21/08: Add processor binding for bluefire:
   setenv TARGET_CPU_LIST "-1"
   mpirun.lsf /usr/local/bin/launch $execdir/$model < $namelist >&! $output || \
     echo ">>> ${0} Execution of mpirun.lsf $execdir/$model FAILED at `date`" && \
     echo "See output in $output"
-else                       # attempt interactive execution
+else                       # non-LSF job -- try interactive execution
   echo "" ; echo "Executing model $model on command line from `pwd` at `date`"
   echo "Model output will go to $output"
   $execdir/$model < $namelist >&! $output || \
     echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
     echo "See output in $output"
 endif          
-echo "Run of $model completed at `date`"
 #
 # Separate output files by MPI task:
 # (we are still in $execdir, but $output contains full path to $wrkdir)
@@ -261,11 +227,10 @@ perl $utildir/Mklogs $output || \
 # This script was created by the model to dispose history files
 #   to the mss if model namelist DISPOSE=2.
 #
-if (-e $execdir/dispose.csh) then
-  echo "" ; echo "Contents of dispose.csh: " 
-  cat $execdir/dispose.csh ; echo ""
-  echo "Executing dispose.csh in background at `date`"
-  $execdir/dispose.csh >&! $execdir/dispose.out &
+if (-e dispose.csh) then
+  echo "" ; echo "Contents of dispose.csh: " ; cat $execdir/dispose.csh ; echo ""
+  echo "Starting dispose.csh in background.."
+  dispose.csh &
 endif
 #
 cd $mycwd # return to original cwd
