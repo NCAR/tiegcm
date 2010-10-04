@@ -88,11 +88,12 @@ set execdir = `perl $utildir/Abspath $execdir`  # full path to execdir
 if (! -d $execdir) mkdir $execdir
 echo "  Execdir = $execdir"
 #
-# Copy Makefile and Make.$machine file to execdir:
+# Copy Makefile and make_machine file to execdir, if they are not already there. 
+# (Note $make_machine:t returns the file name of the full path $make_machine)
 #
-cp $make_machine $execdir
-cp $utildir/Mkdepends $execdir
+if (! -e $execdir/$make_machine:t) cp $make_machine $execdir
 if (! -e $execdir/Makefile) cp $utildir/Makefile $execdir
+cp $utildir/Mkdepends $execdir
 #
 # Make default namelist input if not provided by user:
 #
