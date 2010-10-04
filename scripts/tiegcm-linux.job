@@ -2,24 +2,22 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #        USER EDIT SHELL VARIABLES for Linux job
 #
- set model        = tiegcm_trunk
+ set model        = tiegcm_newbuild
  set wrkdir       = .
  set tgcmroot     = .
-#set utildir      = $tgcmroot/$model/scripts       # old scripts dir
- set utildir      = scripts                        # new scripts dir
- set input        = tiegcm.inp
- set make_machine = scripts/Make.generic_hao64
-#set usr_srcdirs  = (modsrc0 modsrc1)
- set usr_srcdirs  = modsrc0
+ set make_machine = $model/scripts/Make.generic_hao64
  set mpi          = TRUE
  set nproc        = 8
  set mss          = TRUE
  set hres         = 5.0
  set vres         = 0.5
+#set input        = tiegcm.inp
+#set usr_srcdirs  = modsrc
 #set output       = $model.out
 #set tgcmdata     = $TGCMDATA
+#set utildir      = $tgcmroot/$model/scripts
 #set execdir      = $model-linux
- set debug        = FALSE
+#set debug        = FALSE
 #
 #             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
