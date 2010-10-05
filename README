@@ -1169,3 +1169,6 @@ default namelist (see Mknamelist, tiegcm_default.inp) because they are
 unsupported in the Community release. Also recommit tags/tiegcm1.93.
 They were commented out, but remove them completely so they will not be seen.
 However, they remain in the default namelist in local dirs $TGCMROOT/tiegcm1.93.
+
+10/3/10: Starting new branch tiegcm_newbuild for new build scripts using
+Make.$machine. Source is same as the trunk, all changes are in scripts/.

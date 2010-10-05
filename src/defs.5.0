@@ -1,0 +1,26 @@
+!
+! This software is part of the NCAR TIE-GCM.  Use is governed by the 
+! Open Source Academic Research License Agreement contained in the file 
+! tiegcmlicense.txt.
+!
+!------------------------------------
+! 5.0 degree lat x lon horizontal resolution:
+!
+#define NLAT  (36)
+#define GLAT1 (-87.5)
+#define DLAT  (5.)
+!
+#define NLON  (72)
+#define GLON1 (-180.)
+#define DLON  (5.)
+!
+!------------------------------------
+! Vertical column interfaces and midpoints (dz=0.50):
+!
+#define ZIBOT (-7.0)
+#define ZITOP (7.0)
+#define ZMBOT (-6.75)
+#define ZMTOP (7.25)
+#define NLEV (28)
+!
+!------------------------------------

@@ -4,12 +4,13 @@
 #
 # Compilers and flags:
 #
-F90     = ifort
-MPIF90 = 
-FFLAGS = -r8 -fixed -diag-disable remark
-OPTIM  = -O3
-MSS    = TRUE
-LIBS   = -lhdf5_hl -lhdf5 -lsz -L/usr/lib64 -lz -lcurl
+F90      = ifort
+MPIF90   = mpif90
+FFLAGS   = -r8 -fixed -diag-disable remark
+DBGFLAGS = 
+OPTIM    = -O3
+MSS      = TRUE
+LIBS     = -lhdf5_hl -lhdf5 -lsz -L/usr/lib64 -lz -lcurl
 #
 # Library and Include file paths:
 #

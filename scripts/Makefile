@@ -1,13 +1,20 @@
 #
-# OS    = Operating System from uname
 # On Input:
 #   File Srcfiles contains list of source files
 #   File $(MAKE_MACHINE) (e.g. generic_hao64) contains compiler specific Make vars
+#     F90: f90 compiler (e.g., pgf90, ifort, etc)
+#     MPIF90: f90 compiler for MPI jobs (e.g., mpif90)
+#     FFLAGS: compiler flags (e.g., -r8)
+#     OPTIM: optimization flag (e.g., -O3)
+#     DBGFLAGS: Debug flags
+#     MSS: TRUE if NCAR Mass Store is available, otherwise FALSE
 #     INC_NETCDF: Include directory for netcdf
 #     LIB_NETCDF: Library directory for netcdf
-#     DBGFLAGS: Debug flags
-#   File Make.env contains additional Make vars for the current run:
+#   File Make.env contains additional information from the job script
+#     MAKE_MACHINE: File containing machine-specific compiler flags, etc          
 #     DIRS:     List of source-code directories (in Make.env)
+#     MPI:      TRUE or FALSE
+#     EXECNAME: Name of executable to make
 #     DEBUG:    TRUE or FALSE
 #
 SHELL = /bin/sh
@@ -38,6 +45,7 @@ Depends::
 	@echo "INC_DIRS     =$(INC_DIRS)"
 	@echo "VPATH        =$(VPATH)"
 	@echo "FC           =$(FC)"
+	@echo "MPI          =$(MPI)"
 	@echo "LIB_NETCDF   =$(LIB_NETCDF)"
 	@echo "INC_NETCDF   =$(INC_NETCDF)"
 	@echo "EXECNAME     =$(EXECNAME)"

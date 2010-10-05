@@ -3,11 +3,13 @@
 #
 # Compilers and flags:
 #
-F90    = pgf90
-MPIF90 = mpif90
-FFLAGS = -r8
-OPTIM  = -O3
-MSS    = TRUE
+F90      = pgf90
+MPIF90   = mpif90
+FFLAGS   = -r8
+DBGFLAGS = 
+OPTIM    = -O3
+MSS      = TRUE
+LIBS     = -lhdf5_hl -lhdf5 -lsz -L/usr/lib64 -lz
 #
 # Library and Include file paths:
 #
