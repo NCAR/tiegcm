@@ -284,7 +284,7 @@
       implicit none
       
 ! !PARAMETERS: 
-      real,intent(in) :: phihm  ! Heelis potential
+      real,intent(in) :: phihm(nmlonp1,nmlat)  ! Heelis potential
 !
 ! !REVISION HISTORY:
 ! 05.03.10  <Astrid Maute> <include header> 

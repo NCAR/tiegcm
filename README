@@ -1172,3 +1172,11 @@ However, they remain in the default namelist in local dirs $TGCMROOT/tiegcm1.93.
 
 10/3/10: Starting new branch tiegcm_newbuild for new build scripts using
 Make.$machine. Source is same as the trunk, all changes are in scripts/.
+
+10/5/10:
+In highlatpoten, phihm is passed to sub diff_rimr (called by dynamo),
+but diff_rimr declares the arg a scalar. This is actually ok, because
+diff_rimr does not reference it, but only passes it to sub insert_pot,
+where it is correctly dimensioned. However, I am making this change
+to avoid compiler warnings, and to be more clear. This was pointed out
+by Jiannan Tu (jiannan_tu@uml.edu).
