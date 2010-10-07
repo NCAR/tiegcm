@@ -10,8 +10,17 @@ DBGFLAGS =
 OPTIM    = -O3
 MSS      = TRUE
 LIBS     = -lhdf5_hl -lhdf5 -lsz -L/usr/lib64 -lz
+HOST     = $(shell hostname)
 #
 # Library and Include file paths:
 #
 LIB_NETCDF = /opt/local/netcdf/linux86-64/lib
 INC_NETCDF = /opt/local/netcdf/linux86-64/include
+#
+# Make machines.ini file for MPI execution: 
+#
+machines.ini: export HN=$(HOST)
+machines.ini: export NP=$(NPROC)
+machines.ini:
+	@echo `hostname` > machines.ini
+	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini

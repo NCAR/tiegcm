@@ -9,7 +9,7 @@
 # Setup for 64-bit Linux MPI job (next 3 lines):
  set make_machine = Make.generic_hao64
  set mpi          = TRUE
- set nproc        = 8
+ set nproc        = 4
 #
 # Setup for 32-bit Linux serial non-MPI job (next 2 lines):
 #set make_machine = Make.generic_hao32
@@ -22,7 +22,7 @@
  set mss          = TRUE
  set hres         = 5.0
  set vres         = 0.5
-#set input        = tiegcm.inp
+ set input        = $model.inp
 #set usr_srcdirs  = modsrc
 #set output       = $model.out
 #set tgcmdata     = $TGCMDATA
@@ -151,13 +151,16 @@ cat << EOF >! Make.env
 MAKE_MACHINE = $make_machine:t
 DIRS         = . $usr_srcdirs $srcdir 
 MPI          = $mpi
+NPROC        = $nproc
 EXECNAME     = $model
+NAMELIST     = $namelist
+OUTPUT       = $output
 DEBUG        = $debug
 EOF
 #
 # Build the model:
 #
-gmake -j4 || echo ">>> Error return from gmake" && exit 1
+gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 #
 if (-e dispose.csh) then
   echo "Removing dispose.csh prior to execution."
@@ -167,17 +170,11 @@ endif
 echo "Model output will go to $output"
 echo "Linux job: mpi=$mpi nproc=$nproc"
 #
-# Execute Linux mpi job:
-# (first create machines.ini file)
+# Execute Linux job (MPI or non-MPI run):
+# (machines.ini rule is in Make.generic_hao64)
 #
 if ($mpi == TRUE) then
-  echo `hostname`  >!  machines.ini
-  @ i = 1
-  while ($i < $nproc)
-    echo i = $i  nproc = $nproc
-    echo `hostname` >> machines.ini
-    @ i++
-  end
+  gmake machines.ini
   echo "Executing mpirun -np $nproc for Linux MPI run."
   mpirun -np $nproc -machinefile machines.ini $execdir/$model < $namelist >&! $output || \
     echo ">>> ${0} mpirun execution of $execdir/$model FAILED at `date`" && \
