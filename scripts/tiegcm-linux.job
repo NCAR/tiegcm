@@ -6,23 +6,23 @@
  set wrkdir       = .
  set tgcmroot     = .
 #
-# Setup for 64-bit Linux MPI job (next 3 lines):
+# Setup for 64-bit Linux MPI job (HAO machines):
  set make_machine = Make.generic_hao64
  set mpi          = TRUE
  set nproc        = 4
 #
-# Setup for 32-bit Linux serial non-MPI job (next 2 lines):
+# Setup for 32-bit Linux serial non-MPI job (HAO machines):
 #set make_machine = Make.generic_hao32
 #set mpi          = FALSE
 #
-# Setup for 64-bit Linux serial non-MPI job (next 2 lines):
+# Setup for 64-bit Linux serial non-MPI job (DASG machines):
 #set make_machine = Make.generic_dasg
 #set mpi          = FALSE
 #
  set mss          = TRUE
  set hres         = 5.0
  set vres         = 0.5
- set input        = $model.inp
+#set input        = $model.inp
 #set usr_srcdirs  = modsrc
 #set output       = $model.out
 #set tgcmdata     = $TGCMDATA
