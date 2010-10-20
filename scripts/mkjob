@@ -140,7 +140,7 @@ my ($highres) = @_;
 # Default job script parameters:
 #
 $wrkdir       = ".";
-$tgcmroot     = '$TGCMROOT';
+$tgcmroot     = ".";
 $mpi          = "TRUE";
 if ($system eq "linux") { $nproc = 4; } else { $nproc = ""; }
 $mss          = "TRUE";
