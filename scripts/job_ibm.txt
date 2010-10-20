@@ -1,26 +1,18 @@
-#! /bin/csh
-#
-# Set shell variables for tiegcm linux job:
-#
-set model        = tiegcm
-set wrkdir       = .
-set tgcmroot     = $TGCMROOT
-set make_machine = Make.generic_hao64
-#set usr_srcdirs = modsrc
-set input        = tiegcm1.93.inp
-set output       = tiegcm1.93.out
-set mpi          = TRUE
-set nproc        = 4
-set mss          = TRUE
-set hres         = 5.0
-set vres         = 0.5
-set utildir      = $TGCMROOT/tiegcm1.93/scripts
-set execdir      = tiegcm1.93-linux
-set debug        = FALSE
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#                        Shell Script for TIEGCM Linux job
+#                       Shell Script for TIEGCM IBM/AIX job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Env vars for AIX:
+#
+setenv MP_LABELIO YES
+setenv MP_STDINMODE 0
+setenv MP_SHARED_MEMORY yes
+setenv MEMORY_AFFINITY MCM
+setenv AIXTHREAD_SCOPE S
+setenv MALLOCMULTIHEAP true
+setenv MP_TIMEOUT 100
+#
 set mycwd = `pwd`
 echo " "
 echo "${0}:"
@@ -50,8 +42,6 @@ if (! $?vres) set vres = 0.5
 if (! $?mpi) set mpi = "TRUE"
 if (! $?mss) set mss = ""
 if (! $?debug) set debug = "FALSE"
-if (! $?nproc) set nproc = 8
-if ($mpi == FALSE) set nproc = 0
 #
 set wrkdir       = `perl $utildir/Abspath $wrkdir`
 set utildir      = `perl $utildir/Abspath $utildir`
@@ -85,7 +75,7 @@ set execdir = `perl $utildir/Abspath $execdir`  # full path to execdir
 if (! -d $execdir) mkdir $execdir
 echo "  Execdir = $execdir"
 #
-# Copy Makefile and make_machine file to execdir, if they are not already there. 
+# Copy Makefile and make_machine file to execdir, if they are not already there.
 # (Note $make_machine:t returns the file name of the full path $make_machine)
 #
 if (! -e $execdir/$make_machine:t) cp $make_machine $execdir
@@ -138,16 +128,15 @@ cat << EOF >! Make.env
 MAKE_MACHINE = $make_machine:t
 DIRS         = . $usr_srcdirs $srcdir 
 MPI          = $mpi
-NPROC        = $nproc
 EXECNAME     = $model
-NAMELIST     = $namelist
-OUTPUT       = $output
 DEBUG        = $debug
 EOF
 #
 # Build the model:
 #
-gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
+gmake -j4 || echo ">>> Error return from gmake" && exit 1
+#
+# Remove dispose.csh from previous job:
 #
 if (-e dispose.csh) then
   echo "Removing dispose.csh prior to execution."
@@ -155,28 +144,24 @@ if (-e dispose.csh) then
 endif
 #
 echo "Model output will go to $output"
-echo "Linux job: mpi=$mpi nproc=$nproc"
+echo "$os job: mpi=$mpi"
 #
-# Execute Linux job (MPI or non-MPI run):
-# (machines.ini rule is in Make.generic_hao64)
+# Load Sharing Facility batch job execution:
 #
-if ($mpi == TRUE) then
-  gmake machines.ini
-  echo "Executing mpirun -np $nproc for Linux MPI run."
-  mpirun -np $nproc -machinefile machines.ini $execdir/$model < $namelist >&! $output || \
-    echo ">>> ${0} mpirun execution of $execdir/$model FAILED at `date`" && \
+if ($?LSF_ENVDIR && $mpi == "TRUE") then  # MPI LSF job
+  echo "" ; echo "Executing model $model with mpirun.lsf from `pwd` at `date`"
+  echo "Model output will go to $output"
+  setenv TARGET_CPU_LIST "-1"
+  mpirun.lsf /usr/local/bin/launch $execdir/$model < $namelist >&! $output || \
+    echo ">>> ${0} Execution of mpirun.lsf $execdir/$model FAILED at `date`" && \
     echo "See output in $output"
-  echo "Linux MPI run of $model completed at `date`"
-#
-# Execute linux non-mpi job:
-#
-else
-  echo "Executing $model for Linux non-MPI run."
+else                       # non-LSF job -- try interactive execution
+  echo "" ; echo "Executing model $model on command line from `pwd` at `date`"
+  echo "Model output will go to $output"
   $execdir/$model < $namelist >&! $output || \
     echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
     echo "See output in $output"
-  echo "Linux non-MPI run of $model completed at `date`"
-endif
+endif          
 #
 # Separate output files by MPI task:
 # (we are still in $execdir, but $output contains full path to $wrkdir)

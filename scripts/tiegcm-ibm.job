@@ -1,57 +1,38 @@
 #! /bin/csh
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#                 USER EDIT RESOURCES FOR LSF BATCH JOB
 #
-#BSUB -J tiegcm          # job name
+# Set LSF resource directives for ibm job:
 #
-##BSUB -P 28100036       # NCAR project account number (8-digit)
+#BSUB -J tiegcm1.93
 #BSUB -P 24100004
+#BSUB -q regular
+#BSUB -n 32
+#BSUB -o tiegcm1.93.%J.out
+#BSUB -e tiegcm1.93.%J.out
+#BSUB -N
+#BSUB -u $LOGNAME@ucar.edu
+#BSUB -W 1:00
 #
-##BSUB -q regular        # there is a 6-hour wallclock limit in regular queue
-##BSUB -x 		 # exclusive use of nodes (not available in debug queue)
 #
-# Bluefire has 32-way nodes.
+# Set shell variables for tiegcm ibm job:
 #
-##BSUB -n 16
-##BSUB -n 32
-##BSUB -R "span[ptile=64]"   # SMT (Symmetric Multi-Threading)
-#
-# Debug queue (30 min wallclock limit, and -x not allowed)
-#
-#BSUB -q debug             # debug queue (30 min wallclock limit)
-#BSUB -n 4                 # number of MPI tasks
-#
-#BSUB -o tiegcm.%J.out      # stdout filename
-#BSUB -e tiegcm.%J.out      # stderr filename
-#BSUB -N                    # send mail when job finishes
-#BSUB -u $LOGNAME@ucar.edu  # email address
-#
-# Wallclock limit hh:mm (usually 6-hours, except only 30 mins for debug queue)
-#
-##BSUB -W 1:00
-##BSUB -W 6:00
-#BSUB -W 0:30
+set model        = tiegcm
+set wrkdir       = .
+set tgcmroot     = $TGCMROOT
+set make_machine = Make.bluefire
+#set usr_srcdirs = modsrc
+set input        = tiegcm1.93.inp
+set output       = tiegcm1.93.out
+set mpi          = TRUE
+set nproc        = 4
+set mss          = TRUE
+set hres         = 5.0
+set vres         = 0.5
+set utildir      = $TGCMROOT/tiegcm1.93/scripts
+set execdir      = tiegcm1.93-linux
+set debug        = FALSE
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#        USER EDIT SHELL VARIABLES for IBM/AIX job
-#
- set model        = tiegcm_newbuild
- set wrkdir       = .
- set tgcmroot     = .
- set make_machine = Make.bluefire
- set mpi          = TRUE
- set mss          = TRUE
- set hres         = 5.0
- set vres         = 0.5
-#set input        = tiegcm.inp
-#set usr_srcdirs  = modsrc
-#set output       = $model.out
-#set tgcmdata     = $TGCMDATA
-#set utildir      = $tgcmroot/$model/scripts
-#set execdir      = $model-linux
-#set debug        = FALSE
-#
-#             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
+#                       Shell Script for TIEGCM IBM/AIX job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Env vars for AIX:
@@ -120,10 +101,8 @@ echo "  Usr_srcdirs  = $usr_srcdirs"
 #
 # Set exec directory if necessary (wrkdir/model-os):
 #
-if (! $?execdir) then
-  set os = `uname -s | tr "[A-Z]" "[a-z]"`
-  set execdir = $wrkdir/$model-$os
-endif
+set os = `uname -s | tr "[A-Z]" "[a-z]"`
+if (! $?execdir) set execdir = $wrkdir/$model-$os
 set execdir = `perl $utildir/Abspath $execdir`  # full path to execdir
 if (! -d $execdir) mkdir $execdir
 echo "  Execdir = $execdir"
@@ -133,14 +112,14 @@ echo "  Execdir = $execdir"
 #
 if (! -e $execdir/$make_machine:t) cp $make_machine $execdir
 if (! -e $execdir/Makefile) cp $utildir/Makefile $execdir
-cp $utildir/Mkdepends $execdir
+cp $utildir/mkdepends $execdir
 #
 # Make default namelist input if not provided by user:
 #
 if (! $?input) then
   set input = \
-    `perl $utildir/Mknamelist -model=$model -hres=$hres -vres=$vres` || \
-     echo "${0}: Error from Mknamelist: fileout = $input" && exit 1
+    `perl $utildir/mknamelist -model=$model -hres=$hres -vres=$vres` || \
+     echo "${0}: Error from mknamelist: fileout = $input" && exit 1
   echo "Made default namelist input file $input" 
 else
   echo "Using user provided namelist input file $input"
@@ -219,8 +198,8 @@ endif
 # Separate output files by MPI task:
 # (we are still in $execdir, but $output contains full path to $wrkdir)
 #
-perl $utildir/Mklogs $output || \
-  echo ">>> ${0}: Error from $execdir/Mklogs on output $output"
+perl $utildir/mklogs $output || \
+  echo ">>> ${0}: Error from $execdir/mklogs on output $output"
 #
 # Execute dispose.csh, if it exists:
 # This script was created by the model to dispose history files
@@ -235,3 +214,4 @@ endif
 cd $mycwd # return to original cwd
 echo "" ; echo "${0}: Completed execution at `date`"
 exit 0 
+

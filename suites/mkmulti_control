@@ -1,0 +1,137 @@
+#!/usr/bin/perl
+#
+# Set up a series of model control runs (3 seasons x 3 solar conditions). 
+#   This includes making working directories, run scripts, and namelist 
+#   input files for each job. This script does not execute the job scripts.
+# This uses perl scripts mknamelist and mkjob. Mkjob requires a template job
+#   file and a Make.machine file. All of these are normally in the model 
+#   scripts dir.
+#
+$system   = "linux";       # "ibm" or "linux" system (see mkjob)
+$model    = "tiegcm1.93";
+$tgcmroot = ".";
+$utildir  = "$tgcmroot/tiegcm_newbuild/scripts";
+$nproc    = 8;             # for 64-bit linux systems (ignored if system eq ibm)
+$template = "tiegcm_newbuild/scripts/job_$system.txt";  # job template (for mkjob)
+$user     = $ENV{USER};
+#
+# Some LSF directives for ibm job (allow others to default in mkjob):
+$bsub_project = 24100004;
+$bsub_queue    = "regular";
+$bsub_nproc    = 32;
+$bsub_wallclock= "0:30";
+
+$start_year = "2002";
+$hist = "1,0,0"; $sechist = "0,1,0";
+$save = "1,0,0"; $secsave = "0,1,0";
+
+$smin_power= "8."; $smin_ctpoten="30."; $smin_f107= "70."; $smin_f107a= "70.";
+$smed_power="16."; $smed_ctpoten="45."; $smed_f107="150."; $smed_f107a="150.";
+$smax_power="25."; $smax_ctpoten="60."; $smax_f107="250."; $smax_f107a="250.";
+
+$eqnx_start_day = "80" ; $eqnx_start = "80,0,0"; $eqnx_stop = "81,0,0" ; 
+$eqnx_secstart="80,1,0"; $eqnx_secstop="81,0,0";
+
+$dsol_start_day = "355" ; $dsol_start = "355,0,0"; $dsol_stop = "356,0,0";
+$dsol_secstart="355,1,0"; $dsol_secstop="356,0,0";
+
+$jsol_start_day = "172" ; $jsol_start = "172,0,0"; $jsol_stop = "173,0,0";
+$jsol_secstart="172,1,0"; $jsol_secstop="173,0,0";
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Set nested hashes of namelist input parameters:
+#
+%jobs = ( eqnx_smin => {name=>"eqnx_smin", namelist=>"", jobscript=>"", 
+            power=>$smin_power, ctpoten=>$smin_ctpoten, f107=>$smin_f107, f107a=>$smin_f107a,
+            source=>"", source_start=>$eqnx_start, output=>"", secout=>"", start_day=>$eqnx_start_day,
+            start_year=>$start_year, start=>$eqnx_start, stop=>$eqnx_stop, hist=>$hist, save=>$save,
+            secstart=>$eqnx_secstart, secstop=>$eqnx_secstop, sechist=>$sechist, secsave=>$secsave},
+
+          eqnx_smed => {name=>"eqnx_smed", namelist=>"", jobscript=>"", 
+            power=>$smed_power, ctpoten=>$smed_ctpoten, f107=>$smed_f107, f107a=>$smed_f107a,
+            source=>"", source_start=>$eqnx_start, output=>"", secout=>"", start_day=>$eqnx_start_day,
+            start_year=>$start_year, start=>$eqnx_start, stop=>$eqnx_stop, hist=>$hist, save=>$save,
+            secstart=>$eqnx_secstart, secstop=>$eqnx_secstop, sechist=>$sechist, secsave=>$secsave},
+
+          eqnx_smax => {name=>"eqnx_smax", namelist=>"", jobscript=>"", 
+            power=>$smax_power, ctpoten=>$smax_ctpoten, f107=>$smax_f107, f107a=>$smax_f107a,
+            source=>"", source_start=>eqnx_start, output=>"", secout=>"", start_day=>$eqnx_start_day,
+            start_year=>$start_year, start=>$eqnx_start, stop=>$eqnx_stop, hist=>$hist, save=>$save,
+            secstart=>$eqnx_secstart, secstop=>$eqnx_secstop, sechist=>$sechist, secsave=>$secsave},
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          dsol_smin => {name=>"dsol_smin", namelist=>"", jobscript=>"", 
+            power=>$smin_power, ctpoten=>$smin_ctpoten, f107=>$smin_f107, f107a=>$smin_f107a,
+            source=>"", source_start=>$dsol_start, output=>"", secout=>"", start_day=>$dsol_start_day,
+            start_year=>$start_year, start=>$dsol_start, stop=>$dsol_stop, hist=>$hist, save=>$save,
+            secstart=>$dsol_secstart, secstop=>$dsol_secstop, sechist=>$sechist, secsave=>$secsave},
+
+          dsol_smed => {name=>"dsol_smed", namelist=>"", jobscript=>"", 
+            power=>$smed_power, ctpoten=>$smed_ctpoten, f107=>$smed_f107, f107a=>$smed_f107a,
+            source=>"", source_start=>$dsol_start, output=>"", secout=>"", start_day=>$dsol_start_day,
+            start_year=>$start_year, start=>$dsol_start, stop=>$dsol_stop, hist=>$hist, save=>$save,
+            secstart=>$dsol_secstart, secstop=>$dsol_secstop, sechist=>$sechist, secsave=>$secsave},
+
+          dsol_smax => {name=>"dsol_smax", namelist=>"", jobscript=>"", 
+            power=>$smax_power, ctpoten=>$smax_ctpoten, f107=>$smax_f107, f107a=>$smax_f107a,
+            source=>"", source_start=>$dsol_start, output=>"", secout=>"", start_day=>$dsol_start_day,
+            start_year=>$start_year, start=>$dsol_start, stop=>$dsol_stop, hist=>$hist, save=>$save,
+            secstart=>$dsol_secstart, secstop=>$dsol_secstop, sechist=>$sechist, secsave=>$secsave},
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          jsol_smin => {name=>"jsol_smin", namelist=>"", jobscript=>"", 
+            power=>$smin_power, ctpoten=>$smin_ctpoten, f107=>$smin_f107, f107a=>$smin_f107a,
+            source=>"", source_start=>$jsol_start, output=>"", secout=>"", start_day=>$jsol_start_day,
+            start_year=>$start_year, start=>$jsol_start, stop=>$jsol_stop, hist=>$hist, save=>$save,
+            secstart=>$jsol_secstart, secstop=>$jsol_secstop, sechist=>$sechist, secsave=>$secsave},
+
+          jsol_smed => {name=>"jsol_smed", namelist=>"", jobscript=>"", 
+            power=>$smed_power, ctpoten=>$smed_ctpoten, f107=>$smed_f107, f107a=>$smed_f107a,
+            source=>"", source_start=>$jsol_start, output=>"", secout=>"", start_day=>$jsol_start_day,
+            start_year=>$start_year, start=>$jsol_start, stop=>$jsol_stop, hist=>$hist, save=>$save,
+            secstart=>$jsol_secstart, secstop=>$jsol_secstop, sechist=>$sechist, secsave=>$secsave},
+
+          jsol_smax => {name=>"jsol_smax", namelist=>"", jobscript=>"", 
+            power=>$smax_power, ctpoten=>$smax_ctpoten, f107=>$smax_f107, f107a=>$smax_f107a,
+            source=>"", source_start=>$jsol_start, output=>"", secout=>"", start_day=>$jsol_start_day,
+            start_year=>$start_year, start=>$jsol_start, stop=>$jsol_stop, hist=>$hist, save=>$save,
+            secstart=>$jsol_secstart, secstop=>$jsol_secstop, sechist=>$sechist, secsave=>$secsave},
+);
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Loop over jobs:
+#
+foreach $job (keys %jobs) {
+  $myjob = $jobs{$job}; # hash record for current job
+  $myjob->{namelist}  = $model . '_' . $myjob->{name} . '.inp';
+  $myjob->{jobscript} = $model . '_' . $myjob->{name} . '.job';
+  $myjob->{source} = '\"\$TGCMDATA/' . $model . '/TGCM.' . $model . '.pcntr_' . $myjob->{name} . '.nc\"';
+  $myjob->{output} = '\"' . $user . '.' . $model . '.pcntr_' . $myjob->{name} . '_001.nc\"';
+  $myjob->{secout} = '\"' . $user . '.' . $model . '.scntr_' . $myjob->{name} . '_001.nc\"';
+#
+# Make namelist file for current job:
+#
+  $command = "$utildir/mknamelist -fileout=$myjob->{namelist} -POWER=$myjob->{power}" . 
+    " -CTPOTEN=$myjob->{ctpoten} -F107=$myjob->{f107} -F107A=$myjob->{f107a}" .
+    " -SOURCE=$myjob->{source} -SOURCE_START=$myjob->{source_start} -START=$myjob->{start}" .
+    " -STOP=$myjob->{stop} -HIST=$myjob->{hist} -SAVE=$myjob->{save} -OUTPUT=$myjob->{output}" .
+    " -SECSTART=$myjob->{secstart} -SECSTOP=$myjob->{secstop} -SECHIST=$myjob->{sechist}" .
+    " -SECSAVE=$myjob->{secsave} -SECOUT=$myjob->{secout} -START_YEAR=$myjob->{start_year}" .
+    " -START_DAY=$myjob->{start_day}";
+  `$command`;
+#
+# Make job script for current job using mkjob (requires job template file):
+#
+  $jobfile = $model . '_' . $myjob->{name} . '_' . $system . '.job';
+  $output  = $model . '_' . $myjob->{name} . '.out';
+  $execdir = $model . '-' . $system;
+  $command = "$utildir/mkjob -fileout=$jobfile -system=$system -template=$template" .
+    " -utildir=$utildir -execdir=$execdir -input=$myjob->{namelist} -output=$output" .
+    " -nproc=$nproc "; 
+#
+# If ibm job, add LSF directives (see above):
+  if ($system eq 'ibm') {
+    $command = $command . "-bsub_jobname=$myjob->{name} -bsub_project=$bsub_project" .
+      " -bsub_queue=$bsub_queue -bsub_nproc=$bsub_nproc -bsub_wallclock=$bsub_wallclock";
+  }
+  `$command`;
+
+} # foreach $job

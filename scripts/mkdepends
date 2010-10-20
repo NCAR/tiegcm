@@ -227,7 +227,7 @@ sub mksrcfiles {
   foreach $file (sort keys %src) { print SRCFILES "$file\n"; }
   close SRCFILES;
 #
-# Add list of header files (*.h) to %src for the rest of Mkdepends:
+# Add list of header files (*.h) to %src for the rest of mkdepends:
 #
   foreach $dir (@paths) {
     $nhdrs  = 0;

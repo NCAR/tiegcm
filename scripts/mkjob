@@ -1,0 +1,245 @@
+#!/usr/bin/perl
+use Getopt::Long;
+use IO::File;
+#
+# Make a csh job script for tiegcm:
+#
+$user  = $ENV{"LOGNAME"};
+($USER = $user) =~ tr/a-z/A-Z/;
+$tgcmroot = $ENV{TGCMROOT}; 
+$tgcmdata = $ENV{TGCMDATA}; 
+#
+# Defaults for mkjob:
+#
+$model = "tiegcm_newbuild";
+$hres  = 5.0;
+$vres  = 0.5;
+$system  = 'linux';  # 'linux' or 'ibm'
+#
+# Set default job script parameters:
+#
+&set_defaults($highres);
+#
+# Get user options:
+#
+&GetOptions(
+  "fileout=s"        => \$fileout,
+  "system=s"         => \$system,
+  "template=s"       => \$template,
+  "h|help"           => \$help,
+#
+# Begin shell variables for job script:
+# 
+  "model=s"          => \$model,
+  "wrkdir=s"         => \$wrkdir,
+  "tgcmroot=s"       => \$tgcmroot,
+  "make_machine=s"   => \$make_machine,
+  "mpi=s"            => \$mpi,
+  "nproc=i"          => \$nproc,
+  "mss=s"            => \$mss,
+  "hres=f"           => \$hres,
+  "vres=f"           => \$vres,
+  "input=s"          => \$input,
+  "usr_srcdirs=s"    => \$usr_srcdirs,
+  "output=s"         => \$output,
+  "utildir=s"        => \$utildir,
+  "execdir=s"        => \$execdir,
+  "debug=s"          => \$debug,
+#
+# Begin #BSUB LSF resource directives:
+#
+  "bsub_jobname=s"   => \$bsub_jobname,
+  "bsub_project=i"   => \$bsub_project,
+  "bsub_queue=s"     => \$bsub_queue,
+  "bsub_nproc=i"     => \$bsub_nproc,
+  "bsub_stdout=s"    => \$bsub_stdout,
+  "bsub_stderr=s"    => \$bsub_stderr,
+  "bsub_email=s"     => \$bsub_email,
+  "bsub_wallclock=s" => \$bsub_wallclock,
+
+) or usage();
+if ($help) { usage(); } # provide usage if help was requested
+#
+# Check for unparsed arguments:
+#
+if (@ARGV) {
+    print STDERR ">>> $0: unrecognized arguments: @ARGV\n";
+    usage();
+}
+#
+# Validate resolution options:
+#
+if (not (($hres==5.0 and $vres==0.5) or ($hres==2.5 and $vres==0.25))) {
+  print STDERR "\n>>> Bad hres,vres combination: hres=$hres vres=$vres\n";
+  print STDERR ">>> hres,vres must be either 5.0,0.5 or 2.5,0.25\n\n";
+  exit;
+}
+$highres = 0;
+if ($hres == 2.5 and $vres == 0.25) { $highres = 1; }
+#print STDERR "mkjob: hres=$hres vres=$vres highres=$highres\n";
+#
+if (! defined $utildir) { $utildir = "$tgcmroot/$model/scripts"; }
+#
+# Default Make.machine file:
+#
+if (! defined $make_machine) {
+  if ($system eq 'ibm') {
+    $make_machine = "Make.bluefire";
+  } else {
+    $make_machine = "Make.generic_hao64";
+  }
+}
+#
+# Find job template file:
+#
+if (! defined $template) {
+  if ($system eq 'ibm') {
+    $template = "job_ibm.txt";
+  } else {
+    $template = "job_linux.txt";
+  }
+  if (! -f $template) {
+    if (-f "$utildir/$template") { 
+      $template = "$utildir/$template"; 
+    }
+  }
+}
+if (! -f $template) {
+  die ">>> Cannot find template file $template\n"; 
+} else { 
+  #print STDERR "mkjob: Will read job template file $template\n"; 
+}
+#
+# Name of output job script:
+#
+if (defined $fileout) {
+  $jobfile = $fileout;
+} else {
+  $jobfile = $model . "-" . $system . ".job";
+}
+# Or encode resolution in jobfile name:
+# if ($highres) {
+#   $jobfile = $model . "_dres-" . $system . ".job";
+# } else {
+#   $jobfile = $model . "_sres-" . $system . ".job";
+# }
+#
+# Write the job file:
+#
+&write_jobfile($jobfile);
+`chmod ugo+x $jobfile`;
+#
+print STDERR "mkjob: Wrote job script $jobfile\n";
+print "$jobfile\n";
+exit;
+
+#-------------------------------------------------------------------------
+sub set_defaults {
+my ($highres) = @_;
+#
+# Default job script parameters:
+#
+$wrkdir       = ".";
+$tgcmroot     = '$TGCMROOT';
+$mpi          = "TRUE";
+if ($system eq "linux") { $nproc = 4; } else { $nproc = ""; }
+$mss          = "TRUE";
+$hres         = "5.0";
+$vres         = "0.5";
+#$input        = "$model.inp";
+#$usr_srcdirs  = "modsrc";  # no default for usr_srcdirs
+$output       = "$model" . ".out";
+#$utildir      = "$tgcmroot/$model/scripts"; # this is set above after getopts
+$execdir      = "$model-" . $system;
+$debug        = "FALSE";
+#
+# #BSUB LSF defaults:
+#
+$bsub_jobname   = $model;
+$bsub_project   = 24100004;
+$bsub_queue     = "regular";
+$bsub_nproc     = 32;
+$bsub_stdout    = $model . '.%J.out';
+$bsub_stderr    = $model . '.%J.out';
+$bsub_email     = '$LOGNAME@ucar.edu';
+$bsub_wallclock = '1:00';
+
+#BSUB -o tiegcm.%J.out      # stdout filename
+#BSUB -e tiegcm.%J.out      # stderr filename
+
+} # end sub set_defaults
+#-------------------------------------------------------------------------
+sub write_jobfile {
+my ($jobfile) = @_;
+my $fh_out = new IO::File;
+$fh_out->open(">$jobfile") or die ">>> Can't open new job file $jobfile\n";
+print $fh_out <<"EOF0";
+#! /bin/csh
+EOF0
+
+if ($system eq 'ibm') {
+print $fh_out <<"EOF1";
+#
+# Set LSF resource directives for $system job:
+#
+#BSUB -J $bsub_jobname
+#BSUB -P $bsub_project
+#BSUB -q $bsub_queue
+#BSUB -n $bsub_nproc
+#BSUB -o $bsub_stdout
+#BSUB -e $bsub_stderr
+#BSUB -N
+#BSUB -u $bsub_email
+#BSUB -W $bsub_wallclock
+#
+EOF1
+}
+
+print $fh_out <<"EOF2";
+#
+# Set shell variables for $model $system job:
+#
+set model        = $model
+set wrkdir       = $wrkdir
+set tgcmroot     = $tgcmroot
+set make_machine = $make_machine
+EOF2
+#
+# If user specified usr_srcdirs, set it, otherwise
+# write commented line to the job script:
+#
+if (defined $usr_srcdirs) {
+  $string = "set usr_srcdirs = $usr_srcdirs\n";
+} else {
+  $string = "#set usr_srcdirs = modsrc\n";
+}
+if (defined $input) {
+  $string = "set input        = $input\n";
+} else {
+  $string = "#set input       = $model.inp\n";
+}
+print $fh_out $string;
+
+print $fh_out <<"EOF3";
+set output       = $output
+set mpi          = $mpi
+set nproc        = $nproc
+set mss          = $mss
+set hres         = $hres
+set vres         = $vres
+set utildir      = $utildir
+set execdir      = $execdir
+set debug        = $debug
+EOF3
+#
+# Add body of script from job template file for current system (ibm or Linux):
+# If template file is not provided by user, look in cwd and $utildir. If not 
+#   found, this is a fatal error.
+#
+print "Reading job template file $template..\n";
+my $fh_tpl = new IO::File;
+$fh_tpl->open("<$template") or die ">>> Can't open job template file $template\n";
+while (<$fh_tpl>) { print $fh_out $_; }
+$fh_out->close;
+} # end sub write_jobfile
+#-------------------------------------------------------------------------

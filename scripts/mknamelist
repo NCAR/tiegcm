@@ -1,0 +1,382 @@
+#!/usr/bin/perl
+use Getopt::Long;
+use IO::File;
+#
+# Make a namelist input file for tiegcm:
+#
+$user  = $ENV{"LOGNAME"};
+($USER = $user) =~ tr/a-z/A-Z/;
+$tgcmroot = $ENV{TGCMROOT}; 
+$tgcmdata = $ENV{TGCMDATA}; 
+#
+# Defaults for mknamelist:
+#
+$model = "tiegcm";
+$hres  = 5.0;
+$vres  = 0.5;
+#
+# Set default namelist parameters:
+#
+&set_defaults($highres);
+#
+# Get user options:
+#
+&GetOptions(
+  "model=s"       => \$model,
+  "fileout=s"     => \$fileout,
+  "hres=f"        => \$hres,
+  "vres=f"        => \$vres,
+  "comment=s@"    => \@comment,
+  "uncomment=s@"  => \@uncomment,
+  "h|help"        => \$help,
+#
+# Begin namelist parameter options:
+#
+  "LABEL=s"               => \$LABEL,
+  "START_YEAR=i"          => \$START_YEAR,
+  "START_DAY=i"           => \$START_DAY,
+  "CALENDAR_ADVANCE=i"    => \$CALENDAR_ADVANCE,
+  "SOURCE=s"              => \$SOURCE,
+  "SOURCE_START=s"        => \$SOURCE_START,
+  "START=s"               => \$START,
+  "STOP=s"                => \$STOP,
+  "STEP=i"                => \$STEP,
+  "HIST=s"                => \$HIST,
+  "SAVE=s"                => \$SAVE,
+  "OUTPUT=s"              => \$OUTPUT,
+  "MXHIST_PRIM=i"         => \$MXHIST_PRIM,
+  "SECSTART=s"            => \$SECSTART,
+  "SECSTOP=s"             => \$SECSTOP,
+  "SECHIST=s"             => \$SECHIST,
+  "SECSAVE=s"             => \$SECSAVE,
+  "SECOUT=s"              => \$SECOUT,
+  "MXHIST_SECH=s"         => \$MXHIST_SECH,
+  "SECFLDS=s"             => \$SECFLDS,
+  "SECFLDS0=s"            => \$SECFLDS0,
+  "SECFLDS1=s"            => \$SECFLDS1,
+  "DISPOSE=i"             => \$DISPOSE,
+  "TIDE=s"                => \$TIDE,
+  "TIDE2=s"               => \$TIDE2,
+  "GSWM_MI_DI_NCFILE=s"   => \$GSWM_MI_DI_NCFILE,
+  "GSWM_MI_SDI_NCFILE=s"  => \$GSWM_MI_SDI_NCFILE,
+  "GSWM_NM_DI_NCFILE=s"   => \$GSWM_NM_DI_NCFILE,
+  "GSWM_NM_SDI_NCFILE=s"  => \$GSWM_NM_SDI_NCFILE,
+  "SABER_NCFILE=s"        => \$SABER_NCFILE,
+  "TIDI_NCFILE=s"         => \$TIDI_NCFILE,
+  "POTENTIAL_MODEL=s"     => \$POTENTIAL_MODEL,
+  "GPI_NCFILE=s"          => \$GPI_NCFILE,
+  "IMF_NCFILE=s"          => \$IMF_NCFILE,
+  "KP=f"                  => \$KP,
+  "POWER=f"               => \$POWER,
+  "CTPOTEN=f"             => \$CTPOTEN,
+  "F107=f"                => \$F107,
+  "F107A=f"               => \$F107A,
+  "BXIMF=f"               => \$BXIMF,
+  "BYIMF=f"               => \$BYIMF,
+  "BZIMF=f"               => \$BZIMF,
+  "SWVEL=f"               => \$SWVEL,
+  "SWDEN=f"               => \$SWDEN,
+  "SEE_NCFILE=s"          => \$SEE_NCFILE,
+  "AURORA=i"              => \$AURORA,
+  "COLFAC=f"              => \$COLFAC,
+) or usage();
+if ($help) { usage(); } # provide usage if help was requested
+#
+# Check for unparsed arguments:
+#
+if (@ARGV) {
+    print STDERR ">>> $0: unrecognized arguments: @ARGV\n";
+    usage();
+}
+#
+# Validate resolution options:
+#
+if (not (($hres==5.0 and $vres==0.5) or ($hres==2.5 and $vres==0.25))) {
+  print STDERR "\n>>> Bad hres,vres combination: hres=$hres vres=$vres\n";
+  print STDERR ">>> hres,vres must be either 5.0,0.5 or 2.5,0.25\n\n";
+  exit;
+}
+$highres = 0;
+if ($hres == 2.5 and $vres == 0.25) { $highres = 1; }
+#print STDERR "mknamelist: hres=$hres vres=$vres highres=$highres\n";
+#
+# Set 1 or 2 lines of SECFLDS:
+#
+if (defined $SECFLDS) { 
+  $SECFLDS0 = $SECFLDS;
+  undef $SECFLDS1;
+} 
+#
+# Namelist parameters to be commented or uncommented:
+#
+foreach $usr_comment (@comment) {
+  if (! defined $comments{$usr_comment}) {
+    print ">>> WARNING: Cannot find parameter $usr_comment to set comment.\n"; 
+  } else {
+    $comments{$usr_comment} = ";";
+  }
+}
+foreach $usr_uncomment (@uncomment) {
+  if (! defined $comments{$usr_uncomment}) {
+    print ">>> WARNING: Cannot find parameter $usr_uncomment to set uncomment.\n"; 
+  } else {
+    $comments{$usr_uncomment} = " ";
+  }
+}
+#
+# Name of output namelist file:
+#
+if (defined $fileout) {
+  $namelist_file = $fileout;
+} else {
+  if ($highres) {
+    $namelist_file = $model . "_dres.inp";
+  } else {
+    $namelist_file = $model . "_sres.inp";
+  }
+}
+#
+# Write the namelist output file:
+#
+&write_namelist($namelist_file);
+#
+print "$namelist_file\n";
+exit;
+#-------------------------------------------------------------------------
+sub set_defaults {
+my ($highres) = @_;
+#
+# Default namelist parameters:
+#
+$LABEL="'$model hres=$hres vres=$vres'";
+$START_YEAR = 2002;
+$START_DAY  = 80;
+$CALENDAR_ADVANCE = 1;
+if ($highres) {
+  $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.93_dres.pcntr_eqnx_smin.nc'";
+} else {
+  $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc'";
+}
+$SOURCE_START = "80,0,0";
+$START= "80,0,0";
+$STOP=  "80,1,0";
+$STEP= 120;
+$HIST=  "0,1,0";
+$SAVE=  "0,1,0";
+if ($highres) {
+  $OUTPUT = "'" . $USER . "." . $model . "_dres.ptest001.nc'";
+} else {
+  $OUTPUT = "'" . $USER . "." . $model . ".ptest001.nc'";
+}
+$MXHIST_PRIM = 10;
+$SECSTART = "80,0,0";
+$SECSTOP  = "80,1,0";
+$SECHIST  = "0,0,12";
+$SECSAVE  = "0,1,0";
+if ($highres) {
+  $SECOUT   = "'" . $USER . "." . $model . "_dres.stest001.nc'";
+} else {
+  $SECOUT   = "'" . $USER . "." . $model . ".stest001.nc'";
+}
+$MXHIST_SECH = 24;
+$SECFLDS0 = "'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',";
+$SECFLDS1 = "'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'";
+$DISPOSE = 0;
+$TIDE    = "0.,0.,0.,0.,0.,0.,0.,0.,0.,0.";
+$TIDE2   = "0.,0.";
+if ($highres) {
+  $GSWM_MI_DI_NCFILE  = "'\$TGCMDATA/gswm_diurn_2.5d_32km.nc'";
+  $GSWM_MI_SDI_NCFILE = "'\$TGCMDATA/gswm_semi_2.5d_32km.nc'";
+  $GSWM_NM_DI_NCFILE  = "'\$TGCMDATA/gswm_nonmig_diurn_2.5d_32km.nc'";
+  $GSWM_NM_SDI_NCFILE = "'\$TGCMDATA/gswm_nonmig_semi_2.5d_32km.nc'";
+  $SABER_NCFILE = "'\$TGCMDATA/2002_saber_2.5deg.nc'";
+  $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_2.5deg.nc'";
+} else {
+  $GSWM_MI_DI_NCFILE  = "'\$TGCMDATA/gswm_diurn_5.0d_99km.nc'";
+  $GSWM_MI_SDI_NCFILE = "'\$TGCMDATA/gswm_semi_5.0d_99km.nc'";
+  $GSWM_NM_DI_NCFILE  = "'\$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc'";
+  $GSWM_NM_SDI_NCFILE = "'\$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc'";
+  $SABER_NCFILE = "'\$TGCMDATA/2002_saber_5.0deg.nc'";
+  $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_5.0deg.nc'";
+}
+$POTENTIAL_MODEL = "'HEELIS'";
+$GPI_NCFILE = "'\$TGCMDATA/gpi_2000001-2009031.nc'";
+$IMF_NCFILE = "'\$TGCMDATA/imf_2000001-2006365.nc'";
+$KP = "4.0";
+$POWER  = "16.";
+$CTPOTEN="45.";
+$F107  = "150.";
+$F107A = "150.";
+$BXIMF = "0.";
+$BYIMF = "0.";
+$BZIMF = "-5.";
+$SWVEL = "400.";
+$SWDEN = "4.0";
+$SEE_NCFILE = "'\$TGCMDATA/see__L3_merged_2005007_007.nc'";
+$AURORA = 1;
+$COLFAC = "1.5";
+#
+# Set default comments:
+#
+%comments = (
+  LABEL               =>" ",
+  START_YEAR          =>" ",
+  START_DAY           =>" ",
+  CALENDAR_ADVANCE    =>" ",
+  SOURCE              =>" ",
+  SOURCE_START        =>" ",
+  START               =>" ",
+  STOP                =>" ",
+  STEP                =>" ",
+  HIST                =>" ",
+  SAVE                =>" ",
+  OUTPUT              =>" ",
+  MXHIST_PRIM         =>" ",
+  SECSTART            =>" ",
+  SECSTOP             =>" ",
+  SECHIST             =>" ",
+  SECSAVE             =>" ",
+  SECOUT              =>" ",
+  MXHIST_SECH         =>" ",
+  SECFLDS             =>" ",
+  SECFLDS0            =>" ",
+  SECFLDS1            =>" ",
+  DISPOSE             =>" ",
+  TIDE                =>" ",
+  TIDE2               =>" ",
+  GSWM_MI_DI_NCFILE   =>" ",
+  GSWM_MI_SDI_NCFILE  =>" ",
+  GSWM_NM_DI_NCFILE   =>";",
+  GSWM_NM_SDI_NCFILE  =>";",
+  SABER_NCFILE        =>";",
+  TIDI_NCFILE         =>";",
+  POTENTIAL_MODEL     =>" ",
+  GPI_NCFILE          =>";",
+  IMF_NCFILE          =>";",
+  KP                  =>";",
+  POWER               =>" ",
+  CTPOTEN             =>" ",
+  F107                =>" ",
+  F107A               =>" ", 
+  BXIMF               =>";",
+  BYIMF               =>";",
+  BZIMF               =>";",
+  SWVEL               =>";",
+  SWDEN               =>";",
+  SEE_NCFILE          =>";",
+  AURORA              =>" ",
+  COLFAC              =>" "
+);
+
+} # end sub set_defaults
+#-------------------------------------------------------------------------
+sub write_namelist {
+my ($namelist_file) = @_;
+my $fh_out = new IO::File;
+$fh_out->open(">$namelist_file") or die ">>> Can't open new file $namelist_file\n";
+
+print $fh_out <<"EOF";
+&tgcm_input
+;
+; Namelist input file for model $model
+;
+$comments{LABEL}LABEL = $LABEL
+$comments{START_YEAR}START_YEAR = $START_YEAR
+$comments{START_DAY}START_DAY  = $START_DAY
+$comments{CALENDAR_ADVANCE}CALENDAR_ADVANCE = $CALENDAR_ADVANCE
+;
+; SOURCE:       Start-up history file (for initial runs only)
+; SOURCE_START: Time of history on start-up file (initial runs only)
+;
+$comments{SOURCE}SOURCE = $SOURCE
+$comments{SOURCE_START}SOURCE_START = $SOURCE_START
+;
+; START: Start time (day,hour,minute)
+; STOP:  Stop time (day,hour,minute)
+; STEP:  Timestep (seconds)
+;
+$comments{START}START = $START
+$comments{STOP}STOP  = $STOP
+$comments{STEP}STEP  = $STEP
+;
+; Primary History parameters:
+;
+$comments{HIST}HIST = $HIST
+$comments{SAVE}SAVE = $SAVE
+$comments{OUTPUT}OUTPUT = $OUTPUT
+$comments{MXHIST_PRIM}MXHIST_PRIM = $MXHIST_PRIM
+;
+; Secondary History parameters:
+;
+$comments{SECSTART}SECSTART = $SECSTART
+$comments{SECSTOP}SECSTOP  = $SECSTOP
+$comments{SECHIST}SECHIST  =  $SECHIST
+$comments{SECSAVE}SECSAVE  =  $SECSAVE
+$comments{SECOUT}SECOUT   = $SECOUT
+$comments{MXHIST_SECH}MXHIST_SECH = $MXHIST_SECH
+$comments{SECFLDS}SECFLDS = $SECFLDS0
+$comments{SECFLDS}          $SECFLDS1
+;
+$comments{DISPOSE}DISPOSE = $DISPOSE
+$comments{TIDE}TIDE = $TIDE
+$comments{TIDE2}TIDE2 = $TIDE2
+;
+; At 5 deg resolution, use gswm migrating tides only.
+; At 2.5 deg resolution, optionally use both migrating 
+;   and non-migrating tides.
+;
+$comments{GSWM_MI_DI_NCFILE}GSWM_MI_DI_NCFILE  = $GSWM_MI_DI_NCFILE
+$comments{GSWM_MI_SDI_NCFILE}GSWM_MI_SDI_NCFILE = $GSWM_MI_SDI_NCFILE
+$comments{GSWM_NM_DI_NCFILE}GSWM_NM_DI_NCFILE  = $GSWM_NM_DI_NCFILE
+$comments{GSWM_NM_SDI_NCFILE}GSWM_NM_SDI_NCFILE = $GSWM_NM_SDI_NCFILE
+;
+; SABER (T,Z) and/or TIDI (U,V) data files for lbc perturbations:
+;
+$comments{SABER_NCFILE}SABER_NCFILE = $SABER_NCFILE
+$comments{TIDI_NCFILE}TIDI_NCFILE  = $TIDI_NCFILE
+;
+ POTENTIAL_MODEL = $POTENTIAL_MODEL
+;
+; Uncomment GPI_NCFILE to calculate POWER and CTPOTEN from
+; Kp data, and to use data for f10.7 flux. GPI_NCFILE can be
+; used only when potential_model='HEELIS'. If GPI_NCFILE is
+; specified, one or more of POWER,CTPOTEN,F107,F107A must be
+; commented out (data will be used for those that are commented
+; out, otherwise the user-provided values will be used).
+;
+; If KP is specified, and POWER and/or CTPOTEN are commented,
+; then the given KP will be used to calculate POWER and/or CTPOTEN
+;
+;GPI_NCFILE = $GPI_NCFILE
+;
+$comments{KP}KP = $KP
+$comments{POWER}POWER   = $POWER
+$comments{CTPOTEN}CTPOTEN = $CTPOTEN
+$comments{F107}F107    = $F107
+$comments{F107A}F107A   = $F107A
+;
+; Uncomment IMF_NCFILE to read IMF parameters from the data.
+; IMF_NCFILE can be used only when POTENTIAL_MODEL='WEIMER05'.
+; If IMF_NCFILE is specified, one or more of BXIMF,BYIMF,BZIMF,
+; SWVEL,SWDEN,F107,F107A must be commented out (data will be
+; used). If IMF_NCFILE is specified and POWER is not provided,
+; it will be calculated from BZ,SWVEL. Also, if IMF_NCFILE is
+; used, the user cannot provide CTPOTEN (it will be calculated
+; from the Weimer potential).
+;
+$comments{IMF_NCFILE}IMF_NCFILE = $IMF_NCFILE
+$comments{BXIMF}BXIMF   = $BXIMF
+$comments{BYIMF}BYIMF   = $BYIMF
+$comments{BZIMF}BZIMF   = $BZIMF
+$comments{SWVEL}SWVEL   = $SWVEL
+$comments{SWDEN}SWDEN   = $SWDEN
+$comments{SEE_NCFILE}SEE_NCFILE = $SEE_NCFILE
+$comments{AURORA}AURORA = $AURORA
+$comments{COLFAC}COLFAC = $COLFAC
+/
+EOF
+
+$fh_out->close;
+print STDERR "mknamelist: Wrote namelist file $namelist_file\n";
+} # end sub write_namelist
+#-------------------------------------------------------------------------

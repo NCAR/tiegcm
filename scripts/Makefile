@@ -19,6 +19,8 @@
 #
 SHELL = /bin/sh
 
+all: Depends
+
 include Make.env         # made by job script before gmake
 include $(MAKE_MACHINE)  # machine-specific file with compiler/make info
 
@@ -36,8 +38,6 @@ LIBS      += -L$(LIB_NETCDF) -lnetcdf
 COUPLING  := NO
 FC        := $(F90)
 
-all: Depends
-
 Depends::
 	@echo "OS           =$(OS)" 
 	@echo "MAKE_MACHINE =$(MAKE_MACHINE)"
@@ -50,7 +50,7 @@ Depends::
 	@echo "INC_NETCDF   =$(INC_NETCDF)"
 	@echo "EXECNAME     =$(EXECNAME)"
 	@echo "DEBUG        =$(DEBUG)"
-	perl Mkdepends $(DIRS)
+	perl mkdepends $(DIRS)
 	$(MAKE) $(EXECNAME)
 
 $(EXECNAME): $(OBJS)
@@ -90,7 +90,7 @@ FFLAGS += $(INC_DIRS) $(OPTIM) $(DBGFLAGS)
 clean:
 	rm -f Depends Srcfiles *.o *.mod $(EXECNAME)
 veryclean:
-	rm -f Depends Srcfiles *.o *.mod $(EXECNAME) Makefile Make.env $(MAKE_MACHINE) machines.ini Mkdepends defs.h
+	rm -f Depends Srcfiles *.o *.mod $(EXECNAME) Makefile Make.env $(MAKE_MACHINE) machines.ini mkdepends defs.h cwd fort*
 
 include Depends
 

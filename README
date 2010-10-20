@@ -1180,3 +1180,8 @@ diff_rimr does not reference it, but only passes it to sub insert_pot,
 where it is correctly dimensioned. However, I am making this change
 to avoid compiler warnings, and to be more clear. This was pointed out
 by Jiannan Tu (jiannan_tu@uml.edu).
+
+10/19/10: Many changes and additions to scripts directory, including new
+scripts mknamelist and mkjob. Also a new directory "suites", to contain
+scripts that set up a series of runs using mknamelist and mkjob. So far,
+only one file in suites to make a series of control runs, called mkmulti_control.

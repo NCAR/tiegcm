@@ -1,22 +1,3 @@
-#! /bin/csh
-#
-# Set shell variables for tiegcm linux job:
-#
-set model        = tiegcm
-set wrkdir       = .
-set tgcmroot     = $TGCMROOT
-set make_machine = Make.generic_hao64
-#set usr_srcdirs = modsrc
-set input        = tiegcm1.93.inp
-set output       = tiegcm1.93.out
-set mpi          = TRUE
-set nproc        = 4
-set mss          = TRUE
-set hres         = 5.0
-set vres         = 0.5
-set utildir      = $TGCMROOT/tiegcm1.93/scripts
-set execdir      = tiegcm1.93-linux
-set debug        = FALSE
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                        Shell Script for TIEGCM Linux job
