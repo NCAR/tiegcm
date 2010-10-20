@@ -2,33 +2,32 @@
 #
 # Set LSF resource directives for ibm job:
 #
-#BSUB -J tiegcm1.93
+#BSUB -J tiegcm_newbuild
 #BSUB -P 24100004
 #BSUB -q regular
 #BSUB -n 32
-#BSUB -o tiegcm1.93.%J.out
-#BSUB -e tiegcm1.93.%J.out
+#BSUB -o tiegcm_newbuild.%J.out
+#BSUB -e tiegcm_newbuild.%J.out
 #BSUB -N
 #BSUB -u $LOGNAME@ucar.edu
 #BSUB -W 1:00
 #
 #
-# Set shell variables for tiegcm ibm job:
+# Set shell variables for tiegcm_newbuild ibm job:
 #
-set model        = tiegcm
+set model        = tiegcm_newbuild
 set wrkdir       = .
-set tgcmroot     = $TGCMROOT
+set tgcmroot     = .
 set make_machine = Make.bluefire
-#set usr_srcdirs = modsrc
-set input        = tiegcm1.93.inp
-set output       = tiegcm1.93.out
+#set input       = tiegcm_newbuild.inp
+set output       = tiegcm_newbuild.out
 set mpi          = TRUE
 set nproc        = 4
 set mss          = TRUE
 set hres         = 5.0
 set vres         = 0.5
-set utildir      = $TGCMROOT/tiegcm1.93/scripts
-set execdir      = tiegcm1.93-linux
+set utildir      = ./tiegcm_newbuild/scripts
+set execdir      = tiegcm_newbuild-linux
 set debug        = FALSE
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
