@@ -9,10 +9,10 @@
 #
 $system   = "linux";       # "ibm" or "linux" system (see mkjob)
 $model    = "tiegcm1.93";
-$tgcmroot = ".";
-$utildir  = "$tgcmroot/tiegcm_newbuild/scripts";
+$tgcmroot = $ENV{TGCMROOT};               # root dir for job scripts (not this script)
+$utildir  = "../tiegcm_newbuild/scripts"; # utildir for *this* script (not the job scripts)
 $nproc    = 8;             # for 64-bit linux systems (ignored if system eq ibm)
-$template = "tiegcm_newbuild/scripts/job_$system.txt";  # job template (for mkjob)
+$template = "$utildir/job_$system.txt";  # job template (for mkjob)
 $user     = $ENV{USER};
 #
 # Some LSF directives for ibm job (allow others to default in mkjob):
@@ -125,7 +125,7 @@ foreach $job (keys %jobs) {
   $execdir = $model . '-' . $system;
   $command = "$utildir/mkjob -fileout=$jobfile -system=$system -template=$template" .
     " -utildir=$utildir -execdir=$execdir -input=$myjob->{namelist} -output=$output" .
-    " -nproc=$nproc "; 
+    " -nproc=$nproc -tgcmroot=$tgcmroot"; 
 #
 # If ibm job, add LSF directives (see above):
   if ($system eq 'ibm') {
