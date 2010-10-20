@@ -1185,3 +1185,5 @@ by Jiannan Tu (jiannan_tu@uml.edu).
 scripts mknamelist and mkjob. Also a new directory "suites", to contain
 scripts that set up a series of runs using mknamelist and mkjob. So far,
 only one file in suites to make a series of control runs, called mkmulti_control.
+
+10/20/10: Fix call to addfld for qji_tn in dynamics.F (pointed out by Art).

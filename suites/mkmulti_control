@@ -9,8 +9,7 @@
 #
 $system   = "linux";       # "ibm" or "linux" system (see mkjob)
 $model    = "tiegcm1.93";
-$tgcmroot = $ENV{TGCMROOT};               # root dir for job scripts (not this script)
-$utildir  = "../tiegcm_newbuild/scripts"; # utildir for *this* script (not the job scripts)
+$utildir  = "/home/foster/tgcm/tiegcm/branches/tiegcm_newbuild/scripts";
 $nproc    = 8;             # for 64-bit linux systems (ignored if system eq ibm)
 $template = "$utildir/job_$system.txt";  # job template (for mkjob)
 $user     = $ENV{USER};
@@ -107,9 +106,15 @@ foreach $job (keys %jobs) {
   $myjob->{output} = '\"' . $user . '.' . $model . '.pcntr_' . $myjob->{name} . '_001.nc\"';
   $myjob->{secout} = '\"' . $user . '.' . $model . '.scntr_' . $myjob->{name} . '_001.nc\"';
 #
-# Make namelist file for current job:
+# Create working directory if necessary. This is where the namelist input
+# file, the model exec directory, and stdout will be placed.
 #
-  $command = "$utildir/mknamelist -fileout=$myjob->{namelist} -POWER=$myjob->{power}" . 
+  $dir = $model . "_" . $myjob->{name};
+  if (! -d $dir) { mkdir $dir || die ">>> Error from mkdir $dir\n"; }
+#
+# Make namelist file for current job (put in $dir):
+#
+  $command = "$utildir/mknamelist -fileout=$dir/$myjob->{namelist} -POWER=$myjob->{power}" . 
     " -CTPOTEN=$myjob->{ctpoten} -F107=$myjob->{f107} -F107A=$myjob->{f107a}" .
     " -SOURCE=$myjob->{source} -SOURCE_START=$myjob->{source_start} -START=$myjob->{start}" .
     " -STOP=$myjob->{stop} -HIST=$myjob->{hist} -SAVE=$myjob->{save} -OUTPUT=$myjob->{output}" .
@@ -119,17 +124,21 @@ foreach $job (keys %jobs) {
   `$command`;
 #
 # Make job script for current job using mkjob (requires job template file):
+# Input, output, and execdir will be in $dir. 
 #
+  $tgcmroot = $ENV{TGCMROOT};
   $jobfile = $model . '_' . $myjob->{name} . '_' . $system . '.job';
-  $output  = $model . '_' . $myjob->{name} . '.out';
-  $execdir = $model . '-' . $system;
-  $command = "$utildir/mkjob -fileout=$jobfile -system=$system -template=$template" .
-    " -utildir=$utildir -execdir=$execdir -input=$myjob->{namelist} -output=$output" .
-    " -nproc=$nproc -tgcmroot=$tgcmroot"; 
+  $input   = "$dir/$myjob->{namelist}";
+  $output  = "$dir/$model" . '_' . $myjob->{name} . '.out';
+  $execdir = "$dir/$model" . '-' . $system;
+
+  $command = "$utildir/mkjob -model=$model -fileout=$jobfile -system=$system " . 
+    " -template=$template -utildir=$utildir -execdir=$execdir -input=$input " .
+    " -output=$output -nproc=$nproc -tgcmroot=$tgcmroot"; 
 #
 # If ibm job, add LSF directives (see above):
   if ($system eq 'ibm') {
-    $command = $command . "-bsub_jobname=$myjob->{name} -bsub_project=$bsub_project" .
+    $command = $command . " -bsub_jobname=$myjob->{name} -bsub_project=$bsub_project" .
       " -bsub_queue=$bsub_queue -bsub_nproc=$bsub_nproc -bsub_wallclock=$bsub_wallclock";
   }
   `$command`;

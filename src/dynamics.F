@@ -677,7 +677,7 @@
      |    1,nlevp1,lon0,lon1,lat)
         if (diags) then
           call addfld('QJI_TN','Joule Heating for TN',' ',
-     |      qji_ti(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+     |      qji_tn(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         endif
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after qjoule_tn')")
