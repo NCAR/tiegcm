@@ -1187,3 +1187,5 @@ scripts that set up a series of runs using mknamelist and mkjob. So far,
 only one file in suites to make a series of control runs, called mkmulti_control.
 
 10/20/10: Fix call to addfld for qji_tn in dynamics.F (pointed out by Art).
+10/21/10: Moved mkmulti* to control_suite, added perf_suite, but it still
+needs work.
