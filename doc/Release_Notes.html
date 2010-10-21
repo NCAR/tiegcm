@@ -1,0 +1,100 @@
+<html><h2>
+<center>
+Release notes for tiegcm1.93<br>
+May 26, 2010<br>
+</center>
+</h2>
+<body><h3>
+<hr>
+Bug fixes:
+<ul>
+
+  <li>
+    qinite.F : increase night-time ionization rates which is necessary
+    because the minimum electron density was removed in previous versions
+    (elden.F)
+  </li>
+
+  <li>
+    dynamo.F subroutine threed: the E_lam wasn't mapped in the horizontal
+    plane which gave wrong results close to the geomagnetic equator at
+    higher pressure levels (as a consequence EXB drift was wrong)
+  </li>
+
+  <li>
+    efield.F in the mapping from magnetic to geographic grid real values
+    are put into integer w/o explicit conversion from real to integer.
+    This led to wrong mapping on 64-bit Linux systems.
+  </li>
+
+  <li>
+    addiag.F: Use glat(j) instead of float(j) in calculation of c2, sub calczg.
+    Sub calczg calculates gravity-varying geopotential (geometric height) 
+    field ZG.
+  </li>
+
+  <li>
+    fft9.F: Add ntrigs argument to FFT99B call from sub FFT99
+  </li>
+
+  <li>
+    Weimer05 model:wei05sc.F: Fix error in f90 translation in sub interpol_quad 
+      (see comments in wei05sc.F). Also add routines to work around non-ANSI 
+      trig functions.
+  </li>
+</ul>
+     
+<hr>
+New namelist read parameter KP:
+<ul>
+  <li> KP can be specified either as a constant or multiple time-dependent values.</li>
+  <li> If provided, empirical formulas will use the given KP to calculate CTPOTEN 
+       and/or POWER.
+  </li> 
+</ul>
+
+<hr>
+Change calculation of the sun's location from dipole coordinates to apex.
+<ul>
+  <li>Update IGRF coefficients with IGRF11 in apex_subs.F</li>
+</ul>
+
+<hr>
+Option to write 4-byte floats or 8-byte doubles to secondary histories:
+<ul>
+  <li>New namelist input parameter SECH_NBYTE can be either 4 (to write
+      4-byte floats), or 8 (to write 8-byte doubles). Default is SECH_NBYTE = 4
+  </li>
+</ul>
+
+<hr>
+Script changes to enable parallel runs on hao 64-bit Linux systems:
+<ul>
+  <li> Changes to tiegcm-linux.job and tgcm_config in the scripts directory.
+  <li> Add PGI/pgf90 MPI env vars to tiegcm-linux.job
+  <li> To build and execute an MPI run on a 64-bit Linux machine, set the 
+      following in tiegcm-linux.job:</li>
+    <ul>
+       <li> set mpi = TRUE </li>
+       <li> set nproc = 4 or 8 </li>
+       <li>Then execute "tiegcm-linux.job >! tiegcm-linux.out" as usual.</li>
+    </ul>
+</ul>
+
+<hr>
+Minor changes to scripts/tiegcm-ibm.job to accomodate mpi=FALSE under AIX.
+<ul>
+  <li>Also minor change to imf.F for the same reason (4-byte vs 8-byte integers).</li>
+</ul>
+
+<hr>
+Year-end runs:
+<ul>
+  <li> Run to model time 366,0,0 (for non-leap years), or to 367,0,0 (for leap years)
+    This will be written to the history files as mtime 1,0,0 of the next year.
+    The 1,0,0 history can be used as the Source to start the following year.
+  </li>
+</ul>
+</h3>
+</body>
+</html>

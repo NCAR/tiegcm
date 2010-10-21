@@ -1169,3 +1169,26 @@ default namelist (see Mknamelist, tiegcm_default.inp) because they are
 unsupported in the Community release. Also recommit tags/tiegcm1.93.
 They were commented out, but remove them completely so they will not be seen.
 However, they remain in the default namelist in local dirs $TGCMROOT/tiegcm1.93.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+7/8/10:
+Increased mxhvols and mxsech from 100 to 500 files, see params.F.
+This was at request of Qian Wu, who wants to make 100-day runs on
+64-bit Linux cerberus.
+
+7/12/10:
+Reset nanfatal to 1 at end of sub wrf4d in nchist.F. It was apparently
+left off during debugging. It should be turned on by default, so the
+model will stop if writing NaNs to history file.
+
+10/5/10:
+In highlatpoten, phihm is passed to sub diff_rimr (called by dynamo),
+but diff_rimr declares the arg a scalar. This is actually ok, because
+diff_rimr does not reference it, but only passes it to sub insert_pot,
+where it is correctly dimensioned. However, I am making this change
+to avoid compiler warnings, and to be more clear. This was pointed out
+by Jiannan Tu (jiannan_tu@uml.edu).
+
+10/18/10:
+Fix addfld call for QJI_TN in dynamics.F (pass qji_tn instead of qji_ti).
+Thanks to Art for pointing this out.

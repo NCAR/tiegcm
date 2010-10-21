@@ -3349,8 +3349,8 @@
 !     endif
 !
 ! Check for NaNs:
-!     nanfatal = 1 ! abort if nans are found (this is normal default)
-      nanfatal = 0 ! temporary: allow NaNs for debug
+      nanfatal = 1 ! abort if nans are found (this is normal default)
+!     nanfatal = 0 ! temporary: allow NaNs for debug
       if (check_nan) 
      |  call check_nans(f3d,nlon,nlat,nlevp1,name(1:8),nnans,
      |    0,0.,1,nanfatal)
