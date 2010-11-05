@@ -4,7 +4,7 @@
 #
 set modeldir = tiegcm_newbuild
 set execdir  = tiegcm-linux
-set input    = tiegcm_newbuild.inp
+#set input    = tiegcm_newbuild.inp
 set output   = tiegcm_newbuild.out
 set make     = Make.generic_hao64
 set mpi      = TRUE

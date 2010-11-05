@@ -16,7 +16,7 @@
 #
 set modeldir = tiegcm_newbuild
 set execdir  = tiegcm-aix
-set input    = tiegcm_newbuild.inp
+#set input    = tiegcm_newbuild.inp
 set output   = tiegcm_newbuild.out
 set make     = Make.bluefire
 set mpi      = TRUE
