@@ -1205,3 +1205,19 @@ only one file in suites to make a series of control runs, called mkmulti_control
 needs work.
 
 11/2/10: Tagging this as tiegcm_newbuild1.0, before rewriting job scripts.
+
+11/4/10: Rewrite of tiegcm-linux.job and tiegcm-ibm.job, but the latter
+is untested due to bf outages. Changes to mknamelist. job*.txt are updated 
+wrt to job scripts, but suites/ scripts are not up to date with these changes 
+yet.  Changed Abspath to abspath.
+
+(iris) tiegcm_newbuild : svn stat --show-updates
+M             388   scripts/job_ibm.txt
+A               0   scripts/abspath
+D             388   scripts/Abspath
+M             388   scripts/tiegcm-ibm.job
+M             388   scripts/tiegcm_default.inp
+M             388   scripts/mknamelist
+M             388   scripts/job_linux.txt
+M             388   scripts/tiegcm-linux.job
+

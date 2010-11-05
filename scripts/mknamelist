@@ -12,20 +12,18 @@ $tgcmdata = $ENV{TGCMDATA};
 # Defaults for mknamelist:
 #
 $model = "tiegcm";
-$hres  = 5.0;
-$vres  = 0.5;
+$modelres  = 5.0;
 #
 # Set default namelist parameters:
 #
-&set_defaults($highres);
+&set_defaults;
 #
 # Get user options:
 #
 &GetOptions(
   "model=s"       => \$model,
   "fileout=s"     => \$fileout,
-  "hres=f"        => \$hres,
-  "vres=f"        => \$vres,
+  "modelres=f"    => \$modelres,
   "comment=s@"    => \@comment,
   "uncomment=s@"  => \@uncomment,
   "h|help"        => \$help,
@@ -89,16 +87,18 @@ if (@ARGV) {
     usage();
 }
 #
-# Validate resolution options:
+# Validate resolution option:
 #
-if (not (($hres==5.0 and $vres==0.5) or ($hres==2.5 and $vres==0.25))) {
-  print STDERR "\n>>> Bad hres,vres combination: hres=$hres vres=$vres\n";
-  print STDERR ">>> hres,vres must be either 5.0,0.5 or 2.5,0.25\n\n";
+if ($modelres != 5.0 and $modelres != 2.5) { 
+  print STDERR "\n>>> Bad modelres: $modelres (must be either 5.0 or 2.5)\n";
   exit;
 }
+#
+# Set resolution sensitive parameters:
+#
 $highres = 0;
-if ($hres == 2.5 and $vres == 0.25) { $highres = 1; }
-#print STDERR "mknamelist: hres=$hres vres=$vres highres=$highres\n";
+if ($modelres == 2.5) { $highres = 1; }
+&set_res_params($highres);
 #
 # Set 1 or 2 lines of SECFLDS:
 #
@@ -128,13 +128,7 @@ foreach $usr_uncomment (@uncomment) {
 #
 if (defined $fileout) {
   $namelist_file = $fileout;
-} else {
-  if ($highres) {
-    $namelist_file = $model . "_dres.inp";
-  } else {
-    $namelist_file = $model . "_sres.inp";
-  }
-}
+} else { $namelist_file = $model . "_default.inp"; }
 #
 # Write the namelist output file:
 #
@@ -144,61 +138,30 @@ print "$namelist_file\n";
 exit;
 #-------------------------------------------------------------------------
 sub set_defaults {
-my ($highres) = @_;
 #
 # Default namelist parameters:
 #
-$LABEL="'$model hres=$hres vres=$vres'";
+$LABEL="'$model res=$modelres'";
 $START_YEAR = 2002;
 $START_DAY  = 80;
 $CALENDAR_ADVANCE = 1;
-if ($highres) {
-  $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.93_dres.pcntr_eqnx_smin.nc'";
-} else {
-  $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc'";
-}
 $SOURCE_START = "80,0,0";
 $START= "80,0,0";
 $STOP=  "80,1,0";
 $STEP= 120;
 $HIST=  "0,1,0";
 $SAVE=  "0,1,0";
-if ($highres) {
-  $OUTPUT = "'" . $USER . "." . $model . "_dres.ptest001.nc'";
-} else {
-  $OUTPUT = "'" . $USER . "." . $model . ".ptest001.nc'";
-}
 $MXHIST_PRIM = 10;
 $SECSTART = "80,0,0";
 $SECSTOP  = "80,1,0";
 $SECHIST  = "0,0,12";
 $SECSAVE  = "0,1,0";
-if ($highres) {
-  $SECOUT   = "'" . $USER . "." . $model . "_dres.stest001.nc'";
-} else {
-  $SECOUT   = "'" . $USER . "." . $model . ".stest001.nc'";
-}
 $MXHIST_SECH = 24;
 $SECFLDS0 = "'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',";
 $SECFLDS1 = "'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'";
 $DISPOSE = 0;
 $TIDE    = "0.,0.,0.,0.,0.,0.,0.,0.,0.,0.";
 $TIDE2   = "0.,0.";
-if ($highres) {
-  $GSWM_MI_DI_NCFILE  = "'\$TGCMDATA/gswm_diurn_2.5d_32km.nc'";
-  $GSWM_MI_SDI_NCFILE = "'\$TGCMDATA/gswm_semi_2.5d_32km.nc'";
-  $GSWM_NM_DI_NCFILE  = "'\$TGCMDATA/gswm_nonmig_diurn_2.5d_32km.nc'";
-  $GSWM_NM_SDI_NCFILE = "'\$TGCMDATA/gswm_nonmig_semi_2.5d_32km.nc'";
-  $SABER_NCFILE = "'\$TGCMDATA/2002_saber_2.5deg.nc'";
-  $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_2.5deg.nc'";
-} else {
-  $GSWM_MI_DI_NCFILE  = "'\$TGCMDATA/gswm_diurn_5.0d_99km.nc'";
-  $GSWM_MI_SDI_NCFILE = "'\$TGCMDATA/gswm_semi_5.0d_99km.nc'";
-  $GSWM_NM_DI_NCFILE  = "'\$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc'";
-  $GSWM_NM_SDI_NCFILE = "'\$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc'";
-  $SABER_NCFILE = "'\$TGCMDATA/2002_saber_5.0deg.nc'";
-  $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_5.0deg.nc'";
-}
 $POTENTIAL_MODEL = "'HEELIS'";
 $GPI_NCFILE = "'\$TGCMDATA/gpi_2000001-2009031.nc'";
 $IMF_NCFILE = "'\$TGCMDATA/imf_2000001-2006365.nc'";
@@ -269,6 +232,55 @@ $COLFAC = "1.5";
 );
 
 } # end sub set_defaults
+#-------------------------------------------------------------------------
+sub set_res_params {
+  my ($highres) = @_;
+  if (! defined($SOURCE)) {
+    if ($highres) {
+      $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.93_dres.pcntr_eqnx_smin.nc'";
+    } else {
+      $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc'";
+    }
+  }
+  if (! defined($OUTPUT)) {
+    if ($highres) {
+      $OUTPUT = "'" . $USER . "." . $model . "_dres.ptest001.nc'";
+    } else {
+      $OUTPUT = "'" . $USER . "." . $model . ".ptest001.nc'";
+    }
+  }
+  if (! defined($SECOUT)) {
+    if ($highres) {
+      $SECOUT   = "'" . $USER . "." . $model . "_dres.stest001.nc'";
+    } else {
+      $SECOUT   = "'" . $USER . "." . $model . ".stest001.nc'";
+    }
+  }
+  if (! defined($GSWM_MI_DI_NCFILE)) { 
+    if ($highres) { $GSWM_MI_DI_NCFILE  = "'\$TGCMDATA/gswm_diurn_2.5d_32km.nc'"; }
+    else          { $GSWM_MI_DI_NCFILE  = "'\$TGCMDATA/gswm_diurn_5.0d_99km.nc'"; }
+  }
+  if (! defined($GSWM_MI_SDI_NCFILE)) { 
+    if ($highres) { $GSWM_MI_SDI_NCFILE = "'\$TGCMDATA/gswm_semi_2.5d_32km.nc'"; }
+    else          { $GSWM_MI_SDI_NCFILE = "'\$TGCMDATA/gswm_semi_5.0d_99km.nc'"; }
+  }
+  if (! defined($GSWM_NM_DI_NCFILE)) { 
+    if ($highres) { $GSWM_NM_DI_NCFILE  = "'\$TGCMDATA/gswm_nonmig_diurn_2.5d_32km.nc'"; }
+    else          { $GSWM_NM_DI_NCFILE  = "'\$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc'"; }
+  }
+  if (! defined($GSWM_NM_SDI_NCFILE)) { 
+    if ($highres) { $GSWM_NM_SDI_NCFILE = "'\$TGCMDATA/gswm_nonmig_semi_2.5d_32km.nc'"; }
+    else          { $GSWM_NM_SDI_NCFILE = "'\$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc'"; }
+  }
+  if (! defined($SABER_NCFILE)) { 
+    if ($highres) { $SABER_NCFILE = "'\$TGCMDATA/2002_saber_2.5deg.nc'"; }
+    else          { $SABER_NCFILE = "'\$TGCMDATA/2002_saber_5.0deg.nc'"; }
+  }
+  if (! defined($TIDI_NCFILE)) { 
+    if ($highres) { $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_2.5deg.nc'"; }
+    else { $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_5.0deg.nc'"; }
+  }
+} # end sub set_res_params
 #-------------------------------------------------------------------------
 sub write_namelist {
 my ($namelist_file) = @_;
@@ -377,6 +389,6 @@ $comments{COLFAC}COLFAC = $COLFAC
 EOF
 
 $fh_out->close;
-print STDERR "mknamelist: Wrote namelist file $namelist_file\n";
+#print STDERR "mknamelist: Wrote namelist file $namelist_file\n";
 } # end sub write_namelist
 #-------------------------------------------------------------------------
