@@ -129,6 +129,7 @@ gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 # (machines.ini rule is in Make.generic_hao64)
 #
 if ($exec == "TRUE") then
+  set model = ./$model
   echo "Linux job: Executing $model mpi=$mpi nproc=$nproc"
   echo "Model output will go to $output"
   if ($mpi == "TRUE") then
