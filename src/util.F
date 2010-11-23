@@ -1698,7 +1698,7 @@
 !
       ctpoten_from_kp = 0.
       if (kp < 0..or.kp > 9.) then
-        write(6,"('>>> ctpoten_from_kp: Bad kp=',e12.4)")
+        write(6,"('>>> ctpoten_from_kp: Bad kp=',e12.4)") kp
         call shutdown('ctpoten_from_kp')
       endif
 !

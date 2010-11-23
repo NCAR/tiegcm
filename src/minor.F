@@ -191,7 +191,9 @@
 !
 ! Periodic points for advection:
 #ifdef MPI
-      call mp_periodic_f2d(hadvec,lon0,lon1,lat,lat)
+! Oct, 2010: Comment this call to prevent divergence in N4S and NO
+!   between runs w/ different numbers of processors (see also divrg.F):
+!     call mp_periodic_f2d(hadvec,lon0,lon1,lat,lat)
 #endif
 !
 ! Set periodic points to zero:

@@ -1192,3 +1192,9 @@ by Jiannan Tu (jiannan_tu@uml.edu).
 10/18/10:
 Fix addfld call for QJI_TN in dynamics.F (pass qji_tn instead of qji_ti).
 Thanks to Art for pointing this out.
+
+11/23/10:
+Committing changes made to wking dir around 11/1: remove mp_periodic_f2d
+calls in minor.F and divrg.F to remove small differences found when 
+running the code w/ different # cores, e.g., small diffs were found
+between 4 vs 16 processor runs.
