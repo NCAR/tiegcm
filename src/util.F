@@ -242,7 +242,13 @@
       real,intent(in) :: f0,f1
       integer,intent(in) :: isec0,isec1,isec
 !
-      finterp = f0+(f1-f0)*float(isec-isec0)/float(isec1-isec0)
+      if (isec==isec0) then
+        finterp = f0
+      elseif (isec==isec1) then
+        finterp = f1
+      else
+        finterp = f0+(f1-f0)*float(isec-isec0)/float(isec1-isec0)
+      endif
       end function finterp
 !-------------------------------------------------------------------
       real function finterp_bigints(f0,f1,isec0,isec1,isec)
@@ -1698,7 +1704,7 @@
 !
       ctpoten_from_kp = 0.
       if (kp < 0..or.kp > 9.) then
-        write(6,"('>>> ctpoten_from_kp: Bad kp=',e12.4)")
+        write(6,"('>>> ctpoten_from_kp: Bad kp=',e12.4)") kp
         call shutdown('ctpoten_from_kp')
       endif
 !
