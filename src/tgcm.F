@@ -33,6 +33,7 @@
 !     use omp_module,only: init_omp
 #endif
       implicit none
+! #include "revision.inc"
 !
 ! Local:
       integer :: ier,icount_tgcm,icount_apex,nsecs

@@ -2,24 +2,24 @@
 #
 # User set LSF resource directives for IBM/AIX batch job:
 #
-#BSUB -J tiegcm_newbuild
+#BSUB -J tiegcm_trunk
 #BSUB -P 24100004
 #BSUB -q regular
 #BSUB -n 32
 ##BSUB -q debug
 ##BSUB -n 8
-#BSUB -o tiegcm_newbuild.%J.out
-#BSUB -e tiegcm_newbuild.%J.out
+#BSUB -o tiegcm_trunk.%J.out
+#BSUB -e tiegcm_trunk.%J.out
 #BSUB -N
 #BSUB -u $LOGNAME@ucar.edu
 #BSUB -W 1:00
 #
 # User set shell variables for TIEGCM IBM/AIX job:
 #
-set modeldir = tiegcm_newbuild
-set execdir  = tiegcm_newbuild-aix
-#set input    = tiegcm_newbuild.inp
-set output   = tiegcm_newbuild.out
+set modeldir = tiegcm_trunk
+set execdir  = tiegcm_trunk-aix
+#set input    = tiegcm_trunk.inp
+set output   = tiegcm_trunk.out
 set make     = Make.bluefire
 set mpi      = TRUE
 set modelres = 5.0
