@@ -1198,3 +1198,9 @@ Committing changes made to wking dir around 11/1: remove mp_periodic_f2d
 calls in minor.F and divrg.F to remove small differences found when 
 running the code w/ different # cores, e.g., small diffs were found
 between 4 vs 16 processor runs.
+
+Fix function finterp (util.F, called by getgpi.F) to check for 
+model time == bracketed times, to avoid apparent round-off errors that result 
+in negative interpolated kp when kp data is 0 (has come down to zero) when 
+sec1==iutsec. This problem was found by Liying.
+
