@@ -1170,7 +1170,6 @@ unsupported in the Community release. Also recommit tags/tiegcm1.93.
 They were commented out, but remove them completely so they will not be seen.
 However, they remain in the default namelist in local dirs $TGCMROOT/tiegcm1.93.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 7/8/10:
 Increased mxhvols and mxsech from 100 to 500 files, see params.F.
 This was at request of Qian Wu, who wants to make 100-day runs on
@@ -1180,6 +1179,9 @@ This was at request of Qian Wu, who wants to make 100-day runs on
 Reset nanfatal to 1 at end of sub wrf4d in nchist.F. It was apparently
 left off during debugging. It should be turned on by default, so the
 model will stop if writing NaNs to history file.
+
+10/3/10: Starting new branch tiegcm_newbuild for new build scripts using
+Make.$machine. Source is same as the trunk, all changes are in scripts/.
 
 10/5/10:
 In highlatpoten, phihm is passed to sub diff_rimr (called by dynamo),
@@ -1193,6 +1195,35 @@ by Jiannan Tu (jiannan_tu@uml.edu).
 Fix addfld call for QJI_TN in dynamics.F (pass qji_tn instead of qji_ti).
 Thanks to Art for pointing this out.
 
+10/19/10: Many changes and additions to scripts directory, including new
+scripts mknamelist and mkjob. Also a new directory "suites", to contain
+scripts that set up a series of runs using mknamelist and mkjob. So far,
+only one file in suites to make a series of control runs, called mkmulti_control.
+
+10/20/10: Fix call to addfld for qji_tn in dynamics.F (pointed out by Art).
+10/21/10: Moved mkmulti* to control_suite, added perf_suite, but it still
+needs work.
+
+11/2/10: Tagging this as tiegcm_newbuild1.0, before rewriting job scripts.
+
+11/4/10: Rewrite of tiegcm-linux.job and tiegcm-ibm.job, but the latter
+is untested due to bf outages. Changes to mknamelist. job*.txt are updated 
+wrt to job scripts, but suites/ scripts are not up to date with these changes 
+yet.  Changed Abspath to abspath.
+
+(iris) tiegcm_newbuild : svn stat --show-updates
+M             388   scripts/job_ibm.txt
+A               0   scripts/abspath
+D             388   scripts/Abspath
+M             388   scripts/tiegcm-ibm.job
+M             388   scripts/tiegcm_default.inp
+M             388   scripts/mknamelist
+M             388   scripts/job_linux.txt
+M             388   scripts/tiegcm-linux.job
+
+11/23/10:
+Merging changes on the trunk to this branch.
+
 11/23/10:
 Committing changes made to wking dir around 11/1: remove mp_periodic_f2d
 calls in minor.F and divrg.F to remove small differences found when 
@@ -1203,4 +1234,3 @@ Fix function finterp (util.F, called by getgpi.F) to check for
 model time == bracketed times, to avoid apparent round-off errors that result 
 in negative interpolated kp when kp data is 0 (has come down to zero) when 
 sec1==iutsec. This problem was found by Liying.
-

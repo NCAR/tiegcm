@@ -1,0 +1,26 @@
+#
+# Included makefile for generic 32-bit HAO machines.
+# This will be a serial non-MPI build.
+#
+# Compilers and flags:
+#
+F90    = pgf90
+MPIF90 = mpif90
+FFLAGS = -r8
+DBGFLAGS = 
+OPTIM  = -O3
+MSS    = TRUE
+LIBS   = 
+#
+# Library and Include file paths:
+#
+LIB_NETCDF = /opt/local/lib
+INC_NETCDF = /opt/local/include
+#
+# Make machines.ini file for MPI execution:
+#
+machines.ini: export HN=$(HOST)
+machines.ini: export NP=$(NPROC)
+machines.ini:
+        @echo `hostname` > machines.ini
+        @awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini

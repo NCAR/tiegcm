@@ -1,295 +1,152 @@
 #! /bin/csh
 #
-# This is an example job script to configure, build, and execute a tgcm
-#   model on a Linux system.
+# User set shell variables for TIEGCM Linux job:
 #
-# To use:
-#   1) Set script variables below.
-#   2) Copy to a large working directory on the target machine.
-#   3) To execute: "tiegcm-linux.job >&! tiegcm-linux.out &"
-#
-# See http://www.hao.ucar.edu/modeling/tgcm/userguide/ for more information.
-# If you need to customize the configuration beyond the shell vars here, 
-#   add or change options to the tgcm_config call below. 
-#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#    USER EDIT BATCH JOB (LSF) RESOURCES (For Load Sharing Facility only)
-#
-#BSUB -J tiegcm         # job name
-#
-##BSUB -q regular       # queue (premium and regular are available)
-##BSUB -x 	        # exclusive use of the node
-##BSUB -n 16            # number of MPI tasks
-##BSUB -W 3:00          # wallclock limit (hh:mm) (3 hrs for prem or reg)
-#
-#BSUB -q debug          # debug queue is available during the day (30 min limit)
-#BSUB -n 16             # number of MPI tasks
-#BSUB -W 0:30           # 30 min limit for debug queue
-#
-#BSUB -o tiegcm.%J.out  # stdout filename
-#BSUB -e tiegcm.%J.out  # stderr filename
-#BSUB -N                # send mail when job finishes
-#BSUB -u $LOGNAME@ucar.edu # email address
+set modeldir = tiegcm_newbuild
+set execdir  = tiegcm-linux
+#set input    = tiegcm_newbuild.inp
+set output   = tiegcm_newbuild.out
+set make     = Make.generic_hao64
+set mpi      = TRUE
+set nproc    = 4
+set modelres = 5.0
+set debug    = FALSE
+set exec     = TRUE
+set utildir  = $modeldir/scripts
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#        USER EDIT SHELL VARIABLES (for batch and interactive jobs)
-#
-# model:       Desired model name (Required. Use ListModels to see valid models)
-# wrkdir:      User's working directory (default is `pwd`, i.e., the cwd)
-# usr_srcdirs: List of user source directories (optional)
-# input:       Namelist input file (if not given, a default will be created)
-# output:      Name of stdout file relative to the wrkdir (default is $model.out)
-# tgcmroot:    Root directory of distribution (default env var $TGCMROOT)
-# tgcmdata:    Root directory containing input data files (default $TGCMDATA)
-# execdir:     Directory in which to build and execute 
-#              (default is $wrkdir/$model-$os)
-# utildir:     Directory containing config script and needed utilities
-#              (default is $tgcmroot/$model/scripts)
-# mpi:         Load MPI libraries (can be TRUE, FALSE, or DEFAULT)
-# nproc:       Number of MPI tasks (64-bit Linux only, mpi must be TRUE)
-# mss:         Availability of NCAR Mass Store (TRUE or FALSE)
-# hres:        Horizontal resolution can be either 5.0 (default), or 2.5 degrees
-# vres:        Vertical resolution can be either 0.5 (default), or 0.25 (ln(p0/p))
-# debug:       If debug=1, configure Makefile for a debug run (default is 0)
-# lib_netcdf:  Full path to directory containing netcdf library libnetcdf.a
-# inc_netcdf:  Full path to directory containing netcdf include file netcdf.inc
-#
-# Model output history files will be written to $execdir.
-#
- set model       = tiegcm1.93
- set wrkdir      = .
- set mpi         = TRUE
- set nproc       = 8      # linux mpi runs only
-#set input       = $model.inp
-#set output      = $model.out
-#set usr_srcdirs = modsrc
-#set tgcmroot    = $TGCMROOT
-#set tgcmdata    = $TGCMDATA
-#set execdir     = $model-linux
-#set utildir     = $TGCMROOT/$model/scripts
-#set mss         = TRUE
-#set hres        = 5.0
-#set vres        = 0.5
-#set debug       = 1
-#set lib_netcdf  = /opt/local/lib
-#set inc_netcdf  = /opt/local/inc
-#
-#             USER SHOULD NOT HAVE TO EDIT BELOW THIS LINE
-#             (except maybe to customize tgcm_config below)
+#                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# Set up MPI for PGI pgf90 compiler:
-#
-setenv PROCESSOR `uname -p`
-setenv PGI /opt/local/pgi-7.2
-if ( "$PROCESSOR" == "x86_64" ) then    
-    setenv PGI_PATH $PGI/linux86-64/7.2
-else
-    setenv PGI_PATH $PGI/linux86/7.2
-endif
-setenv MPI $PGI_PATH/mpi/mpich
-setenv PATH $PGI_PATH/bin:$MPI/bin:$PATH
-setenv LD_LIBRARY_PATH $PGI_PATH/lib:$MPI/lib:$LD_LIBRARY_PATH
 #
 set mycwd = `pwd`
-echo " "
-echo "${0}:"
+echo "" ; echo "${0}:"
 echo "  Begin execution at `date`"
 echo "  Current working directory: $mycwd"
 echo "  System: `uname -a`"  
-echo "  Log name: $LOGNAME"
-set userguide = http://download.hao.ucar.edu/pub/tgcm/doc/userguide
+echo ""
 #
-# Model name is required:
+# Verify directories and make_machine file (make execdir if necessary).
+# Get absolute path for dirs that are accessed from the execdir.
 #
-if (! $?model) then
-  echo "" ; echo ">>> Please set desired model (e.g., 'tiegcm' or 'timegcm')"
-  echo "    See $userguide for more information."
+if (! -d $modeldir) then
+  echo ">>> Cannot find model directory $modeldir <<<"
   exit 1
 endif
-echo "  Model: $model"
-#
-if (! $?wrkdir) set wrkdir = `pwd`     # default working dir is cwd
-if (! $?tgcmroot) set tgcmroot = ""
-if (! $?tgcmdata) set tgcmdata = ""
-if (! $?usr_srcdirs) set usr_srcdirs = ""
-if (! $?hres) set hres = 5.0
-if (! $?vres) set vres = 0.5
-if (! $?mpi) set mpi = ""
-if (! $?mss) set mss = ""
-if (! $?debug) set debug = 0
-if (! $?lib_netcdf) set lib_netcdf = ""
-if (! $?inc_netcdf) set inc_netcdf = ""
-#
-# Set utility dir from shell var $tgcmroot, or env var $TGCMROOT:
-# (must contain Abspath, MakeNamelist, Mklogs, etc) 
-#
-if (! $?utildir) then
-  if ($tgcmroot != "") then    # shell var from above (if set, trumps env var)
-    set utildir = $tgcmroot/$model/scripts
-  else if ($?TGCMROOT) then    # env var
-    set utildir = $TGCMROOT/$model/scripts
-  else
-    echo "" ; echo ">>> WARNING: cannot determine utility directory."
-    echo "" ; echo "Please set either shell var tgcmroot, or env var TGCMROOT"
-    echo "  such that the directory tgcmroot/$model/scripts contains"
-    echo "  the configuration script tgcm_config, and other needed utilities."
-    echo "  See $userguide for more information."
-    echo "" ; exit 1
-  endif
-else     # user provided utildir -- it must exist
-  if (! -d $utildir) then
-    echo ">>> Cannot find utility directory $utildir" && exit 1
-  endif
+set model = $modeldir:t
+
+if (! -d $utildir) then
+  echo ">>> Cannot find model scripts directory $utildir <<<" 
+  exit 1
 endif
-if (! -x $utildir/Abspath) echo ">>> Cannot find command $utildir/Abspath"
-set utildir = `perl $utildir/Abspath $utildir` # full path to utildir
-echo "  Utildir = $utildir"
-#
-set wrkdir = `perl $utildir/Abspath $wrkdir`  # full path to wrkdir
-echo "  Wrkdir = $wrkdir"
-#
-# Set exec directory if necessary (wrkdir/model-os):
-#
-if (! $?execdir) then
-  set os = `uname -s | tr "[A-Z]" "[a-z]"`
-  set execdir = $wrkdir/$model-$os # if does not exist, will be created by config
+
+set srcdir  = $modeldir/src
+if (! -d $srcdir) then
+  echo ">>> Cannot find model source directory $srcdir <<<"
+  exit 1
 endif
-set execdir = `perl $utildir/Abspath $execdir`  # full path to execdir
-echo "  Execdir = $execdir"
-if (! -x $utildir/tgcm_config) \
-  echo ">>> WARNING: Cannot find config script $utildir/tgcm_config"
+set srcdir = `perl $utildir/abspath $srcdir`
+
+if (! -d $execdir) then
+  echo "Making exec directory $execdir" 
+  mkdir -p $execdir
+endif
+if (! -f $make) set make = $utildir/$make 
+if (! -f $make) then
+  echo ">>> Cannot find make_machine file $make <<<"
+  exit 1
+endif
+set make = `perl $utildir/abspath $make`
+if ($modelres != 5.0 && $modelres != 2.5) then
+  echo ">>> Unknown model resolution $modelres <<<"
+  exit 1
+endif
 #
-# Configure (pass shell vars to tgcm_config):
-# See http://download.hao.ucar.edu/pub/tgcm/doc/userguide for more
-#   options to tgcm_config.
+# Copy make files to execdir if necessary:
 #
-perl $utildir/tgcm_config -model=$model -wrkdir=$wrkdir -execdir=$execdir \
-  -tgcmroot=$tgcmroot -tgcmdata=$tgcmdata -usr_srcdirs=$usr_srcdirs \
-  -utildir=$utildir -hres=$hres -vres=$vres -mpi=$mpi -mss=$mss -debug=$debug \
-  -lib_netcdf=$lib_netcdf -inc_netcdf=$inc_netcdf || \
-  echo ">>> ${0}: Error from tgcm_config" && exit 1
+if (! -f $execdir/$make)     cp $make $execdir
+if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
+if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
 #
-# Make default namelist input if not provided by user:
+# Make default namelist input file if not provided by user:
 #
-if (! $?input) then
+if ($?input) then
+  if (! -f $input) then
+    echo ">>> Cannot find namelist input file $input <<<"
+    exit 1
+  endif
+else 
   set input = \
-    `perl $utildir/Mknamelist -model=$model -hres=$hres -vres=$vres` || \
-     echo "${0}: Error from Mknamelist: fileout = $input" && exit 1
-  echo "Made default namelist input file $input" 
-else
-  echo "Using user provided namelist input file $input"
+    `perl $utildir/mknamelist -model=$model -modelres=$modelres` || \
+     echo ">>> Error from mknamelist: fileout = $input" && exit 1
 endif
-set namelist = `perl $utildir/Abspath $input`
-if (! -e $namelist) then
-  echo "${0}: Cannot find namelist input file $namelist" && exit 1
+set input  = `perl $utildir/abspath $input`
+set output = `perl $utildir/abspath $output`
+#
+# Copy defs header file to execdir, if necessary, according to 
+# requested resolution:
+#
+if (! -f $execdir/defs.h) then
+  if ($modelres == 5.0) then
+    cp $srcdir/defs.5.0 $execdir/defs.h
+  else
+    cp $srcdir/defs.2.5 $execdir/defs.h
+  endif
 endif
 #
-# Build model in execdir:
+# Report to stdout:
+#
+set svnrevision = `svnversion $modeldir` || set svnrevision = "[none]"
+echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnrevision)"
+echo "  Exec directory:    $execdir"
+echo "  Source directory:  $srcdir"
+echo "  Make machine file: $make"
+echo "  Namelist input:    $input"
+#
+# cd to execdir and run make:
 #
 cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
-echo "" ; echo "Begin building $model in `pwd` at `date`..."
-gmake -j4 || echo ">>> Error return from gmake" && exit 1
-echo "End building $model at `date`..."
-cd $mycwd  # return to original cwd
+echo ""
+echo "Begin building $execdir in `pwd`"
 #
-# Default stdout file is $model.out in the wrkdir:
+# Build Make.env file in exec dir, containing needed env vars for Makefile:
 #
-if (! $?output) then
-  set output = $wrkdir/$model.out
-else
-  set output = `perl $utildir/Abspath $wrkdir/$output`
-endif
-#
-# Execute from execdir:
-# 
-cd $execdir || echo ">>> Error from cd to execdir $execdir" && exit 1
-echo "" ; echo "Executing model $model from `pwd` at `date`"
-if (-e dispose.csh) then
-  echo "Removing dispose.csh prior to execution."
-  /bin/rm dispose.csh || echo "WARNING: error removing dispose.csh"
-endif
-#
-# Create machines.ini file:
-#
-if ($mpi == TRUE) then
-  if (! $?nproc) then
-    set nproc = 2
-  endif
-  echo `hostname`  >!  machines.ini
-  @ i = 1
-  while ($i < $nproc)
-    echo i = $i  nproc = $nproc
-    echo `hostname` >> machines.ini
-    @ i++
-  end
-endif
-set unamen = `uname -n`
-#
-#- - - - - - - - - - - - - - - lightning - - - - - - - - - - - - - -
-if ($unamen =~ ln*) then
-#
-# Must make a separate exec script for the linux cluster "lightning",
-# so that mpirun.lsf will send stdout to separate files for each mpi task:
-#
-  cat << EOF > mpiexec.$$
-#! /bin/csh
-  set stdin = $namelist
-  set stdout = ${output}_task\$GMPI_ID.out
-  if ($output:e == 'out') then
-    set stdout = $output:r_task\$GMPI_ID.out
-  endif
-  set exec = $execdir/$model
-  \$exec < \$stdin > \$stdout
+cat << EOF >! Make.env
+MAKE_MACHINE = $make
+DIRS         = . $srcdir 
+MPI          = $mpi
+NPROC        = $nproc
+EXECNAME     = $model
+NAMELIST     = $input
+OUTPUT       = $output
+DEBUG        = $debug
 EOF
-  chmod +x mpiexec.$$
 #
-  echo "Model output will go to ${output}_task[n].out"
-  mpirun.lsf mpiexec.$$ || \
-    echo ">>> ${0} Execution of $execdir/$model FAILED at `date`"
+# Build the model:
 #
-#-  - - - - - - - - - - - non-lightning linux - - - - - - - - - - - -
-else # is not lightning
+gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 #
+# Execute Linux job (MPI or non-MPI run):
+# (machines.ini rule is in Make.generic_hao64)
+#
+if ($exec == "TRUE") then
+  set model = ./$model
+  echo "Linux job: Executing $model mpi=$mpi nproc=$nproc"
   echo "Model output will go to $output"
-  echo "Linux job: mpi = $mpi"
-#
-# Execute linux mpi job (s.a., gmake above):
-  if ($mpi == TRUE) then
+  if ($mpi == "TRUE") then
+    gmake machines.ini
     echo "Executing mpirun -np $nproc for Linux MPI run."
-    mpirun -np $nproc -machinefile machines.ini $execdir/$model < $namelist >&! $output || \
-      echo ">>> ${0} mpirun execution of $execdir/$model FAILED at `date`" && \
+    mpirun -np $nproc -machinefile machines.ini $model < $input >&! $output || \
+      echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
     echo "Linux MPI run of $model completed at `date`"
-#
-# Execute linux non-mpi job:
-  else
+  else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."
-    $execdir/$model < $namelist >&! $output || \
-      echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
+    $model < $input >&! $output || \
+      echo ">>> ${0} Execution of $model FAILED at `date`" && \
       echo "See output in $output"
     echo "Linux non-MPI run of $model completed at `date`"
   endif
-#
-# Separate output files by MPI task:
-# (we are still in $execdir, but $output contains full path to $wrkdir)
-#
-perl $utildir/Mklogs $output || \
-  echo ">>> ${0}: Error from $execdir/Mklogs on output $output"
-#
-#-  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-endif # lightning or non-lightning linux
-#
-# Execute dispose.csh, if it exists:
-# This script was created by the model to dispose history files
-#   to the mss if model namelist DISPOSE=2.
-#
-if (-e dispose.csh) then
-  echo "" ; echo "Contents of dispose.csh: " ; cat $execdir/dispose.csh ; echo ""
-  echo "Starting dispose.csh in background.."
-  dispose.csh &
+else
+  echo "I am NOT executing $model (exec was not set)"
 endif
-#
-cd $mycwd # return to original cwd
-echo "" ; echo "${0}: Completed execution at `date`"
-exit 0 
+exit 0

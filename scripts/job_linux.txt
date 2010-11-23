@@ -1,44 +1,7 @@
-#! /bin/csh
-#
-# User set LSF resource directives for IBM/AIX batch job:
-#
-#BSUB -J tiegcm_newbuild
-#BSUB -P 24100004
-#BSUB -q regular
-#BSUB -n 32
-##BSUB -q debug
-##BSUB -n 8
-#BSUB -o tiegcm_newbuild.%J.out
-#BSUB -e tiegcm_newbuild.%J.out
-#BSUB -N
-#BSUB -u $LOGNAME@ucar.edu
-#BSUB -W 1:00
-#
-# User set shell variables for TIEGCM IBM/AIX job:
-#
-set modeldir = tiegcm_newbuild
-set execdir  = tiegcm_newbuild-aix
-#set input    = tiegcm_newbuild.inp
-set output   = tiegcm_newbuild.out
-set make     = Make.bluefire
-set mpi      = TRUE
-set modelres = 5.0
-set debug    = FALSE
-set exec     = TRUE
-set utildir  = $modeldir/scripts
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#                        Shell Script for TIEGCM IBM/AIX job
+#                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# Env vars for AIX:
-#
-setenv MP_LABELIO YES
-setenv MP_STDINMODE 0
-setenv MP_SHARED_MEMORY yes
-setenv MEMORY_AFFINITY MCM
-setenv AIXTHREAD_SCOPE S
-setenv MALLOCMULTIHEAP true
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"
@@ -55,20 +18,17 @@ if (! -d $modeldir) then
   exit 1
 endif
 set model = $modeldir:t
-
+set utildir = $modeldir/scripts
 if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 
   exit 1
 endif
-set utildir = `perl $utildir/abspath $utildir`
-
 set srcdir  = $modeldir/src
 if (! -d $srcdir) then
-  echo ">>> Cannot find model source directory $srcdir <<<"
+  echo ">>> Cannot find model source directory $utildir <<<"
   exit 1
 endif
 set srcdir = `perl $utildir/abspath $srcdir`
-
 if (! -d $execdir) then
   echo "Making exec directory $execdir" 
   mkdir -p $execdir
@@ -137,6 +97,7 @@ cat << EOF >! Make.env
 MAKE_MACHINE = $make
 DIRS         = . $srcdir 
 MPI          = $mpi
+NPROC        = $nproc
 EXECNAME     = $model
 NAMELIST     = $input
 OUTPUT       = $output
@@ -147,36 +108,27 @@ EOF
 #
 gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 #
-#
-# Load Sharing Facility batch job execution:
+# Execute Linux job (MPI or non-MPI run):
+# (machines.ini rule is in Make.generic_hao64)
 #
 if ($exec == "TRUE") then
-  set model = ./$model
-  echo "IBM/AIX job: Executing $model"
+  echo "Linux job: Executing $model mpi=$mpi nproc=$nproc"
   echo "Model output will go to $output"
-  if ($?LSF_ENVDIR && $mpi == "TRUE") then  # MPI LSF job
-    echo "" ; echo "Executing model $model with mpirun.lsf from `pwd` at `date`"
-    echo "Model output will go to $output"
-    setenv TARGET_CPU_LIST "-1"
-    mpirun.lsf /usr/local/bin/launch $model < $input >&! $output || \
-      echo ">>> ${0} Execution of mpirun.lsf $model FAILED at `date`" && \
+  if ($mpi == "TRUE") then
+    gmake machines.ini
+    echo "Executing mpirun -np $nproc for Linux MPI run."
+    mpirun -np $nproc -machinefile machines.ini $model < $input >&! $output || \
+      echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
-#
-# non-LSF job -- try interactive execution
-#
-  else                       
-    echo "" ; echo "Executing model $model on command line from `pwd` at `date`"
-    echo "Model output will go to $output"
+    echo "Linux MPI run of $model completed at `date`"
+  else # MPI is FALSE
+    echo "Executing $model for Linux non-MPI run."
     $model < $input >&! $output || \
       echo ">>> ${0} Execution of $model FAILED at `date`" && \
       echo "See output in $output"
-  endif          
+    echo "Linux non-MPI run of $model completed at `date`"
+  endif
 else
   echo "I am NOT executing $model (exec was not set)"
 endif
-#
-# Separate output files by MPI task:
-# (we are still in $execdir, but $output contains full path to $wrkdir)
-#
-perl $utildir/mklogs $output || \
-  echo ">>> ${0}: Error from $execdir/mklogs on output $output"
+

@@ -1,31 +1,3 @@
-#! /bin/csh
-#
-# User set LSF resource directives for IBM/AIX batch job:
-#
-#BSUB -J tiegcm_newbuild
-#BSUB -P 24100004
-#BSUB -q regular
-#BSUB -n 32
-##BSUB -q debug
-##BSUB -n 8
-#BSUB -o tiegcm_newbuild.%J.out
-#BSUB -e tiegcm_newbuild.%J.out
-#BSUB -N
-#BSUB -u $LOGNAME@ucar.edu
-#BSUB -W 1:00
-#
-# User set shell variables for TIEGCM IBM/AIX job:
-#
-set modeldir = tiegcm_newbuild
-set execdir  = tiegcm_newbuild-aix
-#set input    = tiegcm_newbuild.inp
-set output   = tiegcm_newbuild.out
-set make     = Make.bluefire
-set mpi      = TRUE
-set modelres = 5.0
-set debug    = FALSE
-set exec     = TRUE
-set utildir  = $modeldir/scripts
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                        Shell Script for TIEGCM IBM/AIX job
@@ -60,7 +32,6 @@ if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 
   exit 1
 endif
-set utildir = `perl $utildir/abspath $utildir`
 
 set srcdir  = $modeldir/src
 if (! -d $srcdir) then
@@ -137,6 +108,7 @@ cat << EOF >! Make.env
 MAKE_MACHINE = $make
 DIRS         = . $srcdir 
 MPI          = $mpi
+NPROC        = $nproc
 EXECNAME     = $model
 NAMELIST     = $input
 OUTPUT       = $output
@@ -151,15 +123,14 @@ gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 # Load Sharing Facility batch job execution:
 #
 if ($exec == "TRUE") then
-  set model = ./$model
   echo "IBM/AIX job: Executing $model"
   echo "Model output will go to $output"
   if ($?LSF_ENVDIR && $mpi == "TRUE") then  # MPI LSF job
     echo "" ; echo "Executing model $model with mpirun.lsf from `pwd` at `date`"
     echo "Model output will go to $output"
     setenv TARGET_CPU_LIST "-1"
-    mpirun.lsf /usr/local/bin/launch $model < $input >&! $output || \
-      echo ">>> ${0} Execution of mpirun.lsf $model FAILED at `date`" && \
+    mpirun.lsf /usr/local/bin/launch $execdir/$model < $input >&! $output || \
+      echo ">>> ${0} Execution of mpirun.lsf $execdir/$model FAILED at `date`" && \
       echo "See output in $output"
 #
 # non-LSF job -- try interactive execution
@@ -167,8 +138,8 @@ if ($exec == "TRUE") then
   else                       
     echo "" ; echo "Executing model $model on command line from `pwd` at `date`"
     echo "Model output will go to $output"
-    $model < $input >&! $output || \
-      echo ">>> ${0} Execution of $model FAILED at `date`" && \
+    $execdir/$model < $input >&! $output || \
+      echo ">>> ${0} Execution of $execdir/$model FAILED at `date`" && \
       echo "See output in $output"
   endif          
 else
@@ -180,3 +151,4 @@ endif
 #
 perl $utildir/mklogs $output || \
   echo ">>> ${0}: Error from $execdir/mklogs on output $output"
+
