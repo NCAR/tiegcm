@@ -1234,3 +1234,9 @@ Fix function finterp (util.F, called by getgpi.F) to check for
 model time == bracketed times, to avoid apparent round-off errors that result 
 in negative interpolated kp when kp data is 0 (has come down to zero) when 
 sec1==iutsec. This problem was found by Liying.
+
+11/24/10:
+Allow constant namelist Kp with gpi_ncfile. In this case, the constant
+Kp will be used to calculate ctpoten and power, and the gpi data will
+be used for f107d and f107a, interpolated to model time. See input.F and 
+gpi.F. This was requested by Liying.

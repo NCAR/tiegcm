@@ -1985,9 +1985,11 @@
 !
 ! Cannot provide KP input for a GPI run:
         if (len_trim(gpi_ncfile) > 0) then
-          write(6,"(/,'>>> INPUT: Cannot provide KP namelist input',
-     |      ' with a GPI run.')")
-          call shutdown('KP input')
+!         write(6,"(/,'>>> INPUT: Cannot provide KP namelist input',
+!    |      ' with a GPI run.')")
+!         call shutdown('KP input')
+          write(6,"(/,'>>> WARNING INPUT: Am allowing constant ',
+     |      'KP namelist and GPI data file')")
         endif
 !
 ! Cannot provide KP input for a Weimer run:

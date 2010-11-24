@@ -167,7 +167,7 @@
       use params_module,only: spval
       use input_module,only: f107,f107a,power,ctpoten,gpi_ncfile,
      |  rd_f107,rd_f107a,rd_power,rd_ctpoten,ntimes_power,
-     |  ntimes_ctpoten
+     |  ntimes_ctpoten,rd_kp
 !
 ! Args:
       integer,intent(in) :: iyear,iday,iutsec,iprint
@@ -294,30 +294,41 @@
 ! calculate power and/or ctpoten from the interpolated kp:
 !
       if (ipower > 0 .or. ictpoten > 0) then
-        isecmin = int(1.5*3600.)
-        isecmax = int(22.5*3600.)
-        if (iutsec >= isecmin .and. iutsec <= isecmax) then ! current day
-          do i=1,7
-            isec0 = int((float(i-1)*3.+1.5)*3600.)
-            isec1 = isec0 + isecmin*2
-            if (iutsec >= isec0 .and. iutsec <= isec1) then
-              fkp0 = fkp_cur(i)
-              fkp1 = fkp_cur(i+1)
-              exit
-            endif            
-          enddo
-        elseif (iutsec < isecmin) then ! use previous day
-          isec0 = -isecmin
-          isec1 = isecmin
-          fkp0 = fkp_prv(8)
-          fkp1 = fkp_cur(1)
-        else                           ! use next day
-          isec0 = isecmax
-          isec1 = isecmax+int(3.*3600.)
-          fkp0 = fkp_cur(8)
-          fkp1 = fkp_nxt(1)
-        endif
-        fkp = finterp(fkp0,fkp1,isec0,isec1,iutsec)
+!
+! If constant namelist Kp was provided, use it instead of data:
+        if (rd_kp /= spval) then
+          fkp = rd_kp 
+!         write(6,"('Note getgpi: Using the provided constant Kp = ',
+!    |      f10.3)") fkp
+!
+! Otherwise (namelist Kp not provided), interpolate data to model time:
+        else 
+          isecmin = int(1.5*3600.)
+          isecmax = int(22.5*3600.)
+          if (iutsec >= isecmin .and. iutsec <= isecmax) then ! current day
+            do i=1,7
+              isec0 = int((float(i-1)*3.+1.5)*3600.)
+              isec1 = isec0 + isecmin*2
+              if (iutsec >= isec0 .and. iutsec <= isec1) then
+                fkp0 = fkp_cur(i)
+                fkp1 = fkp_cur(i+1)
+                exit
+              endif            
+            enddo
+          elseif (iutsec < isecmin) then ! use previous day
+            isec0 = -isecmin
+            isec1 = isecmin
+            fkp0 = fkp_prv(8)
+            fkp1 = fkp_cur(1)
+          else                           ! use next day
+            isec0 = isecmax
+            isec1 = isecmax+int(3.*3600.)
+            fkp0 = fkp_cur(8)
+            fkp1 = fkp_nxt(1)
+          endif
+          fkp = finterp(fkp0,fkp1,isec0,isec1,iutsec)
+
+        endif ! rd_kp == spval
 !
 ! Use empirical formulas to calculate ctpoten and hemispheric power 
 ! from kp (functions are in util.F):
