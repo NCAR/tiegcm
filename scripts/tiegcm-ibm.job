@@ -118,8 +118,8 @@ endif
 #
 # Report to stdout:
 #
-set svnrevision = `svnversion $modeldir` || set svnrevision = "[none]"
-echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnrevision)"
+set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
+echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnversion)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
@@ -141,6 +141,7 @@ EXECNAME     = $model
 NAMELIST     = $input
 OUTPUT       = $output
 DEBUG        = $debug
+SVN_VERSION  = $svnversion
 EOF
 #
 # Build the model:

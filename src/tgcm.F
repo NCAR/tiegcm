@@ -33,7 +33,6 @@
 !     use omp_module,only: init_omp
 #endif
       implicit none
-! #include "revision.inc"
 !
 ! Local:
       integer :: ier,icount_tgcm,icount_apex,nsecs
@@ -86,8 +85,6 @@
 !
       if(mytid==0) call initialize
 #endif
-
-!
 !
 ! Do initialization:
       call init
@@ -193,3 +190,4 @@
       write(6,"('End execution of ',a,' at ',a,'  ',a)")
      |  trim(tgcm_version),rundate,runtime
       end subroutine final_message
+!-----------------------------------------------------------------------

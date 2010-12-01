@@ -1240,3 +1240,12 @@ Allow constant namelist Kp with gpi_ncfile. In this case, the constant
 Kp will be used to calculate ctpoten and power, and the gpi data will
 be used for f107d and f107a, interpolated to model time. See input.F and 
 gpi.F. This was requested by Liying.
+
+12/1/10 btf:
+Add svn revision number as a global attribute on history files:
+ - Job script issues svnversion command on $modeldir, and passes result 
+   to the Makefile as SVN_VERSION via Make.env file
+ - Makefile makes include file svn_version.inc, containing char*8 var
+   with the version number (e.g., "479M", modified revision 479)
+ - The svn_version.inc file is #included into sub nc_define in nchist.F, 
+   where it is written to the history file as a global attribute.

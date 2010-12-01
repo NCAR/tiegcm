@@ -22,6 +22,11 @@
      |  start_mtime,zpmag_mid,zpmag_int
       implicit none
 !
+! Included file svn_version.inc contains the svn revision number used in the build.
+! (character(len=8) svn_version)
+!
+#include "svn_version.inc"
+!
 #ifdef SUN
 #include <netcdf3.inc>
 #else
@@ -1900,6 +1905,15 @@
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
      +    'for model version global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+!
+! SVN version (see included file revision.inc, created by the build):
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"svn_version",
+     +  len_trim(svn_version),trim(svn_version)) 
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error return from nf_put_att_text ',
+     +    'for SVN version global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
