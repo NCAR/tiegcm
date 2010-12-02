@@ -7,12 +7,13 @@
 #   file and a Make.machine file. All of these are normally in the model 
 #   scripts dir.
 #
-$system   = "linux";       # "ibm" or "linux" system (see mkjob)
-$model    = "tiegcm1.93";
-$utildir  = "/home/foster/tgcm/tiegcm/branches/tiegcm_newbuild/scripts";
-$nproc    = 8;             # for 64-bit linux systems (ignored if system eq ibm)
-$template = "$utildir/job_$system.txt";  # job template (for mkjob)
-$user     = $ENV{USER};
+$system    = "linux";       # "ibm" or "linux" system (see mkjob)
+$modeldir  = "tiegcm_trunk";
+$modelname = "tiegcm";
+$utildir   = "$modeldir/scripts";
+$nproc     = 4;             # for 64-bit linux systems (ignored if system eq ibm)
+$template  = "$utildir/job_$system.txt";  # job template (for mkjob)
+$user      = $ENV{USER};
 #
 # Some LSF directives for ibm job (allow others to default in mkjob):
 $bsub_project = 24100004;
@@ -100,16 +101,17 @@ $jsol_secstart="172,1,0"; $jsol_secstop="173,0,0";
 #
 foreach $job (keys %jobs) {
   $myjob = $jobs{$job}; # hash record for current job
-  $myjob->{namelist}  = $model . '_' . $myjob->{name} . '.inp';
-  $myjob->{jobscript} = $model . '_' . $myjob->{name} . '.job';
-  $myjob->{source} = '\"\$TGCMDATA/' . $model . '/TGCM.' . $model . '.pcntr_' . $myjob->{name} . '.nc\"';
-  $myjob->{output} = '\"' . $user . '.' . $model . '.pcntr_' . $myjob->{name} . '_001.nc\"';
-  $myjob->{secout} = '\"' . $user . '.' . $model . '.scntr_' . $myjob->{name} . '_001.nc\"';
+  $myjob->{namelist}  = $modelname . '_' . $myjob->{name} . '.inp';
+  $myjob->{jobscript} = $modelname . '_' . $myjob->{name} . '.job';
+# $myjob->{source} = '\"\$TGCMDATA/' . $modelname . '/TGCM.' . $modelname . '.pcntr_' . $myjob->{name} . '.nc\"';
+  $myjob->{source} = '\"\$TGCMDATA/tiegcm1.93/TGCM.tiegcm1.93.pcntr_' . $myjob->{name} . '.nc\"';
+  $myjob->{output} = '\"' . $user . '.' . $modelname . '.pcntr_' . $myjob->{name} . '_001.nc\"';
+  $myjob->{secout} = '\"' . $user . '.' . $modelname . '.scntr_' . $myjob->{name} . '_001.nc\"';
 #
 # Create working directory if necessary. This is where the namelist input
 # file, the model exec directory, and stdout will be placed.
 #
-  $dir = $model . "_" . $myjob->{name};
+  $dir = $modelname . "_" . $myjob->{name};
   if (! -d $dir) { mkdir $dir || die ">>> Error from mkdir $dir\n"; }
 #
 # Make namelist file for current job (put in $dir):
@@ -126,21 +128,21 @@ foreach $job (keys %jobs) {
 # Make job script for current job using mkjob (requires job template file):
 # Input, output, and execdir will be in $dir. 
 #
-  $tgcmroot = $ENV{TGCMROOT};
-  $jobfile = $model . '_' . $myjob->{name} . '_' . $system . '.job';
+  $jobfile = $modelname . '_' . $myjob->{name} . '_' . $system . '.job';
   $input   = "$dir/$myjob->{namelist}";
-  $output  = "$dir/$model" . '_' . $myjob->{name} . '.out';
-  $execdir = "$dir/$model" . '-' . $system;
+  $output  = "$dir/$modelname" . '_' . $myjob->{name} . '.out';
+  $execdir = "$dir/$modelname" . '-' . $system;
 
-  $command = "$utildir/mkjob -model=$model -fileout=$jobfile -system=$system " . 
+  $command = "$utildir/mkjob -modeldir=$modeldir -modelname=$modelname -fileout=$jobfile -system=$system " . 
     " -template=$template -utildir=$utildir -execdir=$execdir -input=$input " .
-    " -output=$output -nproc=$nproc -tgcmroot=$tgcmroot"; 
+    " -output=$output -nproc=$nproc"; 
 #
 # If ibm job, add LSF directives (see above):
   if ($system eq 'ibm') {
     $command = $command . " -bsub_jobname=$myjob->{name} -bsub_project=$bsub_project" .
       " -bsub_queue=$bsub_queue -bsub_nproc=$bsub_nproc -bsub_wallclock=$bsub_wallclock";
   }
+  print "Executing $command\n";
   `$command`;
 
 } # foreach $job

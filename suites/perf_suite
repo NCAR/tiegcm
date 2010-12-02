@@ -1,10 +1,11 @@
 #!/usr/bin/perl
-$system   = "ibm";       # "ibm" or "linux" system (see mkjob)
-$model    = "tiegcm1.93";
-$utildir  = "../scripts";
+$system   = "linux";       # "ibm" or "linux" system (see mkjob)
+$modeldir = "tiegcm_trunk";
+$modelname= "tiegcm";
+$utildir  = "$modeldir/scripts";
 $template = "$utildir/job_$system.txt";  # job template (for mkjob)
 $user     = $ENV{USER};
-$tgcmroot = $ENV{TGCMROOT};
+$source   = '\"\$TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc\"';
 #
 # LSF directives for ibm job:
 $bsub_project = 24100004;
@@ -13,28 +14,29 @@ $bsub_wallclock= "0:30";
 #
 @nprocs = (1,4,8,16,32,48,64);
 foreach $nproc (@nprocs) {
-  print "nproc=$nproc\n";
+# print "nproc=$nproc\n";
   $snproc = $nproc;
   if ($snproc < 10) { $snproc = "0" . $nproc; };
 
-  $dir = $model . "_nproc" . $snproc;
+  $dir = $modelname . "_nproc" . $snproc;
   if (! -d $dir) { mkdir $dir || die ">>> Error from mkdir $dir\n"; }
 
-  $jobfile = $model . "_nproc" . $snproc . ".job";
-  $input   = "$dir/$model" . "_nproc" . $snproc . ".inp";
-  $output  = "$dir/$model" . "_nproc" . $snproc . ".out";
-  $execdir = "$dir/$model" . "_nproc" . $snproc . "-" . $system;
+  $jobfile = $modelname . "_nproc" . $snproc . ".job";
+  $input   = "$dir/$modelname" . "_nproc" . $snproc . ".inp";
+  $output  = "$dir/$modelname" . "_nproc" . $snproc . ".out";
+  $execdir = "$dir/$modelname" . "_nproc" . $snproc . "-" . $system;
 #
 # Make job script:
 #
-  $command = "$utildir/mkjob -model=$model -fileout=$jobfile -system=$system " . 
+  $command = "$utildir/mkjob -modeldir=$modeldir -modelname=$modelname -fileout=$jobfile -system=$system " . 
     " -template=$template -utildir=$utildir -execdir=$execdir -input=$input " .
-    " -output=$output -nproc=$nproc -tgcmroot=$tgcmroot"; 
+    " -output=$output -nproc=$nproc"; 
   if ($system eq 'ibm') {
     $jobname = "nproc" . $nproc;
     $command = $command . " -bsub_jobname=$jobname -bsub_project=$bsub_project" .
       " -bsub_queue=$bsub_queue -bsub_nproc=$nproc -bsub_wallclock=$bsub_wallclock";
   }
+# print "Executing $command\n";
   `$command`;
 #
 # Make namelist input file:
@@ -47,9 +49,8 @@ foreach $nproc (@nprocs) {
 #   " -SECSAVE=$myjob->{secsave} -SECOUT=$myjob->{secout} -START_YEAR=$myjob->{start_year}" .
 #   " -START_DAY=$myjob->{start_day}";
 
-  $source = '\"\$TGCMDATA/' . $model . '/TGCM.' . $model . '.pcntr_eqnx_smin' . $myjob->{name} . '.nc\"';
-  $output = $model . ".p_nproc" . $nproc . ".nc";
-  $secout = $model . ".s_nproc" . $nproc . ".nc";
+  $output = '\"' . $modelname . '.p_nproc' . $nproc . '.nc\"';
+  $secout = '\"' . $modelname . '.s_nproc' . $nproc . '.nc\"';
   $command = "$utildir/mknamelist -fileout=$input -SOURCE=$source -OUTPUT=$output -SECOUT=$secout";
   `$command`;
 
