@@ -1249,3 +1249,7 @@ Add svn revision number as a global attribute on history files:
    with the version number (e.g., "479M", modified revision 479)
  - The svn_version.inc file is #included into sub nc_define in nchist.F, 
    where it is written to the history file as a global attribute.
+
+Add time-dependent namelist f107 and f107a. Thanks to Karthik for pointing
+out that this was missing (its been in timegcm). See f107_time, f107a_time,
+ntimes_f107, ntime_f107a, etc in input.F. See also advance.F.

@@ -79,10 +79,11 @@
      |  kp               ! Kp index
       real,dimension(4,mxind_time) :: power_time,ctpoten_time,
      |  bximf_time,byimf_time,bzimf_time,swvel_time,swden_time,al_time,
-     |  kp_time
+     |  kp_time,f107_time,f107a_time
       integer :: 
      |  ntimes_ctpoten,ntimes_power,ntimes_bximf,ntimes_byimf,
-     |  ntimes_bzimf,ntimes_swden,ntimes_swvel,ntimes_al,ntimes_kp
+     |  ntimes_bzimf,ntimes_swden,ntimes_swvel,ntimes_al,ntimes_kp,
+     |  ntimes_f107,ntimes_f107a
       logical :: aluse   ! logical to use AL in Weimer 2001 model or not
 !
 ! Parameters as read from namelist:
@@ -166,7 +167,8 @@
      |  start_day,start_year,calendar_advance,see_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
-     |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte
+     |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
+     |  f107a_time
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -281,8 +283,10 @@
       bzimf_time(:,:) = spval
       swden_time(:,:) = spval
       swvel_time(:,:) = spval
-      al_time(:,:) = spval
-      kp_time(:,:) = spval
+      al_time   (:,:) = spval
+      kp_time   (:,:) = spval
+      f107_time (:,:) = spval
+      f107a_time(:,:) = spval
 !
       potential_model = ' '
       source = ' '
@@ -396,6 +400,14 @@
      |    ' by input.')")
         write(6,"('Will default to 1 (WILL advance calendar day)',/)")
         calendar_advance = 1
+      endif
+!
+!mxday:
+      if((mod(start_year,4).eq.0.and.mod(start_year,100).ne.0).or.
+     |   (mod(start_year,400).eq.0)) then
+        mxday=367
+      else
+        mxday=366
       endif
 !
 ! Magnetic field data file for dynamo:
@@ -672,14 +684,6 @@
 !
 ! 8-byte integer step:
       step8 = step
-!
-!mxday:
-      if((mod(start_year,4).eq.0.and.mod(start_year,100).ne.0).or.
-     |   (mod(start_year,400).eq.0)) then
-        mxday=367
-      else
-        mxday=366
-      endif
 !
 ! Dispose flag:
       if (dispose==ispval) then
@@ -1705,10 +1709,20 @@
         write(6,"('  time-dependent swden: ntimes = ',i4,' swden_time=',
      |    /,(3f4.0,e12.4))") ntimes_swden,swden_time(:,1:ntimes_swden)
       endif
-!
-      write(6,"('  f107   = ',e12.4,' (F10.7 solar flux)')") f107
-      write(6,"('  f107a  = ',e12.4,' (81-day ave F10.7 flux)')") f107
 
+      if (ntimes_f107 == 0) then
+        write(6,"('  f107  = ',e12.4,' (F10.7 solar flux)')") f107
+      else
+        write(6,"('  time-dependent f107: ntimes = ',i4,' f107_time=',
+     |    /,(3f4.0,e12.4))") ntimes_f107,f107_time(:,1:ntimes_f107)
+      endif
+      if (ntimes_f107a == 0) then
+        write(6,"('  f107a = ',e12.4,' (81-day ave F10.7 flux)')") f107a
+      else
+        write(6,"('  time-dependent f107a: ntimes = ',i4,' f107a_time=',
+     |    /,(3f4.0,e12.4))") ntimes_f107a,f107a_time(:,1:ntimes_f107a)
+      endif
+!
       write(6,"('  al     = ',e12.4,' (AL, lower auroral mag index)')")
      |  al
 !
@@ -1734,7 +1748,8 @@
 ! Day:
       if (mtime(1) < 0 .or. mtime(1) > mxday) then
         write(6,"(/,'>>> input ',a,': bad model day: ',i5,
-     |    ' (must be >= 0 and <= mxday)')") label,mtime(1)
+     |    ' (must be >= 0 and <= mxday)(mxday=',i4,')')") 
+     |    label,mtime(1),mxday
         ier = 1
       endif 
 !
@@ -1936,6 +1951,10 @@
       if (al == spval) aluse = .false.
       call validate_timedep(kp,kp_time,mxind_time,
      |  ntimes_kp,'kp')
+      call validate_timedep(f107,f107_time,mxind_time,
+     |  ntimes_f107,'f107')
+      call validate_timedep(f107a,f107a_time,mxind_time,
+     |  ntimes_f107a,'f107a')
 !
 ! Check electric potential model:
 ! 4/08 btf: Add wiemer05 option
@@ -2051,12 +2070,12 @@
      |        'provided for non-GPI run with Heelis potential model.')")
             call shutdown('CTPOTEN')
           endif
-          if (f107==spval) then
+          if (f107==spval.and.ntimes_f107==0) then
             write(6,"(/,'>>> INPUT: F107 must be provided for non-GPI',
      |        ' run with Heelis potential model.')")
             call shutdown('F107')
           endif
-          if (f107a==spval) then
+          if (f107a==spval.and.ntimes_f107a==0) then
             write(6,"(/,'>>> INPUT: F107a must be provided for non-GPI',
      |        ' run with Heelis potential model.')")
             call shutdown('F107a')

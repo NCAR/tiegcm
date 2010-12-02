@@ -20,7 +20,7 @@
       use weimer_module,only: weimer01  ! Weimer 2001 model
       use wei05sc,only: weimer05,       ! Weimer 2005 model
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
-      use input_module,only: start,step,idynamo=>dynamo,f107,f107a,
+      use input_module,only: start,step,idynamo=>dynamo,
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
      |  imf_ncfile
       use input_module,only: 
@@ -32,7 +32,9 @@
      |  swden  ,swden_time  ,ntimes_swden,
      |  swvel  ,swvel_time  ,ntimes_swvel,
      |  al     ,al_time     ,ntimes_al,
-     |  kp     ,kp_time     ,ntimes_kp
+     |  kp     ,kp_time     ,ntimes_kp,
+     |  f107   ,f107_time   ,ntimes_f107,
+     |  f107a  ,f107a_time  ,ntimes_f107a
       use init_module,only: istep,uthr,iter,secs,iday,iyear
       use cons_module,only: dt,re,cs,racs,ylatm,rtd
       use filter_module,only: filter
@@ -230,6 +232,10 @@
      |  call set_index(al_time,ntimes_al,nsecs,al,'al')
       if (ntimes_kp > 0) 
      |  call set_index(kp_time,ntimes_kp,nsecs,kp,'kp')
+      if (ntimes_f107 > 0) 
+     |  call set_index(f107_time,ntimes_f107,nsecs,f107,'f107')
+      if (ntimes_f107a > 0) 
+     |  call set_index(f107a_time,ntimes_f107a,nsecs,f107a,'f107a')
 !
 ! Get gpi data if necessary:
       if (len_trim(gpi_ncfile) > 0) then
