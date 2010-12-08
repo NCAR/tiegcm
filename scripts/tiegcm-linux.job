@@ -1,6 +1,19 @@
 #! /bin/csh
 #
 # User set shell variables for TIEGCM Linux job:
+# (modeldir, execdir, and utildir may be relative or absolute paths)
+#
+#   modeldir: Root directory to model source (may be an SVN working dir)
+#   execdir:  Directory in which to build and execute (will be created if necessary)
+#   input:    Namelist input file (will use default if not provided)
+#   output:   Stdout file from model execution (will be created)
+#   make:     Build file with platform-specific compile parameters (see scripts dir)
+#   mpi:      TRUE/FALSE for MPI or non-MPI run
+#   nproc:    Number of processors for 64-bit Linux MPI run
+#   modelres: Model resolution (5.0 or 2.5)
+#   debug:    If TRUE, build and execute a "debug" run
+#   exec:     If TRUE, execute the model (build only if FALSE)
+#   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
 set modeldir = tiegcm_trunk
 set execdir  = tiegcm-linux
