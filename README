@@ -1253,3 +1253,14 @@ Add svn revision number as a global attribute on history files:
 Add time-dependent namelist f107 and f107a. Thanks to Karthik for pointing
 out that this was missing (its been in timegcm). See f107_time, f107a_time,
 ntimes_f107, ntime_f107a, etc in input.F. See also advance.F.
+
+1/7/11: Wenbin and JiuHo found a bug in qjion.F, where line 119:
+     |      .5*(ne(k,i)+ne(k+1,i))*(ra1(k,i,lat)*op(k,i)*0.854+
+Should be:
+     |      .5*(ne(k,i)+ne(k+1,i))*(ra1(k,i,lat)*nop(k,i)*0.854+
+i.e., ra1 is chem rate for NO+, not O+.
+I have put a comment in qrj.F at this point, but have not yet made 
+the change or commit, pending confirmation. This line is correct in 
+timegcm, so no bug there.
+
+1/12/11: Commit above bug fix (no comment added in qjion.F)

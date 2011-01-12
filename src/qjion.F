@@ -116,7 +116,7 @@
      |      rk8*nplus(k,i)*0.98)+
      |      o2p(k,i)*(rk4*n4s(k,i)*rmassinv_n4s*4.21+
      |      rk5*no(k,i)*rmassinv_no*2.813))+
-     |      .5*(ne(k,i)+ne(k+1,i))*(ra1(k,i,lat)*op(k,i)*0.854+
+     |      .5*(ne(k,i)+ne(k+1,i))*(ra1(k,i,lat)*nop(k,i)*0.854+
      |       ra2(k,i,lat)*o2p(k,i)*5.2755+
      |       ra3(k,i,lat)*n2p(k,i)*3.678)/xnmbarm(k,i))*evergs+
 !
