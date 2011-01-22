@@ -26,6 +26,7 @@ INC_NETCDF = /opt/local/netcdf/linux86-64/include
 #
 machines.ini: export HN=$(HOST)
 machines.ini: export NP=$(NPROC)
-machines.ini:
+machines.ini: FORCE
 	@echo `hostname` > machines.ini
 	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini
+FORCE:

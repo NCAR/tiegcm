@@ -50,6 +50,7 @@ Depends::
 	@echo "INC_NETCDF   =$(INC_NETCDF)"
 	@echo "EXECNAME     =$(EXECNAME)"
 	@echo "DEBUG        =$(DEBUG)"
+	@echo "SVN_VERSION  =$(SVN_VERSION)"
 	perl mkdepends $(DIRS)
 	$(MAKE) $(EXECNAME)
 #
