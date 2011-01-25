@@ -7,7 +7,6 @@
 #     FFLAGS: compiler flags (e.g., -r8)
 #     OPTIM: optimization flag (e.g., -O3)
 #     DBGFLAGS: Debug flags
-#     MSS: TRUE if NCAR Mass Store is available, otherwise FALSE
 #     INC_NETCDF: Include directory for netcdf
 #     LIB_NETCDF: Library directory for netcdf
 #   File Make.env contains additional information from the job script
@@ -50,6 +49,7 @@ Depends::
 	@echo "INC_NETCDF   =$(INC_NETCDF)"
 	@echo "EXECNAME     =$(EXECNAME)"
 	@echo "DEBUG        =$(DEBUG)"
+	@echo "SVN_VERSION  =$(SVN_VERSION)"
 	perl mkdepends $(DIRS)
 	$(MAKE) $(EXECNAME)
 #
@@ -68,9 +68,6 @@ $(EXECNAME): $(OBJS)
 ifeq ($(MPI),TRUE)
   CPPFLAGS += -DMPI
   FC := $(MPIF90)
-endif
-ifeq ($(MSS),TRUE)
-  CPPFLAGS += -DMSS
 endif
 ifeq ($(COUPLING), INTERCOMM)
   CPPFLAGS += -DINTERCOMM

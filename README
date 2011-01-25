@@ -1264,3 +1264,10 @@ the change or commit, pending confirmation. This line is correct in
 timegcm, so no bug there.
 
 1/12/11: Commit above bug fix (no comment added in qjion.F)
+
+1/22/11: Have been working on mss->hpss transition. Now writing
+csh script dispose_xxxxx.hsi to the exec dir containing necessary
+hsi commands to dispose history output to the ncar hpss. Removed
+all references to the mss. File are no longer read from the mss,
+and output files not disposed. Namelist DISPOSE is deprecated.
+Removed MSS cpp macro.

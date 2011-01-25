@@ -96,7 +96,6 @@
      |    create_date,       ! date history file was created
      |    write_date         ! date current history was written
         character(len=mxlen_filename) ::
-     |    mss_path,          ! mss path to file containing this history
      |    source_file,       ! source file (this run)
      |    initial_file,      ! initial file (initial run)
      |    output_file,       ! output file (from namelist read)
@@ -201,7 +200,6 @@
       h%write_date = ' '
       h%source_file = ' '    ! set by sub output
       h%output_file = ' '    ! set by sub output
-      h%mss_path = ' '
 !
 ! If this is an initial run, set initial calendar time to model 
 ! start time. Otherwise (continuation run), the initial time has 
@@ -335,7 +333,6 @@
       write(6,"(2x,'host       = ',a)") trim(h%host)
       write(6,"(2x,'system     = ',a)") trim(h%system)
       write(6,"(2x,'run_type   = ',a)") trim(h%run_type)
-      write(6,"(2x,'mss_path   = ',a)") trim(h%mss_path)
       write(6,"(2x,'source_file  = ',a)") trim(h%source_file)
       write(6,"(2x,'output_file  = ',a)") trim(h%output_file)
       write(6,"(2x,'source_mtime = ',3i4)") h%source_mtime

@@ -39,7 +39,6 @@
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'
 ;
- DISPOSE = 0
  TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2 = 0.,0.
 ;

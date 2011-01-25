@@ -1917,16 +1917,6 @@
         call handle_ncerr(istat,char120)
       endif
 !
-! This is not written to new history files (see output_file below)
-! Mss path to history file:
-!     istat = nf_put_att_text(ncid,NF_GLOBAL,"mss_path",
-!    |  len_trim(h%mss_path),trim(h%mss_path))
-!     if (istat /= NF_NOERR) then
-!       write(char120,"('Error return from nf_put_att_text ',
-!    |    'for mss_path global attribute')")
-!       call handle_ncerr(istat,char120)
-!     endif
-!
 ! Output path (from namelist):
       istat = nf_put_att_text(ncid,NF_GLOBAL,"output_file",
      |  len_trim(h%output_file),trim(h%output_file))
@@ -3432,8 +3422,8 @@
 ! giving beginning and ending history dates, model version string,
 ! and "primary" or "secondary". This is added as a global
 ! file attribute, and is included in the mss comment field
-! if the file is disposed to the mss, and is therefore accessible 
-! via msls -x. Example fileinfo string:
+! if the file is disposed to the hpss, and is therefore accessible 
+! via "hsi ls -lA". Example fileinfo string:
 !
 ! 96080  80, 0, 0 to 96084  84, 0, 0 by  720 tgcm22 primary
 !

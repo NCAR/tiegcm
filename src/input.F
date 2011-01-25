@@ -36,8 +36,9 @@
       character(len=80) :: 
      |  label,           ! optional generic text label for this run
      |  tempdir,         ! temporary directory 
-     |  magvol,          ! file name or mss path to magnetic data file
-     |  amievol          ! file or mss path of amie data file (optional)
+     |  magvol,          ! absolute or relative path to magnetic data file
+     |  amievol,         ! absolute or relative path to amie data file (optional)
+     |  hpss_path        ! hpss directory for dispose of output history files
 !
 ! date and calday are no longer supported, and are replaced by start_day, 
 ! start_year, and calendar_advance. Date and calday are retained here so 
@@ -51,7 +52,7 @@
      |  calday,          ! old: starting calendar day (0-mxday)
      |  mxday,           ! calendar day (0-mxday)
      |  step,            ! model time step (integer seconds)
-     |  dispose,         ! dispose output files to mss if dispose==1 or 2
+     |  dispose,         ! deprecated -- formerly for dispose to mss
      |  eddy_dif,	 ! 0/1 flag for DOY dependent eddy diffusion (difk, dift, xmue)
      |  dynamo,          ! 0/1 flag for dynamo
      |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
@@ -110,10 +111,10 @@
                           !  If absent, the default value is set to 'HEELIS'
      |  weimer_ncfile,    ! path to netcdf weimer01 coefficients file
      |  wei05sc_ncfile,   ! path to netcdf data files for weimer05 model
-     |  gpi_ncfile,         ! mss path or file path to netcdf gpi data file
+     |  gpi_ncfile,         ! absolute or relative path to netcdf gpi data file
      |  ncep_ncfile,        ! ncep data file (time-gcm only)
-     |  see_ncfile,         ! mss path or file path to netcdf SEE flux data file
-     |  imf_ncfile,         ! mss path or disk file path to netcdf IMF data file
+     |  see_ncfile,         ! absolute or relative path to netcdf SEE flux data file
+     |  imf_ncfile,         ! absolute or relative path to netcdf IMF data file
      |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
      |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
@@ -137,7 +138,6 @@
      |  hist(3,mxseries),  ! primary history disk write frequency
      |  save(3,mxseries),  ! primary history file save frequency
      |  mxhist_prim,       ! max number of histories per primary file
-     |  msreten,           ! retention period for history files
      |  noutput            ! number of output files given
 !
 ! Secondary history user input (dimension parameters are in params.h):
@@ -163,12 +163,12 @@
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
      |  kp,colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
-     |  mxhist_prim,mxhist_sech,msreten,ntask_lat,ntask_lon,
+     |  mxhist_prim,mxhist_sech,ntask_lat,ntask_lon,
      |  start_day,start_year,calendar_advance,see_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
-     |  f107a_time
+     |  f107a_time,hpss_path
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -181,6 +181,7 @@
 !
 ! Current working (execution) directory (set by tgcm.F):
       character(len=120) :: cwd  ! current working directory
+      integer :: pid ! current process id
 !
       contains
 !-------------------------------------------------------------------
@@ -227,6 +228,7 @@
       tempdir = ' '
       magvol  = ' '
       amievol = ' '
+      hpss_path = ' '
 !
       gpi_ncfile  = ' '       ! user input gpi file path
       ncep_ncfile = ' '       ! (time-gcm only)
@@ -298,7 +300,6 @@
       save(:,:)  = ispval
       mxhist_prim = 10 ! default max number of histories per primary file
       if (dlat == 2.5) mxhist_prim = 4 ! 2.5 degree horizontal resolution 
-      msreten    = 365 ! default retention period for mss history files
 !
       secout(:)  = ' '
       secsource  = ' '
@@ -607,6 +608,13 @@
           call shutdown('namelist input KP')
         endif
       endif
+!
+! hpss path:
+      if (len_trim(hpss_path)==0) then
+        write(hpss_path,"('/home/',a,'/',a)") trim(logname),
+     |    trim(tgcm_version)
+        write(6,"('inp_model: hpss_path=',a)") trim(hpss_path)
+      endif
       end subroutine inp_model
 !-----------------------------------------------------------------------
       subroutine mkntask(ntask,ntask_lat,ntask_lon,ier)
@@ -685,20 +693,19 @@
 ! 8-byte integer step:
       step8 = step
 !
-! Dispose flag:
+! Dispose flag is deprecated:
       if (dispose==ispval) then
-        write(6,"(/,'Input: dispose flag not read --',
-     |    ' will default to dispose=1.',/)")
-        dispose = 1
-      elseif (dispose /= 0 .and. dispose /= 1 .and. dispose /= 2) then
-        write(6,"(/,'>>> INPUT: DISPOSE flag must be 0, 1, or 2:',
-     |    ' dispose = ',i4)") dispose
-        write(6,"('DISPOSE = 0 -> do not dispose to mss.')")
-        write(6,"('DISPOSE = 1 -> dispose to mss during model',
-     |    ' execution.')")
-        write(6,"('DISPOSE = 2 -> dispose to mss after model',
-     |    ' execution.')")
-        call shutdown('DISPOSE')
+        dispose = 0
+      else
+        write(6,"(/,72('-'),/,'>>> WARNING: DISPOSE namelist read',
+     |    ' parameter is deprecated in TIEGCM.',/,' For dispose to',
+     |    ' the NCAR hpss, a csh script named dispose_xxxxx.hsi',
+     |    ' will',/,'be written to the exec directory, and will',
+     |    ' contain necessary hsi commands',/,'to dispose history'
+     |    ' files to the hpss.',/,72('-')")
+        if (dispose > 0) 
+     |    call shutdown('namelist DISPOSE is deprecated')
+        dispose = 0 
       endif
 !
 ! Model start time(s):
@@ -1017,14 +1024,6 @@
         write(6,"('>>> INPUT: maximum number of histories per ',
      |    'primary file must be > 0: mxhist_prim=',i4)") mxhist_prim
         call shutdown('MXHIST_PRIM')
-      endif
-!
-! mss retention period:
-      if (msreten < 1 .or. msreten > 32767) then
-        write(6,"('>>> INPUT: bad MSRETEN = ',i6)") msreten
-        write(6,"('Mss retention period MSRETEN must be >= 1',
-     |    ' and <= 32767')")
-        call shutdown('MSRETEN')
       endif
 !
 ! No dups of file names allowed:
@@ -1539,6 +1538,9 @@
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amievol)
+      if (len_trim(hpss_path) > 0)
+     |  write(6,"('  hpss_path = ',a,/,4x,
+     |    '(hpss directory for hsi dispose script)')") trim(hpss_path)
       write(6,"('  start_year = ',i4,' (starting calendar day)')")
      |  start_year
       write(6,"('  start_day  = ',i4,' (starting calendar year)')")
@@ -1554,8 +1556,6 @@
 
       write(6,"('  step    =',i4,' (model timestep (seconds))',
      |  i4)") step
-      write(6,"('  dispose =',i4,' (mss dispose flag 0/1/2)')") 
-     |  dispose
 #ifdef MPI      
       write(6,"('  ntask_lon = ',i2,' (number of mpi tasks in ',
      |  'longitude dimension)')") ntask_lon
@@ -1591,8 +1591,6 @@
      |  /,4(4x,i3,',',i2,',',i2))") (save(:,i),i=1,n)
       write(6,"('  Maxmimum number of histories per primary file = ',
      |  i3)") mxhist_prim
-      write(6,"('  Mass store retention period for history files = ',
-     |  i5)") msreten
 !
 ! Secondary histories:
       if (len_trim(secsource) > 0) then
