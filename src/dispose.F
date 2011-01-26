@@ -5,28 +5,14 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-! DISPOSE=2 in the model namelist input file means the user wants to dispose 
-!   history files *after* model execution. In this case, sub input calls sub
-!   init_dispose, which opens a csh script "dispose.csh" in the cwd which 
-!   will be used to dispose the files to the mss after model execution.
-! When it is time to save a file to the hpss, sub savefile calls sub
-!   add_dispose, which adds two commands to the dispose script: an hsi put 
-!   command to copy the file to hpss, and an annotation (fileinfo) with
-!   contents of the file (histories written). If the hsi put command is already 
-!   in the script for the current file, it is left alone. If the hsi annotate  
-!   command is already there for the current file, it is updated with the 
-!   current annotation.  Thus, in the final dispose script, each file should 
-!   have a single hsi put and a single hsi annotate command.
-! Following model execution, the dispose script can be executed in an 
-!   interactive loadleveler job step following the model execution step, 
-!   or it can be executed manually on the command line from the directory
-!   in which the model was run.
+! Maintain an external csh script containing the hsi command necessary
+! to dispose history output files to the NCAR HPSS. The script name is
+! dispose_xxxxxx.hsi, where xxxxxx is a PID unique to the model run.
 !
       use input_module,only: hpss_path,pid
       use init_module,only: logname
       implicit none
       character(len=32) :: dispose_script
-!     character(len=8) :: tgcm_pid
       integer :: lu_dispose
       integer :: lenrec = 1024
       contains
@@ -34,7 +20,7 @@
       subroutine init_dispose
 !
 ! Open and initialize cshell script that will dispose history files
-! to mss in separate job step after model execution. This is called
+! to hpss in separate job step after model execution. This is called
 ! once per run from input.F.
 !
       integer,external :: nextlu,isystem
@@ -53,7 +39,7 @@
       close(lu_dispose)   
       write(command,"('chmod u+x ',a)") trim(dispose_script)
       istat = isystem(command)
-      write(6,"('Dispose: initialized mss dispose script ',a,
+      write(6,"('Dispose: initialized hpss dispose script ',a,
      |  ' lu_dispose=',i3)") trim(dispose_script),lu_dispose
       end subroutine init_dispose
 !-----------------------------------------------------------------------
@@ -156,22 +142,23 @@
 !
 ! Check if put command for the current file is already in dispose script:
       iline = isput_in_script(diskfile,dispose_script)
-      if (iline==0) then ! hsi put was not found for this file
 !
 ! Construct hsi put command (with or without -P depending on hpss_path):
-        write(hpss_file,"(a,'/',a)") trim(hpss_path),trim(diskfile)
-        string = ' ' ; write(string,"('/home/',a)") trim(logname)
-        opt = ' '
-        if (trim(string)==trim(hpss_path)) then ! hpss_path does not have subdir
-          write(hsiput_cmd,"('hsi put ',a,' : ',a)")
-     |      trim(diskfile),trim(hpss_file)
-        else                                    ! hpss_path has subdir
-          write(hsiput_cmd,"('hsi put -P ',a,' : ',a)")
-     |      trim(diskfile),trim(hpss_file)
-          opt = '-P'
-        endif
+      hpss_file = ' '
+      write(hpss_file,"(a,'/',a)") trim(hpss_path),trim(diskfile)
+      string = ' ' ; write(string,"('/home/',a)") trim(logname)
+      opt = ' '
+      if (trim(string)==trim(hpss_path)) then ! hpss_path does not have subdir
+        write(hsiput_cmd,"('hsi put ',a,' : ',a)")
+     |    trim(diskfile),trim(hpss_file)
+      else                                    ! hpss_path has subdir
+        write(hsiput_cmd,"('hsi put -P ',a,' : ',a)")
+     |    trim(diskfile),trim(hpss_file)
+        opt = '-P'
+      endif
 !
 ! Write hsi put command to dispose script:
+      if (iline==0) then ! hsi put was not found for this file
         open(file=dispose_script,unit=lu_dispose,status='OLD',
      |    position='APPEND')
         write(lu_dispose,"(' ')") ! space for readability
@@ -190,7 +177,8 @@
         annotate_cmd = 
      |    trim(annotate_cmd)//' '//'\\"'//trim(annotation)//'\\" '
         annotate_cmd = trim(annotate_cmd)//' '//trim(hpss_file)
-!       write(6,"('add_dispose: annotate_cmd = ',a)") trim(annotate_cmd)
+!       write(6,"('add_dispose: annotate_cmd = ',/,a)") 
+!    |    trim(annotate_cmd)
 !
 ! Update annotation for this file:
         call update_annotation(iline+1,trim(annotate_cmd))

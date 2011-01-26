@@ -3429,7 +3429,7 @@
 !
 ! Args:
       integer,intent(in) :: ncid
-      character(len=80),intent(out) :: fileinfo
+      character(len=*),intent(out) :: fileinfo
 !
 ! Local:
       integer :: istat,idvmtime,idtime,ntimes,idvyear,idvday,

@@ -179,7 +179,7 @@
 !
 ! Save file if necessary:
       if (svfile.or.nhist==mxhist_prim.or.nstep==0) then
-        call savefile(ncid,diskfile,output(ioutfile),
+        call savefile(ncid,trim(diskfile),output(ioutfile),
      |    .true.,iprint)
       endif
       call nc_close(ncid)
@@ -289,7 +289,7 @@
       if (svfile.or.nsech==mxhist_sech) then
 !       write(6,"('output_sechist calling savefile: nsech=',i3)")
 !    |    nsech
-        call savefile(ncidsech,diskfile,secout(isecout),
+        call savefile(ncidsech,trim(diskfile),secout(isecout),
      |    .true.,iprint)
       endif
       call nc_close(ncidsech)
@@ -307,7 +307,7 @@
 !
 ! Local:
       integer :: istat,ier
-      character(len=80) :: fileinfo
+      character(len=1024) :: fileinfo
 !
 ! Make fileinfo string for hpss annotation and add as a
 ! global file attribute:
@@ -319,7 +319,7 @@
       call nc_close(ncid)
 !
 ! Add hsi put and annotate commands to dispose script (see dispose.F):
-      call add_dispose(diskfile,fileinfo)
+      call add_dispose(diskfile,trim(fileinfo))
 !
 ! Reopen file for appending:
       if (reopen) call nc_open(ncid,diskfile,'OLD','APPEND')
