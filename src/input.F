@@ -702,7 +702,7 @@
      |    ' the NCAR hpss, a csh script named dispose_xxxxx.hsi',
      |    ' will',/,'be written to the exec directory, and will',
      |    ' contain necessary hsi commands',/,'to dispose history'
-     |    ' files to the hpss.',/,72('-')")
+     |    ' files to the hpss.',/,72('-'))")
         if (dispose > 0) 
      |    call shutdown('namelist DISPOSE is deprecated')
         dispose = 0 
