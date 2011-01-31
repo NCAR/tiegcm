@@ -15,3 +15,4 @@ LIBS     = -lhdf5_hl -lhdf5 -lsz -L/usr/lib64 -lz -lcurl
 #
 LIB_NETCDF = /fs/local/lib
 INC_NETCDF = /fs/local/include
+prereq:

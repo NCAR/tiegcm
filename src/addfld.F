@@ -147,8 +147,8 @@
 ! Local:
       integer :: ier,i,j,k,ii,ix,ixf4d,iseries_p,iseries_s
       integer :: idim1,idim2,idim3,ihdim1,ihdim2,ihdim3
-      logical :: time2write,wrprim,wrsech,save_prim,save_sech,
-     |  newseries_prim,newseries_sech,found
+      logical :: time2write,wrprim,wrsech,newseries_prim,
+     |  newseries_sech,found
       logical :: mag,geo,firstcall
       real :: fmin,fmax
       character(len=8) :: dname3
@@ -174,8 +174,8 @@
 !
 ! Save only if we are writing a secondary history this step:
       time2write = wrhist(istep,modeltime,
-     |  wrprim, save_prim, newseries_prim, iseries_p,
-     |  wrsech, save_sech, newseries_sech, iseries_s) 
+     |  wrprim, newseries_prim, iseries_p,
+     |  wrsech, newseries_sech, iseries_s) 
       if (.not.wrsech) return
       if (istep1 < 0) istep1 = istep
 !

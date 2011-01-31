@@ -10,8 +10,9 @@
      |  nc_define,   ! subroutine to define vars in a new netcdf file
      |  nc_wrhist,   ! subroutine to write history to an open netcdf file
      |  nc_close,    ! subroutine to close a netcdf file
-     |  nc_fileinfo,
+     |  nc_fileinfo, ! make contents string for current file
      |  def_fsech
+      use dispose_module,only: add_dispose
 !
       contains
 !-----------------------------------------------------------------------
@@ -32,8 +33,8 @@
 !
 ! Local:
       logical :: time2write,
-     |  wrprim,  save_prim, newseries_prim,
-     |  wrsech,  save_sech, newseries_sech
+     |  wrprim, newseries_prim,
+     |  wrsech, newseries_sech
       integer :: icount
 !
 ! External:
@@ -43,24 +44,23 @@
 ! (istep and modeltime are input, remaining 6 args are output)
 !
       time2write = wrhist(istep,modeltime,
-     |  wrprim, save_prim, newseries_prim, iseries_prim,
-     |  wrsech, save_sech, newseries_sech, iseries_sech)
+     |  wrprim, newseries_prim, iseries_prim,
+     |  wrsech, newseries_sech, iseries_sech)
 !
 ! Write primary history:
       if (wrprim) then
-        call output_hist(istep,save_prim,newseries_prim)
+        call output_hist(istep,newseries_prim)
       endif
 !
 ! Write secondary history:
       if (wrsech) then
-        call output_sechist(save_sech,newseries_sech)
+        call output_sechist(newseries_sech)
       endif
       end subroutine outhist
 !-----------------------------------------------------------------------
-      subroutine output_hist(istep,svfile,newseries)
+      subroutine output_hist(istep,newseries)
 !
 ! Write a primary history to current output disk file. 
-! If svfile==T, save the file *after* writing the history.
 ! If newseries==T, open new file *before* writing the history
 !   (and save existing file before opening the new one)
 !
@@ -86,14 +86,14 @@
 ! Args:
       integer,intent(in) :: istep
       logical,intent(in) :: 
-     |  newseries, ! if true, open new file before writing history
-     |  svfile     ! if true, save current output file after writing history
+     |  newseries  ! if true, open new file before writing history
 !
 ! Local:
       character(len=80) :: diskfile 
       integer :: iprinthist
       integer,save :: ihist_total=0
       logical :: fullfile
+      character(len=1024) :: fileinfo
 !
 ! Init:
       diskfile = ' '
@@ -177,18 +177,16 @@
      |  ' to ',a,' (',i4,' of ',i4,')')") modeltime(1:3),
      |  trim(diskfile),ihist_total,nhist_total
 !
-! Save file if necessary:
-      if (svfile.or.nhist==mxhist_prim.or.nstep==0) then
-        call savefile(ncid,trim(diskfile),output(ioutfile),
-     |    .true.,iprint)
-      endif
+! Add contents string to the file (as global attribute), and to the
+! hpss dispose script:
+      call nc_fileinfo(ncid,fileinfo)
+      call add_dispose(trim(diskfile),trim(fileinfo))
       call nc_close(ncid)
       end subroutine output_hist
 !-----------------------------------------------------------------------
-      subroutine output_sechist(svfile,newseries)
+      subroutine output_sechist(newseries)
 !
 ! Write a secondary history to current output disk file. 
-! If svfile==T, save the file *after* writing the history.
 ! If newseries==T, open new file *before* writing the history
 !   (and save existing file before opening the new one)
 !
@@ -204,19 +202,18 @@
      |  nsech_total, ! total sech histories to be written (read only)
      |  nstep,       ! total number of steps this run
      |  iseries_sech ! current secondary time series (read only)
-      use init_module,only: istep ! current time-step
       implicit none
 !
 ! Args:
       logical,intent(in) :: 
-     |  newseries, ! if true, open new file before writing history
-     |  svfile     ! if true, save current output file after writing history
+     |  newseries  ! if true, open new file before writing history
 !
 ! Local:
       character(len=80) :: diskfile 
       integer :: iprinthist
       integer,save :: ihist_total=0
       logical :: fullfile
+      character(len=1024) :: fileinfo
 !
 ! Init:
       diskfile = ' '
@@ -285,45 +282,12 @@
      |  ' to ',a,' (',i4,' of ',i4,')')") modeltime(1:3),
      |  trim(diskfile),ihist_total,nsech_total
 !
-! Save file if necessary:
-      if (svfile.or.nsech==mxhist_sech) then
-!       write(6,"('output_sechist calling savefile: nsech=',i3)")
-!    |    nsech
-        call savefile(ncidsech,trim(diskfile),secout(isecout),
-     |    .true.,iprint)
-      endif
+! Add contents string to the file (as global attribute), and to the
+! hpss dispose script:
+      call nc_fileinfo(ncidsech,fileinfo)
+      call add_dispose(trim(diskfile),trim(fileinfo))
       call nc_close(ncidsech)
       end subroutine output_sechist
-!-----------------------------------------------------------------------
-      subroutine savefile(ncid,diskfile,outpath,reopen,iprint)
-      use dispose_module,only: add_dispose
-      implicit none
-!
-! Args:
-      integer,intent(in) :: iprint
-      integer,intent(inout) :: ncid
-      logical,intent(in) :: reopen
-      character(len=*),intent(in) :: diskfile,outpath
-!
-! Local:
-      integer :: istat,ier
-      character(len=1024) :: fileinfo
-!
-! Make fileinfo string for hpss annotation and add as a
-! global file attribute:
-!
-      call nc_fileinfo(ncid,fileinfo)
-      write(6,"('History file info: ',a)") trim(fileinfo)
-!
-! Close file:
-      call nc_close(ncid)
-!
-! Add hsi put and annotate commands to dispose script (see dispose.F):
-      call add_dispose(diskfile,trim(fileinfo))
-!
-! Reopen file for appending:
-      if (reopen) call nc_open(ncid,diskfile,'OLD','APPEND')
-      end subroutine savefile
 !-----------------------------------------------------------------------
       subroutine define_hist(hist_type)
 !

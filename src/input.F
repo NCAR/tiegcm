@@ -136,7 +136,7 @@
      |  start(3,mxseries), ! primary history model start time(s)
      |  stop(3,mxseries),  ! primary history model stop time(s)
      |  hist(3,mxseries),  ! primary history disk write frequency
-     |  save(3,mxseries),  ! primary history file save frequency
+     |  save(3,mxseries),  ! deprecated
      |  mxhist_prim,       ! max number of histories per primary file
      |  noutput            ! number of output files given
 !
@@ -150,7 +150,7 @@
      |  secstart(3,mxseries), ! secondary history model start time(s)
      |  secstop(3,mxseries),  ! secondary history model stop time(s)
      |  sechist(3,mxseries),  ! secondary history disk write frequency
-     |  secsave(3,mxseries),  ! secondary history file save frequency
+     |  secsave(3,mxseries),  ! deprecated
      |  mxhist_sech,          ! max number of histories per secondary file
      |  sech_nbyte            ! 4 or 8: write real or double values to secondary file
 !
@@ -158,7 +158,7 @@
       namelist/tgcm_input/ 
      |  label,tempdir,magvol,amievol,date,calday,step,dispose,
      |  source,source_start,output,start,stop,hist,save,
-     |  secout,secstart,secstop,sechist,secsave,secflds,
+     |  secout,secstart,secstop,sechist,secflds,secsave,
      |  potential_model,eddy_dif,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
      |  kp,colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
@@ -677,12 +677,12 @@
 ! Validate primary history inputs:
 !
 ! Local:
-      integer :: n,i,ii,nhists,nsaves,nsteps,nsteps_hist(mxseries),
-     |  nsteps_save(mxseries),nstarts,nstops,nstep_total,nsrc,
+      integer :: n,i,ii,nhists,nsteps,nsteps_hist(mxseries),
+     |  nstarts,nstops,nstep_total,nsrc,
      |  nout,nhists_total,modeltime(4),nfiles_prim
       integer(kind=8) :: step8,
      |  nsec_start(mxseries),nsec_stop(mxseries),
-     |  nsec_hist (mxseries),nsec_save(mxseries)
+     |  nsec_hist (mxseries)
       character(len=80) :: ch80
       character(len=80) :: hvols(mxhvols)
 !
@@ -852,63 +852,25 @@
         endif
       enddo 
 !
-! History save frequencies:
+! History save frequencies SAVE is deprecated:
       n = size(save)-count(save==ispval)
-      if (mod(n,3) /= 0) then
-        write(6,"(/,'>>> INPUT: SAVE must be given as series of ',
-     |    '3-integer triplet times (day,hr,min).',/)")
-        call shutdown('SAVE')
-      endif 
-      nsaves = n/3 ! number of save times given
-      if (nsaves < 1 .or. nsaves > mxseries) then
-        write(6,"(/,'>>> INPUT: At least one and a maximum of ',i2,
-     |    ' 3-integer SAVE times are allowed.',/)") mxseries
-        call shutdown('SAVE')
+      if (n > 0) then
+        write(6,"(/,'>>> Input parameter SAVE has been deprecated.')")
+        write(6,"('    Please remove it from the namelist input file')")
+        call shutdown('namelist SAVE is deprecated')
       endif
-      do i=1,nsaves
-        call validate_mtime(save(:,i),mxday,'SAVE')
-      enddo
-!
-! History save frequencies must be multiple of step: 
-      nsec_save(:) = 0
-      do i=1,nsaves
-        nsec_save(i) = mtime_to_nsec(save(:,i))
-        if (nsec_save(i)==0) then
-          write(6,"(/,'>>> INPUT: SAVE history save frequency ',i1,
-     |      ' must be > 0',/)") i
-          call shutdown('SAVE')
-        endif
-        if (mod(nsec_save(i),step8) /= 0) then
-          write(6,"(/,'>>> INPUT: SAVE time ',i1,' must be a ',
-     |      'multiple of step:',/,11x,'SAVE=',3i4,' STEP=',i4,/)")
-     |      i,save(:,i),step
-          call shutdown('SAVE')
-        endif
-      enddo 
 !
 ! Must have same number of time sequences:
       if (nstarts /= nstops .or. nstarts /= nhists .or. 
-     |    nstarts /= nsaves .or. nstops  /= nhists .or.
-     |    nstops  /= nsaves .or. nhists  /= nsaves) then
+     |    nstops  /= nhists) then
         write(6,"(/,'>>> INPUT: must provide same number of times ',
-     |    'for',/,11x,'START, STOP, HIST, and SAVE.')")
-        write(6,"(11x,'nstarts=',i3,' nstops=',i3,' nhists=',i3,
-     |    ' nsaves=',i3,/)") nstarts,nstops,nhists,nsaves
+     |    'for',/,11x,'START, STOP, and HIST.')")
+        write(6,"(11x,'nstarts=',i3,' nstops=',i3,' nhists=',i3)")
+     |    nstarts,nstops,nhists
         call shutdown('ntimes')
       endif
 !
-! SAVEs must be multiples of HISTs:
-      do i=1,nstarts
-        if (mod(nsec_save(i),nsec_hist(i)) /= 0) then
-          write(6,"(/,'>>> INPUT: SAVE frequencies must be multiple',
-     |      ' of HIST frequencies.',/,11x,'SAVE ',i1,' =',3i4,
-     |      ' HIST ',i1,' =',3i4,/)") i,save(:,i),i,hist(:,i)
-          call shutdown('mod(SAVE,HIST)')
-        endif
-      enddo
-!
-! Number of steps in each time series must be a multiple of HIST
-! and SAVE frequencies for that series:
+! Number of steps in each time series must be a multiple of HIST:
       do i=1,nstarts
         if (i==1) then
           nsteps = (nsec_stop(i)-nsec_start(i))/step
@@ -927,19 +889,7 @@
      |      i,hist(:,i)
           call shutdown('HIST')
         endif
-        nsteps_save(i) = nsec_save(i)/step
-        if (mod(nsteps,nsteps_save(i)) /= 0) then
-          write(6,"(/,'>>> INPUT: number of steps in time series ',
-     |      i1,' must be multiple of the ',/,11x,'number of steps',
-     |      ' in SAVE ',i1,'.')") i,i
-          write(6,"(11x,'nsteps ',i1,' = ',i6,' nsteps_save ',i1,
-     |      ' = ',i3)") i,nsteps,i,nsteps_save(i)
-          write(6,"(11x,'START',i1,' = ',3i4,' STOP',i1,' = ',3i4,
-     |      ' SAVE',i1,' = ',3i4,/)") i,start(:,i),i,stop(:,i),
-     |      i,save(:,i)
-          call shutdown('SAVE')
-        endif
-      enddo
+      enddo ! i=1,nstarts
 !
 ! Time series cannot overlap (However, they can touch, front-to-back):
       if (nstarts > 1) then
@@ -1062,13 +1012,12 @@
 ! Validate secondary history inputs:
 !
 ! Local:
-      integer :: n,i,ii,nstarts,nstops,nhists,nsaves,nout,nsteps,
-     |  nsteps_hist(mxseries_sech),nsteps_save(mxseries_sech),
-     |  nsechs_total,nseriesp,nflds_sech,nhists_total,
-     |  nfiles_sech,nonblank
+      integer :: n,i,ii,nstarts,nstops,nhists,nout,nsteps,
+     |  nsteps_hist(mxseries_sech),nsechs_total,nseriesp,nflds_sech,
+     |  nhists_total,nfiles_sech,nonblank
       integer(kind=8) :: step8,
      |  nsec_start(mxseries_sech),nsec_stop(mxseries_sech),
-     |  nsec_hist (mxseries_sech),nsec_save(mxseries_sech)
+     |  nsec_hist (mxseries_sech)
       character(len=80) :: ch80
       character(len=80) :: hvols(mxhvols)
       character(len=16) ::
@@ -1086,7 +1035,6 @@
       n = size(secstart)-count(secstart==ispval) +
      |    size(secstop) -count(secstop==ispval)  +
      |    size(sechist) -count(sechist==ispval)  +
-     |    size(secsave) -count(secsave==ispval)  +
      |    size(secflds) -count(len_trim(secflds)==0)
 !
 ! Secondary output volumes:
@@ -1273,64 +1221,25 @@
 !
 ! Secondary history save frequencies:
       n = size(secsave)-count(secsave==ispval)
-      if (mod(n,3) /= 0) then
-        write(6,"(/,'>>> INPUT: SECSAVE must be given as series of ',
-     |    '3-integer triplet times (day,hr,min).',/,11x,'A maximum',
-     |    ' of ',i3,' SECSAVE times are allowed.',/)") mxseries_sech
-        call shutdown('SECSAVE')
-      endif 
-      nsaves = n/3 ! number of save times given
-      if (nsaves < 1 .or. nsaves > mxseries_sech) then
-        write(6,"(/,'>>> INPUT: At least one and a maximum of ',i3,
-     |    ' 3-integer SECSAVE times are allowed.',/)")
-        call shutdown('SECSAVE')
+      if (n > 0) then
+        write(6,"(/,'>>> Input parameter SECSAVE has been',
+     |    ' deprecated.')")
+        write(6,"('    Please remove it from the namelist input file')")
+        call shutdown('namelist SECSAVE is deprecated')
       endif
-      do i=1,nsaves
-        call validate_mtime(secsave(:,i),mxday,'SECSAVE')
-      enddo
-!
-! Secondary history save frequencies must be multiples of step: 
-      nsec_save(:) = 0
-      do i=1,nsaves
-        nsec_save(i) = mtime_to_nsec(secsave(:,i))
-        if (nsec_save(i)==0) then
-          write(6,"(/,'>>> INPUT: SECSAVE save frequency ',i1,
-     |      ' must be > 0',/)") i
-          call shutdown('SECSAVE')
-        endif
-        if (mod(nsec_save(i),step8) /= 0) then
-          write(6,"(/,'>>> INPUT: SECSAVE frequency ',i1,' must be a ',
-     |      'multiple of step:',/,11x,'SECSAVE=',3i4,' STEP=',i4,/)")
-     |      i,sechist(:,i),step
-          call shutdown('SECSAVE')
-        endif
-      enddo 
 !
 ! Must have same number of time sequences:
       if (nstarts /= nstops .or. nstarts /= nhists .or. 
-     |    nstarts /= nsaves .or. nstops  /= nhists .or.
-     |    nstops  /= nsaves .or. nhists  /= nsaves) then
+     |    nstops  /= nhists) then
         write(6,"(/,'>>> INPUT: must provide same number of times ',
-     |    'for',/,11x,'SECSTART, SECSTOP, SECHIST, and SECSAVE.')")
-        write(6,"(11x,'nstarts=',i3,' nstops=',i3,' nhists=',i3,
-     |    ' nsaves=',i3,/)") nstarts,nstops,nhists,nsaves
+     |    'for',/,11x,'SECSTART, SECSTOP, and SECHIST.')")
+        write(6,"(11x,'nstarts=',i3,' nstops=',i3,' nhists=',i3)")
+     |    nstarts,nstops,nhists
         call shutdown('nsechtimes')
       endif
 !     nseries_sech = nstarts
 !
-! SAVEs must be multiples of HISTs:
-      do i=1,nstarts
-        if (mod(nsec_save(i),nsec_hist(i)) /= 0) then
-          write(6,"(/,'>>> INPUT: SECSAVE frequencies must be ',
-     |      'multiples of SECHIST frequencies.',/,11x,'SECSAVE ',
-     |      i1,' =',3i4,' SECHIST ',i1,' =',3i4,/)") i,secsave(:,i),
-     |      i,sechist(:,i)
-          call shutdown('mod(SECSAVE,SECHIST)')
-        endif
-      enddo
-!
-! Number of steps in each time series must be a multiple of SECHIST
-! and SECSAVE frequencies for that series:
+! Number of steps in each time series must be a multiple of SECHIST:
       do i=1,nstarts
         nsteps = (nsec_stop(i)-nsec_start(i))/step
         nsteps_hist(i) = nsec_hist(i)/step
@@ -1344,18 +1253,6 @@
      |      ' SECSTOP = ',3i4,' SECHIST = ',3i4,/)") i,secstart(:,i),
      |      secstop(:,i),sechist(:,i)
           call shutdown('SECHIST')
-        endif
-        nsteps_save(i) = nsec_save(i)/step
-        if (mod(nsteps,nsteps_save(i)) /= 0) then
-          write(6,"(/,'>>> INPUT: number of steps in time series ',
-     |      i1,' must be multiple of the ',/,11x,'number of steps',
-     |      ' in SECSAVE ',i1,'.')") i,i
-          write(6,"(11x,'nsteps ',i1,' = ',i6,' nsteps_save ',i1,
-     |      ' = ',i3)") i,nsteps,i,nsteps_save(i)
-          write(6,"(11x,'Time series ',i2,': SECSTART = ',3i4,
-     |      ' SECSTOP = ',3i4,' SECSAVE = ',3i4,/)") i,secstart(:,i),
-     |      secstop(:,i),secsave(:,i)
-          call shutdown('SECSAVE')
         endif
       enddo
 !
@@ -1586,9 +1483,6 @@
       n = (size(hist)-count(hist==ispval))/3
       write(6,"('  hist (primary history disk write frequencies) =',
      |  /,4(4x,i3,',',i2,',',i2))") (hist(:,i),i=1,n)
-      n = (size(save)-count(save==ispval))/3
-      write(6,"('  save (primary history file save frequencies) =',
-     |  /,4(4x,i3,',',i2,',',i2))") (save(:,i),i=1,n)
       write(6,"('  Maxmimum number of histories per primary file = ',
      |  i3)") mxhist_prim
 !
@@ -1618,11 +1512,6 @@
      |  write(6,"('  sechist (secondary history disk write',
      |    ' frequencies) =',/,4(4x,i3,',',i2,',',i2))") 
      |    (sechist(:,i),i=1,n)
-      n = (size(secsave)-count(secsave==ispval))/3
-      if (n > 0)
-     |  write(6,"('  secsave (secondary history file save',
-     |    ' frequencies) =',/,4(4x,i3,',',i2,',',i2))") 
-     |    (secsave(:,i),i=1,n)
       n = (size(secflds)-count(len_trim(secflds)==0))
       if (n > 0)
      |  write(6,"('  secflds (secondary history fields)',
