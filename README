@@ -1271,3 +1271,7 @@ hsi commands to dispose history output to the ncar hpss. Removed
 all references to the mss. File are no longer read from the mss,
 and output files not disposed. Namelist DISPOSE is deprecated.
 Removed MSS cpp macro.
+
+1/31/11: Add prereq target to Make.machine files to force make of
+machines.ini file for mpi runs on hao 32-bit and 64-bit systems.
+Also, namelist read parameters SAVE and SECSAVE are deprecated.

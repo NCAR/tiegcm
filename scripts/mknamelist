@@ -40,13 +40,11 @@ $modelres  = 5.0;
   "STOP=s"                => \$STOP,
   "STEP=i"                => \$STEP,
   "HIST=s"                => \$HIST,
-  "SAVE=s"                => \$SAVE,
   "OUTPUT=s"              => \$OUTPUT,
   "MXHIST_PRIM=i"         => \$MXHIST_PRIM,
   "SECSTART=s"            => \$SECSTART,
   "SECSTOP=s"             => \$SECSTOP,
   "SECHIST=s"             => \$SECHIST,
-  "SECSAVE=s"             => \$SECSAVE,
   "SECOUT=s"              => \$SECOUT,
   "MXHIST_SECH=s"         => \$MXHIST_SECH,
   "SECFLDS=s"             => \$SECFLDS,
@@ -149,12 +147,10 @@ $START= "80,0,0";
 $STOP=  "80,1,0";
 $STEP= 120;
 $HIST=  "0,1,0";
-$SAVE=  "0,1,0";
 $MXHIST_PRIM = 10;
 $SECSTART = "80,0,0";
 $SECSTOP  = "80,1,0";
 $SECHIST  = "0,0,12";
-$SECSAVE  = "0,1,0";
 $MXHIST_SECH = 24;
 $SECFLDS0 = "'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',";
 $SECFLDS1 = "'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'";
@@ -190,13 +186,11 @@ $COLFAC = "1.5";
   STOP                =>" ",
   STEP                =>" ",
   HIST                =>" ",
-  SAVE                =>" ",
   OUTPUT              =>" ",
   MXHIST_PRIM         =>" ",
   SECSTART            =>" ",
   SECSTOP             =>" ",
   SECHIST             =>" ",
-  SECSAVE             =>" ",
   SECOUT              =>" ",
   MXHIST_SECH         =>" ",
   SECFLDS             =>" ",
@@ -311,7 +305,6 @@ $comments{STEP}STEP  = $STEP
 ; Primary History parameters:
 ;
 $comments{HIST}HIST = $HIST
-$comments{SAVE}SAVE = $SAVE
 $comments{OUTPUT}OUTPUT = $OUTPUT
 $comments{MXHIST_PRIM}MXHIST_PRIM = $MXHIST_PRIM
 ;
@@ -320,7 +313,6 @@ $comments{MXHIST_PRIM}MXHIST_PRIM = $MXHIST_PRIM
 $comments{SECSTART}SECSTART = $SECSTART
 $comments{SECSTOP}SECSTOP  = $SECSTOP
 $comments{SECHIST}SECHIST  =  $SECHIST
-$comments{SECSAVE}SECSAVE  =  $SECSAVE
 $comments{SECOUT}SECOUT   = $SECOUT
 $comments{MXHIST_SECH}MXHIST_SECH = $MXHIST_SECH
 $comments{SECFLDS}SECFLDS = $SECFLDS0
