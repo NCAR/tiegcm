@@ -18,3 +18,4 @@ MSS       = TRUE
 #
 LIB_NETCDF = /usr/local/lib
 INC_NETCDF = /usr/local/include
+prereq:

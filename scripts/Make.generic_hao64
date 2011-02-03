@@ -24,9 +24,11 @@ INC_NETCDF = /opt/local/netcdf/linux86-64/include
 #
 # Make machines.ini file for MPI execution: 
 #
+prereq: machines.ini
 machines.ini: export HN=$(HOST)
 machines.ini: export NP=$(NPROC)
 machines.ini: FORCE
+	@echo "Making machines.ini.."
 	@echo `hostname` > machines.ini
 	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini
 FORCE:

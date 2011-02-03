@@ -19,7 +19,7 @@
 #
 SHELL = /bin/sh
 
-all: Depends
+all: Depends prereq
 
 include Make.env         # made by job script before gmake
 include $(MAKE_MACHINE)  # machine-specific file with compiler/make info
