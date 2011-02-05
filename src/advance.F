@@ -16,7 +16,7 @@
 !
       use fields_module
       use hist_module,only: nstep,modeltime,nsource
-      use heelis_module,only: heelis,colath
+      use heelis_module,only: heelis
       use weimer_module,only: weimer01  ! Weimer 2001 model
       use wei05sc,only: weimer05,       ! Weimer 2005 model
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
@@ -207,7 +207,7 @@
       if (calendar_advance > 0) call advance_day
       call sunloc_apex(iyear,iday,secs)! locate sun's longitude
       if (debug) write(6,"('advance after sunloc')")
-      if (calendar_advance > 0) dday = float(iday)+secs/86400.
+      if (calendar_advance > 0) dday = real(iday)+secs/86400.
 !
 ! Interpolate input parameters to current model time, if time-dependent 
 ! values were read from input. If namelist read parameter indices_interp 
@@ -257,6 +257,9 @@
       if (potential_model(1:6)=='WEIMER'.and.
      |  rd_power==spval) then
         power = hp_from_bz_swvel(bzimf,swvel)
+!       write(6,"('Advance calculated power from bz,swvel: ',
+!    |    ' bz=',f8.2,' swvel=',f8.2,' power=',f8.2)") 
+!    |    bzimf,swvel,power
       endif
 !
 ! If Kp was provided, calculate power and/or ctpoten
@@ -297,7 +300,6 @@
       call cism_scatter(gflx,lon0,lon1,lat0,lat1)
 #endif
 #endif
-
 !
 ! Report to stdout:
       if (time2print(nstep,istep)) then
@@ -309,14 +311,24 @@
           write(6,"('Step ',i6,' of ',i6,' mtime=',3i3)")
      |      istep,nstep,modeltime(1:3)
         endif
-        if (len_trim(gpi_ncfile) > 0) then
-          write(6,"('GPI run: power=',f7.2,' ctpoten=',f7.2,' f107=',
-     |      f7.2,' f107a=',f7.2)") power,ctpoten,f107,f107a
-        endif
-        if (len_trim(imf_ncfile) > 0) then
-          write(6,"('IMF run: bx=',f7.2,' by=',f7.2,' bz=',f7.2,
-     |      ' swvel=',f7.2,' swden=',f7.2,' ctpoten=',f7.2,
-     |      ' power=',f7.2)") bximf,byimf,bzimf,swvel,swden,
+        if (len_trim(gpi_ncfile) > 0.and.len_trim(imf_ncfile) > 0) then
+!
+! If both GPI and IMF data run, then only f10.7 flux is used from
+! the gpi file. GPI power and ctpoten are overwritten as follows:
+! power is calculated from bz,swvel (see above), and ctpoten is from 
+! weimer (Weimer is called later, so do not print ctpoten here)
+!
+          write(6,"('GPI+IMF run: istep=',i6,' GPI f107=',f8.3,
+     |      ' f107a=',f8.3,' power from bzimf,swvel=',f8.3)") 
+     |      istep,f107,f107a,power
+        elseif (len_trim(gpi_ncfile) > 0) then
+          write(6,"('GPI run: istep=',i6,' power=',f8.3,' ctpoten=',
+     |      f8.3,' f107=',f8.3,' f107a=',f8.3)") istep,power,ctpoten,
+     |      f107,f107a
+        elseif (len_trim(imf_ncfile) > 0) then
+          write(6,"('IMF run: istep=',i6,' bx=',f8.3,' by=',f8.3,' bz=',
+     |      f8.3,' swvel=',f8.3,' swden=',f8.3,' ctpoten (prev step)=',
+     |      f8.3,' power=',f8.3)") istep,bximf,byimf,bzimf,swvel,swden,
      |      ctpoten,power
         endif
       endif ! time2print
@@ -440,6 +452,8 @@
 !
 ! sub weimer05 (wei05sc.F), calculates mag electric potential in phihm.
 ! (if byimf==bzimf==0, then weimer05 will set bzimf = .01)
+! Weimer will calculate ctpoten (user cannot provide constant
+!   namelist ctpoten with the Weimer model)
 !
         call weimer05(byimf,bzimf,swvel,swden,wei05sc_ncfile,istep)
         if (debug) write(6,"('advance after weimer05: istep=',i4)")istep
@@ -736,7 +750,7 @@
         endif                          !   for past year's end
 !
 ! Recalculate sun's declination
-        delta = atan(tan(23.5*pi/180.)*sin(2.*pi*float(iday-80)/365.))
+        delta = atan(tan(23.5*pi/180.)*sin(2.*pi*real(iday-80)/365.))
         sin_sundec = sin(delta) ! C(95)
         cos_sundec = cos(delta) ! C(96)
 !
@@ -744,7 +758,7 @@
 ! sfeps is 6% variation in solar output over a year
 !   caused by the orbital eccentricity.
 !
-        theta0 = 2.*pi*float(iday)/365.
+        theta0 = 2.*pi*real(iday)/365.
         sfeps = 1.000110+0.034221*cos(theta0)+0.001280*sin(theta0)
      1        +0.000719*cos(2.*theta0)+0.000077*sin(2.*theta0)
 !

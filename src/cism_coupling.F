@@ -53,7 +53,9 @@
       end subroutine initialize
 !-----------------------------------------------------------------------
       subroutine import
-      integer ii,jj
+      use input_module only: ctpoten
+      integer ii,jj,js,jn
+      real cpmaxsh,cpminsh,cpmaxnh,cpminnh
 
       write(6,*)'inside receive'
 #if defined(INTERCOMM)
@@ -67,6 +69,7 @@
 
 !
 ! Add period points
+
 !
       do jj=1,nlat
        do ii=1,nlonp1-1
@@ -86,6 +89,29 @@
         gflx(nlonp1+ii+1,jj)=gflx(ii,jj)
        enddo
       enddo
+!
+! 01/11:  Find ctpoten (kV) or min/max average from both hemispheres (gpot in V)
+!         ctpoten is NOT (yet) used to find theta0 in aurora_cons, where theta0
+!         is used in colath for crit(1,2).  Set theta0=10 so crit1,2=15,30 deg (old).
+!
+      cpmaxsh = -1000000.
+      cpmaxnh = -1000000.
+      cpminsh =  1000000.
+      cpminnh =  1000000.
+
+      do js=1,nlat/2
+       jn=nlat/2+js
+       do ii=1,nlonp1+1
+	cpmaxsh = max(cpmaxsh,gpot(ii,js))
+	cpminsh = min(cpminsh,gpot(ii,js))
+	cpmaxnh = max(cpmaxnh,gpot(ii,jn))
+	cpminnh = min(cpminnh,gpot(ii,jn))
+       enddo
+      enddo
+      ctpoten = 0.5*(cpmaxsh-cpminsh+cpmaxnh-cpminnh)*0.001
+!     write (6,"(1x,'cism CP (SH,NH,av) =',3f8.2)") 
+!   |  (cpmaxsh-cpminsh)*0.001,(cpmaxnh-cpminnh)*0.001,ctpoten	
+	
 !
 ! Add pole values
 !
