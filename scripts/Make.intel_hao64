@@ -1,0 +1,48 @@
+#
+# Included makefile for ifort compiler on 64-bit HAO machines.
+# Example machines and their unames:
+#   - HAO 64-bit Linux system iris.hao.ucar.edu
+#     System: Linux iris 2.6.18-194.11.1.el5 #1 SMP Tue Aug 10 19:05:06 EDT 2010 x86_64 x86_64 x86_64 GNU/Linux
+#
+# Compilers and flags:
+#
+F90      = ifort
+MPIF90   = /home/tgcm/openmpi-1.4.3/bin/mpif90
+MPIRUN   = /home/tgcm/openmpi-1.4.3/bin/mpirun
+FFLAGS   = -r8
+#DBGFLAGS = -C -Mchkstk -Mpgicoff -traceback
+#
+# Makefile will use OPTIM = -g if set debug=TRUE in job script.
+OPTIM    = -O3
+#MSS      = TRUE
+#LIBS     = -lhdf5_hl -lhdf5 -lsz -L/usr/lib64 -lz
+ LIBS     = -lcurl
+HOST     = $(shell hostname)
+#
+# Library and Include file paths:
+#
+#LIB_NETCDF = /opt/local/netcdf/linux86-64/lib
+#INC_NETCDF = /opt/local/netcdf/linux86-64/include
+ LIB_NETCDF = /home/tgcm/netcdf-4.1.1/lib
+ INC_NETCDF = /home/tgcm/netcdf-4.1.1/include
+#
+# Make machines.ini file for MPI execution: 
+#
+#prereq: machines.ini mpirun.command ifortvars
+prereq: machines.ini mpirun.command
+machines.ini: export HN=$(HOST)
+machines.ini: export NP=$(NPROC)
+machines.ini: FORCE
+	@echo "Making machines.ini.."
+	@echo `hostname` > machines.ini
+	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini
+
+mpirun.command: FORCE
+	@echo "Making mpirun.command: MPIRUN=$(MPIRUN)"
+	@echo $(MPIRUN) > mpirun.command
+
+#ifortvars:
+#	@echo "Sourcing ifortvars.csh"
+#	@source /opt/local/intel/Compiler/11.1/072/bin/ifortvars.csh intel64
+
+FORCE:

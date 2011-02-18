@@ -7,7 +7,8 @@
 # Compilers and flags:
 #
 F90      = pgf90
-MPIF90   = mpif90
+MPIF90   = /opt/local/pgi-9.04/linux86-64/9.0/mpi/mpich/bin/mpif90
+MPIRUN   = /opt/local/pgi-9.04/linux86-64/9.0/mpi/mpich/bin/mpirun
 FFLAGS   = -r8
 DBGFLAGS = -C -Mchkstk -Mpgicoff -traceback
 #
@@ -19,16 +20,23 @@ HOST     = $(shell hostname)
 #
 # Library and Include file paths:
 #
-LIB_NETCDF = /opt/local/netcdf/linux86-64/lib
-INC_NETCDF = /opt/local/netcdf/linux86-64/include
+ LIB_NETCDF = /opt/local/netcdf/linux86-64/lib
+ INC_NETCDF = /opt/local/netcdf/linux86-64/include
+#LIB_NETCDF = /home/tgcm/netcdf-4.1.1/lib
+#INC_NETCDF = /home/tgcm/netcdf-4.1.1/include
 #
 # Make machines.ini file for MPI execution: 
 #
-prereq: machines.ini
+prereq: machines.ini mpirun.command
 machines.ini: export HN=$(HOST)
 machines.ini: export NP=$(NPROC)
 machines.ini: FORCE
 	@echo "Making machines.ini.."
 	@echo `hostname` > machines.ini
 	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini
+
+mpirun.command: FORCE
+	@echo "Making mpirun.command: MPIRUN=$(MPIRUN)"
+	@echo $(MPIRUN) > mpirun.command
+
 FORCE:

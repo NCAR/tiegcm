@@ -1264,3 +1264,11 @@ the change or commit, pending confirmation. This line is correct in
 timegcm, so no bug there.
 
 1/12/11: Commit above bug fix (no comment added in qjion.F)
+
+2/18/11: New option to use Intel compiler on 64-bit hao Linux machines.
+There are now 2 Make.machine options for 64-bit hao:
+Make.intel_hao64 and Make.pgi_hao64. This also involves 2 different
+mpirun commands, see tiegcm-linux.job, and MPIRUN in the Make.machine 
+files. Short tests show that the intel-built code is more than 2x faster
+than the PGI built code using 4 processors on iris.  No changes to the 
+source code in this commit (r512) to the trunk.
