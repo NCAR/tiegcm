@@ -1271,4 +1271,4 @@ Make.intel_hao64 and Make.pgi_hao64. This also involves 2 different
 mpirun commands, see tiegcm-linux.job, and MPIRUN in the Make.machine 
 files. Short tests show that the intel-built code is more than 2x faster
 than the PGI built code using 4 processors on iris.  No changes to the 
-source code in this commit (r512) to the trunk.
+source code in this commit (r514) to the trunk.
