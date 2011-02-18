@@ -2060,12 +2060,14 @@
 ! Note: namelist time-dependent f107 is not available.
 !
         if (len_trim(gpi_ncfile)==0) then
-          if (power==spval.and.ntimes_power==0) then
+          if (power==spval.and.ntimes_power==0.and.
+     |        kp==spval.and.ntimes_kp==0) then
             write(6,"(/,'>>> INPUT: POWER or POWER_TIME must be ',
      |        'provided for non-GPI run with Heelis potential model.')")
             call shutdown('POWER')
           endif
-          if (ctpoten==spval.and.ntimes_ctpoten==0) then
+          if (ctpoten==spval.and.ntimes_ctpoten==0.and.
+     |        kp==spval.and.ntimes_kp==0) then
             write(6,"(/,'>>> INPUT: CTPOTEN or CTPOTEN_TIME must be ',
      |        'provided for non-GPI run with Heelis potential model.')")
             call shutdown('CTPOTEN')
@@ -2112,7 +2114,8 @@
 !
 ! ctpoten cannot be provided by the user, since it will be
 ! calculated from the Weimer potential:
-        if (ctpoten /= spval .or. ntimes_ctpoten > 0) then
+        if (ctpoten /= spval .or. ntimes_ctpoten > 0.and.
+     |    kp==spval.and.ntimes_kp==0) then
           write(6,"(/,'>>> INPUT: Cannot provide CTPOTEN with',
      |      ' Weimer potential model')")
           write(6,"('(ctpoten is calculated from the Weimer',
