@@ -1275,3 +1275,23 @@ Removed MSS cpp macro.
 1/31/11: Add prereq target to Make.machine files to force make of
 machines.ini file for mpi runs on hao 32-bit and 64-bit systems.
 Also, namelist read parameters SAVE and SECSAVE are deprecated.
+
+2/18/11: New option to use Intel compiler on 64-bit hao Linux machines.
+There are now 2 Make.machine options for 64-bit hao:
+Make.intel_hao64 and Make.pgi_hao64. This also involves 2 different
+mpirun commands, see tiegcm-linux.job, and MPIRUN in the Make.machine 
+files. Short tests show that the intel-built code is more than 2x faster
+than the PGI built code using 4 processors on iris.  No changes to the 
+source code in this commit (r514) to the trunk.
+
+2/23/11: Rebuilt openmpi with ifort and installed in 
+/home/tgcm/intel/openmpi-1.4.3, so now Make.intel_hao64 has:
+MPIF90   = /home/tgcm/intel/openmpi-1.4.3/bin/mpif90
+MPIRUN   = /home/tgcm/intel/openmpi-1.4.3/bin/mpirun
+See /home/tgcm/intel/openmpi-1.4.3/config.log for config command.
+
+Also built openmpi with pgf90 and installed in 
+/home/tgcm/pgi/openmpi-1.4.3, but when trying to compile the model
+with mpif90 of this install, it stops immediately complaining about
+"-pthreads unknown option". So for now, just using the old paths
+in Make.pgi_hao64.
