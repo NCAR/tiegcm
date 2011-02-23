@@ -1272,3 +1272,15 @@ mpirun commands, see tiegcm-linux.job, and MPIRUN in the Make.machine
 files. Short tests show that the intel-built code is more than 2x faster
 than the PGI built code using 4 processors on iris.  No changes to the 
 source code in this commit (r514) to the trunk.
+
+2/23/11: Rebuilt openmpi with ifort and installed in 
+/home/tgcm/intel/openmpi-1.4.3, so now Make.intel_hao64 has:
+MPIF90   = /home/tgcm/intel/openmpi-1.4.3/bin/mpif90
+MPIRUN   = /home/tgcm/intel/openmpi-1.4.3/bin/mpirun
+See /home/tgcm/intel/openmpi-1.4.3/config.log for config command.
+
+Also built openmpi with pgf90 and installed in 
+/home/tgcm/pgi/openmpi-1.4.3, but when trying to compile the model
+with mpif90 of this install, it stops immediately complaining about
+"-pthreads unknown option". So for now, just using the old paths
+in Make.pgi_hao64.

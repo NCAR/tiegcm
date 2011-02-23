@@ -145,7 +145,7 @@ EOF
 gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 #
 # Execute Linux job (MPI or non-MPI run):
-# (machines.ini rule is in Make.generic_hao64)
+# (machines.ini mpirun rules are in Make.machine file)
 #
 if ($exec == "TRUE") then
   set model = ./$model
