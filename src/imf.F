@@ -144,27 +144,27 @@
       endif
 !
 ! Get index to requested day for solar flux:
-      index=real_bsearch(real(days),1,ndays,model_dfrac)
-      if (index == -1) then
-         write(6,"('>>> getimf: error from real_bsearch: ',
-     |     'could not find model_dfrac=',f10.3,' ndays=',i5,
-     |     ' days(1)=',i8,' days(ndays)=',i8)") 
-     |     model_dfrac,ndays,days(1),days(ndays)
-         call shutdown('getimf: IMF data not available')
-      endif
-      index1=index
-      index2=index+1
-      if (index2 <= ndays) then
+!     index=real_bsearch(real(days),1,ndays,model_dfrac)
+!     if (index == -1) then
+!        write(6,"('>>> getimf: error from real_bsearch: ',
+!    |     'could not find model_dfrac=',f10.3,' ndays=',i5,
+!    |     ' days(1)=',i8,' days(ndays)=',i8)") 
+!    |     model_dfrac,ndays,days(1),days(ndays)
+!        call shutdown('getimf: IMF data not available')
+!     endif
+!     index1=index
+!     index2=index+1
+!     if (index2 <= ndays) then
 !
 ! Interpolate solar flux:
 !
 ! f107d
-        call finterpb(f107d(index1),f107d(index2),model_f107d,1,
-     |    real(days(index1)),real(days(index2)),model_dfrac)
+!       call finterpb(f107d(index1),f107d(index2),model_f107d,1,
+!    |    real(days(index1)),real(days(index2)),model_dfrac)
 ! f107a
-        call finterpb(f107a(index1),f107a(index2),model_f107a,1,
-     |    real(days(index1)),real(days(index2)),model_dfrac)
-      endif
+!       call finterpb(f107a(index1),f107a(index2),model_f107a,1,
+!    |    real(days(index1)),real(days(index2)),model_dfrac)
+!     endif
 !
 ! Transfer new interpolated data to model variables:
 ! (input has already determined that at least one of these
@@ -175,8 +175,8 @@
       if (rd_bzimf == spval) bzimf = model_bz
       if (rd_swvel == spval) swvel_inp = model_swvel
       if (rd_swden == spval) swden_inp = model_swden
-      if (rd_f107  == spval) f107_inp  = model_f107d
-      if (rd_f107a == spval) f107a_inp = model_f107a
+!     if (rd_f107  == spval) f107_inp  = model_f107d
+!     if (rd_f107a == spval) f107a_inp = model_f107a
 
 !     write(6,"('getimf: data interpolated to modeltime ',3i4,':')")
 !    |  modeltime(1:3)
@@ -215,9 +215,9 @@
 ! Get ndata and ndays dimensions:
       istat = nf_inq_dimid(ncid,'ndata',id_ndata)
       istat = nf_inq_dimlen(ncid,id_ndata,ndata)
-      istat = nf_inq_dimid(ncid,'ndays',id_ndays)
-      istat = nf_inq_dimlen(ncid,id_ndays,ndays)
-      write(6,"('rdimf: ndata=',i5,' ndays=',i5)") ndata,ndays
+!     istat = nf_inq_dimid(ncid,'ndays',id_ndays)
+!     istat = nf_inq_dimlen(ncid,id_ndays,ndays)
+!     write(6,"('rdimf: ndata=',i5,' ndays=',i5)") ndata,ndays
 !
 ! Allocate data arrays and initialize structure pointers:
       if (istep==1) call alloc_imf
@@ -225,8 +225,8 @@
 ! Read vars:
 !
 ! Missing value:
-      istat = nf_inq_varid(ncid,'missing',idv_missing)
-      istat = nf_get_var_double(ncid,idv_missing,missing)
+!     istat = nf_inq_varid(ncid,'missing',idv_missing)
+!     istat = nf_get_var_double(ncid,idv_missing,missing)
 
 ! yyyyddd.frac date:
       istat = nf_inq_varid(ncid,'date',idv_date)
@@ -235,10 +235,10 @@
      |  minval(date),maxval(date)
 
 ! integer days:
-      istat = nf_inq_varid(ncid,'days',idv_days)
-      istat = nf_get_var_int(ncid,idv_days,days)
-      write(6,"('rdimf: ndays=',i5,' days min,max=',2i10)") 
-     |  ndays,minval(days),maxval(days)
+!     istat = nf_inq_varid(ncid,'days',idv_days)
+!     istat = nf_get_var_int(ncid,idv_days,days)
+!     write(6,"('rdimf: ndays=',i5,' days min,max=',2i10)") 
+!    |  ndays,minval(days),maxval(days)
 
 ! uttime:
 !     istat = nf_inq_varid(ncid,'uttime',idv_uttime)
@@ -283,22 +283,22 @@
       write(6,"('rdimf: swden min,max=',2f8.2)") fmin,fmax
 
 ! kp:
-      istat = nf_inq_varid(ncid,'kp',idv_kp)
-      istat = nf_get_var_double(ncid,idv_kp,kp)
-      call fminmaxspv(kp,ndata,fmin,fmax,missing)
-      write(6,"('rdimf: kp min,max=',2f8.2)") fmin,fmax
+!     istat = nf_inq_varid(ncid,'kp',idv_kp)
+!     istat = nf_get_var_double(ncid,idv_kp,kp)
+!     call fminmaxspv(kp,ndata,fmin,fmax,missing)
+!     write(6,"('rdimf: kp min,max=',2f8.2)") fmin,fmax
 
 ! f107d:
-      istat = nf_inq_varid(ncid,'f107d',idv_f107d)
-      istat = nf_get_var_double(ncid,idv_f107d,f107d)
-      call fminmaxspv(f107d,ndays,fmin,fmax,missing)
-      write(6,"('rdimf: f107d min,max=',2f8.2)") fmin,fmax
+!     istat = nf_inq_varid(ncid,'f107d',idv_f107d)
+!     istat = nf_get_var_double(ncid,idv_f107d,f107d)
+!     call fminmaxspv(f107d,ndays,fmin,fmax,missing)
+!     write(6,"('rdimf: f107d min,max=',2f8.2)") fmin,fmax
 
 ! f107a:
-      istat = nf_inq_varid(ncid,'f107a',idv_f107a)
-      istat = nf_get_var_double(ncid,idv_f107a,f107a)
-      call fminmaxspv(f107a,ndays,fmin,fmax,missing)
-      write(6,"('rdimf: f107a min,max=',2f8.2)") fmin,fmax
+!     istat = nf_inq_varid(ncid,'f107a',idv_f107a)
+!     istat = nf_get_var_double(ncid,idv_f107a,f107a)
+!     call fminmaxspv(f107a,ndays,fmin,fmax,missing)
+!     write(6,"('rdimf: f107a min,max=',2f8.2)") fmin,fmax
 
       write(6,"(72('-'),/)")
       end subroutine rdimf
@@ -319,9 +319,9 @@
       allocate(swden(ndata),stat=istat)
       allocate(kp(ndata),stat=istat)
 
-      allocate(days(ndays),stat=istat)
-      allocate(f107d(ndays),stat=istat)
-      allocate(f107a(ndays),stat=istat)
+!     allocate(days(ndays),stat=istat)
+!     allocate(f107d(ndays),stat=istat)
+!     allocate(f107a(ndays),stat=istat)
 
       end subroutine alloc_imf
 !-----------------------------------------------------------------------

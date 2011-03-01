@@ -257,6 +257,9 @@
       if (potential_model(1:6)=='WEIMER'.and.
      |  rd_power==spval) then
         power = hp_from_bz_swvel(bzimf,swvel)
+!       write(6,"('Advance calculated power from bz,swvel: ',
+!    |    ' bz=',f8.2,' swvel=',f8.2,' power=',f8.2)")
+!    |    bzimf,swvel,power
       endif
 !
 ! If Kp was provided, calculate power and/or ctpoten
@@ -309,14 +312,24 @@
           write(6,"('Step ',i6,' of ',i6,' mtime=',3i3)")
      |      istep,nstep,modeltime(1:3)
         endif
-        if (len_trim(gpi_ncfile) > 0) then
-          write(6,"('GPI run: power=',f7.2,' ctpoten=',f7.2,' f107=',
-     |      f7.2,' f107a=',f7.2)") power,ctpoten,f107,f107a
-        endif
-        if (len_trim(imf_ncfile) > 0) then
-          write(6,"('IMF run: bx=',f7.2,' by=',f7.2,' bz=',f7.2,
-     |      ' swvel=',f7.2,' swden=',f7.2,' ctpoten=',f7.2,
-     |      ' power=',f7.2)") bximf,byimf,bzimf,swvel,swden,
+        if (len_trim(gpi_ncfile) > 0.and.len_trim(imf_ncfile) > 0) then
+!
+! If both GPI and IMF data run, then only f10.7 flux is used from
+! the gpi file. GPI power and ctpoten are overwritten as follows:
+! power is calculated from bz,swvel (see above), and ctpoten is from
+! weimer (Weimer is called later, so do not print ctpoten here)
+!
+          write(6,"('GPI+IMF run: istep=',i6,' GPI f107=',f8.3,
+     |      ' f107a=',f8.3,' power from bzimf,swvel=',f8.3)")
+     |      istep,f107,f107a,power
+        elseif (len_trim(gpi_ncfile) > 0) then
+          write(6,"('GPI run: istep=',i6,' power=',f8.3,' ctpoten=',
+     |      f8.3,' f107=',f8.3,' f107a=',f8.3)") istep,power,ctpoten,
+     |      f107,f107a
+        elseif (len_trim(imf_ncfile) > 0) then
+          write(6,"('IMF run: istep=',i6,' bx=',f8.3,' by=',f8.3,' bz=',
+     |      f8.3,' swvel=',f8.3,' swden=',f8.3,' ctpoten (prev step)=',
+     |      f8.3,' power=',f8.3)") istep,bximf,byimf,bzimf,swvel,swden,
      |      ctpoten,power
         endif
       endif ! time2print
@@ -440,6 +453,8 @@
 !
 ! sub weimer05 (wei05sc.F), calculates mag electric potential in phihm.
 ! (if byimf==bzimf==0, then weimer05 will set bzimf = .01)
+! Weimer will calculate ctpoten (user cannot provide constant
+!   namelist ctpoten with the Weimer model)
 !
         call weimer05(byimf,bzimf,swvel,swden,wei05sc_ncfile,istep)
         if (debug) write(6,"('advance after weimer05: istep=',i4)")istep

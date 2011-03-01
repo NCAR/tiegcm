@@ -1898,7 +1898,8 @@
 !      (data file has 3-hourly Kp and daily f107,f107a)
 !   3. imf_ncfile data file can be provided only with Weimer potential model.
 !      (data file has hourly bx,by,bz,swvel,swden,kp, and daily f107,f107a)
-!   4. User cannot provide both gpi_ncfile and imf_ncfile in a single run.
+!   4. User cannot provide both gpi_ncfile and imf_ncfile in a single run, 
+!      except when only f10.7 is requested from the gpi file.
 !   5. User can provide the following parameters as either constants or 
 !      time-dependent values: ctpoten,power,bximf,byimf,bzimf,swden,swvel
 !      (time-dependent keywords are xxxx_time, e.g., ctpoten_time)
@@ -1992,11 +1993,15 @@
           call shutdown('POTENTIAL_MODEL')
       end select
 !
-! Cannot specify both imf and gpi data in same run:
+! gpi and imf data files can be used together only if only f10.7 flux
+! is used from the gpi file.
       if (len_trim(gpi_ncfile) > 0.and.len_trim(imf_ncfile) > 0) then
-        write(6,"(/,'>>> INPUT: User cannot request both GPI ',
-     |    '(gpi_ncfile) and IMF (imf_ncfile) data runs.')")
-        call shutdown('GPI and IMF not allowed')
+        write(6,"('Note INPUT: Both gpi_ncfile and imf_ncfile are ',
+     |    'specified.',/,'  In this case, only f10.7 flux will be ',
+     |    'used from the gpi file.')")
+!       write(6,"(/,'>>> INPUT: User cannot request both GPI ',
+!    |    '(gpi_ncfile) and IMF (imf_ncfile) data runs.')")
+!       call shutdown('GPI and IMF not allowed')
       endif
 !
 ! Kp was specified:
@@ -2106,10 +2111,15 @@
       if (potential_model(1:6)=='WEIMER') then
 !
 ! GPI data not allowed with Weimer potential model:
+! If gpi data is requested with Weimer, then only f10.7 will be
+! used from the gpi file.
         if (len_trim(gpi_ncfile) > 0) then
-          write(6,"(/,'>>> INPUT: GPI data runs (gpi_ncfile) can',
-     |      ' be requested only with HEELIS potential model.')")
-          call shutdown('GPI with WEIMER')
+          write(6,"('Note INPUT: gpi_ncfile has been specified with',
+     |      ' Weimer convection model.',/,'  In this case, only ',
+     |      'f10.7 flux will be used from the gpi file.')")
+!         write(6,"(/,'>>> INPUT: GPI data runs (gpi_ncfile) can',
+!    |      ' be requested only with HEELIS potential model.')")
+!         call shutdown('GPI with WEIMER')
         endif
 !
 ! ctpoten cannot be provided by the user, since it will be
@@ -2169,6 +2179,14 @@
 
         endif ! imf run
       endif ! weimer potential model
+!
+! 12/3/08 btf: User may set BY to test BY effect on Heelis (see aurora.F)
+!
+      if (potential_model(1:4)=='NONE' .and. byimf == spval) then
+        write(6,"('Note input: Setting BY to 0 with no (NONE) ',
+     |      'potential model.')")
+        byimf = 0.
+      endif
 !
 ! Calendar must be advanced if using gpi or imf data:
       if (len_trim(gpi_ncfile) > 0) then

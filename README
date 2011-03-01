@@ -1284,3 +1284,12 @@ Also built openmpi with pgf90 and installed in
 with mpif90 of this install, it stops immediately complaining about
 "-pthreads unknown option". So for now, just using the old paths
 in Make.pgi_hao64.
+
+3/1/11:
+Merge changes from tiegcm/branches/tiegcm_dyncrit to the trunk to allow
+for combined IMF+GPI run. In this case, only f10.7 is used from the GPI
+file. With these mods, f10.7 cannot be read from an IMF data file. This
+code will read data from either the new imf_OMNI*.nc data files or the
+"old" imf_xxxxxxx*.nc data files. Note that the new imf_OMNI*.nc files
+do not have f10.7 or Kp data.
+
