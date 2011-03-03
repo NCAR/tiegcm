@@ -70,7 +70,7 @@
      |  idv_f107d,idv_f107a,idv_imf_ncfile,idv_mag,idv_dtide,
      |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
      |  idv_ec,idv_alfad,idv_ed,idv_writedate,idv_saber_ncfile,
-     |  idv_tidi_ncfile
+     |  idv_tidi_ncfile,idv_crit1,idv_crit2
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
 !
@@ -1741,6 +1741,12 @@
       call defvar_time_dbl(ncid,"ed",ids1,idv_ed,
      |  "Column energy input of drizzle electrons",
      |  "ergs/cm**2/s")
+! crit(1):
+      call defvar_time_dbl(ncid,"crit1",ids1,idv_crit1,
+     |  "critical cross-over latitude 1","deg")
+! crit(2):
+      call defvar_time_dbl(ncid,"crit2",ids1,idv_crit2,
+     |  "critical cross-over latitude 2","deg")
 !
 ! Magnetic pole coordinates (real(2,2)):
       ids2(1) = id_latlon
@@ -2545,6 +2551,7 @@
 !
       use hist_module,only: sh,h,hist_print
       use input_module,only: start,secstart,start_year
+      use cons_module,only: crit,rtd
 !
 ! Args:
       integer,intent(in) :: ncid,iprint
@@ -2557,7 +2564,8 @@
       character(len=240) :: char240
       character(len=80) :: char80
       integer :: ndims,nvars,ngatts,unlimdimid
-      real :: var1(1),var22(2,2),var2(2),var10(10),rmins,rdays
+      real :: var1(1),var22(2,2),var2(2),var10(10),rmins,rdays,
+     |  crit1,crit2
 !
 ! External:
       integer,external :: strloc
@@ -2850,7 +2858,13 @@
       istat = nf_put_var1_double(ncid,idv_alfad,h%ihist,h%alfad)
       if (idv_ed <= 0) istat = nf_inq_varid(ncid,"ed",idv_ed)
       istat = nf_put_var1_double(ncid,idv_ed,h%ihist,h%ed)
-
+! crit1,2:
+      crit1 = crit(1)*rtd
+      if (idv_crit1 <= 0) istat = nf_inq_varid(ncid,"crit1",idv_crit1)
+      istat = nf_put_var1_double(ncid,idv_crit1,h%ihist,crit1)
+      crit2 = crit(2)*rtd
+      if (idv_crit2 <= 0) istat = nf_inq_varid(ncid,"crit2",idv_crit2)
+      istat = nf_put_var1_double(ncid,idv_crit2,h%ihist,crit2)
 !
 ! Reference pressure used to convert ln(p0/p) to pressure (hPa):
 ! (h%p0 was set in sub define_hist, output.F)
