@@ -17,8 +17,8 @@
 
 set modeldir = tiegcm_hpss
 set execdir  = tiegcm-linux
-#set make     = Make.intel_hao64
- set make     = Make.pgi_hao64
+ set make     = Make.intel_hao64
+#set make     = Make.pgi_hao64
 #set input    = tiegcm_hpss.inp
 set output   = tiegcm_hpss.out
 set mpi      = TRUE

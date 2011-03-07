@@ -29,8 +29,8 @@
 !
 ! Make dispose script name from pid (see getpid in util.F):
       write(dispose_script,"('dispose_',i8.8,'.hsi')") pid
-      write(6,"('init_dispose: pid=',i8,' dispose_script=',a)") 
-     |  pid,trim(dispose_script)
+!     write(6,"('init_dispose: pid=',i8,' dispose_script=',a)") 
+!    |  pid,trim(dispose_script)
 !
 ! Open new file and initialize as csh script:
       lu_dispose = nextlu()
@@ -171,13 +171,22 @@
       if (iline > 0) then
 !
 ! Construct annotation command:
-! (must escape double quotes around the annotation in the hsi script):
         annotate_cmd = ' '
         annotate_cmd = 'hsi annotate -A'
-        annotate_cmd = 
-     |    trim(annotate_cmd)//' '//'\\"'//trim(annotation)//'\\" '
+!
+! hsi requires that double quotes around the annotation be escaped w/ a
+! single backslash in the hsi script.  xlf90 and PGI compilers require 
+! escape of the backslash, ifort does not.
+!
+#if defined(AIX) || defined(PGI)
+        annotate_cmd =
+     |    trim(annotate_cmd)//' '//'\\"'//trim(annotation)//'\\"'
+#else
+        annotate_cmd =
+     |    trim(annotate_cmd)//' '//'\"'//trim(annotation)//'\"'
+#endif
         annotate_cmd = trim(annotate_cmd)//' '//trim(hpss_file)
-!       write(6,"('add_dispose: annotate_cmd = ',/,a)") 
+!       write(6,"('add_dispose: annotate_cmd = ',a)") 
 !    |    trim(annotate_cmd)
 !
 ! Update annotation for this file:

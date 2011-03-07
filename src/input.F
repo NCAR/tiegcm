@@ -1436,7 +1436,7 @@
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amievol)
       if (len_trim(hpss_path) > 0)
-     |  write(6,"('  hpss_path = ',a,/,4x,
+     |  write(6,"('  hpss_path = ',a,4x,
      |    '(hpss directory for hsi dispose script)')") trim(hpss_path)
       write(6,"('  start_year = ',i4,' (starting calendar day)')")
      |  start_year

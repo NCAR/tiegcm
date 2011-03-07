@@ -1307,3 +1307,12 @@ do not have f10.7 or Kp data.
 3/3/11:
 Merged from trunk to branch tiegcm_hpss to obtain IMF+GPI option from
 the trunk: svn merge -r519:HEAD $SVN/tiegcm/trunk
+
+3/7/11:
+Cpp conditional on compilers (AIX vs LINUX, and PGI vs INTEL within
+LINUX) was necessary in dispose.F to make correct annotation command 
+with escaped double-quotes surrounding the annotation. xlf90 and PGI 
+fortran require that a backslash be escaped w/ a backslash (even inside 
+single quotes), but ifort does not (ifort makes 2 backslashes in this 
+case). Added -DINTEL or -DPGI to CPPFLAGS in Make.intel_hao64 and 
+Make.pgi_hao64 for the #ifdef conditional in dispose.F.
