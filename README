@@ -1316,3 +1316,9 @@ fortran require that a backslash be escaped w/ a backslash (even inside
 single quotes), but ifort does not (ifort makes 2 backslashes in this 
 case). Added -DINTEL or -DPGI to CPPFLAGS in Make.intel_hao64 and 
 Make.pgi_hao64 for the #ifdef conditional in dispose.F.
+
+3/7/11: Namelist HPSS_PATH is now a switch: an hsi dispose script will
+be made only if HPSS_PATH is set. HPSS_PATH is commented out in the
+default namelist file. This is to encourage use of the independent perl
+script tgcm_put ($TGCMROOT/bin/tgcm_put) to store history files in the hpss.
+Also set default Make.machine file to be Make.intel_hao64.

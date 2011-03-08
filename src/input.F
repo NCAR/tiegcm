@@ -609,12 +609,13 @@
         endif
       endif
 !
-! hpss path:
-      if (len_trim(hpss_path)==0) then
-        write(hpss_path,"('/home/',a,'/',a)") trim(logname),
-     |    trim(tgcm_version)
-        write(6,"('inp_model: hpss_path=',a)") trim(hpss_path)
-      endif
+! hpss path: if hpss_path not set, then do not make hsi dispose script.
+! (see call init_dispose in tgcm.F, and call add_dispose in dispose.F)
+!     if (len_trim(hpss_path)==0) then
+!       write(hpss_path,"('/home/',a,'/',a)") trim(logname),
+!    |    trim(tgcm_version)
+!       write(6,"('inp_model: hpss_path=',a)") trim(hpss_path)
+!     endif
       end subroutine inp_model
 !-----------------------------------------------------------------------
       subroutine mkntask(ntask,ntask_lat,ntask_lon,ier)

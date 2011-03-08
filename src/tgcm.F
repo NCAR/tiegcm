@@ -10,7 +10,7 @@
 ! initial cvs import was tiegcm1
 !
       use params_module,only: tgcm_version
-      use input_module,only: input,dynamo,step,cwd,pid
+      use input_module,only: input,dynamo,step,cwd,pid,hpss_path
       use dispose_module,only: init_dispose
       use fields_module,only: itp
       use init_module,only: init,iyear
@@ -76,7 +76,7 @@
       call getpid(pid)
       write(6,"('Process ID (pid) = ',i8)") pid
       call input(mytid,ntask) ! get user input (mpi)
-      if (mytid==0) call init_dispose
+      if (mytid==0.and.len_trim(hpss_path) > 0) call init_dispose
 #ifdef MPI
       call mp_distribute
 #endif

@@ -66,7 +66,8 @@
 !
       use input_module,only:  ! input_mod.f
      |  output,      ! output file paths provided by input
-     |  mxhist_prim  ! max number of histories on a primary file
+     |  mxhist_prim, ! max number of histories on a primary file
+     |  hpss_path    ! dispose path for hsi script
       use hist_module,only:   ! hist_mod.f
      |  iprint,      ! print flag (read only)
      |  ioutfile,    ! index to current output file (read/write)
@@ -180,7 +181,8 @@
 ! Add contents string to the file (as global attribute), and to the
 ! hpss dispose script:
       call nc_fileinfo(ncid,fileinfo)
-      call add_dispose(trim(diskfile),trim(fileinfo))
+      if (len_trim(hpss_path) > 0) 
+     |  call add_dispose(trim(diskfile),trim(fileinfo))
       call nc_close(ncid)
       end subroutine output_hist
 !-----------------------------------------------------------------------
@@ -192,7 +194,8 @@
 !
       use input_module,only:  ! input_mod.f
      |  secout,      ! output file paths provided by input
-     |  mxhist_sech  ! max number of histories on a primary file
+     |  mxhist_sech, ! max number of histories on a primary file
+     |  hpss_path    ! dispose path for hsi script
       use hist_module,only:   ! hist_mod.f
      |  iprint,      ! print flag (read only)
      |  isecout,     ! index to current output file (read/write)
@@ -285,7 +288,8 @@
 ! Add contents string to the file (as global attribute), and to the
 ! hpss dispose script:
       call nc_fileinfo(ncidsech,fileinfo)
-      call add_dispose(trim(diskfile),trim(fileinfo))
+      if (len_trim(hpss_path) > 0) 
+     |  call add_dispose(trim(diskfile),trim(fileinfo))
       call nc_close(ncidsech)
       end subroutine output_sechist
 !-----------------------------------------------------------------------

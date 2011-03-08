@@ -37,11 +37,9 @@
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'
 ;
-; HPSS_PATH:
-; The model will construct an hsi script (file dispose_xxxxx.hsi)
-; to copy history files to the hpss. HPSS_PATH is the hpss directory 
-; specified in the hsi put commands in the hsi script.
-; (default is /home/[logname]/[model_version])
+; If HPSS_PATH is set, the model will construct an hsi script 
+; (file dispose_xxxxx.hsi in execdir) to copy history files to 
+; the hpss directory HPSS_PATH.
 ;
 ;HPSS_PATH = '/home/logname/tiegcm_hpss'
 ;
