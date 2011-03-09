@@ -50,6 +50,7 @@ $modelres  = 5.0;
   "SECFLDS=s"             => \$SECFLDS,
   "SECFLDS0=s"            => \$SECFLDS0,
   "SECFLDS1=s"            => \$SECFLDS1,
+  "HPSS_PATH=s"           => \$HPSS_PATH,
   "TIDE=s"                => \$TIDE,
   "TIDE2=s"               => \$TIDE2,
   "GSWM_MI_DI_NCFILE=s"   => \$GSWM_MI_DI_NCFILE,
@@ -154,6 +155,7 @@ $SECHIST  = "0,0,12";
 $MXHIST_SECH = 24;
 $SECFLDS0 = "'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',";
 $SECFLDS1 = "'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'";
+$HPSS_PATH = "'/home/$user/$model'";
 $TIDE    = "0.,0.,0.,0.,0.,0.,0.,0.,0.,0.";
 $TIDE2   = "0.,0.";
 $POTENTIAL_MODEL = "'HEELIS'";
@@ -196,6 +198,7 @@ $COLFAC = "1.5";
   SECFLDS             =>" ",
   SECFLDS0            =>" ",
   SECFLDS1            =>" ",
+  HPSS_PATH           =>";",
   TIDE                =>" ",
   TIDE2               =>" ",
   GSWM_MI_DI_NCFILE   =>" ",
@@ -271,6 +274,9 @@ sub set_res_params {
     if ($highres) { $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_2.5deg.nc'"; }
     else { $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_5.0deg.nc'"; }
   }
+  if (! defined($HPSS_PATH)) { 
+    $HPSS_PATH = "/home/$user/$model";
+  }
 } # end sub set_res_params
 #-------------------------------------------------------------------------
 sub write_namelist {
@@ -317,6 +323,11 @@ $comments{SECOUT}SECOUT   = $SECOUT
 $comments{MXHIST_SECH}MXHIST_SECH = $MXHIST_SECH
 $comments{SECFLDS}SECFLDS = $SECFLDS0
 $comments{SECFLDS}          $SECFLDS1
+;
+; If HPSS_PATH is set, an hsi dispose script will be made (not executed)
+; to copy history files to the NCAR HPSS in the directory HPSS_PATH.
+;
+$comments{HPSS_PATH}HPSS_PATH = $HPSS_PATH
 ;
 $comments{TIDE}TIDE = $TIDE
 $comments{TIDE2}TIDE2 = $TIDE2

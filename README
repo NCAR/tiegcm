@@ -1322,3 +1322,5 @@ be made only if HPSS_PATH is set. HPSS_PATH is commented out in the
 default namelist file. This is to encourage use of the independent perl
 script tgcm_put ($TGCMROOT/bin/tgcm_put) to store history files in the hpss.
 Also set default Make.machine file to be Make.intel_hao64.
+
+3/9/11: Add commented HPSS_PATH to mknamelist and tiegcm_default.inp.
