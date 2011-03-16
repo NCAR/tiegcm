@@ -180,6 +180,7 @@
 !
 ! Add contents string to the file (as global attribute), and to the
 ! hpss dispose script:
+      fileinfo = ' '
       call nc_fileinfo(ncid,fileinfo)
       if (len_trim(hpss_path) > 0) 
      |  call add_dispose(trim(diskfile),trim(fileinfo))
@@ -287,6 +288,7 @@
 !
 ! Add contents string to the file (as global attribute), and to the
 ! hpss dispose script:
+      fileinfo = ' '
       call nc_fileinfo(ncidsech,fileinfo)
       if (len_trim(hpss_path) > 0) 
      |  call add_dispose(trim(diskfile),trim(fileinfo))
