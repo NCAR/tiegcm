@@ -36,7 +36,6 @@ $system  = 'linux';  # 'linux' or 'ibm'
   "make_machine=s"   => \$make_machine,
   "mpi=s"            => \$mpi,
   "nproc=i"          => \$nproc,
-  "mss=s"            => \$mss,
   "hres=f"           => \$hres,
   "vres=f"           => \$vres,
   "input=s"          => \$input,
@@ -143,7 +142,6 @@ $wrkdir       = ".";
 $tgcmroot     = ".";
 $mpi          = "TRUE";
 if ($system eq "linux") { $nproc = 4; } else { $nproc = ""; }
-$mss          = "TRUE";
 $hres         = "5.0";
 $vres         = "0.5";
 #$input        = "$model.inp";
@@ -224,7 +222,6 @@ print $fh_out <<"EOF3";
 set output       = $output
 set mpi          = $mpi
 set nproc        = $nproc
-set mss          = $mss
 set hres         = $hres
 set vres         = $vres
 set utildir      = $utildir

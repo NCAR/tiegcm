@@ -1572,20 +1572,23 @@
 !
 ! f107 daily and f107 average solar fluxes:
 ! 9/30/05: change units as suggested by John Caron (s.a. Udunits)
+! 3/16/11: units are kg.s-2, not kg.s-4 (kg.s-2 == W/m2/Hz)
       call defvar_time_dbl(ncid,"f107d",ids1,idv_f107d,
 !    |  "Daily 10.7 cm solar flux","W/m^2Hz*1.e-22")
-     |  "Daily 10.7 cm solar flux","1.e-22 kg.s-4")
+     |  "Daily 10.7 cm solar flux","1.e-22 kg.s-2")
       call defvar_time_dbl(ncid,"f107a",ids1,idv_f107a,
 !    |  "81-day average 10.7 cm solar flux","W/m^2Hz*1.e-22")
-     |  "81-day average 10.7 cm solar flux","1.e-22 kg.s-4")
+     |  "81-day average 10.7 cm solar flux","1.e-22 kg.s-2")
 !
 ! Hemispheric power: 
+! 3/16/11: change "gw" to "GW"
       call defvar_time_dbl(ncid,"hpower",ids1,idv_hpower,
-     |  "Hemispheric power","gw")
+     |  "Hemispheric power","GW")
 !
 ! Cross-tail potential:
+! 3/16/11: change units from volts to kV
       call defvar_time_dbl(ncid,"ctpoten",ids1,idv_ctpoten,
-     |  "Cross-tail potential","volts")
+     |  "Cross-tail potential","kV")
 !
 ! Kp index:
       call defvar_time_dbl(ncid,"Kp",ids1,idv_kp,"Kp index"," ")
@@ -1922,16 +1925,6 @@
      +    'for SVN version global attribute')")
         call handle_ncerr(istat,char120)
       endif
-!
-! This is not written to new history files (see output_file below)
-! Mss path to history file:
-!     istat = nf_put_att_text(ncid,NF_GLOBAL,"mss_path",
-!    |  len_trim(h%mss_path),trim(h%mss_path))
-!     if (istat /= NF_NOERR) then
-!       write(char120,"('Error return from nf_put_att_text ',
-!    |    'for mss_path global attribute')")
-!       call handle_ncerr(istat,char120)
-!     endif
 !
 ! Output path (from namelist):
       istat = nf_put_att_text(ncid,NF_GLOBAL,"output_file",
@@ -3446,14 +3439,14 @@
 ! giving beginning and ending history dates, model version string,
 ! and "primary" or "secondary". This is added as a global
 ! file attribute, and is included in the mss comment field
-! if the file is disposed to the mss, and is therefore accessible 
-! via msls -x. Example fileinfo string:
+! if the file is disposed to the hpss, and is therefore accessible 
+! via "hsi ls -lA". Example fileinfo string:
 !
 ! 96080  80, 0, 0 to 96084  84, 0, 0 by  720 tgcm22 primary
 !
 ! Args:
       integer,intent(in) :: ncid
-      character(len=80),intent(out) :: fileinfo
+      character(len=*),intent(out) :: fileinfo
 !
 ! Local:
       integer :: istat,idvmtime,idtime,ntimes,idvyear,idvday,

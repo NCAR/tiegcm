@@ -10,8 +10,9 @@
      |  nc_define,   ! subroutine to define vars in a new netcdf file
      |  nc_wrhist,   ! subroutine to write history to an open netcdf file
      |  nc_close,    ! subroutine to close a netcdf file
-     |  nc_fileinfo,
+     |  nc_fileinfo, ! make contents string for current file
      |  def_fsech
+      use dispose_module,only: add_dispose
 !
       contains
 !-----------------------------------------------------------------------
@@ -32,8 +33,8 @@
 !
 ! Local:
       logical :: time2write,
-     |  wrprim,  save_prim, newseries_prim,
-     |  wrsech,  save_sech, newseries_sech
+     |  wrprim, newseries_prim,
+     |  wrsech, newseries_sech
       integer :: icount
 !
 ! External:
@@ -43,31 +44,30 @@
 ! (istep and modeltime are input, remaining 6 args are output)
 !
       time2write = wrhist(istep,modeltime,
-     |  wrprim, save_prim, newseries_prim, iseries_prim,
-     |  wrsech, save_sech, newseries_sech, iseries_sech)
+     |  wrprim, newseries_prim, iseries_prim,
+     |  wrsech, newseries_sech, iseries_sech)
 !
 ! Write primary history:
       if (wrprim) then
-        call output_hist(istep,save_prim,newseries_prim)
+        call output_hist(istep,newseries_prim)
       endif
 !
 ! Write secondary history:
       if (wrsech) then
-        call output_sechist(save_sech,newseries_sech)
+        call output_sechist(newseries_sech)
       endif
       end subroutine outhist
 !-----------------------------------------------------------------------
-      subroutine output_hist(istep,svfile,newseries)
+      subroutine output_hist(istep,newseries)
 !
 ! Write a primary history to current output disk file. 
-! If svfile==T, save the file *after* writing the history.
 ! If newseries==T, open new file *before* writing the history
 !   (and save existing file before opening the new one)
 !
       use input_module,only:  ! input_mod.f
      |  output,      ! output file paths provided by input
-     |  dispose,     ! dispose histories to mss if dispose == 1 or 2
-     |  mxhist_prim  ! max number of histories on a primary file
+     |  mxhist_prim, ! max number of histories on a primary file
+     |  hpss_path    ! dispose path for hsi script
       use hist_module,only:   ! hist_mod.f
      |  iprint,      ! print flag (read only)
      |  ioutfile,    ! index to current output file (read/write)
@@ -87,17 +87,14 @@
 ! Args:
       integer,intent(in) :: istep
       logical,intent(in) :: 
-     |  newseries, ! if true, open new file before writing history
-     |  svfile     ! if true, save current output file after writing history
+     |  newseries  ! if true, open new file before writing history
 !
 ! Local:
       character(len=80) :: diskfile 
       integer :: iprinthist
       integer,save :: ihist_total=0
       logical :: fullfile
-!
-! External:
-      logical,external :: is_mspath ! util.F
+      character(len=1024) :: fileinfo
 !
 ! Init:
       diskfile = ' '
@@ -117,7 +114,7 @@
 !
 ! Open new file if starting a new time series, or file was filled
 ! at last write. Otherwise, open existing file to receive history.
-! If disposing to mss, open local disk file constructed from OUTPUT 
+! If disposing to hpss, open local disk file constructed from OUTPUT 
 ! path, otherwise open OUTPUT path as provided by namelist input.
 !
       if (newseries.or.fullfile) then  ! open new file
@@ -126,11 +123,7 @@
         if (newseries) write(6,"(/,'Starting primary history',
      |    ' time series ',i2,' at model time ',4i4)") iseries_prim,
      |    modeltime
-        if (dispose > 0 .or. is_mspath(output(ioutfile))) then
-          call mkdiskflnm(output(ioutfile),diskfile)
-        else
-          diskfile = trim(output(ioutfile))
-        endif
+        diskfile = trim(output(ioutfile))
         call nc_open(ncid,diskfile,'REPLACE','WRITE')
         if (ncid==0) then
           write(6,"(/,'>>> output_hist: Error opening new primary ',
@@ -138,11 +131,7 @@
           call shutdown('opening new primary output history file')
         endif
       else                            ! append to existing file
-        if (dispose > 0 .or. is_mspath(output(ioutfile))) then
-          call mkdiskflnm(output(ioutfile),diskfile)
-        else
-          diskfile = trim(output(ioutfile))
-        endif
+        diskfile = trim(output(ioutfile))
         call nc_open(ncid,diskfile,'OLD','APPEND')
         if (ncid==0) then
           write(6,"(/,'>>> output_hist: Error opening existing primary',
@@ -189,31 +178,25 @@
      |  ' to ',a,' (',i4,' of ',i4,')')") modeltime(1:3),
      |  trim(diskfile),ihist_total,nhist_total
 !
-! Save file if necessary:
-      if (svfile.or.nhist==mxhist_prim.or.nstep==0) then
-        call savefile(ncid,diskfile,output(ioutfile),
-     |    dispose,.true.,iprint)
-!
-! If writing to mss after model execution (dispose==2), update
-! csh dispose script after every disk write:
-      elseif (dispose==2) then
-        call savefile(ncid,diskfile,output(ioutfile),
-     |    dispose,.true.,iprint)
-      endif
+! Add contents string to the file (as global attribute), and to the
+! hpss dispose script:
+      fileinfo = ' '
+      call nc_fileinfo(ncid,fileinfo)
+      if (len_trim(hpss_path) > 0) 
+     |  call add_dispose(trim(diskfile),trim(fileinfo))
       call nc_close(ncid)
       end subroutine output_hist
 !-----------------------------------------------------------------------
-      subroutine output_sechist(svfile,newseries)
+      subroutine output_sechist(newseries)
 !
 ! Write a secondary history to current output disk file. 
-! If svfile==T, save the file *after* writing the history.
 ! If newseries==T, open new file *before* writing the history
 !   (and save existing file before opening the new one)
 !
       use input_module,only:  ! input_mod.f
      |  secout,      ! output file paths provided by input
-     |  dispose,     ! save history files to mss if dispose = 1 or 2
-     |  mxhist_sech  ! max number of histories on a primary file
+     |  mxhist_sech, ! max number of histories on a primary file
+     |  hpss_path    ! dispose path for hsi script
       use hist_module,only:   ! hist_mod.f
      |  iprint,      ! print flag (read only)
      |  isecout,     ! index to current output file (read/write)
@@ -223,22 +206,18 @@
      |  nsech_total, ! total sech histories to be written (read only)
      |  nstep,       ! total number of steps this run
      |  iseries_sech ! current secondary time series (read only)
-      use init_module,only: istep ! current time-step
       implicit none
 !
 ! Args:
       logical,intent(in) :: 
-     |  newseries, ! if true, open new file before writing history
-     |  svfile     ! if true, save current output file after writing history
+     |  newseries  ! if true, open new file before writing history
 !
 ! Local:
       character(len=80) :: diskfile 
       integer :: iprinthist
       integer,save :: ihist_total=0
       logical :: fullfile
-!
-! External:
-      logical,external :: is_mspath ! util.F
+      character(len=1024) :: fileinfo
 !
 ! Init:
       diskfile = ' '
@@ -255,7 +234,7 @@
 !
 ! Open new file if starting a new time series, or file was filled
 ! at last write:
-! If disposing to mss, open local disk file constructed from SECOUT path, 
+! If disposing to hpss, open local disk file constructed from SECOUT path, 
 ! otherwise open SECOUT path as provided by namelist input:
 !
       if (newseries.or.fullfile) then       ! open new file
@@ -264,11 +243,7 @@
         if (newseries) write(6,"(/,'Starting secondary history',
      |    ' time series ',i2,' at model time ',4i4)") iseries_sech,
      |    modeltime
-        if (dispose > 0 .or. is_mspath(secout(isecout))) then
-          call mkdiskflnm(secout(isecout),diskfile)
-        else
-          diskfile = trim(secout(isecout))
-        endif
+        diskfile = trim(secout(isecout))
         call nc_open(ncidsech,diskfile,'REPLACE','WRITE')
         if (ncidsech==0) then
           write(6,"(/,'>>> output_sechist: Error opening new output ',
@@ -276,11 +251,7 @@
           call shutdown('opening new secondary history output file')
         endif
       else                                 ! append to existing file
-        if (dispose > 0 .or. is_mspath(secout(isecout))) then
-          call mkdiskflnm(secout(isecout),diskfile)
-        else
-          diskfile = trim(secout(isecout))
-        endif
+        diskfile = trim(secout(isecout))
         call nc_open(ncidsech,diskfile,'OLD','APPEND')
         if (ncidsech==0) then
           write(6,"(/,'>>> output_sechist: Error opening existing ',
@@ -315,64 +286,14 @@
      |  ' to ',a,' (',i4,' of ',i4,')')") modeltime(1:3),
      |  trim(diskfile),ihist_total,nsech_total
 !
-! Save file if necessary:
-      if (svfile.or.nsech==mxhist_sech) then
-!       write(6,"('output_sechist calling savefile: nsech=',i3)")
-!    |    nsech
-        call savefile(ncidsech,diskfile,secout(isecout),
-     |    dispose,.true.,iprint)
-!
-! If writing to mss after model execution (dispose==2), update
-! csh dispose script after every disk write:
-      elseif (dispose==2) then
-        call savefile(ncidsech,diskfile,secout(isecout),
-     |    dispose,.true.,iprint)
-      endif
+! Add contents string to the file (as global attribute), and to the
+! hpss dispose script:
+      fileinfo = ' '
+      call nc_fileinfo(ncidsech,fileinfo)
+      if (len_trim(hpss_path) > 0) 
+     |  call add_dispose(trim(diskfile),trim(fileinfo))
       call nc_close(ncidsech)
       end subroutine output_sechist
-!-----------------------------------------------------------------------
-      subroutine savefile(ncid,diskfile,outpath,idispose,reopen,iprint)
-      use input_module,only: msreten
-      use dispose_module,only: add_dispose
-      implicit none
-!
-! Args:
-      integer,intent(in) :: idispose,iprint
-      integer,intent(inout) :: ncid
-      logical,intent(in) :: reopen
-      character(len=*),intent(in) :: diskfile,outpath
-!
-! Local:
-      integer :: istat,ier
-      character(len=80) :: fileinfo,msspath
-!
-! Make fileinfo string for mss comment field and add as a
-! global file attribute:
-!
-      call nc_fileinfo(ncid,fileinfo)
-      write(6,"('History file info: ',a)") trim(fileinfo)
-!
-! Close file:
-      call nc_close(ncid)
-!
-! Dispose to mss only if dispose flag is set 1 or 2 (do nothing
-! if it is 0).
-!
-! idispose==1 -> Dispose to mss from model now.  
-! idispose==2 -> Defer disposes to mss until after model execution.
-!                Add msrcp and mscomment commands to dispose script, 
-!                which is executed after model execution:
-!
-      call check_mspath(outpath,msspath)  ! msspath is returned
-      if (idispose==1) then       ! dispose now
-        call putms(msspath,diskfile,'NCARTGCM',fileinfo,msreten)
-      elseif (idispose==2) then   ! add msrcp command to dispose script
-        call add_dispose(msspath,diskfile,'NCARTGCM',fileinfo,msreten)
-      endif
-!
-! Reopen file for appending:
-      if (reopen) call nc_open(ncid,diskfile,'OLD','APPEND')
-      end subroutine savefile
 !-----------------------------------------------------------------------
       subroutine define_hist(hist_type)
 !
@@ -434,7 +355,6 @@
         case ('primary')
           h%ihist = nhist
           h%delhmins = mtime_to_mins(hist(:,iseries_prim))
-          h%mss_path = output(ioutfile)   ! this does not go on new hist files
 
           h%output_file = output(ioutfile)
           call expand_path(h%output_file)
@@ -459,7 +379,6 @@
         case ('secondary')
           h%ihist = nsech
           h%delhmins = mtime_to_mins(sechist(:,iseries_sech))
-          h%mss_path = secout(isecout)    ! this does not go on new hist files
           h%output_file = secout(isecout)
           call expand_path(h%output_file)
         case default

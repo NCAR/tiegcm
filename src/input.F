@@ -36,8 +36,9 @@
       character(len=80) :: 
      |  label,           ! optional generic text label for this run
      |  tempdir,         ! temporary directory 
-     |  magvol,          ! file name or mss path to magnetic data file
-     |  amievol          ! file or mss path of amie data file (optional)
+     |  magvol,          ! absolute or relative path to magnetic data file
+     |  amievol,         ! absolute or relative path to amie data file (optional)
+     |  hpss_path        ! hpss directory for dispose of output history files
 !
 ! date and calday are no longer supported, and are replaced by start_day, 
 ! start_year, and calendar_advance. Date and calday are retained here so 
@@ -51,7 +52,7 @@
      |  calday,          ! old: starting calendar day (0-mxday)
      |  mxday,           ! calendar day (0-mxday)
      |  step,            ! model time step (integer seconds)
-     |  dispose,         ! dispose output files to mss if dispose==1 or 2
+     |  dispose,         ! deprecated -- formerly for dispose to mss
      |  eddy_dif,	 ! 0/1 flag for DOY dependent eddy diffusion (difk, dift, xmue)
      |  dynamo,          ! 0/1 flag for dynamo
      |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
@@ -110,10 +111,10 @@
                           !  If absent, the default value is set to 'HEELIS'
      |  weimer_ncfile,    ! path to netcdf weimer01 coefficients file
      |  wei05sc_ncfile,   ! path to netcdf data files for weimer05 model
-     |  gpi_ncfile,         ! mss path or file path to netcdf gpi data file
+     |  gpi_ncfile,         ! absolute or relative path to netcdf gpi data file
      |  ncep_ncfile,        ! ncep data file (time-gcm only)
-     |  see_ncfile,         ! mss path or file path to netcdf SEE flux data file
-     |  imf_ncfile,         ! mss path or disk file path to netcdf IMF data file
+     |  see_ncfile,         ! absolute or relative path to netcdf SEE flux data file
+     |  imf_ncfile,         ! absolute or relative path to netcdf IMF data file
      |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
      |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
@@ -135,9 +136,8 @@
      |  start(3,mxseries), ! primary history model start time(s)
      |  stop(3,mxseries),  ! primary history model stop time(s)
      |  hist(3,mxseries),  ! primary history disk write frequency
-     |  save(3,mxseries),  ! primary history file save frequency
+     |  save(3,mxseries),  ! deprecated
      |  mxhist_prim,       ! max number of histories per primary file
-     |  msreten,           ! retention period for history files
      |  noutput            ! number of output files given
 !
 ! Secondary history user input (dimension parameters are in params.h):
@@ -150,7 +150,7 @@
      |  secstart(3,mxseries), ! secondary history model start time(s)
      |  secstop(3,mxseries),  ! secondary history model stop time(s)
      |  sechist(3,mxseries),  ! secondary history disk write frequency
-     |  secsave(3,mxseries),  ! secondary history file save frequency
+     |  secsave(3,mxseries),  ! deprecated
      |  mxhist_sech,          ! max number of histories per secondary file
      |  sech_nbyte            ! 4 or 8: write real or double values to secondary file
 !
@@ -158,17 +158,17 @@
       namelist/tgcm_input/ 
      |  label,tempdir,magvol,amievol,date,calday,step,dispose,
      |  source,source_start,output,start,stop,hist,save,
-     |  secout,secstart,secstop,sechist,secsave,secflds,
+     |  secout,secstart,secstop,sechist,secflds,secsave,
      |  potential_model,eddy_dif,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
      |  kp,colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
-     |  mxhist_prim,mxhist_sech,msreten,ntask_lat,ntask_lon,
+     |  mxhist_prim,mxhist_sech,ntask_lat,ntask_lon,
      |  start_day,start_year,calendar_advance,see_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
-     |  f107a_time
+     |  f107a_time,hpss_path
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -181,6 +181,7 @@
 !
 ! Current working (execution) directory (set by tgcm.F):
       character(len=120) :: cwd  ! current working directory
+      integer :: pid ! current process id
 !
       contains
 !-------------------------------------------------------------------
@@ -227,6 +228,7 @@
       tempdir = ' '
       magvol  = ' '
       amievol = ' '
+      hpss_path = ' '
 !
       gpi_ncfile  = ' '       ! user input gpi file path
       ncep_ncfile = ' '       ! (time-gcm only)
@@ -298,7 +300,6 @@
       save(:,:)  = ispval
       mxhist_prim = 10 ! default max number of histories per primary file
       if (dlat == 2.5) mxhist_prim = 4 ! 2.5 degree horizontal resolution 
-      msreten    = 365 ! default retention period for mss history files
 !
       secout(:)  = ' '
       secsource  = ' '
@@ -607,6 +608,14 @@
           call shutdown('namelist input KP')
         endif
       endif
+!
+! hpss path: if hpss_path not set, then do not make hsi dispose script.
+! (see call init_dispose in tgcm.F, and call add_dispose in dispose.F)
+!     if (len_trim(hpss_path)==0) then
+!       write(hpss_path,"('/home/',a,'/',a)") trim(logname),
+!    |    trim(tgcm_version)
+!       write(6,"('inp_model: hpss_path=',a)") trim(hpss_path)
+!     endif
       end subroutine inp_model
 !-----------------------------------------------------------------------
       subroutine mkntask(ntask,ntask_lat,ntask_lon,ier)
@@ -669,12 +678,12 @@
 ! Validate primary history inputs:
 !
 ! Local:
-      integer :: n,i,ii,nhists,nsaves,nsteps,nsteps_hist(mxseries),
-     |  nsteps_save(mxseries),nstarts,nstops,nstep_total,nsrc,
+      integer :: n,i,ii,nhists,nsteps,nsteps_hist(mxseries),
+     |  nstarts,nstops,nstep_total,nsrc,
      |  nout,nhists_total,modeltime(4),nfiles_prim
       integer(kind=8) :: step8,
      |  nsec_start(mxseries),nsec_stop(mxseries),
-     |  nsec_hist (mxseries),nsec_save(mxseries)
+     |  nsec_hist (mxseries)
       character(len=80) :: ch80
       character(len=80) :: hvols(mxhvols)
 !
@@ -685,20 +694,19 @@
 ! 8-byte integer step:
       step8 = step
 !
-! Dispose flag:
+! Dispose flag is deprecated:
       if (dispose==ispval) then
-        write(6,"(/,'Input: dispose flag not read --',
-     |    ' will default to dispose=1.',/)")
-        dispose = 1
-      elseif (dispose /= 0 .and. dispose /= 1 .and. dispose /= 2) then
-        write(6,"(/,'>>> INPUT: DISPOSE flag must be 0, 1, or 2:',
-     |    ' dispose = ',i4)") dispose
-        write(6,"('DISPOSE = 0 -> do not dispose to mss.')")
-        write(6,"('DISPOSE = 1 -> dispose to mss during model',
-     |    ' execution.')")
-        write(6,"('DISPOSE = 2 -> dispose to mss after model',
-     |    ' execution.')")
-        call shutdown('DISPOSE')
+        dispose = 0
+      else
+        write(6,"(/,72('-'),/,'>>> WARNING: DISPOSE namelist read',
+     |    ' parameter is deprecated in TIEGCM.',/,' For dispose to',
+     |    ' the NCAR hpss, a csh script named dispose_xxxxx.hsi',
+     |    ' will',/,'be written to the exec directory, and will',
+     |    ' contain necessary hsi commands',/,'to dispose history'
+     |    ' files to the hpss.',/,72('-'))")
+        if (dispose > 0) 
+     |    call shutdown('namelist DISPOSE is deprecated')
+        dispose = 0 
       endif
 !
 ! Model start time(s):
@@ -845,63 +853,25 @@
         endif
       enddo 
 !
-! History save frequencies:
+! History save frequencies SAVE is deprecated:
       n = size(save)-count(save==ispval)
-      if (mod(n,3) /= 0) then
-        write(6,"(/,'>>> INPUT: SAVE must be given as series of ',
-     |    '3-integer triplet times (day,hr,min).',/)")
-        call shutdown('SAVE')
-      endif 
-      nsaves = n/3 ! number of save times given
-      if (nsaves < 1 .or. nsaves > mxseries) then
-        write(6,"(/,'>>> INPUT: At least one and a maximum of ',i2,
-     |    ' 3-integer SAVE times are allowed.',/)") mxseries
-        call shutdown('SAVE')
+      if (n > 0) then
+        write(6,"(/,'>>> Input parameter SAVE has been deprecated.')")
+        write(6,"('    Please remove it from the namelist input file')")
+        call shutdown('namelist SAVE is deprecated')
       endif
-      do i=1,nsaves
-        call validate_mtime(save(:,i),mxday,'SAVE')
-      enddo
-!
-! History save frequencies must be multiple of step: 
-      nsec_save(:) = 0
-      do i=1,nsaves
-        nsec_save(i) = mtime_to_nsec(save(:,i))
-        if (nsec_save(i)==0) then
-          write(6,"(/,'>>> INPUT: SAVE history save frequency ',i1,
-     |      ' must be > 0',/)") i
-          call shutdown('SAVE')
-        endif
-        if (mod(nsec_save(i),step8) /= 0) then
-          write(6,"(/,'>>> INPUT: SAVE time ',i1,' must be a ',
-     |      'multiple of step:',/,11x,'SAVE=',3i4,' STEP=',i4,/)")
-     |      i,save(:,i),step
-          call shutdown('SAVE')
-        endif
-      enddo 
 !
 ! Must have same number of time sequences:
       if (nstarts /= nstops .or. nstarts /= nhists .or. 
-     |    nstarts /= nsaves .or. nstops  /= nhists .or.
-     |    nstops  /= nsaves .or. nhists  /= nsaves) then
+     |    nstops  /= nhists) then
         write(6,"(/,'>>> INPUT: must provide same number of times ',
-     |    'for',/,11x,'START, STOP, HIST, and SAVE.')")
-        write(6,"(11x,'nstarts=',i3,' nstops=',i3,' nhists=',i3,
-     |    ' nsaves=',i3,/)") nstarts,nstops,nhists,nsaves
+     |    'for',/,11x,'START, STOP, and HIST.')")
+        write(6,"(11x,'nstarts=',i3,' nstops=',i3,' nhists=',i3)")
+     |    nstarts,nstops,nhists
         call shutdown('ntimes')
       endif
 !
-! SAVEs must be multiples of HISTs:
-      do i=1,nstarts
-        if (mod(nsec_save(i),nsec_hist(i)) /= 0) then
-          write(6,"(/,'>>> INPUT: SAVE frequencies must be multiple',
-     |      ' of HIST frequencies.',/,11x,'SAVE ',i1,' =',3i4,
-     |      ' HIST ',i1,' =',3i4,/)") i,save(:,i),i,hist(:,i)
-          call shutdown('mod(SAVE,HIST)')
-        endif
-      enddo
-!
-! Number of steps in each time series must be a multiple of HIST
-! and SAVE frequencies for that series:
+! Number of steps in each time series must be a multiple of HIST:
       do i=1,nstarts
         if (i==1) then
           nsteps = (nsec_stop(i)-nsec_start(i))/step
@@ -920,19 +890,7 @@
      |      i,hist(:,i)
           call shutdown('HIST')
         endif
-        nsteps_save(i) = nsec_save(i)/step
-        if (mod(nsteps,nsteps_save(i)) /= 0) then
-          write(6,"(/,'>>> INPUT: number of steps in time series ',
-     |      i1,' must be multiple of the ',/,11x,'number of steps',
-     |      ' in SAVE ',i1,'.')") i,i
-          write(6,"(11x,'nsteps ',i1,' = ',i6,' nsteps_save ',i1,
-     |      ' = ',i3)") i,nsteps,i,nsteps_save(i)
-          write(6,"(11x,'START',i1,' = ',3i4,' STOP',i1,' = ',3i4,
-     |      ' SAVE',i1,' = ',3i4,/)") i,start(:,i),i,stop(:,i),
-     |      i,save(:,i)
-          call shutdown('SAVE')
-        endif
-      enddo
+      enddo ! i=1,nstarts
 !
 ! Time series cannot overlap (However, they can touch, front-to-back):
       if (nstarts > 1) then
@@ -1019,14 +977,6 @@
         call shutdown('MXHIST_PRIM')
       endif
 !
-! mss retention period:
-      if (msreten < 1 .or. msreten > 32767) then
-        write(6,"('>>> INPUT: bad MSRETEN = ',i6)") msreten
-        write(6,"('Mss retention period MSRETEN must be >= 1',
-     |    ' and <= 32767')")
-        call shutdown('MSRETEN')
-      endif
-!
 ! No dups of file names allowed:
       ch80 = ' '
       do i=1,nout
@@ -1063,13 +1013,12 @@
 ! Validate secondary history inputs:
 !
 ! Local:
-      integer :: n,i,ii,nstarts,nstops,nhists,nsaves,nout,nsteps,
-     |  nsteps_hist(mxseries_sech),nsteps_save(mxseries_sech),
-     |  nsechs_total,nseriesp,nflds_sech,nhists_total,
-     |  nfiles_sech,nonblank
+      integer :: n,i,ii,nstarts,nstops,nhists,nout,nsteps,
+     |  nsteps_hist(mxseries_sech),nsechs_total,nseriesp,nflds_sech,
+     |  nhists_total,nfiles_sech,nonblank
       integer(kind=8) :: step8,
      |  nsec_start(mxseries_sech),nsec_stop(mxseries_sech),
-     |  nsec_hist (mxseries_sech),nsec_save(mxseries_sech)
+     |  nsec_hist (mxseries_sech)
       character(len=80) :: ch80
       character(len=80) :: hvols(mxhvols)
       character(len=16) ::
@@ -1087,7 +1036,6 @@
       n = size(secstart)-count(secstart==ispval) +
      |    size(secstop) -count(secstop==ispval)  +
      |    size(sechist) -count(sechist==ispval)  +
-     |    size(secsave) -count(secsave==ispval)  +
      |    size(secflds) -count(len_trim(secflds)==0)
 !
 ! Secondary output volumes:
@@ -1274,64 +1222,25 @@
 !
 ! Secondary history save frequencies:
       n = size(secsave)-count(secsave==ispval)
-      if (mod(n,3) /= 0) then
-        write(6,"(/,'>>> INPUT: SECSAVE must be given as series of ',
-     |    '3-integer triplet times (day,hr,min).',/,11x,'A maximum',
-     |    ' of ',i3,' SECSAVE times are allowed.',/)") mxseries_sech
-        call shutdown('SECSAVE')
-      endif 
-      nsaves = n/3 ! number of save times given
-      if (nsaves < 1 .or. nsaves > mxseries_sech) then
-        write(6,"(/,'>>> INPUT: At least one and a maximum of ',i3,
-     |    ' 3-integer SECSAVE times are allowed.',/)")
-        call shutdown('SECSAVE')
+      if (n > 0) then
+        write(6,"(/,'>>> Input parameter SECSAVE has been',
+     |    ' deprecated.')")
+        write(6,"('    Please remove it from the namelist input file')")
+        call shutdown('namelist SECSAVE is deprecated')
       endif
-      do i=1,nsaves
-        call validate_mtime(secsave(:,i),mxday,'SECSAVE')
-      enddo
-!
-! Secondary history save frequencies must be multiples of step: 
-      nsec_save(:) = 0
-      do i=1,nsaves
-        nsec_save(i) = mtime_to_nsec(secsave(:,i))
-        if (nsec_save(i)==0) then
-          write(6,"(/,'>>> INPUT: SECSAVE save frequency ',i1,
-     |      ' must be > 0',/)") i
-          call shutdown('SECSAVE')
-        endif
-        if (mod(nsec_save(i),step8) /= 0) then
-          write(6,"(/,'>>> INPUT: SECSAVE frequency ',i1,' must be a ',
-     |      'multiple of step:',/,11x,'SECSAVE=',3i4,' STEP=',i4,/)")
-     |      i,sechist(:,i),step
-          call shutdown('SECSAVE')
-        endif
-      enddo 
 !
 ! Must have same number of time sequences:
       if (nstarts /= nstops .or. nstarts /= nhists .or. 
-     |    nstarts /= nsaves .or. nstops  /= nhists .or.
-     |    nstops  /= nsaves .or. nhists  /= nsaves) then
+     |    nstops  /= nhists) then
         write(6,"(/,'>>> INPUT: must provide same number of times ',
-     |    'for',/,11x,'SECSTART, SECSTOP, SECHIST, and SECSAVE.')")
-        write(6,"(11x,'nstarts=',i3,' nstops=',i3,' nhists=',i3,
-     |    ' nsaves=',i3,/)") nstarts,nstops,nhists,nsaves
+     |    'for',/,11x,'SECSTART, SECSTOP, and SECHIST.')")
+        write(6,"(11x,'nstarts=',i3,' nstops=',i3,' nhists=',i3)")
+     |    nstarts,nstops,nhists
         call shutdown('nsechtimes')
       endif
 !     nseries_sech = nstarts
 !
-! SAVEs must be multiples of HISTs:
-      do i=1,nstarts
-        if (mod(nsec_save(i),nsec_hist(i)) /= 0) then
-          write(6,"(/,'>>> INPUT: SECSAVE frequencies must be ',
-     |      'multiples of SECHIST frequencies.',/,11x,'SECSAVE ',
-     |      i1,' =',3i4,' SECHIST ',i1,' =',3i4,/)") i,secsave(:,i),
-     |      i,sechist(:,i)
-          call shutdown('mod(SECSAVE,SECHIST)')
-        endif
-      enddo
-!
-! Number of steps in each time series must be a multiple of SECHIST
-! and SECSAVE frequencies for that series:
+! Number of steps in each time series must be a multiple of SECHIST:
       do i=1,nstarts
         nsteps = (nsec_stop(i)-nsec_start(i))/step
         nsteps_hist(i) = nsec_hist(i)/step
@@ -1345,18 +1254,6 @@
      |      ' SECSTOP = ',3i4,' SECHIST = ',3i4,/)") i,secstart(:,i),
      |      secstop(:,i),sechist(:,i)
           call shutdown('SECHIST')
-        endif
-        nsteps_save(i) = nsec_save(i)/step
-        if (mod(nsteps,nsteps_save(i)) /= 0) then
-          write(6,"(/,'>>> INPUT: number of steps in time series ',
-     |      i1,' must be multiple of the ',/,11x,'number of steps',
-     |      ' in SECSAVE ',i1,'.')") i,i
-          write(6,"(11x,'nsteps ',i1,' = ',i6,' nsteps_save ',i1,
-     |      ' = ',i3)") i,nsteps,i,nsteps_save(i)
-          write(6,"(11x,'Time series ',i2,': SECSTART = ',3i4,
-     |      ' SECSTOP = ',3i4,' SECSAVE = ',3i4,/)") i,secstart(:,i),
-     |      secstop(:,i),secsave(:,i)
-          call shutdown('SECSAVE')
         endif
       enddo
 !
@@ -1539,6 +1436,9 @@
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amievol)
+      if (len_trim(hpss_path) > 0)
+     |  write(6,"('  hpss_path = ',a,4x,
+     |    '(hpss directory for hsi dispose script)')") trim(hpss_path)
       write(6,"('  start_year = ',i4,' (starting calendar day)')")
      |  start_year
       write(6,"('  start_day  = ',i4,' (starting calendar year)')")
@@ -1554,8 +1454,6 @@
 
       write(6,"('  step    =',i4,' (model timestep (seconds))',
      |  i4)") step
-      write(6,"('  dispose =',i4,' (mss dispose flag 0/1/2)')") 
-     |  dispose
 #ifdef MPI      
       write(6,"('  ntask_lon = ',i2,' (number of mpi tasks in ',
      |  'longitude dimension)')") ntask_lon
@@ -1586,13 +1484,8 @@
       n = (size(hist)-count(hist==ispval))/3
       write(6,"('  hist (primary history disk write frequencies) =',
      |  /,4(4x,i3,',',i2,',',i2))") (hist(:,i),i=1,n)
-      n = (size(save)-count(save==ispval))/3
-      write(6,"('  save (primary history file save frequencies) =',
-     |  /,4(4x,i3,',',i2,',',i2))") (save(:,i),i=1,n)
       write(6,"('  Maxmimum number of histories per primary file = ',
      |  i3)") mxhist_prim
-      write(6,"('  Mass store retention period for history files = ',
-     |  i5)") msreten
 !
 ! Secondary histories:
       if (len_trim(secsource) > 0) then
@@ -1620,11 +1513,6 @@
      |  write(6,"('  sechist (secondary history disk write',
      |    ' frequencies) =',/,4(4x,i3,',',i2,',',i2))") 
      |    (sechist(:,i),i=1,n)
-      n = (size(secsave)-count(secsave==ispval))/3
-      if (n > 0)
-     |  write(6,"('  secsave (secondary history file save',
-     |    ' frequencies) =',/,4(4x,i3,',',i2,',',i2))") 
-     |    (secsave(:,i),i=1,n)
       n = (size(secflds)-count(len_trim(secflds)==0))
       if (n > 0)
      |  write(6,"('  secflds (secondary history fields)',
@@ -1898,7 +1786,8 @@
 !      (data file has 3-hourly Kp and daily f107,f107a)
 !   3. imf_ncfile data file can be provided only with Weimer potential model.
 !      (data file has hourly bx,by,bz,swvel,swden,kp, and daily f107,f107a)
-!   4. User cannot provide both gpi_ncfile and imf_ncfile in a single run.
+!   4. User cannot provide both gpi_ncfile and imf_ncfile in a single run, 
+!      except when only f10.7 is requested from the gpi file.
 !   5. User can provide the following parameters as either constants or 
 !      time-dependent values: ctpoten,power,bximf,byimf,bzimf,swden,swvel
 !      (time-dependent keywords are xxxx_time, e.g., ctpoten_time)
@@ -2180,7 +2069,6 @@
       endif ! weimer potential model
 !
 ! 12/3/08 btf: User may set BY to test BY effect on Heelis (see aurora.F)
-! 
       if (potential_model(1:4)=='NONE' .and. byimf == spval) then
         write(6,"('Note input: Setting BY to 0 with no (NONE) ',
      |      'potential model.')")

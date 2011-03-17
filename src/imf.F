@@ -214,8 +214,6 @@
 ! Get ndata and ndays dimensions:
       istat = nf_inq_dimid(ncid,'ndata',id_ndata)
       istat = nf_inq_dimlen(ncid,id_ndata,ndata)
-      write(6,"('rdimf: ndata=',i8)") ndata
-
 !     istat = nf_inq_dimid(ncid,'ndays',id_ndays)
 !     istat = nf_inq_dimlen(ncid,id_ndays,ndays)
 !     write(6,"('rdimf: ndata=',i5,' ndays=',i5)") ndata,ndays

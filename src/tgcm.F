@@ -10,7 +10,7 @@
 ! initial cvs import was tiegcm1
 !
       use params_module,only: tgcm_version
-      use input_module,only: input,dynamo,step,dispose,cwd
+      use input_module,only: input,dynamo,step,cwd,pid,hpss_path
       use dispose_module,only: init_dispose
       use fields_module,only: itp
       use init_module,only: init,iyear
@@ -66,15 +66,17 @@
       call mp_init
 #endif
 !
-! Init timing for the run, get cwd, get user input,
+! Init timing for the run, get cwd and pid, get user input,
 !   set up 2d decomposition.
 !
       call timer(time0_run,time1_run,'RUN',0,0)    ! start run timing
       call timer(time0_init,time1_init,'INIT',0,0) ! start init timing
       call getcwd(cwd)
-      write(6,"('Current working directory (cwd) = ',a,/)") trim(cwd)
+      write(6,"('Current working directory (cwd) = ',a)") trim(cwd)
+      call getpid(pid)
+      write(6,"('Process ID (pid) = ',i8)") pid
       call input(mytid,ntask) ! get user input (mpi)
-      if (mytid==0) call init_dispose(dispose)
+      if (mytid==0.and.len_trim(hpss_path) > 0) call init_dispose
 #ifdef MPI
       call mp_distribute
 #endif
@@ -154,7 +156,6 @@
 !-----------------------------------------------------------------------
       subroutine startup_message
       use params_module,only: tgcm_version
-      use input_module,only: cwd
       character(len=8) ::
      |  rundate,           ! current local date
      |  runtime            ! current local time

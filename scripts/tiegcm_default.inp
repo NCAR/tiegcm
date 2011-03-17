@@ -24,7 +24,6 @@
 ; Primary History parameters:
 ;
  HIST = 0,1,0
- SAVE = 0,1,0
  OUTPUT = 'FOSTER.tiegcm.ptest001.nc'
  MXHIST_PRIM = 10
 ;
@@ -33,13 +32,16 @@
  SECSTART = 80,0,0
  SECSTOP  = 80,1,0
  SECHIST  =  0,0,12
- SECSAVE  =  0,1,0
  SECOUT   = 'FOSTER.tiegcm.stest001.nc'
  MXHIST_SECH = 24
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'
 ;
- DISPOSE = 0
+; If HPSS_PATH is set, a csh script will be made in the execdir, that
+; will copy history disk files to the HPSS in the directory HPSS_PATH.
+;
+;HPSS_PATH = '/home/foster/tiegcm'
+;
  TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2 = 0.,0.
 ;

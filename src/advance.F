@@ -89,8 +89,8 @@
       real :: fmin,fmax
       integer(kind=8) :: nsecs ! current model time in seconds,
                                ! including model day
-      logical :: time2write,wrprim,wrsech,save_prim,save_sech,
-     |  newseries_sech,newseries_prim,iseries_sech,iseries_prim
+      logical :: time2write,wrprim,wrsech,newseries_sech,
+     |  newseries_prim,iseries_sech,iseries_prim
       real :: secs_per_step,dday,
      |  time0,          time1,
      |  time0_step,     time1_step,
@@ -258,7 +258,7 @@
      |  rd_power==spval) then
         power = hp_from_bz_swvel(bzimf,swvel)
 !       write(6,"('Advance calculated power from bz,swvel: ',
-!    |    ' bz=',f8.2,' swvel=',f8.2,' power=',f8.2)") 
+!    |    ' bz=',f8.2,' swvel=',f8.2,' power=',f8.2)")
 !    |    bzimf,swvel,power
       endif
 !
@@ -315,11 +315,11 @@
 !
 ! If both GPI and IMF data run, then only f10.7 flux is used from
 ! the gpi file. GPI power and ctpoten are overwritten as follows:
-! power is calculated from bz,swvel (see above), and ctpoten is from 
+! power is calculated from bz,swvel (see above), and ctpoten is from
 ! weimer (Weimer is called later, so do not print ctpoten here)
 !
           write(6,"('GPI+IMF run: istep=',i6,' GPI f107=',f8.3,
-     |      ' f107a=',f8.3,' power from bzimf,swvel=',f8.3)") 
+     |      ' f107a=',f8.3,' power from bzimf,swvel=',f8.3)")
      |      istep,f107,f107a,power
         elseif (len_trim(gpi_ncfile) > 0) then
           write(6,"('GPI run: istep=',i6,' power=',f8.3,' ctpoten=',
@@ -582,8 +582,8 @@
 ! Write output history if necessary (output writes data%(:,:,:,itc)).
 !
       time2write = wrhist(istep,modeltime,
-     |  wrprim, save_prim, newseries_prim, iseries_prim,
-     |  wrsech, save_sech, newseries_sech, iseries_sech)
+     |  wrprim, newseries_prim, iseries_prim,
+     |  wrsech, newseries_sech, iseries_sech)
 !
 ! History i/o timing is not included in STEP segment:
       call timer(time0_step,time1,'STEP',1,0) ! suspend step timing for i/o
