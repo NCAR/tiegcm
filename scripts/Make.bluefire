@@ -12,7 +12,6 @@ DBGFLAGS  = -qinitauto=7FF7FFFF -qflttrap=zero:inv:en -qsigtrap=xl__trcedump
 LDFLAGS   = -bloadmap:loadmap -q64 $(OPTIM)
 LDFLAGS   = -bdatapsize:64K -bstackpsize:64K -btextpsize:64K
 LIBS      = -lmass
-MSS       = TRUE
 #
 # Library and Include file paths:
 #

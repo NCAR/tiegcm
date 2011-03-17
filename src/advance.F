@@ -89,8 +89,8 @@
       real :: fmin,fmax
       integer(kind=8) :: nsecs ! current model time in seconds,
                                ! including model day
-      logical :: time2write,wrprim,wrsech,save_prim,save_sech,
-     |  newseries_sech,newseries_prim,iseries_sech,iseries_prim
+      logical :: time2write,wrprim,wrsech,newseries_sech,
+     |  newseries_prim,iseries_sech,iseries_prim
       real :: secs_per_step,dday,
      |  time0,          time1,
      |  time0_step,     time1_step,
@@ -583,8 +583,8 @@
 ! Write output history if necessary (output writes data%(:,:,:,itc)).
 !
       time2write = wrhist(istep,modeltime,
-     |  wrprim, save_prim, newseries_prim, iseries_prim,
-     |  wrsech, save_sech, newseries_sech, iseries_sech)
+     |  wrprim, newseries_prim, iseries_prim,
+     |  wrsech, newseries_sech, iseries_sech)
 !
 ! History i/o timing is not included in STEP segment:
       call timer(time0_step,time1,'STEP',1,0) ! suspend step timing for i/o

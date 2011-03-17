@@ -107,58 +107,6 @@
       return      
       end subroutine rmcomments
 !-------------------------------------------------------------------
-      subroutine mkdiskflnm(msspath,diskname)
-      implicit none
-!
-! Given a mss path (msspath), construct and return a local 
-! file name (diskname) which is the same as msspath except
-! that slashes ('/') in the msspath are replaced by dots ('.')
-! in the diskname. (The initial slash in msspath is ignored)
-!
-! For example, if on input msspath = '/FOSTER/dir1/file', then
-! diskname would be returned as 'FOSTER.dir1.file'
-!
-! Args:
-      character(len=*),intent(in) :: msspath
-      character(len=*),intent(out) :: diskname
-!
-! Local:
-      integer :: lmsspath,i,ii
-!
-      lmsspath = len_trim(msspath)
-      if (lmsspath==0) then
-        write(6,"('WARNING mkdiskflnm: zero length msspath.',
-     +    ' Returning diskname: ''disk.file''')") 
-        diskname = 'disk.file'
-        return
-      endif
-      diskname = ' '
-      do i=1,len(diskname)
-!
-! Do not replace leading slash of msspath. 
-! If there are no occurrences of '/' in the msspath (i.e., its
-!   not really an mss path, but just a file name), return the 
-!   msspath unchanged.
-!
-        ii = i+1 
-        if (index(msspath,'/')==0) ii = i
-        if (ii > lmsspath) exit
-        if (msspath(ii:ii)=='/') then
-          diskname(i:i)='.'
-        else
-          diskname(i:i) = msspath(ii:ii)
-        endif
-      enddo
-      if (len_trim(diskname)==0) then
-        write(6,"('WARNING mkdiskflnm: zero length diskname output.')")
-        write(6,"('  msspath=',a)") trim(msspath)
-        write(6,"('Returning diskname: ''disk.file''')")
-        diskname = 'disk.file'
-      endif
-!     write(6,"('mkdiskflnm returning:',/,'  msspath=',a,
-!    +  /,'  diskname=',a)") trim(msspath),trim(diskname)
-      end subroutine mkdiskflnm
-!-------------------------------------------------------------------
       subroutine fminmax(f,n,fmin,fmax)
 !
 ! Return min and max of fields f(n) (between -1.e36,+1.e36)
@@ -399,6 +347,9 @@
       integer,external :: system
       isystem = system(trim(command))
 #elif defined(LINUX)
+      integer,external :: system
+      isystem = system(trim(command))
+#else
       integer,external :: system
       isystem = system(trim(command))
 #endif
@@ -958,42 +909,6 @@
       endif
       end subroutine timer
 !-----------------------------------------------------------------------
-      subroutine rcpfile(source,target)
-!
-! Do remote copy of source to target.
-!
-      implicit none
-!
-! Args:
-      character(len=*),intent(in) :: source,target
-!
-! Local:
-      integer,parameter :: maxlen=1024
-      character(len=maxlen) :: command
-      integer :: len,ier
-!
-! External:
-      integer,external :: isystem
-!
-      len = len_trim(source)+len_trim(target)+5
-      if (len > maxlen) then
-        write(6,"(/,'>>> WARNING rcpfile: len(source)+len(target)+5=',
-     |    i6,' is > maxlen=',i6)") len,maxlen
-        write(6,"('Please increase maxlen in sub rcpfile to at least ',
-     |    i6,' -- no rcp done.')") len
-        return
-      endif
-      write(command,"('rcp ',a,' ',a)") trim(source),trim(target)
-      ier = isystem(command)
-      if (ier==0) then
-        write(6,"('rcpfile: successful rcp of ',a,' to ',a)")
-     |    trim(source),trim(target)
-      else
-        write(6,"('>>> rcpfile: Error from rcp of ',a,' to ',a)")
-     |    trim(source),trim(target)
-      endif
-      end subroutine rcpfile
-!-----------------------------------------------------------------------
       subroutine getcwd(cwd)
 #ifdef MPI
       use mpi_module,only: mytid
@@ -1031,174 +946,42 @@
 #endif
       end subroutine getcwd
 !-----------------------------------------------------------------------
-      integer function my_msrcp(opts,src,dest)
+      subroutine getpid(pid)
 #ifdef MPI
       use mpi_module,only: mytid
 #endif
+!
+! Return current working directory in pid:
+!
       implicit none
+      integer,intent(out) :: pid
+      integer,external :: isystem,nextlu
+      integer :: istat,lu,ier
 #ifdef MPI
 #include <mpif.h>
 #endif
 !
-! Build and execute msrcp command to the shell. Assume "mss:" prefixes
-! either src (for a get) or dest (for a put).
-!
-! Args:
-      character(len=*),intent(in) :: opts,src,dest
-!      
-! Local:
-      character(len=1024) :: cmd
-      integer :: ier
-!
-! External:
-      integer,external :: isystem
-!
-      if (src(1:4) /= "mss:" .and. dest(1:4) /= "mss:") then
-        write(6,"(/,'>>> my_msrcp: need mss: prefix on either src or ',
-     |    'dest')")
-        write(6,"('src=',a)") trim(src)
-        write(6,"('dest=',a)") trim(dest)
-        write(6,"('opts=',a)") trim(opts)
-        call shutdown('my_msrcp')
-      endif
-!
-! Only master task does the msrcp:
 #ifdef MPI
-      if (mytid/=0) then
-        my_msrcp = 0
-        goto 100
+      if (mytid==0) then
+        istat = isystem('echo $$ > pid')
+        if (istat /= 0) write(6,"('>>> WARNING getpid: error return ',
+     |    'isystem(''echo $$ > pid'')')")
       endif
-#endif
-      if (src(1:4) == "mss:") then
-        write(6,"('my_msrcp: Obtaining file ',a,' from mss.')")
-     |    src(5:len_trim(src))
-      else
-        write(6,"('my_msrcp: Disposing file ',a,' to mss.')")
-     |    dest(5:len_trim(dest))
-      endif
-      cmd = ' '
-      cmd = "msrcp "//trim(opts)//' '//trim(src)//' '//trim(dest)
-      write(6,"('my_msrcp: Executing ',a)") trim(cmd)
-      my_msrcp = isystem(cmd)
-      write(6,"(a)") trim(cmd)
- 100  continue
-#ifdef MPI
       call mpi_barrier(MPI_COMM_WORLD,ier)
+      lu = nextlu()
+      open(lu,file='pid',status='old')
+      read(lu,*) pid
+      close(lu)
+#else
+      istat = isystem('echo $$ > pid')
+      if (istat /= 0) write(6,"('>>> WARNING getpid: error return ',
+     |  'isystem(''echo $$ > pid'')')")
+      lu = nextlu()
+      open(lu,file='pid',status='old')
+      read(lu,"(i10)") pid
+      close(lu)
 #endif
-      end function my_msrcp
-!-----------------------------------------------------------------------
-      logical function is_mspath(path)
-!
-! Return true if input path begins with "/LOGNAME/" or "/TGCM/", 
-! otherwise return false.
-!
-      implicit none
-!
-! Args:
-      character(len=*),intent(in) :: path
-!
-! Local:
-      character(len=64) :: logname,lognamedir
-!
-! External:
-      character(len=64),external :: trcase ! (util.F)
-!
-      is_mspath = .false.
-      if (path(1:1) /= '/') return
-!
-! Get logname in upper case:
-      logname = ' '
-      call getenv('LOGNAME',logname) ! get logname from env var
-      if (len_trim(logname)==0) then
-        write(6,"('>>> WARNING is_mspath: Cannot get LOGNAME ',
-     |    'environment variable.')")
-        return
-      elseif (len_trim(logname) > 62) then
-        write(6,"('>>> WARNING is_mspath: please lengthen logname',
-     |    ' (must be at least 62: len_trim(logname)=',i3)")
-     |    len_trim(logname)
-        return
-      endif
-      logname = trcase(logname) ! translate from lower to upper case
-!
-      lognamedir = '/'//trim(logname)//'/'
-      if (path(1:len_trim(lognamedir))==lognamedir) is_mspath = .true.
-      if (is_mspath) return
-!
-! Try /TGCM/:
-      lognamedir = '/'//'TGCM'//'/'
-      if (path(1:len_trim(lognamedir))==lognamedir) is_mspath = .true.
-!
-      end function is_mspath
-!-----------------------------------------------------------------------
-      subroutine check_mspath(mspathin,mspathout)
-!
-! Check validity of mspathin as an mss path 
-! (must begin with /LOGNAME or /TGCM)
-!
-      implicit none
-!
-! Args:
-      character(len=*),intent(in) :: mspathin
-      character(len=*),intent(out) :: mspathout
-!
-! Local:
-      integer :: i,ii,istat,ipos,oldlen,newlen
-      character(len=32) :: logname
-      character(len=len(logname)),external :: trcase
-!
-! Init:
-!     write(6,"('Enter check_mspath: mspathin=',a)") trim(mspathin)
-      mspathout = mspathin
-!
-! Mss path must begin with a slash:
-      if (mspathin(1:1) /= '/') then
-        if (len(mspathout) < len_trim(mspathin)+1) then
-          write(6,"('>>> WARNING check_mspath: length of mspathout',
-     |      ' too small: ',i4, ' (must be at least ',i4,')')") 
-     |      len(mspathout),len_trim(mspathin)+1
-        endif
-        mspathout = ' '       ! reinit
-        mspathout(1:1) = '/'
-        do i=2,len_trim(mspathin)+1
-          mspathout(i:i) = mspathin(i-1:i-1)    
-        enddo
-!       write(6,"('check_mspath: added slash to front of mspath: ',a)")
-!    |    trim(mspathout)
-      endif
-!
-! Get logname in upper case:
-      logname = ' '
-      call getenv('LOGNAME',logname) ! get logname from env var
-      if (len_trim(logname)==0) then
-        write(6,"('>>> WARNING check_mspath: Cannot get LOGNAME ',
-     |    'environment variable.')")
-        return
-      endif
-      logname = trcase(logname) ! translate from lower to upper case
-!
-! Mss path must begin with /LOGNAME:
-      if (mspathout(2:len_trim(logname)+1) /= trim(logname).and.
-     |    mspathout(2:5) /= 'TGCM') then
-        if (len(mspathout) < len_trim(mspathout)+len_trim(logname)+1) 
-     |    then
-          write(6,"('>>> WARNING check_mspath: length of mspathout',
-     |      ' not long enough to add /',a)") trim(logname)
-          return
-        endif 
-        oldlen = len_trim(mspathout)
-        newlen = oldlen+len_trim(logname)+1 ! +1 for leading slash
-        do i=newlen,newlen-oldlen+1,-1
-          ii = oldlen-newlen+i
-          mspathout(i:i) = mspathout(ii:ii) ! copy existing part
-        enddo
-        mspathout(1:len_trim(logname)+1) = '/'//trim(logname) ! add /LOGNAME
-!       write(6,"('check_mspath: added /',a,' to front of mspath: ',a)")
-!    |    trim(logname),trim(mspathout)
-      endif
-!     write(6,"('check_mspath returning: mspathout=',a)") 
-!    |  trim(mspathout)
-      end subroutine check_mspath
+      end subroutine getpid
 !-----------------------------------------------------------------------
       character(len=*) function trcase(string)
 !

@@ -40,19 +40,17 @@ $modelres  = 5.0;
   "STOP=s"                => \$STOP,
   "STEP=i"                => \$STEP,
   "HIST=s"                => \$HIST,
-  "SAVE=s"                => \$SAVE,
   "OUTPUT=s"              => \$OUTPUT,
   "MXHIST_PRIM=i"         => \$MXHIST_PRIM,
   "SECSTART=s"            => \$SECSTART,
   "SECSTOP=s"             => \$SECSTOP,
   "SECHIST=s"             => \$SECHIST,
-  "SECSAVE=s"             => \$SECSAVE,
   "SECOUT=s"              => \$SECOUT,
   "MXHIST_SECH=s"         => \$MXHIST_SECH,
   "SECFLDS=s"             => \$SECFLDS,
   "SECFLDS0=s"            => \$SECFLDS0,
   "SECFLDS1=s"            => \$SECFLDS1,
-  "DISPOSE=i"             => \$DISPOSE,
+  "HPSS_PATH=s"           => \$HPSS_PATH,
   "TIDE=s"                => \$TIDE,
   "TIDE2=s"               => \$TIDE2,
   "GSWM_MI_DI_NCFILE=s"   => \$GSWM_MI_DI_NCFILE,
@@ -150,16 +148,14 @@ $START= "80,0,0";
 $STOP=  "80,1,0";
 $STEP= 120;
 $HIST=  "0,1,0";
-$SAVE=  "0,1,0";
 $MXHIST_PRIM = 10;
 $SECSTART = "80,0,0";
 $SECSTOP  = "80,1,0";
 $SECHIST  = "0,0,12";
-$SECSAVE  = "0,1,0";
 $MXHIST_SECH = 24;
 $SECFLDS0 = "'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',";
 $SECFLDS1 = "'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'";
-$DISPOSE = 0;
+$HPSS_PATH = "'/home/$user/$model'";
 $TIDE    = "0.,0.,0.,0.,0.,0.,0.,0.,0.,0.";
 $TIDE2   = "0.,0.";
 $POTENTIAL_MODEL = "'HEELIS'";
@@ -192,19 +188,17 @@ $COLFAC = "1.5";
   STOP                =>" ",
   STEP                =>" ",
   HIST                =>" ",
-  SAVE                =>" ",
   OUTPUT              =>" ",
   MXHIST_PRIM         =>" ",
   SECSTART            =>" ",
   SECSTOP             =>" ",
   SECHIST             =>" ",
-  SECSAVE             =>" ",
   SECOUT              =>" ",
   MXHIST_SECH         =>" ",
   SECFLDS             =>" ",
   SECFLDS0            =>" ",
   SECFLDS1            =>" ",
-  DISPOSE             =>" ",
+  HPSS_PATH           =>";",
   TIDE                =>" ",
   TIDE2               =>" ",
   GSWM_MI_DI_NCFILE   =>" ",
@@ -280,6 +274,9 @@ sub set_res_params {
     if ($highres) { $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_2.5deg.nc'"; }
     else { $TIDI_NCFILE  = "'\$TGCMDATA/2002_tidi_5.0deg.nc'"; }
   }
+  if (! defined($HPSS_PATH)) { 
+    $HPSS_PATH = "/home/$user/$model";
+  }
 } # end sub set_res_params
 #-------------------------------------------------------------------------
 sub write_namelist {
@@ -314,7 +311,6 @@ $comments{STEP}STEP  = $STEP
 ; Primary History parameters:
 ;
 $comments{HIST}HIST = $HIST
-$comments{SAVE}SAVE = $SAVE
 $comments{OUTPUT}OUTPUT = $OUTPUT
 $comments{MXHIST_PRIM}MXHIST_PRIM = $MXHIST_PRIM
 ;
@@ -323,13 +319,16 @@ $comments{MXHIST_PRIM}MXHIST_PRIM = $MXHIST_PRIM
 $comments{SECSTART}SECSTART = $SECSTART
 $comments{SECSTOP}SECSTOP  = $SECSTOP
 $comments{SECHIST}SECHIST  =  $SECHIST
-$comments{SECSAVE}SECSAVE  =  $SECSAVE
 $comments{SECOUT}SECOUT   = $SECOUT
 $comments{MXHIST_SECH}MXHIST_SECH = $MXHIST_SECH
 $comments{SECFLDS}SECFLDS = $SECFLDS0
 $comments{SECFLDS}          $SECFLDS1
 ;
-$comments{DISPOSE}DISPOSE = $DISPOSE
+; If HPSS_PATH is set, a csh script will be made in the execdir, that
+; will copy history disk files to the HPSS in the directory HPSS_PATH.
+;
+$comments{HPSS_PATH}HPSS_PATH = $HPSS_PATH
+;
 $comments{TIDE}TIDE = $TIDE
 $comments{TIDE2}TIDE2 = $TIDE2
 ;

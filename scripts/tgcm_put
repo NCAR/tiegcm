@@ -1,0 +1,145 @@
+#!/usr/bin/perl
+use File::Basename;
+#
+# tgcm_put [options] SOURCE_FILE [SOURCE_FILE ...] HPSS_DIRECTORY
+#
+# Copy given disk (source) files to the hpss. 
+# Destination directory on hpss is taken as the last argument.  
+# See also usage below.
+#
+$dryrun = 0;
+while (@ARGV) { 
+  $arg = shift;
+  if ($arg =~ /^-h/) { &usage(); }
+  if ($arg =~ /^-dryrun/) { $dryrun = 1; next; }
+  push @args,$arg; 
+}
+if ($dryrun > 0) { 
+  print "#\n# Dry run of tgcm_put:\n#\n";
+}
+
+$nargs = $#args+1;
+if ($nargs eq 0) { &usage(); }
+$logname  = $ENV{"LOGNAME"};
+$home = '/home/' . $logname;
+#
+# Target directory is last arg:
+# If only one arg, then target dir is /home/username.
+#
+if ($nargs == 1) {
+  $hpss = $home;
+  push(@infiles,@args);
+} else {
+  $hpss = $args[$nargs-1];
+  for ($i=0; $i < $nargs-1; ++$i) { push(@infiles,$args[$i]); }
+}
+#
+# put option -P does not work with /home/username:
+#
+if ($hpss eq $home) {
+  $putopts = '-R';
+} else {
+  $putopts = '-RP';
+}
+#
+# Loop through disk files:
+#
+$i = 0;
+foreach $diskfile (@infiles) {
+  $hpssfile = $hpss . '/' . basename($diskfile);
+  if (! -e $diskfile) {
+    print ">>> File $diskfile not found.\n";
+    next;
+  }
+#
+# Get file contents via ncdump. If contents not found (not a tgcm history
+# file, or not a netcdf file), this will result in error warning, but files 
+# will still be disposed.
+#
+  $ncdump = `ncdump -c $diskfile`;
+  if ($ncdump =~ /\:contents \= (.*);/) { $contents = $1; }
+#
+# Construct hsi put command and execute w/ system call, unless dryrun:
+#
+  $hsiput = "hsi put " . $putopts . " $diskfile : $hpssfile";
+  if ($dryrun <= 0) {
+    $stat = system($hsiput);
+    if ($stat) { 
+      print ">>> Error from hsi put command: stat=$stat Skipping to next file..\n";
+      next;
+    }
+  } else {
+    print "$hsiput\n";
+  }
+#
+# Construct annotation and execute hsi annotate command.
+# Remove double quotes from contents, and add escaped quotes 
+# for hsi annotate command.
+#
+  $contents =~ s/"//g;
+  $annotation = '\"' . $contents . '\"';
+  $annotate = "hsi annotate -A $annotation $hpssfile";
+  if ($dryrun <= 0) {
+    $stat = system($annotate);
+    if ($stat) { 
+      print ">>> Error from hsi annotate command: stat=$stat Skipping to next file..\n";
+      next;
+    }
+  } else {
+    print "$annotate\n";
+  }
+}
+
+#-----------------------------------------------------------------------
+
+sub usage {
+print << "EOF";
+
+NAME:
+	tgcm_put - Put local TGCM netcdf history file(s) on the 
+	           NCAR High Performance Storage System (HPSS)
+
+SYNOPSIS:
+	tgcm_put [options] SOURCE_FILE [SOURCE_FILE ...] HPSS_DIRECTORY
+
+DESCRIPTION:
+	Copy local disk file(s) SOURCE_FILE to HPSS directory HPSS_DIRECTORY.
+	If the netcdf files contain the global file attribute "contents", 
+	then its value is included as an annotation string for the hpss file.
+
+	Subdirectories in the HPSS_DIRECTORY path will be made as necessary.
+	If HPSS_DIRECTORY is not prefixed by "/home/username/", it will be assumed.
+
+	HPSS_DIRECTORY must be the last argument. However, if a single SOURCE_FILE 
+	is the only argument, then HPSS_DIRECTORY will default to the user's
+	hpss home directory "/home/[logname]".
+
+	Wildcards are allowed in SOURCE_FILE, but not in HPSS_DIRECTORY.
+
+	tgcm_put with no arguments will print this help message and exit.
+
+	If files are not TGCM history files (do not have global attribut contents, 
+	or are not netcdf files), there will be a warning error to stdout, but the 
+	files will be copied anyway.
+
+OPTIONS:
+	-h	Print this help message and exit
+	-dryrun	Print hsi commands to stdout, but do not execute them.
+
+EXAMPLES:
+
+1) Put local file tgcm.nc in my home directory on hpss:
+   tgcm_put tgcm.nc
+
+2) Put files tgcm1.nc tgcm2.nc in hpps directory /home/username/tgcm/test:
+   tgcm_put tgcm1.nc tgcm2.nc tgcm/test
+	
+3) Put all local *.nc files in the hpps directory /home/username/tgcm_proj:
+   tgcm_put *.nc tgcm_proj
+
+4) Make a dry-run, saving the hsi commands to a shell script, which can be executed later:
+   tgcm_put -dryrun *.nc dir1/dir2 >&! dispose.hsi
+
+EOF
+exit;
+}

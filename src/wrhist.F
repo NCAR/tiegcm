@@ -1,7 +1,7 @@
 !
       logical function wrhist(istep,modeltime,
-     |  wrprim, save_prim,  newseries_prim, iseries_p,
-     |  wrsech, save_sech,  newseries_sech, iseries_s)
+     |  wrprim, newseries_prim, iseries_p,
+     |  wrsech, newseries_sech, iseries_s)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -11,8 +11,6 @@
 !   given current istep and modeltime(4).
 ! Return wrprim true if its time to write a primary history.
 ! Return wrsech true if its time to write a secondary history.
-! Return save_prim true if its time to save a primary file.
-! Return save_sech true if its time to save a secondary file.
 ! Return newseries_prim true if a new primary time series is beginning.
 ! Return newseries_sech true if a new secondary time series is beginning.
 !
@@ -33,8 +31,8 @@
      |  modeltime(4)    ! current model time (day,hr,min,sec)
       integer,intent(out) :: iseries_p,iseries_s
       logical,intent(out) :: 
-     |  wrprim,  save_prim, newseries_prim,
-     |  wrsech,  save_sech, newseries_sech
+     |  wrprim,  newseries_prim,
+     |  wrsech,  newseries_sech
 !
 ! Local:
       integer :: i, 
@@ -58,8 +56,6 @@
       wrhist = .false.
       wrprim = .false. 
       wrsech = .false.
-      save_prim = .false. 
-      save_sech = .false.
       newseries_prim = .false.
       newseries_sech = .false.
       call modeltime_to_nsecs(modeltime,nsecs) ! sets nsecs
@@ -119,9 +115,6 @@
      |        mod(istep_prim,nstep_hist)==0) then
             wrhist = .true.
             wrprim = .true.
-            save_prim = .false.
-            if ((mod(istep_prim,nstep_save)==0.and.nsecs > nsec_start)
-     |          .or.nsecs==nsec_stop) save_prim = .true.
           endif
         endif
       endif
@@ -179,14 +172,11 @@
      |        mod(istep_sech,nstep_hist)==0) then
                 wrhist = .true.
                 wrsech = .true.
-                save_sech = .false.
-                if (mod(istep_sech,nstep_save)==0.or.nsecs==nsec_stop) 
-     |            save_sech = .true.
             endif
           endif
         endif
       endif
-!     write(6,"(8x,'wrhist=',l1,' wrprim=',l1,' save_prim=',l1,
+!     write(6,"(8x,'wrhist=',l1,' wrprim=',l1,
 !    |  ' newseries_prim=',l1,' iseries_p=',i3)")
-!    |  wrhist,wrprim,save_prim,newseries_prim,iseries_p
+!    |  wrhist,wrprim,newseries_prim,iseries_p
       end function wrhist
