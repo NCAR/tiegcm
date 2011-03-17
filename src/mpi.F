@@ -2243,8 +2243,8 @@
       nlevs = k1-k0+1
       nlats = j1-j0+1
       if (nflds==0) then
-        write(6,"('>>> WARNING mp_gatherlons_f3d: no fields? nflds=',i2)")
-     |    ' -- returning.')") nflds
+        write(6,"('>>> WARNING mp_gatherlons_f3d: no fields? nflds=',
+     |    i2,' -- returning.')") nflds
         return
       endif
       allocate(sndbuf(nlevs,mxlon,nlats,nflds),stat=ier)

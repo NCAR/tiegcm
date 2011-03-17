@@ -37,8 +37,8 @@
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'
 ;
-; If HPSS_PATH is set, an hsi dispose script will be made (not executed)
-; to copy history files to the NCAR HPSS in the directory HPSS_PATH.
+; If HPSS_PATH is set, a csh script will be made in the execdir, that
+; will copy history disk files to the HPSS in the directory HPSS_PATH.
 ;
 ;HPSS_PATH = '/home/foster/tiegcm'
 ;

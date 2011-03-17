@@ -463,7 +463,7 @@
 !
       use params_module,only: mxseries,mxhvols
       use input_module,only: start,stop,step,source,output,mkhvols,
-     |  hist,save,secsource,secstart,secstop,sechist,secsave,secout,
+     |  hist,secsource,secstart,secstop,sechist,secout,
      |  secflds
 !
 ! Local:
@@ -517,7 +517,6 @@
       n = size(secstart)-count(secstart==ispval) +
      |    size(secstop) -count(secstop==ispval)  +
      |    size(sechist) -count(sechist==ispval)  +
-     |    size(secsave) -count(secsave==ispval)  +
      |    size(secflds) -count(len_trim(secflds)==0)
 !
 ! Number of secondary history time series:

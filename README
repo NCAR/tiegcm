@@ -1311,3 +1311,6 @@ Added perl script tgcm_put to tiegcm/trunk/scripts. This script will copy
   history disk files to a specified directory on the hpss, including the 
   "contents" string as an hpss annotation (similiar to old mss comment string)
 
+3/17/11:
+Remove save and secsave from hist.F, wrhist.F, and mpi.F.
+

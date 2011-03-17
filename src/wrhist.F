@@ -19,8 +19,8 @@
 ! this routine can be called from single (e.g., from sub outhist) or 
 ! multiple threads/tasks (e.g. advnce and addfld).
 !
-      use input_module,only: step,start,stop,hist,save,
-     |  secstart,secstop,sechist,secsave
+      use input_module,only: step,start,stop,hist,secstart,secstop,
+     |  sechist
       use hist_module,only: nsource,isechist,nseries_prim,
      |  nseries_sech
       implicit none
@@ -37,7 +37,6 @@
 ! Local:
       integer :: i, 
      |  nstep_hist,    ! number of steps between history writes
-     |  nstep_save,    ! number of steps between prim history saves
      |  istep_prim,    ! current step in current primary series
      |  istep_sech     ! current step in current secondary series
       integer(kind=8) :: 
@@ -106,10 +105,8 @@
           nstep_hist = mtime_to_nstep(hist(:,iseries_p),step)
 
 !         write(6,"('wrhist call mtime_to_nstep: iseries_p=',
-!    |      i2,' save(:,iseries_p)=',3i4,' step=',i4)")
-!    |      iseries_p,save(:,iseries_p),step
+!    |      i2,' step=',i4)") iseries_p,step
 
-          nstep_save = mtime_to_nstep(save(:,iseries_p),step)
           istep_prim = (nsecs-nsec_start)/step
           if ((nsecs >= nsec_start.and.nsecs <= nsec_stop).and.
      |        mod(istep_prim,nstep_hist)==0) then
@@ -164,7 +161,6 @@
             nsec_start = mtime_to_nsec(secstart(:,iseries_s))
             nsec_stop  = mtime_to_nsec(secstop (:,iseries_s))
             nstep_hist = mtime_to_nstep(sechist(:,iseries_s),step)
-            nstep_save = mtime_to_nstep(secsave(:,iseries_s),step)
             istep_sech = (nsecs-nsec_start)/step
 !
 ! Check for secondary history write:
