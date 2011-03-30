@@ -9,7 +9,6 @@ MPIF90 = mpif90
 FFLAGS = -r8
 DBGFLAGS = 
 OPTIM  = -O3
-MSS    = TRUE
 LIBS   = 
 #
 # Library and Include file paths:

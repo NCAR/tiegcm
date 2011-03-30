@@ -73,6 +73,7 @@
      |  h,          ! scale height R*T/(M*g) (cm)
      |  rho,        ! density
      |  tni,        ! tn at interfaces
+     |  barmi,      ! barm at interfaces
      |  p, q, r,    ! coefficients for tridiagonal solver
      |  rhs,        ! right hand side of trsolv
      |  qpart,      ! part of q coeff
@@ -236,20 +237,21 @@
       do i=lon0,lon1
         do k=lev0+1,lev1-1
           tni(k,i) = .5*(tn(k-1,i,lat)+tn(k,i,lat))
-          h(k,i) = gask*tni(k,i)/barm(k,i,lat)
+          barmi(k,i) = .5*(barm(k-1,i,lat)+barm(k,i,lat))
+          h(k,i) = gask*tni(k,i)/barmi(k,i)
           rho(k,i) = p0*expzmid_inv*expz(k)/h(k,i)
           h(k,i) = h(k,i)/grav
         enddo ! k=lev0+1,lev1-1
 !
 ! Boundaries:
-!       tni(lev0,i) = tn(lev1,i,lat)      ! bottom boundary is in top slot
-
-        tni(lev0,i) = tlbc(i,lat)         ! Lower boundary is in tlbc = tn(itp)
+        tni(lev0,i) = tlbc(i,lat)        ! Lower boundary interface of TN is in tlbc
         tni(lev1,i) = tn(lev1-1,i,lat)
-        h(lev0,i) = gask*tni(lev0,i)/barm(lev0,i,lat)
-        h(lev1,i) = gask*tni(lev1,i)/barm(lev1,i,lat)
+        barmi(lev0,i) = barm(lev0,i,lat)
+        barmi(lev1,i) = barm(lev1-1,i,lat)
+        h(lev0,i) = gask*tni(lev0,i)/barmi(lev0,i)
+        h(lev1,i) = gask*tni(lev1,i)/barmi(lev1,i)
         rho(lev0,i) = p0*expzmid_inv*expz(lev0)/h(lev0,i)
-        rho(lev1,i) = p0*expzmid*expz(lev1-1)/h(lev1,i)
+        rho(lev1,i) = p0*expzmid_inv*expz(lev1)/h(lev1,i)
         h(lev0,i) = h(lev0,i)/grav
         h(lev1,i) = h(lev1,i)/grav
 !
@@ -266,7 +268,8 @@
 
 !     call addfld('TNI',' ',' ',tni,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('HG' ,' ',' ',h  ,'lev',lev0,lev1,'lon',lon0,lon1,lat)
-      call addfld('DEN',' ',' ',rho,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('DEN','Neutral Density','gm/cm3',rho,
+     |  'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('G'  ,' ',' ',g(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('F'  ,' ',' ',f(lev0:lev1-1,:),

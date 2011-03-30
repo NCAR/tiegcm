@@ -14,7 +14,6 @@ DBGFLAGS = -C -Mchkstk -Mpgicoff -traceback
 #
 # Makefile will use OPTIM = -g if set debug=TRUE in job script.
 OPTIM    = -O3
-MSS      = TRUE
 LIBS     = -lhdf5_hl -lhdf5 -lsz -L/usr/lib64 -lz
 HOST     = $(shell hostname)
 #
