@@ -1571,22 +1571,16 @@
      +  'Error defining units of timestep variable')
 !
 ! f107 daily and f107 average solar fluxes:
-! 9/30/05: change units as suggested by John Caron (s.a. Udunits)
-! 3/16/11: units are kg.s-2, not kg.s-4 (kg.s-2 == W/m2/Hz)
       call defvar_time_dbl(ncid,"f107d",ids1,idv_f107d,
-!    |  "Daily 10.7 cm solar flux","W/m^2Hz*1.e-22")
-     |  "Daily 10.7 cm solar flux","1.e-22 kg.s-2")
+     |  "Daily 10.7 cm solar flux","1.e-22 W/m2/Hz")
       call defvar_time_dbl(ncid,"f107a",ids1,idv_f107a,
-!    |  "81-day average 10.7 cm solar flux","W/m^2Hz*1.e-22")
-     |  "81-day average 10.7 cm solar flux","1.e-22 kg.s-2")
+     |  "81-day average 10.7 cm solar flux","1.e-22 W/m2/Hz")
 !
 ! Hemispheric power: 
-! 3/16/11: change "gw" to "GW"
       call defvar_time_dbl(ncid,"hpower",ids1,idv_hpower,
      |  "Hemispheric power","GW")
 !
 ! Cross-tail potential:
-! 3/16/11: change units from volts to kV
       call defvar_time_dbl(ncid,"ctpoten",ids1,idv_ctpoten,
      |  "Cross-tail potential","kV")
 !
