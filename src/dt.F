@@ -21,7 +21,8 @@
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm
-      use addfld_module,only: addfld
+      use addfld_module
+      use diags_module
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
 #endif
@@ -227,6 +228,7 @@
 !     call addfld('HEATING2',' ',' ',total_heat(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
+      call mkdiag_HEAT('HEATING',total_heat,lev0,lev1,lon0,lon1,lat)
 !
 ! H = R*T/(M*g)                            (s4)
 ! rho = p0*exp(-s)*M/(R*T)                 (s5)
@@ -266,13 +268,15 @@
 
 !     call addfld('TNI',' ',' ',tni,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('HG' ,' ',' ',h  ,'lev',lev0,lev1,'lon',lon0,lon1,lat)
-      call addfld('DEN','Neutral Density','g/cm3',rho,'ilev',lev0,lev1,
-     |  'lon',lon0,lon1,lat)
+!     call addfld('DEN','Neutral Density','g/cm3',rho,
+!    |  'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('G'  ,' ',' ',g(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('F'  ,' ',' ',f(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
+! Save diagnostic density:
+      call mkdiag_DEN('DEN',rho,lev0,lev1,lon0,lon1,lat)
 !
 ! Coefficients for trsolv:
 ! Levels 3/2 through K-3/2

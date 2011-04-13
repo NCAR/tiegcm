@@ -17,7 +17,8 @@
      |  p0,expz,rmass_o2,rmass_o1,boltz,avo
       use magfield_module,only: dipmag
       use input_module,only: colfac
-      use addfld_module,only: addfld
+      use addfld_module
+      use diags_module
       implicit none
 !
 ! Input args:
@@ -34,7 +35,7 @@
      |  nop   ! NO+ number density (1/cm3)
 !
 ! Output args:
-      real,dimension(lev0:lev1,lo n0-2:lon1+2),intent(out) ::
+      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) ::
      |  lxx,     ! lamda XX term [1/s] 
      |  lyy,     ! lamda YY term [1/s] 
      |  lxy,     ! lamda XY term [1/s] 
@@ -390,12 +391,9 @@
           hall_out(k,i) = sigma_hall(k,i)
         enddo
       enddo
-
-!     call addfld('SIGMAPED' ,'SIGMAPED','S/m ',
-!    |  ped_out(lev0:lev1-1,i0:i1),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('SIGMAHAL','SIGMAHAL','S/m ',
-!    |  hall_out(lev0:lev1-1,i0:i1),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!
+! Save diagnostic conductivities (midpoints?):
+      call mkdiag_SIGMAPED('SIGMA_PED',ped_out,lev0,lev1,lon0,lon1,lat)
+      call mkdiag_SIGMAHAL('SIGMA_HAL',hall_out,lev0,lev1,lon0,lon1,lat)
 
       end subroutine lamdas

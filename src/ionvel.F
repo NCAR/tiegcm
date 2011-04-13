@@ -14,7 +14,8 @@
       use efield_module,only: ex,ey,ez ! (nlevp1,lon0-2:lon1+2,lat0:lat1)
 
       use magfield_module,only: rjac,xb,yb,zb,bmod
-      use addfld_module,only: addfld
+      use addfld_module
+      use diags_module
 #ifdef MPI
       use mpi_module,only: mp_periodic_f3d
 #else
@@ -168,14 +169,10 @@
       enddo
 #endif
 !
-      do lat=lat0,lat1
-       call addfld('UI_VEL','UI','cm/s',ui(:,lon0:lon1,lat),
-     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-       call addfld('VI_VEL','VI','cm/s',vi(:,lon0:lon1,lat),
-     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-       call addfld('WI_VEL','WI','cm/s',wi(:,lon0:lon1,lat),
-     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-      enddo ! lat=lat0,lat1
+! Save ion drifts if requested:
+      call mkdiag_UI('UI_ExB',ui,lev0,lev1,lon0,lon1,lat0,lat1)
+      call mkdiag_VI('VI_ExB',vi,lev0,lev1,lon0,lon1,lat0,lat1)
+      call mkdiag_WI('WI_ExB',wi,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 #ifdef VT
 !     code = 121 ; state = 'ionvel' ; activity='ModelCode'

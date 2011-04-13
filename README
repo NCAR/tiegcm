@@ -1314,3 +1314,12 @@ Added perl script tgcm_put to tiegcm/trunk/scripts. This script will copy
 3/17/11:
 Remove save and secsave from hist.F, wrhist.F, and mpi.F.
 
+4/13/11:
+This is latest working copy of tiegcm trunk w/ new diagnostics module diags.F, 
+which has 14 diagnostic fields with subs that are called from several modules 
+and subs elsewhere in the code. Copied tests directory (w/ automated multi-job
+setup scripts) from /hao/iris1/foster/tiegcm_tests/tiegcm_trunk/tests, so its 
+up to date w/ that work. Will now will make this a new branch called
+tiegcm/branches/tiegcm_diags, where new diagnostics can be added, and merged 
+to the trunk periodically.  Old "suites" directory is deleted.
+

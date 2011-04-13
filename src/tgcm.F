@@ -23,6 +23,7 @@
       use apex_module,only: apxparm
       use timing_module,only: timer,timer_report,init_timer
       use mpi_module,only: mytid,ntask
+      use diags_module,only: init_diags
 #ifdef MPI
       use mpi_module,only: mp_init,mp_close,mp_distribute
 #endif
@@ -85,11 +86,14 @@
 ! Initialize code coupling communication framework 
 ! (i.e. InterComm or AdHoc file exchanges)
 !
-      if(mytid==0) call initialize
+      if (mytid==0) call initialize
 #endif
 !
 ! Do initialization:
       call init
+!
+! Initialize diagnostic fields for secondary histories:
+      call init_diags(1)
 !
 ! Initialization for qrj:
 ! (this is not in init_module to avoid circular dependency between
