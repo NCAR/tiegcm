@@ -22,7 +22,7 @@
       use chemrates_module,only: rkm12
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm
       use addfld_module
-      use diags_module
+      use diags_module,only: mkdiag_DEN,mkdiag_HEAT
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
 #endif

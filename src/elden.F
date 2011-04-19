@@ -15,7 +15,7 @@
      |  rk9,rk10,rk16,rk23,rk26,beta9,ra1,ra2,ra3
       use qrj_module,only: qnp,qnop,qo2p,qn2p
       use addfld_module
-      use diags_module
+      use diags_module,only: mkdiag_TEC,mkdiag_HNMF2
       implicit none
 !
 ! Args:

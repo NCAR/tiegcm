@@ -113,7 +113,7 @@
       use params_module,only: dz
       use cons_module,only: avo,rmassinv_o1,expz
       use addfld_module
-      use diags_module
+      use diags_module,only: mkdiag_COOLIMP,mkdiag_COOLEXP
       implicit none
 !
 ! Args:

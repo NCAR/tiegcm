@@ -1323,3 +1323,11 @@ up to date w/ that work. Will now will make this a new branch called
 tiegcm/branches/tiegcm_diags, where new diagnostics can be added, and merged 
 to the trunk periodically.  Old "suites" directory is deleted.
 
+4/18/11 (After meeting w/ Art, and discussions w/ Astrid and Barb):
+- Added diagnostics SCHT, MU_M, LAMDA_PED, LAMDA_HAL
+- Removed QJI_TI, and changed QJI_TN to QJOULE
+- Changed ion drift units from m/s to cm/s (to be consistent w/ neutral winds)
+- Changed TEC units from "TEC" to 1/cm2
+- Currently, ndiag (number of diag fields) = 17 
+- Added "caller" to diags field table (the sub or file that calls mkdiag_xxx)
+- Reviewed levels of all fields (midpoints or interfaces)

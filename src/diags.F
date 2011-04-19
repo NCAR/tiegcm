@@ -5,23 +5,30 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
+! Make "sanctioned" diagnostics available on secondary history files.
+! To request field(s), the user adds Shortname(s) to the namelist SECFLDS.
+!
+! A table of available diagnostic fields, including names, levels, units, 
+! etc., is printed to stdout by sub init_diags.
+!
       use addfld_module,only: addfld
       implicit none
-!
-! March, 2011 btf: add "sanctioned" diagnostics.
-! Field name lengths (s.a., fields.F):
       integer,parameter :: 
      |  longname_len  = 80, ! length of field long name 
      |  shortname_len = 16, ! length of field short name 
      |  units_len     = 16  ! length of field units attribute
 !
-! number of diagnostics (see sub init_diags):
-      integer,parameter :: ndiag = 14
+! ndiag: Number of available diagnostic fields. This must be incremented when 
+! adding new fields, and type diags(ndiag) must be defined by sub init_diags 
+! below.
+!
+      integer,parameter :: ndiag = 17
       type diag_type
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
         character(len=units_len)     :: units
-        character(len=shortname_len) :: levels ! "lev", "ilev", or "none"
+        character(len=shortname_len) :: levels   ! "lev", "ilev", or "none"
+        character(len=shortname_len) :: caller   ! File or sub that calls mkdiag_xxx
       end type diag_type
       type(diag_type) :: diags(ndiag)
 
@@ -43,94 +50,127 @@
         diags(n)%levels     = ' '
       enddo
 !
-! Fields order is alphabetical by short_name:
+! Fields order is approximately (not necesarilly) alphabetical by short_name:
+! Table of these values are written to stdout, see below.
 !
       n = 1
       diags(n)%short_name = 'COOL_EXP'
       diags(n)%long_name  = 'Total Explicit Cooling'
       diags(n)%units      = 'erg/K/s'  ! Table 4.3 of Model Description
       diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'newton.F'
 !
       n = n+1
       diags(n)%short_name = 'COOL_IMP'
       diags(n)%long_name  = 'Total Implicit Cooling'
       diags(n)%units      = '1/s'       ! Table 4.3 of Model Description
       diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'newton.F'
 !
       n = n+1
       diags(n)%short_name = 'DEN'
       diags(n)%long_name  = 'Total Density'
       diags(n)%units      = 'g/cm3'
       diags(n)%levels     = 'ilev'
+      diags(n)%caller     = 'dt.F'
 !
       n = n+1
       diags(n)%short_name = 'HEATING'
       diags(n)%long_name  = 'Total Heating'
       diags(n)%units      = 'erg/g/s'
       diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'dt.F'
 !
       n = n+1
       diags(n)%short_name = 'HMF2'
       diags(n)%long_name  = 'Height of F2' 
       diags(n)%units      = 'km'
       diags(n)%levels     = 'none' ! hmf2 is 2d lon x lat
+      diags(n)%caller     = 'elden.F'
 !
       n = n+1
       diags(n)%short_name = 'NMF2'
       diags(n)%long_name  = 'Density at HMF2' 
-      diags(n)%units      = 'cm3'
+      diags(n)%units      = '1/cm3'
       diags(n)%levels     = 'none' ! nmf2 is 2d lon x lat
-!
-! Units of joule heating are erg/g/s (qjoule.F and p.141 of MD, 
-! however Table 4.3 of the MD says qjoule input to dt.F is in erg/K/s)
-! I am going w/ erg/g/s to be compatable w/ total heating.
-      n = n+1
-      diags(n)%short_name = 'QJI_TI'
-      diags(n)%long_name  = 'Joule Heating from TI' 
-      diags(n)%units      = 'erg/g/s'   
-      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'elden.F'
 !
       n = n+1
-      diags(n)%short_name = 'QJI_TN'
-      diags(n)%long_name  = 'Joule Heating from TN'
-      diags(n)%units      = 'erg/g/s'
+      diags(n)%short_name = 'LAMDA_HAL'
+      diags(n)%long_name  = 'Hall Ion Drag Coefficient'
+      diags(n)%units      = '1/s'
       diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'lamdas.F'
+!
+      n = n+1
+      diags(n)%short_name = 'LAMDA_PED'
+      diags(n)%long_name  = 'Pedersen Ion Drag Coefficient'
+      diags(n)%units      = '1/s'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'lamdas.F'
+!
+      n = n+1
+      diags(n)%short_name = 'MU_M'
+      diags(n)%long_name  = 'Molecular Viscosity Coefficient'
+      diags(n)%units      = 'g/cm/s'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'cpktkm.F'
+!
+      n = n+1
+      diags(n)%short_name = 'QJOULE'
+      diags(n)%long_name  = 'Joule Heating'
+      diags(n)%units      = 'erg/g/s'  ! model description has erg/K/s
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'qjoule.F'
+!
+      n = n+1
+      diags(n)%short_name = 'SCHT'
+      diags(n)%long_name  = 'Pressure Scale Height'
+      diags(n)%units      = 'km'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'addiag.F'
 !
       n = n+1
       diags(n)%short_name = 'SIGMA_HAL'
       diags(n)%long_name  = 'Hall Conductivity'
       diags(n)%units      = 'S/m'
       diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'lamdas.F'
 !
       n = n+1
       diags(n)%short_name = 'SIGMA_PED'
       diags(n)%long_name  = 'Pedersen Conductivity'
       diags(n)%units      = 'S/m'
       diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'lamdas.F'
 !
       n = n+1
       diags(n)%short_name = 'TEC'
       diags(n)%long_name  = 'Total Electron Content'
-      diags(n)%units      = 'TEC'
+      diags(n)%units      = '1/cm2'
       diags(n)%levels     = 'none' ! 2d lon x lat
+      diags(n)%caller     = 'elden.F'
 !
       n = n+1
       diags(n)%short_name = 'UI_ExB'
       diags(n)%long_name  = 'Zonal Ion Drift (ExB)'
-      diags(n)%units      = 'm/s'
+      diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
+      diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
       diags(n)%short_name = 'VI_ExB'
       diags(n)%long_name  = 'Meridional Ion Drift (ExB)'
-      diags(n)%units      = 'm/s'
+      diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
+      diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
       diags(n)%short_name = 'WI_ExB'
       diags(n)%long_name  = 'Vertical Ion Drift (ExB)'
-      diags(n)%units      = 'm/s'
+      diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
+      diags(n)%caller     = 'ionvel.F'
 
       if (n /= ndiag) then
         write(6,"('>>> init_diags: n=',i4,' ndiag=',i4)")
@@ -140,18 +180,45 @@
 !
 ! Print table to stdout:
       if (iprint > 0) then
-        write(6,"(/,72('-'))")
+        write(6,"(/,96('-'))")
         write(6,"('List of Available Diagnostic Fields:')")
         write(6,"('Shortnames may be added to namelist SECFLDS',/)")
         write(6,"('Field   Shortname       Units           Levels  ',
-     |    'Longname')")
+     |    'Caller          Longname')")
+        write(6,"(48('- '))")
         do n=1,ndiag
-          write(6,"(i4,4x,a,a,a,a)") n,diags(n)%short_name,
-     |      diags(n)%units,diags(n)%levels(1:8),trim(diags(n)%long_name)
+          write(6,"(i4,4x,a,a,a,a,a)") n,diags(n)%short_name,
+     |      diags(n)%units,diags(n)%levels(1:8),diags(n)%caller,
+     |      trim(diags(n)%long_name)
         enddo
-        write(6,"(72('-'),/)")
+        write(6,"(96('-'),/)")
       endif
       end subroutine init_diags
+!-----------------------------------------------------------------------
+      integer function checkf(name)
+!
+! Return index to name in diags(:).
+!
+      use input_module,only: secflds,mxfsech
+!
+! Args:
+      character(len=*),intent(in) :: name
+!
+! External:
+      integer,external :: ixfindc ! util.F
+!
+! Check for field in namelist SECFLDS -- if not found, return silently
+      checkf = ixfindc(secflds,mxfsech,name)
+      if (checkf==0) return
+!
+! Get index to diags -- if not found, return zero with error msg:
+      checkf = ixfindc(diags(:)%short_name,ndiag,name)
+      if (checkf==0) then
+        write(6,"('>>> Cannot find field ',a,' in list of ',
+     |    'available diagnostics -- returning')") name
+      endif
+      return
+      end function checkf
 !-----------------------------------------------------------------------
       subroutine mkdiag_DEN(name,rho,lev0,lev1,lon0,lon1,lat)
 !
@@ -172,31 +239,11 @@
 ! Save to secondary history. Note rho is calculated on interface
 ! levels, hence 'ilev' in the addfld call:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,rho,'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+     |  diags(ix)%units,rho,diags(ix)%levels,lev0,lev1,
+     |  'lon',lon0,lon1,lat)
       end subroutine mkdiag_DEN
 !-----------------------------------------------------------------------
-      subroutine mkdiag_QJI_TI(name,qji_ti,lev0,lev1,lon0,lon1,lat)
-!
-! From qjoule.F, levels at midpoints.
-!
-! Args
-      character(len=*),intent(in) :: name
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in) :: qji_ti(lev0:lev1,lon0-2:lon1+2)
-!
-! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
-!
-! Save on secondary history:
-      call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,qji_ti(lev0:lev1-1,lon0:lon1),diags(ix)%levels,
-     |  lev0,lev1-1,'lon',lon0,lon1,lat)
-      end subroutine mkdiag_QJI_TI
-!-----------------------------------------------------------------------
-      subroutine mkdiag_QJI_TN(name,qji_tn,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_QJOULE(name,qji_tn,lev0,lev1,lon0,lon1,lat)
 !
 ! From qjoule.F, levels at midpoints.
 !
@@ -216,7 +263,7 @@
      |  diags(ix)%units,qji_tn(lev0:lev1-1,lon0:lon1),diags(ix)%levels,
      |  lev0,lev1-1,'lon',lon0,lon1,lat)
 
-      end subroutine mkdiag_QJI_TN
+      end subroutine mkdiag_QJOULE
 !-----------------------------------------------------------------------
       subroutine mkdiag_TEC(name,tec,z,electrons,lev0,lev1,lon0,lon1,
      |  lat)
@@ -243,8 +290,6 @@
           tec(i) = tec(i)+(z(k+1,i)-z(k,i))*electrons(k,i)
         enddo
       enddo
-!     write(6,"('mkdiag_TEC call addfld: lat=',i4,' ',a,' min,max=',
-!    |  2e12.4)") lat,name,minval(tec),maxval(tec)
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -269,10 +314,10 @@
 ! Check that field name is a diagnostic, and was requested:
       ix = checkf(name) ; if (ix==0) return
 !
-! Save on secondary histories (convert from cm/s to m/s):
+! Save on secondary histories:
       do lat=lat0,lat1
         call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units, ui(:,lon0:lon1,lat)/100.,diags(ix)%levels,
+     |    diags(ix)%units, ui(:,lon0:lon1,lat),diags(ix)%levels,
      |    lev0,lev1,'lon',lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       end subroutine mkdiag_UI
@@ -295,10 +340,10 @@
 ! Check that field name is a diagnostic, and was requested:
       ix = checkf(name) ; if (ix==0) return
 !
-! Save on secondary histories (convert from cm/s to m/s):
+! Save on secondary histories:
       do lat=lat0,lat1
         call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units, vi(:,lon0:lon1,lat)/100.,diags(ix)%levels,
+     |    diags(ix)%units, vi(:,lon0:lon1,lat),diags(ix)%levels,
      |    lev0,lev1,'lon',lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       end subroutine mkdiag_VI
@@ -321,10 +366,10 @@
 ! Check that field name is a diagnostic, and was requested:
       ix = checkf(name) ; if (ix==0) return
 !
-! Save on secondary histories (convert from cm/s to m/s):
+! Save on secondary histories:
       do lat=lat0,lat1
         call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units, wi(:,lon0:lon1,lat)/100.,diags(ix)%levels,
+     |    diags(ix)%units, wi(:,lon0:lon1,lat),diags(ix)%levels,
      |    lev0,lev1,'lon',lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       end subroutine mkdiag_WI
@@ -436,6 +481,48 @@
      |  diags(ix)%levels,lev0,lev1-1,'lon',lon0,lon1,lat)
       end subroutine mkdiag_SIGMAHAL
 !-----------------------------------------------------------------------
+      subroutine mkdiag_LAMDAPED(name,lamdaped,lev0,lev1,lon0,lon1,lat)
+!
+! Save Pedersen ion drag coefficient (on interfaces, called from lamdas.F):
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in) :: lamdaped(lev0:lev1,lon0:lon1)
+!
+! Local:
+      integer :: ix
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+!
+! Save on secondary histories:
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,lamdaped(lev0:lev1-1,lon0:lon1),
+     |  diags(ix)%levels,lev0,lev1-1,'lon',lon0,lon1,lat)
+      end subroutine mkdiag_LAMDAPED
+!-----------------------------------------------------------------------
+      subroutine mkdiag_LAMDAHAL(name,lamdahal,lev0,lev1,lon0,lon1,lat)
+!
+! Save Hall ion drag coefficient (on interfaces, called from lamdas.F):
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in) :: lamdahal(lev0:lev1,lon0:lon1)
+!
+! Local:
+      integer :: ix
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+!
+! Save on secondary histories:
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,lamdahal(lev0:lev1-1,lon0:lon1),
+     |  diags(ix)%levels,lev0,lev1-1,'lon',lon0,lon1,lat)
+      end subroutine mkdiag_LAMDAHAL
+!-----------------------------------------------------------------------
       subroutine mkdiag_HNMF2(name,ht,ne,lev0,lev1,lon0,lon1,lat)
 !
 ! Args:
@@ -463,28 +550,6 @@
      |    diags(ix)%units,nmf2,'lon',lon0,lon1,'lat',lat,lat,0)
       endif
       end subroutine mkdiag_HNMF2
-!-----------------------------------------------------------------------
-      integer function checkf(name)
-      use input_module,only: secflds,mxfsech
-!
-! Args:
-      character(len=*),intent(in) :: name
-!
-! External:
-      integer,external :: ixfindc ! util.F
-!
-! Check for field in namelist SECFLDS -- if not found, return silently
-      checkf = ixfindc(secflds,mxfsech,name)
-      if (checkf==0) return
-!
-! Get index to diags -- if not found, return:
-      checkf = ixfindc(diags(:)%short_name,ndiag,name)
-      if (checkf==0) then
-        write(6,"('>>> Cannot find field ',a,' in list of ',
-     |    'available diagnostics -- returning')") name
-      endif
-      return
-      end function checkf
 !-----------------------------------------------------------------------
       subroutine hnmf2(ht,ne,hmf2,nmf2,lev0,lev1,lon0,lon1,lat)
 !
@@ -575,5 +640,74 @@
 !
 ! RETURN
 ! END
+!-----------------------------------------------------------------------
+      subroutine mkdiag_SCHT(name,zcm,lev0,lev1,lon0,lon1,lat0,lat1)
+      use params_module,only: dlev
+!
+! Calculate pressure scale height from geopotential Z (called from addiag.F)
+! Note Z is input at interfaces, and pzps is output at midpoints
+!   (as per conversation w/ Art)
+!
+!     diags(n)%short_name = 'SCHT'
+!     diags(n)%long_name  = 'Pressure Scale Height'
+!     diags(n)%units      = 'km'
+!     diags(n)%levels     = 'lev'
+! 
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
+      real,intent(in) :: zcm(lev0:lev1,lon0:lon1,lat0:lat1) ! geopotential (cm)
+!
+! Local:
+      integer :: k,i,j,ix
+      real :: pzps(lev0:lev1,lon0:lon1)
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+!
+! Take delta Z:
+      do j=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            pzps(k,i) = zcm(k+1,i,j)-zcm(k,i,j)
+          enddo
+!
+! Extrapolate top boundary:
+          pzps(lev1,i) = 3.*zcm(lev1,i,j)-
+     |      4.*zcm(lev1-1,i,j)+zcm(lev1-2,i,j)
+!
+! Generic for dlev 0.5 or 0.25 resolution:
+          pzps(:,i) = pzps(:,i)/dlev
+        enddo ! i=lon0,lon1
+        pzps = pzps*1.e-5 ! cm to km
+!
+! Save on secondary history:
+        call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |    diags(ix)%units,pzps,diags(ix)%levels,lev0,lev1,
+     |    'lon',lon0,lon1,j)
+      enddo ! j=lat0,lat1
+
+      end subroutine mkdiag_SCHT
+!-----------------------------------------------------------------------
+      subroutine mkdiag_MU_M(name,fkm,lev0,lev1,lon0,lon1,lat)
+!
+! Molecular viscosity coefficient (fkm passed from cpktkm.F):
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: fkm
+!
+! Local:
+      integer :: ix
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,fkm,diags(ix)%levels,lev0,lev1,
+     |  'lon',lon0,lon1,lat)
+
+      end subroutine mkdiag_MU_M
 !-----------------------------------------------------------------------
       end module diags_module

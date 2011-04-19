@@ -18,7 +18,8 @@
       use magfield_module,only: dipmag
       use input_module,only: colfac
       use addfld_module
-      use diags_module
+      use diags_module,only: mkdiag_SIGMAPED,mkdiag_SIGMAHAL,
+     |                       mkdiag_LAMDAPED,mkdiag_LAMDAHAL
       implicit none
 !
 ! Input args:
@@ -342,6 +343,12 @@
           lyxnorot(k,i) = lxynorot(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
+!
+! Save diagnostic ion drag coefficients:
+      call mkdiag_LAMDAPED('LAMDA_PED',lamda1(:,lon0:lon1),
+     |  lev0,lev1,lon0,lon1,lat)
+      call mkdiag_LAMDAHAL('LAMDA_HAL',lamda2(:,lon0:lon1),
+     |  lev0,lev1,lon0,lon1,lat)
 
 !     call addfld('LAMDA1',' ',' ',lamda1,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -392,7 +399,7 @@
         enddo
       enddo
 !
-! Save diagnostic conductivities (midpoints?):
+! Save diagnostic conductivities (midpoints):
       call mkdiag_SIGMAPED('SIGMA_PED',ped_out,lev0,lev1,lon0,lon1,lat)
       call mkdiag_SIGMAHAL('SIGMA_HAL',hall_out,lev0,lev1,lon0,lon1,lat)
 

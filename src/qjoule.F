@@ -28,7 +28,6 @@
      |  rmass_o2 , rmass_o1, rmass_n2,  ! 32,16,28 [g/mol]
      |  rmass_n4s, rmass_no, rmass_op   ! 14,30,16 [g/mol]
       use addfld_module
-      use diags_module
       implicit none
 !
 ! Args:
@@ -91,8 +90,6 @@
 !     call addfld('QJI_TI','QJI_TI ',' ',qji_ti(lev0:lev1-1,lon0:lon1),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
-      call mkdiag_QJI_TI('QJI_TI',qji_ti,lev0,lev1,lon0,lon1,lat)
-
       end subroutine qjoule_ti
 !-----------------------------------------------------------------------
       subroutine qjoule_tn(un,vn,w,ui,vi,wi,lam1,barm,tn,qji_tn,
@@ -115,7 +112,7 @@
      |  grav,   ! acceler. due to gravity at lower boundary [cm/s^2]
      |  gask    ! gas konstant 8.314e7 [ergs/K/mol]
       use addfld_module
-      use diags_module
+      use diags_module,only: mkdiag_QJOULE
       implicit none
 !     
 ! Args:
@@ -174,6 +171,6 @@
 !    |  qji_tn(lev0:lev1-1,lon0:lon1),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
-      call mkdiag_QJI_TN('QJI_TN',qji_tn,lev0,lev1,lon0,lon1,lat)
+      call mkdiag_QJOULE('QJOULE',qji_tn,lev0,lev1,lon0,lon1,lat)
 
       end subroutine qjoule_tn

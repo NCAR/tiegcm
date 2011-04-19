@@ -15,7 +15,7 @@
 
       use magfield_module,only: rjac,xb,yb,zb,bmod
       use addfld_module
-      use diags_module
+      use diags_module,only: mkdiag_UI,mkdiag_VI,mkdiag_WI
 #ifdef MPI
       use mpi_module,only: mp_periodic_f3d
 #else
