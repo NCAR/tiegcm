@@ -211,7 +211,7 @@
 !
       use params_module,only: dz
       use init_module,only: glat,istep
-      use cons_module,only: boltz
+      use cons_module,only: boltz,avo
       use addfld_module,only: addfld
 !
 ! Args:
@@ -242,7 +242,7 @@
         do i=lon0,lon1
           g(1)=g0*(r0/(r0+0.5*(z(1,i,j)+z(2,i,j))))**2
           n2(:) = (1.-o2(:,i,j)-o1(:,i,j))
-          xmas(:) = 1./(o1(:,i,j)/16.+o2(:,i,j)/32.+n2(:)/28.)*1.66e-24
+          xmas(:) = 1./(o1(:,i,j)/16.+o2(:,i,j)/32.+n2(:)/28.)/avo
 !         write(6,"('calczg: j=',i3,' i=',i3,' xmas=',/,(6e12.4))")
 !    |      j,i,xmas
 !
