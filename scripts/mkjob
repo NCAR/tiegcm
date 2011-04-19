@@ -11,9 +11,9 @@ $tgcmdata = $ENV{TGCMDATA};
 #
 # Defaults for mkjob:
 #
-$model = "tiegcm_newbuild";
-$hres  = 5.0;
-$vres  = 0.5;
+$model = "tiegcm";
+$modeldir = "tiegcm_trunk";
+$modelres  = 5.0;
 $system  = 'linux';  # 'linux' or 'ibm'
 #
 # Set default job script parameters:
@@ -31,19 +31,17 @@ $system  = 'linux';  # 'linux' or 'ibm'
 # Begin shell variables for job script:
 # 
   "model=s"          => \$model,
-  "wrkdir=s"         => \$wrkdir,
-  "tgcmroot=s"       => \$tgcmroot,
-  "make_machine=s"   => \$make_machine,
+  "modeldir=s"       => \$modeldir,
+  "execdir=s"        => \$execdir,
+  "make=s"           => \$make,
+  "input=s"          => \$input,
+  "output=s"         => \$output,
   "mpi=s"            => \$mpi,
   "nproc=i"          => \$nproc,
-  "hres=f"           => \$hres,
-  "vres=f"           => \$vres,
-  "input=s"          => \$input,
-  "usr_srcdirs=s"    => \$usr_srcdirs,
-  "output=s"         => \$output,
-  "utildir=s"        => \$utildir,
-  "execdir=s"        => \$execdir,
+  "modelres=f"       => \$modelres,
   "debug=s"          => \$debug,
+  "exec=s"           => \$exec,
+  "utildir=s"        => \$utildir,
 #
 # Begin #BSUB LSF resource directives:
 #
@@ -68,24 +66,24 @@ if (@ARGV) {
 #
 # Validate resolution options:
 #
-if (not (($hres==5.0 and $vres==0.5) or ($hres==2.5 and $vres==0.25))) {
-  print STDERR "\n>>> Bad hres,vres combination: hres=$hres vres=$vres\n";
-  print STDERR ">>> hres,vres must be either 5.0,0.5 or 2.5,0.25\n\n";
+if (not ($modelres == 5.0 or $modelres == 2.5)) {
+  print STDERR "\n>>> Bad modelres = $modelres\n";
+  print STDERR ">>> modelres must be either 5.0 or 2.5\n\n";
   exit;
 }
 $highres = 0;
-if ($hres == 2.5 and $vres == 0.25) { $highres = 1; }
-#print STDERR "mkjob: hres=$hres vres=$vres highres=$highres\n";
+if ($modelres == 2.5) { $highres = 1; }
+#print STDERR "mkjob: modelres=$modelres highres=$highres\n";
 #
-if (! defined $utildir) { $utildir = "$tgcmroot/$model/scripts"; }
+if (! defined $utildir) { $utildir = "$modeldir/scripts"; }
 #
 # Default Make.machine file:
 #
-if (! defined $make_machine) {
+if (! defined $make) {
   if ($system eq 'ibm') {
-    $make_machine = "Make.bluefire";
+    $make = "Make.bluefire";
   } else {
-    $make_machine = "Make.generic_hao64";
+    $make = "Make.intel_hao64";
   }
 }
 #
@@ -128,28 +126,24 @@ if (defined $fileout) {
 &write_jobfile($jobfile);
 `chmod ugo+x $jobfile`;
 #
-print STDERR "mkjob: Wrote job script $jobfile\n";
+#print STDERR "Wrote job script $jobfile\n";
 print "$jobfile\n";
 exit;
-
 #-------------------------------------------------------------------------
 sub set_defaults {
 my ($highres) = @_;
 #
 # Default job script parameters:
 #
-$wrkdir       = ".";
-$tgcmroot     = ".";
 $mpi          = "TRUE";
 if ($system eq "linux") { $nproc = 4; } else { $nproc = ""; }
-$hres         = "5.0";
-$vres         = "0.5";
-#$input        = "$model.inp";
-#$usr_srcdirs  = "modsrc";  # no default for usr_srcdirs
+$modelres     = "5.0";
+#$input       = "$model.inp";
 $output       = "$model" . ".out";
-#$utildir      = "$tgcmroot/$model/scripts"; # this is set above after getopts
+$utildir      = "$modeldir/scripts"; # this is set above after getopts
 $execdir      = "$model-" . $system;
 $debug        = "FALSE";
+$exec         = "TRUE";
 #
 # #BSUB LSF defaults:
 #
@@ -197,20 +191,11 @@ print $fh_out <<"EOF2";
 #
 # Set shell variables for $model $system job:
 #
-set model        = $model
-set wrkdir       = $wrkdir
-set tgcmroot     = $tgcmroot
-set make_machine = $make_machine
+set modeldir     = $modeldir
+set execdir      = $execdir
+set make         = $make
 EOF2
 #
-# If user specified usr_srcdirs, set it, otherwise
-# write commented line to the job script:
-#
-if (defined $usr_srcdirs) {
-  $string = "set usr_srcdirs = $usr_srcdirs\n";
-} else {
-  $string = "#set usr_srcdirs = modsrc\n";
-}
 if (defined $input) {
   $string = "set input        = $input\n";
 } else {
@@ -222,10 +207,9 @@ print $fh_out <<"EOF3";
 set output       = $output
 set mpi          = $mpi
 set nproc        = $nproc
-set hres         = $hres
-set vres         = $vres
+set modelres     = $modelres
 set utildir      = $utildir
-set execdir      = $execdir
+set exec         = $exec
 set debug        = $debug
 EOF3
 #
@@ -233,7 +217,7 @@ EOF3
 # If template file is not provided by user, look in cwd and $utildir. If not 
 #   found, this is a fatal error.
 #
-print "Reading job template file $template..\n";
+#print "Reading job template file $template..\n";
 my $fh_tpl = new IO::File;
 $fh_tpl->open("<$template") or die ">>> Can't open job template file $template\n";
 while (<$fh_tpl>) { print $fh_out $_; }

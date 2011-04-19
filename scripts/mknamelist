@@ -178,6 +178,7 @@ $COLFAC = "1.5";
 # Set default comments:
 #
 %comments = (
+  " "                 =>" ",
   LABEL               =>" ",
   START_YEAR          =>" ",
   START_DAY           =>" ",
@@ -358,7 +359,7 @@ $comments{TIDI_NCFILE}TIDI_NCFILE  = $TIDI_NCFILE
 ; If KP is specified, and POWER and/or CTPOTEN are commented,
 ; then the given KP will be used to calculate POWER and/or CTPOTEN
 ;
-;GPI_NCFILE = $GPI_NCFILE
+$comments{GPI_NCFILE}GPI_NCFILE = $GPI_NCFILE
 ;
 $comments{KP}KP = $KP
 $comments{POWER}POWER   = $POWER
@@ -388,6 +389,6 @@ $comments{COLFAC}COLFAC = $COLFAC
 EOF
 
 $fh_out->close;
-#print STDERR "mknamelist: Wrote namelist file $namelist_file\n";
+#print STDERR "Wrote namelist file $namelist_file\n";
 } # end sub write_namelist
 #-------------------------------------------------------------------------

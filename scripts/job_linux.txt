@@ -18,17 +18,19 @@ if (! -d $modeldir) then
   exit 1
 endif
 set model = $modeldir:t
-set utildir = $modeldir/scripts
+
 if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 
   exit 1
 endif
+
 set srcdir  = $modeldir/src
 if (! -d $srcdir) then
-  echo ">>> Cannot find model source directory $utildir <<<"
+  echo ">>> Cannot find model source directory $srcdir <<<"
   exit 1
 endif
 set srcdir = `perl $utildir/abspath $srcdir`
+
 if (! -d $execdir) then
   echo "Making exec directory $execdir" 
   mkdir -p $execdir
@@ -39,16 +41,17 @@ if (! -f $make) then
   exit 1
 endif
 set make = `perl $utildir/abspath $make`
+echo Make machine file = $make
 if ($modelres != 5.0 && $modelres != 2.5) then
   echo ">>> Unknown model resolution $modelres <<<"
   exit 1
 endif
 #
-# Copy make files to execdir if necessary:
+# Unconditionally copy make files to execdir:
 #
-if (! -f $execdir/$make)     cp $make $execdir
-if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
-if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
+cp $make $execdir
+cp $utildir/Makefile $execdir
+cp $utildir/mkdepends $execdir
 #
 # Make default namelist input file if not provided by user:
 #
@@ -78,8 +81,8 @@ endif
 #
 # Report to stdout:
 #
-set svnrevision = `svnversion $modeldir` || set svnrevision = "[none]"
-echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnrevision)"
+set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
+echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnversion)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
@@ -102,24 +105,36 @@ EXECNAME     = $model
 NAMELIST     = $input
 OUTPUT       = $output
 DEBUG        = $debug
+SVN_VERSION  = $svnversion
 EOF
 #
-# Build the model:
+# If building with intel on 64-bit Linux at hao, please add the following 
+# source command to your ~/.cshrc file, or uncomment the next line: 
+#source /opt/local/intel/Compiler/11.1/072/bin/ifortvars.csh intel64
 #
+# Build the model:
 gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 #
 # Execute Linux job (MPI or non-MPI run):
-# (machines.ini rule is in Make.generic_hao64)
+# (machines.ini mpirun rules are in Make.machine file)
 #
 if ($exec == "TRUE") then
+  set model = ./$model
   echo "Linux job: Executing $model mpi=$mpi nproc=$nproc"
   echo "Model output will go to $output"
   if ($mpi == "TRUE") then
+#
+# Files machines.ini and mpirun.command are made by the Make.machines file.
     gmake machines.ini
-    echo "Executing mpirun -np $nproc for Linux MPI run."
-    mpirun -np $nproc -machinefile machines.ini $model < $input >&! $output || \
+    gmake mpirun.command
+    set mpirun = `cat mpirun.command`
+    echo "Executing $mpirun -np $nproc for Linux MPI run."
+#
+# Execute MPI job:
+    $mpirun -np $nproc -machinefile machines.ini $model < $input >&! $output || \
       echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
+ 
     echo "Linux MPI run of $model completed at `date`"
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."
@@ -131,4 +146,5 @@ if ($exec == "TRUE") then
 else
   echo "I am NOT executing $model (exec was not set)"
 endif
+exit 0
 

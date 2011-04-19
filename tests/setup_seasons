@@ -1,0 +1,111 @@
+#! /bin/csh
+#
+# Make 4 tiegcm job scripts and corresponding namelist input files for 4 seasons,
+#   (both equinoxes and solstices) with either Heelis or Weimer potential models.
+# To use: Copy this script to a working directory that contains model root 
+#   directory $modeldir (from the same revision as this script), modify shell 
+#   vars if desired, and execute.
+# These jobs can be executed simultaneously (i.e., not necessarilly sequentially).
+#
+#   mareqx: March equinox (day 80)
+#   junsol: June solstice (day 172)
+#   sepeqx: September solstice (day 264)
+#   decsol: December solstice (day 355)
+#
+set model      = tiegcm                        # For namelist and job scripts
+ set modeldir   = tiegcm_trunk                  # model root dir
+#set modeldir   = ..                            # if executed from a modeldir/tests directory
+set mknamelist = $modeldir/scripts/mknamelist  # mknamelist script
+set mkjob      = $modeldir/scripts/mkjob       # mkjob script
+set utildir    = $modeldir/scripts             # For job script
+set system     = ibm                           # linux or ibm
+set execdir    = ${model}-${system}            # for job script
+set template   = $modeldir/scripts/job_${system}.txt # for mkjob
+set modelres   = 5.0                           # either 5.0 or 2.5 deg resolution
+set potential_name  = weimer                   # "heelis" or "weimer"
+#
+set cases = (mareqx junsol sepeqx decsol) # Will loop through these cases
+set TGCMDATA = '$TGCMDATA'
+set source = ( "'$TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smed.nc'" \
+               "'$TGCMDATA/TGCM.tiegcm1.93.pcntr_jsol_smed.nc'" \
+               "'$TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smed.nc'" \
+               "'$TGCMDATA/TGCM.tiegcm1.93.pcntr_dsol_smed.nc'" )
+set source_start = (80 172 80  355)
+set start_day    = (80 172 264 355)
+set stop_day     = (85 177 269 360)
+#
+# Constants for heelis potential (commented if weimer run):
+set power   = 16.
+set ctpoten = 45.
+set f107    = 150.
+set f107a   = 150.
+#
+# Constants for weimer potential (commented if heelis run):
+set bximf = 0.
+set byimf = 0.
+set bzimf = -5.
+set swvel = 400.
+set swden = 4.0
+#
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+if ($potential_name != "heelis" && $potential_name != "weimer") then
+  echo ">>> Bad potential_name: $potential_name (Must be either 'heelis' or 'weimer')"
+  exit
+endif
+set potential_model = "'HEELIS'"
+if ($potential_name == "weimer") then
+  set potential_model = "'WEIMER'" 
+endif
+#
+# Make namelist files:
+#
+@ i = 1
+foreach case ($cases)
+  set output = "'${model}.p_${case}_${potential_name}_001.nc'"
+  set secout = "'${model}.s_${case}_${potential_name}_001.nc','to','${model}.s_${case}_${potential_name}_005.nc','by','1'"
+#
+# Make heelis namelist:
+#
+  if ($potential_name == "heelis") then
+  $mknamelist -model=$model -fileout=${model}_${case}_${potential_name}.inp \
+    -START_DAY=$start_day[$i] \
+    -SOURCE=$source[$i] -SOURCE_START="$source_start[$i],0,0" \
+    -START="$start_day[$i],0,0" -STOP="$stop_day[$i],0,0" -HIST="1,0,0" \
+    -OUTPUT=$output -SECOUT=$secout -POTENTIAL_MODEL=$potential_model \
+    -SECSTART="$start_day[$i],1,0" -SECSTOP="$stop_day[$i],0,0" -SECHIST="0,1,0" \
+    -POWER=$power -CTPOTEN=$ctpoten -F107=$f107 -F107A=$f107a
+  else
+#
+# Make weimer namelist (uncomment bx,by,bz,swvel,swden):
+#
+  $mknamelist -model=$model -fileout=${model}_${case}_${potential_name}.inp \
+    -START_DAY=$start_day[$i] \
+    -SOURCE=$source[$i] -SOURCE_START="$source_start[$i],0,0" \
+    -START="$start_day[$i],0,0" -STOP="$stop_day[$i],0,0" -HIST="1,0,0" \
+    -OUTPUT=$output -SECOUT=$secout -SECHIST="0,1,0" \
+    -SECSTART="$start_day[$i],1,0" -SECSTOP="$stop_day[$i],0,0" \
+    -POTENTIAL_MODEL=$potential_model -comment="CTPOTEN" -comment="POWER" \
+    -BXIMF=$bximf -BYIMF=$byimf -BZIMF=$bzimf -SWVEL=$swvel -SWDEN=$swden \
+    -uncomment="BXIMF" -uncomment="BYIMF" -uncomment="BZIMF" -uncomment="SWVEL" \
+    -uncomment="SWDEN"
+  endif
+  @ i++
+end
+#
+# Make job scripts:
+#
+set bsub_project = 24100004               # your account number on NCAR IBM machine
+set bsub_queue = regular
+set bsub_nproc = 32
+set bsub_wallclock = "1:00"
+foreach case ($cases)
+  set bsub_jobname = $case
+  $mkjob -model=$model -fileout=${model}_${case}_${potential_name}_$system.job \
+    -bsub_jobname=$bsub_jobname -system=$system -utildir=$utildir -execdir=$execdir \
+    -bsub_project=$bsub_project -bsub_queue=$bsub_queue -bsub_nproc=$bsub_nproc \
+    -template=$template -modeldir="$modeldir" -modelres=$modelres \
+    -bsub_wallclock=$bsub_wallclock \
+    -input="${model}_${case}_${potential_name}.inp" \
+    -output="${model}_${case}_${potential_name}.out"
+end
