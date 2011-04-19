@@ -2010,6 +2010,14 @@
 !         call shutdown('GPI with WEIMER')
         endif
 !
+! Weimer non-gpi run must provide f107:
+        if (len_trim(gpi_ncfile) <= 0.and.(f107==spval.or.f107a==spval)) 
+     |    then
+          write(6,"(/,'>>> Weimer potential model without GPI data',
+     |      ' must provide namelist f107,f107a')") 
+          call shutdown('WEIMER non-GPI without f107')
+        endif
+!
 ! ctpoten cannot be provided by the user, since it will be
 ! calculated from the Weimer potential:
         if (ctpoten /= spval .or. ntimes_ctpoten > 0.and.

@@ -1314,3 +1314,9 @@ Added perl script tgcm_put to tiegcm/trunk/scripts. This script will copy
 3/17/11:
 Remove save and secsave from hist.F, wrhist.F, and mpi.F.
 
+3/19/11:
+Merged tiegcm_dyncrit branch to the trunk (r571)
+
+Add check in input.F to enforce providing namelist f107,f107a when
+Weimer potential model is requested without GPI data.
+
