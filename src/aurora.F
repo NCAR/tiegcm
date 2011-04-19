@@ -309,7 +309,11 @@
       rh = (h2 - h1) / (h1 + h2)
 !
       theta0(isouth) = (-3.80+8.48*(ctpoten**0.1875))*dtr
-      theta0(inorth) = (-3.80+8.48*(ctpoten**0.1875))*dtr
+! Set theta0 = 10 deg so crit(1,2)=15,30 (old values in cons.F) in colath.F for CISM
+#if defined(INTERCOMM) || defined(CISMAH)
+      theta0(isouth) = 10.*dtr
+#endif
+      theta0(inorth) = theta0(isouth)
       offa(isouth) = 1.0*dtr
       offa(inorth) = 1.0*dtr
       dskofa(isouth) = 0.

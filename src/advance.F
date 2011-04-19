@@ -16,7 +16,7 @@
 !
       use fields_module
       use hist_module,only: nstep,modeltime,nsource
-      use heelis_module,only: heelis,colath
+      use heelis_module,only: heelis
       use weimer_module,only: weimer01  ! Weimer 2001 model
       use wei05sc,only: weimer05,       ! Weimer 2005 model
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
@@ -207,7 +207,7 @@
       if (calendar_advance > 0) call advance_day
       call sunloc_apex(iyear,iday,secs)! locate sun's longitude
       if (debug) write(6,"('advance after sunloc')")
-      if (calendar_advance > 0) dday = float(iday)+secs/86400.
+      if (calendar_advance > 0) dday = real(iday)+secs/86400.
 !
 ! Interpolate input parameters to current model time, if time-dependent 
 ! values were read from input. If namelist read parameter indices_interp 
@@ -300,7 +300,6 @@
       call cism_scatter(gflx,lon0,lon1,lat0,lat1)
 #endif
 #endif
-
 !
 ! Report to stdout:
       if (time2print(nstep,istep)) then
@@ -751,7 +750,7 @@
         endif                          !   for past year's end
 !
 ! Recalculate sun's declination
-        delta = atan(tan(23.5*pi/180.)*sin(2.*pi*float(iday-80)/365.))
+        delta = atan(tan(23.5*pi/180.)*sin(2.*pi*real(iday-80)/365.))
         sin_sundec = sin(delta) ! C(95)
         cos_sundec = cos(delta) ! C(96)
 !
@@ -759,7 +758,7 @@
 ! sfeps is 6% variation in solar output over a year
 !   caused by the orbital eccentricity.
 !
-        theta0 = 2.*pi*float(iday)/365.
+        theta0 = 2.*pi*real(iday)/365.
         sfeps = 1.000110+0.034221*cos(theta0)+0.001280*sin(theta0)
      1        +0.000719*cos(2.*theta0)+0.000077*sin(2.*theta0)
 !

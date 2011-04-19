@@ -37,6 +37,8 @@
 !   (see bt, angle, and setmodel and setboundary calls)
 !
       use params_module,only: nmlat,nmlon,nmlonp1
+      use mpi_module,only: mytid ! for stdout print 
+      use hist_module,only: modeltime
       implicit none
 !
 ! Coefficients read from netcdf data file wei05sc.nc:
@@ -75,14 +77,12 @@
 ! 4/2/08 btf:
 ! Driver to call Weimer 2005 model for tiegcm.
 ! 7/2/08 bae: Weimer setboundary 2005 constant location and bndyfitr/2 radius to 0 poten
-!
-!
 ! 07/08:  Added ctpoten to store average weictpoten from wei05loc
+!
       use input_module,only: ctpoten
       use cons_module,only: rtd,ylonm,ylatm
-      use dynamo_module,only: nmlat0,pfrac,phihm
+      use dynamo_module,only: nmlat0,phihm
       use magfield_module,only: sunlons 
-      use heelis_module,only: colath
       use init_module,only: iyear,iday,uthr
       implicit none
 !
@@ -191,12 +191,11 @@
         phihm(nmlonp1,j) = phihm(1,j)
         wei05sc_fac(nmlonp1,j) = wei05sc_fac(1,j)
       enddo ! j=1,nmlat
-
+!
 ! 07/08 bae:  Return the average of the weictpoten from the SH and NH in ctpoten
-!             calccloc05 replaced by wei05loc and this line below
-	ctpoten = 0.5*(weictpoten(1)+weictpoten(2))
-!  Re-calculate the values of theta0,offc,dskofc,arad,phid,phin,offa,dskofa
-!     call calccloc05
+      ctpoten = 0.5*(weictpoten(1)+weictpoten(2))
+!     write(6,"(i4,':weimer05: istep=',i8,' mtime=',3i4,' ctpoten=',
+!    |  f8.3)") mytid,istep,modeltime(1:3),ctpoten
 !
 ! Calculate pfrac:
       call colath
@@ -701,7 +700,7 @@
           call shutdown('tablesize')
         endif
         do i=1,tablesize
-          colattable(i) = float(i-1)*(th0/float(tablesize-1))
+          colattable(i) = real(i-1)*(th0/real(tablesize-1))
           cth(i) = cos(colattable(i)*deg2rad)
         enddo
         prevth0 = th0
@@ -763,8 +762,8 @@
       k = 1
       pmn_loop: do         ! repeat-until loop in idl code
         do i=1,tablesize
-          rm = float(m)
-          rk = float(k)
+          rm = real(m)
+          rk = real(k)
           a(i) = a(i)*(x(i)*((rk+rm-1.)*(rk+rm)-xn)/(rk*(rk+rm)))
           table(i) = table(i)+a(i) ! "result" in idl code
         enddo
@@ -799,7 +798,7 @@
         km_n = 1.
         return
       endif
-      rm = float(m)
+      rm = real(m)
       km_n = sqrt(2.*exp(lngamma(rn+rm+1.)-lngamma(rn-rm+1.))) / 
      |  (2.**m*factorial(m))
       end function km_n
@@ -823,7 +822,7 @@
       real :: th0a(1),out(1)
 
       if (th0 == 90.) then
-        nkmlookup = float(k)
+        nkmlookup = real(k)
         return
       endif
       th0a(1) = th0
@@ -1007,9 +1006,9 @@
         factorial = 1.
         return
       endif
-      factorial = float(n)
+      factorial = real(n)
       do m = n-1,1,-1
-        factorial = factorial * float(m)
+        factorial = factorial * real(m)
       enddo
       end function factorial
 !-----------------------------------------------------------------------
@@ -1115,7 +1114,7 @@ CNCAR
 	UT=HOUR
 	JD=JULDAY(MONTH,DAY,IYR)
 	MJD=JD-2400001
-	T0=(FLOAT(MJD)-51544.5)/36525.0
+	T0=(real(MJD)-51544.5)/36525.0
 	GMSTD=100.4606184 + 36000.770*T0 + 3.87933E-4*T0*T0 +
      $        15.0410686*UT
 	CALL ADJUST(GMSTD)
