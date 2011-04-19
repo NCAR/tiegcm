@@ -181,7 +181,7 @@
 ! Print table to stdout:
       if (iprint > 0) then
         write(6,"(/,96('-'))")
-        write(6,"('List of Available Diagnostic Fields:')")
+        write(6,"('Table of Available Diagnostic Fields:')")
         write(6,"('Shortnames may be added to namelist SECFLDS',/)")
         write(6,"('Field   Shortname       Units           Levels  ',
      |    'Caller          Longname')")
