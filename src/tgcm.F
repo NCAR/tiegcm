@@ -128,8 +128,8 @@
       nsecs = nstep*step
       write(6,"('Model simulation time = ',i8,' secs ',/,
      |  '  (minutes=',f10.2,', hours=',f8.2,', days=',f10.6,')')")
-     |  nsecs,float(nsecs)/60.,float(nsecs)/3600.,
-     |  float(nsecs)/(24.*3600.)
+     |  nsecs,real(nsecs)/60.,real(nsecs)/3600.,
+     |  real(nsecs)/(24.*3600.)
 !
 ! End timing:
 !

@@ -8,7 +8,7 @@
 ! Module used to calculcate the Heelis model potential in both hemispheres
 ! Byimf, Ctpoten and Power at a minimum using paramaters from aurora_cons
 !
-      use dynamo_module,only: nmlat0,pfrac,phihm
+      use dynamo_module,only: phihm
       implicit none
       contains 
 !-----------------------------------------------------------------------
@@ -36,65 +36,6 @@
       call potm
 !
       end subroutine heelis
-!-----------------------------------------------------------------------
-      subroutine colath
-!
-! Calculate pfrac fractional presence of dynamo equation using critical
-!  convection colatitudes crit(2).  (crit is in cons module)
-!
-      use params_module,only: nmlonp1
-      use aurora_module,only: dskofc, offc ! see aurora.F
-      use magfield_module,only: sunlons 
-      use cons_module,only: rtd,
-     |  crit,        ! critical colatitudes crit(2)
-     |  ylonm,ylatm  ! magnetic grid lons, lats
-      implicit none
-!
-! Local:
-      integer :: i,j
-      real :: sinlat,coslat,aslonc,ofdc,cosofc,sinofc
-      real,dimension(nmlonp1,nmlat0) :: colatc
-!
-! offc(2), dskofc(2) are for northern hemisphere aurora (see aurora.F)
-      ofdc = sqrt(offc(2)**2+dskofc(2)**2)
-      cosofc = cos(ofdc)
-      sinofc = sin(ofdc)
-      aslonc = asin(dskofc(2)/ofdc)
-! TEMP
-!       write (6,"(1x,'COLATH: crit1,2 dskofc offc deg=',6e12.4)")
-!    |   crit(1)*rtd,crit(2)*rtd,dskofc(1)*rtd,offc(1)*rtd,
-!    |   dskofc(2)*rtd,offc(2)*rtd
-!
-! Define colatc with northern convection circle coordinates
-! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc)
-!
-      do j=1,nmlat0
-        sinlat = sin(abs(ylatm(j+nmlat0-1)))
-        coslat = cos(    ylatm(j+nmlat0-1))
-        do i=1,nmlonp1
-          colatc(i,j) = cos(ylonm(i)-sunlons(1)+aslonc)
-          colatc(i,j) = acos(cosofc*sinlat-sinofc*coslat*colatc(i,j))
-        enddo ! i=1,nmlonp1
-
-!       write(6,"('colath: j=',i3,' colatc(:,j)=',/,(6e12.4))")
-!    |    j,colatc(:,j)*rtd
-
-!
-! Calculate fractional presence of dynamo equation at each northern
-! hemisphere geomagnetic grid point. Output in pfrac(nmlonp1,nmlat0)
-!
-	do i=1,nmlonp1
-          pfrac(i,j) = (colatc(i,j)-crit(1))/(crit(2)-crit(1))
-          if (pfrac(i,j) < 0.) pfrac(i,j) = 0.
-          if (pfrac(i,j) >= 1.) pfrac(i,j) = 1.
-	enddo ! i=1,nmlonp1
-
-!       write(6,"('colath: j=',i3,' pfrac(:,j)=',/,(6e12.4))")
-!    |    j,pfrac(:,j)
-
-      enddo ! j=1,nmlat0
-
-      end subroutine colath
 !-----------------------------------------------------------------------
       subroutine potm
       use params_module,only: nmlat,nmlon,nmlonp1

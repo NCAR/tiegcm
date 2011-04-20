@@ -9,7 +9,7 @@
 !  hemispheres from Bz, By, Sws, Swd, and AL.
 !
       use params_module,only: nmlat,nmlon,nmlonp1
-      use dynamo_module,only: nmlat0,pfrac,phihm
+      use dynamo_module,only: nmlat0,phihm
       implicit none
 !
 ! Coefficients for Weimer 2001 from reading coef file:
@@ -42,13 +42,15 @@
 
       contains 
 !-----------------------------------------------------------------------
-!     subroutine calccloc(phihm)
       subroutine calccloc
 !
 !  NCAR Nov 02:  Calculate the convection center location (dskofc,offc),
 !       radius (theta0), dayside entry for cusp location (phid, poten=0),
 !       and nightside exit (phin, poten=0), and the associated auroral
 !       radius (arad).  (Leave the aurora center as is, dskofa=0, offa=1.)
+! 01/11 bae:  calccloc has a problem with Bz>0, |Bz/By|>1 conditions where
+!   multiple cells are possible, so for these conditions, set defaults of:
+!   theta0 = 10 deg, offc = 4.2 deg, and dskofc = 0 deg (offc and dskofc from 2005 model)
 !
 ! Input phihm: High lat model potential in magnetic coordinates (single level).
 !
@@ -78,7 +80,8 @@
      |                        dskofc
       use magfield_module,only: sunlons 
       use input_module,only:  ! from user input
-     |  byimf    ! By component of IMF (nT)      (e.g., 0.)
+     |  byimf,   ! By component of IMF (nT)      (e.g., 0.)
+     |  bzimf    ! Bz component of IMF (nT)      (e.g., 0.)
       use cons_module,only: rtd,
      |  ylonm,ylatm  ! magnetic grid lons, lats in radians
       implicit none
@@ -136,6 +139,15 @@
 !    |    ih,(vnx(ih,i),ylatm(jnx(ih,i)),(ylonm(inx(ih,i))-sunlons(1))
 !    |    * rtd/15.+12.,i=1,2)
 
+! 01/11 bae:  Check to see if Bz positive and |Bz/By|>1:  if so, use defaults
+!	for crad (theta0), offcdeg and dskof to set variables for colath.
+!   	Do not redefine phin and phid, but use defaults from aurora_cons
+	if (bzimf>0 .and. abs(bzimf)>abs(byimf)) then
+	 crad0 = 0.
+	 crad = 10.
+	 offcdeg = 4.2
+         dskof = 0.
+        else
 !  Set default values
       do k=1,2
 	do i=1,nmlonp1
@@ -382,12 +394,6 @@
 
 !  Estimate dskofc from lat of peak at 6 and 18 MLT (colat(18-6), lat(6-18))
 	dskof = abs(latinx(i06,2)) - abs(latinx(i18,1))
-	dskofc(ih) = dskof / rtd
-!  oval offset is 2.5 deg towards dawn (more neg dskof)
-	dskofa(ih) = (dskof-2.5) / rtd
-!       write (6,"(1x,'18,06 mlt,lat dskof,c,a=',7e12.4)")
-!    |    mltinx(i18,1),latinx(i18,1),mltinx(i06,2),latinx(i06,2),
-!    |    dskof,dskofc(ih),dskofa(ih)
 
 !  Estimate offc from lat of peak +/-3 hrs from each maximum
 !   (In colat, is nighside-dayside, but in lat is dayside-nightside)
@@ -404,11 +410,6 @@
 !  07/03:  Correction to make sure offset is at least 0.5 deg towards 0 MLT
 !       offcdeg = 0.5*(offcn+offcx)
 	offcdeg = max(0.5,0.5*(offcn+offcx))
-	offc(ih) = offcdeg / rtd
-	offa(ih) = offcdeg / rtd
-!       write (6,"(1x,'min/max latd3,n3 offc =',8e12.4)")
-!    |    latinx(inm3,1),latinx(inp3,1),offcn,latinx(ixp3,2),
-!    |    latinx(ixm3,2),offcx,offcdeg,offc(ih)
 
 !  Estimate theta0 from 6-18 MLT line first
 	crad0 = 90. - 0.5*abs(latinx(i18,1)+latinx(i06,2))
@@ -430,6 +431,7 @@
 !       write (6,"(1x,'06 sinl,cosl,cosm,colat asin=',5e12.4)")
 !    |   sinl06,cosl06,cosm06,colat06,asin(dskof/ofdc)
 	crad = 0.5*(colat18+colat06)
+	endif		! of using defaults for Bz>0, |Bz|>|By|
 !  Make sure crad is largest of crad and crad0
 	craduse = max(crad,crad0)
 	if (craduse .gt. crad) write (6,"(1x,'Used crad0 from 6-18',
@@ -440,6 +442,19 @@
 !       write (6,"(1x,'radius: 0,18,06,c,a deg,rad=',7e12.4)")crad0,
 !    |    colat18,colat06,crad,arad,theta0(ih),rrad(ih)
 !
+	offc(ih) = offcdeg / rtd
+	offa(ih) = offcdeg / rtd
+!       write (6,"(1x,'min/max latd3,n3 offc =',8e12.4)")
+!    |    latinx(inm3,1),latinx(inp3,1),offcn,latinx(ixp3,2),
+!    |    latinx(ixm3,2),offcx,offcdeg,offc(ih),dskofc(ih) = dskof / rtd
+
+!  oval offset is 2.5 deg towards dawn (more neg dskof)
+        dskofc(ih) = dskof / rtd
+	dskofa(ih) = (dskof-2.5) / rtd
+!       write (6,"(1x,'18,06 mlt,lat dskof,c,a=',7e12.4)")
+!    |    mltinx(i18,1),latinx(i18,1),mltinx(i06,2),latinx(i06,2),
+!    |    dskof,dskofc(ih),dskofa(ih)
+
 ! Print out revised values:
 !       write (6,"('Revised convection/oval params (hem,By,off,dsk,',
 !    |    'rad,phid,n=',i2,9e12.4)")ih,byimf,offc(ih)*rtd,offa(ih)*rtd,
@@ -450,12 +465,10 @@
       end subroutine calccloc
 !-----------------------------------------------------------------------
 !
-!     subroutine weimer01(pfrac,phihm,nmlat0,nmlat,nmlon,nmlonp1)
       subroutine weimer01
 
 ! 01/10:  Added ctpoten to store average weictpoten from calccloc
       use input_module,only: ctpoten
-      use heelis_module,only: colath
       use input_module,only: weimer_ncfile
 ! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc)
       use magfield_module,only: sunlons 
@@ -480,7 +493,7 @@
 !
 ! Args:
 ! pfrac:  Fractional presence of dynamo equation in NH given critical
-!           convection colatitudes crit(2) (15,30).
+!           convection colatitudes crit(2) (15,30 in cons.F) re-calc in colath
 ! phihm:  High lat model potential in magnetic coordinates (single level).
 !
 !     integer,intent(in) :: nmlat0,nmlon,nmlat,nmlonp1
@@ -584,8 +597,6 @@
       enddo ! j=1,nmlat
 
 !  Re-calculate the values of theta0,offc,dskofc,arad,phid,phin,offa,dskofa
-!     call calccloc(phihm,nmlat,nmlonp1,nmlat0)
-!     call calccloc(phihm)
       call calccloc
 ! 01/10 bae:  Return the average of the weictpoten from the SH and NH in ctpoten
       ctpoten = 0.5*(weictpoten(1)+weictpoten(2))
@@ -593,9 +604,8 @@
 !    |    ctpoten
 !
 ! Calculate pfrac fractional presence of dynamo equation using critical
-!  convection colatitudes crit(2).  (crit is in cons module)
+!  convection colatitudes crit(2).  (crit is in cons module, re-calc in colath)
 !
-!     call colath(pfrac,nmlat0,nmlonp1)
       call colath
 !
 ! From dynamo.F:
@@ -603,10 +613,6 @@
 !    |   pfrac, ! NH fraction of potential
 !    |   phihm  ! potential in magnetic
 !
-!     do j=1,nmlat0
-!       write(6,"('weimer01: j=',i3,' pfrac=',/,(6e12.4))") j,pfrac(:,j)
-!       write(6,"('weimer01: j=',i3,' phihm=',/,(6e12.4))") j,phihm(:,j)
-!     enddo ! j=1,nmlat0
       end subroutine weimer01
 !-----------------------------------------------------------------------
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

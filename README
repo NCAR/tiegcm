@@ -1314,20 +1314,14 @@ Added perl script tgcm_put to tiegcm/trunk/scripts. This script will copy
 3/17/11:
 Remove save and secsave from hist.F, wrhist.F, and mpi.F.
 
-4/13/11:
-This is latest working copy of tiegcm trunk w/ new diagnostics module diags.F, 
-which has 14 diagnostic fields with subs that are called from several modules 
-and subs elsewhere in the code. Copied tests directory (w/ automated multi-job
-setup scripts) from /hao/iris1/foster/tiegcm_tests/tiegcm_trunk/tests, so its 
-up to date w/ that work. Will now will make this a new branch called
-tiegcm/branches/tiegcm_diags, where new diagnostics can be added, and merged 
-to the trunk periodically.  Old "suites" directory is deleted.
+3/19/11:
+Merged tiegcm_dyncrit branch to the trunk (r571)
 
-4/18/11 (After meeting w/ Art, and discussions w/ Astrid and Barb):
-- Added diagnostics SCHT, MU_M, LAMDA_PED, LAMDA_HAL
-- Removed QJI_TI, and changed QJI_TN to QJOULE
-- Changed ion drift units from m/s to cm/s (to be consistent w/ neutral winds)
-- Changed TEC units from "TEC" to 1/cm2
-- Currently, ndiag (number of diag fields) = 17 
-- Added "caller" to diags field table (the sub or file that calls mkdiag_xxx)
-- Reviewed levels of all fields (midpoints or interfaces)
+Add check in input.F to enforce providing namelist f107,f107a when
+Weimer potential model is requested without GPI data.
+
+3/20/11: Merge changes from the trunk (from r561 to HEAD) to this branch 
+(tiegcm_diags).  This will include the tiegcm_dyncrit branch code, which 
+was recently merged to the trunk. Svn command executed from a tiegcm_diags WC:
+svn merge $SVN/tiegcm/trunk@561 $SVN/tiegcm/trunk@HEAD
+

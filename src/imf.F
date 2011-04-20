@@ -57,12 +57,12 @@
         iyearday = int(date(i),8)           ! yyyyddd (long int)
         iyyyy = iyearday/1000               ! yyyy
         iddd = iyearday-iyyyy*1000          ! ddd
-        ut = (date(i)-float(iyearday))*24.  ! ut (hrs)
+        ut = (date(i)-real(iyearday))*24.  ! ut (hrs)
         iyyyy4 = iyyyy
         if (mod(iyyyy4,4) == 0) then
-           yfrac(i) = float(iyyyy)+(float(iddd-1)+ut/24.)/366.
+           yfrac(i) = real(iyyyy)+(real(iddd-1)+ut/24.)/366.
         else
-           yfrac(i) = float(iyyyy)+(float(iddd-1)+ut/24.)/365.
+           yfrac(i) = real(iyyyy)+(real(iddd-1)+ut/24.)/365.
         endif
 !       write(6,"('getimf: i=',i6,' ndata=',i6,' date(i)=',f14.4,
 !    |    ' year=',i4,' day=',i3,' ut=',f6.2,' yfrac(i)=',f9.4)") 
@@ -210,7 +210,6 @@
       write(6,"(/,72('-'))")
       write(6,"('RDIMF: read IMF data file:')")
       write(6,"('Opened netcdf imf data file ',a)") trim(dskfile)
-
 !
 ! Get ndata and ndays dimensions:
       istat = nf_inq_dimid(ncid,'ndata',id_ndata)
