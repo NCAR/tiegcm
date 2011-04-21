@@ -1320,20 +1320,18 @@ Merged tiegcm_dyncrit branch to the trunk (r571)
 Add check in input.F to enforce providing namelist f107,f107a when
 Weimer potential model is requested without GPI data.
 
-3/20/11: Merge changes from the trunk (from r561 to HEAD) to this branch 
-(tiegcm_diags).  This will include the tiegcm_dyncrit branch code, which 
-was recently merged to the trunk. Svn command executed from a tiegcm_diags WC:
-svn merge $SVN/tiegcm/trunk@561 $SVN/tiegcm/trunk@HEAD
+4/21/11:
+Merged tiegcm_diags branch to the trunk (will be commit r581)
+This adds new src/diags.F and doc/diags.table. svn command from trunk WC
+and modifies files that call mkdiag_xxxx (the tiegcm_diags branch was 
+created at r561):
 
-3/20/11: Replace COOL_EXP and COOL_IMP with CO2_COOL and NO_COOL, called
-from newton.F.  Change write of to stdout of eddy_dif in cons.F.
+svn merge $SVN/tiegcm/trunk@561 $SVN/tiegcm/branches/tiegcm_diags@HEAD
 
-In a 2nd commit, added complete SECFLDS list of diagnostic fields
-available with the current release to scripts/mknamelist and 
-scripts/tiegcm_default.inp. It is commented out in the generated
-namelist file.
+This is the first merge of tiegcm_diags branch to the trunk. The branch 
+will live on, diagnostic fields can be added to the branch as needed, and 
+periodically merged to the trunk. There are currently 17 diagnostic fields, 
+see diags.table.
 
-In tests dir:
-- svn delete setup_seasons_heelis and setup_seasons_weimer
-- svn add setup_climatology, setup_dec2006, setup_seasons, and setup_yeardat
-  from the trunk.
+Also minor changes to default namelist input (mknamelist, tiegcm_default.inp),
+and minor changes to job scripts.
