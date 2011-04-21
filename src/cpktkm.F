@@ -9,6 +9,7 @@
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,gask,t0
       use addfld_module,only: addfld
+      use diags_module,only: mkdiag_MU_M
       implicit none
 !
 ! Args:
@@ -99,5 +100,8 @@
 !    |  'lon',lon0,lon1,lat)
 !     call addfld('KM',' ',' ',fkm(:,lon0:lon1),'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)
+!
+! Save molecular viscosity diagnostic:
+      call mkdiag_MU_M('MU_M',fkm(:,lon0:lon1),lev0,lev1,lon0,lon1,lat)
 
       end subroutine cpktkm

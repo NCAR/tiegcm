@@ -13,6 +13,7 @@
       use fields_module,only: tlbc
       use addfld_module,only: addfld
       use lbc,only: z_lbc
+      use diags_module,only: mkdiag_SCHT
       implicit none
 !
 ! Input args:
@@ -195,6 +196,10 @@
 !
 ! Calculate diagnostic geopotential zg, with varying gravity:
       call calczg(tn,o2,o1,z,zg,lon0,lon1,lev0,lev1,lat0,lat1)
+!
+! Calculate scale height diagnostic (using Z here, not ZG):
+      call mkdiag_SCHT('SCHT',z(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 #ifdef VT
 !     code = 116 ; state = 'addiag' ; activity='ModelCode'

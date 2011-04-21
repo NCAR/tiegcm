@@ -12,7 +12,8 @@
       use cons_module,only: rmass_co2,p0,expz,expzmid_inv,boltz,
      |  avto,avo,rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no,
      |  gask
-      use addfld_module,only: addfld
+      use addfld_module
+      use diags_module,only: mkdiag_CO2COOL,mkdiag_NOCOOL
       implicit none
 !
 ! Args:
@@ -101,6 +102,13 @@
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('COOL_EXP' ,' ',' ',cool_explicit(:,lon0:lon1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!
+! Save as diagnostics on secondary histories (define top level as k-1):
+      co2_cool(lev1,:) = co2_cool(lev1-1,:)
+      no_cool (lev1,:) = no_cool (lev1-1,:)
+      call mkdiag_CO2COOL('CO2_COOL',co2_cool,lev0,lev1,lon0,lon1,lat)
+      call mkdiag_NOCOOL ('NO_COOL' ,no_cool ,lev0,lev1,lon0,lon1,lat)
+
       end subroutine newton
 !-----------------------------------------------------------------------
       subroutine newto3p(tn,o1,cp,cool_implicit,cool_explicit,
@@ -111,7 +119,7 @@
 !
       use params_module,only: dz
       use cons_module,only: avo,rmassinv_o1,expz
-      use addfld_module,only: addfld
+      use addfld_module
       implicit none
 !
 ! Args:

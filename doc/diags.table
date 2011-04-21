@@ -1,0 +1,31 @@
+
+------------------------------------------------------------------------------------------------
+Table of Available Diagnostic Fields:
+Shortnames may be added to namelist SECFLDS (see below)
+
+Field   Shortname       Units           Levels  Caller          Longname
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+   1    CO2_COOL        erg/g/s         lev     newton.F        CO2 Cooling
+   2    NO_COOL         erg/g/s         lev     newton.F        NO Cooling
+   3    DEN             g/cm3           ilev    dt.F            Total Density
+   4    HEATING         erg/g/s         lev     dt.F            Total Heating
+   5    HMF2            km              none    elden.F         Height of F2
+   6    NMF2            1/cm3           none    elden.F         Density at HMF2
+   7    LAMDA_HAL       1/s             lev     lamdas.F        Hall Ion Drag Coefficient
+   8    LAMDA_PED       1/s             lev     lamdas.F        Pedersen Ion Drag Coefficient
+   9    MU_M            g/cm/s          lev     cpktkm.F        Molecular Viscosity Coefficient
+  10    QJOULE          erg/g/s         lev     qjoule.F        Joule Heating
+  11    SCHT            km              lev     addiag.F        Pressure Scale Height
+  12    SIGMA_HAL       S/m             lev     lamdas.F        Hall Conductivity
+  13    SIGMA_PED       S/m             lev     lamdas.F        Pedersen Conductivity
+  14    TEC             1/cm2           none    elden.F         Total Electron Content
+  15    UI_ExB          cm/s            ilev    ionvel.F        Zonal Ion Drift (ExB)
+  16    VI_ExB          cm/s            ilev    ionvel.F        Meridional Ion Drift (ExB)
+  17    WI_ExB          cm/s            ilev    ionvel.F        Vertical Ion Drift (ExB)
+------------------------------------------------------------------------------------------------
+Namelist to put all diagnostic fields on secondary histories:
+
+ SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
+           'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+           'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M'
+------------------------------------------------------------------------------------------------

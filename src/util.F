@@ -181,6 +181,40 @@
       enddo
       end function ixfind
 !-------------------------------------------------------------------
+      integer function ixfindc(strarr,nstr,searchstr)
+      implicit none
+!
+! Given string array strarr, return index to strarr which contains 
+!   string searchstr, or return 0 if searchstr not found,
+!   searchstr is 0 length, or strarr is 0 length.
+!
+! Args:
+      character(len=*),intent(in) :: strarr(nstr),searchstr
+      integer,intent(in) :: nstr ! extent of strarr to search
+!
+! Locals:
+      integer :: lenele,	! length of a strarr element
+     |           lsearch,	! length of the search string
+     |           i		! loop index
+!
+      ixfindc = 0
+      if (nstr == 0) then
+        write(6,"('WARNING ixfindc: nstr=0 (length string array)')")
+        return
+      endif
+      lsearch = len_trim(searchstr)
+      do i=1,nstr
+        lenele = len_trim(strarr(i))
+        if (lenele > 0) then
+          if (strarr(i)(1:lenele) == searchstr(1:lsearch)) then
+            ixfindc = i
+            return 
+          endif
+        endif
+      enddo
+      return
+      end function ixfindc
+!-------------------------------------------------------------------
       real function finterp(f0,f1,isec0,isec1,isec)
 !
 ! Do linear interpolation between f0 (which is at isec0) and 
@@ -1505,3 +1539,4 @@
         if (nstep <= 100 .or. (nstep > 100 .and. mod(istep,10)==0))
      |    time2print = .true.
       end function time2print
+!-----------------------------------------------------------------------

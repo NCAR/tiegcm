@@ -14,7 +14,8 @@
       use chemrates_module,only: rk1,rk2,rk3,rk4,rk5,rk6,rk7,rk8,
      |  rk9,rk10,rk16,rk23,rk26,beta9,ra1,ra2,ra3
       use qrj_module,only: qnp,qnop,qo2p,qn2p
-      use addfld_module,only: addfld
+      use addfld_module
+      use diags_module,only: mkdiag_TEC,mkdiag_HNMF2
       implicit none
 !
 ! Args:
@@ -241,18 +242,15 @@
         electrons(lev0,i) = sqrt(root(lev0  ,i)**3/root(lev0+1,i))
         electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
       enddo ! i=lon0,lon1
-      call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
-     |  'lev',lev0,lev1,'lon',i0,i1,lat)
+!     call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
 !
-! Save tec:
-      tec(:) = 0. ! init tec for current latitude
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          tec(i) = tec(i)+(z(k+1,i)-z(k,i))*electrons(k,i)
-        enddo
-      enddo
-      call addfld('TEC',' ',' ',tec(:),
-     |  'lon',lon0,lon1,'lat',lat,lat,0)
+! Save diagnostic tec (total electron content):
+      call mkdiag_TEC('TEC',tec,z,electrons,lev0,lev1,lon0,lon1,lat)
+!
+! Save diagnostics hmf2, nmf2:
+      call mkdiag_HNMF2('HMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
+      call mkdiag_HNMF2('NMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
 
       end subroutine elden
 !-----------------------------------------------------------------------

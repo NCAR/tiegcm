@@ -257,13 +257,15 @@
         xmue(nlev+1,:) = difk(nlev,:)
       endif  ! eddy_dif on or off
 !
-      write(6,"('init_cons: eddy_dif=',i3)") eddy_dif
-      write(6,"('min,max: difk=',2e12.4,' dift=',2e12.4,' xmue=',
-     |  2e12.4)") minval(difk),maxval(difk),minval(dift),maxval(dift),
-     |            minval(xmue),maxval(xmue)
-      write(6,"('difk(:,1)=',/,(6e12.4))") difk(:,1)
-      write(6,"('dift(:,1)=',/,(6e12.4))") dift(:,1)
-      write(6,"('xmue(:,1)=',/,(6e12.4))") xmue(:,1)
+      if (eddy_dif > 0) then
+        write(6,"('init_cons: eddy_dif=',i3)") eddy_dif
+        write(6,"('min,max: difk=',2e12.4,' dift=',2e12.4,' xmue=',
+     |    2e12.4)") minval(difk),maxval(difk),minval(dift),maxval(dift),
+     |              minval(xmue),maxval(xmue)
+        write(6,"('difk(:,1)=',/,(6e12.4))") difk(:,1)
+        write(6,"('dift(:,1)=',/,(6e12.4))") dift(:,1)
+        write(6,"('xmue(:,1)=',/,(6e12.4))") xmue(:,1)
+      endif
 !
 ! end calculation of eddy diffusivity
 !

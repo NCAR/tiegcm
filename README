@@ -1320,3 +1320,18 @@ Merged tiegcm_dyncrit branch to the trunk (r571)
 Add check in input.F to enforce providing namelist f107,f107a when
 Weimer potential model is requested without GPI data.
 
+4/21/11:
+Merged tiegcm_diags branch to the trunk (will be commit r581)
+This adds new src/diags.F and doc/diags.table. svn command from trunk WC
+and modifies files that call mkdiag_xxxx (the tiegcm_diags branch was 
+created at r561):
+
+svn merge $SVN/tiegcm/trunk@561 $SVN/tiegcm/branches/tiegcm_diags@HEAD
+
+This is the first merge of tiegcm_diags branch to the trunk. The branch 
+will live on, diagnostic fields can be added to the branch as needed, and 
+periodically merged to the trunk. There are currently 17 diagnostic fields, 
+see diags.table.
+
+Also minor changes to default namelist input (mknamelist, tiegcm_default.inp),
+and minor changes to job scripts.

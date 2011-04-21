@@ -4,10 +4,10 @@
 #
 #BSUB -J tiegcm_trunk
 #BSUB -P 24100004
-#BSUB -q regular
-#BSUB -n 32
-##BSUB -q debug
-##BSUB -n 8
+##BSUB -q regular
+##BSUB -n 32
+#BSUB -q debug
+#BSUB -n 8
 #BSUB -o tiegcm_trunk.%J.out
 #BSUB -e tiegcm_trunk.%J.out
 #BSUB -N
