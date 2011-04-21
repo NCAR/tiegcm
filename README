@@ -1335,3 +1335,7 @@ see diags.table.
 
 Also minor changes to default namelist input (mknamelist, tiegcm_default.inp),
 and minor changes to job scripts.
+
+4/21/11: After merging it to the trunk, deleted tiegcm_diags branch, and
+recreated it from the trunk. Then minor commit to change "trunk" to "diags"
+in job scripts.
