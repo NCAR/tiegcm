@@ -1332,3 +1332,8 @@ In a 2nd commit, added complete SECFLDS list of diagnostic fields
 available with the current release to scripts/mknamelist and 
 scripts/tiegcm_default.inp. It is commented out in the generated
 namelist file.
+
+In tests dir:
+- svn delete setup_seasons_heelis and setup_seasons_weimer
+- svn add setup_climatology, setup_dec2006, setup_seasons, and setup_yeardat
+  from the trunk.
