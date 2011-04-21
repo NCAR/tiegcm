@@ -54,16 +54,16 @@
 ! Table of these values are written to stdout, see below.
 !
       n = 1
-      diags(n)%short_name = 'COOL_EXP'
-      diags(n)%long_name  = 'Total Explicit Cooling'
-      diags(n)%units      = 'erg/K/s'  ! Table 4.3 of Model Description
+      diags(n)%short_name = 'CO2_COOL'
+      diags(n)%long_name  = 'CO2 Cooling'
+      diags(n)%units      = 'erg/g/s'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'newton.F'
 !
       n = n+1
-      diags(n)%short_name = 'COOL_IMP'
-      diags(n)%long_name  = 'Total Implicit Cooling'
-      diags(n)%units      = '1/s'       ! Table 4.3 of Model Description
+      diags(n)%short_name = 'NO_COOL'
+      diags(n)%long_name  = 'NO Cooling'
+      diags(n)%units      = 'erg/g/s'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'newton.F'
 !
@@ -395,14 +395,14 @@
      |  lev0,lev1-1,'lon',lon0,lon1,lat)
       end subroutine mkdiag_HEAT
 !-----------------------------------------------------------------------
-      subroutine mkdiag_COOLEXP(name,cool_exp,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_CO2COOL(name,co2_cool,lev0,lev1,lon0,lon1,lat)
 !
-! Explicit cooling from newton.F, levels="lev" (midpoints)
+! CO2 cooling from newton.F, levels="lev" (midpoints)
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in) :: cool_exp(lev0:lev1,lon0-2:lon1+2)
+      real,intent(in) :: co2_cool(lev0:lev1,lon0:lon1)
 !
 ! Local:
       integer :: ix
@@ -412,18 +412,18 @@
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,cool_exp(:,lon0:lon1),diags(ix)%levels,
-     |  lev0,lev1,'lon',lon0,lon1,lat)
-      end subroutine mkdiag_COOLEXP
+     |  diags(ix)%units,co2_cool,diags(ix)%levels,lev0,lev1,
+     |  'lon',lon0,lon1,lat)
+      end subroutine mkdiag_CO2COOL
 !-----------------------------------------------------------------------
-      subroutine mkdiag_COOLIMP(name,cool_imp,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_NOCOOL(name,no_cool,lev0,lev1,lon0,lon1,lat)
 !
-! Implicit cooling from newton.F, levels="lev" (midpoints)
+! NO cooling from newton.F, levels="lev" (midpoints)
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in) :: cool_imp(lev0:lev1,lon0-2:lon1+2)
+      real,intent(in) :: no_cool(lev0:lev1,lon0:lon1)
 !
 ! Local:
       integer :: ix
@@ -433,9 +433,9 @@
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,cool_imp(:,lon0:lon1),diags(ix)%levels,
-     |  lev0,lev1,'lon',lon0,lon1,lat)
-      end subroutine mkdiag_COOLIMP
+     |  diags(ix)%units,no_cool,diags(ix)%levels,lev0,lev1,
+     |  'lon',lon0,lon1,lat)
+      end subroutine mkdiag_NOCOOL
 !-----------------------------------------------------------------------
       subroutine mkdiag_SIGMAPED(name,sigmaped,lev0,lev1,lon0,lon1,lat)
 !

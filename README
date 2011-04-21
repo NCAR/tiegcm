@@ -1325,3 +1325,5 @@ Weimer potential model is requested without GPI data.
 was recently merged to the trunk. Svn command executed from a tiegcm_diags WC:
 svn merge $SVN/tiegcm/trunk@561 $SVN/tiegcm/trunk@HEAD
 
+3/20/11: Replace COOL_EXP and COOL_IMP with CO2_COOL and NO_COOL, called
+from newton.F.  Change write of to stdout of eddy_dif in cons.F.

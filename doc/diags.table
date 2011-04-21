@@ -1,12 +1,12 @@
 
 ------------------------------------------------------------------------------------------------
 Table of Available Diagnostic Fields:
-Shortnames may be added to namelist SECFLDS
+Shortnames may be added to namelist SECFLDS (see below)
 
 Field   Shortname       Units           Levels  Caller          Longname
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-   1    COOL_EXP        erg/K/s         lev     newton.F        Total Explicit Cooling
-   2    COOL_IMP        1/s             lev     newton.F        Total Implicit Cooling
+   1    CO2_COOL        erg/g/s         lev     newton.F        CO2 Cooling
+   2    NO_COOL         erg/g/s         lev     newton.F        NO Cooling
    3    DEN             g/cm3           ilev    dt.F            Total Density
    4    HEATING         erg/g/s         lev     dt.F            Total Heating
    5    HMF2            km              none    elden.F         Height of F2
@@ -22,4 +22,10 @@ Field   Shortname       Units           Levels  Caller          Longname
   15    UI_ExB          cm/s            ilev    ionvel.F        Zonal Ion Drift (ExB)
   16    VI_ExB          cm/s            ilev    ionvel.F        Meridional Ion Drift (ExB)
   17    WI_ExB          cm/s            ilev    ionvel.F        Vertical Ion Drift (ExB)
+------------------------------------------------------------------------------------------------
+Namelist to put all diagnostic fields on secondary histories:
+
+ SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
+           'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+           'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M'
 ------------------------------------------------------------------------------------------------
