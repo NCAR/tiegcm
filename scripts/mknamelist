@@ -325,6 +325,11 @@ $comments{MXHIST_SECH}MXHIST_SECH = $MXHIST_SECH
 $comments{SECFLDS}SECFLDS = $SECFLDS0
 $comments{SECFLDS}          $SECFLDS1
 ;
+; Diagnostic fields available with this release:
+;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
+;          'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+;          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M'
+;
 ; If HPSS_PATH is set, a csh script will be made in the execdir, that
 ; will copy history disk files to the HPSS in the directory HPSS_PATH.
 ;

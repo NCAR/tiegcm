@@ -37,6 +37,11 @@
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'
 ;
+; Diagnostic fields available with this release:
+;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
+;          'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+;          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M'
+;
 ; If HPSS_PATH is set, a csh script will be made in the execdir, that
 ; will copy history disk files to the HPSS in the directory HPSS_PATH.
 ;

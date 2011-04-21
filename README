@@ -1327,3 +1327,8 @@ svn merge $SVN/tiegcm/trunk@561 $SVN/tiegcm/trunk@HEAD
 
 3/20/11: Replace COOL_EXP and COOL_IMP with CO2_COOL and NO_COOL, called
 from newton.F.  Change write of to stdout of eddy_dif in cons.F.
+
+In a 2nd commit, added complete SECFLDS list of diagnostic fields
+available with the current release to scripts/mknamelist and 
+scripts/tiegcm_default.inp. It is commented out in the generated
+namelist file.
