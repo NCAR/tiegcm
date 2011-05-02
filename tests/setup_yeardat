@@ -10,13 +10,16 @@
 #   systems, whereas IBM/AIX/LSF jobs at NCAR have a 6-hour wallclock limit, so
 #   the full-year run must be broken into 5 jobs (5 scripts and namelist files).
 #
-set start_year = 2009                         # Calendar year of simulation
-set system     = linux                        # linux or ibm
-set potential_name  = "heelis"                # potential model, "heelis" or "weimer"
-set case       = yr${start_year}              # case name
-set model      = tiegcm                       # Model name namelist and job scripts
-#set modeldir   = tiegcm_trunk                 # model root dir (access to mknamelist, mkjob scripts)
- set modeldir   = ..                           # if executed from a modeldir/tests directory
+set start_year      = 2006                    # Calendar year of simulation
+set case            = yr${start_year}         # case name
+set system          = linux                   # linux or ibm
+set potential_name  = heelis                  # potential model, "heelis" or "weimer"
+set model           = tiegcm                  # Model name for namelist and job scripts
+#set modeldir       = tiegcm_trunk            # model root dir (access to mknamelist, mkjob scripts)
+ set modeldir       = ..                      # if executed from a modeldir/tests directory
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
 set mknamelist = $modeldir/scripts/mknamelist # mknamelist script
 set mkjob      = $modeldir/scripts/mkjob      # mkjob script
 set utildir    = $modeldir/scripts            # for job script

@@ -4,15 +4,18 @@
 # Run may be heelis potential model with GPI data, or weimer potential 
 #   with IMF/OMNI solar wind + GPI(f107) data.
 #
-set case       = dec2006                      # AGU Storm case
-set model      = tiegcm                       # Model name namelist and job scripts
-#set modeldir   = tiegcm_trunk                 # model root dir (access to mknamelist, mkjob scripts)
- set modeldir   = ..                           # if executed from a modeldir/tests directory
-set mknamelist = $modeldir/scripts/mknamelist  # mknamelist script
-set mkjob      = $modeldir/scripts/mkjob       # mkjob script
-set utildir    = $modeldir/scripts             # for job script
-set system     = linux                         # "linux" or "ibm"
-set execdir    = ${model}-${system}            # for job script
+set case            = dec2006         # AGU Storm case
+set system          = linux           # "linux" or "ibm"
+set potential_name  = weimer          # potential model, "heelis" or "weimer"
+set model           = tiegcm1.94-beta # Model name for namelist and job scripts
+set modeldir       = ~foster/tgcm/tiegcm/trunk
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+set mknamelist = $modeldir/scripts/mknamelist        # mknamelist script
+set mkjob      = $modeldir/scripts/mkjob             # mkjob script
+set utildir    = $modeldir/scripts                   # for job script
+set execdir    = ${model}-${system}                  # for job script
 set template   = $modeldir/scripts/job_${system}.txt # for mkjob
 #
 # LSF BSUB parameters (ignored if system is linux):
@@ -23,7 +26,6 @@ set bsub_wallclock = "2:00"
 set bsub_jobname = $case
 #
 set modelres = 5.0                        # resolution is either 5.0 or 2.5
-set potential_name  = "heelis"            # potential model, "heelis" or "weimer"
 set TGCMDATA = '$TGCMDATA'
 set start_year = 2006
 set start_day  = 329
@@ -57,7 +59,7 @@ set mxhist_sech = 48
 #
 if ($potential_name == "heelis") then
   $mknamelist -model=$model -fileout=${model}_${data_name}_${case}_${potential_name}.inp \
-    -START_YEAR=$start_year -START_DAY=$start_day -SOURCE=$source -SOURCE_START="${source_start},0,0" \
+    -START_YEAR=$start_year -START_DAY=$start_day -SOURCE=$source -SOURCE_START="${source_start}" \
     -START="${start_day},0,0" -STOP="${stop_day},0,0" -HIST="1,0,0" \
     -MXHIST_PRIM=$mxhist_prim -MXHIST_SECH=$mxhist_sech \
     -OUTPUT=$output -SECOUT=$secout -POTENTIAL_MODEL=$potential_model \
@@ -67,13 +69,13 @@ if ($potential_name == "heelis") then
 # Make weimer namelist:
 else
   $mknamelist -model=$model -fileout=${model}_${data_name}_${case}_${potential_name}.inp \
-    -START_YEAR=$start_year -START_DAY=$start_day -SOURCE=$source -SOURCE_START="${source_start},0,0" \
+    -START_YEAR=$start_year -START_DAY=$start_day -SOURCE=$source -SOURCE_START="${source_start}" \
     -START="${start_day},0,0" -STOP="${stop_day},0,0" -HIST="1,0,0" \
     -MXHIST_PRIM=$mxhist_prim -MXHIST_SECH=$mxhist_sech \
     -OUTPUT=$output -SECOUT=$secout -POTENTIAL_MODEL=$potential_model \
     -SECSTART="${start_day},1,0" -SECSTOP="${stop_day},0,0" -SECHIST="0,1,0" \
     -comment="CTPOTEN" -comment="POWER" -comment="F107" -comment="F107A" \
-    -uncomment="IMF_NCFILE" -BXIMF=$bximf -BYIMF=$byimf -BZIMF=$bzimf -SWVEL=$swvel -SWDEN=$swden
+    -uncomment="IMF_NCFILE"
 endif
 #
 # Make job script:

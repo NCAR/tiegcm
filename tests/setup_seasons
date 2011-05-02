@@ -12,19 +12,22 @@
 #   sepeqx: September solstice (day 264)
 #   decsol: December solstice (day 355)
 #
-set model      = tiegcm                        # For namelist and job scripts
- set modeldir   = tiegcm_trunk                  # model root dir
-#set modeldir   = ..                            # if executed from a modeldir/tests directory
+set cases           = (mareqx junsol sepeqx decsol)
+set system          = linux                           # linux or ibm
+set potential_name  = heelis                          # "heelis" or "weimer"
+set model           = tiegcm                          # For namelist and job scripts
+#set modeldir       = tiegcm_trunk                    # model root dir
+ set modeldir       = ..                              # if executed from a modeldir/tests directory
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
 set mknamelist = $modeldir/scripts/mknamelist  # mknamelist script
 set mkjob      = $modeldir/scripts/mkjob       # mkjob script
 set utildir    = $modeldir/scripts             # For job script
-set system     = ibm                           # linux or ibm
 set execdir    = ${model}-${system}            # for job script
 set template   = $modeldir/scripts/job_${system}.txt # for mkjob
 set modelres   = 5.0                           # either 5.0 or 2.5 deg resolution
-set potential_name  = weimer                   # "heelis" or "weimer"
 #
-set cases = (mareqx junsol sepeqx decsol) # Will loop through these cases
 set TGCMDATA = '$TGCMDATA'
 set source = ( "'$TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smed.nc'" \
                "'$TGCMDATA/TGCM.tiegcm1.93.pcntr_jsol_smed.nc'" \
@@ -37,8 +40,8 @@ set stop_day     = (85 177 269 360)
 # Constants for heelis potential (commented if weimer run):
 set power   = 16.
 set ctpoten = 45.
-set f107    = 150.
-set f107a   = 150.
+set f107    = 100.
+set f107a   = 100.
 #
 # Constants for weimer potential (commented if heelis run):
 set bximf = 0.

@@ -1335,3 +1335,8 @@ see diags.table.
 
 Also minor changes to default namelist input (mknamelist, tiegcm_default.inp),
 and minor changes to job scripts.
+
+5/2/11:
+Commit changes to 4 files in tests/ directory. Added tgcm_ncdump and tgcm_contents
+to scripts/ directory. This code was used in the tiegcm1.94-beta benchmark runs
+for climatology, dec2006, and seasonal steady-state histories and control runs.

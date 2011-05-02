@@ -9,12 +9,15 @@
 #   systems, whereas IBM/AIX/LSF jobs at NCAR have a 6-hour wallclock limit, so
 #   the full-year run must be broken into 5 jobs (5 scripts and namelist files).
 #
-set case       = clim_smin                    # climatology solar min (see power, ctpoten, etc below)
-set system     = linux                        # linux or ibm
-set potential_name  = "heelis"                # potential model, "heelis" or "weimer"
-set model      = tiegcm                       # Model name namelist and job scripts
-#set modeldir   = tiegcm_trunk                 # model root dir (access to mknamelist, mkjob scripts)
- set modeldir   = ..                           # if executed from a modeldir/tests directory
+set case            = climat                  # climatology solar medium (see power, ctpoten, etc below)
+set system          = linux                   # linux or ibm
+set potential_name  = heelis                  # potential model, "heelis" or "weimer"
+set model           = tiegcm                  # Model name for namelist and job scripts
+#set modeldir       = tiegcm_trunk            # model root dir (access to mknamelist, mkjob scripts)
+ set modeldir       = ..                      # if executed from a modeldir/tests directory
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
 set mknamelist = $modeldir/scripts/mknamelist # mknamelist script
 set mkjob      = $modeldir/scripts/mkjob      # mkjob script
 set utildir    = $modeldir/scripts            # for job script
@@ -47,10 +50,10 @@ set stop_day     = 366
 #
 # Constants for heelis potential (commented if weimer run):
 # If these are changed, you might want to change the case name accordingly.
-set power   = 8.
-set ctpoten = 30.
-set f107    = 70.
-set f107a   = 70.
+set power   = 16.
+set ctpoten = 45.
+set f107    = 100.
+set f107a   = 100.
 #
 # Constants for weimer potential (commented if heelis run):
 # If these are changed, you might want to change the case name accordingly.
