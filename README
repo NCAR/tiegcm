@@ -1340,5 +1340,8 @@ and minor changes to job scripts.
 recreated it from the trunk. Then minor commit to change "trunk" to "diags"
 in job scripts.
 
-5/5/11: Merged recent changes on tiegcm/trunk to tiegcm_diags branch:
+5/6/11: Merged recent changes on tiegcm/trunk to tiegcm_diags branch:
         From the branch WC: svn merge -r581:HEAD $SVN/tiegcm/trunk.
+	
+5/6/11: add diagnostic fields JE13D,JE23D,KQLAM,KQPHI,JQR calls from current.F
+   on the magnetic grid with flag icalkqlam==1 in dynamo.F	
