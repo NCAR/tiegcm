@@ -22,7 +22,7 @@
 ! adding new fields, and type diags(ndiag) must be defined by sub init_diags 
 ! below.
 !
-      integer,parameter :: ndiag = 17
+      integer,parameter :: ndiag = 22
       type diag_type
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
@@ -87,6 +87,41 @@
       diags(n)%units      = 'km'
       diags(n)%levels     = 'none' ! hmf2 is 2d lon x lat
       diags(n)%caller     = 'elden.F'
+!
+      n = n+1
+      diags(n)%short_name = 'JE13D'
+      diags(n)%long_name  = 'Je1/D' 
+      diags(n)%units      = 'A/m2'
+      diags(n)%levels     = 'mlev' 
+      diags(n)%caller     = 'current.F'
+!
+      n = n+1
+      diags(n)%short_name = 'JE23D'
+      diags(n)%long_name  = 'Je2/D' 
+      diags(n)%units      = 'A/m2'
+      diags(n)%levels     = 'mlev' 
+      diags(n)%caller     = 'current.F'
+!     
+      n = n+1
+      diags(n)%short_name = 'JQR'
+      diags(n)%long_name  = 'Jqr' 
+      diags(n)%units      = 'A/m2'
+      diags(n)%levels     = 'none' 
+      diags(n)%caller     = 'current.F'
+!     
+      n = n+1
+      diags(n)%short_name = 'KQLAM'
+      diags(n)%long_name  = 'Kqlam' 
+      diags(n)%units      = 'A/m'
+      diags(n)%levels     = 'none' 
+      diags(n)%caller     = 'current.F'
+!     
+      n = n+1
+      diags(n)%short_name = 'KQPHI'
+      diags(n)%long_name  = 'Kqphi' 
+      diags(n)%units      = 'A/m'
+      diags(n)%levels     = 'none' 
+      diags(n)%caller     = 'current.F'
 !
       n = n+1
       diags(n)%short_name = 'NMF2'
@@ -709,5 +744,110 @@
      |  'lon',lon0,lon1,lat)
 
       end subroutine mkdiag_MU_M
+!-----------------------------------------------------------------------
+      subroutine mkdiag_JQR(name,fkm,lon0,lon1,lat0,lat1)
+!
+! upward current density at top of ionospheric shell 
+! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lat0,lat1,lon0,lon1
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
+!
+! Local:
+      integer :: ix
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
+
+      end subroutine mkdiag_JQR
+!-----------------------------------------------------------------------
+      subroutine mkdiag_KQLAM(name,fkm,lon0,lon1,lat0,lat1)
+!
+! magn. northward height-integrated current density
+! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lat0,lat1,lon0,lon1
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
+!
+! Local:
+      integer :: ix
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
+
+      end subroutine mkdiag_KQLAM
+!-----------------------------------------------------------------------
+      subroutine mkdiag_KQPHI(name,fkm,lon0,lon1,lat0,lat1)
+!
+! magn. eastward height-integrated current density 
+! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lat0,lat1,lon0,lon1
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
+!
+! Local:
+      integer :: ix
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
+
+      end subroutine mkdiag_KQPHI
+!-----------------------------------------------------------------------
+      subroutine mkdiag_JE13D(name,fkm,lon0,lon1,lev0,lev1,lat)
+!
+! magn. eastward current density
+! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in),dimension(lon0:lon1,lev0:lev1) :: fkm
+!
+! Local:
+      integer :: ix
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
+
+      end subroutine mkdiag_JE13D
+!-----------------------------------------------------------------------
+      subroutine mkdiag_JE23D(name,fkm,lon0,lon1,lev0,lev1,lat)
+!
+! magn. equator-/downward current density
+! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lon0,lon1,lev0,lev1,lat
+      real,intent(in),dimension(lon0:lon1,lev0:lev1) :: fkm
+!
+! Local:
+      integer :: ix
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
+
+      end subroutine mkdiag_JE23D
 !-----------------------------------------------------------------------
       end module diags_module

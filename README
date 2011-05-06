@@ -1340,3 +1340,8 @@ and minor changes to job scripts.
 Commit changes to 4 files in tests/ directory. Added tgcm_ncdump and tgcm_contents
 to scripts/ directory. This code was used in the tiegcm1.94-beta benchmark runs
 for climatology, dec2006, and seasonal steady-state histories and control runs.
+
+5/6/11:
+Astrid added 5 new diagnostics to the tiegcm_diags branch, so now merge those
+changes to the trunk. This command was made from a trunk WC:
+svn merge $SVN/tiegcm/trunk@581 $SVN/tiegcm/branches/tiegcm_diags

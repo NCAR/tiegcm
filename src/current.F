@@ -518,6 +518,7 @@
       use cons_module,only: dt0dts,rcos0s,pi,r0,re,ylatm
       use dynamo_module,only: nscrrt,nscoef,phim,nmlon0,unitvm
       use addfld_module,only: addfld
+      use diags_module,only: mkdiag_JQR
       implicit none
 !
 ! !PARAMETERS:
@@ -706,8 +707,7 @@
         enddo 		! endo i-loop
       enddo 		! enddo j-loop
 !	
-!      call addfld('JQR',' j_qr (magnetic)','[A/m^2]',
-!    |   nscrrt(:,:),'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+      call mkdiag_JQR('JQR',nscrrt(:,:),1,nmlonp1,1,nmlat)
 !
       end subroutine nosocrrt
 !-----------------------------------------------------------------------
@@ -731,6 +731,8 @@
      |  je2oD_pg3d                     ! J_e2/D (plasma pressure + gravity)
       use magpres_g_module,only: j_pg  ! flag for mag.pressure and gravity 
       use addfld_module,only: addfld
+      use diags_module,only: mkdiag_KQPHI,mkdiag_KQLAM,
+     |  mkdiag_JE13D,mkdiag_JE23D
       implicit none
 !
 ! !PARAMETERS: 
@@ -797,10 +799,9 @@
 	enddo
 	je13d(:,j,nlevp1) = je13d(:,j,nlev)
 	je23d(:,j,nlevp1) = je23d(:,j,nlev) 
-	call addfld('JE13D',' J_e1/D (magnetic)','A/m^2',
-     |	   je13d(:,j,:),'mlon',1,nmlonp1,'mlev',1,nlevp1,j) 
-	call addfld('JE23D',' J_e2/D (magnetic)','A/m^2',
-     |	   je23d(:,j,:),'mlon',1,nmlonp1,'mlev',1,nlevp1,j)
+!
+        call mkdiag_JE13D('JE13D',je13d(:,j,:),1,nmlonp1,1,nlevp1,j)
+        call mkdiag_JE23D('JE23D',je23d(:,j,:),1,nmlonp1,1,nlevp1,j)
       enddo
 !      
 !     call addfld('bmodm3d','bmodm3d (magnetic)',' ',
@@ -891,8 +892,7 @@
       enddo
 ! 
 ! save on secondary history 
-!      call addfld('KQPHI',' kqphi (magnetic)','[A/m]',
-!    |    kqphi3d(:,:),'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+      call mkdiag_KQPHI('KQPHI',kqphi3d(:,:),1,nmlonp1,1,nmlat)
 !                
 !  
 ! Calculate K_(q,lam) (Richmond: Ionospheric at full level
@@ -992,8 +992,7 @@
        enddo
       enddo ! end of i-loop
 !      
-!      call addfld('KQLAM',' kqlam (magnetic)','[A/m]',
-!    |      kqlam(:,:),'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+      call mkdiag_KQLAM('KQLAM',kqlam(:,:),1,nmlonp1,1,nmlat)
 !     
       end subroutine nosocrdens
 !-----------------------------------------------------------------------
