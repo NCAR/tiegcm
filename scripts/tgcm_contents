@@ -1,0 +1,18 @@
+#!/usr/bin/perl
+#
+use Getopt::Long;
+use File::Basename;
+#
+&GetOptions(
+   "h|help"   => \$help,
+) or usage();
+if ($help) { usage(); }
+
+@flist = @ARGV;
+foreach $file (@flist) {
+  print "$file ";
+  $contents = `tgcm_ncdump $file | fgrep 'contents = '`;
+  $contents =~ s/[\s+]//;
+  $contents =~ s/[\s+]//;
+  print "$contents";
+}

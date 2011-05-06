@@ -1339,3 +1339,6 @@ and minor changes to job scripts.
 4/21/11: After merging it to the trunk, deleted tiegcm_diags branch, and
 recreated it from the trunk. Then minor commit to change "trunk" to "diags"
 in job scripts.
+
+5/5/11: Merged recent changes on tiegcm/trunk to tiegcm_diags branch:
+        From the branch WC: svn merge -r581:HEAD $SVN/tiegcm/trunk.
