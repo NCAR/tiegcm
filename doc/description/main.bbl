@@ -1,0 +1,113 @@
+\providecommand{\bysame}{\leavevmode\hbox to3em{\hrulefill}\thinspace}
+\providecommand{\MR}{\relax\ifhmode\unskip\space\fi MR }
+% \MRhref is called by the amsart/book/proc definition of \MR.
+\providecommand{\MRhref}[2]{%
+  \href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}
+}
+\providecommand{\href}[2]{#2}
+\begin{thebibliography}{10}
+
+\bibitem{Chapman1970}
+S.~Chapman and R.S. Lindzen, \emph{Atmospheric tides}, D. Reidel, Norwell,
+  Mass., 1970.
+
+\bibitem{colegrove1966}
+F.D. Colegrove, \emph{Atmospheric composition in the lower thermosphere}, J.
+  Geophys. Res. \textbf{71} (1966), 2227.
+
+\bibitem{dickinson1981}
+R.E. Dickinson, E.C. Ridley, and R.G. Roble, \emph{A 3-dimensional
+  general-circulation model of the thermosphere}, J. Geophys. Res. \textbf{86}
+  (1981), 1499.
+
+\bibitem{dickinson1984}
+\bysame, \emph{Thermospheric general circulation with coupled dynamics and
+  composition}, J. of Atmospheric Sciences \textbf{41} (1984), no.~2, 205.
+
+\bibitem{Emery2008}
+B.A.~EMERY et~al., \emph{Seasonal, kp, solar wind, and solar flux variations in
+  long-term single-pass satellite estimates of electron and ion auroral
+  hemispheric power}, J. Geophy. Res \textbf{113} (2008), doi:
+  10.1029/2007JA012866.
+
+\bibitem{Flattery1967}
+T.W. Flattery, \emph{Hough functions}, Tech. Report Tech. Rep. 21, Dept.
+  Geophys. Sci., The University of Chicago, 1967.
+
+\bibitem{Hagan2002}
+M.E. Hagan and J.M. Forbes, \emph{Migrating and nonmigrating diurnal tides in
+  the middle and upper atmosphere excited by tropospheric latent heat release},
+  J. Geophys. Res. \textbf{107} (2002), no.~D24, 4754, doi:
+  10.1029/2001JD001236.
+
+\bibitem{Hagan2003}
+\bysame, \emph{Migrating and nonmigrating semidiurnal tides in the upper
+  atmosphere excited by tropospheric latent heat release}, J. Geophys. Res.
+  \textbf{108} (2003), no.~A2, 1062, doi:10.1029/2002JA009466.
+
+\bibitem{heelis1982}
+R.A. Heelis, J.K.Lowell, and R.W.Spiro, \emph{A model of the high-latitude
+  ionsophere convection pattern}, J. Geophys. Res. \textbf{87} (1982), 6339.
+
+\bibitem{Heelis1980}
+R.A. Heelis, J.D. Winningham, W.B. Hanson, and J.~L. Burch, \emph{The
+  relationships between high-latitude convection reversals and the energetic
+  particle morphology observed by atmosphere explorer}, J. Geophys. Res.
+  \textbf{85} (1980), 3315--3324.
+
+\bibitem{peym93}
+C.~Peymirat and A.D. Richmond, \emph{Modeling the ion loss and the generation
+  of region 2 field--aligned currents via equivalent magnetospheric
+  conductances}, J. Geophy. Res \textbf{98} (1993), 15,467.
+
+\bibitem{pielke1984}
+R.A. Pielke, \emph{Mesoscale metrological modeling}, Academic Press, Orlando
+  Florida, 1984.
+
+\bibitem{rich74}
+A.D. Richmond, \emph{The computation of magnetic effects of field-aligned
+  magnetospheric currents}, J. Atmos. Terr. Phys. \textbf{36} (1974), 245.
+
+\bibitem{rich95}
+\bysame, \emph{Ionospheric electrodynamics using magnetic apex coordinates}, J.
+  Geomag. Geoelectric. \textbf{47} (1995), 191.
+
+\bibitem{Richmond95}
+\bysame, \emph{Ionospheric electrodynamics using magnetic apex coordinates}, J.
+  Geomag. Geoelectric. \textbf{47} (1995), 191.
+
+\bibitem{roble1995}
+R.G. Roble, \emph{Energetics of the mesosphere and thermosphere}, Monograph 87,
+  AGU (1995).
+
+\bibitem{roble1987}
+R.G. Roble and E.C. Ridley, \emph{An auroral model for the ncar thermospheric
+  general circulation model}, Annales Geophysicae \textbf{5a} (1987), no.~6,
+  369.
+
+\bibitem{Schunk00}
+R.W. Schunk and A.F. Nagy, \emph{Ionospheres: Physics, plasma physics, and
+  chemistry}, Cambridge, University Press, 2000.
+
+\bibitem{shapiro1970}
+R.~Shapiro, \emph{Smoothing, filtering, and boundary effects}, Rev. Geophys.
+  Space Phys. (1970), no.~8, 359.
+
+\bibitem{tag1979}
+P.M. Tag, F.W. Murray, and L.R. Kvenig, \emph{A comparison of several forms of
+  eddy viscosity paramterization in the two-dimensional cloud model}, J. Appl.
+  Meteorol \textbf{18} (1979), 1429.
+
+\bibitem{weimer2005}
+D.R. Weimer, J. Geophy. Res \textbf{110} (2005), doi: 10.1029/2004JA010884.
+
+\bibitem{wang1998}
+W.Wang, \emph{A thermosphere-ionosphere nested grid (ting) model}, Master's
+  thesis, University of Michigan, 1998.
+
+\bibitem{zhang2008}
+Y.~Zhang and L.J. Paxton, \emph{An empirical kp-dependent global auroral model
+  based on timed/guvi fuv data}, J. Atmos. Terr. Phys. \textbf{70} (2008),
+  1231.
+
+\end{thebibliography}

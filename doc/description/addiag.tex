@@ -1,0 +1,152 @@
+%
+\section{Calculation of geopotential height  \index{ADDIAG.F} }\label{cap:addiag}
+%
+The input to \src{subroutine addiag} is summarized in table
+\ref{tab:input_addiag}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t_n$\\
+mass mixing ration of $O$ &       $\Psi_{O}$              & $-$   &  midpoints & $t_n$\\
+mass mixing ration of $O_2$ &       $\Psi_{O_2}$              & $-$   &  midpoints & $t_n$\\
+neutral meridional velocity &       $ v_n$              & $cm/s$   &
+midpoints & $t_n$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine addiag}}
+\label{tab:input_addiag}
+\end{table}
+%
+The output of \src{subroutine addiag} is summarized in table
+\ref{tab:output_addiag}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+$\cos \lambda \cdot$ neutral meridional velocity  & $\cos \lambda v_n$ & cm/s$$ & midpoints  & $t_n$ \\
+mean molecular mass & $\overline{m}$ & $g/mole$ & interfaces  & $t_n+\Delta t$ \\
+conversion factor $mmr$ to $\#/cm^3$ & $N\overline{m}$ \src{xnmbar} & $\#/cm^3 g/mole $ & midpoints  & $t_n+ \Delta t??$ \\
+conversion factor $mmr$ to $\#/cm^3$ & $N\overline{m}$ \src{xnmbari} & $\#/cm^3 g/mole $ & interfaces  & $t_n+ \Delta t??$ \\
+conversion factor $mmr$ to $\#/cm^3$ & $N\overline{m}$ \src{xnmbarm}
+& $\#/cm^3 g/mole $ & midpoints  & $t_n+ \Delta t??$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine addiag}}
+\label{tab:output_addiag}
+\end{table}
+%
+%
+The module data of \src{subroutine addiag} is summarized in table
+\ref{tab:module_addiag}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+ cosinus   &  {$\cos \lambda$}     & $-$   & - & $-$ \\
+ height step   &  {$\Delta z$}     & $-$   & -  & $-$ \\
+ \src{dzgrav}   &  {$g/R^*$}     & $$   & interfaces  & $t_n$ \\
+ timestep size   &  {$\Delta t$}     & $s$   & -  & $-$ \\
+  \src{expz}  &  {$e^{-z-\frac{1}{2}\Delta z}$}     & $-$   & midpoints  & $-$ \\
+  \src{expzmid}  &  {$e^{-\frac{1}{2}\Delta z}$}     & $-$   & -  & $-$ \\
+  \src{expzmid\_inv}  &  {$e^{\frac{1}{2}\Delta z}$}     & $-$   & -  & $-$ \\
+   Boltzman constant &  {$k_B$}     & $1.38 \cdot 10^{16}$   & -  & $t_n$ \\
+   \src{freqsemidi} &  {$\frac{4 \Pi}{24 \cdot 60\cdot 60}$}     & $rad/s$   & -  & $-$ \\
+  \src{ci}  &  {$$}     & $(0,1)$   & interfaces  & $t_n$
+\\ \hline \hline
+\end{tabular}
+\caption{Module data of \src{subroutine addiag}}
+\label{tab:module_addiag}
+\end{table}
+%
+First the term $\cos \lambda v_n$ is calculated on the midpoint
+pressure level and stored in the variable \src{vc}. The mean
+molecular mass is determined by
+%
+\begin{align}
+ \overline{m} = \left[ \frac{\Psi_{O_2}}{m_{O_2}}+ \frac{\Psi_{O}}{m_{O}}+
+        \frac{\Psi_{N_2}}{m_{N_2}}\right]^{-1}
+\end{align}
+%
+with the mass mixing ratio of $N_2$ determined by $\Psi_{N_2} = 1-
+\Psi_{O} - \Psi_{O_2}$. Before the mean molecular weight is returned
+from the subroutine it is transferred to the interface pressure
+level by averaging.
+%
+\begin{align}
+ \overline{m}(z) = \frac{1}{2} \left( \overline{m}(z+\frac{1}{2}\Delta z)+
+           \overline{m}(z-\frac{1}{2}\Delta z) \right)
+\end{align}
+%
+with the lower boundary value extrapolated
+%
+\begin{align}
+ \overline{m}(z_{bot}) = 1.5 \overline{m}(z_{bot}+\frac{1}{2}\Delta
+ z)-0.5   \overline{m}(z_{bot}+\frac{3}{2}\Delta z)
+\end{align}
+%
+The conversion factor from mass mixing ratio to number density is
+first evaluated at the midpoint level
+%
+\begin{align}
+ n \overline{m}(z+\frac{1}{2}\Delta z) = p_0 e^{-z-\frac{1}{2}\Delta z}
+ \frac{\overline{m}(z+\frac{1}{2}\Delta z)}{k_B T_n(z+\frac{1}{2}\Delta z)}
+\end{align}
+%
+which is stored in the variable \src{xnmbarm}. I'm not sure why this
+is done, but again is the conversion factor from mass mixing ratio
+to number density calculated and stored in \src{xnmbar}. The only
+difference to the above factor is that now the mean molecular mass
+is already on the interface pressure level and converted back to the
+midpoint pressure level. Afterward the mean molecular mass on the
+interface pressure level is determined
+%
+\begin{align}
+ n \overline{m}(z) = p_0 e^{\frac{1}{2}\Delta z} e^{-z-\frac{1}{2}\Delta z}
+ \frac{\overline{m}(z)}{k_B T_n(z)}
+\end{align}
+%
+with $T_n(z_{top}) = T_n(z_{top}-\frac{1}{2} \Delta z)$, and the
+value $e^{-\frac{1}{2}\Delta z} e^{-z_{top}+\frac{1}{2}\Delta z}$ at
+the upper boundary. \\
+
+%
+The geopotential height is calculated by using the hydrostatic
+equation
+%
+\begin{align}
+   \frac{\partial Z}{\partial z} = \frac{R^* T_n}{\overline{m} g} = H
+\end{align}
+%
+with $\Delta Z = H \Delta z$. First the term $H \Delta z$  is set
+which is stored in the variable \src{w1}
+%
+\begin{align}
+   w1(z+\frac{1}{2} \Delta z) = \frac{\Delta z R^*}{g}\frac{T_n(z+\frac{1}{2} \Delta z) }
+   {\overline{m}(z+\frac{1}{2} \Delta z)} \label{eq:addiag_w1}
+\end{align}
+%
+The lower boundary values of the geopotential height are set from
+the Hough modes or GSWM with possible contribution from the
+semidiurnal migrating tide $Z_{SD}$, the migrating diurnal tide
+$Z_D$, the annual tide $Z_A$, and the nonmigrating semidiurnal and
+diurnal tides $Z_{nSD}$ and $Z_{nD}$, respectively.
+%
+\begin{align}
+   Z(z_{bot}) = Z_{SD} + Z_{D} + Z_A + Z_{nSD} + Z_{nD}
+\end{align}
+%
+All the tidal contributions are defined at the lower boundary
+pressure level $z= -7$. The geopotential height is evaluated then by
+%
+\begin{align}
+   Z(z+ \Delta z) = w1(z+\frac{1}{2} \Delta z) + Z(z)
+\end{align}
+%
+with $w1 = \frac{\Delta z R^*}{g}\frac{T_n }{\overline{m}}$ (see eq.
+(\ref{eq:addiag_w1}))

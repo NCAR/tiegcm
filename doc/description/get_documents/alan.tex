@@ -1,0 +1,96 @@
+\documentclass[12pt]{book}
+\usepackage{html}
+\usepackage{psfig,epsfig}
+\usepackage[centertags]{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{rotating}
+\usepackage{makeidx}
+\begin{document}
+
+% begin Alan_Burns_4/09 see get_documents/aburns_4209_qandltiegcm.doc
+The photoeletron heating is determined by
+%
+\begin{align}
+  Q_{photo} = q_{ionize} 0.05 \times 35. N_A  \frac{1.602\cdot 10^{-12}}{\bar{m}}  
+\end{align}
+%
+where  $q_{ionize}$ is the ionization rate.
+%
+\\
+The heating resulting from ion chemistry is of the type
+%
+\begin{align}
+  Q_{i}^{chem} = N_A 1.602\cdot 10^{-12}n_{neutral}r_k n_i q_{heat}  
+\end{align}
+%
+where $n_{neutral}$ is the number density of the neutral species, $n_i$ is the
+number density of the ion species, $r_k$ is the reaction rate, and $q_{heat}$ is
+the heat emitted by the reaction. 
+%
+\begin{align}
+  Q_{i}^{chem} = N_A 1.602\cdot 10^{-12}n_{neutral}r_k n_i q_{heat}  
+\end{align}
+%
+\\
+The heating resulting from neutral chemistry of the minor species is
+%
+\begin{align}
+  Q_{i}^{chem} = N_A 1.602\cdot 10^{-12}n_{neutral}\beta n_{neutral} q_{heat}  
+\end{align}
+%
+where $\beta$ is the reaction rate.
+%
+\\
+The heating from electron-neutral and electron-ion collisions are
+%
+\begin{align}
+  Q_{en}^{chem} = L_{en}(T_e-T_n) \frac{N_A}{\bar{m}} \\
+  Q_{ei}^{chem} = L_{ei}(T_e-T_i) \frac{N_A}{\bar{m}} 
+\end{align}
+%
+\\
+The loss term due to NO cooling is
+%
+\begin{align}
+  L_{NO} = 4.956 \cdot 10^{-12} N_A n_{NO}\frac{ANO}{ANO + 13.3} e^{\frac{-2700}{Tn}}
+\end{align}
+%
+where $ANO = \bar{m} N_A 5 \cdot 10^{-4} e^{-z}(6.5 \cdot 10^{-11}\frac{n_o}{m_o} +
+2.4 \cdot 10^{-14}\frac{n_{o2}}{m_{o2}})/(R T_n)$
+%
+\\
+The loss due to $CO_2$ cooling is
+%
+\begin{align}
+  L_{CO2_{cool}} = 2.65 \cdot 10^{-13} n_{CO2} e^{\frac{-960}{T_n}} N_A 
+     ((\frac{n_{O2}}{m_{O2}} + \frac{n_{N2}}{m_{N2}})ACO2 + \frac{n_{O}}{m_{O}} BCO2)
+\end{align}
+%
+where 
+%
+\begin{align}
+   ACO2 = & 2.5 \cdot 10^{-15} & \quad T_n < 200 K \notag \\
+   {}     &2.5 \cdot 10^{-15}(1+0.03(T_n-200))& \quad T_n > 200 K \notag \\
+   BCO2 = & 1.\cdot 10^{-12} & \quad  T_n < 300 K  \notag\\
+   {}     &1.\cdot 10^{-12}\frac{T_n}{300}& \quad T_n > 300 K \notag 
+\end{align}
+%
+\\
+The loss due to $O(^3P)$ cooling is
+%
+\begin{align}
+  L_{O(^3P)_{cool}} = \frac{ANO3P(1) \times XO(k) \frac{N_A}{m_o} n_o
+  e^{\frac{-BNO3P(1)}{T_n}}}{1+ANO3P(2) e^{\frac{-BNO3P(2)}{T_n}}+ANO3P(3)
+  e^{\frac{-BNO3P(3)}{T_n}}}
+\end{align}
+%
+with $XO$ is a pressure level dependent set of coefficients. $XO = (3 \times 0.01,
+0.05,0.1,0.2,0.4,0.55,0.7,0.75,15\times 0.0)$. $ANO3P$ is a 3 element array of
+constants $ANO3P = (1.67 \cdot 10^{-18},0.6,0.2)$. $BNO3P$ is a three element array
+of constants $BNO3P = (228,228,325)$.
+% end Alan_Burns_4/09 s. get_documents/aburns_4209_qandltiegcm.doc
+
+%
+\end{document}

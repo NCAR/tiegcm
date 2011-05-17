@@ -1,0 +1,227 @@
+%===============================================================================
+%
+\textbf{\Large{Notation}}
+%
+\begin{tabbing}
+\hspace{5mm} \= \hspace{23mm} \=  \kill
+%
+\textbf{\Large{Variables}}                              \\
+
+\>$\mathbf{B} $     \>  geomagnetic field  \\
+\>$B$               \>  geomagnetic field strength   \\
+\>$\mathbf{B}_0 $       \>  Earth main magnetic field  \\
+\>$B_x, B_y, B_z$       \>  geomagnetic main field components (north, east, downward)  \\
+\>$\mathbf{b}_0 $       \>  unit vector along $\mathbf{B}_0 $  \\
+\>$B_{e3}$        	\>  geomagnetic field strength in $\mathbf{e}_3$ direction [nT]   \\
+\>$c$        		\>  coefficient of the finite difference stencil   \\
+\>$\mathbf E$        	\>  electric field   \\
+\>$E_{d1}, E_{d2}$      \>  electric field component in $\mathbf{d}_1$,
+                            $\mathbf{d}_2$ direction  \\
+\>$H$        		\>  scale height    \\
+\>$h$        		\>  height   \\
+\>$h_0$        		\>  reference height   \\
+\>$h_A$        		\>  apex height   \\
+\>$I_m$        		\>  inclination angle of dipolar geomagnetic field line at $h_0$ on a spherical Earth  \\
+\>$\mathbf J$        	\>  current density   \\
+\>$\mathbf J_{||}$      \>  field aligned current density   \\
+\>$\mathbf J_{M}$       \>  magnetospheric current density   \\
+\>$\mathbf J$        	\>  current density   \\
+\>$J_{mr}$        	\>  radial component of current density   \\
+\>$J_{Mr}$        	\>  radial component of current density for both hemispheres added together  \\
+\>$\mathbf K^{M}$       \>  magnetospheric height integrated current density   \\
+\>$K_{m\phi}^{M}$       \>  magnetospheric eastward height-integrated current density   \\
+\>$K_{m\lambda}^{M}$    \>  magnetospheric down--/equatorward height-integrated current density   \\
+\>$K_{m\phi}$        	\>  eastward height-integrated current density   \\
+\>$K_{m\lambda}$        \>  down--/equatorward height-integrated current density   \\
+\>$K_{m\phi}^D$        	\>  wind driven eastward height-integrated current density   \\
+\>$K_{m\lambda}^D$      \>  wind driven down--/equatorward height-integrated current density   \\
+\>$\overline{m}$        \>  mean molecular mass  \\
+\>$m_i$        		\>  atomic weight of specie i   \\
+\>$N_i$        		\>  density of specie i   \\
+\>$n_i$        		\>  number density of specie i   \\
+\>$N_e$        		\>  electron density   \\
+\>$p$        		\>  atmospheric pressure   \\
+\>$p_p$        		\>  plasma pressure   \\
+\>$ln(p_0/p)$        	\>  log pressure levels    \\
+\>$R$        		\>  radius from Earth center to height h   \\
+\>$R_0$        		\>  radius from Earth center to height $h_0$   \\
+\>$T_e$        		\>  electron temperature   \\
+\>$T_i$        		\>  ion temperature   \\
+\>$T_n$        		\>  neutral temperature    \\
+\>$u_n,v_n, w_n$             \>  neutral zonal, meridional and vertical wind   \\
+\>$W$        		\>  dimensionless vertical wind   \\
+\>$z$        		\>  geopotential height   \\
+%
+\>$$        		\>     \\
+\>$\Phi$        	\>  electric potential   \\
+\>$\Phi_R$        	\>  reference electric potential   \\
+\>$\rho_{ion}$        	\>  ion density   \\
+\>$\Sigma_{\phi \phi}$        	        \>  magnetic eastward conductance   \\
+\>$\Sigma_{\lambda \lambda}$        	\>  magnetic equator-/downward conductance   \\
+\>$\Sigma_{\phi \lambda}, \Sigma_{\lambda \phi }$   \>  mixed term conductances   \\
+\>$\Sigma_{\phi \phi}^M , \Sigma_{H}^M$        	    \>  equivalent magnetospheric conductances   \\
+\>$\sigma_P, \sigma_H$  \>  Pedersen and Hall conductivities  \\
+\>$\nabla$        	\>  gradient    \\
+\>$\sigma_P, \sigma_H$  \>  Pedersen and Hall conductivities  \\
+\>$\mathbf{u}$          \>  neutral wind  \\
+\>$\Phi$                \>  electric potential  \\
+\>$$        		\>     \\
+\>$\mathbf{d}_1, \mathbf{d}_2, \mathbf{d}_3$  \>  magnetic eastward, magnetic 
+                            down--/equatorward vectors, along the field line   \\
+\>$\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$  \>  magnetic eastward, magnetic 
+                            down--/equatorward vectors, along the field line   \\
+\>$D = |\mathbf{d}_1 \times \mathbf{d}_2|$   \>  quantity of  Earth geomagnetic coordinate system   \\
+\>$F$                   \>  quantity of dipole field \\
+\>$i$        		\>  longitudinal index   \\
+\>$j$        		\>  latitudinal index   \\
+\>$k$        		\>  height index   \\
+\>$(\cdot)_i, (\cdot)_j, (\cdot)_k$        \>  quantity at $\phi(i)$, $\lambda(j)$, $h(k)$,   \\
+\>$nlon$                \>  number of discrete geographic longitude grid points  \\
+\>$nmlon$               \>  number of discrete geomagnetic longitude grid points  \\
+\>$nlat$                \>  number of discrete geographic latitude grid points  \\
+\>$nmlat$               \>  number of discrete geomagnetic latitude grid points  \\
+\>$s_L, s_U$        	\>  lower and upper boundary for field line integration    \\
+\>$wgt$        		\>  weight for linear interpolation   \\
+\>$\phi, \lambda$       \>  longitude, latitude   \\
+\>$\phi_g,\lambda_g$    \>  geographic longitude, latitude   \\
+\>$\lambda_A$        	\>  apex latitude   \\
+\>$\lambda_m$        	\>  modified apex latitude   \\
+\>$\lambda_m^*$        	\>  irregular modified apex latitude grid distribution  \\
+\>$\lambda_0$        	\>  equally spaced latitudinal grid distribution in $\lambda_m^*$   \\
+\>$\lambda_{m}^{crb}$   \>  modified apex latitude of convection reversal boundary   \\
+\>$\phi_m$        	\>  modified apex longitude  \\
+\>$$        		\>     \\
+\>$(\cdot)_0$        	\>  refers to reference height    \\
+\>$(\cdot)(0)$        	\>  refers to equally spaced latitudinal grid $\lambda_0$    \\
+\>$(\cdot)_A$        	\>  quantity at apex of field-line   \\
+\>$(\cdot)_g$        	\>  refers to geographic direction   \\
+\>$(\cdot)'$        	\>  half pressure level $(\cdot) +\frac{1}{2}$   \\
+\>$(\cdot)_{d1} ,(\cdot)_{d2},(\cdot)_{d3}$       \>  magnetic eastward, down--/equatorward, field-line direction of quantity $(\cdot)$  \\
+\>$(\cdot)_{e1} ,(\cdot)_{e2},(\cdot)_{e3}$       \>  magnetic eastward, down--/equatorward, field-line direction of quantity $(\cdot)$  \\
+\>$(\cdot)_{eq}$        \>  value at the geomagnetic equator   \\
+\>$(\cdot)_{fl}$        \>  value on the geomagnetic  field line   \\
+\>$(\cdot)_{m \phi} ,(\cdot)_{m \lambda}$         \>  modified apex eastward and down--/equatorward direction of quantity $(\cdot)$  \\
+\>$(\cdot)_{pole}$      \>  values at the geomagnetic poles   \\
+\>$(\cdot)^D$        	\>  dynamo part   \\
+\>$(\cdot)^{p,g}$       \>  refers to plasma pressure and gravity contribution   \\
+\>$(\cdot)^T$        	\>  both hemispheres added together   \\
+\>$\frac{d (\cdot)}{dt}$\>  total time rate of change   \\
+\>$\frac{\partial (\cdot)}{\partial}$\>  partial derivative   \\
+\>$lhs, rhs$        		\>  left and right hand side of electrodynamo equation   \\
+\>$T_n$             \> neutral temperature    \\
+\>$T_i$             \> ion temperature    \\
+\>$T_e$             \> electron temperature    \\
+\>$\mathbf{\lambda}^{mag}$         \> ion drag tensor in geomagnetic direction    \\
+\>$\mathbf{\lambda}^{geo}$         \> ion drag tensor in geographic direction    \\
+\>$\lambda_1, \lambda_2$ \> ion drag coefficient component in geomagnetic direction    \\
+\>$\sigma_H$        \> Hall conductivity    \\
+\>$\sigma_P$        \> Pedersen conductivity    \\
+\>$\Psi_{O_2}, \Psi_O, \Psi_{N_2}$     \> mass mixing ratio of $O_2, O, N_2$    \\
+\>$N_{i}$           \> number density of i    \\
+\>$\overline{m}$    \> mean molecular mass    \\
+\>$\overline{m}_n$    \> mean molecular mass of neutrals   \\
+\>$\overline{m}_{ion}$    \> mean molecular mass of ions   \\
+\>$\Omega$          \> gyro frequency    \\
+\>$D$               \> declination of geomagnetic field    \\
+\>$I$               \> inclination of geomagnetic field    \\
+\>$nlev$            \> number of discrete height levels    \\
+\>$nlev0$            \> height level index of bottom   \\
+\>$nlev1$            \> height level index of top    \\
+\>$\rho$            \> mass density    \\
+\>$\nu$             \> collision frequency    \\
+\>$e$               \> electron charge    \\
+\>$Q_J$             \> energy rate per unit mass of Joule heating    \\
+\>$Q_J^{T_n}$             \> Joule heating of neutral temperature   \\
+\>$\textbf{J}$      \> current    \\
+\>$\textbf{J}_{\bot}$\> current perpendicular to  $\textbf{B}$   \\
+\>$\textbf{E}$      \> electric field   \\
+\>$\textbf{E}'$     \> electric field in the frame of neutral wind    \\
+\>$\textbf{v}_{ExB}$\> $\textbf{E} \times \textbf{B}$ drift velocity     \\
+\>$\textbf{v}_n$    \> neutral wind vector    \\
+\>$\textbf{v}_{n\bot}$    \> neutral wind vector $\bot$ to $mathbf{B}$     \\
+\>$u_n, v_n$    \> zonal and meridional neutral wind components    \\
+\>$E_{m \phi},E_{m \lambda}, E_z$     \> geomagnetic east-, north- and upward electric field   \\
+\>$E_{x}, E_{y}, E_{z}$          \> electric field in geographic east-,north-, upward direction on geographic grid   \\
+\>$\mathbf{E}_{geo}$             \> electric field in geographic direction    \\
+\>$\mathbf{E}_{mag}$             \> electric field in geomagnetic direction    \\
+\>$v_{ExB,x}, $                  \>  electromagnetic drift velocity   \\
+\>$v_{ExB,y}, v_{ExB,z}$         \>  (geographic east-,north-, upward)  \\
+\>$\phi_m, \lambda_m$            \> geomagnetic coordinates    \\
+\>$\phi_g, \lambda_g$            \> geographic coordinates    \\
+\>$\lambda_0$                    \> equally spaced latitudinal grid points in $\lambda_m^*$    \\
+\>$\lambda_m^*$                  \> irregular spaced latitudinal grid points    \\
+\>$\mathbf{J_{mag}}$               \> Jacobian $\frac{\partial s_{mag}}{\partial s_{geo}}$    \\
+\>$j_{11},j_{12}, j_{21}, j_{22}$\> Components of the Jacobian matrix $\mathbf{J_mag}$    \\
+\>$s_{mag}, s_{geo}$             \> generic magnetic and geographic coordinate systems     \\
+\>$k_{bot},k_{top}$              \> height index for bottom and top of model    \\
+\>$\mathbf{f}_1, \mathbf{f}_2$   \> apex base vectors    \\
+\>$t_n$             \> time at time step $n$    \\
+\>$t_{n+1}$         \> time at time step $n+1$    \\
+\>$\Psi_i$          \> mass mixing ratio of specie i e.g. $O_2, O, N$     \\
+\>$H$               \> scale height    \\
+\>$W$               \> dimensionless vertical velocity     \\
+\>$w$               \> vertical velocity    \\
+\>$N_{i}$  \> number density of species $i$ with $i$ = ${O_2}, {O^+},{NO^+},{N^+}$    \\
+\>$N$               \> total number density    \\
+\>$\nu$             \> collision frequency    \\
+\>$\nu_{in}$        \> collision frequency ion-neutral     \\
+\>$\nu_{en}$        \> collision frequency electron-neutral    \\
+\>$\sigma_p, \sigma_h$  \> Pederson and Hall conductivities     \\
+\>$\sigma_1, \sigma_2$  \> conductivity in geomagnetic direction    \\
+\>$Z$               \> geopotential height     \\
+\>$z$               \> dimensionless variable $Z= -\ln \frac{p}{p_0}$ / log
+pressure coordinate    \\
+\>$p$               \> pressure     \\
+\>$p_0$             \> reference pressure     \\
+\>$\Phi $           \>   electric potential  \\
+\>$\mu$             \> viscosity    \\
+\>$\mu_{ed}$        \> eddy viscosity    \\
+\>$\mu_{mol}$       \> molecular viscosity    \\
+\>$K_T$             \> molecular thermal conductivity    \\
+\>$K_E$             \> eddy diffusion coefficient    \\
+\>$k_m$             \> molecular viscosity    \\
+\>$h_d$             \> horizontal diffusion    \\
+\>$Q_{J,T}$         \> Joule heating of neutral temperature    \\
+\>$Q$               \> heating    \\
+\>$L$               \> loss    \\
+\>$C_p$             \> specific heat per unit mass    \\
+\>$\rho$            \> atmospheric mass density    \\
+\>$R$               \> Radius with $R = R_E + z$    \\
+\>$$                \>     \\
+\>$$                \>     \\
+\>$$                \>     \\
+\>$$                \>     \\
+\>$$                \>     \\
+\>$$                \>     \\
+\>$$                \>     \\
+%
+\end{tabbing}
+%
+\textbf{\Large{Constants}}
+%
+\begin{tabbing}
+\hspace{5mm} \= \hspace{15mm} \= \hspace{40mm} \=  \kill
+%
+\>$\mathbf{g}(h_0)$ \>  $870 \frac{cm}{s^2} \;  (TIEGCM)$          \>  gravitational acceleration at height $h_0$   \\
+\>                  \>  $945 \frac{cm}{s^2} \; (TIMEGCM)$          \>  gravitational acceleration at height $h_0$   \\
+\>$M_i$         \>  $1.6605 \cdot 10^{-24} \; g$     \>  mass of unit atomic weight\\
+\>$h_0$         \>  $90 km(T*GCM)$                   \>  height of lower boundary for
+                                                             electrodynamo \\
+\>$h_R$         \>  $90 km$                          \>  reference height\\
+\>$R_E$         \>  $6.37122 \cdot 10^{8} \; cm$     \>  mean Earth radius   \\
+\>$p_0$         \>  $5.0\cdot 10^{-4}$               \>  standard pressure\\
+\>$k_B$         \>  $1.38 \cdot 10^{-16} \; \frac{cm^2g}{s^2 K}$ \> Boltzman constant\\
+\>$R^*$         \>  $8.314e7 \frac{erg}{mole K}$ \> gas constant\\
+\>$R_{eq}$      \>  $6.37814 \cdot 10^{8}$  \> Earth radius at the equator \\
+\>$N_a$         \> $6.023 \times 10^{23}$  \> Avogadro number\\
+\>$e$           \> $1.602 \cdot 10^{-19}$  \> electron charge\\
+\>$$            \>   \> \\
+\>$$            \>   \> \\
+
+%
+\end{tabbing}
+%
+The model code defines these constants to the stated accuracy.
+We do not mean to imply that these constants are known to this accuracy
+nor that the low-order digits are significant to the physical approximations
+employed.

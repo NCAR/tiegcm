@@ -1345,3 +1345,16 @@ for climatology, dec2006, and seasonal steady-state histories and control runs.
 Astrid added 5 new diagnostics to the tiegcm_diags branch, so now merge those
 changes to the trunk. This command was made from a trunk WC:
 svn merge $SVN/tiegcm/trunk@581 $SVN/tiegcm/branches/tiegcm_diags
+
+5/17/11:
+Add additional debug flags to scripts/Make.intel_hao64
+Minor clean-up so code will compile and run with ifort in full debug mode:
+  - Set periodic points of TLBC,ULBC,VLBC to zero after
+    reading (sub rdlbc in nchist.F)
+  - Define isv and alt and set to zero in sub cofrm in apex_subs.F
+
+5/17/11:
+Many changes to doc directory -- Add Release_Notes and README.download for
+v1.94, plus addition of pdf files user_guide.pdf and model_description.pdf,
+and directories userguide and description, which contain source code for
+user's guide and model description. Some old files were deleted.

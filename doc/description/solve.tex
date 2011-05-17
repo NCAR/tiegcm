@@ -1,0 +1,163 @@
+\section{Solving for the electric potential} \label{cap:solve}
+%
+In TIEGCM a multigrid solver is used which was developed by
+J. Adams. The source code and information can be found at
+http://www.scd.ucar.edu\-/css\-/software\-/mudpack/. In the original mudpack solver 
+the finite differencing and the setting of all the boundary conditions
+are part of solver package. For TIEGCM the stencil and the boundary
+conditions  are
+already set up in the TIEGCM code, and therefore the multigrid
+solver was modified accordingly. We have three different solver
+options in TIEGCM which are all based on the mudpack multigrid package.
+%
+\begin{itemize}
+  \item \flags{isolve=0} multigrid solver \src{mudcr2} (see section \ref{cap:mudsol})
+  \item \flags{isolve=1} multigrid solver \src{muhcr2} as direct solver (see section 
+         \ref{cap:directsol})
+  \item \flags{isolve=2} modified multigrid solver \src{mudcr2} (see section 
+         \ref{cap:modmudsol})
+\end{itemize}
+%
+%
+\subsection{Multigrid solver \texttt{mudcr2}}\label{cap:mudsol}
+%
+The \texttt{subroutine mud2cr} attempts to compute
+the second-order difference approximation to a two-dimensional
+linear nonseparable elliptic partial differential equation with cross
+derivative terms on a rectangle.  The approximation is generated on a
+uniform grid covering the rectangle. The parameters used for the multigrid solver 
+in TIEGCM are the following:
+%
+\begin{itemize}
+  \item \flags{intl=0}: this is an input to the subroutine and is zero for the initial
+           call to \texttt{mud2cr} to check for errors. After the initial 
+	   call of \texttt{mud2cr} \flags{intl=1} will be set and the PDE is solved.
+  \item boundary conditions: with x being the longitudinal direction and y the
+          latitudinal one from the equator to the pole.
+  \begin{itemize}  
+      \item \flags{nxa =0 }: flags boundary conditions on the edge x=xa. nxa = 0
+    		means the boundary condition is periodic in x on [xa,xb].
+      \item \flags{nxb =0}: flags boundary conditions on the edge x=xb.  nxb = 0
+    		means the boundary condition is periodic in x on [xa,xb].
+      \item \flags{nyc =2}: flags boundary conditions on the edge y=yc (equator). nyc = 2 means
+    		that there are mixed derivative boundary conditions at y=yc.
+      \item \flags{nyd =1}: flags boundary conditions on the edge y=yd (pole). nyd=1 means
+      that the boundary condition is specified and input thru the variable \src{phi}.
+  \end{itemize}
+  \item  defining the number
+    	    of grid points in x (longitude) and y (latitude) direction
+  \begin{itemize} 
+    \item \flags{ixp = 5}: ixp+1
+  	    is the number of points on the coarsest x grid visited during
+  	    multigrid cycling.
+    \item \flags{jyq = 3}: jyq+1 
+  	    is the number of points on the coarsest y grid visited during
+  	    multigrid cycling.
+    \item \flags{iex = 5}: integer exponent of 2 used in defining the number
+    	    of grid points in the x direction 
+    \item \flags{jey = 5}: integer exponent of 2 used in defining the number
+    	    of grid points in the y direction 
+    \item \flags{nx}: number of equally spaced grid points in the interval [xa,xb]
+    		$ nx = ixp \; 2^{iex-1} + 1$
+    \item \flags{ny}: number of equally spaced grid points in the interval [yc,yd]
+    		$ ny = jyq \; 2^{jey-1} + 1$
+  \end{itemize}
+  \item \flags{iguess = 0:} no initial guess is used  forcing full multigrid cycling
+  \item \flags{tolmax = 0.01}: 
+        tolmax is the maximum relative error tolerance
+	  used to terminate the relaxation iterations. Assume $\Phi_1$
+	  and $\Phi_2$ are the last two computed approximations at 
+	  the finest grid level. If we define \\
+	     $ \Phi_{diff} = max(|\Phi_2(i,j)-\Phi_1(i,j)|) \quad \text{for all} \quad i,j$
+	  and \\
+	      $ \Phi_{max} = max(|\Phi_2(i,j)|) \quad \text{for all} \quad i,j $
+	  then convergence is considered to have occurred if and only if
+	      $ \frac{\Phi_{diff}}{\Phi_{max}} < tolmax  $
+  \item \flags{maxcy = 150}: if $tolmax > 0.0$
+	  is input, which means error control is used, then maxcy is the limit on the number
+	  of cycles between the finest and coarsest grid levels. 
+	  When the multigrid iteration is working
+          correctly only a few cycles are required for convergence.
+  \item \flags{method = 3}: method of relaxation. If neither fx (the longitudinal
+       second order derivative $\Sigma_{\phi \phi}/ \Delta \phi^2$) or fy (the latitudinal
+       second order derivative $\Sigma_{\lambda \lambda}/ \Delta \lambda_0^2$) dominates 
+       over the solution region and they
+       both vary considerably choose method = 3, which uses line 
+       relaxation in both the x and y direction
+  \item \flags{nwork}: length of work array \\
+        $length = [7(nx+2)(ny+2)+4(11+isx+jsy)nx*ny]/3$
+  \item \flags{mgopt}: multigrid options the default values 
+     (2,2,1,3) in the vector \src{mgopt} were chosen for
+     robustness.
+     \begin{itemize}
+         \item \flags{mgopt(1) = 2}: w cycling 
+         \item \flags{mgopt(2) = 2}: the number of pre--relaxation 
+	   sweeps executed before the
+           residual is restricted and cycling is invoked at the next
+           coarser grid level
+         \item \flags{mgopt(3) = 1}: the number of post--relaxation sweeps executed after the cycling
+           has been invoked at the next coarser grid level and the residual
+           correction has been transferred back
+         \item \flags{mgopt(4) = 3}: multicubic prolongation 
+	      (interpolation) is used to
+              transfer residual corrections and the PDE approximation
+              from the coarse to the fine grid within full multigrid cycling.
+     \end{itemize}
+  \item output \flags{$\Phi$}: solution of PDE which is the electric potential
+  \item output \flags{ierror}: indicates invalid input arguments when
+          returned positive and nonfatal warnings when returned
+          negative.
+%
+\end{itemize}
+%
+If no convergence is reached with this version of the multigrid solver the direct
+solver described in section \ref{cap:directsol} is used.
+%
+\subsection{Multigrid solver \src{muhcr2} as direct solver}\label{cap:directsol}
+%
+This solver which is in \texttt{subroutine muh2cr} is originally a hybrid 
+multigrid/direct method which approximates the
+same 2-d nonseparable elliptic PDE as the mudpack solver \src{mud2cr}.
+Using a direct method combines the efficiency of multigrid iteration 
+with the certainty of
+a direct method.  The basic algorithm is modified by using banded
+Gaussian elimination in place of relaxation whenever the coarsest
+subgrid is encountered within the multigrid cycling.
+The solver becomes a full direct method if grid size arguments are chosen
+so that the coarsest and finest grids coincide, i.e.  choosing iex=jey=1
+and ixp=nx-1, jyq=ny-1. This will set the Gaussian elimination
+on the finest grid.  In this case, \texttt{subroutine muh2cr} produces a 
+direct solution
+to the same nonseparable elliptic PDE. In TIEGCM we are using the
+solver \src{muhcr2} only as a direct solver.
+%
+\subsection{Modified multigrid solver \src{mudcr2}}\label{cap:modmudsol}
+%
+This solver is the same as the solver in section \ref{cap:mudsol} only with the
+exception that the residual is calculated with the coefficient
+stencil without upwinding (see section \ref{chap:finitediff}). Therefore 
+the solution converges toward 
+the solution of the direct solver using the 
+coefficient stencil without the upwinding method.
+In general upwinding introduces unwanted numerical dissipation. 
+The unmodified
+coefficient stencil is stored in the array \src{cofum}. 
+In comparison with the solver in
+section \ref{cap:mudsol} the number of relaxation
+steps has to be increased to get convergence.
+%
+\begin{itemize}
+    \item \flags{mgopt(2) = 3}: the number of pre--relaxation 
+      sweeps executed before the
+      residual is restricted and cycling is invoked at the next
+      coarser grid level
+    \item \flags{mgopt(3) = 2}: the number of post--relaxation sweeps executed after cycling
+      has been invoked at the next coarser grid level and the residual
+      correction has been transferred back
+\end{itemize}
+%
+All the other parameters remain the same and can be found in section 
+\ref{cap:mudsol}.
+If no convergence is reached with this multigrid solver the direct
+solver described in section \ref{cap:directsol} is called.
+%

@@ -1,0 +1,31 @@
+\section{Introduction}\label{cap:intro}
+%
+This report presents the governing equations, physical 
+parameterizations and numerical algorithms used in the NCAR 
+Thermosphere-Ionosphere-Electrodynamics GCM version 1.8. The model description
+provides help on the major model component, numerics and coding implementation.
+
+The electrodynamic part of TIEGCM is a serial code, which uses finite differencing to
+discretize the stationary electrostatic equation. We assume that the field--lines are
+equipotential which reduces the 3D equation to 2D. In addition, at 
+low-- and mid--latitude hemispheric
+symmetry of the electric potential is assumed and therefore the 
+electrodynamo equation is only solved in one
+hemisphere. At high latitudes the electric
+potential is prescribed from empirical models e.g. Heelis or Weimer [literature].
+ \\
+
+\vspace{1cm}
+%
+\textbf{Conventions} \\
+%
+\begin{tabular}{l  l } 
+\command{command}	        &   bold \\
+\replaceable{template filenames}&   italics \\       
+\flags{flags}	                &   medium bold \\
+\directory{directories, files}  &   slanted \\
+\src{source code}               &   typewrite  \\ 	
+\myemph{keywords} 	        &   emphasize
+\end{tabular}
+%
+%\subsection{Brief History}\label{subcap:history}

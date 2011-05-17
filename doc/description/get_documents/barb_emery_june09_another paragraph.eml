@@ -1,0 +1,51 @@
+Return-Path: <emery@hao.ucar.edu>
+Received: from aurora.hao.ucar.edu (aurora.hao.ucar.edu [128.117.16.77])
+	by bear.hao.ucar.edu (8.13.8/8.13.8) with ESMTP id n541aChq007376;
+	Wed, 3 Jun 2009 19:36:12 -0600
+From: Barbara Emery <emery@hao.ucar.edu>
+Received: (from emery@localhost)
+	by aurora.hao.ucar.edu (8.11.7p3+Sun/8.12.10) id n541aCb18371;
+	Wed, 3 Jun 2009 19:36:12 -0600 (MDT)
+Date: Wed, 3 Jun 2009 19:36:12 -0600 (MDT)
+Message-Id: <200906040136.n541aCb18371@aurora.hao.ucar.edu>
+To: maute@hao.ucar.edu
+Cc: emery@hao.ucar.edu
+Subject: another paragraph
+
+3 June 2009
+
+Dear Astrid,
+
+This paragraph goes in 'Electron precipitation', between the first paragraph,
+and the second paragraph which should start with 'The TIEGCM defines..'.
+Please add this and the new text I put in by hand with Wenbin's comments
+in red before giving a clean copy to Alan to look at.  I put the corrections
+on your chair.
+
+Thanks!
+
+- Barbara
+
+P.S. I am gone until Monday June 8.
+
+
+The auroral radius (Ra) is set by the larger of:
+Ra(CPCP) = -0.43 + 9.69 * (CPCP**0.1875)        (2.11)
+or
+Ra(HP) = 14.20 + 0.96*Pl                        (2.12)
+where P1 = 2.09*ln(HP) is the hemisphere power level, so Ra=max(Ra(CPCP),Ra(HP)).
+Recall from Equation 2.4, that the Heelis radius of convection (theta0)
+is similar to Ra(CPCP) above, where CPCP**0.1875 is also used.
+[CONSIDER adding a plot of theta0 and Ra(CPCP) and Ra(HP) for
+Kp formalizations of HP and CPCP.]
+For the Weimer 2005 convection model, the Weimer CPCP averaged from both
+hemispheres is used to find the parameterized theta0(param) from Eq. 2.4,
+even though the real theta0=bndyfitr/2.  Ra(param) is the larger of
+Ra(CPCP) from Eq. 2.11 or Ra(HP) from Eq. 2.12.  The difference between
+the larger auroral radius and convection radius, or diffrac in wei05loc,
+is approximately 2.5 degrees, but varies.
+[CONSIDER another plot based on plot above of the difference between
+Ra(param) and theta0(param).]
+This parameterized difference in the radii is then used to find the
+auroral radius used with the Weimer 2005 ion convection radius where
+Ra(with Weimer 2005) = theta0(=bndfitr/2.) + diffrac    (2.13)

@@ -1,64 +1,75 @@
 
-Release notes for tiegcm1.93
-May 26, 2010
+Release notes for tiegcm1.94
+June 1, 2011
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+New validated features in the public release:
+
+  - Weimer 2005 electric potential model, optionally with IMF data.
+
+  - Dynamic critical cross-over latitudes for transition between
+    dynamo and empirical models at high-latitude.
+
+  - New diagnostics module (diags.F).  22 "sanctioned" diagnostic fields 
+    are available, and can be saved on secondary histories 
+    (see diags.table in doc directory).
+
+  - HPSS archive script can be saved by the model, to be executed after 
+    a run to save history files to the NCAR HPSS with "contents" annotations.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+New build system (scripts directory):
+  - Make.machine files contain platform and machine-specific compiler
+    and link options, library locations, etc. are available in scripts directory.
+  - New Makefile without platform-dependent conditionals.
+  - Support for Intel ifort/mpif90 compiler on 64-bit HAO Linux systems
+    (Intel-built code significantly faster than PGI-built code on systems
+     with Intel hardware)
+  - Write svnversion to history files.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Utilities (scripts directory):
+  - tgcm_contents	Print "contents" (annotations) of history files
+  - tgcm_ncdump		Print ncdump of history files, w/ data for scalars and 1d vectors
+  - tgcm_put		Archive history files on the NCAR HPSS system
+  - mknamelist		Generate namelist read input files
+  - mkjob		Generate job scripts for Linux or IBM
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Validation and benchmark runs (new tests directory):
+  - Setup scripts for benchmark runs are available in the tests directory
+  - The following benchmark runs have been performed with the current version:
+      o Seasonal start-up histories at smin, smax.
+      o One-year climatology run (Heelis potential with constant solar forcing)
+      o December, 2006 "AGU storm" case (Weimer/IMF and Heelis/GPI runs)
+      o November, 2003 storm case
+      o Whole-Heliosphere Interval (WHI)
+  - Results of the benchmark runs are available on the NCAR Community Data Portal
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Changes to namelist inputs:
+  - Weimer potential model with IMF data from IMF_NCFILE, and F10.7 data
+    from GPI_NCFILE
+  - HPSS_PATH specifies destination path to the NCAR HPSS, for history file 
+    archive script. (All references to the old NCAR MSS have been removed) 
+  - Time-dependent namelist option for F107a and F107d 
+  - The following namelist parameters are deprecated: SAVE, SECSAVE, DISPOSE
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Changes to the documentation directory "doc":
+  - All new User's Guide (pdf, html) is now provided in the doc directory.
+  - Model Description (pdf) also provided in the doc directory.
+  - README.download: Information and instructions for downloading the current version
+  - Release_Notes: Release notes for the current version (this document)
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Bug fixes:
-
-  - qinite.F : increase night-time ionization rates which is necessary
-    because the minimum electron density was removed in the previous versions
-    (elden.F)
-
-  - dynamo.F subroutine threed: the E_lam wasn't mapped in the horizontal
-    plane which gave wrong results close to the geomagnetic equator at
-    higher pressure levels (as a consequence EXB drift was wrong)
-
-  - efield.F in the mapping from magnetic to geographic grid real values
-    are put into integer w/o explicit conversion from real to integer.
-    This led to wrong mapping on 64-bit Linux systems.
-
-  - addiag.F: Use glat(j) instead of float(j) in calculation of c2, sub calczg.
-    Sub calczg calculates gravity-varying geopotential (geometric height) 
-    field ZG.
-
-  - fft9.F: Add ntrigs argument to FFT99B call from sub FFT99
-
-  - Weimer05 model:wei05sc.F: Fix error in f90 translation in sub interpol_quad 
-      (see comments in wei05sc.F). Also add routines to work around non-ANSI 
-      trig functions.
-     
+  - Change nmlon to nlonp1 where defining dynpot, line 292 of magfield.F
+  - Change op(k,i) to nop(k,i) in calculation of ion chemistry heating (qic).
+    Line 119 of qjion.F
+  
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-New namelist read parameter KP:
-  - KP can be specified either as a constant or multiple time-dependent values.
-  - If provided, empirical formulas will use the given KP to calculate CTPOTEN 
-    and/or POWER. 
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Change calculation of the sun's location from dipole coordinates to apex.
-  - Update IGRF coefficients with IGRF11 in apex_subs.F
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Option to write 4-byte floats or 8-byte doubles to secondary histories:
-  - New namelist input parameter SECH_NBYTE can be either 4 (to write
-    4-byte floats), or 8 (to write 8-byte doubles).
-  - Default is SECH_NBYTE = 4
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Script changes to enable parallel runs on hao 64-bit Linux systems:
-  - Changes to tiegcm-linux.job and tgcm_config in the scripts directory.
-  - Add PGI/pgf90 MPI env vars to tiegcm-linux.job
-  - To build and execute an MPI run on a 64-bit Linux machine, set the 
-    following in tiegcm-linux.job:
-      set mpi = TRUE
-      set nproc = 4 or 8
-    Then execute tiegcm-linux.job as usual.
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Minor changes to scripts/tiegcm-ibm.job to accomodate mpi=FALSE under AIX.
- - Also minor change to imf.F for the same reason (4-byte vs 8-byte integers).
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Year-end runs:
-  - Run to model time 366,0,0 (for non-leap years), or to 367,0,0 (for leap years)
-    This will be written to the history files as mtime 1,0,0 of the next year.
-    The 1,0,0 history can be used as the Source to start the following year.
+Msc:
+  - Changed units of f107d, f107a, ctpoten, and hpower on the histories.
+  - Divide by avogadro's number instead of multiplying by 1.66e-24 in
+    sub calczg (addiag.F).  

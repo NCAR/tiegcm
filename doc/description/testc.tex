@@ -1,0 +1,125 @@
+%
+\section{Calculation of Minor species $N(^2D)$,$N(^4S)$, and $NO$ / \index{COMP\_N2D.F}, \index{COMP\_N4S.F}, \index{COMP\_NO.F}}\label{cap:comp_n}
+%
+\subsection{calculation of $N(^2D)$}\label{subcap:comp_n2d}
+%
+The input to \src{subroutine comp\_n2d} is summarized in table
+\ref{tab:input_comp_n2d}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+mass mixing ratio $O_2$ &       $\Psi(O_2)$              & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $O$ &         $\Psi(O  )$              & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $NO$ &       $\Psi(NO)$              & $-$   &  midpoints & $t_n$\\
+electron density&       $Ne$              & $1/cm^3$   &  interfaces & $t_n$\\
+number density $O^+$&       $n(O^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $N(^2P)$&       $n(N(^2P))$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $NO^+$&       $n(NO^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+conversion factor&       $N \overline{m}$              & $\#/cm^3
+g/mole$   &  midpoints & $t_n$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine comp\_n2d}}
+\label{tab:input_comp_n2d}
+\end{table}
+%
+The output of \src{subroutine comp\_n2d} is summarized in table
+\ref{tab:output_comp_n2d}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline mass mixing ratio $N(^2D)$ &
+$\Psi(N(^2D))$ & $-$ & midpoints & $t_n+\Delta t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine comp\_n2d}}
+\label{tab:output_comp_n2d}
+\end{table}
+%
+$N(^2D)$ is assumed to be in photochemical equilibrium, such that
+the production $P(N(^2D))$ and loss rate $L(N(^2D))$ of $N(^2D)$ is
+balanced.
+%
+\begin{align}
+  n(N(^2D)) = \frac{P(N(^2D))}{L(N(^2D))}
+\end{align}
+%
+The production is due to solar EUV photodissociation of $N_2$, and
+ion and neutral chemistry
+%
+\begin{align}
+ P(N(^2D))(z+\frac{1}{2}\Delta z) = \frac{1}{2} \left[ Q_{tef}(z) +  Q_{tef}(z+\Delta z)\right]
+   br_{N^2D} + k_3 n(N_2^+)N \overline{m}\frac{\Psi(O)}{m_o} +
+   \left( \alpha_1 n(NO^+) 0.85 + \alpha_3 n(N_2^+) 0.9\right)
+   \sqrt{Ne(z) Ne(z+\Delta z}
+\end{align}
+%
+with the branching ratio of producing $N(^2D)$ which is set to 0.6.
+The chemical reaction rates are $\alpha$ and $k$ defined in the
+\src{chemrates\_module}. The total production rate due to solar
+radiation and auroral particle precipitation is denoted by $Q_{tef}$
+which is calculated in \src{subroutine qrj}. \\
+The loss term $L(N(^2D))$ is determined by
+%
+\begin{align}
+  L(N(^2D))(z+\frac{1}{2}\Delta z) = N\overline{m} \left[ \beta_2 \frac{\Psi(O_2)}{m_{O_2}} +
+     \beta_4 \frac{\Psi(O)}{m_{O}} +  \beta_6
+     \frac{\Psi(NO)}{m_{NO}}\right]+
+     \beta_7 + \beta_5\sqrt{Ne(z) Ne(z+\Delta z)} + k_{10}n(O^+)
+\end{align}
+%
+The chemical rates $\beta$ are defined in the module
+\src{chemrates\_module}. \\
+The number density $n(N(^2D))$ is converted to the mass mixing ratio
+by
+%
+\begin{align}
+  \Psi(N(^2D) = \frac{m_{N^2D}}{N \overline{m}}\frac{P(N(^2D))}{L(N(^2D))}
+\end{align}
+%
+
+\subsection{calculation of $N(^4S)$}\label{subcap:comp_n4s}
+%
+The input to \src{subroutine comp\_n4s} is summarized in table
+\ref{tab:input_comp_n4s}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+mass mixing ratio $O_2$ &       $\Psi(O_2)$              & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $O$ &         $\Psi(O  )$              & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $NO$ &       $\Psi(NO)$              & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $N(^2D)$ &       $\Psi(N(^2(D))$              & $-$   &  midpoints & $t_n$\\
+electron density&       $Ne$              & $1/cm^3$   &  interfaces & $t_n$\\
+number density $O_2^+$&       $n(O_2^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $O^+$&       $n(O^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $N_2^+$&       $n(N_2^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $N^4$&       $n(N^4)$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $NO^+$&       $n(NO^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+neutral temperature&       $Tn$              & $K$   &  midpoints & $t_n$\\
+mean molecular mass&       $\overline{m}$              & $g/mole????$   &  midpoints & $t_n$\\
+conversion factor&       $N \overline{m}$              & $\#/cm^3
+g/mole$   &  midpoints & $t_n$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine comp\_n4s}}
+\label{tab:input_comp_n2d}
+\end{table}
+%
+The output of \src{subroutine comp\_n4s} are the factor which define
+the lower boundary calculated in \src{subroutine minor} by solving
+$A\frac{d X}{dZ} + B X + C = 0$. Also the upward flux at the upper
+boundary is defined, and the production $P$ and loss rate $L$ of
+$N(^4S)$. These values are stored in module data of the module
+\src{comp\_n4s}. After \src{subroutine comp\_n4s} the
+\src{subroutine minor\_n4s} is called to calculate the mass mixing
+ratio of $N(^4S)$. \src{Subroutine minor\_n4s} is not described here
+since it just calls \src{subroutine minor}.

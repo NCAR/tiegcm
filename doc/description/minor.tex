@@ -1,0 +1,624 @@
+%
+\section{Calculation minor species $N(^4S)$ and $NO$, (and $HOx$ in TIMEGCM) \index{MINOR.F}}\label{cap:minor}
+%
+The input to \src{subroutine minor} is summarized in table
+\ref{tab:input_minor}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t_n$\\
+mass mixing ratio $O_2$ &   $\Psi(O_2)$        & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $O$   &   $\Psi(O)$          & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $X$   &   $\Psi(X)^{t_n}$    & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $X$   &   $\Psi(X)^{t_n+\Delta t}$ & $-$   &  midpoints & $t_n+ \Delta t$\\
+upward number flux at upper boundary &       $F_x^{upw,top}$              & $\#/cm^3$   &  $z_{top}$ & $t_n+\Delta t$\\
+diffusive vector &       $D_v$              & $???$   &  midpoints?? & $t_n??$\\
+molecular weight of species $X$ &       $m_X$              & $g/mole$   &  - & $-$\\
+thermal diffusion coefficient &       $D_T$              & $???$   &  midpoints??? & $t_n???$\\
+loss of $X$ &       $L_X$              & $???$   &  midpoints??? & $t_n????$\\
+production of $X$&       $P_X$              & $???$   &  midpoints??? & $t_n???$\\
+???coefficient of upward flux $A,B, C$ &
+        $A \frac{\partial \Psi_X}{\partial Z}+ B \Psi_X + C = 0$              & $???$   &  $z_{bot}$ & $t_n+\Delta t$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine minor}}
+\label{tab:input_minor}
+\end{table}
+%
+The output of \src{subroutine minor} is summarized in table
+\ref{tab:output_minor}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline mass mixing ratio of species $X$ &
+$\Psi(X)^{t_n,upd}$ & $-$ & interfaces??? & $t_n$ \\
+mass mixing ratio of species $X$ & $\Psi(X)^{t_n+\Delta t,upd}$ &
+$-$ & interfaces??? & $t_n+\Delta t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine minor}}
+\label{tab:output_minor}
+\end{table}
+%
+%
+The module data of \src{subroutine minor} is summarized in table
+\ref{tab:module_minor}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline background eddy diffusion    &
+{$K_E$} & $???$   & interfaces  & $-$
+\\ \hline \hline
+\end{tabular}
+\caption{Module data of \src{subroutine minor}}
+\label{tab:module_minor}
+\end{table}
+%
+Since the minor species $N(^4S)$ and $NO$ (and $HOx$ in TIMEGCM) 
+have longer life times,
+the neutral wind transport effects have to taken into account. The
+governing equation is (see \cite{roble1988}) Roble et al. 1988
+%
+\begin{align}
+  \frac{\partial {\Psi}}{\partial t} = &-e^{z}\frac{\partial}{\partial
+  Z}\left[ {A} \left(\frac{\partial}{\partial Z} -
+  {E}\right){\Psi}\right] \notag \\
+{}& + {S}{\Psi} - {R} - \left[ \mathbf{v}_n \cdot
+\nabla {\Psi} + W_n \frac{\partial {\Psi}}{\partial
+Z}\right] \notag \\
+{} & + e^z \left[ e^{-z} K_E \left( \frac{\partial}{\partial Z} +
+\frac{1}{\overline{m}}\frac{\partial \overline{m}}{\partial
+Z}\right){\Psi}\right] + H_{sub} \label{eq:minor_goveq}
+\end{align}
+%
+with
+%
+\begin{align}
+  \tilde{E} = \left( 1-\frac{{m}}{\overline{m}} -
+  \frac{1}{\overline{m}}\frac{\partial \overline{m}}{\partial
+  Z}\right) - \tilde{\alpha}\frac{1}{T_n}\frac{\partial T_n}{Z} +
+  \tilde{F}\tilde{\Psi} \label{eq:minor_tildeE}
+\end{align}
+%
+
+The vertical molecular diffusion coefficient is ${A}$, the
+production term is ${S}$, the loss term is ${R}$, the
+term ${E}$ includes the effects of gravity, thermal diffusion
+and friction with the major species on the vertical profile of the
+two species ($O_x, O_2$ ). The matrix operator for frictional interaction is
+$\tilde{F}$, the thermal diffusion coefficient is ${\alpha}$,
+and the mean molecular mass is $\overline{m}$, and $\Psi$ stands for the mass
+mixing ratio of either $NO$, $N(4S)$ or $HOx$. In TIEGCM $O_x$ is simply $O$,
+whereas in TIMEGCM, it is $O_3+O$. The horizontal diffusion caused by
+sub-grid processes which cannot be resolved by the model is added in by
+$H_{sub}$, and calculated in \src{subroutine hdif} \\
+
+The temporal change in the mass mixing ratio on the left hand side
+of eq.(\ref{eq:minor_goveq}) is equal to the vertical molecular
+diffusion which is denoted by the first term on the right hand side,
+the production and loss of the minor species (term two and three in
+eq.(\ref{eq:minor_goveq})), the horizontal and vertical nonlinear
+advection term (fourth term), and the vertical eddy diffusion (fifth
+term). The temporal term and all terms dependent with $Z$
+derivatives are treated implicit. The solver needs the equation in
+the following from
+%
+\begin{align}
+  P_k\Psi_{k-1}^{t+\Delta t}+ Q_k\Psi_{k}^{t+\Delta t}+
+   R_k\Psi_{k+1}^{t+\Delta t} = f_k \label{eq:minor_trisolver}
+\end{align}
+%
+where $P_k$, $Q_k$, $R_k$, and $f_k$ are deterimned at timestep $t$ at
+midpoints. $\Psi_{k-1,k+1}^{t+\Delta t}$ are also at midpoints but at the next
+timestep $t+\Delta t$, $k$ stands for the index of the vertical grid. 
+The equation \ref{eq:minor_goveq}) can be
+rearranged and multiplied by $e^{-z}$ which will lead to
+%
+\begin{align}
+  {}& e^{-z} \frac{\Psi_n^{t+\Delta t}}{2 \Delta t} + \frac{\partial}{\partial Z}
+   \left[A_n  \frac{\partial}{\partial Z} - E_n \Psi_n^{t+\Delta
+   t}\right] \notag \\
+   {}& -e^{-z} S \Psi_n^{t+\Delta
+   t}+ e^{-z} W_n \frac{\partial \Psi^{t+\Delta t}}{\partial
+   Z} - \frac{\partial}{\partial Z} \left\{e^{-z} K_E  \frac{\partial}{\partial Z}+
+   \frac{1}{\overline{m}}\frac{\partial\overline{m}}{\partial
+   Z} \Psi^{t+\Delta t}\right\} = \notag \\
+   {}& -e^{-z}R - e^{-z}\left\{ \mathbf{v}_n \cdot \nabla \Psi^{t}\right\}
+   + e^{-z}\frac{\Psi^{t-\Delta t}}{2 \Delta t} + e^{-z} H_{sub}
+\end{align}
+%
+The second term is discretized by
+%
+\begin{align}
+  \frac{\partial}{\partial Z}\left[
+   A_n \frac{\partial}{\partial Z} \Psi_n^{t+\Delta t} \right]= & \frac{1}{\Delta
+   z^2}\{ A_n(z-\frac{1}{2}\Delta z) \Psi^{t+\Delta t}(z-\Delta z)
+    - \notag \\
+    {} & \left[ A_n(z+\frac{1}{2}\Delta z)+ A_n(z-\frac{1}{2}\Delta z)\right]
+   \Psi^{t+\Delta t}(z) + \notag \\
+   {} & A_n(z+\frac{1}{2}\Delta z) \Psi^{t+\Delta t}(z+\Delta z) \}
+\end{align}
+%
+The third term by
+%
+\begin{align}
+  {} &-\frac{\partial}{\partial Z}\left[
+   A_n E_n \Psi_n^{t+\Delta t} \right]=   \frac{1}{\Delta
+   z} \{- A_n(z-\frac{1}{2}\Delta z)E_n(z-\frac{1}{2}\Delta z) \Psi^{t+\Delta t}(z-\Delta z)
+    - \notag \\
+    {} & \left[ -A_n(z+\frac{1}{2}\Delta z)E_n(z+\frac{1}{2}\Delta z)+ A_n(z-\frac{1}{2}\Delta z)E_n(z-\frac{1}{2}\Delta z)\right]
+   \Psi^{t+\Delta t}(z) + \notag \\
+   {} & A_n(z+\frac{1}{2}\Delta z)E_n(z+\frac{1}{2}\Delta z) \Psi^{t+\Delta t}(z+\Delta z)
+     \}
+\end{align}
+%
+The fifth term is discretized by
+%
+\begin{align}
+  e^{-z} W_n \frac{\partial \Psi^{t+\Delta t}}{\partial Z} = & \frac{1}{2 \Delta
+  z} e^{-z} W_n(z)\Psi^{t+\Delta t}(z+\Delta z) - \notag \\
+  {} & \frac{1}{2 \Delta
+  z} e^{-z} W_n(z)\Psi^{t+\Delta t}(z-\Delta z)
+\end{align}
+%
+the sixth term by
+%
+\begin{align}
+   - \frac{\partial}{\partial Z}&\left[ e^{-z} K_E \frac{\partial}{\partial Z}
+   \Psi^{t+\Delta t}\right] = -\frac{1}{\Delta z^2}[ e^{-z+\frac{1}{2}\Delta z}
+   K_E (z-\frac{1}{2}\Delta z) \Psi^{t+\Delta t}(z-\Delta z)- \notag \\
+   {} &  \left\{
+   e^{-z-\frac{1}{2}\Delta z} K_E(z+\frac{1}{2}\Delta z) +
+   e^{-z+\frac{1}{2}\Delta z} K_E(z-\frac{1}{2}\Delta z)\right\}\Psi^{t+\Delta t}(z)
+   + \notag \\
+   {} & e^{-z-\frac{1}{2}\Delta z} K_E(z+\frac{1}{2}\Delta z)\Psi^{t+\Delta t}(z+\Delta z) ]
+\end{align}
+%
+and the seventh term is
+%
+\begin{align}
+ - \frac{\partial}{\partial Z}  e^{-z} K_E &
+   \frac{1}{\overline{m}}\frac{\partial\overline{m}}{\partial
+   Z} \Psi^{t+\Delta t} = -\frac{1}{\Delta z^2}[ \notag \\
+   {} & e^{-z+\frac{1}{2}\Delta z}
+   K_E (z-\frac{1}{2}\Delta z) \frac{m(z-\Delta z)}{\overline{m}(z-\frac{1}{2}\Delta z)}\Psi^{t+\Delta t}(z-\Delta z)-
+   \notag \\
+   {}& \{
+   e^{-z-\frac{1}{2}\Delta z} K_E(z+\frac{1}{2}\Delta z)\frac{m(z)}{\overline{m}(z+\frac{1}{2}\Delta z)} +
+    \notag \\
+   {} & e^{-z+\frac{1}{2}\Delta z} K_E(z-\frac{1}{2}\Delta z)\frac{m(z)}{\overline{m}(z-\frac{1}{2}\Delta z)}\}\Psi^{t+\Delta t}(z)
+   + \notag \\
+   {} & e^{-z-\frac{1}{2}\Delta z} K_E(z+\frac{1}{2}\Delta z)\frac{m(z+\Delta z)}
+   {\overline{m}(z+\frac{1}{2}\Delta z)}\Psi^{t+\Delta t}(z+\Delta z)]
+\end{align}
+%
+and
+%
+\begin{align}
+  -e^{-z}S \Psi^{t+\Delta t}(z)
+\end{align}
+%
+%
+Rearranging according to eq. (\ref{eq:minor_trisolver}) leads to the
+coefficients
+%
+\begin{align}
+ P =& \frac{1}{\Delta^2 z}\tilde{A}(z)+ \frac{1}{\Delta
+ z}\tilde{A}(z)\tilde{E}(z) - \frac{1}{2 \Delta z} e^{-z} W(z+\frac{1}{2}\Delta
+ z)- \notag \\
+ {} & \frac{1}{\Delta^2 z} e^{-z+\Delta z}K_E(z) - \frac{1}{\Delta^2 z}e^{-z+\Delta
+ z}K_E(z)\frac{m(z-\frac{1}{2}\Delta z)}{\overline{m}(z)} \\
+%
+ R =& \frac{1}{\Delta^2 z}\tilde{A}(z+\Delta z)- \frac{1}{\Delta
+ z}\tilde{A}(z+\Delta z)\tilde{E}(z+\Delta z) + \notag \\
+ {} & \frac{1}{2 \Delta z} e^{-z} W(z+\frac{1}{2}\Delta
+ z)- \frac{1}{\Delta^2 z} e^{-z}K_E(z+\Delta z) - \notag \\
+ {} & \frac{1}{\Delta^2 z}e^{-z}K_E(z+\Delta z)
+ \frac{m(z-\frac{3}{2}\Delta z)}{\overline{m}(z+\Delta z)} \\
+%
+ Q =& \frac{e^{-z}}{2 \Delta t} - \frac{1}{\Delta^2 z}[\tilde{A}(z+\Delta z)+\tilde{A}(z)]+
+   \notag \\
+  {} & \frac{1}{\Delta
+ z}[\tilde{A}(z+\Delta z)\tilde{E}(z+\Delta z)+\tilde{A}(z)\tilde{E}(z)]-e^{-z}S
+ + \notag \\
+ {} &
+ - \frac{1}{\Delta^2 z} [e^{-z}K_E(z+\Delta z)+ e^{-z+\Delta
+ z}K_E(z)] \notag \\
+ {} & - \frac{1}{\Delta^2 z}[e^{-z}K_E(z+\Delta z)
+ \frac{m(z+\frac{1}{2}\Delta z)}{\overline{m}(z+\Delta z)} + \notag \\
+ {} & e^{-z+\frac{1}{2}\Delta z}K_E(z)
+ \frac{m(z+\frac{1}{2}\Delta z)}{\overline{m}(z)}]\\
+%
+ f =& -e^{-z}R -e^{-z}\mathbf{v}_n\cdot \Psi^{t_n} + e^{-z}\frac{\Psi^{t_n-\Delta t}}{2 \Delta t}
+\end{align}
+%
+\\
+
+The lower boundary condition is ???? not used in the code?????
+%
+\begin{align}
+  \frac{1}{2}(\Psi(z_{bot}-\Delta z) + \Psi(z_{bot}+\Delta z)) = \Psi(z_{bot})
+\end{align}
+%
+which leads to
+%
+\begin{align}
+  \Psi(z_{bot}-\Delta z) = 2 \Psi(z_{bot}) - \Psi(z_{bot}+\Delta z)
+\end{align}
+%
+Inserting into the equation (\ref{eq:minor_trisolver})
+%
+\begin{align}
+  \left\{ -P(z_{bot}) + Q(z_{bot})\right\} \Psi(z_{bot}) +& R(z_{bot}) \Psi(z_{bot}+\Delta
+  z) = \notag \\
+  {} & f(z_{bot}) - 2 \Psi(z_{bot})P(z_{bot})
+\end{align}
+%
+\\
+
+The upper boundary is ???? not used in the code ?????
+%
+\begin{align}
+ \frac{\partial}{\partial Z} \Psi = \epsilon \Psi
+\end{align}
+%
+which leads to
+%
+\begin{align}
+  \frac{\Psi(z_{top})-\Psi(z_{top}-\Delta z)}{\Delta z} = \frac{\epsilon(z_{top}-
+   \frac{1}{2}\Delta z)}{2}\left( \Psi(z_{top}) + \Psi(z_{top} - \Delta z)\right)
+\end{align}
+%
+and the value for $\Psi(z_{top})$
+%
+\begin{align}
+ \Psi(z_{top}) = \frac{1+ \Delta z\frac{\epsilon(z_{top}-
+   \frac{1}{2}\Delta z)}{2}}{1- \Delta z \frac{\epsilon(z_{top}-
+   \frac{1}{2}\Delta z)}{2}} \Psi(z_{top} - \Delta z)
+\end{align}
+%
+Inserting into the equation (\ref{eq:minor_trisolver})
+%
+\begin{align}
+   & P(z_{top}-\Delta z) \Psi(z_{top}-2 \Delta z) + \{ Q(z_{top}-\Delta z)
+    + \notag \\
+    {} &  R(z_{top}-\Delta z)\}\frac{1+ \Delta z\frac{\epsilon(z_{top}-
+   \frac{1}{2}\Delta z)}{2}}{1- \Delta z \frac{\epsilon(z_{top}-
+   \frac{1}{2}\Delta z)}{2}} \Psi(z_{top} - \Delta z) = f(z_{top}-\Delta z)
+\end{align}
+%
+
+In the code first the thermal diffusion coefficient $\tilde{\alpha}$
+is set with the diffusion vector $\Phi_1 = (0,1.35,1.11)$ and
+$\Phi_2 = (0.673, 0,0.769)$ independent of the species, and the
+vector $\Phi_x$ depending on the species.
+%
+\begin{align}
+  \alpha_{12} = & \Phi_{12}-\Phi_{13} \notag \\
+  \alpha_{21} = & \Phi_{21}-\Phi_{23} \notag \\
+  \alpha_{x1} = & \Phi_{x1}-\Phi_{x3} \notag \\
+  \alpha_{x2} = & \Phi_{x2}-\Phi_{x13}
+\end{align}
+%
+The values $\Psi_x^{t_n-\Delta t}$ are smoothed with the Shapiro
+smoother, first in latitude,
+%
+\begin{align}
+  {}&\Psi_x^{t_n-\Delta t,lat} = \Psi_x^{t_n-\Delta t} - 0.003[
+   \Psi_x^{t_n-\Delta t}(\phi,\lambda-2 \Delta \lambda)+
+   \Psi_x^{t_n-\Delta t}(\phi,\lambda+2 \Delta \lambda)- \notag \\
+   {} & 4\left(
+   \Psi_x^{t_n-\Delta t}(\phi,\lambda+\Delta \lambda)+
+   \Psi_x^{t_n-\Delta t}(\phi,\lambda-\Delta \lambda)
+   \right)+6
+   \Psi_x^{t_n-\Delta t}(\phi,\lambda)]
+\end{align}
+%
+ and then in longitude
+%
+\begin{align}
+  {} & \Psi_x^{t_n-\Delta t,smo} =\Psi_x^{t_n-\Delta t,lat} - 0.003[
+   \Psi_x^{t_n-\Delta t,lat}(\phi-2\Delta \phi,\lambda)+ \notag \\
+   {} & \Psi_x^{t_n-\Delta t,lat}(\phi+2\Delta \phi,\lambda)-
+   4 (
+   \Psi_x^{t_n-\Delta t,lat}(\phi-\Delta \phi,\lambda)+ \notag \\
+   {} & \Psi_x^{t_n-\Delta t,lat}(\phi+\Delta \phi,\lambda)
+   )+6
+   \Psi_x^{t_n-\Delta t,lat}(\phi,\lambda)]
+\end{align}
+%
+The horizontal advection $\mathbf{v}_n \cdot \nabla \Psi_x$ is
+calculated in \src{subroutine advec}, with
+%
+\begin{align}
+   u_n^{\phi}(\phi,\lambda)&= \frac{1}{2}[u_n(\phi+\Delta \phi,\lambda)+ u_n(\phi-\Delta
+   \phi,\lambda)] \notag \\
+   u_n^{2\phi}(\phi,\lambda) &= \frac{1}{2}[u_n(\phi+2\Delta \phi,\lambda)+ u_n(\phi-2\Delta
+   \phi,\lambda)] \notag \\
+   v_n^{\lambda}(\phi,\lambda) &= \frac{1}{2}[v_n(\phi,\lambda+\Delta \lambda)+ v_n(\phi,\lambda-\Delta
+   \lambda)] \notag \\
+   v_n^{2\lambda}(\phi,\lambda)&e = \frac{1}{2}[v_n(\phi,\lambda+2\Delta \lambda)+ v_n(\phi,\lambda-2\Delta
+   \lambda)]
+\end{align}
+%
+and the terms
+%
+\begin{align}
+  T_1(\phi,\lambda) & = \frac{1}{R_E \cos \lambda }
+   \{ \frac{2}{3 \Delta \phi} u_n^{\phi}(\phi,\lambda)
+     \left[\Psi_x(\phi+\Delta \phi,\lambda) -
+    \Psi_x(\phi-\Delta \phi,\lambda)\right]- \notag \\
+    {} & \frac{1}{12 \Delta \phi} u_n^{2\phi}(\phi,\lambda)
+     \left[\Psi_x(\phi+2\Delta \phi,\lambda) -
+    \Psi_x(\phi-2\Delta \phi,\lambda)\right] \} \\
+%
+  T_2(\phi,\lambda) &= \frac{1}{R_E } \{ \frac{2}{3 \Delta \lambda}
+  v_n^{\lambda}(\phi,\lambda)
+     \left[\Psi_x(\phi,\lambda+\Delta \lambda) -
+    \Psi_x(\phi,\lambda-\Delta \lambda)\right]- \notag \\
+    {} & \frac{1}{12 \Delta \lambda} v_n^{2\lambda}(\phi,\lambda)
+     \left[\Psi_x(\phi,\lambda+2\Delta \lambda) -
+    \Psi_x(\phi,\lambda-2\Delta \lambda)\right] \}
+\end{align}
+%
+The advection $\mathbf{v}_n \cdot \nabla \Psi_x$ is then
+%
+\begin{align}
+  \mathbf{v}_n \cdot \nabla \Psi_x = T_1 + T_2
+\end{align}
+%
+
+At the lower boundary the following values are set ??? which
+level$z_{bot}-\frac{1}{2}\Delta z$ such that it fits afterward????
+%
+\begin{align}
+  \Psi(O_2)(z_{bot}-\frac{1}{2}\Delta z)=&  b_{11}\Psi(O_2)(z_{bot}+\frac{1}{2}\Delta z)
+      + \notag \\
+      {} & b_{12}\Psi(O)(z_{bot}-\frac{1}{2}\Delta z) + F_b(1) \\
+  \Psi(O)(z_{bot}-\frac{1}{2}\Delta z)= & b_{21}\Psi(O_2)(z_{bot}+\frac{1}{2}\Delta z)
+      + \notag \\
+      {} & b_{22}\Psi(O)(z_{bot}-\frac{1}{2}\Delta z) + F_b(2)
+\end{align}
+%
+with $b_{11}, b_{12}, b_{22}, b_{21}$ and $\mathbf{F}_b$ from the
+file \src{bndry.F} and \src{subroutine bndcmp}. The mean molecular
+mass is
+%
+\begin{align}
+  \overline{m}(z_{bot}-\frac{1}{2}\Delta z) =&  [ \frac{\Psi(O_2)}{m_{O_2}}(z_{bot}-\frac{1}{2}\Delta z)
+     +  \frac{\Psi(O)}{m_{O}} (z_{bot}-\frac{1}{2}\Delta z)+ \notag \\
+     {} &
+     \frac{1-\Psi(O_2)-\Psi(O)}{m_{N_2}}(z_{bot}-\frac{1}{2}\Delta z) ]^{-1}
+\end{align}
+%
+The $N_2$ number density is
+%
+\begin{align}
+  \Psi(N_2)(z+\frac{1}{2} \Delta z) =1- \Psi(O_2)(z+\frac{1}{2} \Delta z)-
+     \Psi(O)(z+\frac{1}{2} \Delta z)
+\end{align}
+%
+and the mean molecular mass is
+%
+\begin{align}
+  \overline{m}(z+\frac{1}{2}\Delta z) & = [ \frac{\Psi(O_2)}{m_{O_2}}(z+\frac{1}{2}\Delta z)
+     +  \frac{\Psi(O)}{m_{O}} (z+\frac{1}{2}\Delta z)+ \notag \\
+    {} &  \frac{\Psi(N_2)}{m_{N_2}}(z+\frac{1}{2}\Delta z) ]^{-1}
+\end{align}
+%
+At the lower boundary the following quantities are calculated
+%
+\begin{align}
+  \overline{m}(z_{bot}) = & \frac{1}{2}[\overline{m}(z_{bot}-\frac{1}{2}\Delta z)+
+  \overline{m}(z_{bot}-\frac{1}{2}\Delta z)] \\
+  \frac{d \overline{m}}{dz}(z_{bot}) = & \frac{\overline{m}(z_{bot}+\frac{1}{2}\Delta z)
+     - \overline{m}(z_{bot}-\frac{1}{2}\Delta z)}{\Delta z} \\
+  \Psi(O)(z_{bot})= &\frac{1}{2}[\Psi(O)(z_{bot}-\frac{1}{2}\Delta z)+
+    \Psi(O)(z_{bot}+\frac{1}{2}\Delta z)] \\
+  \Psi(O_2)(z_{bot})= &\frac{1}{2}[\Psi(O_2)(z_{bot}-\frac{1}{2}\Delta z)+
+    \Psi(O_2)(z_{bot}+\frac{1}{2}\Delta z)] \\
+  \frac{d \Psi(O)}{dz}(z_{bot}) = & \frac{\Psi(O)(z_{bot}+\frac{1}{2}\Delta z)
+     - \Psi(O)(z_{bot}-\frac{1}{2}\Delta z)}{\Delta z} \\
+  \frac{d \Psi(O_2)}{dz}(z_{bot}) = & \frac{\Psi(O_2)(z_{bot}+\frac{1}{2}\Delta z)
+     - \Psi(O_2)(z_{bot}-\frac{1}{2}\Delta z)}{\Delta z}
+\end{align}
+%
+At all other levels these quantities are
+%
+\begin{align}
+  \overline{m}(z) = & \frac{1}{2}[\overline{m}(z+\frac{1}{2}\Delta z)+
+  \overline{m}(z-\frac{1}{2}\Delta z)] \\
+  \frac{d \overline{m}}{dz}(z) = & \frac{\overline{m}(z+\frac{1}{2}\Delta z)
+     - \overline{m}(z-\frac{1}{2}\Delta z)}{\Delta z} \\
+  \Psi(O)(z)= &\frac{1}{2}[\Psi(O)(z+\frac{1}{2}\Delta z)+
+    \Psi(O)(z-\frac{1}{2}\Delta z)] \\
+  \Psi(O_2)(z_{bot})= &\frac{1}{2}[\Psi(O_2)(z+\frac{1}{2}\Delta z)+
+    \Psi(O_2)(z-\frac{1}{2}\Delta z)] \\
+  \frac{d \Psi(O)}{dz}(z) = & \frac{\Psi(O)(z+\frac{1}{2}\Delta z)
+     - \Psi(O)(z-\frac{1}{2}\Delta z)}{\Delta z} \\
+  \frac{d \Psi(O_2)}{dz}(z) = & \frac{\Psi(O_2)(z+\frac{1}{2}\Delta z)
+     - \Psi(O_2)(z-\frac{1}{2}\Delta z)}{\Delta z}
+\end{align}
+%
+The neutral temperature at the interfaces is set by
+%
+\begin{align}
+  T_n(z_{bot}) = & T_n(z_{LB}) \notag \\
+  T_n(z_{top}) = & T_n(z_{top}-\frac{1}{2} \Delta z) \notag \\
+  T_n(z) = & \frac{1}{2} [ T_n(z + \frac{1}{2}\Delta z) + T_n(z - \frac{1}{2}\Delta
+  z)]
+\end{align}
+%
+The production is calculated by
+%
+\begin{align}
+  P_0 = P_x \frac{m_x k_B T_n(z+\frac{1}{2}\Delta z}
+       {p_0 e^{-z-\frac{1}{2}\Delta z}\overline{m}(z+\frac{1}{2}\Delta z)}
+\end{align}
+%
+and stored in \src{s0prod}. The production $P_x$ for the specie $x$
+is input to the subroutine, and is multiplied by $\frac{m_x}{N
+\overline{m}}$. ???? does this make sense?????
+%
+The final thermal diffusion coefficients are determined ?????
+%
+\begin{align}
+  \alpha_{11,f} = & -[\phi_{13}+\alpha_{12}\Psi(O)(z)] \notag \\
+  \alpha_{12,f} = & -\alpha_{12}\Psi(O_2)(z) \notag \\
+  \alpha_{21,f} = & -[\alpha_{21}\Psi(O)(z) \notag \\
+  \alpha_{22,f} = & -[\phi_{23}+\alpha_{21}\Psi(O_2)(z)] \notag \\
+\end{align}
+%
+The quantity $1
+-\frac{\tilde{m}}{\overline{m}}-\frac{1}{\overline{m}}\frac{\overline{m}}{\partial
+Z} +\tilde{F} \tilde{\Psi}$ is calculated and stored in the variable
+\src{ex} ?????
+%
+\begin{align}
+  T_{ex} =&  \{ (\alpha_{x1} \alpha_{22,f}-\alpha_{x2}\alpha_{21,f})\left[
+     \frac{d \Psi(O_2)}{dZ}- \left(1 - \frac{m_{O_2}+\frac{d \overline{m}}{d Z}}
+     {\overline{m}}\right)\Psi(O_2)\right] + \notag \\
+     {} & (\alpha_{x2} \alpha_{11,f}-\alpha_{x1}\alpha_{12,f})\left[
+     \frac{d \Psi(O)}{dZ}- \left(1 - \frac{m_{O}+\frac{d \overline{m}}{d Z}}
+     {\overline{m}}\right)\Psi(O)\right] \} \notag \\
+     {} & \frac{1}{\alpha_{11,f}\alpha_{22,f}
+     - \alpha_{12,f}\alpha_{21,f}} + 1 - \frac{m_{X}+\frac{d \overline{m}}{d Z}}
+     {\overline{m}} \label{eq:minor_Tex}
+\end{align}
+%
+The vertical molecular diffusion coefficient $\tilde{A}$ is
+determined by
+%
+\begin{align}
+  \tilde{A} = - \frac{\overline{m}(z)}{\tau m_{N_2}}\left( \frac{T_0}{T_n(z)}
+  \right)^{0.25}\left\{ \phi_{x3} + \alpha_{x1}\Psi(O_2)(z) +
+  \alpha_{x2}\Psi(O)\right\}^{-1}
+\end{align}
+%
+with $\tau = 1.86 \cdot 10^{3}$, and $T_0 = 273 K$. The value is
+stored in the variable \src{ax} in the source code. The effects of
+gravity, thermal diffusion and the frictional interaction with the
+major species is expressed by the variable $\tilde{E}$ given by eq.
+(\ref{eq:minor_tildeE})
+%
+\begin{align}
+  T_{thdiff}(z) = T_{ex} -\alpha_X \frac{T_n(z+\Delta z)- T_n(z-\Delta z}{2 \delta z T_n(z)}
+\end{align}
+%
+and $T_{ex}$ given by the expression in eq. (\ref{eq:minor_Tex}).
+The quantity $T_{thdiff}$ is stored in the variable \src{thdiff} in
+the source code. At the lower boundary the value is
+%
+\begin{align}
+  T_{thdiff}(z_{bot}) = T_{ex}(z_{bot}) -\alpha_X \frac{T_n(z_{bot}+\Delta z)-
+  T_n(z_{bot}}{ \Delta z T_n(z_{bot})} \notag \\
+  T_{thdiff}(z_{top}) = T_{ex}(z_{top}) -\alpha_X \frac{T_n(z_{top})-
+  T_n(z_{top}-\Delta z}{ \Delta z T_n(z_{top})}
+\end{align}
+%
+If the INPUT flag \verb"difhor" is set (>0) then the horizontal
+variation of the eddy diffusion and thermal conductivity ???? is set
+by
+%
+\begin{align}
+  |\lambda_r| \geq 40^o \;\;\; & d_{fac} = hor(\lambda)+ 1.0 \notag \\
+  |\lambda_r| < 40^o \;\;\; & d_{fac} = hor(\lambda)+
+  \frac{1}{2}\left( 1 + \sin{\Pi \frac{|\lambda_r| - \frac{\Pi}{9}}{\Pi/4.5}}\right)
+\end{align}
+%
+with $\lambda_r$ going from the south pole to the north pole????
+check $ |\lambda_r|$ ?????
+\\
+
+The coefficients for the equation (\ref{eq:minor_trisolver}) which
+is solved for the mass mixing ratio are ???? check the pressure
+levels and with the equation at the beginning??????
+%
+\begin{align}
+  P = & \frac{\tilde{A}(k)}{\Delta z}\left( \frac{1}{\Delta z} + \frac{1}{2} T_{thdiff(k)}
+  \right) - \notag \\
+  {} & e^{-z -\frac{1}{2}\Delta z} [e^{\frac{1}{2}\Delta z} K_E(k)
+  d_{fac} \left\{ \frac{1}{\Delta z} - \frac{1}{2}
+  \frac{d\overline{m}}{dz}(k)\right\} + \notag \\
+  {} & \frac{1}{4} \left\{ W(z)+W(z+\Delta z)\right\}
+  ]\frac{1}{\Delta z}
+\end{align}
+%
+\begin{align}
+  R = & \frac{\tilde{A}(k+1)}{\Delta z}\left( \frac{1}{\Delta z} - \frac{1}{2} T_{thdiff(k+1)}
+  \right) - \notag \\
+  {} & e^{-z -\frac{1}{2}\Delta z} [e^{-\frac{1}{2}\Delta z} K_E(k+1)
+  d_{fac} \left\{ \frac{1}{\Delta z} + \frac{1}{2}
+  \frac{d\overline{m}}{dz}(k+1)\right\} - \notag \\
+  {} &  \frac{1}{4} \left\{ W(z)+W(z+\Delta z)\right\}
+  ]\frac{1}{\Delta z}
+\end{align}
+%
+\begin{align}
+  Q =& - \{ \frac{\tilde{A}(k)}{\Delta z}\left( \frac{1}{\Delta z} -
+   \frac{1}{2} T_{thdiff(k)} + \frac{\tilde{A}(k+1)}{\Delta z}\left( \frac{1}{\Delta z}
+   + \frac{1}{2} T_{thdiff(k+1)}
+  \right) \right\}+ \notag \\
+  {} & e^{-z -\frac{1}{2}\Delta z}( e^{\frac{1}{2}\Delta z} K_E(k)
+  d_{fac} \left\{ \frac{1}{\Delta z} + \frac{1}{2}
+  \frac{d\overline{m}}{dz}(k)\right\} + \notag \\
+  {} & e^{-\frac{1}{2}\Delta z} K_E(k+1)
+  d_{fac} \left\{ \frac{1}{\Delta z} - \frac{1}{2}
+  \frac{d\overline{m}}{dz}(k)\right\})\frac{1}{\Delta z}-
+  L(l)+\frac{1}{2 \Delta t} \}
+\end{align}
+%
+\begin{align}
+  f = e^{-z -\frac{1}{2}\Delta z}\left\{ \frac{\Psi_X^{t-\Delta t,smo}}{2 \Delta t} -
+       \mathbf{v}_n\cdot \nabla \Psi(k) + R(k) \right\}
+\end{align}
+%
+At the lower boundary
+%
+\begin{align}
+  Q^*(k_{bot}) =&  Q(k_{bot}) + P(k_{bot})\frac{F(1) + 0.5 F(2)\Delta z}
+        {F(1) - 0.5 F(2)\Delta z} \notag \\
+  f^*(k_{bot}) =& f(k_{bot}) -P(k_{bot}) \frac{F(3)\Delta z}
+        {F(1) - 0.5 F(2)\Delta z}  \notag \\
+  P^*(k_{bot}) =& 0
+\end{align}
+%
+with $F$ the coefficient $A, B, C$ of the upward flux which are
+input to the \src{subroutine minor}. The upper boundary is set by
+%
+\begin{align}
+  P^*(k_{top}) =& 1+\frac{1}{2}\Delta z T_{thdiff}(k_{top}) \notag \\
+  Q^*(k_{top}) =& P^*(k_{bot}) - 2. \notag \\
+  R^*(k_{top}) =& 0. \notag \\
+  f^*(k_{top}) =& -\frac{g m_x F_x^{upw,top} \Delta z}{p_0 \tilde{A} N_A}
+\end{align}
+%
+with $F_x^{upw,top}$ the upward number flux at the upper boundary
+which is input to \src{subroutine minor}. \\
+
+%
+Solving for the mass mixing ratio $\Psi$ at each latitude leads to
+the updated mass mixing ratio $\Psi^{upd, t_n+\Delta t}$ at the
+midpoints. The calculated values for the mass mixing ration
+$\Psi^{upd, t + \Delta t}$ are smoothed by a Fast Fourier
+transformation, which is part of the \src{minor module}. All the
+wave numbers larger than a predefined value at each latitude are
+removed. The wave numbers are defined in the
+ \src{subroutine minor}. The values of the mass mixing ration at the
+time step $t_n$ are also updated by using
+%
+\begin{align}
+  \Psi^{upd,t_n} =  \frac{1}{2}({1-c_{smo}})(\Psi^{t_n-\Delta t}+
+     \Psi_{smo}^{upd,t_n+\Delta t}) + c_{smo}\Psi^{t_n}
+\end{align}
+%
+with $c_{smo} = 0.95$. All the values of $\Psi^{upd,t_n}$ and
+$\Psi^{upd,t_n+\Delta t}$ have to be at least as larger as
+$10^{-12}$
+%

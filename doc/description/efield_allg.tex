@@ -1,0 +1,87 @@
+%
+\section{Electric field calculation / \index{EFIELD.F}}\label{cap:efield}
+%
+The input to \src{subroutine efield} is summarized in table
+\ref{tab:input_efield}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+electric potential on geomag. grid          & $\Phi$           &
+$V$   & interfaces  & $t_n$ \\
+apex factors & $\frac{\cos \lambda_0}{\cos \lambda_m^*}$& -&- &-  \\
+              & $\frac{ \partial \lambda_0}{\partial \lambda_m^*}$& -&-&-
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine efield}}
+\label{tab:input_efield}
+\end{table}
+%
+The output of \src{subroutine efield} is summarized in table
+\ref{tab:output_efield}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+electric field: east-,north-, upward&       {}     & $$   &   & \\
+geomagnetic direction on geographic grid & $R*E_{m \phi}, R*E_{m
+\lambda},\Delta z * E_{z}$  & $V$   & interface  & $t_{n}$
+ \\ \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine efield}}
+\label{tab:output_efield}
+\end{table}
+%
+The electric field calculation was started in the \src{subroutine
+efield} and is finished in the \src{subroutine ionvel}. Note that
+the electric field is also calculated in the dynamo-module in
+\src{subroutine threed}, however it's not used. Later versions of
+TIE-GCM will use the electric field calculated in the dynamo-module,
+and therefore the \src{subroutine efield} will be shortened. \\
+
+Input to the \src{subroutine efield} is the three dimensional
+electric potential $\Phi$ on the geomagnetic grid. It's copied into
+a local array to set up the wrap around points. The three
+dimensional electric field in magnetic eastward, northward and
+upward direction $E_{m \phi}$, $E_{m \lambda}$ and $E_z$ is
+%
+\begin{align}
+   E_{m \phi}    = & - \frac{1}{R cos \lambda_m} \frac{\partial \Phi}{\partial \phi_m}\\
+   E_{m \lambda} = & \frac{1}{R } \frac{\partial \Phi}{\partial
+   \lambda_m} \\
+   E_{z}  = & \frac{\partial \Phi}{\partial z}
+\end{align}
+%
+with the geomagnetic coordinates $\phi_m$ and $\lambda_m$ for
+longitude and latitude. $R$ is the radius $R=R_E+z$. In the code the
+equally spaced grid points distribution $\lambda_0$ in $\lambda_m^*$
+is used to calculate the derivatives. Therefore the mapping factors
+from the irregular latitudinal spaced grid $\lambda_m^*$ to
+$\lambda_0$ have to be taken into account. This leads to the
+discrete derivatives
+%
+\begin{align}
+   R E_{m \phi}(\phi_m,\lambda_m,z)    = & - \frac{cos \lambda_0}{ cos \lambda_m^*}
+           \frac{\Phi(\phi_m+\Delta \phi,\lambda_m,z)-\Phi(\phi_m-\Delta \phi,\lambda_m,z)}{2 cos \lambda_0\Delta \phi_m}\\
+   R E_{m \lambda}(\phi_m,\lambda_m,z) = & \frac{\partial \lambda_0}{\lambda_m^* }
+   \frac{ \Phi(\phi_m,\lambda_m+\Delta \lambda,z)-\Phi(\phi_m,\lambda_m-\Delta \lambda,z)}{2 \Delta \lambda_0} \\
+   2\Delta z E_{z}(\phi_m,\lambda_m,z)  = & - \Phi(\phi_m,\lambda_m,z+\Delta z)+\Phi(\phi_m,\lambda_m,z-\Delta z)
+\end{align}
+%
+The factor $\frac{\cos \lambda_0}{ \cos \lambda_m^*}$ is denoted by
+\src{rcos0s} in the source code and $\frac{\partial
+\lambda_0}{\partial \lambda_m^* }$ by \src{dt0dts}, which are
+calculated in the apex-module. The polar values of $R E_{m \phi}$
+are set by taking the value of $R E_{m \lambda}$ which is shifted by
+180 degree. \\
+%
+The electric field  values $R E_{m \phi}$ , $R E_{m \lambda}$ and
+$\Delta z E_{z}$ are then mapped from the geomagnetic grid to the
+geographic grid. These values are then further used in the
+\src{subroutine ionvel} and rotated in the geographic direction.

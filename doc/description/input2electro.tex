@@ -1,0 +1,60 @@
+\section{Input to the Electrodynamo}\label{cap:input2electro}
+%
+%
+In \src{subroutine prep-dynamo} fields are prepared for the electrodynamo
+calculation. The preparation includes reversing the order of the indexing, as
+well as gathering the fields from the different processors to the master
+processor. The electrodynamo part is still serial and therefore a gathering
+of all the subdomains at
+the beginning and
+a distribution of the fields to all the subdomains at the end has to be done.
+
+The input to \src{subroutine prep-dynamo} is summarized in table
+\ref{tab:input_prepdynamo}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit &pressure
+level& timestep \\ \hline \hline
+%
+neutral zonal wind          & $u_n$           & $\frac{cm}{s}$   &half & $t_n$ \\
+neutral meridional wind     & $v_n$           & $\frac{cm}{s}$   &half & $t_n$ \\
+dimensionless vertical wind & $W$             & $\frac{1}{s}$    &full & $t_n$ \\
+%
+geopotential height         & z               & cm               &full & $t_{n}+ \Delta t$ \\
+Pedersen conductivity     & $\sigma_{P}$      & S/m              &half & $t_n$\\
+Hall conductivity       & $\sigma_{H}$    & S/m              &half & $t_n$ \\
+mean molecular mass         & $\overline{m}$  & $\frac{g}{mole}$ &full & $t_{n}+ \Delta t$ \\
+neutral temperature         & $T_n$           & $K$ &half & $t_n$  \\
+\hline
+\end{tabular}
+\caption{Input fields to \src{subroutine prep-dynamo}}
+\label{tab:input_prepdynamo}
+\end{table}
+%
+To calculate the vertical neutral velocity $w_n$ the pressure scale
+height H in [$cm$] is determined at first, assuming hydrostatic
+equilibrium for timescales longer than a few minutes.
+%
+\begin{equation}
+    H = \frac{R^* T_n}{\overline{m}g}
+\end{equation}
+%
+with $R^*$ the gas constant in [$\frac{erg}{mole K}$], $T_n$ the
+neutral temperature in [$K$], $\overline{m}$ the mean molecular mass
+in [$\frac{g}{mole}$] and $g$ acceleration of gravity in
+[$\frac{cm}{s^2}$]. The dimensionless vertical wind W is
+%
+\begin{equation}
+    W = -\frac{1}{p} \frac{dp}{dt}
+\end{equation}
+%
+which is used to get the vertical wind at a constant pressure level
+by
+%
+\begin{equation}
+    w_n = H W
+\end{equation}
+%
+with the pressure $p$ and $\frac{dp}{dt}$ the time rate of change following the fluid
+motion.
