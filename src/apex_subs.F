@@ -2421,7 +2421,8 @@ C
 C      implicit double precision (a-h,o-z)
       DOUBLE PRECISION F,F0
       PARAMETER (RTOD=5.72957795130823E1,DTOR=1.745329251994330E-2)
-      parameter (ncoef = 196)
+      parameter (alt = 0.)
+      parameter (ncoef = 196, isv=0)
       COMMON /MAGCOF/ G(ncoef),GV(ncoef)
       COMMON /MAGCOF_int/ NMAX,ICHG
       SAVE DATEL

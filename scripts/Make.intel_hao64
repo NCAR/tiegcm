@@ -16,7 +16,8 @@ F90      = ifort
 MPIF90   = /home/tgcm/intel/openmpi-1.4.3/bin/mpif90
 MPIRUN   = /home/tgcm/intel/openmpi-1.4.3/bin/mpirun
 FFLAGS   = -r8
-DBGFLAGS = -debug full
+DBGFLAGS = -debug full -traceback 
+DBGFLAGS += -check bounds -check format -check output_conversion -check pointers -check uninit
 #
 # Makefile will use OPTIM = -g if set debug=TRUE in job script.
 OPTIM    = -O3

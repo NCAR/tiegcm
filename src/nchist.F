@@ -874,12 +874,21 @@
      |    trim(vname),ncid
         call handle_ncerr(istat,trim(char80))
       endif
+!     write(6,"('rdlbc read ',a,': glbc min,max=',2e12.4)")
+!    |  trim(vname),minval(glbc),maxval(glbc)
 !
 ! Store subdomain in flbc (actual arg is tlbc, ulbc, or vlbc):
+! (Zero-out periodic points)
       lonbeg = lon0
-      if (lon0==1) lonbeg = 3
+      if (lon0==1) then
+        lonbeg = 3
+        flbc(1:2,:) = 0.
+      endif
       lonend = lon1
-      if (lon1==nlonp4) lonend = lon1-2
+      if (lon1==nlonp4) then
+        lonend = lon1-2
+        flbc(lon1-1:lon1,:) = 0.
+      endif
       do j=lat0,lat1
         do i=lonbeg,lonend
           flbc(i,j) = glbc(i-2,j)
@@ -892,28 +901,28 @@
       flbc(nlonp4-1:nlonp4,:)  = flbc(3:4,:)
 #endif
  
-      write(6,"('Read ',a,' subdomain from source history: min,max=',
-     |  2f8.2)")  trim(vname), minval(flbc(lon0:lon1,lat0:lat1)),
-     |                         maxval(flbc(lon0:lon1,lat0:lat1))
+!     write(6,"('Read ',a,' subdomain from source history: min,max=',
+!    |  2e12.4)")  trim(vname), minval(flbc(lon0:lon1,lat0:lat1)),
+!    |                          maxval(flbc(lon0:lon1,lat0:lat1))
 
-!      if (trim(vname)=='TLBC') then
+!     if (trim(vname)=='TLBC') then
 !       do i=lon0,lon1
-!	 write(6,"('rdlbc: i=',i3,' lat0,1=',2i3,' tlbc(i,lat0:lat1)=',
-!     |      /,(6e12.4))") i,lat0,lat1,tlbc(i,lat0:lat1)
+!         write(6,"('rdlbc: i=',i3,' lat0,1=',2i3,' tlbc(i,lat0:lat1)=',
+!    |      /,(6e12.4))") i,lat0,lat1,tlbc(i,lat0:lat1)
 !       enddo ! j=lat0,lat1
-!      endif
-!      if (trim(vname)=='ULBC') then
+!     endif
+!     if (trim(vname)=='ULBC') then
 !       do i=lon0,lon1
-!	 write(6,"('rdlbc: i=',i3,' lat0,1=',2i3,' ulbc(i,lat0:lat1)=',
-!     |      /,(6e12.4))") i,lat0,lat1,ulbc(i,lat0:lat1)
+!         write(6,"('rdlbc: i=',i3,' lat0,1=',2i3,' ulbc(i,lat0:lat1)=',
+!    |      /,(6e12.4))") i,lat0,lat1,ulbc(i,lat0:lat1)
 !       enddo ! j=lat0,lat1
-!      endif
-!      if (trim(vname)=='VLBC') then
+!     endif
+!     if (trim(vname)=='VLBC') then
 !       do i=lon0,lon1
-!	 write(6,"('rdlbc: i=',i3,' lat0,1=',2i3,' vlbc(i,lat0:lat1)=',
-!     |      /,(6e12.4))") i,lat0,lat1,vlbc(i,lat0:lat1)
+!         write(6,"('rdlbc: i=',i3,' lat0,1=',2i3,' vlbc(i,lat0:lat1)=',
+!    |      /,(6e12.4))") i,lat0,lat1,vlbc(i,lat0:lat1)
 !       enddo ! j=lat0,lat1
-!      endif
+!     endif
  
       end subroutine rdlbc
 !-----------------------------------------------------------------------
