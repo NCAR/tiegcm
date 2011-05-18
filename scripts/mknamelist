@@ -50,6 +50,7 @@ $modelres  = 5.0;
   "SECFLDS=s"             => \$SECFLDS,
   "SECFLDS0=s"            => \$SECFLDS0,
   "SECFLDS1=s"            => \$SECFLDS1,
+  "SECFLDS2=s"            => \$SECFLDS2,
   "HPSS_PATH=s"           => \$HPSS_PATH,
   "TIDE=s"                => \$TIDE,
   "TIDE2=s"               => \$TIDE2,
@@ -98,11 +99,12 @@ $highres = 0;
 if ($modelres == 2.5) { $highres = 1; }
 &set_res_params($highres);
 #
-# Set 1 or 2 lines of SECFLDS:
+# Set number of lines of SECFLDS:
 #
 if (defined $SECFLDS) { 
   $SECFLDS0 = $SECFLDS;
   undef $SECFLDS1;
+  undef $SECFLDS2;
 } 
 #
 # Namelist parameters to be commented or uncommented:
@@ -138,6 +140,10 @@ exit;
 sub set_defaults {
 #
 # Default namelist parameters:
+#SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
+#          'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+#          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M',
+#	   'KQPHI','KQLAM','JQR','JE13D','JE23D' 
 #
 $LABEL="'$model res=$modelres'";
 $START_YEAR = 2002;
@@ -154,7 +160,8 @@ $SECSTOP  = "80,1,0";
 $SECHIST  = "0,0,12";
 $MXHIST_SECH = 24;
 $SECFLDS0 = "'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',";
-$SECFLDS1 = "'O2','O2P','OMEGA','POTEN','UI_VEL','VI_VEL','WI_VEL'";
+$SECFLDS1 = "'O2','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB',";
+$SECFLDS2 = "'DEN','QJOULE','Z','ZG'";
 $HPSS_PATH = "'/home/$user/$model'";
 $TIDE    = "0.,0.,0.,0.,0.,0.,0.,0.,0.,0.";
 $TIDE2   = "0.,0.";
@@ -199,6 +206,7 @@ $COLFAC = "1.5";
   SECFLDS             =>" ",
   SECFLDS0            =>" ",
   SECFLDS1            =>" ",
+  SECFLDS2            =>" ",
   HPSS_PATH           =>";",
   TIDE                =>" ",
   TIDE2               =>" ",
@@ -331,6 +339,7 @@ $comments{SECOUT}SECOUT   = $SECOUT
 $comments{MXHIST_SECH}MXHIST_SECH = $MXHIST_SECH
 $comments{SECFLDS}SECFLDS = $SECFLDS0
 $comments{SECFLDS}          $SECFLDS1
+$comments{SECFLDS}          $SECFLDS2
 ;
 ; Diagnostic fields available with this release:
 ;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
