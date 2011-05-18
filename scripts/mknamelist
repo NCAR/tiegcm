@@ -283,6 +283,13 @@ sub set_res_params {
 sub write_namelist {
 my ($namelist_file) = @_;
 my $fh_out = new IO::File;
+#
+# Saber-Tidi parameters are not in the public release:
+# SABER (T,Z) and/or TIDI (U,V) data files for lbc perturbations:
+#
+#$comments{SABER_NCFILE}SABER_NCFILE = $SABER_NCFILE
+#$comments{TIDI_NCFILE}TIDI_NCFILE  = $TIDI_NCFILE
+
 $fh_out->open(">$namelist_file") or die ">>> Can't open new file $namelist_file\n";
 
 print $fh_out <<"EOF";
@@ -331,8 +338,9 @@ $comments{SECFLDS}          $SECFLDS1
 ;          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M',
 ;	   'KQPHI','KQLAM','JQR','JE13D','JE23D' 
 ;
-; If HPSS_PATH is set, a csh script will be made in the execdir, that
-; will copy history disk files to the HPSS in the directory HPSS_PATH.
+; If HPSS_PATH is set, a csh script will be made in the execdir that,
+; when executed, will copy history disk files to the NCAR HPSS in the 
+; directory HPSS_PATH (must have an HPSS account at NCAR CISL)
 ;
 $comments{HPSS_PATH}HPSS_PATH = $HPSS_PATH
 ;
@@ -347,11 +355,6 @@ $comments{GSWM_MI_DI_NCFILE}GSWM_MI_DI_NCFILE  = $GSWM_MI_DI_NCFILE
 $comments{GSWM_MI_SDI_NCFILE}GSWM_MI_SDI_NCFILE = $GSWM_MI_SDI_NCFILE
 $comments{GSWM_NM_DI_NCFILE}GSWM_NM_DI_NCFILE  = $GSWM_NM_DI_NCFILE
 $comments{GSWM_NM_SDI_NCFILE}GSWM_NM_SDI_NCFILE = $GSWM_NM_SDI_NCFILE
-;
-; SABER (T,Z) and/or TIDI (U,V) data files for lbc perturbations:
-;
-$comments{SABER_NCFILE}SABER_NCFILE = $SABER_NCFILE
-$comments{TIDI_NCFILE}TIDI_NCFILE  = $TIDI_NCFILE
 ;
 ; Potential model can be 'HEELIS' (optionally with GPI data),
 ; or 'WEIMER' (optionally with IMF data). If WEIMER, both IMF 
