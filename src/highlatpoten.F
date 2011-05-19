@@ -530,8 +530,7 @@
 !      
 ! !DESCRIPTION:
 ! J_rR contribution to dynamo - field-aligned current part representing
-! only region-1 current, therefore fac = 0 below the convection reversal 
-! boundary
+! only region-1 current
 ! calculation of J_rR is set up such that the total current system, horizontal
 ! and radial adds up to zero
 !
@@ -540,16 +539,16 @@
 !        d /d phi_m Phi_H + Sigma_lamlam*cos(lam_m)*d /d |lam_m| Phi_H ] }
 ! 
 !
-! NOTE: - this part wasn't tested
+! NOTE: - tested this part May 2011
 !       - conductances added together - does not matter for
-!         derivatives - only factor of two
+!         derivatives - factor of two for rhs_jrr
 !       - not necessary to calculate J_rR for both hemispheres
 !         since Phi_H / Hellis potential is symmetric
 !         could be changed, insert_pot used by other subroutines too.
 !   
 ! !USES:     
       use params_module,only: nmlon,nmlonp1,nmlatp1,nmlat,nmlath
-      use cons_module,only: dlatm,pi,crit,ylatm
+      use cons_module,only: dlatm,pi,ylatm,dt0dts,rcos0s,r0
       use dynamo_module,only: nmlon0,nmlat0,
                    ! zigms from south to north pole (1:97)
      |  zigm11,    ! +/+Sigma_(phi phi)^T(0)/ cos(lam_0) / d lon^2 )
@@ -566,6 +565,7 @@
 !
 ! !REVISION HISTORY:
 ! 05.03.09  <Astrid Maute> <include header> 
+! 05.19.11  <Astrid Maute> <checked calculation> 
 ! 
 ! EOP 
 ! 
@@ -573,7 +573,8 @@
       integer :: i,j  
       real :: nscoef(nmlon0,nmlat,10),
      |   array(-15:nmlon0+16,nmlat0),
-     |   rhs_jrr(nmlonp1,nmlat),cs(nmlat),crit_lat1,f(nmlath)
+     |   rhs_jrr(nmlonp1,nmlat),cs(nmlat),
+     |   r0sq,fac
       real,parameter :: unitv(nmlon)=1.
 !
 ! External:
@@ -585,28 +586,17 @@
 !
       do j = 1,nmlat    
         cs(j) = cos(-pi/2.+(j-1)*dlatm) ! -pi/2 to pi/2
-      enddo
-!      
-! calculate factor (convection reversal boundar at 75 deg)
-! lam_m < lam(convection reversal boundary)  -> fac = 0
-! lam_m >= lam(convection reversal boundary) -> fac = 1
-!
-      crit_lat1 = -crit(1) + pi/2.	
-      do j = 1,nmlath
-        if(abs(ylatm(j)) >= crit_lat1) then
-	   f(j) = 1.
-	else 
-	   f(j) = 0.
-        endif
-      enddo	               
+      enddo               
 !
 ! Calculate contribution to stencil from each coefficient
 ! nsstencil: set up stencil (finite differencing)
-! divide:    stencil by cos lam_0 note: this has to be done before
-! 	the potential is inserted to be conform with the left-hand-side
+! divide:    stencil by cos lam_0 note: the rhs_jrr is dicided by cos lam0
+! since the stencil is not divided by cos lam0
 ! insert_pot:insert the Heelis-potential
 !
 ! NOTE: calculated for both hemispheres which is not necessary
+! NH and SH hemisphere have added together values
+! rhs_jrr is therefore also the added values
 !
 ! "NH" array index 49:97 equator to pole
 ! zigmc  = Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
@@ -615,49 +605,39 @@
 ! zigm11 = Sigma_(phi phi)^T(0)/ cos(lam_0) / d lon^2 )
 !
 ! "SH" array index 49:1 equator to pole
-! zigmc  = -Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
-! zigm2  = -Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
+! zigmc  = Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
+! zigm2  = Sigma_(phi lam)^T(0)/( 4*d lam_0* d lon )
 ! zigm22 = Sigma_(lam lam)^T(0)*cos(lam_0)/d lam_0^2
 ! zigm11 = Sigma_(phi phi)^T(0)/ cos(lam_0) / d lon^2 )
-!
+!    
       nscoef = 0.
       call nsstencil(zigm11,nmlon0,nmlat,nscoef,array,1,nmlath)
-      do j = 2,nmlat-1
-	nscoef(:,j,:) = nscoef(:,j,:)/cs(j)
-      enddo     
       call insert_pot(nscoef,rhs_jrr,phihm)
 !      
       nscoef = 0.
       call nsstencil(zigm22,nmlon0,nmlat,nscoef,array,4,nmlath)
-      do j = 2,nmlat-1
-	nscoef(:,j,:) = nscoef(:,j,:)/cs(j)
-      enddo     
       call insert_pot(nscoef,rhs_jrr,phihm)
 !      
       nscoef = 0.
       call nsstencil(zigmc,nmlon0,nmlat,nscoef,array,2,nmlath)
-      do j = 2,nmlat-1
-	nscoef(:,j,:) = nscoef(:,j,:)/cs(j)
-      enddo     
       call insert_pot(nscoef,rhs_jrr,phihm)
 !      
       nscoef = 0.
       call nsstencil(zigm2,nmlon0,nmlat,nscoef,array,3,nmlath)
-      do j = 2,nmlat-1
-	nscoef(:,j,:) = nscoef(:,j,:)/cs(j)
-      enddo     
       call insert_pot(nscoef,rhs_jrr,phihm)
 !      
-! add both hemispheres of J_rR (rhs_jrr) together, multiply by factor f
+     
+! does not need to add both hemispheres of J_rR (rhs_jrr) together
+! since ZIGMs were already added together
+! divide by cos lam0 since stencil wasn't divided
 !  J_rR (rhs_jrr)(1:97)  south pole to north pole
 ! and add to rhs (1:49) equator to pole
 !
-      do j=2,nmlath	
-        rhs_jrr(:,j) = rhs_jrr(:,nmlatp1-j)+rhs_jrr(:,j)
-	rhs_jrr(:,j) = f(j)*rhs_jrr(:,j)		
+      do j=2,nmlath
+	rhs_jrr(:,j) = rhs_jrr(:,j)/cs(j)	
 	rhs_jrr(:,nmlatp1-j) = rhs_jrr(:,j)
         rhs(:,nmlath+1-j) = rhs(:,nmlath+1-j) + rhs_jrr(:,j) 
-      enddo ! j=1,nmlath
+      enddo ! j=1,nmlath    
 !
 ! pole values
 !     
@@ -666,12 +646,18 @@
      |   float(nmlon)
       rhs_jrr(:,1)    = rhs_jrr(1,1)			   ! extend in longitude
       rhs_jrr(:,nmlat)= rhs_jrr(1,nmlat)
-      rhs_jrr(:,1)    = rhs_jrr(:,nmlatp1-1)+rhs_jrr(:,1)  ! add hemispheres
-      rhs(:,nmlath) = rhs(:,nmlath) + rhs_jrr(:,1)         ! add to rhs
+      rhs(:,nmlath)  = rhs(:,nmlath) + rhs_jrr(:,1)        ! add to rhs
+           
+! output secondary history 2d mag  
+! convert to rhs_jrr to Jmr before it is R^2 * Jmr*(cos lamm/cos lam0)*(dlamm/dlam0)
+      r0sq = r0*r0*1.e-4 ! in meter   
+      do j= 1,nmlat
+        fac = 0.5*dt0dts(j)/r0sq*rcos0s(j)
+        rhs_jrr(:,j) = rhs_jrr(:,j)*fac  
+      enddo 
       
-! output secondary history 2d mag     
-!     call addfld('RIM_JRR','rim_jrr',' ',rhs_jrr,
-!    |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+      call addfld('RIM_JRR','rim_jrr','[A/m2]',rhs_jrr,
+     |  'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !
       end subroutine calrhs_jrr
 !------------------------------------------------------------------------------

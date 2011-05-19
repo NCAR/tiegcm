@@ -534,8 +534,8 @@
           zigmc(i,jj)   = (zigmc(i,jj) +zigm2(i,jj))/(4.*dlatm*dlonm)
           zigm2(i,jj)   = zigmc(i,jj)-2.*zigm2(i,jj)/(4.*dlatm*dlonm)
           zigm22(i,jj)  = zigm22(i,jj)*cs(j0+j)/dlatm**2
-          zigmc(i,jjj)  = -zigmc(i,jj)
-          zigm2(i,jjj)  = -zigm2(i,jj)
+          zigmc(i,jjj)  = zigmc(i,jj)
+          zigm2(i,jjj)  = zigm2(i,jj)
           zigm22(i,jjj) = zigm22(i,jj)
         enddo ! i=1,nmlonp1
         if (j /= nmlath) then
@@ -701,7 +701,7 @@ c      enddo
 !  back into the 2-D phim before the call threed, and before it is
 !  transformed to geographic coordinates.
 !
-      if(.not.mod_heelis) then   ! original heelis
+      if(.not.mod_heelis.and..not.J_rR) then   ! original heelis
         ncc = 1
         nmaglon = nmlon0
         nmaglat = nmlat0
@@ -786,19 +786,19 @@ c      enddo
       enddo ! j=1,nmlat
 !
 ! Save single-level high latitude potential:
-!     if (potential_model == 'WEIMER01') then
-!       call addfld('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
-!    |    'V', phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-!     elseif (potential_model == 'WEIMER05') then
-!       call addfld('PHIHM2D','2D WEIMER05 ELECTRIC POTENTIAL',
-!    |    'V', phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-!     elseif (potential_model == 'HEELIS') then
-!       call addfld('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
-!    |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-!     else
-!       call addfld('PHIHM2D','2D ELECTRIC POTENTIAL',
-!    |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-!     endif
+!      if (potential_model == 'WEIMER01') then
+!    	call addfld('PHIHM2D','2D WEIMER01 ELECTRIC POTENTIAL',
+!     |    'V', phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!      elseif (potential_model == 'WEIMER05') then
+!    	call addfld('PHIHM2D','2D WEIMER05 ELECTRIC POTENTIAL',
+!     |    'V', phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!      elseif (potential_model == 'HEELIS') then
+!    	call addfld('PHIHM2D','2D HEELIS ELECTRIC POTENTIAL',
+!     |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!      else
+!    	call addfld('PHIHM2D','2D ELECTRIC POTENTIAL',
+!     |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!      endif
 !
 ! Save correct single-level potential to secondary histories (mag grid):
       call addfld('PHIM2D','2D ELECTRIC POTENTIAL','VOLTS',phim,
@@ -1498,7 +1498,7 @@ c      enddo
 !   different from adjacent values.
 ! add factor 1/2 for the equatorial values since both hemispheres are
 ! added together - two physical points but equator is only one point
-!
+!       
       j = nmlat/2+1
       do i = 1,nmlon
         zigm11(i,j)= .125*(zigm11(i,j-1)+ zigm11(i,j+1))
