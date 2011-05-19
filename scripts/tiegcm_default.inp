@@ -10,7 +10,7 @@
 ; SOURCE:       Start-up history file (for initial runs only)
 ; SOURCE_START: Time of history on start-up file (initial runs only)
 ;
- SOURCE = '$TGCMDATA/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc'
+ SOURCE = '$TGCMDATA/tiegcm1.94/p_mareqx_smin.nc'
  SOURCE_START = 80,0,0
 ;
 ; START: Start time (day,hour,minute)
@@ -80,7 +80,7 @@
 ; If KP is specified, and POWER and/or CTPOTEN are commented,
 ; then the given KP will be used to calculate POWER and/or CTPOTEN
 ;
-;KP = 4.0
+;KP = 2.0
  POWER   = 16.
  CTPOTEN = 45.
  F107    = 150.
