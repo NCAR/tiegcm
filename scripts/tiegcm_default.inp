@@ -2,7 +2,7 @@
 ;
 ; Namelist input file for model tiegcm
 ;
- LABEL = 'tiegcm res=5'
+ LABEL = 'tiegcm1.94 res=5'
  START_YEAR = 2002
  START_DAY  = 80
  CALENDAR_ADVANCE = 1
@@ -10,7 +10,7 @@
 ; SOURCE:       Start-up history file (for initial runs only)
 ; SOURCE_START: Time of history on start-up file (initial runs only)
 ;
- SOURCE = '$TGCMDATA/tiegcm1.94/p_mareqx_smin.nc'
+ SOURCE = '$TGCMDATA/tiegcm1.94/pcntr_mareqx_smin.nc'
  SOURCE_START = 80,0,0
 ;
 ; START: Start time (day,hour,minute)
@@ -18,21 +18,21 @@
 ; STEP:  Timestep (seconds)
 ;
  START = 80,0,0
- STOP  = 80,1,0
+ STOP  = 81,0,0
  STEP  = 120
 ;
 ; Primary History parameters:
 ;
- HIST = 0,1,0
- OUTPUT = 'FOSTER.tiegcm.ptest001.nc'
+ HIST = 1,0,0
+ OUTPUT = 'FOSTER.tiegcm1.94.pcntr_mareqx_smin_001.nc'
  MXHIST_PRIM = 10
 ;
 ; Secondary History parameters:
 ;
- SECSTART = 80,0,0
- SECSTOP  = 80,1,0
- SECHIST  =  0,0,12
- SECOUT   = 'FOSTER.tiegcm.stest001.nc'
+ SECSTART = 80,1,0
+ SECSTOP  = 81,0,0
+ SECHIST  =  0,1,0
+ SECOUT   = 'FOSTER.tiegcm1.94.scntr_mareqx_smin_001.nc'
  MXHIST_SECH = 24
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB',
@@ -81,10 +81,10 @@
 ; then the given KP will be used to calculate POWER and/or CTPOTEN
 ;
 ;KP = 2.0
- POWER   = 16.
- CTPOTEN = 45.
- F107    = 150.
- F107A   = 150.
+ POWER   = 18.
+ CTPOTEN = 30.
+ F107    = 70.
+ F107A   = 70.
 ;
 ; If potential model is WEIMER, data file IMF_NCFILE can be specified 
 ; to read one or more of BXIMF,BYIMF,BZIMF,SWVEL,SWDEN. If IMF_NCFILE 

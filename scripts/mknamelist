@@ -12,6 +12,7 @@ $tgcmdata = $ENV{TGCMDATA};
 # Defaults for mknamelist:
 #
 $model = "tiegcm";
+$version = "1.94";
 $modelres  = 5.0;
 #
 # Set default namelist parameters:
@@ -145,19 +146,19 @@ sub set_defaults {
 #          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M',
 #	   'KQPHI','KQLAM','JQR','JE13D','JE23D' 
 #
-$LABEL="'$model res=$modelres'";
+$LABEL="'${model}${version} res=$modelres'";
 $START_YEAR = 2002;
 $START_DAY  = 80;
 $CALENDAR_ADVANCE = 1;
 $SOURCE_START = "80,0,0";
 $START= "80,0,0";
-$STOP=  "80,1,0";
+$STOP=  "81,0,0";
 $STEP= 120;
-$HIST=  "0,1,0";
+$HIST=  "1,0,0";
 $MXHIST_PRIM = 10;
-$SECSTART = "80,0,0";
-$SECSTOP  = "80,1,0";
-$SECHIST  = "0,0,12";
+$SECSTART = "80,1,0";
+$SECSTOP  = "81,0,0";
+$SECHIST  = "0,1,0";
 $MXHIST_SECH = 24;
 $SECFLDS0 = "'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',";
 $SECFLDS1 = "'O2','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB',";
@@ -169,10 +170,10 @@ $POTENTIAL_MODEL = "'HEELIS'";
 $GPI_NCFILE = "'\$TGCMDATA/gpi_2000001-2009031.nc'";
 $IMF_NCFILE = "'\$TGCMDATA/imf_OMNI_2002001-2002365.nc'";
 $KP = "2.0";
-$POWER  = "16.";
-$CTPOTEN="45.";
-$F107  = "150.";
-$F107A = "150.";
+$POWER  = "18.";
+$CTPOTEN="30.";
+$F107  = "70.";
+$F107A = "70.";
 $BXIMF = "0.";
 $BYIMF = "0.";
 $BZIMF = "-5.";
@@ -240,23 +241,23 @@ sub set_res_params {
   my ($highres) = @_;
   if (! defined($SOURCE)) {
     if ($highres) {
-      $SOURCE = "'\$TGCMDATA/tiegcm1.94/p_dres_mareqx_smin.nc'";
+      $SOURCE = "'\$TGCMDATA/tiegcm1.94/pcntr_dres_mareqx_smin.nc'";
     } else {
-      $SOURCE = "'\$TGCMDATA/tiegcm1.94/p_mareqx_smin.nc'";
+      $SOURCE = "'\$TGCMDATA/tiegcm1.94/pcntr_mareqx_smin.nc'";
     }
   }
   if (! defined($OUTPUT)) {
     if ($highres) {
-      $OUTPUT = "'" . $USER . "." . $model . "_dres.ptest001.nc'";
+      $OUTPUT = "'" . $USER . "." . $model . $version . "_dres.pcntr_mareqx_smin_001.nc'";
     } else {
-      $OUTPUT = "'" . $USER . "." . $model . ".ptest001.nc'";
+      $OUTPUT = "'" . $USER . "." . $model . $version . ".pcntr_mareqx_smin_001.nc'";
     }
   }
   if (! defined($SECOUT)) {
     if ($highres) {
-      $SECOUT   = "'" . $USER . "." . $model . "_dres.stest001.nc'";
+      $SECOUT   = "'" . $USER . "." . $model . $version . "_dres.scntr_mareqx_smin_001.nc'";
     } else {
-      $SECOUT   = "'" . $USER . "." . $model . ".stest001.nc'";
+      $SECOUT   = "'" . $USER . "." . $model . $version . ".scntr_mareqx_smin_001.nc'";
     }
   }
   if (! defined($GSWM_MI_DI_NCFILE)) { 
