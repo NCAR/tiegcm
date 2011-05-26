@@ -448,9 +448,24 @@ Parameter Name                              Data Type and Default Description
    If the current model time is not available on the IMF data file, the model will print 
    an error message to stdout and stop.
 
-   Ascii data is obtained from NASA/OMNI (Combined 1AU IP Data), and an equivalent netCDF 
-   data file is written for import to the model.
- 
+   Notes on creation of IMF OMNI data files:
+
+   * IMF data is derived from 1-minute OMNI satellite data available on CDAweb 
+     `CDAweb <http://cdaweb.gsfc.nasa.gov/istp_public/>`_.  Our derivation is a multi-step process:   
+   * Data gaps in the raw 1-minute OMNI data are linearly interpolated.  If a gap happens to occur 
+     at the beginning or end of the time interval, it is set to the next known good data point.
+   * Gap-filled data is used to compute a 15 minute trailing average lagged by 5 minutes.
+   * Time averaged data is sampled at 5 minutes
+   * A data quality flag is calculated for every 5-minute sample point.  The data quality flag is 
+     a boolean value set to "1" for all sample points derived from valid (not gap-filled) data.  
+     The data quality flag is set to "0" for any sample point that is derived from gap-filled data 
+     anywhere in the 15 minute trailing average lagged by 5 minutes.
+   * The data quality flag is stored in the NetCDF-formatted IMF input file.  For any variable 
+     (ie. "swvel" - solar wind velocity), there exists a mask (ie. "velMask").  Find a complete 
+     list of IMF variables with command "ncdump -h [imf-file.nc]".
+   * Note:  You should verify the IMF data quality before doing storm simulations.  Known periods
+     of invalid IMF data include approximately days 301 to 304 of 2003 (during the "Halloween Storm").
+
    Example:
      * IMF_NCFILE = '$TGCMDATA/imf_OMNI_2002001-2002365.nc'
 
