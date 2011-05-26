@@ -1,6 +1,8 @@
 Structure of Output History Files
 =================================
 
+.. _output:
+
 NetCDF Output Files (:term:`netCDF`)
 ------------------------------------
 

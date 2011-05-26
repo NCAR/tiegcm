@@ -1,0 +1,4 @@
+#
+# Change www url to download url:
+ perl -pi -e 's\!www.hao.ucar.edu/modeling/tgcm/doc/release\!download.hao.ucar.edu/pub/tgcm/data/tiegcm1.94\!g' $*
+

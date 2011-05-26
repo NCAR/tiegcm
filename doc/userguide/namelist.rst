@@ -67,6 +67,7 @@ Parameter Name                              Data Type and Default Description
 :ref:`GPI_NCFILE <GPI_NCFILE>`              string: [none]        Geophysical Indices (Kp) data file
 :ref:`GSWM data files <GSWM>`               string: [none]        GSWM Model tidal lbc data files
 :ref:`HIST <HIST>`                          integer(3)            Primary history write frequency
+:ref:`IMF_NCFILE <IMF_NCFILE>`              string: [none]        IMF OMNI data files
 :ref:`KP or KP_TIME <KP>`                   real or real array    Kp for calc of hpower and ctpoten
 :ref:`LABEL <LABEL>`                        string:               Arbitrary string identifying the run
 :ref:`MXHIST_PRIM <MXHIST_PRIM>`            integer: 10           Max histories on primary file
@@ -86,8 +87,8 @@ Parameter Name                              Data Type and Default Description
 :ref:`STOP <STOP>`                          integer(3)            Model stop time (day,hour,minute)
 :ref:`SWDEN or SWDEN_TIME <SWDEN>`          real or real array    Solar Wind Density
 :ref:`SWVEL or SWVEL_TIME <SWVEL>`          real or real array    Solar Wind Velocity
-:ref:`TIDE <TIDE>`                          real(10)              Amplitudes and phases of semi-diurnal tide
-:ref:`TIDE2 <TIDE2>`                        real(2)               Amplitudes and phases of diurnal tide
+:ref:`TIDE <TIDE>`                          real(10)              Amplitudes and phases of semi-diurnal tide (rarely used)
+:ref:`TIDE2 <TIDE2>`                        real(2)               Amplitudes and phases of diurnal tide (rarely used)
 =========================================== ===================== =====================================
 
 .. -------------------------------------------------------------------------------------
@@ -559,6 +560,16 @@ Parameter Name                              Data Type and Default Description
    'HEELIS' is the Rod Heelis model (heelis.F). 'WEIMER' is the Dan Weimer 2005 model 
    (wei05sc.F).
 
+   .. note::
+
+      The Weimer model of high-latitude potential is the intellectual property of Daniel
+      Weimer and may not be extracted, distributed, or used for any purpose other
+      than as implemented in the TIE-GCM.  For further information concerning this
+      model, please contact Dan Weimer (dweimer@vt.edu).
+
+   For a brief discussion of the use of the Weimer 2005 model in TIEGCM, please
+   see :ref:`Notes on Weimer05 in TIEGCM <tiegcm_weimer05>`.
+
    | Data type: string
    | Default: 'HEELIS'
 
@@ -820,7 +831,12 @@ Parameter Name                              Data Type and Default Description
 .. _TIDE:
 .. describe:: TIDE
 
-   Hough mode amplitudes and phases of the semi-diurnal tide. If GSWM tidal perturbations    are specified, TIDE should be set to 0.
+   Hough mode amplitudes and phases of the semi-diurnal tide. If GSWM tidal perturbations    
+   are specified, TIDE should be set to 0.
+
+     .. note::
+        TIDE and TIDE2 should be specified only for experiments where amplitude and phases
+        of the tides must be used.  Normally, GSWM tides are specified instead of TIDE,TIDE2.
 
    Data type: 10 reals
 
@@ -842,6 +858,10 @@ Parameter Name                              Data Type and Default Description
 
    Hough mode amplitudes and phases of the diurnal tide. If GSWM tidal perturbations are 
    specified, TIDE2 should be set to 0.
+
+     .. note::
+        TIDE and TIDE2 should be specified only for experiments where amplitude and phases
+        of the tides must be used.  Normally, GSWM tides are specified instead of TIDE,TIDE2.
 
    Data type: 2 floats
 

@@ -1,0 +1,165 @@
+#! /bin/csh
+#
+# Set shell variables for tiegcm linux job:
+#
+set modeldir     = ../../../trunk
+set execdir      = tiegcm-linux
+set make         = Make.intel_hao64
+set input        = tiegcm_dec2006_weimer_imf.inp
+set output       = tiegcm_dec2006_weimer_imf.out
+set mpi          = TRUE
+set nproc        = 4
+set modelres     = 5.0
+set utildir      = $modeldir/scripts
+set exec         = TRUE
+set debug        = FALSE
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                        Shell Script for TIEGCM Linux job
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+set mycwd = `pwd`
+echo "" ; echo "${0}:"
+echo "  Begin execution at `date`"
+echo "  Current working directory: $mycwd"
+echo "  System: `uname -a`"  
+echo ""
+#
+# Verify directories and make_machine file (make execdir if necessary).
+# Get absolute path for dirs that are accessed from the execdir.
+#
+if (! -d $modeldir) then
+  echo ">>> Cannot find model directory $modeldir <<<"
+  exit 1
+endif
+set model = $modeldir:t
+
+if (! -d $utildir) then
+  echo ">>> Cannot find model scripts directory $utildir <<<" 
+  exit 1
+endif
+
+set srcdir  = $modeldir/src
+if (! -d $srcdir) then
+  echo ">>> Cannot find model source directory $srcdir <<<"
+  exit 1
+endif
+set srcdir = `perl $utildir/abspath $srcdir`
+
+if (! -d $execdir) then
+  echo "Making exec directory $execdir" 
+  mkdir -p $execdir
+endif
+if (! -f $make) set make = $utildir/$make 
+if (! -f $make) then
+  echo ">>> Cannot find make_machine file $make <<<"
+  exit 1
+endif
+set make = `perl $utildir/abspath $make`
+echo Make machine file = $make
+if ($modelres != 5.0 && $modelres != 2.5) then
+  echo ">>> Unknown model resolution $modelres <<<"
+  exit 1
+endif
+#
+# Unconditionally copy make files to execdir:
+#
+cp $make $execdir
+cp $utildir/Makefile $execdir
+cp $utildir/mkdepends $execdir
+#
+# Make default namelist input file if not provided by user:
+#
+if ($?input) then
+  if (! -f $input) then
+    echo ">>> Cannot find namelist input file $input <<<"
+    exit 1
+  endif
+else 
+  set input = \
+    `perl $utildir/mknamelist -model=$model -modelres=$modelres` || \
+     echo ">>> Error from mknamelist: fileout = $input" && exit 1
+endif
+set input  = `perl $utildir/abspath $input`
+set output = `perl $utildir/abspath $output`
+#
+# Copy defs header file to execdir, if necessary, according to 
+# requested resolution:
+#
+if (! -f $execdir/defs.h) then
+  if ($modelres == 5.0) then
+    cp $srcdir/defs.5.0 $execdir/defs.h
+  else
+    cp $srcdir/defs.2.5 $execdir/defs.h
+  endif
+endif
+#
+# Report to stdout:
+#
+set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
+echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnversion)"
+echo "  Exec directory:    $execdir"
+echo "  Source directory:  $srcdir"
+echo "  Make machine file: $make"
+echo "  Namelist input:    $input"
+#
+# cd to execdir and run make:
+#
+cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
+echo ""
+echo "Begin building $execdir in `pwd`"
+#
+# Build Make.env file in exec dir, containing needed env vars for Makefile:
+#
+cat << EOF >! Make.env
+MAKE_MACHINE = $make
+DIRS         = . $srcdir 
+MPI          = $mpi
+NPROC        = $nproc
+EXECNAME     = $model
+NAMELIST     = $input
+OUTPUT       = $output
+DEBUG        = $debug
+SVN_VERSION  = $svnversion
+EOF
+#
+# If building with intel on 64-bit Linux at hao, please add the following 
+# source command to your ~/.cshrc file, or uncomment the next line: 
+#source /opt/local/intel/Compiler/11.1/072/bin/ifortvars.csh intel64
+#
+# Build the model:
+gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
+#
+# Execute Linux job (MPI or non-MPI run):
+# (machines.ini mpirun rules are in Make.machine file)
+#
+if ($exec == "TRUE") then
+  set model = ./$model
+  echo "Linux job: Executing $model mpi=$mpi nproc=$nproc"
+  echo "Model output will go to $output"
+  if ($mpi == "TRUE") then
+#
+# Files machines.ini and mpirun.command are made by the Make.machines file.
+    gmake machines.ini
+    gmake mpirun.command
+    set mpirun = `cat mpirun.command`
+    echo "Executing $mpirun -np $nproc for Linux MPI run."
+#
+# Execute MPI job:
+    $mpirun -np $nproc -machinefile machines.ini $model < $input >&! $output || \
+      echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
+      echo "See output in $output"
+ 
+    echo "Linux MPI run of $model completed at `date`"
+  else # MPI is FALSE
+    echo "Executing $model for Linux non-MPI run."
+    $model < $input >&! $output || \
+      echo ">>> ${0} Execution of $model FAILED at `date`" && \
+      echo "See output in $output"
+    echo "Linux non-MPI run of $model completed at `date`"
+  endif
+else
+  echo "I am NOT executing $model (exec was not set)"
+endif
+exit 0
+

@@ -29,14 +29,16 @@ Documentation and Postprocessor codes are also available on the download site,
 but all you need for now is the source code, and corresponding data files.
 Both are provided as gzipped tar files.
 
-After downloading the tar files to an empty working directory (:term:`workdir`) 
+After downloading the two gzipped tar files to an empty working directory (:term:`workdir`) 
 on a large disk system (for example, ``/mydisk/tiegcm``), uncompress and extract 
 the source code and related scripts and documentation::
 
     $ gunzip tiegcmx.xx.tar.gz
     $ tar xvf tiegcmx.xx.tar
 
-where ``x.xx`` is the model version downloaded. Next, make a directory to hold
+where ``x.xx`` is the model version downloaded. 
+
+Next, make a directory to hold
 the data files (for example, ``/mydisk/tiegcm/data``), and uncompress and extract 
 the data tar file into that directory.  Then set environment variable ``$TGCMDATA``,
 e.g., for the c-shell, add this line to your .cshrc file::
@@ -47,7 +49,7 @@ At this point, you should have something like this in your working directory
 ``/mydisk/tiegcm``::
 
   total 2376
-  -rw-rw-r-- 1 user tgcm    4928 Jun  1  2010 README
+  -rw-rw-r-- 1 user tgcm    4928 Jun  1  2010 README.download
   -rw-r--r-- 1 user tgcm    2886 Jun  1  2010 Release_Notes
   drwxrwxr-x 2 user tgcm    4096 Apr 22 08:52 data/
   -rwxrwxr-x 1 user tgcm   10137 May 31  2010 tiegcm-ibm.job*
@@ -57,8 +59,9 @@ At this point, you should have something like this in your working directory
  
 These files and directories contain the following:
 
-.. describe:: README
+.. describe:: README.download
 
+   :download:`README.download <_static/README.download>`
    Instructions for building and making a short default run.
 
 .. describe:: Release_Notes

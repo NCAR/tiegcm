@@ -23,7 +23,7 @@ Contents:
    diagnostics
    source
    build
-   test_runs
+   tests
    trouble
    glossary
 

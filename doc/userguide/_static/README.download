@@ -1,0 +1,108 @@
+
+Model:		tiegcm1.94
+svn Tag:	tags/tiegcm1.94
+Release Date:	June 1, 2011
+Download Site:	http://www.hao.ucar.edu/modeling/tgcm/download.php
+                (Model and required data are available as separate downloads)
+Documentation:  User's Guide and Model description available in "doc" directory
+                Also available from tgcm website: http://www.hao.ucar.edu/modeling/tgcm
+
+-------------------------------------------------------------------------------
+These instructions assume the gzipped tar file for the model has
+been downloaded from the above URL. After the file is gunzipped 
+and the tar file extracted to a working directory, you should have 
+the following:
+
+README			This file.
+Release_Notes		Release notes
+tiegcm-ibm.job		Job script for IBM system
+tiegcm-linux.job	Job script for Linux system
+tiegcmlicense.txt	Academic research license agreement
+$model/			Model directory, containing src and scripts subdirs
+
+To build and run the model, you must also download the data directory
+from the above URL, or already have the data in a directory specified
+by the $TGCMDATA env var.
+
+>>> IMPORTANT <<<
+If you download the data directory, please set environment variable TGCMDATA 
+to the full path to the tiegcm1.93_data directory (setenv in your .cshrc file).
+(This is to enable the model to resolve $TGCMDATA if it is used in the model
+namelist input file)
+
+-------------------------------------------------------------------------------
+To build the model and make a short test run on a Linux system, type:
+
+tiegcm-linux.job >&! tiegcm-linux.out &
+(To submit to a Linux cluster running LSF (Load Sharing Facility), type
+ bsub < tiegcm-linux.out)
+
+The default job script is for a 64-bit Linux system with MPI, using 8 processors.
+
+To change this to run a 32-bit serial job, comment out the mpi and nproc settings
+in tiegcm-linux.job:
+#set mpi         = TRUE
+#set nproc       = 8      # linux mpi runs only
+
+This assumes the data directory (from the data download) is ./${model}_data. 
+You must set TGCMDATA env var (in your ~/.cshrc file) to the full path to 
+${model}_data for the model to resolve any use of $TGCMDATA in the namelist 
+input file (i.e., specifying paths to data files).
+
+- The build/exec directory will be ./$model/tiegcm-linux
+- A default namelist input file ${model}_default.inp will be written to the 
+  working dir and used in the test run (after editing for a new run, this file 
+  can be renamed and specified in the $input shell var in the job script.
+- Csh script output will go to tiegcm-linux.out 
+- Model stdout will be written to $model.out.
+- History output files (netCDF) will be written to the exec directory
+
+-------------------------------------------------------------------------------
+To build and execute a short 4-processor test run on an IBM cluster running
+  LSF (Load Sharing Facility), submit the job by typing:
+
+bsub < tiegcm-ibm.job
+
+This assumes the data directory (from the data download) is ./${model}_data. 
+You must set TGCMDATA env var (in your ~/.cshrc file) to the full path to 
+${model}_data for the model to resolve any use of $TGCMDATA in the namelist 
+input file (i.e., specifying paths to data files).
+
+The build/exec directory will be ./$model/tiegcm-aix
+History output files will be written to the exec directory
+Csh script output will be returned by LSF.
+Model stdout will be written to $model.out.
+The $model.out stdout file will be parsed to make a file for each MPI task
+  (e.g., tiegcm_task0.out, etc)
+
+-------------------------------------------------------------------------------
+The following "Make.machine" files are available in the scripts directory.
+These contain platform and machine-specific compiler and link flags, library
+locations, etc. Select the Make.machine file you want to use, and set the
+"make" shell variable in the job script.
+
+  Make.bluefire		NCAR IBM cluster "bluefire" with AIX and xlf90 compiler
+  Make.generic_dasg	For serial test runs on NCAR DASG machines (e.g., mirage0)
+  Make.intel_hao64	Intel ifort/mpif90 compiler on 64-bit HAO Linux systems
+  Make.pgi_hao64	PGI pgf90/mpif90 compiler on 64-bit HAO Linux systems
+  Make.pgi_hao32	PGI pgf90 compiler on 32-bit HAO Linux systems (usually serial)
+
+The model has been built and executed on the following platforms:
+
+-- NCAR IBM/AIX bluefire (parallel MPI) (xlf90 build):
+   AIX be1105en 3 5 00CBB5014C00
+
+-- 64-bit Linux (parallel MPI, PGI's pgf90 compiler) e.g.:
+   Linux arc 2.6.18-128.7.1.el5 #1 SMP Mon Aug 24 08:21:56 EDT 2009 x86_64 x86_64 x86_64 GNU/Linux
+
+-- 64-bit Linux (parallel MPI, Intel ifort compiler) e.g.:
+   Linux arc 2.6.18-128.7.1.el5 #1 SMP Mon Aug 24 08:21:56 EDT 2009 x86_64 x86_64 x86_64 GNU/Linux
+
+-- "Generic" NCAR/HAO fc7 32-bit Linux desktop (serial), (pgf90 build) e.g.:
+   Linux oreo 2.6.23.17-88.fc7 #1 SMP Thu May 15 00:35:10 EDT 2008 i686 i686 i386 GNU/Linux
+
+-- Linux Ubuntu with Intel ifort/mpif90 compiler.
+
+User's are encouraged to customize their own Make.machine files for their
+local systems. 
+-------------------------------------------------------------------------------

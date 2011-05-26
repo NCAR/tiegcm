@@ -4,6 +4,13 @@ Glossary
 
 .. glossary::
 
+   benchmark runs
+     A series of :ref:`validation/test runs <tests>` made with each release 
+     of the model.  Namelist files and job scripts used to make these benchmark 
+     runs are available in subdirectories under the :term:`tests/` directory of the
+     current release (e.g., namelist input files for the "control" test run are
+     ``modeldir/tests/control/*.inp``).
+
    continuation run
      A continuation run continues from the last history of the previous run.
      That history (:ref:`START <START>` time) must be on the first :ref:`OUTPUT <OUTPUT>` file  
@@ -39,6 +46,12 @@ Glossary
      on the first :ref:`OUTPUT <OUTPUT>` history file provided in the namelist input, and continue
      the run from there.
 
+   job script
+     A csh script in the scripts/ directory which, when executed, will build and execute
+     the model. The user defines a few shell variables in the job script, such as
+     the :term:`modeldir`, and the :term:`namelist input`. For more details, please
+     see :ref:`job scripts <jobscript>`.
+
    model time
      TIEGCM model time is represented by an integer triplet: day,hour,minute, where 
      day is the julian day of the year, and hour is the ut. The variable for model time
@@ -54,7 +67,7 @@ Glossary
      The `NCAR Community Data Portal <http://cdp.ucar.edu/>`_ is a public data 
      repository with datasets from NCAR, UCAR, UOP, and participating organizations. 
      To browse TIEGCM-related files (mostly netCDF history files for model start-up, 
-     or results of benchmark runs), click on the "Models" link, then to the
+     or results of :term:`benchmark runs`), click on the "Models" link, then to the
      "Thermospheric General Circulation Models" link, and finally to the desired
      model version. NetCDF Metadata is available without actually downloading files.
 
@@ -87,9 +100,12 @@ Glossary
      Subdirectory under the :term:`modeldir` containing the model source code
      (\*.F, \*.h files).
 
-   test/
-     Subdirectory under the :term:`modeldir` containing setup scripts for
-     benchmark runs.
+   tests/
+     Subdirectory under the :term:`modeldir`. The tests directory 
+     contains subdirectories for :term:`benchmark runs` that were made for 
+     the current release.  The subdirectories contain job scripts and namelist input 
+     files that can be used to reproduce benchmark runs for testing and validation 
+     purposes. For more information, see the section on :ref:`Benchmark Test Runs <tests>`.
 
    TGCMDATA
      A unix environment variable that refers to the :term:`datadir`. This environment
@@ -99,7 +115,7 @@ Glossary
    modeldir
      The model root directory. This directory typically contains subdirectories
      :term:`src/` (model source code), :term:`scripts/` (utility scripts), 
-     :term:`doc/` (documentation), and :term:`test/` (test runs). The modeldir 
+     :term:`doc/` (documentation), and :term:`tests/` (test runs). The modeldir 
      is available via :ref:`download <download>`, and is typically a subdirectory 
      of the model working directory (:term:`workdir`). 
  

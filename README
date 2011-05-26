@@ -1,19 +1,19 @@
 
-Model root directory for TIEGCM version 1.94:
+Model root directory for TIEGCM:
 
 Subdir		Description		Summary of Contents
---------------------------------------------------------------------------
-doc/		Documentation		User Guide, Model Description pdf's
+----------------------------------------------------------------------------------
+doc/		Documentation		User Guide, Model Description, Release Doc
 scripts/	Support scripts 	Job scripts, Make files, Utilities
 src/		Source code		Source files *.F, *.h
 tests/		Benchmark tests		Scripts for benchmark runs
 
-For detailed information at the time of this release, please see the 
-pdf's of the User's Guide and Model Description in the doc directory. 
+For a brief set of instructions to build the model and make a short default
+run, see doc/README.download.
 
-Also please see the main TGCM website: 
+Please also see the main TGCM website: 
 
 http://www.hao.ucar.edu/modeling/tgcm 
 
-User's Guide and Model Description for the latest release of the model
-are also available from the main website.
+User's Guide, Model Description, and Release documentation are available from 
+the main website (as well as in your local doc directory).
