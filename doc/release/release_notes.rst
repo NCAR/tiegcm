@@ -51,7 +51,7 @@ Validation and Benchmark Runs (tests/ directory)
     seasonal source histories.
   * **Climatology:** Full-year Climatology with constant solar forcing.
   * **Dec2006:** December, 2006 "AGU" storm case.
-  * **Nov2003:** November 1-6 (days 305-310), 2003 storm case.
+  * **Nov2003:** November 19-24 (days 323-328), 2003 storm case.
   * **Whi2008:** Whole Heliosphere Interval (WHI), March 21 to April 16, 2008.
 
 * For more detailed information and access to the history files and

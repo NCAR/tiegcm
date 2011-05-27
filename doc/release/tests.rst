@@ -110,7 +110,7 @@ December, 2006 "AGU Storm"
 November, 2003 Storm Case
 -------------------------
 
-**nov2003**: November 1-6 (days 305-310), 2003 storm case:
+**nov2003**: November 19-24 (days 323-328), 2003 storm case:
 
 * Heelis potential model with GPI (Kp) data
 * Weimer potential model with IMF data (F10.7 from GPI)
