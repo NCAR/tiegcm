@@ -31,7 +31,7 @@ to the full path to the data directory (setenv in your .cshrc file).  This is to
 enable the model to resolve $TGCMDATA if it is used in the model namelist input file)
 
 -------------------------------------------------------------------------------
-To build the model and make a short test run on a Linux system, type:
+Follow this procedure to build the model and make a short default run on a Linux system.
 
 1. Copy the csh job script scripts/tiegcm-linux.job to your working directory.
    This default job script is for a 64-bit Linux system with MPI, using 4 processors.

@@ -25,7 +25,11 @@ import sys, os
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.todo', 'sphinx.ext.pngmath', 'sphinx.ext.autodoc']
+#extensions = ['sphinx.ext.todo', 'sphinx.ext.pngmath', 'sphinx.ext.autodoc']
+extensions = ['sphinx.ext.extlinks']
+
+extlinks = {'base_url': ('http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/%s', 'base_url '),
+            'data_url': ('http://download.hao.ucar.edu/pub/tgcm/data/tiegcm1.94/%s', 'data_url ')}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

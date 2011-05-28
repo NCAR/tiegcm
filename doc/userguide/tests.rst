@@ -15,8 +15,8 @@ job scripts used to make the runs are provided in the :term:`tests/` directory
 of the release.
 
 For full history file output and "sanity check" plots for benchmark runs made
-by version |version|, please see `Release Documentation 
-<http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/release/_build/html/>`_
+by version |version|, please see 
+:base_url:`Release Documentation <release/_build/html>`
 
 Following is a summary of benchmark runs made by TIEGCM version |version|:
 

@@ -1,24 +1,25 @@
 
 Model:		tiegcm1.94
-svn Tag:	tags/tiegcm1.94
+svn Tag:	tiegcm/tags/tiegcm1.94
 Release Date:	June 1, 2011
+
 Download Site:	http://www.hao.ucar.edu/modeling/tgcm/download.php
-                (Model and required data are available as separate downloads)
+                (Model Source and required Data are available as separate downloads)
+
 Documentation:  User's Guide and Model description available in "doc" directory
                 Also available from tgcm website: http://www.hao.ucar.edu/modeling/tgcm
 
 -------------------------------------------------------------------------------
-These instructions assume the gzipped tar file for the model has
+These instructions assume the gzipped tar file of the Source Code has
 been downloaded from the above URL. After the file is gunzipped 
 and the tar file extracted to a working directory, you should have 
-the following:
+something like the following:
 
-README			This file.
-Release_Notes		Release notes
-tiegcm-ibm.job		Job script for IBM system
-tiegcm-linux.job	Job script for Linux system
-tiegcmlicense.txt	Academic research license agreement
-$model/			Model directory, containing src and scripts subdirs
+README		Brief description of directories
+doc/		Documentation		User Guide, Model Description, Release Doc
+scripts/	Support scripts 	Job scripts, Make files, Utilities
+src/		Source code		Source files *.F, *.h
+tests/		Benchmark tests		Scripts for benchmark runs
 
 To build and run the model, you must also download the data directory
 from the above URL, or already have the data in a directory specified
@@ -26,54 +27,31 @@ by the $TGCMDATA env var.
 
 >>> IMPORTANT <<<
 If you download the data directory, please set environment variable TGCMDATA 
-to the full path to the tiegcm1.93_data directory (setenv in your .cshrc file).
-(This is to enable the model to resolve $TGCMDATA if it is used in the model
-namelist input file)
+to the full path to the data directory (setenv in your .cshrc file).  This is to 
+enable the model to resolve $TGCMDATA if it is used in the model namelist input file)
 
 -------------------------------------------------------------------------------
-To build the model and make a short test run on a Linux system, type:
+Follow this procedure to build the model and make a short default run on a Linux system.
 
-tiegcm-linux.job >&! tiegcm-linux.out &
-(To submit to a Linux cluster running LSF (Load Sharing Facility), type
- bsub < tiegcm-linux.out)
+1. Copy the csh job script scripts/tiegcm-linux.job to your working directory.
+   This default job script is for a 64-bit Linux system with MPI, using 4 processors.
 
-The default job script is for a 64-bit Linux system with MPI, using 8 processors.
+2. Make sure your env var $TGCMDATA is set to a directory containing files
+   obtained from the data download (check setting of SOURCE file in doc/tiegcm_default.inp)
 
-To change this to run a 32-bit serial job, comment out the mpi and nproc settings
-in tiegcm-linux.job:
-#set mpi         = TRUE
-#set nproc       = 8      # linux mpi runs only
+3. Execute the job script in background by typing "tiegcm-linux.job &"
+   (or submit the script to a batch queing system)
 
-This assumes the data directory (from the data download) is ./${model}_data. 
-You must set TGCMDATA env var (in your ~/.cshrc file) to the full path to 
-${model}_data for the model to resolve any use of $TGCMDATA in the namelist 
-input file (i.e., specifying paths to data files).
+4. The model will be built and executed in the execution directory tiegcm-linux
+   (or possibly tiegcmx.xx-linux for version x.xx). A default namelist input
+   tiegcm_default.inp file will be created. NetCDF output files will also be written
+   to the execution directory. Stdout from the model run will be written to
+   tiegcm.out in your working directory.
 
-- The build/exec directory will be ./$model/tiegcm-linux
-- A default namelist input file ${model}_default.inp will be written to the 
-  working dir and used in the test run (after editing for a new run, this file 
-  can be renamed and specified in the $input shell var in the job script.
-- Csh script output will go to tiegcm-linux.out 
-- Model stdout will be written to $model.out.
-- History output files (netCDF) will be written to the exec directory
-
--------------------------------------------------------------------------------
-To build and execute a short 4-processor test run on an IBM cluster running
-  LSF (Load Sharing Facility), submit the job by typing:
-
-bsub < tiegcm-ibm.job
-
-This assumes the data directory (from the data download) is ./${model}_data. 
-You must set TGCMDATA env var (in your ~/.cshrc file) to the full path to 
-${model}_data for the model to resolve any use of $TGCMDATA in the namelist 
-input file (i.e., specifying paths to data files).
-
-The build/exec directory will be ./$model/tiegcm-aix
-History output files will be written to the exec directory
-Csh script output will be returned by LSF.
-Model stdout will be written to $model.out.
-The $model.out stdout file will be parsed to make a file for each MPI task
-  (e.g., tiegcm_task0.out, etc)
+5. For subsequent runs, rename and edit the default namelist input file (tiegcm_default.inp)
+   and set the "input" shell variable to the new input file name in the job script. 
+   (If "set input" is commented out in the job script, it will always make and use 
+    the default file, ignoring other files that may be in the working directory)
 
 -------------------------------------------------------------------------------
 The following "Make.machine" files are available in the scripts directory.
@@ -86,6 +64,10 @@ locations, etc. Select the Make.machine file you want to use, and set the
   Make.intel_hao64	Intel ifort/mpif90 compiler on 64-bit HAO Linux systems
   Make.pgi_hao64	PGI pgf90/mpif90 compiler on 64-bit HAO Linux systems
   Make.pgi_hao32	PGI pgf90 compiler on 32-bit HAO Linux systems (usually serial)
+
+User's are encouraged to customize their own Make.machine files for their
+local systems. For the job script to use the file, the "make" shell variable  
+should be set to the file name (can be in the working directory or the scripts directory
 
 The model has been built and executed on the following platforms:
 
@@ -103,6 +85,4 @@ The model has been built and executed on the following platforms:
 
 -- Linux Ubuntu with Intel ifort/mpif90 compiler.
 
-User's are encouraged to customize their own Make.machine files for their
-local systems. 
 -------------------------------------------------------------------------------

@@ -92,12 +92,16 @@ model source code, supporting scripts, documentation, and test scripts::
 :term:`doc/` directory contents:
 
 * **userguide/**: Directory containing source files for the User's Guide (this document)
-* **description/**: Directory containing source files for the `TIEGCM Model Description 
-  <http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/description/tiegcm_modeldes_6Oct09.pdf>`_
-* **release/**: Directory containing source files for the `Release Documentation 
-  <http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/release/_build/html>`_ 
+
+* **description/**: Directory containing source files for the 
+  :base_url:`TIEGCM Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
+
+* **release/**: Directory containing source files for the 
+  :base_url:`Release Documentation <release/_build/html>`
+
 * **diags.table**: :download:`Table of diagnostic fields <_static/diags.table>` that can be 
   saved on secondary history files.
+
 * **README.download**: :download:`Instructions <_static/README.download>` for how to make a 
   quick-start default build and execution of the model after downloading the source code and data.
 
@@ -108,7 +112,7 @@ model source code, supporting scripts, documentation, and test scripts::
   input files and job scripts that can be used to reproduce the benchmark runs for
   validation and testing, comparing results from code changes, etc. 
 * For more information on benchmark runs made for the current release, please see 
-  `Release Documentation <http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/release/_build/html>`_ .
+  :base_url:`Release Documentation <release/_build/html>`
 
 Data Directory (:term:`datadir`)
 --------------------------------
