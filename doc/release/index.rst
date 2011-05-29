@@ -22,7 +22,7 @@ Contents:
 
 * :base_url:`User's Guide <userguide/html>`
 
-* :base_url:`Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
+* :base_url:`Model Description <description/model_description.pdf>`
 
 * :ref:`search`
 
