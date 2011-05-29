@@ -12,7 +12,7 @@
 ; SOURCE_START: Time of history on start-up file (initial runs only)
 ;
 ; Start from 30-day equilibration run:
- SOURCE = '$TGCMDATA/tiegcm1.94/TGCM.tiegcm1.94.p_nov2003_heelis_gpi_001.nc'
+ SOURCE = '$TGCMDATA/TGCM.tiegcm1.94.p_nov2003_heelis_gpi_001.nc'
  SOURCE_START = 305,0,0
 ;
 ; START: Start time (day,hour,minute)
@@ -72,7 +72,7 @@
 ; must be commented out (data will be used for those that are commented
 ; out, otherwise the user-provided values will be used).
 ;
- GPI_NCFILE = '$TGCMDATA/gpi_2000001-2009031.nc'
+ GPI_NCFILE = '$TGCMDATA/gpi_2000001-2011059.nc'
 ;
 ; If KP is specified, and POWER and/or CTPOTEN are commented,
 ; then the given KP will be used to calculate POWER and/or CTPOTEN

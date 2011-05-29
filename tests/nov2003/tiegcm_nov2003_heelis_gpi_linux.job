@@ -2,7 +2,7 @@
 #
 # Set shell variables for tiegcm linux job:
 #
-set modeldir     = ../../../trunk
+set modeldir     = tiegcm_trunk
 set execdir      = tiegcm-linux
 set make         = Make.intel_hao64
 set input        = tiegcm_nov2003_heelis_gpi.inp

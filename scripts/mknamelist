@@ -167,7 +167,7 @@ $HPSS_PATH = "'/home/$user/$model'";
 $TIDE    = "0.,0.,0.,0.,0.,0.,0.,0.,0.,0.";
 $TIDE2   = "0.,0.";
 $POTENTIAL_MODEL = "'HEELIS'";
-$GPI_NCFILE = "'\$TGCMDATA/gpi_2000001-2009031.nc'";
+$GPI_NCFILE = "'\$TGCMDATA/gpi_2000001-2011059.nc'";
 $IMF_NCFILE = "'\$TGCMDATA/imf_OMNI_2002001-2002365.nc'";
 $KP = "2.0";
 $POWER  = "18.";
@@ -241,9 +241,9 @@ sub set_res_params {
   my ($highres) = @_;
   if (! defined($SOURCE)) {
     if ($highres) {
-      $SOURCE = "'\$TGCMDATA/tiegcm1.94/pcntr_dres_mareqx_smin.nc'";
+      $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.94.pcntr_dres_mareqx_smin.nc'";
     } else {
-      $SOURCE = "'\$TGCMDATA/tiegcm1.94/pcntr_mareqx_smin.nc'";
+      $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.94.pcntr_mareqx_smin.nc'";
     }
   }
   if (! defined($OUTPUT)) {

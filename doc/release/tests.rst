@@ -1,8 +1,8 @@
 
 .. _tests:
 
-TIEGCM v\ |version| Benchmark Runs
-==================================
+Benchmark Runs
+==============
 
 For seasonal start-up files, and control runs, the definition
 of "Solar Minimum" and "Solar Maximum" conditions are as follows:
@@ -30,17 +30,17 @@ about 14.5 MB each):
 
 * Start-up files at Solar Minimum:
 
- * `March Equinox (day 80) Solar Minimum <tiegcm1.94/pcntr_mareqx_smin.nc>`_
- * `June Solstice (day 172) Solar Minimum <tiegcm1.94/pcntr_junsol_smin.nc>`_
- * `September Equinox (day 264) Solar Minimum <tiegcm1.94/pcntr_sepeqx_smin.nc>`_
- * `December Solstice (day 355) Solar Minimum <tiegcm1.94/pcntr_decsol_smin.nc>`_
+ * `March Equinox (day 80) Solar Minimum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_mareqx_smin.nc>`_
+ * `June Solstice (day 172) Solar Minimum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_junsol_smin.nc>`_
+ * `September Equinox (day 264) Solar Minimum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_sepeqx_smin.nc>`_
+ * `December Solstice (day 355) Solar Minimum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_decsol_smin.nc>`_
 
 * Start-up files at Solar Maximum:
 
- * `March Equinox (day 80) Solar Maximum <tiegcm1.94/pcntr_mareqx_smax.nc>`_
- * `June Solstice (day 172) Solar Maximum <tiegcm1.94/pcntr_junsol_smax.nc>`_
- * `September Equinox (day 264) Solar Maximum <tiegcm1.94/pcntr_sepeqx_smax.nc>`_
- * `December Solstice (day 355) Solar Maximum <tiegcm1.94/pcntr_decsol_smax.nc>`_
+ * `March Equinox (day 80) Solar Maximum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_mareqx_smax.nc>`_
+ * `June Solstice (day 172) Solar Maximum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_junsol_smax.nc>`_
+ * `September Equinox (day 264) Solar Maximum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_sepeqx_smax.nc>`_
+ * `December Solstice (day 355) Solar Maximum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_decsol_smax.nc>`_
 
 Seasonal Control Runs
 ---------------------
@@ -135,8 +135,8 @@ Whole Heliosphere Interval (WHI)
   `Community Data Portal <http://cdp.ucar.edu/home/home.htm>`_ (go to "Models",
   then "Thermospheric General Circulation Models").
 
-Version |version| Benchmark Run History files on the NCAR hpss 
---------------------------------------------------------------
+History files on the NCAR HPSS 
+------------------------------
 
 Seasonal start-up files and complete history files for the 
 benchmark runs are on the `NCAR HPSS <http://www2.cisl.ucar.edu/docs/hpss>`_

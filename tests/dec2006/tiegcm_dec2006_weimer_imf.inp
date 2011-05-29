@@ -11,7 +11,7 @@
 ; SOURCE:       Start-up history file (for initial runs only)
 ; SOURCE_START: Time of history on start-up file (initial runs only)
 ;
- SOURCE = '$TGCMDATA/tiegcm1.94/TGCM.tiegcm1.94.p_dec2006_weimer_imf_001.nc'
+ SOURCE = '$TGCMDATA/TGCM.tiegcm1.94.p_dec2006_weimer_imf_001.nc'
  SOURCE_START = 330,0,0
 ;
 ; START: Start time (day,hour,minute)
@@ -47,7 +47,7 @@
 ; when executed, will copy history disk files to the NCAR HPSS in the 
 ; directory HPSS_PATH (must have an HPSS account at NCAR CISL)
 ;
- HPSS_PATH = '/home/tgcm/tiegcm1.94/dec2006'
+ HPSS_PATH = '/home/tgcm/tiegcm_test/dec2006'
 ;
  TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2 = 0.,0.
@@ -74,7 +74,7 @@
 ; must be commented out (data will be used for those that are commented
 ; out, otherwise the user-provided values will be used).
 ;
- GPI_NCFILE = '$TGCMDATA/gpi_2000001-2009031.nc'
+ GPI_NCFILE = '$TGCMDATA/gpi_2000001-2011059.nc'
 ;
 ; If KP is specified, and POWER and/or CTPOTEN are commented,
 ; then the given KP will be used to calculate POWER and/or CTPOTEN

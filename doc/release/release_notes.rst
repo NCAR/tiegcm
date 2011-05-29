@@ -1,6 +1,6 @@
 
-Release Notes for TIEGCM v\ |version|
-=====================================
+Release Notes
+=============
 
 New validated features in the public release
 --------------------------------------------
