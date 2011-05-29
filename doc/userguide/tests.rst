@@ -16,7 +16,7 @@ of the release.
 
 For full history file output and "sanity check" plots for benchmark runs made
 by version |version|, please see 
-:base_url:`Release Documentation <release/_build/html>`
+:base_url:`Release Documentation <release/html>`
 
 Following is a summary of benchmark runs made by TIEGCM version |version|:
 

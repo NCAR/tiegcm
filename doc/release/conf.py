@@ -27,8 +27,8 @@ import sys, os
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.extlinks']
 
-extlinks = {'base_url': ('http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/%s', 'base_url '),
-            'data_url': ('http://download.hao.ucar.edu/pub/tgcm/data/tiegcm1.94/%s', 'data_url ')}
+extlinks = {'base_url': ('http://www.hao.ucar.edu/modeling/tgcm/tiegcm1.94/%s', 'base_url '),
+            'data_url': ('http://www.hao.ucar.edu/modeling/tgcm/tiegcm1.94/%s', 'data_url ')}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

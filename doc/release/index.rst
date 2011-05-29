@@ -20,7 +20,7 @@ Contents:
    release_notes
    tests
 
-* :base_url:`User's Guide <userguide/_build/html>`
+* :base_url:`User's Guide <userguide/html>`
 
 * :base_url:`Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
 

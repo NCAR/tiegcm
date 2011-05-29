@@ -248,16 +248,16 @@ sub set_res_params {
   }
   if (! defined($OUTPUT)) {
     if ($highres) {
-      $OUTPUT = "'" . $USER . "." . $model . $version . "_dres.pcntr_mareqx_smin_001.nc'";
+      $OUTPUT = "'" . $USER . "." . $model . "_dres.pcntr_mareqx_smin_001.nc'";
     } else {
-      $OUTPUT = "'" . $USER . "." . $model . $version . ".pcntr_mareqx_smin_001.nc'";
+      $OUTPUT = "'" . $USER . "." . $model . ".pcntr_mareqx_smin_001.nc'";
     }
   }
   if (! defined($SECOUT)) {
     if ($highres) {
-      $SECOUT   = "'" . $USER . "." . $model . $version . "_dres.scntr_mareqx_smin_001.nc'";
+      $SECOUT   = "'" . $USER . "." . $model . "_dres.scntr_mareqx_smin_001.nc'";
     } else {
-      $SECOUT   = "'" . $USER . "." . $model . $version . ".scntr_mareqx_smin_001.nc'";
+      $SECOUT   = "'" . $USER . "." . $model . ".scntr_mareqx_smin_001.nc'";
     }
   }
   if (! defined($GSWM_MI_DI_NCFILE)) { 

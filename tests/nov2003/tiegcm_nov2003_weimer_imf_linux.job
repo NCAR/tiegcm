@@ -2,7 +2,7 @@
 #
 # Set shell variables for tiegcm linux job:
 #
-set modeldir     = tiegcm_trunk
+set modeldir     = tiegcm1.94
 set execdir      = tiegcm-linux
 set make         = Make.intel_hao64
 set input        = tiegcm_nov2003_weimer_imf.inp
