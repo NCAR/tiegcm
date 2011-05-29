@@ -94,7 +94,7 @@ model source code, supporting scripts, documentation, and test scripts::
 * **userguide/**: Directory containing source files for the User's Guide (this document)
 
 * **description/**: Directory containing source files for the 
-  :base_url:`TIEGCM Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
+  :base_url:`TIEGCM Model Description <description/model_description.pdf>`
 
 * **release/**: Directory containing source files for the 
   :base_url:`Release Documentation <release/html>`

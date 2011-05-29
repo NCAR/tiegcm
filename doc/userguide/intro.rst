@@ -18,7 +18,7 @@ For more information about the TIEGCM and other related models, please see:
 
 * :base_url:`TIEGCM Release Documentation <release/html>` for version |version|.
 
-* :base_url:`TIEGCM Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
+* :base_url:`TIEGCM Model Description <description/model_description.pdf>`
 
 * `tgcmgroup email list <http://mailman.ucar.edu/mailman/listinfo/tgcmgroup>`_ 
 
