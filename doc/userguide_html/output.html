@@ -1,0 +1,149 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Structure of Output History Files &mdash; TIEGCM v1.94 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.94',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="TIEGCM v1.94 documentation" href="index.html" />
+    <link rel="next" title="Saving Diagnostic Fields" href="diagnostics.html" />
+    <link rel="prev" title="Run Control Parameters: The Namelist Input File" href="namelist.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="diagnostics.html" title="Saving Diagnostic Fields"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="namelist.html" title="Run Control Parameters: The Namelist Input File"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="structure-of-output-history-files">
+<h1>Structure of Output History Files<a class="headerlink" href="#structure-of-output-history-files" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="netcdf-output-files-netcdf">
+<span id="output"></span><h2>NetCDF Output Files (<a class="reference internal" href="glossary.html#term-netcdf"><em class="xref std std-term">netCDF</em></a>)<a class="headerlink" href="#netcdf-output-files-netcdf" title="Permalink to this headline">¶</a></h2>
+<p>TIEGCM history files are output in <a class="reference external" href="http://www.unidata.ucar.edu/software/netcdf/">netCDF</a>,
+a self-describing platform-independent data format written and maintained by the UCAR
+<a class="reference external" href="http://www.unidata.ucar.edu">Unidata</a> program.</p>
+<p>Each netCDF file contains one or more <a class="reference internal" href="glossary.html#term-history"><em class="xref std std-term">histories</em></a>, i.e., the state of the
+model output fields at a discrete instant in <a class="reference internal" href="glossary.html#term-model-time"><em class="xref std std-term">model time</em></a>. Here is an example of the
+metadata content of a sample primary history file: <a class="reference download internal" href="_downloads/primary.ncd"><tt class="xref download docutils literal"><span class="pre">primary.ncd</span></tt></a>.
+This example file contains six daily histories (days 355 to 360 of 2002).
+This metadata is obtained via the &#8220;ncdump&#8221; command in the netCDF utilities. This example
+ncdump file contains data values for scalar and singly-dimensioned vectors only.</p>
+<p>TIEGCM history files are &#8220;CF compliant&#8221;, i.e., they conform to the
+<a class="reference external" href="http://cf-pcmdi.llnl.gov">NetCDF Climate and Forecast (CF) Metadata Convention</a>.</p>
+</div>
+<div class="section" id="primary-and-secondary-history-files">
+<h2>Primary and Secondary History Files<a class="headerlink" href="#primary-and-secondary-history-files" title="Permalink to this headline">¶</a></h2>
+<p>&#8220;Primary&#8221; history files contain the &#8220;prognostic&#8221; fields necessary to restart the model.
+They can be specified in namelist input as the <a class="reference internal" href="namelist.html#source"><em>SOURCE</em></a> file for starting
+the model in an <a class="reference internal" href="glossary.html#term-initial-run"><em class="xref std std-term">initial run</em></a> (a <a class="reference internal" href="glossary.html#term-continuation-run"><em class="xref std std-term">continuation run</em></a> does not specify a SOURCE
+file, and is continued from the START time found on the first OUTPUT file).  Typically,
+daily histories are stored on primary history files.</p>
+<p>Fields on primary histories necessary for start-up of the TIEGCM are as follows:
+TN, UN, VN, O2, O1, N4S, NO, O+, N2D, TI, TE, NE, O2P, OMEGA, Z, POTEN</p>
+<p>&#8220;Secondary&#8221; history files contain diagnostic fields and/or primary history fields.
+Fields to be saved on the secondary history files are listed by the namelist input
+parameter <a class="reference internal" href="namelist.html#secflds"><em>SECFLDS</em></a>. Diagnostics can be saved by calling subroutine addfld
+in the code (addfld.F), or by including one or more of the &#8220;standard&#8221; diagnostic fields
+available via the <a class="reference internal" href="diagnostics.html#diagnostics"><em>diagnostics</em></a> module (diags.F). Secondary histories
+are often saved at a higher temporal resolution than primary histories, typically hourly.
+<a class="reference download internal" href="_downloads/secondary.ncd"><tt class="xref download docutils literal"><span class="pre">Here</span></tt></a> is an ncdump of an example secondary history file.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Structure of Output History Files</a><ul>
+<li><a class="reference internal" href="#netcdf-output-files-netcdf">NetCDF Output Files (<tt class="docutils literal"><span class="pre">netCDF</span></tt>)</a></li>
+<li><a class="reference internal" href="#primary-and-secondary-history-files">Primary and Secondary History Files</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="namelist.html"
+                        title="previous chapter">Run Control Parameters: The Namelist Input File</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="diagnostics.html"
+                        title="next chapter">Saving Diagnostic Fields</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/output.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="diagnostics.html" title="Saving Diagnostic Fields"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="namelist.html" title="Run Control Parameters: The Namelist Input File"
+             >previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Ben Foster.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

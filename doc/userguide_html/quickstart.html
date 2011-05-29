@@ -1,0 +1,406 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>QuickStart Procedure &mdash; TIEGCM v1.94 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.94',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="TIEGCM v1.94 documentation" href="index.html" />
+    <link rel="next" title="Directory Structure" href="dirstruct.html" />
+    <link rel="prev" title="Introduction" href="intro.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="dirstruct.html" title="Directory Structure"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="quickstart-procedure">
+<span id="quickstart"></span><h1>QuickStart Procedure<a class="headerlink" href="#quickstart-procedure" title="Permalink to this headline">¶</a></h1>
+<p>This document is intended to provide a tutorial-like procedure for downloading
+source code and start-up data files, building the model, and executing a short
+default run on a 64-bit Linux system.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This document is up to date for version 1.94 of the TIEGCM</p>
+</div>
+<div class="section" id="downloading-the-model-source-code-and-required-data-files">
+<span id="download"></span><span id="index-0"></span><h2>Downloading the model source code and required data files<a class="headerlink" href="#downloading-the-model-source-code-and-required-data-files" title="Permalink to this headline">¶</a></h2>
+<p>The model source code and related input data files may be downloaded from
+the TIEGCM download page of the main TGCM website:</p>
+<p><a class="reference external" href="http://www.hao.ucar.edu/modeling/tgcm/download.php">http://www.hao.ucar.edu/modeling/tgcm/download.php</a></p>
+<p>You will need to provide an email address (login and password are NOT required).
+Documentation and Postprocessor codes are also available on the download site,
+but all you need for now is the source code, and corresponding data files.
+Both are provided as gzipped tar files.</p>
+<p>After downloading the two gzipped tar files to an empty working directory (<a class="reference internal" href="glossary.html#term-workdir"><em class="xref std std-term">workdir</em></a>)
+on a large disk system (for example, <tt class="docutils literal"><span class="pre">/mydisk/tiegcm</span></tt>), uncompress and extract
+the source code and related scripts and documentation:</p>
+<div class="highlight-python"><pre>$ gunzip tiegcmx.xx.tar.gz
+$ tar xvf tiegcmx.xx.tar</pre>
+</div>
+<p>where <tt class="docutils literal"><span class="pre">x.xx</span></tt> is the model version downloaded.</p>
+<p>Next, make a directory to hold
+the data files (for example, <tt class="docutils literal"><span class="pre">/mydisk/tiegcm/data</span></tt>), and uncompress and extract
+the data tar file into that directory.  Then set environment variable <tt class="docutils literal"><span class="pre">$TGCMDATA</span></tt>,
+e.g., for the c-shell, add this line to your .cshrc file:</p>
+<div class="highlight-python"><pre>setenv TGCMDATA /mydisk/tiegcm/data</pre>
+</div>
+<p>At this point, you should have something like this in your working directory
+<tt class="docutils literal"><span class="pre">/mydisk/tiegcm</span></tt>:</p>
+<div class="highlight-python"><pre>total 2376
+-rw-rw-r-- 1 user tgcm    4928 Jun  1  2010 README.download
+-rw-r--r-- 1 user tgcm    2886 Jun  1  2010 Release_Notes
+drwxrwxr-x 2 user tgcm    4096 Apr 22 08:52 data/
+-rwxrwxr-x 1 user tgcm   10137 May 31  2010 tiegcm-ibm.job*
+-rwxrwxr-x 1 user tgcm   10671 May 31  2010 tiegcm-linux.job*
+drwxrwxr-x 5 user tgcm    4096 Jun  1  2010 tiegcmx.xx/
+-rw-r--r-- 1 user tgcm    6116 May 31  2010 tiegcmlicense.txt</pre>
+</div>
+<p>These files and directories contain the following:</p>
+<dl class="describe">
+<dt>
+<tt class="descname">README.download</tt></dt>
+<dd><p><a class="reference download internal" href="_downloads/README.download"><tt class="xref download docutils literal"><span class="pre">README.download</span></tt></a>
+Instructions for building and making a short default run.</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">Release_Notes</tt></dt>
+<dd><p>Release notes for this version of the model.</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">data/</tt></dt>
+<dd><p>Directory containing the downloaded data files (this is <tt class="docutils literal"><span class="pre">$TGCMDATA</span></tt>)</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">tiegcm-ibm.job</tt></dt>
+<dd><p>Job script for building and executing under IBM/AIX systems.
+(<a class="reference download internal" href="_downloads/tiegcm-ibm.job"><tt class="xref download docutils literal"><span class="pre">default</span> <span class="pre">tiegcm-ibm.job</span></tt></a>)</p>
+<p>Read more about <a class="reference internal" href="#ibm-systems"><em>Running the model on IBM/AIX systems</em></a>.</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">tiegcm-linux.job</tt></dt>
+<dd><p>Job script for building and executing under Linux (64-bit) systems.
+(<a class="reference download internal" href="_downloads/tiegcm-linux.job"><tt class="xref download docutils literal"><span class="pre">default</span> <span class="pre">tiegcm-linux.job</span></tt></a>)</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">tiegcmx.xx/</tt></dt>
+<dd><p>Model root directory, containing source code, supporting scripts,
+and documentation.</p>
+</dd></dl>
+
+<p>You are now prepared to build the model and make a short default run
+using the job script.</p>
+</div>
+<div class="section" id="making-a-default-run-on-a-64-bit-linux-system">
+<span id="jobscript"></span><span id="index-1"></span><h2>Making a default run on a 64-bit Linux system<a class="headerlink" href="#making-a-default-run-on-a-64-bit-linux-system" title="Permalink to this headline">¶</a></h2>
+<p>Take a look at the Linux job script
+<a class="reference download internal" href="_downloads/tiegcm-linux.job"><tt class="xref download docutils literal"><span class="pre">tiegcm-linux.job</span></tt></a>. Near the top are
+several shell variables, with their default settings, which configure the
+job script (variables and values may vary somewhat between model versions):</p>
+<div class="highlight-python"><pre>set modeldir = tiegcmx.xx
+set execdir  = tiegcm-linux
+ set make     = Make.intel_hao64
+#set make     = Make.pgi_hao64
+#set input    = tiegcm.inp
+set output   = tiegcm.out
+set mpi      = TRUE
+set nproc    = 4
+set modelres = 5.0
+set debug    = FALSE
+set exec     = TRUE
+set utildir  = $modeldir/scripts</pre>
+</div>
+<p>Following are brief explanations of the job script shell variables:</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Absolute or relative paths are acceptable when specifying directories.
+Relative paths should be relative to the <em>working directory</em> (<a class="reference internal" href="glossary.html#term-workdir"><em class="xref std std-term">workdir</em></a>).</p>
+</div>
+<span class="target" id="index-2"></span><dl class="describe">
+<dt>
+<tt class="descname">modeldir</tt></dt>
+<dd><p>The model root directory (<a class="reference internal" href="glossary.html#term-modeldir"><em class="xref std std-term">modeldir</em></a> from the source code download).
+This will contain subdirectories <tt class="docutils literal"><span class="pre">src/</span></tt>, <tt class="docutils literal"><span class="pre">scripts/</span></tt>, <tt class="docutils literal"><span class="pre">doc/</span></tt>, etc.</p>
+</dd></dl>
+
+<span class="target" id="index-3"></span><dl class="describe">
+<dt>
+<tt class="descname">tiegcm-linux</tt></dt>
+<dd><p>This is the execution directory (<a class="reference internal" href="glossary.html#term-execdir"><em class="xref std std-term">execdir</em></a>), in which the model will
+be built and executed. It will be created if it does not already exist.
+This directory will also contain the model output netCDF history files.</p>
+</dd></dl>
+
+<span class="target" id="index-4"></span><dl class="describe">
+<dt>
+<tt class="descname">make</tt></dt>
+<dd><p>Make file containing platform-specific compiler flags, library locations, etc.
+If not otherwise specified with a path, the job script will look for this
+file in <tt class="docutils literal"><span class="pre">modeldir/scripts</span></tt>. This file is included in the main Makefile
+(<tt class="docutils literal"><span class="pre">scripts/Makefile</span></tt>).  The user can either make necessary adjustments to
+an existing <tt class="docutils literal"><span class="pre">make</span></tt> file, or write their own for a different platform/compiler
+system.</p>
+<p>Here is an example <tt class="docutils literal"><span class="pre">make</span></tt> file for 64-bit HAO Linux systems using the ifort
+Intel compiler: <a class="reference download internal" href="_downloads/Make.intel_hao64"><tt class="xref download docutils literal"><span class="pre">Make.intel_hao64</span></tt></a></p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">input</tt></dt>
+<dd><p>The namelist input file. When this is commented (as above), the job script
+will make a default namelist file <a class="reference download internal" href="_downloads/tiegcm_default.inp"><tt class="xref download docutils literal"><span class="pre">tiegcm_default.inp</span></tt></a>,
+and use it for the default run. Later, you can edit this file for your own runs,
+rename it, and reset and uncomment the <tt class="docutils literal"><span class="pre">input</span></tt> shell variable in the job script.</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">output</tt></dt>
+<dd><p>Name of the file to receive stdout output from the model. If this pre-exists,
+it will be overwritten when the model is executed.</p>
+<p>Here is an example stdout file from a single-processor default run:
+<a class="reference download internal" href="_downloads/tiegcm_default.out"><tt class="xref download docutils literal"><span class="pre">tiegcm_default.out</span></tt></a></p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">mpi</tt></dt>
+<dd><p>Logical flag indicating whether or not to link the MPI library for a
+multi-processor parallel run. If FALSE, the MPI library is not linked,
+and it is assumed the model will be run in serial (single-processor) mode.</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">nproc</tt></dt>
+<dd><p>Number of processors to use in a parallel execution. This is ignored if
+<tt class="docutils literal"><span class="pre">mpi</span></tt> is FALSE.</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">modelres</tt></dt>
+<dd><dl class="docutils">
+<dt>Model resolution. Two resolutions are supported:</dt>
+<dd><ul class="first last simple">
+<li>modelres = 5.0 sets 5-degree lat x lon horizontal, and dz=0.50 vertical</li>
+<li>modelres = 2.5 sets 2.5-degree lat x lon horizontal, and dz=0.25 vertical</li>
+</ul>
+</dd>
+</dl>
+<p>If the resolution is changed, the model should be recompiled before re-executing
+the job script (type &#8220;<em>gmake clean</em>&#8221; in the execdir)</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">debug</tt></dt>
+<dd><p>If <tt class="docutils literal"><span class="pre">debug</span></tt> = TRUE, the job script will compile the build with debug flags set.
+Debug flags specific to the compiler are set in the <tt class="docutils literal"><span class="pre">make</span></tt> file. If <tt class="docutils literal"><span class="pre">debug</span></tt>
+is changed, the code should be recompiled (type &#8220;gmake clean&#8221; in the <tt class="docutils literal"><span class="pre">execdir</span></tt>
+before re-executing the job script).</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">exec</tt></dt>
+<dd><p>If <tt class="docutils literal"><span class="pre">exec</span></tt> = TRUE, the job script will execute the model after compilation,
+otherwise, the job script will stop after compilation without execution.</p>
+</dd></dl>
+
+<dl class="describe">
+<dt>
+<tt class="descname">utildir</tt></dt>
+<dd><p>The utility directory containing supporting scripts. This is normally the <tt class="docutils literal"><span class="pre">scripts/</span></tt>
+subdirectory in the model root directory <tt class="docutils literal"><span class="pre">modeldir</span></tt>.</p>
+</dd></dl>
+
+<p>You are now ready to build and execute a default run. To do this, simply execute the job script
+as follows:</p>
+<div class="highlight-python"><pre>$ tiegcm-linux.job &amp;</pre>
+</div>
+<p>The compilation output will be displayed. If the build is successful (and exec=TRUE),
+the model will be executed, and stdout will go to the specified <tt class="docutils literal"><span class="pre">output</span></tt> file.
+If the job is successful, you can edit and rename the namelist input file, reset
+<tt class="docutils literal"><span class="pre">input</span></tt> in the job script, and re-execute the job script. If there has been
+no change to the source code, it will not need to recompile, and will use the pre-existing
+executable.</p>
+<span class="target" id="ibm-systems"></span></div>
+<div class="section" id="running-the-model-on-ibm-aix-platforms">
+<span id="index-5"></span><h2>Running the model on IBM/AIX Platforms<a class="headerlink" href="#running-the-model-on-ibm-aix-platforms" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This section contains some information that is specific to user&#8217;s
+of the NCAR IBM system <tt class="docutils literal"><span class="pre">&quot;bluefire&quot;</span></tt>. User&#8217;s of other IBM systems
+may need to make adjustments for their particular environment.
+For more information about the NCAR bluefire system, see
+<a class="reference external" href="http://www2.cisl.ucar.edu/docs/bluefire-user-guide">http://www2.cisl.ucar.edu/docs/bluefire-user-guide</a></p>
+</div>
+<p>The model can be built and executed on IBM platforms running AIX with
+the xlf90 (mpxlf_r) compiler. You can use the same procedure described
+in the previous section, except that you use the IBM job script
+<a class="reference download internal" href="_downloads/tiegcm-ibm.job"><tt class="xref download docutils literal"><span class="pre">tiegcm-ibm.job</span></tt></a> instead of the
+Linux job script tiegcm-linux.job.</p>
+<p>The IBM job script has the same user-settable shell variables as the
+Linux job script, but the default settings are slightly different:</p>
+<div class="highlight-python"><pre>set modeldir = tiegcm_trunk
+set execdir  = tiegcm_trunk-aix
+#set input    = tiegcm.inp
+set output   = tiegcm.out
+set make     = Make.bluefire
+set mpi      = TRUE
+set modelres = 5.0
+set debug    = FALSE
+set exec     = TRUE
+set utildir  = $modeldir/scripts</pre>
+</div>
+<p>Note the <tt class="docutils literal"><span class="pre">execdir</span></tt> name, and the <tt class="docutils literal"><span class="pre">make</span></tt> file
+<a class="reference download internal" href="_downloads/Make.bluefire"><tt class="xref download docutils literal"><span class="pre">Make.bluefire</span></tt></a></p>
+<p>Also note the special &#8220;<tt class="docutils literal"><span class="pre">#BSUB</span></tt>&#8221; directives at the top of the IBM
+job script (descriptions in the right-hand column are for this document
+only, and are not in the script itself):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c">#BSUB -J tiegcm_trunk               # Job name</span>
+<span class="c">#BSUB -P 24100004                   # NCAR project number</span>
+<span class="c">##BSUB -q regular                   # regular queue (commented here)</span>
+<span class="c">##BSUB -n 32                        # number of processors (commented here)</span>
+<span class="c">#BSUB -q debug                      # debug queue</span>
+<span class="c">#BSUB -n 8                          # number of processors (MPI tasks)</span>
+<span class="c">#BSUB -o tiegcm_trunk.%J.out        # stdout file</span>
+<span class="c">#BSUB -e tiegcm_trunk.%J.out        # stderr file</span>
+<span class="c">#BSUB -N</span>
+<span class="c">#BSUB -u $LOGNAME@ucar.edu          # email notification address</span>
+<span class="c">#BSUB -W 1:00                       # wallclock limit (6-hr max at NCAR)</span>
+</pre></div>
+</div>
+<p>These are resource settings for the Load Sharing Facility (LSF),
+the batch queuing system sold by Platform Computing. The LSF is
+used for scheduling jobs on the <tt class="docutils literal"><span class="pre">bluefire</span></tt> IBM system at NCAR.
+This job will be submitted to the debug queue, requesting
+8 processors, with a wallclock limit of 1 hour. Note the double
+pound-sign &#8220;##&#8221; indicates a commented field.</p>
+<p>To submit the IBM job script to the LSF batch system, type:</p>
+<div class="highlight-python"><pre>$ bsub &lt; tiegcm-ibm.job</pre>
+</div>
+<p>Watch the progress of your LSF job with the command:</p>
+<div class="highlight-python"><pre>$ bjobs</pre>
+</div>
+<p>You can kill a LSF job with this command:</p>
+<div class="highlight-python"><pre>$ bkill job_ID</pre>
+</div>
+<p>Where <tt class="docutils literal"><span class="pre">job_ID</span></tt> is the job identifier given in the <tt class="docutils literal"><span class="pre">bjobs</span></tt> command.</p>
+<p>For more information about the LSF, see the Wikipedia site:</p>
+<p><a class="reference external" href="http://en.wikipedia.org/wiki/Platform_LSF">http://en.wikipedia.org/wiki/Platform_LSF</a></p>
+<p>or the Platform Computing site:</p>
+<p><a class="reference external" href="http://www.platform.com/workload-management/high-performance-computing/lp">http://www.platform.com/workload-management/high-performance-computing/lp</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">QuickStart Procedure</a><ul>
+<li><a class="reference internal" href="#downloading-the-model-source-code-and-required-data-files">Downloading the model source code and required data files</a></li>
+<li><a class="reference internal" href="#making-a-default-run-on-a-64-bit-linux-system">Making a default run on a 64-bit Linux system</a></li>
+<li><a class="reference internal" href="#running-the-model-on-ibm-aix-platforms">Running the model on IBM/AIX Platforms</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="previous chapter">Introduction</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="dirstruct.html"
+                        title="next chapter">Directory Structure</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/quickstart.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="dirstruct.html" title="Directory Structure"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction"
+             >previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Ben Foster.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

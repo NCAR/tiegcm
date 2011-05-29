@@ -1,0 +1,1172 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Run Control Parameters: The Namelist Input File &mdash; TIEGCM v1.94 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.94',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="TIEGCM v1.94 documentation" href="index.html" />
+    <link rel="next" title="Structure of Output History Files" href="output.html" />
+    <link rel="prev" title="Directory Structure" href="dirstruct.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="output.html" title="Structure of Output History Files"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="dirstruct.html" title="Directory Structure"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="run-control-parameters-the-namelist-input-file">
+<span id="namelist"></span><span id="index-0"></span><h1>Run Control Parameters: The Namelist Input File<a class="headerlink" href="#run-control-parameters-the-namelist-input-file" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="glossary.html#term-namelist-input"><em class="xref std std-term">namelist input</em></a> file specifies user-provided run control
+parameters for a model run. These parameters include the model startup
+file, start and stop times, solar inputs, lower boundary files, and
+several other flags and data files as necessary.  This document describes
+each valid namelist parameter, their valid combinations, and provides
+several example input files for running the model in different modes
+and resolutions.</p>
+<div class="section" id="example-namelist-input-files">
+<h2>Example Namelist Input Files<a class="headerlink" href="#example-namelist-input-files" title="Permalink to this headline">¶</a></h2>
+<p>Please refer to the following examples of namelist input files:</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Any part of a line in the namelist file following a semi-colon will
+be treated as a comment (see example files).</p>
+</div>
+<p id="index-1">Example Namelist Input Files:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The default input file: <a class="reference download internal" href="_downloads/default.inp"><tt class="xref download docutils literal"><span class="pre">default.inp</span></tt></a></li>
+<li>A continuation of the default run: <a class="reference download internal" href="_downloads/continuation.inp"><tt class="xref download docutils literal"><span class="pre">continuation.inp</span></tt></a></li>
+<li>Saving diagnostics on secondary history files: <a class="reference download internal" href="_downloads/diags.inp"><tt class="xref download docutils literal"><span class="pre">diags.inp</span></tt></a></li>
+<li>Full year climatology with constant forcing: <a class="reference download internal" href="_downloads/climatology.inp"><tt class="xref download docutils literal"><span class="pre">climatology.inp</span></tt></a></li>
+<li>Seasonal control runs with constant forcing: <a class="reference download internal" href="_downloads/mareqx.inp"><tt class="xref download docutils literal"><span class="pre">mareqx.inp</span></tt></a></li>
+<li>Heelis potential model with constant solar forcing: <a class="reference download internal" href="_downloads/heelis_smax.inp"><tt class="xref download docutils literal"><span class="pre">heelis_smax.inp</span></tt></a></li>
+<li>Heelis potential model with GPI (Kp) data file: <a class="reference download internal" href="_downloads/heelis_gpi.inp"><tt class="xref download docutils literal"><span class="pre">heelis_gpi.inp</span></tt></a></li>
+<li>Weimer potential model with constant IMF forcing: <a class="reference download internal" href="_downloads/weimer_con.inp"><tt class="xref download docutils literal"><span class="pre">weimer_con.inp</span></tt></a></li>
+<li>Weimer potential model with IMF data file: <a class="reference download internal" href="_downloads/weimer_imf.inp"><tt class="xref download docutils literal"><span class="pre">weimer_imf.inp</span></tt></a></li>
+<li>Weimer potential model with IMF+GPI data files: <a class="reference download internal" href="_downloads/weimer_imf+gpi.inp"><tt class="xref download docutils literal"><span class="pre">weimer_imf+gpi.inp</span></tt></a></li>
+<li>Default double-resolution run:</li>
+<li>Example &#8220;storm runs&#8221;:<ul>
+<li>December, 2006 &#8220;AGU&#8221; storm run: <a class="reference download internal" href="_downloads/dec2006.inp"><tt class="xref download docutils literal"><span class="pre">dec2006.inp</span></tt></a></li>
+</ul>
+</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="explanation-of-valid-namelist-parameters">
+<span id="namelist-params"></span><h2>Explanation of Valid Namelist Parameters<a class="headerlink" href="#explanation-of-valid-namelist-parameters" title="Permalink to this headline">¶</a></h2>
+<p>Following is a table of valid TIEGCM 1.94 namelist parameters, and their descriptions.
+Follow the parameter name links to explanations below.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="36%" />
+<col width="18%" />
+<col width="47%" />
+</colgroup>
+<thead valign="bottom">
+<tr><th class="head">Parameter Name</th>
+<th class="head">Data Type and Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr><td><a class="reference internal" href="#aurora"><em>AURORA</em></a></td>
+<td>integer: 1</td>
+<td>0/1 flag for auroral parameterization</td>
+</tr>
+<tr><td><a class="reference internal" href="#bximf"><em>BXIMF or BXIMF_TIME</em></a></td>
+<td>real or real array</td>
+<td>X-component of the IMF</td>
+</tr>
+<tr><td><a class="reference internal" href="#byimf"><em>BYIMF or BYIMF_TIME</em></a></td>
+<td>real or real array</td>
+<td>Y-component of the IMF</td>
+</tr>
+<tr><td><a class="reference internal" href="#bzimf"><em>BZIMF or BZIMF_TIME</em></a></td>
+<td>real or real array</td>
+<td>Z-component of the IMF</td>
+</tr>
+<tr><td><a class="reference internal" href="#calendar-advance"><em>CALENDAR_ADVANCE</em></a></td>
+<td>real: 1</td>
+<td>0/1 switch to advance calendar time</td>
+</tr>
+<tr><td><a class="reference internal" href="#colfac"><em>COLFAC</em></a></td>
+<td>real: 1.5</td>
+<td>O-O+ collision factor</td>
+</tr>
+<tr><td><a class="reference internal" href="#ctpoten"><em>CTPOTEN</em></a></td>
+<td>real:</td>
+<td>Cross-Tail Potential</td>
+</tr>
+<tr><td><a class="reference internal" href="#ctpoten"><em>CTPOTEN_TIME</em></a></td>
+<td>real: [none]</td>
+<td>Time-dependent Cross-Tail Potential</td>
+</tr>
+<tr><td><a class="reference internal" href="#f107"><em>F107 or F107_TIME</em></a></td>
+<td>real or real array</td>
+<td>Daily F10.7 cm solar flux</td>
+</tr>
+<tr><td><a class="reference internal" href="#f107a"><em>F107A or F107A_TIME</em></a></td>
+<td>real or real array</td>
+<td>81-day average F10.7 cm solar flux</td>
+</tr>
+<tr><td><a class="reference internal" href="#gpi-ncfile"><em>GPI_NCFILE</em></a></td>
+<td>string: [none]</td>
+<td>Geophysical Indices (Kp) data file</td>
+</tr>
+<tr><td><a class="reference internal" href="#gswm"><em>GSWM data files</em></a></td>
+<td>string: [none]</td>
+<td>GSWM Model tidal lbc data files</td>
+</tr>
+<tr><td><a class="reference internal" href="#hist"><em>HIST</em></a></td>
+<td>integer(3)</td>
+<td>Primary history write frequency</td>
+</tr>
+<tr><td><a class="reference internal" href="#imf-ncfile"><em>IMF_NCFILE</em></a></td>
+<td>string: [none]</td>
+<td>IMF OMNI data files</td>
+</tr>
+<tr><td><a class="reference internal" href="#kp"><em>KP or KP_TIME</em></a></td>
+<td>real or real array</td>
+<td>Kp for calc of hpower and ctpoten</td>
+</tr>
+<tr><td><a class="reference internal" href="#label"><em>LABEL</em></a></td>
+<td>string:</td>
+<td>Arbitrary string identifying the run</td>
+</tr>
+<tr><td><a class="reference internal" href="#mxhist-prim"><em>MXHIST_PRIM</em></a></td>
+<td>integer: 10</td>
+<td>Max histories on primary file</td>
+</tr>
+<tr><td><a class="reference internal" href="#mxhist-sech"><em>MXHIST_SECH</em></a></td>
+<td>integer: 24</td>
+<td>Max histories on secondary file</td>
+</tr>
+<tr><td><a class="reference internal" href="output.html#output"><em>OUTPUT</em></a></td>
+<td>string array</td>
+<td>Primary history output file(s)</td>
+</tr>
+<tr><td><a class="reference internal" href="#potential-model"><em>POTENTIAL_MODEL</em></a></td>
+<td>string: [HEELIS]</td>
+<td>High-latitude Potential Model</td>
+</tr>
+<tr><td><a class="reference internal" href="#power"><em>POWER or POWER_TIME</em></a></td>
+<td>real or real array</td>
+<td>Hemispheric Power (GW)</td>
+</tr>
+<tr><td><a class="reference internal" href="#sechist"><em>SECHIST</em></a></td>
+<td>integer(3)</td>
+<td>Secondary history write frequency</td>
+</tr>
+<tr><td><a class="reference internal" href="#secflds"><em>SECFLDS</em></a></td>
+<td>string array</td>
+<td>Fields to be stored on secondary histories</td>
+</tr>
+<tr><td><a class="reference internal" href="#secout"><em>SECOUT</em></a></td>
+<td>string array</td>
+<td>Secondary history output file(s)</td>
+</tr>
+<tr><td><a class="reference internal" href="#source"><em>SOURCE</em></a></td>
+<td>string: [none]</td>
+<td>Primary SOURCE (start-up) file</td>
+</tr>
+<tr><td><a class="reference internal" href="#source-start"><em>SOURCE_START</em></a></td>
+<td>integer(3)</td>
+<td>Model time to start on SOURCE file</td>
+</tr>
+<tr><td><a class="reference internal" href="#start"><em>START</em></a></td>
+<td>integer(3)</td>
+<td>Model start time (day,hour,minute)</td>
+</tr>
+<tr><td><a class="reference internal" href="#start-year"><em>START_YEAR</em></a></td>
+<td>integer: 2002</td>
+<td>Starting year</td>
+</tr>
+<tr><td><a class="reference internal" href="#start-day"><em>START_DAY</em></a></td>
+<td>integer: 80</td>
+<td>Starting day of year</td>
+</tr>
+<tr><td><a class="reference internal" href="#step"><em>STEP</em></a></td>
+<td>integer: [none]</td>
+<td>Model time step (seconds)</td>
+</tr>
+<tr><td><a class="reference internal" href="#stop"><em>STOP</em></a></td>
+<td>integer(3)</td>
+<td>Model stop time (day,hour,minute)</td>
+</tr>
+<tr><td><a class="reference internal" href="#swden"><em>SWDEN or SWDEN_TIME</em></a></td>
+<td>real or real array</td>
+<td>Solar Wind Density</td>
+</tr>
+<tr><td><a class="reference internal" href="#swvel"><em>SWVEL or SWVEL_TIME</em></a></td>
+<td>real or real array</td>
+<td>Solar Wind Velocity</td>
+</tr>
+<tr><td><a class="reference internal" href="#tide"><em>TIDE</em></a></td>
+<td>real(10)</td>
+<td>Amplitudes and phases of semi-diurnal tide (rarely used)</td>
+</tr>
+<tr><td><a class="reference internal" href="#tide2"><em>TIDE2</em></a></td>
+<td>real(2)</td>
+<td>Amplitudes and phases of diurnal tide (rarely used)</td>
+</tr>
+</tbody>
+</table>
+<span class="target" id="aurora"><span id="index-2"></span></span><dl class="describe">
+<dt>
+<tt class="descname">AURORA</tt></dt>
+<dd><p>If AURORA &gt; 0 then the auroral parameterization (aurora.F) is called by dynamics
+(dynamics.F), otherwise it is not called.</p>
+<div class="line-block">
+<div class="line">Data type: scalar integer</div>
+<div class="line">Default: 1</div>
+</div>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="bximf"><span id="index-3"></span></span><dl class="describe">
+<dt>
+<tt class="descname">BXIMF or BXIMF_TIME</tt></dt>
+<dd><p>X-component of the IMF. Can be specified as either a constant (BXIMF), or series of
+time-dependent values (BXIMF_TIME). If IMF_NCFILE is set and BXIMF is not provided,
+then BXIMF will be taken from the IMF data file.</p>
+<p>Data type: real or real array</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>BXIMF = 0. ; constant for entire run</li>
+<li>BXIMF_TIME = 80,0,0,40., 80,1,0,30., 80,5,0,20. ; time series</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#byimf"><em>BYIMF or BYIMF_TIME</em></a></li>
+<li><a class="reference internal" href="#bzimf"><em>BZIMF or BZIMF_TIME</em></a></li>
+<li><a class="reference internal" href="#imf-ncfile"><em>IMF_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="byimf"><span id="index-4"></span></span><dl class="describe">
+<dt>
+<tt class="descname">BYIMF or BYIMF_TIME</tt></dt>
+<dd><p>Y-component of the IMF. Can be specified as either a constant (BYIMF), or series of
+time-dependent values (BYIMF_TIME). If IMF_NCFILE is set and BYIMF is not provided,
+then BYIMF will be taken from the IMF data file.</p>
+<p>Data type: real or real array</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>BYIMF = 0. ; constant for entire run</li>
+<li>BYIMF_TIME = 80,0,0,40., 80,1,0,30., 80,5,0,20. ; time series</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#bximf"><em>BXIMF or BYIMF_TIME</em></a></li>
+<li><a class="reference internal" href="#bzimf"><em>BZIMF or BZIMF_TIME</em></a></li>
+<li><a class="reference internal" href="#imf-ncfile"><em>IMF_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="bzimf"><span id="index-5"></span></span><dl class="describe">
+<dt>
+<tt class="descname">BZIMF or BZIMF_TIME</tt></dt>
+<dd><p>Z-component of the IMF. Can be specified as either a constant (BZIMF), or series of
+time-dependent values (BZIMF_TIME). If IMF_NCFILE is set and BZIMF is not provided,
+then BZIMF will be taken from the IMF data file.</p>
+<p>Data type: real or real array</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>BZIMF = 0. ; constant for entire run</li>
+<li>BZIMF_TIME = 80,0,0,40., 80,1,0,30., 80,5,0,20. ; time series</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#bximf"><em>BXIMF or BXIMF_TIME</em></a></li>
+<li><a class="reference internal" href="#byimf"><em>BYIMF or BYIMF_TIME</em></a></li>
+<li><a class="reference internal" href="#imf-ncfile"><em>IMF_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="calendar-advance"><span id="index-6"></span></span><dl class="describe">
+<dt>
+<tt class="descname">CALENDAR_ADVANCE</tt></dt>
+<dd><p>Set CALENDAR_ADVANCE=1 to advance calendar time from START_DAY, otherwise
+calendar time is not advanced. If advancing calendar time, iday (init_module)
+is incremented every 24 hours, and the sun&#8217;s declination and longitude is recalculated
+(see sub advance_day in advance.F and sub sunloc in magfield.F), thereby allowing
+seasonal change to take place. The earth&#8217;s orbital eccentricity &#8220;sfeps&#8221; is also
+updated as a 6% variation in solar output over a year.</p>
+<p>A run with CALENDAR_ADVANCE=0 is referred to as a &#8220;steady-state&#8221; run. This is often
+used to advance the model to a &#8220;steady-state&#8221; for a given date, prior to a seasonal
+run with CALENDAR_ADVANCE=1.</p>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="colfac"><span id="index-7"></span></span><dl class="describe">
+<dt>
+<tt class="descname">COLFAC</tt></dt>
+<dd><p>O-O+ Collision Frequency, alias the &#8220;Burnside Factor&#8221;. Default is 1.5, but there
+have been recommendations for 1.3. COLFAC is used in lamdas.F and oplus.F.</p>
+<div class="line-block">
+<div class="line">Data type: real</div>
+<div class="line">Default: 1.5</div>
+</div>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="ctpoten"><span id="index-8"></span></span><dl class="describe">
+<dt>
+<tt class="descname">CTPOTEN or CTPOTEN_TIME</tt></dt>
+<dd><p>Cross-tail (or cross-cap) potential. This is used in the auroral precipitation
+parameterization. It can be provided either as a single constant (CTPOTEN), or
+several time-dependent values (CTPOTEN_TIME). If GPI_NCFILE is set and CTPOTEN
+is not provided, it will be calculated from 3-hourly Kp data read from GPI_NCFILE.</p>
+<p>The time-dependent example below specifies increasing CTPOTEN from model times
+80,0,0 to 80,1,0, and 80,5,0. Interpolated values will be used between these
+specified model times.</p>
+<p>Note that if POTENTIAL_MODEL=&#8217;WEIMER&#8217; or &#8216;WEIMER05&#8217;, then the user is not allowed
+to provide CTPOTEN because it will be calculated from the Weimer electric potential.</p>
+<div class="line-block">
+<div class="line">Data type: real or real array</div>
+</div>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>CTPOTEN = 60.</li>
+<li>CTPOTEN_TIME = 80,0,0,60., 80,1,0,65., 80,5,0,100.</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#power"><em>POWER or POWER_TIME</em></a></li>
+<li><a class="reference internal" href="#kp"><em>KP or KP_TIME</em></a></li>
+<li><a class="reference internal" href="#gpi-ncfile"><em>GPI_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="f107"><span id="index-9"></span></span><dl class="describe">
+<dt>
+<tt class="descname">F107 or F107_TIME</tt></dt>
+<dd><p>Daily F10.7 cm solar flux. This can be provided either as a single constant (F107), or
+several time-dependent values (F107_TIME). If GPI_NCFILE is set and F107 is not set,
+then F107 will be set from the data. The below example of F107_TIME increases the f10.7
+flux from 120 to 150 in the first hour of model time, then to 200 by the fifth hour.
+Values are linearly interpolated at each time-step.</p>
+<p>Data type: real or real array</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>F107 = 120.</li>
+<li>F107_TIME = 80,0,0,120., 80,1,0,150., 80,5,0,200.</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#f107a"><em>F107A</em></a></li>
+<li><a class="reference internal" href="#potential-model"><em>POTENTIAL_MODEL</em></a></li>
+<li><a class="reference internal" href="#gpi-ncfile"><em>GPI_NCFILE</em></a></li>
+<li><a class="reference internal" href="#imf-ncfile"><em>IMF_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="f107a"><span id="index-10"></span></span><dl class="describe">
+<dt>
+<tt class="descname">F107A or F107A_TIME</tt></dt>
+<dd><p>81-day average F10.7 cm solar flux. This can be provided either as a single constant
+(F107A), or several time-dependent values (F107A_TIME). If GPI_NCFILE is set and F107A
+is not set, then F107A will be set from the data. The below example of F107A_TIME
+increases the f10.7a flux from 120 to 130 in 12 hours of model time.</p>
+<p>Data type: real or real array</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>F107A = 120.</li>
+<li>F107A_TIME = 80,0,0,120., 80,6,0,125., 80,12,0,130.</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#f107"><em>F107</em></a></li>
+<li><a class="reference internal" href="#potential-model"><em>POTENTIAL_MODEL</em></a></li>
+<li><a class="reference internal" href="#gpi-ncfile"><em>GPI_NCFILE</em></a></li>
+<li><a class="reference internal" href="#imf-ncfile"><em>IMF_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="gpi-ncfile"><span id="index-11"></span></span><dl class="describe">
+<dt>
+<tt class="descname">GPI_NCFILE</tt></dt>
+<dd><p>Specifies a netCDF data file containing 3-hourly Kp and daily F10.7 data to drive
+high-latitude convection and the auroral precipitation oval.  If GPI_NCFILE is specified,
+and POTENTIAL_MODEL=&#8217;HEELIS&#8217;, then at least one of CTPOTEN,POWER,F107,F107A must <strong>not</strong>
+be specified. If CTPOTEN or POWER are not specified, they are calculated from the Kp data
+using empirical relationships (see source file gpi.F).  If F107 or F107A are not specified,
+the data will be used.</p>
+<p>If GPI_NCFILE is specified when POTENTIAL_MODEL=&#8217;WEIMER&#8217; and IMF_NCFILE is specified,
+then the Weimer model and aurora will be driven by the IMF data, and only F107 and F107A
+will be read from the GPI data file (F107 is not available on IMF data files).</p>
+<p>If the current model time is not available on the GPI data file, the model will print
+an error message to stdout, and stop.</p>
+<p>Data Source: Ascii data is obtained from NOAA/NGDC, and an equivalent netCDF data file
+is written for import to the TGCM models (see code in hao:$TGCMROOT/mkgpi).</p>
+<p>Datatype: string</p>
+<dl class="docutils">
+<dt>Example:</dt>
+<dd><ul class="first last simple">
+<li>GPI_NCFILE = &#8216;$TGCMDATA/gpi_2000001-2009031.nc&#8217;</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#ctpoten"><em>CTPOTEN or CTPOTEN_TIME</em></a></li>
+<li><a class="reference internal" href="#power"><em>POWER or POWER_TIME</em></a></li>
+<li><a class="reference internal" href="#f107"><em>F107 or F107_TIME</em></a></li>
+<li><a class="reference internal" href="#imf-ncfile"><em>IMF_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="gswm"><span id="index-12"></span></span><dl class="describe">
+<dt>
+<tt class="descname">GSWM model data files for lbc</tt></dt>
+<dd><p>Paths to netCDF data files containing tidal perturbations from the Global Scale Wave Model.
+If provided, the files will be read and the perturbations will be added to the lower
+boundary conditions of T,U,V, and Z. If provided, then TIDE and TIDE2 must be zeroed out.</p>
+<p>Warning: As of version 1.94, the model is not tuned to use the non-migrating
+GSWM tidal components.  The default namelist input file specifies migrating diurnal and
+semi-diurnal tides, but not the non-migrating components. In later releases, non-migrating
+tides may be supported at the 2.5-deg resolution.</p>
+<p>GSWM files must contain data compatable with the lower boundary of the model (99 km),
+and the horizontal resolution of the model being run (either 5 or 2.5 degrees).
+See examples below.</p>
+<p>Datatype: string</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last">
+<li><p class="first">GSWM files for the 5-degree TIEGCM:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">GSWM_MI_DI_NCFILE</span>   <span class="o">=</span> <span class="s">&#39;$TGCMDATA/gswm_diurn_5.0d_99km.nc&#39;</span>
+<span class="n">GSWM_MI_SDI_NCFILE</span>  <span class="o">=</span> <span class="s">&#39;$TGCMDATA/gswm_semi_5.0d_99km.nc&#39;</span>
+<span class="n">GSWM_NMI_DI_NCFILE</span>  <span class="o">=</span> <span class="s">&#39;$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc&#39;</span>
+<span class="n">GSWM_NMI_SDI_NCFILE</span> <span class="o">=</span> <span class="s">&#39;$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">GSWM files for 2.5-degree TIEGCM:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">GSWM_MI_DI_NCFILE</span>   <span class="o">=</span> <span class="s">&#39;$TGCMDATA/gswm_diurn_2.5d_99km.nc&#39;</span>
+<span class="n">GSWM_MI_SDI_NCFILE</span>  <span class="o">=</span> <span class="s">&#39;$TGCMDATA/gswm_semi_2.5d_99km.nc&#39;</span>
+<span class="n">GSWM_NMI_DI_NCFILE</span>  <span class="o">=</span> <span class="s">&#39;$TGCMDATA/gswm_nonmig_diurn_2.5d_99km.nc&#39;</span>
+<span class="n">GSWM_NMI_SDI_NCFILE</span> <span class="o">=</span> <span class="s">&#39;$TGCMDATA/gswm_nonmig_semi_2.5d_99km.nc&#39;</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#tide"><em>TIDE</em></a></li>
+<li><a class="reference internal" href="#tide2"><em>TIDE2</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="hist"><span id="index-13"></span></span><dl class="describe">
+<dt>
+<tt class="descname">HIST</tt></dt>
+<dd><p>Primary history write frequency, specified as a model time (day,hour,minute).
+HIST time must divide evenly into STOP minus START times.</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>HIST = 1,0,0    ;request daily histories</li>
+<li>HIST = 0,1,0    ;request hourly histories</li>
+<li>HIST = 0,0,12   ;request 12-minute histories</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#sechist"><em>SECHIST</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="power"><span id="index-14"></span></span><dl class="describe">
+<dt>
+<tt class="descname">POWER or POWER_TIME</tt></dt>
+<dd><p>Hemispheric Power (GW). This is used in the auroral precipitation parameterization.
+It can be provided either as a single constant (POWER), or several time-dependent
+values (POWER_TIME). If GPI_NCFILE is set and POWER is not provided, it will be
+calculated from 3-hourly Kp data read from GPI_NCFILE.</p>
+<p>The time-dependent example below specifies increasing POWER from model times
+80,0,0 to 80,1,0, and 80,5,0. Interpolated values will be used between these specified
+model times.</p>
+<p>Data type: real or real array</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>POWER = 16.</li>
+<li>POWER_TIME = 80,0,0,16., 80,1,0,20., 80,5,0,70.</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#ctpoten"><em>CTPOTEN or CTPOTEN_TIME</em></a></li>
+<li><a class="reference internal" href="#kp"><em>KP or KP_TIME</em></a></li>
+<li><a class="reference internal" href="#gpi-ncfile"><em>GPI_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="kp"><span id="index-15"></span></span><dl class="describe">
+<dt>
+<tt class="descname">KP or KP_TIME</tt></dt>
+<dd><p>Geomagnetic Activity index. If KP is specified and POWER and/or CTPOTEN are commented,
+then the given KP will be used with empirical formulas to calculate POWER and/or CTPOTEN,
+which are used in the Auroral parameterization.</p>
+<p>KP can be provided as a scalar constant (KP), or as a series of time-dependent values
+(KP_TIME), as in the below examples. KP cannot be set if GPI_NCFILE data file is specified.</p>
+<p>Empirical formula used to calculate POWER from KP (see function hp_from_kp in util.F):</p>
+<div class="highlight-python"><pre>if (kp &lt;=7.) hp_from_kp = 16.82*exp(0.32*kp)-4.86
+if (kp &gt; 7.) hp_from_kp = 153.13 + (kp-7.)/(9.-7.)*(300.-153.13)</pre>
+</div>
+<p>Empirical formula used to calculate CTPOTEN from KP (see function ctpoten_from_kp in util.F):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">ctpoten_from_kp</span> <span class="o">=</span> <span class="mf">15.</span><span class="o">+</span><span class="mf">15.</span><span class="o">*</span><span class="n">kp</span> <span class="o">+</span> <span class="mf">0.8</span><span class="o">*</span><span class="n">kp</span><span class="o">**</span><span class="mi">2</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>KP = 4.0</li>
+<li>KP_TIME = 80,0,0,4., 80,6,0,4.5, 80,12,0,5.0</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#ctpoten"><em>CTPOTEN</em></a></li>
+<li><a class="reference internal" href="#power"><em>POWER</em></a></li>
+<li><a class="reference internal" href="#gpi-ncfile"><em>GPI_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="imf-ncfile"><span id="index-16"></span></span><dl class="describe">
+<dt>
+<tt class="descname">IMF_NCFILE</tt></dt>
+<dd><p>Specifies a netCDF data file containing hourly IMF parameters BX,BY,BZ,SWVEL, and SWDEN.
+This can be set only when POTENTIAL_MODEL=&#8217;WEIMER&#8217;. The data will be used to drive
+the Weimer 2005 potential model. When set, the user must <strong>not</strong> provide at least one
+of the above IMF parameters.  Data will be used for IMF parameters not provided by the
+user. Values (scalar or time-dependent) that are provided by the user will take precedence
+over the data file.</p>
+<p>If the current model time is not available on the IMF data file, the model will print
+an error message to stdout and stop.</p>
+<p>Notes on creation of IMF OMNI data files:</p>
+<ul class="simple">
+<li>IMF data is derived from 1-minute OMNI satellite data available on CDAweb
+<a class="reference external" href="http://cdaweb.gsfc.nasa.gov/istp_public/">CDAweb</a>.  Our derivation is a multi-step process:</li>
+<li>Data gaps in the raw 1-minute OMNI data are linearly interpolated.  If a gap happens to occur
+at the beginning or end of the time interval, it is set to the next known good data point.</li>
+<li>Gap-filled data is used to compute a 15 minute trailing average lagged by 5 minutes.</li>
+<li>Time averaged data is sampled at 5 minutes</li>
+<li>A data quality flag is calculated for every 5-minute sample point.  The data quality flag is
+a boolean value set to &#8220;1&#8221; for all sample points derived from valid (not gap-filled) data.
+The data quality flag is set to &#8220;0&#8221; for any sample point that is derived from gap-filled data
+anywhere in the 15 minute trailing average lagged by 5 minutes.</li>
+<li>The data quality flag is stored in the NetCDF-formatted IMF input file.  For any variable
+(ie. &#8220;swvel&#8221; - solar wind velocity), there exists a mask (ie. &#8220;velMask&#8221;).  Find a complete
+list of IMF variables with command &#8220;ncdump -h [imf-file.nc]&#8221;.</li>
+<li>Note:  You should verify the IMF data quality before doing storm simulations.  Known periods
+of invalid IMF data include approximately days 301 to 304 of 2003 (during the &#8220;Halloween Storm&#8221;).</li>
+</ul>
+<dl class="docutils">
+<dt>Example:</dt>
+<dd><ul class="first last simple">
+<li>IMF_NCFILE = &#8216;$TGCMDATA/imf_OMNI_2002001-2002365.nc&#8217;</li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="label"><span id="index-17"></span></span><dl class="describe">
+<dt>
+<tt class="descname">LABEL</tt></dt>
+<dd><p>LABEL may be any string up to 80 characters long, used to identify a run.
+The LABEL is written to output history files as a global file attribute.
+This parameter is purely a user convenience, and does not effect the model
+run in any way.</p>
+<div class="line-block">
+<div class="line">Data type: string</div>
+<div class="line">Default: &#8216;tiegcm res=5&#8217;</div>
+</div>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="mxhist-prim"><span id="index-18"></span></span><dl class="describe">
+<dt>
+<tt class="descname">MXHIST_PRIM</tt></dt>
+<dd><p>Maximum number of histories to be written to primary OUTPUT files. When this many
+histories have been written to the current OUTPUT file, the next OUTPUT file is created
+and it receives subsequent histories. This parameter can be adjusted to control the size
+of primary OUTPUT files.</p>
+<div class="line-block">
+<div class="line">Data type: integer</div>
+<div class="line">Default: 10</div>
+</div>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>MXHIST_PRIM = 15 ; allow maximum of 15 histories per primary output file</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="output.html#output"><em>OUTPUT</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="mxhist-sech"><span id="index-19"></span></span><dl class="describe">
+<dt>
+<tt class="descname">MXHIST_SECH</tt></dt>
+<dd><p>Maximum number of histories to be written to secondary output files (SECOUT).
+When this many histories have been written to the current SECOUT file, the next SECOUT
+file is created and it receives subsequent histories. This parameter can be adjusted
+to control the size of secondary OUTPUT files.</p>
+<div class="line-block">
+<div class="line">Data type: integer</div>
+<div class="line">Default: 24</div>
+</div>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>MXHIST_SECH = 24 ; allow 1 day of hourly histories per file</li>
+<li>MXHIST_SECH = 48 ; allow 2 days of hourly histories per file</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#secout"><em>SECOUT</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="output"><span id="index-20"></span></span><dl class="describe">
+<dt>
+<tt class="descname">OUTPUT</tt></dt>
+<dd><p>List of primary history output files. Each file may be an absolute path, or relative
+to the execution directory. If an initial run (SOURCE is specified), then pre-existing
+OUTPUT files will be overwritten. If a continuation run (SOURCE is <em>not</em> specified),
+then the first OUTPUT file should contain the source history at START time. In this case,
+subsequent output histories will be appended to the first OUTPUT file until it is full.
+As each OUTPUT file is filled (see MXHIST_PRIM), the next OUTPUT file is created and
+histories are written until it is full, and so on.</p>
+<p>OUTPUT files are usually specified with increasing integers imbedded in the names. See
+examples below. As a convenience, large sequences of files may be specified in a &#8220;short-form&#8221;,
+see example 3 below specifying 20 files. By convention, primary history output files
+may use the letter &#8220;p&#8221; to indicate primary file series (see all 3 examples below, and
+contrast with SECOUT).</p>
+<p>Examples:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">OUTPUT</span> <span class="o">=</span> <span class="s">&#39;p_myoutput_001.nc&#39;</span>
+<span class="n">OUTPUT</span> <span class="o">=</span> <span class="s">&#39;myoutput.p001.nc&#39;</span><span class="p">,</span><span class="s">&#39;myoutput.p002.nc&#39;</span><span class="p">,</span><span class="s">&#39;myoutput.p003.nc&#39;</span>
+<span class="n">OUTPUT</span> <span class="o">=</span> <span class="s">&#39;myoutput_p001.nc&#39;</span><span class="p">,</span><span class="s">&#39;to&#39;</span><span class="p">,</span><span class="s">&#39;myoutput_p020.nc&#39;</span><span class="p">,</span><span class="s">&#39;by&#39;</span><span class="p">,</span><span class="s">&#39;1&#39;</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#secout"><em>SECOUT</em></a></li>
+<li><a class="reference internal" href="#source"><em>SOURCE</em></a></li>
+<li><a class="reference internal" href="#mxhist-prim"><em>MXHIST_PRIM</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="potential-model"><span id="index-21"></span></span><dl class="describe">
+<dt>
+<tt class="descname">POTENTIAL_MODEL</tt></dt>
+<dd><p>The high-latitude potential model used to calculate electric potential above a specified
+latitude. This string can have one of two values:</p>
+<div class="line-block">
+<div class="line">POTENTIAL_MODEL = &#8216;HEELIS&#8217;</div>
+<div class="line">POTENTIAL_MODEL = &#8216;WEIMER&#8217;</div>
+</div>
+<p>&#8216;HEELIS&#8217; is the Rod Heelis model (heelis.F). &#8216;WEIMER&#8217; is the Dan Weimer 2005 model
+(wei05sc.F).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The Weimer model of high-latitude potential is the intellectual property of Daniel
+Weimer and may not be extracted, distributed, or used for any purpose other
+than as implemented in the TIE-GCM.  For further information concerning this
+model, please contact Dan Weimer (<a class="reference external" href="mailto:dweimer&#37;&#52;&#48;vt&#46;edu">dweimer<span>&#64;</span>vt<span>&#46;</span>edu</a>).</p>
+</div>
+<p>For a brief discussion of the use of the Weimer 2005 model in TIEGCM, please
+see <a class="reference internal" href="tiegcm_weimer05.html#tiegcm-weimer05"><em>Notes on Weimer05 in TIEGCM</em></a>.</p>
+<div class="line-block">
+<div class="line">Data type: string</div>
+<div class="line">Default: &#8216;HEELIS&#8217;</div>
+</div>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="secflds"><span id="index-22"></span></span><dl class="describe">
+<dt>
+<tt class="descname">SECFLDS</tt></dt>
+<dd><p>List of fields to be saved to secondary histories. These may be either fields that are
+also saved on primary histories (so-called &#8220;prognostic&#8221; fields), fields that have been
+requested via addfld calls in the source code, or fields available via the diagnostics
+module (see example below).</p>
+<p>Note the final size of secondary output files is affected by the number of fields specified
+as well as the number of histories on the file.  The file size can be controlled by setting
+the number of histories allowed on a secondary file <a class="reference internal" href="#mxhist-sech"><em>MXHIST_SECH</em></a>.</p>
+<p>Data type: one or more character strings</p>
+<p>Examples:</p>
+<div class="highlight-python"><pre>;
+; Example for tiegcm1.9: all fields are "prognostic" except EEX,EEY,EEZ,
+; which are saved by addfld calls in sub ionvel (ionvel.F).
+;
+ SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI',
+           'O2','O2P','OMEGA','POTEN','EEX','EEY','EEZ'
+;
+; This example lists all diagnostic fields available via the diags module
+; (it is not necessary to call addfld in the code to obtain these fields)
+;
+ SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
+           'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+           'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M'</pre>
+</div>
+<dl class="docutils">
+<dt>See also:</dt>
+<dd><a class="reference internal" href="#mxhist-sech"><em>MXHIST_SECH</em></a></dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="sechist"><span id="index-23"></span></span><dl class="describe">
+<dt>
+<tt class="descname">SECHIST</tt></dt>
+<dd><p>Secondary history write frequency, specified as a model time (day,hour,minute).
+SECHIST time must divide evenly into SECSTOP minus SECSTART times.</p>
+<div class="line-block">
+<div class="line">Data type: 3 integers (day,hour,minute)</div>
+<div class="line">Valid range: 0-365 for day, 0-23 for hour, 0-59 for minute.</div>
+</div>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>SECHIST = 0,1,0    ;request hourly histories</li>
+<li>SECHIST = 0,0,12   ;request 12-minute histories</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#hist"><em>HIST</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="secout"><span id="index-24"></span></span><dl class="describe">
+<dt>
+<tt class="descname">SECOUT</tt></dt>
+<dd><p>List of secondary history output files. Secondary histories store diagnostic fields,
+usually at a higher temporal resolution than primary files. Each file may be an
+absolute path, or relative to the execution directory. Beware that SECOUT will
+overwrite any pre-existing files with the same names.  As each SECOUT file is filled
+(see MXHIST_SECH), the next SECOUT file is created and histories are written until
+it is full, and so on.</p>
+<p>SECOUT files are usually specified with increasing integers imbedded in the names. See
+examples below. As a convenience, large sequences of files may be specified in a &#8220;short-form&#8221;,
+see example 3 below specifying 20 files. By convention, secondary history output files
+may use the letter &#8220;s&#8221; to indicate secondary file series (see all 3 examples below).</p>
+<p>Examples:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">SECOUT</span> <span class="o">=</span> <span class="s">&#39;s_myoutput_001.nc&#39;</span>
+<span class="n">SECOUT</span> <span class="o">=</span> <span class="s">&#39;myoutput.s001.nc&#39;</span><span class="p">,</span><span class="s">&#39;myoutput.s002.nc&#39;</span><span class="p">,</span><span class="s">&#39;myoutput.s003.nc&#39;</span>
+<span class="n">SECOUT</span> <span class="o">=</span> <span class="s">&#39;myoutput_s001.nc&#39;</span><span class="p">,</span><span class="s">&#39;to&#39;</span><span class="p">,</span><span class="s">&#39;myoutput_s020.nc&#39;</span><span class="p">,</span><span class="s">&#39;by&#39;</span><span class="p">,</span><span class="s">&#39;1&#39;</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="output.html#output"><em>OUTPUT</em></a></li>
+<li><a class="reference internal" href="#source"><em>SOURCE</em></a></li>
+<li><a class="reference internal" href="#mxhist-sech"><em>MXHIST_SECH</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="source"><span id="index-25"></span></span><dl class="describe">
+<dt>
+<tt class="descname">SOURCE</tt></dt>
+<dd><p>SOURCE is the start-up history file for an initial run. SOURCE may be a full path or
+relative to the execution directory. It must be a TIEGCM history with the same grid
+resolution as the model being run. It does not need to be from the same model version
+as that being run.</p>
+<p>If SOURCE is specified, then SOURCE_START, the model time of the history to read on the
+SOURCE file, must also be specified. The code will search the SOURCE file for the
+SOURCE_START history. If SOURCE is <em>not</em> specified, then the run is a continuation run,
+and the source history is provided in the first OUTPUT file at START time.</p>
+<p>The SOURCE file must be on the local disk. The model will not look for the SOURCE
+history on any archive file system.</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>SOURCE = &#8216;$TGCMDATA/TGCM.tiegcm1.94.pcntr_eqnx_smed.nc&#8217;</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#source-start"><em>SOURCE_START</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="source-start"><span id="index-26"></span></span><dl class="describe">
+<dt>
+<tt class="descname">SOURCE_START</tt></dt>
+<dd><p>This is the model time of the history to read from the SOURCE file. Model time is
+specified as a 3-integer triplet: day,hour,minute. If SOURCE is specified, then
+SOURCE_START must also be specified. If the SOURCE_START history is not found on the
+SOURCE file, the model will stop and print an appropriate error message to stdout.</p>
+<div class="line-block">
+<div class="line">Data type: 3 integers</div>
+<div class="line">Valid range: 0-365 for day, 0-23 for hour, 0-59 for minute.</div>
+</div>
+<dl class="docutils">
+<dt>Example:</dt>
+<dd><ul class="first last simple">
+<li>SOURCE_START = 80,0,0</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#source"><em>SOURCE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="start"><span id="index-27"></span></span><dl class="describe">
+<dt>
+<tt class="descname">START</tt></dt>
+<dd><p>Model time for start of the run. Model time is a 3-integer triplet: day,hour, minute.
+If CALENDAR_ADVANCE=0, then START day can be any number between 0 and 365.
+If CALENDAR_ADVANCE=1, then START day must be the same as START_DAY. If an initial run,
+START time does not have to be the same as SOURCE_START.</p>
+<p>Data type: 3 integers
+Valid range: 0-365 for day, 0-23 for hour, 0-59 for minute.</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>START = 80,0,0</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#source-start"><em>SOURCE_START</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="start-day"><span id="index-28"></span></span><dl class="describe">
+<dt>
+<tt class="descname">START_DAY</tt></dt>
+<dd><p>Calendar starting day.</p>
+<div class="line-block">
+<div class="line">Data type: integer</div>
+<div class="line">Default: 80</div>
+<div class="line">Valid range: 1 to 365</div>
+</div>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="start-year"><span id="index-29"></span></span><dl class="describe">
+<dt>
+<tt class="descname">START_YEAR</tt></dt>
+<dd><p>Starting year for the run.</p>
+<div class="line-block">
+<div class="line">Data type: integer</div>
+<div class="line">Default: 2002</div>
+</div>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="step"><span id="index-30"></span></span><dl class="describe">
+<dt>
+<tt class="descname">STEP</tt></dt>
+<dd><p>Model time-step in seconds. Default value is 120, although during periods of quiet
+solar activity, the model will run fine at 180. During periods of intense solar
+activity (e.g., F10.7 &gt; 200, or high magnitude BZ southward), the model may become
+numerically unstable. In this case, reducing the timestep to as low as 60 seconds
+may help the model get through the rough period.</p>
+<div class="line-block">
+<div class="line">Data type: integer</div>
+<div class="line">Default: Usually 120 or 180</div>
+</div>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="stop"><span id="index-31"></span></span><dl class="describe">
+<dt>
+<tt class="descname">STOP</tt></dt>
+<dd><p>Model stop time for the run. Model time is specified as a 3-integer triplet: day,hour,minute.</p>
+<div class="line-block">
+<div class="line">Data type: 3 integers</div>
+<div class="line">Valid range: 0-365 for day, 0-23 for hour, 0-59 for minute.</div>
+</div>
+<dl class="docutils">
+<dt>Example:</dt>
+<dd><ul class="first last simple">
+<li>STOP = 81,0,0</li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="swden"><span id="index-32"></span></span><dl class="describe">
+<dt>
+<tt class="descname">SWDEN or SWDEN_TIME</tt></dt>
+<dd><p>Solar Wind Density. Can be specified as either a constant (SWDEN), or series of
+time-dependent values (SWDEN_TIME). If IMF_NCFILE is set and SWDEN is not provided,
+then it SWDEN will be taken from the IMF data file.</p>
+<p>Data type: real or real array</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>SWDEN = 4.0 ; constant for entire run</li>
+<li>SWDEN_TIME = 80,0,0,2., 80,1,0,3., 80,2,0,4. ; time series</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#imf-ncfile"><em>IMF_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="swvel"><span id="index-33"></span></span><dl class="describe">
+<dt>
+<tt class="descname">SWVEL or SWVEL_TIME</tt></dt>
+<dd><p>Solar Wind Velocity. Can be specified as either a constant (SWVEL), or series of
+time-dependent values (SWVEL_TIME). If IMF_NCFILE is set and SWVEL is not provided,
+then it SWVEL will be taken from the IMF data file.</p>
+<p>Data type: real or real array</p>
+<dl class="docutils">
+<dt>Examples:</dt>
+<dd><ul class="first last simple">
+<li>SWVEL = 400. ; constant for entire run</li>
+<li>SWVEL_TIME = 80,0,0,100., 80,1,0,200., 80,2,0,300. ; time series</li>
+</ul>
+</dd>
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#imf-ncfile"><em>IMF_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="tide"><span id="index-34"></span></span><dl class="describe">
+<dt>
+<tt class="descname">TIDE</tt></dt>
+<dd><p>Hough mode amplitudes and phases of the semi-diurnal tide. If GSWM tidal perturbations
+are specified, TIDE should be set to 0.</p>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">TIDE and TIDE2 should be specified only for experiments where amplitude and phases
+of the tides must be used.  Normally, GSWM tides are specified instead of TIDE,TIDE2.</p>
+</div>
+</div></blockquote>
+<p>Data type: 10 reals</p>
+<p>Example:</p>
+<div class="highlight-python"><pre>TIDE= 1.9300E+04, 1.5000E+04, 2.3100E+04, 0.7700E+04, 0.1660E+04,
+      -2.600E+00,  0.000E+00, -3.300E+00, 4.2000E+00, 5.0000E+00</pre>
+</div>
+<dl class="docutils">
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#gswm"><em>GSWM_MI_SDI_NCFILE</em></a></li>
+<li><a class="reference internal" href="#gswm"><em>GSWM_NM_SDI_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+<span class="target" id="tide2"><span id="index-35"></span></span><dl class="describe">
+<dt>
+<tt class="descname">TIDE2</tt></dt>
+<dd><p>Hough mode amplitudes and phases of the diurnal tide. If GSWM tidal perturbations are
+specified, TIDE2 should be set to 0.</p>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">TIDE and TIDE2 should be specified only for experiments where amplitude and phases
+of the tides must be used.  Normally, GSWM tides are specified instead of TIDE,TIDE2.</p>
+</div>
+</div></blockquote>
+<p>Data type: 2 floats</p>
+<p>Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">TIDE2</span> <span class="o">=</span> <span class="mf">4.1E+4</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.7</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>See also:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#gswm"><em>GSWM_MI_DI_NCFILE</em></a></li>
+<li><a class="reference internal" href="#gswm"><em>GSWM_NM_DI_NCFILE</em></a></li>
+</ul>
+</dd>
+</dl>
+<p><a class="reference internal" href="#namelist-params"><em>Back to top</em></a></p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Run Control Parameters: The Namelist Input File</a><ul>
+<li><a class="reference internal" href="#example-namelist-input-files">Example Namelist Input Files</a></li>
+<li><a class="reference internal" href="#explanation-of-valid-namelist-parameters">Explanation of Valid Namelist Parameters</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="dirstruct.html"
+                        title="previous chapter">Directory Structure</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="output.html"
+                        title="next chapter">Structure of Output History Files</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/namelist.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="output.html" title="Structure of Output History Files"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="dirstruct.html" title="Directory Structure"
+             >previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Ben Foster.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

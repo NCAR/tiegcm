@@ -1,0 +1,134 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>The Make/build process: compile and link &mdash; TIEGCM v1.94 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.94',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="TIEGCM v1.94 documentation" href="index.html" />
+    <link rel="next" title="Benchmark Test Runs" href="tests.html" />
+    <link rel="prev" title="Model Source Code" href="source.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tests.html" title="Benchmark Test Runs"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="source.html" title="Model Source Code"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="the-make-build-process-compile-and-link">
+<h1>The Make/build process: compile and link<a class="headerlink" href="#the-make-build-process-compile-and-link" title="Permalink to this headline">¶</a></h1>
+<p>The TIEGCM model is formally supported on two platforms
+systems: 64-bit Linux, and IBM/AIX. However, the model
+has been built and executed on several other platforms.
+The source code is f90 standard compliant, and is mostly
+fixed-format fortran.</p>
+<p>Compilers used on Linux systems include Intel ifort, and
+PGI&#8217;s pgf90. The compiler used on the NCAR IBM/AIX system
+is xlf90.</p>
+<p>Library dependencies consist mainly of netCDF and MPI.
+The MPI library is often bundled in with the compiler.
+Locations of these libraries are specified in &#8220;Make.machine&#8221;
+files, which set platform-specific compile flags and other
+parameters for the build process. The following Make.machine
+files are provided in the <a class="reference internal" href="glossary.html#term-scripts"><em class="xref std std-term">scripts/</em></a> directory:</p>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference download internal" href="_downloads/Make.bluefire"><tt class="xref download docutils literal"><span class="pre">Make.bluefire</span></tt></a> (NCAR IBM/AIX machine)</li>
+<li><a class="reference download internal" href="_downloads/Make.intel_hao64"><tt class="xref download docutils literal"><span class="pre">Make.intel_hao64</span></tt></a> (ifort compiler on HAO 64-bit Linux desktops)</li>
+<li><a class="reference download internal" href="_downloads/Make.pgi_hao32"><tt class="xref download docutils literal"><span class="pre">Make.pgi_hao32</span></tt></a> (pgf90 compiler on HAO 32-bit Linux desktops)</li>
+<li><a class="reference download internal" href="_downloads/Make.pgi_hao32"><tt class="xref download docutils literal"><span class="pre">Make.pgi_hao64</span></tt></a> (pgf90 compiler on HAO 64-bit Linux desktops)</li>
+</ul>
+</div></blockquote>
+<p>One of these files, or the user&#8217;s own, is specified by the csh
+variable &#8220;make&#8221; in the <a class="reference internal" href="quickstart.html#jobscript"><em>job script</em></a>. The specified
+file is included in the main <a class="reference download internal" href="_downloads/Makefile"><tt class="xref download docutils literal"><span class="pre">Makefile</span></tt></a>.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="source.html"
+                        title="previous chapter">Model Source Code</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tests.html"
+                        title="next chapter">Benchmark Test Runs</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/build.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tests.html" title="Benchmark Test Runs"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="source.html" title="Model Source Code"
+             >previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Ben Foster.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

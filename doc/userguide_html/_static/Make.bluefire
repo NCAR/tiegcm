@@ -1,0 +1,20 @@
+#
+# Included makefile for IBM/AIX bluefire machine:
+#
+# Compiler and loader flags:
+#
+F90       = xlf90
+MPIF90    = mpxlf_r
+OPTIM     = -O3
+FFLAGS    = -qfixed -qstrict -qarch=auto -qrealsize=8 -q64
+DBGFLAGS  = -qinitauto=7FF7FFFF -qflttrap=zero:inv:en -qsigtrap=xl__trcedump
+#DBGFLAGS = -C -qzerosize -qinitauto=7FF7FFFF -qflttrap=zero:inv:en -qsigtrap=xl__trcedump
+LDFLAGS   = -bloadmap:loadmap -q64 $(OPTIM)
+LDFLAGS   = -bdatapsize:64K -bstackpsize:64K -btextpsize:64K
+LIBS      = -lmass
+#
+# Library and Include file paths:
+#
+LIB_NETCDF = /usr/local/lib
+INC_NETCDF = /usr/local/include
+prereq:

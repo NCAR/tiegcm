@@ -1,0 +1,219 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Release Notes &mdash; TIEGCM Release v1.94 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.94',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="TIEGCM Release v1.94 documentation" href="index.html" />
+    <link rel="next" title="Benchmark Runs" href="tests.html" />
+    <link rel="prev" title="HAO Release of TIEGCM Version 1.94" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tests.html" title="Benchmark Runs"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="HAO Release of TIEGCM Version 1.94"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">TIEGCM Release v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="release-notes">
+<h1>Release Notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="new-validated-features-in-the-public-release">
+<h2>New validated features in the public release<a class="headerlink" href="#new-validated-features-in-the-public-release" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Weimer 2005 electric potential model, optionally with IMF data.</li>
+<li>Dynamic critical cross-over latitudes for transition between
+dynamo and empirical models at high-latitude.</li>
+<li>For a more detailed description of the use of the Weimer 2005 model in
+the TIEGCM, and the dynamic cross-over latitudes, please see
+<a class="reference internal" href="tiegcm_weimer05.html#tiegcm-weimer05"><em>Notes on Weimer05 in TIEGCM</em></a>.</li>
+<li>New diagnostics module (diags.F).  22 &#8220;sanctioned&#8221; diagnostic fields
+are available, and can be saved on secondary histories
+(see diags.table in doc directory).</li>
+<li>HPSS archive script can be saved by the model, to be executed after
+a run to save history files to the NCAR HPSS with &#8220;contents&#8221; annotations.</li>
+</ul>
+</div>
+<div class="section" id="new-build-system-scripts-directory">
+<h2>New Build System (scripts/ directory)<a class="headerlink" href="#new-build-system-scripts-directory" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Make.machine files containing platform and machine-specific compiler
+and link options, library locations, etc. are available in scripts directory.</li>
+<li>New simplified Makefile without platform-dependent conditionals.</li>
+<li>Support for Intel ifort/mpif90 compiler on 64-bit HAO Linux systems
+(Intel-built code is significantly faster than PGI-built code on systems
+with Intel hardware)</li>
+<li>Write svnversion to history files.</li>
+</ul>
+</div>
+<div class="section" id="utilities-scripts-directory">
+<h2>Utilities (scripts/ directory)<a class="headerlink" href="#utilities-scripts-directory" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><em>tgcm_contents:</em> Print &#8220;contents&#8221; (annotations) of history files</li>
+<li><em>tgcm_ncdump:</em>   Print ncdump of history files, with data for scalars and 1d vectors</li>
+<li><em>tgcm_put:</em>      Archive history files on the NCAR HPSS storage system</li>
+<li><em>mknamelist:</em>    Make a namelist input file</li>
+<li><em>mkjob:</em>         Make a job script</li>
+</ul>
+</div>
+<div class="section" id="validation-and-benchmark-runs-tests-directory">
+<h2>Validation and Benchmark Runs (tests/ directory)<a class="headerlink" href="#validation-and-benchmark-runs-tests-directory" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Namelist input files and job scripts for benchmark runs are available
+in the tests/ directory.</li>
+<li>Seasonal steady-state source histories are provided for both equinoxes and
+solstices, at solar minimum and solar maximum conditions.</li>
+<li>The following benchmark runs were made with tiegcm v1.94:<ul>
+<li><strong>Control:</strong> 5-day Control Runs are made, starting from the steady-state
+seasonal source histories.</li>
+<li><strong>Climatology:</strong> Full-year Climatology with constant solar forcing.</li>
+<li><strong>Dec2006:</strong> December, 2006 &#8220;AGU&#8221; storm case.</li>
+<li><strong>Nov2003:</strong> November 19-24 (days 323-328), 2003 storm case.</li>
+<li><strong>Whi2008:</strong> Whole Heliosphere Interval (WHI), March 21 to April 16, 2008.</li>
+</ul>
+</li>
+<li>For more detailed information and access to the history files and
+post-processing, please see <a class="reference internal" href="tests.html#tests"><em>Benchmark/test runs</em></a>.</li>
+</ul>
+</div>
+<div class="section" id="changes-to-namelist-inputs">
+<h2>Changes to namelist inputs<a class="headerlink" href="#changes-to-namelist-inputs" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Weimer potential model with IMF data from IMF_NCFILE, and F10.7 data
+from GPI_NCFILE.</li>
+<li>HPSS_PATH specifies destination path to the NCAR HPSS, for history file
+archive script. (All references to the old NCAR MSS have been removed)</li>
+<li>Time-dependent namelist option for F107a and F107d</li>
+<li>The following namelist parameters are deprecated: SAVE, SECSAVE, DISPOSE</li>
+</ul>
+</div>
+<div class="section" id="changes-in-the-documentation-directory-doc">
+<h2>Changes in the documentation directory doc/<a class="headerlink" href="#changes-in-the-documentation-directory-doc" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>All new User&#8217;s Guide (pdf, html) is now provided in the doc directory.</li>
+<li>Model Description (pdf) also provided in the doc directory.</li>
+<li>README.download: Information and instructions for downloading and
+executing a default run with the current version.</li>
+<li>Release_Notes: Release notes for the current version.</li>
+</ul>
+</div>
+<div class="section" id="bug-fixes">
+<h2>Bug Fixes<a class="headerlink" href="#bug-fixes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Change nmlon to nlonp1 where defining dynpot, line 292 of magfield.F</li>
+<li>Change op(k,i) to nop(k,i) in calculation of ion chemistry heating (qic).
+Line 119 of qjion.F</li>
+</ul>
+</div>
+<div class="section" id="other">
+<h2>Other<a class="headerlink" href="#other" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Changed units of f107d, f107a, ctpoten, and hpower on the histories.</li>
+<li>Divide by avogadro&#8217;s number instead of multiplying by 1.66e-24 in
+sub calczg (addiag.F).</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Release Notes</a><ul>
+<li><a class="reference internal" href="#new-validated-features-in-the-public-release">New validated features in the public release</a></li>
+<li><a class="reference internal" href="#new-build-system-scripts-directory">New Build System (scripts/ directory)</a></li>
+<li><a class="reference internal" href="#utilities-scripts-directory">Utilities (scripts/ directory)</a></li>
+<li><a class="reference internal" href="#validation-and-benchmark-runs-tests-directory">Validation and Benchmark Runs (tests/ directory)</a></li>
+<li><a class="reference internal" href="#changes-to-namelist-inputs">Changes to namelist inputs</a></li>
+<li><a class="reference internal" href="#changes-in-the-documentation-directory-doc">Changes in the documentation directory doc/</a></li>
+<li><a class="reference internal" href="#bug-fixes">Bug Fixes</a></li>
+<li><a class="reference internal" href="#other">Other</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">HAO Release of TIEGCM Version 1.94</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tests.html"
+                        title="next chapter">Benchmark Runs</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/release_notes.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tests.html" title="Benchmark Runs"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="HAO Release of TIEGCM Version 1.94"
+             >previous</a> |</li>
+        <li><a href="index.html">TIEGCM Release v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Ben Foster.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

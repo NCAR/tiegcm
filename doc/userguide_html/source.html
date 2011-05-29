@@ -1,0 +1,153 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Model Source Code &mdash; TIEGCM v1.94 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.94',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="TIEGCM v1.94 documentation" href="index.html" />
+    <link rel="next" title="The Make/build process: compile and link" href="build.html" />
+    <link rel="prev" title="Saving Diagnostic Fields" href="diagnostics.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="build.html" title="The Make/build process: compile and link"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="diagnostics.html" title="Saving Diagnostic Fields"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="model-source-code">
+<span id="source-section"></span><h1>Model Source Code<a class="headerlink" href="#model-source-code" title="Permalink to this headline">¶</a></h1>
+<p>The source code is in the <a class="reference internal" href="glossary.html#term-src"><em class="xref std std-term">src/</em></a> subdirectory of the model root directory
+(<a class="reference internal" href="glossary.html#term-modeldir"><em class="xref std std-term">modeldir</em></a>), which is provided in the model <a class="reference internal" href="quickstart.html#download"><em>download</em></a> file.</p>
+<div class="section" id="the-academic-license-agreement">
+<h2>The Academic License Agreement<a class="headerlink" href="#the-academic-license-agreement" title="Permalink to this headline">¶</a></h2>
+<p>The TIEGCM <a class="reference download internal" href="_downloads/tiegcmlicense.txt"><tt class="xref download docutils literal"><span class="pre">Open</span> <span class="pre">Source</span> <span class="pre">Academic</span> <span class="pre">Research</span> <span class="pre">License</span> <span class="pre">Agreement</span></tt></a>
+specifies the terms and restrictions under which the NCAR/UCAR grants permission to use the
+model, including the source code, for research, academic, and non-profit purposes.</p>
+</div>
+<div class="section" id="source-code-flow-diagram">
+<h2>Source Code Flow Diagram<a class="headerlink" href="#source-code-flow-diagram" title="Permalink to this headline">¶</a></h2>
+<p>A detailed flow diagram and calling tree of the source code structure is available
+in single and multi-page pdf files:</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Some details of these flow charts may be out of date with respect to TIEGCM version 1.94</p>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/tiegcm_codestruct.pdf">TIEGCM Code Structure (multi-page pdf)</a></li>
+<li><a class="reference external" href="http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/tiegcm_code_poster.pdf">TIEGCM Code Structure (single-page pdf)</a></li>
+</ul>
+</div>
+<div class="section" id="modifying-the-source-code">
+<h2>Modifying the Source Code<a class="headerlink" href="#modifying-the-source-code" title="Permalink to this headline">¶</a></h2>
+<p>As a community user, student, research scientist or developer, you may need to modify the model
+source code. It is best to do this after building and at least making a default execution
+of the model (see the <a class="reference internal" href="quickstart.html#quickstart"><em>QuickStart</em></a> Section). To change one or more
+source files, simply go to the <a class="reference internal" href="glossary.html#term-src"><em class="xref std std-term">src/</em></a> subdirectory in the model root directory
+<a class="reference internal" href="glossary.html#term-modeldir"><em class="xref std std-term">modeldir</em></a>, and edit the files as necessary. Then return to the working directory
+<a class="reference internal" href="glossary.html#term-workdir"><em class="xref std std-term">workdir</em></a> and re-execute the job script. It will recompile the modified files, and
+any other source files that depend on the modified files, and re-execute the model.
+Alternatively, you can enter the execution directory <a class="reference internal" href="glossary.html#term-execdir"><em class="xref std std-term">execdir</em></a>, and recompile
+the code by typing &#8220;gmake&#8221; on the command line, then return to the working directory
+and re-execute the job script.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Model Source Code</a><ul>
+<li><a class="reference internal" href="#the-academic-license-agreement">The Academic License Agreement</a></li>
+<li><a class="reference internal" href="#source-code-flow-diagram">Source Code Flow Diagram</a></li>
+<li><a class="reference internal" href="#modifying-the-source-code">Modifying the Source Code</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="diagnostics.html"
+                        title="previous chapter">Saving Diagnostic Fields</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="build.html"
+                        title="next chapter">The Make/build process: compile and link</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/source.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="build.html" title="The Make/build process: compile and link"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="diagnostics.html" title="Saving Diagnostic Fields"
+             >previous</a> |</li>
+        <li><a href="index.html">TIEGCM v1.94 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Ben Foster.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

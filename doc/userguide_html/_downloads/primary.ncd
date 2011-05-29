@@ -1,0 +1,606 @@
+
+======================================================================
+File tiegcm1.94-beta.pcntr_decsol_smax_001.nc
+
+netcdf tiegcm1.94-beta.pcntr_decsol_smax_001 {
+dimensions:
+	time = UNLIMITED ; // (6 currently)
+	lon = 72 ;
+	lat = 36 ;
+	lev = 29 ;
+	ilev = 29 ;
+	mlon = 81 ;
+	mlat = 97 ;
+	mlev = 32 ;
+	imlev = 32 ;
+	mtimedim = 3 ;
+	latlon = 2 ;
+	dtidedim = 2 ;
+	sdtidedim = 10 ;
+	datelen = 24 ;
+	filelen = 80 ;
+variables:
+	double time(time) ;
+		time:long_name = "time" ;
+		time:units = "minutes since 2002-12-21 0:0:0" ;
+		time:initial_year = 2002 ;
+		time:initial_day = 355 ;
+		time:initial_mtime = 355, 0, 0 ;
+	double lon(lon) ;
+		lon:long_name = "geographic longitude (-west, +east)" ;
+		lon:units = "degrees_east" ;
+	double lat(lat) ;
+		lat:long_name = "geographic latitude (-south, +north)" ;
+		lat:units = "degrees_north" ;
+	double lev(lev) ;
+		lev:long_name = "midpoint levels" ;
+		lev:short_name = "ln(p0/p)" ;
+		lev:units = "" ;
+		lev:positive = "up" ;
+		lev:standard_name = "atmosphere_ln_pressure_coordinate" ;
+		lev:formula_terms = "p0: p0 lev: lev" ;
+		lev:formula = "p(k) = p0 * exp(-lev(k))" ;
+	double ilev(ilev) ;
+		ilev:long_name = "interface levels" ;
+		ilev:short_name = "ln(p0/p)" ;
+		ilev:units = "" ;
+		ilev:positive = "up" ;
+		ilev:standard_name = "atmosphere_ln_pressure_coordinate" ;
+		ilev:formula_terms = "p0: p0 lev: ilev" ;
+		ilev:formula = "p(k) = p0 * exp(-ilev(k))" ;
+	double mlon(mlon) ;
+		mlon:long_name = "magnetic longitude (-west, +east)" ;
+		mlon:units = "degrees_east" ;
+	double mlat(mlat) ;
+		mlat:long_name = "magnetic latitude (-south, +north)" ;
+		mlat:units = "degrees_north" ;
+	double mlev(mlev) ;
+		mlev:long_name = "magnetic midpoint levels" ;
+		mlev:short_name = "ln(p0/p)" ;
+		mlev:units = "" ;
+		mlev:positive = "up" ;
+		mlev:standard_name = "atmosphere_ln_pressure_coordinate" ;
+		mlev:formula_terms = "p0: p0 lev: mlev" ;
+		mlev:formula = "p(k) = p0 * exp(-mlev(k))" ;
+	double imlev(imlev) ;
+		imlev:long_name = "magnetic interface levels" ;
+		imlev:short_name = "ln(p0/p)" ;
+		imlev:units = "" ;
+		imlev:positive = "up" ;
+		imlev:standard_name = "atmosphere_ln_pressure_coordinate" ;
+		imlev:formula_terms = "p0: p0 lev: imlev" ;
+		imlev:formula = "p(k) = p0 * exp(-imlev(k))" ;
+	int mtime(time, mtimedim) ;
+		mtime:long_name = "model times (day, hour, minute)" ;
+		mtime:units = "day, hour, minute" ;
+	int year(time) ;
+		year:long_name = "calendar year" ;
+	int day(time) ;
+		day:long_name = "calendar day" ;
+	int calendar_advance(time) ;
+		calendar_advance:long_name = "calendar advance flag (1 if advancing calendar time)" ;
+	char write_date(time, datelen) ;
+		write_date:long_name = "Date and time each history was written" ;
+	int iter(time) ;
+		iter:long_name = "number of time steps from model time 0,0,0" ;
+	int ntask_mpi(time) ;
+		ntask_mpi:long_name = "Number of MPI tasks" ;
+	double ut(time) ;
+		ut:long_name = "universal time (from model time hour and minute)" ;
+		ut:units = "hours" ;
+	int timestep ;
+		timestep:long_name = "timestep" ;
+		timestep:units = "seconds" ;
+	double f107d(time) ;
+		f107d:long_name = "Daily 10.7 cm solar flux" ;
+		f107d:units = "1.e-22 W/m2/Hz" ;
+	double f107a(time) ;
+		f107a:long_name = "81-day average 10.7 cm solar flux" ;
+		f107a:units = "1.e-22 W/m2/Hz" ;
+	double hpower(time) ;
+		hpower:long_name = "Hemispheric power" ;
+		hpower:units = "GW" ;
+	double ctpoten(time) ;
+		ctpoten:long_name = "Cross-tail potential" ;
+		ctpoten:units = "kV" ;
+	double Kp(time) ;
+		Kp:long_name = "Kp index" ;
+	double bximf(time) ;
+		bximf:long_name = "BX component of IMF" ;
+		bximf:units = "nT" ;
+	double byimf(time) ;
+		byimf:long_name = "BY component of IMF" ;
+		byimf:units = "nT" ;
+	double bzimf(time) ;
+		bzimf:long_name = "BZ component of IMF" ;
+		bzimf:units = "nT" ;
+	double swvel(time) ;
+		swvel:long_name = "Solar wind velocity" ;
+		swvel:units = "km/s" ;
+	double swden(time) ;
+		swden:long_name = "Solar wind density" ;
+		swden:units = "cm3" ;
+	double al(time) ;
+		al:long_name = "Lower magnetic auroral activity index" ;
+		al:units = "nT" ;
+	double colfac(time) ;
+		colfac:long_name = "ion/neutral collision factor" ;
+	double dtide(time, dtidedim) ;
+		dtide:long_name = "amplitude and phase of diurnal tide mode (1,1)" ;
+	double sdtide(time, sdtidedim) ;
+		sdtide:long_name = "amplitudes and phases of semi-diurnal tide" ;
+	char ncep_ncfile(time, filelen) ;
+		ncep_ncfile:long_name = "ncep data file" ;
+		ncep_ncfile:data = "10 mb lower boundary for TN and Z" ;
+	char gpi_ncfile(time, filelen) ;
+		gpi_ncfile:long_name = "GeoPhysical Indices data file" ;
+		gpi_ncfile:data = "Kp, f107, f107a, ctpoten, power" ;
+	char saber_ncfile(time, filelen) ;
+		saber_ncfile:long_name = "SABER lbc data file" ;
+		saber_ncfile:data = "T,Z" ;
+	char tidi_ncfile(time, filelen) ;
+		tidi_ncfile:long_name = "TIDI lbc data file" ;
+		tidi_ncfile:data = "U,V" ;
+	char see_ncfile(time, filelen) ;
+		see_ncfile:long_name = "TIMED SEE data file" ;
+		see_ncfile:data = "Solar flux data" ;
+	char imf_ncfile(time, filelen) ;
+		imf_ncfile:long_name = "IMF data file" ;
+		imf_ncfile:data = "Bx,By,Bz,Swvel,Swden,Kp,f107,f107a" ;
+	char gswm_mi_di_ncfile(time, filelen) ;
+		gswm_mi_di_ncfile:long_name = "GSWM migrating diurnal tides data file" ;
+		gswm_mi_di_ncfile:data = "lower boundary perturbations for TN, UN, VN, and Z" ;
+	char gswm_mi_sdi_ncfile(time, filelen) ;
+		gswm_mi_sdi_ncfile:long_name = "GSWM migrating semi-diurnal tides data file" ;
+		gswm_mi_sdi_ncfile:data = "lower boundary perturbations for TN, UN, VN, and Z" ;
+	char gswm_nm_di_ncfile(time, filelen) ;
+		gswm_nm_di_ncfile:long_name = "GSWM non-migrating diurnal tides data file" ;
+		gswm_nm_di_ncfile:data = "lower boundary perturbations for TN, UN, VN, and Z" ;
+	char gswm_nm_sdi_ncfile(time, filelen) ;
+		gswm_nm_sdi_ncfile:long_name = "GSWM non-migrating semi-diurnal tides data file" ;
+		gswm_nm_sdi_ncfile:data = "lower boundary perturbations for TN, UN, VN, and Z" ;
+	double e1(time) ;
+		e1:long_name = "Peak energy flux in noon sector of the aurora" ;
+		e1:units = "ergs/cm2/s" ;
+	double e2(time) ;
+		e2:long_name = "Peak energy flux in midnight sector of the aurora" ;
+		e2:units = "ergs/cm2/s" ;
+	double h1(time) ;
+		h1:long_name = "Gaussian half-width of the noon auroral oval" ;
+		h1:units = "degrees" ;
+	double h2(time) ;
+		h2:long_name = "Gaussian half-width of the midnight auroral oval" ;
+		h2:units = "degrees" ;
+	double alfac(time) ;
+		alfac:long_name = "Characteristic Maxwellian energy of polar cusp electrons" ;
+		alfac:units = "keV" ;
+	double ec(time) ;
+		ec:long_name = "Column energy input of polar cusp electrons" ;
+		ec:units = "ergs/cm**2/s" ;
+	double alfad(time) ;
+		alfad:long_name = "Characteristic Maxwellian energy of drizzle electrons" ;
+		alfad:units = "keV" ;
+	double ed(time) ;
+		ed:long_name = "Column energy input of drizzle electrons" ;
+		ed:units = "ergs/cm**2/s" ;
+	double crit1(time) ;
+		crit1:long_name = "critical cross-over latitude 1" ;
+		crit1:units = "deg" ;
+	double crit2(time) ;
+		crit2:long_name = "critical cross-over latitude 2" ;
+		crit2:units = "deg" ;
+	double mag(latlon, latlon) ;
+		mag:long_name = "lat,lon coordinates of S,N magnetic poles" ;
+		mag:units = "degrees" ;
+	double p0 ;
+		p0:long_name = "Reference pressure" ;
+		p0:units = "millibars" ;
+	double p0_model ;
+		p0_model:long_name = "Reference pressure (as used by the model)" ;
+		p0_model:units = "microbars" ;
+	double grav ;
+		grav:long_name = "gravitational acceleration" ;
+		grav:units = "cm/s" ;
+		grav:info = "constant used in the model, independent of height" ;
+	double TN(time, lev, lat, lon) ;
+		TN:long_name = "NEUTRAL TEMPERATURE" ;
+		TN:units = "K" ;
+		TN:missing_value = 1.e+36 ;
+	double UN(time, lev, lat, lon) ;
+		UN:long_name = "NEUTRAL ZONAL WIND (+EAST)" ;
+		UN:units = "cm/s" ;
+		UN:missing_value = 1.e+36 ;
+	double VN(time, lev, lat, lon) ;
+		VN:long_name = "NEUTRAL MERIDIONAL WIND (+NORTH)" ;
+		VN:units = "cm/s" ;
+		VN:missing_value = 1.e+36 ;
+	double O2(time, lev, lat, lon) ;
+		O2:long_name = "MOLECULAR OXYGEN" ;
+		O2:units = "mmr" ;
+		O2:missing_value = 1.e+36 ;
+	double O1(time, lev, lat, lon) ;
+		O1:long_name = "ATOMIC OXYGEN" ;
+		O1:units = "mmr" ;
+		O1:missing_value = 1.e+36 ;
+	double N4S(time, lev, lat, lon) ;
+		N4S:long_name = "N4S" ;
+		N4S:units = "mmr" ;
+		N4S:missing_value = 1.e+36 ;
+	double NO(time, lev, lat, lon) ;
+		NO:long_name = "NITRIC OXIDE" ;
+		NO:units = "mmr" ;
+		NO:missing_value = 1.e+36 ;
+	double OP(time, lev, lat, lon) ;
+		OP:long_name = "O+ ION" ;
+		OP:units = "cm-3" ;
+		OP:missing_value = 1.e+36 ;
+	double N2D(time, lev, lat, lon) ;
+		N2D:long_name = "N2D" ;
+		N2D:units = "mmr" ;
+		N2D:missing_value = 1.e+36 ;
+	double TI(time, lev, lat, lon) ;
+		TI:long_name = "ION TEMPERATURE" ;
+		TI:units = "K" ;
+		TI:missing_value = 1.e+36 ;
+	double TE(time, lev, lat, lon) ;
+		TE:long_name = "ELECTRON TEMPERATURE" ;
+		TE:units = "K" ;
+		TE:missing_value = 1.e+36 ;
+	double NE(time, ilev, lat, lon) ;
+		NE:long_name = "ELECTRON DENSITY" ;
+		NE:units = "cm-3" ;
+		NE:missing_value = 1.e+36 ;
+	double O2P(time, lev, lat, lon) ;
+		O2P:long_name = "O2+ ION" ;
+		O2P:units = "cm-3" ;
+		O2P:missing_value = 1.e+36 ;
+	double OMEGA(time, ilev, lat, lon) ;
+		OMEGA:long_name = "VERTICAL MOTION" ;
+		OMEGA:units = "s-1" ;
+		OMEGA:former_name = "W" ;
+		OMEGA:missing_value = 1.e+36 ;
+	double Z(time, ilev, lat, lon) ;
+		Z:long_name = "GEOPOTENTIAL HEIGHT" ;
+		Z:units = "cm" ;
+		Z:missing_value = 1.e+36 ;
+	double POTEN(time, ilev, lat, lon) ;
+		POTEN:long_name = "ELECTRIC POTENTIAL" ;
+		POTEN:units = "volts" ;
+		POTEN:missing_value = 1.e+36 ;
+	double TN_NM(time, lev, lat, lon) ;
+		TN_NM:long_name = "NEUTRAL TEMPERATURE (TIME N-1)" ;
+		TN_NM:units = "K" ;
+		TN_NM:missing_value = 1.e+36 ;
+	double UN_NM(time, lev, lat, lon) ;
+		UN_NM:long_name = "NEUTRAL ZONAL WIND (TIME N-1)" ;
+		UN_NM:units = "cm/s" ;
+		UN_NM:missing_value = 1.e+36 ;
+	double VN_NM(time, lev, lat, lon) ;
+		VN_NM:long_name = "NEUTRAL MERIDIONAL WIND (TIME N-1)" ;
+		VN_NM:units = "cm/s" ;
+		VN_NM:missing_value = 1.e+36 ;
+	double O2_NM(time, lev, lat, lon) ;
+		O2_NM:long_name = "MOLECULAR OXYGEN (TIME N-1)" ;
+		O2_NM:units = "mmr" ;
+		O2_NM:missing_value = 1.e+36 ;
+	double O1_NM(time, lev, lat, lon) ;
+		O1_NM:long_name = "ATOMIC OXYGEN (TIME N-1)" ;
+		O1_NM:units = "mmr" ;
+		O1_NM:missing_value = 1.e+36 ;
+	double N4S_NM(time, lev, lat, lon) ;
+		N4S_NM:long_name = "N4S (TIME N-1)" ;
+		N4S_NM:units = "mmr" ;
+		N4S_NM:missing_value = 1.e+36 ;
+	double NO_NM(time, lev, lat, lon) ;
+		NO_NM:long_name = "NO (TIME N-1)" ;
+		NO_NM:units = "mmr" ;
+		NO_NM:missing_value = 1.e+36 ;
+	double OP_NM(time, lev, lat, lon) ;
+		OP_NM:long_name = "OP (TIME N-1)" ;
+		OP_NM:units = "cm-3" ;
+		OP_NM:missing_value = 1.e+36 ;
+	double TLBC(time, lat, lon) ;
+		TLBC:long_name = "Lower boundary condition of TN" ;
+		TLBC:units = "K" ;
+		TLBC:coordinates = "LBC" ;
+	double ULBC(time, lat, lon) ;
+		ULBC:long_name = "Lower boundary condition of UN" ;
+		ULBC:units = "cm/s" ;
+		ULBC:coordinates = "LBC" ;
+	double VLBC(time, lat, lon) ;
+		VLBC:long_name = "Lower boundary condition of VN" ;
+		VLBC:units = "cm/s" ;
+		VLBC:coordinates = "LBC" ;
+	double TLBC_NM(time, lat, lon) ;
+		TLBC_NM:long_name = "Lower boundary condition of TN (TIME N-1)" ;
+		TLBC_NM:units = "K" ;
+		TLBC_NM:coordinates = "LBC" ;
+	double ULBC_NM(time, lat, lon) ;
+		ULBC_NM:long_name = "Lower boundary condition of UN (TIME N-1)" ;
+		ULBC_NM:units = "cm/s" ;
+		ULBC_NM:coordinates = "LBC" ;
+	double VLBC_NM(time, lat, lon) ;
+		VLBC_NM:long_name = "Lower boundary condition of VN (TIME N-1)" ;
+		VLBC_NM:units = "cm/s" ;
+		VLBC_NM:coordinates = "LBC" ;
+	double LBC ;
+		LBC:long_name = "Interface level of t,u,v lower boundary condition" ;
+
+// global attributes:
+		:Conventions = "CF-1.0" ;
+		:label = "decsol smax equil" ;
+		:create_date = "04/27/11 15:43:34" ;
+		:logname = "foster" ;
+		:host = "arc" ;
+		:system = "LINUX" ;
+		:model_name = "tiegcm" ;
+		:model_version = "tiegcm_trunk" ;
+		:svn_version = "581M" ;
+		:output_file = "" ;
+		:history_type = "primary" ;
+		:run_type = "initial" ;
+		:source_file = "tiegcm1.94-beta.pcntr_decsol_smax.nc (initial)" ;
+		:source_mtime = 355, 0, 0 ;
+		:initial_file = "/hao/aim1/tgcm/data/TGCM.tiegcm1.93.pcntr_dsol_smax.nc" ;
+		:initial_mtime = 355, 0, 0 ;
+		:lev_to_hPa_method1 = "p0*exp(-lev(k))" ;
+		:lev_to_hPa_method2 = "p0_model*1.e-3*exp(-lev(k))" ;
+		:nhist = 6 ;
+		:delhist_mins = 0 ;
+		:missing_value = 1.e+36 ;
+		:potential_model = "HEELIS" ;
+		:tuv_lbc_intop = 0 ;
+		:contents = "02355 355  0  0 to 02360 360  0  0 by    0 tiegcm_trunk primary" ;
+		:contents_desc = "yyddd day hour min to yyddd day hour min by delta_mins" ;
+data:
+
+ time = 0, 1440, 2880, 4320, 5760, 7200 ;
+
+ lon = -180, -175, -170, -165, -160, -155, -150, -145, -140, -135, -130, 
+    -125, -120, -115, -110, -105, -100, -95, -90, -85, -80, -75, -70, -65, 
+    -60, -55, -50, -45, -40, -35, -30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 
+    20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 
+    110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175 ;
+
+ lat = -87.5, -82.5, -77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5, -42.5, 
+    -37.5, -32.5, -27.5, -22.5, -17.5, -12.5, -7.5, -2.5, 2.5, 7.5, 12.5, 
+    17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5, 57.5, 62.5, 67.5, 72.5, 
+    77.5, 82.5, 87.5 ;
+
+ lev = -6.75, -6.25, -5.75, -5.25, -4.75, -4.25, -3.75, -3.25, -2.75, -2.25, 
+    -1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 
+    3.75, 4.25, 4.75, 5.25, 5.75, 6.25, 6.75, 7.25 ;
+
+ ilev = -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 
+    0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7 ;
+
+ mlon = -180, -175.5, -171, -166.5, -162, -157.5, -153, -148.5, -144, -139.5, 
+    -135, -130.5, -126, -121.5, -117, -112.5, -108, -103.5, -99, -94.5, -90, 
+    -85.5, -81, -76.5, -72, -67.5, -63, -58.5, -54, -49.5, -45, -40.5, -36, 
+    -31.5, -27, -22.5, -18, -13.5, -9, -4.5, 0, 4.5, 9, 13.5, 18, 22.5, 27, 
+    31.5, 36, 40.5, 45, 49.5, 54, 58.5, 63, 67.5, 72, 76.5, 81, 85.5, 90, 
+    94.5, 99, 103.5, 108, 112.5, 117, 121.5, 126, 130.5, 135, 139.5, 144, 
+    148.5, 153, 157.5, 162, 166.5, 171, 175.5, 180 ;
+
+ mlat = -90, -88.1238292398491, -86.2386359278657, -84.3344382773342, 
+    -82.4013318763435, -80.4295344892688, -78.4094552099168, 
+    -76.331796630125, -74.1876988925388, -71.9689341802758, 
+    -69.6681589022773, -67.2792279882741, -64.7975706790533, 
+    -62.2206194320588, -59.5482728298363, -56.7833601290164, 
+    -53.9320608459732, -51.0042204168578, -48.0134966005524, 
+    -44.9772754602266, -41.916313892128, -38.8540980954293, 
+    -35.8159497801506, -32.8279553674349, -29.9158266703621, 
+    -27.1038148776609, -24.4137889090065, -21.8645574169981, 
+    -19.4714697638694, -17.2462861630082, -15.1972697734841, 
+    -13.3294282264571, -11.6448185129562, -10.142824406667, 
+    -8.82031765103987, -7.67162666281269, -6.68827297583048, 
+    -5.85851734698832, -5.16689314460211, -4.5940469432968, 
+    -4.11722526306697, -3.71151170575937, -3.35148255039153, 
+    -3.01257883277328, -2.67136426606314, -2.3036287214954, 
+    -1.87754943767857, -1.32687203939232, -7.72840966450717e-08, 
+    1.32687203939232, 1.87754943767857, 2.3036287214954, 2.67136426606314, 
+    3.01257883277328, 3.35148255039153, 3.71151170575936, 4.11722526306697, 
+    4.59404694329679, 5.16689314460211, 5.85851734698832, 6.68827297583048, 
+    7.67162666281268, 8.82031765103987, 10.142824406667, 11.6448185129562, 
+    13.3294282264571, 15.1972697734841, 17.2462861630082, 19.4714697638694, 
+    21.8645574169981, 24.4137889090064, 27.1038148776609, 29.9158266703621, 
+    32.8279553674348, 35.8159497801506, 38.8540980954293, 41.916313892128, 
+    44.9772754602266, 48.0134966005524, 51.0042204168578, 53.9320608459731, 
+    56.7833601290163, 59.5482728298363, 62.2206194320588, 64.7975706790533, 
+    67.2792279882741, 69.6681589022773, 71.9689341802758, 74.1876988925387, 
+    76.331796630125, 78.4094552099168, 80.4295344892687, 82.4013318763434, 
+    84.3344382773342, 86.2386359278657, 88.123829239849, 90 ;
+
+ mlev = -8.25, -7.75, -7.25, -6.75, -6.25, -5.75, -5.25, -4.75, -4.25, -3.75, 
+    -3.25, -2.75, -2.25, -1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75, 
+    2.25, 2.75, 3.25, 3.75, 4.25, 4.75, 5.25, 5.75, 6.25, 6.75, 7.25 ;
+
+ imlev = -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, 
+    -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 
+    6.5, 7 ;
+
+ mtime =
+  355, 0, 0,
+  356, 0, 0,
+  357, 0, 0,
+  358, 0, 0,
+  359, 0, 0,
+  360, 0, 0 ;
+
+ year = 2002, 2002, 2002, 2002, 2002, 2002 ;
+
+ day = 355, 356, 357, 358, 359, 360 ;
+
+ calendar_advance = 1, 1, 1, 1, 1, 1 ;
+
+ write_date =
+  "                        ",
+  "04/27/11 15:46:11       ",
+  "04/27/11 15:48:53       ",
+  "04/27/11 15:52:02       ",
+  "04/27/11 15:54:54       ",
+  "04/27/11 15:57:40       " ;
+
+ iter = 255600, 256320, 257040, 257760, 258480, 259200 ;
+
+ ntask_mpi = 4, 4, 4, 4, 4, 4 ;
+
+ ut = 0, 0, 0, 0, 0, 0 ;
+
+ timestep = 120 ;
+
+ f107d = 200, 200, 200, 200, 200, 200 ;
+
+ f107a = 200, 200, 200, 200, 200, 200 ;
+
+ hpower = 39, 39, 39, 39, 39, 39 ;
+
+ ctpoten = 60, 60, 60, 60, 60, 60 ;
+
+ Kp = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+
+ bximf = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+
+ byimf = 0, 0, 0, 0, 0, 0 ;
+
+ bzimf = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+
+ swvel = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+
+ swden = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+
+ al = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+
+ colfac = 1.5, 1.5, 1.5, 1.5, 1.5, 1.5 ;
+
+ dtide =
+  0, 0,
+  0, 0,
+  0, 0,
+  0, 0,
+  0, 0,
+  0, 0 ;
+
+ sdtide =
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ;
+
+ ncep_ncfile =
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          " ;
+
+ gpi_ncfile =
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          " ;
+
+ saber_ncfile =
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          " ;
+
+ tidi_ncfile =
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          " ;
+
+ see_ncfile =
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          " ;
+
+ imf_ncfile =
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          " ;
+
+ gswm_mi_di_ncfile =
+  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
+  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
+  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
+  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
+  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
+  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     " ;
+
+ gswm_mi_sdi_ncfile =
+  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
+  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
+  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
+  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
+  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
+  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      " ;
+
+ gswm_nm_di_ncfile =
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          " ;
+
+ gswm_nm_sdi_ncfile =
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          ",
+  "[none]                                                                          " ;
+
+ e1 = 2.5972431810548, 2.5972431810548, 2.5972431810548, 2.5972431810548, 
+    2.5972431810548, 2.5972431810548 ;
+
+ e2 = 5.29, 5.29, 5.29, 5.29, 5.29, 5.29 ;
+
+ h1 = 2.35, 2.35, 2.35, 2.35, 2.35, 2.35 ;
+
+ h2 = 3.715, 3.715, 3.715, 3.715, 3.715, 3.715 ;
+
+ alfac = 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 ;
+
+ ec = 0.10026, 0.10026, 0.10026, 0.10026, 0.10026, 0.10026 ;
+
+ alfad = 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 ;
+
+ ed = 0.0246, 0.0246, 0.0246, 0.0246, 0.0246, 0.0246 ;
+
+ crit1 = 14.9999999542121, 19.472552220103, 19.472552220103, 19.472552220103, 
+    19.472552220103, 19.472552220103 ;
+
+ crit2 = 29.99999996572, 34.472552220103, 34.472552220103, 34.472552220103, 
+    34.472552220103, 34.472552220103 ;
+
+ mag =
+  _, _,
+  _, _ ;
+
+ p0 = 5e-07 ;
+
+ p0_model = 0.0005 ;
+
+ grav = 870 ;
+
+ LBC = -7 ;
+}
