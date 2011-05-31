@@ -1,8 +1,8 @@
 
 .. _tests:
 
-Benchmark Test Runs
-===================
+Benchmark Test Runs of v\ |version|
+===================================
 
 A series of benchmark runs are made for each release of the TIEGCM
 (since v1.93).  Job scripts and namelist input files for these runs are 
@@ -14,55 +14,73 @@ the :ref:`data download file <download>`.  These files can be used as start-up
 job scripts used to make the runs are provided in the :term:`tests/` directory
 of the release.
 
-For full history file output and "sanity check" plots for benchmark runs made
-by version |version|, please see 
+Following is a summary of benchmark runs made by TIEGCM version |version|.
+For full history file output, steady-state start-up files, and "sanity check" plots 
+of the benchmark runs made by version |version|, please see 
 :base_url:`Release Documentation <release/html>`
 
-Following is a summary of benchmark runs made by TIEGCM version |version|:
+Control
+-------
 
-#. **control**: 5-day control runs, started from steady-state histories at both equinoxes
-   and both solstices, and at solar minimum and maximum conditions::
+**control**: 5-day control runs, started from steady-state histories at both equinoxes
+and both solstices, and at solar minimum and maximum conditions::
 
-    mareqx: March Equinox (day 80) 
-    junsol: June Solstice (day 172) 
-    sepeqx: September Equinox (day 264) 
-    decsol: December Solstice (day 355)
+  mareqx: March Equinox (day 80) 
+  junsol: June Solstice (day 172) 
+  sepeqx: September Equinox (day 264) 
+  decsol: December Solstice (day 355)
 
-   * Solar Minimum::
+ * Solar Minimum::
 
-      POWER   = 18.
-      CTPOTEN = 30.
-      F107    = 70.
-      F107A   = 70.
+    POWER   = 18.
+    CTPOTEN = 30.
+    F107    = 70.
+    F107A   = 70.
 
-   * Solar Maximum::
+ * Solar Maximum::
 
-      POWER   = 39.
-      CTPOTEN = 60.
-      F107    = 200.
-      F107A   = 200.
+    POWER   = 39.
+    CTPOTEN = 60.
+    F107    = 200.
+    F107A   = 200.
 
-#. **climatology**: Full-year Climatology with constant solar forcing:
+Climatology
+-----------
 
-   * Heelis potential model with constant solar forcing::
+**climatology**: Full-year Climatology with constant solar forcing:
 
-      POWER   = 18.
-      CTPOTEN = 30.
-      F107    = 100.
-      F107A   = 100.
+ * Heelis potential model with constant solar forcing::
 
-#. **dec2006**: December, 2006 "AGU" storm case:
+    POWER   = 18.
+    CTPOTEN = 30.
+    F107    = 100.
+    F107A   = 100.
 
-   * Heelis potential model with GPI (Kp) data
-   * Weimer potential model with IMF data (F10.7 from GPI)
+December, 2006 "AGU" Storm Case
+-------------------------------
 
-#. **nov2003**: November 19-24 (days 323-328), 2003 storm case:
+**dec2006**: December, 2006 "AGU" storm case:
 
-   * Heelis potential model with GPI (Kp) data
-   * Weimer potential model with IMF data (F10.7 from GPI)
+ * Heelis potential model with GPI (Kp) data
+ * Weimer potential model with IMF data (F10.7 from GPI)
 
-#. **whi2008**: Whole Heliosphere interval (WHI) (March 21 to April 16, 2008)
+November, 2003 Storm Case
+-------------------------
 
-   * Heelis potential model with GPI (Kp) data
-   * Weimer potential model with IMF data (F10.7 from GPI)
+**nov2003**: November 19-24 (days 323-328), 2003 storm case:
 
+ * Heelis potential model with GPI (Kp) data
+ * Weimer potential model with IMF data (F10.7 from GPI)
+
+Whole Heliosphere Interval
+-------------------------
+
+**whi2008**: Whole Heliosphere interval (WHI) (March 21 to April 16, 2008)
+
+ * Heelis potential model with GPI (Kp) data
+ * Weimer potential model with IMF data (F10.7 from GPI)
+
+.. note::
+   For more detailed information and access to history file output, and
+   preliminary post-processing of these runs, 
+   see :base_url:`Release Documentation <release/_build/html>`

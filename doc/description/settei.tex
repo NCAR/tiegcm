@@ -1,5 +1,5 @@
 %
-\section{Calculation of electron and ion temperature / \index{SETTEI.F}}\label{cap:settei}
+\section{Calculation of electron and ion temperature  \index{SETTEI.F}}\label{cap:settei}
 %
 The input to \src{subroutine settei} is summarized in table
 \ref{tab:input_settei}.
@@ -14,7 +14,7 @@ neutral temperature &       $T_n$              & $K$   &  midpoints & $t_n$\\
 mass mixing ratio $O_2$&       {$\Psi_{O_2}$}     & $-$   & midpoints  & $t_n$\\
 mass mixing ratio $O$&       {$\Psi_{O}$}     & $-$   &  midpoints & $t_n$\\
 mean molecular mass&       {$\overline{m}$}     & $g/mol$   & interfaces  &$t_n + \Delta t$ \\
-Joule heating of ions&       {$Q_{J,T_i}$}     & $\frac{erg}{K\; s}$   & midpoints  &  $t_n$\\
+Joule heating of ions&       {$Q_{J}^{T_i}$}     & $\frac{erg}{s g}$   & midpoints  &  $t_n$\\
 electron density &       $N_e$              & $\#/cm^3$   &  interfaces & $t_n$\\
 electron temperature &       $T_e$              & $K$   &  midpoints & $t_n$\\
 ion temperature &       $T_i$              & $K$   &  midpoints & $t_n$\\
@@ -65,7 +65,7 @@ viscous heating of electron gas
 \begin{align}
    \frac{3}{2} N_e k_B \frac{\partial T_e}{\partial t} = & - N_e k_B
    T_e \nabla \cdot \mathbf{u}_e - \frac{3}{2} N_e k_B \mathbf{u}_e
-   \cdot T_e - \nabla \cdot q_e + \notag \\
+   \cdot \nabla T_e - \nabla \cdot q_e + \notag \\
    {} &  \sum Q_e - \sum L_e
 \end{align}
 %
@@ -75,34 +75,47 @@ $\sum Q_e$, and the sum of all local cooling rates are $\sum L_e$.
 The electron heat vector is
 %
 \begin{align}
-  q_e = - \beta_e \mathbf{J} - K^e \nabla T_e
+  q_e = - \beta_e \mathbf{J} - K^e \nabla_\parallel T_e
 \end{align}
 %
 with $\beta_e$ is the thermalelectric transport coefficient,
-$\mathbf{J}$ is the elctric current, and $K^e$ is the electron
-thermal conductivity which is
+$\mathbf{J}$ is the electric current density, and $K^e$ is the electron
+thermal conductivity parallel to the magnetic field. 
+$K^e$ in $[\frac{ergs}{cm \; s \; K}]$
+is calculated according to [Rees \& Roble 1975]
 %
 \begin{align}
    K^e = \frac{7.5 \cdot 10^5 T_e^{2.5}}{1+3.22\cdot 10^4 \frac{T_e^2}{N_e} \left(
      d_1 N_{N_2} + d_2 N_{O_2} + d_3 N_O  \right) }
 \end{align}
 %
-we assume that $\mathbf{J}$ and $q_e$ are parallel to the magnetic
-field and $T_e$ and $N_e$ vary only in vertical direction. In
-addition it's assumed that field aligned current is not present so
-that adiabatic expansion and heat advection can be omitted. With
-these assumptions the general electron energy conservation equation
-is simplified to
+with
 %
 \begin{align}
-   \frac{3}{2} N_e  k_B \frac{\partial T_e}{\partial t}=
-   \sin^2 I \frac{\partial}{H \partial Z}\left( K^e \frac{\partial T_e}{H \partial Z}\right)
-    + \sum Q_e - \sum L_e
+  d_1 = & 2.82 \cdot 10^{-17} - 3.41 \cdot 10^{-21} T_e \\
+  d_2 = & 2.2 \cdot 10^{-16} - 7.92 \cdot 10^{-18} \sqrt{T_e} \\
+  d_3 = & 1.1 \cdot 10^{-16}(1+ 5.7 \cdot 10^{-4} {T_e})
 \end{align}
 %
-In the hight range of the model the time scales are very short such
-that the time derivative can be neglected and a thermal quasi steady
-state can be assumed
+We assume a quasi-steady state and neglect thermalelectric heat flux, 
+%we assume that $\mathbf{J}$ and $q_e$ are parallel to the magnetic field and
+horizontal gradients of
+$T_e$ and $N_e$, and
+%vary only in vertical direction. In
+%addition it's assumed that field aligned current is not present so that
+adiabatic expansion and heat advection.  With
+these assumptions the general electron energy conservation equation
+is simplified to
+%%
+%\begin{align}
+%   \frac{3}{2} N_e  k_B \frac{\partial T_e}{\partial t}=
+%   \sin^2 I \frac{\partial}{H \partial Z}\left( K^e \frac{\partial T_e}{H \partial Z}\right)
+%    + \sum Q_e - \sum L_e
+%\end{align}
+%%
+%In the hight range of the model the time scales are very short such
+%that the time derivative can be neglected and a thermal quasi steady
+%state can be assumed
 %
 \begin{align}
    \sin^2 I \frac{\partial}{H \partial Z}\left( K^e \frac{\partial T_e}{H \partial Z}\right)
@@ -242,23 +255,23 @@ The number densities at the interface level are
    N_{N_2} = N \overline{m} \frac{\Psi_{N_2}}{m_{N_2}}
 \end{align}
 %
-The thermal conductivity $K^e$ in $[\frac{ergs}{cm \; s \; K}]$
-is calculated according to [Rees \& Roble 1975]
-%
-\begin{align}
-  K^e = \frac{7.5 \cdot 10^5}{1 + 3.22 \cdot 10^4 \frac{T_e^2}{N_e} [ \sqrt{T_e}
-    d_1 N_{N_2} +
-    d_2 N_{O_2} +
-    d_3 N_{O} ]}
-\end{align}
-%
-with
-%
-\begin{align}
-  d_1 = & 2.82 \cdot^{-17} - 3.41 \cdot 10^{-21} T_e \\
-  d_2 = & 2.2 \cdot^{-16} - 7.92 \cdot 10^{-18} \sqrt{T_e} \\
-  d_3 = & 1.1 \cdot^{-16}(1+ 5.7 \cdot 10^{-4} {T_e})
-\end{align}
+%The thermal conductivity $K^e$ in $[\frac{ergs}{cm \; s \; K}]$
+%is calculated according to [Rees \& Roble 1975]
+%%
+%\begin{align}
+%  K^e = \frac{7.5 \cdot 10^5}{1 + 3.22 \cdot 10^4 \frac{T_e^2}{N_e} [ \sqrt{T_e}
+%    d_1 N_{N_2} +
+%    d_2 N_{O_2} +
+%    d_3 N_{O} ]}
+%\end{align}
+%%
+%with
+%%
+%\begin{align}
+%  d_1 = & 2.82 \cdot^{-17} - 3.41 \cdot 10^{-21} T_e \\
+%  d_2 = & 2.2 \cdot^{-16} - 7.92 \cdot 10^{-18} \sqrt{T_e} \\
+%  d_3 = & 1.1 \cdot^{-16}(1+ 5.7 \cdot 10^{-4} {T_e})
+%\end{align}
 %
 The scale height $H$ in $[cm]$ is determined on midpoint level and interface level
 %
@@ -268,14 +281,19 @@ The scale height $H$ in $[cm]$ is determined on midpoint level and interface lev
 %
 with $R^*$ the gas constant, $g$ the gravitational acceleration,
 and $T_n$ the neutral temperature either on midpoint or interface
-level. A minimum inclination of $I_{min} = 0.17$ is assumed.
+%level. A minimum inclination of $I_{min} = 0.17$ is assumed.
+level. A minimum inclination magnitude is assumed, which is initially
+set to the variable dipmin (0.17 radians for the low-resolution TIEGCM
+or 0.24 radians for the high-resolution TIEGCM), but then increased to 
+$arcsin \sqrt{0.1}$ (= 0.322 radians = 18.4$^\circ$).
+Below, we call the modified inclination angle $I^*$.
 %
-\begin{align}
-    \text{for} \; |I| \geq I_{min} \; \; & \sin I^* = \sin^2 I \\
-    \text{for} \; |I| <   I_{min} \; \; & \sin I^* = \sin^2 I_{min}
-\end{align}
-%
-with $\sin I^* \geq 0.1$. ??? $\sin^2 I_{min} \leq 0.1$ ????? \\
+%\begin{align}
+%    \text{for} \; |I| \geq I_{min} \; \; & \sin I^* = \sin^2 I \\
+%    \text{for} \; |I| <   I_{min} \; \; & \sin I^* = \sin^2 I_{min}
+%\end{align}
+%%
+%with $\sin I^* \geq 0.1$. ??? $\sin^2 I_{min} \leq 0.1$ ????? \\
 
 The term $\sin^2 I \frac{\partial}{H \partial Z}\left( \frac{2}{7}\frac{K^0}{H}
 \frac{\partial G}{ \partial Z}\right)$ of the electron energy conservation
@@ -473,7 +491,7 @@ with the value of $A$
 \begin{align}
    A = & 5.7 \cdot 10^{-8} exp(\frac{-3352.6}{T_e}) \; \; \; \text{for} \; T_e < 1000 K \notag \\
    A = & 2. \cdot 10^{-7} exp(\frac{-4605.2}{T_e}) \; \; \; \text{for} \; 1000 K \leq T_e \leq 2000 K \notag \\
-   A = & 2.53 \cdot 10^{-6}\sqrt{T_e} exp(\frac{-17620}{T_e}) \; \; \; \text{for} \; 2000 K < T_e <  \notag
+   A = & 2.53 \cdot 10^{-6}\sqrt{T_e} exp(\frac{-17620}{T_e}) \; \; \; \text{for} \; 2000 K < T_e \notag
 \end{align}
 %
 
@@ -578,7 +596,8 @@ with
   L^* (e,i) = &0                 \; \; & \text{for} \; \; T_e^{t_n} - T_i^{t_n} \leq 0
 \end{align}
 %
-with $L^* (e,i)$ in $[eV/s/g]$. The term is added to the total heating term $Q_{tot}$
+with $L^* (e,i)$ in $[ergs/cm^3/s/K]$. 
+The term is added to the total heating term $Q_{tot}$
 at the interface level
 %
 \begin{align}

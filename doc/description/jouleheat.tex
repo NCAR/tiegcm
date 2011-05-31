@@ -1,0 +1,200 @@
+%
+\section{Joule heating calculation}
+%\section{Joule heating calculation  QJOULE.F}\label{capqjoule}
+%
+For the Joule heating calculation we assume that the electric field 
+$\textbf{E}$ is perpendicular to the geomagnetic field.  The heating
+rate per unit mass $Q_J$ [erg/s/g] is
+%
+\begin{equation}
+  Q_J = \frac{\textbf{J}{\bot} \cdot
+  (\textbf{E} + \textbf{v}_n \times \textbf{B})}{\rho} =
+  \frac{\sigma_P (\textbf{E} + \textbf{v}_n \times \textbf{B})^2}{\rho} =
+  \lambda_1 (\textbf{v}_{ExB}- \textbf{v}_{n\bot})^2
+\end{equation}
+%
+where $\textbf{v}_n$ is is the neutral wind,
+$textbf{v}_{n,\bot}$ is the component of $\textbf{v}_n$ 
+perpendicular to the geomagnetic field \textbf{B}, 
+$\sigma_P$ is the Pedersen conductivity,
+$\rho$ is the atmospheric mass density,
+$\textbf{v}_{ExB}$ is the electrodynamic drift velocity
+$\frac{\textbf{E} \times \textbf{B}}{B^2}$, and
+$\lambda_1$ is the Pedersen ion drag coefficient
+$\frac{\sigma_P B^2}{\rho}$.
+
+The Joule heating is used in calculating the ion and
+neutral temperatures (see chapter \ref{cap:dt} and \ref{cap:settei}).
+\\
+
+In the heat equation for the neutrals there is no explicit term for
+the energy transfer from the ion to the neutrals, since we assume
+that eventually the whole Joule heating will go into the neutral
+temperature.
+%
+\begin{equation}
+  Q_J^{T_n} =
+  \lambda_1 (\textbf{v}_{ExB}- \textbf{v}_{n\bot})^2
+\end{equation}
+%
+%We refer to \cite{Schunk00} eq. 5.48d, which is part of the
+%transport equation for the high latitude E-region
+%%
+%\begin{equation}
+%  0 = \sum_n \frac{\nu_{in}}{m_i + m_n} [3k(T_n - T_i) + m_n (\textbf{v}_i-\textbf{v}_n)^2]
+%\end{equation}
+%%
+%??? check with book what the values are Sum over what n???? This
+%equation assumes that we have monotonic particles, such that we only
+%have kinetic, and no rotational, energy. In the above equation the
+%collision frequency $\nu_{in}$ instead of the ion drag coefficient
+%is used, since it also uses the difference in velocity between the
+%ion and neutrals $\textbf{v}_i-\textbf{v}_n$, instead of only the
+%$\textbf{E} \times
+%\textbf{B}$ drift velocity. \\
+
+According to \cite{Schunk00} only part of the Joule heating
+contributes to the ion temperature
+%
+\begin{equation}
+  Q_J^{T_i} = \frac{\overline{m}_n}{\overline{m}_n + \overline{m}_i}
+  \lambda_1 (\textbf{v}_{ExB}- \textbf{v}_{n\bot})^2
+\end{equation}
+%
+This approximation is valid above approx. 100 km where the
+contributions from the electron neutral collisions to the Pedersen
+conductivity $\sigma_P$ is small.
+%Only around 75 km we would have to
+%consider also the Joule heating part which goes into the electron
+%temperature. However, since the contribution from the electrons is
+%small, we can justify using $\lambda_1$ which is based on the
+%Pedersen conductivity including the electron neutral collisions.
+%
+\subsection{Joule heating calculation for ion temperature}
+%
+The input to \src{subroutine qjoule\_ti} is summarized in table
+\ref{tab:input_qjoule_ti}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature         & $T_n$           & $K$   & midpoint  & $t_n$\\
+mean molecular mass         & $\overline{m}$  & $\frac{g}{mole}$ &interface & $t_{n+1}$ \\
+mass mixing ratio of $O_2$  & $\Psi_{O_2}$        & mmr  & midpoint & $t_n$\\
+number density of ions       &  $N_{O_2^+}$      & $1/cm^3$  & midpoint & $t_n$\\
+  {}       &  $N_{O^+}$      & $1/cm^3$  & midpoint & $t_n$ \\
+ {}        &  $N_{NO^+}$     & $1/cm^3$  & midpoint & $t_n$ \\
+ {}        &  $N_{N^+}$      & $1/cm^3$  & midpoint & $t_n$ \\
+ ion drag coefficient        &  $\lambda_1$      & $1/s$  & interface & $t_n$ \\
+ $\textbf{E}\times\textbf{B}$ velocity   &  $\textbf{v}_{ExB}$& $cm/s$ & interface & $t_n$ \\
+ dimensionless vertical velocity         &  $W$               & $1/s$  & interface & $t_{n}$ \\
+ neutral velocity        &  $\textbf{v}_{n}$     & $cm/s$  & midpoints & $t_n$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine qjoule\_ti}}
+\label{tab:input_qjoule_ti}
+\end{table}
+%
+The output of \src{subroutine qjoule\_ti} is summarized in table
+\ref{tab:output_qjoule_ti}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+Joule heating of ion temperature & $Q_J^{T_i}$     & $\frac{ergs}{s
+g}$   & midpoints   & $t_n$ $t_{n+1}$
+ \\ \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine qjoule\_ti}}
+\label{tab:output_qjoule_ti}
+\end{table}
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+variable               & physical name        & value \\ \hline
+\hline
+%
+$N_A$   &  Avogadro number         & $6.023 \times 10^{23} \#/mol$  \\
+$g$     &  gravitational acceleration                   & $cm/s^2$  \\
+{}      &  at lower boundary  &   \\
+$R^*$   &  gas constant       & $8.314 \times 10^{7} erg/K/mol$  \\
+$m_{i}$ &  molecular weight         & $g/mol$ \\
+        & species $i$         &
+ \\ \hline
+\end{tabular}
+\caption{Global parameters used in \src{subroutine qjoule\_ti}}
+\label{tab:parameters_qjoule_ti}
+\end{table}
+%
+The mean molecular mass of the ions $\overline{m}_{ion}$ at the
+midpoints in [g/mol] is calculated by
+%
+\begin{equation}
+  \overline{m}_{ion}=\frac{N_{O^+} m_O+N_{O_2^+}m_{O_2}+N_{N^+}m_{N^{4s}}+
+        N_{N_2^+}m_{N_2}+N_{NO^+}m_{NO}}
+  {N_{O^+}+N_{O_2^+}+N_{N^+}+N_{N_2^+}+N_{NO^+}}
+\end{equation}
+%
+and the mean molecular mass of the neutrals $\overline{m}_n$ at the
+midpoints in [g/mol] is
+%
+\begin{equation}
+ \overline{m}_{n}(z+\frac{1}{2} \Delta z) = 0.5*(\overline{m}_{n}(z)+\overline{m}_{n}(z+\Delta z)
+\end{equation}
+%
+with $\overline{m}_n$ on the interface level with $z$ correspond to
+the height index $k$, $z+\Delta z$ to $k+1$, and on the midpoint
+level $z+\frac{1}{2}$ correspond to the height index $k$. The scale
+height H [cm] at midpoints is
+%
+\begin{equation}
+  H= \frac{R^* T_n}{\overline{m}_n g}
+\end{equation}
+%
+since $T_n$ and $\overline{m}_n$ are on the midpoint level. Note
+that the gas constant $R^*$ is in units of [erg/K/mol] and the mean
+molecular mass in units of [g/mol]. The vertical neutral velocity
+$w$ in [cm/s] is
+%
+\begin{equation}
+  w = W H
+\end{equation}
+%
+with the dimensionless vertical velocity $W$. The dimensionless
+vertical velocity at the midpoints is determined by averaging the
+values at the height level $k$ and $k+1$ to get the midpoint level
+$k$, i.e. $W(z+\frac{1}{2}) = 0.5[W(z)+W(z+\Delta z)]$. The
+$\textbf{E}\times \textbf{B}$ drift velocity $\textbf{v}_{ExB}$ in
+[cm/s] at the midpoints is $\textbf{v}_{ExB}(z+\frac{1}{2}\Delta z)
+= 0.5(\textbf{v}_{ExB}(z)+\textbf{v}_{ExB}(z+\Delta z))$, and the
+Pedersen ion drag coefficient $\lambda_1$ in
+[1/s] is averaged in the same way to get the midpoint values. \\
+
+%The Joule heating in [ergs/s/g] which goes into the ion temperature
+%is
+%%
+%\begin{equation}
+%  Q_J^{T_i}=
+%  \frac{\overline{m}_n}{\overline{m}_n+\overline{m}_{ion}}
+%  \lambda_1 (\textbf{v}_{ExB}-\textbf{v}_n)^2
+%\end{equation}
+%%
+%In \src{subroutine qjoule\_tn} the Joule heating for the neutral
+%temperature is calculated. Since the calculation is the same as for
+%the Joule heating for the ion temperature we refer to the previous
+%subsection. The Joule heating for the neutral temperature doesn't
+%have the ratio of the mean molecular mass of ion to ion plus
+%neutral. Since we have no explicit heating term for the energy
+%transfer from ions to neutrals.
+%%
+%\begin{equation}
+%  Q_J^{T_n}=
+%  \lambda_1 (\textbf{v}_{ExB}-\textbf{v}_n)^2
+%\end{equation}
+%%

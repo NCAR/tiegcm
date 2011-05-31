@@ -1,5 +1,5 @@
 %
-\section{Ion drag calculation / \index{LAMDAS.F}}\label{cap:lamdas}
+\section{Ion drag calculation  \index{LAMDAS.F}}\label{cap:lamdas}
 %
 The input to \src{subroutine lamdas} is summarized in table
 \ref{tab:input_lamdas}.
@@ -12,8 +12,8 @@ level& timestep
 %
 neutral temperature         & $T_n$           & $K$   & midpoint  & $t_n$\\
 mean molecular mass         & $\overline{m}$  & $\frac{g}{mole}$ &interface & $t_{n+1}$ \\
-mass mixing ration of molecular oxygen             & $\Psi_{O_2}$        & -  & midpoint & $t_n$\\
-mass mixing ration of atomic oxygen                & $\Psi_{O}$          & -  & midpoint & $t_n$\\
+mass mixing ratio of molecular oxygen             & $\Psi_{O_2}$        & -  & midpoint & $t_n$\\
+mass mixing ratio of atomic oxygen                & $\Psi_{O}$          & -  & midpoint & $t_n$\\
 ion temperature              & $T_i$        & K  & midpoint & $t_n$\\
 electron temperature         & $T_e$        & K  & midpoint & $t_n$\\
 number density of ions       &  $N_{O_2^+}$      & $1/cm^3$  & midpoint & $t_n$\\
@@ -38,7 +38,7 @@ level& timestep
 ion drag coefficients &       {}     & $$   &   & \\
 geographic direction & $\lambda_{xx}, \lambda_{yy},\lambda_{xy},\lambda_{yx},$
                                           & $1/s$   & interface  & $t_{n}$\\
-magnetic east. direction& $\lambda_1$     & $1/s$   & interface  & $t_{n}$\\
+Pedersen & $\lambda_1$     & $1/s$   & interface  & $t_{n}$\\
 conductivities  & $\sigma_H, \sigma_P$ & $S/m$   & midpoint  &
 $t_{n}$
  \\ \hline
@@ -69,7 +69,7 @@ First the factor
 \end{equation}
 %
 is calculated. The gyro frequencies $\Omega$ in units of
-$[\frac{CT}{kg}]$ are
+$[\frac{CT}{kg}=s^1]$ are
 %
 \begin{align}
   \Omega_{O^+}   = &\frac{q_e B}{N_a m_{O^+}} \\
@@ -88,10 +88,8 @@ determined by, e.g. \cite{Schunk00}
 \frac{1}{N_{O_2}} \nu_{O^+ - O_2}  &=6.64\times 10^{-10}  \\
 \frac{1}{N_{O_2}} \nu_{NO^+ - O_2} &=4.27\times 10^{-10}  \\
 \frac{1}{N_{O}} \nu_{O^+ - O}      &=3.67\times
-10^{-11}\sqrt{\frac{T_i +
- T_e}{2}}[ & 1- \notag \\
-  {} & 0.064 log_{10}\sqrt{\frac{T_i +
- T_e}{2}}]^2  f_{cor}  \\
+10^{-11}\sqrt{\frac{T_i + T_e}{2}}[ 1- 
+  0.064 log_{10}\sqrt{\frac{T_i +T_e}{2}}]^2  f_{cor}  \\
 \frac{1}{N_{O}} \nu_{NO^+ - O}    &=2.44\times 10^{-10}  \\
 \frac{1}{N_{O}} \nu_{O_2^+ - O}   &=2.31\times 10^{-10}  \\
 \frac{1}{N_{N_2}} \nu_{O_2^+ - N_2}&=4.13\times 10^{-10} \\
@@ -102,18 +100,21 @@ determined by, e.g. \cite{Schunk00}
 with $N_n$ the number density for the neutral n in units of
 $[1/cm^3]$, and the temperature in $[K]$. The collisions frequencies
 for $\nu_{O_2^+ - O_2}$ and $\nu_{O^+ - O}$ are resonant, all other
-are nonresonant. The Burnsideactor $f_{cor}$
-multiplies the $\nu_{O^+ - O}$ collision frequency and is set to
-$f_{cor} =1.5$ which has been found to improve agreement between
+are nonresonant. The Burnside factor $f_{cor}$
+multiplies the $\nu_{O^+ - O}$ collision frequency, and has the default
+value 1.5, which has been found to improve agreement between
 calculated winds and electron densities in the upper thermosphere in
-other models. The mean mass $ \overline{m}_{mid} $ in $[g/mole]$ at
-the midpoints of the height level is calculated by
+other models. The 
+quantity xnmbar, which is the neutral number density $N$ in cm$^{-3}$ times the
+mean mass $ \overline{m}_{mid} $ in $[g/mole]$ at
+the midpoints of the height level, is calculated by
 %
 \begin{equation}
   N \overline{m}_{mid} = \frac{p_o e^{-Z} \overline{m}_{mid}}{k_B T_n}
 \end{equation}
 %
-The total number density $N$ is in units of $[1/cm^3]$, $p_o e^{-Z}$
+%The total number density $N$ is in units of $[1/cm^3]$, $p_o e^{-Z}$
+where $p_o e^{-Z}$
 is the pressure at the midpoints in [$ dyn/cm^2 $] with $Z$ the
 dimensionless variable at midpoints. The mean molecular weight at
 midpoints is averaged by $\overline{m}_{mid}(z + \frac{1}{2} \Delta
@@ -132,7 +133,7 @@ The number densities in $[1/cm^3]$ are
   N_{N_2} &= \frac{N \overline{m}_{mid} \Psi_{N_2}}{m_{N_2}}
 \end{align}
 %
-with $\Psi$ the mass mixing ration. The mass mixing ratio of $N_2$
+with $\Psi$ the mass mixing ratio. The mass mixing ratio of $N_2$
 is determined by $\Psi_{N_2}= 1 - \Psi_{O_2}-\Psi_{O}$ with
 $\frac{\Psi_{N_2}}{m_{N_2}} \geq 1. \times 10^{-20} \frac{mol}{g}$.
 
@@ -171,7 +172,7 @@ The Pedersen conductivity in $[ S/m]$ is
 %
 \begin{equation}
   \begin{split}
-   \sigma_P = &\frac{e}{B} [ N_{O^+} \frac{r_{O^+}}
+   \sigma_P = &\frac{q_e}{B} [ N_{O^+} \frac{r_{O^+}}
       {1+r_{O^+}^2 } +
        N_{O_2^+} \frac{r_{O_2^+}}
       {1+r_{O_2^+}^2 } + \\
@@ -186,7 +187,7 @@ The Hall conductivity in $[S/m]$ is
 %
 \begin{equation}
   \begin{split}
-   \sigma_H = &\frac{e}{B} [ -N_{O^+} \frac{1}
+   \sigma_H = &\frac{q_e}{B} [ -N_{O^+} \frac{1}
       {1+r_{O^+}^2 } -
        N_{O_2^+} \frac{1}
       {1+r_{O_2^+}^2 } - \\
@@ -198,8 +199,7 @@ The Hall conductivity in $[S/m]$ is
 \end{equation}
 %
 with $N_e = N_{O^+} + N_{O_2^+} + N_{NO^+}$ assuming charge
-equilibrium. The ion drag coefficients are in magnetic eastward and
-magnetic northward ???? direction
+equilibrium. The Pedersen and Hall ion drag coefficients are
 %
 \begin{align}
   \lambda_1 &= \frac{\sigma_P B^2}{\rho} \\
@@ -247,9 +247,10 @@ $\underline{\lambda}^{mag}$ is
 \end{gather}
 %
 with the x--direction in magnetic east, and y--direction magnetic
-south in the northern hemisphere. The inclination of the geomagnetic
-field lines is $I$. Note that in the code the value of
-$\lambda_{yx}$ has a sign change, however the value is not used. The
+north. The inclination of the geomagnetic
+field lines is $I$. Note that in the code lyxnorot
+[= $\lambda^{mag}_{yx}$] has the wrong sign, but is not used, being
+replaced by -lxynorot [$= -\lambda^{mag}_{xy}$].  The
 ion drag tensor can be rotated in geographic direction by using the
 rotation matrix $\mathbf{R}$
 %
@@ -282,6 +283,6 @@ $\mathbf{R}\underline{\lambda}^{mag}\mathbf{R}^{-1}$ leads to
    \end{pmatrix}
 \end{gather}
 %
-Note that in the code $\lambda_{yx}$ has a reversed sign, and is
-later, in the Joule heating calculation, used in the code as
-$-\lambda_{yx}^{code}$.
+%Note that in the code $\lambda_{yx}$ has a reversed sign, and is
+%later, in the Joule heating calculation, used in the code as
+%$-\lambda_{yx}^{code}$.

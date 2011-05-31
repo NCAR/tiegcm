@@ -23,7 +23,8 @@ Contents:
    diagnostics
    source
    build
-   trouble
+   postproc
+   contact
    glossary
 
 Indices and tables
