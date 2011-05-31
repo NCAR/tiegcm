@@ -11,7 +11,7 @@
 %
 \newcommand{\command}{\textbf}      % for commands
 \newcommand{\replaceable}{\textit}  % for replaceable names e.g. inputfiles
-\newcommand{\flags}{\textmd}        % flags of files
+\newcommand{\flags}{\textbf}        % flags of files
 \newcommand{\directory}{\textsl}    % flags of files/code
 \newcommand{\src}{\texttt}          % source code
 \newcommand{\myemph}{\emph}         % emphasize
@@ -30,7 +30,7 @@
 \vspace{2in}
 %
 \begin{center}
-{\Large\bf TIEGCM V1.8 Model Description Draft} \\
+{\Large\bf TIEGCM V1.94 Model Description} \\
 %{\bf June 2009} \\
 {\today} \\
 \medskip
@@ -38,9 +38,9 @@
 {\it e-mail: maute@ucar.edu\\}
 \medskip
 \medskip
-{\bf This is a draft documentation of TIEGCM1.8. Not all the code is documented so far.
-We will work on the documentation to 1. fill in the gaps, 2. correct errors,
-3. update to version TIEGCM1.9. \\
+{\bf This is the documentation of TIEGCM1.94. 
+The HAO team is constantly working on the documentation to 1. fill in the gaps, 2. correct errors,
+3. update to newer versions. \\
 Every help is very much appreciated. If you have comments or   corrections
 please send them to maute@ucar.edu.\\
 Thank you very much.}
@@ -56,9 +56,8 @@ Thank you very much.}
 \tableofcontents
 \listoffigures
 \listoftables
-\printindex
 %
-\include{notation}
+%\include{notation}
 %\include{notation_dyn}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -66,10 +65,11 @@ Thank you very much.}
 \newpage
 %
 % 1 
-\include{code_structure}
+%\include{code_structure} % bf eliminate code structure replace by introduction
+\include{introduction}
 % 2 
 \chapter{Input}
-\section{Solar Input}
+\include{solar_input}
 \include{magsphere_input}  % 21 July Wenbin, Barb, Yue s. get_documents
 \include{lowboundary}
 % 3
@@ -91,14 +91,13 @@ Thank you very much.}
 \include{comp_o2o}
 
 % 6 
-\chapter{Ionospheric precesses}
-\include{Jouleheat}
-\include{lamdas}
-\include{settei}
+\chapter{Ionospheric processes}
+\include{jouleheat}  % May2011 updates from Art
+\include{lamdas}     % May2011 updates from Art
+\include{settei}     % May2011 updates from Art
 \include{oplus}
 % 7
 \chapter{Electrodynamics}
-\include{introduction}
 \include{electro}
 \include{input2electro}
 \include{mapping}
@@ -118,5 +117,6 @@ Thank you very much.}
 %
 \bibliographystyle{amsplain}
 \bibliography{main}
+\printindex
 %
 \end{document}

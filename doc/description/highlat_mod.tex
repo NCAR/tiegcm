@@ -4,9 +4,13 @@
 %
 To use the high latitude potential as defined by
 Weimer the flag \flags{POTENTIAL\_MODEL = WEIMER} in the input file of a TIEGCM 
-has to be set. However the Weimer high latitude
-potential is not working in the version 1.7 and 1.8 of 
-TIEGCM. Please check newer version carefully. 
+has to be set. The Weimer high latitude potential was not working to estimate 
+the convection radius under Bz positive conditions in version 1.7 and 1.8 of TIEGCM.  
+Additional problems concerning the crossover between the high latitude electric 
+fields and the calculated dynamo fields for active conditions with relatively large 
+convection radii theta0 were finally fixed in version 1.94 with the replacement of 
+the constant cross-over co-latitudes with dynamic cross-over co-latitudes described 
+in section \ref{cap:dynamic_cross_over_colat}.
 %
 \subsection{Heelis}
 %
@@ -18,7 +22,59 @@ default if the flag \flags{POTENTIAL\_MODEL} is not specified.
 The Heelis model is also the
 basis for the high latitude modifications described in the following
 sections. Therefore when using these modifications the flag  
-\flags{POTENTIAL\_MODEL = HEELIS} should be set in the input file. 
+\flags{POTENTIAL\_MODEL = HEELIS} should be set in the input file.
+%
+\subsection{Dynamics cross-over co-latitudes} \label{cap:dynamic_cross_over_colat}
+%
+The TIEGCM uses an imposed electric field model such as the Weimer (2005) \cite{Weimer2005} or 
+Heelis (1982) \cite{heelis1982} electric potential models at high magnetic latitudes above a 
+critical magnetic co-latitude called \code{crit(1)}.  This is set at 15 degrees 
+co-latitude, or at 75 geomagnetic latitude.  Below a second magnetic co-latitude called
+\code{crit(2)}, 
+the dynamo model calculates the electric field in the TIEGCM.  This is set at 30 
+degrees co-latitude, or at 60 geomagnetic latitude.  Between 60 and 75 geomagnetic
+latitude, there is a linear 
+variation of the combined dynamo solution and the imposed high latitude solution.   
+\flags{Crit} is set as a real parameter in \src{cons.F} \index{cons.F}. \\
+
+The convection radius increases as a function of magnetic activity, and is offset 
+towards 0 MLT from the magnetic pole by 1.1 degree for the Heelis (1982) \cite{heelis1982} convection 
+model, and by 4.2 degrees for the Weimer (2005) \cite{Weimer2005} convection model.  Assuming the 
+convection is centered on the magnetic pole, the following figure \ref{fig:convec_radius_Heelis} shows how the 
+convection radius increases for the Heelis model in the TIEGCM as a function of Kp 
+and also plots \code{crit(1)} and \code{crit(2)} lines.  The red dashed lines are the present 
+constant crit(1) and crit(2) values, while the dashed green lines are the proposed 
+'dynamic' crit(1) and crit(2) values.  The dynamic values are always equatorwards of 
+the radius of convection, where crit(1) is set to be 5 degrees larger than the 
+convection radius and crit(2) is 15 degrees larger.  This distance from the 
+convection radius is actually a function of MLT because of the offset of the 
+convection pattern towards 0 MLT. \\
+
+%
+\begin{figure}
+  \centering
+  \includegraphics[scale=0.7]{./tex_plot/crad_kp_may11.eps}
+  \caption{Heelis convection radius over Kp}
+   \label{fig:convec_radius_Heelis}
+\end{figure}
+%
+The Heelis convection radius maximizes at 19 degrees for Kp 9, and thus is never more than 
+5 degrees equatorwards of the constant crit(1) and crit(2) values from the 4 degrees at Kp 9 
+(19-15=4) and the additional 1.1 degrees offset towards 0 MLT.  However, the Weimer (2005) 
+convection radius is approximately 20-25 degrees in active periods, and with the additional 
+4.2 degree offset towards 0 MLT can be ~10-15 degrees equatorwards of the constant crit(1) at 
+0 MLT, which is at the location of crit(2) and the dynamo only solution.  We found insufficient 
+TEC magnitudes for 06348 between 16-22 UT using the constant crit values and Weimer (2005) 
+potential patterns driven by 5-min IMF, but good TEC magnitudes when using dynamic crit values.  
+Other tests showed NmF2 values on active days are generally improved in both the Weimer (2005) 
+and Heelis (1982) convection cases using dynamic crit values.  \\
+
+However, we have not finished our testing, especially since the Heelis NmF2 improved for all 
+stations except the station closest to the crit(2) value for the WHI 
+(Whole Heliosphere Interval: March 20, 2008 to April 16, 2008 - Solar Carrington Rotation 2068) 
+period.  
+Thus we have some more testing to determine where we should best place the dynamic crit values 
+with respect to the convection radius and to each other.
 %
 \subsection{Modification of the high latitude input}
 %
@@ -65,31 +121,32 @@ in the current, but
 might not represent correctly the field-aligned current in the region 1.
 %
 \begin{align}
-  K_{\phi}^M       &=  \frac{f_{\lambda}}{R_0} \bigl( \frac{\Sigma_{\phi \phi}^T}{cos
+  K_{\phi}^M       &=  \frac{1}{R_0} \bigl( \frac{\Sigma_{\phi \phi}^T}{cos
    \lambda_m} \frac{\partial \Phi_R}{\partial \phi_m} + 
    \Sigma_{\phi \lambda}^T \frac{\partial \Phi_R}{\partial |\lambda_m|} \bigr) \label{eq:fac_phi}\\
-  K_{|\lambda|}^M  &= \frac{f_{\lambda}}{R_0 cos \lambda_m} \bigl( \Sigma_{\lambda \phi}^T
+  K_{|\lambda|}^M  &= \frac{1}{R_0 cos \lambda_m} \bigl( \Sigma_{\lambda \phi}^T
     \frac{\partial \Phi_R}{\partial \phi_m} + 
    \Sigma_{\lambda \lambda}^T cos \lambda_m 
    \frac{\partial \Phi_R}{\partial |\lambda_m|} \bigr) \label{eq:fac_lam}
 \end{align}
 %
-The factor $f_{\lambda}$ is set such that it's 1 poleward of the the convection reversal
-boundary $ \lambda_m^{crb}$ and zero equatorward. Thus, the current 
-represents region 1 current and is zero in the region 2.
+%The factor $f_{\lambda}$ is set such that it's 1 poleward of the crit(1)
+%$ \lambda_m^{crb}$ and zero equatorward. Thus, the current 
+%represents region 1 current and is zero in the region 2.
 %
-\begin{align}
-  f_{\lambda} = 1 \quad \text{for} \quad |\lambda_m| \ge  \lambda_m^{crb} \\ 
-  f_{\lambda} = 0 \quad \text{for} \quad |\lambda_m| <  \lambda_m^{crb} 
-\end{align}
+%\begin{align}
+%  f_{\lambda} = 1 \quad \text{for} \quad |\lambda_m| \ge  \lambda_m^{crb} \\ 
+%  f_{\lambda} = 0 \quad \text{for} \quad |\lambda_m| <  \lambda_m^{crb} 
+%\end{align}
 %
-In TIEGCM the value for the convection reversal boundary $ \lambda_m^{crb}$  
-is set to $75^o$ in the
-\src{module cons}. Note that this is not a physical meaningful value since 
-the convection reversal boundary is fixed.
-For the modified reference potential in section \ref{cap:modrefpot} 
-a variable value for the convection reversal boundary will
-be used which is set in the \src{aurora module}. 
+%In TIEGCM the value for the convection reversal boundary $ \lambda_m^{crb}$  
+%is set to $75^o$ in the
+%\src{module cons}. Note that this is not a physical meaningful value since 
+%the convection reversal boundary is fixed.
+%For the modified reference potential in section \ref{cap:modrefpot} 
+%a variable value for the convection reversal boundary will
+%be used which is set in the \src{aurora module}. 
+
 The current components in equations (\ref{eq:fac_phi}) and (\ref{eq:fac_lam})
 are calculated in a similar way as the left hand side of the electrodynamo 
 equation, which is described in section

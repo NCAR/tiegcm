@@ -55,6 +55,27 @@ R.A. Heelis, J.D. Winningham, W.B. Hanson, and J.~L. Burch, \emph{The
   particle morphology observed by atmosphere explorer}, J. Geophys. Res.
   \textbf{85} (1980), 3315--3324.
 
+\bibitem{Heroux1977}
+L.~Heroux and J.E. Higgins, \emph{Summary of full disk solar fluxes between 250
+  and 1940 {{\AA}}}, J. Geophys. Res. \textbf{82} (1977), 3307.
+
+\bibitem{Heroux1978}
+L.~Heroux and H.E. Hinteregger, \emph{Aeronomical reference spectrum for solar
+  {{UV}} below 2000 {{\AA}}}, J. Geophys. Res. \textbf{83} (1978), 5305.
+
+\bibitem{Hinteregger1981a}
+H.E. Hinteregger, \emph{Representations of solar {{EUV}} fluxes for aeronomical
+  applications}, Adv. Space Res. \textbf{1} (1981), 39--52.
+
+\bibitem{Hinteregger1981b}
+H.E. Hinteregger, K.~Fukui, and G.R. Gilson, \emph{Observational, reference and
+  model data on solar {{EUV}}, from measurements on {{AE-E}}}, Geophys. Res.
+  Lett. \textbf{8} (1981), 1147.
+
+\bibitem{Nagy1970}
+A.F. Nagy and P.M. Banks, \emph{Photoelectron fluxes in the ionosphere}, J.
+  Geophys. Res. \textbf{75} (1970), 6260.
+
 \bibitem{peym93}
 C.~Peymirat and A.D. Richmond, \emph{Modeling the ion loss and the generation
   of region 2 field--aligned currents via equivalent magnetospheric
@@ -63,6 +84,11 @@ C.~Peymirat and A.D. Richmond, \emph{Modeling the ion loss and the generation
 \bibitem{pielke1984}
 R.A. Pielke, \emph{Mesoscale metrological modeling}, Academic Press, Orlando
   Florida, 1984.
+
+\bibitem{Richards1994}
+P.G. Richards, J.A. Fennelly, and D.G. Torr, \emph{{{EUVAC}}: A solar {{EUV}}
+  flux model for aeronomic calculations}, J. Geophys. Res. \textbf{99} (1994),
+  8981 -- 8992.
 
 \bibitem{rich74}
 A.D. Richmond, \emph{The computation of magnetic effects of field-aligned
@@ -77,13 +103,18 @@ A.D. Richmond, \emph{The computation of magnetic effects of field-aligned
   Geomag. Geoelectric. \textbf{47} (1995), 191.
 
 \bibitem{roble1995}
-R.G. Roble, \emph{Energetics of the mesosphere and thermosphere}, Monograph 87,
-  AGU (1995).
+R.G. Roble, \emph{Energetics of the mesosphere and thermosphere}, Monograph AGU
+  (1995), no.~87.
 
 \bibitem{roble1987}
 R.G. Roble and E.C. Ridley, \emph{An auroral model for the ncar thermospheric
   general circulation model}, Annales Geophysicae \textbf{5a} (1987), no.~6,
   369.
+
+\bibitem{roble1988}
+R.G. Roble, E.C. Ridley, A.D. Richmond, and R.E. Dickinson, \emph{A coupled
+  thermosphere/ionosphere general circulation model}, Geophys. Res. Lett.
+  \textbf{15} (1988), 1325--1328.
 
 \bibitem{Schunk00}
 R.W. Schunk and A.F. Nagy, \emph{Ionospheres: Physics, plasma physics, and
@@ -93,21 +124,45 @@ R.W. Schunk and A.F. Nagy, \emph{Ionospheres: Physics, plasma physics, and
 R.~Shapiro, \emph{Smoothing, filtering, and boundary effects}, Rev. Geophys.
   Space Phys. (1970), no.~8, 359.
 
+\bibitem{Solomon1988}
+S.C. Solomon, P.B. Hays, and V.J. Abreu, \emph{The auroral 6300 {{\AA}}
+  emission: Observations and modeling}, J. Geophys. Res. \textbf{93} (1988),
+  9867--9882.
+
+\bibitem{Solomon2005}
+S.C. Solomon and L.~Qian, \emph{Solar extreme-ultraviolet irradiance for
+  general circulation models}, J. Geophys. Res. \textbf{110} (2005),
+  no.~A10306, doi:10.1029/2005JA011160.
+
 \bibitem{tag1979}
 P.M. Tag, F.W. Murray, and L.R. Kvenig, \emph{A comparison of several forms of
   eddy viscosity paramterization in the two-dimensional cloud model}, J. Appl.
   Meteorol \textbf{18} (1979), 1429.
 
-\bibitem{weimer2005}
-D.R. Weimer, J. Geophy. Res \textbf{110} (2005), doi: 10.1029/2004JA010884.
+\bibitem{Weimer2005}
+D.R. Weimer, \emph{Improved ionospheric electrodynamic models and application
+  to calculating joule heating rates}, J. Geophy. Res \textbf{110} (2005), doi:
+  10.1029/2004JA010884.
+
+\bibitem{Woods2005}
+T.N. Woods, F.G.~Eparvier andS.M. Bailey, P.C. Chamberlin, J.~Lean, G.J.
+  Rottman, S.C. Solomon, W.K. Tobiska, and D.L. Woodraska, \emph{Solar {{EUV}}
+  experiment ({SEE}): Mission overview and first results}, J. Geophys. Res.
+  \textbf{110} (2005), no.~A01312, doi:10.1029/2004JA010765.
+
+\bibitem{Woods2002}
+T.N. Woods and G.J. Rottman, \emph{Comparative aeronomy in the solar system},
+  Solar ultraviolet variability over time periods of aeronomic interest
+  (M.~Mendillo, A.F. Nagy, and J.H. Waite, eds.), AGU, Washington, D. C.,
+  Geophys. Monogr. Ser., vol. 130, 2002.
 
 \bibitem{wang1998}
-W.Wang, \emph{A thermosphere-ionosphere nested grid (ting) model}, Master's
+W.Wang, \emph{A thermosphere-ionosphere nested grid ({{TING}}) model}, Master's
   thesis, University of Michigan, 1998.
 
 \bibitem{zhang2008}
-Y.~Zhang and L.J. Paxton, \emph{An empirical kp-dependent global auroral model
-  based on timed/guvi fuv data}, J. Atmos. Terr. Phys. \textbf{70} (2008),
-  1231.
+Y.~Zhang and L.J. Paxton, \emph{An empirical {{Kp}}-dependent global auroral
+  model based on {{TIMED/GUVI FUV}} data}, J. Atmos. Terr. Phys. \textbf{70}
+  (2008), 1231.
 
 \end{thebibliography}

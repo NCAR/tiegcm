@@ -13,7 +13,7 @@ The aurora depends on the Hemisphere Power (\code{HP}),
 where the auroral radius can depend  on the Cross Polar Cap
 Potential (\code{CPCP}) of both hemispheres.  The Heelis ion convection \cite{heelis1982}
 depends on the \code{CPCP} and the IMF By.
-The input parameters for the Weimer 2005 model \cite{weimer2005}
+The input parameters for the Weimer 2005 model \cite{Weimer2005}
 are solar wind density $N_{sw}$ and speed $V_{sw}$, and the IMF By and Bz. \\
 
 The potential model is specified in the input file as:
@@ -136,11 +136,11 @@ to be increased in order to fit the observed nitric oxide [NO] observations
 \code{HP} is not allowed to be less than 5.0 GW when calculated from IMF
 Bz and Vsw.
 %
-[NOTE: Weimer 2001 model \cite{Weimer2001} is still in version 1.92.
-WHY?  It relies on
-calccloc so the calculated convection position is not very good
-for Bz positive conditions when abs(By) is less than Bz.
-But it could be improved to use the values in 2005.]
+%[NOTE: Weimer 2001 model \cite{Weimer2001} is still in version 1.92.
+%WHY?  It relies on
+%calccloc so the calculated convection position is not very good
+%for Bz positive conditions when abs(By) is less than Bz.
+%But it could be improved to use the values in 2005.]
 %
 The order of calls is:
 %
@@ -434,28 +434,63 @@ Heelis potential in geomagnetic coordinates & \code{phihm} (used in \src{dynamo.
 \label{tab:output_weimer}
 \end{table}
 %
-The input parameters for the 2005 Weimer model \cite{weimer2005}
-are solar wind density (Nsw) and speed (Vsw), and the IMF By and Bz, where the
-sign of the IMF By is changed for the potential pattern in the southern
-hemisphere.  [ADD A REPRESENTATIVE FIGURE WITH BY LARGE, BZ NEG, NH AND SH?]
+The input parameters for the 2005 Weimer model \cite{Weimer2005}
+are solar wind density ($N_{sw}$) and speed ($V_{sw}$), and the IMF $B_y$ and $B_z$, where the
+sign of the IMF $B_y$ is changed for the potential pattern in the southern
+hemisphere. The figure (\ref{fig:weimer05_by0}) shows Weimer 2005 Northern Hemisphere electric 
+potentials with $B_y=0$ for $V_{sw}=400$ km/s where $B_z$ decreases from +20 to -30 nT 
+and for Bz=-5 nT where Vsw increases from 250 to 1500 km/s. 
 The ion convection pattern and the \code{CPCP} are very sensitive to IMF
-Bz, IMF By, and Vsw, but \code{CPCP} is relatively insensitive to Nsw.
-For example, \code{CPCP} changes from 158 kV to 155 kV for Vsw=450 km,
-$By=0$ nT, and $Bz=-15$ nT while Nsw increases from $1 cm^{-3}$ and $16 cm^{-3}$
+$B_z$, IMF $B_y$, and $V_{sw}$, but \code{CPCP} is relatively insensitive to $N_{sw}$.
+For example, \code{CPCP} changes from 158 kV to 155 kV for $V_{sw}$=450 km,
+$By=0$ nT, and $Bz=-15$ nT while $N_{sw}$ increases from $1 cm^{-3}$ and $16 cm^{-3}$
 (Maute, 2008 private communication).
 Thus, because there are numerous drop-outs of the hourly plasma density Nsw,
 we recommend setting the namelist SWDEN = 4 as a constant which is always
-used.
+used. Alternatively, the filled 15 minute averaged IMF files can be used 
+where values from time -20 to -5 minutes is used for time=0.  Sometimes the 
+filled values are not reasonable, especially for large gaps in the IMF (e.g. 
+during the Halloween storm, 03301.6-03304.3, Oct 28-31, 2003). \\
+%
+\begin{figure}
+  \centering
+  \includegraphics[angle=90,scale=0.85]{./tex_plot/wei05_vbz.eps}
+  \caption{Northern hemisphere electric potential [kV] from TIEGCM using Weimer 2005
+  empirical model with $B_y=0$ nT.}
+   \label{fig:weimer05_by0}
+\end{figure}
+%
 %
 The output parameters are the Weimer convection circle location variables of
-\code{theta0} (= bndyfitr from the \code{subroutine setboundary}), \code{offc} (= $4.2^o$), and \code{dskofc} (= $0.0^o$),
+\code{theta0} (= half of bndyfitr from the \code{subroutine setboundary}), \code{offc} (= $4.2^o$), and \code{dskofc} (= $0.0^o$),
 which are set in the Weimer 2005 model, and the convection entrance and exit in
 MLT-12 hours converted to radians, \code{phid} and \code{phin} which were calculated
 from the Weimer potential patterns.  The auroral circle location variables of
 \code{rrad}, \code{offa} (= $4.2^o$), and \code{dskofa} (= \code{diffrac} or
 approximatley $-2.5^o$) are similar to
 the parameterizations calculated in \src{aurora.F}, which are discussed in the next
-section.
+section. \\
+
+The figure (\ref{fig:weimer05_by0}) shows bndyfitr as a dashed black circle where the potential goes to zero.  
+This is below 50 geomagnetic latitude for large $V_{sw}$ ($>$700 km/s).  
+Half of this is the radius of convection 
+\code{theta0}, shown as a red dashed circle.  The offsets, \code{offc} and \code{dskofc} 
+are shown as the center 
+of this red circle as a red dot on the 0 MLT line.  The magenta dot is the center of the 
+dashed magenta circle, determined mostly from the minimum and maximum potentials shown as 
+black dots for MLTs around dusk and dawn.  As shown in figure (\ref{fig:weimer05_by0}), 
+the convection radius 
+\code{theta0} is about 20 degrees for $V_{sw}$=700 km/s and about 30 degrees for 
+$V_{sw}$=1500 km/s.  This 
+compares to an increase in the convection radius for the Heelis model from 11 degrees at 
+Kp=0 to 19 degrees for Kp=9.  There were a very small number of high velocity cases used 
+in the construction of the Weimer 2001 and 2005 models.  Thus the electric potential 
+patterns for large solar wind velocities $V_{sw}$ ($>$900 km/s, but especially ~1100 km/s in this 
+figure and for other values of Bz and By) can be unrealistic.     The data used in the 
+construction of the models also had very few cases with IMF magnitudes greater than 15 nT.  
+Through the use of a saturation curve, the 2005 model appears to be realistic (i.e., lower 
+potential drops consistent with observations of saturation) at high IMF magnitudes ($> 20$ nT), 
+although results may not be as accurate as at lower IMF levels.
 %
 %
 \subsection{High latitude auroral pattern  \index{AURORA.F}}\label{cap:aurora}
@@ -724,7 +759,7 @@ where
     r_a  &= (\alpha_1-\alpha_2)/(\alpha_1+\alpha_2) \\
    F & = E_0 [1-r_e \cos(\alpha - \chi_e)]exp[-(\frac{\phi-\phi_0}{h})^2]/ 
     \alpha_m  = \alpha_0 \cdot [1 - r_a \cos(\alpha - \chi_e)]
-    \label{eq:aurora_8}
+    \label{eq:aurora_10}
   \end{split}
 \end{equation}
 %%
