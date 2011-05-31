@@ -24,7 +24,8 @@ Contents:
    source
    build
    tests
-   trouble
+   postproc
+   contact
    glossary
 
 Indices and tables

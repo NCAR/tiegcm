@@ -181,6 +181,8 @@ Following are brief explanations of the job script shell variables:
    Number of processors to use in a parallel execution. This is ignored if
    ``mpi`` is FALSE.
 
+.. _modelres:
+
 .. describe:: modelres
 
    Model resolution. Two resolutions are supported: 
@@ -188,7 +190,9 @@ Following are brief explanations of the job script shell variables:
      * modelres = 2.5 sets 2.5-degree lat x lon horizontal, and dz=0.25 vertical
 
    If the resolution is changed, the model should be recompiled before re-executing 
-   the job script (type "*gmake clean*" in the execdir)  
+   the job script (type "*gmake clean*" in the execdir).
+
+   For more information, see :ref:`Grid Structure and Resolution <resolution>`.
 
 .. describe:: debug
    

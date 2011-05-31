@@ -57,6 +57,13 @@ Glossary
      day is the julian day of the year, and hour is the ut. The variable for model time
      on history files is mtime(3,ntimes). For example, a history file may contain
      24 hourly histories for day 80: mtime = 80,1,0, 80,2,0, ... 81,0,0.
+
+   modeldir
+     The model root directory. This directory typically contains subdirectories
+     :term:`src/` (model source code), :term:`scripts/` (utility scripts), 
+     :term:`doc/` (documentation), and :term:`tests/` (test runs). The modeldir 
+     is available via :ref:`download <download>`, and is typically a subdirectory 
+     of the model working directory (:term:`workdir`). 
   
    namelist input
      The model reads user specified parameters from the :ref:`namelist input file <namelist>`
@@ -112,12 +119,20 @@ Glossary
      variable may be used when referring to data files in the namelist read file, e.g.,
      "GPI_NCFILE = `$TGCMDATA/gpi_xxxxx.nc`". See :ref:`namelist read files <namelist>`.
 
-   modeldir
-     The model root directory. This directory typically contains subdirectories
-     :term:`src/` (model source code), :term:`scripts/` (utility scripts), 
-     :term:`doc/` (documentation), and :term:`tests/` (test runs). The modeldir 
-     is available via :ref:`download <download>`, and is typically a subdirectory 
-     of the model working directory (:term:`workdir`). 
+   tgcmproc_f90
+     Post-processor and visualizer for TIEGCM netCDF history files. Written in f90,
+     and available at the TGCM download site. See :ref:`tgcmproc_f90 <tgcmproc_f90>`.
+
+   tgcmproc_idl
+     Post-processor and visualizer for TIEGCM netCDF history files. This processor is
+     Written in IDL with a GUI, and is available at the TGCM download site.
+     See :ref:`tgcmproc_idl <tgcmproc_idl>`.
+
+   utproc
+     Post-processor and visualizer for TIEGCM netCDF history files. This processor 
+     reads time-series history files and makes ut vs pressure and ut vs latitude
+     contours.  It is written in IDL with a GUI, and is available at the TGCM download 
+     site.  See :ref:`utproc <utproc>`.
  
    workdir
      Your local working directory. This will typically contain the model root directory
