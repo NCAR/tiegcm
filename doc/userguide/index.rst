@@ -23,7 +23,6 @@ Contents:
    diagnostics
    source
    build
-   tests
    trouble
    glossary
 
