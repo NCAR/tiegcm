@@ -2,7 +2,7 @@
 %
 At the lower boundary of TI(M)EGCM the background thermosphere has to be specified.
 In addition tidal perturbations can be optionally added in. Note that not all TIMEGCM option for the lower
-boundary are describe here since this code is still under development and testing by June 2009.\\
+boundary are describe here.\\
 
 %
 The lower boundary conditions in TIEGCM are specified at pressure level 
@@ -17,21 +17,21 @@ In TIEGCM at the lower boundary (pressure level =-7, approximately at 97 km) we 
 constant background 
 field for the geopotenial height of $96.37229 \;  km$,
 for the neutral temperature of $181.0 \; K$, and the neutral zonal and meridional 
-winds are set to zero. The background does not vary with day of the year.
-These fields are consistent with each other (what does
-this mean?). \\
+winds are set to zero. The background does not vary with day of the year.\\
 
 Note that for TIMEGCM the lower boundary is at pressure level -17, 
 approximately at 32 km. However concerning the interface and midpoint 
 pressure levels TIMEGCM and TIEGCM are the same. The background field in TIMEGCM
 for the geopotential height are from an analytical fit to a model called zatmos
-(is there any reference or official name?), the neutral temperature is specified by
+, the neutral temperature is specified by
 the same model zatmos. Both fields vary with latitude and day of the year. 
-The neutral zonal and meridional winds at the lower
+The background neutral zonal and meridional winds at the lower
 boundary are calculated by assuming geostrophic balance. The calculation is done in
 \code{subroutine tuvbnd} \index{tuvbnd}. At the equator when the Coriolis force
 is zero, and geostrophic balance is not valid to assume, additional 
-tunable Rayleigh friction is introduced (see \src{subroutine tuvbnd}). \\
+tunable Rayleigh friction is introduced (see \src{subroutine tuvbnd}).
+The background can also be specified by using daily averaged data from ECMWF for 
+specific time periods.  \\
 
 In TIEGCM as well as TIMEGCM tidal perturbations caused by 
 solar radiation can be added to the background. For classical tidal theory we refer to Chapman
@@ -119,8 +119,8 @@ parameters
 \begin{itemize}
   \item migrating diurnal tides (s=-6 to 6) \src{GSWM\_MI\_DI\_NCFILE}
   \item migrating semidiurnal tides (s=-6 to 6) \src{GSWM\_MI\_SDI\_NCFILE}
-  \item ONLY TIMEGCM: non-migrating diurnal tides (s=-6 to 6) \src{GSWM\_NM\_DI\_NCFILE}
-  \item ONLY TIMEGCM: non-migrating semidiurnal tides (s=-6 to 6) \src{GSWM\_NM\_SDI\_NCFILE}
+  \item ONLY TIMEGCM: non-migrating diurnal tides (s=-6 to 6) \\ \src{GSWM\_NM\_DI\_NCFILE}
+  \item ONLY TIMEGCM: non-migrating semidiurnal tides (s=-6 to 6) \\ \src{GSWM\_NM\_SDI\_NCFILE}
 \end{itemize} 
 %
 and the location of the corresponding GSWM file. Note that compared to the Hough mode approach the
