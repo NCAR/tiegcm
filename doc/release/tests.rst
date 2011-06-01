@@ -94,10 +94,22 @@ December, 2006 "AGU Storm"
 * Weimer potential model with IMF data (F10.7 from GPI)
 * "Sanity check" plots for dec2006:
 
- * :ref:`Heelis/GPI (daily) <dec2006_heelis_daily>`
- * :ref:`Heelis/GPI (hourly) <dec2006_heelis_hourly>`
- * :ref:`Weimer/IMF (daily) <dec2006_weimer_daily>`
- * :ref:`Weimer/IMF (hourly) <dec2006_weimer_hourly>`
+ * :ref:`Heelis/GPI (daily, days 330-360) <dec2006_heelis_daily>`
+ * :ref:`Heelis/GPI (hourly, days 346-352) <dec2006_heelis_hourly>`
+ * :ref:`Weimer/IMF (daily, days 330-360) <dec2006_weimer_daily>`
+ * :ref:`Weimer/IMF (hourly, days 346-352) <dec2006_weimer_hourly>`
+
+* Heelis/GPI Movies (~3.5M gif):
+
+  * :ref:`Heelis/GPI hourly movies: TN at Zp -4 and Zp +2 <dec2006_heelis_TN_movies>`
+  * :ref:`Heelis/GPI hourly movies: NE at Zp +2 <dec2006_heelis_NE_movies>`
+
+* Weimer/IMF Movies (~3.5 gif):
+
+  * :ref:`Weimer/IMF hourly movies: TN at Zp -4 and Zp +2 <dec2006_weimer_TN_movies>`
+  * :ref:`Weimer/IMF hourly movies: NE at Zp +2 <dec2006_weimer_NE_movies>`
+
+* :ref:`AVI Movies <dec2006_avi_movies>`
 
 * Full history file output for control runs will be made available on the NCAR
   `Community Data Portal <http://cdp.ucar.edu/home/home.htm>`_ (go to "Models",

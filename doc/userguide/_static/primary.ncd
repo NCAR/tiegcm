@@ -1,10 +1,10 @@
 
 ======================================================================
-File tiegcm1.94-beta.pcntr_decsol_smax_001.nc
+File TGCM.tiegcm1.94.pcntr_mareqx_smin.nc
 
-netcdf tiegcm1.94-beta.pcntr_decsol_smax_001 {
+netcdf TGCM.tiegcm1.94.pcntr_mareqx_smin {
 dimensions:
-	time = UNLIMITED ; // (6 currently)
+	time = UNLIMITED ; // (1 currently)
 	lon = 72 ;
 	lat = 36 ;
 	lev = 29 ;
@@ -22,10 +22,10 @@ dimensions:
 variables:
 	double time(time) ;
 		time:long_name = "time" ;
-		time:units = "minutes since 2002-12-21 0:0:0" ;
+		time:units = "minutes since 2002-3-1 0:0:0" ;
 		time:initial_year = 2002 ;
-		time:initial_day = 355 ;
-		time:initial_mtime = 355, 0, 0 ;
+		time:initial_day = 60 ;
+		time:initial_mtime = 60, 0, 0 ;
 	double lon(lon) ;
 		lon:long_name = "geographic longitude (-west, +east)" ;
 		lon:units = "degrees_east" ;
@@ -328,33 +328,33 @@ variables:
 
 // global attributes:
 		:Conventions = "CF-1.0" ;
-		:label = "decsol smax equil" ;
-		:create_date = "04/27/11 15:43:34" ;
+		:label = "tiegcm mareqx smin source equil" ;
+		:create_date = "05/19/11 21:37:08" ;
 		:logname = "foster" ;
 		:host = "arc" ;
 		:system = "LINUX" ;
 		:model_name = "tiegcm" ;
-		:model_version = "tiegcm_trunk" ;
-		:svn_version = "581M" ;
-		:output_file = "" ;
+		:model_version = "tiegcm1.94" ;
+		:svn_version = "600" ;
+		:output_file = "TGCM.tiegcm1.94.pcntr_mareqx_smin.nc" ;
 		:history_type = "primary" ;
 		:run_type = "initial" ;
-		:source_file = "tiegcm1.94-beta.pcntr_decsol_smax.nc (initial)" ;
-		:source_mtime = 355, 0, 0 ;
-		:initial_file = "/hao/aim1/tgcm/data/TGCM.tiegcm1.93.pcntr_dsol_smax.nc" ;
-		:initial_mtime = 355, 0, 0 ;
+		:source_file = "/hao/aim1/tgcm/data/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc (initial)" ;
+		:source_mtime = 80, 0, 0 ;
+		:initial_file = "/hao/aim1/tgcm/data/TGCM.tiegcm1.93.pcntr_eqnx_smin.nc" ;
+		:initial_mtime = 60, 0, 0 ;
 		:lev_to_hPa_method1 = "p0*exp(-lev(k))" ;
 		:lev_to_hPa_method2 = "p0_model*1.e-3*exp(-lev(k))" ;
-		:nhist = 6 ;
-		:delhist_mins = 0 ;
+		:nhist = 1 ;
+		:delhist_mins = 1440 ;
 		:missing_value = 1.e+36 ;
 		:potential_model = "HEELIS" ;
 		:tuv_lbc_intop = 0 ;
-		:contents = "02355 355  0  0 to 02360 360  0  0 by    0 tiegcm_trunk primary" ;
+		:contents = "02080  80  0  0 to 02080  80  0  0 by 1440 tiegcm1.94 primary" ;
 		:contents_desc = "yyddd day hour min to yyddd day hour min by delta_mins" ;
 data:
 
- time = 0, 1440, 2880, 4320, 5760, 7200 ;
+ time = 28800 ;
 
  lon = -180, -175, -170, -165, -160, -155, -150, -145, -140, -135, -130, 
     -125, -120, -115, -110, -105, -100, -95, -90, -85, -80, -75, -70, -65, 
@@ -420,177 +420,104 @@ data:
     6.5, 7 ;
 
  mtime =
-  355, 0, 0,
-  356, 0, 0,
-  357, 0, 0,
-  358, 0, 0,
-  359, 0, 0,
-  360, 0, 0 ;
+  80, 0, 0 ;
 
- year = 2002, 2002, 2002, 2002, 2002, 2002 ;
+ year = 2002 ;
 
- day = 355, 356, 357, 358, 359, 360 ;
+ day = 80 ;
 
- calendar_advance = 1, 1, 1, 1, 1, 1 ;
+ calendar_advance = 1 ;
 
  write_date =
-  "                        ",
-  "04/27/11 15:46:11       ",
-  "04/27/11 15:48:53       ",
-  "04/27/11 15:52:02       ",
-  "04/27/11 15:54:54       ",
-  "04/27/11 15:57:40       " ;
+  "05/19/11 21:37:08       " ;
 
- iter = 255600, 256320, 257040, 257760, 258480, 259200 ;
+ iter = 57600 ;
 
- ntask_mpi = 4, 4, 4, 4, 4, 4 ;
+ ntask_mpi = 4 ;
 
- ut = 0, 0, 0, 0, 0, 0 ;
+ ut = 0 ;
 
  timestep = 120 ;
 
- f107d = 200, 200, 200, 200, 200, 200 ;
+ f107d = 70 ;
 
- f107a = 200, 200, 200, 200, 200, 200 ;
+ f107a = 70 ;
 
- hpower = 39, 39, 39, 39, 39, 39 ;
+ hpower = 18 ;
 
- ctpoten = 60, 60, 60, 60, 60, 60 ;
+ ctpoten = 30 ;
 
- Kp = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+ Kp = 1e+36 ;
 
- bximf = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+ bximf = 1e+36 ;
 
- byimf = 0, 0, 0, 0, 0, 0 ;
+ byimf = 0 ;
 
- bzimf = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+ bzimf = 1e+36 ;
 
- swvel = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+ swvel = 1e+36 ;
 
- swden = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+ swden = 1e+36 ;
 
- al = 1e+36, 1e+36, 1e+36, 1e+36, 1e+36, 1e+36 ;
+ al = 1e+36 ;
 
- colfac = 1.5, 1.5, 1.5, 1.5, 1.5, 1.5 ;
+ colfac = 1.5 ;
 
  dtide =
-  0, 0,
-  0, 0,
-  0, 0,
-  0, 0,
-  0, 0,
   0, 0 ;
 
  sdtide =
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ;
 
  ncep_ncfile =
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
   "[none]                                                                          " ;
 
  gpi_ncfile =
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
   "[none]                                                                          " ;
 
  saber_ncfile =
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
   "[none]                                                                          " ;
 
  tidi_ncfile =
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
   "[none]                                                                          " ;
 
  see_ncfile =
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
   "[none]                                                                          " ;
 
  imf_ncfile =
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
   "[none]                                                                          " ;
 
  gswm_mi_di_ncfile =
-  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
-  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
-  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
-  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
-  "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     ",
   "/hao/aim1/tgcm/data/gswm_diurn_5.0d_99km.nc                                     " ;
 
  gswm_mi_sdi_ncfile =
-  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
-  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
-  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
-  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
-  "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      ",
   "/hao/aim1/tgcm/data/gswm_semi_5.0d_99km.nc                                      " ;
 
  gswm_nm_di_ncfile =
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
   "[none]                                                                          " ;
 
  gswm_nm_sdi_ncfile =
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
-  "[none]                                                                          ",
   "[none]                                                                          " ;
 
- e1 = 2.5972431810548, 2.5972431810548, 2.5972431810548, 2.5972431810548, 
-    2.5972431810548, 2.5972431810548 ;
+ e1 = 1.59534372388185 ;
 
- e2 = 5.29, 5.29, 5.29, 5.29, 5.29, 5.29 ;
+ e2 = 2.98 ;
 
- h1 = 2.35, 2.35, 2.35, 2.35, 2.35, 2.35 ;
+ h1 = 2.35 ;
 
- h2 = 3.715, 3.715, 3.715, 3.715, 3.715, 3.715 ;
+ h2 = 3.505 ;
 
- alfac = 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 ;
+ alfac = 0.1 ;
 
- ec = 0.10026, 0.10026, 0.10026, 0.10026, 0.10026, 0.10026 ;
+ ec = 0.07212 ;
 
- alfad = 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 ;
+ alfad = 0.5 ;
 
- ed = 0.0246, 0.0246, 0.0246, 0.0246, 0.0246, 0.0246 ;
+ ed = 0.012 ;
 
- crit1 = 14.9999999542121, 19.472552220103, 19.472552220103, 19.472552220103, 
-    19.472552220103, 19.472552220103 ;
+ crit1 = 17.2456046560449 ;
 
- crit2 = 29.99999996572, 34.472552220103, 34.472552220103, 34.472552220103, 
-    34.472552220103, 34.472552220103 ;
+ crit2 = 32.2456046560449 ;
 
  mag =
   _, _,

@@ -41,10 +41,17 @@ shell variable in the :ref:`job script <jobscript>` to set the model resolution)
    | (default time step = 120 secs)
  * | 2.5 degrees lat x lon, 4 grid points per scale height 
    | (default time step = 60 secs)
+ * The vertical coordinate ``lev``, or ``Zp``, is a log-pressure scale ``ln(p0/p)``, where p 
+   is pressure and p0 is a reference pressure. Fields are calculated at either "interface" levels 
+   (``ilev``), or at "midpoint" levels (``lev``) (see lev and ilev coordinate definitions below).
+ 
+   * At 5.0 degree horizontal, Zp at interfaces = -7 to +5 by 0.5
+   * At 2.5 degree horizontal, Zp at interfaces = -7 to +5 by 0.25
 
-.. note::
-   The 2.5 degree configuration ("double-resolution"), is not fully tuned and validated
-   in TIEGCM version |version|.
+   .. note::
+      To interpolate model fields to constant height surfaces, you should use
+      geometric height, which is available on the 3d model grid as "ZG" on secondary 
+      histories.
 
 The spatial coordinates at the 5-degree resolution are defined as follows::
 
@@ -92,6 +99,10 @@ The spatial coordinates at the 5-degree resolution are defined as follows::
 
   ilev = -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 
     0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7 ;
+
+.. note::
+   The 2.5 degree configuration ("double-resolution"), is not fully tuned and validated
+   in TIEGCM version |version|.
 
 Modifying the Source Code
 -------------------------
