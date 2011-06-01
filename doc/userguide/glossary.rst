@@ -12,7 +12,7 @@ Glossary
      ``modeldir/tests/control/*.inp``).
 
    continuation run
-     A continuation run continues from the last history of the previous run.
+     A continuation run continues from the last output history of the previous run.
      That history (:ref:`START <START>` time) must be on the first :ref:`OUTPUT <OUTPUT>` file  
      provided by the namelist input file. A continuation run must not specify
      a :ref:`SOURCE <SOURCE>` file or :ref:`SOURCE_START <SOURCE_START>` time.
@@ -91,7 +91,8 @@ Glossary
        * 2.5 x 2.5 deg lat x lon, 4 grid levels per scale height (dz = 0.25)
 
      The resolution is set by the "modelres" shell variable in the TIEGCM 
-     :ref:`job script <jobscript>`.
+     :ref:`job script <jobscript>`. See also the section on 
+     :ref:`Grid Structure and Resolution <resolution>`.
 
      .. note::
 
