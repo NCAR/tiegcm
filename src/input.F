@@ -33,7 +33,7 @@
 !
 ! Namelist user input variables:
 !
-      character(len=80) :: 
+      character(len=1024) :: 
      |  label,           ! optional generic text label for this run
      |  tempdir,         ! temporary directory 
      |  magvol,          ! absolute or relative path to magnetic data file
@@ -128,7 +128,7 @@
 !    |  gpi_names(ngpivars)      ! names of gpi_vars
 !
 ! Primary history user input (dimension parameters are in params.h):
-      character(len=80) :: 
+      character(len=1024) :: 
      |  source,            ! file containing source history (optional)
      |  output(mxhvols)    ! output file(s) (required)
       integer ::
@@ -141,7 +141,7 @@
      |  noutput            ! number of output files given
 !
 ! Secondary history user input (dimension parameters are in params.h):
-      character(len=80) :: 
+      character(len=1024) :: 
      |  secsource,            ! file containing source sec_history (for mhd)
      |  secout(mxhvols)       ! secondary history output file(s)
       character(len=16) ::
@@ -684,8 +684,8 @@
       integer(kind=8) :: step8,
      |  nsec_start(mxseries),nsec_stop(mxseries),
      |  nsec_hist (mxseries)
-      character(len=80) :: ch80
-      character(len=80) :: hvols(mxhvols)
+      character(len=1024) :: ch1024
+      character(len=1024) :: hvols(mxhvols)
 !
 ! External:
       integer,external :: numfiles
@@ -978,16 +978,16 @@
       endif
 !
 ! No dups of file names allowed:
-      ch80 = ' '
+      ch1024 = ' '
       do i=1,nout
-        ch80 = output(i)  
+        ch1024 = output(i)  
         output(i) = 'dummy'
-        if (any(output==ch80)) then
+        if (any(output==ch1024)) then
           write(6,"(/,'>>> INPUT: Duplicate OUTPUT file names = ',
-     |      a,/)") trim(ch80)
+     |      a,/)") trim(ch1024)
           call shutdown('OUTPUT')
         endif
-        output(i) = ch80
+        output(i) = ch1024
       enddo
 !
 ! Check that sufficient primary output files have been provided:
@@ -1019,8 +1019,8 @@
       integer(kind=8) :: step8,
      |  nsec_start(mxseries_sech),nsec_stop(mxseries_sech),
      |  nsec_hist (mxseries_sech)
-      character(len=80) :: ch80
-      character(len=80) :: hvols(mxhvols)
+      character(len=1024) :: ch1024
+      character(len=1024) :: hvols(mxhvols)
       character(len=16) ::
      |  secflds_tmp(mxfsech)
       logical :: found
@@ -1280,16 +1280,16 @@
       endif
 !
 ! No dups of secout file names allowed:
-      ch80 = ' '
+      ch1024 = ' '
       do i=1,nout
-        ch80 = secout(i)  
+        ch1024 = secout(i)  
         secout(i) = 'dummy'
-        if (any(secout==ch80)) then
+        if (any(secout==ch1024)) then
           write(6,"(/,'>>> INPUT: Duplicate SECOUT file names = ',
-     |      a,/)") trim(ch80)
+     |      a,/)") trim(ch1024)
           call shutdown('SECOUT')
         endif
-        secout(i) = ch80
+        secout(i) = ch1024
       enddo
 !
 ! Check that sufficient secondary output files have been provided:
@@ -1349,16 +1349,16 @@
       endif
 
 ! Check for dups of secflds field names:
-      ch80 = ' '
+      ch1024 = ' '
       do i=1,nflds_sech
-        ch80 = secflds(i)  
+        ch1024 = secflds(i)  
         secflds(i) = 'dummy'
-        if (any(secflds==ch80)) then
+        if (any(secflds==ch1024)) then
           write(6,"(/,'>>> INPUT: Duplicate SECFLDS field names = ',
-     |      a,/)") trim(ch80)
+     |      a,/)") trim(ch1024)
           call shutdown('SECFLDS')
         endif
-        secflds(i) = ch80
+        secflds(i) = ch1024
       enddo
 !
 ! Number of bytes for values of 4d fields on secondary histories:
