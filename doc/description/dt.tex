@@ -53,7 +53,7 @@ The module data of \src{subroutine dt} is summarized in table
 \begin{table}[tb]
 \begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
 physical field               & variable        & unit&pressure
-level& timestep \\ \hline \hline haeting from solar radiation    &
+level& timestep \\ \hline \hline heating from solar radiation    &
 {$Q_{qrj}$}     & $\frac{erg}{K \; s}$   & interfaces  & $t_n$
 \\ \hline \hline
 \end{tabular}
@@ -82,7 +82,8 @@ meridional components $u_n$ and $v_n$, $W$ is the dimensionless
 vertical velocity given by $W = \frac{dZ}{dt}$, $R^*$ is the
 universal gas constant, $\overline{m}$ is the mean atmospheric mass,
 and $Q$
-and $L$ are the heating and cooling terms. \\
+and $L$ are the other heating and cooling terms
+\cite{roble1995},\cite{roble1987b}. \\
 %
 The local time variation of the neutral temperature is determined by
 the heating and cooling terms on the right hand side of the
@@ -225,8 +226,8 @@ The heating terms are added together. First the terms from the heating caused by
 with $Q_{Solar}(z+\frac{1}{2}\Delta z)=
 \frac{1}{2}[Q_{Solar}(z)+Q_{Solar}(z+\Delta z)]$ to calculate the
 value on the midpoint level $z+\frac{1}{2}\Delta z$. The solar
-radiation has contributions from the EUV and from the Schuhman Runge
-bands and continuum, and the O????.
+radiation has contributions from the EUV and from the Schuman--Runge
+bands and continuum.
 %
 \begin{align}
   Q = Q_{Solar} + 1.5 Q_{JH} + h_{d,T} + Q_{OR} + Q_{md}\\
@@ -234,12 +235,11 @@ bands and continuum, and the O????.
 %
 with the Joule heating term denoted by $Q_{JH}$ which is multiplied
 by 1.5 to take the heating due to the small scale electric field
-into account. The horizontal diffusion term is denoted by
-$h_{d,T}$?????. \\
+into account.  \\
 
 %
-The heating due to atomic oxygen recombination is determined by
-?????
+The heating due to the recovery of $O_2$ dissociation energy when atomic oxygen
+recombines in the lower thermosphere is
 %
 \begin{align}
   Q_{OR} = f_T r_{km} \frac{N_A}{\overline{m}}\left[
@@ -344,7 +344,7 @@ The heating due to molecular diffusion is determined by
   \left(\frac{\partial v_n}{\partial Z}\right)^2 \right\}
 \end{align}
 %
-with the gas constant $R^* = 8.314 10^7 \frac{ergs}{K mol}$ and
+with the gas constant $R^*$ and
 $\frac{1}{H}= \frac{g \overline{m}}{R^* T_n}$. The vertical change
 in the neutral velocity is calculated by
 %
