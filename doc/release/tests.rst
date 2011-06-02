@@ -101,13 +101,15 @@ December, 2006 "AGU Storm"
 
 * Heelis/GPI Movies (~3.5M gif):
 
-  * :ref:`Heelis/GPI hourly movies: TN at Zp -4 and Zp +2 <dec2006_heelis_TN_movies>`
-  * :ref:`Heelis/GPI hourly movies: NE at Zp +2 <dec2006_heelis_NE_movies>`
+  * :ref:`Heelis/GPI hourly movies: TN at Zp -4 <dec2006_heelis_TN_zp-4_movie>`
+  * :ref:`Heelis/GPI hourly movies: TN at Zp +2 <dec2006_heelis_TN_zp+2_movie>`
+  * :ref:`Heelis/GPI hourly movies: NE at Zp +2 <dec2006_heelis_NE_zp+2_movie>`
 
 * Weimer/IMF Movies (~3.5 gif):
 
-  * :ref:`Weimer/IMF hourly movies: TN at Zp -4 and Zp +2 <dec2006_weimer_TN_movies>`
-  * :ref:`Weimer/IMF hourly movies: NE at Zp +2 <dec2006_weimer_NE_movies>`
+  * :ref:`Weimer/IMF hourly movies: TN at Zp -4 <dec2006_weimer_TN_zp-4_movie>`
+  * :ref:`Weimer/IMF hourly movies: TN at Zp +2 <dec2006_weimer_TN_zp+2_movie>`
+  * :ref:`Weimer/IMF hourly movies: NE at Zp +2 <dec2006_weimer_NE_zp+2_movie>`
 
 * :ref:`AVI Movies <dec2006_avi_movies>`
 
@@ -126,6 +128,20 @@ November, 2003 Storm Case
 
  * :ref:`Heelis/GPI (hourly) <nov2003_heelis_hourly>`
  * :ref:`Weimer/IMF (hourly) <nov2003_weimer_hourly>`
+
+* Heelis/GPI Movies (~3-5M gif):
+
+  * :ref:`Heelis/GPI hourly movies: TN at Zp -4 <nov2003_heelis_TN_zp-4_movie>`
+  * :ref:`Heelis/GPI hourly movies: TN at Zp +2 <nov2003_heelis_TN_zp+2_movie>`
+  * :ref:`Heelis/GPI hourly movies: NE at Zp +2 <nov2003_heelis_NE_zp+2_movie>`
+
+* Weimer/IMF Movies (~3-5M gif):
+
+  * :ref:`Weimer/IMF hourly movies: TN at Zp -4 <nov2003_weimer_TN_zp-4_movie>`
+  * :ref:`Weimer/IMF hourly movies: TN at Zp +2 <nov2003_weimer_TN_zp+2_movie>`
+  * :ref:`Weimer/IMF hourly movies: NE at Zp +2 <nov2003_weimer_NE_zp+2_movie>`
+
+* :ref:`AVI Movies <nov2003_avi_movies>`
 
 * Full history file output for control runs will be made available on the NCAR
   `Community Data Portal <http://cdp.ucar.edu/home/home.htm>`_ (go to "Models",
