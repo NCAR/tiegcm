@@ -19,6 +19,7 @@ Contents:
 
    release_notes
    tests
+   postproc_debug
 
 * :base_url:`User's Guide <userguide/_build/html>`
 

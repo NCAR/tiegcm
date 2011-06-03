@@ -1,42 +1,42 @@
 
 .. _control_mareqx_smin:
 
-TIEGCM\ |version| March Equinox Solar Minimum (day 85)
+March Equinox Solar Minimum (day 85)
 ======================================================
 
 March Equinox Solar Minimum: Global TN at Zp=-4
----------------------------------------------------
+-----------------------------------------------
 
-.. image:: tiegcm1.94/control/mareqx_smin/pict0001.png
+.. image:: _static/images/control/mareqx_smin/pict0001.png
    :align: center
 
 March Equinox Solar Minimum: Global TN at Zp=+2
----------------------------------------------------
+-----------------------------------------------
 
-.. image:: tiegcm1.94/control/mareqx_smin/pict0002.png
+.. image:: _static/images/control/mareqx_smin/pict0002.png
    :align: center
 
 March Equinox Solar Minimum: Global NE at Zp=-4
----------------------------------------------------
+-----------------------------------------------
 
-.. image:: tiegcm1.94/control/mareqx_smin/pict0003.png
+.. image:: _static/images/control/mareqx_smin/pict0003.png
    :align: center
 
 March Equinox Solar Minimum: Global NE at Zp=+2
----------------------------------------------------
+-----------------------------------------------
 
-.. image:: tiegcm1.94/control/mareqx_smin/pict0004.png
+.. image:: _static/images/control/mareqx_smin/pict0004.png
    :align: center
 
 March Equinox Solar Minimum: Global Mean TN
------------------------------------------------
+-------------------------------------------
 
-.. image:: tiegcm1.94/control/mareqx_smin/pict0005.png
+.. image:: _static/images/control/mareqx_smin/pict0005.png
    :align: center
 
 March Equinox Solar Minimum: Global Mean NE
------------------------------------------------
+-------------------------------------------
 
-.. image:: tiegcm1.94/control/mareqx_smin/pict0006.png
+.. image:: _static/images/control/mareqx_smin/pict0006.png
    :align: center
 

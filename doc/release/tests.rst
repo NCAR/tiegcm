@@ -24,23 +24,35 @@ of "Solar Minimum" and "Solar Maximum" conditions are as follows:
 Steady-State Seasonal Start-up Files
 ------------------------------------
 
-Single-history start-up files are available at the four seasons, and may be
-used as SOURCE files in the namelist input for initial runs (these files are
-about 14.5 MB each):
+Single-history start-up files for the four seasons are in the **data download file**, 
+which is available from the `tgcm download page <http://www.hao.ucar.edu/modeling/tgcm/download.php>`_ 
+These files can be used as SOURCE files in the namelist input for initial runs:
 
-* Start-up files at Solar Minimum:
+Start-up files at Solar Minimum Conditions:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
- * `March Equinox (day 80) Solar Minimum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_mareqx_smin.nc>`_
- * `June Solstice (day 172) Solar Minimum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_junsol_smin.nc>`_
- * `September Equinox (day 264) Solar Minimum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_sepeqx_smin.nc>`_
- * `December Solstice (day 355) Solar Minimum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_decsol_smin.nc>`_
+=============================== ====================================
+Date				Filename
+=============================== ====================================
+March Equinox (day 80)          TGCM.tiegcm1.94.pcntr_mareqx_smin.nc
+June Solstice (day 172)         TGCM.tiegcm1.94.pcntr_junsol_smin.nc
+September Equinox (day 264)     TGCM.tiegcm1.94.pcntr_sepeqx_smin.nc
+December Solstice (day 355)     TGCM.tiegcm1.94.pcntr_decsol_smin.nc
+=============================== ====================================
 
-* Start-up files at Solar Maximum:
+Start-up files at Solar Maximum Conditions:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
- * `March Equinox (day 80) Solar Maximum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_mareqx_smax.nc>`_
- * `June Solstice (day 172) Solar Maximum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_junsol_smax.nc>`_
- * `September Equinox (day 264) Solar Maximum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_sepeqx_smax.nc>`_
- * `December Solstice (day 355) Solar Maximum <tiegcm1.94/TGCM.tiegcm1.94.pcntr_decsol_smax.nc>`_
+=============================== ====================================
+Date				Filename
+=============================== ====================================
+March Equinox (day 80)          TGCM.tiegcm1.94.pcntr_mareqx_smax.nc
+June Solstice (day 172)         TGCM.tiegcm1.94.pcntr_junsol_smax.nc
+September Equinox (day 264)     TGCM.tiegcm1.94.pcntr_sepeqx_smax.nc
+December Solstice (day 355)     TGCM.tiegcm1.94.pcntr_decsol_smax.nc
+=============================== ====================================
+
+.. _seasonal_control:
 
 Seasonal Control Runs
 ---------------------
@@ -48,25 +60,25 @@ Seasonal Control Runs
 **control**: 5-day control runs, started from the above steady-state histories at 
 both equinoxes and solstices, and at solar minimum and maximum conditions.
 
-* "Sanity check" plots for solar min control runs 
-  (global maps on last day of 5-day run): 
+* "Sanity check" plots for solar min control runs (global maps on last day of 5-day run): 
 
- * :ref:`December Solstice, Solar Minimum <control_decsol_smin>`
- * :ref:`June Solstice, Solar Minimum <control_junsol_smin>`
- * :ref:`March Equinox, Solar Minimum <control_mareqx_smin>`
- * :ref:`September Equinox, Solar Minimum <control_sepeqx_smin>`
+  * :ref:`December Solstice, Solar Minimum <control_decsol_smin>`
+  * :ref:`June Solstice, Solar Minimum <control_junsol_smin>`
+  * :ref:`March Equinox, Solar Minimum <control_mareqx_smin>`
+  * :ref:`September Equinox, Solar Minimum <control_sepeqx_smin>`
 
-* "Sanity check" plots for solar max control runs 
-  (global maps on last day of 5-day run): 
+* "Sanity check" plots for solar max control runs (global maps on last day of 5-day run): 
 
- * :ref:`December Solstice, Solar Maximum <control_decsol_smax>`
- * :ref:`June Solstice, Solar Maximum <control_junsol_smax>`
- * :ref:`March Equinox, Solar Maximum <control_mareqx_smax>`
- * :ref:`September Equinox, Solar Maximum <control_sepeqx_smax>`
+  * :ref:`December Solstice, Solar Maximum <control_decsol_smax>`
+  * :ref:`June Solstice, Solar Maximum <control_junsol_smax>`
+  * :ref:`March Equinox, Solar Maximum <control_mareqx_smax>`
+  * :ref:`September Equinox, Solar Maximum <control_sepeqx_smax>`
 
 * Full history file output for control runs will be made available on the NCAR
   `Community Data Portal <http://cdp.ucar.edu/home/home.htm>`_ (go to "Models",
   then "Thermospheric General Circulation Models").
+
+.. _climatology:
 
 Climatology
 -----------
@@ -85,6 +97,8 @@ Climatology
   `Community Data Portal <http://cdp.ucar.edu/home/home.htm>`_ (go to "Models",
   then "Thermospheric General Circulation Models").
 
+.. _dec2006:
+
 December, 2006 "AGU Storm"
 --------------------------
 
@@ -94,10 +108,10 @@ December, 2006 "AGU Storm"
 * Weimer potential model with IMF data (F10.7 from GPI)
 * "Sanity check" plots for dec2006:
 
- * :ref:`Heelis/GPI (daily, days 330-360) <dec2006_heelis_daily>`
- * :ref:`Heelis/GPI (hourly, days 346-352) <dec2006_heelis_hourly>`
- * :ref:`Weimer/IMF (daily, days 330-360) <dec2006_weimer_daily>`
- * :ref:`Weimer/IMF (hourly, days 346-352) <dec2006_weimer_hourly>`
+  * :ref:`Heelis/GPI (daily, days 330-360) <dec2006_heelis_daily>`
+  * :ref:`Heelis/GPI (hourly, days 346-352) <dec2006_heelis_hourly>`
+  * :ref:`Weimer/IMF (daily, days 330-360) <dec2006_weimer_daily>`
+  * :ref:`Weimer/IMF (hourly, days 346-352) <dec2006_weimer_hourly>`
 
 * Heelis/GPI Movies (~3.5M gif):
 
@@ -117,6 +131,8 @@ December, 2006 "AGU Storm"
   `Community Data Portal <http://cdp.ucar.edu/home/home.htm>`_ (go to "Models",
   then "Thermospheric General Circulation Models").
 
+.. _nov2003:
+
 November, 2003 Storm Case
 -------------------------
 
@@ -126,8 +142,8 @@ November, 2003 Storm Case
 * Weimer potential model with IMF data (F10.7 from GPI)
 * "Sanity check" plots for nov2003:
 
- * :ref:`Heelis/GPI (hourly) <nov2003_heelis_hourly>`
- * :ref:`Weimer/IMF (hourly) <nov2003_weimer_hourly>`
+  * :ref:`Heelis/GPI (hourly) <nov2003_heelis_hourly>`
+  * :ref:`Weimer/IMF (hourly) <nov2003_weimer_hourly>`
 
 * Heelis/GPI Movies (~3-5M gif):
 
@@ -147,6 +163,8 @@ November, 2003 Storm Case
   `Community Data Portal <http://cdp.ucar.edu/home/home.htm>`_ (go to "Models",
   then "Thermospheric General Circulation Models").
 
+.. _whi2008:
+
 Whole Heliosphere Interval (WHI)
 --------------------------------
 
@@ -156,8 +174,8 @@ Whole Heliosphere Interval (WHI)
 * Weimer potential model with IMF data (F10.7 from GPI)
 * "Sanity check" plots for whi2008:
 
- * :ref:`Heelis/GPI (daily) <whi2008_heelis_daily>`
- * :ref:`Weimer/IMF (daily) <whi2008_weimer_daily>`
+  * :ref:`Heelis/GPI (daily) <whi2008_heelis_daily>`
+  * :ref:`Weimer/IMF (daily) <whi2008_weimer_daily>`
 
 * Full history file output for control runs will be made available on the NCAR
   `Community Data Portal <http://cdp.ucar.edu/home/home.htm>`_ (go to "Models",
@@ -169,6 +187,6 @@ History files on the NCAR HPSS
 Seasonal start-up files and complete history files for the 
 benchmark runs are on the `NCAR HPSS <http://www2.cisl.ucar.edu/docs/hpss>`_
 in directory /home/tgcm/tiegcm\ |version|. Here is a 
-:download:`complete catalog listing <_static/tiegcm1.94.hpss>`,
+:download:`complete catalog listing <_static/tests.hpss>`
 including "contents" annotations.
 
