@@ -78,7 +78,7 @@ both equinoxes and solstices, and at solar minimum and maximum conditions.
   `Community Data Portal <http://cdp.ucar.edu/home/home.htm>`_ (go to "Models",
   then "Thermospheric General Circulation Models").
 
-.. _climatology:
+.. _climatology_info:
 
 Climatology
 -----------
