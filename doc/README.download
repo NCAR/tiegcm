@@ -1,19 +1,32 @@
 
 Model:		tiegcm1.94
 svn Tag:	tiegcm/tags/tiegcm1.94
-Release Date:	June 1, 2011
+Release Date:	June 3, 2011
 
 Download Site:	http://www.hao.ucar.edu/modeling/tgcm/download.php
                 (Model Source and required Data are available as separate downloads)
 
-Documentation:  User's Guide and Model description available in "doc" directory
-                Also available from tgcm website: http://www.hao.ucar.edu/modeling/tgcm
+Source code for documentation and a pdf file of the User's Guide are in
+the doc directory of the model root directory.
+
+Links to Documentation:
+  Main TGCM website:  http://www.hao.ucar.edu/modeling/tgcm 
+  TIEGCM Release Doc: http://www.hao.ucar.edu/modeling/tgcm/doc/release (tiegcm1.94)
+  TIEGCM User Guide:  http://www.hao.ucar.edu/modeling/tgcm/doc/userguide
+  Model Description:  http://www.hao.ucar.edu/modeling/tgcm/doc/description
 
 -------------------------------------------------------------------------------
 These instructions assume the gzipped tar file of the Source Code has
 been downloaded from the above URL. After the file is gunzipped 
 and the tar file extracted to a working directory, you should have 
 something like the following:
+
+README.download    This file
+Release_Notes      Summary of release notes
+tiegcm-linux.job   Default Linux job script
+tiegcmlicense.txt  Academic License Agreement
+
+And the tiegcm1.94 model root directory, containing the following:
 
 README		Brief description of directories
 doc/		Documentation		User Guide, Model Description, Release Doc
@@ -29,6 +42,9 @@ by the $TGCMDATA env var.
 If you download the data directory, please set environment variable TGCMDATA 
 to the full path to the data directory (setenv in your .cshrc file).  This is to 
 enable the model to resolve $TGCMDATA if it is used in the model namelist input file)
+
+You can also setenv TGCMDATA at the top of the job script, near the "modeldir"
+shell variable.
 
 -------------------------------------------------------------------------------
 Follow this procedure to build the model and make a short default run on a Linux system.
