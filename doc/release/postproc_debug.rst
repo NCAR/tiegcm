@@ -24,8 +24,8 @@ Selected Images from Benchmark Runs
    control_mareqx_smax
    control_sepeqx_smax
 
-:ref:`Climatology <climatology>`
---------------------------------
+:ref:`Climatology <climatology_info>`
+-------------------------------------
 
 **UT vs Zp at selected latitudes, and UT vs Latitude at selected Zp's**
 
