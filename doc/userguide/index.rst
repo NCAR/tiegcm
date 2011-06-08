@@ -23,6 +23,7 @@ Contents:
    diagnostics
    source
    build
+   tests
    postproc
    contact
    glossary
