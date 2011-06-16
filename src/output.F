@@ -90,7 +90,7 @@
      |  newseries  ! if true, open new file before writing history
 !
 ! Local:
-      character(len=80) :: diskfile 
+      character(len=1024) :: diskfile 
       integer :: iprinthist
       integer,save :: ihist_total=0
       logical :: fullfile
@@ -213,7 +213,7 @@
      |  newseries  ! if true, open new file before writing history
 !
 ! Local:
-      character(len=80) :: diskfile 
+      character(len=1024) :: diskfile 
       integer :: iprinthist
       integer,save :: ihist_total=0
       logical :: fullfile

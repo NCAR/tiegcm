@@ -98,7 +98,7 @@
       integer :: indices_interp=1 
 !
 ! Import data file names:
-      integer,parameter :: mxlen_filename=80
+      integer,parameter :: mxlen_filename=1024
       character(len=mxlen_filename) ::
 !
 ! 4/2/08 btf: Introducing Weimer 2005 model (wei05sc.F).
