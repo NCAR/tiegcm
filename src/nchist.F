@@ -644,36 +644,21 @@
 !
 ! GPI data file: gpi_ncfile(time,filelen), where filelen=mxlen_filename
           case('gpi_ncfile')
-            start_2d(1) = 1
-            start_2d(2) = sh%ihist
-            count_2d(1) = mxlen_filename
-            count_2d(2) = 1
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%gpi_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%gpi_ncfile)
             if (istat /= NF_NOERR)
      |        call handle_ncerr(istat,'reading gpi_ncfile')
             if (len_trim(sh%gpi_ncfile)==0) sh%gpi_ncfile='[none]'
 !
 ! SABER data file:
           case('saber_ncfile')
-            start_2d(1) = 1
-            start_2d(2) = sh%ihist
-            count_2d(1) = mxlen_filename
-            count_2d(2) = 1
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%saber_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%saber_ncfile)
             if (istat /= NF_NOERR)
      |        call handle_ncerr(istat,'reading saber_ncfile')
             if (len_trim(sh%saber_ncfile)==0) sh%saber_ncfile='[none]'
 !
 ! TIDI data file:
           case('tidi_ncfile')
-            start_2d(1) = 1
-            start_2d(2) = sh%ihist
-            count_2d(1) = mxlen_filename
-            count_2d(2) = 1
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%tidi_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%tidi_ncfile)
             if (istat /= NF_NOERR)
      |        call handle_ncerr(istat,'reading tidi_ncfile')
             if (len_trim(sh%tidi_ncfile)==0) sh%tidi_ncfile='[none]'
@@ -681,36 +666,21 @@
 ! NCEP data file: ncep_ncfile(time,filelen), where filelen=mxlen_filename
 ! (ncep files used only by timegcm -- will always be '[none]' for tiegcm)
           case('ncep_ncfile')                               ! new histories
-            start_2d(1) = 1
-            start_2d(2) = sh%ihist
-            count_2d(1) = mxlen_filename
-            count_2d(2) = 1
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%ncep_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%ncep_ncfile)
             if (istat /= NF_NOERR)
      |        call handle_ncerr(istat,'reading ncep_ncfile')
             if (len_trim(sh%ncep_ncfile)==0) sh%ncep_ncfile='[none]'
 !
 ! SEE data file: see_ncfile(time,filelen), where filelen=mxlen_filename
           case('see_ncfile')                               ! new histories
-            start_2d(1) = 1
-            start_2d(2) = sh%ihist
-            count_2d(1) = mxlen_filename
-            count_2d(2) = 1
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%see_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%see_ncfile)
             if (istat /= NF_NOERR)
      |        call handle_ncerr(istat,'reading see_ncfile')
             if (len_trim(sh%see_ncfile)==0) sh%see_ncfile='[none]'
 !
 ! IMF data file: imf_ncfile(time,filelen), where filelen=mxlen_filename
           case('imf_ncfile')                               ! new histories
-            start_2d(1) = 1
-            start_2d(2) = sh%ihist
-            count_2d(1) = mxlen_filename
-            count_2d(2) = 1
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%imf_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%imf_ncfile)
             if (istat /= NF_NOERR)
      |        call handle_ncerr(istat,'reading imf_ncfile')
             if (len_trim(sh%imf_ncfile)==0) sh%imf_ncfile='[none]'
@@ -724,29 +694,25 @@
 !
 ! gswm_mi_di_ncfile:
           case('gswm_mi_di_ncfile')
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%gswm_mi_di_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%gswm_mi_di_ncfile)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gswm_mi_di_ncfile')
 !
 ! gswm_mi_sdi_ncfile:
           case('gswm_mi_sdi_ncfile')
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%gswm_mi_sdi_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%gswm_mi_sdi_ncfile)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gswm_mi_sdi_ncfile')
 !
 ! gswm_nm_di_ncfile:
           case('gswm_nm_di_ncfile')
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%gswm_nm_di_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%gswm_nm_di_ncfile)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gswm_nm_di_ncfile')
 !
 ! gswm_nm_sdi_ncfile:
           case('gswm_nm_sdi_ncfile')
-            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
-     |        sh%gswm_nm_sdi_ncfile)
+            istat = nf_get_var_text(ncid,i,sh%gswm_nm_sdi_ncfile)
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gswm_nm_sdi_ncfile')
 

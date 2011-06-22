@@ -241,9 +241,9 @@ sub set_res_params {
   my ($highres) = @_;
   if (! defined($SOURCE)) {
     if ($highres) {
-      $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.94.pcntr_dres_mareqx_smin.nc'";
+      $SOURCE = "'\$TGCMDATA/tiegcm1.94/TGCM.tiegcm1.94_dres.pcntr_mareqx_smin.nc'";
     } else {
-      $SOURCE = "'\$TGCMDATA/TGCM.tiegcm1.94.pcntr_mareqx_smin.nc'";
+      $SOURCE = "'\$TGCMDATA/tiegcm1.94/TGCM.tiegcm1.94.pcntr_mareqx_smin.nc'";
     }
   }
   if (! defined($OUTPUT)) {
@@ -261,19 +261,19 @@ sub set_res_params {
     }
   }
   if (! defined($GSWM_MI_DI_NCFILE)) { 
-    if ($highres) { $GSWM_MI_DI_NCFILE  = "'\$TGCMDATA/gswm_diurn_2.5d_32km.nc'"; }
+    if ($highres) { $GSWM_MI_DI_NCFILE  = "'\$TGCMDATA/gswm_diurn_2.5d_99km.nc'"; }
     else          { $GSWM_MI_DI_NCFILE  = "'\$TGCMDATA/gswm_diurn_5.0d_99km.nc'"; }
   }
   if (! defined($GSWM_MI_SDI_NCFILE)) { 
-    if ($highres) { $GSWM_MI_SDI_NCFILE = "'\$TGCMDATA/gswm_semi_2.5d_32km.nc'"; }
+    if ($highres) { $GSWM_MI_SDI_NCFILE = "'\$TGCMDATA/gswm_semi_2.5d_99km.nc'"; }
     else          { $GSWM_MI_SDI_NCFILE = "'\$TGCMDATA/gswm_semi_5.0d_99km.nc'"; }
   }
   if (! defined($GSWM_NM_DI_NCFILE)) { 
-    if ($highres) { $GSWM_NM_DI_NCFILE  = "'\$TGCMDATA/gswm_nonmig_diurn_2.5d_32km.nc'"; }
+    if ($highres) { $GSWM_NM_DI_NCFILE  = "'\$TGCMDATA/gswm_nonmig_diurn_2.5d_99km.nc'"; }
     else          { $GSWM_NM_DI_NCFILE  = "'\$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc'"; }
   }
   if (! defined($GSWM_NM_SDI_NCFILE)) { 
-    if ($highres) { $GSWM_NM_SDI_NCFILE = "'\$TGCMDATA/gswm_nonmig_semi_2.5d_32km.nc'"; }
+    if ($highres) { $GSWM_NM_SDI_NCFILE = "'\$TGCMDATA/gswm_nonmig_semi_2.5d_99km.nc'"; }
     else          { $GSWM_NM_SDI_NCFILE = "'\$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc'"; }
   }
   if (! defined($SABER_NCFILE)) { 
