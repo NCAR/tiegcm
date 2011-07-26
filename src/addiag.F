@@ -264,7 +264,7 @@
 ! Save ZG to secondary histories:
 ! PLEASE DO NOT COMMENT THIS OUT -- ZG IS A MANDATORY FIELD ON SECH HISTORIES
 !
-        call addfld('ZG','Geopotential calculated with varying gravity',
+        call addfld('ZG','Geometric Height ZG',
      |    'cm',zg(:,lon0:lon1,j),'ilev',lev0,lev1,'lon',lon0,lon1,j)
       enddo ! j=lat0,lat1
       end subroutine calczg

@@ -112,7 +112,7 @@
      |  grav,   ! acceler. due to gravity at lower boundary [cm/s^2]
      |  gask    ! gas konstant 8.314e7 [ergs/K/mol]
       use addfld_module
-      use diags_module,only: mkdiag_QJOULE
+      use diags_module,only: mkdiag_QJOULE,mkdiag_QJOULE_INTEG
       implicit none
 !     
 ! Args:
@@ -170,7 +170,12 @@
 !     call addfld('QJI_TN','QJI_TN','ergs/s/g',
 !    |  qji_tn(lev0:lev1-1,lon0:lon1),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-
+!
+! Save diagnostic Total Joule Heating:
       call mkdiag_QJOULE('QJOULE',qji_tn,lev0,lev1,lon0,lon1,lat)
+!
+! Save diagnostic Height-integrated Joule Heating:
+      call mkdiag_QJOULE_INTEG('QJOULE_INTEG',qji_tn(:,lon0:lon1),
+     |  lev0,lev1,lon0,lon1,lat)
 
       end subroutine qjoule_tn

@@ -24,6 +24,10 @@ Glossary
      the :term:`TGCMDATA` environment variable.  Additional data files are available via the 
      :term:`NCAR Community Data Portal`.
 
+   diagnostic fields
+     A list of diagnostic fields are available to be saved on secondary history files.
+     See section :ref:`Saving Diagnostic Fields <diagnostics>`.
+
    doc/
      Subdirectory under the :term:`modeldir` containing documentation, e.g., the
      User's Guide, Model Description, Release Notes, etc.

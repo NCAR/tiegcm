@@ -73,7 +73,7 @@ November, 2003 Storm Case
  * Weimer potential model with IMF data (F10.7 from GPI)
 
 Whole Heliosphere Interval
--------------------------
+--------------------------
 
 **whi2008**: Whole Heliosphere interval (WHI) (March 21 to April 16, 2008)
 

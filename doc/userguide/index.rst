@@ -20,7 +20,7 @@ Contents:
    dirstruct
    namelist 
    output
-   diagnostics
+   diags
    source
    build
    tests

@@ -1,5 +1,5 @@
 !
-      subroutine swdot(un,vc,w,lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine swdot(un,vc,z,w,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -9,14 +9,15 @@
 !
       use cons_module,only: expzmid,dz
       use addfld_module,only: addfld
+      use diags_module,only: mkdiag_WN
+      use mpi_module,only: mytid
       implicit none
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,intent(in) ::
-     |  un(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
-      real,intent(in) ::
-     |  vc(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
+
+      real,intent(in),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)::
+     |  un,vc,z
       real,intent(out) :: 
      |  w(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
 !
@@ -53,11 +54,13 @@
 !
 ! Filter W (3-d):
       call filter_w(w,lev0,lev1,lon0,lon1,lat0,lat1)
-
-!     do lat=lat0,lat1
-!       call addfld('W_FILT',' ',' ',w(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     enddo
+!
+! Pass omega (filtered w) to diags module for WN:
+! (mkdiag_WN is expecting geopotential z in cm)
+      do lat=lat0,lat1
+        call mkdiag_WN('WN',w(:,lon0:lon1,lat),z(:,lon0:lon1,lat),
+     |    lev0,lev1,lon0,lon1,lat)
+      enddo
 
       end subroutine swdot
 !-----------------------------------------------------------------------

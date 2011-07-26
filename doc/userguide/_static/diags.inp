@@ -37,10 +37,10 @@
  MXHIST_SECH = 24
 ;
 ; Diagnostic fields available with this release:
- SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
+ SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
            'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
            'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M',
-           'KQPHI','KQLAM','JQR','JE13D','JE23D'
+           'KQPHI','KQLAM','JQR','JE13D','JE23D','WN','O_N2'
 ;
  TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2 = 0.,0.

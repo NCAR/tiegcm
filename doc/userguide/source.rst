@@ -104,6 +104,8 @@ The spatial coordinates at the 5-degree resolution are defined as follows::
    The 2.5 degree configuration ("double-resolution"), is not fully tuned and validated
    in TIEGCM version |version|.
 
+.. _modifying_source:
+
 Modifying the Source Code
 -------------------------
 

@@ -66,9 +66,13 @@
      |      i3,'*',i3,' = ',i8,' words *8 = ',i8,' bytes.')")
      |      nlevp1,nlonp4,nlat,nf4d,len,len*8
         endif
-        allocate(fzg(nlevp1,nlonp4,nlat),stat=istat)
-        if (istat /= 0) 
-     |    write(6,"('>>> allocdata: error allocating fzg')")
+      endif
+      allocate(fzg(nlevp1,nlonp4,nlat),stat=istat)
+      if (istat /= 0) then
+        write(6,"('>>> allocdata: error allocating fzg')")
+      else
+        write(6,"('allocdata: all tasks allocate fzg: nlevp1=',i4,
+     |    ' nlonp4=',i4,' nlat=',i4)") nlevp1,nlonp4,nlat
       endif
 #else
       allocate(foutput(nlevp1,nlonp4,nlat,nf4d),stat=istat)

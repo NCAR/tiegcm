@@ -109,6 +109,7 @@
       call swdot(
      |  un(levd0,lond0,latd0,itp), ! un input
      |  vc(levd0,lond0,latd0,itp), ! vc input
+     |  z (levd0,lond0,latd0,itc), ! input for WN diag
      |  w (levd0,lond0,latd0,itc), ! omega output
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after swdot')")

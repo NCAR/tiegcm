@@ -202,8 +202,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable Z')
       z = z*100. 	! convert from m to cm
-      write(6,"('rdgswm ',a,': z min,max=',2e12.4)") 
-     |  type,minval(z),maxval(z)
+!     write(6,"('rdgswm ',a,': z min,max=',2e12.4)") 
+!    |  type,minval(z),maxval(z)
 !
 ! Get TN perturbation [deg K]:
 !
@@ -215,8 +215,8 @@
       t(3:nlon+2,:,:,:) = tmp(:,:,:,:)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable TN')
-      write(6,"('rdgswm ',a,': tn min,max=',2e12.4)") 
-     |  type,minval(t),maxval(t)
+!     write(6,"('rdgswm ',a,': tn min,max=',2e12.4)") 
+!    |  type,minval(t),maxval(t)
 !
 ! Get UN perturbation [m/s]:
 !
@@ -229,8 +229,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable UN')
       u = u*100. 	! convert to cm/s
-      write(6,"('rdgswm ',a,': un min,max=',2e12.4)") 
-     |  type,minval(u),maxval(u)
+!     write(6,"('rdgswm ',a,': un min,max=',2e12.4)") 
+!    |  type,minval(u),maxval(u)
 !
 ! Get VN perturbation [m/s]:
 !
@@ -243,8 +243,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgswm: Error getting variable VN')
       v = v*100. 	! convert to cm/s
-      write(6,"('rdgswm ',a,': vn min,max=',2e12.4)") 
-     |  type,minval(v),maxval(v)
+!     write(6,"('rdgswm ',a,': vn min,max=',2e12.4)") 
+!    |  type,minval(v),maxval(v)
 !
 ! Transfer to private module data (whole-array assignments):
       select case(trim(type))

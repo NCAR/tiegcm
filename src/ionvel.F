@@ -170,9 +170,12 @@
 #endif
 !
 ! Save ion drifts if requested:
-      call mkdiag_UI('UI_ExB',ui,lev0,lev1,lon0,lon1,lat0,lat1)
-      call mkdiag_VI('VI_ExB',vi,lev0,lev1,lon0,lon1,lat0,lat1)
-      call mkdiag_WI('WI_ExB',wi,lev0,lev1,lon0,lon1,lat0,lat1)
+      call mkdiag_UI('UI_ExB',ui(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      call mkdiag_VI('VI_ExB',vi(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      call mkdiag_WI('WI_ExB',wi(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 #ifdef VT
 !     code = 121 ; state = 'ionvel' ; activity='ModelCode'

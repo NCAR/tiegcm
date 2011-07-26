@@ -18,6 +18,7 @@
       use lbc,only: b,fb
       use fields_module,only: tlbc
       use addfld_module,only: addfld
+      use diags_module,only: mkdiag_O_N2
       implicit none
 !
 ! Args:
@@ -609,6 +610,9 @@
             endif
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
+
+        call mkdiag_O_N2('O_N2',o1_upd(:,lon0:lon1,lat),
+     |    o2_upd(:,lon0:lon1,lat),lev0,lev1,lon0,lon1,lat)
 
 !       call addfld('O2_OUT',' ',' ',o2_upd(:,i0:i1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)

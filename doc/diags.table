@@ -1,7 +1,6 @@
-
 ------------------------------------------------------------------------------------------------
 Table of Available Diagnostic Fields:
-Shortnames may be added to namelist SECFLDS (see below)
+Shortnames may be added to namelist SECFLDS
 
 Field   Shortname       Units           Levels  Caller          Longname
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -10,28 +9,22 @@ Field   Shortname       Units           Levels  Caller          Longname
    3    DEN             g/cm3           ilev    dt.F            Total Density
    4    HEATING         erg/g/s         lev     dt.F            Total Heating
    5    HMF2            km              none    elden.F         Height of F2
-   6    JE13D           A/m2            mlev    current.F       Je1/D
-   7    JE23D           A/m2            mlev    current.F       Je2/D
-   8    JQR             A/m2            none    current.F       Jqr
-   9    KQLAM           A/m             none    current.F       Kqlam
-  10    KQPHI           A/m             none    current.F       Kqphi
-  11    NMF2            1/cm3           none    elden.F         Density at HMF2
-  12    LAMDA_HAL       1/s             lev     lamdas.F        Hall Ion Drag Coefficient
-  13    LAMDA_PED       1/s             lev     lamdas.F        Pedersen Ion Drag Coefficient
-  14    MU_M            g/cm/s          lev     cpktkm.F        Molecular Viscosity Coefficient
-  15    QJOULE          erg/g/s         lev     qjoule.F        Joule Heating
-  16    SCHT            km              lev     addiag.F        Pressure Scale Height
-  17    SIGMA_HAL       S/m             lev     lamdas.F        Hall Conductivity
-  18    SIGMA_PED       S/m             lev     lamdas.F        Pedersen Conductivity
-  19    TEC             1/cm2           none    elden.F         Total Electron Content
-  20    UI_ExB          cm/s            ilev    ionvel.F        Zonal Ion Drift (ExB)
+   6    JE13D           A/m2            mlev    current.F       Eastward current density (3d)
+   7    JE23D           A/m2            mlev    current.F       Downward current density (3d)
+   8    JQR             A/m2            none    current.F       Height-integrated current density (+up)
+   9    KQLAM           A/m             none    current.F       Height-integrated current density (+north)
+  10    KQPHI           A/m             none    current.F       Height-integrated current density (+east)
   21    VI_ExB          cm/s            ilev    ionvel.F        Meridional Ion Drift (ExB)
   22    WI_ExB          cm/s            ilev    ionvel.F        Vertical Ion Drift (ExB)
+  23    WN              cm/s            ilev    swdot.F         NEUTRAL VERTICAL WIND (plus up)
+  24    O_N2            none            lev     comp.F          O/N2 RATIO
+  25    QJOULE_INTEG    erg/m^2/s       none    qjoule.F        Height-integrated Joule Heating
 ------------------------------------------------------------------------------------------------
+
 Namelist to put all diagnostic fields on secondary histories:
 
- SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
+ SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
            'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
            'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M',
-	   'KQPHI','KQLAM','JQR','JE13D','JE23D'
+           'KQPHI','KQLAM','JQR','JE13D','JE23D','WN','O_N2'
 ------------------------------------------------------------------------------------------------

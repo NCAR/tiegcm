@@ -1,4 +1,3 @@
-!
       module diags_module
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -11,7 +10,9 @@
 ! A table of available diagnostic fields, including names, levels, units, 
 ! etc., is printed to stdout by sub init_diags.
 !
+      use mpi_module,only: mytid
       use addfld_module,only: addfld
+      use params_module,only: dlev
       implicit none
       integer,parameter :: 
      |  longname_len  = 80, ! length of field long name 
@@ -22,7 +23,7 @@
 ! adding new fields, and type diags(ndiag) must be defined by sub init_diags 
 ! below.
 !
-      integer,parameter :: ndiag = 22
+      integer,parameter :: ndiag = 25 ! increment this to add new diags
       type diag_type
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
@@ -90,35 +91,35 @@
 !
       n = n+1
       diags(n)%short_name = 'JE13D'
-      diags(n)%long_name  = 'Je1/D' 
+      diags(n)%long_name  = 'Eastward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
       diags(n)%caller     = 'current.F'
 !
       n = n+1
       diags(n)%short_name = 'JE23D'
-      diags(n)%long_name  = 'Je2/D' 
+      diags(n)%long_name  = 'Downward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
       diags(n)%caller     = 'current.F'
 !     
       n = n+1
       diags(n)%short_name = 'JQR'
-      diags(n)%long_name  = 'Jqr' 
+      diags(n)%long_name  = 'Upward current density (2d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'none' 
       diags(n)%caller     = 'current.F'
 !     
       n = n+1
       diags(n)%short_name = 'KQLAM'
-      diags(n)%long_name  = 'Kqlam' 
+      diags(n)%long_name  = 'Height-integrated current density (+north)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
       diags(n)%caller     = 'current.F'
 !     
       n = n+1
       diags(n)%short_name = 'KQPHI'
-      diags(n)%long_name  = 'Kqphi' 
+      diags(n)%long_name  = 'Height-integrated current density (+east)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
       diags(n)%caller     = 'current.F'
@@ -206,6 +207,27 @@
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
+!
+      n = n+1
+      diags(n)%short_name = 'WN'
+      diags(n)%long_name  = 'NEUTRAL VERTICAL WIND (plus up)' 
+      diags(n)%units      = 'cm/s'
+      diags(n)%levels     = 'ilev'
+      diags(n)%caller     = 'swdot.F'
+!
+      n = n+1
+      diags(n)%short_name = 'O_N2'
+      diags(n)%long_name  = 'O/N2 RATIO'
+      diags(n)%units      = 'none'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'comp.F'
+!
+      n = n+1
+      diags(n)%short_name = 'QJOULE_INTEG'
+      diags(n)%long_name  = 'Height-integrated Joule Heating'
+      diags(n)%units      = 'erg/m^2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'qjoule.F'
 
       if (n /= ndiag) then
         write(6,"('>>> init_diags: n=',i4,' ndiag=',i4)")
@@ -341,7 +363,7 @@
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,intent(in) :: ui(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
+      real,intent(in) :: ui(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! Local:
       integer :: lat,ix
@@ -349,10 +371,10 @@
 ! Check that field name is a diagnostic, and was requested:
       ix = checkf(name) ; if (ix==0) return
 !
-! Save on secondary histories:
+! Save on secondary histories (Convert back to cm/s):
       do lat=lat0,lat1
         call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units, ui(:,lon0:lon1,lat),diags(ix)%levels,
+     |    diags(ix)%units, ui(:,:,lat),diags(ix)%levels,
      |    lev0,lev1,'lon',lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       end subroutine mkdiag_UI
@@ -367,7 +389,7 @@
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,intent(in) :: vi(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
+      real,intent(in) :: vi(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! Local:
       integer :: lat,ix
@@ -378,7 +400,7 @@
 ! Save on secondary histories:
       do lat=lat0,lat1
         call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units, vi(:,lon0:lon1,lat),diags(ix)%levels,
+     |    diags(ix)%units, vi(:,:,lat),diags(ix)%levels,
      |    lev0,lev1,'lon',lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       end subroutine mkdiag_VI
@@ -393,7 +415,7 @@
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,intent(in) :: wi(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
+      real,intent(in) :: wi(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! Local:
       integer :: lat,ix
@@ -404,7 +426,7 @@
 ! Save on secondary histories:
       do lat=lat0,lat1
         call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units, wi(:,lon0:lon1,lat),diags(ix)%levels,
+     |    diags(ix)%units, wi(:,:,lat),diags(ix)%levels,
      |    lev0,lev1,'lon',lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       end subroutine mkdiag_WI
@@ -677,7 +699,6 @@
 ! END
 !-----------------------------------------------------------------------
       subroutine mkdiag_SCHT(name,zcm,lev0,lev1,lon0,lon1,lat0,lat1)
-      use params_module,only: dlev
 !
 ! Calculate pressure scale height from geopotential Z (called from addiag.F)
 ! Note Z is input at interfaces, and pzps is output at midpoints
@@ -687,7 +708,7 @@
 !     diags(n)%long_name  = 'Pressure Scale Height'
 !     diags(n)%units      = 'km'
 !     diags(n)%levels     = 'lev'
-! 
+!
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
@@ -706,10 +727,7 @@
           do k=lev0,lev1-1
             pzps(k,i) = zcm(k+1,i,j)-zcm(k,i,j)
           enddo
-!
-! Extrapolate top boundary:
-          pzps(lev1,i) = 3.*zcm(lev1,i,j)-
-     |      4.*zcm(lev1-1,i,j)+zcm(lev1-2,i,j)
+          pzps(lev1,i) = pzps(lev1-1,i)
 !
 ! Generic for dlev 0.5 or 0.25 resolution:
           pzps(:,i) = pzps(:,i)/dlev
@@ -747,7 +765,7 @@
 !-----------------------------------------------------------------------
       subroutine mkdiag_JQR(name,fkm,lon0,lon1,lat0,lat1)
 !
-! upward current density at top of ionospheric shell 
+! Upward current density at top of ionospheric shell 
 ! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
 !
 ! Args:
@@ -850,4 +868,119 @@
 
       end subroutine mkdiag_JE23D
 !-----------------------------------------------------------------------
+      subroutine mkdiag_WN(name,omega,zcm,lev0,lev1,lon0,lon1,lat)
+!
+! Neutral Vertical Wind, from vertical motion OMEGA and scale height.
+! Scale height pzps is calculated from input geopotential z (cm).
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: omega,zcm
+!
+! Local:
+      integer :: i,k,ix
+      real,dimension(lev0:lev1,lon0:lon1) :: wn
+      real,dimension(lev0:lev1) :: pzps,omega1
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+!
+! Calculate scale height pzps:
+      do i=lon0,lon1
+        do k=lev0+1,lev1-1
+          pzps(k) = (zcm(k+1,i)-zcm(k-1,i))/(2.*dlev)
+        enddo
+        pzps(lev0) = (zcm(lev0+1,i)-zcm(lev0,i))/dlev
+        pzps(lev1) = pzps(lev1-1)
+!
+        omega1(:) = omega(:,i)
+        omega1(lev1) = omega1(lev1-1)
+!
+! Output vertical wind (cm):
+        wn(:,i) = omega1(:)*pzps(:)
+      enddo ! i=lon0,lon1
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,wn,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+
+      end subroutine mkdiag_WN
+!-----------------------------------------------------------------------
+      subroutine mkdiag_O_N2(name,o1,o2,lev0,lev1,lon0,lon1,lat)
+!
+! Calculate O/N2 ratio from o2 and o (mmr).
+! In mass mixing ratio, this is simply o/(1-o2-o)
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: o1,o2
+!
+! Local:
+      integer :: ix
+      real,dimension(lev0:lev1,lon0:lon1) :: n2, o_n2
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+!
+! N2 mmr:
+      n2 = 1.-o2-o1 
+!
+! O/N2 ratio:
+      o_n2 = o1/n2
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,o_n2,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+
+      end subroutine mkdiag_O_N2
+!-----------------------------------------------------------------------
+      subroutine mkdiag_QJOULE_INTEG(name,qji_tn,lev0,lev1,lon0,lon1,
+     |  lat)
+      use cons_module,only: p0,grav
+      use init_module,only: zpint
+!
+! Calculate height-integrated Joule heating (called from qjoule.F)
+! This method is adapted from ncl code provided by Astrid (7/20/11)
+!
+! Args
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: qji_tn
+!
+! Local:
+      integer :: ix,k,i
+      real,dimension(lon0:lon1) :: qji_integ
+      real,dimension(lev0:lev1,lon0:lon1) :: qj
+      real :: myp0,mygrav
+!
+! Check that field name is a diagnostic, and was requested:
+      ix = checkf(name) ; if (ix==0) return
+!
+! First integrate to get MKS units W/m^2:
+! (If you want these units, comment out the below conversion to CGS)
+!
+      mygrav = grav*.01     ! cm/s^2 to m/s^2
+      myp0 = p0*1.e-3*100.  ! to Pa
+      qj = qji_tn*.0001     ! ergs/g/s to W/kg 10^(-7)*10^3
+      
+      qji_integ = 0.
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+          qji_integ(i) = qji_integ(i) + myp0/mygrav*exp(-zpint(k))*
+     |      qj(k,i)*dlev
+        enddo
+      enddo
+!
+! Output in CGS units, to be consistent w/ the model:
+! (note that 1 erg/cm^2/s == 1 mW/m^2)
+      qji_integ = qji_integ*1000. ! W/m^2 to erg/cm^2/s
+!
+! Save 2d field on secondary history:
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,qji_integ,'lon',lon0,lon1,'lat',lat,lat,0)
+
+      end subroutine mkdiag_QJOULE_INTEG
+!-----------------------------------------------------------------------
+!
+! End diags module:
       end module diags_module
