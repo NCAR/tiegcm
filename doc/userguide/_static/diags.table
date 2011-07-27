@@ -1,3 +1,4 @@
+
 ------------------------------------------------------------------------------------------------
 Table of Available Diagnostic Fields:
 Shortnames may be added to namelist SECFLDS
@@ -8,12 +9,22 @@ Field   Shortname       Units           Levels  Caller          Longname
    2    NO_COOL         erg/g/s         lev     newton.F        NO Cooling
    3    DEN             g/cm3           ilev    dt.F            Total Density
    4    HEATING         erg/g/s         lev     dt.F            Total Heating
-   5    HMF2            km              none    elden.F         Height of F2
-   6    JE13D           A/m2            mlev    current.F       Eastward current density (3d)
-   7    JE23D           A/m2            mlev    current.F       Downward current density (3d)
-   8    JQR             A/m2            none    current.F       Height-integrated current density (+up)
-   9    KQLAM           A/m             none    current.F       Height-integrated current density (+north)
-  10    KQPHI           A/m             none    current.F       Height-integrated current density (+east)
+   5    HMF2            km              none    elden.F         Height of the F2 Layer
+   6    NMF2            1/cm3           none    elden.F         Peak Density of the F2 Layer
+   7    JE13D           A/m2            mlev    current.F       Eastward current density (3d)
+   8    JE23D           A/m2            mlev    current.F       Downward current density (3d)
+   9    JQR             A/m2            none    current.F       Upward current density (2d)
+  10    KQLAM           A/m             none    current.F       Height-integrated current density (+north)
+  11    KQPHI           A/m             none    current.F       Height-integrated current density (+east)
+  12    LAMDA_HAL       1/s             lev     lamdas.F        Hall Ion Drag Coefficient
+  13    LAMDA_PED       1/s             lev     lamdas.F        Pedersen Ion Drag Coefficient
+  14    MU_M            g/cm/s          lev     cpktkm.F        Molecular Viscosity Coefficient
+  15    QJOULE          erg/g/s         lev     qjoule.F        Joule Heating
+  16    SCHT            km              lev     addiag.F        Pressure Scale Height
+  17    SIGMA_HAL       S/m             lev     lamdas.F        Hall Conductivity
+  18    SIGMA_PED       S/m             lev     lamdas.F        Pedersen Conductivity
+  19    TEC             1/cm2           none    elden.F         Total Electron Content
+  20    UI_ExB          cm/s            ilev    ionvel.F        Zonal Ion Drift (ExB)
   21    VI_ExB          cm/s            ilev    ionvel.F        Meridional Ion Drift (ExB)
   22    WI_ExB          cm/s            ilev    ionvel.F        Vertical Ion Drift (ExB)
   23    WN              cm/s            ilev    swdot.F         NEUTRAL VERTICAL WIND (plus up)

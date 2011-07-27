@@ -84,9 +84,16 @@
 !
       n = n+1
       diags(n)%short_name = 'HMF2'
-      diags(n)%long_name  = 'Height of F2' 
+      diags(n)%long_name  = 'Height of the F2 Layer' 
       diags(n)%units      = 'km'
       diags(n)%levels     = 'none' ! hmf2 is 2d lon x lat
+      diags(n)%caller     = 'elden.F'
+!
+      n = n+1
+      diags(n)%short_name = 'NMF2'
+      diags(n)%long_name  = 'Peak Density of the F2 Layer' 
+      diags(n)%units      = '1/cm3'
+      diags(n)%levels     = 'none' ! nmf2 is 2d lon x lat
       diags(n)%caller     = 'elden.F'
 !
       n = n+1
@@ -123,13 +130,6 @@
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
       diags(n)%caller     = 'current.F'
-!
-      n = n+1
-      diags(n)%short_name = 'NMF2'
-      diags(n)%long_name  = 'Density at HMF2' 
-      diags(n)%units      = '1/cm3'
-      diags(n)%levels     = 'none' ! nmf2 is 2d lon x lat
-      diags(n)%caller     = 'elden.F'
 !
       n = n+1
       diags(n)%short_name = 'LAMDA_HAL'

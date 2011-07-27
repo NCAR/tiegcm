@@ -15,8 +15,11 @@ Table of Available Diagnostics
 Following is a table of diagnostic fields that can be saved on secondary histories
 by including the short names in the :ref:`SECFLDS <SECFLDS>` namelist input parameter.
 Click on the short name to obtain detailed information about the calculation and
-saving of a diagnostic field. A :download:`text version of the table <_static/diags.table>`,
-is also available, and is printed to stdout by a model run.
+saving of a diagnostic field. 
+
+A :download:`text version of the table <_static/diags.table>` is also available, 
+and is printed to stdout by a model run (the ordering of the fields in the text table 
+may be different than in the below table).
 
 .. _diag_fields:
 
@@ -42,8 +45,8 @@ Short Name                     Long Name                              Units     
 :ref:`O_N2 <O_N2>`             O/N2 RATIO                             [none]       3d geo
 :ref:`QJOULE <QJOULE>`         Joule Heating                          erg/g/s      3d geo
 :ref:`QJOULE_INTEG <QJ_INTEG>` Height-integrated Joule Heating        erg/m^2/s    2d geo
-:ref:`HMF2 <HMF2>`             Height of F2                           km           2d geo
-:ref:`NMF2 <NMF2>`             Density at HMF2                        1/cm2        2d geo
+:ref:`HMF2 <HMF2>`             Height of the F2 Layer                 km           2d geo
+:ref:`NMF2 <NMF2>`             Peak Density of the F2 Layer           1/cm2        2d geo
 :ref:`TEC <TEC>`               Total Electron Content                 1/cm2        2d geo
 :ref:`JE13D <JE13D>`           Eastward current density (3d)          A/m2         3d mag
 :ref:`JE23D <JE23D>`           Downward current density (3d)          A/m2         3d mag
@@ -53,16 +56,16 @@ Short Name                     Long Name                              Units     
 ============================== ====================================== ============ ==========
 
 
-Saving Fields/Arrays from the Source
+Saving Fields/Arrays from the Source Code
 ------------------------------------
 
-  Arbitrary 2d and 3d arrays can be saved from the model to secondary histories
-  by inserting a call to subroutine addfld (addfld.F) in the source code.
-  (See the chapter on :ref:`Modifying Source Code <modifying_source>` in this document
-  for information on modifying the source code.)
-  There are many examples of this in the source code, just grep on "call addfld".
-  For more information about how to make calls to addfld, please see comments
-  in the addfld.F source file.  
+  In addition to the "sanctioned" diagnostics, arbitrary 2d and 3d arrays can be saved 
+  from the model to secondary histories by inserting a call to subroutine *addfld* 
+  (:download:`addfld.F <../../src/addfld.F>`) in the source code.  (See the chapter on 
+  :ref:`Modifying Source Code <modifying_source>` in this document for information about 
+  modifying the source code.) There are many examples of this in the source code, just 
+  grep on "call addfld".  For more information about how to make calls to addfld, please 
+  see comments in the addfld.F source file.  
 
   Here are a couple of examples of addfld calls from near the end of subroutine
   qrj (qrj.F). These calls are inside a latitude loop, where the loop variable
@@ -76,12 +79,13 @@ Saving Fields/Arrays from the Source
     call addfld('QNP'   ,' ',' ',   qnp(lev0:lev1,lon0:lon1,lat),
    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
-  The calling sequence for subroutine addfld is explained in comments at the
-  :download:`top of addfld.F <_static/addfld.explain>`.
+  The calling sequence for subroutine addfld is explained in comments at the top of
+  source file :download:`addfld.F <../../src/addfld.F>`.
 
 
+Details of Diagnostic Field Calculations:
+=========================================
 
-.. -------------------------------------------------------------------------------------
 .. index:: CO2_COOL, diagnostic fields;
 .. _CO2_COOL:
 .. describe:: CO2_COOL
@@ -109,8 +113,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-.. -------------------------------------------------------------------------------------
 .. index:: NO_COOL, diagnostic fields;
 .. _NO_COOL:
 .. describe:: NO_COOL
@@ -137,8 +141,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-.. -------------------------------------------------------------------------------------
 .. index:: DEN, diagnostic fields;
 .. _DEN:
 .. describe:: DEN
@@ -172,9 +176,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: HEATING, diagnostic fields;
 .. _HEATING:
 .. describe:: HEATING
@@ -205,17 +208,16 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: HMF2, diagnostic fields;
 .. _HMF2:
 .. describe:: HMF2
 
-   Diagnostic field (2d lat x lon): Height of F2 (km)::
+   Diagnostic field (2d lat x lon): Height of the F2 Layer (km)::
 
       diags(n)%short_name = 'HMF2'
-      diags(n)%long_name  = 'Height of F2' 
+      diags(n)%long_name  = 'Height of the F2 Layer' 
       diags(n)%units      = 'km'
       diags(n)%levels     = 'none' ! hmf2 is 2d lon x lat
       diags(n)%caller     = 'elden.F'
@@ -228,24 +230,35 @@ Saving Fields/Arrays from the Source
 
       call mkdiag_HNMF2('HMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
 
+   .. note::
+
+      Occaisionally this algorithm will return the peak electron density
+      in the E-region, instead of the F-region, in small areas of the global 
+      domain, usually at high latitide. This can result in pockets of anonymously 
+      low values for HMF2, e.g., around 125 km.
+
+   Sample images: HMF2 Global map:
+
+   .. image:: _static/images/hmf2.png
+      :align: center
+
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: NMF2, diagnostic fields;
 .. _NMF2:
 .. describe:: NMF2
 
-   Diagnostic field (2d lat x lon): Density at HMF2 (1/cm3)::
+   Diagnostic field (2d lat x lon): Peak Density of the F2 Layer (1/cm3)::
 
       diags(n)%short_name = 'NMF2'
-      diags(n)%long_name  = 'Density at HMF2' 
+      diags(n)%long_name  = 'Peak Density of the F2 Layer' 
       diags(n)%units      = '1/cm3'
       diags(n)%levels     = 'none' ! nmf2 is 2d lon x lat
       diags(n)%caller     = 'elden.F'
 
-   The density at the height of the F2 layer is calculated and saved by subroutines 
+   The peak density of the the F2 layer is calculated and saved by subroutines 
    *mkdiag_HNMF2* and *hnmf2* in source file :download:`diags.F <../../src/diags.F>`.
 
    Sub *mkdiag_HNMF2* is called by subroutine *elden* in source file 
@@ -253,11 +266,15 @@ Saving Fields/Arrays from the Source
 
       call mkdiag_HNMF2('NMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
 
+   Sample images: NMF2 Global map:
+
+   .. image:: _static/images/nmf2.png
+      :align: center
+
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: TEC, diagnostic fields;
 .. _TEC:
 .. describe:: TEC
@@ -294,8 +311,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-.. -------------------------------------------------------------------------------------
 .. index:: SCHT, diagnostic fields;
 .. _SCHT:
 .. describe:: SCHT
@@ -337,8 +354,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-.. -------------------------------------------------------------------------------------
 .. index:: SIGMA_HAL, diagnostic fields;
 .. _SIGMA_HAL:
 .. describe:: SIGMA_HAL
@@ -383,8 +400,8 @@ Saving Fields/Arrays from the Source
    
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-.. -------------------------------------------------------------------------------------
 .. index:: SIGMA_PED, diagnostic fields;
 .. _SIGMA_PED:
 .. describe:: SIGMA_PED
@@ -429,9 +446,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: LAMDA_HAL, diagnostic fields;
 .. _LAMDA_HAL:
 .. describe:: LAMDA_HAL
@@ -455,9 +471,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: LAMDA_PED, diagnostic fields;
 .. _LAMDA_PED:
 .. describe:: LAMDA_PED
@@ -481,9 +496,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: UI_ExB, diagnostic fields;
 .. _UI_ExB:
 .. describe:: UI_ExB
@@ -523,9 +537,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: VI_ExB, diagnostic fields;
 .. _VI_ExB:
 .. describe:: VI_ExB
@@ -565,9 +578,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: WI_ExB, diagnostic fields;
 .. _WI_ExB:
 .. describe:: WI_ExB
@@ -607,9 +619,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: MU_M, diagnostic fields;
 .. _MU_M:
 .. describe:: MU_M
@@ -636,17 +647,11 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: WN, diagnostic fields;
 .. _WN:
 .. describe:: WN
-
-   .. note::
-
-      This 3d field is calculated on fixed pressure surfaces ln(p0/p), i.e., there is
-      no interpolation to height.
 
    Diagnostic field: Neutral Vertical Wind (cm/s)::
 
@@ -655,6 +660,11 @@ Saving Fields/Arrays from the Source
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'swdot.F'
+
+   .. note::
+
+      This 3d field is calculated on fixed pressure surfaces ln(p0/p), i.e., there is
+      no interpolation to height.
 
    Calculated and saved by subroutine *mkdiag_WN* in source file :download:`diags.F <../../src/diags.F>`::
 
@@ -712,11 +722,19 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-.. -------------------------------------------------------------------------------------
 .. index:: O/N2, diagnostic fields;
 .. _O_N2:
 .. describe:: O_N2
+
+   Diagnostic field: O/N2 RATIO::
+
+      diags(n)%short_name = 'O_N2'
+      diags(n)%long_name  = 'O/N2 RATIO'
+      diags(n)%units      = ' '
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'comp.F'
 
    .. note::
 
@@ -731,15 +749,8 @@ Saving Fields/Arrays from the Source
       is the quotient of the mixing ratios of the species (i.e., there is no units conversion
       from MMR).
 
-   Diagnostic field: O/N2 RATIO::
-
-      diags(n)%short_name = 'O_N2'
-      diags(n)%long_name  = 'O/N2 RATIO'
-      diags(n)%units      = ' '
-      diags(n)%levels     = 'lev'
-      diags(n)%caller     = 'comp.F'
-
-   Calculated and saved by subroutine *mkdiag_O_N2* in source file :download:`diags.F <../../src/diags.F>`::
+   O/N2 is calculated and saved by subroutine *mkdiag_O_N2* in source file 
+   :download:`diags.F <../../src/diags.F>`::
 
      !-----------------------------------------------------------------------
            subroutine mkdiag_O_N2(name,o1,o2,lev0,lev1,lon0,lon1,lat)
@@ -784,9 +795,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: QJOULE, diagnostic fields;
 .. _QJOULE:
 .. describe:: QJOULE
@@ -831,18 +841,11 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-.. -------------------------------------------------------------------------------------
 .. index:: QJOULE_INTEG, diagnostic fields;
 .. _QJ_INTEG:
 .. describe:: QJOULE_INTEG
-
-   .. note::
-    
-      This field is integrated on pressure surfaces (not height), so is a 2d field.
-      Also note it is first calculated in W/m^2, then converted to erg/g/m^2, for
-      consistency with the model. See comment below if you would like the field to
-      be returned in W/m^2.
 
    Diagnostic field: Height-integrated Joule Heating (W/m^2)::
 
@@ -851,6 +854,13 @@ Saving Fields/Arrays from the Source
       diags(n)%units      = 'erg/m^2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'qjoule.F'
+
+   .. note::
+    
+      This field is integrated on pressure surfaces (not height), so is a 2d field.
+      Also note it is first calculated in W/m^2, then converted to erg/g/m^2, for
+      consistency with the model. See comment below if you would like the field to
+      be returned in W/m^2.
 
    Calculated and saved by subroutine *mkdiag_QJOULE_INTEG* in source file :download:`diags.F <../../src/diags.F>`::
 
@@ -916,9 +926,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: JE13D, diagnostic fields;
 .. _JE13D:
 .. describe:: JE13D
@@ -946,9 +955,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: JE23D, diagnostic fields;
 .. _JE23D:
 .. describe:: JE23D
@@ -976,9 +984,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: JQR, diagnostic fields;
 .. _JQR:
 .. describe:: JQR
@@ -1009,9 +1016,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-
-.. -------------------------------------------------------------------------------------
 .. index:: KQLAM, diagnostic fields;
 .. _KQLAM:
 .. describe:: KQLAM
@@ -1040,8 +1046,8 @@ Saving Fields/Arrays from the Source
 
    :ref:`Back to diagnostics table <diag_fields>`
 
+--------------------------------------------------------------------------------------------
 
-.. -------------------------------------------------------------------------------------
 .. index:: KQPHI, diagnostic fields;
 .. _KQPHI:
 .. describe:: KQPHI
