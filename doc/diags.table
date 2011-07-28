@@ -1,4 +1,3 @@
-
 ------------------------------------------------------------------------------------------------
 Table of Available Diagnostic Fields:
 Shortnames may be added to namelist SECFLDS
@@ -29,13 +28,17 @@ Field   Shortname       Units           Levels  Caller          Longname
   22    WI_ExB          cm/s            ilev    ionvel.F        Vertical Ion Drift (ExB)
   23    WN              cm/s            ilev    swdot.F         NEUTRAL VERTICAL WIND (plus up)
   24    O_N2            none            lev     comp.F          O/N2 RATIO
-  25    QJOULE_INTEG    erg/m^2/s       none    qjoule.F        Height-integrated Joule Heating
+  25    QJOULE_INTEG    erg/cm2/s       none    qjoule.F        Height-integrated Joule Heating
 ------------------------------------------------------------------------------------------------
 
-Namelist to put all diagnostic fields on secondary histories:
+Namelist to put diagnostic fields on secondary histories:
 
- SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
-           'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
-           'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M',
-           'KQPHI','KQLAM','JQR','JE13D','JE23D','WN','O_N2'
+;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
+;          'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+;          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M','O_N2','WN'
+;
+; These additional diagnostics on magnetic grid are available only if 
+; icalkqlam==1 in dynamo.F:
+;
+; SECFLDS = 'KQPHI','KQLAM','JQR','JE13D','JE23D'
 ------------------------------------------------------------------------------------------------
