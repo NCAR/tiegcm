@@ -1,13 +1,15 @@
 
+.. index:: diagnostic fields
+
 .. _diagnostics:
 
 Saving Diagnostic Fields
 ========================
 
-  The diagnostics module (:download:`diags.F <../../src/diags.F>`) in the TIEGCM will calculate 
-  and save :term:`diagnostic fields` to the secondary histories. The user can add any subset
-  of these fields to the :ref:`SECFLDS <SECFLDS>` parameter list in the
-  namelist input file. See the :download:`diagnostics namelist example <_static/diags.inp>`.
+The diagnostics module (:download:`diags.F <../../src/diags.F>`) in the TIEGCM will calculate 
+and save :term:`diagnostic fields` to the secondary histories. The user can add any subset
+of these fields to the :ref:`SECFLDS <SECFLDS>` parameter list in the
+namelist input file. See the :download:`diagnostics namelist example <_static/diags.inp>`.
 
 Table of Available Diagnostics
 ------------------------------
@@ -17,13 +19,16 @@ by including the short names in the :ref:`SECFLDS <SECFLDS>` namelist input para
 Click on the short name to obtain detailed information about the calculation and
 saving of a diagnostic field. 
 
+On the history files, "Short Name" will be the
+variable name, and "Long Name" and "Units" will be attributes of the variable.
+"Grid" refers to the number of dimensions (2d lat-lon, or 3d lat-lon-level),
+and whether the field is on the geographic or geomagnetic grid.
+
 A :download:`text version of the table <_static/diags.table>` is also available, 
-and is printed to stdout by a model run (the ordering of the fields in the text table 
+and is printed to stdout by a model run (ordering of the fields in the text table 
 may be different than in the below table).
 
 .. _diag_fields:
-
-.. index:: diagnostic fields;
 
 ============================== ====================================== ============ ==========
 Short Name                     Long Name                              Units        Grid
@@ -42,11 +47,11 @@ Short Name                     Long Name                              Units     
 :ref:`WI_ExB <UI_ExB>`         Vertical Ion Drift                     cm/s         3d geo
 :ref:`MU_M <MU_M>`             Molecular Viscosity Coefficient        g/cm/s       3d geo
 :ref:`WN <WN>`                 Neutral Vertical Wind                  cm/s         3d geo
-:ref:`O_N2 <O_N2>`             O/N2 RATIO                             [none]       3d geo
+:ref:`O_N2 <O_N2>`             O/N2 Ratio                             [none]       3d geo
 :ref:`QJOULE <QJOULE>`         Joule Heating                          erg/g/s      3d geo
-:ref:`QJOULE_INTEG <QJ_INTEG>` Height-integrated Joule Heating        erg/m^2/s    2d geo
+:ref:`QJOULE_INTEG <QJ_INTEG>` Height-integrated Joule Heating        erg/cm2/s    2d geo
 :ref:`HMF2 <HMF2>`             Height of the F2 Layer                 km           2d geo
-:ref:`NMF2 <NMF2>`             Peak Density of the F2 Layer           1/cm2        2d geo
+:ref:`NMF2 <NMF2>`             Peak Density of the F2 Layer           1/cm3        2d geo
 :ref:`TEC <TEC>`               Total Electron Content                 1/cm2        2d geo
 :ref:`JE13D <JE13D>`           Eastward current density (3d)          A/m2         3d mag
 :ref:`JE23D <JE23D>`           Downward current density (3d)          A/m2         3d mag
@@ -83,10 +88,10 @@ Saving Fields/Arrays from the Source Code
   source file :download:`addfld.F <../../src/addfld.F>`.
 
 
-Details of Diagnostic Field Calculations:
-=========================================
+Details of Diagnostic Field Calculations
+----------------------------------------
 
-.. index:: CO2_COOL, diagnostic fields;
+.. index:: CO2_COOL, diagnostic fields; CO2_COOL
 .. _CO2_COOL:
 .. describe:: CO2_COOL
 
@@ -115,7 +120,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: NO_COOL, diagnostic fields;
+.. index:: NO_COOL, diagnostic fields; NO_COOL
 .. _NO_COOL:
 .. describe:: NO_COOL
 
@@ -143,7 +148,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: DEN, diagnostic fields;
+.. index:: DEN, diagnostic fields; DEN
 .. _DEN:
 .. describe:: DEN
 
@@ -178,7 +183,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: HEATING, diagnostic fields;
+.. index:: HEATING, diagnostic fields; HEATING
 .. _HEATING:
 .. describe:: HEATING
 
@@ -195,7 +200,7 @@ Details of Diagnostic Field Calculations:
    secondary history. The calculation of HEATING (rho) in dt.F sums the following
    heat sources: 
 
-     * Total solar heating (qrj.F)
+     * Total solar heating (see *qtotal* in :download:`qrj.F <../../src/qrj.F>`)
      * Heating from 4th order horizontal diffusion
      * Heating due to atomic oxygen recombination
      * Ion Joule heating
@@ -210,7 +215,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: HMF2, diagnostic fields;
+.. index:: HMF2, diagnostic fields; HMF2
 .. _HMF2:
 .. describe:: HMF2
 
@@ -246,7 +251,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: NMF2, diagnostic fields;
+.. index:: NMF2, diagnostic fields; NMF2
 .. _NMF2:
 .. describe:: NMF2
 
@@ -275,7 +280,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: TEC, diagnostic fields;
+.. index:: TEC, diagnostic fields; TEC
 .. _TEC:
 .. describe:: TEC
 
@@ -313,7 +318,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: SCHT, diagnostic fields;
+.. index:: SCHT, diagnostic fields; SCHT
 .. _SCHT:
 .. describe:: SCHT
 
@@ -356,7 +361,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: SIGMA_HAL, diagnostic fields;
+.. index:: SIGMA_HAL, diagnostic fields; SIGMA_HAL
 .. _SIGMA_HAL:
 .. describe:: SIGMA_HAL
 
@@ -402,7 +407,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: SIGMA_PED, diagnostic fields;
+.. index:: SIGMA_PED, diagnostic fields; SIGMA_PED
 .. _SIGMA_PED:
 .. describe:: SIGMA_PED
 
@@ -448,7 +453,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: LAMDA_HAL, diagnostic fields;
+.. index:: LAMDA_HAL, diagnostic fields; LAMDA_HAL
 .. _LAMDA_HAL:
 .. describe:: LAMDA_HAL
 
@@ -473,7 +478,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: LAMDA_PED, diagnostic fields;
+.. index:: LAMDA_PED, diagnostic fields; LAMDA_PED
 .. _LAMDA_PED:
 .. describe:: LAMDA_PED
 
@@ -498,7 +503,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: UI_ExB, diagnostic fields;
+.. index:: UI_ExB, diagnostic fields; UI_ExB
 .. _UI_ExB:
 .. describe:: UI_ExB
 
@@ -539,7 +544,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: VI_ExB, diagnostic fields;
+.. index:: VI_ExB, diagnostic fields; VI_ExB
 .. _VI_ExB:
 .. describe:: VI_ExB
 
@@ -580,7 +585,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: WI_ExB, diagnostic fields;
+.. index:: WI_ExB, diagnostic fields; WI_ExB
 .. _WI_ExB:
 .. describe:: WI_ExB
 
@@ -621,7 +626,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: MU_M, diagnostic fields;
+.. index:: MU_M, diagnostic fields; MU_M
 .. _MU_M:
 .. describe:: MU_M
 
@@ -649,7 +654,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: WN, diagnostic fields;
+.. index:: WN, diagnostic fields; WN
 .. _WN:
 .. describe:: WN
 
@@ -666,7 +671,8 @@ Details of Diagnostic Field Calculations:
       This 3d field is calculated on fixed pressure surfaces ln(p0/p), i.e., there is
       no interpolation to height.
 
-   Calculated and saved by subroutine *mkdiag_WN* in source file :download:`diags.F <../../src/diags.F>`::
+   Calculated from OMEGA (vertical motion) and pressure scale height by 
+   subroutine *mkdiag_WN* in source file :download:`diags.F <../../src/diags.F>`::
 
      !-----------------------------------------------------------------------
            subroutine mkdiag_WN(name,omega,zcm,lev0,lev1,lon0,lon1,lat)
@@ -724,7 +730,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: O/N2, diagnostic fields;
+.. index:: O/N2, diagnostic fields; O/N2
 .. _O_N2:
 .. describe:: O_N2
 
@@ -797,7 +803,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: QJOULE, diagnostic fields;
+.. index:: QJOULE, diagnostic fields; QJOULE
 .. _QJOULE:
 .. describe:: QJOULE
 
@@ -843,7 +849,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: QJOULE_INTEG, diagnostic fields;
+.. index:: QJOULE_INTEG, diagnostic fields; QJOULE_INTEG
 .. _QJ_INTEG:
 .. describe:: QJOULE_INTEG
 
@@ -851,14 +857,14 @@ Details of Diagnostic Field Calculations:
 
       diags(n)%short_name = 'QJOULE_INTEG'
       diags(n)%long_name  = 'Height-integrated Joule Heating'
-      diags(n)%units      = 'erg/m^2/s'
+      diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'qjoule.F'
 
    .. note::
     
       This field is integrated on pressure surfaces (not height), so is a 2d field.
-      Also note it is first calculated in W/m^2, then converted to erg/g/m^2, for
+      Also note it is first calculated in W/m^2, then converted to erg/g/cm2, for
       consistency with the model. See comment below if you would like the field to
       be returned in W/m^2.
 
@@ -928,7 +934,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: JE13D, diagnostic fields;
+.. index:: JE13D, diagnostic fields; JE13D
 .. _JE13D:
 .. describe:: JE13D
 
@@ -957,7 +963,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: JE23D, diagnostic fields;
+.. index:: JE23D, diagnostic fields; JE23D
 .. _JE23D:
 .. describe:: JE23D
 
@@ -986,7 +992,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: JQR, diagnostic fields;
+.. index:: JQR, diagnostic fields; JQR
 .. _JQR:
 .. describe:: JQR
 
@@ -1018,7 +1024,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: KQLAM, diagnostic fields;
+.. index:: KQLAM, diagnostic fields; KQLAM
 .. _KQLAM:
 .. describe:: KQLAM
 
@@ -1048,7 +1054,7 @@ Details of Diagnostic Field Calculations:
 
 --------------------------------------------------------------------------------------------
 
-.. index:: KQPHI, diagnostic fields;
+.. index:: KQPHI, diagnostic fields; KQPHI
 .. _KQPHI:
 .. describe:: KQPHI
 

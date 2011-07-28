@@ -70,7 +70,7 @@
      |  idv_f107d,idv_f107a,idv_imf_ncfile,idv_mag,idv_dtide,
      |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
      |  idv_ec,idv_alfad,idv_ed,idv_writedate,idv_saber_ncfile,
-     |  idv_tidi_ncfile,idv_crit1,idv_crit2
+     |  idv_tidi_ncfile,idv_crit1,idv_crit2,idv_coupled_cmit
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
 !
@@ -503,6 +503,11 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading ntask_mpi')
             sh%ntask_mpi = iscalar
+          case('coupled_cmit')
+            istat = nf_get_var1_int(ncid,i,itime,iscalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading coupled_cmit')
+            sh%coupled_cmit = iscalar
           case('ut')
             istat = nf_get_var1_double(ncid,i,itime,scalar)
             if (istat /= NF_NOERR) 
@@ -1528,6 +1533,16 @@
      |  19,'Number of MPI tasks')
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining long_name of ntask_mpi variable')
+!
+! If this run was coupled w/ CISM/CMIT:
+      istat = nf_def_var(ncid,"coupled_cmit",NF_INT,1,ids1,
+     |  idv_coupled_cmit)
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining coupled_cmit variable')
+      istat = nf_put_att_text(ncid,idv_coupled_cmit,"long_name",
+     |  40,'1 if coupled with CISM/CMIT, 0 otherwise')
+      if (istat /= NF_NOERR) call handle_ncerr(istat,
+     |  'Error defining long_name of coupled_cmit variable')
 !
 ! Decimal ut(time) (ids1==id_time is unlimited time dimension):
       call defvar_time_dbl(ncid,"ut",ids1,idv_ut,
@@ -2685,6 +2700,18 @@
         write(char120,"('Error from nf_put_var1_int defining ',
      |    'ntask_mpi at h%ihist=',i3,': h%ntask_mpi=',i8)") h%ihist,
      |    h%ntask_mpi
+        call handle_ncerr(istat,char120)
+      endif
+!
+! If coupled with CISM/CMIT:
+      if (idv_coupled_cmit <= 0) istat = nf_inq_varid(ncid,
+     |  "coupled_cmit",idv_coupled_cmit)
+      istat = nf_put_var1_int(ncid,idv_coupled_cmit,h%ihist,
+     |  h%coupled_cmit)
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error from nf_put_var1_int defining ',
+     |    'coupled_cmit at h%ihist=',i3,': h%coupled_cmit=',i8)") 
+     |    h%ihist,h%coupled_cmit
         call handle_ncerr(istat,char120)
       endif
 !

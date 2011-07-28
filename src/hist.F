@@ -126,7 +126,8 @@
      |    initial_mtime(3),  ! initial starting model time
      |    source_mtime(3),   ! start time of source history
      |    tuv_lbc_intop,     ! 1 (old histories), or 0 (new histories)
-     |    ntask_mpi          ! number of mpi tasks this run
+     |    ntask_mpi,         ! number of mpi tasks this run
+     |    coupled_cmit       ! 1 if coupled with CISM/CMIT, 0 otherwise
         real :: 
      |    ut,                ! ut (decimal hours, from modeltime)
      |    time,              ! model time ("minutes since yyyy-m-d")
@@ -249,6 +250,11 @@
       h%tuv_lbc_intop = 0 ! this version writes "new" histories
       h%lbc = zibot
       h%ntask_mpi = 0
+#if defined(INTERCOMM) || defined(CISMAH)
+      h%coupled_cmit = 1
+#else
+      h%coupled_cmit = 0
+#endif
 !
 ! If istep==0, h%f107, etc were defined from source history: 
       if (istep > 0) then
@@ -442,6 +448,8 @@
      |  'level)')") h%lbc
       write(6,"(2x,'ntask_mpi    =',i4,' (number of MPI tasks)')")
      |  h%ntask_mpi
+      write(6,"(2x,'coupled_cmit =',i4,' (1 if coupled with CISM/CMIT,', 
+     |  ' 0 otherwise)')") h%coupled_cmit
 !
       if (associated(h%fnames)) then
         write(6,"('  There are ',i3,' fields on this history,',

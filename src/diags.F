@@ -225,7 +225,7 @@
       n = n+1
       diags(n)%short_name = 'QJOULE_INTEG'
       diags(n)%long_name  = 'Height-integrated Joule Heating'
-      diags(n)%units      = 'erg/m^2/s'
+      diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'qjoule.F'
 
