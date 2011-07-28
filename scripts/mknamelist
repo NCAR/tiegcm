@@ -12,7 +12,7 @@ $tgcmdata = $ENV{TGCMDATA};
 # Defaults for mknamelist:
 #
 $model = "tiegcm";
-$version = "1.94";
+$version = "";
 $modelres  = 5.0;
 #
 # Set default namelist parameters:
