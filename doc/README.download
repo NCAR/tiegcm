@@ -1,14 +1,16 @@
 
-Model:		tiegcm_trunk
-svn Tag:	[last release tag was tiegcm1.94]
-Release Date:	June 1, 2011
+Model:		tiegcm1.94.1
+svn Tag:	[last release tag was tiegcm1.94.1]
+Release Date:	July 28, 2011
 
 Download Site:	http://www.hao.ucar.edu/modeling/tgcm/download.php
                 (Model Source and required Data are available as separate downloads)
 
-Documentation:  User's Guide and Model description available in "doc" directory
-                Also available from tgcm website: http://www.hao.ucar.edu/modeling/tgcm
+Documentation:  User's Guide pdf is available in local directory doc/
+                Model description pdf is available in local directory doc/
 
+                Documentation (including html for the User's Guide) is also available 
+                from the tgcm website: http://www.hao.ucar.edu/modeling/tgcm
 -------------------------------------------------------------------------------
 These instructions assume the gzipped tar file of the Source Code has
 been downloaded from the above URL. After the file is gunzipped 
