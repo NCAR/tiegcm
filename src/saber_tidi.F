@@ -625,7 +625,7 @@
       integer,intent(in) :: lon0,lon1,lat0,lat1
       real,intent(inout) :: f(lon0:lon1,lat0:lat1)
 #ifdef MPI
-      call mp_periodic_f2d(f,lon0,lon1,lat0,lat1)
+      call mp_periodic_f2d(f,lon0,lon1,lat0,lat1,1)
 #else
       f(1:2,:)              = f(nlonp4-3:nlonp4-2,:)
       f(nlonp4-1:nlonp4,:)  = f(3:4,:)

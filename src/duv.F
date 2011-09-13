@@ -71,6 +71,7 @@
      |  zl,zp,       ! output from glp (and dldp)
      |  unm_smooth,  ! un at time n-1, smoothed
      |  vnm_smooth   ! vn at time n-1, smoothed
+      real :: flbc(lon0-2:lon1+2,lat0-2:lat1+2,4) ! ulbc,vlbc,ulbc_nm,vlbc_n
       real :: rtxmue(lev0:lev1) ! sqrt(xmue)
 !
 ! For diagnostic, debug:
@@ -472,30 +473,42 @@
 #ifdef MPI
 !
 ! Boundary longitudes and periodic points for ulbc:
-      call mp_bndlats_f2d(ulbc,lon0-2,lon1+2,lat0,lat1,1)
-      call mp_bndlats_f2d(vlbc,lon0-2,lon1+2,lat0,lat1,1)
-      call mp_bndlats_f2d(ulbc_nm,lon0-2,lon1+2,lat0,lat1,1)
-      call mp_bndlats_f2d(vlbc_nm,lon0-2,lon1+2,lat0,lat1,1)
-      
-      call mp_bndlons_f2d(ulbc,lon0,lon1,lat0-2,lat1+2,1)
-      call mp_bndlons_f2d(vlbc,lon0,lon1,lat0-2,lat1+2,1)
-      call mp_bndlons_f2d(ulbc_nm,lon0,lon1,lat0-2,lat1+2,1)
-      call mp_bndlons_f2d(vlbc_nm,lon0,lon1,lat0-2,lat1+2,1)
-      
-      call mp_periodic_f2d(ulbc(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-      call mp_periodic_f2d(vlbc(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-      call mp_periodic_f2d(ulbc_nm(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-      call mp_periodic_f2d(vlbc_nm(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-
-! Periodic points:
-!     call mp_periodic_f3d(un_upd(:,lon0:lon1,lat0-1:lat1+1),
-!    |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
-!     call mp_periodic_f3d(vn_upd(:,lon0:lon1,lat0-1:lat1+1),
-!    |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
+!     subroutine mp_bndlats_f2d(f,i0,i1,j0,j1,nf)
+!
+!
+! Boundary (halo) latitudes:
+      flbc(:,:,1) = ulbc(:,:)
+      flbc(:,:,2) = vlbc(:,:)
+      flbc(:,:,3) = ulbc_nm(:,:)
+      flbc(:,:,4) = vlbc_nm(:,:)
+      call mp_bndlats_f2d(flbc,lon0,lon1,lat0,lat1,4)
+      ulbc(:,:)    = flbc(:,:,1)
+      vlbc(:,:)    = flbc(:,:,2)
+      ulbc_nm(:,:) = flbc(:,:,3)
+      vlbc_nm(:,:) = flbc(:,:,4)
+!
+! Boundary (halo) longitudes:
+      flbc(:,:,1) = ulbc(:,:)
+      flbc(:,:,2) = vlbc(:,:)
+      flbc(:,:,3) = ulbc_nm(:,:)
+      flbc(:,:,4) = vlbc_nm(:,:)
+      call mp_bndlons_f2d(flbc,lon0,lon1,lat0,lat1,4)
+      ulbc(:,:)    = flbc(:,:,1)
+      vlbc(:,:)    = flbc(:,:,2)
+      ulbc_nm(:,:) = flbc(:,:,3)
+      vlbc_nm(:,:) = flbc(:,:,4)
+!
+! Periodic points for lbc:
+      flbc(:,:,1) = ulbc(:,:)
+      flbc(:,:,2) = vlbc(:,:)
+      flbc(:,:,3) = ulbc_nm(:,:)
+      flbc(:,:,4) = vlbc_nm(:,:)
+      call mp_periodic_f2d(flbc(lon0:lon1,lat0:lat1,1:4),
+     |       lon0,lon1,lat0,lat1,4)
+      ulbc(:,:)    = flbc(:,:,1)
+      vlbc(:,:)    = flbc(:,:,2)
+      ulbc_nm(:,:) = flbc(:,:,3)
+      vlbc_nm(:,:) = flbc(:,:,4)
 #else
       do j=lat0,lat1
         do i=1,2
@@ -529,8 +542,7 @@
       use init_module,only: iter
       use addfld_module,only: addfld
 #ifdef MPI
-      use mpi_module,only: mp_bndlons_f3d, mp_bndlats_f3d, 
-     |  mp_periodic_f3d
+      use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
 #endif
       implicit none
 !
@@ -557,6 +569,7 @@
      |  ztmp
       real,dimension(lev0:lev1,lon0-2:lon1+2) ::
      |  tbar,barmi,dztbar
+      real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,2)
 !
       lonbeg = lon0
       if (lon0==1) lonbeg = 3
@@ -609,9 +622,9 @@
 ! Not necessary if ztmp has been defined at full subdomain, including lon 
 ! halos, but as of 4/02, this was not working (s.a. comments above)
 !
-      call mp_bndlons_f3d(ztmp,nlevs,lon0,lon1,lat0-2,lat1+2,1)
       call mp_periodic_f3d(ztmp(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_bndlons_f3d(ztmp,nlevs,lon0,lon1,lat0,lat1,1,0)
 #else
 !
 ! Set periodic points for serial run:
@@ -662,10 +675,13 @@
 ! points of zl and zp are now no longer NaNs.
 !                                                   Wenbin  04/24/08
 #ifdef MPI
-      call mp_periodic_f3d(zl(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(zp(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      ftmp(:,:,:,1) = zl(:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,2) = zp(:,lon0:lon1,lat0:lat1)
+
+      call mp_periodic_f3d(ftmp,lev0,lev1,lon0,lon1,lat0,lat1,2)
+
+      zl(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,1)
+      zp(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,2)
 #else
 !
 ! Set periodic points for serial run:
@@ -957,7 +973,13 @@
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
-      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,
+     |  'uv ')
+
+!     write(6,"('filter uv after mp_scatterlons: lon0,1=',2i4,' lat0,1='
+!    |  ,2i4,' fkij(:,lon0:lon1,:) min,max=',2e12.4)") lon0,lon1,
+!    |  lat0,lat1,minval(fkij(:,lon0:lon1,:)),
+!    |            maxval(fkij(:,lon0:lon1,:))
 #endif
 !
 ! Return filtered array to fout at current task longitudes and latitudes:

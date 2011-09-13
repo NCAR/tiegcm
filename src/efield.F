@@ -83,6 +83,7 @@
       integer :: 
      |  islot(nlonp4),
      |  jslot(nlonp4)
+      real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,3)
 !
 #ifdef VT
 !     code = 117 ; state = 'efield' ; activity='ModelCode'
@@ -274,12 +275,16 @@
 ! Periodic points:
 
 #ifdef MPI
-      call mp_periodic_f3d(ex(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(ey(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(ez(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+! real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,3)
+      ftmp(:,:,:,1) = ex(:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,2) = ey(:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,3) = ez(:,lon0:lon1,lat0:lat1)
+
+      call mp_periodic_f3d(ftmp,lev0,lev1,lon0,lon1,lat0,lat1,3)
+
+      ex(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,1)
+      ey(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,2)
+      ez(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,3)
 #else
       do j=lat0,lat1
         do i=1,2

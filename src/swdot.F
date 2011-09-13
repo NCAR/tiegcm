@@ -137,7 +137,13 @@
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
-      call mp_scatterlons_f3d(w_kij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_scatterlons_f3d(w_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
+     |  'w  ')
+
+!     write(6,"('filter w  after mp_scatterlons: lon0,1=',2i4,' lat0,1='
+!    |  ,2i4,' fkij(:,lon0:lon1,:) min,max=',2e12.4)") lon0,lon1,
+!    |  lat0,lat1,minval(w_kij(:,lon0:lon1,:)),
+!    |            maxval(w_kij(:,lon0:lon1,:))
 #endif
 !
 ! Return filtered array to wout at current task longitudes and latitudes:

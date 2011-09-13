@@ -96,7 +96,7 @@
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
      |  ftm1_smooth  ! time-smoothed field at time n-1 (s10)
 !
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0:lat1) ::
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
      |  ftm1_jdif ! lat diffs (includes lon boundaries) (s8)
 !
       integer :: jm2,jm1,j0,jp1,jp2 ! lat-2,lat-1,lat,lat+1,lat+2
@@ -159,10 +159,12 @@
 !------------------------- End first latitude scan ---------------------
 #ifdef MPI
 !
-! Boundary longitudes for ftm1_jdif:
-! 10/24/02 bf: changed following call:
-!     call mp_bndlons_f3d(ftm1_jdif,nlevs,lon0,lon1,lat0-2,lat1+2,1)
-      call mp_bndlons_f3d(ftm1_jdif,nlevs,lon0,lon1,lat0,lat1,1)
+! Get subdomain boundary longitudes for ftm1_jdif, to complete shapiro
+! time smoother. (mp_periodic_f3d call opened up 8/31/11)
+!
+      call mp_periodic_f3d(ftm1_jdif(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_bndlons_f3d(ftm1_jdif,nlevs,lon0,lon1,lat0,lat1,1,0)
 #endif
 !----------------------- Begin second latitude scan --------------------
       do lat=lat0,lat1
@@ -476,9 +478,9 @@
 ! Periodic points for fcomp_out and fcomp_tm1_out:
 #ifdef MPI
       call mp_periodic_f3d(fcomp_out(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
       call mp_periodic_f3d(fcomp_tm1_out(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
 #endif
 !
 !----------------------- Begin fourth latitude scan --------------------
@@ -601,7 +603,8 @@
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
-      call mp_scatterlons_f3d(f_kij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_scatterlons_f3d(f_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
+     |  'mnr')
 #endif
 !
 ! Return filtered array to fout at current task longitudes:

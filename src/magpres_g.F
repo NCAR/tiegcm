@@ -153,6 +153,7 @@
      |  plt_t_horlat(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  plt_grav(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  plt_rho(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
+      real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,2)
 !
 ! set longitude index boundary
       lonbeg = lon0
@@ -354,10 +355,13 @@
 
 ! periodic point longitude
 #ifdef MPI
-      call mp_periodic_f3d(je1oD_geo(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(je2oD_geo(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      ftmp(:,:,:,1) = je1oD_geo(:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,2) = je2oD_geo(:,lon0:lon1,lat0:lat1)
+
+      call mp_periodic_f3d(ftmp,lev0,lev1,lon0,lon1,lat0,lat1,2)
+
+      je1oD_geo(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,1)
+      je2oD_geo(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,2)
 #else	
       do lat=lat0,lat1
         do i=1,2

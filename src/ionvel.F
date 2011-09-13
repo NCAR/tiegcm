@@ -33,6 +33,7 @@
 ! Local:
       integer :: k,i,nlevs,lonbeg,lonend,lat,ier
       real,dimension(lev0:lev1,lon0:lon1) :: eex,eey,eez
+      real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,3)
 !
 ! VT vampir tracing:
 !
@@ -150,12 +151,15 @@
 !
 ! Periodic points for ion velocities:
 #ifdef MPI
-      call mp_periodic_f3d(ui(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(vi(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(wi(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      ftmp(:,:,:,1) = ui(:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,2) = vi(:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,3) = wi(:,lon0:lon1,lat0:lat1)
+
+      call mp_periodic_f3d(ftmp,lev0,lev1,lon0,lon1,lat0,lat1,3)
+
+      ui(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,1)
+      vi(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,2)
+      wi(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,3)
 #else
       do lat=lat0,lat1
         do i=1,2

@@ -107,6 +107,7 @@
      |  bdotdh_diff, ! (b(h)*del(h))*phi
      |  dj,          ! diffusion coefficients (s13,s14,s15)
      |  optm1_smooth ! op at time n-1, with shapiro smoother (was s1)
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,5) :: f5
       logical,parameter :: debug=.false. ! if set write print statements to stdout
 !
       if (debug) write(6,"('Enter oplus.')")
@@ -317,24 +318,25 @@
 !------------------------- End first latitude scan ---------------------
 #ifdef MPI
 !
-! Do message passing of boundary longitudes (3-d subdomains):
 !
-! Boundary longitudes and periodic points for dj:
-      call mp_bndlons_f3d(dj,nlevs,lon0,lon1,lat0-2,lat1+2,1)
+! Boundary longitudes:
+      f5(:,:,:,1) = dj(:,:,:)
+      f5(:,:,:,2) = bvel(:,:,:)
+      f5(:,:,:,3) = diffj(:,:,:)
+      f5(:,:,:,4) = tpj(:,:,:)
+      f5(:,:,:,5) = optm1_smooth(:,:,:)
+
+      call mp_bndlons_f3d(f5,nlevs,lon0,lon1,lat0,lat1,5,0)
+
+      dj(:,:,:)           = f5(:,:,:,1)
+      bvel(:,:,:)         = f5(:,:,:,2)
+      diffj(:,:,:)        = f5(:,:,:,3)
+      tpj(:,:,:)          = f5(:,:,:,4)
+      optm1_smooth(:,:,:) = f5(:,:,:,5)
+!
+! Periodic points for dj:
       call mp_periodic_f3d(dj(:,lon0:lon1,lat0-1:lat1+1),lev0,lev1,
-     |  lon0,lon1,lat0-1,lat1+1)
-!
-! Boundary longitudes for bvel:
-      call mp_bndlons_f3d(bvel,nlevs,lon0,lon1,lat0-2,lat1+2,1)
-!
-! Boundary longitudes for diffj, tpj, and bdotdh_opj (for inputs to
-! sub bdotdh calls in next jloop):
-!
-      call mp_bndlons_f3d(diffj     ,nlevs,lon0,lon1,lat0-2,lat1+2,1)
-      call mp_bndlons_f3d(tpj       ,nlevs,lon0,lon1,lat0-2,lat1+2,1)
-!
-! Boundary longitudes for smoothed O+ at time n-1:
-      call mp_bndlons_f3d(optm1_smooth,nlevs,lon0,lon1,lat0-2,lat1+2,1)
+     |  lon0,lon1,lat0,lat1,1)
 !
 #endif
 !----------------------- Begin second latitude scan --------------------
@@ -401,11 +403,11 @@
 #ifdef MPI
 !
 ! Periodic points for bdotdh_opj (output from bdotdh above):
-      call mp_periodic_f3d(bdotdh_opj(:,lon0:lon1,lat0-1:lat1+1),
-     |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
+      call mp_periodic_f3d(bdotdh_opj(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
 !
 ! Boundary longitudes for bdotdh_opj (input to below call to bdotdh):
-      call mp_bndlons_f3d(bdotdh_opj,nlevs,lon0,lon1,lat0-2,lat1+2,1)
+      call mp_bndlons_f3d(bdotdh_opj,nlevs,lon0,lon1,lat0,lat1,1,0)
 #endif
 !
 !----------------------- Begin third latitude scan ---------------------
@@ -845,9 +847,9 @@
 ! Periodic points for outputs:
 #ifdef MPI
       call mp_periodic_f3d(opout(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
       call mp_periodic_f3d(optm1out(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
 #endif
 !
 ! Save outputs on secondary history for diagnostics:
@@ -1155,7 +1157,8 @@
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
-      call mp_scatterlons_f3d(op_kij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_scatterlons_f3d(op_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
+     |  'op ')
 #endif
 !
 ! Return filtered array to opout at task subdomain:

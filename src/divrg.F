@@ -75,9 +75,9 @@
 #ifdef MPI
 ! Oct, 2010: Comment these calls to prevent divergence in T,U,V 
 !   between runs w/ different numbers of processors (see also minor.F):
-!     call mp_periodic_f2d(d2u,lon0,lon1,lat,lat)
-!     call mp_periodic_f2d(d4u,lon0,lon1,lat,lat)
-!     call mp_periodic_f2d(w  ,lon0,lon1,lat,lat)
+!     call mp_periodic_f2d(d2u,lon0,lon1,lat,lat,1)
+!     call mp_periodic_f2d(d4u,lon0,lon1,lat,lat,1)
+!     call mp_periodic_f2d(w  ,lon0,lon1,lat,lat,1)
 #endif
 !     call addfld('DVG_D2U' ,' ',' ',d2u(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)

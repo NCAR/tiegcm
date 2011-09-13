@@ -24,6 +24,10 @@
 ! Local:
       integer :: lu,nth,ncid_source,j,i,k
       real :: fmin,fmax,fminj,fmaxj
+#ifdef MPI
+      real :: flbc(lon0:lon1,lat0:lat1,6)
+      real :: flbc_2(lon0-2:lon1+2,lat0-2:lat1+2,6)
+#endif
 !
       ier = 0
 !
@@ -75,33 +79,26 @@
 !
 ! Periodic points for t,u,v lbc
 ! These are dimensioned (lond0:lond1,latd0:latd1) (see fields.F):
+! real :: flbc(lon0:lon1,lat0:lat1,6)
+!
+! There are calls to mp_bndlons_f2d and mp_bndlats_f2d here in
+! timegcm, before the mp_periodic_f2d call.
+!
+      flbc(:,:,1) = tlbc(lon0:lon1,lat0:lat1)
+      flbc(:,:,2) = ulbc(lon0:lon1,lat0:lat1)
+      flbc(:,:,3) = vlbc(lon0:lon1,lat0:lat1)
+      flbc(:,:,4) = tlbc_nm(lon0:lon1,lat0:lat1)
+      flbc(:,:,5) = ulbc_nm(lon0:lon1,lat0:lat1)
+      flbc(:,:,6) = vlbc_nm(lon0:lon1,lat0:lat1)
 
-!     write(6,"('readsource: call mp_periodic_f2d for tlbc,ulbc,',
-!    |  'vlbc: lon0,1=',2i3,' lat0,1=',2i3)") lon0,lon1,lat0,lat1
+      call mp_periodic_f2d(flbc,lon0,lon1,lat0,lat1,6)
 
-!     do j=lat0,lat1
-!       write(6,"('rdsource before periodic_f2d: j=',i3,
-!    |    ' tlbc(lon0:lon1,j)=',/,(6e12.4))") j,tlbc(lon0:lon1,j)
-!     enddo
-
-      call mp_periodic_f2d(tlbc(lon0:lon1,lat0:lat1),
-     |  lon0,lon1,lat0,lat1)
-      call mp_periodic_f2d(ulbc(lon0:lon1,lat0:lat1),
-     |  lon0,lon1,lat0,lat1)
-      call mp_periodic_f2d(vlbc(lon0:lon1,lat0:lat1),
-     |  lon0,lon1,lat0,lat1)
-      call mp_periodic_f2d(tlbc_nm(lon0:lon1,lat0:lat1),
-     |  lon0,lon1,lat0,lat1)
-      call mp_periodic_f2d(ulbc_nm(lon0:lon1,lat0:lat1),
-     |  lon0,lon1,lat0,lat1)
-      call mp_periodic_f2d(vlbc_nm(lon0:lon1,lat0:lat1),
-     |  lon0,lon1,lat0,lat1)
-
-!     do j=lat0,lat1
-!       write(6,"('rdsource after periodic_f2d:  tlbc(lon0:lon1,j)=',/,
-!    |    (6e12.4))") j,tlbc(lon0:lon1,j)
-!     enddo
-
+      tlbc(lon0:lon1,lat0:lat1) = flbc(:,:,1)
+      ulbc(lon0:lon1,lat0:lat1) = flbc(:,:,2)
+      vlbc(lon0:lon1,lat0:lat1) = flbc(:,:,3)
+      tlbc_nm(lon0:lon1,lat0:lat1) = flbc(:,:,4)
+      ulbc_nm(lon0:lon1,lat0:lat1) = flbc(:,:,5)
+      vlbc_nm(lon0:lon1,lat0:lat1) = flbc(:,:,6)
 !
 ! Define dynpot(nlonp1,0:nlatp1,nlevp1) from electric potential
 ! subdomains, which were read from source history. Do this only

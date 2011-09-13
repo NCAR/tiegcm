@@ -304,6 +304,7 @@
 ! calculated by hdif2. This is called from dynamics, in preparation 
 ! for hdif3.
 !
+      use fields_module,only: f3d
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d
 #endif
@@ -314,21 +315,18 @@
      |  intent(inout) :: kldt,kldu,kldv,kldo2,kldo1
 !
 ! Local:
-      integer :: nlevs
+      integer :: i,nlevs
+      real :: f(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,16)
 !
 #ifdef MPI
-!
-! subroutine mp_bndlons_f3d(f,id1,i0,i1,j0,j1,nf)
-! From oplus: call mp_bndlons_f3d(dj,nlevs,lon0,lon1,lat0-2,lat1+2,1)
-! Could also try transferring to a local 5-field array, and make only
-!   one call to mp_bndlons_f3d.
-!
       nlevs = lev1-lev0+1
-      call mp_bndlons_f3d(kldt ,nlevs,lon0,lon1,lat0-2,lat1+2,1)
-      call mp_bndlons_f3d(kldu ,nlevs,lon0,lon1,lat0-2,lat1+2,1)
-      call mp_bndlons_f3d(kldv ,nlevs,lon0,lon1,lat0-2,lat1+2,1)
-      call mp_bndlons_f3d(kldo2,nlevs,lon0,lon1,lat0-2,lat1+2,1)
-      call mp_bndlons_f3d(kldo1,nlevs,lon0,lon1,lat0-2,lat1+2,1)
+      do i=1,16
+        f(:,:,:,i) = f3d(i)%data(:,:,:)
+      enddo
+      call mp_bndlons_f3d(f,nlevs,lon0,lon1,lat0,lat1,16,0)
+      do i=1,16
+        f3d(i)%data(:,:,:) = f(:,:,:,i)
+      enddo
 #endif
       end subroutine hdif_bndlons
 !-----------------------------------------------------------------------
@@ -468,17 +466,23 @@
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(inout) :: hdt,hdu,hdv,hdo2,hdo1
+!
+! Local:
+      real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,5)
 #ifdef MPI
-      call mp_periodic_f3d(hdt(:,lon0:lon1,lat0-1:lat1+1),lev0,lev1,
-     |  lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(hdu(:,lon0:lon1,lat0-1:lat1+1),lev0,lev1,
-     |  lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(hdv(:,lon0:lon1,lat0-1:lat1+1),lev0,lev1,
-     |  lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(hdo2(:,lon0:lon1,lat0-1:lat1+1),lev0,lev1,
-     |  lon0,lon1,lat0,lat1)
-      call mp_periodic_f3d(hdo1(:,lon0:lon1,lat0-1:lat1+1),lev0,lev1,
-     |  lon0,lon1,lat0,lat1)
+      ftmp(:,:,:,1) = hdt (:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,2) = hdu (:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,3) = hdv (:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,4) = hdo2(:,lon0:lon1,lat0:lat1)
+      ftmp(:,:,:,5) = hdo1(:,lon0:lon1,lat0:lat1)
+
+      call mp_periodic_f3d(ftmp,lev0,lev1,lon0,lon1,lat0,lat1,5)
+
+      hdt (:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,1)
+      hdu (:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,2)
+      hdv (:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,3)
+      hdo2(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,4)
+      hdo1(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,5)
 #endif
       end subroutine hdif_periodic
 !-----------------------------------------------------------------------

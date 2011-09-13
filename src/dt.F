@@ -398,11 +398,11 @@
 ! 4/21/05 btf: These calls opened up as per Wenbin's suggestion.
 !
 ! Define halo longitudes in tn_upd, for use by duv:
-      call mp_bndlons_f3d(tn_upd,nlevs,lon0,lon1,lat0-2,lat1+2,1)
+      call mp_bndlons_f3d(tn_upd,nlevs,lon0,lon1,lat0,lat1,1,0)
 !
 ! Periodic points:
-      call mp_periodic_f3d(tn_upd(:,lon0:lon1,lat0-1:lat1+1),
-     |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
+      call mp_periodic_f3d(tn_upd(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
 #endif
 !
 ! Tn must be at least 100 deg:
@@ -501,7 +501,8 @@
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
-      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,
+     |  'tn ')
 #endif
 !
 ! Return filtered array to fout at current task longitudes and latitudes:

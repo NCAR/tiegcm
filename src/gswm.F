@@ -309,6 +309,7 @@
      |  z_nxtmo, t_nxtmo, u_nxtmo, v_nxtmo,
      |  z_curmo_nxthr, t_curmo_nxthr, u_curmo_nxthr, v_curmo_nxthr,
      |  z_nxtmo_nxthr, t_nxtmo_nxthr, u_nxtmo_nxthr, v_nxtmo_nxthr
+      real :: fgswm(lon0:lon1,lat0:lat1,4) ! for mp calls
 !   
 ! Data: GSWM data given at the middle of each month 
 !       -> day of year for this data assuming non-leap year
@@ -477,42 +478,46 @@
 !
 #ifdef MPI
       select case (type)
-        case ('mi_di') 
-           call mp_periodic_f2d(gswm_mi_di_z(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_mi_di_t(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_mi_di_u(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_mi_di_v(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-        case ('mi_sdi') 
-           call mp_periodic_f2d(gswm_mi_sdi_z(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_mi_sdi_t(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_mi_sdi_u(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_mi_sdi_v(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-        case ('nm_di') 
-           call mp_periodic_f2d(gswm_nm_di_z(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_nm_di_t(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_nm_di_u(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_nm_di_v(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-        case ('nm_sdi') 
-           call mp_periodic_f2d(gswm_nm_sdi_z(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_nm_sdi_t(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_nm_sdi_u(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
-           call mp_periodic_f2d(gswm_nm_sdi_v(lon0:lon1,lat0:lat1),
-     |       lon0,lon1,lat0,lat1)
+        case ('mi_di')
+           fgswm(:,:,1) = gswm_mi_di_z(lon0:lon1,lat0:lat1)
+           fgswm(:,:,2) = gswm_mi_di_t(lon0:lon1,lat0:lat1)
+           fgswm(:,:,3) = gswm_mi_di_u(lon0:lon1,lat0:lat1)
+           fgswm(:,:,4) = gswm_mi_di_v(lon0:lon1,lat0:lat1)
+           call mp_periodic_f2d(fgswm,lon0,lon1,lat0,lat1,4)
+           gswm_mi_di_z(lon0:lon1,lat0:lat1) = fgswm(:,:,1)
+           gswm_mi_di_t(lon0:lon1,lat0:lat1) = fgswm(:,:,2)
+           gswm_mi_di_u(lon0:lon1,lat0:lat1) = fgswm(:,:,3)
+           gswm_mi_di_v(lon0:lon1,lat0:lat1) = fgswm(:,:,4)
+        case ('mi_sdi')
+           fgswm(:,:,1) = gswm_mi_sdi_z(lon0:lon1,lat0:lat1)
+           fgswm(:,:,2) = gswm_mi_sdi_t(lon0:lon1,lat0:lat1)
+           fgswm(:,:,3) = gswm_mi_sdi_u(lon0:lon1,lat0:lat1)
+           fgswm(:,:,4) = gswm_mi_sdi_v(lon0:lon1,lat0:lat1)
+           call mp_periodic_f2d(fgswm,lon0,lon1,lat0,lat1,4)
+           gswm_mi_sdi_z(lon0:lon1,lat0:lat1) = fgswm(:,:,1)
+           gswm_mi_sdi_t(lon0:lon1,lat0:lat1) = fgswm(:,:,2)
+           gswm_mi_sdi_u(lon0:lon1,lat0:lat1) = fgswm(:,:,3)
+           gswm_mi_sdi_v(lon0:lon1,lat0:lat1) = fgswm(:,:,4)
+        case ('nm_di')
+           fgswm(:,:,1) = gswm_nm_di_z(lon0:lon1,lat0:lat1)
+           fgswm(:,:,2) = gswm_nm_di_t(lon0:lon1,lat0:lat1)
+           fgswm(:,:,3) = gswm_nm_di_u(lon0:lon1,lat0:lat1)
+           fgswm(:,:,4) = gswm_nm_di_v(lon0:lon1,lat0:lat1)
+           call mp_periodic_f2d(fgswm,lon0,lon1,lat0,lat1,4)
+           gswm_nm_di_z(lon0:lon1,lat0:lat1) = fgswm(:,:,1)
+           gswm_nm_di_t(lon0:lon1,lat0:lat1) = fgswm(:,:,2)
+           gswm_nm_di_u(lon0:lon1,lat0:lat1) = fgswm(:,:,3)
+           gswm_nm_di_v(lon0:lon1,lat0:lat1) = fgswm(:,:,4)
+        case ('nm_sdi')
+           fgswm(:,:,1) = gswm_nm_sdi_z(lon0:lon1,lat0:lat1)
+           fgswm(:,:,2) = gswm_nm_sdi_t(lon0:lon1,lat0:lat1)
+           fgswm(:,:,3) = gswm_nm_sdi_u(lon0:lon1,lat0:lat1)
+           fgswm(:,:,4) = gswm_nm_sdi_v(lon0:lon1,lat0:lat1)
+           call mp_periodic_f2d(fgswm,lon0,lon1,lat0,lat1,4)
+           gswm_nm_sdi_z(lon0:lon1,lat0:lat1) = fgswm(:,:,1)
+           gswm_nm_sdi_t(lon0:lon1,lat0:lat1) = fgswm(:,:,2)
+           gswm_nm_sdi_u(lon0:lon1,lat0:lat1) = fgswm(:,:,3)
+           gswm_nm_sdi_v(lon0:lon1,lat0:lat1) = fgswm(:,:,4)
         case default
       end select
 #else

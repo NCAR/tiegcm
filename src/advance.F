@@ -65,9 +65,8 @@
 #ifdef MPI
       use mpi_module,only: 
      |  mytid,mp_gather2root,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
-     |  mp_bndlons,mp_gatherlons,mp_scatterlons,mp_polelats,
-     |  mp_periodic_f4d,mp_updatephi,mp_updateemphi,mp_updateemlam,
-     |  mp_updateemz
+     |  mp_bndlons,mp_polelats,mp_periodic_f4d,mp_updatephi,
+     |  mp_updateemphi,mp_updateemlam,mp_updateemz
 !
       implicit none
 #include <mpif.h>
