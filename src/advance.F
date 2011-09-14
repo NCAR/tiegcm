@@ -547,8 +547,12 @@
 ! Only master task calls dynamo: 
 !
       if (debug) write(6,"('advance after prep_dynamo')")
-      if (mytid==0) call dynamo
+      if (mytid==0.and.idynamo > 0) call dynamo
       if (debug) write(6,"('advance after dynamo')")
+!
+! Zero out efield and electric potential if dynamo was not called:
+      if (idynamo <= 0) call nodynamo
+!
 #if defined(INTERCOMM) || defined(CISMAH)
 !
 ! Send conductance and neutral wind current to M-I coupler for CISM
@@ -847,5 +851,27 @@
  100  continue
 !     write(6,"('set_index: ',a,' = ',e12.4)") name,outindex
       end subroutine set_index
+!-----------------------------------------------------------------------
+      subroutine nodynamo
+!
+! Dynamo was not called: zero out electric field and potential:
+!
+      use fields_module,only: 
+     |  dynpot,  ! (nlonp1,0:nlatp1,nlevp1)  ! 3d electric potential geographic
+     |  phim3d,  ! (nmlonp1,nmlat,-2:nlevp1) ! 3d electric potential magnetic
+     |  emphi3d, ! (nmlonp1,nmlat,-2:nlevp1) ! 3d eastward electric field magnetic
+     |  emlam3d, ! (nmlonp1,nmlat,-2:nlevp1) ! 3d equatorw. electric field magnetic
+     |  emz3d    ! (nmlonp1,nmlat,-2:nlevp1) ! 3d upward (?) electric field magnetic
+
+      dynpot = 0.
+      phim3d = 0.
+      emphi3d = 0.
+      emlam3d = 0.
+      emz3d = 0.
+
+!     write(6,"('nodynamo: zeroed out dynpot, phim3d, emphi3d,',
+!    |  ' emlam3d, and emz3d')")
+
+      end subroutine nodynamo
 !-----------------------------------------------------------------------
       end module advance_module

@@ -570,13 +570,9 @@
       if (dynamo==ispval) then
         dynamo = 1
       else
-        if (dynamo <= 0) then
-          write(6,"(/,'>>> Input: dynamo=',i3,': no-dynamo is no ',
-     |      'longer an option.')") dynamo
-          write(6,"('Please set DYNAMO=1, or remove DYNAMO ',
-     |      'from the namelist input file.')") dynamo
-          call shutdown('DYNAMO=0')
-        endif
+        if (dynamo <= 0)
+     |    write(6,"('Input: Will NOT call dynamo: namelist dynamo=',
+     |      i4)") dynamo
       endif
 !
 ! eddy_dif = 1 -> use DOY-dependent eddy diffusion
