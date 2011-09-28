@@ -146,7 +146,7 @@ sub set_defaults {
 #          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M',
 #	   'KQPHI','KQLAM','JQR','JE13D','JE23D' 
 #
-$LABEL="'${model}${version} res=$modelres'";
+$LABEL="'${model}${version}'";
 $START_YEAR = 2002;
 $START_DAY  = 80;
 $CALENDAR_ADVANCE = 1;

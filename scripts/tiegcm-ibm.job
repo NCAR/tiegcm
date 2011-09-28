@@ -30,12 +30,12 @@
 #   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
 set modeldir = tiegcm_trunk
-set execdir  = tiegcm_trunk-aix
-#set input    = tiegcm_trunk.inp
-set output   = tiegcm_trunk.out
+set execdir  = tiegcm-aix
+#set input    = tiegcm.inp
+set output   = tiegcm.out
 set make     = Make.bluefire
-set mpi      = TRUE
 set modelres = 5.0
+set mpi      = TRUE
 set debug    = FALSE
 set exec     = TRUE
 set utildir  = $modeldir/scripts
@@ -118,17 +118,6 @@ endif
 set input  = `perl $utildir/abspath $input`
 set output = `perl $utildir/abspath $output`
 #
-# Copy defs header file to execdir, if necessary, according to 
-# requested resolution:
-#
-if (! -f $execdir/defs.h) then
-  if ($modelres == 5.0) then
-    cp $srcdir/defs.5.0 $execdir/defs.h
-  else
-    cp $srcdir/defs.2.5 $execdir/defs.h
-  endif
-endif
-#
 # Report to stdout:
 #
 set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
@@ -137,12 +126,32 @@ echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
+echo "  Model resolution:  $modelres"
+#
+# Copy defs header file to execdir, if necessary, according to 
+# requested resolution. This should seamlessly switch between
+# resolutions according to $modelres.
+#
+set defs = $srcdir/defs5.0
+if ($modelres == 2.5) set defs = $srcdir/defs2.5
+if (-f $execdir/defs.h) then
+  cmp -s $execdir/defs.h $defs
+  if ($status == 1) then # files differ -> switch resolutions
+    echo "Switching defs.h for model resolution $modelres"
+    cp $defs $execdir/defs.h
+  else
+    echo "defs.h already set for model resolution $modelres"
+  endif 
+else # defs.h does not exist in execdir -> copy appropriate defs file
+  echo "Copying $defs to $execdir/defs.h for resolution $modelres"
+  cp $defs $execdir/defs.h
+endif
 #
 # cd to execdir and run make:
 #
 cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
 echo ""
-echo "Begin building $execdir in `pwd`"
+echo "Begin building $model in `pwd`"
 #
 # Build Make.env file in exec dir, containing needed env vars for Makefile:
 #
