@@ -193,15 +193,17 @@
       integer :: istat,id_time,id_mtimedim,mtime_read(3),ntimes,
      |  i,ix,istart2(2),icount2(2),j,i4dims(4)
       integer :: ndims,nvars,ngatts,idunlim,itype,natts,len,
-     |  iddims(mxdims),iscalar
+     |  iddims(mxdims),iscalar,id
       character(len=80) :: varname
       character(len=80) :: varnames(mxvars)=' '
+      character(len=mxlen_filename) :: filename
       real :: scalar,var1(1),var22(2,2),var2(2),var10(10),varlbc
       real,dimension(nlevp1) :: zpmid_rd,zpint_rd
 !
       integer,parameter :: mxf4d=100
       character(len=16) :: f4dnames(mxf4d) ! list of 4d fields read
       logical :: found 
+      integer :: filelen ! file name length dimension on the file
 !
 ! External:
       logical,external :: arrayeq ! util.F
@@ -353,6 +355,14 @@
           sh%nlev = len
         endif
       enddo
+!
+! Get max length of file name for calls to rdfilename:
+      istat=nf_inq_dimid(ncid,'filelen',id) 
+      if (istat /= NF_NOERR) 
+     |  call handle_ncerr(istat,'get id of filelen dimension')
+      istat = nf_inq_dimlen(ncid,id,filelen)
+      if (istat /= NF_NOERR) 
+     |  call handle_ncerr(istat,'get filelen dimension')
 !
 ! Get variables (should not need to get coord vars lat,lon,lev)
       do i=1,nvars
@@ -647,48 +657,40 @@
      |        call handle_ncerr(istat,'reading timestep')
             sh%step = iscalar
 !
-! GPI data file: gpi_ncfile(time,filelen), where filelen=mxlen_filename
+! Read file names on current itime history: 
+! File name vars are type char, dimensioned (filelen,ntime)
+! See subroutine rdfilename(ncid,idv,vname,filelen,filename)
+!
+! GPI data file:
           case('gpi_ncfile')
-            istat = nf_get_var_text(ncid,i,sh%gpi_ncfile)
-            if (istat /= NF_NOERR)
-     |        call handle_ncerr(istat,'reading gpi_ncfile')
-            if (len_trim(sh%gpi_ncfile)==0) sh%gpi_ncfile='[none]'
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%gpi_ncfile)
 !
 ! SABER data file:
           case('saber_ncfile')
-            istat = nf_get_var_text(ncid,i,sh%saber_ncfile)
-            if (istat /= NF_NOERR)
-     |        call handle_ncerr(istat,'reading saber_ncfile')
-            if (len_trim(sh%saber_ncfile)==0) sh%saber_ncfile='[none]'
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%saber_ncfile)
 !
 ! TIDI data file:
           case('tidi_ncfile')
-            istat = nf_get_var_text(ncid,i,sh%tidi_ncfile)
-            if (istat /= NF_NOERR)
-     |        call handle_ncerr(istat,'reading tidi_ncfile')
-            if (len_trim(sh%tidi_ncfile)==0) sh%tidi_ncfile='[none]'
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%tidi_ncfile)
 !
 ! NCEP data file: ncep_ncfile(time,filelen), where filelen=mxlen_filename
 ! (ncep files used only by timegcm -- will always be '[none]' for tiegcm)
           case('ncep_ncfile')                               ! new histories
-            istat = nf_get_var_text(ncid,i,sh%ncep_ncfile)
-            if (istat /= NF_NOERR)
-     |        call handle_ncerr(istat,'reading ncep_ncfile')
-            if (len_trim(sh%ncep_ncfile)==0) sh%ncep_ncfile='[none]'
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%ncep_ncfile)
 !
 ! SEE data file: see_ncfile(time,filelen), where filelen=mxlen_filename
           case('see_ncfile')                               ! new histories
-            istat = nf_get_var_text(ncid,i,sh%see_ncfile)
-            if (istat /= NF_NOERR)
-     |        call handle_ncerr(istat,'reading see_ncfile')
-            if (len_trim(sh%see_ncfile)==0) sh%see_ncfile='[none]'
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%see_ncfile)
 !
 ! IMF data file: imf_ncfile(time,filelen), where filelen=mxlen_filename
           case('imf_ncfile')                               ! new histories
-            istat = nf_get_var_text(ncid,i,sh%imf_ncfile)
-            if (istat /= NF_NOERR)
-     |        call handle_ncerr(istat,'reading imf_ncfile')
-            if (len_trim(sh%imf_ncfile)==0) sh%imf_ncfile='[none]'
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%imf_ncfile)
 !
 ! GSWM data files (from namelist input):
 !   character(len=mxlen_filename) ::
@@ -699,27 +701,23 @@
 !
 ! gswm_mi_di_ncfile:
           case('gswm_mi_di_ncfile')
-            istat = nf_get_var_text(ncid,i,sh%gswm_mi_di_ncfile)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswm_mi_di_ncfile')
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%gswm_mi_di_ncfile)
 !
 ! gswm_mi_sdi_ncfile:
           case('gswm_mi_sdi_ncfile')
-            istat = nf_get_var_text(ncid,i,sh%gswm_mi_sdi_ncfile)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswm_mi_sdi_ncfile')
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%gswm_mi_sdi_ncfile)
 !
 ! gswm_nm_di_ncfile:
           case('gswm_nm_di_ncfile')
-            istat = nf_get_var_text(ncid,i,sh%gswm_nm_di_ncfile)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswm_nm_di_ncfile')
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%gswm_nm_di_ncfile)
 !
 ! gswm_nm_sdi_ncfile:
           case('gswm_nm_sdi_ncfile')
-            istat = nf_get_var_text(ncid,i,sh%gswm_nm_sdi_ncfile)
-            if (istat /= NF_NOERR) 
-     |        call handle_ncerr(istat,'reading gswm_nm_sdi_ncfile')
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%gswm_nm_sdi_ncfile)
 
           case('maglon')
           case('maglat')
@@ -3525,6 +3523,47 @@
       istat = nf_enddef(ncid)
 !     write(6,"('nc_fileinfo: fileinfo=',a)") trim(fileinfo)
       end subroutine nc_fileinfo
+!-----------------------------------------------------------------------
+      subroutine rdfilename(ncid,itime,idv,vname,filelen,filename)
+      use input_module,only: mxlen_filename
+!
+! Args:
+      integer,intent(in) :: ncid,itime,idv,filelen
+      character(len=*),intent(in) :: vname
+      character(len=*),intent(out) :: filename ! (mxlen_filename)
+!
+! Local:
+      integer :: i,ii,istat,len,id
+      integer :: index(2)
+      character(len=filelen) :: nameonfile
+!
+      filename = ' ' ! init
+!
+! Get name on file at current itime (char (filelen,ntime)):
+      nameonfile = ' '
+      index(2) = itime
+      do ii=1,filelen
+        index(1) = ii
+        istat = nf_get_var1_text(ncid,idv,index,nameonfile(ii:ii))
+      enddo
+      if (istat /= NF_NOERR) 
+     |  call handle_ncerr(istat,'rdfilename nf_get_var1_text')
+!
+! Transfer name to output filename:
+      len = len_trim(nameonfile)
+      if (len <= mxlen_filename) then
+        filename = trim(nameonfile)
+      else ! len on file is larger than current mxlen_filename
+        filename = nameonfile(1:mxlen_filename)
+        write(6,"('>>> Warning rdfilename: filelen on file=',i4,
+     |    ' len_trim(',a,')=',i4,' but mxlen_filename=',i4,
+     |    ' -> file name may be truncated')") 
+     |    filelen,vname,len,mxlen_filename
+      endif
+      if (len_trim(filename)==0) filename = '[none]'
+!     write(6,"('rdfilename returning ',a,' = ',a)") 
+!    |  vname,trim(filename)
+      end subroutine rdfilename
 !-----------------------------------------------------------------------
       subroutine handle_ncerr(istat,msg)
 !

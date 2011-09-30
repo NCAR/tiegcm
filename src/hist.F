@@ -425,6 +425,9 @@
 !    |  ' semidiurnal tides)')") 
 !    |  h%gswmnmsdi
 
+      write(6,"(2x,'nflds   = ',i3,' (number of model fields)')")
+     |  h%nflds
+
       write(6,"(2x,'gswm_mi_di_ncfile  = ',a)")
      |  trim(h%gswm_mi_di_ncfile)
       write(6,"(2x,'gswm_mi_sdi_ncfile = ',a)")
@@ -434,14 +437,13 @@
       write(6,"(2x,'gswm_nm_sdi_ncfile = ',a)")
      |  trim(h%gswm_nm_sdi_ncfile)
 
-      write(6,"(2x,'saber_ncfile   = ',a)") trim(h%saber_ncfile)
-      write(6,"(2x,'tidi_ncfile   = ',a)") trim(h%tidi_ncfile)
-
-      write(6,"(2x,'nflds   = ',i3,' (number of model fields)')")
-     |  h%nflds
       write(6,"(2x,'see_ncfile   = ',a)") trim(h%see_ncfile)
       write(6,"(2x,'gpi_ncfile   = ',a)") trim(h%gpi_ncfile)
       write(6,"(2x,'ncep_ncfile  = ',a)") trim(h%ncep_ncfile)
+      write(6,"(2x,'imf_ncfile   = ',a)") trim(h%imf_ncfile)
+      write(6,"(2x,'saber_ncfile = ',a)") trim(h%saber_ncfile)
+      write(6,"(2x,'tidi_ncfile  = ',a)") trim(h%tidi_ncfile)
+
       write(6,"(2x,'tuv_lbc_intop=',i3,' (if 1, then lbc of t,u,v',
      |  ' are stored in top k slot (old histories))')") h%tuv_lbc_intop
       write(6,"(2x,'LBC = ',f8.2,' (lower boundary interface ',
