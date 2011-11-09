@@ -30,6 +30,8 @@
 !
 ! Local:
       real,parameter :: co2u=350.e-6
+! Test 2 run with increased co2 density at LBC - G. Lu 6/19/09
+!     real,parameter :: co2u=450.e-6
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  xmco2,
      |  nco2,aco2,bco2,  ! n(co2), a(co2), b(co2) (s10,s11,s12)
@@ -68,6 +70,8 @@
           else
              bco2(k,i) = 1.4e-12
           endif
+! G. Lu 6/18/09: Test run1: set bco2=3.e-12
+!            bco2(k,i) = 3.0e-12
 !
 ! Co2 cooling (s12):
           co2_cool(k,i) = 2.65e-13*nco2(k,i)*exp(-960./tn(k,i))*

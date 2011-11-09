@@ -37,7 +37,10 @@
      |  label,           ! optional generic text label for this run
      |  tempdir,         ! temporary directory 
      |  magvol,          ! absolute or relative path to magnetic data file
-     |  amievol,         ! absolute or relative path to amie data file (optional)
+     |  amievol,         ! file or mss path of amie data file (optional)
+     |  amiesh,          ! file or mss path of amie SH data file (optional)
+     |  amienh,          ! file or mss path of amie NH data file (optional)
+     |  seeflux,         ! file or mss path of SEE photon data file (optional)
      |  hpss_path        ! hpss directory for dispose of output history files
 !
 ! date and calday are no longer supported, and are replaced by start_day, 
@@ -57,6 +60,9 @@
      |  dynamo,          ! 0/1 flag for dynamo
      |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
      |  aurora,          ! 0/1 flag for aurora
+     |  iamie,           ! 0/1 flag for AMIE data (not in namelist read)
+     |  amie_ibkg,       ! 0/1/2 flag for read real, 1st, or 24-hr averaged data
+     |  iseeflux,
      |  ntask_lat,       ! number of tasks in latitude  dimension
      |  ntask_lon        ! number of tasks in longitude dimension
       real ::
@@ -113,7 +119,7 @@
      |  wei05sc_ncfile,   ! path to netcdf data files for weimer05 model
      |  gpi_ncfile,         ! absolute or relative path to netcdf gpi data file
      |  ncep_ncfile,        ! ncep data file (time-gcm only)
-     |  see_ncfile,         ! absolute or relative path to netcdf SEE flux data file
+     |  sd_ncfile,          ! absolute or relative path to netcdf SEE flux data file
      |  imf_ncfile,         ! absolute or relative path to netcdf IMF data file
      |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
@@ -164,11 +170,11 @@
      |  kp,colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,ntask_lat,ntask_lon,
-     |  start_day,start_year,calendar_advance,see_ncfile,
+     |  start_day,start_year,calendar_advance,sd_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
-     |  f107a_time,hpss_path
+     |  f107a_time,hpss_path,amiesh,amienh,amie_ibkg,seeflux
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -228,11 +234,14 @@
       tempdir = ' '
       magvol  = ' '
       amievol = ' '
+      amiesh  = ' '
+      amienh  = ' '
+      seeflux = ' '
       hpss_path = ' '
 !
       gpi_ncfile  = ' '       ! user input gpi file path
       ncep_ncfile = ' '       ! (time-gcm only)
-      see_ncfile  = ' '       ! solar flux data (see module in soldata.F)
+      sd_ncfile   = ' '       ! solar flux data (see module in soldata.F)
 !
       imf_ncfile = ' '        ! user input imf data file, used to drive weimer
       write(weimer_ncfile ,"('$TGCMDATA/weimer2001_coeffs.nc')")
@@ -262,6 +271,9 @@
       tide3m3(:) = spval
       tideann = ispval
       aurora  = ispval
+      iseeflux   = 0   ! will be set 1 if amienh or amiesh files are given
+      iamie   = 0      ! will be set 1 if amienh or amiesh files are given
+      amie_ibkg = 0    ! default is read in real time amie data
       ntask_lat = ispval
       ntask_lon = ispval
       colfac  = spval
@@ -526,7 +538,7 @@
       if (len_trim(ncep_ncfile) > 0) call expand_path(ncep_ncfile)
 !
 ! SEE flux data file:
-      if (len_trim(see_ncfile) > 0) call expand_path(see_ncfile)
+      if (len_trim(sd_ncfile) > 0) call expand_path(sd_ncfile)
 !
 ! GSWM data files:
       if (len_trim(gswm_mi_di_ncfile) > 0) 
@@ -583,6 +595,26 @@
         eddy_dif = 0
       else
         eddy_dif = 1
+      endif
+!
+! Set iamie flag to 1 if user has provided either amiesh or amienh
+! data files:
+!
+      if (len_trim(amiesh) + len_trim(amienh) > 0) then
+        write(6,"('Will read AMIE data inputs')")
+        iamie = 1
+        potential_model = 'AMIE'
+      endif
+!
+! Read TIME-SEE flux data
+! gl - 3/05/2005
+!
+      n = len_trim(seeflux)
+      if (n > 0) then
+        write(6,"('Read SEE flux Data as inputs')")
+        iseeflux = 1
+      else
+        write(6,"('input: iseeflux=',i3)") iseeflux
       endif
 !
 ! Save certain params as originally read by namelist read:
@@ -1406,8 +1438,8 @@
 
       if (len_trim(gpi_ncfile) > 0)
      |  write(6,"('  gpi run: gpi_ncfile = ',a)") trim(gpi_ncfile)  
-      if (len_trim(see_ncfile) > 0)
-     |  write(6,"('  SEE data: see_ncfile = ',a)") trim(see_ncfile)
+      if (len_trim(sd_ncfile) > 0)
+     |  write(6,"('  SEE data: sd_ncfile = ',a)") trim(sd_ncfile)
       if (len_trim(imf_ncfile) > 0)
      |  write(6,"('  imf run: imf_ncfile = ',a)") trim(imf_ncfile)  
 
@@ -1865,6 +1897,8 @@
           write(6,"('wei05sc_ncfile=',a)") trim(wei05sc_ncfile)
         case('HEELIS')
           write (6,"('Will use the Heelis potential model')")
+        case('AMIE')
+          write(6,"('Will use the AMIE potential patterns')")
         case('NONE')
           write(6,"('Will NOT use an empirical potential model')")
           write(6,"('High-lat convection will be zero.)')")
@@ -2077,6 +2111,12 @@
       if (potential_model(1:4)=='NONE' .and. byimf == spval) then
         write(6,"('Note input: Setting BY to 0 with no (NONE) ',
      |      'potential model.')")
+        byimf = 0.
+      endif
+!
+! Reset byimf - G. Lu, 5/3/2009
+      if (byimf == spval) then
+        write(6,"('No IMF By input: Resetting BY to 0')")
         byimf = 0.
       endif
 !

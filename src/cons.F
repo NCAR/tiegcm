@@ -126,6 +126,7 @@
      |  ylong(nlonp1)    ! geographic longitudes (radians)
 !
 ! Critical colatitude limits (15,30 deg) for use of Heelis potential in dynamo:
+! These may change with "dynamic crit" in Weimer run, or if reading amie data 
       real :: crit(2) = (/0.261799387, 0.523598775/)
 !
 ! Kut is used in filtering longitudinal waves (see filter.F):
@@ -243,9 +244,33 @@
         z = zibot+.5*dlev
         expz(1) = exp(-z)
         expdz = exp(-dlev)
-        difk(1,:) = 5.0e-6
-        dift(1,:) = 5.0e-6/prndtl
-        xmue(1,:) = 5.0e-6
+
+!       difk(1,:) = 5.0e-6
+!       dift(1,:) = 5.0e-6/prndtl
+!       xmue(1,:) = 5.0e-6
+!
+! 4/23/09 btf: amie mods as per Gang:
+! Note this amie code assumes eddy_dif==0 (i.e., DOY eddy diffusion is off)
+!
+! reduce Eddy diffusion by a factor of 2 - G. Lu, Jul 24, 2006
+!     difk(1,:) = 2.5e-6
+! Increase Eddy diffusion by a factor of 2 - G. Lu, Dec 20, 2006 - Don't seem to affect Nmf2 very much
+!     difk(1,:) = 10.0e-6
+!     dift(1,:) = 5.0e-6/prndtl
+!     xmue(1,:) = 5.0e-6
+! Change made by Roble on May 13, 2007 for Charley Barth
+!     difk(1,:) = 2.0e-6
+!     dift(1,:) = 2.0e-6/prndtl
+!     xmue(1,:) = 2.0e-6
+! Change made for April 2002 (when the modeled Rho was smaller than CHAMP)
+!     difk(1,:) = 1.0e-6
+!     dift(1,:) = 1.0e-6/prndtl
+!     xmue(1,:) = 1.0e-6
+! Change made for Sep 2005 (when the modeled Rho was larger than CHAMP)
+      difk(1,:) = 2.0e-5
+      dift(1,:) = 2.0e-5/prndtl
+      xmue(1,:) = 2.0e-5
+
         do k=2,nlev
           expz(k) = expz(k-1)*expdz
           difk(k,:) = difk(k-1,:)*expdz

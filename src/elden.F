@@ -14,6 +14,7 @@
       use chemrates_module,only: rk1,rk2,rk3,rk4,rk5,rk6,rk7,rk8,
      |  rk9,rk10,rk16,rk23,rk26,beta9,ra1,ra2,ra3
       use qrj_module,only: qnp,qnop,qo2p,qn2p
+      use dyndiag_module,only: tec_sec,tec
       use addfld_module
       use diags_module,only: mkdiag_TEC,mkdiag_HNMF2
       implicit none
@@ -52,8 +53,6 @@
      |  a,b,c,d,e,fg,h, ! terms for quartic coefficients
      |  xn2,            ! n2 (mmr) (1-o2-o)
      |  root            ! output from quartic solver
-      real,dimension(lon0:lon1) ::
-     |  tec		! diagnostic total electron content
 
 !     write(6,"('enter elden: lat=',i2)") lat
       i0 = lon0 ; i1 = lon1
@@ -236,12 +235,33 @@
       do i=lon0,lon1
         do k=lev0,lev1-2
           electrons(k+1,i) = sqrt(root(k,i)*root(k+1,i))
+! Set up the low limit for electron density - G. Lu 5/11/2009
+          if (electrons(k+1,i) < 5.e2) then
+            write(6,"('ELDEN: low Ne ',e7.2,' at k=',i3)")
+     |         electrons(k+1,i),k+1
+            electrons(k+1,i) = 5.e2
+          endif
         enddo ! k=lev0,lev1-2
 !
 ! Lower and upper boundaries:
         electrons(lev0,i) = sqrt(root(lev0  ,i)**3/root(lev0+1,i))
         electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
+! Set up the low limit for electron density - G. Lu 5/11/2009
+        if (electrons(lev0,i) < 5.e2) electrons(lev0,i) = 5.e2
+        if (electrons(lev1,i) < 5.e2) electrons(lev1,i) = 5.e2
       enddo ! i=lon0,lon1
+!
+! 4/23/09 btf: amie mods as per Gang:
+C  Get ht integral of electron density and save in tec of /sight/
+      tec(:,lat) = 0.
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+          tec_sec(i,lat,k) = electrons(k,i)
+          tec(i,lat) = tec(i,lat) +(z(k+1,i)-z(k,i))*electrons(k,i)
+        enddo
+        tec_sec(i,lat,nlevp1) = tec(i,lat)
+      enddo
+
 !     call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',i0,i1,lat)
 !

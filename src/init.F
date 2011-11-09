@@ -77,7 +77,7 @@
      |  gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,output,secout,mkhvols,source_start,
-     |  see_ncfile
+     |  sd_ncfile
       use hist_module,only: hist_init,isechist,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
      |  nfiles_sech,nfsech
@@ -197,7 +197,7 @@
 !     call init_amie
 !
 ! Read SEE data file:
-      if (len_trim(see_ncfile) > 0) then
+      if (len_trim(sd_ncfile) > 0) then
          call rd_soldata
       endif
 !

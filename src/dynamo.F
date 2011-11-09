@@ -286,6 +286,7 @@
 ! Electric potential from heelis or weimer:
       real,dimension(nmlonp1,nmlat0) :: pfrac  ! NH fraction of potential
       real,dimension(nmlonp1,nmlat)  :: phihm  ! potential in magnetic
+      real,dimension(nmlonp1,nmlat0) :: colatc
       real,dimension(nlonp4,nlat,nlevp1) :: dynpot_diag
 ! 
 ! Work array (private to this module)
@@ -405,21 +406,25 @@
 ! K_(m phi)^D     =   rim(1) * dt0dts
 ! K_(m lam)^D     = +-rim(2) * rcos0s
 !
-      use cons_module,only: dlatm,dlonm,pi_dyn,ylatm,rtd
+      use cons_module,only: dlatm,dlonm,pi_dyn,ylatm,rtd,crit
+      use hist_module,only: modeltime
       use magfield_module,only: im,jm,dim,djm
       use fields_module,only: dynpot,phim3d
-      use input_module,only: potential_model
-      use init_module,only: istep	! for sigma_R high latitudes
+      use input_module,only: potential_model,iamie
+      use amie_module,only: pcp_nh_amie,pcp_sh_amie
+      use init_module,only: iyear,istep	! for sigma_R high latitudes
 #if defined(INTERCOMM) || defined(CISMAH)
 !      use cism_coupling_module,only: cism_pot2mag
 #endif
 !
 ! Local:
-      integer :: i,j,jj,jjj,j0,jntl,k,n,ncc,nmaglat,nmaglon,ier
-      real :: sym,fac
+      integer :: i,j,jj,jjj,j0,jntl,k,n,ncc,nmaglat,nmaglon,ier,jfit
+      real :: sym,fac,phi_add
       real :: cs(nmlat0)
       real,dimension(nlonp1,0:nlatp1) :: phih  ! potential in geographic
       real,dimension(nlonp4,nlat) :: phih_diag
+      real,dimension(nmlonp1,nmlat0)  :: phisym  ! symmetric amie potential
+      real,dimension(nmlonp1,nmlat)   :: phiasym ! asymmetric amie potential
 !
 ! First transform fields to geomagnetic grid, and perform field line
 ! integrations:
@@ -678,6 +683,75 @@
       do i=1,nmlon0
         c0(i,nmlat0,10) = 1.
       enddo
+
+!
+! At this point, phihm is heelis, weimer, or amie (see advance.F)
+!
+! If not amie:
+! Modify stencils and RHS so that the NH high lat potential is inserted at
+!  high latitude -> phihm(1,nmlat0). The SH high lat potential will be added back later.
+!  pfrac = fraction of dynamo in solution in the NH. = 1 low lat, = 0 hi lat
+!    cons_module: crit(1)=15, crit(2)=30 deg colats, or hi-lat > 75 deg,
+!      dynamo < 60 deg, and combination between 60-75 mag lat.
+! The dynamo is symmetric about the magnetic equator, but the high latitude
+!  is anti-symmetric in both hemispheres.  However, since Mudpack uses the
+!  NH potential pattern, then the SH potential pattern must be added
+!  back into the 2-D phim before the call threed, and before it is
+!  transformed to geographic coordinates.
+!
+      if (iamie <= 0) then
+        if(.not.mod_heelis) then   ! original heelis
+          ncc = 1
+          nmaglon = nmlon0
+          nmaglat = nmlat0
+          do n=1,5
+            if (isolve==2) then
+              call stenmd(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),
+     |          pfrac)
+            else
+              call stenmod(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),
+     |          pfrac)
+            endif
+            ncc = ncc+9*nmaglon*nmaglat
+            if (n==1) ncc = ncc+nmaglon*nmaglat ! rhs is in 10th slot
+            nmaglon = (nmaglon+1)/2
+            nmaglat = (nmaglat+1)/2
+          enddo ! n=1,5
+        endif
+!
+! If amie, then break phihm into symmetric (phisym) and asymmetric (phiasym)
+!   parts. phihm(nmlonp1,nmlat), phisym(nmlonp1,nmlat0), phyasym(nmlonp1,nmlat)
+!
+      else ! is amie
+        phiasym = 0.
+        jfit = 0
+        do i=1,nmlonp1
+          phisym(i,1) = phihm(i,nmlat0)
+          phiasym(i,nmlat0) = 0.
+          phi_add = 0.
+! Modification for penetration E-field for Nov. 04 - G. Lu, 2/19/2008
+          if (iyear==2004 .and. (modeltime(1)==314 .and.
+     |        modeltime(2) > 19 .and. pcp_nh_amie > 150.e3 .or.
+     |        modeltime(1)==315 .and. pcp_nh_amie > 150.e3)) then
+            do j=1,nmlat0-1
+              if (colatc(i,nmlat0-j+1) < crit(2)) jfit = j
+            enddo
+!!           phi_add = 0.5*phisym(i,nmlat0-jfit+1)
+            phi_add = 0.8*phihm(i,jfit)
+          endif
+          do j=1,nmlat0-1
+            jj = nmlat+1-j
+            j0 = nmlat0-j+1
+            phisym(i,j0)  = 0.5*(phihm(i,j)+phihm(i,jj))
+            phiasym(i,j)  = 0.5*(phihm(i,j)+phihm(i,jj))-phihm(i,j)
+            phiasym(i,jj) = 0.5*(phihm(i,j)+phihm(i,jj))-phihm(i,jj)
+            if (j >= jfit) then
+!!             phisym(i,j)  = phisym(i,j)+phi_add
+              phisym(i,j0)  = phisym(i,j0)+phi_add
+            endif
+          enddo ! j=1,nmlat0-1
+        enddo ! i=1,nmlonp1
+
 #if defined(INTERCOMM) || defined(CISMAH)
 !
 ! Convert LFM geographic potential to geomagnetic coordinates
@@ -706,17 +780,40 @@ c      enddo
         nmaglon = nmlon0
         nmaglat = nmlat0
         do n=1,5
+
+!         if (isolve==2) then
+!           call stenmd(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),pfrac)
+!         else
+!           call stenmod(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),pfrac)
+!         endif
+!
+! Modify stencils of symmetric part of amie potential:
           if (isolve==2) then
-            call stenmd(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),pfrac)
+            call stenmd(nmaglon,nmaglat,cee(ncc),phisym(1,1),
+     |        pfrac)
           else
-            call stenmod(nmaglon,nmaglat,cee(ncc),phihm(1,nmlat0),pfrac)
+            call stenmod(nmaglon,nmaglat,cee(ncc),phisym(1,1),
+     |        pfrac)
           endif
+
           ncc = ncc+9*nmaglon*nmaglat
           if (n==1) ncc = ncc+nmaglon*nmaglat ! rhs is in 10th slot
           nmaglon = (nmaglon+1)/2
           nmaglat = (nmaglat+1)/2
         enddo ! n=1,5
-      endif
+!    
+! End of modification
+! p=0 from pole to crit1, p=1 from crit2 to equator:
+        do i=1,nmlonp1
+          do j=1,nmlat0-1
+            jj = nmlat+1-j
+            j0 = nmlat0-j+1 
+            phiasym(i,j)  = phiasym(i,j) *(1.-pfrac(i,j0))
+            phiasym(i,jj) = phiasym(i,jj)*(1.-pfrac(i,j0))
+          enddo ! j=1,nmlat0-1
+        enddo ! i=1,nmlonp1
+      endif ! not mod_heelis
+      endif ! iamie
 !
       jntl = 0
 !
@@ -770,20 +867,30 @@ c      enddo
 ! jp index for NH pfrac (nmlat0 down to 1)
 ! 
       fac = 1.0
-      if(mod_heelis) fac = 0.   ! modified heelis
-      do j=1,nmlat0		! SH
-        jn = nmlat  - j + 1
-        jp = nmlat0 - j + 1
-        do i=1,nmlonp1
-          phim(i,j)=rim(i,j,1)+fac*(1.-pfrac(i,jp))*(phihm(i,j)-
-     |        phihm(i,jn))
-        enddo ! i=1,nmlonp1
-      enddo ! j=1,nmlat0
-      do j=nmlat0+1,nmlat	! NH
-        do i=1,nmlonp1
-          phim(i,j) = rim(i,j,1)
-        enddo ! i=1,nmlonp1
-      enddo ! j=1,nmlat
+      if (iamie <= 0) then
+        if(mod_heelis) fac = 0.   ! modified heelis
+        do j=1,nmlat0		! SH
+          jn = nmlat  - j + 1
+          jp = nmlat0 - j + 1
+          do i=1,nmlonp1
+            phim(i,j)=rim(i,j,1)+fac*(1.-pfrac(i,jp))*(phihm(i,j)-
+     |          phihm(i,jn))
+          enddo ! i=1,nmlonp1
+        enddo ! j=1,nmlat0
+        do j=nmlat0+1,nmlat	! NH
+          do i=1,nmlonp1
+            phim(i,j) = rim(i,j,1)
+          enddo ! i=1,nmlonp1
+        enddo ! j=1,nmlat
+!
+! Amie (fractional partitioning was done above):
+      else ! amie
+        do j=1,nmlat
+          do i=1,nmlonp1
+            phim(i,j) = rim(i,j,1)-phiasym(i,j)
+          enddo ! i=1,nmlonp1
+        enddo ! j=1,nmlat
+      endif
 !
 ! Save single-level high latitude potential:
 !      if (potential_model == 'WEIMER01') then

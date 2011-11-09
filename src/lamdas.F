@@ -246,7 +246,8 @@
 ! observations, as recommended by Gagnepain et al. (J. Atmos. Terr. 
 ! Phys., 39, 1119-1124, 1977).
 !
-          rnu_ne(k,i) = rnu_ne(k,i)*4.
+! GangLu amie mods do not do this:
+!         rnu_ne(k,i) = rnu_ne(k,i)*4.
 
 !         write(6,"('lamdas: lat=',i3,' k=',i3,' i=',i3,' te=',
 !    |      e12.4,' n2=',e12.4,' o2=',e12.4,' o1=',e12.4,' omega_e_inv='

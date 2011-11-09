@@ -5,7 +5,7 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-      use input_module,only: see_ncfile
+      use input_module,only: sd_ncfile
       implicit none
 #ifdef SUN
 #include <netcdf3.inc>
@@ -48,16 +48,16 @@
 !
       write(6,"(/,72('-'),/,'Read solar data:')")
       diskfile = ' '
-      call getfile(see_ncfile,diskfile)
+      call getfile(sd_ncfile,diskfile)
       write(6,"('Acquired SEE solar data file ',a,
-     |  /,'  (disk file is ',a,')')") trim(see_ncfile),trim(diskfile) 
+     |  /,'  (disk file is ',a,')')") trim(sd_ncfile),trim(diskfile) 
 !
 ! Open netcdf dataset:
       istat = nf_open(diskfile,NF_NOWRITE,ncid) 
       if (istat /= NF_NOERR) then
-        write(6,"('>>> rd_soldata: error opening see_ncfile ',a)")
+        write(6,"('>>> rd_soldata: error opening sd_ncfile ',a)")
      |    trim(diskfile)
-        call handle_ncerr(istat,'error opening see_ncfile')
+        call handle_ncerr(istat,'error opening sd_ncfile')
       else
         write(6,"('Opened netCDF file ',a,' istat=',i3,' ncid=',
      |    i3)") trim(diskfile),istat,ncid
@@ -247,7 +247,7 @@
       if (iyfrac < yfrac(1,istruct) .or. 
      |        iyfrac > yfrac(ndate,istruct)) then
         write(6,"(/,'>>> get_soldata: requested year-day is not ',
-     |    'available from see_ncfile data file:')")
+     |    'available from sd_ncfile data file:')")
         write(6,"(4x,' date(1)=',i8,
      |    ' date(ndate)=',i8,/)") date(1),date(ndate)
         write(6,"(72('-'),/)")

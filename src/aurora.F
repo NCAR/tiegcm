@@ -58,9 +58,13 @@
       use cons_module,only: ! see cons.F
      |  dphi, ! delta latitude geographic (radians)
      |  dtr,  ! degrees to radians (pi/180)
-     |  pi    ! 4.*atan(1.)
+     |  pi,   ! 4.*atan(1.)
+     |  crit  ! may be changed from default if amie run
       use params_module,only: nlon,nlonp4,nlevp1,nlat
       use addfld_module,only: addfld
+      use amie_module,only: crad,phida,ekvg,efxg,hpi_sh_amie,
+     |  hpi_nh_amie,pcp_sh_amie,pcp_nh_amie
+      use input_module,only: iamie
       implicit none
 !
 ! VT vampir tracing:
@@ -147,6 +151,7 @@
      |  phid(2),      ! dayside convection entrance in MLT (subtract 12h since 0=noon) converted to radians (f(By))
      |  phin(2),      ! night convection entrance in MLT (subtract 12h since 0=noon) converted to radians (f(By))
      |  rrad(2),      ! radius of auroral circle in radians
+     |  rradp(2),     ! radius of polar-cap circle in radians for drizls
      |  alfa0,        ! average of noon and midnight characteristic Maxw energies
      |  ralfa,ralfa2, ! difference ratios of characteristic energies
      |  rrote,        ! MLT of maximum auroral energy flux converted to radians
@@ -206,6 +211,8 @@
 ! Set auroral constants (called from sub advance once per time-step).
 !
       use params_module,only: dz,nlev
+      use hist_module,only:   modeltime
+      use init_module,only:   iyear
       use input_module,only:  ! from user input
      |  byimf,   ! BY component of IMF (nT)      (e.g., 0.)
      |  ctpoten, ! cross-cap potential (kV)      (e.g., 45.)
@@ -219,7 +226,7 @@
       real,parameter :: convert=3.1211e+8
       real :: alfa_1,alfa_2,plevel,roth,rote,rcp,rhp,
      |  alfa21,alfa22,e21,e22
-      real :: arad(2)
+      real :: arad(2),hp_amie,c25,c35
       real :: byloc   ! local by
       real,parameter :: e=1.e-10
 !
@@ -410,9 +417,85 @@
       phinm0(:) = 90.*dtr
       rr1(:) = -2.6
 !
+! Recalculate some parameters if an amie run:
+      if (iamie > 0) then
+        theta0(:) = crad(:) ! radians from amie module
+        if (theta0(isouth) > 65.) theta0(isouth) = 65.
+        if (theta0(inorth) > 65.) theta0(inorth) = 65.
+        phid(:) = phida(:)  ! radians from amie module
+!       hp_amie = max(hpi_sh_amie,hpi_nh_amie)
+        hp_amie = 0.5*(hpi_sh_amie+hpi_nh_amie)
+        plevel = 2.09*alog(hp_amie)
+        h1 = min(2.35,0.83+0.33*plevel)
+        h2 = 2.87 + 0.15*plevel
+        h0 = 0.5 * (h1 + h2) * dtr
+        h2 = 4.5 + 0.08*hp_amie
+! For Sep 10 (Day 253) 2005 storm interval
+        h2 = 4.5 + 0.11*hp_amie
+! For October 2003 storm interval
+!       h2 = 4.5 + 0.20*hp_amie
+        roth = (12.18- 0.89*plevel)
+        rote = (2.62 - 0.55*plevel)
+        rroth = roth * dtr
+        rrote = rote * dtr
+!       rradp(isouth) = crad(isouth)-1.5*dtr
+!       rradp(inorth) = crad(inorth)-2.5*dtr
+        rradp(isouth) = crad(isouth) + h2*dtr
+        rradp(inorth) = crad(inorth) + h2*dtr
+        if (rradp(isouth) > 29.*dtr) rradp(isouth) = 29.*dtr
+        if (rradp(inorth) > 29.*dtr) rradp(inorth) = 29.*dtr
+!       if (rradp(isouth) > 31.*dtr) rradp(isouth) = 31.*dtr
+!       if (rradp(inorth) > 31.*dtr) rradp(inorth) = 31.*dtr
+        rrad(isouth) = rradp(isouth) + 0.5*dtr
+        rrad(inorth) = rradp(inorth) + 0.5*dtr
+!
+! Set critical colatitude crit(2) 40 deg -- G. Lu 5/11/98
+! Therefore, crit2 = 40, crit1 = 25-30, depending on theta0
+!
+        c35 = min(30.,(theta0(1)+theta0(2))*0.5 + 5.0)
+        c25 = max(25.,c35)
+        crit(1) = c25 * dtr
+        c25 = max(30.,c35)
+        crit(1) = 30. * dtr
+        crit(2) = 40. * dtr
+! Move CRIT to 3-degree lower for April 17, 2002
+        if (iyear==2002 .and. modeltime(1)==107 .and.
+     |   modeltime(2)>13 .and. pcp_nh_amie*1.e-3 > 100.) then
+          crit(1) = crit(1) - (pcp_nh_amie*1.e-3 - 100.)*0.08*dtr
+          crit(2) = crit(2) - (pcp_nh_amie*1.e-3 - 100.)*0.08*dtr
+          crit(2) = max(crit(1),crit(2))
+        endif
+      if (iyear == 2004) then
+        c25 = max(30.,c35)
+        crit(1) = c25 * dtr
+        crit(2) = 35. * dtr
+! Move CRIT to 3-degree lower for Nov. 10, 2004
+        if (modeltime(1) == 315) then
+          crit(2) = 45.*dtr
+          if (pcp_nh_amie*1.e-3 > 150.) then
+            crit(1) = crit(1) - (pcp_nh_amie*1.e-3 - 150.)*0.08*dtr
+            crit(2) = crit(2) - (pcp_nh_amie*1.e-3 - 150.)*0.08*dtr
+            crit(2) = max(crit(1),crit(2))
+          endif
+        endif
+! Move CRIT to higher latitude for more penetration E-field for Nov. 9, 2004
+        if (modeltime(1) == 314 .and.
+     |      modeltime(2) > 19 .and. pcp_nh_amie*1.e-3 > 150.) then
+          crit(1) = crit(1) - (pcp_nh_amie*1.e-3 - 150.)*0.08*dtr
+          crit(2) = crit(2) - (pcp_nh_amie*1.e-3 - 150.)*0.08*dtr
+          crit(2) = min(crit(1),crit(2))
+        endif
+        write(6,"('crad =',f6.2,'  rrad=',f6.2,'  rradp=',f6.2,
+     |  ' pcp_nh_amie=',f8.1,' crit(2)=',2f6.2)") crad(1)/dtr,
+     |  rrad(1)/dtr,rradp(1)/dtr,pcp_nh_amie*1.e-3,crit/dtr
+      endif     !end of Nov 2004 modes
+
+      endif
+!
 ! Report to stdout:
       if (iprint > 0) then
         write(6,"(/,'aurora_cons:')")
+        write(6,"('  iamie=',i2)") iamie
         write(6,"('  cusp:    alfac=',f8.3,' ec=',f8.3,' fc=',e10.4)")
      |    alfac,ec,fc
         write(6,"('  drizzle: alfad=',f8.3,' ed=',f8.3,' fd=',e10.4)")
@@ -563,6 +646,8 @@
       use cons_module,only: check_exp
 !
 ! Calculate horizontal variation of polar cusp heating (was polht.F)
+! (if this is an amie run, then theta0 and phid have been taken
+!  from amie, see aurora_cons)
 !
 ! Args:
       integer,intent(in) :: lat
@@ -626,7 +711,8 @@
      |  coslamda,  ! cos(angle from throat)
      |  halfwidth, ! oval 1/e-width
      |  dtheta     ! latitudinal variation (Gaussian)
-
+      real,parameter :: s10=0.174532925
+      real :: clat
 !
 ! Low-energy protons:
 !     alfap0 = 0.5*(alfap1+alfap2)
@@ -690,6 +776,29 @@
 !
 ! For electron temperature (used in settei):  
         qteaur(i+2,lat) = -7.e+8*exp(-(dtheta(i)/halfwidth(i))**2)
+!
+! Recalculate alfa, flux, drizl if an amie run (as in old sub amiepa):
+        if (iamie > 0) then
+!
+! Insure ekvg mean energy >= 1.:
+          ekvg(i,lat) = max(ekvg(i,lat),1.)
+          alfa(i+2) = ekvg(i,lat)/2.
+          flux(i+2) = efxg(i,lat)/(2.*alfa(i+2)*1.602e-9)
+          eflux(i+2) = flux(i+2)*fac_p2e*alfa(i+2)
+          clat = acos(sin(abs(dlat_aur(i))))
+          alfa2(i+2) = alfa20
+!         drizl(i+2) = exp(-((clat-crad(ihem)+
+!    |      abs(clat-crad(ihem)))/(2.*s10))**2)
+!         flux2(i+2) = e20*(1.-re2*coslamda(i))*
+!    |      exp(-((clat-crad(ihem))/
+!    |      halfwidth(i))**2) / (2.*alfa2(i+2)*1.602E-9)
+          drizl(i+2) = exp(-((clat-rradp(ihem)+
+     |      abs(clat-rradp(ihem)))/(1*s10))**2)
+          flux2(i+2) = e20*(1.-re2*coslamda(i))*
+     |      exp(-((clat-rrad(ihem))/
+     |      halfwidth(i))**2) / (2.*alfa2(i+2)*1.602E-9)
+          eflux2(i+2) = flux2(i+2)*fac_p2e*alfa2(i+2)
+        endif
       enddo ! i=1,nlon
 !
 ! Periodic points:

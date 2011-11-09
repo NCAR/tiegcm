@@ -51,7 +51,7 @@
 ! !PUBLIC MEMBER FUNCTIONS:
 ! !PUBLIC DATA MEMBERS:
 !      
-      logical,parameter :: j_pg = .true.  ! flag for mag.pressure and gravity 
+      logical,parameter :: j_pg = .false.  ! flag for mag.pressure and gravity 
       real, parameter :: matm = 1.6605E-24 ! mass per atomic weight [g]
       
 ! used by dynamo but calculated on the geographic grid to avoid transfering to

@@ -311,7 +311,7 @@
      |  colfac,source,hist,sechist,calendar_advance,secsource,
      |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
-     |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
+     |  gpi_ncfile,sd_ncfile,ncep_ncfile,label,imf_ncfile,
      |  saber_ncfile,tidi_ncfile
       use mpi_module,only: ntask
 
@@ -459,8 +459,8 @@
 
       h%gpi_ncfile= gpi_ncfile
       if (len_trim(gpi_ncfile) == 0) h%gpi_ncfile = '[none]'
-      h%see_ncfile= see_ncfile
-      if (len_trim(see_ncfile) == 0) h%see_ncfile = '[none]'
+      h%sd_ncfile= sd_ncfile
+      if (len_trim(sd_ncfile) == 0) h%sd_ncfile = '[none]'
       h%ncep_ncfile= ncep_ncfile
       if (len_trim(ncep_ncfile) == 0) h%ncep_ncfile = '[none]'
       h%imf_ncfile= imf_ncfile

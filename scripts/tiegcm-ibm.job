@@ -2,7 +2,7 @@
 #
 # User set LSF resource directives for IBM/AIX batch job:
 #
-#BSUB -J tiegcm_trunk
+#BSUB -J tiegcm_amie
 #BSUB -P 24100004
 ##BSUB -q regular
 ##BSUB -n 32
@@ -29,10 +29,10 @@
 #   exec:     If TRUE, execute the model (build only if FALSE)
 #   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
-set modeldir = tiegcm_trunk
-set execdir  = tiegcm-aix
-#set input    = tiegcm.inp
-set output   = tiegcm.out
+set modeldir = tiegcm_amie
+set execdir  = tiegcm_amie-aix
+set input    = tiegcm_amie.inp
+set output   = tiegcm_amie.out
 set make     = Make.bluefire
 set modelres = 5.0
 set mpi      = TRUE

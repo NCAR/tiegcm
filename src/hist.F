@@ -99,7 +99,7 @@
      |    source_file,       ! source file (this run)
      |    initial_file,      ! initial file (initial run)
      |    output_file,       ! output file (from namelist read)
-     |    see_ncfile,        ! SEE data file
+     |    sd_ncfile,         ! SEE data file
      |    gpi_ncfile,        ! gpi data file
      |    ncep_ncfile,       ! ncep data file (timegcm only)
      |    imf_ncfile,        ! IMF data file
@@ -232,7 +232,7 @@
       h%ut   = real_init
       h%step = -1
 
-      h%see_ncfile = '[none]'
+      h%sd_ncfile = '[none]'
       h%gpi_ncfile = '[none]'
       h%ncep_ncfile = '[none]'
 
@@ -437,7 +437,7 @@
       write(6,"(2x,'gswm_nm_sdi_ncfile = ',a)")
      |  trim(h%gswm_nm_sdi_ncfile)
 
-      write(6,"(2x,'see_ncfile   = ',a)") trim(h%see_ncfile)
+      write(6,"(2x,'sd_ncfile    = ',a)") trim(h%sd_ncfile)
       write(6,"(2x,'gpi_ncfile   = ',a)") trim(h%gpi_ncfile)
       write(6,"(2x,'ncep_ncfile  = ',a)") trim(h%ncep_ncfile)
       write(6,"(2x,'imf_ncfile   = ',a)") trim(h%imf_ncfile)

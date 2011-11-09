@@ -22,7 +22,7 @@
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
       use input_module,only: start,step,idynamo=>dynamo,
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
-     |  imf_ncfile
+     |  imf_ncfile,iamie,amie_ibkg,amiesh,amienh
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
      |  ctpoten,ctpoten_time,ntimes_ctpoten, rd_ctpoten,
@@ -51,6 +51,7 @@
       use imf_module,only: getimf
       use gswm_module,only: getgswm
       use params_module,only: nlonp4,nlat,nlev
+      use amie_module,only: getamie,tiepot
       use output,only: outhist
       use addfld_module,only: addfld
       use lbc,only: tuvz_lbc
@@ -280,6 +281,14 @@
 !
       call getgswm(istep,iyear,iday,secs)
 !
+! Get AMIE data
+      if (iamie==1) then
+        iprint = 0
+        if (istep==1) iprint = 1
+        if (iprint>0) write(6,"('advance calling getamie...')")
+        call getamie(iyear,iday,int(secs),amie_ibkg,iprint)
+      endif
+!
 ! Update lower boundaries of t,u,v,z:
 !
       call tuvz_lbc
@@ -430,54 +439,71 @@
 !  If Weimer is used, then theta0,phid etc is changed before use in aurora
 !   in dynamics.
 !
-      if (potential_model == 'WEIMER01') then
-        if (byimf==0..and.bzimf==0.) then
-          write(6,"(/,'>>> WARNING: byimf and bzimf are both zero',
-     |      ' before call to weimer01.',/,'This will cause the ',
-     |      'weimer model to produce NaNs, so I am setting bzimf ',
-     |      'to .01')") 
-          bzimf = .01
-        endif
-        call weimer01
-        if (debug) write(6,"('advance after weimer01: istep=',i4)")istep
+! If an amie run, ignore potential_model, and use electric potential from
+!   amie module.
+!
+      if (iamie <= 0) then
+        if (potential_model == 'WEIMER01') then
+          if (byimf==0..and.bzimf==0.) then
+            write(6,"(/,'>>> WARNING: byimf and bzimf are both zero',
+     |        ' before call to weimer01.',/,'This will cause the ',
+     |        'weimer model to produce NaNs, so I am setting bzimf ',
+     |        'to .01')") 
+            bzimf = .01
+          endif
+          call weimer01
+          if (debug) write(6,"('advance after weimer01: istep=',i4)")
+     |      istep
 
-!       write(6,"('wei01: mtime=',i3,',',i2,',',i2,' by,bz=',2f6.2,
-!    |    ' swvel=',f8.2,' swden=',f6.2,' al=',f8.2,' phihm min,max=',
-!    |    2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,al,
-!    |    minval(phihm),maxval(phihm)
+!         write(6,"('wei01: mtime=',i3,',',i2,',',i2,' by,bz=',2f6.2,
+!    |      ' swvel=',f8.2,' swden=',f6.2,' al=',f8.2,' phihm min,max=',
+!    |      2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,al,
+!    |      minval(phihm),maxval(phihm)
 
-      elseif (potential_model == 'WEIMER05'.or.
-     |        potential_model == 'WEIMER') then
+        elseif (potential_model == 'WEIMER05'.or.
+     |          potential_model == 'WEIMER') then
 !
 ! sub weimer05 (wei05sc.F), calculates mag electric potential in phihm.
 ! (if byimf==bzimf==0, then weimer05 will set bzimf = .01)
 ! Weimer will calculate ctpoten (user cannot provide constant
 !   namelist ctpoten with the Weimer model)
 !
-        call weimer05(byimf,bzimf,swvel,swden,wei05sc_ncfile,istep)
-        if (debug) write(6,"('advance after weimer05: istep=',i4)")istep
+          call weimer05(byimf,bzimf,swvel,swden,wei05sc_ncfile,istep)
+          if (debug) write(6,"('advance after weimer05: istep=',i4)")
+     |      istep
 
-!       write(6,"('wei05: mtime=',i3,',',i2,',',i2,' by,bz=',2f8.2,
-!    |    ' swvel=',f8.2,' swden=',f6.2,' phihm min,max=',
-!    |    2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,
-!    |    minval(phihm),maxval(phihm)
+!         write(6,"('wei05: mtime=',i3,',',i2,',',i2,' by,bz=',2f8.2,
+!    |      ' swvel=',f8.2,' swden=',f6.2,' phihm min,max=',
+!    |      2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,
+!    |      minval(phihm),maxval(phihm)
 
-        call addfld ('W05_EPOT','Weimer05 Electric Potential',
-     |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-        call addfld ('W05_FAC','Weimer05 Field-Aligned Current',
-     |    ' ',wei05sc_fac,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+          call addfld ('W05_EPOT','Weimer05 Electric Potential',
+     |      'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+          call addfld ('W05_FAC','Weimer05 Field-Aligned Current',
+     |      ' ',wei05sc_fac,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 
-      elseif (potential_model == 'HEELIS') then
-        call heelis
-        if (debug) write(6,"('advance after heelis: istep=',i4)") istep
-      else  !  potential_model='NONE'
-        do j=1,nmlat0
-          do i=1,nmlonp1
-	    phihm(i,j) = 0.
-          enddo ! i=1,nmlonp1
-        enddo ! j=1,nmlat0
+        elseif (potential_model == 'HEELIS') then
+          call heelis
+          if (debug) write(6,"('advance after heelis: istep=',i4)") 
+     |      istep
+        else  !  potential_model='NONE'
+          do j=1,nmlat0
+            do i=1,nmlonp1
+	      phihm(i,j) = 0.
+            enddo ! i=1,nmlonp1
+          enddo ! j=1,nmlat0
+          call colath
+        endif
+      else ! amie run
+!
+! If an amie run, use tiepot from amie.F:
+! (phihm and tiepot are dimensioned (nmlonp1,nmlat))
+        phihm = tiepot ! whole array op
+        call fminmax(phihm,nmlonp1*nmlat,fmin,fmax)
+        write(6,"('advance: amie phihm min,max=',2e12.4)") fmin,fmax
         call colath
       endif
+
       call timer(time0_prep,time1,'PREP',1,0) ! end step-prep timing
       time1_prep = time1
 !
@@ -620,6 +646,10 @@
         ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
         vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
       endif
+!
+! Saving extraoutput here from master only - G. Lu, Aug. 27, 2003
+        call prep_output(1,nlevp1,lon0,lon1,lat0,lat1)
+        if (mytid==0) call extraoutput
 #else
       call timer(time0_phist,time1_phist,'PHIST',0,0) ! non-MPI
       call timer(time0_shist,time1_shist,'SHIST',0,0) ! non-MPI

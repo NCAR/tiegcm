@@ -24,6 +24,8 @@
       use timing_module,only: timer,timer_report,init_timer
       use mpi_module,only: mytid,ntask
       use diags_module,only: init_diags
+      use amie_module,only: init_amie
+      use seeflux_module,only: init_seeflux
 #ifdef MPI
       use mpi_module,only: mp_init,mp_close,mp_distribute
 #endif
@@ -99,6 +101,10 @@
 ! (this is not in init_module to avoid circular dependency between
 !  init_module and qrj_module)
       call init_qrj
+!
+! Read amie data files if requested
+      call init_amie
+      call init_seeflux
 !
 ! Read source history:
       call readsource(ier)

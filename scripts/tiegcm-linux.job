@@ -15,10 +15,10 @@
 #   exec:     If TRUE, execute the model (build only if FALSE)
 #   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
-set modeldir = tiegcm_trunk
-set execdir  = tiegcm-linux
-#set input    = tiegcm.inp
-set output   = tiegcm.out
+set modeldir = tiegcm_amie
+set execdir  = tiegcm_amie-linux
+set input    = tiegcm_amie.inp
+set output   = tiegcm_amie.out
 set make     = Make.intel_hao64
 set modelres = 5.0
 set mpi      = TRUE

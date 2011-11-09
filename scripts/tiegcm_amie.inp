@@ -1,0 +1,100 @@
+&tgcm_input
+;
+; Namelist read input file for model tiegcm1.92
+; /fis/hao/tgcm/tiegcm1.92/scripts/Mknamelist Wed Apr 22 15:40:59 MDT 2009
+;
+ LABEL='tiegcm_amie'
+ START_YEAR = 2004   ; starting year
+ START_DAY  = 314    ; starting day of year (1->365)
+ CALENDAR_ADVANCE = 1       ; if > 0, calendar time will be advanced
+ STEP= 120
+;
+;SOURCE='/GANGLU/tiegcm1.92/p_nov04_01.nc',
+;SOURCE='p_nov04_01.nc',
+;SOURCE_START = 314,0,0
+ SOURCE = '$TGCMDATA/tiegcm1.94/TGCM.tiegcm1.94.pcntr_decsol_smin.nc'
+ SOURCE_START = 355,0,0
+;
+ START= 314,0,0
+ STOP=  315,0,0
+ HIST=    1,0,0
+ OUTPUT='tiegcm_amie.p_nov04_01.nc'
+;OUTPUT='tiegcm_noamie.p_nov04_01.nc'
+ MXHIST_PRIM = 10 ; maximum histories per primary file
+;
+; Save extra fields for current and dB
+ SECSTART = 314,1,0
+ SECSTOP =  315,0,0
+ SECHIST =    0,1,0
+ SECOUT='tiegcm_amie.s_nov04_01.nc'
+;SECOUT='tiegcm_noamie.s_nov04_01.nc'
+ MXHIST_SECH = 24 ; default max #histories per sech file is 24
+ SECFLDS = 'TN','UN','VN','OMEGA','O1','O2','TE','TI','NO','NE',
+           'N2D','OP','N4S','Z','BARM','NO_COOL','CO2_COOL','POTEN'
+
+;SECFLDS = 'TN','UN','VN','OMEGA','O1','O2','TE','TI','NO','NE','N2P_ELD',
+;          'N2D','OP','N4S','Z','BARM','NO_COOL','CO2_COOL',
+;          'POTEN','PEDERSEN', 'HALL', 'QWIND', 'QAMIE', 'FWIND', 
+;          'FAMIE','WORK', 'WTOT', 'TEC', 'QJOULE', 'QJH_TOT',
+;          'KQPHI','KQLAM','JQR'
+
+;SECFLDS = 'NE','TN_ELD','BAR_ELD','OP_ELD','OP1_ELD','O2_ELD','O1_ELD','N2D_ELD',
+;          'NO_ELD','N4S_ELD','XIOP2P','XIOP2D'
+;
+; Set TIDEs = 0. if using GSWM below.
+ TIDE    = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
+ TIDE2   = 0.,0.
+;
+; By default, use gswm migrating diurnal and semi-diurnal tides:
+ GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_5.0d_99km.nc'
+ GSWM_MI_SDI_NCFILE = '$TGCMDATA/gswm_semi_5.0d_99km.nc'
+;GSWM_NM_DI_NCFILE  = '$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc'
+;GSWM_NM_SDI_NCFILE = '$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc'
+;
+;POTENTIAL_MODEL = 'HEELIS'
+ GPI_NCFILE = '$TGCMDATA/gpi_2000001-2011212.nc'
+;
+; Uncomment GPI_NCFILE to calculate POWER and CTPOTEN from
+; Kp data, and to use data for f10.7 flux. GPI_NCFILE can be 
+; used only when potential_model='HEELIS'. If GPI_NCFILE is 
+; specified, one or more of POWER,CTPOTEN,F107,F107A must be 
+; commented out (data will be used for those that are commented 
+; out, otherwise the user-provided values will be used).
+;
+;F107 = 125.
+;F107A =150.
+;POWER= 55.
+;CTPOTEN=45.
+;
+;POTENTIAL_MODEL = 'WEIMER05'
+;IMF_NCFILE = '$TGCMDATA/imf_2000001-2006365.nc'
+;
+; Uncomment IMF_NCFILE to read IMF parameters from the data.
+; IMF_NCFILE can be used only when potential_model='WEIMER05'.
+; If IMF_NCFILE is specified, one or more of BXIMF,BYIMF,BZIMF,
+; SWVEL,SWDEN,F107,F107A must be commented out (data will be
+; used). If IMF_NCFILE is specified and POWER is not provided,
+; it will be calculated from BZ,SWVEL. Also, if IMF_NCFILE is
+; used, the user cannot provide CTPOTEN (it will be calculated
+; from the Weimer potential).
+;
+;BXIMF = 0.
+;BYIMF = 0.
+;BZIMF = -5.
+;SWVEL = 400.
+;SWDEN = 4.  ; try this if problems with missing IMF SWDEN data
+;
+ AURORA=1
+ COLFAC=1.5
+;
+; SEEFLUX: SEE photon data file 
+;SEEFLUX = 'fism_goes_59bin_jan05.nc' ; from /hao/galileo2/ganglu/d.tgcm_inputs
+
+ AMIENH='NOV14_2004_NH.NC' ; hpps:/GANGLU/NOV04
+ AMIESH='NOV14_2004_SH.NC'
+
+;AMIE_IBKG = 0   ! given time AMIE data
+;            1   ! first-time volume AMIE data for background
+;            2   ! 24hr-averaged AMIE data for background
+ AMIE_IBKG=0
+/
