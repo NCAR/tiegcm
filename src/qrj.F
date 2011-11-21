@@ -444,9 +444,10 @@
       subroutine init_sflux
       use input_module,only: f107,f107a,sd_ncfile,iseeflux
       use init_module,only: sfeps,iday,iyear,secs,istep
-      use soldata_module,only: get_soldata,soldata,nwavesd=>nwave,
+      use soldata_module,only: get_soldata,soldata,nwave,
      |                          wave1sd=>wave1,wave2sd=>wave2
       use seeflux_module,only: get_seeflux
+!     use soldata_module,only: get_soldata,soldata,nwave
 !
 ! Flux initialization once per time step, called from advance.
 !

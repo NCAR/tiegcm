@@ -37,6 +37,7 @@
       use addfld_module,only: addfld
       use init_module,only: iyear,secs
       use hist_module,only: modeltime
+      use dyndiag_module,only: dyndiag
       implicit none
 !
 ! Args:
@@ -680,8 +681,24 @@
           call addfld('QJI_TN','Joule Heating for TN',' ',
      |      qji_tn(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         endif
-      enddo ! lat=lat0,lat1
-      if (debug) write(6,"('dynamics after qjoule_tn')")
+        if (debug) write(6,"('dynamics after qjoule_tn')")
+
+!
+! Calculate 2d (lon,lat) diagnostics for secondary histories:
+! (see call dyndiag_sech below after lat loop)
+!
+        call dyndiag(
+     |      ped (levd0,lond0,lat),     ! pedersen conductivity
+     |      hall(levd0,lond0,lat),     ! hall conductivity
+     |      qji_tn(levd0,lond0,lat),   ! ion Joule heating for tn
+     |      z   (levd0,lond0,lat,itc), !  updated Z from addiag
+     |      un  (levd0,lond0,lat,itp), !  neutral zonal velocity
+     |      vn (levd0,lond0,lat,itp),  !  neutral meridional velocity
+     |      ui (levd0,lond0,lat),      ! ion zonal velocity
+     |      vi (levd0,lond0,lat),      ! ion meridional velocity
+     |      1,nlevp1,lon0,lon1,lat)
+      enddo !  lat=lat0,lat1
+      if (debug) write(6,"('dynamics after dyndiag')")
 !
 ! Advance neutral temperature:
 !

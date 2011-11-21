@@ -463,10 +463,12 @@
 !    |  'lon',lon0,lon1,'lat',lat,lat,0)
 !     call addfld('BY',' ',' ',by(lon0:lon1,:),
 !    |  'lon',lon0,lon1,'lat',lat,lat,0)
-!     call addfld('UI_VEL',' ',' ',ui(:,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('VI_VEL',' ',' ',vi(:,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('UI_VEL',' ',' ',ui(:,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('VI_VEL',' ',' ',vi(:,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('WI_VEL',' ',' ',wi(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
  
       lonbeg = lon0
       if (lon0==1) lonbeg = 3

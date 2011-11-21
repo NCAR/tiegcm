@@ -176,8 +176,8 @@
 	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)*joulefac
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-!     call addfld('HEATING1',' ',' ',total_heat(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('HEATING1',' ',' ',total_heat(lev0:lev1-1,:),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Add heating due to molecular diffusion:
 ! du/dz and dv/dz (s10, s11):

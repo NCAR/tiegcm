@@ -236,19 +236,19 @@
         do k=lev0,lev1-2
           electrons(k+1,i) = sqrt(root(k,i)*root(k+1,i))
 ! Set up the low limit for electron density - G. Lu 5/11/2009
-          if (electrons(k+1,i) < 5.e2) then
-            write(6,"('ELDEN: low Ne ',e7.2,' at k=',i3)")
-     |         electrons(k+1,i),k+1
-            electrons(k+1,i) = 5.e2
-          endif
+!         if (electrons(k+1,i) < 5.e2) then
+!           write(6,"('ELDEN: low Ne ',e7.2,'i=',i3,' at k=',i3)")
+!    |         electrons(k+1,i),i,k+1
+!           electrons(k+1,i) = 5.e2
+!         endif
         enddo ! k=lev0,lev1-2
 !
 ! Lower and upper boundaries:
         electrons(lev0,i) = sqrt(root(lev0  ,i)**3/root(lev0+1,i))
         electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
 ! Set up the low limit for electron density - G. Lu 5/11/2009
-        if (electrons(lev0,i) < 5.e2) electrons(lev0,i) = 5.e2
-        if (electrons(lev1,i) < 5.e2) electrons(lev1,i) = 5.e2
+!       if (electrons(lev0,i) < 5.e2) electrons(lev0,i) = 5.e2
+!       if (electrons(lev1,i) < 5.e2) electrons(lev1,i) = 5.e2
       enddo ! i=lon0,lon1
 !
 ! 4/23/09 btf: amie mods as per Gang:

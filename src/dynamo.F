@@ -251,7 +251,7 @@
 !   icalkqlam = 1 -> will be calculated
 !   icalkqlam = 0 -> will NOT be calculated
 !
-      integer,parameter :: icalkqlam = 0
+      integer,parameter :: icalkqlam = 1
       
       real ::
      |  je13d(nmlonp1,nmlat,-2:nlevp1),    ! 3d je1 magnetic
@@ -539,8 +539,10 @@
           zigmc(i,jj)   = (zigmc(i,jj) +zigm2(i,jj))/(4.*dlatm*dlonm)
           zigm2(i,jj)   = zigmc(i,jj)-2.*zigm2(i,jj)/(4.*dlatm*dlonm)
           zigm22(i,jj)  = zigm22(i,jj)*cs(j0+j)/dlatm**2
-          zigmc(i,jjj)  = zigmc(i,jj)
-          zigm2(i,jjj)  = zigm2(i,jj)
+!         zigmc(i,jjj)  = zigmc(i,jj)           !from trunk
+!         zigm2(i,jjj)  = zigm2(i,jj)           !from trunk
+          zigmc(i,jjj)  = -zigmc(i,jj)
+          zigm2(i,jjj)  = -zigm2(i,jj)
           zigm22(i,jjj) = zigm22(i,jj)
         enddo ! i=1,nmlonp1
         if (j /= nmlath) then
@@ -730,14 +732,17 @@
           phiasym(i,nmlat0) = 0.
           phi_add = 0.
 ! Modification for penetration E-field for Nov. 04 - G. Lu, 2/19/2008
-          if (iyear==2004 .and. (modeltime(1)==314 .and.
-     |        modeltime(2) > 19 .and. pcp_nh_amie > 150.e3 .or.
-     |        modeltime(1)==315 .and. pcp_nh_amie > 150.e3)) then
+!         if (iyear==2004 .and. (modeltime(1)==314 .and.
+!    |        modeltime(2) > 19 .and. pcp_nh_amie > 150.e3 .or.
+          if ((iyear==2004 .and. modeltime(1)==314 .and.
+     |        modeltime(2) > 19 .and. pcp_nh_amie > 200.e3) .or.
+     |        (iyear==2004 .and. modeltime(1)==315 .and. 
+     |         pcp_nh_amie > 150.e3)) then
             do j=1,nmlat0-1
               if (colatc(i,nmlat0-j+1) < crit(2)) jfit = j
             enddo
-!!           phi_add = 0.5*phisym(i,nmlat0-jfit+1)
-            phi_add = 0.8*phihm(i,jfit)
+!           phi_add = 0.8*phihm(i,jfit)
+            phi_add = 0.5*phisym(i,nmlat0-jfit+1)
           endif
           do j=1,nmlat0-1
             jj = nmlat+1-j
@@ -746,7 +751,7 @@
             phiasym(i,j)  = 0.5*(phihm(i,j)+phihm(i,jj))-phihm(i,j)
             phiasym(i,jj) = 0.5*(phihm(i,j)+phihm(i,jj))-phihm(i,jj)
             if (j >= jfit) then
-!!             phisym(i,j)  = phisym(i,j)+phi_add
+              phisym(i,j)  = phisym(i,j)+phi_add
               phisym(i,j0)  = phisym(i,j0)+phi_add
             endif
           enddo ! j=1,nmlat0-1
@@ -1382,6 +1387,10 @@ c      enddo
      |      nmlonp1,nmlon,nmlat,j)
           call geo2mag(zpotenm(1,k),zz(1,0,k),ig,jg,wt,nlonp1,
      |      nmlonp1,nmlon,nmlat,j)
+!           if(k .eq. 2 .and. j.eq.82) write(6,"('dynamo: zz ==',
+!    |        2i3,/(6e12.4))") j,k,zz(:,:,k)
+!           if(k .eq. 2 .and. j.eq.82) write(6,"('dynamo: zpotenm ==',
+!    |        2i3,/(6e12.4))") j,k,zpotenm(:,k)
           do n=1,2
             call geo2mag(adotvm(1,k,n),adotv(1,0,k,n),ig,jg,wt,nlonp1,
      |        nmlonp1,nmlon,nmlat,j)
@@ -1445,6 +1454,9 @@ c      enddo
             do i=1,nmlon
               if (zpotenm(i,k) < z0) zpotenm(i,k) = z0 
               zpotenm3d(i,j,k) = zpotenm(i,k)
+!       if (k.ge.1 .and. k.lt.nlev .and. i.le.nlonp1 .and. j.le.nlat) 
+!    |  write(6,"('DYNAMO: zpoten at i,j,k >>>',
+!    |    3i3,3e12.4)") i,j,k,zz(i,j,k),zpoten(i,j,k),zpotenm3d(i,j,k)
 !
 ! Store 3d arrays in magnetic coordinates for postprocessing of the
 ! current density k_(q,lam)
@@ -2908,6 +2920,7 @@ c      enddo
 ! latitude lam_m of footpoint
 ! cos lam_m = cos lam_q [(R_E+h_0)/R_E+h]^0.5 
 !
+
             ctm = sqrt(r0/(re+zpotenm3d(i,j,k)))*cosltm 
             thetam(i) = acos(ctm)
 	    siniq = 2.*sinltm/sqrt(4.-3.*cosltm**2)

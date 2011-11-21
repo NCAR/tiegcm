@@ -120,6 +120,8 @@
           qop (k,i,lat) = qop (k,i,lat)+(0.33*qbo2(k,i)+qbo1(k,i))*
      |      xnmbari(k,i)
           qn2p(k,i,lat) = qn2p(k,i,lat)+0.86*qbn2(k,i)*xnmbari(k,i)
+        if ( qn2p(k,i,lat) .lt.0.) write(6,"('QINITE: qn2p at i=',i3,
+     | ' lev=',i3,3e12.4)")i,k,qn2p(k,i,lat),qbn2(k,i),xnmbari(k,i)
           qnp (k,i,lat) = qnp (k,i,lat)+0.14*qbn2(k,i)*xnmbari(k,i)
           qtef(k,i,lat) = qtef(k,i,lat)+
      |                    1.57*(0.86*qbn2(k,i)*xnmbari(k,i))

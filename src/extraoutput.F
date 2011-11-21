@@ -134,7 +134,7 @@ CCCCCCCCCCCCCCCCCCC save secondary histories CCCCCCCCCCCCCCCCCCCCC
         tec_sec(2,j,:) = tec_sec(nlon+2,j,:) ! 74 <- 2
         tec_sec(nlonp1+2,j,:) = tec_sec(3,j,:) ! 75 <- 3
         tec_sec(nlonp1+3,j,:) = tec_sec(4,j,:) ! 76 <- 4
-        call addfld('TEC',' ',' ',tec_sec(1:nlonp4,j,:),
+        call addfld('TEC_3D',' ',' ',tec_sec(1:nlonp4,j,:),
      |             'lon',1,nlonp4,'lev',1,nlevp1,j)
 
         qjoule_sec(1,j,:) = qjoule_sec(nlon+1,j,:) ! 73 <- 1

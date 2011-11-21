@@ -36,6 +36,7 @@
      |  un,vn,   ! neutral velocities
      |  ui,vi    ! ion velocities
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real, dimension(nlonp4,0:nlatp1) :: bmod_mod
 !
 ! Local:
       integer :: i,k,nk
@@ -46,6 +47,14 @@
 ! Get height integral of Ped, Hall conductance
       sigp(:,lat) = 0.
       sigh(:,lat) = 0.
+! Define bmod_mod
+      do i=1,nlonp1 
+        bmod_mod(i+3,:) = bmod(i,:) 
+      enddo
+      bmod_mod(1,:) = bmod_mod(nlonp1,:) ! 73 <- 1
+      bmod_mod(2,:) = bmod_mod(nlonp1+1,:) ! 74 <- 2
+      bmod_mod(nlonp1+2,:) = bmod_mod(3,:) ! 75 <- 3
+      bmod_mod(nlonp1+3,:) = bmod_mod(4,:) !  76 <- 4
 
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -110,7 +119,7 @@
 ! qamie=sigp{(Bx^2+Bz^2)*Wx^2 + (By^2+Bz^2)*Wy^2-2.*Bx*By*Wx*Wy
 !        -2.*B^2*Vx*Wx - 2.*B^2*Vy*Wy}
 !
-          qwind0 = sigma1(k,i)*bmod(i,lat)**2*(tm2(i)*
+          qwind0 = sigma1(k,i)*bmod_mod(i,lat)**2*(tm2(i)*
      |      un(k,i)**2+tm1(i)*vn(k,i)**2-2.*tm3(i)*un(k,i)*
      |      vn(k,i)-2.*(un(k,i)*ui(k,i)+vn(k,i)*vi(k,i)))
 !
@@ -120,13 +129,13 @@
 !
           qamie0 = sigma1(k,i)*(tm1(i)*ui(k,i)**2+tm2(i)*
      |      vi(k,i)**2+2.*tm3(i)*ui(k,i)*vi(k,i))
-          qamie0 = qamie0*bmod(i,lat)**2 / sndip(i)**2
+          qamie0 = qamie0*bmod_mod(i,lat)**2 / sndip(i)**2
 !
 ! wtot = total electric power
 ! wtot = sigp (E + UxB).E = Qamie + sigp*{(UxB).E}
 !
-          wtot0 = - sigma1(k,i)*bmod(i,lat)**2*(un(k,i)*ui(k,i)+
-     |      vn(k,i)*vi(k,i)) + sigma2(k,i)*bmod(i,lat)**2*
+          wtot0 = - sigma1(k,i)*bmod_mod(i,lat)**2*(un(k,i)*ui(k,i)+
+     |      vn(k,i)*vi(k,i)) + sigma2(k,i)*bmod_mod(i,lat)**2*
      |      (tm3(i)*(un(k,i)*ui(k,i)-vn(k,i)*vi(k,i))-tm1(i)*
      |      vn(k,i)*ui(k,i)+tm2(i)*un(k,i)*vi(k,i))/sndip(i)
           wtot0 = qamie0 + wtot0
@@ -156,8 +165,8 @@ C Calculate the mechanical work done by wind
 ! Convert wind velocity from cm/s to m/s by multipling 1.e-2 and
 ! Convert B from Gauss to T multipling 1.e-4 and 1.e-2 from cm to m
 !
-          fwindu0 = fwindu0*bmod(i,lat)*1.e-8/sndip(i)
-          fwindv0 = fwindv0*bmod(i,lat)*1.e-8/sndip(i)
+          fwindu0 = fwindu0*bmod_mod(i,lat)*1.e-8/sndip(i)
+          fwindv0 = fwindv0*bmod_mod(i,lat)*1.e-8/sndip(i)
           famieu0 = -tm1(i)*sigma2(k,i)*
      |       ui(k,i) + sndip(i)*sigma1(k,i)*vi(k,i)
      |       - tm3(i)*sigma2(k,i)*vi(k,i)
@@ -168,8 +177,8 @@ C Calculate the mechanical work done by wind
 ! Convert wind velocity from cm/s to m/s by multipling 1.e-2 and
 ! Convert B from Gauss to T multipling 1.e-4 and 1.e-2 from cm to m
 !
-          famieu0 = famieu0*bmod(i,lat)*1.e-8/sndip(i)**2
-          famiev0 = famiev0*bmod(i,lat)*1.e-8/sndip(i)**2
+          famieu0 = famieu0*bmod_mod(i,lat)*1.e-8/sndip(i)**2
+          famiev0 = famiev0*bmod_mod(i,lat)*1.e-8/sndip(i)**2
           fwindu(i,lat) = fwindu(i,lat)+(z(k+1,i)-z(k,i))*fwindu0
           fwindv(i,lat) = fwindv(i,lat)+(z(k+1,i)-z(k,i))*fwindv0
           famieu(i,lat) = famieu(i,lat)+(z(k+1,i)-z(k,i))*famieu0

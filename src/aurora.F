@@ -479,10 +479,14 @@
           endif
         endif
 ! Move CRIT to higher latitude for more penetration E-field for Nov. 9, 2004
-        if (modeltime(1) == 314 .and.
-     |      modeltime(2) > 19 .and. pcp_nh_amie*1.e-3 > 150.) then
-          crit(1) = crit(1) - (pcp_nh_amie*1.e-3 - 150.)*0.08*dtr
-          crit(2) = crit(2) - (pcp_nh_amie*1.e-3 - 150.)*0.08*dtr
+!       if (modeltime(1) == 314 .and.
+!    |      modeltime(2) > 19 .and. pcp_nh_amie*1.e-3 > 150.) then
+!         crit(1) = crit(1) - (pcp_nh_amie*1.e-3 - 150.)*0.08*dtr
+!         crit(2) = crit(2) - (pcp_nh_amie*1.e-3 - 150.)*0.08*dtr
+        if (modeltime(1) == 314 .and. modeltime(2) > 19 .and.
+     |         pcp_nh_amie*1.e-3 > 200.) then
+          crit(1) = crit(1) - (pcp_nh_amie*1.e-3 - 200.)*0.05*dtr
+          crit(2) = crit(2) - (pcp_nh_amie*1.e-3 - 200.)*0.06*dtr
           crit(2) = min(crit(1),crit(2))
         endif
         write(6,"('crad =',f6.2,'  rrad=',f6.2,'  rradp=',f6.2,
@@ -1083,16 +1087,40 @@
      |     0.5*qn2p_aur(lev0+1,i))
         endif
 #else
-        qo2p(lev0,i,lat) = qo2p(lev0,i,lat)+1.5*qo2p_aur(lev0,i)-
-     |    0.5*qo2p_aur(lev0+1,i)        
-        qop (lev0,i,lat) = qop (lev0,i,lat)+1.5*qop_aur (lev0,i)-
-     |    0.5*qop_aur (lev0+1,i)        
-        qn2p(lev0,i,lat) = qn2p(lev0,i,lat)+1.5*qn2p_aur(lev0,i)-
-     |    0.5*qn2p_aur(lev0+1,i)        
-        qnp (lev0,i,lat) = qnp (lev0,i,lat)+ .22/.7 * 
-     |    (1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i))
-        qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
-     |    0.5*qn2p_aur(lev0+1,i))        
+! Changed by G. Lu - 11/11/2011
+        if (1.5*qo2p_aur(lev0,i) > 0.5*qo2p_aur(lev0+1,i)) then
+          qo2p(lev0,i,lat) = qo2p(lev0,i,lat)+1.5*qo2p_aur(lev0,i)-
+     |      0.5*qo2p_aur(lev0+1,i)        
+!       else 
+!         qo2p(lev0,i,lat)=qo2p(lev0,i,lat)+qo2p_aur(lev0,i)
+        endif
+        if (1.5*qop_aur (lev0,i) > 0.5*qop_aur (lev0+1,i)) then
+          qop (lev0,i,lat) = qop(lev0,i,lat)+1.5*qop_aur(lev0,i)-
+     |      0.5*qop_aur(lev0+1,i)        
+!       else 
+!         qop (lev0,i,lat) = qop(lev0,i,lat)+qop_aur(lev0,i)
+        endif
+        if (1.5*qn2p_aur(lev0,i)>0.5*qn2p_aur(lev0+1,i)) then
+          qn2p(lev0,i,lat) = qn2p(lev0,i,lat)+1.5*qn2p_aur(lev0,i)-
+     |      0.5*qn2p_aur(lev0+1,i)        
+!       else 
+!         qn2p(lev0,i,lat) = qn2p(lev0,i,lat)+qn2p_aur(lev0,i)
+        endif
+        if (1.5*qn2p_aur(lev0,i)>0.5*qn2p_aur(lev0+1,i)) then
+          qnp (lev0,i,lat) = qnp (lev0,i,lat)+ .22/.7 * 
+     |      (1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i))
+!       else 
+!         qnp (lev0,i,lat) = qnp (lev0,i,lat)+.22/.7*qn2p_aur(lev0,i)
+        endif
+        if (1.5*qn2p_aur(lev0,i)>0.5*qn2p_aur(lev0+1,i)) then
+          qtef(lev0,i,lat)=qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
+     |      0.5*qn2p_aur(lev0+1,i))        
+!       else 
+!         qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*qn2p_aur(lev0,i)
+        endif
+        if (qn2p(lev0,i,lat) .lt. 0.) write(6,"('AURORA: ', 
+     |  'i,lev0,lat,qn2p = ',3i3,4e12.4)") qo2p(lev0,i,lat),
+     |  qop(lev0,i,lat),qn2p(lev0,i,lat),qnp (lev0,i,lat)
 #endif
 !
 ! Extrapolate upper boundary:

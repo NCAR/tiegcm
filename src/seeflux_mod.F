@@ -175,7 +175,8 @@
           i0 = i
           i1 = i+1
 ! Do simple linear interpolation:
-          do ii=1,59
+!         do ii=1,59
+          do ii=1,lmax
             sflux(ii) = 
      |        (msecs-dsecs0)*(sp_flux(ii,i1)-sp_flux(ii,i0))/
      |        (dsecs1-dsecs0)+sp_flux(ii,i0)
