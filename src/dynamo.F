@@ -534,8 +534,8 @@
           zigmc(i,jj)   = (zigmc(i,jj) +zigm2(i,jj))/(4.*dlatm*dlonm)
           zigm2(i,jj)   = zigmc(i,jj)-2.*zigm2(i,jj)/(4.*dlatm*dlonm)
           zigm22(i,jj)  = zigm22(i,jj)*cs(j0+j)/dlatm**2
-          zigmc(i,jjj)  = zigmc(i,jj)
-          zigm2(i,jjj)  = zigm2(i,jj)
+          zigmc(i,jjj)  = -zigmc(i,jj)
+          zigm2(i,jjj)  = -zigm2(i,jj)
           zigm22(i,jjj) = zigm22(i,jj)
         enddo ! i=1,nmlonp1
         if (j /= nmlath) then
