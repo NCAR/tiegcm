@@ -74,7 +74,7 @@
       call timer(time0_init,time1_init,'INIT',0,0) ! start init timing
       call getcwd(cwd)
       write(6,"('Current working directory (cwd) = ',a)") trim(cwd)
-      call getpid(pid)
+      call getprocessid(pid)
       write(6,"('Process ID (pid) = ',i8)") pid
       call input(mytid,ntask) ! get user input (mpi)
       if (mytid==0.and.len_trim(hpss_path) > 0) call init_dispose

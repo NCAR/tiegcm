@@ -980,7 +980,7 @@
 #endif
       end subroutine getcwd
 !-----------------------------------------------------------------------
-      subroutine getpid(pid)
+      subroutine getprocessid(pid)
 #ifdef MPI
       use mpi_module,only: mytid
 #endif
@@ -998,7 +998,8 @@
 #ifdef MPI
       if (mytid==0) then
         istat = isystem('echo $$ > pid')
-        if (istat /= 0) write(6,"('>>> WARNING getpid: error return ',
+        if (istat /= 0) 
+     |    write(6,"('>>> WARNING getprocessid: error return ',
      |    'isystem(''echo $$ > pid'')')")
       endif
       call mpi_barrier(MPI_COMM_WORLD,ier)
@@ -1008,14 +1009,15 @@
       close(lu)
 #else
       istat = isystem('echo $$ > pid')
-      if (istat /= 0) write(6,"('>>> WARNING getpid: error return ',
+      if (istat /= 0) 
+     |  write(6,"('>>> WARNING getprocessid: error return ',
      |  'isystem(''echo $$ > pid'')')")
       lu = nextlu()
       open(lu,file='pid',status='old')
       read(lu,"(i10)") pid
       close(lu)
 #endif
-      end subroutine getpid
+      end subroutine getprocessid
 !-----------------------------------------------------------------------
       character(len=*) function trcase(string)
 !
