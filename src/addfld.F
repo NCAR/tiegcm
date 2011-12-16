@@ -204,11 +204,7 @@
 ! is already in use as a 4d field (e.g., call addfld('TN'...))
 !
       ixf4d = strloc(f4d%short_name,nf4d,name) 
-      if (ixf4d > 0) then
-!       if (istep1==istep) write(6,"('>>> addfld: field ',a,' is a ',
-!    |    'prognostic -- returning.')") trim(name)
-        return
-      endif
+      if (ixf4d > 0) return
 !
 ! Call is for a diagnostic secondary history field (2d or 3d, mag or geo).
 !     write(6,"('addfld: ix=',i3,' name=',a)") ix,name
@@ -224,10 +220,10 @@
 !
 ! Set idim1,idim2 (also validate dname1,2):
       idim1 = 0 ; idim2 = 0
-      do i=1,nvalid
-        if (trim(dname1)==trim(valid_dnames(i))) idim1 = valid_dims(i)
-        if (trim(dname2)==trim(valid_dnames(i))) idim2 = valid_dims(i)
-      enddo
+      i = strloc(valid_dnames,nvalid,dname1)
+      if (i > 0) idim1 = valid_dims(i)
+      i = strloc(valid_dnames,nvalid,dname2)
+      if (i > 0) idim2 = valid_dims(i)
       if (idim1==0) then
         write(6,"(/,'>>> addfld: invalid dname1 = ',a,' for field ',a)") 
      |    dname1,name
@@ -275,11 +271,11 @@
 !
 ! Mag or geo:
       geo = .true. ; mag = .false.
-      do i=5,8                    ! mag dnames
-        if (trim(dname1)==valid_dnames(i)) then
-          geo = .false. ; mag = .true.
-        endif
-      enddo
+      i = strloc(valid_dnames(5:8),4,dname1)
+      if (i > 0) then
+        geo = .false.
+        mag = .true.
+      endif
 !
 ! Dims must be all mag or all geo:
 ! (valid_dnames(1:4) are geo, valid_dnames(5:8) are mag)

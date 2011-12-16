@@ -332,14 +332,14 @@
       write(6,"('  nlat=',i3,' nlon=',i3,' nlev=',i3)") nlat,nlon,nlev
       write(6,"('  dz= ',f5.2)") dz
       write(6,"('  dlat=',f6.2,' dlon=',f6.2)") dlat,dlon
-      write(6,"('  zbound (cm) = ',e12.6)") zbound
+      write(6,"('  zbound (cm) = ',e14.6)") zbound
       write(6,"('  zmbot, zmtop = ',2f8.3,
      |  ' (bottom,top midpoint levels)')") zmbot,zmtop
       write(6,"('  zibot, zitop = ',2f8.3,
      |  ' (bottom,top interface levels)')") zibot,zitop
       write(6,"('  dt = ',f8.2,' secs')") dt
       write(6,"('  grav = ',f10.2)") grav
-      write(6,"('  freq_3m3 = ',e10.4,'  freq_semidi=',e10.4)")
+      write(6,"('  freq_3m3 = ',e12.4,'  freq_semidi=',e12.4)")
      |  freq_3m3,freq_semidi
       write(6,"('  dipmin = ',f8.3)") dipmin
       write(6,"('  check_exp = ',l1)") check_exp

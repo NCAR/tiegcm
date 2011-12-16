@@ -408,11 +408,11 @@
 !    |  write(6,"(2x,'ed2     = ',e8.2,' (ergs/cm2/s)')") h%ed2
 
       write(6,"(2x,'colfac  = ',f5.2)") h%colfac
-      write(6,"(2x,'p0      = ',e8.2)") h%p0
-      if (h%p0_model /= real_init) write(6,"(2x,'p0_model= ',e8.2)") 
+      write(6,"(2x,'p0      = ',e10.2)") h%p0
+      if (h%p0_model /= real_init) write(6,"(2x,'p0_model= ',e10.2)")
      |  h%p0_model
       if (h%grav /= real_init)
-     |  write(6,"(2x,'grav    = ',e8.2)") h%grav
+     |  write(6,"(2x,'grav    = ',e10.2)") h%grav
 
 !     write(6,"(2x,'gswmdi  = ',i2,' (GSWM flag diurnal tides)')") 
 !    |  h%gswmdi

@@ -144,33 +144,26 @@ DEBUG        = $debug
 SVN_VERSION  = $svnversion
 EOF
 #
-# If building with intel on 64-bit Linux at hao, please add the following 
-# source command to your ~/.cshrc file, or uncomment the next line: 
-#source /opt/local/intel/Compiler/11.1/072/bin/ifortvars.csh intel64
-#
 # Build the model:
 gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 #
 # Execute Linux job (MPI or non-MPI run):
-# (machines.ini mpirun rules are in Make.machine file)
 #
 if ($exec == "TRUE") then
   set model = ./$model
-  echo "Linux job: Executing $model mpi=$mpi nproc=$nproc"
-  echo "Model output will go to $output"
+  echo "$model output will go to $output"
   if ($mpi == "TRUE") then
 #
 # Files machines.ini and mpirun.command are made by the Make.machines file.
     gmake machines.ini
     gmake mpirun.command
     set mpirun = `cat mpirun.command`
-    echo "Executing $mpirun -np $nproc for Linux MPI run."
+    echo "Executing $mpirun with -np $nproc for Linux MPI run."
 #
-# Execute MPI job:
-    $mpirun -np $nproc -machinefile machines.ini $model < $input >&! $output || \
+# Execute mpirun (Intel or PGI) for MPI run:
+    $mpirun -machinefile machines.ini -np $nproc $model < $input >&! $output || \
       echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
- 
     echo "Linux MPI run of $model completed at `date`"
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."

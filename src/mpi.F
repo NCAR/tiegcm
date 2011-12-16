@@ -92,33 +92,38 @@
 ! Local:
       integer :: ier,n,j,i
 !
+      ier = 0
 #ifdef VT
       call vttraceoff(ier)
 #endif
       call mpi_init(ier)
-      if (ier /= 0) write(6,"('>>> WARNING: error from mpi_init: ier=',
-     |  i4)") ier
+      if (ier /= 0) then
+        write(6,"('>>> Error from mpi_init: ier=',i4)") ier
+        call shutdown('mpi_init error')
+      endif
 #ifdef VT
       call vtsetup()      ! set user defined states and activities
       write(6,"('mp_init: starting vampir tracing..')")
       call vttraceon(ier) ! start vampir tracing
 #endif
       call mpi_comm_size(MPI_COMM_WORLD,ntask,ier)
-      if (ier /= 0) write(6,"('>>> WARNING: error from mpi_comm_size:',
-     |  ' ier=',i4)") ier
+      if (ier /= 0) then
+        write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
+        call shutdown('mpi_comm_size error')
+      endif
       call mpi_comm_rank(MPI_COMM_WORLD,mytid,ier)
-      if (ier /= 0) write(6,"('>>> WARNING: error from mpi_comm_rank:',
-     |  ' ier=',i4)") ier
-      write(6,"('mp_init: ntask=',i3,' mytid=',i3)") ntask,mytid
+      if (ier /= 0) then
+        write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
+        call shutdown('mpi_comm_rank error')
+      endif
 !
 ! Allocate array of tasks (user defined type(task)):
       allocate(tasks(0:ntask-1),stat=ier)
       if (ier /= 0) then
-        write(6,"('>>> mp_init: error allocating tasks(',i3,')')")
-     |    ntask
-        call mp_close
+        write(6,"('>>> Error allocating ',i4,' tasks')") ntask
         call shutdown('mp_init')
       endif
+      write(6,"('mp_init: ntask=',i3,' mytid=',i3)") ntask,mytid
       end subroutine mp_init
 !-----------------------------------------------------------------------
       subroutine mp_distribute

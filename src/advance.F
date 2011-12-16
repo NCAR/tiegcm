@@ -125,51 +125,51 @@
       if (timing%rtc) timing_type = 'rtc'
       if (debug) write(6,"('advance after update modeltime..')")
 !
-! Echo source history to primary history output if an initial run,
-!   and write initial secondary history if necessary (istep==0).
-! Source history will not be written if a continuation run (i.e., if
-!   SOURCE was *not* provided by user input.
-! (if mpi, only master writes histories)
-!
 ! Source was read into data(:,:,:,itp), and output always writes from
 ! data(:,:,:,itc), so swap indices to echo itp source data:
-        itmp = itp
-        itp = itc
-        itc = itmp
+      itmp = itp
+      itp = itc
+      itc = itmp
+!
+! Start phist timing (source hist may or may not be written):
+      call timer(time0_phist,time1_phist,'PHIST',0,0) ! start phist
+!
+! Echo source history to primary history output if an initial run,
+      time2write = wrhist(istep,modeltime,
+     |  wrprim, newseries_prim, iseries_prim,
+     |  wrsech, newseries_sech, iseries_sech)
+
+      if (time2write) then
 #ifdef MPI
 !
 ! If an initial run, echo source history to output before first time step. 
 !   Because only subdomains are read by rdhist, and only the root task 
 !   outputs histories, the subdomain data must be gathered to the root.
 !
-        if (debug) 
-     |    write(6,"('advance calling mp_gather2root for prim..')")
         call mp_gather2root(itc,'prim')
-        if (debug) write(6,"('advance calling outhist..')")
         if (mytid==0) call outhist(istep,modeltime)
-        if (debug) write(6,"('advance after outhist..')")
 #else
         do i=1,nf4d
           foutput(:,lon0:lon1,lat0:lat1,i) =
      |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
         enddo
-
         tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
         ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
         vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
 
-        if (debug) write(6,"('advance calling outhist..')")
         call outhist(istep,modeltime)
-        if (debug) write(6,"('advance after outhist..')")
 #endif
 !
 ! nstep may be zero if user only wants to copy source history:
-      if (nstep==0) then
-        write(6,"(/,'ADVANCE: model is not advanced in time because ',
-     |    ' start==stop.')")
-        call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
-        return
-      endif
+        if (nstep==0) then
+          write(6,"(/,'ADVANCE: model is not advanced in time because ',
+     |      ' start==stop.')")
+          call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
+          return
+        endif
+      endif ! time2write
+      call timer(time0_phist,time1,'PHIST',1,0) ! suspend phist timing
+      time1_phist = time1
 !
 ! Reswap indices, so model reads itp data and updates itc data:
       itmp = itp
@@ -478,7 +478,7 @@
         enddo ! j=1,nmlat0
         call colath
       endif
-      call timer(time0_prep,time1,'PREP',1,0) ! end step-prep timing
+      call timer(time0_prep,time1,'PREP',1,0) ! suspend step-prep timing
       time1_prep = time1
 !
 ! Model dynamics. Sub dynamics calls physics, chemistry, and dynamics
@@ -592,41 +592,34 @@
       call timer(time0_step,time1,'STEP',1,0) ! suspend step timing for i/o
       time1_step = time1
 !
-      time1_phist = 0.
-      time1_shist = 0.
-!
 ! If its time to write a history, root task must gather subdomain
 ! data from slave tasks before writing the history. This is done
 ! by sub mp_gather2root. Only root task writes to the history.
 !
+      if (time2write) then
+        if (wrprim) call timer(time0_phist,time1,'PHIST',0,0) ! resume phist
+        if (wrsech) call timer(time0_shist,time1_shist,'SHIST',0,0)
 #ifdef MPI
-      if (time2write.and.ntask > 1) then
-        if (wrprim) call timer(time0_phist,time1_phist,'PHIST',0,0)
-        call mp_gather2root(itc,'prim')
-        if (debug) write(6,"('advance after mp_gather2root')")
-        if (wrsech) then
-          call timer(time0_shist,time1_shist,'SHIST',0,0)
-          call mp_gather2root(itc,'sech')
+        if (ntask > 1) then
+          call mp_gather2root(itc,'prim')
+          if (debug) write(6,"('advance after mp_gather2root')")
+          if (wrsech) call mp_gather2root(itc,'sech')
+        elseif (ntask==1) then
+          do i=1,nf4d
+            foutput(:,lon0:lon1,lat0:lat1,i) =
+     |        f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
+          enddo
+          tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
+          ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
+          vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
+          tlbc_nm_glb(lon0:lon1,lat0:lat1)=tlbc_nm(lon0:lon1,lat0:lat1)
+          ulbc_nm_glb(lon0:lon1,lat0:lat1)=ulbc_nm(lon0:lon1,lat0:lat1)
+          vlbc_nm_glb(lon0:lon1,lat0:lat1)=vlbc_nm(lon0:lon1,lat0:lat1)
         endif
-      elseif (time2write.and.ntask==1) then
-        do i=1,nf4d
-          foutput(:,lon0:lon1,lat0:lat1,i) =
-     |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
-        enddo
-        tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
-        ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
-        vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
-        tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
-        ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
-        vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
-      endif
 #else
-      call timer(time0_phist,time1_phist,'PHIST',0,0) ! non-MPI
-      call timer(time0_shist,time1_shist,'SHIST',0,0) ! non-MPI
 !
 ! Update foutput if serial non-MPI run:
 !
-      if (time2write) then
         do i=1,nf4d
           foutput(:,lon0:lon1,lat0:lat1,i) =
      |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
@@ -637,25 +630,20 @@
         tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
         ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
         vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
-      endif
 #endif
 !
 ! Write the history to output file:
-      if (mytid==0) then
-        call outhist(istep,modeltime)
-        if (debug) write(6,"('advance after outhist')")
-      endif
-#ifdef MPI
-      call timer(time0_step,time1,'STEP',0,0) ! resume step timing
+        if (mytid==0) call outhist(istep,modeltime)
 !
-      if (wrprim) call timer(time0_phist,time1_phist,'PHIST',1,0) 
-      if (wrsech) call timer(time0_shist,time1_shist,'SHIST',1,0)
-      if (timing%level >= 2.and.time2print(nstep,istep)) then
-        write(6,"('Time in PHIST =        ',f12.2,
-     |    ' Advance: step ',i5)") time1_phist,istep
-        write(6,"('Time in SHIST =        ',f12.2,
-     |    ' Advance: step ',i5)") time1_shist,istep
-      endif
+! Update i/o timing:
+        if (wrprim) then
+          call timer(time0_phist,time1,'PHIST',1,0) ! end phist timing
+          time1_phist = time1_phist+time1
+        endif
+        if (wrsech) call timer(time0_shist,time1_shist,'SHIST',1,0)
+      endif ! time2write
+      call timer(time0_step,time1,'STEP',0,0) ! resume step timing (non-MPI)
+#ifdef MPI
 !
 ! Each mpi task must receive the 2 lats before its first
 ! updated lat (lat0-1,lat0-2), and the 2 lats after its last
@@ -674,7 +662,6 @@
       call mp_periodic_f4d(itc)
 #else
 ! Non-mpi serial run:
-      call timer(time0_step,time1,'STEP',0,0) ! resume step timing (non-MPI)
       call mk_polelat(0     ,1     ,itc)
       call mk_polelat(-1    ,2     ,itc)
       call mk_polelat(lat1+1,lat1  ,itc)

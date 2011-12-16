@@ -1011,7 +1011,7 @@
 ! Local:
       integer :: n,i,ii,nstarts,nstops,nhists,nout,nsteps,
      |  nsteps_hist(mxseries_sech),nsechs_total,nseriesp,nflds_sech,
-     |  nhists_total,nfiles_sech,nonblank
+     |  nhists_total,nfiles_sech,nonblank,nsrc,mtime(4)
       integer(kind=8) :: step8,
      |  nsec_start(mxseries_sech),nsec_stop(mxseries_sech),
      |  nsec_hist (mxseries_sech)
@@ -1215,6 +1215,18 @@
           call shutdown('SECHIST')
         endif
       enddo 
+!
+! Secondary start time cannot be same as start time if initial run,
+! since sech fields would be zero (this is new as of 12/14/11):
+      nsrc = len_trim(source)
+      if (nsrc > 0.and.nsec_start(1)==mtime_to_nsec(start(:,1))) then      
+        write(6,"(/,'>>> INPUT: If an initial run, secondary start ',
+     |    ' time SECSTART must not be same as START time.')")
+        call nsecs_to_modeltime(nsec_start(1)+nsec_hist(1),mtime)
+        write(6,"('Please set SECSTART to first SECHIST interval ',
+     |    'after START time (',3i4,')')") mtime(1:3)
+        call shutdown('SECSTART')
+      endif
 !
 ! Secondary history save frequencies:
       n = size(secsave)-count(secsave==ispval)

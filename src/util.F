@@ -66,6 +66,7 @@
         write(6,"('rmcomments: using default semicolon as ',
      +    'comment character.')")
       endif
+      isopen = .false.
       inquire(unit=luin,opened=isopen)
       if (.not.isopen) then
         open(unit=luin,iostat=ios)
@@ -780,23 +781,30 @@
 #endif
       end subroutine gethostsname
 !-----------------------------------------------------------------------
-      integer function strloc(strarray,nstr,str)
+      integer function strloc(strarray,nstr,substr)
       implicit none
 !
 ! Search for string str in string array strarray(nstr).
+! Its important NOT to use comparisons such as "if (trim(str0)==trim(str1))" 
+!   to avoid memory leaks by Intel ifort compiler (this is not a problem 
+!   w/ PGI and xlf compilers).
 !
 ! Args:
       integer,intent(in) :: nstr
       character(len=*),intent(in) :: strarray(nstr)
-      character(len=*) :: str
+      character(len=*) :: substr
 !
 ! Local:
       integer :: i
+      character(len=len(substr)) :: subtrim
+      character(len=len(strarray(1))) :: strtrim
 !
       strloc = 0
       aloop: do i=1,nstr
         if (len_trim(strarray(i)) > 0) then
-          if (trim(str) == trim(strarray(i))) then
+          subtrim = trim(substr)
+          strtrim = trim(strarray(i)) 
+          if (subtrim == strtrim) then
             strloc = i
             exit aloop
           endif
