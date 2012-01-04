@@ -37,6 +37,7 @@
       use addfld_module,only: addfld
       use init_module,only: iyear,secs
       use hist_module,only: modeltime
+      use qjoule,only: qjoule_tn,qjoule_ti
       implicit none
 !
 ! Args:

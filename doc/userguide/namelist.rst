@@ -75,7 +75,9 @@ Parameter Name                              Data Type and Default Description
 :ref:`OUTPUT <OUTPUT>`                      string array          Primary history output file(s)
 :ref:`POTENTIAL_MODEL <POTENTIAL_MODEL>`    string: [HEELIS]      High-latitude Potential Model
 :ref:`POWER or POWER_TIME <POWER>`          real or real array    Hemispheric Power (GW)
-:ref:`SECHIST <SECHIST>`                    integer(3)            Secondary history write frequency
+:ref:`SECSTART <SECSTART>`                  integer(3)            Secondary history start time (day,hour,minute)
+:ref:`SECSTOP <SECSTOP>`                    integer(3)            Secondary history stop time (day,hour,minute)
+:ref:`SECHIST <SECHIST>`                    integer(3)            Secondary history write frequency (day,hour,minute)
 :ref:`SECFLDS <SECFLDS>`                    string array          Fields to be stored on secondary histories
 :ref:`SECOUT <SECOUT>`                      string array          Secondary history output file(s)
 :ref:`SOURCE <SOURCE>`                      string: [none]        Primary SOURCE (start-up) file
@@ -624,6 +626,54 @@ Parameter Name                              Data Type and Default Description
 
    See also:
      :ref:`MXHIST_SECH <MXHIST_SECH>`
+
+   :ref:`Back to top <namelist_params>`
+
+.. -------------------------------------------------------------------------------------
+.. index:: secstart, namelist input ; secstart
+.. _SECSTART:
+.. describe:: SECSTART
+
+   Secondary history start time, specified as a model time (day,hour,minute). 
+
+   | Data type: 3 integers (day,hour,minute)
+   | Valid range: 0-365 for day, 0-23 for hour, 0-59 for minute.
+
+   SECSTART time must follow these rules:
+     * It must be a multiple of timestep STEP and less than SECSTOP time.
+     * It must be greater than or equal to START time, and less than or equal to STOP time.
+     * In the case of an initial run (SOURCE history provided), SECSTART must not be equal
+       to START time. This is to avoid zero valued secondary history fields.
+
+   Examples:
+     * SECSTART = 80,1,0  ; Start saving secondary histories at model time 80,1,0
+
+   See also:
+     * :ref:`SECSTOP <SECSTOP>`
+     * :ref:`SECHIST <SECHIST>`
+
+   :ref:`Back to top <namelist_params>`
+
+.. -------------------------------------------------------------------------------------
+.. index:: secstop, namelist input ; secstop
+.. _SECSTOP:
+.. describe:: SECSTOP
+
+   Secondary history stop time, specified as a model time (day,hour,minute). 
+
+   | Data type: 3 integers (day,hour,minute)
+   | Valid range: 0-365 for day, 0-23 for hour, 0-59 for minute.
+
+   SECSTOP time must follow these rules:
+     * It must be a multiple of timestep STEP and greater than SECSTART time.
+     * It must be greater than or equal to START time, and less than or equal to STOP time.
+
+   Examples:
+     * SECSTOP = 81,0,0  ; Start saving secondary histories at model time 80,1,0
+
+   See also:
+     * :ref:`SECSTART <SECSTART>`
+     * :ref:`SECHIST <SECHIST>`
 
    :ref:`Back to top <namelist_params>`
 

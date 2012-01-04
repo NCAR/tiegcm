@@ -321,6 +321,7 @@
       use cons_module,only: p0,grav
 !     use aurora_module,only: alfa30,e30,alfa_sp,e_sp
       use aurora_module,only: e1,e2,h1,h2,alfac,ec,alfad,ed
+      use qjoule,only: joulefac
       implicit none
 !
 ! Args:
@@ -498,5 +499,6 @@
       h%dynamo = .false.
       if (dynamo > 0) h%dynamo = .true.
       h%ntask_mpi = ntask
+      h%joulefac = joulefac
       end subroutine define_hist
       end module output

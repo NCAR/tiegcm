@@ -1,10 +1,15 @@
-!
-      subroutine qjoule_ti(un,vn,w,ui,vi,wi,lam1,op,nplus,
-     |    n2p,nop,o2p,barm,tn,qji_ti,lev0,lev1,lon0,lon1,lat)
+      module qjoule
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
+!
+      real,parameter :: joulefac = 1.5 ! joule heating multiplication factor
+!
+      contains
+!-----------------------------------------------------------------------
+      subroutine qjoule_ti(un,vn,w,ui,vi,wi,lam1,op,nplus,
+     |    n2p,nop,o2p,barm,tn,qji_ti,lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate ion joule heating for use in ion temperature.
 ! This is called from sub dynamics before settei. Qji_ti output from
@@ -150,6 +155,9 @@
           qji_tn(k,i) = .5*(lam1(k,i)+lam1(k+1,i))*
      |      (vel_zonal(k,i)**2 + vel_merid(k,i)**2 + 
      |       vel_vert(k,i)**2)
+!
+! Apply joule heating factor (formerly in dt.F):
+          qji_tn(k,i) = qji_tn(k,i) * joulefac
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !
@@ -179,3 +187,5 @@
      |  lev0,lev1,lon0,lon1,lat)
 
       end subroutine qjoule_tn
+!-----------------------------------------------------------------------
+      end module qjoule

@@ -157,7 +157,8 @@
      |    h1,h2,             ! gaussian half-width for aurora
      |    alfac,ec,          ! aurora cusp energy
      |    alfad,ed,          ! aurora drizzle energy
-     |    lbc                ! lower boundary interface level
+     |    lbc,               ! lower boundary interface level
+     |    joulefac           ! joule heating factor
         logical dynamo       ! if true, is dynamo history
         logical coupled_ccm  ! if true, run was coupled with ccm
         integer :: nflds,    ! total number of fields on history
@@ -273,6 +274,7 @@
       h%dtide = (/real_init,real_init/)
       h%sdtide(:) = real_init
       h%colfac = real_init
+      h%joulefac = real_init
       h%p0     = real_init
       h%p0_model = real_init
       h%grav   = real_init
@@ -407,8 +409,9 @@
 !     if (h%ed2 /= real_init)
 !    |  write(6,"(2x,'ed2     = ',e8.2,' (ergs/cm2/s)')") h%ed2
 
-      write(6,"(2x,'colfac  = ',f5.2)") h%colfac
-      write(6,"(2x,'p0      = ',e10.2)") h%p0
+      write(6,"(2x,'colfac    = ',e10.2)") h%colfac
+      write(6,"(2x,'joulefac  = ',e10.2)") h%joulefac
+      write(6,"(2x,'p0        = ',e10.2)") h%p0
       if (h%p0_model /= real_init) write(6,"(2x,'p0_model= ',e10.2)")
      |  h%p0_model
       if (h%grav /= real_init)

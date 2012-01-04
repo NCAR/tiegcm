@@ -70,7 +70,8 @@
      |  idv_f107d,idv_f107a,idv_imf_ncfile,idv_mag,idv_dtide,
      |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
      |  idv_ec,idv_alfad,idv_ed,idv_writedate,idv_saber_ncfile,
-     |  idv_tidi_ncfile,idv_crit1,idv_crit2,idv_coupled_cmit
+     |  idv_tidi_ncfile,idv_crit1,idv_crit2,idv_coupled_cmit,
+     |  idv_joulefac
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
 !
@@ -635,7 +636,11 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading alfad')
             sh%alfad = scalar
-
+          case('joulefac')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading joulefac')
+            sh%joulefac = scalar
           case('p0')
             istat = nf_get_var_double(ncid,i,var1)
             if (istat /= NF_NOERR) 
@@ -1596,6 +1601,10 @@
 ! Collision factor:
       call defvar_time_dbl(ncid,"colfac",ids1,idv_colfac,
      |  "ion/neutral collision factor"," ")
+!
+! Joule heating factor:
+      call defvar_time_dbl(ncid,"joulefac",ids1,idv_joulefac,
+     |  "joule heating factor"," ")
 !
 ! 1/31/01: Making tides time-dependent (dtide(time,2) and sdtide(time,10):
 ! Diurnal tide amp/phase:
@@ -2816,6 +2825,11 @@
       if (idv_colfac <= 0) istat = nf_inq_varid(ncid,"colfac",
      |  idv_colfac)
       istat = nf_put_var1_double(ncid,idv_colfac,h%ihist,h%colfac)
+!
+! Joule heating factor:
+      if (idv_joulefac <= 0) istat = nf_inq_varid(ncid,"joulefac",
+     |  idv_joulefac)
+      istat = nf_put_var1_double(ncid,idv_joulefac,h%ihist,h%joulefac)
  
 ! alfa30:
 !     if (idv_alfa30 <= 0) istat = nf_inq_varid(ncid,"alfa30",

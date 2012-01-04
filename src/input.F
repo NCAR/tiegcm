@@ -1158,10 +1158,10 @@
         endif
       enddo 
 !
-! Secondary stop times must be > secondary start times:
+! Secondary stop times must be >= secondary start times:
       do i=1,nstops
-        if (nsec_stop(i) <= nsec_start(i)) then
-          write(6,"(/,'>>> INPUT: SECSTART must be < SECSTOP for ',
+        if (nsec_stop(i) < nsec_start(i)) then
+          write(6,"(/,'>>> INPUT: SECSTART must be <= SECSTOP for ',
      |      'all time series.')")
           write(6,"('For time series ',i2,': SECSTART=',3i4,' SECSTOP=',
      |      3i4,/)") i,secstart(:,i),secstop(:,i)
