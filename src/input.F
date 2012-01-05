@@ -1218,15 +1218,23 @@
 !
 ! Secondary start time cannot be same as start time if initial run,
 ! since sech fields would be zero (this is new as of 12/14/11):
-      nsrc = len_trim(source)
-      if (nsrc > 0.and.nsec_start(1)==mtime_to_nsec(start(:,1))) then      
-        write(6,"(/,'>>> INPUT: If an initial run, secondary start ',
-     |    ' time SECSTART must not be same as START time.')")
-        call nsecs_to_modeltime(nsec_start(1)+nsec_hist(1),mtime)
-        write(6,"('Please set SECSTART to first SECHIST interval ',
-     |    'after START time (',3i4,')')") mtime(1:3)
-        call shutdown('SECSTART')
-      endif
+!
+! 1/5/12: Go back to allowing SECSTART==START for initial runs,
+!   so secondary histories can have non-zero "prognostic" fields 
+!   in first history copied from SOURCE (any fields saved by sub 
+!   addfld fields will be zero in this copied history, as before).
+!   Tag 1.94.2 will have this, i.e., allowing SECSTART==START for
+!   initial runs.
+!
+!     nsrc = len_trim(source)
+!     if (nsrc > 0.and.nsec_start(1)==mtime_to_nsec(start(:,1))) then      
+!       write(6,"(/,'>>> INPUT: If an initial run, secondary start ',
+!    |    ' time SECSTART must not be same as START time.')")
+!       call nsecs_to_modeltime(nsec_start(1)+nsec_hist(1),mtime)
+!       write(6,"('Please set SECSTART to first SECHIST interval ',
+!    |    'after START time (',3i4,')')") mtime(1:3)
+!       call shutdown('SECSTART')
+!     endif
 !
 ! Secondary history save frequencies:
       n = size(secsave)-count(secsave==ispval)
