@@ -41,428 +41,7 @@
       real :: weictpoten(2)
 
       contains 
-!-----------------------------------------------------------------------
-      subroutine calccloc
-!
-!  NCAR Nov 02:  Calculate the convection center location (dskofc,offc),
-!       radius (theta0), dayside entry for cusp location (phid, poten=0),
-!       and nightside exit (phin, poten=0), and the associated auroral
-!       radius (arad).  (Leave the aurora center as is, dskofa=0, offa=1.)
-! 01/11 bae:  calccloc has a problem with Bz>0, |Bz/By|>1 conditions where
-!   multiple cells are possible, so for these conditions, set defaults of:
-!   theta0 = 10 deg, offc = 4.2 deg, and dskofc = 0 deg (offc and dskofc from 2005 model)
-!
-! Input phihm: High lat model potential in magnetic coordinates (single level).
-!
-! (dimension 2 is for south, north hemispheres)
-!  Calculate crad, offc, dskofc, and phid and phin if possible
-!   Use Fig 8 of Heelis et al. [JGR, 85, 3315-3324, 1980]
-!     This shows:  arad = 18.7 deg, crad = 16.7 deg (so arad = crad + 2 deg)
-!           offa = offc = 3 deg (so offa = offc)
-!           dskofc = 2 deg, dskofa = -0.5 deg  (so dskofa = dskofc - 2.5 deg)
-!   Parameterization defaults for phid (phid(MLT)=9.39 +/- 0.21By - 12)
-!                             and phin (phin(MLT)=23.50 +/- 0.15By - 12)
-!   (In aurora_cons, phid=0., phin=180.*rtd)
-!     (For zero By, should be phid=21.39MLT*15*rtd, phin=11.5*15*rtd)
-! These are the dimensions and descriptions (corrected phid,n) from aurora.F:
-!    |  theta0(2), ! convection reversal boundary in radians
-!    |  offa(2),   ! offset of oval towards 0 MLT relative to magnetic pole (rad)
-!    |  dskofa(2), ! offset of oval in radians towards 18 MLT (f(By))
-!    |  phid(2),   ! dayside convection entrance in MLT-12 converted to radians (f(By))
-!    |  phin(2),   ! night convection entrance in MLT-12 converted to radians (f(By))
-!    |  rrad(2),   ! radius of auroral circle in radians
-!    |  offc(2),   ! offset of convection towards 0 MLT relative to mag pole (rad)
-!    |  dskofc(2)  ! offset of convection in radians towards 18 MLT (f(By))
-! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc)
-!
-! Additional auroral parameters (see sub aurora_cons):
-      use aurora_module,only: theta0,offa,dskofa,phid,phin,rrad,offc,
-     |                        dskofc
-      use magfield_module,only: sunlons 
-      use input_module,only:  ! from user input
-     |  byimf,   ! By component of IMF (nT)      (e.g., 0.)
-     |  bzimf    ! Bz component of IMF (nT)      (e.g., 0.)
-      use cons_module,only: rtd,
-     |  ylonm,ylatm  ! magnetic grid lons, lats in radians
-      implicit none
-!
-! Args:
-!     integer,intent(in) :: nmlat0,nmlat,nmlonp1
-!     real,dimension(nmlonp1,nmlat),intent(in) :: phihm ! potential in magnetic
-!
-! Local:
-      integer :: i,i1,i2,ih,j,j1,j2,k
-      real :: vnx(2,2),hem,mltdn,mltdx,mltnn,mltnx,mltd,mltn
-      integer :: jnx(2,2),inx(2,2),jinx(nmlonp1,2)
-      real :: vinx(nmlonp1,2),latinx(nmlonp1,2),mltinx(nmlonp1,2)
-      integer :: iflgnn,iflgdx,inm3,inp3,ixm3,ixp3,i06,i18
-      real :: offcn,offcx,offcdeg,dskof,ofdc,crad,arad,crad0,craduse
-      real :: cosl06,sinl06,colat06,cosm06,cosl18,sinl18,colat18,cosm18
-!
-!  Look at both hemispheres
-      do ih=1,2
-!
-	if (ih .eq. 1) then
-	  j1 = 1
-	  j2 = nmlat0
-	  hem = -1.
-	else
-	  j1 = nmlat0 + 1
-	  j2 = nmlat
-	  hem = 1.
-	endif
-! Print out un-revised values:
-!       write (6,"(1x,'Original convection/oval params (hem,By,off,dsk',
-!    |    ',rad,phid,n=',10f9.4)") hem,byimf,offc(ih)*rtd,offa(ih)*rtd,
-!    |    dskofc(ih)*rtd,dskofa(ih)*rtd,theta0(ih)*rtd,rrad(ih)*rtd,
-!    |    phid(ih)*rtd/15.+12.,phin(ih)*rtd/15.+12.
-!  Find min/max
-	vnx(ih,1) = 0.
-	vnx(ih,2) = 0.
-	do j=j1,j2
-	  do i=1,nmlonp1-1
-	    if (phihm(i,j) .gt. vnx(ih,2)) then
-	      vnx(ih,2) = phihm(i,j)
-	      jnx(ih,2) = j
-	      inx(ih,2) = i
-	    endif
-	    if (phihm(i,j) .lt. vnx(ih,1)) then
-	      vnx(ih,1) = phihm(i,j)
-	      jnx(ih,1) = j
-	      inx(ih,1) = i
-	    endif
-	  enddo  !  i=1,nmlonp1-1
-	enddo  !  j=j1,j2
-! 02/10: Calculate weictpoten in kV from Weimer model min/max in V
-	weictpoten(ih) = 0.001 * (vnx(ih,2) - vnx(ih,1))
-!       write (6,"(1x,'ih min/max pot,lat,mlt=',i2,3e12.4,2x,3e12.4))")
-!    |    ih,(vnx(ih,i),ylatm(jnx(ih,i)),(ylonm(inx(ih,i))-sunlons(1))
-!    |    * rtd/15.+12.,i=1,2)
 
-! 01/11 bae:  Check to see if Bz positive and |Bz/By|>1:  if so, use defaults
-!	for crad (theta0), offcdeg and dskof to set variables for colath.
-!   	Do not redefine phin and phid, but use defaults from aurora_cons
-	if (bzimf>0 .and. abs(bzimf)>abs(byimf)) then
-	 crad0 = 0.
-	 crad = 10.
-	 offcdeg = 4.2
-         dskof = 0.
-        else
-!  Set default values
-      do k=1,2
-	do i=1,nmlonp1
-	  jinx(i,k) = -99
-	  vinx(i,k) = -999.
-	  mltinx(i,k) = -999.
-	  latinx(i,k) = -999.
-	enddo  ! i=1,nmlonp1
-      enddo   !  k=1,2
-
-!  Find min/max +/-8 hrs (nmlonp1/3) from peaks and +/-4 lats away
-! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc) in rad
-! Min:
-      k = 1
-      mltdn = -999.
-      mltnn = -999.
-      iflgnn = 0
-	j1 = jnx(ih,k) - 4
-	if (j1 .lt. 1) j1 = 1
-	j2 = jnx(ih,k) + 4
-	if (j2 .gt. nmlat) j2 = nmlat
-	i1 = inx(ih,k) - nmlonp1/3
-	if (i1 .lt. 1) i1=1
-	i2 = inx(ih,k) + nmlonp1/3
-	if (i2 .gt. nmlonp1) i2=nmlonp1
-! Look at mid-point part
-!       write (6,"(1x,'k j1,2 i1,2=',5i3)") k,j1,j2,i1,i2
-	do i=i1,i2
-	vinx(i,k) = 0.
-	mltinx(i,k) = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
-	if (mltinx(i,k) .gt. 24.) mltinx(i,k) = mltinx(i,k) - 24.
-	if (mltinx(i,k) .lt.  0.) mltinx(i,k) = mltinx(i,k) + 24.
-!  MLT is 0.3 MLT apart (24/80=0.3)
-	if (abs(mltinx(i,k)-18.) .lt. 0.15) i18=i
-	  do j=j1,j2
-	    if (phihm(i,j) .lt. vinx(i,k)) then
-	      vinx(i,k) = phihm(i,j)
-	      jinx(i,k) = j
-	      latinx(i,k) = ylatm(j) * rtd
-	    endif
-	  enddo   !  j=j1,j2
-	  if (vinx(i,k) .ge. 0.) then
-!  Look at vinx=0 for low values of i (decreasing time - phid)
-	    if (mltinx(i,k) .gt. 4.5 .and. mltinx(i,k) .lt. 16.5) then
-		 mltdn = mltinx(i,k)
-	    else
-!  Look at vinx=0 for high values of i (increasing time - phin)
-	      if (iflgnn .eq. 0) then
-		mltnn = mltinx(i,k)
-		iflgnn = 1
-	      endif
-	    endif
-	  endif
-	enddo   !  i=i1,i2
-!         write (6,"(1x,'knx i j v mlt lat =',3i3,3e12.4)") (k,i,
-!    |     jinx(i,k),vinx(i,k),mltinx(i,k),latinx(i,k),i=i1,i2)
-!  Now look at i<1 for dusk side:
-	if (inx(ih,k) - nmlonp1/3 .lt. 1) then
-	  i1 = inx(ih,k) - nmlonp1/3 + nmlonp1 - 1
-	  i2 = nmlonp1
-	  do i=i1,i2
-	  vinx(i,k) = 0.
-	  mltinx(i,k) = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
-	  if (mltinx(i,k) .gt. 24.) mltinx(i,k) = mltinx(i,k) - 24.
-	  if (mltinx(i,k) .lt.  0.) mltinx(i,k) = mltinx(i,k) + 24.
-!  MLT is 0.3 MLT apart (24/80=0.3)
-	  if (abs(mltinx(i,k)-18.) .lt. 0.15) i18=i
-	    do j=j1,j2
-	      if (phihm(i,j) .lt. vinx(i,k)) then
-		vinx(i,k) = phihm(i,j)
-		jinx(i,k) = j
-		latinx(i,k) = ylatm(j) * rtd
-	      endif
-	    enddo   !  j=j1,j2
-	    if (vinx(i,k) .ge. 0.) then
-!  Look at vinx=0 for low values of i (decreasing time - phid)
-	      if (mltinx(i,k) .gt. 4.5 .and. mltinx(i,k) .lt. 16.5)
-     |             mltdn = mltinx(i,k)
-	    endif
-	  enddo   !  i=i1,i2
-!         write (6,"(1x,'knx i j v mlt lat =',3i3,3e12.4)") (k,i,
-!    |     jinx(i,k),vinx(i,k),mltinx(i,k),latinx(i,k),i=i1,i2)
-	endif
-!  Now look at i>nmlonp1 for dusk side:
-	if (inx(ih,k) + nmlonp1/3 .gt. nmlonp1) then
-	  i2 = inx(ih,k) + nmlonp1/3 - nmlonp1 + 1
-	  i1 = 1
-	  do i=i1,i2
-	  vinx(i,k) = 0.
-	  mltinx(i,k) = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
-	  if (mltinx(i,k) .gt. 24.) mltinx(i,k) = mltinx(i,k) - 24.
-	  if (mltinx(i,k) .lt.  0.) mltinx(i,k) = mltinx(i,k) + 24.
-!  MLT is 0.3 MLT apart (24/80=0.3)
-	  if (abs(mltinx(i,k)-18.) .lt. 0.15) i18=i
-	    do j=j1,j2
-	      if (phihm(i,j) .lt. vinx(i,k)) then
-		vinx(i,k) = phihm(i,j)
-		jinx(i,k) = j
-		latinx(i,k) = ylatm(j) * rtd
-	      endif
-	    enddo   !  j=j1,j2
-	  if (vinx(i,k) .ge. 0.) then
-!  Look at vinx=0 for high values of i (increasing time - phin)
-	    if (mltinx(i,k) .le. 4.5 .or. mltinx(i,k) .ge. 16.5) then
-	      if (iflgnn .eq. 0) then
-		mltnn = mltinx(i,k)
-		iflgnn = 1
-	      endif
-	    endif
-	  endif
-	  enddo   !  i=i1,i2
-!         write (6,"(1x,'knx i j v mlt lat =',3i3,3e12.4)") (k,i,
-!    |     jinx(i,k),vinx(i,k),mltinx(i,k),latinx(i,k),i=i1,i2)
-	endif
-! Max:
-      k = 2
-      mltnx = -999.
-      mltdx = -999.
-      iflgdx = 0
-	j1 = jnx(ih,k) - 4
-	if (j1 .lt. 1) j1 = 1
-	j2 = jnx(ih,k) + 4
-	if (j2 .gt. nmlat) j2 = nmlat
-	i1 = inx(ih,k) - nmlonp1/3
-	if (i1 .lt. 1) i1=1
-	i2 = inx(ih,k) + nmlonp1/3
-	if (i2 .gt. nmlonp1) i2=nmlonp1
-! Look at mid-point part
-!       write (6,"(1x,'k j1,2 i1,2=',5i3)") k,j1,j2,i1,i2
-	do i=i1,i2
-	vinx(i,k) = 0.
-	mltinx(i,k) = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
-	if (mltinx(i,k) .gt. 24.) mltinx(i,k) = mltinx(i,k) - 24.
-	if (mltinx(i,k) .lt.  0.) mltinx(i,k) = mltinx(i,k) + 24.
-!  MLT is 0.3 MLT apart (24/80=0.3)
-	if (abs(mltinx(i,k)-6.) .lt. 0.15) i06=i
-	  do j=j1,j2
-	    if (phihm(i,j) .gt. vinx(i,k)) then
-	      vinx(i,k) = phihm(i,j)
-	      jinx(i,k) = j
-	      latinx(i,k) = ylatm(j) * rtd
-	    endif
-	  enddo   !  j=j1,j2
-	  if (vinx(i,k) .le. 0.) then
-!  Look at vinx=0 for low values of i (decreasing time - phin)
-	    if (mltinx(i,k) .le. 4.5 .or. mltinx(i,k) .ge. 16.5) then
-		 mltnx = mltinx(i,k)
-	    else
-!  Look at vinx=0 for high values of i (increasing time - phid)
-	      if (iflgdx .eq. 0) then
-		mltdx = mltinx(i,k)
-		iflgdx = 1
-	      endif
-	    endif
-	  endif
-	enddo   !  i=i1,i2
-!         write (6,"(1x,'knx i j v mlt lat =',3i3,3e12.4)") (k,i,
-!    |     jinx(i,k),vinx(i,k),mltinx(i,k),latinx(i,k),i=i1,i2)
-!  Now look at i<1 for dawn side:
-	if (inx(ih,k) - nmlonp1/3 .lt. 1) then
-	  i1 = inx(ih,k) - nmlonp1/3 + nmlonp1 - 1
-	  i2 = nmlonp1
-	  do i=i1,i2
-	  vinx(i,k) = 0.
-	  mltinx(i,k) = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
-	  if (mltinx(i,k) .gt. 24.) mltinx(i,k) = mltinx(i,k) - 24.
-	  if (mltinx(i,k) .lt.  0.) mltinx(i,k) = mltinx(i,k) + 24.
-!  MLT is 0.3 MLT apart (24/80=0.3)
-	  if (abs(mltinx(i,k)-6.) .lt. 0.15) i06=i
-	    do j=j1,j2
-	      if (phihm(i,j) .gt. vinx(i,k)) then
-		vinx(i,k) = phihm(i,j)
-		jinx(i,k) = j
-		latinx(i,k) = ylatm(j) * rtd
-	      endif
-	    enddo   !  j=j1,j2
-!  Look at vinx=0 for low values of i (decreasing time - phin)
-	  if (vinx(i,k) .le. 0.) then
-	    if (mltinx(i,k) .le. 4.5 .or. mltinx(i,k) .ge. 16.5)
-     |           mltnx = mltinx(i,k)
-	  endif
-	  enddo   !  i=i1,i2
-!         write (6,"(1x,'knx i j v mlt lat =',3i3,3e12.4)") (k,i,
-!    |     jinx(i,k),vinx(i,k),mltinx(i,k),latinx(i,k),i=i1,i2)
-	endif
-!  Now look at i>nmlonp1 for dawn side:
-	if (inx(ih,k) + nmlonp1/3 .gt. nmlonp1) then
-	  i2 = inx(ih,k) + nmlonp1/3 - nmlonp1 + 1
-	  i1 = 1
-	  do i=i1,i2
-	  vinx(i,k) = 0.
-	  mltinx(i,k) = (ylonm(i)-sunlons(1)) * rtd / 15. + 12.
-	  if (mltinx(i,k) .gt. 24.) mltinx(i,k) = mltinx(i,k) - 24.
-	  if (mltinx(i,k) .lt.  0.) mltinx(i,k) = mltinx(i,k) + 24.
-!  MLT is 0.3 MLT apart (24/80=0.3)
-	  if (abs(mltinx(i,k)-6.) .lt. 0.15) i06=i
-	    do j=j1,j2
-	      if (phihm(i,j) .gt. vinx(i,k)) then
-		vinx(i,k) = phihm(i,j)
-		jinx(i,k) = j
-		latinx(i,k) = ylatm(j) * rtd
-	      endif
-	    enddo   !  j=j1,j2
-	  if (vinx(i,k) .le. 0.) then
-!  Look at vinx=0 for high values of i (increasing time - phid)
-	    if (mltinx(i,k) .gt. 4.5 .and. mltinx(i,k) .lt. 16.5) then
-	      if (iflgdx .eq. 0) then
-		mltdx = mltinx(i,k)
-		iflgdx = 1
-	      endif
-	    endif
-	  endif
-	  enddo   !  i=i1,i2
-!         write (6,"(1x,'knx i j v mlt lat =',3i3,3e12.4)") (k,i,
-!    |     jinx(i,k),vinx(i,k),mltinx(i,k),latinx(i,k),i=i1,i2)
-	endif
-!  Now look at vinx=0 to find phid,n
-!  Have mltdx,n from 4.5 to 16.5 MLT (or -999.)
-	if (mltdx .ge. 0. .or. mltdn .ge. 0.) then
-	  if (mltdx*mltdn .ge. 0.) mltd = 0.5*(mltdx+mltdn)
-	  if (mltdx .ge. 0. .and. mltdn .lt. 0.) mltd = mltdx
-	  if (mltdn .ge. 0. .and. mltdx .lt. 0.) mltd = mltdn
-	else
-!  Use parameterization defaults for phid (phid(MLT)=9.39 +/- 0.21By - 12)
-!                             and phin (phin(MLT)=23.50 +/- 0.15By - 12)
-	  mltd = 9.39 - hem*0.21*byimf
-	endif
-	phid(ih) = (mltd-12.) * 15. / rtd
-	if (mltnx .ge. 0. .or. mltnn .ge. 0.) then
-!  Make mltnx,n from 16.5 to 28.5 MLT (or -999.)
-	  if (mltnx .ge. 0. .and. mltnx .lt. 12.) mltnx = mltnx + 24.
-	  if (mltnn .ge. 0. .and. mltnn .lt. 12.) mltnn = mltnn + 24.
-	  if (mltnx*mltnn .ge. 0.) mltn = 0.5*(mltnx+mltnn)
-	  if (mltnx .ge. 0. .and. mltnn .lt. 0.) mltn = mltnx
-	  if (mltnn .ge. 0. .and. mltnx .lt. 0.) mltn = mltnn
-	else
-!  Use parameterization defaults for phid (phid(MLT)=9.39 +/- 0.21By - 12)
-!                             and phin (phin(MLT)=23.50 +/- 0.15By - 12)
-	  mltn = 23.50 - hem*0.15*byimf
-	endif
-	phin(ih) = (mltn-12.) * 15. / rtd
-!       write (6,"(1x,'mltd,n,x  mltn,n,x phid,n =',8e12.4)")
-!    |   mltd,mltdn,mltdx,mltn,mltnn,mltnx,phid(ih),phin(ih)
-
-!  Estimate dskofc from lat of peak at 6 and 18 MLT (colat(18-6), lat(6-18))
-	dskof = abs(latinx(i06,2)) - abs(latinx(i18,1))
-
-!  Estimate offc from lat of peak +/-3 hrs from each maximum
-!   (In colat, is nighside-dayside, but in lat is dayside-nightside)
-	inm3 = inx(ih,1) - (nmlonp1-1)/8
-	inp3 = inx(ih,1) + (nmlonp1-1)/8
-	ixm3 = inx(ih,2) - (nmlonp1-1)/8
-	ixp3 = inx(ih,2) + (nmlonp1-1)/8
-	if (inm3 .lt. 1) inm3 = inm3 + nmlonp1 - 1
-	if (inp3 .gt. nmlonp1) inp3 = inp3 - nmlonp1 + 1
-	if (ixm3 .lt. 1) ixm3 = ixm3 + nmlonp1 - 1
-	if (ixp3 .gt. nmlonp1) ixp3 = ixp3 - nmlonp1 + 1
-	offcn = abs(latinx(inm3,1)) - abs(latinx(inp3,1))
-	offcx = abs(latinx(ixp3,2)) - abs(latinx(ixm3,2))
-!  07/03:  Correction to make sure offset is at least 0.5 deg towards 0 MLT
-!       offcdeg = 0.5*(offcn+offcx)
-	offcdeg = max(0.5,0.5*(offcn+offcx))
-
-!  Estimate theta0 from 6-18 MLT line first
-	crad0 = 90. - 0.5*abs(latinx(i18,1)+latinx(i06,2))
-!  Estimate theta0 from 6-18 MLT line in 'convection circle coordinates'
-! Transform to convection circle coordinates:
-	ofdc = sqrt(offcdeg**2+dskof**2)
-	sinl18 = sin(abs(latinx(i18,1))/rtd)
-	cosl18 = cos(abs(latinx(i18,1))/rtd)
-	cosm18 = cos(mltinx(i18,1)*15./rtd+asin(dskof/ofdc))
-	colat18 = cos(ofdc/rtd)*sinl18-sin(ofdc/rtd)*cosl18*cosm18
-	colat18 = acos(colat18)*rtd
-!       write (6,"(1x,'18 sinl,cosl,cosm,colat asin=',5e12.4)")
-!    |   sinl18,cosl18,cosm18,colat18,asin(dskof/ofdc)
-	sinl06 = sin(abs(latinx(i06,2))/rtd)
-	cosl06 = cos(abs(latinx(i06,2))/rtd)
-	cosm06 = cos(mltinx(i06,2)*15./rtd+asin(dskof/ofdc))
-	colat06 = cos(ofdc/rtd)*sinl06-sin(ofdc/rtd)*cosl06*cosm06
-	colat06 = acos(colat06)*rtd
-!       write (6,"(1x,'06 sinl,cosl,cosm,colat asin=',5e12.4)")
-!    |   sinl06,cosl06,cosm06,colat06,asin(dskof/ofdc)
-	crad = 0.5*(colat18+colat06)
-	endif		! of using defaults for Bz>0, |Bz|>|By|
-!  Make sure crad is largest of crad and crad0
-	craduse = max(crad,crad0)
-	if (craduse .gt. crad) write (6,"(1x,'Used crad0 from 6-18',
-     |   'instead of calc crad =',2e12.4)") crad0,crad
-	arad = craduse + 2.
-	theta0(ih) = craduse / rtd
-	rrad(ih) = arad / rtd
-!       write (6,"(1x,'radius: 0,18,06,c,a deg,rad=',7e12.4)")crad0,
-!    |    colat18,colat06,crad,arad,theta0(ih),rrad(ih)
-!
-	offc(ih) = offcdeg / rtd
-	offa(ih) = offcdeg / rtd
-!       write (6,"(1x,'min/max latd3,n3 offc =',8e12.4)")
-!    |    latinx(inm3,1),latinx(inp3,1),offcn,latinx(ixp3,2),
-!    |    latinx(ixm3,2),offcx,offcdeg,offc(ih),dskofc(ih) = dskof / rtd
-
-!  oval offset is 2.5 deg towards dawn (more neg dskof)
-        dskofc(ih) = dskof / rtd
-	dskofa(ih) = (dskof-2.5) / rtd
-!       write (6,"(1x,'18,06 mlt,lat dskof,c,a=',7e12.4)")
-!    |    mltinx(i18,1),latinx(i18,1),mltinx(i06,2),latinx(i06,2),
-!    |    dskof,dskofc(ih),dskofa(ih)
-
-! Print out revised values:
-!       write (6,"('Revised convection/oval params (hem,By,off,dsk,',
-!    |    'rad,phid,n=',i2,9e12.4)")ih,byimf,offc(ih)*rtd,offa(ih)*rtd,
-!    |    dskofc(ih)*rtd,dskofa(ih)*rtd,theta0(ih)*rtd,rrad(ih)*rtd,
-!    |    phid(ih)*rtd/15.+12.,phin(ih)*rtd/15.+12.
-      enddo  ! ih=1,2
-      return
-      end subroutine calccloc
 !-----------------------------------------------------------------------
 !
       subroutine weimer01
@@ -571,6 +150,10 @@
 
       enddo ! j=1,nmlat0
 
+!  Re-calculate SH values of offa, dskofa, arad, and Heelis phid and phin from
+!   Weimer 2001 boundarylat values of theta0 and 2005 setboundary offc, dskofc
+	call wei01loc (1)
+
 !  Do NH calculation
       HEM = 1.
       HTILT = HEM * TILT
@@ -590,6 +173,10 @@
 
       enddo ! j=nmlat0+1,nmlat
 
+!  Re-calculate NH values of offa, dskofa, arad, and Heelis phid and phin from
+!   Weimer 2001 boundarylat values of theta0 and 2005 setboundary offc, dskofc
+	call wei01loc (2)
+
 !
 ! Periodic points:
       do j=1,nmlat
@@ -597,11 +184,12 @@
       enddo ! j=1,nmlat
 
 !  Re-calculate the values of theta0,offc,dskofc,arad,phid,phin,offa,dskofa
-      call calccloc
+! 01/11 bae:  Comment out call to calccloc (although it works) since wei01loc is used instead
+!      call calccloc (weictpoten)
 ! 01/10 bae:  Return the average of the weictpoten from the SH and NH in ctpoten
       ctpoten = 0.5*(weictpoten(1)+weictpoten(2))
-!     write (6,"(1x,'weimer01: CPS,N ctpoten=',3f8.1)") weictpoten,
-!    |    ctpoten
+!      write (6,"(1x,'weimer01: CPS,N ctpoten=',3f8.1)") weictpoten,
+!     |    ctpoten
 !
 ! Calculate pfrac fractional presence of dynamo equation using critical
 !  convection colatitudes crit(2).  (crit is in cons module, re-calc in colath)
@@ -1818,6 +1406,195 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 !     END
 	end function atan2d
 CNCAR
+!-----------------------------------------------------------------------
+      subroutine wei01loc (ih)
+! ih=1,2 for SH,NH called from weimer01
 
+!  Jan 2012 bae: Made wei01loc from similar wei05loc (crad=bndyfitr/2.)
+!    where 18 of 24 calls to BoundaryLat(MLT) for MLT=15.5-8.5 are averaged
+!    into avblat to find crad=(90.-avblat)/2.
+!   Added byloc to limit size of byimf (probably incorrect assymmetry in hems)
+!  NCAR July 08 bae:  Write wei05loc to use values from Weimer 2005
+!       setboundary for convection offc=4.2 deg, dskofc=0, theta0=bndyfitr
+!       where deg should be in radians.  wei05loc replaces calccloc05.
+!
+! (dimension 2 is for south, north hemispheres)
+!  Calculate offa, dskofa, rrad, phid, and phin from Weimer 2005 offc, dskofc, theta0
+!   Use Fig 8 of Heelis et al. [JGR, 85, 3315-3324, 1980]
+!     This shows:  arad = 18.7 deg, crad = 16.7 deg (so arad = crad + 2 deg)
+!           offa = offc = 3 deg (so offa = offc)
+!           dskofc = 2 deg, dskofa = -0.5 deg  (so dskofa = dskofc - 2.5 deg)
+!   Parameterization defaults for phid (phid(MLT)=9.39 +/- 0.21By - 12)
+!                             and phin (phin(MLT)=23.50 +/- 0.15By - 12)
+!   (In aurora_cons, phid=0., phin=180.*rtd)
+!     (For zero By, should be phid=21.39MLT*15*rtd, phin=11.5*15*rtd)
+!  05/08:  But formulae for ra-rc using IMF CP between 5-7 deg (not 2) so use
+!          difference of ra(max IMF CP or HP)-rc(IMF CP) as in aurora.F
+! These are the dimensions and descriptions (corrected phid,n) from aurora.F:
+!    |  theta0(2), ! convection reversal boundary in radians
+!    |  offa(2),   ! offset of oval towards 0 MLT relative to magnetic pole (rad)
+!    |  dskofa(2), ! offset of oval in radians towards 18 MLT (f(By))
+!    |  phid(2),   ! dayside convection entrance in MLT-12 converted to radians (f(By)),
+!                      phid is the MLT-12 location of the cusp on the dayside
+!    |  phin(2),   ! night convection entrance in MLT-12 converted to radians (f(By))
+!    |  rrad(2),   ! radius of auroral circle in radians
+!    |  offc(2),   ! offset of convection towards 0 MLT relative to mag pole (rad)
+!    |  dskofc(2)  ! offset of convection in radians towards 18 MLT (f(By))
+! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc)
+!
+      use dynamo_module,only: nmlat0,phihm
+! Additional auroral parameters (see sub aurora_cons):
+      use aurora_module,only: theta0,offa,dskofa,phid,phin,rrad,offc,
+     |                        dskofc
+      use magfield_module,only: sunlons 
+      use input_module,only:  ! from user input
+     |  byimf    ! By component of IMF (nT)      (e.g., 0.)
+! 05/08:  Added bzimf,ctpoten,power
+     | ,bzimf    ! Bz component of IMF (nT)      (e.g., 0., not used except in print)
+     | ,ctpoten  ! cross-cap potential (kV)      (e.g., 45.)
+     | ,power    ! hemispheric power   (GW)      (e.g., 16.)
+      use cons_module,only: rtd,
+     |  ylonm,ylatm  ! magnetic grid lons, lats in radians
+      implicit none
+!
+! Args:
+      integer,intent(in) :: ih
+!
+! Local:
+! 05/08:  Added rccp etc
+      real :: rccp,racp,rahp,ramx,diffrac,plevel,tmltmin,tmltmax
+      real :: diffrac2
+      real :: offcdegp(2),dskofcp(2),radegp(2)
+      integer :: i,i1,i2,j,j1,j2
+      real :: vnx(2,2),hem,mltd,mltn
+      integer :: jnx(2,2),inx(2,2)
+      real :: offcdeg,dskof,arad,crad
+      real :: cosl06,sinl06,colat06,cosm06,cosl18,sinl18,colat18,cosm18
+! 01/11:  Added blatmlt(24), ml and avblat for wei01loc (different from wei05loc)
+      integer :: ml
+      real :: blatmlt(24),avblat
+      real :: byloc
+
+! Limit size of byimf in phin and phid calculations (as in aurora.F) 
+!  NOTE:  This byloc is assymetric in hemisphere, which is probably not correct
+      byloc = byimf
+      if (byloc .gt. 7.) byloc = 7.
+      if (byloc .lt. -11.) byloc = -11.
+!
+!  ih=1 is SH, ih=2 is NH
+	if (ih .eq. 1) then
+	  j1 = 1
+	  j2 = nmlat0
+	  hem = -1.
+	else
+	  j1 = nmlat0 + 1
+	  j2 = nmlat
+	  hem = 1.
+	endif
+! Print out un-revised values:
+!       write (6,"(1x,'Original convection/oval params (hem,By,off,dsk',
+!    |    ',rad,phid,n=',10f9.4)") hem,byimf,offc(ih)*rtd,offa(ih)*rtd,
+!    |    dskofc(ih)*rtd,dskofa(ih)*rtd,theta0(ih)*rtd,rrad(ih)*rtd,
+!    |    phid(ih)*rtd/15.+12.,phin(ih)*rtd/15.+12.
+!  Find min/max
+	vnx(ih,1) = 0.
+	vnx(ih,2) = 0.
+	do j=j1,j2
+	  do i=1,nmlonp1-1
+	    if (phihm(i,j) .gt. vnx(ih,2)) then
+	      vnx(ih,2) = phihm(i,j)
+	      jnx(ih,2) = j
+	      inx(ih,2) = i
+	    endif
+	    if (phihm(i,j) .lt. vnx(ih,1)) then
+	      vnx(ih,1) = phihm(i,j)
+	      jnx(ih,1) = j
+	      inx(ih,1) = i
+	    endif
+	  enddo  !  i=1,nmlonp1-1
+	enddo  !  j=j1,j2
+! 05/08: Calculate weictpoten in kV from Weimer model min/max in V
+	weictpoten(ih) = 0.001 * (vnx(ih,2) - vnx(ih,1))
+	tmltmin = (ylonm(inx(ih,1))-sunlons(1)) * rtd/15. + 12.
+	if (tmltmin .gt. 24.) tmltmin = tmltmin - 24.
+	tmltmax = (ylonm(inx(ih,2))-sunlons(1)) * rtd/15. + 12.
+	if (tmltmax .gt. 24.) tmltmax = tmltmax - 24.
+!       write (6,"('ih Bz By Hp ctpoten,wei min/max potV,lat,mlt=',i2,
+!    |    5f8.2,2x,e12.4,2f8.2,2x,e12.4,2f8.2))") ih,bzimf,byimf,power,
+!    |    ctpoten,weictpoten(ih),
+!    |    vnx(ih,1),ylatm(jnx(ih,1))*rtd,tmltmin,
+!    |    vnx(ih,2),ylatm(jnx(ih,2))*rtd,tmltmax
+! 05/08: From aurora_cons, calculate convection and aurora radii using IMF convection
+!   and power (plevel);  racp (DMSP/NOAA) - rccp (AMIE) = 5.32 (Bz>0) to 6.62 (Bz<0) deg
+!  Heelis et al [1980, JGR, 85, pp 3315-3324] Fig 8: ra=rc+2deg, and is 2.5 deg to dusk
+	rccp = -3.80+8.48*(weictpoten(ih)**0.1875)
+	racp = -0.43+9.69*(weictpoten(ih)**0.1875)
+	plevel = 0.
+	if (power >=1.00) plevel = 2.09*alog(power)
+	rahp = 14.20 + 0.96*plevel
+	ramx = max(racp,rahp)
+	diffrac = ramx - rccp
+
+!  Set default values
+!  Use parameterization defaults for phid (phid(MLT)=9.39 +/- 0.21By - 12)
+!                             and phin (phin(MLT)=23.50 +/- 0.15By - 12)
+	mltd = 9.39 - hem*0.21*byloc
+	mltn = 23.50 - hem*0.15*byloc
+	phid(ih) = (mltd-12.) * 15. / rtd
+	phin(ih) = (mltn-12.) * 15. / rtd
+! 05/18/08:  Note that phid,phin are only for Heelis and are irrelevant for Weimer
+!       write (6,"(1x,'mltd mltn phid,n =',4f8.2)")
+!    |   mltd,mltn,phid(ih)*rtd/15.,phin(ih)*rtd/15.
+!  Use default constant value of offcdegp from setboundary in Weimer 2005
+	offcdeg = 4.2
+	offcdegp(ih) = offcdeg
+	offc(ih) = offcdegp(ih) / rtd
+	offa(ih) = offcdegp(ih) / rtd
+!       write (6,"(1x,'offcdeg,rad =',2e12.4)") offcdeg,offc(ih)
+	dskof = 0.
+	dskofcp(ih) = dskof
+	dskofc(ih) = dskof / rtd
+!  oval offset is 2.5 deg towards dawn (more neg dskof)
+	dskofa(ih) = (dskof-2.5) / rtd
+!       write (6,"(1x,'dskof,c,a=',3f8.2)")
+!    |    dskof,dskofc(ih)*rtd,dskofa(ih)*rtd
+! Set crad from bndyfitr/2 of setboundary of Weimer 2005
+!	crad = bndyfitr/2.
+        avblat = 0.
+	do ml=1,24
+         blatmlt(ml) = BoundaryLat(ml-0.5)
+! average 9x from 0.5 to 8.5 MLT and 9x from 15.5 to 23.5 MLT (skip 6x 9.5 to 14.5 MLT)
+	 if (ml.lt.10 .or. ml.gt.15) avblat = avblat + blatmlt(ml)
+        enddo 
+! Convert from average boundary latitude to crad       
+	avblat = avblat/18.
+        crad = (90. - avblat)/2.
+!       write (6,"(1x,'wei01loc: ih,bz,y,avblat,crad =',i2,4f8.2)") 
+!    |   ih,bzimf,byimf,avblat,crad
+!       write (6,"(1x,'blatmlt avblat crad =',26f8.2)") blatmlt,avblat,crad
+!  Fig 8 Heelis et al [1980]: ra=rc+2deg, and shifted 2.5 deg to dusk
+	arad = crad + 2.
+! 05/08:  Make ra=rc+diffrac(=ramx-rccp) - same difference as in aurora.F
+! Choose to have arad=crad(Weimer) + diffrac(same diff as in aurora.F)
+	arad = crad + diffrac
+! 08/08: OR make ra=ramx=max(racp,rahp) so diffrac=arad-crad
+	diffrac2 = ramx - crad
+! Choose to have arad=ramx (same as in aurora.F as determined by P/CP)
+!       arad = ramx
+	theta0(ih) = crad / rtd
+	radegp(ih) = arad
+	rrad(ih) = arad / rtd
+!       write (6,"(1x,'radius: crad,rccp,racp,rahp diffa-c',
+!    |   '(aurF,ramx-Weic) ramx,Weic+d,arad deg=',9f8.2)") crad,rccp,
+!    |   racp,rahp,diffrac,diffrac2,ramx,crad+diffrac,arad
+
+! Print out revised values (revised 05/08):
+!       write (6,"(1x,'Revised convection/oval params (off,dsk,',
+!    |    'rad,phid,n=',8f9.4)")offc(ih)*rtd,offa(ih)*rtd,
+!    |    dskofc(ih)*rtd,dskofa(ih)*rtd,theta0(ih)*rtd,rrad(ih)*rtd,
+!    |    phid(ih)*rtd/15.+12.,phin(ih)*rtd/15.+12.
+
+      return
+      end subroutine wei01loc
 !-----------------------------------------------------------------------
       end module weimer_module
