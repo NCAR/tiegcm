@@ -15,7 +15,7 @@
 #   exec:     If TRUE, execute the model (build only if FALSE)
 #   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
-set modeldir = tiegcm_trunk
+set modeldir = tiegcm1.94.2
 set execdir  = tiegcm-linux
 #set input    = tiegcm.inp
 set output   = tiegcm.out
@@ -98,7 +98,8 @@ set output = `perl $utildir/abspath $output`
 #
 # Report to stdout:
 #
-set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
+#set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
+ set svnversion = 1.94.2
 echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnversion)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"

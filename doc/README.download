@@ -1,7 +1,6 @@
 
-Model:		tiegcm_trunk
-svn Tag:	[last release tag was tiegcm1.94]
-Release Date:	June 1, 2011
+Model Version:  tiegcm1.94.2
+Release Date:	January 5, 2012
 
 Download Site:	http://www.hao.ucar.edu/modeling/tgcm/download.php
                 (Model Source and required Data are available as separate downloads)
@@ -61,7 +60,8 @@ locations, etc. Select the Make.machine file you want to use, and set the
 
   Make.bluefire		NCAR IBM cluster "bluefire" with AIX and xlf90 compiler
   Make.generic_dasg	For serial test runs on NCAR DASG machines (e.g., mirage0)
-  Make.intel_hao64	Intel ifort/mpif90 compiler on 64-bit HAO Linux systems
+  Make.intel_hao64	Intel2011 ifort/mpif90 compiler on 64-bit HAO Linux systems
+  Make.intel11.1_hao64	Intel v11.1 ifort/mpif90 compiler on 64-bit HAO Linux systems
   Make.pgi_hao64	PGI pgf90/mpif90 compiler on 64-bit HAO Linux systems
   Make.pgi_hao32	PGI pgf90 compiler on 32-bit HAO Linux systems (usually serial)
 

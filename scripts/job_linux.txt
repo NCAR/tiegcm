@@ -81,7 +81,8 @@ endif
 #
 # Report to stdout:
 #
-set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
+#set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
+ set svnversion = 1.94.2
 echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnversion)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"

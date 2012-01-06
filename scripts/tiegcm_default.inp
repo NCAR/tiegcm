@@ -2,7 +2,7 @@
 ;
 ; Namelist input file for model tiegcm
 ;
- LABEL = 'tiegcm res=5'
+ LABEL = 'tiegcm'
  START_YEAR = 2002
  START_DAY  = 80
  CALENDAR_ADVANCE = 1

@@ -1,75 +1,74 @@
 
-Release notes for tiegcm1.94
-June 1, 2011
+Release notes for tiegcm1.94.2
+December 19, 2011
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-New validated features in the public release:
+Summary of changes from v1.94.1 (r674, 7/28/2011) to v1.94.2 (r739, 1/5/2012):
 
-  - Weimer 2005 electric potential model, optionally with IMF data.
+ - Introducing Intel 2011 Cluster Studio ifort compiler and mpi
+   library. See scripts/Make.intel_hao64 to use the hao installation.
+   The file scripts/Make.intel11.1_hao64 is retained in case anyone needs
+   to use the old compiler. On 64-bit Linux systems at hao, the Intel
+   compilers represent a significant performance improvement over PGI.
 
-  - Dynamic critical cross-over latitudes for transition between
-    dynamo and empirical models at high-latitude.
+ - Fixed memory accumulation bug with ifort compiler by changing use of
+   f90 intrinsic "trim" function in strloc (util.F), addfld.F, and elsewhere.
+   The Intel ifort compiler was doing mallocs when the trim function
+   was being used to compare strings (e.g., if (trim(string1)==trim(string2))
+   Used memory checker in valgrind to find this problem.
 
-  - New diagnostics module (diags.F).  22 "sanctioned" diagnostic fields 
-    are available, and can be saved on secondary histories 
-    (see diags.table in doc directory).
+ - Changes to dynamic memory allocation in mpi routines (mpi.F), to
+   allocate send and receive buffers once per run per subroutine,
+   instead of alloc/dealloc at every call. These modifications are
+   for performance purposes only, and do not affect model results.
 
-  - HPSS archive script can be saved by the model, to be executed after 
-    a run to save history files to the NCAR HPSS with "contents" annotations.
+ - Provide no-dynamo option. To run the model without electro-dynamo
+   set namelist read parameter DYNAMO = 0. In this case, advance calls
+   sub nodynamo instead of sub dynamo. Sub nodynamo zeros out the 3 components 
+   of the electric field (magnetic grid), and the 3d electric potential
+   in both geographic and magnetic. POTEN, UI,VI,WI will be all zero
+   on the histories.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-New build system (scripts directory):
-  - Make.machine files contain platform and machine-specific compiler
-    and link options, library locations, etc. are available in scripts directory.
-  - New Makefile without platform-dependent conditionals.
-  - Support for Intel ifort/mpif90 compiler on 64-bit HAO Linux systems
-    (Intel-built code significantly faster than PGI-built code on systems
-     with Intel hardware)
-  - Write svnversion to history files.
+ - Allow seamless switching between model resolutions, using $modelres
+   in the job script. This is accomplished by comparing defs.h in the
+   execdir with defs2.5 and defs5.0 in the srcdir, and copying the
+   appropriate one from srcdir to execdir when necessary. Note change
+   of names from defs.2.5 and defs.5.0 to defs2.5 and defs5.0.
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Utilities (scripts directory):
-  - tgcm_contents	Print "contents" (annotations) of history files
-  - tgcm_ncdump		Print ncdump of history files, w/ data for scalars and 1d vectors
-  - tgcm_put		Archive history files on the NCAR HPSS system
-  - mknamelist		Generate namelist read input files
-  - mkjob		Generate job scripts for Linux or IBM
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Validation and benchmark runs (new tests directory):
-  - Setup scripts for benchmark runs are available in the tests directory
-  - The following benchmark runs have been performed with the current version:
-      o Seasonal start-up histories at smin, smax.
-      o One-year climatology run (Heelis potential with constant solar forcing)
-      o December, 2006 "AGU storm" case (Weimer/IMF and Heelis/GPI runs)
-      o November, 2003 storm case
-      o Whole-Heliosphere Interval (WHI)
-  - Results of the benchmark runs are available on the NCAR Community Data Portal
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Changes to namelist inputs:
-  - Weimer potential model with IMF data from IMF_NCFILE, and F10.7 data
-    from GPI_NCFILE
-  - HPSS_PATH specifies destination path to the NCAR HPSS, for history file 
-    archive script. (All references to the old NCAR MSS have been removed) 
-  - Time-dependent namelist option for F107a and F107d 
-  - The following namelist parameters are deprecated: SAVE, SECSAVE, DISPOSE
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Changes to the documentation directory "doc":
-  - All new User's Guide (pdf, html) is now provided in the doc directory.
-  - Model Description (pdf) also provided in the doc directory.
-  - README.download: Information and instructions for downloading the current version
-  - Release_Notes: Release notes for the current version (this document)
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Bug fixes:
-  - Change nmlon to nlonp1 where defining dynpot, line 292 of magfield.F
-  - Change op(k,i) to nop(k,i) in calculation of ion chemistry heating (qic).
-    Line 119 of qjion.F
+ - Add sub rdfilename (nchist.F) to read data file names from source
+   history. This allows changes in parameter mxlen_filename between
+   releases, and fixes a bug that was occaisionally expressed when
+   making continuation runs from an "old" history.
   
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Msc:
-  - Changed units of f107d, f107a, ctpoten, and hpower on the histories.
-  - Divide by avogadro's number instead of multiplying by 1.66e-24 in
-    sub calczg (addiag.F).  
+ - Corrected sign error in zigmc and zigm2 in southern hemisphere
+   when difference coefficients are set up. This error was occurring
+   only when the current calculation was turned on (icalkqlam==1).
+   This fix affects Kqphi by approximately 1%.
+
+ - Rename sub getpid to getprocessid (util.F) to avoid conflict with
+   PVM lib when the model is coupled into CMIT.
+
+ - Fixed problem with i/o timing calls in advance.F, and added copying
+   of source history for initial runs to primary history timing.
+
+ - Added SECSTART and SECSTOP to the Userguide namelist parameter 
+   descriptions (doc/userguide/namelist.rst).
+
+ - Move parameter joulefac ("joule heating factor") from dt.F to sub qjoule_tn 
+   in qjoule.F, where it is applied to qji_tn during the joule heating calculation.
+   This is before it is optionally saved as a secondary history diagnostic (QJOULE 
+   and/or QJOULE_INTEG). Sub qjoule_tn is called before dt, so joulefac is no longer
+   applied in dt. Also added joulefac to history files as a scalar per history. 
+   Changed qjoule.F to a module, w/ joulefac in module data, so it can be use-associated
+   by output.F (the routines are use-associated by dynamics.F for the calls).
+   This will NOT affect model results, EXCEPT for the joule heating diagnostics,
+   which will be 1.5x larger than in previous revisions (joulefac==1.5).
+
+ - Move sub calccloc from wei01cm.F to util.F, modified to use default values for
+   convection radius and center location of the convection pattern. The defaults
+   are normally used for Bz northward conditions. Sub calccloc has been tested
+   with Weimer01, but is NOT called at all in this revision. A new subroutine 
+   wei01loc (based on wei05loc) is called for Weimer01. Both wei01loc and wei05loc 
+   were modified to use byloc, a subset of byimf, which is used for the cusp location
+   with phid. Sub calccloc will be used later for imposed potential patters
+   for CMIT/LFM or AMIE. For more details see svn commit log r738 by Emery (1/5/2012).
+    
