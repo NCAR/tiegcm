@@ -262,14 +262,14 @@
       character(len=*),intent(in) :: name
 !
 ! External:
-      integer,external :: ixfindc ! util.F
+      integer,external :: strloc ! util.F
 !
 ! Check for field in namelist SECFLDS -- if not found, return silently
-      checkf = ixfindc(secflds,mxfsech,name)
+      checkf = strloc(secflds,mxfsech,name)
       if (checkf==0) return
 !
 ! Get index to diags -- if not found, return zero with error msg:
-      checkf = ixfindc(diags(:)%short_name,ndiag,name)
+      checkf = strloc(diags(:)%short_name,ndiag,name)
       if (checkf==0) then
         write(6,"('>>> Cannot find field ',a,' in list of ',
      |    'available diagnostics -- returning')") name
@@ -288,10 +288,11 @@
       real,intent(in) :: rho(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save to secondary history. Note rho is calculated on interface
 ! levels, hence 'ilev' in the addfld call:
@@ -310,10 +311,11 @@
       real,intent(in) :: qji_tn(lev0:lev1,lon0-2:lon1+2)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary history:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -335,10 +337,12 @@
       real,intent(out) :: tec(lon0:lon1)
 !
 ! Local:
-      integer :: i,k,ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer :: i,k
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Integrate electron content in height at current latitude:
       tec(:) = 0.
@@ -366,10 +370,12 @@
       real,intent(in) :: ui(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! Local:
-      integer :: lat,ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer :: lat
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories (Convert back to cm/s):
       do lat=lat0,lat1
@@ -392,10 +398,12 @@
       real,intent(in) :: vi(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! Local:
-      integer :: lat,ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer :: lat
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       do lat=lat0,lat1
@@ -418,10 +426,12 @@
       real,intent(in) :: wi(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! Local:
-      integer :: lat,ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer :: lat
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       do lat=lat0,lat1
@@ -441,10 +451,11 @@
       real,intent(in) :: total_heat(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -462,10 +473,11 @@
       real,intent(in) :: co2_cool(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -483,10 +495,11 @@
       real,intent(in) :: no_cool(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -505,10 +518,11 @@
       real,intent(in) :: sigmaped(lev0:lev1,lon0-2:lon1+2)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -527,10 +541,11 @@
       real,intent(in) :: sigmahal(lev0:lev1,lon0-2:lon1+2)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -548,10 +563,11 @@
       real,intent(in) :: lamdaped(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -569,10 +585,11 @@
       real,intent(in) :: lamdahal(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -588,11 +605,12 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: ht,ne
 !
 ! Local:
-      integer :: ix
       real,dimension(lon0:lon1) :: hmf2,nmf2
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Calculate hmf2,nmf2 from ne at current latitude:
       call hnmf2(ht,ne,hmf2,nmf2,lev0,lev1,lon0,lon1,lat) 
@@ -715,11 +733,13 @@
       real,intent(in) :: zcm(lev0:lev1,lon0:lon1,lat0:lat1) ! geopotential (cm)
 !
 ! Local:
-      integer :: k,i,j,ix
+      integer :: k,i,j
       real :: pzps(lev0:lev1,lon0:lon1)
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Take delta Z:
       do j=lat0,lat1
@@ -752,10 +772,11 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,diags(ix)%levels,lev0,lev1,
@@ -774,10 +795,11 @@
       real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
@@ -795,10 +817,11 @@
       real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
@@ -816,10 +839,11 @@
       real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
@@ -837,10 +861,11 @@
       real,intent(in),dimension(lon0:lon1,lev0:lev1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
@@ -858,10 +883,11 @@
       real,intent(in),dimension(lon0:lon1,lev0:lev1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
@@ -879,12 +905,14 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: omega,zcm
 !
 ! Local:
-      integer :: i,k,ix
+      integer :: i,k
       real,dimension(lev0:lev1,lon0:lon1) :: wn
       real,dimension(lev0:lev1) :: pzps,omega1
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Calculate scale height pzps:
       do i=lon0,lon1
@@ -917,11 +945,12 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: o1,o2
 !
 ! Local:
-      integer :: ix
       real,dimension(lev0:lev1,lon0:lon1) :: n2, o_n2
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! N2 mmr:
       n2 = 1.-o2-o1 
@@ -948,13 +977,15 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: qji_tn
 !
 ! Local:
-      integer :: ix,k,i
+      integer :: k,i
       real,dimension(lon0:lon1) :: qji_integ
       real,dimension(lev0:lev1,lon0:lon1) :: qj
       real :: myp0,mygrav
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! First integrate to get MKS units W/m^2:
 ! (If you want these units, comment out the below conversion to CGS)
