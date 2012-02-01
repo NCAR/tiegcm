@@ -4,7 +4,13 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
+#if defined(INTERCOMM) || defined(CISMAH)
+      ! CMIT: When copled to the LFM, the currents are strong
+      !       so we need to reduce joulefac from 1.5 to 1.0:
+      real,parameter :: joulefac = 1.0 ! joule heating multiplication factor
+#else
       real,parameter :: joulefac = 1.5 ! joule heating multiplication factor
+#endif
 !
       contains
 !-----------------------------------------------------------------------
@@ -32,7 +38,7 @@
      |  gask,   ! gas konstant 8.314e7 [ergs/K/mol]
      |  rmass_o2 , rmass_o1, rmass_n2,  ! 32,16,28 [g/mol]
      |  rmass_n4s, rmass_no, rmass_op   ! 14,30,16 [g/mol]
-      use addfld_module
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -116,7 +122,7 @@
       use cons_module,only:
      |  grav,   ! acceler. due to gravity at lower boundary [cm/s^2]
      |  gask    ! gas konstant 8.314e7 [ergs/K/mol]
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_QJOULE,mkdiag_QJOULE_INTEG
       implicit none
 !     

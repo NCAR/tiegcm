@@ -12,7 +12,7 @@
       use cons_module,only: rmass_co2,p0,expz,expzmid_inv,boltz,
      |  avto,avo,rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no,
      |  gask
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_CO2COOL,mkdiag_NOCOOL
       implicit none
 !
@@ -119,7 +119,7 @@
 !
       use params_module,only: dz
       use cons_module,only: avo,rmassinv_o1,expz
-      use addfld_module
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:

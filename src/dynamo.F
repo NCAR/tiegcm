@@ -172,7 +172,7 @@
 ! Parameters to be passed to LFM for CISM. Note the dimension of these variables is
 ! defined to match mag2geo specifications, see detial in cons.F and Apex.F.
 !
-      real,dimension(nlonp1,0:nlatp1) ::
+      real,dimension(nlonp4,0:nlatp1) ::
      |  gzigm2,   ! sigma2    ! CISM height integrated Hall conductivity geographic
      |  gzigm1,   ! sigma1    ! CISM height integrated Pedersen conductivity geographic
      |  gnsrhs    ! nsrsh     ! CISM height integrated neutral wind currents geographic
@@ -410,9 +410,6 @@
       use fields_module,only: dynpot,phim3d
       use input_module,only: potential_model
       use init_module,only: istep	! for sigma_R high latitudes
-#if defined(INTERCOMM) || defined(CISMAH)
-!      use cism_coupling_module,only: cism_pot2mag
-#endif
 !
 ! Local:
       integer :: i,j,jj,jjj,j0,jntl,k,n,ncc,nmaglat,nmaglon,ier
@@ -444,12 +441,12 @@
 ! Transform height-integrated parameters from APEX coordinates to geographic
 ! coordinates to be passed to the M-I coupled in the CISM
 !
-       call mag2geo(zigm1(1,1),gzigm1(1,0),im(1,0),jm(1,0),dim(1,0),
-     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
-       call mag2geo(zigm2(1,1),gzigm2(1,0),im(1,0),jm(1,0),dim(1,0),
-     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
-       call mag2geo(nsrhs(1,1),gnsrhs(1,0),im(1,0),jm(1,0),dim(1,0),
-     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+      call mag2geo(zigm1(1,1),gzigm1(3:nlon+3,0:nlatp1),im(1,0),jm(1,0),
+     |     dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+      call mag2geo(zigm2(1,1),gzigm2(3:nlon+3,0:nlatp1),im(1,0),jm(1,0),
+     |     dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+      call mag2geo(nsrhs(1,1),gnsrhs(3:nlon+3,0:nlatp1),im(1,0),jm(1,0),
+     |     dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
 #endif
 !
 ! Calculate coefficient of PDE for each hemisphere if K_(q,lam) is 

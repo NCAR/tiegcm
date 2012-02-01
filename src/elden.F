@@ -14,7 +14,7 @@
       use chemrates_module,only: rk1,rk2,rk3,rk4,rk5,rk6,rk7,rk8,
      |  rk9,rk10,rk16,rk23,rk26,beta9,ra1,ra2,ra3
       use qrj_module,only: qnp,qnop,qo2p,qn2p
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_TEC,mkdiag_HNMF2
       implicit none
 !
