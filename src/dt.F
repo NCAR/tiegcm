@@ -21,7 +21,7 @@
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm
-      use addfld_module,only: addfld
+      use addfld_module
       use diags_module,only: mkdiag_DEN,mkdiag_HEAT
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
@@ -394,18 +394,6 @@
         tlbc_nm(lon0:lon1,lat) = tlbc(lon0:lon1,lat)
         tlbc(lon0:lon1,lat)    = tnlbc(:,lat)
 !
-#ifdef MPI
-!
-! 4/21/05 btf: These calls opened up as per Wenbin's suggestion.
-!
-! Define halo longitudes in tn_upd, for use by duv:
-      call mp_bndlons_f3d(tn_upd,nlevs,lon0,lon1,lat0,lat1,1,0)
-!
-! Periodic points:
-      call mp_periodic_f3d(tn_upd(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
-#endif
-!
 ! Tn must be at least 100 deg:
         lonbeg = lon0-2
         if (lon0==1) lonbeg = 1
@@ -421,6 +409,17 @@
 !
 ! End third lat scan:
       enddo ! lat=lat0,lat1
+#ifdef MPI
+!
+! 2/3/12 btf: Moved to outside final lat scan:
+!
+! Define halo longitudes in tn_upd, for use by duv:
+      call mp_bndlons_f3d(tn_upd,nlevs,lon0,lon1,lat0,lat1,1,0)
+!
+! Periodic points:
+      call mp_periodic_f3d(tn_upd(:,lon0:lon1,lat0:lat1),
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
+#endif
       end subroutine dt
 !-----------------------------------------------------------------------
       subroutine filter_tn(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
