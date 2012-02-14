@@ -236,7 +236,6 @@
         rtxmue(lev1) = sqrt(xmue(lev1-1,iday)**3/
      |                      xmue(lev1-2,iday))
         do i=lon0,lon1
-!         tni(lev0,i) = tn(lev1,i,lat) ! lbc of tn is stored in top slot
           tni(lev0,i) = tlbc_nm(i,lat)    ! Lower boundary is in tlbc_nm
           tni(lev1,i) = tn(lev1-1,i,lat)
 !
@@ -251,7 +250,6 @@
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('DUV_G',' ',' ',g  ,
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-
 !
 ! dwdz = exp(-s)*w(k+1/2)/(2.*Ds)
         do i=lon0,lon1
@@ -406,10 +404,6 @@
           vlbc_nm(i,lat) = vlbc(i,lat)  ! LB for vn_nm(itc) = vn(itp) 
           ulbc(i,lat) = unlbc(i)        ! LB for un(itc)
           vlbc(i,lat) = vnlbc(i)        ! LB for vn(itc) 
-
-!         write(6,"('duv: i=',i3,' lat=',i3,' unlbc=',e12.4,' vnlbc=',
-!    |      e12.4)") i,lat,unlbc(i),vnlbc(i)
-
         enddo ! i=lonbeg,lonend 
 
 !       call addfld('UNLBC',' ',' ',unlbc_diag,
@@ -431,9 +425,6 @@
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 
 !
-! Set kut for wave filtering according to dlat (2.5 or 5.0):
-!     call set_wave_filter(36,kut_5,nlat,kutt)
-!
 ! Fourier smoothing of U and V:
       call filter_uv(un_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
      |  lat0,lat1,kut)
@@ -442,12 +433,10 @@
 !
 ! Fourth latitude scan:
       do lat=lat0,lat1
-
 !       call addfld('UN_FILT',' ',' ',un_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('VN_FILT',' ',' ',vn_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-
 !
 ! Smooth updated un,vn:
         do i=lon0,lon1 
@@ -462,7 +451,6 @@
           unm_upd(lev1,i,lat) = spval
           vnm_upd(lev1,i,lat) = spval
         enddo ! i=lon0,lon1 
-
 !       call addfld('UN_NMOUT',' ',' ',unm_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('VN_NMOUT',' ',' ',vnm_upd(:,lon0:lon1,lat),
@@ -473,8 +461,6 @@
 #ifdef MPI
 !
 ! Boundary longitudes and periodic points for ulbc:
-!     subroutine mp_bndlats_f2d(f,i0,i1,j0,j1,nf)
-!
 !
 ! Boundary (halo) latitudes:
       flbc(:,:,1) = ulbc(:,:)

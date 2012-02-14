@@ -645,27 +645,10 @@
       call timer(time0_step,time1,'STEP',0,0) ! resume step timing (non-MPI)
 #ifdef MPI
 !
-! Each mpi task must receive the 2 lats before its first
-! updated lat (lat0-1,lat0-2), and the 2 lats after its last
-! updated lat (lat1+1,lat2+2). Each task must also send its
-! first 2 (lat0,lat0+1) and last 2 (lat1,lat1-1) updated lats
-! to the appropriate "adjacent" tasks.
-!
-      call timer(time0_prep,time1,'PREP',0,0) ! resume prep timing
-      f4d(:)%mpi = .true. 
-      call mp_bndlats(f4d,nf4d,itc)
-      if (debug) write(6,"('advance after mp_bndlats')")
-      call mp_bndlons(f4d,nf4d,itc)
-      if (debug) write(6,"('advance after mp_bndlons')")
-!
 ! Periodic points for all updated fields:
       call mp_periodic_f4d(itc)
 #else
 ! Non-mpi serial run:
-      call mk_polelat(0     ,1     ,itc)
-      call mk_polelat(-1    ,2     ,itc)
-      call mk_polelat(lat1+1,lat1  ,itc)
-      call mk_polelat(lat1+2,lat1-1,itc)
       call set_periodic_f4d(itc)
 #endif
 !

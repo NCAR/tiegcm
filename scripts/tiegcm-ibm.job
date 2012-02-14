@@ -21,7 +21,7 @@
 #   execdir:  Directory in which to build and execute (will be created if necessary)
 #   input:    Namelist input file (will use default if not provided)
 #   output:   Stdout file from model execution (will be created)
-#   make:     Build file with platform-specific compile parameters (see scripts dir)
+#   make:     Build file with platform-specific compile parameters (in scripts dir)
 #   mpi:      TRUE/FALSE for MPI or non-MPI run
 #   nproc:    Number of processors for 64-bit Linux MPI run
 #   modelres: Model resolution (5.0 or 2.5)
@@ -86,12 +86,7 @@ if (! -d $execdir) then
   echo "Making exec directory $execdir" 
   mkdir -p $execdir
 endif
-if (! -f $make) set make = $utildir/$make 
-if (! -f $make) then
-  echo ">>> Cannot find make_machine file $make <<<"
-  exit 1
-endif
-set make = `perl $utildir/abspath $make`
+
 if ($modelres != 5.0 && $modelres != 2.5) then
   echo ">>> Unknown model resolution $modelres <<<"
   exit 1
@@ -99,7 +94,7 @@ endif
 #
 # Copy make files to execdir if necessary:
 #
-if (! -f $execdir/$make)     cp $make $execdir
+if (! -f $execdir/$make)     cp $utildir/$make $execdir
 if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
 if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
 #

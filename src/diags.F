@@ -606,23 +606,23 @@
 !
 ! Local:
       real,dimension(lon0:lon1) :: hmf2,nmf2
-      integer,save :: ix=0,firstcall=0
+      integer,save :: ixhmf2=-1,ixnmf2=-1
 
-      firstcall = firstcall+1
-      if (firstcall == 1) ix = checkf(name)
-      if (ix==0) return
+      if (trim(name)=='HMF2'.and.ixhmf2==-1) ixhmf2 = checkf(name)
+      if (trim(name)=='NMF2'.and.ixnmf2==-1) ixnmf2 = checkf(name)
+      if (ixhmf2==0.and.ixnmf2==0) return
 !
 ! Calculate hmf2,nmf2 from ne at current latitude:
       call hnmf2(ht,ne,hmf2,nmf2,lev0,lev1,lon0,lon1,lat) 
 !
 ! Save 2d field on secondary histories:
-      if (trim(name)=='HMF2') then
+      if (trim(name)=='HMF2'.and.ixhmf2 > 0) then
         hmf2 = hmf2*1.e-5 ! cm to km
-        call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units,hmf2,'lon',lon0,lon1,'lat',lat,lat,0)
-      elseif (trim(name)=='NMF2') then
-        call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units,nmf2,'lon',lon0,lon1,'lat',lat,lat,0)
+        call addfld(diags(ixhmf2)%short_name,diags(ixhmf2)%long_name,
+     |    diags(ixhmf2)%units,hmf2,'lon',lon0,lon1,'lat',lat,lat,0)
+      elseif (trim(name)=='NMF2'.and.ixnmf2 > 0) then
+        call addfld(diags(ixnmf2)%short_name,diags(ixnmf2)%long_name,
+     |    diags(ixnmf2)%units,nmf2,'lon',lon0,lon1,'lat',lat,lat,0)
       endif
       end subroutine mkdiag_HNMF2
 !-----------------------------------------------------------------------
@@ -663,6 +663,16 @@
         h32 = h(3)*h(3)
         deltx=h12*h(2)+h22*h(3)+h32*h(1)-h32*h(2)-h12*h(3)-h22*h(1)
         atx=p(1)*h(2)+p(2)*h(3)+p(3)*h(1)-h(2)*p(3)-h(3)*p(1)-h(1)*p(2)
+!
+! Periodic points are not set in ht and ne, so they are zero
+! at i=1,2. Setting hmf2and nmf2 zero here is ok, since they
+! are saved on histories at i=3,nlon. Without this check, code 
+! will stop here w/ divide by zero deltx when debug flags are set.
+!
+        if (deltx == 0.) then
+          hmf2(:) = 0. ; nmf2(:) = 0.
+          cycle
+        endif
         ax=atx/deltx
         btx=h12*p(2)+h22*p(3)+h32*p(1)-h32*p(2)-h12*p(3)-h22*p(1)
         bx=btx/deltx
