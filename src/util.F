@@ -917,7 +917,7 @@
       endif
       end subroutine timer
 !-----------------------------------------------------------------------
-      subroutine getcwd(cwd)
+      subroutine getcwdir(cwd)
 #ifdef MPI
       use mpi_module,only: mytid
 #endif
@@ -935,7 +935,7 @@
 #ifdef MPI
       if (mytid==0) then
         istat = isystem('pwd > cwd')
-        if (istat /= 0) write(6,"('>>> WARNING getcwd: error return ',
+        if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
      |    'isystem(''pwd > cwd'')')")
       endif
       call mpi_barrier(MPI_COMM_WORLD,ier)
@@ -945,14 +945,14 @@
       close(lu)
 #else
       istat = isystem('pwd > cwd')
-      if (istat /= 0) write(6,"('>>> WARNING getcwd: error return ',
+      if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
      |  'isystem(''pwd > cwd'')')")
       lu = nextlu()
       open(lu,file='cwd',status='old')
       read(lu,"(a)") cwd
       close(lu)
 #endif
-      end subroutine getcwd
+      end subroutine getcwdir
 !-----------------------------------------------------------------------
       subroutine getprocessid(pid)
 #ifdef MPI
