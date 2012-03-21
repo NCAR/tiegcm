@@ -12,7 +12,7 @@
 #
 F90      = /opt/local/intel2011/composerxe-2011.0.084/bin/intel64/ifort
 MPIF90   = /opt/local/intel2011/impi/4.0.1.007/intel64/bin/mpif90 -fc=ifort
-MPIRUN   = /opt/local/intel2011/impi/4.0.1.007/intel64/bin/mpirun
+MPIRUN   = /opt/local/intel2011/impi/4.0.1.007/intel64/bin/mpirun -l
 FFLAGS   = -r8 -heap-arrays
 DBGFLAGS = -debug full -traceback 
 DBGFLAGS += -check bounds -check format -check output_conversion -check pointers -check uninit

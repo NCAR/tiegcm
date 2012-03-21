@@ -89,6 +89,8 @@ else
 endif
 set input  = `perl $utildir/abspath $input`
 set output = `perl $utildir/abspath $output`
+set mklogs = `perl $utildir/abspath $utildir`
+set mklogs = $mklogs/mklogs
 #
 # Report to stdout:
 #
@@ -159,6 +161,7 @@ if ($exec == "TRUE") then
       echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
     echo "Linux MPI run of $model completed at `date`"
+    perl $mklogs $output
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."
     $model < $input >&! $output || \
