@@ -23,7 +23,7 @@
 ! adding new fields, and type diags(ndiag) must be defined by sub init_diags 
 ! below.
 !
-      integer,parameter :: ndiag = 25 ! increment this to add new diags
+      integer,parameter :: ndiag = 26 ! increment this to add new diags
       type diag_type
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
@@ -94,6 +94,13 @@
       diags(n)%long_name  = 'Peak Density of the F2 Layer' 
       diags(n)%units      = '1/cm3'
       diags(n)%levels     = 'none' ! nmf2 is 2d lon x lat
+      diags(n)%caller     = 'elden.F'
+!
+      n = n+1
+      diags(n)%short_name = 'FOF2'
+      diags(n)%long_name  = 'Critical Frequency of the F2 Layer' 
+      diags(n)%units      = 'MHz'
+      diags(n)%levels     = 'none' ! fof2 is 2d lon x lat
       diags(n)%caller     = 'elden.F'
 !
       n = n+1
@@ -605,15 +612,16 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: ht,ne
 !
 ! Local:
-      real,dimension(lon0:lon1) :: hmf2,nmf2
-      integer,save :: ixhmf2=-1,ixnmf2=-1
+      real,dimension(lon0:lon1) :: hmf2,nmf2,fof2
+      integer,save :: ixhmf2=-1,ixnmf2=-1,ixfof2=-1
 
       if (trim(name)=='HMF2'.and.ixhmf2==-1) ixhmf2 = checkf(name)
       if (trim(name)=='NMF2'.and.ixnmf2==-1) ixnmf2 = checkf(name)
-      if (ixhmf2==0.and.ixnmf2==0) return
+      if (trim(name)=='FOF2'.and.ixfof2==-1) ixfof2 = checkf(name)
+      if (ixhmf2==0.and.ixnmf2==0.and.ixfof2==0) return
 !
 ! Calculate hmf2,nmf2 from ne at current latitude:
-      call hnmf2(ht,ne,hmf2,nmf2,lev0,lev1,lon0,lon1,lat) 
+      call hnmf2(ht,ne,hmf2,nmf2,fof2,lev0,lev1,lon0,lon1,lat) 
 !
 ! Save 2d field on secondary histories:
       if (trim(name)=='HMF2'.and.ixhmf2 > 0) then
@@ -623,20 +631,24 @@
       elseif (trim(name)=='NMF2'.and.ixnmf2 > 0) then
         call addfld(diags(ixnmf2)%short_name,diags(ixnmf2)%long_name,
      |    diags(ixnmf2)%units,nmf2,'lon',lon0,lon1,'lat',lat,lat,0)
+      elseif (trim(name)=='FOF2'.and.ixfof2 > 0) then
+        call addfld(diags(ixfof2)%short_name,diags(ixfof2)%long_name,
+     |    diags(ixfof2)%units,fof2,'lon',lon0,lon1,'lat',lat,lat,0)
       endif
       end subroutine mkdiag_HNMF2
 !-----------------------------------------------------------------------
-      subroutine hnmf2(ht,ne,hmf2,nmf2,lev0,lev1,lon0,lon1,lat)
+      subroutine hnmf2(ht,ne,hmf2,nmf2,fof2,lev0,lev1,lon0,lon1,lat)
 !
-! Find the NmF2 and hmF2 based on the electron profile.
+! Find the NmF2, foF2, and hmF2 based on the electron profile.
 ! btf: This is taken from an idl procedure provided by Liying.
+! fof2 added April, 2012.
 !
       implicit none
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: ht,ne
-      real,intent(out),dimension(lon0:lon1) :: hmf2,nmf2
+      real,intent(out),dimension(lon0:lon1) :: hmf2,nmf2,fof2
 !
 ! Local:
       integer :: k,kx,i
@@ -652,8 +664,8 @@
         enddo kloop
         if (kx==0) then
           write(6,"('>>> hnmf2: lat=',i4,' could not find kx -- ',
-     |      'setting hmf2=nmf2=0')") lat
-          hmf2(:) = 0. ; nmf2(:) = 0.
+     |      'setting hmf2=nmf2=fof20')") lat
+          hmf2(:) = 0. ; nmf2(:) = 0. ; fof2(:) = 0.
           return
         endif
         h = (/ht(kx-1,i),ht(kx,i),ht(kx+1,i)/)
@@ -670,7 +682,7 @@
 ! will stop here w/ divide by zero deltx when debug flags are set.
 !
         if (deltx == 0.) then
-          hmf2(:) = 0. ; nmf2(:) = 0.
+          hmf2(:) = 0. ; nmf2(:) = 0. ; fof2(:) = 0.
           cycle
         endif
         ax=atx/deltx
@@ -681,10 +693,12 @@
         cx=ctx/deltx
         hmf2(i)=-(bx/(2.*ax))
         nmf2(i)=-((bx*bx-4.*ax*cx)/(4.*ax))
+        fof2(i)=sqrt(nmf2(i)*1.e6/1.24e10)
       enddo ! i=lon0,lon1
 !     write(6,"('hnmf2: lat=',i4,' hmf2 min,max=',2e12.4,
-!    |  ' nmf2 min,max=',2e12.4)") lat,minval(hmf2),maxval(hmf2),
-!    |  minval(nmf2),maxval(nmf2)
+!    |  ' nmf2 min,max=',2e12.4,' fof2 min,max=',2e12.4)") 
+!    |  lat,minval(hmf2),maxval(hmf2),minval(nmf2),maxval(nmf2),
+!    |  minval(fof2),maxval(fof2)
       end subroutine hnmf2
 !-----------------------------------------------------------------------
 !

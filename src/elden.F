@@ -251,6 +251,7 @@
 ! Save diagnostics hmf2, nmf2:
       call mkdiag_HNMF2('HMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
       call mkdiag_HNMF2('NMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
+      call mkdiag_HNMF2('FOF2',z,electrons,lev0,lev1,lon0,lon1,lat)
 
       end subroutine elden
 !-----------------------------------------------------------------------
