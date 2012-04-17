@@ -43,7 +43,7 @@
 ! 
 ! Global gpi data read from gpi data file:
       integer,parameter :: 
-     |  mxgpidays = 15000     ! maximum number of days of gpi data
+     |  mxgpidays = 50000     ! maximum number of days of gpi data
       integer :: 
      |  ngpidays,             ! number of days of gpi data
      |  gpi_iyd(mxgpidays),   ! yearday (7-digit) of gpi data
