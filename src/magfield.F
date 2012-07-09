@@ -129,7 +129,6 @@
 !
 ! Local:
       integer :: nwds,j,k,i,ii,ier
-      character(len=80) :: dskfile
 !
       call magdyn
       call dynpotmag

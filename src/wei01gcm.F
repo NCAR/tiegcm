@@ -428,6 +428,7 @@ CNCAR      NCAR changes are delimited by "CNCAR"
 !
       subroutine rd_weimer_coeffs(ncfile)
       use nchist_module,only: handle_ncerr
+      use input_module,only: mxlen_filename
       implicit none
 !
 #ifdef SUN
@@ -449,7 +450,7 @@ CNCAR      NCAR changes are delimited by "CNCAR"
       integer :: start_5d(5),count_5d(5),start_6d(6),count_6d(6)
       integer :: idv_cs,idv_bcs,idv_ss,idv_bss
       character(len=120) :: msg,desc
-      character(len=80) :: dskfile
+      character(len=mxlen_filename) :: dskfile
 
 CNCAR      Feb 01:  Initialize constants used in GECMP01
 C          Sep 01:  Omit unneeded min lat variables because of switch to
