@@ -618,9 +618,9 @@
       if (trim(name)=='HMF2'.and.ixhmf2==-1) ixhmf2 = checkf(name)
       if (trim(name)=='NMF2'.and.ixnmf2==-1) ixnmf2 = checkf(name)
       if (trim(name)=='FOF2'.and.ixfof2==-1) ixfof2 = checkf(name)
-      if (ixhmf2==0.and.ixnmf2==0.and.ixfof2==0) return
+      if (ixhmf2<=0.and.ixnmf2<=0.and.ixfof2<=0) return
 !
-! Calculate hmf2,nmf2 from ne at current latitude:
+! Calculate hmf2,nmf2,fof2 from ne at current latitude:
       call hnmf2(ht,ne,hmf2,nmf2,fof2,lev0,lev1,lon0,lon1,lat) 
 !
 ! Save 2d field on secondary histories:
@@ -679,9 +679,10 @@
 ! Periodic points are not set in ht and ne, so they are zero
 ! at i=1,2. Setting hmf2and nmf2 zero here is ok, since they
 ! are saved on histories at i=3,nlon. Without this check, code 
-! will stop here w/ divide by zero deltx when debug flags are set.
+! will stop here w/ divide by zero deltx or zero atx when debug 
+! flags are set.
 !
-        if (deltx == 0.) then
+        if (deltx == 0..or.atx == 0.) then
           hmf2(:) = 0. ; nmf2(:) = 0. ; fof2(:) = 0.
           cycle
         endif
