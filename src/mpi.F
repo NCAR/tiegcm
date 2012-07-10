@@ -91,6 +91,8 @@
 !
 ! Local:
       integer :: ier,n,j,i
+      integer,dimension(9) :: 
+     |  valid_pecounts=(/1,4,8,12,16,24,32,48,64/)
 !
       ier = 0
 #ifdef VT
@@ -111,6 +113,15 @@
         write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
         call shutdown('mpi_comm_size error')
       endif
+      if (.not.any(ntask == valid_pecounts)) then
+        write(6,"(/,'>>> This model may not run properly or will ',
+     |    'perform poorly with nask=',i4,/,' Please either change ',
+     |    'valid_pecounts in sub mp_init of source file mpi.F,',/,
+     |    ' or use one of these processor counts for which the model ',
+     |    'has been validated:',/,(8i8))") ntask,valid_pecounts
+        call shutdown('invalid ntask')
+      endif
+
       call mpi_comm_rank(MPI_COMM_WORLD,mytid,ier)
       if (ier /= 0) then
         write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
