@@ -142,6 +142,21 @@ else # defs.h does not exist in execdir -> copy appropriate defs file
   cp $defs $execdir/defs.h
 endif
 #
+# If debug flag has changed from last gmake, clean execdir
+# and reset debug file:
+#
+if (-f $execdir/debug) then
+  set lastdebug = `cat $execdir/debug` 
+  if ($lastdebug != $debug) then
+    echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $debug >! $execdir/debug
+  endif
+else
+  echo $debug >! $execdir/debug
+  echo "Created file debug with debug flag = $debug"
+endif
+#
 # cd to execdir and run make:
 #
 cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
