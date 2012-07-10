@@ -118,7 +118,7 @@
      |    'perform poorly with nask=',i4,/,' Please either change ',
      |    'valid_pecounts in sub mp_init of source file mpi.F,',/,
      |    ' or use one of these processor counts for which the model ',
-     |    'has been validated:',/,(8i8))") ntask,valid_pecounts
+     |    'has been validated:',/,(12i6))") ntask,valid_pecounts
         call shutdown('invalid ntask')
       endif
 
