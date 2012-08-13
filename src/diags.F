@@ -664,7 +664,7 @@
         enddo kloop
         if (kx==0) then
           write(6,"('>>> hnmf2: lat=',i4,' could not find kx -- ',
-     |      'setting hmf2=nmf2=fof20')") lat
+     |      'setting hmf2=nmf2=fof2=0')") lat
           hmf2(:) = 0. ; nmf2(:) = 0. ; fof2(:) = 0.
           return
         endif

@@ -12,6 +12,8 @@
 !   module (dynamo.F). These routines are not in a module so as to avoid 
 !   circular dependency with the dynamo module.
 !
+! btf 8/12: Add checks for zpotenm3d >= h0 to avoid NaNQ in KQLAM,KQPHI.
+!
 !-----------------------------------------------------------------------
 ! BOP
 ! !IROUTINE: nosocoef
@@ -722,7 +724,7 @@
 !
       use params_module,only: nmlon,nmlonp1,nmlat,nmlath,nlev,nlevp1,
      |  nmlev
-      use cons_module,only: dlonm,re,r0,ylatm
+      use cons_module,only: dlonm,re,r0,ylatm,h0
       use dynamo_module,only: ed23d,ed13d,bmodm3d,sinim3d,sigma2m3d,
      |  adotv2m3d,a1a2m3d,sigma1m3d,adotam3d,adotv1m3d,zpotenm3d,
      |  nscrrt,
@@ -825,7 +827,7 @@
 	  if(j.eq.nmlath) then
 	    facsin = sinlamq/sinim3d(i,j-1)	! sin(lam_q)/sin(I)		
 	    k = -2
-            fac	  = r0/(re + zpotenm3d(i,j,k))	! R_0 / R
+            fac	  = r0/(re + max(zpotenm3d(i,j,k),h0))  ! R_0 / R
 	    lamm  = acos(sqrt(coslamq2*fac))	! cos^2(lam_m) = R_0/R*cos^2(lam_q)
 	    lamm  = sign(lamm,ylatm(j-1))	! lam_m
 	    sinlamm = sin(lamm)			! sin(lam_m)
@@ -840,7 +842,7 @@
 	  else
 	    facsin = sinlamq/sinim3d(i,j)	! sin(lam_q)/sin(I)	
 	    k = -2
-            fac	  = r0/(re + zpotenm3d(i,j,k))	! R_0 / R
+            fac	  = r0/(re + max(zpotenm3d(i,j,k),h0))  ! R_0 / R
 	    lamm  = acos(sqrt(coslamq2*fac))	! cos^2(lam_m) = R_0/R*cos^2(lam_q)
 	    lamm  = sign(lamm,ylatm(j))		! lam_m
 	    sinlamm = sin(lamm)			! sin(lam_m)
@@ -858,7 +860,7 @@
           kqphi_int(i,j,:) = 0.0   
 	  do k = -2,nlev  			! height integration from k=-2 to nlev
 ! (R_e + h)/R_0  : R_0 = R_e + h0 ; h0 = 9.e6 cm
-            fac  = r0/(re + zpotenm3d(i,j,k+1))	! R_0 / R
+            fac  = r0/(re + max(zpotenm3d(i,j,k+1),h0))  ! R_0 / R
 	    lamm = acos(sqrt(coslamq2*fac))	! cos^2(lam_m) = R_0/R*cos^2(lam_q)
 	    lamm = sign(lamm,ylatm(j))		! lam_m
 	    sinlamm = sin(lamm)			! sin(lam_m)
@@ -866,7 +868,7 @@
 ! sin(I_m) = sin(lam_m)/sqrt(1/4+3/4*sin^2(lam_m))
 	    sinim = sinlamm/sqrt(.25+.75*sinlamm**2)	
 	    facq  = sinim/sinlamm*facsin	! sin(I_m)/sin(lam_m)*sin(lam_q)/sin(I)
-	    dh    = zpotenm3d(i,j,k+1) - zpotenm3d(i,j,k)	! dh
+	    dh    = max(zpotenm3d(i,j,k+1),h0) - max(zpotenm3d(i,j,k),h0)  ! dh
 	    dh    = dh*1.e-2			! convertion [cm] to [m]
             fac   = fac**0.5			! sqrt(R_0 / R)
 !
