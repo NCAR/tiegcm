@@ -65,7 +65,7 @@
 #ifdef MPI
       use mpi_module,only: 
      |  mytid,mp_gather2root,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
-     |  mp_bndlons,mp_polelats,mp_periodic_f4d,mp_updatephi,
+     |  mp_bndlons,mp_polelats,mp_periodic_f4d,
      |  mp_updateemphi,mp_updateemlam,mp_updateemz
 !
       implicit none
@@ -570,14 +570,10 @@
      |  write(6,"('Time in DYNAMO =       ',
      |    f12.2,' Advance: step ',i5)") time1_dynamo,istep
 !
-! Update slave tasks with new phim3d from the dynamo. Make this call
-! after timing, so that timing will show the difference between master
-! and slave tasks as a consequence of the serial dynamo. (slaves will
-! be blocked here until the master is done with the dynamo)
+! Update 3d electric field on mag grid to slave tasks:
 !
 #ifdef MPI
-      call mp_updatephi
-      call mp_updateemphi  ! am 12/12/05 should be gathered if we stick to this
+      call mp_updateemphi
       call mp_updateemlam
       call mp_updateemz
 #endif
