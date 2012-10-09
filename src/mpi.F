@@ -2699,7 +2699,7 @@
 ! Local:
       integer :: len,ier
 !
-      len = nmlonp1*nmlat*(nmlev+3)
+      len = nmlonp1*nmlat*(nlevp1+3)
       call mpi_bcast(emphi3d,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
       if (ier /= 0)
      |  call handle_mpi_err(ier,'mp_updateemphi call mpi_bcast')
@@ -2716,7 +2716,7 @@
 ! Local:
       integer :: len,ier
 !
-      len = nmlonp1*nmlat*(nmlev+3)
+      len = nmlonp1*nmlat*(nlevp1+3)
       call mpi_bcast(emlam3d,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
       if (ier /= 0)
      |  call handle_mpi_err(ier,'mp_updateemlam call mpi_bcast')
@@ -2733,7 +2733,7 @@
 ! Local:
       integer :: len,ier
 !
-      len = nmlonp1*nmlat*(nmlev+3)
+      len = nmlonp1*nmlat*(nlevp1+3)
       call mpi_bcast(emz3d,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
       if (ier /= 0)
      |  call handle_mpi_err(ier,'mp_updateemz call mpi_bcast')
