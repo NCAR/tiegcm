@@ -1,0 +1,80 @@
+#!/usr/bin/perl
+
+$logfile = $ARGV[0];
+print "logfile = $logfile\n";
+open(LOGFILE,"< $logfile") || 
+  die "Could not open input file $logfile\n\n";
+#
+# ifile is task id (will be encoded in name of task logfile)
+#
+$ifile = 0; 
+$nfound = 1;
+while ($nfound > 0) {
+  $nfound = 0;
+  while (<LOGFILE>) {
+    $found = 0;
+#
+# Split line by colons:
+#
+    @taskinfo = split /:/,$_;
+#
+# Data is rest of line after first colon:
+#
+    $i = 0; $data = '';
+    foreach $info (@taskinfo) {
+      if ($i != 0) { $data = $data . $info; }
+      $i++;
+    }
+#
+# Task info is the line up to the first colon, but must
+# not have any letters. Split this by single spaces:
+#
+    $taskinfo = @taskinfo[0];
+    if ($taskinfo =~ /[a-zA-Z]/) { next; }
+    @tasks = split ' ',$taskinfo;
+#
+# Parse each part for single task or range of tasks,
+# and check for presence of current task $ifile:
+#
+    foreach $task (@tasks) {
+      if ($task eq $ifile) {                              # single task
+        $found = 1;
+      } elsif ($task =~ (/(\d*)-(\d*)/)) {                # task range
+        if ($ifile >= $1 && $ifile <= $2) { $found = 1; }
+      }
+    }
+#
+# Print to logfile if line applies to current task:
+#
+    if ($found) {
+      $nfound++;
+      if ($nfound==1) {                        # open new task logfile
+        &mktasklog($logfile,$ifile,$tasklog);
+        open(TASKLOG,"> $tasklog") || 
+          die "Could not open output file $tasklog\n\n";
+      }
+      $tid = sprintf "%4d",$ifile;
+      print TASKLOG "$tid:$data";
+    }
+  } # while LOGFILE
+  if ($nfound==0) { exit; }
+  close (TASKLOG);
+  print "Wrote file $tasklog\n";
+  seek LOGFILE,0,0;
+  $ifile++;
+}
+#-----------------------------------------------------------------------
+sub mktasklog {
+local ($logfile, $ifile) = @_;
+local ($pos,$dotpos);
+#
+$tasklog = $logfile;
+$pos = -1;
+while (($pos = index($tasklog,'.',$pos)) > -1) {
+  $dotpos = $pos;
+  $pos++;
+}
+substr($tasklog,$dotpos) = "";
+$iifile = sprintf "%4.4d",$ifile;
+$tasklog = $tasklog . '_task' . $iifile . '.out';
+}
