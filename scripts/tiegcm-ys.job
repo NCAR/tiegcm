@@ -50,7 +50,7 @@ set runscript = $execdir/run.lsf
 
 if (! -d $execdir) mkdir -p $execdir
 #
-# Set LSF resource usage (create the runscript):
+# Set LSF resource usage (create the runscript in execdir):
 # (run commands are appended to this script below)
 #
 cat << EOF >! $runscript
@@ -59,14 +59,22 @@ cat << EOF >! $runscript
 #BSUB -J tiegcm
 #BSUB -P P28100036
 #BSUB -q regular
-#BSUB -n 16
-##BSUB -n 32
 #BSUB -o tiegcm.%J.out
 #BSUB -e tiegcm.%J.out
 #BSUB -N
 #BSUB -u $LOGNAME@ucar.edu
-#BSUB -W 0:30
+##BSUB -W 0:30
 #BSUB -W 0:10
+#
+# Recommended for single-res (5.0 deg) tiegcm:
+# -n16,ptile=16 (1 node, 16 procs/node)
+#BSUB -n 16
+#BSUB -R "span[ptile=16]"
+#
+# Recommended for double-res (2.5 deg) tiegcm: 
+# -n64,ptile=16 (4 nodes, 16 procs/node)
+##BSUB -n 64
+##BSUB -R "span[ptile=16]"
 #
 EOF
 #

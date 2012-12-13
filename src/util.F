@@ -30,6 +30,35 @@
       call shutdown('nextlu')
       end function nextlu
 !-------------------------------------------------------------------
+      subroutine rmnamelistcomments(filename,luout,comcharin,echo)
+      implicit none
+! Remove comments from namelist file (filename) and write the results
+! to file unit luout.  See rmcomments for additional documentation.
+!
+! This subroutine was created for CMIT:  when TIEGCM is coupled to
+! CMIT, namelist cannot be reliably read from stdin.
+!
+! Args:
+      character(len=256),intent(in) :: filename
+      integer,intent(in) :: luout
+      character(len=1),intent(in) :: comcharin
+      integer,intent(in) :: echo
+! Local:
+      integer :: fileId=88, iErr
+
+      open(fileId, FILE=filename, STATUS='OLD', iostat=iErr)
+      if (iErr /= 0) then
+         write(6,"('>>> ERROR inp_read: Could not open TIEGCM ',
+     +        'input namelist file tiegcm_namelist.inp ',
+     +        'with unit luin=',i2,' ios=',i5)") fileId,iErr
+         call shutdown('inp_read')
+      endif
+      call rmcomments(fileId,luout,comcharin,echo)
+      close(fileId)
+
+      return
+      end subroutine rmnamelistcomments
+!-------------------------------------------------------------------
       subroutine rmcomments(luin,luout,comcharin,echo)
       implicit none
 !
