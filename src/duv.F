@@ -1,7 +1,7 @@
 !
-      subroutine duv(tn,tn_upd,tn_nm,un,vn,un_nm,vn_nm,w_upd,barm,z,
-     |  hdu,hdv,ui,vi,lxx,lyy,lxy,lyx,km,un_upd,unm_upd,vn_upd,vnm_upd,
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine duv(tn,tn_upd,tn_nm,un,vn,un_nm,vn_nm,w_upd,o2,o1,barm,
+     |  z,hdu,hdv,ui,vi,lxx,lyy,lxy,lyx,km,un_upd,unm_upd,vn_upd,
+     |  vnm_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -13,7 +13,8 @@
       use init_module,only: iter,igetgswm,iday
       use lbc,only: u_lbc,v_lbc
       use cons_module,only: dtx2inv,expz,p0,gask,grav,
-     |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,kut
+     |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,kut,
+     |  rmassinv_n2,rmassinv_o2,rmassinv_o1
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
       use addfld_module,only: addfld
 #ifdef MPI
@@ -35,6 +36,8 @@
      |  un_nm,   ! neutral zonal velocity at time n-1
      |  vn_nm,   ! neutral meridional velocity at time n-1
      |  w_upd,   ! updated vertical velocity (swdot.F)
+     |  o2,      ! o2 (for mbar only)
+     |  o1,      ! o1 (for mbar only)
      |  barm,    ! mean molecular weight
      |  z,       ! geopotential height
      |  hdu,     ! horizontal diffusion of U (hdif3 in hdif.F)
@@ -56,7 +59,7 @@
      |  vnm_upd  ! updated meridional velocity at time n-1
 !
 ! Local:
-      integer :: k,i,j,lat,lonbeg,lonend
+      integer :: k,kk,i,j,lat,lonbeg,lonend
       integer :: nk,nkm1,nlevs
       real :: 
      |  unlbc(lon0:lon1), ! un lower boundary (t1)
@@ -73,6 +76,9 @@
      |  vnm_smooth   ! vn at time n-1, smoothed
       real :: flbc(lon0-2:lon1+2,lat0-2:lat1+2,4) ! ulbc,vlbc,ulbc_nm,vlbc_n
       real :: rtxmue(lev0:lev1) ! sqrt(xmue)
+      real,dimension(lev0:lev1,lon0:lon1) ::
+     |  eddyvisc,    ! eddy viscosity (?)
+     |  mbar         ! mean molecular weight (slightly different than barm)
 !
 ! For diagnostic, debug:
       real,dimension(lev0:lev1,lon0:lon1) ::
@@ -235,13 +241,43 @@
      |                      xmue(lev0+1,iday))
         rtxmue(lev1) = sqrt(xmue(lev1-1,iday)**3/
      |                      xmue(lev1-2,iday))
+!
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            mbar(k,i) = 1./(o2(k,i,lat)*rmassinv_o2 + 
+     |        o1(k,i,lat)*rmassinv_o1+(1.-o2(k,i,lat)-o1(k,i,lat))*
+     |        rmassinv_n2)
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0,lon1
+!
+        do i=lon0,lon1
+          do k=lev0,lev1-1          
+            eddyvisc(k,i) = p0*expz(k)*gask*tn(k,i,lat)*xmue(k,iday)/
+     |                      (mbar(k,i)*grav**2)
+          enddo ! k=lev0+1,lev1-1          
+!
+! Upper boundary:
+          eddyvisc(lev1,i) = sqrt(eddyvisc(lev1-1,i)**3/             ! s3 top
+     |                       eddyvisc(lev1-2,i))
+!            
+! Loop from top down:
+          k = lev1+1
+          do kk=lev0+1,lev1
+            k = k-1 
+            eddyvisc(k,i) = sqrt(eddyvisc(k-1,i)*eddyvisc(k,i))      ! s3
+          enddo ! kk=lev0+1,lev1-1
+!
+! Bottom boundary in tlbc (from t_lbc of lbc.F):
+          eddyvisc(lev0,i) = eddyvisc(lev0,i)**2/eddyvisc(lev0+1,i)  ! s3
+        enddo ! i=lon0,lon1
+!
         do i=lon0,lon1
           tni(lev0,i) = tlbc_nm(i,lat)    ! Lower boundary is in tlbc_nm
           tni(lev1,i) = tn(lev1-1,i,lat)
-!
+
 ! G = g*KM/(P0*H*Ds**2) = g**2*(kM+XMUE)*MBAR*/(P0*R*T*DS**2)
           do k=lev0,lev1
-            g(k,i) = grav**2*(km(k,i,lat)+rtxmue(k))*barm(k,i,lat)/
+            g(k,i) = grav**2*(km(k,i,lat)+eddyvisc(k,i))*barm(k,i,lat)/
      |        (p0*gask*tni(k,i)*dz**2)
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
@@ -250,6 +286,7 @@
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('DUV_G',' ',' ',g  ,
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+
 !
 ! dwdz = exp(-s)*w(k+1/2)/(2.*Ds)
         do i=lon0,lon1
@@ -459,8 +496,6 @@
 ! End fourth latitude scan:
       enddo ! lat=lat0,lat1
 #ifdef MPI
-!
-! Boundary longitudes and periodic points for ulbc:
 !
 ! Boundary (halo) latitudes:
       flbc(:,:,1) = ulbc(:,:)

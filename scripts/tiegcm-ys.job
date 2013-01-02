@@ -1,4 +1,4 @@
-#! /bin/tcsh
+#!/bin/tcsh
 #
 # This script should be executed on the yellowstone command line. It will 
 # compile in execdir on the interactive login node, then create and submit 
@@ -32,10 +32,10 @@
 #
  set modeldir = tiegcm_trunk
  set execdir  = tiegcm-linux
-#set execdir = /glade/p/work/[user]/tiegcm/tiegcm-linux
+#set execdir  = /glade/p/work/[user]/tiegcm/tiegcm-linux
 #
-#set input   = tiegcm.inp
- set output  = tiegcm.out
+#set input    = tiegcm.inp
+ set output   = tiegcm.out
  set modelres = 5.0
 #
 # Intel *or* PGI modules must be loaded on yellowstone (see comment above)

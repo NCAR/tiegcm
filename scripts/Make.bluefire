@@ -14,6 +14,8 @@ DBGFLAGS  = -qinitauto=7FF7FFFF -qflttrap=zero:inv:en -qsigtrap=xl__trcedump
 #DBGFLAGS = -C -qzerosize -qinitauto=7FF7FFFF -qflttrap=zero:inv:en -qsigtrap=xl__trcedump
 LDFLAGS   = -bloadmap:loadmap -q64 $(OPTIM)
 LDFLAGS   = -bdatapsize:64K -bstackpsize:64K -btextpsize:64K
+#
+# Link IBM optimized math library MASS:
 LIBS      = -lmass
 #
 # Library and Include file paths:

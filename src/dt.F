@@ -16,7 +16,6 @@
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
      |  gask,expzmid,expzmid_inv,dift,dtsmooth,dtsmooth_div2,kut
-!     use bndry_module,only: tb,tb2,bnd,bnd2,ci,lbc_gswm_dt
       use lbc,only: t_lbc
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
@@ -76,7 +75,7 @@
      |  p, q, r,    ! coefficients for tridiagonal solver
      |  rhs,        ! right hand side of trsolv
      |  qpart,      ! part of q coeff
-     |  tnlbc_diag  ! tnlbc redundant in vertical
+     |  tnlbc_diag  ! tnlbc_diag is redundant in vertical
 !
 ! Local at 3d (tnsmooth needs lat dimension only for sub smooth):
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
