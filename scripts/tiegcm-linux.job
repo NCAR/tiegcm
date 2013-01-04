@@ -100,6 +100,23 @@ echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
+echo "  Model resolution:  $modelres"
+echo "  Debug flag:        $debug"
+#
+# If debug flag has changed from last gmake, clean execdir
+# and reset debug file:
+#
+if (-f $execdir/debug) then
+  set lastdebug = `cat $execdir/debug` 
+  if ($lastdebug != $debug) then
+    echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $debug >! $execdir/debug
+  endif
+else
+  echo $debug >! $execdir/debug
+  echo "Created file debug with debug flag = $debug"
+endif
 #
 # Copy defs header file to execdir, if necessary, according to 
 # requested resolution. This should seamlessly switch between
@@ -118,21 +135,6 @@ if (-f $execdir/defs.h) then
 else # defs.h does not exist in execdir -> copy appropriate defs file
   echo "Copying $defs to $execdir/defs.h for resolution $modelres"
   cp $defs $execdir/defs.h
-endif
-#
-# If debug flag has changed from last gmake, clean execdir
-# and reset debug file:
-#
-if (-f $execdir/debug) then
-  set lastdebug = `cat $execdir/debug` 
-  if ($lastdebug != $debug) then
-    echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
-    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
-    echo $debug >! $execdir/debug
-  endif
-else
-  echo $debug >! $execdir/debug
-  echo "Created file debug with debug flag = $debug"
 endif
 #
 # cd to execdir and run make:
