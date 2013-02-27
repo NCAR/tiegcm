@@ -12,7 +12,7 @@
 #   output:    Stdout file from model execution (will be created)
 #   make:      Build file with platform-specific compile parameters (in scripts dir)
 #              Supported compiler files: Make.intel_ys or Make.pgi_ys
-#   mpi:       TRUE/FALSE for MPI or non-MPI run
+#   mpi:       TRUE/FALSE for MPI or non-MPI run (for non-mpi runs, lsf runscript is ignored)
 #   modelres:  Model resolution (5.0 or 2.5 degrees)
 #   debug:     If TRUE, build and execute a "debug" run
 #   exec:      If TRUE, execute the model (build only if FALSE)
@@ -31,9 +31,8 @@
 #   From pgi to intel: type "module switch pgi intel", and use Make.intel_ys below
 #
  set modeldir = tiegcm_trunk
- set execdir  = tiegcm-linux
-#set execdir  = /glade/p/work/[user]/tiegcm/tiegcm-linux
-#
+ set execdir  = tiegcm-ys
+#set execdir  = /glade/p/work/[user]/tiegcm/tiegcm-ys
 #set input    = tiegcm.inp
  set output   = tiegcm.out
  set modelres = 5.0
@@ -63,8 +62,7 @@ cat << EOF >! $runscript
 #BSUB -e tiegcm.%J.out
 #BSUB -N
 #BSUB -u $LOGNAME@ucar.edu
-##BSUB -W 0:30
-#BSUB -W 0:10
+#BSUB -W 0:30
 #
 # Recommended for single-res (5.0 deg) tiegcm:
 # -n16,ptile=16 (1 node, 16 procs/node)
@@ -148,7 +146,8 @@ echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
 echo "  Model resolution:  $modelres"
-echo "  Debug flag:        $debug"
+echo "  Debug flags:       $debug"
+echo "  MPI job:           $mpi"
 #
 # If debug flag has changed from last gmake, clean execdir
 # and reset debug file:
@@ -163,6 +162,21 @@ if (-f $execdir/debug) then
 else
   echo $debug >! $execdir/debug
   echo "Created file debug with debug flag = $debug"
+endif
+#
+# If mpi flag has changed from last gmake, clean execdir
+# and reset mpi file:
+#
+if (-f $execdir/mpi) then
+  set lastmpi = `cat $execdir/mpi` 
+  if ($lastmpi != $mpi) then
+    echo "Clean execdir $execdir because mpi flag switched from $lastmpi to $mpi"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $mpi >! $execdir/mpi
+  endif
+else
+  echo $mpi >! $execdir/mpi
+  echo "Created file mpi with mpi flag = $mpi"
 endif
 #
 # Copy defs header file to execdir, if necessary, according to 
@@ -212,18 +226,27 @@ if ($exec == "FALSE") then
 endif
 set model = $execdir/$model
 #
-# Append mpi run command to LSF script (it has #BSUBs from above)
+# MPI/LSF job: append mpirun.lsf command to LSF script 
+# (it has #BSUBs from above)
 #
-cat << EOF >> $runscript
-setenv MP_LABELIO YES
-setenv MP_SHARED_MEMORY yes
-mpirun.lsf $model < $input >&! $output
-$mklogs $output
+if ($mpi == "TRUE") then  # MPI LSF job
+  cat << EOF >> $runscript
+  setenv MP_LABELIO YES
+  setenv MP_SHARED_MEMORY yes
+  mpirun.lsf $model < $input >&! $output
+  $mklogs $output
 EOF
+  echo " "
+  echo "Submitting LSF script $runscript for MPI run"
+  bsub < $runscript
 #
-# Submit LSF script:
+# Non-mpi job: simple execution statement on the interactive node.
+# If you want to submit lsf job, you can use a here-doc like above
+# to put the execution statement in the runscript, then submit with
+# bsub as above.
 #
-echo " "
-echo "Submitting LSF script $runscript"
-bsub < $runscript
+else
+  echo "Executing serial non-MPI run in background on the interactive node.." 
+  $model < $input >&! $output &
+endif
 exit 0
