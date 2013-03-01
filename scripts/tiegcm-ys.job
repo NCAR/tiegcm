@@ -17,7 +17,7 @@
 #   debug:     If TRUE, build and execute a "debug" run
 #   exec:      If TRUE, execute the model (build only if FALSE)
 #   utildir:   Dir containing supporting scripts (usually $modeldir/scripts)
-#   runscript: LSF script with run commands (created in and submitted from execdir)
+#   runscript: LSF script with run commands (submitted with bsub from execdir)
 #
 # Use the "modules" command on yellowstone to load/unload compilers, libs, etc:
 #   module list     Get list of currently loaded modules
@@ -45,8 +45,10 @@ set mpi       = TRUE
 set debug     = FALSE
 set exec      = TRUE
 set utildir   = $modeldir/scripts
-set runscript = $execdir/run.lsf
+set runscript = run.lsf
 
+set execdir   = `perl $utildir/abspath $execdir`
+set runscript = `perl $utildir/abspath $runscript`
 if (! -d $execdir) mkdir -p $execdir
 #
 # Set LSF resource usage (create the runscript in execdir):
@@ -101,6 +103,7 @@ if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 
   exit 1
 endif
+set utildir = `perl $utildir/abspath $utildir`
 
 set srcdir  = $modeldir/src
 if (! -d $srcdir) then
@@ -132,6 +135,8 @@ else
     `perl $utildir/mknamelist -model=$model -modelres=$modelres` || \
      echo ">>> Error from mknamelist: fileout = $input" && exit 1
 endif
+
+set model  = $execdir/$model
 set input  = `perl $utildir/abspath $input`
 set output = `perl $utildir/abspath $output`
 set mklogs = `perl $utildir/abspath $utildir`
@@ -145,8 +150,9 @@ echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
+echo "  Stdout Output:     $output"
 echo "  Model resolution:  $modelres"
-echo "  Debug flags:       $debug"
+echo "  Debug:             $debug"
 echo "  MPI job:           $mpi"
 #
 # If debug flag has changed from last gmake, clean execdir
@@ -224,7 +230,6 @@ if ($exec == "FALSE") then
   echo "Am NOT executing the model because exec = $exec"
   exit 0
 endif
-set model = $execdir/$model
 #
 # MPI/LSF job: append mpirun.lsf command to LSF script 
 # (it has #BSUBs from above)
