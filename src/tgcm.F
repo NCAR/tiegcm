@@ -20,7 +20,7 @@
       use lbc,only: bndry_diurnal, bndry_semidiurnal, bndcmp
       use qrj_module,only: init_qrj
       use magfield_module,only: magfield
-      use apex_module,only: apxparm
+      use getapex_module,only: apxparm
       use timing_module,only: timer,timer_report,init_timer
       use mpi_module,only: mytid,ntask
       use diags_module,only: init_diags

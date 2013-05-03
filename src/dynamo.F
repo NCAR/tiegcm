@@ -909,7 +909,7 @@ c      enddo
      |  ig,       ! (nmlonp1,nmlat) geog lon at each geomag grid point
      |  jg,       ! (nmlonp1,nmlat) geog lat at each geomag grid point
      |  wt        ! (4,nmlonp1,nmlat) interpolation weights
-      use apex_module,only:           ! (see sub apxparm, apex.F)
+      use getapex_module,only:           ! (see sub apxparm, apex.F)
      |  be3arr,   ! (nlonp1,nlat), 
      |  dvec,     ! (nlonp1,nlat,3,2)
      |  dddarr    ! (nlonp1,nlat)

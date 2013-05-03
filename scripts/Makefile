@@ -91,6 +91,12 @@ endif
 
 FFLAGS += $(INC_DIRS) $(OPTIM) $(DBGFLAGS)
 
+.SUFFIXES:
+.SUFFIXES: .o .F .F90
+
+.F90.o:
+	$(FC) -c $(FFLAGS) $(CPPFLAGS) $<
+
 clean:
 	rm -f Depends Srcfiles *.o *.mod $(EXECNAME)
 veryclean:
