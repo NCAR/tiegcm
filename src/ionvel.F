@@ -16,6 +16,7 @@
       use magfield_module,only: rjac,xb,yb,zb,bmod
       use addfld_module,only: addfld
       use diags_module,only: mkdiag_UI,mkdiag_VI,mkdiag_WI
+      use diags_module,only: mkdiag_EXYZ
 #ifdef MPI
       use mpi_module,only: mp_periodic_f3d
 #else
@@ -115,6 +116,9 @@
 !        call addfld('EEZ','E_z','V/cm',eez,
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
+        call mkdiag_EXYZ('EX',eex,lev0,lev1,lon0,lon1,lat)
+        call mkdiag_EXYZ('EY',eey,lev0,lev1,lon0,lon1,lat)
+        call mkdiag_EXYZ('EZ',eez,lev0,lev1,lon0,lon1,lat)
 !
 ! ion velocities = (e x b/b**2) (x 1.e6 for m/sec)
 ! ui = zonal, vi = meridional, wi = vertical

@@ -130,7 +130,7 @@
 ! Multiply by smoothing function:
       do k=lev0,lev1
         do i=1,nlon
-          fx(i+2,k) = fx(i+2,k)*cos(((i+1)/2)*dlamda/2.)**(2*nn(lat))
+          fx(i+2,k)=fx(i+2,k)*cos((real(i+1)/2.)*dlamda/2.)**(2*nn(lat))
         enddo ! i=1,nlon
       enddo ! k=lev0,lev1
 !

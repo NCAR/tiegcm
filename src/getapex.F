@@ -17,6 +17,9 @@
      |  nmlon,  ! number of geomagnetic longitudes
      |  nmlonp1,! nmlon+1
      |  nmlat   ! number of geomagnetic latitudes
+
+!     use fields_module,only: ! diagnostics
+!    |  bx, by, bz, bmag_field=>bmag
 !      
       implicit none
       integer,parameter :: 
@@ -62,6 +65,8 @@
      |  snlong,  ! (nlonp1) sin(lamda)
      |  av,      ! (nlonp1,0:nlatp1,3,2) the two magnetic vectors a1,a2
      |  wt       ! (4,nmlonp1,nmlat) weights for geo2mag interpolation
+
+!     use diags_module,only: mkdiag_BXYZ,mkdiag_BMAG
 !
 ! Calculates apex quantities for reference height of
 !         h_0 (90km)
@@ -115,17 +120,9 @@
 !     call shutdown('apxparm')
 
 !
-!  Initialize interpolation arrays, but do not write them
-!     SUBROUTINE APXMKA (MSGUN, EPOCH, GPLAT,GPLON,GPALT,NLAT,NLON,NALT,
-!    +                  WK,LWK, IST)
-!            DIMENSION GPLAT(NLAT), GPLON(NLON), GPALT(NALT), WK(LWK)
-!     DIMENSION GPLAT(*),GPLON(*),GPALT(*), EPOCH(*), WK(*),
+! Initialize interpolation arrays.
 !
       date1(1) = date
-!     call apxmka (msgun, date1, gplat,gplon,gpalt,nlatp1,nlonp2,nalt,
-!    |             wk,lwk, ist)
-!     if (ist /= 0) call shutdown('apxmka')
-
       call apex_mka(date,gplat,gplon,gpalt,nlatp1,nlonp2,nalt,ist)
       if (ist /= 0) call shutdown('apxmka')
 !
@@ -141,12 +138,6 @@
 	snlatg(j) = sin(ylatg(j))
 	do i = 1,nlonp1
 	  glon = ylong(i)*rtd
-!         call apxmall (
-!    |      glat,glon,alt,hr, wk,                     !Inputs
-!    |      b,bhat,bmag,si,                           !Mag Fld
-!    |      alon,                                     !Apx Lon
-!    |      xlatm,vmp,w,d,be3,sim,d1,d2,d3,e1,e2,e3,  !Mod Apx
-!    |      xlatqd,f,f1,f2 , ist)                     !Qsi-Dpl
 
           call apex_mall(
      |      glat,glon,alt,hr,                         !Inputs
@@ -163,10 +154,10 @@
 ! output:
           alatm(i,j)    =  xlatm*dtr
           alonm(i,j)    =  alon *dtr
-          xb   (i,j)    =  b(2)*1.e-5
-          yb   (i,j)    =  b(1)*1.e-5
-          zb   (i,j)    = -b(3)*1.e-5
-          bmod (i,j)    =  bmag*1.e-5
+          xb   (i,j)    =  b(2)*1.e-5 ! nT to gauss
+          yb   (i,j)    =  b(1)*1.e-5 ! nT to gauss
+          zb   (i,j)    = -b(3)*1.e-5 ! nT to gauss
+          bmod (i,j)    =  bmag*1.e-5 ! nT to gauss
 !
           p    (i,j)    = 1.e+5*abs(sim/si)/(bmag*d)
 	  av   (i,j,1,1) = d1(1)*P(I,J)*si
@@ -225,13 +216,6 @@
 	qdlon = ylonm(i)*rtd
 	do J=1,nmlat
 	  qdlat = ylatm(j)*rtd
-
-!         call apxq2g(qdlat,qdlon,alt, wk, gdlat,gdlon, ist)
-!         if (ist /= 0) then
-!           write(6,"('apxparm: error from APXQ2G: ist=',i3,
-!    |        ' i=',i3,' j=',i3)") ist,i,j
-!           call shutdown('apxq2g ist')
-!         endif
 
           call apex_q2g(qdlat,qdlon,alt, gdlat,gdlon, ist)
           if (ist /= 0) then

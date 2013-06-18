@@ -8,6 +8,7 @@
       use params_module,only: nlat,nlonp4,dz,nlon,dlev
       use magfield_module,only: bx,by,bz,bmod2 ! (nlonp4,-1:nlat+2)
       use addfld_module,only: addfld
+      use diags_module,only: mkdiag_BXYZ,mkdiag_BMAG
 !
 ! VT vampir tracing:
 !
@@ -157,6 +158,11 @@
         j0  = lat
         jp1 = lat+1
         jp2 = lat+2
+
+        call mkdiag_BXYZ('BX',    bx (lon0:lon1,lat),lon0,lon1,lat)
+        call mkdiag_BXYZ('BY',    by (lon0:lon1,lat),lon0,lon1,lat)
+        call mkdiag_BXYZ('BZ',    bz (lon0:lon1,lat),lon0,lon1,lat)
+        call mkdiag_BMAG('BMAG',bmod2(lon0:lon1,lat),lon0,lon1,lat)
 !
 ! Set tp's:
       do i=lon0,lon1
@@ -459,9 +465,9 @@
 
 !     call addfld('EXPLIC0',' ',' ',explicit(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('BX',' ',' ',bx(lon0:lon1,:),
+!     call addfld('BX_OP',' ',' ',bx(lon0:lon1,:),
 !    |  'lon',lon0,lon1,'lat',lat,lat,0)
-!     call addfld('BY',' ',' ',by(lon0:lon1,:),
+!     call addfld('BY_OP',' ',' ',by(lon0:lon1,:),
 !    |  'lon',lon0,lon1,'lat',lat,lat,0)
 !     call addfld('UI_VEL',' ',' ',ui(:,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)

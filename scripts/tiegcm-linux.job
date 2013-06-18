@@ -26,6 +26,9 @@ set nproc    = 4
 set debug    = FALSE
 set exec     = TRUE
 set utildir  = $modeldir/scripts
+# 
+# TGCMDATA can be set here, or in user's shell init file (e.g., .cshrc):
+#setenv TGCMDATA /hao/aim/[user]/tiegcm/data
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                        Shell Script for TIEGCM Linux job
@@ -46,6 +49,11 @@ if (! -d $modeldir) then
   exit 1
 endif
 set model = $modeldir:t
+
+if ($model == '') then
+  echo "Please remove trailing slash from modeldir $modeldir"
+  exit
+endif
 
 if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 

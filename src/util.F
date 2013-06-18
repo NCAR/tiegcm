@@ -413,35 +413,6 @@
 #endif
       end function cputime 
 !-------------------------------------------------------------------
-      integer function iunlink(file,iprint)
-      implicit none
-      character(len=*),intent(in) :: file
-      integer,intent(in) :: iprint
-      integer,external :: unlink
-!
-#if defined(UNICOS) || defined(IRIX) || defined(SUN) || defined(OSF1)
-      iunlink = unlink(trim(file))
-      if (iunlink.eq.0) then
-        if (iprint > 0) 
-     |    write(6,"('Unlinked file ',a)") trim(file)
-      else
-        if (iprint > 0) 
-     |    write(6,"('Note: unlink of ',a,' failed',
-     |      ' (possibly non-existant file).')") trim(file)
-      endif
-#elif AIX || LINUX
-      iunlink = unlink(trim(file)//"\0")
-      if (iunlink.eq.0) then
-        if (iprint > 0) 
-     |    write(6,"('Unlinked file ',a)") trim(file)
-      else
-        if (iprint > 0) 
-     |    write(6,"('Note: unlink of ',a,' failed',
-     |      ' (possibly non-existant file).')") trim(file)
-      endif
-#endif
-      end function iunlink
-!-----------------------------------------------------------------------
       real function mtime_delta(mtime0,mtime1)
 !
 ! Return difference in time (minutes) from mtime0 to mtime1:
