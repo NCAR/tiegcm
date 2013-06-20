@@ -10,7 +10,7 @@
 ; SOURCE:       Start-up history file (for initial runs only)
 ; SOURCE_START: Time of history on start-up file (initial runs only)
 ;
- SOURCE = '$TGCMDATA/tiegcm1.94/TGCM.tiegcm1.94_dres.pcntr_mareqx_smin.nc'
+ SOURCE = '$TGCMDATA/tiegcm1.95/TGCM.tiegcm1.95_dres.pcntr_mareqx_smin.nc'
  SOURCE_START = 80,0,0
 ;
 ; START: Start time (day,hour,minute)

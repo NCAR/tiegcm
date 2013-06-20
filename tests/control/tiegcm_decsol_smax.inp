@@ -2,7 +2,7 @@
 ;
 ; Namelist input file for model tiegcm
 ;
- LABEL = 'tiegcm test decsol smax control run'
+ LABEL = 'tiegcm decsol smax control run'
  START_YEAR = 2002
  START_DAY  = 355
  CALENDAR_ADVANCE = 1
@@ -10,7 +10,7 @@
 ; SOURCE:       Start-up history file (for initial runs only)
 ; SOURCE_START: Time of history on start-up file (initial runs only)
 ;
- SOURCE = '$TGCMDATA/TGCM.tiegcm1.94.pcntr_decsol_smax.nc'
+ SOURCE = '$TGCMDATA/tiegcm1.95/TGCM.tiegcm1.95.pcntr_decsol_smax.nc'
  SOURCE_START = 355,0,0
 ;
 ; START: Start time (day,hour,minute)
@@ -24,7 +24,7 @@
 ; Primary History parameters:
 ;
  HIST = 1,0,0
- OUTPUT = 'TGCM.tiegcm_test.pcntr_decsol_smax_001.nc'
+ OUTPUT = 'TGCM.tiegcm1.95.pcntr_decsol_smax_001.nc'
  MXHIST_PRIM = 10
 ;
 ; Secondary History parameters:
@@ -32,17 +32,18 @@
  SECSTART = 355,1,0
  SECSTOP  = 360,0,0
  SECHIST  =   0,1,0
- SECOUT   = 'TGCM.tiegcm_test.scntr_decsol_smax_001.nc','to','TGCM.tiegcm_test.scntr_decsol_smax_005.nc','by','1'
+ SECOUT   = 'TGCM.tiegcm1.95.scntr_decsol_smax_001.nc','to',
+            'TGCM.tiegcm1.95.scntr_decsol_smax_005.nc','by','1'
  MXHIST_SECH = 24
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB',
            'DEN','QJOULE','Z','ZG'
 ;
 ; Diagnostic fields available with this release:
-;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
+;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
 ;          'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
-;          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M',
-;	   'KQPHI','KQLAM','JQR','JE13D','JE23D' 
+;          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M','O_N2','WN',
+;          'BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2'
 ;
 ; If HPSS_PATH is set, a csh script will be made in the execdir that,
 ; when executed, will copy history disk files to the NCAR HPSS in the 

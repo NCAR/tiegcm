@@ -15,7 +15,7 @@
 #   exec:     If TRUE, execute the model (build only if FALSE)
 #   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
-set modeldir = tiegcm_trunk
+set modeldir = /home/$user/tiegcm_trunk
 set execdir  = tiegcm-linux
 #set input    = tiegcm.inp
 set output   = tiegcm.out

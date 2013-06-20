@@ -14,7 +14,7 @@
 #BSUB -o tiegcm.%J.out
 #BSUB -e tiegcm.%J.out
 #BSUB -N
-#BSUB -u foster@ucar.edu
+#BSUB -u $LOGNAME@ucar.edu
 #BSUB -W 0:30
 #
 # Recommended for single-res (5.0 deg):
@@ -31,7 +31,7 @@ setenv MP_LABELIO YES
 setenv MP_SHARED_MEMORY yes
 
 set exec   = ./tiegcm_trunk
-set wrkdir = /glade/u/home/[user]/tiegcm
+set wrkdir = /glade/u/home/$user/tiegcm
 set input  = $wrkdir/tiegcm.inp
 set output = $wrkdir/tiegcm.out
 set modeldir = $wrkdir/tiegcm_trunk # only for mklogs

@@ -30,10 +30,10 @@
 #   From intel to pgi: type "module switch intel pgi", and use Make.pgi_ys below
 #   From pgi to intel: type "module switch pgi intel", and use Make.intel_ys below
 #
- set modeldir = /home/$user/tiegcm_trunk
- set execdir  = /glade/p/work/$user/tiegcm/tiegcm-ys
-#set input    = tiegcm.inp
- set output   = tiegcm.out
+ set modeldir = /glade/u/home/$user/tiegcm1.95
+ set execdir  = /glade/scratch/$user/tiegcm1.95/tiegcm_decsol_smin-ys
+ set input    = tiegcm_decsol_smin.inp
+ set output   = tiegcm_decsol_smin.out
  set modelres = 5.0
 #
 # Intel *or* PGI modules must be loaded on yellowstone (see comment above)
@@ -56,9 +56,10 @@ if (! -d $execdir) mkdir -p $execdir
 cat << EOF >! $runscript
 #!/bin/tcsh
 #
-#BSUB -J tiegcm
+#BSUB -J tiegcm_decsol_smin
 #BSUB -P P28100036
-#BSUB -q regular
+##BSUB -q regular
+#BSUB -q premium
 #BSUB -o tiegcm.%J.out
 #BSUB -e tiegcm.%J.out
 #BSUB -N

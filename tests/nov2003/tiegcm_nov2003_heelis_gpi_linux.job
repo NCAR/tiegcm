@@ -15,8 +15,8 @@
 #   exec:     If TRUE, execute the model (build only if FALSE)
 #   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
-set modeldir = tiegcm_trunk
-set execdir  = tiegcm-linux
+set modeldir = /home/$user/tiegcm1.95
+set execdir  = tiegcm_linux
 set input    = tiegcm_nov2003_heelis_gpi.inp
 set output   = tiegcm_nov2003_heelis_gpi.out
 set make     = Make.intel_hao64
@@ -28,7 +28,7 @@ set exec     = TRUE
 set utildir  = $modeldir/scripts
 # 
 # TGCMDATA can be set here, or in user's shell init file (e.g., .cshrc):
-#setenv TGCMDATA /hao/aim/foster/tiegcm_trunk/tiegcm1.94_data
+#setenv TGCMDATA /hao/aim/$user/tiegcm1.95_data
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                        Shell Script for TIEGCM Linux job
