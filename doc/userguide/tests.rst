@@ -5,7 +5,7 @@ Benchmark Test Runs of v\ |version|
 ===================================
 
 A series of benchmark runs are made for each release of the TIEGCM
-(since v1.93).  Job scripts and namelist input files for these runs are 
+(since v1.94).  Job scripts and namelist input files for these runs are 
 available in subdirectories in the :term:`tests/` directory.
 
 Netcdf files with the first history of each benchmark run are available in

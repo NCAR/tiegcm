@@ -314,7 +314,7 @@
       diags(n)%long_name  = 
      |  'PHIM2D: 2d Electric Potential on magnetic grid'
       diags(n)%units      = 'V'
-      diags(n)%levels     = 'imlev'
+      diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamo.F'
 
       if (n /= ndiag) then
