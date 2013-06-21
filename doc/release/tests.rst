@@ -34,10 +34,10 @@ Start-up files at Solar Minimum Conditions:
 =============================== ====================================
 Date				Filename
 =============================== ====================================
-March Equinox (day 80)          TGCM.tiegcm1.94.pcntr_mareqx_smin.nc
-June Solstice (day 172)         TGCM.tiegcm1.94.pcntr_junsol_smin.nc
-September Equinox (day 264)     TGCM.tiegcm1.94.pcntr_sepeqx_smin.nc
-December Solstice (day 355)     TGCM.tiegcm1.94.pcntr_decsol_smin.nc
+March Equinox (day 80)          TGCM.tiegcm1.95.pcntr_mareqx_smin.nc
+June Solstice (day 172)         TGCM.tiegcm1.95.pcntr_junsol_smin.nc
+September Equinox (day 264)     TGCM.tiegcm1.95.pcntr_sepeqx_smin.nc
+December Solstice (day 355)     TGCM.tiegcm1.95.pcntr_decsol_smin.nc
 =============================== ====================================
 
 Start-up files at Solar Maximum Conditions:
@@ -46,13 +46,13 @@ Start-up files at Solar Maximum Conditions:
 =============================== ====================================
 Date				Filename
 =============================== ====================================
-March Equinox (day 80)          TGCM.tiegcm1.94.pcntr_mareqx_smax.nc
-June Solstice (day 172)         TGCM.tiegcm1.94.pcntr_junsol_smax.nc
-September Equinox (day 264)     TGCM.tiegcm1.94.pcntr_sepeqx_smax.nc
-December Solstice (day 355)     TGCM.tiegcm1.94.pcntr_decsol_smax.nc
+March Equinox (day 80)          TGCM.tiegcm1.95.pcntr_mareqx_smax.nc
+June Solstice (day 172)         TGCM.tiegcm1.95.pcntr_junsol_smax.nc
+September Equinox (day 264)     TGCM.tiegcm1.95.pcntr_sepeqx_smax.nc
+December Solstice (day 355)     TGCM.tiegcm1.95.pcntr_decsol_smax.nc
 =============================== ====================================
 
-* Download these files at `TIEGCM Version 1.94 Steady State Source Histories <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_94%2fSteady_State_Source_Histories%2fSteady_State_Source_Histories.thredds.xml>`_
+* Download these files at `TIEGCM Version 1.95 Steady State Source Histories <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_95%2fSteady_State_Source_Histories%2fSteady_State_Source_Histories.thredds.xml>`_
 
 .. _seasonal_control:
 
@@ -76,7 +76,9 @@ both equinoxes and solstices, and at solar minimum and maximum conditions.
   * :ref:`March Equinox, Solar Maximum <control_mareqx_smax>`
   * :ref:`September Equinox, Solar Maximum <control_sepeqx_smax>`
 
-* Download history files at `TIEGCM Version 1.94 Seasonal Control Runs <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_94%2fSeasonal_Control_Runs%2fSeasonal_Control_Runs.thredds.xml>`_
+* These history files are bundled with the tiegcm1.95 data download:
+
+  * `<http://www.hao.ucar.edu/modeling/tgcm/download.php>`_
 
 .. _climatology_info:
 
@@ -93,7 +95,6 @@ Climatology
    F107A   = 100.
 
 * :ref:`"Sanity check" plots for Climatology <climatology>`
-* Download history files at `TIEGCM Version 1.94 Climatology <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_94%2fClimatology%2fClimatology.thredds.xml>`_
 
 .. _dec2006:
 
@@ -111,22 +112,25 @@ December, 2006 "AGU Storm"
   * :ref:`Weimer/IMF (daily, days 330-360) <dec2006_weimer_daily>`
   * :ref:`Weimer/IMF (hourly, days 346-352) <dec2006_weimer_hourly>`
 
-* Heelis/GPI Movies (~3.5M gif):
+.. 6/21/13 btf: Comment out v1.95 movies for now:
 
+.. * Heelis/GPI Movies (~3.5M gif):
+..
   * :ref:`Heelis/GPI hourly movies: TN at Zp -4 <dec2006_heelis_TN_zp-4_movie>`
   * :ref:`Heelis/GPI hourly movies: TN at Zp +2 <dec2006_heelis_TN_zp+2_movie>`
   * :ref:`Heelis/GPI hourly movies: NE at Zp +2 <dec2006_heelis_NE_zp+2_movie>`
 
-* Weimer/IMF Movies (~3.5 gif):
-
+.. * Weimer/IMF Movies (~3.5 gif):
+..
   * :ref:`Weimer/IMF hourly movies: TN at Zp -4 <dec2006_weimer_TN_zp-4_movie>`
   * :ref:`Weimer/IMF hourly movies: TN at Zp +2 <dec2006_weimer_TN_zp+2_movie>`
   * :ref:`Weimer/IMF hourly movies: NE at Zp +2 <dec2006_weimer_NE_zp+2_movie>`
 
-* :ref:`AVI Movies <dec2006_avi_movies>`
+.. * :ref:`AVI Movies <dec2006_avi_movies>`
 
-* Download history files at `TIEGCM Version 1.94 December, 2006 AGU Storm <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_94%2fDecember_2006_AGU_Storm_Simulations%2fDecember_2006_AGU_Storm_Simulations.thredds.xml>`_
+.. * Download history files at `TIEGCM Version 1.95 December, 2006 AGU Storm <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_95%2fDecember_2006_AGU_Storm_Simulations%2fDecember_2006_AGU_Storm_Simulations.thredds.xml>`_
 
+.. 6/21/13 btf: End commented movie section
 
 .. _nov2003:
 
@@ -142,21 +146,25 @@ November, 2003 Storm Case
   * :ref:`Heelis/GPI (hourly) <nov2003_heelis_hourly>`
   * :ref:`Weimer/IMF (hourly) <nov2003_weimer_hourly>`
 
-* Heelis/GPI Movies (~3-5M gif):
+.. 6/21/13 btf: Comment out v1.95 movies for now:
 
+.. * Heelis/GPI Movies (~3-5M gif):
+..
   * :ref:`Heelis/GPI hourly movies: TN at Zp -4 <nov2003_heelis_TN_zp-4_movie>`
   * :ref:`Heelis/GPI hourly movies: TN at Zp +2 <nov2003_heelis_TN_zp+2_movie>`
   * :ref:`Heelis/GPI hourly movies: NE at Zp +2 <nov2003_heelis_NE_zp+2_movie>`
 
-* Weimer/IMF Movies (~3-5M gif):
-
+.. * Weimer/IMF Movies (~3-5M gif):
+..
   * :ref:`Weimer/IMF hourly movies: TN at Zp -4 <nov2003_weimer_TN_zp-4_movie>`
   * :ref:`Weimer/IMF hourly movies: TN at Zp +2 <nov2003_weimer_TN_zp+2_movie>`
   * :ref:`Weimer/IMF hourly movies: NE at Zp +2 <nov2003_weimer_NE_zp+2_movie>`
 
-* :ref:`AVI Movies <nov2003_avi_movies>`
+.. * :ref:`AVI Movies <nov2003_avi_movies>`
 
-* Download history files at `TIEGCM Version 1.94 November 2003 Storm Simulations <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_94%2fNovember_2003_Storm_Simulations%2fNovember_2003_Storm_Simulations.thredds.xml>`_
+.. * Download history files at `TIEGCM Version 1.95 November 2003 Storm Simulations <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_95%2fNovember_2003_Storm_Simulations%2fNovember_2003_Storm_Simulations.thredds.xml>`_
+
+.. 6/21/13 btf: End commented movie section
 
 .. _whi2008:
 
@@ -172,7 +180,7 @@ Whole Heliosphere Interval (WHI)
   * :ref:`Heelis/GPI (daily) <whi2008_heelis_daily>`
   * :ref:`Weimer/IMF (daily) <whi2008_weimer_daily>`
 
-* Download history files at `TIEGCM Version 1.94 Whole Heliosphere Interval 2008 <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_94%2fWhole_Heliosphere_Interval_2008%2fWhole_Heliosphere_Interval_2008.thredds.xml>`_
+* Download history files at `TIEGCM Version 1.95 Whole Heliosphere Interval 2008 <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_95%2fWhole_Heliosphere_Interval_2008%2fWhole_Heliosphere_Interval_2008.thredds.xml>`_
 
 History files on the NCAR HPSS 
 ------------------------------
@@ -180,6 +188,6 @@ History files on the NCAR HPSS
 Seasonal start-up files and complete history files for the 
 benchmark runs are on the `NCAR HPSS <http://www2.cisl.ucar.edu/docs/hpss>`_
 in directory /home/tgcm/tiegcm\ |version|. Here is a 
-:download:`complete catalog listing <_static/tests.hpss>`
+:download:`complete catalog listing <_static/benchmarks.hpss>`
 including "contents" annotations.
 

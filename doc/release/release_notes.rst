@@ -2,91 +2,110 @@
 Release Notes
 =============
 
-New validated features in the public release
---------------------------------------------
+Release Notes for tiegcm1.95 ($SVN/tiegcm/tags/tiegcm1.95 in the hao repository)
+Release date: June 20, 2013
+Author: Ben Foster (foster@ucar.edu), for the AIM section at HAO.
 
-* Weimer 2005 electric potential model, optionally with IMF data.
-* Dynamic critical cross-over latitudes for transition between
-  dynamo and empirical models at high-latitude.
-* For a more detailed description of the use of the Weimer 2005 model in
-  the TIEGCM, and the dynamic cross-over latitudes, please see 
-  :ref:`Notes on Weimer05 in TIEGCM <tiegcm_weimer05>`.
-* New diagnostics module (diags.F).  22 "sanctioned" diagnostic fields
-  are available, and can be saved on secondary histories
-  (see diags.table in doc directory).
-* HPSS archive script can be saved by the model, to be executed after
-  a run to save history files to the NCAR HPSS with "contents" annotations.
+Source code for version tiegcm1.95 is available at the TGCM download web page:
+http://www.hao.ucar.edu/modeling/tgcm/download.php
 
-New Build System (scripts/ directory)
--------------------------------------
+Note that data files for tiegcm1.94 (available as tiegcm1.94_data.tar.gz from
+the download page) will work with tiegcm1.95.
 
-* Make.machine files containing platform and machine-specific compiler
-  and link options, library locations, etc. are available in scripts directory.
-* New simplified Makefile without platform-dependent conditionals.
-* Support for Intel ifort/mpif90 compiler on 64-bit HAO Linux systems
-  (Intel-built code is significantly faster than PGI-built code on systems
-  with Intel hardware)
-* Write svnversion to history files.
+Performance Examples
+--------------------
 
-Utilities (scripts/ directory)
-------------------------------
+* The one-year climatology benchmark, using 16 MPI tasks on Yellowstone averaged 0.10 secs/step, or 1.2 minutes per simulated day with a 2-minute timestep. The run finished 365 days in 7.3 hours wallclock.
 
-* *tgcm_contents:* Print "contents" (annotations) of history files
-* *tgcm_ncdump:*   Print ncdump of history files, with data for scalars and 1d vectors
-* *tgcm_put:*      Archive history files on the NCAR HPSS storage system
-* *mknamelist:*    Make a namelist input file
-* *mkjob:*         Make a job script
+* On an hao linux desktop (Optiplex 980), using 4 MPI tasks, the model averaged 0.30 secs/step, or 3.6 minutes per simulated day. Faster times can be expected on newer desktop machines.
 
-Validation and Benchmark Runs (tests/ directory)
-------------------------------------------------
 
-* Namelist input files and job scripts for benchmark runs are available
-  in the tests/ directory.
-* Seasonal steady-state source histories are provided for both equinoxes and 
-  solstices, at solar minimum and solar maximum conditions.
+Summary of modifications made to the source code since tiegcm1.94.2 (revision r739 on January 6, 2012)
+-------------------------------------------------------------------------------------------------------
 
-* The following benchmark runs were made with tiegcm v\ |version|:
+**Bug Fixes:**
 
-  * **Control:** 5-day Control Runs are made, starting from the steady-state 
-    seasonal source histories.
-  * **Climatology:** Full-year Climatology with constant solar forcing.
-  * **Dec2006:** December, 2006 "AGU" storm case.
-  * **Nov2003:** November 19-24 (days 323-328), 2003 storm case.
-  * **Whi2008:** Whole Heliosphere Interval (WHI), March 21 to April 16, 2008.
+ * Repair bug in diags when HMF2,NMF2 are requested, and add conditional to sub hnmf2
+   to avoid divide by zero when code has been built in debug mode (r759).
 
-* For more detailed information and access to the history files and
-  post-processing, please see :ref:`Benchmark/test runs <tests>`.
+ * Add max checks to insure that the zpotenm3d geopotential used in sub nosocrdens
+   (current.F) is >= h0 to avoid NaNQ in KQPHI and KQLAM near the magnetic equator (r808).
+
+ * Correct buffer length in mp_updateephi, mp_updatelam, mp_updateemz (mpi.F).
+   This was apparently causing a corruption of f4d(n)%data under Linux/intel (r837).
+
+ * Fix units bug in eddy and molecular viscosity coefficients in duv.F, resulting in 4-5%
+   change in electron density in E and F regions, up to 4-5% change in zonal wind,
+   negligible changes in meridional wind, and negligible effects on neutral density in
+   the upper thermosphere (~0.5%) (r880).
+
+ * Change in the "floor" of the EUVAC solar fluxes from 0.8 times the reference spectrum
+   to 0.1 times the reference spectrum.  This makes insignificant difference for F10.7 of
+   70 or above, but becomes important for "anomalously low" fluxes corresponding to F10.7
+   in the low 60's (r928).
+
+ * In sub filter2 (filter.F), make part of argument to cos function a real instead of
+   an integer (effects of this change were not quantified) (r945).
+
+ * Fixed long-time netcdf error message "string match to name in use".  This error was not
+   fatal, was essentially a warning, but was annoying and confusing (r945).
+
+ * More of an improvement than a bugfix: Calculation of time-dependent CO2 concentration
+   used in calculation of implicit and explicit cooling terms in newton.F. This results
+   in 370 ppm in 2000, doubling to 740 ppm in 2100. In previous revisions, CO2 concentration
+   was constant at 350 ppm (r946).
+
+**Make/Build System:**
+
+ * Add logic to job scripts to force gmake clean if debug flag has changed (r796).
+
+ * Add logic to job scripts to enable seamless switching between model resolutions (r884,r913).
+
+ * Add new job script for the NWSC yellowstone machine, tiegcm-ys.job in the scripts
+   directory. Also add Make.intel_ys and Make.pgi_ys for building on yellowstone, and
+   run.lsf (made by tiegcm-ys.job) for submitting to yellowstone queues (r868).
+
+ * Modify scripts/tiegcm-ys.job to allow serial non-mpi runs on the interactive node (r913).
+
+**User Interface:**
+
+ * Add -l option to Linux Intel mpirun command to prefix stdout lines with mpi task ids (r769).
+
+ * Add diagnostic FOF2 (r775), and diagnostics BX,BY,BZ,BMAG,EX,EY,EZ,ED1,ED2,PHIM2D
+   (see diags.F) (r945).
+
+ * Stop the model with an error message if the number of available mpi tasks is not
+   one of valid_pecounts for which the model has been validated (1,4,8,12,16,24,32,48,64)
+   (r798).
+
+ * Update linux job scripts for all benchmark test runs in the tests directory (r945).
  
-Changes to namelist inputs
---------------------------
+**Performance and Memory:**
 
-* Weimer potential model with IMF data from IMF_NCFILE, and F10.7 data
-  from GPI_NCFILE.
-* HPSS_PATH specifies destination path to the NCAR HPSS, for history file
-  archive script. (All references to the old NCAR MSS have been removed)
-* Time-dependent namelist option for F107a and F107d
-* The following namelist parameters are deprecated: SAVE, SECSAVE, DISPOSE
+ * Restrict number of calls to checkf in diags.F, avoiding memory-accumulation
+   problems generated by Intel/ifort implementation of intrinsic function len_trim (r751).
 
-Changes in the documentation directory doc/
--------------------------------------------
+ * Remove redundant calls to mk_polelat, mp_bndlats and mp_bndlons from advance.F.
+   Remove unnecessary calls to mp_bndlons_f3d and mp_periodic_f3d at end of dt.F (r759).
 
-* All new User's Guide (pdf, html) is now provided in the doc directory.
-* Model Description (pdf) also provided in the doc directory.
-* README.download: Information and instructions for downloading and
-  executing a default run with the current version.
-* Release_Notes: Release notes for the current version.
+ * Eliminate sub mp_updatephi (mpi.F), since it is no longer necessary.  Changed subs
+   mp_updateemphi, mp_updateemlam and mp_updateemz (mpi.F) to use mpi_bcast rather than
+   mpi_send/recv calls (r826).
 
-Bug Fixes
----------
+ * Reduce statically allocated memory in gswm module by dynamically allocating arrays to
+   be read from the data file on subdomains only, rather than globally (r920).
 
-* Change nmlon to nlonp1 where defining dynpot, line 292 of magfield.F
-* Change op(k,i) to nop(k,i) in calculation of ion chemistry heating (qic).
-  Line 119 of qjion.F
+**CMIT Coupling:**
 
-Other
------
+ * Merge modifications of CMIT-coupled tiegcm1.94.2 tag to the trunk (r752)
 
-* Changed units of f107d, f107a, ctpoten, and hpower on the histories.
-* Divide by avogadro's number instead of multiplying by 1.66e-24 in
-  sub calczg (addiag.F).
+ * Change name of sub getcwd to getcwdir and sub getpid to getprocessid to avoid naming
+   conflicts (r762).
+
+**Legacy Rewrite:**
+
+ * Introduced refactored apex code apex.F90. This is a free-format f90 rewrite of the
+   legacy code apex_subs.F (circa 1995-2000 by Art Richmond, Roy Barnes, et.al.)
+   Old source file apex_subs.F was removed (r931).
+
 

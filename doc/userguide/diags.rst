@@ -62,7 +62,7 @@ Short Name                     Long Name                              Units     
 
 
 Saving Fields/Arrays from the Source Code
-------------------------------------
+-----------------------------------------
 
   In addition to the "sanctioned" diagnostics, arbitrary 2d and 3d arrays can be saved 
   from the model to secondary histories by inserting a call to subroutine *addfld* 

@@ -746,7 +746,7 @@ Parameter Name                              Data Type and Default Description
    history on any archive file system.
 
    Examples:
-     * SOURCE = '$TGCMDATA/TGCM.tiegcm1.94.pcntr_eqnx_smed.nc'
+     * SOURCE = '$TGCMDATA/TGCM.tiegcm1.95.pcntr_eqnx_smed.nc'
 
    See also:
      * :ref:`SOURCE_START <SOURCE_START>`

@@ -83,4 +83,4 @@ Whole Heliosphere Interval
 .. note::
    For more detailed information and access to history file output, and
    preliminary post-processing of these runs, 
-   see :base_url:`Release Documentation <release/_build/html>`
+   see :base_url:`Release Documentation <release/html>`
