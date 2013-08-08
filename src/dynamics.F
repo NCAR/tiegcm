@@ -86,6 +86,7 @@
      |    tn(levd0,lond0,lat,itp), ! 4d input
      |    o2(levd0,lond0,lat,itp), ! 4d input
      |    o1(levd0,lond0,lat,itp), ! 4d input
+     |    he(levd0,lond0,lat,itp), ! 4d input
      |    cp(levd0,lond0,lat),     ! 3d output
      |    kt(levd0,lond0,lat),     ! 3d output
      |    km(levd0,lond0,lat),     ! 3d output
@@ -637,7 +638,7 @@
 ! coefficients from hdif2 (hdif2 was called from advance).
 !
 ! Make boundary longitudes available for inputs to hdif3:
-      call hdif_bndlons(kldt,kldu,kldv,kldo2,kldo1,
+      call hdif_bndlons(kldt,kldu,kldv,kldo2,kldo1,kldhe,
      |    1,nlevp1,lon0,lon1,lat0,lat1)
 !
 ! Make hdt,u,v,o2,o1:
@@ -649,11 +650,13 @@
      |    kldv ,                   ! 3d input from hdif2 for vn
      |    kldo2,                   ! 3d input from hdif2 for o2
      |    kldo1,                   ! 3d input from hdif2 for o1
+     |    kldhe,                   ! 3d input from hdif2 for he
      |    hdt (levd0,lond0,lat),   ! 2d tn output at current lat
      |    hdu (levd0,lond0,lat),   ! 2d un output at current lat
      |    hdv (levd0,lond0,lat),   ! 2d vn output at current lat
      |    hdo2(levd0,lond0,lat),   ! 2d o2 output at current lat
      |    hdo1(levd0,lond0,lat),   ! 2d o1 output at current lat
+     |    hdhe(levd0,lond0,lat),   ! 2d he output at current lat
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after hdif3')")
@@ -767,6 +770,7 @@
      |    tn   (levd0,lond0,lat,itp), ! neutral temperature
      |    o2   (levd0,lond0,lat,itp), ! molecular oxygen (mmr)
      |    o1   (levd0,lond0,lat,itp), ! atomic oxygen (mmr)
+     |    he   (levd0,lond0,lat,itp), ! helium (mmr)                    ! Added by EKS
      |    barm (levd0,lond0,lat,itp), ! mean molecular weight
      |    op   (levd0,lond0,lat,itp), ! O+
      |    no   (levd0,lond0,lat,itp), ! NO
@@ -791,15 +795,21 @@
      |  o2_nm (levd0,lond0,latd0,itp), ! O2 (mmr) at time n-1
      |  o1    (levd0,lond0,latd0,itp), ! O1 (mmr)
      |  o1_nm (levd0,lond0,latd0,itp), ! O1 (mmr) at time n-1
+     |  he    (levd0,lond0,latd0,itp), ! He (mmr)
+     |  he_nm (levd0,lond0,latd0,itp), ! He (mmr) at time n-1
      |  un    (levd0,lond0,latd0,itp), ! zonal velocity
      |  vn    (levd0,lond0,latd0,itp), ! meridional velocity
      |  w     (levd0,lond0,latd0,itp), ! vertical velocity
+     |  z     (levd0,lond0,latd0,itc), ! updated Z from addiag
      |  hdo2  (levd0,lond0,latd0),     ! O2 horizontal diffusion (hdif3)
      |  hdo1  (levd0,lond0,latd0),     ! O  horizontal diffusion (hdif3)
+     |  hdhe  (levd0,lond0,latd0),     ! He horizontal diffusion (hdif3)
      |  o2    (levd0,lond0,latd0,itc), ! output: O2 updated for current step 
      |  o2_nm (levd0,lond0,latd0,itc), ! output: O2 updated for previous step
      |  o1    (levd0,lond0,latd0,itc), ! output: O1 updated for current step
      |  o1_nm (levd0,lond0,latd0,itc), ! output: O1 updated for previous step
+     |  he    (levd0,lond0,latd0,itc), ! output: He updated for current step
+     |  he_nm (levd0,lond0,latd0,itc), ! output: He updated for previous step
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after comp')")
       call timer(time0,time1,'CMPMAJOR',1,0) ! suspend comp major timing

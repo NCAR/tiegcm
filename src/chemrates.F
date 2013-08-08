@@ -80,7 +80,7 @@
      |  tvib
 !
 ! Matrices for O2,O (set by comp_o2o.F, used by comp.F) 
-      real,allocatable :: fs(:,:,:,:,:) ! (i,k,2,0:2,j)
+      real,allocatable :: fs(:,:,:,:,:) ! (i,k,3,0:3,j)                 ! Comments modified by EKS
 !
       contains
 !-----------------------------------------------------------------------
@@ -147,7 +147,7 @@
       if (istat /= 0) write(6,"('>>> alloc_tdep: error allocating',
      |  ' tvib: stat=',i3)") istat
 !
-      allocate(fs(lon0:lon1,nlevp1,2,0:2,lat0:lat1),stat=istat)
+      allocate(fs(lon0:lon1,nlevp1,3,0:3,lat0:lat1),stat=istat)         ! Modified by EKS
       if (istat /= 0) write(6,"('>>> alloc_tdep: error allocating',
      |  ' fs: stat=',i3)") istat
 

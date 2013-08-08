@@ -64,6 +64,7 @@ nchist.F:  $(shell rm -f svn_version.inc) svn_version.inc
 $(EXECNAME): $(OBJS)
 	$(FC) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
 
+CPPFLAGS := $(null)
 ifeq ($(MPI),TRUE)
   CPPFLAGS += -DMPI
   FC := $(MPIF90)
@@ -80,17 +81,21 @@ ifeq ($(DEBUG),TRUE)
 else
   DBGFLAGS := $(null)
 endif
-
 ifeq ($(OS),Linux)
   CPPFLAGS := -DLINUX $(CPPFLAGS)
 endif
-
 ifeq ($(OS),AIX)
-  CPPFLAGS := -WF -DAIX $(CPPFLAGS)
+  CPPFLAGS := -WF -DAIX$(CPPFLAGS)
   CPPFLAGS := $(subst $(space),$(comma),$(CPPFLAGS))
 endif
 
 FFLAGS += $(INC_DIRS) $(OPTIM) $(DBGFLAGS)
+
+.SUFFIXES:
+.SUFFIXES: .o .F .F90
+
+.F90.o:
+	$(FC) -c $(FFLAGS) $(CPPFLAGS) $<
 
 clean:
 	rm -f Depends Srcfiles *.o *.mod $(EXECNAME)

@@ -1,5 +1,5 @@
 !
-      subroutine cpktkm(tn,o2,o1,fcp,fkt,fkm,lev0,lev1,lon0,lon1,lat)
+      subroutine cpktkm(tn,o2,o1,he,fcp,fkt,fkm,lev0,lev1,lon0,lon1,lat)! subroutine call Modified by EKS
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -7,7 +7,8 @@
 !
 ! Define diagnostics CP, KT, and KM.
 !
-      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,gask,t0
+      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,
+     |                      rmassinv_he,gask,t0
       use addfld_module,only: addfld
       use diags_module,only: mkdiag_MU_M
       implicit none
@@ -17,7 +18,8 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: 
      |  tn,  ! neutral temperature (deg K)
      |  o2,  ! molecular oxygen (mmr)
-     |  o1   ! atomic oxygen (mmr)
+     |  o1,  ! atomic oxygen (mmr)
+     |  he   ! helium (mmr) ! Added by EKS
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) :: 
      |  fcp, ! specific heat at constant pressure (ergs/deg/gm)
      |  fkt, ! molecular diffusion (ergs/cm/deg/sec)
@@ -27,7 +29,7 @@
       integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  fmbar,        ! mean mass
-     |  po2,po1,pn2
+     |  po2,po1,pn2,phe ! phe Added by EKS
       integer :: nlons,nlevs
 !
       nlons = lon1-lon0+1
@@ -40,19 +42,27 @@
 !     call addfld('o1_cp',' ',' ',o1(:,lon0:lon1),'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)
 
+! Modified by EKS
+!  Compute po2, po1, phe, and pn2 as the number density mixing ratios.
+!  Add the effect of Helium to the cp,km,kt calculations consistent with
+!  Banks and Kockarts, 1973.
       do i=lon0,lon1
         do k=lev0,lev1
           fmbar(k,i) = 1./(o2(k,i)*rmassinv_o2 + o1(k,i)*rmassinv_o1 +
-     |                 (1.-o2(k,i)-o1(k,i))*rmassinv_n2)
+     |                 he(k,i)*rmassinv_he + 
+     |                 (1.-o2(k,i)-o1(k,i)-he(k,i))*rmassinv_n2)
           po2(k,i) = fmbar(k,i)*o2(k,i)*rmassinv_o2
           po1(k,i) = fmbar(k,i)*o1(k,i)*rmassinv_o1
-          pn2(k,i) = 1.-po2(k,i)-po1(k,i)
+          phe(k,i) = fmbar(k,i)*he(k,i)*rmassinv_he
+          pn2(k,i) = 1.-po2(k,i)-po1(k,i)-phe(k,i)
           fcp(k,i) = gask*.5*(po2(k,i)*7./32.+pn2(k,i)*7./28.+
-     |                        po1(k,i)*5./16.)
-          fkm(k,i) = po2(k,i)*4.03 + pn2(k,i)*3.42 + po1(k,i)*3.9
-          fkt(k,i) = (po2(k,i)+pn2(k,i))*56. + po1(k,i)*75.9
+     |                        po1(k,i)*5./16.+phe(k,i)*5./4.)
+          fkm(k,i) = po2(k,i)*4.03 + pn2(k,i)*3.42 + po1(k,i)*3.9 +
+     |               phe(k,i)*3.84
+          fkt(k,i) = (po2(k,i)+pn2(k,i))*56. + po1(k,i)*75.9 + 
+     |                phe(k,i)*299.
         enddo
-      enddo      
+      enddo
 
 !     call addfld('fcp1',' ',' ',fcp(:,lon0:lon1),'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)

@@ -7,7 +7,7 @@
 #   execdir:  Directory in which to build and execute (will be created if necessary)
 #   input:    Namelist input file (will use default if not provided)
 #   output:   Stdout file from model execution (will be created)
-#   make:     Build file with platform-specific compile parameters (see scripts dir)
+#   make:     Build file with platform-specific compile parameters (in scripts dir)
 #   mpi:      TRUE/FALSE for MPI or non-MPI run
 #   nproc:    Number of processors for 64-bit Linux MPI run
 #   modelres: Model resolution (5.0 or 2.5)
@@ -15,7 +15,7 @@
 #   exec:     If TRUE, execute the model (build only if FALSE)
 #   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
-set modeldir = tiegcm1.94.2
+set modeldir = /home/$user/tiegcm_trunk
 set execdir  = tiegcm-linux
 #set input    = tiegcm.inp
 set output   = tiegcm.out
@@ -26,6 +26,9 @@ set nproc    = 4
 set debug    = FALSE
 set exec     = TRUE
 set utildir  = $modeldir/scripts
+# 
+# TGCMDATA can be set here, or in user's shell init file (e.g., .cshrc):
+#setenv TGCMDATA /hao/aim/[user]/tiegcm/data
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                        Shell Script for TIEGCM Linux job
@@ -47,6 +50,11 @@ if (! -d $modeldir) then
 endif
 set model = $modeldir:t
 
+if ($model == '') then
+  echo "Please remove trailing slash from modeldir $modeldir"
+  exit
+endif
+
 if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 
   exit 1
@@ -63,23 +71,17 @@ if (! -d $execdir) then
   echo "Making exec directory $execdir" 
   mkdir -p $execdir
 endif
-if (! -f $make) set make = $utildir/$make 
-if (! -f $make) then
-  echo ">>> Cannot find make_machine file $make <<<"
-  exit 1
-endif
-set make = `perl $utildir/abspath $make`
-echo Make machine file = $make
+
 if ($modelres != 5.0 && $modelres != 2.5) then
   echo ">>> Unknown model resolution $modelres <<<"
   exit 1
 endif
 #
-# Unconditionally copy make files to execdir:
+# Copy make files to execdir if necessary:
 #
-cp $make $execdir
-cp $utildir/Makefile $execdir
-cp $utildir/mkdepends $execdir
+if (! -f $execdir/$make)     cp $utildir/$make $execdir
+if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
+if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
 #
 # Make default namelist input file if not provided by user:
 #
@@ -95,16 +97,34 @@ else
 endif
 set input  = `perl $utildir/abspath $input`
 set output = `perl $utildir/abspath $output`
+set mklogs = `perl $utildir/abspath $utildir`
+set mklogs = $mklogs/mklogs
 #
 # Report to stdout:
 #
-#set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
- set svnversion = 1.94.2
+set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
 echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnversion)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
+echo "  Model resolution:  $modelres"
+echo "  Debug flag:        $debug"
+#
+# If debug flag has changed from last gmake, clean execdir
+# and reset debug file:
+#
+if (-f $execdir/debug) then
+  set lastdebug = `cat $execdir/debug` 
+  if ($lastdebug != $debug) then
+    echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $debug >! $execdir/debug
+  endif
+else
+  echo $debug >! $execdir/debug
+  echo "Created file debug with debug flag = $debug"
+endif
 #
 # Copy defs header file to execdir, if necessary, according to 
 # requested resolution. This should seamlessly switch between
@@ -166,6 +186,7 @@ if ($exec == "TRUE") then
       echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
     echo "Linux MPI run of $model completed at `date`"
+    perl $mklogs $output
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."
     $model < $input >&! $output || \

@@ -35,10 +35,11 @@ foreach $file (sort keys %src) {
   $srcfile = "$src{$file}/$file"; # full path
   open(SRCFILE,"< $srcfile") || die "Error opening source file $srcfile\n";
   while (<SRCFILE>) {
-    if (/^      module (.*)/) {
+    if (/^\s*(?i)module (.*)/) {
       $modules{$srcfile} .= $1 . ' ';
     }
   }
+# print "modules in srcfile $srcfile:\n  $modules{$srcfile}\n";
 }
 #
 # Build dependencies for each source file:
@@ -47,7 +48,8 @@ foreach $file (sort keys %src) {
   $srcdir  = $src{$file};     # directory
   $srcfile = "$srcdir/$file"; # full path
   $object = $file; $object =~ s/\.[fF]$/\.o/; 
-  $object =~ s/\.F90$/\.o/; # for freeform *.F90 source files
+  $object =~ s/\.f90$/\.o/; # for freeform *.f90 source files
+  $object =~ s/\.F90$/\.o/; # for freeform *.F90 source files that need preprocessor
 
   undef(@module_deps);	# module dependencies for each source file
   undef(@include_deps);	# include dependencies for each source file
@@ -87,6 +89,9 @@ foreach $file (sort keys %src) {
       }
     }
   } # while (<SRCFILE>)
+
+# print "\nmodule_deps for $srcfile:\n";
+# print "  @module_deps\n";
 #
 # Find file dependencies:
 #
@@ -104,6 +109,7 @@ foreach $file (sort keys %src) {
           $filedep = $filename; 
           $filedep =~ s/\.[fF]$/\.o/; 
           $filedep =~ s/\.F90$/\.o/; # for freeform *.F90 files
+          $filedep =~ s/\.f90$/\.o/; # for freeform *.f90 files
           push(@file_deps,$filedep);
         }
       }
@@ -112,6 +118,7 @@ foreach $file (sort keys %src) {
       }
     }
   } # if @module_deps
+# print "file_deps for srcfile $srcfile:\n  @file_deps\n";
 #
 # Add included header files to list of file dependencies:
 #
@@ -208,7 +215,7 @@ sub mksrcfiles {
   %src = ();
   foreach $dir (@paths) {
     $nfiles = 0;
-    @filenames = (glob("$dir/*.[Fc]"), glob("$dir/*.F90"));
+    @filenames = (glob("$dir/*.[Ffc]"), glob("$dir/*.F90"), glob("$dir/*.f90"));
     foreach $filename (@filenames) {
       $file = basename($filename);
       if ($file =~ /^,/) {

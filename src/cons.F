@@ -27,6 +27,7 @@
      |  boltz = 1.38E-16,    ! boltzman's constant                C(84)
      |  p0   = 5.0e-4,       ! standard pressure                  C(81)
      |  gask = 8.314e7,      ! gas constant                       C(57)
+     |  grav_par = 3.986004415e20, ! standard gravitational parameter (cm^3/sec^2)
 !
 ! dipmin should be same as sin10 (see magfield.F):
 !
@@ -63,7 +64,8 @@
      |  rmass(3) = (/32.,16.,28./), ! o2,o,n2
      |  rmass_o2 = 32., rmass_o1  = 16., rmass_n2  = 28., 
      |  rmass_o3 = 48., rmass_n4s = 14., rmass_n2d = 14., 
-     |  rmass_no = 30., rmass_op  = 16., rmass_co2 = 44.
+     |  rmass_no = 30., rmass_op  = 16., rmass_co2 = 44.,
+     |  rmass_he =  4., rmass_ar  = 40. ! Added by EKS
       real,parameter ::
      |  rmassinv_o2  = 1./rmass_o2,
      |  rmassinv_o1  = 1./rmass_o1,
@@ -72,20 +74,29 @@
      |  rmassinv_n4s = 1./rmass_n4s,
      |  rmassinv_n2d = 1./rmass_n2d,
      |  rmassinv_no  = 1./rmass_no,
-     |  rmassinv_op  = 1./rmass_op
+     |  rmassinv_op  = 1./rmass_op,
+     |  rmassinv_he  = 1./rmass_he, ! Added by EKS
+     |  rmassinv_ar  = 1./rmass_ar  ! Added by EKS
 !
 ! Model derived constants (see sub init_cons in this module):
 !
       real ::
      |  pi,             ! set with 4*atan(1)    C(110)
+     |  sqrtpi,         ! sqrt(pi)
      |  rtd,            ! radians-to-degrees (180./pi)
      |  dtr,            ! degrees-to-radians (pi/180.)
      |  dphi,           ! delta lat (pi/nlat)   C(2)
      |  dphi_2div3,     ! 2./(3.*dphi)          C(12)
      |  dphi_1div12,    ! 1./(12.*dphi)         C(13)
+     |  dphi2_5div2,    ! 5./(2.*dphi**2)
+     |  dphi2_4div3,    ! 4./(3.*dphi**2)
+     |  dphi2_1div12,   ! 1./(12.*dphi**2)
      |  dlamda,         ! delta lon (2pi/nlon)  C(1)
      |  dlamda_2div3,   ! 2./(3.*dlamda)        C(10)
      |  dlamda_1div12,  ! 1./(12.*dlamda)       C(11)
+     |  dlamda2_5div2,  ! 5./(2.*dlamda**2)
+     |  dlamda2_4div3,  ! 4./(3.*dlamda**2)
+     |  dlamda2_1div12, ! 1./(12.*dlamda**2)
      |  dt,             ! time step (secs)      C(4)
      |  dtx2,           ! 2*dt                  C(6)
      |  dtx2inv,        ! 1./(2*dt)             C(7)
@@ -98,6 +109,7 @@
      |  t0(nlev+1),     ! set by sub lowbound (bndry_mod.F)
      |  racs(nlat),     ! 1./(re*cs(lat))
      |  cs(-1:nlat+2),  ! cos(phi)
+     |  cs2_inv(nlat),  ! 1/cos(phi)**2
      |  sn(nlat),       ! sin(phi)
      |  tn(nlat),       ! tan(phi)
      |  cor(nlat),
@@ -270,14 +282,21 @@
 ! end calculation of eddy diffusivity
 !
       pi = 4.*atan(1.)                ! C(110)
+      sqrtpi = sqrt(pi)               ! sqrt(pi)
       rtd = 180./pi                   ! radians to degrees
       dtr = pi/180.                   ! degrees to radians
       dphi = pi/float(nlat)           ! C(2)
       dphi_2div3 = 2./(3.*dphi)       ! C(12)
       dphi_1div12 = 1./(12.*dphi)     ! C(13)
+      dphi2_5div2 = 5./(2.*dphi**2)
+      dphi2_4div3 = 4./(3.*dphi**2)
+      dphi2_1div12 = 1./(12.*dphi**2)
       dlamda = 2.*pi/float(nlon)      ! C(1)
       dlamda_2div3 = 2./(3.*dlamda)   ! C(10)
       dlamda_1div12 = 1./(12.*dlamda) ! C(11)
+      dlamda2_5div2 = 5./(2.*dlamda**2)   ! C(10)
+      dlamda2_4div3 = 4./(3.*dlamda**2)   ! C(10)
+      dlamda2_1div12 = 1./(12.*dlamda**2) ! C(11)
       zbound = 136.291/sqrt(2.)*1.e5  ! background lower boundary of Z (cm)
 !
 ! expz(kmax) is exp(-zp) at midpoints:
@@ -305,6 +324,7 @@
         tn(j)=tan(phi)
         cor(j)=2.*omega*sn(j)
         racs(j) = 1./(re*cs(j))
+        cs2_inv(j) = 1./cs(j)**2
       enddo
 !
 ! cs at 0, -1, nlat+1, and nlat+2 replace the old cssp and csnp:

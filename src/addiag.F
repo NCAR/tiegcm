@@ -1,4 +1,4 @@
-      subroutine addiag(tn,o2,o1,vn,vc,barm,xnmbar,xnmbari,xnmbarm,z,
+      subroutine addiag(tn,o2,o1,he,vn,vc,barm,xnmbar,xnmbari,xnmbarm,z,
      |  zg,lon0,lon1,lev0,lev1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -7,8 +7,8 @@
 !
 ! Calculate needed terms vc, barm, xnmbar[i,m], and Z:
 !
-      use cons_module,only: cs,rmassinv,dz,dzgrav,freq_semidi,dt,p0,
-     |  boltz,expz,expzmid,expzmid_inv,zbound
+      use cons_module,only: cs,rmassinv,rmassinv_he,dz,dzgrav,          ! Modified by EKS
+     |  freq_semidi,dt,p0,boltz,expz,expzmid,expzmid_inv,zbound
       use init_module,only: iter,igetgswm
       use fields_module,only: tlbc
       use addfld_module,only: addfld
@@ -18,10 +18,11 @@
 !
 ! Input args:
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat0,lat1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in):: 
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
      |  tn, ! neutral temperature (deg K)
      |  o2, ! molecular oxygen (mmr)
      |  o1, ! atomic oxygen (mmr)
+     |  he, ! helium (mmr)                                              ! Added by EKS
      |  vn  ! meridional wind velocity (cm/s)
 !
 ! Output args:
@@ -84,9 +85,10 @@
 !
         do i=lon0,lon1
           do k=lev0,lev1
-            barm(k,i,j) = 1./
+            barm(k,i,j) = 1./                                           ! Modified by EKS
      |        (o2(k,i,j)*rmassinv(1)+o1(k,i,j)*rmassinv(2)+
-     |        (1.-o2(k,i,j)-o1(k,i,j))*rmassinv(3))
+     |         he(k,i,j)*rmassinv_he+
+     |        (1.-o2(k,i,j)-o1(k,i,j)-he(k,i,j))*rmassinv(3))
             xnmbarm(k,i,j)=p0*expz(k)*barm(k,i,j)/
      |        (boltz*tn(k,i,j))
           enddo
@@ -195,7 +197,7 @@
       enddo ! j=lat0,lat1
 !
 ! Calculate diagnostic geopotential zg, with varying gravity:
-      call calczg(tn,o2,o1,z,zg,lon0,lon1,lev0,lev1,lat0,lat1)
+      call calczg(tn,o2,o1,he,z,zg,lon0,lon1,lev0,lev1,lat0,lat1)       ! Modified by EKS
 !
 ! Calculate scale height diagnostic (using Z here, not ZG):
       call mkdiag_SCHT('SCHT',z(:,lon0:lon1,lat0:lat1),
@@ -207,7 +209,7 @@
 #endif
       end subroutine addiag
 !-----------------------------------------------------------------------
-      subroutine calczg(tn,o2,o1,z,zg,lon0,lon1,lev0,lev1,lat0,lat1)
+      subroutine calczg(tn,o2,o1,he,z,zg,lon0,lon1,lev0,lev1,lat0,lat1)
 !
 ! Given geopotential z (calculated with the model constant gravity),
 !   calculate geopotential zg with varying gravity. This is taken from
@@ -221,10 +223,11 @@
 !
 ! Args:
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat0,lat1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in):: 
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
      |  tn, ! neutral temperature (deg K)
      |  o2, ! molecular oxygen (mmr)
      |  o1, ! atomic oxygen (mmr)
+     |  he, ! helium (mmr)                                              ! Added by EKS
      |  z   ! geopotential calculated with constant gravity (from addiag)
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(out) :: 
@@ -246,8 +249,9 @@
 ! Longitude scan:
         do i=lon0,lon1
           g(1)=g0*(r0/(r0+0.5*(z(1,i,j)+z(2,i,j))))**2
-          n2(:) = (1.-o2(:,i,j)-o1(:,i,j))
-          xmas(:) = 1./(o1(:,i,j)/16.+o2(:,i,j)/32.+n2(:)/28.)/avo
+          n2(:) = (1.-o2(:,i,j)-o1(:,i,j)-he(:,i,j))                    ! Modified by EKS
+          xmas(:) = 1./(o1(:,i,j)/16.+o2(:,i,j)/32.+he(:,i,j)/4.+       ! Modified by EKS
+     |                  n2(:)/28.)/avo
 !         write(6,"('calczg: j=',i3,' i=',i3,' xmas=',/,(6e12.4))")
 !    |      j,i,xmas
 !

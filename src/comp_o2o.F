@@ -1,5 +1,5 @@
 !
-      subroutine comp_o2o(tn,o2,o1,barm,op,no,n4s,n2d,o2p,ne,
+      subroutine comp_o2o(tn,o2,o1,he,barm,op,no,n4s,n2d,o2p,ne,        ! Modified by EKS
      |  n2p,nplus,nop,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -8,8 +8,9 @@
 !
 ! Calculates fs array which gives sources and sinks for comp (o2,o). 
 !
-      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,p0,
-     |  expz,boltz,rmass_no,rmass_n4s,rmass_n2d,rmass_o2,rmass_o1
+      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,        ! Modified by EKS
+     |  rmassinv_he,p0,expz,boltz,rmass_no,rmass_n4s,rmass_n2d,rmass_o2,
+     |  rmass_o1
       use qrj_module,only: rj,qo2p,qop
       use chemrates_module,only: rk4,rk5,rk6,rk7,rk8,rk9,rk10,beta2,
      |  beta6,ra1,ra2,beta3,beta8,rk1,beta1,rkm12,rk3,fs
@@ -24,6 +25,7 @@
      |  tn,    ! neutral temperature (deg K) 
      |  o2,    ! O2 (mmr)
      |  o1,    ! O1 (mmr)
+     |  he,    ! He (mmr)                                               ! Modified by EKS
      |  barm,  ! mean molecular weight
      |  op,    ! O+
      |  no,    ! nitric oxide
@@ -59,8 +61,9 @@
           qopi (k,i) = 0.5*(qop(k,i,lat)+qop(k+1,i,lat))
 !
 ! n*mbar (k+1/2):
-          xnmbar(k,i) = expz(k)*p0/(boltz*tn(k,i)*(o2(k,i)*rmassinv_o2+
-     |      o1(k,i)*rmassinv_o1+(1.-o2(k,i)-o1(k,i))*rmassinv_n2))
+          xnmbar(k,i) = expz(k)*p0/(boltz*tn(k,i)*(o2(k,i)*rmassinv_o2+ ! Modified by EKS
+     |      o1(k,i)*rmassinv_o1+he(k,i)*rmassinv_he+
+     |      (1.-o2(k,i)-o1(k,i)-he(k,i))*rmassinv_n2))
 !
 ! OX production:
 ! s1
@@ -107,6 +110,13 @@
      |      xnmbar(k,i)
           fs(i,k,1,0,lat) = (po23(k,i)-lo22(k,i))*rmass_o2/xnmbar(k,i)
           fs(i,k,2,0,lat) = (pox1(k,i)-lox3(k,i))*rmass_o1/xnmbar(k,i)
+! Helium prod/loss set to zero for now                                  ! Added by EKS
+          fs(i,k,3,0,lat) = 0.
+          fs(i,k,1,3,lat) = 0.
+          fs(i,k,2,3,lat) = 0.
+          fs(i,k,3,1,lat) = 0.
+          fs(i,k,3,2,lat) = 0.
+          fs(i,k,3,3,lat) = 0.
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 

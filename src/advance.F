@@ -354,6 +354,7 @@
      |  tn	 (levd0,lond0,latd0,itp),   ! in
      |  o2	 (levd0,lond0,latd0,itp),   ! in
      |  o1	 (levd0,lond0,latd0,itp),   ! in
+     |  he	 (levd0,lond0,latd0,itp),   ! in
      |  vn	 (levd0,lond0,latd0,itp),   ! in
      |  vc	 (levd0,lond0,latd0,itp),   ! out
      |  barm   (levd0,lond0,latd0,itp),     ! out
@@ -415,11 +416,13 @@
      |  vn_nm(levd0,lond0,latd0,itp),  ! 4d input
      |  o2_nm(levd0,lond0,latd0,itp),  ! 4d input
      |  o1_nm(levd0,lond0,latd0,itp),  ! 4d input
+     |  he_nm(levd0,lond0,latd0,itp),  ! 4d input
      |  kldt ,      ! 3d output
      |  kldu ,      ! 3d output
      |  kldv ,      ! 3d output
      |  kldo2,      ! 3d output
      |  kldo1,      ! 3d output
+     |  kldhe,      ! 3d output
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('advance after hdif2')")
 !
