@@ -919,6 +919,167 @@
       endif ! root or slave
       end subroutine mp_gather2root_lbc
 !-----------------------------------------------------------------------
+      subroutine mp_gather_f2d(f2d_sub,f2d_glb,lb1,ub1,lb2,ub2,
+     |  ntasks,nglb1,nglb2,nf)
+!
+! Gather 2d array to root task. 
+! On input, f2d_sub is 2d array on task subdomains
+! On output, f3d_glb is 2d global array, defined only on the root task
+!
+! Called by sub laplacian prior to fft for HE upper boundary:
+!     call mp_gather_f2d(lap_arg,fx,lon0,lon1,lat0,lat1,
+!    |  nlonp4,nlat)
+!
+! Args:
+      integer,intent(in) ::
+     |  ntasks,        ! size of comm_world (should be = ntask)
+     |  nglb1,nglb2,   ! size of global 1st and 2nd dimensions
+     |  nf             ! number of arrays/fields
+      integer,dimension(0:ntasks-1),intent(in) ::
+     |  lb1,ub1,       ! lower,upper bound of 1st dimension of subdomains
+     |  lb2,ub2        ! lower,upper bound of 2nd dimension of subdomains
+! Input data at current subdomain:
+      real,intent(in)  :: 
+     |  f2d_sub(lb1(mytid):ub1(mytid),lb2(mytid):ub2(mytid),nf) 
+      real,intent(out) :: f2d_glb(nglb1,nglb2,nf)     ! global output at root task
+!
+! Local:
+      integer :: len,root,n,i,j,id,mxsub1,mxsub2,ier
+      real,allocatable,save :: sndbuf(:,:,:),rcvbuf(:,:,:,:)
+
+      root = 0               ! gather to root task
+      f2d_glb = 0.           ! init output
+!
+! Find max dimensions of all subdomains (might be mxlon,mxlat):
+! (this only needs to be done once, but do it always for now)
+!
+      mxsub1 = 0. ; mxsub2 = 0.
+      do id=0,ntasks-1
+        len = ub1(id)-lb1(id)+1
+        if (len > mxsub1) mxsub1 = len
+        len = ub2(id)-lb2(id)+1
+        if (len > mxsub2) mxsub2 = len
+      enddo
+
+      if (.not.allocated(sndbuf)) then
+        allocate(sndbuf(mxsub1,mxsub2,nf))
+        sndbuf = 0.
+      endif
+      if (.not.allocated(rcvbuf)) then
+        allocate(rcvbuf(mxsub1,mxsub2,nf,0:ntasks-1))
+        rcvbuf = 0.
+      endif
+!
+! Load send buffer with current subdomain:
+      do n=1,nf
+        do j=lb2(mytid),ub2(mytid)
+          do i=lb1(mytid),ub1(mytid)
+            sndbuf(i-lb1(mytid)+1,j-lb2(mytid)+1,n) = f2d_sub(i,j,n)
+          enddo
+        enddo
+      enddo
+!
+! Do the gather:      
+      len = mxsub1*mxsub2*nf ! max size of 2d subdomain
+      call mpi_gather(sndbuf,len,MPI_REAL8,rcvbuf,len,MPI_REAL8,root,
+     |  MPI_COMM_WORLD,ier)
+!
+! Define global output on the root task from receive buffer of each task:
+      if (mytid==root) then
+        do id=0,ntasks-1
+          do n=1,nf
+            do j=lb2(id),ub2(id)
+              do i=lb1(id),ub1(id)
+                f2d_glb(i,j,n) = rcvbuf(i-lb1(id)+1,j-lb2(id)+1,n,id)
+              enddo
+            enddo 
+          enddo
+        enddo
+      endif      
+      end subroutine mp_gather_f2d
+!-----------------------------------------------------------------------
+      subroutine mp_scatter_f2d(f2d_glb,f2d_sub,lb1,ub1,lb2,ub2,
+     |  ntasks,nglb1,nglb2,nf)
+!
+! Scatter global arrays on the root task to all task subdomains.
+! This is essentially the reverse of mp_gather_f2d.
+!
+! Called from laplacian after fft for HE upper boundary:
+!     call mp_scatter_f2d(fx,lap_out,tasks(:)%lon0,tasks(:)%lon1,
+!    |  tasks(:)%lat0,tasks(:)%lat1,ntask,nlonp4,nlat,1)
+!
+! Args:
+      integer,intent(in) ::
+     |  ntasks,        ! size of comm_world (should be = ntask)
+     |  nglb1,nglb2,   ! size of global 1st and 2nd dimensions
+     |  nf             ! number of arrays/fields
+      integer,dimension(0:ntasks-1),intent(in) ::
+     |  lb1,ub1,       ! lower,upper bound of 1st dimension of subdomains
+     |  lb2,ub2        ! lower,upper bound of 2nd dimension of subdomains
+!
+! f2d_glb is global input at root task
+! f2d_sub is subdomain output on all tasks
+!
+      real,intent(in) :: f2d_glb(nglb1,nglb2,nf) 
+      real,intent(out)  :: 
+     |  f2d_sub(lb1(mytid):ub1(mytid),lb2(mytid):ub2(mytid),nf) 
+!
+! Local:
+      integer :: len,root,n,i,j,id,mxsub1,mxsub2,ier
+      real,allocatable,save :: sndbuf(:,:,:,:),rcvbuf(:,:,:)
+
+      root = 0     ! scatter from root task
+      f2d_sub = 0. ! init output
+!
+! Find max dimensions of all subdomains (might be mxlon,mxlat):
+! (this only needs to be done once, but do it always for now)
+!
+      mxsub1 = 0. ; mxsub2 = 0.
+      do id=0,ntasks-1
+        len = ub1(id)-lb1(id)+1
+        if (len > mxsub1) mxsub1 = len
+        len = ub2(id)-lb2(id)+1
+        if (len > mxsub2) mxsub2 = len
+      enddo
+
+      if (.not.allocated(sndbuf)) then
+        allocate(sndbuf(mxsub1,mxsub2,nf,0:ntasks-1))
+        sndbuf = 0.
+      endif
+      if (.not.allocated(rcvbuf)) then
+        allocate(rcvbuf(mxsub1,mxsub2,nf))
+        rcvbuf = 0.
+      endif
+!
+! Load global send buffer from root task:
+      if (mytid==root) then
+        do id=0,ntasks-1
+          do n=1,nf
+            do j=lb2(id),ub2(id)
+              do i=lb1(id),ub1(id)
+                sndbuf(i-lb1(id)+1,j-lb2(id)+1,n,id) = f2d_glb(i,j,n)
+              enddo
+            enddo
+          enddo
+        enddo
+      endif
+!
+! Do the scatter:
+      len = mxsub1*mxsub2*nf ! max size of 2d subdomain
+      call mpi_scatter(sndbuf,len,MPI_REAL8,rcvbuf,len,MPI_REAL8,root,
+     |  MPI_COMM_WORLD,ier)
+!
+! Define output subdomains:
+      do n=1,nf
+        do j=lb2(mytid),ub2(mytid)
+          do i=lb1(mytid),ub1(mytid)
+            f2d_sub(i,j,n) = rcvbuf(i-lb1(mytid)+1,j-lb2(mytid)+1,n)     
+          enddo
+        enddo
+      enddo
+
+      end subroutine mp_scatter_f2d
+!-----------------------------------------------------------------------
       subroutine mp_bndlats(f,mxf,ixt)
 !
 ! Exchange boundary latitude data between tasks. 
