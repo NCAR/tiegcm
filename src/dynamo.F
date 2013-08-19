@@ -43,6 +43,7 @@
      |  nmlevp1,! number of geomagnetic midpoint levels
      |  nimlevp1,! number of geomagnetic interface levels
      |  spval
+      use diags_module,only: mkdiag_ED12,mkdiag_PHIM2D
 !    
 ! J(mag.pressure, gravity) to dynamo RHS
       use magpres_g_module,only: j_pg,tpg1,tpg2,je1oD_geo,je2oD_geo
@@ -172,7 +173,7 @@
 ! Parameters to be passed to LFM for CISM. Note the dimension of these variables is
 ! defined to match mag2geo specifications, see detial in cons.F and Apex.F.
 !
-      real,dimension(nlonp1,0:nlatp1) ::
+      real,dimension(nlonp4,0:nlatp1) ::
      |  gzigm2,   ! sigma2    ! CISM height integrated Hall conductivity geographic
      |  gzigm1,   ! sigma1    ! CISM height integrated Pedersen conductivity geographic
      |  gnsrhs    ! nsrsh     ! CISM height integrated neutral wind currents geographic
@@ -410,9 +411,6 @@
       use fields_module,only: dynpot,phim3d
       use input_module,only: potential_model
       use init_module,only: istep	! for sigma_R high latitudes
-#if defined(INTERCOMM) || defined(CISMAH)
-!      use cism_coupling_module,only: cism_pot2mag
-#endif
 !
 ! Local:
       integer :: i,j,jj,jjj,j0,jntl,k,n,ncc,nmaglat,nmaglon,ier
@@ -444,12 +442,12 @@
 ! Transform height-integrated parameters from APEX coordinates to geographic
 ! coordinates to be passed to the M-I coupled in the CISM
 !
-       call mag2geo(zigm1(1,1),gzigm1(1,0),im(1,0),jm(1,0),dim(1,0),
-     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
-       call mag2geo(zigm2(1,1),gzigm2(1,0),im(1,0),jm(1,0),dim(1,0),
-     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
-       call mag2geo(nsrhs(1,1),gnsrhs(1,0),im(1,0),jm(1,0),dim(1,0),
-     |  djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+      call mag2geo(zigm1(1,1),gzigm1(3:nlon+3,0:nlatp1),im(1,0),jm(1,0),
+     |     dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+      call mag2geo(zigm2(1,1),gzigm2(3:nlon+3,0:nlatp1),im(1,0),jm(1,0),
+     |     dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+      call mag2geo(nsrhs(1,1),gnsrhs(3:nlon+3,0:nlatp1),im(1,0),jm(1,0),
+     |     dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
 #endif
 !
 ! Calculate coefficient of PDE for each hemisphere if K_(q,lam) is 
@@ -800,9 +798,7 @@ c      enddo
 !     |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 !      endif
 !
-! Save correct single-level potential to secondary histories (mag grid):
-      call addfld('PHIM2D','2D ELECTRIC POTENTIAL','VOLTS',phim,
-     |    'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+      call mkdiag_PHIM2D('PHIM2D',phim,1,nmlonp1,1,nmlat)
 !
 !  am_02/02: calculate current for both hemisphere:
 !                      R**2 * J_mr / dt0dts /rcos0s
@@ -912,7 +908,7 @@ c      enddo
      |  ig,       ! (nmlonp1,nmlat) geog lon at each geomag grid point
      |  jg,       ! (nmlonp1,nmlat) geog lat at each geomag grid point
      |  wt        ! (4,nmlonp1,nmlat) interpolation weights
-      use apex_module,only:           ! (see sub apxparm, apex.F)
+      use getapex_module,only:           ! (see sub apxparm, apex.F)
      |  be3arr,   ! (nlonp1,nlat), 
      |  dvec,     ! (nlonp1,nlat,3,2)
      |  dddarr    ! (nlonp1,nlat)
@@ -2865,21 +2861,20 @@ c      enddo
         enddo ! i = 1,nmlon
       enddo ! k = -2,nlevp1
 !          
-      do k=2,nlevp1-1
-        do j=1,nmlat
-          do i=1,nmlon
-             emz3d(i,j,k) = -(phim3d(i,j,k+1)-phim3d(i,j,k-1))
-          enddo ! i=1,nmlon
-        enddo ! j=2,nmlat-1
-      enddo ! k=1,nlevp1  
-!
       do k=-1,nlev
         do j=1,nmlat
           do i=1,nmlon
              emz3d(i,j,k) = -(phim3d(i,j,k+1)-phim3d(i,j,k-1))
           enddo ! i=1,nmlon
         enddo ! j=2,nmlat-1
-      enddo ! k=1,nlevp1
+      enddo ! k=2,nlevp1-1
+!
+      do j=1,nmlat
+        do i=1,nmlon
+          emz3d(i,j,nlevp1) = emz3d(i,j,nlev)
+          emz3d(i,j,-2) = emz3d(i,j,-1)
+        enddo
+      enddo
 !
 ! Periodic point:
       do k=-2,nlevp1
@@ -2896,31 +2891,40 @@ c      enddo
 ! Save 3d electric potential on magnetic grid to secondary history:
 ! From fields.F:
 ! Electric potential on geographic and magnetic grids:
+!    |  nmlev = nlev+3,     ! number of vertical levels of mag fields (-2,nlev)
+!    |  nimlev  = nmlev,    ! number of interface levels of mag fields (-2,nlev)
+!    |  nmlevp1 = nmlev+1,  ! 
+!    |  nimlevp1= nimlev+1  ! 
 !     real ::
-!    |  dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
-!    |  phim3d(nmlonp1,nmlat,nlevp1),    ! 3d electric potential magnetic
-!    |  emphi3d(nmlonp1,nmlat,nlevp1),   ! 3d eastward electric field magnetic
-!    |  emlam3d(nmlonp1,nmlat,nlevp1),   ! 3d equatorw. electric field magnetic
-!    |  emz3d(nmlonp1,nmlat,nlevp1)      ! 3d upward (?) electric field magnetic
+!    |  dynpot(nlonp1,0:nlatp1,nlevp1),   ! 3d electric potential geographic
+!    |  phim3d(nmlonp1,nmlat,-2:nlevp1),  ! 3d electric potential magnetic
+!    |  emphi3d(nmlonp1,nmlat,-2:nlevp1), ! 3d eastward electric field magnetic
+!    |  emlam3d(nmlonp1,nmlat,-2:nlevp1), ! 3d equatorw. electric field magnetic
+!    |  emz3d(nmlonp1,nmlat,-2:nlevp1)    ! 3d upward (?) electric field magnetic
 ! Local:
 ! real,dimension(nmlonp1,nmlat,-2:nlevp1) :: zpotenm3d
 !
+!     do j=1,nmlat
+!       call addfld('EMPHI3D','R E_mphi','[V/m*m]',
+!    |	emphi3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('EMLAM3D','R E_mlam','[V/m*m]',
+!    |	emlam3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('EMZ3D','E_mZ','[V/m*m]',
+!    |	emz3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('ED1M3D','ed_1 (magn.)','[V/m]',
+!    |	ed13d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('ED2M3D'  ,'ed_2 (magn.)','[V/m]',
+!    |	ed23d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('PHIM3D','El.Poten','V',
+!    |	 phim3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!      call addfld('ZPOTEN3D','ZPOTEN3D','[cm]',
+!    |	 zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!     enddo ! j=1,nmlat
+
       do j=1,nmlat
-        call addfld('EMPHI3D','R E_mphi','[V/m*m]',
-     |	emphi3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-       call addfld('EMLAM3D','R E_mlam','[V/m*m]',
-     |	emlam3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-       call addfld('EMZ3D','E_mZ','[V/m*m]',
-     |	emz3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-       call addfld('ED1M3D','ed_1 (magn.)','[V/m]',
-     |	ed13d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-       call addfld('ED2M3D'  ,'ed_2 (magn.)','[V/m]',
-     |	ed23d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-       call addfld('PHIM3D','El.Poten','V',
-     |	 phim3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-       call addfld('ZPOTEN3D','ZPOTEN3D','[cm]',
-     |	 zpotenm3d(:,j,:),'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-      enddo ! j=1,nmlat
+        call mkdiag_ED12('ED1',ed13d(:,j,:),1,nmlonp1,1,nmlevp1,j)
+        call mkdiag_ED12('ED2',ed23d(:,j,:),1,nmlonp1,1,nmlevp1,j)
+      enddo
 !      
       end subroutine threed
 !-----------------------------------------------------------------------

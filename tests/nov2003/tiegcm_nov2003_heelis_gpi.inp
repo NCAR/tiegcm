@@ -1,41 +1,41 @@
 &tgcm_input
 ;
 ; November, 2003 storm case: heelis_gpi
-; Days 305-310
+; Days 323-328
 ;
- LABEL = 'tiegcm test nov2003 heelis gpi'
+ LABEL = 'tiegcm nov2003 heelis gpi'
  START_YEAR = 2003
- START_DAY  = 305
+ START_DAY  = 323
  CALENDAR_ADVANCE = 1
 ;
 ; SOURCE:       Start-up history file (for initial runs only)
 ; SOURCE_START: Time of history on start-up file (initial runs only)
 ;
 ; Start from 30-day equilibration run:
- SOURCE = '$TGCMDATA/TGCM.tiegcm1.94.p_nov2003_heelis_gpi_001.nc'
- SOURCE_START = 305,0,0
+ SOURCE = '$TGCMDATA/tiegcm1.95/TGCM.tiegcm1.95.p_nov2003_heelis_gpi.nc'
+ SOURCE_START = 323,0,0
 ;
 ; START: Start time (day,hour,minute)
 ; STOP:  Stop time (day,hour,minute)
 ; STEP:  Timestep (seconds)
 ;
- START = 305,0,0
- STOP  = 310,0,0
+ START = 323,0,0
+ STOP  = 328,0,0
  STEP  = 120
 ;
 ; Primary History parameters:
 ;
  HIST = 1,0,0
- OUTPUT = 'TGCM.tiegcm_test.p_nov2003_heelis_gpi_001.nc'
+ OUTPUT = 'TGCM.tiegcm1.95.p_nov2003_heelis_gpi_001.nc'
  MXHIST_PRIM = 10
 ;
 ; Secondary History parameters:
 ;
- SECSTART = 305,1,0
- SECSTOP  = 310,0,0
+ SECSTART = 323,1,0
+ SECSTOP  = 328,0,0
  SECHIST  =   0,1,0
- SECOUT   = 'TGCM.tiegcm_test.s_nov2003_heelis_gpi_001.nc','to',
-            'TGCM.tiegcm_test.s_nov2003_heelis_gpi_005.nc','by','1'
+ SECOUT   = 'TGCM.tiegcm1.95.s_nov2003_heelis_gpi_001.nc','to',
+            'TGCM.tiegcm1.95.s_nov2003_heelis_gpi_005.nc','by','1'
  MXHIST_SECH = 24
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB',
@@ -45,7 +45,7 @@
 ; when executed, will copy history disk files to the NCAR HPSS in the 
 ; directory HPSS_PATH (must have an HPSS account at NCAR CISL)
 ;
- HPSS_PATH = '/home/tgcm/tiegcm_test/nov2003'
+;HPSS_PATH = '/home/tgcm/tiegcm1.95/nov2003'
 ;
  TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2 = 0.,0.

@@ -14,8 +14,9 @@
       use efield_module,only: ex,ey,ez ! (nlevp1,lon0-2:lon1+2,lat0:lat1)
 
       use magfield_module,only: rjac,xb,yb,zb,bmod
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_UI,mkdiag_VI,mkdiag_WI
+      use diags_module,only: mkdiag_EXYZ
 #ifdef MPI
       use mpi_module,only: mp_periodic_f3d
 #else
@@ -115,6 +116,9 @@
 !        call addfld('EEZ','E_z','V/cm',eez,
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
+        call mkdiag_EXYZ('EX',eex,lev0,lev1,lon0,lon1,lat)
+        call mkdiag_EXYZ('EY',eey,lev0,lev1,lon0,lon1,lat)
+        call mkdiag_EXYZ('EZ',eez,lev0,lev1,lon0,lon1,lat)
 !
 ! ion velocities = (e x b/b**2) (x 1.e6 for m/sec)
 ! ui = zonal, vi = meridional, wi = vertical
@@ -135,6 +139,15 @@
      |        1.e6/bmod(i-2,lat)**2
             wi(k,i,lat) =  (eex(k,i)*xb(i-2,lat)-eey(k,i)*yb(i-2,lat))*
      |        1.e6/bmod(i-2,lat)**2
+
+#if defined(INTERCOMM) || defined(CISMAH)
+            ! CMIT modification
+            if (vi(k,i,lat) > 2000.0) vi(k,i,lat) = 2000.0
+            if (ui(k,i,lat) > 2000.0) ui(k,i,lat) = 2000.0
+            if (vi(k,i,lat) < -2000.0) vi(k,i,lat) = -2000.0
+            if (ui(k,i,lat) < -2000.0) ui(k,i,lat) = -2000.0
+#endif
+
           enddo ! i=lon0,lon1
         enddo ! k=lev0,lev1
 !

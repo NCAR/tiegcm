@@ -884,7 +884,7 @@
          sflux(l)=sfmin(l)*(1+afac(l)*(pind-80.))
          ! set solar flux  to be 80% of the value when pind=80
          ! if it becomes negative
-         if (sflux(l) .le. 0.8*sfmin(l)) sflux(l) = 0.8*sfmin(l)
+         if (sflux(l) .le. 0.1*sfmin(l)) sflux(l) = 0.1*sfmin(l)
       enddo
 !
       end subroutine ssflux

@@ -31,23 +31,25 @@
 !   (i.e., slaves have to wait for master to call rmcomments)
 !
 #ifdef MPI
-      if (mytid==0) then      
-        call rmcomments(5,luin,';',1)
-        call mpi_barrier(MPI_COMM_WORLD,ier)
-      else
-        call mpi_barrier(MPI_COMM_WORLD,ier)
+      if (mytid==0) then
+         ! task 0 should remove namelist comments and store results
+         ! to fort.7 (luin=7).
+#if defined(INTERCOMM) || defined(CISMAH)
+! CMIT with parallel TIEGCM cannot read from stdin.  Read from
+! hard-coded  file "tiegcm_namelist.inp".  CMIT script generator
+! will create/soft-link namelists to the proper location.
+         call rmnamelistcomments('tiegcm_namelist.inp',luin,';',1)
+#else
+! stand-alone TIEGCM will read namelist from stdin (unit 5):
+         call rmcomments(5,luin,';',1)
+#endif
       endif
+      call mpi_barrier(MPI_COMM_WORLD,ier)
 #else
       call rmcomments(5,luin,';',1)
 #endif
       write(6,"(/,'Reading input data...',/)")
       read(luin, nml=tgcm_input,err=900)
-!     read(luin, nml=tgcm_input,iostat=ios,err=900)
-!     if (ios /= 0) then
-!       write(6,"(/,'>>> Error from namelist read: ios=',i5,
-!    |    ' luin=',i3)") ios,luin
-!       call shutdown('inp_read')
-!     endif
       close(luin)
       write(6,"('Completed successful read of namelist inputs.',/)")
       return

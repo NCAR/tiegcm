@@ -181,6 +181,13 @@
       real,allocatable :: foutput(:,:,:,:) ! (nlevp1,nlonp4,nlat,nf4d_hist)
       real,allocatable :: fzg(:,:,:)       ! (nlevp1,nlonp4,nlat)
 !
+! Magnetic field diagnostics (see getapex.F, apex.F90, diags.F)
+!     real,dimension(nlonp4,nlat) ::
+!    |  bx,      ! Magnetic field eastward component (Gauss)
+!    |  by,      ! Magnetic field northward component (Gauss)
+!    |  bz,      ! Magnetic field upward component (Gauss)
+!    |  bmag     ! Magnitude of magnetic field (Gauss)
+
       contains
 !-----------------------------------------------------------------------
 !

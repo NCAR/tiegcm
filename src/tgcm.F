@@ -20,7 +20,7 @@
       use lbc,only: bndry_diurnal, bndry_semidiurnal, bndcmp
       use qrj_module,only: init_qrj
       use magfield_module,only: magfield
-      use apex_module,only: apxparm
+      use getapex_module,only: apxparm
       use timing_module,only: timer,timer_report,init_timer
       use mpi_module,only: mytid,ntask
       use diags_module,only: init_diags
@@ -72,7 +72,7 @@
 !
       call timer(time0_run,time1_run,'RUN',0,0)    ! start run timing
       call timer(time0_init,time1_init,'INIT',0,0) ! start init timing
-      call getcwd(cwd)
+      call getcwdir(cwd)
       write(6,"('Current working directory (cwd) = ',a)") trim(cwd)
       call getprocessid(pid)
       write(6,"('Process ID (pid) = ',i8)") pid

@@ -65,7 +65,7 @@
 #ifdef MPI
       use mpi_module,only: 
      |  mytid,mp_gather2root,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
-     |  mp_bndlons,mp_polelats,mp_periodic_f4d,mp_updatephi,
+     |  mp_bndlons,mp_polelats,mp_periodic_f4d,
      |  mp_updateemphi,mp_updateemlam,mp_updateemz
 !
       implicit none
@@ -573,14 +573,10 @@
      |  write(6,"('Time in DYNAMO =       ',
      |    f12.2,' Advance: step ',i5)") time1_dynamo,istep
 !
-! Update slave tasks with new phim3d from the dynamo. Make this call
-! after timing, so that timing will show the difference between master
-! and slave tasks as a consequence of the serial dynamo. (slaves will
-! be blocked here until the master is done with the dynamo)
+! Update 3d electric field on mag grid to slave tasks:
 !
 #ifdef MPI
-      call mp_updatephi
-      call mp_updateemphi  ! am 12/12/05 should be gathered if we stick to this
+      call mp_updateemphi
       call mp_updateemlam
       call mp_updateemz
 #endif
@@ -648,27 +644,10 @@
       call timer(time0_step,time1,'STEP',0,0) ! resume step timing (non-MPI)
 #ifdef MPI
 !
-! Each mpi task must receive the 2 lats before its first
-! updated lat (lat0-1,lat0-2), and the 2 lats after its last
-! updated lat (lat1+1,lat2+2). Each task must also send its
-! first 2 (lat0,lat0+1) and last 2 (lat1,lat1-1) updated lats
-! to the appropriate "adjacent" tasks.
-!
-      call timer(time0_prep,time1,'PREP',0,0) ! resume prep timing
-      f4d(:)%mpi = .true. 
-      call mp_bndlats(f4d,nf4d,itc)
-      if (debug) write(6,"('advance after mp_bndlats')")
-      call mp_bndlons(f4d,nf4d,itc)
-      if (debug) write(6,"('advance after mp_bndlons')")
-!
 ! Periodic points for all updated fields:
       call mp_periodic_f4d(itc)
 #else
 ! Non-mpi serial run:
-      call mk_polelat(0     ,1     ,itc)
-      call mk_polelat(-1    ,2     ,itc)
-      call mk_polelat(lat1+1,lat1  ,itc)
-      call mk_polelat(lat1+2,lat1-1,itc)
       call set_periodic_f4d(itc)
 #endif
 !

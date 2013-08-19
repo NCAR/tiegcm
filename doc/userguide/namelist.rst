@@ -746,7 +746,7 @@ Parameter Name                              Data Type and Default Description
    history on any archive file system.
 
    Examples:
-     * SOURCE = '$TGCMDATA/TGCM.tiegcm1.94.pcntr_eqnx_smed.nc'
+     * SOURCE = '$TGCMDATA/TGCM.tiegcm1.95.pcntr_eqnx_smed.nc'
 
    See also:
      * :ref:`SOURCE_START <SOURCE_START>`
@@ -856,7 +856,7 @@ Parameter Name                              Data Type and Default Description
 .. _SWDEN:
 .. describe:: SWDEN or SWDEN_TIME
 
-   Solar Wind Density. Can be specified as either a constant (SWDEN), or series of 
+   Solar Wind Density (#/cm-3). Can be specified as either a constant (SWDEN), or series of 
    time-dependent values (SWDEN_TIME). If IMF_NCFILE is set and SWDEN is not provided, 
    then it SWDEN will be taken from the IMF data file.
 
@@ -876,7 +876,7 @@ Parameter Name                              Data Type and Default Description
 .. _SWVEL:
 .. describe:: SWVEL or SWVEL_TIME
 
-   Solar Wind Velocity. Can be specified as either a constant (SWVEL), or series of 
+   Solar Wind Velocity (Km/s). Can be specified as either a constant (SWVEL), or series of 
    time-dependent values (SWVEL_TIME). If IMF_NCFILE is set and SWVEL is not provided, 
    then it SWVEL will be taken from the IMF data file.
 

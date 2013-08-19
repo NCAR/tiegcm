@@ -30,6 +30,35 @@
       call shutdown('nextlu')
       end function nextlu
 !-------------------------------------------------------------------
+      subroutine rmnamelistcomments(filename,luout,comcharin,echo)
+      implicit none
+! Remove comments from namelist file (filename) and write the results
+! to file unit luout.  See rmcomments for additional documentation.
+!
+! This subroutine was created for CMIT:  when TIEGCM is coupled to
+! CMIT, namelist cannot be reliably read from stdin.
+!
+! Args:
+      character(len=256),intent(in) :: filename
+      integer,intent(in) :: luout
+      character(len=1),intent(in) :: comcharin
+      integer,intent(in) :: echo
+! Local:
+      integer :: fileId=88, iErr
+
+      open(fileId, FILE=filename, STATUS='OLD', iostat=iErr)
+      if (iErr /= 0) then
+         write(6,"('>>> ERROR inp_read: Could not open TIEGCM ',
+     +        'input namelist file tiegcm_namelist.inp ',
+     +        'with unit luin=',i2,' ios=',i5)") fileId,iErr
+         call shutdown('inp_read')
+      endif
+      call rmcomments(fileId,luout,comcharin,echo)
+      close(fileId)
+
+      return
+      end subroutine rmnamelistcomments
+!-------------------------------------------------------------------
       subroutine rmcomments(luin,luout,comcharin,echo)
       implicit none
 !
@@ -181,40 +210,6 @@
         endif
       enddo
       end function ixfind
-!-------------------------------------------------------------------
-      integer function ixfindc(strarr,nstr,searchstr)
-      implicit none
-!
-! Given string array strarr, return index to strarr which contains 
-!   string searchstr, or return 0 if searchstr not found,
-!   searchstr is 0 length, or strarr is 0 length.
-!
-! Args:
-      character(len=*),intent(in) :: strarr(nstr),searchstr
-      integer,intent(in) :: nstr ! extent of strarr to search
-!
-! Locals:
-      integer :: lenele,	! length of a strarr element
-     |           lsearch,	! length of the search string
-     |           i		! loop index
-!
-      ixfindc = 0
-      if (nstr == 0) then
-        write(6,"('WARNING ixfindc: nstr=0 (length string array)')")
-        return
-      endif
-      lsearch = len_trim(searchstr)
-      do i=1,nstr
-        lenele = len_trim(strarr(i))
-        if (lenele > 0) then
-          if (strarr(i)(1:lenele) == searchstr(1:lsearch)) then
-            ixfindc = i
-            return 
-          endif
-        endif
-      enddo
-      return
-      end function ixfindc
 !-------------------------------------------------------------------
       real function finterp(f0,f1,isec0,isec1,isec)
 !
@@ -418,35 +413,6 @@
 #endif
       end function cputime 
 !-------------------------------------------------------------------
-      integer function iunlink(file,iprint)
-      implicit none
-      character(len=*),intent(in) :: file
-      integer,intent(in) :: iprint
-      integer,external :: unlink
-!
-#if defined(UNICOS) || defined(IRIX) || defined(SUN) || defined(OSF1)
-      iunlink = unlink(trim(file))
-      if (iunlink.eq.0) then
-        if (iprint > 0) 
-     |    write(6,"('Unlinked file ',a)") trim(file)
-      else
-        if (iprint > 0) 
-     |    write(6,"('Note: unlink of ',a,' failed',
-     |      ' (possibly non-existant file).')") trim(file)
-      endif
-#elif AIX || LINUX
-      iunlink = unlink(trim(file)//"\0")
-      if (iunlink.eq.0) then
-        if (iprint > 0) 
-     |    write(6,"('Unlinked file ',a)") trim(file)
-      else
-        if (iprint > 0) 
-     |    write(6,"('Note: unlink of ',a,' failed',
-     |      ' (possibly non-existant file).')") trim(file)
-      endif
-#endif
-      end function iunlink
-!-----------------------------------------------------------------------
       real function mtime_delta(mtime0,mtime1)
 !
 ! Return difference in time (minutes) from mtime0 to mtime1:
@@ -951,7 +917,7 @@
       endif
       end subroutine timer
 !-----------------------------------------------------------------------
-      subroutine getcwd(cwd)
+      subroutine getcwdir(cwd)
 #ifdef MPI
       use mpi_module,only: mytid
 #endif
@@ -969,7 +935,7 @@
 #ifdef MPI
       if (mytid==0) then
         istat = isystem('pwd > cwd')
-        if (istat /= 0) write(6,"('>>> WARNING getcwd: error return ',
+        if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
      |    'isystem(''pwd > cwd'')')")
       endif
       call mpi_barrier(MPI_COMM_WORLD,ier)
@@ -979,14 +945,14 @@
       close(lu)
 #else
       istat = isystem('pwd > cwd')
-      if (istat /= 0) write(6,"('>>> WARNING getcwd: error return ',
+      if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
      |  'isystem(''pwd > cwd'')')")
       lu = nextlu()
       open(lu,file='cwd',status='old')
       read(lu,"(a)") cwd
       close(lu)
 #endif
-      end subroutine getcwd
+      end subroutine getcwdir
 !-----------------------------------------------------------------------
       subroutine getprocessid(pid)
 #ifdef MPI

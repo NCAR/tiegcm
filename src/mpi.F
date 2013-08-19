@@ -91,6 +91,8 @@
 !
 ! Local:
       integer :: ier,n,j,i
+      integer,dimension(9) :: 
+     |  valid_pecounts=(/1,4,8,12,16,24,32,48,64/)
 !
       ier = 0
 #ifdef VT
@@ -111,6 +113,15 @@
         write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
         call shutdown('mpi_comm_size error')
       endif
+      if (.not.any(ntask == valid_pecounts)) then
+        write(6,"(/,'>>> This model may not run properly or will ',
+     |    'perform poorly with nask=',i4,/,' Please either change ',
+     |    'valid_pecounts in sub mp_init of source file mpi.F,',/,
+     |    ' or use one of these processor counts for which the model ',
+     |    'has been validated:',/,(12i6))") ntask,valid_pecounts
+        call shutdown('invalid ntask')
+      endif
+
       call mpi_comm_rank(MPI_COMM_WORLD,mytid,ier)
       if (ier /= 0) then
         write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
@@ -2838,34 +2849,6 @@
 #endif
       end subroutine mp_dynpot
 !-----------------------------------------------------------------------
-      subroutine mp_updatephi
-!
-! Dynamo has been calculated by the master task. Now send dynamo output
-!   field phim3d (mag coords) to the non-root tasks . Phim3d is
-!   dimensioned at the global mag grid by all tasks (see fields.F):
-!   phim3d(nmlonp1,nmlat,nmlev), but it is calculated in the dynamo by
-!   only the master task.
-!
-! 8/31/11 btf (as in timegcm 11/4/09): Using a simple mpi_bcast call here 
-!   instead of mpi_send/mpi_recv is *much* faster, e.g., with 64 procs 
-!   running timegcm on bluefire, bcast showed 12% speedup overall at 
-!   double-res, and 25% speedup at single-res.
-!
-! Local:
-      integer :: ier,len
-      real :: fmin,fmax
-!
-      len = nmlonp1*nmlat*nmlev
-      call mpi_bcast(phim3d,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
-      if (ier /= 0)
-     |  call handle_mpi_err(ier,'mp_updatephi call mpi_bcast')
-!     if (mytid /= 0) then
-!       call fminmax(phim3d,len,fmin,fmax)
-!       write(6,"('mp_updatephi: task ',i3,' received phim3d ',
-!    |    'from master: global min,max=',2e12.4)") mytid,fmin,fmax
-!     endif
-      end subroutine mp_updatephi      
-!-----------------------------------------------------------------------
       subroutine mp_updateemphi
 !
 ! Dynamo has been calculated by the master task. Now send dynamo output
@@ -2875,33 +2858,12 @@
 !   but it is calculated in the dynamo by only the master task.  
 !
 ! Local:
-      integer :: n,msgtag,ier
-      real :: fmin,fmax
+      integer :: len,ier
 !
-      if (mytid==0) then ! master send to slaves
-        do n=1,ntask-1
-          msgtag = n
-          call mpi_send(emphi3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
-     |      msgtag,MPI_COMM_WORLD,ier)
-          if (ier /= 0) then
-            write(6,"('>>> mp_updatephi: error sending',
-     |        ' emphi3d from master to task ',i3,' msgtag=',i3)")
-     |        n,msgtag
-          else
-!           write(6,"('mp_updatephi: master sent emphi3d to task',
-!    |        i3)") n
-          endif
-        enddo
-      else               ! slave receive from master
-        msgtag = mytid
-        call mpi_recv(emphi3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
-     |    msgtag,MPI_COMM_WORLD,irstat,ier)
-        if (ier /= 0) then
-          write(6,"('>>> mp_updatephi: error receiving',
-     |      ' emphi3d from master at task mytid=',i3,' msgtag=',i3)")
-     |      mytid,msgtag
-        endif
-      endif
+      len = nmlonp1*nmlat*(nlevp1+3)
+      call mpi_bcast(emphi3d,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
+      if (ier /= 0)
+     |  call handle_mpi_err(ier,'mp_updateemphi call mpi_bcast')
       end subroutine mp_updateemphi
 !-----------------------------------------------------------------------
       subroutine mp_updateemlam
@@ -2913,33 +2875,12 @@
 !   but it is calculated in the dynamo by only the master task.  
 !
 ! Local:
-      integer :: n,msgtag,ier
-      real :: fmin,fmax
+      integer :: len,ier
 !
-      if (mytid==0) then ! master send to slaves
-        do n=1,ntask-1
-          msgtag = n
-          call mpi_send(emlam3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
-     |      msgtag,MPI_COMM_WORLD,ier)
-          if (ier /= 0) then
-            write(6,"('>>> mp_updatemlam: error sending',
-     |        ' emlam3d from master to task ',i3,' msgtag=',i3)")
-     |        n,msgtag
-          else
-!           write(6,"('mp_updatemlam: master sent emlam3d to task',
-!    |        i3)") n
-          endif
-        enddo
-      else               ! slave receive from master
-        msgtag = mytid
-        call mpi_recv(emlam3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
-     |    msgtag,MPI_COMM_WORLD,irstat,ier)
-        if (ier /= 0) then
-          write(6,"('>>> mp_updatemlam: error receiving',
-     |      ' emlam3d from master at task mytid=',i3,' msgtag=',i3)")
-     |      mytid,msgtag
-        endif
-      endif
+      len = nmlonp1*nmlat*(nlevp1+3)
+      call mpi_bcast(emlam3d,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
+      if (ier /= 0)
+     |  call handle_mpi_err(ier,'mp_updateemlam call mpi_bcast')
       end subroutine mp_updateemlam      
 !-----------------------------------------------------------------------
       subroutine mp_updateemz
@@ -2951,33 +2892,12 @@
 !   but it is calculated in the dynamo by only the master task.  
 !
 ! Local:
-      integer :: n,msgtag,ier
-      real :: fmin,fmax
+      integer :: len,ier
 !
-      if (mytid==0) then ! master send to slaves
-        do n=1,ntask-1
-          msgtag = n
-          call mpi_send(emz3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,n,
-     |      msgtag,MPI_COMM_WORLD,ier)
-          if (ier /= 0) then
-            write(6,"('>>> mp_updateemz: error sending',
-     |        ' emz3d from master to task ',i3,' msgtag=',i3)")
-     |        n,msgtag
-          else
-!           write(6,"('mp_updatemz: master sent emz3d to task',
-!    |        i3)") n
-          endif
-        enddo
-      else               ! slave receive from master
-        msgtag = mytid
-        call mpi_recv(emz3d,nmlonp1*nmlat*(nlevp1+3),MPI_REAL8,0,
-     |    msgtag,MPI_COMM_WORLD,irstat,ier)
-        if (ier /= 0) then
-          write(6,"('>>> mp_updateemz: error receiving',
-     |      ' emz3d from master at task mytid=',i3,' msgtag=',i3)")
-     |      mytid,msgtag
-        endif
-      endif
+      len = nmlonp1*nmlat*(nlevp1+3)
+      call mpi_bcast(emz3d,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
+      if (ier /= 0)
+     |  call handle_mpi_err(ier,'mp_updateemz call mpi_bcast')
       end subroutine mp_updateemz
 !-----------------------------------------------------------------------
       subroutine mp_close

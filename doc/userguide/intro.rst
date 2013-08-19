@@ -16,7 +16,7 @@ For more information about the TIEGCM and other related models, please see:
 
 * `Main TGCM website <http://www.hao.ucar.edu/modeling/tgcm/>`_
 
-* :base_url:`TIEGCM Release Documentation <release/_build/html>` for version |version|.
+* :base_url:`TIEGCM Release Documentation <release/html>` for version |version|.
 
 * :base_url:`TIEGCM Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
 

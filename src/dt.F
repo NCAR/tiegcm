@@ -16,7 +16,6 @@
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
      |  gask,expzmid,expzmid_inv,dift,dtsmooth,dtsmooth_div2,kut
-!     use bndry_module,only: tb,tb2,bnd,bnd2,ci,lbc_gswm_dt
       use lbc,only: t_lbc
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
@@ -76,7 +75,7 @@
      |  p, q, r,    ! coefficients for tridiagonal solver
      |  rhs,        ! right hand side of trsolv
      |  qpart,      ! part of q coeff
-     |  tnlbc_diag  ! tnlbc redundant in vertical
+     |  tnlbc_diag  ! tnlbc_diag is redundant in vertical
 !
 ! Local at 3d (tnsmooth needs lat dimension only for sub smooth):
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
@@ -188,14 +187,6 @@
           dvdz(k,i) = (vn(k+1,i,lat)-vn(k-1,i,lat))/(2.*dz)  ! s11
         enddo ! k=lev0+1,lev1-2
 !
-! Lower boundary:
-! (recall that level lev1 contains values of u and v at bottom boundary,
-!  i.e., bottom boundary is in top slot)
-!       dudz(1,i) = (un(1,i,lat)+1./3.*un(2,i,lat)-4./3.*
-!    |    un(lev1,i,lat))/dz
-!       dvdz(1,i) = (vn(1,i,lat)+1./3.*vn(2,i,lat)-4./3.*
-!    |    vn(lev1,i,lat))/dz
-!
 ! Lower boundary is in ulbc,vlbc: 
         dudz(1,i) = (un(1,i,lat)+1./3.*un(2,i,lat)-4./3.*
      |    ulbc(i,lat))/dz
@@ -245,8 +236,6 @@
         enddo ! k=lev0+1,lev1-1
 !
 ! Boundaries:
-!       tni(lev0,i) = tn(lev1,i,lat)      ! bottom boundary is in top slot
-
         tni(lev0,i) = tlbc(i,lat)         ! Lower boundary is in tlbc = tn(itp)
         tni(lev1,i) = tn(lev1-1,i,lat)
         h(lev0,i) = gask*tni(lev0,i)/barm(lev0,i,lat)
@@ -362,9 +351,6 @@
 ! End second latitude scan:
       enddo ! lat=lat0,lat1
 !
-! Set kut for wave filtering according to dlat (2.5 or 5.0):
-!     call set_wave_filter(36,kut_5,nlat,kutt)
-!
 ! Filter updated tn:
       call filter_tn(tn_upd,lev0,lev1,lon0,lon1,lat0,lat1,kut)
 !
@@ -383,9 +369,6 @@
 !       call addfld('TN_NMOUT',' ',' ',tn_nm_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
-! Store lower boundary in top slot:
-!       tn_upd(lev1,lon0:lon1,lat) = tnlbc(:,lat)
-!
 ! Put spval in top nlevp1 level:
         tn_upd(lev1,lon0:lon1,lat)    = spval
         tn_nm_upd(lev1,lon0:lon1,lat) = spval
@@ -393,18 +376,6 @@
 ! Lower boundary is saved in tlbc (fields.F):
         tlbc_nm(lon0:lon1,lat) = tlbc(lon0:lon1,lat)
         tlbc(lon0:lon1,lat)    = tnlbc(:,lat)
-!
-#ifdef MPI
-!
-! 4/21/05 btf: These calls opened up as per Wenbin's suggestion.
-!
-! Define halo longitudes in tn_upd, for use by duv:
-      call mp_bndlons_f3d(tn_upd,nlevs,lon0,lon1,lat0,lat1,1,0)
-!
-! Periodic points:
-      call mp_periodic_f3d(tn_upd(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
-#endif
 !
 ! Tn must be at least 100 deg:
         lonbeg = lon0-2

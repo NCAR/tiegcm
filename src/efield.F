@@ -58,6 +58,7 @@
       use params_module,only: 
      |  nmlev,  ! number of geomagnetic pressure levels (nmlev==nlevp1+3)
      |  nmlevp1 ! number of geomagnetic midpoint levels
+!     use diags_module,only: mkdiag_EXYZ
 #ifdef MPI
       use mpi_module,only: mp_periodic_f3d
 #endif
@@ -181,16 +182,16 @@
         enddo ! k=1,nlevp1
       endif ! istep
 ! am 3/10 start with lev=4 since not all mlec are copied over      
-      do j=1,nmlat
-        call addfld('EMX',' ',' ',emx(:,j,:),
-     |	 'mlon',1,nmlonp1,'imlev',4,nmlevp1,j)
-        call addfld('EMPHI_EF',' ',' ',emphi3d(:,j,:),
-     |	 'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
-        call addfld('EMY',' ',' ',emy(:,j,:),
-     |	 'mlon',1,nmlonp1,'mlev',4,nmlevp1,j)
-        call addfld('EMZ',' ',' ',emz(:,j,:),
-     |	 'mlon',1,nmlonp1,'mlev',4,nmlevp1,j)
-      enddo ! j=1,nmlat
+!     do j=1,nmlat
+!       call addfld('EMX',' ',' ',emx(:,j,:),
+!    |	 'mlon',1,nmlonp1,'imlev',4,nmlevp1,j)
+!       call addfld('EMPHI_EF',' ',' ',emphi3d(:,j,:),
+!    |	 'mlon',1,nmlonp1,'imlev',1,nmlevp1,j)
+!       call addfld('EMY',' ',' ',emy(:,j,:),
+!    |	 'mlon',1,nmlonp1,'mlev',4,nmlevp1,j)
+!       call addfld('EMZ',' ',' ',emz(:,j,:),
+!    |	 'mlon',1,nmlonp1,'mlev',4,nmlevp1,j)
+!     enddo ! j=1,nmlat
 !
 ! Transform emx,emy,emz to geographic space. For each geographic grid 
 !   point, determine the corresponding theta0 in the distorted magnetic
@@ -298,13 +299,22 @@
       enddo
 #endif
 !     do j=lat0,lat1
-!       call addfld('EX',' ',' ',ex(lev0:lev1-1,lon0:lon1,j),
+!       call addfld('EX_EFLD',' ',' ',ex(lev0:lev1-1,lon0:lon1,j),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
-!       call addfld('EY',' ',' ',ex(lev0:lev1-1,lon0:lon1,j),
+!       call addfld('EY_EFLD',' ',' ',ex(lev0:lev1-1,lon0:lon1,j),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
-!       call addfld('EZ',' ',' ',ex(lev0:lev1-1,lon0:lon1,j),
+!       call addfld('EZ_EFLD',' ',' ',ex(lev0:lev1-1,lon0:lon1,j),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
 !     enddo ! j=lat0,lat1
+
+!     do j=lat0,lat1
+!       call mkdiag_EXYZ('EX',ex(lev0:lev1,lon0:lon1,j),lev0,lev1,
+!    |    lon0,lon1,j)
+!       call mkdiag_EXYZ('EY',ey(lev0:lev1,lon0:lon1,j),lev0,lev1,
+!    |    lon0,lon1,j)
+!       call mkdiag_EXYZ('EZ',ez(lev0:lev1,lon0:lon1,j),lev0,lev1,
+!    |    lon0,lon1,j)
+!     enddo
 !
 #ifdef VT
 !     code = 117 ; state = 'efield' ; activity='ModelCode'

@@ -129,7 +129,6 @@
 !
 ! Local:
       integer :: nwds,j,k,i,ii,ier
-      character(len=80) :: dskfile
 !
       call magdyn
       call dynpotmag
@@ -317,6 +316,7 @@
       subroutine sunloc_apex(iyr,iday,secs)
       
       use cons_module,only: dtr  ! degrees to radians (pi/180)
+      use apex,only: subsol,cofrm,dypol,solgmlon
 ! am 10/04
 ! tiegcm uses the sun's longitude in dipole coordinates
 ! we changed the approximation of the sun's location in geographic

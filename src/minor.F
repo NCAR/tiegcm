@@ -322,7 +322,7 @@
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('ALFA22',' ',' ',alfa22,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-        call addfld('EX'    ,' ',' ',ex    ,
+        call addfld('EX_MNR'    ,' ',' ',ex,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('DMDZ1' ,' ',' ',dmdz  ,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)

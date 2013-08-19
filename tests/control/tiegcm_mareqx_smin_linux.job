@@ -1,18 +1,34 @@
 #! /bin/csh
 #
-# Set shell variables for tiegcm linux job:
+# User set shell variables for TIEGCM Linux job:
+# (modeldir, execdir, and utildir may be relative or absolute paths)
 #
-set modeldir     = tiegcm1.94.2
-set execdir      = tiegcm-linux
-set make         = Make.intel_hao64
-set input        = tiegcm_mareqx_smin.inp
-set output       = tiegcm_mareqx_smin.out
-set mpi          = TRUE
-set nproc        = 4
-set modelres     = 5.0
-set utildir      = $modeldir/scripts
-set exec         = TRUE
-set debug        = FALSE
+#   modeldir: Root directory to model source (may be an SVN working dir)
+#   execdir:  Directory in which to build and execute (will be created if necessary)
+#   input:    Namelist input file (will use default if not provided)
+#   output:   Stdout file from model execution (will be created)
+#   make:     Build file with platform-specific compile parameters (in scripts dir)
+#   mpi:      TRUE/FALSE for MPI or non-MPI run
+#   nproc:    Number of processors for 64-bit Linux MPI run
+#   modelres: Model resolution (5.0 or 2.5)
+#   debug:    If TRUE, build and execute a "debug" run
+#   exec:     If TRUE, execute the model (build only if FALSE)
+#   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
+#
+set modeldir = /home/$user/tiegcm1.95
+set execdir  = tiegcm_linux
+set input    = tiegcm_mareqx_smin.inp
+set output   = tiegcm_mareqx_smin.out
+set make     = Make.intel_hao64
+set modelres = 5.0
+set mpi      = TRUE
+set nproc    = 4
+set debug    = FALSE
+set exec     = TRUE
+set utildir  = $modeldir/scripts
+# 
+# TGCMDATA can be set here, or in user's shell init file (e.g., .cshrc):
+#setenv TGCMDATA /hao/aim/$user/tiegcm1.95_data
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                        Shell Script for TIEGCM Linux job
@@ -34,6 +50,11 @@ if (! -d $modeldir) then
 endif
 set model = $modeldir:t
 
+if ($model == '') then
+  echo "Please remove trailing slash from modeldir $modeldir"
+  exit
+endif
+
 if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 
   exit 1
@@ -50,23 +71,17 @@ if (! -d $execdir) then
   echo "Making exec directory $execdir" 
   mkdir -p $execdir
 endif
-if (! -f $make) set make = $utildir/$make 
-if (! -f $make) then
-  echo ">>> Cannot find make_machine file $make <<<"
-  exit 1
-endif
-set make = `perl $utildir/abspath $make`
-echo Make machine file = $make
+
 if ($modelres != 5.0 && $modelres != 2.5) then
   echo ">>> Unknown model resolution $modelres <<<"
   exit 1
 endif
 #
-# Unconditionally copy make files to execdir:
+# Copy make files to execdir if necessary:
 #
-cp $make $execdir
-cp $utildir/Makefile $execdir
-cp $utildir/mkdepends $execdir
+if (! -f $execdir/$make)     cp $utildir/$make $execdir
+if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
+if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
 #
 # Make default namelist input file if not provided by user:
 #
@@ -82,17 +97,8 @@ else
 endif
 set input  = `perl $utildir/abspath $input`
 set output = `perl $utildir/abspath $output`
-#
-# Copy defs header file to execdir, if necessary, according to 
-# requested resolution:
-#
-if (! -f $execdir/defs.h) then
-  if ($modelres == 5.0) then
-    cp $srcdir/defs.5.0 $execdir/defs.h
-  else
-    cp $srcdir/defs.2.5 $execdir/defs.h
-  endif
-endif
+set mklogs = `perl $utildir/abspath $utildir`
+set mklogs = $mklogs/mklogs
 #
 # Report to stdout:
 #
@@ -102,12 +108,48 @@ echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
+echo "  Model resolution:  $modelres"
+echo "  Debug flag:        $debug"
+#
+# If debug flag has changed from last gmake, clean execdir
+# and reset debug file:
+#
+if (-f $execdir/debug) then
+  set lastdebug = `cat $execdir/debug` 
+  if ($lastdebug != $debug) then
+    echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $debug >! $execdir/debug
+  endif
+else
+  echo $debug >! $execdir/debug
+  echo "Created file debug with debug flag = $debug"
+endif
+#
+# Copy defs header file to execdir, if necessary, according to 
+# requested resolution. This should seamlessly switch between
+# resolutions according to $modelres.
+#
+set defs = $srcdir/defs5.0
+if ($modelres == 2.5) set defs = $srcdir/defs2.5
+if (-f $execdir/defs.h) then
+  cmp -s $execdir/defs.h $defs
+  if ($status == 1) then # files differ -> switch resolutions
+    echo "Switching defs.h for model resolution $modelres"
+    cp $defs $execdir/defs.h
+  else
+    echo "defs.h already set for model resolution $modelres"
+  endif 
+else # defs.h does not exist in execdir -> copy appropriate defs file
+  echo "Copying $defs to $execdir/defs.h for resolution $modelres"
+  cp $defs $execdir/defs.h
+endif
 #
 # cd to execdir and run make:
 #
 cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
 echo ""
-echo "Begin building $execdir in `pwd`"
+echo "Begin building $model in `pwd`"
 #
 # Build Make.env file in exec dir, containing needed env vars for Makefile:
 #
@@ -123,34 +165,28 @@ DEBUG        = $debug
 SVN_VERSION  = $svnversion
 EOF
 #
-# If building with intel on 64-bit Linux at hao, please add the following 
-# source command to your ~/.cshrc file, or uncomment the next line: 
-#source /opt/local/intel/Compiler/11.1/072/bin/ifortvars.csh intel64
-#
 # Build the model:
 gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 #
 # Execute Linux job (MPI or non-MPI run):
-# (machines.ini mpirun rules are in Make.machine file)
 #
 if ($exec == "TRUE") then
   set model = ./$model
-  echo "Linux job: Executing $model mpi=$mpi nproc=$nproc"
-  echo "Model output will go to $output"
+  echo "$model output will go to $output"
   if ($mpi == "TRUE") then
 #
 # Files machines.ini and mpirun.command are made by the Make.machines file.
     gmake machines.ini
     gmake mpirun.command
     set mpirun = `cat mpirun.command`
-    echo "Executing $mpirun -np $nproc for Linux MPI run."
+    echo "Executing $mpirun with -np $nproc for Linux MPI run."
 #
-# Execute MPI job:
-    $mpirun -np $nproc -machinefile machines.ini $model < $input >&! $output || \
+# Execute mpirun (Intel or PGI) for MPI run:
+    $mpirun -machinefile machines.ini -np $nproc $model < $input >&! $output || \
       echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
- 
     echo "Linux MPI run of $model completed at `date`"
+    perl $mklogs $output
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."
     $model < $input >&! $output || \
@@ -162,4 +198,3 @@ else
   echo "I am NOT executing $model (exec was not set)"
 endif
 exit 0
-

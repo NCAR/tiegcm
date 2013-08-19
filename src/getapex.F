@@ -1,22 +1,13 @@
 #include <defs.h>
 !
-      module apex_module
+      module getapex_module
+      use apex,only: apex_mka, apex_mall, apex_q2g
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
 !----------------------------------------------------------------------- 
-! BOP
-! !MODULE: apex_module
-! !DESCRIPTION: calculate apex quantities for one specific date without
-!       changing during the model run since differences are expected to 
-!       be small.
-!       reference: 
-!          Richmond, A. D., Ionospheric Electrodynamics Using Magnetic Apex
-!          Coordinates, J. Geomag. Geoelectr., 47, 191-212, 1995.
-!  
-! !USES:
       use params_module,only:
      |  nlon,   ! number of geographic longitudes (at 5 deg, nlon=72)
      |  nlonp1, ! nlon+1 
@@ -26,20 +17,15 @@
      |  nmlon,  ! number of geomagnetic longitudes
      |  nmlonp1,! nmlon+1
      |  nmlat   ! number of geomagnetic latitudes
+
+!     use fields_module,only: ! diagnostics
+!    |  bx, by, bz, bmag_field=>bmag
 !      
-! !PUBLIC TYPES:
-! !PUBLIC MEMBER FUNCTIONS:
-! !PUBLIC DATA MEMBERS:
       implicit none
       integer,parameter :: 
      |  nalt=2,
      |  lwk= nlatp1*nlonp2*nalt*5 + nlatp1+nlonp2+nalt
-
-!     real :: dvec,dddarr,be3arr,gplat,gplon,gpalt,wk
-!     COMMON/DVECDDD/dvec(IMAXGP,JMAXG,3,2),dddarr(IMAXGP,JMAXG),
-!    | be3arr(IMAXGP,JMAXG),GPLAT(nlatp1),GPLON(nlonp2),GPALT(nalt),WK(LWK)
 !
-! (formerly in common /dvecddd/)
       real,dimension(nlonp1,nlat,3,2) :: dvec
       real,dimension(nlonp1,nlat) :: dddarr,be3arr  ! [nT]
       real,dimension(nlatp1) :: gplat
@@ -47,18 +33,10 @@
       real,dimension(nalt)   :: gpalt
       real,dimension(lwk)    :: wk
 ! 
-! !REVISION HISTORY:
-! 05.02.04  <Astrid Maute> <include headers> 
-! EOP
-!
       contains
 !-----------------------------------------------------------------------
       subroutine apxparm(date)
 !
-! BOP
-! !IROUTINE: apxparm
-! !INTERFACE:
-! !USES:
       use cons_module,only: re,h0,rtd,dtr,ylatg,ylong,dlong,
      |  dlonm,ylonm,ylatm
       use magfield_module,only:
@@ -87,27 +65,18 @@
      |  snlong,  ! (nlonp1) sin(lamda)
      |  av,      ! (nlonp1,0:nlatp1,3,2) the two magnetic vectors a1,a2
      |  wt       ! (4,nmlonp1,nmlat) weights for geo2mag interpolation
+
+!     use diags_module,only: mkdiag_BXYZ,mkdiag_BMAG
 !
-! !DESCRIPTION: calculates apex quantities for reference height of
+! Calculates apex quantities for reference height of
 !         h_0 (90km)
 !         Original file for this subroutine 
 !         ~richmond/prog/tgcmtst/modsrc/apxparm.mk was copied on 2/25/00.
 !
 !         5/02 B.Foster: adapted for tiegcm1.
 !
-! !RETURN VALUE:
-! !PARAMETERS:
       real,intent(in) :: date 
- !     
-! !REVISION HISTORY:
-! 05.02.04  <Astrid Maute> <include header> 
-! 07.02.04  <Astrid Maute> <use the mean Earth radius for apex Re=6371.22km
-!                           use reference height of 90 km instead 130km
-!                           therefore values don't have to be scaled down to
-!                           90 km anymore
-!                           difference in electr. potential 1-2%> 
-! EOP
-!
+!     
 ! Local:
 !
 ! msgun = Fortran unit number for diagnostics
@@ -151,15 +120,10 @@
 !     call shutdown('apxparm')
 
 !
-!  Initialize interpolation arrays, but do not write them
-!     SUBROUTINE APXMKA (MSGUN, EPOCH, GPLAT,GPLON,GPALT,NLAT,NLON,NALT,
-!    +                  WK,LWK, IST)
-!            DIMENSION GPLAT(NLAT), GPLON(NLON), GPALT(NALT), WK(LWK)
-!     DIMENSION GPLAT(*),GPLON(*),GPALT(*), EPOCH(*), WK(*),
+! Initialize interpolation arrays.
 !
       date1(1) = date
-      call apxmka (msgun, date1, gplat,gplon,gpalt,nlatp1,nlonp2,nalt,
-     |             wk,lwk, ist)
+      call apex_mka(date,gplat,gplon,gpalt,nlatp1,nlonp2,nalt,ist)
       if (ist /= 0) call shutdown('apxmka')
 !
 ! Compute dvec, ddd
@@ -174,8 +138,9 @@
 	snlatg(j) = sin(ylatg(j))
 	do i = 1,nlonp1
 	  glon = ylong(i)*rtd
-          call apxmall (
-     |      glat,glon,alt,hr, wk,                     !Inputs
+
+          call apex_mall(
+     |      glat,glon,alt,hr,                         !Inputs
      |      b,bhat,bmag,si,                           !Mag Fld
      |      alon,                                     !Apx Lon
      |      xlatm,vmp,w,d,be3,sim,d1,d2,d3,e1,e2,e3,  !Mod Apx
@@ -189,10 +154,10 @@
 ! output:
           alatm(i,j)    =  xlatm*dtr
           alonm(i,j)    =  alon *dtr
-          xb   (i,j)    =  b(2)*1.e-5
-          yb   (i,j)    =  b(1)*1.e-5
-          zb   (i,j)    = -b(3)*1.e-5
-          bmod (i,j)    =  bmag*1.e-5
+          xb   (i,j)    =  b(2)*1.e-5 ! nT to gauss
+          yb   (i,j)    =  b(1)*1.e-5 ! nT to gauss
+          zb   (i,j)    = -b(3)*1.e-5 ! nT to gauss
+          bmod (i,j)    =  bmag*1.e-5 ! nT to gauss
 !
           p    (i,j)    = 1.e+5*abs(sim/si)/(bmag*d)
 	  av   (i,j,1,1) = d1(1)*P(I,J)*si
@@ -251,12 +216,14 @@
 	qdlon = ylonm(i)*rtd
 	do J=1,nmlat
 	  qdlat = ylatm(j)*rtd
-	  call apxq2g(qdlat,qdlon,alt, wk, gdlat,gdlon, ist)
+
+          call apex_q2g(qdlat,qdlon,alt, gdlat,gdlon, ist)
           if (ist /= 0) then
-            write(6,"('apxparm: error from APXQ2G: ist=',i3,
+            write(6,"('apxparm: error from apex_q2g: ist=',i3,
      |        ' i=',i3,' j=',i3)") ist,i,j
-            call shutdown('apxq2g ist')
+            call shutdown('apex_q2g error')
           endif
+
 	  gdlat = gdlat*dtr
 	  gdlon = gdlon*dtr
 	  xlongi = (gdlon - ylong(1))/dlong
@@ -391,4 +358,4 @@
 !     endif ! iplot
 !
       end subroutine apxparm
-      end module apex_module
+      end module getapex_module

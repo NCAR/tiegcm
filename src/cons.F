@@ -48,7 +48,7 @@
      |  nob(nlat) = 4.e6,    ! N(NO) LBC from old /RUNMDS/ 
      |  avto = 4.0e-12,      ! from old /RUNMDS/ (not used)
      |  hor(nlat) = .25,     ! horizontal variation of eddy diffusion and
-                             !  eddy thrmal conductivity. If unity, value
+                             !  eddy thermal conductivity. If unity, value
                              !  of KE at bottom is 5.e-6 (old /RUNMDS/)
      |  prndtl = 1.,         ! prandtl number
      |  evergs = 1.602e-12,  ! 1 eV = 1.602e-12 ergs

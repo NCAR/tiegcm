@@ -17,7 +17,7 @@
      |  p0,expz,rmass_o2,rmass_o1,boltz,avo
       use magfield_module,only: dipmag
       use input_module,only: colfac
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_SIGMAPED,mkdiag_SIGMAHAL,
      |                       mkdiag_LAMDAPED,mkdiag_LAMDAHAL
       implicit none

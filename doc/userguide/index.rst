@@ -8,8 +8,7 @@ Welcome to the TIEGCM User's Guide
 
 .. note::
 
-   This document is up to date for TIEGCM version |version| (Diagnostics section
-   is updated to version 1.94.1)
+   This document is up to date for TIEGCM version |version|
 
 Contents:
 

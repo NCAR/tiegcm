@@ -2388,8 +2388,6 @@
      |          trim(fsechist(ix)%short_name)
               call handle_ncerr(istat,trim(char80))
             endif
-!           write(6,"('def_fsech: defined 3d var ',a)")
-!    |        fsechist(ix)%short_name
           endif  ! if var not yet defined
 !
 ! Get dim id's for 2 dimensions (geo or mag):
@@ -2399,7 +2397,7 @@
             write(char80,"('def_fsech: Error getting id for dim ',
      |        a,' (1st of 2)')") trim(fsechist(ix)%dimnames(1))
             call handle_ncerr(istat,trim(char80))
-          endif 
+          endif
           istat=nf_inq_dimid(ncid,fsechist(ix)%dimnames(2),idimids(2)) 
           if (istat /= NF_NOERR) then
             write(char80,"('def_fsech: Error getting id for dim ',
@@ -2409,18 +2407,23 @@
           idimids(3) = id_time
 !
 ! Define 2d var (lon,lat,time)
-          if (sech_nbyte == 4) then ! write 4-byte reals
-            istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_REAL,
-     |        3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
-          else
-            istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
-     |        3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
-          endif
-          if (istat /= NF_NOERR) then
-            write(char80,"('def_fsech: Error defining 2d field ',a)")
-     |        fsechist(ix)%short_name
-            call handle_ncerr(istat,trim(char80))
-          endif
+          istat = nf_inq_varid(ncid,fsechist(ix)%short_name,idv)
+          isdef = 0                  ! assume var is not yet defined
+          if (istat == 0) isdef = 1  ! var is already defined -- cannot redef
+          if (isdef == 0) then ! safe to define
+            if (sech_nbyte == 4) then ! write 4-byte reals
+              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_REAL,
+     |          3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
+            else
+              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
+     |          3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
+            endif
+            if (istat /= NF_NOERR) then
+              write(char80,"('def_fsech: Error defining 2d field ',a)")
+     |          fsechist(ix)%short_name
+              call handle_ncerr(istat,trim(char80))
+            endif
+          endif ! isdef==0
         endif  ! 2d or 3d
 
 !       write(6,"('def_fsech: defined sech field ',a,': dimnames=',

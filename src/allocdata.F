@@ -19,6 +19,7 @@
       use n4s_module,only: alloc_n4s
       use no_module,only: alloc_no
       use magpres_g_module,only: alloc_pg
+      use gswm_module,only: alloc_gswm
       implicit none
 !
 ! Local:
@@ -40,6 +41,9 @@
 ! for minor composition species:
       call alloc_n4s(lon0,lon1,lat0,lat1)
       call alloc_no (lon0,lon1,lat0,lat1)
+!
+! Allocate for gswm:
+      call alloc_gswm(lon0,lon1,lat0,lat1)
 !
 ! We are not doing parallel i/o to netcdf output histories, so when
 ! it comes time to write a history, the task subdomains are gathered

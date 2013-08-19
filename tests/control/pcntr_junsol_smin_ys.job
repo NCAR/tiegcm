@@ -1,0 +1,262 @@
+#!/bin/tcsh
+#
+# This script should be executed on the yellowstone command line. It will 
+# compile in execdir on the interactive login node, then create and submit 
+# an LSF script (also in execdir), based on the #BSUB resources specified below.
+#
+# Set shell variables and BSUB settings below:
+#
+#   modeldir:  Root directory to model source (may be an SVN working dir)
+#   execdir:   Directory in which to build and execute (will be created if necessary)
+#   input:     Namelist input file (will use default if not provided)
+#   output:    Stdout file from model execution (will be created)
+#   make:      Build file with platform-specific compile parameters (in scripts dir)
+#              Supported compiler files: Make.intel_ys or Make.pgi_ys
+#   mpi:       TRUE/FALSE for MPI or non-MPI run (for non-mpi runs, lsf runscript is ignored)
+#   modelres:  Model resolution (5.0 or 2.5 degrees)
+#   debug:     If TRUE, build and execute a "debug" run
+#   exec:      If TRUE, execute the model (build only if FALSE)
+#   utildir:   Dir containing supporting scripts (usually $modeldir/scripts)
+#   runscript: LSF script with run commands (submitted with bsub from execdir)
+#
+# Use the "modules" command on yellowstone to load/unload compilers, libs, etc:
+#   module list     Get list of currently loaded modules
+#   module avail    See which modules are available in your current setup
+#   module load     Load one or more available modules
+#   module switch   Switch between modules (e.g., compilers)
+# See also the module man page on yellowstone.
+#
+# To switch compilers (default is intel):
+#   From intel to pgi: type "module switch intel pgi", and use Make.pgi_ys below
+#   From pgi to intel: type "module switch pgi intel", and use Make.intel_ys below
+#
+ set modeldir = /glade/u/home/$user/tiegcm1.95
+ set execdir  = /glade/scratch/$user/tiegcm1.95/tiegcm_junsol_smin-ys
+ set input    = tiegcm_junsol_smin.inp
+ set output   = tiegcm_junsol_smin.out
+ set modelres = 5.0
+#
+# Intel *or* PGI modules must be loaded on yellowstone (see comment above)
+ set make     = Make.intel_ys
+#set make     = Make.pgi_ys
+
+set mpi       = TRUE
+set debug     = FALSE
+set exec      = TRUE
+set utildir   = $modeldir/scripts
+set runscript = run.lsf
+
+set execdir   = `perl $utildir/abspath $execdir`
+set runscript = `perl $utildir/abspath $runscript`
+if (! -d $execdir) mkdir -p $execdir
+#
+# Set LSF resource usage (create the runscript in execdir):
+# (run commands are appended to this script below)
+#
+cat << EOF >! $runscript
+#!/bin/tcsh
+#
+#BSUB -J tiegcm_junsol_smin
+#BSUB -P P28100036
+##BSUB -q regular
+#BSUB -q premium
+#BSUB -o tiegcm.%J.out
+#BSUB -e tiegcm.%J.out
+#BSUB -N
+#BSUB -u $LOGNAME@ucar.edu
+#BSUB -W 0:30
+#
+# Recommended for single-res (5.0 deg) tiegcm:
+# -n16,ptile=16 (1 node, 16 procs/node)
+#BSUB -n 16
+#BSUB -R "span[ptile=16]"
+#
+# Recommended for double-res (2.5 deg) tiegcm: 
+# -n64,ptile=16 (4 nodes, 16 procs/node)
+##BSUB -n 64
+##BSUB -R "span[ptile=16]"
+#
+EOF
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                               End user settings
+#                        Shell Script for TIEGCM Linux job
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+set mycwd = `pwd`
+echo "" ; echo "${0}:"
+echo "  Begin execution at `date`"
+echo "  Current working directory: $mycwd"
+echo "  System: `uname -a`"  
+echo ""
+#
+# Verify directories and make_machine file (make execdir if necessary).
+# Get absolute path for dirs that are accessed from the execdir.
+#
+if (! -d $modeldir) then
+  echo ">>> Cannot find model directory $modeldir <<<"
+  exit 1
+endif
+set model = $modeldir:t
+
+if ($model == '') then
+  echo "Please remove trailing slash from modeldir $modeldir"
+  exit
+endif
+
+if (! -d $utildir) then
+  echo ">>> Cannot find model scripts directory $utildir <<<" 
+  exit 1
+endif
+set utildir = `perl $utildir/abspath $utildir`
+
+set srcdir  = $modeldir/src
+if (! -d $srcdir) then
+  echo ">>> Cannot find model source directory $srcdir <<<"
+  exit 1
+endif
+set srcdir = `perl $utildir/abspath $srcdir`
+
+if ($modelres != 5.0 && $modelres != 2.5) then
+  echo ">>> Unknown model resolution $modelres <<<"
+  exit 1
+endif
+#
+# Copy make files to execdir if necessary:
+#
+if (! -f $execdir/$make)     cp $utildir/$make $execdir
+if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
+if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
+#
+# Make default namelist input file if not provided by user:
+#
+if ($?input) then
+  if (! -f $input) then
+    echo ">>> Cannot find namelist input file $input <<<"
+    exit 1
+  endif
+else 
+  set input = \
+    `perl $utildir/mknamelist -model=$model -modelres=$modelres` || \
+     echo ">>> Error from mknamelist: fileout = $input" && exit 1
+endif
+
+set model  = $execdir/$model
+set input  = `perl $utildir/abspath $input`
+set output = `perl $utildir/abspath $output`
+set mklogs = `perl $utildir/abspath $utildir`
+set mklogs = $mklogs/mklogs.ys # special mklogs for yellowstone
+#
+# Report to stdout:
+#
+set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
+echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnversion)"
+echo "  Exec directory:    $execdir"
+echo "  Source directory:  $srcdir"
+echo "  Make machine file: $make"
+echo "  Namelist input:    $input"
+echo "  Stdout Output:     $output"
+echo "  Model resolution:  $modelres"
+echo "  Debug:             $debug"
+echo "  MPI job:           $mpi"
+#
+# If debug flag has changed from last gmake, clean execdir
+# and reset debug file:
+#
+if (-f $execdir/debug) then
+  set lastdebug = `cat $execdir/debug` 
+  if ($lastdebug != $debug) then
+    echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $debug >! $execdir/debug
+  endif
+else
+  echo $debug >! $execdir/debug
+  echo "Created file debug with debug flag = $debug"
+endif
+#
+# If mpi flag has changed from last gmake, clean execdir
+# and reset mpi file:
+#
+if (-f $execdir/mpi) then
+  set lastmpi = `cat $execdir/mpi` 
+  if ($lastmpi != $mpi) then
+    echo "Clean execdir $execdir because mpi flag switched from $lastmpi to $mpi"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $mpi >! $execdir/mpi
+  endif
+else
+  echo $mpi >! $execdir/mpi
+  echo "Created file mpi with mpi flag = $mpi"
+endif
+#
+# Copy defs header file to execdir, if necessary, according to 
+# requested resolution. This should seamlessly switch between
+# resolutions according to $modelres.
+#
+set defs = $srcdir/defs5.0
+if ($modelres == 2.5) set defs = $srcdir/defs2.5
+if (-f $execdir/defs.h) then
+  cmp -s $execdir/defs.h $defs
+  if ($status == 1) then # files differ -> switch resolutions
+    echo "Switching defs.h for model resolution $modelres"
+    cp $defs $execdir/defs.h
+  else
+    echo "defs.h already set for model resolution $modelres"
+  endif 
+else # defs.h does not exist in execdir -> copy appropriate defs file
+  echo "Copying $defs to $execdir/defs.h for resolution $modelres"
+  cp $defs $execdir/defs.h
+endif
+#
+# cd to execdir and run make:
+#
+cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
+echo ""
+echo "Begin building $model in `pwd`"
+#
+# Build Make.env file in exec dir, containing needed env vars for Makefile:
+#
+cat << EOF >! Make.env
+MAKE_MACHINE = $make
+DIRS         = . $srcdir 
+MPI          = $mpi
+EXECNAME     = $model
+NAMELIST     = $input
+OUTPUT       = $output
+DEBUG        = $debug
+SVN_VERSION  = $svnversion
+EOF
+#
+# Build the model:
+gmake -j8 all || echo ">>> Error return from gmake all" && exit 1
+#
+if ($exec == "FALSE") then
+  echo "Am NOT executing the model because exec = $exec"
+  exit 0
+endif
+#
+# MPI/LSF job: append mpirun.lsf command to LSF script 
+# (it has #BSUBs from above)
+#
+if ($mpi == "TRUE") then  # MPI LSF job
+  cat << EOF >> $runscript
+  setenv MP_LABELIO YES
+  setenv MP_SHARED_MEMORY yes
+  mpirun.lsf $model < $input >&! $output
+  $mklogs $output
+EOF
+  echo " "
+  echo "Submitting LSF script $runscript for MPI run"
+  bsub < $runscript
+#
+# Non-mpi job: simple execution statement on the interactive node.
+# If you want to submit lsf job, you can use a here-doc like above
+# to put the execution statement in the runscript, then submit with
+# bsub as above.
+#
+else
+  echo "Executing serial non-MPI run in background on the interactive node.." 
+  $model < $input >&! $output &
+endif
+exit 0

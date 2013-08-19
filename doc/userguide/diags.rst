@@ -52,17 +52,28 @@ Short Name                     Long Name                              Units     
 :ref:`QJOULE_INTEG <QJ_INTEG>` Height-integrated Joule Heating        erg/cm2/s    2d geo
 :ref:`HMF2 <HMF2>`             Height of the F2 Layer                 km           2d geo
 :ref:`NMF2 <NMF2>`             Peak Density of the F2 Layer           1/cm3        2d geo
+:ref:`FOF2 <FOF2>`             Critical Frequency of F2 Layer         MHz          2d geo
 :ref:`TEC <TEC>`               Total Electron Content                 1/cm2        2d geo
 :ref:`JE13D <JE13D>`           Eastward current density (3d)          A/m2         3d mag
 :ref:`JE23D <JE23D>`           Downward current density (3d)          A/m2         3d mag
 :ref:`JQR <JQR>`               Upward current density (2d)            A/m2         2d mag
 :ref:`KQLAM <KQLAM>`           Height-integ current density (+north)  A/m          2d mag
 :ref:`KQPHI <KQPHI>`           Height-integ current density (+east)   A/m          2d mag
+:ref:`BX <BX>`                 BX/BMAG eastward electric field        [none]       2d mag
+:ref:`BY <BY>`                 BY/BMAG northward electric field       [none]       2d mag
+:ref:`BZ <BZ>`                 BZ/BMAG upward electric field          [none]       2d mag
+:ref:`BMAG <BMAG>`             Magnetic field magnitude               Gauss        2d mag
+:ref:`EX <EX>`                 Zonal component of electric field      V/m          3d geo
+:ref:`EY <EY>`                 Meridional component of electric field V/m          3d geo
+:ref:`EZ <EZ>`                 Vertical component of electric field   V/m          3d geo
+:ref:`ED1 <ED1>`               Mag eastward component electric field  V/m          3d mag
+:ref:`ED2 <ED2>`               Mag downward component electric field  V/m          3d mag
+:ref:`PHIM2D <PHIM2D>`         2d Electric Potential on magnetic grid V            2d mag
 ============================== ====================================== ============ ==========
 
 
 Saving Fields/Arrays from the Source Code
-------------------------------------
+-----------------------------------------
 
   In addition to the "sanctioned" diagnostics, arbitrary 2d and 3d arrays can be saved 
   from the model to secondary histories by inserting a call to subroutine *addfld* 
@@ -274,6 +285,35 @@ Details of Diagnostic Field Calculations
    Sample images: NMF2 Global map:
 
    .. image:: _static/images/nmf2.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: FOF2, diagnostic fields; FOF2
+.. _FOF2:
+.. describe:: FOF2
+
+   Diagnostic field (2d lat x lon): Peak Density of the F2 Layer (1/cm3)::
+
+      diags(n)%short_name = 'FOF2'
+      diags(n)%long_name  = 'Critical Frequency of the F2 Layer' 
+      diags(n)%units      = 'Mhz'
+      diags(n)%levels     = 'none' ! fof2 is 2d lon x lat
+      diags(n)%caller     = 'elden.F'
+
+   The critical frequency of the the F2 layer is calculated and saved by subroutines 
+   *mkdiag_HNMF2* and *hnmf2* in source file :download:`diags.F <../../src/diags.F>`.
+
+   Sub *mkdiag_HNMF2* is called by subroutine *elden* in source file 
+   :download:`elden.F <../../src/elden.F>`, as follows:
+
+      call mkdiag_HNMF2('FOF2',z,electrons,lev0,lev1,lon0,lon1,lat)
+
+   Sample images: FOF2 Global map:
+
+   .. image:: _static/images/fof2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1078,6 +1118,208 @@ Details of Diagnostic Field Calculations
    Sample images: KQPHI North polar projection 
 
    .. image:: _static/images/kqphi_npol.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: BX, diagnostic fields; BX
+.. _BX:
+.. describe:: BX
+
+   Diagnostic field: Normalized eastward component of magnetic field (BX/BMAG)
+   (2d lat-lon on geographic grid)::
+
+      diags(n)%short_name = 'BX'
+      diags(n)%long_name  = 'BX/BMAG: Normalized eastward component of magnetic field'
+      diags(n)%units      = 'none'
+      diags(n)%levels     = 'none' 
+      diags(n)%caller     = 'oplus.F'
+
+   Sample images: BX cylindrical equidistant projection 
+
+   .. image:: _static/images/bx.png
+      :align: center
+
+--------------------------------------------------------------------------------------------
+
+.. index:: BY, diagnostic fields; BY
+.. _BY:
+.. describe:: BY
+
+   Diagnostic field: Normalized eastward component of magnetic field (BY/BMAG)
+   (2d lat-lon on geographic grid)::
+
+      diags(n)%short_name = 'BY'
+      diags(n)%long_name  = 'BY/BMAG: Normalized northward component of magnetic field'
+      diags(n)%units      = 'none'
+      diags(n)%levels     = 'none' 
+      diags(n)%caller     = 'oplus.F'
+
+   Sample images: BY cylindrical equidistant projection 
+
+   .. image:: _static/images/by.png
+      :align: center
+
+--------------------------------------------------------------------------------------------
+
+.. index:: BZ, diagnostic fields; BZ
+.. _BZ:
+.. describe:: BZ
+
+   Diagnostic field: Normalized upward component of magnetic field (BZ/BMAG)
+   (2d lat-lon on geographic grid)::
+
+      diags(n)%short_name = 'BZ'
+      diags(n)%long_name  = 'BZ/BMAG: Normalized northward component of magnetic field'
+      diags(n)%units      = 'none'
+      diags(n)%levels     = 'none' 
+      diags(n)%caller     = 'oplus.F'
+
+   Sample images: BZ cylindrical equidistant projection 
+
+   .. image:: _static/images/bz.png
+      :align: center
+
+--------------------------------------------------------------------------------------------
+
+.. index:: BMAG, diagnostic fields; BMAG
+.. _BMAG:
+.. describe:: BMAG
+
+   Diagnostic field: Magnetic Field Magnitude
+   (2d lat-lon on geographic grid)::
+
+      diags(n)%short_name = 'BMAG'
+      diags(n)%long_name  = 'BMAG: Magnetic Field Magnitude'
+      diags(n)%units      = 'Gauss'
+      diags(n)%levels     = 'none' 
+      diags(n)%caller     = 'oplus.F'
+
+   Sample images: BMAG cylindrical equidistant projection 
+
+   .. image:: _static/images/bmag.png
+      :align: center
+
+--------------------------------------------------------------------------------------------
+
+.. index:: EX, diagnostic fields; EX
+.. _EX:
+.. describe:: EX
+
+   Diagnostic field: Zonal Component of Electric Field
+   (3d lat-lon on geographic grid)::
+
+      diags(n)%short_name = 'EX'
+      diags(n)%long_name  = 'EX: Zonal Component of Electric Field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'ilev' 
+      diags(n)%caller     = 'ionvel.F'
+
+   Sample images: EX cylindrical equidistant projection 
+
+   .. image:: _static/images/ex.png
+      :align: center
+
+--------------------------------------------------------------------------------------------
+
+.. index:: EY, diagnostic fields; EY
+.. _EY:
+.. describe:: EY
+
+   Diagnostic field: Meridional Component of Electric Field
+   (3d lat-lon on geographic grid)::
+
+      diags(n)%short_name = 'EY'
+      diags(n)%long_name  = 'EY: Meridional Component of Electric Field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'ilev' 
+      diags(n)%caller     = 'ionvel.F'
+
+   Sample images: EY cylindrical equidistant projection 
+
+   .. image:: _static/images/ey.png
+      :align: center
+
+--------------------------------------------------------------------------------------------
+
+.. index:: EZ, diagnostic fields; EZ
+.. _EZ:
+.. describe:: EZ
+
+   Diagnostic field: Vertical Component of Electric Field
+   (3d lat-lon on geographic grid)::
+
+      diags(n)%short_name = 'EZ'
+      diags(n)%long_name  = 'EZ: Vertical Component of Electric Field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'ilev' 
+      diags(n)%caller     = 'ionvel.F'
+
+   Sample images: EZ cylindrical equidistant projection 
+
+   .. image:: _static/images/ez.png
+      :align: center
+
+--------------------------------------------------------------------------------------------
+
+.. index:: ED1, diagnostic fields; ED1
+.. _ED1:
+.. describe:: ED1
+
+   Diagnostic field: Magnetic Eastward Component of Electric Field
+   (3d mlat-mlon on geomagnetic grid)::
+
+      diags(n)%short_name = 'ED1'
+      diags(n)%long_name  = 'ED1: Magnetic Eastward Component of Electric Field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'imlev' 
+      diags(n)%caller     = 'dynamo.F'
+
+   Sample images: ED1 cylindrical equidistant projection 
+
+   .. image:: _static/images/ed1.png
+      :align: center
+
+--------------------------------------------------------------------------------------------
+
+.. index:: ED2, diagnostic fields; ED2
+.. _ED2:
+.. describe:: ED2
+
+   Diagnostic field: Magnetic Eastward Component of Electric Field
+   (3d mlat-mlon on geomagnetic grid)::
+
+      diags(n)%short_name = 'ED2'
+      diags(n)%long_name  = 'ED2: Magnetic Downward (Equatorward) Component of Electric Field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'imlev' 
+      diags(n)%caller     = 'dynamo.F'
+
+   Sample images: ED2 cylindrical equidistant projection 
+
+   .. image:: _static/images/ed2.png
+      :align: center
+
+--------------------------------------------------------------------------------------------
+
+.. index:: PHIM2D, diagnostic fields; PHIM2D
+.. _PHIM2D:
+.. describe:: PHIM2D
+
+   Diagnostic field: 2d Electric Potential on Magnetic Grid
+   (3d mlat-mlon on geomagnetic grid)::
+
+      diags(n)%short_name = 'PHIM2D'
+      diags(n)%long_name  = 'PHIM2D: 2d Electric Potential on Magnetic Grid'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamo.F'
+
+   Sample images: PHIM2D cylindrical equidistant projection 
+
+   .. image:: _static/images/phim2d.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`

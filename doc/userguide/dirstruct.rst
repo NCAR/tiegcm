@@ -97,7 +97,7 @@ model source code, supporting scripts, documentation, and test scripts::
   :base_url:`TIEGCM Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
 
 * **release/**: Directory containing source files for the 
-  :base_url:`Release Documentation <release/_build/html>`
+  :base_url:`Release Documentation <release/html>`
 
 * **diags.table**: :download:`Table of diagnostic fields <_static/diags.table>` that can be 
   saved on secondary history files.
@@ -112,7 +112,7 @@ model source code, supporting scripts, documentation, and test scripts::
   input files and job scripts that can be used to reproduce the benchmark runs for
   validation and testing, comparing results from code changes, etc. 
 * For more information on benchmark runs made for the current release, please see 
-  :base_url:`Release Documentation <release/_build/html>`
+  :base_url:`Release Documentation <release/html>`
 
 Data Directory (:term:`datadir`)
 --------------------------------

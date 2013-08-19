@@ -43,7 +43,7 @@
 ! 
 ! Global gpi data read from gpi data file:
       integer,parameter :: 
-     |  mxgpidays = 15000     ! maximum number of days of gpi data
+     |  mxgpidays = 50000     ! maximum number of days of gpi data
       integer :: 
      |  ngpidays,             ! number of days of gpi data
      |  gpi_iyd(mxgpidays),   ! yearday (7-digit) of gpi data
@@ -62,11 +62,11 @@
 ! and kp. These data are obtained in ascii format from NGDC. See comments 
 ! below.  If mpi job, only the master task executes this routine.
 !
-      use input_module,only: gpi_ncfile
+      use input_module,only: gpi_ncfile,mxlen_filename
       use nchist_module,only: nc_open,nc_close,handle_ncerr
 !
 ! Local:
-      character(len=80) :: dskfile
+      character(len=mxlen_filename) :: dskfile
       integer :: istat,ncid,nkp,i,ier
       integer :: id_ndays,id_nkp,idv_iyd,idv_f107d,idv_f107a,idv_kp
 !

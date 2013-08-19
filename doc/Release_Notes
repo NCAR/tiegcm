@@ -1,74 +1,114 @@
 
-Release notes for tiegcm1.94.2
-January 5, 2012
+Release Notes for tiegcm1.95 ($SVN/tiegcm/tags/tiegcm1.95 in the hao repository)
+Release date: June 20, 2013
+Author: Ben Foster (foster@ucar.edu), for the AIM section at HAO.
 
-Summary of changes from v1.94.1 (r674, 7/28/2011) to v1.94.2 (r739, 1/5/2012):
+Source code for version tiegcm1.95 is available at the TGCM download web page:
+http://www.hao.ucar.edu/modeling/tgcm/download.php
 
- - Introducing Intel 2011 Cluster Studio ifort compiler and mpi
-   library. See scripts/Make.intel_hao64 to use the hao installation.
-   The file scripts/Make.intel11.1_hao64 is retained in case anyone needs
-   to use the old compiler. On 64-bit Linux systems at hao, the Intel
-   compilers represent a significant performance improvement over PGI.
+Note that data files for tiegcm1.94 (available as tiegcm1.94_data.tar.gz from 
+the download page) will work with tiegcm1.95.
 
- - Fixed memory accumulation bug with ifort compiler by changing use of
-   f90 intrinsic "trim" function in strloc (util.F), addfld.F, and elsewhere.
-   The Intel ifort compiler was doing mallocs when the trim function
-   was being used to compare strings (e.g., if (trim(string1)==trim(string2))
-   Used memory checker in valgrind to find this problem.
+--------------------------------------------------------------------------------------
+Performance Example:
 
- - Changes to dynamic memory allocation in mpi routines (mpi.F), to
-   allocate send and receive buffers once per run per subroutine,
-   instead of alloc/dealloc at every call. These modifications are
-   for performance purposes only, and do not affect model results.
+The one-year climatology benchmark, using 16 MPI tasks on Yellowstone averaged 0.10 secs/step,
+or 1.2 minutes per simulated day with a 2-minute timestep. The run finished 365 days in 
+7.3 hours wallclock.
 
- - Provide no-dynamo option. To run the model without electro-dynamo
-   set namelist read parameter DYNAMO = 0. In this case, advance calls
-   sub nodynamo instead of sub dynamo. Sub nodynamo zeros out the 3 components 
-   of the electric field (magnetic grid), and the 3d electric potential
-   in both geographic and magnetic. POTEN, UI,VI,WI will be all zero
-   on the histories.
+On an hao linux desktop (Optiplex 980), using 4 MPI tasks, the model averaged 0.30 secs/step, 
+or 3.6 minutes per simulated day. Faster times can be expected on newer desktop machines.
 
- - Allow seamless switching between model resolutions, using $modelres
-   in the job script. This is accomplished by comparing defs.h in the
-   execdir with defs2.5 and defs5.0 in the srcdir, and copying the
-   appropriate one from srcdir to execdir when necessary. Note change
-   of names from defs.2.5 and defs.5.0 to defs2.5 and defs5.0.
+--------------------------------------------------------------------------------------
+Summary of modifications made to the source code since tiegcm1.94.2
+(revision r739 on January 6, 2012):
 
- - Add sub rdfilename (nchist.F) to read data file names from source
-   history. This allows changes in parameter mxlen_filename between
-   releases, and fixes a bug that was occaisionally expressed when
-   making continuation runs from an "old" history.
-  
- - Corrected sign error in zigmc and zigm2 in southern hemisphere
-   when difference coefficients are set up. This error was occurring
-   only when the current calculation was turned on (icalkqlam==1).
-   This fix affects Kqphi by approximately 1%.
+1. Bug Fixes:
+ 
+  - Repair bug in diags when HMF2,NMF2 are requested, and add conditional to sub hnmf2 
+    to avoid divide by zero when code has been built in debug mode (r759).
 
- - Rename sub getpid to getprocessid (util.F) to avoid conflict with
-   PVM lib when the model is coupled into CMIT.
+  - Add max checks to insure that the zpotenm3d geopotential used in sub nosocrdens
+   (current.F) is >= h0 to avoid NaNQ in KQPHI and KQLAM near the magnetic equator (r808).
+ 
+  - Correct buffer length in mp_updateephi, mp_updatelam, mp_updateemz (mpi.F).
+    This was apparently causing a corruption of f4d(n)%data under Linux/intel (r837).
 
- - Fixed problem with i/o timing calls in advance.F, and added copying
-   of source history for initial runs to primary history timing.
+  - Fix units bug in eddy and molecular viscosity coefficients in duv.F, resulting in 4-5% 
+    change in electron density in E and F regions, up to 4-5% change in zonal wind, 
+    negligible changes in meridional wind, and negligible effects on neutral density in 
+    the upper thermosphere (~0.5%) (r880).
 
- - Added SECSTART and SECSTOP to the Userguide namelist parameter 
-   descriptions (doc/userguide/namelist.rst).
+  - Change in the "floor" of the EUVAC solar fluxes from 0.8 times the reference spectrum 
+    to 0.1 times the reference spectrum.  This makes insignificant difference for F10.7 of 
+    70 or above, but becomes important for "anomalously low" fluxes corresponding to F10.7 
+    in the low 60's (r928).
 
- - Move parameter joulefac ("joule heating factor") from dt.F to sub qjoule_tn 
-   in qjoule.F, where it is applied to qji_tn during the joule heating calculation.
-   This is before it is optionally saved as a secondary history diagnostic (QJOULE 
-   and/or QJOULE_INTEG). Sub qjoule_tn is called before dt, so joulefac is no longer
-   applied in dt. Also added joulefac to history files as a scalar per history. 
-   Changed qjoule.F to a module, w/ joulefac in module data, so it can be use-associated
-   by output.F (the routines are use-associated by dynamics.F for the calls).
-   This will NOT affect model results, EXCEPT for the joule heating diagnostics,
-   which will be 1.5x larger than in previous revisions (joulefac==1.5).
+  - In sub filter2 (filter.F), make part of argument to cos function a real instead of 
+    an integer (effects of this change were not quantified) (r945).
 
- - Move sub calccloc from wei01cm.F to util.F, modified to use default values for
-   convection radius and center location of the convection pattern. The defaults
-   are normally used for Bz northward conditions. Sub calccloc has been tested
-   with Weimer01, but is NOT called at all in this revision. A new subroutine 
-   wei01loc (based on wei05loc) is called for Weimer01. Both wei01loc and wei05loc 
-   were modified to use byloc, a subset of byimf, which is used for the cusp location
-   with phid. Sub calccloc will be used later for imposed potential patters
-   for CMIT/LFM or AMIE. For more details see svn commit log r738 by Emery (1/5/2012).
-    
+  - Fixed long-time netcdf error message "string match to name in use".  This error was not 
+    fatal, was essentially a warning, but was annoying and confusing (r945).
+
+  - More of an improvement than a bugfix: Calculation of time-dependent CO2 concentration
+    used in calculation of implicit and explicit cooling terms in newton.F. This results
+    in 370 ppm in 2000, doubling to 740 ppm in 2100. In previous revisions, CO2 concentration
+    was constant at 350 ppm (r946).
+
+--------------------------------------------------------------------------------------
+2. Make/Build System:
+
+  - Add logic to job scripts to force gmake clean if debug flag has changed (r796).
+  - Add logic to job scripts to enable seamless switching between model resolutions (r884,r913).
+
+  - Add new job script for the NWSC yellowstone machine, tiegcm-ys.job in the scripts 
+    directory. Also add Make.intel_ys and Make.pgi_ys for building on yellowstone, and
+    run.lsf (made by tiegcm-ys.job) for submitting to yellowstone queues (r868).
+
+  - Modify scripts/tiegcm-ys.job to allow serial non-mpi runs on the interactive node (r913).
+
+--------------------------------------------------------------------------------------
+3. User Interface:
+
+  - Add -l option to Linux Intel mpirun command to prefix stdout lines with mpi task ids (r769).
+ 
+  - Add diagnostic FOF2 (r775), and diagnostics BX,BY,BZ,BMAG,EX,EY,EZ,ED1,ED2,PHIM2D
+    (see diags.F) (r945).
+
+  - Stop the model with an error message if the number of available mpi tasks is not
+    one of valid_pecounts for which the model has been validated (1,4,8,12,16,24,32,48,64)
+    (r798).
+
+  - Update linux job scripts for all benchmark test runs in the tests directory (r945).
+
+--------------------------------------------------------------------------------------
+4. Performance/Memory:
+
+  - Restrict number of calls to checkf in diags.F, avoiding memory-accumulation
+    problems generated by Intel/ifort implementation of intrinsic function len_trim (r751).
+
+  - Remove redundant calls to mk_polelat, mp_bndlats and mp_bndlons from advance.F. 
+    Remove unnecessary calls to mp_bndlons_f3d and mp_periodic_f3d at end of dt.F (r759).
+
+  - Eliminate sub mp_updatephi (mpi.F), since it is no longer necessary.  Changed subs 
+    mp_updateemphi, mp_updateemlam and mp_updateemz (mpi.F) to use mpi_bcast rather than 
+    mpi_send/recv calls (r826).
+
+  - Reduce statically allocated memory in gswm module by dynamically allocating arrays to 
+    be read from the data file on subdomains only, rather than globally (r920).
+
+--------------------------------------------------------------------------------------
+5. Coupling:
+
+  - Merge modifications of CMIT-coupled tiegcm1.94.2 tag to the trunk (r752)
+
+  - Change name of sub getcwd to getcwdir and sub getpid to getprocessid to avoid naming 
+    conflicts (r762).
+
+--------------------------------------------------------------------------------------
+6. Legacy Rewrite:
+
+  - Introduced refactored apex code apex.F90. This is a free-format f90 rewrite of the 
+    legacy code apex_subs.F (circa 1995-2000 by Art Richmond, Roy Barnes, et.al.)
+    Old source file apex_subs.F was removed (r931).
+

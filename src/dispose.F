@@ -27,7 +27,7 @@
       integer :: istat
       character(len=32) :: command
 !
-! Make dispose script name from pid (see getpid in util.F):
+! Make dispose script name from pid (see getprocessid in util.F):
       write(dispose_script,"('dispose_',i8.8,'.hsi')") pid
 !     write(6,"('init_dispose: pid=',i8,' dispose_script=',a)") 
 !    |  pid,trim(dispose_script)

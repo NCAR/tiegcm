@@ -27,20 +27,19 @@
 #endif 
 ! 
 ! GSWM boundary data at model grid, output by this module,
-!   to be used by dt, duv, addiag, etc:
+!   to be used by dt, duv, addiag, etc.
+! Allocated by sub alloc_gswm (called by allocdata):
 !
-! 11/1/05: later change these from global to allocated subdomains:
-!   real,dimension(:,:) :: ! will be (lon0:lon1,lat0,lat1)
-!
-      real,dimension(nlonp4,nlat) ::
+      real,allocatable,dimension(:,:) :: ! (lon0:lon1,lat0:lat1)
      |  gswm_mi_di_z, gswm_mi_sdi_z, gswm_nm_di_z, gswm_nm_sdi_z,
      |  gswm_mi_di_t, gswm_mi_sdi_t, gswm_nm_di_t, gswm_nm_sdi_t,
      |  gswm_mi_di_u, gswm_mi_sdi_u, gswm_nm_di_u, gswm_nm_sdi_u,
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
 !
 ! Private module data, read by sub rdgswm:
+! Will be allocated (lon0:lon1,lat0:lat1,nmonth,nhour)
       integer,parameter,private :: nmonth= 12, nhour = 24
-      real,dimension(nlonp4,nlat,nmonth,nhour),private ::
+      real,allocatable,dimension(:,:,:,:),private ::
      |  z_mi_di, z_mi_sdi, z_nm_di, z_nm_sdi,
      |  t_mi_di, t_mi_sdi, t_nm_di, t_nm_sdi,
      |  u_mi_di, u_mi_sdi, u_nm_di, u_nm_sdi,
@@ -249,25 +248,25 @@
 ! Transfer to private module data (whole-array assignments):
       select case(trim(type))
         case('mi_di')    ! migrating diurnal
-          z_mi_di = z
-          t_mi_di = t
-          u_mi_di = u
-          v_mi_di = v
+          z_mi_di(lon0:lon1,lat0:lat1,:,:) = z(lon0:lon1,lat0:lat1,:,:)
+          t_mi_di(lon0:lon1,lat0:lat1,:,:) = t(lon0:lon1,lat0:lat1,:,:)
+          u_mi_di(lon0:lon1,lat0:lat1,:,:) = u(lon0:lon1,lat0:lat1,:,:)
+          v_mi_di(lon0:lon1,lat0:lat1,:,:) = v(lon0:lon1,lat0:lat1,:,:)
         case('mi_sdi')   ! migrating semi-diurnal
-          z_mi_sdi = z
-          t_mi_sdi = t
-          u_mi_sdi = u
-          v_mi_sdi = v
+          z_mi_sdi(lon0:lon1,lat0:lat1,:,:) = z(lon0:lon1,lat0:lat1,:,:)
+          t_mi_sdi(lon0:lon1,lat0:lat1,:,:) = t(lon0:lon1,lat0:lat1,:,:)
+          u_mi_sdi(lon0:lon1,lat0:lat1,:,:) = u(lon0:lon1,lat0:lat1,:,:)
+          v_mi_sdi(lon0:lon1,lat0:lat1,:,:) = v(lon0:lon1,lat0:lat1,:,:)
         case('nm_di')    ! non-migrating diurnal
-          z_nm_di = z
-          t_nm_di = t
-          u_nm_di = u
-          v_nm_di = v
+          z_nm_di(lon0:lon1,lat0:lat1,:,:) = z(lon0:lon1,lat0:lat1,:,:)
+          t_nm_di(lon0:lon1,lat0:lat1,:,:) = t(lon0:lon1,lat0:lat1,:,:)
+          u_nm_di(lon0:lon1,lat0:lat1,:,:) = u(lon0:lon1,lat0:lat1,:,:)
+          v_nm_di(lon0:lon1,lat0:lat1,:,:) = v(lon0:lon1,lat0:lat1,:,:)
         case('nm_sdi')   ! non-migrating semi-diurnal
-          z_nm_sdi = z
-          t_nm_sdi = t
-          u_nm_sdi = u
-          v_nm_sdi = v
+          z_nm_sdi(lon0:lon1,lat0:lat1,:,:) = z(lon0:lon1,lat0:lat1,:,:)
+          t_nm_sdi(lon0:lon1,lat0:lat1,:,:) = t(lon0:lon1,lat0:lat1,:,:)
+          u_nm_sdi(lon0:lon1,lat0:lat1,:,:) = u(lon0:lon1,lat0:lat1,:,:)
+          v_nm_sdi(lon0:lon1,lat0:lat1,:,:) = v(lon0:lon1,lat0:lat1,:,:)
         case default
           write(6,"(/,'>>> rdgswm: unknown type=',a)") type
           call shutdown('rdgswm')
@@ -695,5 +694,62 @@
       f(1:2,:)              = f(nlonp4-3:nlonp4-2,:)
       f(nlonp4-1:nlonp4,:)  = f(3:4,:)
       end subroutine set_periodic_f2d
+!-----------------------------------------------------------------------
+      subroutine alloc_gswm(lon0,lon1,lat0,lat1)
+!
+! Args:
+      integer,intent(in) :: lon0,lon1,lat0,lat1
+!
+! Local:
+      integer :: istat
+!
+! Module data to be use-associated to lbc.F:
+      allocate(gswm_mi_di_z (lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_mi_sdi_z(lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_nm_di_z (lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_nm_sdi_z(lon0:lon1,lat0:lat1),stat=istat)
+
+      allocate(gswm_mi_di_t (lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_mi_sdi_t(lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_nm_di_t (lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_nm_sdi_t(lon0:lon1,lat0:lat1),stat=istat)
+
+      allocate(gswm_mi_di_u (lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_mi_sdi_u(lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_nm_di_u (lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_nm_sdi_u(lon0:lon1,lat0:lat1),stat=istat)
+
+      allocate(gswm_mi_di_v (lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_mi_sdi_v(lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_nm_di_v (lon0:lon1,lat0:lat1),stat=istat)
+      allocate(gswm_nm_sdi_v(lon0:lon1,lat0:lat1),stat=istat)
+
+      write(6,"('Allocated gswm t,u,v,z (lon0:lon1,lat0:lat1)')")
+!
+! Private module data to be read from nc file:
+      allocate(z_mi_di (lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(z_mi_sdi(lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(z_nm_di (lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(z_nm_sdi(lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+
+      allocate(t_mi_di (lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(t_mi_sdi(lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(t_nm_di (lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(t_nm_sdi(lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+
+      allocate(u_mi_di (lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(u_mi_sdi(lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(u_nm_di (lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(u_nm_sdi(lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+
+      allocate(v_mi_di (lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(v_mi_sdi(lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(v_nm_di (lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+      allocate(v_nm_sdi(lon0:lon1,lat0:lat1,nmonth,nhour),stat=istat)
+
+      write(6,"('Allocated private gwm t,u,v,z ',
+     |  '(lon0:lon1,lat0:lat1,nmonth,nhour)')")
+
+      end subroutine alloc_gswm
 !-----------------------------------------------------------------------
       end module gswm_module

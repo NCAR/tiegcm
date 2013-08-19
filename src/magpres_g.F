@@ -95,7 +95,7 @@
      |  zb,      ! downward component of magnetic field [Gauss = 10^-4 T]
      |  bmod,    ! magnitude of magnetic field [Gauss = 10^-4 T]
      |  alatm    ! (nlonp1,0:nlatp1)  
-      use apex_module,only:           ! (see sub apxparm, apex.F)
+      use getapex_module,only:           ! (see sub apxparm, apex.F)
      |  dvec,     ! d_1,d_2 referenced to h_0 (nlonp1,nlat,3,2)
      |  dddarr    ! D referenced to h_0 (nlonp1,nlat)  
 #ifdef MPI

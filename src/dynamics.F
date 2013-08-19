@@ -725,28 +725,30 @@
 !
       call timer(time0,time1,'DUV',0,0) ! start duv timing
       call duv(
-     |  tn	(levd0,lond0,latd0,itp), ! neutral temperature
-     |  tn	(levd0,lond0,latd0,itc), ! updated neutral temperature (dt.F)
+     |  tn    (levd0,lond0,latd0,itp), ! neutral temperature
+     |  tn    (levd0,lond0,latd0,itc), ! updated neutral temperature (dt.F)
      |  tn_nm (levd0,lond0,latd0,itp), ! tn at time n-1
-     |  un	(levd0,lond0,latd0,itp), ! zonal velocity
-     |  vn	(levd0,lond0,latd0,itp), ! meridional velocity
+     |  un    (levd0,lond0,latd0,itp), ! zonal velocity
+     |  vn    (levd0,lond0,latd0,itp), ! meridional velocity
      |  un_nm (levd0,lond0,latd0,itp), ! zonal velocity at time n-1
      |  vn_nm (levd0,lond0,latd0,itp), ! meridional velocity at time n-1
-     |  w	(levd0,lond0,latd0,itc), ! updated vertical velocity (swdot.F)
+     |  w     (levd0,lond0,latd0,itc), ! updated vertical velocity (swdot.F)
+     |  o2    (levd0,lond0,latd0,itp), ! molecular oxygen at time n-1
+     |  o1    (levd0,lond0,latd0,itp), ! atomic oxygen at time n-1
      |  barm  (levd0,lond0,latd0,itp), ! mean molecular weight
-     |  z	(levd0,lond0,latd0,itp), ! geopotential height
-     |  hdu	(levd0,lond0,latd0),	 ! horizontal diffusion of U (hdif3.F)
-     |  hdv	(levd0,lond0,latd0),	 ! horizontal diffusion of V (hdif3.F)
-     |  ui	(levd0,lond0,latd0),	 ! zonal ion velocity input
-     |  vi	(levd0,lond0,latd0),	 ! meridional ion velocity input
-     |  lxx	(levd0,lond0,latd0),	 ! xx ion drag coefficient
-     |  lyy	(levd0,lond0,latd0),	 ! yy ion drag coefficient
-     |  lxy	(levd0,lond0,latd0),	 ! xy ion drag coefficient
-     |  lyx	(levd0,lond0,latd0),	 ! yx ion drag coefficient
-     |  km	(levd0,lond0,latd0),	 ! molecular viscosity  (cpktkm.F)
-     |  un	(levd0,lond0,latd0,itc), ! output updated un
+     |  z     (levd0,lond0,latd0,itp), ! geopotential height
+     |  hdu   (levd0,lond0,latd0),     ! horizontal diffusion of U (hdif3.F)
+     |  hdv   (levd0,lond0,latd0),     ! horizontal diffusion of V (hdif3.F)
+     |  ui    (levd0,lond0,latd0),     ! zonal ion velocity input
+     |  vi    (levd0,lond0,latd0),     ! meridional ion velocity input
+     |  lxx   (levd0,lond0,latd0),     ! xx ion drag coefficient
+     |  lyy   (levd0,lond0,latd0),     ! yy ion drag coefficient
+     |  lxy   (levd0,lond0,latd0),     ! xy ion drag coefficient
+     |  lyx   (levd0,lond0,latd0),     ! yx ion drag coefficient
+     |  km    (levd0,lond0,latd0),     ! molecular viscosity  (cpktkm.F)
+     |  un    (levd0,lond0,latd0,itc), ! output updated un
      |  un_nm (levd0,lond0,latd0,itc), ! output updated un at time n-1
-     |  vn	(levd0,lond0,latd0,itc), ! output updated vn
+     |  vn    (levd0,lond0,latd0,itc), ! output updated vn
      |  vn_nm (levd0,lond0,latd0,itc), ! output updated vn at time n-1
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after duv')")
