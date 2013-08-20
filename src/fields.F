@@ -17,9 +17,9 @@
      |  mxfsech,spval,nmlat,nmlonp1
       implicit none
       integer,parameter :: 
-     |  nf4d          = 28, ! number of 4-d fields                      ! Changed from 26 to 28 by EKS
-     |  nf4d_hist     = 26, ! number of 4-d fields on primary histories ! Changed from 24 to 26 by EKS
-     |  nf3d          = 44  ! number of 3-d fields                      ! Changed from 42 to 44 by EKS
+     |  nf4d          = 28, ! number of 4-d fields
+     |  nf4d_hist     = 26, ! number of 4-d fields on primary histories
+     |  nf3d          = 45  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
       integer,parameter :: 
@@ -87,30 +87,30 @@
 !
 ! 3-d fields and indices, e.g., reference f3d(kldt)%data
       integer :: 
-     |  i_kldt   ,i_kldu    ,i_kldv    ,i_kldo2 ,i_kldo1 ,i_kldhe,      ! Modified by EKS
+     |  i_kldt   ,i_kldu    ,i_kldv    ,i_kldo2 ,i_kldo1 ,i_kldhe,
      |  i_xnmbar ,i_xnmbari ,i_xnmbarm ,i_cp    ,i_kt    ,
      |  i_km     ,i_ui      ,i_vi      ,i_wi    ,i_vo2   ,
      |  i_vo1    ,i_vn2     ,i_sco2    ,i_sco1  ,i_scn2  ,
      |  i_xiop2p ,i_xiop2d  ,i_nplus   ,i_n2p   ,i_nop   ,
      |  i_lxx    ,i_lyy     ,i_lxy     ,i_lyx   ,i_qji_ti,
      |  i_qji_tn ,i_cool_implicit      ,i_cool_explicit  ,
-     |  i_hdt    ,i_hdu     ,i_hdv     ,i_hdo2  ,i_hdo1  ,i_hdhe,       ! Modified by EKS
-     |  i_ped    ,i_hall    ,i_lam1    ,i_zg
+     |  i_hdt    ,i_hdu     ,i_hdv     ,i_hdo2  ,i_hdo1  ,i_hdhe,
+     |  i_ped    ,i_hall    ,i_lam1    ,i_zg    ,i_n2
 !
 ! Allocatable target arrays 3-d:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 )
 ! which is the same as: tn(1    :nlev ,lon0-2:lon1+2,lat0-2:lat1+2)
 !
       real,dimension(:,:,:),target,allocatable :: ! (k,i,j)
-     |  kldt     ,kldu     ,kldv     ,kldo2    ,kldo1   ,kldhe,         ! Modified by EKS
+     |  kldt     ,kldu     ,kldv     ,kldo2    ,kldo1   ,kldhe,
      |  xnmbar   ,xnmbari  ,xnmbarm  ,cp       ,kt      ,
      |  km       ,ui       ,vi       ,wi       ,vo2     ,
      |  vo1      ,vn2      ,sco2     ,sco1     ,scn2    ,
      |  xiop2p   ,xiop2d   ,nplus    ,n2p      ,nop     ,
      |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti  ,
      |  qji_tn   ,cool_implicit      ,cool_explicit     ,
-     |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1    ,hdhe,          ! Modified by EKS
-     |  ped      ,hall     ,lam1     ,zg
+     |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1    ,hdhe,
+     |  ped      ,hall     ,lam1     ,zg       ,n2
 
 !
 ! 2-d field type (used for 2d secondary history fields):
@@ -838,6 +838,13 @@
       f3d(n)%units = "cm"
       f3d(n)%data => zg
       i_zg = n ; n = n+1
+!
+      allocate(n2(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Molecular Nitrogen N2')")
+      f3d(n)%short_name = "N2"
+      f3d(n)%units = "mmr"
+      f3d(n)%data => n2
+      i_n2 = n ; n = n+1
 !
 ! f3d fields are diagnostics:
       f3d%prognostic = .false.

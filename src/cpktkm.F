@@ -1,5 +1,6 @@
 !
-      subroutine cpktkm(tn,o2,o1,he,fcp,fkt,fkm,lev0,lev1,lon0,lon1,lat)! subroutine call Modified by EKS
+      subroutine cpktkm(tn,o2,o1,n2,he,fcp,fkt,fkm,lev0,lev1,lon0,lon1,
+     |  lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -19,6 +20,7 @@
      |  tn,  ! neutral temperature (deg K)
      |  o2,  ! molecular oxygen (mmr)
      |  o1,  ! atomic oxygen (mmr)
+     |  n2,  ! molecular nitrogen (mmr)
      |  he   ! helium (mmr) ! Added by EKS
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) :: 
      |  fcp, ! specific heat at constant pressure (ergs/deg/gm)
@@ -49,12 +51,11 @@
       do i=lon0,lon1
         do k=lev0,lev1
           fmbar(k,i) = 1./(o2(k,i)*rmassinv_o2 + o1(k,i)*rmassinv_o1 +
-     |                 he(k,i)*rmassinv_he + 
-     |                 (1.-o2(k,i)-o1(k,i)-he(k,i))*rmassinv_n2)
+     |                 he(k,i)*rmassinv_he + n2(k,i)*rmassinv_n2)
           po2(k,i) = fmbar(k,i)*o2(k,i)*rmassinv_o2
           po1(k,i) = fmbar(k,i)*o1(k,i)*rmassinv_o1
           phe(k,i) = fmbar(k,i)*he(k,i)*rmassinv_he
-          pn2(k,i) = 1.-po2(k,i)-po1(k,i)-phe(k,i)
+          pn2(k,i) = fmbar(k,i)*n2(k,i)*rmassinv_n2
           fcp(k,i) = gask*.5*(po2(k,i)*7./32.+pn2(k,i)*7./28.+
      |                        po1(k,i)*5./16.+phe(k,i)*5./4.)
           fkm(k,i) = po2(k,i)*4.03 + pn2(k,i)*3.42 + po1(k,i)*3.9 +

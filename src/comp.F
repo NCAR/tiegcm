@@ -1,6 +1,6 @@
 !
-      subroutine comp(tn,o2,o2_nm,o1,o1_nm,he,he_nm,un,vn,w,z,hdo2,hdo1,
-     |                hdhe,o2_upd,o2nm_upd,o1_upd,o1nm_upd,he_upd,
+      subroutine comp(tn,o2,o2_nm,o1,o1_nm,he,he_nm,n2,un,vn,w,z,hdo2,
+     |                hdo1,hdhe,o2_upd,o2nm_upd,o1_upd,o1nm_upd,he_upd,
      |                henm_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -32,6 +32,7 @@
      |  o2_nm,! O2 (mmr) at time n-1
      |  o1_nm,! O  (mmr) at time n-1
      |  he_nm,! He (mmr) at time n-1
+     |  n2,   ! N2 (mmr) input
      |  un,   ! zonal wind velocity at current timestep
      |  vn,   ! meridional wind velocity at current timestep
      |  w,    ! vertical velocity at current timestep
@@ -102,12 +103,10 @@
         do i=lon0,lon1
           embar(i,lev1) = 1./(o2(lev1,i,lat)*rmassinv_o2 +
      |      o1(lev1,i,lat)*rmassinv_o1+he(lev1,i,lat)*rmassinv_he +
-     |      (1.-o2(lev1,i,lat)-o1(lev1,i,lat)-he(lev1,i,lat))*
-     |      rmassinv_n2)
+     |      n2(lev1,i,lat)*rmassinv_n2)
           embar(i,lev1-1) = 1./(o2(lev1-1,i,lat)*rmassinv_o2+
      |      o1(lev1-1,i,lat)*rmassinv_o1+he(lev1-1,i,lat)*rmassinv_he+
-     |      (1.-o2(lev1-1,i,lat)-o1(lev1-1,i,lat)-he(lev1-1,i,lat))*
-     |      rmassinv_n2)
+     |      n2(lev1-1,i,lat)*rmassinv_n2)
           flx_arg(i,lat) = flxwks*(1.+tn(lev1-1,i,lat)/3330.)*
      |      (embar(i,lev1)+embar(i,lev1-1))*(tn(lev1-1,i,lat)**1.5)*
      |      (he(lev1,i,lat)+he(lev1-1,i,lat))
@@ -181,7 +180,7 @@
           embar(i,k) = 1./(o2(k,i,lat)*rmassinv_o2 +                    ! Modified by EKS
      |                     o1(k,i,lat)*rmassinv_o1 +
      |                     he(k,i,lat)*rmassinv_he +
-     |     (1.-o2(k,i,lat)-o1(k,i,lat)-he(k,i,lat))*rmassinv_n2)
+     |                     n2(k,i,lat)*rmassinv_n2)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 

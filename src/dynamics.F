@@ -86,6 +86,7 @@
      |    tn(levd0,lond0,lat,itp), ! 4d input
      |    o2(levd0,lond0,lat,itp), ! 4d input
      |    o1(levd0,lond0,lat,itp), ! 4d input
+     |    n2(levd0,lond0,lat),     ! 3d input
      |    he(levd0,lond0,lat,itp), ! 4d input
      |    cp(levd0,lond0,lat),     ! 3d output
      |    kt(levd0,lond0,lat),     ! 3d output
@@ -772,6 +773,7 @@
      |    tn   (levd0,lond0,lat,itp), ! neutral temperature
      |    o2   (levd0,lond0,lat,itp), ! molecular oxygen (mmr)
      |    o1   (levd0,lond0,lat,itp), ! atomic oxygen (mmr)
+     |    n2   (levd0,lond0,lat),     ! molecular nitrogen (mmr)
      |    he   (levd0,lond0,lat,itp), ! helium (mmr)                    ! Added by EKS
      |    barm (levd0,lond0,lat,itp), ! mean molecular weight
      |    op   (levd0,lond0,lat,itp), ! O+
@@ -787,7 +789,7 @@
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after comp_o2o')")
 !
-! Advance O2, O:
+! Advance O2, O, HE:
 !
       time1_cmpmajor = 0.
       call timer(time0,time1,'CMPMAJOR',0,0) ! start comp major timing
@@ -799,6 +801,7 @@
      |  o1_nm (levd0,lond0,latd0,itp), ! O1 (mmr) at time n-1
      |  he    (levd0,lond0,latd0,itp), ! He (mmr)
      |  he_nm (levd0,lond0,latd0,itp), ! He (mmr) at time n-1
+     |  n2    (levd0,lond0,latd0),     ! N2 (mmr) input
      |  un    (levd0,lond0,latd0,itp), ! zonal velocity
      |  vn    (levd0,lond0,latd0,itp), ! meridional velocity
      |  w     (levd0,lond0,latd0,itp), ! vertical velocity

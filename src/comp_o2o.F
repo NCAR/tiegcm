@@ -1,5 +1,5 @@
 !
-      subroutine comp_o2o(tn,o2,o1,he,barm,op,no,n4s,n2d,o2p,ne,        ! Modified by EKS
+      subroutine comp_o2o(tn,o2,o1,n2,he,barm,op,no,n4s,n2d,o2p,ne,
      |  n2p,nplus,nop,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -25,6 +25,7 @@
      |  tn,    ! neutral temperature (deg K) 
      |  o2,    ! O2 (mmr)
      |  o1,    ! O1 (mmr)
+     |  n2,    ! N2 (mmr)
      |  he,    ! He (mmr)                                               ! Modified by EKS
      |  barm,  ! mean molecular weight
      |  op,    ! O+
@@ -61,9 +62,8 @@
           qopi (k,i) = 0.5*(qop(k,i,lat)+qop(k+1,i,lat))
 !
 ! n*mbar (k+1/2):
-          xnmbar(k,i) = expz(k)*p0/(boltz*tn(k,i)*(o2(k,i)*rmassinv_o2+ ! Modified by EKS
-     |      o1(k,i)*rmassinv_o1+he(k,i)*rmassinv_he+
-     |      (1.-o2(k,i)-o1(k,i)-he(k,i))*rmassinv_n2))
+          xnmbar(k,i) = expz(k)*p0/(boltz*tn(k,i)*(o2(k,i)*rmassinv_o2+
+     |     o1(k,i)*rmassinv_o1+he(k,i)*rmassinv_he+n2(k,i)*rmassinv_n2))
 !
 ! OX production:
 ! s1

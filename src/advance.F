@@ -363,6 +363,7 @@
      |  xnmbarm(levd0,lond0,latd0),	    ! out
      |  z      (levd0,lond0,latd0,itp),     ! out (note itp is output)
      |  zg     (levd0,lond0,latd0),         ! out (z with varying grav)
+     |  n2     (levd0,lond0,latd0),         ! out (1.-o2-o1-he)
      |  lon0,lon1,1,nlevp1,lat0,lat1)
 !   
       if (debug) write(6,"('advance after addiag')")
