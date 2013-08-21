@@ -432,7 +432,7 @@
       endif
       end subroutine aurora_cons
 !-----------------------------------------------------------------------
-      subroutine aurora(tn,o2,o1,barm,lev0,lev1,lon0,lon1,lat)
+      subroutine aurora(tn,o2,o1,n2,barm,lev0,lev1,lon0,lon1,lat)
 !
 ! Auroral parameterization driver.
 ! (called by sub dynamics, from inside parallel latitude scan)
@@ -457,6 +457,7 @@
      |  tn,    ! neutral gas temperature (deg K)
      |  o2,    ! O2 mass mixing ratio
      |  o1,    ! O mass mixing ratio
+     |  n2,    ! N2 mass mixing ratio (1-o2-o-he)
      |  barm   ! mean molecular weight (see sub addiag)
 !
 ! Local:
@@ -550,7 +551,7 @@
      |  alfa (lon0:lon1), alfa2(lon0:lon1), alfa3(lon0:lon1),
      |  eflux(lon0:lon1), eflux2(lon0:lon1), eflux3(lon0:lon1),
      |  flux (lon0:lon1), flux2(lon0:lon1), flux3(lon0:lon1),
-     |  tn,o2,o1,barm,zibot,dz,lev0,lev1,lon0,lon1,lat)
+     |  tn,o2,o1,n2,barm,zibot,dz,lev0,lev1,lon0,lon1,lat)
 !
 #ifdef VT
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
@@ -741,7 +742,7 @@
 ! 11/08 EMERY added eflux=flux*fac_p2e*alfa (better when alfa quite variable)
       subroutine aurora_ions (fac_p2e,drizl,cusp,alfa1,alfa2,alfa3,
      |  eflux1,eflux2,eflux3,flux1,flux2,flux3,
-     |  tn,o2,o1,barm,zpbot,dzp,lev0,lev1,lon0,lon1,lat)
+     |  tn,o2,o1,n2,barm,zpbot,dzp,lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate aroral additions to ionization rates.
 ! Note this routine is standalone, not in aurora_module.
@@ -778,7 +779,7 @@
 ! 11/08 EMERY added eflux=flux*fac_p2e*alfa as eflux1
       real,intent(in) :: zpbot,dzp
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  tn,o2,o1,barm
+     |  tn,o2,o1,n2,barm
 !
 ! Local:
       integer :: i,k,nlevs
@@ -818,7 +819,7 @@
           p0ez_mbar(k,i) = p0*expz(k)/(boltz*tn(k,i)*
      |      (o2(k,i)*rmassinv_o2+
      |       o1(k,i)*rmassinv_o1+
-     |       (1.-o2(k,i)-o1(k,i))*rmassinv_n2))/avo
+     |       n2(k,i)*rmassinv_n2))/avo
           tk_mbar(k,i) = gask*tn(k,i)/(grav*barm(k,i))*p0ez_mbar(k,i)
           xalfa_sp(k,i) = ((tk_mbar(k,i)/0.00271)**0.58140)/alfa_sp
         enddo ! k=lev0,lev1
@@ -894,9 +895,9 @@
 !
 ! Denominator of equations (13-16) in Roble,1987.
           denom(k,i) = 
-     |      0.92*(1.-o2(k,i)-o1(k,i))*rmassinv_n2 +
-     |      1.5             *o2(k,i) *rmassinv_o2 + 
-     |      0.56            *o1(k,i) *rmassinv_o1
+     |      0.92 * n2(k,i)*rmassinv_n2 +
+     |      1.5  * o2(k,i)*rmassinv_o2 + 
+     |      0.56 * o1(k,i)*rmassinv_o1
 !
 ! Production of O2+ (equation (15) in Roble,1987):
           qo2p_aur(k,i) = qsum(k,i)*o2(k,i)/(rmass_o2*denom(k,i))+qia(2)
@@ -907,7 +908,7 @@
      |       0.56*o1(k,i)*rmassinv_o1)/denom(k,i) + qia(3)
 !
 ! Production of N2+ (equation (13) in Roble,1987)
-          xn2 = (1.-o2(k,i)-o1(k,i))
+          xn2 = n2(k,i)
           if (xn2 <= 1.e-8) xn2 = 1.e-8
           qn2p_aur(k,i) = qsum(k,i)*0.7*xn2/(rmass_n2*denom(k,i))+qia(1)
         enddo ! k=lev0,lev1

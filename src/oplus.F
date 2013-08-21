@@ -23,7 +23,7 @@
       logical :: callfilt2=.true.   ! if true, call filter2()
       contains
 !-----------------------------------------------------------------------
-      subroutine oplus(tn,te,ti,o2,o1,n2d,ne,u,v,w,barm,ui,vi,wi,
+      subroutine oplus(tn,te,ti,o2,o1,n2,n2d,ne,u,v,w,barm,ui,vi,wi,
      |  xnmbar,op,optm1,opout,optm1out,xiop2p,xiop2d,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -57,7 +57,7 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) ::
      |  tn, te, ti, ! neutral, electron, and ion temperatures (deg K)
-     |  o2, o1,     ! o2, o mass mixing ratios
+     |  o2, o1, n2, ! o2, o, n2 mass mixing ratios
      |  n2d,        ! n2d
      |  ne,         ! electron density
      |  u,v,w,      ! neutral wind velocities (zonal, meridional, omega)
@@ -84,7 +84,7 @@
      |  ubca, ubcb ! O+ upper boundary condition (were t2,t3)
       real :: explic = 1., gmr
       real,dimension(lev0:lev1,lon0:lon1) :: 
-     |  psi_n2,           ! n2 mass mixing ratio (1-o2-o)
+     |  psi_n2,           ! n2 mass mixing ratio (1-o2-o-he)
      |  bdzdvb_op,        ! was s7
      |  explicit,         ! was s4
      |  hdz,              ! was s15
@@ -179,18 +179,18 @@
       call rrk(
      |  tn (:,lon0:lon1,jm1),barm(:,lon0:lon1,jm1),
      |  o2 (:,lon0:lon1,jm1),o1(:,lon0:lon1,jm1),
-     |  tpj(:,lon0:lon1,jm1),dj(:,lon0:lon1,jm1),
-     |  lon0,lon1,lev0,lev1,lat)
+     |  n2 (:,lon0:lon1,jm1),tpj(:,lon0:lon1,jm1),
+     |  dj(:,lon0:lon1,jm1),lon0,lon1,lev0,lev1,lat)
       call rrk(
      |  tn (:,lon0:lon1,lat),barm(:,lon0:lon1,lat),
      |  o2 (:,lon0:lon1,lat),o1(:,lon0:lon1,lat),
-     |  tpj(:,lon0:lon1,lat),dj(:,lon0:lon1,lat),
-     |  lon0,lon1,lev0,lev1,lat)
+     |  n2 (:,lon0:lon1,lat),tpj(:,lon0:lon1,lat),
+     |  dj(:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
       call rrk(
      |  tn (:,lon0:lon1,jp1),barm(:,lon0:lon1,jp1),
      |  o2 (:,lon0:lon1,jp1),o1(:,lon0:lon1,jp1),
-     |  tpj(:,lon0:lon1,jp1),dj(:,lon0:lon1,jp1),
-     |  lon0,lon1,lev0,lev1,lat)
+     |  n2 (:,lon0:lon1,jp1),tpj(:,lon0:lon1,jp1),
+     |  dj(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,lat)
       if (debug) write(6,"('oplus after rrk: lat=',i3)") lat
 
 !     call addfld('DJM1',' ',' ',dj(:,lon0:lon1,jm1),
@@ -715,7 +715,7 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
 !
-          psi_n2(k,i) = 1.-o2(k,i,j0)-o1(k,i,j0) ! n2 mixing ratio
+          psi_n2(k,i) = n2(k,i,j0) ! n2 mixing ratio
 !
           xiop2p(k,i,lat) = 
      |      0.5*(qop2p(k,i,lat)+qop2p(k+1,i,lat))/((xnmbar(k,i,lat)*
@@ -955,7 +955,7 @@
 !
       end subroutine divb
 !-----------------------------------------------------------------------
-      subroutine rrk(t,rms,ps1,ps2,tp,ans,lon0,lon1,lev0,lev1,lat)
+      subroutine rrk(t,rms,ps1,ps2,ps3,tp,ans,lon0,lon1,lev0,lev1,lat)
 !
 ! Returns diffusion coefficient in ans.
 !
@@ -966,7 +966,7 @@
 ! Args:
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat
       real,dimension(lev0:lev1,lon0:lon1),intent(in) ::
-     |  t,rms,ps1,ps2,tp
+     |  t,rms,ps1,ps2,ps3,tp
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
 !
 ! Local:
@@ -976,8 +976,8 @@
         do k=lev0,lev1-1
           ans(k,i) = 1.42E17*boltz*t(k,i)/(p0*expz(k)*.5*(rms(k,i)+
      |      rms(k+1,i))*(ps2(k,i)*rmassinv_o1*sqrt(tp(k,i))*(1.-0.064*
-     |      alog10(tp(k,i)))**2*colfac+18.6*(1.-ps1(k,i)-ps2(k,i))*
-     |      rmassinv_n2+18.1*ps1(k,i)*rmassinv_o2))
+     |      alog10(tp(k,i)))**2*colfac+18.6*ps3(k,i))*rmassinv_n2+18.1*
+     |      ps1(k,i)*rmassinv_o2)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
       end subroutine rrk

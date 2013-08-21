@@ -66,7 +66,7 @@
 !
       end subroutine alloc_n4s
 !-----------------------------------------------------------------------
-      subroutine comp_n4s(tn,o2,o1,barm,xnmbarm,no,n2d,ne,o2p,op,n2p,
+      subroutine comp_n4s(tn,o2,o1,n2,barm,xnmbarm,no,n2d,ne,o2p,op,n2p,
      |  nplus,nop,lev0,lev1,lon0,lon1,lat)
 !
 ! Advance n4s by one time step. This is called from dynamics at
@@ -86,6 +86,7 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
+     |  n2,      ! molecular nitrogen (mmr)
      |  barm,    ! mean molecular weight
      |  xnmbarm, ! p0*e(-z)*barm/kT
      |  no,      ! nitric oxide (mmr)
@@ -101,7 +102,6 @@
       integer :: k,i
       integer ::i0,i1,nk,nkm1
       real :: xnmbar_lbc
-      real,dimension(lev0:lev1,lon0:lon1) :: xn2 ! n2 (mmr)
 !
 !     write(6,"('enter comp_n4s: lat=',i2)") lat
       i0 = lon0
@@ -133,8 +133,7 @@
      |   (beta1(lev0,i,lat)*o2(lev0,i)*rmassinv_o2+
      |    beta3(lev0,i,lat)*no(lev0,i)*rmassinv_no+
      |    xnmbar_lbc*beta17(lev0,i,lat)*
-     |    o1(lev0,i)*rmassinv_o1*
-     |    (1.-o2(lev0,i)-o1(lev0,i))*rmassinv_n2)
+     |    o1(lev0,i)*rmassinv_o1*n2(lev0,i)*rmassinv_n2)
 !
 ! Zero diffusive flux at top:
         n4s_ubc(i,lat) = 0.
@@ -143,14 +142,13 @@
 ! Sources:
       do i=lon0,lon1
         do k=lev0,lev1-1
-          xn2(k,i) = 1.-o2(k,i)-o1(k,i)
 !
           n4s_prod(k,i,lat) = (.5*(qtef(k,i,lat)+qtef(k+1,i,lat))*
      |      (1.-brn2d))+xnmbarm(k,i)*(n2d(k,i)*rmassinv_n2d*
      |      (xnmbarm(k,i)*beta4*o1(k,i)*rmassinv_o1+
      |      beta5(k,i,lat)*.5*(ne(k,i)+ne(k+1,i))+beta7)+
      |      .5*(beta8(k,i,lat)+beta8(k+1,i,lat))*no(k,i)*rmassinv_no)+
-     |      xnmbarm(k,i)*(rk2(k,i,lat)*op(k,i)*xn2(k,i)*rmassinv_n2+
+     |      xnmbarm(k,i)*(rk2(k,i,lat)*op(k,i)*n2(k,i)*rmassinv_n2+
      |      rk6*nplus(k,i)*o2(k,i)*rmassinv_o2+
      |      rk8*nplus(k,i)*o1(k,i)*rmassinv_o1)+
      |      sqrt(ne(k,i)*ne(k+1,i))*(ra1(k,i,lat)*nop(k,i)*0.15+
@@ -159,7 +157,7 @@
           n4s_loss(k,i,lat) = -xnmbarm(k,i)*(beta1(k,i,lat)*o2(k,i)*
      |      rmassinv_o2+beta3(k,i,lat)*no(k,i)*rmassinv_no+
      |      xnmbarm(k,i)*beta17(k,i,lat)*o1(k,i)*rmassinv_o1*
-     |      xn2(k,i)*rmassinv_n2)-rk4*o2p(k,i)
+     |      n2(k,i)*rmassinv_n2)-rk4*o2p(k,i)
 
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
@@ -173,7 +171,7 @@
  
       end subroutine comp_n4s
 !-----------------------------------------------------------------------
-      subroutine minor_n4s(tn,o2,o1,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
+      subroutine minor_n4s(tn,o2,o1,n2,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_n4s
 !
@@ -184,6 +182,7 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
+     |  n2,      ! molecular nitrogen (mmr)
      |  n4s,     ! N4S (mmr)
      |  n4s_nm1  ! N4S at time n-1 
 !
@@ -205,7 +204,7 @@
 !    |  sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,lon0,lon1,lat0,
 !    |  lat1,idebug)
 !
-      call minor(tn,o2,o1,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
+      call minor(tn,o2,o1,n2,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
      |  n4s_loss,n4s_prod,n4s_lbc,n4s_ubc,rmass_n4s,phi_n4s,
      |  alfa_n4s,lev0,lev1,lon0,lon1,lat0,lat1,0)
 

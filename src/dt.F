@@ -1,5 +1,5 @@
 !
-      subroutine dt(tn,tn_nm,un,vn,o2,o1,barm,cp,kt,km,hdt,qji_tn,
+      subroutine dt(tn,tn_nm,un,vn,o2,o1,n2,barm,cp,kt,km,hdt,qji_tn,
      |  cool_imp,cool_exp,w_upd,tn_upd,tn_nm_upd,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -38,6 +38,7 @@
      |  vn,    ! neutral zonal velocity (cm/sec)
      |  o2,    ! molecular oxygen (mmr)
      |  o1,    ! atomic oxygen (mmr)
+     |  n2,    ! molecular nitrogen (mmr)
      |  barm,  ! mean molecular weight
      |  cp,    ! specific heat (ergs/deg/gm)           (sub cpktkm)
      |  kt,    ! molecular diffusion (ergs/cm/deg/sec) (sub cpktkm)
@@ -132,15 +133,11 @@
         do k=lev0,lev1-1
           cptn(k,i) = .5*(cp(k,i,lat)+cp(k+1,i,lat))*expz(k)*
      |      (advec_tn(k,i,lat)-dtx2inv*tnsmooth(k,i,lat))
-!         mbar(k,i) = 1./(o2(k+1,i,lat)*rmassinv_o2 + 
-!    |      o1(k+1,i,lat)*rmassinv_o1+(1.-o2(k+1,i,lat)-o1(k+1,i,lat))*
-!    |      rmassinv_n2)
 !
 ! 2/28/05 btf: Use k rather than k+1 in mbar calculation
 !              (as in recent versions of time-gcm, e.g., timegcm1.2)
           mbar(k,i) = 1./(o2(k,i,lat)*rmassinv_o2 +
-     |      o1(k,i,lat)*rmassinv_o1+(1.-o2(k,i,lat)-o1(k,i,lat))*
-     |      rmassinv_n2)
+     |      o1(k,i,lat)*rmassinv_o1 + n2(k,i,lat)*rmassinv_n2)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 

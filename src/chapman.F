@@ -17,7 +17,7 @@
 !
       contains
 !-----------------------------------------------------------------------
-      subroutine chapman(z,tn,o2,o1,barm,vo2,vo1,vn2,sco2,sco1,scn2,
+      subroutine chapman(z,tn,o2,o1,n2,barm,vo2,vo1,vn2,sco2,sco1,scn2,
      |  lev0,lev1,lon0,lon1,lat)
       use params_module,only: dz
       use init_module,only: secs,sin_sundec,cos_sundec,idn,uthr
@@ -35,6 +35,7 @@
      |  tn,   ! neutral temperature (deg K)
      |  o2,   ! molecular oxygen (mmr)
      |  o1,   ! atomic oxygen (mmr)
+     |  n2,   ! molecular nitrogen (mmr)
      |  barm  ! mean molecular weight
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) :: 
      |  vo2,  ! o2 vertical integration
@@ -49,8 +50,6 @@
       integer :: k,i
       real :: rp(lev0:lev1,lon0:lon1), ! z+re
      |        ti(lev0:lev1,lon0:lon1)  ! tn at interfaces
-      real :: 
-     |        n2(lev0:lev1,lon0-2:lon1+2)  ! n2
       real,dimension(lev0:lev1,lon0:lon1) :: ! for diagnostic plotting
      |  chi_plt, slt_plt, idn_plt
 !
@@ -104,15 +103,11 @@
       ti(lev1,:) = tn(lev1-1,lon0:lon1) ! nlevp1 <- nlev
 !     call addfld('TNI',' ',' ',ti,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
-! Make n2 mmr:
-      do k=lev0,lev1
-        n2(k,lon0:lon1) = 1.-o2(k,lon0:lon1)-o1(k,lon0:lon1)
-      enddo
 !     call addfld('CHAP_O2',' ',' ',o2,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('CHAP_O1',' ',' ',o1,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('CHAP_N2',' ',' ',n2(:,lon0:lon1),
+!     call addfld('CHAP_N2',' ',' ',n2,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Calculate line integrals (vo[x] and sco[x] are output):

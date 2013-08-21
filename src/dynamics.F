@@ -153,6 +153,7 @@
      |    tn  (levd0,lond0,lat,itp), ! 4d in
      |    o2  (levd0,lond0,lat,itp), ! 4d in
      |    o1  (levd0,lond0,lat,itp), ! 4d in
+     |    n2  (levd0,lond0,lat),     ! 3d in
      |    barm(levd0,lond0,lat,itp), ! 4d in
      |    vo2 (levd0,lond0,lat),     ! 3d out
      |    vo1 (levd0,lond0,lat),     ! 3d out
@@ -215,6 +216,7 @@
      |      no  (levd0,lond0,lat,itp),
      |      o2  (levd0,lond0,lat,itp),
      |      o1  (levd0,lond0,lat,itp),
+     |      n2  (levd0,lond0,lat),
      |      n4s (levd0,lond0,lat,itp),
      |      xnmbari(levd0,lond0,lat),
      |      1,nlevp1,lon0,lon1,lat)
@@ -241,6 +243,7 @@
         call qinite(
      |    o2     (levd0,lond0,lat,itp),
      |    o1     (levd0,lond0,lat,itp),
+     |    n2     (levd0,lond0,lat),
      |    no     (levd0,lond0,lat,itp),
      |    xnmbari(levd0,lond0,lat),
      |    vo2    (levd0,lond0,lat),
@@ -255,6 +258,7 @@
      |      tn  (levd0,lond0,lat,itp),
      |      o2  (levd0,lond0,lat,itp),
      |      o1  (levd0,lond0,lat,itp),
+     |      n2  (levd0,lond0,lat),
      |      barm(levd0,lond0,lat,itp),
      |      1,nlevp1,lon0,lon1,lat)
           if (debug) write(6,"('dynamics after aurora: lat=',i3)") lat
@@ -284,6 +288,7 @@
      |  ti    (levd0,lond0,latd0,itp),
      |  o2    (levd0,lond0,latd0,itp),
      |  o1    (levd0,lond0,latd0,itp),
+     |  n2    (levd0,lond0,latd0),
      |  n2d   (levd0,lond0,latd0,itp),
      |  ne    (levd0,lond0,latd0,itp),
      |  un    (levd0,lond0,latd0,itp),
@@ -327,6 +332,7 @@
      |    op    (levd0,lond0,lat,itc), ! O+ updated by sub oplus
      |    o2    (levd0,lond0,lat,itp),
      |    o1    (levd0,lond0,lat,itp),
+     |    n2    (levd0,lond0,lat),
      |    n2d   (levd0,lond0,lat,itp),
      |    no    (levd0,lond0,lat,itp),
      |    n4s   (levd0,lond0,lat,itp),
@@ -367,6 +373,7 @@
      |    barm(levd0,lond0,lat,itp),
      |    o2  (levd0,lond0,lat,itp),
      |    o1  (levd0,lond0,lat,itp),
+     |    n2  (levd0,lond0,lat),
      |    ti  (levd0,lond0,lat,itp),
      |    te  (levd0,lond0,lat,itp),
      |    o2p (levd0,lond0,lat,itp),
@@ -430,6 +437,7 @@
      |    tn     (levd0,lond0,lat,itp),  ! TN (deg K)
      |    o2     (levd0,lond0,lat,itp),  ! O2 (mmr)
      |    o1     (levd0,lond0,lat,itp),  ! O (mmr)
+     |    n2     (levd0,lond0,lat),      ! N2 (mmr)
      |    barm   (levd0,lond0,lat,itp),  ! mean mol weight
      |    xnmbarm(levd0,lond0,lat),      ! p0*e(-z)*barm
      |    no     (levd0,lond0,lat,itp),  ! NO
@@ -451,6 +459,7 @@
      |    tn     (levd0,lond0,latd0,itp),  ! TN (deg K)
      |    o2     (levd0,lond0,latd0,itp),  ! O2 (mmr)
      |    o1     (levd0,lond0,latd0,itp),  ! O (mmr)
+     |    n2     (levd0,lond0,latd0),      ! N2 (mmr)
      |    n4s    (levd0,lond0,latd0,itp),  ! n4s from previous step
      |    n4s_nm (levd0,lond0,latd0,itp),  ! n4s at time n-1
      |    n4s    (levd0,lond0,latd0,itc),  ! output n4s
@@ -474,6 +483,7 @@
      |    tn     (levd0,lond0,lat,itp),
      |    o2     (levd0,lond0,lat,itp),
      |    o1     (levd0,lond0,lat,itp),
+     |    n2     (levd0,lond0,lat),
      |    barm   (levd0,lond0,lat,itp),
      |    xnmbarm(levd0,lond0,lat),
      |    n4s    (levd0,lond0,lat,itp),
@@ -489,6 +499,7 @@
      |    tn   (levd0,lond0,latd0,itp),  ! TN (deg K)
      |    o2   (levd0,lond0,latd0,itp),  ! O2 (mmr)
      |    o1   (levd0,lond0,latd0,itp),  ! O (mmr)
+     |    n2   (levd0,lond0,latd0),      ! N2 (mmr)
      |    no   (levd0,lond0,latd0,itp),  ! current no
      |    no_nm(levd0,lond0,latd0,itp),  ! no at time n-1
      |    no   (levd0,lond0,latd0,itc),  ! output no
@@ -533,6 +544,7 @@
      |    tn    (levd0,lond0,lat,itp),
      |    o2    (levd0,lond0,lat,itp),
      |    o1    (levd0,lond0,lat,itp),
+     |    n2    (levd0,lond0,lat),
      |    o2p   (levd0,lond0,lat,itp),
      |    op    (levd0,lond0,lat,itp),
      |    n4s   (levd0,lond0,lat,itp),
@@ -581,6 +593,7 @@
      |    tn  (levd0,lond0,lat,itp),
      |    o2  (levd0,lond0,lat,itp),
      |    o1  (levd0,lond0,lat,itp),
+     |    n2  (levd0,lond0,lat),
      |    ne  (levd0,lond0,lat,itp),
      |    te  (levd0,lond0,lat,itp),
      |    ti  (levd0,lond0,lat,itp),
@@ -607,6 +620,7 @@
      |    tn  (levd0,lond0,lat,itp),
      |    o2  (levd0,lond0,lat,itp),
      |    o1  (levd0,lond0,lat,itp),
+     |    n2  (levd0,lond0,lat),
      |    no  (levd0,lond0,lat,itp), 
      |    barm(levd0,lond0,lat,itp), 
      |    cp  (levd0,lond0,lat),
@@ -693,21 +707,22 @@
       call timer(time0,time1,'DT',0,0) ! start dt timing
       call dt(
      |  tn	(levd0,lond0,latd0,itp),
-     |  tn_nm (levd0,lond0,latd0,itp),
+     |  tn_nm   (levd0,lond0,latd0,itp),
      |  un	(levd0,lond0,latd0,itp),
      |  vn	(levd0,lond0,latd0,itp),
      |  o2	(levd0,lond0,latd0,itp),
      |  o1	(levd0,lond0,latd0,itp),
-     |  barm  (levd0,lond0,latd0,itp),    ! mean molecular weight
-     |  cp	(levd0,lond0,latd0),	    ! specific heat	   (cpktkm.F)
-     |  kt	(levd0,lond0,latd0),	    ! molecular diffusion  (cpktkm.F)
-     |  km	(levd0,lond0,latd0),	    ! molecular viscosity  (cpktkm.F)
-     |  hdt	(levd0,lond0,latd0),	    ! horizontal diffusion (hdif.F)
-     |  qji_tn(levd0,lond0,latd0),	    ! joule heating (sub qjoule_tn)
+     |  n2	(levd0,lond0,latd0),
+     |  barm    (levd0,lond0,latd0,itp),  ! mean molecular weight
+     |  cp	(levd0,lond0,latd0),	  ! specific heat	 (cpktkm.F)
+     |  kt	(levd0,lond0,latd0),	  ! molecular diffusion  (cpktkm.F)
+     |  km	(levd0,lond0,latd0),	  ! molecular viscosity  (cpktkm.F)
+     |  hdt	(levd0,lond0,latd0),	  ! horizontal diffusion (hdif.F)
+     |  qji_tn  (levd0,lond0,latd0),      ! joule heating (sub qjoule_tn)
      |  cool_implicit(levd0,lond0,latd0), ! implicit cooling (newton.F)
      |  cool_explicit(levd0,lond0,latd0), ! explicit cooling (newton.F)
-     |  w	(levd0,lond0,latd0,itc),    ! updated W (swdot.F)
-     |  tn	(levd0,lond0,latd0,itc),    ! output updated tn
+     |  w	(levd0,lond0,latd0,itc),  ! updated W (swdot.F)
+     |  tn	(levd0,lond0,latd0,itc),  ! output updated tn
      |  tn_nm (levd0,lond0,latd0,itc),    ! output updated tn at time n-1
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after dt')")
@@ -736,6 +751,7 @@
      |  w     (levd0,lond0,latd0,itc), ! updated vertical velocity (swdot.F)
      |  o2    (levd0,lond0,latd0,itp), ! molecular oxygen at time n-1
      |  o1    (levd0,lond0,latd0,itp), ! atomic oxygen at time n-1
+     |  n2    (levd0,lond0,latd0),     ! molecular nitrogen
      |  barm  (levd0,lond0,latd0,itp), ! mean molecular weight
      |  z     (levd0,lond0,latd0,itp), ! geopotential height
      |  hdu   (levd0,lond0,latd0),     ! horizontal diffusion of U (hdif3.F)

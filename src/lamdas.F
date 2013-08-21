@@ -1,6 +1,6 @@
 !
-      subroutine lamdas(tn,barm,o2,o1,ti,te,o2p,op,nop, lxx,lyy,lxy,lyx,
-     |  lamda1,ped_out,hall_out,lev0,lev1,lon0,lon1,lat)
+      subroutine lamdas(tn,barm,o2,o1,n2,ti,te,o2p,op,nop, lxx,lyy,lxy,
+     |  lyx,lamda1,ped_out,hall_out,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -29,6 +29,7 @@
      |  barm, ! mean molecular mass
      |  o2,   ! molecular oxygen (mmr)
      |  o1,   ! atomic oxygen    (mmr)
+     |  n2,   ! molecular nitrogen (mmr)
      |  ti,   ! ion temperature (deg K)
      |  te,   ! electron temperature (deg K)
      |  o2p,  ! O2+ number density (1/cm3)
@@ -65,7 +66,7 @@
 ! Local (lev,lon):
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  xnmbar,     ! for conversion to volume density
-     |  xn2,        ! N2 (1-o2-o mmr)
+     |  xn2,        ! N2 (1-o2-o-he mmr)
      |  tnti,       ! average of tn and ti
      |  o2_cm3, o1_cm3, n2_cm3, ! major species number densities (cm3)
      |  sigma_ped,  ! pedersen conductivity (siemens/m)
@@ -194,7 +195,7 @@
      |      (boltz*tn(k,i))
           o2_cm3(k,i) = o2(k,i)*xnmbar(k,i)*rmassinv_o2
           o1_cm3(k,i) = o1(k,i)*xnmbar(k,i)*rmassinv_o1
-          xn2(k,i) = (1.-o2(k,i)-o1(k,i))
+          xn2(k,i) = n2(k,i)
           xn2(k,i) = xn2(k,i)*rmassinv_n2            ! this part varies from timegcm
           if (xn2(k,i) < 1.e-20) xn2(k,i) = 1.e-20   ! done as in tiegcm
           n2_cm3(k,i) = xn2(k,i)*xnmbar(k,i)

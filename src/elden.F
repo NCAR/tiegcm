@@ -1,6 +1,6 @@
 !
-      subroutine elden(tn,barm,op,op_upd,o2,o1,n2d,no,n4s,xiop2p,xiop2d,
-     |  z,nplus,n2p,nop,o2p,electrons,lev0,lev1,lon0,lon1,lat)
+      subroutine elden(tn,barm,op,op_upd,o2,o1,n2,n2d,no,n4s,xiop2p,
+     |  xiop2d,z,nplus,n2p,nop,o2p,electrons,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -29,6 +29,7 @@
      |  op_upd,! O+ ion (updated, from sub oplus)
      |  o2,    ! molecular oxygen (mmr)
      |  o1,    ! atomic oxygen (mmr)
+     |  n2,    ! molecular nitrogen (mmr)
      |  n2d,   ! n2d
      |  no,    ! nitric oxide
      |  n4s,   ! n4s
@@ -50,7 +51,6 @@
      |  xnmbarm,        ! for conversion from mmr to cm3
      |  a0,a1,a2,a3,a4, ! coefficients for quartic solver
      |  a,b,c,d,e,fg,h, ! terms for quartic coefficients
-     |  xn2,            ! n2 (mmr) (1-o2-o)
      |  root            ! output from quartic solver
       real,dimension(lon0:lon1) ::
      |  tec		! diagnostic total electron content
@@ -85,7 +85,6 @@
         do k=lev0,lev1-1
           xnmbarm(k,i) = p0*expz(k)*.5*(barm(k,i)+barm(k+1,i))/
      |      (boltz*tn(k,i))
-          xn2(k,i) = (1.-o2(k,i)-o1(k,i)) ! n2 (mmr)
 !
 ! N+ ion (output):
           nplus(k,i) = (0.5*(qnp(k,i,lat)+qnp(k+1,i,lat))+
@@ -98,7 +97,7 @@
 ! A = QI(NO+)+K2*N(O+)*N(N2)+K7*N(N+)*N(02)+B9*N(NO) (s10)
 !
           a(k,i) = .5*(qnop(k,i,lat)+qnop(k+1,i,lat))+xnmbarm(k,i)*
-     |      (rk2(k,i,lat)*op_upd(k,i)*xn2(k,i)*rmassinv_n2+
+     |      (rk2(k,i,lat)*op_upd(k,i)*n2(k,i)*rmassinv_n2+
      |       rk7*nplus(k,i)*o2(k,i)*rmassinv_o2+
      |       .5*(beta9(k,i,lat)+beta9(k+1,i,lat))*no(k,i)*rmassinv_no)
 !
@@ -117,7 +116,7 @@
 ! D = QI(N2+) (s7)
 !
           d(k,i) = .5*(qn2p(k,i,lat)+qn2p(k+1,i,lat))+(rk16*xiop2p(k,i)+
-     |      rk23*xiop2d(k,i))*xn2(k,i)*rmassinv_n2
+     |      rk23*xiop2d(k,i))*n2(k,i)*rmassinv_n2
 !
 ! E =K3*N(O)+K9*N(O2) (s6)
 !

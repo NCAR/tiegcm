@@ -1,6 +1,6 @@
 !
-      subroutine newton(tn,o2,o1,no,barm,cp,cool_implicit,cool_explicit,
-     |  lev0,lev1,lon0,lon1,lat)
+      subroutine newton(tn,o2,o1,n2,no,barm,cp,cool_implicit,
+     |  cool_explicit,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -23,6 +23,7 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
+     |  n2,      ! molecular nitrogen (mmr)
      |  no,      ! nitric oxide (mmr)
      |  cp,      ! specific heat
      |  barm     ! mean molecular weight
@@ -89,7 +90,7 @@
 !
 ! Co2 cooling (s12):
           co2_cool(k,i) = 2.65e-13*nco2(k,i)*exp(-960./tn(k,i))*
-     |      avo*((o2(k,i)*rmassinv_o2+(1.-o2(k,i)-o1(k,i))*rmassinv_n2)*
+     |      avo*((o2(k,i)*rmassinv_o2 + n2(k,i)*rmassinv_n2)*
      |      aco2(k,i)+o1(k,i)*rmassinv_o1*bco2(k,i))
 !
 ! a(no) (s11):

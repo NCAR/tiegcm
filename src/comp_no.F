@@ -54,7 +54,7 @@
 !
       end subroutine alloc_no
 !-----------------------------------------------------------------------
-      subroutine comp_no(tn,o2,o1,barm,xnmbar,n4s,n2d,ne,o2p,
+      subroutine comp_no(tn,o2,o1,n2,barm,xnmbar,n4s,n2d,ne,o2p,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Advance NO by one time step:
@@ -70,7 +70,7 @@
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
      |  tn,         ! neutral temperature (deg K)
-     |  o2, o1,     ! o2, o mass mixing ratios
+     |  o2, o1, n2, ! o2, o, n2 mass mixing ratios
      |  barm,       ! mean molecular weight
      |  xnmbar,     ! p0*e(-z)*barm/kT
      |  n4s,        ! N(4S)
@@ -81,8 +81,6 @@
 ! Local:
       integer :: k,i
       integer ::i0,i1,nk,nkm1
-      real,dimension(lev0:lev1,lon0:lon1) ::
-     |  xn2       ! N2 (mmr)
 !
       i0 = lon0
       i1 = lon1
@@ -107,14 +105,13 @@
 ! Sources:
       do i=lon0,lon1
         do k=lev0,lev1-1
-          xn2(k,i) = 1.-o2(k,i)-o1(k,i)
 !
           no_prod(k,i,lat) = xnmbar(k,i)**2*o2(k,i)*rmassinv_o2*
      |      (beta1(k,i,lat)*n4s(k,i)*rmassinv_n4s+beta2*n2d(k,i)*
      |      rmassinv_n2d)
 !
           no_prod(k,i,lat) = no_prod(k,i,lat)+xnmbar(k,i)**3*
-     |      beta17(k,i,lat)*o1(k,i)*rmassinv_o1*xn2(k,i)*
+     |      beta17(k,i,lat)*o1(k,i)*rmassinv_o1*n2(k,i)*
      |      rmassinv_n2*n4s(k,i)*rmassinv_n4s
 !
           no_loss(k,i,lat) = 
@@ -136,7 +133,7 @@
 !
       end subroutine comp_no
 !-----------------------------------------------------------------------
-      subroutine minor_no(tn,o2,o1,no,no_nm1,no_out,no_nm1_out,
+      subroutine minor_no(tn,o2,o1,n2,no,no_nm1,no_out,no_nm1_out,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_no
 !
@@ -146,6 +143,7 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
+     |  n2,      ! molecular nitrogen (mmr)
      |  no,      ! NO (mmr)
      |  no_nm1   ! NO at time n-1
 !
@@ -165,7 +163,7 @@
 !    |  sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,lon0,lon1,lat0,
 !    |  lat1,idebug)
 
-      call minor(tn,o2,o1,no,no_nm1,no_out,no_nm1_out,
+      call minor(tn,o2,o1,n2,no,no_nm1,no_out,no_nm1_out,
      |  no_loss,no_prod,no_lbc,no_ubc,rmass_no,phi_no,alfa_no,
      |  lev0,lev1,lon0,lon1,lat0,lat1,0)
 

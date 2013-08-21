@@ -19,7 +19,7 @@
       use lbc,only: b,fb
       use fields_module,only: tlbc
       use addfld_module,only: addfld
-      use diags_module,only: mkdiag_O_N2
+      use diags_module,only: mkdiag_O_N2,mkdiag_N2
       implicit none
 !
 ! Args:
@@ -32,7 +32,6 @@
      |  o2_nm,! O2 (mmr) at time n-1
      |  o1_nm,! O  (mmr) at time n-1
      |  he_nm,! He (mmr) at time n-1
-     |  n2,   ! N2 (mmr) input
      |  un,   ! zonal wind velocity at current timestep
      |  vn,   ! meridional wind velocity at current timestep
      |  w,    ! vertical velocity at current timestep
@@ -40,6 +39,9 @@
      |  hdo2, ! O2 horizontal diffusion (hdif3)
      |  hdo1, ! O  horizontal diffusion (hdif3)
      |  hdhe  ! He horizontal diffusion (hdif3)
+! N2 (mmr) is input, but is also updated from new o2,o,he.
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+     |  intent(inout) :: n2 
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(out)::
      |  o2_upd,  o1_upd,  he_upd,  ! output: O2,O,He updated for next timestep
@@ -906,11 +908,21 @@
               henm_upd(k,i,lat) = henm_upd(k,i,lat)*(1.-small)/
      |                            normalize
             endif
+!
+! Update N2. This is necessary only if n2 is to be saved on
+! secondary history (it will be updated in addiag for next timestep). 
+            n2(k,i,lat) = (1.-o2_upd(k,i,lat)-o1_upd(k,i,lat)-
+     |                     he_upd(k,i,lat))
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
-
+!
+! Provide diagnostics N2 and O/N2:
+!
         call mkdiag_O_N2('O_N2',o1_upd(:,lon0:lon1,lat),
-     |    o2_upd(:,lon0:lon1,lat),lev0,lev1,lon0,lon1,lat)
+     |    o2_upd(:,lon0:lon1,lat),n2(:,lon0:lon1,lat),
+     |    lev0,lev1,lon0,lon1,lat)
+
+        call mkdiag_N2('N2',n2(:,lon0:lon1,lat),lev0,lev1,lon0,lon1,lat)
 
 !       call addfld('O2_OUT',' ',' ',o2_upd(:,i0:i1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
