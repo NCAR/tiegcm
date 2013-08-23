@@ -72,6 +72,12 @@
 ! Latitude scan:
       do j=lat0,lat1
 !
+! Define 3d N2 (fields.F):
+!
+        do i=lon0,lon1
+          n2(:,i,j) = (1.-o2(:,i,j)-o1(:,i,j)-he(:,i,j)) 
+        enddo
+!
 ! vc = cos(phi)*v
 !
         do i=lon0,lon1
@@ -88,8 +94,7 @@
           do k=lev0,lev1
             barm(k,i,j) = 1./                                           ! Modified by EKS
      |        (o2(k,i,j)*rmassinv(1)+o1(k,i,j)*rmassinv(2)+
-     |         he(k,i,j)*rmassinv_he+
-     |        (1.-o2(k,i,j)-o1(k,i,j)-he(k,i,j))*rmassinv(3))
+     |         he(k,i,j)*rmassinv_he+n2(k,i,j)*rmassinv(3))
             xnmbarm(k,i,j)=p0*expz(k)*barm(k,i,j)/
      |        (boltz*tn(k,i,j))
           enddo
@@ -190,12 +195,6 @@
         enddo
         call addfld('ADIAG_Z','Geopotential from addiag',
      |    'cm',z(:,lon0:lon1,j),'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!
-! Define 3d N2 (fields.F):
-!
-        do i=lon0,lon1
-          n2(:,i,j) = (1.-o2(:,i,j)-o1(:,i,j)-he(:,i,j)) 
-        enddo
       enddo ! j=lat0,lat1
 !
 ! Calculate diagnostic geopotential zg, with varying gravity:

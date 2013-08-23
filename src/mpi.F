@@ -1352,6 +1352,127 @@
 #endif
       end subroutine mp_bndlats_f2d
 !-----------------------------------------------------------------------
+      subroutine mp_bndlats_f3d(f,id1,i0,i1,j0,j1,nf)
+!
+! Exchange boundary latitude data between tasks. 
+! Each task sends its lat0,lat0+1 data to task jprev, and its lat1-1,lat1
+!   data to jnext.
+! Each task receives its lat0-2,lat0-1 data from task jprev, and its
+!   lat1+1,lat1+2 data from task jnext.
+!
+! Args:
+      integer,intent(in) :: id1,i0,i1,j0,j1,nf
+      real,intent(inout) :: f(id1,i0-2:i1+2,j0-2:j1+2,nf)
+!
+! Local:
+      integer :: n,nlons,ier,len,jnext,jprev,nflds,jsend0,jsend1,
+     |  jrecv0,jrecv1
+      real,allocatable,save :: 
+     |  sndbuf0(:,:,:,:), ! send buffer for j0  ,j0+1 (id1,i,2,nf)
+     |  sndbuf1(:,:,:,:), ! send buffer for j1-1,j1   (id1,i,2,nf)
+     |  rcvbuf0(:,:,:,:), ! recv buffer for j0-2,j0-1 (id1,i,2,nf)
+     |  rcvbuf1(:,:,:,:)  ! recv buffer for j1+1,j1+2 (id1,i,2,nf)
+      real :: fmin,fmax
+      integer :: ireq(4),istat(MPI_STATUS_SIZE,4),nfsave=0
+!
+#ifdef VT
+!     call vtsymdef(100, 'mp_bndlats_f3d','Communication',ier)
+      call vtbegin(100,ier)
+#endif
+!
+! Allocate send and receive buffers (only fields with %mpi==true):
+! This may be called w/ different nf -- when nf is greater than the
+! previous nf, deallocate the buffers so they will be reallocated w/
+! the new larger nf (note 1:nf in the isend/irecv calls):
+!
+      if (nf > nfsave) then
+        if (allocated(sndbuf0)) deallocate(sndbuf0)
+        if (allocated(sndbuf1)) deallocate(sndbuf1)
+        if (allocated(rcvbuf0)) deallocate(rcvbuf0)
+        if (allocated(rcvbuf1)) deallocate(rcvbuf1)
+        nfsave = nf
+      endif
+      if (.not.allocated(sndbuf0)) then
+        allocate(sndbuf0(id1,mxlon,2,nf),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_bndlats_f3d: error allocating sndbuf0.')")
+      endif
+      if (.not.allocated(sndbuf1)) then
+        allocate(sndbuf1(id1,mxlon,2,nf),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_bndlats_f3d: error allocating sndbuf1.')")
+      endif
+      if (.not.allocated(rcvbuf0)) then
+        allocate(rcvbuf0(id1,mxlon,2,nf),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_bndlats_f3d: error allocating rcvbuf0.')")
+      endif
+      if (.not.allocated(rcvbuf1)) then
+        allocate(rcvbuf1(id1,mxlon,2,nf),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_bndlats_f3d: error allocating rcvbuf1.')")
+      endif
+      rcvbuf0 = 0. ; sndbuf0 = 0.
+      rcvbuf1 = 0. ; sndbuf1 = 0.
+      len    = id1*mxlon*2*nf
+      nlons = i1-i0+1
+!
+! Locate adjacent tasks (includes null tasks top and bottom)
+      jprev = itask_table(mytidi,mytidj-1) ! task above (south)
+      jnext = itask_table(mytidi,mytidj+1) ! task below (north)
+!
+! Load sndbuf0 with j0,j0+1 and sndbuf1 with j1-1,j1:
+      do n=1,nf
+        sndbuf0(1:id1,1:nlons,:,n) = f(1:id1,i0:i1,j0  :j0+1,n)
+        sndbuf1(1:id1,1:nlons,:,n) = f(1:id1,i0:i1,j1-1:j1  ,n)
+      enddo
+!
+! Send j0:j0+1 (sndbuf0) to jprev:
+      call mpi_isend(sndbuf0(:,:,:,1:nf),len,MPI_REAL8,jprev,1,
+     |  MPI_COMM_WORLD,jsend0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f3d send0 to jprev')
+!
+! Send j1-1:j1 (sndbuf1) to jnext:
+      call mpi_isend(sndbuf1(:,:,:,1:nf),len,MPI_REAL8,jnext,1,
+     |  MPI_COMM_WORLD,jsend1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f3d send1 to jnext')
+!
+! Receive j0-2:j0-1 (rcvbuf0) from jprev:
+      call mpi_irecv(rcvbuf0(:,:,:,1:nf),len,MPI_REAL8,jprev,1,
+     |  MPI_COMM_WORLD,jrecv0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f3d recv0 fm jprev')
+!
+! Receive j1+1:j1+2 (rcvbuf1) from jnext:
+      call mpi_irecv(rcvbuf1(:,:,:,1:nf),len,MPI_REAL8,jnext,1,
+     |  MPI_COMM_WORLD,jrecv1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f3d recv1 fm jnext')
+!
+! Wait for completions:
+! integer :: ireq(4),istat(4)
+      ireq = (/jsend0,jsend1,jrecv0,jrecv1/)
+      istat = 0
+      call mpi_waitall(4,ireq,istat,ier)
+      if (ier /= 0) call handle_mpi_err(ier,'mp_bndlats_f3d waitall')
+!
+! Copy j0-2:j0-1 from rcvbuf0, and j1+1:j1+2 from rcvbuf1:
+      do n=1,nf
+        if (j0 /= 1) then
+          f(:,i0:i1,j0-2:j0-1,n) = rcvbuf0(:,1:nlons,:,n)
+        endif
+        if (j1 /= nlat) then
+          f(:,i0:i1,j1+1:j1+2,n) = rcvbuf1(:,1:nlons,:,n)
+        endif
+      enddo
+#ifdef VT
+!     call vtsymdef(100, 'mp_bndlats_f3d','Communication',ier)
+      call vtend(100,ier)
+#endif
+      end subroutine mp_bndlats_f3d
+!-----------------------------------------------------------------------
       subroutine mp_bndlons(f,mxf,ixt)
 !
 ! Exchange boundary longitude data between tasks.
@@ -1824,8 +1945,6 @@
      |  sndbuf(:,:,:,:,:)  ! send for new lats on remote task (k,ihave,2,nf,nt)
       real :: fmin,fmax,signchange
 !
-!#ifdef MPI
-!
 ! Serial run of an MPI job (1 task):
       if (ntask==1) then
         call mk_polelat( 0,1,ixt)
@@ -1834,15 +1953,6 @@
         call mk_polelat(nlat+2,nlat-1,ixt)
         return
       endif ! ntask==1
-!#else
-!
-! Serial job (non-MPI):
-!     call mk_polelat( 0,1,ixt)
-!     call mk_polelat(-1,2,ixt)
-!     call mk_polelat(nlat+1,nlat  ,ixt)
-!     call mk_polelat(nlat+2,nlat-1,ixt)
-!     return
-!#endif
 !
       if (mytidj /= 0 .and. mytidj /= ntaskj-1) return
 !
@@ -2064,6 +2174,271 @@
       call vtend(103,ier)
 #endif
       end subroutine mp_polelats
+!-----------------------------------------------------------------------
+      subroutine mp_polelats_f3d(f,nlevp1,lon0,lon1,lat0,lat1,nf,
+     |  polesigns)
+!
+! Make latitudes j=-1,0 from j=2,1, and j=nlat+1,nlat+2 from nlat-1,nlat
+! Longitude data are swapped across the poles, with a sign change if
+!   necessary (i.e., U or V).
+!
+! This is same as mp_polelats, except adapted to be called with
+! 3d fields instead of field structures. Currently, it is called
+! from advance for N2 only.
+!
+! Args:
+      integer,intent(in) :: nlevp1,lon0,lon1,lat0,lat1,nf
+      real,intent(inout) :: f(nlevp1,lon0-2:lon1+2,lat0-2:lat1+2,nf)
+      real,intent(in) :: polesigns(nf)
+!
+! Local:
+      integer :: i,ii,j0,j1,if,it,iit,i0,i1,itask,ier,lenrecv,lensend,
+     |  nlonhalf,
+     |  irecv(ntask), itrecv,
+     |  isend(ntask), itsend,
+     |  ntrecv,   ! number of tasks from which to receive needlons
+     |  ntsend    ! number of tasks to which to send havelons
+      integer :: 
+     |  newlons(nlonp4),            ! longitudes needed across the pole
+     |  lonseast(nlonp4),lonswest(nlonp4),
+     |  needlons(nlonp4,0:ntask-1), ! longitudes needed by each task
+     |  irecvlons(nlonp4),
+     |  isendto(2,0:ntask-1),       ! i0,i1 and tasks to send my lons to
+     |  irecvfm(2,0:ntask-1)        ! i0,i1 and tasks to recv my needlons from
+      real,allocatable,save ::
+     |  rcvbuf(:,:,:,:,:), ! recv for new lats on this task (k,ineed,2,nf,nt)
+     |  sndbuf(:,:,:,:,:)  ! send for new lats on remote task (k,ihave,2,nf,nt)
+      real :: fmin,fmax,signchange
+!
+! Serial run of an MPI job (1 task):
+!     if (ntask==1) then
+!       call mk_polelat( 0,1,ixt)
+!       call mk_polelat(-1,2,ixt)
+!       call mk_polelat(nlat+1,nlat  ,ixt)
+!       call mk_polelat(nlat+2,nlat-1,ixt)
+!       return
+!     endif ! ntask==1
+!
+      if (mytidj /= 0 .and. mytidj /= ntaskj-1) return
+!
+#ifdef VT
+!     call vtsymdef(103, 'mp_polelat','Communication',ier)
+      call vtbegin(103,ier)
+#endif
+!
+! Determine longitudes at which east and west hemispheres are exchanged.
+! Data at newlons(i) are replaced by data at lonswest(i) for west hemisphere,
+!   or lonseast(i) for east hemisphere.
+! When nlonp4==76, newlons(:) will be 37-74 and 3-40, i.e.,
+!   (1-38) <- (37-74) and (39-76) <- (3-40)
+! Another way of looking at it:
+!   newlons(1) -> [east,west]lons
+!    37-74     ->   1-38 west
+!     3-40     ->  39-76 east
+!
+      nlonhalf = nlonp4/2
+      do i=1,nlonhalf
+        newlons(i) = nlonhalf+i-2
+        lonswest(newlons(i)) = i
+      enddo 
+      do i=nlonhalf+1,nlonp4
+        newlons(i) = 2+i-nlonhalf
+        lonseast(newlons(i)) = i
+      enddo
+!     write(6,"(/,'newlons(:) = ',/,(15i4))") newlons(:)
+!     write(6,"('lonswest(:) = ',/,(15i4))") lonswest(:)
+!     write(6,"('lonseast(:) = ',/,(15i4))") lonseast(:)
+!
+! Determine which longitudes each task needs to make new polar boundary 
+! latitudes (i.e., across the pole from its own longitudes):
+!
+      needlons(:,:) = 0
+      do it=0,ntask-1
+        i0 = tasks(it)%lon0
+        i1 = tasks(it)%lon1
+        do i=i0,i1
+          needlons(i,it) = newlons(i)
+        enddo
+!       write(6,"('task ',i2,' needlons=',/,(10i4))") it,needlons(:,it)
+      enddo
+!     write(6,"(/,'My needlons = ',/,(10i4))") needlons(:,mytid) 
+!
+      irecvfm(1,:) = 9999
+      irecvfm(2,:) = -1
+      isendto(1,:) = 9999
+      isendto(2,:) = -1
+      do i=0,ntaski-1 ! loop over tasks in my latitude row in the task table
+        itask = tasks(itask_table(i,mytidj))%mytid
+        i0 = tasks(itask)%lon0
+        i1 = tasks(itask)%lon1
+!       if (itask /= mytid) then ! current task is not me
+!
+! Determine tasks I need to receive my needlons from:
+! (1st dimension of irecvfm is 2, for lon0,lon1 to receive)
+          do ii=1,nlonp4
+            if (needlons(ii,mytid) > 0) then ! I need this lon
+              if (needlons(ii,mytid) >= i0 .and. 
+     |            needlons(ii,mytid) <= i1) then
+                if (needlons(ii,mytid) < irecvfm(1,itask))
+     |            irecvfm(1,itask) = needlons(ii,mytid)
+                if (needlons(ii,mytid) > irecvfm(2,itask))
+     |            irecvfm(2,itask) = needlons(ii,mytid)
+              endif
+            endif
+          enddo
+!
+! Determine tasks I need to send my longitudes to:
+! (1st dimension of isendto is 2, for lon0,lon1 to send)
+          do ii=1,nlonp4
+            if (needlons(ii,itask) >= lon0 .and. 
+     |          needlons(ii,itask) <= lon1) then ! itask needs this lon from me
+              if (needlons(ii,itask) < isendto(1,itask))
+     |          isendto(1,itask) = needlons(ii,itask)
+              if (needlons(ii,itask) > isendto(2,itask))
+     |          isendto(2,itask) = needlons(ii,itask)
+            endif
+          enddo ! ii=1,nlonp4
+!       endif ! current task is not me
+      enddo ! i=0,ntaski-1  
+      where(irecvfm==9999) irecvfm = -1
+      where(isendto==9999) isendto = -1
+!
+! Determine how many tasks will be sent to and received from:
+!
+      ntrecv = 0 ; ntsend = 0 
+      do it=0,ntask-1
+        if (irecvfm(1,it) > -1 .and. irecvfm(2,it) > -1) then
+          ntrecv = ntrecv+1
+        endif
+        if (isendto(1,it) > -1 .and. isendto(2,it) > -1) then
+          ntsend = ntsend+1  
+        endif
+      enddo ! it=1,ntask-1
+!
+! Allocate send buffer.
+! sndbuf(:,:,:,:,:), ! send for new lats on remote task (k,i,2,nf,ntsend)
+!
+      if (.not.allocated(sndbuf)) then
+        allocate(sndbuf(nlevp1,mxlon,2,nf,ntsend),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_polelats_f3d: error allocating sndbuf: ',
+     |      ' mxlon=',i3,' ntsend=',i3)") mxlon,ntsend
+      endif
+      sndbuf = 0.
+      lensend = nlevp1*mxlon*2*nf
+!
+! Allocate receive buffer.
+! rcvbuf(:,:,:,:,:), ! recv for new lats on this task (k,i,2,nf,ntrecv)
+!
+      if (.not.allocated(rcvbuf)) then
+        allocate(rcvbuf(nlevp1,mxlon,2,nf,ntrecv),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_polelats_f3d: error allocating rcvbuf: ',
+     |      ' mxlon=',i3,' ntrecv=',i3)") mxlon,ntrecv
+      endif
+      rcvbuf = 0.
+      lenrecv = nlevp1*mxlon*2*nf
+!
+! Load send buffer:
+      j0 = 1 ; j1 = 2              ! Make shem lats 0,-1 from 1,2
+      if (mytidj == ntaskj-1) then ! Make nhem lats nlat+1,nlat+2 from nlat-1,nlat
+        j0 = nlat-1 ; j1 = nlat
+      endif
+      iit = 0
+      do it=0,ntask-1
+        if (isendto(1,it)/=-1.and.isendto(2,it)/=-1) then 
+          iit = iit+1
+          do if=1,nf
+            ii = 0
+            do i=isendto(1,it),isendto(2,it)
+              ii = ii+1 
+              sndbuf(:,ii,1:2,if,iit) = f(:,i,j0:j1,if)
+            enddo
+          enddo ! if=1,nf4d
+        endif ! isendto /= -1
+      enddo ! it=1,ntaski-1
+!
+! Post sends of longitudes I have that are needed on other tasks:
+!
+      itrecv = 0
+      itsend = 0
+      iit = 0
+      do it=0,ntask-1
+        if (isendto(1,it)/=-1.and.isendto(2,it)/=-1) then 
+          iit = iit+1
+          itsend = itsend+1
+          call mpi_isend(sndbuf(1,1,1,1,iit),lensend,MPI_REAL8,it,1,
+     |      MPI_COMM_WORLD,isend(iit),ier)
+          if (ier /= 0) call handle_mpi_err(ier,'mp_polelats_f3d send')
+        endif
+      enddo
+!
+! Post receives of longitudes I need:
+!
+      iit = 0
+      do it=0,ntask-1
+        if (irecvfm(1,it)/=-1.and.irecvfm(2,it)/=-1) then 
+          iit = iit+1
+          call mpi_irecv(rcvbuf(1,1,1,1,iit),lenrecv,MPI_REAL8,it,1,
+     |      MPI_COMM_WORLD,irecv(iit),ier)
+          if (ier /= 0) call handle_mpi_err(ier,'mp_polelats_f3d recv')
+        endif
+      enddo
+!
+! Wait for completion of sends:
+      do it=1,ntsend
+        call mpi_wait(isend(it),irstat,ier)
+        if (ier /= 0) 
+     |    call handle_mpi_err(ier,'mp_polelats_f3d wait for send')
+      enddo
+!
+! Wait for completion of receives:
+      do it=1,ntrecv
+        call mpi_wait(irecv(it),irstat,ier)
+        if (ier /= 0) 
+     |    call handle_mpi_err(ier,'mp_polelats_f3d wait for recv')
+      enddo
+!
+! Define f4d at new latitudes from recvbuf:
+!
+      j0 = -1 ; j1 = 0             ! Receive data for new S lats 0,-1
+      if (mytidj == ntaskj-1) then ! Receive data for new N lats nlat+1,nlat+2
+        j0 = nlat+1 ; j1 = nlat+2
+      endif
+      iit = 0
+      do it=0,ntask-1
+        if (irecvfm(1,it)/=-1.and.irecvfm(2,it)/=-1) then 
+          iit = iit+1
+          field_loop: do if=1,nf
+            if (polesigns(if)==0.) cycle field_loop ! n2d,ne,o2p
+            ii = 0
+            do i=irecvfm(1,it),irecvfm(2,it) ! longitudes that were sent
+              ii = ii+1 
+!
+! Determine if lon to be replaced is east or west:
+              if (lon1 <= nlonhalf) then
+                irecvlons(ii) = lonswest(i)
+              elseif (lon0 > nlonhalf) then
+                irecvlons(ii) = lonseast(i)
+              else ! task is split between east and west
+                irecvlons(ii) = lonswest(i)
+                if (i < nlonhalf) irecvlons(ii) = lonseast(i)
+              endif
+!
+! polesign == -1. for u,v velocities (is +1. for all other fields):
+              f(:,irecvlons(ii),j0,if) =
+     |          rcvbuf(:,ii,2,if,iit)*polesigns(if)
+              f(:,irecvlons(ii),j1,if)=
+     |          rcvbuf(:,ii,1,if,iit)*polesigns(if)
+            enddo
+          enddo field_loop
+        endif
+      enddo
+#ifdef VT
+!     call vtsymdef(103, 'mp_polelat','Communication',ier)
+      call vtend(103,ier)
+#endif
+      end subroutine mp_polelats_f3d
 !-----------------------------------------------------------------------
       subroutine mp_gatherlons_f3d(f,k0,k1,i0,i1,j0,j1,nflds)
 !

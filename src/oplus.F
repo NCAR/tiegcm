@@ -145,10 +145,14 @@
 !   opflux(lon0:lon1,lat0:lat1):
       call oplus_flux(opflux,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('oplus after oplus_flux.')")
+!     call addfld('OPFLUX',' ',' ',opflux,
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
 ! Divergence is returned in dvb(lon0:lon1,lat0:lat1) by sub divb:
       call divb(dvb,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('oplus after divb.')")
+!     call addfld('OP_DIVB',' ',' ',dvb,
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
 !----------------------- Begin first latitude scan ---------------------
       do lat=lat0,lat1
@@ -168,29 +172,39 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
           tpj(k,i,jm1) = 0.5*(te(k,i,jm1)+ti(k,i,jm1))
-          tpj(k,i,lat  ) = 0.5*(te(k,i,lat  )+ti(k,i,lat  ))
+          tpj(k,i,lat) = 0.5*(te(k,i,lat  )+ti(k,i,lat))
           tpj(k,i,jp1) = 0.5*(te(k,i,jp1)+ti(k,i,jp1))
         enddo
       enddo
+
+!     call addfld('TP_JM1',' ',' ',tpj(:,lon0:lon1,jm1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TP_J',' ',' ',tpj(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TP_JP1',' ',' ',tpj(:,lon0:lon1,jp1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! rrk returns djm1,dj,djp1:
-!     subroutine rrk(t,rms,ps1,ps2,tp,ans,lon0,lon1,lev0,lev1,lat)
+!     subroutine rrk(t,rms,ps1,ps2,ps3,tp,ans,lon0,lon1,lev0,lev1,lat)
 !
       call rrk(
      |  tn (:,lon0:lon1,jm1),barm(:,lon0:lon1,jm1),
      |  o2 (:,lon0:lon1,jm1),o1(:,lon0:lon1,jm1),
      |  n2 (:,lon0:lon1,jm1),tpj(:,lon0:lon1,jm1),
-     |  dj(:,lon0:lon1,jm1),lon0,lon1,lev0,lev1,lat)
+     |  dj (:,lon0:lon1,jm1),lon0,lon1,lev0,lev1,lat)
+
       call rrk(
      |  tn (:,lon0:lon1,lat),barm(:,lon0:lon1,lat),
      |  o2 (:,lon0:lon1,lat),o1(:,lon0:lon1,lat),
      |  n2 (:,lon0:lon1,lat),tpj(:,lon0:lon1,lat),
-     |  dj(:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
+     |  dj (:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
+
       call rrk(
      |  tn (:,lon0:lon1,jp1),barm(:,lon0:lon1,jp1),
      |  o2 (:,lon0:lon1,jp1),o1(:,lon0:lon1,jp1),
      |  n2 (:,lon0:lon1,jp1),tpj(:,lon0:lon1,jp1),
-     |  dj(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,lat)
+     |  dj (:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,lat)
+
       if (debug) write(6,"('oplus after rrk: lat=',i3)") lat
 
 !     call addfld('DJM1',' ',' ',dj(:,lon0:lon1,jm1),
@@ -273,11 +287,11 @@
      |  diffj(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,lat)
 
       if (debug) write(6,"('oplus after diffus: lat=',i3)") lat
-!     call addfld('DIFFJM1',' ',' ',diffj(:,lon0:lon1,jm1),
+!     call addfld('DIFF_JM1',' ',' ',diffj(:,lon0:lon1,jm1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('DIFFJ  ',' ',' ',diffj(:,lon0:lon1,lat),
+!     call addfld('DIFF_J  ',' ',' ',diffj(:,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('DIFFJP1',' ',' ',diffj(:,lon0:lon1,jp1),
+!     call addfld('DIFF_JP1',' ',' ',diffj(:,lon0:lon1,jp1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! tpjm2 = 2.*TP*N(O+)    (J-2)
@@ -318,6 +332,9 @@
      |       optm1(k,i,j0))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
+!     call addfld('OPTM1_SM0' ,' ',' ',
+!    |  optm1_smooth(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
         if (debug) write(6,"('oplus end first lat scan: lat=',i3)") lat
       enddo ! lat=lat0,lat1
@@ -603,12 +620,12 @@
         enddo ! k=lev0,lev1
       enddo ! i=lonbeg,lonend
 
-!     call addfld('OPTM1_SM' ,' ',' ',
+!     call addfld('OPTM1_SM1' ,' ',' ',
 !    |  optm1_smooth(lev0:lev1-1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('EXPLIC2' ,' ',' ',explicit(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
+! 
 ! Begin coefficients p_coeff, q_coeff, r_coeff  (s1,s2,s3)
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -957,7 +974,7 @@
 !-----------------------------------------------------------------------
       subroutine rrk(t,rms,ps1,ps2,ps3,tp,ans,lon0,lon1,lev0,lev1,lat)
 !
-! Returns diffusion coefficient in ans.
+! Returns ambipolar diffusion coefficient in ans.
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,boltz,
      |  p0,expz
@@ -974,10 +991,32 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
+!
+! btf 8/23/13: Problem with oplus in tiegcm_he branch:
+! Using new n2 (ps3=n2=1-o2-o-he) here causes the tiegcm_he branch to crash 
+! after 26 days (near 107,0,0, having starting at 80,0,0, 2008). Oplus goes 
+! to the minimum 1.e-6 between ut 13 and 14 of day 80 around local time 12 
+! at high south latitudes, and high in the model column (above zp +5). 
+! These minimum values continue sporadically in time and space (but mostly
+! in high south latitudes, including the pole) until the code seg-faults after 
+! 26 days. See also calls in advance to set halo points in n2.
+!
+! If the original code below is used (1-ps1-ps2 instead of ps3=1-o2-o-he),
+! and this is the *only* difference in all source code, then the model
+! runs fine (this is the *only* place in the source code where replacing 
+! 1-o2-o with n2=1-o2-o-he causes a problem).
+!
+!         ans(k,i) = 1.42E17*boltz*t(k,i)/(p0*expz(k)*.5*(rms(k,i)+
+!    |      rms(k+1,i))*(ps2(k,i)*rmassinv_o1*sqrt(tp(k,i))*(1.-0.064*
+!    |      alog10(tp(k,i)))**2*colfac+18.6*ps3(k,i))*rmassinv_n2+18.1*
+!    |      ps1(k,i)*rmassinv_o2)
+
+! Original code used 1.-ps1-ps2:
           ans(k,i) = 1.42E17*boltz*t(k,i)/(p0*expz(k)*.5*(rms(k,i)+
      |      rms(k+1,i))*(ps2(k,i)*rmassinv_o1*sqrt(tp(k,i))*(1.-0.064*
-     |      alog10(tp(k,i)))**2*colfac+18.6*ps3(k,i))*rmassinv_n2+18.1*
-     |      ps1(k,i)*rmassinv_o2)
+     |      alog10(tp(k,i)))**2*colfac+18.6*(1.-ps1(k,i)-ps2(k,i))*
+     |      rmassinv_n2+18.1*ps1(k,i)*rmassinv_o2))
+
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
       end subroutine rrk
