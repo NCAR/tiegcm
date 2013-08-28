@@ -289,6 +289,7 @@
      |  o2    (levd0,lond0,latd0,itp),
      |  o1    (levd0,lond0,latd0,itp),
      |  n2    (levd0,lond0,latd0),
+     |  he    (levd0,lond0,latd0,itp),
      |  n2d   (levd0,lond0,latd0,itp),
      |  ne    (levd0,lond0,latd0,itp),
      |  un    (levd0,lond0,latd0,itp),

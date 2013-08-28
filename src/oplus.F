@@ -23,7 +23,7 @@
       logical :: callfilt2=.true.   ! if true, call filter2()
       contains
 !-----------------------------------------------------------------------
-      subroutine oplus(tn,te,ti,o2,o1,n2,n2d,ne,u,v,w,barm,ui,vi,wi,
+      subroutine oplus(tn,te,ti,o2,o1,n2,he,n2d,ne,u,v,w,barm,ui,vi,wi,
      |  xnmbar,op,optm1,opout,optm1out,xiop2p,xiop2d,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -58,6 +58,7 @@
      |  intent(in) ::
      |  tn, te, ti, ! neutral, electron, and ion temperatures (deg K)
      |  o2, o1, n2, ! o2, o, n2 mass mixing ratios
+     |  he,         ! he mass mixing ratio
      |  n2d,        ! n2d
      |  ne,         ! electron density
      |  u,v,w,      ! neutral wind velocities (zonal, meridional, omega)
@@ -169,10 +170,15 @@
         call mkdiag_BMAG('BMAG',bmod2(lon0:lon1,lat),lon0,lon1,lat)
 !
 ! Set tp's:
+! 8/28/13: Wenbin says this is wrong, it should be using tn instead of
+!          te, that he presented this in 2011, but it was not changed
+!          in the repository. We will get back to this later, after He 
+!          is fixed.
+!
       do i=lon0,lon1
         do k=lev0,lev1-1
           tpj(k,i,jm1) = 0.5*(te(k,i,jm1)+ti(k,i,jm1))
-          tpj(k,i,lat) = 0.5*(te(k,i,lat  )+ti(k,i,lat))
+          tpj(k,i,lat) = 0.5*(te(k,i,lat)+ti(k,i,lat))
           tpj(k,i,jp1) = 0.5*(te(k,i,jp1)+ti(k,i,jp1))
         enddo
       enddo
@@ -185,25 +191,27 @@
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! rrk returns djm1,dj,djp1:
-!     subroutine rrk(t,rms,ps1,ps2,ps3,tp,ans,lon0,lon1,lev0,lev1,lat)
 !
       call rrk(
      |  tn (:,lon0:lon1,jm1),barm(:,lon0:lon1,jm1),
      |  o2 (:,lon0:lon1,jm1),o1(:,lon0:lon1,jm1),
-     |  n2 (:,lon0:lon1,jm1),tpj(:,lon0:lon1,jm1),
-     |  dj (:,lon0:lon1,jm1),lon0,lon1,lev0,lev1,lat)
+     |  n2 (:,lon0:lon1,jm1),he(:,lon0:lon1,jm1),
+     |  tpj(:,lon0:lon1,jm1),dj(:,lon0:lon1,jm1),
+     |  lon0,lon1,lev0,lev1,lat)
 
       call rrk(
      |  tn (:,lon0:lon1,lat),barm(:,lon0:lon1,lat),
      |  o2 (:,lon0:lon1,lat),o1(:,lon0:lon1,lat),
-     |  n2 (:,lon0:lon1,lat),tpj(:,lon0:lon1,lat),
-     |  dj (:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
+     |  n2 (:,lon0:lon1,lat),he(:,lon0:lon1,lat),
+     |  tpj(:,lon0:lon1,lat),dj(:,lon0:lon1,lat),
+     |  lon0,lon1,lev0,lev1,lat)
 
       call rrk(
      |  tn (:,lon0:lon1,jp1),barm(:,lon0:lon1,jp1),
      |  o2 (:,lon0:lon1,jp1),o1(:,lon0:lon1,jp1),
-     |  n2 (:,lon0:lon1,jp1),tpj(:,lon0:lon1,jp1),
-     |  dj (:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,lat)
+     |  n2 (:,lon0:lon1,jp1),he(:,lon0:lon1,jp1),
+     |  tpj(:,lon0:lon1,jp1),dj(:,lon0:lon1,jp1),
+     |  lon0,lon1,lev0,lev1,lat)
 
       if (debug) write(6,"('oplus after rrk: lat=',i3)") lat
 
@@ -972,18 +980,18 @@
 !
       end subroutine divb
 !-----------------------------------------------------------------------
-      subroutine rrk(t,rms,ps1,ps2,ps3,tp,ans,lon0,lon1,lev0,lev1,lat)
+      subroutine rrk(t,rms,ps1,ps2,n2,he,tp,ans,lon0,lon1,lev0,lev1,lat)
 !
 ! Returns ambipolar diffusion coefficient in ans.
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,boltz,
-     |  p0,expz
+     |  p0,expz,rmassinv_he
       use input_module,only: colfac
 !
 ! Args:
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat
       real,dimension(lev0:lev1,lon0:lon1),intent(in) ::
-     |  t,rms,ps1,ps2,ps3,tp
+     |  t,rms,ps1,ps2,n2,he,tp
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
 !
 ! Local:
@@ -992,30 +1000,12 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
 !
-! btf 8/23/13: Problem with oplus in tiegcm_he branch:
-! Using new n2 (ps3=n2=1-o2-o-he) here causes the tiegcm_he branch to crash 
-! after 26 days (near 107,0,0, having starting at 80,0,0, 2008). Oplus goes 
-! to the minimum 1.e-6 between ut 13 and 14 of day 80 around local time 12 
-! at high south latitudes, and high in the model column (above zp +5). 
-! These minimum values continue sporadically in time and space (but mostly
-! in high south latitudes, including the pole) until the code seg-faults after 
-! 26 days. See also calls in advance to set halo points in n2.
+! 8/28/13 btf: Use n2=1-o2-o-he, and include O+/He collision rate from Wenbin:
 !
-! If the original code below is used (1-ps1-ps2 instead of ps3=1-o2-o-he),
-! and this is the *only* difference in all source code, then the model
-! runs fine (this is the *only* place in the source code where replacing 
-! 1-o2-o with n2=1-o2-o-he causes a problem).
-!
-!         ans(k,i) = 1.42E17*boltz*t(k,i)/(p0*expz(k)*.5*(rms(k,i)+
-!    |      rms(k+1,i))*(ps2(k,i)*rmassinv_o1*sqrt(tp(k,i))*(1.-0.064*
-!    |      alog10(tp(k,i)))**2*colfac+18.6*ps3(k,i))*rmassinv_n2+18.1*
-!    |      ps1(k,i)*rmassinv_o2)
-
-! Original code used 1.-ps1-ps2:
           ans(k,i) = 1.42E17*boltz*t(k,i)/(p0*expz(k)*.5*(rms(k,i)+
      |      rms(k+1,i))*(ps2(k,i)*rmassinv_o1*sqrt(tp(k,i))*(1.-0.064*
-     |      alog10(tp(k,i)))**2*colfac+18.6*(1.-ps1(k,i)-ps2(k,i))*
-     |      rmassinv_n2+18.1*ps1(k,i)*rmassinv_o2))
+     |      alog10(tp(k,i)))**2*colfac+18.6*n2(k,i)*rmassinv_n2+18.1*
+     |      ps1(k,i)*rmassinv_o2+3.6*he(k,i)*rmassinv_he))
 
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1

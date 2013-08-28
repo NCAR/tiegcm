@@ -499,7 +499,7 @@
 !
 ! Total number of timesteps this run:
       nstep = (secs_stop(nseries_prim)-secs_start(1))/step
-      write(6,"('hist_init: nstep=',i3)") nstep
+      write(6,"('hist_init: nstep=',i5)") nstep
 !
 ! Number of source files given (0 or 1):
       if (len_trim(source)==0) then
