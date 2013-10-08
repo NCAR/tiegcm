@@ -5,6 +5,10 @@ F90      = ifort
 MPIF90   = mpif90
 MPIRUN   = mpirun.lsf
 FFLAGS   = -r8 -heap-arrays
+#
+# See http://www2.cisl.ucar.edu/resources/yellowstone/code_dev/compiling#where
+#FFLAGS += -march=corei7 -axAVX
+#
 DBGFLAGS = -debug full -traceback 
 DBGFLAGS += -check bounds -check format -check output_conversion -check pointers -check uninit
 #

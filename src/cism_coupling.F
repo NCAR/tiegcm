@@ -23,23 +23,23 @@
      |     nlon,   ! number of geographic longitudes (at 5 deg, nlon=72)
      |     nlonp1, ! nlon+1
      |     nlonp4  ! nlon+4
-      integer,parameter :: mytid=0,ntask=1
-      real, dimension(nlat,nlonp1) ::
+
+      real*8, dimension(nlat,nlonp1) ::
      |     ting_pot_interp,  ! potential in geo coord from MIX
      |     ting_eng_interp,  ! energy in geo coord from MIX
      |     ting_flux_interp  ! flux in geo coord from MIX
-      real, dimension(nlat,nlonp1) ::
+      real*8, dimension(nlat,nlonp1) ::
      |     ting_ped,     ! Temp array --> gzigm1
      |     ting_hall,    ! Temp array --> gzigm2
      |     ting_gnsrhs  ! Temp array --> gnsrhs
-      real, dimension(nlonp4,nlat) ::
+      real*8, dimension(nlonp4,nlat) ::
      |     gpot, ! potential in geographic coordinates, periodic bound.
      |     geng, ! energy in geographic coordinates, periodic boundary
      |     gflx  ! flux in geographic coordinates, periodic boundary
 
 !     Note: gpotm latitude dimension is defined to match mag2geo
 !     specifications.
-      real, dimension(nlonp4,0:nlatp1) ::
+      real*8, dimension(nlonp4,0:nlatp1) ::
      |     gpotm ! Potential in geographic coord from M-I coupler
 
 #if defined(INTERCOMM)
@@ -48,6 +48,12 @@
       contains 
 !-----------------------------------------------------------------------
       subroutine initialize
+      use mpi_module,only: mytid,ntask
+#ifndef MPI
+      mytid = 0
+      ntask = 1
+#endif
+
 #if defined(INTERCOMM)
       call ci_init
 #elif defined(CISMAH)
@@ -56,22 +62,62 @@
       end subroutine initialize
 !-----------------------------------------------------------------------
       subroutine import
+! 1.  Receive arrays
+!       - ting_pot_interp
+!       - ting_eng_interp
+!       - ting_flx_interp
+!     from MIX on process zero.
+! 2.  Broadcast to all MPI tasks
+! 3.  Set to gpot, gpotm, geng, gflx with periodic boundary
+! 4.  Clean up pole values for Dynamo solver.
+!
       use input_module,only: ctpoten
+      use mpi_module,only: mytid
+#ifdef MPI
+      use mpi_module,only: mytid, handle_mpi_err
+#include <mpif.h>
+      integer iErr
+#endif
       integer ii,jj,js,jn
       real cpmaxsh,cpminsh,cpmaxnh,cpminnh
 
-      write(6,*)'inside receive'
+      write(6,"(A,I1,A)") "TIEGCM (",mytid,"): inside receive"
+
 #if defined(INTERCOMM)
       call ci_receive
 #elif defined(CISMAH)
       call ca_receive
 #endif
+
+#ifdef MPI
+!     FIXME: could optimize this by packing all three arrays
+!     (ting_pot_interp, ting_eng_interp, ting_flux_interp) into one 3d
+!     array and calling MPI_Bcast with count=3*nlat*nlonp1.
+      call MPI_Bcast(ting_pot_interp, nlat*nlonp1, MPI_REAL8, 0, 
+     $     MPI_COMM_WORLD, iErr)
+      if (iErr .ne. 0) then
+         call handle_mpi_err(iErr, 'cism_coupling.F: call mpi_bcast')
+      endif
+
+      call MPI_Bcast(ting_eng_interp, nlat*nlonp1, MPI_REAL8, 0, 
+     $     MPI_COMM_WORLD, iErr)
+      if (iErr .ne. 0) then
+         call handle_mpi_err(iErr, 'cism_coupling.F: call mpi_bcast')
+      endif
+
+      call MPI_Bcast(ting_flux_interp, nlat*nlonp1, MPI_REAL8, 0, 
+     $     MPI_COMM_WORLD, iErr)
+      if (iErr .ne. 0) then
+         call handle_mpi_err(iErr, 'cism_coupling.F: call mpi_bcast')
+      endif
+#endif
+
 !
 ! Process the imported data.
 !
 
       do jj=1,nlat
-         do ii=1,nlonp1-1
+         do ii=1,nlon
             ! Note ii+2 skips over period points.
             gpot(ii+2,jj)=ting_pot_interp(jj,ii) !/1.2
             geng(ii+2,jj)=ting_eng_interp(jj,ii)
@@ -117,15 +163,15 @@
 !     
       do jj=1,nlat
          do ii=1,2
-            gpot(ii,jj)=gpot(nlonp1+ii-1,jj)
-            geng(ii,jj)=geng(nlonp1+ii-1,jj)
-            gflx(ii,jj)=gflx(nlonp1+ii-1,jj)
-            gpotm(ii,jj)=gpotm(nlonp1+ii-1,jj)
+            gpot(ii,jj)=gpot(nlon+ii,jj)
+            geng(ii,jj)=geng(nlon+ii,jj)
+            gflx(ii,jj)=gflx(nlon+ii,jj)
+            gpotm(ii,jj)=gpotm(nlon+ii,jj)
             
-            gpot(nlonp1+ii+1,jj)=gpot(ii,jj)
-            geng(nlonp1+ii+1,jj)=geng(ii,jj)
-            gflx(nlonp1+ii+1,jj)=gflx(ii,jj)
-            gpotm(nlonp1+ii+1,jj)=gpotm(ii,jj)
+            gpot(nlonp1+ii+1,jj)=gpot(ii+2,jj)
+            geng(nlonp1+ii+1,jj)=geng(ii+2,jj)
+            gflx(nlonp1+ii+1,jj)=gflx(ii+2,jj)
+            gpotm(nlonp1+ii+1,jj)=gpotm(ii+2,jj)
          enddo
       enddo
 
@@ -177,9 +223,9 @@
       do jj=1,nlat
          ! Add periodic points
          do ii=1,2
-            gzigm1(ii,jj)=gzigm1(nlonp1+ii-1,jj)
-            gzigm2(ii,jj)=gzigm2(nlonp1+ii-1,jj)
-            gnsrhs(ii,jj)=gnsrhs(nlonp1+ii-1,jj)
+            gzigm1(ii,jj)=gzigm1(nlon+ii,jj)
+            gzigm2(ii,jj)=gzigm2(nlon+ii,jj)
+            gnsrhs(ii,jj)=gnsrhs(nlon+ii,jj)
             gzigm1(nlonp1+ii+1,jj)=gzigm1(ii,jj)
             gzigm2(nlonp1+ii+1,jj)=gzigm2(ii,jj)
             gnsrhs(nlonp1+ii+1,jj)=gnsrhs(ii,jj)
@@ -223,109 +269,6 @@
       call ca_close
 #endif
       end subroutine finalize
-!-----------------------------------------------------------------------
-#if 0
-! FIXME:  This code is un-tested with CMIT 2.5.  It's designed to 
-!         scatter CMIT exchange data to all the nodes in an MPI run of
-!         the TIEGCM.
-      subroutine cism_scatter(f,i0,i1,j0,j1)
-! 
-! Redistribute data from task 1 to other tasks
-!
-! Uses:
-!
-      use params_module,only: nlonp4,nlat
-      use mpi_module,only: mxlon,mxlat,mytidi,mytidj,ntaski,ntaskj,
-     |  itask_table,mytid,tasks,mytid
-#ifdef MPI
-#include <mpif.h>
-      integer ::
-     |  irstat(MPI_STATUS_SIZE)      ! mpi receive status
-#endif
-#ifndef MPI
-      integer :: irstat,mpi_comm_world,mpi_real8
-#endif
-!
-! Args:
-!
-      integer,intent(in) :: i0,i1,j0,j1
-      real,intent(inout) :: f(nlonp4,nlat)
-!
-! Local:
-!
-      integer :: i,j,nlonsend,nlatsend,len,idest,isrc,ier,istart,
-     |  isend,irecv,itask,jtask,lonsend0,lonsend1,latsend0,latsend1,mtag
-      real,allocatable ::
-     |  sndbuf(:,:), ! send buffer (mxlon,mxlat)
-     |  rcvbuf(:,:)  ! recv buffer (mxlon,mxlat)
-!      implicit none
-!
-! Allocate send and receive buffers:
-!
-      allocate(sndbuf(mxlon,mxlat),stat=ier)
-      if (ier /= 0) 
-     |  write(6,"('>>> mp_scatterlons_f3d: error allocating sndbuf.')")
-      allocate(rcvbuf(mxlon,mxlat),stat=ier)
-      if (ier /= 0) 
-     |  write(6,"('>>> mp_scatterlons_f3d: error allocating rcvbuf.')")
-      len = mxlon*mxlat
-!
-! Send data from mytidi==0 and mytidj==1 to other processes
-!
-      if(mytid==0)then
-       do jtask=0,ntaskj-1
-        if (jtask==0)then
-         istart=1
-        else
-         istart=0
-        endif
-        do itask=istart,ntaski-1
-         idest = itask_table(itask,jtask)
-         lonsend0 = tasks(idest)%lon0
-         lonsend1 = tasks(idest)%lon1
-         nlonsend = lonsend1-lonsend0+1
-         latsend0 = tasks(idest)%lat0
-         latsend1 = tasks(idest)%lat1
-         nlatsend = latsend1-latsend0+1
-         sndbuf(1:nlonsend,1:nlatsend) = 
-     |       f(lonsend0:lonsend1,latsend0:latsend1) 
-         mtag = idest+mytid
-         call mpi_isend(sndbuf,len,MPI_REAL8,idest,mtag,MPI_COMM_WORLD,
-     |    isend,ier)
-c        if (ier /= 0) 
-c     |    call handle_mpi_err(ier,'mp_scatterlons_f3d send to idest')
-         call mpi_wait(isend,irstat,ier)
-c        if (ier /= 0) 
-c     |    call handle_mpi_err(ier,'mp_scatterlons_f3d wait for send')
-        enddo ! itask=istart,ntaski-1
-       enddo ! jtask=0,ntaskj-1
-      else
-!
-! Receive data from task (0,0):
-!
-       isrc = itask_table(0,0)
-       mtag = isrc+mytid
-       call mpi_irecv(rcvbuf,len,MPI_REAL8,isrc,mtag,MPI_COMM_WORLD,
-     |    irecv,ier)
-c      if (ier /= 0) 
-c     |  call handle_mpi_err(ier,'mp_scatterlons_f3d recv fm isrc')
-       call mpi_wait(irecv,irstat,ier)
-c      if (ier /= 0) 
-c      |  call handle_mpi_err(ier,'mp_scatterlons_f3d wait for recv')
-       do j=j0,j1 
-         f(i0:i1,j) = rcvbuf(1:i1-i0+1,j-j0+1)
-       enddo ! j=j0,j1
-      endif
-!
-! Free local buffer space:
-!
-      deallocate(sndbuf)
-      deallocate(rcvbuf)
-      
-      end subroutine cism_scatter
-! end #if 0 ...
-! FIXME: Implement & test cism_scatter for TIEGCM MPI coupling.
-#endif
 !-----------------------------------------------------------------------
       subroutine cism_save
 ! This subroutine saves physical parameters that are either important to 

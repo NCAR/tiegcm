@@ -64,6 +64,14 @@
 !   called after mp_init.
 !
 #ifdef MPI
+#ifdef INTERCOMM
+!
+! This code block is required for coupling with LFM (CMIT):
+!
+! InterComm 2.0 requires that IC_Setprogname be called prior to
+! MPI_Init.
+      call IC_Setprogname("tiegcm")
+#endif
       call mp_init
 #endif
 !
@@ -86,7 +94,7 @@
 ! Initialize code coupling communication framework 
 ! (i.e. InterComm or AdHoc file exchanges)
 !
-      if (mytid==0) call initialize
+      call initialize
 #endif
 !
 ! Do initialization:
@@ -143,7 +151,7 @@
 ! Finalize code coupling communication framework 
 ! (i.e. InterComm or AdHoc file exchanges)
 !
-      if (mytid==0)call finalize
+      call finalize
 #endif
 
 !

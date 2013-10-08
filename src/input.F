@@ -2064,9 +2064,10 @@
      |        ' for non-IMF run with Weimer potential model.')")
             call shutdown('IMF params')
           endif
-          if (f107==spval.and.f107a==spval) then
-            write(6,"(/,'>>> INPUT: f107 and f107a must be provided',
-     |        ' for non-IMF run with Weimer potential model.')")
+          if (len_trim(gpi_ncfile) <= 0.and.
+     |      (f107==spval.or.f107a==spval)) then
+            write(6,"(/,'>>> Weimer potential model without GPI data',
+     |        ' must provide namelist f107,f107a')") 
             call shutdown('f107,f107a params')
           endif
 !

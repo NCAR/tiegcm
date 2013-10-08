@@ -9,8 +9,6 @@
       use cism_coupling_module,only: 
      |     nlat,
      |     nlonp1,
-     |     mytid,
-     |     ntask,
      |     ting_pot_interp,
      |     ting_eng_interp,
      |     ting_flux_interp,
@@ -18,7 +16,7 @@
      |     ting_hall, 
      |     ting_gnsrhs, 
      |     xjd      ! XJD handle
-
+      use mpi_module,only: mytid
 ! ... Local variables ..................................................
       integer status ! InterComm Status flag
 
@@ -27,14 +25,14 @@
 
       ! IC_Create_block_region variables:
       integer iaLower2d(2), iaUpper2d(2), iaStride2d(2), iRegion2d
-
-! ... Begin ............................................................      
-
-      write(*,*) "Initializing TIEGCM InterComm Interface"
+! ... Begin ............................................................
+      write(*,"(A,I1,A)") "TIEGCM (", mytid,"): IC_Initialize"
       call IC_Initialize("tiegcm", mytid, "cmit.xjd", xjd, status)
       call handle_IC_error("cism_intercomm.F::IC_Initialize", status)
 
-      tasks(1) = mytid
+      ! Describe global block data decomposition.
+      ! For TIEGCM, all data should be communicated via process 0
+      tasks(1) = 0
       iaBlocks2d(1,1,1) = 1
       iaBlocks2d(1,2,1) = nlat
       iaBlocks2d(1,1,2) = 1
@@ -85,8 +83,6 @@
       ! Commit all the regions:
       call IC_Commit_region(xjd, status)
       call handle_IC_error("cism_intercomm.F::IC_Commit_region", status)
-
-
 
       end subroutine ci_init
 !-----------------------------------------------------------------------
