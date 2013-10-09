@@ -335,35 +335,19 @@
 ! Get hour of model run (model hours from 0 to 23 )
       ihr_cur = modeltime(2)	! current hour
       ihr_nxt = modeltime(2)+1  ! next hour
-      if(ihr_nxt == 24 ) ihr_nxt = 1
+      if(ihr_nxt == 24 ) ihr_nxt = 0
 !
 ! Subdomains at current month, current hour:
       z_curmo = gswmdat(type,mon_cur,ihr_cur+1,'z')
       t_curmo = gswmdat(type,mon_cur,ihr_cur+1,'t')
       u_curmo = gswmdat(type,mon_cur,ihr_cur+1,'u')
       v_curmo = gswmdat(type,mon_cur,ihr_cur+1,'v')
-!     call addfld('z_curmo','z_curmo',' ',z_curmo,
-!    |  'lon',i0,i1,'lat',j0,j1,0)
-!     call addfld('t_curmo','t_curmo',' ',t_curmo,
-!    |  'lon',i0,i1,'lat',j0,j1,0)
-!     call addfld('u_curmo','u_curmo',' ',u_curmo,
-!    |  'lon',i0,i1,'lat',j0,j1,0)
-!     call addfld('v_curmo','v_curmo',' ',v_curmo,
-!    |  'lon',i0,i1,'lat',j0,j1,0)
 !
 ! Subdomains at next month, current hour:
       z_nxtmo = gswmdat(type,mon_nxt,ihr_cur+1,'z')
       t_nxtmo = gswmdat(type,mon_nxt,ihr_cur+1,'t')
       u_nxtmo = gswmdat(type,mon_nxt,ihr_cur+1,'u')
       v_nxtmo = gswmdat(type,mon_nxt,ihr_cur+1,'v')
-!     call addfld('z_nxtmo','z_nxtmo',' ',z_nxtmo,
-!    |  'lon',i0,i1,'lat',j0,j1,0)
-!     call addfld('t_nxtmo','z_nxtmo',' ',t_nxtmo,
-!    |  'lon',i0,i1,'lat',j0,j1,0)
-!     call addfld('u_nxtmo','z_nxtmo',' ',u_nxtmo,
-!    |  'lon',i0,i1,'lat',j0,j1,0)
-!     call addfld('v_nxtmo','z_nxtmo',' ',v_nxtmo,
-!    |  'lon',i0,i1,'lat',j0,j1,0)
 !
 ! Interpolate to month:
       if (isecs /= 0) then
