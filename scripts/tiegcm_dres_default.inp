@@ -2,7 +2,7 @@
 ;
 ; Namelist input file for model tiegcm/branches/tiegcm_amie
 ;
- LABEL = 'tiegcm_amie res=5.0'
+ LABEL = 'tiegcm_amie res=2.5'
  START_YEAR = 2002
  START_DAY  = 80
  CALENDAR_ADVANCE = 1
@@ -10,7 +10,7 @@
 ; SOURCE:       Start-up history file (for initial runs only)
 ; SOURCE_START: Time of history on start-up file (initial runs only)
 ;
- SOURCE = '$TGCMDATA/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc'
+ SOURCE = '$TGCMDATA/tiegcm1.95/TGCM.tiegcm1.95_dres.pcntr_mareqx_smin.nc'
  SOURCE_START = 80,0,0
 ;
 ; START: Start time (day,hour,minute)
@@ -19,12 +19,12 @@
 ;
  START = 80,0,0
  STOP  = 81,0,0
- STEP  = 120
+ STEP  = 60
 ;
 ; Primary History parameters:
 ;
  HIST = 1,0,0
- OUTPUT = 'tiegcm_amie.pcntr_mareqx_smin_001.nc'
+ OUTPUT = 'tiegcm_amie_dres.pcntr_mareqx_smin_001.nc'
  MXHIST_PRIM = 10
 ;
 ; Secondary History parameters:
@@ -32,7 +32,7 @@
  SECSTART = 80,1,0
  SECSTOP  = 81,0,0
  SECHIST  =  0,1,0
- SECOUT   = 'tiegcm_amie.scntr_mareqx_smin_001.nc'
+ SECOUT   = 'tiegcm_amie_dres.scntr_mareqx_smin_001.nc'
  MXHIST_SECH = 24
  SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
            'O2','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB',
@@ -60,10 +60,10 @@
 ; At 2.5 deg resolution, optionally use both migrating 
 ;   and non-migrating tides.
 ;
- GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_5.0d_99km.nc'
- GSWM_MI_SDI_NCFILE = '$TGCMDATA/gswm_semi_5.0d_99km.nc'
-;GSWM_NM_DI_NCFILE  = '$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc'
-;GSWM_NM_SDI_NCFILE = '$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc'
+ GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_2.5d_99km.nc'
+ GSWM_MI_SDI_NCFILE = '$TGCMDATA/gswm_semi_2.5d_99km.nc'
+ GSWM_NM_DI_NCFILE  = '$TGCMDATA/gswm_nonmig_diurn_2.5d_99km.nc'
+ GSWM_NM_SDI_NCFILE = '$TGCMDATA/gswm_nonmig_semi_2.5d_99km.nc'
 ;
 ; Potential model can be 'HEELIS' (optionally with GPI data),
 ; or 'WEIMER' (optionally with IMF data). If WEIMER, both IMF 

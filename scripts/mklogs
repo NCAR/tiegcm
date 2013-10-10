@@ -36,5 +36,6 @@ while (($pos = index($tasklog,'.',$pos)) > -1) {
   $pos++;
 }
 substr($tasklog,$dotpos) = "";
-$tasklog = $tasklog . '_task' . $ifile . '.out';
+$iifile = sprintf "%4.4d",$ifile;
+$tasklog = $tasklog . '_task' . $iifile . '.out';
 }

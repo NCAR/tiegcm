@@ -336,7 +336,7 @@
 ! Get hour of model run (model hours from 0 to 23 )
       ihr_cur = modeltime(2)	! current hour
       ihr_nxt = modeltime(2)+1  ! next hour
-      if(ihr_nxt == 24 ) ihr_nxt = 1
+      if(ihr_nxt == 24 ) ihr_nxt = 0
 !
 ! Subdomains at current month, current hour:
       z_curmo = gswmdat(type,mon_cur,ihr_cur+1,'z')

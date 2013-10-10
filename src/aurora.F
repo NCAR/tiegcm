@@ -500,9 +500,9 @@
       if (iprint > 0) then
         write(6,"(/,'aurora_cons:')")
         write(6,"('  iamie=',i2)") iamie
-        write(6,"('  cusp:    alfac=',f8.3,' ec=',f8.3,' fc=',e10.4)")
+        write(6,"('  cusp:    alfac=',f8.3,' ec=',f8.3,' fc=',e12.4)")
      |    alfac,ec,fc
-        write(6,"('  drizzle: alfad=',f8.3,' ed=',f8.3,' fd=',e10.4)")
+        write(6,"('  drizzle: alfad=',f8.3,' ed=',f8.3,' fd=',e12.4)")
      |    alfad,ed,fd
 	write(6,"('  auroral radius = max of rhp,rcp=',2f10.3)") rhp,rcp
 	write(6,"('  roth, rote (MLT) =',2f10.3)") roth,rote
@@ -510,7 +510,7 @@
         write(6,"('  energy flux = e1,e2=',2f10.3)") e1,e2
         write(6,"('  add_sproton = ',l1)") add_sproton
         if (add_sproton) write(6,"('  solar protons: alfa_sp=',f8.3,
-     |    ' e_sp = ',e10.4,' flx_sp = ',e10.4)") alfa_sp,e_sp,flx_sp
+     |    ' e_sp = ',e12.4,' flx_sp = ',e12.4)") alfa_sp,e_sp,flx_sp
         if (add_helectron)
      |    write(6,"('  high-energy electrons: alfa30 = ',f8.3,
      |    ' e30 = ',f8.3)") alfa30,e30

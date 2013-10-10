@@ -397,22 +397,22 @@
       write(6,"(2x,'ec,ed = ',2e12.4,' (ergs/cm2/s)')") h%ec,h%ed
 
 !     if (h%alfa30 /= real_init)
-!    |  write(6,"(2x,'alfa30  = ',e8.2,' (KeV) (same as alfa_sp)')") 
+!    |  write(6,"(2x,'alfa30  = ',e10.2,' (KeV) (same as alfa_sp)')") 
 !    |    h%alfa30
 !     if (h%e30 /= real_init)
-!    |  write(6,"(2x,'e30     = ',e8.2,' (ergs/cm2/s) (same as e_sp)')") 
+!    |  write(6,"(2x,'e30     = ',e10.2,' (ergs/cm2/s) (same as e_sp)')") 
 !    |    h%e30
 !     if (h%alfad2 /= real_init) 
-!    |  write(6,"(2x,'alfad2  = ',e8.2,' (KeV)')") h%alfad2
+!    |  write(6,"(2x,'alfad2  = ',e10.2,' (KeV)')") h%alfad2
 !     if (h%ed2 /= real_init)
-!    |  write(6,"(2x,'ed2     = ',e8.2,' (ergs/cm2/s)')") h%ed2
+!    |  write(6,"(2x,'ed2     = ',e10.2,' (ergs/cm2/s)')") h%ed2
 
       write(6,"(2x,'colfac  = ',f5.2)") h%colfac
-      write(6,"(2x,'p0      = ',e8.2)") h%p0
-      if (h%p0_model /= real_init) write(6,"(2x,'p0_model= ',e8.2)") 
+      write(6,"(2x,'p0      = ',e9.2)") h%p0
+      if (h%p0_model /= real_init) write(6,"(2x,'p0_model= ',e10.2)") 
      |  h%p0_model
       if (h%grav /= real_init)
-     |  write(6,"(2x,'grav    = ',e8.2)") h%grav
+     |  write(6,"(2x,'grav    = ',e10.2)") h%grav
 
 !     write(6,"(2x,'gswmdi  = ',i2,' (GSWM flag diurnal tides)')") 
 !    |  h%gswmdi
