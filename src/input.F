@@ -65,7 +65,8 @@
      |  tide3m3(2),      ! 2-day wave amplitude and phase
      |  f107,            ! 10.7 cm daily solar flux
      |  f107a,           ! 10.7 cm average (81-day) solar flux
-     |  colfac           ! collision factor
+     |  colfac,          ! collision factor
+     |  joulefac         ! joule heating factor (see sub qjoule_tn (qjoule.F))
 !
 ! Input parameters that can be either constant or time-dependent:
       real ::
@@ -161,7 +162,7 @@
      |  secout,secstart,secstop,sechist,secflds,secsave,
      |  potential_model,eddy_dif,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
-     |  kp,colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
+     |  kp,colfac,joulefac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,ntask_lat,ntask_lon,
      |  start_day,start_year,calendar_advance,see_ncfile,
@@ -265,6 +266,7 @@
       ntask_lat = ispval
       ntask_lon = ispval
       colfac  = spval
+      joulefac= spval
 
       f107    = spval
       f107a   = spval
@@ -560,8 +562,14 @@
 !
 ! Collision factor:
       if (colfac==spval) then
-        write(6,"('Input: Using default colfac = 1.5')")
         colfac = 1.5
+        write(6,"('Input: Using default colfac = ',f9.2)") colfac
+      endif
+!
+! Joule heating factor:
+      if (joulefac==spval) then
+        joulefac = 1.5
+        write(6,"('Input: Using default joulefac = ',f9.2)") joulefac
       endif
 !
 ! 1/12/05 btf: removed old dynamo (was in dynamo_old.F)
@@ -1551,6 +1559,8 @@
 !    |  tideann
       write(6,"('  aurora  = ',i2,' (0/1 flag for aurora)')") aurora
       write(6,"('  colfac = ',f9.3,' (collision factor)')") colfac
+      write(6,"('  joulefac = ',f9.3,' (joule heating factor)')") 
+     |  joulefac
 
       write(6,"('If any of the following are spval (',e12.4,'),',
      |  ' they will be calculated',/,'during the simulation on a per ',

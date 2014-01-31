@@ -80,16 +80,16 @@
       end subroutine filter
 !-----------------------------------------------------------------------
 #include <defs.h>
-      subroutine filter2(f,lev0,lev1,lat)
+      subroutine filter2(f,lev0,lev1,kutj,lat)
       use cons_module,only: dlamda
       use params_module,only: nlon,dlon
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lat
+      integer,intent(in) :: kutj,lev0,lev1,lat
       real,intent(inout) :: f(nlonp4,lev0:lev1)
 !
 ! Local:
-      integer :: nn(nlat),nlevs,k,i,j,nx,nw
+      integer :: nn(nlat),nlevs,k,i,j,nx,nw,n1,kut2(nlat)
       real :: fx(nlonp4,2*(lev1-lev0+1)),
      |        wfft((nlonp4+1)*2*(lev1-lev0+1))
 !
@@ -106,6 +106,21 @@
 #else
       UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
 #endif
+
+#if (NLAT==36 && NLON==72)
+      kut2=(/ 0, 0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 
+     |        0, 0,  0,  0,  0,  0, 0,  0,  0,  0,  0,  0,  0,  0,  0, 
+     |        0, 0,  0,  0,  0,  0/) ! 5.0 deg
+#elif (NLAT==72 && NLON==144)
+      kut2=(/0, 0, 1, 2, 4, 4, 6, 6, 8, 8,10,10,12,12,15,15,18,18,
+     |      20,20,20,20,18,18,15,12, 8, 8, 4, 4, 4, 4, 2, 2, 1, 1,
+     |       1, 1, 2, 2, 4, 4, 4, 4, 8, 8,12,15,18,18,20,20,20,20,
+     |      18,18,15,15,12,12,10,10, 8, 8, 6, 6, 4, 4, 2, 1, 0, 0/) ! 2.5 deg
+#else
+      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
+#endif
+
+
 !
 ! Load field data into fx (1-nlon <- 3-nlonp2)
       nlevs = lev1-lev0+1
@@ -127,10 +142,17 @@
       call fftrans(fx,nx,wfft,nw,trigs,ntrigs,ifax,1,nlonp4,nlon,nlevs,
      |  -1)
 !
+! Change filters so that it does not over filtering at high latitudes, it will be the
+! same as filter for low wavenumer, but wrapping up smoothly for large wavenumers, not a
+! sharp transition, so there is still filtering effect in the lower latitudes
+!                                                       Wenbin Wang  06/11/13 
+      n1=2*(kut2(lat)-1)+3
+!
 ! Multiply by smoothing function:
       do k=lev0,lev1
-        do i=1,nlon
-          fx(i+2,k)=fx(i+2,k)*cos((real(i+1)/2.)*dlamda/2.)**(2*nn(lat))
+        do i=n1,nlon
+          fx(i+2,k) = fx(i+2,k)*
+     |                cos(((i+2-n1)/2.)*dlamda/2.)**(2*nn(lat))
         enddo ! i=1,nlon
       enddo ! k=lev0,lev1
 !

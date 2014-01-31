@@ -312,7 +312,7 @@
      |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
-     |  saber_ncfile,tidi_ncfile
+     |  saber_ncfile,tidi_ncfile,joulefac
       use mpi_module,only: ntask
 
       use init_module,only: logname,host,system,iyear,iday,istep,
@@ -321,7 +321,6 @@
       use cons_module,only: p0,grav
 !     use aurora_module,only: alfa30,e30,alfa_sp,e_sp
       use aurora_module,only: e1,e2,h1,h2,alfac,ec,alfad,ed
-      use qjoule,only: joulefac
       implicit none
 !
 ! Args:

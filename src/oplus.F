@@ -888,7 +888,10 @@
 ! Local:
       integer :: i,lat
       real,parameter ::
-     |  phid =  2.0e8,
+!
+! phid changed from 2.0e8 to 0. by Wenbin Jan, 2014:
+!    |  phid =  2.0e8,
+     |  phid =  0.,
      |  phin = -2.0e8,
      |  ppolar = 0.
       real :: a(lon0:lon1)   ! was t3 ("a" needs a better name)
@@ -1146,7 +1149,7 @@
 ! call filter and/or filter2 according to module logicals callfilt1,callfilt2:
 !
 ! If requested, call filter2(), as in composition comp_major and minor:
-            if (callfilt2) call filter2(op_ik,lev0,lev1,j)
+            if (callfilt2) call filter2(op_ik,lev0,lev1,kut(j),j)
 !
 ! If requested, call filter(), as in dt,duv,etc:
 !
