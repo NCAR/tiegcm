@@ -929,10 +929,15 @@
       endif
       do i=1,nu
         ix = value_locate(x,u(i))
-        if (ix <= 1.or.ix >= nx) then ! bug fix by btf 12/23/09
-          p(i) = 0.
-          cycle                       ! bug fix by btf 12/23/09
-        endif
+! 01/14 bae: interpol_quad in wei05sc.F is called when inside=1 or radii<bndryfit 
+!  for Weimer 2005. The fix to ix<=1 and ix>=nx assures epot is non-zero near 
+!  the pole (85.8mlat,0MLT) and the boundary (bndryfit).
+        if (ix <=1) ix = 2	      ! bug fix by bae 01/28/14
+        if (ix >=nx) ix = nx-1	      ! bug fix by bae 01/29/14
+!       if (ix <= 1.or.ix >= nx) then ! bug fix by btf 12/23/09
+!          p(i) = 0.
+!          cycle                       ! bug fix by btf 12/23/09
+!        endif
         x1 = x(ix)
         x0 = x(ix-1)
         x2 = x(ix+1)
