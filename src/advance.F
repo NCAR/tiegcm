@@ -290,16 +290,7 @@
 !
 ! Receive aurora parameters from the M-I coupler for CISM
 !
-      if (mytid==0) call import
-!
-! Scatter data to other tasks if using MPI, periodic points already added
-! in ci_receive. Only need to scatter auroral characteristic energy and
-! flux, potential is used in dynamo which is a serial code
-!
-#ifdef MPI
-      call cism_scatter(geng,lon0,lon1,lat0,lat1)
-      call cism_scatter(gflx,lon0,lon1,lat0,lat1)
-#endif
+      call import
 #endif
 !
 ! Report to stdout:
@@ -578,7 +569,7 @@
 !
 ! Send conductance and neutral wind current to M-I coupler for CISM
 !
-      if (mytid==0) call export(cmodeltime)
+      call export(cmodeltime)
 #endif
 #ifdef VT
 !       code = 127 ; state = 'timestep' ; activity='ModelCode'

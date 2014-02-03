@@ -136,6 +136,15 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgpi: Error getting variable kp')
 !     write(6,"('rdgpi: kp=',/(8f8.2))") (gpi_kp(:,i),i=1,ngpidays)
+      if (any(gpi_kp < 0.)) then
+        do i=1,ngpidays
+          if (any(gpi_kp(:,i) < 0.)) then
+            write(6,"('>>> WARNING rdgpi: bad kp at i=',i5,
+     |        ' gpi_iyd(i)=',i6,' gpi_kp(:,i)=',/,8e12.4)")
+     |        i,gpi_iyd(i),gpi_kp(:,i)
+          endif
+        enddo
+      endif
 !
 ! Get beginning and ending integer dates:
 ! (these should be gpi_iyd(3) and gpi_iyd(ngpidays-2) respectively,
@@ -327,7 +336,16 @@
             fkp1 = fkp_nxt(1)
           endif
           fkp = finterp(fkp0,fkp1,isec0,isec1,iutsec)
-
+!
+! Kp has been known to go < 0 due to interpolation.
+!
+          if (fkp < 0.) then
+            write(6,"('>>> WARNING getgpi: bad kp = ',e12.4,' iyear=',
+     |        i4,' iday=',i4,' real(iutsec)/3600.=',f10.2)")
+     |        fkp,iyear,iday,real(iutsec)/3600.
+            write(6,"('I am setting kp to zero.')")
+            fkp = 0.
+          endif
         endif ! rd_kp == spval
 !
 ! Use empirical formulas to calculate ctpoten and hemispheric power 

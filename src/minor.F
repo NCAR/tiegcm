@@ -15,7 +15,7 @@
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  boltz,p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
      |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,
-     |  dtsmooth_div2,difhor
+     |  dtsmooth_div2,difhor,kut
       use init_module,only: glat,iday
       use fields_module,only: w,itc,itp,tlbc
       use addfld_module,only: addfld
@@ -449,7 +449,7 @@
 ! not including ghost cells.
 !
       call filter_minor(fcomp_out(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,kut)
 !
 !----------------------- Begin third latitude scan --------------------
       do lat=lat0,lat1
@@ -525,7 +525,7 @@
 !
       end subroutine minor
 !-----------------------------------------------------------------------
-      subroutine filter_minor(fout,lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine filter_minor(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
 !
 ! Filter minor species (called from minor after trsolv)
 !
@@ -542,6 +542,7 @@
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
+      integer,intent(in) :: kut(nlat)
       real,intent(inout) :: fout(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! VT vampir tracing:
@@ -590,7 +591,7 @@
           enddo ! i=1,nlonp4
 !
 ! Do the filtering (requires fft):
-          call filter2(f_ik,lev0,lev1,j)
+          call filter2(f_ik,lev0,lev1,kut(j),j)
 !
 ! Return filtered array to f_kij:
           do i=1,nlonp4
