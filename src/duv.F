@@ -1,6 +1,6 @@
 !
-      subroutine duv(tn,tn_upd,tn_nm,un,vn,un_nm,vn_nm,w_upd,o2,o1,barm,
-     |  z,hdu,hdv,ui,vi,lxx,lyy,lxy,lyx,km,un_upd,unm_upd,vn_upd,
+      subroutine duv(tn,tn_upd,tn_nm,un,vn,un_nm,vn_nm,w_upd,o2,o1,n2,
+     |  barm,z,hdu,hdv,ui,vi,lxx,lyy,lxy,lyx,km,un_upd,unm_upd,vn_upd,
      |  vnm_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -38,6 +38,7 @@
      |  w_upd,   ! updated vertical velocity (swdot.F)
      |  o2,      ! o2 (for mbar only)
      |  o1,      ! o1 (for mbar only)
+     |  n2,      ! n2 (for mbar only)
      |  barm,    ! mean molecular weight
      |  z,       ! geopotential height
      |  hdu,     ! horizontal diffusion of U (hdif3 in hdif.F)
@@ -245,8 +246,7 @@
         do i=lon0,lon1
           do k=lev0,lev1-1
             mbar(k,i) = 1./(o2(k,i,lat)*rmassinv_o2 + 
-     |        o1(k,i,lat)*rmassinv_o1+(1.-o2(k,i,lat)-o1(k,i,lat))*
-     |        rmassinv_n2)
+     |        o1(k,i,lat)*rmassinv_o1 + n2(k,i,lat)*rmassinv_n2)
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 !

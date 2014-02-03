@@ -6,7 +6,7 @@ Release Date:	June 21, 2013
 Download Site:	http://www.hao.ucar.edu/modeling/tgcm/download.php
                 (Model Source and required Data are available as separate downloads)
 
-Documentation:  User's Guide and Model description available in "doc" directory
+Documentation:  User's Guide and Model description pdf's available in "doc" directory
                 Also available from tgcm website: http://www.hao.ucar.edu/modeling/tgcm
 
 -------------------------------------------------------------------------------
@@ -15,7 +15,14 @@ been downloaded from the above URL. After the file is gunzipped
 and the tar file extracted to a working directory, you should have 
 something like the following:
 
-README		Brief description of directories
+README.download			This file
+Release_Notes_tiegcm1.94.2	Release Notes
+tiegcm-linux.job*		Default Linux job script
+tiegcm1.94.2/			Model root directory
+
+Contents of the model root directory:
+
+README		Brief description of subdirectories
 doc/		Documentation		User Guide, Model Description, Release Doc
 scripts/	Support scripts 	Job scripts, Make files, Utilities
 src/		Source code		Source files *.F, *.h
@@ -39,6 +46,7 @@ Follow this procedure to build the model and make a short default run on a Linux
 
 1. Copy the csh job script scripts/tiegcm-linux.job to your working directory.
    This default job script is for a 64-bit Linux system with MPI, using 4 processors.
+   (actually, this should already be available when you extract the downloaded file) 
 
 2. Make sure your env var $TGCMDATA is set to a directory containing files
    obtained from the data download (check setting of SOURCE file in doc/tiegcm_default.inp)
@@ -65,7 +73,8 @@ locations, etc. Select the Make.machine file you want to use, and set the
 
   Make.intel_ys         NCAR IBM cluster "yellowstone" with Linux, and intel, pgi compilers
   Make.bluefire		NCAR IBM cluster "bluefire" with AIX and xlf90 compiler
-  Make.intel_hao64	Intel ifort/mpif90 compiler on 64-bit HAO Linux systems
+  Make.intel_hao64	Intel2011 ifort/mpif90 compiler on 64-bit HAO Linux systems
+  Make.intel11.1_hao64	Intel v11.1 ifort/mpif90 compiler on 64-bit HAO Linux systems
   Make.pgi_hao64	PGI pgf90/mpif90 compiler on 64-bit HAO Linux systems
 
 User's are encouraged to customize their own Make.machine files for their

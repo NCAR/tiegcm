@@ -1,7 +1,7 @@
 !
-      subroutine minor(tn,o2,o1,fcomp,fcomp_tm1,fcomp_out,fcomp_tm1_out,
-     |  sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,lon0,lon1,lat0,
-     |  lat1,idebug)
+      subroutine minor(tn,o2,o1,n2,fcomp,fcomp_tm1,fcomp_out,
+     |  fcomp_tm1_out,sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,
+     |  lon0,lon1,lat0,lat1,idebug)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -39,6 +39,7 @@
      |  tn,       ! neutral temperature (deg K)
      |  o2,       ! molecular oxygen (mmr)
      |  o1,       ! atomic oxygen (mmr)
+     |  n2,       ! molecular nitrogen (mmr)
      |  fcomp,    ! input species (for finite diffs in advec)
      |  fcomp_tm1 ! input species at time n-1 
 !
@@ -223,9 +224,8 @@
 ! xmbar_kh = mbar(k+1/2):
       do i=lon0,lon1
         do k=lev0,lev1
-          xn2(k,i) = 1.-o2(k,i,lat)-o1(k,i,lat)
           xmbar_kh(k,i) = 1./(o2(k,i,lat)*rmassinv_o2+o1(k,i,lat)*
-     |      rmassinv_o1+xn2(k,i)*rmassinv_n2)
+     |      rmassinv_o1+n2(k,i,lat)*rmassinv_n2)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 !

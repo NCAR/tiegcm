@@ -65,8 +65,9 @@
 #ifdef MPI
       use mpi_module,only: 
      |  mytid,mp_gather2root,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
-     |  mp_bndlons,mp_polelats,mp_periodic_f4d,
-     |  mp_updateemphi,mp_updateemlam,mp_updateemz
+     |  mp_bndlons,mp_polelats,mp_periodic_f4d,mp_bndlats_f3d,
+     |  mp_updateemphi,mp_updateemlam,mp_updateemz,
+     |  mp_polelats_f3d,mp_bndlons_f3d
 !
       implicit none
 #include <mpif.h>
@@ -86,6 +87,7 @@
       integer :: cmodeltime(4) !CISM coupling time
 #endif
       real :: fmin,fmax
+      real :: polesigns(1)=1.  ! for n2 call to mp_polelats
       integer(kind=8) :: nsecs ! current model time in seconds,
                                ! including model day
       logical :: time2write,wrprim,wrsech,newseries_sech,
@@ -345,6 +347,7 @@
      |  tn	 (levd0,lond0,latd0,itp),   ! in
      |  o2	 (levd0,lond0,latd0,itp),   ! in
      |  o1	 (levd0,lond0,latd0,itp),   ! in
+     |  he	 (levd0,lond0,latd0,itp),   ! in
      |  vn	 (levd0,lond0,latd0,itp),   ! in
      |  vc	 (levd0,lond0,latd0,itp),   ! out
      |  barm   (levd0,lond0,latd0,itp),     ! out
@@ -353,6 +356,7 @@
      |  xnmbarm(levd0,lond0,latd0),	    ! out
      |  z      (levd0,lond0,latd0,itp),     ! out (note itp is output)
      |  zg     (levd0,lond0,latd0),         ! out (z with varying grav)
+     |  n2     (levd0,lond0,latd0),         ! out (1.-o2-o1-he)
      |  lon0,lon1,1,nlevp1,lat0,lat1)
 !   
       if (debug) write(6,"('advance after addiag')")
@@ -361,15 +365,30 @@
 !   nlat+1,nlat+2 across the north pole:
 !
 #ifdef MPI
-      call mp_polelats(itp)
+      if (ntask==1) then
+        call mk_polelat( 0,1,itp)
+        call mk_polelat(-1,2,itp)
+        call mk_polelat(nlat+1,nlat  ,itp)
+        call mk_polelat(nlat+2,nlat-1,itp)
+      else
+        call mp_polelats(itp)
 !
 ! Update ghost cell boundary lats and lons.
 ! Bndlats is called first to exchange lat0-1,2 and lat1+1,2 at lon0->lon1, 
 !   then bndlons is called  to exchange lon0-1,2 and lon1+1,2 at lat0-2->lat1+2).
 !
-      f4d(:)%mpi = .true. 
-      call mp_bndlats(f4d,nf4d,itp)
-      call mp_bndlons(f4d,nf4d,itp)
+        f4d(:)%mpi = .true. 
+        call mp_bndlats(f4d,nf4d,itp)
+        call mp_bndlons(f4d,nf4d,itp)
+!
+! Set poles and halo points for 3d field N2.
+! (this is necessary in latitude for rrk calls in oplus.F)
+!
+        call mp_polelats_f3d(n2,nlevp1,lon0,lon1,lat0,lat1,1,polesigns)
+        call mp_bndlats_f3d(n2,nlevp1,lon0,lon1,lat0,lat1,1)
+! Setting longitude halos is apparently not necessary:
+!       call mp_bndlons_f3d(n2,nlevp1,lon0,lon1,lat0,lat1,1,0)
+      endif ! ntask==1
 #else
       call mk_polelat(0     ,1     ,itp)
       call mk_polelat(-1    ,2     ,itp)
@@ -406,11 +425,13 @@
      |  vn_nm(levd0,lond0,latd0,itp),  ! 4d input
      |  o2_nm(levd0,lond0,latd0,itp),  ! 4d input
      |  o1_nm(levd0,lond0,latd0,itp),  ! 4d input
+     |  he_nm(levd0,lond0,latd0,itp),  ! 4d input
      |  kldt ,      ! 3d output
      |  kldu ,      ! 3d output
      |  kldv ,      ! 3d output
      |  kldo2,      ! 3d output
      |  kldo1,      ! 3d output
+     |  kldhe,      ! 3d output
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('advance after hdif2')")
 !

@@ -23,7 +23,7 @@
       logical :: callfilt2=.true.   ! if true, call filter2()
       contains
 !-----------------------------------------------------------------------
-      subroutine oplus(tn,te,ti,o2,o1,n2d,ne,u,v,w,barm,ui,vi,wi,
+      subroutine oplus(tn,te,ti,o2,o1,n2,he,n2d,ne,u,v,w,barm,ui,vi,wi,
      |  xnmbar,op,optm1,opout,optm1out,xiop2p,xiop2d,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -57,7 +57,8 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) ::
      |  tn, te, ti, ! neutral, electron, and ion temperatures (deg K)
-     |  o2, o1,     ! o2, o mass mixing ratios
+     |  o2, o1, n2, ! o2, o, n2 mass mixing ratios
+     |  he,         ! he mass mixing ratio
      |  n2d,        ! n2d
      |  ne,         ! electron density
      |  u,v,w,      ! neutral wind velocities (zonal, meridional, omega)
@@ -84,7 +85,7 @@
      |  ubca, ubcb ! O+ upper boundary condition (were t2,t3)
       real :: explic = 1., gmr
       real,dimension(lev0:lev1,lon0:lon1) :: 
-     |  psi_n2,           ! n2 mass mixing ratio (1-o2-o)
+     |  psi_n2,           ! n2 mass mixing ratio (1-o2-o-he)
      |  bdzdvb_op,        ! was s7
      |  explicit,         ! was s4
      |  hdz,              ! was s15
@@ -145,10 +146,14 @@
 !   opflux(lon0:lon1,lat0:lat1):
       call oplus_flux(opflux,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('oplus after oplus_flux.')")
+!     call addfld('OPFLUX',' ',' ',opflux,
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
 ! Divergence is returned in dvb(lon0:lon1,lat0:lat1) by sub divb:
       call divb(dvb,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('oplus after divb.')")
+!     call addfld('OP_DIVB',' ',' ',dvb,
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
 !----------------------- Begin first latitude scan ---------------------
       do lat=lat0,lat1
@@ -165,32 +170,49 @@
         call mkdiag_BMAG('BMAG',bmod2(lon0:lon1,lat),lon0,lon1,lat)
 !
 ! Set tp's:
+! 8/28/13: Wenbin says this is wrong, it should be using tn instead of
+!          te, that he presented this in 2011, but it was not changed
+!          in the repository. We will get back to this later, after He 
+!          is fixed.
+!
       do i=lon0,lon1
         do k=lev0,lev1-1
           tpj(k,i,jm1) = 0.5*(te(k,i,jm1)+ti(k,i,jm1))
-          tpj(k,i,lat  ) = 0.5*(te(k,i,lat  )+ti(k,i,lat  ))
+          tpj(k,i,lat) = 0.5*(te(k,i,lat)+ti(k,i,lat))
           tpj(k,i,jp1) = 0.5*(te(k,i,jp1)+ti(k,i,jp1))
         enddo
       enddo
+
+!     call addfld('TP_JM1',' ',' ',tpj(:,lon0:lon1,jm1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TP_J',' ',' ',tpj(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TP_JP1',' ',' ',tpj(:,lon0:lon1,jp1),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! rrk returns djm1,dj,djp1:
-!     subroutine rrk(t,rms,ps1,ps2,tp,ans,lon0,lon1,lev0,lev1,lat)
 !
       call rrk(
      |  tn (:,lon0:lon1,jm1),barm(:,lon0:lon1,jm1),
      |  o2 (:,lon0:lon1,jm1),o1(:,lon0:lon1,jm1),
+     |  n2 (:,lon0:lon1,jm1),he(:,lon0:lon1,jm1),
      |  tpj(:,lon0:lon1,jm1),dj(:,lon0:lon1,jm1),
      |  lon0,lon1,lev0,lev1,lat)
+
       call rrk(
      |  tn (:,lon0:lon1,lat),barm(:,lon0:lon1,lat),
      |  o2 (:,lon0:lon1,lat),o1(:,lon0:lon1,lat),
+     |  n2 (:,lon0:lon1,lat),he(:,lon0:lon1,lat),
      |  tpj(:,lon0:lon1,lat),dj(:,lon0:lon1,lat),
      |  lon0,lon1,lev0,lev1,lat)
+
       call rrk(
      |  tn (:,lon0:lon1,jp1),barm(:,lon0:lon1,jp1),
      |  o2 (:,lon0:lon1,jp1),o1(:,lon0:lon1,jp1),
+     |  n2 (:,lon0:lon1,jp1),he(:,lon0:lon1,jp1),
      |  tpj(:,lon0:lon1,jp1),dj(:,lon0:lon1,jp1),
      |  lon0,lon1,lev0,lev1,lat)
+
       if (debug) write(6,"('oplus after rrk: lat=',i3)") lat
 
 !     call addfld('DJM1',' ',' ',dj(:,lon0:lon1,jm1),
@@ -273,11 +295,11 @@
      |  diffj(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,lat)
 
       if (debug) write(6,"('oplus after diffus: lat=',i3)") lat
-!     call addfld('DIFFJM1',' ',' ',diffj(:,lon0:lon1,jm1),
+!     call addfld('DIFF_JM1',' ',' ',diffj(:,lon0:lon1,jm1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('DIFFJ  ',' ',' ',diffj(:,lon0:lon1,lat),
+!     call addfld('DIFF_J  ',' ',' ',diffj(:,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('DIFFJP1',' ',' ',diffj(:,lon0:lon1,jp1),
+!     call addfld('DIFF_JP1',' ',' ',diffj(:,lon0:lon1,jp1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! tpjm2 = 2.*TP*N(O+)    (J-2)
@@ -318,6 +340,9 @@
      |       optm1(k,i,j0))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
+!     call addfld('OPTM1_SM0' ,' ',' ',
+!    |  optm1_smooth(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
         if (debug) write(6,"('oplus end first lat scan: lat=',i3)") lat
       enddo ! lat=lat0,lat1
@@ -603,12 +628,12 @@
         enddo ! k=lev0,lev1
       enddo ! i=lonbeg,lonend
 
-!     call addfld('OPTM1_SM' ,' ',' ',
+!     call addfld('OPTM1_SM1' ,' ',' ',
 !    |  optm1_smooth(lev0:lev1-1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('EXPLIC2' ,' ',' ',explicit(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
+! 
 ! Begin coefficients p_coeff, q_coeff, r_coeff  (s1,s2,s3)
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -715,7 +740,7 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
 !
-          psi_n2(k,i) = 1.-o2(k,i,j0)-o1(k,i,j0) ! n2 mixing ratio
+          psi_n2(k,i) = n2(k,i,j0) ! n2 mixing ratio
 !
           xiop2p(k,i,lat) = 
      |      0.5*(qop2p(k,i,lat)+qop2p(k+1,i,lat))/((xnmbar(k,i,lat)*
@@ -958,18 +983,18 @@
 !
       end subroutine divb
 !-----------------------------------------------------------------------
-      subroutine rrk(t,rms,ps1,ps2,tp,ans,lon0,lon1,lev0,lev1,lat)
+      subroutine rrk(t,rms,ps1,ps2,n2,he,tp,ans,lon0,lon1,lev0,lev1,lat)
 !
-! Returns diffusion coefficient in ans.
+! Returns ambipolar diffusion coefficient in ans.
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,boltz,
-     |  p0,expz
+     |  p0,expz,rmassinv_he
       use input_module,only: colfac
 !
 ! Args:
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat
       real,dimension(lev0:lev1,lon0:lon1),intent(in) ::
-     |  t,rms,ps1,ps2,tp
+     |  t,rms,ps1,ps2,n2,he,tp
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
 !
 ! Local:
@@ -977,10 +1002,14 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
+!
+! 8/28/13 btf: Use n2=1-o2-o-he, and include O+/He collision rate from Wenbin:
+!
           ans(k,i) = 1.42E17*boltz*t(k,i)/(p0*expz(k)*.5*(rms(k,i)+
      |      rms(k+1,i))*(ps2(k,i)*rmassinv_o1*sqrt(tp(k,i))*(1.-0.064*
-     |      alog10(tp(k,i)))**2*colfac+18.6*(1.-ps1(k,i)-ps2(k,i))*
-     |      rmassinv_n2+18.1*ps1(k,i)*rmassinv_o2))
+     |      alog10(tp(k,i)))**2*colfac+18.6*n2(k,i)*rmassinv_n2+18.1*
+     |      ps1(k,i)*rmassinv_o2+3.6*he(k,i)*rmassinv_he))
+
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
       end subroutine rrk

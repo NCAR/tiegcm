@@ -66,7 +66,7 @@
 !
       contains
 !-----------------------------------------------------------------------
-      subroutine qrj(sco2,sco1,scn2,tn,no,o2,o1,n4s,xnmbari,
+      subroutine qrj(sco2,sco1,scn2,tn,no,o2,o1,n2,n4s,xnmbari,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate heating and dissociation rates.
@@ -83,9 +83,9 @@
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  sco2,sco1,scn2,   ! chapman integrals
-     |  tn,no,o2,o1,n4s,  ! tn and species mass mixing ratios
-     |  xnmbari           ! p0*e(-z)*barm/kT at interfaces
+     |  sco2,sco1,scn2,     ! chapman integrals
+     |  tn,no,o2,o1,n2,n4s, ! tn and species mass mixing ratios
+     |  xnmbari             ! p0*e(-z)*barm/kT at interfaces
 !
 ! VT vampir tracing:
 !
@@ -171,6 +171,7 @@
         do k=lev0,lev1-1
           o2i (k+1,i) = 0.5*(o2(k,i)+o2(k+1,i))
           o1i (k+1,i) = 0.5*(o1(k,i)+o1(k+1,i))
+          n2i (k+1,i) = 0.5*(n2(k,i)+n2(k+1,i))
           n4si(k+1,i) = 0.
         enddo
       enddo
@@ -182,11 +183,15 @@
         o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+
      |    fb(i,2))
         n4si(1,i) = 0.
+!
+! btf tiegcm_he 8/21/13: Not sure about n2i bottom boundary. 
+! For now, use 1-o2i-o1i since helium is negligible at this height.
+!
+        n2i(1,i) = 1.-o2i(1,i)-o1i(1,i)
       enddo
 !
 ! N2 at interfaces:
       do k=lev0,lev1
-        n2i(k,:) = 1.-o2i(k,:)-o1i(k,:)
         do i=lon0,lon1                       !!! temporal fix CISM
           if(n2i(k,i)<=0.)n2i(k,i)=1.e-5     !!! temporal fix CISM
         enddo                                !!! temporal fix CISM

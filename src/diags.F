@@ -23,7 +23,7 @@
 ! adding new fields, and type diags(ndiag) must be defined by sub init_diags 
 ! below.
 !
-      integer,parameter :: ndiag = 36 ! increment this to add new diags
+      integer,parameter :: ndiag = 37 ! increment this to add new diags
       type diag_type
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
@@ -316,6 +316,13 @@
       diags(n)%units      = 'V'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamo.F'
+!
+      n = n+1
+      diags(n)%short_name = 'N2'
+      diags(n)%long_name  = 'N2: Molecular Nitrogen'
+      diags(n)%units      = 'mmr'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'comp.F'
 
       if (n /= ndiag) then
         write(6,"('>>> init_diags: n=',i4,' ndiag=',i4)")
@@ -1157,26 +1164,23 @@
 
       end subroutine mkdiag_WN
 !-----------------------------------------------------------------------
-      subroutine mkdiag_O_N2(name,o1,o2,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_O_N2(name,o1,o2,n2,lev0,lev1,lon0,lon1,lat)
 !
-! Calculate O/N2 ratio from o2 and o (mmr).
-! In mass mixing ratio, this is simply o/(1-o2-o)
+! Calculate O/N2 ratio from o2 and o (mmr). 
+! N2 is passed in (3d array in fields.F), where n2=1-o2-o-he
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: o1,o2
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: o1,o2,n2
 !
 ! Local:
-      real,dimension(lev0:lev1,lon0:lon1) :: n2, o_n2
+      real,dimension(lev0:lev1,lon0:lon1) :: o_n2
       integer,save :: ix=0,firstcall=0
 
       firstcall = firstcall+1
       if (firstcall == 1) ix = checkf(name)
       if (ix==0) return
-!
-! N2 mmr:
-      n2 = 1.-o2-o1 
 !
 ! O/N2 ratio:
       o_n2 = o1/n2
@@ -1185,6 +1189,27 @@
      |  diags(ix)%units,o_n2,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       end subroutine mkdiag_O_N2
+!-----------------------------------------------------------------------
+      subroutine mkdiag_N2(name,n2,lev0,lev1,lon0,lon1,lat)
+!
+! Save updated N2 (3d field in fields.F) from comp.F:
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: n2
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,n2,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+
+      end subroutine mkdiag_N2
 !-----------------------------------------------------------------------
       subroutine mkdiag_QJOULE_INTEG(name,qji_tn,lev0,lev1,lon0,lon1,
      |  lat)

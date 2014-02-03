@@ -1,5 +1,5 @@
 ! 
-      subroutine settei(tn,o2,o1,ne,te,ti,op,o2p,nop,barm,qji_ti,
+      subroutine settei(tn,o2,o1,n2,ne,te,ti,op,o2p,nop,barm,qji_ti,
      |  te_out,ti_out,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -33,6 +33,7 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
+     |  n2,      ! molecular nitrogen (mmr)
      |  ne,      ! electron density (cm3)
      |  te,      ! electron temperature (from previous time step)
      |  ti,      ! ion temperature (from previous time step)
@@ -187,30 +188,32 @@
 !     write(6,"('settei: lat=',i2,' fe =',/,(6e12.4))") lat,fe
 
 !
-! te,o2,o,tn at interfaces: 
+! te,o2,o,n2,tn at interfaces: 
       do i=lon0,lon1
         do k=lev0+1,lev1-1
-          te_int(k,i) = .5*(te(k,i)+te(k-1,i)) ! s14
-          o2n(k,i)    = .5*(o2(k,i)+o2(k-1,i)) ! s13
-          o1n(k,i)    = .5*(o1(k,i)+o1(k-1,i)) ! s12
-          tn_int(k,i) = .5*(tn(k,i)+tn(k-1,i)) ! s10
+          te_int(k,i) = .5*(te(k,i)+te(k-1,i))
+          o2n(k,i)    = .5*(o2(k,i)+o2(k-1,i))
+          o1n(k,i)    = .5*(o1(k,i)+o1(k-1,i))
+          n2n(k,i)    = .5*(n2(k,i)+n2(k-1,i))
+          tn_int(k,i) = .5*(tn(k,i)+tn(k-1,i))
         enddo ! k=lev0+1,lev1-2
 !
 ! Bottom:
         te_int(lev0,i) = 1.5*te(lev0,i)-.5*te(lev0+1,i)
         o2n(lev0,i)    = 1.5*o2(lev0,i)-.5*o2(lev0+1,i)
         o1n(lev0,i)    = 1.5*o1(lev0,i)-.5*o1(lev0+1,i)
+        n2n(lev0,i)    = 1.5*n2(lev0,i)-.5*n2(lev0+1,i)
         tn_int(lev0,i) = 1.5*tn(lev0,i)-.5*tn(lev0+1,i)
 !
 ! Top:
         te_int(lev1,i) = 1.5*te(lev1-1,i)-.5*te(lev1-2,i)
         o2n(lev1,i)    = 1.5*o2(lev1-1,i)-.5*o2(lev1-2,i)
         o1n(lev1,i)    = 1.5*o1(lev1-1,i)-.5*o1(lev1-2,i)
+        n2n(lev1,i)    = 1.5*n2(lev1-1,i)-.5*n2(lev1-2,i)
         tn_int(lev1,i) = 1.5*tn(lev1-1,i)-.5*tn(lev1-2,i)
 !
 ! N2:
         do k=lev0,lev1
-          n2n(k,i) = 1.-o2n(k,i)-o1n(k,i)
           if (n2n(k,i) < 0.) n2n(k,i) = 0.
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
@@ -403,7 +406,7 @@
      |      (boltz*tn(k,i))
           o2n(k,i) = xnmbar(k,i)*o2(k,i)*rmassinv_o2  ! s14
           o1n(k,i) = xnmbar(k,i)*o1(k,i)*rmassinv_o1  ! s13
-          n2n(k,i) = 1.-o2(k,i)-o1(k,i)
+          n2n(k,i) = n2(k,i)
           if (n2n(k,i) < 0.) n2n(k,i) = 0.
           n2n(k,i) = xnmbar(k,i)*n2n(k,i)*rmassinv_n2 ! s12
 !
