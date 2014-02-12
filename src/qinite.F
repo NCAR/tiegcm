@@ -75,8 +75,10 @@
 !
 ! Bottom boundary for o2i, o1i:
       do i=lon0,lon1
-        o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+fb(i,1))
-        o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+fb(i,2))
+        o2i(1,i) = .5*((b(i,1,1,lat) + 1.)*o2(1,i) + 
+     |        b(i,1,2,lat)*o1(1,i) + fb(i,1,lat))
+        o1i(1,i) = .5*(b(i,2,1,lat)*o2(1,i) + 
+     |       (b(i,2,2,lat)+1.)*o1(1,i) + fb(i,2,lat))
       enddo
 !
 ! n2 at interfaces:

@@ -212,10 +212,12 @@
       endif
 
       do i=lon0,lon1
-        bo2(i) = b(i,1,1)*o2(lev0,i,lat)+b(i,1,2)*o1(lev0,i,lat)+
-     |    fb(i,1)
-        bo1(i) = b(i,2,1)*o2(lev0,i,lat)+b(i,2,2)*o1(lev0,i,lat)+
-     |    fb(i,2)
+         bo2(i) = b(i,1,1,lat)*o2(lev0,i,lat) +
+     |        b(i,1,2,lat)*o1(lev0,i,lat) +
+     |        fb(i,1,lat)
+         bo1(i) = b(i,2,1,lat)*o2(lev0,i,lat) +
+     |        b(i,2,2,lat)*o1(lev0,i,lat) +
+     |        fb(i,2,lat)
         xmbari(i) = 1./(bo2(i)*rmassinv_o2+bo1(i)*rmassinv_o1+
      |    (1.-bo2(i)-bo1(i))*rmassinv_n2)
       enddo ! i=lon0,lon1

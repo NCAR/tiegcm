@@ -33,7 +33,7 @@ INC_DIRS  := $(foreach dir,$(DIRS),-I$(dir)) -I$(INC_NETCDF)
 SOURCES   := $(shell cat Srcfiles)
 OBJS      := $(addsuffix .o, $(basename $(SOURCES)))
 # LIBS may be specified in Make.machine file, so append here
-LIBS      += -L$(LIB_NETCDF) -lnetcdf 
+LIBS      += -L$(LIB_NETCDF) -lnetcdf /usr/lib64/libcurl.so.4
 COUPLING  := NO
 FC        := $(F90)
 

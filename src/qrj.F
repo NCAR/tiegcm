@@ -134,8 +134,8 @@
 
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  sum1,   ! sum(o2,o,n2)(sigma*chapman)   (s5)
-     |  sum2,   ! sum(o2,o,n2)(sigma*psi/rmass) (s6)
-     |  sum3    ! sum(o2,o,n2,n4s)(sigmas)      (s7)
+     |  sum2 !,   ! sum(o2,o,n2)(sigma*psi/rmass) (s6)
+!    |  sum3    ! sum(o2,o,n2,n4s)(sigmas)      (s7)
       logical,parameter :: 
      |  debug=.false.     ! insert print statements
 !
@@ -177,11 +177,11 @@
 !
 ! Bottom boundary:
       do i=lon0,lon1
-        o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+
-     |    fb(i,1))
-        o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+
-     |    fb(i,2))
-        n4si(1,i) = 0.
+         o2i(1,i) = .5*((b(i,1,1,lat) + 1.0)*o2(1,i)
+     |        + b(i,1,2,lat)*o1(1,i) + fb(i,1,lat))
+         o1i(1,i) = .5*(b(i,2,1,lat)*o2(1,i) 
+     |        + (b(i,2,2,lat) + 1.0)*o1(1,i) + fb(i,2,lat))
+         n4si(1,i) = 0.
       enddo
 !
 ! N2 at interfaces:
@@ -201,14 +201,6 @@
            mn_n(k,i)=n4si(k,i)*rmassinv_n4s
         enddo
       enddo
-!	 
-!     call addfld('O2I'  ,' ',' ',o2i,
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('O1I'  ,' ',' ',o1i,
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('N2I'  ,' ',' ',n2i,
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!
 ! Initialize ionization/dissociation arrays on current processor domain:
 ! (global module data for use by other routines)
       rj    (lev0:lev1,lon0:lon1,lat) = 0.
@@ -227,97 +219,148 @@
       di_n2=0.
 !
 ! Summation over wavelength:
-      do l=l1+1,lmax   !  from 0.5A to 1050A
-        sum1(:,:) = 0. ! sum(o2,o,n2)(sigma*chapman)
-        sum2(:,:) = 0. ! sum(o2,o,n2)(sigma*psi/rmass)
-        sum3(:,:) = 0. ! sum(o2,o,n2,n4s)(sigmas)
-        htfac=hc*rlmeuvinv(l)
-        do i=lon0,lon1
-          do k=lev0,lev1
-            sum1(k,i) = sum1(k,i)+sigeuv(1,l)*sco2(k,i)+
-     |                            sigeuv(2,l)*sco1(k,i)+
-     |                            sigeuv(3,l)*scn2(k,i)
-!
-            if (.not.check_exp) then
-              sum1(k,i) = feuv(l)*exp(-sum1(k,i))
-            else
-              sum1(k,i) = feuv(l)*expo(-sum1(k,i),0)
-            endif
 
-            sum2(k,i) = sum2(k,i)+sigeuv(1,l)*mn_o2(k,i)+
-     |                            sigeuv(2,l)*mn_o1(k,i)+
-     |                            sigeuv(3,l)*mn_n2(k,i)
-          enddo
-        enddo
-!
-! Longitude and column domain of current process:
+      do l = l1+1,lmax   !  from 0.5A to 1050A
+
+         sum1(:,:) = 0.         ! sum(o2,o,n2)(sigma*chapman)
+         sum2(:,:) = 0.         ! sum(o2,o,n2)(sigma*psi/rmass)
+         htfac=hc*rlmeuvinv(l)
+         
         do i=lon0,lon1
-          do k=lev0,lev1
-            ! absorption/ionization frequency for the three major species (O2, O, and N2)
-            absorp_o2= sum1(k,i)*sigeuv(1,l)
-            absorp_o= sum1(k,i)*sigeuv(2,l)
-            absorp_n2= sum1(k,i)*sigeuv(3,l)
-            ioniz_o2=absorp_o2*BPhotonI(1,l)
-            ioniz_o=absorp_o*BPhotonI(2,l)
-            ioniz_n2=absorp_n2*BPhotonI(3,l)
-!
-!  ionization/dissociative ionization frequency (s^-1)
-            di_o2(k,i)=di_o2(k,i)+absorp_o2*bro2DIPh(l)+
-     |                            ioniz_o2*bro2DIEl(l)
-            di_n2(k,i)=di_n2(k,i)+absorp_n2*brn2DIPh(l)+
-     |                            ioniz_n2*brn2DIEl(l)
-            qnp(k,i,lat) = qnp(k,i,lat)+sigin4s(l)*sum1(k,i)
-            qn2p(k,i,lat) = qn2p(k,i,lat)+ioniz_n2+
-     |                                ioniz_n2*BElectronI(3,l)
-            qo2p(k,i,lat) = qo2p(k,i,lat)+ioniz_o2+
-     |                                ioniz_o2*BElectronI(1,l)
-            qop2p(k,i,lat) = qop2p(k,i,lat)+absorp_o*brop2pPh(l)+
-     |                                      ioniz_o*brop2pEl(l) 
-            qop2d(k,i,lat) = qop2d(k,i,lat)+absorp_o*brop2dPh(l)+
-     |                                      ioniz_o*brop2dEl(l)
-            qop(k,i,lat) = qop(k,i,lat)+absorp_o*brop4sPh(l)+
-     |                                  ioniz_o*brop4sEl(l)
-!
-! total dissociation and EUV heating
-            rj(k,i,lat) = rj(k,i,lat)+(absorp_o2*bro2DPh(l)
-     |                      +ioniz_o2*bro2DEl(l))
-            qtef(k,i,lat) = qtef(k,i,lat)+absorp_n2*brn2DPh(l)
-     |                      +ioniz_n2*brn2DEl(l)
-            qtotal(k,i,lat) = qtotal(k,i,lat)+htfac*
-     |                      sum1(k,i)*sum2(k,i)
-          enddo
+           do k=lev0,lev1
+              sum1(k,i) = sum1(k,i)+sigeuv(1,l)*sco2(k,i)+
+     |             sigeuv(2,l)*sco1(k,i)+
+     |             sigeuv(3,l)*scn2(k,i)
+              sum1(k,i) = feuv(l)*exp(-sum1(k,i))
+              sum2(k,i) = sum2(k,i)+sigeuv(1,l)*mn_o2(k,i)+
+     |             sigeuv(2,l)*mn_o1(k,i)+
+     |             sigeuv(3,l)*mn_n2(k,i)
+              qtotal(k,i,lat) = qtotal(k,i,lat) + htfac*
+     |             sum1(k,i)*sum2(k,i)
+              
+           enddo
         enddo
-      enddo ! l=l1+1,lmax
-!
-!     call addfld('QOP2P' ,' ',' ', qop2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOP2D' ,' ',' ', qop2d(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('SUM1' ,' ',' ', sum1,
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('Q0'  ,' ',' ',qtotal(:,:,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('RJ_QRJ',' ',' ',rj(:,:,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!
+
+        ! O2 ionization
+        if (BPhotonI(1,l) .ne. 0.0) then
+           do i=lon0,lon1
+              do k=lev0,lev1
+                 ioniz_o2 = sum1(k,i)*sigeuv(1,l)*BPhotonI(1,l)
+                 di_o2(k,i) = di_o2(k,i) + ioniz_o2*bro2DIEl(l)
+                 qo2p(k,i,lat) = qo2p(k,i,lat) + ioniz_o2 + 
+     |                ioniz_o2*BElectronI(1,l)
+                 rj(k,i,lat) = rj(k,i,lat) + ioniz_o2*bro2DEl(l)
+              enddo
+           enddo
+        endif
+        
+        ! O2 Absorption
+        if (bro2DIPh(l) .ne. 0.0) then
+           do i=lon0,lon1
+              do k=lev0,lev1
+                 di_o2(k,i) = di_o2(k,i) 
+     |                + sum1(k,i)*sigeuv(1,l)*bro2DIPh(l)
+              enddo
+           enddo
+        endif
+        if (bro2DPh(l) .ne. 0.0) then
+           do i=lon0,lon1
+              do k=lev0,lev1
+                 rj(k,i,lat) = rj(k,i,lat) 
+     |                + sum1(k,i)*sigeuv(1,l)*bro2DPh(l)
+              enddo
+           enddo
+        endif
+
+        ! N2 Ionization
+        if (BPhotonI(3,l) .ne. 0.0) then
+           do i=lon0,lon1
+              do k=lev0,lev1
+                 ioniz_n2 = sum1(k,i)*sigeuv(3,l)*BPhotonI(3,l)
+                 di_n2(k,i) = di_n2(k,i) + ioniz_n2*brn2DIEl(l)
+                 qn2p(k,i,lat) = qn2p(k,i,lat) + ioniz_n2 +
+     |                ioniz_n2*BElectronI(3,l)
+                 qtef(k,i,lat) = qtef(k,i,lat) + ioniz_n2*brn2DEl(l)
+              enddo
+           enddo
+        endif
+        
+        ! N2 Absorbtion
+        if (sigeuv(3,l) .ne. 0.0) then
+           if (brn2DIPh(l) .ne. 0.0) then
+              do i=lon0,lon1
+                 do k=lev0,lev1
+                    di_n2(k,i) = di_n2(k,i) + 
+     |                   sum1(k,i)*sigeuv(3,l)*brn2DIPh(l)
+                 enddo
+              enddo
+           endif
+           if (brn2DPh(l) .ne. 0.0) then
+              do i=lon0,lon1
+                 do k=lev0,lev1
+                    qtef(k,i,lat) = qtef(k,i,lat) + 
+     |                   sum1(k,i)*sigeuv(3,l)*brn2DPh(l)
+                 enddo
+              enddo
+           endif
+        endif
+
+        ! O Ionization 
+        ! Note: Impact ionization branching rati for O+(2p),o+(2d),O+(4s) 
+        ! are only non-zero for the 10 last wavelengths; i.e. brop2pEl(l),brop2dEl(:),
+        ! and brop4sEl(:) are all zero at the same wavelengths
+      
+        if (brop2pEl(l) .ne. 0.0) then
+           do i=lon0,lon1
+              do k=lev0,lev1
+                 ioniz_o = sum1(k,i)*sigeuv(2,l)*BPhotonI(2,l)
+                 qop2p(k,i,lat) = qop2p(k,i,lat)+
+     |                ioniz_o*brop2pEl(l) 
+                 qop2d(k,i,lat) = qop2d(k,i,lat)+
+     |                ioniz_o*brop2dEl(l)
+                 qop(k,i,lat) = qop(k,i,lat)+
+     |                ioniz_o*brop4sEl(l)
+              enddo
+           enddo
+        endif
+        
+        ! O absorption for O+(4s),O+(2d),and O+(2p)
+        if (sigeuv(2,l) .ne. 0.) then
+           do i=lon0,lon1
+              do k=lev0,lev1
+                 absorp_o = sum1(k,i)*sigeuv(2,l)
+                 qop2p(k,i,lat) = qop2p(k,i,lat) + absorp_o*brop2pPh(l)
+                 qop2d(k,i,lat) = qop2d(k,i,lat) + absorp_o*brop2dPh(l)
+                 qop(k,i,lat) = qop(k,i,lat) + absorp_o*brop4sPh(l)
+              enddo
+           enddo
+        endif
+        
+        if (sigin4s(l) .ne. 0.0) then
+           do i=lon0,lon1
+              do k=lev0,lev1
+                 qnp(k,i,lat) = qnp(k,i,lat) + sigin4s(l)*sum1(k,i)
+              enddo
+           enddo
+        endif
+      enddo                     ! l=l1+1,lmax
+
 ! Multiply Q by efficiency factor:
       do i=lon0,lon1
-        do k=lev0,lev1
-          qtotal(k,i,lat) = qtotal(k,i,lat)*euveff(k)*avo
-        enddo
+         do k=lev0,lev1
+            qtotal(k,i,lat) = qtotal(k,i,lat)*euveff(k)*avo
+         enddo
       enddo
-!     call addfld('Q1'  ,' ',' ',qtotal(:,:,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!
+
 ! transfer frequency (s^-1) to production rates (cm^-3 s^-1)
       do i=lon0,lon1
-        do k=lev0,lev1
-           mn_o2(k,i)=mn_o2(k,i)*xnmbari(k,i)
-           mn_n2(k,i)=mn_n2(k,i)*xnmbari(k,i)
-           mn_o1(k,i)=mn_o1(k,i)*xnmbari(k,i)
-           mn_n(k,i)=mn_n(k,i)*xnmbari(k,i)
-           di_o2(k,i)=di_o2(k,i)*mn_o2(k,i)
-           di_n2(k,i)=di_n2(k,i)*mn_n2(k,i)
+         do k=lev0,lev1
+           mn_o2(k,i) = mn_o2(k,i)*xnmbari(k,i)
+           mn_n2(k,i) = mn_n2(k,i)*xnmbari(k,i)
+           mn_o1(k,i) = mn_o1(k,i)*xnmbari(k,i)
+           mn_n(k,i) = mn_n(k,i)*xnmbari(k,i)
+           di_o2(k,i) = di_o2(k,i)*mn_o2(k,i)
+           di_n2(k,i) = di_n2(k,i)*mn_n2(k,i)
            qo2p(k,i,lat) = qo2p(k,i,lat)*mn_o2(k,i)-di_o2(k,i)
            qn2p(k,i,lat) = qn2p(k,i,lat)*mn_n2(k,i)-di_n2(k,i)
            qnp(k,i,lat)  = qnp(k,i,lat)*mn_n(k,i)+di_n2(k,i)
@@ -327,10 +370,7 @@
            qtef(k,i,lat) = 2.*qtef(k,i,lat)*mn_n2(k,i)+di_n2(k,i)
         enddo
       enddo
-!
-!     call addfld('QOP',' ',' ',qop(:,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-! 
+
 ! Add no ionization to qnop:
       do i=lon0,lon1
         qnop(lev0,i,lat) = qnop(lev0,i,lat)+
@@ -372,18 +412,10 @@
       do l=1,l1       ! from 1050A to 1750A
         do i=lon0,lon1
           do k=lev0,lev1
-!
-! Note check_exp should be true for debug runs only:
-            if (.not.check_exp) then
-              sigchap(k,i) = sigsrc(l)*fsrc(l)*exp(-sigsrc(l)*sco2(k,i))
-            else
-              sigchap(k,i) = sigsrc(l)*fsrc(l)*
-     |          expo(-sigsrc(l)*sco2(k,i),0)
-            endif
-!
-            sum1(k,i) = sum1(k,i)+sigchap(k,i)*
-     |        (hc*rlmsrcinv(l)-do22+quenchfac(k,i))
-            rj(k,i,lat) = rj(k,i,lat)+sigchap(k,i)
+             sigchap(k,i) = sigsrc(l)*fsrc(l)*exp(-sigsrc(l)*sco2(k,i))
+             sum1(k,i) = sum1(k,i)+sigchap(k,i)*
+     |            (hc*rlmsrcinv(l)-do22+quenchfac(k,i))
+             rj(k,i,lat) = rj(k,i,lat)+sigchap(k,i)
           enddo
         enddo
       enddo
@@ -395,51 +427,28 @@
      |      o2i(k,i)*rmassinv_o2
         enddo
       enddo
-!
-!     call addfld('Q2'  ,' ',' ',qtotal(:,:,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!
+
 ! Contributions from schumann runge bands:
       do i=lon0,lon1
-        do k=lev0,lev1
-          if (sco2(k,i) >= 1.e18) then
-            p3f(k,i) = (1./(aband*sco2(k,i)+bband*sqrt(sco2(k,i))))*
-     |                 (1.+0.11*(f107-65.)/165.)*sfeps
-          else
-            p3f(k,i) = cband*(1.+0.11*(f107-65.)/165.)*sfeps
-          endif
-          qtotal(k,i,lat) = qtotal(k,i,lat)+p3f(k,i)*avo*
-     |      o2i(k,i)*rmassinv_o2*e3
-          rj(k,i,lat) = rj(k,i,lat)+p3f(k,i)/do2
+         do k=lev0,lev1
+            if (sco2(k,i) >= 1.e18) then
+               p3f(k,i) = (1./(aband*sco2(k,i)+bband*sqrt(sco2(k,i))))*
+     |              (1.+0.11*(f107-65.)/165.)*sfeps
+            else
+               p3f(k,i) = cband*(1.+0.11*(f107-65.)/165.)*sfeps
+            endif
+            qtotal(k,i,lat) = qtotal(k,i,lat)+p3f(k,i)*avo*
+     |           o2i(k,i)*rmassinv_o2*e3
+            rj(k,i,lat) = rj(k,i,lat)+p3f(k,i)/do2
         enddo
       enddo
-!     call addfld('Q'     ,' ',' ',qtotal(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('RJ'    ,' ',' ',rj(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOP2Pa' ,' ',' ',qop2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOP2Da' ,' ',' ', qop2d(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QTEF'  ,' ',' ',  qtef(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QO2P'  ,' ',' ',  qo2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QN2P'  ,' ',' ',  qn2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QNP'   ,' ',' ',   qnp(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOPa'   ,' ',' ',  qop(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QNOP'  ,' ',' ',  qnop(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!
 #ifdef VT
 !     code = 118 ; state = 'qrj' ; activity='ModelCode'
       call vtend(118,ier)
 #endif
 !
       end subroutine qrj
+
 !---------------------------------------------------------------
       subroutine init_sflux
       use input_module,only: f107,f107a,see_ncfile

@@ -1,8 +1,8 @@
 
       module lbc
 !
-! This software is part of the NCAR TIE-GCM.  Use is governed by the 
-! Open Source Academic Research License Agreement contained in the file 
+! This software is part of the NCAR TIE-GCM.  Use is governed by the
+! Open Source Academic Research License Agreement contained in the file
 ! tiegcmlicense.txt.
 !
 ! Calculate lower boundary conditions for T,U,V,Z
@@ -19,28 +19,28 @@
 !
       real,dimension(nlonp4,nlat) :: t_lbc, u_lbc, v_lbc, z_lbc
 !
-! Diurnal and semi-diurnal tidal perturbations using Hough functions: 
+! Diurnal and semi-diurnal tidal perturbations using Hough functions:
 !
-      complex,dimension(nlat) :: 
+      complex,dimension(nlat) ::
      |  t_di , u_di , v_di , z_di, t_sdi, u_sdi, v_sdi, z_sdi
       complex,parameter :: ci=(0.,1.), expta=1.
       complex :: bnd_sdi(nlonp4), bnd_di(nlonp4)
 !
 ! For bndcmp:
-      real :: b(nlonp4,2,2),fb(nlonp4,2)
-!
+      real :: b(nlonp4,2,2,nlat),fb(nlonp4,2,nlat)
+
 ! This t0 is different than the t0 in cons.
-      real :: t0(nlev+1) 
+      real :: t0(nlev+1)
       contains
 !-----------------------------------------------------------------------
-      subroutine tuvz_lbc
-!
+      subroutine tuvz_lbc()
+
 ! Update lower boundary subdomains of T,U,V,Z
-! This is called every timestep from advance, after getgswm and 
+! This is called every timestep from advance, after getgswm and
 !   before addiag.
-!
-      use mpi_module,only: lon0,lon1,lat0,lat1
-      use init_module,only: iter
+
+      use mpi_module,only: lon0,lon1,lat0,lat1,mytid
+      use init_module,only: iter,iyear
       use input_module,only: step,
      |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
@@ -55,23 +55,72 @@
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
       use hist_module,only: modeltime
+      use etimod,only: tfilter,t0init,time0,timeramp,usezlbc,
+     |     nudgeT,nudgeU,useoxf,
+     |     nudgeV,msistlbc,msiszlbc,hwmulbc,hwmvlbc,calclbc,nudgeyear0
+
       implicit none
-      integer :: i,j
-      real :: rstep
-      complex :: t_expt_sdi, t_expt_di, uvz_expt_sdi, uvz_expt_di
+      integer     :: i,j,k
+      real        :: rstep
+      complex     :: t_expt_sdi, t_expt_di, uvz_expt_sdi, uvz_expt_di
+      real        :: a,b
 !
 ! Calculate exponentials
       rstep = float(step)
+
       t_expt_sdi = cexp(ci*freq_semidi*rstep*iter)
       t_expt_di  = cexp(ci*.5*freq_semidi*rstep*iter)
       uvz_expt_sdi = cexp(ci*freq_semidi*dt*iter)
       uvz_expt_di  = cexp(ci*.5*freq_semidi*dt*iter)
-!
+
 ! Set background constants (see cons module):
-      t_lbc(lon0:lon1,lat0:lat1) = tbound
-      u_lbc(lon0:lon1,lat0:lat1) = 0.
-      v_lbc(lon0:lon1,lat0:lat1) = 0.
-      z_lbc(lon0:lon1,lat0:lat1) = zbound
+       t_lbc(lon0:lon1,lat0:lat1) = tbound
+       z_lbc(lon0:lon1,lat0:lat1) = zbound
+       u_lbc(lon0:lon1,lat0:lat1) = 0.
+       v_lbc(lon0:lon1,lat0:lat1) = 0.
+
+! ---------------------------------------------------------------------
+! If nudging (initialize onset ramps once) then call MSIS/HWM etc
+! ---------------------------------------------------------------------
+
+      if (iyear .eq. nudgeyear0) then
+          if (t0init) then
+              time0 = rstep*iter
+              t0init = .false.
+          endif
+          b = tfilter(rstep*iter)
+          a = 1.0 - b
+      else
+          a = 0.0
+          b = 1.0
+      endif
+      call calclbc()
+      timeramp = b  ! for other levels in dt.F and duv.F
+
+      if (useoxf) call bndcmp()
+
+      if (usezlbc) then
+        do j=lat0,lat1
+            do i=lon0,lon1
+                z_lbc(i,j) = a*zbound + b*msiszlbc(i,j,0)
+            enddo
+         enddo
+      endif
+
+      if (nudgeT) then
+         do j=lat0,lat1
+            do i=lon0,lon1
+               t_lbc(i,j) = a*tbound + b*msistlbc(i,j,0)
+            enddo
+         enddo
+      endif
+
+      do j=lat0,lat1
+         do i=lon0,lon1
+            if (nudgeU) u_lbc(i,j) = b*hwmulbc(i,j,0)
+            if (nudgeV) v_lbc(i,j) = b*hwmvlbc(i,j,0)
+         enddo
+      enddo
 
       if (len_trim(saber_ncfile) > 0 .or.
      |    len_trim(tidi_ncfile) > 0) goto 100
@@ -150,6 +199,7 @@
 !
 ! Add SABER and/or TIDI perturbations:
  100  continue
+
       if (len_trim(saber_ncfile) > 0 .or.
      |    len_trim(tidi_ncfile) > 0)
      |  call get_saber_tidi(modeltime)
@@ -162,12 +212,6 @@
           enddo
         enddo
 
-!       write(6,"('tuvz_lbc: added saber_t,z to t_lbc,z_lbc')")
-!       write(6,"('tuvz_lbc: saber_z min,max=',2e12.4)") 
-!    |    minval(saber_z),maxval(saber_z)
-!       write(6,"('tuvz_lbc: z_lbc min,max=',2e12.4)") 
-!    |    minval(z_lbc),maxval(z_lbc)
-
       endif
       if (len_trim(tidi_ncfile) > 0) then
         do j=lat0,lat1
@@ -176,7 +220,6 @@
             v_lbc(i,j) = v_lbc(i,j)+tidi_v(i,j)
           enddo
         enddo
-!       write(6,"('tuvz_lbc: added tidi_u,v to u_lbc,v_lbc')")
       endif
 !
 ! Save 2d boundaries to secondary histories:
@@ -188,13 +231,14 @@
      |  'lon',lon0,lon1,'lat',lat0,lat1,0)
       call addfld('Z_LBC','Z_LBC',' ',z_lbc(lon0:lon1,lat0:lat1),
      |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      
       end subroutine tuvz_lbc
 !-----------------------------------------------------------------------
       subroutine bndry_semidiurnal
 !
 ! Lower boundary conditions for semi-diurnal tide, using Hough functions.
-! This is called once per run from init, and returns t_sdi, u_sdi, v_sdi, 
-!   z_sdi at nlat latitudes. 
+! This is called once per run from init, and returns t_sdi, u_sdi, v_sdi,
+!   z_sdi at nlat latitudes.
 !
       use input_module,only: tide
       implicit none
@@ -234,7 +278,7 @@
 ! t0 is local to this module (different than the t0 in cons)
       t0(:) = 0.
       t0(1) = tbound
-      t0(2) = tbound+dz*tgrad
+      t0(2) = tbound + dz*tgrad
 !
 ! Longitudinal structure:
       rlamda = -2.*dlamda
@@ -314,21 +358,14 @@
         u_sdi(j)=grav*(cor(j)/freq_semidi*dzb(j)-2./cs(j)*
      |    z_sdi(j))/u_sdi(j)
       enddo
-!     write(6,"('bndry_semidiurnal: t_sdi min,max=',2e12.4)")
-!    |  minval(real(t_sdi)),maxval(real(t_sdi))
-!     write(6,"('bndry_semidiurnal: u_sdi min,max=',2e12.4)")
-!    |  minval(real(u_sdi)),maxval(real(u_sdi))
-!     write(6,"('bndry_semidiurnal: v_sdi min,max=',2e12.4)")
-!    |  minval(real(v_sdi)),maxval(real(v_sdi))
-!     write(6,"('bndry_semidiurnal: z_sdi min,max=',2e12.4)")
-!    |  minval(real(z_sdi)),maxval(real(z_sdi))
+
       end subroutine bndry_semidiurnal
 !-----------------------------------------------------------------------
-      subroutine bndry_diurnal
+      subroutine bndry_diurnal()
 !
 ! Lower boundary conditions for diurnal tide, using Hough functions.
-! This is called once per run from init, and returns t_di, u_di, v_di, 
-!   z_di at nlat latitudes. 
+! This is called once per run from init, and returns t_di, u_di, v_di,
+!   z_di at nlat latitudes.
 !
       use input_module,only: tide2
 !
@@ -367,7 +404,7 @@
 ! t0 is local to this module (different than the t0 in cons)
       t0(:) = 0.
       t0(1) = tbound
-      t0(2) = tbound+dz*tgrad
+      t0(2) = tbound + dz*tgrad
 !
 ! Calculate longitudinal structure
       rlamda = -2.*dlamda
@@ -386,7 +423,7 @@
         return
       endif
       bhour(1) = tide2(2)
-      pik = 3.14159265358979312 
+      pik = 3.14159265358979312
       do n=1,1
         zee(n)=tide2(n)*cexp(ci*pik*bhour(n)/12.)
         cl(n)=csqrt(cmplx(gask/(atm_amu*grav*rl(n))*
@@ -444,147 +481,214 @@
         u_di(j)=grav*(cor(j)/(.5*freq_semidi)*dzb(j)-1./cs(j)*z_di(j))/
      |    u_di(j)
       enddo
-!     write(6,"('bndry_diurnal: t_di min,max=',2e12.4)")
-!    |  minval(real(t_di)),maxval(real(t_di))
-!     write(6,"('bndry_diurnal: u_di min,max=',2e12.4)")
-!    |  minval(real(u_di)),maxval(real(u_di))
-!     write(6,"('bndry_diurnal: v_di min,max=',2e12.4)")
-!    |  minval(real(v_di)),maxval(real(v_di))
-!     write(6,"('bndry_diurnal: z_di min,max=',2e12.4)")
-!    |  minval(real(z_di)),maxval(real(z_di))
+
       end subroutine bndry_diurnal
 !-----------------------------------------------------------------------
-      subroutine bndcmp
-C     ****
-C     ****     CALCULATE MATRICES B(nlonp4,2,2) AND VECTORS FB(nlonp4,2)
-C     ****       REPRESENTING THE LOWER BOUBNDARY CONDITION IN COMP,
-C     ****       WHERE PSI1 AND PSI2 ARE CALCULATED:
-C     ****
-C     ****         PSI(K=-1/2) = B * PSI(K=1/2) + FB
-C     ****
-C     ****     BNDCMP CALLS THE SUBROUTINE BNDEF TO DEFINE THE 2 X 2
-C     ****       MATRICES E, F AND THE 2 VECTOR G IN THE GENERAL
-C     ****       LOWER BOUNDARY CONDITION:
-C     ****
-C     ****         E * D(PSI)/DS + F * PSI + G = 0.
-C     ****
-C     ****         WHERE:
-C     ****           PSI = |PSI1| AND THE BOUNDARY CONDITION IS APPLIED
-C     ****                 |    |
-C     ****                 |PSI2|
-C     ****
-C     ****           AT LEVEL ZERO
-C     ****
-C     ****     THIS SUBROUTINE THEN EVALUATES B AND FB FROM:
-C     ****
-C     ****       B = (E/DS - F/2.)**(-1) * (E/DS + F/2.)
-C     ****
-C     ****       FB = (E/DS - F/2.)**(-1) * G
-C     ****
+      subroutine bndcmp()
+
+	  use etimod,only: timeramp,msiso1f,msiso2f,useoxf
+
+!C     ****
+!C     ****     CALCULATE MATRICES B(nlonp4,2,2) AND VECTORS FB(nlonp4,2)
+!C     ****       REPRESENTING THE LOWER BOUNDARY CONDITION IN COMP,
+!C     ****       WHERE PSI1 AND PSI2 ARE CALCULATED:
+!C     ****
+!C     ****         PSI(K=-1/2) = B * PSI(K=1/2) + FB
+!                or PSI(k=1/2) = PSI(k=-1/2)/B - FB/B
+!C     ****
+!C     ****     BNDCMP CALLS THE SUBROUTINE BNDEF TO DEFINE THE 2 X 2
+!C     ****       MATRICES E, F AND THE 2 VECTOR G IN THE GENERAL
+!C     ****       LOWER BOUNDARY CONDITION:
+!C     ****
+!C     ****         E * D(PSI)/DS + F * PSI + G = 0.
+!C     ****
+!C     ****         WHERE:
+!C     ****           PSI = |PSI1| AND THE BOUNDARY CONDITION IS APPLIED
+!C     ****                 |    |
+!C     ****                 |PSI2|
+!C     ****
+!C     ****           AT LEVEL ZERO
+!C     ****
+!C     ****     THIS SUBROUTINE THEN EVALUATES B AND FB FROM:
+!C     ****
+!C     ****       B = (E/DS - F/2.)**(-1) * (E/DS + F/2.)
+!C     ****
+!C     ****       FB = (E/DS - F/2.)**(-1) * G
+!C     ****
+!
+!		 ps0(i,io2) =
+!     |        b(i,io2,io2,lat)*o2(lev0,i,lat) + b(i,io2,io1,lat)*o1(lev0,i,lat)
+!     |        + fb(i,io2,lat)
+!
+!        ps0(i,io1) =
+!     |       b(i,io1,io2,lat)*o2(lev0,i,lat) + b(i,io1,io1,lat)*o1(lev0,i,lat)
+!     |       + fb(i,io1,lat)
 !
 ! Local:
-      real :: ee(nlonp4,2,2),ff(nlonp4,2,2),gg(nlonp4,2),
-     |  wm1(nlonp4,2,2),wm2(nlonp4,2,2),wm3(nlonp4,2,2),
-     |  ws1(nlonp4)
-      integer :: l,m,i
-C     ****
-C     ****     CALL BNDEF TO DEFINE E, F AND G IN S1, S2 AND S3
-C     ****
-      call bndef(ee,ff,gg)
-C     ****
-C     ****     WM1 = (E/DS - F/2.)
-C     ****
-C     ****     WM1 = (E/DS + F/2.)
-C     ****
-      do l = 1,2
-        do m = 1,2
+
+      integer,parameter  :: io2 = 1
+      integer,parameter  :: io1 = 2
+        
+      real    :: ee(nlonp4,2,2),ff(nlonp4,2,2),gg(nlonp4,2),
+     |  wm1(nlonp4,2,2),wm2(nlonp4,2,2),wm3(nlonp4,2,2),ws1(nlonp4),
+     |  xb(nlonp4,2,2),xfb(nlonp4,2),yb(nlonp4,2,2),yfb(nlonp4,2)
+      
+      integer :: l,m,i,lat
+
+!     ****
+!     ****     CALL BNDEF TO DEFINE E, F AND G IN S1, S2 AND S3
+!     ****
+
+      do lat = 1,nlat
+
+         call bndef(lat,ee,ff,gg)
+
+!        ****
+!        ****     WM1 = (E/DS - F/2.)
+!        ****
+!        ****     WM1 = (E/DS + F/2.)
+!        ****
+         do l = 1,2
+            do m = 1,2
+               do i = 1,nlonp4
+                  wm1(i,l,m) = ee(i,l,m)/dz - ff(i,l,m)/2.
+                  wm2(i,l,m) = ee(i,l,m)/dz + ff(i,l,m)/2.
+               enddo
+            enddo
+         enddo
+!        ****
+!        ****     WM3 = WM1**(-1)
+!        ****
+!        ****       WS1 = DET(WM1)
+!        ****
+         do i = 1,nlonp4
+            ws1(i) = wm1(i,1,1)*wm1(i,2,2) - wm1(i,1,2)*wm1(i,2,1)
+         enddo
+!C        ****
+!C        ****     NOW INVERSE OF WM1 IN WM3
+!C        ****
+         do i = 1,nlonp4
+            wm3(i,1,1) =  wm1(i,2,2)/ws1(i)
+            wm3(i,1,2) = -wm1(i,1,2)/ws1(i)
+            wm3(i,2,1) = -wm1(i,2,1)/ws1(i)
+            wm3(i,2,2) =  wm1(i,1,1)/ws1(i)
+         enddo
+!C        ****
+!C        ****     B = WM3 * WM2
+!C        ****
+!        b and fb are bndry_module module data.
+         do l = 1,2
+            do m = 1,2
+               do i = 1,nlonp4
+                 yb(i,l,m) = wm3(i,l,1)*wm2(i,1,m) +
+     |                 wm3(i,l,2)*wm2(i,2,m)
+                 xb(i,l,m) = 0.0
+               enddo
+            enddo
+         enddo
+!C        ****
+!C        ****     FB = WM3 * G
+!C        ****
+         do l = 1,2
+            do i = 1,nlonp4
+               yfb(i,l) = wm3(i,l,1)*gg(i,1) + wm3(i,l,2)*gg(i,2)
+               xfb(i,l) = 0.0
+            enddo
+         enddo
+
+		 !! ---------------------------------------
+		 !! Nuding to new boundary condition (DPD)
+		 !! ---------------------------------------
+
+         if (useoxf) then
           do i = 1,nlonp4
-            wm1(i,l,m) = ee(i,l,m)/dz-ff(i,l,m)/2.
-            wm2(i,l,m) = ee(i,l,m)/dz+ff(i,l,m)/2.
+            xb(i,io2,io2) = (msiso2f(i,lat,0)-msiso2f(i,lat,1))
+     |          / msiso2f(i,lat,1)
+        	  xfb(i,io2) = msiso2f(i,lat,1)
+            xb(i,io1,io1) = (msiso1f(i,lat,0)-msiso1f(i,lat,1))
+     |          / msiso1f(i,lat,1)
+            xfb(i,io1) = msiso1f(i,lat,1)
           enddo
-        enddo
+		 do l = 1,2
+            do m = 1,2
+               do i = 1,nlonp4
+                 b(i,l,m,lat) = (1.0-timeramp)*yb(i,l,m)
+     |               + timeramp*xb(i,l,m)
+			   enddo
+			enddo
+		 enddo
+		 do l = 1,2
+            do i = 1,nlonp4
+                fb(i,l,lat) = (1.0-timeramp)*yfb(i,l)
+     |             + timeramp*xfb(i,l)
+			enddo
+           enddo
+         else
+          do l = 1,2
+            do m = 1,2
+               do i = 1,nlonp4
+                 b(i,l,m,lat) = yb(i,l,m)
+			   enddo
+			enddo
+		 enddo
+		 do l = 1,2
+             do i = 1,nlonp4
+                fb(i,l,lat) = yfb(i,l)
+             enddo
+           enddo
+         endif
       enddo
-C     ****
-C     ****     WM3 = WM1**(-1)
-C     ****
-C     ****       WS1 = DET(WM1)
-C     ****
-      do i = 1,nlonp4
-        ws1(i) = wm1(i,1,1)*wm1(i,2,2)-wm1(i,1,2)*wm1(i,2,1)
-      enddo
-C     ****
-C     ****     NOW INVERSE OF WM1 IN WM3
-C     ****
-      do i = 1,nlonp4
-        wm3(i,1,1) =  wm1(i,2,2)/ws1(i)
-        wm3(i,1,2) = -wm1(i,1,2)/ws1(i)
-        wm3(i,2,1) = -wm1(i,2,1)/ws1(i)
-        wm3(i,2,2) =  wm1(i,1,1)/ws1(i)
-      enddo
-C     ****
-C     ****     B = WM3 * WM2
-C     ****
-! b and fb are bndry_module module data.
-      do l = 1,2
-        do m = 1,2
-          do i = 1,nlonp4
-            b(i,l,m) = wm3(i,l,1)*wm2(i,1,m)+wm3(i,l,2)*wm2(i,2,m)
-          enddo
-        enddo
-      enddo
-C     ****
-C     ****     FB = WM3 * G
-C     ****
-      do l = 1,2
-        do i = 1,nlonp4
-          fb(i,l) = wm3(i,l,1)*gg(i,1)+wm3(i,l,2)*gg(i,2)
-        enddo
-      enddo
+
+      return
       end subroutine bndcmp
 !-----------------------------------------------------------------------
-      subroutine bndef(ee,ff,gg)
-C     ****
-C     ****     BNDEF DEFINES THE LOWER BOUNDARY CONDITION FOR THIS
-C     ****       VERSION OF THE MODEL
-C     ****
-C     ****     THE LOWER BOUNDARY CONDITION FOR COMP IS:
-C     ****
-C     ****       E * D(PSI)/DS + F * PSI +G = 0.
-C     ****
-C     ****         WHERE:
-C     ****           PSI = VECTOR(PSI1,PSI2)
-C     ****           E AND F ARE 2 X 2 MATRICES
-C     ****           G = VECTOR(G1,G2)
-C     ****
-C     ****           E, F AND G MAY BE FUNCTIONS OF LATITUDE & LONGITUDE
-C     ****
-C     ****       THIS SUBROUTINE DEFINES E, F AND G for BNDCMP
-C     ****
+      subroutine bndef(lat,ee,ff,gg)
+
+      use etimod,only: timeramp,msiso1f,msiso2f
+
+!C     ****
+!C     ****     BNDEF DEFINES THE LOWER BOUNDARY CONDITION FOR THIS
+!C     ****       VERSION OF THE MODEL
+!C     ****
+!C     ****     THE LOWER BOUNDARY CONDITION FOR COMP IS:
+!C     ****
+!C     ****       E * D(PSI)/DS + F * PSI + G = 0.
+!C     ****
+!C     ****         WHERE:
+!C     ****           PSI = VECTOR(PSI1,PSI2)
+!C     ****           E AND F ARE 2 X 2 MATRICES
+!C     ****           G = VECTOR(G1,G2)
+!C     ****
+!C     ****           E, F AND G MAY BE FUNCTIONS OF LATITUDE & LONGITUDE
+!C     ****
+!C     ****       THIS SUBROUTINE DEFINES E, F AND G for BNDCMP
+!C     ****
 !
 ! Args:
+      integer,intent(in) :: lat
       real,intent(out) :: ee(nlonp4,2,2),ff(nlonp4,2,2),gg(nlonp4,2)
-!
 ! Local:
       real :: alfa
       integer :: i
-C     ****
-C     ****     IN TIGCM AND TIEGCM:
-C     ****
-C     ****       E = |0.  0.|
-C     ****           |      |
-C     ****           |0.  1.|
-C     ****
-C     ****       F = |1.  1.|
-C     ****           |      |
-C     ****           |0. -1.|
-C     ****
-C     ****       G = |-ALFA|
-C     ****           |     |
-C     ****           |   0.|
-C     ****
-C     ****       WHERE:
-C     ****         ALFA = 0.22 + 0.014 = 0.234
-C     ****
+!C     ****
+!C     ****     IN TIGCM AND TIEGCM:
+!C     ****
+!C     ****       E = |0.  0.|
+!C     ****           |      |
+!C     ****           |0.  1.|
+!C     ****
+!C     ****       F = |1.  1.|
+!C     ****           |      |
+!C     ****           |0. -1.|
+!C     ****
+!C     ****       G = |-ALFA|
+!C     ****           |     |
+!C     ****           |   0.|
+!C     ****
+!C     ****       WHERE:
+!C     ****         ALFA = 0.22 + 0.014 = 0.234
+!C     ****
+
       data alfa/0.234/
       do i = 1,nlonp4
         ee(i,1,1) = 0.
@@ -596,8 +700,8 @@ C     ****
         ff(i,2,1) = 0.
         ff(i,2,2) = -1.
         gg(i,1) = -alfa
-        gg(i,2) = 0.
-      enddo
+        gg(i,2) = 0.0
+	  enddo
       end subroutine bndef
 !-----------------------------------------------------------------------
       end module lbc

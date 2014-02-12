@@ -3,8 +3,8 @@
      |                o2_upd,o2nm_upd,o1_upd,o1nm_upd,
      |                lev0,lev1,lon0,lon1,lat0,lat1)
 !
-! This software is part of the NCAR TIE-GCM.  Use is governed by the 
-! Open Source Academic Research License Agreement contained in the file 
+! This software is part of the NCAR TIE-GCM.  Use is governed by the
+! Open Source Academic Research License Agreement contained in the file
 ! tiegcmlicense.txt.
 !
 ! Advance major species O2 and O.
@@ -101,7 +101,7 @@
       enddo
 !
 ! difhor flag is a parameter flag set to 1 in cons.F
-! dfactor = 
+! dfactor =
 !   .5*(1.+SIN(PI*(ABS(RLATM)-PI/6.)/(PI/3.))) FOR ABS(RLATM).LT.PI/3.
 ! dfactor = 1. FOR  ABS(RLATM).GE.PI/3
 ! (dfactor was in sub dfact in earlier versions)
@@ -117,13 +117,10 @@
       else
         dfactor(:) = 1.
       endif
-!     write(6,"('comp: lat=',i2,' dfactor=',/,(6e12.4))")
-!    |  lat,dfactor
-!
 ! Embar:
       do i=lon0,lon1
         do k=lev0,lev1
-          embar(i,k) = 1./(o2(k,i,lat)*rmassinv_o2 + 
+          embar(i,k) = 1./(o2(k,i,lat)*rmassinv_o2 +
      |                     o1(k,i,lat)*rmassinv_o1 +
      |     (1.-o2(k,i,lat)-o1(k,i,lat))*rmassinv_n2)
         enddo ! k=lev0,lev1
@@ -135,10 +132,12 @@
 !
 ! ps0 and embar0:
       do i=lon0,lon1
-        ps0(i,io2) = 
-     |    b(i,1,1)*o2(lev0,i,lat)+b(i,1,2)*o1(lev0,i,lat)+fb(i,1)
-        ps0(i,io1) = 
-     |    b(i,2,1)*o2(lev0,i,lat)+b(i,2,2)*o1(lev0,i,lat)+fb(i,2)
+        ps0(i,io2) =
+     |        b(i,1,1,lat)*o2(lev0,i,lat) + b(i,1,2,lat)*o1(lev0,i,lat)
+     |        + fb(i,1,lat)
+        ps0(i,io1) =
+     |       b(i,2,1,lat)*o2(lev0,i,lat) + b(i,2,2,lat)*o1(lev0,i,lat)
+     |       + fb(i,2,lat)
         embar0(i) = 1./(ps0(i,io2)*rmassinv_o2+ps0(i,io1)*rmassinv_o1+
      |              (1.-ps0(i,io2)-ps0(i,io1))*rmassinv_n2)
 ! WKS4 = .5*(DMBAR/DZ)/MBAR
@@ -146,14 +145,8 @@
      |            (dz*(embar0(i)+embar(i,lev0)))
       enddo ! i=lon0,lon1
 
-!     write(6,"(/,'comp: lat=',i2,' ps0(:,io2)=',/,(6e12.4))") 
-!    |  lat,ps0(:,io2)
-!     write(6,"('ps0(:,io1)=',/,(6e12.4))") ps0(:,io1)
-!     write(6,"('embar0(:)=',/,(6e12.4))") embar0(:)
-!     write(6,"('wks4(:)=',/,(6e12.4))") wks4(:)
-!
 ! ep, ak at level 1/2:
-      km = 1 
+      km = 1
       kp = 2
       do i=lon0,lon1
         ep(i,io2,kp) = 1.-(2./(embar0(i)+embar(i,lev0)))*
@@ -163,30 +156,22 @@
         zz(i,1,:) = 0.
       enddo ! i=lon0,lon1
 
-!     write(6,"('ep(:,1,kp)=',/,(6e12.4))") ep(:,1,kp)
-!     write(6,"('ep(:,2,kp)=',/,(6e12.4))") ep(:,2,kp)
-
       do m=1,2
         do i=lon0,lon1
-          ak(i,io2,m,kp) = 
+          ak(i,io2,m,kp) =
      |      -delta(io2,m)*(phi(io1,3)+(phi(io1,io2)-phi(io1,3))*
      |      .5*(ps0(i,io2)+o2(lev0,i,lat)))-(1.-delta(io2,m))*
      |      (phi(io2,m)-phi(io2,3))*.5*(ps0(i,io2)+o2(lev0,i,lat))
-          ak(i,io1,m,kp) = 
+          ak(i,io1,m,kp) =
      |      -delta(io1,m)*(phi(io2,3)+(phi(io2,io1)-phi(io2,3))*
      |      .5*(ps0(i,io1)+o1(lev0,i,lat)))-(1.-delta(io1,m))*
      |      (phi(io1,m)-phi(io1,3))*.5*(ps0(i,io1)+o1(lev0,i,lat))
         enddo ! i=lon0,lon1
 
-!       write(6,"('lat=',i2,' m=',i2,' ak(io2)=',/,(6e12.4))")
-!    |    lat,m,ak(:,io2,m,kp)
-!       write(6,"('lat=',i2,' m=',i2,' ak(io1)=',/,(6e12.4))")
-!    |    lat,m,ak(:,io1,m,kp)
-
       enddo ! m=1,2
 !
 ! WKS1=MBAR/M3*(T00/(T0+T))*0.25/(TAU*DET) AT LEVEL 1/2
-! tn lower boundary is stored in top slot tn(lev1..). 
+! tn lower boundary is stored in top slot tn(lev1..).
       do i=lon0,lon1
 !       wks1(i) = 0.5*(embar0(i)+embar(i,lev0))*rmassinv_n2*
 !    |    (t00/tn(lev1,i,lat))**0.25/(tau*(ak(i,1,1,kp)*ak(i,2,2,kp)-
@@ -205,12 +190,6 @@
           ak(i,io1,m,kp) = ak(i,io1,m,kp)*wks1(i)
           gama(i,lev0,:,m) = 0.
         enddo ! i=lon0,lon1
-
-!       write(6,"('lat=',i2,' m=',i2,' ak(io2)=',/,(6e12.4))")
-!    |    lat,m,ak(:,io2,m,kp)
-!       write(6,"('lat=',i2,' m=',i2,' ak(io1)=',/,(6e12.4))")
-!    |    lat,m,ak(:,io1,m,kp)
-
       enddo ! m=1,2
 !
       lonbeg = lon0
@@ -235,21 +214,17 @@
      |      (embar(i,k+1)-embar(i,k))/dz)
         enddo ! i=lon0,lon1
 
-!       write(6,"('lat=',i3,' k=',i3,' ep(io2)=',/,(6e12.4))") lat,k,
-!    |    ep(:,io2,kp)
-!       write(6,"('ep(io1)=',/,(6e12.4))") ep(:,io1,kp)
-
         do m=1,2
           do i=lon0,lon1
 !
 ! AK(K+1/2)
-            ak(i,io2,m,kp) = 
+            ak(i,io2,m,kp) =
      |        -delta(io2,m)*(phi(io1,3)+(phi(io1,io2)-phi(io1,3))*
      |        .5*(o2(k,i,lat)+o2(k+1,i,lat)))-
      |        (1.-delta(io2,m))*(phi(io2,m)-phi(io2,3))*
      |        .5*(o2(k,i,lat)+o2(k+1,i,lat))
 
-            ak(i,io1,m,kp) = 
+            ak(i,io1,m,kp) =
      |        -delta(io1,m)*(phi(io2,3)+(phi(io2,io1)-phi(io2,3))*
      |        .5*(o1(k,i,lat)+o1(k+1,i,lat)))-
      |        (1.-delta(io1,m))*(phi(io1,m)-phi(io1,3))*
@@ -265,7 +240,7 @@
      |      (tau*(ak(i,1,1,kp)*ak(i,2,2,kp)-ak(i,1,2,kp)*
      |      ak(i,2,1,kp)))
 !
-! EDDY DIFFUSION TERMS IN WKS3 AND WKS4 
+! EDDY DIFFUSION TERMS IN WKS3 AND WKS4
           wks3(i) = wks4(i)
           wks4(i) = (embar(i,k+1)-embar(i,k))/
      |      (dz*(embar(i,k)+embar(i,k+1)))
@@ -286,7 +261,7 @@
      |          expz(k)*(expzmid*difk(k+1,iday)*dfactor(i)*(1./dz+
      |          wks4(i))-0.25*(w(k,i,lat)+w(k+1,i,lat)))*
      |          delta(isp,m))/dz
-   
+
               qk(i,isp,m) = -(ak(i,isp,m,km)*(1./dz-ep(i,m,km)/2.)+
      |          ak(i,isp,m,kp)*(1./dz+ep(i,m,kp)/2.))/dz+expz(k)*
      |          (((expzmid*difk(k+1,iday)*(1./dz-wks4(i))+expzmid_inv*
@@ -294,13 +269,6 @@
      |          delta(isp,m)-fs(i,k,isp,m,lat))
 
             enddo ! i=lon0,lon1
-
-!           write(6,"(/,'comp: lat=',i3,' m=',i2,' isp=',i2,' k=',i3)") 
-!    |        lat,m,isp,k
-!           write(6,"('ak=',/,(6e12.4))") ak(:,isp,m,kp)
-!           write(6,"('pk=',/,(6e12.4))") pk(:,isp,m)
-!           write(6,"('rk=',/,(6e12.4))") rk(:,isp,m)
-!           write(6,"('qk=',/,(6e12.4))") qk(:,isp,m)
 
           enddo ! isp=io2,io1
         enddo ! m=1,2
@@ -311,20 +279,12 @@
           fk(i,io2) = o2_advec(k,i,lat)
           fk(i,io1) = o1_advec(k,i,lat)
         enddo ! i=lonbeg,lonend
-
-!       write(6,"(/,'comp: lat=',i3,' k=',i2)") lat,k
-!       write(6,"('fk(:,io2)=',/,(6e12.4))") fk(lonbeg:lonend,io2)
-!       write(6,"('fk(:,io1)=',/,(6e12.4))") fk(lonbeg:lonend,io1)
 !
 ! Add explicit source terms to fk:
         do i=lon0,lon1
           fk(i,io2) = fk(i,io2)-fs(i,k,io2,0,lat)
           fk(i,io1) = fk(i,io1)-fs(i,k,io1,0,lat)
         enddo ! i=lon0,lon1
-
-!       write(6,"(/,'comp: lat=',i3,' k=',i2)") lat,k
-!       write(6,"('fk(:,io2)=',/,(6e12.4))") fk(lonbeg:lonend,io2)
-!       write(6,"('fk(:,io1)=',/,(6e12.4))") fk(lonbeg:lonend,io1)
 !
 ! Complete calculation of rhs in fk:
         do i=lonbeg,lonend
@@ -334,43 +294,28 @@
      |      hdo1(k,i,lat))
         enddo ! i=lonbeg,lonend
 
-!       write(6,"(/,'comp: lat=',i3,' k=',i2)") lat,k
-!       write(6,"('fk(:,io2)=',/,(6e12.4))") fk(lonbeg:lonend,io2)
-!       write(6,"('fk(:,io1)=',/,(6e12.4))") fk(lonbeg:lonend,io1)
-
 !
 ! fk is ok up to this point.
 ! In earlier version, periodic points for fk were taken here.
 ! For now, ignore periodic points.
 
-
-!
 ! Lower boundary:
         if (k==lev0) then
           do m=1,2                                                ! DO 16
             do kk=1,2
               do i=lon0,lon1
-                qk(i,io2,m) = qk(i,io2,m)+pk(i,io2,kk)*b(i,kk,m) 
-                qk(i,io1,m) = qk(i,io1,m)+pk(i,io1,kk)*b(i,kk,m) 
+                qk(i,io2,m) = qk(i,io2,m) + pk(i,io2,kk)*b(i,kk,m,lat)
+                qk(i,io1,m) = qk(i,io1,m) + pk(i,io1,kk)*b(i,kk,m,lat)
               enddo ! i=lon0,lon1
             enddo ! kk=1,2
           enddo ! m=1,2
           do m=1,2
             do i=lon0,lon1
-              fk(i,io2) = fk(i,io2)-pk(i,io2,m)*fb(i,m)
-              fk(i,io1) = fk(i,io1)-pk(i,io1,m)*fb(i,m)
+              fk(i,io2) = fk(i,io2) - pk(i,io2,m)*fb(i,m,lat)
+              fk(i,io1) = fk(i,io1) - pk(i,io1,m)*fb(i,m,lat)
               pk(i,:,m) = 0.
             enddo ! i=lon0,lon1
           enddo ! m=1,2
-
-!         do m=1,2
-!           write(6,"('comp lbc: m=',i2,' lat=',i2)") m,lat
-!           write(6,"('qk(io2)=',/,(6e12.4))") qk(:,io2,m)
-!           write(6,"('qk(io1)=',/,(6e12.4))") qk(:,io1,m)
-!         enddo ! m=1,2
-!         write(6,"('fk(io2)=',/,(6e12.4))") fk(:,io2)
-!         write(6,"('fk(io1)=',/,(6e12.4))") fk(:,io1)
-
 !
 ! Upper boundary:
         elseif (k==lev1-1) then
@@ -384,37 +329,17 @@
             enddo ! i=lon0,lon1
           enddo ! m=1,2
 
-!         do m=1,2
-!           write(6,"('comp ubc: m=',i2,' lat=',i2)") m,lat
-!           write(6,"('qk(io2)=',/,(6e12.4))") qk(:,io2,m)
-!           write(6,"('qk(io1)=',/,(6e12.4))") qk(:,io1,m)
-!         enddo ! m=1,2
-
         endif ! lbc or ubc
 !
 ! QK=ALFAK=QK-PK*GAMA(K-1)
         do m=1,2                                          ! DO 18
           do kk=1,2
             do i=lon0,lon1
-
-!             write(6,"('comp: i=',i2,' kk=',i2,' m=',i2,' k=',i2,
-!    |          ' lat=',i2)") i,kk,m,k,lat
-!             write(6,"('qk=',e12.4,' pk=',e12.4,' gama=',e12.4))") 
-!    |          qk(i,io2,m),pk(i,io2,kk),gama(i,k,kk,m)
-
               qk(i,io2,m) = qk(i,io2,m)-pk(i,io2,kk)*gama(i,k,kk,m)
               qk(i,io1,m) = qk(i,io1,m)-pk(i,io1,kk)*gama(i,k,kk,m)
             enddo ! i=lon0,lon1
           enddo ! kk=1,2
         enddo ! m=1,2
-
-! Testing will not work here until gama is incremented below..
-!       do m=1,2
-!         write(6,"('comp: m=',i2,' k=',i2,' lat=',i2)") m,k,lat
-!         write(6,"('qk(io2)=',/,(6e12.4))") qk(:,io2,m)
-!         write(6,"('qk(io1)=',/,(6e12.4))") qk(:,io1,m)
-!       enddo ! m=1,2
-
 !
 ! WKS1=DET(ALFA)
         do i=lon0,lon1
@@ -465,15 +390,6 @@
             zz(i,k+1,io1) = zz(i,k+1,io1)+wkm1(i,io1,m)*wkv1(i,m)
           enddo ! i=lon0,lon1
         enddo ! m=1,2
-
-!       do m=1,2
-!         write(6,"('comp: m=',i2,' k=',i2,' lat=',i2)") m,k,lat
-!         write(6,"('gama(k+1,io2)=',/,(6e12.4))") gama(:,k+1,io2,m)
-!         write(6,"('gama(k+1,io1)=',/,(6e12.4))") gama(:,k+1,io1,m)
-!       enddo
-!       write(6,"('zz(k+1,io2)=',/,(6e12.4))") zz(:,k+1,io2)
-!       write(6,"('zz(k+1,io1)=',/,(6e12.4))") zz(:,k+1,io1)
-
 !
 ! End main pressure loop:
       enddo levloop ! k=lev0,lev1-1
@@ -534,10 +450,10 @@
 ! Upper boundary:
 ! kp is carried forward from the last iteration of levloop above.
       do i=lon0,lon1
-        o2_upd(lev1,i,lat) = 
+        o2_upd(lev1,i,lat) =
      |    (1.+.5*ep(i,io2,kp)*dz)/
      |    (1.-.5*ep(i,io2,kp)*dz)*o2_upd(lev1-1,i,lat)
-        o1_upd(lev1,i,lat) = 
+        o1_upd(lev1,i,lat) =
      |    (1.+.5*ep(i,io1,kp)*dz)/
      |    (1.-.5*ep(i,io1,kp)*dz)*o1_upd(lev1-1,i,lat)
       enddo ! i=lon0,lon1
@@ -564,14 +480,14 @@
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
 !
 ! Time smoothing:
-        do i=lon0,lon1 
+        do i=lon0,lon1
           do k=lev0,lev1
             o2nm_upd(k,i,lat) = dtsmooth_div2*(o2_nm(k,i,lat)+
      |        o2_upd(k,i,lat)) + dtsmooth*o2(k,i,lat)
             o1nm_upd(k,i,lat) = dtsmooth_div2*(o1_nm(k,i,lat)+
      |        o1_upd(k,i,lat)) + dtsmooth*o1(k,i,lat)
           enddo ! k=lev0,lev1-1
-        enddo ! i=lon0,lon1 
+        enddo ! i=lon0,lon1
 
 !       call addfld('O2NM_OUT',' ',' ',o2nm_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
@@ -629,11 +545,11 @@
       subroutine advecl(o2,o1,un,vn,o2_advec,o1_advec,
      |  lev0,lev1,lon0,lon1,lat0,lat1,lat)
 !
-! Horizontal advection for O2,O. 
-! In previous versions, this was sub advecl (inline.F), called from 
-!   k-loop in comp.F. Here it is called from beginning of comp.F at 
+! Horizontal advection for O2,O.
+! In previous versions, this was sub advecl (inline.F), called from
+!   k-loop in comp.F. Here it is called from beginning of comp.F at
 !   all latitudes and saved for later use (fk) inside comp.F k-loop.
-! O2,o1,un,vn already have i-2,i-1,i+1,i+2, and j-1,j-2,j+1,j+2 for 
+! O2,o1,un,vn already have i-2,i-1,i+1,i+2, and j-1,j-2,j+1,j+2 for
 !   finite differencing.
 !
       use cons_module,only: dlamda_2div3 ,dlamda_1div12, dphi_2div3,
@@ -728,7 +644,7 @@
 #ifdef MPI
 !
 ! Gather longitudes into tasks in first longitude column of task table
-!   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
+!   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
       call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1)

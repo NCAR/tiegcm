@@ -3,16 +3,16 @@
      |  cool_imp,cool_exp,w_upd,tn_upd,tn_nm_upd,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
-! This software is part of the NCAR TIE-GCM.  Use is governed by the 
-! Open Source Academic Research License Agreement contained in the file 
+! This software is part of the NCAR TIE-GCM.  Use is governed by the
+! Open Source Academic Research License Agreement contained in the file
 ! tiegcmlicense.txt.
 !
-! Advance neutral temperature at current latitude: 
+! Advance neutral temperature at current latitude:
 ! 4/4/05 btf: added gswm lbc option (eliminated dt_gswm.F)
 !
       use params_module,only: nlonp4,dz,nlat,spval
       use input_module,only: step
-      use init_module,only: iter,igetgswm,iday
+      use init_module,only: iter,igetgswm,iday,iyear
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
      |  gask,expzmid,expzmid_inv,dift,dtsmooth,dtsmooth_div2,kut
@@ -22,6 +22,7 @@
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm
       use addfld_module
       use diags_module,only: mkdiag_DEN,mkdiag_HEAT
+      use etimod,only:gtheta,nudgeT,msistlbc,nlbc,zwght,timeramp
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
 #endif
@@ -33,7 +34,7 @@
 ! Full subdomains:
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
      |  tn,    ! neutral temperature (deg K)
-     |  tn_nm, ! neutral temperature, time n-1 
+     |  tn_nm, ! neutral temperature, time n-1
      |  un,    ! neutral zonal velocity (cm/sec)
      |  vn,    ! neutral zonal velocity (cm/sec)
      |  o2,    ! molecular oxygen (mmr)
@@ -56,9 +57,8 @@
       integer :: k,i,lonbeg,lonend,lat
       integer :: nk,nkm1,nlevs
       complex :: expt,expt2
-      real :: rstep
       real :: tnlbc(lon0:lon1,lat0:lat1) ! lower boundary condition
-!
+
 ! Local at 2d:
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  cptn,       ! cp*exp(-s)*(V.del(T(n))-1/(2*DT))*T(n-1) (k+1/2)
@@ -85,7 +85,7 @@
       nk = lev1-lev0+1
       nkm1 = nk-1
       nlevs = nk
-! 
+
 ! First latitude scan for dt:
       do lat=lat0,lat1
 !
@@ -97,7 +97,7 @@
 !       call addfld('TNLBC1',' ',' ',tnlbc_diag,
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
-! Horizontal advection (pass k vs i slices at full task subdomain 
+! Horizontal advection (pass k vs i slices at full task subdomain
 ! longitudes, and the 5 latitudes centered over the current latitude).
 !
         call advec(tn(:,:,lat-2:lat+2),advec_tn(:,:,lat),
@@ -132,7 +132,7 @@
         do k=lev0,lev1-1
           cptn(k,i) = .5*(cp(k,i,lat)+cp(k+1,i,lat))*expz(k)*
      |      (advec_tn(k,i,lat)-dtx2inv*tnsmooth(k,i,lat))
-!         mbar(k,i) = 1./(o2(k+1,i,lat)*rmassinv_o2 + 
+!         mbar(k,i) = 1./(o2(k+1,i,lat)*rmassinv_o2 +
 !    |      o1(k+1,i,lat)*rmassinv_o1+(1.-o2(k+1,i,lat)-o1(k+1,i,lat))*
 !    |      rmassinv_n2)
 !
@@ -164,6 +164,14 @@
 !
 ! Add heating from 4th order horizontal diffusion (hdt from sub hdif3):
           total_heat(k,i) = total_heat(k,i)+hdt(k,i,lat)
+
+! Fake heat source/sink for nudging of Z=-6.75,... (DPD)
+          if (nudgeT .and. (k .le. nlbc)) then
+             total_heat(k,i) = total_heat(k,i) - 
+     |            timeramp*zwght(k)*gtheta*
+     |            (tn(k,i,lat) - msistlbc(i,lat,k))*
+     |            0.5*(cp(k+1,i,lat)+cp(k,i,lat))
+          endif
 !
 ! Add heating due to atomic oxygen recombination:
           total_heat(k,i) = total_heat(k,i)+tsurplus*rkm12(k,i,lat)*
@@ -187,7 +195,7 @@
           dvdz(k,i) = (vn(k+1,i,lat)-vn(k-1,i,lat))/(2.*dz)  ! s11
         enddo ! k=lev0+1,lev1-2
 !
-! Lower boundary is in ulbc,vlbc: 
+! Lower boundary is in ulbc,vlbc:
         dudz(1,i) = (un(1,i,lat)+1./3.*un(2,i,lat)-4./3.*
      |    ulbc(i,lat))/dz
         dvdz(1,i) = (vn(1,i,lat)+1./3.*vn(2,i,lat)-4./3.*
@@ -248,12 +256,12 @@
 ! G = g*(kT + H**2*rho*cp*kE)/(p0*H*Ds**2) (s2)
 ! F = g*(kE*H**3*rho*g/T)/(p0*2*H*Ds)      (s3)
 !
-        do k=lev0,lev1-1 
+        do k=lev0,lev1-1
           g(k,i) = grav*(kt(k,i,lat)+h(k,i)**2*rho(k,i)*cp(k,i,lat)*
      |      dift(k,iday))/(p0*h(k,i)*dz**2)
           f(k,i)=grav**2*dift(k,iday)*h(k,i)**2*rho(k,i)/(tni(k,i)*
      |      p0*2.*dz)
-        enddo ! k=lev0,lev1-1 
+        enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
 !     call addfld('TNI',' ',' ',tni,'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -300,9 +308,9 @@
 ! qpart = cp*(1/(2*Dt)+ai/cp+w*R/(cp*M))
       do i=lon0,lon1
         do k=lev0,lev1-1
-          qpart(k,i) = 
+          qpart(k,i) =
      |      .5*(cp(k,i,lat)+cp(k+1,i,lat))*(dtx2inv+cool_imp(k,i,lat))+
-     |      .5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))*gask/mbar(k,i) 
+     |      .5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))*gask/mbar(k,i)
           rhs(k,i) = rhs(k,i)+cool_exp(k,i,lat)
           q(k,i) = q(k,i)-expz(k)*qpart(k,i)
         enddo ! k=lev0,lev1-1
@@ -360,12 +368,12 @@
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Smooth updated tn:
-        do i=lon0,lon1 
+        do i=lon0,lon1
           do k=lev0,lev1-1
             tn_nm_upd(k,i,lat) = dtsmooth_div2*(tn_nm(k,i,lat)+
      |        tn_upd(k,i,lat)) + dtsmooth*tn(k,i,lat)
           enddo ! k=lev0,lev1-1
-        enddo ! i=lon0,lon1 
+        enddo ! i=lon0,lon1
 !       call addfld('TN_NMOUT',' ',' ',tn_nm_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
@@ -443,7 +451,7 @@
 #ifdef MPI
 !
 ! Gather longitudes into tasks in first longitude column of task table
-!   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
+!   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
       call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1)
