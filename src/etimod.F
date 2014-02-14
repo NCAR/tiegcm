@@ -41,11 +41,15 @@
       real,parameter  :: betaT = 5.0	   ! transition midpoint time (days after inittime0)
 
       logical         :: usezlbc = .true.
+
       logical         :: nudgeT = .true.
       logical         :: nudgeU = .true.
       logical         :: nudgeV = .true.
-      
+
+      logical         :: nudgezmonly = .true.
+
       logical         :: useoxf = .false.
+
       logical         :: t0init = .true.
       integer         :: nudgeyear0 = 2008
       
@@ -121,19 +125,19 @@
       ! --------------------------------------------------
 
       if (switchinit) then
-          
-         ! MSIS/HWM
-         !sw(7:8) = 0.0          ! turn off diurnal and semidiurnal tides
-         !sw(14) = 0.0           ! turn off terdiurnal tide
-         !sw(10) = 0.0           ! all ut/longitude effects off
-         !sw(11) = 0.0
-         sw(7:14) = 0.0
-        
-         ! NRLMSISE00 
-         call tselec7(sw)
-               
-         ! HWM93
-         call tselec(sw)
+
+         if (nudgezmonly) then
+            ! MSIS/HWM
+            !sw(7:8) = 0.0          ! turn off diurnal and semidiurnal tides
+            !sw(14) = 0.0           ! turn off terdiurnal tide
+            !sw(10) = 0.0           ! all ut/longitude effects off
+            !sw(11) = 0.0
+            sw(7:14) = 0.0
+            ! NRLMSISE00 
+            call tselec7(sw)               
+            ! HWM93
+            call tselec(sw)
+         endif
 
          ! Compute at hours -1,+0,+1,+2  (assumes start is at ut = 0 hr)
          ! Note HWM and MSIS are peridioc functions in time so uthour = -1 is ok.
@@ -260,17 +264,20 @@
           real(4)     :: tmass
           real(4)     :: psio1,psio2
 
-          real(8)     :: day,lat,zalt
-          real(8)     :: mox,sbrln10o,o1sbr,o2corr
+          real(8)           :: day,lat,zalt
+          real(8)           :: mox,sbrln10o,o1sbr,o2corr
           logical,parameter :: etmodgpi = .false.
 
-          if (etmodgpi) then
-            call getindex(ccyyddd,utsec,1,f107a,f107,ap)  
-          else
-              f107a = 70.
-              f107 = 70.
-              ap(:) = 4.0
-          endif
+!   Commented getindex() out which is just gpi availble elsewhere in the model.
+!   Assume constant F10.7(a), Ap lower boundary forcing for now.
+!
+!     if (etmodgpi) then
+!         call getindex(ccyyddd,utsec,1,f107a,f107,ap)  
+!     else
+          f107a = 70.
+          f107 = 70.
+          ap(:) = 4.0
+!     endif
           do j=lat0,lat1
 
               glatin = glat(j)

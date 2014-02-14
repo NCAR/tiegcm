@@ -82,13 +82,17 @@
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  eddyvisc,    ! eddy viscosity (?)
      |  mbar         ! mean molecular weight (slightly different than barm)
-!
+
+      real,dimension(lev0:lev1,lon0:lon1) ::
+     |  nudgeUterm,nudgeVterm
+
 ! For diagnostic, debug:
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  unlbc_diag,   ! un lbc redundant in vertical, for diagnostic
      |  vnlbc_diag,   ! vn lbc redundant in vertical, for diagnostic
      |  ss_un,ss_vn,  ! also for diagnostics
      |  pp11,pp12,pp21,pp22, qq11,qq12,qq21,qq22, rr11,rr12,rr21,rr22
+
 !
 ! pp, qq, rr, beta AND gamma are (2 x 2) matrices defined for
 !   k = 3/2, K-1/2, 1 and i = 3, IMAX+2, 1
@@ -154,19 +158,34 @@
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
-!  Add in a momentum nudging term
-        if (nudgeU .or. nudgeV) then
-           do i=lon0,lon1
-              do k = 1,nlbc
-                 if (nudgeU) advec_un(k,i,lat) = advec_un(k,i,lat) +
+!     Add in a horizontal momentum nudging term (DPD)
+        
+        do i=lon0,lon1
+           do k = lev0,lev1              
+              if (nudgeU .and. k .le. nlbc) then
+                 nudgeUterm(k,i) = 
      |                timeramp*zwght(k)*gtheta*
      |                (un(k,i,lat) - hwmulbc(i,lat,k))
-                 if (nudgeV) advec_vn(k,i,lat) = advec_vn(k,i,lat) +
+              else
+                 nudgeUterm(k,i) = 0.0
+              endif
+              if (nudgeV .and. k .le. nlbc) then
+                 nudgeVterm(k,i) = 
      |                timeramp*zwght(k)*gtheta*
      |                (vn(k,i,lat) - hwmvlbc(i,lat,k))
-              enddo
-           enddo                ! i=lon0,lon1
-        endif
+              else
+                 nudgeVterm(k,i) = 0.0
+              endif
+              advec_vn(k,i,lat) = advec_vn(k,i,lat) +
+     |             nudgeVterm(k,i)
+              advec_un(k,i,lat) = advec_un(k,i,lat) +
+     |             nudgeUterm(k,i)
+           enddo
+        enddo                   ! i=lon0,lon1
+        call addfld('NUDGEU','Zonal wind nudging term',' '
+     |       ,nudgeUterm,'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('NUDGEV','Meridional wind nudging term',' '
+     |       ,nudgeVterm,'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 
 !       call addfld('ADVEC_U1','ADVEC_U1',' ',advec_un(:,:,lat),
 !    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)

@@ -48,6 +48,7 @@
      |  cool_imp, ! implicit cooling (newton.F)
      |  cool_exp, ! explicit cooling (newton.F)
      |  w_upd  ! updated vertical velocity (swdot.F)
+
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(out) ::
      |  tn_upd,   ! updated tn (output)
@@ -82,6 +83,8 @@
      |  tnsmooth,   ! zonal and meridional smoothing of tn_nm
      |  advec_tn    ! horizontal advection (output of sub advec)
 !
+      real,dimension(lev0:lev1,lon0:lon1) :: nudgeheat   ! nudging heat source
+
       nk = lev1-lev0+1
       nkm1 = nk-1
       nlevs = nk
@@ -164,14 +167,6 @@
 !
 ! Add heating from 4th order horizontal diffusion (hdt from sub hdif3):
           total_heat(k,i) = total_heat(k,i)+hdt(k,i,lat)
-
-! Fake heat source/sink for nudging of Z=-6.75,... (DPD)
-          if (nudgeT .and. (k .le. nlbc)) then
-             total_heat(k,i) = total_heat(k,i) - 
-     |            timeramp*zwght(k)*gtheta*
-     |            (tn(k,i,lat) - msistlbc(i,lat,k))*
-     |            0.5*(cp(k+1,i,lat)+cp(k,i,lat))
-          endif
 !
 ! Add heating due to atomic oxygen recombination:
           total_heat(k,i) = total_heat(k,i)+tsurplus*rkm12(k,i,lat)*
@@ -184,6 +179,24 @@
 	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
+
+! Add in fake heat source/sink for nudging of Z=-6.75,... (DPD)
+      do i=lon0,lon1
+         do k=lev0,lev1
+            if (nudgeT .and. k .le. nlbc) then
+               nudgeheat(k,i) = timeramp*zwght(k)*gtheta*
+     |              (tn(k,i,lat) - msistlbc(i,lat,k))*
+     |              0.5*(cp(k+1,i,lat)+cp(k,i,lat))
+            else
+               nudgeheat(k,i) = 0.0
+            endif
+            total_heat(k,i) = total_heat(k,i) - 
+     |           nudgeheat(k,i)
+         enddo
+      enddo
+      call addfld('NUDGEHEAT','Nudging heat source',' ',
+     |     nudgeheat, 'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      
 !     call addfld('HEATING1',' ',' ',total_heat(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !

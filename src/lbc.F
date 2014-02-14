@@ -596,9 +596,9 @@
             enddo
          enddo
 
-		 !! ---------------------------------------
-		 !! Nuding to new boundary condition (DPD)
-		 !! ---------------------------------------
+!! ---------------------------------------
+!! Nuding to new boundary condition (DPD)
+!! ---------------------------------------
 
          if (useoxf) then
           do i = 1,nlonp4
