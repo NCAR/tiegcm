@@ -44,7 +44,8 @@
      |  rk1 ,rk2 ,rk10,rk16,rk17,rk18,rk19,rk20,
      |  rk21,rk22,rk23,rk24,rk25,rk26,rk27
 #ifdef MPI
-      use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
+      use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
+     |  mp_geo_halos,mp_polelats_f3d
 #endif
 !
 ! Args:
@@ -57,7 +58,7 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) ::
      |  tn, te, ti, ! neutral, electron, and ion temperatures (deg K)
-     |  o2, o1, n2, ! o2, o, n2 mass mixing ratios
+     |  o2, o1,     ! o2, o mass mixing ratios
      |  he,         ! he mass mixing ratio
      |  n2d,        ! n2d
      |  ne,         ! electron density
@@ -67,6 +68,10 @@
      |  op,         ! O+ ion
      |  ui,vi,wi,   ! zonal, meridional, and vertical ion velocities
      |  xnmbar      ! p0*e(-z)*barm/kT
+!
+! N2 is intent(inout) for setting halo points (mp_geo_halos call below)
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+     |  intent(inout) :: n2
 !
 ! Output fields (full 3d task subdomain):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
@@ -99,6 +104,9 @@
      |  tp                ! te+ti
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
 !
+! Local 2d N2 for mp_geo_halos call below:
+      real,dimension(lon0-2:lon1+2,lat0-2:lat1+2) :: n2_2d
+!
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
      |  bvel,
@@ -121,6 +129,23 @@
 ! Number of pressure levels (this will equal nlevp1):
       nlevs = lev1-lev0+1 ! for bndlons calls
 !
+! Set lat,lon halo points of 3d field N2 for rrk calls below:
+!
+      do k=lev0,lev1
+        n2_2d = n2(k,:,:)
+        call mp_geo_halos(n2_2d,lon0,lon1,lat0,lat1,1)
+        n2(k,:,:) = n2_2d
+      enddo
+!
+! Make latitudes j=-1,0 from j=2,1, and j=nlat+1,nlat+2 from nlat-1,nlat
+! (note that mp_geo_halos and mp_polelats_f3d do not define "outside corner"
+! halo points, but this should be ok since cross-derivatives are not performed)
+!
+      call mp_polelats_f3d(n2(:,lon0:lon1,:),   ! 3rd dim is lat0-2:lat1+2
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1,(/1./)) ! last arg means no change in polesign
+!
+! Save inputs to secondary history file:
+! 
 !     do lat=lat0,lat1
 !       call addfld('TE_OP',' ',' ',te(lev0:lev1-1,lon0:lon1,lat),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
@@ -143,7 +168,7 @@
 !     enddo ! lat=lat0,lat1
 !
 ! Sub oplus_flux returns upward number flux of O+ in 
-!   opflux(lon0:lon1,lat0:lat1):
+!
       call oplus_flux(opflux,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('oplus after oplus_flux.')")
 !     call addfld('OPFLUX',' ',' ',opflux,

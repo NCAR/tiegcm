@@ -39,6 +39,7 @@
      |  hdo2, ! O2 horizontal diffusion (hdif3)
      |  hdo1, ! O  horizontal diffusion (hdif3)
      |  hdhe  ! He horizontal diffusion (hdif3)
+!
 ! N2 (mmr) is input, but is also updated from new o2,o,he.
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(inout) :: n2 

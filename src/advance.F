@@ -65,9 +65,8 @@
 #ifdef MPI
       use mpi_module,only: 
      |  mytid,mp_gather2root,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
-     |  mp_bndlons,mp_polelats,mp_periodic_f4d,mp_bndlats_f3d,
-     |  mp_updateemphi,mp_updateemlam,mp_updateemz,
-     |  mp_polelats_f3d,mp_bndlons_f3d
+     |  mp_bndlons,mp_polelats,mp_periodic_f4d,
+     |  mp_updateemphi,mp_updateemlam,mp_updateemz
 !
       implicit none
 #include <mpif.h>
@@ -380,14 +379,6 @@
         f4d(:)%mpi = .true. 
         call mp_bndlats(f4d,nf4d,itp)
         call mp_bndlons(f4d,nf4d,itp)
-!
-! Set poles and halo points for 3d field N2.
-! (this is necessary in latitude for rrk calls in oplus.F)
-!
-        call mp_polelats_f3d(n2,nlevp1,lon0,lon1,lat0,lat1,1,polesigns)
-        call mp_bndlats_f3d(n2,nlevp1,lon0,lon1,lat0,lat1,1)
-! Setting longitude halos is apparently not necessary:
-!       call mp_bndlons_f3d(n2,nlevp1,lon0,lon1,lat0,lat1,1,0)
       endif ! ntask==1
 #else
       call mk_polelat(0     ,1     ,itp)

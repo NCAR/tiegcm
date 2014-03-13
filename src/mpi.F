@@ -208,6 +208,10 @@
           endif
           irank = irank+1
         enddo
+!
+! Tasks are periodic in longitude:
+        itask_table(-1,j) = itask_table(ntaski-1,j)
+        itask_table(ntaski,j) = itask_table(0,j)
       enddo  
 !
 ! Print table to stdout:
@@ -1352,127 +1356,6 @@
 #endif
       end subroutine mp_bndlats_f2d
 !-----------------------------------------------------------------------
-      subroutine mp_bndlats_f3d(f,id1,i0,i1,j0,j1,nf)
-!
-! Exchange boundary latitude data between tasks. 
-! Each task sends its lat0,lat0+1 data to task jprev, and its lat1-1,lat1
-!   data to jnext.
-! Each task receives its lat0-2,lat0-1 data from task jprev, and its
-!   lat1+1,lat1+2 data from task jnext.
-!
-! Args:
-      integer,intent(in) :: id1,i0,i1,j0,j1,nf
-      real,intent(inout) :: f(id1,i0-2:i1+2,j0-2:j1+2,nf)
-!
-! Local:
-      integer :: n,nlons,ier,len,jnext,jprev,nflds,jsend0,jsend1,
-     |  jrecv0,jrecv1
-      real,allocatable,save :: 
-     |  sndbuf0(:,:,:,:), ! send buffer for j0  ,j0+1 (id1,i,2,nf)
-     |  sndbuf1(:,:,:,:), ! send buffer for j1-1,j1   (id1,i,2,nf)
-     |  rcvbuf0(:,:,:,:), ! recv buffer for j0-2,j0-1 (id1,i,2,nf)
-     |  rcvbuf1(:,:,:,:)  ! recv buffer for j1+1,j1+2 (id1,i,2,nf)
-      real :: fmin,fmax
-      integer :: ireq(4),istat(MPI_STATUS_SIZE,4),nfsave=0
-!
-#ifdef VT
-!     call vtsymdef(100, 'mp_bndlats_f3d','Communication',ier)
-      call vtbegin(100,ier)
-#endif
-!
-! Allocate send and receive buffers (only fields with %mpi==true):
-! This may be called w/ different nf -- when nf is greater than the
-! previous nf, deallocate the buffers so they will be reallocated w/
-! the new larger nf (note 1:nf in the isend/irecv calls):
-!
-      if (nf > nfsave) then
-        if (allocated(sndbuf0)) deallocate(sndbuf0)
-        if (allocated(sndbuf1)) deallocate(sndbuf1)
-        if (allocated(rcvbuf0)) deallocate(rcvbuf0)
-        if (allocated(rcvbuf1)) deallocate(rcvbuf1)
-        nfsave = nf
-      endif
-      if (.not.allocated(sndbuf0)) then
-        allocate(sndbuf0(id1,mxlon,2,nf),stat=ier)
-        if (ier /= 0)
-     |    write(6,"('>>> mp_bndlats_f3d: error allocating sndbuf0.')")
-      endif
-      if (.not.allocated(sndbuf1)) then
-        allocate(sndbuf1(id1,mxlon,2,nf),stat=ier)
-        if (ier /= 0)
-     |    write(6,"('>>> mp_bndlats_f3d: error allocating sndbuf1.')")
-      endif
-      if (.not.allocated(rcvbuf0)) then
-        allocate(rcvbuf0(id1,mxlon,2,nf),stat=ier)
-        if (ier /= 0)
-     |    write(6,"('>>> mp_bndlats_f3d: error allocating rcvbuf0.')")
-      endif
-      if (.not.allocated(rcvbuf1)) then
-        allocate(rcvbuf1(id1,mxlon,2,nf),stat=ier)
-        if (ier /= 0)
-     |    write(6,"('>>> mp_bndlats_f3d: error allocating rcvbuf1.')")
-      endif
-      rcvbuf0 = 0. ; sndbuf0 = 0.
-      rcvbuf1 = 0. ; sndbuf1 = 0.
-      len    = id1*mxlon*2*nf
-      nlons = i1-i0+1
-!
-! Locate adjacent tasks (includes null tasks top and bottom)
-      jprev = itask_table(mytidi,mytidj-1) ! task above (south)
-      jnext = itask_table(mytidi,mytidj+1) ! task below (north)
-!
-! Load sndbuf0 with j0,j0+1 and sndbuf1 with j1-1,j1:
-      do n=1,nf
-        sndbuf0(1:id1,1:nlons,:,n) = f(1:id1,i0:i1,j0  :j0+1,n)
-        sndbuf1(1:id1,1:nlons,:,n) = f(1:id1,i0:i1,j1-1:j1  ,n)
-      enddo
-!
-! Send j0:j0+1 (sndbuf0) to jprev:
-      call mpi_isend(sndbuf0(:,:,:,1:nf),len,MPI_REAL8,jprev,1,
-     |  MPI_COMM_WORLD,jsend0,ier)
-      if (ier /= 0) 
-     |  call handle_mpi_err(ier,'mp_bndlats_f3d send0 to jprev')
-!
-! Send j1-1:j1 (sndbuf1) to jnext:
-      call mpi_isend(sndbuf1(:,:,:,1:nf),len,MPI_REAL8,jnext,1,
-     |  MPI_COMM_WORLD,jsend1,ier)
-      if (ier /= 0) 
-     |  call handle_mpi_err(ier,'mp_bndlats_f3d send1 to jnext')
-!
-! Receive j0-2:j0-1 (rcvbuf0) from jprev:
-      call mpi_irecv(rcvbuf0(:,:,:,1:nf),len,MPI_REAL8,jprev,1,
-     |  MPI_COMM_WORLD,jrecv0,ier)
-      if (ier /= 0) 
-     |  call handle_mpi_err(ier,'mp_bndlats_f3d recv0 fm jprev')
-!
-! Receive j1+1:j1+2 (rcvbuf1) from jnext:
-      call mpi_irecv(rcvbuf1(:,:,:,1:nf),len,MPI_REAL8,jnext,1,
-     |  MPI_COMM_WORLD,jrecv1,ier)
-      if (ier /= 0) 
-     |  call handle_mpi_err(ier,'mp_bndlats_f3d recv1 fm jnext')
-!
-! Wait for completions:
-! integer :: ireq(4),istat(4)
-      ireq = (/jsend0,jsend1,jrecv0,jrecv1/)
-      istat = 0
-      call mpi_waitall(4,ireq,istat,ier)
-      if (ier /= 0) call handle_mpi_err(ier,'mp_bndlats_f3d waitall')
-!
-! Copy j0-2:j0-1 from rcvbuf0, and j1+1:j1+2 from rcvbuf1:
-      do n=1,nf
-        if (j0 /= 1) then
-          f(:,i0:i1,j0-2:j0-1,n) = rcvbuf0(:,1:nlons,:,n)
-        endif
-        if (j1 /= nlat) then
-          f(:,i0:i1,j1+1:j1+2,n) = rcvbuf1(:,1:nlons,:,n)
-        endif
-      enddo
-#ifdef VT
-!     call vtsymdef(100, 'mp_bndlats_f3d','Communication',ier)
-      call vtend(100,ier)
-#endif
-      end subroutine mp_bndlats_f3d
-!-----------------------------------------------------------------------
       subroutine mp_bndlons(f,mxf,ixt)
 !
 ! Exchange boundary longitude data between tasks.
@@ -2175,21 +2058,17 @@
 #endif
       end subroutine mp_polelats
 !-----------------------------------------------------------------------
-      subroutine mp_polelats_f3d(f,nlevp1,lon0,lon1,lat0,lat1,nf,
-     |  polesigns)
+      subroutine mp_polelats_f3d(f,lev0,lev1,lon0,lon1,lat0,lat1,nf,
+     |  polesign)
 !
 ! Make latitudes j=-1,0 from j=2,1, and j=nlat+1,nlat+2 from nlat-1,nlat
 ! Longitude data are swapped across the poles, with a sign change if
-!   necessary (i.e., U or V).
-!
-! This is same as mp_polelats, except adapted to be called with
-! 3d fields instead of field structures. Currently, it is called
-! from advance for N2 only.
+!   necessary.
 !
 ! Args:
-      integer,intent(in) :: nlevp1,lon0,lon1,lat0,lat1,nf
-      real,intent(inout) :: f(nlevp1,lon0-2:lon1+2,lat0-2:lat1+2,nf)
-      real,intent(in) :: polesigns(nf)
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1,nf
+      real,intent(in) :: polesign(nf)
+      real,intent(inout) :: f(lev0:lev1,lon0:lon1,lat0-2:lat1+2,nf)
 !
 ! Local:
       integer :: i,ii,j0,j1,if,it,iit,i0,i1,itask,ier,lenrecv,lensend,
@@ -2209,6 +2088,7 @@
      |  rcvbuf(:,:,:,:,:), ! recv for new lats on this task (k,ineed,2,nf,nt)
      |  sndbuf(:,:,:,:,:)  ! send for new lats on remote task (k,ihave,2,nf,nt)
       real :: fmin,fmax,signchange
+      real :: starttime,endtime
 !
 ! Serial run of an MPI job (1 task):
 !     if (ntask==1) then
@@ -2321,7 +2201,7 @@
       if (.not.allocated(sndbuf)) then
         allocate(sndbuf(nlevp1,mxlon,2,nf,ntsend),stat=ier)
         if (ier /= 0)
-     |    write(6,"('>>> mp_polelats_f3d: error allocating sndbuf: ',
+     |    write(6,"('>>> mp_polelats: error allocating sndbuf: ',
      |      ' mxlon=',i3,' ntsend=',i3)") mxlon,ntsend
       endif
       sndbuf = 0.
@@ -2333,7 +2213,7 @@
       if (.not.allocated(rcvbuf)) then
         allocate(rcvbuf(nlevp1,mxlon,2,nf,ntrecv),stat=ier)
         if (ier /= 0)
-     |    write(6,"('>>> mp_polelats_f3d: error allocating rcvbuf: ',
+     |    write(6,"('>>> mp_polelats: error allocating rcvbuf: ',
      |      ' mxlon=',i3,' ntrecv=',i3)") mxlon,ntrecv
       endif
       rcvbuf = 0.
@@ -2353,8 +2233,15 @@
             do i=isendto(1,it),isendto(2,it)
               ii = ii+1 
               sndbuf(:,ii,1:2,if,iit) = f(:,i,j0:j1,if)
+
+!             write(6,"('mp_polelats_f3d: lon0,1=',2i4,' i=',i4,' j0,1='
+!    |          ,2i4,' f(:,i,j0,if)=',2e12.4,' f(:,i,j1,if)=',2e12.4)") 
+!    |          lon0,lon1,i,j0,j1,
+!    |          minval(f(:,i,j0,if)),maxval(f(:,i,j0,if)),
+!    |          minval(f(:,i,j1,if)),maxval(f(:,i,j1,if))
+
             enddo
-          enddo ! if=1,nf4d
+          enddo ! if=1,nf
         endif ! isendto /= -1
       enddo ! it=1,ntaski-1
 !
@@ -2369,7 +2256,7 @@
           itsend = itsend+1
           call mpi_isend(sndbuf(1,1,1,1,iit),lensend,MPI_REAL8,it,1,
      |      MPI_COMM_WORLD,isend(iit),ier)
-          if (ier /= 0) call handle_mpi_err(ier,'mp_polelats_f3d send')
+          if (ier /= 0) call handle_mpi_err(ier,'mp_polelats send')
         endif
       enddo
 !
@@ -2381,7 +2268,7 @@
           iit = iit+1
           call mpi_irecv(rcvbuf(1,1,1,1,iit),lenrecv,MPI_REAL8,it,1,
      |      MPI_COMM_WORLD,irecv(iit),ier)
-          if (ier /= 0) call handle_mpi_err(ier,'mp_polelats_f3d recv')
+          if (ier /= 0) call handle_mpi_err(ier,'mp_polelats recv')
         endif
       enddo
 !
@@ -2389,17 +2276,17 @@
       do it=1,ntsend
         call mpi_wait(isend(it),irstat,ier)
         if (ier /= 0) 
-     |    call handle_mpi_err(ier,'mp_polelats_f3d wait for send')
+     |    call handle_mpi_err(ier,'mp_polelats wait for send')
       enddo
 !
 ! Wait for completion of receives:
       do it=1,ntrecv
         call mpi_wait(irecv(it),irstat,ier)
         if (ier /= 0) 
-     |    call handle_mpi_err(ier,'mp_polelats_f3d wait for recv')
+     |    call handle_mpi_err(ier,'mp_polelats wait for recv')
       enddo
 !
-! Define f4d at new latitudes from recvbuf:
+! Define f at new latitudes from recvbuf:
 !
       j0 = -1 ; j1 = 0             ! Receive data for new S lats 0,-1
       if (mytidj == ntaskj-1) then ! Receive data for new N lats nlat+1,nlat+2
@@ -2410,7 +2297,7 @@
         if (irecvfm(1,it)/=-1.and.irecvfm(2,it)/=-1) then 
           iit = iit+1
           field_loop: do if=1,nf
-            if (polesigns(if)==0.) cycle field_loop ! n2d,ne,o2p
+!           if (polesign(if)==0.) cycle field_loop ! n2d,ne,o2p
             ii = 0
             do i=irecvfm(1,it),irecvfm(2,it) ! longitudes that were sent
               ii = ii+1 
@@ -2426,16 +2313,23 @@
               endif
 !
 ! polesign == -1. for u,v velocities (is +1. for all other fields):
-              f(:,irecvlons(ii),j0,if) =
-     |          rcvbuf(:,ii,2,if,iit)*polesigns(if)
+              f(:,irecvlons(ii),j0,if)=
+     |          rcvbuf(:,ii,2,if,iit)*polesign(if)
               f(:,irecvlons(ii),j1,if)=
-     |          rcvbuf(:,ii,1,if,iit)*polesigns(if)
+     |          rcvbuf(:,ii,1,if,iit)*polesign(if)
+
+!             write(6,"('mp_polelats_f3d: lon0,1=',2i4,' ii=',i4,
+!    |          ' irecvlons(ii)=',i4,' j0,1=',2i3,
+!    |          ' f(:,irecvlons(ii),j0,if)=',2e12.4)") lon0,lon1,
+!    |          ii,irecvlons(ii),j0,j1,minval(f(:,irecvlons(ii),j0,if)),
+!    |                                 maxval(f(:,irecvlons(ii),j0,if))
+
             enddo
           enddo field_loop
         endif
       enddo
 #ifdef VT
-!     call vtsymdef(103, 'mp_polelat','Communication',ier)
+!     call vtsymdef(103, 'mp_polelats_f3d','Communication',ier)
       call vtend(103,ier)
 #endif
       end subroutine mp_polelats_f3d
@@ -3122,6 +3016,203 @@
       call vtend(109,ier)
 #endif
       end subroutine mp_periodic_f2d
+!-----------------------------------------------------------------------
+      subroutine mp_geo_halos(fmsub,lon0,lon1,lat0,lat1,nf)
+!
+! Exchange halo/ghost points between geographic grid subdomains for nf fields.
+! Two halo points are set in both lon and lat dimensions.
+! Longitude halos are done first, then latitude halos are done, including
+!   longitude halos that were defined first).
+!
+! Args:
+      integer,intent(in) :: lon0,lon1,lat0,lat1,nf
+      real,intent(inout) :: 
+     |  fmsub(lon0-2:lon1+2,lat0-2:lat1+2,nf)
+!
+! Local:
+      integer :: i,j,ifld,west,east,north,south,len,isend0,isend1,
+     |  irecv0,irecv1,ier,nlats,istat(MPI_STATUS_SIZE,4),ireq(4),
+     |  nlons
+      real,dimension(2,lat1-lat0+1,nf) ::
+     |  sndlon0,sndlon1,rcvlon0,rcvlon1
+      real,dimension(2,(lon1+2)-(lon0-2)+1,nf) ::
+     |  sndlat0,sndlat1,rcvlat0,rcvlat1
+      real :: starttime,endtime
+!
+! Init send/recv buffers for lon halos:
+      sndlon0 = 0. ; rcvlon0 = 0.
+      sndlon1 = 0. ; rcvlon1 = 0.
+!
+! Identify east and west neightbors:
+      west  = itask_table(mytidi-1,mytidj)
+      east  = itask_table(mytidi+1,mytidj)
+!
+! Exchange lat0:lat1 (lat halos are not yet defined):
+      nlats = lat1-lat0+1
+      len = 2*nlats*nf
+
+!     write(6,"('mp_geo_halos: mytid=',i3,' mytidi,j=',2i4,
+!    |  ' west=',i3,' east=',i3,' lat0,1=',2i4,' nlats=',i4)") 
+!    |  mytid,mytidi,mytidj,west,east,lat0,lat1,nlats
+!
+! Send lon0:lon0+1 to the west neighbor, and lon1-1:lon1 to the east.
+!
+      do ifld=1,nf
+        do i=1,2
+          sndlon0(i,:,ifld) = fmsub(lon0+i-1,lat0:lat1,ifld)
+          sndlon1(i,:,ifld) = fmsub(lon1+i-2,lat0:lat1,ifld)
+        enddo
+      enddo ! ifld=1,nf
+!
+! Send lon0:lon0+1 to the west:
+      call mpi_isend(sndlon0,len,MPI_REAL8,west,1,MPI_COMM_WORLD,
+     |  isend0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_geo_halos send lon0:lon0+1 to west')
+!
+! Send lon1-1:lon1 to the east:
+      call mpi_isend(sndlon1,len,MPI_REAL8,east,1,MPI_COMM_WORLD,
+     |    isend1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_geo_halos send lon1-1:lon1 to east')
+!
+! Recv lon0-2:lon0-1 from west:
+      call mpi_irecv(rcvlon0,len,MPI_REAL8,west,1,MPI_COMM_WORLD,
+     |  irecv0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,
+     |    'mp_geo_halos recv lon0-2:lon0-1 from west')
+!
+! Recv lon1+1:lon1+2 from east:
+      call mpi_irecv(rcvlon1,len,MPI_REAL8,east,1,MPI_COMM_WORLD,
+     |  irecv1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,
+     |    'mp_geo_halos recv lon1+1:lon1+2 from east')
+!
+! Wait for completions:
+      ireq = (/isend0,isend1,irecv0,irecv1/)
+      istat = 0
+      call mpi_waitall(4,ireq,istat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_geo_halos waitall for lons')
+!
+! Copy lon0-2:lon0-1 from rcvlon0, and lon1+1:lon1+2 from rcvlon1:
+      do ifld=1,nf
+        do i=1,2
+          fmsub(lon0-3+i,lat0:lat1,ifld) = rcvlon0(i,:,ifld)  
+          fmsub(lon1+i,lat0:lat1,ifld)   = rcvlon1(i,:,ifld)  
+        enddo
+!
+! Fix special case of 2 tasks in longitude dimension:
+        if (east == west) then
+          do i=1,2
+            fmsub(lon0-3+i,lat0:lat1,ifld) = rcvlon1(i,:,ifld)  
+            fmsub(lon1+i,lat0:lat1,ifld) = rcvlon0(i,:,ifld)  
+          enddo
+        endif
+
+!       if (ifld==1) then
+!         do i=1,2
+!           write(6,"('mp_geo_halos: i=',i2,' rcv lon0-3+i=',i4,
+!    |        ' from west=',i4,' ifld=',i3,
+!    |        ' fmsub(lon0-3+i,lat0:lat1,ifld)=',/,(6e12.4))")
+!    |        i,lon0-3+i,west,ifld,fmsub(lon0-3+i,lat0:lat1,ifld)
+!           write(6,"('mp_geo_halos: i=',i2,' rcv lon1+i=',i4,
+!    |        ' from east=',i4,' ifld=',i3,
+!    |        ' fmsub(lon1+i,lat0:lat1,ifld)=',/,(6e12.4))")
+!    |        i,lon1+i,east,ifld,fmsub(lon1+i,lat0:lat1,ifld)
+!         enddo
+!       endif
+
+      enddo ! ifld=1,nf
+!
+! Now exchange latitudes:
+      sndlat0 = 0. ; rcvlat0 = 0.
+      sndlat1 = 0. ; rcvlat1 = 0.
+
+      south = itask_table(mytidi,mytidj-1)  ! neighbor to south
+      north = itask_table(mytidi,mytidj+1)  ! neighbor to north
+!
+! Include halo longitudes that were defined by the exchanges above:
+      nlons = (lon1+2)-(lon0-2)+1 
+      len = 2*nlons*nf
+
+!     write(6,"('mp_geo_halos: mytid=',i3,' mytidi,j=',2i4,
+!    |  ' south=',i3,' north=',i3,' lon0,1=',2i4,' nlons=',i4)") 
+!    |  mytid,mytidi,mytidj,south,north,lon0,lon1,nlons
+!
+! Send lat0:lat0+1 to south neighbor, and lat1-1:lat1 to north:
+      do ifld=1,nf
+        do i=1,2
+          sndlat0(i,:,ifld) = fmsub(:,lat0+i-1,ifld)
+          sndlat1(i,:,ifld) = fmsub(:,lat1+i-2,ifld)
+        enddo
+      enddo
+!
+! Send lat0:lat0+1 to south:
+      call mpi_isend(sndlat0,len,MPI_REAL8,south,1,MPI_COMM_WORLD,
+     |  isend0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,
+     |    'mp_geo_halos send lat0:lat0+1 to south')
+!
+! Send lat1-1:lat1 to north:
+      call mpi_isend(sndlat1,len,MPI_REAL8,north,1,MPI_COMM_WORLD,
+     |  isend1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,
+     |    'mp_geo_halos send lat1-1:lat1 to north')
+!
+! Recv lat0-2:lat0-1 from south:
+      call mpi_irecv(rcvlat0,len,MPI_REAL8,south,1,MPI_COMM_WORLD,
+     |  irecv0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,
+     |    'mp_geo_halos recv lat0-2:lat0-1 from south')
+!
+! Recv lat1+1:lat1+2 from north:
+      call mpi_irecv(rcvlat1,len,MPI_REAL8,north,1,MPI_COMM_WORLD,
+     |  irecv1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,
+     |    'mp_geo_halos recv lat1+1:lat1+2 from north')
+!
+! Wait for completions:
+      ireq = (/isend0,isend1,irecv0,irecv1/)
+      istat = 0
+      call mpi_waitall(4,ireq,istat,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_geo_halos waitall for lats')
+!
+! Copy lat0-2:lat0-1 from rcvlat0, and lat1+1:lat1+2 from rcvlat1:
+      do ifld=1,nf
+        do i=1,2
+          fmsub(:,lat0-3+i,ifld) = rcvlat0(i,:,ifld)  
+          fmsub(:,lat1+i,ifld)   = rcvlat1(i,:,ifld)  
+        enddo
+!
+! Fix special case of 2 tasks in latitude dimension:
+        if (north == south) then
+          do i=1,2
+            fmsub(:,lat0-3+i,ifld) = rcvlat1(i,:,ifld)  
+            fmsub(:,lat1+i,ifld)   = rcvlat0(i,:,ifld)  
+          enddo
+        endif
+
+!       if (ifld==1) then
+!         do i=1,2
+!           write(6,"('mp_geo_halos: i=',i2,' rcv lat0-3+i=',i4,
+!    |        ': ifld=',i3,' fmsub(:,lat0-3+i,ifld)=',/,(6e12.4))")
+!    |        i,lat0-3+i,ifld,fmsub(:,lat0-3+i,ifld)
+!           write(6,"('mp_geo_halos: i=',i2,' rcv lat1+i=',i4,': ifld=',
+!    |        i3,' fmsub(:,lat1+i,ifld)=',/,(6e12.4))")
+!    |        i,lat1+i,ifld,fmsub(:,lat1+i,ifld)
+!         enddo
+!       endif
+
+      enddo ! ifld=1,nf
+      end subroutine mp_geo_halos
 !-----------------------------------------------------------------------
       subroutine mp_dynpot(ixt)
 !
