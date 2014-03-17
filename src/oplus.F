@@ -938,10 +938,7 @@
 ! Local:
       integer :: i,lat
       real,parameter ::
-!
-! phid changed from 2.0e8 to 0. by Wenbin Jan, 2014:
-!    |  phid =  2.0e8,
-     |  phid =  0.,
+     |  phid =  2.0e8,
      |  phin = -2.0e8,
      |  ppolar = 0.
       real :: a(lon0:lon1)   ! was t3 ("a" needs a better name)
