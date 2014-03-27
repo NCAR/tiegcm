@@ -5,23 +5,17 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-! Read and calculate magnetic field data used for transformation 
+! Calculate magnetic field data used for transformation 
 !   between geographic and geomagnetic coordinate systems. 
-!   Sub magfield is called once per run from main tgcm.F.
-!   Magfield calls nc_rdmag, magdyn, and dynpotmag.
-!
-! Nc_rdmag:  Read netcdf file containing magnetic field information.
+!   Sub magdyn is called once per run from main tgcm.F.
 ! Magdyn:    Establish magnetic field and grid (bx,by,bz).
-! Dynpotmag: Transform electric potential (from source history) from
-!            geographic to geomagnetic grid.
-!
 ! Sub sunloc is called once per timestep from advance to determine
 !   sun's longitudes for current ut model time.
 !
       use params_module,only: nmlonp1,nmlat,nlat,nlonp4,nlatp2,nlonp2,
-     |  nlon,nlonp1,nlevp1,nmlon,nlatp1,nmlev
-      use input_module,only: magvol
+     |  nlon,nlonp1,nlevp1,nmlon,nlatp1
       use nchist_module,only: nc_open,nc_close,handle_ncerr
+      use addfld_module,only: addfld
       implicit none
 !
 ! Netcdf header file:
@@ -31,17 +25,13 @@
 #include <netcdf.inc>
 #endif
 !
-! Grid dimensions:
-!
-! Magnetic quantities read from magvol by sub nc_rdmag (called by rdmag)
-! (see input_module for magvol file) (these were in old version fieldz.h)
-!
       real,dimension(nlonp1,0:nlatp1) ::
      |  alatm,   ! geomagnetic latitude at each geographic grid point (radians)
      |  alonm,   ! geomagnetic longitude at each geographic grid point (radians)
      |  xb,      ! northward component of magnetic field
      |  yb,      ! eastward component of magnetic field
      |  zb,      ! downward component of magnetic field
+! apex.F: bmod (i,j)    =  bmag*1.e-5
      |  bmod,    ! magnitude of magnetic field (gauss?)
      |  dmlat,   ! dipole latitude corresponding to apex of field line
      |  rmag11,  ! (a1.a1)/p*sin(i)*cos(thetas)
@@ -96,7 +86,7 @@
      |  cslonm, ! cos(lamdas)
      |  snlonm  ! sin(lamdas)
 !
-! 10/17/02 bf: cslatg and snlatg dim changed from nlat to 0:nlatp1
+! 10/17/02 btf: cslatg and snlatg dim changed from nlat to 0:nlatp1
 !   for apxparm (apex.F).
       real ::
      |  cslatg(0:nlatp1), ! cos(theta)
@@ -121,25 +111,12 @@
 !
       contains
 !-----------------------------------------------------------------------
-      subroutine magfield
-!
-! Read magnetic field data file:
-!
-      implicit none
-!
-! Local:
-      integer :: nwds,j,k,i,ii,ier
-!
-      call magdyn
-      call dynpotmag
-      end subroutine magfield
-!-------------------------------------------------------------------
 #include <defs.h>
       subroutine magdyn
 !
+! Define magnetic field and related quantities:
+!
 ! Local:
-!     real,parameter :: sin10=0.17   ! should be equal to dipmin
-      real :: cos10
 !
 ! sin10 should be the same as dipmin (see cons.F)
 !
@@ -150,6 +127,7 @@
 #else
       UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
 #endif
+      real :: cos10
 !
 ! Field are calculated in local arrays dimensioned -1:nlonp2, then transferred 
 !   to module data bx,by,bz,bmod2 at 1:nlonp4 for use in the model.
@@ -247,74 +225,11 @@
 !       write(6,"('by(:,j)=',/,(6e12.4))") by(:,j)
 !       write(6,"('bz(:,j)=',/,(6e12.4))") bz(:,j)
 !     enddo ! j=-1,nlatp2
-
+!
       end subroutine magdyn
 !-----------------------------------------------------------------------
-      subroutine dynpotmag
-      use fields_module,only: dynpot,phim3d
-      use mpi_module,only: mytid
-!
-! Transform electric potential to geomagnetic grid. 
-!
-! Electric potential dynpot on geographic grid was defined from source
-!   history (see sub rdf4d in nchist.F) before the first step, then by 
-!   dynamo module if input flat dynamo=1. Dynpot is dimensioned in 
-!   fields_module (fields.F).
-!
-! Local:
-      integer :: k,j,i
-      real :: fmin,fmax
-      real,parameter :: unitv(nlonp1)=1.
-! Externals:
-!
-      real,external :: sddot ! in util.F
-!
-! Fields.F:
-!   dynpot(nlonp1,0:nlatp1,nlevp1),  ! 3d electric potential geographic
-!   phim3d(nmlonp1,nmlat,-2:nlevp1), ! 3d electric potential magnetic
-! Magfield.F:
-!   ig(nmlonp1,nmlat),   ! geog lon index for each geomag point
-!   jg(nmlonp1,nmlat),   ! geog lat index for each geomag point
-! The "-1" in the j dimension of dynpot is because the dimension is
-!   0:nlatp1. Previously, when grdint or geo2mag was called for this
-!   transformation, dynpot(1,0,k) was passed as actual arg, and the 
-!   dummy arg in the sub was fgeo(nlonp1_geo,*).
-!   
-! am 11/09 set polar value of dynpot - simple averaging since this is only used in
-! first timestep and never cuased problems
-!   
-      do k=1,nlevp1
-        dynpot(1,nlatp1,k) = 1./float(nlonp1)*
-     |                  sddot(nlonp1,unitv,dynpot(1,nlat,k))
-        dynpot(1,0,k)     = 1./float(nlonp1)*
-     |                  sddot(nlonp1,unitv,dynpot(1,1,k))
-        do i=2,nlonp1
-	  dynpot(i,nlatp1,k)= dynpot(1,nlatp1,k)
-          dynpot(i,0,k)     =  dynpot(1,0,k)
-	enddo
-!	
-        do j=1,nmlat
-          do i=1,nmlon
-            phim3d(i,j,k) =
-     |        dynpot(ig(i,j)  ,jg(i,j)  -1,k)*wt(1,i,j)+
-     |        dynpot(ig(i,j)+1,jg(i,j)  -1,k)*wt(2,i,j)+
-     |        dynpot(ig(i,j)+1,jg(i,j)+1-1,k)*wt(3,i,j)+
-     |        dynpot(ig(i,j)  ,jg(i,j)+1-1,k)*wt(4,i,j)
-          enddo ! i=1,nmlon
-          phim3d(nmlonp1,j,k) = phim3d(1,j,k)
-        enddo ! j=1,nmlat
-      enddo ! k=1,nlevp1
-!
-! Periodic point:
-      do k=1,nlevp1
-        do j=1,nmlat
-          phim3d(nmlonp1,j,k) = phim3d(1,j,k)
-        enddo ! j=1,nmlat
-      enddo ! k=1,nlevp1
-      end subroutine dynpotmag
-!-----------------------------------------------------------------------
       subroutine sunloc_apex(iyr,iday,secs)
-      
+
       use cons_module,only: dtr  ! degrees to radians (pi/180)
       use apex,only: subsol,cofrm,dypol,solgmlon
 ! am 10/04
@@ -324,7 +239,7 @@
 !      glats=asin(.398749*sin(2.*PI*(iday-80)/365.))
 !      glons=pi*(1.-2.*secs/86400.)
 ! to use the apex routines based on formulas in Astronomical Almanac
-! difference is around 6/7 min 
+! difference is around 6/7 min
 ! This is called every timestep from advance.
 !
 ! Args:
@@ -339,72 +254,33 @@
      |  sbsllon,    ! geographic longitude of subsolar point (degrees)
      |  colat,      ! Geocentric colatitude of geomagnetic dipole north pole (deg)
      |  elon        ! East longitude of geomagnetic dipole north pole (deg)
-      
+
       ihr = int(secs/3600.)
       imn = int((secs - float(ihr)*3600.)/60.)
       sec = secs - float(ihr)*3600. - float(imn)*60.
-      
+
 !  calculate subsol point: given universal time
 !          input: iyr,iday,ihr,imn,sec
-!          output: sbsllat,sbsllon 
-!                  
+!          output: sbsllat,sbsllon
+!
       call subsol(iyr,iday,ihr,imn,sec ,sbsllat,sbsllon)
-      
+
       date = float(iyr) + float(iday)/365. + float(ihr)/24./365. +
      |  float(imn)/60./24./365.+ sec/60./60./24./365.
       call cofrm(date)
       call dypol(colat,elon,vp)
-      
+
 ! calculate geomagn. diploe longitude
 !        input: aloni,sbsllat,sbsllon,colat,elon
-!        output: xmlon  
-      call solgmlon(sbsllat,sbsllon,colat,elon,xmlon) 
+!        output: xmlon
+      call solgmlon(sbsllat,sbsllon,colat,elon,xmlon)
 !
       sunlons(1) = xmlon*dtr
       do j = 2,nlat
         sunlons(j) = sunlons(1)
       enddo
 !      write(6,*) 'sunloc_apex ',xmlon
-!     
+!    
       end subroutine sunloc_apex
-!-----------------------------------------------------------------------
-      subroutine sunloc(iday,secs)
-      use cons_module,only: pi,dlamda,dphi
-!
-! Calculate sun's longitude in dipole coordinates, defining sunlons(nlat)
-! (sunlons is module data above). This is called every timestep from advance.
-!
-! Args:
-      integer,intent(in) :: iday ! day of year
-      real,intent(in) :: secs    ! ut in seconds
-!
-! Local:
-      integer :: j,isun,jsun
-      real :: glats,glons,pisun,pjsun,sndlons,csdlons
-!
-! Sun's geographic coordinates:
-      glats=asin(.398749*sin(2.*PI*(iday-80)/365.))
-      glons=pi*(1.-2.*secs/86400.)
-!
-      pisun = (glons+pi)/dlamda+1.
-      pjsun = (glats+.5*(pi-dphi))/dphi+1.
-      isun = int(pisun)
-      jsun = int(pjsun)
-      pisun = pisun-float(isun)
-      pjsun = pjsun-float(jsun)
-      sndlons = (1.-pisun)*(1.-pjsun)*sin(rlonm(isun+2,jsun))+
-     |           pisun*(1.-pjsun)*sin(rlonm(isun+3,jsun))+
-     |           pisun*pjsun*sin(rlonm(isun+3,jsun+1))+
-     |           (1.-pisun)*pjsun*sin(rlonm(isun+2,jsun+1))
-      csdlons = (1.-pisun)*(1.-pjsun)*cos(rlonm(isun+2,jsun))+
-     |           pisun*(1.-pjsun)*cos(rlonm(isun+3,jsun))+
-     |           pisun*pjsun*cos(rlonm(isun+3,jsun+1))+
-     |           (1.-pisun)*pjsun*cos(rlonm(isun+2,jsun+1))
-      sunlons(1) = atan2(sndlons,csdlons)
-      do j = 2,nlat
-        sunlons(j) = sunlons(1)
-      enddo
-!      write(6,*) 'sunloc_dipole ',sunlons(1)*180/pi
-      end subroutine sunloc
 !-----------------------------------------------------------------------
       end module magfield_module

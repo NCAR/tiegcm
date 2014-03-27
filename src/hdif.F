@@ -7,6 +7,7 @@
 !
       use params_module,only: nlevp1,nlonp4,nlat
       use addfld_module,only: addfld
+      use mpi_module,only: mpi_timing
       implicit none
 !
 ! An extra latitude is needed in fnrh and fkmh: 
@@ -522,7 +523,8 @@
 !-----------------------------------------------------------------------
 #ifdef MPI
       subroutine mp_bndlats_kmh(lev0,lev1,lon0,lon1,lat0,lat1)
-      use mpi_module,only: mytidi,mytidj,itask_table,handle_mpi_err
+      use mpi_module,only: mytidi,mytidj,itask_table,handle_mpi_err,
+     |  time_bndlats_kmh
       implicit none
 !
 ! Args:
@@ -534,10 +536,12 @@
      |  irstat(MPI_STATUS_SIZE)      ! mpi receive status
       real,allocatable :: sndbuf(:,:,:),rcvbuf(:,:,:)
       integer :: ier,nlons,len,jprev,jnext,ireqrecv,ireqsend
+      real :: starttime,endtime
 #ifdef VT
 !     call vtsymdef(111, 'mp_bndlats_kmh','Communication',ier)
       call vtbegin(111,ier)
 #endif
+      if (mpi_timing) starttime = mpi_wtime()
 !
       nlons = lon1-lon0+1
       allocate(sndbuf(nlevp1,nlons,3),stat=ier)
@@ -579,6 +583,11 @@
 ! Release local buffer space:
       deallocate(sndbuf)
       deallocate(rcvbuf)
+!
+      if (mpi_timing) then
+        endtime = mpi_wtime()
+        time_bndlats_kmh=time_bndlats_kmh+(endtime-starttime)
+      endif
 #ifdef VT
 !     call vtsymdef(111, 'mp_bndlats_kmh','Communication',ier)
       call vtend(111,ier)
@@ -587,7 +596,7 @@
 !-----------------------------------------------------------------------
       subroutine mp_bndlons_kmh(lev0,lev1,lon0,lon1,lat0,lat1)
       use mpi_module,only: mytidi,mytidj,itask_table,ntaski,
-     |  handle_mpi_err
+     |  handle_mpi_err,time_bndlons_kmh
       implicit none
 !
 ! Args:
@@ -605,10 +614,12 @@
       integer :: j,jj,ier,len,iprev,inext,isend,irecv,nlats
       real,allocatable :: rcvbuf(:,:),sndbuf(:,:)
       real :: fmin,fmax
+      real :: starttime,endtime
 #ifdef VT
 !     call vtsymdef(112, 'mp_bndlons_kmh','Communication',ier)
       call vtbegin(112,ier)
 #endif
+      if (mpi_timing) starttime = mpi_wtime()
 !
 ! Allocate send and receive buffers:
       nlats = lat1-lat0+1+3
@@ -670,6 +681,11 @@
 ! Release local buffer space:
       deallocate(sndbuf)
       deallocate(rcvbuf)
+!
+      if (mpi_timing) then
+        endtime = mpi_wtime()
+        time_bndlons_kmh=time_bndlons_kmh+(endtime-starttime)
+      endif
 #ifdef VT
 !     call vtsymdef(112, 'mp_bndlons_kmh','Communication',ier)
       call vtend(112,ier)

@@ -81,9 +81,10 @@
 !
       use input_module,only: ctpoten
       use cons_module,only: rtd,ylonm,ylatm
-      use dynamo_module,only: nmlat0,phihm
+      use pdynamo_module,only: nmlat0,phihm
       use magfield_module,only: sunlons 
       use init_module,only: iyear,iday,uthr
+      use heelis_module,only: colath
       implicit none
 !
 ! Args:
@@ -1445,7 +1446,7 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 !    |  dskofc(2)  ! offset of convection in radians towards 18 MLT (f(By))
 ! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc)
 !
-      use dynamo_module,only: nmlat0,phihm
+      use pdynamo_module,only: nmlat0,phihm
 ! Additional auroral parameters (see sub aurora_cons):
       use aurora_module,only: theta0,offa,dskofa,phid,phin,rrad,offc,
      |                        dskofc

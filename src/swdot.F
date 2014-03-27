@@ -53,7 +53,7 @@
       enddo ! lat=lat0,lat1
 !
 ! Filter W (3-d):
-      call filter_w(w,lev0,lev1,lon0,lon1,lat0,lat1)
+      call filter_w(w,lev0,lev1,lon0,lon1,lat0,lat1,'WN')
 !
 ! Pass omega (filtered w) to diags module for WN:
 ! (mkdiag_WN is expecting geopotential z in cm)
@@ -64,7 +64,7 @@
 
       end subroutine swdot
 !-----------------------------------------------------------------------
-      subroutine filter_w(wout,lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine filter_w(wout,lev0,lev1,lon0,lon1,lat0,lat1,name)
 !
 ! Filter updated W omega:
 !
@@ -80,6 +80,7 @@
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
       real,intent(inout) :: wout(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
+      character(len=*),intent(in) :: name
 !
 ! VT vampir tracing:
 !
@@ -97,7 +98,7 @@
       call vtbegin(125,ier)
 #endif
 !
-! Define lons in w_ki from current task:
+! Define lons in w_kij from current task:
       w_kij = 0.
       do j=lat0,lat1
         do i=lon0,lon1
@@ -111,7 +112,7 @@
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
-      call mp_gatherlons_f3d(w_kij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_gatherlons_f3d(w_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,name)
 #endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
@@ -138,7 +139,7 @@
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
       call mp_scatterlons_f3d(w_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
-     |  'w  ')
+     |  name)
 
 !     write(6,"('filter w  after mp_scatterlons: lon0,1=',2i4,' lat0,1='
 !    |  ,2i4,' fkij(:,lon0:lon1,:) min,max=',2e12.4)") lon0,lon1,

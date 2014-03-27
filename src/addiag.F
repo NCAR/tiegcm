@@ -77,6 +77,8 @@
         do i=lon0,lon1
           n2(:,i,j) = (1.-o2(:,i,j)-o1(:,i,j)-he(:,i,j)) 
         enddo
+!       write(6,"('addiag: j=',i4,' n2(:,lon0:lon1,j)=',2e12.4)")
+!    |    j,minval(n2(:,lon0:lon1,j)),maxval(n2(:,lon0:lon1,j))
 !
 ! vc = cos(phi)*v
 !
@@ -193,8 +195,8 @@
             z(k+1,i,j) = w1(k,i)+z(k,i,j)
           enddo
         enddo
-        call addfld('ADIAG_Z','Geopotential from addiag',
-     |    'cm',z(:,lon0:lon1,j),'ilev',lev0,lev1,'lon',lon0,lon1,j)
+!       call addfld('ADIAG_Z','Geopotential from addiag',
+!    |    'cm',z(:,lon0:lon1,j),'ilev',lev0,lev1,'lon',lon0,lon1,j)
       enddo ! j=lat0,lat1
 !
 ! Calculate diagnostic geopotential zg, with varying gravity:

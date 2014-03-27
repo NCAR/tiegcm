@@ -165,7 +165,7 @@
 
       call minor(tn,o2,o1,n2,no,no_nm1,no_out,no_nm1_out,
      |  no_loss,no_prod,no_lbc,no_ubc,rmass_no,phi_no,alfa_no,
-     |  lev0,lev1,lon0,lon1,lat0,lat1,0)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,0,'NO')
 
 !     do lat=lat0,lat1
 !       call addfld('NO_OUT' ,' ',' ',

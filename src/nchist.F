@@ -7,9 +7,9 @@
 !
 ! Module to create, read and write netcdf history files:
 !
-      use params_module,only: nlon,nlev,nmlev,nimlev,nmlevp1,nimlevp1,
+      use params_module,only: nlon,nlev,nmlevp1,nimlevp1,
      |  nlat,nlevp1,spval,nlonp4,nlonp2,nmlonp1,nmlat,nmlon,zmbot,zmtop,
-     |  zibot,zitop,mxfsech
+     |  zibot,zitop,mxfsech,zpmag,zpimag,gmlon,gmlat
       use fields_module,only: nf4d,nf4d_hist,f4d,fakeflds,shortname_len,
      |  fsechist,itc,itp,fields_4d,fields_3d,fields_2d,poten,foutput,
      |  tlbc,ulbc,vlbc,tlbc_glb,ulbc_glb,vlbc_glb,
@@ -18,8 +18,7 @@
       use input_module,only: mxlen_filename,
      |  gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, 
      |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile
-      use init_module,only: glon,glat,zpmid,zpint,gmlon,gmlat,istep,
-     |  start_mtime,zpmag_mid,zpmag_int
+      use init_module,only: glon,glat,zpmid,zpint,istep,start_mtime
       implicit none
 !
 ! Included file svn_version.inc contains the svn revision number used in the build.
@@ -464,15 +463,8 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gmlat')
           case('mlev')  ! mag midpoints
-!           istat = nf_get_var_double(ncid,i,zpmag) ! zpmag is in init module
-!           if (istat /= NF_NOERR) 
-!    |        call handle_ncerr(istat,'reading zpmag')
-!           write(6,"('nc_rdhist: read zpmag=',/,(8f8.2))") zpmag
 
           case('imlev') ! mag interfaces
-!           istat = nf_get_var_double(ncid,i,zpimag) ! zpimag is in init module
-!           if (istat /= NF_NOERR) 
-!    |        call handle_ncerr(istat,'reading zpimag')
 !
 ! Time:
           case('time')
@@ -811,7 +803,6 @@
 !
 ! Report to stdout:
       call hist_print(sh,'READ',diskfile)
-!     
       end subroutine nc_rdhist
 !-----------------------------------------------------------------------
       subroutine rdlbc(ncid,idv,flbc,vname,itime)
@@ -1148,18 +1139,15 @@
      |    'Error defining magnetic latitude dimension')
 !
 ! Mag midpoint levels dimension:
-! 11/07 btf: mlev should be nmlev, not nmlevp1 (?)
-
       istat = nf_def_dim(ncid,"mlev",nmlevp1,id_mlev)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining magnetic midpoints levels dimension')
 !
 ! Mag interface levels dimension:
-! 11/07 btf: imlev should be nimlev, not nmlevp1 (?)
-
       istat = nf_def_dim(ncid,"imlev",nimlevp1,id_imlev)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining magnetic interface levels dimension')
+
       istat = nf_def_dim(ncid,"mtimedim",3,id_mtimedim)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining mtime dimension')
@@ -2093,22 +2081,18 @@
       istat = nf_put_var_double(ncid,idv_mlon,gmlon)
       istat = nf_put_var_double(ncid,idv_mlat,gmlat)
 !
-! 11/07 btf: mag midpoints  are zpmag_mid(nmlev), and
-!            mag interfaces are zpmag_int(nimlev)
-! (see init.F)
-!
-      istat = nf_put_var_double(ncid,idv_mlev,zpmag_mid) 
-      istat = nf_put_var_double(ncid,idv_imlev,zpmag_int)
+      istat = nf_put_var_double(ncid,idv_mlev,zpmag) 
+      istat = nf_put_var_double(ncid,idv_imlev,zpimag)
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_var_double ',
      +    ' to assign values to magnetic dimension vars')")
         call handle_ncerr(istat,char120)
       endif
 
-!     write(6,"('nc_define: mag midpoints zpmag_mid=',/,(8f8.2))")
-!    |  zpmag_mid
-!     write(6,"('nc_define: mag interfaces zpmag_int=',/,(8f8.2))") 
-!    |  zpmag_int
+!     write(6,"('nc_define: mag midpoints zpmag=',/,(8f8.2))")
+!    |  zpmag
+!     write(6,"('nc_define: mag interfaces zpimag=',/,(8f8.2))") 
+!    |  zpimag
 
       end subroutine nc_define
 !-----------------------------------------------------------------------
@@ -3284,7 +3268,6 @@
 ! history file attached to ncid:
 !
       use input_module,only: dynamo
-      use fields_module,only: dynpot
 !
 ! Args:
       integer,intent(in) :: ncid,itime,ix
@@ -3322,32 +3305,14 @@
         return
       endif
 !
-! Transform from (k,i,j) to (i,j,k) for the history.
-! This routine is executed by root task only. The root task has
-! gathered all subdomain data from other tasks into foutput
-! (see call mp_gather2root in advance). Foutput is a pointer to 
-! all fields at 3d grid, declared in fields.F and allocated in 
-! allocdata.F). 
+!  Electric potential in f4d(i_poten) has been updated by sub
+!  prepare_phig3d in pdynamo.F.
 !
-! f3d(nlon,nlat,nlevp1)            ! note i,j,k for history
-! dynpot(nlonp1,0:nlatp1,nlevp1)   ! 3d electric potential geographic
-!
-      if (trim(name) /= "POTEN") then
-        do j=1,nlat
-          do k=1,nlevp1
-            f3d(:,j,k) = foutput(k,3:nlon+2,j,ix)
-          enddo
+      do j=1,nlat
+        do k=1,nlevp1
+          f3d(:,j,k) = foutput(k,3:nlon+2,j,ix)
         enddo
-      else               
-!
-! Save geographic potential dynpot from dynamo.
-!
-        do j=1,nlat
-          do k=1,nlevp1
-            f3d(:,j,k) = dynpot(1:nlon,j,k)
-          enddo
-        enddo
-      endif
+      enddo
 !
 ! Get field id:
       istat = nf_inq_varid(ncid,name,idvar)

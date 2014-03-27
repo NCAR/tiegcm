@@ -7,7 +7,7 @@
 !
       use params_module,only: mxhvols,mxseries,mxseries_sech,mxfsech,
      |  nlat,nlon,nlev,glat1,dlat,glon1,dlon,tgcm_version,tgcm_name,
-     |  spval,ispval,nlonp4,mxind_time
+     |  spval,ispval,nlonp4,mxind_time,nmlat,nmlonp1
       use mk_hvols,only: mkhvols
       implicit none
 !
@@ -55,10 +55,14 @@
      |  dispose,         ! deprecated -- formerly for dispose to mss
      |  eddy_dif,	 ! 0/1 flag for DOY dependent eddy diffusion (difk, dift, xmue)
      |  dynamo,          ! 0/1 flag for dynamo
+     |  current_pg,      ! 0/1 flag to add current due to plasma pressure and gravity to rhs (default 1)
+     |  current_kq,      ! 0/1 flag to calculate height-integrated current density (default 0)
      |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
      |  aurora,          ! 0/1 flag for aurora
      |  ntask_lat,       ! number of tasks in latitude  dimension
-     |  ntask_lon        ! number of tasks in longitude dimension
+     |  ntask_lon,       ! number of tasks in longitude dimension
+     |  ntask_maglat,    ! number of tasks in mag latitude  dimension (not namelist)
+     |  ntask_maglon     ! number of tasks in mag longitude dimension (not namelist)
       real ::
      |  tide(10),        ! semidiurnal tide amplitudes and phases
      |  tide2(2),        ! diurnal tide amplitude and phase
@@ -169,7 +173,7 @@
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
-     |  f107a_time,hpss_path
+     |  f107a_time,hpss_path,current_pg,current_kq
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -178,7 +182,7 @@
      |   'O1              ',
      |   'Z               ',
      |   'ZG              ',    ! see sub calczg in addiag.F
-     |   'ZMAG            '/)   ! see sub transf in dynamo.F
+     |   'ZMAG            '/)   ! see sub dynamo_inputs in pdynamo.F
 !
 ! Current working (execution) directory (set by tgcm.F):
       character(len=120) :: cwd  ! current working directory
@@ -258,6 +262,8 @@
       dispose = ispval
       eddy_dif = ispval  ! new as of 4/10
       dynamo  = ispval
+      current_pg = 1     ! on by default
+      current_kq = 0     ! off by default
       tide(:) = spval
       tide2(:)= spval
       tide3m3(:) = spval
@@ -498,7 +504,9 @@
 ! Number of tasks in lat,lon dimensions (ntask_lat*ntask_lon must == ntask):
 #ifdef MPI
       if (ntask_lat==ispval.or.ntask_lon==ispval) then
-        call mkntask(ntask,ntask_lat,ntask_lon,ier)
+!
+! Choose number of tasks in lon,lat dimensions:
+        call mkntask(ntask,nlonp4,nlat,ntask_lon,ntask_lat,ier)
         if (ier /= 0) then
           write(6,"(/,'>>> INPUT: error from mkntask. ntask_lat=',
      |      i3,' ntask_lon=',i3,' ntask=',i3)") ntask_lat,ntask_lon,
@@ -509,11 +517,6 @@
      |      ' ntask_lat=',i3,' (ntask=',i3,')')") 
      |      ntask_lon,ntask_lat,ntask
         endif
-!       write(6,"(/,'>>> INPUT: for MPI runs, you must specify ',
-!    |    'NTASK_LAT as the number of',/,4x,'MPI tasks in the ',
-!    |    'latitude dimension, and NTASK_LON as the number of',
-!    |    /,4x,'MPI tasks in the longitude dimension.',/)")
-!       call shutdown("NTASK_LAT|LON")
       endif
       if (ntask_lat*ntask_lon /= ntask) then
         write(6,"(/,'>>> INPUT: NTASK_LAT * NTASK_LON must ',
@@ -521,6 +524,19 @@
         write(6,"(4x,'ntask_lat=',i3,' ntask_lon=',i3,
      |    ' ntask=',i4,/)") ntask_lat,ntask_lon,ntask
         call shutdown("NTASK_LAT|LON")
+      endif
+!
+! Choose number of tasks in maglon,maglat dimensions:
+      call mkntask(ntask,nmlonp1,nmlat,ntask_maglon,ntask_maglat,ier)
+      if (ier /= 0) then
+        write(6,"(/,'>>> INPUT: error from mkntask. ntask_maglat=',
+     |    i3,' ntask_lon=',i3,' ntask=',i3)") ntask_lat,ntask_maglon,
+     |    ntask
+        call shutdown('MKNTASK')
+      else
+        write(6,"('Input: mkntask chose ntask_maglon=',i3,
+     |    ' ntask_maglat=',i3,' (ntask=',i3,')')")
+     |    ntask_maglon,ntask_maglat,ntask
       endif
 #endif
 !
@@ -622,22 +638,27 @@
 !     endif
       end subroutine inp_model
 !-----------------------------------------------------------------------
-      subroutine mkntask(ntask,ntask_lat,ntask_lon,ier)
-      integer,intent(in) :: ntask
-      integer,intent(out) :: ntask_lat,ntask_lon,ier
-      integer :: i,j,ntlat(nlonp4),ntlon(nlonp4),nchoice,ngap,
+      subroutine mkntask(ntask,nx,ny,ntaskx,ntasky,ier)
+!
+! Args:
+      integer,intent(in) :: ntask,nx,ny
+      integer,intent(out) :: ntaskx,ntasky,ier
+!
+! Local:
+      integer,parameter :: mxtask=1000
+      integer :: i,j,ntx(mxtask),nty(mxtask),nchoice,ngap,
      |  ngap_prev,ii
-      ntask_lat = 0
-      ntask_lon = 0
+      ntaskx = 0
+      ntasky = 0
       nchoice=0
-      do i=1,nlonp4
-        do j=1,nlat
+      do i=1,nx   ! usually longitude
+        do j=1,ny ! usually latitude
           if (i*j==ntask) then
             nchoice = nchoice+1
-            write(6,"('mkntask: i=',i2,' j=',i2,' i*j=',i5,' ntask=',
-     |        i5)") i,j,i*j,ntask
-            ntlat(nchoice)=j 
-            ntlon(nchoice)=i 
+!           write(6,"('mkntask: i=',i2,' j=',i2,' i*j=',i5,' ntask=',
+!    |        i5)") i,j,i*j,ntask
+            nty(nchoice)=j
+            ntx(nchoice)=i
           endif
         enddo
       enddo
@@ -647,33 +668,33 @@
 !   ntlon-ntlat.
 !
       do i=1,nchoice
-        if (ntlon(i) == ntlat(i)) then
-          ntask_lat = ntlat(i)
-          ntask_lon = ntlon(i)
+        if (ntx(i) == nty(i)) then
+          ntasky = nty(i)
+          ntaskx = ntx(i)
         endif
       enddo
-      if (ntask_lat==0.or.ntask_lon==0) then
-        ngap_prev = nlonp4*nlat
+      if (ntasky==0.or.ntaskx==0) then
+        ngap_prev = nx*ny
         do i=1,nchoice
-          ngap = ntlon(i)-ntlat(i)
+          ngap = ntx(i)-nty(i)
           if (abs(ngap) < ngap_prev) then
-            ngap = ntlon(i)-ntlat(i)
+            ngap = ntx(i)-nty(i)
             ngap_prev = abs(ngap)
             ii = i
           endif
         enddo
-        ntask_lat = ntlat(ii)
-        ntask_lon = ntlon(ii)
+        ntasky = nty(ii)
+        ntaskx = ntx(ii)
 !
 ! If they are not equal, ntlon should be > ntlat because nlon > nlat.
-        if (ntask_lon < ntask_lat) then
-          i = ntask_lat
-          ntask_lat = ntask_lon
-          ntask_lon = i
+        if (ntaskx < ntasky) then
+          i = ntasky
+          ntasky = ntaskx
+          ntaskx = i
         endif
       endif
-      ier =0
-      if (ntask_lat==0.or.ntask_lon==0.or.ntask_lat*ntask_lon /= ntask)
+      ier = 0
+      if (ntasky==0.or.ntaskx==0.or.ntasky*ntaskx /= ntask)
      |   ier = 1
       end subroutine mkntask
 !-----------------------------------------------------------------------
@@ -1545,6 +1566,21 @@
      |  i3)") mxhist_sech
       write(6,"('  Number of bytes for values of fields on secondary',
      |  ' histories (sech_nbyte) = ',i3)") sech_nbyte
+
+      if (dynamo <= 0) then
+        write(6,"('  dynamo = ',i2,' (dynamo will NOT be calculated)')")
+     |    dynamo
+        write(6,"(14x,
+     |    '(electric potential and ion drifts will be zero')")
+      else
+        write(6,"('  dynamo = ',i2,' (dynamo will be calculated)')")
+     |    dynamo
+        write(6,"('  current_pg = ',i2,' (Add current due to plasma',
+     |    ' pressure gradient and gravity to rhs)')") current_pg
+        write(6,"('  current_kq = ',i2,
+     |    ' (Calculate height-integrated current density)')")
+     |    current_kq
+      endif
 !
 ! More model-wide inputs:
       write(6,"('  eddy_dif = ',i2,' (DOY-dependent eddy diffusion ',

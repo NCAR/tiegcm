@@ -51,6 +51,39 @@
      |  lo21,lo22       ! O2 loss terms
 !
       nk = lev1-lev0+1
+
+!     call addfld('TN_O2O',' ',' ',tn(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('O2_O2O',' ',' ',o2(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('O1_O2O',' ',' ',o1(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('N2_O2O',' ',' ',n2(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('HE_O2O',' ',' ',he(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('BARM_O2O',' ',' ',barm(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('OP_O2O',' ',' ',op(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('NO_O2O',' ',' ',no(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('N4S_O2O',' ',' ',n4s(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('N2D_O2O',' ',' ',n2d(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('O2P_O2O',' ',' ',o2p(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('NE_O2O',' ',' ',ne(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!
+! Diffs with r1014 in N2P, NPLUS, NOP (see elden.F)
+!     call addfld('N2P_O2O',' ',' ',n2p(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('NPLUS_O2O',' ',' ',nplus(:,lon0:lon1),'lev',lev0,lev1
+!    |  ,'lon',lon0,lon1,lat)
+!     call addfld('NOP_O2O',' ',' ',nop(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
 !
 ! Loop over subdomain at current latitude:
       do i=lon0,lon1

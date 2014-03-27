@@ -92,6 +92,8 @@
       integer :: nn(nlat),nlevs,k,i,j,nx,nw,n1,kut2(nlat)
       real :: fx(nlonp4,2*(lev1-lev0+1)),
      |        wfft((nlonp4+1)*2*(lev1-lev0+1))
+      real :: smoothfunc ! smoothing function
+      real :: coslon
 !
 ! 1/8/08 btf: Define nn for 5.0 or 2.5 degree resolution:
 !
@@ -149,10 +151,17 @@
       n1=2*(kut2(lat)-1)+3
 !
 ! Multiply by smoothing function:
+! Test coslon to avoid underflow in smoothfunc at the poles
+!
       do k=lev0,lev1
         do i=n1,nlon
-          fx(i+2,k) = fx(i+2,k)*
-     |                cos(((i+2-n1)/2.)*dlamda/2.)**(2*nn(lat))
+          coslon = cos(((i+2-n1)/2.)*dlamda/2.)
+          if (coslon >= 0.1) then
+            smoothfunc = coslon**(2*nn(lat))
+            fx(i+2,k) = fx(i+2,k)*smoothfunc
+          else
+            fx(i+2,k) = 0.
+          endif
         enddo ! i=1,nlon
       enddo ! k=lev0,lev1
 !

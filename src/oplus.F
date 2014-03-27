@@ -45,7 +45,7 @@
      |  rk21,rk22,rk23,rk24,rk25,rk26,rk27
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
-     |  mp_geo_halos,mp_polelats_f3d
+     |  mp_geo_halos_f3d,mp_polelats_f3d
 #endif
 !
 ! Args:
@@ -69,7 +69,7 @@
      |  ui,vi,wi,   ! zonal, meridional, and vertical ion velocities
      |  xnmbar      ! p0*e(-z)*barm/kT
 !
-! N2 is intent(inout) for setting halo points (mp_geo_halos call below)
+! N2 is intent(inout) for setting halo points (mp_geo_halos_f3d call below)
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(inout) :: n2
 !
@@ -104,9 +104,6 @@
      |  tp                ! te+ti
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
 !
-! Local 2d N2 for mp_geo_halos call below:
-      real,dimension(lon0-2:lon1+2,lat0-2:lat1+2) :: n2_2d
-!
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
      |  bvel,
@@ -130,15 +127,10 @@
       nlevs = lev1-lev0+1 ! for bndlons calls
 !
 ! Set lat,lon halo points of 3d field N2 for rrk calls below:
-!
-      do k=lev0,lev1
-        n2_2d = n2(k,:,:)
-        call mp_geo_halos(n2_2d,lon0,lon1,lat0,lat1,1)
-        n2(k,:,:) = n2_2d
-      enddo
+      call mp_geo_halos_f3d(n2,lev0,lev1,lon0,lon1,lat0,lat1,1)
 !
 ! Make latitudes j=-1,0 from j=2,1, and j=nlat+1,nlat+2 from nlat-1,nlat
-! (note that mp_geo_halos and mp_polelats_f3d do not define "outside corner"
+! (note that mp_geo_halos_f3d and mp_polelats_f3d do not define "outside corner"
 ! halo points, but this should be ok since cross-derivatives are not performed)
 !
       call mp_polelats_f3d(n2(:,lon0:lon1,:),   ! 3rd dim is lat0-2:lat1+2
@@ -861,7 +853,7 @@
 ! Filter updated O+:
 ! 
       call filter_op(opout(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,kut)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,kut,'OPLUS')
 !
 !----------------------- Begin fourth latitude scan ---------------------
       do lat=lat0,lat1
@@ -1141,7 +1133,7 @@
       enddo ! i=lon0,lon1
       end subroutine bdzdvb
 !-----------------------------------------------------------------------
-      subroutine filter_op(opout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
+      subroutine filter_op(opout,lev0,lev1,lon0,lon1,lat0,lat1,kut,name)
 !
 ! Filter updated O+. This is called from outside latitude loop,
 ! i.e., once per timestep.
@@ -1157,6 +1149,7 @@
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
       integer,intent(in) :: kut(nlat)
       real,intent(inout) :: opout(lev0:lev1,lon0:lon1,lat0:lat1)
+      character(len=*),intent(in) :: name
 !
 ! Local:
       integer :: i,j,ier
@@ -1182,7 +1175,8 @@
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
-      call mp_gatherlons_f3d(op_kij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_gatherlons_f3d(op_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
+     |  name)
 #endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
@@ -1218,7 +1212,7 @@
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
       call mp_scatterlons_f3d(op_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
-     |  'op ')
+     |  name)
 #endif
 !
 ! Return filtered array to opout at task subdomain:

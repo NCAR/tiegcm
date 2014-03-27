@@ -118,15 +118,12 @@
 !
       call laplacian(flx_arg,flx_he,lon0,lon1,lat0,lat1)
 !
-      call addfld('FLX_ARG','UB Mass Flux of Helium ','g/cm^2',
-     |  flx_arg(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
-     |  lat0,lat1,0)
-      call addfld('FLX_HE','UB Mass Flux of Helium ','g/cm^2',
-     |  flx_he(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
-     |  lat0,lat1,0)
-!
-!    Debug
-!      flx_he(:,:)=0.
+!     call addfld('FLX_ARG','UB Mass Flux of Helium ','g/cm^2',
+!    |  flx_arg(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
+!    |  lat0,lat1,0)
+!     call addfld('FLX_HE','UB Mass Flux of Helium ','g/cm^2',
+!    |  flx_he(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
+!    |  lat0,lat1,0)
 !
 ! Calculate and save horizontal advection in o2_advec, o1_advec, he_advec:
 !
@@ -830,8 +827,8 @@
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
 !       call addfld('O1_SOLV',' ',' ',o1_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
-      call addfld('HE_SOLV',' ',' ',he_upd(:,lon0:lon1,lat),
-     |    'lev',k0,k1,'lon',i0,i1,lat)
+!     call addfld('HE_SOLV',' ',' ',he_upd(:,lon0:lon1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
 !
 ! End latitude scan:
       enddo ! lat=lat0,lat1
@@ -1058,7 +1055,7 @@
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
-      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,'O2O')
 #endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
@@ -1086,7 +1083,7 @@
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
       call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,
-     |  'o2o')
+     |  'O2O')
 #endif
 !
 ! Return filtered array to fout at current task longitudes and latitudes:

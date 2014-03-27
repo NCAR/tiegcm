@@ -231,36 +231,34 @@ subroutine apex_mka(date,gplat,gplon,gpalt,nlat,nlon,nalt,ier)
   ier = 0
 !
 ! Allocate 3d x,y,z,v arrays:
-! Deallocate if necessary in case this routine is called more than once
-! (e.g., called by each of coupled models with different grids)
+! These are not deallocated by this module. They can be deallocated
+! by the calling program following the last call to the apex subs.
 !
-  if (allocated(xarray)) deallocate(xarray)
-  allocate(xarray(nlat,nlon,nalt),stat=istat)
-  if (istat /= 0) stop 'allocate xarray'
-  xarray = 0.
-
-  if (allocated(yarray)) deallocate(yarray)
-  allocate(yarray(nlat,nlon,nalt),stat=istat)
-  if (istat /= 0) stop 'allocate yarray'
-  yarray = 0.
-
-  if (allocated(zarray)) deallocate(zarray)
-  allocate(zarray(nlat,nlon,nalt),stat=istat)
-  if (istat /= 0) stop 'allocate zarray'
-  zarray = 0.
-
-  if (allocated(varray)) deallocate(varray)
-  allocate(varray(nlat,nlon,nalt),stat=istat)
-  if (istat /= 0) stop 'allocate varray'
-  varray = 0.
+  if (.not.allocated(xarray)) then
+    allocate(xarray(nlat,nlon,nalt),stat=istat)
+    if (istat /= 0) stop 'allocate xarray'
+    xarray = 0.
+  endif
+  if (.not.allocated(yarray)) then
+    allocate(yarray(nlat,nlon,nalt),stat=istat)
+    if (istat /= 0) stop 'allocate yarray'
+    yarray = 0.
+  endif
+  if (.not.allocated(zarray)) then
+    allocate(zarray(nlat,nlon,nalt),stat=istat)
+    if (istat /= 0) stop 'allocate zarray'
+    zarray = 0.
+  endif
+  if (.not.allocated(varray)) then
+    allocate(varray(nlat,nlon,nalt),stat=istat)
+    if (istat /= 0) stop 'allocate varray'
+    varray = 0.
+  endif
 !
 ! Set geographic grid in module data for later reference:
 ! (these also are not deallocated by this module)
 !
   nglon=nlon ; nglat=nlat ; ngalt=nalt
-  if (allocated(geolat)) deallocate(geolat)
-  if (allocated(geolon)) deallocate(geolon)
-  if (allocated(geoalt)) deallocate(geoalt)
   allocate(geolat(nglat),stat=istat)
   allocate(geolon(nglon),stat=istat)
   allocate(geoalt(ngalt),stat=istat)
@@ -1639,8 +1637,8 @@ subroutine intrp(glat,glon,alt, gplat,gplon,gpalt, nlat,nlon,nalt, &
     endif
   enddo
   if (i0==0) then
-    write(6,"('>>> intrp: nlat=',i4,' Could not bracket glat=',f9.3,' in gplat=',/,(6f9.2))") &
-      nlat,glat,gplat
+    write(6,"('>>> intrp: could not bracket glat=',f9.3,' in gplat=',/,(6f9.2))") &
+      glat,gplat
     ier = 1
     return 
   endif
@@ -1655,8 +1653,8 @@ subroutine intrp(glat,glon,alt, gplat,gplon,gpalt, nlat,nlon,nalt, &
     endif
   enddo
   if (j0==0) then
-    write(6,"('>>> intrp: nlon=',i4,' Could not bracket glon=',f9.3,' in gplon=',/,(6f9.2))") &
-      nlon,glon,gplon
+    write(6,"('>>> intrp: could not bracket glon=',f9.3,' in gplon=',/,(6f9.2))") &
+      glon,gplon
     ier = 1
     return 
   endif
@@ -1672,8 +1670,8 @@ subroutine intrp(glat,glon,alt, gplat,gplon,gpalt, nlat,nlon,nalt, &
     endif
   enddo
   if (k0==0) then
-    write(6,"('>>> intrp: nalt=',i4,' Could not bracket alt=',f12.3,' in gpalt=',/,(6f12.2))") &
-      nalt,alt,gpalt
+    write(6,"('>>> intrp: could not bracket alt=',f12.3,' in gpalt=',/,(6f12.2))") &
+      alt,gpalt
     ier = 1
     return 
   endif

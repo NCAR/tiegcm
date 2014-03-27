@@ -69,7 +69,7 @@
 !           'T_ELEC','T_ION','COOL_IMPLICIT','COOL_EXPLICIT',
 !           'QJI_TN','TN_UPD','UN_UPD','VN_UPD','O2_UPD','O1_UPD'
 !
-      logical,parameter :: diags=.false. ! put fields on sec hist
+      logical,parameter :: diags=.true. ! put fields on sec hist
       real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor
       logical,external :: time2print
 !
@@ -426,8 +426,10 @@
       call timer(time0,time1,'CMPMINOR',1,0) ! suspend comp minor timing
       time1_cmpminor = time1_cmpminor+time1
       if (diags) then
-        call addfld('CMP_N2D',' ',' ',n2d(:,i0:i1,lat,itc),
-     |    'lev',k0,k1,'lon',i0,i1,lat)
+        do lat=lat0,lat1
+          call addfld('CMP_N2D',' ',' ',n2d(:,i0:i1,lat,itc),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+        enddo
       endif
 !
 ! Advance n4s:
@@ -656,6 +658,7 @@
 ! Make boundary longitudes available for inputs to hdif3:
       call hdif_bndlons(kldt,kldu,kldv,kldo2,kldo1,kldhe,
      |    1,nlevp1,lon0,lon1,lat0,lat1)
+      if (debug) write(6,"('dynamics after hdif_bndlons')")
 !
 ! Make hdt,u,v,o2,o1:
       do lat=lat0,lat1
@@ -834,15 +837,18 @@
      |  he_nm (levd0,lond0,latd0,itc), ! output: He updated for previous step
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after comp')")
-      call timer(time0,time1,'CMPMAJOR',1,0) ! suspend comp major timing
-      time1_cmpmajor = time1_cmpmajor+time1
-      if (timing%level >= 2.and.time2print(nstep,istep))
-     |  write(6,"('Time in COMP=          ',f12.2,
-     |    ' Dynamics: step ',i5)") time1,istep
-!
+      call timer(time0,time1,'CMPMAJOR',1,0)
       if (timing%level >= 2.and.time2print(nstep,istep))
      |  write(6,"('Time in CMPMAJOR =     ',f12.2,
      |    ' Dynamics: step ',i5)") time1_cmpmajor,istep
-      if (debug) write(6,"('dynamics returning')")
+      if (diags) then
+        do lat=lat0,lat1
+          call addfld('O2_UPD','Updated O2','mmr',
+     |      o2(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('O1_UPD','Updated O1','mmr',
+     |      o1(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
+        enddo
+      endif
+
       if (debug) write(6,"('dynamics returning')")
       end subroutine dynamics

@@ -7,7 +7,9 @@
 ! tiegcmlicense.txt.
 !
       use params_module,only: dlat,dz,nlon,nlonp1,nlonp4,nlat,nlatp1,
-     |  dlev,nlev,nmlat,nmlon,nmlonp1,zmbot,zmtop,zibot,zitop,dlon
+     |  dlev,nlev,nmlat,nmlon,nmlonp1,zmbot,zmtop,zibot,zitop,dlon,
+     |  glon,glat,glon1,glat1,zpmid,zpint,gmlon,gmlat,zpmag,zpimag,
+     |  dmlev,nlevp1,nmlevp1,nimlevp1,zpbot_dyn,zpibot_dyn
       implicit none
 !
 ! Define model constants. 
@@ -22,6 +24,7 @@
       real,parameter ::
      |  dzp  = dz,           ! alias for dz (also dlev)
      |  re   = 6.37122e8,    ! earth radius (cm)                  C(51)
+     |  re_dyn = 6.378165e8, ! earth radius for apex
      |  re_inv = 1./re,      ! inverse of earth radius            C(52)
      |  avo  = 6.023e23,     ! avogadro number                    C(85)
      |  boltz = 1.38E-16,    ! boltzman's constant                C(84)
@@ -121,16 +124,21 @@
      |  zbound          ! background low bound of Z (formerly ZBA in annual tide)
 !
 ! Constants for dynamo and electric field calculations:
-      real,parameter :: h00=9.7e6, r00=re+h00	! use mean earth radius
-      real,parameter :: h0 =9.0e6, r0 =re+h0	! use mean earth radius
-      real :: 
-     |  dlatg, dlong, dlatm, dlonm,
+      real,parameter :: h0 =9.0e6, r0 =re+h0    ! use mean earth radius
+!
+! Save gdlat,gdlon(nmlonp1,nmlat) in degrees from apex for sub define_mag (mpi.F)
+!     real,dimension(nmlonp1,nmlat) :: gdlatdeg,gdlondeg
+
+      real,parameter :: hs=1.3e7
+      real ::
+     |  dlatg, dlong, dlatm, dlonm,dmagphrlon,
      |  ylatm(nmlat),    ! magnetic latitudes (radians)
      |  ylonm(nmlonp1),  ! magnetic longitudes (radians)
      |  rcos0s(nmlat),   ! cos(theta0)/cos(thetas)
      |  dt0dts(nmlat),   ! d(theta0)/d(thetas)
      |  dt1dts(nmlat),   ! dt0dts/abs(sinim) (non-zero at equator)
      |  table(91,2)
+
 !
 ! Geographic grid in radians:
       real ::
@@ -342,9 +350,6 @@
       grav = 870. ! (is 945. in time-gcm)
       dzgrav = grav/gask   ! C(65)
 !
-! Set dynamo constants:
-      call consdyn
-!
 ! Report to stdout:
 !     write(6,"(/,'Model name    = ',a)") tgcm_name
       write(6,"(  'Model version = ',a)") tgcm_version
@@ -373,7 +378,7 @@
 ! Set derived constants used in dynamo.
 !
 ! Local:
-      integer :: j,i,n
+      integer :: k,j,i,n
       real,parameter :: e=1.e-6, r1=1.06e7, alfa=1.668
       real :: 
      |  tanth0(nmlat),
@@ -381,7 +386,12 @@
      |  theta0(nmlat),
      |  hamh0(nmlat)
       real :: dtheta,table2(91,3:5),tanths2
-      real :: rmin,rmax,rmag
+      real :: fac,rmin,rmax,rmag
+!
+! Must define pi, rtd, dtr, because consdyn is called before init_cons:
+      pi = 4.*atan(1.)                ! C(110)
+      rtd = 180./pi                   ! radians to degrees
+      dtr = pi/180.                   ! degrees to radians
 !
 ! Set grid deltas:
       dlatg = pi/float(nlat)
@@ -416,17 +426,28 @@
         ylatm(j) = sign(atan(tanths(j)),theta0(j))
         rcos0s(j) = sqrt((1.+tanths(j)**2)/(1.+tanth0(j)**2))
 !
-! If dynamo <= 0 -> no dynamo
-! If dynamo >= 1 -> dynamo is called
+! If dynamo==0 -> dynamo is not calculated
+! If dynamo==1 -> dynamo is calculated
 !
-        if (dynamo > 0) then
+        if (dynamo <= 0) then ! no dynamo
+          dt1dts(j) = 0.
+          dt0dts(j) = (2.*r0*tanths(j)*(1.+tanths(j)**2))/
+     |      (r1*(1.+tanth0(j)**2)+2.*r0*tanth0(j)**(2.*alfa+1.)*
+     |      (1.+alfa+tanth0(j)**2)/(1.+tanth0(j)**2)**alfa)
+        else                  ! with dynamo
           tanths2  = tanths(j)**2
-          dt1dts(j) = 
+          dt1dts(j) =
      |      (r0*sqrt(1.+4.*tanths2)*(1.+tanths2))/
      |      (r1*(1.+tanth0(j)**2)+2.*r0*tanth0(j)**(2.*alfa+1.)*
      |      (1.+alfa+tanth0(j)**2)/(1.+tanth0(j)**2)**alfa)
           dt0dts(j) = dt1dts(j)*2.*tanths(j)/sqrt(1.+4.*tanths2)
         endif
+
+!       write(6,"('consdyn: j=',i3,' tanth0=',e12.4,' hamh0=',e12.4,
+!    |    ' tanths=',e12.4,' ylatm=',e12.4,' rcos0s=',e12.4,' dt0dts=',
+!    |    e12.4,' dt1dts=',e12.4)") j,tanth0(j),hamh0(j),tanths(j),
+!    |    ylatm(j),rcos0s(j),dt0dts(j),dt1dts(j)
+
       enddo ! j=2,nmlat-1
 !
 ! Magnetic poles:
@@ -467,12 +488,49 @@
         enddo ! i=2,90
       enddo ! n=1,7
 !
+! Define mag grid in degrees, and mag levels:
+      gmlat(:) = ylatm(:)*rtd
+      gmlon(:) = ylonm(:)*rtd
+!
+! zpmag,zpimag = -8.5 -> +7.0 (k=1,nmlevp1) (mainly for history fields)
+      do k=1,nmlevp1
+        zpmag(k)  = zpbot_dyn +(k-1)*dmlev
+      enddo
+      do k=1,nimlevp1
+        zpimag(k) = zpibot_dyn+(k-1)*dmlev
+      enddo
+!
 !     write(6,"(/,'consdyn: ylatg =',/,(6e12.4))") ylatg
 !     write(6,"(  'consdyn: ylong =',/,(6e12.4))") ylong
 !     write(6,"(  'consdyn: ylatm =',/,(6e12.4))") ylatm
+!     write(6,"(  'consdyn: ylonm =',/,(6e12.4))") ylonm
+
 !     write(6,"(  'consdyn: rcos0s=',/,(6e12.4))") rcos0s
 !     write(6,"(  'consdyn: dt0dts=',/,(6e12.4))") dt0dts
+!     write(6,"(  'consdyn: table=',/,(6e12.4))") table
+!     write(6,"(  'consdyn: table2=',/,(6e12.4))") table2
+!
+!     write(6,"(  'consdyn: nmlevp1=',i4,' zpmag=',/,(8f10.3))")
+!    |  nmlevp1,zpmag
+!     write(6,"(  'consdyn: nimlevp1=',i4,' zpimag=',/,(8f10.3))")
+!    |  nimlevp1,zpimag
 !
       end subroutine consdyn
+!-----------------------------------------------------------------------
+      subroutine set_geogrid
+      integer :: i,j,k
+!
+! Define geographic grid:
+      do i=1,nlon
+        glon(i) = glon1+(i-1)*dlon
+      enddo
+      do j=1,nlat
+        glat(j) = glat1+(j-1)*dlat
+      enddo
+      do k=1,nlevp1
+        zpmid(k) = zmbot+(k-1)*dlev  ! midpoint levels
+        zpint(k) = zibot+(k-1)*dlev  ! interface levels
+      enddo
+      end subroutine set_geogrid
 !-----------------------------------------------------------------------
       end module cons_module

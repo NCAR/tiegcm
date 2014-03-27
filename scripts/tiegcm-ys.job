@@ -30,7 +30,7 @@
 #   From intel to pgi: type "module switch intel pgi", and use Make.pgi_ys below
 #   From pgi to intel: type "module switch pgi intel", and use Make.intel_ys below
 #
- set modeldir = /home/$user/tiegcm_trunk
+ set modeldir = tiegcm_trunk
  set execdir  = /glade/p/work/$user/tiegcm/tiegcm-ys
 #set input    = tiegcm.inp
  set output   = tiegcm.out
@@ -81,6 +81,10 @@ EOF
 #                               End user settings
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+#
+# Load ESMF module on yellowstone:
+module load esmf esmf-6.1.1-ncdfio-mpi-O
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"

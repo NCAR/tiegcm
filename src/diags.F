@@ -272,7 +272,7 @@
       n = n+1
       diags(n)%short_name = 'EX'
       diags(n)%long_name  = 
-     |  'EX: Geographic zonal component of electric field'
+     |  'EX: Zonal component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
@@ -280,7 +280,7 @@
       n = n+1
       diags(n)%short_name = 'EY'
       diags(n)%long_name  = 
-     |  'EY: Geographic meridional component of electric field'
+     |  'EY: Meridional component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
@@ -288,7 +288,7 @@
       n = n+1
       diags(n)%short_name = 'EZ'
       diags(n)%long_name  = 
-     |  'EZ: Geographic vertical component of electric field'
+     |  'EZ: Vertical component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
@@ -781,8 +781,7 @@
       subroutine mkdiag_ED12(name,ed12,mlon0,mlon1,mlev0,mlev1,lat)
 !
 ! Two 3d components of electric field on the geomagnetic grid: ED1,ED2 
-! (called by dynamo.F with global magnetic arrays, and mlev0,1=1,nmlevp1,
-!  and actual imlev dimensions of ed12 are -2:nlevp1)
+! (called by dynamo.F with global magnetic arrays, mlev0:mlev1
 !
 ! Args:
       character(len=*),intent(in) :: name

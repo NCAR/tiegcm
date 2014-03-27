@@ -16,7 +16,9 @@
 !
       subroutine mudmod(pe,jntl,isolve,ier)
 ! !USES:
-      use dynamo_module,only: cee
+      use pdynamo_module,only: nc,ncee,cee
+      use timing_module,only: timer,timing
+      use init_module,only: istep
       implicit none
 !
 ! !DESCRIPTION: multigrid solver with modified stencil
@@ -541,7 +543,7 @@ c
 
 c------------------------------------------------------------------------
       subroutine kcym2cm(wk)
-      use dynamo_module,only: cofum
+      use pdynamo_module,only: cofum
 c
 c     execute multigrid k cycle from kcur grid level
 c     kcycle=1 for v cycles, kcycle=2 for w cycles

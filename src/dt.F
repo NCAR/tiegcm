@@ -429,7 +429,7 @@
       nlons = lon1-lon0+1
       nlats = lat1-lat0+1
 !
-! Define lons in w_ki from current task:
+! Define lons in fkij from current task:
       fkij = 0.
       do j=lat0,lat1
         do i=lon0,lon1
@@ -443,7 +443,7 @@
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
-      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,'TN')
 #endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
@@ -470,8 +470,7 @@
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
-      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,
-     |  'tn ')
+      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,'TN')
 #endif
 !
 ! Return filtered array to fout at current task longitudes and latitudes:

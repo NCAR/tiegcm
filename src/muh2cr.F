@@ -21,7 +21,7 @@ c
 !
       subroutine muh(pe,jntl)
 ! !USES:
-      use dynamo_module,only: nc,cee
+      use pdynamo_module,only: nc,ncee,cee
       implicit none
 !      
 ! !DESCRIPTION: multigrid solver as direct solver
@@ -724,7 +724,7 @@ c
       end
 
       subroutine dismh2cr(nx,ny,cf,tx,ty,wk,iwk,ier)
-      use dynamo_module,only: nc,cee,ceee
+      use pdynamo_module,only: nc,ncee,cee,ceee
 c
 c     discretize elliptic pde for muh2cr, set nonfatal errors
 c

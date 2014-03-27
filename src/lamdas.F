@@ -100,9 +100,38 @@
 ! 
      |  rnu_ne      ! electron~neutral
 !
+! Save input args to secondary history:
+!     real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
+!    |  tn,   ! neutral temperature (deg K)
+!    |  barm, ! mean molecular mass
+!    |  o2,   ! molecular oxygen (mmr)
+!    |  o1,   ! atomic oxygen    (mmr)
+!    |  n2,   ! molecular nitrogen (mmr)
+!    |  ti,   ! ion temperature (deg K)
+!    |  te,   ! electron temperature (deg K)
+!    |  o2p,  ! O2+ number density (1/cm3)
+!    |  op,   ! O+  number density (1/cm3)
+!    |  nop   ! NO+ number density (1/cm3)
+
+      i0 = lon0 ; i1 = lon1
+
+!     call addfld('TN_lam',' ',' ',tn(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('BARM_lam',' ',' ',barm(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O2_lam',' ',' ',o2(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O1_lam',' ',' ',o1(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('N2_lam',' ',' ',n2(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TI_lam',' ',' ',ti(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TE_lam',' ',' ',te(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!
 ! Save input ions to secondary history:
 !
-      i0 = lon0 ; i1 = lon1
 !     call addfld('O2P_LAM',' ',' ',o2p(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('OP_LAM' ,' ',' ',op (:,i0:i1),

@@ -25,7 +25,9 @@ c     the common subroutine file "mudcom.f" is attached to the end
       subroutine mud(pe,jntl,isolve,ier)
 !
 ! !USES:
-      use dynamo_module,only: nc,cee
+      use pdynamo_module,only: nc,ncee,cee
+      use timing_module,only: timer,timing
+      use init_module,only: istep
 !
 ! !DESCRIPTION: multigrid solver with modified stencil
 !     input 
@@ -725,7 +727,7 @@ c
       end
 
       subroutine dismd2cr(nx,ny,cf,tx,ty,wk,ier,isolve)
-      use dynamo_module,only: nc,cee,ceee
+      use pdynamo_module,only: nc,ncee,cee,ceee
 c
 c     discretize elliptic pde for mud2cr, set nonfatal errors
 c
@@ -746,9 +748,6 @@ c
 
       real           xa,xb,yc,yd,tolmax,relmax
       common/fmud2cr/xa,xb,yc,yd,tolmax,relmax
-      
-!#include "params.h"
-!#include "ceee.h"
 c
 c     CHECK FOR CONSISTENCYT WRT KLEVEL
 c

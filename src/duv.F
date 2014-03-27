@@ -460,13 +460,12 @@
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !     call addfld('VNLBC_IJ','VNLBC_IJ','[cm/s]',vnlbc_ij,
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-
 !
 ! Fourier smoothing of U and V:
       call filter_uv(un_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
-     |  lat0,lat1,kut)
+     |  lat0,lat1,kut,'UN')
       call filter_uv(vn_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
-     |  lat0,lat1,kut)
+     |  lat0,lat1,kut,'VN')
 !
 ! Fourth latitude scan:
       do lat=lat0,lat1
@@ -917,12 +916,13 @@
       enddo ! i=lon0,lon1
       end subroutine blktri
 !-----------------------------------------------------------------------
-      subroutine filter_uv(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
+      subroutine filter_uv(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut,name)
 !
 ! Filter updated W omega:
 !
       use params_module,only: nlat,nlonp4,nlon
       use filter_module,only: filter
+      use addfld_module,only: addfld
 #ifdef MPI
       use mpi_module,only: mp_gatherlons_f3d,mp_scatterlons_f3d,mytidi
       implicit none
@@ -934,6 +934,7 @@
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1,kut(nlat)
       real,intent(inout) :: fout(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
+      character(len=*),intent(in) :: name
 !
 ! VT vampir tracing:
 !
@@ -953,7 +954,7 @@
 !
       nlevs = lev1-lev0+1
 !
-! Define lons in w_ki from current task:
+! Save subdomain of current task in fkij:
       fkij = 0.
       do j=lat0,lat1
         do i=lon0,lon1
@@ -967,7 +968,7 @@
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
-      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,name)
 #endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
@@ -994,8 +995,7 @@
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
-      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,
-     |  'uv ')
+      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,name)
 
 !     write(6,"('filter uv after mp_scatterlons: lon0,1=',2i4,' lat0,1='
 !    |  ,2i4,' fkij(:,lon0:lon1,:) min,max=',2e12.4)") lon0,lon1,

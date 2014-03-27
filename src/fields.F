@@ -14,12 +14,12 @@
 !   without the final time dimension. 
 !
       use params_module,only: nlonp1,nlonp4,nlat,nlatp1,nlevp1,
-     |  mxfsech,spval,nmlat,nmlonp1
+     |  mxfsech,spval,nmlat,nmlonp1,mlev0,mlev1
       implicit none
       integer,parameter :: 
      |  nf4d          = 28, ! number of 4-d fields
      |  nf4d_hist     = 26, ! number of 4-d fields on primary histories
-     |  nf3d          = 45  ! number of 3-d fields
+     |  nf3d          = 46  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
       integer,parameter :: 
@@ -95,7 +95,7 @@
      |  i_lxx    ,i_lyy     ,i_lxy     ,i_lyx   ,i_qji_ti,
      |  i_qji_tn ,i_cool_implicit      ,i_cool_explicit  ,
      |  i_hdt    ,i_hdu     ,i_hdv     ,i_hdo2  ,i_hdo1  ,i_hdhe,
-     |  i_ped    ,i_hall    ,i_lam1    ,i_zg    ,i_n2
+     |  i_ped    ,i_hall    ,i_lam1    ,i_zg    ,i_n2    ,i_wn
 !
 ! Allocatable target arrays 3-d:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 )
@@ -110,7 +110,7 @@
      |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti  ,
      |  qji_tn   ,cool_implicit      ,cool_explicit     ,
      |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1    ,hdhe,
-     |  ped      ,hall     ,lam1     ,zg       ,n2
+     |  ped      ,hall     ,lam1     ,zg       ,n2      ,wn
 
 !
 ! 2-d field type (used for 2d secondary history fields):
@@ -130,11 +130,10 @@
 ! Electric potential on geographic and magnetic grids:
 ! (full domains until dynamo is parallelized)
       real ::
-     |  dynpot(nlonp1,0:nlatp1,nlevp1),   ! 3d electric potential geographic
-     |  phim3d(nmlonp1,nmlat,-2:nlevp1),  ! 3d electric potential magnetic
-     |  emphi3d(nmlonp1,nmlat,-2:nlevp1), ! 3d eastward electric field magnetic
-     |  emlam3d(nmlonp1,nmlat,-2:nlevp1), ! 3d equatorw. electric field magnetic
-     |  emz3d(nmlonp1,nmlat,-2:nlevp1)    ! 3d upward (?) electric field magnetic
+     |  phim3d(nmlonp1,nmlat,mlev0:mlev1),  ! 3d electric potential magnetic
+     |  emphi3d(nmlonp1,nmlat,mlev0:mlev1), ! 3d eastward electric field magnetic
+     |  emlam3d(nmlonp1,nmlat,mlev0:mlev1), ! 3d equatorw. electric field magnetic
+     |  emz3d(nmlonp1,nmlat,mlev0:mlev1)    ! 3d upward (?) electric field magnetic
 !
 ! Secondary history field structures.
 ! These are initialized in sub init_fsech, and data is set in addfld.F.
@@ -488,13 +487,10 @@
 ! f4d fields are "prognostic":
       f4d%prognostic = .true.
 !
-! Report to stdout:
-      if (iprint > 0) then
-        write(6,"(/,'There are ',i3,' 4-d fields:')") nf4d
-        do n=1,nf4d
-          call print_f4d(f4d(n),n)
-        enddo
-      endif
+! Init data:
+      do i=1,nf4d
+        f4d(i)%data = field_initval
+      enddo
 !
 ! Report to stdout:
       if (iprint > 0) then
@@ -503,9 +499,6 @@
           call print_f4d(f4d(n),n)
         enddo
       endif
-!
-! Do other allocations:
-!     call allocdata
       end subroutine init_4d
 !-----------------------------------------------------------------------
       subroutine init_3d(lon0,lon1,lat0,lat1,mytid,iprint)
@@ -842,6 +835,13 @@
       f3d(n)%data => n2
       i_n2 = n ; n = n+1
 !
+      allocate(wn(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Neutral Vertical Wind')")
+      f3d(n)%short_name = "WN"
+      f3d(n)%units = "cm"
+      f3d(n)%data => wn
+      i_wn = n ; n = n+1
+!
 ! f3d fields are diagnostics:
       f3d%prognostic = .false.
       f3d%magnetic = .false.
@@ -849,6 +849,11 @@
       f3d%vcoord = 'midpoints'
       do n=1,nf3d
         if (trim(f3d(n)%short_name)=='ZG') f3d(n)%vcoord='interfaces' 
+      enddo
+!
+! Init:
+      do n=1,nf3d
+        f3d(n)%data = field_initval
       enddo
 !
 ! Report to stdout:

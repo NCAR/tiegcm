@@ -33,6 +33,27 @@
       real :: t0(nlev+1) 
       contains
 !-----------------------------------------------------------------------
+      subroutine init_lbc
+!
+! Called once per run from tgcm.
+!
+      use cons_module,only: t0cons=>t0
+      implicit none
+!
+! t0 in cons is zeroed out:
+      t0cons(:) = 0.
+!
+! t0 local to this module (different than the t0 in cons) is for
+! use in Hough functions:
+      t0(:) = 0.
+      t0(1) = tbound
+      t0(2) = tbound+dz*tgrad
+!
+      call bndry_diurnal      ! t_di ,u_di ,v_di ,z_di
+      call bndry_semidiurnal  ! t_sdi,u_sdi,v_sdi,z_sdi
+      call bndcmp
+      end subroutine init_lbc
+!-----------------------------------------------------------------------
       subroutine tuvz_lbc
 !
 ! Update lower boundary subdomains of T,U,V,Z
@@ -180,14 +201,14 @@
       endif
 !
 ! Save 2d boundaries to secondary histories:
-      call addfld('T_LBC','T_LBC',' ',t_lbc(lon0:lon1,lat0:lat1),
-     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-      call addfld('U_LBC','U_LBC',' ',u_lbc(lon0:lon1,lat0:lat1),
-     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-      call addfld('V_LBC','V_LBC',' ',v_lbc(lon0:lon1,lat0:lat1),
-     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-      call addfld('Z_LBC','Z_LBC',' ',z_lbc(lon0:lon1,lat0:lat1),
-     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('T_LBC','T_LBC',' ',t_lbc(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('U_LBC','U_LBC',' ',u_lbc(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('V_LBC','V_LBC',' ',v_lbc(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('Z_LBC','Z_LBC',' ',z_lbc(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
       end subroutine tuvz_lbc
 !-----------------------------------------------------------------------
       subroutine bndry_semidiurnal

@@ -206,7 +206,7 @@
 !
       call minor(tn,o2,o1,n2,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
      |  n4s_loss,n4s_prod,n4s_lbc,n4s_ubc,rmass_n4s,phi_n4s,
-     |  alfa_n4s,lev0,lev1,lon0,lon1,lat0,lat1,0)
+     |  alfa_n4s,lev0,lev1,lon0,lon1,lat0,lat1,0,'N4S')
 
 !     do lat=lat0,lat1
 !       call addfld('N4S_OUT' ,' ',' ',

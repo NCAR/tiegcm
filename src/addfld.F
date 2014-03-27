@@ -239,13 +239,15 @@
 !
 ! Validate dimension bounds:
       if (lb1 < 1 .or. ub1 > idim1) then
-        write(6,"(/,'>>> addfld bad bounds: dname1=',a,' idim1=',i4,
-     |    ' lb1=',i4,' ub1=',i4)") dname1,idim1,lb1,ub1
+        write(6,"(/,'>>> addfld bad bounds: field=',a,
+     |    ' dname1=',a,' idim1=',i4,' lb1=',i4,' ub1=',i4)") 
+     |    trim(name),dname1,idim1,lb1,ub1
         call shutdown('addfld')
       endif
       if (lb2 < 1 .or. ub2 > idim2) then
-        write(6,"(/,'>>> addfld bad bounds: dname2=',a,' idim2=',i4,
-     |    ' lb2=',i4,' ub2=',i4)") dname2,idim2,lb2,ub2
+        write(6,"(/,'>>> addfld bad bounds: field=',a,
+     |    ' dname2=',a,' idim2=',i4,' lb2=',i4,' ub2=',i4)") 
+     |    trim(name),dname2,idim2,lb2,ub2
         call shutdown('addfld')
       endif
 !

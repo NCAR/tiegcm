@@ -36,8 +36,8 @@
       real :: fx_tmp(nlonp4,nlat)
       real :: lap_tmp(lon0:lon1,lat0:lat1)
 
-      call addfld('LAP_ARG',' ',' ',lap_arg,'lon',lon0,lon1,
-     |  'lat',lat0,lat1,0)
+!     call addfld('LAP_ARG',' ',' ',lap_arg,'lon',lon0,lon1,
+!    |  'lat',lat0,lat1,0)
 !
 ! FFT
 ! Load fx from f for the fft:
@@ -128,8 +128,8 @@
           fx_tmp(3:nlonp2,j) = fx(1:nlon,j)
         enddo
 
-        call addfld('LAP_FX',' ',' ',fx_tmp,'lon',1,nlonp4,
-     |    'lat',1,nlat,0)
+!       call addfld('LAP_FX',' ',' ',fx_tmp,'lon',1,nlonp4,
+!    |    'lat',1,nlat,0)
 !
 ! End root task only:
       endif ! mytid==0
@@ -152,8 +152,8 @@
 !    |    j,lap_out(:,j)
 !     enddo
 
-      call addfld('LAP_OUT',' ',' ',
-     |  lap_out,'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('LAP_OUT',' ',' ',
+!    |  lap_out,'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
       end subroutine laplacian
 !-----------------------------------------------------------------------

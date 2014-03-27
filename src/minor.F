@@ -1,7 +1,7 @@
 !
       subroutine minor(tn,o2,o1,n2,fcomp,fcomp_tm1,fcomp_out,
      |  fcomp_tm1_out,sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,
-     |  lon0,lon1,lat0,lat1,idebug)
+     |  lon0,lon1,lat0,lat1,idebug,name)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -32,7 +32,8 @@
       implicit none
 !
 ! Args:
-      integer :: lev0,lev1,lon0,lon1,lat0,lat1,idebug
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1,idebug
+      character(len=*),intent(in) :: name
 !
 ! Input fields are at full task subdomain:
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
@@ -190,7 +191,7 @@
 ! longitudes, and the 5 latitudes centered over the current latitude).
 !
       call advec(fcomp(:,:,lat-2:lat+2),hadvec,lev0,lev1,lon0,lon1,
-     |  lat)
+     |  lat,0)
 !
 ! Periodic points for advection:
 #ifdef MPI
@@ -449,7 +450,7 @@
 ! not including ghost cells.
 !
       call filter_minor(fcomp_out(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,kut)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,kut,name)
 !
 !----------------------- Begin third latitude scan --------------------
       do lat=lat0,lat1
@@ -525,7 +526,8 @@
 !
       end subroutine minor
 !-----------------------------------------------------------------------
-      subroutine filter_minor(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
+      subroutine filter_minor(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut,
+     |  name)
 !
 ! Filter minor species (called from minor after trsolv)
 !
@@ -544,6 +546,7 @@
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
       integer,intent(in) :: kut(nlat)
       real,intent(inout) :: fout(lev0:lev1,lon0:lon1,lat0:lat1)
+      character(len=*),intent(in) :: name
 !
 ! VT vampir tracing:
 !
@@ -576,7 +579,7 @@
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
-      call mp_gatherlons_f3d(f_kij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_gatherlons_f3d(f_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,name)
 #endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
@@ -605,7 +608,7 @@
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
       call mp_scatterlons_f3d(f_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
-     |  'mnr')
+     |  name)
 #endif
 !
 ! Return filtered array to fout at current task longitudes:

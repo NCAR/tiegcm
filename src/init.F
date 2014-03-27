@@ -1,4 +1,3 @@
-!
       module init_module
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -6,16 +5,12 @@
 ! tiegcmlicense.txt.
 !
       use params_module,only: nlon,nlat,nlevp1,nlonp4,nmlonp1,nmlat,
-     |  glon1,dlon,glat1,dlat,nlev,zmbot,dlev,zibot,zmbot,
-     |  nmlev,nmlevp1,nimlev,nimlevp1
+     |  glon1,dlon,glat1,dlat,nlev,zmbot,dlev,zibot,zmbot
       implicit none
 !
 ! Initialize and store model non-input variables and constants:
 !
       real :: glon(nlon),glat(nlat),zpmid(nlevp1),zpint(nlevp1)
-      real :: gmlon(nmlonp1),gmlat(nmlat),
-     |        zpmag_mid(nmlevp1),zpmag_int(nimlevp1)
-!    |        zpmag_mid(nmlev),zpmag_int(nimlev)
 !
 ! istep: the current time step index. istep is initialized
 ! to 0, then incremented before each time step (see advance.f).
@@ -241,16 +236,6 @@
         zpint(i) = zibot+(i-1)*dlev  ! interface levels
       enddo
 !
-! Define magnetic zp grid:
-! For 97 km boundary, zpmag starts 3 zp levels below geographic fields
-!   (at dzp=0.5, this is -8.5 instead of -7.0)
-! zpmag_mid(nmlevp1), zpmag_int(nimlevp1)
-!     do i=1,nmlev
-      do i=1,nmlevp1
-        zpmag_mid(i) = zmbot-(3.*dlev)+(i-1)*dlev  ! midpoint levels
-        zpmag_int(i) = zpmag_mid(i)-0.5*dlev
-      enddo
-!
 ! Report to stdout:
       write(6,"(/,'Model run initialization:')")
       write(6,"('  nstep      = ',i6,4x,
@@ -277,10 +262,6 @@
      |  '(Number of levels (midpoints and interfaces))')") nlev
       write(6,"(/,'  zpmid (midpoint  levels) = ',/,(10f7.3))") zpmid
       write(6,"(/,'  zpint (interface levels) = ',/,(10f7.3))") zpint
-      write(6,"(/,'  nmlevp1=',i4,' zpmag_mid (mag midpoint  levels) = '
-     |  ,/,(10f7.3))") nmlevp1,zpmag_mid
-      write(6,"(/,'  nmlevp1=',i4,' zpmag_int (mag interface levels) = '
-     |  ,/,(10f7.3))") nmlevp1,zpmag_int
 !
       if (nsource > 0) then
         write(6,"(/,'This is an initial run:')")

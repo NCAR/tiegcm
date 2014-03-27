@@ -323,7 +323,157 @@
 !     |     hall, 'lev',levd0,levd1,  'lon',1,nlonp1,  nlat)
       end subroutine cism_save
 !-----------------------------------------------------------------------
-! FIXME:  Should move cism_ucurrent from dynamo.F to here!
+      subroutine cism_ucurrent
+!
+! 3/20/14 btf: This routine moved from old serial dynamo (where it was
+!   called after sub transf, and followed by 3 calls to mag2geo). 
+!   The call to this routine is now in pdynamo after sub complete_integrals, 
+!   however as of this date, the call is commented out because rim1,2 are
+!   in magnetic subdomains, whereas this sub assumes global rims.
+!
+! DESCRIPTION:
+!
+! This subroutine calculate height-integrated neutral wind generated
+! field-aligned current (dynamo) to be passed to the M-I coupler to
+! solve electric potential. This subroutine is based on the subroutine
+! 'nosocoef' in 'current.F' written by Astrid Maute.
+! The height-integrated neutral wind field-alined current is calculated in a
+! Quisi-Dipole Coordinate that is defined in detail in Richmond (1995). This
+! coordinate system removes the 1/|sinI_m| factor in the partial differential
+! equation for the electric potential in the Modified Apex Coordinate system.
+! 1/|sinI_m| is not defined at magnetic equator in the Modified Apex
+! Coordinate system, but is well defined in the Quisi-Dipole Coordinate system
+! (I still need to see how this works).
+! The neutral dynamo currents are already calculted in subroutine
+! 'fieldline-integrals' in the 'dynamo.F' as a global variable
+! 'rim(nmlonp1,nmlat,2)'. Subroutine 'rshpde' has the formula to calculate
+! height-integrated neutral wind current, but the current there is the sum
+! of two hemispheres. We want a global distribution of this current for the M-I
+! coupler. Thus the code here is an expanded version of that in "rhspde", but a
+! stripped version of "nosocoef". 'nosocoef' also calculates other
+! coefficients (lhs) for the potential equation to obtain total field-aligned currents
+! including both magnetosphere and thermosphere originated currents. We only need
+! thermospheric originated currents for the CISM M-I coupler.
+!
+! This subroutine is called by subroutine 'dynamo' after 'call transfer'
+! in 'dynamo.F'
+!                                                  ---------- Wenbin Wang 09/20/05
+! USES
+!
+      use cons_module,only: dlonm,dlatm,pi,r0
+
+!
+! PARAMETERS:
+! RETURN VALUE: nsrhs(nmlonp1,nmlat)   ! defined as a global variable above
+!
+! !REVISION HISTORY:
+!
+! EOP
+!
+! Calculate height-integrated field-aligned neutral wind currents for both hemisphere
+!
+! Local:
+!
+      real :: cs(nmlat)
+      real :: dfac
+      integer :: j,je,jj,i,n
+!
+! Externals:
+!
+      real,external :: sddot ! in util.F
+!
+! Calculate coefficients for dynamo pde for both hemisphere
+!
+!
+! Clear arrays
+!
+      nsrhs(:,:)    = 0.0
+!
+! Calculate magnetic latitude cosin array
+!
+      do j = 1,nmlat     ! -pi/2 to pi/2
+        cs(j) = cos(-pi/2.+(j-1)*dlatm)
+      enddo
+!
+! Calculate right hand side of pde from rim(1) and rim(2)
+!
+      do j = 2,nmlath-1  ! 2,48  south pole-1 to equator-1
+        jj = j+nmlath-1     ! 50,96 equator+1 to north pole-1
+!
+! Differentiate rim(1) w.r.t lamda
+!
+        do i = 2,nmlon-1
+          nsrhs(i,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim(i+1,j,1)-rim(i-1,j,1))
+          nsrhs(i,jj) = 1.0/(dlonm*cs(jj))*
+     |                      0.5*(rim(i+1,jj,1)-rim(i-1,jj,1))
+       enddo
+!
+! Values at longitudinal boundaries
+!
+        nsrhs(1,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim(2,j,1)-rim(nmlon,j,1))
+        nsrhs(1,jj) = 1.0/(dlonm*cs(jj))*
+     |                      0.5*(rim(2,jj,1)-rim(nmlon,jj,1))
+        nsrhs(nmlon,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim(1,j,1)-rim(nmlon-1,j,1))
+        nsrhs(nmlon,jj) = 1.0/(dlonm*cs(jj))*
+     |                      0.5*(rim(1,jj,1)-rim(nmlon-1,jj,1))
+      enddo
+!
+! Differentiate rim(2) w.r.t theta0
+!
+      do j = 2,nmlath-1  ! 2,48  south pole -1 to equator-1 "negative sigh"
+       jj = j+nmlath-1  ! 50,96 equator+1 to north pole-1
+       do i = 1,nmlon
+        nsrhs(i,j)  = nsrhs(i,j) - 1.0/(dlatm*cs(j))*0.5*
+     |               (rim(i,j+1,2)*cs(j+1)-rim(i,j-1,2)*cs(j-1))
+        nsrhs(i,jj) = nsrhs(i,jj) + 1.0/(dlatm*cs(jj))*0.5*
+     |               (rim(i,jj+1,2)*cs(jj+1)-rim(i,jj-1,2)*cs(jj-1))
+       enddo
+      enddo
+!
+! Calculate value at the poles by averaging over i:nmlon
+!
+      nsrhs(1,nmlat) = -2./float(nmlon)*
+     |                  sddot(nmlon,unitvm,rim(1,nmlat-1,2))/cs(nmlat-1)
+      nsrhs(1,1)     = -2./float(nmlon)*
+     |                  sddot(nmlon,unitvm,rim(1,2,2))/cs(2)
+!
+! Extend over longitude
+!
+      nsrhs(:,nmlat) = nsrhs(1,nmlat)
+      nsrhs(:,1)     = nsrhs(1,1)
+!
+! Calculate equator values
+!
+      je = nmlath
+      i = 1
+      nsrhs(i,je) = 0.5/dlonm*(rim(i+1,je,1)-rim(nmlon,je,1))
+      nsrhs(i,je) = nsrhs(i,je) + 1./dlatm*(cs(je)*
+     |                 rim(i,je,2)+ cs(je+1)*rim(i,je+1,2))
+!
+      do i = 2,nmlon-1
+        nsrhs(i,je) = 0.5/dlonm*(rim(i+1,je,1)-rim(i-1,je,1))
+       nsrhs(i,je) = nsrhs(i,je) + 1./dlatm*(cs(je)*
+     |                    rim(i,je,2)+ cs(je+1)*rim(i,je+1,2))
+      enddo
+!
+      i = nmlon
+      nsrhs(i,je) = 0.5/dlonm*(rim(1,je,1)-rim(i-1,je,1))
+      nsrhs(i,je) = nsrhs(i,je) + 1./dlatm*(cs(je)*
+     |                 rim(i,je,2)+ cs(je+1)*rim(i,je+1,2))
+!
+! Periodic points
+!
+      nsrhs(nmlonp1,:) = nsrhs(1,:)
+!
+! Scale rhs by refernce radius (R_E + H0) in meters dfac = r0*1e-2
+!
+      dfac = r0*1.0e-2
+      nsrhs(:,:) = -1.*nsrhs(:,:)/dfac
+!
+      end subroutine cism_ucurrent
 !-----------------------------------------------------------------------
       end module cism_coupling_module
 !-----------------------------------------------------------------------
