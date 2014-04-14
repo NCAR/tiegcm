@@ -26,9 +26,9 @@ OPTIM    = -O3
 LIBS     = -lcurl
 HOST     = $(shell hostname)
 #
-# ESMF lib on yellowstone: the following commands are executed by the ys job script:
-# source /glade/apps/opt/lmod/lmod/init/tcsh
-# module add esmf esmf-6.1.1-ncdfio-mpi-O
+# ESMF lib on yellowstone:
+# The following module load is executed by the ys job script:
+# module load esmf esmf-6.3.0r-ncdfio-mpi-O
 #
 export ESMF_LIBDIR
 LIB_ESMF = $(ESMF_LIBDIR)
