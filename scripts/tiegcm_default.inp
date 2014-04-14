@@ -24,7 +24,7 @@
 ; Primary History parameters:
 ;
  HIST = 1,0,0
- OUTPUT = 'tiegcm.pcntr_mareqx_smin_001.nc'
+ OUTPUT = 'FOSTER.tiegcm.pcntr_mareqx_smin_001.nc'
  MXHIST_PRIM = 10
 ;
 ; Secondary History parameters:
@@ -32,11 +32,11 @@
  SECSTART = 80,1,0
  SECSTOP  = 81,0,0
  SECHIST  =  0,1,0
- SECOUT   = 'tiegcm.scntr_mareqx_smin_001.nc'
+ SECOUT   = 'FOSTER.tiegcm.scntr_mareqx_smin_001.nc'
  MXHIST_SECH = 24
- SECFLDS = 'TN','UN','VN','O2','O1','N2','HE','NO','N4S','NE',
-           'TE','TI','TEC','O2P','OMEGA','POTEN','UI_ExB','VI_ExB',
-           'WI_ExB','DEN','QJOULE','Z','ZG'
+ SECFLDS = 'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI',
+           'TEC','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN',
+           'QJOULE','Z','ZG'
 ;
 ; Diagnostic fields available with this release:
 ;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
@@ -51,7 +51,7 @@
 ; when executed, will copy history disk files to the NCAR HPSS in the 
 ; directory HPSS_PATH (must have an HPSS account at NCAR CISL)
 ;
-;HPSS_PATH = '/home/[user]/tiegcm'
+;HPSS_PATH = '/home/foster/tiegcm'
 ;
  TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2 = 0.,0.
@@ -78,7 +78,7 @@
 ; must be commented out (data will be used for those that are commented
 ; out, otherwise the user-provided values will be used).
 ;
-;GPI_NCFILE = '$TGCMDATA/gpi_2000001-2013365.nc'
+;GPI_NCFILE = '$TGCMDATA/gpi_2000001-2013120.nc'
 ;
 ; If KP is specified, and POWER and/or CTPOTEN are commented,
 ; then the given KP will be used to calculate POWER and/or CTPOTEN
