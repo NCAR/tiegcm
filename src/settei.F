@@ -143,7 +143,8 @@
 !
 ! Increased heat flux for TE fom protonosphere.
         fed(i) = ( -5.0e+7*f107te*a(i)-4.0e+7*f107te)*1.2
-        fen(i) = fed(i)/2.
+!       fen(i) = fed(i)/2.
+        fen(i) = fed(i)*0.30
         fed(i) = fed(i)+qteaur(i,lat)     ! t4
         fen(i) = fen(i)+qteaur(i,lat)     ! t5
         if (chi(i,lat)-.5*pi >= 0.) then  ! chi==t2

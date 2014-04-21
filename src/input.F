@@ -38,6 +38,8 @@
      |  tempdir,         ! temporary directory 
      |  magvol,          ! absolute or relative path to magnetic data file
      |  amievol,         ! absolute or relative path to amie data file (optional)
+     |  amiesh,          ! absolute or relative path of amie SH data file (optional)
+     |  amienh,          ! absolute or relative path of amie NH data file (optional) or NH+SH ASTRA AMIE
      |  hpss_path        ! hpss directory for dispose of output history files
 !
 ! date and calday are no longer supported, and are replaced by start_day, 
@@ -110,6 +112,8 @@
      |  potential_model,  ! electric potential model used
                           !  Values can be 'HEELIS', 'WEIMER', or 'NONE'
                           !  If absent, the default value is set to 'HEELIS'
+     |  kameleon_path,    ! Path to directory and part of name of CCMC kameleon 5?min files
+			  !   of electric potential and electron mean energy and energy flux
      |  weimer_ncfile,    ! path to netcdf weimer01 coefficients file
      |  wei05sc_ncfile,   ! path to netcdf data files for weimer05 model
      |  gpi_ncfile,         ! absolute or relative path to netcdf gpi data file
@@ -122,6 +126,16 @@
      |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
      |  saber_ncfile,       ! SABER data (T,Z)
      |  tidi_ncfile         ! TIDI data (U,V)
+
+!  4/13 bae: facmw and lbmlat for amie or kameleon runs in namelist read
+!  8/13 bae:  if AMIE run, read iamie in namelist as 1,2, or 3 for HAO, ASTRA, or U MI AMIE inputs
+      integer :: iamie
+      real :: facmw,lbmlat
+!  8/13 bae: irdpot=2 for iamie=1-4, kameleon, and CMIT runs
+!  4/14 bae: irdpot=1 for iamie=5 SuperDARN
+!  8/13 bae:  Set avmincrad for various models for use as a default in revcloc in calccloc.F
+      real :: avmincrad
+      integer :: irdpot
 
 !     integer,parameter :: ngpivars = 4
 !     real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
@@ -169,7 +183,8 @@
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
-     |  f107a_time,hpss_path
+     |  f107a_time,hpss_path,facmw,lbmlat,
+     |  kameleon_path,iamie,amiesh,amienh
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -217,6 +232,7 @@
        call inp_lbc
 !
 ! Print type(input_typ) inp:
+! Can change potential_model in inp_print from defaults listed in inp_solar to revise to AMIE, kameleon, SWMF, CMIT, etc
       call inp_print(ntask)
 !
       end subroutine input
@@ -229,6 +245,8 @@
       tempdir = ' '
       magvol  = ' '
       amievol = ' '
+      amiesh  = ' '
+      amienh  = ' '
       hpss_path = ' '
 !
       gpi_ncfile  = ' '       ! user input gpi file path
@@ -246,6 +264,7 @@
 
       saber_ncfile = ' '      ! SABER data file
       tidi_ncfile = ' '       ! TIDI data file
+      kameleon_path = ' '     ! CCMC Kameleon path (and part of file name)
 
       date(:) = ispval ! old
       calday  = ispval ! old
@@ -267,6 +286,15 @@
       ntask_lon = ispval
       colfac  = spval
       joulefac= spval
+      facmw = spval
+      lbmlat = spval
+! 3/14 bae: irdpot = 0,1,2: 0 if convection not input (Heelis and W05), 1 only convection is 
+!           input (eg SuperDARN), or 2 both convection and aurora are input (kameleon,CMIT,amie)
+! 8/13 bae:  if AMIE run, read iamie in namelist as 1,2, or 3 for HAO, ASTRA, or U MI AMIE inputs 
+! 8/13 bae:  avmincrad used as default lower value of Rc (crad, theta0 in deg) in calccloc.F 
+      irdpot = 0
+      iamie = 0
+      avmincrad = 10.
 
       f107    = spval
       f107a   = spval
@@ -559,6 +587,9 @@
 ! SABER and/or TIDI data files:
       if (len_trim(saber_ncfile) > 0) call expand_path(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0)  call expand_path(tidi_ncfile)
+
+! CCMC Kameleon path (and part of file names):
+      if (len_trim(kameleon_path) > 0) call expand_path(kameleon_path)
 !
 ! Collision factor:
       if (colfac==spval) then
@@ -1457,9 +1488,97 @@
       if (len_trim(tidi_ncfile) > 0) write(6,"('  TIDI data file: ',
      |    'tidi_ncfile = ',a)") trim(tidi_ncfile)
 
-      if (len_trim(amievol) > 0)
-     |  write(6,"('  amievol = ',a,/,4x,
+#if defined(INTERCOMM) || defined(CISMAH)
+! 8/13 bae: irdpot = 2 for CMIT since convection and aurora are read-in 
+       irdpot = 2
+       iamie = 0
+#endif
+
+      if (len_trim(kameleon_path) > 0) then
+! 8/13 bae: irdpot = 2 for kameleon since convection and aurora are read-in 
+        irdpot = 2
+        write (6,"('  facmw,lbmlat and ',
+     |   'KAMELEON path for CCMC 5?min files of convection and aurora',
+     |    2e12.4,a)") facmw,lbmlat,
+     |    trim(kameleon_path)
+        if (facmw==spval .or. lbmlat==spval) then  
+          write (6,"(' missing namelist facmw,lbmlat - stop')")
+          stop
+        endif
+! Check to see if iamie is 1,2,3, or 4 for type of 'AMIE' run since iamie=4 is really SWMF run from U MI files
+        if (iamie==0 .or. iamie>0 .or. iamie<-4) then  
+          write (6,"(' for KAMELEON, missing/bad namelist iamie ',
+     |    '(good is -4 to -1) - stop',i9)") iamie
+          stop
+        endif
+      endif
+
+!
+
+      if (len_trim(amiesh) + len_trim(amienh) > 0) then
+! 8/13 bae: irdpot = 2 for amie since convection and aurora are read-in 
+       irdpot = 2
+        if (iamie==5 .or. iamie==6) irdpot = 1
+! Check to see if iamie is 1-6 for type of 'AMIE' 
+        if (iamie==0 .or. iamie<0 .or. iamie>6) then  
+          write (6,"(' for AMIE missing/bad namelist iamie (good 1-6)',
+     |    ' - stop',i9)") iamie
+          stop
+        endif
+        write(6,"('Will read hi-lat inputs using AMIE-type files=', 
+     |    a,1x,a)") trim(amienh),trim(amiesh)
+      endif
+
+! amievol not used much since mostly use NH (sometimes with both NH+SH for ASTRA) plus SH (sometimes absent)
+      if (len_trim(amievol) > 0) then
+! 8/13 bae: irdpot = 2 for amie since convection and aurora are read-in 
+       irdpot = 2
+! Check to see if iamie is 1,2, or 3 for type of 'AMIE' run (since iamie=3 for U MI could be SWMF or other)
+        if (iamie==0 .or. iamie<0 .or. iamie>6) then  
+          write (6,"(' for AMIE missing/bad namelist iamie (good 1-6)',
+     |    ' - stop',i9)") iamie
+          stop
+        endif
+       write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amievol)
+      endif
+
+!  Set avmincrad from linear fits of Dec06 Rc (crad) with CP for CP=0 for KAMELEON or AMIE
+      if (irdpot>0) then
+         if (abs(iamie)==0) then
+		potential_model = 'CMIT'
+                avmincrad = 11.1
+         endif
+         if (abs(iamie)==1) then
+		potential_model = 'HAO AMIE'
+	        avmincrad = 10.0
+	 endif
+         if (abs(iamie)==2) then
+		potential_model = 'ASTRA AMIE'
+		avmincrad = 15.0
+         endif
+         if (abs(iamie)==3) then
+		potential_model = 'U MI AMIE'
+		avmincrad = 13.8
+	 endif
+         if (abs(iamie)==4) then
+		potential_model = 'SWMF'
+		avmincrad = 12.2
+	 endif
+         if (abs(iamie)==5) then            
+		potential_model = 'D50 SuperDARN'
+		avmincrad = 10.0		
+	 endif
+         if (abs(iamie)==6) then            
+		potential_model = 'VT60 SuperDARN'
+		avmincrad = 10.0		
+	 endif
+          write (6,"(' Have irdpot>0 because convection (and aurora ',
+     |    'if =2) are input through CMIT, AMIE, kameleon, or other. ',
+     |   '  avmincrad in potential model =',
+     |    f5.1,2x,a)") avmincrad,trim(potential_model)
+      endif
+
       if (len_trim(hpss_path) > 0)
      |  write(6,"('  hpss_path = ',a,4x,
      |    '(hpss directory for hsi dispose script)')") trim(hpss_path)

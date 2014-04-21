@@ -20,9 +20,11 @@
       use weimer_module,only: weimer01  ! Weimer 2001 model
       use wei05sc,only: weimer05,       ! Weimer 2005 model
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
+     | ,weictpoten   ! Weimer CP SH and NH in kV
       use input_module,only: start,step,idynamo=>dynamo,
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
-     |  imf_ncfile
+     |  imf_ncfile,kameleon_path,amienh,avmincrad,irdpot
+      use amie_module,only: getamie
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
      |  ctpoten,ctpoten_time,ntimes_ctpoten, rd_ctpoten,
@@ -35,14 +37,16 @@
      |  kp     ,kp_time     ,ntimes_kp,
      |  f107   ,f107_time   ,ntimes_f107,
      |  f107a  ,f107a_time  ,ntimes_f107a
-      use init_module,only: istep,uthr,iter,secs,iday,iyear
+      use init_module,only: istep,uthr,iter,secs,iday,iyear,glat
       use cons_module,only: dt,re,cs,racs,ylatm,rtd
       use filter_module,only: filter
       use qrj_module,only: init_sflux
       use magfield_module,only: sunloc_apex
       use efield_module,only: efield
       use aurora_module,only: aurora_cons,cusp2d,drzl2d,alfa2d,nflx2d,
-     |  eflux2d
+!     |  eflux2d,calc_hp
+     |  eflux2d,calc_hp,gmwpm2	! eflux2d,gmwpm2 not saved correctly in aurora_heat unless nproc=1
+      use diags_module,only: qji_integ2d
       use hdif_module,only: hdif1,hdif2
       use timing_module,only: timer,timing
       use dynamo_module,only: prep_dynamo,dynamo,
@@ -50,12 +54,13 @@
       use gpi_module,only: rdgpi,getgpi
       use imf_module,only: getimf
       use gswm_module,only: getgswm
-      use params_module,only: nlonp4,nlat,nlev
+      use params_module,only: nlonp4,nlat,nlev,nlon,nlatp1,nlonp1,nlonp2
       use output,only: outhist
       use addfld_module,only: addfld
       use lbc,only: tuvz_lbc
 #if defined(INTERCOMM) || defined(CISMAH)
-      use cism_coupling_module,only: import, export, geng,gflx
+      use cism_coupling_module,only: import, export
+      use aurora_module,only: gekev	! for cism_scatter ifdef MPI
 #endif
 
 !      
@@ -67,6 +72,7 @@
      |  mytid,mp_gather2root,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
      |  mp_bndlons,mp_polelats,mp_periodic_f4d,
      |  mp_updateemphi,mp_updateemlam,mp_updateemz
+!     |  ,mp_gather_f2d,tasks				! to gather for QJ or HP calc - failed!
 !
       implicit none
 #include <mpif.h>
@@ -82,6 +88,9 @@
 ! Local:
       integer :: i,j,k,lat,itmp,icount_step,nlatlocal,icount_mpi,ier,
      |  iprint
+      real :: model_ctpoten(2),model_hpi(2),model_qj(2),power_ave,
+     |  qj_ave
+!      real :: gw_temp(nlonp4,nlat),gw_array(nlon,nlat)	% not used since mp_gather failed
 #if defined(INTERCOMM) || defined(CISMAH)
       integer :: cmodeltime(4) !CISM coupling time
 #endif
@@ -267,14 +276,65 @@
       if (kp /= spval) then
         if (potential_model(1:6)/='WEIMER'.and.rd_power==spval) then
           power = hp_from_kp(kp)
-!         write(6,"('Advance calculated power from Kp: ',
-!    |      ' KP=',f5.2,' POWER=',f8.2)") kp,power
+         write(6,"('Advance calculated power from Kp: ',
+     |      ' KP=',f5.2,' POWER=',f8.2)") kp,power
         endif
         if (rd_ctpoten==spval) then
           ctpoten = ctpoten_from_kp(kp)
-!         write(6,"('Advance calculated ctpoten from Kp: ',
-!    |      ' KP=',f5.2,' CTPOTEN=',f8.2)") kp,ctpoten
+         write(6,"('Advance calculated ctpoten from Kp: ',
+     |      ' KP=',f5.2,' CTPOTEN=',f8.2)") kp,ctpoten
         endif
+      endif
+!
+! Get electric potential and ctpoten and aurora data and power from kameleon or amie
+      if (len_trim(kameleon_path)>0 .or. len_trim(amienh)>0) then
+       if (mytid==0) then
+        iprint = 0
+        if (istep==1) iprint = 1
+        if (iprint>0) write(6,"('advance calling kameleon or amie istep',
+     |   i4,1x,a,1x,a)") istep,trim(kameleon_path),trim(amienh)
+        if (len_trim(kameleon_path)>0) then
+         call kameleon_tiegcm (istep,model_hpi)
+	else
+         call getamie(iyear,iday,int(secs),iprint,istep,model_hpi)
+	endif
+       endif	! if (mytid==0) then
+      endif
+!
+#if defined(INTERCOMM) || defined(CISMAH)
+!
+!
+! Receive aurora parameters from the M-I coupler for CISM
+!
+! 3/14 bae:  TEMP leave extra code in import for cism_input_analysis
+      call import
+! Remember gmwpm2(nlonp1,0:nlat+1) (gmwpm2 should be OK for CISM as an entire array for nproc>1)
+      call calc_hp (nlat,nlon,nlonp1,glat,gmwpm2(1,1),model_hpi(1),
+     |   model_hpi(2))
+! calc_hp also done after dynamo, so could be skipped there for CISM, 
+!   but it is needed to set power for irdpot==2 in a few lines
+!
+! Scatter data to other tasks if using MPI, periodic points already added
+! in ci_receive. Only need to scatter auroral characteristic energy and
+! flux, potential is used in dynamo which is a serial code
+!
+#ifdef MPI
+!      call cism_scatter(geng,lon0,lon1,lat0,lat1)
+!      call cism_scatter(gflx,lon0,lon1,lat0,lat1)
+! 3/14 bae:  Could not find cism_scatter anywhere to see if gekev and gmwpm2 need to be dim nlonp4
+      call cism_scatter(gekev,lon0,lon1,lat0,lat1)
+      call cism_scatter(gmwpm2,lon0,lon1,lat0,lat1)
+#endif
+#endif
+
+! If irdpot=2, revise power (for cusp and drizzle in aurora_cons) for printout of hpower in nchist.F
+!   (from power in output.F) since aurora and electric potential (ctpoten revised after calccloc) 
+!   are read in from CMIT, or CCMC kameleon, or AMIE, etc
+      if (irdpot == 2) then
+! Recalculate power for cusp and drizzle in aurora_cons in aurora.F called by advance.F
+         power = 0.5*(model_hpi(1) + model_hpi(2))
+         write(6,"(1x,'istep UTh HPS,N,av= ',i9,f8.2,3f7.2)")istep,
+     |    secs/3600.,model_hpi(1),model_hpi(2),power 
       endif
 !
 ! Get GSWM tidal boundary data:
@@ -285,44 +345,16 @@
 !
       call tuvz_lbc
 !
-#if defined(INTERCOMM) || defined(CISMAH)
+! 3/14 bae:  commented out since done already but with ifdef MPI????
+!#if defined(INTERCOMM) || defined(CISMAH)
 !
 ! Receive aurora parameters from the M-I coupler for CISM
 !
-      call import
-#endif
+!      call import (model_hpi)
+!#endif
 !
-! Report to stdout:
-      if (time2print(nstep,istep)) then
-        if (istep > 1) then
-          write(6,"('Step ',i6,' of ',i6,' mtime=',4i3,
-     |      ' secs/step (',a,') =',f6.2)") istep,nstep,modeltime,
-     |      timing_type,secs_per_step
-        else
-          write(6,"('Step ',i6,' of ',i6,' mtime=',3i3)")
-     |      istep,nstep,modeltime(1:3)
-        endif
-        if (len_trim(gpi_ncfile) > 0.and.len_trim(imf_ncfile) > 0) then
-!
-! If both GPI and IMF data run, then only f10.7 flux is used from
-! the gpi file. GPI power and ctpoten are overwritten as follows:
-! power is calculated from bz,swvel (see above), and ctpoten is from
-! weimer (Weimer is called later, so do not print ctpoten here)
-!
-          write(6,"('GPI+IMF run: istep=',i6,' GPI f107=',f8.3,
-     |      ' f107a=',f8.3,' power from bzimf,swvel=',f8.3)")
-     |      istep,f107,f107a,power
-        elseif (len_trim(gpi_ncfile) > 0) then
-          write(6,"('GPI run: istep=',i6,' power=',f8.3,' ctpoten=',
-     |      f8.3,' f107=',f8.3,' f107a=',f8.3)") istep,power,ctpoten,
-     |      f107,f107a
-        elseif (len_trim(imf_ncfile) > 0) then
-          write(6,"('IMF run: istep=',i6,' bx=',f8.3,' by=',f8.3,' bz=',
-     |      f8.3,' swvel=',f8.3,' swden=',f8.3,' ctpoten (prev step)=',
-     |      f8.3,' power=',f8.3)") istep,bximf,byimf,bzimf,swvel,swden,
-     |      ctpoten,power
-        endif
-      endif ! time2print
+! Report to stdout:  3/14 bae moved this to after call dynamics so have ctpoten also
+!!!!!     if (time2print(nstep,istep)) then
 !
 ! Update aurora parameters:
       iprint = 0
@@ -433,6 +465,10 @@
 !  If Weimer is used, then theta0,phid etc is changed before use in aurora
 !   in dynamics.
 !
+! If irdpot>0, ignore potential_model since electric potential is read in
+!   from AMIE, from CCMC kameleon, or from CISM
+!
+      if (irdpot == 0) then
       if (potential_model == 'WEIMER01') then
         if (byimf==0..and.bzimf==0.) then
           write(6,"(/,'>>> WARNING: byimf and bzimf are both zero',
@@ -459,7 +495,8 @@
 !
         call weimer05(byimf,bzimf,swvel,swden,wei05sc_ncfile,istep)
         if (debug) write(6,"('advance after weimer05: istep=',i4)")istep
-
+        model_ctpoten(1) = weictpoten(1)
+        model_ctpoten(2) = weictpoten(2)
 !       write(6,"('wei05: mtime=',i3,',',i2,',',i2,' by,bz=',2f8.2,
 !    |    ' swvel=',f8.2,' swden=',f6.2,' phihm min,max=',
 !    |    2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,
@@ -471,6 +508,8 @@
      |    ' ',wei05sc_fac,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 
       elseif (potential_model == 'HEELIS') then
+        model_ctpoten(1) = ctpoten
+        model_ctpoten(2) = ctpoten
         call heelis
         if (debug) write(6,"('advance after heelis: istep=',i4)") istep
       else  !  potential_model='NONE'
@@ -479,12 +518,22 @@
 	    phihm(i,j) = 0.
           enddo ! i=1,nmlonp1
         enddo ! j=1,nmlat0
-        call colath
       endif
+      else !  if irdpot>0, potential model is read in previously to phihm
+! Call calccloc followed by revcloc for irdpot=1, where ctpoten is set as av of both hem
+!   ifbad is passed from calccloc to revcloc to revise the convection location for ifbad>0 
+! CANNOT have offc=dskofc=0 or divide by zero in potm in heelis.F (avmincrad set in input.F)
+        call calccloc (istep,avmincrad,model_ctpoten)
+! Set ctpoten for output as average of CP in both hemispheres
+        ctpoten = 0.5*(model_ctpoten(1)+model_ctpoten(2))
+      endif
+!  All potential models call colath to define crit(1,2) boundaries between hi-lat inputs and dynamo
+      call colath
+
       call timer(time0_prep,time1,'PREP',1,0) ! suspend step-prep timing
       time1_prep = time1
 !
-! Model dynamics. Sub dynamics calls physics, chemistry, and dynamics
+! Model dynamics. Sub dynamics calls aurora, physics, chemistry, and dynamics
 ! routines for current time step:
 !
       call timer(time0_dynamics,time1_dynamics,'DYNAMICS',0,0)
@@ -494,18 +543,96 @@
       if (timing%level >= 2.and.time2print(nstep,istep))
      |  write(6,"('Time in DYNAMICS =     ',f12.2,
      |    ' Advance: step ',i5)") time1_dynamics,istep
+
+! call aurora in call dynamics where gmwpm2 set for irdpot<=1  
+!  Find power_ave from gmwpm2 (or eflux2d) - correct if 1 processor (nproc=1), or can be incomplete
+
+!  Gather 2-D array to get hemispheric power in GW - this failed!
+!#ifdef MPI
+!       call mp_gather_f2d(eflux2d(lon0:lon1,lat0:lat1),gw_temp,
+!     |   tasks(:)%lon1,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
+!     |   ntask,nlonp4,nlat,1)
+!       if (mytid==0) gw_array(1:nlon,1:nlat) = gw_temp(3:nlonp2,1:nlat)
+!#else
+!       gw_array(1:nlon,1:nlat) = eflux2d(3:nlonp2,1:nlat)
+!#endif  
+!       if (mytid==0) then    
+! Remember gmwpm2(nlonp1,0:nlat+1)
+       call calc_hp (nlat,nlon,nlonp1,glat,gmwpm2(1,1),model_hpi(1),
+     |   model_hpi(2)) 
+! using eflux2d is even worse since it is only saved (lon0:lon1,lat0:lat1) here!
+!      call calc_hp (nlat,nlon,nlonp4,glat,eflux2d,model_hpi(1),
+!     |   model_hpi(2))
+!       call calc_hp (nlat,nlon,nlonp4,glat,gw_array,model_hpi(1),
+!     |   model_hpi(2))
+       power_ave =.5*(model_hpi(1)+model_hpi(2))
+!      endif
+!  Gather 2-D array to get QJ in GW - this failed!
+!#ifdef MPI
+!       call mp_gather_f2d(qji_integ2d(lon0:lon1,lat0:lat1),gw_temp,
+!     |   tasks(:)%lon1,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
+!     |   ntask,nlonp4,nlat,1)
+!       if (mytid==0) gw_array(1:nlon,1:nlat) = gw_temp(3:nlonp2,1:nlat)
+!#else
+!       gw_array(1:nlon,1:nlat) = qji_integ2d(3:nlonp2,1:nlat)
+!#endif 
+!      if (mytid==0) then   
+! qji_integ2d off by 2 in nlon, but is OK since area is the same for same glat
+       call calc_hp (nlat,nlon,nlonp4,glat,qji_integ2d,model_qj(1),
+     |   model_qj(2))
+!       call calc_hp (nlat,nlon,nlonp4,glat,gw_array,model_qj(1),
+!     |   model_qj(2))
+       qj_ave =.5*(model_qj(1)+model_qj(2))
+!
+! TEMP to fort.51 like calccloc (which gives model_ctpoten) for ctpoten, power, and QJ
+	write (51,"(1x,i10,4i5,10f8.2)") istep,modeltime(1:4),
+     |  model_hpi,power,power_ave,model_ctpoten,ctpoten,model_qj,qj_ave
+!       endif	!      if (mytid==0) then  
+
+! Report to stdout:  
+! 3/14 bae moved this to after call dynamics to get ctpoten and geog power from dynamics call aurora
+      if (time2print(nstep,istep)) then
+        if (istep > 1) then
+          write(6,"('Step ',i6,' of ',i6,' mtime=',4i3,
+     |      ' secs/step (',a,') =',e12.4)") istep,nstep,modeltime,
+     |      timing_type,secs_per_step
+        else
+          write(6,"('Step ',i6,' of ',i6,' mtime=',3i3)")
+     |      istep,nstep,modeltime(1:3)
+        endif
+        if (len_trim(gpi_ncfile) > 0.and.len_trim(imf_ncfile) > 0) then
+!
+! If both GPI and IMF data run, then only f10.7 flux is used from
+! the gpi file. GPI power and ctpoten are overwritten as follows:
+! power is calculated from bz,swvel (see above), and ctpoten is from
+! weimer (Weimer is called later, so do not print ctpoten here)
+!
+          write(6,"('GPI+IMF run: istep=',i6,' GPI f107=',f8.3,
+     |      ' f107a=',f8.3,' power from bzimf,swvel and calc =',2f8.3)")
+     |      istep,f107,f107a,power,power_ave
+        elseif (len_trim(gpi_ncfile) > 0) then
+          write(6,"('GPI run: istep=',i6,' power,calc=',2f8.3,
+     |     ' ctpoten=',f8.3,' f107=',f8.3,' f107a=',f8.3)") istep,power,
+     |     power_ave,ctpoten,f107,f107a
+        elseif (len_trim(imf_ncfile) > 0) then
+          write(6,"('IMF run: istep=',i6,' bx=',f8.3,' by=',f8.3,' bz=',
+     |      f8.3,' swvel=',f8.3,' swden=',f8.3,' ctpoten =',
+     |      f8.3,' power,calc=',f28.3)") istep,bximf,byimf,bzimf,swvel,
+     |      swden,ctpoten,power,power_ave
+        endif
+      endif ! time2print
 !
 ! Save Cusp, drizzle, alfa and nflux to secondary history to plot later
 !     call addfld ('CUSP','2D CUSP','0-1',
 !    |  cusp2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
 !     call addfld ('DRIZZLE','2D DRIZZLE','0-1',
 !    |  drzl2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('ALFA','2D ALFA','keV',
-!    |  alfa2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld ('ALFA','2D ALFA','keV',
+     |  alfa2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
 !     call addfld ('NFLUX','2D NFLUX','#/cm2-s',
 !    |  nflx2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('EFLUX','2D EFLUX','mW/m^2',
-!    |  eflux2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld ('EFLUX','2D EFLUX','mW/m^2',
+     |  eflux2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
 ! Call dynamo if namelist input flag is set:
       call timer(time0_dynamo,time1_dynamo,'DYNAMO',0,0)
@@ -748,7 +875,7 @@
 !   (i.e., rindex will be either ctpoten_time or power_time from input).
 ! Note times in seconds are 8-byte integers.
 !
-      use params_module,only: 
+      use params_module,only: spval,ispval,
      |  mxind_time ! max number of time-dependent solar index points
       use input_module,only: indices_interp
       implicit none

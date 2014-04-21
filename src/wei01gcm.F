@@ -203,41 +203,6 @@
 !
       end subroutine weimer01
 !-----------------------------------------------------------------------
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      SUBROUTINE CVT2MD(MSGUN,IYEAR,NDA,MON,DAY)
-C     SUBROUTINE CVT2MD(MSGUN,IYEAR,NDA,MMDD)
-C          This sub converts NDA, the day number of the year, IYEAR,
-C          into the appropriate month and day of month (integers)
-      implicit none
-      integer :: msgun,iyear,nda,mon,miss,numd,i,mmdd
-      INTEGER DAY
-      INTEGER LMON(12)
-      PARAMETER (MISS=-32767)
-      SAVE LMON
-      DATA LMON/31,28,31,30,31,30,31,31,30,31,30,31/
- 
-      LMON(2)=28
-      IF(MOD(IYEAR,4) .EQ. 0)LMON(2)=29
- 
-      NUMD=0
-      DO 100 I=1,12
-      IF(NDA.GT.NUMD .AND. NDA.LE.NUMD+LMON(I))GO TO 200
-      NUMD=NUMD+LMON(I)
-  100 CONTINUE
-      WRITE(MSGUN,'('' CVT2MD:  Unable to convert year & day of year'',
-     +              I5,'','',I5,''to month & day of month'')')IYEAR,NDA
-      MMDD = MISS
-      MON = MISS
-      DAY = MISS
-      RETURN
-  200 MON=I
-      DAY=NDA-NUMD
-      MMDD = MON*100 + DAY
- 
-      RETURN
-!     END
-	end subroutine cvt2md
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 ************************ Copyright 1996,2001 Dan Weimer/MRC ***********************
 *
 * Subroutines to calculate the electric potentials from the "Weimer 2K" model of

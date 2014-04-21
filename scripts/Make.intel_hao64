@@ -21,6 +21,13 @@ DBGFLAGS += -check bounds -check format -check output_conversion -check pointers
 OPTIM    = -O3
 LIBS     = -lcurl
 HOST     = $(shell hostname)
+
+# kameleon libraries
+KAMELEON_LIB_DIR=/home/emery/kameleon/fortran_test_24mar14
+KAMELEON_LIB_PLUS=${KAMELEON_LIB_DIR}/kameleon_drivers/build/interpolator_wrapper.a
+CDF_LIB=${KAMELEON_LIB_DIR}/cdf35_0-dist/src/lib/libcdf.a
+KAMELEON_LIB=${KAMELEON_LIB_PLUS} ${CDF_LIB}
+LIBS    += -lm -lstdc++ ${KAMELEON_LIB}
 #
 # Library and Include file paths:
 #

@@ -59,8 +59,16 @@
      |  dphi, ! delta latitude geographic (radians)
      |  dtr,  ! degrees to radians (pi/180)
      |  pi    ! 4.*atan(1.)
-      use params_module,only: nlon,nlonp4,nlevp1,nlat
+      use params_module,only: nlon,nlonp4,nlevp1,nlat,nlatp1,nlonp1
       use addfld_module,only: addfld
+      use input_module,only:  ! from user input
+     |  potential_model,  ! electric potential model used
+     |  irdpot   !  flag (2,1,0) if have outside 2 (epot and aurora gekev+gmwpm2), 
+!                   1 (epot only), or 0 (internal W05 or Heelis epot) for the 
+!                   electric potential (epot) from the potential_model used
+!#if defined(INTERCOMM) || defined(CISMAH)
+!      use cism_coupling_module,only: geng,gflx     !CISM
+!#endif
       implicit none
 !
 ! VT vampir tracing:
@@ -187,7 +195,7 @@
      |  drizl(nlonp4),cusp(nlonp4),                 ! polar drizzle and cusp
      |  qteaur(nlonp4,nlat),                        ! for electron temperature
      |  eflux(nlonp4),eflux2(nlonp4),eflux3(nlonp4) ! energy flux
-! 11/08 EMERY added energy flux eflux and eflux2d
+! 11/08 EMERY added energy flux eflux and eflux2d 
       real :: cusp2d(nlonp4,nlat),drzl2d(nlonp4,nlat),
      |        alfa2d(nlonp4,nlat),nflx2d(nlonp4,nlat),
      |        eflux2d(nlonp4,nlat)
@@ -196,6 +204,15 @@
 ! 
       real :: aureff(nlevp1)
       real :: bdriz(nlevp1)   ! vertical profile for background drizzle
+
+! 4/13 and 3/14 bae:  geographic ekev and mwpm2 auroral mean energies and fluxes 
+!   for irdpot>0 cases (ie, cmit, amie, kameleon)
+!   SH and NH poles at 0 and nlatp1 are REQUIRED for geo2mag and mag2geo!!
+!      real, dimension(nlonp1,0:nlatp1) :: gekev,gmwpm2
+!      real*8, dimension(nlonp4,nlat) ::
+       real*8, dimension(nlonp1,0:nlatp1) ::	! pole positions 0 and nlatp1 are not used in aurora
+     |     gekev, ! electron energy in keV in geographic coordinates (also at poles for mag2geo)
+     |     gmwpm2 ! electron energy flux mW/m2 in geographic coordinates (also at poles for mag2geo)
 !
 ! Subroutines internal to aurora module.
       contains
@@ -209,8 +226,7 @@
       use input_module,only:  ! from user input
      |  byimf,   ! BY component of IMF (nT)      (e.g., 0.)
      |  ctpoten, ! cross-cap potential (kV)      (e.g., 45.)
-     |  power,   ! hemispheric power   (GW)      (e.g., 16.)
-     |  potential_model  ! electric potential model used
+     |  power    ! hemispheric power   (GW)      (e.g., 16.)
 !
 ! Args:
       integer,intent(in) :: iprint
@@ -279,6 +295,7 @@
       endif
 
       plevel = 0.
+! 4/13 bae:  power is reset in amie or kameleon if used
 ! 8/1/06 btf: change conditional as per Richmond suggestion:
 !     if (power >= 0.01) plevel = 2.09*alog(power)
       if (power >= 1.00) plevel = 2.09*alog(power)
@@ -308,6 +325,10 @@
       h2=2.5+0.025*max(power,55.)+0.01*min(0.,power-55.)
       rh = (h2 - h1) / (h1 + h2)
 !
+! 4/13 bae:  It is possible that CMIT, AMIE or kameleon change theta0 etc
+!  When epot is set (e.g. irdpot>0), theta0 is already found.
+!   Setting offa,dskofa,arad,rrad is irrelevant for irdpot=2, but default needed for irdpot=1
+      if (irdpot>0) go to 101
       theta0(isouth) = (-3.80+8.48*(ctpoten**0.1875))*dtr
 #if defined(INTERCOMM) || defined(CISMAH)
 ! Set theta0 = 10 deg so crit(1,2)=15,30 (old values in cons.F) in colath.F for CISM
@@ -315,7 +336,7 @@
 !     theta0(isouth) = 10.*dtr
 #endif
       theta0(inorth) = theta0(isouth)
-      offa(isouth) = 1.0*dtr
+ 101  offa(isouth) = 1.0*dtr
       offa(inorth) = 1.0*dtr
       dskofa(isouth) = 0.
       dskofa(inorth) = 0.
@@ -393,11 +414,13 @@
 ! tiegcm original with assymmetry and By effect
 !     write(6,"(/,'byloc (local by)=',f8.3)") byloc
 
+! 4/13 bae:  It is possible that AMIE or kameleon change offc etc
+      if (irdpot>0) go to 102
       offc(isouth) = 1.1*dtr
-      offc(inorth) = 1.1*dtr
+      offc(inorth) = offc(isouth)
       dskofc(isouth) = (-0.08 + 0.15*byloc)*dtr
       dskofc(inorth) = (-0.08 - 0.15*byloc)*dtr
-      phid(isouth) = (9.39 + 0.21*byloc - 12.) * h2deg * dtr
+ 102  phid(isouth) = (9.39 + 0.21*byloc - 12.) * h2deg * dtr
       phid(inorth) = (9.39 - 0.21*byloc - 12.) * h2deg * dtr
       phin(isouth) = (23.50 + 0.15*byloc - 12.) * h2deg * dtr
       phin(inorth) = (23.50 - 0.15*byloc - 12.) * h2deg * dtr
@@ -414,6 +437,8 @@
 ! Report to stdout:
       if (iprint > 0) then
         write(6,"(/,'aurora_cons:')")
+        write(6,"('  irdpot,ctpoten,theta0,offc,dskofc =',i2,7f8.3)")
+     |    irdpot,ctpoten,theta0/dtr,offc/dtr,dskofc/dtr
         write(6,"('  cusp:    alfac=',f8.3,' ec=',f8.3,' fc=',e12.4)")
      |    alfac,ec,fc
         write(6,"('  drizzle: alfad=',f8.3,' ed=',f8.3,' fd=',e12.4)")
@@ -431,6 +456,73 @@
         write(6,"(' ')")
       endif
       end subroutine aurora_cons
+!-----------------------------------------------------------------------
+      subroutine calc_hp(nmlat,nmlon,nlonef,gmlatdeg,efmwpm2,hpsh,hpnh)
+!
+! 4/14 bae:  NOTE:  This subroutine is ONLY correct if nproc=1, or if have full array from amie.F
+! 3/14 bae: calc_hp adds calculation of sh and nh HP from efmwpm2(nmlon,nmlat)
+! 8/13 bae:  may want to alter power=0.5*(hpsh+hpnh) in advance.F for cusp and drizzle in aurora_cons
+!
+! Args:
+      integer,intent(in) :: nmlat,nmlon,nlonef
+      real,intent(in) :: gmlatdeg(nmlat),efmwpm2(nlonef,nmlat)
+      real,intent(out) :: hpsh,hpnh
+!
+      real, parameter :: Re=6371.e+3  ! radius of the Earth in m at the level of the ionosphere (use 6370e+3 in MIX)
+!
+! Local:
+      integer :: nl4,i,jj,j
+      real :: areatot,dmlat,dlonm
+      real, dimension(nmlat) :: da
+
+! Can calculate HP in geographic or magnetic coords
+      dlonm = 360./nmlon 
+      areatot = 0.
+      do j=1,nmlat
+       if (j==nmlat) then
+        dmlat = 90.- abs(gmlatdeg(j))+0.5*abs(gmlatdeg(j)-gmlatdeg(j-1))
+       elseif (j==1) then
+        dmlat = 90.- abs(gmlatdeg(j))+0.5*abs(gmlatdeg(j)-gmlatdeg(j+1))
+       else
+        dmlat = 0.5*abs(gmlatdeg(j+1)-gmlatdeg(j-1))
+       endif
+       da(j) = Re*cos(gmlatdeg(j)*dtr)*dlonm*dtr*(Re*dmlat*dtr)
+       areatot = areatot + da(j)*nmlon
+      enddo
+
+! Calculate Hemispheric power (HP) for each hemisphere from the pole to near equator (nmlat/2)
+! SH
+      nl4 = nmlat/2
+
+      hpsh = 0.
+       do j=1,nl4
+      do i=1,nmlon
+        hpsh = hpsh + da(j)*efmwpm2(i,j)
+       enddo
+      enddo
+	
+      hpnh = 0.
+       do jj=1,nl4
+      do i=1,nmlon
+	j = nmlat - jj + 1
+        hpnh = hpnh + da(j)*efmwpm2(i,j)
+       enddo
+      enddo
+
+! Convert from mW/m2 * m2(da) * 1.e-12GW/mW to GW
+      hpsh = hpsh*1.e-12  
+      hpnh = hpnh*1.e-12  
+
+! TEMP - hpsh and hpnh only good if have WHOLE efmwpm2 array or if nproc=1
+!	write (51,"('hpsh hpnh =',2f8.2)") hpsh,hpnh
+!	write (51,"('gmlatdeg =',10f8.2)") gmlatdeg
+!        write (51,"('da =',10e12.4)") da
+!        do j=1,nmlat
+!         write (51,"('j =',i3)") j
+!         write(51,"('efmwpm2(i,j)=',10e12.4)")(efmwpm2(i,j),i=1,nmlon)
+!        enddo
+   
+      end subroutine calc_hp
 !-----------------------------------------------------------------------
       subroutine aurora(tn,o2,o1,n2,barm,lev0,lev1,lon0,lon1,lat)
 !
@@ -615,9 +707,6 @@
 ! Calculate alfa, flux, and drizzle.
 !
       use params_module,only: nlon,nlonp2
-#if defined(INTERCOMM) || defined(CISMAH)
-      use cism_coupling_module,only: geng,gflx     !CISM
-#endif
 !
 ! Args:
       integer,intent(in) :: lat
@@ -628,7 +717,6 @@
      |  coslamda,  ! cos(angle from throat)
      |  halfwidth, ! oval 1/e-width
      |  dtheta     ! latitudinal variation (Gaussian)
-
 !
 ! Low-energy protons:
 !     alfap0 = 0.5*(alfap1+alfap2)
@@ -692,6 +780,41 @@
 !
 ! For electron temperature (used in settei):  
         qteaur(i+2,lat) = -7.e+8*exp(-(dtheta(i)/halfwidth(i))**2)
+!
+! Recalculate alfa, flux, drizl if a CISM, AMIE or kameleon run:
+        if (irdpot==2) then
+!#if defined(INTERCOMM) || defined(CISMAH)
+! Replacing with M-I coupler values. Warning: alfa and flux can not be
+! zero, otherwise the model will blow up. Set to small values here. This
+! will not change simulations.
+!                                                        Wenbin  Wang
+! NOTE: ting_eng_interp is divided by 2 from MIX before entering TIEGCM, but gekev=2*ting_eng_interp
+!       ting_
+!         alfa(i+2)=max(0.01,geng(i+2,lat))
+!         flux(i+2)=max(0.01,gflx(i+2,lat))
+!         eflux(i+2) = flux(i+2)*fac_p2e*alfa(i+2)
+!#else
+! Ensure ekvg mean energy >= 1. (mean energy/2=characteristic energy) for AMIE or kameleon
+!   and CHANGE gekev instead of just setting alfa=max(0.5,gekev/2)
+          gekev(i,lat) = max(1.,gekev(i,lat))
+          alfa(i+2) = gekev(i,lat)/2.
+          flux(i+2) = gmwpm2(i,lat)/(2.*alfa(i+2)*1.602e-9)
+          eflux(i+2) = gmwpm2(i,lat)
+! May have more for amie run
+!          clat = acos(sin(abs(dlat_aur(i))))
+!          alfa2(i+2) = alfa20
+!          drizl(i+2) = exp(-((clat-rradp(ihem)+
+!     |      abs(clat-rradp(ihem)))/(1*s10))**2)
+!          flux2(i+2) = e20*(1.-re2*coslamda(i))*
+!     |      exp(-((clat-rrad(ihem))/
+!     |      halfwidth(i))**2) / (2.*alfa2(i+2)*1.602E-9)
+!          eflux2(i+2) = flux2(i+2)*fac_p2e*alfa2(i+2)
+!#endif
+       else
+! For irdpot=0 or 1, use gmwpm2 array to store eflux in later calculation of HP in calc_hp
+! 4/14 bae:  This save of gmwpm2 only works for 1 hemisphere unless nproc=1, same as eflux2d
+          gmwpm2(i,lat) = eflux(i+2)
+        endif	! if (irdpot==2) then
       enddo ! i=1,nlon
 !
 ! Periodic points:
@@ -720,22 +843,6 @@
         qteaur(nlonp2+i,lat)= qteaur(i+2,lat)
       enddo
 !
-! Replacing with M-I coupler values. Warning: alfa and flux can not be
-! zero, otherwise the model will blow up. Set to small values here. This
-! will not change simulations.
-!                                                        Wenbin  wang
-!
-#if defined(INTERCOMM) || defined(CISMAH)
-      do i=1,nlonp4
-       alfa(i)=geng(i,lat)+0.01
-       flux(i)=gflx(i,lat)+0.01
-       if(alfa(i)<=0.)alfa(i)=0.01
-       if(flux(i)<=0.)flux(i)=0.01
-       eflux(i) = flux(i)*fac_p2e*alfa(i)
-!       write(6,*)alfa(i),flux(i),i,lat
-      enddo
-#endif
-
       end subroutine aurora_heat
       end module aurora_module
 !-----------------------------------------------------------------------
@@ -954,7 +1061,8 @@
 !
 ! Extrapolate lower boundary:
 ! TIEGCM-1.9x bug fix from Wenbin's old LTR/CMIT-2.5 code
-#if defined(INTERCOMM) || defined(CISMAH)
+! 8/13 bae:  Prevent extrapolations less than 0 at lb so use CISM fix always
+!!#if defined(INTERCOMM) || defined(CISMAH)
         if(1.5*qo2p_aur(lev0,i) > 0.5*qo2p_aur(lev0+1,i))then
          qo2p(lev0,i,lat) = qo2p(lev0,i,lat)+1.5*qo2p_aur(lev0,i)-
      |     0.5*qo2p_aur(lev0+1,i)
@@ -975,18 +1083,18 @@
          qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
      |     0.5*qn2p_aur(lev0+1,i))
         endif
-#else
-        qo2p(lev0,i,lat) = qo2p(lev0,i,lat)+1.5*qo2p_aur(lev0,i)-
-     |    0.5*qo2p_aur(lev0+1,i)        
-        qop (lev0,i,lat) = qop (lev0,i,lat)+1.5*qop_aur (lev0,i)-
-     |    0.5*qop_aur (lev0+1,i)        
-        qn2p(lev0,i,lat) = qn2p(lev0,i,lat)+1.5*qn2p_aur(lev0,i)-
-     |    0.5*qn2p_aur(lev0+1,i)        
-        qnp (lev0,i,lat) = qnp (lev0,i,lat)+ .22/.7 * 
-     |    (1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i))
-        qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
-     |    0.5*qn2p_aur(lev0+1,i))        
-#endif
+!!#else
+!!        qo2p(lev0,i,lat) = qo2p(lev0,i,lat)+1.5*qo2p_aur(lev0,i)-
+!!    |    0.5*qo2p_aur(lev0+1,i)        
+!!        qop (lev0,i,lat) = qop (lev0,i,lat)+1.5*qop_aur (lev0,i)-
+!!     |    0.5*qop_aur (lev0+1,i)        
+!!        qn2p(lev0,i,lat) = qn2p(lev0,i,lat)+1.5*qn2p_aur(lev0,i)-
+!!     |    0.5*qn2p_aur(lev0+1,i)        
+!!        qnp (lev0,i,lat) = qnp (lev0,i,lat)+ .22/.7 * 
+!!     |    (1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i))
+!!        qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
+!!     |    0.5*qn2p_aur(lev0+1,i))        
+!!#endif
 !
 ! Extrapolate upper boundary:
         qo2p(lev1,i,lat)= qo2p(lev1,i,lat)+1.5*qo2p_aur(lev1-1,i)-

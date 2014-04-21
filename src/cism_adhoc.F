@@ -48,7 +48,8 @@
 ! M-I coupler 
 !
       use params_module,only: nlat,nlonp1 
-      use cism_coupling_module,only: gpot,geng,gflx,gpotm,
+!     use cism_coupling_module,only: gpot,geng,gflx,gpotm,
+      use cism_coupling_module,only: 
      |     ting_pot_interp,
      |     ting_eng_interp,
      |     ting_flux_interp

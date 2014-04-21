@@ -8,7 +8,6 @@
       use params_module,only: nlat,nlonp4,dz,nlon,dlev
       use magfield_module,only: bx,by,bz,bmod2 ! (nlonp4,-1:nlat+2)
       use addfld_module,only: addfld
-      use diags_module,only: mkdiag_BXYZ,mkdiag_BMAG
 !
 ! VT vampir tracing:
 !
@@ -188,11 +187,6 @@
         j0  = lat
         jp1 = lat+1
         jp2 = lat+2
-
-        call mkdiag_BXYZ('BX',    bx (lon0:lon1,lat),lon0,lon1,lat)
-        call mkdiag_BXYZ('BY',    by (lon0:lon1,lat),lon0,lon1,lat)
-        call mkdiag_BXYZ('BZ',    bz (lon0:lon1,lat),lon0,lon1,lat)
-        call mkdiag_BMAG('BMAG',bmod2(lon0:lon1,lat),lon0,lon1,lat)
 !
 ! Set tp's:
 ! 8/28/13: Wenbin says this is wrong, it should be using tn instead of
@@ -515,9 +509,9 @@
 
 !     call addfld('EXPLIC0',' ',' ',explicit(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('BX_OP',' ',' ',bx(lon0:lon1,:),
+!     call addfld('BX',' ',' ',bx(lon0:lon1,:),
 !    |  'lon',lon0,lon1,'lat',lat,lat,0)
-!     call addfld('BY_OP',' ',' ',by(lon0:lon1,:),
+!     call addfld('BY',' ',' ',by(lon0:lon1,:),
 !    |  'lon',lon0,lon1,'lat',lat,lat,0)
 !     call addfld('UI_VEL',' ',' ',ui(:,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -928,7 +922,7 @@
 ! Calculate O+ number flux in opflux for sub oplus (was sub opflux).
 !
       use cons_module,only: pi,rtd
-      use chapman_module,only: chi     ! was t2 in old sub opflux
+      use chapman_module,only: chi,slt     ! was t2 in old sub opflux
       use magfield_module,only: rlatm
 !
 ! Args:
@@ -938,11 +932,14 @@
 ! Local:
       integer :: i,lat
       real,parameter ::
+! Changes suggested by IT Lee to match COSMIC data observations
+     |  phid =  2.0e8, !To balance the reduce value in night *2.0e8,
+     |  phin = -1.0e8,
 !
-! phid changed from 2.0e8 to 0. by Wenbin Jan, 2014:
+! phid changed from 2.0e8 to 0. by Wenbin Jan, 2014: NOTE: DIFFERENT from IT Lee
 !    |  phid =  2.0e8,
-     |  phid =  0.,
-     |  phin = -2.0e8,
+!    |  phid =  0.,
+!    |  phin = -2.0e8,
      |  ppolar = 0.
       real :: a(lon0:lon1)   ! was t3 ("a" needs a better name)
       real :: fed(lon0:lon1) ! was t4
@@ -961,15 +958,53 @@
           endif
           fed(i) = phid*a(i)
           fen(i) = phin*a(i)
+!          if (chi(i,lat)-0.5*pi >= 0.) then
+!            opflux(i,lat) = fen(i)
+!          else
+!            opflux(i,lat) = fed(i)
+!          endif
+!          if ((chi(i,lat)*rtd-80.)*(chi(i,lat)*rtd-100.) < 0.) 
+!     |      opflux(i,lat) = .5*(fed(i)+fen(i))+.5*(fed(i)-fen(i))*
+!     |        cos(pi*(chi(i,lat)*rtd-80.)/20.)
+!
+!Revised new local time variation function to match the F3/C profiles
+!Added by ITL (IT Lee, ikkyu.itlee@gmail.com), 2012.05.19 at HAO
+!Only reduces the flux during early morning!   
           if (chi(i,lat)-0.5*pi >= 0.) then
-            opflux(i,lat) = fen(i)
+            if (slt(i,lat) < 12.) then
+              opflux(i,lat) = 0.25*fen(i)
+            else
+              opflux(i,lat) = fen(i)
+            endif
           else
             opflux(i,lat) = fed(i)
           endif
-          if ((chi(i,lat)*rtd-80.)*(chi(i,lat)*rtd-100.) < 0.) 
-     |      opflux(i,lat) = .5*(fed(i)+fen(i))+.5*(fed(i)-fen(i))*
-     |        cos(pi*(chi(i,lat)*rtd-80.)/20.)
-!
+
+!Day-night terminator zone 
+          if ((chi(i,lat)*rtd-80.)*(chi(i,lat)*rtd-100.) < 0.) then
+            if (slt(i,lat) < 12.) then
+              opflux(i,lat) = .5*(fed(i)+0.5*fen(i))+
+     |                        .5*(fed(i)-0.5*fen(i))*
+     |                        cos(pi*(chi(i,lat)*rtd-80.)/20.)
+            else
+              opflux(i,lat) = .5*(fed(i)+fen(i))+.5*(fed(i)-fen(i))*
+     |                        cos(pi*(chi(i,lat)*rtd-80.)/20.)
+            endif
+          endif
+
+!midnight zone
+          if ((chi(i,lat)*rtd-160.)*(chi(i,lat)*rtd-180.) <= 0.) then
+            if (slt(i,lat) < 12.) then
+              opflux(i,lat) = 0.75*fen(i)+.25*fen(i)*
+     |                        cos(0.5*pi+pi*(chi(i,lat)*rtd-160.)/20.)
+            else
+              opflux(i,lat) = .5*(fen(i)+0.75*fen(i))+
+     |                        .5*(fen(i)-0.75*fen(i))*
+     |                        cos(pi*(chi(i,lat)*rtd-160.)/20.)
+            endif
+          endif 
+
+
 ! Add ppolar if magnetic latitude >= 60 degrees:
           if (abs(rlatm(i,lat))-pi/3. >= 0.) 
      |      opflux(i,lat) = opflux(i,lat)+ppolar

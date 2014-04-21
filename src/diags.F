@@ -12,8 +12,9 @@
 !
       use mpi_module,only: mytid
       use addfld_module,only: addfld
-      use params_module,only: dlev
+      use params_module,only: dlev,nlonp4,nlat
       implicit none
+
       integer,parameter :: 
      |  longname_len  = 80, ! length of field long name 
      |  shortname_len = 16, ! length of field short name 
@@ -32,6 +33,7 @@
         character(len=shortname_len) :: caller   ! File or sub that calls mkdiag_xxx
       end type diag_type
       type(diag_type) :: diags(ndiag)
+      real :: qji_integ2d(nlonp4,nlat)
 
       contains
 !-----------------------------------------------------------------------
@@ -1226,7 +1228,7 @@
 !
 ! Local:
       integer :: k,i
-      real,dimension(lon0:lon1) :: qji_integ
+      real,dimension(lon0:lon1) :: qji_integ	
       real,dimension(lev0:lev1,lon0:lon1) :: qj
       real :: myp0,mygrav
       integer,save :: ix=0,firstcall=0
@@ -1245,18 +1247,23 @@
       qji_integ = 0.
       do i=lon0,lon1
         do k=lev0,lev1-1
-          qji_integ(i) = qji_integ(i) + myp0/mygrav*exp(-zpint(k))*
-     |      qj(k,i)*dlev
+          qji_integ(i) = qji_integ(i) + myp0/mygrav*
+     |      exp(-zpint(k))*qj(k,i)*dlev
         enddo
       enddo
 !
 ! Output in CGS units, to be consistent w/ the model:
 ! (note that 1 erg/cm^2/s == 1 mW/m^2)
-      qji_integ = qji_integ*1000. ! W/m^2 to erg/cm^2/s
+       qji_integ = qji_integ*1000. ! W/m^2 to erg/cm^2/s
+
+      do i=lon0,lon1
+       qji_integ2d(i,lat) = qji_integ(i)
+      enddo
 !
 ! Save 2d field on secondary history:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,qji_integ,'lon',lon0,lon1,'lat',lat,lat,0)
+     |  diags(ix)%units,qji_integ,'lon',lon0,lon1,
+     |  'lat',lat,lat,0)
 
       end subroutine mkdiag_QJOULE_INTEG
 !-----------------------------------------------------------------------

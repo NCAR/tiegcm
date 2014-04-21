@@ -23,6 +23,9 @@
      |     nlon,   ! number of geographic longitudes (at 5 deg, nlon=72)
      |     nlonp1, ! nlon+1
      |     nlonp4  ! nlon+4
+      use aurora_module,only:	! (nlonp1,0:nlatp1)
+     |     gekev, ! electron energy in keV in geographic coordinates (also at poles for mag2geo)
+     |     gmwpm2 ! electron energy flux mW/m2 in geographic coordinates (also at poles for mag2geo)
 
       real*8, dimension(nlat,nlonp1) ::
      |     ting_pot_interp,  ! potential in geo coord from MIX
@@ -33,9 +36,9 @@
      |     ting_hall,    ! Temp array --> gzigm2
      |     ting_gnsrhs  ! Temp array --> gnsrhs
       real*8, dimension(nlonp4,nlat) ::
-     |     gpot, ! potential in geographic coordinates, periodic bound.
-     |     geng, ! energy in geographic coordinates, periodic boundary
-     |     gflx  ! flux in geographic coordinates, periodic boundary
+     |     gpot ! potential in geographic coordinates, periodic bound.
+!     |     geng, ! characteristic energy in geographic coordinates, periodic boundary
+!     |     gflx  ! number flux in geographic coordinates, periodic boundary
 
 !     Note: gpotm latitude dimension is defined to match mag2geo
 !     specifications.
@@ -62,24 +65,30 @@
       end subroutine initialize
 !-----------------------------------------------------------------------
       subroutine import
+!!      subroutine import (model_hpi)
 ! 1.  Receive arrays
 !       - ting_pot_interp
 !       - ting_eng_interp
 !       - ting_flx_interp
 !     from MIX on process zero.
 ! 2.  Broadcast to all MPI tasks
-! 3.  Set to gpot, gpotm, geng, gflx with periodic boundary
+! 3.  Set to gpot, gpotm, geng, gflx (gpot,m with periodic boundary; 
+!     geng,gflx,gpotm at poles also)
 ! 4.  Clean up pole values for Dynamo solver.
 !
       use input_module,only: ctpoten
       use mpi_module,only: mytid
 #ifdef MPI
       use mpi_module,only: mytid, handle_mpi_err
+! Args:
 #include <mpif.h>
       integer iErr
 #endif
+!!      real,intent(out) :: model_hpi(2)
       integer ii,jj,js,jn
       real cpmaxsh,cpminsh,cpmaxnh,cpminnh
+! 11/08 EMERY added eflux=flux*fac_p2e*alfa   (fac_p2e=2*1.602e-9, so 2*alfa in this factor)
+      real, parameter:: fac_p2e = 3.204e-9 ! convert from particle to energy flux
 
       write(6,"(A,I1,A)") "TIEGCM (",mytid,"): inside receive"
 
@@ -118,13 +127,22 @@
 
       do jj=1,nlat
          do ii=1,nlon
-            ! Note ii+2 skips over period points.
+            ! Note ii+2 skips over period points, where geng, and gflx don't have them
+! NOTE:  ting_eng_interp is divided by 2 from MIX before entering TIEGCM so geng is alfa 
+!        ting_flux_interp is the number flux from MIX so gflx is electron number flux
             gpot(ii+2,jj)=ting_pot_interp(jj,ii) !/1.2
-            geng(ii+2,jj)=ting_eng_interp(jj,ii)
-            gflx(ii+2,jj)=ting_flux_interp(jj,ii)
+!           geng(ii+2,jj)=ting_eng_interp(jj,ii)
+!           gflx(ii+2,jj)=ting_flux_interp(jj,ii)
          enddo
          do ii=1,nlonp1
             gpotm(ii+2,jj)=ting_pot_interp(jj,ii)
+! NOTE:  ting_eng_interp is divided by 2 from MIX before entering TIEGCM so multiply 
+!         gekev by 2 to get electron energy in keV 
+!        ting_flux_interp is the number flux from MIX so convert gmwpm2 to energy flux 
+!         in mW/m2 as gmwpm2=ting_flux_interp*fac_p2e*gekev/2 (where gekev/2=ting_eng_interp)
+            gekev(ii,jj)=ting_eng_interp(jj,ii) * 2.
+            gmwpm2(ii,jj)=ting_flux_interp(jj,ii)*fac_p2e*
+     |        ting_eng_interp(jj,ii)
          enddo
       enddo	
 
@@ -164,16 +182,20 @@
       do jj=1,nlat
          do ii=1,2
             gpot(ii,jj)=gpot(nlon+ii,jj)
-            geng(ii,jj)=geng(nlon+ii,jj)
-            gflx(ii,jj)=gflx(nlon+ii,jj)
+!            geng(ii,jj)=geng(nlon+ii,jj)
+!            gflx(ii,jj)=gflx(nlon+ii,jj)
             gpotm(ii,jj)=gpotm(nlon+ii,jj)
             
             gpot(nlonp1+ii+1,jj)=gpot(ii+2,jj)
-            geng(nlonp1+ii+1,jj)=geng(ii+2,jj)
-            gflx(nlonp1+ii+1,jj)=gflx(ii+2,jj)
+!            geng(nlonp1+ii+1,jj)=geng(ii+2,jj)
+!            gflx(nlonp1+ii+1,jj)=gflx(ii+2,jj)
             gpotm(nlonp1+ii+1,jj)=gpotm(ii+2,jj)
          enddo
       enddo
+
+! 08/13 bae:  Added call to calculate HP from geflux in SH and NH
+! 03/14 bae:  Deleted since model_hpi now found in aurora.F from gflx
+!     call cism_input_analysis (model_hpi)
 
 !!!
 !!!  08/11:  FIXME: While merging TIEGCM 1.94.1 into LTR-2.1.4-beta, I found
@@ -293,11 +315,23 @@
       call addfld('gpot','Potential from M-I Coupler (geographic)',' ', 
      |     gpot, 'lon',1,nlonp4,  'lat',1,nlat,  0)
       
+!      call addfld("geng",'Energy from M-I Coupler', ' ',
+!     |     geng, 'lon',1,nlonp4,  'lat',1,nlat,  0)
+!      
+!      call addfld("gflx",'Number Flux from M-I Coupler ', ' ', 
+!     |     gflx, 'lon',1,nlonp4,  'lat',1,nlat,  0)
+
       call addfld("geng",'Energy from M-I Coupler', ' ',
-     |     geng, 'lon',1,nlonp4,  'lat',1,nlat,  0)
+     |     ting_eng_interp, 'lon',1,nlonp1,  'lat',1,nlat,  0)
       
       call addfld("gflx",'Number Flux from M-I Coupler ', ' ', 
-     |     gflx, 'lon',1,nlonp4,  'lat',1,nlat,  0)
+     |     ting_flux_interp, 'lon',1,nlonp1,  'lat',1,nlat,  0)
+
+      call addfld("gekev",'Energy*2 from M-I Coupler', ' ',
+     |     gekev, 'lon',1,nlonp1,  'lat',1,nlat,  0)
+      
+      call addfld("gmwpm2",'Energy Flux from M-I Coupler ', ' ', 
+     |     gmwpm2, 'lon',1,nlonp1,  'lat',1,nlat,  0)
 
       call addfld('gpotm','Potential from M-I Coupler (geographic)',' ', 
      |     gpotm(:, 1:nlat), 'lon',1,nlonp4,  'lat',1,nlat,  0)
