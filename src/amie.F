@@ -26,12 +26,12 @@
 !  Do not know why UMI worked with ASTRA (larger) parameters for first day 5deg grid
       integer,parameter :: 
 !  SWMF in 3 1-day files of 289 times from 0-0(24)UT every 15 min
-     |  mxtimes = 289,  ! maximum number of times of AMIE data per file (Dec 13,14,15 5 min) + 1 for 0UT 
-     |  lonmx = 180,    ! maximum number of longitudes of AMIE data (1 less than grid), but SWMF is lonp1!
-     |  ithtrns = 89,   ! corresponding to trans lat 1 mlat number of AMIE lats minus 1
-     |  ithmx = 91,     ! max number of AMIE mlats (90/(5/3)=54+1) to equator
-     |  ifpole = 1,	 ! ifpole=1,0 if do,not have pole as endpoints
-     |  inmin = 15,     ! number of minutes between inputs, used only for corr SD and ASTRA
+!     |  mxtimes = 289,  ! maximum number of times of AMIE data per file (Dec 13,14,15 5 min) + 1 for 0UT 
+!     |  lonmx = 180,    ! maximum number of longitudes of AMIE data (1 less than grid), but SWMF is lonp1!
+!     |  ithtrns = 89,   ! corresponding to trans lat 1 mlat number of AMIE lats minus 1
+!     |  ithmx = 91,     ! max number of AMIE mlats (90/(5/3)=54+1) to equator
+!     |  ifpole = 1,	 ! ifpole=1,0 if do,not have pole as endpoints
+!     |  inmin = 15,     ! number of minutes between inputs, used only for corr SD and ASTRA
 ! Geoff Crowley's amie files:
 !  ASTRA AMIE is 40min MLTS 00-24(dup) or 37 times, 31 lats 90-40 1.67 deg, every 5 min
 !     |  mxtimes = 1153, ! maximum number of times of AMIE data per file (Dec 13-16 5 min) + 1 for 0UT Dec 17
@@ -65,12 +65,12 @@
 !     |  inmin = 10,     ! number of minutes between inputs, used only for corr SD and ASTRA
 !  Virginia Tech SuperDARN north and south 4 days 10min UT 142*4=568 missing 20 min 2350-0010!
 !   180 2 deg 0-358mlon, 40 mlat 1 deg 50-89deg
-!     |  mxtimes = 570,  ! maximum number of times of AMIE data per file (Dec 13-16 10 min - 20min ~0UT) + 2 for endpts
-!     |  lonmx = 180,    ! maximum number of longitudes of AMIE data (1 less than grid)
-!     |  ithtrns = 40,   ! corresponding to trans lat 50 mlat number of AMIE lats minus 1 + pole
-!     |  ithmx = 91,     ! max number of AMIE mlats (90/1deg=90+1) to equator
-!     |  ifpole = 0,	! ifpole=1,0 if do,not have pole as endpoints
-!     |  inmin = 10,     ! number of minutes between inputs, used only for corr SD and ASTRA
+     |  mxtimes = 570,  ! maximum number of times of AMIE data per file (Dec 13-16 10 min - 20min ~0UT) + 2 for endpts
+     |  lonmx = 180,    ! maximum number of longitudes of AMIE data (1 less than grid)
+     |  ithtrns = 40,   ! corresponding to trans lat 50 mlat number of AMIE lats minus 1 + pole
+     |  ithmx = 91,     ! max number of AMIE mlats (90/1deg=90+1) to equator
+     |  ifpole = 0,	! ifpole=1,0 if do,not have pole as endpoints
+     |  inmin = 10,     ! number of minutes between inputs, used only for corr SD and ASTRA
 ! jmxm is odd for ifpole=1, even for ifpole=0 (SD) which includes 2 polar values also
      |  jmxm = 2*ithmx-ifpole ! maximum number of global latitudes 
 !                             !  (only one 0 mlat ifpole=1, or inbetween 2 pts for ifpole=0)
@@ -522,7 +522,7 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
 !             epot_xnh = max(epkv(nt,j+latp1,i),epot_xnh)
            enddo
           enddo
-          if (nt==2) write (52,"(i1,' iamie Superdarn Dec06 CP'/
+          if (nt==2) write (52,"(i1,' iamie Superdarn CP'/
      |     '  nt year nda mnpd cp_sh_kV cp_nh_kV ctpoten',
      |     ' nsh:epot,mlt,mlat xsh:epot,mlt,mlat nnh:epot,mlt,mlat',
      |     ' xnh:epot,mlt,mlat')") iamie
