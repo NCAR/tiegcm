@@ -720,8 +720,8 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
           amieminpdm1 = amieminpdm1 - 1440.
         endif
         delmin = amieminpd - amie_min(nt-1)
-        if (amie_day(nt-1)==modeltime(1) 
-     |    .and. amie_min(nt-1) .le. rmodelminpd) go to 100
+        if (amie_day(nt-1)==modeltime(1) .and. amieminpd .ge.
+     |    rmodelminpd .and. amie_min(nt-1) .le. rmodelminpd) go to 100
         if (amie_day(nt)==modeltime(1) .and. amieminpdm1 .le.   
      |   rmodelminpd .and. amie_min(nt) .ge. rmodelminpd) go to 101
        enddo
