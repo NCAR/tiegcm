@@ -898,7 +898,7 @@
 ! 4-d arrays for use in the model. It would be interesting to try reading
 ! only the subdomain directly from the file rather than the full domain.
 !
-      use input_module,only: dynamo
+      use input_module,only: dynamo,calc_helium
       use hist_module,only: sh
       use mpi_module,only: lon0,lon1,lat0,lat1
 !
@@ -963,6 +963,20 @@
 ! Zero out electric potential and return if DYNAMO flag is not set:
       if (trim(name)=='POTEN'.and.dynamo <= 0) then
         f4d(ix)%data = 0.
+        return
+      endif
+!
+! Zero out helium if requested by namelist calc_helium=0:
+      if (trim(name)=='HE'.and.calc_helium <= 0) then
+        f4d(ix)%data = 0.
+        write(6,"('rdf4d: namelist calc_helium=',i3,' -> am setting',
+     |    ' prognostic helium (HE) to zero.')") calc_helium
+        return
+      endif
+      if (trim(name)=='HE_NM'.and.calc_helium <= 0) then
+        f4d(ix)%data = 0.
+        write(6,"('rdf4d: namelist calc_helium=',i3,' -> am setting',
+     |    ' helium at time t-1 (HE_NM) to zero.')") calc_helium
         return
       endif
 !

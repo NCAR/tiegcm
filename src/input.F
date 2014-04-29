@@ -1,3 +1,4 @@
+#include <defs.h>
 !
       module input_module
 !
@@ -62,7 +63,8 @@
      |  ntask_lat,       ! number of tasks in latitude  dimension
      |  ntask_lon,       ! number of tasks in longitude dimension
      |  ntask_maglat,    ! number of tasks in mag latitude  dimension (not namelist)
-     |  ntask_maglon     ! number of tasks in mag longitude dimension (not namelist)
+     |  ntask_maglon,    ! number of tasks in mag longitude dimension (not namelist)
+     |  calc_helium      ! calculate helium if calc_helium=1, otherwise set he=0.
       real ::
      |  tide(10),        ! semidiurnal tide amplitudes and phases
      |  tide2(2),        ! diurnal tide amplitude and phase
@@ -173,7 +175,7 @@
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
-     |  f107a_time,hpss_path,current_pg,current_kq
+     |  f107a_time,hpss_path,current_pg,current_kq,calc_helium
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -273,6 +275,7 @@
       ntask_lon = ispval
       colfac  = spval
       joulefac= spval
+      calc_helium = ispval
 
       f107    = spval
       f107a   = spval
@@ -587,6 +590,28 @@
         joulefac = 1.5
         write(6,"('Input: Using default joulefac = ',f9.2)") joulefac
       endif
+!
+! If calc_helium == 1 then calculate helium, otherwise zero out helium.
+! 4/28/14: Note helium is not yet available at 2.5-degree resolution.
+!
+      if (calc_helium==ispval) then
+        calc_helium = 1
+        write(6,"('Input: Using default calc_helium = ',i3)")calc_helium
+      elseif (calc_helium <= 0) then
+        calc_helium = 0
+        write(6,"('Input: calc_helium=',i3,' -> will zero out ',
+     |    'helium.')") calc_helium
+      endif
+      if (calc_helium > 0) calc_helium=1
+#if (NLAT==72 && NLON==144)
+!     if (calc_helium == 1) then
+!       write(6,"(/,'>>> INPUT: Cannot calculate helium at 2.5-degree ',
+!    |    'resolution (laplacian coefficients are not available)')")
+!       write(6,"('Please set namelist calc_helium=0, or run the ',
+!    |    '5-degree resolution.')") 
+!       call shutdown('ERROR: calc_helium=1 at 2.5-degree resolution')
+!     endif
+#endif
 !
 ! 1/12/05 btf: removed old dynamo (was in dynamo_old.F)
 ! 6/11/08 btf: remove dynamo==0 option
@@ -1597,6 +1622,8 @@
       write(6,"('  colfac = ',f9.3,' (collision factor)')") colfac
       write(6,"('  joulefac = ',f9.3,' (joule heating factor)')") 
      |  joulefac
+      write(6,"('  calc_helium = ',i4,' (0/1 flag for helium)')") 
+     |  calc_helium
 
       write(6,"('If any of the following are spval (',e12.4,'),',
      |  ' they will be calculated',/,'during the simulation on a per ',

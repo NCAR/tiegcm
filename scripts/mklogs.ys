@@ -14,9 +14,9 @@ while ($nfound > 0) {
   while (<LOGFILE>) {
     $found = 0;
 #
-# Split line by colons:
+# Split line by the first colon only (limit=2):
 #
-    @taskinfo = split /:/,$_;
+    @taskinfo = split /:/,$_,2;
 #
 # Data is rest of line after first colon:
 #

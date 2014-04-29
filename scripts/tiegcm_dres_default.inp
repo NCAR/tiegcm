@@ -24,7 +24,7 @@
 ; Primary History parameters:
 ;
  HIST = 1,0,0
- OUTPUT = 'FOSTER.tiegcm_dres.pcntr_mareqx_smin_001.nc'
+ OUTPUT = 'tiegcm_dres.pcntr_mareqx_smin_001.nc'
  MXHIST_PRIM = 10
 ;
 ; Secondary History parameters:
@@ -32,7 +32,7 @@
  SECSTART = 80,1,0
  SECSTOP  = 81,0,0
  SECHIST  =  0,1,0
- SECOUT   = 'FOSTER.tiegcm_dres.scntr_mareqx_smin_001.nc'
+ SECOUT   = 'tiegcm_dres.scntr_mareqx_smin_001.nc'
  MXHIST_SECH = 24
  SECFLDS = 'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI',
            'TEC','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN',

@@ -117,7 +117,7 @@
       call vtbegin(115,ier)
 #endif
 !
-      write(6,"(/,'Enter advance: iter=',i6,' nstep=',i6)") iter,nstep
+      write(6,"(/,'Enter advance: iter=',i10,' nstep=',i10)") iter,nstep
       call timer(time0_init,time1_init,'INIT',0,0)
 !
 ! Init timestep index, modeltime, and nsecs:

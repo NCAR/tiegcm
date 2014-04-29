@@ -238,9 +238,9 @@
 !
 ! Report to stdout:
       write(6,"(/,'Model run initialization:')")
-      write(6,"('  nstep      = ',i6,4x,
+      write(6,"('  nstep      = ',i12,4x,
      |  '(Number of time steps this run)')") nstep
-      write(6,"('  iter       = ',i6,4x,
+      write(6,"('  iter       = ',i12,4x,
      |  '(Initial iteration number)')") iter
       write(6,"('  iyear      = ',i6,4x,
      |  '(Beginning calendar year)')") iyear

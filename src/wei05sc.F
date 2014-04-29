@@ -596,6 +596,7 @@
       sinpm(:) = sin(phim(:))
 !
       z = 0.
+      skip = 0 ! Added by B.Foster, 4/23/14
       do j=1,csize
         if (skip == 1) then
           skip = 0
@@ -645,6 +646,7 @@
       sinpm(:) = sin(phim(:))
 !
       z = 0.
+      skip = 0 ! Added by B.Foster, 4/23/14
       jloop: do j=1,csize
         if (skip == 1) then
           skip = 0
@@ -693,6 +695,7 @@
       integer,save :: tablesize
 !
       scplm = 0.
+      skip = 0 ! Added by B.Foster, 4/23/14
       th0 = bndyfitr
       if (prevth0 /= th0) then
         tablesize = 3*nint(th0)

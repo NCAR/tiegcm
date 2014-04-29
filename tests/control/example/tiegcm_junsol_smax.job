@@ -1,87 +1,44 @@
 #!/bin/tcsh
-#
-# This script should be executed on the yellowstone command line. It will 
-# compile in execdir on the interactive login node, then create and submit 
-# an LSF script (also in execdir), based on the #BSUB resources specified below.
-#
-# Set shell variables and BSUB settings below:
-#
-#   modeldir:  Root directory to model source (may be an SVN working dir)
-#   execdir:   Directory in which to build and execute (will be created if necessary)
-#   input:     Namelist input file (will use default if not provided)
-#   output:    Stdout file from model execution (will be created)
-#   make:      Build file with platform-specific compile parameters (in scripts dir)
-#              Supported compiler files: Make.intel_ys or Make.pgi_ys
-#   mpi:       TRUE/FALSE for MPI or non-MPI run (for non-mpi runs, lsf runscript is ignored)
-#   modelres:  Model resolution (5.0 or 2.5 degrees)
-#   debug:     If TRUE, build and execute a "debug" run
-#   exec:      If TRUE, execute the model (build only if FALSE)
-#   utildir:   Dir containing supporting scripts (usually $modeldir/scripts)
-#   runscript: LSF script with run commands (submitted with bsub from execdir)
-#
-# Use the "modules" command on yellowstone to load/unload compilers, libs, etc:
-#   module list     Get list of currently loaded modules
-#   module avail    See which modules are available in your current setup
-#   module load     Load one or more available modules
-#   module switch   Switch between modules (e.g., compilers)
-# See also the module man page on yellowstone.
-#
-# To switch compilers (default is intel):
-#   From intel to pgi: type "module switch intel pgi", and use Make.pgi_ys below
-#   From pgi to intel: type "module switch pgi intel", and use Make.intel_ys below
-#
- set modeldir = /glade/u/home/$user/tiegcm1.95
- set execdir  = /glade/scratch/$user/tiegcm1.95/tiegcm_junsol_smin-ys
- set input    = tiegcm_junsol_smin.inp
- set output   = tiegcm_junsol_smin.out
- set modelres = 5.0
-#
-# Intel *or* PGI modules must be loaded on yellowstone (see comment above)
- set make     = Make.intel_ys
-#set make     = Make.pgi_ys
 
+set modeldir  = ../../
+set execdir   = /glade/scratch/foster/tiegcm_trunk/control/tiegcm-ys
+set input     = tiegcm_junsol_smax.inp
+set output    = junsol_smax_out/tiegcm_junsol_smax.out
+set modelres  = 5.0
+set make      = Make.intel_ys
 set mpi       = TRUE
 set debug     = FALSE
 set exec      = TRUE
 set utildir   = $modeldir/scripts
-set runscript = run.lsf
+set runscript = run_junsol_smax.lsf
 
-set execdir   = `perl $utildir/abspath $execdir`
-set runscript = `perl $utildir/abspath $runscript`
+set execdir   = `perl $modeldir/scripts/abspath /glade/scratch/foster/tiegcm_trunk/control/tiegcm-ys`
+set runscript = `perl $modeldir/scripts/abspath run_junsol_smax.lsf`
+
 if (! -d $execdir) mkdir -p $execdir
-#
-# Set LSF resource usage (create the runscript in execdir):
-# (run commands are appended to this script below)
-#
-cat << EOF >! $runscript
+
+cat << EOF_runscript >! run_junsol_smax.lsf
 #!/bin/tcsh
-#
-#BSUB -J tiegcm_junsol_smin
+#BSUB -J junsol_smax
 #BSUB -P P28100036
-##BSUB -q regular
 #BSUB -q premium
 #BSUB -o tiegcm.%J.out
 #BSUB -e tiegcm.%J.out
 #BSUB -N
 #BSUB -u $LOGNAME@ucar.edu
 #BSUB -W 0:30
-#
-# Recommended for single-res (5.0 deg) tiegcm:
-# -n16,ptile=16 (1 node, 16 procs/node)
 #BSUB -n 16
 #BSUB -R "span[ptile=16]"
-#
-# Recommended for double-res (2.5 deg) tiegcm: 
-# -n64,ptile=16 (4 nodes, 16 procs/node)
-##BSUB -n 64
-##BSUB -R "span[ptile=16]"
-#
-EOF
+EOF_runscript
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                               End user settings
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Update ESMF module on ys as of 4/14/14:
+ set lib_esmf = esmf-6.3.0r-ncdfio-mpi-O
+ module load esmf $lib_esmf
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"
@@ -217,7 +174,7 @@ echo "Begin building $model in `pwd`"
 #
 # Build Make.env file in exec dir, containing needed env vars for Makefile:
 #
-cat << EOF >! Make.env
+cat << EOF_env >! Make.env
 MAKE_MACHINE = $make
 DIRS         = . $srcdir 
 MPI          = $mpi
@@ -226,7 +183,7 @@ NAMELIST     = $input
 OUTPUT       = $output
 DEBUG        = $debug
 SVN_VERSION  = $svnversion
-EOF
+EOF_env
 #
 # Build the model:
 gmake -j8 all || echo ">>> Error return from gmake all" && exit 1
@@ -240,12 +197,12 @@ endif
 # (it has #BSUBs from above)
 #
 if ($mpi == "TRUE") then  # MPI LSF job
-  cat << EOF >> $runscript
+  cat << EOF_runscript >> $runscript
   setenv MP_LABELIO YES
   setenv MP_SHARED_MEMORY yes
   mpirun.lsf $model < $input >&! $output
   $mklogs $output
-EOF
+EOF_runscript
   echo " "
   echo "Submitting LSF script $runscript for MPI run"
   bsub < $runscript

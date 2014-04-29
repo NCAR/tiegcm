@@ -67,7 +67,7 @@
           write(6,"('Allocated 3d data for all fields on root task:')")
           len = nlevp1*nlonp4*nlat*nf4d
           write(6,"('  nlevp1*nlonp4*nlat*nf4d = ',i3,'*',i3,'*',
-     |      i3,'*',i3,' = ',i8,' words *8 = ',i8,' bytes.')")
+     |      i3,'*',i3,' = ',i10,' words *8 = ',i12,' bytes.')")
      |      nlevp1,nlonp4,nlat,nf4d,len,len*8
         endif
       endif

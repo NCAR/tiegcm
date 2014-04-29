@@ -1,38 +1,44 @@
-#! /bin/csh
-#
-# User set shell variables for TIEGCM Linux job:
-# (modeldir, execdir, and utildir may be relative or absolute paths)
-#
-#   modeldir: Root directory to model source (may be an SVN working dir)
-#   execdir:  Directory in which to build and execute (will be created if necessary)
-#   input:    Namelist input file (will use default if not provided)
-#   output:   Stdout file from model execution (will be created)
-#   make:     Build file with platform-specific compile parameters (in scripts dir)
-#   mpi:      TRUE/FALSE for MPI or non-MPI run
-#   nproc:    Number of processors for 64-bit Linux MPI run
-#   modelres: Model resolution (5.0 or 2.5)
-#   debug:    If TRUE, build and execute a "debug" run
-#   exec:     If TRUE, execute the model (build only if FALSE)
-#   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
-#
-set modeldir = /home/$user/tiegcm1.95
-set execdir  = tiegcm_linux
-set input    = tiegcm_junsol_smin.inp
-set output   = tiegcm_junsol_smin.out
-set make     = Make.intel_hao64
-set modelres = 5.0
-set mpi      = TRUE
-set nproc    = 4
-set debug    = FALSE
-set exec     = TRUE
-set utildir  = $modeldir/scripts
-# 
-# TGCMDATA can be set here, or in user's shell init file (e.g., .cshrc):
-#setenv TGCMDATA /hao/aim/$user/tiegcm1.95_data
+#!/bin/tcsh
+
+set modeldir  = ../../
+set execdir   = /glade/scratch/foster/tiegcm_trunk/control/tiegcm-ys
+set input     = tiegcm_mareqx_smax.inp
+set output    = mareqx_smax_out/tiegcm_mareqx_smax.out
+set modelres  = 5.0
+set make      = Make.intel_ys
+set mpi       = TRUE
+set debug     = FALSE
+set exec      = TRUE
+set utildir   = $modeldir/scripts
+set runscript = run_mareqx_smax.lsf
+
+set execdir   = `perl $modeldir/scripts/abspath /glade/scratch/foster/tiegcm_trunk/control/tiegcm-ys`
+set runscript = `perl $modeldir/scripts/abspath run_mareqx_smax.lsf`
+
+if (! -d $execdir) mkdir -p $execdir
+
+cat << EOF_runscript >! run_mareqx_smax.lsf
+#!/bin/tcsh
+#BSUB -J mareqx_smax
+#BSUB -P P28100036
+#BSUB -q premium
+#BSUB -o tiegcm.%J.out
+#BSUB -e tiegcm.%J.out
+#BSUB -N
+#BSUB -u $LOGNAME@ucar.edu
+#BSUB -W 0:30
+#BSUB -n 16
+#BSUB -R "span[ptile=16]"
+EOF_runscript
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                               End user settings
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Update ESMF module on ys as of 4/14/14:
+ set lib_esmf = esmf-6.3.0r-ncdfio-mpi-O
+ module load esmf $lib_esmf
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"
@@ -59,6 +65,7 @@ if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 
   exit 1
 endif
+set utildir = `perl $utildir/abspath $utildir`
 
 set srcdir  = $modeldir/src
 if (! -d $srcdir) then
@@ -66,11 +73,6 @@ if (! -d $srcdir) then
   exit 1
 endif
 set srcdir = `perl $utildir/abspath $srcdir`
-
-if (! -d $execdir) then
-  echo "Making exec directory $execdir" 
-  mkdir -p $execdir
-endif
 
 if ($modelres != 5.0 && $modelres != 2.5) then
   echo ">>> Unknown model resolution $modelres <<<"
@@ -95,10 +97,12 @@ else
     `perl $utildir/mknamelist -model=$model -modelres=$modelres` || \
      echo ">>> Error from mknamelist: fileout = $input" && exit 1
 endif
+
+set model  = $execdir/$model
 set input  = `perl $utildir/abspath $input`
 set output = `perl $utildir/abspath $output`
 set mklogs = `perl $utildir/abspath $utildir`
-set mklogs = $mklogs/mklogs
+set mklogs = $mklogs/mklogs.ys # special mklogs for yellowstone
 #
 # Report to stdout:
 #
@@ -108,8 +112,10 @@ echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
+echo "  Stdout Output:     $output"
 echo "  Model resolution:  $modelres"
-echo "  Debug flag:        $debug"
+echo "  Debug:             $debug"
+echo "  MPI job:           $mpi"
 #
 # If debug flag has changed from last gmake, clean execdir
 # and reset debug file:
@@ -124,6 +130,21 @@ if (-f $execdir/debug) then
 else
   echo $debug >! $execdir/debug
   echo "Created file debug with debug flag = $debug"
+endif
+#
+# If mpi flag has changed from last gmake, clean execdir
+# and reset mpi file:
+#
+if (-f $execdir/mpi) then
+  set lastmpi = `cat $execdir/mpi` 
+  if ($lastmpi != $mpi) then
+    echo "Clean execdir $execdir because mpi flag switched from $lastmpi to $mpi"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $mpi >! $execdir/mpi
+  endif
+else
+  echo $mpi >! $execdir/mpi
+  echo "Created file mpi with mpi flag = $mpi"
 endif
 #
 # Copy defs header file to execdir, if necessary, according to 
@@ -153,48 +174,46 @@ echo "Begin building $model in `pwd`"
 #
 # Build Make.env file in exec dir, containing needed env vars for Makefile:
 #
-cat << EOF >! Make.env
+cat << EOF_env >! Make.env
 MAKE_MACHINE = $make
 DIRS         = . $srcdir 
 MPI          = $mpi
-NPROC        = $nproc
 EXECNAME     = $model
 NAMELIST     = $input
 OUTPUT       = $output
 DEBUG        = $debug
 SVN_VERSION  = $svnversion
-EOF
+EOF_env
 #
 # Build the model:
-gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
+gmake -j8 all || echo ">>> Error return from gmake all" && exit 1
 #
-# Execute Linux job (MPI or non-MPI run):
+if ($exec == "FALSE") then
+  echo "Am NOT executing the model because exec = $exec"
+  exit 0
+endif
 #
-if ($exec == "TRUE") then
-  set model = ./$model
-  echo "$model output will go to $output"
-  if ($mpi == "TRUE") then
+# MPI/LSF job: append mpirun.lsf command to LSF script 
+# (it has #BSUBs from above)
 #
-# Files machines.ini and mpirun.command are made by the Make.machines file.
-    gmake machines.ini
-    gmake mpirun.command
-    set mpirun = `cat mpirun.command`
-    echo "Executing $mpirun with -np $nproc for Linux MPI run."
+if ($mpi == "TRUE") then  # MPI LSF job
+  cat << EOF_runscript >> $runscript
+  setenv MP_LABELIO YES
+  setenv MP_SHARED_MEMORY yes
+  mpirun.lsf $model < $input >&! $output
+  $mklogs $output
+EOF_runscript
+  echo " "
+  echo "Submitting LSF script $runscript for MPI run"
+  bsub < $runscript
 #
-# Execute mpirun (Intel or PGI) for MPI run:
-    $mpirun -machinefile machines.ini -np $nproc $model < $input >&! $output || \
-      echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
-      echo "See output in $output"
-    echo "Linux MPI run of $model completed at `date`"
-    perl $mklogs $output
-  else # MPI is FALSE
-    echo "Executing $model for Linux non-MPI run."
-    $model < $input >&! $output || \
-      echo ">>> ${0} Execution of $model FAILED at `date`" && \
-      echo "See output in $output"
-    echo "Linux non-MPI run of $model completed at `date`"
-  endif
+# Non-mpi job: simple execution statement on the interactive node.
+# If you want to submit lsf job, you can use a here-doc like above
+# to put the execution statement in the runscript, then submit with
+# bsub as above.
+#
 else
-  echo "I am NOT executing $model (exec was not set)"
+  echo "Executing serial non-MPI run in background on the interactive node.." 
+  $model < $input >&! $output &
 endif
 exit 0

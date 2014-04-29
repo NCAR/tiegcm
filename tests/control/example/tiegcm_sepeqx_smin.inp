@@ -2,54 +2,56 @@
 ;
 ; Namelist input file for model tiegcm
 ;
- LABEL = 'tiegcm junsol smin control run'
+ LABEL = 'tiegcm sepeqx_smin control equilibration run'
  START_YEAR = 2002
- START_DAY  = 172
+ START_DAY  = 264
  CALENDAR_ADVANCE = 1
 ;
 ; SOURCE:       Start-up history file (for initial runs only)
 ; SOURCE_START: Time of history on start-up file (initial runs only)
 ;
- SOURCE = '$TGCMDATA/tiegcm1.95/TGCM.tiegcm1.95.pcntr_junsol_smin.nc'
- SOURCE_START = 172,0,0
+ SOURCE = '/glade/p/hao/tgcm/data/tiegcm_trunk_dres/tiegcm_trunk.pcntr_sepeqx_smin.nc'
+ SOURCE_START = 264,0,0
 ;
 ; START: Start time (day,hour,minute)
 ; STOP:  Stop time (day,hour,minute)
 ; STEP:  Timestep (seconds)
 ;
- START = 172,0,0
- STOP  = 177,0,0
- STEP  = 120
+ START = 264,0,0
+ STOP  = 269,0,0
+ STEP  = 60
 ;
 ; Primary History parameters:
 ;
  HIST = 1,0,0
- OUTPUT = 'TGCM.tiegcm1.95.pcntr_junsol_smin_001.nc'
+ OUTPUT = 'tiegcm_trunk.pcntr_sepeqx_smin_001.nc'
  MXHIST_PRIM = 10
 ;
 ; Secondary History parameters:
 ;
- SECSTART = 172,1,0
- SECSTOP  = 177,0,0
- SECHIST  =   0,1,0
- SECOUT   = 'TGCM.tiegcm1.95.scntr_junsol_smin_001.nc','to',
-            'TGCM.tiegcm1.95.scntr_junsol_smin_005.nc','by','1'
+ SECSTART = 264,1,0
+ SECSTOP  = 269,0,0
+ SECHIST  =  0,1,0
+ SECOUT   = 'tiegcm_trunk.scntr_sepeqx_smin_001.nc','to','tiegcm_trunk.scntr_sepeqx_smin_005.nc','by','1'
  MXHIST_SECH = 24
- SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
-           'O2','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB',
-           'DEN','QJOULE','Z','ZG'
+ SECFLDS = TN,UN,VN,O2,O1,N2,NO,N4S,HE,NE,TE,TI,
+           TEC,O2P,OMEGA,POTEN,UI_ExB,VI_ExB,WI_ExB,DEN,
+           QJOULE,Z,ZG
 ;
 ; Diagnostic fields available with this release:
 ;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
 ;          'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
 ;          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M','O_N2','WN',
-;          'BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2'
+;          'BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2','PHIM2D','N2'
+;
+; These diagnostic currents are available only if icalkqlam==1 (dynamo.F)
+;	   'KQPHI','KQLAM','JQR','JE13D','JE23D' 
 ;
 ; If HPSS_PATH is set, a csh script will be made in the execdir that,
 ; when executed, will copy history disk files to the NCAR HPSS in the 
 ; directory HPSS_PATH (must have an HPSS account at NCAR CISL)
 ;
-;HPSS_PATH = '/home/tgcm/tiegcm_test/control'
+;HPSS_PATH = '/home/foster/tiegcm'
 ;
  TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2 = 0.,0.
@@ -58,10 +60,10 @@
 ; At 2.5 deg resolution, optionally use both migrating 
 ;   and non-migrating tides.
 ;
- GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_5.0d_99km.nc'
- GSWM_MI_SDI_NCFILE = '$TGCMDATA/gswm_semi_5.0d_99km.nc'
-;GSWM_NM_DI_NCFILE  = '$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc'
-;GSWM_NM_SDI_NCFILE = '$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc'
+ GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_2.5d_99km.nc'
+ GSWM_MI_SDI_NCFILE = '$TGCMDATA/gswm_semi_2.5d_99km.nc'
+ GSWM_NM_DI_NCFILE  = '$TGCMDATA/gswm_nonmig_diurn_2.5d_99km.nc'
+ GSWM_NM_SDI_NCFILE = '$TGCMDATA/gswm_nonmig_semi_2.5d_99km.nc'
 ;
 ; Potential model can be 'HEELIS' (optionally with GPI data),
 ; or 'WEIMER' (optionally with IMF data). If WEIMER, both IMF 
@@ -76,16 +78,16 @@
 ; must be commented out (data will be used for those that are commented
 ; out, otherwise the user-provided values will be used).
 ;
-;GPI_NCFILE = '$TGCMDATA/gpi_2000001-2011059.nc'
+;GPI_NCFILE = '$TGCMDATA/gpi_2000001-2013120.nc'
 ;
 ; If KP is specified, and POWER and/or CTPOTEN are commented,
 ; then the given KP will be used to calculate POWER and/or CTPOTEN
 ;
 ;KP = 2.0
- POWER   = 39.
- CTPOTEN = 60.
- F107    = 200.
- F107A   = 200.
+ POWER   = 18.
+ CTPOTEN = 30.
+ F107    = 70.
+ F107A   = 70.
 ;
 ; If potential model is WEIMER, data file IMF_NCFILE can be specified 
 ; to read one or more of BXIMF,BYIMF,BZIMF,SWVEL,SWDEN. If IMF_NCFILE 
@@ -100,6 +102,19 @@
 ;BZIMF   = -5.
 ;SWVEL   = 400.
 ;SWDEN   = 4.0
+;SEE_NCFILE = '$TGCMDATA/see__L3_merged_2005007_007.nc'
  AURORA = 1
  COLFAC = 1.5
+ DYNAMO = 1
+;
+; If CURRENT_PG=1, current due to plasma pressure gradient and gravity is calculated
+; and included as a forcing term in the dynamo equation (default=1) (ignored if DYNAMO=0)
+;
+ CURRENT_PG = 1
+;
+; If CURRENT_KQ=1, then height-integrated current density of current sheet, and
+; upward current density at the top of the ionosphere is calculated (default=0)
+; (ignored if DYNAMO=0) (see current.F90 to save JQR, JE13D, JE23D, KQPHI, KQLAM)
+;
+ CURRENT_KQ = 0
 /
