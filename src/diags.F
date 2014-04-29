@@ -1229,7 +1229,7 @@
 ! Local:
       integer :: k,i
       real,dimension(lon0:lon1) :: qji_integ	
-      real,dimension(lev0:lev1,lon0:lon1) :: qj
+      real,dimension(lev0:lev1,lon0:lon1) :: qj,qj_vol
       real :: myp0,mygrav
       integer,save :: ix=0,firstcall=0
 
@@ -1247,9 +1247,11 @@
       qji_integ = 0.
       do i=lon0,lon1
         do k=lev0,lev1-1
+          qj_vol(k,i) = myp0/mygrav*exp(-zpint(k))*qj(k,i)*1000.
           qji_integ(i) = qji_integ(i) + myp0/mygrav*
      |      exp(-zpint(k))*qj(k,i)*dlev
         enddo
+          qj_vol(lev1,i) = 2.*qj_vol(lev1-1,i) - qj_vol(lev1-2,i)
       enddo
 !
 ! Output in CGS units, to be consistent w/ the model:
@@ -1264,6 +1266,11 @@
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,qji_integ,'lon',lon0,lon1,
      |  'lat',lat,lat,0)
+
+! 01/14 bae: Save 3d QJOULE_VOL on secondary history also:
+      call addfld('QJOULE_VOL',
+     |  'QJOULE_VOL: 3d Joule Heating per volumn','mW/m3',
+     |  qj_vol,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       end subroutine mkdiag_QJOULE_INTEG
 !-----------------------------------------------------------------------

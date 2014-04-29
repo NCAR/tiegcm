@@ -8,7 +8,7 @@
 !       found from ctpoten in aurora_cons, where offc=1.1 deg and dskofc = -0.08 deg 
 !       (converted to radians).  In Weimer, theta0, offc, and dskofc are recalculated.
 !       (For Weimer 2005, offc=4.2 deg, dskofc = 0 deg, and theta0 = crad = bndyfitr/2)
-!       AMIE and CISM could: (1) use calccloc in wei01gcm.F to calculate theta0, offc, dskofc,
+!       AMIE and CISM could: (1) use calccloc to calculate theta0, offc, dskofc,
 !        from their potential patterns (where if Bz>0 and Bz>|By|, set theta0=10), 
 !        (2) let aurora_cons calculate theta0 from their ctpoten,
 !	 (3) use the old default crit(1,2) = 15,30 deg (in radians) from cons.F by not

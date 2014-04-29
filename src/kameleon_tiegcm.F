@@ -313,8 +313,8 @@ C 4/13 bae: use i=1,nlon of gekev and gmwpm2  in aurora.F and below, BUT nlonp1 
 
       call f_timeinterp_closeandcleanupmemory(tid)
 
-        call addfld('PHIHM',' ',' ',phihm,'mlon',1,nmlonp1,
-     |    'mlat',1,nmlat,0)
+        call addfld('PHIHM2D','2D KAMELEON-TYPE ELECTRIC POTENTIAL',
+     |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
         call addfld('TIEEKV',' ',' ',tieekv,'mlon',1,nmlonp1,
      |    'mlat',1,nmlat,0)
         call addfld('TIEEFX',' ',' ',tieefx,'mlon',1,nmlonp1,

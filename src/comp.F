@@ -20,6 +20,7 @@
       use fields_module,only: tlbc
       use addfld_module,only: addfld
       use diags_module,only: mkdiag_O_N2,mkdiag_N2
+      use input_module,only: calc_helium
       implicit none
 !
 ! Args:
@@ -116,17 +117,20 @@
         enddo ! i=lon0,lon1
       enddo ! lat=lat0,lat1
 !
-      call laplacian(flx_arg,flx_he,lon0,lon1,lat0,lat1)
-!
-      call addfld('FLX_ARG','UB Mass Flux of Helium ','g/cm^2',
+! Zero out helium flux if requested:
+      if (calc_helium==1) then
+        call laplacian(flx_arg,flx_he,lon0,lon1,lat0,lat1)
+        call addfld('FLX_ARG','UB Mass Flux of Helium ','g/cm^2',
      |  flx_arg(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
      |  lat0,lat1,0)
-      call addfld('FLX_HE','UB Mass Flux of Helium ','g/cm^2',
+        call addfld('FLX_HE','UB Mass Flux of Helium ','g/cm^2',
      |  flx_he(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
      |  lat0,lat1,0)
-!
-!    Debug
-!      flx_he(:,:)=0.
+      else
+        he_upd = 0.   ! 3d whole array op
+        henm_upd = 0. ! 3d whole array op
+        flx_he=0.     ! 2d whole array op
+      endif
 !
 ! Calculate and save horizontal advection in o2_advec, o1_advec, he_advec:
 !
@@ -805,7 +809,7 @@
       do k=lev0,lev1
         o2_upd(k,lon0:lon1,lat) = upd(k,:,io2)
         o1_upd(k,lon0:lon1,lat) = upd(k,:,io1)
-        he_upd(k,lon0:lon1,lat) = upd(k,:,ihe)
+        if (calc_helium==1) he_upd(k,lon0:lon1,lat) = upd(k,:,ihe)
       enddo ! k=lev0,lev1
 !
 ! Upper boundary:
@@ -819,19 +823,23 @@
      |    (1.-.5*ep(i,io1,kp)*dz)*o1_upd(lev1-1,i,lat)+
      |    (alpha23(i)-alpha22(i))*flx_he(i,lat)/
      |    (flx00(i)*(1./dz-0.5*ep(i,io1,kp)))
-        he_upd(lev1,i,lat) = 
-     |    (1.+.5*ep(i,ihe,kp)*dz)/
-     |    (1.-.5*ep(i,ihe,kp)*dz)*he_upd(lev1-1,i,lat)+
-     |    (alpha33(i)-alpha32(i))*flx_he(i,lat)/
-     |    (flx00(i)*(1./dz-0.5*ep(i,ihe,kp)))
+!
+! Calculate updated helium only if namelist calc_helium == 1:
+        if (calc_helium == 1) then
+          he_upd(lev1,i,lat) = 
+     |      (1.+.5*ep(i,ihe,kp)*dz)/
+     |      (1.-.5*ep(i,ihe,kp)*dz)*he_upd(lev1-1,i,lat)+
+     |      (alpha33(i)-alpha32(i))*flx_he(i,lat)/
+     |      (flx00(i)*(1./dz-0.5*ep(i,ihe,kp)))
+        endif
       enddo ! i=lon0,lon1
 !
 !       call addfld('O2_SOLV',' ',' ',o2_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
 !       call addfld('O1_SOLV',' ',' ',o1_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
-      call addfld('HE_SOLV',' ',' ',he_upd(:,lon0:lon1,lat),
-     |    'lev',k0,k1,'lon',i0,i1,lat)
+!     call addfld('HE_SOLV',' ',' ',he_upd(:,lon0:lon1,lat),
+!    |    'lev',k0,k1,'lon',i0,i1,lat)
 !
 ! End latitude scan:
       enddo ! lat=lat0,lat1
@@ -841,7 +849,8 @@
 ! Fourier smoothing of O2 and O:
       call filter_o2o(o2_upd,lev0,lev1,lon0,lon1,lat0,lat1)
       call filter_o2o(o1_upd,lev0,lev1,lon0,lon1,lat0,lat1)
-      call filter_o2o(he_upd,lev0,lev1,lon0,lon1,lat0,lat1)
+      if (calc_helium == 1)
+     |  call filter_o2o(he_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Resume latitude scan:
       do lat=lat0,lat1
@@ -857,8 +866,12 @@
      |        o2_upd(k,i,lat)) + dtsmooth*o2(k,i,lat)
             o1nm_upd(k,i,lat) = dtsmooth_div2*(o1_nm(k,i,lat)+
      |        o1_upd(k,i,lat)) + dtsmooth*o1(k,i,lat)
-            henm_upd(k,i,lat) = dtsmooth_div2*(he_nm(k,i,lat)+
-     |        he_upd(k,i,lat)) + dtsmooth*he(k,i,lat)
+!
+! Zero out helium at time t-1 if requested:
+            if (calc_helium==1) then
+              henm_upd(k,i,lat) = dtsmooth_div2*(he_nm(k,i,lat)+
+     |          he_upd(k,i,lat)) + dtsmooth*he(k,i,lat)
+            endif
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1 
 
@@ -883,11 +896,15 @@
           do k=lev0,lev1
             if (o2_upd(k,i,lat) < small) o2_upd(k,i,lat) = small
             if (o1_upd(k,i,lat) < small) o1_upd(k,i,lat) = small
-            if (he_upd(k,i,lat) < small_he) he_upd(k,i,lat) = small_he
+            if (calc_helium==1) then
+              if (he_upd(k,i,lat) < small_he) he_upd(k,i,lat) = small_he
+            endif
             if (o2nm_upd(k,i,lat) < small) o2nm_upd(k,i,lat) = small
             if (o1nm_upd(k,i,lat) < small) o1nm_upd(k,i,lat) = small
-            if (henm_upd(k,i,lat) < small_he)                         
-     |        henm_upd(k,i,lat) = small_he
+            if (calc_helium==1) then
+              if (henm_upd(k,i,lat) < small_he)
+     |          henm_upd(k,i,lat) = small_he
+            endif
             if (1.-small-o2_upd(k,i,lat)-o1_upd(k,i,lat)-
      |          he_upd(k,i,lat) < 0.) then
               normalize = (o2_upd(k,i,lat)+o1_upd(k,i,lat)+
@@ -900,8 +917,10 @@
      |                          normalize
               o1_upd(k,i,lat) = o1_upd(k,i,lat)*(1.-small)/
      |                          normalize
-              he_upd(k,i,lat) = he_upd(k,i,lat)*(1.-small)/
+              if (calc_helium==1) then
+                he_upd(k,i,lat) = he_upd(k,i,lat)*(1.-small)/
      |                          normalize
+              endif
             endif
             if (1.-small-o2nm_upd(k,i,lat)-o1nm_upd(k,i,lat)-
      |          henm_upd(k,i,lat) < 0.) then
@@ -911,8 +930,10 @@
      |                            normalize
               o1nm_upd(k,i,lat) = o1nm_upd(k,i,lat)*(1.-small)/
      |                            normalize
-              henm_upd(k,i,lat) = henm_upd(k,i,lat)*(1.-small)/
+              if (calc_helium==1) then
+                henm_upd(k,i,lat) = henm_upd(k,i,lat)*(1.-small)/
      |                            normalize
+              endif
             endif
 !
 ! Update N2. This is necessary only if n2 is to be saved on
@@ -1086,7 +1107,7 @@
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
       call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,
-     |  'o2o')
+     |  'O2O')
 #endif
 !
 ! Return filtered array to fout at current task longitudes and latitudes:

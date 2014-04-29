@@ -22,13 +22,9 @@
 !
 ! Args:
 ! pfrac:  Fractional presence of dynamo equation given critical 
-!           convection colatitudes crit(2).
+!           convection colatitudes crit(2) found in colath.F from advance.F
 ! phihm:  Heelis potential in magnetic coordinates (single level).
 !
-! Calculate pfrac fractional presence of dynamo equation using critical
-!  convection colatitudes crit(2).  (crit is in cons module)
-!
-      call colath
 !
 ! Calculate  the heelis potential phihm in geomagnetic coordinates:
 ! (potm calls sub flwv32)

@@ -588,6 +588,7 @@
      |     offc,   ! offc(2),   ! offset of convection towards 0 MLT relative to mag pole (rad)
      |     dskofc  ! dskofc(2)  ! offset of convection in radians towards 18 MLT (f(By))
       use cons_module,only: rtd
+      use input_module,only: ctpoten
       implicit none
 
 ! ... Arguments ........................................................ 
@@ -607,13 +608,21 @@
 !    the dawn-dusk dskofc is usually opposite signs in the hemispheres, and can be large
 !   If this is not the case, then revcloc needs to be changed to use the calculated offc,dskofc
 
-! TEMP
+! Set ctpoten for output as average of CP in both hemispheres for ifrdpot=1
+       ctpoten = 0.5*(model_ctpoten(1)+model_ctpoten(2))
+
+! TEMP to fort.51 like advance.F 
+!  NOTE:  With more than 1 processor, writing to fort.51 gives random results 
+!  Thus for nproc=4, often model_ctpoten=0, but if this is written to unit 6, print-out is good
         if (istep==1) write (51,"('calccloc: ',
      |   'istep,ifbad,radcen,theta0,offc,dskofc,model_ctpoten'/
      |   '     revcloc: theta0,offc,dskofc'/
      |   ' advance: istep,modeltime(dayn,hr,min,sec),model_hpi,power,',
      |   'power_ave,model_ctpoten,ctpoten,model_qj,qj_ave')")
 	write (51,"(1x,i10,2i2,10e12.4)")
+     |  istep,ifbad,radcen,theta0*rtd,offc*rtd,dskofc*rtd,model_ctpoten
+	write (6,"(1x,i10,2i2,10e12.4,' istep S,N: ifbad radcen theta0',
+     |  ' offc dskofc CP')")
      |  istep,ifbad,radcen,theta0*rtd,offc*rtd,dskofc*rtd,model_ctpoten
 
 ! Set default center of convection if desired (note, both CANNOT be zero!)
@@ -701,8 +710,12 @@
      |    6f8.2)") offc(1)*rtd,dskofc(1)*rtd,theta0(1)*rtd,
      |    offc(2)*rtd,dskofc(2)*rtd,theta0(2)*rtd
 
-! TEMP
+! TEMP to fort.51 like advance.F 
+!  NOTE:  With more than 1 processor, writing to fort.51 gives random results 
+!  Thus for nproc=4, often model_ctpoten=0, but if this is written to unit 6, print-out is good
 	write (51,"(15x,24x,6e12.4)") theta0*rtd,offc*rtd,dskofc*rtd
+	write (6,"(15x,24x,6e12.4,' revcloc S,N: theta0,offc,dskofc')")
+     |    theta0*rtd,offc*rtd,dskofc*rtd
 
       return
 

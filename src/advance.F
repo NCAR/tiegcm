@@ -123,7 +123,7 @@
       call vtbegin(115,ier)
 #endif
 !
-      write(6,"(/,'Enter advance: iter=',i6,' nstep=',i6)") iter,nstep
+      write(6,"(/,'Enter advance: iter=',i10,' nstep=',i10)") iter,nstep
       call timer(time0_init,time1_init,'INIT',0,0)
 !
 ! Init timestep index, modeltime, and nsecs:
@@ -288,6 +288,7 @@
 !
 ! Get electric potential and ctpoten and aurora data and power from kameleon or amie
       if (len_trim(kameleon_path)>0 .or. len_trim(amienh)>0) then
+! mytid==0 is root processor in SH near -180glon - get less output and same results 
        if (mytid==0) then
         iprint = 0
         if (istep==1) iprint = 1
@@ -522,11 +523,10 @@
       else !  if irdpot>0, potential model is read in previously to phihm
 ! Call calccloc followed by revcloc for irdpot=1, where ctpoten is set as av of both hem
 !   ifbad is passed from calccloc to revcloc to revise the convection location for ifbad>0 
-! CANNOT have offc=dskofc=0 or divide by zero in potm in heelis.F (avmincrad set in input.F)
+! CANNOT have offc=dskofc=0 or divide by zero in potm in heelis.F (avmincrad set in input.F)en
         call calccloc (istep,avmincrad,model_ctpoten)
-! Set ctpoten for output as average of CP in both hemispheres
-        ctpoten = 0.5*(model_ctpoten(1)+model_ctpoten(2))
-      endif
+       endif	!       if (irdpot == 0) then
+
 !  All potential models call colath to define crit(1,2) boundaries between hi-lat inputs and dynamo
       call colath
 
@@ -555,7 +555,8 @@
 !       if (mytid==0) gw_array(1:nlon,1:nlat) = gw_temp(3:nlonp2,1:nlat)
 !#else
 !       gw_array(1:nlon,1:nlat) = eflux2d(3:nlonp2,1:nlat)
-!#endif  
+!#endif 
+! The root processor (mytid==0), is located in the left-most glon -180 in the polar SH
 !       if (mytid==0) then    
 ! Remember gmwpm2(nlonp1,0:nlat+1)
        call calc_hp (nlat,nlon,nlonp1,glat,gmwpm2(1,1),model_hpi(1),
@@ -566,7 +567,7 @@
 !       call calc_hp (nlat,nlon,nlonp4,glat,gw_array,model_hpi(1),
 !     |   model_hpi(2))
        power_ave =.5*(model_hpi(1)+model_hpi(2))
-!      endif
+!      endif	%       if (mytid==0) then
 !  Gather 2-D array to get QJ in GW - this failed!
 !#ifdef MPI
 !       call mp_gather_f2d(qji_integ2d(lon0:lon1,lat0:lat1),gw_temp,
@@ -576,7 +577,8 @@
 !#else
 !       gw_array(1:nlon,1:nlat) = qji_integ2d(3:nlonp2,1:nlat)
 !#endif 
-!      if (mytid==0) then   
+!  Comment out mytid==0 since for QJ, have to sum the processors for the (6 printout to be good  
+!       if (mytid==0) then   
 ! qji_integ2d off by 2 in nlon, but is OK since area is the same for same glat
        call calc_hp (nlat,nlon,nlonp4,glat,qji_integ2d,model_qj(1),
      |   model_qj(2))
@@ -585,7 +587,14 @@
        qj_ave =.5*(model_qj(1)+model_qj(2))
 !
 ! TEMP to fort.51 like calccloc (which gives model_ctpoten) for ctpoten, power, and QJ
+!  NOTE:  With more than 1 processor, writing to fort.51 gives random results 
+!  Thus for nproc=4, often model_ctpoten=0, but if this is written to unit 6, print-out is good
+!   but needs interpretation.  For nproc=4, SH HP OK for proc=0,1 and NH HP OK for proc=2,3
+!   but QJ needed to add proc0+1 for SH QJ and proc2+3 for NH QJ, while CP only good proc=0
 	write (51,"(1x,i10,4i5,10f8.2)") istep,modeltime(1:4),
+     |  model_hpi,power,power_ave,model_ctpoten,ctpoten,model_qj,qj_ave
+	write (6,"(1x,i10,4i5,10f8.2,' istep mtime HPS,N,in,b CPS,N,b',
+     |   ' QJS,N,b' )") istep,modeltime(1:4),
      |  model_hpi,power,power_ave,model_ctpoten,ctpoten,model_qj,qj_ave
 !       endif	!      if (mytid==0) then  
 

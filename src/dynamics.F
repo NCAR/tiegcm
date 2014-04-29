@@ -312,6 +312,10 @@
       if (timing%level >= 2.and.time2print(nstep,istep))
      |  write(6,"('Time in OPLUS =        ',
      |    f12.2,' Dynamics: step ',i5)") time1,istep
+        do lat=lat0,lat1
+          call addfld('OPLUS' ,'O+ Ion',' ',op(:,i0:i1,lat,itc),
+     |      'lev',k0,k1,'lon',i0,i1,lat)
+        enddo
       if (diags) then
         do lat=lat0,lat1
           call addfld('OPLUS' ,'O+ Ion',' ',op(:,i0:i1,lat,itc),
@@ -351,6 +355,10 @@
 !
 ! Ions and electron density are at interface levels (ilev):
       do lat=lat0,lat1
+          call addfld('NOP_diag','NO+ Ion','cm^3',nop(:,i0:i1,lat),
+     |      'ilev',k0,k1,'lon',i0,i1,lat)
+          call addfld('O2P_diag','O2+ Ion','cm^3',o2p(:,i0:i1,lat,itc),
+     |      'ilev',k0,k1,'lon',i0,i1,lat)
         if (diags) then
           call addfld('NP_diag' ,'N+ Ion' ,'cm^3',nplus(:,i0:i1,lat),
      |      'ilev',k0,k1,'lon',i0,i1,lat)

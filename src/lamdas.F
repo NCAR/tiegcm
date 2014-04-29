@@ -110,6 +110,9 @@
 !     call addfld('NOP_LAM',' ',' ',nop(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
+      call addfld('BMAG',
+     |  'BMAG: ht independent magnetic field strength','Gauss',
+     |  bmod2,'lon',lon0,lon1,'lat',lat,lat,0)
 ! Set local needs:
       do i=lon0,lon1
         bgauss(i) = bmod2(i,lat) ! magnetic field strength [Gauss]

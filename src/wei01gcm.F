@@ -191,10 +191,6 @@
 !      write (6,"(1x,'weimer01: CPS,N ctpoten=',3f8.1)") weictpoten,
 !     |    ctpoten
 !
-! Calculate pfrac fractional presence of dynamo equation using critical
-!  convection colatitudes crit(2).  (crit is in cons module, re-calc in colath)
-!
-      call colath
 !
 ! From dynamo.F:
 !     real,dimension(nmlonp1,nmlat0) ::

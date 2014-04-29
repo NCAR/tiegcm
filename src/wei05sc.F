@@ -199,8 +199,6 @@
 !      write(6,"(i4,':weimer05: istep=',i8,' mtime=',3i4,' ctpoten=',
 !    |  f8.3)") mytid,istep,modeltime(1:3),ctpoten
 !
-! Calculate pfrac:
-      call colath
       end subroutine weimer05
 !-----------------------------------------------------------------------
       subroutine read_wei05sc_ncfile(file)
@@ -595,6 +593,7 @@
       sinpm(:) = sin(phim(:))
 !
       z = 0.
+      skip = 0 ! Added by B.Foster, 4/23/14
       do j=1,csize
         if (skip == 1) then
           skip = 0
@@ -644,6 +643,7 @@
       sinpm(:) = sin(phim(:))
 !
       z = 0.
+      skip = 0 ! Added by B.Foster, 4/23/14
       jloop: do j=1,csize
         if (skip == 1) then
           skip = 0
@@ -692,6 +692,7 @@
       integer,save :: tablesize
 !
       scplm = 0.
+      skip = 0 ! Added by B.Foster, 4/23/14
       th0 = bndyfitr
       if (prevth0 /= th0) then
         tablesize = 3*nint(th0)
@@ -1385,7 +1386,7 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 !  Jan 2012 bae:  added byloc to limit size of byimf (probably incorrect assymmetry in hems)
 !  NCAR July 08 bae:  Write wei05loc to use values from Weimer 2005
 !       setboundary for convection offc=4.2 deg, dskofc=0, theta0=bndyfitr
-!       where deg should be in radians.  wei05loc replaces calccloc05.
+!       where deg should be in radians.  wei05loc replaces calccloc.
 !
 ! (dimension 2 is for south, north hemispheres)
 !  Calculate offa, dskofa, rrad, phid, and phin from Weimer 2005 offc, dskofc, theta0

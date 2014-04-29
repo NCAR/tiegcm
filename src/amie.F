@@ -22,7 +22,7 @@
 ! colath.F restricts crit(1) between 15-30 colat so crit(2) is between 30 and 45)
 
 ! FIXME!  Want to change these so do not have to revise them for each run
-!  mxtimes and inmin only used for ASTRA and for SuperDARN
+!  mxtimes only used for ASTRA and for SuperDARN, and inmin used only for SuperDARN
 !  Do not know why UMI worked with ASTRA (larger) parameters for first day 5deg grid
       integer,parameter :: 
 !  SWMF in 3 1-day files of 289 times from 0-0(24)UT every 15 min
@@ -31,7 +31,7 @@
 !     |  ithtrns = 89,   ! corresponding to trans lat 1 mlat number of AMIE lats minus 1
 !     |  ithmx = 91,     ! max number of AMIE mlats (90/(5/3)=54+1) to equator
 !     |  ifpole = 1,	 ! ifpole=1,0 if do,not have pole as endpoints
-!     |  inmin = 15,     ! number of minutes between inputs, used only for corr SD and ASTRA
+!     |  inmin = 15,     ! number of minutes between inputs, used only for SD
 ! Geoff Crowley's amie files:
 !  ASTRA AMIE is 40min MLTS 00-24(dup) or 37 times, 31 lats 90-40 1.67 deg, every 5 min
 !     |  mxtimes = 1153, ! maximum number of times of AMIE data per file (Dec 13-16 5 min) + 1 for 0UT Dec 17
@@ -39,7 +39,7 @@
 !     |  ithtrns = 30,   ! corresponding to trans lat 40 mlat number of AMIE lats minus 1
 !     |  ithmx = 55,     ! max number of AMIE mlats (90/(5/3)=54+1) to equator
 !     |  ifpole = 1,	 ! ifpole=1,0 if do,not have pole as endpoints
-!     |  inmin = 5,      ! number of minutes between inputs, used only for corr SD and ASTRA
+!     |  inmin = 5,      ! number of minutes between inputs, used only for SD
 ! Aaron Ridley's amie files:
 !  Ridley AMIE is 2deg 90-44 or 24 lats + 15 lats extended to 14 mlat where potential is zero
 !     |  mxtimes = 5881, ! maximum number of times of AMIE data per file (Dec 13-16 1min)
@@ -47,14 +47,14 @@
 !     |  ithtrns = 24,   ! Aaron: corresponding to trans lat 42 mlat (ie, 90 to 44 dmlat=2) 
 !     |  ithmx = 46,     ! max number of AMIE mlats (90/2=45+1) to equator
 !     |  ifpole = 1,	 ! ifpole=1,0 if do,not have pole as endpoints
-!     |  inmin = 1,      ! number of minutes between inputs, used only for corr SD and ASTRA
+!     |  inmin = 1,      ! number of minutes between inputs, used only for SD
 ! Gang Lu's AMIE files (usually 1 per day, so need to run each day separately)
 !     |  mxtimes = 1440 ! maximum number of times of AMIE data per daily file
 !     |  lonmx = 36,    ! maximum number of longitudes of AMIE data
 !     |  ithtrns = 30,  ! corresponding to trans lat 40-deg
 !     |  ithmx = 55,    ! maximum number of latitudes of AMIE data
 !     |  ifpole = 1,	 ! ifpole=1,0 if do,not have pole as endpoints
-!     |  inmin = 1,      ! number of minutes between inputs, used only for corr SD and ASTRA
+!     |  inmin = 1,      ! number of minutes between inputs, used only for SD
 !  Dartmouth SuperDARN 200612130000-200612170000 north and south 4 days 10min UT 6*24*4=576, 
 !    36 40min MLT 00.00-23.33, 20 mlat 2 deg 50-88deg
 !     |  mxtimes = 578,  ! maximum number of times of AMIE data per file (Dec 13-16 10 min) + 2 for endpts
@@ -62,15 +62,26 @@
 !     |  ithtrns = 20,   ! corresponding to trans lat 50 mlat number of AMIE lats minus 1 + pole
 !     |  ithmx = 46,     ! max number of AMIE mlats (90/2deg=45+1) to equator
 !     |  ifpole = 0,	 ! ifpole=1,0 if do,not have pole as endpoints
-!     |  inmin = 10,     ! number of minutes between inputs, used only for corr SD and ASTRA
+!     |  inmin = 10,     ! number of minutes between inputs, used only for SD
 !  Virginia Tech SuperDARN north and south 4 days 10min UT 142*4=568 missing 20 min 2350-0010!
 !   180 2 deg 0-358mlon, 40 mlat 1 deg 50-89deg
-     |  mxtimes = 570,  ! maximum number of times of AMIE data per file (Dec 13-16 10 min - 20min ~0UT) + 2 for endpts
+! After 23 Apr 2014, VT SD has begin and end times of 0002(-0004) and 2356(-2358) since
+!   inmin cadence is really the default 2 min chunks every inmin minutes
+!   Sometimes, especially in the SH, the end 2min chunk of time is 2354(-2356) instead of 2356.
+!  If SH missing 2356UT for inmin=2, then should duplicate 2354ut, revise UT to 2356ut, 
+!   and cat it on end of daily file to have the same number of UT times as the NH
+!     |  mxtimes = 570,  ! maximum number of times of AMIE data per file (Dec 13-16 10 min - 20min ~0UT) + 2 for endpts
+!     |  mxtimes = 722,  ! maximum number of times of AMIE data per file 72_20m*10d=720+2
+!     |  mxtimes = 1438,  ! maximum number of times of AMIE data per file 718_2m*2d=1436+2
+!     |  mxtimes = 2874,  ! maximum number of times of AMIE data per file 718_2m*4d=2872+2
+     |  mxtimes = 218,  ! maximum number of times of AMIE data per file 72_20m*3d=216+2
      |  lonmx = 180,    ! maximum number of longitudes of AMIE data (1 less than grid)
      |  ithtrns = 40,   ! corresponding to trans lat 50 mlat number of AMIE lats minus 1 + pole
      |  ithmx = 91,     ! max number of AMIE mlats (90/1deg=90+1) to equator
      |  ifpole = 0,	! ifpole=1,0 if do,not have pole as endpoints
-     |  inmin = 10,     ! number of minutes between inputs, used only for corr SD and ASTRA
+!     |  inmin = 10,     ! number of minutes between inputs, used only for SD
+     |  inmin = 20,     ! number of minutes between inputs, used only for SD
+!     |  inmin = 2,     ! number of minutes between inputs, used only for SD
 ! jmxm is odd for ifpole=1, even for ifpole=0 (SD) which includes 2 polar values also
      |  jmxm = 2*ithmx-ifpole ! maximum number of global latitudes 
 !                             !  (only one 0 mlat ifpole=1, or inbetween 2 pts for ifpole=0)
@@ -100,9 +111,10 @@
 ! 4/13: added by Emery for ascii ASTRA AMIE
       real,dimension(mxtimes,2*ithtrns+2,lonmx+1),private :: 
      |    epkv,wpm2,ekev
-! 4/14 bae: 3 amie_dhm (daynumber,hour,minute) to 1 (daynum, minutes)
-!     to allow for irregularly spaced 10 or 12 min VT SD 129x/day (not 144x!)
-      integer,dimension(mxtimes,2),private :: amie_dhm
+! 4/14 bae: save daynum amie_day, and minutes in day amie_min 
+      integer,dimension(mxtimes),private :: amie_day
+      real,dimension(mxtimes),private :: amie_min
+ 
 
 
       contains 
@@ -126,8 +138,8 @@
 
 ! 3/14 added by Emery for SuperDARN files
       integer :: iy2,imo2,ida2,ih2,imin2,isec2,ntim,nt1,nt2,nda,jutsec
-      integer :: nl,delmin,ifstop,j1,j2
-      real :: lblat,glat,glon,mlon,depot,polekvs,polekvn
+      integer :: nl,ifstop,j1,j2
+      real :: lblat,glat,glon,mlon,depot,polekvs,polekvn,delmin
       character*1 :: char1
 ! Local dimension for temporary print-outs
       real :: epot_nsh,epot_xsh,epot_nnh,epot_xnh,hpsh,hpnh
@@ -239,10 +251,10 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
              read_mlt(i) = mlt
 	     if (ihem==1 .and. j==1 .and. i==1) then
               call cvt2dn (6,iy,nda,imo,ida)
-              amie_dhm(nt,1) = nda
-              amie_dhm(nt,2) = ih*60 + imin
-!              write (6,"(1x,'nt dayn hr min minpd = ',5i5)") 
-!     |         nt,nda,ih,imin,amie_dhm(nt,2)
+              amie_day(nt) = nda
+              amie_min(nt) = ih*60 + imin + isec/60.
+!              write (6,"(1x,'nt dayn hr min sec minpd = ',5i5,f9.2)") 
+!     |         nt,nda,ih,imin,isec,amie_min(2)
              endif
              if (ihem==1) then
               epkv(nt,j+latp1,i) = epot
@@ -258,7 +270,7 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
            enddo
           enddo
          enddo		! do i=1,lonp1
-! TEMP find HP and min-max and print out CP and time to fort.51
+! TEMP find HP and min-max and print out CP and time to fort.52
           epot_nsh = 0.
           epot_xsh = 0.
           epot_nnh = 0.
@@ -279,8 +291,8 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
         write (52,"('ASTRA AMIE Dec06 CP and HP'/'  nt year',
      | ' nda mnpd cp_sh_kV cp_nh_kV ctpoten hp_sh_GW hp_nh_GW power')")
          endif
-          write (52,"(i4,i5,i4,i5,6f8.2)") nt,iy,amie_dhm(nt,1),
-     |     amie_dhm(nt,2),epot_xsh-epot_nsh,
+          write (52,"(i4,2i5,7f9.2)") nt,iy,amie_day(nt),
+     |     amie_min(nt),epot_xsh-epot_nsh,
      |     epot_xnh-epot_nnh,0.5*(epot_xsh-epot_nsh+epot_xnh-epot_nnh),
      |     hpsh,hpnh,0.5*(hpsh+hpnh)
 ! wrap-around loc 1=lonp1 (mlt=0 and 24) not necessary since MLT=24 is also read in. 
@@ -301,12 +313,10 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
           endif
          endif   	! if (nt==1) then    
         enddo		! do nt=1,mxtimes-1
-! TEMP
-!	stop
-        delmin = amie_dhm(2,2) - amie_dhm(1,2)
-!  Extrapolate to 24 UT at end of time (ie to 17 Dec 2006 from 16 Dec) 
-        amie_dhm(mxtimes,1) = amie_dhm(mxtimes-1,1)+1
-        amie_dhm(mxtimes,2) = 0
+        delmin = amie_min(2) - amie_min(1)
+!  TEMP!! Extrapolate to 24 UT at end of time (ie to 17 Dec 2006 from 16 Dec) for ASTRA
+        amie_day(mxtimes) = amie_day(mxtimes-1)+1
+        amie_min(mxtimes) = 0
         do i=1,lonmx+1
          do j=1,latp1*2
           epkv(mxtimes,j,i) = epkv(mxtimes-1,j,i) 
@@ -318,9 +328,10 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
          enddo
         enddo
        write (6,"(1x,'Reading AMIE times from 1 to mxtimes (dn,mpd)', 
-     |   ' every delmin minutes =',i4,2x,2i5,1x,2i5,1x,2i5,i3)")
-     |    mxtimes,(amie_dhm(1,i),i=1,2),(amie_dhm(mxtimes-1,j),j=1,2),
-     |   (amie_dhm(mxtimes,jt),jt=1,2),delmin
+     |   ' every delmin minutes =',i4,3(1x,i4,f9.2),f7.2)")
+     |    mxtimes,amie_day(1),amie_min(1),amie_day(mxtimes-1),
+     |    amie_min(mxtimes-1),amie_day(mxtimes), amie_min(mxtimes),
+     |    delmin
       endif		! if (iamie==2)
 
 ! U MI AMIE:
@@ -393,8 +404,9 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
            read (ls_amie,"(a1)") char1
           enddo
 !  Read begin time for VT SD
-          read (lu_amie,"(2x,i4,5(1x,i2))") iy,imo,ida,ih,imin,isec
           read (ls_amie,"(2x,i4,5(1x,i2))") iy,imo,ida,ih,imin,isec
+! Read NH last since VT first time 0002 or last time 2356 can be different for SH w less data
+          read (lu_amie,"(2x,i4,5(1x,i2))") iy,imo,ida,ih,imin,isec
           do nl=6,12
            read (lu_amie,"(a1)") char1
            read (ls_amie,"(a1)") char1
@@ -402,10 +414,24 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
          endif	! if (iamie==5) then,else
 !  use midpoint time and convert to daynumber
               call cvt2dn (6,iy,nda,imo,ida)
-              amie_dhm(nt,1) = nda
-              amie_dhm(nt,2) = ih*60 + imin + inmin/2	!  Corrected for inmin/2 midpt
-!              write (6,"(1x,'nt dayn hr min minpd = ',5i5)") 
-!     |         nt,nda,ih,imin,amie_dhm(nt,2)
+              amie_day(nt) = nda
+              amie_min(nt) = ih*60 + imin + isec/60. + inmin/2.	!  Corrected for inmin/2 midpt
+             if (iamie==6) then
+!  Correct for endpoints of day at 0002-0004 and 2356-2358 for any inmin but 2 min (the default chunk size)
+!  If SH missing 2356UT for inmin=2, then should duplicate 2354ut, revise UT to 2356ut, 
+!   and cat it on end of daily file to have the same number of UT times as the NH
+              if (ih==0 .and. imin==2 .and. inmin.ne.2)  
+     |         amie_min(nt) = ih*60 + imin + (inmin-2)/2.
+              if (ih==23 .and. imin==60-2*inmin .and. inmin.ne.2)
+     |         amie_min(nt) = ih*60 + imin + (56-imin)/2.
+              if (ih==23 .and. imin==56 .and. inmin.ne.2) 
+     |         amie_min(nt) = ih*60 + imin + 1.
+             endif
+             if (amie_min(nt).ge.1440.) then
+              write (6,"(1x,'nt dayn hr min sec minpd(>=1440) = ',5i5,
+     |         f9.2)") nt,nda,ih,imin,isec,amie_min(nt)
+              stop
+             endif
         if (iamie==5) then
 ! Read Dartmouth SD  
          do i=1,lonmx
@@ -427,7 +453,7 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
            enddo
          enddo		! do i=1,lonmx
         else
-! Read VT SD from 60-89mlat and save 89.5 to 60.5 with j=latp1 (1=latp1+1-latp1,latp1+1=2*latp1=1-latp1) for pole
+! Read VT SD from 50-89mlat and save 89.5 to 50.5 with j=latp1 (1=latp1+1-latp1,latp1+1=2*latp1=1-latp1) for pole
          do j=1,latp1-1
           do i=1,lonmx
 !  Read NH 0-358 mlon
@@ -473,7 +499,7 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
           epkv(nt,1,i) = polekvs
           epkv(nt,latp1+1,i) = polekvn
          enddo
-! TEMP find min-max and print out CP and time to fort.51
+! TEMP find min-max and print out CP and time to fort.52
           epot_nsh = 0.
           epot_xsh = 0.
           epot_nnh = 0.
@@ -526,8 +552,8 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
      |     '  nt year nda mnpd cp_sh_kV cp_nh_kV ctpoten',
      |     ' nsh:epot,mlt,mlat xsh:epot,mlt,mlat nnh:epot,mlt,mlat',
      |     ' xnh:epot,mlt,mlat')") iamie
-           write (52,"(i4,i5,i4,i5,15f8.2)") nt,iy,amie_dhm(nt,1),
-     |     amie_dhm(nt,2),epot_xsh-epot_nsh,
+           write (52,"(i4,2i5,16f8.2)") nt,iy,amie_day(nt),
+     |     amie_min(nt),epot_xsh-epot_nsh,
      |     epot_xnh-epot_nnh,0.5*(epot_xsh-epot_nsh+epot_xnh-epot_nnh),
      |     epot_nsh,mlt_nsh,mlat_nsh,epot_xsh,mlt_xsh,mlat_xsh,
      |     epot_nnh,mlt_nnh,mlat_nnh,epot_xnh,mlt_xnh,mlat_xnh
@@ -569,25 +595,23 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
            epkv(nt,j,lonp1) = epkv(nt,j,1)
           enddo
         enddo		! do nt=2,mxtimes-1
-! TEMP
-!       stop
-! Add times 1,mxtimes
+! Add times 1,mxtimes assuming 2min SD chunks so add 1 min
         nt1 = 1
         nt2 = mxtimes
-        amie_dhm(nt1,1) = amie_dhm(nt1+1,1)
-        amie_dhm(nt1,2) = 0
-        amie_dhm(nt2,1) = amie_dhm(nt2-1,1) + 1
-        amie_dhm(nt2,2) = 0
+        amie_day(nt1) = amie_day(nt1+1)
+        amie_min(nt1) = 0
+        amie_day(nt2) = amie_day(nt2-1) + 1
+        amie_min(nt2) = 0
         do i=1,lonp1
-         do j=1,latp1+latp1+2
+         do j=1,latp1*2
           epkv(nt1,j,i) = epkv(nt1+1,j,i)
           epkv(nt2,j,i) = epkv(nt2-1,j,i)
          enddo
         enddo
        write (6,"(1x,'Reading SuperDARN iamie from 2 to mxtimes-1 ',
-     |   '(dn,h,m) every delmin minutes =',2i4,2x,2i5,1x,2i5,i10)") 
-     |   iamie,mxtimes,(amie_dhm(2,i),i=1,2),(amie_dhm(mxtimes-1,jt),
-     |   jt=1,2),inmin
+     |   '(daynum,minpd) every delmin minutes =',2i4,2(1x,i4,f9.2), 
+     |   i10)") iamie,mxtimes,amie_day(2),amie_min(2),
+     |   amie_day(mxtimes-1),amie_min(mxtimes-1),inmin
       endif		! if (iamie==5 .or. iamie==6)
 
       end subroutine init_amie
@@ -635,8 +659,8 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
       integer :: iError, imlt,ilat,jl
       real :: hpi
 		
-      integer :: nt,ihem,delmin,amieminpd,amieminpdm1,modelminpd	
-      real :: frac1,frac2,rmodelminpd
+      integer :: nt,ihem
+      real :: frac1,frac2,rmodelminpd,amieminpd,amieminpdm1,delmin	
 
       integer :: ip,ipp
       real :: polekv,polekev,polemwpm2
@@ -652,6 +676,7 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
      |  /31,60,91,121,152,182,213,244,274,305,335,366,397/ 
 !
 !
+
       if (iprint > 0) then
         write(6,"(/,72('-'))")
         write(6,"('GETAMIE:')")
@@ -685,45 +710,44 @@ C   18*3=54 so 90/54=1.67=dmlat (ithtrns=30 to 40 mlat, ithmx=55 to equator, jmx
 ! 04/13 bae: ASTRA AMIE (modeltime=daynum,hr,min,sec)
 ! 04/14 bae: SuperDARN also stored in arrays like ASTRA AMIE - now use minutes per day 
        do nt=2,mxtimes
-        modelminpd = modeltime(2)*60 + modeltime(3)
         rmodelminpd = modeltime(2)*60 + modeltime(3) + 
      |     modeltime(4)/60.
-        amieminpdm1 = amie_dhm(nt-1,2)
-        amieminpd = amie_dhm(nt,2)
-        if (amie_dhm(nt-1,1) .eq. amie_dhm(nt,1)-1) then
+        amieminpdm1 = amie_min(nt-1)
+        amieminpd = amie_min(nt)
+! Check if go over a day boundary (will not work for Dec 31 to Jan 01!)
+        if (amie_day(nt-1)==amie_day(nt)-1) then
           amieminpd = amieminpd + 1440.
-          amieminpdm1 = amieminpdm1 - 1440
+          amieminpdm1 = amieminpdm1 - 1440.
         endif
-        delmin = amieminpd - amie_dhm(nt-1,2)
-        if (amie_dhm(nt-1,1)==modeltime(1) 
-     |    .and. amie_dhm(nt-1,2) .le. modelminpd.and.
-     |    amieminpd .ge. modelminpd+modeltime(4)/30) go to 100
-        if (amie_dhm(nt,1)==modeltime(1) 
-     |    .and. amieminpdm1 .le. modelminpd .and.
-     |    amie_dhm(nt,2) .ge. modelminpd+modeltime(4)/30) go to 101
+        delmin = amieminpd - amie_min(nt-1)
+        if (amie_day(nt-1)==modeltime(1) 
+     |    .and. amie_min(nt-1) .le. rmodelminpd) go to 100
+        if (amie_day(nt)==modeltime(1) .and. amieminpdm1 .le.   
+     |   rmodelminpd .and. amie_min(nt) .ge. rmodelminpd) go to 101
        enddo
-        write (6,"(1x,'Cannot find modeltime in amie_dhm; modeltime ',
-     |   'modelminpd amie_dhm(1,mxtimes) =',4i5,1x,2i5,1x,3i5)") 
-     |   modeltime,modelminpd,
-     |   (amie_dhm(1,i),i=1,2),mxtimes,(amie_dhm(mxtimes,j),j=1,2)
+        write (6,"(1x,'Cannot find modeltime in amie_day,min; ',
+     |   'modeltime rmodelminpd amie_day,min(1,mxtimes) =',4i5,1x,f9.2,
+     |   1x,i4,f9.2,i6,1x,i4,f9.2)") modeltime,rmodelminpd,
+     |   amie_day(1),amie_min(1),mxtimes,amie_day(mxtimes),
+     |   amie_min(mxtimes)
        stop
-!  Use nt and nt-1 for interpolation over delmin or amie_dhm(nt,nt-1) (integer) min
-100    frac1 = (amieminpd-rmodelminpd) / float(delmin)
+!  Use nt and nt-1 for interpolation over delmin or amie_min(nt-1,nt)
+100    frac1 = (amieminpd-rmodelminpd) / delmin
        go to 102
-101    frac1 = (amie_dhm(nt,2)-rmodelminpd) / float(delmin) 
+101    frac1 = (amie_min(nt)-rmodelminpd) / delmin 
 102    frac2 = 1. - frac1
        if (frac1<0. .or. frac1>1.) then
-        write (6,"(1x,'frac1,2 bad; nt-1,nt modeltime modelminpd ',
-     |   'amie_dhm(nt-1,nt) amieminpdm1 amieminpd delmin =',
-     |   3f7.2,7i5,1x,7i5)") frac1,frac2,rmodelminpd,nt-1,nt,modeltime,
-     |   modelminpd,(amie_dhm(nt-1,i),i=1,2),(amie_dhm(nt,j),j=1,2),
-     |   amieminpdm1,amieminpd,delmin
+        write (6,"(1x,'bad: frac1,2 nt-1,nt modeltime rmodelminpd ',
+     |   'amie_day,min(nt-1,nt) amieminpdm1 amieminpd delmin =',2f7.2,
+     |   2i5,1x,4i5,1x,f9.2,2(i5,f9.2),3f9.2)") frac1,frac2,nt-1,nt,
+     |   modeltime,rmodelminpd,amie_day(nt-1),amie_min(nt-1),
+     |   amie_day(nt),amie_min(nt),amieminpdm1,amieminpd,delmin
         stop
        endif
       if (iprint > 0) then
-        write(6,"('Initial frac1,2,nt-1,nt,amie_dhm =',2f7.2,2i5,4i5)")
-     |   frac1,frac2,nt-1,nt,(amie_dhm(nt-1,i),i=1,2),
-     |   (amie_dhm(nt,j),j=1,2)
+        write(6,"('Initial frac1,2,nt-1,nt,amie_day,min =',2f7.2,2i5,
+     |   2(i5,f9.2))") frac1,frac2,nt-1,nt,amie_day(nt-1),
+     |   amie_min(nt-1),amie_day(nt),amie_min(nt)
       endif
 !  ASTRA AMIE arrays (kV,mw/m2,keV) are read over 0000to2320 mlts from 90to40, -40to-90 mlat
 !    but are stored in init_amie in order SH -90 to ~-40 mlat, NH +90 to ~+40mlat
@@ -1012,7 +1036,8 @@ C 4/13 bae: use i=1,nlon of gekev and gmwpm2 in aurora.F and below, BUT nlonp1 i
 ! temp - save the AMIE output in magnetic grid
       amie_debug = 1
       if (amie_debug > 0) then
-
+        call addfld('PHIHM2D','2D AMIE-TYPE ELECTRIC POTENTIAL','V',
+     |    phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
        if (irdpot==2) then
         call addfld('TIEEKV',' ',' ',tieekv,'mlon',1,nmlonp1,
      |    'mlat',1,nmlat,0)
