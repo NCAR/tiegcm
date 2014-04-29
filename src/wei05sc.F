@@ -84,7 +84,6 @@
       use pdynamo_module,only: nmlat0,phihm
       use magfield_module,only: sunlons 
       use init_module,only: iyear,iday,uthr
-      use heelis_module,only: colath
       implicit none
 !
 ! Args:
@@ -200,8 +199,9 @@
 !      write(6,"(i4,':weimer05: istep=',i8,' mtime=',3i4,' ctpoten=',
 !    |  f8.3)") mytid,istep,modeltime(1:3),ctpoten
 !
-! Calculate pfrac:
-      call colath
+! Note calculation of pfrac for dynamo is done by sub colath (colath.F),
+! called from advance.
+!
       end subroutine weimer05
 !-----------------------------------------------------------------------
       subroutine read_wei05sc_ncfile(file)

@@ -15,7 +15,7 @@
       use mpitime_module,only: mpi_timer
       use mpi_module,only: mlat0,mlat1,mlon0,mlon1,lon0,lon1,lat0,lat1,
      |  mp_mag_periodic_f2d
-      use heelis_module,only: pfrac,phihm
+      use heelis_module,only: phihm
       use init_module,only: istep
       use input_module,only: current_pg,current_kq
       use mpi
@@ -159,6 +159,8 @@
      |  (cee(nc4),c4)
 
       logical :: debug = .false.
+
+      real,dimension(nmlonp1,nmlat0) :: pfrac  ! NH fraction of potential
 
 #if defined(INTERCOMM) || defined(CISMAH)
 !

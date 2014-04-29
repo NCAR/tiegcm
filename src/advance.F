@@ -16,7 +16,7 @@
 !
       use fields_module
       use hist_module,only: nstep,modeltime,nsource
-      use heelis_module,only: heelis,colath
+      use heelis_module,only: heelis
       use wei05sc,only: weimer05,       ! Weimer 2005 model
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
       use input_module,only: start,step,idynamo=>dynamo,
@@ -477,8 +477,11 @@
 	    phihm(i,j) = 0.
           enddo ! i=1,nmlonp1
         enddo ! j=1,nmlat0
-        call colath
       endif
+!
+! Set pfrac for dynamo, regardless of potential_model (in colath.F): 
+      call colath
+
       call timer(time0_prep,time1,'PREP',1,0) ! suspend step-prep timing
       time1_prep = time1
 !

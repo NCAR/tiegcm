@@ -146,6 +146,7 @@
      |  ylong(nlonp1)    ! geographic longitudes (radians)
 !
 ! Critical colatitude limits (15,30 deg) for use of Heelis potential in dynamo:
+! This is not a parameter because it may be changed by sub colath (colath.F).
       real :: crit(2) = (/0.261799387, 0.523598775/)
 !
 ! Kut is used in filtering longitudinal waves (see filter.F):

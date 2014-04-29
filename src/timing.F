@@ -354,7 +354,7 @@
      |  (timing%cmpminor*100.)/timing%run
 
       write(6,"('    Elapsed cmpmajor  = ',f8.2,' secs, ',
-     |  f6.3,' hrs, ',f5.1,'%',' (o2, o)')")
+     |  f6.3,' hrs, ',f5.1,'%',' (o2, o, he)')")
      |  timing%cmpmajor,timing%cmpmajor/3600., 
      |  (timing%cmpmajor*100.)/timing%run
 
