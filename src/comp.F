@@ -120,18 +120,19 @@
 ! Zero out helium flux if requested:
       if (calc_helium==1) then
         call laplacian(flx_arg,flx_he,lon0,lon1,lat0,lat1)
+
+!       call addfld('FLX_ARG','UB Mass Flux of Helium ','g/cm^2',
+!    |    flx_arg(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
+!    |    lat0,lat1,0)
+!       call addfld('FLX_HE','UB Mass Flux of Helium ','g/cm^2',
+!    |    flx_he(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
+!    |    lat0,lat1,0)
+
       else
         he_upd = 0.   ! 3d whole array op
         henm_upd = 0. ! 3d whole array op
         flx_he=0.     ! 2d whole array op
       endif
-!
-!     call addfld('FLX_ARG','UB Mass Flux of Helium ','g/cm^2',
-!    |  flx_arg(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
-!    |  lat0,lat1,0)
-!     call addfld('FLX_HE','UB Mass Flux of Helium ','g/cm^2',
-!    |  flx_he(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
-!    |  lat0,lat1,0)
 !
 ! Calculate and save horizontal advection in o2_advec, o1_advec, he_advec:
 !
@@ -839,7 +840,7 @@
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
 !       call addfld('O1_SOLV',' ',' ',o1_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
-!     call addfld('HE_SOLV',' ',' ',he_upd(:,lon0:lon1,lat),
+!       call addfld('HE_SOLV',' ',' ',he_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
 !
 ! End latitude scan:

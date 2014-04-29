@@ -604,13 +604,13 @@
       endif
       if (calc_helium > 0) calc_helium=1
 #if (NLAT==72 && NLON==144)
-!     if (calc_helium == 1) then
-!       write(6,"(/,'>>> INPUT: Cannot calculate helium at 2.5-degree ',
-!    |    'resolution (laplacian coefficients are not available)')")
-!       write(6,"('Please set namelist calc_helium=0, or run the ',
-!    |    '5-degree resolution.')") 
-!       call shutdown('ERROR: calc_helium=1 at 2.5-degree resolution')
-!     endif
+      if (calc_helium == 1) then
+        write(6,"(/,'>>> INPUT: Cannot calculate helium at 2.5-degree ',
+     |    'resolution (laplacian coefficients are not available)')")
+        write(6,"('Please set namelist calc_helium=0, or run the ',
+     |    '5-degree resolution.')") 
+        call shutdown('ERROR: calc_helium=1 at 2.5-degree resolution')
+      endif
 #endif
 !
 ! 1/12/05 btf: removed old dynamo (was in dynamo_old.F)
