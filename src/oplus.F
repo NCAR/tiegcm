@@ -33,6 +33,8 @@
 ! There are 4 latitude scans, with 3d mpi calls in between the loops.
 !   (see also 3d gather/scatter calls in sub filter_op).
 !
+      use params_module,only: zpint,glat ! for O+ minimum
+      use init_module,only: secs         ! for O+ minimum
       use cons_module,only: rmass_op,gask,grav,re,cs,dphi,dlamda,
      |  shapiro,dtx2inv,boltz,expz,rmassinv_o2,rmassinv_o1,
      |  rmassinv_n2,rmassinv_n2d,p0,dtsmooth,dtsmooth_div2,kut
@@ -103,6 +105,7 @@
      |  op_loss,          ! was s13
      |  tp                ! te+ti
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
+      real :: opmin ! O+ low-lat minimum
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
@@ -163,8 +166,8 @@
 !
       call oplus_flux(opflux,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('oplus after oplus_flux.')")
-!     call addfld('OPFLUX',' ',' ',opflux,
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('OPFLUX',' ',' ',opflux,
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
 ! Divergence is returned in dvb(lon0:lon1,lat0:lat1) by sub divb:
       call divb(dvb,lon0,lon1,lat0,lat1)
@@ -234,8 +237,8 @@
 
 !     call addfld('DJM1',' ',' ',dj(:,lon0:lon1,jm1),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('DJ  ',' ',' ',dj(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('DJ  ',' ',' ',dj(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('DJP1',' ',' ',dj(:,lon0:lon1,jp1),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
@@ -888,6 +891,24 @@
           if (optm1out(k,i,lat) < 1.e-5) optm1out(k,i,lat) = 1.e-5
         enddo ! k=lev0,lev1-1      
       enddo ! i=lon0,lon1
+!
+! btf 5/6/14 (with Wenbin): Limit O+ to minimum opmin at 
+!   low-latitudes and above zp +2.5.
+!
+      opmin = 100. ! O+ minimum
+      if (glat(lat) <= 15..and.glat(lat) >= -15.) then
+        do i=lon0,lon1
+          do k=lev0,lev1-1      
+            if (zpint(k) >= 2.5 .and. opout(k,i,lat) < opmin) then
+              write(6,"('OPLUS: opout too low: glat=',f8.2,' zpint=',
+     |          f8.2,' i=',i4,' opout=',e13.4,': will set to opmin=',
+     |          f8.2,' uthr=',f8.2)") glat(lat),zpint(k),i,
+     |          opout(k,i,lat),opmin,secs/3600.
+              opout(k,i,lat) = opmin
+            endif
+          enddo
+        enddo  
+      endif
 !
 ! End fourth and final latitude scan:
       enddo ! lat=lat0,lat1

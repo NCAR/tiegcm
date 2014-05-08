@@ -1,3 +1,4 @@
+#include <defs.h>
       subroutine laplacian(lap_arg,lap_out,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -8,12 +9,24 @@
 !
       use params_module,only: nlon,nlonp2,nlonp4,nlat
       use addfld_module,only: addfld
-      use sh_coef_module,only: lpmn,zmn
       use filter_module,only: ntrigs,trigs,ifax
 #ifdef MPI
       use mpi_module,only: mp_gather_f2d,mp_scatter_f2d,tasks,ntask,
      |  mytid
 #endif
+!
+! Select correct set of coefficients for He calculation, depending
+! on grid resolution:
+!
+#if (NLAT==36 && NLON==72)
+      use he_coefs_sres,only: lpmn,zmn ! he_coefs_sres.F
+#elif (NLAT==72 && NLON==144)
+      use he_coef0_dres,only: lpmn     ! he_coef0_dres.F
+      use he_coef1_dres,only: zmn      ! he_coef1_dres.F
+#else
+      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
+#endif
+!
       implicit none
 !
 ! Args:

@@ -117,4 +117,9 @@
 ; (ignored if DYNAMO=0) (see current.F90 to save JQR, JE13D, JE23D, KQPHI, KQLAM)
 ;
  CURRENT_KQ = 0
+;
+; If calc_helium=1, helium is calculated as a major composition species.
+; If calc_helium=0, helium is zeroed out.
+;
+ CALC_HELIUM = 1
 /
