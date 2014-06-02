@@ -11,7 +11,9 @@
      |  nc_wrhist,   ! subroutine to write history to an open netcdf file
      |  nc_close,    ! subroutine to close a netcdf file
      |  nc_fileinfo, ! make contents string for current file
-     |  def_fsech
+     |  def_fsech,
+     |  datasource_kp ! defined here
+
       use dispose_module,only: add_dispose
 !
       contains
@@ -312,15 +314,15 @@
      |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
-     |  saber_ncfile,tidi_ncfile,joulefac
+     |  saber_ncfile,tidi_ncfile,joulefac,gpi_ncfile
       use mpi_module,only: ntask
 
       use init_module,only: logname,host,system,iyear,iday,istep,
      |  start_mtime
       use fields_module,only: nf4d_hist,f4d,fsechist
       use cons_module,only: p0,grav
-!     use aurora_module,only: alfa30,e30,alfa_sp,e_sp
       use aurora_module,only: e1,e2,h1,h2,alfac,ec,alfad,ed
+      use gpi_module,only: kp_gpi=>fkp
       implicit none
 !
 ! Args:
@@ -427,7 +429,21 @@
         h%f107a     = f107a
         h%hpower    = power
         h%ctpoten   = ctpoten
-        h%kp        = kp
+!
+! Kp can be provided by namelist and/or gpi_ncfile. If both were
+! specified, the namelist kp takes precedence (see also advance.F).
+!
+        if (kp /= spval) then ! write namelist kp to history
+          h%kp      = kp
+          datasource_kp = 'namelist'
+        elseif (len_trim(gpi_ncfile) > 0) then ! write kp from gpi file to history
+          h%kp      = kp_gpi
+          datasource_kp = 'gpi_ncfile'
+        else
+          h%kp      = spval ! Kp not used
+          datasource_kp = '[none]'
+        endif
+
         h%bximf     = bximf
         h%byimf     = byimf
         h%bzimf     = bzimf

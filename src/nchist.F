@@ -82,6 +82,7 @@
 #else
       logical :: check_nan = .false.
 #endif
+      character(len=16) :: datasource_kp=' '
       contains
 !-----------------------------------------------------------------------
       subroutine nc_open(ncid,flnm,status,rdwr)
@@ -1579,8 +1580,10 @@
       call defvar_time_dbl(ncid,"ctpoten",ids1,idv_ctpoten,
      |  "Cross-tail potential","kV")
 !
-! Kp index:
+! Kp index (data_source will be either namelist or gpi_ncfile):
       call defvar_time_dbl(ncid,"Kp",ids1,idv_kp,"Kp index"," ")
+      istat = nf_put_att_text(ncid,idv_kp,"data_source",
+     |  len_trim(datasource_kp),datasource_kp)
 !
 ! BX,BY,BZ:
       call defvar_time_dbl(ncid,"bximf",ids1,idv_bximf,

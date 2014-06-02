@@ -1980,8 +1980,9 @@
 !         write(6,"(/,'>>> INPUT: Cannot provide KP namelist input',
 !    |      ' with a GPI run.')")
 !         call shutdown('KP input')
-          write(6,"(/,'>>> WARNING INPUT: Am allowing constant ',
-     |      'KP namelist and GPI data file')")
+          write(6,"(/,'>>> WARNING INPUT: I am allowing both namelist',
+     |      ' KP and GPI data file to be specified in this run.',
+     |      ' In this case, the namelist KP will take precedence')")
         endif
 !
 ! Cannot provide KP input for a Weimer run:

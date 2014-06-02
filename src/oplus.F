@@ -900,10 +900,10 @@
         do i=lon0,lon1
           do k=lev0,lev1-1      
             if (zpint(k) >= 2.5 .and. opout(k,i,lat) < opmin) then
-              write(6,"('OPLUS: opout too low: glat=',f8.2,' zpint=',
-     |          f8.2,' i=',i4,' opout=',e13.4,': will set to opmin=',
-     |          f8.2,' uthr=',f8.2)") glat(lat),zpint(k),i,
-     |          opout(k,i,lat),opmin,secs/3600.
+!             write(6,"('OPLUS: opout too low: glat=',f8.2,' zpint=',
+!    |          f8.2,' i=',i4,' opout=',e13.4,': will set to opmin=',
+!    |          f8.2,' uthr=',f8.2)") glat(lat),zpint(k),i,
+!    |          opout(k,i,lat),opmin,secs/3600.
               opout(k,i,lat) = opmin
             endif
           enddo

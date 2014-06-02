@@ -53,6 +53,8 @@
      |  gpi_f107d(mxgpidays), ! daily 10.7 cm flux
      |  gpi_f107a(mxgpidays), ! 81-day average 10.7 cm flux
      |  gpi_kp(8,mxgpidays)   ! 3-hourly kp
+
+      real :: fkp ! kp from gpi file, interpolated to model time
 !
       contains 
 !-----------------------------------------------------------------------
@@ -189,7 +191,7 @@
      |        f107_p2d, f107a_p2d, fkp_p2d(8),  ! at 2nd previous day
      |        f107_nxt, f107a_nxt, fkp_nxt(8),  ! at next day
      |        f107_n2d, f107a_n2d, fkp_n2d(8)   ! at 2nd next day
-      real :: fkp,fkp0,fkp1
+      real :: fkp0,fkp1
       integer,parameter :: isecnoon = 12*60*60   ! secs at noon 
 ! 
 ! External:
