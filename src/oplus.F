@@ -33,8 +33,8 @@
 ! There are 4 latitude scans, with 3d mpi calls in between the loops.
 !   (see also 3d gather/scatter calls in sub filter_op).
 !
-      use params_module,only: zpint,glat ! for O+ minimum
-      use init_module,only: secs         ! for O+ minimum
+      use params_module,only: zpmid,glat,glon  ! for O+ minimum
+      use init_module,only: secs,istep         ! for O+ minimum
       use cons_module,only: rmass_op,gask,grav,re,cs,dphi,dlamda,
      |  shapiro,dtx2inv,boltz,expz,rmassinv_o2,rmassinv_o1,
      |  rmassinv_n2,rmassinv_n2d,p0,dtsmooth,dtsmooth_div2,kut
@@ -105,7 +105,10 @@
      |  op_loss,          ! was s13
      |  tp                ! te+ti
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
-      real :: opmin ! O+ low-lat minimum
+!
+! For O+ minimum:
+      real :: opmin=1000., opmin_lat0=-15., opmin_lat1=15., opmin_zp=1.0
+      real :: slt,dum ! only for print to stdout
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
@@ -119,6 +122,9 @@
      |  optm1_smooth ! op at time n-1, with shapiro smoother (was s1)
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,5) :: f5
       logical,parameter :: debug=.false. ! if set write print statements to stdout
+!
+! External:
+      real,external :: fslt
 !
       if (debug) write(6,"('Enter oplus.')")
 #ifdef VT
@@ -234,13 +240,15 @@
      |  lon0,lon1,lev0,lev1,lat)
 
       if (debug) write(6,"('oplus after rrk: lat=',i3)") lat
-
-!     call addfld('DJM1',' ',' ',dj(:,lon0:lon1,jm1),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-      call addfld('DJ  ',' ',' ',dj(:,lon0:lon1,lat),
-     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('DJP1',' ',' ',dj(:,lon0:lon1,jp1),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!
+! Top level is invalid, so exclude it:
+!     call addfld('DJM1',' ',' ',dj(lev0:lev1-1,lon0:lon1,jm1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('LOG10DJ  ',' ',' ',
+!    |    log10(dj(lev0:lev1-1,lon0:lon1,lat)),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('DJP1',' ',' ',dj(lev0:lev1-1,lon0:lon1,jp1),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -884,7 +892,7 @@
       opout(lev1,:,lat) = 0.
       optm1out(lev1,:,lat) = 0.
 !
-! Insure non-negative O+:
+! Insure global non-negative O+:
       do i=lon0,lon1
         do k=lev0,lev1-1      
           if (opout(k,i,lat)    < 1.e-5) opout(k,i,lat)    = 1.e-5
@@ -892,20 +900,29 @@
         enddo ! k=lev0,lev1-1      
       enddo ! i=lon0,lon1
 !
-! btf 5/6/14 (with Wenbin): Limit O+ to minimum opmin at 
-!   low-latitudes and above zp +2.5.
+! Report magnitude and spatial extent of imposed O+ minimum at
+! first timestep (see opmin settings above):
 !
-      opmin = 100. ! O+ minimum
-      if (glat(lat) <= 15..and.glat(lat) >= -15.) then
+      if (istep==1.and.lat==lat0)
+     |  write(6,"('OPLUS: opmin=',e12.4,' opmin_lat0,1=',2e12.4,
+     |    ' opmin_zp=',f8.2)") opmin,opmin_lat0,opmin_lat1,opmin_zp
+!
+! May-June, 2014 (B.Foster and Wenbin): Limit O+ to minimum opmin at 
+!   low-latitudes and above given zp level (see opmin settings above):
+!
+      if (glat(lat) <= opmin_lat1.and.glat(lat) >= opmin_lat0) then
         do i=lon0,lon1
           do k=lev0,lev1-1      
-            if (zpint(k) >= 2.5 .and. opout(k,i,lat) < opmin) then
-!             write(6,"('OPLUS: opout too low: glat=',f8.2,' zpint=',
-!    |          f8.2,' i=',i4,' opout=',e13.4,': will set to opmin=',
-!    |          f8.2,' uthr=',f8.2)") glat(lat),zpint(k),i,
-!    |          opout(k,i,lat),opmin,secs/3600.
+            if (zpmid(k) >= opmin_zp .and. opout(k,i,lat) < opmin) then
+!             if (opout(k,i,lat) /= 1.e-5) then ! don't report global min
+!               slt = fslt(dum,secs/3600.,glon(i),1)
+!               write(6,"('OPLUS: apply O+ min: glat=',f8.2,' glon=',
+!    |            f8.2,' zpmid=',f8.2,' opout=',e12.3,' uthr=',f8.2,
+!    |            ' slt=',f8.2)") glat(lat),glon(i),zpmid(k),
+!    |            opout(k,i,lat),secs/3600.,slt
+!             endif ! report to stdout
               opout(k,i,lat) = opmin
-            endif
+            endif ! apply minimum
           enddo
         enddo  
       endif

@@ -1516,3 +1516,34 @@
      |    time2print = .true.
       end function time2print
 !-----------------------------------------------------------------------
+      real function fslt(slt,ut,glon,iflag)
+      implicit none
+!
+! If iflag = 1 -> return slt, given ut and glon (slt=ut+glon/15.)
+! If iflag = 2 -> return ut, given slt and glon (ut=slt-glon/15.)
+! If iflag = 3 -> return glon, given slt and ut (glon=(slt-ut)*15.)
+! (slt and ut always in decimal hours, glon in -180 -> 180)
+!
+! Args:
+      real :: slt,ut,glon
+      integer,intent(in) :: iflag
+!
+      if (iflag==1) then
+        fslt = ut + glon/15.
+        if (fslt < 0.) fslt = fslt+24.
+        if (fslt >= 24.) fslt = fslt-24.
+      elseif (iflag==2) then
+        fslt = slt - glon/15.  
+        if (fslt < 0.) fslt = fslt+24.
+        if (fslt > 24.) fslt = fslt-24.
+      elseif (iflag==3) then
+        fslt = (slt-ut) * 15.
+        if (fslt >= 180.) fslt = fslt-360.
+        if (fslt < -180.) fslt = fslt+360.
+      else
+        write(6,"('>>> fslt: bad iflag=',i3)") iflag
+        stop 'fslt'
+      endif
+      return
+      end
+!-------------------------------------------------------------------
