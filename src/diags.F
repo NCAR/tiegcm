@@ -1213,7 +1213,7 @@
       subroutine mkdiag_QJOULE_INTEG(name,qji_tn,lev0,lev1,lon0,lon1,
      |  lat)
       use cons_module,only: p0,grav
-      use init_module,only: zpint
+      use params_module,only: zpint
 !
 ! Calculate height-integrated Joule heating (called from qjoule.F)
 ! This method is adapted from ncl code provided by Astrid (7/20/11)

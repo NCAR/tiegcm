@@ -135,7 +135,6 @@
 !
 ! Do initialization:
       call init
-      write(6,"('tgcm after init')")
 !
 ! Initialize diagnostic fields for secondary histories:
       call init_diags(1)
@@ -144,26 +143,20 @@
 ! (this is not in init_module to avoid circular dependency between
 !  init_module and qrj_module)
       call init_qrj
-      write(6,"('tgcm after init_qrj')")
 !
 ! Read source history:
       call readsource(ier)
-      write(6,"('tgcm after readsource')")
 !
 ! Define magnetic field and related quantities:
       call magdyn
-      write(6,"('tgcm after magdyn')")
 !
 ! Set several lower boundary parameters (including Hough mode functions):
       call init_lbc ! lbc module
-      write(6,"('tgcm after init_lbc')")
 
       call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
 !
 ! Advance the model (timing in main time-step loop is done in advance):
-!     write(6,"('tgcm call advance')")
       call advance
-!     write(6,"('tgcm after advance')")
 !
 ! Report to stdout:
       write(6,"(' ')")

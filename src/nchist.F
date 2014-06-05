@@ -9,7 +9,8 @@
 !
       use params_module,only: nlon,nlev,nmlevp1,nimlevp1,
      |  nlat,nlevp1,spval,nlonp4,nlonp2,nmlonp1,nmlat,nmlon,zmbot,zmtop,
-     |  zibot,zitop,mxfsech,zpmag,zpimag,gmlon,gmlat
+     |  zibot,zitop,mxfsech,zpmag,zpimag,gmlon,gmlat,glon,glat,zpmid,
+     |  zpint
       use fields_module,only: nf4d,nf4d_hist,f4d,fakeflds,shortname_len,
      |  fsechist,itc,itp,fields_4d,fields_3d,fields_2d,poten,foutput,
      |  tlbc,ulbc,vlbc,tlbc_glb,ulbc_glb,vlbc_glb,
@@ -18,7 +19,7 @@
       use input_module,only: mxlen_filename,
      |  gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, 
      |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile
-      use init_module,only: glon,glat,zpmid,zpint,istep,start_mtime
+      use init_module,only: istep,start_mtime
       implicit none
 !
 ! Included file svn_version.inc contains the svn revision number used in the build.

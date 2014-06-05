@@ -220,8 +220,8 @@
 !   tgcmproc_f90, routines calchts and glatf in proclat.F.
 ! ZG will be put on secondary histories, along with the regular Z.
 !
-      use params_module,only: dz
-      use init_module,only: glat,istep
+      use params_module,only: dz,glat
+      use init_module,only: istep
       use cons_module,only: boltz,avo
       use addfld_module,only: addfld
 !

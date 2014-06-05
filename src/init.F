@@ -4,13 +4,8 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-      use params_module,only: nlon,nlat,nlevp1,nlonp4,nmlonp1,nmlat,
-     |  glon1,dlon,glat1,dlat,nlev,zmbot,dlev,zibot,zmbot
+      use params_module,only: nlon,nlat,nlonp4
       implicit none
-!
-! Initialize and store model non-input variables and constants:
-!
-      real :: glon(nlon),glat(nlat),zpmid(nlevp1),zpint(nlevp1)
 !
 ! istep: the current time step index. istep is initialized
 ! to 0, then incremented before each time step (see advance.f).
@@ -224,18 +219,6 @@
       sin_sundec = SIN(sundec) ! C(95)
       cos_sundec = COS(sundec) ! C(96)
 !
-! Define geographic grid:
-      do i=1,nlon
-        glon(i) = glon1+(i-1)*dlon
-      enddo
-      do i=1,nlat
-        glat(i) = glat1+(i-1)*dlat
-      enddo
-      do i=1,nlevp1
-        zpmid(i) = zmbot+(i-1)*dlev  ! midpoint levels
-        zpint(i) = zibot+(i-1)*dlev  ! interface levels
-      enddo
-!
 ! Report to stdout:
       write(6,"(/,'Model run initialization:')")
       write(6,"('  nstep      = ',i12,4x,
@@ -258,10 +241,6 @@
       write(6,"('  igswm_nm_sdi= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating semidiurnal tidal database will',
      |  ' be used.)')") igswm_nm_sdi
-      write(6,"('  nlev       = ',i6,4x,
-     |  '(Number of levels (midpoints and interfaces))')") nlev
-      write(6,"(/,'  zpmid (midpoint  levels) = ',/,(10f7.3))") zpmid
-      write(6,"(/,'  zpint (interface levels) = ',/,(10f7.3))") zpint
 !
       if (nsource > 0) then
         write(6,"(/,'This is an initial run:')")

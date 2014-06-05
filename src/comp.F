@@ -9,8 +9,8 @@
 !
 ! Advance major species O2 and O.
 !
-      use params_module,only: dz,nlonp4,nlat,dlat,nlon
-      use init_module,only: glat,iday
+      use params_module,only: dz,nlonp4,nlat,dlat,nlon,glat
+      use init_module,only: iday
       use cons_module,only: pi,hor,dtr,rmassinv_o2,rmassinv_o1,
      |  rmassinv_he,rmassinv_n2,rmass_o2,rmass_o1,rmass_he,expz,expzmid,
      |  expzmid_inv,difk,dtx2inv,dtsmooth,dtsmooth_div2,difhor,
