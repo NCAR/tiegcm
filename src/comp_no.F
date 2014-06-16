@@ -133,7 +133,7 @@
 !
       end subroutine comp_no
 !-----------------------------------------------------------------------
-      subroutine minor_no(tn,o2,o1,n2,no,no_nm1,no_out,no_nm1_out,
+      subroutine minor_no(tn,o2,o1,n2,he,no,no_nm1,no_out,no_nm1_out,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_no
 !
@@ -144,6 +144,7 @@
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
      |  n2,      ! molecular nitrogen (mmr)
+     |  he,      ! helium (mmr)
      |  no,      ! NO (mmr)
      |  no_nm1   ! NO at time n-1
 !
@@ -163,7 +164,7 @@
 !    |  sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,lon0,lon1,lat0,
 !    |  lat1,idebug)
 
-      call minor(tn,o2,o1,n2,no,no_nm1,no_out,no_nm1_out,
+      call minor(tn,o2,o1,n2,he,no,no_nm1,no_out,no_nm1_out,
      |  no_loss,no_prod,no_lbc,no_ubc,rmass_no,phi_no,alfa_no,
      |  lev0,lev1,lon0,lon1,lat0,lat1,0,'NO')
 

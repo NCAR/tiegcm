@@ -592,7 +592,6 @@
       endif
 !
 ! If calc_helium == 1 then calculate helium, otherwise zero out helium.
-! 4/28/14: Note helium is not yet available at 2.5-degree resolution.
 !
       if (calc_helium==ispval) then
         calc_helium = 1

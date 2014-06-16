@@ -1,5 +1,5 @@
 !
-      subroutine minor(tn,o2,o1,n2,fcomp,fcomp_tm1,fcomp_out,
+      subroutine minor(tn,o2,o1,n2,he,fcomp,fcomp_tm1,fcomp_out,
      |  fcomp_tm1_out,sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,
      |  lon0,lon1,lat0,lat1,idebug,name)
 !
@@ -15,7 +15,7 @@
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  boltz,p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
      |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,
-     |  dtsmooth_div2,difhor,kut
+     |  dtsmooth_div2,difhor,kut,rmassinv_he
       use init_module,only: iday
       use fields_module,only: w,itc,itp,tlbc
       use addfld_module,only: addfld
@@ -41,6 +41,7 @@
      |  o2,       ! molecular oxygen (mmr)
      |  o1,       ! atomic oxygen (mmr)
      |  n2,       ! molecular nitrogen (mmr)
+     |  he,       ! helium (mmr)
      |  fcomp,    ! input species (for finite diffs in advec)
      |  fcomp_tm1 ! input species at time n-1 
 !
@@ -87,7 +88,6 @@
      |  dmdz,     ! dm/dz(k)     (s10)
      |  xmbar_k,  ! mbar (k)     (s11)
      |  xmbar_kh, ! mbar (k+1/2) (s12)
-     |  xn2,      ! N2 (mmr)
      |  tni,      ! tn (k)       (s5)
      |  s0prod,   ! sprod*mx/nmbar (s15)
      |  alfa11,alfa12,alfa21,alfa22, ! (s1,s2,s3,s4)
@@ -104,9 +104,9 @@
       integer :: jm2,jm1,j0,jp1,jp2 ! lat-2,lat-1,lat,lat+1,lat+2
 !
       real,dimension(lon0:lon1) :: 
-     |  xmbari,   ! (t6)
-     |  bo2,bo1,  ! (t4,t5)
-     |  dfactor   ! (t7) (formerly output of sub dfact)
+     |  xmbari,       ! (t6)
+     |  bo2,bo1,bhe,  ! (t4,t5)
+     |  dfactor       ! (t7) (formerly output of sub dfact)
 !
       real :: phi(2,3)
 !
@@ -212,23 +212,35 @@
         call addfld('SPROD' ,' ',' ',sprod(:,lon0:lon1,lat),
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
       endif
-
+!
       do i=lon0,lon1
         bo2(i) = b(i,1,1)*o2(lev0,i,lat)+b(i,1,2)*o1(lev0,i,lat)+
-     |    fb(i,1)
+     |    b(i,1,3)*he(lev0,i,lat)+fb(i,1)
         bo1(i) = b(i,2,1)*o2(lev0,i,lat)+b(i,2,2)*o1(lev0,i,lat)+
-     |    fb(i,2)
-        xmbari(i) = 1./(bo2(i)*rmassinv_o2+bo1(i)*rmassinv_o1+
-     |    (1.-bo2(i)-bo1(i))*rmassinv_n2)
+     |    b(i,2,3)*he(lev0,i,lat)+fb(i,2)
+        bhe(i) = b(i,3,1)*o2(lev0,i,lat)+b(i,3,2)*o1(lev0,i,lat)+
+     |    b(i,3,3)*he(lev0,i,lat)+fb(i,3)
+        xmbari(i) = 1./
+     |    (bo2(i)*rmassinv_o2+
+     |     bo1(i)*rmassinv_o1+
+     |     (1.-bo2(i)-bo1(i)-bhe(i))*rmassinv_n2+
+     |     bhe(i)*rmassinv_he)
       enddo ! i=lon0,lon1
 !
 ! xmbar_kh = mbar(k+1/2):
       do i=lon0,lon1
         do k=lev0,lev1
-          xmbar_kh(k,i) = 1./(o2(k,i,lat)*rmassinv_o2+o1(k,i,lat)*
-     |      rmassinv_o1+n2(k,i,lat)*rmassinv_n2)
+          xmbar_kh(k,i) = 1./
+     |      (o2(k,i,lat)*rmassinv_o2+
+     |       o1(k,i,lat)*rmassinv_o1+
+     |       n2(k,i,lat)*rmassinv_n2+
+     |       he(k,i,lat)*rmassinv_he)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
+!
+! btf 6/16/14: To be completely correct and consistent, need to
+!   add pshe and dhedz below (including calculation of ex), to 
+!   include helium in diffusion of minor species.
 !
 ! Lower boundary:
       do i=lon0,lon1
@@ -254,7 +266,6 @@
 !
 ! tni = tn at interfaces:
       do i=lon0,lon1
-!       tni(lev0,i) = tn(lev1,i,lat) ! assumes bottom boundary of tn in top slot
         tni(lev0,i) = tlbc(i,lat) 
         tni(lev1,i) = tn(lev1-1,i,lat)
         do k=lev0+1,lev1-1

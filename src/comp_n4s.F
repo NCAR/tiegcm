@@ -171,8 +171,8 @@
  
       end subroutine comp_n4s
 !-----------------------------------------------------------------------
-      subroutine minor_n4s(tn,o2,o1,n2,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine minor_n4s(tn,o2,o1,n2,he,n4s,n4s_nm1,n4s_out,
+     |  n4s_nm1_out,lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_n4s
 !
 ! Input args:
@@ -183,6 +183,7 @@
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
      |  n2,      ! molecular nitrogen (mmr)
+     |  he,      ! helium (mmr)
      |  n4s,     ! N4S (mmr)
      |  n4s_nm1  ! N4S at time n-1 
 !
@@ -200,11 +201,7 @@
 ! Minor returns n4s_out and n4s_nm1_out. Module data n4s_prod,
 ! n4s_loss, etc, were defined by comp_n4s.  
 !
-!     subroutine minor(tn,o2,o1,fcomp,fcomp_tm1,fcomp_out,fcomp_tm1_out,
-!    |  sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,lon0,lon1,lat0,
-!    |  lat1,idebug)
-!
-      call minor(tn,o2,o1,n2,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
+      call minor(tn,o2,o1,n2,he,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
      |  n4s_loss,n4s_prod,n4s_lbc,n4s_ubc,rmass_n4s,phi_n4s,
      |  alfa_n4s,lev0,lev1,lon0,lon1,lat0,lat1,0,'N4S')
 

@@ -463,6 +463,7 @@
      |    o2     (levd0,lond0,latd0,itp),  ! O2 (mmr)
      |    o1     (levd0,lond0,latd0,itp),  ! O (mmr)
      |    n2     (levd0,lond0,latd0),      ! N2 (mmr)
+     |    he     (levd0,lond0,latd0,itp),  ! HE (mmr)
      |    n4s    (levd0,lond0,latd0,itp),  ! n4s from previous step
      |    n4s_nm (levd0,lond0,latd0,itp),  ! n4s at time n-1
      |    n4s    (levd0,lond0,latd0,itc),  ! output n4s
@@ -503,6 +504,7 @@
      |    o2   (levd0,lond0,latd0,itp),  ! O2 (mmr)
      |    o1   (levd0,lond0,latd0,itp),  ! O (mmr)
      |    n2   (levd0,lond0,latd0),      ! N2 (mmr)
+     |    he   (levd0,lond0,latd0,itp),  ! HE (mmr)
      |    no   (levd0,lond0,latd0,itp),  ! current no
      |    no_nm(levd0,lond0,latd0,itp),  ! no at time n-1
      |    no   (levd0,lond0,latd0,itc),  ! output no
