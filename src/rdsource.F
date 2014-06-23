@@ -11,9 +11,11 @@
       use input_module,only: source,source_start,output,start,
      |  f107,f107a,power
       use hist_module,only: nsource,nhist,ioutfile,ncid,iprint,h
-      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
+      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm,
+     |  he,he_nm,field_initval
       use mpi_module,only: lat0,lat1,lon0,lon1
       use pdynamo_module,only: define_phim3d
+      use lbc,only: pshelb
 #ifdef MPI
       use mpi_module,only: mp_periodic_f4d,mp_periodic_f2d,
      |  mp_bndlons_f2d,mp_bndlats_f2d
@@ -134,6 +136,17 @@
       enddo
       call set_periodic_f4d(itp)
 #endif
+!
+! If helium was not read from history, then set it to pshelb globally.
+! (pshelb is a constant set in lbc.F). Helium is a 4d prognostic, which
+! was initialized to field_initval (probably zero) by sub init_4d (fields.F)
+!
+      if (all(he==field_initval)) then
+        write(6,"('readsource: Helium apparently not read from source',
+     |    ' history. Will init HE and HE_NM to pshelb=',e12.4)") pshelb
+        he = pshelb    ! whole-array op
+        he_nm = pshelb ! whole-array op
+      endif 
 !
       end subroutine readsource
 !-------------------------------------------------------------------

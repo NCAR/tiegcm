@@ -31,6 +31,9 @@
 !
 ! This t0 is different than the t0 in cons.
       real :: t0(nlev+1) 
+!
+! Lower boundary for helium (mmr):
+      real,parameter :: pshelb=0.1154E-5
       contains
 !-----------------------------------------------------------------------
       subroutine init_lbc
@@ -597,7 +600,6 @@ C     ****
 !
 ! Local:
       real :: alfa
-      real :: psheb
       integer :: i
 C     ****
 C     ****     IN TIGCM AND TIEGCM:
@@ -624,7 +626,6 @@ C     ****       WHERE:
 C     ****         ALFA = 0.22 + 0.014 = 0.234
 C     ****
       data alfa/0.234/
-      data psheb/0.1154E-5/
       do i = 1,nlonp4
         ee(i,1,1) = 0.
         ee(i,1,2) = 0.
@@ -646,7 +647,7 @@ C     ****
         ff(i,3,3) = 1.
         gg(i,1) = -alfa
         gg(i,2) = 0.
-        gg(i,3) = -psheb
+        gg(i,3) = -pshelb
       enddo
       end subroutine bndef
 !-----------------------------------------------------------------------

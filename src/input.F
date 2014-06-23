@@ -1096,8 +1096,8 @@
       do i=1,mxhvols
         if (len_trim(secout(i)) > 0) then
           call expand_path(secout(i))
-          write(6,"('Input: Expanded secout file ',a,' to ',/,'  ',a)")
-     |      trim(hvols(i)),trim(secout(i))
+!         write(6,"('Input: Expanded secout file ',a,' to ',/,'  ',a)")
+!    |      trim(hvols(i)),trim(secout(i))
         endif
       enddo
 !
