@@ -82,10 +82,10 @@
 ; then the given KP will be used to calculate POWER and/or CTPOTEN
 ;
 ;KP = 2.0
- POWER   = 39.
- CTPOTEN = 60.
- F107    = 200.
- F107A   = 200.
+ POWER   = 18.
+ CTPOTEN = 30.
+ F107    = 70.
+ F107A   = 70.
 ;
 ; If potential model is WEIMER, data file IMF_NCFILE can be specified 
 ; to read one or more of BXIMF,BYIMF,BZIMF,SWVEL,SWDEN. If IMF_NCFILE 
