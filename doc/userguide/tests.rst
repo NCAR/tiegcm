@@ -17,7 +17,7 @@ of the release.
 Following is a summary of benchmark runs made by TIEGCM version |version|.
 For full history file output, steady-state start-up files, and "sanity check" plots 
 of the benchmark runs made by version |version|, please see 
-:base_url:`Release Documentation <release/_build/html>`
+:base_url:`Release Documentation <release/html>`
 
 Control
 -------
