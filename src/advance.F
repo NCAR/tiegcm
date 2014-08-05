@@ -89,6 +89,7 @@
       integer :: cmodeltime(4) !CISM coupling time
 #endif
       real :: fmin,fmax
+      real :: polesigns(1)=1.  ! for n2 call to mp_polelats
       integer(kind=8) :: nsecs ! current model time in seconds,
                                ! including model day
       logical :: time2write,wrprim,wrsech,newseries_sech,

@@ -47,7 +47,7 @@
      |  rk21,rk22,rk23,rk24,rk25,rk26,rk27
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
-     |  mp_geo_halos_f3d,mp_polelats_f3d
+     |  mp_polelats_f3d,mp_geo_halos_f3d
 #endif
 !
 ! Args:
@@ -134,16 +134,18 @@
 !
 ! Number of pressure levels (this will equal nlevp1):
       nlevs = lev1-lev0+1 ! for bndlons calls
+
+#ifdef MPI
 !
-! Set lat,lon halo points of 3d field N2 for rrk calls below:
-      call mp_geo_halos_f3d(n2,lev0,lev1,lon0,lon1,lat0,lat1,1)
-!
-! Make latitudes j=-1,0 from j=2,1, and j=nlat+1,nlat+2 from nlat-1,nlat
-! (note that mp_geo_halos_f3d and mp_polelats_f3d do not define "outside corner"
-! halo points, but this should be ok since cross-derivatives are not performed)
+! Make latitudes j=-1,0 from j=2,1, and j=nlat+1,nlat+2 from nlat-1,nlat for n2, 
+! then define 2d halos points.  Note that mp_geo_halos_f3d and mp_polelats_f3d 
+! do not define "outside corner" halo points, but this should be ok since 
+! cross-derivatives are not performed.
 !
       call mp_polelats_f3d(n2(:,lon0:lon1,:),   ! 3rd dim is lat0-2:lat1+2
      |  lev0,lev1,lon0,lon1,lat0,lat1,1,(/1./)) ! last arg means no change in polesign
+      call mp_geo_halos_f3d(n2,lev0,lev1,lon0,lon1,lat0,lat1,1)      
+#endif
 !
 ! Save inputs to secondary history file:
 ! 

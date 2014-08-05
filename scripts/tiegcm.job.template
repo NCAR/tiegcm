@@ -22,12 +22,8 @@ if (! -d $modeldir) then
   echo ">>> Cannot find model directory $modeldir <<<"
   exit 1
 endif
-set model = $modeldir:t
-
-if ($model == '') then
-  echo "Please remove trailing slash from modeldir $modeldir"
-  exit
-endif
+# Executable file name:
+set model = tiegcm.exe
 
 if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 

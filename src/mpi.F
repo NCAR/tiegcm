@@ -253,8 +253,12 @@
         enddo
 !
 ! Tasks are periodic in longitude:
-        itask_table(-1,j) = itask_table(ntaski-1,j)
-        itask_table(ntaski,j) = itask_table(0,j)
+! 8/5/14 btf: this was apparently causing a problem at lon=0,
+!   esp visible in maps of UN and OMEGA at higher levels, but 
+!   only when ntask==4.
+! 
+!       itask_table(-1,j) = itask_table(ntaski-1,j)
+!       itask_table(ntaski,j) = itask_table(0,j)
       enddo  
 !
 ! Print table to stdout:
