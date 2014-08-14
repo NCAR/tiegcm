@@ -32,6 +32,7 @@
       use aurora_module,only: aurora
       use n4s_module,only: comp_n4s,minor_n4s
       use no_module,only: comp_no,minor_no
+      use ar_module,only: comp_ar,minor_ar
       use hdif_module,only: hdif3,hdif_bndlons,hdif_periodic
       use timing_module,only: timer,timing
       use addfld_module,only: addfld
@@ -522,6 +523,43 @@
      |      no(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
         enddo
       endif
+!
+! Advance argon:
+!
+      call timer(time0,time1,'CMPMINOR',0,0) ! resume comp minor timing
+      do lat=lat0,lat1
+        call comp_ar(
+     |    ar    (levd0,lond0,lat,itp),    ! argon from previous step
+     |    1,nlevp1,lon0,lon1,lat)
+        if (debug) write(6,"('dynamics after comp_ar: lat=',i3,
+     |    ' istep=',i5)") lat,istep
+      enddo ! lat=lat0,lat1
+!
+      call minor_ar(
+     |  tn     (levd0,lond0,latd0,itp),   ! tn (deg K)
+     |  o2     (levd0,lond0,latd0,itp),   ! o2 (mmr)
+     |  o1     (levd0,lond0,latd0,itp),   ! o1 (mmr)
+     |  n2     (levd0,lond0,latd0),       ! n2 (mmr)
+     |  he     (levd0,lond0,latd0,itp),   ! he (mmr)
+     |  ar     (levd0,lond0,latd0,itp),   ! ar from previous step
+     |  ar_nm  (levd0,lond0,latd0,itp),   ! ar at time n-1
+     |  ar     (levd0,lond0,latd0,itc),   ! ar output
+     |  ar_nm  (levd0,lond0,latd0,itc),   ! ar output at time n-1
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
+!
+      if (debug) write(6,"('dynamics after minor_ar: istep=',i5)") istep
+      call timer(time0,time1,'CMPMINOR',1,0) ! suspend comp minor timing
+      time1_cmpminor = time1_cmpminor+time1
+      if (timing%level >= 2.and.time2print(nstep,istep))
+     |  write(6,"('Time in CMPMINOR =     ',f12.2,
+     |    ' Dynamics: step ',i5)") time1_cmpminor,istep
+      if (diags) then
+        do lat=lat0,lat1
+          call addfld('CMP_AR',' ',' ',ar(:,i0:i1,lat,itc),
+     |      'lev',1,nk,'lon',i0,i1,lat)
+        enddo
+      endif
+
 !
 ! Calculate additions to neutral gas heating and O2 dissociation
 ! due to N, NO chemistry:

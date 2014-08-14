@@ -17,6 +17,7 @@
       use qrj_module,only: alloc_q
       use n4s_module,only: alloc_n4s
       use no_module,only: alloc_no
+      use ar_module,only: alloc_ar
       use magpres_g,only: alloc_pg
       use gswm_module,only: alloc_gswm
       use pdynamo_module,only: alloc_pdyn
@@ -38,6 +39,7 @@
 ! for minor composition species:
       call alloc_n4s(lon0,lon1,lat0,lat1)
       call alloc_no (lon0,lon1,lat0,lat1)
+      call alloc_ar (lon0,lon1,lat0,lat1)
 !
 ! Allocate for gswm:
       call alloc_gswm(lon0,lon1,lat0,lat1)

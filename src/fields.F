@@ -17,8 +17,8 @@
      |  mxfsech,spval,nmlat,nmlonp1,mlev0,mlev1
       implicit none
       integer,parameter :: 
-     |  nf4d          = 28, ! number of 4-d fields
-     |  nf4d_hist     = 26, ! number of 4-d fields on primary histories
+     |  nf4d          = 30, ! number of 4-d fields
+     |  nf4d_hist     = 27, ! number of 4-d fields on primary histories
      |  nf3d          = 46  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
@@ -52,7 +52,7 @@
      |  i_te    ,i_ne     ,i_o2p    ,i_w      ,i_z      ,
      |  i_poten ,i_tn_nm  ,i_un_nm  ,i_vn_nm  ,i_o2_nm  ,
      |  i_o1_nm ,i_n4s_nm ,i_no_nm  ,i_op_nm  ,i_barm   ,
-     |  i_vc    ,i_he     ,i_he_nm
+     |  i_vc    ,i_he     ,i_he_nm  ,i_ar     ,i_ar_nm
 !
 ! Allocatable target arrays for 4-d fields:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 ,2)
@@ -64,7 +64,7 @@
      |  te      ,ne       ,o2p      ,w        ,z        ,
      |  poten   ,tn_nm    ,un_nm    ,vn_nm    ,o2_nm    ,
      |  o1_nm   ,n4s_nm   ,no_nm    ,op_nm    ,barm     ,
-     |  vc      ,he       ,he_nm
+     |  vc      ,he       ,he_nm    ,ar       ,ar_nm
 !
 ! 3-d fields structure type:
 ! Data pointers will point to allocatable target arrays.
@@ -281,6 +281,14 @@
       f4d(n)%data => he
       i_he = n ; n = n+1
 !
+      allocate(ar(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('ARGON (AR)')")
+      f4d(n)%short_name = ("AR")
+      f4d(n)%units = "MMR"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => ar
+      i_ar = n ; n = n+1
+!
       allocate(op(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('O+ ION')")
       f4d(n)%short_name = ("OP")
@@ -427,6 +435,14 @@
       f4d(n)%data => he_nm
       i_he_nm = n ; n = n+1
 !
+      allocate(ar_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('ARGON (TIME N-1)')")
+      f4d(n)%short_name = ("AR_NM")
+      f4d(n)%units = "MMR"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => ar_nm
+      i_ar_nm = n ; n = n+1
+!
       allocate(op_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('OP (TIME N-1)')")
       f4d(n)%short_name = ("OP_NM")
@@ -450,6 +466,12 @@
       f4d(n)%vcoord = "midpoints"
       f4d(n)%data => vc
       i_vc = n ; n = n+1
+!
+! Check number of fields allocated:
+      if (n-1 /= nf4d) then
+        write(6,"(/,'>>> init_4d: wrong number of 4-d fields?',
+     |    ' n-1=',i5,' nf4d=',i5)") n-1,nf4d
+      endif
 !
 ! itp,itc are indices to rightmost dimension of field data, for
 ! previous and current time steps.
@@ -559,7 +581,7 @@
       f3d(n)%units = " "
       f3d(n)%data => kldhe
       i_kldhe = n ; n = n+1
-!
+
       allocate(xnmbar(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
       write(f3d(n)%long_name,"('p0*e(-z)/kT*barm')")
       f3d(n)%short_name = ("XNMBAR")
@@ -841,6 +863,12 @@
       f3d(n)%units = "cm"
       f3d(n)%data => wn
       i_wn = n ; n = n+1
+!
+! Check number of fields allocated:
+      if (n-1 /= nf3d) then
+        write(6,"(/,'>>> init_3d: wrong number of 3-d fields?',
+     |    ' n-1=',i5,' nf3d=',i5)") n-1,nf3d
+      endif
 !
 ! f3d fields are diagnostics:
       f3d%prognostic = .false.

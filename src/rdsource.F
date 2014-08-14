@@ -12,7 +12,8 @@
      |  f107,f107a,power
       use hist_module,only: nsource,nhist,ioutfile,ncid,iprint,h
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm,
-     |  he,he_nm,field_initval
+     |  he,he_nm,field_initval,ar,ar_nm
+      use ar_module,only: ar_glbm
       use mpi_module,only: lat0,lat1,lon0,lon1
       use pdynamo_module,only: define_phim3d
       use lbc,only: pshelb
@@ -136,6 +137,18 @@
       enddo
       call set_periodic_f4d(itp)
 #endif
+!
+! If argon was not read from the source history, then set it to
+! column global means (see ar_glbm(nlevp1) in comp_ar.F).
+!
+      if (all(ar==field_initval)) then
+        write(6,"('readsource: Argon apparently not read from source',
+     |    ' history. Will init AR and AR_NM to ar_glb')")
+        do k=1,nlevp1
+          ar   (k,:,:,:) = ar_glbm(k)
+          ar_nm(k,:,:,:) = ar_glbm(k)
+        enddo
+      endif
 !
 ! If helium was not read from history, then set it to pshelb globally.
 ! (pshelb is a constant set in lbc.F). Helium is a 4d prognostic, which
