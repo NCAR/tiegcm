@@ -5,7 +5,7 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-      use params_module,only: nlat,nlonp4,dz,nlon,dlev
+      use params_module,only: nlat,nlonp4,dz,nlon,dlev,nlevp1
       use magfield_module,only: bx,by,bz,bmod2 ! (nlonp4,-1:nlat+2)
       use addfld_module,only: addfld
       use diags_module,only: mkdiag_BXYZ,mkdiag_BMAG
@@ -45,6 +45,7 @@
       use chemrates_module,only: ! needed chemical reaction rates
      |  rk1 ,rk2 ,rk10,rk16,rk17,rk18,rk19,rk20,
      |  rk21,rk22,rk23,rk24,rk25,rk26,rk27
+      use input_module,only: enforce_opfloor
 #ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
      |  mp_polelats_f3d,mp_geo_halos_f3d
@@ -83,7 +84,7 @@
      |  xiop2p,xiop2d
 !
 ! Local:
-      integer :: k,i,lonbeg,lonend,lat,ier,nlevs
+      integer :: k,i,ii,lonbeg,lonend,lat,ier,nlevs
       integer :: jm2,jm1,j0,jp1,jp2 ! lat-2, lat-1, lat, lat+1, lat+2 
       real,dimension(lon0:lon1,lat0:lat1) :: 
      |  opflux,    ! upward number flux of O+ (returned by sub oplus_flux) (t7)
@@ -106,9 +107,9 @@
      |  tp                ! te+ti
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
 !
-! For O+ minimum:
-      real :: opmin=1000., opmin_lat0=-15., opmin_lat1=15., opmin_zp=1.0
-      real :: slt,dum ! only for print to stdout
+! For O+ "smooth floor" (ignored if enforce_opfloor is false):
+!     logical :: enforce_opfloor = .false.
+      real :: opmin=1000.,opfloor,glondeg,slt,dum
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
@@ -902,32 +903,34 @@
         enddo ! k=lev0,lev1-1      
       enddo ! i=lon0,lon1
 !
-! Report magnitude and spatial extent of imposed O+ minimum at
-! first timestep (see opmin settings above):
+! 12/4/14 btf: Enforce O+ minimum if enforce_opfloor is true.
+! Opfloor is Stan's "smooth floor" (product of two Gaussians, 
+!   dependent on latitude and pressure level) (opmin=1000.0):
 !
-      if (istep==1.and.lat==lat0)
-     |  write(6,"('OPLUS: opmin=',e12.4,' opmin_lat0,1=',2e12.4,
-     |    ' opmin_zp=',f8.2)") opmin,opmin_lat0,opmin_lat1,opmin_zp
+      if (enforce_opfloor > 0) then
+        do k=lev0,lev1-1
+          opfloor = opmin*exp(-(glat(lat)/90.0)**2/0.3)*
+     |              exp(-((zpmid(k)-4.25)/zpmid(nlevp1))**2/0.1)
+          do i=lon0,lon1
+            if (opout(k,i,lat) < opfloor) then
 !
-! May-June, 2014 (B.Foster and Wenbin): Limit O+ to minimum opmin at 
-!   low-latitudes and above given zp level (see opmin settings above):
-!
-      if (glat(lat) <= opmin_lat1.and.glat(lat) >= opmin_lat0) then
-        do i=lon0,lon1
-          do k=lev0,lev1-1      
-            if (zpmid(k) >= opmin_zp .and. opout(k,i,lat) < opmin) then
-!             if (opout(k,i,lat) /= 1.e-5) then ! don't report global min
-!               slt = fslt(dum,secs/3600.,glon(i),1)
-!               write(6,"('OPLUS: apply O+ min: glat=',f8.2,' glon=',
-!    |            f8.2,' zpmid=',f8.2,' opout=',e12.3,' uthr=',f8.2,
-!    |            ' slt=',f8.2)") glat(lat),glon(i),zpmid(k),
-!    |            opout(k,i,lat),secs/3600.,slt
-!             endif ! report to stdout
-              opout(k,i,lat) = opmin
-            endif ! apply minimum
-          enddo
-        enddo  
-      endif
+! Report time and location to stdout when opout < opfloor:
+!             if (opout   (k,i,lat) /= 1.e-5) then
+!               ii = i ; if (i > nlon) ii = i-nlon
+!               glondeg = glon(ii)
+!               slt = fslt(dum,secs/3600.,glondeg,1)
+!               write(6,"('OPLUS: enforce O+ min: opout=',e12.4,
+!    |            ' opfloor=',e12.4,' lat,lon=',2f9.2,' zpmid=',f8.2,
+!    |            ' istep=',i5,' uthr=',f8.2,' slt=',f8.2)") 
+!    |            opout(k,i,lat),opfloor,glat(lat),glondeg,zpmid(k),
+!    |            istep,secs/3600.,slt
+!             endif ! report if not 1.e-5
+
+              opout(k,i,lat) = opfloor
+            endif ! opout < opfloor
+          enddo ! i=lon0,lon1
+        enddo ! k=lev0,lev1-1
+      endif ! enforce_opfloor
 !
 ! End fourth and final latitude scan:
       enddo ! lat=lat0,lat1
