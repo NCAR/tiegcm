@@ -1,5 +1,5 @@
 !
-      subroutine comp(tn,o2,o2_nm,o1,o1_nm,he,he_nm,n2,un,vn,w,z,hdo2,
+      subroutine comp(tn,o2,o2_nm,o1,o1_nm,he,he_nm,n2,un,vn,w,hdo2,
      |                hdo1,hdhe,o2_upd,o2nm_upd,o1_upd,o1nm_upd,he_upd,
      |                henm_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -14,7 +14,7 @@
       use cons_module,only: pi,hor,dtr,rmassinv_o2,rmassinv_o1,
      |  rmassinv_he,rmassinv_n2,rmass_o2,rmass_o1,rmass_he,expz,expzmid,
      |  expzmid_inv,difk,dtx2inv,dtsmooth,dtsmooth_div2,difhor,
-     |  gask,grav,grav_par,re,p0,sqrtpi
+     |  gask,grav,re,p0,sqrtpi
       use chemrates_module,only: fs ! from sub comp_o2o
       use lbc,only: b,fb
       use fields_module,only: tlbc
@@ -36,7 +36,6 @@
      |  un,   ! zonal wind velocity at current timestep
      |  vn,   ! meridional wind velocity at current timestep
      |  w,    ! vertical velocity at current timestep
-     |  z,    ! geopotential height
      |  hdo2, ! O2 horizontal diffusion (hdif3)
      |  hdo1, ! O  horizontal diffusion (hdif3)
      |  hdhe  ! He horizontal diffusion (hdif3)
@@ -69,7 +68,7 @@
       real :: rlat
       real :: alpha(3,3),phi(3,4),delta(3,3),tau,t00,small,small_he
       real :: normalize,thdiffalpha
-      real :: vp2,ve2,lamdac,flxwks
+      real :: flxwks
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
      |  o2nm_smooth, o1nm_smooth, henm_smooth, ! smoothed at time n-1
      |  o2_advec,    o1_advec,    he_advec     ! horizontal advection
@@ -121,12 +120,12 @@
       if (calc_helium==1) then
         call laplacian(flx_arg,flx_he,lon0,lon1,lat0,lat1)
 
-!       call addfld('FLX_ARG','UB Mass Flux of Helium ','g/cm^2',
-!    |    flx_arg(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
-!    |    lat0,lat1,0)
-!       call addfld('FLX_HE','UB Mass Flux of Helium ','g/cm^2',
-!    |    flx_he(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
-!    |    lat0,lat1,0)
+        call addfld('FLX_ARG','Argument of Laplacian ','g/cm^2/s',
+     |    flx_arg(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
+     |    lat0,lat1,0)
+        call addfld('FLX_HE','UB Mass Flux of Helium ','g/cm^2/s',
+     |    flx_he(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',
+     |    lat0,lat1,0)
 
       else
         he_upd = 0.   ! 3d whole array op
@@ -587,7 +586,7 @@
             enddo ! i=lon0,lon1
           enddo ! m=1,3
 
-! Separate longitude loop to calculate helium thermal escape flux UBC (Added by EKS)
+! Separate longitude loop to calculate helium lateral exospheric transport flux UBC (Added by EKS)
           do i=lon0,lon1
             alpha22(i) = -(phi(io1,4) + (phi(io1,io2)-phi(io1,4))*
      |                 .5*(o2(k,i,lat)+o2(k+1,i,lat))
@@ -601,16 +600,9 @@
      |                 .5*(o1(k,i,lat)+o1(k+1,i,lat))
             alpha32(i) = (phi(ihe,io1)-phi(ihe,4))*
      |                 .5*(he(k,i,lat)+he(k+1,i,lat))
-!            vp2 = 2.*gask*tn(k,i,lat)*rmassinv_he ! tn(lev1,i) missing
-!            ve2 = 2.*grav_par/(re+z(lev1,i,lat))
-!            lamdac = ve2/vp2
-! Add thermal escape mass flux to flx_he=((P/kB/T)*(embar/avo)*psi_he)*vp*(1+lamda_c)*exp(-lamda_c)/(2*sqrtpi)
+! Add lateral exospheric transport mass flux
             flx00(i) = 0.5*(embar(i,k)+embar(i,k+1))*rmassinv_n2*p0*
      |        (t00/tn(k,i,lat))**0.25/(tau*grav)
-!            flx_he(i,lat) = flx_he(i,lat)+p0*expz(k)*expzmid*
-!     |        (he(k,i,lat)+he(k+1,i,lat))*(embar(i,k)+embar(i,k+1))*
-!     |        sqrt(vp2)*(1.+lamdac)*exp(-lamdac)/
-!     |        (8.*sqrtpi*gask*tn(k,i,lat))
             fk(i,io2) = fk(i,io2)-
      |        rk(i,io2,2)*(alpha23(i)-alpha22(i))*flx_he(i,lat)/
      |        (flx00(i)*(1./dz-0.5*ep(i,2,kp)))-

@@ -5,7 +5,11 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-! Compute Laplacian using Spectral Approximation.
+! Compute scalar surface Laplacian:  Nabla^2 F = 1/sin(theta)*d/d(theta)*
+!  (sin(theta)*dF/d(theta)) + 1/sin^2(theta)*d^2*F/d(phi)^2 using a 
+!  truncated spectral approximation, where theta = colatitude, phi = 
+!  longitude, and F includes the constant factor 1/re^2 that is normally 
+!  present on the rhs.
 !
       use params_module,only: nlon,nlonp2,nlonp4,nlat
       use addfld_module,only: addfld
@@ -19,9 +23,9 @@
 ! on grid resolution:
 !
 #if (NLAT==36 && NLON==72)
-      use he_coefs_sres,only: lpmn,zmn ! he_coefs_sres.F
+      use he_coefs_sres,only: pmn,zmn  ! he_coefs_sres.F
 #elif (NLAT==72 && NLON==144)
-      use he_coef0_dres,only: lpmn     ! he_coef0_dres.F
+      use he_coef0_dres,only: pmn      ! he_coef0_dres.F
       use he_coef1_dres,only: zmn      ! he_coef1_dres.F
 #else
       UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
@@ -39,6 +43,13 @@
 ! Local:
 #ifndef MPI
       integer,save :: mytid=0
+#endif
+#if (NLAT==36 && NLON==72)
+      integer,parameter :: truncdeg=4 ! Degree of truncation to maintain numerical stability
+#elif (NLAT==72 && NLON==144)
+      integer,parameter :: truncdeg=8 ! Degree of truncation to maintain numerical stability
+#else
+      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
 #endif
       integer :: i,j,lat,m,n,nx,nw,lonbeg,lonend
       integer,parameter :: nmax=35
@@ -86,7 +97,7 @@
         amn(:,:) = 0.
         bmn(:,:) = 0.
         ! n=0,nmax-1
-        do n=0,nmax-1
+        do n=0,truncdeg ! for no truncation, sum to nmax-1
           ! m=0
           do lat=1,nlat
             amn(0,n) = amn(0,n)+zmn(lat,0,n)*fx(1,lat)
@@ -99,17 +110,18 @@
             enddo
           enddo ! m=1,n
         enddo ! n=0,nmax-1
-        ! n=nmax,m=0
-        do lat=1,nlat
-          amn(0,nmax) = amn(0,nmax)+zmn(lat,0,nmax)*fx(1,lat)
-        enddo
-        ! n=nmax,m=2,nmax-1,2
-        do m=2,nmax-1,2
-          do lat=1,nlat
-            amn(m,nmax) = amn(m,nmax)+zmn(lat,m,nmax)*fx(2*m+1,lat)
-            bmn(m,nmax) = bmn(m,nmax)+zmn(lat,m,nmax)*fx(2*m+2,lat)
-          enddo
-        enddo ! m=2,nmax-1,2
+        ! for (no) truncation (un)comment the following loops
+        ! n=nmax;m=0
+!        do lat=1,nlat
+!          amn(0,nmax) = amn(0,nmax)+zmn(lat,0,nmax)*fx(1,lat)
+!        enddo
+        ! n=nmax;m=2,nmax-1,2
+!        do m=2,nmax-1,2
+!          do lat=1,nlat
+!            amn(m,nmax) = amn(m,nmax)+zmn(lat,m,nmax)*fx(2*m+1,lat)
+!            bmn(m,nmax) = bmn(m,nmax)+zmn(lat,m,nmax)*fx(2*m+2,lat)
+!          enddo
+!        enddo ! m=2,nmax-1,2
 !
 ! Synthesis
 !   ORDERING OF COEFFICIENTS:
@@ -118,19 +130,36 @@
 !
         fx(:,:) = 0.
         ! n=0,nmax-1
-        do n=0,8 !12 !nmax-1
+        do n=0,truncdeg ! for no truncation, sum to nmax-1
           ! m=0
           do lat=1,nlat
-            fx(1,lat) = fx(1,lat)+amn(0,n)*lpmn(lat,0,n) ! A(0)
+            fx(1,lat) = fx(1,lat)-n*(n+1)*amn(0,n)*pmn(lat,0,n)         ! A(0)
           enddo
           ! m=1,n
           do m=1,n
             do lat=1,nlat
-              fx(2*m+1,lat) = fx(2*m+1,lat)+amn(m,n)*lpmn(lat,m,n) ! A(1),A(2),...
-              fx(2*m+2,lat) = fx(2*m+2,lat)+bmn(m,n)*lpmn(lat,m,n) ! B(1),B(2),...
+              fx(2*m+1,lat) = fx(2*m+1,lat)-n*(n+1)*amn(m,n)*
+     |                        pmn(lat,m,n)                              ! A(1),A(2),...
+              fx(2*m+2,lat) = fx(2*m+2,lat)-n*(n+1)*bmn(m,n)*
+     |                        pmn(lat,m,n)                              ! B(1),B(2),...
             enddo
           enddo ! m=1,n
         enddo ! n=0,nmax-1
+        ! for (no) truncation (un)comment the following loops
+        ! n=nmax;m=0
+!        do lat=lat0,lat1
+!          fx(1,lat) = fx(1,lat)-nmax*(nmax+1)*amn(0,nmax)*
+!     |                pmn(lat,0,nmax)                                   ! A(0)
+!        enddo ! lat=lat0,lat1
+        ! n=nmax;m=2,nmax-1,2
+!        do m=2,nmax-1,2
+!          do lat=lat0,lat1
+!            fx(2*m+1,lat) = fx(2*m+1,lat)-nmax*(nmax+1)*amn(m,nmax)*
+!     |                      pmn(lat,m,nmax)                             ! A(2),A(4),...
+!            fx(2*m+2,lat) = fx(2*m+2,lat)-nmax*(nmax+1)*bmn(m,nmax)*
+!     |                      pmn(lat,m,nmax)                             ! B(2),B(4),...
+!          enddo ! lat=lat0,lat1
+!        enddo ! m=2,nmax-1,2
 !
 ! Inverse transform fourier back to gridpoint:
         call fftrans(fx,nx,wfft,nw,trigs,ntrigs,ifax,1,nlonp4,nlon,nlat,

@@ -865,7 +865,6 @@
      |  un    (levd0,lond0,latd0,itp), ! zonal velocity
      |  vn    (levd0,lond0,latd0,itp), ! meridional velocity
      |  w     (levd0,lond0,latd0,itp), ! vertical velocity
-     |  z     (levd0,lond0,latd0,itc), ! updated Z from addiag
      |  hdo2  (levd0,lond0,latd0),     ! O2 horizontal diffusion (hdif3)
      |  hdo1  (levd0,lond0,latd0),     ! O  horizontal diffusion (hdif3)
      |  hdhe  (levd0,lond0,latd0),     ! He horizontal diffusion (hdif3)
