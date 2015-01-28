@@ -325,8 +325,8 @@
       diags(n)%caller     = 'comp.F'
 !
       n = n+1
-      diags(n)%short_name = 'ZMID'
-      diags(n)%long_name  = 'ZMID: Geopotential Height at midpoints'
+      diags(n)%short_name = 'ZGMID'
+      diags(n)%long_name  = 'ZGMID: Geometric Height at midpoints'
       diags(n)%units      = 'cm'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'addiag.F'
@@ -1288,32 +1288,33 @@
 
       end subroutine mkdiag_PHIM2D
 !-----------------------------------------------------------------------
-      subroutine mkdiag_ZMID(name,zint,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_ZGMID(name,zgint,lev0,lev1,lon0,lon1,lat)
 !
-! Interpolate geopotential on interfaces (input zint) to midpoints.
+! Interpolate geometric height on interfaces (input zgint) to midpoints.
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: zint
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: 
+     |  zgint ! geometric height at interfaces
 !
 ! Local:
       integer,save :: ix=0,firstcall=0,k
-      real,dimension(lev0:lev1,lon0:lon1) :: zmid
+      real,dimension(lev0:lev1,lon0:lon1) :: zgmid
 
       firstcall = firstcall+1
       if (firstcall == 1) ix = checkf(name)
       if (ix==0) return
 
       do k=lev0,lev1-1
-        zmid(k,:) = 0.5*(zint(k,:)+zint(k+1,:))
+        zgmid(k,:) = 0.5*(zgint(k,:)+zgint(k+1,:))
       enddo
-      zmid(lev1,:) = 1.5*zmid(lev1-1,:)-0.5*zmid(lev1-2,:)
+      zgmid(lev1,:) = 1.5*zgmid(lev1-1,:)-0.5*zgmid(lev1-2,:)
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,zmid,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+     |  diags(ix)%units,zgmid,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
-      end subroutine mkdiag_ZMID
+      end subroutine mkdiag_ZGMID
 !-----------------------------------------------------------------------
 !
 ! End diags module:
