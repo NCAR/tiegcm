@@ -13,7 +13,7 @@
       use fields_module,only: tlbc
       use addfld_module,only: addfld
       use lbc,only: z_lbc
-      use diags_module,only: mkdiag_SCHT
+      use diags_module,only: mkdiag_SCHT,mkdiag_ZMID
       implicit none
 !
 ! Input args:
@@ -197,6 +197,10 @@
         enddo
 !       call addfld('ADIAG_Z','Geopotential from addiag',
 !    |    'cm',z(:,lon0:lon1,j),'ilev',lev0,lev1,'lon',lon0,lon1,j)
+!
+! Interpolate Z from interfaces to midpoints for diagnostic:
+        call mkdiag_ZMID('ZMID',z(:,lon0:lon1,j),lev0,lev1,
+     |    lon0,lon1,j)
       enddo ! j=lat0,lat1
 !
 ! Calculate diagnostic geopotential zg, with varying gravity:

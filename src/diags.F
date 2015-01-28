@@ -23,7 +23,7 @@
 ! adding new fields, and type diags(ndiag) must be defined by sub init_diags 
 ! below.
 !
-      integer,parameter :: ndiag = 37 ! increment this to add new diags
+      integer,parameter :: ndiag = 38 ! increment this to add new diags
       type diag_type
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
@@ -323,6 +323,13 @@
       diags(n)%units      = 'mmr'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'comp.F'
+!
+      n = n+1
+      diags(n)%short_name = 'ZMID'
+      diags(n)%long_name  = 'ZMID: Geopotential Height at midpoints'
+      diags(n)%units      = 'cm'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'addiag.F'
 
       if (n /= ndiag) then
         write(6,"('>>> init_diags: n=',i4,' ndiag=',i4)")
@@ -1280,6 +1287,33 @@
      |  diags(ix)%units,phim2d,'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
 
       end subroutine mkdiag_PHIM2D
+!-----------------------------------------------------------------------
+      subroutine mkdiag_ZMID(name,zint,lev0,lev1,lon0,lon1,lat)
+!
+! Interpolate geopotential on interfaces (input zint) to midpoints.
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: zint
+!
+! Local:
+      integer,save :: ix=0,firstcall=0,k
+      real,dimension(lev0:lev1,lon0:lon1) :: zmid
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      do k=lev0,lev1-1
+        zmid(k,:) = 0.5*(zint(k,:)+zint(k+1,:))
+      enddo
+      zmid(lev1,:) = 1.5*zmid(lev1-1,:)-0.5*zmid(lev1-2,:)
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,zmid,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+
+      end subroutine mkdiag_ZMID
 !-----------------------------------------------------------------------
 !
 ! End diags module:
