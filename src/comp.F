@@ -49,7 +49,7 @@
      |  o2nm_upd,o1nm_upd,henm_upd ! output: O2,O,He updated for previous timestep
 !
 ! Local:
-      integer :: k,kk,i,lat,isp,km,kp,ktmp,m,lonbeg,lonend,nlondiv2
+      integer :: k,kk,i,lat,isp,km,kp,ktmp,m,lonbeg,lonend,nlondiv2,n
       integer :: nk,nkm1,i0,i1,k0,k1
       integer,parameter :: io2=1,io1=2,ihe=3 ! indices to O2, O, He respectively
       real,dimension(lon0:lon1,lev0:lev1,3,3) :: gama
@@ -77,10 +77,16 @@
       real,dimension(lev0:lev1,lon0:lon1,3) :: zz_ki
       real,dimension(lev0:lev1,lon0:lon1,3,3) :: gama_ki
 !
+! Correction factor for diffusion coeff betweeen helium and o2,o,n2:
+      real,dimension(lev0:lev1,lon0:lon1,3) :: diff_fac
+      real :: ss(3) ! exponent factor for diff_fac
+!
       phi(:,1)=(/0.  ,0.673,0.270/)
       phi(:,2)=(/1.35,0.   ,0.404/)
       phi(:,3)=(/2.16,1.616,0.   /)
       phi(:,4)=(/1.11,0.769,0.322/)
+
+      ss = (/1.710, 1.749, 1.718/) ! for o2,o,n2
 
       tau=1.86e+3
       thdiffalpha = -0.38  ! Thermal diff alpha coefficient for Helium 
@@ -161,6 +167,31 @@
       do i=lon0,lon1
         dfactor(i) = 1.
       enddo
+!
+! Correction factors for mutual diffusion of helium with o2,o,n2:
+! (use tn at interfaces)
+! real,dimension(lev0:lev1,lon0:lon1,3) :: diff_fac
+!
+      do i=lon0,lon1
+        do k=lev0,lev1
+          do n=1,3 ! o2,o,n2
+            if (k==lev0) then
+              diff_fac(k,i,n) = (0.5*(tlbc(i,lat)+tn(k,i,lat))/t00)**
+     |          (1.75-ss(n))
+            else if (k==lev1) then
+              diff_fac(k,i,n) = (tn(k-1,i,lat)/t00)**(1.75-ss(n))
+            else
+              diff_fac(k,i,n) = (0.5*(tn(k-1,i,lat)+tn(k,i,lat))/t00)**
+     |          (1.75-ss(n))
+            endif
+          enddo
+        enddo
+      enddo
+!      do n=1,3
+!        write(6,"('comp: lat=',i3,' n=',i2,' diff_fac min,max=',
+!     |    2es12.4)") lat,n,minval(diff_fac(:,:,n)),
+!     |                     maxval(diff_fac(:,:,n))
+!      enddo
 !
 ! difhor flag is a parameter flag set to 1 in cons.F
 ! dfactor = 
@@ -263,27 +294,32 @@
 ! ALFA
           alpha(io2,1) = -(phi(io2,4) + (phi(io2,io1)-phi(io2,4))*
      |                    .5*(ps0(i,io1)+o1(lev0,i,lat))
-     |                   +(phi(io2,ihe)-phi(io2,4))*
-     |                    .5*(ps0(i,ihe)+he(lev0,i,lat)))
+     |                   +(diff_fac(lev0,i,io2)*phi(io2,ihe)-phi(io2,4))
+     |                   *.5*(ps0(i,ihe)+he(lev0,i,lat)))
           alpha(io1,2) = -(phi(io1,4) + (phi(io1,io2)-phi(io1,4))*
      |                    .5*(ps0(i,io2)+o2(lev0,i,lat))
-     |                   +(phi(io1,ihe)-phi(io1,4))*
-     |                    .5*(ps0(i,ihe)+he(lev0,i,lat)))
-          alpha(ihe,3) = -(phi(ihe,4) + (phi(ihe,io2)-phi(ihe,4))*
+     |                   +(diff_fac(lev0,i,io1)*phi(io1,ihe)-phi(io1,4))
+     |                   *.5*(ps0(i,ihe)+he(lev0,i,lat)))
+          alpha(ihe,3) = -(diff_fac(lev0,i,3)*phi(ihe,4) + 
+     |                    (diff_fac(lev0,i,io2)*phi(ihe,io2)-
+     |                    diff_fac(lev0,i,3)*phi(ihe,4))*
      |                    .5*(ps0(i,io2)+o2(lev0,i,lat))
-     |                   +(phi(ihe,io1)-phi(ihe,4))*
+     |                   +(diff_fac(lev0,i,io1)*phi(ihe,io1)-
+     |                     diff_fac(lev0,i,3)*phi(ihe,4))*
      |                    .5*(ps0(i,io1)+o1(lev0,i,lat)))
           alpha(io2,2) = (phi(io2,io1)-phi(io2,4))*
      |                    .5*(ps0(i,io2)+o2(lev0,i,lat))
-          alpha(io2,3) = (phi(io2,ihe)-phi(io2,4))*
+          alpha(io2,3) = (diff_fac(lev0,i,io2)*phi(io2,ihe)-phi(io2,4))*
      |                    .5*(ps0(i,io2)+o2(lev0,i,lat))
           alpha(io1,1) = (phi(io1,io2)-phi(io1,4))*
      |                    .5*(ps0(i,io1)+o1(lev0,i,lat))
-          alpha(io1,3) = (phi(io1,ihe)-phi(io1,4))*
+          alpha(io1,3) = (diff_fac(lev0,i,io1)*phi(io1,ihe)-phi(io1,4))*
      |                    .5*(ps0(i,io1)+o1(lev0,i,lat))
-          alpha(ihe,1) = (phi(ihe,io2)-phi(ihe,4))*
+          alpha(ihe,1) = (diff_fac(lev0,i,io2)*phi(ihe,io2)-
+     |                    diff_fac(lev0,i,3)*phi(ihe,4))*
      |                    .5*(ps0(i,ihe)+he(lev0,i,lat))
-          alpha(ihe,2) = (phi(ihe,io1)-phi(ihe,4))*
+          alpha(ihe,2) = (diff_fac(lev0,i,io1)*phi(ihe,io1)-
+     |                    diff_fac(lev0,i,3)*phi(ihe,4))*
      |                    .5*(ps0(i,ihe)+he(lev0,i,lat))
 
 ! DET(ALFA)
@@ -400,27 +436,32 @@
 ! ALFA
           alpha(io2,1) = -(phi(io2,4) + (phi(io2,io1)-phi(io2,4))*
      |                    .5*(o1(k,i,lat)+o1(k+1,i,lat))
-     |                   +(phi(io2,ihe)-phi(io2,4))*
+     |                   +(diff_fac(k+1,i,io2)*phi(io2,ihe)-phi(io2,4))*
      |                    .5*(he(k,i,lat)+he(k+1,i,lat)))
           alpha(io1,2) = -(phi(io1,4) + (phi(io1,io2)-phi(io1,4))*
      |                    .5*(o2(k,i,lat)+o2(k+1,i,lat))
-     |                   +(phi(io1,ihe)-phi(io1,4))*
+     |                   +(diff_fac(k+1,i,io1)*phi(io1,ihe)-phi(io1,4))*
      |                    .5*(he(k,i,lat)+he(k+1,i,lat)))
-          alpha(ihe,3) = -(phi(ihe,4) + (phi(ihe,io2)-phi(ihe,4))*
+          alpha(ihe,3) = -(diff_fac(k+1,i,3)*phi(ihe,4) + 
+     |                    (diff_fac(k+1,i,io2)*phi(ihe,io2)-
+     |                     diff_fac(k+1,i,3)*phi(ihe,4))*
      |                    .5*(o2(k,i,lat)+o2(k+1,i,lat))
-     |                   +(phi(ihe,io1)-phi(ihe,4))*
+     |                   +(diff_fac(k+1,i,io1)*phi(ihe,io1)-
+     |                     diff_fac(k+1,i,3)*phi(ihe,4))*
      |                    .5*(o1(k,i,lat)+o1(k+1,i,lat)))
           alpha(io2,2) = (phi(io2,io1)-phi(io2,4))*
      |                    .5*(o2(k,i,lat)+o2(k+1,i,lat))
-          alpha(io2,3) = (phi(io2,ihe)-phi(io2,4))*
+          alpha(io2,3) = (diff_fac(k+1,i,io2)*phi(io2,ihe)-phi(io2,4))*
      |                    .5*(o2(k,i,lat)+o2(k+1,i,lat))
           alpha(io1,1) = (phi(io1,io2)-phi(io1,4))*
      |                    .5*(o1(k,i,lat)+o1(k+1,i,lat))
-          alpha(io1,3) = (phi(io1,ihe)-phi(io1,4))*
+          alpha(io1,3) = (diff_fac(k+1,i,io1)*phi(io1,ihe)-phi(io1,4))*
      |                    .5*(o1(k,i,lat)+o1(k+1,i,lat))
-          alpha(ihe,1) = (phi(ihe,io2)-phi(ihe,4))*
+          alpha(ihe,1) = (diff_fac(k+1,i,io2)*phi(ihe,io2)-
+     |                    diff_fac(k+1,i,3)*phi(ihe,4))*
      |                    .5*(he(k,i,lat)+he(k+1,i,lat))
-          alpha(ihe,2) = (phi(ihe,io1)-phi(ihe,4))*
+          alpha(ihe,2) = (diff_fac(k+1,i,io1)*phi(ihe,io1)-
+     |                    diff_fac(k+1,i,3)*phi(ihe,4))*
      |                    .5*(he(k,i,lat)+he(k+1,i,lat))
 
 ! DET(ALFA)
@@ -590,15 +631,19 @@
           do i=lon0,lon1
             alpha22(i) = -(phi(io1,4) + (phi(io1,io2)-phi(io1,4))*
      |                 .5*(o2(k,i,lat)+o2(k+1,i,lat))
-     |                +(phi(io1,ihe)-phi(io1,4))*
+     |                +(diff_fac(k+1,i,io1)*phi(io1,ihe)-phi(io1,4))*
      |                 .5*(he(k,i,lat)+he(k+1,i,lat)))
-            alpha33(i) = -(phi(ihe,4) + (phi(ihe,io2)-phi(ihe,4))*
+            alpha33(i) = -(diff_fac(k+1,i,3)*phi(ihe,4) + 
+     |                    (diff_fac(k+1,i,io2)*phi(ihe,io2)-
+     |                     diff_fac(k+1,i,3)*phi(ihe,4))*
      |                 .5*(o2(k,i,lat)+o2(k+1,i,lat))
-     |                +(phi(ihe,io1)-phi(ihe,4))*
+     |                   +(diff_fac(k+1,i,io1)*phi(ihe,io1)-
+     |                     diff_fac(k+1,i,3)*phi(ihe,4))*
      |                 .5*(o1(k,i,lat)+o1(k+1,i,lat)))
-            alpha23(i) = (phi(io1,ihe)-phi(io1,4))*
+            alpha23(i) = (diff_fac(k+1,i,io1)*phi(io1,ihe)-phi(io1,4))*
      |                 .5*(o1(k,i,lat)+o1(k+1,i,lat))
-            alpha32(i) = (phi(ihe,io1)-phi(ihe,4))*
+            alpha32(i) = (diff_fac(k+1,i,io1)*phi(ihe,io1)-
+     |                    diff_fac(k+1,i,3)*phi(ihe,4))*
      |                 .5*(he(k,i,lat)+he(k+1,i,lat))
 ! Add lateral exospheric transport mass flux
             flx00(i) = 0.5*(embar(i,k)+embar(i,k+1))*rmassinv_n2*p0*
