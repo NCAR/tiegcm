@@ -40,7 +40,8 @@
       use qrj_module,only: init_sflux
       use magfield_module,only: sunloc_apex
       use pdynamo_module,only: pefield
-      use aurora_module,only: aurora_cons,cusp2d,drzl2d,alfa2d,nflx2d,
+      use aurora_module,only: aurora_cons
+      use aurora_module,only: cusp2d,drzl2d,alfa2d,nflx2d,
      |  eflux2d
       use hdif_module,only: hdif1,hdif2
       use current,only: noso_crrt,noso_crdens

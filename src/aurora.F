@@ -441,6 +441,9 @@
      |  rlatm,rlonm, ! magnetic latitude,longitude grid (radians)
      |  sunlons      ! sun's mag longitudes (see sub sunloc, magfield.F) 
       use params_module,only: nlat,zibot,dz
+      use mpi_module,only: lat0,lat1
+      use diags_module,only: mkdiag_CUSP,mkdiag_DRIZZLE,mkdiag_ALFA,
+     |  mkdiag_NFLUX,mkdiag_EFLUX
 !
       use qrj_module,only:       ! for diag only
      |  qo2p,  ! o2+ ionization
@@ -558,6 +561,21 @@
       call vtend(130,ier)
 #endif
 !
+! Save diagnostics (see diags.F):
+!
+      if (lat==lat1) then
+        call mkdiag_CUSP('CUSP',cusp2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+        call mkdiag_DRIZZLE('DRIZZLE',drzl2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+        call mkdiag_ALFA('ALFA',alfa2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+        call mkdiag_NFLUX('NFLUX',nflx2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+        call mkdiag_EFLUX('EFLUX',eflux2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+      endif
+
       end subroutine aurora
 !-----------------------------------------------------------------------
       subroutine aurora_cusp(lat)
