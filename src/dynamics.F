@@ -30,6 +30,7 @@
       use oplus_module,only: oplus
       use input_module,only: iaurora=>aurora
       use aurora_module,only: aurora
+      use aurora_module,only: cusp2d,drzl2d,alfa2d,nflx2d,eflux2d
       use n4s_module,only: comp_n4s,minor_n4s
       use no_module,only: comp_no,minor_no
       use ar_module,only: comp_ar,minor_ar
@@ -39,6 +40,9 @@
       use init_module,only: iyear,secs
       use hist_module,only: modeltime
       use qjoule,only: qjoule_tn,qjoule_ti
+      use diags_module,only: mkdiag_CUSP,mkdiag_DRIZZLE,mkdiag_ALFA,
+     |  mkdiag_NFLUX,mkdiag_EFLUX
+
       implicit none
 !
 ! Args:
@@ -266,6 +270,21 @@
         endif
       enddo ! lat=lat0,lat1 for qrj, qinite, and aurora
       if (debug) write(6,"('dynamics after qrj,qinite,aurora')")
+!
+! Save auroral diagnostics (see diags.F):
+!
+      if (iaurora > 0) then
+        call mkdiag_CUSP('CUSP',cusp2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+        call mkdiag_DRIZZLE('DRIZZLE',drzl2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+        call mkdiag_ALFA('ALFA',alfa2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+        call mkdiag_NFLUX('NFLUX',nflx2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+        call mkdiag_EFLUX('EFLUX',eflux2d(lon0:lon1,lat0:lat1),
+     |    lon0,lon1,lat0,lat1)
+      endif
 !
 ! Report timing from above latitude loop:
       if (timing%level >= 2.and.time2print(nstep,istep))

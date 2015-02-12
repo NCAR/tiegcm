@@ -333,38 +333,38 @@
 !
       n = n+1
       diags(n)%short_name = 'CUSP'
-      diags(n)%long_name  = 'CUSP'
-      diags(n)%units      = '0-1'
+      diags(n)%long_name  = 'CUSP (cusp2d*ec)'
+      diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
-      diags(n)%caller     = 'aurora.F'
+      diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'DRIZZLE'
-      diags(n)%long_name  = 'DRIZZLE'
-      diags(n)%units      = '0-1'
+      diags(n)%long_name  = 'DRIZZLE (drzl2d*ed)'
+      diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
-      diags(n)%caller     = 'aurora.F'
+      diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'ALFA'
       diags(n)%long_name  = 'ALFA'
       diags(n)%units      = 'keV'
       diags(n)%levels     = 'none'
-      diags(n)%caller     = 'aurora.F'
+      diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'NFLUX'
       diags(n)%long_name  = 'NFLUX'
-      diags(n)%units      = '#/cm2-s'
+      diags(n)%units      = '#/cm2/s'
       diags(n)%levels     = 'none'
-      diags(n)%caller     = 'aurora.F'
+      diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'EFLUX'
       diags(n)%long_name  = 'EFLUX'
-      diags(n)%units      = 'mW/m^2'
+      diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
-      diags(n)%caller     = 'aurora.F'
+      diags(n)%caller     = 'dynamics.F'
 
       if (n /= ndiag) then
         write(6,"('>>> init_diags: n=',i4,' ndiag=',i4)")
@@ -1351,18 +1351,8 @@
 
       end subroutine mkdiag_ZGMID
 !-----------------------------------------------------------------------
-!     call addfld ('CUSP','2D CUSP','0-1',
-!    |  cusp2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('DRIZZLE','2D DRIZZLE','0-1',
-!    |  drzl2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('ALFA','2D ALFA','keV',
-!    |  alfa2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('NFLUX','2D NFLUX','#/cm2-s',
-!    |  nflx2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('EFLUX','2D EFLUX','mW/m^2',
-!    |  eflux2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!-----------------------------------------------------------------------
       subroutine mkdiag_CUSP(name,cusp2d,lon0,lon1,lat0,lat1)
+      use aurora_module,only: ec
 !
 ! Interpolate geometric height on interfaces (input zgint) to midpoints.
 !
@@ -1379,11 +1369,12 @@
       if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,cusp2d,'lon',lon0,lon1,'lat',lat0,lat1,0)
+     |  diags(ix)%units,cusp2d*ec,'lon',lon0,lon1,'lat',lat0,lat1,0)
 
       end subroutine mkdiag_CUSP
 !-----------------------------------------------------------------------
       subroutine mkdiag_DRIZZLE(name,drzl2d,lon0,lon1,lat0,lat1)
+      use aurora_module,only: ed
 !
 ! Interpolate geometric height on interfaces (input zgint) to midpoints.
 !
@@ -1400,7 +1391,7 @@
       if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,drzl2d,'lon',lon0,lon1,'lat',lat0,lat1,0)
+     |  diags(ix)%units,drzl2d*ed,'lon',lon0,lon1,'lat',lat0,lat1,0)
 
       end subroutine mkdiag_DRIZZLE
 !-----------------------------------------------------------------------

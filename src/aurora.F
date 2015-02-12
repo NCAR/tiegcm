@@ -59,9 +59,10 @@
      |  dphi, ! delta latitude geographic (radians)
      |  dtr,  ! degrees to radians (pi/180)
      |  pi    ! 4.*atan(1.)
-      use params_module,only: nlon,nlonp4,nlevp1,nlat
+      use params_module,only: nlon,nlonp4,nlevp1,nlat,glat
       use addfld_module,only: addfld
       implicit none
+      save
 !
 ! VT vampir tracing:
 !
@@ -187,6 +188,7 @@
      |  drizl(nlonp4),cusp(nlonp4),                 ! polar drizzle and cusp
      |  qteaur(nlonp4,nlat),                        ! for electron temperature
      |  eflux(nlonp4),eflux2(nlonp4),eflux3(nlonp4) ! energy flux
+
 ! 11/08 EMERY added energy flux eflux and eflux2d
       real :: cusp2d(nlonp4,nlat),drzl2d(nlonp4,nlat),
      |        alfa2d(nlonp4,nlat),nflx2d(nlonp4,nlat),
@@ -442,8 +444,6 @@
      |  sunlons      ! sun's mag longitudes (see sub sunloc, magfield.F) 
       use params_module,only: nlat,zibot,dz
       use mpi_module,only: lat0,lat1
-      use diags_module,only: mkdiag_CUSP,mkdiag_DRIZZLE,mkdiag_ALFA,
-     |  mkdiag_NFLUX,mkdiag_EFLUX
 !
       use qrj_module,only:       ! for diag only
      |  qo2p,  ! o2+ ionization
@@ -474,6 +474,9 @@
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
       call vtbegin(130,ier)
 #endif
+
+!     write(6,"('Enter aurora: lat=',i4,' glat=',f8.2,' lon0,1=',2i4)")
+!    |  lat,glat(lat),lon0,lon1
 !
 ! Save ionization rates on entry to secondary history:
 !     call addfld('QO2P_PRE',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
@@ -482,6 +485,15 @@
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('QN2P_PRE',' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!
+! Initialize diagnostics to insure they have values before the
+! below return when lat < 32.5.
+!
+      cusp2d(:,lat) = 0.
+      drzl2d(:,lat) = 0.
+      alfa2d(:,lat) = 0.
+      nflx2d(:,lat) = 0.
+      eflux2d(:,lat) = 0.
 !
 ! Check latitude, and return if below aurlat (32.5 deg at 5 deg res):
 !
@@ -534,11 +546,11 @@
 
 ! Save aurora oval on exit to full arrays so can save later to secondary history
       do i=lon0,lon1
-      cusp2d(i,lat)=cusp(i)
-      drzl2d(i,lat)=drizl(i)
-      alfa2d(i,lat)=alfa(i)
-      nflx2d(i,lat)=flux(i)
-      eflux2d(i,lat)=eflux(i)
+        cusp2d(i,lat)=cusp(i)
+        drzl2d(i,lat)=drizl(i)
+        alfa2d(i,lat)=alfa(i)
+        nflx2d(i,lat)=flux(i)
+        eflux2d(i,lat)=eflux(i)
       enddo
 !
 ! Auroral additions to ionization rates:
@@ -560,21 +572,6 @@
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
       call vtend(130,ier)
 #endif
-!
-! Save diagnostics (see diags.F):
-!
-      if (lat==lat1) then
-        call mkdiag_CUSP('CUSP',cusp2d(lon0:lon1,lat0:lat1),
-     |    lon0,lon1,lat0,lat1)
-        call mkdiag_DRIZZLE('DRIZZLE',drzl2d(lon0:lon1,lat0:lat1),
-     |    lon0,lon1,lat0,lat1)
-        call mkdiag_ALFA('ALFA',alfa2d(lon0:lon1,lat0:lat1),
-     |    lon0,lon1,lat0,lat1)
-        call mkdiag_NFLUX('NFLUX',nflx2d(lon0:lon1,lat0:lat1),
-     |    lon0,lon1,lat0,lat1)
-        call mkdiag_EFLUX('EFLUX',eflux2d(lon0:lon1,lat0:lat1),
-     |    lon0,lon1,lat0,lat1)
-      endif
 
       end subroutine aurora
 !-----------------------------------------------------------------------

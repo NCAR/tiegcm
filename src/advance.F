@@ -41,8 +41,6 @@
       use magfield_module,only: sunloc_apex
       use pdynamo_module,only: pefield
       use aurora_module,only: aurora_cons
-      use aurora_module,only: cusp2d,drzl2d,alfa2d,nflx2d,
-     |  eflux2d
       use hdif_module,only: hdif1,hdif2
       use current,only: noso_crrt,noso_crdens
       use timing_module,only: timer,timing
@@ -497,19 +495,6 @@
       if (timing%level >= 2.and.time2print(nstep,istep))
      |  write(6,"('Time in DYNAMICS =     ',f12.2,
      |    ' Advance: step ',i5)") time1_dynamics,istep
-!
-! Save Cusp, drizzle, alfa and nflux to secondary history to plot later
-!     call addfld ('CUSP','2D CUSP','0-1',
-!    |  cusp2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('DRIZZLE','2D DRIZZLE','0-1',
-!    |  drzl2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('ALFA','2D ALFA','keV',
-!    |  alfa2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('NFLUX','2D NFLUX','#/cm2-s',
-!    |  nflx2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('EFLUX','2D EFLUX','mW/m^2',
-!    |  eflux2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!
 !
 ! Call dynamo if namelist idynamo > 0:
 !
