@@ -62,15 +62,6 @@
 !
 ! Report starting time and other info to stdout:
       call startup_message
-!
-! Initialize timing (must be called after mp_init):
-      call init_timer
-!
-! Initialize MPI:
-#ifdef MPI
-      call mp_init
-      if (mpi_timing) starttime = mpi_wtime()
-#endif
 
 #ifdef INTERCOMM
 !
@@ -80,6 +71,19 @@
 ! MPI_Init.
       call IC_Setprogname("tiegcm")
 #endif
+
+!
+! Initialize MPI:
+#ifdef MPI
+      call mp_init
+      if (mpi_timing) starttime = mpi_wtime()
+#endif
+
+!
+! Initialize timing (must be called after mp_init):
+      call init_timer
+!
+
 !
 ! Init timing for the run, get cwd and pid, get user input,
 !   set up 2d decomposition.

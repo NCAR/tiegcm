@@ -6,8 +6,6 @@
 !
 ! Parallel dynamo module.
 !
-! 3/20/14 btf: Coupling with cism is not yet ready in parallel dynamo
-!              (search on INTERCOMM in this file)
 !
       use params_module,only: nmlevp1,nmlon,nmlonp1,nlon,nlonp4,nlat,
      |  nmlat,gmlat,nmlath,nlev,nlevp1,mlev0,mlev1,nmlev_diff
@@ -15,6 +13,7 @@
       use mpitime_module,only: mpi_timer
       use mpi_module,only: mlat0,mlat1,mlon0,mlon1,lon0,lon1,lat0,lat1,
      |  mp_mag_periodic_f2d
+!CAF     |  mp_mag_periodic_f2d, mp_mag_halos
       use heelis_module,only: phihm
       use init_module,only: istep
       use input_module,only: current_pg,current_kq
@@ -42,6 +41,10 @@
      |  rhs,        ! right-hand side
      |  phimsolv,   ! solution direct from solver (nhem only)
      |  phim2d      ! solution with phihm and both nhem and shem
+#if defined(INTERCOMM) || defined(CISMAH)
+      real,allocatable,dimension(:,:),save :: 
+     |  zigm1, nsrhs
+#endif
 !
 ! 3d potential and electric field on mag subdomains (see sub pthreed):
 ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1)
@@ -79,7 +82,11 @@
 !
 ! Global longitude values near mag equator and poles for complete_integrals and rhs.
 ! The nf2d 6 fields are: zigm11,zigm22,zigmc,zigm2,rim1,rim2
+#if defined(INTERCOMM) || defined(CISMAH)
+      integer,parameter :: nf2d=7        ! 7 2d fields for CISM
+#else
       integer,parameter :: nf2d=6        ! 6 2d fields
+#endif
       real :: feq_jpm1(nmlonp1,2,nf2d)   ! 6 fields at 2 lats (eq-1, eq+1)
       real :: fpole_jpm2(nmlonp1,4,nf2d) ! fields at S pole+1,2 and N pole-1,2
 !
@@ -161,25 +168,6 @@
       logical :: debug = .false.
 
       real,dimension(nmlonp1,nmlat0) :: pfrac  ! NH fraction of potential
-
-#if defined(INTERCOMM) || defined(CISMAH)
-!
-! 3/20/14 btf:
-! This will need to be parallelized to work in pdynamo, see call cism_ucurrent below.
-!
-!     real,dimension(nmlonp1,nmlat) :: Zigm1 ! CISM, height-intergrated
-!                                            ! Pedersen conductivity
-!
-! Parameters to be passed to LFM for CISM. Note the dimension of these variables is
-! defined to match mag2geo specifications, see detial in cons.F and Apex.F.
-!
-!     real,dimension(nlonp4,0:nlatp1) ::
-!    |  gzigm2,   ! sigma2    ! CISM height integrated Hall conductivity geographic
-!    |  gzigm1,   ! sigma1    ! CISM height integrated Pedersen conductivity geographic
-!    |  gnsrhs    ! nsrsh     ! CISM height integrated neutral wind currents geographic
-!
-!     real :: nsrhs(nmlonp1,nmlat)         ! CISM current
-#endif
 
       contains
 !-----------------------------------------------------------------------
@@ -375,7 +363,6 @@
      |  mag_je1pg, mag_je2pg, esmf_3dfields
       use my_esmf,only: ! esmf 2d (i,j) fields on mag grid
      |  mag_sini, mag_adota1, mag_adota2, mag_a1dta2, mag_be3
-
       use params_module,only: glat,glon
 
       use magpres_g,only: ! (nlevp1,lon0:lon1,lat0:lat1)
@@ -903,6 +890,10 @@
       zigmc  = 0.
       rim1   = 0.
       rim2   = 0.
+#if defined(INTERCOMM) || defined(CISMAH)
+      zigm1  = 0.
+#endif 
+
       je1pg_diag  = 0.
       je2pg_diag  = 0.
 !
@@ -1016,6 +1007,10 @@
 !
             zigmc(i,j) = zigmc(i,j) + sig1*rtramrm(i,k)*htfunc(i,k)
             zigm2(i,j) = zigm2(i,j) + sig2*rtramrm(i,k)*htfunc(i,k)
+#if defined(INTERCOMM) || defined(CISMAH)
+            zigm1(i,j) = zigm1(i,j) + sig1*rtramrm(i,k)*htfunc(i,k)
+#endif
+
 ! 
 ! rim1: int [sigma_p*d_1^2/D u_e2+(sigma_h-(sigma_p*d_1*d_2)/D) u_e1] ds
 ! rim2: int [(sigma_h+sigma_p*d_1*d_2/D) u_e2-sigma_p*d_2^2/D u_e1 ] ds
@@ -1075,6 +1070,9 @@
           zigm22(i,j) = 1.e-2*zigm22(i,j)*aam(i)*adota2_mag(i,j)
           zigmc(i,j)  = 1.e-2*zigmc (i,j)*aam(i)*a1dta2_mag(i,j)
           zigm2(i,j)  = 1.e-2*zigm2 (i,j)*aam(i)
+#if defined(INTERCOMM) || defined(CISMAH)
+          zigm1(i,j)  = 1.e-2*zigm1(i,j)*aam(i)
+#endif
           rim1(i,j)   = 1.e-2*rim1(i,j)*aam(i)*be3_mag(i,j)
           rim2(i,j)   = 1.e-2*rim2(i,j)*aam(i)*be3_mag(i,j)
         enddo ! i = 1,nmlon
@@ -1142,6 +1140,14 @@
       allocate(phim2d(mlon00:mlon11,mlat00:mlat11),stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: phim2d')
       phim2d = 0.
+#if defined(INTERCOMM) || defined(CISMAH)
+      allocate(zigm1(mlon00:mlon11,mlat00:mlat11),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: zigm1')
+      zigm1 = 0.
+      allocate(nsrhs(mlon00:mlon11,mlat00:mlat11),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: nsrhs')
+      nsrhs = 0.
+#endif
 !
 ! 3d phim and electric field on mag subdomains:
       allocate(phim3d(mlon0:mlon1,mlat0:mlat1,mlev0:mlev1),stat=istat)
@@ -1244,6 +1250,14 @@
       use cons_module,only: rcos0s,dt1dts
       use mpi_module,only: mp_mageq_jpm1,mp_magpole_2d,mp_mag_foldhem
       use mpi_module,only: mytid
+#if defined(INTERCOMM) || defined(CISMAH)
+      use mpi_module,only: mp_mag_halos
+      use cism_coupling_module,only: gzigm1,gzigm2,gnsrhs,cism_ucurrent
+      use my_esmf,only: 
+     |  mag_zigm1, mag_zigm2, mag_nsrhs,
+     |  geo_zigm1, geo_zigm2, geo_nsrhs
+#endif
+
       implicit none
 !
 ! Local:
@@ -1272,6 +1286,9 @@
       fmsub(:,:,4) = zigm2 (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,5) = rim1  (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,6) = rim2  (mlon0:mlon1,mlat0:mlat1)
+#if defined(INTERCOMM) || defined(CISMAH)
+      fmsub(:,:,7) = zigm1(mlon0:mlon1,mlat0:mlat1)
+#endif
 
       call mp_mageq_jpm1(fmsub,mlon0,mlon1,mlat0,mlat1,nmlonp1,
      |  feq_jpm1,nf2d)
@@ -1312,12 +1329,11 @@
      |                                  feq_jpm1(mlon0:mlon1,2,5))
           rim2  (mlon0:mlon1,j) = .060*(feq_jpm1(mlon0:mlon1,1,6)+
      |                                  feq_jpm1(mlon0:mlon1,2,6))
-
 #if defined(INTERCOMM) || defined(CISMAH)
-! 3/20/14 btf: This will have to be parallelized before it will work 
-!   in pdynamo.
-!       zigm1(i,j) = .06 *(zigm1(i,j-1) + zigm1(i,j+1))     ! cism
+          zigm1(mlon0:mlon1,j) = .060*(feq_jpm1(mlon0:mlon1,1,7)+
+     |                                  feq_jpm1(mlon0:mlon1,2,7))
 #endif
+
 !
 ! Include the boundary condition at the equator eq.(5.30) in
 ! Richmond (1995) Ionospheric Electrodynamics use. Mag. Apex Coord.
@@ -1404,9 +1420,6 @@
         enddo
       enddo
 !
-! 3/20/14 btf: In old serial dynamo, periodic points of zigmxxx were
-!   set here, including zigm1 if coupled w/ cism (defined(INTERCOMM)).
-!
 ! For polar values, we need south pole plus 1 and 2 (j==2,3),
 !   and north pole minus 1 and 2 (j==nmlat-1,nmlat-2). These
 !   are returned by sub mp_magpole_jpm2 (mpi.F):
@@ -1419,6 +1432,9 @@
       fmsub(:,:,4) = zigm2 (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,5) = rim1  (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,6) = rim2  (mlon0:mlon1,mlat0:mlat1)
+#if defined(INTERCOMM) || defined(CISMAH)
+      fmsub(:,:,7) = zigm1 (mlon0:mlon1,mlat0:mlat1)
+#endif
 !
 ! mp_magpole_2d returns fpole_jpm2(nmlonp1,1->4,nf) as:
 !   1: j = 2       (spole+1)
@@ -1451,9 +1467,6 @@
 ! 
 ! Compute polar values for the conductances, 4th order interpolation:
 !
-! 3/20/14 btf: In old serial dynamo, if coupled with cism (defined(INTERCOMM)),
-!   then polar values, extension over longitude, and periodic point  were also 
-!   set for cism zigm1. This was near the end of old sub transf.
 !
       do j=mlat0,mlat1
 !
@@ -1475,6 +1488,12 @@
      |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,1,4))-
      |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,2,4)))/
      |      (3.*float(nmlon))
+#if defined(INTERCOMM) || defined(CISMAH)
+          zigm1(mlon0,j) = (4.*
+     |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,1,7))-
+     |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,2,7)))/
+     |      (3.*float(nmlon))
+#endif
 !
 ! Extend south pole over longitude:
           do i=mlon0+1,mlon1
@@ -1482,6 +1501,9 @@
             zigm22(i,j) = zigm22(mlon0,j)
             zigmc (i,j) = zigmc (mlon0,j)
             zigm2 (i,j) = zigm2 (mlon0,j)
+#if defined(INTERCOMM) || defined(CISMAH)
+            zigm1 (i,j) = zigm1 (mlon0,j)
+#endif
           enddo ! i=mlon0,mlon1
 !
 ! RHS vector (I_1,I_2): average over south pole:
@@ -1512,6 +1534,12 @@
      |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,3,4))-
      |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,4,4)))/
      |      (3.*float(nmlon))
+#if defined(INTERCOMM) || defined(CISMAH)
+          zigm1(mlon0,j) = (4.*
+     |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,3,7))-
+     |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,4,7)))/
+     |      (3.*float(nmlon))
+#endif
 !
 ! Extend north pole over longitude:
           do i=mlon0+1,mlon1
@@ -1519,6 +1547,9 @@
             zigm22(i,j) = zigm22(mlon0,j)
             zigmc (i,j) = zigmc (mlon0,j)
             zigm2 (i,j) = zigm2 (mlon0,j)
+#if defined(INTERCOMM) || defined(CISMAH)
+            zigm1 (i,j) = zigm1 (mlon0,j)
+#endif
           enddo ! i=mlon0,mlon1
 !
 ! RHS vector (I_1,I_2): average over north pole:
@@ -1554,23 +1585,28 @@
 
 #if defined(INTERCOMM) || defined(CISMAH)
 !
-! 3/20/14 btf: Sub cism_ucurrent was moved from old serial dynamo.F
-!   to cism_coupling.F. This will need to be parallelized to work in
-!   pdynamo (see also gzigm1 in module declarations above).
 !
 ! Calculate global neutral winds generated current to transfer to CISM M-I couplier
 !
+
+      call mp_mag_halos(rim1,mlon0,mlon1,mlat0,mlat1,1,1)
+      call mp_mag_halos(rim2,mlon0,mlon1,mlat0,mlat1,1,1) 
+
+      call cism_ucurrent(rim1,rim2,mlon0,mlon1,mlat0,mlat1,nsrhs)
+
 !     call cism_ucurrent
 !
 ! Transform height-integrated parameters from APEX coordinates to geographic
 ! coordinates to be passed to the M-I coupled in the CISM
 !
-!     call mag2geo(zigm1(1,1),gzigm1(3:nlon+3,0:nlatp1),im(1,0),jm(1,0),
-!    |     dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
-!     call mag2geo(zigm2(1,1),gzigm2(3:nlon+3,0:nlatp1),im(1,0),jm(1,0),
-!    |     dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
-!     call mag2geo(nsrhs(1,1),gnsrhs(3:nlon+3,0:nlatp1),im(1,0),jm(1,0),
-!    |     dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+
+      call mag2geo_2d(zigm1(mlon0:mlon1,mlat0:mlat1),gzigm1,mag_zigm1,
+     |     geo_zigm1,'ZIGM1   ')
+      call mag2geo_2d(zigm2(mlon0:mlon1,mlat0:mlat1),gzigm2,mag_zigm2,
+     |     geo_zigm2,'ZIGM2   ')
+      call mag2geo_2d(nsrhs(mlon0:mlon1,mlat0:mlat1),gnsrhs,mag_nsrhs,
+     |     geo_nsrhs,'NSRHS   ')
+
 #endif
 !
 ! Set coefficients for current density calculations.
@@ -1592,7 +1628,9 @@
       fmsub(:,:,4) = zigm2 (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,5) = rim1  (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,6) = rim2  (mlon0:mlon1,mlat0:mlat1)
- 
+#if defined(INTERCOMM) || defined(CISMAH)
+      fmsub(:,:,7) = zigm1 (mlon0:mlon1,mlat0:mlat1)
+#endif
       call mp_mag_foldhem(fmsub,mlon0,mlon1,mlat0,mlat1,nf2d)
       call mp_mag_periodic_f2d(fmsub,mlon0,mlon1,mlat0,mlat1,nf2d) 
 
@@ -1602,6 +1640,9 @@
       zigm2 (mlon0:mlon1,mlat0:mlat1) = fmsub(:,:,4)
       rim1  (mlon0:mlon1,mlat0:mlat1) = fmsub(:,:,5)
       rim2  (mlon0:mlon1,mlat0:mlat1) = fmsub(:,:,6)
+#if defined(INTERCOMM) || defined(CISMAH)
+      zigm1 (mlon0:mlon1,mlat0:mlat1) = fmsub(:,:,7)
+#endif
 !
 ! Reverse sign of zigmc in northern hemisphere.
       do j=mlat0,mlat1
@@ -2738,6 +2779,49 @@
 
       end subroutine mag2geo_3d
 !-----------------------------------------------------------------------
+!
+#if defined(INTERCOMM) || defined(CISMAH)
+      subroutine mag2geo_2d(fmag,fgeo,ESMF_mag,ESMF_geo,fname)
+!
+! Convert field on geomagnetic grid fmag to geographic grid in fgeo.
+!
+      use my_esmf,only: esmf_set2d_mag,esmf_regrid,esmf_get_2dfield,
+     |  ESMF_Field
+!
+! Args:
+      character(len=*) :: fname
+      type(ESMF_Field),intent(inout) :: ESMF_mag, ESMF_geo
+      real,intent(in) :: fmag(mlon0:mlon1,mlat0:mlat1)
+      real,intent(out) :: fgeo(lon0:lon1,lat0:lat1)
+!
+! Local:
+      integer :: j
+      character(len=8) :: fnames(1)
+      type(ESMF_Field) :: magfields(1)
+      real,pointer,dimension(:,:) :: fptr
+
+      fgeo = 0.
+      fnames(1) = fname
+      magfields(1) = ESMF_mag
+!
+! Put fmag into ESMF mag field on mag source grid:
+      call esmf_set2d_mag(magfields,fnames,fmag,1,
+     |  mlon0,mlon1,mlat0,mlat1)
+!
+! Regrid to geographic destination grid, defining ESMF_geo:
+      call esmf_regrid(ESMF_mag,ESMF_geo,'mag2geo',2)
+!
+! Put regridded geo field into pointer:
+      call esmf_get_2dfield(ESMF_geo,fptr,fname)
+!
+! Transfer from pointer to output arg:
+      do j=lat0,lat1
+        fgeo(:,j) = fptr(:,j)
+      enddo
+
+      end subroutine mag2geo_2d
+#endif
+!-----------------------------------------------------------------------
       subroutine geo2mag_3d(fgeo,fmag,ESMF_geo,ESMF_mag,fname)
 !
 ! Convert field on geographic grid fgeo to geomagnetic grid in fmag.
@@ -3046,7 +3130,7 @@
 !
 ! Convert LFM geographic potential to geomagnetic coordinates
 !
-!     call cism_pot2mag
+      call cism_pot2mag
 c      do jj=1,nmlat
 c       do i=1,nmlonp1
 c        write(6,*)phihm(i,jj),i,jj
@@ -3807,5 +3891,62 @@ c      enddo
 !     write(6,*) 'L2norm (global root task) = ',l2norm
 
       end subroutine solver
+!-----------------------------------------------------------------------
+
+#if defined(INTERCOMM) || defined(CISMAH)
+      subroutine cism_pot2mag
+!
+! This subroutine converts high latitude potential in geographic coordinate 
+! obtained form the CMIT M-I couplier to geomagnetci coordinate to be used
+! in dynamo calculations
+!
+! Uses
+!
+      use params_module,only: nlonp1
+      use cism_coupling_module, only:gpotm
+      use magfield_module,only: ig,jg,wt
+!
+! Local:
+!
+      integer :: jj
+
+      do jj=mlat0,mlat1
+         call geo2mag(phihm(1,jj),gpotm(3:nlonp1+2,:),
+     |        ig,jg,wt,nlonp1,nmlonp1,nmlon,nmlat,jj)
+         ! Periodic point
+         phihm(nmlonp1,jj) = phihm(1,jj)
+      enddo
+
+      end subroutine cism_pot2mag
+!-----------------------------------------------------------------------
+      subroutine geo2mag(fmag,fgeo,long,latg,wght,nlonp1_geo,nlonp1_mag,
+     |  nlon_mag,nlat_mag,lat)
+!
+! Transform field fgeo on geographic grid to geomagnetic grid using
+!   indices long,latg and weights wght. Return field fmag on magnetic
+!   grid.
+!
+! Args:
+      integer,intent(in) :: nlonp1_geo,nlonp1_mag,nlon_mag,nlat_mag,lat
+      integer,dimension(nlonp1_mag,nlat_mag),intent(in) :: long,latg
+      real,intent(in) :: fgeo(nlonp1_geo,*),wght(4,nlonp1_mag,nlat_mag)
+      real,intent(out) :: fmag(nlonp1_mag,*)
+!
+! Local:
+      integer :: i
+!
+      do i=mlon0,mlon1
+        fmag(i,1) =
+     |    fgeo(long(i,lat)  ,latg(i,lat)  )*wght(1,i,lat)+
+     |    fgeo(long(i,lat)+1,latg(i,lat)  )*wght(2,i,lat)+
+     |    fgeo(long(i,lat)+1,latg(i,lat)+1)*wght(3,i,lat)+
+     |    fgeo(long(i,lat)  ,latg(i,lat)+1)*wght(4,i,lat)
+!       if (iprint > 0) write(6,"('geo2mag: i=',i3,' lat=',i3,' long=',
+!    |    i3,' latg=',i3,' wght=',4e12.4,' fgeo=',e12.4,' fmag=',
+!    |    e12.4)") i,lat,long(i,lat),latg(i,lat),wght(:,i,lat),
+!    |    fgeo(long(i,lat),latg(i,lat)),fmag(i,1)
+      enddo
+      end subroutine geo2mag
+#endif
 !-----------------------------------------------------------------------
       end module pdynamo_module

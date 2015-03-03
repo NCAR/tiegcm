@@ -17,12 +17,24 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !-----------------------------------------------------------------------
       use addfld_module,only: addfld
+      use mpi_module,only: lon0,lon1,lat0,lat1
       use params_module,only: 
      |     nlat,   ! number of geographic latitudes (at 5 deg, nlat==36)
      |     nlatp1, ! nlat+1
      |     nlon,   ! number of geographic longitudes (at 5 deg, nlon=72)
      |     nlonp1, ! nlon+1
-     |     nlonp4  ! nlon+4
+     |     nlonp4, ! nlon+4
+     |     nmlonp1,
+     |     nmlath,
+     |     nmlat,
+     |     nmlon   !
+      implicit none
+
+
+      real*8,allocatable,dimension(:,:),save ::
+     |  gzigm2,   ! sigma2    ! CISM height integrated Hall conductivity geographic
+     |  gzigm1,   ! sigma1    ! CISM height integrated Pedersen conductivity geographic
+     |  gnsrhs    ! nsrsh     ! CISM height integrated neutral wind currents geographic
 
       real*8, dimension(nlat,nlonp1) ::
      |     ting_pot_interp,  ! potential in geo coord from MIX
@@ -49,6 +61,7 @@
 !-----------------------------------------------------------------------
       subroutine initialize
       use mpi_module,only: mytid,ntask
+      integer istat
 #ifndef MPI
       mytid = 0
       ntask = 1
@@ -59,6 +72,17 @@
 #elif defined(CISMAH)
       call ca_init
 #endif
+      allocate(gzigm1(lon0:lon1,lat0:lat1),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: gzigm1')
+      gzigm1 = 0.
+      allocate(gzigm2(lon0:lon1,lat0:lat1),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: gzigm2')
+      gzigm2 = 0.
+      allocate(gnsrhs(lon0:lon1,lat0:lat1),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: gnsrhs')
+      ting_ped = 0.
+      ting_hall = 0.
+      ting_gnsrhs = 0.
       end subroutine initialize
 !-----------------------------------------------------------------------
       subroutine import
@@ -80,6 +104,7 @@
 #endif
       integer ii,jj,js,jn
       real cpmaxsh,cpminsh,cpmaxnh,cpminnh
+      real polev1, polev2
 
       write(6,"(A,I1,A)") "TIEGCM (",mytid,"): inside receive"
 
@@ -136,9 +161,9 @@
 !
       polev1=0.
       polev2=0.
-      do i=1,nlonp1
-         polev1=polev1+gpotm(i+2,1)
-         polev2=polev2+gpotm(i+2,2)
+      do ii=1,nlonp1
+         polev1=polev1+gpotm(ii+2,1)
+         polev2=polev2+gpotm(ii+2,2)
       enddo
 
       do ii=1,nlonp1
@@ -150,9 +175,9 @@
 !
       polev1=0.
       polev2=0.
-      do i=1,nlonp1
-         polev1=polev1+gpotm(i+2,nlat)
-         polev2=polev2+gpotm(i+2,nlat-1)
+      do ii=1,nlonp1
+         polev1=polev1+gpotm(ii+2,nlat)
+         polev2=polev2+gpotm(ii+2,nlat-1)
       enddo
       do ii=1,nlonp1
          gpotm(ii+2,nlatp1)=(9.*polev1-polev2)/(8.*float(nlonp1))
@@ -211,8 +236,13 @@
 !-----------------------------------------------------------------------
       subroutine export(modeltime)
 ! ... Shared Module Variables ..........................................
-      use dynamo_module,only: gzigm2,gzigm1,gnsrhs 
+      use mpi_module,only: mp_gather_f2d,mytid,ntask,tasks
 ! ... Local variables ..................................................
+      real*8, dimension(nlonp4,nlat) ::
+     | gzigm1_glb,
+     | gzigm2_glb,
+     | gnsrhs_glb
+
       integer :: jj,ii
 ! ... Parameter variables ..............................................
       integer, intent(in) :: modeltime(4)      
@@ -220,45 +250,43 @@
 !
 ! Prepare data for export:
 !     
-      do jj=1,nlat
-         ! Add periodic points
-         do ii=1,2
-            gzigm1(ii,jj)=gzigm1(nlon+ii,jj)
-            gzigm2(ii,jj)=gzigm2(nlon+ii,jj)
-            gnsrhs(ii,jj)=gnsrhs(nlon+ii,jj)
-            gzigm1(nlonp1+ii+1,jj)=gzigm1(ii,jj)
-            gzigm2(nlonp1+ii+1,jj)=gzigm2(ii,jj)
-            gnsrhs(nlonp1+ii+1,jj)=gnsrhs(ii,jj)
-         enddo
-         
-         do ii=1,nlonp1
-            if(gzigm1(ii+2,jj)<0.2)gzigm1(ii+2,jj)=0.2 !wwb
-            if(gzigm2(ii+2,jj)<0.2)gzigm2(ii+2,jj)=0.2 !wwb      
+      where(gzigm1 < 0.2) gzigm1 = 0.2
+      where(gzigm2 < 0.2) gzigm2 = 0.2
             
 !           FIXME:  Copying data into temporary arrays:
 !                   ting_ped,ting_hall,ting_gnsrhs ... and then copying to 
 !                   the arrays gzigm1,gzigm2,gnsrhs in cism_coupling.F
 !                   This code should be refactored to prevent ting_* tmp arrays.
-            ting_ped(jj,ii) = gzigm1(ii+2,jj)
-            ting_hall(jj,ii) = gzigm2(ii+2,jj)
-            ting_gnsrhs(jj,ii) = gnsrhs(ii+2,jj)
-         enddo
-      enddo
+      call mp_gather_f2d(gzigm1,gzigm1_glb,tasks(:)%lon0,
+     |   tasks(:)%lon1, tasks(:)%lat0,tasks(:)%lat1,ntask,nlonp4,nlat,1)
+      call mp_gather_f2d(gzigm2,gzigm2_glb,tasks(:)%lon0,
+     |   tasks(:)%lon1, tasks(:)%lat0,tasks(:)%lat1,ntask,nlonp4,nlat,1)
+      call mp_gather_f2d(gnsrhs,gnsrhs_glb,tasks(:)%lon0,
+     |   tasks(:)%lon1, tasks(:)%lat0,tasks(:)%lat1,ntask,nlonp4,nlat,1)
+      if (mytid == 0) then
+        do jj=1,nlat
+           do ii=1,nlonp1
+              ting_ped(jj,ii) = gzigm1_glb(ii+2,jj)
+              ting_hall(jj,ii) = gzigm2_glb(ii+2,jj)
+              ting_gnsrhs(jj,ii) = gnsrhs_glb(ii+2,jj)
+           enddo
+        enddo
 
-      write(6,*) "Sending at: ", 
+        write(6,*) "Sending at: ", 
      1     modeltime(1),modeltime(2), modeltime(3),modeltime(4)
       
 !
 ! Export the data...
 !      
 #if defined(INTERCOMM)
-      call ci_send(modeltime)
+        call ci_send(modeltime)
 #elif defined(CISMAH)
-      call ca_send(modeltime)
+        call ca_send(modeltime)
 #endif
 !
 ! Save exchange variables to secondary history files.
 !
+      endif !mytid == 0
       call cism_save
       end subroutine export
 !-----------------------------------------------------------------------
@@ -286,8 +314,7 @@
 !       (2D,73,0:37)
 !-----------------------------------------------------------------------
       use params_module,only: nlonp1,nlon
-      use dynamo_module,only: gzigm2,gzigm1,gnsrhs
-      use fields_module,only: ped,hall,  levd0,levd1
+!      use fields_module,only: ped,hall,levd0,levd1
 !-----------------------------------------------------------------------
  
       call addfld('gpot','Potential from M-I Coupler (geographic)',' ', 
@@ -303,13 +330,16 @@
      |     gpotm(:, 1:nlat), 'lon',1,nlonp4,  'lat',1,nlat,  0)
 
       call addfld("gzigm1",'Pedersen Conductance (geographic)', ' ', 
-     |     gzigm1(:, 1:nlat), 'lon',1,nlonp4, 'lat',1,nlat,  0)
+     |     gzigm1(lon0:lon1, lat0:lat1), 'lon',lon0,lon1, 'lat',
+     |     lat0,lat1,  0)
       
       call addfld("gzigm2",'Hall Conductance (geographic) ', ' ', 
-     |     gzigm2(:, 1:nlat), 'lon',1,nlonp4, 'lat',1,nlat,  0)
+     |     gzigm2(lon0:lon1, lat0:lat1), 'lon',lon0,lon1, 'lat',
+     |     lat0,lat1,  0)
 
       call addfld("gnsrhs",'Height-integrated neutral wind ', ' ', 
-     |     gnsrhs(:, 1:nlat), 'lon',1,nlonp4, 'lat',1,nlat,  0)
+     |     gnsrhs(lon0:lon1, lat0:lat1), 'lon',lon0,lon1, 'lat',
+     |     lat0,lat1,  0)
       
 !
 ! FIXME:  Something is wrong with these ped/hall addfld calls... 
@@ -323,13 +353,12 @@
 !     |     hall, 'lev',levd0,levd1,  'lon',1,nlonp1,  nlat)
       end subroutine cism_save
 !-----------------------------------------------------------------------
-      subroutine cism_ucurrent
+      subroutine cism_ucurrent(rim1,rim2,mlon0,mlon1,mlat0,mlat1,nsrhs)
 !
 ! 3/20/14 btf: This routine moved from old serial dynamo (where it was
 !   called after sub transf, and followed by 3 calls to mag2geo). 
 !   The call to this routine is now in pdynamo after sub complete_integrals, 
-!   however as of this date, the call is commented out because rim1,2 are
-!   in magnetic subdomains, whereas this sub assumes global rims.
+!   however as of this date. 
 !
 ! DESCRIPTION:
 !
@@ -361,6 +390,7 @@
 ! USES
 !
       use cons_module,only: dlonm,dlatm,pi,r0
+      use mpi_module,only: mp_mag_periodic_f2d
 
 !
 ! PARAMETERS:
@@ -372,15 +402,31 @@
 !
 ! Calculate height-integrated field-aligned neutral wind currents for both hemisphere
 !
+      real,intent(in) :: rim1(mlon0-1:mlon1+1,mlat0-1:mlat1+1),
+     |                      rim2(mlon0-1:mlon1+1,mlat0-1:mlat1+1)
+      integer,intent(in) :: mlon0,mlon1,mlat0,mlat1
+      real,intent(out) :: nsrhs(mlon0-1:mlon1+1,mlat0-1:mlat1+1)
+
+!
 ! Local:
 !
-      real :: cs(nmlat)
+      real,parameter :: unitvm(nmlon)=1.
+      real :: cs(mlat0-1:mlat1+1)
       real :: dfac
+      real :: fmsub(mlon0:mlon1,mlat0:mlat1)
+      real :: fpole_jpm2(nmlonp1,4) ! fields at S pole+1,2 and N pole-1,2
       integer :: j,je,jj,i,n
+      integer mlon00,mlon11,mlat00,mlat11
+      integer latstart, latend
 !
 ! Externals:
 !
       real,external :: sddot ! in util.F
+!
+! Set halos indexes
+!
+      mlon00=mlon0-1 ; mlon11=mlon1+1
+      mlat00=mlat0-1 ; mlat11=mlat1+1
 !
 ! Calculate coefficients for dynamo pde for both hemisphere
 !
@@ -391,82 +437,91 @@
 !
 ! Calculate magnetic latitude cosin array
 !
-      do j = 1,nmlat     ! -pi/2 to pi/2
+      do j = mlat00,mlat11     
         cs(j) = cos(-pi/2.+(j-1)*dlatm)
       enddo
 !
-! Calculate right hand side of pde from rim(1) and rim(2)
+! Calculate right hand side of pde from rim1 and rim2
 !
-      do j = 2,nmlath-1  ! 2,48  south pole-1 to equator-1
-        jj = j+nmlath-1     ! 50,96 equator+1 to north pole-1
-!
-! Differentiate rim(1) w.r.t lamda
-!
-        do i = 2,nmlon-1
-          nsrhs(i,j)  = 1.0/(dlonm*cs(j))*
-     |                      0.5*(rim(i+1,j,1)-rim(i-1,j,1))
-          nsrhs(i,jj) = 1.0/(dlonm*cs(jj))*
-     |                      0.5*(rim(i+1,jj,1)-rim(i-1,jj,1))
-       enddo
-!
-! Values at longitudinal boundaries
-!
-        nsrhs(1,j)  = 1.0/(dlonm*cs(j))*
-     |                      0.5*(rim(2,j,1)-rim(nmlon,j,1))
-        nsrhs(1,jj) = 1.0/(dlonm*cs(jj))*
-     |                      0.5*(rim(2,jj,1)-rim(nmlon,jj,1))
-        nsrhs(nmlon,j)  = 1.0/(dlonm*cs(j))*
-     |                      0.5*(rim(1,j,1)-rim(nmlon-1,j,1))
-        nsrhs(nmlon,jj) = 1.0/(dlonm*cs(jj))*
-     |                      0.5*(rim(1,jj,1)-rim(nmlon-1,jj,1))
-      enddo
+      latstart=mlat0
+      latend=mlat1
+      if (latstart==1) then 
+        latstart=2
+      endif
+      if (latend==nmlat) then 
+        latend=nmlat-1
+      endif
+      do j = latstart,latend  
+        if (j == nmlath) cycle  ! skip equator
+        !
+        ! Differentiate rim(1) w.r.t lamda
+        !
+        do i = mlon0,mlon1
+          if (i /= 1 .and. i /= nmlonp1) then  ! Skip longitudinal boundaries
+            nsrhs(i,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim1(i+1,j)-rim1(i-1,j))
+          else ! Values at longitudinal boundaries
+            if (i==1) then
+              nsrhs(1,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim1(2,j)-rim1(0,j))
+            else
+              nsrhs(nmlonp1,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim1(mlon0,j)-rim1(nmlonp1-1,j))
+            endif
+          endif
+        enddo
+      enddo  ! j loop
 !
 ! Differentiate rim(2) w.r.t theta0
 !
-      do j = 2,nmlath-1  ! 2,48  south pole -1 to equator-1 "negative sigh"
-       jj = j+nmlath-1  ! 50,96 equator+1 to north pole-1
-       do i = 1,nmlon
-        nsrhs(i,j)  = nsrhs(i,j) - 1.0/(dlatm*cs(j))*0.5*
-     |               (rim(i,j+1,2)*cs(j+1)-rim(i,j-1,2)*cs(j-1))
-        nsrhs(i,jj) = nsrhs(i,jj) + 1.0/(dlatm*cs(jj))*0.5*
-     |               (rim(i,jj+1,2)*cs(jj+1)-rim(i,jj-1,2)*cs(jj-1))
-       enddo
+      do j = mlat0,mlat1  ! south pole to north pole
+        if (j==1) then ! Calculate south pole value
+           nsrhs(mlon0,1)     = -2./float(nmlon)*
+     |               sddot(nmlon,unitvm,rim2(mlon0,2))/cs(2)
+           ! Extend over longitude
+           nsrhs(:,1) = nsrhs(mlon0,1)
+        elseif (j==nmlat) then ! Calculate calculate north pole value 
+           nsrhs(mlon0,nmlat) = -2./float(nmlon)*
+     |               sddot(nmlon,unitvm,rim2(mlon0,nmlat-1))/cs(mlat0-1)
+           ! Extend over longitude
+           nsrhs(:,nmlat) = nsrhs(mlon0,nmlat)
+         elseif (j==nmlath) then ! Calculate equator values
+           do i=mlon0,mlon1
+             if (i==1) then
+               nsrhs(i,j) = 0.5/dlonm*(rim1(i+1,j)-rim1(i-1,j))
+               nsrhs(i,j) = nsrhs(i,j) + 1./dlatm*(cs(j)*
+     |                 rim2(i,j)+ cs(j+1)*rim2(i,j+1))
+             elseif (i==nmlonp1) then
+               nsrhs(i,j) = 0.5/dlonm*(rim1(nmlonp1+1,j)-rim1(i-1,j))
+               nsrhs(i,j) = nsrhs(i,j) + 1./dlatm*(cs(j)*
+     |                 rim2(i,j)+ cs(j+1)*rim2(i,j+1))
+             else
+               nsrhs(i,j) = 0.5/dlonm*(rim1(i+1,j)-rim1(i-1,j))
+               nsrhs(i,j) = nsrhs(i,j) + 1./dlatm*(cs(j)*
+     |                    rim2(i,j)+ cs(j+1)*rim2(i,j+1))
+             endif
+
+           enddo
+
+         elseif (j<nmlath) then !calculate south pole to equator
+           do i = mlon0,mlon1
+             nsrhs(i,j)  = nsrhs(i,j) - 1.0/(dlatm*cs(j))*0.5*
+     |               (rim2(i,j+1)*cs(j+1)-rim2(i,j-1)*cs(j-1))
+           enddo
+         else !calculate north pole to equator
+           do i = mlon0,mlon1
+             nsrhs(i,j) = nsrhs(i,j) + 1.0/(dlatm*cs(j))*0.5*
+     |               (rim2(i,j+1)*cs(j+1)-rim2(i,j-1)*cs(j-1))
+           enddo
+         endif
       enddo
-!
-! Calculate value at the poles by averaging over i:nmlon
-!
-      nsrhs(1,nmlat) = -2./float(nmlon)*
-     |                  sddot(nmlon,unitvm,rim(1,nmlat-1,2))/cs(nmlat-1)
-      nsrhs(1,1)     = -2./float(nmlon)*
-     |                  sddot(nmlon,unitvm,rim(1,2,2))/cs(2)
-!
-! Extend over longitude
-!
-      nsrhs(:,nmlat) = nsrhs(1,nmlat)
-      nsrhs(:,1)     = nsrhs(1,1)
-!
-! Calculate equator values
-!
-      je = nmlath
-      i = 1
-      nsrhs(i,je) = 0.5/dlonm*(rim(i+1,je,1)-rim(nmlon,je,1))
-      nsrhs(i,je) = nsrhs(i,je) + 1./dlatm*(cs(je)*
-     |                 rim(i,je,2)+ cs(je+1)*rim(i,je+1,2))
-!
-      do i = 2,nmlon-1
-        nsrhs(i,je) = 0.5/dlonm*(rim(i+1,je,1)-rim(i-1,je,1))
-       nsrhs(i,je) = nsrhs(i,je) + 1./dlatm*(cs(je)*
-     |                    rim(i,je,2)+ cs(je+1)*rim(i,je+1,2))
-      enddo
-!
-      i = nmlon
-      nsrhs(i,je) = 0.5/dlonm*(rim(1,je,1)-rim(i-1,je,1))
-      nsrhs(i,je) = nsrhs(i,je) + 1./dlatm*(cs(je)*
-     |                 rim(i,je,2)+ cs(je+1)*rim(i,je+1,2))
 !
 ! Periodic points
 !
-      nsrhs(nmlonp1,:) = nsrhs(1,:)
+      fmsub(:,:)=nsrhs(mlon0:mlon1,mlat0:mlat1)
+      call mp_mag_periodic_f2d(fmsub,mlon0,mlon1,mlat0,mlat1,1)
+
+      nsrhs(mlon0:mlon1,mlat0:mlat1) = fmsub(:,:)
 !
 ! Scale rhs by refernce radius (R_E + H0) in meters dfac = r0*1e-2
 !
@@ -476,32 +531,6 @@
       end subroutine cism_ucurrent
 !-----------------------------------------------------------------------
       end module cism_coupling_module
-!-----------------------------------------------------------------------
-      subroutine cism_pot2mag
-!
-! This subroutine converts high latitude potential in geographic coordinate 
-! obtained form the CMIT M-I couplier to geomagnetci coordinate to be used
-! in dynamo calculations
-!
-! Uses
-!
-      use params_module,only: nlonp1,nmlonp1,nmlon,nmlat
-      use cism_coupling_module, only:gpotm
-      use dynamo_module,only: phihm,geo2mag
-      use magfield_module,only: ig,jg,wt
-!
-! Local:
-!
-      integer :: jj
-
-      do jj=1,nmlat
-         call geo2mag(phihm(1,jj),gpotm(3:nlonp1+2,:),
-     |        ig,jg,wt,nlonp1,nmlonp1,nmlon,nmlat,jj)
-         ! Periodic point
-         phihm(nmlonp1,jj) = phihm(1,jj)
-      enddo
-
-      end subroutine cism_pot2mag
 !-----------------------------------------------------------------------
 #else
 !-----------------------------------------------------------------------

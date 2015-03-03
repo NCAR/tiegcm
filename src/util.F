@@ -39,7 +39,7 @@
 ! CMIT, namelist cannot be reliably read from stdin.
 !
 ! Args:
-      character(len=256),intent(in) :: filename
+      character(len=*),intent(in) :: filename
       integer,intent(in) :: luout
       character(len=1),intent(in) :: comcharin
       integer,intent(in) :: echo

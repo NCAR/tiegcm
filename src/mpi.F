@@ -2499,7 +2499,12 @@
       real,allocatable,save ::
      |  sndbuf(:,:,:,:), ! send buffer (nlevs,mxlon,mxlat,nflds)
      |  rcvbuf(:,:,:,:)  ! recv buffer (nlevs,mxlon,mxlat,nflds)
-      integer,parameter :: mxnf=1
+#if defined(INTERCOMM) || defined(CISMAH)
+      integer,parameter :: mxnf=7        ! 7 2d fields for CISM
+#else
+      integer,parameter :: mxnf=6        ! 6 2d fields
+#endif
+
 #ifdef VT
 !     call vtsymdef(106, 'mp_gatherlons_f3d','Communication',ier)
       call vtbegin(106,ier)
@@ -3801,7 +3806,11 @@
       integer :: ifld,j,ier,len,jlateq,itask,i0,i1
       real,allocatable,save :: sndbuf(:,:,:,:), rcvbuf(:,:,:,:)
       real :: starttime,endtime
-      integer,parameter :: mxnf=6
+#if defined(INTERCOMM) || defined(CISMAH)
+      integer,parameter :: mxnf=7        ! 7 2d fields for CISM
+#else
+      integer,parameter :: mxnf=6        ! 6 2d fields
+#endif
 
       if (mpi_timing) starttime = mpi_wtime()
 
@@ -3920,7 +3929,11 @@
       integer :: j,k,ier,len,itask,i0,i1,j0,j1
       real,allocatable,save :: sndbuf(:,:,:,:),rcvbuf(:,:,:,:)
       real :: starttime,endtime
-      integer,parameter :: mxnf=6
+#if defined(INTERCOMM) || defined(CISMAH)
+      integer,parameter :: mxnf=7        ! 7 2d fields for CISM
+#else
+      integer,parameter :: mxnf=6        ! 6 2d fields
+#endif
 
       if (mpi_timing) starttime = mpi_wtime()
 
@@ -4017,7 +4030,11 @@
       integer :: j,k,ier,len,itask,i0,i1,j0,j1
       real,allocatable,save :: sndbuf(:,:,:,:,:),rcvbuf(:,:,:,:,:)
       real :: starttime,endtime
-      integer,parameter :: mxnf=6
+#if defined(INTERCOMM) || defined(CISMAH)
+      integer,parameter :: mxnf=7        ! 7 2d fields for CISM
+#else
+      integer,parameter :: mxnf=6        ! 6 2d fields
+#endif
 
       if (mpi_timing) starttime = mpi_wtime()
 
