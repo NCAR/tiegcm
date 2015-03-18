@@ -1,0 +1,33 @@
+am 23 July 08
+/home/tgcm/doc/description/get_documents/notes_wenbin
+
+new files in /home/tgcm/doc/description/get_documents:
+ magsphere_input.tex 
+ filter.tex
+ 
+* index terms (add or remove s. index page)
+* chapter numbering is not logical in the script
+* under Weimer table with heelis input
+* figures produced eps figures, let me know if you have originals or if the ones
+  I produced are fine
+* check references to figures, literature, equations
+  I automated them.
+* check notation (put in the notation section, try to be conistent, also we 
+   other chapters)
+* equation 2.115 double chi_e or chi_h  ?
+* reference missing: Fontheim et al., 1987; 
+   Heikkila and Winningham, 1971
+   Hardy et al., 1985; Candidi and Meng, 1984; Sotirelis et al., 1997;
+   Hardy et al., 1986; Riehl and Hardy, 1986; Gussenhoven et al., 1984; 
+   Winningham and Heikkila, 1974; Newell and Meng, 
+   1990, Meng and Kroehl, 1977; Roble and Rees, 1977; Lazarev (1967)
+   (if possible give them to me like in main.bib, the once you already gave to
+   me I included)
+* reference to section 2.4.2 which is not in the script
+  (chapter cusp electron precipitation)
+* assume units in e.g. eq. 2.123 is eV/(cm^2 s)
+* left out Barb's part (s. wiki site) since this needs to be incorporated into the other text.
+  It's partly redundant, new etc.
+  So somebody has to go over it, before I put time into converting it to latex.
+*  notation not consistent phi sometimes latitude, longitude...
+  if possible we should stick to the same names for basic quantities.

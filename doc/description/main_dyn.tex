@@ -1,0 +1,108 @@
+%
+\documentclass[]{article}
+\usepackage{html}
+\usepackage{amsmath,amssymb}
+\usepackage{psfig,epsfig}
+\usepackage{html}
+\usepackage[T1]{fontenc}
+\usepackage{rotating}
+%
+\newcommand{\command}{\textbf}      % for commands
+\newcommand{\replaceable}{\textit}         % for replaceable names e.g. inputfiles
+\newcommand{\flags}{\textmd}        % flags of files
+\newcommand{\directory}{\textsl} % flags of files/code
+\newcommand{\src}{\texttt}          % source code
+\newcommand{\myemph}{\emph}         % emphasize
+%
+\begin{document}
+%
+\begin{titlepage}
+%
+\begin{latexonly}
+\noindent {\bf High Altitude Observatory} \\
+\noindent National Center for Atmospheric Research, Boulder, CO \\
+\vspace{2in}
+\end{latexonly}
+%
+\begin{center}
+{\Large\bf TIEGCM V1.8 Model Description} \\
+{\bf May 6, 2005}
+\medskip
+{\it Author: Astrid Maute} \\
+{\it e-mail: maute@ucar.edu}
+\end{center}
+%
+\end{titlepage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagenumbering{Roman}
+\setcounter{page}{1}
+%
+\include{Cover}
+%
+\tableofcontents
+%
+\include{notation}
+%
+%{List of Figures}
+%
+%{List of Tables}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\pagenumbering{arabic}
+\newpage
+%
+\include{introduction}
+%
+\include{electro}
+%
+\include{input2electro}
+%
+\include{mapping}
+%
+\include{highlat_mod}
+%
+\include{fieldline}
+%
+% should be in the default code 
+\include{pg_current}
+%
+\include{finitediff}
+%
+\include{solve}
+%
+\include{efield}
+%
+\section{Additional features}
+%
+\include{current4dB}
+\subsection{No electrodynamo calculation}
+%
+\begin{thebibliography}{1}
+\newcommand{\enquote}[1]{`#1'}
+%
+\bibitem[Peym93]{peym93}
+{\sc Peymirat, C. and A. Richmond} [1993].
+\newblock \enquote{Modeling the ion loss and the generation of region 2 field--aligned
+currents via equivalent magnetospheric conductances.}
+\newblock {\em J. Geop. Res.\/}, {\bf 98}, pp.~15,467--15,476.
+%
+\bibitem[Rich74]{rich74}
+{\sc Richmond, A.} [1974].
+\newblock \enquote{The computation of magnetic effects of field-aligned
+  magnetospheric currents.}
+\newblock {\em J. Atmos. Terr. Phys.\/}, {\bf 36}, pp.~245--252.
+%
+\bibitem[Rich95]{rich95}
+{\sc Richmond, A.} [1995].
+\newblock \enquote{Ionospheric electrodynamics using apex coordinates.}
+\newblock {\em J. Geomag. Geoelectr.\/}, {\bf 47}, pp.~191--212.
+%
+\bibitem[Rich05]{rich05}
+{\sc Richmond, A.} [2005].
+\newblock \enquote{Modeling magnetic perturbation from TIEGCM.}
+\newblock {\em in preparation\/}.
+%
+\end{thebibliography}
+%
+\end{document}

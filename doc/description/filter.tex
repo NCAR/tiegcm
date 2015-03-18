@@ -1,0 +1,158 @@
+%
+\section{Shapiro Filter \index{Shapiro Filter}}\label{cap:shapiro}
+%
+A Shapiro Filter/smoother is used for  
+time-dependent dynamical variables $T_n, U_n, V_n, O^+, \Psi_O, \Psi_{O_2},
+\Psi_{NO}$  and  $\Psi_{N(^4S)}$
+in the TIEGCM to limit the development of numerical 
+nonlinear instability and short wavelength waves 
+(less than four grid size) that are poorly represented 
+in the model. Shapiro smoothing is used in 
+modules/subroutines that solve equations for 
+these variables. \\
+%
+\textbf{*Note: the following material is from \cite{wang1998}, 
+and copyright to the University of Michigan. Some of 
+the material has been modified based on the updated TIEGCM. } \\
+%
+In real world, wave interactions occur that generate 
+larger and smaller wavelength waves. The smaller waves 
+cascade in sizes to reach the characteristic scale of 
+molecular dissipation which is the process that finally 
+eliminates motion. However, in a numerical model that has 
+discrete grid, motion energy cascade from larger wavelength 
+waves to smaller and smaller scales is interrupted. In fact, 
+waves with wavelength smaller than $2 \Delta x$ ($\Delta x$ is the grid size 
+of a numerical model) are erroneously represented as larger 
+wavelength waves. This phenomenon is called aliasing 
+\cite{pielke1984}. The net result of this aliasing is a 
+fictitious energy buildup since energy is added 
+continuously to the model through forcing terms, 
+while energy dissipation processes are cut off. 
+Therefore, even though a numerical scheme is 
+linearly stable, the results can degrade into physically 
+meaningless computational noise. The solutions of model 
+dynamical variables can grow to infinity. This numerical 
+error is commonly referred to as nonlinear instability. \\
+%
+To remove aliasing in the wave presentation, and thus to 
+prevent the nonlinear instability from occurring, short 
+waves with wavelength smaller than $4 \Delta x$ must be eliminated 
+from a numerical model. In addition to the above mentioned 
+nonlinear instability problem, such short waves are also 
+poorly represented in terms of phase and amplitude. And they 
+are expected to dissipate to even smaller scale motions anyway. 
+Therefore, it is desirable to remove these waves completely.\\
+%
+In the TIEGCM the smoothing technique discussed by \cite{shapiro1970} 
+is used to control computational noise. The Shapiro smoother is 
+a low-pass filter that eliminates waves with wavelength smaller 
+than $4 \Delta x$ each time step, but leaves the large-scale disturbances 
+unaffected. Another way to control nonlinear instability is to 
+enhance the horizontal eddy diffusion by proper parameterization 
+of the subgrid correlation terms. This method is not desirable 
+since it allows modelers to adjust the eddy diffusion coefficient 
+arbitrarily to change the magnitude of numerical solutions 
+\cite{tag1979},\\
+%
+ A one-dimensional, five-point Shapiro smoothing scheme is 
+ used in both the TIEGCM to eliminate or constrain any spurious, 
+ nonlinear growth of high-frequency waves that may be introduced 
+ by roundoff and truncations errors or by the interruption of the 
+ energy cascade process that transport energy from large-scale 
+ disturbances to small-scale motions. Any time-dependent 
+ dynamical variable Z( $T_n, U_n, V_n, O^+, \Psi_O, \Psi_{O_2},
+\Psi_{NO}$  and  $\Psi_{N(^4S)}$) is averaged each time 
+ step by
+%
+\begin{equation}
+  \bar{Z} = Z_l - \alpha(Z_{l+2}+ Z_{l-2}-4 Z_{l+1}+6 Z_{l})
+    \label{eq:filer_1}
+\end{equation}
+% 
+where $l$ is the index of grid point in either latitude or 
+longitude direction.$\alpha$  is a smoothing factor and $0 < \alpha < 0.5$.
+$Z(x)$  can 
+be expressed in terms of a summation of Fourier components of the form
+%
+\begin{equation}
+  Z_l = C+A cos k(x_l + \varphi)
+    \label{eq:filer_2}
+\end{equation}
+% 
+where $C$ is a constant, $A$ is the amplitude of the wave 
+component with wave number $k$ ( $k=2\Pi/\lambda$, where 
+$\lambda$  is the wavelength of 
+the component). Substituting \ref{eq:filer_2} into \ref{eq:filer_1} yields
+%
+\begin{equation}
+  \begin{split}
+  \bar{Z} = & C + A cos k(x_l + \varphi) [1- 2 \alpha(cos 2 k \Delta x - 4 cos k
+  \Delta x + 3)]  \\
+  =&  C + A[1-4 \alpha(1-cos k \Delta x)^2]cos k(x_l + \varphi)
+  \end{split}
+    \label{eq:filer_3}
+\end{equation}
+% 
+$\alpha$ is set to be equal to 0.03. $\alpha$  values are determined 
+ by numerical experiments. It is desirable to have $\alpha$  as 
+ small as possible so that longer waves are less affected 
+ by the smoothing. The minimum value of $\alpha$  is obtained by 
+ gradually decreasing $\alpha$  while preserving integrity and 
+ stability of the numerical solutions. 
+% 
+It is clear from \ref{eq:filer_3} that all wavelengths are 
+damped. However, short waves ($\lambda , 8 \Delta x$) are heavily damped while long 
+waves are almost unaffected. Successive application of this 
+smoother on a dynamical variable prevents short waves from 
+growing to such a degree that they degrade the numerical 
+solutions.
+%
+\section{Fourier Filter\index{Fourier Filter}}\label{cap:fourier}
+%
+\textbf{*Note: the following material is from \cite{wang1998}, 
+and copyright to the University of Michigan. Some of 
+the material has been modified based on the updated TIEGCM.} \\
+%
+Since the TIEGCM uses a uniform horizontal grid system 
+and finite-difference numerical scheme, computational 
+errors can grow significantly as the grids approach to 
+the poles. The zonal grid sizes decrease in direct 
+proportion to $cos \phi$ , where $\phi$ is the latitude. The truncation 
+error of the finite-difference scheme and other numerical 
+errors may be amplified by the zonal finite difference 
+calculations at the grid points near poles. Non-physical 
+waves are then generated and grow non-linearly to cause 
+computational instability. This pole problem occurs in any 
+simulation that uses finite difference techniques with uniform 
+latitude and longitude grids. One way to avoid this problem is 
+to use much smaller time steps, which is undesirable because it 
+increases the computational cost dramatically by slowing down the 
+entire simulation process. \\
+%
+Another way to solve this pole problem is to apply a Fourier 
+filter at high latitudes to remove non-physical high-frequency 
+zonal waves generated by finite differences in the region with 
+smaller zonal grid sizes. At each time step a Fourier expansion 
+is applied to the prognostic variables of the model. A cutoff 
+frequency was found at each latitude (at high latitudes) as a 
+result of numerical experiments. Waves with frequencies that are 
+higher than the cutoff frequencies are eliminated from the Fourier 
+spectra of prognostic variables. The values of prognostic variables 
+are then recovered through a reverse Fourier transform using modified 
+Fourier spectra. Each latitude grid may have its own cutoff frequency. 
+The cutoff frequency at a particular latitude is determined by the 
+expected time step used by a model. A large time step requires low 
+cutoff frequencies and more zonal waves are filtered out.\\
+% 
+In the TIEGCM, Fourier filters are applied to the individual 
+prognostic variables. These variables include  $T_n, U_n, V_n, O^+, 
+\Psi_O, \Psi_{O_2},
+\Psi_{NO}, \Psi_{N(^4S)}$  and  $W$. 
+It should be noted here that to apply a Fourier filter directly and 
+successively on prognostic variables may cause overfiltering which 
+may remove fine structures that are expected to occur at high latitudes.
+
+ 
+
+

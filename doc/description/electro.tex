@@ -1,0 +1,239 @@
+%
+\section{Steady--State Electrodynamic Equations}\label{cap:electro_equ}
+%
+The basic equations of the steady state electrodynamo
+are shown in this chapter. If an equation is taken from \cite{rich95}. 
+then the additional equation
+number refers to the equation number in \cite{rich95}. 
+In the following the presentation of the equations
+is based on the coding in the source code and might not look
+straight forward in many places. For the location in the source code 
+of the equations it is referred to the
+\src{subroutine names}. \\
+
+For longer time scales it is valid to assume steady state electrodynamics
+with a divergence free current density $\mathbf{J}$. It is also assumed that
+the conductivity along the magnetic field line is very high, thus there is no 
+electric
+field component in this direction. Therefore the electrodynamo equation 
+can be reduced to a two dimensional equation. \\
+
+The current density is divergence free
+%
+\begin{equation}
+ \nabla \cdot  \mathbf{J} = 0
+\end{equation}
+%
+The current density has an ohmic component 
+transverse to the magnetic field and parallel to the magnetic field line
+  $\mathbf{J}_{||}$ and a non--ohmic 
+magnetospheric component $\mathbf{J}_{M}$. In the TIEGCM only the ohmic
+component transverse to the magnetic field is considered by default.
+The other two components can be added by the user which is
+ discussed later in chapter \ref{cap:fldalg_curr} and \ref{cap:magncond}. 
+The total current density is expressed by (eq. 2.1 in \cite{rich95})
+%
+\begin{equation}
+  \mathbf{J} = \sigma_P (\mathbf{E} + \mathbf{u}\times \mathbf{B}) +
+      \sigma_H \mathbf{b} \times (\mathbf{E} + \mathbf{u}\times \mathbf{B}) +
+      \mathbf{J}_{||} + \mathbf{J}_{M}
+\end{equation}
+%
+with $\sigma_P$ and $\sigma_H$ the Pedersen and Hall conductivities. The
+neutral wind is denoted by $\mathbf{u}$, the electric field by $\mathbf{E}$
+and the geomagnetic field by $\mathbf{B}$ with $\mathbf{b}$ the unit vector
+parallel to $\mathbf{B}$. 
+
+The following relations are used to derive the electrodynamo equation. For
+details it is referred to \cite{rich95}. Apex coordinates are used with two sets of
+base vectors $\mathbf{e}_{i}$ and $\mathbf{d}_j$ which are calculated in 
+\src{subroutine apxparm} (see chapter 
+\ref{cap:apex_coord}). The directions of $\mathbf{e}_{1}$ and $\mathbf{d}_1$ are
+more or less in magnetic eastward, $\mathbf{e}_{2}$ and $\mathbf{d}_2$ in downward
+or equatorward, and $\mathbf{e}_{3}$ and $\mathbf{d}_3$ in field line direction.
+(eq. 3.11- 3.13 in \cite{rich95}) 
+%
+\begin{align}
+   \mathbf{e}_{1} &= \mathbf{d}_2 \times \mathbf{d}_3 \\
+   \mathbf{e}_{2} &= \mathbf{d}_3 \times \mathbf{d}_1 \\ 
+   \mathbf{e}_{3} &= \mathbf{d}_1 \times \mathbf{d}_2 
+\end{align}
+%
+with (eq. 3.8- 3.10 in \cite{rich95}) 
+%
+\begin{align}
+   \mathbf{d}_{1} &= R_0 cos \lambda_m \nabla \phi_m \\
+   \mathbf{d}_{2} &=-R_0 sin I_m \nabla \lambda_m  \\ 
+   \mathbf{d}_{3} &= \frac{\mathbf{b_0}}{|\mathbf{d}_{1} \times \mathbf{d}_{2} |}
+\end{align}
+%
+The geomagnetic longitude and apex latitude are $\phi_m$ and $\lambda_m$,
+$I_m$ is the inclination of the geomagnetic field, $R_0$ the radius to the
+reference height $R_E+ h_0$, and $b_0$ the unit vector in the direction of the
+geomagnetic field.
+The neutral wind $\mathbf{u}$ and the electric field $\mathbf{E}$ can be 
+expressed in terms of the base vectors which has the advantage that the 
+components are constant along a magnetic field line
+(eq. 4.5 in \cite{rich95}).
+%
+\begin{alignat}{2}
+   \mathbf{u} &= u_{e1} \mathbf{e}_1 + u_{e2}\mathbf{e}_2   \quad &\text{with} \quad
+   {u}_{ei} = \mathbf{u} \cdot \mathbf{d}_i \\
+   \mathbf{E} &= E_{d1} \mathbf{d}_1 + E_{d2}\mathbf{d}_2   \quad &\text{with} \quad
+   {E}_{di} = \mathbf{E} \cdot \mathbf{e}_i
+\end{alignat}
+%
+The geomagnetic field $\mathbf{B}$ is approximated by the main field 
+$\mathbf{B}_0$. We are using the International Geomagnetic Reference Field
+(IGRF2000) in TIEGCM and ignore the magnetic perturbation $\Delta \mathbf{B}$ due
+to the external currents (eq. 3.10, 3.15, 4.4 in \cite{rich95}). 
+%
+\begin{align}
+   \mathbf{B}_0 &= \mathbf{B}_{e3} \mathbf{e}_3 \\
+   \mathbf{b}_0 &= \mathbf{d}_3 D \quad \text{with} \quad
+             D= | \mathbf{d}_1 \times \mathbf{d}_2 |
+\end{align}
+%
+The current density can be expressed by
+%
+\begin{equation}
+   \mathbf{J} = \sum_{i=1}^3 {J}_{ei} \mathbf{e}_i  \; \text{with} \;
+   {J}_{ei} = \mathbf{J} \cdot \mathbf{d}_i
+\end{equation}
+%
+Using all the equations from above leads to the current density components ${J}_{e1}$
+and ${J}_{e2}$ (eq. 5.7, 5.8 in \cite{rich95})  
+%
+\begin{align}
+   {J}_{e1} &= \sigma_P d_1^2 ( E_{d1} + u_{e2} B_{e3}) + 
+     (\sigma_H \mathbf{d}_1 \cdot \mathbf{d}_2 - \sigma_H D) 
+     ( E_{d2} - u_{e1} B_{e3}) \label{eq:j_e1} \\
+   {J}_{e2} &= (\sigma_P \mathbf{d}_1 \cdot \mathbf{d}_2 + \sigma_H D) 
+     ( E_{d1} + u_{e2} B_{e3}) + 
+     \sigma_P {d}_2^2 ( E_{d2} - u_{e1} B_{e3})  \label{eq:j_e2}
+\end{align}
+%
+The height integrated current density in magnetic eastward and downward/
+equatorward direction are $K_{m \phi}$ and $K_{m \lambda}$. Knowing the current
+density $\mathbf{J}$ the height integrated components can be calculated by 
+(eq. 5.1, 5.2 in \cite{rich95})  
+% 
+\begin{align}
+   K_{m \phi}  &= |sin I_m | \int_{s_L}^{s_U} \frac{J_{e1}}{D}
+   		     ds \label{eq:k_mphi} \\
+   K_{m \lambda} &= \mp \int_{s_L}^{s_U} \frac{J_{e2}}{D} ds \label{eq:k_mlambda}
+\end{align}
+%
+with the index $(\cdot)_m$ standing for modified apex (see chapter 
+\ref{cap:apex_coord}).
+The integration is done along the field line and $s_L$ and $s_U$ are the lower and 
+upper
+boundary of the ionosphere, i.e. in the TIEGCM v 1.7 model 90 km to the top of 
+the model. The electrostatic  field is  the gradient of the electric potential.
+Therefore the component of the electric field are (eq. 5.9, 5.10 in \cite{rich95})  
+% 
+\begin{align}
+E_{m \phi} &= E_{d1} = - \frac{1}{R cos \lambda_m} 
+                      \frac{\partial \Phi}{\partial \phi_m} \label{eq:e_mphi} \\
+E_{m \lambda} &= - E_{d2} sin I_m= - \frac{1}{R} 
+                      \frac{\partial \Phi}{\partial \lambda_m}\label{eq:e_mlambda}
+\end{align}
+%
+Inserting equations (\ref{eq:e_mphi}) and (\ref{eq:e_mlambda}) into the current
+density component expressions (\ref{eq:j_e1}) and (\ref{eq:j_e2}), which then can be
+used to calculate the height integrated current density in equations 
+(\ref{eq:k_mphi}) and (\ref{eq:k_mlambda}). This leads to (eq. 5.11, 5.12 in \cite{rich95}) 
+% 
+\begin{align}
+K_{m \phi} &= \Sigma_{\phi \phi} E_{m \phi} + \Sigma_{\phi \lambda} E_{m \lambda}
+                 + K_{m \phi}^{D} \label{eq:kmp}\\
+K_{m \lambda} &=  \Sigma_{\lambda \phi} E_{m \phi} + \Sigma_{\lambda \lambda} E_{m \lambda}
+                 + K_{m \lambda}^{D}\label{eq:kml}
+\end{align}
+%
+The terms $ K_{m \phi}^{D} $ and $K_{m \lambda}^{D}$ are the wind driven 
+height integrated current densities which are the driving forces 
+(eq. 5.19, 5.20 in \cite{rich95}).
+% 
+\begin{align}
+K_{m \phi}^D &= B_{e3} |sin I_m |  \int_{s_L}^{s_U} \bigl[ 
+     \frac{\sigma_P d_1^2}{D} u_{e2} + \bigl( \sigma_H - \frac{\sigma_P
+     \mathbf{d}_1 \cdot \mathbf{d}_2 }{D}\bigr) u_{e1} \bigr] ds \label{eq:eldy_1}\\
+K_{m \lambda}^D &= \mp B_{e3}   \int_{s_L}^{s_U} \bigl[ 
+     \bigl( \sigma_H + \frac{\sigma_P
+     \mathbf{d}_1 \cdot \mathbf{d}_2 }{D}\bigr) u_{e2}  -
+     \frac{\sigma_P d_2^2}{D} u_{e1}  \bigr] ds \label{eq:eldy_2}
+\end{align}
+%
+The conductances in the equations (\ref{eq:kmp}) and (\ref{eq:kml}) are 
+(eq. 5.13--5.18 in \cite{rich95})
+% 
+\begin{align}
+\Sigma_{\phi \phi} &= |sin I_m |  \int_{s_L}^{s_U} 
+     \frac{\sigma_P d_1^2}{D}   ds  \label{eq:eldy_3}\\
+\Sigma_{\lambda \lambda} &= \frac{1}{|sin I_m |}  \int_{s_L}^{s_U} 
+     \frac{\sigma_P d_2^2}{D}  ds  \label{eq:eldy_4}\\
+\Sigma_{H} &=  \int_{s_L}^{s_U}\sigma_H   ds  \label{eq:eldy_5}\\
+\Sigma_{C} &=  \int_{s_L}^{s_U} \frac{\sigma_P 
+   \mathbf{d}_1 \cdot \mathbf{d}_2 }{D}  ds  \label{eq:eldy_6}\\
+\Sigma_{\phi \lambda} &= \pm ( \Sigma_H - \Sigma_C) \label{eq:eldy_7}\\
+\Sigma_{ \lambda \phi} &= \mp ( \Sigma_H + \Sigma_C) \label{eq:eldy_8}\\
+\end{align}
+%
+Since current continuity applies, the divergence of the horizontal current 
+$K_{m \phi}$ and $K_{m \lambda}$ has
+to be balanced by an upward current density $J_{mr}$ at the top of the ionospheric current
+sheet layer. (eq. 5.3 in \cite{rich95})
+%
+\begin{equation}
+   {J}_{mr}  = \frac{-1}{R cos \lambda_m} \bigl(
+    \frac{\partial K_{m \phi}}{\partial \phi_m} + 
+    \frac{\partial K_{m \lambda} cos \lambda_m}{\partial \lambda_m} \bigr)
+    \label{eq:j_mr}
+\end{equation}
+%
+Inserting the height integrated current densities (\ref{eq:kmp}) and 
+(\ref{eq:kml}) into equation (\ref{eq:j_mr}) and assuming that in the closed field
+line region the field lines are equipotential leads to (eq. 5.23 in \cite{rich95})
+%
+\begin{equation}
+ \begin{split}
+  & \frac{\partial}{\partial \phi_m} \bigl( \frac{\Sigma_{\phi \phi}^T}{cos
+   \lambda_m} \frac{\partial \Phi}{\partial \phi_m} + 
+   \Sigma_{\phi \lambda}^T \frac{\partial \Phi}{\partial |\lambda_m|} \bigr) +
+   \frac{\partial}{\partial | \lambda_m |} \bigl( \Sigma_{\lambda \phi}^T
+    \frac{\partial \Phi}{\partial \phi_m} + 
+   \Sigma_{\lambda \lambda}^T cos \lambda_m 
+   \frac{\partial \Phi}{\partial |\lambda_m|} \bigr) \\
+  &  =
+   R \frac{\partial K_{m \phi}^{DT}}{\partial \phi_m} +  
+   R \frac{\partial K_{m \lambda cos \lambda_m }^{DT}}{\partial | \lambda_m |} +
+   R^2 cos \lambda_m J_{Mr}
+    \label{eq:edyn}
+  \end{split}
+\end{equation}
+%
+with $\frac{\partial}{\partial | \lambda_m |} = 
+- \frac{\partial^{SH}}{\partial  \lambda_m } = 
+ \frac{\partial^{NH}}{\partial  \lambda_m }$ and $J_{Mr} = J_{mr}^{SH} +
+ J_{mr}^{NH}$.
+The values $(\cdot)^T$ denote the sum of the values from northern $(\cdot)^{NH}$ and 
+southern $(\cdot)^{SH}$ hemisphere (eq. 5.24--5.29 \cite{rich95})
+% 
+\begin{align}
+  \Sigma_{\phi \phi}^T &= \Sigma_{\phi \phi}^{NH} + \Sigma_{\phi \phi}^{SH} \label{eq:nh_1}\\
+  \Sigma_{\lambda \lambda}^T &= \Sigma_{\lambda \lambda}^{NH} + 
+                                      \Sigma_{\lambda \lambda}^{SH}\\
+  \Sigma_{\lambda \phi}^T &= \Sigma_{\lambda \phi}^{NH} - 
+                                      \Sigma_{\lambda \phi}^{SH}\\
+  \Sigma_{\phi\lambda}^T &= \Sigma_{ \phi\lambda}^{NH} - 
+                                      \Sigma_{\phi\lambda }^{SH} \\
+  K_{m \phi}^{DT} &= K_{m \phi}^{D, NH} + K_{m \phi}^{D, SH}\\
+  K_{m \lambda}^{DT} &= K_{m \lambda}^{D, NH} - K_{m \lambda}^{D, SH} \label{eq:nh_6}
+\end{align}
+%
+In the source code the electrodynamo equation (\ref{eq:edyn}) is divided by
+$\frac{\partial \lambda_m}{ cos \lambda_0\partial\lambda_0}$ with $\lambda_0$ the
+equally spaced distribution in modified apex latitudes $\lambda_m$ 
+which is irregular spaced. The latitudinal distribution is explained 
+in more detail in section \ref{cap:latid_grid}. \label{page:electro_multi}

@@ -1,0 +1,322 @@
+\section{Gravity and plasma pressure driven current}
+%
+\subsection{Gravity Driven Current}\label{subsec:grav_current}
+%
+This section refers to the \texttt{subroutine magpres\_grav} in TIEGCM. Note that
+the units in this section are the units used in the source code of
+TIEGCM. By default the gravity driven current is calculated for a model run.
+To omit the gravity and plasma pressure driven current the flag \flags{j\_pg=.false.} in \src{magpres\_g\_module} 
+has to be set. \\
+
+%
+The current driven by gravity can be calculated by
+%
+\begin{equation}
+  \mathbf{J}_g (h) =  \frac{1}{\mathbf{B}(h)^2}\rho_{ion} \mathbf{g}(h) \times \mathbf{B}(h) 
+  		\label{eq:j_g}
+\end{equation}
+%
+with $\mathbf{B}$  [Gauss] the Earth main magnetic field, the ion density 
+$\rho_{ion}$ [$\frac{1}{cm^3}$], and $\mathbf{g}(h)$  [$\frac{cm}{s^2}$] 
+the gravitational acceleration
+at height h. The gravitational 
+field gets weaker
+with height and therefore the  gravitational acceleration at reference height $h_0= 90
+\; km$ is scaled by 
+%
+\begin{equation}
+  \mathbf{g}(h)  =  \biggl(\frac{R_0}{R} \biggr)^2\mathbf{g}(h_0) \label{eq:gh}
+\end{equation}
+%
+with $R = R_E + h$ and $R_E$ the mean Earth radius. The radius of
+the reference height is $R_0 = R_E + h_0$.
+The ion density is determined by 
+%
+\begin{equation}
+  \rho_{ion} = M_i \sum_i n_i m_i  \quad \text{with} \quad i= O^+,O^{2+},N^+,N^{2+},NO^+ 
+  		\label{eq:iondensity}
+\end{equation}
+%
+with the mass of a unit atomic weight $M_i$ [g], $n_i$ [$\frac{1}{cm^3}$] the ion number density 
+of the species i
+and $m_i$ its corresponding atomic weight. Combining equations 
+(\ref{eq:gh}) and (\ref{eq:iondensity}) and converting from [$\frac{g}{s^2 cm^2}$] to 
+[$\frac{kg}{s^2 m^2}$] will introduce an additional factor of 10 (see equation \ref{eq:j_gdisc}). \\
+%
+The height variation of the Earth main magnetic
+field is approximated by
+%
+\begin{equation}
+  \mathbf{B}(h)  =  \biggl(\frac{R_0}{R} \biggr)^3\mathbf{B}(h_0) \label{eq:bh}
+\end{equation}
+%
+with $\mathbf{B}(h_0)$ [Gaus] referenced to $h_0$.
+The components of the main field are $\mathbf{B} = (b_x,b_y,b_z)$  the
+north--, east-- and downward components or $\mathbf{B} = (b_{\phi_g},b_{\lambda_g},b_{z_g})$ with
+$\phi_g, \; \lambda_g \; \text{and} \; z_g$ the directions in geographic
+longitude, latitude and upward height respectively. 
+The current in [$\frac{A}{cm^2}$] due to the gravitational force is calculated at half pressure levels
+$k+\frac{1}{2}$ by
+%
+\begin{equation}
+  \mathbf{J}_{g,k+\frac{1}{2}} = 10 \frac{R}{R_0} \frac{1}{\mathbf{B}_0^2} \rho_{ion} 
+          {g}(h_0) (b_x,-b_y,0) \label{eq:j_gdisc}
+\end{equation}
+%
+Note that in the TIEGCM code most quantities are evaluated at half levels
+$k+\frac{1}{2}$ and stored at level $k'$ with $(\cdot)'$ denoting the
+half levels $(\cdot) +\frac{1}{2}$ in contrast to $k$ which is the full pressure level 
+$k$. Therefore $R$ and $\rho_{ion}$ in equation (\ref{eq:j_gdisc}) must be 
+evaluated at the half level $k+\frac{1}{2}$.
+%
+\subsection{Plasma Pressure Gradient Driven Current}\label{subsec:ppres_current}
+%
+This section refers to the \texttt{subroutine magpres\_grav} in TIEGCM. Note that
+the units in this section are the units used in the source code of
+TIEGCM. The plasma pressure gradient driven current is calculated by default for a model run.
+To omit the gravity and plasma pressure driven current the flag \flags{j\_pg=.false.} in \src{magpres\_g\_module} 
+has to be set. \\ \\
+%
+The current due to the plasma pressure gradient $\nabla p_p$ is
+%
+\begin{equation}
+  \mathbf{J}_p  =  - \frac{1}{\mathbf{B}(h)^2}\nabla p_p \times \mathbf{B}(h) 
+  		\label{eq:j_p}
+\end{equation}
+%
+with the plasma pressure
+%
+\begin{equation}
+  \nabla p_p  =  k_B \nabla [(T_i + T_e ) N_e] \label{eq:gradp_p}
+\end{equation}
+%
+The Boltzmann constant is denoted by $k_B$; $T_i , \; T_e$ and $N_e$ are the ion
+temperature [K], the electron temperature [K] and the electron density
+[$\frac{1}{cm^3}$]. The gradient $\nabla$ is taken in the geographic direction
+$(\nabla_{\phi_g}, \nabla_{\lambda_g}, \nabla_{z_g})$. \\
+%
+The vertical gradient $\nabla_{z_g} p_p$ is
+approximated at the half pressure level $k+\frac{1}{2}$ by
+%
+\begin{equation}
+  \begin{split}
+     \nabla_{z_g} p_{p,k+\frac{1}{2}}  =  10 k_B \biggl[  
+   &  \frac{N_{e,k+1}-N_{e,k}}{z_{k+1}-z_{k}} (T_i+T_e)_{k+\frac{1}{2}} + \\
+   & \frac{(T_i+T_e)_{k+1} - (T_i+T_e)_{k}}{z_{k+1}-z_{k}} N_{e, k+\frac{1}{2}}  \biggr]
+  \end{split}
+    \label{eq:gradz_pp}
+\end{equation}
+%
+with the geopotential height $z$ in [cm].
+The factor of 10 takes the conversion from [$\frac{g}{s^2 cm^2}$] to  [$\frac{kg}{s^2
+m^2}$] into account. \\
+%
+The plasma pressure gradient in geographic eastward direction at the half pressure 
+level $k+\frac{1}{2}$ and geographic longitude $\phi_g$ and geographic latitude
+$\lambda_g$ is approximated by
+%
+\begin{equation}
+  \begin{split}
+     \nabla_{\phi_g} p_{p,k+\frac{1}{2}}  = & 10 k_B 
+        \frac{1}{2 \Delta \phi R_{k+\frac{1}{2}} cos\lambda_g}
+         \biggl[  \\
+     & \bigl( N_e(\phi_g + \Delta \phi_g ) - N_e(\phi_g -\Delta \phi_g) \bigr)_{k+\frac{1}{2}} 
+       (T_i(\phi_g)+T_e(\phi_g))_{k+\frac{1}{2}}  + \\
+     & \bigl((T_i+T_e)(\phi_g + \Delta \phi_g )- (T_i+T_e)(\phi_g -\Delta \phi_g) \bigr)_{k+\frac{1}{2}} N(\phi_g)_{e, k+\frac{1}{2}} \biggr]
+  \end{split}
+  \label{eq:gradphi_pp}
+\end{equation}
+%
+with $\Delta \phi_g$ the discrete step size in the eastward direction and the radius 
+$ R_{k+\frac{1}{2}}$ at the half pressure level. \\
+%
+The plasma pressure gradient in geographic north direction at the half pressure 
+level $k+\frac{1}{2}$ and geographic longitude $\phi_g$ and geographic latitude
+$\lambda_g$ is approximated by
+%
+\begin{equation}
+  \begin{split}
+     \nabla_{\lambda_g} p_{p,k+\frac{1}{2}}  =  & 10 k_B 
+        \frac{1}{2 \Delta \lambda R_{k+\frac{1}{2}}}
+      \biggl[ \\
+      & \bigl( N_e(\lambda_g + \Delta \lambda_g ) - N_e(\lambda_g -\Delta \lambda_g) \bigr)_{k+\frac{1}{2}} 
+      (T_i(\lambda_g )+T_e(\lambda_g ))_{k+\frac{1}{2}}  + \\
+      & \bigl((T_i+T_e)(\lambda_g + \Delta \lambda_g )- (T_i+T_e)(\lambda_g -\Delta \lambda_g) \bigr)_{k+\frac{1}{2}} 
+      N(\lambda_g )_{e, k+\frac{1}{2}} \biggr]
+  \end{split}
+  \label{eq:gradlam_pp}
+\end{equation}
+%
+with $\Delta \lambda_g$ the discrete step size in the northward direction. At the
+geographic poles we set 
+%
+\begin{equation}
+   \nabla_{\lambda_g} p_{p,k+\frac{1}{2}} (\lambda_g= \pm 90^{\circ}) =  0
+\end{equation}
+%
+Inserting the derivatives (\ref{eq:gradz_pp}), (\ref{eq:gradphi_pp}) and
+(\ref{eq:gradlam_pp}) into equation (\ref{eq:gradp_p}) lead to
+%
+\begin{equation}
+   \nabla p_p  =  10 k_B \begin{pmatrix} \nabla_{\phi_g} \\
+                                           \nabla_{\lambda_g}\\
+                                           \nabla_{z_g}
+			   \end{pmatrix}
+	[(T_i + T_e ) N_e]_{\phi_g, \lambda_g, k+\frac{1}{2}} \label{eq:discgradp_p}
+\end{equation}
+%
+with $\nabla p_p$ in [$\frac{kg}{s^2 m^2}$]. The cross product with the geomagnetic
+field vector from equation (\ref{eq:j_p}) can be written as
+%
+\begin{equation}
+  \begin{split}
+  \mathbf{J}_{p,\phi_g, \lambda_g, k+\frac{1}{2}} 
+       & = -  \frac{10 k_B}{\mathbf{B}_0^2} \biggl(\frac{R}{R_0} \biggr)^3 
+                         \begin{pmatrix} \nabla_{\phi_g} \\
+                                         \nabla_{\lambda_g}\\
+                                         \nabla_{z_g}
+			   \end{pmatrix}
+	\times \begin{pmatrix}  b_y \\
+                                b_x\\
+                               -b_z
+		\end{pmatrix} 
+	[(T_i + T_e ) N_e]_{\phi_g, \lambda_g, k+\frac{1}{2}}  \\
+	& =  -  \frac{10 k_B}{\mathbf{B}_0^2} \biggl(\frac{R}{R_0} \biggr)^3 
+	 \begin{pmatrix} -\nabla_{\lambda_g} b_{z} - \nabla_{z_g} b_x      \\
+                          \nabla_z  b_{y} +\nabla_{\phi_g} b_{z}     \\
+                          \nabla_{\phi_g} b_{x}  -  \nabla_{\lambda_g} b_{y}
+		\end{pmatrix}		
+		   [(T_i + T_e ) N_e]_{\phi_g, \lambda_g, k+\frac{1}{2}} 
+  \end{split}
+		    \label{eq:currp_p}
+\end{equation}
+%
+The height variation of the magnetic field is approximated by the factor 
+$(\frac{R}{R_0})^3$. 
+%
+The calculated current vectors $\mathbf{J}_g$ and $\mathbf{J}_p$ have to be rotated to 
+point in the geomagnetic direction.
+%
+\begin{gather}
+  \frac{1}{D}{{J}}_{e1}^{p,g} = \frac{\mathbf{d}_1}{D} \cdot \mathbf{J}_{pg} \label{eq:rot_j1_pg} \\
+  \frac{1}{D}{{J}}_{e2}^{p,g} = \frac{\mathbf{d}_2}{D} \cdot \mathbf{J}_{pg} \label{eq:rot_j2_pg}
+\end{gather}
+%
+with $\mathbf{d}_{1}$ and $\mathbf{d}_{2}$ denoting the vectors in quasi magnetic eastward and down/
+equatorward direction. The quantity D varies
+with the strength of the geomagnetic field and the distortion of the
+geomagnetic field from a pure dipole field. The quantity D can be calculated by
+using the vectors $\mathbf{d}_{1}$ and $\mathbf{d}_{2}$
+%
+\begin{equation}
+    D = |\mathbf{d}_1 \times \mathbf{d}_2| \label{eq:D}
+\end{equation}
+%
+The vectors $\mathbf{d}_{1}(h_0)$ and $\mathbf{d}_{2}(h_0)$ as well as $D(h_0)$ are only 
+calculated at the reference height $h_0$. The
+height variation is approximated by
+%
+\begin{equation}
+    \mathbf{d}_1(h) = \mathbf{d}_{1}(h_0) \biggl( \frac{R_0}{R} \biggr)^{\frac{3}{2}}; \quad\quad
+    \mathbf{d}_2(h) = \mathbf{d}_{2}(h_0) \biggl( \frac{R_0}{R} \biggr)^{\frac{3}{2}} 
+            \frac{\sqrt{4-3 cos^2 \lambda_m}}{\sqrt{4-3 \frac{R_0}{R} cos^2 \lambda_m}}
+\end{equation}
+%
+Considering equation (\ref{eq:D}) the quantity $\frac{\mathbf{d}_1}{D}$ varies like $\frac{1}{\mathbf{d}_2}$ and 
+$\frac{\mathbf{d}_2}{D}$ varies like $\frac{1}{\mathbf{d}_1}$.
+%
+The current at top pressure level of the model is extrapolated using
+%
+\begin{gather}
+  {J}_{e1,k_{max}+\frac{1}{2}}^{p,g} =\frac{3}{2} {J}_{e1,k_{max}-\frac{1}{2}}^{p,g} - \frac{1}{2}{J}_{e1,k_{max}-\frac{3}{2}}^{p,g} \\
+  {J}_{e2,k_{max}+\frac{1}{2}}^{p,g} =\frac{3}{2} {J}_{e2,k_{max}-\frac{1}{2}}^{p,g} - \frac{1}{2}{J}_{e2,k_{max}-\frac{3}{2}}^{p,g}	
+\end{gather}
+%
+with $k_{max}+\frac{1}{2}$ the index of the highest pressure level.
+%
+\subsection{Field--line Integration}\label{subsubsec:field--line-intg}
+%
+This section describes how the gravity and plasma pressure gradient driven current
+is added to forcing of the electrodynamo equation. The gravity and plasma pressure 
+gradient driven current is therefore added to the current driven by the neutral wind.
+The current of the different sources are combined
+in \texttt{subroutine fieldline\_integrals}, before the field line integration.
+The field line integration itself is described in section \ref{cap:fieldlineintg}. \\
+%
+The height--integrated
+eastward current density $K_{m\phi}$, see eq. (\ref{eq:eldy_1}),
+is calculated and included on the right hand side
+of the electrodynamo equation (\ref{eq:edyn}). The current $J_{e1}^{p,g}$ 
+due to gravity and plasma
+pressure gradient is added.
+%
+\begin{equation}
+  K_{m\phi} = |sin I_m | \int_{s_L}^{s_U} \frac{{J}_{e1}}{D} ds  = \\
+  B_{e3} |sin I_m | \int_{s_L}^{s_U} \left[ \frac{{J}_{e1}^D}{D} +
+              \frac{{J}_{e1}^{p,g}}{B_{e3} D}  \right] ds\label{eq:int_kqp}
+\end{equation}
+%
+with s the line--integral variable and ${s_L}$ and ${s_U}$ the lower and upper boundary
+of the line--integration. The inclination of the geomagnetic field line at the
+reference height $h_0$ on an assumed spherical Earth is $I_m$ and $B_{e3}$ the
+component of the geomagnetic field along the field--line. The eastward current
+${J}_{e1}$ has a contribution from the neutral winds ${J}_{e1}^D$ and from the
+plasma pressure and gravity term ${J}_{e1}^{p,g}$. \\
+%
+The field--line integration is approximated by a height--integration 
+combined with an interpolation
+between the height-varying values at the foot point of the field line 
+($\lambda_m$) and at the magnetic 
+equator ($\lambda = 0$) which is described in section \ref{cap:fieldlineintg}. 
+Figure \ref{fig:fieldline_intg} shows schematically that for
+a field line with the foot point at the reference height $h_0$ and latitude $\lambda_m$ the
+value $x_{fl}$ at height $h$ on the field line is approximated by the value $x_{eq}$ at the equator
+and value $x_m$ at foot point $\lambda_m$ and height h. The calculation of the weighting factors $x_{fl}$
+and $wgt_{eq}$ for the interpolation are described in section \ref{cap:fieldlineintg} equations 
+(\ref{eq:approx_fl}) and (\ref{eq:wgh1}).
+
+Therefore the eastward current  at ($\lambda, h$) on the
+field line is approximated by
+%
+\begin{equation}
+ {J}_{e1}^{p,g}(\lambda, h) = wgt_{eq}(h,\lambda_{eq}){J}_{e1,eq}^{p,g}(\lambda_{eq}, h)  + 
+            wgt_m(\lambda_m, h) {J}_{e1,m}^{p,g}(\lambda_m, h) \label{eq:approx_fl_j1}
+\end{equation}
+%
+Since the integration is done in height rather than along the field--line,
+$ds$ in equation \ref{eq:int_kqp} is expressed in terms of height h.
+%
+The conversion from field line integration to height is shown in section \ref{cap:fieldlineintg}.
+The increment ds along the field line is substituted by eq. (\ref{eq:ds9}).
+%
+The contribution $K_{m\phi}^{p,g}$ to the height integrated eastward current is the sum over 
+all pressure level k
+%
+\begin{equation}
+  \frac{K_{m\phi}^{p,g}}{|sin I_m|} =  
+  B_{e3}(h_0) A(h_0) \sum_k  \left[ 
+              \frac{10^4 {J}_{e1}^{p,g}(\lambda, h_{k+\frac{1}{2}}) }{B_{e3}(h_0) D(h_{k+\frac{1}{2}})}  \right]  
+	     10^{-2} h_{fac}(- d\sqrt{h_A-h_{k+\frac{1}{2}}} )\label{eq:intdes_kqp}
+\end{equation}
+%
+The factor $10^4$ converts the current from [$\frac{A}{cm^2}$] to [$\frac{A}{m^2}$] and
+the factor $10^{-2}$ converts ds from [cm] to [m].
+%
+The north--/upward height integrated current density is
+%
+\begin{equation}
+  K_{m\lambda} = \mp \int_{s_L}^{s_U} \frac{{J}_{e2}}{D} ds  = \\
+ \mp  B_{e3}  \int_{s_L}^{s_U} \left[ \frac{{J}_{e2}^D}{D} +
+              \frac{{J}_{e2}^{p,g}}{B_{e3} D}  \right] ds\label{eq:int_kql}
+\end{equation}
+%
+With the above mentioned approximation of the field line integration the contribution
+from the plasma pressure gradient and the gravity driven current is the sum over 
+all pressure level k
+%
+\begin{equation}
+  K_{m\lambda}^{p,g} = \pm  
+  B_{e3}(h_0) A(h_0) \sum_k  \left[ 
+              \frac{10^4 {J}_{e2}^{p,g}(\lambda, h_{k+\frac{1}{2}}]) }{B_{e3}(h_0) D(h_{k+\frac{1}{2}})}  \right]  
+	    10^{-2} h_{fac} (d\sqrt{h_A-h_{k+\frac{1}{2}}} )\label{eq:intdes_kql}
+\end{equation}

@@ -1,0 +1,125 @@
+%
+\section{Calculation of chemical reaction rates  \index{CHEMRATES.F}}\label{cap:chemrates}
+%
+The chemical reaction rates can be found in \cite{roble1995}, and
+\cite{roble1987}
+% Roble, 1995 Energetics of the Mesosphere and Thermosphere. Monograph 87, AGU
+% Roble, R.G., Ridley, E.C.: An auroral Model for the NCAR Thermospheric General Circulation Model,
+%   Annales Geophysicae, 5A, (6), 369-382, 1987
+%
+In this module the time independent reaction rates are set as module
+data. The time dependent rates are calculated in the \src{subroutine
+chemrates\_tdep}. First we describe the time independent rates for
+the ion chemistry:
+%
+\subsection{Module data}\label{cap:subsec_module_rates}
+
+\begin{align}
+ O_2^+ + N(^4S) & \stackrel{k_4}{\longrightarrow}  NO^+ + O + 4.21 eV  & \;\;\; k_4 = 1\cdot 10^{-10} \\
+ O_2^+ + NO     & \stackrel{k_5}{\longrightarrow}  NO^+ + O_2 + 2.813 eV  & \;\;\; k_5 = 4.4\cdot 10^{-10} \\
+ N^+ + O_2      & \stackrel{k_6}{\longrightarrow}  O_2^+ + N(^4S) + 2.486 eV  & \;\;\; k_6 = 4.\cdot 10^{-10} \\
+ N^+ + O_2      & \stackrel{k_7}{\longrightarrow}  NO^+ + O + 6.669 eV  & \;\;\; k_7 = 2.\cdot 10^{-10} \\
+ N^+ + O        & \stackrel{k_8}{\longrightarrow}  O^+ + N + 0.98 eV  & \;\;\; k_8 = 1\cdot 10^{-12} \\
+ N_2^+ + O_2 & \stackrel{k_9}{\longrightarrow}  O_2^+ + N_2 + 3.52 eV  & \;\;\; k_9 = 6.\cdot 10^{-11} \\
+ O^+ + N(^2D) & \stackrel{k_{10}}{\longrightarrow}  N^+ + O + 1.45 eV  & \;\;\; k_{10} = 1.3\cdot 10^{-10} \\
+ O^+(^2P) + N_2 & \stackrel{k_{16}}{\longrightarrow}  N_2^+ + O + 3.02 eV  & \;\;\; k_{16} = 4.8\cdot 10^{-10} \\
+ O^+(^2P) + N_2 & \stackrel{k_{17}}{\longrightarrow}  N^+ + NO + 0.7 eV  & \;\;\; k_{17} = 1.0\cdot 10^{-10} \\
+ O^+(^2P) + O & \stackrel{k_{18}}{\longrightarrow}  O^+ + O + 5.2 eV  &  \;\;\;k_{18} = 4.0\cdot 10^{-10} \\
+ O^+(^2P)  & \stackrel{k_{21}}{\longrightarrow}  O^+ + h\nu(2470 {\AA}) & \;\;\; k_{21} = 0.047 \\
+ O^+(^2P)  & \stackrel{k_{22}}{\longrightarrow}  O^+ + h\nu(7320 {\AA}) & \;\;\; k_{22} = 0.171 \\
+ O^+(^2D) + N_2 & \stackrel{k_{23}}{\longrightarrow}  N_2^+ + O + 1.33 eV  & \;\;\; k_{23} = 8.0\cdot 10^{-10} \\
+ O^+(^2D) + O & \stackrel{k_{24}}{\longrightarrow}  O^+(^4S) + e + 3.31 eV  & \;\;\; k_{24} = 5.0\cdot 10^{-12} \\
+ O^+(^2D) + O_2 & \stackrel{k_{26}}{\longrightarrow}  O_2 + O + 4.865 eV  & \;\;\; k_{26} = 7.0\cdot 10^{-10} \\
+  & \stackrel{k_{27}}{\longrightarrow}     & k_{27} = 7.7\cdot 10^{-5}
+\end{align}
+%
+The time independent rates for the neutral chemistry are
+%
+\begin{align}
+ N(^2D) + O_2 & \stackrel{\beta_2}{\longrightarrow}  NO + O(^1D) + 1.84 eV  & \;\;\; \beta_2 = 5.\cdot 10^{-12} \\
+ N(^2D) + O   & \stackrel{\beta_4}{\longrightarrow}  N(^4S) + O + 2.38 eV   & \;\;\; \beta_4 = 7.\cdot 10^{-13} \\
+ N(^2D) + NO  & \stackrel{\beta_6}{\longrightarrow}  N_2 + O + 5.63 eV      & \;\;\; \beta_6 = 7.\cdot 10^{-11} \\
+ N(^2D)       & \stackrel{\beta_7}{\longrightarrow}  N(^4S) + h \nu  & \;\;\; \beta_2 = 1.06\cdot 10^{-5} \\
+\end{align}
+%
+The temperature dependent rates are calculated at every timestep and
+every latitude. For the ion chemistry these reaction rates are:
+%
+\begin{align}
+ O^+ + O_2  \stackrel{k_1}{\longrightarrow}& \;\; O + O_2^+ + 1.555 eV   \\
+ O^+ + N_2  \stackrel{k_2}{\longrightarrow}& \;\;  NO^+ + N(^4S) + 1.0888 eV   \\
+ N_2^+ + O  \stackrel{k_3}{\longrightarrow}& \;\;  NO^+ + N(^2D) + 0.7 eV   \\
+ NO^+ + e \stackrel{a_1}{\longrightarrow}& \;\;  0.2 [N(^4S) + O + 2.75 eV]   \\
+                     & \;\; 0.8 [N(^2D) + O + 0.38 eV]  ) \notag \\
+ O_2^+ + e  \stackrel{a_2}{\longrightarrow}& \;\; 0.15 [O  + O + 6.95 eV]   \\
+                     & \;\; 0.85 [O + O + 4.98 eV] ) \notag  \\
+ N_2^+ + e  \stackrel{a_3}{\longrightarrow}& \;\; 0.1 [N(^4S) + N(^4S) + 5.82 eV]   \\
+                    & \;\;  0.9 [N(^2D) + N(^2D) + 3.44 eV] ) \notag  \\
+\end{align}
+%
+The time dependent reactions for the neutral chemistry are
+%
+\begin{align}
+  N(^4S) + O_2& \stackrel{\beta_1}{\longrightarrow}  NO + O   + 1.4 eV   \\
+  N(^4S) + NO & \stackrel{\beta_3}{\longrightarrow}  N_2 + O   + 3.25 eV   \\
+  N(^2D) + e  & \stackrel{\beta_5}{\longrightarrow}  N(^4S) + e  + 2.38 eV   \\
+  NO + h \nu  & \stackrel{\beta_8}{\longrightarrow}  N(^4S) + O    \\
+  NO + h \nu |_{Ly-\alpha}& \stackrel{\beta_9}{\longrightarrow}  NO^+ + e    \\
+  & \stackrel{\beta_{9n}}{\longrightarrow}      \\
+  & \stackrel{\beta_{17}}{\longrightarrow}    \\
+  O^+(^2P) + e  & \stackrel{k_{19}}{\longrightarrow}  O^+(^4S) + e  + 5.0 eV   \\
+  O^+(^2P) + e  & \stackrel{k_{20}}{\longrightarrow}  O^+(^2O) + e  + 1.69 eV   \\
+  O^+(^2D) + e  & \stackrel{k_{25}}{\longrightarrow}  O^+(^4S) + e  + 3.31 eV   \\
+  O + O + N_2  & \stackrel{k_{m12}}{\longrightarrow}  O_2 + N_2  + 5.0 eV  
+\end{align}
+%
+\subsection{Calculation of time dependent reaction rates}\label{cap:subsec_tdep_rates}
+%
+The time dependent rates, mentioned in the previous section
+\ref{cap:subsec_module_rates} are calculated in the \src{subroutine
+chemrates\_tdep}. The temperatures are set by
+%
+\begin{align}
+  T_1 = & \frac{1}{300} (\frac{2}{3} T_i + \frac{1}{3} T_n) \notag \\
+  T_2 = & \frac{1}{300} (0.6363 T_i + 0.3637 T_n) \notag \\
+  T_3 = & \frac{1}{2} \frac{1}{300}(T_i + T_n)
+\end{align}
+%
+with $T_i$, $T_e$ and $T_n$ denoting the ion, electron and neutral
+temperature, respectively.
+%
+\begin{align}
+  k_1  = & 1.6 \cdot 10^{-11} T_1 ^{-0.52} + 5.5 \cdot 10^{-11}
+      e^{-22.85/T_1} \\
+  k_2^* = & (8.6 \cdot 10^{-11} T-2 - 5.92 \cdot 10^{-13}) T_2 + 1.533
+      \cdot ^{-12} \\
+  e^t = & e^{-3353/t_n} \notag \\
+  k_2 = & [(\{ [( 270. e^t + 220.) e^t + 85] e^t + 38\} e^t + \notag \\
+        & 1 ) k_2^* e^t + k_2^* ] (1-e^t) \\
+  k_3 = & 5.2\cdot 10^{-11} T_3^{0.2} \text{for} \frac{1}{2}(T_i + T_n) > 1500K \notag \\
+  k_3 = & 1.4\cdot 10^{-10} T_3^{-0.44} \text{for} \frac{1}{2}(T_i + T_n) \leq 1500K \\
+  k_{19} = & 4. 10^{-8} \sqrt{300/T_e} \\
+  k_{20} = & 1.5 10^{-7} \sqrt{300/T_e} \\
+  k_{25} = & 6.6 10^{-8} \sqrt{300/T_e} \\
+  k_{m,12} = & 9.59 10^{-34} e^{480/T_n} \\
+  a_1 = & 4.2 10^{-7} (300/T_e)^{0.85} \\
+  a_2 = & 1.6 10^{-7} (300/T_e)^{0.55} \; T_e \geq 1200 K \notag \\
+  a_2 = & 2.7 10^{-7} (300/T_e)^{0.7} \; T_e < 1200 K \\
+  a_3 = & 1.8 10^{-7} (300/T_e)^{0.39} \\
+  \beta_1 = &1.5 10^{-11} e^{-3600/T_n} \\
+  \beta_3 = &3.4 10^{-11} \sqrt{T_n/300} \\
+  \beta_5 = &3.6 10^{-10} \sqrt{T_e/300} \\
+ \beta_8 = & 4.5^{-6}(1 + 0.11 \frac{F_{10.7} -65}{165}) e^{-1
+ 10^{-8}fnO_2^{0.38}}fls
+\end{align}
+%
+with $FnO_2$ the $O_2$ line integral from \src{chapman.F}, $FNvO_2$
+the column number density of $O_2$ from \src{chapman.F}, and $fls$
+denotes the flux variation due to orbital excentricity (from
+\src{init\_module}. The $10.7$ cm flux is denoted by $F_{10.7}$.
+%
+\begin{align}
+  \beta_9 = &2.91 10^{11}(1 + 0.2  \frac{F_{10.7} -65}{100}) 2 10^{-18}e^{1-8.10^{-21}FnO_2}fls \\
+  \beta_{9n} = &5 10^{9}(1 + 0.2  \frac{F_{10.7} -65}{100}) 2 10^{-18}e^{1-8.10^{-21}FnvO_2}fls \\
+\end{align}
+%

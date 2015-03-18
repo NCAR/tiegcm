@@ -1,0 +1,264 @@
+%
+\section{Solar Input} \label{cap:solar_input}
+%
+Solar input, ionization rates, dissociation rates, and heating rates, 
+are calculated in the module \src{qrj.F,} which contains the \src{subroutines qrj}, 
+\src{init\_sflux, init\_qrj, ssflux, and alloc\_q}.  The acronym "qrj" is historically 
+based on a convolution of Q (heating rate) and RJ ($O_2$ dissociation rate).
+\\
+\subsection{Solar Irradiance} \label{cap:solar_irradiance}
+%
+\subsubsection{The solar irradiance proxy model}
+The thermosphere absorbs solar radiation in the soft X-ray ultraviolet 
+(XUV, 0.05 nm -- 30 nm), extreme ultraviolet (EUV, 30 nm -- 120 nm), and 
+far ultraviolet (FUV, 120 nm -- 200 nm) wavelength ranges, primarily by 
+O, $O_2$, and $N_2$ through photon ionization and dissociation. The 
+ionization threshold of O, $O_2$, and $N_2$ are 91.3 nm, 102.6 nm, and 
+79.8 nm, respectively. The dissociation threshold of $N_2$ is 98.6 nm. 
+The spectrum longward of 102.6 nm is mainly absorbed by $O_2$ dissociation,
+ especially in the Schumann-Runge continuum from 132--175 nm. \\ 
+The TIE-GCM uses the EUVAC solar proxy model as the default solar 
+input \cite{Richards1994} in the spectral range from 5--105 nm.  
+This model is an empirical representation of solar irradiance and its 
+variability. It includes two parts, a reference spectrum at solar 
+minimum and a wavelength-dependent solar variability. The variability 
+is usually parameterized by solar indices that are historically 
+available. The most widely used solar index is the $F_{10.7}$ index. 
+Solar flux at a given solar activity level is obtained from $F_{10.7}$ and 
+its 81 day average $< F_{10.7} >$ as follows:\\
+The EUVAC model \cite{Richards1994} is used between 5 nm and 105 
+nm. 
+%        
+\begin{equation}
+   f(\lambda) = f_{ref}(\lambda)[1+A(\lambda)(P-80)]
+\end{equation}
+%	
+where $f_{ref}$ is the reference spectrum, $A$ is the solar variability factor, 
+and $P = (F_{10.7} + <F_{10.7}>) / 2.$  It is apparent that the solar spectrum is 
+equivalent to the solar minimum reference spectrum when P = 80. For solar 
+minimum conditions when P is less than 80, the proxy model imposes the limit 
+that solar irradiance is no less than 80\% of the solar minimum reference 
+spectrum in any given wavelength band.\\
+%
+EUVAC is based on the F74113 reference spectrum, with the EUV fluxes between 
+15 nm and 25 nm doubled and the EUV flux below 15 nm increased by a factor of 
+3; the solar variability scale factors are based on the AE-E and calibration 
+rocket measurements. The F74113 spectrum was measured on April 23, 1974 by a 
+rocket flight \cite{Heroux1977},\cite{Heroux1978} at low 
+solar activity.       EUVAC has been compared with more recent measurements by 
+the SEE instrument on the TIMED satellite \cite{Woods2005} and found to be 
+in reasonable agreement, although SEE fluxes at low solar activity are slightly 
+higher in the XUV wavelengths. \\
+%
+For the spectral region shortward of 5 nm, GOES X-ray measurements in its two 
+channels, 0.05--0.4 nm and 0.1--0.8 nm, are used to establish the reference 
+irradiance and the solar variability factor for the first two bins. The third 
+bin, i.e., from 0.8--1.8 nm, is based on some early X-ray/XUV measurements as 
+described in Solomon and Qian \cite{Solomon2005}.  The Hinteregger model \cite{Hinteregger1981a} 
+is used for the wavelength range from 1.8--5 nm, based on the 
+SC21REFW reference spectrum and variability factors, but with the fluxes in 
+this wavelength range increased by a factor of 3.  The SC21REFW reference 
+spectrum is based on the AE-E EUV measurements \cite{Hinteregger1981b}. \\
+%
+The Woods and Rottman model \cite{Woods2002} is used from 105 nm to 
+175 nm. The Woods and Rottman model is based on UARS (Upper Atmosphere Research 
+Satellite) SOLSTICE (SOLar STellar Irradiance Comparison Experiment) measurements 
+from 119--200 nm and a 1994 rocket measurement.  This model uses a two-parameter 
+fit based on $F_{10.7}$ and $<F_{10.7}>$, but the implementation in the TIE-GCM simplifies 
+this using the P and A factors as described above for the EUVAC model, which 
+results in differences from the original formulation generally less than 1\%. \\
+%
+Solar input is segmented into optimized low-resolution bands as described by 
+Solomon and Qian \cite{Solomon2005}.  This paper includes a detailed description of the 
+band structure, the ionization and photoionization scheme, and tables of solar 
+flux, cross sections, and branching ratios.  These tables are coded directly 
+into the module \index{\src{qrj.F}}.  The reference spectrum and solar variability factors 
+for the solar proxy model are given here in table \ref{tab:solar_refspectrum}.  
+All values are specified at 1 AU; 
+the fluxes are multiplied by the factor $sfeps$ to account for the Earth's 
+orbital eccentricity effect on Sun-Earth distance, which is calculated 
+in \src{advance.F}\index{\src{advance.F}}.\\
+
+%
+\begin{table}[tb]
+\begin{tabular}{|c |c|c|c|} \hline
+$\lambda_{min}$  & $\lambda_{min}$    &  Reference Spectrum($f_{ref}$) Variability& Factor(A)
+\\ \hline \hline
+%
+    0.05  &    0.40   &       5.010e+01     &       6.240e-01 \\
+    0.40  &    0.80   &       1.000e+04     &       3.710e-01 \\
+    0.80  &    1.80   &       2.000e+06     &       2.000e-01 \\
+    1.80  &    3.20   &       2.850e+07     &       6.247e-02 \\
+    3.20  &    7.00   &       5.326e+08     &       1.343e-02 \\
+    7.00  &   15.50   &       1.270e+09     &       9.182e-03 \\
+   15.50  &   22.40   &       5.612e+09     &       1.433e-02 \\
+   22.40  &   29.00   &       4.342e+09     &       2.575e-02 \\
+   29.00  &   32.00   &       8.380e+09     &       7.059e-03 \\
+   32.00  &   54.00   &       2.861e+09     &       1.458e-02 \\
+   54.00  &   65.00   &       4.830e+09     &       5.857e-03 \\
+   65.00  &   79.80   &       1.459e+09     &       5.719e-03 \\
+   65.00  &   79.80   &       1.142e+09     &       3.680e-03 \\
+   79.80  &   91.30   &       2.364e+09     &       5.310e-03 \\
+   79.80  &   91.30   &       3.655e+09     &       5.261e-03 \\
+   79.80  &   91.30   &       8.448e+08     &       5.437e-03 \\
+   91.30  &   97.50   &       3.818e+08     &       4.915e-03 \\
+   91.30  &   97.50   &       1.028e+09     &       4.955e-03 \\
+   91.30  &   97.50   &       7.156e+08     &       4.422e-03 \\
+   97.50  &   98.70   &       4.482e+09     &       3.950e-03 \\
+   98.70  &  102.70   &       4.419e+09     &       5.021e-03 \\
+  102.70  &  105.00   &       4.235e+09     &       4.825e-03 \\
+  105.00  &  110.00   &       3.298e+09     &       3.007e-03 \\
+  110.00  &  115.00   &       3.200e+09     &       2.099e-03 \\
+  115.00  &  120.00   &       8.399e+09     &       2.541e-03 \\
+  121.57  &  121.57   &       3.940e+11     &       4.230e-03 \\
+  120.00  &  125.00   &       1.509e+10     &       3.739e-03 \\
+  125.00  &  130.00   &       7.790e+09     &       2.610e-03 \\
+  130.00  &  135.00   &       2.659e+10     &       2.877e-03 \\
+  135.00  &  140.00   &       1.387e+10     &       2.632e-03 \\
+  140.00  &  145.00   &       1.824e+10     &       1.873e-03 \\
+  145.00  &  150.00   &       2.802e+10     &       1.202e-03 \\
+  150.00  &  155.00   &       5.080e+10     &       1.531e-03 \\
+  155.00  &  160.00   &       7.260e+10     &       1.125e-03 \\
+  160.00  &  165.00   &       1.055e+11     &       1.043e-03 \\
+  165.00  &  170.00   &       1.998e+11     &       6.089e-04 \\
+  170.00  &  175.00   &       3.397e+11     &       5.937e-04 
+\\ \hline \hline
+\end{tabular}
+\caption{Reference spectrum and solar solar variability factors for 
+the solar proxy model used in the TIE-GCM.}
+\label{tab:solar_refspectrum}
+\end{table}
+%
+\subsubsection{Use of solar irradiance measurements} 
+Although solar proxy models have been widely used in aeronomy studies, 
+solar irradiance can deviate significantly from empirical parameterizations,
+on time scales ranging from solar flares, to the solar 27-day rotation, to 
+the 11-year solar cycle.  Therefore, the TIE-GCM has an option to use measured 
+solar irradiance spectra directly.  The TIMED/SEE instrument has measured solar 
+spectral irradiance from 0.1--195 nm from 2002 to present \cite{Woods2005}. 
+It covers nearly from the solar maximum to the solar minimum of solar cycle 23. 
+It uses two types of instruments: the XUV Photometer System (XPS) and the EUV 
+Grating Spectrograph (EGS). The XPS measures solar irradiance from 0.1--34 nm 
+with a resolution of 5--10 nm. The EGS measures irradiance from 27--195 nm with 
+0.4 nm spectral resolution. TIMED/SEE data are available from February 2002 
+through March 2011. More information is available at the TIMED/SEE web site: 
+http://lasp.colorado.edu/see.  These data are pre-processed from 1-nm resolution 
+to the binning scheme in table \ref{tab:solar_refspectrum}, and provided in a netCDF data file for input 
+to the TIE-GCM.  If the namelist input parameter \flags{SEE\_NCFILE} is set to specify 
+this file, these data will be used for solar irradiance input instead of the 
+EUVAC proxy model, interpolated to current model time.  Any environment variables 
+imbedded in the file path will be expanded by the model input module. \\
+
+%
+\subsubsection{Ionization Rates}
+\paragraph{Direct solar ionization rates}
+The solar flux in each spectral interval at each level of the atmosphere is 
+calculated by applying the Beer-Lambert law:
+%        
+\begin{equation}
+   I(\lambda,z) = I(\lambda,\infty) exp[\tau(\lambda,z)]
+\end{equation}
+%	
+where the optical depth $\tau$ as a function of altitude z is:
+%        
+\begin{equation}
+   \tau(\lambda,z)=\sum_j \sigma_j(\lambda)N_j(z) \cdot Ch
+\end{equation}
+%		
+$N_j$ and $\sigma_j$ are the column density and total absorption cross 
+section for each species, and $Ch$ is the Chapman grazing incidence 
+integral correction factor, calculated by \src{subroutine chapman}.  The 
+process--specific rate for each species j and process k is then:
+%        
+\begin{equation}
+   R_{j,k}(z)=\sum_{\lambda} I(\lambda,z)\sigma_j(\lambda)\beta_{j,k}(\lambda)
+\end{equation}
+%	
+where $\beta_{i,j}$ is a branching ratio, e.g., for ionization, 
+dissociative ionization, or dissociation.  Tables containing these 
+parameters are available in Solomon and Qian \cite{Solomon2005}, at 
+http://download.hao.ucar.edu/pub/stans/euv, and in \src{module qrj.F}. \\
+
+%
+\paragraph{Photoelectron ionization rates} 
+The photon ionization process generates energetic electrons called 
+photoelectrons or secondary electrons. Photoelectrons generated by 
+shorter EUV wavelengths have sufficient energy to ionize, dissociate, 
+and excite neutral species. The photoelectron flux and its impact on 
+ionization, dissociation, and excitation can be calculated using models 
+that are based on radiative transfer methods [e.g. \cite{Nagy1970} 
+\cite{Solomon1988}]. However, such detailed calculations are not 
+practical for a global general circulation model. The method of 
+Solomon and Qian \cite{Solomon2005} is used to estimate the additional proportion 
+of photoelectron ionization to direct photoionization that occurs in 
+each wavelength band, which are also tabulated as specified above.  
+
+\paragraph{Dissociation Rates}
+\begin{itemize}
+   \item \myemph{EUV and XUV}:
+       Dissociation rates of $N_2$ and $O_2$ are obtained from each wavelength 
+       band in the EUV and XUV using the tabulated process-specific branching 
+       ratios and photoelectron enhancement factors described above.  They 
+       are then integrated over wavelength to calculate the production of 
+       atoms (and, in the case of dissociative ionization, atomic ions) 
+       at each altitude level.
+%
+    \item \myemph{Lyman-alpha}:
+       Ionization of nitric oxide by the solar H Lyman-alpha emission at 
+       121.6 nm is calculated using the parameter \flags{beta9}, which is specified 
+       as a pseudo rate coefficient in chemrates as the product of the 
+       Lyman-alpha solar flux and the NO cross section: 
+       %        
+       \begin{equation}
+         beta9 = 2.91\times 10^{11} \cdot (1+0.2(F_{10.7}-65)/100) \cdot 2\times10^{-18}
+       \end{equation}
+%
+     \item \myemph{Schumann-Runge continuum}:
+	Solar flux in the spectral range from 132--175 primarily dissociates 
+	$O_2$ in the thermosphere, resulting in production of one ground state 
+	$O(^3P)$ atom and one excited $O(^1D)$ atom.  Solar flux in 5 nm bands as a 
+	function of altitude is calculated from Beer's law, then multiplied by 
+	the $O_2$ dissociation cross section for each band, and integrated across 
+	wavelength, to obtain the dissociation rate.
+%
+     \item \myemph{Schumann-Runge  bands (SRB)}:
+	For $O_2$ dissociation and heating in the SR bands (197--200 nm), 
+	which results in two ground state $O(^3P)$ atoms, a simple approximation 
+	is employed for the optically thin region above ~97 km:
+       %   
+	\begin{align} 
+	  p3f = & \text{(erg/s in SRB)(solar activity factor)(Sun-Earth distance factor)}   \notag \\
+	  p3f = & (9.03\times10^{-19}) (1+0.11(F_{10.7}-65.) (\text{sfeps})  \notag \\
+          rj  =  &p3f / do2  
+	\end{align}
+	%
+	with do2 is the dissociation energy of $O_2$ in ergs =$8.2\times10^{-12}$.
+	
+\end{itemize}
+%
+\paragraph{Heating Rates}
+%
+\begin{itemize}
+	\item \myemph{Neutral heating rates} \\
+	\myemph{EUV}:  Direct solar heating of the neutral gas, primarily from photoelectron 
+	impact and from the kinetic energy of dissociation products, is approximated 
+	as 5\% of the total photon energy absorbed at each altitude level.  This is a 
+	small fraction of the heating that is ultimately attributable to ionization 
+	and dissociation caused by solar EUV, but these other pathways are calculated 
+	as chemical heating, electron heating, and ion heating.\\
+	\myemph{FUV}:  The heating rate is calculated by subtracting the sum of the $O_2$ 
+	bond energy and the excitation energy of the $O(^1D)$ state (do22=1.1407 erg) 
+	from the photon energy, and assuming that the remainder goes into the 
+	energy of the products, and ultimately neutral heating.  Quenching of 
+	$O(^1D)$ resulting in kinetic and vibrational excitation of $N_2$ and $O_2$ is 
+	also assumed to result in neutral heating; this is calculated in \src{module qrj} 
+	(rather than in the chemistry module) for historical reasons. \\
+	\myemph{SRB}:  33\% of the dissociation rate is assumed to result in neutral 
+	heating (approximately the difference between the $O_2$ bond energy and 
+	the photon energy in the center of the SRB region).
+
+        \item \myemph{Electron and Ion Heating Rates}\\
+	Electron and ion temperatures are calculated in \src{subroutine settei}, 
+	see chapter \ref{cap:settei}.
+
+\end{itemize}

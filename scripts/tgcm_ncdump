@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+#
+use Getopt::Long;
+use File::Basename;
+#
+&GetOptions(
+   "h|help"   => \$help,
+) or usage();
+if ($help) { usage(); }
+
+@flist = @ARGV;
+foreach $file (@flist) {
+  print "\n======================================================================\n";
+  print "File $file\n\n";
+  $ncdumpc = `ncdump -c $file`;
+  @ncdc = split /\n/,$ncdumpc;
+  LINE: foreach $line (@ncdc) { 
+#
+# Check for a variable (if line has "=", then its a dimension)
+    if ($line =~ /^(\t\w+)/ and not $line =~ /=/) { 
+      @tmp = split /\,/,$line;
+      $ndims = $#tmp + 1;
+      if ($ndims > 2) { next LINE; }      # allow only scalars and 1d vars
+#     if ($ndims > 3) { next LINE; }      # allow scalars, 1d and 2d vars
+      @varwords = split / /,$line;
+      if ($varwords[1] =~ /\(/) {         # is a dimensioned var
+        @tmp = split /\(/,$varwords[1];
+        $var = $tmp[0];
+      } else {
+        $var = $varwords[1];
+      }
+      push @vars,$var
+    } # is a var line
+  } # lines loop
+  $vars = join ',',@vars;
+# print "vars = $vars\n\n";
+  print `ncdump -v $vars $file`;
+} # foreach file arg
+
+#
+#-------------------------------------------------------------------------
+sub usage {
+  die <<EOF;
+
+SYNOPSIS
+  tgcm_ncdump [-h] [file1 file2 ...]
+
+PURPOSE:
+  Execute ncdump on each file arg.
+
+OPTIONS
+  -h Print this usage message.
+
+ARGS [file1 file2 ...]
+  List of netCDF files on which to execute ncdump.
+
+EOF
+}

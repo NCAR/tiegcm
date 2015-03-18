@@ -1,0 +1,91 @@
+%
+\section{Calculation vertical velocity $W$\index{SWDOT.F} \index{DIVRG.F}}\label{cap:divrg}
+%
+The input to \src{subroutine swdot} is summarized in table
+\ref{tab:input_swdot}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral zonal velocity &       $u_n$              & $cm/s$   &  midpoints & $t_n$\\
+neutral meridional velocity &       $\cos \lambda v_n$              & $cm/s$   &  midpoints & $t_n$\\
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine swdot}}
+\label{tab:input_swdot}
+\end{table}
+%
+The output of \src{subroutine swdot} is summarized in table
+\ref{tab:output_swdot}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline 'dimensionless' vertical velocity &
+$W$ & $1/s$ & interfaces  & $t_n+\Delta t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine swdot}}
+\label{tab:output_swdot}
+\end{table}
+%
+The vertical velocity is calculated by solving the continuity
+equation of the
+thermospheric neutral gas. The continuity equation takes the
+following form
+%
+\begin{align}
+  \frac{1}{R \cos \lambda} \frac{\partial}{\partial \lambda} ( v_n \cos \lambda
+ ) + \frac{1}{R \cos \lambda } \frac{\partial u_n}{\partial
+  \phi} + e^z \frac{\partial}{\partial Z}(e^{-z}W) = 0 \label{eq:swdot1}
+\end{align}
+%
+with the 'dimensionless' vertical velocity is $W= \frac{dZ}{dt}$.
+The 'real' vertical velocity $w$ relative to a pressure level 
+(note that for the vertical velocity relative to the ground you have to add the
+vertical movement of the pressure level) is obtained by integrating the
+continuity equation over $Z$ to get $W$, and then multiply $W$ by
+the scale height $H$. \\
+
+The horizontal divergence $\nabla_H \cdot \mathbf{v}_n $ is
+calculated in \src{subroutine divrg}.
+%
+\begin{align}
+  \nabla_H \cdot \mathbf{v}_n = & \frac{1}{R_E \cos \lambda} [ \frac{2}{3 \Delta \phi}\left[ u_n(\phi+ \Delta \phi,\lambda)
+    u_n(\phi- \Delta \phi,\lambda)\right] - \notag \\
+    {}&  \frac{1}{12 \Delta \phi}\left[ u_n(\phi+ 2\Delta \phi,\lambda)
+    u_n(\phi- 2\Delta \phi,\lambda)\right] \notag \\
+  {} & \frac{2}{3 \Delta \phi}\left[ \cos (\lambda + \Delta \lambda) v_n(\phi,\lambda + \Delta \lambda)
+    cos (\lambda - \Delta \lambda) v_n(\phi,\lambda - \Delta \lambda)\right]
+    - \notag \\
+   {} & \frac{1}{12 \Delta \lambda}\left[ v_n(\phi,\lambda+2\Delta \lambda)
+    v_n(\phi,\lambda-2 \Delta \lambda)\right]]
+\end{align}
+%
+The integration is done by an integration from the top to the bottom of
+the model, with the condition at the upper boundary being
+%
+\begin{align}
+  \frac{\partial w}{\partial z} = 0
+\end{align}
+%
+and in descritized form
+%
+\begin{align}
+  W(z_{top}) = \nabla_H \cdot \mathbf{v}_n(z_{top}-\frac{1}{2} \Delta z)
+\end{align}
+%
+and then do the integration
+%
+\begin{align}
+  W(z - \Delta z) = e^{-\frac{1}{2}z}\left[e^{-\frac{1}{2}z}W(z - 2\Delta z)+ \Delta z
+  \nabla_H \cdot \mathbf{v}_n(z+\frac{1}{2} \Delta
+  z)\right]
+\end{align}
+%
+The vertical velocity $W$ is then filtered in longitude to remove
+the high wave numbers. The filter is in \src{subroutine filter\_w}
+and is part of the file \src{swdot.F}.

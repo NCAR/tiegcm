@@ -1,0 +1,833 @@
+%
+\section{Calculation of $O^+$ number density  
+  \index{OPLUS.F}}\label{cap:oplus}
+%
+The input to \src{subroutine oplus} is summarized in table
+\ref{tab:input_oplus}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t_n$\\
+neutral zonal velocity&     $u_n$     & $cm/s$   &  midpoints & $t_n$\\
+neutral meridional velocity & $v_n$   & $cm/s$   &  midpoints & $t_n$\\
+dimenionsless vertical velocity& $W^{t+\Delta t}$& $1/s$   & interfaces& $t+\Delta t$ \\
+mass mixing ratio $O_2$&       {$\Psi_{O_2}$}     & $-$   & midpoints  & $t_n$\\
+mass mixing ratio $O$&       {$\Psi_{O}$}     & $-$   &  midpoints & $t_n$\\
+mean molecular mass&       {$\overline{m}$}     & $g/mol$   & interfaces  &$t_n + \Delta t$ \\
+electron temperature &       $T_e$              & $K$   &  midpoints & $t_n$\\
+ion temperature &       $T_i$              & $K$   &  midpoints & $t_n$\\
+electron density &       $N_e$              & $\#/cm^3$   &  interfaces & $t_n$\\
+number density of $N_2(D)??$ &       $n(N_2(D))??$              & $\#/cm^3$   &  midpoints & $t_n$\\
+electrodynamic drift velocity &       $v_{ExB,x}$              & $cm/s$   &  interface & $t_n$\\
+electrodynamic drift velocity &       $v_{ExB,y}$              & $cm/s$   &  interfaces & $t_n$\\
+electrodynamic drift velocity &       $v_{ExB,z}$              & $cm/s$   &  interfaces & $t_n$\\
+conversion factor $mmr$ to $\#/cm^3$ &       $N\overline{m}$              & $\frac{\# g}{cm^3 mole}$   &  midpoints??? & $t_n$\\
+number density of $O^+$ &       $n(O^+)^{t_n}$              & $\#/cm^3$   &  midpoints??? & $t_n$\\
+number density of $O^+$ &       $n(O^+)^{t_n- \Delta t}$ & $\#/cm^3$
+&  midpoints??? & $t_n- \Delta t$
+  \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine oplus}}
+\label{tab:input_oplus}
+\end{table}
+%
+The output of \src{subroutine oplus} is summarized in table
+\ref{tab:output_oplus}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+number density of $O^+$ &       $n(O^+)^{upd,t_n}$              & $\#/cm^3$   &  midpoints??? & $t_n$\\
+number density of $O^+$ &       $n(O^+)^{upd,t_n+ \Delta t}$ &
+$\#/cm^3$   &  midpoints??? & $t_n+ \Delta t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine oplus}}
+\label{tab:output_oplus}
+\end{table}
+%
+%
+The module data of \src{subroutine oplus} is summarized in table
+\ref{tab:module_oplus}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline heating from solar radiation ???&
+{$Q(^2P)$}     & $\frac{erg}{K \; s}???$   & interfaces  & $t_n$ \\
+heating from solar radiation &
+{$Q(O^+(^2D))$}     & $\frac{erg}{K \; s}???$   & interfaces  & $t_n$ \\
+heating from solar radiation ????&
+{$Q(O^+)$}     & $\frac{erg}{K \; s}???$   & interfaces  & $t_n$ \\
+chemical reaction rates &
+{$k_i$}     & $??$   & -  & $-???$ \\
+\\ \hline \hline
+\end{tabular}
+\caption{Module data of \src{subroutine oplus}}
+\label{tab:module_oplus}
+\end{table}
+%
+Most major species are in photochemical equilibrium below $1000 km$,
+and can be simply calculated by balancing the production and loss
+rates. However,  $O^+$ is determined by considering diffusion, along
+the magnetic field line and the $\mathbf{E} \times \mathbf{B}$
+transport. In the following for simplicity the variable $n$ is used
+for the $O^+$ number density $n(O^+)$.
+%
+\begin{align}
+  \frac{\partial n}{\partial t} -Q + L n = - \nabla \cdot (n
+  \mathbf{v}_i) \label{eq:oplus_simple}
+\end{align}
+%
+with $n$ the $O^+$ number density, $Q$ the production rate of $O^+$,
+$L$ the loss rate of $O^+$. The right hand side is the transport due
+$\mathbf{E} \times \mathbf{B}$ drift and the field aligned ambipolar
+diffusion. The ion velocity $\mathbf{v}_i$ is given by
+%
+\begin{align}
+  \mathbf{v}_i = \mathbf{v}_{i,\parallel} + \mathbf{v}_{i,\perp}
+\end{align}
+%
+with the parallel and perpendicular velocity with respect to the
+geomagnetic field
+%
+\begin{align}
+  \mathbf{v}_{i,\parallel} = & \left[ \mathbf{b} \cdot \frac{1}{\nu_{in}} \left( \mathbf{g}
+     - \frac{1}{\rho_i} \nabla (P_i + P_e)\right)+ \mathbf{b} \cdot
+     \mathbf{v}_n\right] \mathbf{b} \label{eq:oplus_v_parall}\\
+ \mathbf{v}_{i,\perp} = & \frac{\mathbf{E} \times \mathbf{B}}{|B|} \label{eq:oplus_v_perp}
+\end{align}
+%
+The parallel velocity is caused by ambipolar diffusion and the
+perpendicular velocity by $\mathbf{E} \times \mathbf{B}$ drift
+velocity. The unit vector along the geomagnetic field line is
+$\mathbf{b}$, $\nu_{in}$ is the $O^+$ ion-neutral collision
+frequency, $\mathbf{g}$ the gravitational acceleration due to
+gravity, $\rho_i$ is the ion mass density, $P_i$ and $P_e$ are the
+ion and electron pressure, $\mathbf{v}_n$ is the neutral velocity,
+$|B|$ is the geomagnetic field strength, and $\mathbf{E}$ is the
+electric field. \\
+Inserting the parallel (\ref{eq:oplus_v_parall}) and perpendicular
+(\ref{eq:oplus_v_perp}) velocity into the $O^+$ transport equation
+(\ref{eq:oplus_simple}) leads to
+%
+\begin{align}
+  {}& \frac{\partial n}{\partial t} - Q + Ln + \left[ (\mathbf{b}_h \cdot \nabla_h)
+  K b_z\right] \left[ \left( \frac{1}{H}\frac{\partial}{\partial Z} (2 T_p n) + \frac{m g}{k_B}n\right)
+  \right] \notag \\
+  {}& - (\mathbf{b}_h \cdot \nabla_h)(\mathbf{b}\cdot{v}_n n) +
+  \left( b_z \frac{1}{H} \frac{\partial}{\partial Z} + \nabla \cdot
+  \mathbf{b} \right) K b_z \left( \frac{1}{H} \frac{\partial}{\partial Z} (2 T_p n) + \frac{m g}{k_B} n\right)
+   - \notag \\
+  {}& \left( b_z \frac{1}{H} \frac{\partial}{\partial Z} + \nabla \cdot
+  \mathbf{b} \right)(\mathbf{b}\cdot{v}_n n) - \left[ B^2 \mathbf{v}_{ExB,h} \cdot
+  \nabla \left( \frac{n}{B^2}\right)\right]_H - \notag \\
+  {}& B^2 \mathbf{v}_{ExB,z} \frac{1}{H} \frac{\partial}{\partial Z}
+  \left( \frac{n}{B^2}\right) + \left( \mathbf{b}_H\cdot \nabla_H
+  \right) K \left( \mathbf{b}_H\cdot \nabla_H \right) (2 n T_p) + \notag \\
+  {}& K b_z \left( \mathbf{b}_H\cdot \nabla_H \right) \left( \frac{1}{H} \frac{\partial}{\partial Z} (2 T_p n) +
+   \frac{m g}{k_B}n \right)  + \notag \\
+   {}& \left( b_z \frac{1}{H} \frac{\partial}{\partial Z} + \nabla \cdot \mathbf{b}\right)
+   K \left( \mathbf{b}_H \cdot \nabla_H (2 n T_p)\right) = 0 \label{eq:oplus_optrans}
+\end{align}
+%
+where the ambipolar diffusion coefficient is $K = D_A + K_E$ with
+$K_E$ the eddy diffusion coefficient in the lower thermosphere, and
+$D_A$ the molecular diffusion coefficient. The geomagnetic unit
+vector, the horizontal vector and vertical component are
+$\mathbf{b}$, $\mathbf{b}_H$ and $b_z$ respectively. The scale
+height is denoted by $H$, $ \mathbf{v}_{ExB,h}$ is the horizontal
+drift vector, and $\mathbf{v}_{ExB,z}$ the vertical component. The
+horizontal derivative of $\nabla$ is $\nabla_H$. The plasma
+pressure is $T_p = \frac{1}{2}(T_e + T_i)$. \\
+%
+The fourth, eleventh, and sixth term are the contributions of the
+vertical component of ambipolar diffusion to the plasma transport
+due to respectively, the horizontal variation of the diffusion
+coefficient and $b_z$, the horizontal variation of the vertical
+ambipolar diffusion, and the vertical variation of the vertical
+ambipolar diffusion. The tenth term is the contribution of the
+horizontal component of the ambipolar diffusion due to variations in
+the vertical and horizontal direction. The fifth and seventh term
+are the neutral wind effects on the $O^+$ distribution, and the
+eight and ninth terms are the effects of the $\mathbf{E} \times
+\mathbf{B}$ transport. \\
+
+%
+The flux at the upper boundary is determined in the \src{subroutine
+oplus\_flux}. The transport from and to the plasmasphere is
+specified by the flux $\Phi$. The latitudinal variation of the flux
+is specified by the factor $A$
+%
+\begin{align}
+  A = & 1 & \;\;\; \text{for} & |\lambda_m| \geq \frac{\Pi}{24} \notag \\
+  A = & \frac{1}{2} \left( 1 + \sin{ \Pi \frac{|\lambda_m| -
+ \frac{\Pi}{48}}{\Pi/24}} \right) \;\;\; & \text{for} & |\lambda_m| <
+\frac{\Pi}{24}
+\end{align}
+%
+with $A \geq 0.05$, and $\lambda_m$ the geomagnetic latitude. 
+The daytime flux is $\Phi_D^o$ and upward, and
+the nighttime flux $\Phi_N^o$ which is downward
+%
+\begin{align}
+ \Phi_D^o = 2 \cdot 10^8 \notag \\
+ \Phi_N^o = - 2 \cdot 10^8
+\end{align}
+%
+and the flux variation during the day-- and nighttime is given by
+%
+\begin{align}
+ F_{eD} = & \Phi_D^o A \notag \\
+ F_{eN} = & \Phi_N^o A
+ \end{align}
+%
+The solar zenith angle $\psi$ determines which flux $F^{O^+}$ is
+used
+%
+\begin{align}
+  F^{O^+} = F_{eN} \;\;\; \text{for} \; \; \; \psi \geq 80^o \notag \\
+  F^{O^+} = F_{eD} \;\;\; \text{for} \; \; \; \psi < 100^o \label{eq:oplus_flux1}
+\end{align}
+%
+with
+%
+\begin{align}
+  F^{O^+} = \frac{1}{2} [F_{eD} + F_{eN}] + \frac{1}{2} [F_{eD} -
+  F_{eN}]\cos (\Pi \frac{\psi-80}{20})\;\;\; \text{for} \; \; \; 80^o < \psi < 100^o \label{eq:oplus_flux2}
+\end{align}
+%
+The divergence of the geomagnetic field vector $\mathbf{b}$ is
+determined in \src{subroutine divb}. Since variation in height of
+the geomagnetic field is neglected the divergence also varies only
+with latitude and longitude.
+%
+\begin{align}
+ \nabla \cdot \mathbf{b} = &  \frac{b_x (\phi + \Delta \phi, \lambda) -
+     b_x(\phi - \Delta \phi, \lambda)}{2 \Delta \phi R_E \cos
+     \lambda} + \notag \\
+     {} & \frac{\cos{\lambda+\Delta \lambda}b_y (\phi, \lambda+ \Delta \lambda) -
+     \cos{\lambda-\Delta \lambda}b_y(\phi, \lambda- \Delta \lambda)}{2 \Delta \lambda R_E \cos
+     \lambda} + \notag \\
+     {} & \frac{2 b_z(\phi,\lambda)}{R_E}
+\end{align}
+%
+with $b_y$ the northward, $b_x$ the eastward, and $b_z$ the upward
+component of the unit geomagnetic field vector
+$\frac{\mathbf{B}}{|B|}$. The divergence is stored in the value \src{dvb}.\\
+
+%
+In the first latitudinal scan the plasma pressure is determined at
+$\lambda - \Delta \lambda$, $\lambda$ and , $\lambda + \Delta
+\lambda$, e.g. at $\lambda$
+%
+\begin{align}
+  T_p(\phi,\lambda, z+\frac{1}{2}\Delta z) = \frac{1}{2} (T_i + T_e)
+\end{align}
+%
+The values in the code are stored in the variable \src{tpj}. \\
+
+%
+In \src{subroutine rrk} the diffusion coefficient are determined.
+The values are stored in the variable \src{dj} in the source code at
+$\lambda - \Delta \lambda$, $\lambda$ and , $\lambda + \Delta
+\lambda$.
+%
+\begin{align}
+  D_A = \frac{1.42 \cdot 10^{17} k_B T_n}
+  {p \overline{m}\left[
+    \frac{\Psi_O}{m_O} \sqrt{T_p}(1-0.064 log_{10} T_p)^2 C_f + 18.6 \frac{\Psi_{N_2}}{m_{N_2}}
+    + 18.1 \frac{\Psi_{O_2}}{m_{O_2}}\right]}
+\end{align}
+%
+with the pressure $p(z + \frac{1}{2}\Delta ) = p_0 e^{-z -
+\frac{1}{2}\Delta z}$, the number density of $N_2$ is $\Psi_{N_2}= 1
+- \Psi_{O_2}-\Psi_O$, the factor is $C_f = 1.5$, and $N = \frac{p_0
+e^{-z - \frac{1}{2}\Delta z}}{k_B T_n}$. The value $D_A$ is
+determined at half pressure levels e.g. $z + \frac{1}{2} \Delta z$.
+%
+The variable \src{tpj} holds $2 T_p$ at the midpoint pressure level
+$z + \frac{1}{2} \Delta z$ and at the latitudes $\lambda - \Delta
+\lambda$, $\lambda$ and , $\lambda + \Delta \lambda$. The scale
+height is also determined at the midpoint pressure level, and the
+latitudes $\lambda - \Delta \lambda$, $\lambda$ and , $\lambda +
+\Delta \lambda$.
+%
+\begin{align}
+  H = \frac{R^* T_n}{\overline{m} g}
+\end{align}
+%
+The scale height is stored in the variable \src{hj}. The dot product
+$\mathbf{b} \cdot \mathbf{v}_n n$ is stored in \src{bvel} and
+calculated also on the midpoint pressure level, and the latitudes
+$\lambda - \Delta \lambda$, $\lambda$ and , $\lambda + \Delta
+\lambda$.
+%
+\begin{align}
+   \mathbf{b} \cdot \mathbf{v}_n n = \left[  b_x u_n + b_y v_n + b_z
+      \frac{W(z) + W(z+\frac{1}{2} \Delta z)}{2} H(z+\frac{1}{2} \Delta
+      z)\right]n
+\end{align}
+%
+In \src{subroutine diffus} the term $ \left[2 \frac{\partial T_p
+n}{H
+\partial Z} + \frac{m_{O^+}  g}{R^*}n \right] $ at the midpoint
+pressure level is determined
+%
+\begin{align}
+ F(z+\frac{1}{2}\Delta z) =  & \frac{1}{2 H(z+\frac{1}{2}\Delta z) \Delta z}[2 T_p(z+\frac{3}{2}\Delta
+ z)n(z+\frac{3}{2}\Delta z) - \notag \\
+ {} & 2 T_p(z-\frac{1}{2}\Delta z)n(z-\frac{1}{2}\Delta z)
+ ] + \frac{m_{O^+}  g}{R^*}  n(z+\frac{1}{2}\Delta z)
+ \label{eq:oplus_F}
+\end{align}
+%
+The term is stored in the variable \src{diffj}. The upper and lower
+boundary values are set by
+%
+\begin{align}
+ F(z_{bot}+\frac{1}{2}\Delta z) = & \frac{1}{ H(z_{bot}+\frac{1}{2}\Delta z) \Delta z} [2 T_p(z_{bot}+\frac{3}{2}\Delta
+ z)n(z_{bot}+\frac{3}{2}\Delta z) - \\
+ {} & 2 T_p(z_{bot}+\frac{1}{2}\Delta z)n(z_{bot}+\frac{1}{2}\Delta z)
+ ] + \frac{m_{O^+}  g}{R^*}  n(z_{bot}+\frac{1}{2}\Delta z) \notag \\
+%
+ F(z_{top}-\frac{1}{2}\Delta z) = & \frac{1}{ H(z_{top}-\frac{1}{2}\Delta z) \Delta z} [2 T_p(z_{top}-\frac{1}{2}\Delta
+ z)n(z_{top}-\frac{1}{2}\Delta z) -  \\
+ {}& 2 T_p(z_{top}-\frac{3}{2}\Delta z)n(z_{top}-\frac{3}{2}\Delta z)
+ ] + \frac{m_{O^+}  g}{R^*}  n(z_{top}-\frac{1}{2}\Delta z) \notag
+\end{align}
+%
+The value $2 n T_p$ is determined at midpoint level, and the
+latitudes $\lambda - \Delta \lambda$, $\lambda$ and , $\lambda +
+\Delta \lambda$. The value overwrites the variable \src{tpj}. The
+latitudinal smoothed value of $n(O^+)^{t_n- \Delta t}$ are
+determined by
+%
+\begin{align}
+ n(O^+)^{smo\lambda,t_n- \Delta t} = & n(O^+)^{t_n- \Delta t} - f_{smo}[
+ n(O^+)^{t_n- \Delta t} (\lambda+ 2 \Delta \lambda) + \notag \\
+ {} & n(O^+)^{t_n- \Delta t}(\lambda- 2 \Delta \lambda) - 4 (
+ n(O^+)^{t_n- \Delta t}(\lambda+  \Delta \lambda)+ \notag \\
+ {} & n(O^+)^{t_n- \Delta t}(\lambda- \Delta \lambda)) + 6n(O^+)^{t_n- \Delta
+ t}(\lambda)] \label{eq:oplus_smolat}
+\end{align}
+%
+and stored in \src{optm1\_smooth}, and $f_{smo} = 0.003$. \\
+
+%
+The second latitudinal scan starts with calculating the value of
+$\mathbf{b} \cdot \nabla_H$ in \src{subroutine bdotdh} at the
+midpoint level. The output variable is \src{bdotdh\_op}. The input
+is the term from eq. (\ref{eq:oplus_F}) $F = \left[2  \frac{\partial
+T_p n}{H
+\partial Z} + \frac{m_{O^+}  g}{R^*} n \right] $, which leads to
+$( \mathbf{b} \cdot \nabla_H ) \left[2  \frac{\partial T_p n}{H
+\partial Z} + \frac{m_{O^+}  g n}{R^*} \right] $
+%
+\begin{align}
+  T1 = & \frac{1}{R_E} [ \frac{b_x}{2 \Delta \phi  \cos \lambda }
+  \left\{
+   F(\phi+ \Delta \phi, \lambda) - F(\phi- \Delta \phi, \lambda)\right\}
+   + \notag \\
+   {} & b_y \frac{F(\phi, \lambda+ \Delta \lambda) -
+   F(\phi, \lambda- \Delta \lambda)}{2 \Delta \lambda}]
+   \label{eq:oplus_T1}
+\end{align}
+%
+The term is multiplied by the diffusion coefficient $D_A$ from
+\src{subroutine rrk}, which leads to
+%
+\begin{align}
+  D_A(z+\frac{1}{2} \Delta z) b_z ( \mathbf{b} \cdot \nabla_H ) \left[2 \frac{\partial T_p n}{H
+\partial Z} + \frac{m_{O^+}  g }{R^*} n \right] \label{eq:oplus_T1b}
+\end{align}
+%
+The same \src{subroutine bdotdh} is used to calculate $\mathbf{b}
+\cdot \nabla_H \left[ 2 T_p n \right]$. Using eq.
+(\ref{eq:oplus_T1}) with $F = 2 T_p n$. The values are determined at
+the midpoint pressure level, and at the latitudes $\lambda - \Delta
+\lambda$, $\lambda$ and , $\lambda + \Delta \lambda$. Afterwards the
+value is multiplied by
+%
+\begin{align}
+  D_A(z+\frac{1}{2} \Delta z) \mathbf{b} \cdot \nabla_H \left[ 2 T_p n \right]
+  \label{eq:oplus_T2}
+\end{align}
+%
+and stored in the variable \src{bdotdh\_opj}. \\
+
+%
+The third latitudinal scan starts with calling the \src{subroutine
+bdotdh} for the term in eq. (\ref{eq:oplus_T2}) $F= D_A \mathbf{b}
+\cdot \nabla_H \left[ 2 T_p n \right]$, which leads to (see eq.
+(\ref{eq:oplus_T1}))
+%
+\begin{align}
+  \mathbf{b}
+\cdot \nabla_H \left( D_A \mathbf{b} \cdot \nabla_H \left[ 2 T_p n
+\right] \right)
+\end{align}
+%
+evaluated at the midpoint pressure level, and stored in the variable
+\src{bdotdh\_diff}. \\
+
+%
+The \src{subroutine bdzdvb} calculates the term $\left(b_z
+\frac{1}{H} \frac{\partial}{\partial Z} + \nabla \cdot \mathbf{b}
+\right) G$, with the input into the subroutine $\nabla \cdot
+\mathbf{B}$, and $G = D_A \mathbf{b}\cdot \nabla_H \left[ 2 T_p
+n\right]$.
+%
+\begin{align}
+  T3(z + \frac{1}{2} \Delta z)) = & \frac{b_z}{2 H(z + \frac{1}{2} \Delta z) \delta z} \left\{  G(z + \frac{3}{2} \Delta z) -
+  G(z - \frac{1}{2} \Delta z)\right\} + \notag \\
+  {}& \nabla \cdot \mathbf{b}
+  G(z + \frac{1}{2} \Delta z) \label{eq:oplus_T3}
+\end{align}
+%
+At the upper and lower boundary the values are set to
+%
+\begin{align}
+  T3(z_{top} - \frac{1}{2} \Delta z)) = & \frac{b_z}{2 H(z_{top} -\frac{1}{2} \Delta z) \delta z} \left\{  G(z_{top} - \frac{1}{2} \Delta z) -
+  G(z_{top} - \frac{3}{2} \Delta z)\right\} + \notag \\
+  {}& \nabla \cdot \mathbf{b}
+  G(z_{top} - \frac{1}{2} \Delta z) \label{eq:oplus_T3top} \\
+  %
+  T3(z_{bot} + \frac{1}{2} \Delta z)) =& \frac{b_z}{2 H(z_{bot} +\frac{1}{2} \Delta z) \delta z}
+  \left\{  G(z_{bot} + \frac{3}{2} \Delta z) -
+  G(z_{bot} + \frac{1}{2} \Delta z)\right\} + \notag \\
+  {} & \nabla \cdot \mathbf{b}
+  G(z_{bot} + \frac{1}{2} \Delta z) \label{eq:oplus_T3bot}
+\end{align}
+%
+All the explicit terms are added together from eq.
+(\ref{eq:oplus_T1b}), (\ref{eq:oplus_T2}), and (\ref{eq:oplus_T3})
+which leads to
+%
+\begin{align}
+  T_{1,explicit} = & - D_A(z+\frac{1}{2} \Delta z) b_z ( \mathbf{b} \cdot \nabla_H ) \left[2 \frac{\partial T_p n}{H
+ \partial Z} + \frac{m_{O^+}  g }{R^*} n \right] \notag \\
+ {} & - \mathbf{b} \cdot \nabla_H \left( D_A \mathbf{b} \cdot \nabla_H
+ \left[ 2 T_p n \right] \right)  \notag \\
+ {} & - \left(b_z \frac{1}{H} \frac{\partial}{\partial Z} + \nabla \cdot
+ \mathbf{b} \right) (D_A \mathbf{b}\cdot \nabla_H \left[ 2 T_p
+ n\right]) \label{eq:oplus_exp1}
+\end{align}
+%
+In addition the term $(\mathbf{b}_H \cdot \nabla_H )(\mathbf{b}
+\cdot \mathbf{v}_{n,H})$ and $\left[ b^2 v_{ExB,H}\cdot \nabla
+(\frac{n}{B^2})\right]_H$ are treated as explicit terms which leads
+to
+%
+\begin{align}
+ T_{2,explicit} = & T_{1,explicit} + \frac{1}{2 R_E}[
+   \frac{b_x}{\Delta \phi \cos \lambda} \left( \mathbf{b} \cdot \mathbf{v}_n
+   (\phi+\Delta \phi,\lambda) -\mathbf{b} \cdot \mathbf{v}_n
+   (\phi-\Delta \phi,\lambda) \right) + \notag \\
+   {}& v_{ExB,x}(z+\frac{1}{2}\Delta z) B^2(\phi,\lambda) \left(
+   \frac{n(\phi+\Delta \phi,\lambda)}{B^2(\phi+\Delta \phi,\lambda)} -
+   \frac{n(\phi-\Delta \phi,\lambda)}{B^2(\phi-\Delta
+   \phi,\lambda)}\right) \notag \\
+   {}& +\frac{1}{\Delta \lambda}( b_y \left( \mathbf{b} \cdot \mathbf{v}_n
+   (\phi,\lambda+ \Delta \lambda) -\mathbf{b} \cdot \mathbf{v}_n
+   (\phi,\lambda- \Delta \lambda) \right) + \notag \\
+   {}& v_{ExB,y}(z+\frac{1}{2}\Delta z) B^2(\phi,\lambda) \left(
+   \frac{n(\phi,\lambda+ \Delta \lambda)}{B^2(\phi,\lambda+ \Delta \lambda)} -
+   \frac{n(\phi,\lambda- \Delta \lambda)}{B^2(\phi,\lambda- \Delta \lambda)}\right)
+   )
+   ]
+   \label{eq:oplus_exp2}
+\end{align}
+%
+Afterwards the following values are set
+%
+\begin{align}
+ \frac{\nabla \cdot \mathbf{b}}{b_z} \\
+ \frac{1}{\Delta z H} \\
+ T_p = \frac{1}{2}(T_e + T_i)
+\end{align}
+%
+at the midpoint pressure level and stored in the variables
+\src{dvb}, src{hdz}, and \src{tp} respectively. \\
+
+%
+The term $2 T_p \frac{1}{H \Delta z} \pm \frac{g m}{2 R^*}$ are
+determined
+%
+\begin{align}
+  S_p(z + \frac{3}{2} \Delta z) = 2 T_p(z + \frac{3}{2} \Delta z)
+       \frac{1}{H(z + \Delta z) \Delta z} + \frac{g m}{2 R^*} \label{eq:oplus_S_p}\\
+  S_m(z + \frac{3}{2} \Delta z) = 2 T_p(z + \frac{1}{2} \Delta z)
+       \frac{1}{H(z +  \Delta z) \Delta z} - \frac{g m}{2 R^*}\label{eq:oplus_S_m}
+\end{align}
+%
+and stored in the variable \src{tphdz1} for $S_p$ and  \src{tphdz0}
+for $S_m$ respectively. The lower boundaries are set by
+%
+\begin{align}
+  S_p(z_{bot} + \frac{1}{2} \Delta z) = & 2 T_p(z_{bot} + \frac{1}{2} \Delta
+  z) \notag \\
+     {} &  \left[\frac{1.5}{H(z_{bot} + \frac{1}{2}\Delta z) \Delta z}
+       - \frac{0.5}{H(z_{bot} + \frac{3}{2}\Delta z) \Delta z}
+       \right] + \frac{g m}{2 R^*} \label{eq:oplus_S_p_bot}\\
+  S_m(z_{bot} + \frac{1}{2} \Delta z) = & 2 \cdot \left[ 2 T_p(z_{bot} + \frac{1}{2} \Delta
+  z) - T_p(z_{bot} + \frac{3}{2} \Delta z)\right] \notag \\
+    {} & \left[\frac{1.5}{H(z_{bot} + \frac{1}{2}\Delta z) \Delta z}
+       - \frac{0.5}{H(z_{bot} + \frac{3}{2}\Delta z) \Delta z}
+       \right]   - \frac{g m}{2 R^*}\label{eq:oplus_S_m_bot}
+\end{align}
+%
+and stored in \src{tphdz1(lev0)} and \src{tphdz0(lev0)},
+respectively, with $lev0$ corresponding to $z_{bot} + \frac{1}{2}
+\Delta z$ on the midpoint pressure level. The upper boundary values
+are
+%
+\begin{align}
+  S_p(z_{top} + \frac{1}{2} \Delta z) = & 2 \cdot \left[ 2 T_p(z_{top} - \frac{1}{2} \Delta
+  z) - T_p(z_{top} - \frac{3}{2} \Delta z)\right] \notag \\
+    {} & \left[\frac{1.5}{H(z_{top} - \frac{1}{2}\Delta z) \Delta z}
+       - \frac{0.5}{H(z_{top} - \frac{3}{2}\Delta z) \Delta z}
+       \right]   + \frac{g m}{2 R^*} \label{eq:oplus_S_p_top}\\
+  S_m(z_{top} + \frac{1}{2} \Delta z) = & 2 T_p(z_{top} - \frac{1}{2} \Delta
+  z) \notag \\
+      {} &  \left[\frac{1.5}{H(z_{top} - \frac{1}{2}\Delta z) \Delta z}
+       - \frac{0.5}{H(z_{top} - \frac{3}{2}\Delta z) \Delta z}
+       \right] - \frac{g m}{2 R^*}\label{eq:oplus_S_m_top}
+\end{align}
+%
+and stored in \src{tphdz1(lev1)} and \src{tphdz0(lev1)},
+respectively, with the index $lev1 = nlev + 1$ corresponding to
+$z_{top} + \frac{1}{2} \Delta z$. \\
+
+%
+The diffusion coefficient $D_A$ are calculated at the interface
+pressure level $z, z+ \Delta z, ...$ by averaging
+%
+\begin{align}
+  D_A (z) = \frac{1}{2} \left( D_A(z+\frac{1}{2}\Delta z) + D_A(z-\frac{1}{2}\Delta z)\right)
+  \label{eq:oplus_daint}
+\end{align}
+%
+and stored in the variable \src{djint}. The upper and lower boundary
+values are determined by extrapolation
+%
+\begin{align}
+  D_A (z_{bot}) = \frac{1}{2} \left( 3 D_A(z_{bot}+\frac{1}{2}\Delta z) - D_A(z_{bot}+\frac{3}{2}\Delta
+  z)\right) \\
+  D_A (z_{top}) = \frac{1}{2} \left( 3 D_A(z_{top}-\frac{1}{2}\Delta z) - D_A(z_{top}-\frac{3}{2}\Delta z)\right)
+\end{align}
+%
+The term $T_4 = \frac{\nabla \cdot \mathbf{b}}{b_z} +
+\frac{\mathbf{b}_H \cdot \nabla_H (D_A b_z)}{R_E D_A b_z^2}$ is
+determined at the midpoint pressure level, and stored in the
+variable \src{divbz}
+%
+\begin{align}
+  T_4(z+\frac{1}{2}\Delta z) = & \frac{\nabla \cdot \mathbf{b}}{b_z}(\phi,\lambda) +
+  \frac{1}{R_E D_A(\phi,\lambda,z+\frac{1}{2}\Delta z) b_z^2}[
+  \notag \\
+  {} & \frac{b_x(\phi,\lambda)}{\cos \lambda} (\frac{D_A(\phi+\Delta \phi,\lambda,z+\frac{1}{2}\Delta z)
+  b_z(\phi+\Delta \phi,\lambda)}{2 \Delta \phi} - \notag \\
+  {} & \frac{D_A(\phi-\Delta \phi,\lambda,z+\frac{1}{2}\Delta z)
+  b_z(\phi-\Delta \phi,\lambda)}{2 \Delta \phi})+ \notag \\
+  {} & b_y(\phi,\lambda) (\frac{D_A(\phi,\lambda+\Delta \lambda,z+\frac{1}{2}\Delta z)
+  b_z(\phi,\lambda+\Delta \lambda)}{2 \Delta \lambda} - \notag \\
+  {} & \frac{D_A(\phi,\lambda-\Delta \lambda,z+\frac{1}{2}\Delta z)
+  b_z(\phi,\lambda-\Delta \lambda)}{2 \Delta \lambda})] \label{eq:oplus_T4}
+\end{align}
+%
+The periodic points for $T_4$ are set to zero. \\
+
+%
+The term $T_5= b_z^2(\frac{1}{H \Delta z} \pm \frac{1}{2}T_4)$ are
+calculated, with $T_4 = \frac{\nabla \cdot \mathbf{b}}{b_z} +
+\frac{\mathbf{b}_H \cdot \nabla_H (D_A b_z)}{R_E D_A b_z^2} $, see
+above in eq.(\ref{eq:oplus_T4})
+%
+\begin{align}
+  T_{5p}(z+\frac{1}{2}\Delta z) = b_z^2\left[ \frac{1}{H \Delta z} +
+    \frac{1}{2} \left( \frac{\nabla \cdot \mathbf{b}}{b_z} +
+     \frac{\mathbf{b}_H \cdot \nabla_H (D_A b_z)}{R_E D_A b_z^2}(z+\frac{1}{2}\Delta z)\right)
+     \right] \label{eq:oplus_T_5p}\\
+  T_{5m}(z+\frac{1}{2}\Delta z) = b_z^2\left[ \frac{1}{H \Delta z} -
+    \frac{1}{2} \left( \frac{\nabla \cdot \mathbf{b}}{b_z} +
+     \frac{\mathbf{b}_H \cdot \nabla_H (D_A b_z)}{R_E D_A b_z^2}(z+\frac{1}{2}\Delta z)\right)
+     \right]  \label{eq:oplus_T_5m}
+\end{align}
+%
+and stored in the variables $hdzpbz$ and $hdzmdz$ respectively. \\
+
+%
+The smoothing of $n(O^+)^{t_n- \Delta t}$ is finished with a
+longitudinal smoothing. See eq. (\ref{eq:oplus_smolat}) for the
+latitudinal smoothing
+%
+\begin{align}
+ n(O^+&)^{smo,t_n- \Delta t} =  n(O^+)^{smo\lambda,t_n- \Delta t} - f_{smo}[
+ n(O^+)^{smo\lambda,t_n- \Delta t} (\phi+2\Delta \phi,\lambda) +
+ \notag \\
+ {} & n(O^+)^{smo\lambda,t_n- \Delta t}(\phi-2\Delta \phi,\lambda) - 4 (
+ n(O^+)^{smo\lambda,t_n- \Delta t}(\phi+\Delta \phi,\lambda)+ \notag
+ \\
+ {} & n(O^+)^{smo\lambda,t_n- \Delta t}(\phi-\Delta \phi,\lambda)) + 6n(O^+)^{t_n- \Delta
+ t}(\phi+\Delta \phi,\lambda)] \label{eq:oplus_smolon}
+\end{align}
+%
+with $f_{smo} = 0.003$. The smoothed number density is added to the
+explicit term $ T_{2,explicit} $
+%
+\begin{align}
+T_{3,explicit} = T_{2,explicit} - \frac{n(O^+)^{smo,t_n- \Delta
+t}}{2 \Delta t}  \label{eq:oplus_exp3}
+\end{align}
+%
+%
+The tridiagonal solver need the equation in the following form:
+%
+\begin{align}
+P(k,i) n^{t+\Delta t}(k-1,i) + & Q(k,i) n^{t+\Delta t}(k,i)+ \notag \\
+ {} & R(k,i) n^{t+\Delta t}(k+1,i) = T_{explicit}(k,i)
+\end{align}
+%
+with the height index $k$ for $z+\frac{1}{2}\Delta z$, $k+1$ for
+$z+\frac{3}{2}\Delta z$, and $k-1$ for $z-\frac{1}{2}\Delta z$. The
+longitude index is denoted by $i$. Note that the equation is solved
+at each latitude $\lambda$ with the index $j$. \\
+
+%
+The fourth and sixth term of the $O^+$ transport equation
+eq.(\ref{eq:oplus_optrans}) are treated implicit with the fourth
+term being
+%
+\begin{align}
+\left[ (\mathbf{b}_h \cdot \nabla_h)
+  K b_z\right] \left[ \left( \frac{1}{H}\frac{\partial}{\partial Z} (2 T_p n) + \frac{m g}{k_B}n\right)
+  \right] \notag
+\end{align}
+%
+and the sixth term
+%
+\begin{align}
+  \left( b_z \frac{1}{H} \frac{\partial}{\partial Z} + \nabla \cdot
+  \mathbf{b} \right) K b_z \left( \frac{1}{H} \frac{\partial}{\partial Z} (2 T_p n) + \frac{m g}{k_B} n\right)
+ \notag
+\end{align}
+%
+\begin{align}
+  P_1((z+\frac{1}{2}\Delta z),\phi) = & \;  T_{5m}(z+\frac{1}{2}\Delta z,\phi)D_A (z,\phi) S_m(z+\frac{1}{2}\Delta z,\phi)\\
+  Q_1((z+\frac{1}{2}\Delta z),\phi) = & \; -( T_{5p}(z+\frac{1}{2}\Delta z,\phi)D_A
+          (z+\Delta z,\phi) S_m(z+\frac{3}{2}\Delta z,\phi)
+   + \notag \\
+   {} & T_{5m}(z+\frac{1}{2}\Delta z,\phi)D_A (z,\phi) S_p(z+\frac{1}{2}\Delta z,\phi)) \\
+  R_1((z+\frac{1}{2}\Delta z),\phi) = & \; T_{5p}(z+\frac{1}{2}\Delta z,\phi)D_A (z+\Delta z,\phi) S_p(z+\frac{3}{2}\Delta z,\phi)
+\end{align}
+%
+for the terms please see equations
+(\ref{eq:oplus_S_m}),(\ref{eq:oplus_S_p}),
+(\ref{eq:oplus_daint}),(\ref{eq:oplus_T_5m}),and
+(\ref{eq:oplus_T_5p}). \\
+%
+The term $\mathbf{b} \cdot \mathbf{v}_n$ is determined
+%
+\begin{align}
+  T_6(z+\frac{1}{2}\Delta z) = &b_x u_n(z+\frac{1}{2}\Delta z) + b_y v_n(z+\frac{1}{2}\Delta z) + \notag \\
+    {} & H(z+\frac{1}{2}\Delta z) b_z W(z+\frac{1}{2}\Delta z)
+\end{align}
+%
+Note that the dimensionless vertical velocity $W$ is on the
+interface level $z, z+\Delta z, ...$ \\
+
+%
+Part of the seventh term in eq. (\ref{eq:oplus_optrans}) which is
+%
+\begin{align}
+  (b_z \frac{1}{H}\frac{\partial}{\partial Z})(\mathbf{b}\cdot
+  \mathbf{v}_n) \notag
+\end{align}
+%
+and the ninth term
+%
+\begin{align}
+  B^2 \mathbf{v}_{ExB,z} \frac{1}{H}
+  \frac{\partial}{\partial Z}
+  \left( \frac{n}{B^2}\right) \notag
+\end{align}
+%
+are treated implicit leading to ??? who is this done???
+%
+\begin{align}
+  P_2((z+\frac{1}{2}\Delta z),\phi) = & \;  P_1 + b_z \mathbf{b} \cdot
+          \mathbf{v}_n((z+\frac{1}{2}\Delta z),\phi) + \notag \\
+       {} & \mathbf{v}_{ExB,z}((z+\frac{3}{2}\Delta z),\phi) \frac{1}{2H(z+\frac{3}{2}\Delta z),\phi)\Delta z} \\
+  Q_2((z+\frac{1}{2}\Delta z),\phi) = & \; Q_1 - \mathbf{v}_{ExB,z}((z+\frac{1}{2}\Delta z),\phi)
+   \frac{6}{R_E} \\
+  R_2((z+\frac{1}{2}\Delta z),\phi) = & \; R_1 -
+       b_z mathbf{b} \cdot \mathbf{v}_n((z+\frac{3}{2}\Delta z),\phi) + \notag \\
+       {} & \mathbf{v}_{ExB,z}((z+\frac{1}{2}\Delta z),\phi) \frac{1}{2H(z+\frac{1}{2}\Delta z),\phi)\Delta z}
+\end{align}
+%
+The coefficients at the upper and lower boundary are set to
+%
+\begin{align}
+  P_2^*((z_{bot}+\frac{1}{2}\Delta z),\phi) = & \;  P_2((z_{bot}+\frac{1}{2}\Delta z),\phi) +
+    b_z
+    [ 2 \mathbf{b} \cdot \mathbf{v}_n((z_{bot}+\frac{1}{2}\Delta
+    z),\phi) \notag \\
+    {} &- \mathbf{b} \cdot \mathbf{v}_n((z_{bot}+\frac{3}{2}\Delta z),\phi)
+    ]  \\
+     {} &  +
+       \mathbf{v}_{ExB,z}((z_{bot}+\frac{1}{2}\Delta z),\phi)
+       \frac{1}{2H(z_{bot}+\frac{1}{2}\Delta z),\phi)\Delta z} \notag \\
+%
+  Q_2^*((z_{top}-\frac{1}{2}\Delta z),\phi) = & \; Q_2((z_{top}-\frac{1}{2}\Delta z),\phi)
+  \notag \\
+  {} & -
+    \mathbf{v}_{ExB,z}((z_{top}-\frac{1}{2}\Delta z),\phi)
+   \frac{6}{R_E} \\
+%
+  R_2^*((z_{top}-\frac{1}{2}\Delta z),\phi) = & \; R_2(z_{top}-\frac{1}{2}\Delta z),\phi)
+  -+??
+    b_z [ 2 \mathbf{b} \cdot \mathbf{v}_n((z_{top}-\frac{1}{2}\Delta
+    z),\phi) \notag \\
+    {}&-
+    \mathbf{b} \cdot \mathbf{v}_n((z_{top}-\frac{3}{2}\Delta z),\phi)
+    ] \\
+     {} &  +
+       \mathbf{v}_{ExB,z}((z_{top}-\frac{1}{2}\Delta z),\phi)
+       \frac{1}{2H(z_{top}-\frac{1}{2}\Delta z),\phi)\Delta z}
+       \notag
+\end{align}
+%
+We add the other part of the seventh term in the transport equation
+(\ref{eq:oplus_optrans})?? check $b_z$ where does it come from???
+%
+\begin{align}
+\left(\nabla \cdot
+  \mathbf{b} \right)(\mathbf{b}\cdot{v}_n n) \notag
+\end{align}
+%
+and the time derivative of the number density of $n(O^+)$ to the
+Q--coefficient
+%
+\begin{align}
+ Q_3((z+\frac{1}{2}\Delta z),\phi) = & \; Q_2 - (b_z \nabla \cdot
+ \mathbf{b}(\phi))
+ (\mathbf{b} \cdot \mathbf{v}_n((z+\frac{1}{2}\Delta z),\phi)) -
+ \frac{1}{2 \Delta t}
+\end{align}
+%
+The upper boundary condition is defined by
+%
+\begin{align}
+  -b_z^2 D_a\left( T_p \frac{\partial}{H \partial Z} +
+  \frac{mg}{R^*}\right) n = F^{O^+}
+\end{align}
+%
+with $F^{O^+} $ the flux of $O^+$ from and to the plasmasphere,
+which was defined in eq. (\ref{eq:oplus_flux1}) and
+(\ref{eq:oplus_flux2}).
+%
+\begin{align}
+  B = & -b_z^2 D_a(z_{top}) S_m(z_{top}+\frac{1}{2}\Delta z) \\
+  A = & -b_z^2 D_a(z_{top}) S_p(z_{top}+\frac{1}{2}\Delta z)
+\end{align}
+%
+with $S_m= 2 T_p \frac{\partial}{H \partial Z} +
+  \frac{mg}{R^*}$ from eq. (\ref{eq:oplus_S_m_top}) leading to
+%
+\begin{align}
+ Q_3^*((z_{top}-\frac{1}{2}\Delta z),\phi) = & \; Q_3((z_{top}-\frac{1}{2}\Delta z),\phi)
+ + \frac{B}{A} R_2^*((z_{top}-\frac{1}{2}\Delta z),\phi)
+\end{align}
+%
+and for the right hand side
+%
+\begin{align}
+  T_{3,explicit}^*((z_{top}-\frac{1}{2}\Delta z),\phi) = & T_{3,explicit}((z_{top}-\frac{1}{2}\Delta
+  z),\phi) - \notag \\
+  {} &  F^{O^+}  R_2^*((z_{top}-\frac{1}{2}\Delta z),\phi)
+  \frac{1}{A}
+\end{align}
+%
+The source and sink terms are calculated
+%
+\begin{align}
+  n(XI & O^+(^2P)) =  \frac{1}{2}\left( Q(O^+(^2P))(z) + Q(O^+(^2P))(z+\frac{1}{2} \Delta
+  z)\right) \notag \\
+  {} & \frac{1}{(k_{16} + k_{17})n(N_2) + k_{18} n(O) + (k_{19}+k_{20})N_e(z??) +
+  k_{21}+k_{22}} \\
+  n(XI & O^+(^2D)) =  \frac{1}{2}\left( Q(O^+(^2D))(z) + Q(O^+(^2D))(z+\frac{1}{2} \Delta
+  z)\right) + \notag \\
+  {} & \frac{(k_{20} N_e(z??)+ k_{22})n(XI
+  O^+(^2P))}{k_{23}n(N_2)+k_{24}n(O)+k_{26}n(O_2)} \\
+  L^{O^+} = & k_1 n(O_2) + k_2 n(N_2) + k_{10 n(N(^2D))}
+\end{align}
+%
+The loss term $L^{O^+}$ is added to the left hand side
+%
+\begin{align}
+  Q_4((z+\frac{1}{2}\Delta z),\phi) = Q_3((z+\frac{1}{2}\Delta
+  z),\phi) -L^{O^+}
+\end{align}
+%
+The right hand side is updated by
+%
+\begin{align}
+ T_{4,explicit}((z+\frac{1}{2}\Delta z),\phi)= &
+  T_{3,explicit}((z+\frac{1}{2}\Delta z),\phi) - Q(O^+)- \notag \\
+  {} & (k_{19} N_e(z) + k_{21})n(XI O^+(^2P)) - \notag \\
+  {} & (k_{25} N_e(z) + k_{27})n(XI O^+(^2D)) - \notag \\
+  {} &  (k_{18}n(XI O^+(^2P)) + k_{24}n(XI O^+(^2D)))n(O)
+\end{align}
+%
+The lower boundary condition is specified by photochemical
+equilibrium $n = \frac{Q}{L}$ leading to
+%
+\begin{align}
+  {} & Q_4^*((z_{bot}+\frac{1}{2}\Delta z),\phi) = Q_4((z_{bot}+\frac{1}{2}\Delta
+    z),\phi) - P_2((z_{bot}+\frac{1}{2}\Delta z),\phi) \\
+  {} & T_{4,explicit}^*((z_{bot}+\frac{1}{2}\Delta z),\phi)= T_{4,explicit}((z_{bot}+\frac{1}{2}\Delta
+    z),\phi) - \notag \\
+    {} & \; \; \; \; 2 P_2((z_{bot}+\frac{1}{2}\Delta
+    z),\phi)\frac{Q(O^+)}{1.5 L^{O^+}(z_{bot}+\frac{1}{2}\Delta z)-
+     0.5 L^{O^+}(z_{bot}+\frac{3}{2}\Delta
+    z)} \\
+  {} & P_2^*((z_{bot}+\frac{1}{2}\Delta z),\phi) = 0
+\end{align}
+%
+%
+Solving for the number density of $O^+$ at each latitude leads to
+the updated number densities $n(O^+)^{upd, t_n+\Delta t}$ at the
+midpoints. The calculated values for the number density of
+$n(O^+)^{upd, t + \Delta t}$ are smoothed by a Fast Fourier
+transformation leading to $n(O^+)_{smo}^{upd,t+\Delta t}$. All the
+wave numbers larger than a predefined value at each latitude are
+removed. The wave numbers are defined in the module \src{cons.F}???.
+The values of the number densities at the timestep $t_n$ are also
+updated by using
+%
+\begin{align}
+  n(O^+)^{upd,t} = \frac{1}{2}({1-c_{smo}})(n(O^+)^{t-\Delta t}+
+     n(O^+)_{smo}^{upd,t+\Delta t}) + c_{smo}n(O^+)^{t_n}
+\end{align}
+%
+with $c_{smo} = 0.95$ The upper boundary values are set to zero
+%
+\begin{align}
+ n(O^+)^{upd,t_n}(z_{top}-\frac{1}{2}\Delta z) = 0 \\
+ n(O^+)_{smo}^{upd,t_n}(z_{top}-\frac{1}{2}\Delta z) = 0
+\end{align}
+%
+and the number density is set such that it has a minimum value of
+$1\cdot 10^{-5}$.
+%
+\begin{align}
+ n(O^+)^{upd,t_n}(z+\frac{1}{2}\Delta z) \geq  1\cdot 10^{-5}\\
+ n(O^+)_{smo}^{upd,t_n}(z+\frac{1}{2}\Delta z) \geq 1\cdot 10^{-5}
+\end{align}
+%

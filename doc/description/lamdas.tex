@@ -1,0 +1,288 @@
+%
+\section{Ion drag calculation  \index{LAMDAS.F}}\label{cap:lamdas}
+%
+The input to \src{subroutine lamdas} is summarized in table
+\ref{tab:input_lamdas}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature         & $T_n$           & $K$   & midpoint  & $t_n$\\
+mean molecular mass         & $\overline{m}$  & $\frac{g}{mole}$ &interface & $t_{n+1}$ \\
+mass mixing ratio of molecular oxygen             & $\Psi_{O_2}$        & -  & midpoint & $t_n$\\
+mass mixing ratio of atomic oxygen                & $\Psi_{O}$          & -  & midpoint & $t_n$\\
+ion temperature              & $T_i$        & K  & midpoint & $t_n$\\
+electron temperature         & $T_e$        & K  & midpoint & $t_n$\\
+number density of ions       &  $N_{O_2^+}$      & $1/cm^3$  & midpoint & $t_n$\\
+  {}       &  $N_{O^+}$      & $1/cm^3$  & midpoint & $t_n$\\
+ {}        &  $N_{NO^+}$     & $1/cm^3$  & midpoint & $t_n$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine lamdas}}
+\label{tab:input_lamdas}
+\end{table}
+
+%
+The output of \src{subroutine lamdas} is summarized in table
+\ref{tab:output_lamdas}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+ion drag coefficients &       {}     & $$   &   & \\
+geographic direction & $\lambda_{xx}, \lambda_{yy},\lambda_{xy},\lambda_{yx},$
+                                          & $1/s$   & interface  & $t_{n}$\\
+Pedersen & $\lambda_1$     & $1/s$   & interface  & $t_{n}$\\
+conductivities  & $\sigma_H, \sigma_P$ & $S/m$   & midpoint  &
+$t_{n}$
+ \\ \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine lamdas}}
+\label{tab:output_lamdas}
+\end{table}
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+variable               & physical name        & value \\ \hline
+\hline
+%
+$q_e$ &  electron charge         & $1.602 \times 10^{-19} C$  \\
+$\frac{q_e}{10 m_e}$ &  {}       & $1.7588028 \times 10^7 C/g$  \\
+$\frac{q_e}{10 N_a}$ &  {}       & $9.6489 \times 10^{3} C/mol$  \\
+$m_{NO^+}$ &  molecular weight of $NO^+$         & $30 g/mol$
+ \\ \hline
+\end{tabular}
+\caption{Local parameters used in \src{subroutine lamdas}}
+\label{tab:parameters_lamdas}
+\end{table}
+%
+First the factor
+%
+\begin{equation}
+  \frac{q_e}{B} \; \; \text{in} \left[ \frac{C}{T} \frac{cm^3}{m^3}\right]
+\end{equation}
+%
+is calculated. The gyro frequencies $\Omega$ in units of
+$[\frac{CT}{kg}=s^1]$ are
+%
+\begin{align}
+  \Omega_{O^+}   = &\frac{q_e B}{N_a m_{O^+}} \\
+  \Omega_{O_2^+} = &\frac{q_e B}{N_a m_{O_2^+}} \\
+  \Omega_{NO^+}  = &\frac{q_e B}{N_a m_{NO^+}} \\
+  \Omega_{e}  = &\frac{q_e B}{m_{e}}
+\end{align}
+%
+The collision frequencies $\nu$ in units of $[s^{-1}]$ are
+determined by, e.g. \cite{Schunk00}
+%
+\begin{align}
+ \frac{1}{N_{O_2}} \nu_{O_2^+ - O_2} &= 2.59\times 10^{-11}\sqrt{\frac{T_i +
+ T_e}{2}}\left[ 1-0.73 log_{10}\sqrt{\frac{T_i +
+ T_e}{2}}\right]^2  \\
+\frac{1}{N_{O_2}} \nu_{O^+ - O_2}  &=6.64\times 10^{-10}  \\
+\frac{1}{N_{O_2}} \nu_{NO^+ - O_2} &=4.27\times 10^{-10}  \\
+\frac{1}{N_{O}} \nu_{O^+ - O}      &=3.67\times
+10^{-11}\sqrt{\frac{T_i + T_e}{2}}[ 1- 
+  0.064 log_{10}\sqrt{\frac{T_i +T_e}{2}}]^2  f_{cor}  \\
+\frac{1}{N_{O}} \nu_{NO^+ - O}    &=2.44\times 10^{-10}  \\
+\frac{1}{N_{O}} \nu_{O_2^+ - O}   &=2.31\times 10^{-10}  \\
+\frac{1}{N_{N_2}} \nu_{O_2^+ - N_2}&=4.13\times 10^{-10} \\
+\frac{1}{N_{N_2}} \nu_{NO^+ - N_2} &=4.34\times 10^{-10} \\
+\frac{1}{N_{N_2}} \nu_{O^+ - N_2}  &=6.82\times 10^{-10}
+\end{align}
+%
+with $N_n$ the number density for the neutral n in units of
+$[1/cm^3]$, and the temperature in $[K]$. The collisions frequencies
+for $\nu_{O_2^+ - O_2}$ and $\nu_{O^+ - O}$ are resonant, all other
+are nonresonant. The Burnside factor $f_{cor}$
+multiplies the $\nu_{O^+ - O}$ collision frequency, and has the default
+value 1.5, which has been found to improve agreement between
+calculated winds and electron densities in the upper thermosphere in
+other models. The 
+quantity xnmbar, which is the neutral number density $N$ in cm$^{-3}$ times the
+mean mass $ \overline{m}_{mid} $ in $[g/mole]$ at
+the midpoints of the height level, is calculated by
+%
+\begin{equation}
+  N \overline{m}_{mid} = \frac{p_o e^{-Z} \overline{m}_{mid}}{k_B T_n}
+\end{equation}
+%
+%The total number density $N$ is in units of $[1/cm^3]$, $p_o e^{-Z}$
+where $p_o e^{-Z}$
+is the pressure at the midpoints in [$ dyn/cm^2 $] with $Z$ the
+dimensionless variable at midpoints. The mean molecular weight at
+midpoints is averaged by $\overline{m}_{mid}(z + \frac{1}{2} \Delta
+z)= 0.5*(\overline{m}(z)+\overline{m}(z + \Delta z))$ with the
+height index on the interface level $k$ corresponds to $z$, $k+1$ to
+$z+ \Delta z$, and on the midpoint level corresponds $z +
+\frac{1}{2} \Delta z$ to the k index level. The Boltzmann constant
+is denoted by $k_B$ in [erg/K] and the neutral temperature
+$T_n$ is in units of [K]. \\
+
+The number densities in $[1/cm^3]$ are
+%
+\begin{align}
+  N_{O_2} &= \frac{N \overline{m}_{mid} \Psi_{O_2}}{m_{O_2}} \\
+  N_{O}   &= \frac{N \overline{m}_{mid} \Psi_{O}}{m_{O}} \\
+  N_{N_2} &= \frac{N \overline{m}_{mid} \Psi_{N_2}}{m_{N_2}}
+\end{align}
+%
+with $\Psi$ the mass mixing ratio. The mass mixing ratio of $N_2$
+is determined by $\Psi_{N_2}= 1 - \Psi_{O_2}-\Psi_{O}$ with
+$\frac{\Psi_{N_2}}{m_{N_2}} \geq 1. \times 10^{-20} \frac{mol}{g}$.
+
+The collision frequencies in $[1/s]$ are
+%
+\begin{align}
+  \nu_{O_2^+} &= \nu_{O_2^+ - O_2} + \nu_{O_2^+ - O} +
+  \nu_{O_2^+ - N_2}  \\
+  \nu_{O^+}   &= \nu_{O^+ - O_2} + \nu_{O^+ - O} +
+  \nu_{O^+ - N_2}  \\
+  \nu_{NO^+}  &= \nu_{NO^+ - O_2} + \nu_{NO^+ - O} +
+  \nu_{NO^+ - N_2}  \\
+  \begin{split}
+  \nu_{en}   &= 2.33\times10^{-11} N_{N_2} T_e (1-1.21 \times 10^{-4}
+  T_e) + \\
+   & 1.82 \times 10^{-10} N_{O_2} \sqrt{T_e} (1 + 3.6 \times 10^{-2}
+  \sqrt{T_e}) + \\
+   & 8.9 \times 10^{-11} N_O \sqrt{T_e} (1 + 5.7 \times 10^{-4} T_e)
+  \end{split}
+\end{align}
+%
+The ratios $r$ between collision frequency $\nu$ and gyro frequency
+$\Omega$ are
+%
+\begin{align}
+  r_{O_2^+} &= \frac{\nu_{O_2^+}}{\Omega_{O_2^+}}\\
+  r_{O^+}   &= \frac{\nu_{O^+}}{\Omega_{O^+}}\\
+  r_{NO^+}  &= \frac{\nu_{NO^+}}{\Omega_{NO^+}}\\
+  r_{e}     &= \frac{\nu_{en}}{\Omega_{e}}
+\end{align}
+%
+with the gyro frequency for ions $\Omega_i = e B/m_i$ and for
+electrons $\Omega_e=eB/m_e$.
+%
+The Pedersen conductivity in $[ S/m]$ is
+%
+\begin{equation}
+  \begin{split}
+   \sigma_P = &\frac{q_e}{B} [ N_{O^+} \frac{r_{O^+}}
+      {1+r_{O^+}^2 } +
+       N_{O_2^+} \frac{r_{O_2^+}}
+      {1+r_{O_2^+}^2 } + \\
+       & N_{NO^+} \frac{r_{NO^+}}
+      {1+r_{NO^+}^2 } +
+       N_{e} \frac{r_e}
+      {1+r_e^2 } ]
+  \end{split}
+\end{equation}
+%
+The Hall conductivity in $[S/m]$ is
+%
+\begin{equation}
+  \begin{split}
+   \sigma_H = &\frac{q_e}{B} [ -N_{O^+} \frac{1}
+      {1+r_{O^+}^2 } -
+       N_{O_2^+} \frac{1}
+      {1+r_{O_2^+}^2 } - \\
+      & N_{NO^+} \frac{1}
+      {1+r_{NO^+}^2 }+
+       N_{e} \frac{1}
+      {1+r_{e}^2 }  ]
+  \end{split}
+\end{equation}
+%
+with $N_e = N_{O^+} + N_{O_2^+} + N_{NO^+}$ assuming charge
+equilibrium. The Pedersen and Hall ion drag coefficients are
+%
+\begin{align}
+  \lambda_1 &= \frac{\sigma_P B^2}{\rho} \\
+  \lambda_2 &= \frac{\sigma_H B^2}{\rho}
+\end{align}
+%
+with $\rho= \frac{\overline{m}}{N_A}$ , and $N_A$ the Avagadro
+number. The ion drag coefficients are transferred to interfaces by
+%
+\begin{align}
+  \lambda_1(z) &= \sqrt{\lambda_1(z+\frac{1}{2} \Delta z)*\lambda_1(z-\frac{1}{2} \Delta z)} \\
+  \lambda_2(z) &= \sqrt{\lambda_2(z+\frac{1}{2} \Delta z)*\lambda_2(z-\frac{1}{2} \Delta z)}
+\end{align}
+%
+with the height index $k$ at the $z$ interface level, and $k+1$ at
+$z + \Delta z$. On the midpoint level the index $k$ corresponds to
+$z+\frac{1}{2} \Delta z$. For the top and bottom boundary the values
+are calculated by
+%
+\begin{align}
+  \lambda_1(z_{top}) &= \sqrt{\lambda_1^3(z_{top}-\frac{1}{2}\Delta z)/ \lambda_1(z_{top}-\frac{3}{2}\Delta z)} \\
+  \lambda_2(z_{top}) &= \sqrt{\lambda_2^3(z_{top}-\frac{1}{2}\Delta z)/ \lambda_2(z_{top}-\frac{3}{2}\Delta z))} \\
+  \lambda_1(z_{bot}) &= \sqrt{\lambda_1^3(z_{bot}+\frac{1}{2}\Delta z))/ \lambda_1(z_{bot}+\frac{3}{2}\Delta z)} \\
+  \lambda_2(z_{bot}) &= \sqrt{\lambda_2^3(z_{bot}+\frac{1}{2}\Delta z)/ \lambda_2(z_{bot}+\frac{3}{2}\Delta z)}
+\end{align}
+%
+with $z_{top}$ on the interface level corresponds to the index
+$nlev$, and $z_{top}-\frac{1}{2}\Delta z$ is on the midpoint level
+and has the index $nlev -1$. At the bottom boundary $z_{bot}$
+corresponds to the index $1$ on the interface level, and
+$z_{bot}+\frac{1}{2}\Delta z$ corresponds to the index $1$ on the
+midpoint level. The ion drag tensor in magnetic direction
+$\underline{\lambda}^{mag}$ is
+%
+\begin{gather}
+  \underline{\lambda}^{mag}=
+   \begin{pmatrix}
+      \lambda_{xx}^{mag} & \lambda_{xy}^{mag} \\
+      \lambda_{yx}^{mag} & \lambda_{yy}^{mag}
+   \end{pmatrix} =
+   \begin{pmatrix}
+      \lambda_1 & \lambda_{2}sin I\\
+      -\lambda_2 sin I & \lambda_{1} sin^2 I
+   \end{pmatrix}
+\end{gather}
+%
+with the x--direction in magnetic east, and y--direction magnetic
+north. The inclination of the geomagnetic
+field lines is $I$. Note that in the code lyxnorot
+[= $\lambda^{mag}_{yx}$] has the wrong sign, but is not used, being
+replaced by -lxynorot [$= -\lambda^{mag}_{xy}$].  The
+ion drag tensor can be rotated in geographic direction by using the
+rotation matrix $\mathbf{R}$
+%
+\begin{gather}
+   \mathbf{R} =
+   \begin{pmatrix}
+      \cos D & \sin D\\
+     -\sin D & \cos D
+   \end{pmatrix}
+\end{gather}
+%
+with the declination $D$ of the geomagnetic field. Applying the
+rotation to the ion drag tensor
+$\mathbf{R}\underline{\lambda}^{mag}\mathbf{R}^{-1}$ leads to
+%
+\begin{gather}
+  \Lambda =
+   \begin{pmatrix}
+  \lambda_{xx} & \lambda_{xy}  \\
+  \lambda_{yx} & \lambda_{yy}
+   \end{pmatrix}
+      = \\
+   \begin{pmatrix}
+  \lambda_{xx}^{mag} cos^2 D + \lambda_{yy}^{mag}
+  sin^2 D &  \lambda_{xy}^{mag} + (\lambda_{yy}^{mag}-
+  \lambda_{xx}^{mag}) \sin D \cos D  \\
+  -\lambda_{xy}^{mag} + (\lambda_{yy}^{mag}-
+  \lambda_{xx}^{mag}) \sin D \cos D  & \lambda_{yy}^{mag} \cos^2 D + \lambda_{xx}^{mag}
+  \sin^2 D
+   \end{pmatrix}
+\end{gather}
+%
+%Note that in the code $\lambda_{yx}$ has a reversed sign, and is
+%later, in the Joule heating calculation, used in the code as
+%$-\lambda_{yx}^{code}$.

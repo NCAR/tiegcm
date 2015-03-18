@@ -1,0 +1,137 @@
+%===============================================================================
+%
+\textbf{\Large{Notation}} 
+%        						
+\begin{tabbing}
+\hspace{5mm} \= \hspace{23mm} \=  \kill
+%
+\textbf{\Large{Variables}}         						\\
+
+\>$\mathbf{B} $         \>  geomagnetic field  \\
+\>$\mathbf{B}_0 $       \>  Earth main magnetic field  \\
+\>$B_x, B_y, B_z$       \>  geomagnetic main field components (north, east, downward)  \\
+\>$\mathbf{b}_0 $       \>  unit vector along $\mathbf{B}_0 $  \\
+\>$B_{e3}$        	\>  geomagnetic field strength in $\mathbf{e}_3$ direction [nT]   \\
+\>$c$        		\>  coefficient of the finite difference stencil   \\
+\>$\mathbf E$        	\>  electric field   \\
+\>$E_{d1}, E_{d2}$      \>  electric field component in $\mathbf{d}_1$,
+                            $\mathbf{d}_2$ direction  \\
+\>$H$        		\>  scale height    \\
+\>$h$        		\>  height   \\
+\>$h_0$        		\>  reference height   \\
+\>$h_A$        		\>  apex height   \\
+\>$I_m$        		\>  inclination angle of dipolar geomagnetic field line at $h_0$ on a spherical Earth  \\
+\>$\mathbf J$        	\>  current density   \\
+\>$\mathbf J_{||}$      \>  field aligned current density   \\
+\>$\mathbf J_{M}$       \>  magnetospheric current density   \\
+\>$\mathbf J$        	\>  current density   \\
+\>$J_{mr}$        	\>  radial component of current density   \\
+\>$J_{Mr}$        	\>  radial component of current density for both hemispheres added together  \\
+\>$\mathbf K^{M}$       \>  magnetospheric height integrated current density   \\
+\>$K_{m\phi}^{M}$       \>  magnetospheric eastward height-integrated current density   \\
+\>$K_{m\lambda}^{M}$    \>  magnetospheric down--/equatorward height-integrated current density   \\
+\>$K_{m\phi}$        	\>  eastward height-integrated current density   \\
+\>$K_{m\lambda}$        \>  down--/equatorward height-integrated current density   \\
+\>$K_{m\phi}^D$        	\>  wind driven eastward height-integrated current density   \\
+\>$K_{m\lambda}^D$      \>  wind driven down--/equatorward height-integrated current density   \\
+\>$\overline{m}$        \>  mean molecular mass  \\
+\>$m_i$        		\>  atomic weight of specie i   \\
+\>$N_i$        		\>  density of specie i   \\
+\>$n_i$        		\>  number density of specie i   \\
+\>$N_e$        		\>  electron density   \\
+\>$p$        		\>  atmospheric pressure   \\
+\>$p_p$        		\>  plasma pressure   \\
+\>$ln(p_0/p)$        	\>  log pressure levels    \\
+\>$R$        		\>  radius from Earth center to height h   \\
+\>$R_0$        		\>  radius from Earth center to height $h_0$   \\
+\>$T_e$        		\>  electron temperature   \\
+\>$T_i$        		\>  ion temperature   \\
+\>$T_n$        		\>  neutral temperature    \\
+\>$u_n,v_n, w_n$             \>  neutral zonal, meridional and vertical wind   \\
+\>$W$        		\>  dimensionless vertical wind   \\
+\>$z$        		\>  geopotential height   \\
+%
+\>$$        		\>     \\
+\>$\Phi$        	\>  electric potential   \\
+\>$\Phi_R$        	\>  reference electric potential   \\
+\>$\rho_{ion}$        	\>  ion density   \\
+\>$\Sigma_{\phi \phi}$        	        \>  magnetic eastward conductance   \\
+\>$\Sigma_{\lambda \lambda}$        	\>  magnetic equator-/downward conductance   \\
+\>$\Sigma_{\phi \lambda}, \Sigma_{\lambda \phi }$   \>  mixed term conductances   \\
+\>$\Sigma_{\phi \phi}^M , \Sigma_{H}^M$        	    \>  equivalent magnetospheric conductances   \\
+\>$\sigma_P, \sigma_H$  \>  Pedersen and Hall conductivities  \\
+\>$\nabla$        	\>  gradient    \\
+\>$\sigma_P, \sigma_H$  \>  Pedersen and Hall conductivities  \\
+\>$\mathbf{u}$          \>  neutral wind  \\
+\>$\Phi$                \>  electric potential  \\
+\>$$        		\>     \\
+\>$\mathbf{d}_1, \mathbf{d}_2, \mathbf{d}_3$  \>  magnetic eastward, magnetic 
+                            down--/equatorward vectors, along the field line   \\
+\>$\mathbf{e}_1, \mathbf{e}_2, \mathbf{e}_3$  \>  magnetic eastward, magnetic 
+                            down--/equatorward vectors, along the field line   \\
+\>$D = |\mathbf{d}_1 \times \mathbf{d}_2|$   \>  quantity of  Earth geomagnetic coordinate system   \\
+\>$F$                   \>  quantity of dipole field \\
+\>$i$        		\>  longitudinal index   \\
+\>$j$        		\>  latitudinal index   \\
+\>$k$        		\>  height index   \\
+\>$(\cdot)_i, (\cdot)_j, (\cdot)_k$        \>  quantity at $\phi(i)$, $\lambda(j)$, $h(k)$,   \\
+\>$nlon$                \>  number of discrete geographic longitude grid points  \\
+\>$nmlon$               \>  number of discrete geomagnetic longitude grid points  \\
+\>$nlat$                \>  number of discrete geographic latitude grid points  \\
+\>$nmlat$               \>  number of discrete geomagnetic latitude grid points  \\
+\>$s_L, s_U$        	\>  lower and upper boundary for field line integration    \\
+\>$wgt$        		\>  weight for linear interpolation   \\
+\>$\phi, \lambda$       \>  longitude, latitude   \\
+\>$\phi_g,\lambda_g$    \>  geographic longitude, latitude   \\
+\>$\lambda_A$        	\>  apex latitude   \\
+\>$\lambda_m$        	\>  modified apex latitude   \\
+\>$\lambda_m^*$        	\>  irregular modified apex latitude grid distribution  \\
+\>$\lambda_0$        	\>  equally spaced latitudinal grid distribution in $\lambda_m^*$   \\
+\>$\lambda_{m}^{crb}$   \>  modified apex latitude of convection reversal boundary   \\
+\>$\phi_m$        	\>  modified apex longitude  \\
+\>$$        		\>     \\
+\>$(\cdot)_0$        	\>  refers to reference height    \\
+\>$(\cdot)(0)$        	\>  refers to equally spaced latitudinal grid $\lambda_0$    \\
+\>$(\cdot)_A$        	\>  quantity at apex of field-line   \\
+\>$(\cdot)_g$        	\>  refers to geographic direction   \\
+\>$(\cdot)'$        	\>  half pressure level $(\cdot) +\frac{1}{2}$   \\
+\>$(\cdot)_{d1} ,(\cdot)_{d2},(\cdot)_{d3}$       \>  magnetic eastward, down--/equatorward, field-line direction of quantity $(\cdot)$  \\
+\>$(\cdot)_{e1} ,(\cdot)_{e2},(\cdot)_{e3}$       \>  magnetic eastward, down--/equatorward, field-line direction of quantity $(\cdot)$  \\
+\>$(\cdot)_{eq}$        \>  value at the geomagnetic equator   \\
+\>$(\cdot)_{fl}$        \>  value on the geomagnetic  field line   \\
+\>$(\cdot)_{m \phi} ,(\cdot)_{m \lambda}$         \>  modified apex eastward and down--/equatorward direction of quantity $(\cdot)$  \\
+\>$(\cdot)_{pole}$      \>  values at the geomagnetic poles   \\
+\>$(\cdot)^D$        	\>  dynamo part   \\
+\>$(\cdot)^{p,g}$       \>  refers to plasma pressure and gravity contribution   \\
+\>$(\cdot)^T$        	\>  both hemispheres added together   \\
+\>$\frac{d (\cdot)}{dt}$\>  total time rate of change   \\
+\>$\frac{\partial (\cdot)}{\partial}$\>  partial derivative   \\
+\>$lhs, rhs$        		\>  left and right hand side of electrodynamo equation   \\
+\>$$        		\>     \\
+%
+\end{tabbing}
+%
+\textbf{\Large{Constants}} 
+%        						
+\begin{tabbing}
+\hspace{5mm} \= \hspace{15mm} \= \hspace{40mm} \=  \kill
+%
+\>$\mathbf{g}(h_0)$ \>  $870 \frac{cm}{s^2} \;  (TIEGCM)$          \>  gravitational acceleration at height $h_0$   \\
+\>                  \>  $945 \frac{cm}{s^2} \; (TIMEGCM)$          \>  gravitational acceleration at height $h_0$   \\
+\>$M_i$   	    \>  $1.6605 \cdot 10^{-24} \; g$     \>  mass of unit atomic weight\\
+\>$h_0$   	    \>  $90 km(T*GCM)$                   \>  height of lower boundary for 
+                                                             electrodynamo \\
+\>$h_R$   	    \>  $90 km$                          \>  reference height\\
+\>$R_E$             \>  $6.37122 \cdot 10^{8} \; cm$     \>  mean Earth radius   \\
+\>$p_0$   	    \>  $5.0\cdot 10^{-4}$               \>  standard pressure\\
+\>$k_B$   	    \>  $1.38 \cdot 10^{-16} \; \frac{cm^2g}{s^2 K}$ \> Boltzman constant\\                  
+\>$R^*$             \>  $8.314e7 \frac{erg}{mole K}$ \> gas constant\\                  
+\>$R_{eq}$          \>  $$  \> Earth radius at the equator \\                  
+\>$$   		    \>   \> \\ 
+%
+\end{tabbing}
+%
+The model code defines these constants to the stated accuracy. 
+We do not mean to imply that these constants are known to this accuracy 
+nor that the low-order digits are significant to the physical approximations 
+employed. 

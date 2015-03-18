@@ -1,0 +1,793 @@
+%
+\section{Calculation of Major species $O_2$, and $O$  \index{COMP\_O2O.F}, \index{comp.F}}\label{cap:comp_o2o}
+%
+\subsection{Calculation of source and sinks for $O_2$ and $O$}\label{subcap:comp_o2o}
+%
+The input to \src{subroutine comp\_O2O} is summarized in table
+\ref{tab:input_comp_o2o}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+mass mixing ratio $O_2$ &       $\Psi(O_2)$              & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $O$ &         $\Psi(O  )$              & $-$   &  midpoints & $t_n$\\
+electron density&       $Ne$              & $1/cm^3$   &  interfaces & $t_n$\\
+number density $O^+$&       $n(O^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $N_2^+$&       $n(N_2^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $NO^+$&       $n(NO^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $NO$&       $n(NO)$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $N(^4S)$&       $n(N(^4S))$              & $1/cm^3$   &  midpoints & $t_n$\\
+number density $N^+$&       $n(N^+)$              & $1/cm^3$   &  midpoints & $t_n$\\
+
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine comp\_o2o}}
+\label{tab:input_comp_o2o}
+\end{table}
+%
+The output of \src{subroutine comp\_o2o} is summarized in table
+\ref{tab:output_comp_o2o}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline matrix coefficients for rhs? & $fs$
+& $-$ & midpoints? & $t_n+\Delta t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine comp\_o2o}}
+\label{tab:output_comp_o2o}
+\end{table}
+%
+The module data of \src{subroutine comp\_o2o} is summarized in table
+\ref{tab:module_comp_o2o}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&module&
+timestep
+\\ \hline \hline inverse of molecular mass $O_2$&
+$1/m_{O_2}$ & $mole/g$ & cons & $-$ \\
+inverse of molecular mass $O$& $1/m_{O}$ & $mole/g$ & cons & $-$ \\
+inverse of molecular mass $N_2$& $1/m_{N_2}$ & $mole/g$ & cons & $-$ \\
+reference pressure & $p_0$ & $???$ & cons & $-$ \\
+- & $e^z$ & $-$ & cons & $-$ \\
+Boltzman constant & $k_B$ & $-$ & cons & $-$ \\
+ molecular mass $NO$& $m_{NO}$ & $g/mole$ & cons & $-$ \\
+ molecular mass $N(^4S)$& $m_{N^4S}$ & $g/mole$ & cons & $-$ \\
+ molecular mass $N(^2D)$& $m_{N^2D}$ & $g/mole$ & cons & $-$ \\
+ molecular mass $O_2$& $m_{O_2}$ & $g/mole$ & cons & $-$ \\
+ molecular mass $O$& $m_{O}$ & $g/mole$ & cons & $-$ \\
+ total $O_2$ dissociation frequency& $rj$ & $1/s$ & qrj & $interface$ \\
+ $O_2^+$ production rate& $Q(O_2^+)$ & $??$ & qrj & $interface$ \\
+ $O^+$ production rate& $Q(O^+)$ & $??$ & qrj & $interface$ \\
+ chemical reaction rates& $k_i$ & $???$ & chemrates & $-$ \\
+ chemical reaction rates& $\beta_i$ & $???$ & chemrates & $-$ \\
+ chemical reaction rates& $a_i$ & $???$ & chemrates & $-$ \\
+ coefficient matrix & $fs$ & $???$ & chemrates & $-$
+\\ \hline \hline
+\end{tabular}
+\caption{Module data used in \src{subroutine comp\_o2o}}
+\label{tab:module_comp_o2o}
+\end{table}
+%
+The source and sink terms for the neutral composition are calculated
+in this subroutine, and stored in the coefficient matrix $fs$, which
+is module data of \src{chemrates\_module}. \\
+
+Firstly, the total dissociation frequency and the production rates
+are transferred from the interface level to the midpoint level.
+%
+\begin{align}
+  rj(z+\frac{1}{2}\Delta z ) = \frac{1}{2} [rj(z)+ rj(z+\Delta z)] \notag \\
+  Q(O_2^+)(z+\frac{1}{2}\Delta z ) = \frac{1}{2} [Q(O_2^+)(z)+ Q(O_2^+)(z+\Delta z)] \notag \\
+  Q(O^+)(z+\frac{1}{2}\Delta z ) = \frac{1}{2} [Q(O^+)(z)+ Q(O^+)(z+\Delta z)]
+\end{align}
+%
+The conversion factor $N\overline{m}$ from number density to mass
+mixing ratio is evaluated at the midpoint level
+%
+\begin{align}
+  N\overline{m}(z+\frac{1}{2}\Delta z) = \frac{p_0 e^{-z-1/2\Delta z}}{k_B T_n(z+1/2\Delta
+  z)}\left( \frac{\Psi(O_2)}{m_{O_2}}+ \frac{\Psi(O)}{m_{O}}+\frac{\Psi(N_2)}{m_{N_2}}\right)
+\end{align}
+%
+with $\Psi(N_2) = 1- \Psi(O_2 )- \Psi(O)$, and
+$1/\overline{m}(z+\frac{1}{2}\Delta z) =\frac{\Psi(O_2)}{m_{O_2}}+
+\frac{\Psi(O)}{m_{O}}+\frac{\Psi(N_2)}{m_{N_2}} $. The $O_x$
+production is
+%
+\begin{align}
+  P(O_x) = & (N\overline{m})^2 \left[ \beta_3 \frac{n(N^4S)}{m_{N^4S}}\frac{n(NO)}{m_{NO}}
+     + \beta_6 \frac{n(N^2D)}{m_{N^2D}}\frac{n(NO)}{m_{NO}}\right] +
+     \notag \\
+  & \frac{1}{2}( \beta_8(z) + \beta_8(z+\Delta
+    z))\frac{n(NO)}{m_{NO}}N\overline{m}(z+\frac{1}{2}\Delta z) + \notag \\
+  & N\overline{m}(z+\frac{1}{2}\Delta z) \left[ k_4 n(O_2^+)\frac{n(N^4S)}{m_{N^4S}} +
+     k_4 n(O^+)\frac{n(N^2D)}{m_{N^2D}}\right] + \notag \\
+  & \sqrt{Ne(z)Ne(z+\Delta z)}(a_1 n(NO^+)= 2 a_2 n(O_2^+))
+\end{align}
+%
+???? what is mass mixing ratio and what number density ??? and
+%
+\begin{align}
+ P(O_{x2}) = & (N\overline{m})(z+\frac{1}{2}\Delta z)\left[ \beta_1 \frac{n(N^4S)}{m_{N^4S}}
+    + \beta_2 \frac{n(N^2D)}{m_{N^2D}}\right] + \notag \\
+    & k_1 n(O^+) + k_7 n(N^+) + 2 rj(z+\frac{1}{2} \Delta z)
+\end{align}
+%
+The $O_x$ loss rates are
+%
+\begin{align}
+   L(O_{x1}) = & 2 k_{m12} N\overline{m} \frac{1}{\frac{1}{2}(\overline{m}(z) + \overline{m}(z+\Delta
+   z))} \\
+   L(O_{x2}) = & k_3 n(N_2^+) + k_8 n(N^+) \\
+   L(O_{x3}) = & Q(O^+) (z+\frac{1}{2} \Delta z)
+\end{align}
+%
+The $O_2$ production rates are
+%
+\begin{align}
+  P(O_2)_1 = & k_{m12}\frac{N\overline{m}(z+\frac{1}{2} \Delta z)}{\frac{1}{2}(\overline{m}(z) + \overline{m}(z+\Delta
+   z))} \\
+  P(O_2)_2 = & 0 \\
+  P(O_2)_3 = & k_5 \frac{n(NO}{m_{NO}}n(O_2^+)N\overline{m}(z+\frac{1}{2} \Delta z)
+\end{align}
+%
+The $O_2$ loss rates are
+%
+\begin{align}
+  L(O_2)_1 = & N\overline{m}(z+\frac{1}{2} \Delta z)\left[ \beta_1 \frac{n(N^4S)}{m_{N^4S}} +
+      \beta_2 \frac{n(N^2D)}{m_{N^2D}}\right] + \notag \\
+      & k_1 n(O^+) + (k_6 + k_7)n(N^+) + k_9 n(N_2^+) + rj \\
+  l(O_2)_2 = Q(O_2^+)(z+\frac{1}{2} \Delta z)
+\end{align}
+%
+The coefficients of the matrix $\mathbf(fs)$ are then
+%
+\begin{align}
+  fs_{11} = & - L(O_2) \\
+  fs_{12} = & N\overline{m}(z+\frac{1}{2} \Delta z) P(O_2)_1
+        \frac{\Psi(O)}{m_O}\frac{m_{O_2}}{m_O} \\
+  fs_{21} = & P(O_x)_2 \frac{m_O}{}m_{O_2} \\
+  fs_{22} = & -L(O_x)_2 - L(O_x)_1\frac{\Psi(O)}{m_O}N\overline{m}(z+\frac{1}{2} \Delta
+         z)\\
+  fs_{10} = & ( P(O_2)_3 - L(O_2)_2) \frac{m_{O_2}}{N\overline{m}} \\
+  fs_{20} = & ( P(O_x)_1 - L(O_x)_3) \frac{m_{O}}{N\overline{m}} \\
+\end{align}
+%
+%
+\subsection{Calculation of major species  $O_2$ and $O$}\label{subcap:comp}
+%
+The input to \src{subroutine comp} is summarized in table
+\ref{tab:input_comp}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+mass mixing ratio $O_2$ &       $\Psi(O_2)$              & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $O$ &         $\Psi(O  )$              & $-$   &  midpoints & $t_n$\\
+mass mixing ratio $O_2$ &       $\Psi(O_2)$              & $-$   &  midpoints & $t_n-\Delta t$\\
+mass mixing ratio $O$ &         $\Psi(O  )$              & $-$   &  midpoints & $t_n- \Delta t$\\
+neutral temperature &        $T_n$              & $K$   &  midpoints & $t_n$\\
+neutral zonal velocity &       $u_n$              & $cm/s$   &  midpoints & $t_n$\\
+neutral meridional velocity &       $v_n$              & $cm/s$   &  midpoints & $t_n$\\
+neutral "vertical" velocity &       $W$              & $1/s$   &  interfaces & $t_n$\\
+horizontal diffusion of $O_2$ &       $h_a(O_2)$              & $??$   &  midpoints ??? & $t_n$\\
+horizontal diffusion of $O$ &       $h_d(O)$              & $??$ &
+midpoints ??? & $t_n$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine comp}}
+\label{tab:input_comp}
+\end{table}
+%
+The output of \src{subroutine comp} is summarized in table
+\ref{tab:output_comp}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+updated mass mixing ratio $O_2$ &       $\Psi(O_2)^{upd}$              & $-$   &  midpoints & $t_n$\\
+updated mass mixing ratio $O$ &         $\Psi(O  )^{upd}$              & $-$   &  midpoints & $t_n$\\
+updated mass mixing ratio $O_2$ &       $\Psi(O_2)^{upd}$              & $-$   &  midpoints & $t_n+\Delta t$\\
+updated mass mixing ratio $O$ &         $\Psi(O  )^{upd}$ & $-$   &
+midpoints & $t_n+ \Delta t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine comp}}
+\label{tab:output_comp}
+\end{table}
+%
+The module data of \src{subroutine comp} is summarized in table
+\ref{tab:module_comp}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&module&
+timestep
+\\ \hline \hline inverse of molecular mass $O_2$&
+$1/m_{O_2}$ & $mole/g$ & cons & $-$ \\
+inverse of molecular mass $O$& $1/m_{O}$ & $mole/g$ & cons & $-$ \\
+inverse of molecular mass $N_2$& $1/m_{N_2}$ & $mole/g$ & cons & $-$ \\
+- & $e^{-z-\frac{1}{2}\Delta z}$ & $-$ & cons & $-$ \\
+- & $e^{-\frac{1}{2}\Delta z}$ & $-$ & cons & $-$ \\
+- & $e^{\frac{1}{2}\Delta z}$ & $-$ & cons & $-$ \\
+ molecular mass $O_2$& $m_{O_2}$ & $g/mole$ & cons & $-$ \\
+ molecular mass $O$& $m_{O}$ & $g/mole$ & cons & $-$ \\
+ & $\Pi$ & $-$ & cons & $-$ \\
+ & $\frac{1}{2\Delta t}$ & $$ & cons & $-$ \\
+smoothing factor & $f_{smo}=0.95$ & $$ & cons & $-$ \\
+ & $\frac{1}{2}(1-0.95)$ & $$ & cons & $-$ \\
+background eddy diffusion & $d_k$ & $$ & cons & $-$ \\
+wave filtering & $k_{ut5}$ & $$ & cons & $-$ \\
+matrix coefficients with source and sinks & $\mathbf{fs}$ & $$ &
+chemrates & $-$
+\\ \hline \hline
+\end{tabular}
+\caption{Module data used in \src{subroutine comp}}
+\label{tab:module_comp}
+\end{table}
+%
+The calculation of the composition is explained in
+\cite{dickinson1984}
+% Dickinson, R.E., Ridley, E.C., Roble, R.G.:
+% Thermospheric General Circulation with Coupled Dynamics and Composition
+% Journal of the atmospheric sciences, Vol 41, No. 2,pp 205-219
+The major neutral constituents of the thermosphere are $O_2$, $O$,
+and $N_2$. The mass mixing ratio of these are
+%
+\begin{align}
+ \Psi_i = n_i m_i \left( \sum_{j=1}^3 n_j m_j \right)^{-1}
+\end{align}
+%
+with $n_i$ the number density of the $i th$ species, with $i=1,2,
+\text{and} 3$ corresponding to $O_2$, $O$, and $N_2$. The molecular
+mass of the $i th$ species is $m_i$. The vector of mass mixing
+ratios is defined by
+%
+\begin{align}
+ \mathbf{\Psi} = \left(
+                    \begin{array}{c}
+                      \Psi_{O_2} \\
+                      \Psi_O \\
+                    \end{array}
+                  \right)
+\end{align}
+%
+The $N_2$ mass mixing ratio is determined by
+%
+\begin{align}
+ \Psi_{N_2} = 1 - \Psi_{O_2}-\Psi_O
+\end{align}
+%
+The coupled vector equation for the mass mixing ratio vector
+\cite{dickinson1984}
+%
+\begin{align}
+ \frac{\partial}{\partial t}\mathbf{\Psi} & = -e^z \tau^{-1}\frac{\partial}{\partial z}
+ \left[ \frac{\overline{m}}{m_{N_2}\left(\frac{T_{00}}{T_n}\right)^{0.25}}
+ \mathbf{\alpha}^{-1} \mathbf{L} \mathbf{\Psi}\right] + \notag \\
+ & e^z \frac{\partial}{\partial z} \left( K(z)e^{-z}\frac{\partial}{\partial z}\mathbf{\Psi}\right)
+ - \notag \\
+ & \left( \mathbf{v}_n \cdot \nabla \mathbf{\Psi} +
+ W \frac{\partial}{\partial z} \mathbf{\Psi}\right)+ \mathbf{S} -
+ \mathbf{R}
+\end{align}
+%
+with time $t$, the vertical coordinate $z= ln(p_0/p)$, the pressure
+$p$ and $p_0$ the reference pressure. The diffusion time scale is
+$\tau = (p_0 H_0/ p_{00}D_0) = 1.86 10^3 s$, with $H_0$ the
+characteristic molecular nitrogen scale height at $T_{00}=273 K$,
+$p_{00}= 10^5 Pa$, the characteristic diffusion coefficient at
+$p_{00}$ and temperature $T_{00}$ is $D_0 = 2 10^{-5} m^2/s$. The
+mean molecular mass is $\overline{m}$, the molecular mass of each
+species is $m_i$. The horizontal neutral velocity is $\mathbf{v}_n$,
+and the "vertical" velocity is $W=\frac{dz}{dt}$. $K(z)$ is the eddy
+diffusion coefficient, the effective mass source is $\mathbf{S}$,
+and the removal rate is $\mathbf{R}$. \\
+The matrix $\mathbf{\alpha}$ varies as the inverse of the diffusion
+coefficients according to
+%
+\begin{align}
+  \alpha_{11} = & -[\phi_{13}+(\phi_{12}-\phi_{13})\Phi_{2}] \notag \\
+  \alpha_{22} = & -[\phi_{23}+(\phi_{21}-\phi_{23})\Phi_{1}] \notag \\
+  \alpha_{12} = &  (\phi_{12}-\phi_{13})\Phi_{1} \notag \\
+  \alpha_{21} = &  (\phi_{12}-\phi_{13})\Phi_{2} \label{eq:comp_phi_ij}
+\end{align}
+%
+where $i=1, 2, \text{and} 3$ denotes $O_2$, $O$, and $N_2$
+respectively. The value $\phi_{ij}$ is determined by
+%
+\begin{align}
+  \phi_{ij} = \frac{D}{D_{ij}}\frac{m_3}{m_j}
+\end{align}
+%
+with $D_{ij}$ is the mutual diffusion coefficient for gases $i$ and
+$j$ with $D_{12}$, $D_{13}$, $D_{23}$, and $D_0$ being $0.26, \;
+0.18, \; 0.26$ \cite{colegrove1966}, and $0.2 \times 10^{-4} m^2/s$,
+respectively.
+% colegrove, F.D. 1966: Atmospheric composition in the lower thermosphere.
+% J. Geophys. Res. 71, 2227-2236.
+%
+$D$ is the characteristic diffusion coefficient, which has the same
+temperature and pressure dependence as $D_{ij}$
+%
+\begin{align}
+  D = D_0 \frac{P_{00}}{P}\left(\frac{P}{T_{00}} \right)^{1.75}
+\end{align}
+%
+The matrix operator $\mathbf{L}$ is diagonal with elements
+%
+\begin{align}
+  \mathbf{L}= \delta_{ij}\left( \frac{\delta}{\delta z} - \epsilon_{ii}\right)
+\end{align}
+%
+and
+%
+\begin{align}
+  \epsilon_{ii} = 1-\frac{m_i}{\overline{m}}-
+  \frac{1}{\overline{m}}\frac{\partial}{\partial z}
+\end{align}
+%
+The matrix $\mathbf{L}$ defines diffusive equilibrium through
+$\mathbf{L}\mathbf{\Phi} = 0$. at the upper boundary diffusive
+equilibrium is assumed, so that $\mathbf{L}\mathbf{\Phi} = 0$. At
+the lower boundary the atomic oxygen concentration $n(O) $ peaks,
+which was observed, and therefore it is assumed $\partial
+n(O)/\partial z = 0$. Together with the the conservation of total
+oxygen atoms, this assumption leads to the following condition at
+the lower boundary
+%
+\begin{align}
+   \frac{\partial}{\partial z}\Psi_2 & = \Psi_2 \notag \\
+   \Psi_1 + \Psi_2 & = constant
+\end{align}
+%
+
+In the source code in \src{comp.F} first the values $\phi_{ij}$ from
+equation (\ref{eq:comp_phi_ij}) are set
+%
+\begin{align}
+  \phi_{21} = & \frac{0.2}{0.26}\frac{28}{32} = & 0.673 \notag \\
+  \phi_{12} = & \frac{0.2}{0.26}\frac{28}{10} = & 1.35  \notag \\
+  \phi_{13} = & \frac{0.2}{0.18}\frac{28}{28} = & 1.11  \notag \\
+  \phi_{23} = & \frac{0.2}{0.26}\frac{28}{28} = & 0.769
+\end{align}
+%
+The diffusive time scale $\tau$ is set to $1.86 \times 10^3 s$, and
+the standard temperature $T_{00}= 273 K$. A $\mathbf{\delta}$ matrix
+is set up as the identity matrix
+%
+\begin{align}
+ \mathbf{\delta} = \left(
+   \begin{array}{cc}
+    1 & 0 \\
+    0 & 1 \\
+  \end{array}
+ \right)
+\end{align}
+%
+The horizontal advection term $\mathbf{v}_n \cdot \nabla
+\mathbf{\Psi}$ is determined in the \src{subroutine advecl} which is
+part of the file \src{comp.F}. The input to the \src{subroutine
+advecl} is the mass mixing ratios $\Psi(O_2)^{t_n}$ and
+$\Psi(O)^{t_n}$, as well as the horizontal neutral velocities $u_n$
+and $v_n$.
+%
+\begin{align}
+ & \mathbf{v}_n \cdot \Psi_i  = \frac{1}{2} \frac{1}{R_e \cos \lambda}
+  [ \frac{2}{3 \Delta \phi} \left( \Psi_i(\phi + \Delta \phi, \lambda) -
+   \Psi_i(\phi - \Delta \phi, \lambda) \right) \notag \\
+   & \left( u_n(\phi + \Delta \phi, \lambda)
+   +  u_n(\phi - \Delta \phi, \lambda)\right) - \notag \\
+   & \frac{1}{12 \Delta \phi} \left( \Psi_i(\phi + 2\Delta \phi, \lambda) -
+   \Psi_i(\phi - 2\Delta \phi, \lambda) \right) \left( u_n(\phi + 2\Delta \phi, \lambda)
+   +  u_n(\phi - 2\Delta \phi, \lambda)\right)] + \notag \\
+   & \frac{1}{2}\frac{1}{R_e}
+  [ \frac{2}{3 \Delta \lambda} \left( \Psi_i(\phi, \lambda+ \Delta \lambda) -
+   \Psi_i(\phi , \lambda-\Delta \lambda) \right) \left( v_n(\phi , \lambda+\Delta \lambda)
+   +  v_n(\phi , \lambda-\Delta \lambda)\right) - \notag \\
+   & \frac{1}{12 \Delta \lambda} \left( \Psi_i(\phi , \lambda+2\Delta \lambda) -
+   \Psi_i(\phi , \lambda-2\Delta \lambda) \right) \left( v_n(\phi , \lambda\Delta \lambda)
+   +  v_n(\phi , \lambda-2 \Delta \lambda)\right)]
+\end{align}
+%
+for $i = 1, 2$ which corresponds to $O_2$ and $O$, respectively. The
+mass mixing ratios at timestep $t_n - \Delta t$ are smoothed with a
+two part Shapiro smoother. The smoothing in latitude is
+%
+\begin{align}
+  \Psi_i^{t-\Delta t, \lambda_s}& = \Psi_i^{t-\Delta t} - 0.03 \{\Psi_i^{t-\Delta t}(\phi,\lambda +
+  2 \Delta \lambda) + \Psi_i^{t-\Delta t}(\phi,\lambda -
+  2 \Delta \lambda) - \notag \\
+  & 4 [\Psi_i^{t-\Delta t}(\phi,\lambda +
+   \Delta \lambda)+ \Psi_i^{t-\Delta t}(\phi,\lambda - \Delta \lambda)+
+   6\Psi_i^{t-\Delta t}(\phi,\lambda)]\}
+\end{align}
+%
+and afterwards a zonal smoothing is applied
+%
+\begin{align}
+  \Psi_i^{t-\Delta t, smo}& = \Psi_i^{t-\Delta t, \lambda_s} - 0.03
+  \{\Psi_i^{t-\Delta t, \lambda_s}(\phi+ 2\Delta \phi,\lambda +
+  ) + \Psi_i^{t-\Delta t, \lambda_s}(\phi- 2\Delta \phi,\lambda ) - \notag \\
+  & 4 [\Psi_i^{t-\Delta t, \lambda_s}(\phi+ \Delta \phi,\lambda )+
+  \Psi_i^{t-\Delta t, \lambda_s}(\phi-\Delta \phi,\lambda )+
+   6\Psi_i^{t-\Delta t, \lambda_s}(\phi,\lambda)]\}
+\end{align}
+%
+for $i = 1, 2$ which corresponds to $O_2$ and $O$, respectively. The
+horizontal diffusion factor is set by
+%
+\begin{align}
+  |\lambda| & > 40^o    & \qquad d_{fac} = & 0.25 + 1.0 \notag \\
+  |\lambda| & \leq 40^o & \qquad d_{fac} = & 0.25 + \frac{1}{2}
+        \left( 1+\sin(\frac{\Pi (|\lambda| - 20^o)}{40^o})\right)
+\end{align}
+%
+If the input flag $DIFHOR$ is set to zero, in the input file then
+$d_{fac} = 0$. The mean molecular mass $\overline{m}$ is calculated
+at the midpoint level
+%
+\begin{align}
+ \overline{m} (z+\frac{1}{2}\Delta z) = \left( \frac{\Psi(O_2)}{m_{O_2}} +
+    \frac{\Psi(O)}{m_{O}}+ \frac{\Psi(N_2)}{m_{N_2}} \right)^{-1}
+\end{align}
+%
+with $\Psi(N_2) = 1 - \Psi(O_2) - \Psi(O)$. Note that the mass
+mixing ratios are also on the midpoint levels. \\
+
+The lower boundary values for the mass mixing ratios are set by
+%
+\begin{align}
+  \Psi_i(z_{LB}) = b(i,1) \Psi(O_2)(z_{LB}+\frac{1}{2}\Delta z) +
+   b(i,2) \Psi(O)(z_{LB}+\frac{1}{2}\Delta z) + f_b(i)
+\end{align}
+%
+for $i = 1, 2$ which corresponds to $O_2$ and $O$, respectively. The
+values $b(i,1)$, $b(i,2)$ and $f_b(i)$ are set in the
+\src{boundary\_module}. With the mass mixing ratios at the lower
+boundary the mean molecular mass can be determined at the lower
+boundary
+%
+\begin{align}
+ \overline{m} (z_{LB}) = \left( \sum_{i=1}^3 \frac{\Psi_i}{m_i}(z_{LB})  \right)^{-1}
+\end{align}
+%
+for $i = 1, 2 \text{and} 3$ which corresponds to $O_2$, $O$ and
+$N_2$, respectively. The term $\frac{1}{\overline{m}}\frac{\partial
+\overline{m}}{\partial z}$ at the bottom is determined
+%
+\begin{align}
+   wk_4  = \frac{1}{\overline{m}(z_{LB}) +\overline{m}(z_{LB}+\frac{1}{2}\Delta z) }
+      \frac{\overline{m}(z_{LB}+\frac{1}{2}\Delta z) +\overline{m}(z_{LB})}{\Delta z}
+\end{align}
+%
+???? where is the factor of 1/2 and 1/2 in $wk_4$ which level. Is
+the LB below the LB level???????. The $epsilon $terms $1-
+\frac{1}{\overline{m}}[{m_i} + \frac{\partial \overline{m}}{\partial
+z}]$ are
+%
+\begin{align}
+   \epsilon_{i}(k_m) = 1- \frac{2}{\overline{m}(z_{LB}) +
+       \overline{m}(z_{LB}+\frac{1}{2}\Delta z)}[{m_i} +
+     \frac{\overline{m}(z_{LB}+\frac{1}{2}\Delta z) -
+      \overline{m}(z_{LB})}{\Delta z}]
+\end{align}
+%
+for $i = 1, 2$ which corresponds to $O_2$ and $O$, respectively, and
+$k_m = 2$. The value
+%
+\begin{align}
+  zz_{1}(k_m) = zz_{1}(k_m) = 0
+\end{align}
+%
+??? how does the algorithm goes????. Next the matrix
+$\mathbf{\alpha}$ at the height level $z+0.25\Delta z$ is determined
+%
+\begin{align}
+   \alpha^*_{1,1}(k_m) = & \alpha_{22} = -\Delta_{11}[\phi_{2,3}+\{\phi_{2,1}-\phi_{2,3}\} \notag \\
+                         & \frac{1}{2} \{ \Psi_1(z_{LB}) + \Psi_1(z_{LB}+\frac{1}{2}\Delta
+                         z)\}] \\
+   \alpha^*_{1,2}(k_m) = & -\alpha_{12} = [1-\Delta_{12}][\phi_{1,2}- \phi_{1,3}] \notag \\
+                         & \frac{1}{2} \{ \Psi_1(z_{LB}) + \Psi_1(z_{LB}+\frac{1}{2}\Delta
+                         z)\}] \\
+   \alpha^*_{2,2}(k_m) = & \alpha_{11} = -\Delta_{22}[\phi_{1,3}+\{\phi_{1,2}-\phi_{1,3}\} \notag \\
+                         & \frac{1}{2} \{ \Psi_2(z_{LB}) + \Psi_2(z_{LB}+\frac{1}{2}\Delta
+                         z)\}]\\
+   \alpha^*_{2,1}(k_m) = & -\alpha_{21} = [1-\Delta_{22}][\phi_{2,2}- \phi_{2,3}] \notag \\
+                         & \frac{1}{2} \{ \Psi_2(z_{LB}) + \Psi_2(z_{LB}+\frac{1}{2}\Delta z)\}]
+\end{align}
+%
+Note, that the indices in the source code already take into account
+the inverse of the matrix with $\mathbf{\alpha}^{-1} =
+\mathbf{\alpha}^*/det|\mathbf{\alpha}| $, and therefore the diagonal
+values are switches and the off-diagonal terms have an minus sign.
+The determinant $det|\mathbf{\alpha}|$ is the same as
+$det|\mathbf{\alpha}^*(k_m)|=
+\alpha^*_{1,1}(k_m)\alpha^*_{2,2}(k_m)-\alpha^*_{1,2}(k_m)\alpha^*_{2,1}(k_m)$.
+The matrix $\mathbf{\alpha}^{*}$ is multiplied by the factor
+$\frac{1}{\tau} \frac{\overline{m}}{m_{N_2}}\left(
+\frac{T_{00}}{T_n}\right)^{0.25}\frac{1}{det|\mathbf{\alpha}^*|}$
+%
+\begin{align}
+   wk_1 = \frac{1}{\tau}\frac{1}{2} [\overline{m}(z_{LB}+ \overline{m}(z_{LB}+\frac{1}{2}\Delta z)]
+   \frac{1}{m_{N_2}}\left(
+\frac{T_{00}}{T_n(z_{LB})}\right)^{0.25}\frac{1}{det|\mathbf{\alpha}^*(k_m)|}
+\end{align}
+%
+ which lead to the quantity defined as $A = \frac{1}{\tau} \frac{\overline{m}}{m_{N_2}}\left(
+\frac{T_{00}}{T_n}\right)^{0.25}\mathbf{\alpha}^{-1}$. The value
+$\gamma$ at the bottom are set to
+%
+\begin{align}
+  \gamma_{ij}(k=1) = 0.
+\end{align}
+%
+for $i = 1, 2$ and $j+ 1, 2$, which corresponds to $O_2$ and $O$,
+respectively. \\
+
+After setting all the values at the bottom of the model, the height
+loops starts from the bottom to the top of the model ($k=1/ z=
+-6.75$ to $k = nlev-1 / z= 6.75$). The $epsilon $terms $1-
+\frac{1}{\overline{m}}[{m_i} + \frac{\partial \overline{m}}{\partial
+z}]$ are set at $z$ by
+%
+\begin{align}
+   \epsilon_{i}(k_p) = 1- \frac{2}{\overline{m}(z- \frac{1}{2} \Delta z) +
+       \overline{m}(z+\frac{1}{2}\Delta z)}[{m_i} +
+     \frac{\overline{m}(z+\frac{1}{2}\Delta z) -
+      \overline{m}(z-\frac{1}{2}\Delta z)}{\Delta z}]
+\end{align}
+%
+for $i = 1, 2$ which corresponds to $O_2$ and $O$, respectively, and
+$k_p = 1$. Note that before the value $\epsilon_{i}(k_m)$ was
+determined, with $k_m = 2$. The values of $k_m$ and $k_p$ are
+alternating between $1$ and $2$ to get the values at the previous
+height level $k_m= k-1$, and the height level $k_p = k+1$. The
+$\mathbf{\alpha}$ is determined at $k_p / z$ by
+%
+\begin{align}
+   \alpha^*_{1,1}(k_p) = & \alpha_{22} = -\Delta_{11}[\phi_{2,3}+\{\phi_{2,1}-\phi_{2,3}\} \notag \\
+                         & \frac{1}{2} \{ \Psi_1(z-\frac{1}{2}\Delta z) + \Psi_1(z+\frac{1}{2}\Delta
+                         z)\}] \\
+   \alpha^*_{1,2}(k_p) = & -\alpha_{12} = [1-\Delta_{12}][\phi_{1,2}- \phi_{1,3}] \notag \\
+                         & \frac{1}{2} \{ \Psi_1(z-\frac{1}{2}\Delta z) + \Psi_1(z+\frac{1}{2}\Delta
+                         z)\}] \\
+   \alpha^*_{2,2}(k_p) = & \alpha_{11} = -\Delta_{22}[\phi_{1,3}+\{\phi_{1,2}-\phi_{1,3}\} \notag \\
+                         & \frac{1}{2} \{ \Psi_2(z-\frac{1}{2}\Delta z) + \Psi_2(z+\frac{1}{2}\Delta
+                         z)\}] \\
+   \alpha^*_{2,1}(k_p) = & -\alpha_{21} = [1-\Delta_{22}][\phi_{2,2}- \phi_{2,3}] \notag \\
+                         & \frac{1}{2} \{ \Psi_2(z-\frac{1}{2}\Delta z) + \Psi_2(z+\frac{1}{2}\Delta z)\}]
+\end{align}
+%
+The matrix $\mathbf{\alpha}^{*}$ is multiplied by the factor
+$\frac{1}{\tau} \frac{\overline{m}}{m_{N_2}}\left(
+\frac{T_{00}}{T_n}\right)^{0.25}\frac{1}{det|\mathbf{\alpha}^*|}$
+%
+\begin{align}
+   wk_1 = \frac{1}{\tau}\frac{1}{2} [\overline{m}(z- \frac{1}{2}\Delta )\overline{m}(z+\frac{1}{2}\Delta z)]
+   \frac{1}{m_{N_2}}\left(
+\frac{T_{00}}{T_n(z)}\right)^{0.25}\frac{1}{det|\mathbf{\alpha}^*(k_p)|}
+\end{align}
+%
+ which lead to the quantity defined as $A = \frac{1}{\tau} \frac{\overline{m}}{m_{N_2}}\left(
+\frac{T_{00}}{T_n}\right)^{0.25}\mathbf{\alpha}^{-1}$. The term
+$\frac{1}{\overline{m}}\frac{\partial \overline{m}}{\partial z}$ at
+is determined, but first the value  $wk_4$ which holds the value for
+$k_p / z$ is copied into $wk_3$ which holds the value for $k_m /
+z-\Delta z$.
+%
+\begin{align}
+   wk_4  = \frac{1}{\overline{m}(z-\frac{1}{2}\Delta z) +\overline{m}(z+\frac{1}{2}\Delta z) }
+      \frac{\overline{m}(z+\frac{1}{2}\Delta z) +\overline{m}(z-\frac{1}{2}\Delta z)}{\Delta z}
+\end{align}
+%
+???? where is the factor of 1/2 and 1/2 in $wk_4$ which level.
+???????. \\
+
+The discretizied equation can be written as
+%
+\begin{align}
+  \mathbf{P}_k \mathbf{\Psi}_{k-1}^{t_n+ \Delta t} +
+  \mathbf{Q}_k \mathbf{\Psi}_{k}^{t_n+ \Delta t} +
+  \mathbf{R}_k \mathbf{\Psi}_{k+1}^{t_n+ \Delta t} = \mathbf{f}_k
+\end{align}
+%
+with
+%
+\begin{align}
+  P_k = & \frac{A(k_m)}{\Delta z} \left(\frac{1}{\Delta z} + \frac{\epsilon(k_m)}{2} \right)
+  - \frac{e^{-z} K(k_m)}{\Delta^2 z} - \frac{e^{-z} W(k)}{2 \Delta
+  z} \\
+  R_k = & \frac{A(k_p)}{\Delta z} \left(\frac{1}{\Delta z} + \frac{\epsilon(k_p)}{2} \right)
+  - \frac{e^{-z} K(k_p)}{\Delta^2 z} + \frac{e^{-z} W(k)}{2 \Delta
+  z} \\
+  Q_k =&  - [\frac{A(k_m)}{\Delta z} \left(\frac{1}{\Delta z} - \frac{\epsilon(k_m)}{2} \right)  \\
+    & \frac{A(k_p)}{\Delta z} \left(\frac{1}{\Delta z} + \frac{\epsilon(k_p)}{2} \right)
+  - \frac{e^{-z} K(k_m)}{\Delta^2 z}- \frac{e^{-z} K(k_p)}{\Delta^2 z} + JSe^{-z} -
+   \frac{e^{-z}}{2 \Delta t} ] \notag \\
+   f_k = & e^{-z}[ \frac{\Psi^{t_n-\Delta t}(k)}{2 \Delta t} - \mathbf{v}_n \cdot \nabla \Psi^{t_n}(k)]
+\end{align}
+%
+In the source code the values are
+%
+\begin{align}
+  P_k(i,j) = & [{A(k_m)(i,j)}
+   \left(\frac{1}{\Delta z} + \frac{\epsilon(k_m)(j)}{2} \right)
+      \notag \\
+  & - e^{-(z+\frac{1}{2}\Delta z)}( e^{\frac{1}{2}\Delta z}K(k???z-\frac{1}{2}\Delta z)d_{fac}
+    (\frac{1}{\Delta z}-wk_3) + \notag \\
+  & 0.25 (W(z)+W(z+\Delta z))) \Delta(i,j)] \frac{1}{\Delta z}
+\end{align}
+%
+\begin{align}
+  R_k(i,j) = & [A(k_p)(i,j)
+   \left(\frac{1}{\Delta z} - \frac{\epsilon(k_p)(j)}{2} \right)
+      \notag \\
+  & - e^{-(z+\frac{1}{2}\Delta z)}( e^{-\frac{1}{2}\Delta z}K(k+1/z+\frac{1}{2}\Delta z)d_{fac}
+  (\frac{1}{\Delta z}+wk_4) -  \notag \\
+  &  0.25 (W(z)+W(z+\Delta z))) \Delta(i,j)] \frac{1}{\Delta z}
+\end{align}
+%
+\begin{align}
+  Q_k(i,j) = & - \frac{1}{\Delta z}[A(k_m)(i,j)
+   \left(\frac{1}{\Delta z} - \frac{\epsilon(k_m)(j)}{2} \right) +
+   A(k_p)(i,j)
+   \left(\frac{1}{\Delta z} + \frac{\epsilon(k_p)(j)}{2} \right)
+      \notag \\
+  & + e^{-(z+\frac{1}{2}\Delta z)}( \{e^{\frac{1}{2}\Delta z}K(k+1/z+\frac{1}{2}\Delta z)
+  (\frac{1}{\Delta z}-wk_4) -  \notag \\
+  & e^{-\frac{1}{2}\Delta z}K(k/z-\frac{1}{2}\Delta z)
+  (\frac{1}{\Delta z}+wk_3) \}\frac{d_{fac}}{\Delta z} + \frac{1}{2\Delta t}\notag \\
+  &) \Delta(i,j) - fs(i,j)]
+\end{align}
+%
+The right hand side is assembled in the following
+%
+\begin{align}
+  f_k(i) =e^{-(z+\frac{1}{2}\Delta z)}[ \frac{\Psi_i^{t_n-\Delta t,smo}}{2 \Delta t}
+     -\mathbf{v}_n\cdot \nabla \Psi_i + f_{s,0}(i) + h_{d,i}]
+\end{align}
+%
+for $i = 1,2$ corresponding to $O_2$ and $O$, respectively. \\
+
+At the lower boundary the coefficients are adjusted ??? what's the
+condition there???
+%
+%
+\begin{align}
+ Q_k^*(i,j)(z_{bot}) = Q_k(i,j)(z_{bot}) +P_k(i,1)(z_{bot})b(1,j) +
+      P_k(i,2)(z_{bot})b(2,j)
+\end{align}
+%
+with $z_{bot} = -6.75$ or $z_{bot} = z_{LB}+ \frac{1}{2}\Delta z$,
+and $i = 1, 2$ and $j=1, 2$ corresponding to $O_2$ and $O$,
+respectively. The updated right hand side is
+%
+\begin{align}
+ f_k^*(i)(z_{bot}) = f_k(i)(z_{bot}) -P_k(i,1)(z_{bot})fb(1) -
+      P_k(i,2)(z_{bot})fb(2)
+\end{align}
+%
+with $i = 1, 2$ corresponding to $O_2$ and $O$, respectively. \\
+
+At the upper boundary we set $\frac{\partial}{\partial z}
+\mathbf{\Psi} = \epsilon \mathbf{\Psi}$ which leads to
+%
+\begin{align}
+ \frac{\Psi(k+1) - \Psi(k)}{\Delta z} = \frac{\epsilon(z+\frac{1}{2}\Delta z)}{2}
+ (\Psi(k+1)+\Psi(k)))
+\end{align}
+%
+with $k= nlev1-1$ and $k+1=nlev$ corresponding to
+$z_{ub}-\frac{3}{2}\Delta z=6.25$ and $z_{ub}-\frac{1}{2}\Delta
+z=6.75$, respectively. The coefficient equation looks like
+%
+\begin{align}
+  P_k \Psi(k-1) + [Q_k + R_k \frac{1 + 0.5 \epsilon(k+1/2) \Delta z}
+  {1 - 0.5 \epsilon(k+1/2) \Delta z}]\Psi(k) = f_k
+\end{align}
+%
+??? make matrix out of the equation????
+%
+%
+\begin{align}
+ Q_k^*(i,j)(z_{ub}-\frac{3}{2}\Delta z) & = Q_k(i,j)(z_{ub}-\frac{3}{2}\Delta z)
+ + \notag \\
+   & \frac{1 + 0.5 \epsilon(k+1/2) \Delta z}{1 - 0.5 \epsilon(k+1/2) \Delta
+   z} R_k(i,j)(z_{ub}-\frac{3}{2}\Delta z) \\
+  R_k^*(i,j)(z_{ub}-\frac{3}{2}\Delta z) & = 0
+\end{align}
+%
+with $i = 1, 2$ and $j=1, 2$ corresponding to $O_2$ and $O$,
+respectively.
+%
+For solving the equation the following values are needed ??? is this
+Newton iteration??? How does it work????
+%
+\begin{align}
+  Q_k'(i,j) = & Q_k(i,j) - P_k(i,1)*\gamma(1,j)(k)-
+     P_k(i,2)*\gamma(2,j)(k) \\
+  wk_1    = & det|Q_k'| \\
+  wk_{m1}(1,j) = & \frac{1}{wk_1} [\Delta(1,j)Q_k(2,2) - (1-\Delta(1,j))Q_k(1,j)] \\
+  wk_{m1}(2,j) = & \frac{1}{wk_1} [\Delta(2,j)Q_k(1,1) - (1-\Delta(2,j))Q_k(2,j)] \\
+  wk_{v1}(i) = & f_k(i) - \sum_{j=1}^2 P_k(i,j)zz(k)(j) \\
+  \gamma(k+1)(1,j) = & \sum_{m=1}^2 wk_{m1}(1,m) R_k(m,j)\\
+  \gamma(k+1)(2,j) = & \sum_{m=1}^2 wk_{m1}(2,m) R_k(m,j) \\
+  zz(k+1)(i) = &  \sum_{m=1}^2 wk_{m1}(i,m) wk_{v1}(m)
+\end{align}
+%
+Hereby end the height loop from the bottom to the top of the model.
+The values at the top ($k=nlev+1$ or $z_{UB}+\frac{1}{2}\Delta z =
+7.25$) are set
+%
+\begin{align}
+   \Psi_i^{t_n+\Delta t}(z_{UB}+\frac{1}{2}\Delta z) = 0
+\end{align}
+%
+with $i = 1, 2$ corresponding to $O_2$ and $O$, respectively. The
+updated value is
+%
+%
+\begin{align}
+  upd_i(z_{UB}+\frac{1}{2}\Delta z)  = 0
+\end{align}
+%
+Then the downward sweep begins
+%
+\begin{align}
+   upd_i(k)  = & zz(k+1)(i) \\
+   upd_i(k)  = & upd_i(k) - \sum_{j=1}^2 \gamma(k+1)(i,j)upd_j(k+1) \\
+   \Psi_i^{t_n+\Delta t}(k) = & upd_i(k)
+\end{align}
+%
+with $k$ and $k+1$ corresponding to $z-\frac{1}{2}\Delta z$ and
+$z+\frac{1}{2}\Delta z$, respectively, and with $i = 1, 2$ and $j=1,
+2$ corresponding to $O_2$ and $O$, respectively. \\
+
+The upper boundary is set by
+%
+\begin{align}
+  \Psi_i^{t_n+\Delta t}(lev1) = \frac{1 + 0.5 \epsilon_i(k_p) \Delta z}
+      {1 - 0.5 \epsilon_i(k_p) \Delta z}\Psi_i^{t_n+\Delta t}(lev1-1)
+\end{align}
+%
+with $i = 1, 2$ and corresponding to $O_2$ and $O$, respectively. \\
+%
+The calculated values for the mass mixing ratio $\Psi_i^{upd, t +
+\Delta t}$ are smoothed by a Fast Fourier transformation. All the
+wave numbers larger than a predefined value at each latitude are
+removed. The wave numbers are defined in the module \src{cons.F}.
+The values of the mass mixing ratio at the timestep $t_n$ are also
+updated by using
+%
+\begin{align}
+  \Psi_i^{upd,t_n} = \frac{1}{2}({1-c_{smo}})(\Psi_i^{t_n-\Delta t}+
+     \Psi_{i,{smo}}^{upd,t_n+\Delta t}) + c_{smo}\Psi_i^{t_n}
+\end{align}
+%
+with $c_{smo} = 0.95$, and $i = 1, 2$ and corresponding to $O_2$ and
+$O$, respectively. Non negative values are assured by
+%
+\begin{align}
+  \Psi_i^{upd,t_n} < & 1 \times 10^{-6} &  \quad & \Psi_i^{upd,t_n} = 1 \times
+  10^{-6} \\
+  \Psi_i^{upd,t_n+\Delta t} < & 1 \times 10^{-6} & \quad &\Psi_i^{upd,t_n+\Delta t} = 1 \times
+  10^{-6} \\
+  1-\sum_{i=1}^2 \Psi_i^{upd,t_n+\Delta t} < & 1 \times 10^{-6} &  \quad &
+          \Psi_i^{upd,t_n+\Delta t} =
+          \Psi_i^{upd,t_n+\Delta t}\frac{1-10^{-6}}{\sum_{i=1}^2 \Psi_i^{upd,t_n+\Delta t}} \\
+  1-\sum_{i=1}^2 \Psi_i^{upd,t_n} < & 1 \times 10^{-6} &  \quad &
+          \Psi_i^{upd,t_n} =
+          \Psi_i^{upd,t_n}\frac{1-10^{-6}}{\sum_{i=1}^2 \Psi_i^{upd,t_n}}
+\end{align}
+%

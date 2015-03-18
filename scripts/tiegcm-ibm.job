@@ -1,0 +1,221 @@
+#! /bin/csh
+#
+# User set LSF resource directives for IBM/AIX batch job:
+#
+#BSUB -J tiegcm_trunk
+#BSUB -P 24100004
+##BSUB -q regular
+##BSUB -n 32
+#BSUB -q debug
+#BSUB -n 8
+#BSUB -o tiegcm_trunk.%J.out
+#BSUB -e tiegcm_trunk.%J.out
+#BSUB -N
+#BSUB -u $LOGNAME@ucar.edu
+#BSUB -W 1:00
+#
+# User set shell variables for TIEGCM IBM/AIX job:
+# (modeldir, execdir, and utildir may be relative or absolute paths)
+#
+#   modeldir: Root directory to model source (may be SVN working dir)
+#   execdir:  Directory in which to build and execute (will be created if necessary)
+#   input:    Namelist input file (will use default if not provided)
+#   output:   Stdout file from model execution (will be created)
+#   make:     Build file with platform-specific compile parameters (in scripts dir)
+#   mpi:      TRUE/FALSE for MPI or non-MPI run
+#   nproc:    Number of processors for 64-bit Linux MPI run
+#   modelres: Model resolution (5.0 or 2.5)
+#   debug:    If TRUE, build and execute a "debug" run
+#   exec:     If TRUE, execute the model (build only if FALSE)
+#   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
+#
+set modeldir = tiegcm_trunk
+set execdir  = tiegcm-aix
+#set input    = tiegcm.inp
+set output   = tiegcm.out
+set make     = Make.bluefire
+set modelres = 5.0
+set mpi      = TRUE
+set debug    = FALSE
+set exec     = TRUE
+set utildir  = $modeldir/scripts
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                        Shell Script for TIEGCM IBM/AIX job
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Env vars for AIX:
+#
+setenv MP_LABELIO YES
+setenv MP_STDINMODE 0
+setenv MP_SHARED_MEMORY yes
+setenv MEMORY_AFFINITY MCM
+setenv AIXTHREAD_SCOPE S
+setenv MALLOCMULTIHEAP true
+#
+set mycwd = `pwd`
+echo "" ; echo "${0}:"
+echo "  Begin execution at `date`"
+echo "  Current working directory: $mycwd"
+echo "  System: `uname -a`"  
+echo ""
+#
+# Verify directories and make_machine file (make execdir if necessary).
+# Get absolute path for dirs that are accessed from the execdir.
+#
+if (! -d $modeldir) then
+  echo ">>> Cannot find model directory $modeldir <<<"
+  exit 1
+endif
+set model = $modeldir:t
+
+if ($model == '') then
+  echo "Please remove trailing slash from modeldir $modeldir"
+  exit
+endif
+
+if (! -d $utildir) then
+  echo ">>> Cannot find model scripts directory $utildir <<<" 
+  exit 1
+endif
+set utildir = `perl $utildir/abspath $utildir`
+
+set srcdir  = $modeldir/src
+if (! -d $srcdir) then
+  echo ">>> Cannot find model source directory $srcdir <<<"
+  exit 1
+endif
+set srcdir = `perl $utildir/abspath $srcdir`
+
+if (! -d $execdir) then
+  echo "Making exec directory $execdir" 
+  mkdir -p $execdir
+endif
+
+if ($modelres != 5.0 && $modelres != 2.5) then
+  echo ">>> Unknown model resolution $modelres <<<"
+  exit 1
+endif
+#
+# Copy make files to execdir if necessary:
+#
+if (! -f $execdir/$make)     cp $utildir/$make $execdir
+if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
+if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
+#
+# Make default namelist input file if not provided by user:
+#
+if ($?input) then
+  if (! -f $input) then
+    echo ">>> Cannot find namelist input file $input <<<"
+    exit 1
+  endif
+else 
+  set input = \
+    `perl $utildir/mknamelist -model=$model -modelres=$modelres` || \
+     echo ">>> Error from mknamelist: fileout = $input" && exit 1
+endif
+set input  = `perl $utildir/abspath $input`
+set output = `perl $utildir/abspath $output`
+#
+# Report to stdout:
+#
+set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
+echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnversion)"
+echo "  Exec directory:    $execdir"
+echo "  Source directory:  $srcdir"
+echo "  Make machine file: $make"
+echo "  Namelist input:    $input"
+echo "  Model resolution:  $modelres"
+echo "  Debug flag:        $debug"
+#
+# If debug flag has changed from last gmake, clean execdir
+# and reset debug file:
+#
+if (-f $execdir/debug) then
+  set lastdebug = `cat $execdir/debug` 
+  if ($lastdebug != $debug) then
+    echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $debug >! $execdir/debug
+  endif
+else
+  echo $debug >! $execdir/debug
+  echo "Created file debug with debug flag = $debug"
+endif
+#
+# Copy defs header file to execdir, if necessary, according to 
+# requested resolution. This should seamlessly switch between
+# resolutions according to $modelres.
+#
+set defs = $srcdir/defs5.0
+if ($modelres == 2.5) set defs = $srcdir/defs2.5
+if (-f $execdir/defs.h) then
+  cmp -s $execdir/defs.h $defs
+  if ($status == 1) then # files differ -> switch resolutions
+    echo "Switching defs.h for model resolution $modelres"
+    cp $defs $execdir/defs.h
+  else
+    echo "defs.h already set for model resolution $modelres"
+  endif 
+else # defs.h does not exist in execdir -> copy appropriate defs file
+  echo "Copying $defs to $execdir/defs.h for resolution $modelres"
+  cp $defs $execdir/defs.h
+endif
+#
+# cd to execdir and run make:
+#
+cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
+echo ""
+echo "Begin building $model in `pwd`"
+#
+# Build Make.env file in exec dir, containing needed env vars for Makefile:
+#
+cat << EOF >! Make.env
+MAKE_MACHINE = $make
+DIRS         = . $srcdir 
+MPI          = $mpi
+EXECNAME     = $model
+NAMELIST     = $input
+OUTPUT       = $output
+DEBUG        = $debug
+SVN_VERSION  = $svnversion
+EOF
+#
+# Build the model:
+#
+gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
+#
+#
+# Load Sharing Facility batch job execution:
+#
+if ($exec == "TRUE") then
+  set model = ./$model
+  echo "IBM/AIX job: Executing $model"
+  echo "Model output will go to $output"
+  if ($?LSF_ENVDIR && $mpi == "TRUE") then  # MPI LSF job
+    echo "" ; echo "Executing model $model with mpirun.lsf from `pwd` at `date`"
+    echo "Model output will go to $output"
+    setenv TARGET_CPU_LIST "-1"
+    mpirun.lsf /usr/local/bin/launch $model < $input >&! $output || \
+      echo ">>> ${0} Execution of mpirun.lsf $model FAILED at `date`" && \
+      echo "See output in $output"
+#
+# non-LSF job -- try interactive execution
+#
+  else                       
+    echo "" ; echo "Executing model $model on command line from `pwd` at `date`"
+    echo "Model output will go to $output"
+    $model < $input >&! $output || \
+      echo ">>> ${0} Execution of $model FAILED at `date`" && \
+      echo "See output in $output"
+  endif          
+else
+  echo "I am NOT executing $model (exec was not set)"
+endif
+#
+# Separate output files by MPI task:
+# (we are still in $execdir, but $output contains full path to $wrkdir)
+#
+perl $utildir/mklogs $output || \
+  echo ">>> ${0}: Error from $execdir/mklogs on output $output"

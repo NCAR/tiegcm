@@ -1,0 +1,21 @@
+The TIE-GCM solves the primitive equations in pressure coordinate, and the detailed information on
+the equations and the numerics employed can be found in \cite{dickinsonetal81}. In this Chapter,
+we will first give a brief summary of the model dynamics, and then discuss the main components
+in solving dynamic equations. The solution of the thermodynamics will be discussed in the next
+Chpater.
+
+The zonal and meridional winds are solved from the momentum equations in the zonal and meridional
+direction, respectively. The tendencies (acceleration) of the horizontal winds come from horizontal
+and vertical momentum transport, horizontal gradient of geopotential, eddy and molecular viscosity,
+Coriolis force, and ion drag (Section \ref{cap:duv}). The vertical wind is determined from the
+continuity equation by integrating the divergence of the horizontal winds vertically (Section
+\ref{cap:divrg}). The geopotential is calculated from the hydrostatic equation by integrating
+temperature vertically (Section \ref{cap:addiag}).
+
+The equations are solved using 4th order finite difference method. The vertical grid is staggered
+with horizontal winds, neutral, ion, and electron temperature, and mass mixing ratios defined
+on the so-called midpoints, and vertical wind and geopotential defined on the interfaces.
+Leapfrog scheme is used for time integration of momentum transport, geopontential gradient,
+Coriolis force, and ion drag, and implicit scheme is used for eddy and molecular viscosity
+in the vertical direction. To achieve better numerical stability, Shapiro filter (reference?) is
+applied in meridional and zonal directions.

@@ -1,0 +1,96 @@
+%
+\section{Calculation of $O^+$ number density / \index{OPLUS.F}}\label{cap:oplus}
+%
+The input to \src{subroutine oplus} is summarized in table
+\ref{tab:input_oplus}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t_n$\\
+neutral zonal velocity&     $u_n$     & $cm/s$   &  midpoints & $t_n$\\
+neutral meridional velocity & $v_n$   & $cm/s$   &  midpoints & $t_n$\\
+dimenionsless vertical velocity& $W^{t+\Delta t}$& $1/s$   & interfaces& $t+\Delta t$ \\
+mass mixing ratio $O_2$&       {$\Psi_{O_2}$}     & $-$   & midpoints  & $t_n$\\
+mass mixing ratio $O$&       {$\Psi_{O}$}     & $-$   &  midpoints & $t_n$\\
+mean molecular mass&       {$\overline{m}$}     & $g/mol$   & interfaces  &$t_n + \Delta t$ \\
+electron temperature &       $T_e$              & $K$   &  midpoints & $t_n$\\
+ion temperature &       $T_i$              & $K$   &  midpoints & $t_n$\\
+electron density &       $N_e$              & $\#/cm^3$   &  interfaces & $t_n$\\
+number density of $N_2(D)??$ &       $n(N_2(D))??$              & $\#/cm^3$   &  midpoints & $t_n$\\
+electrodynamic drift velocity &       $v_{ExB,x}$              & $cm/s$   &  interface & $t_n$\\
+electrodynamic drift velocity &       $v_{ExB,y}$              & $cm/s$   &  interfaces & $t_n$\\
+electrodynamic drift velocity &       $v_{ExB,z}$              & $cm/s$   &  interfaces & $t_n$\\
+conversion factor $mmr$ to $\#/cm^3$ &       $N\overline{m}$              & $\frac{\# g}{cm^3 mole}$   &  midpoints??? & $t_n$\\
+number density of $O^+$ &       $n(O^+)^{t_n}$              & $\#/cm^3$   &  midpoints??? & $t_n$\\
+number density of $O^+$ &       $n(O^+)^{t_n- \Delta t}$ & $\#/cm^3$
+&  midpoints??? & $t_n- \Delta t$
+  \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine oplus}}
+\label{tab:input_oplus}
+\end{table}
+%
+The output of \src{subroutine oplus} is summarized in table
+\ref{tab:output_oplus}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+number density of $O^+$ &       $n(O^+)^{upd,t_n}$              & $\#/cm^3$   &  midpoints??? & $t_n$\\
+number density of $O^+$ &       $n(O^+)^{upd,t_n+ \Delta t}$ &
+$\#/cm^3$   &  midpoints??? & $t_n+ \Delta t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine oplus}}
+\label{tab:output_oplus}
+\end{table}
+%
+%
+The module data of \src{subroutine oplus} is summarized in table
+\ref{tab:module_oplus}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline heating from solar radiation ???&
+{$Q(^2P)$}     & $\frac{erg}{K \; s}???$   & interfaces  & $t_n$ \\
+heating from solar radiation &
+{$Q(O^+(^2D))$}     & $\frac{erg}{K \; s}???$   & interfaces  & $t_n$ \\
+heating from solar radiation ????&
+{$Q(O^+)$}     & $\frac{erg}{K \; s}???$   & interfaces  & $t_n$ \\
+chemical reaction rates &
+{$k_i$}     & $??$   & -  & $-???$ \\
+\\ \hline \hline
+\end{tabular}
+\caption{Module data of \src{subroutine oplus}}
+\label{tab:module_oplus}
+\end{table}
+%
+Most major species are in photochemical equilibrium below $1000 km$,
+and can be simply calculated by balancing the production and loss
+rates. However,  $O^+$ is determined by considering diffusion, along
+the magnetic field line and the $\mathbf{E} \times \mathbf{B}$
+transport. In the following for simplicity the variable $n$ is used
+for the $O^+$ number density $n(O^+)$.
+%
+\begin{align}
+  \frac{\partial n}{\partial t} -Q + L n = - \nabla \cdot (n
+  \mathbf{v}_i) \label{eq:oplus_simple}
+\end{align}
+%
+with $n$ the $O^+$ number density, $Q$ the production rate of $O^+$,
+$L$ the loss rate of $O^+$. The right hand side is the transport due
+$\mathbf{E} \times \mathbf{B}$ drift and the field aligned ambipolar
+diffusion. The ion velocity $\mathbf{v}_i$ is given by
+%
+\begin{align}
+  \mathbf{v}_i = \mathbf{v}_{i,\parallel} + \mathbf{v}_{i,\perp}
+\end{align}
+%
+with the parallel and perpendicular velocity with respect to the
+geomagnetic field

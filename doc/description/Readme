@@ -1,0 +1,129 @@
+am 2/7/05 /home/maute/teTex.d/TIEGCM_DYNAMO
+  for documentation of the electrodynamo part of TIEGCM
+  
+  on 2/7/04 copied source code from /suncat/e/maute/tiegcm_pg_paper
+   -> directory src_orig (is the unmodified code)
+   -> directory src (is the modified code which is documented)
+   
+   run test cases to see what the changes effect
+  
+am 3/31/05 
+   - code moved into TIEGCM by Ben Foster
+   - move the source code from callisto into home directory
+      /home/maute/teTex.d/TIEGCM_DYNAMO/
+      src : modified TIEGCM1.6 with my mods documented & corrected
+      src_orig: modified TIEGCM1.6 with my mods
+      merge_w1.7: TIEGCM1.7 with my mods
+         note that other mods are added to TIEGCM1.7 afterwards
+	 
+   - code and test cases can be found at
+      mss:/MAUTE/TIEGCM_1.7DEV (s. merge_w1.7/Readme)
+      tested on bluesky, lightning, V1.6 and V1.7
+
+am 6/8/05
+   - modsrc_1.8dev:  modsrc to /home/tgcm/dev/tiegcm1.8/src
+     correct the calculation of Joule heating for the ion
+     temperature subroutine qjoule_ti
+     before
+       Q_JI = [ lambda_xx * u_i(u_i-u_n) + lambda_yy*v_i*(v_i-v_n)]
+     should be
+       Q_JI = m_n/(m_n+m_i) * [ lambda_xx * (u_i-u_n)^2 + lambda_yy*(v_i-v_n)^2]
+     the part for the neutral temperature is not changing
+     since it also includes the energy transfered from the ion to the neutrals
+     and therefore is
+       Q_J = [ lambda_xx * (u_i-u_n)^2 + lambda_yy*(v_i-v_n)^2]
+           = Q_JI + Q_JN
+       Q_JN Joule heating going into the neutrals
+
+am 8/15/05
+   - this doesn't have the source code included, please use
+     ModelDes_tex_src/
+----------------------------------------------------------------------------------
+am June 08 
+ merged dynamo and general tiegcm description
+ 
+am  8 July 08
+  moved into /home/tgcm/doc/description
+   
+  work in there from now on     
+  included an index
+  
+am 21 July 08
+  got description from Wenbin Wang
+  magnetospheric inputs
+  put into directory  get_documents 
+  incorporated the script from Wenbbin
+  -> tiegcm_modeldes_23july08.pdf
+  notes see get_documents/notes_wenbin
+  new files: 
+  magsphere_input.tex
+  filter.tex
+  
+am 23 July 08
+  get Hanli changes neutral dynamics
+  put into directory  get_documents
+  notes see get_documents/notes_hanli
+  new files: 
+  neutraldyn.tex
+  -> tiegcm_modeldes_23july08.pdf
+
+am 24 July
+   include Hanli's handwritten changes to the neutral dynamics
+   notation.tex
+   addiag.F
+   divrg.tex
+   duv.tex
+   
+* Anyway, can you check the z,Z problem.
+* Horizontal diffusion is included (I had it in my notes, but didn't document
+the hdif.F file) I just put in a comment there and included it in the RHS of the
+discretizied eqn..
+* Spectral filtering is done when for Un and Vn is solved, not intermittently.
+It was already in the description. In between a Shapiro  smoother is used for the
+neutral winds at the old timestep (already documented)
+* The equation (5.22) I had a question mark in my notes too. I changed it so that it makes sense
+and is conform with the code.
+
+am 17 Nov 08
+  update F value in current.F equ (6.9) from Richmond 95 sinI/sinI_m
+  in the document it was sinI_m/sinI   
+
+am 18 Nov 08
+  corrected next equation which uses F from sinI/sinI_m to sinI_m/sinI
+  
+am 19 Nov 08
+  corrected eq. (7.190) J_e2/D = 
+  Tzu-Wei pointed out it must be Ed1+ue2Be3 in stead of Ed1-ue2Be3  
+
+am 4/2/09 include Alan Burns cahnges to duv.F, cpktkm.tex and dt.F
+   files for changes in directory get_documents:
+   aburns_4209_tiegcm_modeldes_24july08agbmod.pdf
+   aburns_4209_qandltiegcm.doc
+ 
+am 5/11/09 include Barbara Emery changes to  magsphere_input.tex & main.bib
+  saved version before make changes to old_versions/ ModelDes_tex_051109.tar.gz
+  changes in get_documents/emery_may09_magsphere_input.tex
+             get_documents/emery_may09_main.bib
+
+am 5/27/09 include Juihou Lei changes to
+   lamdas.F, duv.F settei.F elden.F oplus.F chemrates.F
+   got a hard copy of the changes
+   generated tiegcm_modeldes_28may09.pdf
+
+am 6/10/09 include revisions from Barbara Emery and Wenbin Wang to
+  magsphere_input.tex
+  see file: get_documents/barb_emery_june09_another paragraph.eml
+
+am 6/15/09 maute add the description of the lower boundary for the tidal
+  perturbations
+  
+am 6/16/09 revisions to the magnetospheric input part
+
+am 6/26/09 include revision to lower boundary from Maura Hagan
+   see file: get_documents/tiegcm_modeldes_17june09_MH.pdf
+
+am 6/30/09: include code structure part from Ben Foster
+(see get_documents/tiegcm_codestruct.pdf)
+
+am 10/6/09:
+  add documentation for lower boundary of TIMEGCM in lowboundary.tex

@@ -1,0 +1,42 @@
+
+.. _control_junsol_smax:
+
+June Solstice Solar Maximum (day 177)
+=======================================================
+
+June Solstice Solar Maximum: Global TN at Zp=-4
+-----------------------------------------------
+
+.. image:: _static/images/control/junsol_smax/pict0001.png
+   :align: center
+
+June Solstice Solar Maximum: Global TN at Zp=+2
+-----------------------------------------------
+
+.. image:: _static/images/control/junsol_smax/pict0002.png
+   :align: center
+
+June Solstice Solar Maximum: Global NE at Zp=-4
+-----------------------------------------------
+
+.. image:: _static/images/control/junsol_smax/pict0003.png
+   :align: center
+
+June Solstice Solar Maximum: Global NE at Zp=+2
+-----------------------------------------------
+
+.. image:: _static/images/control/junsol_smax/pict0004.png
+   :align: center
+
+June Solstice Solar Maximum: Global Mean TN
+-------------------------------------------
+
+.. image:: _static/images/control/junsol_smax/pict0005.png
+   :align: center
+
+June Solstice Solar Maximum: Global Mean NE
+-------------------------------------------
+
+.. image:: _static/images/control/junsol_smax/pict0006.png
+   :align: center
+

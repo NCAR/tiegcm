@@ -1,0 +1,103 @@
+
+Model:		tiegcm_trunk
+svn Tag:	[last release tag was tiegcm1.95]
+Release Date:	June 21, 2013
+
+Download Site:	http://www.hao.ucar.edu/modeling/tgcm/download.php
+                (Model Source and required Data are available as separate downloads)
+
+Documentation:  User's Guide and Model description pdf's available in "doc" directory
+                Also available from tgcm website: http://www.hao.ucar.edu/modeling/tgcm
+
+-------------------------------------------------------------------------------
+These instructions assume the gzipped tar file of the Source Code has
+been downloaded from the above URL. After the file is gunzipped 
+and the tar file extracted to a working directory, you should have 
+something like the following:
+
+README.download			This file
+Release_Notes_tiegcm1.94.2	Release Notes
+tiegcm-linux.job*		Default Linux job script
+tiegcm1.94.2/			Model root directory
+
+Contents of the model root directory:
+
+README		Brief description of subdirectories
+doc/		Documentation		User Guide, Model Description, Release Doc
+scripts/	Support scripts 	Job scripts, Make files, Utilities
+src/		Source code		Source files *.F, *.h
+tests/		Benchmark tests		Scripts for benchmark runs
+
+To build and run the model, you must also download the data directory
+from the above URL, or already have the data in a directory specified
+by the $TGCMDATA env var.
+
+>>> IMPORTANT <<<
+If you download the data directory, please set environment variable TGCMDATA 
+to the full path to the data directory (setenv in your .cshrc file).  This is to 
+enable the model to resolve $TGCMDATA if it is used in the model namelist input file)
+
+The default and test (benchmark) job scripts usually refer to $TGCMDATA/tiegcm1.95
+so its a good idea to extract the data tar file into an empty directory with this
+path.
+
+-------------------------------------------------------------------------------
+Follow this procedure to build the model and make a short default run on a Linux system.
+
+1. Copy the csh job script scripts/tiegcm-linux.job to your working directory.
+   This default job script is for a 64-bit Linux system with MPI, using 4 processors.
+   (actually, this should already be available when you extract the downloaded file) 
+
+2. Make sure your env var $TGCMDATA is set to a directory containing files
+   obtained from the data download (check setting of SOURCE file in doc/tiegcm_default.inp)
+
+3. Execute the job script in background by typing "tiegcm-linux.job &"
+   (or submit the script to a batch queing system)
+
+4. The model will be built and executed in the execution directory tiegcm-linux
+   (or possibly tiegcmx.xx-linux for version x.xx). A default namelist input
+   tiegcm_default.inp file will be created. NetCDF output files will also be written
+   to the execution directory. Stdout from the model run will be written to
+   tiegcm.out in your working directory.
+
+5. For subsequent runs, rename and edit the default namelist input file (tiegcm_default.inp)
+   and set the "input" shell variable to the new input file name in the job script. 
+   (If "set input" is commented out in the job script, it will always make and use 
+    the default file, ignoring other files that may be in the working directory)
+
+-------------------------------------------------------------------------------
+The following "Make.machine" files are available in the scripts directory.
+These contain platform and machine-specific compiler and link flags, library
+locations, etc. Select the Make.machine file you want to use, and set the
+"make" shell variable in the job script.
+
+  Make.intel_ys         NCAR IBM cluster "yellowstone" with Linux, and intel, pgi compilers
+  Make.bluefire		NCAR IBM cluster "bluefire" with AIX and xlf90 compiler
+  Make.intel_hao64	Intel2011 ifort/mpif90 compiler on 64-bit HAO Linux systems
+  Make.intel11.1_hao64	Intel v11.1 ifort/mpif90 compiler on 64-bit HAO Linux systems
+  Make.pgi_hao64	PGI pgf90/mpif90 compiler on 64-bit HAO Linux systems
+
+User's are encouraged to customize their own Make.machine files for their
+local systems. For the job script to use the file, the "make" shell variable  
+should be set to the file name (can be in the working directory or the scripts directory
+
+The model has been built and executed on the following platforms:
+
+-- NCAR IBM/Linux cluster yellowstone (parallel MPI) (Intel ifort build)
+   Linux yslogin5 2.6.32-220.13.1.el6.x86_64 #1 SMP Thu Mar 29 11:46:40 EDT 2012 x86_64 x86_64 x86_64 GNU/Linux
+
+-- NCAR IBM/AIX bluefire (parallel MPI) (xlf90 build):
+   AIX be1105en 3 5 00CBB5014C00
+
+-- 64-bit Linux (parallel MPI, PGI's pgf90 compiler) e.g.:
+   Linux arc 2.6.18-128.7.1.el5 #1 SMP Mon Aug 24 08:21:56 EDT 2009 x86_64 x86_64 x86_64 GNU/Linux
+
+-- 64-bit Linux (parallel MPI, Intel ifort compiler) e.g.:
+   Linux arc 2.6.18-128.7.1.el5 #1 SMP Mon Aug 24 08:21:56 EDT 2009 x86_64 x86_64 x86_64 GNU/Linux
+
+-- "Generic" NCAR/HAO fc7 32-bit Linux desktop (serial), (pgf90 build) e.g.:
+   Linux oreo 2.6.23.17-88.fc7 #1 SMP Thu May 15 00:35:10 EDT 2008 i686 i686 i386 GNU/Linux
+
+-- Linux Ubuntu with Intel ifort/mpif90 compiler.
+
+-------------------------------------------------------------------------------

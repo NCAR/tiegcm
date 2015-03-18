@@ -1,0 +1,120 @@
+%
+\section{Calculation of $K_T$, $\mu$, $C_p$ 
+\index{CPKTKM.F}}\label{cap:cpktkm}
+%
+The input to \src{subroutine cpktkm} is summarized in table
+\ref{tab:input_cpktkm}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t_n$\\
+mass mixing ratio $O_2$&       {$\Psi_{O_2}$}     & $-$   & midpoints  & $t_n$\\
+mass mixing ratio $O$&       {$\Psi_{O}$}     & $-$   &  midpoints &
+$t_n$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine cpktkm}}
+\label{tab:input_cpktkm}
+\end{table}
+%
+The output of \src{subroutine cpktkm} is summarized in table
+\ref{tab:output_cpktkm}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+specific heat    & $C_p$   & $ergs/(K cm^3)$   & interfaces  & $t_n+$ \\
+molecular viscosity    & $\mu$   & $gms/(cm s)$   & interfaces  & $t_n+$ \\
+thermal conductivity    & $K_T$   & $ergs/(cm K s)$   & interfaces & $t_n$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine cpktkm}}
+\label{tab:output_cpktkm}
+\end{table}
+%
+%
+The mean mass at the midpoint level is determined by
+%
+\begin{align}
+  \overline{m} = \frac{1}{\frac{\Psi_{O_2}}{m_{O_2}} +
+       \frac{\Psi_{O}}{m_{O}} + \frac{\Psi_{N_2}}{m_{N_2}}}
+\end{align}
+%
+with $\Psi_{N_2} = 1 - \Psi_{O} - \Psi_{O_2}$. The following values
+are calculated
+%
+\begin{align}
+  P(O_2) = \overline{m} \frac{\Psi_{O_2}}{m_{O_2}} \\
+  P(O) = \overline{m} \frac{\Psi_{O}}{m_{O}} \\
+  P(N_2) = \overline{m} \frac{\Psi_{N_2}}{m_{N_2}}
+\end{align}
+%
+The molecular viscosity is
+%
+\begin{align}
+ \mu = \left[ 4.03 \cdot P(O_2) + 3.42 \cdot P(N_2) + 3.9 \cdot
+ P(O)\right] T_n^{0.69} \cdot 10^{-6}
+\end{align}
+%
+The thermal conductivity is
+%
+\begin{align}
+  K_T = \left[ 56 \cdot \left( P(O_2) + P(N_2)\right) + 75.9 \cdot
+  P(O)\right] T_n^{0.69}
+\end{align}
+%
+Note that the value $T_0$ is set to zero in the code. (This is a holdover from
+the original TGCM, which only calculated a temperature difference. $T_0$ was
+then added to this calcualtion to get the actual temperature for purposes like
+this.) The specific
+heat is
+%
+\begin{align}
+  C_p = \frac{1}{2} R^* \left[ \frac{7}{32} P(O_2) + \frac{7}{28} P(N_2)+ \frac{5}{16} P(O)\right]
+\end{align}
+%
+with $R^*$ the gas constant. At the upper boundary the values are
+set to
+%
+\begin{align}
+  K_T(z_{top} + \frac{1}{2} \Delta z) =& \left[ 56 \cdot \left( P(O_2) + P(N_2)\right) + 75.9 \cdot
+  P(O)\right] \notag \\
+    {} & T_n^{0.69}(z_{top} - \frac{1}{2} \Delta z) \\
+ \mu(z_{top} + \frac{1}{2} \Delta z) = & \left[ 4.03 \cdot P(O_2) + 3.42 \cdot P(N_2) + 3.9 \cdot
+ P(O)\right]\notag \\
+   {} & T_n^{0.69}(z_{top} - \frac{1}{2} \Delta z) \cdot 10^{-6}
+\end{align}
+%
+and all the other values at $z_{top} + \frac{1}{2} \Delta z$, and
+only $T_n$ at a level below $z_{top} - \frac{1}{2} \Delta z$. The
+values are then transferred to the interface level by averaging
+%
+\begin{align}
+  K_T(z) = & \frac{1}{2} (K_T(z+\frac{1}{2}\Delta z) +K_T(z-\frac{1}{2}\Delta
+  z))\\
+  \mu(z) = & \frac{1}{2} (\mu(z+\frac{1}{2}\Delta z) +\mu(z-\frac{1}{2}\Delta
+  z))\\
+  C_p(z) = & \frac{1}{2} (C_p(z+\frac{1}{2}\Delta z) +C_p(z-\frac{1}{2}\Delta
+  z))
+\end{align}
+%
+with $z$ having the height index $k$ on the interface level,
+$z+\frac{1}{2}\Delta z$ has the index $k$, and $z-\frac{1}{2}\Delta
+z$ has the index $k-1$ on the midpoint level. The lower boundary is
+extrapolated by
+%
+\begin{align}
+   C_p(z_{bot} = & 2 C_p(z_{bot} + \frac{1}{2} \Delta z) - C_p(z_{bot} +\Delta
+   z) \\
+   K_T(z_{bot} = & 2 K_T (z_{bot} + \frac{1}{2} \Delta z) - K_T(z_{bot} +\Delta
+   z) \\
+   \mu(z_{bot} = & 2 \mu(z_{bot} + \frac{1}{2} \Delta z) - \mu(z_{bot} +\Delta
+   z) \\
+\end{align}
+%
+%

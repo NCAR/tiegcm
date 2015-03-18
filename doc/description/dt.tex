@@ -1,0 +1,574 @@
+%
+\section{Thermodynamic equation \index{DT.F}}\label{cap:dt}
+%
+The input to \src{subroutine dt} is summarized in table
+\ref{tab:input_dt}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t_n$\\
+neutral temperature &       $T_n^{t-\Delta t}$ & $K$   &  midpoints & $t_n-\Delta t$\\
+neutral zonal velocity&     $u_n$     & $cm/s$   &  midpoints & $t_n$\\
+neutral meridional velocity & $v_n$   & $cm/s$   &  midpoints & $t_n$\\
+mass mixing ratio $O_2$&       {$\Psi_{O_2}$}     & $-$   & midpoints  & $t_n$\\
+mass mixing ratio $O$&       {$\Psi_{O}$}     & $-$   &  midpoints & $t_n$\\
+mean molecular mass&       {$\overline{m}$}     & $g/mol$   & interfaces  &$t_n + \Delta t$ \\
+specific heat&       {$C_p$}     & $\frac{erg}{K g}$   & interfaces   &  $t_n$\\
+molecular diffusion&       $k_t$     & $\frac{erg}{cm K s}$   & interfaces  & $t_n$ \\
+molecular viscosity&       $k_m$     & $\frac{g}{cm s}$   & interfaces  & $t_n$ \\
+horizontal diffusion&       {$h_{d,T}$}     & $\frac{cm}{s^2}$   & midpoints  & $t_n-\Delta t$\\
+Joule heating &       {$Q_{J,T}$}     & $\frac{erg}{K\; s}$   & midpoints  &  $t_n$\\
+implicit cooling &       {$L_{imp}$}     & $\frac{1}{s}$   & midpoints  & $t_n$\\
+explicit cooling &       {$L_{exp}$}     & $\frac{erg}{K \; s}$   & midpoints  & $t_n$\\
+dimenionsless vertical velocity& $W^{t+\Delta t}$& $1/s$   &
+interfaces& $t+\Delta t$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine dt}} \label{tab:input_dt}
+\end{table}
+%
+The output of \src{subroutine dt} is summarized in table
+\ref{tab:output_dt}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+neutral temperature    &       {$T_n^{upd,t+\Delta t}$}     & $K$   & midpoints  & $t_n+\Delta t$ \\
+neutral temperature     &       {$T_n^{upd,t}$}     & $K$   &
+midpoints & $t_n$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine dt}} \label{tab:output_dt}
+\end{table}
+%
+%
+The module data of \src{subroutine dt} is summarized in table
+\ref{tab:module_dt}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline heating from solar radiation    &
+{$Q_{qrj}$}     & $\frac{erg}{K \; s}$   & interfaces  & $t_n$
+\\ \hline \hline
+\end{tabular}
+\caption{Module data of \src{subroutine dt}} \label{tab:module_dt}
+\end{table}
+%
+The thermodynamic equation is solved to get the neutral temperature
+%
+\begin{align}
+  \frac{\partial T_n}{\partial t} = & \frac{g e^z}{p_0 C_p}\frac{\partial}{\partial Z}
+  \left\{ \frac{K_T}{H} \frac{\partial T_n}{\partial Z} + K_E H^2 C_p \rho \left[
+   \frac{g}{C_p} + \frac{1}{H}\frac{\partial T}{\partial
+   Z}\right]\right\} - \mathbf{v}_n\cdot \nabla T_n - \notag  \\
+   {}&  W \left(
+   \frac{\partial T_n}{\partial Z} + \frac{R^* T_n}{C_p \overline{m}}
+   \right) + \frac{Q^{exp}-e^z \; L^{exp}}{C_p} - L^{imp} \label{eq:dt_1}
+\end{align}
+%
+with $T_n$ the neutral temperature, $t$ the time, $g$ the
+gravitational acceleration, $C_p$ the specific heat per unit mass,
+$p_0 $ the reference pressure, $K_T$ is the molecular thermal
+conductivity, $H$ is the pressure scale height, $K_E$ is the eddy
+diffusion coefficient, $\rho$ is the atmospheric mass density,
+$\mathbf{v}_n$ is the horizontal neutral velocity with the zonal and
+meridional components $u_n$ and $v_n$, $W$ is the dimensionless
+vertical velocity given by $W = \frac{dZ}{dt}$, $R^*$ is the
+universal gas constant, $\overline{m}$ is the mean atmospheric mass,
+and $Q$
+and $L$ are the other heating and cooling terms
+\cite{roble1995},\cite{roble1987b}. \\
+%
+The local time variation of the neutral temperature is determined by
+the heating and cooling terms on the right hand side of the
+thermodynamic equation. The first term is the heat transfer by
+vertical molecular heat conduction and adiabatic heating or cooling
+due to eddy diffusion. The second term is the heat transfer due to
+horizontal advection, and the third term is the adiabetic heating
+and cooling caused by the vertical winds. The last terms in equation 
+(\ref{eq:dt_1}) account
+for all the other heating and cooling terms. \\
+
+%
+To make it more easy to compare with the code we write the
+thermodynamic equation with implicit and explicit terms
+%
+\begin{align}
+  \frac{T_n^{t+\Delta t}- T_n^{t- \Delta t}}{2 \Delta t} =&
+   \frac{g e^z}{p_0 C_p}\frac{\partial}{\partial Z}
+  \left\{ \left( \frac{K_T}{H} + \frac{K_E H^2 C_p \rho}{H} \right)
+  \frac{\partial T_n^{t+\Delta t}}{\partial Z}\right\} + \notag \\
+  {}& \frac{g e^z}{p_0 C_p}\frac{\partial}{\partial Z}
+  \left\{K_E H^2 C_p
+   \frac{g}{C_p}\right\} - \mathbf{v}_n^t\cdot \nabla T_n^t - \\
+   {}& W^{t+\Delta t}\frac{\partial T_n}{\partial Z}
+    - W^{t+\Delta t}\frac{R^* T_n^{t+\Delta t}}{C_p \overline{m}}
+    + \frac{Q^{exp}}{C_p}- \frac{e^z \; L^{exp}}{C_p}- L^{imp} T_n^{t + \Delta t}
+    \notag
+\end{align}
+%
+The terms are ordered now by left and right hand side, and the whole
+equation is multiplied by $\frac{C_p}{e^z}$.
+%
+\begin{align}
+  & \frac{C_p}{e^z} \left\{ -\frac{T_n^{t- \Delta t,smo}}{2 \Delta t} +
+  \mathbf{v}_n^t\cdot \nabla T_n^t + W^{t+\Delta t}\frac{\partial T_n}{\partial Z}
+  - \frac{Q^{exp}-e^z \; L^{exp}}{C_p} \right\} = \notag \\
+  & \frac{\partial}{\partial Z} \left\{
+  \frac{g}{H p_0} \left( \frac{K_T}{H} + K_E H^2 C_p \rho \right)
+  \frac{\partial T_n^{t+\Delta t}}{\partial Z}
+  \right\} + \\
+  & \frac{\partial}{\partial Z} \left\{ \frac{g^2}{p_0}\frac{K_E H^2 \rho}
+  {T_n^t} T_n^{t+\Delta t} \right\}
+  + \frac{C_p}{e^z}\left\{ - \frac{T_n^{t+ \Delta t}}{2 \Delta t} - w^{t+\Delta t}
+  \frac{R^* T_n^{t+\Delta t}}{C_p \overline{m}} - L^{imp} T_n^{t + \Delta t}
+\right\} \notag
+\end{align}
+%
+We first describe the known terms on the left hand side. The
+horizontal advection $\mathbf{v}_n^t\cdot \nabla T_n^t$ is
+calculated similar to the horizontal advection in the momentum
+equation in chapter \ref{cap:duv} equation
+(\ref{eq:duv_horiz_advec})
+and following. \\
+
+ The advection term is calculated in the
+\src{subroutine advec} by taking the fourth order stencil for the
+derivative. The average velocity is denoted by
+$u_n^{avg}(\phi,\lambda) = \frac{1}{2} (u_n(\phi+\Delta
+\phi,\lambda) + u_n (\phi-\Delta \phi,\lambda))$ and $u_n^{2
+avg}(\phi,\lambda)  = \frac{1}{2} (u_n(\phi+2\Delta \phi,\lambda) +
+u_n (\phi-2\Delta \phi,\lambda))$. The same is done for the
+meridional velocity $v_n$ which leads to $v_n^{avg}(\phi,\lambda)  =
+\frac{1}{2} (v_n(\phi,\lambda + \Delta \lambda) + v_n (\phi,\lambda
+- \Delta \lambda))$ and $v_n^{2 avg}(\phi,\lambda)  = \frac{1}{2}
+(v_n(\phi,\lambda + 2 \Delta \lambda) + v_n (\phi,\lambda - 2 \Delta
+\lambda))$. The horizontal advection of the neutral temperature is
+%
+\begin{align}
+ \mathbf{v}_n^t\cdot \nabla T_n^t = &
+  \frac{1}{R_E cos \lambda} ( \frac{2}
+   {3 \Delta \phi}u_n^{avg}(\phi,\lambda) \left[
+   T_n^t(\phi+\Delta \phi,\lambda) - T_n^t(\phi-\Delta \phi,\lambda)  \right]
+- \notag \\
+    {} & \frac{1}{12 \Delta \phi}u_n^{2avg}(\phi,\lambda) \left[
+   T_n^t(\phi+2\Delta \phi,\lambda) - T_n^t(\phi-2\Delta \phi,\lambda)  \right]
+   )+ \notag \\
+   {}&
+   \frac{1}{R_E} ( \frac{2}{3 \Delta \lambda}v_n^{avg}(\phi,\lambda) \left[
+   T_n^t(\phi,\lambda + \Delta \lambda) - T_n^t(\phi,\lambda - \Delta \lambda)  \right]
+- \notag \\
+    {}& \frac{1}{12 \Delta \lambda}v_n^{2avg}(i,j) \left[
+   T_n^t(\phi,\lambda + 2 \Delta \lambda) -
+T_n^t(\phi,\lambda - 2 \Delta \lambda)  \right] )
+\end{align}
+%
+in unit of $[\frac{K}{s}]$ the values are determined at midpoints. \\
+%
+
+The vertical advection term $W^{t+\Delta t}\frac{\partial
+T_n}{\partial Z}$ is calculated by
+%
+\begin{align}
+  \frac{1}{2 \Delta z}( W^{t+\Delta t}(z)\left[ T_n^t(z+\frac{1}{2}
+\Delta z) -
+  T_n^t(z-\frac{1}{2}\Delta z) \right]+ \notag \\
+       W^{t+\Delta t}(z+\Delta z)\left[ T_n^t(z+\frac{3}{2}\Delta z) -
+       T_n^t(z+\frac{1}{2}\Delta z) \right] )
+       = \notag \\
+  \frac{1}{2} \left[ W^{t+\Delta t}(z) \frac{\partial T_n^t(z)}{\partial Z}+
+                            W^{t+\Delta t}(z+\Delta z)\frac{\partial T_n^t(z+\Delta z)}{\partial Z}
+                            \right] = \notag \\
+          W^{avg, t+\Delta t}(z+\frac{1}{2}\Delta z)
+          \frac{\partial T_n^{avg,t}(z+\frac{1}{2}\Delta z)}{\partial Z}
+\end{align}
+%
+It takes the average between the values at the level $z$ and
+$z+\Delta z$. Note that $T_n$ is on the midpoints levels
+$z+\frac{1}{2}\Delta z$ etc. The vertical advection is determined at
+midpoints and has the units $[\frac{K}{s}]$. \\
+%
+The next term is from the time derivative of the neutral temperature
+$-\frac{T_n^{t- \Delta t,smo}}{2 \Delta t}$. The smoothed value is
+calculated similar as in the momentum equation in chapter
+\ref{cap:duv} in equation (\ref{eq:duv_shapiro}).
+%
+\begin{align}
+  f^{smooth}_{merid} = & f(\phi,\lambda) - c_{shapiro} (  f(\phi,\lambda+2\Delta \lambda) +
+  f(\phi,\lambda-2\Delta \lambda) - \notag \\
+{} & 4 \left[ f(\phi,\lambda+\Delta \lambda) + f(\phi,\lambda-\Delta
+\lambda) \right]+
+  6 f(\phi,\lambda) ) \\
+  f^{smooth}_{zonal} = & f^{smooth}_{merid} -c_{shapiro} (  f^{smooth}_{merid}(\phi+2 \Delta \phi,\lambda) +
+  f^{smooth}_{merid}(\phi-2\Delta \phi,\lambda) - \notag \\
+{} & 4 \left[ f^{smooth}_{merid}(\phi+\Delta \phi,\lambda)
+  + f^{smooth}_{merid}(\phi-\Delta \phi,\lambda)  \right]+
+  6 f^{smooth}_{merid}(\phi,\lambda) ) \label{eq:dt_shapiro}
+\end{align}
+%
+with $f = T_n^{t-\Delta t}$ which leads to $T_n^{t-\Delta t,smo}$.
+\\
+
+%
+The heating terms are added together. First the terms from the heating caused by
+ solar radiation, which are calculated in \src{subroutine qrj}.
+%
+\begin{align}
+  Q_{solar} = Q_{EUV} + Q_{SchR} + Q_o \\
+\end{align}
+%
+with $Q_{Solar}(z+\frac{1}{2}\Delta z)=
+\frac{1}{2}[Q_{Solar}(z)+Q_{Solar}(z+\Delta z)]$ to calculate the
+value on the midpoint level $z+\frac{1}{2}\Delta z$. The solar
+radiation has contributions from the EUV and from the Schuman--Runge
+bands and continuum.
+%
+\begin{align}
+  Q = Q_{Solar} + 1.5 Q_{JH} + h_{d,T} + Q_{OR} + Q_{md}\\
+\end{align}
+%
+with the Joule heating term denoted by $Q_{JH}$ which is multiplied
+by 1.5 to take the heating due to the small scale electric field
+into account.  \\
+
+%
+The heating due to the recovery of $O_2$ dissociation energy when atomic oxygen
+recombines in the lower thermosphere is
+%
+\begin{align}
+  Q_{OR} = f_T r_{km} \frac{N_A}{\overline{m}}\left[
+   \frac{p_0 e^{-z}\overline{m}}{k_B T_n} \frac{\Psi_o}{m_o}
+   \right]^2
+\end{align}
+%
+with the Boltzman constant $k_B = 1.38 \cdot 10^{-16}\frac{cm^2
+g}{s^2 K}$, and $f_T = 5.11 eV = 5.11 \cdot 1.602 \cdot 10^{-12}
+ergs$, which is the surplus heating and set in \src{subroutine cons}.
+The loss of O to $O_2$ is captured by
+$r_{km}$ and set in the source code file \src{chemrates.F} according to Dickinson et al. 1984.\\
+
+% begin Alan_Burns_4/09 see get_documents/aburns_4209_qandltiegcm.doc
+The photoeletron heating is determined by
+%
+\begin{align}
+  Q_{photo} = q_{ionize} 0.05 \times 35. N_A  \frac{1.602\cdot 10^{-12}}{\bar{m}}  
+\end{align}
+%
+where  $q_{ionize}$ is the ionization rate.
+%
+\\
+The heating resulting from ion chemistry is of the type
+%
+\begin{align}
+  Q_{i}^{chem} = N_A 1.602\cdot 10^{-12}n_{neutral}r_k n_i q_{heat}  
+\end{align}
+%
+where $n_{neutral}$ is the number density of the neutral species, $n_i$ is the
+number density of the ion species, $r_k$ is the reaction rate, and $q_{heat}$ is
+the heat emitted by the reaction.
+%
+\\
+The heating resulting from neutral chemistry of the minor species is
+%
+\begin{align}
+  Q_{i}^{chem} = N_A 1.602\cdot 10^{-12}n_{neutral}\beta n_{neutral} q_{heat}  
+\end{align}
+%
+where $\beta$ is the reaction rate.
+%
+\\
+The heating from electron-neutral and electron-ion collisions are
+%
+\begin{align}
+  Q_{en}^{chem} = L_{en}(T_e-T_n) \frac{N_A}{\bar{m}} \\
+  Q_{ei}^{chem} = L_{ei}(T_e-T_i) \frac{N_A}{\bar{m}} 
+\end{align}
+%
+\\
+The loss term due to NO cooling is
+%
+\begin{align}
+  L_{NO} = 4.956 \cdot 10^{-12} N_A n_{NO}\frac{ANO}{ANO + 13.3} e^{\frac{-2700}{Tn}}
+\end{align}
+%
+where $ANO = \bar{m} N_A 5 \cdot 10^{-4} e^{-z}(6.5 \cdot 10^{-11}\frac{n_o}{m_o} +
+2.4 \cdot 10^{-14}\frac{n_{o2}}{m_{o2}})/(R T_n)$
+%
+\\
+The loss due to $CO_2$ cooling is
+%
+\begin{align}
+  L_{CO2_{cool}} = 2.65 \cdot 10^{-13} n_{CO2} e^{\frac{-960}{T_n}} N_A 
+     ((\frac{n_{O2}}{m_{O2}} + \frac{n_{N2}}{m_{N2}})ACO2 + \frac{n_{O}}{m_{O}} BCO2)
+\end{align}
+%
+where 
+%
+\begin{align}
+   ACO2 = & 2.5 \cdot 10^{-15} & \quad T_n < 200 K \notag \\
+   {}     &2.5 \cdot 10^{-15}(1+0.03(T_n-200))& \quad T_n > 200 K \notag \\
+   BCO2 = & 1.\cdot 10^{-12} & \quad  T_n < 300 K  \notag\\
+   {}     &1.\cdot 10^{-12}\frac{T_n}{300}& \quad T_n > 300 K \notag 
+\end{align}
+%
+\\
+The loss due to $O(^3P)$ cooling is
+%
+\begin{align}
+  L_{O(^3P)_{cool}} = \frac{ANO3P(1) \times XO(k) \frac{N_A}{m_o} n_o
+  e^{\frac{-BNO3P(1)}{T_n}}}{1+ANO3P(2) e^{\frac{-BNO3P(2)}{T_n}}+ANO3P(3)
+  e^{\frac{-BNO3P(3)}{T_n}}}
+\end{align}
+%
+with $XO$ is a pressure level dependent set of coefficients. $XO = (3 \times 0.01,
+0.05,0.1,0.2,0.4,0.55,0.7,0.75,15\times 0.0)$. $ANO3P$ is a 3 element array of
+constants $ANO3P = (1.67 \cdot 10^{-18},0.6,0.2)$. $BNO3P$ is a three element array
+of constants $BNO3P = (228,228,325)$.
+% end Alan_Burns_4/09 s. get_documents/aburns_4209_qandltiegcm.doc
+\\
+
+The heating due to molecular diffusion is determined by
+%
+\begin{align}
+  Q_{md} = \frac{g^2 \overline{m} K_m^{mid}}{p_0 R^* e^{-z} T_n^t}
+  \left\{ \left(\frac{\partial u_n}{\partial Z}\right)^2 +
+  \left(\frac{\partial v_n}{\partial Z}\right)^2 \right\} = \\
+  \frac{e^z g \overline{m} K_m^{mid}}{p_0 H}
+  \left\{ \left(\frac{\partial u_n}{\partial Z}\right)^2 +
+  \left(\frac{\partial v_n}{\partial Z}\right)^2 \right\}
+\end{align}
+%
+with the gas constant $R^*$ and
+$\frac{1}{H}= \frac{g \overline{m}}{R^* T_n}$. The vertical change
+in the neutral velocity is calculated by
+%
+\begin{align}
+  \frac{d u_n}{d Z}(z + \frac{1}{2}\Delta z) = \frac{u_n(z + \frac{3}{2}\Delta z ) -
+                                               u_n(z - \frac{1}{2}\Delta z )}{2 \Delta
+                                               z} \\
+  \frac{d v_n}{d Z}(z + \frac{1}{2}\Delta z) = \frac{v_n(z + \frac{3}{2}\Delta z ) -
+                                               v_n(z - \frac{1}{2}\Delta z )}{2 \Delta
+                                               z}
+\end{align}
+%
+At the lower boundary the derivative is determined by
+%
+\begin{align}
+  \frac{d u_n}{d Z}(z_{LB}) = \frac{1}{\Delta z}\left( u_n(z_{LB} + \frac{1}{2}\Delta z)
+        + \frac{1}{3} u_n(z_{LB} + \frac{3}{2}\Delta z) -
+        \frac{4}{3} u_n(z_{LB})\right) \\
+  \frac{d v_n}{d Z}(z_{LB}) = \frac{1}{\Delta z}\left( v_n(z_{LB} + \frac{1}{2}\Delta z)
+        + \frac{1}{3} v_n(z_{LB} + \frac{3}{2}\Delta z) -
+        \frac{4}{3} v_n(z_{LB})\right)
+\end{align}
+%
+At the top the derivatives are set to
+%
+\begin{align}
+  \frac{d u_n}{d Z}(z_{top}-\Delta z) = \frac{1}{3}\frac{d u_n}{d Z}(z_{top}-2 \Delta z) \\
+  \frac{d v_n}{d Z}(z_{top}-\Delta z) = \frac{1}{3}\frac{d v_n}{d Z}(z_{top}-2 \Delta z)
+\end{align}
+%
+\\
+
+All the terms of the right hand side are added together which leads
+to
+%
+\begin{align}
+ RHS = \frac{C_p}{e^z} \left[ \mathbf{v}_n^t \cdot \nabla T_n^t + W^{t+\Delta t}
+      \frac{\partial T}{\partial Z} - \frac{1}{2 \Delta t} T_n^{t-\Delta t,smo}
+      \right] - e^{-z} Q^{exp} + L^{exp}
+\end{align}
+%
+
+Next we discuss the terms on the left hand side starting with the
+second derivative terms  $\frac{\partial}{\partial Z} \left\{
+  \frac{g}{H p_0} \left( \frac{K_T}{H} + K_E H^2 C_p \rho \right)
+  \frac{\partial T_n^{t+\Delta t}}{\partial Z}
+  \right\}$. In the source code and in this description we
+  substitute for simplicity $g_c = \frac{g}{H p_0} \left( \frac{K_T}{H} +
+  K_E H^2 C_p \rho \right)$. First the mass density $\rho$ and the
+  scale height $H$ are calculated.
+The neutral temperature at the interface level is
+%
+\begin{align}
+  T_n^t(z) = \frac{1}{2}\left[ T_n^t(z - \frac{1}{2}\Delta z) +  T_n^t(z + \frac{1}{2}\Delta z)\right]
+\end{align}
+%
+and the scale height $H$ is
+%
+\begin{align}
+  H(z)= \frac{R^* T_n^t(z)}{\overline{m}(z) g}
+\end{align}
+%
+and the mass density $\rho$
+%
+\begin{align}
+  \rho(z)= \frac{p_0 e^{-z} \overline{m}(z)}{e^{-0.5 \Delta z} R^*
+  T_n^t(z)} =\frac{p}{H(z) g}
+\end{align}
+%
+with the pressure $p = p_0 e^{-\int_o^z dz'/H}$. At the boundaries
+the values are set to
+%
+\begin{align}
+  T_n^{t}(z_{LB}) = & \; T_{n,LB}^{t} \\
+  T_n^{t}(z_{top}) = & \; T_{n}^{t}(z_{top}-\frac{1}{2}\Delta z) \\
+  g H(z_{LB}) = & \; \frac{R T_n^{t}(z_{LB})}{\overline{m}(z_{LB})} \\
+  g H(z_{top}) = & \; \frac{R^* T_n^{t}(z_{top})}{\overline{m}(z_{top})} \\
+  \rho_{LB} = &  \; \frac{p_0 e^{-z_{LB}} }{e^{-0.5 \Delta z}} \frac{1}{H(z_{LB})
+  g} \\
+  \rho_{top} = &  \; \frac{p_0 e^{-z_{top}} }{e^{-0.5 \Delta z}} \frac{1}{H(z_{top})
+  g}
+\end{align}
+%
+The second derivative $\frac{\partial}{\partial Z}\left\{ g_c
+\frac{\partial T_n^{t+\Delta t}}{\partial Z}\right\}$ is
+approximated at midpoint level by
+%
+\begin{align}
+  \frac{\partial}{\partial Z} \left\{ g_c \frac{\partial T_n^{t+\Delta t}}
+     {\partial Z}(z+\frac{1}{2}\Delta z)\right\} \approx &
+    \frac{1}{\Delta z^2} [
+     T_n^{t+\Delta t}(z-\frac{1}{2}\Delta z) g_c(z) + \notag \\
+   {} & T_n^{t+\Delta
+     t}(z+\frac{1}{2}\Delta z)\left\{ -g_c(z+\Delta z)- g_c(z)\right\}
+     + \notag \\
+  {} & T_n^{t+\Delta t}(z+\frac{3}{2}\Delta z)g_c(z+\Delta z)
+     ]
+\end{align}
+%
+Note that $g_c$ are calculated at the interface levels $z, z+\Delta
+z ...$ and the neutral temperature is on the midpoint level. For a
+derivation of the discrete second order derivative we refer to
+chapter \ref{cap:duv} equation (\ref{eq:duv_2ndderiv}). \\
+%
+The first order derivative $\frac{\partial}{\partial Z} \left\{
+\frac{g^2}{p_0}\frac{K_E H^2 \rho}{T_n^t} T_n^{t+\Delta t} \right\}$
+is expanded by $\frac{T_n^{t+\Delta t}}{T_n^t}$. The term
+$\frac{g^2}{p_0}\frac{K_E H^2 \rho}{T_n^t}$ is substituted by $f_c$
+with $f$ in the source code denotes $f= \frac{f_c}{2 \Delta z}$. The
+first order derivative is determined by
+%
+\begin{align}
+   \frac{\partial}{\partial Z} \left\{ f_c  T_n^{t+\Delta
+    t} \right\}(z+\frac{1}{2}\Delta z) \approx &
+    \frac{1}{2 \Delta z}
+   [ -T_n^{t+\Delta t}(z - \frac{1}{2} \Delta z)f_c(z)+ \notag \\
+  {} & T_n^{t+\Delta t}(z+ \frac{1}{2}\Delta z)\left\{ f_c(z+ \Delta z) -
+     f_c(z) \right\} + \notag \\
+   {} & T_n^{t+\Delta t}(z+\frac{3}{2}\Delta
+z)f_c(z+\Delta z) ]
+\end{align}
+%
+Note that $f_c$ is on the interface level, and the neutral
+temperature on the midpoint level. The first order derivative
+derived from
+%
+\begin{align}
+ \frac{\partial f T_n^{t+\Delta t}}{\partial Z}(z+\frac{1}{2}\Delta z) =
+ \frac{f(z+\Delta z)T_n^{t+\Delta t}(z+\Delta z) -
+       f(z)T_n^{t+\Delta t}(z) }{\Delta z}
+\end{align}
+%
+with the values at the interface level $T_n^{t+\Delta t}(z)=
+\frac{1}{2} (T_n^{t+\Delta t}(z-\frac{1}{2}\Delta z)+ T_n^{t+\Delta
+t}(z+\frac{1}{2}\Delta z))$ and $T_n^{t+\Delta t}(z+\Delta z)=
+\frac{1}{2} (T_n^{t+\Delta t}(z+\frac{3}{2}\Delta
+z)T_n^{t+\Delta t}(z+\frac{1}{2}\Delta z))$. \\
+%
+The tridiagonal solver need the equation in the following form:
+%
+\begin{align}
+P(k,i) T_n^{t+\Delta t}(k-1,i) + & Q(k,i) T_n^{t+\Delta t}(k,i)+ \notag \\
+ {} & R(k,i) T_n^{t+\Delta t}(k+1,i) = RHS(k,i)
+\end{align}
+%
+with the height index $k$ for $z+\frac{1}{2}\Delta z$, $k+1$ for
+$z+\frac{3}{2}\Delta z$, and $k-1$ for $z-\frac{1}{2}\Delta z$. The
+longitude index is denoted by $i$. Note that the equation is solved
+at each latitude $\lambda$ with the index $j$. \\
+%
+The left hand side terms discussed above are sorted according to the
+height index which leads to
+%
+\begin{align}
+  P(k,i) = & \; g_c(k,i)-f_c(k,i) \\
+  Q^*(k,i) = & \; -g_c(k+1,i)-g_c(k,i)-f_c(k,i)+f(k+1,i) \\
+  R = & \; g_c(k+1,i) + f(k+1,i)
+\end{align}
+%
+At the upper boundary the values are set to
+%
+\begin{align}
+  R(z_{top}-\frac{1}{2} \Delta z)= & \; 0 \\
+  P(z_{top}-\frac{1}{2} \Delta z) = & \; g_c(z_{top}-\frac{1}{2} \Delta z)-f(z_{top}-\frac{1}{2} \Delta z) \\
+  Q(z_{top}-\frac{1}{2} \Delta z) = & \; -g_c(z_{top}-\frac{1}{2} \Delta z)-f(z_{top}-\frac{1}{2} \Delta z)
+\end{align}
+%
+The right hand side is
+%
+\begin{align}
+  RHS = & C_p^{mid} e^{-z} \left[ \mathbf{v}_n^t \nabla T_n^{t} + w^{t+\Delta t \frac{\partial T_n^t}{\partial Z}} -
+       \frac{1}{2 \Delta t} T_n^{t-\Delta t,smo} \right] - \notag \\
+   {} & e^{-z}
+       Q^{exp}+ L^{exp}
+\end{align}
+%
+At the height level $k$ the following terms are added to $Q$
+%
+\begin{align}
+  Q(k,i) = Q^*(k,i) + C_p^{mid}\left\{ \frac{1}{2 \Delta t} + L^{imp}
+  \right\} + w^{mid}\frac{R}{\overline{m}}
+\end{align}
+%
+with the values at the midpoint level $C_p^{mid}(z+\frac{1}{2} +
+\Delta z) = C_p(z) + C_p(z + \Delta z)$ and $w^{mid}(z+\frac{1}{2} +
+\Delta z) = w(z) + w(z+\Delta z)$. At the lower boundary the
+following condition is used
+%
+\begin{align}
+  P(z_{bot}-\frac{1}{2}\Delta z) T_n(z_{bot}-\frac{1}{2}\Delta z) = & \;
+                   2 P(z_{bot}) T_n(z_{LB}) - P(z_{bot}+\frac{1}{2}\Delta z)
+  T_n(z_{bot}+\frac{1}{2}\Delta z) \\
+  P(z_{bot}+\frac{1}{2} \Delta z) = & \;  0
+\end{align}
+%
+with $z_{bot}+\frac{1}{2} \Delta z$ corresponding to the midpoint
+level and the height index $k=1$. $P(z_{bot})$ is set to
+$P(z_{bot}+\frac{1}{2} \Delta z)$, and $T_n(z_{bot})$ is equal to
+the lower boundary with the value $T_n(z_{LB})$. This which leads to
+%
+\begin{align}
+  Q^*(z_{bot}+\frac{1}{2} \Delta z) = & \; Q(z_{bot}+\frac{1}{2} \Delta z) - P(z_{bot}+\frac{1}{2} \Delta z) \\
+  RHS^*(z_{bot}+\frac{1}{2} \Delta z) = & \; RHS(z_{bot}+\frac{1}{2} \Delta z) - 2P(z_{bot}+\frac{1}{2} \Delta z) T_n^t(z_{LB}) \\
+  P^*(z_{bot}+\frac{1}{2} \Delta z) = & \; 0
+\end{align}
+%
+Solving for the neutral temperature at each latitude leads to the
+updated neutral temperature $T_n^{upd, t_n+\Delta t}$ at the
+midpoints. The lower boundary of the neutral temperature is stored
+at the top level with the height index $nlev + 1$ which is above the
+upper boundary of the model with pressure level $-7$ . Note that the
+lower boundary is at pressure level $-7$ which is $z_{bot}$ or
+$z_{LB}$, however all the other values of the neutral temperature
+are on the midpoints which means at the pressure levels $ -6.75,
+-6.25, -5.75 ....5.75, 6.25, 6.75$. The calculated values for the
+neutral temperature $T_n^{upd, t + \Delta t}$ are smoothed by a Fast
+Fourier transformation. All the wave numbers larger than a
+predefined value at each latitude are removed. The wave numbers are
+defined in the module \src{cons.F}. The values of the neutral
+temperature at the timestep $t_n$ are also updated by using
+%
+\begin{align}
+  T_n^{upd,t} = \frac{1}{2}({1-c_{smo}})(T_n^{t-\Delta t}+
+     T_{n,smo}^{upd,t+\Delta t}) + c_{smo}T_n^t
+\end{align}
+%
+with $c_{smo} = 0.95$

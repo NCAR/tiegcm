@@ -1,0 +1,120 @@
+%
+\section{Electrodynamic drift velocity calculation  \index{IONVEL.F}}\label{cap:ionvel}
+%
+The input to \src{subroutine ionvel} is summarized in table
+\ref{tab:input_ionvel}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+electric field: east-,north-, upward&       {}     & $$   &   & \\
+geomagnetic direction on geographic grid & $R*E_{m \phi}, R*E_{m
+\lambda},2 \Delta z * E_{z}$  & $V$   & interface  & $t_{n}$ \\
+geomagnetic field (north-, east-, downward) &       {$B_x, B_y, B_z$} & $Gauss$   & -  & -\\
+geomagnetic field strength &       {B}     & $Gauss$   &  - & -\\
+Jacobian &       $\mathbf{J}_{mag} = \frac{\partial
+s_{mag}}{\partial s_{geo}}$     & -   &  - & -
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine ionvel}}
+\label{tab:input_ionvel}
+\end{table}
+%
+The output of \src{subroutine ionvel} is summarized in table
+\ref{tab:output_ionvel}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+electric field: geographic east-,north-, upward&       {}     & $$   &   & \\
+on geographic grid & $E_{x}, E_{y}, E_{z}$  & $V/cm$   & interface &
+        $t_{n}$ \\
+electromagnetic drift velocity (geographic east-,north-, upward) &
+        $v_{ExB,x}, v_{ExB,y}, v_{ExB,z}$ & cm/s   &  interface & $t_n$
+ \\ \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine ionvel}}
+\label{tab:output_ionvel}
+\end{table}
+%
+Firstly, the electric field input to this subroutine $R*E_{m \phi},
+R*E_{m \lambda},\Delta z * E_{z}$ which is the electric field on the
+geographic grid but in geomagnetic direction is rotated into the
+geographic direction by using the Jacobian matrix
+$\mathbf{J}_{mag}$.
+%
+\begin{gather}
+   \mathbf{J}_{mag} = \frac{\partial s_{mag}}{\partial s_{geo}} =
+   \begin{pmatrix}
+      \frac{\cos \lambda_m}{\cos \lambda_g} \frac{d \phi_m}{d \phi_g} & {\cos \lambda_m}\frac{d \phi_m}{d \lambda_g}\\
+      \frac{1}{\cos \lambda_g} \frac{d \lambda_m}{d \phi_g}&\frac{\lambda_m}{\lambda_g}
+   \end{pmatrix}
+\end{gather}
+%
+with the geographic coordinate system denoted by $s_{geo}$ and the
+geomagnetic coordinate system denoted by $s_{mag}$. The Jacobian
+matrix is calculated in the \src{subroutine apex} by using the
+eastward $\mathbf{f}_1$ and northward $\mathbf{f}_2$ base vector for
+quasi--dipole coordinates as defined in \cite{Richmond95}.
+%
+\begin{gather}
+   \mathbf{J}_{mag} =
+   \begin{pmatrix}
+      \mathbf{f}_{2}(2) & \mathbf{f}_2(1)\\
+      -\mathbf{f}_1(2)  & \mathbf{f}_1(1)
+   \end{pmatrix}
+\end{gather}
+%
+\emph{check the Jacobian stuff, how does this fit together the two
+matrices????????}. \\
+
+%
+The electric field [V/cm] in geographic direction is
+$\mathbf{E}_{geo} = \mathbf{J}_{mag} \mathbf{E}_{mag}$ ??????? with
+$\mathbf{E}_{geo} = (E_x,E_y,E_z)^T$.
+%
+\begin{align}
+     E_x  = & \frac{1}{R}\left[ j_{11} R* E_{m \phi} + j_{21} R* E_{m \lambda} \right]\\
+     E_y  = & \frac{1}{R}\left[ j_{12} R* E_{m \phi} + j_{22} R* E_{m \lambda} \right]\\
+     E_z  = & \frac{2 \Delta z * E_{z}}{2 \Delta z}
+\end{align}
+%
+with the radius $R = R_E + z$, and $2 \Delta z = z_{k+1}-z_{k-1}$.
+The electric field is extrapolated at the lower and upper boundary
+with the height index $k_{bot}$ and $k_{top}$.
+%
+\begin{align}
+     E_z(z_{bot})    = & 2 E_z(z_{bot}+\Delta z)-E_z(z_{bot}+2 \Delta z) \\
+     E_z(z_{top})    = & 2 E_z(z_{top}-\Delta z)-E_z(z_{top}-2 \Delta z)
+\end{align}
+%
+The height $z_{bot}$ corresponds to $k_{bot}$, and $z_{top}$ to
+$k_{top}$ with $z_{bot}+ \Delta z $ is $k_{bot}+ 1$, and $z_{top}-
+\Delta z $ is $k_{top}- 1$ etc. The electrodynamic drift velocity is
+determined by
+%
+\begin{align}
+     \mathbf{v}_{ExB} = - \frac{\mathbf{E}\times \mathbf{B}}{B^2}
+\end{align}
+%
+The components of $\mathbf{B}$ are $B_x, B_y, \text{and} B_z$ in
+northward, eastward and downward direction. To be consistent with
+the geographic direction the magnetic field vector reads $(B_y, B_x,
+- B_z)^T$.
+%
+\begin{align}
+     v_{ExB,x}  = & - \frac{E_y B_z + E_z B_x}{B^2}\\
+     v_{ExB,y}  = &   \frac{E_z B_y + E_x B_z}{B^2}\\
+     v_{ExB,z}  = &   \frac{E_x B_x - E_y B_y}{B^2}\\
+\end{align}
+%
+In the code a factor of $10^6$ is used to convert from $[\frac{V}{cm
+Gauss}]$ to $[\frac{V}{m T}] = [m/s]$. However, after the periodic
+points are set the electrodynamic drift velocity is converted back
+from m/s to $[cm/s]$

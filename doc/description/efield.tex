@@ -1,0 +1,42 @@
+%
+\section{Electric Field}
+%
+In \src{subroutine threed} the two and three dimensional 
+electric field and the three dimensional electric potential 
+is calculated from the two dimensional electric
+potential $\Phi$. The components of the electric field $E_{d1}$ and $E_{d2}$
+which are in more-or-less magnetic eastward and downward/equatorward direction are
+determined by
+%
+\begin{align}
+   E_{d1} &= - \frac{1}{R_0 cos \lambda_m}\frac{\partial \Phi}{\partial \phi_m} \\
+   E_{d2} &= \frac{1}{R_0 sin I_m}\frac{\partial \Phi}{\partial \lambda_m}
+\end{align}
+%
+In the code the equally spaced latitudinal grid point
+distribution $\lambda_0$ in $\lambda_m^*$ is used to calculate the derivatives. Therefore 
+the mapping factors from the irregular latitudinal spaced 
+grid $\lambda_m^*$ to $\lambda_0$ have to be taken into account. 
+Including these factors the discrete derivatives are
+%
+\begin{align}
+   E_{d1}(i,j) &= - \frac{1}{R_0}\frac{cos \lambda_0(j)}{cos \lambda_m^*(j)}
+           \frac{ \Phi(i-1,j) -\Phi(i+1,j) }{2 cos \lambda_0(j) \Delta \phi_m} \\
+   E_{d2}(i,j) &= \frac{1}{R_0}\frac{\partial \lambda_0(j)}{|sin I_m(j)|
+               \partial \lambda_m^*(j)}
+            \frac{\Phi(i,j-1) -\Phi(i,j+1)}{2 \Delta \lambda_0}
+\end{align}
+%
+The polar values are averaged over the four surrounding points. At the equator a
+second order polynomial of the electric potential is fitted through the adjacent points
+and thus the derivative of the polynomial at the equator is determined. \\
+
+The three dimensional electric potential and electric field is calculated
+assuming that the dipolar magnetic field lines are equipotential. At each grid 
+point $(\phi(i),\lambda_m^*(j),h(k))$
+the foot point of the magnetic field line going through this grid point is
+determined. Having found the foot point of the field line at height $h_0$
+the values, i.e. electric potential and electric field, 
+at this point can be determined by a two dimensional interpolation of
+the surrounding points. The polar values are determined by longitudinal 
+averaging all the polar values.

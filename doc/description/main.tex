@@ -1,0 +1,122 @@
+\documentclass[12pt]{book}
+\usepackage{html}
+\usepackage{psfig,epsfig}
+\usepackage[centertags]{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{rotating}
+\usepackage{makeidx}
+%\usepackage{xtocinc}
+%
+\newcommand{\command}{\textbf}      % for commands
+\newcommand{\replaceable}{\textit}  % for replaceable names e.g. inputfiles
+\newcommand{\flags}{\textbf}        % flags of files
+\newcommand{\directory}{\textsl}    % flags of files/code
+\newcommand{\src}{\texttt}          % source code
+\newcommand{\myemph}{\emph}         % emphasize
+\newcommand{\code}{\texttt}          % source code
+
+\makeindex
+% MATH -------------------------------------------------------------------
+%\newcommand{\src}[1]{\emph{#1}}
+%
+\begin{document}
+%
+\begin{titlepage}
+%
+\noindent {\bf High Altitude Observatory} \\
+\noindent National Center for Atmospheric Research, Boulder, CO \\
+\vspace{2in}
+%
+\begin{center}
+{\Large\bf TIEGCM V1.94 Model Description} \\
+%{\bf June 2009} \\
+{\today} \\
+\medskip
+{\it Author: HAO} \\
+{\it e-mail: maute@ucar.edu\\}
+\medskip
+\medskip
+{\bf This is the documentation of TIEGCM1.94. 
+The HAO team is constantly working on the documentation to 1. fill in the gaps, 2. correct errors,
+3. update to newer versions. \\
+Every help is very much appreciated. If you have comments or   corrections
+please send them to maute@ucar.edu.\\
+Thank you very much.}
+\end{center}
+%
+\end{titlepage}
+%
+\pagenumbering{Roman}
+\setcounter{page}{1}
+%
+\include{Cover}
+%
+\tableofcontents
+\listoffigures
+\listoftables
+%
+%\include{notation}
+%\include{notation_dyn}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\pagenumbering{arabic}
+\newpage
+%
+% 1 
+%\include{code_structure} % bf eliminate code structure replace by introduction
+\include{introduction}
+% 2 
+\chapter{Input}
+\include{solar_input}
+\include{magsphere_input}  % 21 July Wenbin, Barb, Yue s. get_documents
+\include{lowboundary}
+% 3
+\chapter{Neutral Dynamics}
+\include{neutraldyn}  % 23 July Hanli s. get_documents
+\include{addiag}
+\include{divrg}  % 23 July changes  Hanli s. get_documents
+\include{duv}
+% 4
+\chapter{Neutral Thermodynamics}
+\include{cpktkm}
+\include{dt}
+% 5 
+\chapter{Chemistry}
+\include{chemrates}
+\include{elden}
+\include{minor}
+\include{comp_n2d_n4s_no}
+\include{comp_o2o}
+
+% 6 
+\chapter{Ionospheric processes}
+\include{jouleheat}  % May2011 updates from Art
+\include{lamdas}     % May2011 updates from Art
+\include{settei}     % May2011 updates from Art
+\include{oplus}
+% 7
+\chapter{Electrodynamics}
+\include{electro}
+\include{input2electro}
+\include{mapping}
+\include{highlat_mod}
+\include{fieldline}
+\include{pg_current}
+\include{finitediff}
+\include{solve}
+\include{efield}
+\section{Additional features}
+\include{current4dB}
+\subsection{No electrodynamo calculation}
+\include{ionvel}
+% 8
+\chapter{Numerical Algorithms}
+\include{filter}
+%
+\bibliographystyle{amsplain}
+\bibliography{main}
+\printindex
+%
+\end{document}

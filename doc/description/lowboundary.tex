@@ -1,0 +1,190 @@
+\section{Lower Boundary}
+%
+At the lower boundary of TI(M)EGCM the background thermosphere has to be specified.
+In addition tidal perturbations can be optionally added in. Note that not all TIMEGCM option for the lower
+boundary are describe here.\\
+
+%
+The lower boundary conditions in TIEGCM are specified at pressure level 
+-7. Note that TIEGCM uses two different height grids. One is called the
+interface grid, which starts at the pressure level -7, the other one is called the
+midpoint level grid, which starts at -6.75 (height resolution 2 grid points per
+scale height), or -6.875 (height resolution 4 grid points per
+scale height). Except for the geopotential height, the vertical dimensionless
+velocity and the electron density, all fields are output on the midlevel grid. \\
+
+In TIEGCM at the lower boundary (pressure level =-7, approximately at 97 km) we specify a 
+constant background 
+field for the geopotenial height of $96.37229 \;  km$,
+for the neutral temperature of $181.0 \; K$, and the neutral zonal and meridional 
+winds are set to zero. The background does not vary with day of the year.\\
+
+Note that for TIMEGCM the lower boundary is at pressure level -17, 
+approximately at 32 km. However concerning the interface and midpoint 
+pressure levels TIMEGCM and TIEGCM are the same. The background field in TIMEGCM
+for the geopotential height are from an analytical fit to a model called zatmos
+, the neutral temperature is specified by
+the same model zatmos. Both fields vary with latitude and day of the year. 
+The background neutral zonal and meridional winds at the lower
+boundary are calculated by assuming geostrophic balance. The calculation is done in
+\code{subroutine tuvbnd} \index{tuvbnd}. At the equator when the Coriolis force
+is zero, and geostrophic balance is not valid to assume, additional 
+tunable Rayleigh friction is introduced (see \src{subroutine tuvbnd}).
+The background can also be specified by using daily averaged data from ECMWF for 
+specific time periods.  \\
+
+In TIEGCM as well as TIMEGCM tidal perturbations caused by 
+solar radiation can be added to the background. For classical tidal theory we refer to Chapman
+and Lindzen \cite{Chapman1970}. In TIEGCM only migrating tidal components
+which propagate westward with the apparent motion of the sun should be specified at either 2.5-degree/4 grid points
+per scale height or 5-degree/ 2 grid points per scale height resolution until nonmigrating tidal propagation is
+validated in the high resolution version of the TIEGCM. These components are thermally 
+driven by the periodic absorption of solar radiation throughout the atmosphere, primarily the 
+absorption of UV radiation by stratospheric ozone and of IR by water and water vapor in the 
+troposphere. In TIMEGCM we recommend using migrating and non-migrating tides only with the 
+double resolution version of TIMEGCM (version TIMEGCM1.3 and higher). The single resolution 
+version of TIMEGCM is too coarse to capture the propagation of the tides in the
+right way. Non-migrating tides which can be include in TIMEGCM are global-scale waves, 
+however they do not follow the
+apparent motion of the sun. They can either not propagate horizontally, move eastward or
+westward.\\
+
+Both models provide two ways of specifying the migrating tidal perturbations:
+%
+\begin{itemize}  
+  \item Hough Modes
+  \item Global Scale Wave Model (GSWM)
+\end{itemize}  
+%
+However, we recommend using only the Global Scale Wave Model option to include tidal perturbations, and
+using Hough Modes only for numerical experiments done by experienced users. Both options will be
+explained in the following.
+%
+\subsection{Migrating tides specified by Hough Modes}
+%
+Using Hough modes is one way to decompose the tidal perturbations with respect to longitude and
+latitude for the different wave components. Hough functions are described in 
+ e.g. Chapman and
+Lindzen \cite{Chapman1970}, Flattery \cite{Flattery1967}. A single tidal mode has a horizontal structure which can be described
+by a single Hough function. The atmospheric tides which migrate westward with the apparent
+motion of the Sun are called migrating tides. In TI(M)EGCM only a limited number of upward propagating migrating
+tidal modes are
+defined. The modes with a diurnal period have a wavenumber s=1, and a Hough Mode with (s,n)=(1,1)
+can be specified. For the semidiurnal modes with a wavenumber s=2 the following Hough modes can be
+specified: (2,2), (2,3), (2,3), (2,4), (2,5). \\
+%
+To specify the Hough modes the amplitude and phase of the corresponding mode has to be given in
+the namelist read input for the semidiurnal tides \src{TIDE}, and the diurnal tides  \src{TIDE2} by
+setting the amplitude and phase of the component. The order of the semidiurnal Hough mode
+specification is from n=2 (2,2) to n=5 (2,5). The amplitude has to be in [cm] and the phase of the
+Hough mode components 
+%
+\begin{equation}
+   slt=-bhour+12
+\end{equation}
+%
+with the solar local time $slt$, and $bhour$ the phase of the tidal component in the TI(M)EGCM input.
+A 24 hrs/12 hrs shift may be applied to the diurnal / semidiurnal components since $bhour$ should 
+be  
+%
+\begin{equation}
+  \begin{split}
+    (-12 < bhour < 12) \;\;\; \text{for the diurnal}\\
+    (-6 < bhour < 6) \;\;\;  \text{for the semidiurnal}
+  \end{split}
+\end{equation}
+%
+\subsection{Migrating and non-migrating tides specified by GSWM}
+%
+The Global Scale Wave Model (GSWM) \cite{Hagan2002},\cite{Hagan2003} is a numerical model 
+of planetary waves and 
+solar tides in the Earth's atmosphere from 0 - ~125 km developed at 
+HAO (High Altitude Observatory), NCAR (National Center for Atmospheric Research ) 
+by M. Hagan. GSWM solves for non-migrating or migrating waves with 2-dimensional, 
+linearized, steady-state assumptions and a realistic zonal mean atmosphere. 
+The forcing is due to thermospheric absorption of solar extreme ultraviolet (EUV) radiation,
+absorption of solar radiation in the Schumann-Runge (S-R) bands and continuum in the 
+mesopause region, strato-mesospheric absorption of solar ultraviolet (UV) radiation,
+tropospheric absorption of solar infrared (IR) radiation, and
+tropospheric latent heating associated with deep convective activity (DCA).  
+GSWM also includes dissipation due to ion drag, thermal conductivity, molecular and eddy
+diffusivity, and gravity wave drag.
+Both migrating (sun-synchronous) and non-migrating 
+(longitude-dependent) tidal components are included (s=-6 to 6) for both the diurnal and semidiurnal
+harmonics.  \\
+%
+In TI(M)EGCM the use of GSWM at the lower boundary has to be specified by the namelist read
+parameters
+%
+\begin{itemize}
+  \item migrating diurnal tides (s=-6 to 6) \src{GSWM\_MI\_DI\_NCFILE}
+  \item migrating semidiurnal tides (s=-6 to 6) \src{GSWM\_MI\_SDI\_NCFILE}
+  \item ONLY TIMEGCM: non-migrating diurnal tides (s=-6 to 6) \\ \src{GSWM\_NM\_DI\_NCFILE}
+  \item ONLY TIMEGCM: non-migrating semidiurnal tides (s=-6 to 6) \\ \src{GSWM\_NM\_SDI\_NCFILE}
+\end{itemize} 
+%
+and the location of the corresponding GSWM file. Note that compared to the Hough mode approach the
+perturbations at each grid point will be provided, already including the 13 wavenumbers (s=-6 to
+s=6).
+\subsection{Specifics about the Lower Boundary of TIMEGCM}
+%
+This chapter applies to TIMEGCM version 1.41 and higher. The basic change with
+respect to the lower boundary compared to older versions is that we separate the
+background from the perturbations of the geopotential height Z, the neutral
+temperature Tn, and the neutral wind components Un and Vn. The lower boundary in
+TIME-GCM is at pressure level -17, approximately at 32 km.
+%
+\subsubsection*{Background fields}
+%
+In the model we set the background in \src{subroutine lbc}. There are three options
+available, and all have in common that these are daily values, so no tidal
+perturbations are included.
+%
+\begin{itemize}
+  \item ECMWF (only 2.5 deg): sets Z, Tn, Un, Vn
+  \item NCEP   (only 5 deg): sets Z, Tn + calculation of Un, Vn
+  \item model zatmos (2.5 and 5 deg): sets Z, Tn + calculation of Un, Vn
+\end{itemize} 
+%
+zatmos is an analytical model which sets the geopotential height and the
+neutral temperature. For both background cases using NCEP and the model zatmos the
+neutral winds are not specified, and have to be calculated. In TIME-GCM this is
+done in \src{subroutine uvbgrd}, and for the first two time steps in \src{subroutine
+uvbnd}. The calculation of the neutral winds at the lower boundary is using the
+background fields of Z. It's considering horizontal advection, the pressure
+gradient force, and horizontal diffusion on the left hand side, and the right hand
+side consists of the Coriolis force, Rayleigh friction and momentum force. It
+should be added that there is some tuning friction close to the equator which is
+set to zero. The
+time derivative of the neutral winds are discretized and split on the left and right
+hand side. We are not using the vertical advection term anymore. This term had a
+neglectable influence on the winds at the lower boundary, and it wouldn't have
+justified the effort to separate the term into a background and perturbations. The
+\src{subroutine uvbnd} calculates the winds fields for the background and the
+perturbations while \src{subroutine uvbgrd} calculates it only for the background.
+Except for the first two time steps, when the splitting into background and
+perturbations of Z, Un, Vn from the two previous time step is not know, 
+\src{subroutine uvbgrd} is called to determine the background winds.
+%
+\subsubsection*{Perturbations fields}
+%
+The perturbations of tides and waves are set in \src{subroutine lbc}, after the background is
+specified. The options are:
+%
+\begin{itemize}
+  \item Hough Modes (2.5 and 5 deg): sets Z, Tn, Un, Vn
+  \item GSWM: sets Z, Tn,  Un, Vn
+     \begin{itemize}
+         \item migrating (2.5 and 5 deg)
+         \item nonmigrating (only 5 deg)
+      \end{itemize} 
+  \item planetary waves etc. (2.5 and 5 deg): sets Z, Tn + calculation of Un, Vn
+\end{itemize} 
+%
+The planetary wave etc. option is not tested in the model, and the source code is 
+just kept. Also since only the geopotential and neutral temperature from these waves are set the winds
+have to be calculated like it is done for the background. Therefore
+only for this perturbation option the perturbations are added to the background
+field, and then the background + planetary wave neutral winds are determined in \src{subroutine uvbgrd}. The
+nonmigrating tides from GSWM should only be used with the 2.5 degree grid
+resolution since otherwise the tidal propagation is not right. 

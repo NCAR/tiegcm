@@ -1,0 +1,617 @@
+%
+\section{Calculation of electron and ion temperature  \index{SETTEI.F}}\label{cap:settei}
+%
+The input to \src{subroutine settei} is summarized in table
+\ref{tab:input_settei}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t_n$\\
+mass mixing ratio $O_2$&       {$\Psi_{O_2}$}     & $-$   & midpoints  & $t_n$\\
+mass mixing ratio $O$&       {$\Psi_{O}$}     & $-$   &  midpoints & $t_n$\\
+mean molecular mass&       {$\overline{m}$}     & $g/mol$   & interfaces  &$t_n + \Delta t$ \\
+Joule heating of ions&       {$Q_{J}^{T_i}$}     & $\frac{erg}{s g}$   & midpoints  &  $t_n$\\
+electron density &       $N_e$              & $\#/cm^3$   &  interfaces & $t_n$\\
+electron temperature &       $T_e$              & $K$   &  midpoints & $t_n$\\
+ion temperature &       $T_i$              & $K$   &  midpoints & $t_n$\\
+number density $O^+$   &      $N_{O^+}$              & $\#/cm^3$   & interfaces & $t_n$?\\
+number density $O_2^+$ &      $N_{O_2^+}$            & $\#/cm^3$   & interfaces & $t_n$?\\
+number density $NO^+$  &      $N_{NO^+}$             & $\#/cm^3$   &
+interfaces& $t_n$?
+\\ \hline \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine setei}}
+\label{tab:input_settei}
+\end{table}
+%
+The output of \src{subroutine settei} is summarized in table
+\ref{tab:output_settei}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+electron temperature    &       {$T_e^{t_n+\Delta t}$}     & $K$   & midpoints  & $t_n+\Delta t$ \\
+ion temperature     &       {$T_i^{t_n+\Delta t}$}     & $K$   &
+midpoints & $t_n+\Delta t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine settei}}
+\label{tab:output_settei}
+\end{table}
+%
+%
+The module data of \src{subroutine settei} is summarized in table
+\ref{tab:module_settei}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+    & {$$}     & $$   &   & $$
+\\ \hline \hline
+\end{tabular}
+\caption{Module data of \src{subroutine settei}}
+\label{tab:module_settei}
+\end{table}
+%
+The general energy conservation equation without chemical and
+viscous heating of electron gas
+%
+\begin{align}
+   \frac{3}{2} N_e k_B \frac{\partial T_e}{\partial t} = & - N_e k_B
+   T_e \nabla \cdot \mathbf{u}_e - \frac{3}{2} N_e k_B \mathbf{u}_e
+   \cdot \nabla T_e - \nabla \cdot q_e + \notag \\
+   {} &  \sum Q_e - \sum L_e
+\end{align}
+%
+with the electron bulk velocity $\mathbf{u}_e$, the electron heat
+flow vector $q_e$, the sum of all local electron heating rates are
+$\sum Q_e$, and the sum of all local cooling rates are $\sum L_e$.
+The electron heat vector is
+%
+\begin{align}
+  q_e = - \beta_e \mathbf{J} - K^e \nabla_\parallel T_e
+\end{align}
+%
+with $\beta_e$ is the thermalelectric transport coefficient,
+$\mathbf{J}$ is the electric current density, and $K^e$ is the electron
+thermal conductivity parallel to the magnetic field. 
+$K^e$ in $[\frac{ergs}{cm \; s \; K}]$
+is calculated according to [Rees \& Roble 1975]
+%
+\begin{align}
+   K^e = \frac{7.5 \cdot 10^5 T_e^{2.5}}{1+3.22\cdot 10^4 \frac{T_e^2}{N_e} \left(
+     d_1 N_{N_2} + d_2 N_{O_2} + d_3 N_O  \right) }
+\end{align}
+%
+with
+%
+\begin{align}
+  d_1 = & 2.82 \cdot 10^{-17} - 3.41 \cdot 10^{-21} T_e \\
+  d_2 = & 2.2 \cdot 10^{-16} - 7.92 \cdot 10^{-18} \sqrt{T_e} \\
+  d_3 = & 1.1 \cdot 10^{-16}(1+ 5.7 \cdot 10^{-4} {T_e})
+\end{align}
+%
+We assume a quasi-steady state and neglect thermalelectric heat flux, 
+%we assume that $\mathbf{J}$ and $q_e$ are parallel to the magnetic field and
+horizontal gradients of
+$T_e$ and $N_e$, and
+%vary only in vertical direction. In
+%addition it's assumed that field aligned current is not present so that
+adiabatic expansion and heat advection.  With
+these assumptions the general electron energy conservation equation
+is simplified to
+%%
+%\begin{align}
+%   \frac{3}{2} N_e  k_B \frac{\partial T_e}{\partial t}=
+%   \sin^2 I \frac{\partial}{H \partial Z}\left( K^e \frac{\partial T_e}{H \partial Z}\right)
+%    + \sum Q_e - \sum L_e
+%\end{align}
+%%
+%In the hight range of the model the time scales are very short such
+%that the time derivative can be neglected and a thermal quasi steady
+%state can be assumed
+%
+\begin{align}
+   \sin^2 I \frac{\partial}{H \partial Z}\left( K^e \frac{\partial T_e}{H \partial Z}\right)
+    + \sum Q_e - \sum L_e = 0
+\end{align}
+%
+The heating sources are solar EUV radiation, deactivation of excited
+neutral and ion species, dissociative recombination of electrons
+with ions, energetic particle precipitation, and Joule heating. Only
+the solar EUV radiation and the energetic particle precipitation are
+considered, all other contributions are neglectable small. \\
+
+We substitute
+%
+\begin{align}
+K^e = & K^0 T^{5/2} \\
+L_e = & L_{on} (T_e - T_n) + L_{oi}(T_e - T_i)
+\end{align}
+%
+with $G = T_e^{7/2}$ the derivative is
+%
+\begin{align}
+  \frac{\partial G}{\partial Z} = \frac{7}{2} T_e^{5/2} \frac{\partial T_e}{\partial Z}
+\end{align}
+%
+and, therefore
+%
+\begin{align}
+  \frac{K^e}{H}\frac{\partial T_e}{\partial Z} = \frac{2}{7} \frac{K^0}{H} \frac{\partial G}{\partial Z}
+\end{align}
+%
+and the loss terms are
+%
+\begin{align}
+  L_e = \frac{L_{on}+L_{oi}}{T_e^{5/2}} G - L_{on} T_n - L_{oi} T_i
+\end{align}
+%
+The energy conservation equation reads
+%
+\begin{align}
+   \sin^2 I \frac{\partial}{H \partial Z}\left( \frac{2}{7}\frac{K^0}{H}
+    \frac{\partial G}{ \partial Z}\right) - \left( \frac{L_{on}+L_{oi}}{T_e^{5/2}}
+    \right) G = -L_{on} T_n - L_{oi}T_i - Q_e
+\end{align}
+%
+The heat flux from the topside ionosphere is $F_e$ with
+%
+\begin{align}
+  F_{eD} = F_{10.7}^* 1.2 [-5 \cdot 10^7 A - 4 \cdot 10^7] \label{settei:eq_FeD}
+\end{align}
+%
+for the daytime, and for the nighttime
+%
+\begin{align}
+  F_{eD} = \frac{F_eD}{2}
+\end{align}
+%
+with $F_{10.7^*}= F_{10.7}$ and $F_{10.7^*}\leq 235$. The factor A
+is set to
+%
+\begin{align}
+ {}& \text{for} \; |\lambda_m| \geq 40^o \; \; \; & A =&1 \\
+ {} & \text{for} \; |\lambda_m| < 40^o \; \; \; & A = &\frac{1}{2} [1+\sin(\Pi \frac{|\lambda_m|-20}{40})]
+\end{align}
+%
+The aurora contribution is added
+%
+\begin{align}
+  F_{eDA} = & F_{eD} + Q_{aurora} \\
+  F_{eNA} = & F_{eN} + Q_{aurora}
+\end{align}
+%
+For solar zenith angles $\psi \geq 90^o$ the flux is $F_e =
+F_{eNA}$, and for $\psi < 90^o$ the flux is $F_e = F_{eDA}$
+%
+\begin{align}
+ {} & \text{for} \;  80^o < \psi < 100 \; \; \; & F_e & {}= \frac{1}{2} (F_{eDA + F_{eNA}}+
+      \frac{1}{2} (F_{eDA - F_{eNA}}) \cos(\Pi \frac{\psi-80}{20}) \\
+ {} & \text{for} \; \psi \leq 80 \; \; \; or \; \; \;\psi \geq 100 \; \; \; & F_e & {}
+\end{align}
+%
+For $|\lambda_m| > 60^o$  a polar contribution is added $Q_{aurora}= 3 \cdot 10^9$.
+The values of the neutral temperature $T_n$, the mass mixing ratio $\Psi_{O_2}$ and
+$\Psi_o$, and the electron temperature $T_e$ at the interfaces are calculated by averaging
+the values from the height level $z+\frac{1}{2}\Delta z$ and $z-\frac{1}{2}\Delta z$ to
+get the value at the level $z$, with the height index k corresponding to $z$, and
+$k$ and $k+1$ corresponding to $z-\frac{1}{2}\Delta z$ and $z+\frac{1}{2}\Delta z$
+respectively on the midpoint level; e.g. for the electron temperature
+%
+\begin{align}
+  T_e(z) = \frac{1}{2} (T_e (z+\frac{1}{2} \Delta z) + T_e(z-\frac{1}{2} \Delta z))
+\end{align}
+%
+The bottom value is extrapolated for $T_e$, $T_n$, $\Psi_O$, and $\Psi_{O_2}$,
+as shown for the electron temperature
+%
+\begin{align}
+  T_e(z_{bot}) = \frac{1}{2} (3 T_e (z_{bot}+\frac{1}{2} \Delta z) - T_e(z_{bot}+\frac{3}{2} \Delta z))
+\end{align}
+%
+with the height index $k=1$ for the midpoint level $z_{bot}+\frac{1}{2} \Delta z$,
+and the interface height index $k=1$ for $z_{bot}$. Note that even for the
+neutral temperature the values are extrapolated although a lower boundary value exist.
+The value at the top are also extrapolated for $T_e$, $T_n$, $\Psi_O$, and $\Psi_{O_2}$,
+as shown for the electron temperature
+%
+\begin{align}
+  T_e(z_{top}) = \frac{1}{2} (3 T_e (z_{top}-\frac{1}{2} \Delta z) - T_e(z_{top}-\frac{3}{2} \Delta z))
+\end{align}
+%
+The mass mixing ratio of $N_2$ is calculated by
+%
+\begin{align}
+  \Psi_{N_2} = 1 - \Psi_O - \Psi_{O_2} \; \; \; with \; \; \;  \Psi_{N_2} \geq 0
+\end{align}
+%
+The mass mixing ratios $\Psi_i$ are converted to number densities $N_i$.
+First the exponentials $e^{-z}$ are set
+%
+\begin{align}
+  e^{-Z} = e^{\frac{1}{2} \Delta Z} e^{-Z -\frac{1}{2} \Delta Z} \\
+  e^{-Z_{top}} = e^{\frac{1}{2} \Delta Z} e^{-Z_{top} -\frac{1}{2} \Delta Z}
+\end{align}
+%
+For the conversion from mass mixing ratio to number density the following
+factor $N \overline {m}$ is calculated
+%
+\begin{align}
+   N \overline{m} = \frac{p_0 e^{-Z} \overline{m}(z)}{k_B T_n(z)} = \frac{p \overline{m}(z}{k_B T_n(z)}
+\end{align}
+%
+The number densities at the interface level are
+%
+\begin{align}
+   N_{O_2} = N \overline{m} \frac{\Psi_{O_2}}{m_{O_2}} \\
+   N_{O} = N \overline{m} \frac{\Psi_{O}}{m_{O}}
+   N_{N_2} = N \overline{m} \frac{\Psi_{N_2}}{m_{N_2}}
+\end{align}
+%
+%The thermal conductivity $K^e$ in $[\frac{ergs}{cm \; s \; K}]$
+%is calculated according to [Rees \& Roble 1975]
+%%
+%\begin{align}
+%  K^e = \frac{7.5 \cdot 10^5}{1 + 3.22 \cdot 10^4 \frac{T_e^2}{N_e} [ \sqrt{T_e}
+%    d_1 N_{N_2} +
+%    d_2 N_{O_2} +
+%    d_3 N_{O} ]}
+%\end{align}
+%%
+%with
+%%
+%\begin{align}
+%  d_1 = & 2.82 \cdot^{-17} - 3.41 \cdot 10^{-21} T_e \\
+%  d_2 = & 2.2 \cdot^{-16} - 7.92 \cdot 10^{-18} \sqrt{T_e} \\
+%  d_3 = & 1.1 \cdot^{-16}(1+ 5.7 \cdot 10^{-4} {T_e})
+%\end{align}
+%
+The scale height $H$ in $[cm]$ is determined on midpoint level and interface level
+%
+\begin{align}
+  H = \frac{R^* T_n}{g}
+\end{align}
+%
+with $R^*$ the gas constant, $g$ the gravitational acceleration,
+and $T_n$ the neutral temperature either on midpoint or interface
+%level. A minimum inclination of $I_{min} = 0.17$ is assumed.
+level. A minimum inclination magnitude is assumed, which is initially
+set to the variable dipmin (0.17 radians for the low-resolution TIEGCM
+or 0.24 radians for the high-resolution TIEGCM), but then increased to 
+$arcsin \sqrt{0.1}$ (= 0.322 radians = 18.4$^\circ$).
+Below, we call the modified inclination angle $I^*$.
+%
+%\begin{align}
+%    \text{for} \; |I| \geq I_{min} \; \; & \sin I^* = \sin^2 I \\
+%    \text{for} \; |I| <   I_{min} \; \; & \sin I^* = \sin^2 I_{min}
+%\end{align}
+%%
+%with $\sin I^* \geq 0.1$. ??? $\sin^2 I_{min} \leq 0.1$ ????? \\
+
+The term $\sin^2 I \frac{\partial}{H \partial Z}\left( \frac{2}{7}\frac{K^0}{H}
+\frac{\partial G}{ \partial Z}\right)$ of the electron energy conservation
+equation is first determined. The derivative is calculated by
+%
+\begin{align}
+ {} &  \frac{\partial}{\partial Z} \left( f \frac{\partial Y}{\partial Z} \right) (z+\frac{1}{2} \Delta z)=
+   \frac{1}{\Delta z} \left[ f(z+\Delta z) \frac{\partial Y}{\partial Z}(z+\Delta z) -
+  f(z) \frac{\partial Y}{\partial Z}(z) \right] =   \notag \\
+ {} &  \frac{1}{\Delta z^2} [ f(z)Y(z-\frac{1}{2}\Delta z) + Y(z+\frac{1}{2}\Delta z)
+  (-f(z+\Delta z)- f(z)) +  \\
+  {} & f(z+\Delta z) Y(z+\frac{3}{2}\Delta z)] \notag
+\end{align}
+%
+with $f= \frac{2 K^o}{7 H}$ and $Y = G$. The solver needs the equation in the following form
+%
+\begin{align}
+  P(z+\frac{1}{2} \Delta z) G(z-\frac{1}{2} \Delta z) + Q(z+\frac{1}{2} \Delta z)
+  G(z+\frac{1}{2} \Delta z) + \notag \\
+  R(z+\frac{1}{2} \Delta z) G(z+\frac{3}{2} \Delta z) = RHS(z+\frac{1}{2} \Delta z)
+\end{align}
+%
+Therefore, from the derivative the following values can be set
+%
+\begin{align}
+   P(z+\frac{1}{2} \Delta z) = & \frac{2 \sin^2 I^*}{7 \Delta^2 z H(z+\frac{1}{2} \Delta z)}
+   \frac{K^o(z)}{H(z)} \\
+   R((z+\frac{1}{2} \Delta z) = & \frac{2 \sin^2 I^*}{7 \Delta^2 z H(z+\frac{1}{2} \Delta z)}
+   \frac{K^o(z+\Delta z)}{H(z+ \Delta z)} \\
+   Q((z+\frac{1}{2} \Delta z) = & \frac{2 \sin^2 I^*}{7 \Delta^2 z H(z+\frac{1}{2} \Delta z)}
+   \left[ - \frac{K^o(z+\Delta z)}{H(z+ \Delta z)} - \frac{K^o(z)}{H(z)}\right]
+\end{align}
+%
+At the bottom of the model we set $T_e(z_{bot}) = T_n(z_{bot}) $ which leads to
+$G= T_n^{7/2}$. The boundary is then
+%
+\begin{align}
+  G(z_{bot}) = T_n^{7/2}(z_{bot})= \frac{1}{2} [G(z_{bot}-\frac{1}{2}\Delta z) +
+   G(z_{bot}+\frac{1}{2}\Delta z)]
+\end{align}
+%
+which leads to
+%
+\begin{align}
+  G(z_{bot}-\frac{1}{2}\Delta z) = 2 T_n^{7/2}(z_{bot}) - G(z_{bot}+\frac{1}{2}\Delta z)
+\end{align}
+%
+and is inserted into
+%
+\begin{align}
+  P(z_{bot}+\frac{1}{2} \Delta z) G(z_{bot}-\frac{1}{2} \Delta z) + Q(z_{bot}+\frac{1}{2} \Delta z)
+  G(z_{bot}+\frac{1}{2} \Delta z) + \notag \\
+  R(z_{bot}+\frac{1}{2} \Delta z) G(z_{bot}+\frac{3}{2} \Delta z) =
+  RHS(z_{bot}+\frac{1}{2} \Delta z)
+\end{align}
+%
+and gives
+%
+\begin{align}
+  {} & P(z_{bot}+\frac{1}{2} \Delta z)\left[ 2 T_n^{7/2}(z_{bot}) - G(z_{bot}+\frac{1}{2}\Delta z) \right]  +
+   \notag \\
+  {}& Q(z_{bot}+\frac{1}{2} \Delta z)
+  G(z_{bot}+\frac{1}{2} \Delta z) + R(z_{bot}+\frac{1}{2} \Delta z) G(z_{bot}+\frac{3}{2} \Delta z) = \\
+  {} & RHS(z_{bot}+\frac{1}{2} \Delta z) \notag \label{settei:eq_trisolv}
+\end{align}
+%
+Therefore at the lower boundary the coefficients are
+%
+\begin{align}
+  Q^*(z_{bot}+\frac{1}{2} \Delta z) = & Q(z_{bot}+\frac{1}{2} \Delta z) - P(z_{bot}+\frac{1}{2} \Delta z)\\
+  RHS^*(z_{bot}+\frac{1}{2} \Delta z) = & RHS(z_{bot}+\frac{1}{2} \Delta z) -
+         2P(z_{bot}+\frac{1}{2} \Delta z) T_n^{7/2}(z_{bot} \\
+  P^*(z_{bot}+\frac{1}{2} \Delta z) = 0
+\end{align}
+%
+At the upper boundary the flux is set
+%
+\begin{align}
+  \frac{2 K^o}{7 H} \frac{\partial G}{\partial Z} = F_e
+\end{align}
+%
+which leads to $\frac{\partial G}{\partial Z} = \frac{7H}{2 K^o} F_e$.
+So the top level value can be set by using
+%
+\begin{align}
+   \frac{G(z_{bot}+\frac{1}{2} \Delta z)-G(z_{bot}-\frac{1}{2} \Delta z)}{\Delta z} =
+   \left( \frac{7H}{2 K^o} F_e \right) (z_{top})
+\end{align}
+%
+and solving for $G(z_{bot}+\frac{1}{2} \Delta z)$. Inserting it into
+%
+\begin{align}
+  P(z_{top}-\frac{1}{2} \Delta z) G(z_{top}-\frac{3}{2} \Delta z) +
+  Q(z_{top}-\frac{1}{2} \Delta z)
+  G(z_{top}-\frac{1}{2} \Delta z) + \notag \\
+  R(z_{top}-\frac{1}{2} \Delta z) G(z_{top}+\frac{1}{2} \Delta z) =
+  RHS(z_{top}-\frac{1}{2} \Delta z)
+\end{align}
+%
+leads to
+%
+\begin{align}
+  {} &  P(z_{top}-\frac{1}{2} \Delta z) G(z_{top}-\frac{3}{2} \Delta z) +
+  Q(z_{top}-\frac{1}{2} \Delta z)
+  G(z_{top}-\frac{1}{2} \Delta z) + \notag \\
+  {} & R(z_{top}-\frac{1}{2} \Delta z) \left[
+   \left( \frac{7H}{2 K^o} F_e \right) (z_{top}) \Delta z  + G(z_{bot}-\frac{1}{2} \Delta z) \right] = \\
+  {} & RHS(z_{top}-\frac{1}{2} \Delta z) \notag
+\end{align}
+%
+%
+Therefore at the upper boundary the coefficients are
+%
+\begin{align}
+  Q^*(z_{top}-\frac{1}{2} \Delta z) = & Q(z_{top}+\frac{1}{2} \Delta z) +
+          R(z_{top}-\frac{1}{2} \Delta z)\\
+  RHS^*(z_{top}-\frac{1}{2} \Delta z) = & RHS(z_{top}-\frac{1}{2} \Delta z) - \notag \\
+        {} &  R(z_{top}+\frac{1}{2} \Delta z) \left( \frac{7H}{2 K^o} F_e \right) (z_{top}) \Delta z \\
+  R^*(z_{top}-\frac{1}{2} \Delta z) = 0
+\end{align}
+%
+The flux $F_e$ was set before see eq. (\ref{settei:eq_FeD}) \\
+
+The heating rate is
+%
+\begin{align}
+\sum Q_e = \left[ Q_{O_2^+}+ Q_{O^+}+Q_{N_2^+}+Q_{NO^+}+Q_{N^+}+Q_{O^+(2D)}+Q_{O^+(2p)}\right] \epsilon
+\end{align}
+%
+with $\epsilon$ the heat efficiency. In the code first $\sum Q_e/\epsilon$ is calculated
+at the interface level. The values of $\sum Q_e/\epsilon$
+ at the midpoint level
+are calculated by
+%
+\begin{align}
+  \frac{\sum Q_e}{\epsilon}(z+\frac{1}{2} \Delta z) = \sqrt{\frac{\sum Q_e}{\epsilon}(z)
+        \frac{\sum Q_e}{\epsilon}(z+\Delta z)}
+\end{align}
+%
+In the same way the electron density is determined at the midpoint level
+%
+\begin{align}
+  N_e(z+\frac{1}{2} \Delta z) = \sqrt{N_e(z)
+        N_e(z+\Delta z)} \; \; \; \text{with} \; \; \; N_e \geq 100.
+\end{align}
+%
+For the conversion from mass mixing ratio to number density $N \overline{m}$
+at the midpoint level is determined
+%
+\begin{align}
+   N \overline{m}(z+\frac{1}{2} \Delta z) = \frac{p_0 e^{-z-\frac{1}{2}\Delta z}
+         \overline{m}(z+\frac{1}{2} \Delta z)}{k_B T_n(z+\frac{1}{2} \Delta z)}
+\end{align}
+%
+The number densities $N_i$ at the midpoint level are
+%
+\begin{align}
+   N_{O_2}(z+\frac{1}{2} \Delta z) = & N \overline{m}(z+\frac{1}{2} \Delta z) \frac{\Psi_{O_2}(z+\frac{1}{2} \Delta z}{m_{O_2}} \\
+   N_{O}(z+\frac{1}{2} \Delta z) = & N \overline{m}(z+\frac{1}{2} \Delta z) \frac{\Psi_{O}(z+\frac{1}{2} \Delta z)}{m_{O}} \\
+   N_{N_2}(z+\frac{1}{2} \Delta z) = & N \overline{m}(z+\frac{1}{2} \Delta z) \frac{\Psi_{N_2}(z+\frac{1}{2} \Delta z)}{m_{N_2}}
+\end{align}
+%
+with $\Psi_{N_2} = 1 - \Psi_{O_2} - \Psi_{O}$ and $\Psi_{N_2} \geq 0$.
+The heat efficiency $\epsilon$ at the midpoint level is then
+%
+\begin{align}
+ \epsilon = exp \left[ - \left( 12.75 + 6.941 R + 1.166 R^2 + 0.08043 R^3 + 0.001996 R^4 \right)\right]
+\end{align}
+%
+with
+%
+\begin{align}
+  R = \ln{\frac{N_e}{N_{O_2} + 0.1 \cdot N_{O}+ N_{N_2}}}
+\end{align}
+%
+Therefore, the following term is added to  the right hand side
+%
+\begin{align}
+  RHS = \frac{\sum Q_e}{\epsilon}(z + \frac{1}{2} \Delta z)
+\end{align}
+%
+
+The cooling term due to vibrational excitation $L(e,N_2)_{vib}$
+of $N_2$ is given by
+%
+\begin{align}
+  \frac{L(e,N_2)_{vib}}{N_e } = N_{N_2} 1.3 \cdot 10^{-4} A
+      \frac{-3200}{T_e T_n} \frac{1 - exp\left[ 3200 \left(
+          \frac{1}{T_e}-\frac{1}{T_n}\right)\right]}{3200 \left(
+          \frac{1}{T_e}-\frac{1}{T_n}\right)}
+\end{align}
+%
+with the value of $A$
+%
+\begin{align}
+   A = & 5.7 \cdot 10^{-8} exp(\frac{-3352.6}{T_e}) \; \; \; \text{for} \; T_e < 1000 K \notag \\
+   A = & 2. \cdot 10^{-7} exp(\frac{-4605.2}{T_e}) \; \; \; \text{for} \; 1000 K \leq T_e \leq 2000 K \notag \\
+   A = & 2.53 \cdot 10^{-6}\sqrt{T_e} exp(\frac{-17620}{T_e}) \; \; \; \text{for} \; 2000 K < T_e \notag
+\end{align}
+%
+
+The rotational excitation of $N_2$ and the cooling rates due to elastic electron-neutral
+collisions are $L(e,N_2)_{elast}+ L(e,N_2)_{rot}$
+%
+\begin{align}
+\frac{L(e,N_2)_{elast}+ L(e,N_2)_{rot}}{N_e} = \notag \\
+  N_{N_2} \left[ 1.77 \cdot 10^{-19}
+   \left\{ 1-1.21\cdot 10^{-4} T_e\right\} T_e + 2.9 \cdot 10^{-14} \frac{1}{\sqrt{T_e}} \right]
+\end{align}
+%
+The elastic, vibrational and rotational excitation of $O_2$ is
+%
+\begin{align}
+ {} &  \frac{L(e,O_2)_{elast}+ L(e,O_2)_{vib} +L(e,)_2)_{rot}}{N_e} =  \\
+ {} &  N_{O_2}\left[ 1.21 \cdot 10^{-18} \left(
+     1 + 3.6 \cdot 10^{-2} \sqrt{T_e}\right) \sqrt{T_e} + 3.125 \cdot 10^{-21} T_e^2 +
+     6.9 \cdot 10^{-14} \frac{1}{\sqrt{T_e}}\right] \notag
+\end{align}
+%
+due to elastic electron neutral collision and due
+to fine structure excitation of $O$ is
+%
+\begin{align}
+  {} & \frac{L(e,O)_{elast}+ L(e,O)_{fs}}{N_e} = \\
+  {} & N_{O}\left[ 7.9 \cdot 10^{-19} \left(
+   1 + 5.7 \cdot 10^{-4} T_e\right) \sqrt{T_e}+ 3.4 \cdot 10^{-12}
+   \frac{1-7\cdot 10^{-5} T_e}{T_n} \left( \frac{150}{T_e}+ 0.4 \right)
+  \right] \notag
+\end{align}
+%
+All the loss terms together are $L(e,n)$
+%
+\begin{align}
+  \frac{L(e,n)}{N_e} = & \frac{L(e,N_2)_{vib}}{N_e} +
+  \frac{L(e,O_2)_{elast}+ L(e,O_2)_{vib} + L(e,O_2)_{rot}}{N_e}  + \notag \\
+  {} & \frac{L(e,O)_{elast}+ L(e,O)_{fs}}{N_e}
+\end{align}
+%
+and is multiplied by the electron density on the midpoint level. The cooling rate
+due to mixture of the electrons with ions is $L(e,i)$
+%
+\begin{align}
+ L(e,i) = 3.2 \cdot 10^{-8} \frac{N_e}{T_e^{3/2}} 15
+     \left( N_{O^+} + 0.5 N_{O_2}+ 0.53 N_{NO^+}\right)
+\end{align}
+%
+The cooling due to ion neutral collision is $L(i,n)$ in $[\frac{erg}{s \; cm^3}]$
+%
+\begin{align}
+  {} & L(i,n) = N_{O^+}\left( 6.6 \cdot 10^{-14}N_{N_2} + 5.8 \cdot 10^{-14} N_{O_2}+ 0.21 \cdot 10^{-14}N_O \sqrt{2 T_n}\right)+ \notag \\
+  {} &     N_{O^+}\left( 5.45 \cdot 10^{-14}N_{O_2} + 5.9 \cdot 10^{-14} N_{N_2}+ 4.5 \cdot 10^{-14}N_O \right)+  \notag \\
+  {} &     N_{O_2^+}\left(5.8 \cdot 10^{-14}N_{N_2} + 4.4 \cdot 10^{-14} N_{O}+ 0.14 \cdot 10^{-14}N_{O_2} \sqrt{2 T_n}\right)
+\end{align}
+%
+The coefficients are updated by
+%
+\begin{align}
+  Q^* = & Q - \frac{L(e,n) + L(e,i)}{T_e^{5/2}} \\
+  RHS^* = & RHS - L(e,n) T_n - L(e,i) T_i
+\end{align}
+%
+Note that the temperatures $T_n$, $T_i$ and $T_e$ are at timestep
+$t_n$ and midpoints height level. The tridiagonal solver solve
+eq. (\ref{settei:eq_trisolv}) which gives $G$ and the updated
+electron temperatures
+%
+\begin{align}
+  T_e(t_n+\Delta t) = G^{2/7} \;\;\; \text{with} \;\;\; T_e(t_n+\Delta t) \geq T_n(t_n)
+\end{align}
+%
+
+The ion temperature $T_i$ at timestep $t_n+\Delta t$ is determined
+from
+%
+\begin{align}
+  L(e,i) (T_e -T_i) + \rho Q_J^{T_i} = L(i,n)(T_i - T_n)
+\end{align}
+%
+which leads to
+%
+\begin{align}
+  T_i = \frac{L(e,i)T_e(t_n+\Delta t) + L(i,n)T_n(t_n) + \rho Q_J^{T_i}}{L(e,i)+L(i,n)}
+\end{align}
+%
+with $\rho = \frac{N \overline{m}}{N_A}$ in $[g/cm^3]$,
+and $N_A$ is the Avogadro number. The ion temperature has to be
+larger than the neutral temperature $T_i \geq T_n$. \\
+
+For the thermodynamic equation an addition to the heating term is determined.
+%
+\begin{align}
+  Q(en,ei)=Q(e,n) + Q(e,i) = \frac{N_A}{N \overline{m}}\left[ L(e,n) (T_e^{t_n} - T_n^{t_n}) +
+  L^*(e,i) (T_e^{t_n} - T_i^{t_n}) \right]
+\end{align}
+%
+with
+%
+\begin{align}
+  L^* (e,i) = &L(e,i)(T_e^{t_n} - T_i^{t_n}) \; \; & \text{for} \; \; T_e^{t_n} - T_i^{t_n} > 0 \\
+  L^* (e,i) = &0                 \; \; & \text{for} \; \; T_e^{t_n} - T_i^{t_n} \leq 0
+\end{align}
+%
+with $L^* (e,i)$ in $[ergs/cm^3/s/K]$. 
+The term is added to the total heating term $Q_{tot}$
+at the interface level
+%
+\begin{align}
+  Q_{tot}^*(z) = Q_{tot}(z) + \frac{1}{2} (Q(en,ei)(z+\frac{1}{2} \Delta z) +
+      Q(en,ei)(z-\frac{1}{2} \Delta z))
+\end{align}
+%
+The upper and lower boundary are extrapolated
+%
+\begin{align}
+  Q_{tot}^*(z_{bot}) = & Q_{tot}(z_{bot}) + \frac{3}{2} Q(en,ei)(z+\frac{1}{2} \Delta z) \notag \\
+       {} & -Q(en,ei)(z_{bot}+\frac{3}{2} \Delta z)) \\
+  Q_{tot}^*(z_{top}) = & Q_{tot}(z_{top}) + \frac{3}{2}
+  Q(en,ei)(z_{top}-\frac{1}{2} \Delta z) \notag \\
+       {} & -Q(en,ei)(z_{top}-\frac{3}{2} \Delta z))
+\end{align}
+%

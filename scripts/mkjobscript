@@ -1,0 +1,131 @@
+#!/usr/bin/perl
+use Getopt::Long;
+use IO::File;
+#
+# Make a job script for tiegcm or timegcm:
+#
+# Default settings:
+#
+$model     = "tiegcm";
+$template  = "${model}.job.template";
+$modeldir  = "${model}_trunk";
+$execdir   = "glade/scratch/$user/${model}_trunk/${model}-ys";
+$input     = "${model}.inp";
+$output    = "${model}.out";
+$modelres  = "5.0";
+$make      = "Make.intel_ys";
+$mpi       = "TRUE";
+$debug     = "FALSE";
+$exec      = "TRUE";
+$utildir   = '$modeldir/scripts';
+$runscript = "run.lsf";
+
+$bsub_jobname = "${model}";
+$bsub_project = "P28100036";
+$bsub_queue   = "premium";
+$bsub_out     = "$model.%J.out";
+$bsub_err     = "$model.%J.out";
+$bsub_email   = '$LOGNAME@ucar.edu';
+$bsub_wc      = "0:30";
+$bsub_nproc   = "16";
+$bsub_span    = '"span[ptile=16]"';
+
+&GetOptions(
+  "fileout=s"     => \$fileout,
+  "template=s"    => \$template,
+  "model=s"       => \$tiegcm,
+  "modeldir=s"    => \$modeldir,
+  "execdir=s"     => \$execdir,
+  "input=s"       => \$input,
+  "output=s"      => \$output,
+  "modelres=s"    => \$modelres,
+  "make=s"        => \$make,
+  "mpi=s"         => \$mpi,
+  "debug=s"       => \$debug,
+  "exec=s"        => \$exec,
+  "utildir=s"     => \$utildir,
+  "runscript=s"   => \$runscript,
+
+  "bsub_jobname=s"  => \$bsub_jobname,
+  "bsub_project=s"  => \$bsub_project,
+  "bsub_queue=s"    => \$bsub_queue,
+  "bsub_out=s"      => \$bsub_out,
+  "bsub_err=s"      => \$bsub_err,
+  "bsub_email=s"    => \$bsub_email,
+  "bsub_wc=s"       => \$bsub_wc,
+  "bsub_nproc=s"    => \$bsub_nproc,
+  "bsub_span=s"     => \$bsub_span
+);
+#
+# Check for unparsed arguments:
+#
+if (@ARGV) {
+    die ">>> $0: unrecognized arguments: @ARGV\n";
+}
+#
+# Name of output file:
+#
+if (defined $fileout) {
+  $file_out = $fileout;
+} else { 
+  $file_out = "${model}-ys.job";
+}
+
+&write_output($file_out);
+
+print "Wrote file $file_out\n";
+exit;
+#-------------------------------------------------------------------------
+sub write_output {
+my ($file_out) = @_;
+my $fh_out = new IO::File;
+
+$fh_out->open(">$file_out") or die ">>> Can't open new file $file_out\n";
+
+print $fh_out <<"EOF_sets";
+#!/bin/tcsh
+
+set modeldir  = $modeldir
+set execdir   = $execdir
+set input     = $input
+set output    = $output
+set modelres  = $modelres
+set make      = $make
+set mpi       = $mpi
+set debug     = $debug
+set exec      = $exec
+set utildir   = $utildir
+set runscript = $runscript
+
+set execdir   = `perl $utildir/abspath $execdir`
+set runscript = `perl $utildir/abspath $runscript`
+
+if (! -d \$execdir) mkdir -p \$execdir
+
+cat << EOF_runscript >! $runscript
+#!/bin/tcsh
+#BSUB -J $bsub_jobname
+#BSUB -P $bsub_project
+#BSUB -q $bsub_queue
+#BSUB -o $bsub_out
+#BSUB -e $bsub_err
+#BSUB -N
+#BSUB -u $bsub_email
+#BSUB -W $bsub_wc
+#BSUB -n $bsub_nproc
+#BSUB -R $bsub_span
+EOF_runscript
+EOF_sets
+
+# Add code from job template:
+
+open(TEMPLATE,"< $template") || die "Error opening template file $template\n";
+#print "Opened template file $template\n";
+
+while (<TEMPLATE>) {
+  print $fh_out $_;
+}
+
+$fh_out->close;
+chmod 0744, $file_out;
+}

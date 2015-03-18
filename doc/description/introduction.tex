@@ -1,0 +1,42 @@
+\chapter{Introduction}\label{cap:intro}
+%
+The High Altitude Observatory at the National Center for Atmospheric Research 
+has developed a series of numeric simulation models of the Earth's upper 
+atmosphere, including the upper Stratosphere, Mesosphere, and Thermosphere. 
+The Thermospheric General Circulation Models (TGCM's) are three-dimensional, 
+time-dependent models of the Earth's neutral upper atmosphere. The models use a 
+finite differencing technique to obtain a self-consistent solution for the coupled, 
+nonlinear equations of hydrodynamics, thermodynamics, continuity of the neutral gas 
+and for the coupling between the dynamics and the composition. \\
+
+Models in the series include a self-consistent aeronomic scheme for the 
+coupled Thermosphere/Ionosphere system, the Thermosphere Ionosphere Electrodynamic 
+General Circulation Model (TIEGCM), and an extension of the lower boundary from 97 
+to 30 km, including the physical and chemical processes appropriate for the Mesosphere 
+and upper Stratosphere, the Thermosphere Ionosphere Mesosphere Electrodynamic General 
+Circulation Model (TIME-GCM). A global mean, or column model, has also been developed 
+in parallel with the TGCM's. The global mean model is used as a time-dependent, 
+one-dimensional platform from which new chemical, dynamic and numeric schemes are 
+developed and tested before being introduced into the 3-d GCM's.  \\
+
+
+This documentation presents the governing equations, physical 
+parameterizations and numerical algorithms used in the NCAR 
+Thermosphere Ionosphere Electrodynamics GCM (TIE-GCM) version 1.94. The model description
+provides help on the major model component, numerics and coding implementation.
+ \\
+
+\vspace{1cm}
+%
+\textbf{Conventions} \\
+%
+\begin{tabular}{l  l } 
+\command{command}	        &   bold \\
+\replaceable{template filenames}&   italics \\       
+\flags{flags}	                &   medium bold \\
+\directory{directories, files}  &   slanted \\
+\src{source code}               &   typewrite  \\ 	
+\myemph{keywords} 	        &   emphasize
+\end{tabular}
+%
+%\subsection{Brief History}\label{subcap:history}

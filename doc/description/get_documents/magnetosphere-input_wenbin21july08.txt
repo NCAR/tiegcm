@@ -1,0 +1,365 @@
+Introduction
+The documentation group for the magnetospheric inputs to the TIEGCM model consists of Barbara Emery, Wenbin Wang and Yue Deng, with help from others as needed. 
+1. Parameters to define the magnetospheric inputs
+If use the Heelis convection pattern (Heelis et al., 1982), then need to define Hemisphere Power (HP) and Cross Polar Cap Potential (CPCP).
+There are two ways to define HP and CPCP:
+a). Directly specify them in the namelist file. IMF By component can also be defined in the namelist file to account for the By effect on the high latitude convection pattern.
+b) Use the "gpi.F" file, which calculates HP and CPCP from the Kp index. For this case, in the namelist file, comment out the HP and CPCP lines, select the gpi netcdf file. The formulas are 
+ (Zhang and Paxton, 2008)
+ 
+If use the Weimer model (Weimer, 2005), then need to give solar wind and IMF parameters in the namelist file. You also need to specify the HP for the aurora (same as above).
+The input parameters for the Weimer model are:
+Solar wind density, speed, IMF Bx, By and Bz, and AE index (optional)
+2. The Heelis convection pattern (heelis.F)
+Input fields to module heelis.F
+Physical field
+Variable
+Unit
+Pressure level
+Time step
+Radii of the convection flow reversal circle
+(theta0)
+
+
+tn
+Offset between the center of the convection circle and the geomagnetic pole along the geomagnetic noon and midnight line 
+offc
+
+
+tn
+Offset between the center of the convection circle and the geomagnetic pole along the geomagnetic dawn-dusk line
+dskofc
+
+
+tn
+Potential at the center of the convection circle
+pcen
+
+
+tn
+Potential of the evening cell
+psie
+
+
+
+Potential of the morning cell
+psie
+
+
+
+Negative departure from phid
+phidm
+
+
+
+Positive departure from phid
+phidp
+
+
+
+Positive departure from phin
+phinp
+
+
+
+Negative departure from phin
+phinm
+
+
+
+
+rr1
+
+
+
+Sun's longitude in dipole coordinale (magfield.F)
+sunlons
+
+
+
+Critical colatitudes (cons.F)
+crit
+
+
+
+(all these variables but sunlons and crit are specified in module aurora.F)
+
+Output fields of module heelis.F
+Physical field
+Variable
+Unit
+Pressure level
+Time step
+Fractional presence of dynamo field
+Pfrac (used in dynamo.F)
+
+
+tn
+Heelis potential in geomagnetic coordinates
+phihm(used in dynamo.F)
+
+
+tn
+
+*Note: the following material is from Wang (1998), and copyright to the University of Michigan. Some of the material has been modified based on the updated TIEGCM. 
+The auroral ion convection pattern in the TIEGCM is parameterized using the Heelis model (Heelis et al., 1982), which is modified to account for IMF By effects on the shape of the convection pattern. In general, only two parameters are needed to define the auroral ion convection pattern: the cross-tail potential ??in kilovolts and the interplanetary magnetic field By component (in nanotesla). Other parameters are set up based on these two parameters that define the convection pattern.
+The first parameter defined is the radii ?0 of the convection flow reversal circle where the potential peaks 
+								(2.1)
+Where  is the cross polar cap potential (CPCP in KV). The center of the circle is located away from the geomagnetic poles by  along the magnetic noon-midnight line and  in the dawn-dusk direction
+										(2.2)
+where , and  applies for southern/northern hemisphere, respectively (By dependency is removed from the current TIEGCM, need check why? in older versions of the TIEGCM, and also ). The TIEGCM grid is then transformed into grid points in the new ion convection coordinate system defined by  and  relative to the geomagnetic poles. In this coordinate the auroral electric potential is generally expressed as
+									(2.3)
+where  and  represent the strongest latitude and local time dependencies, respectively,  and  correspond to the corrected magnetic colatitude and magnetic local time.
+Latitude variations of the potential are represented in the TIEGCM by two functions, one describing the variation when colatitude is smaller than ? 0, the other one describing the variation when colatitude greater than ? 0. The latitude gradient of the potential, and therefore the meridional electric field, is discontinuous at ? 0 in the TIEGCM implementation of the Heelis model. The TIEGCM neglects a few degrees of turnover region around the ion convection reversal because of the five-by-five degree grid spacing used in the TIEGCM. However, this neglect introduces sharp changes in ion velocity and neutral wind near the convection reversal which are an obvious discrepancy between the calculated and observed convection patterns. In the TIEGCM
+					for 		(2.107)
+		
+								for 		(2.108)
+where , , ,  and  are functions accounting for the local time dependencies of the convection pattern. They are chosen such that  is continuous at ? 0,  is the potential at the center of the convection reversal circle due to the By effect
+								(2.109)
+(Note, in the earlier version of the TIEGCM,, do not know why By dependency is removed, need check). As discussed in Chapter 1, positive By increases the evening cell and negative By enlarges the morning cell in the northern hemisphere. The opposite behavior occurs in the southern hemisphere.
+The cross tail potential is split between the evening and morning potentials  and . The evening cell is usually larger than the morning cell based on both satellite and ground measurements, so the normal split used in the TIEGCM is
+							(2.110)
+(In the earlier version of the TIEGCM, , do not know why being changed). 
+The local magnetic time dependencies are described by 6 angles. The longitude 00 (12 MLT) in the TIEGCM ion convection coordinate system is defined at noon. The longitude is positive when rotating clockwise.  and  are local time angles determining the daytime entrance and nighttime exit of the ion convection pattern (zero potential line) across the polar cap. Their position are also affected by the magnitude and orientation of IMF By
+							(2.111)
+( in the older versions of the TIEGCM, why changed?), again, in (2.111) +/- applies for the southern/northern hemispheres, respectively.
+The regions over which the flow paths are not parallel to the convection reversal circle are specified by local hour limits on either side of the zero potential line. The dayside convergence region is called the throat region whereas the region on the nightside is the Harang discontinuity. The angular limits of these two convergence zones at ? 0 are given by positive and negative departures from  and , respectively, which are denoted by , ,  and . Figure 2.2 is illustration of an example of the Heelis model output marked with various parameters.
+
+Figure 2.2 The ion convection pattern (northern hemisphere) for cross-tail potential of 60 KV and the IMF By of 7 nt. Many of the specification parameters are illustrated.
+
+It should be noticed that the Heelis model is suitable only for IMF Bz negative (southward) conditions. As discussed in Chapter 1, when Bz is positive (northward), the ion convection patterns can have a configuration quite different from the two-cell pattern simulated by the Heelis model. Up until now, the latest TIEGCM and TIME-GCM still use this simple model for the parameterization of the convection pattern.  
+3.2. Weimer convection pattern (need Barbara to write this)
+Input fields to module heelis.F
+Physical field
+Variable
+Unit
+Pressure level
+Time step
+Solar wind density
+
+
+
+tn
+Solar wind speed
+
+
+
+tn
+IMF Bx, By and Bz
+
+nT
+
+tn
+AE (optional)
+
+
+
+
+
+Output fields of module heelis.F
+Physical field
+Variable
+Unit
+Pressure level
+Time step
+Fractional presence of dynamo field
+Pfrac (used in dynamo.F)
+
+
+tn
+Weimer potential in geomagnetic coordinates
+phihm(used in dynamo.F)
+
+
+tn
+(Also parameters to specify the auroral oval: (theta0) and???)
+
+4. High latitude auroral pattern (aurora.F)
+Input fields to module auroral.F
+Physical field
+Variable
+Unit
+Pressure level
+Time step
+Cross polar cap potential
+ctpoten
+
+
+tn
+Hemisphere power
+power
+
+
+tn
+IMF By 
+byimf
+
+
+
+Sun's longitude in dipole coordinale (magfield.F)
+sunlons
+
+
+
+
+Output fields of module auroral.F
+Physical field
+Variable
+Unit
+Pressure level
+Time step
+Radii of the convection flow reversal circle
+(theta0) (used in heelis.F)
+
+
+tn
+Offset between the center of the convection circle and the geomagnetic pole along the geomagnetic noon and midnight line 
+offc (used in heelis.F)
+
+
+tn
+Offset between the center of the convection circle and the geomagnetic pole along the geomagnetic dawn-dusk line
+dskofc (used in heelis.F)
+
+
+tn
+Potential at the center of the convection circle
+pcen (used in heelis.F)
+
+
+tn
+Potential of the evening cell
+psie (used in heelis.F)
+
+
+
+Potential of the morning cell
+psie (used in heelis.F)
+
+
+
+Negative departure from phid
+phidm (used in heelis.F)
+
+
+
+Positive departure from phid
+phidp (used in heelis.F)
+
+
+
+Positive departure from phin
+phinp (used in heelis.F)
+
+
+
+Negative departure from phin
+phinm (used in heelis.F)
+
+
+
+Ion ionization rates and electron heating rate by auroral precipitation are added to the total ionization rates (variables qo2p, qop, qn2p and qnp) and electron heating rate (variable qteaur) (solar part is calculated in qrj.F) within the auroral.F module itself (subroutine xxxx), so they are not the outputs of the module. 
+The precipitation in the auroral.F module includes electron precipitation, soft electron precipitation, cusp precipitation, polar rain (drizzle), and ion precipitation. The contribution of each precipitation to ion production and electron heating is added to the total ionization and heating rates. 
+*Note: the following material is from Wang (1998), and copyright to the University of Michigan. Some of the material has been modified based on the updated TIEGCM. 
+4.1. Electron precipitation
+The characteristics of the auroral oval used in the TIEGCM are shown in Figure 2.3. The oval is approximately circular and is offset toward the magnetic nighttime by , which is assumed to be 3.70 and 4.30 for the northern and southern hemispheres, respectively. The dawn-dusk offset is related to the direction and strength of the IMF By component and is given by
+								(2.112)
+where the plus sign is for the southern hemisphere and the minus sign for the northern hemisphere. Thus the center of the auroral oval is away from the magnetic poles. The TIEGCM defines the auroral oval in a new auroral coordinate system with poles in the center of the auroral oval. The width of the auroral zone is assumed to be a Gaussian distribution having a half-width of the form
+									(2.113)
+where , .  is the angle clockwise from the entrance of the auroral convection throat, which is away from the magnetic local noon by an angle of .  (daytime) and  (nighttime) are the half-widths of the auroral zone at  and , respectively, and given by
+						(2.114)
+ The angle  (variable rroth in the code, the clockwise rotation from noon of dayside h1 Gaussian) is defined as
+								(2.115)
+where  is the hemisphere power level,  is the hemispheric power in unit of GW. 
+There is also an angle  (variable rrote in the code, the clockwise rotation from noon of peak dayside energy), it is defined as
+							(2.115)*
+
+
+
+Figure 2.3 Illustration of the parameterization of the auroral oval in the TIGCM
+
+The auroral particle precipitation number flux is then assumed to be a product of functions describing the  (longitude) variations and a latitudinal Gaussian distribution (Roble and Ridley, 1987)
+			(2.116)
+where  is the longitude,  is the colatitude in the newly defined auroral coordinate system,  (named arad in the code) is the radii of the auroral oval expressed as
+					(2.117)
+where  is the cross tail potential in unit of KV,  is the Maxwellian characteristic energy of the precipitating particles in KeV,  is an angle defined by 
+								(2.118)
+such that 
+				when 		(2.119)
+				when 
+where  and .  and  are the energy flux of the precipitating particles (ergs cm-2 s-1) in the noon sector and midnight sector, respectively, and given by
+			
+The characteristic energy  is defined using the statistical patterns measured by satellite (e.g. Hardy et al., 1985). Embedded in the uniform soft particle precipitation (<1.0 KeV) are two hot plasma zones (high energy precipitating electrons) described in terms of Maxwellian distribution around magnetic local 6 and 21 hours
+		
+				(2.120)
+where ,  and  are the characteristic energies of the background soft particles, hot particles in the magnetic morning (06:00 MLT), and hot particles in the magnetic evening (21:00 MLT), respectively.  and  are the displacements of the regions of maximum characteristic energies with respect to the oval described by equation (2.110);  and  are the latitudinal half-widths of the two hard precipitation zones, assuming a Maxwellian distribution;  and  are the zonal half-widths of the hard precipitation zones.  and  are magnetic local times in degrees. Values of these parameters are given in Table 2.3.
+
+Parameter
+Values
+
+
+
+
+
+
+
+-
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Table 2.3 Parameters and their values used in the TIGCM to define the characteristic energy of the precipitating particles in the auroral oval.
+
+Note: TIEGCM currently uses a simple auroral oval specification. The characteristic energies for the noon and midnight sectors are fixed and 1.5 KeV and 2.0 KeV, respectively. Thus the characteristic energy of electron precipitation over the entire auroral oval is not changing with geomagnetic storm intensities (i.e. Kp).
+4.2. Soft electron precipitation
+Soft electron precipitation is defined the same as the auroral oval in Section 4.1. At present, it is turned off in the TIEGCM by setting the energy flux to be zero (characteristic energy is set to be 75 eV). 
+4.3. Cusp Electron precipitation
+The polar cusp region is also subject to intense soft particle precipitation with an average energy around 100 eV. (The characteristic energy (not mean energy!) of the cusp precipitation used in TIEGCM is 100 eV.) Most of the energy of the precipitating electrons is deposited in the F-region, causing localized enhanced electron density and temperature, or a so called hot spot (Fontheim et al., 1987; Heikkila and Winningham, 1971). The longitude extent of the polar cusp is about 30 to 40 degrees (2-4 MLT hours) around magnetic local noon. The polar cusp is more constrained in the latitudinal direction with an average width about 2-3 degrees (e.g. Lockwood and Davis, 1995; Newell and Meng, 1992), and is located between 750 and 800 magnetic latitudes. The location and size of the polar cusp may change dramatically under various IMF conditions.
+In the TIEGCM cusp precipitation is parameterized by assuming Gaussian distribution in both latitude and longitude. The location of the cusp is assumed to be at the daytime convection reversal throat which is determined by the strength and direction of the IMF By and Bz components as discussed in Section 2.4.2. The Gaussian half width in the longitude direction is 200 and the half width in the latitude direction is 50. Thus the TIEGCM, because of the limitations of its grid size, overestimates the latitude extent by about 5 times as compared to the observed average latitude width of 20 to 30 discussed above. One consequence of this parameterization is the overestimation of the sizes of enhanced plasma density and temperature regions produced by the cusp soft precipitation and, in turn, the overestimation of the coupling effect between neutrals and ions, and the amount of plasma transported from the dayside ionosphere into the nighttime polar cap. 
+The typical energy flux of cusp electron precipitation is about 0.32 erg/cm2 s varying with geomagnetic and IMF conditions (Hardy et al., 1985; Candidi and Meng, 1984; Heikkila and Winningham, 1971). In the TIEGCM, the energy flux of the cusp precipitation is given by
+					eV/cm2 s	(2.123)
+		 			erg/cm2 s
+(in TIEGCM 1.9 Ec is defined as  do not know why) Thus, the energy flux is 0.14 erg/cm2 s when  = 5.0 GW during  magnetic quiet times, and 0.63 erg/cm2 s when  is 150.0 GW during a storm.
+4.4. Polar rain (drizzle)
+Spatially homogeneous precipitation of soft particles in the polar cap, the so called polar rain, is also included in the TIEGCM. The polar rain particles come from the solar corona and get into the upper atmosphere through the magnetosheath (Fairfield and Scudder, 1985). The energy fluxes of polar rain commonly vary from 10-3 to 10-2 erg/cm2 s (Sotirelis et al., 1997; Hardy et al., 1986; Riehl and Hardy, 1986; Gussenhoven et al., 1984; Winningham and Heikkila, 1974), although sometimes very strong polar rain may occur with energy fluxes up to about 10 erg/cm2 s (Newell and Meng, 1990, Meng and Kroehl, 1977). The occurrence frequency of polar rain events for the IMF Bz southward is about twice that for IMF Bz northward conditions (Gussenhoven et al., 1984). Polar rain has strong hemispherical asymmetry, with the Earth's north (south) hemisphere favored for away (towards) IMF Bx directions (Hardy et al., 1986; Gussenhoven et al., 1984). The energy flux of polar rain also has a dawn-dusk gradient controlled by IMF By conditions. Polar rain is stronger during magnetic storms than during magnetically quiet times (Winningham and Heikkila, 1974). 
+The energy spectrum of polar rain can be described by a single or by two Maxwellian distributions. The lower energy component of polar rain has a very narrow energy distribution centered at 80 eV with a standard deviation of 13 eV. The energy spectrum of the high energy component has a outstanding peak centered at 525 eV but extending over a wide range from 100 eV to several thousand eV. The mean energy of the high energy component of the polar rain is about 1250 eV with a standard deviation of 750 eV (Hardy et al., 1986; Riehl and Hardy, 1986).
+ In the TIEGCM, polar rain is parameterized by a single Maxwellian distribution with a characteristic (not mean energy) energy of 500 eV. This simple approach may underestimate the contributions of the low energy component of polar rain to the ionization rate of the upper atmosphere, while overestimating the contributions of the high energy component. The peak altitude of the ionization rate is thus moved to lower heights affecting the calculation of the F-region electron density in the winter hemisphere polar cap greatly. The energy flux and its variations with the geomagnetic activity is described in the TIEGCM by
+				eV/cm2 s		(2.121)
+		      			erg/cm2 s
+4.5. Ion precipitation
+Solar proton precipitation inside the polar cap is included in TIEGCM. The characteristic energy was assumed to be 10 KeV. The energy flux is currently set to be 1.E-20, so practically zero. There is also a logical variable "add_sproton", which has a default value of "false". You have to change this to 'true' and specify the energy flux "e_sp" if want to include this precipitation in the model calculation.
+4.6. Ion ionization and electron heating rates
+    It is assumed that particle precipitations has a Maxwellian energy  distribution.  The total energy flux is given by (Roble and Rees, 1977; Roble and Ridley, 1987)
+									(3.33)
+where  is the total number flux of the precipitating particles,  is characteristic energy of the energy distribution and  is the mean energy. The ionization rate produced by collisions between precipitating particles and neutral particles is then calculated using an analytic relationship derived by Lazarev (1967). Contributions from both primary and secondary electrons to the production of ionospheric plasma are included. The detailed description of this calculation is given by Roble and Ridley (1987).
+The number fluxes of auroral electron precipitation, soft electron precipitation and polar drizzle are calculated in the auroral coordinate system based on (3.33). The coordinate transfer for each geographic grid points, and the final characteristic energies number fluxes (variable alfa, alfa2, drizl, flux1, flux2) and auroral heating (qteaur: used in subroutine settei.F) at each grid points are calculated in subroutine aurora_heat . 
+Number flux for the cusp precipitation is obtained in subroutine aurora_cusp.
+
+The detail of how to obtain ionization rates need to written in detail later. (subroutines are aurora_ions, aion and bion). Formulas need to be added here too.
+
+
+The magnetospheric inputs to the TIEGCM model cover the following 1.9 code modules: 
+1.aurora.F - Auroral precipitation model from Roble and Ridley (1987, Annal. Geophys., 5, 369-382) with some parameterizations of the auroral radius, width, energy flux and mean energy from an internal 1989 document by Emery et al using DMSP and NOAA particle precipitation data. Parameterizations of the convection radius, cusp, and pattern (like the MLT of the Harang discontinuity on the nightside) are also employed for input to the Heelis convection model. 
+2.gpi.F - Geophysical inputs of the 10.7 cm solar flux for solar forcing and Kp for the Heelis convection and auroral models. The cross-tail potential drop in kV and the hemispheric power in GW are parameterized in terms of Kp. The GPI and IMF files cannot both be read in version 1.9. Later versions will delete the GPI file and only use the IMF file because Kp and F10.7 are also available in the IMF file. 
+3.heelis.F - Heelis polar cap ion convection model adapted by Cecily Ridley of NCAR from Heelis, Lowell and Spiro (1982, J. Geophys. Res., 87, 6339-6345) 
+4.input.F - Only those parts that refer to the GPI or IMF inputs, or the explicit name-list inputs for the auroral and convection models that define the magnetospheric inputs to the TIEGCM. 
+5.imf.F - Reading the hourly imf file of IMF (Bx, By, Bz), solar wind (Vsw, Dsw), Kp, and F10.7 cm values. If missing data is encountered and there are no name-list constant values used instead, then the program stops with a warning message. Because Dsw is the value most often missing, and because it has little effect on the Weimer 2005 ion convection, we recommend setting Dsw = 4 particles/cm3 in the name-list read so that this is the value always used and the program will not stop if ONLY Dsw is missing. 
+6.util.F - Only the calculation of the hemispheric power (Hp) input parameter to the auroral model based on Bz and By from imf.F or from name-list inputs. Further parameterizations of the cross-tail potential drop for the convection model of Heelis based on other geophysical indices will be implemented here or in another module when this pathway is allowed in future releases. In version 1.9, we cannot run the Heelis model if we read the IMF file or have all IMF inputs. 
+7.wei05sc.F - Weimer 2005 polar cap ion convection and FAC model adapted by Roy Barnes, Barbara Emery, Ben Foster, and Astrid Maute of NCAR from Weimer (2005, J. Geophys. Res., 110, A05306, doi: 10.1029/2004JA010884). The wei01gcm.F module for the Weimer 2001 model is not covered because it will be deleted in the next TIEGCM release. 
+References: 
+Heelis R. A, J. K. Lowell and R. W. Spiro, A model of the high-latitude ionospheric convection pattern, J. Geophys. Res., 87, 6339-6345, 1982.
+Roble R. G., and E. C. Ridley, An auroral model for the NCAR thermospheric general circulation model (TGCM), Annal. Geophys., 5, 369-382, 1987.
+Wang Wenbin, A thermosphere-Ionosphere Nested Grid (TING) model, Phd. Thesis, University of Michigan, 1998.
+Weimer, J. Geophys. Res., 110, A05306, doi: 10.1029/2004JA010884, 2005.
+Zhang Y. and L.J. Paxton, An empirical Kp-dependent global auroral model based on TIMED/GUVI FUV data, Journal of Atmospheric and Solar-Terrestrial Physics, Volume 70, Issues 8-9, 1231-1242, 2008.

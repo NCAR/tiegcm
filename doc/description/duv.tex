@@ -1,0 +1,613 @@
+%
+\section{Momentum equation  \index{DUV.F}}\label{cap:duv}
+%
+The input to \src{subroutine duv} is summarized in table
+\ref{tab:input_duv}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t$\\
+neutral temperature &       $T_n^{t-\Delta t}$ & $K$   &  midpoints & $t-\Delta t$\\
+neutral temperature &       $T_n^{t+\Delta t}$ & $K$   &  midpoints & $t+\Delta t$\\
+neutral zonal velocity&     $u_n$     & $cm/s$   &  midpoints & $t$\\
+neutral meridional velocity & $v_n$   & $cm/s$   &  midpoints & $t$\\
+neutral zonal velocity&     {$u_n^{t-\Delta t}$} & $cm/s$& midpoints & $t-\Delta t$\\
+neutral meridional velocity&{$v_n^{t-\Delta t}$} & $cm/s$& midpoints & $t-\Delta t$\\
+dimenionsless vertical velocity& $W^{t-\Delta t}$& $1/s$   & interfaces& $t+\Delta t$ \\
+geopotential height&  $z$     & $cm$   & interfaces  & $t+\Delta t$\\
+zonal horizontal diffusion&       {$h_{d,u}$}     & $cm/s^2$   & midpoints  & $t-\Delta t$\\
+meridional horizontal diffusion& {$h_{d,v}$}     & $cm/s^2$   & midpoints  & $t-\Delta t$ \\
+zonal electrodynamic drift velocity&       {$v_{ExB,x}$}     & $cm/s$   & interfaces  & $t$ \\
+meridional electrodynamic drift velocity&  {$v_{ExB,y}$}     & $cm/s$   & interfaces  & $t$ \\
+ion drag coefficients (geographic direction)&       $\lambda_{xx},\lambda_{xy},\lambda_{yy},\lambda_{yx}$ & $1/s$   & interfaces  & $t + \Delta t$ \\
+molecular viscosity&       $k_m$     & $\frac{g}{cm s}$   & interfaces  & t \\
+mean molecular weight&       {$\overline{m}$}     & $g/mol$ &
+interfaces  &$t + \Delta t$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine duv}} \label{tab:input_duv}
+\end{table}
+%
+The output of \src{subroutine duv} is summarized in table
+\ref{tab:output_duv}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+neutral zonal velocity     &       {$u_n^{upd,t+\Delta t}$}     & $cm/s$   & midpoints  & $t+\Delta t$ \\
+neutral meridional velocity&       {$v_n^{upd,t+\Delta t}$}     & $cm/s$   & midpoints  & $t+\Delta t$\\
+neutral zonal velocity     &       {$u_n^{upd,t}$}     & $cm/s$   & midpoints  & $t$\\
+neutral meridional velocity&       {$v_n^{upd,t}$}     & $cm/s$
+&midpoints  & $t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine duv}}
+\label{tab:output_duv}
+\end{table}
+%
+The zonal and meridional momentum equation is solved to get the
+neutral horizontal velocities $u_n$ and $v_n$. For the vertical
+velocity the continuity \ref{eq:swdot1} equation is solved. In the code the
+\src{subroutine addiag} solves for the dimensionless vertical
+velocity $w$. \\
+
+The momentuum equation in the zonal direction can be written as
+%
+\begin{align}
+   \frac{\partial u_n}{\partial t}=& \frac{g e^z}{p_0} \frac{\partial}{\partial Z}\left[
+       \frac{\mu \partial u_n}{H \partial Z}\right] + f^{cor}v_n +
+       \lambda_{xx}(v_{ExB,x}- u_n) + \lambda_{xy}(v_{ExB,y}- v_n) - \notag \\
+       {} & \mathbf{v}_n\cdot
+       \nabla u_n + \frac{u_n v_n}{R_E} \tan \lambda - \frac{1}{R_E cos
+       \lambda} \frac{\partial \Phi}{\partial \phi} - W \frac{\partial u_n}{\partial Z} -hd_u
+\end{align}
+%
+with $\lambda_{xx}$ and $\lambda_{xy}$ the ion drag coefficients.
+ The meridional momentum equation is defined as
+%
+\begin{align}
+   \frac{\partial v_n}{\partial t}=& \frac{g e^z}{p_0} \frac{\partial}{\partial Z}\left[
+       \frac{\mu \partial v_n}{H \partial Z}\right] - f^{cor}v_n +
+       \lambda_{yy}(v_{ExB,x}- u_n) + \lambda_{yx}(v_{ExB,y}- u_n) - \notag \\
+       {} & \mathbf{v}_n\cdot
+       \nabla v_n + \frac{u_n u_n}{R_E} \tan \lambda - \frac{1}{R_E}
+       \frac{\partial \Phi}{\partial \lambda} - W \frac{\partial
+       v_n}{\partial Z} -hd_v
+\end{align}
+%
+Horizontal diffusion $hd_u$ and $hd_v$ is also included in the momentum equations (needs
+documentation look at hdiff3; not consistent in equations)
+The time rate of change in the horizontal velocity on the left hand
+(1. term) side is equal to the forcing terms on the right hand
+side. The forcing terms are the following in this order: the
+vertical viscosity (2. term), the Coriolis force (3. term), the
+ion-drag force (4.+5. term), the nonlinear horizontal advection (6.
+term) and momentum force (7. term), the pressure gradient force (8.
+term),the vertical advection (9. term) and horizontal diffusion (10.term). Using a Leapfrog
+scheme leads to
+%
+\begin{align}
+   \frac{ u_n^{t+ \Delta t}- u_n^{t-\Delta t}}{2 \Delta t}=& \frac{g e^z}{p_0} \frac{d}{d z}\left[
+       \frac{\mu d u_n^{t+\Delta t}}{H d z}\right] + fv_n^{t+\Delta t} +
+       \lambda_{xx}(v_{ExB,x}^t- u_n^{t+\Delta t}) + \notag \\
+       {}& \lambda_{xy}(v_{ExB,y}^t- v_n^{t+\Delta t}) - \mathbf{v}_n^t\cdot
+       \nabla u_n^t +  \\
+       {}& \frac{u_n^{t+\Delta t} v_n^t}{R_E} \tan \lambda - \frac{1}{R_E cos
+       \lambda} \frac{d \Phi^{t+\Delta t*}}{d \phi} - W^{t+\Delta t}
+       \frac{d u_n^{t+\Delta t}}{d Z} \notag
+\end{align}
+%
+and
+%
+\begin{align}
+   \frac{ v_n^{t+ \Delta t}- v_n^{t-\Delta t}}{2 \Delta t}=& \frac{g e^z}{p_0} \frac{d}{d Z}\left[
+       \frac{\mu d v_n^{t+\Delta t}}{H d Z}\right] - fu_n^{t+\Delta t} +
+       \lambda_{yy}(v_{ExB,y}^t- v_n^{t+\Delta t}) + \notag \\
+       {} & \lambda_{yx}(v_{ExB,x}^t- u_n^{t+\Delta t}) - \mathbf{v}_n^t\cdot
+       \nabla v_n^t -  \\
+       {}& \frac{u_n^{t+\Delta t} u_n^t}{R_E} \tan \lambda - \frac{1}{R_E
+       } \frac{d \Phi^{t+\Delta t*}}{d \lambda} - W^{t+\Delta t} \frac{d v_n^{t+\Delta t}}{d
+       Z} \notag
+\end{align}
+%
+The terms of the discretized equation are added to the matrices
+$\mathbf{Q}$ at the height level $k$, $\mathbf{P}$ at $k-1$, and
+$\mathbf{R}$ at $k+1$. The first line in the matrices is the zonal
+equation and the second line the meridional one. In the
+following text we will describe the contribution to the matrices for each
+term. The right hand side goes into $\mathbf{rhs}$. Note that in the
+code the two equations are divided by $e^z$ \\
+
+%
+The time derivatives $\frac{ u_n^{t+ \Delta t}- u_n^{t-\Delta t}}{2
+\Delta t}$ i.e. $\frac{ v_n^{t+ \Delta t}- v_n^{t-\Delta t}}{2
+\Delta t}$ lead to
+%
+\begin{gather}
+  \mathbf{Q}^1= e^{-z}
+   \begin{pmatrix}
+       \frac{1}{2 \Delta t}&  0\\
+       0                   & \frac{1}{2 \Delta t}
+   \end{pmatrix}
+\end{gather}
+%
+in units of $1/s$, and the right hand side
+%
+\begin{gather}
+  \mathbf{RHS}^1=e^{-z}
+   \begin{pmatrix}
+       \frac{u_n^{t-\Delta t},smooth}{2 \Delta t} + hd_u\\
+       \frac{v_n^{t-\Delta t},smooth}{2 \Delta t} + hd_v
+   \end{pmatrix}
+\end{gather}
+%
+in units of $cm/s^2$ with $hd_u$ and $hd_v$ the horizontal diffusion terms calculated in
+\src{subroutine hdiff3} \index{hdiff3}. The velocities $u_n^{t-\Delta t}$ and
+$v_n^{t-\Delta t}$ at the previous timestep $t-\Delta t$ are
+smoothed with the Shapiro method. First in meridional direction and
+then a zonal smoothing is applied.
+%
+\begin{align}
+  f^{smooth}_{merid} = & f(\phi,\lambda) - c_{shapiro}\{  f(\phi,\lambda+2\Delta \lambda) +
+  f(\phi,\lambda-2\Delta \lambda) - \notag \\
+  {}& 4 \left[ f(\phi,\lambda+\Delta \lambda) + f(\phi,\lambda-\Delta \lambda)  \right]+
+  6 f(\phi,\lambda) \} \\
+  f^{smooth}_{zonal}
+  =& f^{smooth}_{merid} -c_{shapiro} \{  f^{smooth}_{merid}(\phi+2 \Delta \phi,\lambda) +
+  f^{smooth}_{merid}(\phi-2\Delta \phi,\lambda) - \notag \\
+  {}& 4 \left[ f^{smooth}_{merid}(\phi+\Delta \phi,\lambda)
+  + f^{smooth}_{merid}(\phi-\Delta \phi,\lambda)  \right]+
+  6 f^{smooth}_{merid}(\phi,\lambda) \} \label{eq:duv_shapiro}
+\end{align}
+%
+The Shapiro constant is set to $c_{shapiro}=
+0.03$. The smoothing is done in
+the \src{subroutine smooth}. \\
+
+The vertical viscosity term includes the eddy $\mu_{ed}$ and
+molecular $\mu_{mol}$ viscosity.
+%
+\begin{align}
+  \frac{g e^z}{p_0} \frac{d}{d z}\left[
+       \frac{\mu d u_n^{t+\Delta t}}{H d Z}\right] = e^z \frac{g^2 (\mu_{ed} + \mu_{mol})
+          \overline{m}}{p_0 k_B T_n^{int} \Delta z^2} 
+\end{align}
+%
+with $\frac{1}{H} = \frac{g \overline{m}}{k_B T_n}$.   The term is calculated at the interface level. We substitute
+in the following in $[1/s]$
+%
+\begin{align}
+  \frac{f_{vis}}{\Delta z^2} = \frac{g^2 \mu \overline{m}}{p_0 k_B  T_n^{int} \Delta z^2}
+\end{align}
+%
+The second derivative is discretized by
+%
+\begin{align}
+  {}& \frac{\partial}{\partial z} \left(  {f_{vis}}
+  \frac{\partial u_n^{t + \Delta t} }{\partial z}\right) (z+\frac{1}{2}\Delta z)  =
+    \frac{ \left[ f^{int}_{vis} \frac{\partial u_n^{t + \Delta t} }
+  {\partial z} \right](z+\Delta z)
+  - \left[ f^{int}_{vis} \frac{\partial u_n^{t + \Delta t} }
+  {\partial z} \right](z)}{\Delta
+  z}  =& \notag \\
+  {} & = \frac{1}{\Delta z} ( f_{vis}(z+\Delta z)
+  \frac{u_n(z+\frac{3}{2}\Delta z)- u_n(z+\frac{1}{2}\Delta z)}{\Delta z}
+   \notag \\
+   {} \; \; & -  f_{vis}(z) \frac{u_n(z+\frac{1}{2}\Delta z)- u_n(z-\frac{1}{2}\Delta z)}
+  {\Delta  z} ) =  \\
+   {} & {=} \frac{1}{\Delta z^2} ( f_{vis}(z) u_n(z+\frac{3}{2}\Delta z) \notag \\
+   {} \; \; & -
+   (f_{vis}(z+\Delta z) + f_{vis}(z)) u_n(z+\frac{1}{2}\Delta z)
+   + f_{vis}(z)u_n(z-\frac{1}{2}\Delta z)
+   ) \label{eq:duv_2ndderiv} \notag
+\end{align}
+%
+Note that $f_{vis}$ is at the interface level with $z$ denoting the
+index $k$, and the neutral velocity on the midpoints with
+$z+\frac{1}{2}\Delta z$ being the $k$ level. The same applies to the
+derivative of the meridional velocity. The terms from the above
+equation are added to the matrices $\mathbf{Q}$ for the height level
+k, $\mathbf{R}$ for the values at the level $k+1$, and $\mathbf{P}$
+for the $k-1$ height level
+%
+\begin{gather}
+  \mathbf{Q}^2= \mathbf{Q}^1 +
+   \begin{pmatrix}
+       \frac{1}{ \Delta z^2}(f_{vis}(z+\Delta z) + f_{vis}(z))&  0\\
+       0                   & \frac{1}{\Delta z^2}(f_{vis}(z+\Delta z) + f_{vis}(z))
+   \end{pmatrix}
+\end{gather}
+%
+%
+\begin{gather}
+  \mathbf{P}^2=
+   \begin{pmatrix}
+       -\frac{1}{\Delta z^2}f_{vis}(z)&  0\\
+       0                   & -\frac{1}{\Delta z^2}f_{vis}(z)
+   \end{pmatrix}
+\end{gather}
+%
+%
+\begin{gather}
+  \mathbf{R}^2=
+   \begin{pmatrix}
+       -\frac{1}{\Delta z^2}f_{vis}(z+\Delta z)&  0\\
+       0                   &- \frac{1}{\Delta z^2}f_{vis}(z+\Delta z)
+   \end{pmatrix}
+\end{gather}
+%
+The third terms in the momentuum equations $f^{cor}v_n^{t+\Delta t}$
+and $- f^{cor}u_n^{t+\Delta t}$ are the Coriolis forcing with the
+Coriolis parameter $f^{cor} = 2 \Omega \sin \lambda$. The terms are
+added to the matrix $\mathbf{G}$ in units of $[1/s]$
+%
+\begin{gather}
+  \mathbf{Q}^3= \mathbf{Q}^2 + e^{-z}
+   \begin{pmatrix}
+       0 & - f^{cor} \\
+       f^{cor} & 0
+   \end{pmatrix}
+\end{gather}
+%
+The fourth and fifth term in the momentuum equation
+$\lambda_{xx}(v_{ExB,x}- u_n^{t+\Delta t}) + \lambda_{xy}(v_{ExB,y}-
+v_n^{t+\Delta t})$ and $\lambda_{yy}(v_{ExB,x}- u_n^{t+\Delta t}) +
+\lambda_{yx}(v_{ExB,y}- u_n^{t+\Delta t})$ are the ion drag terms.
+The terms with the electrodynamic drift velocity are added to the
+right hand side.
+%
+\begin{gather}
+  \mathbf{RHS}^2= \mathbf{RHS}^1 + e^{-z}
+   \begin{pmatrix}
+     \lambda_{xx}^{t, mid} v_{ExB,x}^{t, mid} + \lambda_{xy}^{t, mid} v_{ExB,y}^{t, mid}  \\
+     \lambda_{yy}^{t, mid} v_{ExB,y}^{t, mid} - \lambda_{yx}^{t, mid} v_{ExB,x}^{t, mid}
+   \end{pmatrix}
+\end{gather}
+%
+The values $\lambda_{**}^{t, mid} $ and $v_{ExB,*}^{t, mid}$ are the
+ion drag coefficient and the electrodynamic drift velocity at the
+time step $t$ and at the midpoints. Therefore in the code the values
+from the interface height level $k$ and $k+1$ are averaged to get
+the midpoints values. Both the ion drag coefficients and the
+electrodynamic drift velocity
+are on the interface levels. \\
+%
+The terms with the neutral velocity are added to the left hand side
+in units of $[1/s]$.
+%
+\begin{gather}
+  \mathbf{Q}^3= \mathbf{Q}^2 + e^{-z}
+   \begin{pmatrix}
+       \lambda_{xx}^{t, mid} &  \lambda_{xy}^{t, mid}\\
+      -\lambda_{yx}^{t, mid} & \lambda_{yy}^{t, mid}
+   \end{pmatrix}
+\end{gather}
+%
+The horizontal advection terms in zonal direction $-
+\mathbf{v}_n^t\cdot \nabla u_n^t$ and meridional direction $-
+\mathbf{v}_n^t\cdot \nabla v_n^t$ are added to the right hand side
+in units of $[cm/s^2]$.
+%
+\begin{gather}
+  \mathbf{RHS}^3= \mathbf{RHS}^2 + e^{-z}
+   \begin{pmatrix}
+     -\mathbf{v}_n^t\cdot \nabla u_n^t  \\
+     -\mathbf{v}_n^t\cdot \nabla v_n^t
+   \end{pmatrix} = \mathbf{RHS}^2 + e^{-z}
+   \begin{pmatrix}
+     - u_n^t \frac{\partial u_n^t}{\partial \phi} - v_n^t \frac{\partial u_n^t}{\partial \lambda } \\
+     - u_n^t \frac{\partial v_n^t}{\partial \phi} - v_n^t \frac{\partial v_n^t}{\partial \lambda }
+   \end{pmatrix}
+\end{gather} \label{eq:duv_horiz_advec}
+%
+The advection term is calculated in the \src{subroutine advec} by
+taking the fourth order stencil for the derivative. The average
+velocity is denoted by $u_n^{avg} = \frac{1}{2} (u_n(\phi+\Delta
+\phi,\lambda) + u_n (\phi-\Delta \phi,\lambda))$ and $u_n^{2 avg} =
+\frac{1}{2} (u_n(\phi+2\Delta \phi,\lambda) + u_n (\phi-2\Delta
+\phi,\lambda))$. The same is done for the meridional velocity $v_n$
+which leads to $v_n^{avg} = \frac{1}{2} (v_n(\phi,\lambda+\Delta
+\lambda) + v_n (\phi,\lambda-\Delta \lambda))$ and $v_n^{2 avg} =
+\frac{1}{2} (v_n(\phi,\lambda+2\Delta \lambda) + v_n
+(\phi,\lambda-2\Delta \lambda))$. The discrete advection of the
+zonal velocity for the point $(\phi,\lambda)$ is
+%
+\begin{align}
+  u_n \frac{\partial u_n}{\partial \phi}(\phi,\lambda) = &
+  \frac{1}{R_E cos \lambda} ( \frac{2}{3 \Delta \phi}
+  u_n^{avg}(\phi,\lambda) \left[
+   u_n(\phi+\Delta
+   \phi,\lambda) - u_n(\phi-\Delta
+   \phi,\lambda)  \right] - \notag \\
+   {} & \frac{1}
+   {12 \Delta \phi}u_n^{2avg}(\phi,\lambda) \left[
+   u_n(\phi+2\Delta
+   \phi,\lambda) - u_n(\phi-2\Delta \phi,\lambda)  \right] )
+\end{align}
+%
+and
+%
+\begin{align}
+  v_n \frac{\partial u_n}{\partial \lambda }(\phi,\lambda) = &
+  \frac{1}{R_E} ( \frac{2}{3 \Delta \lambda}v_n^{avg}(\phi,\lambda) \left[
+   u_n(\phi,\lambda+\Delta \lambda) - u_n(\phi,\lambda-\Delta \lambda)  \right] - \notag \\
+   {} & \frac{1}{12 \Delta \lambda}v_n^{2avg}(\phi,\lambda) \left[
+   u_n(\phi,\lambda+2\Delta \lambda) - u_n(\phi,\lambda-2\Delta \lambda)  \right] )
+\end{align}
+%
+%
+\begin{align}
+  u_n \frac{\partial v_n}{\partial \phi}(\phi,\lambda) = &
+  \frac{1}{R_E cos \lambda} (
+  \frac{2}{3 \Delta \phi}u_n^{avg}(\phi,\lambda) \left[
+   v_n(\phi+\Delta \phi,\lambda) - v_n(\phi-\Delta \phi,\lambda)  \right] - \notag \\
+   {} & \frac{1}{12 \Delta \phi}u_n^{2avg}(\phi,\lambda) \left[
+   v_n(\phi+2\Delta \phi,\lambda) - v_n(\phi-2\Delta \phi,\lambda)  \right] )
+\end{align}
+%
+and
+%
+\begin{align}
+  v_n \frac{\partial v_n}{\partial \lambda }(\phi,\lambda) & =
+  \frac{1}{R_E} ( \frac{2}{3 \Delta \lambda}
+  v_n^{avg}(\phi,\lambda) \left[
+   v_n(\phi,\lambda+\Delta \lambda) - v_n(\phi,\lambda-\Delta \lambda)  \right] - \notag \\
+ {} &   \frac{1}{12 \Delta \lambda}v_n^{2avg}(\phi,\lambda) \left[
+   v_n(\phi,\lambda+2\Delta \lambda) - v_n(\phi,\lambda-2\Delta \lambda)  \right] )
+\end{align}
+%
+The advection term is calculated at midpoints and is in units of
+[$cm/s^2$]. \\
+%
+The 8. term is due to the horizontal momentum in the zonal direction
+$\frac{u_n^{t+\Delta t} v_n^t}{R_E} \tan \lambda$ and the meridional
+one $\frac{u_n^{t+\Delta t} u_n^t}{R_E} \tan \lambda$. These terms
+are added to the left hand side $\mathbf{G}$ matrix in $[1/s]$.
+%
+\begin{gather}
+  \mathbf{Q}^4= \mathbf{Q}^3 + e^{-z}
+   \begin{pmatrix}
+       0 & - \frac{v_n^t}{R_E}\tan \lambda \\
+       \frac{u_n^t}{R_E}\tan \lambda & 0
+   \end{pmatrix}
+\end{gather}
+%
+in the code it's $+\frac{u_n^t}{R_E}\tan \lambda$  due
+to northward/meridional direction.\\
+%
+The pressure gradient term in the zonal and meridional directions is $-
+\frac{1}{R_E \cos \lambda} \frac{d \Phi^{t+\Delta t*}}{d \phi}$ and
+$- \frac{1}{R_E } \frac{d \Phi^{t+\Delta t*}}{d \lambda} $ (9. term)
+which is added to the right hand side matrix $\mathbf{RHS}$ in units of $[cm/s^2]$\\
+%
+\begin{gather}
+  \mathbf{RHS}^3= \mathbf{RHS}^2 + e^{-z}
+   \begin{pmatrix}
+     - \frac{1}{R_E \cos \lambda} \frac{d \Phi^{t+\Delta t*}}{d \phi} \\
+     - \frac{1}{R_E } \frac{d \Phi^{t+\Delta t}}{d \lambda}
+   \end{pmatrix}
+\end{gather}
+%
+The geopotential is calculated in \src{subroutine glp}. The input to
+\src{subroutine glp} is summarized in table \ref{tab:input_glp}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t$\\
+neutral temperature &       $T_n^{t-\Delta t}$ & $K$   &  midpoints & $t-\Delta t$\\
+neutral temperature &       $T_n^{t+\Delta t}$ & $K$   &  midpoints & $t+\Delta t$\\
+geopotential height&  $z$     & $cm$   & interfaces  & $t+\Delta t$\\
+mean molecular weight&       {$\overline{m}$}     & $g/mol$   &
+interfaces  &$t + \Delta t$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine glp}} \label{tab:input_glp}
+\end{table}
+%
+The output of \src{subroutine glp} is summarized in table
+\ref{tab:output_duv}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+zonal derivative of geopotential      & {$\frac{1}{R_E \cos \lambda} \frac{\partial \Phi^{t+\Delta t*}}{\partial \phi}$}     & $cm/s^2$   & midpoints  & $t+\Delta t*$ \\
+meridional derivative of geopotential & {$\frac{1}{R_E }
+\frac{\partial \Phi^{t+\Delta t}}{\partial \lambda}$}    & $cm/s^2$
+& midpoints  & $t+\Delta t$
+\\ \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine glp} i.e. \src{subroutine
+dldp}} \label{tab:output glp}
+\end{table}
+%
+The parameters are summarized in table \ref{tab:parameters glp}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|} \hline
+ variable        & value \\ \hline \hline
+   $\Delta z$  & 0.5   $$  \\
+   $wgt$  &   $0.225$  \\
+  $\frac{g}{R}$   & $\frac{870 cm/s^2}{8.314 e^7 erg/K/mol}$
+\\ \hline
+\end{tabular}
+\caption{Parameters of \src{subroutine glp} i.e. \src{subroutine
+dldp}} \label{tab:parameters glp}
+\end{table}
+%
+Firstly, an average temperature $\overline{T}_n$ is calculated by
+using
+%
+\begin{align}
+  \overline{T}_n = T_n^t + wgt* \left[ -2 T_n^t + T_n^{t- \Delta t} + T_n^{t+ \Delta t}\right]
+\end{align}
+%
+The mean molecular weight is determined at the midpoints by
+%
+\begin{align}
+  \overline{m}(k+\frac{1}{2}) =
+  0.5*(\overline{m}(k)\overline{m}(k+1))=\overline{m}^{mid}(k)
+\end{align}
+%
+The geopotenial is defined by the hydrostatic equation
+%
+\begin{align}
+  \frac{\partial \Phi}{\partial z}= \frac{R^* \overline{T}_n}{\overline{m}}
+\end{align}
+%
+which is integrated from the bottom of the model to the top.
+%
+\begin{align}
+ z^*(k) = z^{t+\Delta t*}(k) = \int_{k_{bot}}^{k(z)} \frac{R^*
+  \overline{T}_n}{g \overline{m}^{mid}} \Delta Z
+\end{align}
+%
+in units of $[cm]$ with $\Phi = Z g$, the gas constant $R^*$ in
+$[erg/K/mol]$, and the mean mass $\overline{m}$ in $[g/mole]$. The
+geopotential height uses already an mix of neutral temperature,
+which includes $T_n^{t+\Delta t}$ and there it's neither $z^t$ not
+$z^{t+ \Delta t}$. ??? check units???. Note that $z^* = z^{t+\Delta
+t*}$ is at the interfaces, since the value which
+is integrated is on the midlevels. \\
+%
+The derivatives are determined in \src{subroutine dldp} by taking
+the fourth order derivative. In the zonal direction the previous
+calculated geopotential height $z^{t+\Delta t*}$ is used while in the
+latitudinal direction the updated geopotential height  $z^{t+\Delta
+t}$ is applied.
+%
+\begin{align}
+  \frac{d z^*}{d \phi}(\phi,\lambda,z) = & \frac{2}{3 \Delta \phi}[
+   z^*(\phi+\Delta \phi,\lambda,z) -
+  z^*(\phi-\Delta \phi,\lambda,z)] - \notag \\
+  {} & \frac{1}{12 \Delta \phi}[z^*(\phi+2\Delta \phi,\lambda,z)-z^*(\phi-2\Delta \phi,\lambda,z)] \\
+  \frac{d z^*}{d \lambda}(\phi,\lambda,z) = & \frac{2}{3 \Delta \lambda}[ z^*(\phi,\lambda+\Delta \lambda,z) -
+  z^*(\phi,\lambda-\Delta \lambda,z)] -  \notag \\
+  {} & \frac{1}{12 \Delta \phi}[z^*(\phi,\lambda+2\Delta \lambda,z)-z^*(\phi,\lambda-2\Delta \lambda,z)]
+\end{align}
+%
+in units of $[cm]$. The derivatives are the transfered from the
+interface levels to the midpoint level by
+%
+\begin{align}
+  \frac{1}{R_E \cos \lambda}\frac{d \Phi}{d \phi}(\phi,\lambda,z) = &
+  \frac{1}{2} g \frac{1}{R_E \cos \lambda}\left[ \frac{d z^*}
+  {d \phi}(\phi,\lambda,z) + \frac{d z^*}{d \phi}(\phi,\lambda,z+\Delta z)\right]  \\
+  \frac{1}{R_E} \frac{d \Phi}{d \lambda}(\phi,\lambda,z) = & \frac{1}{2} g \frac{1}{R_E }
+        \left[ \frac{d z^*}{d \lambda}(\phi,\lambda,z) + \frac{d z^*}{d \lambda}(\phi,\lambda,z+\Delta z)\right]
+\end{align}
+%
+which is in $[cm/s^2]$. 
+% ??? check the gravity term g, is this to get from z to phi?  alan Burns 4/2/09
+The
+periodic points are set to zero. \\
+%
+The final term is the vertical advection term $- W^{t+\Delta t}
+\frac{d u_n^{t+\Delta t}}{d Z}$ and $- W^{t+\Delta t} \frac{d
+v_n^{t+\Delta t}}{d Z}$. The terms are added to the left hand side
+matrix $\mathbf{P}$ and $\mathbf{R}$ in $[1/s]$
+%
+\begin{gather}
+  \mathbf{P}^3= \mathbf{P}^2 + e^{-z}
+   \begin{pmatrix}
+       -\frac{W^{mid,t+\Delta t}}{2 \Delta z} & 0 \\
+       0 & -\frac{W^{mid,t+\Delta t}}{2 \Delta z}
+   \end{pmatrix}
+\end{gather}
+%
+%
+\begin{gather}
+  \mathbf{R}^3= \mathbf{R}^2 + e^{-z}
+   \begin{pmatrix}
+       \frac{W^{mid,t+\Delta t}}{2 \Delta z} & 0 \\
+       0 & i\frac{W^{mid,t+\Delta t}}{2 \Delta z}
+   \end{pmatrix}
+\end{gather}
+%
+The lower boundary is taken into account by extrapolating the values
+of the matrix $\mathbf{P}$
+%
+\begin{align}
+     \mathbf{P}(z_{bot}-\frac{1}{2}\Delta z)\mathbf{v}(z_{bot}-\frac{1}{2}\Delta z)=
+     2 \mathbf{P}(z_{bot})\mathbf{v}_{LB} -
+     \mathbf{P}(z_{bot}+\frac{1}{2}\Delta z)\mathbf{v}(z_{bot}+\frac{1}{2}\Delta z)
+\end{align}
+%
+with $z_{bot}+\frac{1}{2}\Delta z$ on the midpoint level having the
+height index $1$. The value $\mathbf{P}(z_{bot})$ is set to
+$\mathbf{P}(z_{bot}+\frac{1}{2}\Delta z)$, and the neutral velocity
+at the lower boundary is $\mathbf{v}(z_{bot}) = \mathbf{v}_{LB}$.
+Therefore, substituting the lower boundary condition into the
+equation leads to
+%
+\begin{align}
+  \mathbf{Q}(z_{bot}+\frac{1}{2}\Delta z)^*= & \; \mathbf{Q}(z_{bot}+\frac{1}{2}\Delta z)-\mathbf{P}(z_{bot}+\frac{1}{2}\Delta z)
+  \\
+  \mathbf{RHS}(z_{bot}+\frac{1}{2}\Delta z)^*= & \; \mathbf{RHS}(z_{bot}+\frac{1}{2}\Delta z)-2
+  \mathbf{P}(z_{bot}+\frac{1}{2}\Delta z)\mathbf{v}_{LB} \\
+  \mathbf{P}(z_{bot}+\frac{1}{2}\Delta z) = & \; 0
+\end{align}
+%
+At the upper boundary it's assumed that
+%
+\begin{align}
+  \mathbf{R}(z_{top}-\frac{1}{2}\Delta z)\mathbf{v}(z_{top}+\frac{1}{2}\Delta z) =
+  \mathbf{R}(z_{top}-\frac{1}{2}\Delta z)\mathbf{v}(z_{top}-\frac{1}{2}\Delta z)
+\end{align}
+%
+with $z_{top}-\frac{1}{2}\Delta z$ on the midpoint level corresponds
+to the height index $nlev$. This which leads to
+%
+\begin{align}
+  \mathbf{Q}(z_{top}-\frac{1}{2}\Delta z)^*= & \;
+    \mathbf{Q}(z_{top}-\frac{1}{2}\Delta z)-\mathbf{R}(z_{top}-\frac{1}{2}\Delta z)
+  \\
+  \mathbf{R}(z_{top}-\frac{1}{2}\Delta z)^*= & \; 0
+\end{align}
+%
+A tridiagional solver
+is called in \src{subroutine trsolv}. It solve the generic equation
+%
+%
+\begin{align}
+ p(k,i)*v(k-1,i) + q(k,i)*v(k,i)+r(k,i)*t(k+1,i) = rhs(k,i)
+\end{align}
+%
+with  $p(k,i)$ being the $(i,j)$ element of the matrix $\mathbf{P}$,
+$q(k,i)$ of the matrix $\mathbf{Q}$, $r(k,i)$ of the matrix
+$\mathbf{R}$, $rhs(k,i)$ of the matrix $\mathbf{RHS}$, and $v(k,i)$
+of the neutral velocity vector $\mathbf{v}_n $. The lower boundary
+at $z_{bot}=z_{LB}$ of the neutral velocity is stored at the top
+level $nlev+1$ since this height is above the upper boundary anyway.
+The upper boundary pressure level is $-7$ which corresponds to
+$z_{top}$. The neutral velocity is only calculated from
+$z_{bot}+\frac{1}{2}\Delta z$ to $z_{top}-\frac{1}{2}\Delta z$. Note
+that the lower boundary is at $p-lev=-7$, and all the other values
+of the neutral velocity are on the midpoints which means at $p-lev =
+-6.75, -6.25, -5.75 ....5.75, 6.25, 6.75$.
+\\
+
+The calculated values for the neutral velocity $\mathbf{u}_n^{upd, t
++ \Delta t}$ and $\mathbf{v}_n^{upd, t + \Delta t}$ are smoothed by
+a Fast Fourier transformation. All the wave numbers larger than a
+predefined value at each latitude are removed. The wave numbers are
+defined in the module \src{cons.F}. The values of the neutral
+velocity at the timestep $t$ are also updated by using
+%
+\begin{align}
+  u_n^{upd,t} = \frac{1}{2}({1-c_{smo}})(u_n^{t-\Delta t}+
+     u_{n,smo}^{upd,t+\Delta t}) + c_{smo}u_n^t \\
+  v_n^{upd,t} = \frac{1}{2}({1-c_{smo}})(v_n^{t-\Delta t}+
+     v_{n,smo}^{upd,t+\Delta t}) + c_{smo}v_n^t
+\end{align}
+%
+with $c_{smo} = 0.95$

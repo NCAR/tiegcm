@@ -1,0 +1,1233 @@
+
+Username: foster  UID: 7622  Acct: 24100004(P24100004) Copies: 1 Firewall: off [hsi.3.5.7 Mon Feb 7 09:52:25 MST 2011] 
+
+/home/tgcm/tiegcm1.94:
+-rw-rw----   1 foster    tgcm        14575352 May 21 20:34 TGCM.tiegcm1.94.p_dec2006_heelis_gpi_001.nc
+Annotation: 06330 330 0 0 to 06339 339 0 0 by 0 tiegcm1.94 primary 
+
+-rw-rw----   1 foster    tgcm        14575352 May 21 20:34 TGCM.tiegcm1.94.p_dec2006_weimer_imf_001.nc
+Annotation: 06330 330 0 0 to 06339 339 0 0 by 0 tiegcm1.94 primary 
+
+-rw-rw----   1 foster    tgcm        14575336 May 21 20:34 TGCM.tiegcm1.94.p_nov2003_heelis_gpi_001.nc
+Annotation: 03305 305 0 0 to 03310 310 0 0 by 0 tiegcm1.94 primary 
+
+-rw-rw----   1 foster    tgcm        14575336 May 21 20:34 TGCM.tiegcm1.94.p_nov2003_weimer_imf_001.nc
+Annotation: 03305 305 0 0 to 03310 310 0 0 by 0 tiegcm1.94 primary 
+
+-rw-rw----   1 foster    tgcm        14575348 May 21 20:34 TGCM.tiegcm1.94.p_whi2008_heelis_gpi_001.nc
+Annotation: 08081 81 0 0 to 08090 90 0 0 by 0 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575104 May 21 20:34 TGCM.tiegcm1.94.p_whi2008_weimer_imf_001.nc
+Annotation: 08081 81 0 0 to 08081 81 0 0 by 0 tiegcm1.94 primary 
+
+-rw-rw----   1 foster    tgcm        14575340 May 21 20:34 TGCM.tiegcm1.94.pclim_heelis_001.nc
+Annotation: 02001 1 0 0 to 02020 20 0 0 by 0 tiegcm1.94 primary 
+
+drwxrwx---   2 foster    tgcm            3584 May 21 20:40 climatology
+Annotation: 
+
+drwxrwx---   2 foster    tgcm            1024 May 20 09:34 control
+Annotation: 
+
+drwxrwx---   3 foster    tgcm            1024 May 20 15:37 dec2006
+Annotation: 
+
+drwxrwx---   3 foster    tgcm             512 May 26 18:03 nov2003
+Annotation: 
+
+drwxrwx---   3 foster    tgcm             512 May 26 11:51 nov2003_days001-006
+Annotation: 
+
+-rw-r-----   1 foster    tgcm        14575176 May 21 20:34 pcntr_decsol_smax.nc
+Annotation: 02355 355 0 0 to 02355 355 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575172 May 21 20:34 pcntr_decsol_smin.nc
+Annotation: 02355 355 0 0 to 02355 355 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575172 May 21 20:34 pcntr_junsol_smax.nc
+Annotation: 02172 172 0 0 to 02172 172 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575168 May 21 20:34 pcntr_junsol_smin.nc
+Annotation: 02172 172 0 0 to 02172 172 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575172 May 21 20:34 pcntr_mareqx_smax.nc
+Annotation: 02080 80 0 0 to 02080 80 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575168 May 21 20:34 pcntr_mareqx_smin.nc
+Annotation: 02080 80 0 0 to 02080 80 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575172 May 21 20:34 pcntr_sepeqx_smax.nc
+Annotation: 02264 264 0 0 to 02264 264 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575168 May 21 20:34 pcntr_sepeqx_smin.nc
+Annotation: 02264 264 0 0 to 02264 264 0 0 by 1440 tiegcm1.94 primary 
+
+drwxrwx---   2 foster    tgcm             512 May 19 21:42 source
+Annotation: 
+
+drwxrwx---   2 foster    tgcm             512 May 21 20:13 whi2008
+Annotation: 
+
+
+/home/tgcm/tiegcm1.94/climatology:
+-rw-r-----   1 foster    tgcm       291173692 May 21 20:40 TGCM.tiegcm1.94.pclim_heelis_001.nc
+Annotation: 02001 1 0 0 to 02020 20 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:41 TGCM.tiegcm1.94.pclim_heelis_002.nc
+Annotation: 02021 21 0 0 to 02040 40 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:42 TGCM.tiegcm1.94.pclim_heelis_003.nc
+Annotation: 02041 41 0 0 to 02060 60 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:43 TGCM.tiegcm1.94.pclim_heelis_004.nc
+Annotation: 02061 61 0 0 to 02080 80 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:44 TGCM.tiegcm1.94.pclim_heelis_005.nc
+Annotation: 02081 81 0 0 to 02100 100 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:45 TGCM.tiegcm1.94.pclim_heelis_006.nc
+Annotation: 02101 101 0 0 to 02120 120 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:46 TGCM.tiegcm1.94.pclim_heelis_007.nc
+Annotation: 02121 121 0 0 to 02140 140 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:47 TGCM.tiegcm1.94.pclim_heelis_008.nc
+Annotation: 02141 141 0 0 to 02160 160 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:48 TGCM.tiegcm1.94.pclim_heelis_009.nc
+Annotation: 02161 161 0 0 to 02180 180 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:48 TGCM.tiegcm1.94.pclim_heelis_010.nc
+Annotation: 02181 181 0 0 to 02200 200 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:49 TGCM.tiegcm1.94.pclim_heelis_011.nc
+Annotation: 02201 201 0 0 to 02220 220 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:51 TGCM.tiegcm1.94.pclim_heelis_012.nc
+Annotation: 02221 221 0 0 to 02240 240 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:52 TGCM.tiegcm1.94.pclim_heelis_013.nc
+Annotation: 02241 241 0 0 to 02260 260 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:53 TGCM.tiegcm1.94.pclim_heelis_014.nc
+Annotation: 02261 261 0 0 to 02280 280 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:55 TGCM.tiegcm1.94.pclim_heelis_015.nc
+Annotation: 02281 281 0 0 to 02300 300 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:56 TGCM.tiegcm1.94.pclim_heelis_016.nc
+Annotation: 02301 301 0 0 to 02320 320 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:57 TGCM.tiegcm1.94.pclim_heelis_017.nc
+Annotation: 02321 321 0 0 to 02340 340 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173744 May 21 20:58 TGCM.tiegcm1.94.pclim_heelis_018.nc
+Annotation: 02341 341 0 0 to 02360 360 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364320 May 21 20:58 TGCM.tiegcm1.94.pclim_heelis_019.nc
+Annotation: 02361 361 0 0 to 03001 1 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       340474276 May 21 20:40 TGCM.tiegcm1.94.sclim_heelis_001.nc
+Annotation: 02001 1 1 0 to 02003 3 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:40 TGCM.tiegcm1.94.sclim_heelis_002.nc
+Annotation: 02003 3 1 0 to 02005 5 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:40 TGCM.tiegcm1.94.sclim_heelis_003.nc
+Annotation: 02005 5 1 0 to 02007 7 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:40 TGCM.tiegcm1.94.sclim_heelis_004.nc
+Annotation: 02007 7 1 0 to 02009 9 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:40 TGCM.tiegcm1.94.sclim_heelis_005.nc
+Annotation: 02009 9 1 0 to 02011 11 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:40 TGCM.tiegcm1.94.sclim_heelis_006.nc
+Annotation: 02011 11 1 0 to 02013 13 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:40 TGCM.tiegcm1.94.sclim_heelis_007.nc
+Annotation: 02013 13 1 0 to 02015 15 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:40 TGCM.tiegcm1.94.sclim_heelis_008.nc
+Annotation: 02015 15 1 0 to 02017 17 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_009.nc
+Annotation: 02017 17 1 0 to 02019 19 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_010.nc
+Annotation: 02019 19 1 0 to 02021 21 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_011.nc
+Annotation: 02021 21 1 0 to 02023 23 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_012.nc
+Annotation: 02023 23 1 0 to 02025 25 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_013.nc
+Annotation: 02025 25 1 0 to 02027 27 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_014.nc
+Annotation: 02027 27 1 0 to 02029 29 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_015.nc
+Annotation: 02029 29 1 0 to 02031 31 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_016.nc
+Annotation: 02031 31 1 0 to 02033 33 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_017.nc
+Annotation: 02033 33 1 0 to 02035 35 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:41 TGCM.tiegcm1.94.sclim_heelis_018.nc
+Annotation: 02035 35 1 0 to 02037 37 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_019.nc
+Annotation: 02037 37 1 0 to 02039 39 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_020.nc
+Annotation: 02039 39 1 0 to 02041 41 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_021.nc
+Annotation: 02041 41 1 0 to 02043 43 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_022.nc
+Annotation: 02043 43 1 0 to 02045 45 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_023.nc
+Annotation: 02045 45 1 0 to 02047 47 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_024.nc
+Annotation: 02047 47 1 0 to 02049 49 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_025.nc
+Annotation: 02049 49 1 0 to 02051 51 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_026.nc
+Annotation: 02051 51 1 0 to 02053 53 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_027.nc
+Annotation: 02053 53 1 0 to 02055 55 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:42 TGCM.tiegcm1.94.sclim_heelis_028.nc
+Annotation: 02055 55 1 0 to 02057 57 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_029.nc
+Annotation: 02057 57 1 0 to 02059 59 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_030.nc
+Annotation: 02059 59 1 0 to 02061 61 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_031.nc
+Annotation: 02061 61 1 0 to 02063 63 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_032.nc
+Annotation: 02063 63 1 0 to 02065 65 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_033.nc
+Annotation: 02065 65 1 0 to 02067 67 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_034.nc
+Annotation: 02067 67 1 0 to 02069 69 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_035.nc
+Annotation: 02069 69 1 0 to 02071 71 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_036.nc
+Annotation: 02071 71 1 0 to 02073 73 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_037.nc
+Annotation: 02073 73 1 0 to 02075 75 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_038.nc
+Annotation: 02075 75 1 0 to 02077 77 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:43 TGCM.tiegcm1.94.sclim_heelis_039.nc
+Annotation: 02077 77 1 0 to 02079 79 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_040.nc
+Annotation: 02079 79 1 0 to 02081 81 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_041.nc
+Annotation: 02081 81 1 0 to 02083 83 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_042.nc
+Annotation: 02083 83 1 0 to 02085 85 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_043.nc
+Annotation: 02085 85 1 0 to 02087 87 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_044.nc
+Annotation: 02087 87 1 0 to 02089 89 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_045.nc
+Annotation: 02089 89 1 0 to 02091 91 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_046.nc
+Annotation: 02091 91 1 0 to 02093 93 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_047.nc
+Annotation: 02093 93 1 0 to 02095 95 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_048.nc
+Annotation: 02095 95 1 0 to 02097 97 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:44 TGCM.tiegcm1.94.sclim_heelis_049.nc
+Annotation: 02097 97 1 0 to 02099 99 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_050.nc
+Annotation: 02099 99 1 0 to 02101 101 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_051.nc
+Annotation: 02101 101 1 0 to 02103 103 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_052.nc
+Annotation: 02103 103 1 0 to 02105 105 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_053.nc
+Annotation: 02105 105 1 0 to 02107 107 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_054.nc
+Annotation: 02107 107 1 0 to 02109 109 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_055.nc
+Annotation: 02109 109 1 0 to 02111 111 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_056.nc
+Annotation: 02111 111 1 0 to 02113 113 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_057.nc
+Annotation: 02113 113 1 0 to 02115 115 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_058.nc
+Annotation: 02115 115 1 0 to 02117 117 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_059.nc
+Annotation: 02117 117 1 0 to 02119 119 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:45 TGCM.tiegcm1.94.sclim_heelis_060.nc
+Annotation: 02119 119 1 0 to 02121 121 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_061.nc
+Annotation: 02121 121 1 0 to 02123 123 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_062.nc
+Annotation: 02123 123 1 0 to 02125 125 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_063.nc
+Annotation: 02125 125 1 0 to 02127 127 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_064.nc
+Annotation: 02127 127 1 0 to 02129 129 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_065.nc
+Annotation: 02129 129 1 0 to 02131 131 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_066.nc
+Annotation: 02131 131 1 0 to 02133 133 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_067.nc
+Annotation: 02133 133 1 0 to 02135 135 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_068.nc
+Annotation: 02135 135 1 0 to 02137 137 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_069.nc
+Annotation: 02137 137 1 0 to 02139 139 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:46 TGCM.tiegcm1.94.sclim_heelis_070.nc
+Annotation: 02139 139 1 0 to 02141 141 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_071.nc
+Annotation: 02141 141 1 0 to 02143 143 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_072.nc
+Annotation: 02143 143 1 0 to 02145 145 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_073.nc
+Annotation: 02145 145 1 0 to 02147 147 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_074.nc
+Annotation: 02147 147 1 0 to 02149 149 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_075.nc
+Annotation: 02149 149 1 0 to 02151 151 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_076.nc
+Annotation: 02151 151 1 0 to 02153 153 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_077.nc
+Annotation: 02153 153 1 0 to 02155 155 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_078.nc
+Annotation: 02155 155 1 0 to 02157 157 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_079.nc
+Annotation: 02157 157 1 0 to 02159 159 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:47 TGCM.tiegcm1.94.sclim_heelis_080.nc
+Annotation: 02159 159 1 0 to 02161 161 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_081.nc
+Annotation: 02161 161 1 0 to 02163 163 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_082.nc
+Annotation: 02163 163 1 0 to 02165 165 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_083.nc
+Annotation: 02165 165 1 0 to 02167 167 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_084.nc
+Annotation: 02167 167 1 0 to 02169 169 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_085.nc
+Annotation: 02169 169 1 0 to 02171 171 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_086.nc
+Annotation: 02171 171 1 0 to 02173 173 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_087.nc
+Annotation: 02173 173 1 0 to 02175 175 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_088.nc
+Annotation: 02175 175 1 0 to 02177 177 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_089.nc
+Annotation: 02177 177 1 0 to 02179 179 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:48 TGCM.tiegcm1.94.sclim_heelis_090.nc
+Annotation: 02179 179 1 0 to 02181 181 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_091.nc
+Annotation: 02181 181 1 0 to 02183 183 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_092.nc
+Annotation: 02183 183 1 0 to 02185 185 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_093.nc
+Annotation: 02185 185 1 0 to 02187 187 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_094.nc
+Annotation: 02187 187 1 0 to 02189 189 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_095.nc
+Annotation: 02189 189 1 0 to 02191 191 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_096.nc
+Annotation: 02191 191 1 0 to 02193 193 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_097.nc
+Annotation: 02193 193 1 0 to 02195 195 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_098.nc
+Annotation: 02195 195 1 0 to 02197 197 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_099.nc
+Annotation: 02197 197 1 0 to 02199 199 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:49 TGCM.tiegcm1.94.sclim_heelis_100.nc
+Annotation: 02199 199 1 0 to 02201 201 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:50 TGCM.tiegcm1.94.sclim_heelis_101.nc
+Annotation: 02201 201 1 0 to 02203 203 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:50 TGCM.tiegcm1.94.sclim_heelis_102.nc
+Annotation: 02203 203 1 0 to 02205 205 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:50 TGCM.tiegcm1.94.sclim_heelis_103.nc
+Annotation: 02205 205 1 0 to 02207 207 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:50 TGCM.tiegcm1.94.sclim_heelis_104.nc
+Annotation: 02207 207 1 0 to 02209 209 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:50 TGCM.tiegcm1.94.sclim_heelis_105.nc
+Annotation: 02209 209 1 0 to 02211 211 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_106.nc
+Annotation: 02211 211 1 0 to 02213 213 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_107.nc
+Annotation: 02213 213 1 0 to 02215 215 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_108.nc
+Annotation: 02215 215 1 0 to 02217 217 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_109.nc
+Annotation: 02217 217 1 0 to 02219 219 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_110.nc
+Annotation: 02219 219 1 0 to 02221 221 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_111.nc
+Annotation: 02221 221 1 0 to 02223 223 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_112.nc
+Annotation: 02223 223 1 0 to 02225 225 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_113.nc
+Annotation: 02225 225 1 0 to 02227 227 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_114.nc
+Annotation: 02227 227 1 0 to 02229 229 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:51 TGCM.tiegcm1.94.sclim_heelis_115.nc
+Annotation: 02229 229 1 0 to 02231 231 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_116.nc
+Annotation: 02231 231 1 0 to 02233 233 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_117.nc
+Annotation: 02233 233 1 0 to 02235 235 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_118.nc
+Annotation: 02235 235 1 0 to 02237 237 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_119.nc
+Annotation: 02237 237 1 0 to 02239 239 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_120.nc
+Annotation: 02239 239 1 0 to 02241 241 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_121.nc
+Annotation: 02241 241 1 0 to 02243 243 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_122.nc
+Annotation: 02243 243 1 0 to 02245 245 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_123.nc
+Annotation: 02245 245 1 0 to 02247 247 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_124.nc
+Annotation: 02247 247 1 0 to 02249 249 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:52 TGCM.tiegcm1.94.sclim_heelis_125.nc
+Annotation: 02249 249 1 0 to 02251 251 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:53 TGCM.tiegcm1.94.sclim_heelis_126.nc
+Annotation: 02251 251 1 0 to 02253 253 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:53 TGCM.tiegcm1.94.sclim_heelis_127.nc
+Annotation: 02253 253 1 0 to 02255 255 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:53 TGCM.tiegcm1.94.sclim_heelis_128.nc
+Annotation: 02255 255 1 0 to 02257 257 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:53 TGCM.tiegcm1.94.sclim_heelis_129.nc
+Annotation: 02257 257 1 0 to 02259 259 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:53 TGCM.tiegcm1.94.sclim_heelis_130.nc
+Annotation: 02259 259 1 0 to 02261 261 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:53 TGCM.tiegcm1.94.sclim_heelis_131.nc
+Annotation: 02261 261 1 0 to 02263 263 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:53 TGCM.tiegcm1.94.sclim_heelis_132.nc
+Annotation: 02263 263 1 0 to 02265 265 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:54 TGCM.tiegcm1.94.sclim_heelis_133.nc
+Annotation: 02265 265 1 0 to 02267 267 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:54 TGCM.tiegcm1.94.sclim_heelis_134.nc
+Annotation: 02267 267 1 0 to 02269 269 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:54 TGCM.tiegcm1.94.sclim_heelis_135.nc
+Annotation: 02269 269 1 0 to 02271 271 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:54 TGCM.tiegcm1.94.sclim_heelis_136.nc
+Annotation: 02271 271 1 0 to 02273 273 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:54 TGCM.tiegcm1.94.sclim_heelis_137.nc
+Annotation: 02273 273 1 0 to 02275 275 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:54 TGCM.tiegcm1.94.sclim_heelis_138.nc
+Annotation: 02275 275 1 0 to 02277 277 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:54 TGCM.tiegcm1.94.sclim_heelis_139.nc
+Annotation: 02277 277 1 0 to 02279 279 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:54 TGCM.tiegcm1.94.sclim_heelis_140.nc
+Annotation: 02279 279 1 0 to 02281 281 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_141.nc
+Annotation: 02281 281 1 0 to 02283 283 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_142.nc
+Annotation: 02283 283 1 0 to 02285 285 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_143.nc
+Annotation: 02285 285 1 0 to 02287 287 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_144.nc
+Annotation: 02287 287 1 0 to 02289 289 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_145.nc
+Annotation: 02289 289 1 0 to 02291 291 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_146.nc
+Annotation: 02291 291 1 0 to 02293 293 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_147.nc
+Annotation: 02293 293 1 0 to 02295 295 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_148.nc
+Annotation: 02295 295 1 0 to 02297 297 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_149.nc
+Annotation: 02297 297 1 0 to 02299 299 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:55 TGCM.tiegcm1.94.sclim_heelis_150.nc
+Annotation: 02299 299 1 0 to 02301 301 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_151.nc
+Annotation: 02301 301 1 0 to 02303 303 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_152.nc
+Annotation: 02303 303 1 0 to 02305 305 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_153.nc
+Annotation: 02305 305 1 0 to 02307 307 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_154.nc
+Annotation: 02307 307 1 0 to 02309 309 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_155.nc
+Annotation: 02309 309 1 0 to 02311 311 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_156.nc
+Annotation: 02311 311 1 0 to 02313 313 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_157.nc
+Annotation: 02313 313 1 0 to 02315 315 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_158.nc
+Annotation: 02315 315 1 0 to 02317 317 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_159.nc
+Annotation: 02317 317 1 0 to 02319 319 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:56 TGCM.tiegcm1.94.sclim_heelis_160.nc
+Annotation: 02319 319 1 0 to 02321 321 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_161.nc
+Annotation: 02321 321 1 0 to 02323 323 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_162.nc
+Annotation: 02323 323 1 0 to 02325 325 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_163.nc
+Annotation: 02325 325 1 0 to 02327 327 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_164.nc
+Annotation: 02327 327 1 0 to 02329 329 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_165.nc
+Annotation: 02329 329 1 0 to 02331 331 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_166.nc
+Annotation: 02331 331 1 0 to 02333 333 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_167.nc
+Annotation: 02333 333 1 0 to 02335 335 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_168.nc
+Annotation: 02335 335 1 0 to 02337 337 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_169.nc
+Annotation: 02337 337 1 0 to 02339 339 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:57 TGCM.tiegcm1.94.sclim_heelis_170.nc
+Annotation: 02339 339 1 0 to 02341 341 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_171.nc
+Annotation: 02341 341 1 0 to 02343 343 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_172.nc
+Annotation: 02343 343 1 0 to 02345 345 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_173.nc
+Annotation: 02345 345 1 0 to 02347 347 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_174.nc
+Annotation: 02347 347 1 0 to 02349 349 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_175.nc
+Annotation: 02349 349 1 0 to 02351 351 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_176.nc
+Annotation: 02351 351 1 0 to 02353 353 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_177.nc
+Annotation: 02353 353 1 0 to 02355 355 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_178.nc
+Annotation: 02355 355 1 0 to 02357 357 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_179.nc
+Annotation: 02357 357 1 0 to 02359 359 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:58 TGCM.tiegcm1.94.sclim_heelis_180.nc
+Annotation: 02359 359 1 0 to 02361 361 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:59 TGCM.tiegcm1.94.sclim_heelis_181.nc
+Annotation: 02361 361 1 0 to 02363 363 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474240 May 21 20:59 TGCM.tiegcm1.94.sclim_heelis_182.nc
+Annotation: 02363 363 1 0 to 02365 365 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245696 May 21 20:59 TGCM.tiegcm1.94.sclim_heelis_183.nc
+Annotation: 02365 365 1 0 to 03001 1 0 0 by 60 tiegcm1.94 secondary
+
+
+/home/tgcm/tiegcm1.94/control:
+-rw-r-----   1 foster    tgcm        87364220 May 20 10:51 TGCM.tiegcm1.94.pcntr_decsol_smax_001.nc
+Annotation: 02355 355 0 0 to 02360 360 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364216 May 20 09:37 TGCM.tiegcm1.94.pcntr_decsol_smin_001.nc
+Annotation: 02355 355 0 0 to 02360 360 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364220 May 20 10:52 TGCM.tiegcm1.94.pcntr_junsol_smax_001.nc
+Annotation: 02172 172 0 0 to 02177 177 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364216 May 20 09:38 TGCM.tiegcm1.94.pcntr_junsol_smin_001.nc
+Annotation: 02172 172 0 0 to 02177 177 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364220 May 20 10:53 TGCM.tiegcm1.94.pcntr_mareqx_smax_001.nc
+Annotation: 02080 80 0 0 to 02085 85 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364216 May 20 09:39 TGCM.tiegcm1.94.pcntr_mareqx_smin_001.nc
+Annotation: 02080 80 0 0 to 02085 85 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364220 May 20 10:53 TGCM.tiegcm1.94.pcntr_sepeqx_smax_001.nc
+Annotation: 02264 264 0 0 to 02269 269 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364216 May 20 09:39 TGCM.tiegcm1.94.pcntr_sepeqx_smin_001.nc
+Annotation: 02264 264 0 0 to 02269 269 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       170245664 May 20 10:51 TGCM.tiegcm1.94.scntr_decsol_smax_001.nc
+Annotation: 02355 355 1 0 to 02356 356 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:51 TGCM.tiegcm1.94.scntr_decsol_smax_002.nc
+Annotation: 02356 356 1 0 to 02357 357 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:51 TGCM.tiegcm1.94.scntr_decsol_smax_003.nc
+Annotation: 02357 357 1 0 to 02358 358 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:52 TGCM.tiegcm1.94.scntr_decsol_smax_004.nc
+Annotation: 02358 358 1 0 to 02359 359 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:52 TGCM.tiegcm1.94.scntr_decsol_smax_005.nc
+Annotation: 02359 359 1 0 to 02360 360 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245664 May 20 09:37 TGCM.tiegcm1.94.scntr_decsol_smin_001.nc
+Annotation: 02355 355 1 0 to 02356 356 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:37 TGCM.tiegcm1.94.scntr_decsol_smin_002.nc
+Annotation: 02356 356 1 0 to 02357 357 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:37 TGCM.tiegcm1.94.scntr_decsol_smin_003.nc
+Annotation: 02357 357 1 0 to 02358 358 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:37 TGCM.tiegcm1.94.scntr_decsol_smin_004.nc
+Annotation: 02358 358 1 0 to 02359 359 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:37 TGCM.tiegcm1.94.scntr_decsol_smin_005.nc
+Annotation: 02359 359 1 0 to 02360 360 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245664 May 20 10:52 TGCM.tiegcm1.94.scntr_junsol_smax_001.nc
+Annotation: 02172 172 1 0 to 02173 173 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:52 TGCM.tiegcm1.94.scntr_junsol_smax_002.nc
+Annotation: 02173 173 1 0 to 02174 174 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:52 TGCM.tiegcm1.94.scntr_junsol_smax_003.nc
+Annotation: 02174 174 1 0 to 02175 175 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:52 TGCM.tiegcm1.94.scntr_junsol_smax_004.nc
+Annotation: 02175 175 1 0 to 02176 176 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:52 TGCM.tiegcm1.94.scntr_junsol_smax_005.nc
+Annotation: 02176 176 1 0 to 02177 177 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245664 May 20 09:38 TGCM.tiegcm1.94.scntr_junsol_smin_001.nc
+Annotation: 02172 172 1 0 to 02173 173 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:38 TGCM.tiegcm1.94.scntr_junsol_smin_002.nc
+Annotation: 02173 173 1 0 to 02174 174 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:38 TGCM.tiegcm1.94.scntr_junsol_smin_003.nc
+Annotation: 02174 174 1 0 to 02175 175 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:38 TGCM.tiegcm1.94.scntr_junsol_smin_004.nc
+Annotation: 02175 175 1 0 to 02176 176 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:38 TGCM.tiegcm1.94.scntr_junsol_smin_005.nc
+Annotation: 02176 176 1 0 to 02177 177 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245668 May 20 10:53 TGCM.tiegcm1.94.scntr_mareqx_smax_001.nc
+Annotation: 02080 80 1 0 to 02081 81 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245636 May 20 10:53 TGCM.tiegcm1.94.scntr_mareqx_smax_002.nc
+Annotation: 02081 81 1 0 to 02082 82 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245636 May 20 10:53 TGCM.tiegcm1.94.scntr_mareqx_smax_003.nc
+Annotation: 02082 82 1 0 to 02083 83 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245636 May 20 10:53 TGCM.tiegcm1.94.scntr_mareqx_smax_004.nc
+Annotation: 02083 83 1 0 to 02084 84 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245636 May 20 10:53 TGCM.tiegcm1.94.scntr_mareqx_smax_005.nc
+Annotation: 02084 84 1 0 to 02085 85 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245664 May 20 09:39 TGCM.tiegcm1.94.scntr_mareqx_smin_001.nc
+Annotation: 02080 80 1 0 to 02081 81 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:39 TGCM.tiegcm1.94.scntr_mareqx_smin_002.nc
+Annotation: 02081 81 1 0 to 02082 82 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:39 TGCM.tiegcm1.94.scntr_mareqx_smin_003.nc
+Annotation: 02082 82 1 0 to 02083 83 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:39 TGCM.tiegcm1.94.scntr_mareqx_smin_004.nc
+Annotation: 02083 83 1 0 to 02084 84 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:39 TGCM.tiegcm1.94.scntr_mareqx_smin_005.nc
+Annotation: 02084 84 1 0 to 02085 85 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245664 May 20 10:53 TGCM.tiegcm1.94.scntr_sepeqx_smax_001.nc
+Annotation: 02264 264 1 0 to 02265 265 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:53 TGCM.tiegcm1.94.scntr_sepeqx_smax_002.nc
+Annotation: 02265 265 1 0 to 02266 266 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:54 TGCM.tiegcm1.94.scntr_sepeqx_smax_003.nc
+Annotation: 02266 266 1 0 to 02267 267 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:54 TGCM.tiegcm1.94.scntr_sepeqx_smax_004.nc
+Annotation: 02267 267 1 0 to 02268 268 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 10:54 TGCM.tiegcm1.94.scntr_sepeqx_smax_005.nc
+Annotation: 02268 268 1 0 to 02269 269 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245664 May 20 09:39 TGCM.tiegcm1.94.scntr_sepeqx_smin_001.nc
+Annotation: 02264 264 1 0 to 02265 265 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:39 TGCM.tiegcm1.94.scntr_sepeqx_smin_002.nc
+Annotation: 02265 265 1 0 to 02266 266 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:40 TGCM.tiegcm1.94.scntr_sepeqx_smin_003.nc
+Annotation: 02266 266 1 0 to 02267 267 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:40 TGCM.tiegcm1.94.scntr_sepeqx_smin_004.nc
+Annotation: 02267 267 1 0 to 02268 268 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245632 May 20 09:40 TGCM.tiegcm1.94.scntr_sepeqx_smin_005.nc
+Annotation: 02268 268 1 0 to 02269 269 0 0 by 60 tiegcm1.94 secondary
+
+
+/home/tgcm/tiegcm1.94/dec2006:
+-rw-r-----   1 foster    tgcm       145595536 May 20 17:15 TGCM.tiegcm1.94.p_dec2006_heelis_gpi_001.nc
+Annotation: 06330 330 0 0 to 06339 339 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595576 May 20 17:15 TGCM.tiegcm1.94.p_dec2006_heelis_gpi_002.nc
+Annotation: 06340 340 0 0 to 06349 349 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595576 May 20 17:16 TGCM.tiegcm1.94.p_dec2006_heelis_gpi_003.nc
+Annotation: 06350 350 0 0 to 06359 359 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575232 May 20 17:17 TGCM.tiegcm1.94.p_dec2006_heelis_gpi_004.nc
+Annotation: 06360 360 0 0 to 06360 360 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595536 May 20 17:17 TGCM.tiegcm1.94.p_dec2006_weimer_imf_001.nc
+Annotation: 06330 330 0 0 to 06339 339 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595576 May 20 17:18 TGCM.tiegcm1.94.p_dec2006_weimer_imf_002.nc
+Annotation: 06340 340 0 0 to 06349 349 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595576 May 20 17:18 TGCM.tiegcm1.94.p_dec2006_weimer_imf_003.nc
+Annotation: 06350 350 0 0 to 06359 359 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575232 May 20 17:19 TGCM.tiegcm1.94.p_dec2006_weimer_imf_004.nc
+Annotation: 06360 360 0 0 to 06360 360 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       340474264 May 20 17:15 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_001.nc
+Annotation: 06330 330 1 0 to 06332 332 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:15 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_002.nc
+Annotation: 06332 332 1 0 to 06334 334 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:15 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_003.nc
+Annotation: 06334 334 1 0 to 06336 336 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:15 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_004.nc
+Annotation: 06336 336 1 0 to 06338 338 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:15 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_005.nc
+Annotation: 06338 338 1 0 to 06340 340 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:15 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_006.nc
+Annotation: 06340 340 1 0 to 06342 342 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:15 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_007.nc
+Annotation: 06342 342 1 0 to 06344 344 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:16 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_008.nc
+Annotation: 06344 344 1 0 to 06346 346 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:16 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_009.nc
+Annotation: 06346 346 1 0 to 06348 348 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:16 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_010.nc
+Annotation: 06348 348 1 0 to 06350 350 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:16 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_011.nc
+Annotation: 06350 350 1 0 to 06352 352 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:16 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_012.nc
+Annotation: 06352 352 1 0 to 06354 354 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:16 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_013.nc
+Annotation: 06354 354 1 0 to 06356 356 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:16 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_014.nc
+Annotation: 06356 356 1 0 to 06358 358 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:16 TGCM.tiegcm1.94.s_dec2006_heelis_gpi_015.nc
+Annotation: 06358 358 1 0 to 06360 360 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474264 May 20 17:17 TGCM.tiegcm1.94.s_dec2006_weimer_imf_001.nc
+Annotation: 06330 330 1 0 to 06332 332 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:17 TGCM.tiegcm1.94.s_dec2006_weimer_imf_002.nc
+Annotation: 06332 332 1 0 to 06334 334 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:17 TGCM.tiegcm1.94.s_dec2006_weimer_imf_003.nc
+Annotation: 06334 334 1 0 to 06336 336 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:18 TGCM.tiegcm1.94.s_dec2006_weimer_imf_004.nc
+Annotation: 06336 336 1 0 to 06338 338 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:18 TGCM.tiegcm1.94.s_dec2006_weimer_imf_005.nc
+Annotation: 06338 338 1 0 to 06340 340 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:18 TGCM.tiegcm1.94.s_dec2006_weimer_imf_006.nc
+Annotation: 06340 340 1 0 to 06342 342 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:18 TGCM.tiegcm1.94.s_dec2006_weimer_imf_007.nc
+Annotation: 06342 342 1 0 to 06344 344 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:18 TGCM.tiegcm1.94.s_dec2006_weimer_imf_008.nc
+Annotation: 06344 344 1 0 to 06346 346 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:18 TGCM.tiegcm1.94.s_dec2006_weimer_imf_009.nc
+Annotation: 06346 346 1 0 to 06348 348 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:18 TGCM.tiegcm1.94.s_dec2006_weimer_imf_010.nc
+Annotation: 06348 348 1 0 to 06350 350 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:18 TGCM.tiegcm1.94.s_dec2006_weimer_imf_011.nc
+Annotation: 06350 350 1 0 to 06352 352 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:19 TGCM.tiegcm1.94.s_dec2006_weimer_imf_012.nc
+Annotation: 06352 352 1 0 to 06354 354 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:19 TGCM.tiegcm1.94.s_dec2006_weimer_imf_013.nc
+Annotation: 06354 354 1 0 to 06356 356 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:19 TGCM.tiegcm1.94.s_dec2006_weimer_imf_014.nc
+Annotation: 06356 356 1 0 to 06358 358 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 20 17:19 TGCM.tiegcm1.94.s_dec2006_weimer_imf_015.nc
+Annotation: 06358 358 1 0 to 06360 360 0 0 by 60 tiegcm1.94 secondary
+
+drwxrwx---   2 foster    tgcm             512 May 20 15:37 equil
+Annotation: 
+
+
+/home/tgcm/tiegcm1.94/dec2006/equil:
+-rw-r-----   1 foster    tgcm       145595480 May 20 15:38 TGCM.tiegcm1.94.p_dec2006_heelis_gpi_equil_001.nc
+Annotation: 06300 300 0 0 to 06309 309 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595532 May 20 15:38 TGCM.tiegcm1.94.p_dec2006_heelis_gpi_equil_002.nc
+Annotation: 06310 310 0 0 to 06319 319 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595532 May 20 15:38 TGCM.tiegcm1.94.p_dec2006_heelis_gpi_equil_003.nc
+Annotation: 06320 320 0 0 to 06329 329 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575188 May 20 15:38 TGCM.tiegcm1.94.p_dec2006_heelis_gpi_equil_004.nc
+Annotation: 06330 330 0 0 to 06330 330 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595480 May 20 15:39 TGCM.tiegcm1.94.p_dec2006_weimer_imf_equil_001.nc
+Annotation: 06300 300 0 0 to 06309 309 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595532 May 20 15:39 TGCM.tiegcm1.94.p_dec2006_weimer_imf_equil_002.nc
+Annotation: 06310 310 0 0 to 06319 319 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595532 May 20 15:39 TGCM.tiegcm1.94.p_dec2006_weimer_imf_equil_003.nc
+Annotation: 06320 320 0 0 to 06329 329 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575188 May 20 15:39 TGCM.tiegcm1.94.p_dec2006_weimer_imf_equil_004.nc
+Annotation: 06330 330 0 0 to 06330 330 0 0 by 1440 tiegcm1.94 primary
+
+
+/home/tgcm/tiegcm1.94/nov2003:
+-rw-r-----   1 foster    tgcm        87364252 May 26 18:00 TGCM.tiegcm1.94.p_nov2003_heelis_gpi_001.nc
+Annotation: 03323 323 0 0 to 03328 328 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364252 May 26 18:19 TGCM.tiegcm1.94.p_nov2003_weimer_imf_001.nc
+Annotation: 03323 323 0 0 to 03328 328 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       170245704 May 26 18:00 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_001.nc
+Annotation: 03323 323 1 0 to 03324 324 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 26 18:00 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_002.nc
+Annotation: 03324 324 1 0 to 03325 325 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 26 18:00 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_003.nc
+Annotation: 03325 325 1 0 to 03326 326 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 26 18:01 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_004.nc
+Annotation: 03326 326 1 0 to 03327 327 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 26 18:01 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_005.nc
+Annotation: 03327 327 1 0 to 03328 328 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245704 May 26 18:19 TGCM.tiegcm1.94.s_nov2003_weimer_imf_001.nc
+Annotation: 03323 323 1 0 to 03324 324 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 26 18:19 TGCM.tiegcm1.94.s_nov2003_weimer_imf_002.nc
+Annotation: 03324 324 1 0 to 03325 325 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 26 18:19 TGCM.tiegcm1.94.s_nov2003_weimer_imf_003.nc
+Annotation: 03325 325 1 0 to 03326 326 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 26 18:19 TGCM.tiegcm1.94.s_nov2003_weimer_imf_004.nc
+Annotation: 03326 326 1 0 to 03327 327 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 26 18:19 TGCM.tiegcm1.94.s_nov2003_weimer_imf_005.nc
+Annotation: 03327 327 1 0 to 03328 328 0 0 by 60 tiegcm1.94 secondary
+
+drwxrwx---   2 foster    tgcm             512 May 26 18:03 equil
+Annotation: 
+
+
+/home/tgcm/tiegcm1.94/nov2003/equil:
+-rw-r-----   1 foster    tgcm       145595480 May 26 18:03 TGCM.tiegcm1.94.p_nov2003_heelis_gpi_equil_001.nc
+Annotation: 03309 309 0 0 to 03318 318 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        72806448 May 26 18:03 TGCM.tiegcm1.94.p_nov2003_heelis_gpi_equil_002.nc
+Annotation: 03319 319 0 0 to 03323 323 0 0 by 1440 tiegcm1.94 primary
+
+
+/home/tgcm/tiegcm1.94/nov2003_days001-006:
+-rw-r-----   1 foster    tgcm        87364256 May 21 09:42 TGCM.tiegcm1.94.p_nov2003_heelis_gpi_001.nc
+Annotation: 03305 305 0 0 to 03310 310 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364256 May 21 09:43 TGCM.tiegcm1.94.p_nov2003_weimer_imf_001.nc
+Annotation: 03305 305 0 0 to 03310 310 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       170245704 May 21 09:42 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_001.nc
+Annotation: 03305 305 1 0 to 03306 306 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 21 09:42 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_002.nc
+Annotation: 03306 306 1 0 to 03307 307 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 21 09:42 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_003.nc
+Annotation: 03307 307 1 0 to 03308 308 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 21 09:42 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_004.nc
+Annotation: 03308 308 1 0 to 03309 309 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 21 09:42 TGCM.tiegcm1.94.s_nov2003_heelis_gpi_005.nc
+Annotation: 03309 309 1 0 to 03310 310 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245704 May 21 09:43 TGCM.tiegcm1.94.s_nov2003_weimer_imf_001.nc
+Annotation: 03305 305 1 0 to 03306 306 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 21 09:43 TGCM.tiegcm1.94.s_nov2003_weimer_imf_002.nc
+Annotation: 03306 306 1 0 to 03307 307 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 21 09:43 TGCM.tiegcm1.94.s_nov2003_weimer_imf_003.nc
+Annotation: 03307 307 1 0 to 03308 308 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 21 09:43 TGCM.tiegcm1.94.s_nov2003_weimer_imf_004.nc
+Annotation: 03308 308 1 0 to 03309 309 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245672 May 21 09:43 TGCM.tiegcm1.94.s_nov2003_weimer_imf_005.nc
+Annotation: 03309 309 1 0 to 03310 310 0 0 by 60 tiegcm1.94 secondary
+
+drwxrwx---   2 foster    tgcm             512 May 21 09:47 equil
+Annotation: 
+
+
+/home/tgcm/tiegcm1.94/nov2003_days001-006/equil:
+-rw-r-----   1 foster    tgcm       145595480 May 21 09:48 TGCM.tiegcm1.94.p_nov2003_heelis_gpi_equil_001.nc
+Annotation: 03275 275 0 0 to 03284 284 0 0 by 0 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm       145595532 May 21 09:48 TGCM.tiegcm1.94.p_nov2003_heelis_gpi_equil_002.nc
+Annotation: 03285 285 0 0 to 03294 294 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm       145595532 May 21 09:49 TGCM.tiegcm1.94.p_nov2003_heelis_gpi_equil_003.nc
+Annotation: 03295 295 0 0 to 03304 304 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575188 May 21 09:49 TGCM.tiegcm1.94.p_nov2003_heelis_gpi_equil_004.nc
+Annotation: 03305 305 0 0 to 03305 305 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm       145595480 May 21 09:49 TGCM.tiegcm1.94.p_nov2003_weimer_imf_equil_001.nc
+Annotation: 03275 275 0 0 to 03284 284 0 0 by 0 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm       145595532 May 21 09:49 TGCM.tiegcm1.94.p_nov2003_weimer_imf_equil_002.nc
+Annotation: 03285 285 0 0 to 03294 294 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm       145595532 May 21 09:49 TGCM.tiegcm1.94.p_nov2003_weimer_imf_equil_003.nc
+Annotation: 03295 295 0 0 to 03304 304 0 0 by 1440 tiegcm1.94 primary 
+
+-rw-r-----   1 foster    tgcm        14575188 May 21 09:49 TGCM.tiegcm1.94.p_nov2003_weimer_imf_equil_004.nc
+Annotation: 03305 305 0 0 to 03305 305 0 0 by 1440 tiegcm1.94 primary 
+
+
+/home/tgcm/tiegcm1.94/source:
+-rw-r-----   1 foster    tgcm        14575176 May 20 09:21 TGCM.tiegcm1.94.pcntr_decsol_smax.nc
+Annotation: 02355 355 0 0 to 02355 355 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173628 May 20 09:21 TGCM.tiegcm1.94.pcntr_decsol_smax_000.nc
+Annotation: 02335 335 0 0 to 02354 354 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575172 May 19 21:42 TGCM.tiegcm1.94.pcntr_decsol_smin.nc
+Annotation: 02355 355 0 0 to 02355 355 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173628 May 19 21:42 TGCM.tiegcm1.94.pcntr_decsol_smin_000.nc
+Annotation: 02335 335 0 0 to 02354 354 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575172 May 20 09:21 TGCM.tiegcm1.94.pcntr_junsol_smax.nc
+Annotation: 02172 172 0 0 to 02172 172 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173624 May 20 09:21 TGCM.tiegcm1.94.pcntr_junsol_smax_000.nc
+Annotation: 02152 152 0 0 to 02171 171 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575168 May 19 21:42 TGCM.tiegcm1.94.pcntr_junsol_smin.nc
+Annotation: 02172 172 0 0 to 02172 172 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173624 May 19 21:42 TGCM.tiegcm1.94.pcntr_junsol_smin_000.nc
+Annotation: 02152 152 0 0 to 02171 171 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575172 May 20 09:21 TGCM.tiegcm1.94.pcntr_mareqx_smax.nc
+Annotation: 02080 80 0 0 to 02080 80 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173624 May 20 09:21 TGCM.tiegcm1.94.pcntr_mareqx_smax_000.nc
+Annotation: 02060 60 0 0 to 02079 79 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575168 May 19 21:43 TGCM.tiegcm1.94.pcntr_mareqx_smin.nc
+Annotation: 02080 80 0 0 to 02080 80 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173624 May 19 21:43 TGCM.tiegcm1.94.pcntr_mareqx_smin_000.nc
+Annotation: 02060 60 0 0 to 02079 79 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575172 May 20 09:22 TGCM.tiegcm1.94.pcntr_sepeqx_smax.nc
+Annotation: 02264 264 0 0 to 02264 264 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173624 May 20 09:22 TGCM.tiegcm1.94.pcntr_sepeqx_smax_000.nc
+Annotation: 02244 244 0 0 to 02263 263 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        14575168 May 19 21:43 TGCM.tiegcm1.94.pcntr_sepeqx_smin.nc
+Annotation: 02264 264 0 0 to 02264 264 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       291173624 May 19 21:43 TGCM.tiegcm1.94.pcntr_sepeqx_smin_000.nc
+Annotation: 02244 244 0 0 to 02263 263 0 0 by 0 tiegcm1.94 primary
+
+
+/home/tgcm/tiegcm1.94/whi2008:
+-rw-r-----   1 foster    tgcm       145595532 May 21 20:13 TGCM.tiegcm1.94.p_whi2008_heelis_gpi_001.nc
+Annotation: 08081 81 0 0 to 08090 90 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595572 May 21 20:14 TGCM.tiegcm1.94.p_whi2008_heelis_gpi_002.nc
+Annotation: 08091 91 0 0 to 08100 100 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364308 May 21 20:14 TGCM.tiegcm1.94.p_whi2008_heelis_gpi_003.nc
+Annotation: 08101 101 0 0 to 08106 106 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595532 May 21 20:52 TGCM.tiegcm1.94.p_whi2008_weimer_imf_001.nc
+Annotation: 08081 81 0 0 to 08090 90 0 0 by 0 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       145595576 May 21 20:53 TGCM.tiegcm1.94.p_whi2008_weimer_imf_002.nc
+Annotation: 08091 91 0 0 to 08100 100 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm        87364312 May 21 20:54 TGCM.tiegcm1.94.p_whi2008_weimer_imf_003.nc
+Annotation: 08101 101 0 0 to 08106 106 0 0 by 1440 tiegcm1.94 primary
+
+-rw-r-----   1 foster    tgcm       340474260 May 21 20:13 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_001.nc
+Annotation: 08081 81 1 0 to 08083 83 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:13 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_002.nc
+Annotation: 08083 83 1 0 to 08085 85 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:13 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_003.nc
+Annotation: 08085 85 1 0 to 08087 87 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_004.nc
+Annotation: 08087 87 1 0 to 08089 89 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_005.nc
+Annotation: 08089 89 1 0 to 08091 91 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_006.nc
+Annotation: 08091 91 1 0 to 08093 93 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_007.nc
+Annotation: 08093 93 1 0 to 08095 95 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_008.nc
+Annotation: 08095 95 1 0 to 08097 97 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_009.nc
+Annotation: 08097 97 1 0 to 08099 99 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_010.nc
+Annotation: 08099 99 1 0 to 08101 101 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_011.nc
+Annotation: 08101 101 1 0 to 08103 103 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474228 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_012.nc
+Annotation: 08103 103 1 0 to 08105 105 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245684 May 21 20:14 TGCM.tiegcm1.94.s_whi2008_heelis_gpi_013.nc
+Annotation: 08105 105 1 0 to 08106 106 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474264 May 21 20:52 TGCM.tiegcm1.94.s_whi2008_weimer_imf_001.nc
+Annotation: 08081 81 1 0 to 08083 83 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:53 TGCM.tiegcm1.94.s_whi2008_weimer_imf_002.nc
+Annotation: 08083 83 1 0 to 08085 85 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:53 TGCM.tiegcm1.94.s_whi2008_weimer_imf_003.nc
+Annotation: 08085 85 1 0 to 08087 87 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:53 TGCM.tiegcm1.94.s_whi2008_weimer_imf_004.nc
+Annotation: 08087 87 1 0 to 08089 89 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:53 TGCM.tiegcm1.94.s_whi2008_weimer_imf_005.nc
+Annotation: 08089 89 1 0 to 08091 91 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:53 TGCM.tiegcm1.94.s_whi2008_weimer_imf_006.nc
+Annotation: 08091 91 1 0 to 08093 93 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:53 TGCM.tiegcm1.94.s_whi2008_weimer_imf_007.nc
+Annotation: 08093 93 1 0 to 08095 95 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:54 TGCM.tiegcm1.94.s_whi2008_weimer_imf_008.nc
+Annotation: 08095 95 1 0 to 08097 97 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:54 TGCM.tiegcm1.94.s_whi2008_weimer_imf_009.nc
+Annotation: 08097 97 1 0 to 08099 99 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:54 TGCM.tiegcm1.94.s_whi2008_weimer_imf_010.nc
+Annotation: 08099 99 1 0 to 08101 101 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:54 TGCM.tiegcm1.94.s_whi2008_weimer_imf_011.nc
+Annotation: 08101 101 1 0 to 08103 103 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       340474232 May 21 20:54 TGCM.tiegcm1.94.s_whi2008_weimer_imf_012.nc
+Annotation: 08103 103 1 0 to 08105 105 0 0 by 60 tiegcm1.94 secondary
+
+-rw-r-----   1 foster    tgcm       170245688 May 21 20:54 TGCM.tiegcm1.94.s_whi2008_weimer_imf_013.nc
+Annotation: 08105 105 1 0 to 08106 106 0 0 by 60 tiegcm1.94 secondary
+

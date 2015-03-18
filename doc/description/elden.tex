@@ -1,0 +1,229 @@
+%
+\section{Calculation of electron density $N_e$, $N^+$, $N_2^+$, $NO^+$  \index{ELDEN.F}}\label{cap:elden}
+%
+The input to \src{subroutine elden} is summarized in table
+\ref{tab:input_elden}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep
+\\ \hline \hline
+%
+neutral temperature &       $T_n$              & $K$   &  midpoints & $t_n$\\
+mass mixing ratio $O_2$&       {$\Psi_{O_2}$}     & $-$   & midpoints  & $t_n$\\
+mass mixing ratio $O$&       {$\Psi_{O}$}     & $-$   &  midpoints & $t_n$\\
+mean molecular mass&       {$\overline{m}$}     & $g/mol$   & interfaces  &$t_n + \Delta t$ \\
+number density of $O^+$&   $n(O^+)$         & $\#/cm^3$   & midpoints  &$t_n $ \\
+number density of $O^{+,t_n+\Delta t}$&   $n(O^+)$         & $\#/cm^3$   & midpoints  &$t_n $ \\
+number density of $N(^2D)$&   $n(N(^2D))$  & $\#/cm^3$   & midpoints  &$t_n$ \\
+number density of $NO$&   $n(NO)$  & $\#/cm^3$   & midpoints  &$t_n$ \\
+number density of $N(^4S)$&   $n(N(^4S))$  & $\#/cm^3$   & midpoints  &$t_n$ \\
+number density of $XI O^+(^2P)$&   $n(XI O^+(^2P))$  & $\#/cm^3$   & midpoints  &$t_n+ \Delta t$ \\
+number density of $XI O^+(^2D)$&   $n(XI O^+(^2D))$  & $\#/cm^3$   &
+midpoints &$t_n+ \Delta t$
+ \\ \hline
+\end{tabular}
+\caption{Input fields to \src{subroutine elden}}
+\label{tab:input_elden}
+\end{table}
+%
+The output of \src{subroutine settei} is summarized in table
+\ref{tab:output_elden}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline
+number density of $N^+$    & $n(N^+)$   & $\#/cm^3$   & midpoints  & $t_n+\Delta t$ \\
+number density of $N_2^+$    & $n(N_2^+)$   & $\#/cm^3$   & midpoints  & $t_n+\Delta t$ \\
+number density of $NO^+$    & $n(NO^+)$   & $\#/cm^3$   & midpoints  & $t_n+\Delta t$ \\
+number density of $O_2^+$    & $n(O_2^+)$   & $\#/cm^3$   & midpoints  & $t_n+\Delta t$ \\
+electron density     & $N_e$   & $\#/cm^3$   & midpoints  &
+$t_n+\Delta t$
+\\ \hline \hline
+\end{tabular}
+\caption{Output fields of \src{subroutine elden}}
+\label{tab:output_elden}
+\end{table}
+%
+%
+The module data of \src{subroutine elden} is summarized in table
+\ref{tab:module_elden}.
+%
+\begin{table}[tb]
+\begin{tabular}{|p{3.5cm} ||c|c|c|c|c|c|} \hline
+physical field               & variable        & unit&pressure
+level& timestep \\ \hline \hline QRJ: production due to $N^+$ &
+{$Q(N^+)$}
+&$cm^{-3}s^{-1}$ & interfaces & $t_n$  \\
+QRJ: production due to $NO^+$ & {$Q(NO^+)$}
+&$cm^{-3}s^{-1}$ & interfaces & $t_n$  \\
+CHEMRATES: reaction rates & {$k_i$}
+&$cm^{3}s^{-1}$ & midpoints & $-$  \\
+CHEMRATES: N) production coefficient & {$\beta_9$} &$s^{-1}$ & interface & $-$ 
+\\ \hline \hline
+\end{tabular}
+\caption{Module data of \src{subroutine elden}}
+\label{tab:module_elden}
+\end{table}
+%
+
+The electron density is calculated by
+%
+\begin{align}
+  N_e = n(O^+) + n(N_2^+) + n(N^+) + n(O_2^+)+ n(NO^+)
+\end{align}
+%
+with
+%
+\begin{align}
+  n(O^+) = & F \\
+  n(N_2^+) = & \frac{D}{E' + \alpha_3 N_e} \\
+  n(N^+) = & G \\
+  n(O_2^+) = & \frac{B+\frac{HD}{E' + \alpha_3 N_e}}{C+ \alpha_2 N_e}
+  \\
+  n(NO^+) =&  \left[ A + \frac{E' D - HD}{E' + \alpha_3 N-e} + \frac{C}{C+ \alpha_2 N-e}
+     \frac{B+HD}{E' + \alpha_3 N_e} \right] \frac{1}{\alpha_1 N_e}
+\end{align}
+%
+ This leads to an
+fourth order equation
+%
+\begin{align}
+  a_4 N_e^4 + a_3 N_e^3 + a_2 N_e + a_1 N_e + a_0 = 0
+\end{align}
+%
+with
+%
+\begin{align}
+   a_4 = & \alpha_1 \alpha_2 \alpha_3 \\
+   a_3 = & \alpha_1 (\alpha_2 E' + \alpha_3 C) - \alpha_1 \alpha_2
+       \alpha_3 (F + G) \\
+   a_2 = & \alpha_1 E' C - \alpha_1 (\alpha_2 E' + \alpha_3 C) (F+G)
+        - \alpha_1 \alpha_2 D - \alpha_2 \alpha_3 A - \alpha_1
+        \alpha_3 B \\
+   a_1 = & - \alpha_1 \left[ E' C (F+G) + D C + B E' + H D\right] -
+         \notag \\
+        {} & \alpha_2 \left[ E' (A + D) - H D \right] - \alpha_3 C (A +
+        B)\\
+   a_0 =  & - E' C (A + B + D)
+\end{align}
+%
+and
+%
+\begin{align}
+  A = & Q(NO^+) + k_2 n(O^+)n(N_2) + k_7 n(N^+)n(O_2) + \beta_9
+       n(NO)\\
+  B = & Q(O_2^+)+ k_1 n(O^+)+ n(O_2) + k_6 n(N^+)n(O_2) + \notag \\
+       {} & k_{26}n(O_2)n(xiO^+(^2D)) \\
+  C = & k_4 n(N(^4S)) + k_5 n(NO) \\
+  D = & Q(N_2^+) + n(N_2)\left[ k_{16}n(xiO^+(^2P) +
+       k_{23}n(xiO^+(^2D))\right] \\
+  E = & k_3 n(O) \\
+  F = & n(O^+)  \\
+  G = & n(N^+)  \\
+  H = & k_9 n(O_2) \\
+  E' = & E + H
+\end{align}
+%
+Then the electron density is
+%
+\begin{align}
+  N_e = F + \frac{D}{E' + \alpha_3 N_e} + G + \frac{B}{C+ \alpha_2
+  N_e} + \frac{HD}{(E' + \alpha_3 N_e)(C+ \alpha_2 N_e)}+ \notag \\ \frac{1}{\alpha_1 N_e}
+  \left[ A + \frac{E' D - HD}{E' + \alpha_3 N_e}+
+  \frac{CB}{C+ \alpha_2 N_e}+ \frac{CHD}{(E' + \alpha_3 N_e)(C+\alpha_2 N_e)}\right]
+\end{align}
+%
+The values $A, B, C, D, E, F, G$ and $H$ are evaluated at midpoint
+level
+%
+\begin{align}
+  A(z+\frac{1}{2} \Delta z) = & \frac{1}{2}( Q(NO^+)(z)+Q(NO^+)(z+ \Delta z))
+  + \notag \\
+       {} & N\overline{m} \left[ k_2 n(O^+)^{t+\Delta t}\frac{\Psi_{N_2}}{m_{N_2}} +
+       k_7 n(N^+)\frac{\Psi_{O_2}}{m_{O_2}}\right] + \notag \\
+       {} & \frac{1}{2}\left[\beta_9(z) + \beta_9(z+\Delta z)\right]
+       \frac{\Psi_{NO}}{m_{NO}}\\
+  B(z+\frac{1}{2} \Delta z) = & \frac{1}{2}(Q(O_2^+)(z)+Q(O_2^+)(z+ \Delta z)
+  )+ \notag \\
+   {} & N \overline{m} [ k_1 n(O^+)^{T+\Delta t} + k_6 n(N^+)+
+   \notag \\
+    {} & k_{26}n(xiO^+(^2D)) ]\frac{\Psi_{O_2}}{m_{O_2}} \\
+  C(z+\frac{1}{2} \Delta z) = & N\overline{m} \left[ k_4 \frac{\Psi_{N(^4S)}}{m_{N(^4S)}} +
+                               k_5 \frac{\Psi_{NO}}{m_{NO}}\right]
+                               \\
+  D(z+\frac{1}{2} \Delta z) = & frac{1}{2}\left[Q(N_2^+)(z) + Q(N_2^+)(z+ \Delta z)
+  \right]+ \notag \\
+          {} &          N\overline{m} \frac{\Psi_{N_2}}{m_{N_2}}\left[ k_{16}n(xiO^+(^2P) +
+       k_{23}n(xiO^+(^2D)))\right] \\
+  E'(z+\frac{1}{2} \Delta z) = & N\overline{m} \left[ k_3 \frac{\Psi_{O}}{m_{O}} +
+                               k_9 \frac{\Psi_{O_2}}{m_{O_2}}\right]\\
+  (F+G)(z+\frac{1}{2} \Delta z) = & n(O^+)+  n(N^+) \\
+  H(z+\frac{1}{2} \Delta z)= & N\overline{m} k_9 \frac{\Psi_{O_2}}{m_{O_2}}
+\end{align}
+%
+%
+First the conversion factor from mass mixing ratio to number density
+is calculated at the midpoint level
+%
+\begin{align}
+  N \overline{m}(z+ \frac{1}{2}\Delta z) =
+        \frac{p_o e^{-z - \frac{1}{2} \Delta z}\overline{m}(z + \Delta z)}
+                    {k_B T_n(z + \Delta z)}
+\end{align}
+%
+The mass mixing ratio of $N_2$ at the midpoint level is determined
+by
+%
+\begin{align}
+  \Psi(N_2)(z+ \frac{1}{2}\Delta z) = 1- \Psi(O_2)(z+ \frac{1}{2}\Delta z) - \Psi(O)(z+ \frac{1}{2}\Delta z)
+\end{align}
+%
+The number density of $N^+$ is
+%
+\begin{align}
+  n(N^+) = \frac{Q(N^+) + k_{10}n(O^+)n(N(^2D))}{(k_6 + k_7)n(O_2) + k_8 n(O)}
+\end{align}
+%
+which is calculated  at the midpoint level in the code by
+%
+\begin{align}
+  n(N^+)(z+ \frac{1}{2}\Delta z) =  \frac{ \frac{1}{2}\left[Q(N^+)(z) + Q(N^+)(z+ \Delta z) \right] +
+         k_{10}n(O^+)N \overline{m} \frac{\Psi(N(^2D))}{m_{N(^2D)}}}
+         {N \overline{m}(k_6 + k_7)\frac{\Psi(O_2)}{m_{O_2}} + k_8
+         \frac{\Psi(O)}{m_{O}}}
+\end{align}
+%
+The quadric solver solves for the electron density $N_e$, with $N_e
+\geq 3 \cdot 10^3$. Then, the number densities of $N_2^+$, $O_2^+$
+and $NO^+$ can be determined on the midpoint level
+%
+\begin{align}
+  n(N_2^+) = & \frac{D}{E' + \alpha_3 N_e} \\
+  n(O_2^+) = & \left[ B + \frac{HD}{E' + \alpha_3 N_e}
+               \right]\frac{1}{C+\alpha_2 N_e} \\
+  n(NO^+) = & \frac{A + \frac{D(E' - H)}{E'+ \alpha_3 N_e} + C \left( B+ \frac{HD}{E' + \alpha_3 N_e}\right)}
+  {C+\alpha_2 N_e} \frac{1}{\alpha_1 N_e}
+\end{align}
+%
+with $N_e$ still on the midpoint level. The electron density at the
+interface level is determined by
+%
+\begin{align}
+  N_e (z) = \sqrt{N_e(z-\frac{1}{2}\Delta z) N_e(z+\frac{1}{2}\Delta z)}
+\end{align}
+%
+with the midpoint level  $z-\frac{1}{2}\Delta z$ denoted by index
+$k$,  $z+\frac{1}{2}\Delta z$ then by the height index $k+1$, and on
+the interface level $z$ has the index $k+1$. The upper and lower
+boundary are set by
+%
+\begin{align}
+  N_e (z_{bot}) = \sqrt{\frac{N_e^3(z_{bot}+\frac{1}{2}\Delta z)}{N_e(z_{bot}+\frac{3}{2}\Delta
+  z)}} \\
+  N_e (z_{top}) = \sqrt{\frac{N_e^3(z_{top}-\frac{1}{2}\Delta z)}{N_e(z_{top}-\frac{3}{2}\Delta
+  z)}}
+\end{align}
+%
