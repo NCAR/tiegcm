@@ -314,7 +314,7 @@
      |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
-     |  saber_ncfile,tidi_ncfile,joulefac,gpi_ncfile
+     |  saber_ncfile,tidi_ncfile,bgrddata_ncfile,joulefac,gpi_ncfile
       use mpi_module,only: ntask
 
       use init_module,only: logname,host,system,iyear,iday,istep,
@@ -501,7 +501,10 @@
       h%saber_ncfile= saber_ncfile
       if (len_trim(saber_ncfile) == 0) h%saber_ncfile = '[none]'
       h%tidi_ncfile= tidi_ncfile
-      if (len_trim(saber_ncfile) == 0) h%tidi_ncfile = '[none]'
+      if (len_trim(tidi_ncfile) == 0) h%tidi_ncfile = '[none]'
+      
+      h%bgrddata_ncfile= bgrddata_ncfile
+      if (len_trim(bgrddata_ncfile) == 0) h%bgrddata_ncfile = '[none]'
 
       h%missing_value = spval
       h%nlat = nlat
