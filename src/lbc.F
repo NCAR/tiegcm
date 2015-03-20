@@ -57,7 +57,7 @@
       call bndcmp
       end subroutine init_lbc
 !-----------------------------------------------------------------------
-      subroutine tuvz_lbc
+      subroutine tuvz_lbc(istep,iyear,iday,secs)
 !
 ! Update lower boundary subdomains of T,U,V,Z
 ! This is called every timestep from advance, after getgswm and 
@@ -71,18 +71,24 @@
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
      |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
      |  gswm_nm_sdi_ncfile  ! gswm non-migrating semi-diurnal data file
-      use gswm_module,only: ! (nlonp4,nlat)
+      use gswm_module,only: getgswm,       ! (nlonp4,nlat)
      |  gswm_mi_di_z, gswm_mi_sdi_z, gswm_nm_di_z, gswm_nm_sdi_z,
      |  gswm_mi_di_t, gswm_mi_sdi_t, gswm_nm_di_t, gswm_nm_sdi_t,
      |  gswm_mi_di_u, gswm_mi_sdi_u, gswm_nm_di_u, gswm_nm_sdi_u,
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
       use bgrd_data_module,only: ! (nlonp4,nlat)
      |  bgrddata_z, bgrddata_t, bgrddata_u, bgrddata_v
-      use input_module,only: saber_ncfile, tidi_ncfile
+      use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
+      use ctmt_module,only: get_ctmt,ctmt_t,ctmt_z,ctmt_u,ctmt_v
       use hist_module,only: modeltime
+      
       implicit none
+! Args:
+      integer,intent(in) :: istep,iyear,iday
+      real,intent(in) :: secs
+! local      
       integer :: i,j
       real :: rstep
       complex :: t_expt_sdi, t_expt_di, uvz_expt_sdi, uvz_expt_di
@@ -108,10 +114,13 @@
       endif
 
       if (len_trim(saber_ncfile) > 0 .or.
-     |    len_trim(tidi_ncfile) > 0) goto 100
+     |    len_trim(tidi_ncfile) > 0.or.
+     |    len_trim(ctmt_ncfile) > 0) goto 100
 !
 ! Add gswm or Hough mode perturbations:
-!
+! am 3/2015: moved from advanced to lbc since it makes more sense
+      call getgswm(istep,iyear,iday,secs)
+!      
 ! GSWM migrating diurnal:
       if (len_trim(gswm_mi_di_ncfile) > 0) then
         do j=lat0,lat1
@@ -212,6 +221,21 @@
         enddo
 !       write(6,"('tuvz_lbc: added tidi_u,v to u_lbc,v_lbc')")
       endif
+      
+! Add CTMT perturbations:
+      if (len_trim(ctmt_ncfile) > 0 ) 
+     |  call get_ctmt(istep,iyear,iday,secs)
+!
+      if (len_trim(ctmt_ncfile) > 0) then
+        do j=lat0,lat1
+          do i=lon0,lon1
+            t_lbc(i,j) = t_lbc(i,j)+ctmt_t(i,j)
+            z_lbc(i,j) = z_lbc(i,j)+ctmt_z(i,j)
+            u_lbc(i,j) = u_lbc(i,j)+ctmt_u(i,j)
+            v_lbc(i,j) = v_lbc(i,j)+ctmt_v(i,j)
+          enddo
+        enddo
+      endif
 !
 ! Save 2d boundaries to secondary histories:
 !     call addfld('T_LBC','T_LBC',' ',t_lbc(lon0:lon1,lat0:lat1),
@@ -222,6 +246,7 @@
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !     call addfld('Z_LBC','Z_LBC',' ',z_lbc(lon0:lon1,lat0:lat1),
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!
       end subroutine tuvz_lbc
 !-----------------------------------------------------------------------
       subroutine bndry_semidiurnal

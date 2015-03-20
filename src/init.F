@@ -33,6 +33,7 @@
       integer :: igswm_nm_di  ! 0/1 flag for GSWM data nonmigrating diurnal tide
       integer :: igswm_nm_sdi ! 0/1 flag for GSWM data nonmigrating semidiurnal tide
       integer :: igetgswm     ! will be 1 only if at least one of the above flags are set
+      integer :: ictmt        ! 0/1 flag to get CTMT data
       integer :: ibgrddata    ! 0/1 flag to get background data
 !
       character(len=16) ::
@@ -67,8 +68,8 @@
      |  start_year,start_day,calendar_advance,gpi_ncfile,
      |  gswm_mi_di_ncfile,bgrddata_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
-     |  mxhist_prim,mxhist_sech,output,secout,mkhvols,source_start,
-     |  see_ncfile
+     |  ctmt_ncfile,mxhist_prim,mxhist_sech,output,secout,mkhvols,
+     |  source_start,see_ncfile
       use hist_module,only: hist_init,isechist,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
      |  nfiles_sech,nfsech
@@ -177,6 +178,13 @@
       if (igswm_mi_di>0 .or. igswm_mi_sdi>0 .or.
      |    igswm_nm_di>0 .or. igswm_nm_sdi>0) igetgswm = 1
 !     
+      ictmt = 0
+      if (len_trim(ctmt_ncfile) > 0) ictmt = 1
+      if (ictmt > 0) 
+     |  write(6,"('  ctmt_ncfile = ',a)") trim(ctmt_ncfile)
+!     
+      ibgrddata = 0
+      if (len_trim(bgrddata_ncfile) > 0) ibgrddata = 1
       if (ibgrddata > 0) 
      |  write(6,"('  bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
 !
@@ -245,6 +253,9 @@
       write(6,"('  igswm_nm_sdi= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating semidiurnal tidal database will',
      |  ' be used.)')") igswm_nm_sdi
+     
+      write(6,"('  ictmt= ',i6,4x,
+     |  '(If > 0, CTMT tidal database will be used.)')") ictmt
      
       write(6,"('  ibgrddata= ',i6,4x,
      |  '(If > 0, background datafile will',

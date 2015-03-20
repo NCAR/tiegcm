@@ -18,7 +18,7 @@
      |  nf3d,fzg
       use input_module,only: mxlen_filename,
      |  gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, 
-     |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile
+     |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile,ctmt_ncfile
       use init_module,only: istep,start_mtime
       implicit none
 !
@@ -70,8 +70,8 @@
      |  idv_f107d,idv_f107a,idv_imf_ncfile,idv_mag,idv_dtide,
      |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
      |  idv_ec,idv_alfad,idv_ed,idv_writedate,idv_saber_ncfile,
-     |  idv_tidi_ncfile,idv_bgrddata_ncfile,idv_crit1,idv_crit2,
-     |  idv_coupled_cmit,idv_joulefac
+     |  idv_tidi_ncfile,idv_ctmt_ncfile,idv_bgrddata_ncfile,idv_crit1,
+     |  idv_crit2,idv_coupled_cmit,idv_joulefac
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
 !
@@ -674,6 +674,11 @@
           case('tidi_ncfile')
             call rdfilename(ncid,itime,i,trim(varname),filelen,
      |        sh%tidi_ncfile)
+!
+! CTMT data file:
+          case('ctmt_ncfile')
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%ctmt_ncfile)
 !
 ! Background data file:
           case('bgrddata_ncfile')
@@ -1660,7 +1665,12 @@
 ! Define tidi data file:
       call define_ncfile(ncid,"tidi_ncfile",idv_tidi_ncfile,
      |  "long_name","TIDI lbc data file",
-     |  "data","U,V")
+     |  "data","U,V") 
+!
+! Define ctmt data file:
+      call define_ncfile(ncid,"ctmt_ncfile",idv_ctmt_ncfile,
+     |  "long_name","CTMT lbc data file",
+     |  "data","U,V, T, Z")
 !     
 ! Define background data file:
       call define_ncfile(ncid,"bgrddata_ncfile",idv_bgrddata_ncfile,
@@ -2795,6 +2805,10 @@
 ! Update tidi_ncfile:
       call update_ncfile(ncid,"tidi_ncfile",h%tidi_ncfile,
      |  idv_tidi_ncfile,h%ihist)
+!
+! Update ctmt_ncfile:
+      call update_ncfile(ncid,"ctmt_ncfile",h%ctmt_ncfile,
+     |  idv_ctmt_ncfile,h%ihist)
 !
 ! Update bgrddata_ncfile:
       call update_ncfile(ncid,"bgrddata_ncfile",h%bgrddata_ncfile,

@@ -282,11 +282,11 @@
 !
 ! Get GSWM tidal boundary data:
 !
-      call getgswm(istep,iyear,iday,secs)
+!      call getgswm(istep,iyear,iday,secs)
 !
 ! Update lower boundaries of t,u,v,z:
 !
-      call tuvz_lbc
+      call tuvz_lbc(istep,iyear,iday,secs)
 !
 #if defined(INTERCOMM) || defined(CISMAH)
 !
