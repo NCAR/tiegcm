@@ -32,7 +32,8 @@
       integer :: igswm_mi_sdi ! 0/1 flag for GSWM data semidiurnal tide
       integer :: igswm_nm_di  ! 0/1 flag for GSWM data nonmigrating diurnal tide
       integer :: igswm_nm_sdi ! 0/1 flag for GSWM data nonmigrating semidiurnal tide
-      integer :: igetgswm ! will be 1 only if at least one of the above flags are set
+      integer :: igetgswm     ! will be 1 only if at least one of the above flags are set
+      integer :: ibgrddata    ! 0/1 flag to get background data
 !
       character(len=16) ::
      |  host,              ! host machine
@@ -64,7 +65,7 @@
 !
       use input_module,only: start,stop,step,secflds,
      |  start_year,start_day,calendar_advance,gpi_ncfile,
-     |  gswm_mi_di_ncfile,
+     |  gswm_mi_di_ncfile,bgrddata_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,output,secout,mkhvols,source_start,
      |  see_ncfile
@@ -175,6 +176,9 @@
       igetgswm = 0
       if (igswm_mi_di>0 .or. igswm_mi_sdi>0 .or.
      |    igswm_nm_di>0 .or. igswm_nm_sdi>0) igetgswm = 1
+!     
+      if (ibgrddata > 0) 
+     |  write(6,"('  bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
 !
 ! ixtimep is 4th dimension index to fg-array for previous time step
 ! ixtimec is 4th dimension index to fg-array for current time step
@@ -241,6 +245,10 @@
       write(6,"('  igswm_nm_sdi= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating semidiurnal tidal database will',
      |  ' be used.)')") igswm_nm_sdi
+     
+      write(6,"('  ibgrddata= ',i6,4x,
+     |  '(If > 0, background datafile will',
+     |  ' be used.)')") ibgrddata
 !
       if (nsource > 0) then
         write(6,"(/,'This is an initial run:')")
