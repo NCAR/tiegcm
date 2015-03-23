@@ -57,7 +57,7 @@
       call bndcmp
       end subroutine init_lbc
 !-----------------------------------------------------------------------
-      subroutine tuvz_lbc(istep,iyear,iday,secs)
+      subroutine tuvz_lbc(istep,iyear,iday,secs,itp)
 !
 ! Update lower boundary subdomains of T,U,V,Z
 ! This is called every timestep from advance, after getgswm and 
@@ -78,15 +78,17 @@
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
       use bgrd_data_module,only: ! (nlonp4,nlat)
      |  bgrddata_z, bgrddata_t, bgrddata_u, bgrddata_v
-      use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile
+      use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile,
+     | hme_nfiles
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
       use ctmt_module,only: get_ctmt,ctmt_t,ctmt_z,ctmt_u,ctmt_v
+      use hme_module,only: get_hme,hme_t,hme_z,hme_u,hme_v,hme_rho
       use hist_module,only: modeltime
       
       implicit none
 ! Args:
-      integer,intent(in) :: istep,iyear,iday
+      integer,intent(in) :: istep,iyear,iday,itp
       real,intent(in) :: secs
 ! local      
       integer :: i,j
@@ -233,6 +235,21 @@
             z_lbc(i,j) = z_lbc(i,j)+ctmt_z(i,j)
             u_lbc(i,j) = u_lbc(i,j)+ctmt_u(i,j)
             v_lbc(i,j) = v_lbc(i,j)+ctmt_v(i,j)
+          enddo
+        enddo
+      endif
+      
+! Add HME perturbations:
+      if (hme_nfiles > 0 ) then
+        call get_hme(modeltime)
+        call cal_hme_z(istep,itp,t_lbc,hme_z,hme_t,hme_rho) 
+!     
+        do j=lat0,lat1
+          do i=lon0,lon1
+            t_lbc(i,j) = t_lbc(i,j)+hme_t(i,j)
+            z_lbc(i,j) = z_lbc(i,j)+hme_z(i,j)
+            u_lbc(i,j) = u_lbc(i,j)+hme_u(i,j)
+            v_lbc(i,j) = v_lbc(i,j)+hme_v(i,j)
           enddo
         enddo
       endif

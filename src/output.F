@@ -13,6 +13,7 @@
      |  nc_fileinfo, ! make contents string for current file
      |  def_fsech,
      |  datasource_kp ! defined here
+      use hme_module,only: hme_ncfile_curr
 
       use dispose_module,only: add_dispose
 !
@@ -315,7 +316,7 @@
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
      |  saber_ncfile,tidi_ncfile,ctmt_ncfile,bgrddata_ncfile,joulefac,
-     |  gpi_ncfile
+     |  gpi_ncfile,hme_nfiles
       use mpi_module,only: ntask
 
       use init_module,only: logname,host,system,iyear,iday,istep,
@@ -506,6 +507,9 @@
       
       h%ctmt_ncfile= ctmt_ncfile
       if (len_trim(ctmt_ncfile) == 0) h%ctmt_ncfile = '[none]'
+
+      h%hme_ncfile= hme_ncfile_curr
+      if (hme_nfiles == 0) h%hme_ncfile = '[none]'
       
       h%bgrddata_ncfile= bgrddata_ncfile
       if (len_trim(bgrddata_ncfile) == 0) h%bgrddata_ncfile = '[none]'

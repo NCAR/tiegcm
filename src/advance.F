@@ -286,7 +286,7 @@
 !
 ! Update lower boundaries of t,u,v,z:
 !
-      call tuvz_lbc(istep,iyear,iday,secs)
+      call tuvz_lbc(istep,iyear,iday,secs,itp)
 !
 #if defined(INTERCOMM) || defined(CISMAH)
 !
