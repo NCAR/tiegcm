@@ -388,7 +388,7 @@
       implicit none
 !
 ! calculates the zpert 
-!   zprt = -R/g0*tprt - R/g0*tbgrd*(pprt/p0 + tprt/tbgrd)
+!   zprt = - R/g0*tbgrd*(pprt/p0 + tprt/tbgrd)
 ! with R = kb/m [cm2/s2]  kb Boltzman constant; m mass
 !
       integer,intent(in):: istep,  ! step
@@ -434,8 +434,7 @@
 ! kb/m/g*Tn  [ergs/K /g / (cm/s2) *K] = [cm]
       do j=lat0,lat1
         do i=lon0,lon1
-          zprt(i,j) = - boltz/grav/barm_lb(i,j)*tprt(i,j)-
-     |  	boltz/grav/barm_lb(i,j)*tbgrd(i,j)*
+          zprt(i,j) = -boltz/grav/barm_lb(i,j)*tbgrd(i,j)*
      |         (rhoprt(i,j)+tprt(i,j)/tbgrd(i,j))
 
 !         write(6,"('cal_hme_z: istep=',i3,' j=',i3,' i=',i3,
