@@ -128,8 +128,7 @@
      |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
      |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
      |  saber_ncfile,       ! SABER data (T,Z)
-     |  tidi_ncfile,        ! TIDI data (U,V)
-     |  bgrddata_ncfile     ! background data (T,U,V,Z; V=0)
+     |  tidi_ncfile         ! TIDI data (U,V)
 
 !     integer,parameter :: ngpivars = 4
 !     real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
@@ -176,9 +175,9 @@
      |  start_day,start_year,calendar_advance,see_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
-     |  imf_ncfile,saber_ncfile,tidi_ncfile,bgrddata_ncfile,
-     |  sech_nbyte,f107_time,f107a_time,hpss_path,current_pg,
-     |  current_kq,calc_helium,enforce_opfloor
+     |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
+     |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
+     |  enforce_opfloor
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -255,8 +254,6 @@
 
       saber_ncfile = ' '      ! SABER data file
       tidi_ncfile = ' '       ! TIDI data file
-
-      bgrddata_ncfile = ' '   ! Background data file
 
       date(:) = ispval ! old
       calday  = ispval ! old
@@ -584,10 +581,6 @@
 ! SABER and/or TIDI data files:
       if (len_trim(saber_ncfile) > 0) call expand_path(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0)  call expand_path(tidi_ncfile)
-!
-! background data files:
-      if (len_trim(bgrddata_ncfile) > 0) 
-     | call expand_path(bgrddata_ncfile)
 !
 ! Collision factor:
       if (colfac==spval) then
@@ -1511,9 +1504,6 @@
      |    'saber_ncfile = ',a)") trim(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0) write(6,"('  TIDI data file: ',
      |    'tidi_ncfile = ',a)") trim(tidi_ncfile)
-     
-      if (len_trim(bgrddata_ncfile) > 0) write(6,"('  Bgrddata file: ',
-     |    'bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
 
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
@@ -2227,7 +2217,7 @@
 ! Validate lower boundary options:
 !
       implicit none
-      integer :: igswm, isaber, itidi, ihough, ibgrddata 
+      integer :: igswm, isaber, itidi, ihough
       igswm = 0
       if (len_trim(gswm_mi_di_ncfile ) > 0.or.
      |    len_trim(gswm_mi_sdi_ncfile) > 0.or.
@@ -2237,8 +2227,6 @@
       if (len_trim(saber_ncfile) > 0.) isaber = 1
       itidi = 0
       if (len_trim(tidi_ncfile) > 0.) itidi = 1
-      ibgrddata = 0
-      if (len_trim(bgrddata_ncfile) > 0.) ibgrddata = 1
       ihough = 0
       if (any(tide2 /= 0).or.any(tide  /= 0.)) ihough = 1
 !
@@ -2255,6 +2243,17 @@
       if (ihough==1) then
         if (isaber==1.or.itidi==1.or.igswm==1) then
           write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM')")
+          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
+     |      ' ihough=',i2)") igswm,isaber,itidi,ihough
+          call shutdown('inp_lbc')
+        endif 
+      endif
+!
+! saber and tidi can be specified separately or together,
+! but either are exclusive of gswm and hough. 
+      if (isaber==1.or.itidi==1) then
+        if (igswm==1.or.ihough==1) then
+          write(6,"('SABER/TIDI must be exclusive of GSWM,HOUGH')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
      |      ' ihough=',i2)") igswm,isaber,itidi,ihough
           call shutdown('inp_lbc')

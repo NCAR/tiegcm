@@ -64,8 +64,7 @@
 !   before addiag.
 !
       use mpi_module,only: lon0,lon1,lat0,lat1
-      use init_module,only: iter,
-     |  ibgrddata           ! 0/1 flag to get background data
+      use init_module,only: iter
       use input_module,only: step,
      |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
@@ -76,8 +75,6 @@
      |  gswm_mi_di_t, gswm_mi_sdi_t, gswm_nm_di_t, gswm_nm_sdi_t,
      |  gswm_mi_di_u, gswm_mi_sdi_u, gswm_nm_di_u, gswm_nm_sdi_u,
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
-      use bgrd_data_module,only: ! (nlonp4,nlat)
-     |  bgrddata_z, bgrddata_t, bgrddata_u, bgrddata_v
       use input_module,only: saber_ncfile, tidi_ncfile
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
@@ -94,18 +91,11 @@
       uvz_expt_sdi = cexp(ci*freq_semidi*dt*iter)
       uvz_expt_di  = cexp(ci*.5*freq_semidi*dt*iter)
 !
-! Set background constants 
-      if (ibgrddata > 0 ) then ! background based on data
-        t_lbc(lon0:lon1,lat0:lat1) = bgrddata_z(lon0:lon1,lat0:lat1)
-        u_lbc(lon0:lon1,lat0:lat1) = bgrddata_t(lon0:lon1,lat0:lat1)
-        v_lbc(lon0:lon1,lat0:lat1) = bgrddata_u(lon0:lon1,lat0:lat1)
-        z_lbc(lon0:lon1,lat0:lat1) = bgrddata_v(lon0:lon1,lat0:lat1)
-      else !(default see cons module):
-        t_lbc(lon0:lon1,lat0:lat1) = tbound
-        u_lbc(lon0:lon1,lat0:lat1) = 0.
-        v_lbc(lon0:lon1,lat0:lat1) = 0.
-        z_lbc(lon0:lon1,lat0:lat1) = zbound
-      endif
+! Set background constants (see cons module):
+      t_lbc(lon0:lon1,lat0:lat1) = tbound
+      u_lbc(lon0:lon1,lat0:lat1) = 0.
+      v_lbc(lon0:lon1,lat0:lat1) = 0.
+      z_lbc(lon0:lon1,lat0:lat1) = zbound
 
       if (len_trim(saber_ncfile) > 0 .or.
      |    len_trim(tidi_ncfile) > 0) goto 100
