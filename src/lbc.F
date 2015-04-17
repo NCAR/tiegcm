@@ -76,7 +76,7 @@
      |  gswm_mi_di_t, gswm_mi_sdi_t, gswm_nm_di_t, gswm_nm_sdi_t,
      |  gswm_mi_di_u, gswm_mi_sdi_u, gswm_nm_di_u, gswm_nm_sdi_u,
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
-      use bgrd_data_module,only: ! (nlonp4,nlat)
+      use bgrd_data_module,only: get_bgrddata,! (nlonp4,nlat)
      |  bgrddata_z, bgrddata_t, bgrddata_u, bgrddata_v
       use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile,
      | hme_nfiles
@@ -104,6 +104,7 @@
 !
 ! Set background constants 
       if (ibgrddata > 0 ) then ! background based on data
+        call get_bgrddata(istep,iyear,iday,secs)
         t_lbc(lon0:lon1,lat0:lat1) = bgrddata_z(lon0:lon1,lat0:lat1)
         u_lbc(lon0:lon1,lat0:lat1) = bgrddata_t(lon0:lon1,lat0:lat1)
         v_lbc(lon0:lon1,lat0:lat1) = bgrddata_u(lon0:lon1,lat0:lat1)

@@ -515,7 +515,7 @@
       f(nlonp4-1:nlonp4,:)  = f(3:4,:)
       end subroutine set_periodic_f2d
 !-----------------------------------------------------------------------
-      subroutine alloc_gswm(lon0,lon1,lat0,lat1)
+      subroutine alloc_bgrddata(lon0,lon1,lat0,lat1)
 !
 ! Args:
       integer,intent(in) :: lon0,lon1,lat0,lat1
@@ -540,6 +540,6 @@
       write(6,"('Allocated private background t,u,v,z ',
      |  '(lon0:lon1,lat0:lat1,nmonth,nhour)')")
 
-      end subroutine alloc_gswm
+      end subroutine alloc_bgrddata
 !-----------------------------------------------------------------------
       end module bgrd_data_module
