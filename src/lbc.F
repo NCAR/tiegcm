@@ -104,16 +104,16 @@
 !
 ! Set background constants 
       if (ibgrddata > 0 ) then ! background based on data
-        call get_bgrddata(istep,iyear,iday,secs)
-        t_lbc(lon0:lon1,lat0:lat1) = bgrddata_z(lon0:lon1,lat0:lat1)
-        u_lbc(lon0:lon1,lat0:lat1) = bgrddata_t(lon0:lon1,lat0:lat1)
-        v_lbc(lon0:lon1,lat0:lat1) = bgrddata_u(lon0:lon1,lat0:lat1)
-        z_lbc(lon0:lon1,lat0:lat1) = bgrddata_v(lon0:lon1,lat0:lat1)
+	call get_bgrddata(istep,iyear,iday,secs)
+	t_lbc(lon0:lon1,lat0:lat1) = bgrddata_t(lon0:lon1,lat0:lat1)
+	u_lbc(lon0:lon1,lat0:lat1) = bgrddata_u(lon0:lon1,lat0:lat1)
+	v_lbc(lon0:lon1,lat0:lat1) = bgrddata_v(lon0:lon1,lat0:lat1)
+	z_lbc(lon0:lon1,lat0:lat1) = bgrddata_z(lon0:lon1,lat0:lat1)
       else !(default see cons module):
         t_lbc(lon0:lon1,lat0:lat1) = tbound
         u_lbc(lon0:lon1,lat0:lat1) = 0.
         v_lbc(lon0:lon1,lat0:lat1) = 0.
-        z_lbc(lon0:lon1,lat0:lat1) = zbound
+        z_lbc(lon0:lon1,lat0:lat1) = zbound	
       endif
 
       if (len_trim(saber_ncfile) > 0 .or.
@@ -256,14 +256,14 @@
       endif
 !
 ! Save 2d boundaries to secondary histories:
-!     call addfld('T_LBC','T_LBC',' ',t_lbc(lon0:lon1,lat0:lat1),
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld('U_LBC','U_LBC',' ',u_lbc(lon0:lon1,lat0:lat1),
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld('V_LBC','V_LBC',' ',v_lbc(lon0:lon1,lat0:lat1),
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld('Z_LBC','Z_LBC',' ',z_lbc(lon0:lon1,lat0:lat1),
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('T_LBC1','T_LBC1',' ',t_lbc(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('U_LBC1','U_LBC1',' ',u_lbc(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('V_LBC1','V_LBC1',' ',v_lbc(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('Z_LBC1','Z_LBC1',' ',z_lbc(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
       end subroutine tuvz_lbc
 !-----------------------------------------------------------------------
