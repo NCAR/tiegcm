@@ -71,9 +71,7 @@
       if (itime0 < itime1) yfrac0 = yfrac_hme(itime0,modeltime(1))
       yfrac1 = yfrac_hme(itime1,modeltime(1))
 !      write(6,*) 'in modeltime_tgcm',iyear,modeltime
-!      write(6,*) 'in modeltime_wacx',wacxg5_date(itime1),
-!     |  wacxg5_datesec(itime1)/60./60.
-!      write(6,'(a28,3(x,f15.10))') 'in get_wacxg5_hourly',yfrac,
+!      write(6,'(a28,3(x,f15.10))') 'in get_hme',yfrac,
 !     |  yfrac0,yfrac1 
      
       if (yfrac >= yfrac0 .and. yfrac < yfrac1) then
@@ -279,36 +277,36 @@
       count3(2) = nlat
       count3(3) = 1
 !      
-      istat = nf_inq_varid(ncid,"THME",id)
+      istat = nf_inq_varid(ncid,"TN",id)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting THME var id')
+     |  'read_hme: Error getting TN var id')
       istat = nf_get_vara_double(ncid,id,start3,count3,t)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting variable THME')
-      istat = nf_inq_varid(ncid,"UHME",id)
+     |  'read_hme: Error getting variable TN')
+      istat = nf_inq_varid(ncid,"UN",id)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting UHME var id')
+     |  'read_hme: Error getting UN var id')
       istat = nf_get_vara_double(ncid,id,start3,count3,u)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting variable UHME')
-      istat = nf_inq_varid(ncid,"VHME",id)
+     |  'read_hme: Error getting variable UN')
+      istat = nf_inq_varid(ncid,"VN",id)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting VHME var id')
+     |  'read_hme: Error getting VN var id')
       istat = nf_get_vara_double(ncid,id,start3,count3,v)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting variable VHME')
-      istat = nf_inq_varid(ncid,"WHME",id)
+     |  'read_hme: Error getting variable VN')
+      istat = nf_inq_varid(ncid,"WN",id)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting WHME var id')
+     |  'read_hme: Error getting WN var id')
       istat = nf_get_vara_double(ncid,id,start3,count3,w)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting variable WHME')
-      istat = nf_inq_varid(ncid,"RhoHME",id)
+     |  'read_hme: Error getting variable WN')
+      istat = nf_inq_varid(ncid,"DN",id)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting RhoHME var id')
+     |  'read_hme: Error getting DN var id')
       istat = nf_get_vara_double(ncid,id,start3,count3,rho)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'read_hme: Error getting variable RhoHME')
+     |  'read_hme: Error getting variable DN')
       
 !     write(6,"('Read data: ifile ',i3,': itime',i1,'=',i3,
 !    |  ' min,max T=',2e12.4,' U=',2e12.4,' V=',2e12.4,' Z=',2e12.4)")

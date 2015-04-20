@@ -2306,6 +2306,13 @@
           call shutdown('inp_lbc')
         endif 
       endif
+      if (ictmt==1) then
+        if (ihme==1) then
+          write(6,"('CTMT must be exclusive of HME')")
+          write(6,"(' ictmt=',i2,' ihme=',i2)") ictmt,ihme
+          call shutdown('inp_lbc')
+        endif 
+      endif
 
       end subroutine inp_lbc
 !-----------------------------------------------------------------------
