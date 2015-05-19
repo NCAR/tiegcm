@@ -263,14 +263,14 @@
           xmas(:) = 1./(o1(:,i,j)/16.+o2(:,i,j)/32.+he(:,i,j)/4.+
      |                  n2(:,i,j)/28.)/avo
 !
-! Levels:
+! Interface levels:
           zg(lev0,i,j) = z(lev0,i,j)
           do k=lev0+1,lev1-1
             zg(k,i,j) = zg(k-1,i,j) + boltz*dz*tn(k-1,i,j) / 
      |        (xmas(k-1)*g(k-1))
             g(k)=g0*(r0/(r0+0.5*(zg(k,i,j)+z(k+1,i,j))))**2
           enddo ! k=lev0+1,lev1-1
-          zg(lev1,i,j) = 1.5*zg(lev1-1,i,j)-0.5*zg(lev1-2,i,j)
+          zg(lev1,i,j) = 2.0*zg(lev1-1,i,j)-zg(lev1-2,i,j)
         enddo ! i=lon0,lon1
 !
 ! Save ZG to secondary histories:

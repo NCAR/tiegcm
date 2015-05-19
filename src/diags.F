@@ -1167,8 +1167,8 @@
 !-----------------------------------------------------------------------
       subroutine mkdiag_WN(name,omega,zcm,lev0,lev1,lon0,lon1,lat)
 !
-! Neutral Vertical Wind, from vertical motion OMEGA and scale height.
-! Scale height pzps is calculated from input geopotential z (cm).
+! Neutral Vertical Wind on interfaces, from vertical motion OMEGA and 
+! scale height. Scale height pzps is calculated from input geopotential z (cm).
 !
 ! Args:
       character(len=*),intent(in) :: name
@@ -1201,7 +1201,8 @@
       enddo ! i=lon0,lon1
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,wn,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+     |  diags(ix)%units,wn,diags(ix)%levels,lev0,lev1,
+     |  'lon',lon0,lon1,lat)
 
       end subroutine mkdiag_WN
 !-----------------------------------------------------------------------
@@ -1344,7 +1345,7 @@
       do k=lev0,lev1-1
         zgmid(k,:) = 0.5*(zgint(k,:)+zgint(k+1,:))
       enddo
-      zgmid(lev1,:) = 1.5*zgmid(lev1-1,:)-0.5*zgmid(lev1-2,:)
+      zgmid(lev1,:) = 2.0*zgmid(lev1-1,:)-zgmid(lev1-2,:)
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,zgmid,'lev',lev0,lev1,'lon',lon0,lon1,lat)
