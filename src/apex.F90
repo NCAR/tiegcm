@@ -1186,7 +1186,7 @@ subroutine feldg(iflag,glat,glon,alt,bnrth,beast,bdown,babs)
 ! Args:
   integer,intent(in) :: iflag
   real,intent(in)    :: glon
-  real,intent(out)   :: glat,alt
+  real,intent(inout) :: glat,alt
   real,intent(out)   :: bnrth,beast,bdown,babs
 !
 ! Local:
