@@ -238,7 +238,7 @@
         h(lev0,i) = gask*tni(lev0,i)/barm(lev0,i,lat)
         h(lev1,i) = gask*tni(lev1,i)/barm(lev1,i,lat)
         rho(lev0,i) = p0*expzmid_inv*expz(lev0)/h(lev0,i)
-        rho(lev1,i) = p0*expzmid*expz(lev1-1)/h(lev1,i)
+        rho(lev1,i) = p0*expzmid_inv*expz(lev1-1)/h(lev1,i)
         h(lev0,i) = h(lev0,i)/grav
         h(lev1,i) = h(lev1,i)/grav
 !
@@ -393,7 +393,7 @@
 !-----------------------------------------------------------------------
       subroutine filter_tn(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
 !
-! Filter updated W omega:
+! Filter updated TN
 !
       use params_module,only: nlat,nlonp4,nlon
       use filter_module,only: filter
