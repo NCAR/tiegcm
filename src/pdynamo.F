@@ -410,12 +410,12 @@
 ! For esmf_set3d_geo call:
       real,dimension(mlev0:mlev1,lon0:lon1,lat0:lat1,8) :: f3d
       character(len=8) :: fnames(8)
-!
-!     write(6,"('Enter dynamo_inputs: un=',2e12.4,' vn=',2e12.4,
-!    |  ' wn=',2e12.4,' zpot=',2e12.4,' ped=',2e12.4,' hal=',2e12.4)")
-!    |  minval(un),maxval(un),minval(vn),maxval(vn),
-!    |  minval(wn),maxval(wn),minval(zpot),maxval(zpot),
-!    |  minval(ped),maxval(ped),minval(hal),maxval(hal)
+      if (debug)
+     | write(6,"('Enter dynamo_inputs: un=',2e12.4,' vn=',2e12.4,
+     |  ' wn=',2e12.4,' zpot=',2e12.4,' ped=',2e12.4,' hal=',2e12.4)")
+     |  minval(un),maxval(un),minval(vn),maxval(vn),
+     |  minval(wn),maxval(wn),minval(zpot),maxval(zpot),
+     |  minval(ped),maxval(ped),minval(hal),maxval(hal)
 
 ! First, transfer lev0:lev1 (and all geo i,j) from inputs to xxxdyn:
       do j=lat0,lat1
@@ -1958,42 +1958,135 @@
 ! Both phihm and pfrac have been set by either heelis or weimer.
 ! phihm is on 2d global mag grid, pfrac is in north hemisphere only
 !
+      use input_module,only: iamie
+      use amie_module,only: pcp_nh_amie,pcp_sh_amie
+      use hist_module,only:   modeltime
+      use init_module,only:   iyear
+      use cons_module,only: dlatm,dlonm,pi_dyn,ylatm,rtd,crit
 ! Local:
       logical,parameter :: mod_heelis = .false.   ! true == modified
-      integer :: i,j,jn,js
-      real :: fac
+      integer :: i,j,jn,js,jfit,jj,j0
+      real :: fac, phi_add
+      real,dimension(nmlonp1,nmlat) :: phim
 !
 ! Add empirical model potential at high latitude:
       fac = 1.0
       if (mod_heelis) fac = 0.  ! modified heelis
-      do j=mlat0,mlat1
-        if (j > nmlath) cycle   ! south only (including equator)
-        jn = nmlat-j+1
-        js = nmlath-j+1 
-        do i=mlon0,mlon1
-          phim2d(i,j) = rim1(i,j)+fac*(1.-pfrac(i,js))*(phihm(i,j)-
-     |      phihm(i,jn))
+!
+!  Set phim=phihm of the chosen high-latitude model
+      if (iamie <= 0) then
+        do j=mlat0,mlat1
+          if (j > nmlath) cycle   ! south only (including equator)
+          jn = nmlat-j+1
+          js = nmlath-j+1 
+          do i=mlon0,mlon1
+            phim2d(i,j) = rim1(i,j)+fac*(1.-pfrac(i,js))*(phihm(i,j)-
+     |        phihm(i,jn))
 
-!         write(6,"('highlat_poten: i=',i4,' j=',i4,' jn=',i4,' js=',i4,
-!    |      ' rim1=',e12.4,' pfrac(i,js)=',f12.3,
-!    |      ' phihm(i,j)=',e12.4,' phihm(i,jn)=',e12.4,' phim2d(i,j)=',
-!    |      e12.4)") i,j,jn,js,rim1(i,j),pfrac(i,js),phihm(i,j),
-!    |      phihm(i,jn),phim2d(i,j)
-
+          enddo
         enddo
-      enddo
-
-      do j=mlat0,mlat1
-        if (j <= nmlath) cycle ! north only (excluding equator)
-        do i=mlon0,mlon1
-          phim2d(i,j) = rim1(i,j)
+  
+        do j=mlat0,mlat1
+          if (j <= nmlath) cycle ! north only (excluding equator)
+          do i=mlon0,mlon1
+            phim2d(i,j) = rim1(i,j)
+          enddo
         enddo
-      enddo
+	
+      else      !amie run
+        jfit = 0
+        if (debug) write (6,"('hilat_poten:min,max(rim1)=',2g10.2)")
+     |       minval(rim1),maxval(rim1)
+        do i=1,nmlonp1
+          do j=1,nmlat
+            j0 = nmlat-j+1
+            phim(i,j) = phihm(i,j)
+            phi_add = 0.
+            if (iyear==2004 .and. (modeltime(1)==314 .and.
+     |        modeltime(2) >= 19 .and. pcp_nh_amie > 180.e3) .or.
+     |        (iyear==2004 .and. modeltime(1)==315 .and.
+     |        pcp_nh_amie > 150.e3)) then
+              do jj=1,nmlat0-1
+                if ((90./rtd-abs(ylatm(jj))) < crit(1)) jfit = jj
+              enddo
+              phi_add =0.08*phihm(i,nmlat-jfit)
+            endif
+            if (j > jfit+3 .and. j <= (nmlat-jfit)) then
+              phim(i,j) = phihm(i,j)+phi_add
+            endif
+          enddo ! j=1,nmlat0-1
+        enddo ! i=1,nmlonp1
 
+        do i=mlon0,mlon1
+          do j=mlat0,mlat1
+            if (j > nmlath) cycle   ! south only (including equator)
+            j0 = nmlath-j+1
+            jn = nmlat-j+1
+            phim2d(i,j) = rim1(i,j)+(1.-pfrac(i,j0))*(phihm(i,j)-
+     |         phihm(i,jn))
+            phi_add = 0.
+            if (iyear==2004 .and. (modeltime(1)==314 .and.
+     |        modeltime(2) >= 19 .and. pcp_nh_amie > 180.e3) .or.
+     |        (iyear==2004 .and. modeltime(1)==315 .and.
+     |        pcp_nh_amie > 150.e3)) then
+              do jj=1,nmlat0-1
+                if ((90./rtd-abs(ylatm(jj))) < crit(1)) jfit = jj
+              enddo
+              phi_add =0.08*phihm(i,nmlat-jfit)
+            endif
+            if (j > jfit+3 .and. j <= (nmlat-jfit)) then
+              phim2d(i,j) = phim2d(i,j)+phi_add
+            endif
+!        if (i.eq.10 .and. j.eq.8)write(6,"('SH phiasym=',3i3,3f13.4)")
+!    |          j,jn,j0,pfrac(i,j),phihm(i,j),phihm(i,jn)
+!        if (i.eq.10 .and. j.eq.8)write(6,"('ylatm=',/,10(f8.4))")
+!    |           ylatm(:)
+!        if (i.eq.10 .and. j.eq.8)write(6,"('pfrac=',/,10(f8.4))")
+!    |           pfrac(i,:)
+          enddo
+        enddo
+
+        do j=mlat0,mlat1
+          if (j <= nmlath) cycle ! north only (excluding equator)
+          do i=mlon0,mlon1
+            js = nmlat-j+1
+            j0 = j-nmlath+1
+            phim2d(i,j) = rim1(i,j)
+!           phim2d(i,j) = rim1(i,j)+fac*(1.-pfrac(i,j0))*(phihm(i,j)-
+!    |         phihm(i,js))*0.5
+            phi_add = 0.
+            if (iyear==2004 .and. (modeltime(1)==314 .and.
+     |        modeltime(2) >= 19 .and. pcp_nh_amie > 180.e3) .or.
+     |        (iyear==2004 .and. modeltime(1)==315 .and.
+     |        pcp_nh_amie > 150.e3)) then
+              do jj=1,nmlat0-1
+                if ((90./rtd-abs(ylatm(jj))) < crit(1)) jfit = jj
+              enddo
+              phi_add =0.08*phihm(i,nmlat-jfit)
+            endif
+            if (j > jfit+3 .and. j <= (nmlat-jfit)) then
+              phim2d(i,j) = phim2d(i,j)+phi_add
+            endif
+!        if (i.eq.10 .and. j.eq.88)write(6,"('NH phiasym=',3i3,3f13.4)")
+!    |          j,jn,j0,pfrac(i,j0),phihm(i,j),phihm(i,js)
+          enddo
+        enddo
+
+      endif ! is amie
+      if (debug)
+     |  write(6,"('highlat_poten: amie phim2d max,min = ',2e12.4)")
+     |    maxval(phim2d),minval(phim2d)
+!
 ! There is also a PHIM2D saved at beginning of pthreed below.
-!     call addfld('PHIM2D',' ','VOLTS',
-!    |  phim2d(mlon0:mlon1,mlat0:mlat1),
-!    |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+      call addfld('PHIM2D',' ','VOLTS',
+     |  phim2d(mlon0:mlon1,mlat0:mlat1),
+     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+      call addfld('PHIM',' ','VOLTS',
+     |  phim(mlon0:mlon1,mlat0:mlat1),
+     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+      call addfld('RIM1',' ','VOLTS',
+     |  rim1(mlon0:mlon1,mlat0:mlat1),
+     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
 
       end subroutine highlat_poten
 !-----------------------------------------------------------------------
@@ -3889,6 +3982,12 @@ c      enddo
         end do
       end do
 !     write(6,*) 'L2norm (global root task) = ',l2norm
+      if (debug)
+     |  write(6,"('solver: amie rim_glb max,min = ',2e12.4)")
+     |    maxval(rim_glb),minval(rim_glb)
+      if (debug)
+     |  write(6,"('solver: amie ressolv max,min = ',2e12.4)")
+     |    maxval(ressolv),minval(ressolv)
 
       end subroutine solver
 !-----------------------------------------------------------------------

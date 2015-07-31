@@ -39,6 +39,9 @@
      |  tempdir,         ! temporary directory 
      |  magvol,          ! absolute or relative path to magnetic data file
      |  amievol,         ! absolute or relative path to amie data file (optional)
+     |  amiesh,          ! file or mss path of amie SH data file (optional)
+     |  amienh,          ! file or mss path of amie NH data file (optional)
+     |  seeflux,         ! file or mss path of SEE photon data file (optional)
      |  hpss_path        ! hpss directory for dispose of output history files
 !
 ! date and calday are no longer supported, and are replaced by start_day, 
@@ -60,6 +63,9 @@
      |  current_kq,      ! 0/1 flag to calculate height-integrated current density (default 0)
      |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
      |  aurora,          ! 0/1 flag for aurora
+     |  iamie,           ! 0/1 flag for AMIE data (not in namelist read)
+     |  amie_ibkg,       ! 0/1/2 flag for read real, 1st, or 24-hr averaged data
+     |  iseeflux,        ! 0/1 flag for SEE flux data
      |  ntask_lat,       ! number of tasks in latitude  dimension
      |  ntask_lon,       ! number of tasks in longitude dimension
      |  ntask_maglat,    ! number of tasks in mag latitude  dimension (not namelist)
@@ -180,7 +186,8 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,ctmt_ncfile,hme_ncfiles,
      |  bgrddata_ncfile,sech_nbyte,f107_time,f107a_time,hpss_path,
-     |  current_pg,current_kq,calc_helium,enforce_opfloor
+     |  current_pg,current_kq,calc_helium,enforce_opfloor,amiesh,
+     |  amienh,amie_ibkg,seeflux
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -241,6 +248,9 @@
       tempdir = ' '
       magvol  = ' '
       amievol = ' '
+      amiesh  = ' '
+      amienh  = ' '
+      seeflux = ' '
       hpss_path = ' '
 !
       gpi_ncfile  = ' '       ! user input gpi file path
@@ -282,6 +292,9 @@
       tide3m3(:) = spval
       tideann = ispval
       aurora  = ispval
+      iseeflux  = 0    ! will be set 1 if amienh or amiesh files are given
+      iamie     = 0    ! will be set 1 if amienh or amiesh files are given
+      amie_ibkg = 0    ! default is read in real time amie data
       ntask_lat = ispval
       ntask_lon = ispval
       colfac  = spval
@@ -660,6 +673,26 @@
         eddy_dif = 0
       else
         eddy_dif = 1
+      endif
+!
+! Set iamie flag to 1 if user has provided either amiesh or amienh
+! data files:
+!
+      if (len_trim(amiesh) + len_trim(amienh) > 0) then
+        write(6,"('Will read AMIE data inputs')")
+        iamie = 1
+        potential_model = 'AMIE'
+      endif
+!
+! Read TIME-SEE flux data
+! gl - 3/05/2005
+!
+      n = len_trim(seeflux)
+      if (n > 0) then
+        write(6,"('Read SEE flux Data as inputs')")
+        iseeflux = 1
+      else
+        write(6,"('input: iseeflux=',i3)") iseeflux
       endif
 !
 ! Save certain params as originally read by namelist read:
@@ -1547,6 +1580,15 @@
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amievol)
+      if (len_trim(amienh) > 0)
+     |  write(6,"('  amienh = ',a,/,4x,
+     |    '(file or mss path containing amie data)')") trim(amienh)
+      if (len_trim(amiesh) > 0)
+     |  write(6,"('  amiesh = ',a,/,4x,
+     |    '(file or mss path containing amie data)')") trim(amiesh)
+      if (len_trim(seeflux) > 0)
+     |  write(6,"('  seeflux = ',a,/,4x,
+     |    '(file or mss path containing SEE flux )')") trim(seeflux)
       if (len_trim(hpss_path) > 0)
      |  write(6,"('  hpss_path = ',a,4x,
      |    '(hpss directory for hsi dispose script)')") trim(hpss_path)
@@ -1999,6 +2041,8 @@
           write(6,"('wei05sc_ncfile=',a)") trim(wei05sc_ncfile)
         case('HEELIS')
           write (6,"('Will use the Heelis potential model')")
+        case('AMIE')
+          write (6,"('Will use the AMIE potential input')")
         case('NONE')
           write(6,"('Will NOT use an empirical potential model')")
           write(6,"('High-lat convection will be zero.)')")

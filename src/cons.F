@@ -238,6 +238,13 @@
      |             + coeff(4)*sin(2.*theta(m))+coeff(5)*cos(2.*theta(m)) 
      |             + coeff(6)*sin(3.*theta(m))+coeff(7)*cos(3.*theta(m)) 
      |             + coeff(8)*sin(4.*theta(m))+coeff(9)*cos(4.*theta(m)) 
+!
+! Reduce eddy diffusion by a factor of 2 to see if NO cooling increases - G. Lu 7/26/2015
+! NO is decreased between 100~250 km
+!          difk(1,m) = difk(1,m)/2.
+! Double eddy diffusion to see if NO cooling increases - G. Lu 7/27/2015
+!           difk(1,m) = difk(1,m)*2.
+!
            dift(1,m) = difk(1,m)/prndtl
            xmue(1,m) = difk(1,m)
         enddo
