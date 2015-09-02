@@ -275,7 +275,7 @@
      |  'EX: Zonal component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'ilev'
-      diags(n)%caller     = 'ionvel.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'EY'
@@ -283,7 +283,7 @@
      |  'EY: Meridional component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'ilev'
-      diags(n)%caller     = 'ionvel.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'EZ'
@@ -291,7 +291,7 @@
      |  'EZ: Vertical component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'ilev'
-      diags(n)%caller     = 'ionvel.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'ED1'
@@ -299,7 +299,7 @@
      |  'ED1: Magnetic eastward component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'imlev'
-      diags(n)%caller     = 'dynamo.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'ED2'
@@ -307,7 +307,7 @@
      |'ED2: Magnetic downward (equatorward) component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'imlev'
-      diags(n)%caller     = 'dynamo.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'PHIM2D'
@@ -315,7 +315,7 @@
      |  'PHIM2D: 2d Electric Potential on magnetic grid'
       diags(n)%units      = 'V'
       diags(n)%levels     = 'none'
-      diags(n)%caller     = 'dynamo.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'N2'

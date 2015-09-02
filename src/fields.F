@@ -18,7 +18,7 @@
       implicit none
       integer,parameter :: 
      |  nf4d          = 30, ! number of 4-d fields
-     |  nf4d_hist     = 27, ! number of 4-d fields on primary histories
+     |  nf4d_hist     = 28, ! number of 4-d fields on primary histories
      |  nf3d          = 46  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
@@ -427,6 +427,14 @@
       f4d(n)%data => no_nm
       i_no_nm = n ; n = n+1
 !
+      allocate(op_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('OP (TIME N-1)')")
+      f4d(n)%short_name = ("OP_NM")
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => op_nm
+      i_op_nm = n ; n = n+1
+!
       allocate(he_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('HELIUM (TIME N-1)')")
       f4d(n)%short_name = ("HE_NM")
@@ -442,14 +450,6 @@
       f4d(n)%vcoord = "midpoints"
       f4d(n)%data => ar_nm
       i_ar_nm = n ; n = n+1
-!
-      allocate(op_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('OP (TIME N-1)')")
-      f4d(n)%short_name = ("OP_NM")
-      f4d(n)%units = "cm-3"
-      f4d(n)%vcoord = "midpoints"
-      f4d(n)%data => op_nm
-      i_op_nm = n ; n = n+1
 !
       allocate(barm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('MEAN MOLECULAR WEIGHT')")
