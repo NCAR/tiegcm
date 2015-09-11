@@ -1,8 +1,8 @@
 &tgcm_input
 ;
-; Namelist input file for model tiegcm/branches/tiegcm_amie
+; Namelist input file for model tiegcm
 ;
- LABEL = 'tiegcm_amie res=5.0'
+ LABEL = 'tiegcm res=5.0'
  START_YEAR = 2002
  START_DAY  = 80
  CALENDAR_ADVANCE = 1
@@ -19,12 +19,16 @@
 ;
  START = 80,0,0
  STOP  = 81,0,0
- STEP  = 120
+;
+; Default step for sres is 60 seconds, although 120 can often
+; be used during quiet solar conditions.
+;
+ STEP  = 60
 ;
 ; Primary History parameters:
 ;
  HIST = 1,0,0
- OUTPUT = 'tiegcm_amie.pcntr_mareqx_smin_001.nc'
+ OUTPUT = 'tiegcm.pcntr_mareqx_smin_001.nc'
  MXHIST_PRIM = 10
 ;
 ; Secondary History parameters:
@@ -32,17 +36,18 @@
  SECSTART = 80,1,0
  SECSTOP  = 81,0,0
  SECHIST  =  0,1,0
- SECOUT   = 'tiegcm_amie.scntr_mareqx_smin_001.nc'
+ SECOUT   = 'tiegcm.scntr_mareqx_smin_001.nc'
  MXHIST_SECH = 24
- SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI','TEC',
-           'O2','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB',
-           'DEN','QJOULE','Z','ZG'
+ SECFLDS = 'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI',
+           'TEC','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN',
+           'QJOULE','Z','ZG'
 ;
 ; Diagnostic fields available with this release:
 ;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
 ;          'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
 ;          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M','O_N2','WN',
-;          'BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2','PHIM2D'
+;          'BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2','PHIM2D','N2',
+;          'CUSP','DRIZZLE','ALFA','NFLUX','EFLUX'
 ;
 ; These diagnostic currents are available only if icalkqlam==1 (dynamo.F)
 ;	   'KQPHI','KQLAM','JQR','JE13D','JE23D' 
@@ -51,7 +56,7 @@
 ; when executed, will copy history disk files to the NCAR HPSS in the 
 ; directory HPSS_PATH (must have an HPSS account at NCAR CISL)
 ;
-;HPSS_PATH = '/home/[user]/tiegcm'
+;HPSS_PATH = '/home/foster/tiegcm'
 ;
  TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2 = 0.,0.
@@ -78,7 +83,7 @@
 ; must be commented out (data will be used for those that are commented
 ; out, otherwise the user-provided values will be used).
 ;
-;GPI_NCFILE = '$TGCMDATA/gpi_2000001-2013120.nc'
+;GPI_NCFILE = '$TGCMDATA/gpi_1960001-2014304.nc'
 ;
 ; If KP is specified, and POWER and/or CTPOTEN are commented,
 ; then the given KP will be used to calculate POWER and/or CTPOTEN
@@ -105,4 +110,21 @@
 ;SEE_NCFILE = '$TGCMDATA/see__L3_merged_2005007_007.nc'
  AURORA = 1
  COLFAC = 1.5
+ DYNAMO = 1
+;
+; If CURRENT_PG=1, current due to plasma pressure gradient and gravity is calculated
+; and included as a forcing term in the dynamo equation (default=1) (ignored if DYNAMO=0)
+;
+ CURRENT_PG = 1
+;
+; If CURRENT_KQ=1, then height-integrated current density of current sheet, and
+; upward current density at the top of the ionosphere is calculated (default=0)
+; (ignored if DYNAMO=0) (see current.F90 to save JQR, JE13D, JE23D, KQPHI, KQLAM)
+;
+ CURRENT_KQ = 0
+;
+; If calc_helium=1, helium is calculated as a major composition species.
+; If calc_helium=0, helium is zeroed out.
+;
+ CALC_HELIUM = 1
 /

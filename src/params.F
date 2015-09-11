@@ -31,6 +31,7 @@
      |  zmbot = ZMBOT,               ! bottom midpoint level
      |  zitop = ZITOP,               ! top interface level
      |  zibot = ZIBOT                ! bottom interface level
+      real :: glon(nlon),glat(nlat),zpmid(nlevp1),zpint(nlevp1)
       real,parameter ::
      |  spval = 1.e36
       integer,parameter ::
@@ -43,27 +44,35 @@
      |  nmlonp1=nmlon+1,
      |  nmlonp2=nmlon+2,
      |  nmlatp1=nmlat+1,
-     |  nmlath=(nmlat+1)/2, ! index to magnetic equator
-     |  nmlev = nlev+3,   ! number of vertical levels of mag fields (-2,nlev)
-     |  nimlev  = nmlev,    ! number of interface levels of mag fields (-2,nlev)
-     |  nmlevp1 = nmlev+1,  ! 
-     |  nimlevp1= nimlev+1  ! 
+     |  nmlath=(nmlat+1)/2  ! index to magnetic equator
+
+      real,parameter :: zpbot_dyn  = -8.25 ! bottom midpoint boundary of dynamo
+      real,parameter :: zpibot_dyn = -8.5  ! bottom interface boundary of dynamo
+      real,parameter :: dmlev = dlev
 !
-! kbotdyn is zp k-index at which upward dynamo integrals begin (dynamo.F):
-! For zp -8 at dzp=0.5,  kbotdyn = 5 
-! For zp -8 at dzp=0.25, kbotdyn = 9 
+! nmlev_diff = number of levels from zibot down to zpibot_dyn (3 at 5-deg, 6 at 2.5-deg)
+! nmlevp1 = total number of mag levels (-2 -> 29 = 32 levels at 5-deg)
 !
-! -7 to +7 by 0.50 ("normal" vertical resolution)
-#if (NLEV==28)
-!     integer,parameter :: kbotdyn = 1
+      integer,parameter ::
+     |  nmlev_diff = int((zibot-zpibot_dyn)/dlev), 
+     |  nmlevp1 = nlevp1+nmlev_diff, 
+     |  nimlevp1= nmlevp1
 !
-! -7 to +7 by 0.25 ("double" vertical resolution)
-#elif (NLEV==56) 
-!     integer,parameter :: kbotdyn = 1
-#endif
+! At 5-deg resolution:
+!   mlev0 = -2, mlev1 = nlevp1 = 29
+! At 2.5-deg resolution:
+!   mlev0 = -5, mlev1 = nlevp1 = 57
+!
+      integer,parameter :: mlev0 = 1 - nmlev_diff ! (-2 at 5-deg, -5 at 2.5-deg)
+      integer,parameter :: mlev1 = nlevp1
+
+      real :: gmlon(nmlonp1), ! magnetic longitude (deg)
+     |        gmlat(nmlat),   ! magnetic latitude (deg)
+     |        zpmag(nmlevp1),   ! magnetic midpoint levels
+     |        zpimag(nimlevp1)  ! magnetic interface levels
 !
 ! For modules hist_mod and input_mod:
-      character(len=16),parameter :: tgcm_version = 'tiegcm1.94      '
+      character(len=16),parameter :: tgcm_version = 'tiegcm_trunk    '
 !
 ! tgcm_name is either "tiegcm" or "time-gcm"
       character(len=8),parameter :: tgcm_name    = 'tiegcm'

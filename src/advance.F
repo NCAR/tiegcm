@@ -17,12 +17,11 @@
       use fields_module
       use hist_module,only: nstep,modeltime,nsource
       use heelis_module,only: heelis
-      use weimer_module,only: weimer01  ! Weimer 2001 model
       use wei05sc,only: weimer05,       ! Weimer 2005 model
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
       use input_module,only: start,step,idynamo=>dynamo,
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
-     |  imf_ncfile,iamie,amie_ibkg,amiesh,amienh
+     |  imf_ncfile,current_pg,current_kq,iamie,amie_ibkg,amiesh,amienh
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
      |  ctpoten,ctpoten_time,ntimes_ctpoten, rd_ctpoten,
@@ -40,13 +39,12 @@
       use filter_module,only: filter
       use qrj_module,only: init_sflux
       use magfield_module,only: sunloc_apex
-      use efield_module,only: efield
-      use aurora_module,only: aurora_cons,cusp2d,drzl2d,alfa2d,nflx2d,
-     |  eflux2d
+      use pdynamo_module,only: pefield
+      use aurora_module,only: aurora_cons
       use hdif_module,only: hdif1,hdif2
+      use current,only: noso_crrt,noso_crdens
       use timing_module,only: timer,timing
-      use dynamo_module,only: prep_dynamo,dynamo,
-     |  phihm,nmlat0,zpotenm3d
+      use mpitime_module,only: mpi_timer
       use gpi_module,only: rdgpi,getgpi
       use imf_module,only: getimf
       use gswm_module,only: getgswm
@@ -55,19 +53,23 @@
       use output,only: outhist
       use addfld_module,only: addfld
       use lbc,only: tuvz_lbc
+!
+! Routines and timing for parallel dynamo (pdynamo.F):
+      use pdynamo_module,only: dynamo_inputs,pdynamo,pefield,
+     |  prepare_phig3d,nmlat0,phihm 
+
 #if defined(INTERCOMM) || defined(CISMAH)
       use cism_coupling_module,only: import, export, geng,gflx
 #endif
 
 !      
 ! current due to plasma pressure & gravity -> add to RHS of dynamo    
-      use magpres_g_module, only: magpres_grav,j_pg
+      use magpres_g, only: magpres_grav
 !
 #ifdef MPI
       use mpi_module,only: 
      |  mytid,mp_gather2root,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
-     |  mp_bndlons,mp_polelats,mp_periodic_f4d,mp_updatephi,
-     |  mp_updateemphi,mp_updateemlam,mp_updateemz
+     |  mp_bndlons,mp_polelats,mp_periodic_f4d
 !
       implicit none
 #include <mpif.h>
@@ -87,6 +89,7 @@
       integer :: cmodeltime(4) !CISM coupling time
 #endif
       real :: fmin,fmax
+      real :: polesigns(1)=1.  ! for n2 call to mp_polelats
       integer(kind=8) :: nsecs ! current model time in seconds,
                                ! including model day
       logical :: time2write,wrprim,wrsech,newseries_sech,
@@ -95,7 +98,7 @@
      |  time0,          time1,
      |  time0_step,     time1_step,
      |  time0_dynamics, time1_dynamics,
-     |  time0_dynamo,   time1_dynamo,
+     |  time0_pdynamo,  time1_pdynamo,
      |  time0_phist,    time1_phist,
      |  time0_shist,    time1_shist,
      |  time0_prep,     time1_prep,
@@ -104,6 +107,7 @@
       character(len=3) :: timing_type
 !
       logical :: debug=.false.
+      integer :: lev0=1,lev1=nlevp1
 !
 ! External:
       logical,external :: wrhist,time2print
@@ -114,7 +118,7 @@
       call vtbegin(115,ier)
 #endif
 !
-      write(6,"(/,'Enter advance: iter=',i6,' nstep=',i6)") iter,nstep
+      write(6,"(/,'Enter advance: iter=',i10,' nstep=',i10)") iter,nstep
       call timer(time0_init,time1_init,'INIT',0,0)
 !
 ! Init timestep index, modeltime, and nsecs:
@@ -126,51 +130,51 @@
       if (timing%rtc) timing_type = 'rtc'
       if (debug) write(6,"('advance after update modeltime..')")
 !
-! Echo source history to primary history output if an initial run,
-!   and write initial secondary history if necessary (istep==0).
-! Source history will not be written if a continuation run (i.e., if
-!   SOURCE was *not* provided by user input.
-! (if mpi, only master writes histories)
-!
 ! Source was read into data(:,:,:,itp), and output always writes from
 ! data(:,:,:,itc), so swap indices to echo itp source data:
-        itmp = itp
-        itp = itc
-        itc = itmp
+      itmp = itp
+      itp = itc
+      itc = itmp
+!
+! Start phist timing (source hist may or may not be written):
+      call timer(time0_phist,time1_phist,'PHIST',0,0) ! start phist
+!
+! Echo source history to primary history output if an initial run,
+      time2write = wrhist(istep,modeltime,
+     |  wrprim, newseries_prim, iseries_prim,
+     |  wrsech, newseries_sech, iseries_sech)
+
+      if (time2write) then
 #ifdef MPI
 !
 ! If an initial run, echo source history to output before first time step. 
 !   Because only subdomains are read by rdhist, and only the root task 
 !   outputs histories, the subdomain data must be gathered to the root.
 !
-        if (debug) 
-     |    write(6,"('advance calling mp_gather2root for prim..')")
         call mp_gather2root(itc,'prim')
-        if (debug) write(6,"('advance calling outhist..')")
         if (mytid==0) call outhist(istep,modeltime)
-        if (debug) write(6,"('advance after outhist..')")
 #else
         do i=1,nf4d
           foutput(:,lon0:lon1,lat0:lat1,i) =
      |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
         enddo
-
         tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
         ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
         vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
 
-        if (debug) write(6,"('advance calling outhist..')")
         call outhist(istep,modeltime)
-        if (debug) write(6,"('advance after outhist..')")
 #endif
 !
 ! nstep may be zero if user only wants to copy source history:
-      if (nstep==0) then
-        write(6,"(/,'ADVANCE: model is not advanced in time because ',
-     |    ' start==stop.')")
-        call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
-        return
-      endif
+        if (nstep==0) then
+          write(6,"(/,'ADVANCE: model is not advanced in time because ',
+     |      ' start==stop.')")
+          call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
+          return
+        endif
+      endif ! time2write
+      call timer(time0_phist,time1,'PHIST',1,0) ! suspend phist timing
+      time1_phist = time1
 !
 ! Reswap indices, so model reads itp data and updates itc data:
       itmp = itp
@@ -277,10 +281,6 @@
         endif
       endif
 !
-! Get GSWM tidal boundary data:
-!
-      call getgswm(istep,iyear,iday,secs)
-!
 ! Get AMIE data
       if (iamie==1) then
         iprint = 0
@@ -288,6 +288,10 @@
         if (iprint>0) write(6,"('advance calling getamie...')")
         call getamie(iyear,iday,int(secs),amie_ibkg,iprint)
       endif
+!
+! Get GSWM tidal boundary data:
+!
+      call getgswm(istep,iyear,iday,secs)
 !
 ! Update lower boundaries of t,u,v,z:
 !
@@ -297,16 +301,7 @@
 !
 ! Receive aurora parameters from the M-I coupler for CISM
 !
-      if (mytid==0) call import
-!
-! Scatter data to other tasks if using MPI, periodic points already added
-! in ci_receive. Only need to scatter auroral characteristic energy and
-! flux, potential is used in dynamo which is a serial code
-!
-#ifdef MPI
-      call cism_scatter(geng,lon0,lon1,lat0,lat1)
-      call cism_scatter(gflx,lon0,lon1,lat0,lat1)
-#endif
+      call import
 #endif
 !
 ! Report to stdout:
@@ -341,28 +336,42 @@
         endif
       endif ! time2print
 !
+! Write output history if necessary (master task writes data%(:,:,:,itc)).
+! This is called early in the timestep so time2write is available to other
+! modules who may need it.
+!
+      time2write = wrhist(istep,modeltime,
+     |  wrprim, newseries_prim, iseries_prim,
+     |  wrsech, newseries_sech, iseries_sech)
+!
 ! Update aurora parameters:
       iprint = 0
       if (istep==1) iprint = 1
-      call aurora_cons(iprint)
+      call aurora_cons(iprint,iyear,iday,secs)
       if (debug) write(6,"('advance after aurora_cons')")
 !
 ! init_sflux calls ssflux and euvac (see qrj_module.F):
       call init_sflux
       if (debug) write(6,"('advance after init_sflux')")
 !
-! Calculate electric field (ex,ey,ez in efield module, efield.F):
-      call efield(1,nlevp1,lon0,lon1,lat0,lat1)
-      if (debug) write(6,"('advance after efield')")
+! Calculate electric field on magnetic subdomains (first 
+! timestep only), and regrid ! to geographic subdomains 
+! in ex,ey,ez. (after first timestep, pthreed will calculate
+! the electric field)
+!
+      call mpi_timer('pefield',0,0)
+      if (debug) write(6,"('advance call pefield')")
+      call pefield
+      if (debug) write(6,"('advance after pefield')")
+      call mpi_timer('pefield',1,0)
 !
 ! Calculate vc, barm, xnmbar, and z (tn,o2,o1,vn are input).
-!     subroutine addiag(tn,o2,o1,vn,vc,barm,xnmbar,xnmbari,xnmbarm,z,
-!    |  zg,lon0,lon1,lev0,lev1,lat0,lat1)
 !
       call addiag(
      |  tn	 (levd0,lond0,latd0,itp),   ! in
      |  o2	 (levd0,lond0,latd0,itp),   ! in
      |  o1	 (levd0,lond0,latd0,itp),   ! in
+     |  he	 (levd0,lond0,latd0,itp),   ! in
      |  vn	 (levd0,lond0,latd0,itp),   ! in
      |  vc	 (levd0,lond0,latd0,itp),   ! out
      |  barm   (levd0,lond0,latd0,itp),     ! out
@@ -371,32 +380,43 @@
      |  xnmbarm(levd0,lond0,latd0),	    ! out
      |  z      (levd0,lond0,latd0,itp),     ! out (note itp is output)
      |  zg     (levd0,lond0,latd0),         ! out (z with varying grav)
+     |  n2     (levd0,lond0,latd0),         ! out (1.-o2-o1-he)
      |  lon0,lon1,1,nlevp1,lat0,lat1)
 !   
       if (debug) write(6,"('advance after addiag')")
+
+#ifdef MPI
 !
 ! Define boundary latitudes -1,0 across the south pole, and
 !   nlat+1,nlat+2 across the north pole:
 !
-#ifdef MPI
-      call mp_polelats(itp)
+      if (ntask==1) then
+        call mk_polelat( 0,1,itp)
+        call mk_polelat(-1,2,itp)
+        call mk_polelat(nlat+1,nlat  ,itp)
+        call mk_polelat(nlat+2,nlat-1,itp)
+      else
+        call mp_polelats(itp)
+        if (debug) write(6,"('advance after mp_polelats')")
 !
 ! Update ghost cell boundary lats and lons.
 ! Bndlats is called first to exchange lat0-1,2 and lat1+1,2 at lon0->lon1, 
 !   then bndlons is called  to exchange lon0-1,2 and lon1+1,2 at lat0-2->lat1+2).
 !
-      f4d(:)%mpi = .true. 
-      call mp_bndlats(f4d,nf4d,itp)
-      call mp_bndlons(f4d,nf4d,itp)
+        f4d(:)%mpi = .true. 
+        call mp_bndlats(f4d,nf4d,itp)
+        call mp_bndlons(f4d,nf4d,itp)
+      endif ! ntask==1
 #else
-      call mk_polelat(0     ,1     ,itp)
-      call mk_polelat(-1    ,2     ,itp)
-      call mk_polelat(lat1+1,lat1  ,itp)
-      call mk_polelat(lat1+2,lat1-1,itp)
+      call mk_polelat( 0,1,itp)
+      call mk_polelat(-1,2,itp)
+      call mk_polelat(nlat+1,nlat  ,itp)
+      call mk_polelat(nlat+2,nlat-1,itp)
 #endif
 !
 ! For Z, itc==itp (itp was set by addiag):
       z(:,:,:,itc) = z(:,:,:,itp)
+      if (debug) write(6,"('advance after z')")
 !
 ! Horizontal diffusion, first step:
 ! hdif1 saves nrh and kmh at lats -2->nlat in nrh and kmh using
@@ -424,93 +444,70 @@
      |  vn_nm(levd0,lond0,latd0,itp),  ! 4d input
      |  o2_nm(levd0,lond0,latd0,itp),  ! 4d input
      |  o1_nm(levd0,lond0,latd0,itp),  ! 4d input
+     |  he_nm(levd0,lond0,latd0,itp),  ! 4d input
      |  kldt ,      ! 3d output
      |  kldu ,      ! 3d output
      |  kldv ,      ! 3d output
      |  kldo2,      ! 3d output
      |  kldo1,      ! 3d output
+     |  kldhe,      ! 3d output
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('advance after hdif2')")
 !
-! Dynamo calls Heelis (heelis.F), Weimer (wei01gcm.F), or neither
+! Dynamo calls Heelis (heelis.F), Weimer (wei05sc.F), or neither
 !   for high latitude electric potential, according to user-provided
 !   "model_potential".
 ! Get high latitude (Heelis or Weimer) colatitudes, NH pfrac, and poten phihm.
 !  If Weimer is used, then theta0,phid etc is changed before use in aurora
 !   in dynamics.
 !
-! If an amie run, ignore potential_model, and use electric potential from
-!   amie module.
-!
-      if (iamie <= 0) then
-        if (potential_model == 'WEIMER01') then
-          if (byimf==0..and.bzimf==0.) then
-            write(6,"(/,'>>> WARNING: byimf and bzimf are both zero',
-     |        ' before call to weimer01.',/,'This will cause the ',
-     |        'weimer model to produce NaNs, so I am setting bzimf ',
-     |        'to .01')") 
-            bzimf = .01
-          endif
-          call weimer01
-          if (debug) write(6,"('advance after weimer01: istep=',i4)")
-     |      istep
-
-!         write(6,"('wei01: mtime=',i3,',',i2,',',i2,' by,bz=',2f6.2,
-!    |      ' swvel=',f8.2,' swden=',f6.2,' al=',f8.2,' phihm min,max=',
-!    |      2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,al,
-!    |      minval(phihm),maxval(phihm)
-
-        elseif (potential_model == 'WEIMER05'.or.
-     |          potential_model == 'WEIMER') then
+      if (potential_model == 'WEIMER05'.or.
+     |    potential_model == 'WEIMER') then
 !
 ! sub weimer05 (wei05sc.F), calculates mag electric potential in phihm.
 ! (if byimf==bzimf==0, then weimer05 will set bzimf = .01)
 ! Weimer will calculate ctpoten (user cannot provide constant
 !   namelist ctpoten with the Weimer model)
 !
-          call weimer05(byimf,bzimf,swvel,swden,wei05sc_ncfile,istep)
-          if (debug) write(6,"('advance after weimer05: istep=',i4)")
-     |      istep
+        call weimer05(byimf,bzimf,swvel,swden,wei05sc_ncfile,istep)
+        if (debug) write(6,"('advance after weimer05: istep=',i4)")istep
 
-!         write(6,"('wei05: mtime=',i3,',',i2,',',i2,' by,bz=',2f8.2,
-!    |      ' swvel=',f8.2,' swden=',f6.2,' phihm min,max=',
-!    |      2e12.4)") modeltime(1:3),byimf,bzimf,swvel,swden,
-!    |      minval(phihm),maxval(phihm)
+!       call addfld ('W05_EPOT','Weimer05 Electric Potential',
+!    |    'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!       call addfld ('W05_FAC','Weimer05 Field-Aligned Current',
+!    |    ' ',wei05sc_fac,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
 
-          call addfld ('W05_EPOT','Weimer05 Electric Potential',
-     |      'V',phihm,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-          call addfld ('W05_FAC','Weimer05 Field-Aligned Current',
-     |      ' ',wei05sc_fac,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
-
-        elseif (potential_model == 'HEELIS') then
-          call heelis
-          if (debug) write(6,"('advance after heelis: istep=',i4)") 
-     |      istep
-        else  !  potential_model='NONE'
-          do j=1,nmlat0
-            do i=1,nmlonp1
-	      phihm(i,j) = 0.
-            enddo ! i=1,nmlonp1
-          enddo ! j=1,nmlat0
-          call colath
-        endif
-      else ! amie run
+      elseif (potential_model == 'HEELIS') then
+        call heelis
+        if (debug) write(6,"('advance after heelis: istep=',i4)") istep
+      else  !  potential_model='NONE'
+        do j=1,nmlat0
+          do i=1,nmlonp1
+	    phihm(i,j) = 0.
+          enddo ! i=1,nmlonp1
+        enddo ! j=1,nmlat0
+      endif
 !
 ! If an amie run, use tiepot from amie.F:
 ! (phihm and tiepot are dimensioned (nmlonp1,nmlat))
+      if (iamie > 0) then
         phihm = tiepot ! whole array op
         call fminmax(phihm,nmlonp1*nmlat,fmin,fmax)
-        write(6,"('advance: amie phihm min,max=',2e12.4)") fmin,fmax
-        call colath
+        write(6,"('Advance: amie phihm min,max=',2e12.4)") fmin,fmax
       endif
+!
+! Set pfrac for dynamo, regardless of potential_model (in colath.F): 
+!     print *,'Advance: calling colath >>>'
+      call colath
 
-      call timer(time0_prep,time1,'PREP',1,0) ! end step-prep timing
+      call timer(time0_prep,time1,'PREP',1,0) ! suspend step-prep timing
       time1_prep = time1
 !
 ! Model dynamics. Sub dynamics calls physics, chemistry, and dynamics
 ! routines for current time step:
 !
       call timer(time0_dynamics,time1_dynamics,'DYNAMICS',0,0)
+!     print *,'Advance: calling dynamics >>>'
       call dynamics(nstep,istep)
       call timer(time0_dynamics,time1_dynamics,'DYNAMICS',1,0)
       if (debug) write(6,"('advance after dynamics: istep=',i4)") istep
@@ -518,94 +515,92 @@
      |  write(6,"('Time in DYNAMICS =     ',f12.2,
      |    ' Advance: step ',i5)") time1_dynamics,istep
 !
-! Save Cusp, drizzle, alfa and nflux to secondary history to plot later
-!     call addfld ('CUSP','2D CUSP','0-1',
-!    |  cusp2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('DRIZZLE','2D DRIZZLE','0-1',
-!    |  drzl2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('ALFA','2D ALFA','keV',
-!    |  alfa2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('NFLUX','2D NFLUX','#/cm2-s',
-!    |  nflx2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld ('EFLUX','2D EFLUX','mW/m^2',
-!    |  eflux2d(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+! Call dynamo if namelist idynamo > 0:
 !
-! Call dynamo if namelist input flag is set:
-      call timer(time0_dynamo,time1_dynamo,'DYNAMO',0,0)
-!
-! zpotenm3d is 3-d geopotential height in mag coords. This field is forced
-! on the secondary histories. Here init to zero:
-!
-      zpotenm3d = 0. ! whole array init (this field forced onto secondary hist)
+      if (idynamo > 0) then
 !
 ! Calculate addition to electrodynamo RHS (current due to plasma 
 ! pressure and gravity)
 !
-      if(j_pg) then	
-        call magpres_grav (
-     |    z	(levd0,lond0,latd0,itp),   ! geopotential input
-     |    te	(levd0,lond0,latd0,itp),   ! electron temperature K
-     |    ti	(levd0,lond0,latd0,itp),   ! ion temperature K
-     |    ne	(levd0,lond0,latd0,itp),   ! electron density 1/cm^3
-     |    op	(levd0,lond0,latd0,itp),   ! O+ 1/cm^3
-     |    nplus (levd0,lond0,latd0),	   ! N+  1/cm^3
-     |    n2p	(levd0,lond0,latd0),	   ! N2+ 1/cm^3
-     |    nop	(levd0,lond0,latd0),	   ! NO+  1/cm^3
-     |    o2p	(levd0,lond0,latd0,itp),   ! O2+  1/cm^3
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
+        if (current_pg > 0) then	
+          call timer(time0,time1,"MAGPRES_GRAV",0,0)
+          call magpres_grav (
+     |      z	(levd0,lond0,latd0,itp),   ! geopotential input
+     |      te	(levd0,lond0,latd0,itp),   ! electron temperature K
+     |      ti	(levd0,lond0,latd0,itp),   ! ion temperature K
+     |      ne	(levd0,lond0,latd0,itp),   ! electron density 1/cm^3
+     |      op	(levd0,lond0,latd0,itp),   ! O+ 1/cm^3
+     |      nplus (levd0,lond0,latd0),	   ! N+  1/cm^3
+     |      n2p	(levd0,lond0,latd0),	   ! N2+ 1/cm^3
+     |      nop	(levd0,lond0,latd0),	   ! NO+  1/cm^3
+     |      o2p	(levd0,lond0,latd0,itp),   ! O2+  1/cm^3
+     |      1,nlevp1,lon0,lon1,lat0,lat1)
           if (debug) write(6,"('advance after magpres_grav: istep=',
-     |    i4)") istep
-      endif 
+     |      i4)") istep
+          call timer(time0,time1,"MAGPRES_GRAV",1,0)
+        endif ! current_pg > 0
 !
-! Prepare inputs to dynamo and gather to master task:
-!  
-      call prep_dynamo(
-     |  tn     (levd0,lond0,latd0,itp),
-     |  un     (levd0,lond0,latd0,itp),
-     |  vn     (levd0,lond0,latd0,itp),
-     |  w      (levd0,lond0,latd0,itp),
-     |  z      (levd0,lond0,latd0,itp),
-     |  barm   (levd0,lond0,latd0,itp),
-     |  ped    (levd0,lond0,latd0),     ! from lamdas.F
-     |  hall   (levd0,lond0,latd0),     ! from lamdas.F
-     |  1,nlevp1,lon0,lon1,lat0,lat1)
+! Prepare neutral inputs for parallel dynamo:
+! Calculate vertical velocity wn:
+        call calc_wn(
+     |    tn   (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    w    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    barm (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    wn   (lev0:lev1,lon0:lon1,lat0:lat1),     ! output
+     |    1,nlevp1,lon0,lon1,lat0,lat1)
+
+        call mpi_timer('dynamo_inputs',0,0)
+        call dynamo_inputs(
+     |    un   (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    vn   (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    wn   (lev0:lev1,lon0:lon1,lat0:lat1),
+     |    z    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    ped  (lev0:lev1,lon0:lon1,lat0:lat1),     ! from lamdas.F
+     |    hall (lev0:lev1,lon0:lon1,lat0:lat1),     ! from lamdas.F
+     |    1,nlevp1,lon0,lon1,lat0,lat1)
+        call mpi_timer('dynamo_inputs',1,0)
+        if (debug) write(6,"('advance after dynamo_inputs: istep=',
+     |    i5)") istep
 !
-! Only master task calls dynamo: 
+! Call parallel dynamo (pdynamo.F has its own timing):
+        call timer(time0_pdynamo,time1_pdynamo,'PDYNAMO',0,0)
+        call pdynamo
+        call timer(time0_pdynamo,time1_pdynamo,'PDYNAMO',1,0)
+        if (debug) write(6,"('advance after pdynamo: istep=',i5)")
+     |    istep
+        if (timing%level >= 2.and.time2print(nstep,istep))
+     |    write(6,"('Time in DYNAMO =       ',
+     |      f12.2,' Advance: step ',i5)") time1_pdynamo,istep
 !
-      if (debug) write(6,"('advance after prep_dynamo')")
-      if (mytid==0.and.idynamo > 0) call dynamo
-      if (debug) write(6,"('advance after dynamo')")
+! Calculate current diagnostics (current.F90):
+! (note sub nosocoef is called by the root task from complete_integrals
+!  in pdynamo. Sub nosocoef is a stub in current.F90 that calls sub noso_coef)
 !
-! Zero out efield and electric potential if dynamo was not called:
-      if (idynamo <= 0) call nodynamo
+        if (current_kq > 0) then
+          if (mytid==0) call noso_crrt
+          call noso_crdens
+        endif
+!
+! Prepare potential on geographic grid if writing history:
+        call prepare_phig3d(wrprim,wrsech)
+        if (debug) write(6,"('advance after prepare_phig3d')")
+!
+! If idynamo <= 0, dynamo is not called:
+      else
+        if (time2print(nstep,istep))
+     |    write(6,"('Note: idynamo=',i3,' -> dynamo was not called')")
+     |      idynamo
+      endif ! idynamo
 !
 #if defined(INTERCOMM) || defined(CISMAH)
 !
 ! Send conductance and neutral wind current to M-I coupler for CISM
 !
-      if (mytid==0) call export(cmodeltime)
+      call export(cmodeltime)
 #endif
 #ifdef VT
 !       code = 127 ; state = 'timestep' ; activity='ModelCode'
         call vtend(127,ier)
-#endif
-!
-! End timing for dynamo and step (before i/o):
-      call timer(time0_dynamo,time1_dynamo,'DYNAMO',1,0)
-      if (timing%level >= 2.and.time2print(nstep,istep))
-     |  write(6,"('Time in DYNAMO =       ',
-     |    f12.2,' Advance: step ',i5)") time1_dynamo,istep
-!
-! Update slave tasks with new phim3d from the dynamo. Make this call
-! after timing, so that timing will show the difference between master
-! and slave tasks as a consequence of the serial dynamo. (slaves will
-! be blocked here until the master is done with the dynamo)
-!
-#ifdef MPI
-      call mp_updatephi
-      call mp_updateemphi  ! am 12/12/05 should be gathered if we stick to this
-      call mp_updateemlam
-      call mp_updateemz
 #endif
 !
 ! Write output history if necessary (output writes data%(:,:,:,itc)).
@@ -618,45 +613,40 @@
       call timer(time0_step,time1,'STEP',1,0) ! suspend step timing for i/o
       time1_step = time1
 !
-      time1_phist = 0.
-      time1_shist = 0.
-!
 ! If its time to write a history, root task must gather subdomain
 ! data from slave tasks before writing the history. This is done
 ! by sub mp_gather2root. Only root task writes to the history.
 !
+      if (time2write) then
+        if (wrprim) call timer(time0_phist,time1,'PHIST',0,0) ! resume phist
+        if (wrsech) call timer(time0_shist,time1_shist,'SHIST',0,0)
 #ifdef MPI
-      if (time2write.and.ntask > 1) then
-        if (wrprim) call timer(time0_phist,time1_phist,'PHIST',0,0)
-        call mp_gather2root(itc,'prim')
-        if (debug) write(6,"('advance after mp_gather2root')")
-        if (wrsech) then
-          call timer(time0_shist,time1_shist,'SHIST',0,0)
-          call mp_gather2root(itc,'sech')
+        if (ntask > 1) then
+          if (debug) write(6,"('advance call mp_gather2root prim')")
+          call mp_gather2root(itc,'prim')
+          if (debug) write(6,"('advance after mp_gather2root prim')")
+          if (wrsech) call mp_gather2root(itc,'sech')
+          if (debug) write(6,"('advance after mp_gather2root sech')")
+        elseif (ntask==1) then
+          do i=1,nf4d
+            foutput(:,lon0:lon1,lat0:lat1,i) =
+     |        f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
+          enddo
+          tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
+          ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
+          vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
+          tlbc_nm_glb(lon0:lon1,lat0:lat1)=tlbc_nm(lon0:lon1,lat0:lat1)
+          ulbc_nm_glb(lon0:lon1,lat0:lat1)=ulbc_nm(lon0:lon1,lat0:lat1)
+          vlbc_nm_glb(lon0:lon1,lat0:lat1)=vlbc_nm(lon0:lon1,lat0:lat1)
         endif
-      elseif (time2write.and.ntask==1) then
-        do i=1,nf4d
-          foutput(:,lon0:lon1,lat0:lat1,i) =
-     |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
-        enddo
-        tlbc_glb(lon0:lon1,lat0:lat1) = tlbc(lon0:lon1,lat0:lat1)
-        ulbc_glb(lon0:lon1,lat0:lat1) = ulbc(lon0:lon1,lat0:lat1)
-        vlbc_glb(lon0:lon1,lat0:lat1) = vlbc(lon0:lon1,lat0:lat1)
-        tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
-        ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
-        vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
-      endif
 !
 ! Saving extraoutput here from master only - G. Lu, Aug. 27, 2003
         call prep_output(1,nlevp1,lon0,lon1,lat0,lat1)
         if (mytid==0) call extraoutput
 #else
-      call timer(time0_phist,time1_phist,'PHIST',0,0) ! non-MPI
-      call timer(time0_shist,time1_shist,'SHIST',0,0) ! non-MPI
 !
 ! Update foutput if serial non-MPI run:
 !
-      if (time2write) then
         do i=1,nf4d
           foutput(:,lon0:lon1,lat0:lat1,i) =
      |      f4d(i)%data(:,lon0:lon1,lat0:lat1,itc)
@@ -667,48 +657,30 @@
         tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
         ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
         vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
-      endif
 #endif
 !
 ! Write the history to output file:
-      if (mytid==0) then
-        call outhist(istep,modeltime)
-        if (debug) write(6,"('advance after outhist')")
-      endif
+        if (mytid==0) then
+          if (debug) write(6,"('advance root call outhist')")
+          call outhist(istep,modeltime)
+          if (debug) write(6,"('advance after root call outhist')")
+        endif
+!
+! Update i/o timing:
+        if (wrprim) then
+          call timer(time0_phist,time1,'PHIST',1,0) ! end phist timing
+          time1_phist = time1_phist+time1
+        endif
+        if (wrsech) call timer(time0_shist,time1_shist,'SHIST',1,0)
+      endif ! time2write
+      call timer(time0_step,time1,'STEP',0,0) ! resume step timing (non-MPI)
 #ifdef MPI
-      call timer(time0_step,time1,'STEP',0,0) ! resume step timing
-!
-      if (wrprim) call timer(time0_phist,time1_phist,'PHIST',1,0) 
-      if (wrsech) call timer(time0_shist,time1_shist,'SHIST',1,0)
-      if (timing%level >= 2.and.time2print(nstep,istep)) then
-        write(6,"('Time in PHIST =        ',f12.2,
-     |    ' Advance: step ',i5)") time1_phist,istep
-        write(6,"('Time in SHIST =        ',f12.2,
-     |    ' Advance: step ',i5)") time1_shist,istep
-      endif
-!
-! Each mpi task must receive the 2 lats before its first
-! updated lat (lat0-1,lat0-2), and the 2 lats after its last
-! updated lat (lat1+1,lat2+2). Each task must also send its
-! first 2 (lat0,lat0+1) and last 2 (lat1,lat1-1) updated lats
-! to the appropriate "adjacent" tasks.
-!
-      call timer(time0_prep,time1,'PREP',0,0) ! resume prep timing
-      f4d(:)%mpi = .true. 
-      call mp_bndlats(f4d,nf4d,itc)
-      if (debug) write(6,"('advance after mp_bndlats')")
-      call mp_bndlons(f4d,nf4d,itc)
-      if (debug) write(6,"('advance after mp_bndlons')")
 !
 ! Periodic points for all updated fields:
       call mp_periodic_f4d(itc)
+      if (debug) write(6,"('advance after mp_periodic_f4d')")
 #else
 ! Non-mpi serial run:
-      call timer(time0_step,time1,'STEP',0,0) ! resume step timing (non-MPI)
-      call mk_polelat(0     ,1     ,itc)
-      call mk_polelat(-1    ,2     ,itc)
-      call mk_polelat(lat1+1,lat1  ,itc)
-      call mk_polelat(lat1+2,lat1-1,itc)
       call set_periodic_f4d(itc)
 #endif
 !
@@ -734,7 +706,7 @@
       if (istep < nstep) then
 #ifdef MPI
         if (ntask > 1) then
-          call mpi_barrier(MPI_COMM_WORLD,ier)
+          call mpi_barrier(MPI_COMM_WORLD,ier) ! is this necessary??
           if (debug) write(6,"('advance after end of step barrier')")
         endif
 #endif
@@ -882,24 +854,54 @@
 !     write(6,"('set_index: ',a,' = ',e12.4)") name,outindex
       end subroutine set_index
 !-----------------------------------------------------------------------
+      subroutine calc_wn(tn,omega,barm,wn,lev0,lev1,lon0,lon1,lat0,lat1)
+      use cons_module,only: gask,grav
+!
+! Calculate vertical velocity wn for dynamo inputs:
+!
+! Args:
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1),intent(in) ::
+     |  tn,omega,barm
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1),intent(out) :: wn
+!
+! Local:
+      integer :: j,i,k
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) :: scheight
+
+!     write(6,"('calc_wn: tn=',2e12.4,' omega=',2e12.4,' barm=',
+!    |  2e12.4)") minval(tn),maxval(tn),minval(omega),maxval(omega),
+!    |  minval(barm),maxval(barm)
+!
+      do j=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            scheight(k,i,j) = gask*tn(k,i,j)/(.5*(barm(k,i,j)+
+     |        barm(k+1,i,j))*grav)
+            wn(k,i,j)=0.5*(omega(k,i,j)+omega(k+1,i,j))*scheight(k,i,j)
+          enddo
+          scheight(lev1,i,j) = 0.
+          wn(lev1,i,j) = 0.
+        enddo
+      enddo
+      end subroutine calc_wn
+!-----------------------------------------------------------------------
       subroutine nodynamo
 !
 ! Dynamo was not called: zero out electric field and potential:
 !
       use fields_module,only: 
-     |  dynpot,  ! (nlonp1,0:nlatp1,nlevp1)  ! 3d electric potential geographic
      |  phim3d,  ! (nmlonp1,nmlat,-2:nlevp1) ! 3d electric potential magnetic
      |  emphi3d, ! (nmlonp1,nmlat,-2:nlevp1) ! 3d eastward electric field magnetic
      |  emlam3d, ! (nmlonp1,nmlat,-2:nlevp1) ! 3d equatorw. electric field magnetic
      |  emz3d    ! (nmlonp1,nmlat,-2:nlevp1) ! 3d upward (?) electric field magnetic
 
-      dynpot = 0.
       phim3d = 0.
       emphi3d = 0.
       emlam3d = 0.
       emz3d = 0.
 
-!     write(6,"('nodynamo: zeroed out dynpot, phim3d, emphi3d,',
+!     write(6,"('nodynamo: zeroed out phim3d, emphi3d,',
 !    |  ' emlam3d, and emz3d')")
 
       end subroutine nodynamo

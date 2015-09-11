@@ -18,14 +18,14 @@
 !
 ! Define parameters for AMIE input data file:
       integer,parameter :: 
-     |  mxgdays = 10,  ! maximum number of days of AMIE data
-     |  mxtimes = 5881, ! maximum number of times of AMIE data per day
-     |  ithtrns = 30, ! corresponding to trans lat 40-deg
-     |  ithmx = 55, ! maximum number of latitudes of AMIE data
+     |  mxgdays = 10,     ! maximum number of days of AMIE data
+     |  mxtimes = 5881,   ! maximum number of times of AMIE data per day
+     |  ithtrns = 30,     ! corresponding to trans lat 40-deg
+     |  ithmx = 55,       ! maximum number of latitudes of AMIE data
      |  jmxm = 2*ithmx-1, ! maximum number of global latitudes
-     |  lonmx = 36  ! maximum number of longitudes of AMIE data
-      integer :: lonp1,latp1,
-     |  year(mxtimes),month(mxtimes),day(mxtimes),jday(mxtimes)
+     |  lonmx = 36        ! maximum number of longitudes of AMIE data
+      integer :: lonp1,latp1
+      integer,dimension(mxtimes) :: year,month,day,jday
 ! Define AMIE output fields
       real :: 
      |  tiepot(nmlonp1,nmlat),tieekv(nmlonp1,nmlat),
@@ -46,13 +46,13 @@
 ! amie_pcp_nh(sh) are AMIE polar-cap potential drop
 ! Saved AMIE outputs with suffix _amie
 !
-      real,allocatable,dimension(:,:,:) :: ! (lonp1,latp1,ntimes)
+      real,allocatable,dimension(:,:,:),save :: ! (lonp1,latp1,ntimes)
      |  amie_pot_nh, amie_pot_sh, amie_ekv_nh, amie_ekv_sh,
      |  amie_efx_nh, amie_efx_sh
-      real,allocatable,dimension(:,:) ::   ! (lonp1,latp1)
+      real,allocatable,dimension(:,:),save ::   ! (lonp1,latp1)
      |  pot_nh_amie,pot_sh_amie, ekv_nh_amie,ekv_sh_amie,
      |  efx_nh_amie,efx_sh_amie
-      real, allocatable,dimension(:) :: ! (ntimes)
+      real, allocatable,dimension(:),save :: ! (ntimes)
      |  amie_cusplat_nh, amie_cuspmlt_nh, amie_hpi_nh,
      |  amie_pcp_nh, amie_nh_ut,
      |  amie_cusplat_sh, amie_cuspmlt_sh, amie_hpi_sh,
@@ -71,10 +71,13 @@
 !
       use input_module,only: amienh,amiesh
 !
+! Read north hemisphere file:
       if (len_trim(amienh) > 0) then
         write(6,"('Reading AMIENH file ',a)") trim(amienh)
         call rdamie_nh
       endif
+!
+! Read south hemisphere file:
       if (len_trim(amiesh) > 0) then
         write(6,"('Reading AMIESH file ',a)") trim(amiesh)
         call rdamie_sh
@@ -107,7 +110,7 @@
       if (istat /= NF_NOERR) then
         write(6,"(/,'>>> rdamie_nh: error opening netcdf NH AMIE data ',
      |    'diurnal file ',a)") trim(dskfile)
-        stop 'rdamie_nh'
+        call shutdown('rdamie_nh')
       else
         write(6,"('rdamie_nh: opened file ',a)") trim(dskfile)
       endif
@@ -145,10 +148,6 @@
       istat = nf_get_var_int(ncid,idv_jday,jday)
 !
 ! Allocate 1-d fields:
-!     real,allocatable,dimension(:,:,:) :: ! (ntimes)
-!    |  amie_cusplat_nh, amie_cuspmlt_nh, amie_hpi_nh,
-!    |  amie_pcp_nh, amie_nh_ut,
-!
       if (.not. allocated(amie_nh_ut))
      |  allocate(amie_nh_ut(ntimes),stat=ier)
       if (ier /= 0) write(6,"('>>> rdamie_nh: error allocating',
@@ -211,9 +210,6 @@
      |  'rdamie_nh: Error getting NH AMIE variable cuspmlt')
 !
 ! Allocate 2-d fields:
-!     real,allocatable,dimension(:,:,:) :: ! (lonp1,latp1)
-!    |  pot_nh_amie, ekv_nh_amie, efx_nh_amie
-!
       if (.not. allocated(pot_nh_amie))
      |   allocate(pot_nh_amie(lonp1,latp1),stat=ier)
       if (ier /= 0) write(6,"('>>> rdamie_sh: error allocating',
@@ -228,10 +224,6 @@
      |  ' efx_nh_amie: lonp1=',i3,' latp1=',i3)")lonp1,latp1
 !
 ! Allocate 3-d fields:
-!     real,allocatable,dimension(:,:,:) :: ! (lonp1,latp1,ntimes)
-!    |  amie_pot_nh, amie_pot_sh, amie_ekv_nh, amie_ekv_sh,
-!    |  amie_efx_nh, amie_efx_sh
-!
       if (.not. allocated(amie_pot_nh)) 
      |   allocate(amie_pot_nh(lonp1,latp1,ntimes),stat=ier)
       if (ier /= 0) write(6,"('>>> rdamie_nh: error allocating',
@@ -307,7 +299,7 @@
       if (istat /= NF_NOERR) then
         write(6,"(/,'>>> rdamie_nh: error opening netcdf SH AMIE data ',
      |    'diurnal file ',a)") trim(dskfile)
-        stop 'rdamie_sh'
+        call shutdown('rdamie_sh')
       endif
 !
 ! Get AMIE grid dimension:
@@ -340,10 +332,6 @@
       istat = nf_get_var_int(ncid,idv_jday,jday)
 !
 ! Allocate 1-d fields:
-!     real,allocatable,dimension(:,:,:) :: ! (ntimes)
-!    |  amie_cusplat_sh, amie_cuspmlt_sh, amie_hpi_sh,
-!    |  amie_pcp_sh, amie_sh_ut,
-!
       if (.not. allocated(amie_sh_ut))
      |   allocate(amie_sh_ut(ntimes),stat=ier)
       if (ier /= 0) write(6,"('>>> rdamie_sh: error allocating',
@@ -406,9 +394,6 @@
      |  'rdamie_sh: Error getting SH AMIE variable cuspmlt')
 !
 ! Allocate 2-d fields:
-!     real,allocatable,dimension(:,:,:) :: ! (lonp1,latp1)
-!    |  pot_sh_amie, ekv_sh_amie, efx_sh_amie
-!
       if (.not. allocated(pot_sh_amie))
      |   allocate(pot_sh_amie(lonp1,latp1),stat=ier)
       if (ier /= 0) write(6,"('>>> rdamie_sh: error allocating',
@@ -424,10 +409,6 @@
 
 !
 ! Allocate 3-d fields:
-!     real,allocatable,dimension(:,:,:) :: ! (lonp1,latp1,ntimes)
-!    |  amie_pot_nh, amie_pot_sh, amie_ekv_nh, amie_ekv_sh,
-!    |  amie_efx_nh, amie_efx_sh
-!
       if (.not. allocated(amie_pot_sh))
      |   allocate(amie_pot_sh(lonp1,latp1,ntimes),stat=ier)
       if (ier /= 0) write(6,"('>>> rdamie_sh: error allocating',
@@ -485,10 +466,9 @@
 ! gl - 12/07/2002
 !
       use hist_module,only: modeltime
-      use input_module,only: amiesh,amienh
+      use input_module,only: iamie,amiesh,amienh
       use cons_module,only: pi,ylonm,ylatm
       use magfield_module,only: im,jm,dim,djm
-!     use dynamo_module,only: mag2geo
 !
 ! Args:
       integer,intent(in) :: iyear,iday,iutsec,amie_ibkg,iprint
@@ -588,48 +568,52 @@
       if (year(1) /= iyear) then
         write(6,"('>>> getamie: wrong year,iyear=',2i4)")
      |     year(1),iyear
-        stop 'getamie'
+        call shutdown('getamie')
       endif
       amieday = jday(1)
       if (amie_ibkg > 0) amieday = jday(1) - 1
 !     if (amieday /= iday .and. amie_ibkg == 0) then
 !       write(6,"('>>> getamie: wrong amieday,modelday=',2i4)")
 !    |     amieday,iday
-!       stop 'getamie'
+!       call shutdown('getamie')
 !     endif
       if (modeltime(3).lt.0.or.modeltime(3).gt.59) then
         write(6,"('>>> getamie: bad imin=',3i4)") modeltime(3)
-        stop 'getamie'
+        call shutdown('getamie')
       endif
       if (modeltime(4).lt.0.or.modeltime(4).gt.59) then
         write(6,"('>>> getamie: bad isec=',3i4)") modeltime(4)
-        stop 'getamie'
+        call shutdown('getamie')
       endif
 !     model_ut = (modeltime(1)-amieday)*24. + float(iutsec)/3600.
       model_ut = float(iutsec)/3600.
 
       maxefx=50.
-      if (amieday==314 .and. abs(model_ut-7.333) < 0.1) 
+      if (iyear==2004 .and. amieday==314 .and. abs(model_ut-7.333)<0.1) 
      |      maxefx=21.
-      if (amieday==314 .and. abs(model_ut-8.833) < 0.1) 
+      if (iyear==2004 .and. amieday==314 .and. abs(model_ut-8.833)<0.1) 
      |      maxefx=14.
-      if (amieday==318) maxefx=10.
-      if (amieday==318 .and. model_ut < 5.75) maxefx=3.
-      if (amieday==318 .and. abs(model_ut-4.75) < 0.1) maxefx=1.
-      if (amieday==318 .and. abs(model_ut-21.0) < 0.1) maxefx=2.
+      if (iyear==2004 .and. amieday==318) maxefx=10.
+      if (iyear==2004 .and. amieday==318 .and. model_ut < 5.75) 
+     |      maxefx=3.
+      if (iyear==2004 .and. amieday==318 .and. abs(model_ut-4.75)<0.1) 
+     |      maxefx=1.
+      if (iyear==2004 .and. amieday==318 .and. abs(model_ut-21.0)<0.1) 
+     |      maxefx=2.
 
 ! Find out the multiplication factor from Charley Barth
       fxfact_nh = 1.
       fxfact_sh = 1.
       if (nxyear == iyear) then
 ! For the southern hemisphere
-	iset = nxtimes
+	iset = 0
 	iset1 = nxtimes
         do i=1,nxtimes
           fxtime=(nxday(i)-iday)*24.+ut_nh(i)
 	  if (fxtime < model_ut) iset=i
 	enddo
 	iset1 = iset + 1
+	if (iset==0) iset=1
 	if (iset==nxtimes) iset1=iset
         fxtime1=(iday-nxday(iset))*24.+ut_nh(iset)
         fxtime2=(iday-nxday(iset1))*24.+ut_nh(iset1)
@@ -682,9 +666,16 @@
       pcp_sh_amie = 0.
 !
       n = len_trim(amiesh)
+
       iboxcar = 0
       if (n > 0) then
         nn = size(amie_sh_ut)
+        if (jday(nn) < modeltime(1)) then
+          write(6,"('getamie: Model date beyond the AMIE last Data: ',
+     |   'modelday, amieday =',2i5)") modeltime(1),jday(nn)
+          iamie = 0
+          return
+        endif
         if (amie_ibkg == 0) then
           iset = nn
           iset1 = nn
@@ -693,8 +684,8 @@
             if (amie_sh_ut(i) < model_ut+(modeltime(1)-jday(i))*24.) 
      |          iset = i
           enddo
-        write(6,"('getamie: AMIE SH Data nn,iset,day1,day2=',4i5)")
-     |    nn,iset,jday(1),jday(nn)
+!       write(6,"('getamie: AMIE SH Data nn,iset,day1,day2=',4i5)")
+!    |    nn,iset,jday(1),jday(nn)
           iset1 = iset + 1
           if (iset == nn) iset1 = iset
 ! get rid of outragous flux values 
@@ -738,9 +729,10 @@
           endif
 !       write(6,"('getamie: AMIE SH Data n,iset,modeltime,f1,f2 =',
 !    |    4i5,2f5.2)")n,iset,modeltime(1),jday(iset1),f1,f2
-        write(6,"('getamie: AMIE SH Data model_day,model_ut,amie_day,',
-     |    'amie_ut,f1,f2 =',i4,f7.1,i4,f7.1,2f5.2)")modeltime(1),
-     |     model_ut,jday(iset),amie_sh_ut(iset1),f1,f2
+!       write(6,"('getamie: AMIE SH Data model_day,model_ut,amie_day,',
+!    |    'amie_ut,f1,f2,iset,iset1 =',i4,f7.1,i4,f7.1,2f5.2,2i3)")
+!    |    modeltime(1),model_ut,jday(iset),amie_sh_ut(iset),f1,f2,
+!    |    iset,iset1
           cusplat_sh_amie = (f1*amie_cusplat_sh(iset1) + 
      |                        f2*amie_cusplat_sh(iset))
           cuspmlt_sh_amie = (f1*amie_cuspmlt_sh(iset1) + 
@@ -829,15 +821,23 @@
       iboxcar = 0
       if (n > 0) then
         nn = size(amie_nh_ut)
+!       if (amie_nh_ut(nn) < model_ut+(iday-jday(n))*24.) then
+        if (jday(nn) < modeltime(1)) then
+          write(6,"('getamie: Model date beyond the AMIE last Data: ',
+     |   'modelday, amieday =',2i5)") modeltime(1),jday(nn)
+          iamie = 0
+          return
+        endif
 !       write(6,"('getamie: Interpolate AMIE NH Data nn=',i3)")nn
         if (amie_ibkg == 0) then
-          iset = nn
+          iset = 0
           iset1 = nn
           do i=1,nn
             if (amie_nh_ut(i) < model_ut+(modeltime(1)-jday(i))*24.) 
      |          iset = i
           enddo
           iset1 = iset + 1
+          if (iset == 0) iset = 1
           if (iset == nn) iset1 = iset
 ! get rid of outragous flux values 
       inpt = 0
@@ -878,6 +878,11 @@
             f2 = (model_ut+(modeltime(1)-jday(iset1))*24. - 
      |             amie_nh_ut(iset))/denoma
           endif
+!       write(6,"('getamie: AMIE NH Data model_day,model_ut,amie_day,',
+!    |    'amie_ut,f1,f2,iset,iset1 =',i4,f7.1,i4,f7.1,2f5.2,2i3)")
+!    |    modeltime(1),model_ut,jday(iset),amie_nh_ut(iset),f1,f2,
+!    |    iset,iset1
+!
           cusplat_nh_amie = (f1*amie_cusplat_nh(iset1) + 
      |                      f2*amie_cusplat_nh(iset))
           cuspmlt_nh_amie = (f1*amie_cuspmlt_nh(iset1) + 
@@ -1258,27 +1263,14 @@ C     ****
 !
       end subroutine boxcar_ave
 !-----------------------------------------------------------------------
-! BOP
-! !IROUTINE: mag2geo
-! !INTERFACE:
       subroutine mag2geo(am,ag,im,jm,dim,djm,lg,lm,nlong,nlatg,nlonm,
      |  nlatm)
-! !USES:
-! !DESCRIPTION:
-! Transform field am on geomagnetic grid to ag on the geographic grid using
-!   indices im,jm and weights am. Return field ag on geographic grid.
 !
-! !PARAMETERS: 
+! Args:
       integer,intent(in) :: lg,lm,nlong,nlatg,nlonm,nlatm
       integer,intent(in) :: im(lg,*),jm(lg,*)
       real,intent(in) :: am(lm,*),dim(lg,*),djm(lg,*)
-! !RETURN VALUE:
       real,intent(out) :: ag(lg,*)
-!
-! !REVISION HISTORY:
-! 05.03.11  <Astrid Maute> <include header> 
-! 
-! EOP
 !
 ! Local:
       integer :: ig,jg
@@ -1294,7 +1286,6 @@ C     ****
       enddo ! jg=1,nlatg 
       end subroutine mag2geo
 !-----------------------------------------------------------------------
-!-------------------------------------------------------------------
       subroutine rpt_ncerr(istat,msg)
 !
 ! Handle a netcdf lib error:

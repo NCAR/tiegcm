@@ -1,6 +1,6 @@
 !
-      subroutine newton(tn,o2,o1,no,barm,cp,cool_implicit,cool_explicit,
-     |  lev0,lev1,lon0,lon1,lat)
+      subroutine newton(tn,o2,o1,n2,no,barm,cp,cool_implicit,
+     |  cool_explicit,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -12,8 +12,9 @@
       use cons_module,only: rmass_co2,p0,expz,expzmid_inv,boltz,
      |  avto,avo,rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no,
      |  gask
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_CO2COOL,mkdiag_NOCOOL
+      use init_module,only: sfeps,iday,iyear,secs,istep
       implicit none
 !
 ! Args:
@@ -22,6 +23,7 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
+     |  n2,      ! molecular nitrogen (mmr)
      |  no,      ! nitric oxide (mmr)
      |  cp,      ! specific heat
      |  barm     ! mean molecular weight
@@ -29,9 +31,7 @@
      |  cool_implicit, cool_explicit ! output
 !
 ! Local:
-      real,parameter :: co2u=350.e-6
-! Test 2 run with increased co2 density at LBC - G. Lu 6/19/09
-!     real,parameter :: co2u=450.e-6
+      real :: co2u
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  xmco2,
      |  nco2,aco2,bco2,  ! n(co2), a(co2), b(co2) (s10,s11,s12)
@@ -39,6 +39,23 @@
      |  co2_cool,        ! co2 contribution to cooling
      |  no_cool          ! no contribution to cooling
       integer :: k,i
+      real :: uttime,yfrac
+!
+! set CO2 concentration
+! calculate the fractional year value for the model time
+      uttime= secs/3600.
+      if (mod(iyear,4) == 0) then
+         yfrac=iyear+(iday-1+(uttime/24.))/366.
+      else
+         yfrac=iyear+(iday-1+(uttime/24.))/365.
+      endif
+      if (yfrac > 1953.0) then 
+         co2u=248.0+30.0*exp(0.014*(yfrac-1900.))
+      else
+         co2u=280.0+0.30*(yfrac-1850.0)
+      endif
+      if (co2u < 280.0) co2u=280.0
+      co2u=co2u*1.e-6
 !
 ! Integral(m(co2)*dz/mbar) (s10).
 ! Low boundary: 
@@ -70,12 +87,10 @@
           else
              bco2(k,i) = 1.4e-12
           endif
-! G. Lu 6/18/09: Test run1: set bco2=3.e-12
-!            bco2(k,i) = 3.0e-12
 !
 ! Co2 cooling (s12):
           co2_cool(k,i) = 2.65e-13*nco2(k,i)*exp(-960./tn(k,i))*
-     |      avo*((o2(k,i)*rmassinv_o2+(1.-o2(k,i)-o1(k,i))*rmassinv_n2)*
+     |      avo*((o2(k,i)*rmassinv_o2 + n2(k,i)*rmassinv_n2)*
      |      aco2(k,i)+o1(k,i)*rmassinv_o1*bco2(k,i))
 !
 ! a(no) (s11):
@@ -123,7 +138,7 @@
 !
       use params_module,only: dz
       use cons_module,only: avo,rmassinv_o1,expz
-      use addfld_module
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:

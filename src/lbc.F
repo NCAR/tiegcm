@@ -27,11 +27,35 @@
       complex :: bnd_sdi(nlonp4), bnd_di(nlonp4)
 !
 ! For bndcmp:
-      real :: b(nlonp4,2,2),fb(nlonp4,2)
+      real :: b(nlonp4,3,3),fb(nlonp4,3)
 !
 ! This t0 is different than the t0 in cons.
       real :: t0(nlev+1) 
+!
+! Lower boundary for helium (mmr):
+      real,parameter :: pshelb=0.1154E-5
       contains
+!-----------------------------------------------------------------------
+      subroutine init_lbc
+!
+! Called once per run from tgcm.
+!
+      use cons_module,only: t0cons=>t0
+      implicit none
+!
+! t0 in cons is zeroed out:
+      t0cons(:) = 0.
+!
+! t0 local to this module (different than the t0 in cons) is for
+! use in Hough functions:
+      t0(:) = 0.
+      t0(1) = tbound
+      t0(2) = tbound+dz*tgrad
+!
+      call bndry_diurnal      ! t_di ,u_di ,v_di ,z_di
+      call bndry_semidiurnal  ! t_sdi,u_sdi,v_sdi,z_sdi
+      call bndcmp
+      end subroutine init_lbc
 !-----------------------------------------------------------------------
       subroutine tuvz_lbc
 !
@@ -180,14 +204,14 @@
       endif
 !
 ! Save 2d boundaries to secondary histories:
-      call addfld('T_LBC','T_LBC',' ',t_lbc(lon0:lon1,lat0:lat1),
-     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-      call addfld('U_LBC','U_LBC',' ',u_lbc(lon0:lon1,lat0:lat1),
-     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-      call addfld('V_LBC','V_LBC',' ',v_lbc(lon0:lon1,lat0:lat1),
-     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-      call addfld('Z_LBC','Z_LBC',' ',z_lbc(lon0:lon1,lat0:lat1),
-     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('T_LBC','T_LBC',' ',t_lbc(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('U_LBC','U_LBC',' ',u_lbc(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('V_LBC','V_LBC',' ',v_lbc(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('Z_LBC','Z_LBC',' ',z_lbc(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
       end subroutine tuvz_lbc
 !-----------------------------------------------------------------------
       subroutine bndry_semidiurnal
@@ -483,8 +507,8 @@ C     ****       FB = (E/DS - F/2.)**(-1) * G
 C     ****
 !
 ! Local:
-      real :: ee(nlonp4,2,2),ff(nlonp4,2,2),gg(nlonp4,2),
-     |  wm1(nlonp4,2,2),wm2(nlonp4,2,2),wm3(nlonp4,2,2),
+      real :: ee(nlonp4,3,3),ff(nlonp4,3,3),gg(nlonp4,3),
+     |  wm1(nlonp4,3,3),wm2(nlonp4,3,3),wm3(nlonp4,3,3),
      |  ws1(nlonp4)
       integer :: l,m,i
 C     ****
@@ -494,10 +518,10 @@ C     ****
 C     ****
 C     ****     WM1 = (E/DS - F/2.)
 C     ****
-C     ****     WM1 = (E/DS + F/2.)
+C     ****     WM2 = (E/DS + F/2.)
 C     ****
-      do l = 1,2
-        do m = 1,2
+      do l = 1,3
+        do m = 1,3
           do i = 1,nlonp4
             wm1(i,l,m) = ee(i,l,m)/dz-ff(i,l,m)/2.
             wm2(i,l,m) = ee(i,l,m)/dz+ff(i,l,m)/2.
@@ -507,37 +531,47 @@ C     ****
 C     ****
 C     ****     WM3 = WM1**(-1)
 C     ****
-C     ****       WS1 = DET(WM1)
+C     ****     WS1 = DET(WM1)
 C     ****
       do i = 1,nlonp4
-        ws1(i) = wm1(i,1,1)*wm1(i,2,2)-wm1(i,1,2)*wm1(i,2,1)
+        ws1(i) = 
+     |    wm1(i,1,1)*(wm1(i,2,2)*wm1(i,3,3)-wm1(i,2,3)*wm1(i,3,2))+
+     |    wm1(i,1,2)*(wm1(i,2,3)*wm1(i,3,1)-wm1(i,2,1)*wm1(i,3,3))+
+     |    wm1(i,1,3)*(wm1(i,2,1)*wm1(i,3,2)-wm1(i,2,2)*wm1(i,3,1))
       enddo
 C     ****
 C     ****     NOW INVERSE OF WM1 IN WM3
 C     ****
       do i = 1,nlonp4
-        wm3(i,1,1) =  wm1(i,2,2)/ws1(i)
-        wm3(i,1,2) = -wm1(i,1,2)/ws1(i)
-        wm3(i,2,1) = -wm1(i,2,1)/ws1(i)
-        wm3(i,2,2) =  wm1(i,1,1)/ws1(i)
+        wm3(i,1,1) =(wm1(i,2,2)*wm1(i,3,3)-wm1(i,2,3)*wm1(i,3,2))/ws1(i)
+        wm3(i,1,2) =(wm1(i,1,3)*wm1(i,3,2)-wm1(i,1,2)*wm1(i,3,3))/ws1(i)
+        wm3(i,1,3) =(wm1(i,1,2)*wm1(i,2,3)-wm1(i,1,3)*wm1(i,2,2))/ws1(i)
+        wm3(i,2,1) =(wm1(i,2,3)*wm1(i,3,1)-wm1(i,2,1)*wm1(i,3,3))/ws1(i)
+        wm3(i,2,2) =(wm1(i,1,1)*wm1(i,3,3)-wm1(i,1,3)*wm1(i,3,1))/ws1(i)
+        wm3(i,2,3) =(wm1(i,1,3)*wm1(i,2,1)-wm1(i,1,1)*wm1(i,2,3))/ws1(i)
+        wm3(i,3,1) =(wm1(i,2,1)*wm1(i,3,2)-wm1(i,2,2)*wm1(i,3,1))/ws1(i)
+        wm3(i,3,2) =(wm1(i,1,2)*wm1(i,3,1)-wm1(i,1,1)*wm1(i,3,2))/ws1(i)
+        wm3(i,3,3) =(wm1(i,1,1)*wm1(i,2,2)-wm1(i,1,2)*wm1(i,2,1))/ws1(i)
       enddo
 C     ****
 C     ****     B = WM3 * WM2
 C     ****
 ! b and fb are bndry_module module data.
-      do l = 1,2
-        do m = 1,2
+      do l = 1,3
+        do m = 1,3
           do i = 1,nlonp4
-            b(i,l,m) = wm3(i,l,1)*wm2(i,1,m)+wm3(i,l,2)*wm2(i,2,m)
+            b(i,l,m) = wm3(i,l,1)*wm2(i,1,m)+wm3(i,l,2)*wm2(i,2,m)+
+     |                 wm3(i,l,3)*wm2(i,3,m)
           enddo
         enddo
       enddo
 C     ****
 C     ****     FB = WM3 * G
 C     ****
-      do l = 1,2
+      do l = 1,3
         do i = 1,nlonp4
-          fb(i,l) = wm3(i,l,1)*gg(i,1)+wm3(i,l,2)*gg(i,2)
+          fb(i,l) = wm3(i,l,1)*gg(i,1)+wm3(i,l,2)*gg(i,2)+wm3(i,l,3)*
+     |              gg(i,3)
         enddo
       enddo
       end subroutine bndcmp
@@ -562,7 +596,7 @@ C     ****       THIS SUBROUTINE DEFINES E, F AND G for BNDCMP
 C     ****
 !
 ! Args:
-      real,intent(out) :: ee(nlonp4,2,2),ff(nlonp4,2,2),gg(nlonp4,2)
+      real,intent(out) :: ee(nlonp4,3,3),ff(nlonp4,3,3),gg(nlonp4,3)
 !
 ! Local:
       real :: alfa
@@ -570,17 +604,23 @@ C     ****
 C     ****
 C     ****     IN TIGCM AND TIEGCM:
 C     ****
-C     ****       E = |0.  0.|
-C     ****           |      |
-C     ****           |0.  1.|
+C     ****       E = |0.  0.  0.|
+C     ****           |          |
+C     ****           |0.  1.  0.|
+C     ****           |          |
+C     ****           |0.  0.  0.|
 C     ****
-C     ****       F = |1.  1.|
-C     ****           |      |
-C     ****           |0. -1.|
+C     ****       F = |1.  1.  0.|
+C     ****           |          |
+C     ****           |0. -1.  0.|
+C     ****           |          |
+C     ****           |0.  0.  1.|
 C     ****
 C     ****       G = |-ALFA|
 C     ****           |     |
 C     ****           |   0.|
+C     ****           |     |
+C     ****           | -HEB|
 C     ****
 C     ****       WHERE:
 C     ****         ALFA = 0.22 + 0.014 = 0.234
@@ -589,14 +629,25 @@ C     ****
       do i = 1,nlonp4
         ee(i,1,1) = 0.
         ee(i,1,2) = 0.
+        ee(i,1,3) = 0.
         ee(i,2,1) = 0.
         ee(i,2,2) = 1.
+        ee(i,2,3) = 0.
+        ee(i,3,1) = 0.
+        ee(i,3,2) = 0.
+        ee(i,3,3) = 0.
         ff(i,1,1) = 1.
         ff(i,1,2) = 1.
+        ff(i,1,3) = 0.
         ff(i,2,1) = 0.
         ff(i,2,2) = -1.
+        ff(i,2,3) = 0.
+        ff(i,3,1) = 0.
+        ff(i,3,2) = 0.
+        ff(i,3,3) = 1.
         gg(i,1) = -alfa
         gg(i,2) = 0.
+        gg(i,3) = -pshelb
       enddo
       end subroutine bndef
 !-----------------------------------------------------------------------

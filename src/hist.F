@@ -99,7 +99,7 @@
      |    source_file,       ! source file (this run)
      |    initial_file,      ! initial file (initial run)
      |    output_file,       ! output file (from namelist read)
-     |    sd_ncfile,         ! SEE data file
+     |    see_ncfile,        ! SEE data file
      |    gpi_ncfile,        ! gpi data file
      |    ncep_ncfile,       ! ncep data file (timegcm only)
      |    imf_ncfile,        ! IMF data file
@@ -157,7 +157,8 @@
      |    h1,h2,             ! gaussian half-width for aurora
      |    alfac,ec,          ! aurora cusp energy
      |    alfad,ed,          ! aurora drizzle energy
-     |    lbc                ! lower boundary interface level
+     |    lbc,               ! lower boundary interface level
+     |    joulefac           ! joule heating factor
         logical dynamo       ! if true, is dynamo history
         logical coupled_ccm  ! if true, run was coupled with ccm
         integer :: nflds,    ! total number of fields on history
@@ -232,7 +233,7 @@
       h%ut   = real_init
       h%step = -1
 
-      h%sd_ncfile = '[none]'
+      h%see_ncfile = '[none]'
       h%gpi_ncfile = '[none]'
       h%ncep_ncfile = '[none]'
 
@@ -273,6 +274,7 @@
       h%dtide = (/real_init,real_init/)
       h%sdtide(:) = real_init
       h%colfac = real_init
+      h%joulefac = real_init
       h%p0     = real_init
       h%p0_model = real_init
       h%grav   = real_init
@@ -397,19 +399,20 @@
       write(6,"(2x,'ec,ed = ',2e12.4,' (ergs/cm2/s)')") h%ec,h%ed
 
 !     if (h%alfa30 /= real_init)
-!    |  write(6,"(2x,'alfa30  = ',e10.2,' (KeV) (same as alfa_sp)')") 
+!    |  write(6,"(2x,'alfa30  = ',e8.2,' (KeV) (same as alfa_sp)')") 
 !    |    h%alfa30
 !     if (h%e30 /= real_init)
-!    |  write(6,"(2x,'e30     = ',e10.2,' (ergs/cm2/s) (same as e_sp)')") 
+!    |  write(6,"(2x,'e30     = ',e8.2,' (ergs/cm2/s) (same as e_sp)')") 
 !    |    h%e30
 !     if (h%alfad2 /= real_init) 
-!    |  write(6,"(2x,'alfad2  = ',e10.2,' (KeV)')") h%alfad2
+!    |  write(6,"(2x,'alfad2  = ',e8.2,' (KeV)')") h%alfad2
 !     if (h%ed2 /= real_init)
-!    |  write(6,"(2x,'ed2     = ',e10.2,' (ergs/cm2/s)')") h%ed2
+!    |  write(6,"(2x,'ed2     = ',e8.2,' (ergs/cm2/s)')") h%ed2
 
-      write(6,"(2x,'colfac  = ',f5.2)") h%colfac
-      write(6,"(2x,'p0      = ',e9.2)") h%p0
-      if (h%p0_model /= real_init) write(6,"(2x,'p0_model= ',e10.2)") 
+      write(6,"(2x,'colfac    = ',e10.2)") h%colfac
+      write(6,"(2x,'joulefac  = ',e10.2)") h%joulefac
+      write(6,"(2x,'p0        = ',e10.2)") h%p0
+      if (h%p0_model /= real_init) write(6,"(2x,'p0_model= ',e10.2)")
      |  h%p0_model
       if (h%grav /= real_init)
      |  write(6,"(2x,'grav    = ',e10.2)") h%grav
@@ -437,7 +440,7 @@
       write(6,"(2x,'gswm_nm_sdi_ncfile = ',a)")
      |  trim(h%gswm_nm_sdi_ncfile)
 
-      write(6,"(2x,'sd_ncfile    = ',a)") trim(h%sd_ncfile)
+      write(6,"(2x,'see_ncfile   = ',a)") trim(h%see_ncfile)
       write(6,"(2x,'gpi_ncfile   = ',a)") trim(h%gpi_ncfile)
       write(6,"(2x,'ncep_ncfile  = ',a)") trim(h%ncep_ncfile)
       write(6,"(2x,'imf_ncfile   = ',a)") trim(h%imf_ncfile)
@@ -496,7 +499,7 @@
 !
 ! Total number of timesteps this run:
       nstep = (secs_stop(nseries_prim)-secs_start(1))/step
-      write(6,"('hist_init: nstep=',i3)") nstep
+      write(6,"('hist_init: nstep=',i5)") nstep
 !
 ! Number of source files given (0 or 1):
       if (len_trim(source)==0) then

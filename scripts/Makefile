@@ -37,6 +37,13 @@ LIBS      += -L$(LIB_NETCDF) -lnetcdf
 COUPLING  := NO
 FC        := $(F90)
 
+# Add ESMF stuff (LIB_ESMF is set in MAKE_MACHINE)
+# See also targets below for source files that depend on esmf.
+LIBS += -L $(LIB_ESMF) -lesmf
+include $(LIB_ESMF)/esmf.mk
+LDFLAGS    += $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS)
+LDFLAGS    += $(ESMF_F90ESMFLINKLIBS)
+
 Depends::
 	@echo "OS           =$(OS)" 
 	@echo "MAKE_MACHINE =$(MAKE_MACHINE)"
@@ -96,6 +103,16 @@ FFLAGS += $(INC_DIRS) $(OPTIM) $(DBGFLAGS)
 
 .F90.o:
 	$(FC) -c $(FFLAGS) $(CPPFLAGS) $<
+
+esmf.o: esmf.F
+	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) \
+	$(ESMF_F90COMPILECPPFLAGS) $(FIXEDFLAGS) $(CPPFLAGS) $(FFLAGS) $<
+pdynamo.o: pdynamo.F
+	$(FC) -c $(FFLAGS) $(CPPFLAGS) $(ESMF_F90COMPILEPATHS) $<
+tgcm.o: tgcm.F
+	$(FC) -c $(FFLAGS) $(CPPFLAGS) $(ESMF_F90COMPILEPATHS) $<
+util.o: util.F
+	$(FC) -c $(FFLAGS) $(CPPFLAGS) $(ESMF_F90COMPILEPATHS) $<
 
 clean:
 	rm -f Depends Srcfiles *.o *.mod $(EXECNAME)

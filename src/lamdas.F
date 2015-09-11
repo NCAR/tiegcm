@@ -1,6 +1,6 @@
 !
-      subroutine lamdas(tn,barm,o2,o1,ti,te,o2p,op,nop, lxx,lyy,lxy,lyx,
-     |  lamda1,ped_out,hall_out,lev0,lev1,lon0,lon1,lat)
+      subroutine lamdas(tn,barm,o2,o1,n2,ti,te,o2p,op,nop, lxx,lyy,lxy,
+     |  lyx,lamda1,ped_out,hall_out,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -17,9 +17,10 @@
      |  p0,expz,rmass_o2,rmass_o1,boltz,avo
       use magfield_module,only: dipmag
       use input_module,only: colfac
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_SIGMAPED,mkdiag_SIGMAHAL,
      |                       mkdiag_LAMDAPED,mkdiag_LAMDAHAL
+      use init_module,only: istep
       implicit none
 !
 ! Input args:
@@ -29,6 +30,7 @@
      |  barm, ! mean molecular mass
      |  o2,   ! molecular oxygen (mmr)
      |  o1,   ! atomic oxygen    (mmr)
+     |  n2,   ! molecular nitrogen (mmr)
      |  ti,   ! ion temperature (deg K)
      |  te,   ! electron temperature (deg K)
      |  o2p,  ! O2+ number density (1/cm3)
@@ -65,7 +67,7 @@
 ! Local (lev,lon):
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  xnmbar,     ! for conversion to volume density
-     |  xn2,        ! N2 (1-o2-o mmr)
+     |  xn2,        ! N2 (1-o2-o-he mmr)
      |  tnti,       ! average of tn and ti
      |  o2_cm3, o1_cm3, n2_cm3, ! major species number densities (cm3)
      |  sigma_ped,  ! pedersen conductivity (siemens/m)
@@ -99,9 +101,38 @@
 ! 
      |  rnu_ne      ! electron~neutral
 !
+! Save input args to secondary history:
+!     real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
+!    |  tn,   ! neutral temperature (deg K)
+!    |  barm, ! mean molecular mass
+!    |  o2,   ! molecular oxygen (mmr)
+!    |  o1,   ! atomic oxygen    (mmr)
+!    |  n2,   ! molecular nitrogen (mmr)
+!    |  ti,   ! ion temperature (deg K)
+!    |  te,   ! electron temperature (deg K)
+!    |  o2p,  ! O2+ number density (1/cm3)
+!    |  op,   ! O+  number density (1/cm3)
+!    |  nop   ! NO+ number density (1/cm3)
+
+      i0 = lon0 ; i1 = lon1
+
+!     call addfld('TN_lam',' ',' ',tn(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('BARM_lam',' ',' ',barm(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O2_lam',' ',' ',o2(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('O1_lam',' ',' ',o1(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('N2_lam',' ',' ',n2(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TI_lam',' ',' ',ti(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TE_lam',' ',' ',te(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!
 ! Save input ions to secondary history:
 !
-      i0 = lon0 ; i1 = lon1
 !     call addfld('O2P_LAM',' ',' ',o2p(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('OP_LAM' ,' ',' ',op (:,i0:i1),
@@ -194,7 +225,7 @@
      |      (boltz*tn(k,i))
           o2_cm3(k,i) = o2(k,i)*xnmbar(k,i)*rmassinv_o2
           o1_cm3(k,i) = o1(k,i)*xnmbar(k,i)*rmassinv_o1
-          xn2(k,i) = (1.-o2(k,i)-o1(k,i))
+          xn2(k,i) = n2(k,i)
           xn2(k,i) = xn2(k,i)*rmassinv_n2            ! this part varies from timegcm
           if (xn2(k,i) < 1.e-20) xn2(k,i) = 1.e-20   ! done as in tiegcm
           n2_cm3(k,i) = xn2(k,i)*xnmbar(k,i)
@@ -246,8 +277,7 @@
 ! observations, as recommended by Gagnepain et al. (J. Atmos. Terr. 
 ! Phys., 39, 1119-1124, 1977).
 !
-! GangLu amie mods do not do this:
-!         rnu_ne(k,i) = rnu_ne(k,i)*4.
+          rnu_ne(k,i) = rnu_ne(k,i)*4.
 
 !         write(6,"('lamdas: lat=',i3,' k=',i3,' i=',i3,' te=',
 !    |      e12.4,' n2=',e12.4,' o2=',e12.4,' o1=',e12.4,' omega_e_inv='
@@ -293,6 +323,13 @@
 
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
+     
+!     if (istep > 228)
+!    |  write(6,"('lamdas: lat = ',i3,' sigma_ped = ',/,(10e10.2))")
+!    |  lat,sigma_ped
+!     if (istep > 228)
+!    |  write(6,"('lamdas: lat = ',i3,' Ne = ',/,(10e10.2))")
+!    |  lat,ne
 
 !     call addfld('ELECDEN' ,' ',' ',ne,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)

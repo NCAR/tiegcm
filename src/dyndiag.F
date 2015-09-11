@@ -1,6 +1,7 @@
 #include "defs.h"
       module dyndiag_module
       use params_module,only: nlonp1,nlonp4,nlat,nlevp1,nlatp1
+      use addfld_module,only: addfld
       implicit none
 !
       real, dimension(nlonp4,nlat) ::
@@ -36,25 +37,17 @@
      |  un,vn,   ! neutral velocities
      |  ui,vi    ! ion velocities
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real, dimension(nlonp4,0:nlatp1) :: bmod_mod
 !
 ! Local:
-      integer :: i,k,nk
+      integer :: i,k
       real,dimension(nlonp4) :: tm1,tm2,tm3,sndip 
       real :: qamie0,qwind0,wtot0,work0,famieu0,famiev0,
      |        fwindu0,fwindv0
+      real :: bmod_lat(nlonp4) ! local bmod at current lat
 !
 ! Get height integral of Ped, Hall conductance
       sigp(:,lat) = 0.
       sigh(:,lat) = 0.
-! Define bmod_mod
-      do i=1,nlonp1 
-        bmod_mod(i+3,:) = bmod(i,:) 
-      enddo
-      bmod_mod(1,:) = bmod_mod(nlonp1,:) ! 73 <- 1
-      bmod_mod(2,:) = bmod_mod(nlonp1+1,:) ! 74 <- 2
-      bmod_mod(nlonp1+2,:) = bmod_mod(3,:) ! 75 <- 3
-      bmod_mod(nlonp1+3,:) = bmod_mod(4,:) !  76 <- 4
 
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -71,11 +64,12 @@
         ped_sec(i,lat,nlevp1) = sigp(i,lat)
         hall_sec(i,lat,nlevp1) = sigh(i,lat)
       enddo
-      nk = lev1-lev0+1
-!     call addfsech('SIGMA1',' ',' ',sigma1(:,lon0:lon1),
-!    |  lon0,lon1,nk,nk-1,lat)
-!     call addfsech('SIGMA2',' ',' ',sigma2(:,lon0:lon1),
-!    |  lon0,lon1,nk,nk-1,lat)
+
+      call addfld('SIGMA1',' ',' ',sigma1(lev0:lev1-1,lon0:lon1),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('SIGMA2',' ',' ',sigma2(lev0:lev1-1,lon0:lon1),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+
 !
 ! Calculate the Joule heating due to wind and ion drift
 !  qwind = Joule Heting due to wind
@@ -107,6 +101,12 @@
       famieu(:,lat) = 0.
       famiev(:,lat) = 0.
 !
+! Set local global bmod_lat(nlonp4) (at current latitude) to avoid 
+! out-of-bounds in bmod(nlonp1) in longitude dimension:
+      bmod_lat(3:nlonp1+1) = bmod(1:nlonp1-1,lat) ! at 5 deg: 3-74 <- 1-72
+      bmod_lat(1:2) = bmod_lat(nlonp1+1:nlonp1+2) ! periodic
+      bmod_lat(nlonp4-1:nlonp4) = bmod_lat(3:4)   ! periodic
+!
 ! Longitude, level loops:
       do k=lev0,lev1-1
         do i=lon0,lon1
@@ -114,12 +114,11 @@
          sndip(i) = sin(dipmag(i,lat))
          if (abs(sndip(i)) .gt. 0.1) then
 !
-!
 ! qwind is the Joule heating associated with nuetral wind terms
 ! qamie=sigp{(Bx^2+Bz^2)*Wx^2 + (By^2+Bz^2)*Wy^2-2.*Bx*By*Wx*Wy
 !        -2.*B^2*Vx*Wx - 2.*B^2*Vy*Wy}
 !
-          qwind0 = sigma1(k,i)*bmod_mod(i,lat)**2*(tm2(i)*
+          qwind0 = sigma1(k,i)*bmod_lat(i)**2*(tm2(i)*
      |      un(k,i)**2+tm1(i)*vn(k,i)**2-2.*tm3(i)*un(k,i)*
      |      vn(k,i)-2.*(un(k,i)*ui(k,i)+vn(k,i)*vi(k,i)))
 !
@@ -129,13 +128,13 @@
 !
           qamie0 = sigma1(k,i)*(tm1(i)*ui(k,i)**2+tm2(i)*
      |      vi(k,i)**2+2.*tm3(i)*ui(k,i)*vi(k,i))
-          qamie0 = qamie0*bmod_mod(i,lat)**2 / sndip(i)**2
+          qamie0 = qamie0*bmod_lat(i)**2 / sndip(i)**2
 !
 ! wtot = total electric power
 ! wtot = sigp (E + UxB).E = Qamie + sigp*{(UxB).E}
 !
-          wtot0 = - sigma1(k,i)*bmod_mod(i,lat)**2*(un(k,i)*ui(k,i)+
-     |      vn(k,i)*vi(k,i)) + sigma2(k,i)*bmod_mod(i,lat)**2*
+          wtot0 = - sigma1(k,i)*bmod_lat(i)**2*(un(k,i)*ui(k,i)+
+     |      vn(k,i)*vi(k,i)) + sigma2(k,i)*bmod_lat(i)**2*
      |      (tm3(i)*(un(k,i)*ui(k,i)-vn(k,i)*vi(k,i))-tm1(i)*
      |      vn(k,i)*ui(k,i)+tm2(i)*un(k,i)*vi(k,i))/sndip(i)
           wtot0 = qamie0 + wtot0
@@ -165,8 +164,8 @@ C Calculate the mechanical work done by wind
 ! Convert wind velocity from cm/s to m/s by multipling 1.e-2 and
 ! Convert B from Gauss to T multipling 1.e-4 and 1.e-2 from cm to m
 !
-          fwindu0 = fwindu0*bmod_mod(i,lat)*1.e-8/sndip(i)
-          fwindv0 = fwindv0*bmod_mod(i,lat)*1.e-8/sndip(i)
+          fwindu0 = fwindu0*bmod_lat(i)*1.e-8/sndip(i)
+          fwindv0 = fwindv0*bmod_lat(i)*1.e-8/sndip(i)
           famieu0 = -tm1(i)*sigma2(k,i)*
      |       ui(k,i) + sndip(i)*sigma1(k,i)*vi(k,i)
      |       - tm3(i)*sigma2(k,i)*vi(k,i)
@@ -177,8 +176,8 @@ C Calculate the mechanical work done by wind
 ! Convert wind velocity from cm/s to m/s by multipling 1.e-2 and
 ! Convert B from Gauss to T multipling 1.e-4 and 1.e-2 from cm to m
 !
-          famieu0 = famieu0*bmod_mod(i,lat)*1.e-8/sndip(i)**2
-          famiev0 = famiev0*bmod_mod(i,lat)*1.e-8/sndip(i)**2
+          famieu0 = famieu0*bmod_lat(i)*1.e-8/sndip(i)**2
+          famiev0 = famiev0*bmod_lat(i)*1.e-8/sndip(i)**2
           fwindu(i,lat) = fwindu(i,lat)+(z(k+1,i)-z(k,i))*fwindu0
           fwindv(i,lat) = fwindv(i,lat)+(z(k+1,i)-z(k,i))*fwindv0
           famieu(i,lat) = famieu(i,lat)+(z(k+1,i)-z(k,i))*famieu0
@@ -205,10 +204,10 @@ C Calculate the mechanical work done by wind
 !     if (lat==25) write(6,"('dyndiag>>> ped_sec,',
 !    |  'qamie_sec = ',/,(6g12.2))")
 !    |   ped_sec(lon0,lat,:),qamie_sec(lon0,lat,:)
-!     call addfsech_ik('QAMIE1',' ',' ',qamie_sec(lon0:lon1,lat,:),
-!    |  lon0,lon1,nk,nk,lat)
-!     call addfsech_ik('QWIND1',' ',' ',qwind_sec(lon0:lon1,lat,:),
-!    |  lon0,lon1,nk,nk,lat)
+      call addfld('QAMIE1',' ',' ',qamie_sec(lon0:lon1,lat,:),
+     |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
+      call addfld('QWIND1',' ',' ',qwind_sec(lon0:lon1,lat,:),
+     |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
       end subroutine dyndiag
 !-----------------------------------------------------------------------
       subroutine dyndiag_sech(lon0,lon1,lev0,lev1,lat)
@@ -222,31 +221,30 @@ C Calculate the mechanical work done by wind
 !   from the secondary histories.
 !
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat
-! Local:
-      integer :: nk
-!
-      nk = lev1-lev0+1
-!     call addfsech_ik('PEDERSEN',' ',' ',ped_sec(lon0:lon1,lat,:),
-!    |  lon0,lon1,nk,nk,lat)
-!     call addfsech_ik('HALL'    ,' ',' ',hall_sec(lon0:lon1,lat,:),
-!    |  lon0,lon1,nk,nk,lat)
-!     call addfsech_ik('QWIND'   ,' ',' ',
-!    |  qwind_sec(lon0:lon1,lat,:),lon0,lon1,nk,nk,lat)
-!     call addfsech_ik('QAMIE'   ,' ',' ',
-!    |  qamie_sec(lon0:lon1,lat,:),lon0,lon1,nk,nk,lat)
-!     call addfsech_ij('FWINDU'   ,' ',' ',
-!    |  fwindu(lon0:lon1,lat0:lat1),lon0,lon1,lat0,lat1)
-!     call addfsech_ij('FWINDV'   ,' ',' ',
-!    |  fwindv(lon0:lon1,lat0:lat1),lon0,lon1,lat0,lat1)
-!     call addfsech_ij('FAMIEU'   ,' ',' ',
-!    |  famieu(lon0:lon1,lat0:lat1),lon0,lon1,lat0,lat1)
-!     call addfsech_ij('FAMIEV'   ,' ',' ',
-!    |  famiev(lon0:lon1,lat0:lat1),lon0,lon1,lat0,lat1)
+
+!     call addfld('PEDERSEN',' ',' ',ped_sec(lon0:lon1,lat,:),
+!    |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
+!     call addfld('HALL'    ,' ',' ',hall_sec(lon0:lon1,lat,:),
+!    |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
+      call addfld('QWIND'   ,' ',' ',qwind_sec(lon0:lon1,lat,:),
+     |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
+      call addfld('QAMIE'   ,' ',' ',qamie_sec(lon0:lon1,lat,:),
+     |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
+
+!     call addfld('FWINDU'   ,' ',' ',fwindu(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
+!     call addfld('FWINDV'   ,' ',' ',fwindv(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
+!     call addfld('FAMIEU'   ,' ',' ',famieu(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
+!     call addfld('FAMIEV'   ,' ',' ',famiev(lon0:lon1,lat0:lat1),
+!    |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
       end subroutine dyndiag_sech
 !-----------------------------------------------------------------------
+#ifdef MPI
       subroutine mp_dyndiag_gather
       use mpi_module,only: mytid,lon0,lon1,lat0,lat1,mxlat,mxlon,
-     |  ntask,mpi_comm_world,mpi_real8,irstat,tasks,handle_mpi_err
+     |  ntask,tasks,handle_mpi_err,mpi_real8,mpi_comm_world
 !
 ! Local:
       integer,parameter :: nfld=12
@@ -259,7 +257,7 @@ C Calculate the mechanical work done by wind
      |  sndbuf(:,:,:,:)    ! Send buffer for slave tasks (i,j,k,ifld)
       character(len=8) :: fnames(nfld) =
      |  (/'PEDERSEN','HALL    ','QAMIE   ','QWIND   ','WTOT    ',
-     |    'WORK    ','TEC     ','FAMIEU  ','FAMIEV  ','FWINDU  ',
+     |    'WORK    ','DEN_TEC ','FAMIEU  ','FAMIEV  ','FWINDU  ',
      |    'FWINDV  ','QJOULE  '/)
 !
 ! Allocate send buffer for each task, and a receive buffer for the 
@@ -393,5 +391,6 @@ C Calculate the mechanical work done by wind
       deallocate(sndbuf)
 !
       end subroutine mp_dyndiag_gather
+#endif
 !-----------------------------------------------------------
       end module dyndiag_module

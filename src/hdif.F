@@ -7,6 +7,7 @@
 !
       use params_module,only: nlevp1,nlonp4,nlat
       use addfld_module,only: addfld
+      use mpi_module,only: mpi_timing
       implicit none
 !
 ! An extra latitude is needed in fnrh and fkmh: 
@@ -35,7 +36,7 @@
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in):: 
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
      |  tn_nm, ! neutral temperature at time n-1
      |  un_nm, ! zonal velocity at time n-1
      |  vn_nm, ! meridional velocity at time n-1
@@ -135,8 +136,9 @@
       end subroutine hdif1
 !-----------------------------------------------------------------------
 !
-      subroutine hdif2(tn_nm,un_nm,vn_nm,o2_nm,o1_nm,
-     |  fkldt,fkldu,fkldv,fkldo2,fkldo1,lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine hdif2(tn_nm,un_nm,vn_nm,o2_nm,o1_nm,he_nm,
+     |  fkldt,fkldu,fkldv,fkldo2,fkldo1,fkldhe,
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Save fkldx horizontal diffusion terms for hdif3. fkmh and fnrh are 
 ! module data, and were calculated by hdif1.
@@ -145,12 +147,13 @@
 !
 ! Input args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in):: 
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
      |  tn_nm,  ! neutral temperature at time n-1 (deg K)
      |  un_nm,  ! zonal velocity at time n-1 (cm/s)
      |  vn_nm,  ! meridional velocity at time n-1 (cm/s)
      |  o2_nm,  ! molecular oxygen at time n-1 (mmr)
-     |  o1_nm   ! atomic oxygen at time n-1 (mmr)
+     |  o1_nm,  ! atomic oxygen at time n-1 (mmr)
+     |  he_nm   ! helium at time n-1 (mmr)
 !
 ! Ouput args:
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
@@ -159,7 +162,8 @@
      |  fkldu,  ! un horizontal diffusion term
      |  fkldv,  ! vn horizontal diffusion term
      |  fkldo1, ! o1 horizontal diffusion term
-     |  fkldo2  ! o2 horizontal diffusion term
+     |  fkldo2, ! o2 horizontal diffusion term
+     |  fkldhe  ! He horizontal diffusion term
 !
 ! Local:
       integer :: k,i,ip1,ip1k,lonbeg,lonend,lat,ier
@@ -289,6 +293,21 @@
 !    |  call addfld('FKLDO1',' ',' ',fkldo1(lev0:lev1-1,lon0:lon1,lat+1)
 !    |    ,'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
+! FOR PSI = He
+      call lsqdsq(he_nm(lev0:lev1,lonbeg-1:lonend+1,lat+2),
+     |            he_nm(lev0:lev1,lonbeg-1:lonend+1,lat+1),
+     |            he_nm(lev0:lev1,lonbeg-1:lonend+1,lat),
+     |            avkmh(lev0:lev1,lonbeg:lonend),lonbeg,lonend,
+     |            lev0,lev1,lat+1)
+      do i=lonbeg,lonend
+        do k=lev0,lev1
+          fkldhe(k,i,lat+1) = avkmh(k,i)*rhokmh(k,i)
+        enddo
+      enddo
+!     if (lat > 0)
+!    |  call addfld('FKLDHE',' ',' ',fkldhe(lev0:lev1-1,lon0:lon1,lat+1)
+!    |    ,'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!
       enddo ! lat=lat0-2,lat1
 !
 #ifdef VT
@@ -297,7 +316,7 @@
 #endif
       end subroutine hdif2
 !-----------------------------------------------------------------------
-      subroutine hdif_bndlons(kldt,kldu,kldv,kldo2,kldo1,
+      subroutine hdif_bndlons(kldt,kldu,kldv,kldo2,kldo1,kldhe,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Exchange boundary longitudes of horizontal diffusion coeffs
@@ -312,7 +331,7 @@
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
-     |  intent(inout) :: kldt,kldu,kldv,kldo2,kldo1
+     |  intent(inout) :: kldt,kldu,kldv,kldo2,kldo1,kldhe
 !
 ! Local:
       integer :: i,nlevs
@@ -331,15 +350,15 @@
       end subroutine hdif_bndlons
 !-----------------------------------------------------------------------
       subroutine hdif3(cp,
-     |  kldt,kldu,kldv,kldo2,kldo1,     ! input
-     |  hdt ,hdu ,hdv ,hdo2 ,hdo1,      ! output
+     |  kldt,kldu,kldv,kldo2,kldo1,kldhe, ! input
+     |  hdt ,hdu ,hdv ,hdo2 ,hdo1,hdhe,   ! output
      |  lev0,lev1,lon0,lon1,lat)
       use mpi_module,only: lat0,lat1
 !
-! Calculate horizontal diffusion terms for t,u,v,o2,o1 at current latitude, 
+! Calculate horizontal diffusion terms for t,u,v,o2,o1,he at current latitude, 
 ! using coefficients that were output by hdif2. (hdif2 is called from advance, 
 ! hdif3 is called from dynamics). Sub kld_bndlons has been called prior to
-! this routine so tasks have boundary longitudes for kldt,u,v,o2,o1.
+! this routine so tasks have boundary longitudes for kldt,u,v,o2,o1,he.
 !
       implicit none
 !
@@ -350,12 +369,12 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: cp
 !
 ! 3d input at full task subdomain:
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in):: 
-     |  kldt,kldu,kldv,kldo2,kldo1 ! input from hdif2
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
+     |  kldt,kldu,kldv,kldo2,kldo1,kldhe ! input from hdif2
 !
 ! 2d output for current latitude:
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out):: 
-     |  hdt ,hdu ,hdv ,hdo2 ,hdo1  ! output
+     |  hdt ,hdu ,hdv ,hdo2 ,hdo1, hdhe  ! output
 !
 ! Local:
       integer :: k,i,lonbeg,lonend
@@ -454,6 +473,22 @@
       enddo ! i=lonbeg,lonend
 !     call addfld('HDO1',' ',' ',hdo1(lev0:lev1-1,lon0:lon1),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!
+! Make hdhe from kldhe:
+      call lsqdsq(kldhe(lev0:lev1,lonbeg-1:lonend+1,lat+1),
+     |            kldhe(lev0:lev1,lonbeg-1:lonend+1,lat  ),
+     |            kldhe(lev0:lev1,lonbeg-1:lonend+1,lat-1),
+     |            hdout(lev0:lev1,lonbeg:lonend),lonbeg,lonend,
+     |            lev0,lev1,lat)
+      do i=lonbeg,lonend
+        do k=lev0,lev1-1
+          hdhe(k,i) = hdout(k,i)*fnrh_inv(k,i)
+        enddo ! k=lev0,lev1-1
+        hdhe(lev1,i) = 0.
+      enddo ! i=lonbeg,lonend
+!     call addfld('HDHE',' ',' ',hdhe(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!
       end subroutine hdif3
 !-----------------------------------------------------------------------
       subroutine hdif_periodic(hdt,hdu,hdv,hdo2,hdo1,
@@ -488,7 +523,8 @@
 !-----------------------------------------------------------------------
 #ifdef MPI
       subroutine mp_bndlats_kmh(lev0,lev1,lon0,lon1,lat0,lat1)
-      use mpi_module,only: mytidi,mytidj,itask_table,handle_mpi_err
+      use mpi_module,only: mytidi,mytidj,itask_table,handle_mpi_err,
+     |  time_bndlats_kmh
       implicit none
 !
 ! Args:
@@ -500,10 +536,12 @@
      |  irstat(MPI_STATUS_SIZE)      ! mpi receive status
       real,allocatable :: sndbuf(:,:,:),rcvbuf(:,:,:)
       integer :: ier,nlons,len,jprev,jnext,ireqrecv,ireqsend
+      real :: starttime,endtime
 #ifdef VT
 !     call vtsymdef(111, 'mp_bndlats_kmh','Communication',ier)
       call vtbegin(111,ier)
 #endif
+      if (mpi_timing) starttime = mpi_wtime()
 !
       nlons = lon1-lon0+1
       allocate(sndbuf(nlevp1,nlons,3),stat=ier)
@@ -545,6 +583,11 @@
 ! Release local buffer space:
       deallocate(sndbuf)
       deallocate(rcvbuf)
+!
+      if (mpi_timing) then
+        endtime = mpi_wtime()
+        time_bndlats_kmh=time_bndlats_kmh+(endtime-starttime)
+      endif
 #ifdef VT
 !     call vtsymdef(111, 'mp_bndlats_kmh','Communication',ier)
       call vtend(111,ier)
@@ -553,7 +596,7 @@
 !-----------------------------------------------------------------------
       subroutine mp_bndlons_kmh(lev0,lev1,lon0,lon1,lat0,lat1)
       use mpi_module,only: mytidi,mytidj,itask_table,ntaski,
-     |  handle_mpi_err
+     |  handle_mpi_err,time_bndlons_kmh
       implicit none
 !
 ! Args:
@@ -571,10 +614,12 @@
       integer :: j,jj,ier,len,iprev,inext,isend,irecv,nlats
       real,allocatable :: rcvbuf(:,:),sndbuf(:,:)
       real :: fmin,fmax
+      real :: starttime,endtime
 #ifdef VT
 !     call vtsymdef(112, 'mp_bndlons_kmh','Communication',ier)
       call vtbegin(112,ier)
 #endif
+      if (mpi_timing) starttime = mpi_wtime()
 !
 ! Allocate send and receive buffers:
       nlats = lat1-lat0+1+3
@@ -636,6 +681,11 @@
 ! Release local buffer space:
       deallocate(sndbuf)
       deallocate(rcvbuf)
+!
+      if (mpi_timing) then
+        endtime = mpi_wtime()
+        time_bndlons_kmh=time_bndlons_kmh+(endtime-starttime)
+      endif
 #ifdef VT
 !     call vtsymdef(112, 'mp_bndlons_kmh','Communication',ier)
       call vtend(112,ier)

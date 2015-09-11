@@ -1,21 +1,11 @@
-!
       module init_module
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-      use params_module,only: nlon,nlat,nlevp1,nlonp4,nmlonp1,nmlat,
-     |  glon1,dlon,glat1,dlat,nlev,zmbot,dlev,zibot,zmbot,
-     |  nmlev,nmlevp1,nimlev,nimlevp1
+      use params_module,only: nlon,nlat,nlonp4
       implicit none
-!
-! Initialize and store model non-input variables and constants:
-!
-      real :: glon(nlon),glat(nlat),zpmid(nlevp1),zpint(nlevp1)
-      real :: gmlon(nmlonp1),gmlat(nmlat),
-     |        zpmag_mid(nmlevp1),zpmag_int(nimlevp1)
-!    |        zpmag_mid(nmlev),zpmag_int(nimlev)
 !
 ! istep: the current time step index. istep is initialized
 ! to 0, then incremented before each time step (see advance.f).
@@ -77,7 +67,7 @@
      |  gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,output,secout,mkhvols,source_start,
-     |  sd_ncfile
+     |  see_ncfile
       use hist_module,only: hist_init,isechist,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
      |  nfiles_sech,nfsech
@@ -197,7 +187,7 @@
 !     call init_amie
 !
 ! Read SEE data file:
-      if (len_trim(sd_ncfile) > 0) then
+      if (len_trim(see_ncfile) > 0) then
          call rd_soldata
       endif
 !
@@ -229,33 +219,11 @@
       sin_sundec = SIN(sundec) ! C(95)
       cos_sundec = COS(sundec) ! C(96)
 !
-! Define geographic grid:
-      do i=1,nlon
-        glon(i) = glon1+(i-1)*dlon
-      enddo
-      do i=1,nlat
-        glat(i) = glat1+(i-1)*dlat
-      enddo
-      do i=1,nlevp1
-        zpmid(i) = zmbot+(i-1)*dlev  ! midpoint levels
-        zpint(i) = zibot+(i-1)*dlev  ! interface levels
-      enddo
-!
-! Define magnetic zp grid:
-! For 97 km boundary, zpmag starts 3 zp levels below geographic fields
-!   (at dzp=0.5, this is -8.5 instead of -7.0)
-! zpmag_mid(nmlevp1), zpmag_int(nimlevp1)
-!     do i=1,nmlev
-      do i=1,nmlevp1
-        zpmag_mid(i) = zmbot-(3.*dlev)+(i-1)*dlev  ! midpoint levels
-        zpmag_int(i) = zpmag_mid(i)-0.5*dlev
-      enddo
-!
 ! Report to stdout:
       write(6,"(/,'Model run initialization:')")
-      write(6,"('  nstep      = ',i6,4x,
+      write(6,"('  nstep      = ',i12,4x,
      |  '(Number of time steps this run)')") nstep
-      write(6,"('  iter       = ',i6,4x,
+      write(6,"('  iter       = ',i12,4x,
      |  '(Initial iteration number)')") iter
       write(6,"('  iyear      = ',i6,4x,
      |  '(Beginning calendar year)')") iyear
@@ -273,14 +241,6 @@
       write(6,"('  igswm_nm_sdi= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating semidiurnal tidal database will',
      |  ' be used.)')") igswm_nm_sdi
-      write(6,"('  nlev       = ',i6,4x,
-     |  '(Number of levels (midpoints and interfaces))')") nlev
-      write(6,"(/,'  zpmid (midpoint  levels) = ',/,(10f7.3))") zpmid
-      write(6,"(/,'  zpint (interface levels) = ',/,(10f7.3))") zpint
-      write(6,"(/,'  nmlevp1=',i4,' zpmag_mid (mag midpoint  levels) = '
-     |  ,/,(10f7.3))") nmlevp1,zpmag_mid
-      write(6,"(/,'  nmlevp1=',i4,' zpmag_int (mag interface levels) = '
-     |  ,/,(10f7.3))") nmlevp1,zpmag_int
 !
       if (nsource > 0) then
         write(6,"(/,'This is an initial run:')")

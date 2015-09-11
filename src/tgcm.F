@@ -10,7 +10,8 @@
 ! initial cvs import was tiegcm1
 !
       use params_module,only: tgcm_version
-      use input_module,only: input,dynamo,step,cwd,pid,hpss_path
+      use input_module,only: input,dynamo,step,cwd,pid,hpss_path,
+     |  potential_model,start_year
       use dispose_module,only: init_dispose
       use fields_module,only: itp
       use init_module,only: init,iyear
@@ -19,15 +20,21 @@
       use cons_module,only: init_cons
       use lbc,only: bndry_diurnal, bndry_semidiurnal, bndcmp
       use qrj_module,only: init_qrj
-      use magfield_module,only: magfield
-      use apex_module,only: apxparm
+      use lbc,only: init_lbc
+      use magfield_module,only: magdyn
+      use getapex_module,only: apxparm
       use timing_module,only: timer,timer_report,init_timer
       use mpi_module,only: mytid,ntask
-      use diags_module,only: init_diags
       use amie_module,only: init_amie
       use seeflux_module,only: init_seeflux
+      use diags_module,only: init_diags
+      use cons_module,only: consdyn,set_geogrid
+      use mpitime_module,only: report_mpitime
 #ifdef MPI
-      use mpi_module,only: mp_init,mp_close,mp_distribute
+      use mpi_module,only: mp_init,mp_close,mp_distribute_geo,
+     |  mp_distribute_mag,mp_exchange_tasks,report_mpi_timing,
+     |  mpi_timing,time_totalrun
+      use my_esmf,only: esmf_init
 #endif
 #if defined(INTERCOMM) || defined(CISMAH)
       use cism_coupling_module,only: initialize,finalize
@@ -48,47 +55,88 @@
      |  time0_apx, time1_apx,
      |  time0_run, time1_run,
      |  time0_init,time1_init
-      real,external :: cputime  ! util.F
+      real :: starttime,endtime
+      real,external :: mpi_wtime
 !
-! Report starting time and other info to stdout:
-      call startup_message
-!
-! Initialize timing for entire run:
 #ifndef IRIX
       call cpu_time(cpu1)
 #endif
 !
+! Report starting time and other info to stdout:
+      call startup_message
+
+#ifdef INTERCOMM
+!
+! This code block is required for coupling with LFM (CMIT):
+!
+! InterComm 2.0 requires that IC_Setprogname be called prior to
+! MPI_Init.
+      call IC_Setprogname("tiegcm")
+#endif
+
+!
+! Initialize MPI:
+#ifdef MPI
+      call mp_init
+      if (mpi_timing) starttime = mpi_wtime()
+#endif
+
+!
 ! Initialize timing (must be called after mp_init):
       call init_timer
 !
-! Get user input. If MPI job, init mpi and set up 2-d decomposition
-!   across tasks. Start timing contains an mpi_barrier, so must be
-!   called after mp_init.
-!
-#ifdef MPI
-      call mp_init
-#endif
+
 !
 ! Init timing for the run, get cwd and pid, get user input,
 !   set up 2d decomposition.
 !
       call timer(time0_run,time1_run,'RUN',0,0)    ! start run timing
       call timer(time0_init,time1_init,'INIT',0,0) ! start init timing
-      call getcwd(cwd)
+      call getcwdir(cwd)
       write(6,"('Current working directory (cwd) = ',a)") trim(cwd)
-      call getpid(pid)
+      call getprocessid(pid)
       write(6,"('Process ID (pid) = ',i8)") pid
       call input(mytid,ntask) ! get user input (mpi)
       if (mytid==0.and.len_trim(hpss_path) > 0) call init_dispose
+!
+! set_geogrid and consdyn (both in cons.F) must be called before
+! mp_distribute, for use by sub define_mag.
+      call set_geogrid
+      call consdyn
+!
+! Call apex code if doing new dynamo
+      if (dynamo > 0.or.
+     |   (dynamo <= 0 .and.trim(potential_model) /= 'NONE')) then
+        call timer(time0_apx,time1_apx,'APXPARM',0,0)
+        write(6,"('tgcm: dynamo=',i2,' -- calling apxparm: start_year=',
+     |    i5)") dynamo,start_year
+        call apxparm(real(start_year))
+        call timer(time0_apx,time1_apx,'APXPARM',1,0)
+        write(6,"('Time in apxparm = ',f6.3,' (secs)')") time1_apx
+      endif
+!
 #ifdef MPI
-      call mp_distribute
+!
+! Do 2d decomposition of geographic and magnetic grids:
+      call mp_distribute_geo
+      write(6,"('tgcm after distribute_geo')")
+      call mp_distribute_mag
+      write(6,"('tgcm after distribute_mag')")
+!
+! Make all task structures available to all tasks:
+      call mp_exchange_tasks(1)
+!
+! Set up geo and mag ESMF grids (esmf.F):
+      call esmf_init
+      write(6,"('tgcm after esmf_init')")
 #endif
+
 #if defined(INTERCOMM) || defined(CISMAH)
 !
 ! Initialize code coupling communication framework 
 ! (i.e. InterComm or AdHoc file exchanges)
 !
-      if (mytid==0) call initialize
+      call initialize
 #endif
 !
 ! Do initialization:
@@ -103,22 +151,18 @@
       call init_qrj
 !
 ! Read amie data files if requested
+! (this is not in init_module to avoid circular dependencies)
       call init_amie
       call init_seeflux
 !
 ! Read source history:
       call readsource(ier)
 !
-! Call apex code if doing dynamo.
-      call apxparm(real(iyear))
+! Define magnetic field and related quantities:
+      call magdyn
 !
-! Set up magnetic field data (read from magfield file if dynamo<=0) 
-      call magfield
-!
-! Set lower boundary Hough mode functions:
-      call bndry_diurnal
-      call bndry_semidiurnal
-      call bndcmp
+! Set several lower boundary parameters (including Hough mode functions):
+      call init_lbc ! lbc module
 
       call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
 !
@@ -144,18 +188,28 @@
       write(6,"('Cpu time for run = ',f10.2)") cpu2-cpu1
 #endif
       call timer(time0_run,time1_run,'RUN',1,0) ! end total run timing
+
 #if defined(INTERCOMM) || defined(CISMAH)
 !
 ! Finalize code coupling communication framework 
 ! (i.e. InterComm or AdHoc file exchanges)
 !
-      if (mytid==0)call finalize
+      call finalize
 #endif
-
 !
 ! Finalize mpi:
 !
 #ifdef MPI
+!
+! Report detailed mpi timing (see mpi.F):
+      if (mpi_timing) then
+        endtime = mpi_wtime()
+        time_totalrun = time_totalrun+(endtime-starttime)
+        call report_mpi_timing
+      endif
+!
+! report_mpitime reports on dynamo timing using mpi_wtime function.
+      call report_mpitime
       call mp_close ! mpi.F
 #endif
       call timer_report

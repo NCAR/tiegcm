@@ -14,8 +14,17 @@ HOST     = $(shell hostname)
 # Netcdf inc and lib set to "." are dummies 
 # (pgi requires arguments to -I and -L)
 # (Netcdf is loaded with the modules utility)
-INC_NETCDF = .
-LIB_NETCDF = .
+#INC_NETCDF = .
+#LIB_NETCDF = .
+#
+# ESMF lib on yellowstone: the following commands are executed by the ys job script:
+# source /glade/apps/opt/lmod/lmod/init/tcsh
+# module add esmf esmf-6.1.1-ncdfio-mpi-O
+#
+export ESMF_LIBDIR
+LIB_ESMF = $(ESMF_LIBDIR)
+include $(LIB_ESMF)/esmf.mk
+LIBS = -L$(LIB_ESMF) -Wl,-rpath=$(LIB_ESMF) -lesmf
 #
 # Make machines.ini file for MPI execution: 
 #

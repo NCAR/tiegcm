@@ -7,7 +7,9 @@
 ! tiegcmlicense.txt.
 !
       use params_module,only: dlat,dz,nlon,nlonp1,nlonp4,nlat,nlatp1,
-     |  dlev,nlev,nmlat,nmlon,nmlonp1,zmbot,zmtop,zibot,zitop,dlon
+     |  dlev,nlev,nmlat,nmlon,nmlonp1,zmbot,zmtop,zibot,zitop,dlon,
+     |  glon,glat,glon1,glat1,zpmid,zpint,gmlon,gmlat,zpmag,zpimag,
+     |  dmlev,nlevp1,nmlevp1,nimlevp1,zpbot_dyn,zpibot_dyn
       implicit none
 !
 ! Define model constants. 
@@ -22,11 +24,13 @@
       real,parameter ::
      |  dzp  = dz,           ! alias for dz (also dlev)
      |  re   = 6.37122e8,    ! earth radius (cm)                  C(51)
+     |  re_dyn = 6.378165e8, ! earth radius for apex
      |  re_inv = 1./re,      ! inverse of earth radius            C(52)
      |  avo  = 6.023e23,     ! avogadro number                    C(85)
      |  boltz = 1.38E-16,    ! boltzman's constant                C(84)
      |  p0   = 5.0e-4,       ! standard pressure                  C(81)
      |  gask = 8.314e7,      ! gas constant                       C(57)
+     |  grav_par = 3.986004415e20, ! standard gravitational parameter (cm^3/sec^2)
 !
 ! dipmin should be same as sin10 (see magfield.F):
 !
@@ -47,7 +51,7 @@
      |  nob(nlat) = 4.e6,    ! N(NO) LBC from old /RUNMDS/ 
      |  avto = 4.0e-12,      ! from old /RUNMDS/ (not used)
      |  hor(nlat) = .25,     ! horizontal variation of eddy diffusion and
-                             !  eddy thrmal conductivity. If unity, value
+                             !  eddy thermal conductivity. If unity, value
                              !  of KE at bottom is 5.e-6 (old /RUNMDS/)
      |  prndtl = 1.,         ! prandtl number
      |  evergs = 1.602e-12,  ! 1 eV = 1.602e-12 ergs
@@ -63,7 +67,8 @@
      |  rmass(3) = (/32.,16.,28./), ! o2,o,n2
      |  rmass_o2 = 32., rmass_o1  = 16., rmass_n2  = 28., 
      |  rmass_o3 = 48., rmass_n4s = 14., rmass_n2d = 14., 
-     |  rmass_no = 30., rmass_op  = 16., rmass_co2 = 44.
+     |  rmass_no = 30., rmass_op  = 16., rmass_co2 = 44.,
+     |  rmass_he =  4., rmass_ar  = 40.
       real,parameter ::
      |  rmassinv_o2  = 1./rmass_o2,
      |  rmassinv_o1  = 1./rmass_o1,
@@ -72,20 +77,29 @@
      |  rmassinv_n4s = 1./rmass_n4s,
      |  rmassinv_n2d = 1./rmass_n2d,
      |  rmassinv_no  = 1./rmass_no,
-     |  rmassinv_op  = 1./rmass_op
+     |  rmassinv_op  = 1./rmass_op,
+     |  rmassinv_he  = 1./rmass_he,
+     |  rmassinv_ar  = 1./rmass_ar
 !
 ! Model derived constants (see sub init_cons in this module):
 !
       real ::
      |  pi,             ! set with 4*atan(1)    C(110)
+     |  sqrtpi,         ! sqrt(pi)
      |  rtd,            ! radians-to-degrees (180./pi)
      |  dtr,            ! degrees-to-radians (pi/180.)
      |  dphi,           ! delta lat (pi/nlat)   C(2)
      |  dphi_2div3,     ! 2./(3.*dphi)          C(12)
      |  dphi_1div12,    ! 1./(12.*dphi)         C(13)
+     |  dphi2_5div2,    ! 5./(2.*dphi**2)
+     |  dphi2_4div3,    ! 4./(3.*dphi**2)
+     |  dphi2_1div12,   ! 1./(12.*dphi**2)
      |  dlamda,         ! delta lon (2pi/nlon)  C(1)
      |  dlamda_2div3,   ! 2./(3.*dlamda)        C(10)
      |  dlamda_1div12,  ! 1./(12.*dlamda)       C(11)
+     |  dlamda2_5div2,  ! 5./(2.*dlamda**2)
+     |  dlamda2_4div3,  ! 4./(3.*dlamda**2)
+     |  dlamda2_1div12, ! 1./(12.*dlamda**2)
      |  dt,             ! time step (secs)      C(4)
      |  dtx2,           ! 2*dt                  C(6)
      |  dtx2inv,        ! 1./(2*dt)             C(7)
@@ -98,6 +112,7 @@
      |  t0(nlev+1),     ! set by sub lowbound (bndry_mod.F)
      |  racs(nlat),     ! 1./(re*cs(lat))
      |  cs(-1:nlat+2),  ! cos(phi)
+     |  cs2_inv(nlat),  ! 1/cos(phi)**2
      |  sn(nlat),       ! sin(phi)
      |  tn(nlat),       ! tan(phi)
      |  cor(nlat),
@@ -109,16 +124,21 @@
      |  zbound          ! background low bound of Z (formerly ZBA in annual tide)
 !
 ! Constants for dynamo and electric field calculations:
-      real,parameter :: h00=9.7e6, r00=re+h00	! use mean earth radius
-      real,parameter :: h0 =9.0e6, r0 =re+h0	! use mean earth radius
-      real :: 
-     |  dlatg, dlong, dlatm, dlonm,
+      real,parameter :: h0 =9.0e6, r0 =re+h0    ! use mean earth radius
+!
+! Save gdlat,gdlon(nmlonp1,nmlat) in degrees from apex for sub define_mag (mpi.F)
+!     real,dimension(nmlonp1,nmlat) :: gdlatdeg,gdlondeg
+
+      real,parameter :: hs=1.3e7
+      real ::
+     |  dlatg, dlong, dlatm, dlonm,dmagphrlon,
      |  ylatm(nmlat),    ! magnetic latitudes (radians)
      |  ylonm(nmlonp1),  ! magnetic longitudes (radians)
      |  rcos0s(nmlat),   ! cos(theta0)/cos(thetas)
      |  dt0dts(nmlat),   ! d(theta0)/d(thetas)
      |  dt1dts(nmlat),   ! dt0dts/abs(sinim) (non-zero at equator)
      |  table(91,2)
+
 !
 ! Geographic grid in radians:
       real ::
@@ -126,7 +146,7 @@
      |  ylong(nlonp1)    ! geographic longitudes (radians)
 !
 ! Critical colatitude limits (15,30 deg) for use of Heelis potential in dynamo:
-! These may change with "dynamic crit" in Weimer run, or if reading amie data 
+! This is not a parameter because it may be changed by sub colath (colath.F).
       real :: crit(2) = (/0.261799387, 0.523598775/)
 !
 ! Kut is used in filtering longitudinal waves (see filter.F):
@@ -218,6 +238,14 @@
      |             + coeff(4)*sin(2.*theta(m))+coeff(5)*cos(2.*theta(m)) 
      |             + coeff(6)*sin(3.*theta(m))+coeff(7)*cos(3.*theta(m)) 
      |             + coeff(8)*sin(4.*theta(m))+coeff(9)*cos(4.*theta(m)) 
+! Reduce eddy diffusion by a factor of 2 to see if NO cooling increases - G. Lu 7/26/2015
+! NO is decreased between 100~250 km
+!          difk(1,m) = difk(1,m)/2.
+! Double eddy diffusion to see if NO cooling increases - G. Lu 7/27/2015 
+! Causing stronger Joule heating effect
+!          difk(1,m) = difk(1,m)*2.
+! Double eddy diffusion to see if NO cooling increases - G. Lu 1/8/2015 
+           difk(1,m) = difk(1,m)*1.5
            dift(1,m) = difk(1,m)/prndtl
            xmue(1,m) = difk(1,m)
         enddo
@@ -244,33 +272,9 @@
         z = zibot+.5*dlev
         expz(1) = exp(-z)
         expdz = exp(-dlev)
-
-!       difk(1,:) = 5.0e-6
-!       dift(1,:) = 5.0e-6/prndtl
-!       xmue(1,:) = 5.0e-6
-!
-! 4/23/09 btf: amie mods as per Gang:
-! Note this amie code assumes eddy_dif==0 (i.e., DOY eddy diffusion is off)
-!
-! reduce Eddy diffusion by a factor of 2 - G. Lu, Jul 24, 2006
-!     difk(1,:) = 2.5e-6
-! Increase Eddy diffusion by a factor of 2 - G. Lu, Dec 20, 2006 - Don't seem to affect Nmf2 very much
-!     difk(1,:) = 10.0e-6
-!     dift(1,:) = 5.0e-6/prndtl
-!     xmue(1,:) = 5.0e-6
-! Change made by Roble on May 13, 2007 for Charley Barth
-!     difk(1,:) = 2.0e-6
-!     dift(1,:) = 2.0e-6/prndtl
-!     xmue(1,:) = 2.0e-6
-! Change made for April 2002 (when the modeled Rho was smaller than CHAMP)
-!     difk(1,:) = 1.0e-6
-!     dift(1,:) = 1.0e-6/prndtl
-!     xmue(1,:) = 1.0e-6
-! Change made for Sep 2005 (when the modeled Rho was larger than CHAMP)
-      difk(1,:) = 2.0e-5
-      dift(1,:) = 2.0e-5/prndtl
-      xmue(1,:) = 2.0e-5
-
+        difk(1,:) = 5.0e-6
+        dift(1,:) = 5.0e-6/prndtl
+        xmue(1,:) = 5.0e-6
         do k=2,nlev
           expz(k) = expz(k-1)*expdz
           difk(k,:) = difk(k-1,:)*expdz
@@ -295,14 +299,21 @@
 ! end calculation of eddy diffusivity
 !
       pi = 4.*atan(1.)                ! C(110)
+      sqrtpi = sqrt(pi)               ! sqrt(pi)
       rtd = 180./pi                   ! radians to degrees
       dtr = pi/180.                   ! degrees to radians
       dphi = pi/float(nlat)           ! C(2)
       dphi_2div3 = 2./(3.*dphi)       ! C(12)
       dphi_1div12 = 1./(12.*dphi)     ! C(13)
+      dphi2_5div2 = 5./(2.*dphi**2)
+      dphi2_4div3 = 4./(3.*dphi**2)
+      dphi2_1div12 = 1./(12.*dphi**2)
       dlamda = 2.*pi/float(nlon)      ! C(1)
       dlamda_2div3 = 2./(3.*dlamda)   ! C(10)
       dlamda_1div12 = 1./(12.*dlamda) ! C(11)
+      dlamda2_5div2 = 5./(2.*dlamda**2)   ! C(10)
+      dlamda2_4div3 = 4./(3.*dlamda**2)   ! C(10)
+      dlamda2_1div12 = 1./(12.*dlamda**2) ! C(11)
       zbound = 136.291/sqrt(2.)*1.e5  ! background lower boundary of Z (cm)
 !
 ! expz(kmax) is exp(-zp) at midpoints:
@@ -330,6 +341,7 @@
         tn(j)=tan(phi)
         cor(j)=2.*omega*sn(j)
         racs(j) = 1./(re*cs(j))
+        cs2_inv(j) = 1./cs(j)**2
       enddo
 !
 ! cs at 0, -1, nlat+1, and nlat+2 replace the old cssp and csnp:
@@ -347,9 +359,6 @@
       grav = 870. ! (is 945. in time-gcm)
       dzgrav = grav/gask   ! C(65)
 !
-! Set dynamo constants:
-      call consdyn
-!
 ! Report to stdout:
 !     write(6,"(/,'Model name    = ',a)") tgcm_name
       write(6,"(  'Model version = ',a)") tgcm_version
@@ -357,7 +366,7 @@
       write(6,"('  nlat=',i3,' nlon=',i3,' nlev=',i3)") nlat,nlon,nlev
       write(6,"('  dz= ',f5.2)") dz
       write(6,"('  dlat=',f6.2,' dlon=',f6.2)") dlat,dlon
-      write(6,"('  zbound (cm) = ',e12.4)") zbound
+      write(6,"('  zbound (cm) = ',e14.6)") zbound
       write(6,"('  zmbot, zmtop = ',2f8.3,
      |  ' (bottom,top midpoint levels)')") zmbot,zmtop
       write(6,"('  zibot, zitop = ',2f8.3,
@@ -378,7 +387,7 @@
 ! Set derived constants used in dynamo.
 !
 ! Local:
-      integer :: j,i,n
+      integer :: k,j,i,n
       real,parameter :: e=1.e-6, r1=1.06e7, alfa=1.668
       real :: 
      |  tanth0(nmlat),
@@ -386,7 +395,12 @@
      |  theta0(nmlat),
      |  hamh0(nmlat)
       real :: dtheta,table2(91,3:5),tanths2
-      real :: rmin,rmax,rmag
+      real :: fac,rmin,rmax,rmag
+!
+! Must define pi, rtd, dtr, because consdyn is called before init_cons:
+      pi = 4.*atan(1.)                ! C(110)
+      rtd = 180./pi                   ! radians to degrees
+      dtr = pi/180.                   ! degrees to radians
 !
 ! Set grid deltas:
       dlatg = pi/float(nlat)
@@ -421,17 +435,28 @@
         ylatm(j) = sign(atan(tanths(j)),theta0(j))
         rcos0s(j) = sqrt((1.+tanths(j)**2)/(1.+tanth0(j)**2))
 !
-! If dynamo <= 0 -> no dynamo
-! If dynamo >= 1 -> dynamo is called
+! If dynamo==0 -> dynamo is not calculated
+! If dynamo==1 -> dynamo is calculated
 !
-        if (dynamo > 0) then
+        if (dynamo <= 0) then ! no dynamo
+          dt1dts(j) = 0.
+          dt0dts(j) = (2.*r0*tanths(j)*(1.+tanths(j)**2))/
+     |      (r1*(1.+tanth0(j)**2)+2.*r0*tanth0(j)**(2.*alfa+1.)*
+     |      (1.+alfa+tanth0(j)**2)/(1.+tanth0(j)**2)**alfa)
+        else                  ! with dynamo
           tanths2  = tanths(j)**2
-          dt1dts(j) = 
+          dt1dts(j) =
      |      (r0*sqrt(1.+4.*tanths2)*(1.+tanths2))/
      |      (r1*(1.+tanth0(j)**2)+2.*r0*tanth0(j)**(2.*alfa+1.)*
      |      (1.+alfa+tanth0(j)**2)/(1.+tanth0(j)**2)**alfa)
           dt0dts(j) = dt1dts(j)*2.*tanths(j)/sqrt(1.+4.*tanths2)
         endif
+
+!       write(6,"('consdyn: j=',i3,' tanth0=',e12.4,' hamh0=',e12.4,
+!    |    ' tanths=',e12.4,' ylatm=',e12.4,' rcos0s=',e12.4,' dt0dts=',
+!    |    e12.4,' dt1dts=',e12.4)") j,tanth0(j),hamh0(j),tanths(j),
+!    |    ylatm(j),rcos0s(j),dt0dts(j),dt1dts(j)
+
       enddo ! j=2,nmlat-1
 !
 ! Magnetic poles:
@@ -472,12 +497,49 @@
         enddo ! i=2,90
       enddo ! n=1,7
 !
+! Define mag grid in degrees, and mag levels:
+      gmlat(:) = ylatm(:)*rtd
+      gmlon(:) = ylonm(:)*rtd
+!
+! zpmag,zpimag = -8.5 -> +7.0 (k=1,nmlevp1) (mainly for history fields)
+      do k=1,nmlevp1
+        zpmag(k)  = zpbot_dyn +(k-1)*dmlev
+      enddo
+      do k=1,nimlevp1
+        zpimag(k) = zpibot_dyn+(k-1)*dmlev
+      enddo
+!
 !     write(6,"(/,'consdyn: ylatg =',/,(6e12.4))") ylatg
 !     write(6,"(  'consdyn: ylong =',/,(6e12.4))") ylong
 !     write(6,"(  'consdyn: ylatm =',/,(6e12.4))") ylatm
+!     write(6,"(  'consdyn: ylonm =',/,(6e12.4))") ylonm
+
 !     write(6,"(  'consdyn: rcos0s=',/,(6e12.4))") rcos0s
 !     write(6,"(  'consdyn: dt0dts=',/,(6e12.4))") dt0dts
+!     write(6,"(  'consdyn: table=',/,(6e12.4))") table
+!     write(6,"(  'consdyn: table2=',/,(6e12.4))") table2
+!
+!     write(6,"(  'consdyn: nmlevp1=',i4,' zpmag=',/,(8f10.3))")
+!    |  nmlevp1,zpmag
+!     write(6,"(  'consdyn: nimlevp1=',i4,' zpimag=',/,(8f10.3))")
+!    |  nimlevp1,zpimag
 !
       end subroutine consdyn
+!-----------------------------------------------------------------------
+      subroutine set_geogrid
+      integer :: i,j,k
+!
+! Define geographic grid:
+      do i=1,nlon
+        glon(i) = glon1+(i-1)*dlon
+      enddo
+      do j=1,nlat
+        glat(j) = glat1+(j-1)*dlat
+      enddo
+      do k=1,nlevp1
+        zpmid(k) = zmbot+(k-1)*dlev  ! midpoint levels
+        zpint(k) = zibot+(k-1)*dlev  ! interface levels
+      enddo
+      end subroutine set_geogrid
 !-----------------------------------------------------------------------
       end module cons_module

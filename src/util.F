@@ -30,6 +30,35 @@
       call shutdown('nextlu')
       end function nextlu
 !-------------------------------------------------------------------
+      subroutine rmnamelistcomments(filename,luout,comcharin,echo)
+      implicit none
+! Remove comments from namelist file (filename) and write the results
+! to file unit luout.  See rmcomments for additional documentation.
+!
+! This subroutine was created for CMIT:  when TIEGCM is coupled to
+! CMIT, namelist cannot be reliably read from stdin.
+!
+! Args:
+      character(len=*),intent(in) :: filename
+      integer,intent(in) :: luout
+      character(len=1),intent(in) :: comcharin
+      integer,intent(in) :: echo
+! Local:
+      integer :: fileId=88, iErr
+
+      open(fileId, FILE=filename, STATUS='OLD', iostat=iErr)
+      if (iErr /= 0) then
+         write(6,"('>>> ERROR inp_read: Could not open TIEGCM ',
+     +        'input namelist file tiegcm_namelist.inp ',
+     +        'with unit luin=',i2,' ios=',i5)") fileId,iErr
+         call shutdown('inp_read')
+      endif
+      call rmcomments(fileId,luout,comcharin,echo)
+      close(fileId)
+
+      return
+      end subroutine rmnamelistcomments
+!-------------------------------------------------------------------
       subroutine rmcomments(luin,luout,comcharin,echo)
       implicit none
 !
@@ -66,6 +95,7 @@
         write(6,"('rmcomments: using default semicolon as ',
      +    'comment character.')")
       endif
+      isopen = .false.
       inquire(unit=luin,opened=isopen)
       if (.not.isopen) then
         open(unit=luin,iostat=ios)
@@ -180,40 +210,6 @@
         endif
       enddo
       end function ixfind
-!-------------------------------------------------------------------
-      integer function ixfindc(strarr,nstr,searchstr)
-      implicit none
-!
-! Given string array strarr, return index to strarr which contains 
-!   string searchstr, or return 0 if searchstr not found,
-!   searchstr is 0 length, or strarr is 0 length.
-!
-! Args:
-      character(len=*),intent(in) :: strarr(nstr),searchstr
-      integer,intent(in) :: nstr ! extent of strarr to search
-!
-! Locals:
-      integer :: lenele,	! length of a strarr element
-     |           lsearch,	! length of the search string
-     |           i		! loop index
-!
-      ixfindc = 0
-      if (nstr == 0) then
-        write(6,"('WARNING ixfindc: nstr=0 (length string array)')")
-        return
-      endif
-      lsearch = len_trim(searchstr)
-      do i=1,nstr
-        lenele = len_trim(strarr(i))
-        if (lenele > 0) then
-          if (strarr(i)(1:lenele) == searchstr(1:lsearch)) then
-            ixfindc = i
-            return 
-          endif
-        endif
-      enddo
-      return
-      end function ixfindc
 !-------------------------------------------------------------------
       real function finterp(f0,f1,isec0,isec1,isec)
 !
@@ -417,35 +413,6 @@
 #endif
       end function cputime 
 !-------------------------------------------------------------------
-      integer function iunlink(file,iprint)
-      implicit none
-      character(len=*),intent(in) :: file
-      integer,intent(in) :: iprint
-      integer,external :: unlink
-!
-#if defined(UNICOS) || defined(IRIX) || defined(SUN) || defined(OSF1)
-      iunlink = unlink(trim(file))
-      if (iunlink.eq.0) then
-        if (iprint > 0) 
-     |    write(6,"('Unlinked file ',a)") trim(file)
-      else
-        if (iprint > 0) 
-     |    write(6,"('Note: unlink of ',a,' failed',
-     |      ' (possibly non-existant file).')") trim(file)
-      endif
-#elif AIX || LINUX
-      iunlink = unlink(trim(file)//"\0")
-      if (iunlink.eq.0) then
-        if (iprint > 0) 
-     |    write(6,"('Unlinked file ',a)") trim(file)
-      else
-        if (iprint > 0) 
-     |    write(6,"('Note: unlink of ',a,' failed',
-     |      ' (possibly non-existant file).')") trim(file)
-      endif
-#endif
-      end function iunlink
-!-----------------------------------------------------------------------
       real function mtime_delta(mtime0,mtime1)
 !
 ! Return difference in time (minutes) from mtime0 to mtime1:
@@ -780,23 +747,30 @@
 #endif
       end subroutine gethostsname
 !-----------------------------------------------------------------------
-      integer function strloc(strarray,nstr,str)
+      integer function strloc(strarray,nstr,substr)
       implicit none
 !
 ! Search for string str in string array strarray(nstr).
+! Its important NOT to use comparisons such as "if (trim(str0)==trim(str1))" 
+!   to avoid memory leaks by Intel ifort compiler (this is not a problem 
+!   w/ PGI and xlf compilers).
 !
 ! Args:
       integer,intent(in) :: nstr
       character(len=*),intent(in) :: strarray(nstr)
-      character(len=*) :: str
+      character(len=*) :: substr
 !
 ! Local:
       integer :: i
+      character(len=len(substr)) :: subtrim
+      character(len=len(strarray(1))) :: strtrim
 !
       strloc = 0
       aloop: do i=1,nstr
         if (len_trim(strarray(i)) > 0) then
-          if (trim(str) == trim(strarray(i))) then
+          subtrim = trim(substr)
+          strtrim = trim(strarray(i)) 
+          if (subtrim == strtrim) then
             strloc = i
             exit aloop
           endif
@@ -943,7 +917,7 @@
       endif
       end subroutine timer
 !-----------------------------------------------------------------------
-      subroutine getcwd(cwd)
+      subroutine getcwdir(cwd)
 #ifdef MPI
       use mpi_module,only: mytid
 #endif
@@ -961,7 +935,7 @@
 #ifdef MPI
       if (mytid==0) then
         istat = isystem('pwd > cwd')
-        if (istat /= 0) write(6,"('>>> WARNING getcwd: error return ',
+        if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
      |    'isystem(''pwd > cwd'')')")
       endif
       call mpi_barrier(MPI_COMM_WORLD,ier)
@@ -971,16 +945,16 @@
       close(lu)
 #else
       istat = isystem('pwd > cwd')
-      if (istat /= 0) write(6,"('>>> WARNING getcwd: error return ',
+      if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
      |  'isystem(''pwd > cwd'')')")
       lu = nextlu()
       open(lu,file='cwd',status='old')
       read(lu,"(a)") cwd
       close(lu)
 #endif
-      end subroutine getcwd
+      end subroutine getcwdir
 !-----------------------------------------------------------------------
-      subroutine getpid(pid)
+      subroutine getprocessid(pid)
 #ifdef MPI
       use mpi_module,only: mytid
 #endif
@@ -998,7 +972,8 @@
 #ifdef MPI
       if (mytid==0) then
         istat = isystem('echo $$ > pid')
-        if (istat /= 0) write(6,"('>>> WARNING getpid: error return ',
+        if (istat /= 0) 
+     |    write(6,"('>>> WARNING getprocessid: error return ',
      |    'isystem(''echo $$ > pid'')')")
       endif
       call mpi_barrier(MPI_COMM_WORLD,ier)
@@ -1008,14 +983,15 @@
       close(lu)
 #else
       istat = isystem('echo $$ > pid')
-      if (istat /= 0) write(6,"('>>> WARNING getpid: error return ',
+      if (istat /= 0) 
+     |  write(6,"('>>> WARNING getprocessid: error return ',
      |  'isystem(''echo $$ > pid'')')")
       lu = nextlu()
       open(lu,file='pid',status='old')
       read(lu,"(i10)") pid
       close(lu)
 #endif
-      end subroutine getpid
+      end subroutine getprocessid
 !-----------------------------------------------------------------------
       character(len=*) function trcase(string)
 !
@@ -1540,3 +1516,34 @@
      |    time2print = .true.
       end function time2print
 !-----------------------------------------------------------------------
+      real function fslt(slt,ut,glon,iflag)
+      implicit none
+!
+! If iflag = 1 -> return slt, given ut and glon (slt=ut+glon/15.)
+! If iflag = 2 -> return ut, given slt and glon (ut=slt-glon/15.)
+! If iflag = 3 -> return glon, given slt and ut (glon=(slt-ut)*15.)
+! (slt and ut always in decimal hours, glon in -180 -> 180)
+!
+! Args:
+      real :: slt,ut,glon
+      integer,intent(in) :: iflag
+!
+      if (iflag==1) then
+        fslt = ut + glon/15.
+        if (fslt < 0.) fslt = fslt+24.
+        if (fslt >= 24.) fslt = fslt-24.
+      elseif (iflag==2) then
+        fslt = slt - glon/15.  
+        if (fslt < 0.) fslt = fslt+24.
+        if (fslt > 24.) fslt = fslt-24.
+      elseif (iflag==3) then
+        fslt = (slt-ut) * 15.
+        if (fslt >= 180.) fslt = fslt-360.
+        if (fslt < -180.) fslt = fslt+360.
+      else
+        write(6,"('>>> fslt: bad iflag=',i3)") iflag
+        stop 'fslt'
+      endif
+      return
+      end
+!-------------------------------------------------------------------

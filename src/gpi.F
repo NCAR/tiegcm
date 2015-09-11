@@ -43,7 +43,7 @@
 ! 
 ! Global gpi data read from gpi data file:
       integer,parameter :: 
-     |  mxgpidays = 15000     ! maximum number of days of gpi data
+     |  mxgpidays = 50000     ! maximum number of days of gpi data
       integer :: 
      |  ngpidays,             ! number of days of gpi data
      |  gpi_iyd(mxgpidays),   ! yearday (7-digit) of gpi data
@@ -53,6 +53,8 @@
      |  gpi_f107d(mxgpidays), ! daily 10.7 cm flux
      |  gpi_f107a(mxgpidays), ! 81-day average 10.7 cm flux
      |  gpi_kp(8,mxgpidays)   ! 3-hourly kp
+
+      real :: fkp ! kp from gpi file, interpolated to model time
 !
       contains 
 !-----------------------------------------------------------------------
@@ -62,11 +64,11 @@
 ! and kp. These data are obtained in ascii format from NGDC. See comments 
 ! below.  If mpi job, only the master task executes this routine.
 !
-      use input_module,only: gpi_ncfile
+      use input_module,only: gpi_ncfile,mxlen_filename
       use nchist_module,only: nc_open,nc_close,handle_ncerr
 !
 ! Local:
-      character(len=80) :: dskfile
+      character(len=mxlen_filename) :: dskfile
       integer :: istat,ncid,nkp,i,ier
       integer :: id_ndays,id_nkp,idv_iyd,idv_f107d,idv_f107a,idv_kp
 !
@@ -136,6 +138,15 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rdgpi: Error getting variable kp')
 !     write(6,"('rdgpi: kp=',/(8f8.2))") (gpi_kp(:,i),i=1,ngpidays)
+      if (any(gpi_kp < 0.)) then
+        do i=1,ngpidays
+          if (any(gpi_kp(:,i) < 0.)) then
+            write(6,"('>>> WARNING rdgpi: bad kp at i=',i5,
+     |        ' gpi_iyd(i)=',i6,' gpi_kp(:,i)=',/,8e12.4)")
+     |        i,gpi_iyd(i),gpi_kp(:,i)
+          endif
+        enddo
+      endif
 !
 ! Get beginning and ending integer dates:
 ! (these should be gpi_iyd(3) and gpi_iyd(ngpidays-2) respectively,
@@ -180,7 +191,7 @@
      |        f107_p2d, f107a_p2d, fkp_p2d(8),  ! at 2nd previous day
      |        f107_nxt, f107a_nxt, fkp_nxt(8),  ! at next day
      |        f107_n2d, f107a_n2d, fkp_n2d(8)   ! at 2nd next day
-      real :: fkp,fkp0,fkp1
+      real :: fkp0,fkp1
       integer,parameter :: isecnoon = 12*60*60   ! secs at noon 
 ! 
 ! External:
@@ -327,7 +338,16 @@
             fkp1 = fkp_nxt(1)
           endif
           fkp = finterp(fkp0,fkp1,isec0,isec1,iutsec)
-
+!
+! Kp has been known to go < 0 due to interpolation.
+!
+          if (fkp < 0.) then
+            write(6,"('>>> WARNING getgpi: bad kp = ',e12.4,' iyear=',
+     |        i4,' iday=',i4,' real(iutsec)/3600.=',f10.2)")
+     |        fkp,iyear,iday,real(iutsec)/3600.
+            write(6,"('I am setting kp to zero.')")
+            fkp = 0.
+          endif
         endif ! rd_kp == spval
 !
 ! Use empirical formulas to calculate ctpoten and hemispheric power 

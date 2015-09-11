@@ -1,3 +1,4 @@
+#include <defs.h>
 !
       module input_module
 !
@@ -7,7 +8,7 @@
 !
       use params_module,only: mxhvols,mxseries,mxseries_sech,mxfsech,
      |  nlat,nlon,nlev,glat1,dlat,glon1,dlon,tgcm_version,tgcm_name,
-     |  spval,ispval,nlonp4,mxind_time
+     |  spval,ispval,nlonp4,mxind_time,nmlat,nmlonp1
       use mk_hvols,only: mkhvols
       implicit none
 !
@@ -37,7 +38,7 @@
      |  label,           ! optional generic text label for this run
      |  tempdir,         ! temporary directory 
      |  magvol,          ! absolute or relative path to magnetic data file
-     |  amievol,         ! file or mss path of amie data file (optional)
+     |  amievol,         ! absolute or relative path to amie data file (optional)
      |  amiesh,          ! file or mss path of amie SH data file (optional)
      |  amienh,          ! file or mss path of amie NH data file (optional)
      |  seeflux,         ! file or mss path of SEE photon data file (optional)
@@ -58,20 +59,27 @@
      |  dispose,         ! deprecated -- formerly for dispose to mss
      |  eddy_dif,	 ! 0/1 flag for DOY dependent eddy diffusion (difk, dift, xmue)
      |  dynamo,          ! 0/1 flag for dynamo
+     |  current_pg,      ! 0/1 flag to add current due to plasma pressure and gravity to rhs (default 1)
+     |  current_kq,      ! 0/1 flag to calculate height-integrated current density (default 0)
      |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
      |  aurora,          ! 0/1 flag for aurora
      |  iamie,           ! 0/1 flag for AMIE data (not in namelist read)
      |  amie_ibkg,       ! 0/1/2 flag for read real, 1st, or 24-hr averaged data
-     |  iseeflux,
+     |  iseeflux,        ! 0/1 flag for SEE flux data
      |  ntask_lat,       ! number of tasks in latitude  dimension
-     |  ntask_lon        ! number of tasks in longitude dimension
+     |  ntask_lon,       ! number of tasks in longitude dimension
+     |  ntask_maglat,    ! number of tasks in mag latitude  dimension (not namelist)
+     |  ntask_maglon,    ! number of tasks in mag longitude dimension (not namelist)
+     |  calc_helium,     ! calculate helium if calc_helium=1, otherwise set he=0.
+     |  enforce_opfloor  ! if > 0, enforce O+ floor (see oplus.F)
       real ::
      |  tide(10),        ! semidiurnal tide amplitudes and phases
      |  tide2(2),        ! diurnal tide amplitude and phase
      |  tide3m3(2),      ! 2-day wave amplitude and phase
      |  f107,            ! 10.7 cm daily solar flux
      |  f107a,           ! 10.7 cm average (81-day) solar flux
-     |  colfac           ! collision factor
+     |  colfac,          ! collision factor
+     |  joulefac         ! joule heating factor (see sub qjoule_tn (qjoule.F))
 !
 ! Input parameters that can be either constant or time-dependent:
       real ::
@@ -119,7 +127,7 @@
      |  wei05sc_ncfile,   ! path to netcdf data files for weimer05 model
      |  gpi_ncfile,         ! absolute or relative path to netcdf gpi data file
      |  ncep_ncfile,        ! ncep data file (time-gcm only)
-     |  sd_ncfile,          ! absolute or relative path to netcdf SEE flux data file
+     |  see_ncfile,         ! absolute or relative path to netcdf SEE flux data file
      |  imf_ncfile,         ! absolute or relative path to netcdf IMF data file
      |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
@@ -167,14 +175,15 @@
      |  secout,secstart,secstop,sechist,secflds,secsave,
      |  potential_model,eddy_dif,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
-     |  kp,colfac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
+     |  kp,colfac,joulefac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,ntask_lat,ntask_lon,
-     |  start_day,start_year,calendar_advance,sd_ncfile,
+     |  start_day,start_year,calendar_advance,see_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
-     |  f107a_time,hpss_path,amiesh,amienh,amie_ibkg,seeflux
+     |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
+     |  enforce_opfloor,amiesh,amienh,amie_ibkg,seeflux
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -183,7 +192,7 @@
      |   'O1              ',
      |   'Z               ',
      |   'ZG              ',    ! see sub calczg in addiag.F
-     |   'ZMAG            '/)   ! see sub transf in dynamo.F
+     |   'ZMAG            '/)   ! see sub dynamo_inputs in pdynamo.F
 !
 ! Current working (execution) directory (set by tgcm.F):
       character(len=120) :: cwd  ! current working directory
@@ -241,7 +250,7 @@
 !
       gpi_ncfile  = ' '       ! user input gpi file path
       ncep_ncfile = ' '       ! (time-gcm only)
-      sd_ncfile   = ' '       ! solar flux data (see module in soldata.F)
+      see_ncfile  = ' '       ! solar flux data (see module in soldata.F)
 !
       imf_ncfile = ' '        ! user input imf data file, used to drive weimer
       write(weimer_ncfile ,"('$TGCMDATA/weimer2001_coeffs.nc')")
@@ -266,6 +275,8 @@
       dispose = ispval
       eddy_dif = ispval  ! new as of 4/10
       dynamo  = ispval
+      current_pg = 1     ! on by default
+      current_kq = 0     ! off by default
       tide(:) = spval
       tide2(:)= spval
       tide3m3(:) = spval
@@ -277,6 +288,9 @@
       ntask_lat = ispval
       ntask_lon = ispval
       colfac  = spval
+      joulefac= spval
+      calc_helium = ispval
+      enforce_opfloor = ispval
 
       f107    = spval
       f107a   = spval
@@ -508,7 +522,9 @@
 ! Number of tasks in lat,lon dimensions (ntask_lat*ntask_lon must == ntask):
 #ifdef MPI
       if (ntask_lat==ispval.or.ntask_lon==ispval) then
-        call mkntask(ntask,ntask_lat,ntask_lon,ier)
+!
+! Choose number of tasks in lon,lat dimensions:
+        call mkntask(ntask,nlonp4,nlat,ntask_lon,ntask_lat,ier)
         if (ier /= 0) then
           write(6,"(/,'>>> INPUT: error from mkntask. ntask_lat=',
      |      i3,' ntask_lon=',i3,' ntask=',i3)") ntask_lat,ntask_lon,
@@ -519,11 +535,6 @@
      |      ' ntask_lat=',i3,' (ntask=',i3,')')") 
      |      ntask_lon,ntask_lat,ntask
         endif
-!       write(6,"(/,'>>> INPUT: for MPI runs, you must specify ',
-!    |    'NTASK_LAT as the number of',/,4x,'MPI tasks in the ',
-!    |    'latitude dimension, and NTASK_LON as the number of',
-!    |    /,4x,'MPI tasks in the longitude dimension.',/)")
-!       call shutdown("NTASK_LAT|LON")
       endif
       if (ntask_lat*ntask_lon /= ntask) then
         write(6,"(/,'>>> INPUT: NTASK_LAT * NTASK_LON must ',
@@ -532,13 +543,26 @@
      |    ' ntask=',i4,/)") ntask_lat,ntask_lon,ntask
         call shutdown("NTASK_LAT|LON")
       endif
+!
+! Choose number of tasks in maglon,maglat dimensions:
+      call mkntask(ntask,nmlonp1,nmlat,ntask_maglon,ntask_maglat,ier)
+      if (ier /= 0) then
+        write(6,"(/,'>>> INPUT: error from mkntask. ntask_maglat=',
+     |    i3,' ntask_lon=',i3,' ntask=',i3)") ntask_lat,ntask_maglon,
+     |    ntask
+        call shutdown('MKNTASK')
+      else
+        write(6,"('Input: mkntask chose ntask_maglon=',i3,
+     |    ' ntask_maglat=',i3,' (ntask=',i3,')')")
+     |    ntask_maglon,ntask_maglat,ntask
+      endif
 #endif
 !
 ! ncep data file:
       if (len_trim(ncep_ncfile) > 0) call expand_path(ncep_ncfile)
 !
 ! SEE flux data file:
-      if (len_trim(sd_ncfile) > 0) call expand_path(sd_ncfile)
+      if (len_trim(see_ncfile) > 0) call expand_path(see_ncfile)
 !
 ! GSWM data files:
       if (len_trim(gswm_mi_di_ncfile) > 0) 
@@ -572,9 +596,36 @@
 !
 ! Collision factor:
       if (colfac==spval) then
-        write(6,"('Input: Using default colfac = 1.5')")
         colfac = 1.5
+        write(6,"('Input: Using default colfac = ',f9.2)") colfac
       endif
+!
+! Joule heating factor:
+      if (joulefac==spval) then
+        joulefac = 1.5
+        write(6,"('Input: Using default joulefac = ',f9.2)") joulefac
+      endif
+!
+! If calc_helium == 1 then calculate helium, otherwise zero out helium.
+!
+      if (calc_helium==ispval) then
+        calc_helium = 1
+        write(6,"('Input: Using default calc_helium = ',i3)")calc_helium
+      elseif (calc_helium <= 0) then
+        calc_helium = 0
+        write(6,"('Input: calc_helium=',i3,' -> will zero out ',
+     |    'helium.')") calc_helium
+      endif
+      if (calc_helium > 0) calc_helium=1
+!
+! If enforce_opfloor > 0, then enforce O+ floor (see oplus.F)
+!
+      if (enforce_opfloor==ispval.or.enforce_opfloor > 0) then
+        enforce_opfloor = 1
+      elseif (enforce_opfloor <= 0) then
+        enforce_opfloor = 0
+      endif
+      write(6,"('Input: enforce_opfloor=',i3)") enforce_opfloor
 !
 ! 1/12/05 btf: removed old dynamo (was in dynamo_old.F)
 ! 6/11/08 btf: remove dynamo==0 option
@@ -646,22 +697,27 @@
 !     endif
       end subroutine inp_model
 !-----------------------------------------------------------------------
-      subroutine mkntask(ntask,ntask_lat,ntask_lon,ier)
-      integer,intent(in) :: ntask
-      integer,intent(out) :: ntask_lat,ntask_lon,ier
-      integer :: i,j,ntlat(nlonp4),ntlon(nlonp4),nchoice,ngap,
+      subroutine mkntask(ntask,nx,ny,ntaskx,ntasky,ier)
+!
+! Args:
+      integer,intent(in) :: ntask,nx,ny
+      integer,intent(out) :: ntaskx,ntasky,ier
+!
+! Local:
+      integer,parameter :: mxtask=1000
+      integer :: i,j,ntx(mxtask),nty(mxtask),nchoice,ngap,
      |  ngap_prev,ii
-      ntask_lat = 0
-      ntask_lon = 0
+      ntaskx = 0
+      ntasky = 0
       nchoice=0
-      do i=1,nlonp4
-        do j=1,nlat
+      do i=1,nx   ! usually longitude
+        do j=1,ny ! usually latitude
           if (i*j==ntask) then
             nchoice = nchoice+1
-            write(6,"('mkntask: i=',i2,' j=',i2,' i*j=',i5,' ntask=',
-     |        i5)") i,j,i*j,ntask
-            ntlat(nchoice)=j 
-            ntlon(nchoice)=i 
+!           write(6,"('mkntask: i=',i2,' j=',i2,' i*j=',i5,' ntask=',
+!    |        i5)") i,j,i*j,ntask
+            nty(nchoice)=j
+            ntx(nchoice)=i
           endif
         enddo
       enddo
@@ -671,33 +727,33 @@
 !   ntlon-ntlat.
 !
       do i=1,nchoice
-        if (ntlon(i) == ntlat(i)) then
-          ntask_lat = ntlat(i)
-          ntask_lon = ntlon(i)
+        if (ntx(i) == nty(i)) then
+          ntasky = nty(i)
+          ntaskx = ntx(i)
         endif
       enddo
-      if (ntask_lat==0.or.ntask_lon==0) then
-        ngap_prev = nlonp4*nlat
+      if (ntasky==0.or.ntaskx==0) then
+        ngap_prev = nx*ny
         do i=1,nchoice
-          ngap = ntlon(i)-ntlat(i)
+          ngap = ntx(i)-nty(i)
           if (abs(ngap) < ngap_prev) then
-            ngap = ntlon(i)-ntlat(i)
+            ngap = ntx(i)-nty(i)
             ngap_prev = abs(ngap)
             ii = i
           endif
         enddo
-        ntask_lat = ntlat(ii)
-        ntask_lon = ntlon(ii)
+        ntasky = nty(ii)
+        ntaskx = ntx(ii)
 !
 ! If they are not equal, ntlon should be > ntlat because nlon > nlat.
-        if (ntask_lon < ntask_lat) then
-          i = ntask_lat
-          ntask_lat = ntask_lon
-          ntask_lon = i
+        if (ntaskx < ntasky) then
+          i = ntasky
+          ntasky = ntaskx
+          ntaskx = i
         endif
       endif
-      ier =0
-      if (ntask_lat==0.or.ntask_lon==0.or.ntask_lat*ntask_lon /= ntask)
+      ier = 0
+      if (ntasky==0.or.ntaskx==0.or.ntasky*ntaskx /= ntask)
      |   ier = 1
       end subroutine mkntask
 !-----------------------------------------------------------------------
@@ -1043,7 +1099,7 @@
 ! Local:
       integer :: n,i,ii,nstarts,nstops,nhists,nout,nsteps,
      |  nsteps_hist(mxseries_sech),nsechs_total,nseriesp,nflds_sech,
-     |  nhists_total,nfiles_sech,nonblank
+     |  nhists_total,nfiles_sech,nonblank,nsrc,mtime(4)
       integer(kind=8) :: step8,
      |  nsec_start(mxseries_sech),nsec_stop(mxseries_sech),
      |  nsec_hist (mxseries_sech)
@@ -1084,8 +1140,8 @@
       do i=1,mxhvols
         if (len_trim(secout(i)) > 0) then
           call expand_path(secout(i))
-          write(6,"('Input: Expanded secout file ',a,' to ',/,'  ',a)")
-     |      trim(hvols(i)),trim(secout(i))
+!         write(6,"('Input: Expanded secout file ',a,' to ',/,'  ',a)")
+!    |      trim(hvols(i)),trim(secout(i))
         endif
       enddo
 !
@@ -1190,10 +1246,10 @@
         endif
       enddo 
 !
-! Secondary stop times must be > secondary start times:
+! Secondary stop times must be >= secondary start times:
       do i=1,nstops
-        if (nsec_stop(i) <= nsec_start(i)) then
-          write(6,"(/,'>>> INPUT: SECSTART must be < SECSTOP for ',
+        if (nsec_stop(i) < nsec_start(i)) then
+          write(6,"(/,'>>> INPUT: SECSTART must be <= SECSTOP for ',
      |      'all time series.')")
           write(6,"('For time series ',i2,': SECSTART=',3i4,' SECSTOP=',
      |      3i4,/)") i,secstart(:,i),secstop(:,i)
@@ -1247,6 +1303,26 @@
           call shutdown('SECHIST')
         endif
       enddo 
+!
+! Secondary start time cannot be same as start time if initial run,
+! since sech fields would be zero (this is new as of 12/14/11):
+!
+! 1/5/12: Go back to allowing SECSTART==START for initial runs,
+!   so secondary histories can have non-zero "prognostic" fields 
+!   in first history copied from SOURCE (any fields saved by sub 
+!   addfld fields will be zero in this copied history, as before).
+!   Tag 1.94.2 will have this, i.e., allowing SECSTART==START for
+!   initial runs.
+!
+!     nsrc = len_trim(source)
+!     if (nsrc > 0.and.nsec_start(1)==mtime_to_nsec(start(:,1))) then      
+!       write(6,"(/,'>>> INPUT: If an initial run, secondary start ',
+!    |    ' time SECSTART must not be same as START time.')")
+!       call nsecs_to_modeltime(nsec_start(1)+nsec_hist(1),mtime)
+!       write(6,"('Please set SECSTART to first SECHIST interval ',
+!    |    'after START time (',3i4,')')") mtime(1:3)
+!       call shutdown('SECSTART')
+!     endif
 !
 ! Secondary history save frequencies:
       n = size(secsave)-count(secsave==ispval)
@@ -1438,8 +1514,8 @@
 
       if (len_trim(gpi_ncfile) > 0)
      |  write(6,"('  gpi run: gpi_ncfile = ',a)") trim(gpi_ncfile)  
-      if (len_trim(sd_ncfile) > 0)
-     |  write(6,"('  SEE data: sd_ncfile = ',a)") trim(sd_ncfile)
+      if (len_trim(see_ncfile) > 0)
+     |  write(6,"('  SEE data: see_ncfile = ',a)") trim(see_ncfile)
       if (len_trim(imf_ncfile) > 0)
      |  write(6,"('  imf run: imf_ncfile = ',a)") trim(imf_ncfile)  
 
@@ -1464,6 +1540,15 @@
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amievol)
+      if (len_trim(amienh) > 0)
+     |  write(6,"('  amienh = ',a,/,4x,
+     |    '(file or mss path containing amie data)')") trim(amienh)
+      if (len_trim(amiesh) > 0)
+     |  write(6,"('  amiesh = ',a,/,4x,
+     |    '(file or mss path containing amie data)')") trim(amiesh)
+      if (len_trim(seeflux) > 0)
+     |  write(6,"('  seeflux = ',a,/,4x,
+     |    '(file or mss path containing SEE flux )')") trim(seeflux)
       if (len_trim(hpss_path) > 0)
      |  write(6,"('  hpss_path = ',a,4x,
      |    '(hpss directory for hsi dispose script)')") trim(hpss_path)
@@ -1549,6 +1634,21 @@
      |  i3)") mxhist_sech
       write(6,"('  Number of bytes for values of fields on secondary',
      |  ' histories (sech_nbyte) = ',i3)") sech_nbyte
+
+      if (dynamo <= 0) then
+        write(6,"('  dynamo = ',i2,' (dynamo will NOT be calculated)')")
+     |    dynamo
+        write(6,"(14x,
+     |    '(electric potential and ion drifts will be zero')")
+      else
+        write(6,"('  dynamo = ',i2,' (dynamo will be calculated)')")
+     |    dynamo
+        write(6,"('  current_pg = ',i2,' (Add current due to plasma',
+     |    ' pressure gradient and gravity to rhs)')") current_pg
+        write(6,"('  current_kq = ',i2,
+     |    ' (Calculate height-integrated current density)')")
+     |    current_kq
+      endif
 !
 ! More model-wide inputs:
       write(6,"('  eddy_dif = ',i2,' (DOY-dependent eddy diffusion ',
@@ -1563,6 +1663,10 @@
 !    |  tideann
       write(6,"('  aurora  = ',i2,' (0/1 flag for aurora)')") aurora
       write(6,"('  colfac = ',f9.3,' (collision factor)')") colfac
+      write(6,"('  joulefac = ',f9.3,' (joule heating factor)')") 
+     |  joulefac
+      write(6,"('  calc_helium = ',i4,' (0/1 flag for helium)')") 
+     |  calc_helium
 
       write(6,"('If any of the following are spval (',e12.4,'),',
      |  ' they will be calculated',/,'during the simulation on a per ',
@@ -1898,7 +2002,7 @@
         case('HEELIS')
           write (6,"('Will use the Heelis potential model')")
         case('AMIE')
-          write(6,"('Will use the AMIE potential patterns')")
+          write (6,"('Will use the AMIE potential input')")
         case('NONE')
           write(6,"('Will NOT use an empirical potential model')")
           write(6,"('High-lat convection will be zero.)')")
@@ -1930,8 +2034,9 @@
 !         write(6,"(/,'>>> INPUT: Cannot provide KP namelist input',
 !    |      ' with a GPI run.')")
 !         call shutdown('KP input')
-          write(6,"(/,'>>> WARNING INPUT: Am allowing constant ',
-     |      'KP namelist and GPI data file')")
+          write(6,"(/,'>>> WARNING INPUT: I am allowing both namelist',
+     |      ' KP and GPI data file to be specified in this run.',
+     |      ' In this case, the namelist KP will take precedence')")
         endif
 !
 ! Cannot provide KP input for a Weimer run:
@@ -2078,9 +2183,10 @@
      |        ' for non-IMF run with Weimer potential model.')")
             call shutdown('IMF params')
           endif
-          if (f107==spval.and.f107a==spval) then
-            write(6,"(/,'>>> INPUT: f107 and f107a must be provided',
-     |        ' for non-IMF run with Weimer potential model.')")
+          if (len_trim(gpi_ncfile) <= 0.and.
+     |      (f107==spval.or.f107a==spval)) then
+            write(6,"(/,'>>> Weimer potential model without GPI data',
+     |        ' must provide namelist f107,f107a')") 
             call shutdown('f107,f107a params')
           endif
 !
@@ -2111,12 +2217,6 @@
       if (potential_model(1:4)=='NONE' .and. byimf == spval) then
         write(6,"('Note input: Setting BY to 0 with no (NONE) ',
      |      'potential model.')")
-        byimf = 0.
-      endif
-!
-! Reset byimf - G. Lu, 5/3/2009
-      if (byimf == spval) then
-        write(6,"('No IMF By input: Resetting BY to 0')")
         byimf = 0.
       endif
 !

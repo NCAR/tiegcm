@@ -1,5 +1,5 @@
 !
-      subroutine qinite(o2,o1,no,xnmbari,vo2,vo1,vn2,
+      subroutine qinite(o2,o1,n2,no,xnmbari,vo2,vo1,vn2,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -24,7 +24,7 @@
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  o2,o1,no,      ! mass mixing ratios o2,o,no
+     |  o2,o1,n2,no,   ! mass mixing ratios o2,o,n2,no
      |  vo2,vo1,vn2,   ! vertical column densities
      |  xnmbari        ! p0*e(-z)*barm at interfaces
 !
@@ -71,17 +71,22 @@
       do k=lev0,lev1-1
         o2i(k+1,:) = 0.5*(o2(k,lon0:lon1)+o2(k+1,lon0:lon1))
         o1i(k+1,:) = 0.5*(o1(k,lon0:lon1)+o1(k+1,lon0:lon1))
+        n2i(k+1,:) = 0.5*(n2(k,lon0:lon1)+n2(k+1,lon0:lon1))
       enddo
 !
 ! Bottom boundary for o2i, o1i:
       do i=lon0,lon1
         o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+fb(i,1))
         o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+fb(i,2))
+!
+! btf tiegcm_he 8/21/13: Not sure about n2i bottom boundary. 
+! For now, use 1-o2i-o1i since helium is negligible at this height.
+!
+        n2i(1,i) = 1.-o2i(1,i)-o1i(1,i)
       enddo
 !
 ! n2 at interfaces:
       do k=lev0,lev1
-        n2i(k,:) = 1.-o2i(k,:)-o1i(k,:)
         do i=lon0,lon1                       !!! temporal fix CISM
          if(n2i(k,i)<=0.)n2i(k,i)=1.e-5      !!! temporal fix CISM
         enddo                                !!! temporal fix CISM
@@ -120,8 +125,6 @@
           qop (k,i,lat) = qop (k,i,lat)+(0.33*qbo2(k,i)+qbo1(k,i))*
      |      xnmbari(k,i)
           qn2p(k,i,lat) = qn2p(k,i,lat)+0.86*qbn2(k,i)*xnmbari(k,i)
-        if ( qn2p(k,i,lat) .lt.0.) write(6,"('QINITE: qn2p at i=',i3,
-     | ' lev=',i3,3e12.4)")i,k,qn2p(k,i,lat),qbn2(k,i),xnmbari(k,i)
           qnp (k,i,lat) = qnp (k,i,lat)+0.14*qbn2(k,i)*xnmbari(k,i)
           qtef(k,i,lat) = qtef(k,i,lat)+
      |                    1.57*(0.86*qbn2(k,i)*xnmbari(k,i))

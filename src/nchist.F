@@ -7,9 +7,10 @@
 !
 ! Module to create, read and write netcdf history files:
 !
-      use params_module,only: nlon,nlev,nmlev,nimlev,nmlevp1,nimlevp1,
+      use params_module,only: nlon,nlev,nmlevp1,nimlevp1,
      |  nlat,nlevp1,spval,nlonp4,nlonp2,nmlonp1,nmlat,nmlon,zmbot,zmtop,
-     |  zibot,zitop,mxfsech
+     |  zibot,zitop,mxfsech,zpmag,zpimag,gmlon,gmlat,glon,glat,zpmid,
+     |  zpint
       use fields_module,only: nf4d,nf4d_hist,f4d,fakeflds,shortname_len,
      |  fsechist,itc,itp,fields_4d,fields_3d,fields_2d,poten,foutput,
      |  tlbc,ulbc,vlbc,tlbc_glb,ulbc_glb,vlbc_glb,
@@ -18,8 +19,7 @@
       use input_module,only: mxlen_filename,
      |  gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, 
      |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile
-      use init_module,only: glon,glat,zpmid,zpint,gmlon,gmlat,istep,
-     |  start_mtime,zpmag_mid,zpmag_int
+      use init_module,only: istep,start_mtime
       implicit none
 !
 ! Included file svn_version.inc contains the svn revision number used in the build.
@@ -66,11 +66,12 @@
      |  idv_colfac,idv_swden,idv_swvel,idv_al,idv_kp,
      |  idv_gswm_mi_di_ncfile,idv_gswm_mi_sdi_ncfile,
      |  idv_gswm_nm_di_ncfile,idv_gswm_nm_sdi_ncfile,
-     |  idv_sd_ncfile,idv_gpi_ncfile,idv_ncep_ncfile,
+     |  idv_see_ncfile,idv_gpi_ncfile,idv_ncep_ncfile,
      |  idv_f107d,idv_f107a,idv_imf_ncfile,idv_mag,idv_dtide,
      |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
      |  idv_ec,idv_alfad,idv_ed,idv_writedate,idv_saber_ncfile,
-     |  idv_tidi_ncfile,idv_crit1,idv_crit2,idv_coupled_cmit
+     |  idv_tidi_ncfile,idv_crit1,idv_crit2,idv_coupled_cmit,
+     |  idv_joulefac
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
 !
@@ -82,6 +83,7 @@
 #else
       logical :: check_nan = .false.
 #endif
+      character(len=16) :: datasource_kp=' '
       contains
 !-----------------------------------------------------------------------
       subroutine nc_open(ncid,flnm,status,rdwr)
@@ -463,15 +465,8 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading gmlat')
           case('mlev')  ! mag midpoints
-!           istat = nf_get_var_double(ncid,i,zpmag) ! zpmag is in init module
-!           if (istat /= NF_NOERR) 
-!    |        call handle_ncerr(istat,'reading zpmag')
-!           write(6,"('nc_rdhist: read zpmag=',/,(8f8.2))") zpmag
 
           case('imlev') ! mag interfaces
-!           istat = nf_get_var_double(ncid,i,zpimag) ! zpimag is in init module
-!           if (istat /= NF_NOERR) 
-!    |        call handle_ncerr(istat,'reading zpimag')
 !
 ! Time:
           case('time')
@@ -635,7 +630,11 @@
             if (istat /= NF_NOERR) 
      |        call handle_ncerr(istat,'reading alfad')
             sh%alfad = scalar
-
+          case('joulefac')
+            istat = nf_get_var1_double(ncid,i,itime,scalar)
+            if (istat /= NF_NOERR) 
+     |        call handle_ncerr(istat,'reading joulefac')
+            sh%joulefac = scalar
           case('p0')
             istat = nf_get_var_double(ncid,i,var1)
             if (istat /= NF_NOERR) 
@@ -682,10 +681,10 @@
             call rdfilename(ncid,itime,i,trim(varname),filelen,
      |        sh%ncep_ncfile)
 !
-! SEE data file: sd_ncfile(time,filelen), where filelen=mxlen_filename
-          case('sd_ncfile')                               ! new histories
+! SEE data file: see_ncfile(time,filelen), where filelen=mxlen_filename
+          case('see_ncfile')                               ! new histories
             call rdfilename(ncid,itime,i,trim(varname),filelen,
-     |        sh%sd_ncfile)
+     |        sh%see_ncfile)
 !
 ! IMF data file: imf_ncfile(time,filelen), where filelen=mxlen_filename
           case('imf_ncfile')                               ! new histories
@@ -806,7 +805,6 @@
 !
 ! Report to stdout:
       call hist_print(sh,'READ',diskfile)
-!     
       end subroutine nc_rdhist
 !-----------------------------------------------------------------------
       subroutine rdlbc(ncid,idv,flbc,vname,itime)
@@ -902,7 +900,7 @@
 ! 4-d arrays for use in the model. It would be interesting to try reading
 ! only the subdomain directly from the file rather than the full domain.
 !
-      use input_module,only: dynamo
+      use input_module,only: dynamo,calc_helium
       use hist_module,only: sh
       use mpi_module,only: lon0,lon1,lat0,lat1
 !
@@ -967,6 +965,20 @@
 ! Zero out electric potential and return if DYNAMO flag is not set:
       if (trim(name)=='POTEN'.and.dynamo <= 0) then
         f4d(ix)%data = 0.
+        return
+      endif
+!
+! Zero out helium if requested by namelist calc_helium=0:
+      if (trim(name)=='HE'.and.calc_helium <= 0) then
+        f4d(ix)%data = 0.
+        write(6,"('rdf4d: namelist calc_helium=',i3,' -> am setting',
+     |    ' prognostic helium (HE) to zero.')") calc_helium
+        return
+      endif
+      if (trim(name)=='HE_NM'.and.calc_helium <= 0) then
+        f4d(ix)%data = 0.
+        write(6,"('rdf4d: namelist calc_helium=',i3,' -> am setting',
+     |    ' helium at time t-1 (HE_NM) to zero.')") calc_helium
         return
       endif
 !
@@ -1143,18 +1155,15 @@
      |    'Error defining magnetic latitude dimension')
 !
 ! Mag midpoint levels dimension:
-! 11/07 btf: mlev should be nmlev, not nmlevp1 (?)
-
       istat = nf_def_dim(ncid,"mlev",nmlevp1,id_mlev)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining magnetic midpoints levels dimension')
 !
 ! Mag interface levels dimension:
-! 11/07 btf: imlev should be nimlev, not nmlevp1 (?)
-
       istat = nf_def_dim(ncid,"imlev",nimlevp1,id_imlev)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining magnetic interface levels dimension')
+
       istat = nf_def_dim(ncid,"mtimedim",3,id_mtimedim)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      +  'Error defining mtime dimension')
@@ -1572,8 +1581,10 @@
       call defvar_time_dbl(ncid,"ctpoten",ids1,idv_ctpoten,
      |  "Cross-tail potential","kV")
 !
-! Kp index:
+! Kp index (data_source will be either namelist or gpi_ncfile):
       call defvar_time_dbl(ncid,"Kp",ids1,idv_kp,"Kp index"," ")
+      istat = nf_put_att_text(ncid,idv_kp,"data_source",
+     |  len_trim(datasource_kp),datasource_kp)
 !
 ! BX,BY,BZ:
       call defvar_time_dbl(ncid,"bximf",ids1,idv_bximf,
@@ -1596,6 +1607,10 @@
 ! Collision factor:
       call defvar_time_dbl(ncid,"colfac",ids1,idv_colfac,
      |  "ion/neutral collision factor"," ")
+!
+! Joule heating factor:
+      call defvar_time_dbl(ncid,"joulefac",ids1,idv_joulefac,
+     |  "joule heating factor"," ")
 !
 ! 1/31/01: Making tides time-dependent (dtide(time,2) and sdtide(time,10):
 ! Diurnal tide amp/phase:
@@ -1643,7 +1658,7 @@
      |  "data","U,V") 
 !
 ! Define TIMED SEE data file:
-      call define_ncfile(ncid,"sd_ncfile",idv_sd_ncfile,
+      call define_ncfile(ncid,"see_ncfile",idv_see_ncfile,
      |  "long_name","TIMED SEE data file",
      |  "data","Solar flux data")
 !
@@ -2084,22 +2099,18 @@
       istat = nf_put_var_double(ncid,idv_mlon,gmlon)
       istat = nf_put_var_double(ncid,idv_mlat,gmlat)
 !
-! 11/07 btf: mag midpoints  are zpmag_mid(nmlev), and
-!            mag interfaces are zpmag_int(nimlev)
-! (see init.F)
-!
-      istat = nf_put_var_double(ncid,idv_mlev,zpmag_mid) 
-      istat = nf_put_var_double(ncid,idv_imlev,zpmag_int)
+      istat = nf_put_var_double(ncid,idv_mlev,zpmag) 
+      istat = nf_put_var_double(ncid,idv_imlev,zpimag)
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_var_double ',
      +    ' to assign values to magnetic dimension vars')")
         call handle_ncerr(istat,char120)
       endif
 
-!     write(6,"('nc_define: mag midpoints zpmag_mid=',/,(8f8.2))")
-!    |  zpmag_mid
-!     write(6,"('nc_define: mag interfaces zpmag_int=',/,(8f8.2))") 
-!    |  zpmag_int
+!     write(6,"('nc_define: mag midpoints zpmag=',/,(8f8.2))")
+!    |  zpmag
+!     write(6,"('nc_define: mag interfaces zpimag=',/,(8f8.2))") 
+!    |  zpimag
 
       end subroutine nc_define
 !-----------------------------------------------------------------------
@@ -2379,8 +2390,6 @@
      |          trim(fsechist(ix)%short_name)
               call handle_ncerr(istat,trim(char80))
             endif
-!           write(6,"('def_fsech: defined 3d var ',a)")
-!    |        fsechist(ix)%short_name
           endif  ! if var not yet defined
 !
 ! Get dim id's for 2 dimensions (geo or mag):
@@ -2390,7 +2399,7 @@
             write(char80,"('def_fsech: Error getting id for dim ',
      |        a,' (1st of 2)')") trim(fsechist(ix)%dimnames(1))
             call handle_ncerr(istat,trim(char80))
-          endif 
+          endif
           istat=nf_inq_dimid(ncid,fsechist(ix)%dimnames(2),idimids(2)) 
           if (istat /= NF_NOERR) then
             write(char80,"('def_fsech: Error getting id for dim ',
@@ -2400,18 +2409,23 @@
           idimids(3) = id_time
 !
 ! Define 2d var (lon,lat,time)
-          if (sech_nbyte == 4) then ! write 4-byte reals
-            istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_REAL,
-     |        3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
-          else
-            istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
-     |        3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
-          endif
-          if (istat /= NF_NOERR) then
-            write(char80,"('def_fsech: Error defining 2d field ',a)")
-     |        fsechist(ix)%short_name
-            call handle_ncerr(istat,trim(char80))
-          endif
+          istat = nf_inq_varid(ncid,fsechist(ix)%short_name,idv)
+          isdef = 0                  ! assume var is not yet defined
+          if (istat == 0) isdef = 1  ! var is already defined -- cannot redef
+          if (isdef == 0) then ! safe to define
+            if (sech_nbyte == 4) then ! write 4-byte reals
+              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_REAL,
+     |          3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
+            else
+              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
+     |          3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
+            endif
+            if (istat /= NF_NOERR) then
+              write(char80,"('def_fsech: Error defining 2d field ',a)")
+     |          fsechist(ix)%short_name
+              call handle_ncerr(istat,trim(char80))
+            endif
+          endif ! isdef==0
         endif  ! 2d or 3d
 
 !       write(6,"('def_fsech: defined sech field ',a,': dimnames=',
@@ -2746,8 +2760,8 @@
       call update_ncfile(ncid,"ncep_ncfile",h%ncep_ncfile,
      |  idv_ncep_ncfile,h%ihist)
 !
-! Update sd_ncfile:
-      call update_ncfile(ncid,"sd_ncfile",h%sd_ncfile,idv_sd_ncfile,
+! Update see_ncfile:
+      call update_ncfile(ncid,"see_ncfile",h%see_ncfile,idv_see_ncfile,
      |  h%ihist)
 !
 ! Update imf_ncfile:
@@ -2816,6 +2830,11 @@
       if (idv_colfac <= 0) istat = nf_inq_varid(ncid,"colfac",
      |  idv_colfac)
       istat = nf_put_var1_double(ncid,idv_colfac,h%ihist,h%colfac)
+!
+! Joule heating factor:
+      if (idv_joulefac <= 0) istat = nf_inq_varid(ncid,"joulefac",
+     |  idv_joulefac)
+      istat = nf_put_var1_double(ncid,idv_joulefac,h%ihist,h%joulefac)
  
 ! alfa30:
 !     if (idv_alfa30 <= 0) istat = nf_inq_varid(ncid,"alfa30",
@@ -3267,7 +3286,6 @@
 ! history file attached to ncid:
 !
       use input_module,only: dynamo
-      use fields_module,only: dynpot
 !
 ! Args:
       integer,intent(in) :: ncid,itime,ix
@@ -3305,32 +3323,14 @@
         return
       endif
 !
-! Transform from (k,i,j) to (i,j,k) for the history.
-! This routine is executed by root task only. The root task has
-! gathered all subdomain data from other tasks into foutput
-! (see call mp_gather2root in advance). Foutput is a pointer to 
-! all fields at 3d grid, declared in fields.F and allocated in 
-! allocdata.F). 
+!  Electric potential in f4d(i_poten) has been updated by sub
+!  prepare_phig3d in pdynamo.F.
 !
-! f3d(nlon,nlat,nlevp1)            ! note i,j,k for history
-! dynpot(nlonp1,0:nlatp1,nlevp1)   ! 3d electric potential geographic
-!
-      if (trim(name) /= "POTEN") then
-        do j=1,nlat
-          do k=1,nlevp1
-            f3d(:,j,k) = foutput(k,3:nlon+2,j,ix)
-          enddo
+      do j=1,nlat
+        do k=1,nlevp1
+          f3d(:,j,k) = foutput(k,3:nlon+2,j,ix)
         enddo
-      else               
-!
-! Save geographic potential dynpot from dynamo.
-!
-        do j=1,nlat
-          do k=1,nlevp1
-            f3d(:,j,k) = dynpot(1:nlon,j,k)
-          enddo
-        enddo
-      endif
+      enddo
 !
 ! Get field id:
       istat = nf_inq_varid(ncid,name,idvar)

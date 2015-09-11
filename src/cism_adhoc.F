@@ -130,9 +130,7 @@ c
 !              
 ! This subroutine send TIEGCM data via ad hoc coupling to M-I coupler 
 !
-      use params_module,only: nlat,nlonp1,dlon
-      use init_module,only: glon,glat
-!      use dynamo_module,only: gzigm2,gzigm1,gnsrhs 
+      use params_module,only: nlat,nlonp1,dlon,glon,glat
       use cism_coupling_module,only:
      |     ting_ped,
      |     ting_hall,

@@ -14,12 +14,12 @@
 !   without the final time dimension. 
 !
       use params_module,only: nlonp1,nlonp4,nlat,nlatp1,nlevp1,
-     |  mxfsech,spval,nmlat,nmlonp1
+     |  mxfsech,spval,nmlat,nmlonp1,mlev0,mlev1
       implicit none
       integer,parameter :: 
-     |  nf4d          = 26, ! number of 4-d fields
-     |  nf4d_hist     = 24, ! number of 4-d fields on primary histories
-     |  nf3d          = 42  ! number of 3-d fields
+     |  nf4d          = 30, ! number of 4-d fields
+     |  nf4d_hist     = 28, ! number of 4-d fields on primary histories
+     |  nf3d          = 46  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
       integer,parameter :: 
@@ -52,7 +52,7 @@
      |  i_te    ,i_ne     ,i_o2p    ,i_w      ,i_z      ,
      |  i_poten ,i_tn_nm  ,i_un_nm  ,i_vn_nm  ,i_o2_nm  ,
      |  i_o1_nm ,i_n4s_nm ,i_no_nm  ,i_op_nm  ,i_barm   ,
-     |  i_vc
+     |  i_vc    ,i_he     ,i_he_nm  ,i_ar     ,i_ar_nm
 !
 ! Allocatable target arrays for 4-d fields:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 ,2)
@@ -64,7 +64,7 @@
      |  te      ,ne       ,o2p      ,w        ,z        ,
      |  poten   ,tn_nm    ,un_nm    ,vn_nm    ,o2_nm    ,
      |  o1_nm   ,n4s_nm   ,no_nm    ,op_nm    ,barm     ,
-     |  vc
+     |  vc      ,he       ,he_nm    ,ar       ,ar_nm
 !
 ! 3-d fields structure type:
 ! Data pointers will point to allocatable target arrays.
@@ -87,30 +87,30 @@
 !
 ! 3-d fields and indices, e.g., reference f3d(kldt)%data
       integer :: 
-     |  i_kldt   ,i_kldu    ,i_kldv    ,i_kldo2 ,i_kldo1 ,
+     |  i_kldt   ,i_kldu    ,i_kldv    ,i_kldo2 ,i_kldo1 ,i_kldhe,
      |  i_xnmbar ,i_xnmbari ,i_xnmbarm ,i_cp    ,i_kt    ,
      |  i_km     ,i_ui      ,i_vi      ,i_wi    ,i_vo2   ,
      |  i_vo1    ,i_vn2     ,i_sco2    ,i_sco1  ,i_scn2  ,
      |  i_xiop2p ,i_xiop2d  ,i_nplus   ,i_n2p   ,i_nop   ,
      |  i_lxx    ,i_lyy     ,i_lxy     ,i_lyx   ,i_qji_ti,
      |  i_qji_tn ,i_cool_implicit      ,i_cool_explicit  ,
-     |  i_hdt    ,i_hdu     ,i_hdv     ,i_hdo2  ,i_hdo1  ,
-     |  i_ped    ,i_hall    ,i_lam1    ,i_zg
+     |  i_hdt    ,i_hdu     ,i_hdv     ,i_hdo2  ,i_hdo1  ,i_hdhe,
+     |  i_ped    ,i_hall    ,i_lam1    ,i_zg    ,i_n2    ,i_wn
 !
 ! Allocatable target arrays 3-d:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 )
 ! which is the same as: tn(1    :nlev ,lon0-2:lon1+2,lat0-2:lat1+2)
 !
       real,dimension(:,:,:),target,allocatable :: ! (k,i,j)
-     |  kldt     ,kldu     ,kldv     ,kldo2    ,kldo1   ,
+     |  kldt     ,kldu     ,kldv     ,kldo2    ,kldo1   ,kldhe,
      |  xnmbar   ,xnmbari  ,xnmbarm  ,cp       ,kt      ,
      |  km       ,ui       ,vi       ,wi       ,vo2     ,
      |  vo1      ,vn2      ,sco2     ,sco1     ,scn2    ,
      |  xiop2p   ,xiop2d   ,nplus    ,n2p      ,nop     ,
      |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti  ,
      |  qji_tn   ,cool_implicit      ,cool_explicit     ,
-     |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1    ,
-     |  ped      ,hall     ,lam1     ,zg
+     |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1    ,hdhe,
+     |  ped      ,hall     ,lam1     ,zg       ,n2      ,wn
 
 !
 ! 2-d field type (used for 2d secondary history fields):
@@ -130,11 +130,10 @@
 ! Electric potential on geographic and magnetic grids:
 ! (full domains until dynamo is parallelized)
       real ::
-     |  dynpot(nlonp1,0:nlatp1,nlevp1),   ! 3d electric potential geographic
-     |  phim3d(nmlonp1,nmlat,-2:nlevp1),  ! 3d electric potential magnetic
-     |  emphi3d(nmlonp1,nmlat,-2:nlevp1), ! 3d eastward electric field magnetic
-     |  emlam3d(nmlonp1,nmlat,-2:nlevp1), ! 3d equatorw. electric field magnetic
-     |  emz3d(nmlonp1,nmlat,-2:nlevp1)    ! 3d upward (?) electric field magnetic
+     |  phim3d(nmlonp1,nmlat,mlev0:mlev1),  ! 3d electric potential magnetic
+     |  emphi3d(nmlonp1,nmlat,mlev0:mlev1), ! 3d eastward electric field magnetic
+     |  emlam3d(nmlonp1,nmlat,mlev0:mlev1), ! 3d equatorw. electric field magnetic
+     |  emz3d(nmlonp1,nmlat,mlev0:mlev1)    ! 3d upward (?) electric field magnetic
 !
 ! Secondary history field structures.
 ! These are initialized in sub init_fsech, and data is set in addfld.F.
@@ -181,6 +180,13 @@
       real,allocatable :: foutput(:,:,:,:) ! (nlevp1,nlonp4,nlat,nf4d_hist)
       real,allocatable :: fzg(:,:,:)       ! (nlevp1,nlonp4,nlat)
 !
+! Magnetic field diagnostics (see getapex.F, apex.F90, diags.F)
+!     real,dimension(nlonp4,nlat) ::
+!    |  bx,      ! Magnetic field eastward component (Gauss)
+!    |  by,      ! Magnetic field northward component (Gauss)
+!    |  bz,      ! Magnetic field upward component (Gauss)
+!    |  bmag     ! Magnitude of magnetic field (Gauss)
+
       contains
 !-----------------------------------------------------------------------
 !
@@ -266,6 +272,22 @@
       f4d(n)%vcoord = "midpoints"
       f4d(n)%data => no
       i_no = n ; n = n+1
+!
+      allocate(he(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('HELIUM')")
+      f4d(n)%short_name = ("HE")
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => he
+      i_he = n ; n = n+1
+!
+      allocate(ar(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('ARGON (AR)')")
+      f4d(n)%short_name = ("AR")
+      f4d(n)%units = "MMR"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => ar
+      i_ar = n ; n = n+1
 !
       allocate(op(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('O+ ION')")
@@ -413,6 +435,22 @@
       f4d(n)%data => op_nm
       i_op_nm = n ; n = n+1
 !
+      allocate(he_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('HELIUM (TIME N-1)')")
+      f4d(n)%short_name = ("HE_NM")
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => he_nm
+      i_he_nm = n ; n = n+1
+!
+      allocate(ar_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('ARGON (TIME N-1)')")
+      f4d(n)%short_name = ("AR_NM")
+      f4d(n)%units = "MMR"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => ar_nm
+      i_ar_nm = n ; n = n+1
+!
       allocate(barm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('MEAN MOLECULAR WEIGHT')")
       f4d(n)%short_name = ("BARM")
@@ -428,6 +466,12 @@
       f4d(n)%vcoord = "midpoints"
       f4d(n)%data => vc
       i_vc = n ; n = n+1
+!
+! Check number of fields allocated:
+      if (n-1 /= nf4d) then
+        write(6,"(/,'>>> init_4d: wrong number of 4-d fields?',
+     |    ' n-1=',i5,' nf4d=',i5)") n-1,nf4d
+      endif
 !
 ! itp,itc are indices to rightmost dimension of field data, for
 ! previous and current time steps.
@@ -465,13 +509,10 @@
 ! f4d fields are "prognostic":
       f4d%prognostic = .true.
 !
-! Report to stdout:
-      if (iprint > 0) then
-        write(6,"(/,'There are ',i3,' 4-d fields:')") nf4d
-        do n=1,nf4d
-          call print_f4d(f4d(n),n)
-        enddo
-      endif
+! Init data:
+      do i=1,nf4d
+        f4d(i)%data = field_initval
+      enddo
 !
 ! Report to stdout:
       if (iprint > 0) then
@@ -480,9 +521,6 @@
           call print_f4d(f4d(n),n)
         enddo
       endif
-!
-! Do other allocations:
-!     call allocdata
       end subroutine init_4d
 !-----------------------------------------------------------------------
       subroutine init_3d(lon0,lon1,lat0,lat1,mytid,iprint)
@@ -537,6 +575,13 @@
       f3d(n)%data => kldo1
       i_kldo1 = n ; n = n+1
 !
+      allocate(kldhe(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('HE HORIZONTAL DIFFUSION COEFF')")
+      f3d(n)%short_name = "KLDHE"
+      f3d(n)%units = " "
+      f3d(n)%data => kldhe
+      i_kldhe = n ; n = n+1
+
       allocate(xnmbar(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
       write(f3d(n)%long_name,"('p0*e(-z)/kT*barm')")
       f3d(n)%short_name = ("XNMBAR")
@@ -770,6 +815,13 @@
       f3d(n)%data => hdo1
       i_hdo1 = n ; n = n+1
 !
+      allocate(hdhe(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('HE HORIZONTAL DIFFUSION')")
+      f3d(n)%short_name = "hdhe"
+      f3d(n)%units = " "
+      f3d(n)%data => hdhe
+      i_hdhe = n ; n = n+1
+!
       allocate(ped(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
       write(f3d(n)%long_name,"('PEDERSEN CONDUCTIVITY')")
       f3d(n)%short_name = "ped"
@@ -798,6 +850,26 @@
       f3d(n)%data => zg
       i_zg = n ; n = n+1
 !
+      allocate(n2(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Molecular Nitrogen N2')")
+      f3d(n)%short_name = "N2"
+      f3d(n)%units = "mmr"
+      f3d(n)%data => n2
+      i_n2 = n ; n = n+1
+!
+      allocate(wn(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Neutral Vertical Wind')")
+      f3d(n)%short_name = "WN"
+      f3d(n)%units = "cm"
+      f3d(n)%data => wn
+      i_wn = n ; n = n+1
+!
+! Check number of fields allocated:
+      if (n-1 /= nf3d) then
+        write(6,"(/,'>>> init_3d: wrong number of 3-d fields?',
+     |    ' n-1=',i5,' nf3d=',i5)") n-1,nf3d
+      endif
+!
 ! f3d fields are diagnostics:
       f3d%prognostic = .false.
       f3d%magnetic = .false.
@@ -805,6 +877,11 @@
       f3d%vcoord = 'midpoints'
       do n=1,nf3d
         if (trim(f3d(n)%short_name)=='ZG') f3d(n)%vcoord='interfaces' 
+      enddo
+!
+! Init:
+      do n=1,nf3d
+        f3d(n)%data = field_initval
       enddo
 !
 ! Report to stdout:

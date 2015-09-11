@@ -1,10 +1,13 @@
-!
-      subroutine qjoule_ti(un,vn,w,ui,vi,wi,lam1,op,nplus,
-     |    n2p,nop,o2p,barm,tn,qji_ti,lev0,lev1,lon0,lon1,lat)
+      module qjoule
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
+!
+      contains
+!-----------------------------------------------------------------------
+      subroutine qjoule_ti(un,vn,w,ui,vi,wi,lam1,op,nplus,
+     |    n2p,nop,o2p,barm,tn,qji_ti,lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate ion joule heating for use in ion temperature.
 ! This is called from sub dynamics before settei. Qji_ti output from
@@ -27,7 +30,7 @@
      |  gask,   ! gas konstant 8.314e7 [ergs/K/mol]
      |  rmass_o2 , rmass_o1, rmass_n2,  ! 32,16,28 [g/mol]
      |  rmass_n4s, rmass_no, rmass_op   ! 14,30,16 [g/mol]
-      use addfld_module
+      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -111,8 +114,10 @@
       use cons_module,only:
      |  grav,   ! acceler. due to gravity at lower boundary [cm/s^2]
      |  gask    ! gas konstant 8.314e7 [ergs/K/mol]
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_QJOULE,mkdiag_QJOULE_INTEG
+      use input_module,only: joulefac_input => joulefac
+      use params_module,only: nlat
       implicit none
 !     
 ! Args:
@@ -131,6 +136,22 @@
       integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) ::vel_zonal,vel_merid,
      |  vel_vert,scheight        ! scale height  
+      real :: joulefac
+!
+#if defined(INTERCOMM) || defined(CISMAH)
+!
+! CMIT: When copled to the LFM, the currents are strong
+!       so we need to reduce joulefac from 1.5 to 1.0:
+!
+      joulefac = 1.0 ! joule heating multiplication factor
+#else
+!
+! Assign joulefac from value read from namelist (or its default):
+!
+      joulefac = joulefac_input
+! Apply different joule heating factor in south - G. Lu, 7/25/2015
+!     if (lat < nlat/2) joulefac = 1.5
+#endif
 ! 
 ! scheight: scale height H [cm] to convert omega [1/s] to vertical 
 ! neutral wind [cm/s] on half level	  
@@ -150,6 +171,9 @@
           qji_tn(k,i) = .5*(lam1(k,i)+lam1(k+1,i))*
      |      (vel_zonal(k,i)**2 + vel_merid(k,i)**2 + 
      |       vel_vert(k,i)**2)
+!
+! Apply joule heating factor (formerly in dt.F):
+          qji_tn(k,i) = qji_tn(k,i) * joulefac
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !
@@ -179,3 +203,5 @@
      |  lev0,lev1,lon0,lon1,lat)
 
       end subroutine qjoule_tn
+!-----------------------------------------------------------------------
+      end module qjoule

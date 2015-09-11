@@ -9,8 +9,6 @@
       use cism_coupling_module,only: 
      |     nlat,
      |     nlonp1,
-     |     mytid,
-     |     ntask,
      |     ting_pot_interp,
      |     ting_eng_interp,
      |     ting_flux_interp,
@@ -18,7 +16,7 @@
      |     ting_hall, 
      |     ting_gnsrhs, 
      |     xjd      ! XJD handle
-
+      use mpi_module,only: mytid
 ! ... Local variables ..................................................
       integer status ! InterComm Status flag
 
@@ -27,14 +25,14 @@
 
       ! IC_Create_block_region variables:
       integer iaLower2d(2), iaUpper2d(2), iaStride2d(2), iRegion2d
-
-! ... Begin ............................................................      
-
-      write(*,*) "Initializing TIEGCM InterComm Interface"
-      call IC_Initialize("TIEGCM", mytid, "cmit.xjd", xjd, status)
+! ... Begin ............................................................
+      write(*,"(A,I1,A)") "TIEGCM (", mytid,"): IC_Initialize"
+      call IC_Initialize("tiegcm", mytid, "cmit.xjd", xjd, status)
       call handle_IC_error("cism_intercomm.F::IC_Initialize", status)
 
-      tasks(1) = mytid
+      ! Describe global block data decomposition.
+      ! For TIEGCM, all data should be communicated via process 0
+      tasks(1) = 0
       iaBlocks2d(1,1,1) = 1
       iaBlocks2d(1,2,1) = nlat
       iaBlocks2d(1,1,2) = 1
@@ -55,38 +53,36 @@
       
 
       ! Register the "receive" arrays:
-      call IC_Register_region(
-     $     xjd, iRegion2d, 1, "pot", iDesc2d, ting_pot_interp, status)
+      call IC_Register_region(xjd, iRegion2d, 1, "cpl-itm_potential", 
+     $     iDesc2d, ting_pot_interp, status)
       call handle_IC_error(
      $     "cism_intercomm.F::IC_Register_region(...pot...)", status)
-      call IC_Register_region(
-     $     xjd, iRegion2d, 1, "eng", iDesc2d, ting_eng_interp, status)
+      call IC_Register_region(xjd, iRegion2d, 1, "cpl-itm_energy", 
+     $     iDesc2d, ting_eng_interp, status)
       call handle_IC_error(
      $     "cism_intercomm.F::IC_Register_region(...eng...)", status)
-      call IC_Register_region(
-     $     xjd, iRegion2d, 1, "flux", iDesc2d, ting_flux_interp, status)
+      call IC_Register_region(xjd, iRegion2d, 1, "cpl-itm_flux", 
+     $     iDesc2d, ting_flux_interp, status)
       call handle_IC_error(
      $     "cism_intercomm.F::IC_Register_region(...flux...)", status)
 
       ! Register the "send" arrays:
-      call IC_Register_region(
-     $     xjd, iRegion2d, 1, "ped", iDesc2d, ting_ped, status)
+      call IC_Register_region(xjd, iRegion2d, 1, "itm-cpl_pedersen", 
+     $     iDesc2d, ting_ped, status)
       call handle_IC_error(
      $     "cism_intercomm.F::IC_Register_region(...ped...)", status)
-      call IC_Register_region(
-     $     xjd, iRegion2d, 1, "hall", iDesc2d, ting_hall, status)
+      call IC_Register_region(xjd, iRegion2d, 1, "itm-cpl_hall", 
+     $     iDesc2d, ting_hall, status)
       call handle_IC_error(
      $     "cism_intercomm.F::IC_Register_region(...hall...)", status)
-      call IC_Register_region(
-     $     xjd, iRegion2d, 1, "wfac", iDesc2d, ting_gnsrhs, status)
+      call IC_Register_region(xjd, iRegion2d, 1, "itm-cpl_wfac", 
+     $     iDesc2d, ting_gnsrhs, status)
       call handle_IC_error(
      $     "cism_intercomm.F::IC_Register_region(...wfac...)", status)
 
       ! Commit all the regions:
       call IC_Commit_region(xjd, status)
       call handle_IC_error("cism_intercomm.F::IC_Commit_region", status)
-
-
 
       end subroutine ci_init
 !-----------------------------------------------------------------------
@@ -107,12 +103,15 @@
 ! ... Local Variables ..................................................
       integer status
 ! ... Begin ............................................................
-      call IC_Import(xjd, "pot", status)
-      call handle_IC_error("ITM_demo.F::IC_Import(...pot...)", status)
-      call IC_Import(xjd, "eng", status)
-      call handle_IC_error("ITM_demo.F::IC_Import(...eng...)", status)
-      call IC_Import(xjd, "flux", status)
-      call handle_IC_error("ITM_demo.F::IC_Import(...flux...)", status)
+      call IC_Import(xjd, "cpl-itm_potential", status)
+      call handle_IC_error("cism_intercomm.F::IC_Import(...pot...)", 
+     |     status)
+      call IC_Import(xjd, "cpl-itm_energy", status)
+      call handle_IC_error("cism_intercomm.F::IC_Import(...eng...)", 
+     |     status)
+      call IC_Import(xjd, "cpl-itm_flux", status)
+      call handle_IC_error("cism_intercomm.F::IC_Import(...flux...)",
+     |     status)
 
       end subroutine ci_receive
 !-----------------------------------------------------------------------
@@ -124,12 +123,15 @@
 ! ... Parameter variables ..............................................
       integer, intent(in) :: modeltime(4)      
 ! ... Begin ............................................................
-      call IC_Export(xjd, "ped", status)
-      call handle_IC_error("ITM_demo.F::IC_Export(...ped...)", status)
-      call IC_Export(xjd, "hall", status)
-      call handle_IC_error("ITM_demo.F::IC_Export(...hall...)", status)
-      call IC_Export(xjd, "wfac", status)
-      call handle_IC_error("ITM_demo.F::IC_Export(...wfac...)", status)
+      call IC_Export(xjd, "itm-cpl_pedersen", status)
+      call handle_IC_error("cism_intercomm.F::IC_Export(...ped...)",
+     |     status)
+      call IC_Export(xjd, "itm-cpl_hall", status)
+      call handle_IC_error("cism_intercomm.F::IC_Export(...hall...)",
+     |     status)
+      call IC_Export(xjd, "itm-cpl_wfac", status)
+      call handle_IC_error("cism_intercomm.F::IC_Export(...wfac...)",
+     |     status)
 
       end subroutine ci_send
 !-----------------------------------------------------------------------

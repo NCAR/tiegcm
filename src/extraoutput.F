@@ -12,7 +12,16 @@
 
       implicit none
 
-
+      real, dimension(nlonp4,nlat) ::
+     |  sigp,    ! height integrated pedersen conductivity
+     |  sigh,    ! height integrated hall conductivity
+     |  qwind,   ! joule heating associated with neutral winds
+     |  qamie,   ! joule heating from amie
+     |  wtot,    ! total electromagnetic power
+     |  work,    ! mechanical work
+     |  fwindu,fwindv, ! horizontal current
+     |  famieu,famiev, ! horizontal current from amie
+     |  tec      ! total electron content
 !
 ! Local:
       integer :: j1,i,j,k,lonm,lonp
@@ -71,13 +80,6 @@ C
 CCCCCCCCCCCCCCCCCCC save secondary histories CCCCCCCCCCCCCCCCCCCCC
 !
 ! Add sigmas to secondary histories:
-!     subroutine addfsech(fname,f,idim1,idim2,ndim2,ilat)
-! Field passed to addfsech must have ZIMXP (76) in 1st dimension,
-!   and ZKMXP in 2nd dimension.
-! Since sigma1,2 have zimxp1 (73) in 1st dimension, so transfer
-!   to local arrays sigma1_sech and sigma2_sech w/ periodic points.
-! Since ndim2 < idim2 by 1 (ZKMX < ZKMXP) in this case, addfsech will
-!   pad the top level with spval.
 ! ZIMXP = 76, ZIMXP1 = 72+1 = 73, ZKMX = 28, ZKMXP = ZKMX+1 = 29
 ! From dynamo.h: SIGMA1(ZIMXP1,ZJMX,ZKMX),SIGMA2(ZIMXP1,ZJMX,ZKMX)
 !
@@ -134,7 +136,7 @@ CCCCCCCCCCCCCCCCCCC save secondary histories CCCCCCCCCCCCCCCCCCCCC
         tec_sec(2,j,:) = tec_sec(nlon+2,j,:) ! 74 <- 2
         tec_sec(nlonp1+2,j,:) = tec_sec(3,j,:) ! 75 <- 3
         tec_sec(nlonp1+3,j,:) = tec_sec(4,j,:) ! 76 <- 4
-        call addfld('TEC_3D',' ',' ',tec_sec(1:nlonp4,j,:),
+        call addfld('DEN_TEC',' ',' ',tec_sec(1:nlonp4,j,:),
      |             'lon',1,nlonp4,'lev',1,nlevp1,j)
 
         qjoule_sec(1,j,:) = qjoule_sec(nlon+1,j,:) ! 73 <- 1
@@ -159,7 +161,9 @@ CCCCCCCCCCCCCCCCCCC save secondary histories CCCCCCCCCCCCCCCCCCCCC
 ! advance before the dynamo itself (which is executed by master task only).
 !
       use cons_module,only: gask,grav
+#ifdef MPI
       use dyndiag_module,only: mp_dyndiag_gather
+#endif
 !
 ! Args:  
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1

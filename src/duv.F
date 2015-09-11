@@ -1,7 +1,7 @@
 !
-      subroutine duv(tn,tn_upd,tn_nm,un,vn,un_nm,vn_nm,w_upd,barm,z,
-     |  hdu,hdv,ui,vi,lxx,lyy,lxy,lyx,km,un_upd,unm_upd,vn_upd,vnm_upd,
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine duv(tn,tn_upd,tn_nm,un,vn,un_nm,vn_nm,w_upd,o2,o1,n2,
+     |  barm,z,hdu,hdv,ui,vi,lxx,lyy,lxy,lyx,km,un_upd,unm_upd,vn_upd,
+     |  vnm_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -13,7 +13,8 @@
       use init_module,only: iter,igetgswm,iday
       use lbc,only: u_lbc,v_lbc
       use cons_module,only: dtx2inv,expz,p0,gask,grav,
-     |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,kut
+     |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,kut,
+     |  rmassinv_n2,rmassinv_o2,rmassinv_o1
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
       use addfld_module,only: addfld
 #ifdef MPI
@@ -35,6 +36,9 @@
      |  un_nm,   ! neutral zonal velocity at time n-1
      |  vn_nm,   ! neutral meridional velocity at time n-1
      |  w_upd,   ! updated vertical velocity (swdot.F)
+     |  o2,      ! o2 (for mbar only)
+     |  o1,      ! o1 (for mbar only)
+     |  n2,      ! n2 (for mbar only)
      |  barm,    ! mean molecular weight
      |  z,       ! geopotential height
      |  hdu,     ! horizontal diffusion of U (hdif3 in hdif.F)
@@ -56,7 +60,7 @@
      |  vnm_upd  ! updated meridional velocity at time n-1
 !
 ! Local:
-      integer :: k,i,j,lat,lonbeg,lonend
+      integer :: k,kk,i,j,lat,lonbeg,lonend
       integer :: nk,nkm1,nlevs
       real :: 
      |  unlbc(lon0:lon1), ! un lower boundary (t1)
@@ -73,6 +77,9 @@
      |  vnm_smooth   ! vn at time n-1, smoothed
       real :: flbc(lon0-2:lon1+2,lat0-2:lat1+2,4) ! ulbc,vlbc,ulbc_nm,vlbc_n
       real :: rtxmue(lev0:lev1) ! sqrt(xmue)
+      real,dimension(lev0:lev1,lon0:lon1) ::
+     |  eddyvisc,    ! eddy viscosity (?)
+     |  mbar         ! mean molecular weight (slightly different than barm)
 !
 ! For diagnostic, debug:
       real,dimension(lev0:lev1,lon0:lon1) ::
@@ -235,14 +242,42 @@
      |                      xmue(lev0+1,iday))
         rtxmue(lev1) = sqrt(xmue(lev1-1,iday)**3/
      |                      xmue(lev1-2,iday))
+!
         do i=lon0,lon1
-!         tni(lev0,i) = tn(lev1,i,lat) ! lbc of tn is stored in top slot
+          do k=lev0,lev1-1
+            mbar(k,i) = 1./(o2(k,i,lat)*rmassinv_o2 + 
+     |        o1(k,i,lat)*rmassinv_o1 + n2(k,i,lat)*rmassinv_n2)
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0,lon1
+!
+        do i=lon0,lon1
+          do k=lev0,lev1-1          
+            eddyvisc(k,i) = p0*expz(k)*gask*tn(k,i,lat)*xmue(k,iday)/
+     |                      (mbar(k,i)*grav**2)
+          enddo ! k=lev0+1,lev1-1          
+!
+! Upper boundary:
+          eddyvisc(lev1,i) = sqrt(eddyvisc(lev1-1,i)**3/             ! s3 top
+     |                       eddyvisc(lev1-2,i))
+!            
+! Loop from top down:
+          k = lev1+1
+          do kk=lev0+1,lev1
+            k = k-1 
+            eddyvisc(k,i) = sqrt(eddyvisc(k-1,i)*eddyvisc(k,i))      ! s3
+          enddo ! kk=lev0+1,lev1-1
+!
+! Bottom boundary in tlbc (from t_lbc of lbc.F):
+          eddyvisc(lev0,i) = eddyvisc(lev0,i)**2/eddyvisc(lev0+1,i)  ! s3
+        enddo ! i=lon0,lon1
+!
+        do i=lon0,lon1
           tni(lev0,i) = tlbc_nm(i,lat)    ! Lower boundary is in tlbc_nm
           tni(lev1,i) = tn(lev1-1,i,lat)
-!
+
 ! G = g*KM/(P0*H*Ds**2) = g**2*(kM+XMUE)*MBAR*/(P0*R*T*DS**2)
           do k=lev0,lev1
-            g(k,i) = grav**2*(km(k,i,lat)+rtxmue(k))*barm(k,i,lat)/
+            g(k,i) = grav**2*(km(k,i,lat)+eddyvisc(k,i))*barm(k,i,lat)/
      |        (p0*gask*tni(k,i)*dz**2)
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
@@ -406,10 +441,6 @@
           vlbc_nm(i,lat) = vlbc(i,lat)  ! LB for vn_nm(itc) = vn(itp) 
           ulbc(i,lat) = unlbc(i)        ! LB for un(itc)
           vlbc(i,lat) = vnlbc(i)        ! LB for vn(itc) 
-
-!         write(6,"('duv: i=',i3,' lat=',i3,' unlbc=',e12.4,' vnlbc=',
-!    |      e12.4)") i,lat,unlbc(i),vnlbc(i)
-
         enddo ! i=lonbeg,lonend 
 
 !       call addfld('UNLBC',' ',' ',unlbc_diag,
@@ -429,25 +460,19 @@
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !     call addfld('VNLBC_IJ','VNLBC_IJ','[cm/s]',vnlbc_ij,
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-
-!
-! Set kut for wave filtering according to dlat (2.5 or 5.0):
-!     call set_wave_filter(36,kut_5,nlat,kutt)
 !
 ! Fourier smoothing of U and V:
       call filter_uv(un_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
-     |  lat0,lat1,kut)
+     |  lat0,lat1,kut,'UN')
       call filter_uv(vn_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
-     |  lat0,lat1,kut)
+     |  lat0,lat1,kut,'VN')
 !
 ! Fourth latitude scan:
       do lat=lat0,lat1
-
 !       call addfld('UN_FILT',' ',' ',un_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('VN_FILT',' ',' ',vn_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-
 !
 ! Smooth updated un,vn:
         do i=lon0,lon1 
@@ -462,7 +487,6 @@
           unm_upd(lev1,i,lat) = spval
           vnm_upd(lev1,i,lat) = spval
         enddo ! i=lon0,lon1 
-
 !       call addfld('UN_NMOUT',' ',' ',unm_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('VN_NMOUT',' ',' ',vnm_upd(:,lon0:lon1,lat),
@@ -471,10 +495,6 @@
 ! End fourth latitude scan:
       enddo ! lat=lat0,lat1
 #ifdef MPI
-!
-! Boundary longitudes and periodic points for ulbc:
-!     subroutine mp_bndlats_f2d(f,i0,i1,j0,j1,nf)
-!
 !
 ! Boundary (halo) latitudes:
       flbc(:,:,1) = ulbc(:,:)
@@ -896,12 +916,13 @@
       enddo ! i=lon0,lon1
       end subroutine blktri
 !-----------------------------------------------------------------------
-      subroutine filter_uv(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
+      subroutine filter_uv(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut,name)
 !
 ! Filter updated W omega:
 !
       use params_module,only: nlat,nlonp4,nlon
       use filter_module,only: filter
+      use addfld_module,only: addfld
 #ifdef MPI
       use mpi_module,only: mp_gatherlons_f3d,mp_scatterlons_f3d,mytidi
       implicit none
@@ -913,6 +934,7 @@
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1,kut(nlat)
       real,intent(inout) :: fout(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
+      character(len=*),intent(in) :: name
 !
 ! VT vampir tracing:
 !
@@ -932,7 +954,7 @@
 !
       nlevs = lev1-lev0+1
 !
-! Define lons in w_ki from current task:
+! Save subdomain of current task in fkij:
       fkij = 0.
       do j=lat0,lat1
         do i=lon0,lon1
@@ -946,7 +968,7 @@
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
-      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,name)
 #endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
@@ -973,8 +995,7 @@
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
-      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,
-     |  'uv ')
+      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,name)
 
 !     write(6,"('filter uv after mp_scatterlons: lon0,1=',2i4,' lat0,1='
 !    |  ,2i4,' fkij(:,lon0:lon1,:) min,max=',2e12.4)") lon0,lon1,

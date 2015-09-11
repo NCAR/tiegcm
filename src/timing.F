@@ -34,7 +34,7 @@
      |    step,       ! per step timing (not including i/o)
      |    prep,       ! preparing and concluding a time step 
      |    dynamics,   ! timing for dynamics (dynamics.F)
-     |    dynamo,     ! timing for dynamo
+     |    pdynamo,    ! timing for pdynamo
      |    phist,      ! timing for primary history i/o
      |    shist,      ! timing for secondary history i/o
      |    io,         ! total i/o (phist+shist)
@@ -44,18 +44,20 @@
      |    cmpminor,   ! minor species n2d, n4s, no
      |    cmpmajor,   ! major species o2 and o
      |    dt,         ! time in dt
-     |    duv         ! time in duv
+     |    duv,        ! time in duv
+     |    magpres_grav,
+     |    apxparm
       end type timing_type
       type (timing_type) :: timing
 !
-      integer,parameter :: nsegs = 16
+      integer,parameter :: nsegs = 18
       character(len=16) :: timing_segs(nsegs) =
      |  (/'RUN             ','INIT            ','STEP            ',
-     |    'PREP            ','DYNAMICS        ','DYNAMO          ',
+     |    'PREP            ','DYNAMICS        ','PDYNAMO         ',
      |    'PHIST           ','SHIST           ','IO              ',
      |    'QRJ             ','GW              ','OPLUS           ',
      |    'CMPMINOR        ','CMPMAJOR        ','DT              ',
-     |    'DUV             '/)
+     |    'DUV             ','MAGPRES_GRAV    ','APXPARM         '/)
       contains
 !-----------------------------------------------------------------------
       subroutine init_timer
@@ -86,7 +88,7 @@
       timing%step     = 0.
       timing%prep     = 0.
       timing%dynamics = 0.
-      timing%dynamo   = 0.
+      timing%pdynamo  = 0.
       timing%phist    = 0.
       timing%shist    = 0.
       timing%io       = 0.
@@ -109,7 +111,6 @@
 ! Local:
       real :: esecs 
       integer :: i
-      logical :: found
 !
 ! Use system_clock:
       if (timing%sys) then                  ! using sys timing
@@ -135,53 +136,47 @@
 !
 ! Update module data, if appropriate:
       if (ibegend == 1) then  ! end timing (rtc or sys)
-        found = .false.
-        do i=1,nsegs
-          if (trim(seg) == trim(timing_segs(i))) then
-            found = .true.
-            select case(trim(seg))
-              case('RUN')
-                timing%run = timing%run+esecs
-              case('INIT')
-                timing%init = timing%init+esecs
-              case('STEP')
-                timing%step = timing%step+esecs
-              case('PREP')
-                timing%prep= timing%prep+esecs
-              case('DYNAMICS')
-                timing%dynamics= timing%dynamics+esecs
-              case('QRJ')
-                timing%qrj= timing%qrj+esecs
-              case('GW')
-                timing%gw= timing%gw+esecs
-              case('OPLUS')
-                timing%oplus= timing%oplus+esecs
-              case('CMPMINOR')
-                timing%cmpminor= timing%cmpminor+esecs
-              case('CMPMAJOR')
-                timing%cmpmajor= timing%cmpmajor+esecs
-              case('DT')
-                timing%dt= timing%dt+esecs
-              case('DUV')
-                timing%duv= timing%duv+esecs
-              case('DYNAMO')
-                timing%dynamo= timing%dynamo+esecs
-              case('PHIST')
-                timing%phist= timing%phist+esecs
-                timing%io= timing%io+esecs
-              case('SHIST')
-                timing%shist= timing%shist+esecs
-                timing%io= timing%io+esecs
-              case default
-                write(6,"('>>> timer: unknown segment: ',a)") trim(seg)
-            end select
-            exit ! exit nsegs loop
-          endif  ! known segment
-        enddo ! i=1,nsegs
-!       if (.not.found) write(6,"('timer: unknown segment: ',a)") 
-!    |    trim(seg)
+        select case(trim(seg))
+          case('RUN')
+            timing%run = timing%run+esecs
+          case('INIT')
+            timing%init = timing%init+esecs
+          case('STEP')
+            timing%step = timing%step+esecs
+          case('PREP')
+            timing%prep= timing%prep+esecs
+          case('DYNAMICS')
+            timing%dynamics= timing%dynamics+esecs
+          case('QRJ')
+            timing%qrj= timing%qrj+esecs
+          case('GW')
+            timing%gw= timing%gw+esecs
+          case('OPLUS')
+            timing%oplus= timing%oplus+esecs
+          case('CMPMINOR')
+            timing%cmpminor= timing%cmpminor+esecs
+          case('CMPMAJOR')
+            timing%cmpmajor= timing%cmpmajor+esecs
+          case('DT')
+            timing%dt= timing%dt+esecs
+          case('DUV')
+            timing%duv= timing%duv+esecs
+          case('PDYNAMO')
+            timing%pdynamo= timing%pdynamo+esecs
+          case('PHIST')
+            timing%phist= timing%phist+esecs
+            timing%io= timing%io+esecs
+          case('SHIST')
+            timing%shist= timing%shist+esecs
+            timing%io= timing%io+esecs
+          case('MAGPRES_GRAV')
+            timing%magpres_grav= timing%magpres_grav+esecs
+          case('APXPARM')
+            timing%apxparm= timing%apxparm+esecs
+          case default
+            write(6,"('>>> timer: unknown segment: ',a)") trim(seg)
+        end select
       endif ! end rtc timing
-
       end subroutine timer
 !-----------------------------------------------------------------------
       subroutine start_timing(count_out,string,ibarrier)
@@ -314,20 +309,24 @@
       write(6,"(' ')")
 
       write(6,"('Elapsed init time     = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%',' (includes source i/o)')") 
+     |  f6.3,' hrs, ',f5.1,'%',' (includes source i/o)')") 
      |  timing%init,timing%init/3600.,
      |  (timing%init*100.)/timing%run
 
       write(6,"('Elapsed step time     = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%step,
+     |  f6.3,' hrs, ',f5.1,'%')") timing%step,
      |  timing%step/3600., (timing%step*100.)/timing%run
 
       write(6,"('  Elapsed prep time   = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%prep,
+     |  f6.3,' hrs, ',f5.1,'%')") timing%prep,
      |  timing%prep/3600., (timing%prep*100.)/timing%run
 
+      write(6,"('  Elapsed apxparm time= ',f8.2,' secs, ',
+     |  f6.3,' hrs, ',f5.1,'%')") timing%apxparm,
+     |  timing%apxparm/3600., (timing%apxparm*100.)/timing%apxparm
+
       write(6,"('  Elapsed dynamics    = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%dynamics,
+     |  f6.3,' hrs, ',f5.1,'%')") timing%dynamics,
      |  timing%dynamics/3600., 
      |  (timing%dynamics*100.)/timing%run
 !
@@ -335,57 +334,62 @@
 !
 ! mgw is timegcm only:
 !     write(6,"('    Elapsed mgw       = ',f8.2,' secs, ',
-!    |  f8.3,' hrs, ',f5.1,'%')") timing%gw,
+!    |  f6.3,' hrs, ',f5.1,'%')") timing%gw,
 !    |  timing%gw/3600., 
 !    |  (timing%gw*100.)/timing%run
 
       write(6,"('    Elapsed qrj       = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%qrj,
+     |  f6.3,' hrs, ',f5.1,'%')") timing%qrj,
      |  timing%qrj/3600., 
      |  (timing%qrj*100.)/timing%run
 
       write(6,"('    Elapsed oplus     = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%oplus,
+     |  f6.3,' hrs, ',f5.1,'%')") timing%oplus,
      |  timing%oplus/3600., 
      |  (timing%oplus*100.)/timing%run
 
       write(6,"('    Elapsed cmpminor  = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%',' (n4s,n2d,no)')") 
+     |  f6.3,' hrs, ',f5.1,'%',' (n4s,n2d,no)')") 
      |  timing%cmpminor,timing%cmpminor/3600., 
      |  (timing%cmpminor*100.)/timing%run
 
       write(6,"('    Elapsed cmpmajor  = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%',' (o2, o)')")
+     |  f6.3,' hrs, ',f5.1,'%',' (o2, o, he)')")
      |  timing%cmpmajor,timing%cmpmajor/3600., 
      |  (timing%cmpmajor*100.)/timing%run
 
       write(6,"('    Elapsed dt        = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%dt,timing%dt/3600., 
+     |  f6.3,' hrs, ',f5.1,'%')") timing%dt,timing%dt/3600., 
      |  (timing%dt*100.)/timing%run
 
       write(6,"('    Elapsed duv       = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%duv,timing%duv/3600., 
+     |  f6.3,' hrs, ',f5.1,'%')") timing%duv,timing%duv/3600., 
      |  (timing%duv*100.)/timing%run
 !
 ! Add other reports from dynamics here..
 !
-      write(6,"('  Elapsed dynamo      = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%dynamo,
-     |  timing%dynamo/3600., 
-     |  (timing%dynamo*100.)/timing%run
+      write(6,"('  Elapsed pdynamo     = ',f8.2,' secs, ',
+     |  f6.3,' hrs, ',f5.1,'%')") timing%pdynamo,
+     |  timing%pdynamo/3600., 
+     |  (timing%pdynamo*100.)/timing%run
+ 
+      write(6,"('  Elapsed magpres_grav= ',f8.2,' secs, ',
+     |  f6.3,' hrs, ',f5.1,'%')") timing%magpres_grav,
+     |  timing%magpres_grav/3600., 
+     |  (timing%magpres_grav*100.)/timing%run
 
       write(6,"('Elapsed i/o           = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%io,
+     |  f6.3,' hrs, ',f5.1,'%')") timing%io,
      |  timing%io/3600., 
      |  (timing%io*100.)/timing%run
 
       write(6,"('  Elapsed Primary io  = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%phist,
+     |  f6.3,' hrs, ',f5.1,'%')") timing%phist,
      |  timing%phist/3600., 
      |  (timing%phist*100.)/timing%run
 
       write(6,"('  Elapsed Secondary   = ',f8.2,' secs, ',
-     |  f8.3,' hrs, ',f5.1,'%')") timing%shist,
+     |  f6.3,' hrs, ',f5.1,'%')") timing%shist,
      |  timing%shist/3600., 
      |  (timing%shist*100.)/timing%run
 

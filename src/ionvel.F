@@ -11,10 +11,10 @@
 !
       use params_module,only: nlon,nlonp2,nlonp4
       use cons_module,only: re
-      use efield_module,only: ex,ey,ez ! (nlevp1,lon0-2:lon1+2,lat0:lat1)
+      use pdynamo_module,only: ex,ey,ez ! (nlevp1,lon0-2:lon1+2,lat0:lat1)
 
       use magfield_module,only: rjac,xb,yb,zb,bmod
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_UI,mkdiag_VI,mkdiag_WI
 #ifdef MPI
       use mpi_module,only: mp_periodic_f3d
@@ -59,6 +59,8 @@
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('EZ_IONV',' ',' ',ez(lev0:lev1-1,lon0:lon1,lat),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('Z_IONV',' ',' ',z(lev0:lev1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 ! 
 ! For latitude lat, rotate ex and ey to geographic orientation using 
 !   Jacobian.  Divide by distance from center of earth.
@@ -69,36 +71,14 @@
           do k=lev0,lev1
             eex(k,i) = (rjac(i-2,lat,1,1)*ex(k,i,lat)+
      |                  rjac(i-2,lat,2,1)*ey(k,i,lat))/(re+z(k,i,lat))
-
-!           if (mod(nlat,lat)==6) 
-!    |      write(6,"(/,'ionvel: 'lat=',i2,' k=',i2,' i=',i2,' rjac=',
-!    |        2e12.4,' ex=',e12.4,' ey=',e12.4,' z=',e12.4,' eex=',
-!    |        e12.4)") lat,k,i-2,rjac(i-2,lat,1,1),rjac(i-2,lat,2,1),
-!    |        ex(k,i,lat),ey(k,i,lat),z(k,i,lat),eex(k,i)
-
             eey(k,i) = (rjac(i-2,lat,1,2)*ex(k,i,lat)+
      |                  rjac(i-2,lat,2,2)*ey(k,i,lat))/(re+z(k,i,lat))
-
-!           if (mod(nlat,lat)==6) 
-!    |      write(6,"(/,'ionvel: 'lat=',i2,' k=',i2,' i=',i2,' rjac=',
-!    |        2e12.4,' ex=',e12.4,' ey=',e12.4,' z=',e12.4,' eey=',
-!    |        e12.4)") lat,k,i-2,rjac(i-2,lat,1,1),rjac(i-2,lat,2,1),
-!    |        ex(k,i,lat),ey(k,i,lat),z(k,i,lat),eey(k,i)
-
           enddo ! k=lev0,lev1
         enddo ! i=longeg,lonend
-
-!       call addfld('Z_IONV',' ',' ', z(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
         do i=lonbeg,lonend
           do k=lev0+1,lev1-1
             eez(k,i) = ez(k,i,lat)/(z(k+1,i,lat)-z(k-1,i,lat))
-
-!           write(6,"('ionvel: lat=',i2,' k=',i2,' i=',i2,
-!    |        ' ez(i,lat,k)=',e14.7,' z(k+1)=',e14.7,' z(k-1)=',
-!    |        e14.7)") lat,k,i-2,ez(i,lat,k),z(k+1,i,lat),z(k-1,i,lat)
-
           enddo ! k=lev0+1,lev1-1
         enddo ! i=lonbeg,lonend
 !
@@ -114,7 +94,6 @@
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !        call addfld('EEZ','E_z','V/cm',eez,
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-
 !
 ! ion velocities = (e x b/b**2) (x 1.e6 for m/sec)
 ! ui = zonal, vi = meridional, wi = vertical
@@ -122,19 +101,19 @@
           do i=lonbeg,lonend
             ui(k,i,lat) = -(eey(k,i)*zb(i-2,lat)+eez(k,i)*xb(i-2,lat))*
      |        1.e6/bmod(i-2,lat)**2
-
-! diffs in eez
-!           write(6,"('ionvel: lat=',i2,' k=',i2,' i=',i2,
-!    |        ' eey=',e14.7,' eez=',e14.7)") lat,k,i-2,eey(k,i),eez(k,i)
-!           write(6,"('  xb=',e14.7,' zb=',e14.7)")
-!    |        xb(i-2,lat),zb(i-2,lat)
-!           write(6,"('  bmod=',e14.7,' ui=',e14.7)") 
-!    |        bmod(i-2,lat),ui(k,i,lat)
-
             vi(k,i,lat) =  (eez(k,i)*yb(i-2,lat)+eex(k,i)*zb(i-2,lat))*
      |        1.e6/bmod(i-2,lat)**2
             wi(k,i,lat) =  (eex(k,i)*xb(i-2,lat)-eey(k,i)*yb(i-2,lat))*
      |        1.e6/bmod(i-2,lat)**2
+
+#if defined(INTERCOMM) || defined(CISMAH)
+            ! CMIT modification
+            if (vi(k,i,lat) > 2000.0) vi(k,i,lat) = 2000.0
+            if (ui(k,i,lat) > 2000.0) ui(k,i,lat) = 2000.0
+            if (vi(k,i,lat) < -2000.0) vi(k,i,lat) = -2000.0
+            if (ui(k,i,lat) < -2000.0) ui(k,i,lat) = -2000.0
+#endif
+
           enddo ! i=lon0,lon1
         enddo ! k=lev0,lev1
 !
@@ -172,6 +151,15 @@
         enddo
       enddo
 #endif
+
+! real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+!     write(6,"('end ionvel: ui=',2e12.4,' vi=',2e12.4,' wi=',2e12.4)")
+!    |  minval(ui(:,lon0:lon1,lat0:lat1)),
+!    |  maxval(ui(:,lon0:lon1,lat0:lat1)),
+!    |  minval(vi(:,lon0:lon1,lat0:lat1)),
+!    |  maxval(vi(:,lon0:lon1,lat0:lat1)),
+!    |  minval(wi(:,lon0:lon1,lat0:lat1)),
+!    |  maxval(wi(:,lon0:lon1,lat0:lat1))
 !
 ! Save ion drifts if requested:
       call mkdiag_UI('UI_ExB',ui(:,lon0:lon1,lat0:lat1),

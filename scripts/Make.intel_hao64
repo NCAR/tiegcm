@@ -16,6 +16,7 @@ MPIRUN   = /opt/local/intel2011/impi/4.0.1.007/intel64/bin/mpirun -l
 FFLAGS   = -r8 -heap-arrays
 DBGFLAGS = -debug full -traceback 
 DBGFLAGS += -check bounds -check format -check output_conversion -check pointers -check uninit
+DBGFLAGS += -fpe-all=0 # this traps all floating point exceptions
 #
 # Makefile will use OPTIM = -g if set debug=TRUE in job script.
 OPTIM    = -O3
@@ -26,6 +27,9 @@ HOST     = $(shell hostname)
 #
 LIB_NETCDF = /home/tgcm/intel/netcdf-4.1.1/lib
 INC_NETCDF = /home/tgcm/intel/netcdf-4.1.1/include
+#
+# ESMF 5.2.0r beta snapshot:
+LIB_ESMF = /home/tgcm/esmf/ESMF_5_2_0rp1_beta_snapshot_21/lib/libO/Linux.intel.64.intelmpi.hao
 #
 # Make machines.ini file for MPI execution: 
 #

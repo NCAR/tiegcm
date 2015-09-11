@@ -188,10 +188,12 @@
 !-----------------------------------------------------------------------
       subroutine rdimf(istep)
       use nchist_module,only: handle_ncerr
+      use input_module,only: mxlen_filename
 !
 ! Local:
       integer :: istat,ncid,istep
-      character(len=240) :: char240,dskfile
+      character(len=240) :: char240
+      character(len=mxlen_filename) :: dskfile
       integer :: id_ndata,id_ndays,idv_date,idv_uttime,idv_yfrac,
      |  idv_bx,idv_by,idv_bz,idv_swvel,idv_swden,idv_kp,
      |  idv_f107d,idv_f107a,idv_missing,idv_days

@@ -24,6 +24,9 @@ HOST     = $(shell hostname)
 #LIB_NETCDF = /home/tgcm/netcdf-4.1.1/lib
 #INC_NETCDF = /home/tgcm/netcdf-4.1.1/include
 #
+# ESMF 6.3.0r for PGI compiler (this is not working yet, as of 3/27/14):
+LIB_ESMF = /home/tgcm/esmf/pgi-9.04/lib/libO/Linux.pgi.64.mpich.default
+#
 # Make machines.ini file for MPI execution: 
 #
 prereq: machines.ini mpirun.command

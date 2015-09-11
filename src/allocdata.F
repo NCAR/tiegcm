@@ -15,10 +15,12 @@
       use mpi_module,only: lon0,lon1,lat0,lat1,mytid
       use chemrates_module,only: alloc_tdep
       use qrj_module,only: alloc_q
-      use efield_module,only: alloc_e
       use n4s_module,only: alloc_n4s
       use no_module,only: alloc_no
-      use magpres_g_module,only: alloc_pg
+      use ar_module,only: alloc_ar
+      use magpres_g,only: alloc_pg
+      use gswm_module,only: alloc_gswm
+      use pdynamo_module,only: alloc_pdyn
       implicit none
 !
 ! Local:
@@ -33,13 +35,17 @@
 ! Allocate J(mag.pressure,gravity (magpres_g module):
       call alloc_pg(lon0,lon1,lat0,lat1)
 !
-! Allocate electric field (efield module):
-      call alloc_e(lon0,lon1,lat0,lat1)
-!
 ! Allocate boundary conditions and production and loss terms
 ! for minor composition species:
       call alloc_n4s(lon0,lon1,lat0,lat1)
       call alloc_no (lon0,lon1,lat0,lat1)
+      call alloc_ar (lon0,lon1,lat0,lat1)
+!
+! Allocate for gswm:
+      call alloc_gswm(lon0,lon1,lat0,lat1)
+!
+! Allocate needed fields for parallel dynamo (pdynamo.F):
+      call alloc_pdyn
 !
 ! We are not doing parallel i/o to netcdf output histories, so when
 ! it comes time to write a history, the task subdomains are gathered
@@ -63,7 +69,7 @@
           write(6,"('Allocated 3d data for all fields on root task:')")
           len = nlevp1*nlonp4*nlat*nf4d
           write(6,"('  nlevp1*nlonp4*nlat*nf4d = ',i3,'*',i3,'*',
-     |      i3,'*',i3,' = ',i8,' words *8 = ',i8,' bytes.')")
+     |      i3,'*',i3,' = ',i10,' words *8 = ',i12,' bytes.')")
      |      nlevp1,nlonp4,nlat,nf4d,len,len*8
         endif
       endif
@@ -85,7 +91,7 @@
         write(6,"('Allocated 3d data for all fields on root task:')")
         len = nlevp1*nlonp4*nlat*nf4d
         write(6,"('  nlevp1*nlonp4*nlat*nf4d = ',i3,'*',i3,'*',
-     |    i3,'*',i3,' = ',i8,' words *8 = ',i8,' bytes.')")
+     |    i3,'*',i3,' = ',i10,' words *8 = ',i12,' bytes.')")
      |    nlevp1,nlonp4,nlat,nf4d,len,len*8
       endif
       allocate(fzg(nlevp1,nlonp4,nlat),stat=istat)

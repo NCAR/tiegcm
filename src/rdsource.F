@@ -7,15 +7,21 @@
 !
 ! Read source history.
 !
+      use params_module,only: nlon,nlonp2,nlonp4,nlevp1,nlat
       use input_module,only: source,source_start,output,start,
-     |  f107,f107a,power,ctpoten,dynamo
+     |  f107,f107a,power
       use hist_module,only: nsource,nhist,ioutfile,ncid,iprint,h
-      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
+      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm,
+     |  he,he_nm,field_initval,ar,ar_nm
+      use ar_module,only: ar_glbm
+      use mpi_module,only: lat0,lat1,lon0,lon1
+      use pdynamo_module,only: define_phim3d
+      use lbc,only: pshelb
 #ifdef MPI
-      use mpi_module,only: mp_periodic_f4d,mp_dynpot,lat0,lat1,lon0,
-     |  lon1,mp_periodic_f2d
+      use mpi_module,only: mp_periodic_f4d,mp_periodic_f2d,
+     |  mp_bndlons_f2d,mp_bndlats_f2d
 #endif
-      use fields_module,only: itp,poten,un,f4d
+      use fields_module,only: itp,un,f4d,nf4d_hist
       implicit none
 !
 ! Arg:
@@ -54,20 +60,6 @@
         ier = 1
         return
       endif
-
-!     do j=lat0,lat1
-!       do i=lon0,lon1
-!         write(6,"('after rdsource: itp=',i3,' lat=',i3,
-!    |      ' (lat0,1=',2i3,') i=',i3,' (lon0,1=',2i3,') un(:,i)=',
-!    |      /,(6e12.4))") itp,j,lat0,lat1,i,lon0,lon1,un(:,i,j,itp)
-
-!         write(6,"('after rdsource: itp=',i3,' lat=',i3,
-!    |      ' (lat0,1=',2i3,') i=',i3,' (lon0,1=',2i3,') f4d(2)%data=',
-!    |      /,(6e12.4))") itp,j,lat0,lat1,i,lon0,lon1,
-!    |      f4d(2)%data(:,i,j,itp)
-!       enddo ! i=lon0,lon1
-!     enddo ! j=lat0,lat1
-
 !
 ! Do mpi periodic points exchange for f4d(:) 
 ! Moved here from sub nc_rdhist because mpi necessary when f4d data
@@ -81,8 +73,37 @@
 ! These are dimensioned (lond0:lond1,latd0:latd1) (see fields.F):
 ! real :: flbc(lon0:lon1,lat0:lat1,6)
 !
-! There are calls to mp_bndlons_f2d and mp_bndlats_f2d here in
-! timegcm, before the mp_periodic_f2d call.
+      flbc_2(:,:,1) = tlbc(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,2) = ulbc(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,3) = vlbc(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,4) = tlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,5) = ulbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,6) = vlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
+
+      call mp_bndlons_f2d(flbc_2,lon0,lon1,lat0,lat1,6)
+
+      tlbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,1)
+      ulbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,2)
+      vlbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,3)
+      tlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,4)
+      ulbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,5)
+      vlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,6)
+!    
+      flbc_2(:,:,1) = tlbc(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,2) = ulbc(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,3) = vlbc(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,4) = tlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,5) = ulbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,6) = vlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
+
+      call mp_bndlats_f2d(flbc_2,lon0,lon1,lat0,lat1,6)
+
+      tlbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,1)
+      ulbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,2)
+      vlbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,3)
+      tlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,4)
+      ulbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,5)
+      vlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,6)
 !
       flbc(:,:,1) = tlbc(lon0:lon1,lat0:lat1)
       flbc(:,:,2) = ulbc(lon0:lon1,lat0:lat1)
@@ -100,50 +121,46 @@
       ulbc_nm(lon0:lon1,lat0:lat1) = flbc(:,:,5)
       vlbc_nm(lon0:lon1,lat0:lat1) = flbc(:,:,6)
 !
-! Define dynpot(nlonp1,0:nlatp1,nlevp1) from electric potential
-! subdomains, which were read from source history. Do this only
-! if dynamo input flag is set:
-!
-      if (dynamo > 0) then
-        call mp_dynpot(itp)
-      else
-        poten(:,:,:,itp) = 0. ! zero out electric potential
-      endif
+      call define_phim3d(itp)
 #else
-      call set_periodic_f4d(itp)      
-!
-! Set_dynpot for non-mpi runs:
-      call set_dynpot(itp)
+      do lat=lat0,lat1
+        do i=1,2
+          ulbc(i,lat)        = ulbc(nlon+i,lat)
+          ulbc(nlonp2+i,lat) = ulbc(i+2,lat)
+          vlbc(i,lat)        = vlbc(nlon+i,lat)
+          vlbc(nlonp2+i,lat) = vlbc(i+2,lat)
+          ulbc_nm(i,lat)        = ulbc_nm(nlon+i,lat)
+          ulbc_nm(nlonp2+i,lat) = ulbc_nm(i+2,lat)
+          vlbc_nm(i,lat)        = vlbc_nm(nlon+i,lat)
+          vlbc_nm(nlonp2+i,lat) = vlbc_nm(i+2,lat)
+        enddo
+      enddo
+      call set_periodic_f4d(itp)
 #endif
 !
-! Update gpi vars:
-!     f107  = h%f107d
-!     f107a = h%f107a
-!     power = h%hpower
-!     ctpoten = h%ctpoten
+! If argon was not read from the source history, then set it to
+! column global means (see ar_glbm(nlevp1) in comp_ar.F).
 !
-! Debug lat min,max:
-!     write(6,"('readsource: call fgmnmx after reading netcdf',
-!    |  ' source: ixtimep=',i2)") ixtimep
-!     do j=1,nlat
-!       call fgmnmx(0,'DUM',1,ndisk,j,ixtimep)
-!     enddo
+      if (all(ar==field_initval)) then
+        write(6,"('readsource: Argon apparently not read from source',
+     |    ' history. Will init AR and AR_NM to ar_glb')")
+        do k=1,nlevp1
+          ar   (k,:,:,:) = ar_glbm(k)
+          ar_nm(k,:,:,:) = ar_glbm(k)
+        enddo
+      endif
 !
-! Debug 3d min,max:
-!     write(6,"('readsource: call fminmaxspv after reading netcdf',
-!    |  ' source: ixtimep=',i2)") ixtimep
-!     do i=1,ndisk
-!       fmin = 1.e36
-!       fmax = -1.e36
-!       do j=1,nlat
-!         call fminmaxspv(fg(1,ndexa(i+1)+1,j,ixtimep),zimxp*zkmxp,
-!    |      fminj,fmaxj,spval)
-!         if (fminj < fmin) fmin = fminj    
-!         if (fmaxj > fmax) fmax = fmaxj    
-!       enddo
-!       write(6,"('readsource: Read field ',a,' 3d min,max = ',
-!    |    2e12.4)") nflds_lab(i),fmin,fmax
-!     enddo
+! If helium was not read from history, then set it to pshelb globally.
+! (pshelb is a constant set in lbc.F). Helium is a 4d prognostic, which
+! was initialized to field_initval (probably zero) by sub init_4d (fields.F)
+!
+      if (all(he==field_initval)) then
+        write(6,"('readsource: Helium apparently not read from source',
+     |    ' history. Will init HE and HE_NM to pshelb=',e12.4)") pshelb
+        he = pshelb    ! whole-array op
+        he_nm = pshelb ! whole-array op
+      endif 
+!
       end subroutine readsource
 !-------------------------------------------------------------------
       subroutine rdsource(filepath,mtime,ncid,nthist,
@@ -228,29 +245,3 @@
       enddo
       end subroutine set_periodic_f4d
 !-----------------------------------------------------------------------
-      subroutine set_dynpot(itx)
-!
-! This is called for non-MPI runs only:
-! Define dynpot(nlonp1,0:nlatp1,nlevp1)  (3d electric potential geographic)
-!   from 4d field poten(levd0:levd1,lond0:lond1,latd0:latd1,2) that has
-!   been read from source history.
-!
-      use params_module,only: nlat,nlonp1,nlevp1
-      use fields_module,only: poten,dynpot
-      implicit none
-      integer,intent(in) :: itx
-!
-! Local: 
-      integer :: k,i,j
-!
-      do j=1,nlat
-!
-! 8/13/07 btf: changed nlonp4 to nlonp1 for dynpot lon dimension
-        do i=1,nlonp1 
-          do k=1,nlevp1
-            dynpot(i,j,k) = poten(k,i,j,itx) 
-          enddo ! k=1,nlevp1
-        enddo ! i=1,nlonp1 
-      enddo ! j=1,nlat
-
-      end subroutine set_dynpot

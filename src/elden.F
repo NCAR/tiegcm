@@ -1,6 +1,6 @@
 !
-      subroutine elden(tn,barm,op,op_upd,o2,o1,n2d,no,n4s,xiop2p,xiop2d,
-     |  z,nplus,n2p,nop,o2p,electrons,lev0,lev1,lon0,lon1,lat)
+      subroutine elden(tn,barm,op,op_upd,o2,o1,n2,n2d,no,n4s,xiop2p,
+     |  xiop2d,z,nplus,n2p,nop,o2p,electrons,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -14,8 +14,7 @@
       use chemrates_module,only: rk1,rk2,rk3,rk4,rk5,rk6,rk7,rk8,
      |  rk9,rk10,rk16,rk23,rk26,beta9,ra1,ra2,ra3
       use qrj_module,only: qnp,qnop,qo2p,qn2p
-      use dyndiag_module,only: tec_sec,tec
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_TEC,mkdiag_HNMF2
       implicit none
 !
@@ -30,6 +29,7 @@
      |  op_upd,! O+ ion (updated, from sub oplus)
      |  o2,    ! molecular oxygen (mmr)
      |  o1,    ! atomic oxygen (mmr)
+     |  n2,    ! molecular nitrogen (mmr)
      |  n2d,   ! n2d
      |  no,    ! nitric oxide
      |  n4s,   ! n4s
@@ -51,8 +51,9 @@
      |  xnmbarm,        ! for conversion from mmr to cm3
      |  a0,a1,a2,a3,a4, ! coefficients for quartic solver
      |  a,b,c,d,e,fg,h, ! terms for quartic coefficients
-     |  xn2,            ! n2 (mmr) (1-o2-o)
      |  root            ! output from quartic solver
+      real,dimension(lon0:lon1) ::
+     |  tec		! diagnostic total electron content
 
 !     write(6,"('enter elden: lat=',i2)") lat
       i0 = lon0 ; i1 = lon1
@@ -84,7 +85,6 @@
         do k=lev0,lev1-1
           xnmbarm(k,i) = p0*expz(k)*.5*(barm(k,i)+barm(k+1,i))/
      |      (boltz*tn(k,i))
-          xn2(k,i) = (1.-o2(k,i)-o1(k,i)) ! n2 (mmr)
 !
 ! N+ ion (output):
           nplus(k,i) = (0.5*(qnp(k,i,lat)+qnp(k+1,i,lat))+
@@ -97,7 +97,7 @@
 ! A = QI(NO+)+K2*N(O+)*N(N2)+K7*N(N+)*N(02)+B9*N(NO) (s10)
 !
           a(k,i) = .5*(qnop(k,i,lat)+qnop(k+1,i,lat))+xnmbarm(k,i)*
-     |      (rk2(k,i,lat)*op_upd(k,i)*xn2(k,i)*rmassinv_n2+
+     |      (rk2(k,i,lat)*op_upd(k,i)*n2(k,i)*rmassinv_n2+
      |       rk7*nplus(k,i)*o2(k,i)*rmassinv_o2+
      |       .5*(beta9(k,i,lat)+beta9(k+1,i,lat))*no(k,i)*rmassinv_no)
 !
@@ -116,7 +116,7 @@
 ! D = QI(N2+) (s7)
 !
           d(k,i) = .5*(qn2p(k,i,lat)+qn2p(k+1,i,lat))+(rk16*xiop2p(k,i)+
-     |      rk23*xiop2d(k,i))*xn2(k,i)*rmassinv_n2
+     |      rk23*xiop2d(k,i))*n2(k,i)*rmassinv_n2
 !
 ! E =K3*N(O)+K9*N(O2) (s6)
 !
@@ -196,12 +196,12 @@
 !                     parameter al in qinite.F
 !
 ! Insure positive Ne (at least 3100):
-!     where(root < 3.1e3) root = 3.1e3
-!      do i=lon0,lon1
-!        do k=lev0,lev1-1
-!          if (root(k,i) < 3.1e3) root(k,i) = 3.1e3
-!        enddo 
-!      enddo
+      where(root < 3.1e3) root = 3.1e3
+       do i=lon0,lon1
+         do k=lev0,lev1-1
+           if (root(k,i) < 3.1e3) root(k,i) = 3.1e3
+         enddo 
+       enddo
 !
 ! Calculate N2+, O2+, NO+ (cm3)
 !
@@ -224,46 +224,25 @@
 !
 !     call addfld('NPLUSb' ,' ',' ',nplus(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',i0,i1,lat)
-!     call addfld('N2P_ELD',' ',' ',n2p  (:,i0:i1),
-!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
-!     call addfld('O2P_ELD',' ',' ',o2p  (:,i0:i1),
-!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
-!     call addfld('NOP_ELD',' ',' ',nop  (:,i0:i1),
-!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
+      call addfld('N2P_ELD',' ',' ',n2p  (:,i0:i1),
+     |  'lev',lev0,lev1,'lon',i0,i1,lat)
+      call addfld('O2P_ELD',' ',' ',o2p  (:,i0:i1),
+     |  'lev',lev0,lev1,'lon',i0,i1,lat)
+      call addfld('NOP_ELD',' ',' ',nop  (:,i0:i1),
+     |  'lev',lev0,lev1,'lon',i0,i1,lat)
 !
 ! Transfer root to electrons output array:
       do i=lon0,lon1
         do k=lev0,lev1-2
           electrons(k+1,i) = sqrt(root(k,i)*root(k+1,i))
-! Set up the low limit for electron density - G. Lu 5/11/2009
-!         if (electrons(k+1,i) < 5.e2) then
-!           write(6,"('ELDEN: low Ne ',e7.2,'i=',i3,' at k=',i3)")
-!    |         electrons(k+1,i),i,k+1
-!           electrons(k+1,i) = 5.e2
-!         endif
         enddo ! k=lev0,lev1-2
 !
 ! Lower and upper boundaries:
         electrons(lev0,i) = sqrt(root(lev0  ,i)**3/root(lev0+1,i))
         electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
-! Set up the low limit for electron density - G. Lu 5/11/2009
-!       if (electrons(lev0,i) < 5.e2) electrons(lev0,i) = 5.e2
-!       if (electrons(lev1,i) < 5.e2) electrons(lev1,i) = 5.e2
       enddo ! i=lon0,lon1
-!
-! 4/23/09 btf: amie mods as per Gang:
-C  Get ht integral of electron density and save in tec of /sight/
-      tec(:,lat) = 0.
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          tec_sec(i,lat,k) = electrons(k,i)
-          tec(i,lat) = tec(i,lat) +(z(k+1,i)-z(k,i))*electrons(k,i)
-        enddo
-        tec_sec(i,lat,nlevp1) = tec(i,lat)
-      enddo
-
-!     call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
-!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
+      call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
+     |  'lev',lev0,lev1,'lon',i0,i1,lat)
 !
 ! Save diagnostic tec (total electron content):
       call mkdiag_TEC('TEC',tec,z,electrons,lev0,lev1,lon0,lon1,lat)
@@ -271,6 +250,7 @@ C  Get ht integral of electron density and save in tec of /sight/
 ! Save diagnostics hmf2, nmf2:
       call mkdiag_HNMF2('HMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
       call mkdiag_HNMF2('NMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
+      call mkdiag_HNMF2('FOF2',z,electrons,lev0,lev1,lon0,lon1,lat)
 
       end subroutine elden
 !-----------------------------------------------------------------------

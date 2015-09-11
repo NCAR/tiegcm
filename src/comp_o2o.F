@@ -1,5 +1,5 @@
 !
-      subroutine comp_o2o(tn,o2,o1,barm,op,no,n4s,n2d,o2p,ne,
+      subroutine comp_o2o(tn,o2,o1,n2,he,barm,op,no,n4s,n2d,o2p,ne,
      |  n2p,nplus,nop,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -8,8 +8,9 @@
 !
 ! Calculates fs array which gives sources and sinks for comp (o2,o). 
 !
-      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,p0,
-     |  expz,boltz,rmass_no,rmass_n4s,rmass_n2d,rmass_o2,rmass_o1
+      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,
+     |  rmassinv_he,p0,expz,boltz,rmass_no,rmass_n4s,rmass_n2d,rmass_o2,
+     |  rmass_o1
       use qrj_module,only: rj,qo2p,qop
       use chemrates_module,only: rk4,rk5,rk6,rk7,rk8,rk9,rk10,beta2,
      |  beta6,ra1,ra2,beta3,beta8,rk1,beta1,rkm12,rk3,fs
@@ -24,6 +25,8 @@
      |  tn,    ! neutral temperature (deg K) 
      |  o2,    ! O2 (mmr)
      |  o1,    ! O1 (mmr)
+     |  n2,    ! N2 (mmr)
+     |  he,    ! He (mmr)
      |  barm,  ! mean molecular weight
      |  op,    ! O+
      |  no,    ! nitric oxide
@@ -48,6 +51,39 @@
      |  lo21,lo22       ! O2 loss terms
 !
       nk = lev1-lev0+1
+
+!     call addfld('TN_O2O',' ',' ',tn(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('O2_O2O',' ',' ',o2(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('O1_O2O',' ',' ',o1(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('N2_O2O',' ',' ',n2(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('HE_O2O',' ',' ',he(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('BARM_O2O',' ',' ',barm(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('OP_O2O',' ',' ',op(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('NO_O2O',' ',' ',no(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('N4S_O2O',' ',' ',n4s(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('N2D_O2O',' ',' ',n2d(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('O2P_O2O',' ',' ',o2p(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('NE_O2O',' ',' ',ne(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!
+! Diffs with r1014 in N2P, NPLUS, NOP (see elden.F)
+!     call addfld('N2P_O2O',' ',' ',n2p(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
+!     call addfld('NPLUS_O2O',' ',' ',nplus(:,lon0:lon1),'lev',lev0,lev1
+!    |  ,'lon',lon0,lon1,lat)
+!     call addfld('NOP_O2O',' ',' ',nop(:,lon0:lon1),'lev',lev0,lev1,
+!    |  'lon',lon0,lon1,lat)
 !
 ! Loop over subdomain at current latitude:
       do i=lon0,lon1
@@ -60,7 +96,7 @@
 !
 ! n*mbar (k+1/2):
           xnmbar(k,i) = expz(k)*p0/(boltz*tn(k,i)*(o2(k,i)*rmassinv_o2+
-     |      o1(k,i)*rmassinv_o1+(1.-o2(k,i)-o1(k,i))*rmassinv_n2))
+     |     o1(k,i)*rmassinv_o1+he(k,i)*rmassinv_he+n2(k,i)*rmassinv_n2))
 !
 ! OX production:
 ! s1
@@ -107,6 +143,13 @@
      |      xnmbar(k,i)
           fs(i,k,1,0,lat) = (po23(k,i)-lo22(k,i))*rmass_o2/xnmbar(k,i)
           fs(i,k,2,0,lat) = (pox1(k,i)-lox3(k,i))*rmass_o1/xnmbar(k,i)
+! Helium prod/loss set to zero for now
+          fs(i,k,3,0,lat) = 0.
+          fs(i,k,1,3,lat) = 0.
+          fs(i,k,2,3,lat) = 0.
+          fs(i,k,3,1,lat) = 0.
+          fs(i,k,3,2,lat) = 0.
+          fs(i,k,3,3,lat) = 0.
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 

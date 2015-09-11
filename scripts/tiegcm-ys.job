@@ -30,8 +30,8 @@
 #   From intel to pgi: type "module switch intel pgi", and use Make.pgi_ys below
 #   From pgi to intel: type "module switch pgi intel", and use Make.intel_ys below
 #
- set modeldir = tiegcm_amie
- set execdir  = /glade/p/work/$user/tiegcm_amie/tiegcm_amie-ys
+ set modeldir = tiegcm_trunk
+ set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm-ys
 #set input    = tiegcm.inp
  set output   = tiegcm.out
  set modelres = 5.0
@@ -58,7 +58,7 @@ cat << EOF >! $runscript
 #
 #BSUB -J tiegcm
 #BSUB -P P28100036
-#BSUB -q regular
+#BSUB -q premium
 #BSUB -o tiegcm.%J.out
 #BSUB -e tiegcm.%J.out
 #BSUB -N
@@ -67,11 +67,15 @@ cat << EOF >! $runscript
 #
 # Recommended for single-res (5.0 deg) tiegcm:
 # -n16,ptile=16 (1 node, 16 procs/node)
+# For 5.0-deg res, STEP= 60, nproc=16, allow 2.0 mins per simulated day (0.08 secs/step)
+# For 5.0-deg res, STEP=120, nproc=16, allow 1.0 mins per simulated day (0.08 secs/step)
 #BSUB -n 16
 #BSUB -R "span[ptile=16]"
 #
 # Recommended for double-res (2.5 deg) tiegcm: 
 # -n64,ptile=16 (4 nodes, 16 procs/node)
+# For 2.5-deg res, STEP= 30, nproc=64, allow 8.5 mins per simulated day (0.17 secs/step)
+# For 2.5-deg res, STEP= 60, nproc=64, allow 4.5 mins per simulated day (0.17 secs/step)
 ##BSUB -n 64
 ##BSUB -R "span[ptile=16]"
 #
@@ -81,6 +85,10 @@ EOF
 #                               End user settings
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Update ESMF module on ys as of 4/14/14:
+ set lib_esmf = esmf-6.3.0r-ncdfio-mpi-O
+ module load esmf $lib_esmf
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"
@@ -96,12 +104,9 @@ if (! -d $modeldir) then
   echo ">>> Cannot find model directory $modeldir <<<"
   exit 1
 endif
-set model = $modeldir:t
-
-if ($model == '') then
-  echo "Please remove trailing slash from modeldir $modeldir"
-  exit
-endif
+#
+# Executable file name:
+set model = tiegcm.exe
 
 if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 

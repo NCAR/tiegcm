@@ -1,5 +1,5 @@
 !
-      subroutine dt(tn,tn_nm,un,vn,o2,o1,barm,cp,kt,km,hdt,qji_tn,
+      subroutine dt(tn,tn_nm,un,vn,o2,o1,n2,barm,cp,kt,km,hdt,qji_tn,
      |  cool_imp,cool_exp,w_upd,tn_upd,tn_nm_upd,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -16,7 +16,6 @@
       use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
      |  gask,expzmid,expzmid_inv,dift,dtsmooth,dtsmooth_div2,kut
-!     use bndry_module,only: tb,tb2,bnd,bnd2,ci,lbc_gswm_dt
       use lbc,only: t_lbc
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
@@ -39,6 +38,7 @@
      |  vn,    ! neutral zonal velocity (cm/sec)
      |  o2,    ! molecular oxygen (mmr)
      |  o1,    ! atomic oxygen (mmr)
+     |  n2,    ! molecular nitrogen (mmr)
      |  barm,  ! mean molecular weight
      |  cp,    ! specific heat (ergs/deg/gm)           (sub cpktkm)
      |  kt,    ! molecular diffusion (ergs/cm/deg/sec) (sub cpktkm)
@@ -54,7 +54,6 @@
      |  tn_nm_upd ! updated tn at time n-1 (output)
 !
 ! Local:
-      real,parameter :: joulefac = 1.5 ! joule heating multiplication factor
       integer :: k,i,lonbeg,lonend,lat
       integer :: nk,nkm1,nlevs
       complex :: expt,expt2
@@ -77,7 +76,7 @@
      |  p, q, r,    ! coefficients for tridiagonal solver
      |  rhs,        ! right hand side of trsolv
      |  qpart,      ! part of q coeff
-     |  tnlbc_diag  ! tnlbc redundant in vertical
+     |  tnlbc_diag  ! tnlbc_diag is redundant in vertical
 !
 ! Local at 3d (tnsmooth needs lat dimension only for sub smooth):
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
@@ -134,15 +133,11 @@
         do k=lev0,lev1-1
           cptn(k,i) = .5*(cp(k,i,lat)+cp(k+1,i,lat))*expz(k)*
      |      (advec_tn(k,i,lat)-dtx2inv*tnsmooth(k,i,lat))
-!         mbar(k,i) = 1./(o2(k+1,i,lat)*rmassinv_o2 + 
-!    |      o1(k+1,i,lat)*rmassinv_o1+(1.-o2(k+1,i,lat)-o1(k+1,i,lat))*
-!    |      rmassinv_n2)
 !
 ! 2/28/05 btf: Use k rather than k+1 in mbar calculation
 !              (as in recent versions of time-gcm, e.g., timegcm1.2)
           mbar(k,i) = 1./(o2(k,i,lat)*rmassinv_o2 +
-     |      o1(k,i,lat)*rmassinv_o1+(1.-o2(k,i,lat)-o1(k,i,lat))*
-     |      rmassinv_n2)
+     |      o1(k,i,lat)*rmassinv_o1 + n2(k,i,lat)*rmassinv_n2)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -173,11 +168,13 @@
      |      rmassinv_o1)**2*avo/mbar(k,i)
 !
 ! Add ion joule heating (from sub qjoule_tn, qjoule.F)
-	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)*joulefac
+! (Note joulefac was applied in sub qji_tn)
+!
+	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-      call addfld('HEATING1',' ',' ',total_heat(lev0:lev1-1,:),
-     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('HEATING1',' ',' ',total_heat(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Add heating due to molecular diffusion:
 ! du/dz and dv/dz (s10, s11):
@@ -186,14 +183,6 @@
           dudz(k,i) = (un(k+1,i,lat)-un(k-1,i,lat))/(2.*dz)  ! s10
           dvdz(k,i) = (vn(k+1,i,lat)-vn(k-1,i,lat))/(2.*dz)  ! s11
         enddo ! k=lev0+1,lev1-2
-!
-! Lower boundary:
-! (recall that level lev1 contains values of u and v at bottom boundary,
-!  i.e., bottom boundary is in top slot)
-!       dudz(1,i) = (un(1,i,lat)+1./3.*un(2,i,lat)-4./3.*
-!    |    un(lev1,i,lat))/dz
-!       dvdz(1,i) = (vn(1,i,lat)+1./3.*vn(2,i,lat)-4./3.*
-!    |    vn(lev1,i,lat))/dz
 !
 ! Lower boundary is in ulbc,vlbc: 
         dudz(1,i) = (un(1,i,lat)+1./3.*un(2,i,lat)-4./3.*
@@ -244,14 +233,12 @@
         enddo ! k=lev0+1,lev1-1
 !
 ! Boundaries:
-!       tni(lev0,i) = tn(lev1,i,lat)      ! bottom boundary is in top slot
-
         tni(lev0,i) = tlbc(i,lat)         ! Lower boundary is in tlbc = tn(itp)
         tni(lev1,i) = tn(lev1-1,i,lat)
         h(lev0,i) = gask*tni(lev0,i)/barm(lev0,i,lat)
         h(lev1,i) = gask*tni(lev1,i)/barm(lev1,i,lat)
         rho(lev0,i) = p0*expzmid_inv*expz(lev0)/h(lev0,i)
-        rho(lev1,i) = p0*expzmid*expz(lev1-1)/h(lev1,i)
+        rho(lev1,i) = p0*expzmid_inv*expz(lev1-1)/h(lev1,i)
         h(lev0,i) = h(lev0,i)/grav
         h(lev1,i) = h(lev1,i)/grav
 !
@@ -361,9 +348,6 @@
 ! End second latitude scan:
       enddo ! lat=lat0,lat1
 !
-! Set kut for wave filtering according to dlat (2.5 or 5.0):
-!     call set_wave_filter(36,kut_5,nlat,kutt)
-!
 ! Filter updated tn:
       call filter_tn(tn_upd,lev0,lev1,lon0,lon1,lat0,lat1,kut)
 !
@@ -382,9 +366,6 @@
 !       call addfld('TN_NMOUT',' ',' ',tn_nm_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
-! Store lower boundary in top slot:
-!       tn_upd(lev1,lon0:lon1,lat) = tnlbc(:,lat)
-!
 ! Put spval in top nlevp1 level:
         tn_upd(lev1,lon0:lon1,lat)    = spval
         tn_nm_upd(lev1,lon0:lon1,lat) = spval
@@ -392,18 +373,6 @@
 ! Lower boundary is saved in tlbc (fields.F):
         tlbc_nm(lon0:lon1,lat) = tlbc(lon0:lon1,lat)
         tlbc(lon0:lon1,lat)    = tnlbc(:,lat)
-!
-#ifdef MPI
-!
-! 4/21/05 btf: These calls opened up as per Wenbin's suggestion.
-!
-! Define halo longitudes in tn_upd, for use by duv:
-      call mp_bndlons_f3d(tn_upd,nlevs,lon0,lon1,lat0,lat1,1,0)
-!
-! Periodic points:
-      call mp_periodic_f3d(tn_upd(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,1)
-#endif
 !
 ! Tn must be at least 100 deg:
         lonbeg = lon0-2
@@ -424,7 +393,7 @@
 !-----------------------------------------------------------------------
       subroutine filter_tn(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
 !
-! Filter updated W omega:
+! Filter updated TN
 !
       use params_module,only: nlat,nlonp4,nlon
       use filter_module,only: filter
@@ -460,7 +429,7 @@
       nlons = lon1-lon0+1
       nlats = lat1-lat0+1
 !
-! Define lons in w_ki from current task:
+! Define lons in fkij from current task:
       fkij = 0.
       do j=lat0,lat1
         do i=lon0,lon1
@@ -474,7 +443,7 @@
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
-      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,'TN')
 #endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
@@ -501,8 +470,7 @@
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
-      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,
-     |  'tn ')
+      call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,'TN')
 #endif
 !
 ! Return filtered array to fout at current task longitudes and latitudes:

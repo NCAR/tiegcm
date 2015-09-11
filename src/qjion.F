@@ -1,5 +1,5 @@
 !
-      subroutine qjion(tn,o2,o1,o2p,op,n4s,n2d,no,ne,barm,
+      subroutine qjion(tn,o2,o1,n2,o2p,op,n4s,n2d,no,ne,barm,
      |  n2p,nplus,nop,xiop2p,xiop2d, lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -34,6 +34,7 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
+     |  n2,      ! molecular nitrogen (mmr)
      |  o2p,     ! O2+ ion
      |  op,      ! O+ ion
      |  n4s,     ! N(4S)
@@ -53,7 +54,6 @@
      |  qtot,    ! total ionization rate                 (s1)
      |  qphoto,  ! photo-electron heating of neutral gas (s2)
      |  qic,     ! ion chemistry heating of neutral gas  (s3)
-     |  xn2,     ! N2 (mmr) (1.o2-o)
      |  xnmbarm, ! p0*e(-z)*barm/kT ("(K)" -- averaged)        (s12)
      |  xnmbari  ! p0*e(-z)*barm/kT ("(K+1/2)" -- not averaged (s11)
       real,dimension(lev0:lev1) :: aureff
@@ -104,13 +104,11 @@
         enddo ! k=lev0,lev1
  
         do k=lev0,lev1-1
-          xn2(k,i) = 1.-o2(k,i)-o1(k,i)
-!
           qic(k,i) = 
      |      (avo*(o2(k,i)*rmassinv_o2*(rk1(k,i,lat)*op(k,i)*1.555+
      |      (rk6*2.486+rk7*6.699)*nplus(k,i)+
      |      rk9*n2p(k,i)*3.52)+
-     |      op(k,i)*(rk2(k,i,lat)*xn2(k,i)*rmassinv_n2*1.0888+
+     |      op(k,i)*(rk2(k,i,lat)*n2(k,i)*rmassinv_n2*1.0888+
      |      rk10*n2d(k,i)*rmassinv_n2d*1.45)+
      |      o1(k,i)*rmassinv_o1*(rk3(k,i,lat)*n2p(k,i)*0.70+
      |      rk8*nplus(k,i)*0.98)+
@@ -120,9 +118,9 @@
      |       ra2(k,i,lat)*o2p(k,i)*5.2755+
      |       ra3(k,i,lat)*n2p(k,i)*3.678)/xnmbarm(k,i))*evergs+
 !
-     |      (avo*(((rk16*3.02+rk17*0.7)*xn2(k,i)*rmassinv_n2+
+     |      (avo*(((rk16*3.02+rk17*0.7)*n2(k,i)*rmassinv_n2+
      |       rk18*o1(k,i)*rmassinv_o1*5.0)*xiop2p(k,i)+
-     |      (rk23*xn2(k,i)*rmassinv_n2*1.33+
+     |      (rk23*n2(k,i)*rmassinv_n2*1.33+
      |       rk24*o1(k,i)*rmassinv_o1*3.31+
      |       rk26*4.87*o2(k,i)*rmassinv_o2)*xiop2d(k,i))+
      |      (.5*(ne(k,i)+ne(k+1,i))*((rk19(k,i,lat)*5.0+

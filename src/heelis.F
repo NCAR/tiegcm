@@ -8,27 +8,24 @@
 ! Module used to calculcate the Heelis model potential in both hemispheres
 ! Byimf, Ctpoten and Power at a minimum using paramaters from aurora_cons
 !
-      use dynamo_module,only: phihm
+      use params_module,only: nmlat,nmlonp1,nmlon,nmlonp1
       implicit none
+      integer,parameter :: nmlat0=(nmlat+1)/2
+      real,dimension(nmlonp1,nmlat)  :: phihm  ! potential in magnetic
       contains 
 !-----------------------------------------------------------------------
       subroutine heelis
 !
-! Heelis driver, called from sub dynamo (dynamo module, dynamo.F).
-! These routines return pfrac and phihm to the dynamo.
-!   (see argument descriptions below). 
+! Heelis driver, called from sub pdynamo (pdynamo.F).
+! These routines return phihm to the pdynamo.
+! phihm:  Heelis potential in magnetic coordinates (single level).
 !
       implicit none
 !
-! Args:
+! Calculation of pfrac for dynamo will be done by sub colath, 
+! called from advance.
 ! pfrac:  Fractional presence of dynamo equation given critical 
 !           convection colatitudes crit(2).
-! phihm:  Heelis potential in magnetic coordinates (single level).
-!
-! Calculate pfrac fractional presence of dynamo equation using critical
-!  convection colatitudes crit(2).  (crit is in cons module)
-!
-      call colath
 !
 ! Calculate  the heelis potential phihm in geomagnetic coordinates:
 ! (potm calls sub flwv32)
@@ -38,7 +35,6 @@
       end subroutine heelis
 !-----------------------------------------------------------------------
       subroutine potm
-      use params_module,only: nmlat,nmlon,nmlonp1
       use magfield_module,only: sunlons 
       use cons_module,only: 
      |  ylonm,ylatm, ! magnetic grid lons, lats

@@ -81,7 +81,7 @@
 !
       use input_module,only: ctpoten
       use cons_module,only: rtd,ylonm,ylatm
-      use dynamo_module,only: nmlat0,phihm
+      use pdynamo_module,only: nmlat0,phihm
       use magfield_module,only: sunlons 
       use init_module,only: iyear,iday,uthr
       implicit none
@@ -174,7 +174,7 @@
 !
 !  Re-calculate NH values of offa, dskofa, arad, and Heelis phid and phin from
 !   Weimer 2005 setboundary values of offc, dskofc, and theta0
-	call wei05loc (2)
+	 call wei05loc (2)
 !
 ! Call Weimer model for northern hemisphere fac:
       call setmodel(angle,bt,htilt,swvel,swden,'bpot')
@@ -194,11 +194,14 @@
 !
 ! 07/08 bae:  Return the average of the weictpoten from the SH and NH in ctpoten
       ctpoten = 0.5*(weictpoten(1)+weictpoten(2))
-!     write(6,"(i4,':weimer05: istep=',i8,' mtime=',3i4,' ctpoten=',
+!      write (6,"(1x,'weimer05: CPS,N ctpoten=',3f8.1)") weictpoten,
+!     |    ctpoten
+!      write(6,"(i4,':weimer05: istep=',i8,' mtime=',3i4,' ctpoten=',
 !    |  f8.3)") mytid,istep,modeltime(1:3),ctpoten
 !
-! Calculate pfrac:
-      call colath
+! Note calculation of pfrac for dynamo is done by sub colath (colath.F),
+! called from advance.
+!
       end subroutine weimer05
 !-----------------------------------------------------------------------
       subroutine read_wei05sc_ncfile(file)
@@ -593,6 +596,7 @@
       sinpm(:) = sin(phim(:))
 !
       z = 0.
+      skip = 0 ! Added by B.Foster, 4/23/14
       do j=1,csize
         if (skip == 1) then
           skip = 0
@@ -642,6 +646,7 @@
       sinpm(:) = sin(phim(:))
 !
       z = 0.
+      skip = 0 ! Added by B.Foster, 4/23/14
       jloop: do j=1,csize
         if (skip == 1) then
           skip = 0
@@ -690,6 +695,7 @@
       integer,save :: tablesize
 !
       scplm = 0.
+      skip = 0 ! Added by B.Foster, 4/23/14
       th0 = bndyfitr
       if (prevth0 /= th0) then
         tablesize = 3*nint(th0)
@@ -927,10 +933,15 @@
       endif
       do i=1,nu
         ix = value_locate(x,u(i))
-        if (ix <= 1.or.ix >= nx) then ! bug fix by btf 12/23/09
-          p(i) = 0.
-          cycle                       ! bug fix by btf 12/23/09
-        endif
+! 01/14 bae: interpol_quad in wei05sc.F is called when inside=1 or radii<bndryfit 
+!  for Weimer 2005. The fix to ix<=1 and ix>=nx assures epot is non-zero near 
+!  the pole (85.8mlat,0MLT) and the boundary (bndryfit).
+        if (ix <=1) ix = 2	      ! bug fix by bae 01/28/14
+        if (ix >=nx) ix = nx-1	      ! bug fix by bae 01/29/14
+!       if (ix <= 1.or.ix >= nx) then ! bug fix by btf 12/23/09
+!          p(i) = 0.
+!          cycle                       ! bug fix by btf 12/23/09
+!        endif
         x1 = x(ix)
         x0 = x(ix-1)
         x2 = x(ix+1)
@@ -1409,6 +1420,7 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
       subroutine wei05loc (ih)
 ! ih=1,2 for SH,NH called from weimer05
 
+!  Jan 2012 bae:  added byloc to limit size of byimf (probably incorrect assymmetry in hems)
 !  NCAR July 08 bae:  Write wei05loc to use values from Weimer 2005
 !       setboundary for convection offc=4.2 deg, dskofc=0, theta0=bndyfitr
 !       where deg should be in radians.  wei05loc replaces calccloc05.
@@ -1430,13 +1442,14 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 !    |  offa(2),   ! offset of oval towards 0 MLT relative to magnetic pole (rad)
 !    |  dskofa(2), ! offset of oval in radians towards 18 MLT (f(By))
 !    |  phid(2),   ! dayside convection entrance in MLT-12 converted to radians (f(By))
+!                      phid is the MLT-12 location of the cusp on the dayside
 !    |  phin(2),   ! night convection entrance in MLT-12 converted to radians (f(By))
 !    |  rrad(2),   ! radius of auroral circle in radians
 !    |  offc(2),   ! offset of convection towards 0 MLT relative to mag pole (rad)
 !    |  dskofc(2)  ! offset of convection in radians towards 18 MLT (f(By))
 ! sunlons(nlat): sun's longitude in dipole coordinates (see sub sunloc)
 !
-      use dynamo_module,only: nmlat0,phihm
+      use pdynamo_module,only: nmlat0,phihm
 ! Additional auroral parameters (see sub aurora_cons):
       use aurora_module,only: theta0,offa,dskofa,phid,phin,rrad,offc,
      |                        dskofc
@@ -1464,6 +1477,13 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
       integer :: jnx(2,2),inx(2,2)
       real :: offcdeg,dskof,arad,crad
       real :: cosl06,sinl06,colat06,cosm06,cosl18,sinl18,colat18,cosm18
+      real :: byloc
+
+! Limit size of byimf in phin and phid calculations (as in aurora.F) 
+!  NOTE:  This byloc is assymetric in hemisphere, which is probably not correct
+      byloc = byimf
+      if (byloc .gt. 7.) byloc = 7.
+      if (byloc .lt. -11.) byloc = -11.
 !
 !  ih=1 is SH, ih=2 is NH
 	if (ih .eq. 1) then
@@ -1522,8 +1542,8 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 !  Set default values
 !  Use parameterization defaults for phid (phid(MLT)=9.39 +/- 0.21By - 12)
 !                             and phin (phin(MLT)=23.50 +/- 0.15By - 12)
-	mltd = 9.39 - hem*0.21*byimf
-	mltn = 23.50 - hem*0.15*byimf
+	mltd = 9.39 - hem*0.21*byloc
+	mltn = 23.50 - hem*0.15*byloc
 	phid(ih) = (mltd-12.) * 15. / rtd
 	phin(ih) = (mltn-12.) * 15. / rtd
 ! 05/18/08:  Note that phid,phin are only for Heelis and are irrelevant for Weimer
@@ -1544,6 +1564,8 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 !    |    dskof,dskofc(ih)*rtd,dskofa(ih)*rtd
 ! Set crad from bndyfitr/2 of setboundary of Weimer 2005
 	crad = bndyfitr/2.
+!      write (6,"(1x,'wei05loc: ih,bz,y,crad =',i2,3f8.2)") 
+!    |    ih,bzimf,byimf,crad
 !  Fig 8 Heelis et al [1980]: ra=rc+2deg, and shifted 2.5 deg to dusk
 	arad = crad + 2.
 ! 05/08:  Make ra=rc+diffrac(=ramx-rccp) - same difference as in aurora.F

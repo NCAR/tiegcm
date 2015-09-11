@@ -23,7 +23,7 @@
 ! adding new fields, and type diags(ndiag) must be defined by sub init_diags 
 ! below.
 !
-      integer,parameter :: ndiag = 25 ! increment this to add new diags
+      integer,parameter :: ndiag = 43 ! increment this to add new diags
       type diag_type
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
@@ -84,133 +84,142 @@
 !
       n = n+1
       diags(n)%short_name = 'HMF2'
-      diags(n)%long_name  = 'Height of the F2 Layer' 
+      diags(n)%long_name  = 'HMF2: Height of the F2 Layer' 
       diags(n)%units      = 'km'
       diags(n)%levels     = 'none' ! hmf2 is 2d lon x lat
       diags(n)%caller     = 'elden.F'
 !
       n = n+1
       diags(n)%short_name = 'NMF2'
-      diags(n)%long_name  = 'Peak Density of the F2 Layer' 
+      diags(n)%long_name  = 'NMF2: Peak Density of the F2 Layer' 
       diags(n)%units      = '1/cm3'
       diags(n)%levels     = 'none' ! nmf2 is 2d lon x lat
       diags(n)%caller     = 'elden.F'
 !
       n = n+1
+      diags(n)%short_name = 'FOF2'
+      diags(n)%long_name  = 'FOF2: Critical Frequency of the F2 Layer' 
+      diags(n)%units      = 'MHz'
+      diags(n)%levels     = 'none' ! fof2 is 2d lon x lat
+      diags(n)%caller     = 'elden.F'
+!
+      n = n+1
       diags(n)%short_name = 'JE13D'
-      diags(n)%long_name  = 'Eastward current density (3d)'
+      diags(n)%long_name  = 'JE13D: Eastward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
       diags(n)%caller     = 'current.F'
 !
       n = n+1
       diags(n)%short_name = 'JE23D'
-      diags(n)%long_name  = 'Downward current density (3d)'
+      diags(n)%long_name  = 'JE23D: Downward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
       diags(n)%caller     = 'current.F'
 !     
       n = n+1
       diags(n)%short_name = 'JQR'
-      diags(n)%long_name  = 'Upward current density (2d)'
+      diags(n)%long_name  = 'JQR: Upward current density (2d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'none' 
       diags(n)%caller     = 'current.F'
 !     
       n = n+1
       diags(n)%short_name = 'KQLAM'
-      diags(n)%long_name  = 'Height-integrated current density (+north)'
+      diags(n)%long_name  = 
+     |  'KQLAM: Height-integrated current density (+north)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
       diags(n)%caller     = 'current.F'
 !     
       n = n+1
       diags(n)%short_name = 'KQPHI'
-      diags(n)%long_name  = 'Height-integrated current density (+east)'
+      diags(n)%long_name  = 
+     |  'KQPHI: Height-integrated current density (+east)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
       diags(n)%caller     = 'current.F'
 !
       n = n+1
       diags(n)%short_name = 'LAMDA_HAL'
-      diags(n)%long_name  = 'Hall Ion Drag Coefficient'
+      diags(n)%long_name  = 'LAMDA_HAL: Hall Ion Drag Coefficient'
       diags(n)%units      = '1/s'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'lamdas.F'
 !
       n = n+1
       diags(n)%short_name = 'LAMDA_PED'
-      diags(n)%long_name  = 'Pedersen Ion Drag Coefficient'
+      diags(n)%long_name  = 'LAMDA_PED: Pedersen Ion Drag Coefficient'
       diags(n)%units      = '1/s'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'lamdas.F'
 !
       n = n+1
       diags(n)%short_name = 'MU_M'
-      diags(n)%long_name  = 'Molecular Viscosity Coefficient'
+      diags(n)%long_name  = 'MU_M: Molecular Viscosity Coefficient'
       diags(n)%units      = 'g/cm/s'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'cpktkm.F'
 !
       n = n+1
       diags(n)%short_name = 'QJOULE'
-      diags(n)%long_name  = 'Joule Heating'
+      diags(n)%long_name  = 'QJOULE: Joule Heating'
       diags(n)%units      = 'erg/g/s'  ! model description has erg/K/s
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'qjoule.F'
 !
       n = n+1
       diags(n)%short_name = 'SCHT'
-      diags(n)%long_name  = 'Pressure Scale Height'
+      diags(n)%long_name  = 'SCHT: Pressure Scale Height'
       diags(n)%units      = 'km'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'addiag.F'
 !
       n = n+1
       diags(n)%short_name = 'SIGMA_HAL'
-      diags(n)%long_name  = 'Hall Conductivity'
+      diags(n)%long_name  = 'SIGMA_HAL: Hall Conductivity'
       diags(n)%units      = 'S/m'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'lamdas.F'
 !
       n = n+1
       diags(n)%short_name = 'SIGMA_PED'
-      diags(n)%long_name  = 'Pedersen Conductivity'
+      diags(n)%long_name  = 'SIGMA_PED: Pedersen Conductivity'
       diags(n)%units      = 'S/m'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'lamdas.F'
 !
       n = n+1
       diags(n)%short_name = 'TEC'
-      diags(n)%long_name  = 'Total Electron Content'
+      diags(n)%long_name  = 'TEC: Total Electron Content'
       diags(n)%units      = '1/cm2'
       diags(n)%levels     = 'none' ! 2d lon x lat
       diags(n)%caller     = 'elden.F'
 !
       n = n+1
       diags(n)%short_name = 'UI_ExB'
-      diags(n)%long_name  = 'Zonal Ion Drift (ExB)'
+      diags(n)%long_name  = 'UI: Zonal Ion Drift (ExB)'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
       diags(n)%short_name = 'VI_ExB'
-      diags(n)%long_name  = 'Meridional Ion Drift (ExB)'
+      diags(n)%long_name  = 'VI: Meridional Ion Drift (ExB)'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
       diags(n)%short_name = 'WI_ExB'
-      diags(n)%long_name  = 'Vertical Ion Drift (ExB)'
+      diags(n)%long_name  = 'WI: Vertical Ion Drift (ExB)'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
       diags(n)%short_name = 'WN'
-      diags(n)%long_name  = 'NEUTRAL VERTICAL WIND (plus up)' 
+      diags(n)%long_name  = 'WN: Neutral Vertical Wind (plus up)' 
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'swdot.F'
@@ -228,6 +237,134 @@
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'qjoule.F'
+!
+      n = n+1
+      diags(n)%short_name = 'BX'
+      diags(n)%long_name  = 
+     |  'BX/BMAG: Normalized eastward component of magnetic field'
+      diags(n)%units      = ' '
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'oplus.F'
+!
+      n = n+1
+      diags(n)%short_name = 'BY'
+      diags(n)%long_name  = 
+     |  'BY/BMAG: Normalized northward component of magnetic field'
+      diags(n)%units      = ' '
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'oplus.F'
+!
+      n = n+1
+      diags(n)%short_name = 'BZ'
+      diags(n)%long_name  = 
+     |  'BZ/BMAG: Normalized upward component of magnetic field'
+      diags(n)%units      = ' '
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'oplus.F'
+!
+      n = n+1
+      diags(n)%short_name = 'BMAG'
+      diags(n)%long_name  = 'BMAG: Magnetic field magnitude'
+      diags(n)%units      = 'Gauss'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'oplus.F'
+!
+      n = n+1
+      diags(n)%short_name = 'EX'
+      diags(n)%long_name  = 
+     |  'EX: Zonal component of electric field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'ilev'
+      diags(n)%caller     = 'pdynamo.F'
+!
+      n = n+1
+      diags(n)%short_name = 'EY'
+      diags(n)%long_name  = 
+     |  'EY: Meridional component of electric field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'ilev'
+      diags(n)%caller     = 'pdynamo.F'
+!
+      n = n+1
+      diags(n)%short_name = 'EZ'
+      diags(n)%long_name  = 
+     |  'EZ: Vertical component of electric field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'ilev'
+      diags(n)%caller     = 'pdynamo.F'
+!
+      n = n+1
+      diags(n)%short_name = 'ED1'
+      diags(n)%long_name  = 
+     |  'ED1: Magnetic eastward component of electric field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'imlev'
+      diags(n)%caller     = 'pdynamo.F'
+!
+      n = n+1
+      diags(n)%short_name = 'ED2'
+      diags(n)%long_name  = 
+     |'ED2: Magnetic downward (equatorward) component of electric field'
+      diags(n)%units      = 'V/m'
+      diags(n)%levels     = 'imlev'
+      diags(n)%caller     = 'pdynamo.F'
+!
+      n = n+1
+      diags(n)%short_name = 'PHIM2D'
+      diags(n)%long_name  = 
+     |  'PHIM2D: 2d Electric Potential on magnetic grid'
+      diags(n)%units      = 'V'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'pdynamo.F'
+!
+      n = n+1
+      diags(n)%short_name = 'N2'
+      diags(n)%long_name  = 'N2: Molecular Nitrogen'
+      diags(n)%units      = 'mmr'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'comp.F'
+!
+      n = n+1
+      diags(n)%short_name = 'ZGMID'
+      diags(n)%long_name  = 'ZGMID: Geometric Height at midpoints'
+      diags(n)%units      = 'cm'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'addiag.F'
+!
+      n = n+1
+      diags(n)%short_name = 'CUSP'
+      diags(n)%long_name  = 'CUSP (cusp2d*ec)'
+      diags(n)%units      = 'erg/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+!
+      n = n+1
+      diags(n)%short_name = 'DRIZZLE'
+      diags(n)%long_name  = 'DRIZZLE (drzl2d*ed)'
+      diags(n)%units      = 'erg/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+!
+      n = n+1
+      diags(n)%short_name = 'ALFA'
+      diags(n)%long_name  = 'ALFA'
+      diags(n)%units      = 'keV'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+!
+      n = n+1
+      diags(n)%short_name = 'NFLUX'
+      diags(n)%long_name  = 'NFLUX'
+      diags(n)%units      = '#/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+!
+      n = n+1
+      diags(n)%short_name = 'EFLUX'
+      diags(n)%long_name  = 'EFLUX'
+      diags(n)%units      = 'erg/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
 
       if (n /= ndiag) then
         write(6,"('>>> init_diags: n=',i4,' ndiag=',i4)")
@@ -262,14 +399,14 @@
       character(len=*),intent(in) :: name
 !
 ! External:
-      integer,external :: ixfindc ! util.F
+      integer,external :: strloc ! util.F
 !
 ! Check for field in namelist SECFLDS -- if not found, return silently
-      checkf = ixfindc(secflds,mxfsech,name)
+      checkf = strloc(secflds,mxfsech,name)
       if (checkf==0) return
 !
 ! Get index to diags -- if not found, return zero with error msg:
-      checkf = ixfindc(diags(:)%short_name,ndiag,name)
+      checkf = strloc(diags(:)%short_name,ndiag,name)
       if (checkf==0) then
         write(6,"('>>> Cannot find field ',a,' in list of ',
      |    'available diagnostics -- returning')") name
@@ -288,10 +425,11 @@
       real,intent(in) :: rho(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save to secondary history. Note rho is calculated on interface
 ! levels, hence 'ilev' in the addfld call:
@@ -310,10 +448,11 @@
       real,intent(in) :: qji_tn(lev0:lev1,lon0-2:lon1+2)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary history:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -335,10 +474,12 @@
       real,intent(out) :: tec(lon0:lon1)
 !
 ! Local:
-      integer :: i,k,ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer :: i,k
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Integrate electron content in height at current latitude:
       tec(:) = 0.
@@ -366,10 +507,12 @@
       real,intent(in) :: ui(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! Local:
-      integer :: lat,ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer :: lat
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories (Convert back to cm/s):
       do lat=lat0,lat1
@@ -392,10 +535,12 @@
       real,intent(in) :: vi(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! Local:
-      integer :: lat,ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer :: lat
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       do lat=lat0,lat1
@@ -418,10 +563,12 @@
       real,intent(in) :: wi(lev0:lev1,lon0:lon1,lat0:lat1)
 !
 ! Local:
-      integer :: lat,ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer :: lat
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       do lat=lat0,lat1
@@ -441,10 +588,11 @@
       real,intent(in) :: total_heat(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -462,10 +610,11 @@
       real,intent(in) :: co2_cool(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -483,10 +632,11 @@
       real,intent(in) :: no_cool(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -505,10 +655,11 @@
       real,intent(in) :: sigmaped(lev0:lev1,lon0-2:lon1+2)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -527,10 +678,11 @@
       real,intent(in) :: sigmahal(lev0:lev1,lon0-2:lon1+2)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -548,10 +700,11 @@
       real,intent(in) :: lamdaped(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
@@ -569,16 +722,133 @@
       real,intent(in) :: lamdahal(lev0:lev1,lon0:lon1)
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,lamdahal(lev0:lev1-1,lon0:lon1),
      |  diags(ix)%levels,lev0,lev1-1,'lon',lon0,lon1,lat)
       end subroutine mkdiag_LAMDAHAL
+!-----------------------------------------------------------------------
+      subroutine mkdiag_EXYZ(name,exyz,lev0,lev1,lon0,lon1,lat)
+!
+! 3d electric field on geographic grid (called by efield.F)
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,dimension(lev0:lev1,lon0:lon1),intent(in) :: exyz
+!
+! Local:
+      integer,save :: iex=-1,iey=-1,iez=-1
+
+      if (trim(name)=='EX'.and.iex==-1) iex = checkf(name)
+      if (trim(name)=='EY'.and.iey==-1) iey = checkf(name)
+      if (trim(name)=='EZ'.and.iez==-1) iez = checkf(name)
+      if (iex<=0.and.iey<=0.and.iez<=0) return
+!
+! Save 2d field (3d on history) at current lat on secondary histories:
+! Pass exyz*100. to convert from V/cm to V/m
+!
+      if (trim(name)=='EX'.and.iex > 0) then
+        call addfld(diags(iex)%short_name,diags(iex)%long_name,
+     |    diags(iex)%units,exyz*100.,diags(iex)%levels,lev0,lev1,'lon',
+     |    lon0,lon1,lat)
+      elseif (trim(name)=='EY'.and.iey > 0) then
+        call addfld(diags(iey)%short_name,diags(iey)%long_name,
+     |    diags(iey)%units,exyz*100.,diags(iey)%levels,lev0,lev1,'lon',
+     |    lon0,lon1,lat)
+      elseif (trim(name)=='EZ'.and.iez > 0) then
+        call addfld(diags(iez)%short_name,diags(iez)%long_name,
+     |    diags(iez)%units,exyz*100.,diags(iez)%levels,lev0,lev1,'lon',
+     |    lon0,lon1,lat)
+      endif
+      end subroutine mkdiag_EXYZ
+!-----------------------------------------------------------------------
+      subroutine mkdiag_BXYZ(name,bxyz,lon0,lon1,lat)
+!
+! Called by oplus.F
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lon0,lon1,lat
+      real,dimension(lon0:lon1),intent(in) :: bxyz
+!
+! Local:
+      integer,save :: ibx=-1,iby=-1,ibz=-1
+
+      if (trim(name)=='BX'.and.ibx==-1) ibx = checkf(name)
+      if (trim(name)=='BY'.and.iby==-1) iby = checkf(name)
+      if (trim(name)=='BZ'.and.ibz==-1) ibz = checkf(name)
+      if (ibx<=0.and.iby<=0.and.ibz<=0) return
+!
+! Save 2d field on secondary histories:
+      if (trim(name)=='BX'.and.ibx > 0) then
+        call addfld(diags(ibx)%short_name,diags(ibx)%long_name,
+     |    diags(ibx)%units,bxyz,'lon',lon0,lon1,'lat',lat,lat,0)
+      elseif (trim(name)=='BY'.and.iby > 0) then
+        call addfld(diags(iby)%short_name,diags(iby)%long_name,
+     |    diags(iby)%units,bxyz,'lon',lon0,lon1,'lat',lat,lat,0)
+      elseif (trim(name)=='BZ'.and.ibz > 0) then
+        call addfld(diags(ibz)%short_name,diags(ibz)%long_name,
+     |    diags(ibz)%units,bxyz,'lon',lon0,lon1,'lat',lat,lat,0)
+      endif
+      end subroutine mkdiag_BXYZ
+!-----------------------------------------------------------------------
+      subroutine mkdiag_BMAG(name,bmag,lon0,lon1,lat)
+!
+! Called by oplus.F
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lon0,lon1,lat
+      real,dimension(lon0:lon1),intent(in) :: bmag
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,bmag,'lon',lon0,lon1,'lat',lat,lat,0)
+
+      end subroutine mkdiag_BMAG
+!-----------------------------------------------------------------------
+      subroutine mkdiag_ED12(name,ed12,mlon0,mlon1,mlev0,mlev1,lat)
+!
+! Two 3d components of electric field on the geomagnetic grid: ED1,ED2 
+! (called by dynamo.F with global magnetic arrays, mlev0:mlev1
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: mlon0,mlon1,mlev0,mlev1,lat
+      real,dimension(mlon0:mlon1,mlev0:mlev1),intent(in) :: ed12
+!
+! Local:
+      integer,save :: ied1=-1,ied2=-1
+
+      if (trim(name)=='ED1'.and.ied1==-1) ied1 = checkf(name)
+      if (trim(name)=='ED2'.and.ied2==-1) ied2 = checkf(name)
+      if (ied1<=0.and.ied2<=0) return
+!
+! Save 2d field (3d on history) at current lat on secondary histories:
+!
+      if (trim(name)=='ED1'.and.ied1 > 0) then
+        call addfld(diags(ied1)%short_name,diags(ied1)%long_name,
+     |    diags(ied1)%units,ed12,'mlon',mlon0,mlon1,diags(ied1)%levels,
+     |    mlev0,mlev1,lat)
+      elseif (trim(name)=='ED2'.and.ied2 > 0) then
+        call addfld(diags(ied2)%short_name,diags(ied2)%long_name,
+     |    diags(ied2)%units,ed12,'mlon',mlon0,mlon1,diags(ied2)%levels,
+     |    mlev0,mlev1,lat)
+      endif
+      end subroutine mkdiag_ED12
 !-----------------------------------------------------------------------
       subroutine mkdiag_HNMF2(name,ht,ne,lev0,lev1,lon0,lon1,lat)
 !
@@ -588,37 +858,43 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: ht,ne
 !
 ! Local:
-      integer :: ix
-      real,dimension(lon0:lon1) :: hmf2,nmf2
+      real,dimension(lon0:lon1) :: hmf2,nmf2,fof2
+      integer,save :: ixhmf2=-1,ixnmf2=-1,ixfof2=-1
+
+      if (trim(name)=='HMF2'.and.ixhmf2==-1) ixhmf2 = checkf(name)
+      if (trim(name)=='NMF2'.and.ixnmf2==-1) ixnmf2 = checkf(name)
+      if (trim(name)=='FOF2'.and.ixfof2==-1) ixfof2 = checkf(name)
+      if (ixhmf2<=0.and.ixnmf2<=0.and.ixfof2<=0) return
 !
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
-!
-! Calculate hmf2,nmf2 from ne at current latitude:
-      call hnmf2(ht,ne,hmf2,nmf2,lev0,lev1,lon0,lon1,lat) 
+! Calculate hmf2,nmf2,fof2 from ne at current latitude:
+      call hnmf2(ht,ne,hmf2,nmf2,fof2,lev0,lev1,lon0,lon1,lat) 
 !
 ! Save 2d field on secondary histories:
-      if (trim(name)=='HMF2') then
+      if (trim(name)=='HMF2'.and.ixhmf2 > 0) then
         hmf2 = hmf2*1.e-5 ! cm to km
-        call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units,hmf2,'lon',lon0,lon1,'lat',lat,lat,0)
-      elseif (trim(name)=='NMF2') then
-        call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |    diags(ix)%units,nmf2,'lon',lon0,lon1,'lat',lat,lat,0)
+        call addfld(diags(ixhmf2)%short_name,diags(ixhmf2)%long_name,
+     |    diags(ixhmf2)%units,hmf2,'lon',lon0,lon1,'lat',lat,lat,0)
+      elseif (trim(name)=='NMF2'.and.ixnmf2 > 0) then
+        call addfld(diags(ixnmf2)%short_name,diags(ixnmf2)%long_name,
+     |    diags(ixnmf2)%units,nmf2,'lon',lon0,lon1,'lat',lat,lat,0)
+      elseif (trim(name)=='FOF2'.and.ixfof2 > 0) then
+        call addfld(diags(ixfof2)%short_name,diags(ixfof2)%long_name,
+     |    diags(ixfof2)%units,fof2,'lon',lon0,lon1,'lat',lat,lat,0)
       endif
       end subroutine mkdiag_HNMF2
 !-----------------------------------------------------------------------
-      subroutine hnmf2(ht,ne,hmf2,nmf2,lev0,lev1,lon0,lon1,lat)
+      subroutine hnmf2(ht,ne,hmf2,nmf2,fof2,lev0,lev1,lon0,lon1,lat)
 !
-! Find the NmF2 and hmF2 based on the electron profile.
+! Find the NmF2, foF2, and hmF2 based on the electron profile.
 ! btf: This is taken from an idl procedure provided by Liying.
+! fof2 added April, 2012.
 !
       implicit none
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: ht,ne
-      real,intent(out),dimension(lon0:lon1) :: hmf2,nmf2
+      real,intent(out),dimension(lon0:lon1) :: hmf2,nmf2,fof2
 !
 ! Local:
       integer :: k,kx,i
@@ -634,8 +910,8 @@
         enddo kloop
         if (kx==0) then
           write(6,"('>>> hnmf2: lat=',i4,' could not find kx -- ',
-     |      'setting hmf2=nmf2=0')") lat
-          hmf2(:) = 0. ; nmf2(:) = 0.
+     |      'setting hmf2=nmf2=fof2=0')") lat
+          hmf2(:) = 0. ; nmf2(:) = 0. ; fof2(:) = 0.
           return
         endif
         h = (/ht(kx-1,i),ht(kx,i),ht(kx+1,i)/)
@@ -645,6 +921,17 @@
         h32 = h(3)*h(3)
         deltx=h12*h(2)+h22*h(3)+h32*h(1)-h32*h(2)-h12*h(3)-h22*h(1)
         atx=p(1)*h(2)+p(2)*h(3)+p(3)*h(1)-h(2)*p(3)-h(3)*p(1)-h(1)*p(2)
+!
+! Periodic points are not set in ht and ne, so they are zero
+! at i=1,2. Setting hmf2and nmf2 zero here is ok, since they
+! are saved on histories at i=3,nlon. Without this check, code 
+! will stop here w/ divide by zero deltx or zero atx when debug 
+! flags are set.
+!
+        if (deltx == 0..or.atx == 0.) then
+          hmf2(:) = 0. ; nmf2(:) = 0. ; fof2(:) = 0.
+          cycle
+        endif
         ax=atx/deltx
         btx=h12*p(2)+h22*p(3)+h32*p(1)-h32*p(2)-h12*p(3)-h22*p(1)
         bx=btx/deltx
@@ -653,10 +940,12 @@
         cx=ctx/deltx
         hmf2(i)=-(bx/(2.*ax))
         nmf2(i)=-((bx*bx-4.*ax*cx)/(4.*ax))
+        fof2(i)=sqrt(nmf2(i)*1.e6/1.24e10)
       enddo ! i=lon0,lon1
 !     write(6,"('hnmf2: lat=',i4,' hmf2 min,max=',2e12.4,
-!    |  ' nmf2 min,max=',2e12.4)") lat,minval(hmf2),maxval(hmf2),
-!    |  minval(nmf2),maxval(nmf2)
+!    |  ' nmf2 min,max=',2e12.4,' fof2 min,max=',2e12.4)") 
+!    |  lat,minval(hmf2),maxval(hmf2),minval(nmf2),maxval(nmf2),
+!    |  minval(fof2),maxval(fof2)
       end subroutine hnmf2
 !-----------------------------------------------------------------------
 !
@@ -715,11 +1004,13 @@
       real,intent(in) :: zcm(lev0:lev1,lon0:lon1,lat0:lat1) ! geopotential (cm)
 !
 ! Local:
-      integer :: k,i,j,ix
+      integer :: k,i,j
       real :: pzps(lev0:lev1,lon0:lon1)
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Take delta Z:
       do j=lat0,lat1
@@ -752,10 +1043,11 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,diags(ix)%levels,lev0,lev1,
@@ -774,10 +1066,11 @@
       real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
@@ -795,10 +1088,11 @@
       real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
@@ -816,10 +1110,11 @@
       real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
@@ -837,10 +1132,11 @@
       real,intent(in),dimension(lon0:lon1,lev0:lev1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
@@ -858,10 +1154,11 @@
       real,intent(in),dimension(lon0:lon1,lev0:lev1) :: fkm
 !
 ! Local:
-      integer :: ix
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
@@ -870,8 +1167,8 @@
 !-----------------------------------------------------------------------
       subroutine mkdiag_WN(name,omega,zcm,lev0,lev1,lon0,lon1,lat)
 !
-! Neutral Vertical Wind, from vertical motion OMEGA and scale height.
-! Scale height pzps is calculated from input geopotential z (cm).
+! Neutral Vertical Wind on interfaces, from vertical motion OMEGA and 
+! scale height. Scale height pzps is calculated from input geopotential z (cm).
 !
 ! Args:
       character(len=*),intent(in) :: name
@@ -879,12 +1176,14 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: omega,zcm
 !
 ! Local:
-      integer :: i,k,ix
+      integer :: i,k
       real,dimension(lev0:lev1,lon0:lon1) :: wn
       real,dimension(lev0:lev1) :: pzps,omega1
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! Calculate scale height pzps:
       do i=lon0,lon1
@@ -902,29 +1201,28 @@
       enddo ! i=lon0,lon1
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,wn,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+     |  diags(ix)%units,wn,diags(ix)%levels,lev0,lev1,
+     |  'lon',lon0,lon1,lat)
 
       end subroutine mkdiag_WN
 !-----------------------------------------------------------------------
-      subroutine mkdiag_O_N2(name,o1,o2,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_O_N2(name,o1,o2,n2,lev0,lev1,lon0,lon1,lat)
 !
-! Calculate O/N2 ratio from o2 and o (mmr).
-! In mass mixing ratio, this is simply o/(1-o2-o)
+! Calculate O/N2 ratio from o2 and o (mmr). 
+! N2 is passed in (3d array in fields.F), where n2=1-o2-o-he
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: o1,o2
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: o1,o2,n2
 !
 ! Local:
-      integer :: ix
-      real,dimension(lev0:lev1,lon0:lon1) :: n2, o_n2
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
-!
-! N2 mmr:
-      n2 = 1.-o2-o1 
+      real,dimension(lev0:lev1,lon0:lon1) :: o_n2
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! O/N2 ratio:
       o_n2 = o1/n2
@@ -934,10 +1232,31 @@
 
       end subroutine mkdiag_O_N2
 !-----------------------------------------------------------------------
+      subroutine mkdiag_N2(name,n2,lev0,lev1,lon0,lon1,lat)
+!
+! Save updated N2 (3d field in fields.F) from comp.F:
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: n2
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,n2,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+
+      end subroutine mkdiag_N2
+!-----------------------------------------------------------------------
       subroutine mkdiag_QJOULE_INTEG(name,qji_tn,lev0,lev1,lon0,lon1,
      |  lat)
       use cons_module,only: p0,grav
-      use init_module,only: zpint
+      use params_module,only: zpint
 !
 ! Calculate height-integrated Joule heating (called from qjoule.F)
 ! This method is adapted from ncl code provided by Astrid (7/20/11)
@@ -948,13 +1267,15 @@
       real,intent(in),dimension(lev0:lev1,lon0:lon1) :: qji_tn
 !
 ! Local:
-      integer :: ix,k,i
+      integer :: k,i
       real,dimension(lon0:lon1) :: qji_integ
       real,dimension(lev0:lev1,lon0:lon1) :: qj
       real :: myp0,mygrav
-!
-! Check that field name is a diagnostic, and was requested:
-      ix = checkf(name) ; if (ix==0) return
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
 !
 ! First integrate to get MKS units W/m^2:
 ! (If you want these units, comment out the below conversion to CGS)
@@ -980,6 +1301,163 @@
      |  diags(ix)%units,qji_integ,'lon',lon0,lon1,'lat',lat,lat,0)
 
       end subroutine mkdiag_QJOULE_INTEG
+!-----------------------------------------------------------------------
+      subroutine mkdiag_PHIM2D(name,phim2d,mlon0,mlon1,mlat0,mlat1)
+!
+! 2d Electric Potential on magnetic grid (called from dynamo with
+! global mag dimensions)
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: mlon0,mlon1,mlat0,mlat1
+      real,intent(in),dimension(mlon0:mlon1,mlat0:mlat1) :: phim2d
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,phim2d,'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+
+      end subroutine mkdiag_PHIM2D
+!-----------------------------------------------------------------------
+      subroutine mkdiag_ZGMID(name,zgint,lev0,lev1,lon0,lon1,lat)
+!
+! Interpolate geometric height on interfaces (input zgint) to midpoints.
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: 
+     |  zgint ! geometric height at interfaces
+!
+! Local:
+      integer,save :: ix=0,firstcall=0,k
+      real,dimension(lev0:lev1,lon0:lon1) :: zgmid
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      do k=lev0,lev1-1
+        zgmid(k,:) = 0.5*(zgint(k,:)+zgint(k+1,:))
+      enddo
+      zgmid(lev1,:) = 2.0*zgmid(lev1-1,:)-zgmid(lev1-2,:)
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,zgmid,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+
+      end subroutine mkdiag_ZGMID
+!-----------------------------------------------------------------------
+      subroutine mkdiag_CUSP(name,cusp2d,lon0,lon1,lat0,lat1)
+      use aurora_module,only: ec
+!
+! Interpolate geometric height on interfaces (input zgint) to midpoints.
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lon0,lon1,lat0,lat1
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: cusp2d
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,cusp2d*ec,'lon',lon0,lon1,'lat',lat0,lat1,0)
+
+      end subroutine mkdiag_CUSP
+!-----------------------------------------------------------------------
+      subroutine mkdiag_DRIZZLE(name,drzl2d,lon0,lon1,lat0,lat1)
+      use aurora_module,only: ed
+!
+! Interpolate geometric height on interfaces (input zgint) to midpoints.
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lon0,lon1,lat0,lat1
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: drzl2d
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,drzl2d*ed,'lon',lon0,lon1,'lat',lat0,lat1,0)
+
+      end subroutine mkdiag_DRIZZLE
+!-----------------------------------------------------------------------
+      subroutine mkdiag_ALFA(name,alfa2d,lon0,lon1,lat0,lat1)
+!
+! Interpolate geometric height on interfaces (input zgint) to midpoints.
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lon0,lon1,lat0,lat1
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: alfa2d
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,alfa2d,'lon',lon0,lon1,'lat',lat0,lat1,0)
+
+      end subroutine mkdiag_ALFA
+!-----------------------------------------------------------------------
+      subroutine mkdiag_NFLUX(name,nflx2d,lon0,lon1,lat0,lat1)
+!
+! Interpolate geometric height on interfaces (input zgint) to midpoints.
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lon0,lon1,lat0,lat1
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: nflx2d
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,nflx2d,'lon',lon0,lon1,'lat',lat0,lat1,0)
+
+      end subroutine mkdiag_NFLUX
+!-----------------------------------------------------------------------
+      subroutine mkdiag_EFLUX(name,eflux2d,lon0,lon1,lat0,lat1)
+!
+! Interpolate geometric height on interfaces (input zgint) to midpoints.
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lon0,lon1,lat0,lat1
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: eflux2d
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,eflux2d,'lon',lon0,lon1,'lat',lat0,lat1,0)
+
+      end subroutine mkdiag_EFLUX
 !-----------------------------------------------------------------------
 !
 ! End diags module:
