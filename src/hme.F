@@ -190,11 +190,19 @@
       istat = nf_inq_varid(ncid,"year",idv_year)
       istat = nf_get_vara_int(ncid,idv_year,istart1,icount1,
      |  hme_year)
+      if (istat /= NF_NOERR) then
+        write(6,"('>>> Reading hme data file: year')") 
+        call shutdown('hme year')
+      endif
 !
 ! modeltime(doy,hour,min):
       istat = nf_inq_varid(ncid,"modeltime",idv_modeltime)
       istat = nf_get_vara_int(ncid,idv_modeltime,(/istart1,0/),
      |  (/icount1,3/),hme_modeltime)
+      if (istat /= NF_NOERR) then
+        write(6,"('>>> Reading hme data file: mtime')") 
+        call shutdown('hme mtime')
+      endif
 
 !     write(6,"('readfile: file=',a,' date=',/,(6i10))") 
 !    |  trim(ncfile),hme_year
@@ -278,35 +286,65 @@
       count3(3) = 1
 !      
       istat = nf_inq_varid(ncid,"TN",id)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then 
+         call handle_ncerr(istat,
      |  'read_hme: Error getting TN var id')
+         call shutdown('read_hme TN')
+      endif	 
       istat = nf_get_vara_double(ncid,id,start3,count3,t)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then
+        call handle_ncerr(istat,
      |  'read_hme: Error getting variable TN')
+         call shutdown('read_hme TN')
+      endif	 
       istat = nf_inq_varid(ncid,"UN",id)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then
+        call handle_ncerr(istat,
      |  'read_hme: Error getting UN var id')
+         call shutdown('read_hme UN')
+      endif	 
       istat = nf_get_vara_double(ncid,id,start3,count3,u)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then 
+        call handle_ncerr(istat,
      |  'read_hme: Error getting variable UN')
+         call shutdown('read_hme UN')
+      endif	 
       istat = nf_inq_varid(ncid,"VN",id)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then
+        call handle_ncerr(istat,
      |  'read_hme: Error getting VN var id')
+         call shutdown('read_hme VN')
+      endif	 
       istat = nf_get_vara_double(ncid,id,start3,count3,v)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then 
+        call handle_ncerr(istat,
      |  'read_hme: Error getting variable VN')
+         call shutdown('read_hme VN')
+      endif	 
       istat = nf_inq_varid(ncid,"WN",id)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then
+        call handle_ncerr(istat,
      |  'read_hme: Error getting WN var id')
+         call shutdown('read_hme WN')
+      endif	 
       istat = nf_get_vara_double(ncid,id,start3,count3,w)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then
+        call handle_ncerr(istat,
      |  'read_hme: Error getting variable WN')
+         call shutdown('read_hme WN')
+      endif	 
       istat = nf_inq_varid(ncid,"DN",id)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then
+        call handle_ncerr(istat,
      |  'read_hme: Error getting DN var id')
+         call shutdown('read_hme DN')
+      endif	 
       istat = nf_get_vara_double(ncid,id,start3,count3,rho)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
+      if (istat /= NF_NOERR) then
+        call handle_ncerr(istat,
      |  'read_hme: Error getting variable DN')
+         call shutdown('read_hme DN')
+      endif	 
       
 !     write(6,"('Read data: ifile ',i3,': itime',i1,'=',i3,
 !    |  ' min,max T=',2e12.4,' U=',2e12.4,' V=',2e12.4,' Z=',2e12.4)")
