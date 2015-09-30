@@ -2349,8 +2349,8 @@
          write(6,"('GSWM must be exclusive of SABER,TIDI,HOUGH,CTMT,',
      |    'HME TGCMlb')")
          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
-     |      ' ihough=',i2,' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") igswm,
-     |      isaber,itidi,ihough,ictmt,ihme,itgcmlb
+     |      ' ihough=',i2,' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |      igswm,isaber,itidi,ihough,ictmt,ihme,itgcmlb
          call shutdown('inp_lbc')
         endif 
       endif
@@ -2361,8 +2361,8 @@
           write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM,CTMT,',
      |    'HME')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
-     |     ' ihough=',i2,' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") igswm,
-     |     isaber,itidi,ihough,ictmt,ihme,itgcmlb
+     |     ' ihough=',i2,' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |     igswm,isaber,itidi,ihough,ictmt,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif

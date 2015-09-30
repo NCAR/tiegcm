@@ -317,7 +317,7 @@
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
      |  saber_ncfile,tidi_ncfile,ctmt_ncfile,bgrddata_ncfile,joulefac,
-     |  gpi_ncfile,hme_nfilestgcmlb_nfiles
+     |  gpi_ncfile,hme_nfiles,tgcmlb_nfiles
       use mpi_module,only: ntask
 
       use init_module,only: logname,host,system,iyear,iday,istep,

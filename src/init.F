@@ -72,7 +72,7 @@
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  ctmt_ncfile,mxhist_prim,mxhist_sech,output,secout,mkhvols,
      |  source_start,see_ncfile,
-     |  hme_nfiles,tgcmlb_ncfiles
+     |  hme_nfiles,tgcmlb_nfiles
       use hist_module,only: hist_init,isechist,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
      |  nfiles_sech,nfsech
