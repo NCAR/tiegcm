@@ -35,6 +35,7 @@
       integer :: igetgswm     ! will be 1 only if at least one of the above flags are set
       integer :: ictmt        ! 0/1 flag to get CTMT data
       integer :: ihme         ! 0/1 flag to get HME data
+      integer :: itgcmlb      ! 0/1 flag to get TGCM lb data
       integer :: ibgrddata    ! 0/1 flag to get background data
 !
       character(len=16) ::
@@ -71,7 +72,7 @@
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  ctmt_ncfile,mxhist_prim,mxhist_sech,output,secout,mkhvols,
      |  source_start,see_ncfile,
-     |  hme_nfiles
+     |  hme_nfiles,tgcmlb_ncfiles
       use hist_module,only: hist_init,isechist,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
      |  nfiles_sech,nfsech
@@ -189,6 +190,11 @@
       if (hme_nfiles > 0) ihme = 1
       if (ihme > 0) 
      |  write(6,"('  hme_nfiles = ',a)") hme_nfiles
+     
+      itgcmlb = 0
+      if (tgcmlb_nfiles > 0) itgcmlb = 1
+      if (itgcmlb > 0) 
+     |  write(6,"('  tgcmlb_nfiles = ',a)") tgcmlb_nfiles
 !     
       ibgrddata = 0
       if (len_trim(bgrddata_ncfile) > 0) ibgrddata = 1
@@ -266,6 +272,9 @@
      
       write(6,"('  ihme= ',i6,4x,
      |  '(If > 0, HME tidal database will be used.)')") ihme
+     
+      write(6,"('  itgcmlb= ',i6,4x,
+     |  '(If > 0, TGCM lb files will be used.)')") itgcmlb
      
       write(6,"('  ibgrddata= ',i6,4x,
      |  '(If > 0, background datafile will',

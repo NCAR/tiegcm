@@ -19,7 +19,7 @@
       use input_module,only: mxlen_filename,
      |  gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, 
      |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile,ctmt_ncfile,
-     |  hme_nfiles
+     |  hme_nfiles,tgcmlb_nfiles
       use init_module,only: istep,start_mtime
       implicit none
 !
@@ -72,6 +72,7 @@
      |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
      |  idv_ec,idv_alfad,idv_ed,idv_writedate,idv_saber_ncfile,
      |  idv_tidi_ncfile,idv_ctmt_ncfile,idv_hme_ncfile,
+     |  idv_tgcmlb_ncfile,
      |  idv_bgrddata_ncfile,idv_crit1,idv_crit2,idv_coupled_cmit,
      |  idv_joulefac
       integer,allocatable :: idv_sech(:)
@@ -694,6 +695,19 @@
      |        call handle_ncerr(istat,'reading hme_ncfile')
             if (len_trim(sh%hme_ncfile)==0) 
      |        sh%hme_ncfile='[none]'
+     
+! TGCMLB data files:
+          case('tgcmlb_ncfile')
+            start_2d(1) = 1
+            start_2d(2) = sh%ihist
+            count_2d(1) = mxlen_filename
+            count_2d(2) = 1
+            istat = nf_get_vara_text(ncid,i,start_2d,count_2d,
+     |        sh%tgcmlb_ncfile)
+            if (istat /= NF_NOERR)
+     |        call handle_ncerr(istat,'reading tgcmlb_ncfile')
+            if (len_trim(sh%tgcmlb_ncfile)==0) 
+     |        sh%tgcmlb_ncfile='[none]'
 !
 ! Background data file:
           case('bgrddata_ncfile')
@@ -1691,6 +1705,11 @@
       call define_ncfile(ncid,"hme_ncfile",idv_hme_ncfile,
      |  "long_name","HME file","data",
      |  "HME file used for lower boundary perturbation")
+!
+! Define TGCMlb data file:
+      call define_ncfile(ncid,"tgcmlb_ncfile",idv_tgcmlb_ncfile,
+     |  "long_name","tgcmlb file","data",
+     |  "tgcmlb file used for lower boundary perturbation")
 !     
 ! Define background data file:
       call define_ncfile(ncid,"bgrddata_ncfile",idv_bgrddata_ncfile,
@@ -2833,6 +2852,10 @@
 ! Update hme_ncfile:
       call update_ncfile(ncid,"hme_ncfile",
      |  h%hme_ncfile,idv_hme_ncfile,h%ihist)
+     
+! Update tgcmlb_ncfile:
+      call update_ncfile(ncid,"tgcmlb_ncfile",
+     |  h%tgcmlb_ncfile,idv_tgcmlb_ncfile,h%ihist)
 
 !
 ! Update bgrddata_ncfile:

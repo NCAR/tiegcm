@@ -137,6 +137,7 @@
      |  tidi_ncfile,        ! TIDI data (U,V)
      |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z)     
      |  hme_ncfiles(mxhvols), ! hme files for lbcperturbations
+     |  tgcmlb_ncfiles(mxhvols), ! tgcm files for lbcperturbations
      |  bgrddata_ncfile     ! background data (T,U,V,Z; V=0)
 
 !     integer,parameter :: ngpivars = 4
@@ -187,7 +188,7 @@
      |  imf_ncfile,saber_ncfile,tidi_ncfile,ctmt_ncfile,hme_ncfiles,
      |  bgrddata_ncfile,sech_nbyte,f107_time,f107a_time,hpss_path,
      |  current_pg,current_kq,calc_helium,enforce_opfloor,amiesh,
-     |  amienh,amie_ibkg,seeflux
+     |  amienh,amie_ibkg,seeflux,tgcmlb_ncfiles
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -202,6 +203,7 @@
       character(len=120) :: cwd  ! current working directory
       integer :: pid ! current process id
       integer :: hme_nfiles
+      integer :: tgcmlb_nfiles
 !
       contains
 !-------------------------------------------------------------------
@@ -271,6 +273,7 @@
       
       ctmt_ncfile = ' '       ! CTMT data file
       hme_ncfiles(:) = ' '    ! HME files for lb perturbation
+      tgcmlb_ncfiles(:) = ' ' ! TGCM files for lb perturbation
 
       bgrddata_ncfile = ' '   ! Background data file
 
@@ -614,6 +617,16 @@
         if (len_trim(hme_ncfiles(n)) > 0) then
           hme_nfiles = hme_nfiles+1
           call expand_path(hme_ncfiles(n))
+        endif
+      enddo
+      
+! TGCM LB data files:
+!
+      tgcmlb_nfiles=0
+      do n=1,mxhvols
+        if (len_trim(tgcmlb_ncfiles(n)) > 0) then
+          tgcmlb_nfiles = tgcmlb_nfiles+1
+          call expand_path(tgcmlb_ncfiles(n))
         endif
       enddo
 !
@@ -1573,6 +1586,13 @@
      |      i,trim(hme_ncfiles(i))
         enddo
       endif
+      
+      if (tgcmlb_nfiles > 0) then
+        do i=1,tgcmlb_nfiles
+          write(6,"('TGCMLB_NCFILES(',i3,') = ',a)")
+     |      i,trim(tgcmlb_ncfiles(i))
+        enddo
+      endif
      
       if (len_trim(bgrddata_ncfile) > 0) write(6,"('  Bgrddata file: ',
      |    'bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
@@ -2300,7 +2320,7 @@
 ! Validate lower boundary options:
 !
       implicit none
-      integer :: igswm, isaber, itidi, ihough, ictmt, ihme 
+      integer :: igswm, isaber, itidi, ihough, ictmt, ihme, itgcmlb 
 !      
       igswm = 0
       if (len_trim(gswm_mi_di_ncfile ) > 0.or.
@@ -2315,45 +2335,51 @@
       if (len_trim(ctmt_ncfile) > 0.) ictmt = 1
       ihme = 0
       if (hme_nfiles > 0.) ihme = 1
+      itgcmlb = 0
+      if (tgcmlb_nfiles > 0.) itgcmlb = 1
       ihough = 0
       if (any(tide2 /= 0).or.any(tide  /= 0.)) ihough = 1
 !
-! Hough-modes, gswm, saber/tidi and ctmt are mutually exclusive: 
+! Hough-modes, gswm, saber/tidi and ctmt tgcmlb are mutually exclusive: 
 !
       if (igswm==1) then
-        if (isaber==1.or.itidi==1.or.ihough==1.or.ictmt==1.or.ihme==1)
+        if (isaber==1.or.itidi==1.or.ihough==1.or.ictmt==1.or.ihme==1.
+     |      or.itgcmlb==1)
      |    then
          write(6,"('GSWM must be exclusive of SABER,TIDI,HOUGH,CTMT,',
-     |    'HME')")
+     |    'HME TGCMlb')")
          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
-     |      ' ihough=',i2,' ictmt=',i2,' ihme=',i2)") igswm,isaber,
-     |      itidi,ihough,ictmt,ihme
+     |      ' ihough=',i2,' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") igswm,
+     |      isaber,itidi,ihough,ictmt,ihme,itgcmlb
          call shutdown('inp_lbc')
         endif 
       endif
       if (ihough==1) then
-        if (isaber==1.or.itidi==1.or.igswm==1.or.ictmt==1.or.ihme==1) 
+        if (isaber==1.or.itidi==1.or.igswm==1.or.ictmt==1.or.ihme==1.
+     |      or.itgcmlb==1) 
      |    then
           write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM,CTMT,',
      |    'HME')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
-     |     ' ihough=',i2,' ictmt=',i2,' ihme=',i2)") igswm,isaber,itidi,
-     |     ihough,ictmt,ihme
+     |     ' ihough=',i2,' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") igswm,
+     |     isaber,itidi,ihough,ictmt,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif
       if (isaber==1.or.itidi==1) then
-        if (ictmt==1.or.ihme==1) then
+        if (ictmt==1.or.ihme==1.or.itgcmlb==1) then
           write(6,"('SABERR/TIDI must be exclusive of CTMT,HME')")
           write(6,"(' isaber=',i2,' itidi=',i2,
-     |      ' ictmt=',i2,' ihme=',i2)") isaber,itidi,ictmt,ihme
+     |      ' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") isaber,itidi,
+     |       ictmt,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif
       if (ictmt==1) then
-        if (ihme==1) then
-          write(6,"('CTMT must be exclusive of HME')")
-          write(6,"(' ictmt=',i2,' ihme=',i2)") ictmt,ihme
+        if (ihme==1.or.itgcmlb==1) then
+          write(6,"('CTMT must be exclusive of HME and TGCM lb')")
+          write(6,"(' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") ictmt,
+     |      ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif

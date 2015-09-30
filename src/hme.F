@@ -140,7 +140,7 @@
       integer :: nlat_rd,nlon_rd
       integer :: id_lat,id_lon,id_time
       integer :: idv_year,idv_modeltime
-      integer :: istart1(1),icount1(1)
+      integer :: istart1(1),icount1(1),istart2(2),icount2(2)
       character(len=1024) :: dskfile
 !
       dskfile = ' '
@@ -196,11 +196,15 @@
       endif
 !
 ! modeltime(doy,hour,min):
-      istat = nf_inq_varid(ncid,"modeltime",idv_modeltime)
-      istat = nf_get_vara_int(ncid,idv_modeltime,(/istart1,0/),
-     |  (/icount1,3/),hme_modeltime)
+      istart2(2) = istart1(1)
+      istart2(1) = 1
+      icount2(2) = icount1(1)
+      icount2(1) = 3
+      istat = nf_inq_varid(ncid,"mtime",idv_modeltime)
+      istat = nf_get_vara_int(ncid,idv_modeltime,istart2,
+     |  icount2,hme_modeltime)
       if (istat /= NF_NOERR) then
-        write(6,"('>>> Reading hme data file: mtime')") 
+        write(6,"('>>> Reading hme data file: mtime')")
         call shutdown('hme mtime')
       endif
 

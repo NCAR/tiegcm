@@ -79,11 +79,13 @@
       use bgrd_data_module,only: get_bgrddata,! (nlonp4,nlat)
      |  bgrddata_z, bgrddata_t, bgrddata_u, bgrddata_v
       use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile,
-     | hme_nfiles
+     | hme_nfiles,tgcmlb_nfiles
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
       use ctmt_module,only: get_ctmt,ctmt_t,ctmt_z,ctmt_u,ctmt_v
       use hme_module,only: get_hme,hme_t,hme_z,hme_u,hme_v,hme_rho
+      use tgcmlb_module,only: get_tgcmlb,tgcmlb_t,tgcmlb_z,tgcmlb_u,
+     |  tgcmlb_v
       use hist_module,only: modeltime
       
       implicit none
@@ -251,6 +253,20 @@
             z_lbc(i,j) = z_lbc(i,j)+hme_z(i,j)
             u_lbc(i,j) = u_lbc(i,j)+hme_u(i,j)
             v_lbc(i,j) = v_lbc(i,j)+hme_v(i,j)
+          enddo
+        enddo
+      endif
+      
+! Add TGCMlb perturbations:
+      if (tgcmlb_nfiles > 0 ) then
+        call get_tgcmlb(modeltime)
+!     
+        do j=lat0,lat1
+          do i=lon0,lon1
+            t_lbc(i,j) = t_lbc(i,j)+tgcmlb_t(i,j)
+            z_lbc(i,j) = z_lbc(i,j)+tgcmlb_z(i,j)
+            u_lbc(i,j) = u_lbc(i,j)+tgcmlb_u(i,j)
+            v_lbc(i,j) = v_lbc(i,j)+tgcmlb_v(i,j)
           enddo
         enddo
       endif
