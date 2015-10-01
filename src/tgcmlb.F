@@ -15,8 +15,8 @@
       use nchist_module,only:nc_open,nc_close,handle_ncerr
       use addfld_module,only: addfld
       use input_module ,only: 
-     |  nfiles =>hme_nfiles,     ! number of hme files
-     |  ncfiles=>hme_ncfiles,    ! hme file names
+     |  nfiles =>tgcmlb_nfiles,     ! number of tgcmlb files
+     |  ncfiles=>tgcmlb_ncfiles,    ! tgcmlb file names
      |  mxlen_filename,
      |  start_year               ! starting year (4-digit integer yyyy)
       use init_module,only: iyear,istep
@@ -34,7 +34,6 @@
      |  tgcmlb_modeltime   ! (doy,hr,min)    
 !
 #include <netcdf.inc>
-
 !
       real,dimension(nlonp4,nlat),save ::
      |  tgcmlb_z, 
@@ -42,7 +41,7 @@
      |  tgcmlb_u, 
      |  tgcmlb_v
 !
-! Current hme_ncfile being used for nudging (for histories):
+! Current tgcmlb_ncfile being used for nudging (for histories):
       character(len=mxlen_filename) :: tgcmlb_ncfile_curr
 !
       contains 
@@ -69,8 +68,8 @@
       if (itime0 < itime1) yfrac0 = yfrac_tgcmlb(itime0,modeltime(1))
       yfrac1 = yfrac_tgcmlb(itime1,modeltime(1))
 !      write(6,*) 'in modeltime_tgcm',iyear,modeltime
-!      write(6,'(a28,3(x,f15.10))') 'in get_tgcmlb',yfrac,
-!     |  yfrac0,yfrac1 
+      write(6,'(a28,3(x,f15.10))') 'in get_tgcmlb',yfrac,
+     |  yfrac0,yfrac1 
      
       if (yfrac >= yfrac0 .and. yfrac < yfrac1) then
         if (.not.isread(itime0)) then
@@ -134,8 +133,8 @@
 !
 ! Local:
       integer :: istat,ndims,idunlim,ngatts,nvars
-      integer :: nlat_rd,nlon_rd
-      integer :: id_lat,id_lon,id_time
+      integer :: nlat_rd,nlon_rd,nlev_rd
+      integer :: id_lat,id_lon,id_time,id_lev
       integer :: idv_year,idv_modeltime
       integer :: istart1(1),icount1(1),istart2(2),icount2(2)
       character(len=1024) :: dskfile
@@ -164,6 +163,15 @@
         write(6,"(/,'>>> readfile in tgcmlb: bad nlon_rd=',i3,
      |    ' -- should be nlon=',i3)") nlon_rd,nlon
         call shutdown('readfile')
+      endif
+!
+! Get and verify lev dimension. 
+      istat = nf_inq_dimid(ncid,'ilev',id_lev)
+      istat = nf_inq_dimlen(ncid,id_lev,nlev_rd)
+      if (nlev_rd /= 1) then
+        write(6,"(/,'>>> readfile tgcmlb: bad nlev_rd=',i3,
+     |    ' -- should be 1')") nlat_rd
+        call shutdown('readfile')
       endif  
 !
 ! Get number of times (value of unlimited dimension) on the file:
@@ -179,7 +187,7 @@
       if (allocated(tgcmlb_year)) deallocate(tgcmlb_year)
       if (allocated(tgcmlb_modeltime)) deallocate(tgcmlb_modeltime)
       allocate(tgcmlb_year(ntime),stat=istat)
-      allocate(tgcmlb_modeltime(ntime,3),stat=istat)
+      allocate(tgcmlb_modeltime(3,ntime),stat=istat)
       istart1(1) = 1
       icount1(1) = ntime
 !
@@ -205,9 +213,9 @@
         call shutdown('tgcmlb mtime')
       endif
 
-!     write(6,"('readfile: file=',a,' date=',/,(6i10))") 
-!    |  trim(ncfile),tgcmlb_year
-!     write(6,"('readfile: modeltime=',/,(6i10))") tgcmlb_modeltime
+!      write(6,"('readfile: file=',a,' date=',/,(6i10))") 
+!     |  trim(ncfile),tgcmlb_year
+!      write(6,"('readfile: modeltime=',/,(3i10))") tgcmlb_modeltime(:,1)
 
       end subroutine readfile      
 !-----------------------------------------------------------------------
@@ -259,9 +267,11 @@
          maxday = 365.  ! counting starts with 0
       endif
 !
-      isecs = tgcmlb_modeltime(it,2)*3600+tgcmlb_modeltime(it,3)*60
+      isecs = tgcmlb_modeltime(2,it)*3600+tgcmlb_modeltime(3,it)*60
       yfrac_tgcmlb=float(tgcmlb_year(it))+
-     | (float(tgcmlb_modeltime(it,1))-1+float(isecs)/(3600.*24.))/maxday
+     | (float(tgcmlb_modeltime(1,it))-1+float(isecs)/(3600.*24.))/maxday
+!      write(6,*) 'yfrac_tgcmlb ',it, tgcmlb_modeltime(2,it),
+!     | tgcmlb_modeltime(3,it),tgcmlb_year(it)
 !
       end function yfrac_tgcmlb
 !--------------------------------------------------------------------------
@@ -277,13 +287,14 @@
       real,dimension(nlon,nlat),intent(inout) :: t,u,v,z ! if used only out compiler complained
 !
 ! Local:
-      integer :: istat,id,start3(3),count3(3)
+      integer :: istat,id,start4(4),count4(4)
 
-      start3(1:2) = 1
-      start3(3) = itime
-      count3(1) = nlon
-      count3(2) = nlat
-      count3(3) = 1
+      start4(1:3) = 1
+      start4(4) = itime
+      count4(1) = nlon
+      count4(2) = nlat
+      count4(3) = 1
+      count4(4) = 1
 !      
       istat = nf_inq_varid(ncid,"Tpert",id)
       if (istat /= NF_NOERR) then 
@@ -291,7 +302,7 @@
      |  'read_tgcmlb: Error getting Tpert var id')
          call shutdown('read_tgcmlb Tpert')
       endif	 
-      istat = nf_get_vara_double(ncid,id,start3,count3,t)
+      istat = nf_get_vara_double(ncid,id,start4,count4,t)
       if (istat /= NF_NOERR) then
         call handle_ncerr(istat,
      |  'read_tgcmlb: Error getting variable Tpert')
@@ -303,7 +314,7 @@
      |  'read_tgcmlb: Error getting Upert var id')
          call shutdown('read_tgcmlb Upert')
       endif	 
-      istat = nf_get_vara_double(ncid,id,start3,count3,u)
+      istat = nf_get_vara_double(ncid,id,start4,count4,u)
       if (istat /= NF_NOERR) then 
         call handle_ncerr(istat,
      |  'read_tgcmlb: Error getting variable Upert')
@@ -315,7 +326,7 @@
      |  'read_tgcmlb: Error getting Vpert var id')
          call shutdown('read_tgcmlb Vpert')
       endif	 
-      istat = nf_get_vara_double(ncid,id,start3,count3,v)
+      istat = nf_get_vara_double(ncid,id,start4,count4,v)
       if (istat /= NF_NOERR) then 
         call handle_ncerr(istat,
      |  'read_tgcmlb: Error getting variable Vpert')
@@ -324,10 +335,10 @@
       istat = nf_inq_varid(ncid,"Zpert",id)
       if (istat /= NF_NOERR) then
         call handle_ncerr(istat,
-     |  'read_hme: Error getting Zpert var id')
+     |  'read_tgcmlb: Error getting Zpert var id')
          call shutdown('read_tgcmlb Zpert')
       endif	 
-      istat = nf_get_vara_double(ncid,id,start3,count3,z)
+      istat = nf_get_vara_double(ncid,id,start4,count4,z)
       if (istat /= NF_NOERR) then
         call handle_ncerr(istat,
      |  'read_tgcmlb: Error getting variable Zpert')

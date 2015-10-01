@@ -423,15 +423,15 @@
        call set_periodic_f2d(bgrddata_v)
 #endif
 
-!       call addfld('bgrddata_z','bgrd Z','cm',
-!    |    bgrddata_z(i0:i1,j0:j1),'lon',i0,i1,'lat',j0,j1,0)
-!       call addfld('bgrddata_t','bgrd TN','K',
-!    |    _t(i0:i1,j0:j1),'lon',i0,i1,'lat',j0,j1,0)
-!       cabgrddatall addfld('bgrddata_u','bgrd UN','cm/s',
-!    |    bgrddata_u(i0:i1,j0:j1),'lon',i0,i1,'lat',j0,j1,0)
-!       call addfld('bgrddata_v','bgrd VN','cm/s',
-!    |    bgrddata_v(i0:i1,j0:j1),'lon',i0,i1,'lat',j0,j1,0)
-!
+       call addfld('bgrddata_z','bgrd Z','cm',
+     |	 bgrddata_z(i0:i1,j0:j1),'lon',i0,i1,'lat',j0,j1,0)
+       call addfld('bgrddata_t','bgrd TN','K',
+     |	 bgrddata_t(i0:i1,j0:j1),'lon',i0,i1,'lat',j0,j1,0)
+       call addfld('bgrddata_u','bgrd UN','cm/s',
+     |	 bgrddata_u(i0:i1,j0:j1),'lon',i0,i1,'lat',j0,j1,0)
+       call addfld('bgrddata_v','bgrd VN','cm/s',
+     |	 bgrddata_v(i0:i1,j0:j1),'lon',i0,i1,'lat',j0,j1,0)
+
       end subroutine mk_bgrddata
 !
 !-----------------------------------------------------------------------
