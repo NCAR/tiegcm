@@ -1022,6 +1022,7 @@
       end function trcase
 !-----------------------------------------------------------------------
       subroutine shutdown(msg)
+      use my_esmf
 !
 ! An fatal error has occurred -- shut down the model, including MPI.
 !
@@ -1040,10 +1041,24 @@
       write(6,"(/,28('>'),' MODEL SHUTDOWN ',28('<'))")
       write(6,"('Shutdown: stop message: ',a)") trim(msg)
 #ifdef MPI
+!
+! ESMF is nested inside MPI, so shutdown ESMF first:
+      call ESMF_Finalize(endflag=ESMF_END_KEEPMPI,rc=ier)
+      if (ier /= ESMF_SUCCESS) then
+        write(6,"('>>> Shutdown: error return from ESMF_Finalize:',
+     |    ' ier=',i4)") ier
+      else
+        write(6,"('Shutdown after ESMF_Finalize')")
+      endif
+!
+! Shutdown MPI:
       write(6,"('Shutdown calling mpi_abort..')")
       write(6,"(72('>'))")
       call mpi_abort(MPI_COMM_WORLD,errorcode,ier)
 #endif
+      write(6,"(/,'For information, please see TGCM Users Guide at ',
+     |  /,'http://www.hao.ucar.edu/modeling/tgcm/doc/userguide')")
+      write(6,"(72('>'))")
       stop 'shutdown'
       end subroutine shutdown
 !-----------------------------------------------------------------------

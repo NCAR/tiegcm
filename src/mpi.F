@@ -144,8 +144,8 @@
 !
 ! Local:
       integer :: ier,n,j,i
-      integer,dimension(10) :: 
-     |  valid_pecounts=(/4,8,12,16,24,32,48,64,72,80/)
+      integer,dimension(11) :: 
+     |  valid_pecounts=(/1,4,8,12,16,24,32,48,64,72,80/)
 !
       ier = 0
 #ifdef VT

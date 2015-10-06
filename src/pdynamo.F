@@ -722,17 +722,17 @@
 ! (note cannot use mlev0=-2 in addfld call)
 !
       do j=mlat0,mlat1
-        call addfld('ZMAG','ZMAG from pdynamo','cm',
-     |    zpot_mag(:,j,:),'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
+        call addfld('ZMAG','ZMAG from pdynamo','km',
+     |    zpot_mag(:,j,:)*1.e-5,'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
       enddo
 
-!     do j=mlat0,mlat1
-!       call addfld('PED_MAG','PED on mag grid','S/m',
-!    |    ped_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('HAL_MAG','HALL on mag grid','S/m',
-!    |    hal_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('ZPOT_MAG','ZPOT on mag grid','cm',
-!    |    zpot_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
+      do j=mlat0,mlat1
+        call addfld('PED_MAG','PED on mag grid','S/m',
+     |    ped_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+        call addfld('HAL_MAG','HALL on mag grid','S/m',
+     |    hal_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+        call addfld('ZPOT_MAG','ZPOT on mag grid','cm',
+     |    zpot_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
 !       call addfld('ADOTV1_MAG','ADOTV1 on mag grid',' ',
 !    |    adotv1_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
 !       call addfld('ADOTV2_MAG','ADOTV2 on mag grid',' ',
@@ -741,7 +741,7 @@
 !    |    je1pg_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
 !       call addfld('JE2PG_MAG','JE2PG on mag grid',' ',
 !    |    je2pg_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!     enddo
+      enddo
 
 !     call addfld('SINI_MAG',  'SINI on mag grid',' ',
 !    |  sini_mag,'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)

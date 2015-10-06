@@ -225,9 +225,6 @@
 ! Save route handle and get esmf indices and weights for geo2mag:
 ! Use polemethod=ESMF_POLEMETHOD_ALLAVG to define geographic poles:
 !
-! 2/4/14: Error return:
-!  0:>>> esmf_init error return from ESMF_FieldRegridStore for 3d geo2mag rc= 513
-!
       call ESMF_FieldRegridStore(srcField=geo_ped,dstField=mag_ped, 
      |  regridMethod=ESMF_REGRIDMETHOD_BILINEAR,
      |  polemethod=ESMF_POLEMETHOD_ALLAVG,
@@ -237,7 +234,7 @@
       if (rc /= ESMF_SUCCESS) then
         write(6,"('>>> esmf_init: error return from ',
      |    'ESMF_FieldRegridStore for 3d geo2mag: rc=',i4)") rc
-        call shutdown('esmf_FieldRegridStore')
+        call shutdown('esmf_FieldRegridStore for 3d geo2mag')
       endif
 !
 ! Store route handle for geo2mag 3d fields:
@@ -502,12 +499,16 @@
 ! for source grids only:
 !
       if (srcdes == 'src') then
-        do n=0,ntask-1
+        if (ntask==1) then ! for single task, remove 4 periodic points
+          nlons_task(1) = tasks(0)%nlons-4
+        else
+          do n=0,ntask-1
 ! east or west edge of task table:
-          if (tasks(n)%mytidi==ntaski-1.or.tasks(n)%mytidi==0) then
-            nlons_task(tasks(n)%mytidi+1) = tasks(n)%nlons-2
-          endif
-        enddo
+            if (tasks(n)%mytidi==ntaski-1.or.tasks(n)%mytidi==0) then
+              nlons_task(tasks(n)%mytidi+1) = tasks(n)%nlons-2
+            endif
+          enddo
+        endif ! ntask==1
       endif
 !
 ! nlats_task(ntaskj) = number of geo lats per task in lat dim
@@ -629,9 +630,9 @@
 !    |  srcdes,lbnd_lon,ubnd_lon,lon0,lon1,lbnd_lat,ubnd_lat,
 !    |  lat0,lat1
 
-!     write(6,"(a,' geo grid: my nlons=',i4,' coordX=',(8f9.2))") 
+!     write(6,"(a,' geo grid: my nlons=',i4,' coordX=',/,(8f9.2))") 
 !    |  srcdes,ubnd_lon-lbnd_lon+1,coordX
-!     write(6,"(a,' geo grid: my nlats=',i4,' coordY=',(8f9.2))") 
+!     write(6,"(a,' geo grid: my nlats=',i4,' coordY=',/,(8f9.2))") 
 !    |  srcdes,ubnd_lat-lbnd_lat+1,coordY
 
       end subroutine create_geo_grid
