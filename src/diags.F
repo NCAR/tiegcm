@@ -275,7 +275,7 @@
      |  'EX: Zonal component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'ilev'
-      diags(n)%caller     = 'ionvel.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'EY'
@@ -283,7 +283,7 @@
      |  'EY: Meridional component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'ilev'
-      diags(n)%caller     = 'ionvel.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'EZ'
@@ -291,7 +291,7 @@
      |  'EZ: Vertical component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'ilev'
-      diags(n)%caller     = 'ionvel.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'ED1'
@@ -299,7 +299,7 @@
      |  'ED1: Magnetic eastward component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'imlev'
-      diags(n)%caller     = 'dynamo.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'ED2'
@@ -307,7 +307,7 @@
      |'ED2: Magnetic downward (equatorward) component of electric field'
       diags(n)%units      = 'V/m'
       diags(n)%levels     = 'imlev'
-      diags(n)%caller     = 'dynamo.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'PHIM2D'
@@ -315,7 +315,7 @@
      |  'PHIM2D: 2d Electric Potential on magnetic grid'
       diags(n)%units      = 'V'
       diags(n)%levels     = 'none'
-      diags(n)%caller     = 'dynamo.F'
+      diags(n)%caller     = 'pdynamo.F'
 !
       n = n+1
       diags(n)%short_name = 'N2'
@@ -1167,8 +1167,8 @@
 !-----------------------------------------------------------------------
       subroutine mkdiag_WN(name,omega,zcm,lev0,lev1,lon0,lon1,lat)
 !
-! Neutral Vertical Wind, from vertical motion OMEGA and scale height.
-! Scale height pzps is calculated from input geopotential z (cm).
+! Neutral Vertical Wind on interfaces, from vertical motion OMEGA and 
+! scale height. Scale height pzps is calculated from input geopotential z (cm).
 !
 ! Args:
       character(len=*),intent(in) :: name
@@ -1201,7 +1201,8 @@
       enddo ! i=lon0,lon1
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,wn,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+     |  diags(ix)%units,wn,diags(ix)%levels,lev0,lev1,
+     |  'lon',lon0,lon1,lat)
 
       end subroutine mkdiag_WN
 !-----------------------------------------------------------------------
@@ -1344,7 +1345,7 @@
       do k=lev0,lev1-1
         zgmid(k,:) = 0.5*(zgint(k,:)+zgint(k+1,:))
       enddo
-      zgmid(lev1,:) = 1.5*zgmid(lev1-1,:)-0.5*zgmid(lev1-2,:)
+      zgmid(lev1,:) = 2.0*zgmid(lev1-1,:)-zgmid(lev1-2,:)
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
      |  diags(ix)%units,zgmid,'lev',lev0,lev1,'lon',lon0,lon1,lat)

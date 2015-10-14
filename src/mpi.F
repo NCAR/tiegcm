@@ -4445,20 +4445,22 @@
       real,intent(out) :: fmglb(nmlonp1,nmlat,nf)
 !
 ! Local:
-      integer :: len,i,j,ifld,ier,itask,i0,i1,j0,j1
-      real,dimension(nmlonp1,nmlat,nf) :: sndbuf
-      real,dimension(nmlonp1,nmlat,nf,0:ntask-1) :: rcvbuf
+      integer :: len,i,j,ifld,ier,itask,i0,i1,j0,j1,nlons,nlats
+      real,dimension(mxmaglon,mxmaglat,nf) :: sndbuf
+      real,dimension(mxmaglon,mxmaglat,nf,0:ntask-1) :: rcvbuf
       real :: starttime,endtime
 
       if (mpi_timing) starttime = mpi_wtime()
       sndbuf = 0.
       rcvbuf = 0.
-      len = nmlonp1*nmlat*nf
+      len = mxmaglon*mxmaglat*nf
+      nlons = mlon1-mlon0+1
+      nlats = mlat1-mlat0+1
 !
 ! Load send buffer with my subdomain:
       do ifld=1,nf
         do j=mlat0,mlat1
-          sndbuf(mlon0:mlon1,j,ifld) = fmsub(:,j,ifld)
+          sndbuf(1:nlons,j-mlat0+1,ifld) = fmsub(mlon0:mlon1,j,ifld)
         enddo
       enddo
 !
@@ -4471,11 +4473,11 @@
 ! Root task unpack from receive buffer:
       if (mytid==0) then
         do itask=0,ntask-1
+          i0 = tasks(itask)%mlon0 ; i1 = tasks(itask)%mlon1
+          j0 = tasks(itask)%mlat0 ; j1 = tasks(itask)%mlat1
           do ifld=1,nf
-            i0 = tasks(itask)%mlon0 ; i1 = tasks(itask)%mlon1
-            j0 = tasks(itask)%mlat0 ; j1 = tasks(itask)%mlat1
             do j=j0,j1
-              fmglb(i0:i1,j,ifld) = rcvbuf(i0:i1,j,ifld,itask) 
+              fmglb(i0:i1,j,ifld) = rcvbuf(1:i1-i0+1,j-j0+1,ifld,itask) 
             enddo ! j=mlat0,mlat1
           enddo ! ifld=1,nf
         enddo ! itask=0,ntask-1
