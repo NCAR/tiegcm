@@ -539,9 +539,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107A'        , '200.']
         ]
 
-#     if res == '2.5':
-#       self.list_mods[2] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pcntr_decsol_smax.nc'"]
-
       self.list_rm   = []
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
       self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
@@ -568,9 +565,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107'         , '70.'],
         ['F107A'        , '70.' ]
         ]
-
-#     if res == '2.5':
-#       self.list_mods[2] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pcntr_decsol_smin.nc'"]
 
       self.list_rm = []
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
@@ -600,9 +594,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107A'        , '200.' ]
         ]
 
-      if res == '2.5':
-        self.list_mods[2] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pcntr_junsol_smax.nc'"]
-
       self.list_rm   = []
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
       self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
@@ -630,9 +621,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107'         , '70.'],
         ['F107A'        , '70.' ]
         ]
-
-      if res == '2.5':
-        self.list_mods[2] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pcntr_junsol_smin.nc'"]
 
       self.list_rm   = []
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
@@ -662,9 +650,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107A'        , '200.' ]
         ]
 
-      if res == '2.5':
-        self.list_mods[2] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pcntr_mareqx_smax.nc'"]
-
       self.list_rm   = []
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
       self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
@@ -693,10 +678,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107A'        , '70.']
         ]
 
-      if res == '2.5':
-        self.list_mods[2] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pcntr_mareqx_smin.nc'"]
-
-      self.list_rm   = {} 
+      self.list_rm   = []
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
       self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -723,9 +705,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107'         , '200.'],
         ['F107A'        , '200.']
         ]
-
-      if res == '2.5':
-        self.list_mods[2] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pcntr_sepeqx_smax.nc'"]
 
       self.list_rm   = []
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
@@ -755,9 +734,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107A'        , '70.']
         ]
 
-      if res == '2.5':
-        self.list_mods[2] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pcntr_sepeqx_smin.nc'"]
-
       self.list_rm   = []
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
       self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
@@ -782,14 +758,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'      , '328 0 0'],
         ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
-        ['GPI_NCFILE'     , "'$TGCMDATA/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
-
-      if res == '2.5':
-        self.list_mods[3] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.p_nov2003_heelis_gpi.nc'"]
-
 #
-# Lines (keys) to remove from default:
+# Pairs to be removed do not need values:
       self.list_rm = [
         ['POWER'        , '0.'],
         ['CTPOTEN'      , '0.'],
@@ -818,15 +790,11 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'        , '328 0 0'],
         ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
-        ['IMF_NCFILE'     , "'$TGCMDATA/imf_OMNI_2003001-2003365.nc'"],
-        ['GPI_NCFILE'     , "'$TGCMDATA/gpi_1960001-2015090.nc'"]
+        ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2003001-2003365.nc'"],
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
-
-      if res == '2.5':
-        self.list_mods[3] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.p_nov2003_weimer_imf.nc'"]
-
 #
-# Lines (keys) to remove from default:
+# Pairs to be removed do not need values:
       self.list_rm = [
         ['POWER'        , '0.'],
         ['CTPOTEN'      , '0.'],
@@ -855,14 +823,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'        , '339 0 0'],
         ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_010.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
-        ['GPI_NCFILE'     , "'$TGCMDATA/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
-
-      if res == '2.5':
-        self.list_mods[3] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.p_dec2006_heelis_gpi.nc'"]
-
 #
-# Lines (keys) to remove from default:
+# Pairs to be removed do not need values:
       self.list_rm = [
         ['POWER'        , '0.'],
         ['CTPOTEN'      , '0.'],
@@ -891,15 +855,11 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'        , '339 0 0'],
         ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_010.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
-        ['IMF_NCFILE'     , "'$TGCMDATA/imf_OMNI_2006001-2006365.nc'"],
-        ['GPI_NCFILE'     , "'$TGCMDATA/gpi_1960001-2015090.nc'"]
+        ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2006001-2006365.nc'"],
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
-
-      if res == '2.5':
-        self.list_mods[3] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.p_dec2006_weimer_imf.nc'"]
-
 #
-# Lines (keys) to remove from default:
+# Pairs to be removed do not need values:
       self.list_rm = [
         ['POWER'        , '0.'],
         ['CTPOTEN'      , '0.'],
@@ -928,12 +888,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'        , '106 0 0'],
         ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
-        ['GPI_NCFILE'     , "'$TGCMDATA/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
-
-      if res == '2.5':
-        self.list_mods[3] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.p_whi2008_heelis_gpi.nc'"]
-
 #
 # Lines (keys) to remove from default:
       self.list_rm = [
@@ -968,15 +924,11 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'        , '106 0 0'],
         ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
-        ['IMF_NCFILE'     , "'$TGCMDATA/imf_OMNI_2008001-2008366.nc'"],
-        ['GPI_NCFILE'     , "'$TGCMDATA/gpi_1960001-2015090.nc'"]
+        ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2008001-2008366.nc'"],
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
-
-      if res == '2.5':
-        self.list_mods[3] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.p_whi2008_weimer_imf.nc'"]
-
 #
-# Lines (keys) to remove from default:
+# Pairs to be removed do not need values:
       self.list_rm = [
         ['POWER'        , '0.'],
         ['CTPOTEN'      , '0.'],
@@ -1019,10 +971,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['CTPOTEN'      , '30.'],
         ['F107'         , '70.'],
         ['F107A'        , '70.']]
-
-      if res == '2.5':
-        self.list_mods[3] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pclim_heelis.nc'"]
-
 #
 # Pairs to be removed do not need values:
       self.list_rm = [
@@ -1032,7 +980,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECOUT'      ,''],
         ['MXHIST_SECH' ,''],
         ['SECFLDS'     ,'']]
-
 #
       self.wc50_default = '00:30' # wallclock limit for 5.0-deg res (ys only)
       self.wc25_default = '00:30' # wallclock limit for 2.5-deg res (ys only)
@@ -1057,10 +1004,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['CTPOTEN'      , '60.'],
         ['F107'         , '200.'],
         ['F107A'        , '200.']]
-
-      if res == '2.5':
-        self.list_mods[3] = ['SOURCE', "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95_dres.pclim_heelis.nc'"]
-
 #
 # Pairs to be removed do not need values:
       self.list_rm = [
@@ -1070,7 +1013,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECOUT'      ,''],
         ['MXHIST_SECH' ,''],
         ['SECFLDS'     ,'']]
-
 #
       self.wc50_default = '00:30' # wallclock limit for 5.0-deg res (ys only)
       self.wc25_default = '00:30' # wallclock limit for 2.5-deg res (ys only)
