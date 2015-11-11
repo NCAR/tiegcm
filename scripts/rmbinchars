@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+import sys
+#
+# Remove non-ASCII characters in input file(s):
+#
+def strip_non_ascii(string):
+    ''' Returns the string without non ASCII characters'''
+    stripped = (c for c in string if 0 < ord(c) < 127)
+    return ''.join(stripped)
+
+if len(sys.argv) == 1:
+  print '>>> Please provide input files from which to remove non-ASCII characters.'
+  sys.exit()
+
+for infile in sys.argv[1:]:
+# print 'Reading file ',infile
+  f = open(infile,'r')
+  lines = f.readlines()
+  lines = [line.rstrip() for line in lines]
+  f.close()
+#
+# Overwrite input file:
+#
+  f = open(infile,'w')
+  print 'Overwriting file ',infile,' with non-ASCII characters removed.'
+  for line in lines:
+    newline = strip_non_ascii(line)
+    f.write(newline+'\n')
+  f.close()
+#
+# Write to output file infile.txt:
+#
+# outfile = infile+'.txt'
+# print 'Writing file ',outfile
+# f = open(outfile,'w')
+# for line in lines:
+#   newline = strip_non_ascii(line)
+#   f.write(newline+'\n')
+# f.close()

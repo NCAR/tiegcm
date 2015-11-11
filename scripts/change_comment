@@ -1,0 +1,32 @@
+#
+set file = $1
+set c0 = $2
+set c1 = $3
+if ($c0 == '') then
+  set c0 = ';'
+endif
+if ($c1 == '') then
+  set c1 = '!'
+endif
+echo c0 = $c0 c1 = $c1
+
+if (! -e $file) then
+  echo "Cannot find file $file"
+  exit 1
+endif
+if (! -f $file) then
+  echo "$file is not a plain file."
+  exit 1
+endif
+if (! -r $file) then
+  echo "Need read access to $file"
+  exit 1
+endif
+#cat $file | sed 's/;/\!/g' >! $file.new
+cat $file | sed "s/$c0/$c1/g" >! $file.new
+if (-w $file) then
+  mv $file.new $file
+  echo "Changed comments in $file"
+else
+  echo "Wrote new file $file.new from $file with comments changed"
+endif
