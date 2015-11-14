@@ -1,41 +1,120 @@
-#!/usr/bin/perl
-$logfile = $ARGV[0];
-print "logfile = $logfile\n";
-open(LOGFILE,"< $logfile") || 
-  die "Could not open input file $logfile\n\n";
-$ifile = 0;
-$found = 1;
-while ($found > 0) {
-  $found = 0;
-  while (<LOGFILE>) {
-    if (/^\s*$ifile\:/) {
-      $found++;
-      if ($found==1) {
-        &mktasklog($logfile,$ifile,$tasklog);
-        open(TASKLOG,"> $tasklog") || 
-          die "Could not open output file $tasklog\n\n";
-      }
-      print TASKLOG;
-    }
-  }
-  if ($found==0) { exit; }
-  close (TASKLOG);
-  print "Wrote file $tasklog\n";
-  seek LOGFILE,0,0;
-  $ifile++;
-}
-#-----------------------------------------------------------------------
-sub mktasklog {
-local ($logfile, $ifile) = @_;
-local ($pos,$dotpos);
+#!/usr/bin/env python
+import os,sys
 #
-$tasklog = $logfile;
-$pos = -1;
-while (($pos = index($tasklog,'.',$pos)) > -1) {
-  $dotpos = $pos;
-  $pos++;
-}
-substr($tasklog,$dotpos) = "";
-$iifile = sprintf "%4.4d",$ifile;
-$tasklog = $tasklog . '_task' . $iifile . '.out';
-}
+# Each file argument is an mpi stdout log file from yellowstone, with
+#   a list of mpi tasks that printed the line prepended to each line.
+# This code creates a new file "taskfile" for each mpi task, and
+#   writes each line that task printed to its taskfile.
+#
+#-----------------------------------------------------------------------
+
+def make_taskfile(filename,proc):
+  dot = '.'
+  parts = file.split(dot)
+  parts.pop(len(parts)-1)
+  fileroot = dot.join(parts)
+  if proc < 10:
+    procnum = '000'+str(proc)
+  elif proc < 100:
+    procnum = '00'+str(proc)
+  elif proc < 1000:
+    procnum = '0'+str(proc)
+  else:
+    procnum = str(proc)
+  taskfile = fileroot+'_task'+procnum+'.out'
+  return taskfile
+  
+#-----------------------------------------------------------------------
+
+if len(sys.argv) == 1:
+  print 'mklogs: Need at least one file argument.'
+  sys.exit()
+
+for arg in sys.argv[1:]:
+  file = arg
+  if not os.path.isfile(file):
+    print '>>> mklogs: Could not open file ',file
+    continue
+#
+# Open, read, and close arg file:
+#
+  f = open(file,'r')
+  print 'mklogs: Opened file ',file
+  lines = f.readlines()  
+  lines = [line.rstrip() for line in lines]
+  f.close()
+#
+# For each line:
+# There are 3 possible prefix types on each line (before the first ":")
+#   One or more procs: 20,27,49,56
+#   Range of procs:    36-40
+#   Combination:       17,32-33,37-40,47
+#
+  proclist = []                  # list of procs for each line (2d)
+  maxproc = -1
+  for line in lines:
+    line = line.split(':')
+    procs = line[0]             # procs definition (3 possible, as described above)
+    procs = procs.split(',')    # list of 1 or more procs and/or ranges
+    plist = []                  # will be list of procs for this line
+    for string in procs:
+      if '-' not in string:     # not a range, append the proc 
+        plist.append(string)
+      else:                     # append range of procs, e.g., "36-40"
+        list = string.split('-')
+#
+# Make sure we are dealing with integer strings:
+#
+        try: int(list[0])
+	except: continue
+        try: int(list[1])
+	except: continue
+#
+# Loop over procs within range, inclusive:
+#
+        proc0 = int(list[0])
+        proc1 = int(list[1])
+        proc = proc0
+        while proc <= proc1:      # loop over procs within range 
+          plist.append(str(proc)) # append each proc to plist
+          proc = proc+1
+
+      for proc in plist:          # update maxproc
+        try: int(proc)
+        except: continue
+        if int(proc) > maxproc: maxproc = int(proc)
+#
+# append plist to proclist for current line in file:
+#
+    proclist.append(plist)        
+#
+# Now open all maxproc+1 task files for writing (0->maxproc):
+#
+  f = [] # file descriptors
+  nproc = 0
+  while nproc <= maxproc:
+    taskfile = make_taskfile(file,nproc)
+    f.append('f'+str(nproc))
+    f[nproc] = open(taskfile,'w')
+    nproc = nproc+1 
+#
+# Write text from each line to each procfile in proclist[nline]:
+#
+  nline = 0
+  for line in lines:
+    line = line.split(':')
+    for proc in proclist[nline]: 
+      try: int(proc)
+      except: continue
+      string = ''.join(line[1:])
+      f[int(proc)].write(string+'\n')
+    nline = nline+1
+#
+# Close task files:
+#
+  nproc = 0
+  while nproc <= maxproc:
+    f[nproc].close()
+    nproc = nproc+1
+
+# End args loop

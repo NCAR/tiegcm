@@ -59,7 +59,8 @@ cat << EOF >! $runscript
 #BSUB -J tiegcm
 #BSUB -P P28100036
 ##BSUB -P NHAO0004
-#BSUB -q premium
+##BSUB -q premium
+#BSUB -q regular
 #BSUB -o tiegcm.%J.out
 #BSUB -e tiegcm.%J.out
 #BSUB -N
@@ -143,8 +144,9 @@ endif
 set model  = $execdir/$model
 set input  = `perl $utildir/abspath $input`
 set output = `perl $utildir/abspath $output`
-set mklogs = `perl $utildir/abspath $utildir`
-set mklogs = $mklogs/mklogs.ys # special mklogs for yellowstone
+set util   = `perl $utildir/abspath $utildir`
+set mklogs = $util/mklogs         # Nov, 2015: mklogs rewritten in python
+set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdout files
 #
 # Report to stdout:
 #
@@ -243,7 +245,8 @@ if ($mpi == "TRUE") then  # MPI LSF job
   setenv MP_LABELIO YES
   setenv MP_SHARED_MEMORY yes
   mpirun.lsf $model < $input >&! $output
-  $mklogs $output
+  $rmbinchars $output # remove any non-ascii chars in stdout file
+  $mklogs $output     # break stdout into per-task log files
 EOF
   echo " "
   echo "Submitting LSF script $runscript for MPI run"

@@ -91,8 +91,9 @@ if (! -f $input) then
 endif
 set input  = `perl $utildir/abspath $input`
 set output = `perl $utildir/abspath $output`
-set mklogs = `perl $utildir/abspath $utildir`
-set mklogs = $mklogs/mklogs
+set util   = `perl $utildir/abspath $utildir`
+set mklogs = $util/mklogs
+set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdout files
 #
 # Report to stdout:
 #
@@ -180,7 +181,8 @@ if ($exec == "TRUE") then
       echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
     echo "Linux MPI run of $model completed at `date`"
-    perl $mklogs $output
+    $rmbinchars $output # remove any non-ascii chars in stdout file
+    $mklogs $output     # break stdout into per-task log files
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."
     $model < $input >&! $output || \
