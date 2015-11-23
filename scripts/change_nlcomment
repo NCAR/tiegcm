@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+import sys,os,shutil,argparse
+#-----------------------------------------------------------------------
+def replace_string(file,oldstr,newstr):
+#
+# Replace all occurrences of "oldstr" in oldfile to "newstr" in newfile.
+# Note oldfile and newfile may be the same, i.e., overwrite oldfile. 
+#
+# Read contents first, then close input file.
+#
+  file_read = open(file,'r')
+  contents = file_read.read()
+  file_read.close()
+# print contents
+#
+# Open output file and change chars per line.
+#
+  fw = open(file,'w')
+  for line in contents:
+    newline = line.replace(oldstr,newstr)
+    fw.write(newline)
+  fw.close()
+#-----------------------------------------------------------------------
+#
+description='''\
+Change namelist comment character from ";" to "!" in input file(s).
+
+If the -overwrite option is NOT set, user is prompted for whether or 
+  not to overwrite the input files.
+If the -overwrite option IS set (yes or no), then the option will be
+  honored, and the user will NOT be prompted.
+If input files are not overwritten, files with a '.new' suffix 
+  added to the original file name will be written with the comment 
+  character changed.
+'''
+
+epilog='''\
+Example 1:
+  change_nlcomment tiegcm.inp mynamelist.inp
+  (User will be prompted whether or not to overwrite each input file)
+Example 2:
+  change_nlcomment -overwrite=no *.inp  
+  (Files will be NOT be overwritten without prompting the user)
+Example 3:
+  change_nlcomment -overwrite=yes *.inp 
+  (Files WILL be overwritten without prompting the user)
+Example 4:
+  change_nlcomment -overwrite=yes `find . -name \*.inp`
+  (Files found by the "find" command will be overwritten without prompting the user)
+'''
+
+parser = argparse.ArgumentParser(description=description, \
+  formatter_class=argparse.RawTextHelpFormatter,epilog=epilog)
+
+help_overwrite = 'Overwrite input files (yes/no)? (If set, user will not be prompted for overwrite)'
+help_nlfiles = 'One or more input namelist files in which to change the comment character.'
+
+parser.add_argument('nlfiles', nargs='+', help=help_nlfiles)
+parser.add_argument('-overwrite', help=help_overwrite)
+
+args = parser.parse_args()
+
+overwrite = ''
+if args.overwrite: overwrite = args.overwrite
+if overwrite != '':
+  if overwrite == 'yes' or overwrite == 'y':
+    print 'Will overwrite input files.'
+  else:
+    print 'Will NOT overwrite input files.'
+
+nlfiles = args.nlfiles
+print 'There are ',len(nlfiles),' input files.'
+
+oldstr = ';'
+newstr = '!'
+
+for file in nlfiles:
+  if os.path.isfile(file):
+#
+# Use command line argument, if provided:
+#
+    if overwrite != '':
+      if overwrite == 'yes' or overwrite == 'y':
+        replace_string(file,oldstr,newstr)
+        print 'Overwrote file ',file
+      else:
+        newfile = file+'.new'
+        shutil.copyfile(file,newfile)
+        replace_string(newfile,oldstr,newstr)
+        print 'Wrote file ',newfile
+      continue
+#
+# Prompt user for each file (command line arg not provided):
+#
+    answer = raw_input('Overwrite file '+file+' (y/n/q, default=n)? ')
+    if answer == 'q': sys.exit()
+    if answer == 'y':
+      replace_string(file,oldstr,newstr)
+      print 'Overwrote file ',file
+    elif answer == 'n' or answer == '':
+      newfile = file+'.new'
+      shutil.copyfile(file,newfile)
+      replace_string(newfile,oldstr,newstr)
+      print 'Wrote file ',newfile
+    else:
+      print 'File ',file,' is unchanged.'
+#
+# File not found:
+#
+  else:
+    print '>>> Cannot find file ',file
+    continue

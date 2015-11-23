@@ -32,7 +32,7 @@
 #
  set modeldir = tiegcm_trunk
  set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm-ys
-#set input    = tiegcm.inp
+ set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
  set output   = tiegcm.out
  set modelres = 5.0
 #

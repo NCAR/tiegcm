@@ -15,9 +15,9 @@
 #   exec:     If TRUE, execute the model (build only if FALSE)
 #   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
-set modeldir = /home/$user/tiegcm_trunk
+set modeldir = tiegcm_trunk
 set execdir  = /hao/aim/$user/tiegcm-linux
-#set input    = tiegcm.inp
+set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
 set output   = tiegcm.out
 set make     = Make.intel_hao64
 set modelres = 5.0
@@ -177,7 +177,7 @@ if ($exec == "TRUE") then
     echo "Executing $mpirun with -np $nproc for Linux MPI run."
 #
 # Execute mpirun (Intel or PGI) for MPI run:
-    $mpirun -machinefile machines.ini -np $nproc $model < $input >&! $output || \
+    $mpirun -s all -machinefile machines.ini -np $nproc $model < $input >&! $output || \
       echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
     echo "Linux MPI run of $model completed at `date`"
