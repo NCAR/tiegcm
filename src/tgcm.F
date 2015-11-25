@@ -43,7 +43,7 @@
       implicit none
 !
 ! Local:
-      integer :: ier,icount_tgcm,icount_apex,nsecs
+      integer :: ier,icount_tgcm,icount_apex
       real :: cpu1,cpu2
       character(len=8) ::
      |  rundate,           ! current local date
@@ -54,6 +54,7 @@
      |  time0_run, time1_run,
      |  time0_init,time1_init
       real :: starttime,endtime
+      real :: hours,days
       real,external :: mpi_wtime
 !
 #ifndef IRIX
@@ -167,12 +168,11 @@
 #ifdef MPI
       write(6,"('MPI run with ntask = ',i3)") ntask
 #endif
-      write(6,"('nstep=',i5,' step=',i5)") nstep,step
-      nsecs = nstep*step
-      write(6,"('Model simulation time = ',i8,' secs ',/,
-     |  '  (minutes=',f10.2,', hours=',f8.2,', days=',f10.6,')')")
-     |  nsecs,real(nsecs)/60.,real(nsecs)/3600.,
-     |  real(nsecs)/(24.*3600.)
+      write(6,"('nstep=',i8,' step=',i8)") nstep,step
+      hours = real(nstep*step)/3600. ! seconds to hours
+      days  = hours/24.
+      write(6,"('Model simulation time: hours=',f10.2,' days=',f10.2)")
+     |  hours,days
 !
 ! End timing:
 !

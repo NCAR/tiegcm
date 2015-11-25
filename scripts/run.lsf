@@ -44,4 +44,4 @@ mpirun.lsf $exec < $input >&! $output
 #mpirun.lsf job_memusage.exe $exec < $input >&! $output
 #
 # Sort stdout into one file per task:
-$modeldir/scripts/mklogs.ys $output
+$modeldir/scripts/mklogs $output

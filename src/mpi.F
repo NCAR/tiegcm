@@ -5080,7 +5080,7 @@
 
       write(6,"(/,72('-'))")
 
-      write(6,"('Total run time: mins=',e12.4,' hours=',e12.4)")
+      write(6,"('Total wallclock time: mins=',f10.2,' hours=',f10.2)")
      |  time_totalrun/60.,time_totalrun/3600.
 
       write(6,"('Total MPI timing: mins=',e12.4,' hours=',e12.4,

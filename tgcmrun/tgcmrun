@@ -47,6 +47,7 @@ while True:
   job.project      = get_options('project'     ,run,job,args.project)    # command-line only
   job.queue        = get_options('queue'       ,run,job,args.queue)      # command-line only
   job.wallclock    = get_options('wc'          ,run,job,args.wc)         # command-line only
+  job.step         = get_options('step'        ,run,job,args.step)       # command-line only
   job.submitflag   = get_options('submit'      ,run,job,args.submit)     # command-line only
   job.stdout_dir   = get_options('stdout_dir'  ,run,job,args.stdout_dir) # command-line only
   tgcmdata         = get_options('tgcmdata'    ,run,job,args.tgcmdata)   # env var TGCMDATA
@@ -67,7 +68,8 @@ while True:
 # Set run parameters (most importantly, namelist modifications):
 # Note: after going to tiegcm2.0, the model_res argument to set_run will no longer be necessary. 
 #
-  run.set_run(run.number,run.fullname,tgcmdata,job.model_version,job.model_res)
+# run.set_run(run.number,run.fullname,tgcmdata,job.model_version,job.model_res)
+  run.set_run(job,tgcmdata)
 #
 # Make instance of Namelist, and set file paths:
 # nl.default_file: default namelist file in model_root/scripts (read)

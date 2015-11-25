@@ -53,7 +53,8 @@ def get_args():
   help_project    = "Authorized NCAR project number, e.g.: #BSUB -P P28100036 (ys only)"
   help_queue      = "LSF queue name, e.g.: #BSUB -q regular (ys only)"
   help_wc         = "Wallclock limit e.g.: '01:30' is 1 hour, 30 minutes (ys only)"
-  help_submit     = "Submit job automatically without prompting user (yes/no))"
+  help_step       = "Model timestep (seconds) default=60 for res5.0, default=30 for res2.5"
+  help_submit     = "Submit job without prompting user? (yes/no))"
   help_execute    = "Execution flag for job script ('yes'/'no') (default: 'yes')"
   help_stdout_dir = "Directory in which stdout files and run scripts are to be saved (default: cwd)"
 
@@ -71,6 +72,7 @@ def get_args():
     ['project'    , help_project],
     ['queue'      , help_queue],
     ['wc'         , help_wc],
+    ['step'       , help_step],
     ['submit'     , help_submit],
     ['stdout_dir' , help_stdout_dir]]
 
@@ -373,6 +375,8 @@ def get_options(arg,run,job,option):
     if option:
       job.wallclock = option
       return job.wallclock
+#   else:
+#     return job.calc_wallclock
 #
 # Execute flag (TRUE/FALSE):
 #
@@ -402,6 +406,17 @@ def get_options(arg,run,job,option):
         print 'Will use existing stdout directory ',option
       job.stdout_dir = option
       return job.stdout_dir
+#
+# Model timestep:
+#
+  elif arg == 'step':
+    if option:
+      return option
+    else:
+      if job.model_res == '5.0': step = '60'
+      if job.model_res == '2.5': step = '30'
+      print 'getoptions returning step=',step
+      return step
 #
 # Source history file:
 #

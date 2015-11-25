@@ -5,7 +5,8 @@ from utils import getenv,replace_string,remove_comments
 class Version:
   def name(self,model_name):
     if model_name == 'tiegcm':
-      return 'tiegcm1.95'
+#     return 'tiegcm1.95'
+      return 'tiegcm2.0'
     elif model_name == 'timegcm':
       return 'timegcm1.42'
 
@@ -303,6 +304,9 @@ class Job:
 #   print "Wrote job script ",self.script_run
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# def calc_wallclock
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   def submit(self,run_fullname):
     print "Submitting ",self.script_run," for run ",run_fullname
     subprocess.call([self.script_run])
@@ -344,8 +348,6 @@ class Run(Job,Namelist):
       ['climatology_smax','Climatology run with constant solar maximum conditions (Jan 1-5)']
       ]
     self.nruns = len(self.names)
-#   self.name = ''
-#   self.number = 0
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   def get_number(self,run_name):
@@ -419,74 +421,72 @@ NUMBER\tNAME\t\tDESCRIPTION
 # Have to hardwire this for now, but oldsource will not be necessary after
 #   timegcm1.5 and tiegcm2.0 are released.
 #
-  def make_oldsource(self,tgcmdata,version,res):
+  def make_oldsource(self,tgcmdata,version):
     source = ''
 #
 # tiegcm old (v1.95) history files (this should be complete):
 #
-    if 'tiegcm' in version:
-      if res == '5.0':
+    if version == 'tiegcm5.0':
 
-        if self.name=='decsol_smax': source='TGCM.tiegcm1.95.pcntr_decsol_smax.nc'
-        if self.name=='decsol_smin': source='TGCM.tiegcm1.95.pcntr_decsol_smin.nc'
-        if self.name=='junsol_smax': source='TGCM.tiegcm1.95.pcntr_junsol_smax.nc'
-        if self.name=='junsol_smin': source='TGCM.tiegcm1.95.pcntr_junsol_smin.nc'
-        if self.name=='mareqx_smax': source='TGCM.tiegcm1.95.pcntr_mareqx_smax.nc'
-        if self.name=='mareqx_smin': source='TGCM.tiegcm1.95.pcntr_mareqx_smin.nc'
-        if self.name=='sepeqx_smax': source='TGCM.tiegcm1.95.pcntr_sepeqx_smax.nc'
-        if self.name=='sepeqx_smin': source='TGCM.tiegcm1.95.pcntr_sepeqx_smin.nc'
+      if self.name=='decsol_smax': source='TGCM.tiegcm1.95.pcntr_decsol_smax.nc'
+      if self.name=='decsol_smin': source='TGCM.tiegcm1.95.pcntr_decsol_smin.nc'
+      if self.name=='junsol_smax': source='TGCM.tiegcm1.95.pcntr_junsol_smax.nc'
+      if self.name=='junsol_smin': source='TGCM.tiegcm1.95.pcntr_junsol_smin.nc'
+      if self.name=='mareqx_smax': source='TGCM.tiegcm1.95.pcntr_mareqx_smax.nc'
+      if self.name=='mareqx_smin': source='TGCM.tiegcm1.95.pcntr_mareqx_smin.nc'
+      if self.name=='sepeqx_smax': source='TGCM.tiegcm1.95.pcntr_sepeqx_smax.nc'
+      if self.name=='sepeqx_smin': source='TGCM.tiegcm1.95.pcntr_sepeqx_smin.nc'
 
-        if self.name=='dec2006_heelis_gpi': source='TGCM.tiegcm1.95.p_dec2006_heelis_gpi.nc'
-        if self.name=='dec2006_weimer_imf': source='TGCM.tiegcm1.95.p_dec2006_weimer_imf.nc'
-        if self.name=='nov2003_heelis_gpi': source='TGCM.tiegcm1.95.p_nov2003_heelis_gpi.nc'
-        if self.name=='nov2003_weimer_imf': source='TGCM.tiegcm1.95.p_nov2003_weimer_imf.nc'
-        if self.name=='whi2008_heelis_gpi': source='TGCM.tiegcm1.95.p_whi2008_heelis_gpi.nc'
-        if self.name=='whi2008_weimer_imf': source='TGCM.tiegcm1.95.p_whi2008_weimer_imf.nc'
-        if self.name=='climatology_smin'  : source='TGCM.tiegcm1.95.pclim_heelis.nc'
-        if self.name=='climatology_smax'  : source='TGCM.tiegcm1.95.pclim_heelis.nc'
+      if self.name=='dec2006_heelis_gpi': source='TGCM.tiegcm1.95.p_dec2006_heelis_gpi.nc'
+      if self.name=='dec2006_weimer_imf': source='TGCM.tiegcm1.95.p_dec2006_weimer_imf.nc'
+      if self.name=='nov2003_heelis_gpi': source='TGCM.tiegcm1.95.p_nov2003_heelis_gpi.nc'
+      if self.name=='nov2003_weimer_imf': source='TGCM.tiegcm1.95.p_nov2003_weimer_imf.nc'
+      if self.name=='whi2008_heelis_gpi': source='TGCM.tiegcm1.95.p_whi2008_heelis_gpi.nc'
+      if self.name=='whi2008_weimer_imf': source='TGCM.tiegcm1.95.p_whi2008_weimer_imf.nc'
+      if self.name=='climatology_smin'  : source='TGCM.tiegcm1.95.pclim_heelis.nc'
+      if self.name=='climatology_smax'  : source='TGCM.tiegcm1.95.pclim_heelis.nc'
 
-      else: # tiegcm res=2.5
+    elif version == 'tiegcm2.5':
 
-        if self.name=='decsol_smax': source='TGCM.tiegcm1.95_dres.pcntr_decsol_smax.nc'
-        if self.name=='decsol_smin': source='TGCM.tiegcm1.95_dres.pcntr_decsol_smin.nc'
-        if self.name=='junsol_smax': source='TGCM.tiegcm1.95_dres.pcntr_junsol_smax.nc'
-        if self.name=='junsol_smin': source='TGCM.tiegcm1.95_dres.pcntr_junsol_smin.nc'
-        if self.name=='mareqx_smax': source='TGCM.tiegcm1.95_dres.pcntr_mareqx_smax.nc'
-        if self.name=='mareqx_smin': source='TGCM.tiegcm1.95_dres.pcntr_mareqx_smin.nc'
-        if self.name=='sepeqx_smax': source='TGCM.tiegcm1.95_dres.pcntr_sepeqx_smax.nc'
-        if self.name=='sepeqx_smin': source='TGCM.tiegcm1.95_dres.pcntr_sepeqx_smin.nc'
+      if self.name=='decsol_smax': source='TGCM.tiegcm1.95_dres.pcntr_decsol_smax.nc'
+      if self.name=='decsol_smin': source='TGCM.tiegcm1.95_dres.pcntr_decsol_smin.nc'
+      if self.name=='junsol_smax': source='TGCM.tiegcm1.95_dres.pcntr_junsol_smax.nc'
+      if self.name=='junsol_smin': source='TGCM.tiegcm1.95_dres.pcntr_junsol_smin.nc'
+      if self.name=='mareqx_smax': source='TGCM.tiegcm1.95_dres.pcntr_mareqx_smax.nc'
+      if self.name=='mareqx_smin': source='TGCM.tiegcm1.95_dres.pcntr_mareqx_smin.nc'
+      if self.name=='sepeqx_smax': source='TGCM.tiegcm1.95_dres.pcntr_sepeqx_smax.nc'
+      if self.name=='sepeqx_smin': source='TGCM.tiegcm1.95_dres.pcntr_sepeqx_smin.nc'
 
-        if self.name=='dec2006_heelis_gpi': source='TGCM.tiegcm1.95_dres.p_dec2006_heelis_gpi.nc'
-        if self.name=='dec2006_weimer_imf': source='TGCM.tiegcm1.95_dres.p_dec2006_weimer_imf.nc'
-        if self.name=='nov2003_heelis_gpi': source='TGCM.tiegcm1.95_dres.p_nov2003_heelis_gpi.nc'
-        if self.name=='nov2003_weimer_imf': source='TGCM.tiegcm1.95_dres.p_nov2003_weimer_imf.nc'
-        if self.name=='whi2008_heelis_gpi': source='TGCM.tiegcm1.95_dres.p_whi2008_heelis_gpi.nc'
-        if self.name=='whi2008_weimer_imf': source='TGCM.tiegcm1.95_dres.p_whi2008_weimer_imf.nc'
-        if self.name=='climatology_smin'  : source='TGCM.tiegcm1.95_dres.pclim_heelis.nc'
-        if self.name=='climatology_smax'  : source='TGCM.tiegcm1.95_dres.pclim_heelis.nc'
+      if self.name=='dec2006_heelis_gpi': source='TGCM.tiegcm1.95_dres.p_dec2006_heelis_gpi.nc'
+      if self.name=='dec2006_weimer_imf': source='TGCM.tiegcm1.95_dres.p_dec2006_weimer_imf.nc'
+      if self.name=='nov2003_heelis_gpi': source='TGCM.tiegcm1.95_dres.p_nov2003_heelis_gpi.nc'
+      if self.name=='nov2003_weimer_imf': source='TGCM.tiegcm1.95_dres.p_nov2003_weimer_imf.nc'
+      if self.name=='whi2008_heelis_gpi': source='TGCM.tiegcm1.95_dres.p_whi2008_heelis_gpi.nc'
+      if self.name=='whi2008_weimer_imf': source='TGCM.tiegcm1.95_dres.p_whi2008_weimer_imf.nc'
+      if self.name=='climatology_smin'  : source='TGCM.tiegcm1.95_dres.pclim_heelis.nc'
+      if self.name=='climatology_smax'  : source='TGCM.tiegcm1.95_dres.pclim_heelis.nc'
 #
-# timegcm old (v1.42) history files (this is incomplete):
+# timegcm old (v1.42) history files (this is incomplete - missing nov2003, whi2008):
 #
-    elif 'timegcm' in version:
-      if res == '5.0':
+    elif version == 'timegcm5.0':
 
-        if self.name=='decsol_smax': source='TGCM.timegcm1.42.pcntr_dsol_smax.nc'
-        if self.name=='decsol_smin': source='TGCM.timegcm1.42.pcntr_dsol_smin.nc'
-        if self.name=='mareqx_smax': source='TGCM.timegcm1.42.pcntr_eqnx_smax.nc'
-        if self.name=='mareqx_smax': source='TGCM.timegcm1.42.pcntr_eqnx_smin.nc'
-        if self.name=='junsol_smax': source='TGCM.timegcm1.42.pcntr_jsol_smax.nc'
-        if self.name=='junsol_smin': source='TGCM.timegcm1.42.pcntr_jsol_smin.nc'
-        if self.name=='dec2006_heelis_gpi': source='timegcm.p_dec2006.nc'
+      if self.name=='decsol_smax': source='TGCM.timegcm1.42.pcntr_dsol_smax.nc'
+      if self.name=='decsol_smin': source='TGCM.timegcm1.42.pcntr_dsol_smin.nc'
+      if self.name=='mareqx_smax': source='TGCM.timegcm1.42.pcntr_eqnx_smax.nc'
+      if self.name=='mareqx_smax': source='TGCM.timegcm1.42.pcntr_eqnx_smin.nc'
+      if self.name=='junsol_smax': source='TGCM.timegcm1.42.pcntr_jsol_smax.nc'
+      if self.name=='junsol_smin': source='TGCM.timegcm1.42.pcntr_jsol_smin.nc'
+      if self.name=='dec2006_heelis_gpi': source='timegcm.p_dec2006.nc'
 
-      else: # timegcm res=2.5
+    elif version == 'timegcm2.5':
 
-        if self.name=='decsol_smax': source='TGCM.timegcm1.42d.pcntr_dsol_smax.nc'
-        if self.name=='decsol_smin': source='TGCM.timegcm1.42d.pcntr_dsol_smin.nc'
-        if self.name=='mareqx_smax': source='TGCM.timegcm1.42d.pcntr_eqnx_smax.nc'
-        if self.name=='mareqx_smin': source='TGCM.timegcm1.42d.pcntr_eqnx_smin.nc'
-        if self.name=='junsol_smax': source='TGCM.timegcm1.42d.pcntr_jsol_smax.nc'
-        if self.name=='junsol_smin': source='TGCM.timegcm1.42d.pcntr_jsol_smin.nc'
-        if self.name=='dec2006_heelis_gpi': source='timegcm_dres.p_dec2006.nc'
+      if self.name=='decsol_smax': source='TGCM.timegcm1.42d.pcntr_dsol_smax.nc'
+      if self.name=='decsol_smin': source='TGCM.timegcm1.42d.pcntr_dsol_smin.nc'
+      if self.name=='mareqx_smax': source='TGCM.timegcm1.42d.pcntr_eqnx_smax.nc'
+      if self.name=='mareqx_smin': source='TGCM.timegcm1.42d.pcntr_eqnx_smin.nc'
+      if self.name=='junsol_smax': source='TGCM.timegcm1.42d.pcntr_jsol_smax.nc'
+      if self.name=='junsol_smin': source='TGCM.timegcm1.42d.pcntr_jsol_smin.nc'
+      if self.name=='dec2006_heelis_gpi': source='timegcm_dres.p_dec2006.nc'
 
     if source == '':
       print '>>> Could not find old source history file for ',version,' ',self.name
@@ -496,15 +496,18 @@ NUMBER\tNAME\t\tDESCRIPTION
 
     return source
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  def set_run(self,n,fullname,tgcmdata,version,res):
+  def set_run(self,job,tgcmdata):
+
+# run.set_run(run.number,run.fullname,tgcmdata,job.model_version,job.model_res)
 #
 # Note: after going to tiegcm2.0, the model_res argument will no longer be necessary. 
 #
 # Set namelist modifications for each run:
 # 
-    n = int(n)
+    n = int(self.number)
     self.name = self.names[n][0]
     self.desc = self.names[n][1]
+    version = job.model_version
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Default run:
@@ -519,20 +522,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 # December Solstice, solar max:
 #
     elif self.name == 'decsol_smax':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
+      print 'Prepare namelist for ',self.name,': version=',version,' source=',source
+
       self.list_mods = [ 
-        ['LABEL'        , "'"+fullname+"'"],
+        ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '355'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.pcntr_decsol_smax.nc'"],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'       , source],
         ['SOURCE_START' , '355 0 0'],
         ['START'        , '355 0 0'],
         ['STOP'         , '360 0 0'],
-        ['OUTPUT'       , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'         , job.step],
+        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'     , '355 1 0'],
         ['SECSTOP'      , '360 0 0'],
-        ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
         ['F107'         , '200.'],
@@ -547,19 +556,24 @@ NUMBER\tNAME\t\tDESCRIPTION
 # December Solstice, solar min:
 #
     elif self.name == 'decsol_smin':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [ 
-        ['LABEL'        , "'"+fullname+"'"],
+        ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '355'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'       , source],
         ['SOURCE_START' , '355 0 0'],
         ['START'        , '355 0 0'],
         ['STOP'         , '360 0 0'],
-        ['OUTPUT'       , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'         , job.step],
+        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'     , '355 1 0'],
         ['SECSTOP'      , '360 0 0'],
-        ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
         ['F107'         , '70.'],
@@ -574,20 +588,24 @@ NUMBER\tNAME\t\tDESCRIPTION
 # June Solstice, solar max:
 #
     elif self.name == 'junsol_smax':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'        , "'"+fullname+"'"],
+        ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '172'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.pcntr_junsol_smax.nc'"],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'       , source],
         ['SOURCE_START' , '172 0 0'],
         ['START'        , '172 0 0'],
         ['STOP'         , '177 0 0'],
-        ['OUTPUT'       , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'         , job.step],
+        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'     , '172 1 0'],
         ['SECSTOP'      , '177 0 0'],
-        ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
         ['F107'         , '200.'],
@@ -602,20 +620,24 @@ NUMBER\tNAME\t\tDESCRIPTION
 # June Solstice, solar min:
 #
     elif self.name == 'junsol_smin':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'        , "'"+fullname+"'"],
+        ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '172'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.pcntr_junsol_smin.nc'"],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'       , source],
         ['SOURCE_START' , '172 0 0'],
         ['START'        , '172 0 0'],
         ['STOP'         , '177 0 0'],
-        ['OUTPUT'       , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'         , job.step],
+        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'     , '172 1 0'],
         ['SECSTOP'      , '177 0 0'],
-        ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
         ['F107'         , '70.'],
@@ -630,20 +652,24 @@ NUMBER\tNAME\t\tDESCRIPTION
 # March Equinox, solar max:
 #
     elif self.name == 'mareqx_smax':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [ 
-        ['LABEL'        , "'"+fullname+"'"],
+        ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '80'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.pcntr_mareqx_smax.nc'"],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'       , source],
         ['SOURCE_START' , '80 0 0'],
         ['START'        , '80 0 0'],
         ['STOP'         , '85 0 0'],
-        ['OUTPUT'       , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'         , job.step],
+        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'     , '80 1 0'],
         ['SECSTOP'      , '85 0 0'],
-        ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
         ['F107'         , '200.'],
@@ -658,20 +684,24 @@ NUMBER\tNAME\t\tDESCRIPTION
 # March Equinox, solar min:
 #
     elif self.name == 'mareqx_smin':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'        , "'"+fullname+"'"],
+        ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '80'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc'"],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'       , source],
         ['SOURCE_START' , '80 0 0'],
         ['START'        , '80 0 0'],
         ['STOP'         , '85 0 0'],
-        ['OUTPUT'       , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'         , job.step],
+        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'     , '80 1 0'],
         ['SECSTOP'      , '85 0 0'],
-        ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
         ['F107'         , '70.'],
@@ -686,20 +716,24 @@ NUMBER\tNAME\t\tDESCRIPTION
 # September Equinox, solar max:
 #
     elif self.name == 'sepeqx_smax':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [ 
-        ['LABEL'        , "'"+fullname+"'"],
+        ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '264'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.pcntr_sepeqx_smax.nc'"],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'       , source],
         ['SOURCE_START' , '264 0 0'],
         ['START'        , '264 0 0'],
         ['STOP'         , '269 0 0'],
-        ['OUTPUT'       , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'         , job.step],
+        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'     , '264 1 0'],
         ['SECSTOP'      , '269 0 0'],
-        ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
         ['F107'         , '200.'],
@@ -714,20 +748,24 @@ NUMBER\tNAME\t\tDESCRIPTION
 # September Equinox, solar min:
 #
     elif self.name == 'sepeqx_smin':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'        , "'"+fullname+"'"],
+        ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '264'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.pcntr_sepeqx_smin.nc'"],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'       , source],
         ['SOURCE_START' , '264 0 0'],
         ['START'        , '264 0 0'],
         ['STOP'         , '269 0 0'],
-        ['OUTPUT'       , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'         , job.step],
+        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'     , '264 1 0'],
         ['SECSTOP'      , '269 0 0'],
-        ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
         ['F107'         , '70.'],
@@ -742,21 +780,25 @@ NUMBER\tNAME\t\tDESCRIPTION
 # November 2003 "Halloween Storm" with Heelis and GPI:
 #
     elif self.name == 'nov2003_heelis_gpi':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'        , "'"+fullname+"'"],
+        ['LABEL'        , "'"+self.fullname+"'"],
         ['START_YEAR'   , '2003'],
         ['START_DAY'    , '323'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.p_nov2003_heelis_gpi.nc'"],
-#       ['SOURCE'       , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'       , source],
         ['SOURCE_START' , '323 0 0'],
         ['START'        , '323 0 0'],
         ['STOP'         , '328 0 0'],
-        ['OUTPUT'       , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'         , job.step],
+        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'     , '323 1 0'],
         ['SECSTOP'      , '328 0 0'],
-        ['SECOUT'       , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
@@ -774,21 +816,37 @@ NUMBER\tNAME\t\tDESCRIPTION
 # 2003 Halloween Storm case with Weimer and IMF, GPI:
 #
     elif self.name == 'nov2003_weimer_imf':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+#
+# As of 11/16/15, the current trunk code for tiegcm_res2.5 will crash in the 
+#   first ~1.5 days if starting from tiegcm2.0 benchmark SOURCE history, and 
+#   STEP is 30 secs. It succeeds if timestep is reduced to 20 secs, so force 
+#   that here.
+# (Interestingly, the current trunk code succeeds with STEP=30, if starting
+#  from the old tiegcm1.95 benchmark SOURCE history)
+#
+        step = job.step
+        if job.model_res == '2.5': 
+          if job.step != '20': print 'NOTE: Am changing timestep from ',job.step,' to 20 seconds'
+          step = 20 # reduce timestep for res2.5 from 30 to 20
+
       self.list_mods = [
-        ['LABEL'          , "'"+fullname+"'"],
+        ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2003'],
         ['START_DAY'      , '323'],
-        ['SOURCE'       , oldsource],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.p_nov2003_weimer_imf.nc'"],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'         , source],
         ['SOURCE_START'   , '323 0 0'],
         ['START'          , '323 0 0'],
         ['STOP'           , '328 0 0'],
-        ['OUTPUT'         , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'           , str(step)],
+        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'       , '323 1 0'],
         ['SECSTOP'        , '328 0 0'],
-        ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2003001-2003365.nc'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
@@ -807,21 +865,25 @@ NUMBER\tNAME\t\tDESCRIPTION
 # December, 2006 AGU storm with Heelis and GPI:
 #
     elif self.name == 'dec2006_heelis_gpi':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'          , "'"+fullname+"'"],
+        ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2006'],
         ['START_DAY'      , '330'],
-        ['SOURCE'         , oldsource],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.p_dec2006_heelis_gpi.nc'"],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'         , source],
         ['SOURCE_START'   , '330 0 0'],
         ['START'          , '330 0 0'],
         ['STOP'           , '339 0 0'],
-        ['OUTPUT'         , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'           , job.step],
+        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'       , '330 1 0'],
         ['SECSTOP'        , '339 0 0'],
-        ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_010.nc','by','1'"],
+        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_010.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
@@ -839,21 +901,25 @@ NUMBER\tNAME\t\tDESCRIPTION
 # December, 2006 AGU storm with Weimer and IMF:
 #
     elif self.name == 'dec2006_weimer_imf':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'          , "'"+fullname+"'"],
+        ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2006'],
         ['START_DAY'      , '330'],
-        ['SOURCE'         , oldsource],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.p_dec2006_weimer_imf.nc'"],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'         , source],
         ['SOURCE_START'   , '330 0 0'],
         ['START'          , '330 0 0'],
         ['STOP'           , '339 0 0'],
-        ['OUTPUT'         , "'"+fullname+"_prim_001.nc'"],
+        ['STEP'           , job.step],
+        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc'"],
         ['SECSTART'       , '330 1 0'],
         ['SECSTOP'        , '339 0 0'],
-        ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_010.nc','by','1'"],
+        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_010.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2006001-2006365.nc'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
@@ -872,21 +938,25 @@ NUMBER\tNAME\t\tDESCRIPTION
 # Whole Heliosphere Interval, 2008, with Heelis and GPI
 #
     elif self.name == 'whi2008_heelis_gpi':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'          , "'"+fullname+"'"],
+        ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2008'],
         ['START_DAY'      , '81'],
-        ['SOURCE'         , oldsource],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.p_whi2008_heelis_gpi.nc'"],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'         , source],
         ['SOURCE_START'   , '81 0 0'],
         ['START'          , '81 0 0'],
         ['STOP'           , '106 0 0'],
-        ['OUTPUT'         , "'"+fullname+"_prim_001.nc','to','"+fullname+"_prim_003.nc','by','1'"],
+        ['STEP'           , job.step],
+        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_003.nc','by','1'"],
         ['SECSTART'       , '81 1 0'],
         ['SECSTOP'        , '106 0 0'],
-        ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_025.nc','by','1'"],
+        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
@@ -908,21 +978,25 @@ NUMBER\tNAME\t\tDESCRIPTION
 # Whole Heliosphere Interval, 2008, with Weimer, IMF and GPI
 #
     elif self.name == 'whi2008_weimer_imf':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'          , "'"+fullname+"'"],
+        ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2008'],
         ['START_DAY'      , '81'],
-        ['SOURCE'         , oldsource],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.p_whi2008_weimer_imf.nc'"],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'         , source],
         ['SOURCE_START'   , '81 0 0'],
         ['START'          , '81 0 0'],
         ['STOP'           , '106 0 0'],
-        ['OUTPUT'         , "'"+fullname+"_prim_001.nc','to','"+fullname+"_prim_003.nc','by','1'"],
+        ['STEP'           , job.step],
+        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_003.nc','by','1'"],
         ['SECSTART'       , '81 1 0'],
         ['SECSTOP'        , '106 0 0'],
-        ['SECOUT'         , "'"+fullname+"_sech_001.nc','to','"+fullname+"_sech_025.nc','by','1'"],
+        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2008001-2008366.nc'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
@@ -953,18 +1027,22 @@ NUMBER\tNAME\t\tDESCRIPTION
 #       year, how to make longer runs, etc.
 #
     elif self.name == 'climatology_smin':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'          , "'"+fullname+"'"],
-        ['START_YEAR'     , "2000  ! arbitrary for climatology run"], 
+        ['LABEL'          , "'"+self.fullname+"'"],
+        ['START_YEAR'     , "2002  ! arbitrary for climatology run"], 
         ['START_DAY'      , '1'],
-        ['SOURCE'         , oldsource],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.pclim_heelis.nc'"],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'         , source],
         ['SOURCE_START'   , '1 0 0'],
         ['START'          , '1 0 0'],
         ['STOP'           , '5 0 0'],
-        ['OUTPUT'         , "'"+fullname+"_prim_001.nc','to','"+fullname+"_prim_020.nc','by','1'"],
+        ['STEP'           , job.step],
+        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_020.nc','by','1'"],
         ['MXHIST_PRIM'    , '20'],     # default is 10
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['POWER'        , '18.'],     
@@ -986,18 +1064,22 @@ NUMBER\tNAME\t\tDESCRIPTION
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     elif self.name == 'climatology_smax':
-      oldsource = self.make_oldsource(tgcmdata,version,res)
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42':
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
       self.list_mods = [
-        ['LABEL'          , "'"+fullname+"'"],
-        ['START_YEAR'     , "2000  ! arbitrary for climatology run"], 
+        ['LABEL'          , "'"+self.fullname+"'"],
+        ['START_YEAR'     , "2002  ! arbitrary for climatology run"], 
         ['START_DAY'      , '1'],
-        ['SOURCE'         , oldsource],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/TGCM.tiegcm1.95.pclim_heelis.nc'"],
-#       ['SOURCE'         , "'"+tgcmdata+"/"+version+"/"+fullname+".nc'"],
+        ['SOURCE'         , source],
         ['SOURCE_START'   , '1 0 0'],
         ['START'          , '1 0 0'],
         ['STOP'           , '5 0 0'],
-        ['OUTPUT'         , "'"+fullname+"_prim_001.nc','to','"+fullname+"_prim_020.nc','by','1'"],
+        ['STEP'           , job.step],
+        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_020.nc','by','1'"],
         ['MXHIST_PRIM'    , '20'],     # default is 10
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['POWER'        , '40.'],     
