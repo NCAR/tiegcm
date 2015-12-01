@@ -177,7 +177,7 @@ if ($exec == "TRUE") then
     echo "Executing $mpirun with -np $nproc for Linux MPI run."
 #
 # Execute mpirun (Intel or PGI) for MPI run:
-    $mpirun -machinefile machines.ini -np $nproc $model < $input >&! $output || \
+    $mpirun -s all -machinefile machines.ini -np $nproc $model < $input >&! $output || \
       echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
       echo "See output in $output"
     echo "Linux MPI run of $model completed at `date`"
