@@ -25,6 +25,7 @@ LIB_NETCDF = /opt/local/netcdf/linux86-64/lib
 INC_NETCDF = /opt/local/netcdf/linux86-64/include
 #
 LIB_ESMF = /home/tgcm/esmf/pgi-9.04/lib/libO/Linux.pgi.64.mpich.default
+include $(LIB_ESMF)/esmf.mk
 #
 # Make machines.ini file for MPI execution: 
 #
