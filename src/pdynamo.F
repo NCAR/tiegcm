@@ -13,11 +13,9 @@
       use mpitime_module,only: mpi_timer
       use mpi_module,only: mlat0,mlat1,mlon0,mlon1,lon0,lon1,lat0,lat1,
      |  mp_mag_periodic_f2d
-!CAF     |  mp_mag_periodic_f2d, mp_mag_halos
       use heelis_module,only: phihm
       use init_module,only: istep
       use input_module,only: current_pg,current_kq
-      use mpi
       implicit none
 !
 ! 3d pointers to fields regridded to magnetic subdomains (i,j,k):

@@ -79,7 +79,13 @@ endif
 #
 # Copy make files to execdir if necessary:
 #
-if (! -f $execdir/$make)     cp $utildir/$make $execdir
+if (-f $make) then # set by user above
+  cp $make $execdir
+  echo Copied $make to $execdir
+else
+  cp $utildir/$make $execdir
+  echo Copied $utildir/$make to $execdir
+endif
 if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
 if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
 #
@@ -174,15 +180,24 @@ if ($exec == "TRUE") then
     gmake machines.ini
     gmake mpirun.command
     set mpirun = `cat mpirun.command`
-    echo "Executing $mpirun with -np $nproc for Linux MPI run."
+    echo Executing $mpirun with executable $model at `date`
 #
-# Execute mpirun (Intel or PGI) for MPI run:
-    $mpirun -s all -machinefile machines.ini -np $nproc $model < $input >&! $output || \
-      echo ">>> ${0} mpirun execution of $model FAILED at `date`" && \
-      echo "See output in $output"
+# Execute mpirun with the model executable ($model), and a single argument
+# giving the path to the namelist input file:
+#
+    $mpirun -machinefile machines.ini -np $nproc $model $input >&! $output
+
     echo "Linux MPI run of $model completed at `date`"
     $rmbinchars $output # remove any non-ascii chars in stdout file
-    $mklogs $output     # break stdout into per-task log files
+#
+# Do not call mklogs if built with PGI:
+    set pgi = pgi
+    set match = `echo $make | /bin/awk -v v="$pgi" '$0 ~ v { print "MATCH" }'`
+    if ($match == '') then
+      $mklogs $output     # break stdout into per-task log files
+    else
+      echo "Am not calling mklogs because model was built with PGI"
+    endif
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."
     $model < $input >&! $output || \

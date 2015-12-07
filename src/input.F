@@ -192,7 +192,7 @@
 ! Initialize:
       call inp_init
 !
-! Do namelist read:
+! Do namelist read (see source file input_read.F):
       call inp_read
 !
 ! Validate model-wide input:
@@ -216,19 +216,6 @@
       call inp_print(ntask)
 !
       end subroutine input
-!-------------------------------------------------------------------
-      subroutine inp_read
-!
-! Namelist read from stdin unit 5:
-!
-      implicit none
-      write(6,"(/,'Reading namelist input data...')") 
-      open(5) 
-      read(5, nml=tgcm_input)
-      write(6,"('Completed successful read of namelist inputs.',/)")
-      close(5)
-      return
-      end subroutine inp_read
 !-------------------------------------------------------------------
       subroutine inp_init
 !

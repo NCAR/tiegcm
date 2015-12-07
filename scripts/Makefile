@@ -41,8 +41,9 @@ FC        := $(F90)
 # See also targets below for source files that depend on esmf.
 LIBS += -L $(LIB_ESMF) -lesmf
 include $(LIB_ESMF)/esmf.mk
-LDFLAGS    += $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS)
-LDFLAGS    += $(ESMF_F90ESMFLINKLIBS)
+INC_DIRS += $(ESMF_F90COMPILEPATHS)
+LDFLAGS  += $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS)
+LDFLAGS  += $(ESMF_F90ESMFLINKLIBS)
 
 Depends::
 	@echo "OS           =$(OS)" 

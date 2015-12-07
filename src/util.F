@@ -868,6 +868,9 @@
 ! timing is started in the first call, and before timing is completed 
 ! in the second call.
 !
+#ifdef MPI
+      use mpi
+#endif
       implicit none
 !
 ! Args:
@@ -880,9 +883,6 @@
       integer :: ier
       integer,save :: ncalls=0 ! only for non-AIX warning message.
       real :: time1 ! ending time
-#ifdef MPI
-#include <mpif.h>
-#endif
 #ifdef AIX
       real,external :: rtc
 #endif
@@ -920,6 +920,7 @@
       subroutine getcwdir(cwd)
 #ifdef MPI
       use mpi_module,only: mytid
+      use mpi
 #endif
 !
 ! Return current working directory in cwd:
@@ -928,9 +929,6 @@
       character(len=*),intent(out) :: cwd
       integer,external :: isystem,nextlu
       integer :: istat,lu,ier
-#ifdef MPI
-#include <mpif.h>
-#endif
 !
 #ifdef MPI
       if (mytid==0) then
@@ -957,6 +955,7 @@
       subroutine getprocessid(pid)
 #ifdef MPI
       use mpi_module,only: mytid
+      use mpi
 #endif
 !
 ! Return current working directory in pid:
@@ -965,9 +964,6 @@
       integer,intent(out) :: pid
       integer,external :: isystem,nextlu
       integer :: istat,lu,ier
-#ifdef MPI
-#include <mpif.h>
-#endif
 !
 #ifdef MPI
       if (mytid==0) then
@@ -1023,20 +1019,20 @@
 !-----------------------------------------------------------------------
       subroutine shutdown(msg)
       use my_esmf
+#ifdef MPI
+      use mpi
+#endif
 !
 ! An fatal error has occurred -- shut down the model, including MPI.
 !
       implicit none
-#ifdef MPI
-#include <mpif.h>
-#endif
 !
 ! Args:
       character(len=*) :: msg
 !
 ! Local:
-      integer :: ier
-      character(len=80) :: errorcode
+      integer :: ier,errorcode
+!     character(len=80) :: errorcode
 !
       write(6,"(/,28('>'),' MODEL SHUTDOWN ',28('<'))")
       write(6,"('Shutdown: stop message: ',a)") trim(msg)

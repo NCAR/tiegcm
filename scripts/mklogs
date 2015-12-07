@@ -39,7 +39,7 @@ for arg in sys.argv[1:]:
 # Open, read, and close arg file:
 #
   f = open(file,'r')
-  print 'mklogs: Opened file ',file
+  print 'mklogs: Extracting log files from ',file
   lines = f.readlines()  
   lines = [line.rstrip() for line in lines]
   f.close()
