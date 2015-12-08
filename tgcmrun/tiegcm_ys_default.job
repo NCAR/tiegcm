@@ -32,7 +32,7 @@
 #
  set modeldir = tiegcm_trunk
  set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm-ys
-#set input    = tiegcm.inp
+ set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
  set output   = tiegcm.out
  set modelres = 5.0
 #
@@ -59,8 +59,7 @@ cat << EOF >! $runscript
 #BSUB -J tiegcm
 #BSUB -P P28100036
 ##BSUB -P NHAO0004
-##BSUB -q premium
-#BSUB -q regular
+#BSUB -q premium
 #BSUB -o tiegcm.%J.out
 #BSUB -e tiegcm.%J.out
 #BSUB -N
@@ -244,7 +243,8 @@ if ($mpi == "TRUE") then  # MPI LSF job
   cat << EOF >> $runscript
   setenv MP_LABELIO YES
   setenv MP_SHARED_MEMORY yes
-  mpirun.lsf $model < $input >&! $output
+  mpirun.lsf $model $input >&! $output
+  $mklogs $output
   $rmbinchars $output # remove any non-ascii chars in stdout file
   $mklogs $output     # break stdout into per-task log files
 EOF

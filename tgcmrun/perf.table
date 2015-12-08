@@ -1,14 +1,17 @@
 
-Performance estimates for TIEGCM and TIMEGCM on yellowstone.ucar.edu,
-based on benchmark runs:
+Performance estimates for TIEGCM and TIMEGCM based on benchmark runs:
 
 Step:         Timestep in seconds
 Nproc:        Number of processors (mpi tasks)
 WC Sec/Step:  Wallclock seconds per timestep
 WC Min/Day:   Wallclock minutes per simulated day
 Days/12h:     Number of simulated days in 12 hours WC (estimate)
-Ave Mem:      Average memory usage (from LSF reports)
+Ave Mem:      Average memory usage (from yellowstone LSF reports)
 
+===============================================================================================
+
+Runs made on NCAR yellowstone.ucar.edu (linux cluster IBM supercomputer (16-way nodes)):
+Linux yslogin4 2.6.32-358.el6.x86_64 #1 SMP Tue Jan 29 11:47:41 EST 2013 x86_64 x86_64 x86_64 GNU/Linux
 
 Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Ave Mem
 -----------------------------------------------------------------------------------------------
@@ -17,4 +20,18 @@ tiegcm2.5	30	64	.15		7.25		100		25-30 GB
 
 timegcm5.0	60	48	.11		2.7		272             [not available]
 timegcm2.5	30	64	.51		24.5		29              [not available]
+-----------------------------------------------------------------------------------------------
+
+===============================================================================================
+
+Runs made on HAO kokanee.hao.ucar.edu (linux desktop Optiplex 7020):
+Linux kokanee 2.6.32-573.8.1.el6.x86_64 #1 SMP Tue Nov 10 18:01:38 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+
+Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Ave Mem
+-----------------------------------------------------------------------------------------------
+tiegcm5.0	60	4	.15		4.0		163
+tiegcm2.5	30	4	.95		46.8		15
+
+timegcm5.0	
+timegcm2.5	
 -----------------------------------------------------------------------------------------------

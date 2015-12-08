@@ -88,8 +88,8 @@ EOF
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Update ESMF module on ys as of 4/14/14:
- set lib_esmf = esmf-6.3.0r-ncdfio-mpi-O
- module load esmf $lib_esmf
+set lib_esmf = esmf-6.3.0r-ncdfio-mpi-O
+module load esmf $lib_esmf
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"

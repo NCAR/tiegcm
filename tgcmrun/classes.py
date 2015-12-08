@@ -878,12 +878,12 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SOURCE'         , source],
         ['SOURCE_START'   , '330 0 0'],
         ['START'          , '330 0 0'],
-        ['STOP'           , '339 0 0'],
+        ['STOP'           , '360 0 0'],
         ['STEP'           , job.step],
-        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_005.nc','by','1'"],
         ['SECSTART'       , '330 1 0'],
-        ['SECSTOP'        , '339 0 0'],
-        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_010.nc','by','1'"],
+        ['SECSTOP'        , '360 0 0'],
+        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_032.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
@@ -895,7 +895,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107'         , '0.'],
         ['F107A'        , '0.']]
       self.wc50_default = '1:00' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '2:30' # wallclock limit for 2.5-deg res (ys only)
+      self.wc25_default = '4:00' # wallclock limit for 2.5-deg res (ys only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # December, 2006 AGU storm with Weimer and IMF:
@@ -914,12 +914,12 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SOURCE'         , source],
         ['SOURCE_START'   , '330 0 0'],
         ['START'          , '330 0 0'],
-        ['STOP'           , '339 0 0'],
+        ['STOP'           , '360 0 0'],
         ['STEP'           , job.step],
-        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_005.nc','by','1'"],
         ['SECSTART'       , '330 1 0'],
-        ['SECSTOP'        , '339 0 0'],
-        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_010.nc','by','1'"],
+        ['SECSTOP'        , '360 0 0'],
+        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_032.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2006001-2006365.nc'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
@@ -932,7 +932,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107'         , '0.'],
         ['F107A'        , '0.']]
       self.wc50_default = '1:00' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '2:30' # wallclock limit for 2.5-deg res (ys only)
+      self.wc25_default = '4:00' # wallclock limit for 2.5-deg res (ys only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Whole Heliosphere Interval, 2008, with Heelis and GPI
