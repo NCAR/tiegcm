@@ -44,6 +44,14 @@ include $(LIB_ESMF)/esmf.mk
 INC_DIRS += $(ESMF_F90COMPILEPATHS)
 LDFLAGS  += $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS)
 LDFLAGS  += $(ESMF_F90ESMFLINKLIBS)
+#
+# With gfortran compiler, esmf compiler is mpifort instead of mpif90,
+# so force it to use $(MPIF90), which is set by Make.gfort_hao64.
+#
+ifeq ($(F90),/usr/bin/gfortran)
+  ESMF_F90COMPILER = $(MPIF90)
+  @echo "set ESMF_F90COMPILER = $(ESMF_F90COMPILER)"
+endif
 
 Depends::
 	@echo "OS           =$(OS)" 

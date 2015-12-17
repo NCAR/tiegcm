@@ -166,6 +166,20 @@ DEBUG        = $debug
 SVN_VERSION  = $svnversion
 EOF
 #
+gmake machines.ini
+gmake mpirun.command
+set mpirun = `cat mpirun.command`
+#
+set compiler = 'unknown'
+if ($make == Make.intel_hao64) then
+  set compiler = intel
+else if ($make == Make.pgi_hao64) then
+  set compiler = pgi
+else if ($make == Make.gfort_hao64) then
+  set compiler = gfort
+endif
+echo Compiler: $compiler
+#
 # Build the model:
 gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 #
@@ -175,28 +189,23 @@ if ($exec == "TRUE") then
   set model = ./$model
   echo "$model output will go to $output"
   if ($mpi == "TRUE") then
-#
-# Files machines.ini and mpirun.command are made by the Make.machines file.
-    gmake machines.ini
-    gmake mpirun.command
-    set mpirun = `cat mpirun.command`
     echo Executing $mpirun with executable $model at `date`
 #
 # Execute mpirun with the model executable ($model), and a single argument
-# giving the path to the namelist input file:
+# providing the path to the namelist input file:
 #
     $mpirun -machinefile machines.ini -np $nproc $model $input >&! $output
 
     echo "Linux MPI run of $model completed at `date`"
     $rmbinchars $output # remove any non-ascii chars in stdout file
 #
-# Do not call mklogs if built with PGI:
-    set pgi = pgi
-    set match = `echo $make | /bin/awk -v v="$pgi" '$0 ~ v { print "MATCH" }'`
-    if ($match == '') then
+# Do not call mklogs if built with PGI or gfortran:
+# (only intel has ability to prefix task ids to stdout lines)
+#
+    if ($compiler != 'pgi' && $compiler != 'gfort') then
       $mklogs $output     # break stdout into per-task log files
     else
-      echo "Am not calling mklogs because model was built with PGI"
+      echo "Am not calling mklogs because model was built with pgi or gfortran"
     endif
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."

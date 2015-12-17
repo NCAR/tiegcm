@@ -1,10 +1,8 @@
 #
 # Included makefile for PGI compiler on 64-bit HAO Linux desktops.
-#
-# Compilers and flags:
+# Using pgf90 9.0-4 64-bit target on x86-64 Linux -tp nehalem-64
 #
 F90      = pgf90
-
 MPIF90   = /opt/local/pgi-9.04/linux86-64/9.0/mpi/mpich/bin/mpif90
 MPIRUN   = /opt/local/pgi-9.04/linux86-64/9.0/mpi/mpich/bin/mpirun
 

@@ -1,14 +1,13 @@
 #
 # Included makefile for building tiegcm with gfortran compiler on Linux desktop. 
-#
-# Linux kokanee 2.6.32-573.8.1.el6.x86_64 #1 SMP Tue Nov 10 18:01:38 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
-# GNU Fortran (GCC) 4.4.7 20120313 (Red Hat 4.4.7-16)
+# Using GNU Fortran (GCC) 4.4.7 20120313 (Red Hat 4.4.7-16)
 #
 F90    = /usr/bin/gfortran
 MPIF90 = /usr/lib64/openmpi/bin/mpif90
 MPIRUN = /usr/lib64/openmpi/bin/mpirun
 FFLAGS = -fdefault-real-8
 FFLAGS += -fno-range-check # required for sub check_nans in util.F
+OPTIM   = -O3
 #
 # btf 12/16/15: Model crashes with FPE in qrj.F if built with 
 #               these debug flags:

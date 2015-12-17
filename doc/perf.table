@@ -27,11 +27,14 @@ timegcm2.5	30	64	.51		24.5		29              [not available]
 Runs made on HAO kokanee.hao.ucar.edu (linux desktop Optiplex 7020):
 Linux kokanee 2.6.32-573.8.1.el6.x86_64 #1 SMP Tue Nov 10 18:01:38 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
 
-Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Ave Mem
+Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Compiler
 -----------------------------------------------------------------------------------------------
-tiegcm5.0	60	4	.15		4.0		163
-tiegcm2.5	30	4	.95		46.8		15
+tiegcm5.0	60	4	.35		15.0		48		Intel
+tiegcm2.5	30	4	.95		46.8		15		Intel
 
-timegcm5.0	
-timegcm2.5	
+tiegcm5.0	60	4	.36		13.6		53  		gfortran
+tiegcm2.5	30	4							gfortran
+
+timegcm5.0	60	4	.65		25		29		pgi
+timegcm2.5	30	4							pgi
 -----------------------------------------------------------------------------------------------

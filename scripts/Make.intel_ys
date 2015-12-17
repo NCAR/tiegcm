@@ -1,5 +1,6 @@
 #
 # Included makefile for Intel ifort compiler on NCAR yellowstone:
+# As of December 2015, yellowstone is using intel 12.1.5.
 #
 F90      = ifort
 MPIF90   = mpif90
