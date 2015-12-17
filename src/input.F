@@ -44,7 +44,6 @@
      |  calendar_advance,! if > 0, advance calendar day from start_day
      |  mxday,           ! calendar day (0-mxday)
      |  step,            ! model time step (integer seconds)
-     |  dispose,         ! deprecated -- formerly for dispose to mss
      |  eddy_dif,	 ! 0/1 flag for DOY dependent eddy diffusion (difk, dift, xmue)
      |  dynamo,          ! 0/1 flag for dynamo
      |  current_pg,      ! 0/1 flag to add current due to plasma pressure and gravity to rhs (default 1)
@@ -152,7 +151,7 @@
 !
 ! Namelist for read:
       namelist/tgcm_input/ 
-     |  label,step,dispose,
+     |  label,step,
      |  source,source_start,output,start,stop,hist,
      |  secout,secstart,secstop,sechist,secflds,
      |  potential_model,eddy_dif,dynamo,tide,tide2,tide3m3,
@@ -245,7 +244,6 @@
       calendar_advance = ispval
 !
       step    = ispval
-      dispose = ispval
       eddy_dif = ispval  ! new as of 4/10
       dynamo  = ispval
       current_pg = 1     ! on by default
@@ -679,21 +677,6 @@
 !
 ! 8-byte integer step:
       step8 = step
-!
-! Dispose flag is deprecated:
-      if (dispose==ispval) then
-        dispose = 0
-      else
-        write(6,"(/,72('-'),/,'>>> WARNING: DISPOSE namelist read',
-     |    ' parameter is deprecated in TIEGCM.',/,' For dispose to',
-     |    ' the NCAR hpss, a csh script named dispose_xxxxx.hsi',
-     |    ' will',/,'be written to the exec directory, and will',
-     |    ' contain necessary hsi commands',/,'to dispose history',
-     |    ' files to the hpss.',/,72('-'))")
-        if (dispose > 0) 
-     |    call shutdown('namelist DISPOSE is deprecated')
-        dispose = 0 
-      endif
 !
 ! Model start time(s):
       n = size(start)-count(start==ispval)

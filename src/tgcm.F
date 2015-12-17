@@ -84,8 +84,6 @@
 ! Initialize timing (must be called after mp_init):
       call init_timer
 !
-
-!
 ! Init timing for the run, get cwd and pid, get user input,
 !   set up 2d decomposition.
 !
@@ -93,8 +91,9 @@
       call timer(time0_init,time1_init,'INIT',0,0) ! start init timing
       call getcwdir(cwd)
       write(6,"('Current working directory (cwd) = ',a)") trim(cwd)
-      call getprocessid(pid)
-      write(6,"('Process ID (pid) = ',i8)") pid
+!
+! Namelist read and input verification:
+!
       call input(mytid,ntask) ! get user input (mpi)
       if (mytid==0.and.len_trim(hpss_path) > 0) call init_dispose
 !
@@ -118,16 +117,13 @@
 !
 ! Do 2d decomposition of geographic and magnetic grids:
       call mp_distribute_geo
-      write(6,"('tgcm after distribute_geo')")
       call mp_distribute_mag
-      write(6,"('tgcm after distribute_mag')")
 !
 ! Make all task structures available to all tasks:
       call mp_exchange_tasks(1)
 !
 ! Set up geo and mag ESMF grids (esmf.F):
       call esmf_init
-      write(6,"('tgcm after esmf_init')")
 #endif
 
 #if defined(INTERCOMM) || defined(CISMAH)
