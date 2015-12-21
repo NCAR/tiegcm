@@ -36,7 +36,9 @@ while True:
   run.number = get_options('run_number',run,job,args.run_number) # if run.name is set, use that to get number
 
   run.name = run.get_name(run.number) # get name from number
-
+#
+# Order may be significant due to dependencies:
+#
   job.model_name   = get_options('model_name'  ,run,job,args.model_name)
   job.model_root   = get_options('model_root'  ,run,job,args.model_root) # env var TIEGCM_ROOT,TIMEGCM_ROOT
   job.model_res    = get_options('model_res'   ,run,job,args.model_res)
@@ -50,6 +52,8 @@ while True:
   job.step         = get_options('step'        ,run,job,args.step)       # command-line only
   job.submitflag   = get_options('submit'      ,run,job,args.submit)     # command-line only
   job.stdout_dir   = get_options('stdout_dir'  ,run,job,args.stdout_dir) # command-line only
+  job.compiler     = get_options('compiler'    ,run,job,args.compiler)   # Linux platfor only (not ys)
+  print 'tgcmrun: job.compiler=',job.compiler
   tgcmdata         = get_options('tgcmdata'    ,run,job,args.tgcmdata)   # env var TGCMDATA
 #
 # If stdout_dir, then go there - everything now will happen in that directory:
@@ -125,6 +129,7 @@ while True:
   print '\nJob parameters for run ',run.fullname,' (',run.desc,'):'
   print 'Job script:           ',job.script_run
   print 'Machine/platform:     ',job.machine
+  print 'Compiler:             ',job.compiler
   print 'Model version:        ',job.model_version
   print 'Model root directory: ',job.model_root
   print 'Model resolution:     ',job.model_res

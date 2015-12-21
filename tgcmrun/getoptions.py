@@ -57,6 +57,7 @@ def get_args():
   help_submit     = "Submit job without prompting user? (yes/no))"
   help_execute    = "Execution flag for job script ('yes'/'no') (default: 'yes')"
   help_stdout_dir = "Directory in which stdout files and run scripts are to be saved (default: cwd)"
+  help_compiler   = "Compiler to be used on Linux desktop platform (not supercomputer)\n(valid values: 'intel', 'pgi', 'gfort') (default 'intel')"
 
   arg_list = [
     ['run_name'   , help_run_name],
@@ -65,6 +66,7 @@ def get_args():
     ['model_res'  , help_model_res],
     ['model_root' , help_model_root],
     ['machine'    , help_machine],
+    ['compiler'   , help_compiler],
     ['execdir'    , help_execdir],
     ['execute'    , help_execute],
     ['tgcmdata'   , help_tgcmdata],
@@ -265,6 +267,23 @@ def get_options(arg,run,job,option):
         sys.exit()
     return job.machine
 #
+# Compiler ('linux' platform only):
+# ToDo: if compiler option is specified and execdir exists, force gmake clean in execdir.
+#
+  elif arg == 'compiler':
+    if option:
+      if job.machine != 'linux':
+        print ">>> The '-compiler' option is valid only for the linux desktop platform"
+        print "    Machine = ",job.machine
+	sys.exit()
+      if option != 'intel' and option != 'pgi' and option != 'gfort':
+        print ">>> Invalid value for 'compiler' option: ",option
+        print ">>> Value for 'compiler' option must be 'intel', 'pgi', or 'gfort'"
+	sys.exit()
+      return option
+    else:                     # default is intel
+      return 'intel'
+#
 # Get execution directory:
 #
   elif arg == 'execdir':
@@ -415,7 +434,6 @@ def get_options(arg,run,job,option):
     else:
       if job.model_res == '5.0': step = '60'
       if job.model_res == '2.5': step = '30'
-      print 'getoptions returning step=',step
       return step
 #
 # Source history file:

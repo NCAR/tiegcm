@@ -163,6 +163,7 @@ class Job:
   project = ''             # authorized project number, e.g.: #BSUB -P P28100036
   queue = ''               # LSF queue, e.g.: #BSUB -q regular
   submitflag = ''          # Submit flag (not in job script)
+  compiler = ''            # Compiler (intel, pgi, or gfort) (Linux platform only, not ys super)
 
   def make_jobscript(self,run):
     f = open(self.script_run,'w')
@@ -294,6 +295,24 @@ class Job:
           f.write(newline+'\n')
         else:                        # use default
           f.write(line)
+#
+# Compiler (linux desktop platform only, not ys (not super)):
+#
+# if compiler=='intel', then makefile is Make.intel_hao64
+# if compiler=='pgi', then makefile is Make.pgi_hao64
+# if compiler=='gfort', then makefile is Make.gfort_hao64
+#
+      elif 'set make' in line:
+        if self.compiler == 'intel':
+          newline = 'set make = Make.intel_hao64'
+	elif self.compiler == 'pgi':
+          newline = 'set make = Make.pgi_hao64'
+	elif self.compiler == 'gfort':
+          newline = 'set make = Make.gfort_hao64'
+	else:
+	  print '>>> Unknown compiler ',self.compiler
+	  sys.exit()
+        f.write(newline+'\n')
 #
 # Otherwise, no change to this line in default job script:
       else:               # no change
