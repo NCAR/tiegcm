@@ -22,6 +22,3 @@ For more information about the TIEGCM and other related models, please see:
 
 * `tgcmgroup email list <http://mailman.ucar.edu/mailman/listinfo/tgcmgroup>`_ 
 
-
-To contact a live body at NCAR/HAO, send email to Ben Foster at foster@ucar.edu
-(see also :ref:`Contact Information <contact>`)

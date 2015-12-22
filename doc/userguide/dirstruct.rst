@@ -105,12 +105,9 @@ model source code, supporting scripts, documentation, and test scripts::
 * **README.download**: :download:`Instructions <_static/README.download>` for how to make a 
   quick-start default build and execution of the model after downloading the source code and data.
 
-:term:`tests/` directory contents:
+:term:`tgcmrun/` directory contents:
 
-* **README.tests**: Summary of benchmark test runs made with the current version of the model
-* **Several directories** (climatology, control, dec2006, nov2003, etc) containing namelist
-  input files and job scripts that can be used to reproduce the benchmark runs for
-  validation and testing, comparing results from code changes, etc. 
+* Python code to make benchmark runs interactively or from shell scripts.
 * For more information on benchmark runs made for the current release, please see 
   :base_url:`Release Documentation <release/html>`
 

@@ -51,9 +51,9 @@ copyright = u'2011, Ben Foster'
 # built documents.
 #
 # The short X.Y version.
-version = '1.95'
+version = '2.0'
 # The full version, including alpha/beta/rc tags.
-release = '1.95'
+release = '2.0'
 
 data_url = 'http://download.hao.ucar.edu/pub/tgcm/data/tiegcm1.95'
 

@@ -1,16 +1,17 @@
 
 .. _quickstart:
 
+====================
 QuickStart Procedure
 ====================
-
-This document is intended to provide a tutorial-like procedure for downloading 
-source code and start-up data files, building the model, and executing a short 
-default run on a 64-bit Linux system.
 
 .. note::
 
    This document is up to date for version |version| of the TIEGCM
+
+This document is intended to provide a tutorial-like procedure for downloading 
+source code and start-up data files, building the model, and executing a short 
+default run on a 64-bit Linux system.
 
 .. index:: download
 
@@ -22,40 +23,29 @@ Downloading the model source code and required data files
 The model source code and related input data files may be downloaded from 
 the TIEGCM download page of the main TGCM website:
 
-http://www.hao.ucar.edu/modeling/tgcm/download.php
+:download_url:`download.php`
 
 You will need to provide an email address (login and password are NOT required).
 Documentation and Postprocessor codes are also available on the download site,
 but all you need for now is the source code, and corresponding data files.
-Both are provided as gzipped tar files.
+Both are provided as gzipped tar files. There are separate data files for 
+5.0-degree and 2.5-degree model resolutions.
 
-After downloading the two gzipped tar files to an empty working directory (:term:`workdir`) 
-on a large disk system (for example, ``/mydisk/tiegcm``), uncompress and extract 
-the source code and related scripts and documentation::
+Download the model source code:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    $ gunzip tiegcmx.xx.tar.gz
-    $ tar xvf tiegcmx.xx.tar
+#. Make an empty working directory to contain the model source code (:term:`/home/user/tiegcm_wrkdir`)
+#. Download the file |tgcm_version|.tar.gz from the :download_url:`download <download.php>` page to the working directory.
+#. Uncompress (gunzip) and extract the tar file.
 
-where ``x.xx`` is the model version downloaded. 
+At this point, you should have something like this in your working directory::
 
-Next, make a directory to hold
-the data files (for example, ``/mydisk/tiegcm/data``), and uncompress and extract 
-the data tar file into that directory.  Then set environment variable ``$TGCMDATA``,
-e.g., for the c-shell, add this line to your .cshrc file::
-
-    setenv TGCMDATA /mydisk/tiegcm/data
-
-At this point, you should have something like this in your working directory
-``/mydisk/tiegcm``::
-
-  total 2376
-  -rw-rw-r-- 1 user tgcm    4928 Jun  1  2010 README.download
-  -rw-r--r-- 1 user tgcm    2886 Jun  1  2010 Release_Notes
-  drwxrwxr-x 2 user tgcm    4096 Apr 22 08:52 data/
-  -rwxrwxr-x 1 user tgcm   10137 May 31  2010 tiegcm-ibm.job*
-  -rwxrwxr-x 1 user tgcm   10671 May 31  2010 tiegcm-linux.job*
-  drwxrwxr-x 5 user tgcm    4096 Jun  1  2010 tiegcmx.xx/
-  -rw-r--r-- 1 user tgcm    6116 May 31  2010 tiegcmlicense.txt
+  total 64
+  -rw-r--r--  1 foster  staff  5162 Dec 15 15:39 README.download
+  -rw-r--r--  1 foster  staff  5608 Dec 15 15:39 Release_Notes
+  -rwxr-xr-x  1 foster  staff  6713 Dec 15 15:39 tiegcm-linux.job*
+  drwxr-xr-x  8 foster  staff   272 Dec 15 13:21 tiegcmx.x/
+  -rw-r--r--  1 foster  staff  6116 Dec 15 15:39 tiegcmlicense.txt
  
 These files and directories contain the following:
 
@@ -68,59 +58,117 @@ These files and directories contain the following:
 
    Release notes for this version of the model.
 
-.. describe:: data/
-
-   Directory containing the downloaded data files (this is ``$TGCMDATA``)
-
-.. describe:: tiegcm-ibm.job
-
-   Job script for building and executing under IBM/AIX systems.
-   (:download:`default tiegcm-ibm.job <_static/tiegcm-ibm.job>`)
-
-   Read more about :ref:`Running the model on IBM/AIX systems <ibm-systems>`.
-
 .. describe:: tiegcm-linux.job 
 
    Job script for building and executing under Linux (64-bit) systems.
-   (:download:`default tiegcm-linux.job <_static/tiegcm-linux.job>`)
+   (:download:`tiegcm-linux.job <_static/tiegcm-linux.job>`)
 
-.. describe:: tiegcmx.xx/
+.. describe:: tiegcmx.x/
 
-   Model root directory, containing source code, supporting scripts,
-   and documentation.
+   Model root directory for this version (e.g., |tgcm_version|), containing source code, supporting scripts, and documentation.
 
-.. tiegcmlicense.txt 
+.. describe:: tiegcmlicense.txt 
 
    Academic license agreement.
    (:download:`tiegcmlicense.txt <_static/tiegcmlicense.txt>`)
 
-You are now prepared to build the model and make a short default run
-using the job script.
+Download required data files:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. index:: default ; Linux run
+.. index:: TGCMDATA
 
-.. _jobscript:
+#. Make a directory on a large temporary storage disk (e.g., :term:`/mytmpdir/tiegcm/data`).
+#. Set environment variable :term:`TGCMDATA` to the absolute path of this directory.
+#. Download the file |download_5.0data| from the :download_url:`download <download.php>` 
+   page to the data directory.
+#. Uncompress (gunzip) and extract the tar file.
+
+Now, you should have something like this in your data directory (:term:`TGCMDATA`)::
+
+  -rw-r--r-- 1 foster hao  1695912 Nov  4 14:18 gpi_1960001-2015090.nc
+  -rw-r--r-- 1 foster hao 23889780 Dec  7 09:39 gswm_diurn_5.0d_99km.nc
+  -rw-r--r-- 1 foster hao 23889816 Dec  7 09:39 gswm_nonmig_diurn_5.0d_99km.nc
+  -rw-r--r-- 1 foster hao 23889768 Dec  7 09:39 gswm_nonmig_semi_5.0d_99km.nc
+  -rw-r--r-- 1 foster hao 23889784 Dec  7 09:39 gswm_semi_5.0d_99km.nc
+  -rw-r--r-- 1 foster hao  5573432 Nov  4 14:09 imf_OMNI_2003001-2003365.nc
+  -rw-r--r-- 1 foster hao  5573432 Nov  4 14:56 imf_OMNI_2006001-2006365.nc
+  -rw-r--r-- 1 foster hao  5588648 Nov  4 21:45 imf_OMNI_2008001-2008366.nc
+  -rw-r--r-- 1 foster hao 16990860 Nov 21 20:06 tiegcm_res5.0_climatology_smax_prim.nc
+  -rw-r--r-- 1 foster hao 16990860 Nov 21 20:06 tiegcm_res5.0_climatology_smin_prim.nc
+  -rw-r--r-- 1 foster hao 16990868 Nov 12 14:04 tiegcm_res5.0_dec2006_heelis_gpi_prim.nc
+  -rw-r--r-- 1 foster hao 16990868 Nov 12 14:04 tiegcm_res5.0_dec2006_weimer_imf_prim.nc
+  -rw-r--r-- 1 foster hao 16990848 Nov 12 14:04 tiegcm_res5.0_decsol_smax_prim.nc
+  -rw-r--r-- 1 foster hao 16990848 Nov 12 14:04 tiegcm_res5.0_decsol_smin_prim.nc
+  -rw-r--r-- 1 foster hao 16990848 Nov 12 14:04 tiegcm_res5.0_junsol_smax_prim.nc
+  -rw-r--r-- 1 foster hao 16990848 Nov 12 14:04 tiegcm_res5.0_junsol_smin_prim.nc
+  -rw-r--r-- 1 foster hao 16990848 Nov 12 14:04 tiegcm_res5.0_mareqx_smax_prim.nc
+  -rw-r--r-- 1 foster hao 16990848 Nov 12 14:04 tiegcm_res5.0_mareqx_smin_prim.nc
+  -rw-r--r-- 1 foster hao 16990868 Nov 12 14:04 tiegcm_res5.0_nov2003_heelis_gpi_prim.nc
+  -rw-r--r-- 1 foster hao 16990868 Nov 12 14:04 tiegcm_res5.0_nov2003_weimer_imf_prim.nc
+  -rw-r--r-- 1 foster hao 16990848 Nov 12 14:04 tiegcm_res5.0_sepeqx_smax_prim.nc
+  -rw-r--r-- 1 foster hao 16990848 Nov 12 14:04 tiegcm_res5.0_sepeqx_smin_prim.nc
+  -rw-r--r-- 1 foster hao 16990868 Nov 12 14:04 tiegcm_res5.0_whi2008_heelis_gpi_prim.nc
+  -rw-r--r-- 1 foster hao 16990868 Nov 12 14:04 tiegcm_res5.0_whi2008_weimer_imf_prim.nc
+
+These are all netCDF data files (if you have netcdf installed on your system, you can
+see the contents of these files with the command "ncdump -c file.nc").
+
+.. describe:: gpi*.nc
+
+  | Files containing dated geophysical indices and solar fluxes Kp, f107, and f107a 
+  | Specify these files with the namelist input keyword :ref:`GPI_NCFILE <GPI_NCFILE>`
+
+.. describe:: gswm*.nc (GSWM* namelist input keywords)
+
+  | Lower boundary tidal perturbations from the Global Scale Wave Model `GSWM <http://www.hao.ucar.edu/modeling/gswm/gswm.html>`_
+  | Specify these files with the namelist input keywords :ref:`GSWM data files <GSWM>`
+
+.. describe:: imf*.nc 
+
+  | Interplanetary Magnetic Field OMNI data files
+  | For use when namelist input keyword :ref:`POTENTIAL_MODEL <POTENTIAL_MODEL>` = 'WEIMER'
+  | Specify these files with the namelist input keyword :ref:`IMF_NCFILE <IMF_NCFILE>`
+
+.. describe:: tiegcm_res5.0*.nc
+
+  | Startup history files for an initial run (of tiegcm in this case).
+  | Specify these files with the namelist input keyword :ref:`SOURCE <SOURCE>`
+
+.. index:: resolution
+| For 5.0-degree model :term:`resolution`, the data files total about 500 MB.
+| For 2.5-degree model :term:`resolution`, the data files total about 2.6 GB.
 
 Making a default run on a 64-bit Linux system
 ---------------------------------------------
 
+.. index:: modeldir
+.. index:: execdir
+.. index:: namelist input
+.. index:: make
+.. index:: output
+.. index:: mpi
+.. index:: ESMF
+.. index:: scripts/
+.. index:: src/
+.. index:: doc/
+.. index:: tgcmrun/
+
 Take a look at the Linux job script 
 :download:`tiegcm-linux.job <_static/tiegcm-linux.job>`. Near the top are
 several shell variables, with their default settings, which configure the 
-job script (variables and values may vary somewhat between model versions)::
+job script (variables and values may vary between model versions)::
 
- set modeldir = tiegcmx.xx
- set execdir  = tiegcm-linux
+  set modeldir = tiegcmx.x
+  set execdir  = /hao/aim/$user/tiegcm-linux
+  set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
+  set output   = tiegcm.out
   set make     = Make.intel_hao64
- #set make     = Make.pgi_hao64
- #set input    = tiegcm.inp
- set output   = tiegcm.out
- set mpi      = TRUE
- set nproc    = 4
- set modelres = 5.0
- set debug    = FALSE
- set exec     = TRUE
- set utildir  = $modeldir/scripts
+  set modelres = 5.0
+  set mpi      = TRUE
+  set nproc    = 4
+  set debug    = FALSE
+  set exec     = TRUE
+  set utildir  = $modeldir/scripts
 
 Following are brief explanations of the job script shell variables:
 
@@ -129,60 +177,68 @@ Following are brief explanations of the job script shell variables:
    Absolute or relative paths are acceptable when specifying directories.
    Relative paths should be relative to the *working directory* (:term:`workdir`).
 
-.. index:: modeldir
 .. describe:: modeldir
 
    The model root directory (:term:`modeldir` from the source code download). 
-   This will contain subdirectories ``src/``, ``scripts/``, ``doc/``, etc.
+   This will contain subdirectories src/, scripts/, doc/, tgcmrun/, etc.
 
-.. index:: execdir
-.. describe:: tiegcm-linux
+.. describe:: execdir
 
    This is the execution directory (:term:`execdir`), in which the model will
    be built and executed. It will be created if it does not already exist.
    This directory will also contain the model output netCDF history files.
 
-.. index:: make
+.. describe:: input
+
+   The :ref:`namelist input file <namelist>`. The default namelist file is in the scripts directory
+   under the model root with file name :download:`tiegcm_res5.0_default.inp <_static/tiegcm_res5.0_default.inp>`
+   (for 5-degree resolution), or :download:`tiegcm_res2.5_default.inp <_static/tiegcm_res2.5_default.inp>`
+   (for 2.5-degree resolution).
+   The default input file can be copied to the working directory, modified, and renamed for your
+   own runs. In that case, be sure to reset the input file in the job script.
+
 .. describe:: make
 
    Make file containing platform-specific compiler flags, library locations, etc.
    If not otherwise specified with a path, the job script will look for this
-   file in ``modeldir/scripts``. This file is included in the main Makefile
-   (``scripts/Makefile``).  The user can either make necessary adjustments to 
-   an existing ``make`` file, or write their own for a different platform/compiler 
+   file in the :term:`scripts/` directory. This file is included in the main Makefile
+   (scripts/Makefile).  The user can either make necessary adjustments to 
+   an existing make file, or write their own for a different platform/compiler 
    system.
 
-   Here is an example ``make`` file for 64-bit HAO Linux systems using the ifort
-   Intel compiler: :download:`Make.intel_hao64 <_static/Make.intel_hao64>`
+   There are three such makefiles available in the :term:`scripts/` directory for the
+   Linux desktop platform:
+    * :download:`Make.intel_hao64 <_static/Make.intel_hao64>` (for Intel compiler)
+    * :download:`Make.pgi_hao64 <_static/Make.pgi_hao64>` (for PGI compiler)
+    * :download:`Make.gfort_hao64 <_static/Make.gfort_hao64>` (for gfortran compiler)
 
-.. describe:: input
-
-   The namelist input file. When this is commented (as above), the job script
-   will make a default namelist file :download:`tiegcm_default.inp <_static/tiegcm_default.inp>`, 
-   and use it for the default run. Later, you can edit this file for your own runs, 
-   rename it, and reset and uncomment the ``input`` shell variable in the job script.
+   You will need to set the paths to your local netCDF and :term:`ESMF` libraries
+   in these makefiles.
 
 .. describe:: output
 
-   Name of the file to receive stdout output from the model. If this pre-exists, 
-   it will be overwritten when the model is executed.
-   
-   Here is an example stdout file from a single-processor default run:
-   :download:`tiegcm_default.out <_static/tiegcm_default.out>`
+   Name of the file to receive stdout :term:`output` from the model. If this 
+   pre-exists, it will be overwritten when the model is executed.
+   Here is an example stdout file from the root mpi task of a 4-processor
+   run (5-degree resolution) on a Linux desktop machine:
+   :download:`tiegcm_task0000.out <_static/tiegcm_task0000.out>`
 
 .. describe:: mpi
 
    Logical flag indicating whether or not to link the MPI library for a 
-   multi-processor parallel run. If FALSE, the MPI library is not linked,
-   and it is assumed the model will be run in serial (single-processor) mode.
+   multi-processor parallel run.
+
+.. warning::
+
+   For |model| versions |version| and later, non-MPI runs (mpi=FALSE) are NOT supported.
+   However, mpi runs (mpi=TRUE) with a single processor (nproc=1) ARE supported.
 
 .. describe:: nproc
 
    Number of processors to use in a parallel execution. This is ignored if
-   ``mpi`` is FALSE.
+   mpi is FALSE.
 
 .. _modelres:
-
 .. describe:: modelres
 
    Model resolution. Two resolutions are supported: 
@@ -190,103 +246,104 @@ Following are brief explanations of the job script shell variables:
      * modelres = 2.5 sets 2.5-degree lat x lon horizontal, and dz=0.25 vertical
 
    If the resolution is changed, the model should be recompiled before re-executing 
-   the job script (type "*gmake clean*" in the execdir).
+   the job script (type "*gmake clean*" in the :term:`execdir`.
 
    For more information, see :ref:`Grid Structure and Resolution <resolution>`.
 
 .. describe:: debug
    
-   If ``debug`` = TRUE, the job script will compile the build with debug flags set.
-   Debug flags specific to the compiler are set in the ``make`` file. If ``debug`` 
-   is changed, the code should be recompiled (type "gmake clean" in the ``execdir``
+   If debug = TRUE, the job script will compile the build with debug flags set.
+   Debug flags specific to the compiler are set in the make file. If debug
+   is changed, the code should be recompiled (type "gmake clean" in the :term:`execdir`
    before re-executing the job script).
 
 .. describe:: exec
 
-   If ``exec`` = TRUE, the job script will execute the model after compilation,
+   If exec = TRUE, the job script will execute the model after compilation,
    otherwise, the job script will stop after compilation without execution.
 
 .. describe:: utildir
 
-   The utility directory containing supporting scripts. This is normally the ``scripts/``
-   subdirectory in the model root directory ``modeldir``.
+   The utility directory containing supporting scripts. This is normally the :term:`scripts/`
+   subdirectory in the model root directory :term:`modeldir`
 
 You are now ready to build and execute a default run. To do this, simply execute the job script
 as follows::
 
   $ tiegcm-linux.job &
 
+
 The compilation output will be displayed. If the build is successful (and exec=TRUE),
-the model will be executed, and stdout will go to the specified ``output`` file.
+the model will be executed, and stdout will go to the specified :term:`output` file.
 If the job is successful, you can edit and rename the namelist input file, reset
-``input`` in the job script, and re-execute the job script. If there has been
+`namelist input file <namelist>` in the job script, and re-execute the job script. If there has been
 no change to the source code, it will not need to recompile, and will use the pre-existing 
 executable.
 
-.. _ibm-systems:
-
-.. index:: ibm, aix
-
-Running the model on IBM/AIX Platforms
---------------------------------------
+Running the model on NCAR Linux Supercomputer |ncarsuper|
+---------------------------------------------------------
 
 .. note::
 
-   This section contains some information that is specific to user's
-   of the NCAR IBM system ``"bluefire"``. User's of other IBM systems
-   may need to make adjustments for their particular environment.
-   For more information about the NCAR bluefire system, see
-   http://www2.cisl.ucar.edu/docs/bluefire-user-guide
+   This section contains information that is specific to user's
+   of the NCAR Linux Supercomputer |ncarsuper|:
 
-The model can be built and executed on IBM platforms running AIX with
-the xlf90 (mpxlf_r) compiler. You can use the same procedure described 
-in the previous section, except that you use the IBM job script 
-:download:`tiegcm-ibm.job <_static/tiegcm-ibm.job>` instead of the
-Linux job script tiegcm-linux.job.
+   | Linux yslogin3 2.6.32-358.el6.x86_64 #1 SMP 
+   | Tue Jan 29 11:47:41 EST 2013 x86_64 x86_64 x86_64 GNU/Linux
 
-The IBM job script has the same user-settable shell variables as the
-Linux job script, but the default settings are slightly different::
+   For more information about the NCAR |ncarsuper| system, see
+   |ncarsuper_url|
 
-  set modeldir = tiegcm_trunk
-  set execdir  = tiegcm_trunk-aix
-  #set input    = tiegcm.inp
-  set output   = tiegcm.out
-  set make     = Make.bluefire
-  set mpi      = TRUE
-  set modelres = 5.0
-  set debug    = FALSE
-  set exec     = TRUE
-  set utildir  = $modeldir/scripts
+The model can be built and executed on |ncarsuper|, using the Intel
+compiler and the intelmpi implementation. To do this, copy and modify
+the job script tiegcm-ys.job from the scripts directory.
 
+The |ncarsuper| :download:`tiegcm-ys.job <_static/tiegcm-ys.job>` has 
+the same user-settable shell variables as the Linux job script, but 
+the default settings are slightly different::
+
+  set modeldir  = tiegcmx.x
+  set execdir   = /glade/scratch/$user/tiegcm_trunk/tiegcm-ys
+  set input     = $modeldir/scripts/tiegcm_res5.0_default.inp
+  set output    = tiegcm.out
+  set make      = Make.intel_ys
+  set mpi       = TRUE
+  set modelres  = 5.0
+  set debug     = FALSE
+  set exec      = TRUE
+  set utildir   = $modeldir/scripts
+  set runscript = run.lsf
+
+Where ``x.x`` refers to the version number (|version|).
 Note the ``execdir`` name, and the ``make`` file 
-:download:`Make.bluefire <_static/Make.bluefire>`
+:download:`Make.intel_ys <_static/Make.intel_ys>`.
+The model :term:`resolution` in this case is 5.0 degrees.
 
-Also note the special "``#BSUB``" directives at the top of the IBM
+Also note the special "#BSUB" directives near the top of the |ncarsuper|
 job script (descriptions in the right-hand column are for this document
 only, and are not in the script itself)::
 
-  #BSUB -J tiegcm_trunk               # Job name
-  #BSUB -P 24100004                   # NCAR project number
-  ##BSUB -q regular                   # regular queue (commented here)
-  ##BSUB -n 32                        # number of processors (commented here)
-  #BSUB -q debug                      # debug queue
-  #BSUB -n 8                          # number of processors (MPI tasks)
-  #BSUB -o tiegcm_trunk.%J.out        # stdout file
-  #BSUB -e tiegcm_trunk.%J.out        # stderr file
+  #BSUB -J tiegcm                # job name
+  #BSUB -P P28100036             # authorized project number
+  #BSUB -q premium               # premium queue
+  #BSUB -o tiegcm.%J.out         # stdout file
+  #BSUB -e tiegcm.%J.out         # stderr file
   #BSUB -N
-  #BSUB -u $LOGNAME@ucar.edu          # email notification address
-  #BSUB -W 1:00                       # wallclock limit (6-hr max at NCAR)
+  #BSUB -u $LOGNAME@ucar.edu     # email notification address
+  #BSUB -W 1:00                  # wallclock limit hours:minutes
+  #BSUB -n 16                    # number of processors (mpi tasks)
+  #BSUB -R "span[ptile=16]"      # use 16 processors per node
 
 These are resource settings for the Load Sharing Facility (LSF),
 the batch queuing system sold by Platform Computing. The LSF is
-used for scheduling jobs on the ``bluefire`` IBM system at NCAR.
-This job will be submitted to the debug queue, requesting
-8 processors, with a wallclock limit of 1 hour. Note the double
-pound-sign "##" indicates a commented field.
+used for scheduling jobs on the |ncarsuper| system at NCAR.
+This job will be submitted to the premium queue command, 
+requesting 16 processors with a wallclock limit of 1 hour. 
 
-To submit the IBM job script to the LSF batch system, type::
-
-  $ bsub < tiegcm-ibm.job
+To submit the |ncarsuper| job, simply execute the job script 
+on the command line. It will build the model on the interactive
+node, and if successful, the runscript (run.lsf by default) will 
+be created and submitted to the LSF via the bsub command. 
 
 Watch the progress of your LSF job with the command::
 

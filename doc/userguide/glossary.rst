@@ -5,11 +5,8 @@ Glossary
 .. glossary::
 
    benchmark runs
-     A series of :ref:`validation/test runs <tests>` made with each release 
-     of the model.  Namelist files and job scripts used to make these benchmark 
-     runs are available in subdirectories under the :term:`tests/` directory of the
-     current release (e.g., namelist input files for the "control" test run are
-     ``modeldir/tests/control/*.inp``).
+     Selected validation runs made with each release of the model. These runs can
+     be made using Python code in the :term:`tgcmrun/` directory. 
 
    continuation run
      A continuation run continues from the last output history of the previous run.
@@ -19,10 +16,10 @@ Glossary
 
    datadir
      The directory containing start-up and other input data files required for
-     running the model. A minimal set of datadir files are available via 
-     :ref:`download <download>`.  The datadir is sometimes referred to by
-     the :term:`TGCMDATA` environment variable.  Additional data files are available via the 
-     :term:`NCAR Community Data Portal`.
+     running the model. This should be on a large temporary disk. A minimal set 
+     of datadir files are available via :ref:`download <download>`.  The datadir 
+     is sometimes referred to by the :term:`TGCMDATA` environment variable.  
+     See also :ref:`job script shell variable <jobscript>`.
 
    diagnostic fields
      A list of diagnostic fields are available to be saved on secondary history files.
@@ -32,12 +29,21 @@ Glossary
      Subdirectory under the :term:`modeldir` containing documentation, e.g., the
      User's Guide, Model Description, Release Notes, etc.
 
+   ESMF
+     "Earth System Modeling Framework". The ESMF library is used in the electro-dynamo 
+     code (pdynamo.F in version |version| or later) for regridding between geographic 
+     and geomagnetic grids in an mpi environment. This is open software that can
+     be downloaded at https://www.earthsystemcog.org/projects/esmf/download/
+     If you build the ESMF library, it should be built with the same compiler with 
+     which the model is built.
+
    execdir
      The model execution directory. This is the directory where the model is built 
-     and executed. It is typically, but not necessarilly, a subdirectory of your
-     working directory :term:`workdir`. When a job script is executed from a working 
-     directory, the execdir is created if it does not already exist. During a model run, 
-     output history files are written to the execdir.
+     and executed. It is typically on a large temporary disk, capable of storing
+     model object and module code, netCDF output history files, and other data. 
+     When a job script is executed from a working directory, the execdir is created 
+     if it does not already exist. During a model run, output history files are written 
+     to the execdir. The execdir is set in the :term:`job script`.
 
    history
      A model history records the state of the model at a discrete instant in
@@ -50,7 +56,7 @@ Glossary
      on the first :ref:`OUTPUT <OUTPUT>` history file provided in the namelist input, and continue
      the run from there.
 
-   job script
+   job script 
      A csh script in the scripts/ directory which, when executed, will build and execute
      the model. The user defines a few shell variables in the job script, such as
      the :term:`modeldir`, and the :term:`namelist input`. For more details, please
@@ -72,21 +78,17 @@ Glossary
    namelist input
      The model reads user specified parameters from the :ref:`namelist input file <namelist>`
      via f90 standard namelist read. Keyword/Value pairs are read from unit 5,
-     and are validated by the input module (input.F).
-     
-   NCAR Community Data Portal
-     The `NCAR Community Data Portal <http://cdp.ucar.edu/>`_ is a public data 
-     repository with datasets from NCAR, UCAR, UOP, and participating organizations. 
-     To browse TIEGCM-related files (mostly netCDF history files for model start-up, 
-     or results of :term:`benchmark runs`), click on the "Models" link, then to the
-     "Thermospheric General Circulation Models" link, and finally to the desired
-     model version. NetCDF Metadata is available without actually downloading files.
+     and are validated by the input module (input.F). See also :ref:`job scripts <jobscript>`.
 
    netCDF
      TIEGCM output history files are written in 
      `netCDF <http://www.unidata.ucar.edu/software/netcdf/>`_, a self-describing 
      platform-independent data format written and maintained by the UCAR 
      `Unidata <http://www.unidata.ucar.edu>`_ program.
+     
+   output
+     File to receive stdout output from the model. This file will be created if 
+     it does not exist, or overwritten if it does exist.
 
    resolution
      The TIEGCM can be run in one of two resolutions: 
@@ -112,12 +114,13 @@ Glossary
      Subdirectory under the :term:`modeldir` containing the model source code
      (\*.F, \*.h files).
 
-   tests/
-     Subdirectory under the :term:`modeldir`. The tests directory 
-     contains subdirectories for :term:`benchmark runs` that were made for 
-     the current release.  The subdirectories contain job scripts and namelist input 
-     files that can be used to reproduce benchmark runs for testing and validation 
-     purposes. For more information, see the section on :ref:`Benchmark Test Runs <tests>`.
+   tgcmrun/
+     Subdirectory under the :term:`modeldir`. The tgcmrun directory 
+     contains Python code to make :term:`benchmark runs` for the current release.  
+     The 'tgcmrun' command may be used to interactively submit selected
+     benchmark runs, or tgcmrun can be executed from a shell script using
+     command-line options. There are several run_xxxxx shell scripts there 
+     demonstrating how to make benchmark runs.
 
    TGCMDATA
      A unix environment variable that refers to the :term:`datadir`. This environment
@@ -141,6 +144,6 @@ Glossary
  
    workdir
      Your local working directory. This will typically contain the model root directory
-     :term:`modeldir`, the execution directory :term:`execdir`, and related namelist
-     input files, job scripts, stdout files, etc. It may also contain a data subdirectory
-     :term:`datadir`.
+     :term:`modeldir` and related namelist input files, job scripts, stdout files, etc. 
+     Because the model source files are critical, this should be on backed-up disk, 
+     typically under your home directory.

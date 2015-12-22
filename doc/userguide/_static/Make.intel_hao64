@@ -1,22 +1,14 @@
 #
-# Included makefile for Intel ifort compiler and ifort-built openmpi on 64-bit HAO machines.
+# Included makefile for Intel ifort compiler with openmpi on 64-bit HAO machines.
+# Intel ifort (IFORT) 12.0.0 20101006
 #
-# Example machines and their unames:
-#   - HAO 64-bit Linux system iris.hao.ucar.edu (one quad-core)
-#     Linux iris 2.6.18-194.11.1.el5 #1 SMP Tue Aug 10 19:05:06 EDT 2010 x86_64 x86_64 x86_64 GNU/Linux
-#   - HAO 64-bit Linux system arc.hao.ucar.edu (two quad-cores)
-#     Linux arc 2.6.18-194.26.1.el5 #1 SMP Tue Nov 9 12:54:20 EST 2010 x86_64 x86_64 x86_64 GNU/Linux
-#
-# To access the ifort compiler at hao, you should have the following in your ~/.cshrc file:
-#   source /opt/local/intel/Compiler/11.1/072/bin/ifortvars.csh intel64
-#
-# Compilers and flags:
-#
-F90      = ifort
-MPIF90   = /home/tgcm/intel/openmpi-1.4.3/bin/mpif90
-MPIRUN   = /home/tgcm/intel/openmpi-1.4.3/bin/mpirun
-FFLAGS   = -r8
-DBGFLAGS = -debug full
+F90      = /opt/local/intel2011/composerxe-2011.0.084/bin/intel64/ifort
+MPIF90   = /opt/local/intel2011/impi/4.0.1.007/intel64/bin/mpif90 -fc=ifort
+MPIRUN   = /opt/local/intel2011/impi/4.0.1.007/intel64/bin/mpirun -l -s all
+FFLAGS   = -r8 -heap-arrays
+DBGFLAGS = -debug full -traceback 
+DBGFLAGS += -check bounds -check format -check output_conversion -check pointers -check uninit
+DBGFLAGS += -fpe-all=0 # this traps all floating point exceptions
 #
 # Makefile will use OPTIM = -g if set debug=TRUE in job script.
 OPTIM    = -O3
@@ -27,6 +19,9 @@ HOST     = $(shell hostname)
 #
 LIB_NETCDF = /home/tgcm/intel/netcdf-4.1.1/lib
 INC_NETCDF = /home/tgcm/intel/netcdf-4.1.1/include
+#
+# ESMF 5.2.0r beta snapshot:
+LIB_ESMF = /home/tgcm/esmf/ESMF_5_2_0rp1_beta_snapshot_21/lib/libO/Linux.intel.64.intelmpi.hao
 #
 # Make machines.ini file for MPI execution: 
 #

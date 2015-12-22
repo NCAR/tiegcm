@@ -1,0 +1,52 @@
+#
+# Included makefile for Intel ifort compiler on NCAR yellowstone:
+# As of December 2015, yellowstone is using intel 12.1.5.
+#
+F90      = ifort
+MPIF90   = mpif90
+MPIRUN   = mpirun.lsf
+FFLAGS   = -r8 -heap-arrays
+#
+# See http://www2.cisl.ucar.edu/resources/yellowstone/code_dev/compiling#where
+#FFLAGS += -march=corei7 -axAVX
+#
+# DBGFLAGS are used by the Makefile only if the job script
+# has "set debug = true"
+#
+DBGFLAGS = -debug full -debug extended -traceback 
+DBGFLAGS += -check bounds -check format -check output_conversion -check pointers -check uninit
+#
+# -fpe-all=0 traps all floating point exceptions. The model is not
+#   guaranteed not to crash if this option is set.
+# -nowarn is used to eliminate warnings that result in huge stderr files.
+#
+DBGFLAGS += -fpe-all=0 -nowarn 
+#
+# Makefile will use OPTIM = -g if set debug=TRUE in job script.
+OPTIM    = -O3
+LIBS     = -lcurl
+HOST     = $(shell hostname)
+#
+# ESMF lib on yellowstone:
+# (tiegcm-ys.job does "module load esmf")
+#
+export ESMF_LIBDIR
+LIB_ESMF = $(ESMF_LIBDIR)
+include $(LIB_ESMF)/esmf.mk
+LIBS = -L$(LIB_ESMF) -Wl,-rpath=$(LIB_ESMF) -lesmf
+#
+# Make machines.ini file for MPI execution: 
+#
+prereq: machines.ini mpirun.command
+machines.ini: export HN=$(HOST)
+machines.ini: export NP=$(NPROC)
+machines.ini: FORCE
+	@echo "Making machines.ini.."
+	@echo `hostname` > machines.ini
+	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini
+
+mpirun.command: FORCE
+	@echo "Making mpirun.command: MPIRUN=$(MPIRUN)"
+	@echo $(MPIRUN) > mpirun.command
+
+FORCE:
