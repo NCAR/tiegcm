@@ -69,6 +69,13 @@ Short Name                     Long Name                              Units     
 :ref:`ED1 <ED1>`               Mag eastward component electric field  V/m          3d mag
 :ref:`ED2 <ED2>`               Mag downward component electric field  V/m          3d mag
 :ref:`PHIM2D <PHIM2D>`         2d Electric Potential on magnetic grid V            2d mag
+:ref:`N2 <N2>`                 Molecular Nitrogen                     mmr          3d geo
+:ref:`ZGMID <ZGMID>`           Geometric Height at midpoints          cm           3d geo
+:ref:`CUSP <CUSP>`             Aurora Low Energy Electron Flux        erg/cm2/s    2d geo
+:ref:`DRIZZLE <DRIZZLE>`       Aurora Low Energy Electron Flux        erg/cm2/s    2d geo
+:ref:`ALFA <ALFA>`             Aurora Characteristic Energy           keV          2d geo
+:ref:`NFLUX <NFLUX>`           Aurora Energy Flux                     #/cm2/s      2d geo
+:ref:`EFLUX <EFLUX>`           Aurora Energy Flux                     erg/cm2/s    2d geo
 ============================== ====================================== ============ ==========
 
 
@@ -1323,3 +1330,152 @@ Details of Diagnostic Field Calculations
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: N2, diagnostic fields; N2
+.. _N2:
+.. describe:: N2
+
+   Diagnostic field: Molecular Nitrogen (mmr)::
+
+      diags(n)%short_name = 'N2'
+      diags(n)%long_name  = 'N2: Molecular Nitrogen'
+      diags(n)%units      = 'mmr'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'comp.F'
+
+   Sample images: N2 cylindrical equidistant projection 
+
+   .. image:: _static/images/n2.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: ZGMID, diagnostic fields; ZGMID
+.. _ZGMID:
+.. describe:: ZGMID
+
+   Diagnostic field: Geometric Height at Midpoints::
+
+      diags(n)%short_name = 'ZGMID'
+      diags(n)%long_name  = 'ZGMID: Geometric Height at midpoints'
+      diags(n)%units      = 'cm'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'addiag.F'
+
+   Sample images: ZGMID cylindrical equidistant projection 
+
+   .. image:: _static/images/zgmid.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: CUSP, diagnostic fields; CUSP
+.. _CUSP:
+.. describe:: CUSP
+
+   Aurora low energy electron flux (erg/cm2/s)::
+
+      diags(n)%short_name = 'CUSP'
+      diags(n)%long_name  = 'CUSP (cusp2d*ec)'
+      diags(n)%units      = 'erg/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: CUSP polar equidistant projection 
+
+   .. image:: _static/images/cusp.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: DRIZZLE, diagnostic fields; DRIZZLE
+.. _DRIZZLE:
+.. describe:: DRIZZLE
+
+   Aurora low energy electron flux (erg/cm2/s)::
+
+      diags(n)%short_name = 'DRIZZLE'
+      diags(n)%long_name  = 'DRIZZLE (drzl2d*ed)'
+      diags(n)%units      = 'erg/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: DRIZZLE polar projection 
+
+   .. image:: _static/images/cusp.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: ALFA, diagnostic fields; ALFA
+.. _ALFA:
+.. describe:: ALFA
+
+   Aurora Characteristic Energy (keV)::
+
+      diags(n)%short_name = 'ALFA'
+      diags(n)%long_name  = 'ALFA'
+      diags(n)%units      = 'keV'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: ALFA polar projection 
+
+   .. image:: _static/images/alfa.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: NFLUX, diagnostic fields; NFLUX
+.. _NFLUX:
+.. describe:: NFLUX
+
+   Aurora Energy Flux (#/cm2/s)::
+
+      diags(n)%short_name = 'NFLUX'
+      diags(n)%long_name  = 'NFLUX'
+      diags(n)%units      = '#/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: NFLUX polar projection 
+
+   .. image:: _static/images/nflux.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: EFLUX, diagnostic fields; EFLUX
+.. _EFLUX:
+.. describe:: EFLUX
+
+   Aurora Energy Flux (#/cm2/s)::
+
+      diags(n)%short_name = 'EFLUX'
+      diags(n)%long_name  = 'EFLUX'
+      diags(n)%units      = 'erg/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: EFLUX polar projection 
+
+   .. image:: _static/images/eflux.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------

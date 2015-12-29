@@ -141,17 +141,8 @@ see the contents of these files with the command "ncdump -c file.nc").
 Making a default run on a 64-bit Linux system
 ---------------------------------------------
 
-.. index:: modeldir
-.. index:: execdir
-.. index:: namelist input
-.. index:: make
-.. index:: output
-.. index:: mpi
-.. index:: ESMF
-.. index:: scripts/
-.. index:: src/
-.. index:: doc/
-.. index:: tgcmrun/
+.. _jobscript:
+
 
 Take a look at the Linux job script 
 :download:`tiegcm-linux.job <_static/tiegcm-linux.job>`. Near the top are
@@ -180,7 +171,8 @@ Following are brief explanations of the job script shell variables:
 .. describe:: modeldir
 
    The model root directory (:term:`modeldir` from the source code download). 
-   This will contain subdirectories src/, scripts/, doc/, tgcmrun/, etc.
+   This will contain subdirectories :term:`src/` , :term:`scripts/` , :term:`doc/` , 
+   and :term:`tgcmrun/` .
 
 .. describe:: execdir
 
@@ -235,8 +227,15 @@ Following are brief explanations of the job script shell variables:
 
 .. describe:: nproc
 
-   Number of processors to use in a parallel execution. This is ignored if
-   mpi is FALSE.
+   Number of processors to use in parallel execution. This will be the number
+   of MPI tasks made available for the domain decomposition. On linux desktops,
+   this is typically 4. For |model| on linux supercomputer clusters (e.g., the 
+   NCAR |ncarsuper| system, where there are 16 processors per node), the recommended 
+   number is 16 for 5.0-degree resolution, or 64 for 2.5-degree resolution. 
+   For debug purposes, nproc=1 is supported. The models have been tested with
+   the following processor counts: 1,4,8,12,16,24,32,48,64,72,80. See 
+   :download:`performance table <_static/perf.table>` for performance estimates
+   at recommended processor counts and timesteps.
 
 .. _modelres:
 .. describe:: modelres
@@ -276,9 +275,9 @@ as follows::
 The compilation output will be displayed. If the build is successful (and exec=TRUE),
 the model will be executed, and stdout will go to the specified :term:`output` file.
 If the job is successful, you can edit and rename the namelist input file, reset
-`namelist input file <namelist>` in the job script, and re-execute the job script. If there has been
-no change to the source code, it will not need to recompile, and will use the pre-existing 
-executable.
+:term:`namelist input file <namelist input>` in the job script, and re-execute the job script. 
+If there has been no change to the source code, it will not need to recompile, and will 
+use the pre-existing executable.
 
 Running the model on NCAR Linux Supercomputer |ncarsuper|
 ---------------------------------------------------------
@@ -315,7 +314,7 @@ the default settings are slightly different::
   set runscript = run.lsf
 
 Where ``x.x`` refers to the version number (|version|).
-Note the ``execdir`` name, and the ``make`` file 
+Note the :term:`execdir` name, and the ``make`` file 
 :download:`Make.intel_ys <_static/Make.intel_ys>`.
 The model :term:`resolution` in this case is 5.0 degrees.
 

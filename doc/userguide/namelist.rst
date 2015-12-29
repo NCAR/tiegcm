@@ -21,27 +21,51 @@ Please refer to the following examples of namelist input files:
 
 .. note::
 
-   Any part of a line in the namelist file following a semi-colon will
+   Any part of a line in the namelist file following a exclamation mark '!' will
    be treated as a comment (see example files).
 
 .. index:: default ; namelist read file
 
 Example Namelist Input Files:
 
-  * The default input file: :download:`default.inp <_static/default.inp>`
-  * A continuation of the default run: :download:`continuation.inp <_static/continuation.inp>` 
-  * Saving diagnostics on secondary history files: :download:`diags.inp <_static/diags.inp>`
-  * Full year climatology with constant forcing: :download:`climatology.inp <_static/climatology.inp>`
-  * Seasonal control runs with constant forcing: :download:`mareqx.inp <_static/mareqx.inp>`
-  * Heelis potential model with constant solar forcing: :download:`heelis_smax.inp <_static/heelis_smax.inp>`
-  * Heelis potential model with GPI (Kp) data file: :download:`heelis_gpi.inp <_static/heelis_gpi.inp>`
-  * Weimer potential model with constant IMF forcing: :download:`weimer_con.inp <_static/weimer_con.inp>`
-  * Weimer potential model with IMF data file: :download:`weimer_imf.inp <_static/weimer_imf.inp>`
-  * Weimer potential model with IMF+GPI data files: :download:`weimer_imf+gpi.inp <_static/weimer_imf+gpi.inp>`
-  * Default double-resolution run:
-  * Example "storm runs":
+* The default input files: 
 
-    * December, 2006 "AGU" storm run: :download:`dec2006.inp <_static/dec2006.inp>`
+  * :download:`5-degree resolution namelist file <_static/namelist_files/tiegcm_res5.0_default.inp>`
+  * :download:`2.5-degree resolution namelist file <_static/namelist_files/tiegcm_res2.5_default.inp>`
+
+* A continuation of the default run: 
+
+  * :download:`continuation.inp <_static/namelist_files/continuation.inp>` 
+
+* Saving diagnostics on secondary history files: 
+
+  * :download:`diags.inp <_static/namelist_files/diags.inp>`
+
+* Seasonal Benchmark namelist input files (5-degree resolution):
+  (Use run_scriptsonly in the :term:`tgcmrun/` directory to generate benchmark job scripts and namelist files) 
+
+  * :download:`December solstice solar max <_static/namelist_files/tiegcm_res5.0_decsol_smax.inp>`
+  * :download:`December solstice solar min <_static/namelist_files/tiegcm_res5.0_decsol_smin.inp>`
+  * :download:`June solstice solar max <_static/namelist_files/tiegcm_res5.0_junsol_smax.inp>`
+  * :download:`June solstice solar min <_static/namelist_files/tiegcm_res5.0_junsol_smin.inp>`
+  * :download:`March equinox solar max <_static/namelist_files/tiegcm_res5.0_mareqx_smax.inp>`
+  * :download:`March equinox solar min <_static/namelist_files/tiegcm_res5.0_mareqx_smin.inp>`
+  * :download:`September equinox solar max <_static/namelist_files/tiegcm_res5.0_sepeqx_smax.inp>`
+  * :download:`September equinox solar min <_static/namelist_files/tiegcm_res5.0_sepeqx_smin.inp>`
+
+* Climatology Benchmark Runs:
+
+  * :download:`Solar max climatology <_static/namelist_files/tiegcm_res5.0_climatology_smax.inp>`
+  * :download:`Solar min climatology <_static/namelist_files/tiegcm_res5.0_climatology_smin.inp>`
+
+* Storm Simulations: 
+
+  * :download:`December, 2006 storm (Heelis/gpi)     <_static/namelist_files/tiegcm_res5.0_dec2006_heelis_gpi.inp>`
+  * :download:`December, 2006 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm_res5.0_dec2006_weimer_imf.inp>`
+  * :download:`November, 2003 storm (Heelis/gpi)     <_static/namelist_files/tiegcm_res5.0_nov2003_heelis_gpi.inp>`
+  * :download:`November, 2003 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm_res5.0_nov2003_weimer_imf.inp>`
+  * :download:`2008 Whole Heliosphere Interval (Heelis/gpi)    <_static/namelist_files/tiegcm_res5.0_whi2008_heelis_gpi.inp>`
+  * :download:`2008 Whole Heliosphere Interval (Weimer/gpi,imf <_static/namelist_files/tiegcm_res5.0_whi2008_weimer_imf.inp>`
 
 .. _namelist_params:
 
@@ -62,12 +86,18 @@ Parameter Name                              Data Type and Default Description
 :ref:`COLFAC <COLFAC>`                      real: 1.5             O-O+ collision factor
 :ref:`CTPOTEN <CTPOTEN>`                    real:                 Cross-Tail Potential
 :ref:`CTPOTEN_TIME <CTPOTEN>`               real: [none]          Time-dependent Cross-Tail Potential
+:ref:`CURRENT_KQ <CURRENT_KQ>`              integer: 0            Height-integrated Current Density
+:ref:`CURRENT_PG <CURRENT_PG>`              integer: 1            Current due to Plasma Pressure Gradient
+:ref:`CALC_HELIUM <CALC_HELIUM>`            integer: 1            0/1 switch for calculation of Helium
+:ref:`DYNAMO <DYNAMO>`                      integer: 1            0/1 switch for electro-dynamo
+:ref:`EDDY_DIF <EDDY_DIF>`                  integer: 0            0/1 switch for DOY-dependent or constant eddy diffusion
 :ref:`F107 or F107_TIME <F107>`             real or real array    Daily F10.7 cm solar flux
 :ref:`F107A or F107A_TIME <F107A>`          real or real array    81-day average F10.7 cm solar flux
 :ref:`GPI_NCFILE <GPI_NCFILE>`              string: [none]        Geophysical Indices (Kp) data file
 :ref:`GSWM data files <GSWM>`               string: [none]        GSWM Model tidal lbc data files
 :ref:`HIST <HIST>`                          integer(3)            Primary history write frequency
 :ref:`IMF_NCFILE <IMF_NCFILE>`              string: [none]        IMF OMNI data files
+:ref:`JOULEFAC <JOULEFAC>`                  real: 1.5             Joule Heating Factor
 :ref:`KP or KP_TIME <KP>`                   real or real array    Kp for calc of hpower and ctpoten
 :ref:`LABEL <LABEL>`                        string:               Arbitrary string identifying the run
 :ref:`MXHIST_PRIM <MXHIST_PRIM>`            integer: 10           Max histories on primary file
@@ -75,6 +105,7 @@ Parameter Name                              Data Type and Default Description
 :ref:`OUTPUT <OUTPUT>`                      string array          Primary history output file(s)
 :ref:`POTENTIAL_MODEL <POTENTIAL_MODEL>`    string: [HEELIS]      High-latitude Potential Model
 :ref:`POWER or POWER_TIME <POWER>`          real or real array    Hemispheric Power (GW)
+:ref:`SABER_NCFILE <SABER_NCFILE>`          string: [none]        SABER data file (T,Z lower boundary condition)
 :ref:`SECSTART <SECSTART>`                  integer(3)            Secondary history start time (day,hour,minute)
 :ref:`SECSTOP <SECSTOP>`                    integer(3)            Secondary history stop time (day,hour,minute)
 :ref:`SECHIST <SECHIST>`                    integer(3)            Secondary history write frequency (day,hour,minute)
@@ -91,6 +122,7 @@ Parameter Name                              Data Type and Default Description
 :ref:`SWVEL or SWVEL_TIME <SWVEL>`          real or real array    Solar Wind Velocity
 :ref:`TIDE <TIDE>`                          real(10)              Amplitudes and phases of semi-diurnal tide (rarely used)
 :ref:`TIDE2 <TIDE2>`                        real(2)               Amplitudes and phases of diurnal tide (rarely used)
+:ref:`TIDI_NCFILE <TIDI_NCFILE>`            string: [none]        TIDI data file (U,V lower boundary condition)
 =========================================== ===================== =====================================
 
 .. -------------------------------------------------------------------------------------
@@ -233,6 +265,69 @@ Parameter Name                              Data Type and Default Description
 
    :ref:`Back to top <namelist_params>`
 
+.. -------------------------------------------------------------------------------------
+.. index:: current_kq, namelist input ; current_kq
+.. _CURRENT_KQ:
+.. describe:: CURRENT_KQ
+
+   If CURRENT_KQ=1, then height-integrated current density of current sheet, and
+   upward current density at the top of the ionosphere is calculated (default=0)
+   (ignored if DYNAMO=0) (see current.F90 to save JQR, JE13D, JE23D, KQPHI, KQLAM)
+
+   | Data type: integer
+   | Default: 0
+
+   :ref:`Back to top <namelist_params>`
+.. -------------------------------------------------------------------------------------
+.. index:: eddy_dif, namelist input ; eddy_dif
+.. _EDDY_DIF:
+.. describe:: EDDY_DIF
+
+   If EDDY_DIF=1, then day-of-year dependent eddy diffusion will be calculated, otherwise
+   eddy diffusion will be set to pressure-dependent constants. See cons.F.
+
+   | Data type: integer
+   | Default: 0
+
+   :ref:`Back to top <namelist_params>`
+.. -------------------------------------------------------------------------------------
+.. index:: current_pg, namelist input ; current_pg
+.. _CURRENT_PG:
+.. describe:: CURRENT_PG
+
+   If CURRENT_PG=1, current due to plasma pressure gradient and gravity is calculated
+   and included as a forcing term in the dynamo equation (default=1) (ignored if DYNAMO=0)
+
+   | Data type: integer
+   | Default: 1
+
+   :ref:`Back to top <namelist_params>`
+.. -------------------------------------------------------------------------------------
+.. index:: calc_helium, namelist input ; calc_helium
+.. _CALC_HELIUM:
+.. describe:: CALC_HELIUM
+
+   If calc_helium=1, helium is calculated as a major composition species.
+   If calc_helium=0, helium is zeroed out. If calc_helium=1 and the source history
+   does not have helium, then helium will be initialized globally to 0.1154E-5.
+
+   | Data type: integer
+   | Default: 1
+
+   :ref:`Back to top <namelist_params>`
+.. -------------------------------------------------------------------------------------
+.. index:: dynamo, namelist input ; dynamo
+.. _DYNAMO:
+.. describe:: DYNAMO
+
+   Integer switch for electro-dynamo. If DYNAMO=0, then dynamo (pdynamo.F) will not be
+   called, and ion drift velocities will be zero.  If DYNAMO=1, then dynamo will be
+   called, and ion drift velocities will be calculated.
+
+   | Data type: integer
+   | Default: 1
+
+   :ref:`Back to top <namelist_params>`
 .. -------------------------------------------------------------------------------------
 .. index:: f107, namelist input ; f107
 .. _F107:
@@ -402,7 +497,36 @@ Parameter Name                              Data Type and Default Description
      * :ref:`GPI_NCFILE <GPI_NCFILE>`
 
    :ref:`Back to top <namelist_params>`
+.. -------------------------------------------------------------------------------------
+.. index:: saber_ncfile, namelist input ; saber_ncfile
+.. _SABER_NCFILE:
+.. describe:: SABER_NCFILE
 
+   SABER data file for lower boundary conditions of T and Z 
+   (neutral temperature and geopotential height).
+
+   | Data type: string
+   | Default: [none]
+
+   See also:
+     * :ref:`TIDI_NCFILE <TIDI_NCFILE>`
+
+   :ref:`Back to top <namelist_params>`
+.. -------------------------------------------------------------------------------------
+.. index:: tidi_ncfile, namelist input ; tidi_ncfile
+.. _TIDI_NCFILE:
+.. describe:: TIDI_NCFILE
+
+   TIDI data file for lower boundary conditions of U and V 
+   (zonal and meridional neutral wind).
+
+   | Data type: string
+   | Default: [none]
+
+   See also:
+     * :ref:`SABER_NCFILE <SABER_NCFILE>`
+
+   :ref:`Back to top <namelist_params>`
 .. -------------------------------------------------------------------------------------
 .. index:: kp, namelist input ; kp
 .. _KP:
@@ -472,7 +596,18 @@ Parameter Name                              Data Type and Default Description
      * IMF_NCFILE = '$TGCMDATA/imf_OMNI_2002001-2002365.nc'
 
    :ref:`Back to top <namelist_params>`
+.. -------------------------------------------------------------------------------------
+.. index:: joulefac, namelist input ; joulefac
+.. _JOULEFAC:
+.. describe:: JOULEFAC
 
+   Joule heating factor. This factor is multiplied by the joule heating calculation
+   (see subroutine qjoule_tn in qjoule.F).
+
+   | Data type: real
+   | Default: 1.5
+
+   :ref:`Back to top <namelist_params>`
 .. -------------------------------------------------------------------------------------
 .. index:: label, namelist input ; label
 .. _LABEL:
@@ -610,19 +745,21 @@ Parameter Name                              Data Type and Default Description
 
    Examples::
 
-     ;
-     ; Example for tiegcm1.9: all fields are "prognostic" except EEX,EEY,EEZ,
-     ; which are saved by addfld calls in sub ionvel (ionvel.F).
-     ;
-      SECFLDS = 'TN','UN','VN','O1','NO','N4S','NE','TE','TI',
-                'O2','O2P','OMEGA','POTEN','EEX','EEY','EEZ'
-     ;
-     ; This example lists all diagnostic fields available via the diags module
-     ; (it is not necessary to call addfld in the code to obtain these fields)
-     ;
-      SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE',
-                'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
-                'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M'
+     !
+     ! Example list of fields to be written to secondary histories:
+     !
+       SECFLDS = 'TN' 'UN' 'VN' 'O2' 'O1' 'N2' 'NO' 'N4S' 'HE' 'NE' 'TE' 'TI'
+                 'TEC' 'O2P' 'OP' 'OMEGA' 'POTEN' 'UI_ExB' 'VI_ExB' 'WI_ExB' 
+                 'DEN' 'QJOULE' 'Z' 'ZG'
+     !
+     ! This example lists all diagnostic fields available via the diags module
+     ! (it is not necessary to call addfld in the code to obtain these fields)
+     !
+       SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
+           'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+           'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M','O_N2','WN',
+           'BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2','PHIM2D','N2',
+           'CUSP','DRIZZLE','ALFA','NFLUX','EFLUX'
 
    See also:
      :ref:`MXHIST_SECH <MXHIST_SECH>`
@@ -746,7 +883,7 @@ Parameter Name                              Data Type and Default Description
    history on any archive file system.
 
    Examples:
-     * SOURCE = '$TGCMDATA/TGCM.tiegcm1.95.pcntr_eqnx_smed.nc'
+     * SOURCE = '$TGCMDATA/tiegcm_res2.5_decsol_smax_prim.nc'
 
    See also:
      * :ref:`SOURCE_START <SOURCE_START>`
@@ -825,14 +962,16 @@ Parameter Name                              Data Type and Default Description
 .. _STEP:
 .. describe:: STEP
 
-   Model time-step in seconds. Default value is 120, although during periods of quiet 
-   solar activity, the model will run fine at 180. During periods of intense solar 
+   Model time-step in seconds. Default value is 60 seconds for 5-degree resolution, 
+   30 seconds for 2.5-degree resolution. During periods of quiet solar activity, 
+   the model can often be run at twice these times. During periods of intense solar 
    activity (e.g., F10.7 > 200, or high magnitude BZ southward), the model may become 
-   numerically unstable. In this case, reducing the timestep to as low as 60 seconds 
-   may help the model get through the rough period.
+   numerically unstable. In this case, reducing the timestep to as low as 10 seconds 
+   may be necessary for the model get through the rough period.
 
    | Data type: integer
-   | Default: Usually 120 or 180
+   | Default for 5.0-degree resolution: STEP=60
+   | Default for 2.5-degree resolution: STEP=30
 
    :ref:`Back to top <namelist_params>`
 

@@ -20,8 +20,9 @@ HOST     = $(shell hostname)
 LIB_NETCDF = /home/tgcm/intel/netcdf-4.1.1/lib
 INC_NETCDF = /home/tgcm/intel/netcdf-4.1.1/include
 #
-# ESMF 5.2.0r beta snapshot:
-LIB_ESMF = /home/tgcm/esmf/ESMF_5_2_0rp1_beta_snapshot_21/lib/libO/Linux.intel.64.intelmpi.hao
+# This public release of ESMF was built at hao with intel on Dec 22, 2015:
+#
+LIB_ESMF = /home/tgcm/esmf/intel/esmf_6_3_0rp1/lib/libO/Linux.intel.64.intelmpi.default
 #
 # Make machines.ini file for MPI execution: 
 #

@@ -1,0 +1,47 @@
+
+Performance estimates for TIEGCM and TIMEGCM based on benchmark runs:
+
+Model:        tiegcm or timegcm at 5.0 and 2.5-degree resolutions
+Step:         Timestep in seconds
+Nproc:        Number of processors (mpi tasks)
+WC Sec/Step:  Wallclock seconds per timestep
+WC Min/Day:   Wallclock minutes per simulated day
+Days/12h:     Number of simulated days in 12 hours WC (estimate)
+Ave Mem:      Average memory usage (from yellowstone LSF reports)
+Compiler:     Results when built with different compilers (linux desktop platform only)
+
+===============================================================================================
+
+Runs made on NCAR yellowstone.ucar.edu (linux cluster IBM supercomputer (16-way nodes)):
+Linux yslogin4 2.6.32-358.el6.x86_64 #1 SMP Tue Jan 29 11:47:41 EST 2013 x86_64 x86_64 x86_64 GNU/Linux
+
+Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Ave Mem
+-----------------------------------------------------------------------------------------------
+tiegcm5.0	60	16	.07		1.65		428		2.8-3 GB
+tiegcm2.5	30	64	.15		7.25		100		25-30 GB
+
+timegcm5.0	60	48	.11		2.7		272             [not available]
+timegcm2.5	30	64	.51		24.5		29              [not available]
+-----------------------------------------------------------------------------------------------
+
+===============================================================================================
+
+Runs made on linux desktop (Optiplex 7020):
+Linux kokanee 2.6.32-573.8.1.el6.x86_64 #1 SMP Tue Nov 10 18:01:38 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+
+Notes: 
+ - Showing range of timing results due to variable load balancing on the linux desktop platform.
+ - Optimization level was -O3 for all compilers.
+ - Performance estimates not currently available for TIMEGCM.
+
+Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Compiler
+-----------------------------------------------------------------------------------------------
+tiegcm5.0	60	4	.20-.45		5-11		150-66		Intel
+tiegcm2.5	30	4	1.3-2.3		62-110		11.5-6.5	Intel
+
+tiegcm5.0	60	4	.40-.60		10-14		75-50		pgi
+tiegcm2.5	30	4	2.1-2.7		100-130		7.1-5.5		pgi
+
+tiegcm5.0	60	4	.26-.60		6-14		115-50 		gfortran
+tiegcm2.5	30	4	2.3-2.7		110-130		6.5-5.5		gfortran
+-----------------------------------------------------------------------------------------------

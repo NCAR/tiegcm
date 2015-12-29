@@ -39,11 +39,12 @@ Glossary
 
    execdir
      The model execution directory. This is the directory where the model is built 
-     and executed. It is typically on a large temporary disk, capable of storing
+     and executed. It should be on a large temporary disk, capable of storing
      model object and module code, netCDF output history files, and other data. 
      When a job script is executed from a working directory, the execdir is created 
      if it does not already exist. During a model run, output history files are written 
-     to the execdir. The execdir is set in the :term:`job script`.
+     to the execdir. The execdir is set in the :term:`job script`. See also
+     :ref:`Execution Directory <execdir>`
 
    history
      A model history records the state of the model at a discrete instant in
@@ -74,6 +75,7 @@ Glossary
      :term:`doc/` (documentation), and :term:`tests/` (test runs). The modeldir 
      is available via :ref:`download <download>`, and is typically a subdirectory 
      of the model working directory (:term:`workdir`). 
+     See also :ref:`Model Directory <modeldir>`
   
    namelist input
      The model reads user specified parameters from the :ref:`namelist input file <namelist>`

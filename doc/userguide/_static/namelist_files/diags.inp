@@ -1,0 +1,45 @@
+&tgcm_input
+!
+! Namelist input file for run tiegcm_res5.0_decsol_smax
+!
+LABEL = 'tiegcm_res5.0_decsol_smax'
+START_YEAR = 2002
+START_DAY = 355
+CALENDAR_ADVANCE = 1
+SOURCE = '/glade/p/hao/tgcm/data/tiegcm2.0/tiegcm_res5.0_decsol_smax_prim.nc'
+SOURCE_START = 355 0 0
+START = 355 0 0
+STOP = 360 0 0
+STEP = 60
+HIST = 1 0 0
+OUTPUT = 'tiegcm_res5.0_decsol_smax_prim_001.nc'
+MXHIST_PRIM = 10
+SECSTART = 355 1 0
+SECSTOP = 360 0 0
+SECHIST = 0 1 0
+SECOUT = 'tiegcm_res5.0_decsol_smax_sech_001.nc','to','tiegcm_res5.0_decsol_smax_sech_005.nc','by','1'
+MXHIST_SECH = 24
+!
+! Diagnostic fields available with this release:
+!
+!SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
+           'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+           'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M','O_N2','WN',
+           'BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2','PHIM2D','N2',
+           'CUSP','DRIZZLE','ALFA','NFLUX','EFLUX'
+TIDE = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+TIDE2 = 0. 0.
+GSWM_MI_DI_NCFILE = '/glade/p/hao/tgcm/data/gswm_diurn_5.0d_99km.nc'
+GSWM_MI_SDI_NCFILE = '/glade/p/hao/tgcm/data/gswm_semi_5.0d_99km.nc'
+POTENTIAL_MODEL = 'HEELIS'
+POWER = 40.
+CTPOTEN = 60.
+F107 = 200.
+F107A = 200.
+AURORA = 1
+COLFAC = 1.5
+DYNAMO = 1
+CURRENT_PG = 1
+CURRENT_KQ = 0
+CALC_HELIUM = 1
+/

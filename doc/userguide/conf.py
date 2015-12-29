@@ -32,7 +32,7 @@ extensions = ['sphinx.ext.extlinks']
 # btf 12/15/15: Change this when tiegcm2.0 is available on webpub:
 #
 extlinks = {'base_url': ('http://www.hao.ucar.edu/modeling/tgcm/tiegcm1.95/%s', 'base_url '),
-            'data_url': ('http://download.hao.ucar.edu/pub/tgcm/data/tiegcm1.95/%s', 'data_url '),
+            'ftp_url': ('http://download.hao.ucar.edu/pub/tgcm/data/%s', None ),
             'download_url': ('http://www.hao.ucar.edu/modeling/tgcm/%s', None )}
 
 #extlinks = {'base_url': ('http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/%s', 'base_url '),
@@ -65,6 +65,7 @@ release = '2.0'
 
 rst_epilog = """
 .. |model| replace:: tiegcm
+.. |modeluc| replace:: TIEGCM
 .. |tgcm_version| replace:: tiegcm2.0
 .. |download_5.0data| replace:: tiegcm2.0_res5.0_data.tar.gz
 .. |download_2.5data| replace:: tiegcm2.0_res2.5_data.tar.gz
@@ -84,7 +85,7 @@ rst_epilog = """
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build','v1.95']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None

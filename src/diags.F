@@ -1419,7 +1419,7 @@
 !-----------------------------------------------------------------------
       subroutine mkdiag_NFLUX(name,nflx2d,lon0,lon1,lat0,lat1)
 !
-! Interpolate geometric height on interfaces (input zgint) to midpoints.
+! Auroral energy flux.
 !
 ! Args:
       character(len=*),intent(in) :: name
