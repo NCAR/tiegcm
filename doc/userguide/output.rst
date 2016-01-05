@@ -15,10 +15,11 @@ model output fields at a discrete instant in :term:`model time`. Here is an exam
 metadata content of a sample primary history file: :download:`primary.ncd <_static/primary.ncd>`. 
 This example file contains six daily histories (days 355 to 360 of 2002).
 This metadata is obtained via the "ncdump" command in the netCDF utilities. This example 
-ncdump file contains data values for scalar and singly-dimensioned vectors only.
+ncdump file contains data values for scalar and singly-dimensioned vectors only. You can
+also use the tgcm_ncdump script in the :term:`scripts/` directory.
 
 TIEGCM history files are "CF compliant", i.e., they conform to the 
-`NetCDF Climate and Forecast (CF) Metadata Convention <http://cf-pcmdi.llnl.gov>`_.
+`NetCDF Climate and Forecast (CF) Metadata Convention <http://cfconventions.org>`_.
 
 Primary and Secondary History Files
 -----------------------------------
@@ -30,7 +31,7 @@ file, and is continued from the START time found on the first OUTPUT file).  Typ
 daily histories are stored on primary history files.
 
 Fields on primary histories necessary for start-up of the TIEGCM are as follows:
-TN, UN, VN, O2, O1, N4S, NO, O+, N2D, TI, TE, NE, O2P, OMEGA, Z, POTEN 
+TN, UN, VN, O2, O1, N4S, NO, HE, AR, OP, N2D, TI, TE, NE, O2P, OMEGA, Z, POTEN 
 
 "Secondary" history files contain diagnostic fields and/or primary history fields.
 Fields to be saved on the secondary history files are listed by the namelist input 
@@ -38,4 +39,4 @@ parameter :ref:`SECFLDS <SECFLDS>`. Diagnostics can be saved by calling subrouti
 in the code (addfld.F), or by including one or more of the "standard" diagnostic fields 
 available via the :ref:`diagnostics <diagnostics>` module (diags.F). Secondary histories 
 are often saved at a higher temporal resolution than primary histories, typically hourly. 
-:download:`Here <_static/secondary.ncd>` is an ncdump of an example secondary history file.
+Here is an ncdump of an :download:`example secondary history file <_static/secondary.ncd>`

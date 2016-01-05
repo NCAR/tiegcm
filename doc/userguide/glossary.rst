@@ -46,6 +46,10 @@ Glossary
      to the execdir. The execdir is set in the :term:`job script`. See also
      :ref:`Execution Directory <execdir>`
 
+   geomagnetic coordinates
+     The electro-dynamo fields (electric potential, electric field, and ion drift
+     velocities) are calculated on a geomagnetic grid, see :ref:`magnetic coordinates <magcoords>` 
+
    history
      A model history records the state of the model at a discrete instant in
      :term:`model time`. One or more histories are stored in netCDF history files.
@@ -149,3 +153,8 @@ Glossary
      :term:`modeldir` and related namelist input files, job scripts, stdout files, etc. 
      Because the model source files are critical, this should be on backed-up disk, 
      typically under your home directory.
+
+   zp
+     Vertical log pressure coordinate of the |modeluc|. This is the lev coordinate
+     on the history files: ln(p0/p) (see :ref:`grid structure <grid>` and 
+     :download:`sample history file <_static/primary.ncd>`.

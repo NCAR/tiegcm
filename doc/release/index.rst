@@ -1,14 +1,14 @@
-.. tiegcm1.95 documentation master file, created by
+.. tiegcm2.0 documentation master file, created by
    sphinx-quickstart on Mon May 23 18:37:24 2011.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-HAO Release of TIEGCM Version |version|
+HAO Release of |modeluc| Version |version|
 =======================================
 
-HAO is pleased to announce the release of version 1.95 of the
+HAO is pleased to announce the release of version |version| of the
 Thermosphere Ionosphere Electrodynamics General Circulation Model
-(TIEGCM).
+(|modeluc|).
 
 
 
@@ -18,7 +18,7 @@ Contents:
    :maxdepth: 2
 
    release_notes
-   tests
+   benchmarks
    postproc
 
 * `User's Guide <http://www.hao.ucar.edu/modeling/tgcm/doc/userguide/html/>`_

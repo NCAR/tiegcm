@@ -16,7 +16,7 @@ of "Solar Minimum" and "Solar Maximum" conditions are as follows:
 
 * Solar Maximum Conditions::
 
-   POWER   = 39.
+   POWER   = 40.
    CTPOTEN = 60.
    F107    = 200.
    F107A   = 200.
@@ -26,7 +26,9 @@ Steady-State Seasonal Start-up Files
 
 Single-history start-up files for the four seasons are in the **data download file**, 
 which is available from the `tgcm download page <http://www.hao.ucar.edu/modeling/tgcm/download.php>`_ 
-These files can be used as SOURCE files in the namelist input for initial runs:
+These files can be used as SOURCE files in the namelist input for initial runs.
+Files listed below are for the 5.0-degree resolution. Files for benchmark runs
+at the 2.5-degree resolution are the same, but have 'res2.5' instead of 'res5.0'.
 
 Start-up files at Solar Minimum Conditions:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -34,10 +36,10 @@ Start-up files at Solar Minimum Conditions:
 =============================== ====================================
 Date				Filename
 =============================== ====================================
-March Equinox (day 80)          TGCM.tiegcm1.95.pcntr_mareqx_smin.nc
-June Solstice (day 172)         TGCM.tiegcm1.95.pcntr_junsol_smin.nc
-September Equinox (day 264)     TGCM.tiegcm1.95.pcntr_sepeqx_smin.nc
-December Solstice (day 355)     TGCM.tiegcm1.95.pcntr_decsol_smin.nc
+March Equinox (day 80)          tiegcm_res5.0_decsol_smin_prim.nc
+June Solstice (day 172)         tiegcm_res5.0_junsol_smin_prim.nc
+September Equinox (day 264)     tiegcm_res5.0_sepeqx_smin_prim.nc
+December Solstice (day 355)     tiegcm_res5.0_decsol_smin_prim.nc
 =============================== ====================================
 
 Start-up files at Solar Maximum Conditions:
@@ -46,13 +48,12 @@ Start-up files at Solar Maximum Conditions:
 =============================== ====================================
 Date				Filename
 =============================== ====================================
-March Equinox (day 80)          TGCM.tiegcm1.95.pcntr_mareqx_smax.nc
-June Solstice (day 172)         TGCM.tiegcm1.95.pcntr_junsol_smax.nc
-September Equinox (day 264)     TGCM.tiegcm1.95.pcntr_sepeqx_smax.nc
-December Solstice (day 355)     TGCM.tiegcm1.95.pcntr_decsol_smax.nc
+March Equinox (day 80)          tiegcm_res5.0_decsol_smax_prim.nc
+June Solstice (day 172)         tiegcm_res5.0_junsol_smax_prim.nc
+September Equinox (day 264)     tiegcm_res5.0_sepeqx_smax_prim.nc
+December Solstice (day 355)     tiegcm_res5.0_decsol_smax_prim.nc
 =============================== ====================================
 
-* Download these files at `TIEGCM Version 1.95 Steady State Source Histories <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_95%2fSteady_State_Source_Histories%2fSteady_State_Source_Histories.thredds.xml>`_
 
 .. _seasonal_control:
 

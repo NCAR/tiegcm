@@ -1,28 +1,26 @@
 
-.. _tests:
+.. _benchmarks:
 
-Benchmark Test Runs of v\ |version|
-===================================
+Benchmark Runs
+==============
 
-A series of benchmark runs are made for each release of the TIEGCM
-(since v1.94).  Job scripts and namelist input files for these runs are 
-available in subdirectories in the :term:`tests/` directory.
+A series of benchmark runs are made for each major release of the |model|
+These runs (for |tgcm_version|) were made using the python scripts in the 
+:term:`tgcmrun/` directory.
 
 Netcdf files with the first history of each benchmark run are available in
 the :ref:`data download file <download>`.  These files can be used as start-up 
-:ref:`SOURCE <SOURCE>` files to reproduce the runs.  The namelist input files and 
-job scripts used to make the runs are provided in the :term:`tests/` directory
-of the release.
+:ref:`SOURCE <SOURCE>` files to reproduce the runs.  
 
-Following is a summary of benchmark runs made by TIEGCM version |version|.
+Following is a summary of benchmark runs made by |model| version |version|.
 For full history file output, steady-state start-up files, and "sanity check" plots 
 of the benchmark runs made by version |version|, please see 
 :base_url:`Release Documentation <release/html>`
 
-Control
--------
+Seasonal
+--------
 
-**control**: 5-day control runs, started from steady-state histories at both equinoxes
+**Seasonal**: 5-day control runs, started from steady-state histories at both equinoxes
 and both solstices, and at solar minimum and maximum conditions::
 
   mareqx: March Equinox (day 80) 
@@ -39,7 +37,7 @@ and both solstices, and at solar minimum and maximum conditions::
 
  * Solar Maximum::
 
-    POWER   = 39.
+    POWER   = 40.
     CTPOTEN = 60.
     F107    = 200.
     F107A   = 200.

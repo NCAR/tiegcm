@@ -4,7 +4,7 @@
 Post-Processing and Visualization
 =================================
 
-TIEGCM netCDF history files can be read by any application with access to
+|modeluc| netCDF history files can be read by any application with access to
 the netCDF library, including many freely available software packages developed
 for mainpulating or displaying netCDF data 
 (see http://www.unidata.ucar.edu/software/netcdf/software.html).
