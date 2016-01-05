@@ -8,38 +8,22 @@
 #
 #   modeldir:  Root directory to model source (may be an SVN working dir)
 #   execdir:   Directory in which to build and execute (will be created if necessary)
-#   input:     Namelist input file (will use default if not provided)
+#   input:     Namelist input file (set to default file in modeldir)
 #   output:    Stdout file from model execution (will be created)
 #   make:      Build file with platform-specific compile parameters (in scripts dir)
-#              Supported compiler files: Make.intel_ys or Make.pgi_ys
-#   mpi:       TRUE/FALSE for MPI or non-MPI run (for non-mpi runs, lsf runscript is ignored)
+#   mpi:       TRUE/FALSE for MPI run (non-MPI runs are not supported in v2.0 and later)
 #   modelres:  Model resolution (5.0 or 2.5 degrees)
-#   debug:     If TRUE, build and execute a "debug" run
-#   exec:      If TRUE, execute the model (build only if FALSE)
-#   utildir:   Dir containing supporting scripts (usually $modeldir/scripts)
+#   debug:     If TRUE, build and execute a "debug" run (debug compiler flags are set)
+#   exec:      If TRUE, execute the model (build only if exec is FALSE)
+#   utildir:   Directory containing supporting scripts (default $modeldir/scripts)
 #   runscript: LSF script with run commands (submitted with bsub from execdir)
 #
-# Use the "modules" command on yellowstone to load/unload compilers, libs, etc:
-#   module list     Get list of currently loaded modules
-#   module avail    See which modules are available in your current setup
-#   module load     Load one or more available modules
-#   module switch   Switch between modules (e.g., compilers)
-# See also the module man page on yellowstone.
-#
-# To switch compilers (default is intel):
-#   From intel to pgi: type "module switch intel pgi", and use Make.pgi_ys below
-#   From pgi to intel: type "module switch pgi intel", and use Make.intel_ys below
-#
- set modeldir = tiegcm_trunk
- set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm-ys
- set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
- set output   = tiegcm.out
- set modelres = 5.0
-#
-# Intel *or* PGI modules must be loaded on yellowstone (see comment above)
- set make     = Make.intel_ys
-#set make     = Make.pgi_ys
-
+set modeldir = tiegcm_trunk
+set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm-ys
+set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
+set output   = tiegcm.out
+set modelres = 5.0
+set make     = Make.intel_ys
 set mpi       = TRUE
 set debug     = FALSE
 set exec      = TRUE
@@ -88,8 +72,8 @@ EOF
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Update ESMF module on ys as of 4/14/14:
- set lib_esmf = esmf-6.3.0r-ncdfio-mpi-O
- module load esmf $lib_esmf
+set lib_esmf = esmf-6.3.0r-ncdfio-mpi-O
+module load esmf $lib_esmf
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"

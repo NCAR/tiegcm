@@ -52,8 +52,8 @@ while True:
   job.step         = get_options('step'        ,run,job,args.step)       # command-line only
   job.submitflag   = get_options('submit'      ,run,job,args.submit)     # command-line only
   job.stdout_dir   = get_options('stdout_dir'  ,run,job,args.stdout_dir) # command-line only
+  job.hist_dir     = get_options('hist_dir'    ,run,job,args.hist_dir)   # command-line only
   job.compiler     = get_options('compiler'    ,run,job,args.compiler)   # Linux platfor only (not ys)
-  print 'tgcmrun: job.compiler=',job.compiler
   tgcmdata         = get_options('tgcmdata'    ,run,job,args.tgcmdata)   # env var TGCMDATA
 #
 # If stdout_dir, then go there - everything now will happen in that directory:
@@ -112,11 +112,6 @@ while True:
 # do not prepend stdout_dir to job.stdout.
 #
   job.stdout = "'"+run.fullname+".out'"
-
-# if job.stdout_dir:
-#   job.stdout = "'"+job.stdout_dir+'/'+run.fullname+".out'"
-# else:
-#   job.stdout = "'"+run.fullname+".out'"
 #
 # Construct path to job script for this run, and make it:
 # This also is heavily dependent on the default job script in local dir.
@@ -136,6 +131,8 @@ while True:
   print 'Execution directory:  ',job.execdir
   print 'Namelist input file:  ',job.stdin
   print 'Standard out file:    ',job.stdout 
+  print 'Standard out dir:     ',job.stdout_dir
+  print 'History out dir:      ',job.hist_dir
   print 'TGCMDATA env var:     ',tgcmdata
 #
 # Print any LSF arguments found on the command-line:

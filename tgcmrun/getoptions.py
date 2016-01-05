@@ -57,6 +57,7 @@ def get_args():
   help_submit     = "Submit job without prompting user? (yes/no))"
   help_execute    = "Execution flag for job script ('yes'/'no') (default: 'yes')"
   help_stdout_dir = "Directory in which stdout files and run scripts are to be saved (default: cwd)"
+  help_hist_dir   = "Directory in which output history files are to be saved (default: cwd)"
   help_compiler   = "Compiler to be used on Linux desktop platform (not supercomputer)\n(valid values: 'intel', 'pgi', 'gfort') (default 'intel')"
 
   arg_list = [
@@ -76,7 +77,8 @@ def get_args():
     ['wc'         , help_wc],
     ['step'       , help_step],
     ['submit'     , help_submit],
-    ['stdout_dir' , help_stdout_dir]]
+    ['stdout_dir' , help_stdout_dir],
+    ['hist_dir'   , help_hist_dir]]
 
   for arg in arg_list:
     parser.add_argument('-'+arg[0], help=arg[1])
@@ -425,6 +427,20 @@ def get_options(arg,run,job,option):
         print 'Will use existing stdout directory ',option
       job.stdout_dir = option
       return job.stdout_dir
+#
+# Directory in which to save history files:
+#
+  elif arg == 'hist_dir':
+    if option:
+      if not os.path.isdir(option):
+        os.makedirs(option) # this makes parents and leaf as necessary
+        print 'Made hist_dir directory ',option
+      else: # do not clean hist dir 
+        print 'Will use existing hist_dir directory ',option
+      histdir = option+'/' 
+    else:
+      histdir = './'
+    return histdir
 #
 # Model timestep:
 #

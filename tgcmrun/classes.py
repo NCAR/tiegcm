@@ -302,7 +302,7 @@ class Job:
 # if compiler=='pgi', then makefile is Make.pgi_hao64
 # if compiler=='gfort', then makefile is Make.gfort_hao64
 #
-      elif 'set make' in line:
+      elif 'set make' in line and self.machine != 'ys':
         if self.compiler == 'intel':
           newline = 'set make = Make.intel_hao64'
 	elif self.compiler == 'pgi':
@@ -547,8 +547,6 @@ NUMBER\tNAME\t\tDESCRIPTION
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
 
-      print 'Prepare namelist for ',self.name,': version=',version,' source=',source
-
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '355'],
@@ -557,10 +555,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'        , '355 0 0'],
         ['STOP'         , '360 0 0'],
         ['STEP'         , job.step],
-        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '355 1 0'],
         ['SECSTOP'      , '360 0 0'],
-        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
         ['F107'         , '200.'],
@@ -589,10 +587,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'        , '355 0 0'],
         ['STOP'         , '360 0 0'],
         ['STEP'         , job.step],
-        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '355 1 0'],
         ['SECSTOP'      , '360 0 0'],
-        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
         ['F107'         , '70.'],
@@ -621,10 +619,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'        , '172 0 0'],
         ['STOP'         , '177 0 0'],
         ['STEP'         , job.step],
-        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '172 1 0'],
         ['SECSTOP'      , '177 0 0'],
-        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
         ['F107'         , '200.'],
@@ -653,10 +651,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'        , '172 0 0'],
         ['STOP'         , '177 0 0'],
         ['STEP'         , job.step],
-        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '172 1 0'],
         ['SECSTOP'      , '177 0 0'],
-        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
         ['F107'         , '70.'],
@@ -685,10 +683,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'        , '80 0 0'],
         ['STOP'         , '85 0 0'],
         ['STEP'         , job.step],
-        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '80 1 0'],
         ['SECSTOP'      , '85 0 0'],
-        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
         ['F107'         , '200.'],
@@ -717,10 +715,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'        , '80 0 0'],
         ['STOP'         , '85 0 0'],
         ['STEP'         , job.step],
-        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '80 1 0'],
         ['SECSTOP'      , '85 0 0'],
-        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
         ['F107'         , '70.'],
@@ -749,10 +747,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'        , '264 0 0'],
         ['STOP'         , '269 0 0'],
         ['STEP'         , job.step],
-        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '264 1 0'],
         ['SECSTOP'      , '269 0 0'],
-        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
         ['F107'         , '200.'],
@@ -781,10 +779,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'        , '264 0 0'],
         ['STOP'         , '269 0 0'],
         ['STEP'         , job.step],
-        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '264 1 0'],
         ['SECSTOP'      , '269 0 0'],
-        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
         ['F107'         , '70.'],
@@ -814,10 +812,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'        , '323 0 0'],
         ['STOP'         , '328 0 0'],
         ['STEP'         , job.step],
-        ['OUTPUT'       , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '323 1 0'],
         ['SECSTOP'      , '328 0 0'],
-        ['SECOUT'       , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
@@ -862,10 +860,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'          , '323 0 0'],
         ['STOP'           , '328 0 0'],
         ['STEP'           , str(step)],
-        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc'"],
+        ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'       , '323 1 0'],
         ['SECSTOP'        , '328 0 0'],
-        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_005.nc','by','1'"],
+        ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2003001-2003365.nc'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
@@ -899,10 +897,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'          , '330 0 0'],
         ['STOP'           , '360 0 0'],
         ['STEP'           , job.step],
-        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_005.nc','by','1'"],
+        ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_005.nc','by','1'"],
         ['SECSTART'       , '330 1 0'],
         ['SECSTOP'        , '360 0 0'],
-        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_032.nc','by','1'"],
+        ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_032.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
@@ -935,10 +933,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'          , '330 0 0'],
         ['STOP'           , '360 0 0'],
         ['STEP'           , job.step],
-        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_005.nc','by','1'"],
+        ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_005.nc','by','1'"],
         ['SECSTART'       , '330 1 0'],
         ['SECSTOP'        , '360 0 0'],
-        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_032.nc','by','1'"],
+        ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_032.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2006001-2006365.nc'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
@@ -972,10 +970,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'          , '81 0 0'],
         ['STOP'           , '106 0 0'],
         ['STEP'           , job.step],
-        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_003.nc','by','1'"],
+        ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
         ['SECSTART'       , '81 1 0'],
         ['SECSTOP'        , '106 0 0'],
-        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_025.nc','by','1'"],
+        ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
         ] 
@@ -1012,7 +1010,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'          , '81 0 0'],
         ['STOP'           , '106 0 0'],
         ['STEP'           , job.step],
-        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_003.nc','by','1'"],
+        ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
         ['SECSTART'       , '81 1 0'],
         ['SECSTOP'        , '106 0 0'],
         ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_025.nc','by','1'"],
@@ -1061,7 +1059,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'          , '1 0 0'],
         ['STOP'           , '5 0 0'],
         ['STEP'           , job.step],
-        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_020.nc','by','1'"],
+        ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_020.nc','by','1'"],
         ['MXHIST_PRIM'    , '20'],     # default is 10
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['POWER'        , '18.'],     
@@ -1098,7 +1096,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START'          , '1 0 0'],
         ['STOP'           , '5 0 0'],
         ['STEP'           , job.step],
-        ['OUTPUT'         , "'"+self.fullname+"_prim_001.nc','to','"+self.fullname+"_prim_020.nc','by','1'"],
+        ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_020.nc','by','1'"],
         ['MXHIST_PRIM'    , '20'],     # default is 10
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['POWER'        , '40.'],     
