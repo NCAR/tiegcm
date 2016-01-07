@@ -47,7 +47,6 @@
       use mpitime_module,only: mpi_timer
       use gpi_module,only: rdgpi,getgpi
       use imf_module,only: getimf
-      use gswm_module,only: getgswm
       use params_module,only: nlonp4,nlat,nlev
       use output,only: outhist
       use addfld_module,only: addfld
@@ -280,13 +279,9 @@
         endif
       endif
 !
-! Get GSWM tidal boundary data:
-!
-      call getgswm(istep,iyear,iday,secs)
-!
 ! Update lower boundaries of t,u,v,z:
 !
-      call tuvz_lbc
+      call tuvz_lbc(istep,iyear,iday,secs,itp)
 !
 #if defined(INTERCOMM) || defined(CISMAH)
 !

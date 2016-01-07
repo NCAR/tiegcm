@@ -117,7 +117,8 @@
      |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
      |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
      |  saber_ncfile,       ! SABER data (T,Z)
-     |  tidi_ncfile         ! TIDI data (U,V)
+     |  tidi_ncfile,        ! TIDI data (U,V)
+     |  bgrddata_ncfile     ! background data (T,U,V,Z; V=0)
 
 !     integer,parameter :: ngpivars = 4
 !     real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
@@ -164,7 +165,7 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  enforce_opfloor
+     |  enforce_opfloor,bgrddata_ncfile
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -238,6 +239,7 @@
 
       saber_ncfile = ' '      ! SABER data file
       tidi_ncfile = ' '       ! TIDI data file
+      bgrddata_ncfile = ' '   ! Background data file
 !
       start_day  = ispval
       start_year = ispval
@@ -513,6 +515,10 @@
 ! SABER and/or TIDI data files:
       if (len_trim(saber_ncfile) > 0) call expand_path(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0)  call expand_path(tidi_ncfile)
+!
+! background data files:
+      if (len_trim(bgrddata_ncfile) > 0)
+     | call expand_path(bgrddata_ncfile)
 !
 ! Collision factor:
       if (colfac==spval) then
@@ -1398,6 +1404,9 @@
       if (len_trim(tidi_ncfile) > 0) write(6,"('  TIDI data file: ',
      |    'tidi_ncfile = ',a)") trim(tidi_ncfile)
 
+      if (len_trim(bgrddata_ncfile) > 0) write(6,"('  Bgrddata file: ',
+     |    'bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
+
       if (len_trim(hpss_path) > 0)
      |  write(6,"('  hpss_path = ',a,4x,
      |    '(hpss directory for hsi dispose script)')") trim(hpss_path)
@@ -2144,6 +2153,14 @@
      |      ' ihough=',i2)") igswm,isaber,itidi,ihough
           call shutdown('inp_lbc')
         endif 
+      endif
+!
+! Background lbc data (T,U,V,Z) is available only at 2.5-deg resolution:
+!
+      if (len_trim(bgrddata_ncfile) > 0.and.dlat==5.0) then
+        write(6,"(/,'>>> Background lbc data files (BGRDDATA_NCFILE)',
+     |    ' are available only at the 2.5-degree model resolution.')")
+        call shutdown('BGRDDATA_NCFILE not allowed at 5-deg resolution')
       endif
 
       end subroutine inp_lbc

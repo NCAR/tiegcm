@@ -57,29 +57,38 @@
       call bndcmp
       end subroutine init_lbc
 !-----------------------------------------------------------------------
-      subroutine tuvz_lbc
+      subroutine tuvz_lbc(istep,iyear,iday,secs,itp)
 !
 ! Update lower boundary subdomains of T,U,V,Z
-! This is called every timestep from advance, after getgswm and 
-!   before addiag.
+! This is called every timestep from advance.
 !
       use mpi_module,only: lon0,lon1,lat0,lat1
-      use init_module,only: iter
+      use init_module,only: iter,
+     |  ibgrddata           ! 0/1 flag to get background data
       use input_module,only: step,
      |  gswm_mi_di_ncfile,  ! gswm migrating diurnal data file
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
      |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
      |  gswm_nm_sdi_ncfile  ! gswm non-migrating semi-diurnal data file
-      use gswm_module,only: ! (nlonp4,nlat)
+      use gswm_module,only: getgswm, ! (nlonp4,nlat)
      |  gswm_mi_di_z, gswm_mi_sdi_z, gswm_nm_di_z, gswm_nm_sdi_z,
      |  gswm_mi_di_t, gswm_mi_sdi_t, gswm_nm_di_t, gswm_nm_sdi_t,
      |  gswm_mi_di_u, gswm_mi_sdi_u, gswm_nm_di_u, gswm_nm_sdi_u,
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
+      use bgrd_data_module,only: get_bgrddata,! (nlonp4,nlat)
+     |  bgrddata_z, bgrddata_t, bgrddata_u, bgrddata_v
       use input_module,only: saber_ncfile, tidi_ncfile
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
       use hist_module,only: modeltime
+
       implicit none
+!
+! Args:
+      integer,intent(in) :: istep,iyear,iday,itp
+      real,intent(in) :: secs
+!
+! Local:
       integer :: i,j
       real :: rstep
       complex :: t_expt_sdi, t_expt_di, uvz_expt_sdi, uvz_expt_di
@@ -91,14 +100,27 @@
       uvz_expt_sdi = cexp(ci*freq_semidi*dt*iter)
       uvz_expt_di  = cexp(ci*.5*freq_semidi*dt*iter)
 !
-! Set background constants (see cons module):
-      t_lbc(lon0:lon1,lat0:lat1) = tbound
-      u_lbc(lon0:lon1,lat0:lat1) = 0.
-      v_lbc(lon0:lon1,lat0:lat1) = 0.
-      z_lbc(lon0:lon1,lat0:lat1) = zbound
+! Set background constants 
+      if (ibgrddata > 0 ) then ! background based on data
+        call get_bgrddata(istep,iyear,iday,secs)
+        t_lbc(lon0:lon1,lat0:lat1) = bgrddata_t(lon0:lon1,lat0:lat1)
+        u_lbc(lon0:lon1,lat0:lat1) = bgrddata_u(lon0:lon1,lat0:lat1)
+        v_lbc(lon0:lon1,lat0:lat1) = bgrddata_v(lon0:lon1,lat0:lat1)
+        z_lbc(lon0:lon1,lat0:lat1) = bgrddata_z(lon0:lon1,lat0:lat1)
+      else !(default see cons module):
+        t_lbc(lon0:lon1,lat0:lat1) = tbound
+        u_lbc(lon0:lon1,lat0:lat1) = 0.
+        v_lbc(lon0:lon1,lat0:lat1) = 0.
+        z_lbc(lon0:lon1,lat0:lat1) = zbound
+      endif
 
       if (len_trim(saber_ncfile) > 0 .or.
      |    len_trim(tidi_ncfile) > 0) goto 100
+!
+! Add gswm perturbations:
+! 12/2/15 btf: moved from advance.F to lbc.F
+!
+      call getgswm(istep,iyear,iday,secs)
 !
 ! Add gswm or Hough mode perturbations:
 !

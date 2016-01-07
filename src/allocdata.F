@@ -20,6 +20,7 @@
       use ar_module,only: alloc_ar
       use magpres_g,only: alloc_pg
       use gswm_module,only: alloc_gswm
+      use bgrd_data_module,only: alloc_bgrddata
       use pdynamo_module,only: alloc_pdyn
       implicit none
 !
@@ -43,6 +44,9 @@
 !
 ! Allocate for gswm:
       call alloc_gswm(lon0,lon1,lat0,lat1)
+!
+! Allocate for bgrddata:
+      call alloc_bgrddata(lon0,lon1,lat0,lat1)
 !
 ! Allocate needed fields for parallel dynamo (pdynamo.F):
       call alloc_pdyn
