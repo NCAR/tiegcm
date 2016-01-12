@@ -300,25 +300,19 @@
           write(6,"('Step ',i6,' of ',i6,' mtime=',3i3)")
      |      istep,nstep,modeltime(1:3)
         endif
-        if (len_trim(gpi_ncfile) > 0.and.len_trim(imf_ncfile) > 0) then
 !
-! If both GPI and IMF data run, then only f10.7 flux is used from
-! the gpi file. GPI power and ctpoten are overwritten as follows:
-! power is calculated from bz,swvel (see above), and ctpoten is from
-! weimer (Weimer is called later, so do not print ctpoten here)
+! GPI data run:
+        if (len_trim(gpi_ncfile) > 0) then
+          write(6,"('GPI run: mtime=',3i3,' power=',f8.3,' ctpoten=',
+     |      f8.3,' f107=',f8.3,' f107a=',f8.3)")modeltime(1:3),
+     |      power,ctpoten,f107,f107a
+        endif
 !
-          write(6,"('GPI+IMF run: istep=',i6,' GPI f107=',f8.3,
-     |      ' f107a=',f8.3,' power from bzimf,swvel=',f8.3)")
-     |      istep,f107,f107a,power
-        elseif (len_trim(gpi_ncfile) > 0) then
-          write(6,"('GPI run: istep=',i6,' power=',f8.3,' ctpoten=',
-     |      f8.3,' f107=',f8.3,' f107a=',f8.3)") istep,power,ctpoten,
-     |      f107,f107a
-        elseif (len_trim(imf_ncfile) > 0) then
-          write(6,"('IMF run: istep=',i6,' bx=',f8.3,' by=',f8.3,' bz=',
-     |      f8.3,' swvel=',f8.3,' swden=',f8.3,' ctpoten (prev step)=',
-     |      f8.3,' power=',f8.3)") istep,bximf,byimf,bzimf,swvel,swden,
-     |      ctpoten,power
+! Weimer/IMF/OMNI data run:
+        if (len_trim(imf_ncfile) > 0) then
+          write(6,"('IMF run: mtime=',3i3,' bx=',f8.3,' by=',f8.3,
+     |      ' bz=',f8.3,' swvel=',f8.3,' swden=',f8.3)")
+     |      modeltime(1:3),bximf,byimf,bzimf,swvel,swden
         endif
       endif ! time2print
 !

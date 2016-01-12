@@ -44,7 +44,6 @@
      |  brn2d = 0.6,         !
      |  tbound = 181.0,      ! background tn at lower boundary (tiegcm)
      |  atm_amu = 28.9,      ! mean mass of surface atmosphere    C(24)
-     |  shapiro = 3.0E-2,    ! shapiro smoother constant          C(26)
      |  dtsmooth = 0.95,     ! time smoothing constant            C(30)
      |  dtsmooth_div2 = 0.5*(1.-dtsmooth), !                      C(31)
      |  tgrad = 6.,          ! TN gradient from old /RUNMDS/ (tiegcm)
@@ -56,6 +55,13 @@
      |  prndtl = 1.,         ! prandtl number
      |  evergs = 1.602e-12,  ! 1 eV = 1.602e-12 ergs
      |  tsurplus=5.11*evergs ! surplus heat per event (ergs)    C(45)
+!
+! Smoothing constant is dependent on timestep (see below), so cannot be a parameter.
+! (in previous revisions, shapiro=3.e-2, with no timestep or resolution dependence)
+!
+        real :: shapiro      ! shapiro smoother constant
+        real :: default_step ! default timestep at current resolution.
+        real :: smooth_fac   ! smoothing factor (typically 3.e-3)
 !
       integer :: nlonper=nlonp4 ! nlon + periodic points (alias for nlonp4)
 !
@@ -351,6 +357,20 @@
       grav = 870. ! (is 945. in time-gcm)
       dzgrav = grav/gask   ! C(65)
 !
+! Adjust smoothing constant as function of timestep:
+!
+#if (NLAT==36 && NLON==72)
+      default_step = 60.   ! default step at 5.0 deg for shapiro=dt/def*fac
+#elif (NLAT==72 && NLON==144)
+      default_step = 30.   ! default step at 2.5 deg for shapiro=dt/def*fac
+#else
+      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
+#endif
+!
+! shapiro = dt/def*smooth_fac
+      smooth_fac = 3.e-3
+      shapiro = dt/default_step * smooth_fac
+!
 ! Report to stdout:
 !     write(6,"(/,'Model name    = ',a)") tgcm_name
       write(6,"(  'Model version = ',a)") tgcm_version
@@ -370,6 +390,8 @@
       write(6,"('  dipmin = ',f8.3)") dipmin
       write(6,"('  check_exp = ',l1)") check_exp
       write(6,"('  kut (for filtering) = ',36i3)") kut
+      write(6,"('  step=',i4,' smooth_fac=',es9.2,' shapiro=',es9.2)")
+     |  step,smooth_fac,shapiro
 !
       end subroutine init_cons
 !-----------------------------------------------------------------------

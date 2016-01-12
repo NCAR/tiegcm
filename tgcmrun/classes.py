@@ -841,15 +841,15 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
 # As of 11/16/15, the current trunk code for tiegcm_res2.5 will crash in the 
 #   first ~1.5 days if starting from tiegcm2.0 benchmark SOURCE history, and 
-#   STEP is 30 secs. It succeeds if timestep is reduced to 20 secs, so force 
+#   STEP is 30 secs. It succeeds if timestep is reduced to 10 secs, so force 
 #   that here.
 # (Interestingly, the current trunk code succeeds with STEP=30, if starting
 #  from the old tiegcm1.95 benchmark SOURCE history)
 #
         step = job.step
         if job.model_res == '2.5': 
-          if job.step != '20': print 'NOTE: Am changing timestep from ',job.step,' to 20 seconds'
-          step = 20 # reduce timestep for res2.5 from 30 to 20
+          if job.step != '10': print 'NOTE: Am changing timestep from ',job.step,' to 10 seconds'
+          step = 10 # reduce timestep for res2.5 from 30 to 10
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -876,7 +876,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107'         , '0.'],
         ['F107A'        , '0.']]
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc25_default = '2:30' # wallclock limit for 2.5-deg res (ys only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # December, 2006 AGU storm with Heelis and GPI:
