@@ -11,7 +11,8 @@ QuickStart Procedure
 
 This document is intended to provide a tutorial-like procedure for downloading 
 source code and start-up data files, building the model, and executing a short 
-default run on a 64-bit Linux system.
+default run on a 64-bit Linux system, or a supercomputer (linux cluster) like
+the NCAR |ncarsuper| machine.
 
 .. index:: download
 
@@ -34,7 +35,7 @@ Both are provided as gzipped tar files. There are separate data files for
 Download the model source code:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#. Make an empty working directory to contain the model source code (:term:`/home/user/tiegcm_wrkdir`)
+#. Make an empty :term:`working directory <workdir>` to contain the model source code (e.g., /home/user/tiegcm_test). 
 #. Download the file |tgcm_version|.tar.gz from the :download_url:`download <download.php>` page to the working directory.
 #. Uncompress (gunzip) and extract the tar file.
 
@@ -71,6 +72,8 @@ These files and directories contain the following:
 
    Academic license agreement.
    (:download:`tiegcmlicense.txt <_static/tiegcmlicense.txt>`)
+
+.. _data_download:
 
 Download required data files:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

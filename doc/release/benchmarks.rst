@@ -1,5 +1,5 @@
 
-.. _tests:
+.. _benchmarks:
 
 Benchmark Runs
 ==============
@@ -24,8 +24,8 @@ of "Solar Minimum" and "Solar Maximum" conditions are as follows:
 Steady-State Seasonal Start-up Files
 ------------------------------------
 
-Single-history start-up files for the four seasons are in the **data download file**, 
-which is available from the `tgcm download page <http://www.hao.ucar.edu/modeling/tgcm/download.php>`_ 
+Single-history start-up files for the four seasons (at both model resolutions) are available
+at the `tgcm download page <http://www.hao.ucar.edu/modeling/tgcm/download.php>`_ 
 These files can be used as SOURCE files in the namelist input for initial runs.
 Files listed below are for the 5.0-degree resolution. Files for benchmark runs
 at the 2.5-degree resolution are the same, but have 'res2.5' instead of 'res5.0'.
@@ -34,24 +34,32 @@ Start-up files at Solar Minimum Conditions:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 =============================== ====================================
-Date				Filename
+Date				Filenames (5.0 and 2.5-deg res)
 =============================== ====================================
-March Equinox (day 80)          tiegcm_res5.0_decsol_smin_prim.nc
-June Solstice (day 172)         tiegcm_res5.0_junsol_smin_prim.nc
-September Equinox (day 264)     tiegcm_res5.0_sepeqx_smin_prim.nc
-December Solstice (day 355)     tiegcm_res5.0_decsol_smin_prim.nc
+March Equinox (day 80)          tiegcm_res5.0_decsol_smin_prim.nc  
+                                tiegcm_res2.5_decsol_smin_prim.nc
+June Solstice (day 172)         tiegcm_res5.0_junsol_smin_prim.nc  
+                                tiegcm_res2.5_junsol_smin_prim.nc
+September Equinox (day 264)     tiegcm_res5.0_sepeqx_smin_prim.nc  
+                                tiegcm_res2.5_sepeqx_smin_prim.nc
+December Solstice (day 355)     tiegcm_res5.0_decsol_smin_prim.nc  
+                                tiegcm_res2.5_decsol_smin_prim.nc
 =============================== ====================================
 
 Start-up files at Solar Maximum Conditions:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 =============================== ====================================
-Date				Filename
+Date				Filename (5.0 and 2.5-deg res)
 =============================== ====================================
 March Equinox (day 80)          tiegcm_res5.0_decsol_smax_prim.nc
+                                tiegcm_res2.5_decsol_smax_prim.nc
 June Solstice (day 172)         tiegcm_res5.0_junsol_smax_prim.nc
+                                tiegcm_res2.5_junsol_smax_prim.nc
 September Equinox (day 264)     tiegcm_res5.0_sepeqx_smax_prim.nc
+                                tiegcm_res2.5_sepeqx_smax_prim.nc
 December Solstice (day 355)     tiegcm_res5.0_decsol_smax_prim.nc
+                                tiegcm_res2.5_decsol_smax_prim.nc
 =============================== ====================================
 
 
@@ -83,19 +91,28 @@ both equinoxes and solstices, and at solar minimum and maximum conditions.
 
 .. _climatology_info:
 
-Climatology
------------
+Climatologies
+-------------
 
-**climatology**: Full-year Climatology with constant solar forcing:
+**climatology smax**: Full-year Climatology with constant solar maximum forcing,
+  with the Heelis potential model::
 
-* Heelis potential model with constant solar forcing::
+   POWER   = 40.
+   CTPOTEN = 60.
+   F107    = 200.
+   F107A   = 200.
+
+* :ref:`"Sanity check" plots for Climatology at Solar Max <climatology_smax>`
+
+**climatology smin**: Full-year Climatology with constant solar minimum forcing,
+  with the Heelis potential model::
 
    POWER   = 18.
    CTPOTEN = 30.
    F107    = 100.
    F107A   = 100.
 
-* :ref:`"Sanity check" plots for Climatology <climatology>`
+* :ref:`"Sanity check" plots for Climatology at Solar Min <climatology_smin>`
 
 .. _dec2006:
 
@@ -113,26 +130,6 @@ December, 2006 "AGU Storm"
   * :ref:`Weimer/IMF (daily, days 330-360) <dec2006_weimer_daily>`
   * :ref:`Weimer/IMF (hourly, days 346-352) <dec2006_weimer_hourly>`
 
-.. 6/21/13 btf: Comment out v1.95 movies for now:
-
-.. * Heelis/GPI Movies (~3.5M gif):
-..
-  * :ref:`Heelis/GPI hourly movies: TN at Zp -4 <dec2006_heelis_TN_zp-4_movie>`
-  * :ref:`Heelis/GPI hourly movies: TN at Zp +2 <dec2006_heelis_TN_zp+2_movie>`
-  * :ref:`Heelis/GPI hourly movies: NE at Zp +2 <dec2006_heelis_NE_zp+2_movie>`
-
-.. * Weimer/IMF Movies (~3.5 gif):
-..
-  * :ref:`Weimer/IMF hourly movies: TN at Zp -4 <dec2006_weimer_TN_zp-4_movie>`
-  * :ref:`Weimer/IMF hourly movies: TN at Zp +2 <dec2006_weimer_TN_zp+2_movie>`
-  * :ref:`Weimer/IMF hourly movies: NE at Zp +2 <dec2006_weimer_NE_zp+2_movie>`
-
-.. * :ref:`AVI Movies <dec2006_avi_movies>`
-
-.. * Download history files at `TIEGCM Version 1.95 December, 2006 AGU Storm <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_95%2fDecember_2006_AGU_Storm_Simulations%2fDecember_2006_AGU_Storm_Simulations.thredds.xml>`_
-
-.. 6/21/13 btf: End commented movie section
-
 .. _nov2003:
 
 November, 2003 Storm Case
@@ -146,26 +143,6 @@ November, 2003 Storm Case
 
   * :ref:`Heelis/GPI (hourly) <nov2003_heelis_hourly>`
   * :ref:`Weimer/IMF (hourly) <nov2003_weimer_hourly>`
-
-.. 6/21/13 btf: Comment out v1.95 movies for now:
-
-.. * Heelis/GPI Movies (~3-5M gif):
-..
-  * :ref:`Heelis/GPI hourly movies: TN at Zp -4 <nov2003_heelis_TN_zp-4_movie>`
-  * :ref:`Heelis/GPI hourly movies: TN at Zp +2 <nov2003_heelis_TN_zp+2_movie>`
-  * :ref:`Heelis/GPI hourly movies: NE at Zp +2 <nov2003_heelis_NE_zp+2_movie>`
-
-.. * Weimer/IMF Movies (~3-5M gif):
-..
-  * :ref:`Weimer/IMF hourly movies: TN at Zp -4 <nov2003_weimer_TN_zp-4_movie>`
-  * :ref:`Weimer/IMF hourly movies: TN at Zp +2 <nov2003_weimer_TN_zp+2_movie>`
-  * :ref:`Weimer/IMF hourly movies: NE at Zp +2 <nov2003_weimer_NE_zp+2_movie>`
-
-.. * :ref:`AVI Movies <nov2003_avi_movies>`
-
-.. * Download history files at `TIEGCM Version 1.95 November 2003 Storm Simulations <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_95%2fNovember_2003_Storm_Simulations%2fNovember_2003_Storm_Simulations.thredds.xml>`_
-
-.. 6/21/13 btf: End commented movie section
 
 .. _whi2008:
 

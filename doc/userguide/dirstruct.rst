@@ -66,9 +66,9 @@ test and benchmark runs::
      *.F          linux.job       description/          run_* 
      *.h           ibm.job          release/          tgcmrun 
                  default.inp       diags.table       
-                tgcm_contents    README.download    
-                 tgcm_ncdump                           
-                    etc                             
+                tgcm_contents      perf.table
+                 tgcm_ncdump    README.download    
+                    etc                           
 
 :term:`src/` directory contents:
 
@@ -98,7 +98,7 @@ directory for more information.
 
 :term:`doc/` directory contents:
 
-* **userguide/**: Directory containing source files for the User's Guide (this document)
+* **userguide/**: Directory containing `Python Sphinx <http://www.sphinx-doc.org/en/stable/index.html>`_ source files for the User's Guide (this document)
 
 * **description/**: Directory containing source files for the 
   :base_url:`TIEGCM Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
@@ -108,6 +108,8 @@ directory for more information.
 
 * **diags.table**: :download:`Table of diagnostic fields <_static/diags.table>` that can be 
   saved on secondary history files.
+
+.. index:: perf.table
 
 * **perf.table**: :download:`Table of performance statistics <_static/perf.table>` for both
   models (tiegcm and timegcm) at both :term:`resolution`.

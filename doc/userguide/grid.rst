@@ -164,7 +164,7 @@ Geomagnetic 3d spatial coordinates
 The longitude geomagnetic coordinate is from -180 to +180 by 4.5 degrees.
 The latitude coordinate is non-regular, with resolution increasing toward
 the magnetic equator. The vertical :term:`zp` (ln(p0/p)) interface coordinate 
-is from -8.5 to 7 by 0.25.
+is from -8.5 to 7 by 0.25::
 
  dimensions:
 	mlon = 81 ;

@@ -1,13 +1,14 @@
 
-Model:		tiegcm_trunk
+Model:		TIEGCM
 svn Tag:	tiegcm2.0
 Release Date:	
 
 Download Site:	http://www.hao.ucar.edu/modeling/tgcm/download.php
                 (Model Source and required Data are available as separate downloads)
 
-Documentation:  User's Guide and Model description pdf's available in "doc" directory
-                Also available from tgcm website: http://www.hao.ucar.edu/modeling/tgcm
+Documentation:  User Guide and Model description are available in the "doc" directory
+                of the model source download. They are also available from tgcm website: 
+                http://www.hao.ucar.edu/modeling/tgcm
 
 -------------------------------------------------------------------------------
 These instructions assume the gzipped tar file of the Source Code has
@@ -30,7 +31,8 @@ tgcmrun/	Semi-automated testing	Python code to make benchmark runs
 
 To build and run the model, you must also download the data directory
 from the above URL, or already have the data in a directory specified
-by the $TGCMDATA env var.
+by the $TGCMDATA env var. There are two data downloads: one for the 5-degree
+horizontal resolution and another for the 2.5-degree resolution.
 
 >>> IMPORTANT <<<
 If you download the data directory, please set environment variable TGCMDATA 

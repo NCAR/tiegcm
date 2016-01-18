@@ -104,3 +104,35 @@ included in the model's main makefile :download:`scripts/Makefile <_static/Makef
 
 netCDF
 ^^^^^^
+
+  The Network Common Data Form (NetCDF) is a cross-platform, self-describing 
+  metadata file format, developed by UNIDATA at UCAR. Please see 
+  `NetCDF <http://www.unidata.ucar.edu/software/netcdf>`_ for more information.
+  It is necessary to link the netCDF library when the model is built, since
+  all data files imported to the model, and all model output history files
+  are in NetCDF format. Because NetCDF is platform-independent, all history
+  and data files can be used on either linux desktops or the NCAR |ncarsuper|
+  system. At HAO on linux desktops, we are using NetCDF version 4.1.1. On the
+  NCAR |ncarsuper| system, we are using version 4.3.2.
+
+Build for Debugging
+-------------------
+
+  The model can be built with debug flags set in the compiler.
+  To do this, simply set debug = TRUE in the :term:`job script`,
+  and resubmit (see also :ref:`job scripts section <jobscript>`).
+
+  The debug flags are set in the compiler-specific Make files 
+  described above. They can be adjusted there, of course, but
+  usually they include floating-point exception traps, and core 
+  dumps with traceback. If debug was false in a previous run, 
+  the entire code will be rebuilt with the debug flags set, however, 
+  it doesn't hurt to go to the execdir and type "gmake clean" before 
+  resubmitting. Keep in mind that because optimization is turned off
+  when debug flags are set, performance will be destroyed, and the 
+  model will run agonizingly slow. 
+
+  Although we do not support the model with MPI turned off, 
+  it can also be useful for debugging to run the model with
+  only a single MPI task. To do this, set nproc=1 in the linux
+  job script, or set #BSUB -n 1 in the |ncarsuper| job script.
