@@ -72,8 +72,7 @@ while True:
 # Set run parameters (most importantly, namelist modifications):
 # Note: after going to tiegcm2.0, the model_res argument to set_run will no longer be necessary. 
 #
-# run.set_run(run.number,run.fullname,tgcmdata,job.model_version,job.model_res)
-  run.set_run(job,tgcmdata)
+  run.set_run(run.fullname,job,tgcmdata)
 #
 # Make instance of Namelist, and set file paths:
 # nl.default_file: default namelist file in model_root/scripts (read)

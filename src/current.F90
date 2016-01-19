@@ -26,6 +26,8 @@ module current
   use pdynamo_module,only: & 
     zigm11_glb,zigm22_glb,zigmc_glb,zigm2_glb,rhs_glb,rim_glb,nmlon0
   use addfld_module,only: addfld
+  use diags_module,only: mkdiag_JE13D, mkdiag_JE23D, mkdiag_KQLAM, &
+    mkdiag_KQPHI, mkdiag_JQR
   implicit none
   real,parameter :: unitv(nmlon)=1.
   real,dimension(nmlon0,nmlat,10) :: nscoef ! nmlon0==nmlonp1
@@ -642,9 +644,10 @@ subroutine noso_crrt
       tout(i,j,:) = nscrrt(i,j) ! copy for secondary history field
     enddo           ! endo i-loop
   enddo             ! enddo j-loop
-
-  call addfld('JQR','JQR: Upward current density','A/m^2 ', &
-      nscrrt ,'mlon',1,nmlonp1,'mlat',1,nmlat,0)
+!
+! Save JQR: Upward current density (2d)
+!
+  call mkdiag_JQR('JQR',nscrrt,1,nmlon0,1,nmlat)
 
 end subroutine noso_crrt
 !-----------------------------------------------------------------------
@@ -749,13 +752,14 @@ subroutine noso_crdens
   do k=mlev0,mlev1
     call mp_mag_periodic_f2d(je13d(:,:,k),mlon0,mlon1,mlat0,mlat1,1)
   enddo
-
+!
+! JE13D: Eastward current density (3d)
+! JE23D: Downward current density (3d)
+!
   do j=mlat0,mlat1
-    call addfld('JE13D','JE13D: Eastward current density (3d)','A/m^2', &
-      je13d(:,j,:),'mlon',mlon0,mlon1,'mlev',mlev0,mlev1,j)
-    call addfld('JE23D','JE23D: Downward current density (3d)','A/m^2', &
-      je23d(:,j,:),'mlon',mlon0,mlon1,'mlev',mlev0,mlev1,j)
-  enddo
+    call mkdiag_JE13D('JE13D',je13d(:,j,1:mlev1),mlon0,mlon1,1,mlev1,j)
+    call mkdiag_JE23D('JE23D',je23d(:,j,1:mlev1),mlon0,mlon1,1,mlev1,j)
+  enddo  
 !
 ! Calculate K_(q,phi) (Richmond: Ionospheric
 ! Electrodynamics using magnetic apex coordinates pp.208 (eq 7.4))
@@ -834,10 +838,10 @@ subroutine noso_crdens
 
   enddo ! mlat0,mlat1
 !
+! KQPHI: Height-integrated current density (+east)
 ! Note kqphi2d is dimensioned with halo points.
 !
-  call addfld('KQPHI','KQPHI: Height-integrated current density (+east)','A/m', &
-    kqphi2d(mlon0:mlon1,mlat0:mlat1),'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+  call mkdiag_KQPHI('KQPHI',kqphi2d(mlon0:mlon1,mlat0:mlat1),mlon0,mlon1,mlat0,mlat1)
 !
 ! Calculate K_(q,lam) (Richmond: Ionospheric
 ! Electrodynamics using magnetic apex coordinates pp.208 (eq 7.5))
@@ -949,9 +953,10 @@ subroutine noso_crdens
     enddo
 
   enddo ! i=mlon0,mlon1
-
-  call addfld('KQLAM','KQLAM: Height-integrated current density (+north)','A/m', &
-    kqlam,'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+!
+! KQLAM: Height-integrated current density (+north)
+!
+  call mkdiag_KQLAM('KQLAM',kqlam,mlon0,mlon1,mlat0,mlat1)
 
 end subroutine noso_crdens
 !-----------------------------------------------------------------------

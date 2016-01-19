@@ -515,7 +515,7 @@ NUMBER\tNAME\t\tDESCRIPTION
 
     return source
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  def set_run(self,job,tgcmdata):
+  def set_run(self,fullname,job,tgcmdata):
 
 # run.set_run(run.number,run.fullname,tgcmdata,job.model_version,job.model_res)
 #
@@ -527,6 +527,7 @@ NUMBER\tNAME\t\tDESCRIPTION
     self.name = self.names[n][0]
     self.desc = self.names[n][1]
     version = job.model_version
+    res = job.model_res
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Default run:
@@ -1080,6 +1081,9 @@ NUMBER\tNAME\t\tDESCRIPTION
       self.wc25_default = '00:30' # wallclock limit for 2.5-deg res (ys only)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Climatology run with solar maximum:
+#
     elif self.name == 'climatology_smax':
 
       if version == 'tiegcm1.95' or version == 'timegcm1.42':
