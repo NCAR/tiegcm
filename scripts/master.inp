@@ -1,27 +1,9 @@
 &tgcm_input
-
-!     namelist/tgcm_input/
-!    |  label,step,
-!    |  source,source_start,output,start,stop,hist,
-!    |  secout,secstart,secstop,sechist,secflds,
-!    |  potential_model,eddy_dif,dynamo,tide,tide2,tide3m3,
-!    |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
-!    |  kp,colfac,joulefac,aurora,gpi_ncfile,gswm_mi_di_ncfile,
-!    |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
-!    |  mxhist_prim,mxhist_sech,ntask_lat,ntask_lon,
-!    |  start_day,start_year,calendar_advance,see_ncfile,
-!    |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
-!    |  kp_time,al_time,swden_time,swvel_time,indices_interp,
-!    |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
-!    |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-!    |  enforce_opfloor
-
 !
 ! Master namelist file describing all namelist parameters.
-!   (incomplete as of Nov, 2015)
 ! This file serves as a reference for tiegcm namelist input parameters.
 ! If unchanged, using this file for namelist input should result 
-!   in a default run. 
+!   in a default run (march equinox, solar min). 
 !
  LABEL = 'tiegcm res=5.0'
  START_YEAR = 2002
@@ -61,7 +43,7 @@
  MXHIST_SECH = 24
  SECFLDS = 'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI',
            'TEC','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN',
-           'QJOULE','Z','ZG'
+           'QJOULE','HMF2','NMF2','Z','ZG'
 !
 ! Diagnostic fields available with this release:
 !SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',

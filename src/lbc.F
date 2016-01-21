@@ -77,9 +77,10 @@
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
       use bgrd_data_module,only: get_bgrddata,! (nlonp4,nlat)
      |  bgrddata_z, bgrddata_t, bgrddata_u, bgrddata_v
-      use input_module,only: saber_ncfile, tidi_ncfile
+      use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
+      use ctmt_module,only: get_ctmt,ctmt_t,ctmt_z,ctmt_u,ctmt_v
       use hist_module,only: modeltime
 
       implicit none
@@ -115,7 +116,8 @@
       endif
 
       if (len_trim(saber_ncfile) > 0 .or.
-     |    len_trim(tidi_ncfile) > 0) goto 100
+     |    len_trim(tidi_ncfile) > 0 .or.
+     |    len_trim(ctmt_ncfile) > 0) goto 100
 !
 ! Add gswm perturbations:
 ! 12/2/15 btf: moved from advance.F to lbc.F
@@ -223,6 +225,21 @@
           enddo
         enddo
 !       write(6,"('tuvz_lbc: added tidi_u,v to u_lbc,v_lbc')")
+      endif
+!
+! Add CTMT perturbations:
+      if (len_trim(ctmt_ncfile) > 0 )
+     |  call get_ctmt(istep,iyear,iday,secs)
+!
+      if (len_trim(ctmt_ncfile) > 0) then
+        do j=lat0,lat1
+          do i=lon0,lon1
+            t_lbc(i,j) = t_lbc(i,j)+ctmt_t(i,j)
+            z_lbc(i,j) = z_lbc(i,j)+ctmt_z(i,j)
+            u_lbc(i,j) = u_lbc(i,j)+ctmt_u(i,j)
+            v_lbc(i,j) = v_lbc(i,j)+ctmt_v(i,j)
+          enddo
+        enddo
       endif
 !
 ! Save 2d boundaries to secondary histories:

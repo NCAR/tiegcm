@@ -14,18 +14,27 @@
       use input_module,only: tgcm_input
       use mpi
       implicit none
-      character(len=1024) :: inputfile
-      integer :: ier
+      character(len=1024) :: inputfile,line
+      integer :: ier,stat
       
       inputfile = ' '
       call getarg(1,inputfile)
       write(6,"(/,'Reading namelist input data from ',a)") 
      |  trim(inputfile)
-
       call mpi_bcast(inputfile,1024,MPI_CHARACTER,0,MPI_COMM_WORLD,ier)
-
       open(10,file=trim(inputfile)) 
+!
+! Do the namelist read:
       read(10, nml=tgcm_input)
+!
+! Print namelist file to stdout:
+      rewind(10)
+      line = ' '
+      do
+        read(10,"(a)",iostat=stat) line 
+        if (stat < 0) exit
+        write(6,"(a)") trim(line)
+      enddo
       close(10)
       write(6,"('Completed successful read of namelist inputs.',/)")
       end subroutine inp_read

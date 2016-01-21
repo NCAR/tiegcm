@@ -18,7 +18,7 @@
      |  nf3d,fzg
       use input_module,only: mxlen_filename,
      |  gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, 
-     |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile
+     |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile,ctmt_ncfile
       use init_module,only: istep,start_mtime
       implicit none
 !
@@ -71,7 +71,7 @@
      |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
      |  idv_ec,idv_alfad,idv_ed,idv_writedate,idv_saber_ncfile,
      |  idv_tidi_ncfile,idv_crit1,idv_crit2,idv_coupled_cmit,
-     |  idv_joulefac,idv_bgrddata_ncfile
+     |  idv_joulefac,idv_bgrddata_ncfile,idv_ctmt_ncfile
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
 !
@@ -679,6 +679,11 @@
           case('bgrddata_ncfile')
             call rdfilename(ncid,itime,i,trim(varname),filelen,
      |        sh%bgrddata_ncfile)
+!
+! CTMT data file:
+          case('ctmt_ncfile')
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%ctmt_ncfile)
 !
 ! NCEP data file: ncep_ncfile(time,filelen), where filelen=mxlen_filename
 ! (ncep files used only by timegcm -- will always be '[none]' for tiegcm)
@@ -1666,6 +1671,11 @@
       call define_ncfile(ncid,"bgrddata_ncfile",idv_bgrddata_ncfile,
      |  "long_name","background lbc data file",
      |  "data","T,U,Z")
+!
+! Define ctmt data file:
+      call define_ncfile(ncid,"ctmt_ncfile",idv_ctmt_ncfile,
+     |  "long_name","CTMT lbc data file",
+     |  "data","U,V, T, Z")
 !
 ! Define TIMED SEE data file:
       call define_ncfile(ncid,"see_ncfile",idv_see_ncfile,
@@ -2799,6 +2809,10 @@
 ! Update bgrddata_ncfile:
       call update_ncfile(ncid,"bgrddata_ncfile",h%bgrddata_ncfile,
      |  idv_bgrddata_ncfile,h%ihist)
+!
+! Update ctmt_ncfile:
+      call update_ncfile(ncid,"ctmt_ncfile",h%ctmt_ncfile,
+     |  idv_ctmt_ncfile,h%ihist)
 !
 ! f107d and f107a (daily and average solar fluxes):
       if (idv_f107d <= 0) istat = nf_inq_varid(ncid,"f107d",

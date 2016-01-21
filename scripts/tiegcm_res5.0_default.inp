@@ -18,7 +18,7 @@
  MXHIST_SECH = 24
  SECFLDS = 'TN' 'UN' 'VN' 'O2' 'O1' 'N2' 'NO' 'N4S' 'HE' 'NE' 'TE' 'TI'
            'TEC' 'O2P' 'OP' 'OMEGA' 'POTEN' 'UI_ExB' 'VI_ExB' 'WI_ExB' 
-           'DEN' 'QJOULE' 'Z' 'ZG'
+           'DEN' 'QJOULE' 'HMF2' 'NMF2' 'Z' 'ZG'
  TIDE = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
  TIDE2 = 0. 0.
  GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_5.0d_99km.nc'

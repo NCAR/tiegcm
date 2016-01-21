@@ -118,6 +118,7 @@
      |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
      |  saber_ncfile,       ! SABER data (T,Z)
      |  tidi_ncfile,        ! TIDI data (U,V)
+     |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z)
      |  bgrddata_ncfile     ! background data (T,U,V,Z; V=0)
 
 !     integer,parameter :: ngpivars = 4
@@ -165,7 +166,7 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  enforce_opfloor,bgrddata_ncfile
+     |  enforce_opfloor,bgrddata_ncfile,ctmt_ncfile
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -240,6 +241,7 @@
       saber_ncfile = ' '      ! SABER data file
       tidi_ncfile = ' '       ! TIDI data file
       bgrddata_ncfile = ' '   ! Background data file
+      ctmt_ncfile = ' '       ! CTMT data file for lbc tides 
 !
       start_day  = ispval
       start_year = ispval
@@ -519,6 +521,9 @@
 ! background data files:
       if (len_trim(bgrddata_ncfile) > 0)
      | call expand_path(bgrddata_ncfile)
+!
+! CTMT data files (lbc tides):
+      if (len_trim(ctmt_ncfile) > 0) call expand_path(ctmt_ncfile)
 !
 ! Collision factor:
       if (colfac==spval) then
@@ -1406,6 +1411,8 @@
 
       if (len_trim(bgrddata_ncfile) > 0) write(6,"('  Bgrddata file: ',
      |    'bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
+      if (len_trim(ctmt_ncfile) > 0) write(6,"('  CTMT data file: ',
+     |    'ctmt_ncfile = ',a)") trim(ctmt_ncfile)
 
       if (len_trim(hpss_path) > 0)
      |  write(6,"('  hpss_path = ',a,4x,
@@ -2112,7 +2119,8 @@
 ! Validate lower boundary options:
 !
       implicit none
-      integer :: igswm, isaber, itidi, ihough
+      integer :: igswm, isaber, itidi, ihough, ictmt
+!
       igswm = 0
       if (len_trim(gswm_mi_di_ncfile ) > 0.or.
      |    len_trim(gswm_mi_sdi_ncfile) > 0.or.
@@ -2124,22 +2132,25 @@
       if (len_trim(tidi_ncfile) > 0.) itidi = 1
       ihough = 0
       if (any(tide2 /= 0).or.any(tide  /= 0.)) ihough = 1
+      ictmt = 0
+      if (len_trim(ctmt_ncfile) > 0.) ictmt = 1
 !
-! Hough-modes, gswm, and saber/tidi are mutually exclusive: 
+! Hough-modes, gswm, saber/tidi, and ctmt are mutually exclusive: 
 !
       if (igswm==1) then
-        if (isaber==1.or.itidi==1.or.ihough==1) then
-          write(6,"('GSWM must be exclusive of SABER,TIDI,HOUGH')")
+        if (isaber==1.or.itidi==1.or.ihough==1.or.ictmt==1) then
+          write(6,"('GSWM must be exclusive of SABER,TIDI,CTMT,HOUGH')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
-     |      ' ihough=',i2)") igswm,isaber,itidi,ihough
+     |      ' ictmt=',i2,' ihough=',i2)") igswm,isaber,itidi,ictmt,
+     |      ihough
           call shutdown('inp_lbc')
         endif 
       endif
       if (ihough==1) then
-        if (isaber==1.or.itidi==1.or.igswm==1) then
-          write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM')")
-          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
-     |      ' ihough=',i2)") igswm,isaber,itidi,ihough
+        if (isaber==1.or.itidi==1.or.igswm==1.or.ictmt==1) then
+          write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM,CTMT')")
+          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,' ictmt=',i2,
+     |      ' ihough=',i2)") igswm,isaber,itidi,ictmt,ihough
           call shutdown('inp_lbc')
         endif 
       endif
@@ -2147,9 +2158,9 @@
 ! saber and tidi can be specified separately or together,
 ! but either are exclusive of gswm and hough. 
       if (isaber==1.or.itidi==1) then
-        if (igswm==1.or.ihough==1) then
-          write(6,"('SABER/TIDI must be exclusive of GSWM,HOUGH')")
-          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
+        if (igswm==1.or.ihough==1.or.ictmt==1) then
+          write(6,"('SABER/TIDI must be exclusive of GSWM,HOUGH,CTMT')")
+          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,' ictmt=',i2,
      |      ' ihough=',i2)") igswm,isaber,itidi,ihough
           call shutdown('inp_lbc')
         endif 
@@ -2161,6 +2172,14 @@
         write(6,"(/,'>>> Background lbc data files (BGRDDATA_NCFILE)',
      |    ' are available only at the 2.5-degree model resolution.')")
         call shutdown('BGRDDATA_NCFILE not allowed at 5-deg resolution')
+      endif
+!
+! CTMT data is available only at 2.5-deg resolution:
+!
+      if (len_trim(ctmt_ncfile) > 0.and.dlat==5.0) then
+        write(6,"(/,'>>> CTMT data are available only at the ',
+     |    '2.5-degree model resolution.')")
+        call shutdown('CTMT_NCFILE not allowed at 5-deg resolution')
       endif
 
       end subroutine inp_lbc

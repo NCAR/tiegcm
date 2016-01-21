@@ -9,16 +9,16 @@
  STOP  = 81 0 0
  STEP  = 30
  HIST = 1 0 0
- OUTPUT = 'tiegcm_dres.pcntr_mareqx_smin_001.nc'
+ OUTPUT = 'tiegcm_res2.5_mareqx_smin_prim_001.nc'
  MXHIST_PRIM = 10
  SECSTART = 80 1 0
  SECSTOP  = 81 0 0
  SECHIST  =  0 1 0
- SECOUT   = 'tiegcm_dres.scntr_mareqx_smin_001.nc'
+ SECOUT   = 'tiegcm_res2.5_mareqx_smin_sech_001.nc'
  MXHIST_SECH = 24
  SECFLDS = 'TN' 'UN' 'VN' 'O2' 'O1' 'N2' 'NO' 'N4S' 'HE' 'NE' 'TE' 'TI'
            'TEC' 'O2P' 'OP' 'OMEGA' 'POTEN' 'UI_ExB' 'VI_ExB' 'WI_ExB' 
-           'DEN' 'QJOULE' 'Z' 'ZG'
+           'DEN' 'QJOULE' 'HMF2' 'NMF2' 'Z' 'ZG'
  TIDE = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
  TIDE2 = 0. 0.
  GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_2.5d_99km.nc'
