@@ -107,9 +107,20 @@
      |  tp1               ! 0.5*(te+ti)
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
 !
-! For O+ "smooth floor" (ignored if enforce_opfloor is false):
-!     logical :: enforce_opfloor = .false.
-      real :: opmin=1000.,opfloor,glondeg,slt,dum
+! For O+ "smooth floor" (ignored if enforce_opfloor = 0)
+! (default namelist enforce_opfloor = 1). The floor is a
+! spatial gaussian based on the O+ minimum (opmin below).
+!
+      real :: opfloor,glondeg,slt,dum
+!
+! 1/21/16 btf: O+ minimum increased from 1000 to 3000.
+! (This alleviates numerical instability that can develop
+!  near the equator at the top of the model in some cases,
+!  e.g., it allows the 2.5-deg June solstice solar max 
+!  benchmark to run with step=30 rather than step=20, and
+!  may improve stability in other cases as well.)
+!
+      real :: opmin=3000.
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
@@ -1033,6 +1044,17 @@
      |      ps1(k,i)*rmassinv_o2+3.6*he(k,i)*rmassinv_he))
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
+!
+! Cap ambipolar diffusion coefficient.
+! This was tested with various values (1.5e8, 3e8, 6e8, 8e8),
+! and was found to not significantly improve numerical stability
+! in storm cases, particularly November, 2003 storm case with
+! Weimer/IMF-OMNI data, which will succeed only with step=10 sec.
+!
+!     where(ans(:,:) > 1.5e+8)
+!       ans(:,:) = 1.5e+8
+!     endwhere
+
       end subroutine rrk
 !-----------------------------------------------------------------------
       subroutine diffus(tp,en,hj,ans,lon0,lon1,lev0,lev1,lat)
