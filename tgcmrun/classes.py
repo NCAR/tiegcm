@@ -355,8 +355,8 @@ class Run(Job,Namelist):
       ['sepeqx_smin','September Equinox Solar Minimum'],
 #
 # Storms:
-      ['nov2003_heelis_gpi','November 2003 "Halloween Storm", Heelis potential model, GPI data'],
-      ['nov2003_weimer_imf','November 2003 "Halloween Storm", Weimer potential model, IMF, GPI data'],
+      ['nov2003_heelis_gpi','November 2003 storm case, Heelis potential model, GPI data'],
+      ['nov2003_weimer_imf','November 2003 storm case, Weimer potential model, IMF, GPI data'],
       ['dec2006_heelis_gpi','December 2006 "AGU storm", Heelis potential model, GPI data'],
       ['dec2006_weimer_imf','December 2006 "AGU storm", Weimer potential model, IMF and GPI data'],
       ['whi2008_heelis_gpi','2008 "Whole Heliosphere Interval", Heelis potential model, GPI data'],
@@ -612,6 +612,11 @@ NUMBER\tNAME\t\tDESCRIPTION
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
 
+      if res == '2.5': 
+        if job.step != '20':
+          job.step = '20' # ~12 min/day
+          print 'Override timestep for junsol_smax at 2.5-deg res: STEP=',job.step
+
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '172'],
@@ -795,7 +800,7 @@ NUMBER\tNAME\t\tDESCRIPTION
       self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# November 2003 "Halloween Storm" with Heelis and GPI:
+# November 2003 storm case with Heelis and GPI:
 #
     elif self.name == 'nov2003_heelis_gpi':
 
@@ -831,7 +836,7 @@ NUMBER\tNAME\t\tDESCRIPTION
       self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# 2003 Halloween Storm case with Weimer and IMF, GPI:
+# November 2003 storm case with Weimer and IMF, GPI:
 #
     elif self.name == 'nov2003_weimer_imf':
 
@@ -842,15 +847,15 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
 # As of 11/16/15, the current trunk code for tiegcm_res2.5 will crash in the 
 #   first ~1.5 days if starting from tiegcm2.0 benchmark SOURCE history, and 
-#   STEP is 30 secs. It succeeds if timestep is reduced to 10 secs, so force 
-#   that here.
+#   STEP is > 10 secs (e.g., 20, 30). It succeeds if timestep is reduced to 
+#   10 secs, so force that here.
 # (Interestingly, the current trunk code succeeds with STEP=30, if starting
 #  from the old tiegcm1.95 benchmark SOURCE history)
 #
-        step = job.step
         if job.model_res == '2.5': 
-          if job.step != '10': print 'NOTE: Am changing timestep from ',job.step,' to 10 seconds'
-          step = 10 # reduce timestep for res2.5 from 30 to 10
+          if job.step != '10': 
+            print 'NOTE for ',self.name,': Changing timestep from ',job.step,' to 10 seconds'
+          job.step = '10' # reduce timestep for res2.5 from to 10 seconds
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -860,7 +865,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SOURCE_START'   , '323 0 0'],
         ['START'          , '323 0 0'],
         ['STOP'           , '328 0 0'],
-        ['STEP'           , str(step)],
+        ['STEP'           , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'       , '323 1 0'],
         ['SECSTOP'        , '328 0 0'],
@@ -877,7 +882,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['F107'         , '0.'],
         ['F107A'        , '0.']]
       self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '2:30' # wallclock limit for 2.5-deg res (ys only)
+      self.wc25_default = '4:30' # wallclock limit for 2.5-deg res (ys only) (step=10)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # December, 2006 AGU storm with Heelis and GPI:
@@ -1014,7 +1019,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
         ['SECSTART'       , '81 1 0'],
         ['SECSTOP'        , '106 0 0'],
-        ['SECOUT'         , "'"+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_025.nc','by','1'"],
+        ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2008001-2008366.nc'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]

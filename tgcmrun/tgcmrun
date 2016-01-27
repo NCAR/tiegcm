@@ -60,7 +60,7 @@ while True:
 #
   if job.stdout_dir:
     os.chdir(job.stdout_dir)
-    print 'Note: tgcmrun has moved to directory ',job.stdout_dir
+    print 'Tgcmrun moved to directory ',job.stdout_dir
 
   run.fullname(job,run.name)
 

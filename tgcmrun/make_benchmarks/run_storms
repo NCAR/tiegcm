@@ -1,83 +1,91 @@
 #!/bin/tcsh
 #
-# Storm cases:
+# Make tiegcm storm case benchmark runs (Dec2006, Nov2003, WHI2008, heelis_gpi/weimer_imf)
+# (This script will override environment settings for TGCMTEMP and 
+#  TIEGCM_ROOT as used by tgcmrun)
 #
-set case = tiegcm_res5.0_storms
+# Shell vars:
+#
+# home:      Base directory (usually cwd)
+# modelroot: Model root directory (containing src/, scripts/, tgcmrun/, etc)
+# tgcmrun:   Path to tgcmrun command (python run code)
+# queue:     LSF queue, if needed
+# submit:    Submit job only if submit=yes (will make scripts)
+#
+  set home      = /glade/p/hao/tgcm/tiegcm_benchmarks
+  set modelroot = $home/tiegcm_trunk
+  set tgcmrun   = $home/tiegcm_trunk/tgcmrun/tgcmrun
+  set queue     = regular
+  set submit    = yes
+#
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #
-# November 2003 "Halloween storm" res5.0:
+# TIEGCM 5.0-deg resolution: 
 #
-set run = tiegcm_res5.0_nov2003_heelis_gpi
-tgcmrun -run_name nov2003_heelis_gpi -model_name tiegcm -model_res 5.0 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-set run = tiegcm_res5.0_nov2003_weimer_imf
-tgcmrun -run_name nov2003_weimer_imf -model_name tiegcm -model_res 5.0 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
+ set res = 5.0                     # Model resolution (degrees horizontal)
+ set model     = tiegcm_res${res}  # Model name and resolution
+ set benchmark = ${model}_storms   # Benchmark group (seasons, storms, climatology)
+ set stdoutdir = $home/$benchmark  # Path to receive stdout files
+ set execdir   = $home/$benchmark  # Execution directory
+ set histdir   = ../hist           # History directory (if not abs path, then relative to execdir)
+ 
+ set runname = dec2006_heelis_gpi ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = dec2006_weimer_imf ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = nov2003_heelis_gpi ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = nov2003_weimer_imf ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = whi2008_heelis_gpi ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = whi2008_weimer_imf ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+# 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #
-# December 2006 "AGU storm" res5.0:
+# TIEGCM 2.5-deg resolution:
 #
-set run = tiegcm_res5.0_dec2006_heelis_gpi
-tgcmrun -run_name dec2006_heelis_gpi -model_name tiegcm -model_res 5.0 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-set run = tiegcm_res5.0_dec2006_weimer_imf
-tgcmrun -run_name dec2006_weimer_imf -model_name tiegcm -model_res 5.0 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+ set res = 2.5                     # Model resolution (degrees horizontal)
+ set model     = tiegcm_res${res}  # Model name and resolution
+ set benchmark = ${model}_storms   # Benchmark group (seasons, storms, climatology)
+ set stdoutdir = $home/$benchmark  # Path to receive stdout files
+ set execdir   = $home/$benchmark  # Execution directory
+ set histdir   = ../hist           # History directory (if not abs path, then relative to execdir)
+ 
+ set runname = dec2006_heelis_gpi ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = dec2006_weimer_imf ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = nov2003_heelis_gpi ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = nov2003_weimer_imf ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = whi2008_heelis_gpi ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = whi2008_weimer_imf ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-#
-# Whole Heliosphere Interval, 2008 res5.0: 
-#
-set run = tiegcm_res5.0_whi2008_heelis_gpi
-tgcmrun -run_name whi2008_heelis_gpi -model_name tiegcm -model_res 5.0 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-set run = tiegcm_res5.0_whi2008_weimer_imf
-tgcmrun -run_name whi2008_weimer_imf -model_name tiegcm -model_res 5.0 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-#
-# Exit here if doing only res5.0:
-#exit
-#===============================================================================================
-
-set case = tiegcm_res2.5_storms
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-#
-# November 2003 "Halloween storm" res2.5:
-#
-set run = tiegcm_res2.5_nov2003_heelis_gpi
-tgcmrun -run_name nov2003_heelis_gpi -model_name tiegcm -model_res 2.5 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-set run = tiegcm_res2.5_nov2003_weimer_imf
-tgcmrun -run_name nov2003_weimer_imf -model_name tiegcm -model_res 2.5 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-#
-# December 2006 "AGU storm" res2.5:
-#
-set run = tiegcm_res2.5_dec2006_heelis_gpi
-tgcmrun -run_name dec2006_heelis_gpi -model_name tiegcm -model_res 2.5 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-set run = tiegcm_res2.5_dec2006_weimer_imf
-tgcmrun -run_name dec2006_weimer_imf -model_name tiegcm -model_res 2.5 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-#
-# Whole Heliosphere Interval, 2008 res2.5: 
-#
-set run = tiegcm_res2.5_whi2008_heelis_gpi
-tgcmrun -run_name whi2008_heelis_gpi -model_name tiegcm -model_res 2.5 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-set run = tiegcm_res2.5_whi2008_weimer_imf
-tgcmrun -run_name whi2008_weimer_imf -model_name tiegcm -model_res 2.5 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-

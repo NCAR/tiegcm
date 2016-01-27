@@ -1,33 +1,59 @@
 #!/bin/tcsh
 #
-# Start climatology run with Jan 1-5.
+# Make tiegcm climatology benchmarks (smin,smax)
+# (This script will override environment settings for TGCMTEMP and 
+#  TIEGCM_ROOT as used by tgcmrun)
+#
+# Shell vars:
+#
+# home:      Base directory (usually cwd)
+# modelroot: Model root directory (containing src/, scripts/, tgcmrun/, etc)
+# tgcmrun:   Path to tgcmrun command (python run code)
+# queue:     LSF queue, if needed
+# submit:    Submit job only if submit=yes (will make scripts)
+#
+  set home      = /glade/p/hao/tgcm/tiegcm_benchmarks
+  set modelroot = $home/tiegcm_trunk
+  set tgcmrun   = $home/tiegcm_trunk/tgcmrun/tgcmrun
+  set queue     = regular
+  set submit    = yes
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #
-# Climatology smax,smin at res5.0:
+# TIEGCM 5.0-deg resolution: 
 #
-set case = tiegcm_res5.0_climatology
-
-set run  = tiegcm_res5.0_climatology_smax
-tgcmrun -run_name climatology_smax -model_name tiegcm -model_res 5.0 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-set run  = tiegcm_res5.0_climatology_smin
-tgcmrun -run_name climatology_smin -model_name tiegcm -model_res 5.0 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+ set res = 5.0                     # Model resolution (degrees horizontal)
+ set model     = tiegcm_res${res}  # Model name and resolution
+ set benchmark = ${model}_climatology   # Benchmark group (seasons, storms, climatology)
+ set stdoutdir = $home/$benchmark  # Path to receive stdout files
+ set execdir   = $home/$benchmark  # Execution directory
+ set histdir   = ../hist           # History directory (if not abs path, then relative to execdir)
+ 
+ set runname = climatology_smin ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = climatology_smax ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+#
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #
-# Climatology smax,smin at res2.5:
+# TIEGCM 2.5-deg resolution:
 #
-set case = tiegcm_res2.5_climatology
+ set res = 2.5                     # Model resolution (degrees horizontal)
+ set model     = tiegcm_res${res}  # Model name and resolution
+ set benchmark = ${model}_climatology   # Benchmark group (seasons, storms, climatology)
+ set stdoutdir = $home/$benchmark  # Path to receive stdout files
+ set execdir   = $home/$benchmark  # Execution directory
+ set histdir   = ../hist           # History directory (if not abs path, then relative to execdir)
+ 
+ set runname = climatology_smin ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+ 
+ set runname = climatology_smax ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
 
-set run  = tiegcm_res2.5_climatology_smax
-tgcmrun -run_name climatology_smax -model_name tiegcm -model_res 2.5 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
-
-set run  = tiegcm_res2.5_climatology_smin
-tgcmrun -run_name climatology_smin -model_name tiegcm -model_res 2.5 -submit yes \
-  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-
-

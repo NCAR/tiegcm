@@ -429,15 +429,26 @@ def get_options(arg,run,job,option):
       return job.stdout_dir
 #
 # Directory in which to save history files:
+# (absolute path or relative to execdir)
 #
   elif arg == 'hist_dir':
     if option:
-      if not os.path.isdir(option):
-        os.makedirs(option) # this makes parents and leaf as necessary
-        print 'Made hist_dir directory ',option
+      histdir = option
+      if option[0]=='/':  # absolute path
+        histdir = option
+      else:               # relative to execdir
+        histdir = job.execdir+'/'+option
+
+      if not os.path.isdir(histdir):
+        os.makedirs(histdir) # this makes parents and leaf as necessary
+        print 'Made history directory ',histdir
       else: # do not clean hist dir 
-        print 'Will use existing hist_dir directory ',option
-      histdir = option+'/' 
+        print 'Will use existing history directory ',histdir
+
+      if option[0] != '/':    # relative to execdir
+        histdir = option      # this goes in the namelist read file
+
+      histdir = histdir + '/' # file name will be appended
     else:
       histdir = './'
     return histdir
