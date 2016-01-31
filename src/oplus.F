@@ -1022,13 +1022,15 @@
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,boltz,
      |  p0,expz,rmassinv_he
-      use input_module,only: colfac
+      use input_module,only: colfac,opdiffcap
+      use init_module,only: istep
 !
 ! Args:
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat
       real,dimension(lev0:lev1,lon0:lon1),intent(in) ::
      |  t,rms,ps1,ps2,n2,he,tr
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
+      real :: diffcap
 !
 ! Local:
       integer :: k,i
@@ -1045,15 +1047,23 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 !
-! Cap ambipolar diffusion coefficient.
+! 1/30/16 btf:
+! Cap ambipolar diffusion coefficient. Namelist parameter OPDIFFCAP.
 ! This was tested with various values (1.5e8, 3e8, 6e8, 8e8),
-! and was found to not significantly improve numerical stability
-! in storm cases, particularly November, 2003 storm case with
-! Weimer/IMF-OMNI data, which will succeed only with step=10 sec.
+! and was found to improve numerical stability in some storm cases, 
+! for example the November, 2003 and July, 2000 storms, with Weimer
+! potential model and IMF/OMNI data. Both of these cases generally 
+! will not complete if timestep is longer than 10 sec. The Nov, 2003
+! may succeed with opdiffcap turned off, but the July, 2000 
+! "Bastille day storm" will succeed only with step=10 and opdiffcap=6.e8.
 !
-!     where(ans(:,:) > 1.5e+8)
-!       ans(:,:) = 1.5e+8
-!     endwhere
+      if (opdiffcap /= 0.) then ! default is off
+        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)") 
+     |    diffcap
+        where(ans(:,:) > opdiffcap)
+          ans(:,:) = opdiffcap
+        endwhere
+      endif
 
       end subroutine rrk
 !-----------------------------------------------------------------------

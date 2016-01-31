@@ -62,7 +62,8 @@
      |  f107,            ! 10.7 cm daily solar flux
      |  f107a,           ! 10.7 cm average (81-day) solar flux
      |  colfac,          ! collision factor
-     |  joulefac         ! joule heating factor (see sub qjoule_tn (qjoule.F))
+     |  joulefac,        ! joule heating factor (see sub qjoule_tn (qjoule.F))
+     |  opdiffcap        ! Maximum O+ diffusion (see sub rrk in oplus.F)
 !
 ! Input parameters that can be either constant or time-dependent:
       real ::
@@ -166,7 +167,7 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  enforce_opfloor,bgrddata_ncfile,ctmt_ncfile
+     |  enforce_opfloor,bgrddata_ncfile,ctmt_ncfile,opdiffcap
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -262,6 +263,7 @@
       joulefac= spval
       calc_helium = ispval
       enforce_opfloor = ispval
+      opdiffcap = spval
 
       f107    = spval
       f107a   = spval
@@ -535,6 +537,16 @@
       if (joulefac==spval) then
         joulefac = 1.5
         write(6,"('Input: Using default joulefac = ',f9.2)") joulefac
+      endif
+!
+! O+ diffusion cap:
+      if (opdiffcap==spval) then
+        opdiffcap = 0. ! default is off
+        write(6,"('Input: default diffusion maximum (opdiffcap) is',
+     |    ' turned off by default.')")
+      else
+        write(6,"('Input: O+ diffusion maximum (opdiffcap)=',es12.4)")
+     |    opdiffcap
       endif
 !
 ! If calc_helium == 1 then calculate helium, otherwise zero out helium.
@@ -1526,6 +1538,8 @@
       write(6,"('  colfac = ',f9.3,' (collision factor)')") colfac
       write(6,"('  joulefac = ',f9.3,' (joule heating factor)')") 
      |  joulefac
+      write(6,"('  diffcap  = ',es12.4,' (Maximum O+ diffusion)')") 
+     |  opdiffcap
       write(6,"('  calc_helium = ',i4,' (0/1 flag for helium)')") 
      |  calc_helium
 
