@@ -9,7 +9,7 @@
 !
       use params_module,only: nlon,nlonp2,nlonp4,nlevp1,nlat
       use input_module,only: source,source_start,output,start,
-     |  f107,f107a,power
+     |  f107,f107a,power,noutput
       use hist_module,only: nsource,nhist,ioutfile,ncid,iprint,h
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm,
      |  he,he_nm,field_initval,ar,ar_nm
@@ -48,18 +48,27 @@
         nhist  = 0         ! no histories on output file
         ioutfile = 0       ! no output file currently in use
 !
-! Source file was not provided -- search 1st output file:
+! Source file was not provided -- search output files:
       else
-        call rdsource(output(1),start(:,1),ncid,nth,.true.,
-     |    iprint)
-        nhist  = nth       ! number of histories on current output file
-        ioutfile = 1       ! current output file name is output(ioutfile)
+        do i = 1,noutput
+          call rdsource(output(i),start(:,1),ncid,nth,.true.,iprint)
+          if (ncid > 0) then   ! history was found (not found if ncid==0)
+            nhist  = nth       ! number of histories on current output file
+            ioutfile = i       ! current output file name is output(ioutfile)
+            exit               ! exit the loop if history is found
+          endif
+        enddo
+        if (ncid == 0) then    ! history not found on any output file
+          write(6,"('>>> rdsource: starting history at mtime ',3i4,
+     |      ' was not found on OUTPUT files.')")
+          call shutdown('Starting history not found on output files')
+        endif
       endif
 !
-      if (ncid==0) then
-        ier = 1
-        return
-      endif
+!     if (ncid==0) then
+!       ier = 1
+!       return
+!     endif
 !
 ! Do mpi periodic points exchange for f4d(:) 
 ! Moved here from sub nc_rdhist because mpi necessary when f4d data
@@ -215,12 +224,10 @@
 ! Search for and read the source history:
       call nc_rdhist(ncid,diskfile,mtime,nthist,ier)
       if (ier > 0) then
-        write(6,"(/,'>>> ERROR return from nc_rdhist reading')")
-        write(6,"('  source file ',a,' from ncid=',i8,' mtime=',
-     |    3i4)") trim(diskfile),ncid,mtime
-        call shutdown('nc_rdhist')
+        call nc_close(ncid)
+        ncid = 0
+        return
       endif
-      call nc_close(ncid)
 !
 ! Reopen file for writing if necessary:
       if (reopen_append) call nc_open(ncid,diskfile,'OLD','WRITE')

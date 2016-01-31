@@ -293,11 +293,11 @@
 ! Report to stdout:
       if (time2print(nstep,istep)) then
         if (istep > 1) then
-          write(6,"('Step ',i6,' of ',i6,' mtime=',4i3,
+          write(6,"('Step ',i8,' of ',i8,' mtime=',4i3,
      |      ' secs/step (',a,') =',f6.2)") istep,nstep,modeltime,
      |      timing_type,secs_per_step
         else
-          write(6,"('Step ',i6,' of ',i6,' mtime=',3i3)")
+          write(6,"('Step ',i8,' of ',i8,' mtime=',3i3)")
      |      istep,nstep,modeltime(1:3)
         endif
 !

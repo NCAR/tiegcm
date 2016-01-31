@@ -945,9 +945,11 @@
       output = hvols
 !
 ! Expand any env vars imbedded in output:
+      noutput = 0
       do i=1,mxhvols
         if (len_trim(output(i)) > 0) then
           call expand_path(output(i))
+          noutput = noutput+1
 !         write(6,"('Input: Expanded output file ',a,' to ',/,'  ',a)")
 !    |      trim(hvols(i)),trim(output(i))
         endif

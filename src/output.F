@@ -68,6 +68,7 @@
 !
       use input_module,only:  ! input_mod.f
      |  output,      ! output file paths provided by input
+     |  noutput,     ! number of output files provided by input
      |  mxhist_prim, ! max number of histories on a primary file
      |  hpss_path    ! dispose path for hsi script
       use hist_module,only:   ! hist_mod.f
@@ -107,12 +108,23 @@
       else
         iprinthist = iprint
       endif
-      if (ihist_total==0) then       ! first history of a run
-        ioutfile = 0                 ! first history goes on new file
-        if (nsource==0) ioutfile = 1 ! first history on first output file
-      endif
+
+! 1/13/16 btf: ioutfile is set by readsource (rdsource.F)
+!     if (ihist_total==0) then       ! first history of a run
+!       ioutfile = 0                 ! first history goes on new file
+!       if (nsource==0) ioutfile = 1 ! first history on first output file
+!     endif
+!
       fullfile = .false.
-      if (nhist==mxhist_prim) fullfile = .true.
+!
+! Use >= because source history may already have > mxhist_prim histories.
+! In that case, a new file will be opened.
+!
+      if (nhist >= mxhist_prim) fullfile = .true.
+
+!     write(6,"('Enter output_hist: nhist=',i4,' mxhist_prim=',i4,
+!    |  ' ioutfile=',i4,' noutput=',i4,' fullfile=',l1)") 
+!    |  nhist,mxhist_prim,ioutfile,noutput,fullfile
 !
 ! Open new file if starting a new time series, or file was filled
 ! at last write. Otherwise, open existing file to receive history.
@@ -121,6 +133,11 @@
 !
       if (newseries.or.fullfile) then  ! open new file
         ioutfile = ioutfile+1
+        if (ioutfile > noutput) then
+          write(6,"('>>> Out of primary output files: noutput=',i4,
+     |      ' Last output file was ',a)") noutput,output(noutput)
+          call shutdown('out of primary output files')
+        endif
         nhist = 0             ! number of histories on current file
         if (newseries) write(6,"(/,'Starting primary history',
      |    ' time series ',i2,' at model time ',4i4)") iseries_prim,
@@ -131,6 +148,9 @@
           write(6,"(/,'>>> output_hist: Error opening new primary ',
      |      'output history file ',a)") trim(diskfile)
           call shutdown('opening new primary output history file')
+        else
+          write(6,"('Opened new primary history file ',a,
+     |      ' (ioutfile=',i3,')')") trim(diskfile),ioutfile
         endif
       else                            ! append to existing file
         diskfile = trim(output(ioutfile))
@@ -139,6 +159,9 @@
           write(6,"(/,'>>> output_hist: Error opening existing primary',
      |      'output history file',a)") trim(diskfile)
           call shutdown('opening existing primary output history file')
+        else
+!         write(6,"('Will append to primary history file (ioutfile=',i4,
+!    |      ' nhist=',i4,' file=',a)") ioutfile,nhist,trim(diskfile)
         endif
       endif ! newseries
 !
@@ -251,6 +274,9 @@
           write(6,"(/,'>>> output_sechist: Error opening new output ',
      |      'file ',a)") trim(diskfile)
           call shutdown('opening new secondary history output file')
+        else
+          write(6,"('Opened new secondary history file ',a,
+     |      ' (isecout=',i4,')')") trim(diskfile),isecout
         endif
       else                                 ! append to existing file
         diskfile = trim(secout(isecout))
