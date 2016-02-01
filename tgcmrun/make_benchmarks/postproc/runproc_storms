@@ -1,0 +1,110 @@
+#!/bin/tcsh
+#
+# Make runs of post-processor to generate plots from storm case benchmark runs:
+# (instantaneous and time-dependent)
+#
+set proc = tgcmproc_f90/tgcmproc/tgcmproc        # python code to make multiple proc runs
+set home = /glade/p/hao/tgcm/tiegcm_benchmarks   # base working directory
+
+set res50 = 1
+set res25 = 0
+
+#---------------------------------------------------------------------------------------
+if (! $res50) then
+  echo Not doing res5.0
+  goto do25
+endif
+
+set res  = 5.0
+set exec = tgcmproc_f90/build/tgcmproc_sres_f90  # processor executable (resolution dependent)
+ 
+ set runs = ( \
+#  tiegcm_res${res}_dec2006_heelis_gpi \
+#  tiegcm_res${res}_dec2006_weimer_imf \
+#  tiegcm_res${res}_nov2003_heelis_gpi \
+#  tiegcm_res${res}_nov2003_weimer_imf \
+#  tiegcm_res${res}_whi2008_heelis_gpi \
+#  tiegcm_res${res}_whi2008_weimer_imf \
+   tiegcm_res${res}_jul2000_heelis_gpi \
+   tiegcm_res${res}_jul2000_weimer_imf \
+ )
+ 
+set case   = tiegcm_res${res}_storms
+set work   = $home/$case
+ 
+foreach run ($runs)
+  echo "------------------ $run --------------------"
+  set outdir  = $work/$run/proc
+  set histdir = $work/$run/hist
+#
+# Instantaneous maps, slices, etc at last history: 
+#
+  $proc -submit yes -executable $exec -singleut=1 \
+    -nlfile $outdir/${run}_singleut.inp -stdout $outdir/${run}_singleut.out \
+    -flnm_ps $outdir/${run}_singleut.ps $histdir/\*sech\*.nc
+  echo Completed singleut for run $run
+#
+# Time-dependent plots with day/ut on x-axis:
+#
+  $proc -submit yes -executable $exec -multiut=1 \
+    -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+    -flnm_ps $outdir/${run}_multiut.ps $histdir/\*sech\*.nc
+  echo Completed multiut for run $run
+
+  if ($run == "tiegcm_res${res}_whi2008_weimer_imf") then
+    $proc -submit yes -executable $exec -multiut 1 -mtimes "85,0,0,'to',90,0,0,'by',60" \
+      -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+      -flnm_ps $outdir/${run}_days085-090.ps $histdir/\*sech\*.nc
+    echo Completed multiut days 85-90 for run $run
+  endif
+end
+
+#---------------------------------------------------------------------------------------
+do25:
+if (! $res25) then
+  echo Not doing res2.5
+  exit 
+endif
+#---------------------------------------------------------------------------------------
+
+set res  = 2.5
+set exec = tgcmproc_f90/build/tgcmproc_dres_f90  # processor executable (resolution dependent)
+
+set runs = (tiegcm_res${res}_dec2006_heelis_gpi \
+            tiegcm_res${res}_dec2006_weimer_imf \
+            tiegcm_res${res}_nov2003_heelis_gpi \
+            tiegcm_res${res}_nov2003_weimer_imf \
+            tiegcm_res${res}_whi2008_heelis_gpi \
+            tiegcm_res${res}_whi2008_weimer_imf \
+            tiegcm_res${res}_jul2000_heelis_gpi \
+            tiegcm_res${res}_jul2000_weimer_imf )
+
+set case   = tiegcm_res${res}_storms
+set work   = $home/$case
+
+foreach run ($runs)
+  echo "------------------ $run --------------------"
+  set outdir = $work/$run/proc
+  set histdir = $work/$run/hist
+#
+# Instantaneous maps, slices, etc at last history: 
+#
+  $proc -submit yes -executable $exec -singleut=1 \
+    -nlfile $outdir/${run}_singleut.inp -stdout $outdir/${run}_singleut.out \
+    -flnm_ps $outdir/${run}_singleut.ps $histdir/\*sech\*.nc
+  echo Completed singleut for run $run
+#
+# Time-dependent plots with day/ut on x-axis:
+#
+  $proc -submit yes -executable $exec -multiut=1 \
+    -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+    -flnm_ps $outdir/${run}_multiut.ps $histdir/\*sech\*.nc
+  echo Completed multiut for run $run
+
+  if ($run == "tiegcm_res${res}_whi2008_weimer_imf") then
+    $proc -submit yes -executable $exec -multiut 1 -mtimes "85,0,0,'to',90,0,0,'by',60" \
+      -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+      -flnm_ps $outdir/${run}_days085-090.ps $histdir/\*sech\*.nc
+    echo Completed multiut days 85-90 for run $run
+  endif
+end

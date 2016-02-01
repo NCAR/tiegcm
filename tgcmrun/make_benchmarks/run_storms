@@ -1,6 +1,8 @@
 #!/bin/tcsh
 #
-# Make tiegcm storm case benchmark runs (Dec2006, Nov2003, WHI2008, heelis_gpi/weimer_imf)
+# Make tiegcm storm case benchmark runs 
+# Dec2006, Nov2003, WHI2008, Jul2000 (heelis_gpi and weimer_imf)
+#
 # (This script will override environment settings for TGCMTEMP and 
 #  TIEGCM_ROOT as used by tgcmrun)
 #
@@ -12,13 +14,21 @@
 # queue:     LSF queue, if needed
 # submit:    Submit job only if submit=yes (will make scripts)
 #
-  set home      = /glade/p/hao/tgcm/tiegcm_benchmarks
-  set modelroot = $home/tiegcm_trunk
-  set tgcmrun   = $home/tiegcm_trunk/tgcmrun/tgcmrun
-  set queue     = regular
-  set submit    = yes
+ set home      = /glade/p/hao/tgcm/tiegcm_benchmarks
+ set modelroot = $home/tiegcm_trunk
+ set tgcmrun   = $home/tiegcm_trunk/tgcmrun/tgcmrun
+ set queue     = regular
+ set submit    = yes
+
+ set res50 = 0
+ set res25 = 1
+
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+if (! $res50) then
+  echo Not doing res5.0
+  goto do25
+endif
 #
 # TIEGCM 5.0-deg resolution: 
 #
@@ -52,7 +62,21 @@
  set runname = whi2008_weimer_imf ; set case = ${model}_${runname}
  $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
    -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+
+ set runname = jul2000_heelis_gpi ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+
+ set runname = jul2000_weimer_imf ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
 # 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+do25:
+if (! $res25) then
+  echo Not doing res2.5
+  exit
+endif
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 #
 # TIEGCM 2.5-deg resolution:
@@ -67,7 +91,6 @@
  set runname = dec2006_heelis_gpi ; set case = ${model}_${runname}
  $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
    -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
- 
  set runname = dec2006_weimer_imf ; set case = ${model}_${runname}
  $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
    -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
@@ -75,7 +98,6 @@
  set runname = nov2003_heelis_gpi ; set case = ${model}_${runname}
  $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
    -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
- 
  set runname = nov2003_weimer_imf ; set case = ${model}_${runname}
  $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
    -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
@@ -83,9 +105,15 @@
  set runname = whi2008_heelis_gpi ; set case = ${model}_${runname}
  $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
    -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
- 
  set runname = whi2008_weimer_imf ; set case = ${model}_${runname}
  $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
-   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir -step 15
+
+ set runname = jul2000_heelis_gpi ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir -step 15
+ set runname = jul2000_weimer_imf ; set case = ${model}_${runname}
+ $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
+   -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec -hist_dir $histdir -step 10
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 

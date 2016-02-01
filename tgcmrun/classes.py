@@ -361,6 +361,8 @@ class Run(Job,Namelist):
       ['dec2006_weimer_imf','December 2006 "AGU storm", Weimer potential model, IMF and GPI data'],
       ['whi2008_heelis_gpi','2008 "Whole Heliosphere Interval", Heelis potential model, GPI data'],
       ['whi2008_weimer_imf','2008 "Whole Heliosphere Interval", Weimer potential model, IMF, GPI data'],
+      ['jul2000_heelis_gpi','July 2000 "Bastille Day" storm, Heelis potential model, GPI data'],
+      ['jul2000_weimer_imf','July 2000 "Bastille Day" storm, Weimer potential model, IMF, GPI data'],
 #
 # Climatology:
       ['climatology_smin','Climatology run with constant solar minimum conditions (Jan 1-5)'],
@@ -515,9 +517,7 @@ NUMBER\tNAME\t\tDESCRIPTION
 
     return source
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  def set_run(self,fullname,job,tgcmdata):
-
-# run.set_run(run.number,run.fullname,tgcmdata,job.model_version,job.model_res)
+  def set_run(self,job,tgcmdata):
 #
 # Note: after going to tiegcm2.0, the model_res argument will no longer be necessary. 
 #
@@ -612,10 +612,10 @@ NUMBER\tNAME\t\tDESCRIPTION
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
 
-      if res == '2.5': 
-        if job.step != '20':
-          job.step = '20' # ~12 min/day
-          print 'Override timestep for junsol_smax at 2.5-deg res: STEP=',job.step
+#     if res == '2.5': 
+#       if job.step != '20':
+#         job.step = '20' # ~12 min/day
+#         print 'Override timestep for junsol_smax at 2.5-deg res: STEP=',job.step
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -853,9 +853,9 @@ NUMBER\tNAME\t\tDESCRIPTION
 #  from the old tiegcm1.95 benchmark SOURCE history)
 #
         if job.model_res == '2.5': 
-          if job.step != '10': 
-            print 'NOTE for ',self.name,': Changing timestep from ',job.step,' to 10 seconds'
-          job.step = '10' # reduce timestep for res2.5 from to 10 seconds
+          if int(job.step) > 10: 
+            print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds'
+            job.step = '10' # reduce timestep for res2.5 to 10 seconds
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1037,6 +1037,103 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
       self.wc50_default = '1:00' # wallclock limit for 5.0-deg res (ys only)
       self.wc25_default = '3:30' # wallclock limit for 2.5-deg res (ys only)
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# July 2000 "Bastille Day" storm, with Heelis and GPI
+#
+    elif self.name == 'jul2000_heelis_gpi':
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42': # not available
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
+      if job.model_res == '2.5': 
+        if int(job.step) > 15: 
+          print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 15 seconds'
+          job.step = '15' # force timestep for res2.5 to 15 seconds
+
+      self.list_mods = [
+        ['LABEL'          , "'"+self.fullname+"'"],
+        ['START_YEAR'     , '2000'],
+        ['START_DAY'      , '192'],
+        ['SOURCE'         , source],
+        ['SOURCE_START'   , '192 0 0'],
+        ['START'          , '192 0 0'],
+        ['STOP'           , '202 0 0'],
+        ['STEP'           , job.step],
+        ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
+        ['SECSTART'       , '192 1 0'],
+        ['SECSTOP'        , '202 0 0'],
+        ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_025.nc','by','1'"],
+        ['POTENTIAL_MODEL', "'HEELIS'"],
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
+        ] 
+#
+# Lines (keys) to remove from default:
+      self.list_rm = [
+        ['POWER'        , '0.'],
+        ['CTPOTEN'      , '0.'],
+        ['F107'         , '0.'],
+        ['F107A'        , '0.']]
+#
+# res5.0: step=60 -> 2 min/day * 10 days = 20 mins wc -> 30 minutes
+# res2.5: step=30 -> 17 min/day * 10 days = 170 mins -> 3.5 hours
+#
+      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
+      self.wc25_default = '3:30' # wallclock limit for 2.5-deg res (ys only)
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# July 2000 "Bastille Day" storm, with Weimer, IMF, and GPI
+#
+    elif self.name == 'jul2000_weimer_imf':
+
+      if version == 'tiegcm1.95' or version == 'timegcm1.42': # not available
+        source = self.make_oldsource(tgcmdata,version,res)
+      else:
+        source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+#
+# Note: As of tiegcm/trunk -r1248 (1/31/16), STEP=10 and OPDIFFCAP=6e8 are
+#       necessary for this run to succeed at 2.5-deg (resolution)
+#
+      opdiffcap = '0.'
+      if job.model_res == '2.5': 
+        if int(job.step) > 10: 
+          print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds'
+          job.step = '10' # force timestep for res2.5 to 10 seconds
+        opdiffcap = '6.e8'
+
+      self.list_mods = [
+        ['LABEL'          , "'"+self.fullname+"'"],
+        ['START_YEAR'     , '2000'],
+        ['START_DAY'      , '192'],
+        ['SOURCE'         , source],
+        ['SOURCE_START'   , '192 0 0'],
+        ['START'          , '192 0 0'],
+        ['STOP'           , '202 0 0'],
+        ['STEP'           , job.step],
+        ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
+        ['SECSTART'       , '192 1 0'],
+        ['SECSTOP'        , '202 0 0'],
+        ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_025.nc','by','1'"],
+        ['POTENTIAL_MODEL', "'WEIMER'"],
+        ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2000001-2000366.nc'"],
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"],
+        ['OPDIFFCAP'      , opdiffcap],
+        ] 
+#
+# Lines (keys) to remove from default:
+      self.list_rm = [
+        ['POWER'        , '0.'],
+        ['CTPOTEN'      , '0.'],
+        ['F107'         , '0.'],
+        ['F107A'        , '0.']]
+#
+# res5.0: step=60 -> 2 min/day * 10 days = 20 mins wc -> 30 minutes
+# res2.5: step=10 -> 25 min/day * 10 days = 250 mins -> 5.0 hours
+#
+      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
+      self.wc25_default = '5:00' # wallclock limit for 2.5-deg res (ys only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Climatology run with solar minimum:
