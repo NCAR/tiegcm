@@ -1030,7 +1030,6 @@
       real,dimension(lev0:lev1,lon0:lon1),intent(in) ::
      |  t,rms,ps1,ps2,n2,he,tr
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
-      real :: diffcap
 !
 ! Local:
       integer :: k,i
@@ -1059,7 +1058,7 @@
 !
       if (opdiffcap /= 0.) then ! default is off
         if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)") 
-     |    diffcap
+     |    opdiffcap
         where(ans(:,:) > opdiffcap)
           ans(:,:) = opdiffcap
         endwhere
