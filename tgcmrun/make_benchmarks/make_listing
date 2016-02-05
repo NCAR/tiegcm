@@ -1,0 +1,52 @@
+#!/bin/tcsh
+
+set mycwd = `pwd`
+set home = $mycwd
+set model = tiegcm
+set resolutions = ('5.0' '2.5')
+
+set filenames = ( \
+  out.list      \
+  nc.list       \
+  tails.list    \
+  timing.list   \
+# contents.list \
+)
+
+foreach file ($filenames)
+  set filepath = $home/$file
+  echo Making file $file \($filepath\)
+  echo "Make listings from $home" >! $filepath # overwrite any pre-existing
+  foreach res ($resolutions)
+    set dirs = ( \
+      $home/${model}_res${res}_climatology \
+      $home/${model}_res${res}_seasons \
+      $home/${model}_res${res}_storms \
+    )
+    foreach dir ($dirs)
+      cd $dir
+      echo " " >> $filepath
+      echo "Group path: $dir"       >> $filepath
+      set cases = `ls -d *`
+      foreach case ($cases)
+        if ($file == 'out.list'   ) ls -lF $case/stdout/*.out >> $filepath 
+        if ($file == 'tails.list' ) tail   $case/stdout/*.out >> $filepath 
+        if ($file == 'nc.list'    ) ls -lF $case/hist/*.nc    >> $filepath 
+#       if ($file == 'timing.list') fgrep 'Average secs' $case/stdout/*.out >>  $filepath
+        if ($file == 'timing.list') fgrep 'Elapsed run' $case/stdout/*.out >>  $filepath
+
+        if ($file == 'contents.list') then
+          echo "  Case path: $dir/$case/hist" >> $filepath
+          echo "  Case path: $dir/$case/hist"
+          foreach ncpath ($case/hist/*.nc)
+            set contents = `tgcm_ncdump $ncpath | grep 'contents = ' `
+            set ncfile = `/bin/basename $ncpath`
+            echo "    $ncfile:r $contents" >> $filepath
+            echo "    $ncfile:r $contents" 
+          end
+        endif
+
+      end # foreach case 
+    end # foreach dir
+  end # foreach res
+end # foreach file
