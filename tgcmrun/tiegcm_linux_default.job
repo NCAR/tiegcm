@@ -103,8 +103,8 @@ set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdou
 #
 # Report to stdout:
 #
-set svnversion = `svnversion $modeldir` || set svnversion = "[none]"
-echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svnversion)"
+set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
+echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svn_revision)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Make machine file: $make"
@@ -155,15 +155,15 @@ echo "Begin building $model in `pwd`"
 # Build Make.env file in exec dir, containing needed env vars for Makefile:
 #
 cat << EOF >! Make.env
-MAKE_MACHINE = $make
-DIRS         = . $srcdir 
-MPI          = $mpi
-NPROC        = $nproc
-EXECNAME     = $model
-NAMELIST     = $input
-OUTPUT       = $output
-DEBUG        = $debug
-SVN_VERSION  = $svnversion
+MAKE_MACHINE  = $make
+DIRS          = . $srcdir 
+MPI           = $mpi
+NPROC         = $nproc
+EXECNAME      = $model
+NAMELIST      = $input
+OUTPUT        = $output
+DEBUG         = $debug
+SVN_REVISION  = $svn_revision
 EOF
 #
 gmake machines.ini

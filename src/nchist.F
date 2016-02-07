@@ -22,10 +22,10 @@
       use init_module,only: istep,start_mtime
       implicit none
 !
-! Included file svn_version.inc contains the svn revision number used in the build.
-! (character(len=8) svn_version)
+! Included file svn_revision.inc contains the svn revision number used in the build.
+! (character(len=8) svn_revision)
 !
-#include "svn_version.inc"
+#include "svn_revision.inc"
 !
 #ifdef SUN
 #include <netcdf3.inc>
@@ -1935,8 +1935,9 @@
       endif
 !
 ! SVN version (see included file revision.inc, created by the build):
-      istat = nf_put_att_text(ncid,NF_GLOBAL,"svn_version",
-     +  len_trim(svn_version),trim(svn_version)) 
+      write(6,"('nc_define: svn_revision = ',a)") trim(svn_revision)
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"svn_revision",
+     +  len_trim(svn_revision),trim(svn_revision)) 
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
      +    'for SVN version global attribute')")
