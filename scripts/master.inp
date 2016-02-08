@@ -13,7 +13,7 @@
 ! SOURCE:       Start-up history file (for initial runs only)
 ! SOURCE_START: Time of history on start-up file (initial runs only)
 !
- SOURCE = '$TGCMDATA/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc'
+ SOURCE = '$TGCMDATA/tiegcm2.0/tiegcm_res5.0_mareqx_smin_prim.nc'
  SOURCE_START = 80,0,0 ! source time
 !
 ! START: Start time (day,hour,minute)
@@ -61,6 +61,7 @@
 !
 !HPSS_PATH = '/home/foster/tiegcm'
 !
+! Hough-mode tidal amplitudes and phases:
  TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
  TIDE2 = 0.,0.
 !

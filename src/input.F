@@ -401,31 +401,39 @@
 !        (/TGCM/data/magdat.nc was unchanged). This is still for 5.0h resolution.
 !
 ! Tide:
-      n = size(tide)-count(tide==spval)
-      if (n /= 10) then
-        write(6,"(/,'>>> INPUT: must have 10 entries for TIDE,',
-     |    ' got ',i3)") n
-        call shutdown('TIDE')
-      endif
-      do i=1,5
-        if (tide(i) < 0.) then
-          write(6,"(/,'>>> INPUT: amplitudes for TIDE(1:5) must ',
-     |      'be > 0.: tide=',/,(5e12.4))") tide
+      if (all(tide==spval)) then
+        tide(:) = 0.
+      else
+        n = size(tide)-count(tide==spval)
+        if (n /= 10) then
+          write(6,"(/,'>>> INPUT: must have 10 entries for TIDE,',
+     |      ' got ',i3)") n
           call shutdown('TIDE')
         endif
-      enddo
+        do i=1,5
+          if (tide(i) < 0.) then
+            write(6,"(/,'>>> INPUT: amplitudes for TIDE(1:5) must ',
+     |        'be > 0.: tide=',/,(5e12.4))") tide
+            call shutdown('TIDE')
+          endif
+        enddo
+      endif
 !
 ! Tide2:
-      n = size(tide2)-count(tide2==spval)
-      if (n /= 2) then
-        write(6,"(/,'>>> INPUT: must have 2 entries for TIDE2,',
-     |    ' got ',i3)") n
-        call shutdown('TIDE2')
-      endif
-      if (tide2(1) < 0.) then
-        write(6,"(/,'>>> INPUT: amplitude for TIDE2(1) must ',
-     |    'be > 0.: tide2=',e12.4)") tide2
-        call shutdown('TIDE2')
+      if (all(tide2==spval)) then
+        tide2(:) = 0.
+      else
+        n = size(tide2)-count(tide2==spval)
+        if (n /= 2) then
+          write(6,"(/,'>>> INPUT: must have 2 entries for TIDE2,',
+     |      ' got ',i3)") n
+          call shutdown('TIDE2')
+        endif
+        if (tide2(1) < 0.) then
+          write(6,"(/,'>>> INPUT: amplitude for TIDE2(1) must ',
+     |      'be > 0.: tide2=',e12.4)") tide2
+          call shutdown('TIDE2')
+        endif
       endif
 !
 ! Tide3m3 not in tiegcm:

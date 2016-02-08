@@ -3,7 +3,7 @@
  START_YEAR = 2002
  START_DAY  = 80
  CALENDAR_ADVANCE = 1
- SOURCE = '$TGCMDATA/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc'
+ SOURCE = '$TGCMDATA/tiegcm2.0/tiegcm_res5.0_mareqx_smin_prim.nc'
  SOURCE_START = 80 0 0
  START = 80 0 0
  STOP  = 81 0 0
@@ -19,8 +19,6 @@
  SECFLDS = 'TN' 'UN' 'VN' 'O2' 'O1' 'N2' 'NO' 'N4S' 'HE' 'NE' 'TE' 'TI'
            'TEC' 'O2P' 'OP' 'OMEGA' 'POTEN' 'UI_ExB' 'VI_ExB' 'WI_ExB' 
            'DEN' 'QJOULE' 'HMF2' 'NMF2' 'Z' 'ZG'
- TIDE = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
- TIDE2 = 0. 0.
  GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_5.0d_99km.nc'
  GSWM_MI_SDI_NCFILE = '$TGCMDATA/gswm_semi_5.0d_99km.nc'
  POTENTIAL_MODEL = 'HEELIS'

@@ -1185,6 +1185,7 @@ NUMBER\tNAME\t\tDESCRIPTION
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Climatology run with solar maximum:
+# Solar max run can crash around day 85 if STEP > 20 seconds.
 #
     elif self.name == 'climatology_smax':
 
@@ -1192,6 +1193,11 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+
+      if job.model_res == '2.5': 
+        if int(job.step) > 20: 
+          print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 20 seconds'
+          job.step = '20' # force timestep for res2.5 to 20 seconds
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
