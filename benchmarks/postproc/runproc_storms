@@ -1,0 +1,127 @@
+#!/bin/tcsh
+#
+# Make runs of post-processor to generate plots from storm case benchmark runs:
+# (instantaneous and time-dependent)
+#
+set proc = tgcmproc_f90/tgcmproc/tgcmproc        # python code to make multiple proc runs
+set home = /glade/p/hao/tgcm/tiegcm_benchmarks   # base working directory
+
+set resolutions = ( \
+# '5.0' \
+  '2.5' \
+)
+
+foreach res ($resolutions)
+
+  if ($res == '5.0') then
+    set exec = tgcmproc_f90/build/tgcmproc_sres_f90  # single-res processor executable
+  else if ($res == '2.5') then
+    set exec = tgcmproc_f90/build/tgcmproc_dres_f90  # double-res processor executable
+  else
+    echo ">>> Unknown resolution: $res"
+    exit 
+  endif
+ 
+  set runs = ( \
+    tiegcm_res${res}_dec2006_heelis_gpi \
+    tiegcm_res${res}_dec2006_weimer_imf \
+    tiegcm_res${res}_nov2003_heelis_gpi \
+    tiegcm_res${res}_nov2003_weimer_imf \
+    tiegcm_res${res}_whi2008_heelis_gpi \
+    tiegcm_res${res}_whi2008_weimer_imf \
+    tiegcm_res${res}_jul2000_heelis_gpi \
+    tiegcm_res${res}_jul2000_weimer_imf \
+  )
+ 
+  set case   = tiegcm_res${res}_storms
+  set work   = $home/$case
+ 
+  foreach run ($runs)
+    echo "------------------ $run --------------------"
+    set outdir  = $work/$run/proc
+    set histdir = $work/$run/hist
+#
+#------------------------------------------------------------------------------------------
+#
+# Instantaneous maps, slices, etc at last history: 
+# (should pick out peak conditions for each storm, rather than only last history)
+#
+    $proc -submit yes -executable $exec -singleut=1 \
+      -nlfile $outdir/${run}_singleut.inp -stdout $outdir/${run}_singleut.out \
+      -flnm_ps $outdir/${run}_singleut.ps $histdir/\*sech\*.nc
+    echo Completed singleut for run $run
+#
+#------------------------------------------------------------------------------------------
+#
+# Time-dependent plots with day/ut on x-axis:
+#
+# December 2006 storm (days 330 -> 360):
+#
+    if ($run == "tiegcm_res${res}_dec2006_heelis_gpi" || \
+        $run == "tiegcm_res${res}_dec2006_weimer_imf") then
+#
+# dec2006 primaries: days 330,0,0 to 360,0,0:
+      $proc -submit yes -executable $exec -multiut 1 -mtimes "330,0,0,'to',360,0,0,'by',1440" \
+        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+        -flnm_ps $outdir/${run}_days330-360.ps $histdir/\*prim\*.nc
+      echo "Completed multiut for run $run (days 330-360 (daily))"
+#
+# dec2006 secondaries: 347,0,0 -> 352,0,0:
+      $proc -submit yes -executable $exec -multiut 1 -mtimes "347,0,0,'to',352,0,0,'by',60" \
+        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+        -flnm_ps $outdir/${run}_days347-352.ps $histdir/\*sech\*.nc
+      echo "Completed multiut for run $run (days 347-352 (hourly))"
+#
+#------------------------------------------------------------------------------------------
+# November 2003 storm (days323-328): (should this run be expanded?)
+#
+    else if ($run == "tiegcm_res${res}_nov2003_heelis_gpi" || \
+            $run == "tiegcm_res${res}_nov2003_weimer_imf") then
+#
+# nov2003 primaries: 323 -> 328 daily
+# nov2003 secondaries: 323,1,0 -> 328,0,0 hourly
+#
+      $proc -submit yes -executable $exec -multiut 1 -mtimes "323,1,0,'to',328,0,0,'by',60" \
+        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+        -flnm_ps $outdir/${run}_days323-328.ps $histdir/\*sech\*.nc
+      echo "Completed multiut for run $run (days 323-328 (hourly))"
+#
+#------------------------------------------------------------------------------------------
+# Whole Heliosphere Interval days 81-106:
+#
+    else if ($run == "tiegcm_res${res}_whi2008_heelis_gpi" || \
+             $run == "tiegcm_res${res}_whi2008_weimer_imf") then
+#
+# whi2008 primaries: days 81-106:
+      $proc -submit yes -executable $exec -multiut 1 -mtimes "81,0,0,'to',106,0,0,'by',1440" \
+        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+        -flnm_ps $outdir/${run}_days081-106.ps $histdir/\*prim\*.nc
+      echo "Completed multiut for run $run (days 81-106 (daily))"
+#
+# whi2008 secondaries (available for days 81-106): plot days 85-90:
+      $proc -submit yes -executable $exec -multiut 1 -mtimes "85,0,0,'to',90,0,0,'by',60" \
+        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+        -flnm_ps $outdir/${run}_days085-090.ps $histdir/\*sech\*.nc
+      echo "Completed multiut for run $run (days 85-90 (hourly))"
+#
+#------------------------------------------------------------------------------------------
+# July, 2000 storm (days 192-202) (main storm around day 198):
+#
+# Days 192-202, hourly:
+    else if ($run == "tiegcm_res${res}_jul2000_heelis_gpi" || \
+             $run == "tiegcm_res${res}_jul2000_weimer_imf") then
+      $proc -submit yes -executable $exec -multiut=1 -mtimes "192,1,0,'to',202,0,0,'by',60" \
+        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+        -flnm_ps $outdir/${run}_days192-202.ps $histdir/\*sech\*.nc
+        echo "Completed multiut for run $run (days 192-202, hourly)" 
+#
+# Days 196-200, hourly:
+      $proc -submit yes -executable $exec -multiut=1 -mtimes "196,1,0,'to',200,0,0,'by',60" \
+        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
+        -flnm_ps $outdir/${run}_days196-200.ps $histdir/\*sech\*.nc
+        echo "Completed multiut for run $run (days 196-200, hourly)" 
+    endif
+  end # foreach run
+end # foreach res
+#
+#---------------------------------------------------------------------------------------

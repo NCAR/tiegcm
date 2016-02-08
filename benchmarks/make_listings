@@ -1,17 +1,20 @@
 #!/bin/tcsh
-
+#
+# Make listings of log files, history files, post-processing, etc.
+#
 set mycwd = `pwd`
 set home = $mycwd
 set model = tiegcm
 set resolutions = ('5.0' '2.5')
 
-set filenames = ( \
-  out.list      \
-  nc.list       \
-  tails.list    \
-  timing.list   \
-# contents.list \
-)
+ set filenames = ( \
+   out.list      \
+   tails.list    \
+   nc.list       \
+   timing.list   \
+   ps.list       \
+#  contents.list \
+ )
 
 foreach file ($filenames)
   set filepath = $home/$file
@@ -25,15 +28,17 @@ foreach file ($filenames)
     )
     foreach dir ($dirs)
       cd $dir
-      echo " " >> $filepath
-      echo "Group path: $dir"       >> $filepath
+      echo " "           >> $filepath
+      echo "Group: $dir" >> $filepath
       set cases = `ls -d *`
       foreach case ($cases)
+        echo "Case $case" >> $filepath
         if ($file == 'out.list'   ) ls -lF $case/stdout/*.out >> $filepath 
         if ($file == 'tails.list' ) tail   $case/stdout/*.out >> $filepath 
         if ($file == 'nc.list'    ) ls -lF $case/hist/*.nc    >> $filepath 
 #       if ($file == 'timing.list') fgrep 'Average secs' $case/stdout/*.out >>  $filepath
-        if ($file == 'timing.list') fgrep 'Elapsed run' $case/stdout/*.out >>  $filepath
+        if ($file == 'timing.list') fgrep 'Elapsed run' $case/stdout/*.out  >>  $filepath
+        if ($file == 'ps.list'    ) ls -lF $case/proc/*.ps    >> $filepath
 
         if ($file == 'contents.list') then
           echo "  Case path: $dir/$case/hist" >> $filepath
