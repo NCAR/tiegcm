@@ -1,6 +1,6 @@
 #!/bin/tcsh
 #
-# Make seasonal climatology runs of tiegcm (equinox, solstice, solar minmax)
+# Make seasonal climatology runs of tiegcm (equinox, solstice, solar min,max)
 #
 # $home:      Base working directory
 # $modelroot: Model root directory (with src, scripts, etc)
@@ -11,66 +11,37 @@
  set tgcmrun   = $modelroot/tgcmrun/tgcmrun
  set queue     = regular # for LSF jobs
  set submit    = yes     # if yes, execute or submit, as appropriate
- set clean     = yes     # if yes, remove stdout, exec, and hist directories before each run
 
- set runnames = ( \
-#  decsol_smax \
-#  decsol_smin \
-   junsol_smax \
-#  junsol_smin \
-#  mareqx_smax \
-#  mareqx_smin \
-#  sepeqx_smax \
-#  sepeqx_smin \
+ set resolutions = ( \
+   '5.0' \
+   '2.5' \
  )
 
- set res50 = 0
- set res25 = 1
-#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-if (! $res50) then
-  echo Not running res5.0 cases
-  goto do25
-endif
-#
-# TIEGCM 5.0-deg res: 
-#
- set res = 5.0
- set model = tiegcm_res${res}
- set benchmark = ${model}_seasons
- set stdoutdir = $home/$benchmark
- set execdir   = $home/$benchmark
- set histdir   = $home/$benchmark
+ set runs = ( \
+   decsol_smax \
+   decsol_smin \
+   junsol_smax \
+   junsol_smin \
+   mareqx_smax \
+   mareqx_smin \
+   sepeqx_smax \
+   sepeqx_smin \
+ )
 
- foreach runname ($runnames)
-   set case = ${model}_${runname}
-   if (clean == 'yes') /bin/rm -vr $home/$benchmark/$case/*
-   $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res \
-     -model_root $modelroot -submit $submit -stdout_dir $stdoutdir/$case/stdout \
-     -execdir $execdir/$case/exec -hist_dir $histdir/$case/hist
- end
-#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-do25:
-if (! $res25) then
-  echo Not running res2.5 cases
-  exit
-endif
-#
-# TIEGCM 2.5-deg res:
-#
- set res = 2.5
- set model = tiegcm_res${res}
- set benchmark = ${model}_seasons
- set stdoutdir = $home/$benchmark
- set execdir   = $home/$benchmark
- set histdir   = $home/$benchmark
+foreach res ($resolutions)
 
- foreach runname ($runnames)
-   set case = ${model}_${runname}
-   if (clean == 'yes') /bin/rm -vr $home/$benchmark/$case/*
-   $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res \
-     -model_root $modelroot -submit $submit -stdout_dir $stdoutdir/$case/stdout \
-     -execdir $execdir/$case/exec -hist_dir $histdir/$case/hist
- end
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  set case   = tiegcm_res${res}_seasons
+  set work   = $home/$case
+ 
+  foreach run ($runs)
+    echo "------------------ $run --------------------"
+    set stdout  = $work/tiegcm_res${res}_$run/stdout
+    set histdir = $work/tiegcm_res${res}_$run/hist
+    set execdir = $work/tiegcm_res${res}_$run/exec
+   
+   $tgcmrun -q $queue -run_name $run -model_name tiegcm -model_res $res \
+     -model_root $modelroot -stdout_dir $stdout -execdir $execdir \
+     -hist_dir $histdir -submit $submit
+  end # foreach run
+
+end # foreach res

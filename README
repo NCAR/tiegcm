@@ -3,7 +3,8 @@ Model root directory for TIEGCM:
 
 Subdir		Description		Summary of Contents
 ----------------------------------------------------------------------------------
-doc/		Documentation		User Guide, Model Description, Release Doc
+benchmarks/     Benchmark scripts       Scripts that use tgcmrun to make benchmark runs
+doc/		Documentation		User Guide, Model Description, Release Docs
 scripts/	Support scripts 	Job scripts, Make files, Utilities
 src/		Source code		Source files *.F, *.h
 tgcmrun/	Benchmark tests		Python program to make benchmark runs

@@ -1152,6 +1152,15 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+#
+# 5-deg model at 60-sec timestep can simulate a full year in < 12 hours:
+#   step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
+# 2.5-deg model at 30-sec timestep can complete 80 days in < 12 hours:
+#   step=30 -> 8.2 min/day * 80 days = 656 mins / 60 = 11 hours
+#
+      stop = '366,0,0' # step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
+      if job.model_res == '2.5': 
+        stop = '80,0,0'
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1160,7 +1169,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SOURCE'         , source],
         ['SOURCE_START'   , '1 0 0'],
         ['START'          , '1 0 0'],
-        ['STOP'           , '5 0 0'],
+        ['STOP'           , stop],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_020.nc','by','1'"],
         ['MXHIST_PRIM'    , '20'],     # default is 10
@@ -1179,8 +1188,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['MXHIST_SECH' ,''],
         ['SECFLDS'     ,'']]
 #
-      self.wc50_default = '00:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '00:30' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '12:00' # wallclock limit for 5.0-deg res (ys only)
+      self.wc25_default = '12:00' # wallclock limit for 2.5-deg res (ys only)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
@@ -1193,11 +1202,20 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
-
+#
+# 5-deg model at 60-sec timestep can simulate a full year in < 12 hours:
+#   step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
+#
+# Climatology smax at 2.5-deg requires a 20-sec timestep:
+# 2.5-deg model at 20-sec timestep can complete 55 days in < 12 hours:
+#   step=20 -> 12.2 min/day * 55 days = 671 mins / 60 = 11 hours
+#
+      stop = '366,0,0' # step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
       if job.model_res == '2.5': 
         if int(job.step) > 20: 
           print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 20 seconds'
           job.step = '20' # force timestep for res2.5 to 20 seconds
+        stop = '55,0,0'
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1206,7 +1224,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SOURCE'         , source],
         ['SOURCE_START'   , '1 0 0'],
         ['START'          , '1 0 0'],
-        ['STOP'           , '5 0 0'],
+        ['STOP'           , stop],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_020.nc','by','1'"],
         ['MXHIST_PRIM'    , '20'],     # default is 10
@@ -1225,6 +1243,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['MXHIST_SECH' ,''],
         ['SECFLDS'     ,'']]
 #
-      self.wc50_default = '00:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '00:30' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '12:00' # wallclock limit for 5.0-deg res (ys only)
+      self.wc25_default = '12:00' # wallclock limit for 2.5-deg res (ys only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

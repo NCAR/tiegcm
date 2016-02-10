@@ -1,82 +1,93 @@
 #!/bin/tcsh
 #
-# Make runs of post-processor to generate plots from climatology benchmark runs:
-# (instantaneous and time-dependent)
+# Make runs of post-processor to generate plots from one-year climatology benchmark runs:
 #
-set proc = tgcmproc_f90/tgcmproc/tgcmproc        # python code to make multiple proc runs
-set home = /glade/p/hao/tgcm/tiegcm_benchmarks   # base working directory
+set mycwd = `pwd`
+set home = /glade/p/hao/tgcm/tiegcm_benchmarks            # base working directory
+set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make multiple proc runs
 
-set res50 = 1
-set res25 = 1
+set singleut = no  # generally do not make instantaneous plots for climatology
+set multiut = yes  # make time slices (ut on x-axis)
+set select = yes   # less comprehensive (fewer fields, fewer plots)
 
-#---------------------------------------------------------------------------------------
-if (! $res50) then
-  echo Not doing res5.0
-  goto do25
-endif
+set resolutions = ( \
+  '5.0' \
+# '2.5' \
+)
 
-set res  = 5.0
-set exec = tgcmproc_f90/build/tgcmproc_sres_f90  # processor executable (resolution dependent)
- 
-set runs = (tiegcm_res${res}_climatology_smax \
-            tiegcm_res${res}_climatology_smin )
- 
-set case   = tiegcm_res${res}_climatology
-set work   = $home/$case
- 
-foreach run ($runs)
-  echo "------------------ $run --------------------"
-  set outdir  = $work/$run/proc
-  set histdir = $work/$run/hist
+foreach res ($resolutions)
+
+  if ($res == '5.0') then
+    set exec = $home/postproc/tgcmproc_f90/build/tgcmproc_sres_f90  # single-res processor executable
+  else if ($res == '2.5') then
+    set exec = $home/postproc/tgcmproc_f90/build/tgcmproc_dres_f90  # double-res processor executable
+  else
+    echo ">>> Unknown resolution: $res"
+    exit 
+  endif
+
+  set runs = ( \
+    tiegcm_res${res}_climatology_smax \
+    tiegcm_res${res}_climatology_smin \
+  )
+
+  set case   = tiegcm_res${res}_climatology
+  set work   = $home/$case
+
+  foreach run ($runs)
+    echo "------------------ $run --------------------"
+    set outdir  = $work/$run/proc
+    set histdir = $work/$run/hist
 #
-# Instantaneous maps, slices, etc at last history: 
+# All file paths are absolute, except for history files, which are relative to $histdir
 #
-  $proc -submit yes -executable $exec -singleut=1 \
-    -nlfile $outdir/${run}_singleut.inp -stdout $outdir/${run}_singleut.out \
-    -flnm_ps $outdir/${run}_singleut.ps $histdir/\*prim\*.nc
-  echo Completed singleut for run $run
+    cd $histdir
+    echo tgcmproc moved to $histdir
+#
+# Instantaneous maps, slices, etc, at last history: 
+#
+#   if ($singleut == 'yes') then
+#     $proc -submit yes -executable $exec -singleut=1 \
+#       -nlfile $outdir/${run}_singleut.inp -stdout $outdir/${run}_singleut.out \
+#       -flnm_ps $outdir/${run}_singleut.ps $histdir/\*sech\*.nc
+#     echo Completed singleut for run $run
+#   endif
 #
 # Time-dependent plots with day/ut on x-axis:
 #
-  $proc -submit yes -executable $exec -multiut=1 \
-    -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
-    -flnm_ps $outdir/${run}_multiut.ps $histdir/\*prim\*.nc
-  echo Completed multiut for run $run
-end
-
-#---------------------------------------------------------------------------------------
-do25:
-if (! $res25) then
-  echo Not doing res2.5
-  exit 
-endif
-#---------------------------------------------------------------------------------------
-
-set res  = 2.5
-set exec = tgcmproc_f90/build/tgcmproc_dres_f90  # processor executable (resolution dependent)
-
-set runs = (tiegcm_res${res}_climatology_smax \
-            tiegcm_res${res}_climatology_smin )
-
-set case   = tiegcm_res${res}_climatology
-set work   = $home/$case
-
-foreach run ($runs)
-  echo "------------------ $run --------------------"
-  set outdir = $work/$run/proc
-  set histdir = $work/$run/hist
+    set mtimes = "1,0,0,'to',365,0,0,'by',1440"
+    if ($multiut == 'yes') then
+      $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
+        -nlfile  $outdir/${run}_daily.inp \
+        -stdout  $outdir/${run}_daily.out \
+        -flnm_ps $outdir/${run}_daily.ps  \
+        \*prim\*.nc
+      echo Completed multiut daily for $run
+    endif
 #
-# Instantaneous maps, slices, etc at last history: 
+# "Select" means fewer fields and fewer plots:
 #
-  $proc -submit yes -executable $exec -singleut=1 \
-    -nlfile $outdir/${run}_singleut.inp -stdout $outdir/${run}_singleut.out \
-    -flnm_ps $outdir/${run}_singleut.ps $histdir/\*prim\*.nc
-  echo Completed singleut for run $run
-#
-# Time-dependent plots with day/ut on x-axis:
-#
-  $proc -submit yes -executable $exec -multiut=1 \
-    -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
-    -flnm_ps $outdir/${run}_multiut.ps $histdir/\*prim\*.nc
-  echo Completed multiut for run $run
-end
+    if ($select == 'yes') then
+      set cfields = "'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
+
+      $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
+        -nlfile  $outdir/${run}_daily_select.inp \
+        -stdout  $outdir/${run}_daily_select.out \
+        -flnm_ps $outdir/${run}_daily_select.ps  \
+        -cfields $cfields \
+        \*prim\*.nc
+      echo Completed multiut daily select for $run
+
+#     $proc -submit yes -executable $exec -singleut=1 \
+#       -nlfile  $outdir/${run}_singleut_select.inp \
+#       -stdout  $outdir/${run}_singleut_select.out \
+#       -flnm_ps $outdir/${run}_singleut_select.ps  \
+#       -fmap_zpht '-4. 0. 2. 4.' \
+#       -cfields $cfields \
+#       \*prim\*.nc
+    endif # select
+
+  end # foreach run
+  cd $mycwd
+  echo tgcmproc moved back to $mycwd
+end # foreach res

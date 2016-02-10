@@ -8,12 +8,12 @@ set model = tiegcm
 set resolutions = ('5.0' '2.5')
 
  set filenames = ( \
-   out.list      \
-   tails.list    \
-   nc.list       \
-   timing.list   \
-   ps.list       \
-#  contents.list \
+   list.stdout   \
+   list.tails    \
+   list.ncfiles  \
+   list.timing   \
+   list.psfiles  \
+#  list.contents \
  )
 
 foreach file ($filenames)
@@ -33,14 +33,14 @@ foreach file ($filenames)
       set cases = `ls -d *`
       foreach case ($cases)
         echo "Case $case" >> $filepath
-        if ($file == 'out.list'   ) ls -lF $case/stdout/*.out >> $filepath 
-        if ($file == 'tails.list' ) tail   $case/stdout/*.out >> $filepath 
-        if ($file == 'nc.list'    ) ls -lF $case/hist/*.nc    >> $filepath 
-#       if ($file == 'timing.list') fgrep 'Average secs' $case/stdout/*.out >>  $filepath
-        if ($file == 'timing.list') fgrep 'Elapsed run' $case/stdout/*.out  >>  $filepath
-        if ($file == 'ps.list'    ) ls -lF $case/proc/*.ps    >> $filepath
+        if ($file == 'list.stdout' ) ls -lF $case/stdout/*.out >> $filepath 
+        if ($file == 'list.tails'  ) tail   $case/stdout/*.out >> $filepath 
+        if ($file == 'list.ncfiles') ls -lF $case/hist/*.nc    >> $filepath 
+#       if ($file == 'list.timing' ) fgrep 'Average secs' $case/stdout/*.out >>  $filepath
+        if ($file == 'list.timing' ) fgrep 'Elapsed run' $case/stdout/*.out  >>  $filepath
+        if ($file == 'list.psfiles') ls -lF $case/proc/*.ps    >> $filepath
 
-        if ($file == 'contents.list') then
+        if ($file == 'list.contents') then
           echo "  Case path: $dir/$case/hist" >> $filepath
           echo "  Case path: $dir/$case/hist"
           foreach ncpath ($case/hist/*.nc)

@@ -1,6 +1,6 @@
 #!/bin/tcsh
 #
-# Make storm case benchmark runs of tiegcm (heelis/gpi, weimer/imf)
+# Make storm case runs of tiegcm (dec2006, jul2000, nov2003, whi2008)
 #
 # $home:      Base working directory
 # $modelroot: Model root directory (with src, scripts, etc)
@@ -11,66 +11,38 @@
  set tgcmrun   = $modelroot/tgcmrun/tgcmrun
  set queue     = regular # for LSF jobs
  set submit    = yes     # if yes, execute or submit, as appropriate
- set clean     = yes     # if yes, remove stdout, exec, and hist directories before each run
 
- set runnames = ( \
+ set resolutions = ( \
+   '5.0' \
+   '2.5' \
+ )
+
+ set runs = ( \
    dec2006_heelis_gpi \
    dec2006_weimer_imf \
+   jul2000_heelis_gpi \
+   jul2000_weimer_imf \
    nov2003_heelis_gpi \
    nov2003_weimer_imf \
    whi2008_heelis_gpi \
    whi2008_weimer_imf \
-   jul2000_heelis_gpi \
-   jul2000_weimer_imf \
  )
 
- set res50 = 1
- set res25 = 1
-#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-if (! $res50) then
-  echo Not running res5.0 cases
-  goto do25
-endif
-#
-# TIEGCM 5.0-deg res: 
-#
- set res = 5.0
- set model = tiegcm_res${res}
- set benchmark = ${model}_storms
- set stdoutdir = $home/$benchmark
- set execdir   = $home/$benchmark
- set histdir   = $home/$benchmark
+foreach res ($resolutions)
 
- foreach runname ($runnames)
-   set case = ${model}_${runname}
-   if (clean == 'yes') /bin/rm -vr $home/$benchmark/$case/*
-   $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
-     -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec \
-     -hist_dir $histdir/$case/hist
- end
-#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-do25:
-if (! $res25) then
-  echo Not running res2.5 cases
-  exit
-endif
-#
-# TIEGCM 2.5-deg res:
-#
- set res = 2.5
- set model = tiegcm_res${res}
- set benchmark = ${model}_storms
- set stdoutdir = $home/$benchmark
- set execdir   = $home/$benchmark
- set histdir   = $home/$benchmark
+  set case   = tiegcm_res${res}_storms
+  set work   = $home/$case
+ 
+  foreach run ($runs)
+    echo "------------------ $run --------------------"
+    set stdout  = $work/tiegcm_res${res}_$run/stdout
+    set histdir = $work/tiegcm_res${res}_$run/hist
+    set execdir = $work/tiegcm_res${res}_$run/exec
+   
+   $tgcmrun -q $queue -run_name $run -model_name tiegcm -model_res $res \
+     -model_root $modelroot -stdout_dir $stdout -execdir $execdir \
+     -hist_dir $histdir -submit $submit
+  end # foreach run
 
- foreach runname ($runnames)
-   set case = ${model}_${runname}
-   if (clean == 'yes') /bin/rm -vr $home/$benchmark/$case/*
-   $tgcmrun -q $queue -run_name $runname -model_name tiegcm -model_res $res -model_root $modelroot \
-     -submit $submit -stdout_dir $stdoutdir/$case/stdout -execdir $execdir/$case/exec \
-     -hist_dir $histdir/$case/hist
- end
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+end # foreach res
+

@@ -3,20 +3,25 @@
 # Make runs of post-processor to generate plots from storm case benchmark runs:
 # (instantaneous and time-dependent)
 #
-set proc = tgcmproc_f90/tgcmproc/tgcmproc        # python code to make multiple proc runs
-set home = /glade/p/hao/tgcm/tiegcm_benchmarks   # base working directory
+set mycwd = `pwd`
+set home = /glade/p/hao/tgcm/tiegcm_benchmarks            # base working directory
+set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make multiple proc runs
+
+set singleut = yes # make instantaneous plots
+set multiut = yes  # make time slices (ut on x-axis)
+set select = yes   # less comprehensive (fewer fields, fewer plots)
 
 set resolutions = ( \
-# '5.0' \
+  '5.0' \
   '2.5' \
 )
 
 foreach res ($resolutions)
 
   if ($res == '5.0') then
-    set exec = tgcmproc_f90/build/tgcmproc_sres_f90  # single-res processor executable
+    set exec = $home/postproc/tgcmproc_f90/build/tgcmproc_sres_f90  # single-res processor executable
   else if ($res == '2.5') then
-    set exec = tgcmproc_f90/build/tgcmproc_dres_f90  # double-res processor executable
+    set exec = $home/postproc/tgcmproc_f90/build/tgcmproc_dres_f90  # double-res processor executable
   else
     echo ">>> Unknown resolution: $res"
     exit 
@@ -35,93 +40,245 @@ foreach res ($resolutions)
  
   set case   = tiegcm_res${res}_storms
   set work   = $home/$case
+
+  if ($select == 'yes') then # reduced field set:
+    set cfields = "'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
+  endif
  
   foreach run ($runs)
     echo "------------------ $run --------------------"
     set outdir  = $work/$run/proc
     set histdir = $work/$run/hist
 #
-#------------------------------------------------------------------------------------------
+# All file paths are absolute, except for history files, which are relative to $histdir
 #
-# Instantaneous maps, slices, etc at last history: 
-# (should pick out peak conditions for each storm, rather than only last history)
-#
-    $proc -submit yes -executable $exec -singleut=1 \
-      -nlfile $outdir/${run}_singleut.inp -stdout $outdir/${run}_singleut.out \
-      -flnm_ps $outdir/${run}_singleut.ps $histdir/\*sech\*.nc
-    echo Completed singleut for run $run
+    cd $histdir
+    echo tgcmproc moved to $histdir
 #
 #------------------------------------------------------------------------------------------
 #
+# Instantaneous maps, slices, etc, usually at about peak storm conditions:
+#
+    if ($run == "tiegcm_res${res}_dec2006_heelis_gpi" || \
+        $run == "tiegcm_res${res}_dec2006_weimer_imf") set mtimes = '349,12,0'
+    if ($run == "tiegcm_res${res}_jul2000_heelis_gpi" || \
+        $run == "tiegcm_res${res}_jul2000_weimer_imf") set mtimes = '198,0,0'
+    if ($run == "tiegcm_res${res}_nov2003_heelis_gpi" || \
+        $run == "tiegcm_res${res}_nov2003_weimer_imf") set mtimes = '325,0,0'
+    if ($run == "tiegcm_res${res}_whi2008_heelis_gpi" || \
+        $run == "tiegcm_res${res}_whi2008_weimer_imf") set mtimes = '88,0,0'
+
+    if ($singleut == 'yes') then
+      $proc -submit yes -executable $exec -singleut=1 -mtimes $mtimes \
+        -nlfile $outdir/${run}_singleut.inp \
+        -stdout $outdir/${run}_singleut.out \
+        -flnm_ps $outdir/${run}_singleut.ps \
+        \*sech\*.nc
+      echo Completed singleut run for $run
+    endif
+
+    if ($select == 'yes') then # reduced field set:
+      $proc -submit yes -executable $exec -singleut=1 -mtimes $mtimes \
+        -nlfile $outdir/${run}_singleut_select.inp \
+        -stdout $outdir/${run}_singleut_select.out \
+        -flnm_ps $outdir/${run}_singleut_select.ps \
+        -fmap_zpht '-4. 0. 2. 4.' \
+        -cfields $cfields \
+        \*sech\*.nc
+      echo Completed singleut select run for $run
+    endif
+#
+#------------------------------------------------------------------------------------------
 # Time-dependent plots with day/ut on x-axis:
 #
 # December 2006 storm (days 330 -> 360):
 #
     if ($run == "tiegcm_res${res}_dec2006_heelis_gpi" || \
         $run == "tiegcm_res${res}_dec2006_weimer_imf") then
+
+      if ($multiut == 'yes') then
 #
-# dec2006 primaries: days 330,0,0 to 360,0,0:
-      $proc -submit yes -executable $exec -multiut 1 -mtimes "330,0,0,'to',360,0,0,'by',1440" \
-        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
-        -flnm_ps $outdir/${run}_days330-360.ps $histdir/\*prim\*.nc
-      echo "Completed multiut for run $run (days 330-360 (daily))"
+# dec2006 primaries: daily days 330 to 360:
+        set mtimes = "330,0,0,'to',360,0,0,'by',1440"
+        set days = "days330-360"
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_$days.inp \
+          -stdout  $outdir/${run}_$days.out \
+          -flnm_ps $outdir/${run}_$days.ps  \
+          \*prim\*.nc
+        echo "Completed multiut for run $run ($days (daily))"
 #
-# dec2006 secondaries: 347,0,0 -> 352,0,0:
-      $proc -submit yes -executable $exec -multiut 1 -mtimes "347,0,0,'to',352,0,0,'by',60" \
-        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
-        -flnm_ps $outdir/${run}_days347-352.ps $histdir/\*sech\*.nc
-      echo "Completed multiut for run $run (days 347-352 (hourly))"
+# dec2006 secondaries: 347,0,0 -> 352,0,0, hourly:
+        set mtimes = "347,0,0,'to',352,0,0,'by',60"
+        set days = "days347-352"
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_$days.inp \
+          -stdout  $outdir/${run}_$days.out \
+          -flnm_ps $outdir/${run}_$days.ps  \
+          \*sech\*.nc
+        echo "Completed multiut for run $run ($days (hourly))"
+      endif # doing multiut
+
+      if ($select == 'yes') then
+        set mtimes = "330,0,0,'to',360,0,0,'by',1440"
+        set days = "days330-360"
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_${days}_select.inp \
+          -stdout  $outdir/${run}_${days}_select.out \
+          -flnm_ps $outdir/${run}_${days}_select.ps  \
+          -cfields $cfields \
+          \*prim\*.nc
+        echo "Completed multiut select for run $run ($days (daily))"
+
+        set mtimes = "347,0,0,'to',352,0,0,'by',60"
+        set days = "days347-352"
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_${days}_select.inp \
+          -stdout  $outdir/${run}_${days}_select.out \
+          -flnm_ps $outdir/${run}_${days}_select.ps  \
+          -cfields $cfields \
+          \*sech\*.nc
+        echo "Completed multiut select for run $run ($days (hourly))"
+      endif # doing select
+    endif # run
 #
 #------------------------------------------------------------------------------------------
 # November 2003 storm (days323-328): (should this run be expanded?)
 #
-    else if ($run == "tiegcm_res${res}_nov2003_heelis_gpi" || \
-            $run == "tiegcm_res${res}_nov2003_weimer_imf") then
+    if ($run == "tiegcm_res${res}_nov2003_heelis_gpi" || \
+        $run == "tiegcm_res${res}_nov2003_weimer_imf") then
 #
 # nov2003 primaries: 323 -> 328 daily
 # nov2003 secondaries: 323,1,0 -> 328,0,0 hourly
 #
-      $proc -submit yes -executable $exec -multiut 1 -mtimes "323,1,0,'to',328,0,0,'by',60" \
-        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
-        -flnm_ps $outdir/${run}_days323-328.ps $histdir/\*sech\*.nc
-      echo "Completed multiut for run $run (days 323-328 (hourly))"
+      set mtimes = "323,1,0,'to',328,0,0,'by',60"
+      set days = "days323-328"
+      if ($multiut == 'yes') then
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile $outdir/${run}_$days.inp \
+          -stdout $outdir/${run}_$days.out \
+          -flnm_ps $outdir/${run}_$days.ps \
+          \*sech\*.nc
+        echo "Completed multiut run for $run ($days (hourly))"
+      endif
+      if ($select == 'yes') then # use selected fields list
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile $outdir/${run}_${days}_select.inp \
+          -stdout $outdir/${run}_${days}_select.out \
+          -flnm_ps $outdir/${run}_${days}_select.ps   \
+          -cfields $cfields \
+          \*sech\*.nc
+        echo "Completed multiut select run for $run ($days (hourly))"
+      endif # doing select
+    endif # run
 #
 #------------------------------------------------------------------------------------------
 # Whole Heliosphere Interval days 81-106:
 #
-    else if ($run == "tiegcm_res${res}_whi2008_heelis_gpi" || \
-             $run == "tiegcm_res${res}_whi2008_weimer_imf") then
+    if ($run == "tiegcm_res${res}_whi2008_heelis_gpi" || \
+        $run == "tiegcm_res${res}_whi2008_weimer_imf") then
 #
 # whi2008 primaries: days 81-106:
-      $proc -submit yes -executable $exec -multiut 1 -mtimes "81,0,0,'to',106,0,0,'by',1440" \
-        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
-        -flnm_ps $outdir/${run}_days081-106.ps $histdir/\*prim\*.nc
-      echo "Completed multiut for run $run (days 81-106 (daily))"
+      if ($multiut == 'yes') then
+        set mtimes = "81,0,0,'to',106,0,0,'by',1440"
+        set days = "days081-106"
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile $outdir/${run}_$days.inp \
+          -stdout $outdir/${run}_$days.out \
+          -flnm_ps $outdir/${run}_$days.ps \
+          \*prim\*.nc
+        echo "Completed multiut run for $run ($days (daily))"
 #
 # whi2008 secondaries (available for days 81-106): plot days 85-90:
-      $proc -submit yes -executable $exec -multiut 1 -mtimes "85,0,0,'to',90,0,0,'by',60" \
-        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
-        -flnm_ps $outdir/${run}_days085-090.ps $histdir/\*sech\*.nc
-      echo "Completed multiut for run $run (days 85-90 (hourly))"
+        set mtimes = "85,0,0,'to',90,0,0,'by',60"
+        set days = "days085-090"
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_$days.inp \
+          -stdout  $outdir/${run}_$days.out \
+          -flnm_ps $outdir/${run}_$days.ps  \
+          \*sech\*.nc
+        echo "Completed multiut run for $run ($days (hourly))"
+      endif # doing multiut
+
+      if ($select == 'yes') then # use selected fields list
+        set mtimes = "81,0,0,'to',106,0,0,'by',1440"
+        set days = "days081-106"
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_${days}_select.inp \
+          -stdout  $outdir/${run}_${days}_select.out \
+          -flnm_ps $outdir/${run}_${days}_select.ps  \
+          -cfields $cfields \
+          \*prim\*.nc
+        echo "Completed multiut select run for $run ($days (daily))"
+#
+# whi2008 secondaries (available for days 81-106): plot days 85-90:
+        set mtimes = "85,0,0,'to',90,0,0,'by',60"
+        set days = "days085-090"
+        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_${days}_select.inp \
+          -stdout  $outdir/${run}_${days}_select.out \
+          -flnm_ps $outdir/${run}_${days}_select.ps  \
+          -cfields $cfields \
+          \*sech\*.nc
+        echo "Completed multiut select run for $run ($days (hourly))"
+      endif # doing select
+    endif # run
 #
 #------------------------------------------------------------------------------------------
 # July, 2000 storm (days 192-202) (main storm around day 198):
 #
 # Days 192-202, hourly:
-    else if ($run == "tiegcm_res${res}_jul2000_heelis_gpi" || \
-             $run == "tiegcm_res${res}_jul2000_weimer_imf") then
-      $proc -submit yes -executable $exec -multiut=1 -mtimes "192,1,0,'to',202,0,0,'by',60" \
-        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
-        -flnm_ps $outdir/${run}_days192-202.ps $histdir/\*sech\*.nc
-        echo "Completed multiut for run $run (days 192-202, hourly)" 
+    if ($run == "tiegcm_res${res}_jul2000_heelis_gpi" || \
+        $run == "tiegcm_res${res}_jul2000_weimer_imf") then
+
+      if ($multiut == 'yes') then
+        set mtimes = "192,0,0,'to',202,0,0,'by',1440"
+        set days = "days192-202"
+        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_$days.inp \
+          -stdout  $outdir/${run}_$days.out \
+          -flnm_ps $outdir/${run}_$days.ps  \
+          \*prim\*.nc
+          echo "Completed multiut for run $run ($days (daily))" 
 #
 # Days 196-200, hourly:
-      $proc -submit yes -executable $exec -multiut=1 -mtimes "196,1,0,'to',200,0,0,'by',60" \
-        -nlfile $outdir/${run}_multiut.inp -stdout $outdir/${run}_multiut.out \
-        -flnm_ps $outdir/${run}_days196-200.ps $histdir/\*sech\*.nc
-        echo "Completed multiut for run $run (days 196-200, hourly)" 
-    endif
+        set mtimes = "195,0,0,'to',200,0,0,'by',60"
+        set days = "days195-200"
+        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_$days.inp \
+          -stdout  $outdir/${run}_$days.out \
+          -flnm_ps $outdir/${run}_$days.ps  \
+          \*sech\*.nc
+          echo "Completed multiut for run $run ($days (hourly))" 
+      endif # doing multiut
+
+      if ($select == 'yes') then # use selected fields list
+        set mtimes = "192,0,0,'to',202,0,0,'by',1440"
+        set days = "days192-202"
+        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_${days}_select.inp \
+          -stdout  $outdir/${run}_${days}_select.out \
+          -flnm_ps $outdir/${run}_${days}_select.ps  \
+          -cfields $cfields \
+          \*prim\*.nc
+          echo "Completed multiut for run $run ($days (daily))" 
+#
+# Days 196-200, hourly:
+        set mtimes = "195,0,0,'to',200,0,0,'by',60"
+        set days = "days195-200"
+        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
+          -nlfile  $outdir/${run}_${days}_select.inp \
+          -stdout  $outdir/${run}_${days}_select.out \
+          -flnm_ps $outdir/${run}_${days}_select.ps  \
+          -cfields $cfields \
+          \*sech\*.nc
+          echo "Completed multiut for run $run ($days (hourly))" 
+      endif # doing select
+
+    endif # run
   end # foreach run
+  cd $mycwd
+  echo tgcmproc moved back to $mycwd
 end # foreach res
 #
 #---------------------------------------------------------------------------------------
