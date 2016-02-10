@@ -28,7 +28,7 @@
       use qrj_module,only: qrj,qtotal,qop,qo2p,qn2p,qnp,qnop
       use chapman_module,only: chapman
       use oplus_module,only: oplus
-      use input_module,only: iaurora=>aurora
+      use input_module,only: iaurora=>aurora,iamie
       use aurora_module,only: aurora
       use aurora_module,only: cusp2d,drzl2d,alfa2d,nflx2d,eflux2d
       use n4s_module,only: comp_n4s,minor_n4s
@@ -42,6 +42,7 @@
       use qjoule,only: qjoule_tn,qjoule_ti
       use diags_module,only: mkdiag_CUSP,mkdiag_DRIZZLE,mkdiag_ALFA,
      |  mkdiag_NFLUX,mkdiag_EFLUX
+      use dyndiag_module,only: dyndiag
 
       implicit none
 !
@@ -764,6 +765,23 @@
         endif
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after qjoule_tn')")
+!
+! Calculate 2d (lon,lat) diagnostics for amie run:
+!
+      if (iamie > 0) then
+        do lat=lat0,lat1
+          call dyndiag(
+     |      ped (levd0,lond0,lat),     ! pedersen conductivity
+     |      hall(levd0,lond0,lat),     ! hall conductivity
+     |      qji_tn(levd0,lond0,lat),   ! ion Joule heating for tn
+     |      z   (levd0,lond0,lat,itc), ! updated Z from addiag
+     |      un  (levd0,lond0,lat,itp), ! neutral zonal velocity
+     |      vn  (levd0,lond0,lat,itp), ! neutral meridional velocity
+     |      ui  (levd0,lond0,lat),     ! ion zonal velocity
+     |      vi  (levd0,lond0,lat),     ! ion meridional velocity
+     |      1,nlevp1,lon0,lon1,lat)
+        enddo ! lat=lat0,lat1
+      endif
 !
 ! Advance neutral temperature:
 !

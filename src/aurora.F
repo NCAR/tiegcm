@@ -58,9 +58,13 @@
       use cons_module,only: ! see cons.F
      |  dphi, ! delta latitude geographic (radians)
      |  dtr,  ! degrees to radians (pi/180)
-     |  pi    ! 4.*atan(1.)
+     |  pi,    ! 4.*atan(1.)
+     |  crit  ! may be changed from default if amie run
       use params_module,only: nlon,nlonp4,nlevp1,nlat,glat
       use addfld_module,only: addfld
+      use amie_module,only: crad,phida,ekvg,efxg,hpi_sh_amie,
+     |  hpi_nh_amie,pcp_sh_amie,pcp_nh_amie
+      use input_module,only: iamie
       implicit none
       save
 !
@@ -148,6 +152,7 @@
      |  phid(2),      ! dayside convection entrance in MLT (subtract 12h since 0=noon) converted to radians (f(By))
      |  phin(2),      ! night convection entrance in MLT (subtract 12h since 0=noon) converted to radians (f(By))
      |  rrad(2),      ! radius of auroral circle in radians
+     |  rradp(2),     ! radius of polar-cap circle in radians for drizls
      |  alfa0,        ! average of noon and midnight characteristic Maxw energies
      |  ralfa,ralfa2, ! difference ratios of characteristic energies
      |  rrote,        ! MLT of maximum auroral energy flux converted to radians
@@ -203,25 +208,29 @@
       contains
 !-----------------------------------------------------------------------
 #include <defs.h>
-      subroutine aurora_cons(iprint)
+      subroutine aurora_cons(iprint,iyear,iday,secs)
 !
 ! Set auroral constants (called from sub advance once per time-step).
 !
       use params_module,only: dz,nlev
+      use hist_module,only:   modeltime
       use input_module,only:  ! from user input
      |  byimf,   ! BY component of IMF (nT)      (e.g., 0.)
      |  ctpoten, ! cross-cap potential (kV)      (e.g., 45.)
      |  power,   ! hemispheric power   (GW)      (e.g., 16.)
+     |  iamie,
      |  potential_model  ! electric potential model used
 !
 ! Args:
-      integer,intent(in) :: iprint
+      integer,intent(in) :: iprint,iday,iyear
+      real,intent(in) :: secs
 !
 ! Local:
       real,parameter :: convert=3.1211e+8
       real :: alfa_1,alfa_2,plevel,roth,rote,rcp,rhp,
      |  alfa21,alfa22,e21,e22
       real :: arad(2)
+      real :: hp_amie,c25,c35
       real :: byloc   ! local by
       real,parameter :: e=1.e-10
 !
@@ -412,6 +421,50 @@
       phinp0(:) = 90.*dtr
       phinm0(:) = 90.*dtr
       rr1(:) = -2.6
+!
+! Recalculate some parameters if an amie run:
+      if (iamie > 0) then
+        theta0(:) = crad(:) ! radians from amie module
+        phid(:) = phida(:)  ! radians from amie module
+        hp_amie = max(hpi_sh_amie,hpi_nh_amie)
+        hp_amie = 0.5*(hpi_sh_amie+hpi_nh_amie)
+        plevel = 2.09*alog(hp_amie)
+        h1 = min(2.35,0.83+0.33*plevel)
+        h2 = 2.87 + 0.15 * plevel
+        h0 = 0.5 * (h1 + h2) * dtr
+        roth = (12.18- 0.89*plevel)
+        rote = (2.62 - 0.55*plevel)
+        rroth = roth * dtr
+        rrote = rote * dtr
+! For Sep 10 (Day 253) 2005 storm interval
+        h2 = 4.5 + 0.11*hp_amie
+! For October 2003 storm
+!       h2 = 4.5 + 0.15*hp_amie
+!       rradp(isouth) = crad(isouth)-1.5*dtr
+!       rradp(inorth) = crad(inorth)-2.5*dtr
+        rradp(isouth) = crad(isouth) + h2*dtr
+        rradp(inorth) = crad(inorth) + h2*dtr
+        if (rradp(isouth) > 31.*dtr) rradp(isouth) = 31.*dtr
+        if (rradp(inorth) > 31.*dtr) rradp(inorth) = 31.*dtr
+!       write(6,"('crad =',2f6.2,'  rrad=',2f6.2,'  rradp=',2f6.2,
+!    |  ' power =',f5.1,' plev =',f5.2)")
+!    |  crad/dtr,rrad/dtr,rradp/dtr,hp_amie,plevel
+        rrad(isouth) = rradp(isouth)+0.5*dtr
+        rrad(inorth) = rradp(inorth)+0.5*dtr
+!
+! Set critical colatitude crit(2) 40 deg -- G. Lu 5/11/98
+! Therefore, crit2 = 40, crit1 = 25-30, depending on theta0
+!
+        c35 = min(30.,(theta0(1)+theta0(2))*0.5/dtr + 5.0)
+!       c25 = max(25.,c35)
+!       c25 = max(30.,c35)
+        c25 = max(35.,c35)
+        crit(1) = c25 * dtr
+        crit(2) = 40. * dtr
+        if (crit(1) > 35.*dtr) crit(1) = 35.*dtr
+!       write(6,"('aurora: crit(1:2) = ',2f7.1)")crit(:)/dtr
+
+      endif
 !
 ! Report to stdout:
       if (iprint > 0) then
@@ -643,6 +696,8 @@
      |  coslamda,  ! cos(angle from throat)
      |  halfwidth, ! oval 1/e-width
      |  dtheta     ! latitudinal variation (Gaussian)
+      real,parameter :: s10=0.174532925
+      real :: clat
 
 !
 ! Low-energy protons:
@@ -707,6 +762,33 @@
 !
 ! For electron temperature (used in settei):  
         qteaur(i+2,lat) = -7.e+8*exp(-(dtheta(i)/halfwidth(i))**2)
+!
+! Recalculate alfa, flux, drizl if an amie run (as in old sub amiepa):
+        if (iamie > 0) then
+! Insure ekvg mean energy >= 1.:
+!         if (lat==5) write(6,"('Using AMIE aurora flux >>>',4g10.3)")
+!    |      minval(ekvg),maxval(ekvg),minval(efxg),maxval(efxg)
+          ekvg(i,lat) = max(ekvg(i,lat),1.)
+          alfa(i+2) = ekvg(i,lat)/2.
+          alfa2(i+2) = alfa20
+          clat = acos(sin(abs(dlat_aur(i))))
+!         drizl(i+2) = exp(-((clat-crad(ihem)+
+!    |      abs(clat-crad(ihem)))/(2.*s10))**2)
+!         drizl(i+2) = exp(-((colat(i)-crad(ihem)+
+!    |      abs(colat(i)-crad(ihem)))/s10)**2)
+          flux(i+2) = max(efxg(i,lat)/(2.*alfa(i+2)*1.602e-9),1.e-20)
+!          flux2(i+2) = e20*(1.-re2*coslamda(i))*
+!     |      exp(-((clat-crad(ihem))/
+!!    |      exp(-((colat(i)-crad(ihem))/
+!     |      halfwidth(i))**2) / (2.*alfa2(i+2)*1.602E-9)
+! New drizal formulation - G. Lu /08/17/2006
+          drizl(i+2) = exp(-((clat-rradp(ihem)+
+     |      abs(clat-rradp(ihem)))/(1*s10))**2)
+          flux2(i+2) = e20*(1.-re2*coslamda(i))*
+     |      exp(-((clat-rrad(ihem))/
+     |      halfwidth(i))**2) / (2.*alfa2(i+2)*1.602E-9)
+        endif
+
       enddo ! i=1,nlon
 !
 ! Periodic points:
@@ -741,14 +823,14 @@
 !                                                        Wenbin  wang
 !
 #if defined(INTERCOMM) || defined(CISMAH)
-      do i=1,nlonp4
-       alfa(i)=geng(i,lat)+0.01
-       flux(i)=gflx(i,lat)+0.01
-       if(alfa(i)<=0.)alfa(i)=0.01
-       if(flux(i)<=0.)flux(i)=0.01
-       eflux(i) = flux(i)*fac_p2e*alfa(i)
-!       write(6,*)alfa(i),flux(i),i,lat
-      enddo
+     do i=1,nlonp4
+      alfa(i)=geng(i,lat)+0.01
+      flux(i)=gflx(i,lat)+0.01
+      if(alfa(i)<=0.)alfa(i)=0.01
+      if(flux(i)<=0.)flux(i)=0.01
+      eflux(i) = flux(i)*fac_p2e*alfa(i)
+!     write(6,*)alfa(i),flux(i),i,lat
+     enddo
 #endif
 
       end subroutine aurora_heat
@@ -784,6 +866,7 @@
       use aurora_module,only: alfac, alfad, alfa_sp, ec,ed, fc,fd,
      |  flx_sp, e30, add_sproton, add_helectron
       use addfld_module,only: addfld
+      use init_module,only: istep
       implicit none
 !
 ! Args:
@@ -810,10 +893,16 @@
       real,dimension(lon0:lon1) ::
      |  falfa1, falfa2, fcusp, fdrizl, falfa_sp, falfa3
       real :: qia(5) ! low energy proton source (not in use, 1/02)
+      real,dimension(lev0:lev1,lon0:lon1) :: qaurora
+! External:
+      logical,external :: time2print
+      logical :: use_cion = .false.      ! switch between AION and CION
 !
       qia(:) = 0.
 !
-!     write(6,"('aurora_ions: lat=',i2,' alfa1=',/,(6e12.4))")
+!     write(6,"('aurora_ions: lat=',i2,' flux1=',/,(10e12.4))")
+!    |  lat,flux1
+!     write(6,"('aurora_ions: lat=',i2,' alfa1=',/,(10e12.4))")
 !    |  lat,alfa1
 !     write(6,"('aurora_ions: lat=',i2,' alfa2=',/,(6e12.4))")
 !    |  lat,alfa2
@@ -854,10 +943,17 @@
 !     klev = int((zlev-zpbot)/dzp)+1
 !     write(6,"('zlev=',f8.2,' klev=',i3)") zlev,klev
 !
-      call aion(xalfa1,alfa1_ion,lev0,lev1,lon0,lon1,lat) ! s7,s3
-      call aion(xalfa2,alfa2_ion,lev0,lev1,lon0,lon1,lat) ! s8,s4
-      call aion(xcusp ,cusp_ion ,lev0,lev1,lon0,lon1,lat) ! s9,s5
-      call aion(xdrizl,drizl_ion,lev0,lev1,lon0,lon1,lat) ! s10,s6
+      if (.not.use_cion) then
+        call aion(xalfa1,alfa1_ion,lev0,lev1,lon0,lon1,lat)
+        call aion(xalfa2,alfa2_ion,lev0,lev1,lon0,lon1,lat)
+        call aion(xcusp,cusp_ion,lev0,lev1,lon0,lon1,lat)
+        call aion(xdrizl,drizl_ion,lev0,lev1,lon0,lon1,lat)
+      else
+        call cion(xalfa1,alfa1_ion,alfa1,lev0,lev1,lon0,lon1,lat)
+        call cion(xalfa2,alfa2_ion,alfa1,lev0,lev1,lon0,lon1,lat)
+        call cion(xcusp,cusp_ion,alfa1,lev0,lev1,lon0,lon1,lat)
+        call cion(xdrizl,drizl_ion,alfa1,lev0,lev1,lon0,lon1,lat)
+      endif
 
 !     call addfld('ALFA1',' ',' ',alfa1_ion,'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)
@@ -876,16 +972,18 @@
       if (e30 > 1.e-19)
      |  call aion(xalfa3, alfa3_ion,lev0,lev1,lon0,lon1,lat)
 !
+      qaurora = 0.
       do i=lon0,lon1
 ! 11/08 EMERY added eflux=flux*fac_p2e*alfa;  eflux1 better than flux1 if alfa quite variable
-	falfa1(i) = eflux1(i)/fac_p2e  ! s7  This should be equivalent to alfa1*flux1
-!       falfa1(i) = alfa1(i)*flux1(i)  ! s7
-	falfa2(i) = eflux2(i)/fac_p2e  ! s8  This should be equivalent to alfa2*flux2
-!       falfa2(i) = alfa2(i)*flux2(i)  ! s8
+!       falfa1(i) = eflux1(i)/fac_p2e  ! s7  This should be equivalent to alfa1*flux1
+        falfa1(i) = alfa1(i)*flux1(i)  ! s7
+!       falfa2(i) = eflux2(i)/fac_p2e  ! s8  This should be equivalent to alfa2*flux2
+        falfa2(i) = alfa2(i)*flux2(i)  ! s8
+
         fcusp (i) = cusp(i)*alfac*fc   ! s9
         fdrizl(i) = drizl(i)*alfad*fd  ! s10
-	falfa3(i) = eflux3(i)/fac_p2e  ! s13 This should be equivalent to alfa3*flux3
-!       falfa3(i) = alfa3(i)*flux3(i)  ! s13 (high energy electrons)
+!	falfa3(i) = eflux3(i)/fac_p2e  ! s13 This should be equivalent to alfa3*flux3
+        falfa3(i) = alfa3(i)*flux3(i)  ! s13 (high energy electrons)
 !
 ! Pressure column, bottom to top:
         do k=lev0,lev1-1
@@ -898,6 +996,8 @@
      |      falfa2(i)*alfa2_ion(k,i)+  ! s8*s4
      |      fcusp (i)*cusp_ion (k,i)+  ! s9*s5
      |      fdrizl(i)*drizl_ion(k,i)   ! s10*s6
+          qaurora(k,i) = barm_t(k,i)*(falfa1(i)*alfa1_ion(k,i)+
+     |                   falfa2(i)*alfa2_ion(k,i))
 !
 ! Include solar protons if add_sproton is set, and high energy electrons
 ! if add_helectron is set:
@@ -930,7 +1030,15 @@
       enddo ! i=lon0,lon1
 
 !     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' falfa1=',/,
-!    |  (6e12.4))") lat,lon0,lon1,falfa1
+!    |  (10e12.4))") lat,lon0,lon1,falfa1
+!     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qsum=',/,
+!    |  (8e12.4))") lat,lon0,lon1,qsum
+!     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qo2p_aur=',/,
+!    |  (9e12.4))") lat,lon0,lon1,qo2p_aur
+!     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qop_aur=',/,
+!    |  (9e12.4))") lat,lon0,lon1,qop_aur
+!     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qn2p_aur=',/,
+!    |  (9e12.4))") lat,lon0,lon1,qn2p_aur
 !     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' falfa2=',/,
 !    |  (6e12.4))") lat,lon0,lon1,falfa2
 !     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' fcusp=',/,
@@ -950,6 +1058,9 @@
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('QN2P_AUR',' ',' ',qn2p_aur(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!
+      call addfld('QAURORA',' ','cm-3 s-1',qaurora,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Add auroral to total ionization rates for o2+, o+, and n2+
 ! (see qrj_module)
@@ -1090,4 +1201,60 @@
           enddo ! i=lon0,lon1
       enddo ! k=lev0,lev1
       end subroutine bion
+!-----------------------------------------------------------------------
+      subroutine cion(si,so,alpha,lev0,lev1,lon0,lon1,lat)
+!
+! Calculate a normalized energy deposition function, which is produced by
+! electron precipitation with a characteristic energy from 100 eV to 1 MeV.
+! This parameterization is designed to improve the subroutine aion, extending
+! the working energy range from around 1-100 keV to 0.1-1000 keV.
+! -- Xiaohua Fang, LASP, University of Colorado, May 2008.
+! Reference:
+!  Fang, X., C. E. Randall, D. Lummerzheim, S. C. Solomon, M. J. Mills,
+!  D. Marsh, C. H. Jackman, W. Wang, and G. Lu (2008), Electron impact
+!  ionization: A new parameterization for 100 eV to 1 MeV electrons,
+!  J. Geophys. Res., doi:10.1029/2008JA013384.
+!
+      implicit none
+!
+! Args:
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      real,intent(in)  :: si(lev0:lev1,lon0:lon1),alpha(lon0:lon1)
+      real,intent(out) :: so(lev0:lev1,lon0:lon1)
+!
+! Locals:
+      real,parameter :: P(4, 8) = RESHAPE(
+     | (/ 3.49979e-1, -6.18200e-2, -4.08124e-2,  1.65414e-2,
+     |    5.85425e-1, -5.00793e-2,  5.69309e-2, -4.02491e-3,
+     |    1.69692e-1, -2.58981e-2,  1.96822e-2,  1.20505e-3,
+     |   -1.22271e-1, -1.15532e-2,  5.37951e-6,  1.20189e-3,
+     |    1.57018,     2.87896e-1, -4.14857e-1,  5.18158e-2,
+     |    8.83195e-1,  4.31402e-2, -8.33599e-2,  1.02515e-2,
+     |    1.90953,    -4.74704e-2, -1.80200e-1,  2.46652e-2,
+     |   -1.29566,    -2.10952e-1,  2.73106e-1, -2.92752e-2 /),
+     | (/4, 8/) )
+      real :: cc(8), logE, logY
+      integer  :: i,ii,k
+!
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+          if (alpha(i) >= 0.1) then
+!
+! calculate the energy-dependent coefficients
+            logE = log(alpha(i))      ! alpha=E0 (in keV)
+            do ii=1, 8
+              cc(ii)=exp( P(1,ii) + P(2,ii)*logE + P(3,ii)*(logE**2.) +
+     |          P(4,ii)*(logE**3.) )
+            end do
+!
+! calculate the energy deposition function
+            logY = log( si(k,i) )
+            so(k,i) =  cc(1)*exp( cc(2)*logY - cc(3)*exp( cc(4)*logY ) )
+     |               + cc(5)*exp( cc(6)*logY - cc(7)*exp( cc(8)*logY ) )
+          else
+            so(k,i)=0.
+          endif
+        enddo
+      enddo
+      end subroutine cion
 

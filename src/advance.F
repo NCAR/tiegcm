@@ -21,7 +21,7 @@
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
       use input_module,only: start,step,idynamo=>dynamo,
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
-     |  imf_ncfile,current_pg,current_kq
+     |  imf_ncfile,current_pg,current_kq,iamie,amie_ibkg,amiesh,amienh
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
      |  ctpoten,ctpoten_time,ntimes_ctpoten, rd_ctpoten,
@@ -47,7 +47,9 @@
       use mpitime_module,only: mpi_timer
       use gpi_module,only: rdgpi,getgpi
       use imf_module,only: getimf
+      use gswm_module,only: getgswm
       use params_module,only: nlonp4,nlat,nlev
+      use amie_module,only: getamie,tiepot
       use output,only: outhist
       use addfld_module,only: addfld
       use lbc,only: tuvz_lbc
@@ -279,6 +281,18 @@
         endif
       endif
 !
+! Get AMIE data
+      if (iamie==1) then
+        iprint = 0
+        if (istep==1) iprint = 1
+        if (iprint>0) write(6,"('advance calling getamie...')")
+        call getamie(iyear,iday,int(secs),amie_ibkg,iprint)
+      endif
+!
+! Get GSWM tidal boundary data:
+!
+      call getgswm(istep,iyear,iday,secs)
+!
 ! Update lower boundaries of t,u,v,z:
 !
       call tuvz_lbc(istep,iyear,iday,secs,itp)
@@ -327,7 +341,7 @@
 ! Update aurora parameters:
       iprint = 0
       if (istep==1) iprint = 1
-      call aurora_cons(iprint)
+      call aurora_cons(iprint,iyear,iday,secs)
       if (debug) write(6,"('advance after aurora_cons')")
 !
 ! init_sflux calls ssflux and euvac (see qrj_module.F):
@@ -466,6 +480,14 @@
 	    phihm(i,j) = 0.
           enddo ! i=1,nmlonp1
         enddo ! j=1,nmlat0
+      endif
+!
+! If an amie run, use tiepot from amie.F:
+! (phihm and tiepot are dimensioned (nmlonp1,nmlat))
+      if (iamie > 0) then
+        phihm = tiepot ! whole array op
+        call fminmax(phihm,nmlonp1*nmlat,fmin,fmax)
+        write(6,"('Advance: amie phihm min,max=',2e12.4)") fmin,fmax
       endif
 !
 ! Set pfrac for dynamo, regardless of potential_model (in colath.F): 
@@ -608,6 +630,12 @@
           tlbc_nm_glb(lon0:lon1,lat0:lat1)=tlbc_nm(lon0:lon1,lat0:lat1)
           ulbc_nm_glb(lon0:lon1,lat0:lat1)=ulbc_nm(lon0:lon1,lat0:lat1)
           vlbc_nm_glb(lon0:lon1,lat0:lat1)=vlbc_nm(lon0:lon1,lat0:lat1)
+        endif
+!
+! Saving extraoutput here from master only - G. Lu, Aug. 27, 2003
+        if (iamie > 0) then
+          call prep_output(1,nlevp1,lon0,lon1,lat0,lat1)
+          if (mytid==0) call extraoutput
         endif
 #else
 !

@@ -36,6 +36,9 @@
 !
       character(len=1024) :: 
      |  label,           ! optional generic text label for this run
+     |  amievol,         ! absolute or relative path to amie data file (optional)
+     |  amiesh,          ! file or mss path of amie SH data file (optional)
+     |  amienh,          ! file or mss path of amie NH data file (optional)
      |  hpss_path        ! hpss directory for dispose of output history files
 !
       integer ::
@@ -49,6 +52,8 @@
      |  current_pg,      ! 0/1 flag to add current due to plasma pressure and gravity to rhs (default 1)
      |  current_kq,      ! 0/1 flag to calculate height-integrated current density (default 0)
      |  aurora,          ! 0/1 flag for aurora
+     |  iamie,           ! 0/1 flag for AMIE data (not in namelist read)
+     |  amie_ibkg,       ! 0/1/2 flag for read real, 1st, or 24-hr averaged data
      |  ntask_lat,       ! number of tasks in latitude  dimension
      |  ntask_lon,       ! number of tasks in longitude dimension
      |  ntask_maglat,    ! number of tasks in mag latitude  dimension (not namelist)
@@ -167,7 +172,8 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  enforce_opfloor,bgrddata_ncfile,ctmt_ncfile,opdiffcap
+     |  enforce_opfloor,bgrddata_ncfile,ctmt_ncfile,opdiffcap,
+     |  amienh,amiesh,amie_ibkg
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -224,6 +230,9 @@
 ! Initialize input variables:
 !
       label   = ' '
+      amievol = ' '
+      amiesh  = ' '
+      amienh  = ' '
       hpss_path = ' '
 !
       gpi_ncfile  = ' '       ! user input gpi file path
@@ -257,6 +266,8 @@
       tide2(:)= spval
       tide3m3(:) = spval
       aurora  = ispval
+      iamie   = 0      ! will be set 1 if amienh or amiesh files are given
+      amie_ibkg = 0    ! default is read in real time amie data
       ntask_lat = ispval
       ntask_lon = ispval
       colfac  = spval
@@ -597,6 +608,15 @@
         eddy_dif = 0
       else
         eddy_dif = 1
+      endif
+!
+! Set iamie flag to 1 if user has provided either amiesh or amienh
+! data files:
+!
+      if (len_trim(amiesh) + len_trim(amienh) > 0) then
+        write(6,"('Will read AMIE data inputs')")
+        iamie = 1
+        potential_model = 'AMIE'
       endif
 !
 ! Save certain params as originally read by namelist read:
@@ -1436,6 +1456,15 @@
       if (len_trim(ctmt_ncfile) > 0) write(6,"('  CTMT data file: ',
      |    'ctmt_ncfile = ',a)") trim(ctmt_ncfile)
 
+      if (len_trim(amievol) > 0)
+     |  write(6,"('  amievol = ',a,/,4x,
+     |    '(file or mss path containing amie data)')") trim(amievol)
+      if (len_trim(amienh) > 0)
+     |  write(6,"('  amienh = ',a,/,4x,
+     |    '(file or mss path containing amie data)')") trim(amienh)
+      if (len_trim(amiesh) > 0)
+     |  write(6,"('  amiesh = ',a,/,4x,
+     |    '(file or mss path containing amie data)')") trim(amiesh)
       if (len_trim(hpss_path) > 0)
      |  write(6,"('  hpss_path = ',a,4x,
      |    '(hpss directory for hsi dispose script)')") trim(hpss_path)
@@ -1886,6 +1915,8 @@
           write(6,"('wei05sc_ncfile=',a)") trim(wei05sc_ncfile)
         case('HEELIS')
           write (6,"('Will use the Heelis potential model')")
+        case('AMIE')
+          write (6,"('Will use the AMIE potential input')")
         case('NONE')
           write(6,"('Will NOT use an empirical potential model')")
           write(6,"('High-lat convection will be zero.)')")

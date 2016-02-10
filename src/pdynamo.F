@@ -1956,6 +1956,11 @@
 ! Both phihm and pfrac have been set by either heelis or weimer.
 ! phihm is on 2d global mag grid, pfrac is in north hemisphere only
 !
+      use input_module,only: iamie
+      use amie_module,only: pcp_nh_amie,pcp_sh_amie
+      use hist_module,only:   modeltime
+      use init_module,only:   iyear
+      use cons_module,only: dlatm,dlonm,pi_dyn,ylatm,rtd,crit
 ! Local:
       logical,parameter :: mod_heelis = .false.   ! true == modified
       integer :: i,j,jn,js
@@ -1964,19 +1969,14 @@
 ! Add empirical model potential at high latitude:
       fac = 1.0
       if (mod_heelis) fac = 0.  ! modified heelis
+
       do j=mlat0,mlat1
         if (j > nmlath) cycle   ! south only (including equator)
         jn = nmlat-j+1
-        js = nmlath-j+1 
+        js = nmlath-j+1
         do i=mlon0,mlon1
           phim2d(i,j) = rim1(i,j)+fac*(1.-pfrac(i,js))*(phihm(i,j)-
-     |      phihm(i,jn))
-
-!         write(6,"('highlat_poten: i=',i4,' j=',i4,' jn=',i4,' js=',i4,
-!    |      ' rim1=',e12.4,' pfrac(i,js)=',f12.3,
-!    |      ' phihm(i,j)=',e12.4,' phihm(i,jn)=',e12.4,' phim2d(i,j)=',
-!    |      e12.4)") i,j,jn,js,rim1(i,j),pfrac(i,js),phihm(i,j),
-!    |      phihm(i,jn),phim2d(i,j)
+     |    phihm(i,jn))
 
         enddo
       enddo
@@ -1987,10 +1987,13 @@
           phim2d(i,j) = rim1(i,j)
         enddo
       enddo
-
+!
 ! There is also a PHIM2D saved at beginning of pthreed below.
 !     call addfld('PHIM2D',' ','VOLTS',
 !    |  phim2d(mlon0:mlon1,mlat0:mlat1),
+!    |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+!     call addfld('RIM1',' ','VOLTS',
+!    |  rim1(mlon0:mlon1,mlat0:mlat1),
 !    |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
 
       end subroutine highlat_poten
