@@ -8,12 +8,15 @@ set model = tiegcm
 set resolutions = ('5.0' '2.5')
 
  set filenames = ( \
-   list.stdout   \
-   list.tails    \
-   list.ncfiles  \
-   list.timing   \
-   list.psfiles  \
-#  list.contents \
+   list.stdout     \
+   list.tails      \
+   list.ncfiles    \
+   list.timing     \
+   list.psfiles    \
+   list.pdffiles   \
+   list.diskusage  \
+   list.dirs       \
+   list.contents   \
  )
 
 foreach file ($filenames)
@@ -27,7 +30,12 @@ foreach file ($filenames)
       $home/${model}_res${res}_storms \
     )
     foreach dir ($dirs)
-      cd $dir
+      if (-d $dir) then
+        cd $dir
+      else
+        echo ">>> Could not find directory $dir"
+        continue
+      endif
       echo " "           >> $filepath
       echo "Group: $dir" >> $filepath
       set cases = `ls -d *`
@@ -39,6 +47,7 @@ foreach file ($filenames)
 #       if ($file == 'list.timing' ) fgrep 'Average secs' $case/stdout/*.out >>  $filepath
         if ($file == 'list.timing' ) fgrep 'Elapsed run' $case/stdout/*.out  >>  $filepath
         if ($file == 'list.psfiles') ls -lF $case/proc/*.ps    >> $filepath
+        if ($file == 'list.pdffiles')ls -lF $case/proc/*.pdf   >> $filepath
 
         if ($file == 'list.contents') then
           echo "  Case path: $dir/$case/hist" >> $filepath
@@ -54,4 +63,8 @@ foreach file ($filenames)
       end # foreach case 
     end # foreach dir
   end # foreach res
+  if ($file == 'list.diskusage') then
+    cd $home # assuming benchmark group dirs are here
+    du -h --total tiegcm_res* >&! $file
+  endif
 end # foreach file

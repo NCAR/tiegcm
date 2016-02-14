@@ -10,10 +10,12 @@ set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make m
 set singleut = yes # make instantaneous plots
 set multiut = yes  # make time slices (ut on x-axis)
 set select = yes   # less comprehensive (fewer fields, fewer plots)
+set select = zm    # zonal mean plots only for multiut runs
+set make_pdf = yes # will make pdf files from the ps, using ps2pdf
 
 set resolutions = ( \
   '5.0' \
-  '2.5' \
+# '2.5' \
 )
 
 foreach res ($resolutions)
@@ -29,13 +31,13 @@ foreach res ($resolutions)
  
   set runs = ( \
     tiegcm_res${res}_dec2006_heelis_gpi \
-    tiegcm_res${res}_dec2006_weimer_imf \
-    tiegcm_res${res}_nov2003_heelis_gpi \
-    tiegcm_res${res}_nov2003_weimer_imf \
-    tiegcm_res${res}_whi2008_heelis_gpi \
-    tiegcm_res${res}_whi2008_weimer_imf \
-    tiegcm_res${res}_jul2000_heelis_gpi \
-    tiegcm_res${res}_jul2000_weimer_imf \
+#   tiegcm_res${res}_dec2006_weimer_imf \
+#   tiegcm_res${res}_nov2003_heelis_gpi \
+#   tiegcm_res${res}_nov2003_weimer_imf \
+#   tiegcm_res${res}_whi2008_heelis_gpi \
+#   tiegcm_res${res}_whi2008_weimer_imf \
+#   tiegcm_res${res}_jul2000_heelis_gpi \
+#   tiegcm_res${res}_jul2000_weimer_imf \
   )
  
   set case   = tiegcm_res${res}_storms
@@ -75,6 +77,10 @@ foreach res ($resolutions)
         -flnm_ps $outdir/${run}_singleut.ps \
         \*sech\*.nc
       echo Completed singleut run for $run
+      if ($make_pdf == 'yes') then
+        echo Converting $outdir/${run}_singleut.ps to $outdir/${run}_singleut.pdf
+        ps2pdf $outdir/${run}_singleut.ps $outdir/${run}_singleut.pdf
+      endif
     endif
 
     if ($select == 'yes') then # reduced field set:
@@ -86,6 +92,10 @@ foreach res ($resolutions)
         -cfields $cfields \
         \*sech\*.nc
       echo Completed singleut select run for $run
+      if ($make_pdf == 'yes') then
+        echo Converting $outdir/${run}_singleut_select.ps to $outdir/${run}_singleut_select.pdf
+        ps2pdf $outdir/${run}_singleut_select.ps $outdir/${run}_singleut_select.pdf
+      endif
     endif
 #
 #------------------------------------------------------------------------------------------
@@ -97,6 +107,8 @@ foreach res ($resolutions)
         $run == "tiegcm_res${res}_dec2006_weimer_imf") then
 
       if ($multiut == 'yes') then
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # dec2006 primaries: daily days 330 to 360:
         set mtimes = "330,0,0,'to',360,0,0,'by',1440"
@@ -107,6 +119,13 @@ foreach res ($resolutions)
           -flnm_ps $outdir/${run}_$days.ps  \
           \*prim\*.nc
         echo "Completed multiut for run $run ($days (daily))"
+
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
+          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
+        endif
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # dec2006 secondaries: 347,0,0 -> 352,0,0, hourly:
         set mtimes = "347,0,0,'to',352,0,0,'by',60"
@@ -117,8 +136,14 @@ foreach res ($resolutions)
           -flnm_ps $outdir/${run}_$days.ps  \
           \*sech\*.nc
         echo "Completed multiut for run $run ($days (hourly))"
-      endif # doing multiut
 
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
+          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
+        endif
+
+      endif # doing multiut
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       if ($select == 'yes') then
         set mtimes = "330,0,0,'to',360,0,0,'by',1440"
         set days = "days330-360"
@@ -130,6 +155,11 @@ foreach res ($resolutions)
           \*prim\*.nc
         echo "Completed multiut select for run $run ($days (daily))"
 
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
+          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
+        endif
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         set mtimes = "347,0,0,'to',352,0,0,'by',60"
         set days = "days347-352"
         $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
@@ -139,6 +169,11 @@ foreach res ($resolutions)
           -cfields $cfields \
           \*sech\*.nc
         echo "Completed multiut select for run $run ($days (hourly))"
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
+          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
+        endif
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       endif # doing select
     endif # run
 #
@@ -147,6 +182,8 @@ foreach res ($resolutions)
 #
     if ($run == "tiegcm_res${res}_nov2003_heelis_gpi" || \
         $run == "tiegcm_res${res}_nov2003_weimer_imf") then
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # nov2003 primaries: 323 -> 328 daily
 # nov2003 secondaries: 323,1,0 -> 328,0,0 hourly
@@ -160,7 +197,13 @@ foreach res ($resolutions)
           -flnm_ps $outdir/${run}_$days.ps \
           \*sech\*.nc
         echo "Completed multiut run for $run ($days (hourly))"
-      endif
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
+          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
+        endif
+      endif # doing multiut
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       if ($select == 'yes') then # use selected fields list
         $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
           -nlfile $outdir/${run}_${days}_select.inp \
@@ -169,6 +212,11 @@ foreach res ($resolutions)
           -cfields $cfields \
           \*sech\*.nc
         echo "Completed multiut select run for $run ($days (hourly))"
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
+          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
+        endif
+      endif
       endif # doing select
     endif # run
 #
@@ -177,6 +225,8 @@ foreach res ($resolutions)
 #
     if ($run == "tiegcm_res${res}_whi2008_heelis_gpi" || \
         $run == "tiegcm_res${res}_whi2008_weimer_imf") then
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # whi2008 primaries: days 81-106:
       if ($multiut == 'yes') then
@@ -188,6 +238,12 @@ foreach res ($resolutions)
           -flnm_ps $outdir/${run}_$days.ps \
           \*prim\*.nc
         echo "Completed multiut run for $run ($days (daily))"
+
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
+          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
+        endif
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # whi2008 secondaries (available for days 81-106): plot days 85-90:
         set mtimes = "85,0,0,'to',90,0,0,'by',60"
@@ -198,7 +254,12 @@ foreach res ($resolutions)
           -flnm_ps $outdir/${run}_$days.ps  \
           \*sech\*.nc
         echo "Completed multiut run for $run ($days (hourly))"
+
+        echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
+        ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
+
       endif # doing multiut
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
       if ($select == 'yes') then # use selected fields list
         set mtimes = "81,0,0,'to',106,0,0,'by',1440"
@@ -210,6 +271,12 @@ foreach res ($resolutions)
           -cfields $cfields \
           \*prim\*.nc
         echo "Completed multiut select run for $run ($days (daily))"
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
+          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
+        endif
+      endif
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # whi2008 secondaries (available for days 81-106): plot days 85-90:
         set mtimes = "85,0,0,'to',90,0,0,'by',60"
@@ -221,6 +288,10 @@ foreach res ($resolutions)
           -cfields $cfields \
           \*sech\*.nc
         echo "Completed multiut select run for $run ($days (hourly))"
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
+          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
+        endif
       endif # doing select
     endif # run
 #
@@ -240,6 +311,10 @@ foreach res ($resolutions)
           -flnm_ps $outdir/${run}_$days.ps  \
           \*prim\*.nc
           echo "Completed multiut for run $run ($days (daily))" 
+          if ($make_pdf == 'yes') then
+            echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
+            ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
+          endif
 #
 # Days 196-200, hourly:
         set mtimes = "195,0,0,'to',200,0,0,'by',60"
@@ -249,7 +324,11 @@ foreach res ($resolutions)
           -stdout  $outdir/${run}_$days.out \
           -flnm_ps $outdir/${run}_$days.ps  \
           \*sech\*.nc
-          echo "Completed multiut for run $run ($days (hourly))" 
+        echo "Completed multiut for run $run ($days (hourly))" 
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
+          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
+        endif
       endif # doing multiut
 
       if ($select == 'yes') then # use selected fields list
@@ -262,6 +341,9 @@ foreach res ($resolutions)
           -cfields $cfields \
           \*prim\*.nc
           echo "Completed multiut for run $run ($days (daily))" 
+
+          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
+          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
 #
 # Days 196-200, hourly:
         set mtimes = "195,0,0,'to',200,0,0,'by',60"
@@ -272,7 +354,11 @@ foreach res ($resolutions)
           -flnm_ps $outdir/${run}_${days}_select.ps  \
           -cfields $cfields \
           \*sech\*.nc
-          echo "Completed multiut for run $run ($days (hourly))" 
+        echo "Completed multiut for run $run ($days (hourly))" 
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
+          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
+        endif
       endif # doing select
 
     endif # run

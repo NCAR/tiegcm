@@ -1,0 +1,54 @@
+#!/bin/tcsh
+#
+# Archive benchmark data to the NCAR HPSS.
+#
+# Set some directory paths:
+#
+set mycwd = `pwd` # probably not necessary
+set model = tiegcm2.0
+set hpss_home  = /home/tgcm/$model
+set data_home  = /glade/p/hao/tgcm/data
+set bench_home = /glade/p/hao/tgcm/tiegcm_benchmarks
+#
+# Save model source that generated the benchmarks:
+#
+cd $bench_home
+set hpss_file = $hpss_home/${model}_source.tar
+echo "Saving hpss file: $hpss_file"
+htar -cf $hpss_file tiegcm_trunk
+#
+# Save model data (startup histories, data files, etc)
+# (this is same as data tar file on the download website)
+#
+cd $data_home
+set hpss_file = $hpss_home/${model}_data.tar
+echo "Saving hpss file: $hpss_file"
+htar -cf $hpss_file $model
+#
+# Benchmark groups:
+#
+set groups = ( \
+# tiegcm_res5.0_climatology \
+  tiegcm_res5.0_seasons     \
+  tiegcm_res5.0_storms      \
+# tiegcm_res2.5_climatology \
+  tiegcm_res2.5_seasons     \
+  tiegcm_res2.5_storms      \
+)
+
+foreach group ($groups)
+  cd $bench_home/$group
+  echo ' '
+  echo Moved to $bench_home/$group
+  set cases = `ls -1 -d *`
+#
+# Save each benchmark case directory in this group,
+# containing dirs exec/, hist/, stdout/, proc/
+#
+  foreach case ($cases)
+    set hpss_file = $hpss_home/benchmarks/$case.tar
+    echo "  Saving hpss file: $hpss_file"
+    htar -P -cf $hpss_file $case
+  end # foreach case
+
+end # foreach group

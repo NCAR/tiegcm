@@ -10,6 +10,7 @@ set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make m
 set singleut = yes # make instantaneous plots
 set multiut = yes  # make time slices (ut on x-axis)
 set select = yes   # less comprehensive (fewer fields, fewer plots)
+set make_pdf = yes # will make pdf files from the ps, using ps2pdf
 
 set resolutions = ( \
   '5.0' \
@@ -60,7 +61,17 @@ foreach res ($resolutions)
         -flnm_ps $outdir/${run}_singleut.ps  \
         \*sech\*.nc
       echo Completed singleut for run $run
-    endif
+#
+# Convert ps file to pdf:
+#
+      if ($make_pdf == 'yes') then
+        set ps_file  = $outdir/${run}_singleut.ps
+        set pdf_file = $outdir/${run}_singleut.pdf
+        echo Converting $ps_file to $pdf_file
+        ps2pdf $ps_file $pdf_file 
+      endif # make_pdf
+
+    endif # singleut
 #
 # Time-dependent plots with day/ut on x-axis:
 #
@@ -71,6 +82,15 @@ foreach res ($resolutions)
         -flnm_ps $outdir/${run}_multiut.ps  \
         \*sech\*.nc
       echo Completed multiut for run $run
+#
+# Convert ps file to pdf:
+#
+      if ($make_pdf == 'yes') then
+        set ps_file  = $outdir/${run}_multiut.ps
+        set pdf_file = $outdir/${run}_multiut.pdf
+        echo Converting $ps_file to $pdf_file
+        ps2pdf $ps_file $pdf_file 
+      endif # make_pdf
     endif
 #
 # "Select" means fewer fields and fewer plots:
@@ -84,6 +104,15 @@ foreach res ($resolutions)
         -flnm_ps $outdir/${run}_multiut_select.ps \
         -cfields $cfields \
         \*sech\*.nc
+#
+# Convert ps file to pdf:
+#
+      if ($make_pdf == 'yes') then
+        set ps_file  = $outdir/${run}_multiut_select.ps
+        set pdf_file = $outdir/${run}_multiut_select.pdf
+        echo Converting $ps_file to $pdf_file
+        ps2pdf $ps_file $pdf_file 
+      endif # make_pdf
 
       $proc -submit yes -executable $exec -singleut=1 \
         -nlfile  $outdir/${run}_singleut_select.inp \
@@ -93,6 +122,15 @@ foreach res ($resolutions)
         -cfields $cfields \
         \*sech\*.nc
     endif
+#
+# Convert ps file to pdf:
+#
+      if ($make_pdf == 'yes') then
+        set ps_file  = $outdir/${run}_singleut_select.ps
+        set pdf_file = $outdir/${run}_singleut_select.pdf
+        echo Converting $ps_file to $pdf_file
+        ps2pdf $ps_file $pdf_file 
+      endif # make_pdf
 
   end # foreach run
   cd $mycwd

@@ -9,10 +9,11 @@ set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make m
 set singleut = no  # generally do not make instantaneous plots for climatology
 set multiut = yes  # make time slices (ut on x-axis)
 set select = yes   # less comprehensive (fewer fields, fewer plots)
+set make_pdf = yes # will make pdf files from the ps, using ps2pdf
 
 set resolutions = ( \
-  '5.0' \
-# '2.5' \
+# '5.0' \
+  '2.5' \
 )
 
 foreach res ($resolutions)
@@ -28,7 +29,7 @@ foreach res ($resolutions)
 
   set runs = ( \
     tiegcm_res${res}_climatology_smax \
-    tiegcm_res${res}_climatology_smin \
+#   tiegcm_res${res}_climatology_smin \
   )
 
   set case   = tiegcm_res${res}_climatology
@@ -44,14 +45,28 @@ foreach res ($resolutions)
     cd $histdir
     echo tgcmproc moved to $histdir
 #
+# Generally do not make single-ut plots for climatologies
+# see singleut flag above.
+#
 # Instantaneous maps, slices, etc, at last history: 
 #
-#   if ($singleut == 'yes') then
-#     $proc -submit yes -executable $exec -singleut=1 \
-#       -nlfile $outdir/${run}_singleut.inp -stdout $outdir/${run}_singleut.out \
-#       -flnm_ps $outdir/${run}_singleut.ps $histdir/\*sech\*.nc
-#     echo Completed singleut for run $run
-#   endif
+    if ($singleut == 'yes') then
+      $proc -submit yes -executable $exec -singleut=1 \
+        -nlfile $outdir/${run}_singleut.inp \
+        -stdout $outdir/${run}_singleut.out \
+        -flnm_ps $outdir/${run}_singleut.ps \
+        \*sech\*.nc
+      echo Completed singleut for run $run
+#
+# Convert ps file to pdf:
+#
+      if ($make_pdf == 'yes') then
+        set ps_file  = $outdir/${run}_singleut.ps
+        set pdf_file = $outdir/${run}_singleut.pdf
+        echo Converting $ps_file to $pdf_file
+        ps2pdf $ps_file $pdf_file 
+      endif # make_pdf
+    endif
 #
 # Time-dependent plots with day/ut on x-axis:
 #
@@ -63,6 +78,15 @@ foreach res ($resolutions)
         -flnm_ps $outdir/${run}_daily.ps  \
         \*prim\*.nc
       echo Completed multiut daily for $run
+#
+# Convert ps file to pdf:
+#
+      if ($make_pdf == 'yes') then
+        set ps_file  = $outdir/${run}_daily.ps
+        set pdf_file = $outdir/${run}_daily.pdf
+        echo Converting $ps_file to $pdf_file
+        ps2pdf $ps_file $pdf_file 
+      endif # make_pdf
     endif
 #
 # "Select" means fewer fields and fewer plots:
@@ -77,14 +101,33 @@ foreach res ($resolutions)
         -cfields $cfields \
         \*prim\*.nc
       echo Completed multiut daily select for $run
+#
+# Convert ps file to pdf:
+#
+      if ($make_pdf == 'yes') then
+        set ps_file  = $outdir/${run}_daily_select.ps
+        set pdf_file = $outdir/${run}_daily_select.pdf
+        echo Converting $ps_file to $pdf_file
+        ps2pdf $ps_file $pdf_file 
+      endif # make_pdf
 
-#     $proc -submit yes -executable $exec -singleut=1 \
-#       -nlfile  $outdir/${run}_singleut_select.inp \
-#       -stdout  $outdir/${run}_singleut_select.out \
-#       -flnm_ps $outdir/${run}_singleut_select.ps  \
-#       -fmap_zpht '-4. 0. 2. 4.' \
-#       -cfields $cfields \
-#       \*prim\*.nc
+# Generally do not make single-ut plots for climatologies
+# see singleut flag above.
+      $proc -submit yes -executable $exec -singleut=1 \
+        -nlfile  $outdir/${run}_singleut_select.inp \
+        -stdout  $outdir/${run}_singleut_select.out \
+        -flnm_ps $outdir/${run}_singleut_select.ps  \
+        -fmap_zpht '-4. 0. 2. 4.' \
+        -cfields $cfields \
+        \*prim\*.nc
+      echo Completed singleut daily select for $run
+ 
+      if ($make_pdf == 'yes') then
+        set ps_file  = $outdir/${run}_daily_select.ps
+        set pdf_file = $outdir/${run}_daily_select.pdf
+        echo Converting $ps_file to $pdf_file
+        ps2pdf $ps_file $pdf_file 
+      endif # make_pdf
     endif # select
 
   end # foreach run

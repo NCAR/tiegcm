@@ -10,6 +10,7 @@ Makefile 		  Main Makefile for all supported platforms.
 abspath 		  Utility to obtain full linux paths
 change_nlcomment	  Utility to change comment character in namelist input files
 master.inp		  Master namelist file describing all available namelist parameters.
+minsperday                Calculates WC minutes per simulated day, given timestep and WC secs/step
 mkdepends		  Script to determine dependencies at build time.
 mklogs			  Utility to parse the stdout file into log files for each mpi task.
 rmbinchars		  Utility to remove binary characters from stdout files.

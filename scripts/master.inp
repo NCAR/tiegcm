@@ -74,6 +74,18 @@
 !GSWM_NM_DI_NCFILE  = '$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc'
 !GSWM_NM_SDI_NCFILE = '$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc'
 !
+! SABER tidal data for T,Z:
+!SABER_NCFILE = $TGCMDATA/
+!
+! TIDI tidal data for U,V:
+!TIDI_NCFILE = $TGCMDATA/
+!
+! Background tidal data for T,U,V,Z (one or the other file, not both):
+! BGRDDATA_NCFILE = '$TGCMDATA/bgndlbc_hwm_msis.nc'
+! BGRDDATA_NCFILE = '$TGCMDATA/bgndlbc_saber_hrdi.nc'
+!
+! CTMT_NCFILE = '$TGCMDATA/ctmt_tides.nc'
+!
 ! Potential model can be 'HEELIS' (optionally with GPI data),
 ! or 'WEIMER' (optionally with IMF data). If WEIMER, both IMF 
 ! and GPI may be specified, but only f10.7 will be used from GPI.
@@ -131,4 +143,10 @@
 ! If calc_helium=0, helium is zeroed out.
 !
  CALC_HELIUM = 1
+!
+! AMIE data files:
+!
+!AMIENH = '$TGCMDATA/amie_apr01_10_2010_nh_ssusi.nc'
+!AMIESH = '$TGCMDATA/amie_apr01_10_2010_sh_ssusi.nc'
+!AMIE_IBKG = 0
 /
