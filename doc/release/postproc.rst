@@ -58,7 +58,7 @@ Selected Images from Benchmark Runs
    nov2003_heelis_hourly
    nov2003_weimer_hourly
 
-:ref:`Whole Heliosphere Interval <whi2008>`
+:ref:`2008 Whole Heliosphere Interval <whi2008>`
 -------------------------------------------
 
 **UT vs ZP contours at selected latitudes**

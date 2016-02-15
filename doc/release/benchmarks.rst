@@ -146,8 +146,8 @@ November, 2003 Storm Case
 
 .. _whi2008:
 
-Whole Heliosphere Interval (WHI)
---------------------------------
+2008 Whole Heliosphere Interval (WHI)
+-------------------------------------
 
 **whi2008**: Whole Heliosphere interval (WHI) (March 21 to April 16, 2008)
 
