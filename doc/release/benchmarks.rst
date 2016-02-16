@@ -1,171 +1,89 @@
 
 .. _benchmarks:
 
-Benchmark Runs
-==============
+|modeluc| Version |version| Benchmark Runs
+==========================================
 
-For seasonal start-up files, and control runs, the definition
-of "Solar Minimum" and "Solar Maximum" conditions are as follows:
+Benchmark runs are provided in three groups: full-year climatology, seasonal, and solar storm events.
+Here is a table of runs at 2.5-degree model resolution (there is also a set at the 5-degree resolution)::
+ 
+ Full-year climatologies (solar min,max):
+   tiegcm_res2.5_climatology_smax	Full-year climatology at solar maximum conditions
+   tiegcm_res2.5_climatology_smin	Full-year climatology at solar minimum conditions
+ 
+ Seasons (Equinox, Solstice, solar min,max):
+   tiegcm_res2.5_decsol_smax		December Solstice, solar maximum (days 355-360)
+   tiegcm_res2.5_decsol_smin		December Solstice, solar minimum (days 355-360)
+   tiegcm_res2.5_junsol_smax		June Solstice, solar maximum     (days 172-177)
+   tiegcm_res2.5_junsol_smin		June Solstice, solar minimum     (days 172-177)
+   tiegcm_res2.5_mareqx_smax		March Equinox, solar maximum     (days 80-85)
+   tiegcm_res2.5_mareqx_smin		March Equinox, solar minimum     (days 80-85)
+   tiegcm_res2.5_sepeqx_smax		September Equinox, solar maximum (days 264-269)
+   tiegcm_res2.5_sepeqx_smin		September Equinox, solar minimum (days 264-269)
+  
+ Solar storm events (Heelis/GPI and Weimer/IMF,GPI):
+   tiegcm_res2.5_dec2006_heelis_gpi	December 2006 storm, Heelis/GPI          (days 330-360)
+   tiegcm_res2.5_dec2006_weimer_imf	December 2006 storm, Weimer/IMF,GPI      (days 330-360)
+   tiegcm_res2.5_jul2000_heelis_gpi	July 2000 storm,     Heelis/GPI          (days 192-202)
+   tiegcm_res2.5_jul2000_weimer_imf	July 2000 storm,     Weimer/IMF,GPI      (days 192-202)
+   tiegcm_res2.5_nov2003_heelis_gpi	November 2003 storm, Heelis/GPI          (days 323-328)
+   tiegcm_res2.5_nov2003_weimer_imf	November 2003 storm, Weimer/IMF,GPI      (days 323-328)
+   tiegcm_res2.5_whi2008_heelis_gpi	Whole Helio Interval 2008 Heelis/GPI     (days 81-106)
+   tiegcm_res2.5_whi2008_weimer_imf	Whole Helio Interval 2008 Weimer/IMF,GPI (days 81-106)
 
-* Solar Minimum Conditions::
+.. note::
 
-   POWER   = 18.
-   CTPOTEN = 30.
-   F107    = 70.
-   F107A   = 70.
+ Climatology and Seasonal runs were made with constant solar conditions as follows:
 
-* Solar Maximum Conditions::
+ * Solar Minimum Conditions:
+   
+   | POWER   = 18.
+   | CTPOTEN = 30.
+   | F107    = 70.
+   | F107A   = 70.
+   
+ * Solar Maximum Conditions:            
+   
+   | POWER   = 40.
+   | CTPOTEN = 60.
+   | F107    = 200.
+   | F107A   = 200.
+ 
+.. note::
+  
+  Explanation of terms for Storm Case Benchmarks:
 
-   POWER   = 40.
-   CTPOTEN = 60.
-   F107    = 200.
-   F107A   = 200.
+    * :term:`Heelis`: The Heelis Potential Model was used for high-latitude ion drift velocities
 
-Steady-State Seasonal Start-up Files
-------------------------------------
+    * :term:`Weimer`: The Weimer Potential Model was used for high-latitude ion drift velocities
 
-Single-history start-up files for the four seasons (at both model resolutions) are available
-at the `tgcm download page <http://www.hao.ucar.edu/modeling/tgcm/download.php>`_ 
-These files can be used as SOURCE files in the namelist input for initial runs.
-Files listed below are for the 5.0-degree resolution. Files for benchmark runs
-at the 2.5-degree resolution are the same, but have 'res2.5' instead of 'res5.0'.
+    * :term:`GPI`: Runs used GeoPhysical Indices data with Kp, and solar flux f10.7d, f10.7a 
 
-Start-up files at Solar Minimum Conditions:
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    * :term:`IMF`: Runs used IMF/OMNI data with Solar Wind density and velocity
 
-=============================== ====================================
-Date				Filenames (5.0 and 2.5-deg res)
-=============================== ====================================
-March Equinox (day 80)          tiegcm_res5.0_decsol_smin_prim.nc  
-                                tiegcm_res2.5_decsol_smin_prim.nc
-June Solstice (day 172)         tiegcm_res5.0_junsol_smin_prim.nc  
-                                tiegcm_res2.5_junsol_smin_prim.nc
-September Equinox (day 264)     tiegcm_res5.0_sepeqx_smin_prim.nc  
-                                tiegcm_res2.5_sepeqx_smin_prim.nc
-December Solstice (day 355)     tiegcm_res5.0_decsol_smin_prim.nc  
-                                tiegcm_res2.5_decsol_smin_prim.nc
-=============================== ====================================
+.. _benchmark_results:
 
-Start-up files at Solar Maximum Conditions:
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Selected Results of Benchmark Runs
+----------------------------------
 
-=============================== ====================================
-Date				Filename (5.0 and 2.5-deg res)
-=============================== ====================================
-March Equinox (day 80)          tiegcm_res5.0_decsol_smax_prim.nc
-                                tiegcm_res2.5_decsol_smax_prim.nc
-June Solstice (day 172)         tiegcm_res5.0_junsol_smax_prim.nc
-                                tiegcm_res2.5_junsol_smax_prim.nc
-September Equinox (day 264)     tiegcm_res5.0_sepeqx_smax_prim.nc
-                                tiegcm_res2.5_sepeqx_smax_prim.nc
-December Solstice (day 355)     tiegcm_res5.0_decsol_smax_prim.nc
-                                tiegcm_res2.5_decsol_smax_prim.nc
-=============================== ====================================
+Results of the benchmark runs are available in 2d plots of time series, grid slices, and maps.
+These are multi-page PDF files (you may need to use the rotate tool in your browser or previewer):
+
+Runs at 5.0-degree resolution:
+
+  * :benchmarks_url:`Climatology Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_climatology/PDFs>`
+  * :benchmarks_url:`Seasonal Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_seasons/PDFs>`
+  * :benchmarks_url:`Storm Case Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_storms/PDFs>`
+
+Runs at 2.5-degree resolution:
+
+  * :benchmarks_url:`Climatology Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_climatology/PDFs>`
+  * :benchmarks_url:`Seasonal Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_seasons/PDFs>`
+  * :benchmarks_url:`Storm Case Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_storms/PDFs>`
 
 
-.. _seasonal_control:
+Availability of Model Output History Files 
+------------------------------------------
 
-Seasonal Control Runs
----------------------
-
-**control**: 5-day control runs, started from the above steady-state histories at 
-both equinoxes and solstices, and at solar minimum and maximum conditions.
-
-* "Sanity check" plots for solar min control runs (global maps on last day of 5-day run): 
-
-  * :ref:`December Solstice, Solar Minimum <control_decsol_smin>`
-  * :ref:`June Solstice, Solar Minimum <control_junsol_smin>`
-  * :ref:`March Equinox, Solar Minimum <control_mareqx_smin>`
-  * :ref:`September Equinox, Solar Minimum <control_sepeqx_smin>`
-
-* "Sanity check" plots for solar max control runs (global maps on last day of 5-day run): 
-
-  * :ref:`December Solstice, Solar Maximum <control_decsol_smax>`
-  * :ref:`June Solstice, Solar Maximum <control_junsol_smax>`
-  * :ref:`March Equinox, Solar Maximum <control_mareqx_smax>`
-  * :ref:`September Equinox, Solar Maximum <control_sepeqx_smax>`
-
-* These history files are bundled with the tiegcm1.95 data download:
-
-  * `<http://www.hao.ucar.edu/modeling/tgcm/download.php>`_
-
-.. _climatology_info:
-
-Climatologies
--------------
-
-**climatology smax**: Full-year Climatology with constant solar maximum forcing,
-  with the Heelis potential model::
-
-   POWER   = 40.
-   CTPOTEN = 60.
-   F107    = 200.
-   F107A   = 200.
-
-* :ref:`"Sanity check" plots for Climatology at Solar Max <climatology_smax>`
-
-**climatology smin**: Full-year Climatology with constant solar minimum forcing,
-  with the Heelis potential model::
-
-   POWER   = 18.
-   CTPOTEN = 30.
-   F107    = 100.
-   F107A   = 100.
-
-* :ref:`"Sanity check" plots for Climatology at Solar Min <climatology_smin>`
-
-.. _dec2006:
-
-December, 2006 "AGU Storm"
---------------------------
-
-**dec2006**: December, 2006 "AGU" storm case:
-
-* Heelis potential model with GPI (Kp) data
-* Weimer potential model with IMF data (F10.7 from GPI)
-* "Sanity check" plots for dec2006:
-
-  * :ref:`Heelis/GPI (daily, days 330-360) <dec2006_heelis_daily>`
-  * :ref:`Heelis/GPI (hourly, days 346-352) <dec2006_heelis_hourly>`
-  * :ref:`Weimer/IMF (daily, days 330-360) <dec2006_weimer_daily>`
-  * :ref:`Weimer/IMF (hourly, days 346-352) <dec2006_weimer_hourly>`
-
-.. _nov2003:
-
-November, 2003 Storm Case
--------------------------
-
-**nov2003**: November 19-24 (days 323-328), 2003 storm case:
-
-* Heelis potential model with GPI (Kp) data
-* Weimer potential model with IMF data (F10.7 from GPI)
-* "Sanity check" plots for nov2003:
-
-  * :ref:`Heelis/GPI (hourly) <nov2003_heelis_hourly>`
-  * :ref:`Weimer/IMF (hourly) <nov2003_weimer_hourly>`
-
-.. _whi2008:
-
-2008 Whole Heliosphere Interval (WHI)
--------------------------------------
-
-**whi2008**: Whole Heliosphere interval (WHI) (March 21 to April 16, 2008)
-
-* Heelis potential model with GPI (Kp) data
-* Weimer potential model with IMF data (F10.7 from GPI)
-* "Sanity check" plots for whi2008:
-
-  * :ref:`Heelis/GPI (daily) <whi2008_heelis_daily>`
-  * :ref:`Weimer/IMF (daily) <whi2008_weimer_daily>`
-
-* Download history files at `TIEGCM Version 1.95 Whole Heliosphere Interval 2008 <http://cdp.ucar.edu/browse/browse.htm?uri=http%3a%2f%2fdataportal.ucar.edu%2fmetadata%2ftgcm%2fTIEGCM_Version_1_95%2fWhole_Heliosphere_Interval_2008%2fWhole_Heliosphere_Interval_2008.thredds.xml>`_
-
-History files on the NCAR HPSS 
-------------------------------
-
-Seasonal start-up files and complete history files for the 
-benchmark runs are on the `NCAR HPSS <http://www2.cisl.ucar.edu/docs/hpss>`_
-in directory /home/tgcm/tiegcm\ |version|. Here is a 
-:download:`complete catalog listing <_static/benchmarks.hpss>`
-including "contents" annotations.
-
+Model output history files are stored in CF-compliant netCDF format.
+Benchmark history files are available from the Globus data-sharing service.

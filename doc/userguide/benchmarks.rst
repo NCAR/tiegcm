@@ -95,31 +95,33 @@ command line for a detailed usage message.  Typing "tgcmrun" on the
 command line will cause the program to print the available benchmark 
 runs and prompt the user as follows::
 
-  The following runs are available:
+ The following runs are available:
 
-  NUMBER	NAME		DESCRIPTION
-  ------	----		-----------
-  0 	default_run 	Default run
-  1 	decsol_smax 	December Solstice Solar Maximum
-  2 	decsol_smin 	December Solstice Solar Minimum
-  3 	junsol_smax 	June Solstice Solar Maximum
-  4 	junsol_smin 	June Solstice Solar Minimum
-  5 	mareqx_smax 	March Equinox Solar Maximum
-  6 	mareqx_smin 	March Equinox Solar Minimum
-  7 	sepeqx_smax 	September Equinox Solar Maximum
-  8 	sepeqx_smin 	September Equinox Solar Minimum
-  9 	nov2003_heelis_gpi 	November 2003 "Halloween Storm", Heelis potential model, GPI data
-  10 	nov2003_weimer_imf 	November 2003 "Halloween Storm", Weimer potential model, IMF, GPI data
-  11 	dec2006_heelis_gpi 	December 2006 "AGU storm", Heelis potential model, GPI data
-  12 	dec2006_weimer_imf 	December 2006 "AGU storm", Weimer potential model, IMF and GPI data
-  13 	whi2008_heelis_gpi 	2008 "Whole Heliosphere Interval", Heelis potential model, GPI data
-  14 	whi2008_weimer_imf 	2008 "Whole Heliosphere Interval", Weimer potential model, IMF, GPI data
-  15 	climatology_smin 	Climatology run with constant solar minimum conditions (Jan 1-5)
-  16 	climatology_smax 	Climatology run with constant solar maximum conditions (Jan 1-5)
+ NUMBER	NAME		DESCRIPTION
+ ------	----		-----------
+ 0 	default_run 	Default run
+ 1 	decsol_smax 	December Solstice Solar Maximum
+ 2 	decsol_smin 	December Solstice Solar Minimum
+ 3 	junsol_smax 	June Solstice Solar Maximum
+ 4 	junsol_smin 	June Solstice Solar Minimum
+ 5 	mareqx_smax 	March Equinox Solar Maximum
+ 6 	mareqx_smin 	March Equinox Solar Minimum
+ 7 	sepeqx_smax 	September Equinox Solar Maximum
+ 8 	sepeqx_smin 	September Equinox Solar Minimum
+ 9 	nov2003_heelis_gpi 	November 2003 storm case, Heelis potential model, GPI data
+ 10 	nov2003_weimer_imf 	November 2003 storm case, Weimer potential model, IMF, GPI data
+ 11 	dec2006_heelis_gpi 	December 2006 "AGU storm", Heelis potential model, GPI data
+ 12 	dec2006_weimer_imf 	December 2006 "AGU storm", Weimer potential model, IMF and GPI data
+ 13 	whi2008_heelis_gpi 	2008 "Whole Heliosphere Interval", Heelis potential model, GPI data
+ 14 	whi2008_weimer_imf 	2008 "Whole Heliosphere Interval", Weimer potential model, IMF, GPI data
+ 15 	jul2000_heelis_gpi 	July 2000 "Bastille Day" storm, Heelis potential model, GPI data
+ 16 	jul2000_weimer_imf 	July 2000 "Bastille Day" storm, Weimer potential model, IMF, GPI data
+ 17 	climatology_smin 	Climatology run with constant solar minimum conditions (Jan 1-5)
+ 18 	climatology_smax 	Climatology run with constant solar maximum conditions (Jan 1-5)
+ 
+ Enter number of desired run (0-18) ('q' to quit, 'p' to print list, default=0): 
 
-  Enter number of desired run (0-16) ('q' to quit, 'p' to print list, default=0): 
-
-At this point the user can enter an integer 0 to 16, specifying the desired run.
+At this point the user can enter an integer 0 to 18, specifying the desired run.
 The user will then be prompted for a few additional parameters (tiegcm or timegcm model,
 resolution, model root directory, etc).  However, it is easiest to set a few environment
 variables before executing tgcmrun, to minimize the need to enter long file paths at the 
@@ -143,12 +145,19 @@ data downloads available for each model resolution). These source files should b
 located in the :term:`TGCMDATA` directory.
 
 The tgcmrun program can also be executed from a shell script. There are several
-example tcsh scripts in the tgcmrun directory that make a series of runs for
-various purposes:
+example tcsh scripts in the tgcmrun directory that make series of runs for
+various purposes. The scripts optionally run at one or both model resolutions.
+History files, stdout log files, and job scripts used, are stored in a directory
+tree below the working directory. 
 
-* **run_climatology**: Make two short climatology runs, one for each resolution.
+Standard 18 benchmark runs (as in the interactive tgcmrun command above):
+
+* **run_climatology**: Start climatology runs (smin,smax). These can be extended to a full year by the user.
+* **run_seasons**: Make seasonal benchmark runs (equinoxes, solstices, at smin, smax)
+* **run_storms**: Make storm case benchmark runs (heelis_gpi and weimer_imf)
+
+Additional runs for testing compilers, performance, etc.:
+
 * **run_compilers**: Make three runs, each with a different compiler (linux desktop systems only)
 * **run_perf**: Make several runs using different processor (MPI task) counts (super systems only)
 * **run_scriptsonly**: This only makes the namelist input and job scripts (does not submit the jobs)
-* **run_seasons**: Make the 8 seasonal benchmark runs (at both resolutions).
-* **run_storms**: Make storm case benchmark runs (at both resolutions).

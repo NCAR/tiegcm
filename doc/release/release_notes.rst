@@ -55,7 +55,7 @@ Make/Build System
   * **ESMF Library**. The parallel dynamo now requires that the ESMF library
     be linked. See the User's Guide for more information. 
 
-New Benchmarking Utility
+Benchmarking Utility
 ------------------------
 
   Tgcmrun is a Python code (in the tgcmrun/ directory) that can be used to 
