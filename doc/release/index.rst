@@ -20,7 +20,7 @@ Contents:
    release_notes
    benchmarks
 
-* `User's Guide <http://www.hao.ucar.edu/modeling/tgcm/doc/userguide/html/>`_
+* :base_url:`User's Guide <userguide_html>`
 
 * `Model Description <http://www.hao.ucar.edu/modeling/tgcm/doc/description/model_description.pdf>`_
 

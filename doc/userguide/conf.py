@@ -31,12 +31,12 @@ extensions = ['sphinx.ext.extlinks']
 #
 # btf 12/15/15: Change this when tiegcm2.0 is available on webpub:
 #
-extlinks = {'base_url': ('http://www.hao.ucar.edu/modeling/tgcm/tiegcm1.95/%s', 'base_url '),
-            'ftp_url': ('http://download.hao.ucar.edu/pub/tgcm/data/%s', None ),
-            'download_url': ('http://www.hao.ucar.edu/modeling/tgcm/%s', None )}
+#extlinks = {'base_url': ('http://www.hao.ucar.edu/modeling/tgcm/tiegcm2.0/%s', 'base_url '),
+#            'ftp_url': ('http://download.hao.ucar.edu/pub/tgcm/data/%s', None ),
+#            'download_url': ('http://www.hao.ucar.edu/modeling/tgcm/%s', None )}
 
-#extlinks = {'base_url': ('http://download.hao.ucar.edu/pub/tgcm/tiegcm1.94/%s', 'base_url '),
-#            'data_url': ('http://download.hao.ucar.edu/pub/tgcm/data/tiegcm1.94/%s', 'data_url ')}
+extlinks = {'base_url': ('http://download.hao.ucar.edu/pub/tgcm/tiegcm2.0/%s', 'base_url '),
+            'data_url': ('http://download.hao.ucar.edu/pub/tgcm/data/tiegcm2.0/%s', 'data_url ')}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -67,6 +67,7 @@ rst_epilog = """
 .. |model| replace:: tiegcm
 .. |modeluc| replace:: TIEGCM
 .. |tgcm_version| replace:: tiegcm2.0
+.. |tgcm_version_uc| replace:: TIEGCM2.0
 .. |download_5.0data| replace:: tiegcm2.0_res5.0_data.tar.gz
 .. |download_2.5data| replace:: tiegcm2.0_res2.5_data.tar.gz
 .. |ncarsuper| replace:: yellowstone

@@ -131,9 +131,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: CO2_COOL Global maps at Zp -4, +2:
 
-   .. image:: _static/images/CO2_COOL_zpm4.png
+   .. image:: _static/images/diags/CO2_COOL_zpm4.png
       :align: center
-   .. image:: _static/images/CO2_COOL_zpp2.png
+   .. image:: _static/images/diags/CO2_COOL_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -161,9 +161,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: NO_COOL Global maps at Zp -4, +2:
 
-   .. image:: _static/images/NO_COOL_zpm4.png
+   .. image:: _static/images/diags/NO_COOL_zpm4.png
       :align: center
-   .. image:: _static/images/NO_COOL_zpp2.png
+   .. image:: _static/images/diags/NO_COOL_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -198,9 +198,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: DEN Global maps at Zp -4, +2:
 
-   .. image:: _static/images/DEN_zpm4.png
+   .. image:: _static/images/diags/DEN_zpm4.png
       :align: center
-   .. image:: _static/images/DEN_zpp2.png
+   .. image:: _static/images/diags/DEN_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -232,9 +232,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: HEATING Global maps at Zp -4, +2:
 
-   .. image:: _static/images/DEN_zpm4.png
+   .. image:: _static/images/diags/DEN_zpm4.png
       :align: center
-   .. image:: _static/images/DEN_zpp2.png
+   .. image:: _static/images/diags/DEN_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -270,7 +270,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: HMF2 Global map:
 
-   .. image:: _static/images/HMF2.png
+   .. image:: _static/images/diags/HMF2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -299,7 +299,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: NMF2 Global map:
 
-   .. image:: _static/images/NMF2.png
+   .. image:: _static/images/diags/NMF2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -328,7 +328,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: FOF2 Global map:
 
-   .. image:: _static/images/fof2.png
+   .. image:: _static/images/diags/fof2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -366,7 +366,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: TEC Global map
 
-   .. image:: _static/images/TEC.png
+   .. image:: _static/images/diags/TEC.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -409,9 +409,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: SCHT Global maps at Zp -4, +2:
 
-   .. image:: _static/images/SCHT_zpm4.png
+   .. image:: _static/images/diags/SCHT_zpm4.png
       :align: center
-   .. image:: _static/images/SCHT_zpp2.png
+   .. image:: _static/images/diags/SCHT_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -457,9 +457,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: SIGMA_HAL Global maps at Zp -4, +2:
 
-   .. image:: _static/images/SIGMA_HAL_zpm4.png
+   .. image:: _static/images/diags/SIGMA_HAL_zpm4.png
       :align: center
-   .. image:: _static/images/SIGMA_HAL_zpp2.png
+   .. image:: _static/images/diags/SIGMA_HAL_zpp2.png
       :align: center
    
    :ref:`Back to diagnostics table <diag_fields>`
@@ -505,9 +505,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: SIGMA_PED Global maps at Zp -4, +2:
 
-   .. image:: _static/images/SIGMA_PED_zpm4.png
+   .. image:: _static/images/diags/SIGMA_PED_zpm4.png
       :align: center
-   .. image:: _static/images/SIGMA_PED_zpp2.png
+   .. image:: _static/images/diags/SIGMA_PED_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -532,9 +532,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: LAMDA_HAL Global maps at Zp -4, +2:
 
-   .. image:: _static/images/LAMDA_HAL_zpm4.png
+   .. image:: _static/images/diags/LAMDA_HAL_zpm4.png
       :align: center
-   .. image:: _static/images/LAMDA_HAL_zpp2.png
+   .. image:: _static/images/diags/LAMDA_HAL_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -559,9 +559,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: LAMDA_PED Global maps at Zp -4, +2:
 
-   .. image:: _static/images/LAMDA_PED_zpm4.png
+   .. image:: _static/images/diags/LAMDA_PED_zpm4.png
       :align: center
-   .. image:: _static/images/LAMDA_PED_zpp2.png
+   .. image:: _static/images/diags/LAMDA_PED_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -602,7 +602,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: UI_ExB Global maps at Zp +2:
 
-   .. image:: _static/images/UI_ExB_zpp2.png
+   .. image:: _static/images/diags/UI_ExB_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -643,7 +643,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: VI_ExB Global maps at Zp +2:
 
-   .. image:: _static/images/VI_ExB_zpp2.png
+   .. image:: _static/images/diags/VI_ExB_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -684,7 +684,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: WI_ExB Global maps at Zp +2:
 
-   .. image:: _static/images/WI_ExB_zpp2.png
+   .. image:: _static/images/diags/WI_ExB_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -712,9 +712,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: MU_M Global maps at Zp -4, +2:
 
-   .. image:: _static/images/MU_M_zpm4.png
+   .. image:: _static/images/diags/MU_M_zpm4.png
       :align: center
-   .. image:: _static/images/MU_M_zpp2.png
+   .. image:: _static/images/diags/MU_M_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -790,9 +790,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: WN Global maps at Zp -4, +2:
 
-   .. image:: _static/images/WN_zpm4.png
+   .. image:: _static/images/diags/WN_zpm4.png
       :align: center
-   .. image:: _static/images/WN_zpp2.png
+   .. image:: _static/images/diags/WN_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -865,9 +865,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: O_N2 Global maps at Zp -4, +2:
 
-   .. image:: _static/images/O_N2_zpm4.png
+   .. image:: _static/images/diags/O_N2_zpm4.png
       :align: center
-   .. image:: _static/images/O_N2_zpp2.png
+   .. image:: _static/images/diags/O_N2_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -913,9 +913,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: QJOULE Global maps at Zp -4, +2:
 
-   .. image:: _static/images/QJOULE_zpm4.png
+   .. image:: _static/images/diags/QJOULE_zpm4.png
       :align: center
-   .. image:: _static/images/QJOULE_zpp2.png
+   .. image:: _static/images/diags/QJOULE_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1000,7 +1000,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: QJOULE_INTEG North polar projection
 
-   .. image:: _static/images/QJOULE_INTEG.png
+   .. image:: _static/images/diags/QJOULE_INTEG.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1029,9 +1029,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: JE13D North polar projection at Zp -4, +2
 
-   .. image:: _static/images/JE13D_zpm4.png
+   .. image:: _static/images/diags/JE13D_zpm4.png
       :align: center
-   .. image:: _static/images/JE13D_zpp2.png
+   .. image:: _static/images/diags/JE13D_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1060,9 +1060,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: JE23D North polar projection at Zp -4, +2
 
-   .. image:: _static/images/JE23D_zpm4.png
+   .. image:: _static/images/diags/JE23D_zpm4.png
       :align: center
-   .. image:: _static/images/JE23D_zpp2.png
+   .. image:: _static/images/diags/JE23D_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1094,7 +1094,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: JQR North polar projection 
 
-   .. image:: _static/images/JQR_nhem.png
+   .. image:: _static/images/diags/JQR_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1124,7 +1124,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: KQLAM North polar projection
 
-   .. image:: _static/images/KQLAM_nhem.png
+   .. image:: _static/images/diags/KQLAM_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1155,7 +1155,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: KQPHI North polar projection 
 
-   .. image:: _static/images/KQPHI_nhem.png
+   .. image:: _static/images/diags/KQPHI_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1177,7 +1177,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: BX cylindrical equidistant projection 
 
-   .. image:: _static/images/BX.png
+   .. image:: _static/images/diags/BX.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1197,7 +1197,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: BY cylindrical equidistant projection 
 
-   .. image:: _static/images/BY.png
+   .. image:: _static/images/diags/BY.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1217,7 +1217,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: BZ cylindrical equidistant projection 
 
-   .. image:: _static/images/BZ.png
+   .. image:: _static/images/diags/BZ.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1237,7 +1237,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: BMAG cylindrical equidistant projection 
 
-   .. image:: _static/images/BMAG.png
+   .. image:: _static/images/diags/BMAG.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1257,7 +1257,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: EX cylindrical equidistant projection 
 
-   .. image:: _static/images/EX_zpp2.png
+   .. image:: _static/images/diags/EX_zpp2.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1277,7 +1277,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: EY cylindrical equidistant projection 
 
-   .. image:: _static/images/EY_zpp2.png
+   .. image:: _static/images/diags/EY_zpp2.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1297,7 +1297,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: EZ cylindrical equidistant projection 
 
-   .. image:: _static/images/EZ_zpp2.png
+   .. image:: _static/images/diags/EZ_zpp2.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1317,7 +1317,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: ED1 north hemisphere polar projection
 
-   .. image:: _static/images/ED1_nhem.png
+   .. image:: _static/images/diags/ED1_nhem.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1337,7 +1337,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: ED2 north hemisphere polar projection
 
-   .. image:: _static/images/ED2_nhem.png
+   .. image:: _static/images/diags/ED2_nhem.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1357,9 +1357,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: PHIM2D polar projection (north and south):
 
-   .. image:: _static/images/PHIM2D_nhem.png
+   .. image:: _static/images/diags/PHIM2D_nhem.png
       :align: center
-   .. image:: _static/images/PHIM2D_shem.png
+   .. image:: _static/images/diags/PHIM2D_shem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1380,9 +1380,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: N2 cylindrical equidistant projection 
 
-   .. image:: _static/images/N2_zpm4.png
+   .. image:: _static/images/diags/N2_zpm4.png
       :align: center
-   .. image:: _static/images/N2_zpp2.png
+   .. image:: _static/images/diags/N2_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1403,7 +1403,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: ZGMID cylindrical equidistant projection 
 
-   .. image:: _static/images/zgmid.png
+   .. image:: _static/images/diags/zgmid.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1424,7 +1424,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: CUSP polar equidistant projection 
 
-   .. image:: _static/images/CUSP_nhem.png
+   .. image:: _static/images/diags/CUSP_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1445,7 +1445,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: DRIZZLE polar projection 
 
-   .. image:: _static/images/DRIZZLE_nhem.png
+   .. image:: _static/images/diags/DRIZZLE_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1466,7 +1466,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: ALFA polar projection 
 
-   .. image:: _static/images/alfa.png
+   .. image:: _static/images/diags/alfa.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1487,7 +1487,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: NFLUX polar projection 
 
-   .. image:: _static/images/NFLUX_nhem.png
+   .. image:: _static/images/diags/NFLUX_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1508,7 +1508,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: EFLUX polar projection 
 
-   .. image:: _static/images/EFLUX_nhem.png
+   .. image:: _static/images/diags/EFLUX_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`

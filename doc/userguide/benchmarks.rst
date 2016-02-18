@@ -12,76 +12,90 @@ Netcdf files with the first history of each benchmark run are available in
 the :ref:`data download file <download>`.  These files can be used as start-up 
 :ref:`SOURCE <SOURCE>` files to reproduce the runs.  
 
-Following is a summary of benchmark runs made by |model| version |version|.
-For full history file output, steady-state start-up files, and "sanity check" plots 
-of the benchmark runs made by version |version|, please see 
-:base_url:`Release Documentation <release/html>`
+Benchmark runs are provided in three groups: full-year climatology, seasonal, and solar storm events.
+Here is a table of runs at 2.5-degree model resolution (there is also a set at the 5-degree resolution)::
+ 
+ Full-year climatologies (solar min,max):
+   tiegcm_res2.5_climatology_smax	Full-year climatology at solar maximum conditions
+   tiegcm_res2.5_climatology_smin	Full-year climatology at solar minimum conditions
+ 
+ Seasons (Equinox, Solstice, solar min,max):
+   tiegcm_res2.5_decsol_smax		December Solstice, solar maximum (days 355-360)
+   tiegcm_res2.5_decsol_smin		December Solstice, solar minimum (days 355-360)
+   tiegcm_res2.5_junsol_smax		June Solstice, solar maximum     (days 172-177)
+   tiegcm_res2.5_junsol_smin		June Solstice, solar minimum     (days 172-177)
+   tiegcm_res2.5_mareqx_smax		March Equinox, solar maximum     (days 80-85)
+   tiegcm_res2.5_mareqx_smin		March Equinox, solar minimum     (days 80-85)
+   tiegcm_res2.5_sepeqx_smax		September Equinox, solar maximum (days 264-269)
+   tiegcm_res2.5_sepeqx_smin		September Equinox, solar minimum (days 264-269)
+  
+ Solar storm events (Heelis/GPI and Weimer/IMF,GPI):
+   tiegcm_res2.5_dec2006_heelis_gpi	December 2006 storm, Heelis/GPI          (days 330-360)
+   tiegcm_res2.5_dec2006_weimer_imf	December 2006 storm, Weimer/IMF,GPI      (days 330-360)
+   tiegcm_res2.5_jul2000_heelis_gpi	July 2000 storm,     Heelis/GPI          (days 192-202)
+   tiegcm_res2.5_jul2000_weimer_imf	July 2000 storm,     Weimer/IMF,GPI      (days 192-202)
+   tiegcm_res2.5_nov2003_heelis_gpi	November 2003 storm, Heelis/GPI          (days 323-328)
+   tiegcm_res2.5_nov2003_weimer_imf	November 2003 storm, Weimer/IMF,GPI      (days 323-328)
+   tiegcm_res2.5_whi2008_heelis_gpi	Whole Helio Interval 2008 Heelis/GPI     (days 81-106)
+   tiegcm_res2.5_whi2008_weimer_imf	Whole Helio Interval 2008 Weimer/IMF,GPI (days 81-106)
 
-Seasonal
---------
+.. note::
 
-**Seasonal**: 5-day control runs, started from steady-state histories at both equinoxes
-and both solstices, and at solar minimum and maximum conditions::
+  Seasonal runs and full-year Climatologies were run with constant solar forcing, as follows:
 
-  mareqx: March Equinox (day 80) 
-  junsol: June Solstice (day 172) 
-  sepeqx: September Equinox (day 264) 
-  decsol: December Solstice (day 355)
+ * Solar Minimum:
 
- * Solar Minimum::
+  | POWER   = 18.
+  | CTPOTEN = 30.
+  | F107    = 70.
+  | F107A   = 70.
 
-    POWER   = 18.
-    CTPOTEN = 30.
-    F107    = 70.
-    F107A   = 70.
+ * Solar Maximum:
 
- * Solar Maximum::
+  | POWER   = 40.
+  | CTPOTEN = 60.
+  | F107    = 200.
+  | F107A   = 200.
 
-    POWER   = 40.
-    CTPOTEN = 60.
-    F107    = 200.
-    F107A   = 200.
+For comprehensive plots of all benchmark runs, please see the |tgcm_version_uc|
+:base_url:`Release Documentation <release_html>`
 
-Climatology
------------
+Seasonal (equinoxes, solstices, solar min, max):
 
-**climatology**: Full-year Climatology with constant solar forcing:
+  * decsol: December Solstice (days 355-360)
+  * junsol: June Solstice (days 172-177) 
+  * mareqx: March Equinox (days 80-85) 
+  * sepeqx: September Equinox (days 264-269) 
 
- * Heelis potential model with constant solar forcing::
+Climatologies (full-year runs with daily histories):
 
-    POWER   = 18.
-    CTPOTEN = 30.
-    F107    = 100.
-    F107A   = 100.
+  * climatology_smax: Climatologies at Solar Maximum
+  * climatology_smin: Climatologies at Solar Minimum
 
-December, 2006 "AGU" Storm Case
--------------------------------
+December, 2006 "AGU" Storm Case (days 330-360):
 
-**dec2006**: December, 2006 "AGU" storm case:
+ * dec2006: Heelis potential model with GPI (Kp) data
+ * dec2006: Weimer potential model with IMF data (F10.7 from GPI)
 
- * Heelis potential model with GPI (Kp) data
- * Weimer potential model with IMF data (F10.7 from GPI)
+November 19-24, 2003 Storm Case (days 323-328)
 
-November, 2003 Storm Case
--------------------------
+ * nov2003: Heelis potential model with GPI (Kp) data
+ * nov2003: Weimer potential model with IMF data (F10.7 from GPI)
 
-**nov2003**: November 19-24 (days 323-328), 2003 storm case:
+July 11-21, 2000 "Bastille Day" Storm Case (days 192-202)
 
- * Heelis potential model with GPI (Kp) data
- * Weimer potential model with IMF data (F10.7 from GPI)
+ * jul2000: Heelis potential model with GPI (Kp) data
+ * jul2000: Weimer potential model with IMF data (F10.7 from GPI)
 
-Whole Heliosphere Interval
---------------------------
+Whole Heliosphere Interval (WHI) (March 21 to April 16, 2008)
 
-**whi2008**: Whole Heliosphere interval (WHI) (March 21 to April 16, 2008)
-
- * Heelis potential model with GPI (Kp) data
- * Weimer potential model with IMF data (F10.7 from GPI)
+ * whi2008: Heelis potential model with GPI (Kp) data
+ * whi2008: Weimer potential model with IMF data (F10.7 from GPI)
 
 .. note::
    For more detailed information and access to history file output, and
-   preliminary post-processing of these runs, 
-   see :base_url:`Release Documentation <release/html>`
+   extensive post-processing of these runs, see the |tgcm_version_uc|
+   :base_url:`Release Documentation <release_html>`
 
 Making Benchmark Runs
 ---------------------

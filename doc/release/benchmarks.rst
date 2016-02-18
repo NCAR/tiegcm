@@ -69,17 +69,49 @@ Selected Results of Benchmark Runs
 Results of the benchmark runs are available in 2d plots of time series, grid slices, and maps.
 These are multi-page PDF files (you may need to use the rotate tool in your browser or previewer):
 
-Runs at 5.0-degree resolution:
+Large, comprehensive files with many fields (instantaneous and time series):
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   * :benchmarks_url:`Climatology Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_climatology/PDFs>`
   * :benchmarks_url:`Seasonal Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_seasons/PDFs>`
   * :benchmarks_url:`Storm Case Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_storms/PDFs>`
 
-Runs at 2.5-degree resolution:
-
   * :benchmarks_url:`Climatology Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_climatology/PDFs>`
   * :benchmarks_url:`Seasonal Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_seasons/PDFs>`
   * :benchmarks_url:`Storm Case Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_storms/PDFs>`
+
+Selected plots (smaller files, fewer fields) (2.5-deg resolution only):
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  * Climatologies (TN, NE at full-year vs log pressure)
+
+    * :download:`Full-year Climatology, Solar Maximum <_static/images/tiegcm_res2.5_climatology_smax_daily.pdf>`
+    * :download:`Full-year Climatology, Solar Minimum <_static/images/tiegcm_res2.5_climatology_smin_daily.pdf>`
+
+  * Seasonal (TN, NE global maps at zp -4, +2, and global mean profiles):
+
+    * :download:`December Solstice, Solar Maximum <_static/images/tiegcm_res2.5_decsol_smax.pdf>`
+    * :download:`December Solstice, Solar Minimum <_static/images/tiegcm_res2.5_decsol_smin.pdf>`
+    * :download:`June Solstice, Solar Maximum <_static/images/tiegcm_res2.5_junsol_smax.pdf>`
+    * :download:`June Solstice, Solar Minimum <_static/images/tiegcm_res2.5_junsol_smin.pdf>`
+    * :download:`March Equinox, Solar Maximum <_static/images/tiegcm_res2.5_mareqx_smax.pdf>`
+    * :download:`March Equinox, Solar Minimum <_static/images/tiegcm_res2.5_mareqx_smin.pdf>`
+    * :download:`September Equinox, Solar Maximum <_static/images/tiegcm_res2.5_sepeqx_smax.pdf>`
+    * :download:`September Equinox, Solar Minimum <_static/images/tiegcm_res2.5_sepeqx_smin.pdf>`
+
+  * Storms (Time (hourly) vs Zp) (TN, NE, lt 0,12,zm, TE,TI zm):
+
+    * :download:`December 2006 storm (days 347-352, hourly) <_static/images/tiegcm_res2.5_dec2006_weimer_imf_days347-352_utzp.pdf>`
+    * :download:`July 2000 storm (days 195-200, hourly) <_static/images/tiegcm_res2.5_jul2000_weimer_imf_days195-200_utzp.pdf>`
+    * :download:`November 2003 storm (days 323-328, hourly) <_static/images/tiegcm_res2.5_nov2003_weimer_imf_days323-328_utzp.pdf>`
+    * :download:`Whole Heliosphere Interval 2008 (days 85-90, hourly) <_static/images/tiegcm_res2.5_whi2008_weimer_imf_days085-090_utzp.pdf>`
+
+  * Storms (Time (hourly) vs Latitude) (TN, NE at Zp -4, lt 0, 12, HMF2, NMF2)
+
+    * :download:`December 2006 storm (days 347-352, hourly) <_static/images/tiegcm_res2.5_dec2006_weimer_imf_days347-352_utlat.pdf>`
+    * :download:`July 2000 storm (days 195-200, hourly) <_static/images/tiegcm_res2.5_nov2003_weimer_imf_days323-328_utlat.pdf>`
+    * :download:`November 2003 storm (days 323-328, hourly) <_static/images/tiegcm_res2.5_nov2003_weimer_imf_days323-328_utlat.pdf>`
+    * :download:`Whole Heliosphere Interval 2008 (days 85-90, hourly) <_static/images/tiegcm_res2.5_whi2008_weimer_imf_days085-090_utlat.pdf>`
 
 
 Availability of Model Output History Files 
