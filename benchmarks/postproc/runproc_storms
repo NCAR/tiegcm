@@ -7,18 +7,21 @@ set mycwd = `pwd`
 set home = /glade/p/hao/tgcm/tiegcm_benchmarks            # base working directory
 set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make multiple proc runs
 
-set singleut = yes # make instantaneous plots
-set multiut = yes  # make time slices (ut on x-axis)
-set select = yes   # less comprehensive (fewer fields, fewer plots)
-set select = zm    # zonal mean plots only for multiut runs
-set make_pdf = yes # will make pdf files from the ps, using ps2pdf
+set singleut  = yes  # make instantaneous plots
+set multiut   = yes  # make time slices (ut on x-axis)
+set select    = yes  # less comprehensive (fewer fields, fewer plots)
+set make_pdf  = yes  # will make pdf files from the ps, using ps2pdf
+set remove_ps = yes  # remove ps file after making pdf (only if make_pdf=yes)
 
 set resolutions = ( \
   '5.0' \
-# '2.5' \
+  '2.5' \
 )
 
 foreach res ($resolutions)
+
+  set case   = tiegcm_res${res}_storms
+  set work   = $home/$case
 
   if ($res == '5.0') then
     set exec = $home/postproc/tgcmproc_f90/build/tgcmproc_sres_f90  # single-res processor executable
@@ -31,22 +34,68 @@ foreach res ($resolutions)
  
   set runs = ( \
     tiegcm_res${res}_dec2006_heelis_gpi \
-#   tiegcm_res${res}_dec2006_weimer_imf \
-#   tiegcm_res${res}_nov2003_heelis_gpi \
-#   tiegcm_res${res}_nov2003_weimer_imf \
-#   tiegcm_res${res}_whi2008_heelis_gpi \
-#   tiegcm_res${res}_whi2008_weimer_imf \
-#   tiegcm_res${res}_jul2000_heelis_gpi \
-#   tiegcm_res${res}_jul2000_weimer_imf \
+    tiegcm_res${res}_dec2006_weimer_imf \
+    tiegcm_res${res}_jul2000_heelis_gpi \
+    tiegcm_res${res}_jul2000_weimer_imf \
+    tiegcm_res${res}_nov2003_heelis_gpi \
+    tiegcm_res${res}_nov2003_weimer_imf \
+    tiegcm_res${res}_whi2008_heelis_gpi \
+    tiegcm_res${res}_whi2008_weimer_imf \
   )
- 
-  set case   = tiegcm_res${res}_storms
-  set work   = $home/$case
 
-  if ($select == 'yes') then # reduced field set:
-    set cfields = "'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
-  endif
- 
+  set mtimes_singleut = ( \
+    '349,12,0' '349,12,0' \
+    '198,0,0'  '198,0,0'  \
+    '325,0,0'  '325,0,0'  \
+    '88,0,0'   '88,0,0'   \
+  )
+
+  set mtimes_daily = ( \
+    "330,0,0,'to',360,0,0,'by',1440" \
+    "330,0,0,'to',360,0,0,'by',1440" \
+    "192,0,0,'to',202,0,0,'by',1440" \
+    "192,0,0,'to',202,0,0,'by',1440" \
+    "323,0,0,'to',328,0,0,'by',1440" \
+    "323,0,0,'to',328,0,0,'by',1440" \
+    "81,0,0,'to',106,0,0,'by',1440" \
+    "81,0,0,'to',106,0,0,'by',1440" \
+  )
+
+  set days_daily = ( \
+    'days330-360_daily' 'days330-360_daily'  \
+    'days192-202_daily' 'days192-202_daily'  \
+    'days323-328_daily' 'days323-328_daily'  \
+    'days081-106_daily' 'days081-106_daily'  \
+  )
+    
+  set mtimes_hourly = ( \
+    "347,0,0,'to',352,0,0,'by',60" \
+    "347,0,0,'to',352,0,0,'by',60" \
+    "195,0,0,'to',200,0,0,'by',60" \
+    "195,0,0,'to',200,0,0,'by',60" \
+    "323,1,0,'to',328,0,0,'by',60" \
+    "323,1,0,'to',328,0,0,'by',60" \
+    "85,0,0,'to',90,0,0,'by',60"   \
+    "85,0,0,'to',90,0,0,'by',60"   \
+  )
+
+  set days_hourly = ( \
+    'days347-352_hourly' 'days347-352_hourly'  \
+    'days195-200_hourly' 'days195-200_hourly'  \
+    'days323-328_hourly' 'days323-328_hourly'  \
+    'days085-090_hourly' 'days085-090_hourly'  \
+  )
+
+  set doselect = 0
+runloop:
+#
+# Complete fields list:
+  set cfields = "'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI','TEC','O2P','OP','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN','QJOULE','HMF2','NMF2','Z','ZG'"
+#
+# Selected fields:
+  if ($doselect == '1') set cfields = "'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
+
+  @ irun = 1
   foreach run ($runs)
     echo "------------------ $run --------------------"
     set outdir  = $work/$run/proc
@@ -55,316 +104,90 @@ foreach res ($resolutions)
 # All file paths are absolute, except for history files, which are relative to $histdir
 #
     cd $histdir
-    echo tgcmproc moved to $histdir
 #
-#------------------------------------------------------------------------------------------
+# Instantaneous maps and slices:
 #
-# Instantaneous maps, slices, etc, usually at about peak storm conditions:
-#
-    if ($run == "tiegcm_res${res}_dec2006_heelis_gpi" || \
-        $run == "tiegcm_res${res}_dec2006_weimer_imf") set mtimes = '349,12,0'
-    if ($run == "tiegcm_res${res}_jul2000_heelis_gpi" || \
-        $run == "tiegcm_res${res}_jul2000_weimer_imf") set mtimes = '198,0,0'
-    if ($run == "tiegcm_res${res}_nov2003_heelis_gpi" || \
-        $run == "tiegcm_res${res}_nov2003_weimer_imf") set mtimes = '325,0,0'
-    if ($run == "tiegcm_res${res}_whi2008_heelis_gpi" || \
-        $run == "tiegcm_res${res}_whi2008_weimer_imf") set mtimes = '88,0,0'
-
     if ($singleut == 'yes') then
-      $proc -submit yes -executable $exec -singleut=1 -mtimes $mtimes \
-        -nlfile $outdir/${run}_singleut.inp \
-        -stdout $outdir/${run}_singleut.out \
-        -flnm_ps $outdir/${run}_singleut.ps \
-        \*sech\*.nc
-      echo Completed singleut run for $run
+      set root = $outdir/${run}_singleut
+      if ($doselect == '1') set root = $outdir/${run}_singleut_select
+      $proc -submit yes -executable $exec -singleut 1 -mtimes $mtimes_singleut[$irun] \
+        -nlfile $root.inp -stdout $root.out -flnm_ps $root.ps -cfields $cfields \*sech\*.nc
       if ($make_pdf == 'yes') then
-        echo Converting $outdir/${run}_singleut.ps to $outdir/${run}_singleut.pdf
-        ps2pdf $outdir/${run}_singleut.ps $outdir/${run}_singleut.pdf
+        ps2pdf $root.ps $root.pdf
+        if ($remove_ps == 'yes' && -e $root.ps) rm $root.ps
       endif
-    endif
-
-    if ($select == 'yes') then # reduced field set:
-      $proc -submit yes -executable $exec -singleut=1 -mtimes $mtimes \
-        -nlfile $outdir/${run}_singleut_select.inp \
-        -stdout $outdir/${run}_singleut_select.out \
-        -flnm_ps $outdir/${run}_singleut_select.ps \
-        -fmap_zpht '-4. 0. 2. 4.' \
-        -cfields $cfields \
-        \*sech\*.nc
-      echo Completed singleut select run for $run
-      if ($make_pdf == 'yes') then
-        echo Converting $outdir/${run}_singleut_select.ps to $outdir/${run}_singleut_select.pdf
-        ps2pdf $outdir/${run}_singleut_select.ps $outdir/${run}_singleut_select.pdf
-      endif
+      echo Completed singleut run for $run mtime=$mtimes_singleut[$irun]
+      echo ' '
     endif
 #
-#------------------------------------------------------------------------------------------
-# Time-dependent plots with day/ut on x-axis:
+# Time series plots (utvert, utlat, daily, hourly):
 #
-# December 2006 storm (days 330 -> 360):
+    if ($multiut == 'yes') then
 #
-    if ($run == "tiegcm_res${res}_dec2006_heelis_gpi" || \
-        $run == "tiegcm_res${res}_dec2006_weimer_imf") then
-
-      if ($multiut == 'yes') then
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# dec2006 primaries: daily days 330 to 360:
-        set mtimes = "330,0,0,'to',360,0,0,'by',1440"
-        set days = "days330-360"
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_$days.inp \
-          -stdout  $outdir/${run}_$days.out \
-          -flnm_ps $outdir/${run}_$days.ps  \
-          \*prim\*.nc
-        echo "Completed multiut for run $run ($days (daily))"
-
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
-          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
-        endif
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# dec2006 secondaries: 347,0,0 -> 352,0,0, hourly:
-        set mtimes = "347,0,0,'to',352,0,0,'by',60"
-        set days = "days347-352"
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_$days.inp \
-          -stdout  $outdir/${run}_$days.out \
-          -flnm_ps $outdir/${run}_$days.ps  \
-          \*sech\*.nc
-        echo "Completed multiut for run $run ($days (hourly))"
-
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
-          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
-        endif
-
-      endif # doing multiut
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      if ($select == 'yes') then
-        set mtimes = "330,0,0,'to',360,0,0,'by',1440"
-        set days = "days330-360"
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_${days}_select.inp \
-          -stdout  $outdir/${run}_${days}_select.out \
-          -flnm_ps $outdir/${run}_${days}_select.ps  \
-          -cfields $cfields \
-          \*prim\*.nc
-        echo "Completed multiut select for run $run ($days (daily))"
-
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
-          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
-        endif
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        set mtimes = "347,0,0,'to',352,0,0,'by',60"
-        set days = "days347-352"
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_${days}_select.inp \
-          -stdout  $outdir/${run}_${days}_select.out \
-          -flnm_ps $outdir/${run}_${days}_select.ps  \
-          -cfields $cfields \
-          \*sech\*.nc
-        echo "Completed multiut select for run $run ($days (hourly))"
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
-          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
-        endif
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      endif # doing select
-    endif # run
-#
-#------------------------------------------------------------------------------------------
-# November 2003 storm (days323-328): (should this run be expanded?)
-#
-    if ($run == "tiegcm_res${res}_nov2003_heelis_gpi" || \
-        $run == "tiegcm_res${res}_nov2003_weimer_imf") then
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# nov2003 primaries: 323 -> 328 daily
-# nov2003 secondaries: 323,1,0 -> 328,0,0 hourly
-#
-      set mtimes = "323,1,0,'to',328,0,0,'by',60"
-      set days = "days323-328"
-      if ($multiut == 'yes') then
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile $outdir/${run}_$days.inp \
-          -stdout $outdir/${run}_$days.out \
-          -flnm_ps $outdir/${run}_$days.ps \
-          \*sech\*.nc
-        echo "Completed multiut run for $run ($days (hourly))"
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
-          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
-        endif
-      endif # doing multiut
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      if ($select == 'yes') then # use selected fields list
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile $outdir/${run}_${days}_select.inp \
-          -stdout $outdir/${run}_${days}_select.out \
-          -flnm_ps $outdir/${run}_${days}_select.ps   \
-          -cfields $cfields \
-          \*sech\*.nc
-        echo "Completed multiut select run for $run ($days (hourly))"
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
-          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
-        endif
+# Daily utvert:
+      set root = $outdir/${run}_${days_daily[$irun]}_utvert
+      if ($doselect == '1') set root = $outdir/${run}_${days_daily[$irun]}_utvert_select
+      $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes_daily[$irun] \
+        -pltutlat 0 -nlfile $root.inp -stdout $root.out -flnm_ps $root.ps \
+        -cfields $cfields \*prim\*.nc
+      if ($make_pdf == 'yes') then
+        ps2pdf -dAutoRotatePages=/None $root.ps $root.pdf
+        if ($remove_ps == 'yes' && -e $root.ps) rm $root.ps
       endif
-      endif # doing select
-    endif # run
+      echo Completed daily utvert for $run $days_daily[$irun]
+      echo ' '
 #
-#------------------------------------------------------------------------------------------
-# Whole Heliosphere Interval days 81-106:
-#
-    if ($run == "tiegcm_res${res}_whi2008_heelis_gpi" || \
-        $run == "tiegcm_res${res}_whi2008_weimer_imf") then
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# whi2008 primaries: days 81-106:
-      if ($multiut == 'yes') then
-        set mtimes = "81,0,0,'to',106,0,0,'by',1440"
-        set days = "days081-106"
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile $outdir/${run}_$days.inp \
-          -stdout $outdir/${run}_$days.out \
-          -flnm_ps $outdir/${run}_$days.ps \
-          \*prim\*.nc
-        echo "Completed multiut run for $run ($days (daily))"
-
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
-          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
-        endif
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# whi2008 secondaries (available for days 81-106): plot days 85-90:
-        set mtimes = "85,0,0,'to',90,0,0,'by',60"
-        set days = "days085-090"
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_$days.inp \
-          -stdout  $outdir/${run}_$days.out \
-          -flnm_ps $outdir/${run}_$days.ps  \
-          \*sech\*.nc
-        echo "Completed multiut run for $run ($days (hourly))"
-
-        echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
-        ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
-
-      endif # doing multiut
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-      if ($select == 'yes') then # use selected fields list
-        set mtimes = "81,0,0,'to',106,0,0,'by',1440"
-        set days = "days081-106"
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_${days}_select.inp \
-          -stdout  $outdir/${run}_${days}_select.out \
-          -flnm_ps $outdir/${run}_${days}_select.ps  \
-          -cfields $cfields \
-          \*prim\*.nc
-        echo "Completed multiut select run for $run ($days (daily))"
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
-          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
-        endif
+# Daily utlat:
+      set root = $outdir/${run}_${days_daily[$irun]}_utlat
+      if ($doselect == '1') set root = $outdir/${run}_${days_daily[$irun]}_utlat_select
+      $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes_daily[$irun] \
+        -pltutvert=0 -nlfile $root.inp -stdout $root.out -flnm_ps $root.ps \
+        -cfields $cfields \*prim\*.nc
+      if ($make_pdf == 'yes') then
+        ps2pdf $root.ps $root.pdf
+        if ($remove_ps == 'yes') rm $root.ps
       endif
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      echo Completed daily utlat for $run $days_daily[$irun]
+      echo ' '
 #
-# whi2008 secondaries (available for days 81-106): plot days 85-90:
-        set mtimes = "85,0,0,'to',90,0,0,'by',60"
-        set days = "days085-090"
-        $proc -submit yes -executable $exec -multiut 1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_${days}_select.inp \
-          -stdout  $outdir/${run}_${days}_select.out \
-          -flnm_ps $outdir/${run}_${days}_select.ps  \
-          -cfields $cfields \
-          \*sech\*.nc
-        echo "Completed multiut select run for $run ($days (hourly))"
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
-          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
-        endif
-      endif # doing select
-    endif # run
+# Hourly utvert:
+      set root = $outdir/${run}_${days_hourly[$irun]}_utvert
+      if ($doselect == '1') set root = $outdir/${run}_${days_hourly[$irun]}_utvert_select
+      $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes_hourly[$irun] \
+        -pltutlat=0 -nlfile $root.inp -stdout $root.out -flnm_ps $root.ps \
+        -cfields $cfields \*sech\*.nc
+      if ($make_pdf == 'yes') then
+        ps2pdf -dAutoRotatePages=/None $root.ps $root.pdf
+        if ($remove_ps == 'yes') rm $root.ps
+      endif
+      echo Completed hourly utvert for $run $days_daily[$irun]
+      echo ' '
 #
-#------------------------------------------------------------------------------------------
-# July, 2000 storm (days 192-202) (main storm around day 198):
-#
-# Days 192-202, hourly:
-    if ($run == "tiegcm_res${res}_jul2000_heelis_gpi" || \
-        $run == "tiegcm_res${res}_jul2000_weimer_imf") then
+# Hourly utlat:
+      set root = $outdir/${run}_${days_hourly[$irun]}_utlat
+      if ($doselect == '1') set root = $outdir/${run}_${days_hourly[$irun]}_utlat_select
+      $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes_hourly[$irun] \
+        -pltutvert=0 -nlfile $root.inp -stdout $root.out -flnm_ps $root.ps \
+        -cfields $cfields \*sech\*.nc
+      if ($make_pdf == 'yes') then
+        ps2pdf $root.ps $root.pdf
+        if ($remove_ps == 'yes') rm $root.ps
+      endif
+      echo Completed hourly utlat for $run $days_daily[$irun]
+      echo ' '
 
-      if ($multiut == 'yes') then
-        set mtimes = "192,0,0,'to',202,0,0,'by',1440"
-        set days = "days192-202"
-        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_$days.inp \
-          -stdout  $outdir/${run}_$days.out \
-          -flnm_ps $outdir/${run}_$days.ps  \
-          \*prim\*.nc
-          echo "Completed multiut for run $run ($days (daily))" 
-          if ($make_pdf == 'yes') then
-            echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
-            ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
-          endif
-#
-# Days 196-200, hourly:
-        set mtimes = "195,0,0,'to',200,0,0,'by',60"
-        set days = "days195-200"
-        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_$days.inp \
-          -stdout  $outdir/${run}_$days.out \
-          -flnm_ps $outdir/${run}_$days.ps  \
-          \*sech\*.nc
-        echo "Completed multiut for run $run ($days (hourly))" 
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_$days.ps to $outdir/${run}_$days.pdf
-          ps2pdf $outdir/${run}_$days.ps $outdir/${run}_$days.pdf
-        endif
-      endif # doing multiut
+    endif # multiut
 
-      if ($select == 'yes') then # use selected fields list
-        set mtimes = "192,0,0,'to',202,0,0,'by',1440"
-        set days = "days192-202"
-        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_${days}_select.inp \
-          -stdout  $outdir/${run}_${days}_select.out \
-          -flnm_ps $outdir/${run}_${days}_select.ps  \
-          -cfields $cfields \
-          \*prim\*.nc
-          echo "Completed multiut for run $run ($days (daily))" 
-
-          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
-          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
-#
-# Days 196-200, hourly:
-        set mtimes = "195,0,0,'to',200,0,0,'by',60"
-        set days = "days195-200"
-        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes \
-          -nlfile  $outdir/${run}_${days}_select.inp \
-          -stdout  $outdir/${run}_${days}_select.out \
-          -flnm_ps $outdir/${run}_${days}_select.ps  \
-          -cfields $cfields \
-          \*sech\*.nc
-        echo "Completed multiut for run $run ($days (hourly))" 
-        if ($make_pdf == 'yes') then
-          echo Converting $outdir/${run}_${days}_select.ps to $outdir/${run}_${days}_select.pdf
-          ps2pdf $outdir/${run}_${days}_select.ps $outdir/${run}_${days}_select.pdf
-        endif
-      endif # doing select
-
-    endif # run
+    @ irun += 1
   end # foreach run
+#
+# Go back up and make select files (select subgroup of fields)
+  if ($select == 'yes' && $doselect == '0') then
+    set doselect = 1
+    goto runloop
+  endif
+
   cd $mycwd
   echo tgcmproc moved back to $mycwd
 end # foreach res
-#
-#---------------------------------------------------------------------------------------
+

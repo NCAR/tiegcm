@@ -7,11 +7,12 @@ set mycwd = `pwd`
 set home = /glade/p/hao/tgcm/tiegcm_benchmarks            # base working directory
 set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make multiple proc runs
 
-set singleut = yes # make instantaneous plots
-set multiut = yes  # make time slices (ut on x-axis)
-set select = yes   # less comprehensive (fewer fields, fewer plots)
-set make_pdf = yes # will make pdf files from the ps, using ps2pdf
-
+set singleut  = yes  # make instantaneous plots
+set multiut   = yes  # make time slices (ut on x-axis)
+set select    = yes  # less comprehensive (fewer fields, fewer plots)
+set make_pdf  = yes  # will make pdf files from the ps, using ps2pdf
+set remove_ps = yes  # remove ps file after making pdf (only if make_pdf=yes)
+ 
 set resolutions = ( \
   '5.0' \
   '2.5' \
@@ -61,77 +62,96 @@ foreach res ($resolutions)
         -flnm_ps $outdir/${run}_singleut.ps  \
         \*sech\*.nc
       echo Completed singleut for run $run
-#
-# Convert ps file to pdf:
-#
       if ($make_pdf == 'yes') then
-        set ps_file  = $outdir/${run}_singleut.ps
-        set pdf_file = $outdir/${run}_singleut.pdf
-        echo Converting $ps_file to $pdf_file
-        ps2pdf $ps_file $pdf_file 
-      endif # make_pdf
-
+        echo Converting $outdir/${run}_singleut.ps to pdf
+        ps2pdf $outdir/${run}_singleut.ps $outdir/${run}_singleut.pdf
+        if ($remove_ps == 'yes') rm $outdir/${run}_singleut.ps
+      endif
     endif # singleut
 #
 # Time-dependent plots with day/ut on x-axis:
 #
+# ut vs zp:
     if ($multiut == 'yes') then
-      $proc -submit yes -executable $exec -multiut=1 \
-        -nlfile  $outdir/${run}_multiut.inp \
-        -stdout  $outdir/${run}_multiut.out \
-        -flnm_ps $outdir/${run}_multiut.ps  \
+      $proc -submit yes -executable $exec -multiut=1 -pltutlat=0 \
+        -nlfile  $outdir/${run}_utvert.inp \
+        -stdout  $outdir/${run}_utvert.out \
+        -flnm_ps $outdir/${run}_utvert.ps  \
         \*sech\*.nc
-      echo Completed multiut for run $run
-#
-# Convert ps file to pdf:
-#
+      echo Completed utvert for run $run
       if ($make_pdf == 'yes') then
-        set ps_file  = $outdir/${run}_multiut.ps
-        set pdf_file = $outdir/${run}_multiut.pdf
-        echo Converting $ps_file to $pdf_file
-        ps2pdf $ps_file $pdf_file 
-      endif # make_pdf
+        echo Converting $outdir/${run}_utvert.ps to pdf
+        ps2pdf -dAutoRotatePages=/None $outdir/${run}_utvert.ps $outdir/${run}_utvert.pdf
+        if ($remove_ps == 'yes') rm $outdir/${run}_utvert.ps
+      endif
+#
+# ut vs latitude:
+      $proc -submit yes -executable $exec -multiut=1 -pltutvert=0 \
+        -nlfile  $outdir/${run}_utlat.inp \
+        -stdout  $outdir/${run}_utlat.out \
+        -flnm_ps $outdir/${run}_utlat.ps  \
+        \*sech\*.nc
+      echo Completed utlat for run $run
+      if ($make_pdf == 'yes') then
+        echo Converting $outdir/${run}_utlat.ps to pdf
+        ps2pdf $outdir/${run}_utlat.ps $outdir/${run}_utlat.pdf
+        if ($remove_ps == 'yes') rm $outdir/${run}_utlat.ps
+      endif
     endif
 #
 # "Select" means fewer fields and fewer plots:
 #
     if ($select == 'yes') then
       set cfields = "'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
-
-      $proc -submit yes -executable $exec -multiut=1 \
-        -nlfile  $outdir/${run}_multiut_select.inp \
-        -stdout  $outdir/${run}_multiut_select.out \
-        -flnm_ps $outdir/${run}_multiut_select.ps \
-        -cfields $cfields \
-        \*sech\*.nc
 #
-# Convert ps file to pdf:
+# Instantaneous maps, slices:
 #
-      if ($make_pdf == 'yes') then
-        set ps_file  = $outdir/${run}_multiut_select.ps
-        set pdf_file = $outdir/${run}_multiut_select.pdf
-        echo Converting $ps_file to $pdf_file
-        ps2pdf $ps_file $pdf_file 
-      endif # make_pdf
-
-      $proc -submit yes -executable $exec -singleut=1 \
-        -nlfile  $outdir/${run}_singleut_select.inp \
-        -stdout  $outdir/${run}_singleut_select.out \
-        -flnm_ps $outdir/${run}_singleut_select.ps \
-        -fmap_zpht '-4. 0. 2. 4.' \
-        -cfields $cfields \
-        \*sech\*.nc
-    endif
+      if ($singleut == 'yes') then
+        $proc -submit yes -executable $exec -singleut=1 \
+          -nlfile  $outdir/${run}_singleut_select.inp \
+          -stdout  $outdir/${run}_singleut_select.out \
+          -flnm_ps $outdir/${run}_singleut_select.ps \
+          -fmap_zpht '-4. 0. 2. 4.' \
+          -cfields $cfields \
+          \*sech\*.nc
+        echo Completed singleut select for run $run
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_singleut_select.ps to pdf
+          ps2pdf $outdir/${run}_singleut_select.ps $outdir/${run}_singleut_select.pdf
+          if ($remove_ps == 'yes') rm $outdir/${run}_singleut_select.ps
+        endif
+      endif # singleut
 #
-# Convert ps file to pdf:
+# ut vs zp:
+      if ($multiut == 'yes') then
+        $proc -submit yes -executable $exec -multiut=1 -pltutlat=0 \
+          -nlfile  $outdir/${run}_utvert_select.inp \
+          -stdout  $outdir/${run}_utvert_select.out \
+          -flnm_ps $outdir/${run}_utvert_select.ps \
+          -cfields $cfields \
+          \*sech\*.nc
+        echo Completed multiut select for run $run
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_utvert_select.ps to pdf
+          ps2pdf -dAutoRotatePages=/None $outdir/${run}_utvert_select.ps $outdir/${run}_utvert_select.pdf
+          if ($remove_ps == 'yes') rm $outdir/${run}_utvert_select.ps
+        endif
 #
-      if ($make_pdf == 'yes') then
-        set ps_file  = $outdir/${run}_singleut_select.ps
-        set pdf_file = $outdir/${run}_singleut_select.pdf
-        echo Converting $ps_file to $pdf_file
-        ps2pdf $ps_file $pdf_file 
-      endif # make_pdf
-
+# ut vs latitude:
+        $proc -submit yes -executable $exec -multiut=1 -pltutvert=0 \
+          -nlfile  $outdir/${run}_utlat_select.inp \
+          -stdout  $outdir/${run}_utlat_select.out \
+          -flnm_ps $outdir/${run}_utlat_select.ps \
+          -cfields $cfields \
+          \*sech\*.nc
+        echo Completed multiut select for run $run
+        if ($make_pdf == 'yes') then
+          echo Converting $outdir/${run}_utlat_select.ps to pdf
+          ps2pdf $outdir/${run}_utlat_select.ps $outdir/${run}_utlat_select.pdf
+          if ($remove_ps == 'yes') rm $outdir/${run}_utlat_select.ps
+        endif
+      endif # multiut
+    endif # select
   end # foreach run
   cd $mycwd
   echo tgcmproc moved back to $mycwd
