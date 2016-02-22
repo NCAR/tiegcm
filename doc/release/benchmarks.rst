@@ -67,51 +67,48 @@ Selected Results of Benchmark Runs
 ----------------------------------
 
 Results of the benchmark runs are available in 2d plots of time series, grid slices, and maps.
-These are multi-page PDF files (you may need to use the rotate tool in your browser or previewer):
+These are multi-page PDF files, arranged as follows:
 
-Large, comprehensive files with many fields (instantaneous and time series):
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  * Files with "singleut" in their names contain instantaneous maps and slices
+  * Files with "utvert" in their names contain ut vs pressure plots (daily or hourly histories)
+  * Files with "utlat" in their names contain ut vs latitude plots (daily or hourly histories)
 
-  * :benchmarks_url:`Climatology Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_climatology/PDFs>`
-  * :benchmarks_url:`Seasonal Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_seasons/PDFs>`
-  * :benchmarks_url:`Storm Case Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_storms/PDFs>`
+Instantaneous and time series plots for **all** fields
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  * :benchmarks_url:`Climatology Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_climatology/PDFs>`
-  * :benchmarks_url:`Seasonal Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_seasons/PDFs>`
-  * :benchmarks_url:`Storm Case Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_storms/PDFs>`
+**All** fields are: 
+  | 'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI','TEC','O2P','OP',
+  | OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN','QJOULE','HMF2','NMF2','Z'
 
-Selected plots (smaller files, fewer fields) (2.5-deg resolution only):
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+At 5-degree model resolution:
 
-  * Climatologies (TN, NE at full-year vs log pressure)
+  * :benchmarks_url:`Climatology Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_climatology/PDFs_all_fields>`
+  * :benchmarks_url:`Seasonal Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_seasons/PDFs_all_fields>`
+  * :benchmarks_url:`Storm Case Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_storms/PDFs_all_fields>`
 
-    * :download:`Full-year Climatology, Solar Maximum <_static/images/tiegcm_res2.5_climatology_smax_daily.pdf>`
-    * :download:`Full-year Climatology, Solar Minimum <_static/images/tiegcm_res2.5_climatology_smin_daily.pdf>`
+At 2.5-degree model resolution:
 
-  * Seasonal (TN, NE global maps at zp -4, +2, and global mean profiles):
+  * :benchmarks_url:`Climatology Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_climatology/PDFs_all_fields>`
+  * :benchmarks_url:`Seasonal Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_seasons/PDFs_all_fields>`
+  * :benchmarks_url:`Storm Case Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_storms/PDFs_all_fields>`
 
-    * :download:`December Solstice, Solar Maximum <_static/images/tiegcm_res2.5_decsol_smax.pdf>`
-    * :download:`December Solstice, Solar Minimum <_static/images/tiegcm_res2.5_decsol_smin.pdf>`
-    * :download:`June Solstice, Solar Maximum <_static/images/tiegcm_res2.5_junsol_smax.pdf>`
-    * :download:`June Solstice, Solar Minimum <_static/images/tiegcm_res2.5_junsol_smin.pdf>`
-    * :download:`March Equinox, Solar Maximum <_static/images/tiegcm_res2.5_mareqx_smax.pdf>`
-    * :download:`March Equinox, Solar Minimum <_static/images/tiegcm_res2.5_mareqx_smin.pdf>`
-    * :download:`September Equinox, Solar Maximum <_static/images/tiegcm_res2.5_sepeqx_smax.pdf>`
-    * :download:`September Equinox, Solar Minimum <_static/images/tiegcm_res2.5_sepeqx_smin.pdf>`
+Instantaneous and time series plots for **selected** fields
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  * Storms (Time (hourly) vs Zp) (TN, NE, lt 0,12,zm, TE,TI zm):
+**Selected** fields are:
+  | 'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'
 
-    * :download:`December 2006 storm (days 347-352, hourly) <_static/images/tiegcm_res2.5_dec2006_weimer_imf_days347-352_utzp.pdf>`
-    * :download:`July 2000 storm (days 195-200, hourly) <_static/images/tiegcm_res2.5_jul2000_weimer_imf_days195-200_utzp.pdf>`
-    * :download:`November 2003 storm (days 323-328, hourly) <_static/images/tiegcm_res2.5_nov2003_weimer_imf_days323-328_utzp.pdf>`
-    * :download:`Whole Heliosphere Interval 2008 (days 85-90, hourly) <_static/images/tiegcm_res2.5_whi2008_weimer_imf_days085-090_utzp.pdf>`
+At 5-degree model resolution:
 
-  * Storms (Time (hourly) vs Latitude) (TN, NE at Zp -4, lt 0, 12, HMF2, NMF2)
+  * :benchmarks_url:`Climatology Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_climatology/PDFs_select_fields>`
+  * :benchmarks_url:`Seasonal Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_seasons/PDFs_select_fields>`
+  * :benchmarks_url:`Storm Case Benchmark Runs at 5.0-deg resolution <tiegcm_res5.0_storms/PDFs_select_fields>`
 
-    * :download:`December 2006 storm (days 347-352, hourly) <_static/images/tiegcm_res2.5_dec2006_weimer_imf_days347-352_utlat.pdf>`
-    * :download:`July 2000 storm (days 195-200, hourly) <_static/images/tiegcm_res2.5_nov2003_weimer_imf_days323-328_utlat.pdf>`
-    * :download:`November 2003 storm (days 323-328, hourly) <_static/images/tiegcm_res2.5_nov2003_weimer_imf_days323-328_utlat.pdf>`
-    * :download:`Whole Heliosphere Interval 2008 (days 85-90, hourly) <_static/images/tiegcm_res2.5_whi2008_weimer_imf_days085-090_utlat.pdf>`
+At 2.5-degree model resolution:
+
+  * :benchmarks_url:`Climatology Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_climatology/PDFs_select_fields>`
+  * :benchmarks_url:`Seasonal Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_seasons/PDFs_select_fields>`
+  * :benchmarks_url:`Storm Case Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_storms/PDFs_select_fields>`
 
 
 Availability of Model Output History Files 
