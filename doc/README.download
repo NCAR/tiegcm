@@ -10,6 +10,8 @@ Documentation:  User Guide and Model description are available in the "doc" dire
                 of the model source download. They are also available from tgcm website: 
                 http://www.hao.ucar.edu/modeling/tgcm
 
+See also the HAO public ftp site: http://download.hao.ucar.edu/pub/tgcm
+
 -------------------------------------------------------------------------------
 These instructions assume the gzipped tar file of the Source Code has
 been downloaded from the above URL. After the file is gunzipped 
@@ -50,17 +52,15 @@ Follow this procedure to build the model and make a short default run on a Linux
    obtained from the data download (check setting of SOURCE file in 
    scripts/tiegcm_res5.0_default.inp)
 
-3. Set the "make" shell variable to one of the three compiler-specific
+3. Set the "make" shell variable in the job script to one of the three compiler-specific
    makefiles in the scripts directory: Make.intel_hao64, Make.pgi_hao64,
    or Make.gfort_hao64. Modify the makefile to point to your local
    netCDF and ESMF library locations.
 
 4. Execute the job script on the command line by typing "tiegcm-linux.job"
 
-5. The model will be built on the interactive node, and if successful, the
-   runscript run.lsf will be submitted to the LSF via the bsub command.
-   When the job starts, you can track its progress with the "bjobs" command,
-   and stdout will go to the output file in the working directory (or whatever
+5. The model will be built, and if successful, the model will execute.
+   Stdout will go to the output file in the working directory (or whatever
    the shell variable "output" was set to in the job script).
 
 6. For subsequent runs, copy the default input file from the scripts directory
@@ -68,6 +68,16 @@ Follow this procedure to build the model and make a short default run on a Linux
    the input shell variable accordingly in the job script.
 
 -------------------------------------------------------------------------------
+For building and running on the NCAR supercomputer (currently "yellowstone"),
+copy tiegcm-ys.job from the scripts directory, and follow the above steps with
+that job script. Also set/change any LSF resources in the #BSUB section of the 
+ys script as necessary (queue, wallclock time, project number, nprocs, etc).
+
+The ys job script will build the model on the interactive node, and if successful, 
+it will submit the job to LSF. Track the job using the command "bjobs".
+
+-------------------------------------------------------------------------------
+
 The following "Make.machine" files are available in the scripts directory.
 These contain platform and machine-specific compiler and link flags, library
 locations, etc. Select the Make.machine file you want to use, and set the

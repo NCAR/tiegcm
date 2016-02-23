@@ -823,7 +823,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'      , '328 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
-        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
         ] 
 #
 # Pairs to be removed do not need values:
@@ -872,7 +872,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2003001-2003365.nc'"],
-        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
         ] 
 #
 # Pairs to be removed do not need values:
@@ -908,7 +908,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'        , '360 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_032.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
-        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
         ] 
 #
 # Pairs to be removed do not need values:
@@ -945,7 +945,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_032.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2006001-2006365.nc'"],
-        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
         ] 
 #
 # Pairs to be removed do not need values:
@@ -981,7 +981,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'        , '106 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
-        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
         ] 
 #
 # Lines (keys) to remove from default:
@@ -1022,7 +1022,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2008001-2008366.nc'"],
-        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
         ] 
 #
 # Pairs to be removed do not need values:
@@ -1067,7 +1067,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECSTOP'        , '202 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
-        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"]
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
         ] 
 #
 # Lines (keys) to remove from default:
@@ -1118,7 +1118,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2000001-2000366.nc'"],
-        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015090.nc'"],
+        ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"],
         ['OPDIFFCAP'      , opdiffcap],
         ] 
 #

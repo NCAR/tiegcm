@@ -202,10 +202,10 @@ if ($exec == "TRUE") then
 # Do not call mklogs if built with PGI or gfortran:
 # (only intel has ability to prefix task ids to stdout lines)
 #
-    if ($compiler != 'pgi' && $compiler != 'gfort') then
+    if ($compiler == 'intel') then
       $mklogs $output     # break stdout into per-task log files
     else
-      echo "Am not calling mklogs because model was built with pgi or gfortran"
+      echo "Am not calling mklogs because model was not built with intel"
     endif
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."

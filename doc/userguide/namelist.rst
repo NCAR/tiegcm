@@ -62,6 +62,8 @@ Example Namelist Input Files:
 
   * :download:`December, 2006 storm (Heelis/gpi)     <_static/namelist_files/tiegcm_res5.0_dec2006_heelis_gpi.inp>`
   * :download:`December, 2006 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm_res5.0_dec2006_weimer_imf.inp>`
+  * :download:`July, 2000 storm (Heelis/gpi)     <_static/namelist_files/tiegcm_res5.0_jul2000_heelis_gpi.inp>`
+  * :download:`July, 2000 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm_res5.0_jul2000_weimer_imf.inp>`
   * :download:`November, 2003 storm (Heelis/gpi)     <_static/namelist_files/tiegcm_res5.0_nov2003_heelis_gpi.inp>`
   * :download:`November, 2003 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm_res5.0_nov2003_weimer_imf.inp>`
   * :download:`2008 Whole Heliosphere Interval (Heelis/gpi)    <_static/namelist_files/tiegcm_res5.0_whi2008_heelis_gpi.inp>`

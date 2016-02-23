@@ -31,5 +31,5 @@ DYNAMO = 1
 CURRENT_PG = 1
 CURRENT_KQ = 0
 CALC_HELIUM = 1
-GPI_NCFILE = '/glade/p/hao/tgcm/data/gpi_1960001-2015090.nc'
+GPI_NCFILE = '/glade/p/hao/tgcm/data/gpi_1960001-2015365.nc'
 /
