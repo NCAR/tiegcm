@@ -9,6 +9,18 @@ class Version:
       return 'tiegcm2.0'
     elif model_name == 'timegcm':
       return 'timegcm1.42'
+#
+# Can specify a tag name for output history files, 
+# (e.g. if tag=2.0, history file names would start with tiegcm2.0)
+# The default is the null string (file names will start with tiegcm)
+#
+  def tag(self,model_name):
+    if model_name == 'tiegcm':
+      return ''      # can be null (e.g., testing or trunk version)
+#     return '1.95'  # use previous tag to make startup history files
+#     return '2.0'   
+    elif model_name == 'timegcm':
+      return '1.42'
 
 #----------------------- Begin Class Namelist definition ---------------------
 class Namelist:
@@ -421,7 +433,7 @@ class Run(Job,Namelist):
 # Run full names are model_name + model_res + short_name 
 # (e.g. tiegcm_res5.0_decsol_smax)
 #
-    self.fullname = job.model_name+'_res'+job.model_res+'_'+name 
+    self.fullname = job.model_name+job.model_tag+'_res'+job.model_res+'_'+name 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Print run numbers, short names, and descriptions:
@@ -547,6 +559,10 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
+          
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -579,6 +595,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -611,11 +630,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
-
-#     if res == '2.5': 
-#       if job.step != '20':
-#         job.step = '20' # ~12 min/day
-#         print 'Override timestep for junsol_smax at 2.5-deg res: STEP=',job.step
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -648,6 +665,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -680,6 +700,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -712,6 +735,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -744,6 +770,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -776,6 +805,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -808,6 +840,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -844,6 +879,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 #
 # As of 11/16/15, the current trunk code for tiegcm_res2.5 will crash in the 
 #   first ~1.5 days if starting from tiegcm2.0 benchmark SOURCE history, and 
@@ -893,6 +931,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -929,6 +970,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -966,6 +1010,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1006,6 +1053,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1047,6 +1097,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 
       if job.model_res == '2.5': 
         if int(job.step) > 15: 
@@ -1092,6 +1145,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 #
 # Note: As of tiegcm/trunk -r1248 (1/31/16), STEP=10 and OPDIFFCAP=6e8 are
 #       necessary for this run to succeed at 2.5-deg (resolution)
@@ -1202,6 +1258,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 #
 # 5-deg model at 60-sec timestep can simulate a full year in < 12 hours:
 #   step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours

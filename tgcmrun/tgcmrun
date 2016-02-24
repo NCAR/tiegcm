@@ -61,13 +61,14 @@ while True:
   if job.stdout_dir:
     os.chdir(job.stdout_dir)
     print 'Tgcmrun moved to directory ',job.stdout_dir
+ 
+  version = Version()
+  job.model_version = version.name(job.model_name)
+  job.model_tag = version.tag(job.model_name)
 
   run.fullname(job,run.name)
 
   print '\n----------------------------- Run ',run.fullname,' --------------------------------\n'
-#
-  version = Version()
-  job.model_version = version.name(job.model_name)
 #
 # Set run parameters (most importantly, namelist modifications):
 # Note: after going to tiegcm2.0, the model_res argument to set_run will no longer be necessary. 
@@ -159,6 +160,13 @@ while True:
       sourcefile = sourcefile.replace("'","")
       if not os.path.isfile(sourcefile):
         print '>>> WARNING: Cannot find SOURCE file ',sourcefile
+
+#       sourcefile = sourcefile.replace(job.model_tag,"")
+#       if not os.path.isfile(sourcefile):
+#         print '>>> WARNING: Also cannot find SOURCE file ',sourcefile
+#       else:
+#         print 'Will use SOURCE = ',sourcefile
+
 #
 # Submit job or not:
 # 
