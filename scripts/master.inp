@@ -13,7 +13,7 @@
 ! SOURCE:       Start-up history file (for initial runs only)
 ! SOURCE_START: Time of history on start-up file (initial runs only)
 !
- SOURCE = '$TGCMDATA/tiegcm2.0/tiegcm_res5.0_mareqx_smin_prim.nc'
+ SOURCE = '$TGCMDATA/tiegcm_res5.0_mareqx_smin_prim.nc'
  SOURCE_START = 80,0,0 ! source time
 !
 ! START: Start time (day,hour,minute)

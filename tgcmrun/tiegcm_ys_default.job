@@ -8,6 +8,9 @@
 #
 #   modeldir:  Root directory to model source (may be an SVN working dir)
 #   execdir:   Directory in which to build and execute (will be created if necessary)
+#   tgcmdata:  Directory in which startup history and data files are accessed.
+#              If tgcmdata is not set, the model will use env var TGCMDATA 
+#              (i.e., you can use tgcmdata to override env var TGCMDATA)
 #   input:     Namelist input file (set to default file in modeldir)
 #   output:    Stdout file from model execution (will be created)
 #   make:      Build file with platform-specific compile parameters (in scripts dir)
@@ -18,8 +21,12 @@
 #   utildir:   Directory containing supporting scripts (default $modeldir/scripts)
 #   runscript: LSF script with run commands (submitted with bsub from execdir)
 #
-set modeldir = tiegcm_trunk
-set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm-ys
+# To switch to 2.5-deg resolution, set modelres = 2.5, and make sure
+# the data directory (tgcmdata or env var TGCMDATA) contains 2.5-deg files.
+#
+set modeldir = ../tiegcm_trunk
+set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm.exec
+#set tgcmdata = /glade/scratch/$user/tiegcm_res5.0_data
 set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
 set output   = tiegcm.out
 set modelres = 5.0
@@ -40,7 +47,7 @@ if (! -d $execdir) mkdir -p $execdir
 cat << EOF >! $runscript
 #!/bin/tcsh
 #
-#BSUB -J tiegcm
+#BSUB -J tiegcm_trunk
 #BSUB -P P28100036
 ##BSUB -P NHAO0004
 #BSUB -q premium
@@ -105,6 +112,27 @@ if (! -d $srcdir) then
   exit 1
 endif
 set srcdir = `perl $utildir/abspath $srcdir`
+#
+# Set data directory:
+#   If tgcmdata is set above, use it to set (override) env var TGCMDATA
+#   If tgcmdata not set above, use env var TGCMDATA
+#   If neither are set, print a warning and set both to cwd.
+#   Finally, print warning if the directory does not exist.
+#
+if ($?tgcmdata) then
+  setenv TGCMDATA $tgcmdata
+  echo Set env var TGCMDATA = $TGCMDATA
+else
+  if ($?TGCMDATA) then
+    set tgcmdata = $TGCMDATA
+    echo Set tgcmdata = $TGCMDATA
+  else
+    echo WARNING: TGCMDATA is not set - using cwd
+    set tgcmdata = .
+    setenv TGCMDATA $tgcmdata
+  endif
+endif
+if (! -d $tgcmdata) echo ">>> Cannot find data directory $tgcmdata"
 
 if ($modelres != 5.0 && $modelres != 2.5) then
   echo ">>> Unknown model resolution $modelres <<<"
@@ -133,10 +161,13 @@ set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdou
 #
 # Report to stdout:
 #
-set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
+ set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
+#set svn_revision = 'tiegcm2.0' # for svn tag instead of revision number
+
 echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svn_revision)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
+echo "  Data directory:    $tgcmdata"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
 echo "  Stdout Output:     $output"
@@ -219,6 +250,12 @@ if ($exec == "FALSE") then
   echo "Am NOT executing the model because exec = $exec"
   exit 0
 endif
+#
+# Set data directory in LSF script:
+#
+cat << EOF >> $runscript
+  setenv TGCMDATA $tgcmdata
+EOF
 #
 # MPI/LSF job: append mpirun.lsf command to LSF script 
 # (it has #BSUBs from above)

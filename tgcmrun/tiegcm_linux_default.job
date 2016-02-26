@@ -5,6 +5,9 @@
 #
 #   modeldir: Root directory to model source (may be an SVN working dir)
 #   execdir:  Directory in which to build and execute (will be created if necessary)
+#   tgcmdata:  Directory in which startup history and data files are accessed.
+#              If tgcmdata is not set, the model will use env var TGCMDATA 
+#              (i.e., you can use tgcmdata to override env var TGCMDATA)
 #   input:    Namelist input file (will use default if not provided)
 #   output:   Stdout file from model execution (will be created)
 #   make:     Build file with platform-specific compile parameters (in scripts dir)
@@ -15,8 +18,12 @@
 #   exec:     If TRUE, execute the model (build only if FALSE)
 #   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
 #
+# To switch to 2.5-deg resolution, set modelres = 2.5, and make sure
+# the data directory (tgcmdata or env var TGCMDATA) contains 2.5-deg files.
+#
 set modeldir = tiegcm_trunk
-set execdir  = /hao/aim/$user/tiegcm-linux
+set execdir  = /hao/aim/$user/tiegcm_trunk/tiegcm.exec
+#set tgcmdata = /hao/aim/$user/tiegcm_res5.0_data
 set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
 set output   = tiegcm.out
 set make     = Make.intel_hao64
@@ -27,9 +34,6 @@ set debug    = FALSE
 set exec     = TRUE
 set utildir  = $modeldir/scripts
 # 
-# TGCMDATA can be set here, or in user's shell init file (e.g., .cshrc):
-#setenv TGCMDATA /hao/aim/[user]/tiegcm/data
-#
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -71,6 +75,27 @@ if (! -d $execdir) then
   echo "Making exec directory $execdir" 
   mkdir -p $execdir
 endif
+#
+# Set data directory:
+#   If tgcmdata is set above, use it to set (override) env var TGCMDATA
+#   If tgcmdata not set above, use env var TGCMDATA
+#   If neither are set, print a warning and set both to cwd.
+#   Finally, print warning if the directory does not exist.
+#
+if ($?tgcmdata) then
+  setenv TGCMDATA $tgcmdata
+  echo Set env var TGCMDATA = $TGCMDATA
+else
+  if ($?TGCMDATA) then
+    set tgcmdata = $TGCMDATA
+    echo Set tgcmdata = $TGCMDATA
+  else
+    echo WARNING: TGCMDATA is not set - using cwd
+    set tgcmdata = .
+    setenv TGCMDATA $tgcmdata
+  endif
+endif
+if (! -d $tgcmdata) echo ">>> Cannot find data directory $tgcmdata"
 
 if ($modelres != 5.0 && $modelres != 2.5) then
   echo ">>> Unknown model resolution $modelres <<<"
@@ -107,6 +132,7 @@ set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
 echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svn_revision)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
+echo "  Data directory:    $tgcmdata"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
 echo "  Model resolution:  $modelres"
@@ -202,10 +228,10 @@ if ($exec == "TRUE") then
 # Do not call mklogs if built with PGI or gfortran:
 # (only intel has ability to prefix task ids to stdout lines)
 #
-    if ($compiler != 'pgi' && $compiler != 'gfort') then
+    if ($compiler == 'intel') then
       $mklogs $output     # break stdout into per-task log files
     else
-      echo "Am not calling mklogs because model was built with pgi or gfortran"
+      echo "Am not calling mklogs because model was not built with intel"
     endif
   else # MPI is FALSE
     echo "Executing $model for Linux non-MPI run."

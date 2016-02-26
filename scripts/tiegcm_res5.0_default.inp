@@ -3,7 +3,7 @@
  START_YEAR = 2002
  START_DAY  = 80
  CALENDAR_ADVANCE = 1
- SOURCE = '$TGCMDATA/tiegcm2.0/tiegcm_res5.0_mareqx_smin_prim.nc'
+ SOURCE = '$TGCMDATA/tiegcm_res5.0_mareqx_smin_prim.nc'
  SOURCE_START = 80 0 0
  START = 80 0 0
  STOP  = 81 0 0
