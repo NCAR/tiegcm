@@ -1208,6 +1208,9 @@ NUMBER\tNAME\t\tDESCRIPTION
         source = self.make_oldsource(tgcmdata,version,res)
       else:
         source =  "'"+tgcmdata+"/"+version+"/"+self.fullname+"_prim.nc'"
+        if not os.path.isfile(source):
+          fullname = self.fullname.replace(job.model_tag,"")
+          source =  "'"+tgcmdata+"/"+version+"/"+fullname+"_prim.nc'"
 #
 # 5-deg model at 60-sec timestep can simulate a full year in < 12 hours:
 #   step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours

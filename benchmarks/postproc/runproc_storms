@@ -90,8 +90,8 @@ foreach res ($resolutions)
 runloop:
 #
 # Complete fields list:
-  set cfields = "'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI','TEC','O2P','OP','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN','QJOULE','HMF2','NMF2','Z','ZG'"
 #
+  set cfields = "'TN','UN','VN','WN','O2','O1','N2','NO','N4S','HE','NE','TE','TI','TEC','O2P','OP','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN','QJOULE','HMF2','NMF2','Z','ZG'"
 # Selected fields:
   if ($doselect == '1') set cfields = "'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
 
