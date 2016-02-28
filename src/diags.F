@@ -198,21 +198,21 @@
 !
       n = n+1
       diags(n)%short_name = 'UI_ExB'
-      diags(n)%long_name  = 'UI: Zonal Ion Drift (ExB)'
+      diags(n)%long_name  = 'UI: Zonal ExB Velocity'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
       diags(n)%short_name = 'VI_ExB'
-      diags(n)%long_name  = 'VI: Meridional Ion Drift (ExB)'
+      diags(n)%long_name  = 'VI: Meridional ExB Velocity'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
       diags(n)%short_name = 'WI_ExB'
-      diags(n)%long_name  = 'WI: Vertical Ion Drift (ExB)'
+      diags(n)%long_name  = 'WI: Vertical ExB Velocity'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'

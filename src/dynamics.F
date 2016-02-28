@@ -138,16 +138,18 @@
      |  wi(levd0,lond0,latd0),     ! W ion velocity output
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after ionvel')")
-      if (diags) then
-        do lat=lat0,lat1
-          call addfld('UI_ExB','Zonal ExB Ion Drift','cm/s',
-     |      ui(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
-          call addfld('VI_ExB','Meridional ExB Ion Drift','cm/s',
-     |      vi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
-          call addfld('WI_ExB','Vertical ExB Ion Drift','cm/s',
-     |      wi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
-        enddo
-      endif
+!
+! mkdiags_UI,VI,WI are called from ionvel.
+!     if (diags) then
+!       do lat=lat0,lat1
+!         call addfld('UI_ExB','Zonal ExB Velocity','cm/s',
+!    |      ui(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+!         call addfld('VI_ExB','Meridional ExB Velocity','cm/s',
+!    |      vi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+!         call addfld('WI_ExB','Vertical ExB Velocity','cm/s',
+!    |      wi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+!       enddo
+!     endif
 !
 ! Calculate column densities and line integrals of o2, o, and n2.
 ! Prognostics z,tn,o2,o1,barm are input, diagnostics vo2,vo1,vn2,

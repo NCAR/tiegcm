@@ -2,6 +2,7 @@
 #
 # tiegcm performance testing: 
 # Model run is made for a single case with different numbers of processors (mpi tasks)
+# (At hao, may need to add -tgcmdata=/glade/p/hao/tgcm/data/tiegcm2.0 or reset $TGCMDATA)
 #
   set run_name = 'decsol_smax'
 #-----------------------------------------------------------------------------------

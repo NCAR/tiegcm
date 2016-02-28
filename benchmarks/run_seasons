@@ -8,6 +8,7 @@
 #
  set home      = /glade/p/hao/tgcm/tiegcm_benchmarks
  set modelroot = $home/tiegcm_trunk
+ set tgcmdata  = /glade/p/hao/tgcm/data/tiegcm2.0
  set tgcmrun   = $modelroot/tgcmrun/tgcmrun
  set queue     = regular # for LSF jobs
  set submit    = yes     # if yes, execute or submit, as appropriate
@@ -41,7 +42,7 @@ foreach res ($resolutions)
    
    $tgcmrun -q $queue -run_name $run -model_name tiegcm -model_res $res \
      -model_root $modelroot -stdout_dir $stdout -execdir $execdir \
-     -hist_dir $histdir -submit $submit
+     -hist_dir $histdir -submit $submit -tgcmdata $tgcmdata
   end # foreach run
 
 end # foreach res
