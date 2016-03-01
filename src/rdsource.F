@@ -45,6 +45,7 @@
       if (nsource==1) then 
         call rdsource(source,source_start,ncid,nth,
      |    .false.,iprint)
+        if (ncid==0) call shutdown('Source history not found')
         nhist  = 0         ! no histories on output file
         ioutfile = 0       ! no output file currently in use
 !
