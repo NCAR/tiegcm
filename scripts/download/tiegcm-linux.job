@@ -1,13 +1,8 @@
-#!/bin/tcsh
+#! /bin/csh
 #
-# Job script to build and execute TIEGCM on the NCAR supercomputer yellowstone,
-# or similar system running LSF (Load Sharing Facility)
-#
-# This script should be executed on the yellowstone command line.
-# It will compile in execdir on the interactive login node, then create and 
-# submit an LSF script based on the #BSUB resources specified below.
-#
-# User should set shell variables and #BSUB settings below:
+# Job script to build and execute the model on a 64-bit Linux desktop machine.
+# 
+# User must set shell variables below:
 #
 #   modeldir:  Root directory to model source (may be an SVN working dir)
 #   execdir:   Directory in which to build and execute (will be created if necessary)
@@ -23,67 +18,25 @@
 #   utildir:   Directory containing supporting scripts (default $modeldir/scripts)
 #   runscript: LSF script with run commands (submitted with bsub from execdir)
 #
-# To switch to 2.5-deg resolution, set modelres below to 2.5,
+# To switch to 2.5-deg resolution, set modelres below to 2.5, 
 # and change execdir, tgcmdata and namelist input if necessary.
-# Also reset number of processors accordingly below (#BSUB -n).
 #
-set modeldir = tiegcm_trunk
-set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm.exec
-set tgcmdata = /glade/p/hao/tgcm/data/tiegcm2.0
-set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
-set output   = tiegcm.out
+set modeldir = tiegcm2.0
+set execdir  = tiegcm.exec
+set tgcmdata = tiegcm_res5.0_data
+set input    = tiegcm_res5.0.inp
+set output   = tiegcm_res5.0.out
 set modelres = 5.0
-set make     = Make.intel_ys
-set mpi       = TRUE   # must be TRUE for tiegcm2.0 and later
-set debug     = FALSE
-set exec      = TRUE
-set utildir   = $modeldir/scripts
-set runscript = run.lsf
-
-set execdir   = `perl $utildir/abspath $execdir`
-set runscript = `perl $utildir/abspath $runscript`
-if (! -d $execdir) mkdir -p $execdir
-#
-# Set LSF resource usage (create the runscript in execdir):
-# (run commands are appended to this script below)
-#
-cat << EOF >! $runscript
-#!/bin/tcsh
-#
-#BSUB -J tiegcm
-#BSUB -P P28100036
-##BSUB -P NHAO0004
-#BSUB -q premium
-#BSUB -o tiegcm.%J.out
-#BSUB -e tiegcm.%J.out
-#BSUB -N
-#BSUB -u $LOGNAME@ucar.edu
-#BSUB -W 0:30
-#
-# Recommended for single-res (5.0 deg) tiegcm:
-# -n16,ptile=16 (1 node, 16 procs/node)
-# For 5.0-deg res, STEP= 60, nproc=16, allow 2.0 mins per simulated day (0.08 secs/step)
-# For 5.0-deg res, STEP=120, nproc=16, allow 1.0 mins per simulated day (0.08 secs/step)
-#BSUB -n 16
-#BSUB -R "span[ptile=16]"
-#
-# Recommended for double-res (2.5 deg) tiegcm: 
-# -n64,ptile=16 (4 nodes, 16 procs/node)
-# For 2.5-deg res, STEP= 30, nproc=64, allow 8.5 mins per simulated day (0.17 secs/step)
-# For 2.5-deg res, STEP= 60, nproc=64, allow 4.5 mins per simulated day (0.17 secs/step)
-##BSUB -n 64
-##BSUB -R "span[ptile=16]"
-#
-EOF
-#
+set make     = Make.intel_hao64
+set mpi      = TRUE
+set nproc    = 4
+set debug    = FALSE
+set exec     = TRUE
+set utildir  = $modeldir/scripts
+# 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#                               End user settings
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# Update ESMF module on ys as of 4/14/14:
-set lib_esmf = esmf-6.3.0r-ncdfio-mpi-O
-module load esmf $lib_esmf
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"
@@ -99,15 +52,17 @@ if (! -d $modeldir) then
   echo ">>> Cannot find model directory $modeldir <<<"
   exit 1
 endif
-#
-# Executable file name:
-set model = tiegcm.exe
+set model = $modeldir:t
+
+if ($model == '') then
+  echo "Please remove trailing slash from modeldir $modeldir"
+  exit
+endif
 
 if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 
   exit 1
 endif
-set utildir = `perl $utildir/abspath $utildir`
 
 set srcdir  = $modeldir/src
 if (! -d $srcdir) then
@@ -115,9 +70,15 @@ if (! -d $srcdir) then
   exit 1
 endif
 set srcdir = `perl $utildir/abspath $srcdir`
+
+if (! -d $execdir) then
+  echo "Making exec directory $execdir" 
+  mkdir -p $execdir
+endif
 #
 # Set data directory:
-#   If tgcmdata is set above, use it to set (override) env var TGCMDATA
+#   If tgcmdata is set above, get the absolute path and use
+#     it to set (override) env var TGCMDATA
 #   If tgcmdata not set above, use env var TGCMDATA
 #   If neither are set, print a warning and set both to cwd.
 #   Finally, print warning if the directory does not exist.
@@ -145,39 +106,39 @@ endif
 #
 # Copy make files to execdir if necessary:
 #
-if (! -f $execdir/$make)     cp $utildir/$make $execdir
+if (-f $make) then # set by user above
+  cp $make $execdir
+  echo Copied $make to $execdir
+else
+  cp $utildir/$make $execdir
+  echo Copied $utildir/$make to $execdir
+endif
 if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
 if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
 #
-# Make default namelist input file if not provided by user:
+# Namelist input file must exist:
 #
 if (! -f $input) then
   echo ">>> Cannot find namelist input file $input <<<"
   exit 1
 endif
-
-set model  = $execdir/$model
 set input  = `perl $utildir/abspath $input`
 set output = `perl $utildir/abspath $output`
 set util   = `perl $utildir/abspath $utildir`
-set mklogs = $util/mklogs         # Nov, 2015: mklogs rewritten in python
+set mklogs = $util/mklogs
 set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdout files
 #
 # Report to stdout:
 #
- set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
-#set svn_revision = 'tiegcm2.0' # for svn tag instead of revision number
-
+set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
 echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svn_revision)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Data directory:    $tgcmdata"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
-echo "  Stdout Output:     $output"
 echo "  Model resolution:  $modelres"
-echo "  Debug:             $debug"
-echo "  MPI job:           $mpi"
+echo "  Debug flag:        $debug"
 #
 # If debug flag has changed from last gmake, clean execdir
 # and reset debug file:
@@ -192,21 +153,6 @@ if (-f $execdir/debug) then
 else
   echo $debug >! $execdir/debug
   echo "Created file debug with debug flag = $debug"
-endif
-#
-# If mpi flag has changed from last gmake, clean execdir
-# and reset mpi file:
-#
-if (-f $execdir/mpi) then
-  set lastmpi = `cat $execdir/mpi` 
-  if ($lastmpi != $mpi) then
-    echo "Clean execdir $execdir because mpi flag switched from $lastmpi to $mpi"
-    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
-    echo $mpi >! $execdir/mpi
-  endif
-else
-  echo $mpi >! $execdir/mpi
-  echo "Created file mpi with mpi flag = $mpi"
 endif
 #
 # Copy defs header file to execdir, if necessary, according to 
@@ -240,6 +186,7 @@ cat << EOF >! Make.env
 MAKE_MACHINE  = $make
 DIRS          = . $srcdir 
 MPI           = $mpi
+NPROC         = $nproc
 EXECNAME      = $model
 NAMELIST      = $input
 OUTPUT        = $output
@@ -247,52 +194,55 @@ DEBUG         = $debug
 SVN_REVISION  = $svn_revision
 EOF
 #
-# Build the model:
-gmake -j8 all || echo ">>> Error return from gmake all" && exit 1
+gmake machines.ini
+gmake mpirun.command
+set mpirun = `cat mpirun.command`
 #
-if ($exec == "FALSE") then
-  echo "Am NOT executing the model because exec = $exec"
-  exit 0
+set compiler = 'unknown'
+if ($make == Make.intel_hao64) then
+  set compiler = intel
+else if ($make == Make.pgi_hao64) then
+  set compiler = pgi
+else if ($make == Make.gfort_hao64) then
+  set compiler = gfort
 endif
+echo Compiler: $compiler
 #
-# Set data directory in LSF script:
+# Build the model:
+gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
 #
-cat << EOF >> $runscript
-  setenv TGCMDATA $tgcmdata
-EOF
+# Execute Linux job (MPI or non-MPI run):
 #
-# MPI/LSF job: append mpirun.lsf command to LSF script 
-# (it has #BSUBs from above)
+if ($exec == "TRUE") then
+  set model = ./$model
+  echo "$model output will go to $output"
+  if ($mpi == "TRUE") then
+    echo Executing $mpirun with executable $model at `date`
 #
-if ($mpi == "TRUE") then  # MPI LSF job
-  cat << EOF >> $runscript
-  setenv MP_LABELIO YES
-  setenv MP_SHARED_MEMORY yes
+# Execute mpirun with the model executable ($model), and a single argument
+# providing the path to the namelist input file:
 #
-# Execute:
-  mpirun.lsf $model $input >&! $output
+    $mpirun -machinefile machines.ini -np $nproc $model $input >&! $output
+
+    echo "Linux MPI run of $model completed at `date`"
+    $rmbinchars $output # remove any non-ascii chars in stdout file
 #
-# Save stdout:
-  $rmbinchars $output # remove any non-ascii chars in stdout file
-  $mklogs $output     # break stdout into per-task log files
-  cd $output:h
+# Do not call mklogs if built with PGI or gfortran:
+# (only intel has ability to prefix task ids to stdout lines)
 #
-# Make tar file of task log files:
-  tar -cf $output.tar *task*.out 
-  echo Saved stdout tar file $output.tar 
-  rm *task*.out
-EOF
-  echo " "
-  echo "Submitting LSF script $runscript for MPI run"
-  bsub < $runscript
-#
-# Non-mpi job: simple execution statement on the interactive node.
-# If you want to submit lsf job, you can use a here-doc like above
-# to put the execution statement in the runscript, then submit with
-# bsub as above.
-#
+    if ($compiler == 'intel') then
+      $mklogs $output     # break stdout into per-task log files
+    else
+      echo "Am not calling mklogs because model was not built with intel"
+    endif
+  else # MPI is FALSE
+    echo "Executing $model for Linux non-MPI run."
+    $model < $input >&! $output || \
+      echo ">>> ${0} Execution of $model FAILED at `date`" && \
+      echo "See output in $output"
+    echo "Linux non-MPI run of $model completed at `date`"
+  endif
 else
-  echo "Executing serial non-MPI run in background on the interactive node.." 
-  $model < $input >&! $output &
+  echo "I am NOT executing $model (exec was not set)"
 endif
 exit 0

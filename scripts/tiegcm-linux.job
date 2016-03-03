@@ -1,34 +1,34 @@
 #! /bin/csh
 #
-# User set shell variables for TIEGCM Linux job:
-# (modeldir, execdir, and utildir may be relative or absolute paths)
+# Job script to build and execute the model on a 64-bit Linux desktop machine.
 #
-#   modeldir: Root directory to model source (may be an SVN working dir)
-#   execdir:  Directory in which to build and execute (will be created if necessary)
+# User should set shell variables below (paths below are examples on the hao network)
+#
+#   modeldir:  Root directory to model source (may be an SVN working dir)
+#   execdir:   Directory in which to build and execute (will be created if necessary)
 #   tgcmdata:  Directory in which startup history and data files are accessed.
-#              If tgcmdata is not set, the model will use env var TGCMDATA 
-#              (i.e., you can use tgcmdata to override env var TGCMDATA)
-#   input:    Namelist input file (will use default if not provided)
-#   output:   Stdout file from model execution (will be created)
-#   make:     Build file with platform-specific compile parameters (in scripts dir)
-#   mpi:      TRUE/FALSE for MPI or non-MPI run
-#   nproc:    Number of processors for 64-bit Linux MPI run
-#   modelres: Model resolution (5.0 or 2.5)
-#   debug:    If TRUE, build and execute a "debug" run
-#   exec:     If TRUE, execute the model (build only if FALSE)
-#   utildir:  Dir containing supporting scripts (usually $modeldir/scripts)
+#              (If tgcmdata is not set, the model will use env var TGCMDATA)
+#   input:     Namelist input file for the chosen model resolution
+#   output:    Stdout file from model execution (will be created)
+#   modelres:  Model resolution (5.0 or 2.5 degrees)
+#   make:      Build file with platform-specific compile parameters (in scripts dir)
+#   mpi:       TRUE/FALSE for MPI run (non-MPI runs are not supported in v2.0 and later)
+#   debug:     If TRUE, build and execute a "debug" run (debug compiler flags are set)
+#   exec:      If TRUE, execute the model (build only if exec is FALSE)
+#   utildir:   Directory containing supporting scripts (default $modeldir/scripts)
+#   runscript: LSF script with run commands (submitted with bsub from execdir)
 #
-# To switch to 2.5-deg resolution, set modelres = 2.5, and make sure
-# the data directory (tgcmdata or env var TGCMDATA) contains 2.5-deg files.
+# To switch to 2.5-deg resolution, set modelres below to 2.5,
+# and change execdir, tgcmdata and namelist input if necessary.
 #
 set modeldir = tiegcm_trunk
 set execdir  = /hao/aim/$user/tiegcm_trunk/tiegcm.exec
-#set tgcmdata = /hao/aim/$user/tiegcm_res5.0_data
+set tgcmdata = /hao/aim/tgcm/data/tiegcm2.0
 set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
 set output   = tiegcm.out
 set make     = Make.intel_hao64
 set modelres = 5.0
-set mpi      = TRUE
+set mpi      = TRUE  # must be TRUE for tiegcm2.0 and later
 set nproc    = 4
 set debug    = FALSE
 set exec     = TRUE
@@ -83,6 +83,7 @@ endif
 #   Finally, print warning if the directory does not exist.
 #
 if ($?tgcmdata) then
+  set tgcmdata = `perl $utildir/abspath $tgcmdata`
   setenv TGCMDATA $tgcmdata
   echo Set env var TGCMDATA = $TGCMDATA
 else

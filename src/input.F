@@ -460,8 +460,8 @@
 !
 ! Aurora flag:
       if (aurora==ispval) then
-        write(6,"(/,'Input: setting default AURORA = 0')")
-        aurora = 0
+        write(6,"(/,'Input: setting default AURORA = 1')")
+        aurora = 1
       endif
 !
 ! Number of tasks in lat,lon dimensions (ntask_lat*ntask_lon must == ntask):

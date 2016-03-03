@@ -1,37 +1,40 @@
 #!/bin/tcsh
 #
-# This script should be executed on the yellowstone command line. It will 
-# compile in execdir on the interactive login node, then create and submit 
-# an LSF script (also in execdir), based on the #BSUB resources specified below.
+# Job script to build and execute TIEGCM on the NCAR supercomputer yellowstone,
+# or similar system running LSF (Load Sharing Facility)
 #
-# Set shell variables and BSUB settings below:
+# This script should be executed on the yellowstone command line.
+# It will compile in execdir on the interactive login node, then create and 
+# submit an LSF script based on the #BSUB resources specified below.
+#
+# User should set shell variables and #BSUB settings below:
 #
 #   modeldir:  Root directory to model source (may be an SVN working dir)
 #   execdir:   Directory in which to build and execute (will be created if necessary)
 #   tgcmdata:  Directory in which startup history and data files are accessed.
-#              If tgcmdata is not set, the model will use env var TGCMDATA 
-#              (i.e., you can use tgcmdata to override env var TGCMDATA)
-#   input:     Namelist input file (set to default file in modeldir)
+#              (If tgcmdata is not set, the model will use env var TGCMDATA)
+#   input:     Namelist input file for the chosen model resolution
 #   output:    Stdout file from model execution (will be created)
+#   modelres:  Model resolution (5.0 or 2.5 degrees)
 #   make:      Build file with platform-specific compile parameters (in scripts dir)
 #   mpi:       TRUE/FALSE for MPI run (non-MPI runs are not supported in v2.0 and later)
-#   modelres:  Model resolution (5.0 or 2.5 degrees)
 #   debug:     If TRUE, build and execute a "debug" run (debug compiler flags are set)
 #   exec:      If TRUE, execute the model (build only if exec is FALSE)
 #   utildir:   Directory containing supporting scripts (default $modeldir/scripts)
 #   runscript: LSF script with run commands (submitted with bsub from execdir)
 #
-# To switch to 2.5-deg resolution, set modelres = 2.5, and make sure
-# the data directory (tgcmdata or env var TGCMDATA) contains 2.5-deg files.
+# To switch to 2.5-deg resolution, set modelres below to 2.5,
+# and change execdir, tgcmdata and namelist input if necessary.
+# Also reset number of processors accordingly below (#BSUB -n).
 #
-set modeldir = ../tiegcm_trunk
+set modeldir = tiegcm_trunk
 set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm.exec
-#set tgcmdata = /glade/scratch/$user/tiegcm_res5.0_data
+#set tgcmdata = /glade/p/hao/tgcm/data/tiegcm2.0
 set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
 set output   = tiegcm.out
 set modelres = 5.0
 set make     = Make.intel_ys
-set mpi       = TRUE
+set mpi       = TRUE   # must be TRUE for tiegcm2.0 and later
 set debug     = FALSE
 set exec      = TRUE
 set utildir   = $modeldir/scripts
@@ -47,7 +50,7 @@ if (! -d $execdir) mkdir -p $execdir
 cat << EOF >! $runscript
 #!/bin/tcsh
 #
-#BSUB -J tiegcm_trunk
+#BSUB -J tiegcm
 #BSUB -P P28100036
 ##BSUB -P NHAO0004
 #BSUB -q premium
@@ -120,6 +123,7 @@ set srcdir = `perl $utildir/abspath $srcdir`
 #   Finally, print warning if the directory does not exist.
 #
 if ($?tgcmdata) then
+  set tgcmdata = `perl $utildir/abspath $tgcmdata`
   setenv TGCMDATA $tgcmdata
   echo Set env var TGCMDATA = $TGCMDATA
 else
