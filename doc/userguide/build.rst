@@ -34,20 +34,20 @@ for the build priocess.  These files are provided in the model
 at build time:
 
 * | Makefile for Intel compiler on NCAR supercomputer |ncarsuper|:
-  | :download:`Make.intel_ys <_static/Make.intel_ys>` (NCAR |ncarsuper|)
+  | :download:`Make.intel_ys <../../scripts/Make.intel_ys>` (NCAR |ncarsuper|)
 
 * | Makefile for Intel compiler on 64-bit Linux desktop system:
-  | :download:`Make.intel_hao64 <_static/Make.intel_hao64>`
+  | :download:`Make.intel_hao64 <../../scripts/Make.intel_hao64>`
 
 * | Makefile for PGI compiler on 64-bit Linux desktop system:
-  | :download:`Make.pgi_hao64 <_static/Make.pgi_hao64>` 
+  | :download:`Make.pgi_hao64 <../../scripts/Make.pgi_hao64>` 
 
 * | Makefile for GNU gfortran compiler on 64-bit Linux desktop system:
-  | :download:`Make.gfort_hao64 <_static/Make.gfort_hao64>`
+  | :download:`Make.gfort_hao64 <../../scripts/Make.gfort_hao64>`
 
 One of these files, or the user's own, is specified by the job script 
 variable "make" in the :ref:`job script <jobscript>`. The specified 
-file is included in the main :download:`Makefile <_static/Makefile>`.
+file is included in the main :download:`Makefile <../../scripts/Makefile>`.
 User's outside NCAR are encouraged to copy and rename one of these files, 
 and customize it for your own operating system and compiler.
 
@@ -62,7 +62,7 @@ Local paths to these libraries are specified in the compiler-specific
 The Earth System Modeling Framework (ESMF)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The electro-dynamo code see :download:`src/pdynamo.F <_static/pdynamo.F>`) 
+The electro-dynamo code see :download:`source file pdynamo.F <../../src/pdynamo.F>`) 
 in the |modeluc| is calculated on the :ref:`geomagnetic grid <magcoords>`. 
 Since the dynamo receives inputs from the neutral atmosphere, which is on 
 the :ref:`geographic grid <geocoords>`, there is a need for regridding 
@@ -73,7 +73,7 @@ geographic grid.
 The `Earth System Modeling Framework <https://www.earthsystemcog.org/projects/esmf>`_ (see also 
 `Modeling Infractructure for the Geoscience Community <http://www.cisl.ucar.edu/research/2005/esmf.jsp>`_ 
 is used in the |modeluc| to perform the grid remapping in an parallel MPI environment,
-see :download:`src/esmf.F <_static/esmf.F>`. To build the |modeluc|, the ESMF library
+see :download:`src/esmf.F <../../src/esmf.F>`. To build the |modeluc|, the ESMF library
 must be included in the link step. If the ESMF library is not already on your system,
 you will need to `download <https://www.earthsystemcog.org/projects/esmf/download/>`_  
 and build it, using the same compiler you are using to build the |modeluc|.
@@ -83,7 +83,7 @@ desktop for each compiler/MPI implementation:
 
 ESMF libraries at HAO for use on Linux desktop systems (these paths are provided
 in the scripts/Make.xxxx files described above). The esmf makefiles esmf.mk are
-included in the model's main makefile :download:`scripts/Makefile <_static/Makefile>`
+included in the model's main makefile :download:`scripts/Makefile <../../scripts/Makefile>`
 
  * | For use with the Intel compiler:
    | /home/tgcm/esmf/intel/esmf_6_3_0rp1/lib/libO/Linux.intel.64.intelmpi.default
@@ -99,7 +99,7 @@ included in the model's main makefile :download:`scripts/Makefile <_static/Makef
 
  * | For the NCAR Linux cluster |ncarsuper|: esmf-6.3.0r-ncdfio-mpi-O
    | The ESMF library is loaded on |ncarsuper| with the "module load" command,
-   | executed by the :download:`job script tiegcm-ys.job <_static/tiegcm-ys.job>`.
+   | executed by the :download:`job script tiegcm-ys.job <../../scripts/tiegcm-ys.job>`.
 
 
 netCDF

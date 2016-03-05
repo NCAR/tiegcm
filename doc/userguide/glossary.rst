@@ -8,22 +8,28 @@ Glossary
      Selected validation runs made with each release of the model. These runs can
      be made using Python code in the :term:`tgcmrun/` directory. 
 
+   benchmarks/
+     Directory in the model root directory containing shell scripts that call
+     :term:`tgcmrun/` for making benchmark runs, some utility scripts, and
+     a subdirectory postproc/ containing scripts that do post-processing on
+     benchmark results. See :ref:`Benchmark Runs <benchmarks>` for more information.
+     Benchmark results (plots) for version |tgcm_version| are available here: 
+     :base_url:`Release Benchmarks Results <release/html/benchmarks.html>`
+
    continuation run
      A continuation run continues from the last output history of the previous run.
      That history (:ref:`START <START>` time) must be on the first :ref:`OUTPUT <OUTPUT>` file  
      provided by the namelist input file. A continuation run must not specify
      a :ref:`SOURCE <SOURCE>` file or :ref:`SOURCE_START <SOURCE_START>` time.
-
-   datadir
-     The directory containing start-up and other input data files required for
-     running the model. This should be on a large temporary disk. A minimal set 
-     of datadir files are available via :ref:`download <download>`.  The datadir 
-     is sometimes referred to by the :term:`TGCMDATA` environment variable.  
-     See also :ref:`job script shell variable <jobscript>`.
+     See also :ref:`Continuation Run <continuation_run>`
 
    diagnostic fields
      A list of diagnostic fields are available to be saved on secondary history files.
      See section :ref:`Saving Diagnostic Fields <diagnostics>`.
+
+   datadir
+     Directory containing startup history and data files necessary for running the model.
+     This is specified with the :term:`tgcmdata` shell variable in the :term:`job script`.
 
    doc/
      Subdirectory under the :term:`modeldir` containing documentation, e.g., the
@@ -64,8 +70,10 @@ Glossary
    job script 
      A csh script in the scripts/ directory which, when executed, will build and execute
      the model. The user defines a few shell variables in the job script, such as
-     the :term:`modeldir`, and the :term:`namelist input`. For more details, please
-     see :ref:`job scripts <jobscript>`.
+     the :term:`modeldir`, and the :term:`namelist input`. See example 
+     :download:`job script for Linux desktops <../../scripts/tiegcm-linux.job>`, and
+     :download:`job script for Super computer <../../scripts/tiegcm-ys.job>`
+     See :ref:`jobscript` for more detailed information.
 
    model time
      TIEGCM model time is represented by an integer triplet: day,hour,minute, where 
@@ -76,7 +84,7 @@ Glossary
    modeldir
      The model root directory. This directory typically contains subdirectories
      :term:`src/` (model source code), :term:`scripts/` (utility scripts), 
-     :term:`doc/` (documentation), and :term:`tests/` (test runs). The modeldir 
+     :term:`doc/` (documentation), and :term:`benchmarks/`. The modeldir 
      is available via :ref:`download <download>`, and is typically a subdirectory 
      of the model working directory (:term:`workdir`). 
      See also :ref:`Model Directory <modeldir>`
@@ -128,8 +136,15 @@ Glossary
      command-line options. There are several run_xxxxx shell scripts there 
      demonstrating how to make benchmark runs.
 
-   TGCMDATA
-     A unix environment variable that refers to the :term:`datadir`. This environment
+   tgcmdata
+     A directory path to start-up and other input data files required for 
+     running the model. This should be on a large temporary disk.  tgcmdata is a 
+     csh variable optionally specified in the :term:`job script`. If not specified,
+     the job script will use the :term:`TGCMDATA` environment variable.  
+     See also :ref:`job script shell variables <jobscript>`.
+
+   env var TGCMDATA
+     A linux environment variable that refers to the :term:`tgcmdata`. This environment
      variable may be used when referring to data files in the namelist read file, e.g.,
      "GPI_NCFILE = `$TGCMDATA/gpi_xxxxx.nc`". See :ref:`namelist read files <namelist>`.
 
@@ -149,7 +164,7 @@ Glossary
      site.  See :ref:`utproc <utproc>`.
  
    workdir
-     Your local working directory. This will typically contain the model root directory
+     User-created local working directory. This will typically contain the model root directory
      :term:`modeldir` and related namelist input files, job scripts, stdout files, etc. 
      Because the model source files are critical, this should be on backed-up disk, 
      typically under your home directory.

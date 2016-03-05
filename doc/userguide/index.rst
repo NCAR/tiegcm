@@ -20,6 +20,7 @@ Contents:
    dirstruct
    grid
    namelist 
+   jobscripts
    output
    diags
    source

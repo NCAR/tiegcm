@@ -16,10 +16,10 @@
 ! Principle interface to the model is via a single call to sub input 
 !   (which makes calls to the input module subroutines), and via 
 !   "use input_module" statements in model subprograms.
-! This module is dependent on the model header file "params.h"
+! This module is dependent on the model source file "params.F"
 !
 ! Procedure to add new input parameters:
-!   0. Add any necessary parameter declarations in params.h
+!   0. Add any necessary parameter declarations in params.F
 !      (these are generally for dimensioning input variables)
 !   1. Declare new module variables in proper category below
 !      (e.g., model-wide, primary histories, secondary histories, etc)
@@ -132,7 +132,7 @@
 !     character(len=16) ::
 !    |  gpi_names(ngpivars)      ! names of gpi_vars
 !
-! Primary history user input (dimension parameters are in params.h):
+! Primary history user input (dimension parameters are in params.F):
       character(len=1024) :: 
      |  source,            ! file containing source history (optional)
      |  output(mxhvols)    ! output file(s) (required)
@@ -144,7 +144,7 @@
      |  mxhist_prim,       ! max number of histories per primary file
      |  noutput            ! number of output files given
 !
-! Secondary history user input (dimension parameters are in params.h):
+! Secondary history user input (dimension parameters are in params.F):
       character(len=1024) :: 
      |  secsource,            ! file containing source sec_history (for mhd)
      |  secout(mxhvols)       ! secondary history output file(s)

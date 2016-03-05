@@ -4,27 +4,31 @@
 Directory Structure
 ===================
 
-This chapter describes a typical directory structure the user will be
-working with when running the |modeluc| model. The working directory
-(:term:`workdir`) is the "root" directory of the user's project. 
+To make a model run, some directory paths must be defined:
 
-The model directory (:term:`modeldir`) is typically a subdirectory under
-the working directory, and contains the model source code, supporting
-scripts, documentation, and a semi-automated validation and testing program.
+* :term:`workdir`: User created directory from which model runs are submitted.
 
-The data directory (:term:`datadir`) is typically on a large temporary disk 
-capable of storing start-up and input data files necessary for running the model.
-The execution directory (:term:`execdir`) is also on a large temporary disk,
-and contains the compiled object and module files, the model executable, and 
-the model output netCDF history files.
+* :term:`modeldir`: Directory containing the model source code (may be an svn working copy)
+
+* :term:`tgcmdata`: Location of start-up history and input data files (see :ref:`datadir` below)
+
+* :term:`execdir`: Directory in which the model will be built and executed 
+
+These paths are set by the user in the job script, as in these examples:
+(these can be absolute paths or relative to the working directory)::
+
+  set modeldir = tiegcm_trunk
+  set tgcmdata = /my/prettybig/data/tiegcm.data
+  set execdir  = /my/big/exec/disk/tiegcm.exec
+
+See this :download:`example job script <../../scripts/tiegcm-linux.job>`
 
 .. _workdir:
 
 Working Directory (:term:`workdir`)
 -----------------------------------
 
-The user's working directory will typically look something like this
-(the :term:`datadir` can be on a large separate disk system)::
+The user's working directory will typically look something like this::
 
                       workdir
                          |
@@ -34,17 +38,18 @@ The user's working directory will typically look something like this
             *.job                          
             *.out                         
                                 
-Here, *.inp are :term:`namelist input` files, *.job are 
-:term:`job script` s, and *.out are stdout :term:`output` files from model 
-runs. 
+Here, \*.inp are :term:`namelist input` files, \*.job are 
+:term:`job script`'s, and \*.out are stdout :term:`output` files from model 
+and are validated by the input module (input.F). 
 
-The job script(s) in your working directory contains a shell variable specifying
+The job script in your working directory contains a shell variable specifying
 the path to the :term:`modeldir`, so it knows where to find the source code and 
 supporting scripts for the build process. The namelist input file also refers to 
 the :term:`datadir` path for start-up and other data input files (e.g., :ref:`SOURCE <SOURCE>`, 
 :ref:`GPI_NCFILE <GPI_NCFILE>`, :ref:`IMF_NCFILE <IMF_NCFILE>`, etc). 
 These namelist parameters can use the environment variable :term:`TGCMDATA` to 
 specify the :term:`datadir` (see section on :ref:`namelist input files <namelist>`).
+The job script shell variable :term:`tgcmdata`, if set, will override the TGCMDATA env var.
 
 .. _modeldir:
 
@@ -58,21 +63,21 @@ test and benchmark runs::
 
                                 modeldir
                                    |
-   ----------------------------------------------------------------------
-      |               |                |                 |
-     src/          scripts/           doc/            tgcmrun/
-      |               |                |                 | 
-     *.F90          Make.*         userguide/           *.py 
-     *.F          linux.job       description/          run_* 
-     *.h           ibm.job          release/          tgcmrun 
-                 default.inp       diags.table       
-                tgcm_contents      perf.table
-                 tgcm_ncdump    README.download    
+   -------------------------------------------------------------------------
+      |               |                |                 |             |
+     src/          scripts/           doc/            tgcmrun/     benchmarks/
+      |               |                |                 |             |
+     *.F90          Make.*         userguide/           *.py      run_climatology
+     *.F          linux.job       description/          run_*       run_seasons
+     *.h           ibm.job          release/          tgcmrun       run_storms
+                 default.inp       diags.table                    archive_hpss 
+                tgcm_contents      perf.table                     make_listings
+                 tgcm_ncdump    README.download                     postproc/
                     etc                           
 
 :term:`src/` directory contents:
 
-* Fortran source code *.F, *.F90, *.h. The source code is f90 standard compliant, and most 
+* Fortran source code \*.F, \*.F90, \*.h. The source code is f90 standard compliant, and most 
   source files are in fixed-format fortran. There is a single header file, defs.h,
   which contains grid definitions and dimensions for different :term:`resolution` s.
 
@@ -90,10 +95,11 @@ test and benchmark runs::
 * **tiegcm-ys.job**: Default model :term:`job script` for the NCAR |ncarsuper| supercomputer.
 * **tiegcm_res5.0_default.inp**: Default namelist input file for 5.0-degree resolution.
 * **tiegcm_res2.5_default.inp**: Default namelist input file for 2.5-degree resolution.
+* **download**: Directory in which to make source and data tar files for :ref:`download <download>` from the TGCM website
 
 There are several additional utilities in the scripts directory that are used by
 the build system or by the user to perform various tasks or to obtain information
-(see :download:`README.scripts <_static/README.scripts>` for more information).
+(see :download:`README in scripts directory <../../scripts/README>` for more information).
 directory for more information.
 
 :term:`doc/` directory contents:
@@ -101,7 +107,7 @@ directory for more information.
 * **userguide/**: Directory containing `Python Sphinx <http://www.sphinx-doc.org/en/stable/index.html>`_ source files for the User's Guide (this document)
 
 * **description/**: Directory containing source files for the 
-  :base_url:`TIEGCM Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
+  `Model Description <http://www.hao.ucar.edu/modeling/tgcm/doc/description/model_description.pdf>`_
 
 * **release/**: Directory containing source files for the 
   :base_url:`Release Documentation <release/html>`
@@ -114,7 +120,7 @@ directory for more information.
 * **perf.table**: :download:`Table of performance statistics <_static/perf.table>` for both
   models (tiegcm and timegcm) at both :term:`resolution`.
 
-* **README.download**: :download:`Instructions <_static/README.download>` for how to make a 
+* **README.download**: :download:`Instructions <../../scripts/download/README.download>` for how to make a 
   quick-start default build and execution of the model after downloading the source code and data.
 
 :term:`tgcmrun/` directory contents:
@@ -124,10 +130,25 @@ directory for more information.
 * For more information on benchmark runs made for the current release, please see 
   :base_url:`Release Documentation <release/html>`
 
+:term:`benchmarks/` directory contents:
+
+* Shell scripts that call :term:`tgcmrun` to make benchmark runs:
+
+  * run_climatology
+  * run_seasons
+  * run_storms
+  * run_perf
+
+* Script archive_hpss to archive benchmark runs on the hpss 
+  (see `HPSS <https://www2.cisl.ucar.edu/resources/storage-and-file-systems/hpss>`_)
+* Script make_listings for making lists of files related to benchmark runs
+* Subdirectory postproc/ contains scripts that call the tgcmproc utility to post-process
+  benchmark runs.
+
 .. _datadir:
 
-Data Directory (:term:`datadir`)
---------------------------------
+Data Directory (:term:`datadir`) (see also :term:`tgcmdata`)
+------------------------------------------------------------
 
 The public |modeluc| data directory is what you get when you :ref:`download <download>` 
 the data tar file. This directory is typically referred to with the environment variable
@@ -143,12 +164,12 @@ the data tar file. This directory is typically referred to with the environment 
                       gswm*5.0d*.nc
                       gswm*2.5d*.nc
                       imf_OMNI_*.nc
+                         etc
 
 These are netCDF history startup and data files for running the current version of the
 model ( |tgcm_version| )
 They are specified in the namelist input file (see :ref:`namelist input files <namelist>` 
-for more information). Additional files may be downloaded from the 
-:ftp_url:`HAO public ftp page <>`
+for more information). These files are available for download, see :ref:`download`.
 
 
 * **tiegcmx.x_res5.0_*.nc**: History start-up files for the 5.0-degree resolution
@@ -221,7 +242,8 @@ for more information). Additional files may be downloaded from the
   Interplanetary Magnetic Field OMNI data files. Namelist read parameter is
   :ref:`IMF_NCFILE <IMF_NCFILE>`. These files contain data for the BX,BY,BZ 
   components of the IMF, solar wind velocity and solar wind density.
-  See :ftp_url:`HAO public ftp page <>` to download imf data files for years 
+  See `HAO public ftp page <http://download.hao.ucar.edu/pub/tgcm/data>`_ 
+  to download imf data files for years 
   not included at the :download_url:`tgcm download website <>`.
 
 .. _execdir:
@@ -231,7 +253,7 @@ Execution Directory (:term:`execdir`)
 
 The model is built and executed in the execution directory (:term:`execdir`). 
 The path to the execution directory is specified by the execdir shell variable
-in the :ref:`job script <jobscript>`. The following file types are typically
+in the :term:`job script`. The following file types are typically
 found in the execution directory:
 
 * ***.o**:

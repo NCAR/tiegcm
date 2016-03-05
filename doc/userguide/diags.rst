@@ -326,11 +326,6 @@ Details of Diagnostic Field Calculations
 
       call mkdiag_HNMF2('FOF2',z,electrons,lev0,lev1,lon0,lon1,lat)
 
-   Sample images: FOF2 Global map:
-
-   .. image:: _static/images/diags/fof2.png
-      :align: center
-
    :ref:`Back to diagnostics table <diag_fields>`
 
 --------------------------------------------------------------------------------------------
@@ -1017,9 +1012,9 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Eastward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
-   Je1/D is calculated in subroutine *nosocrdens* in source file :download:`current.F <../../src/current.F>`, 
+   Je1/D is calculated in subroutine *nosocrdens* in source file :download:`current.F90 <../../src/current.F90>`, 
    and saved to secondary histories by subroutine *mkdiag_JE13D* (:download:`diags.F <../../src/diags.F>`)
    
    .. note::
@@ -1048,9 +1043,9 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Downward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
-   Je2/D is calculated in subroutine *nosocrdens* in source file :download:`current.F <../../src/current.F>`, 
+   Je2/D is calculated in subroutine *nosocrdens* in source file :download:`current.F90 <../../src/current.F90>`, 
    and saved to secondary histories by subroutine *mkdiag_JE23D* (:download:`diags.F <../../src/diags.F>`)
    
    .. note::
@@ -1080,10 +1075,10 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Upward current density (2d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'none' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
    Jqr is calculated in subroutine *nosocrrt* in source file 
-   :download:`current.F <../../src/current.F>`,
+   :download:`current.F90 <../../src/current.F90>`,
    and saved to secondary histories by subroutine *mkdiag_JQR* 
    (:download:`diags.F <../../src/diags.F>`)
    
@@ -1112,9 +1107,9 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Height-integrated current density (+north)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
-   Kqlam is calculated in subroutine *nosocrdens* in source file :download:`current.F <../../src/current.F>`,
+   Kqlam is calculated in subroutine *nosocrdens* in source file :download:`current.F90 <../../src/current.F90>`,
    and saved to secondary histories by subroutine *mkdiag_KQLAM* (:download:`diags.F <../../src/diags.F>`)
    
    .. note::
@@ -1142,9 +1137,9 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Height-integrated current density (+east)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
-   KQPHI is calculated in subroutine *nosocrdens* in source file :download:`current.F <../../src/current.F>`,
+   KQPHI is calculated in subroutine *nosocrdens* in source file :download:`current.F90 <../../src/current.F90>`,
    and saved to secondary histories by subroutine *mkdiag_KQPHI* (:download:`diags.F <../../src/diags.F>`)
 
    
@@ -1400,11 +1395,6 @@ Details of Diagnostic Field Calculations
       diags(n)%units      = 'cm'
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'addiag.F'
-
-   Sample images: ZGMID cylindrical equidistant projection 
-
-   .. image:: _static/images/diags/zgmid.png
-      :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
 

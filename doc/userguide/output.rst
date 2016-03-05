@@ -1,7 +1,7 @@
 Structure of Output History Files
 =================================
 
-.. _output:
+.. _historyoutput:
 
 NetCDF Output Files (:term:`netCDF`)
 ------------------------------------
@@ -32,6 +32,10 @@ daily histories are stored on primary history files.
 
 Fields on primary histories necessary for start-up of the TIEGCM are as follows:
 TN, UN, VN, O2, O1, N4S, NO, HE, AR, OP, N2D, TI, TE, NE, O2P, OMEGA, Z, POTEN 
+There are also several fields with the suffix "_NM" that contain data from the 
+previous timestep, necessary for the job-stepping scheme for prognostic variables.
+Lower boundary conditions for neutral temperature and winds are also on the 
+primary history (TLBC, ULBC and VLBC).
 
 "Secondary" history files contain diagnostic fields and/or primary history fields.
 Fields to be saved on the secondary history files are listed by the namelist input 

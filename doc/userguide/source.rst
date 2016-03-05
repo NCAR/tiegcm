@@ -25,9 +25,9 @@ in single and multi-page pdf files:
 
   Some details of these flow charts may be out of date with respect to TIEGCM version |version|
 
-* :base_url:`TIEGCM Code Structure (multi-page pdf) <tiegcm_codestruct.pdf>`
+* :base_url:`TIEGCM Code Structure (multi-page pdf) <code_structure/tiegcm_codestruct.pdf>`
 
-* :base_url:`TIEGCM Code Structure (single-page pdf) <tiegcm_code_poster.pdf>`
+* :base_url:`TIEGCM Code Structure (single-page pdf) <code_structure/tiegcm_code_poster.pdf>`
 
 
 .. _modifying_source:

@@ -27,13 +27,11 @@ import sys, os
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 #extensions = ['sphinx.ext.todo', 'sphinx.ext.pngmath', 'sphinx.ext.autodoc']
 extensions = ['sphinx.ext.extlinks']
-
 #
-# btf 12/15/15: Change this when tiegcm2.0 is available on webpub:
+# Change this when tiegcm2.0 is available on webpub:
 #
-#extlinks = {'base_url': ('http://www.hao.ucar.edu/modeling/tgcm/tiegcm2.0/%s', 'base_url '),
-#            'ftp_url': ('http://download.hao.ucar.edu/pub/tgcm/data/%s', None ),
-#            'download_url': ('http://www.hao.ucar.edu/modeling/tgcm/%s', None )}
+#extlinks = {'base_url': ('http://www.hao.ucar.edu/modeling/tgcm/tiegcm2.0%s', 'base_url '),
+#            'data_url': ('http://download.hao.ucar.edu/pub/tgcm/data/tiegcm2.0/%s', 'data_url ')}
 
 extlinks = {'base_url': ('http://download.hao.ucar.edu/pub/tgcm/tiegcm2.0/%s', 'base_url '),
             'data_url': ('http://download.hao.ucar.edu/pub/tgcm/data/tiegcm2.0/%s', 'data_url ')}
@@ -52,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'TIEGCM'
-copyright = u'2016, Ben Foster'
+copyright = u'2016, NCAR/HAO'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

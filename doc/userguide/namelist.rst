@@ -669,7 +669,7 @@ Parameter Name                              Data Type and Default Description
    :ref:`Back to top <namelist_params>`
 
 .. -------------------------------------------------------------------------------------
-.. index:: output, namelist input ; output
+.. index:: output, namelist input , output
 .. _OUTPUT:
 .. describe:: OUTPUT
 

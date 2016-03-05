@@ -63,8 +63,8 @@ Here is a table of runs at 2.5-degree model resolution (there is also a set at t
 
 .. _benchmark_results:
 
-Selected Results of Benchmark Runs
-----------------------------------
+Selected Results of |tgcm_version_uc| Benchmark Runs 
+----------------------------------------------------
 
 Results of the benchmark runs are available in 2d plots of time series, grid slices, and maps.
 These are multi-page PDF files, arranged as follows:
@@ -115,4 +115,46 @@ Availability of Model Output History Files
 ------------------------------------------
 
 Model output history files are stored in CF-compliant netCDF format.
-Benchmark history files are available from the Globus data-sharing service.
+Benchmark history files are available via `Globus research data sharing service <https://www.globus.org>`_.
+The tiegcm benchmark history files are stored at the "NCAR Data Sharing Service" Globus shared endpoint.
+(for users with an NCAR/CISL login: this endpoint is /glade/u/datashare/tgcm)
+
+See these CISL docs for information regarding the NCAR Data Sharing Service:
+
+  * `NCAR Data Sharing Service <https://www2.cisl.ucar.edu/resources/storage-and-file-systems/using-the-ncar-data-sharing-service>`_
+
+  * `Globus file transfers     <https://www2.cisl.ucar.edu/resources/storage-and-file-systems/globus-file-transfers>`_
+    (see especially "Transferring files with the webh interface")
+
+  * `Retreiving data from a shared endpoint <https://www2.cisl.ucar.edu/resources/storage-and-file-systems/using-the-ncar-data-sharing-service#retrieve>`_
+
+Here is a summary procedure for accessing the |tgcm_version| benchmark data:
+
+.. note::
+
+  You do *NOT* have to have an NCAR user account or token to retrieve this data.
+
+
+* You must have or create a `Globus <https://www.globus.org>`_ account. If your 
+  institution/organization has a Globus data sharing endpoint, you can use your institutional 
+  authorization to login to Globus. Otherwise, you can create a 
+  `Globus personal account <https://www.globus.org/SignUp>`_ to transfer files
+  to your personal laptop or desktop computer.
+
+* Log  in to your Globus account, and click on "File Transfer"
+
+* To reach the NCAR/TIEGCM source endpoint, click in the "Endpoint" text box on the left, 
+  and type "TIEGCM v2.0". It should retrieve directory contents, and show a "benchmarks" folder.
+
+* Next, establish your destination endpoint on the right. This is either your institutional
+  endpoint, or the username of your personal Globus login.
+
+* Select the locations/files you want to download from the left side, and the destination
+  location on the right, then click the right arrow at the top to begin the transfer.
+
+Here's a screen shot of a Globus file transfer from the TIEGCM v2.0 endpoint to my personal
+Macbook Pro: :download:`Globus_screenshot.png <_static/globus_screenshot.png>`
+
+In each of the 6 benchmark groups are folders for each run, with folders containing
+the history files (hist), post-processing (proc), and scripts and log files (stdout). 
+Individual files or whole directories can be downloaded.

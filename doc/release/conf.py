@@ -28,7 +28,7 @@ extensions = ['sphinx.ext.extlinks']
 
 extlinks = {'base_url': ('http://download.hao.ucar.edu/pub/tgcm/tiegcm2.0/%s','base_url '),
    'benchmarks_url':    ('http://download.hao.ucar.edu/pub/tgcm/tiegcm2.0/benchmarks/%s','benchmarks_url '),
-   'release_url':       ('http://download.hao.ucar.edu/pub/tgcm/tiegcm2.0/release_html/%s','release_url '),
+   'release_url':       ('http://download.hao.ucar.edu/pub/tgcm/tiegcm2.0/release/html/%s','release_url '),
    'data_url':          ('http://download.hao.ucar.edu/pub/tgcm/data/tiegcm2.0/%s','data_url ')}
 
 # Add any paths that contain templates here, relative to this directory.

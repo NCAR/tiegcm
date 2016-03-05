@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 Release of HAO |modeluc| Version |version|
-=======================================
+==========================================
 
 HAO is pleased to announce the release of version |version| of the
 Thermosphere Ionosphere Electrodynamics General Circulation Model
@@ -19,8 +19,9 @@ Contents:
 
    release_notes
    benchmarks
+   glossary
 
-* :base_url:`User's Guide <userguide_html>`
+* :base_url:`User's Guide <userguide/html>`
 
 * `Model Description <http://www.hao.ucar.edu/modeling/tgcm/doc/description/model_description.pdf>`_
 

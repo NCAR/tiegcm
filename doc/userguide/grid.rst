@@ -27,7 +27,7 @@ shell variable in the :ref:`job script <jobscript>` to set the model resolution)
 .. _geocoords:
 
 Geographic 3d spatial coordinates at 5-degree horizontal resolution 
-------------------------------------------------------------
+-------------------------------------------------------------------
 
 Following are spatial coordinates for the 5x5-degree latxlon horizontal
 grid, with two grid points per scale height in the vertical (delta :term:`zp` = 0.5)::
