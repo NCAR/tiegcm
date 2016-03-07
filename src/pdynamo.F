@@ -8,7 +8,7 @@
 !
 !
       use params_module,only: nmlevp1,nmlon,nmlonp1,nlon,nlonp4,nlat,
-     |  nmlat,gmlat,nmlath,nlev,nlevp1,mlev0,mlev1,nmlev_diff
+     |  nmlat,gmlat,nmlath,nlev,nlevp1,mlev0,mlev1,nmlev_diff,dlat,spval
       use addfld_module,only: addfld
       use mpitime_module,only: mpi_timer
       use mpi_module,only: mlat0,mlat1,mlon0,mlon1,lon0,lon1,lat0,lat1,
@@ -149,6 +149,7 @@
 !   coefficients for all 5 levels of resolution.
 !
       integer :: nc(6)
+      integer :: mlevtop ! for saving mag fields to sechist
 
       real ::
      |  c0(nmlon0,nmlat0,10),
@@ -414,6 +415,16 @@
 !    |  minval(un),maxval(un),minval(vn),maxval(vn),
 !    |  minval(wn),maxval(wn),minval(zpot),maxval(zpot),
 !    |  minval(ped),maxval(ped),minval(hal),maxval(hal)
+!
+! mlevtop is for saving mag fields with addfld, see below: 
+!   (actually mlevtop one level below the top):
+!   At 5.0-deg: mlev0,mlev1 = -2,29 mag_field(81,97,mlev0:mlev1)
+!   At 2.5-deg: mlev0,mlev1 = -5,57 mag_field(81,97,mlev0:mlev1)
+!
+      mlevtop = mlev1+2                  ! 5.0-deg (mlev1=57)
+      if (dlat == 2.5) mlevtop = mlev1+5 ! 2.5-deg (mlev1=63)
+      write(6,"('dynamo_inputs: dlat=',f7.2,' mlevtop=',i4)") 
+     |  dlat,mlevtop
 
 ! First, transfer lev0:lev1 (and all geo i,j) from inputs to xxxdyn:
       do j=lat0,lat1
@@ -434,20 +445,26 @@
 ! Set three equally spaced levels for Z, take U, V, and W
 ! to be constant, and extrapolate sigmas exponentially.
 !
+! 3/3/16 btf (as per Astrid and Art): Change extrapolation of Pedersen and Hall:
+!   from (float(nmlev_diff-1)*rl1)) to (2.*rl1)) for peddyn, and
+!   from (float(nmlev_diff-1)*rl2)) to (2.*rl2)) for haldyn.
+! According to Astrid This will lead to smaller conductivities between
+!   zp -8.5 to zp -7.
+!
           do k=lev0-1,mlev0,-1
             zpotdyn(k,i,j) = h0+float(k+nmlev_diff-1)*
      |        (zpotdyn(lev0,i,j)-h0)/float(nmlev_diff)
             peddyn(k,i,j) = peddyn(lev0,i,j)*exp((zpotdyn(k,i,j)+
      |        zpotdyn(k+1,i,j)-zpotdyn(lev0,i,j)-zpotdyn(lev0+1,i,j))/
-     |        (float(nmlev_diff-1)*rl1))
+     |        (2.*rl1))
             haldyn(k,i,j) = haldyn(1,i,j)*exp((zpotdyn(k,i,j)+
      |        zpotdyn(k+1,i,j)-zpotdyn(lev0,i,j)-zpotdyn(lev0+1,i,j))/
-     |        (float(nmlev_diff-1)*rl2))
+     |        (2.*rl2))
             undyn(k,i,j) = undyn(lev0,i,j)
             vndyn(k,i,j) = vndyn(lev0,i,j)
             wndyn(k,i,j) = wndyn(lev0,i,j)
-            je1pg(k,i,j) = je1pg(lev0,i,j)
-            je2pg(k,i,j) = je1pg(lev0,i,j)
+            je1pg(k,i,j) = 0.
+            je2pg(k,i,j) = 0.
           enddo
         enddo ! i=lon0,lon1
       enddo ! j=lat0,lat1
@@ -465,20 +482,20 @@
 !     enddo
 !
 ! real,dimension(mlev0:mlev1,lon0:lon1,lat0:lat1) ::
-!     do j=lat0,lat1
-!       call addfld('Z_DYN',' ',' ',zpotdyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('U_DYN',' ',' ',undyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('V_DYN',' ',' ',vndyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('W_DYN',' ',' ',wndyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('PED_DYN',' ',' ',peddyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('HAL_DYN',' ',' ',haldyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!     enddo
+      do j=lat0,lat1
+        call addfld('Z_DYN',' ',' ',zpotdyn(1:nlev,:,j),
+     |    'ilev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('U_DYN',' ',' ',undyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('V_DYN',' ',' ',vndyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('W_DYN',' ',' ',wndyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('PED_DYN',' ',' ',peddyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('HAL_DYN',' ',' ',haldyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+      enddo
 !
 ! Calculate some 2d and 3d fields:
       call calc_adotv(zpotdyn,undyn,vndyn,wndyn,
@@ -589,26 +606,26 @@
 !
 ! Save original fields on geographic grid to secondary histories:
 !
-!     do j=lat0,lat1
-!       call addfld('PED_GEO',' ','S/m',ped(:,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('HAL_GEO',' ','S/m',hal(:,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('ZPOT_GEO',' ','cm',zpot(:,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+      do j=lat0,lat1
+        call addfld('PED_GEO',' ','S/m',ped(:,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('HAL_GEO',' ','S/m',hal(:,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('ZPOT_GEO',' ','cm',zpot(:,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
 !
 ! Beware, adotv1,2, etc have levels mlev0:mlev1, e.g., -2:nlevp1,
 ! so must specify lev0:lev1
 !
-!       call addfld('ADOTV1_GEO',' ',' ',adotv1(lev0:lev1,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('ADOTV2_GEO',' ',' ',adotv2(lev0:lev1,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('JE1PG_GEO',' ',' ',je1pg(lev0:lev1,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('JE2PG_GEO',' ',' ',je2pg(lev0:lev1,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!     enddo
+        call addfld('ADOTV1_GEO',' ',' ',adotv1(lev0:lev1,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('ADOTV2_GEO',' ',' ',adotv2(lev0:lev1,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('JE1PG_GEO',' ',' ',je1pg(lev0:lev1,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('JE2PG_GEO',' ',' ',je2pg(lev0:lev1,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+      enddo
 !     call addfld('SINI_GEO',' ',' ',sini,
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !     call addfld('ADOTA1_GEO',' ',' ',adota1,
@@ -721,24 +738,38 @@
 !
       do j=mlat0,mlat1
         call addfld('ZMAG','ZMAG from pdynamo','km',
-     |    zpot_mag(:,j,:)*1.e-5,'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
+     |    zpot_mag(:,j,mlev0:mlev1-1)*1.e-5,'mlon',mlon0,mlon1,
+     |    'imlev',1,mlevtop,j)
       enddo
 
       do j=mlat0,mlat1
         call addfld('PED_MAG','PED on mag grid','S/m',
-     |    ped_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+     |    ped_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
         call addfld('HAL_MAG','HALL on mag grid','S/m',
-     |    hal_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+     |    hal_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
         call addfld('ZPOT_MAG','ZPOT on mag grid','cm',
-     |    zpot_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-!       call addfld('ADOTV1_MAG','ADOTV1 on mag grid',' ',
-!    |    adotv1_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('ADOTV2_MAG','ADOTV2 on mag grid',' ',
-!    |    adotv2_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('JE1PG_MAG','JE1PG on mag grid',' ',
-!    |    je1pg_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('JE2PG_MAG','JE2PG on mag grid',' ',
-!    |    je2pg_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+     |    zpot_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'imlev',1,mlevtop,j)
+
+        call addfld('ADOTV1_MAG','ADOTV1 on mag grid',' ',
+     |    adotv1_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
+        call addfld('ADOTV2_MAG','ADOTV2 on mag grid',' ',
+     |    adotv2_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
+        call addfld('JE1PG_MAG','JE1PG on mag grid',' ',
+     |    je1pg_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
+        call addfld('JE2PG_MAG','JE2PG on mag grid',' ',
+     |    je2pg_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
       enddo
 
 !     call addfld('SINI_MAG',  'SINI on mag grid',' ',
@@ -2512,20 +2543,18 @@
 ! Cannot use mlev0 (-2) in addfld call, so plot from level 1:
 !
       do j=mlat0,mlat1
-        call addfld('PHIM3D',' ',' ',phim3d(mlon0:mlon1,j,1:mlev1),
-     |    'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-
-        call addfld('EMX',' ',' ',ephi3d(mlon0:mlon1,j,1:mlev1),
-     |    'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-        call addfld('EMY',' ',' ',elam3d(mlon0:mlon1,j,1:mlev1),
-     |    'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-        call addfld('EMZ',' ',' ',emz3d(mlon0:mlon1,j,1:mlev1),
-     |    'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-
-        call mkdiag_ED12('ED1',ed13d(mlon0:mlon1,j,1:mlev1),
-     |    mlon0,mlon1,1,mlev1,j)
-        call mkdiag_ED12('ED2',ed23d(mlon0:mlon1,j,1:mlev1),
-     |    mlon0,mlon1,1,mlev1,j)
+        call addfld('PHIM3D',' ',' ',phim3d(:,j,mlev0:mlev1-1),
+     |    'mlon',mlon0,mlon1,'mlev',1,mlevtop,j)
+        call addfld('EMX',' ',' ',ephi3d(:,j,mlev0:mlev1-1),
+     |    'mlon',mlon0,mlon1,'mlev',1,mlevtop,j)
+        call addfld('EMY',' ',' ',elam3d(:,j,mlev0:mlev1-1),
+     |    'mlon',mlon0,mlon1,'mlev',1,mlevtop,j)
+        call addfld('EMZ',' ',' ',emz3d(:,j,mlev0:mlev1-1),
+     |    'mlon',mlon0,mlon1,'mlev',1,mlevtop,j)
+        call mkdiag_ED12('ED1',ed13d(:,j,mlev0:mlev1-1),
+     |    mlon0,mlon1,1,mlevtop,j)
+        call mkdiag_ED12('ED2',ed23d(:,j,mlev0:mlev1-1),
+     |    mlon0,mlon1,1,mlevtop,j)
       enddo
       if (debug) write(6,"('pthreed returning')")
       end subroutine pthreed
