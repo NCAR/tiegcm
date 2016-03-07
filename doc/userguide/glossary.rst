@@ -169,7 +169,7 @@ Glossary
      Because the model source files are critical, this should be on backed-up disk, 
      typically under your home directory.
 
-   zp
-     Vertical log pressure coordinate of the |modeluc|. This is the lev coordinate
-     on the history files: ln(p0/p) (see :ref:`grid structure <grid>` and 
-     :download:`sample history file <_static/primary.ncd>`.
+   Zp
+     Vertical log pressure coordinate ln(p0/p) of the |modeluc|. This is the "lev" coordinate
+     on the history files. See the chapter on :ref:`Altitude Coordinates the NCAR TIEGCM <altcoords>` 
+     for a detailed explanation of the relationship between Zp and Altitude.

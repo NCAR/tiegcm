@@ -51,6 +51,8 @@ file is included in the main :download:`Makefile <../../scripts/Makefile>`.
 User's outside NCAR are encouraged to copy and rename one of these files, 
 and customize it for your own operating system and compiler.
 
+.. _external_libs::
+
 Required External Libraries
 ---------------------------
 
