@@ -86,13 +86,15 @@ Short Name                     Long Name                              Units     
 Saving Fields/Arrays from the Source Code
 -----------------------------------------
 
-  In addition to the "sanctioned" diagnostics, arbitrary 2d and 3d arrays can be saved 
-  from the model to secondary histories by inserting a call to subroutine *addfld* 
+  In addition to the "sanctioned" diagnostics above, arbitrary 2d and 3d arrays can be 
+  saved from the model to secondary histories by inserting a call to subroutine *addfld* 
   (:download:`addfld.F <../../src/addfld.F>`) in the source code.  (See the chapter on 
   :ref:`Modifying Source Code <modifying_source>` in this document for information about 
-  modifying the source code.) There are many examples of this in the source code, just 
-  grep on "call addfld".  For more information about how to make calls to addfld, please 
-  see comments in the addfld.F source file.  
+  modifying the source code.) There are hundreds of examples of this in the source code, 
+  some commented, others uncommented. To put these on secondary histories, uncomment
+  the addfld call, and add the short name (first argument) to the secondary history
+  field list (SECFLDS) in the namelist input file.  For more information about how to 
+  make calls to addfld, please see comments in the addfld.F source file.  
 
   Here are a couple of examples of addfld calls from near the end of subroutine
   qrj (qrj.F). These calls are inside a latitude loop, where the loop variable

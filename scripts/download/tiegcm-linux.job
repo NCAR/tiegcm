@@ -28,8 +28,8 @@ set input    = tiegcm_res5.0.inp
 set output   = tiegcm_res5.0.out
 set modelres = 5.0
 set make     = Make.intel_hao64
-set mpi      = TRUE
-set nproc    = 4
+set mpi      = TRUE  # must be TRUE for tiegcm2.0 and later
+set nproc    = 4     # nproc=1 is permitted
 set debug    = FALSE
 set exec     = TRUE
 set utildir  = $modeldir/scripts

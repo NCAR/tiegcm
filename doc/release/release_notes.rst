@@ -128,13 +128,15 @@ Functional Changes
    A double-Gaussian shaped floor (in latitude and altitude) is applied to O+ at 
    low-to-mid latitudes in the F-region in order to keep the model stable when the 
    ionosphere gets very low in density. It can be turned off in the namelist inputs 
-   but this is not recommended.
+   but this is not recommended. 
+   See :base_url:`Namelist parameter ENFORCE_OPFLOOR <userguide/html/namelist.html#enforce-opfloor>`
 
 .. describe:: O+ Diffusion Limiter
 
    An optional O+ diffusion coefficient limit can be supplied as a namelist input. 
    This can improve model stability in the topside F-region, but it is only 
    recommended as a last resort since it will change model results.
+   See :base_url:`Namelist parameter OPDIFFCAP <userguide/html/namelist.html#opdiffcap>`
 
 Bug Fixes
 ---------

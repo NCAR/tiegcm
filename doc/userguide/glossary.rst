@@ -56,6 +56,11 @@ Glossary
      The electro-dynamo fields (electric potential, electric field, and ion drift
      velocities) are calculated on a geomagnetic grid, see :ref:`magnetic coordinates <magcoords>` 
 
+   Globus
+     `Globus Data Sharing Service <https://www.globus.org>`_ for scientific research. 
+     The |tgcm_version| benchmark history files and post-processing are available via Globus. 
+     See :ref:`benchmark_history_files` for more information.
+
    history
      A model history records the state of the model at a discrete instant in
      :term:`model time`. One or more histories are stored in netCDF history files.

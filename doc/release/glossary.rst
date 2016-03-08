@@ -20,3 +20,8 @@ Glossary
   IMF
     Interplanetary Magnetic Field data from OMNI, used to drive the Weimer potential model.
     Example namelist input setting: IMF_NCFILE = '$TGCMDATA/imf_OMNI_2006001-2006365.nc'
+
+  Globus
+    `Globus Data Sharing Service <https://www.globus.org>`_ for scientific research. 
+    The |tgcm_version| benchmark history files and post-processing are available via Globus. 
+    See :ref:`benchmark_history_files` for more information.

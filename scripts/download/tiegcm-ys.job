@@ -61,6 +61,7 @@ cat << EOF >! $runscript
 #
 # Recommended for single-res (5.0 deg) tiegcm:
 # -n16,ptile=16 (1 node, 16 procs/node)
+# Note: -n 1 is permitted.
 # For 5.0-deg res, STEP= 60, nproc=16, allow 2.0 mins per simulated day (0.08 secs/step)
 # For 5.0-deg res, STEP=120, nproc=16, allow 1.0 mins per simulated day (0.08 secs/step)
 #BSUB -n 16
@@ -68,6 +69,7 @@ cat << EOF >! $runscript
 #
 # Recommended for double-res (2.5 deg) tiegcm: 
 # -n64,ptile=16 (4 nodes, 16 procs/node)
+# Note: -n 1 is permitted.
 # For 2.5-deg res, STEP= 30, nproc=64, allow 8.5 mins per simulated day (0.17 secs/step)
 # For 2.5-deg res, STEP= 60, nproc=64, allow 4.5 mins per simulated day (0.17 secs/step)
 ##BSUB -n 64

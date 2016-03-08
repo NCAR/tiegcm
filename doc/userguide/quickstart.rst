@@ -35,14 +35,14 @@ to a large scratch disk on either your Linux desktop, or the NCAR supercomputer
 |ncarsuper|. To download all files and make default runs at both resolutions
 you will need at least 5.5 GB of disk space. Extracting these tarballs will result 
 in directories with the same names. When extracting the source code, you will 
-also see the following files:
+also get these default namelist input files and job scripts:
 
  * tiegcm-linux.job: Default csh job script for 64-bit Linux desktop
  * tiegcm-ys.job: Default csh job script for the NCAR supercomputer |ncarsuper|
  * tiegcm_res5.0.inp: Default namelist input for 5.0-degree resolution model
  * tiegcm_res2.5.inp: Default namelist input for 2.5-degree resolution model
 
-Making a default 5-deg model run
+Making a Default 5-deg model run
 --------------------------------
 
 The job scripts are set up to make a short (1-day) 5-degree model run (March Equinox
@@ -52,7 +52,14 @@ The job script will create an execution directory (tiegcm.exec), and build and
 execute the model there.  If successful, the stdout log will be tiegcm_res5.0.out,
 and model output netCDF history files will be in the execution directory.
 
-Switching to 2.5-degree model resolution
+.. note::
+  A warning for user's of previous revisions of TIEGCM: Do not use old namelist
+  input files or job scripts from previous revisions. Copy the default files
+  from the :term:`scripts/` directory, and modify them for your own runs.
+  Also, for initial runs, do not build/execute the model in an old :term:`execdir`. 
+  Instead, allow the job script to make a new execdir for you.
+
+Switching to 2.5-degree Model Resolution
 ----------------------------------------
 
 To make a default run of the 2.5-deg model, edit the job script and reset 4 shell
@@ -64,7 +71,7 @@ variables as follows:
  * set modelres = 2.5
 
 If you are on the NCAR supercomputer |ncarsuper|, you should also make the
-following changes to tiegcm-ys.job:
+following changes to tiegcm-ys.job, to use 64 cores:
 
  * #BSUB -n 64
  * #BSUB -R "span[ptile=16]"

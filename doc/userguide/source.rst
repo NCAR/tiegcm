@@ -23,7 +23,7 @@ in single and multi-page pdf files:
 
 .. Warning::
 
-  Some details of these flow charts may be out of date with respect to TIEGCM version |version|
+  Some details of these flow charts are out of date with respect to TIEGCM version |version|
 
 * :base_url:`TIEGCM Code Structure (multi-page pdf) <code_structure/tiegcm_codestruct.pdf>`
 

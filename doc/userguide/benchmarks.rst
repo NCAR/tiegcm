@@ -161,7 +161,8 @@ Environment variables to set before using the tgcmrun utility:
 Source history files (start-up netcdf files with a single history) to start these
 runs are provided in the :ref:`data download <data_download>` (there are separate
 data downloads available for each model resolution). These source files should be 
-located in the :term:`TGCMDATA` directory.
+located in the :term:`TGCMDATA` directory (or the path may be specified in the 
+job script with the :term:`tgcmdata` shell variable).
 
 The tgcmrun program can also be executed from a shell script. There are several
 example tcsh scripts in the tgcmrun directory that make series of runs for
@@ -181,13 +182,15 @@ Additional runs for testing compilers, performance, etc.:
 * **run_perf**: Make several runs using different processor (MPI task) counts (super systems only)
 * **run_scriptsonly**: This only makes the namelist input and job scripts (does not submit the jobs)
 
-Availability of Model Output History Files of |tgcm_version| Benchmark runs
----------------------------------------------------------------------------
+.. _benchmark_history_files:
+
+Model Output History Files of the |tgcm_version| Benchmark runs
+---------------------------------------------------------------
 
 Model output history files are stored in CF-compliant netCDF format (see :ref:`historyoutput`).
 Benchmark history files are available via `Globus research data sharing service <https://www.globus.org>`_.
-The tiegcm benchmark history files are stored at the "NCAR Data Sharing Service" Globus shared endpoint.
-(for users with an NCAR/CISL login: this endpoint is /glade/u/datashare/tgcm)
+The tiegcm benchmark history files are stored at the "NCAR Data Sharing Service" :term:`Globus` 
+shared endpoint (for users with an NCAR/CISL login: this endpoint is /glade/u/datashare/tgcm).
 
 See these CISL docs for information regarding the NCAR Data Sharing Service:
 

@@ -110,13 +110,51 @@ At 2.5-degree model resolution:
   * :benchmarks_url:`Seasonal Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_seasons/PDFs_select_fields>`
   * :benchmarks_url:`Storm Case Benchmark Runs at 2.5-deg resolution <tiegcm_res2.5_storms/PDFs_select_fields>`
 
+Namelist input files used for the 2.5-deg benchmark runs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Availability of Model Output History Files 
-------------------------------------------
+These are the namelist input files used for making the 2.5-degree resolution benchmark runs.
+Note that a few of the 2.5-deg runs need to be run at a shorter timestep than the default of
+30 seconds to maintain numerical stability. Also note that the 5-degree full-year climatology
+run can be completed on |ncarsuper| in 12 hours WC, but the 2.5-deg model has to be restarted 
+several times to reach a full year.
+
+* Climatology Benchmark Runs (full-year):
+
+  * :download:`Solar max climatology <_static/namelist_files/tiegcm2.0_res2.5_climatology_smax.inp>`
+  * :download:`Solar min climatology <_static/namelist_files/tiegcm2.0_res2.5_climatology_smin.inp>`
+
+* Seasonal Benchmark Runs (5-day runs):
+
+  * :download:`December solstice solar max <_static/namelist_files/tiegcm2.0_res2.5_decsol_smax.inp>`
+  * :download:`December solstice solar min <_static/namelist_files/tiegcm2.0_res2.5_decsol_smin.inp>`
+  * :download:`June solstice solar max <_static/namelist_files/tiegcm2.0_res2.5_junsol_smax.inp>`
+  * :download:`June solstice solar min <_static/namelist_files/tiegcm2.0_res2.5_junsol_smin.inp>`
+  * :download:`March equinox solar max <_static/namelist_files/tiegcm2.0_res2.5_mareqx_smax.inp>`
+  * :download:`March equinox solar min <_static/namelist_files/tiegcm2.0_res2.5_mareqx_smin.inp>`
+  * :download:`September equinox solar max <_static/namelist_files/tiegcm2.0_res2.5_sepeqx_smax.inp>`
+  * :download:`September equinox solar min <_static/namelist_files/tiegcm2.0_res2.5_sepeqx_smin.inp>`
+
+* Storm Simulations: 
+
+  * :download:`December, 2006 storm (Heelis/gpi)     <_static/namelist_files/tiegcm2.0_res2.5_dec2006_heelis_gpi.inp>`
+  * :download:`December, 2006 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm2.0_res2.5_dec2006_weimer_imf.inp>`
+  * :download:`July, 2000 storm (Heelis/gpi)     <_static/namelist_files/tiegcm2.0_res2.5_jul2000_heelis_gpi.inp>`
+  * :download:`July, 2000 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm2.0_res2.5_jul2000_weimer_imf.inp>`
+  * :download:`November, 2003 storm (Heelis/gpi)     <_static/namelist_files/tiegcm2.0_res2.5_nov2003_heelis_gpi.inp>`
+  * :download:`November, 2003 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm2.0_res2.5_nov2003_weimer_imf.inp>`
+  * :download:`2008 Whole Heliosphere Interval (Heelis/gpi)    <_static/namelist_files/tiegcm2.0_res2.5_whi2008_heelis_gpi.inp>`
+  * :download:`2008 Whole Heliosphere Interval (Weimer/gpi,imf <_static/namelist_files/tiegcm2.0_res2.5_whi2008_weimer_imf.inp>`
+
+.. _benchmark_history_files:
+
+Model Output History Files of the |tgcm_version| Benchmark runs
+---------------------------------------------------------------
 
 Model output history files are stored in CF-compliant netCDF format.
-Benchmark history files are available via `Globus research data sharing service <https://www.globus.org>`_.
-The tiegcm benchmark history files are stored at the "NCAR Data Sharing Service" Globus shared endpoint.
+Benchmark history files for |tgcm_version| are available via the 
+`Globus Research Data Sharing Service <https://www.globus.org>`_.
+The history files are stored at the "NCAR Data Sharing Service" :term:`Globus` shared endpoint.
 (for users with an NCAR/CISL login: this endpoint is /glade/u/datashare/tgcm)
 
 See these CISL docs for information regarding the NCAR Data Sharing Service:
@@ -132,8 +170,7 @@ Here is a summary procedure for accessing the |tgcm_version| benchmark data:
 
 .. note::
 
-  You do *NOT* have to have an NCAR user account or token to retrieve this data.
-
+  You do *NOT* need to have an NCAR user account or token to retrieve this data.
 
 * You must have or create a `Globus <https://www.globus.org>`_ account. If your 
   institution/organization has a Globus data sharing endpoint, you can use your institutional 

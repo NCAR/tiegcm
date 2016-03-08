@@ -30,44 +30,16 @@ Example Namelist Input Files:
 
 * The default input files: 
 
-  * :download:`5-degree resolution namelist file <_static/namelist_files/tiegcm_res5.0_default.inp>`
-  * :download:`2.5-degree resolution namelist file <_static/namelist_files/tiegcm_res2.5_default.inp>`
+  * :download:`5-degree resolution namelist file <../../scripts/tiegcm_res5.0_default.inp>`
+  * :download:`2.5-degree resolution namelist file <../../scripts/tiegcm_res2.5_default.inp>`
 
-* A continuation of the default run: 
+* A continuation of the default 5-degree run: 
 
   * :download:`continuation.inp <_static/namelist_files/continuation.inp>` 
 
 * Saving diagnostics on secondary history files: 
 
   * :download:`diags.inp <_static/namelist_files/diags.inp>`
-
-* Seasonal Benchmark namelist input files (5-degree resolution):
-  (Use run_scriptsonly in the :term:`tgcmrun/` directory to generate benchmark job scripts and namelist files) 
-
-  * :download:`December solstice solar max <_static/namelist_files/tiegcm_res5.0_decsol_smax.inp>`
-  * :download:`December solstice solar min <_static/namelist_files/tiegcm_res5.0_decsol_smin.inp>`
-  * :download:`June solstice solar max <_static/namelist_files/tiegcm_res5.0_junsol_smax.inp>`
-  * :download:`June solstice solar min <_static/namelist_files/tiegcm_res5.0_junsol_smin.inp>`
-  * :download:`March equinox solar max <_static/namelist_files/tiegcm_res5.0_mareqx_smax.inp>`
-  * :download:`March equinox solar min <_static/namelist_files/tiegcm_res5.0_mareqx_smin.inp>`
-  * :download:`September equinox solar max <_static/namelist_files/tiegcm_res5.0_sepeqx_smax.inp>`
-  * :download:`September equinox solar min <_static/namelist_files/tiegcm_res5.0_sepeqx_smin.inp>`
-
-* Climatology Benchmark Runs:
-
-  * :download:`Solar max climatology <_static/namelist_files/tiegcm_res5.0_climatology_smax.inp>`
-  * :download:`Solar min climatology <_static/namelist_files/tiegcm_res5.0_climatology_smin.inp>`
-
-* Storm Simulations: 
-
-  * :download:`December, 2006 storm (Heelis/gpi)     <_static/namelist_files/tiegcm_res5.0_dec2006_heelis_gpi.inp>`
-  * :download:`December, 2006 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm_res5.0_dec2006_weimer_imf.inp>`
-  * :download:`July, 2000 storm (Heelis/gpi)     <_static/namelist_files/tiegcm_res5.0_jul2000_heelis_gpi.inp>`
-  * :download:`July, 2000 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm_res5.0_jul2000_weimer_imf.inp>`
-  * :download:`November, 2003 storm (Heelis/gpi)     <_static/namelist_files/tiegcm_res5.0_nov2003_heelis_gpi.inp>`
-  * :download:`November, 2003 storm (Weimer/gpi,imf) <_static/namelist_files/tiegcm_res5.0_nov2003_weimer_imf.inp>`
-  * :download:`2008 Whole Heliosphere Interval (Heelis/gpi)    <_static/namelist_files/tiegcm_res5.0_whi2008_heelis_gpi.inp>`
-  * :download:`2008 Whole Heliosphere Interval (Weimer/gpi,imf <_static/namelist_files/tiegcm_res5.0_whi2008_weimer_imf.inp>`
 
 .. _namelist_params:
 

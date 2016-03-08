@@ -25,10 +25,12 @@ See this :download:`example job script <../../scripts/tiegcm-linux.job>`
 
 .. _workdir:
 
-Working Directory (:term:`workdir`)
------------------------------------
+Working Directory (created by the user)
+---------------------------------------
 
-The user's working directory will typically look something like this::
+To get started, the user will typically create a working directory from
+which model runs are submitted. The user's working directory will typically 
+look something like this::
 
                       workdir
                          |
@@ -53,13 +55,13 @@ The job script shell variable :term:`tgcmdata`, if set, will override the TGCMDA
 
 .. _modeldir:
 
-Model Directory (:term:`modeldir`)
-----------------------------------
+Model Directory (model source code and supporting utilities)
+------------------------------------------------------------
 
 The model root directory is what you get when you :ref:`download <download>` the 
-model source code tar file. The model directory contains subdirectories with the 
-model source code, supporting scripts, documentation, and a python code to make
-test and benchmark runs::
+model source code tar file, or check out the code from the svn repository. 
+The model directory contains subdirectories with the model source code, 
+supporting scripts, documentation, and a python code to make test and benchmark runs::
 
                                 modeldir
                                    |
@@ -147,12 +149,13 @@ directory for more information.
 
 .. _datadir:
 
-Data Directory (:term:`datadir`) (see also :term:`tgcmdata`)
-------------------------------------------------------------
+Data Directory (startup and data files)
+---------------------------------------
 
 The public |modeluc| data directory is what you get when you :ref:`download <download>` 
 the data tar file. This directory is typically referred to with the environment variable
-:term:`TGCMDATA`.:: 
+:term:`TGCMDATA`, but can be set with the :term:`tgcmdata` shell variable in the job script
+(the shell variable, if set, will take precedence over the environment variable).
 
                   datadir for tiegcmx.x
                           |
@@ -248,13 +251,20 @@ for more information). These files are available for download, see :ref:`downloa
 
 .. _execdir:
 
-Execution Directory (:term:`execdir`)
--------------------------------------
+Execution Directory (build and execute)
+---------------------------------------
 
 The model is built and executed in the execution directory (:term:`execdir`). 
 The path to the execution directory is specified by the execdir shell variable
-in the :term:`job script`. The following file types are typically
-found in the execution directory:
+in the :term:`job script`. The job script will create the execdir for you if
+it does not already exist. The following file types are typically found in the 
+execution directory:
+
+.. note::
+  When making your first run, its best to let the job script create the execdir
+  for you. It is not wise to use an execdir used for revisions prior to |tgcm_version|.
+  Also, if you have build or execution problems, it will sometimes help to remove
+  the execdir and let the job script start over.
 
 * ***.o**:
   Object files produced by the compiler.
