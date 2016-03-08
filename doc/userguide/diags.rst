@@ -28,6 +28,10 @@ A :download:`text version of the table <_static/diags.table>` is also available,
 and is printed to stdout by a model run (ordering of the fields in the text table 
 may be different than in the below table).
 
+Also note that prognostic variables that are saved on the primary histories can also
+be saved on secondary histories by adding the short name to SECFLDS. See 
+:ref:`Primary History Fields <primaryfields>` for a table of the prognostic fields.
+
 .. _diag_fields:
 
 ============================== ====================================== ============ ==========

@@ -1,5 +1,5 @@
 #include "defs.h"
-      subroutine extraoutput
+      subroutine amieoutput
       use params_module,only: nlonp1,nlonp4,nlevp1,nlatp1,nlat,nlev,nlon
       use fields_module,only: ped,hall
       use dyndiag_module,only: 
@@ -152,7 +152,7 @@ CCCCCCCCCCCCCCCCCCC save secondary histories CCCCCCCCCCCCCCCCCCCCC
       enddo
 
 !CCCCCCCCCCCCCCCCCC end of save secondary histories CCCCCCCCCCCCCCCCCCCCC
-      end subroutine extraoutput
+      end subroutine amieoutput
 !----------------------------------------------------
       subroutine prep_output(lev0,lev1,lon0,lon1,lat0,lat1)
 !

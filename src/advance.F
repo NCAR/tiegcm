@@ -632,10 +632,10 @@
           vlbc_nm_glb(lon0:lon1,lat0:lat1)=vlbc_nm(lon0:lon1,lat0:lat1)
         endif
 !
-! Saving extraoutput here from master only - G. Lu, Aug. 27, 2003
+! Saving amieoutput here from master only - G. Lu, Aug. 27, 2003
         if (iamie > 0) then
           call prep_output(1,nlevp1,lon0,lon1,lat0,lat1)
-          if (mytid==0) call extraoutput
+          if (mytid==0) call amieoutput
         endif
 #else
 !

@@ -10,7 +10,7 @@ src/		Source code		Source files *.F, *.F90, *.h
 tgcmrun/	Benchmark tests		Python program to make benchmark runs
 
 For a brief set of instructions to build the model and make a short default
-run, see doc/README.download.
+run, see scripts/download/README.download.
 
 Please also see the main TGCM website: 
 http://www.hao.ucar.edu/modeling/tgcm 

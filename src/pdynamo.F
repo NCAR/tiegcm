@@ -423,9 +423,7 @@
 !
       mlevtop = mlev1+2                  ! 5.0-deg (mlev1=57)
       if (dlat == 2.5) mlevtop = mlev1+5 ! 2.5-deg (mlev1=63)
-      write(6,"('dynamo_inputs: dlat=',f7.2,' mlevtop=',i4)") 
-     |  dlat,mlevtop
-
+!
 ! First, transfer lev0:lev1 (and all geo i,j) from inputs to xxxdyn:
       do j=lat0,lat1
         do i=lon0,lon1

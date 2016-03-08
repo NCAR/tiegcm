@@ -80,12 +80,16 @@ Follow the parameter name links to explanations below.
 =========================================== ===================== =====================================
 Parameter Name                              Data Type and Default Description
 =========================================== ===================== =====================================
+:ref:`AMIENH,AMIESH <AMIE>`                 string: [none]        Optional AMIE data files
+:ref:`AMIE_IBKG <AMIE_IBKG>`                integer: 0            Flag for how to read AMIE data
 :ref:`AURORA <AURORA>`                      integer: 1            0/1 flag for auroral parameterization
+:ref:`BGRDDATA_NCFILE <BGRDDATA_NCFILE>`    string: [none]        Data file for background lower boundary 
 :ref:`BXIMF or BXIMF_TIME <BXIMF>`          real or real array    X-component of the IMF
 :ref:`BYIMF or BYIMF_TIME <BYIMF>`          real or real array    Y-component of the IMF
 :ref:`BZIMF or BZIMF_TIME <BZIMF>`          real or real array    Z-component of the IMF
 :ref:`CALENDAR_ADVANCE <CALENDAR_ADVANCE>`  real: 1               0/1 switch to advance calendar time
 :ref:`COLFAC <COLFAC>`                      real: 1.5             O-O+ collision factor
+:ref:`CTMT_NCFILE <CTMT_NCFILE>`            string: [none]        Lower boundary data file T,U,V,Z
 :ref:`CTPOTEN <CTPOTEN>`                    real:                 Cross-Tail Potential
 :ref:`CTPOTEN_TIME <CTPOTEN>`               real: [none]          Time-dependent Cross-Tail Potential
 :ref:`CURRENT_KQ <CURRENT_KQ>`              integer: 0            Height-integrated Current Density
@@ -93,6 +97,7 @@ Parameter Name                              Data Type and Default Description
 :ref:`CALC_HELIUM <CALC_HELIUM>`            integer: 1            0/1 switch for calculation of Helium
 :ref:`DYNAMO <DYNAMO>`                      integer: 1            0/1 switch for electro-dynamo
 :ref:`EDDY_DIF <EDDY_DIF>`                  integer: 0            0/1 switch for DOY-dependent or constant eddy diffusion
+:ref:`ENFORCE_OPFLOOR <ENFORCE_OPFLOOR>`    integer: 1            Gaussian shaped floor for O+
 :ref:`F107 or F107_TIME <F107>`             real or real array    Daily F10.7 cm solar flux
 :ref:`F107A or F107A_TIME <F107A>`          real or real array    81-day average F10.7 cm solar flux
 :ref:`GPI_NCFILE <GPI_NCFILE>`              string: [none]        Geophysical Indices (Kp) data file
@@ -104,6 +109,7 @@ Parameter Name                              Data Type and Default Description
 :ref:`LABEL <LABEL>`                        string:               Arbitrary string identifying the run
 :ref:`MXHIST_PRIM <MXHIST_PRIM>`            integer: 10           Max histories on primary file
 :ref:`MXHIST_SECH <MXHIST_SECH>`            integer: 24           Max histories on secondary file
+:ref:`OPDIFFCAP <OPDIFFCAP>`                real: 0 [no cap]      Impose maximum O+ diffusion
 :ref:`OUTPUT <OUTPUT>`                      string array          Primary history output file(s)
 :ref:`POTENTIAL_MODEL <POTENTIAL_MODEL>`    string: [HEELIS]      High-latitude Potential Model
 :ref:`POWER or POWER_TIME <POWER>`          real or real array    Hemispheric Power (GW)
@@ -128,6 +134,45 @@ Parameter Name                              Data Type and Default Description
 =========================================== ===================== =====================================
 
 .. -------------------------------------------------------------------------------------
+.. index:: amienh, amiesh, namelist input ; amienh, amiesh
+.. _AMIE:
+.. describe:: AMIENH, AMIESH
+
+   Data files containing output from the AMIE model, to be imported to the tiegcm.
+   AMIENH contains northern hemisphere data, AMIESH contains southern hemisphere data.  
+   Contact Gang Lu (ganglu@ucar.edu) for more information.
+
+   | Data type: string
+   | Default: [none]
+
+   Example:
+
+    * AMIENH = '$TGCMDATA/amie_apr01_10_2010_nh_ssusi.nc'
+    * AMIESH = '$TGCMDATA/amie_apr01_10_2010_sh_ssusi.nc'
+
+   See also: 
+   
+    * :ref:`AMIE_IBKG <AMIE_IBKG>`
+
+   :ref:`Back to top <namelist_params>`
+
+.. -------------------------------------------------------------------------------------
+.. index:: amie_ibkg, namelist input ; amie_ibkg
+.. _AMIE_IBKG:
+.. describe:: AMIE_IBKG
+
+   Integer flag 0, 1, or 2 for reading real, first, or 24-hour averaged AMIE data
+
+   | Data type: scalar integer
+   | Default: 0
+
+   See also: 
+   
+    * :ref:`AMIE <AMIE>`
+
+   :ref:`Back to top <namelist_params>`
+
+.. -------------------------------------------------------------------------------------
 .. index:: aurora, namelist input ; aurora
 .. _AURORA:
 .. describe:: AURORA
@@ -137,6 +182,26 @@ Parameter Name                              Data Type and Default Description
 
    | Data type: scalar integer
    | Default: 1
+
+   :ref:`Back to top <namelist_params>`
+
+.. -------------------------------------------------------------------------------------
+.. index:: bgrddata_ncfile, namelist input ; bgrddata_ncfile
+.. _BGRDDATA_NCFILE:
+.. describe:: BGRDDATA_NCFILE
+
+   Data file providing zonal mean climatology of T, U, V using MSIS and HWM empirical models,
+   or UARS data. If no input file is specified, a flat lower boundary (u=v=0, Tn=181 K, z=96.4 km) 
+   is employed by default. Other zonal mean climatologies can be used by generating and 
+   specifying a different file.
+
+   Data type: string
+   Default: [none]
+
+   Example:
+
+     * BGRDDATA_NCFILE = '$TGCMDATA/bgndlbc_hwm_msis.nc'
+     * BGRDDATA_NCFILE = '$TGCMDATA/bgndlbc_saber_hrdi.nc'
 
    :ref:`Back to top <namelist_params>`
 
@@ -238,6 +303,30 @@ Parameter Name                              Data Type and Default Description
    :ref:`Back to top <namelist_params>`
 
 .. -------------------------------------------------------------------------------------
+.. index:: ctmt_ncfile, namelist input ; ctmt_ncfile
+.. _CTMT_NCFILE:
+.. describe:: CTMT_NCFILE
+
+   Tidal perturbations for lower boundary of Z, T, U, V.  See this reference::
+
+     Ref. Oberheide, J., J. M. Forbes, X. Zhang, and S. L. Bruinsma
+       Climatology of upward propagating diurnal and semidiurnal tides in the thermosphere
+       J. Geophys. Res., 116, A11306, doi:10.1029/2011JA016784, 2011.
+
+   Note: This is mutually incompatible with GSWM_NCFILE
+
+   | Data type: string
+   | Default: [none]
+
+   Examples:
+     * CTMT_NCFILE = '$TGCMDATA/ctmt_tides.nc'
+
+   See also:
+     * :ref:`GSWM <GSWM>`
+
+   :ref:`Back to top <namelist_params>`
+
+.. -------------------------------------------------------------------------------------
 .. index:: ctpoten, namelist input ; ctpoten
 .. _CTPOTEN:
 .. describe:: CTPOTEN or CTPOTEN_TIME
@@ -290,6 +379,29 @@ Parameter Name                              Data Type and Default Description
 
    | Data type: integer
    | Default: 0
+
+   :ref:`Back to top <namelist_params>`
+.. -------------------------------------------------------------------------------------
+.. index:: enforce_opfloor, namelist input ; enforce_opfloor
+.. _ENFORCE_OPFLOOR:
+.. describe:: ENFORCE_OPFLOOR
+
+   A double-Gaussian shaped floor (in latitude and altitude) is applied to O+ at 
+   low-to-mid latitudes in the F-region in order to keep the model stable when the 
+   ionosphere gets very low in density.
+
+   If set to 1 (the default), the floor is implemented in oplus.F as follows::
+
+       do k=lev0,lev1-1
+         opfloor = opmin*exp(-(glat(lat)/90.0)**2/0.3)*
+     |             exp(-((zpmid(k)-4.25)/zpmid(nlevp1))**2/0.1)
+         do i=lon0,lon1
+           if (opout(k,i,lat) < opfloor) opout(k,i,lat) = opfloor
+         enddo
+       enddo
+
+   | Data type: integer
+   | Default: 1
 
    :ref:`Back to top <namelist_params>`
 .. -------------------------------------------------------------------------------------
@@ -669,7 +781,32 @@ Parameter Name                              Data Type and Default Description
    :ref:`Back to top <namelist_params>`
 
 .. -------------------------------------------------------------------------------------
-.. index:: output, namelist input , output
+.. index:: opdiffcap, namelist input ; opdiffcap
+.. _OPDIFFCAP:
+.. describe:: OPDIFFCAP
+
+   Optional cap on ambipolar diffusion coefficient for O+. This can improve model 
+   stability in the topside F-region, but it is only recommended as a last resort 
+   since it will change model results. This is a new namelist parameter for |tgcm_version|.
+   The default is 0., i.e., no cap. If this is non-zero (provided by the user), then
+   it is implemented in subroutine rrk of src/oplus.F.
+
+   | Data type: integer
+   | Default: 0
+
+   Examples::
+   
+   Tests have been made with these values:
+
+     * OPDIFFCAP = 1.5e8
+     * OPDIFFCAP = 3.0e8
+     * OPDIFFCAP = 6.0e8
+     * OPDIFFCAP = 8.0e8
+
+   :ref:`Back to top <namelist_params>`
+
+.. -------------------------------------------------------------------------------------
+.. index:: output, namelist input ; output
 .. _OUTPUT:
 .. describe:: OUTPUT
 
