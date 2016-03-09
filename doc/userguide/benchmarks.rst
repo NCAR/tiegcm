@@ -231,3 +231,8 @@ Macbook Pro: :download:`Globus_screenshot.png <_static/globus_screenshot.png>`
 In each of the 6 benchmark groups are folders for each run, with folders containing
 the history files (hist), post-processing (proc), and scripts and log files (stdout). 
 Individual files or whole directories can be downloaded.
+
+.. note::
+  Users wanting to use their NCAR authentication rather than personal GlobusID, apparently 
+  need to have a login on the `NCAR RDA <http://rda.ucar.edu/>`_ (Research Data Archives) 
+  to access the NCAR GLADE endpoint on Globus.

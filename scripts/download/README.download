@@ -35,6 +35,8 @@ The job script will build the model, and execute a default 5-deg run. The job
 scripts can be easily modified to make a 2.5-degree run (read the comments at 
 the top of the job scripts).
 
+By default, output history files will be created in the execution directory (execdir)
+
 See the TIEGCM User's Guide for more information:
 
 http://www.hao.ucar.edu/modeling/tgcm/doc/userguide/html/

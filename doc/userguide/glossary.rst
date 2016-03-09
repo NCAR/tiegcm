@@ -155,11 +155,13 @@ Glossary
 
    tgcmproc_f90
      Post-processor and visualizer for TIEGCM netCDF history files. Written in f90,
-     and available at the TGCM download site. See :ref:`tgcmproc_f90 <tgcmproc_f90>`.
+     and available at the `TIEGCM download site <http://www.hao.ucar.edu/modeling/tgcm/download.php>`_
+     See :ref:`tgcmproc_f90 <tgcmproc_f90>`.
 
    tgcmproc_idl
      Post-processor and visualizer for TIEGCM netCDF history files. This processor is
-     Written in IDL with a GUI, and is available at the TGCM download site.
+     Written in IDL with a GUI, and is available at the 
+     `TIEGCM download site <http://www.hao.ucar.edu/modeling/tgcm/download.php>`_
      See :ref:`tgcmproc_idl <tgcmproc_idl>`.
 
    utproc

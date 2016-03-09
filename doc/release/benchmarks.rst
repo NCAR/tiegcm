@@ -77,8 +77,8 @@ Instantaneous and time series plots for **all** fields
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **All** fields are: 
-  | 'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI','TEC','O2P','OP',
-  | OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN','QJOULE','HMF2','NMF2','Z'
+  | 'TN','UN','VN','WN','O2','O1','N2','NO','N4S','HE','NE','TE','TI','TEC','O2P','OP',
+  | 'POTEN','UI_ExB','VI_ExB','WI_ExB','DEN','QJOULE','HMF2','NMF2','Z'
 
 At 5-degree model resolution:
 
@@ -96,7 +96,7 @@ Instantaneous and time series plots for **selected** fields
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Selected** fields are:
-  | 'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'
+  | 'TN','UN','VN','WN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'
 
 At 5-degree model resolution:
 

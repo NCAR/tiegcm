@@ -134,7 +134,7 @@ directory for more information.
 
 :term:`benchmarks/` directory contents:
 
-* Shell scripts that call :term:`tgcmrun` to make benchmark runs:
+* Shell scripts that call :term:`tgcmrun/` to make benchmark runs:
 
   * run_climatology
   * run_seasons
@@ -155,7 +155,7 @@ Data Directory (startup and data files)
 The public |modeluc| data directory is what you get when you :ref:`download <download>` 
 the data tar file. This directory is typically referred to with the environment variable
 :term:`TGCMDATA`, but can be set with the :term:`tgcmdata` shell variable in the job script
-(the shell variable, if set, will take precedence over the environment variable).
+(the shell variable, if set, will take precedence over the environment variable)::
 
                   datadir for tiegcmx.x
                           |
@@ -246,8 +246,8 @@ for more information). These files are available for download, see :ref:`downloa
   :ref:`IMF_NCFILE <IMF_NCFILE>`. These files contain data for the BX,BY,BZ 
   components of the IMF, solar wind velocity and solar wind density.
   See `HAO public ftp page <http://download.hao.ucar.edu/pub/tgcm/data>`_ 
-  to download imf data files for years 
-  not included at the :download_url:`tgcm download website <>`.
+  to download imf data files for years not included on the |tgcm_version|
+  data download.
 
 .. _execdir:
 

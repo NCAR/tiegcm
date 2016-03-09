@@ -102,7 +102,7 @@ foreach res ($resolutions)
 # "Select" means fewer fields and fewer plots:
 #
     if ($select == 'yes') then
-      set cfields = "'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
+      set cfields = "'TN','UN','VN','WN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
 #
 # Instantaneous maps, slices:
 #

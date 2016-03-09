@@ -8,7 +8,7 @@ WC Sec/Step:  Wallclock seconds per timestep
 WC Min/Day:   Wallclock minutes per simulated day
 Days/12h:     Number of simulated days in 12 hours WC (estimate)
 Ave Mem:      Average memory usage (from yellowstone LSF reports)
-Compiler:     Results when built with different compilers (linux desktop platform only)
+Compiler:     Results when built with the Intel compiler.
 
 ===============================================================================================
 
@@ -31,8 +31,8 @@ Notes:
  - Optimization level was -O3 for all compilers.
  - Performance estimates not currently available for TIMEGCM.
 
-Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Compiler
+Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Ave Mem
 -----------------------------------------------------------------------------------------------
-tiegcm5.0	60	4	.15		3.6		200		Intel
-tiegcm2.5	30	4	.95		45.6		15.8		Intel
+tiegcm5.0	60	8	.10		2.4		300		1.5 GB
+tiegcm2.5	30	8	.60		28.8		25		5 GB
 -----------------------------------------------------------------------------------------------

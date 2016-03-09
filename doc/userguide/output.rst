@@ -3,8 +3,8 @@ Model Output History Files
 
 .. _historyoutput:
 
-NetCDF Output Files (:term:`netCDF`)
-------------------------------------
+NetCDF History Output Files
+---------------------------
 
 TIEGCM history files are output in `netCDF <http://www.unidata.ucar.edu/software/netcdf/>`_, 
 a self-describing platform-independent data format written and maintained by the UCAR 

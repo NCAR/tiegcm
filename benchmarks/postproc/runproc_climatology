@@ -100,9 +100,10 @@ foreach res ($resolutions)
     endif # multiut
 #
 # "Select" means a selected subgroup of fields is processed:
+# Only primary histories are saved in climatologies, so save OMEGA instead of WN.
 #
     if ($select == 'yes') then
-      set cfields = "'TN','UN','VN','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
+      set cfields = "'TN','UN','VN','OMEGA','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
 #
 # Generally do not make single-ut plots for climatologies
 # see singleut flag above.

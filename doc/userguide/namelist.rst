@@ -845,8 +845,8 @@ Parameter Name                              Data Type and Default Description
 
    List of fields to be saved to secondary histories. These may be either fields that are 
    also saved on primary histories (so-called "prognostic" fields), fields that have been 
-   requested via addfld calls in the source code, or fields available via the diagnostics
-   module (see example below).
+   requested via addfld calls in the source code, or fields available via the 
+   :ref:`diagnostics module <diagnostics>` (see example below).
 
    Note the final size of secondary output files is affected by the number of fields specified
    as well as the number of histories on the file.  The file size can be controlled by setting 
