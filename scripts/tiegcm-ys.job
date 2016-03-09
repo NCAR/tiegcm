@@ -3,9 +3,9 @@
 # Job script to build and execute TIEGCM on the NCAR supercomputer yellowstone,
 # or similar system running LSF (Load Sharing Facility)
 #
-# This script should be executed on the yellowstone command line.
-# It will compile in execdir on the interactive login node, then create and 
-# submit an LSF script based on the #BSUB resources specified below.
+# This script should be executed on the yellowstone supercomputer command line. 
+# It will compile in execdir on the interactive login node, then create and submit 
+# an LSF script (also in execdir), based on the #BSUB resources specified below.
 #
 # User should set shell variables and #BSUB settings below:
 #
@@ -27,8 +27,8 @@
 # and change execdir, tgcmdata and namelist input if necessary.
 # Also reset number of processors accordingly below (#BSUB -n).
 #
-set modeldir = tiegcm_trunk
-set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm.exec
+set modeldir = tiegcm2.0
+set execdir  = /glade/scratch/$user/tiegcm2.0/tiegcm.exec
 set tgcmdata = /glade/p/hao/tgcm/data/tiegcm2.0
 set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
 set output   = tiegcm.out
@@ -50,7 +50,7 @@ if (! -d $execdir) mkdir -p $execdir
 cat << EOF >! $runscript
 #!/bin/tcsh
 #
-#BSUB -J tiegcm
+#BSUB -J tiegcm2.0
 #BSUB -P P28100036
 ##BSUB -P NHAO0004
 #BSUB -q premium
@@ -167,8 +167,8 @@ set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdou
 #
 # Report to stdout:
 #
- set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
-#set svn_revision = 'tiegcm2.0' # for svn tag instead of revision number
+ set svn_revision = 'tiegcm2.0' # for svn tag instead of revision number
+#set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
 
 echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svn_revision)"
 echo "  Exec directory:    $execdir"

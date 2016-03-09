@@ -8,7 +8,7 @@ set mycwd = `pwd` # probably not necessary
 set model = tiegcm2.0
 set hpss_home  = /home/tgcm/$model
 set data_home  = /glade/p/hao/tgcm/data
-set bench_home = /glade/p/hao/tgcm/tiegcm_benchmarks
+set bench_home = /glade/p/hao/tgcm/tiegcm2.0/benchmarks
 #
 # Save model source that generated the benchmarks:
 #

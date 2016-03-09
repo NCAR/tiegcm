@@ -16,9 +16,9 @@ class Version:
 #
   def tag(self,model_name):
     if model_name == 'tiegcm':
-      return ''      # can be null (e.g., testing or trunk version)
+#     return ''      # can be null (e.g., testing or trunk version)
 #     return '1.95'  # use previous tag to make startup history files
-#     return '2.0'   
+      return '2.0'   
     elif model_name == 'timegcm':
       return '1.42'
 

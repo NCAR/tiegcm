@@ -4,7 +4,7 @@
 # (instantaneous and time-dependent)
 #
 set mycwd = `pwd`
-set home = /glade/p/hao/tgcm/tiegcm_benchmarks            # base working directory
+set home = /glade/p/hao/tgcm/tiegcm2.0/benchmarks         # base working directory
 set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make multiple proc runs
 
 set singleut  = yes  # make instantaneous plots
