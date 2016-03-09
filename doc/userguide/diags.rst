@@ -75,10 +75,10 @@ Short Name                     Long Name                              Units     
 :ref:`PHIM2D <PHIM2D>`         2d Electric Potential on magnetic grid V            2d mag
 :ref:`N2 <N2>`                 Molecular Nitrogen                     mmr          3d geo
 :ref:`ZGMID <ZGMID>`           Geometric Height at midpoints          cm           3d geo
-:ref:`CUSP <CUSP>`             Aurora Low Energy Electron Flux        erg/cm2/s    2d geo
-:ref:`DRIZZLE <DRIZZLE>`       Aurora Low Energy Electron Flux        erg/cm2/s    2d geo
+:ref:`CUSP <CUSP>`             Cusp Low Energy Electron Flux          erg/cm2/s    2d geo
+:ref:`DRIZZLE <DRIZZLE>`       Drizzle Low Energy Electron Flux       erg/cm2/s    2d geo
 :ref:`ALFA <ALFA>`             Aurora Characteristic Energy           keV          2d geo
-:ref:`NFLUX <NFLUX>`           Aurora Energy Flux                     #/cm2/s      2d geo
+:ref:`NFLUX <NFLUX>`           Aurora Number Flux                     #/cm2/s      2d geo
 :ref:`EFLUX <EFLUX>`           Aurora Energy Flux                     erg/cm2/s    2d geo
 ============================== ====================================== ============ ==========
 
@@ -1410,10 +1410,10 @@ Details of Diagnostic Field Calculations
 .. _CUSP:
 .. describe:: CUSP
 
-   Aurora low energy electron flux (erg/cm2/s)::
+   Cusp low energy electron flux (erg/cm2/s)::
 
       diags(n)%short_name = 'CUSP'
-      diags(n)%long_name  = 'CUSP (cusp2d*ec)'
+      diags(n)%long_name  = 'Cusp low energy electron flux'
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
@@ -1431,10 +1431,10 @@ Details of Diagnostic Field Calculations
 .. _DRIZZLE:
 .. describe:: DRIZZLE
 
-   Aurora low energy electron flux (erg/cm2/s)::
+   Drizzle low energy electron flux (erg/cm2/s)::
 
       diags(n)%short_name = 'DRIZZLE'
-      diags(n)%long_name  = 'DRIZZLE (drzl2d*ed)'
+      diags(n)%long_name  = 'Drizzle low energy electron flux'
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
@@ -1473,7 +1473,7 @@ Details of Diagnostic Field Calculations
 .. _NFLUX:
 .. describe:: NFLUX
 
-   Aurora Energy Flux (#/cm2/s)::
+   Aurora Number Flux (#/cm2/s)::
 
       diags(n)%short_name = 'NFLUX'
       diags(n)%long_name  = 'NFLUX'

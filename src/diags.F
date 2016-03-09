@@ -333,35 +333,35 @@
 !
       n = n+1
       diags(n)%short_name = 'CUSP'
-      diags(n)%long_name  = 'CUSP (cusp2d*ec)'
+      diags(n)%long_name  = 'CUSP Low Energy Electron Flux'
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'DRIZZLE'
-      diags(n)%long_name  = 'DRIZZLE (drzl2d*ed)'
+      diags(n)%long_name  = 'DRIZZLE Low Energy Electron Flux'
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'ALFA'
-      diags(n)%long_name  = 'ALFA'
+      diags(n)%long_name  = 'Aurora Characteristic Energy'
       diags(n)%units      = 'keV'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'NFLUX'
-      diags(n)%long_name  = 'NFLUX'
+      diags(n)%long_name  = 'Aurora Number Flux'
       diags(n)%units      = '#/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'EFLUX'
-      diags(n)%long_name  = 'EFLUX'
+      diags(n)%long_name  = 'Aurora Energy Flux'
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'

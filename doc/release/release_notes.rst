@@ -185,6 +185,13 @@ Make/Build System
    :base_url:`Grid Structure and Resolution <userguide/html/build.html>`
    for more information.
 
+.. note::
+  A warning for user's of previous revisions of TIEGCM: Do not use old namelist
+  input files or job scripts from previous revisions. Copy the default files
+  from the :term:`scripts/` directory, and modify them for your own runs.
+  Also, for initial runs, do not build/execute the model in an old :term:`execdir`. 
+  Instead, allow the job script to make a new execdir for you.
+
 Benchmarking Utility
 --------------------
 

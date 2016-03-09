@@ -80,7 +80,7 @@ must be included in the link step. If the ESMF library is not already on your sy
 you will need to `download <https://www.earthsystemcog.org/projects/esmf/download/>`_  
 and build it, using the same compiler you are using to build the |modeluc|.
 
-As of January, 2015, HAO is using the following ESMF libraries built on a 64-bit Linux
+HAO is using the following ESMF libraries built on a 64-bit Linux
 desktop for each compiler/MPI implementation:
 
 ESMF libraries at HAO for use on Linux desktop systems (these paths are provided
