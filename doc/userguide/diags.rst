@@ -1,4 +1,4 @@
-
+Aurora Characteristic Energy'
 .. index:: diagnostic fields
 
 .. _diagnostics:
@@ -1455,7 +1455,7 @@ Details of Diagnostic Field Calculations
    Aurora Characteristic Energy (keV)::
 
       diags(n)%short_name = 'ALFA'
-      diags(n)%long_name  = 'ALFA'
+      diags(n)%long_name  = 'Aurora Characteristic Energy'
       diags(n)%units      = 'keV'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
@@ -1476,7 +1476,7 @@ Details of Diagnostic Field Calculations
    Aurora Number Flux (#/cm2/s)::
 
       diags(n)%short_name = 'NFLUX'
-      diags(n)%long_name  = 'NFLUX'
+      diags(n)%long_name  = 'Aurora Number Flux'
       diags(n)%units      = '#/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
@@ -1497,7 +1497,7 @@ Details of Diagnostic Field Calculations
    Aurora Energy Flux (#/cm2/s)::
 
       diags(n)%short_name = 'EFLUX'
-      diags(n)%long_name  = 'EFLUX'
+      diags(n)%long_name  = 'Aurora Energy Flux'
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
