@@ -96,6 +96,7 @@
       integer :: i,j
       real :: rstep
       complex :: t_expt_sdi, t_expt_di, uvz_expt_sdi, uvz_expt_di
+      real,dimension(nlonp4,nlat) :: hme_z_loc
 !
 ! Calculate exponentials
       rstep = float(step)
@@ -245,7 +246,7 @@
 ! Add HME perturbations:
       if (hme_nfiles > 0 ) then
         call get_hme(modeltime)
-        call cal_hme_z(istep,itp,t_lbc,hme_z,hme_t,hme_rho) 
+        call cal_hme_z(istep,itp,t_lbc,hme_z_loc,hme_t,hme_rho) 
 !     
         do j=lat0,lat1
           do i=lon0,lon1
@@ -255,6 +256,16 @@
             v_lbc(i,j) = v_lbc(i,j)+hme_v(i,j)
           enddo
         enddo
+        call addfld('T_HME','T_HME',' ',hme_t(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('U_HME','U_HME',' ',hme_u(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('V_HME','V_HME',' ',hme_v(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('Z_HME','Z_HME',' ',hme_z(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('ZL_HME','ZL_HME',' ',hme_z_loc(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
       endif
       
 ! Add TGCMlb perturbations:
