@@ -1,0 +1,81 @@
+#!/bin/tcsh
+#
+#--------------res 5.0--------------------------
+#
+set gettiming = ./gettiming
+set out = timing.all
+echo ' ' >! $out
+#
+# tiegcm_res5.0_seasons:
+#
+set dir = tiegcm_res5.0_seasons
+#set out = timing.$dir.out
+echo ' ' >> $out
+echo $0 Case dir = $dir >> $out
+$gettiming $dir >> $out
+echo Appended $dir to $out
+#
+# tiegcm_res5.0_storms:
+#
+set dir = tiegcm_res5.0_storms
+#set out = timing.$dir.out
+echo ' ' >> $out
+echo $0 Case dir = $dir >> $out
+$gettiming $dir >> $out
+echo Appended $dir to $out
+#
+# tiegcm_res5.0_climatology:
+#
+set dir = tiegcm_res5.0_climatology
+#set out = timing.$dir.out
+echo ' ' >> $out
+echo $0 Case dir = $dir >> $out
+$gettiming $dir >> $out
+echo Appended $dir to $out
+#
+# tiegcm_res5.0_perf:
+#
+set dir = tiegcm_res5.0_perf
+#set out = timing.$dir.out
+echo ' ' >> $out
+echo $0 Case dir = $dir >> $out
+$gettiming $dir >> $out
+echo Appended $dir to $out
+#
+#--------------res 2.5--------------------------
+#
+# tiegcm_res2.5_seasons:
+#
+set dir = tiegcm_res2.5_seasons
+#set out = timing.$dir.out
+echo ' ' >> $out
+echo $0 Case dir = $dir >> $out
+$gettiming $dir >> $out
+echo Appended $dir to $out
+#
+# tiegcm_res2.5_storms:
+#
+set dir = tiegcm_res2.5_storms
+#set out = timing.$dir.out
+echo ' ' >> $out
+echo $0 Case dir = $dir >> $out
+$gettiming $dir >> $out
+echo Appended $dir to $out
+#
+# tiegcm_res2.5_climatology:
+#
+set dir = tiegcm_res2.5_climatology
+#set out = timing.$dir.out
+echo ' ' >> $out
+echo $0 Case dir = $dir >> $out
+$gettiming $dir >> $out
+echo Appended $dir to $out
+#
+# tiegcm_res2.5_perf:
+#
+set dir = tiegcm_res2.5_perf
+#set out = timing.$dir.out
+echo ' ' >> $out
+echo $0 Case dir = $dir >> $out
+$gettiming $dir >> $out
+echo Appended $dir to $out

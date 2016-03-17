@@ -18,12 +18,14 @@ Contents:
    intro
    quickstart
    dirstruct
+   grid
    namelist 
+   jobscripts
    output
    diags
    source
    build
-   tests
+   benchmarks
    postproc
    contact
    glossary

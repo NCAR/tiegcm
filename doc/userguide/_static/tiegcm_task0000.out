@@ -1,0 +1,966 @@
+
+ ========================================================================
+ Begin execution of tiegcm_trunk     at 12/22/15  142642
+   Host    = kokanee
+   System  = LINUX
+   Logname = foster
+ ========================================================================
+
+ init_timer level=  1 rtc=F sys=T
+ Current working directory (cwd) = /hao/aim/foster/tiegcm_test
+
+ Reading namelist input data from /home/foster/tiegcm/tiegcm_trunk/scripts/tiegcm_res5.0_default.inp
+ Completed successful read of namelist inputs.
+
+ Input mkntask chose ntask_lon=  2 ntask_lat=  2 (ntask=  4)
+ Input mkntask chose ntask_maglon=  2 ntask_maglat=  2 (ntask=  4)
+ Input Using default joulefac =      1.50
+ Input enforce_opfloor=  1
+ Will use the Heelis potential model
+ Note input Setting BY to 0 with HEELIS potential model.
+ INPUT NOTE adding mandatory field ZMAG     to secondary history fields (field  25)
+
+ ------------------------------------------------------------------------
+ USER INPUT PARAMETERS
+   label  = tiegcm res=5.0
+     (optional text label for current run)
+   High-lat electric potential model  potential_model = HEELIS
+   gswm migrating diurnal file gswm_mi_di_ncfile = /hao/aim/tgcm/data/gswm_diurn_5.0d_99km.nc
+   gswm migrating semi-diurnal file gswm_mi_sdi_ncfile = /hao/aim/tgcm/data/gswm_semi_5.0d_99km.nc
+   start_year = 2002 (starting calendar day)
+   start_day  =   80 (starting calendar year)
+   calendar_advance = 1 (model will be advanced in calendar time starting on this day)
+   step    =  60 (model timestep (seconds))
+   ntask_lon =  2 (number of mpi tasks in longitude dimension)
+   ntask_lat =  2 (number of mpi tasks in latitude  dimension)
+   total tasks = ntask_lon*ntask_lat =    4
+   source  = /hao/aim/tgcm/data/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc
+     (file or mss path containing source history)
+   sour3 INPUT NOTE adding mandatory field ZMAG     to secondary history fields (field  25)
+
+   output (primary history output files) =
+     tiegcm.pcntr_mareqx_smin_001.nc,
+   start (model start times) =
+      80, 0, 0
+   stop (model stop times) =
+      81, 0, 0
+   hist (primary history disk write frequencies) =
+       1, 0, 0
+   Maxmimum number of histories per primary file =  10
+   secout (secondary history output files)=
+     tiegcm.scntr_mareqx_smin_001.nc,
+   secstart (secondary history start times) =
+      80, 1, 0
+   secstop (secondary history stop times) =
+      81, 0, 0
+   sechist (secondary history disk write frequencies) =
+       0, 1, 0
+   secflds (secondary history fields) =
+     TN          UN          VN          O2          O1
+     N2          NO          N4S         HE          NE
+     TE          TI          TEC         O2P         OP
+     OMEGA       POTEN       UI_ExB      VI_ExB      WI_ExB
+     DEN         QJOULE      Z           ZG          ZMAG
+   Maximum number of histories per secondary file =  24
+   3
+   dynamo =  1 (dynamo will be calculated)
+   current_pg =  1 (Add current due to plasma pressure gradient and gravity to rhs)
+   current_kq =  0 (Calculate height-integrated current density)
+   eddy_dif =  0 (DOY-dependent eddy diffusion flag)
+   tide (amplitudes and phases of semidiurnal tide) =
+      0.0E+00 0.0E+00 0.0E+00 0.0E+00 0.0E+00  0.00  0.00  0.00  0.00  0.00
+   tide2 (amplitude and phase of diurnal tide) =
+      0.0E+00  0.00
+   aurora  =  1 (0/1 flag for aurora)
+   colfac =     1.500 (collision factor)
+   joulefac =     1.500 (joule heating factor)
+   calc_helium =    1 (0/1 flag for helium)
+ If any of the following are spval (  0.1000E+37), they will be calculated
+ during the simulation on a per timestep basis
+   power  =   0.1800E+02 (Hemispheric Power)
+   ctpoten=   0.3000E+02 (Cross-cap potential)
+   kp     =   0.1000E+37 (Kp index)
+   bximf  =   0.1000E+37 (BX component of IMF)
+   byimf  =   0.0000E+00 (BY component of IMF)
+   bzi3 ------------------------------------------------------------------------
+   swvel  =   0.1000E+37 (solar wind velocity)
+   swden  =   0.1000E+37 (solar wind density)
+   f107  =   0.7000E+02 (F10.7 solar flux)
+   f107a =   0.7000E+02 (81-day ave F10.7 flux)
+   al     =   0.1000E+37 (AL, lower auroral mag index)
+ END USER INPUT PARAMETERS
+ ------------------------------------------------------------------------
+
+ tgcm dynamo= 1 -- calling apxparm start_year= 2002
+ Time in apxparm =  0.270 (secs)
+
+ ntask=  4 ntaski= 2 ntaskj= 2 Task Table
+ j= -1 itask_table(,j)= -1 -1 -1 -1
+ j=  0 itask_table(,j)= -1  0  1 -1
+ j=  1 itask_table(,j)= -1  2  3 -1
+ j=  2 itask_table(,j)= -1 -1 -1 -1
+
+ mytid=  0 mytidi,j=  0  0 lat0,1=  1 18 (18) lon0,1=  1 38 (38) ncells= 684
+
+ ntask=  4 ntask_maglon= 2 ntask_maglat= 2 Task Table
+ j= -1 itask_table_mag(,j)= -1 -1 -1 -1 -1
+ j=  0 itask_table_mag(,j)=  1  0  1  0 -1
+ j=  1 itask_table_mag(,j)=  3  2  3  2 -1
+ j=  2 itask_table_mag(,j)= -1 -1 -1 -1 -1
+
+ mytid=  0 magtidi,j=  0  0 mlat0,1=  1 49 (49) mlon0,1=  1 41 (41) ncells=2009
+ mp_distribute_geo nmagtaski=  2 tidcol=  0
+
+ Task   0
+
+ Subdomain on geographic grid
+ tasks(  0)%mytid =  0
+ tasks(  0)%mytidi=  0
+ tasks(  0)%mytidj=  0
+ tasks(  0)%nlats = 18
+ tasks(  0)%nlons = 38
+ tasks(  0)%lat0  =  1
+ tasks(  0)%lat1  = 18
+ tasks(  0)%lon0  =  1
+ tasks(  0)%lon1  = 38
+ Number of geo subdomain grid points =    684
+
+ Subdomain on geomagnetic grid
+ tasks(  0)%magtidi=  0
+ tasks(  0)%magtidj=  0
+ tasks(  0)%nmaglats = 49
+ tasks(  0)%nmaglons = 41
+ tasks(  0)%mlat0  =  1
+ tasks(  0)%mlat1  = 49
+ tasks(  0)%mlon0  =  1
+ tasks(  0)%mlon1  = 41
+ Number of mag subdomain grid points =   2009
+ mp_exchange_tasks mxmaglat=  49 mxmaglon=  41
+ Model version = tiegcm_trunk
+
+ Set constants
+   nlat= 36 nlon= 72 nlev= 28
+   dz=  0.50
+   dlat=  5.00 dlon=  5.00
+   zbound (cm) =   0.963723E+07
+   zmbot, zmtop =   -6.750   7.250 (bottom,top midpoint levels)
+   zibot, zitop =   -7.000   7.000 (bottom,top interface levels)
+   dt =    60.00 secs
+   grav =     870.00
+   freq_3m3 =   0.3506E-04  freq_semidi=  0.1454E-03
+   dipmin =    0.170
+   check_exp = F
+   kut (for filtering) =   1  2  3  5  6  7  9 10 11 13 14 15 17 17 17 17 17 17 17 17 17 17 17 17 15 14 13 11 10  9  7  6  5  3  2  1
+ init iyear= 2002 iday=   80
+   gswm_mi_di_ncfile = /hao/aim/tgcm/data/gswm_diurn_5.0d_99km.nc
+   gswm_mi_sdi_ncfile = /hao/aim/tgcm/data/gswm_semi_5.0d_99km.nc
+ hist_init nstep= 1440
+ alloc_ar allocated module data
+ Allocated gswm t,u,v,z (lon0lon1,lat0lat1)
+ Allocated private gwm t,u,v,z (lon0lon1,lat0lat1,nmonth,nhour)
+ alloc_pdyn allocate fmeq_in with mlev0,1=  -2  29
+ Allocated 3d data for all fields on root task
+   nlevp1*nlonp4*nlat*nf4d =  29* 76* 36* 30 =    2380320 words *8 =     19042560 bytes.
+ allocdata all tasks allocate fzg nlevp1=  29 nlonp4=  76 nlat=  36
+ init_lbc allocated subdomains tlbc, ulbc, vlbc
+ init_lbc_nm allocated subdomains tlbc_nm, ulbc_nm, vlbc_nm
+ init_lbc allocated globals tlbc_glb, ulbc_glb, vlbc_glb nlonp4= 76 nlat= 36
+ init_lbc allocated globals tlbc_nm_glb, ulbc_nm_glb, vlbc_nm_glb nlonp4= 76 nlat= 36
+
+ Model run initialization
+   nstep      =         1440    (Number of time steps this run)
+   iter       =       115200    (Initial iteration number)
+   iyear      =   2002    (Beginning calendar year)
+   iday       =     80    (Beginning calendar day)
+   igswm_mi_di =      1    (If > 0, GSWM diurnal tidal database will be used.)
+   igswm_mi_sdi=      1    (If > 0, GSWM semidiurnal tidal database will be used.)
+   igswm_nm_di=      0    (If > 0, GSWM nonmigrating diurnal tidal database will be used.)
+   igswm_nm_sdi=      0    (If > 0, GSWM nonmigrating semidiurnal tidal database will be used.)
+
+ This is an initial run
+   start_year =   2002     (Starting year of initial run)
+   start_day  =     80     (Starting day of initial run)
+   start_mtime=   803   iday       =     80    (Beginning calendar day)
+
+ Primary Histories
+   nsource       =     1  (If > 0, a primary source history was provided)
+   nseries_prim  =     1  (Number of primary time series)
+   nhist_total   =     2  (Number of primary histories to be written)
+   nfiles_prim   =     1  (Number of primary output files to be written)
+   mxhist_prim   =    10  (Maximum number of primary histories per file)
+
+ Secondary Histories
+   nseries_sech  =     1  (Number of secondary time series)
+   nsech_total   =    24  (Number of secondary histories to be written)
+   nfiles_sech   =     1  (Number of secondary output files to be written)
+   mxhist_sech   =    24  (Maximum number of secondary histories per file)
+   nfsech        =    25  (Number of requested secondary history fields)
+   secondary history field   1 TN
+   secondary history field   2 UN
+   secondary history field   3 VN
+   secondary history field   4 O2
+   secondary history field   5 O1
+   secondar3   igswm_mi_di =      1    (If > 0, GSWM diurnal tidal database will be used.)
+   secondary history field   7 NO
+   secondary history field   8 N4S
+   secondary history field   9 HE
+   secondary history field  10 NE
+   secondary history field  11 TE
+   secondary history field  12 TI
+   secondary history field  13 TEC
+   secondary history field  14 O2P
+   secondary history field  15 OP
+   secondary history field  16 OMEGA
+   secondary history field  17 POTEN
+   secondary history field  18 UI_ExB
+   secondary history field  19 VI_ExB
+   secondary history field  20 WI_ExB
+   secondary history field  21 DEN
+   secondary history field  22 QJOULE
+   secondary history field  23 Z
+   secondary history field  24 ZG
+   secondary history field  25 ZMAG
+
+ -------------------------------------------------------------------------3   igswm_mi_sdi=      1    (If > 0, GSWM semidiurnal tidal database will be used.)
+ Table of Available Diagnostic Fields
+ Shortnames may be added to namelist SECFLDS
+
+ Field   Shortname       Units           Levels  Caller          Longname
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    1    CO2_COOL        erg/g/s         lev     newton.F        CO2 Cooling
+    2    NO_COOL         erg/g/s         lev     newton.F        NO Cooling
+    3    DEN             g/cm3           ilev    dt.F            Total Density
+    4    HEATING         erg/g/s         lev     dt.F            Total Heating
+    5    HMF2            km              none    elden.F         HMF2 Height of the F2 Layer
+    6    NMF2            1/cm3           none    elden.F         NMF2 Peak Density of the F2 Layer
+    7    FOF2            MHz             none    elden.F         FOF2 Critical Frequency of the F2 Layer
+    8    JE13D           A/m2            mlev    current.F       JE13D Eastward current density (3d)
+    9    JE23D           A/m2            ml3   igswm_nm_di=      0    (If > 0, GSWM nonmigrating diurnal tidal database will be used.)
+   10    JQR             A/m2            none    current.F       JQR Upward current density (2d)
+   11    KQLAM           A/m             none    current.F       KQLAM Height-integrated current density (+north)
+   12    KQPHI           A/m             none    current.F       KQPHI Height-integrated current density (+east)
+   13    LAMDA_HAL       1/s             lev     lamdas.F        LAMDA_HAL Hall Ion Drag Coefficient
+   14    LAMDA_PED       1/s             lev     lamdas.F        LAMDA_PED Pedersen Ion Drag Coefficient
+   15    MU_M            g/cm/s          lev     cpktkm.F        MU_M Molecular Viscosity Coefficient
+   16    QJOULE          erg/g/s         lev     qjoule.F        QJOULE Joule Heating
+   17    SCHT            km              lev     addiag.F        SCHT Pressure Scale Height
+   18    SIGMA_HAL       S/m             lev     lamdas.F        SIGMA_HAL Hall Conductivity
+   19    SIGMA_PED       S/m             lev     lamdas.F      3   igswm_nm_sdi=      0    (If > 0, GSWM nonmigrating semidiurnal tidal database will be used.)
+   20    TEC             1/cm2           none    elden.F         TEC Total Electron Content
+   21    UI_ExB          cm/s            ilev    ionvel.F        UI Zonal Ion Drift (ExB)
+   22    VI_ExB          cm/s            ilev    ionvel.F        VI Meridional Ion Drift (ExB)
+   23    WI_ExB          cm/s            ilev    ionvel.F        WI Vertical Ion Drift (ExB)
+   24    WN              cm/s            ilev    swdot.F         WN Neutral Vertical Wind (plus up)
+   25    O_N2            none            lev     comp.F          O/N2 RATIO
+   26    QJOULE_INTEG    erg/cm2/s       none    qjoule.F        Height-integrated Joule Heating
+   27    BX                              none    oplus.F         BX/BMAG Normalized eastward component of magnetic field
+   28    BY                              none    oplus.F         BY/BMAG Normalized northward component of magnetic field
+   29    BZ                              none    oplus.F         BZ/BMAG Normalized upward component of m3
+   30    BMAG            Gauss           none    oplus.F         BMAG Magnetic field magnitude
+   31    EX              V/m             ilev    pdynamo.F       EX Zonal component of electric field
+   32    EY              V/m             ilev    pdynamo.F       EY Meridional component of electric field
+   33    EZ              V/m             ilev    pdynamo.F       EZ Vertical component of electric field
+   34    ED1             V/m             imlev   pdynamo.F       ED1 Magnetic eastward component of electric field
+   35    ED2             V/m             imlev   pdynamo.F       ED2 Magnetic downward (equatorward) component of electric field
+   36    PHIM2D          V               none    pdynamo.F       PHIM2D 2d Electric Potential on magnetic grid
+   37    N2              mmr             lev     comp.F          N2 Molecular Nitrogen
+   38    ZGMID           cm              lev     addiag.F        ZGMID Geometric Height at midpoints
+   39    CUSP            erg/cm2/s       none    dynamics.F3 This is an initial run
+   40    DRIZZLE         erg/cm2/s       none    dynamics.F      DRIZZLE (drzl2d*ed)
+   41    ALFA            keV             none    dynamics.F      ALFA
+   42    NFLUX           #/cm2/s         none    dynamics.F      NFLUX
+   43    EFLUX           erg/cm2/s       none    dynamics.F      EFLUX
+ ------------------------------------------------------------------------------------------------
+
+
+ ------------------------------------------------------------------------
+ Getfile remote=/hao/aim/tgcm/data/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc
+ Getfile Found file /hao/aim/tgcm/data/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc
+ ------------------------------------------------------------------------
+
+ Acquired source history file /hao/aim/tgcm/data/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc
+   (disk file is /hao/aim/tgcm/data/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc)
+ Reading source history from diskfile /hao/aim/tgcm/data/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc
+ nc_rdhist seeking   80   0   0 found   80   0   0  n=  1
+ Note nc_rdhist unused variable calendar_advance
+ Note nc_rdhist unused variable write_date
+ Note nc_rdhist unused variable crit1
+ Note nc_rdhist unused variable crit2
+ Note nc_rdhist unused variable mag
+ Read field TN               3d subdomain min,max=  0.1517E+03  0.7856E+03
+ Read field UN               3d subdomain min,max= -0.8738E+04  0.1170E+05
+ Read field VN               3d subdomain min,max= -0.7674E+04  0.1133E+05
+ Read field O2               3d subdomain min,max=  0.9179E-04  0.2299E+00
+ Read field O1               3d subdomain min,max=  0.3728E-02  0.9923E+00
+ Read field N4S              3d subdomain min,max=  0.1000E-11  0.1567E-01
+ Read field NO               3d subdomain min,max=  0.1675E-06  0.2971E-03
+ Read field OP               3d subdomain min,max=  0.0000E+00  0.1024E+07
+ Read field N2D              3d subdomain min,max=  0.0000E+00  0.4532E-03
+ Read field TI               3d subdomain min,max=  0.1517E+03  0.1535E+04
+ Read field TE               3d subdomain min,max=  0.1517E+03  0.3281E+04
+ Read field NE               3d subdomain min,max=  0.1177E+04  0.1018E+07
+ Read field O2P              3d subdomain min,max=  0.0000E+00  0.7850E+05
+ Read field OMEGA            3d subdomain min,max= -0.4661E-04  0.4114E-04
+ Read field Z                3d subdomain min,max=  0.9620E+07  0.5084E+08
+ Read field POTEN            3d subdomain min,max= -0.1469E+05  0.5943E+03
+ Read field TN_NM            3d subdomain min,max=  0.1517E+03  0.7856E+03
+ Read field UN_NM            3d subdomain min,max= -0.8739E+04  0.1172E+05
+ Read field VN_NM            3d subdomain min,max= -0.7709E+04  0.1131E+05
+ Read field O2_NM            3d subdomain min,max=  0.9172E-04  0.2299E+00
+ Read field O1_NM            3d subdomain min,max=  0.3728E-02  0.9923E+00
+ Read field N4S_NM           3d subdomain min,max=  0.1000E-11  0.1567E-01
+ Read field NO_NM            3d subdomain min,max=  0.1675E-06  0.2970E-03
+ Read field OP_NM            3d subdomain min,max=  0.0000E+00  0.1023E+07
+ Read LBC from source history i= 89 sh%lbc=   -7.00
+
+ ------------------------------------------------------------------------
+ Read TGCM PRIMARY HISTORY (source history)
+ Diskfile /hao/aim/tgcm/data/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc
+   label         = tiegcm mareqx smin control run
+   model_name    = tiegcm
+   model_version = tiegcm1.95
+   create_date= 07/14/14 130928
+   write_date =
+   logname    = foster
+   host       = ys6353
+   system     = LINUX
+   run_type   =
+   source_file  =
+   output_file  =
+   source_mtime =   80   0   0
+   initial_year = 2002
+   initial_day  =   80
+   initial_mtime=   80   0   0
+   type       = primary
+   ihist      =   1 (nth history on history file)
+   delhmins=    0 (delta minutes between histories)
+   calendar year,day = 2002, 60
+     (model IS being advanced in calendar time)
+   modeltime =  80, 0, 0, 0 (model time day,hour,minute,seconds)
+   time    =
+   ut      =  0.00 (ut hours)
+   step    =  120 (time step in seconds)
+   iter    =    57600 (number of steps from 0,0,0)
+   nlat    =   36 (number of latitudes)
+   nlon    =   72 (number of longitudes)
+   nlev    =   29 (number of levels)
+   zmtop   =   7.2502 Read LBC from source history i= 89 sh%lbc=   -7.00
+   zmbot   =  -6.750 (bottom midpoint level)
+   zitop   =   7.000 (top interface level)
+   zibot   =  -7.000 (bottom interface level)
+   dtide   =  0.0E+00   0.0 (amp/phase of diurnal tide)
+   sdtide  =  0.0E+00 0.0E+00 0.0E+00 0.0E+00 0.0E+00   0.0  0.0  0.0  0.0  0.0
+     (amp/phase of semi-diurnal tide)
+   f107d   =   0.7000E+02 (daily solar flux)
+   f107a   =   0.7000E+02 (average solar flux)
+   hpower  =   0.1800E+02 (Gw)
+   ctpoten =   0.3000E+02 (Volts)
+   kp      =   0.1000E+37 ()
+   byimf   =   0.0000E+00
+   bzimf   =   0.1000E+37
+   swvel   =   0.1000E+37
+   swden   =   0.1000E+37
+   al      =   0.1000E+37
+   e1,e2   =   0.1595E+01  0.2980E+01 (ergs/cm2/s)
+   alfac,alfad  =   0.1000E+00  0.5000E+00 (keV)
+   ec,ed =   0.7212E-01  0.1200E-01 (ergs/cm2/s)
+   colfac    =   0.15E+01
+   joulefac  =   0.15E+01
+   p0        =   0.50E-06
+   p0_model=   0.50E-03
+   grav    =   0.87E+03
+   nflds   =  24 (number of model fields)
+   gswm_mi_di_ncfile  = /glade/p/hao/tgcm/data/gswm_diurn_5.0d_99km.nc
+   gswm_mi_sdi_nc1 Read LBC from source history i= 89 sh%lbc=   -7.00
+   gswm_nm_di_ncfile  = [none]
+   gswm_nm_sdi_ncfile = [none]
+   see_ncfile   = [none]
+   gpi_ncfile   = [none]
+   ncep_ncfile  = [none]
+   imf_ncfile   = [none]
+   saber_ncfile = [none]
+   tidi_ncfile  = [none]
+   tuv_lbc_intop=  0 (if 1, then lbc of t,u,v are stored in top k slot (old histories))
+   LBC =    -7.00 (lower boundary interface level)
+   ntask_mpi    =  16 (number of MPI tasks)
+   coupled_cmit =   0 (1 if coupled with CISM/CMIT, 0 otherwise)
+   There are  24 fields on this history, as follows
+   TN        UN        VN        O2        O1        N4S       NO        OP
+   N2D       TI        TE        NE        O2P       OMEGA     Z         POTEN
+   TN_NM     UN_NM     VN_NM     O2_NM     O1_NM     N4S_NM    NO_NM     OP_NM
+ ------------------------------------------------------------------------
+
+ readsource Argon apparently not read from source history. Will init AR and AR_NM to ar_glb
+ readsource Helium apparently not read from source history. Will init HE and HE_NM to pshelb=  0.1154E-05
+
+ Enter advance iter=    115200 nstep=      1440
+
+ Starting primary history time series  1 at model time   80   0   0   0
+ Created netcdf file tiegcm.pcntr_mareqx_smin_001.nc ncid=       7
+ Copied history structure at modeltime   80   0   0
+ output_hist copied source history structure sh to history structure h (nhist=  1)
+
+ ------------------------------------------------------------------------
+ Write TGCM PRIMARY HISTORY
+ Diskfile tiegcm.pcntr_mareqx_smin_001.nc
+   label         = tiegcm mareqx smin control run
+   model_name    = tiegcm
+   model_version = tiegcm1.95
+   create_date= 12/22/15 142647
+   write_date =
+   logname    = foster
+   host       = ys6353
+   system     = LINUX
+   run_type   =
+   source_file  =
+   output_file  =
+   source_mtime =   80   0   0
+   initial_year = 2002
+   initial_day  =   80
+   initial_mtime=   80   0   0
+   type       = primary
+   ihist      =   1 (nth history on history file)
+   delhmins=    0 (delta minutes between histories)
+   calendar year,day = 2002, 80
+     (model IS being advanced in calendar time)
+   modeltime =  80, 0, 0, 0 (model time day,hour,minute,seconds)
+   time    =
+   ut      =  0.00 (ut hours)
+   step    =  120 (time step in seconds)
+   iter    =    57600 (number of steps from 0,0,0)
+   nlat    =   36 (number of latitudes)
+   nlon    =   72 (number of longitudes)
+   nlev    =   29 (number of levels)
+   zmtop   =   7.250 (top midpoint level)
+   zmbot   =  -6.750 (bottom midpoint level)
+   zitop   =   7.000 (top interface level)
+   zibot   =  -7.000 (bottom interface level)
+   dtide   =  0.0E+00   0.0 (amp/phase of diurnal tide)
+   sdtide  =  0.0E+00 0.0E+00 0.0E+00 0.0E+00 0.0E+00   0.0  0.0  0.0  0.0  0.0
+     (amp/phase of semi-diurnal tide)
+   f107d   =   0.7000E+02 (daily solar flux)
+   f107a   =   0.7000E+02 (average solar flux)
+   hpower  =   0.1800E+02 (Gw)
+   ctpoten =   0.3000E+02 (Volts)
+   kp      =   0.1000E+37 ()
+   byimf   =   0.0000E+00
+   bzimf   =   0.1000E+37
+   swvel   =   0.1000E+37
+   swden   =   0.1000E+37
+   al      =   0.1000E+37
+   e1,e2   =   0.1595E+01  0.2980E+01 (ergs/cm2/s)
+   alfac,alfad  =   0.1000E+00  0.5000E+00 (keV)
+   ec,ed =   0.7212E-01  0.1200E-01 (ergs/cm2/s)
+   colfac    =   0.15E+01
+   joulefac  =   0.15E+01
+   p0        =   0.50E-06
+   p0_model=   0.50E-03
+   grav    =   0.87E+03
+   nflds   =  24 (number of model fields)
+   gswm_mi_di_ncfile  = /glade/p/hao/tgcm/data/gswm_diurn_5.0d_99km.nc
+   gswm_mi_sdi_ncfile = /glade/p/hao/tgcm/data/gswm_semi_5.0d_99km.nc
+   gswm_nm_di_ncfile  = [none]
+   gswm_nm_sdi_ncfile = [none]
+   see_ncfile   = [none]
+   gpi_ncfile   = [none]
+   ncep_ncfile  = [none]
+   imf_ncfile   = [none]
+   saber_ncfile = [none]
+   tidi_ncfile  = [none]
+   tuv_lbc_intop=  0 (if 1, then lbc of t,u,v are stored in top k slot (old histories))
+   LBC =    -7.00 (lower boundary interface level)
+   ntask_mpi    =  16 (number of MPI tasks)
+   coupled_cmit =   0 (1 if coupled with CISM/CMIT, 0 otherwise)
+   There are  24 fields on this history, as follows
+   TN        UN        VN        O2        O1        N4S       NO        OP
+   N2D       TI        TE        NE        O2P       OMEGA     Z         POTEN
+   TN_NM     UN_NM     VN_NM     O2_NM     O1_NM     N4S_NM    NO_NM     OP_NM
+ ------------------------------------------------------------------------
+
+ Wrote primary   history  80, 0, 0 to tiegcm.pcntr_mareqx_smin_001.nc (   1 of    2)
+
+ ------------------------------------------------------------------------
+ Getfile remote=/hao/aim/tgcm/data/gswm_diurn_5.0d_99km.nc
+ Getfile Found file /hao/aim/tgcm/data/gswm_diurn_5.0d_99km.nc
+ ------------------------------------------------------------------------
+
+
+ ------------------------------------------------------------------------
+ Reading GSWM data file /hao/aim/tgcm/data/gswm_diurn_5.0d_99km.nc
+ Completed read from GSWM data file /hao/aim/tgcm/data/gswm_diurn_5.0d_99km.nc
+
+ ------------------------------------------------------------------------
+
+ ------------------------------------------------------------------------
+ Getfile remote=/hao/aim/tgcm/data/gswm_semi_5.0d_99km.nc
+ Getfile Found file /hao/aim/tgcm/data/gswm_semi_5.0d_99km.nc
+ ------------------------------------------------------------------------
+
+
+ ------------------------------------------------------------------------
+ Reading GSWM data file /hao/aim/tgcm/data/gswm_semi_5.0d_99km.nc
+ Completed read from GSWM data file /hao/aim/tgcm/data/gswm_semi_5.0d_99km.nc
+
+ ------------------------------------------------------------------------
+
+ aurora_cons
+   cusp    alfac=   0.100 ec=   0.072 fc=  0.2251E+09
+   drizzle alfad=   0.500 ed=   0.012 fd=  0.7491E+07
+   auroral radius = max of rhp,rcp=    19.999    17.905
+   roth, rote (MLT) =     0.448    -0.072
+   1/e-widths = h1,h2=     2.350     3.505
+   energy flux = e1,e2=     1.595     2.980
+   add_sproton = F
+
+ mpitime_init Completed initialization of mpi timing
+ Step     10 of   1440 mtime= 80  0 10  0 secs/step (sys) =  0.15
+ Step     20 of   1440 mtime= 80  0 20  0 secs/step (sys) =  0.15
+ Step     30 of   1440 mtime= 80  0 30  0 secs/step (sys) =  0.15
+ Step     40 of   1440 mtime= 80  0 40  0 secs/step (sys) =  0.15
+ Step     50 of   1440 mtime= 80  0 50  0 secs/step (sys) =  0.15
+ Step     60 of   1440 mtime= 80  1  0  0 secs/step (sys) =  0.15
+
+ Allocated 3d sech field ZG(lon= 76,lat= 36,ilev= 29)
+
+ Initialized diagnostic secondary history field ZG (ix= 24)
+   short_name = ZG
+   long_name  = Geometric Height ZG
+   units      = cm
+   geo        = T
+   mag        = F
+   dimnames   = lon     lat     ilev
+   dimsizes   =   76  36  29
+   ndims      =  3
+   task0_only =     F
+
+ Allocated 3d sech field UI_ExB(lon= 76,lat= 36,ilev= 29)
+
+ Initialized diagnostic secondary history field UI_ExB (ix= 18)
+   short_name = UI_ExB
+   long_name  = UI Zonal Ion Drift (ExB)
+   units      = cm/s
+   geo        = T
+   mag        = F
+   dimnames   = lon     lat     ilev
+   dimsizes   =   76  36  29
+   ndims      =  3
+   task0_only =     F
+
+ Allocated 3d sech field VI_ExB(lon= 76,lat= 36,ilev= 29)
+
+ Initialized diagnostic secondary history field VI_ExB (ix= 19)
+   short_name = VI_ExB
+   long_name  = VI Meridional Ion Drift (ExB)
+   units      = cm/s
+   geo        = T
+   mag        = F
+   dimnames   = lon     lat     ilev
+   dimsizes   =   76  36  29
+   ndims      =  3
+   task0_only =     F
+
+ Allocated 3d sech field WI_ExB(lon= 76,lat= 36,ilev= 29)
+
+ Initialized diagnostic secondary history field WI_ExB (ix= 20)
+   short_name = WI_ExB
+   long_name  = WI Vertical Ion Drift (ExB)
+   units      = cm/s
+   geo        = T
+   mag        = F
+   dimnames   = lon     lat     ilev
+   dimsizes   =   76  36  29
+   ndims      =  3
+   task0_only =     F
+
+ Allocated 2d sech field TEC(lon= 76,lat= 36)
+
+ Initialized diagnostic secondary history field TEC (ix= 13)
+   short_name = TEC
+   long_name  = TEC Total Electron Content
+   units      = 1/cm2
+   geo        = T
+   mag        = F
+   dimnames   = lon     lat
+   dimsizes   =   76  36   0
+   ndims      =  2
+   task0_only =     F
+
+ Allocated 3d sech field QJOULE(lon= 76,lat= 36,lev= 29)
+
+ Initialized diagnostic secondary history field QJOULE (ix= 22)
+   short_name = QJOULE
+   long_name  = QJOULE Joule Heating
+   units      = erg/g/s
+   geo        = T
+   mag        = F
+   dimnames   = lon     lat     lev
+   dimsizes   =   76  36  29
+   ndims      =  3
+   task0_only =     F
+
+ Allocated 3d sech field DEN(lon= 76,lat= 36,ilev= 29)
+
+ Initialized diagnostic secondary history field DEN (ix= 21)
+   short_name = DEN
+   long_name  = Total Density
+   units      = g/cm3
+   geo        = T
+   mag        = F
+   dimnames   = lon     lat     ilev
+   dimsizes   =   76  36  29
+   ndims      =  3
+   task0_only =     F
+
+ Allocated 3d sech field N2(lon= 76,lat= 36,lev= 29)
+
+ Initialized diagnostic secondary history field N2 (ix=  6)
+   short_name = N2
+   long_name  = N2 Molecular Nitrogen
+   units      = mmr
+   geo        = T
+   mag        = F
+   dimnames   = lon     lat     lev
+   dimsizes   =   76  36  29
+   ndims      =  3
+   task0_only =     F
+
+ Allocated 3d sech field ZMAG(mlon= 81,mlat= 97,imlev= 32)
+
+ Initialized diagnostic secondary history field ZMAG (ix= 25)
+   short_name = ZMAG
+   long_name  = ZMAG from pdynamo
+   units      = km
+   geo        = F
+   mag        = T
+   dimnames   = mlon    mlat    imlev
+   dimsizes   =   81  97  32
+   ndims      =  3
+   task0_only =     F
+
+ Starting secondary history time series  1 at model time   80   1   0   0
+ Created netcdf file tiegcm.scntr_mareqx_smin_001.nc ncid=       7
+
+ ------------------------------------------------------------------------
+ Write TGCM SECONDARY HISTORY
+ Diskfile tiegcm.scntr_mareqx_smin_001.nc
+   label         = tiegcm res=5.0
+   model_name    = tiegcm
+   model_version = tiegcm_trunk
+   create_date= 12/22/15 142657
+   write_date = 12/22/15 142657
+   logname    = foster
+   host       = kokanee
+   system     = LINUX
+   run_type   = initial
+   source_file  = /hao/aim/tgcm/data/tiegcm1.95/TGCM.tiegcm1.95.pcntr_mareqx_smin.nc
+   output_file  = tiegcm.scntr_mareqx_smin_001.nc
+   source_mtime =   80   0   0
+   initial_year = 2002
+   initial_day  =   80
+   initial_mtime=   80   0   0
+   type       = secondary
+   ihist      =   1 (nth history on history file)
+   delhmins=   60 (delta minutes between histories)
+   calendar year,day = 2002, 80
+     (model IS being advanced in calendar time)
+   modeltime =  80, 1, 0, 0 (model time day,hour,minute,seconds)
+   time    =      60.00 (minutes in current day)
+   ut      =  1.00 (ut hours)
+   step    =   60 (time step in seconds)
+   iter    =   115260 (number of steps from 0,0,0)
+   nlat    =   36 (number of latitudes)
+   nlon    =   72 (number of longitudes)
+   nlev    =   29 (number of levels)
+   zmtop   =   7.250 (top midpoint level)
+   zmbot   =  -6.750 (bottom midpoint level)
+   zitop   =   7.000 (top interface level)
+   zibot   =  -7.000 (bottom interface level)
+   dtide   =  0.0E+00   0.0 (amp/phase of diurnal tide)
+   sdtide  =  0.0E+00 0.0E+00 0.0E+00 0.0E+00 0.0E+00   0.0  0.0  0.0  0.0  0.0
+     (amp/phase of semi-diurnal tide)
+   f107d   =   0.7000E+02 (daily solar flux)
+   f107a   =   0.7000E+02 (average solar flux)
+   hpower  =   0.1800E+02 (Gw)
+   ctpoten =   0.3000E+02 (Volts)
+   kp      =   0.1000E+37 ()
+   byimf   =   0.0000E+00
+   bzimf   =   0.1000E+37
+   swvel   =   0.1000E+37
+   swden   =   0.1000E+37
+   al      =   0.1000E+37
+   e1,e2   =   0.1595E+01  0.2980E+01 (ergs/cm2/s)
+   alfac,alfad  =   0.1000E+00  0.5000E+00 (keV)
+   ec,ed =   0.7212E-01  0.1200E-01 (ergs/cm2/s)
+   colfac    =   0.15E+01
+   joulefac  =   0.15E+01
+   p0        =   0.50E-06
+   p0_model=   0.50E-03
+   grav    =   0.87E+03
+   nflds   =   0 (number of model fields)
+   gswm_mi_di_ncfile  = /hao/aim/tgcm/data/gswm_diurn_5.0d_99km.nc
+   gswm_mi_sdi_ncfile = /hao/aim/tgcm/data/gswm_semi_5.0d_99km.nc
+   gswm_nm_di_ncfile  = [none]
+   gswm_nm_sdi_ncfile = [none]
+   see_ncfile   = [none]
+   gpi_ncfile   = [none]
+   ncep_ncfile  = [none]
+   imf_ncfile   = [none]
+   saber_ncfile = [none]
+   tidi_ncfile  = [none]
+   tuv_lbc_intop=  0 (if 1, then lbc of t,u,v are stored in top k slot (old histories))
+   LBC =    -7.00 (lower boundary interface level)
+   ntask_mpi    =   4 (number of MPI tasks)
+   coupled_cmit =   0 (1 if coupled with CISM/CMIT, 0 otherwise)
+ ------------------------------------------------------------------------
+
+ Wrote secondary history  80, 1, 0 to tiegcm.scntr_mareqx_smin_001.nc (   1 of   24)
+ Step     70 of   1440 mtime= 80  1 10  0 secs/step (sys) =  0.15
+ Step     80 of   1440 mtime= 80  1 20  0 secs/step (sys) =  0.15
+ Step     90 of   1440 mtime= 80  1 30  0 secs/step (sys) =  0.15
+ Step    100 of   1440 mtime= 80  1 40  0 secs/step (sys) =  0.15
+ Step    110 of   1440 mtime= 80  1 50  0 secs/step (sys) =  0.15
+ Step    120 of   1440 mtime= 80  2  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80, 2, 0 to tiegcm.scntr_mareqx_smin_001.nc (   2 of   24)
+ Step    130 of   1440 mtime= 80  2 10  0 secs/step (sys) =  0.15
+ Step    140 of   1440 mtime= 80  2 20  0 secs/step (sys) =  0.15
+ Step    150 of   1440 mtime= 80  2 30  0 secs/step (sys) =  0.15
+ Step    160 of   1440 mtime= 80  2 40  0 secs/step (sys) =  0.15
+ Step    170 of   1440 mtime= 80  2 50  0 secs/step (sys) =  0.15
+ Step    180 of   1440 mtime= 80  3  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80, 3, 0 to tiegcm.scntr_mareqx_smin_001.nc (   3 of   24)
+ Step    190 of   1440 mtime= 80  3 10  0 secs/step (sys) =  0.15
+ Step    200 of   1440 mtime= 80  3 20  0 secs/step (sys) =  0.15
+ Step    210 of   1440 mtime= 80  3 30  0 secs/step (sys) =  0.15
+ Step    220 of   1440 mtime= 80  3 40  0 secs/step (sys) =  0.15
+ Step    230 of   1440 mtime= 80  3 50  0 secs/step (sys) =  0.15
+ Step    240 of   1440 mtime= 80  4  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80, 4, 0 to tiegcm.scntr_mareqx_smin_001.nc (   4 of   24)
+ Step    250 of   1440 mtime= 80  4 10  0 secs/step (sys) =  0.15
+ Step    260 of   1440 mtime= 80  4 20  0 secs/step (sys) =  0.15
+ Step    270 of   1440 mtime= 80  4 30  0 secs/step (sys) =  0.15
+ Step    280 of   1440 mtime= 80  4 40  0 secs/step (sys) =  0.15
+ Step    290 of   1440 mtime= 80  4 50  0 secs/step (sys) =  0.15
+ Step    300 of   1440 mtime= 80  5  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80, 5, 0 to tiegcm.scntr_mareqx_smin_001.nc (   5 of   24)
+ Step    310 of   1440 mtime= 80  5 10  0 secs/step (sys) =  0.15
+ Step    320 of   1440 mtime= 80  5 20  0 secs/step (sys) =  0.15
+ Step    330 of   1440 mtime= 80  5 30  0 secs/step (sys) =  0.15
+ Step    340 of   1440 mtime= 80  5 40  0 secs/step (sys) =  0.15
+ Step    350 of   1440 mtime= 80  5 50  0 secs/step (sys) =  0.15
+ Step    360 of   1440 mtime= 80  6  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80, 6, 0 to tiegcm.scntr_mareqx_smin_001.nc (   6 of   24)
+ Step    370 of   1440 mtime= 80  6 10  0 secs/step (sys) =  0.15
+ Step    380 of   1440 mtime= 80  6 20  0 secs/step (sys) =  0.15
+ Step    390 of   1440 mtime= 80  6 30  0 secs/step (sys) =  0.15
+ Step    400 of   1440 mtime= 80  6 40  0 secs/step (sys) =  0.15
+ Step    410 of   1440 mtime= 80  6 50  0 secs/step (sys) =  0.15
+ Step    420 of   1440 mtime= 80  7  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80, 7, 0 to tiegcm.scntr_mareqx_smin_001.nc (   7 of   24)
+ Step    430 of   1440 mtime= 80  7 10  0 secs/step (sys) =  0.15
+ Step    440 of   1440 mtime= 80  7 20  0 secs/step (sys) =  0.15
+ Step    450 of   1440 mtime= 80  7 30  0 secs/step (sys) =  0.15
+ Step    460 of   1440 mtime= 80  7 40  0 secs/step (sys) =  0.15
+ Step    470 of   1440 mtime= 80  7 50  0 secs/step (sys) =  0.15
+ Step    480 of   1440 mtime= 80  8  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80, 8, 0 to tiegcm.scntr_mareqx_smin_001.nc (   8 of   24)
+ Step    490 of   1440 mtime= 80  8 10  0 secs/step (sys) =  0.15
+ Step    500 of   1440 mtime= 80  8 20  0 secs/step (sys) =  0.15
+ Step    510 of   1440 mtime= 80  8 30  0 secs/step (sys) =  0.15
+ Step    520 of   1440 mtime= 80  8 40  0 secs/step (sys) =  0.15
+ Step    530 of   1440 mtime= 80  8 50  0 secs/step (sys) =  0.15
+ Step    540 of   1440 mtime= 80  9  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80, 9, 0 to tiegcm.scntr_mareqx_smin_001.nc (   9 of   24)
+ Step    550 of   1440 mtime= 80  9 10  0 secs/step (sys) =  0.15
+ Step    560 of   1440 mtime= 80  9 20  0 secs/step (sys) =  0.15
+ Step    570 of   1440 mtime= 80  9 30  0 secs/step (sys) =  0.15
+ Step    580 of   1440 mtime= 80  9 40  0 secs/step (sys) =  0.15
+ Step    590 of   1440 mtime= 80  9 50  0 secs/step (sys) =  0.15
+ Step    600 of   1440 mtime= 80 10  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,10, 0 to tiegcm.scntr_mareqx_smin_001.nc (  10 of   24)
+ Step    610 of   1440 mtime= 80 10 10  0 secs/step (sys) =  0.15
+ Step    620 of   1440 mtime= 80 10 20  0 secs/step (sys) =  0.15
+ Step    630 of   1440 mtime= 80 10 30  0 secs/step (sys) =  0.15
+ Step    640 of   1440 mtime= 80 10 40  0 secs/step (sys) =  0.15
+ Step    650 of   1440 mtime= 80 10 50  0 secs/step (sys) =  0.15
+ Step    660 of   1440 mtime= 80 11  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,11, 0 to tiegcm.scntr_mareqx_smin_001.nc (  11 of   24)
+ Step    670 of   1440 mtime= 80 11 10  0 secs/step (sys) =  0.15
+ Step    680 of   1440 mtime= 80 11 20  0 secs/step (sys) =  0.15
+ Step    690 of   1440 mtime= 80 11 30  0 secs/step (sys) =  0.15
+ Step    700 of   1440 mtime= 80 11 40  0 secs/step (sys) =  0.15
+ Step    710 of   1440 mtime= 80 11 50  0 secs/step (sys) =  0.15
+ Step    720 of   1440 mtime= 80 12  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,12, 0 to tiegcm.scntr_mareqx_smin_001.nc (  12 of   24)
+ Step    730 of   1440 mtime= 80 12 10  0 secs/step (sys) =  0.15
+ Step    740 of   1440 mtime= 80 12 20  0 secs/step (sys) =  0.15
+ Step    750 of   1440 mtime= 80 12 30  0 secs/step (sys) =  0.15
+ Step    760 of   1440 mtime= 80 12 40  0 secs/step (sys) =  0.15
+ Step    770 of   1440 mtime= 80 12 50  0 secs/step (sys) =  0.15
+ Step    780 of   1440 mtime= 80 13  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,13, 0 to tiegcm.scntr_mareqx_smin_001.nc (  13 of   24)
+ Step    790 of   1440 mtime= 80 13 10  0 secs/step (sys) =  0.15
+ Step    800 of   1440 mtime= 80 13 20  0 secs/step (sys) =  0.15
+ Step    810 of   1440 mtime= 80 13 30  0 secs/step (sys) =  0.15
+ Step    820 of   1440 mtime= 80 13 40  0 secs/step (sys) =  0.15
+ Step    830 of   1440 mtime= 80 13 50  0 secs/step (sys) =  0.15
+ Step    840 of   1440 mtime= 80 14  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,14, 0 to tiegcm.scntr_mareqx_smin_001.nc (  14 of   24)
+ Step    850 of   1440 mtime= 80 14 10  0 secs/step (sys) =  0.15
+ Step    860 of   1440 mtime= 80 14 20  0 secs/step (sys) =  0.15
+ Step    870 of   1440 mtime= 80 14 30  0 secs/step (sys) =  0.15
+ Step    880 of   1440 mtime= 80 14 40  0 secs/step (sys) =  0.15
+ Step    890 of   1440 mtime= 80 14 50  0 secs/step (sys) =  0.15
+ Step    900 of   1440 mtime= 80 15  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,15, 0 to tiegcm.scntr_mareqx_smin_001.nc (  15 of   24)
+ Step    910 of   1440 mtime= 80 15 10  0 secs/step (sys) =  0.15
+ Step    920 of   1440 mtime= 80 15 20  0 secs/step (sys) =  0.15
+ Step    930 of   1440 mtime= 80 15 30  0 secs/step (sys) =  0.15
+ Step    940 of   1440 mtime= 80 15 40  0 secs/step (sys) =  0.15
+ Step    950 of   1440 mtime= 80 15 50  0 secs/step (sys) =  0.15
+ Step    960 of   1440 mtime= 80 16  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,16, 0 to tiegcm.scntr_mareqx_smin_001.nc (  16 of   24)
+ Step    970 of   1440 mtime= 80 16 10  0 secs/step (sys) =  0.15
+ Step    980 of   1440 mtime= 80 16 20  0 secs/step (sys) =  0.15
+ Step    990 of   1440 mtime= 80 16 30  0 secs/step (sys) =  0.15
+ Step   1000 of   1440 mtime= 80 16 40  0 secs/step (sys) =  0.15
+ Step   1010 of   1440 mtime= 80 16 50  0 secs/step (sys) =  0.15
+ Step   1020 of   1440 mtime= 80 17  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,17, 0 to tiegcm.scntr_mareqx_smin_001.nc (  17 of   24)
+ Step   1030 of   1440 mtime= 80 17 10  0 secs/step (sys) =  0.15
+ Step   1040 of   1440 mtime= 80 17 20  0 secs/step (sys) =  0.15
+ Step   1050 of   1440 mtime= 80 17 30  0 secs/step (sys) =  0.15
+ Step   1060 of   1440 mtime= 80 17 40  0 secs/step (sys) =  0.15
+ Step   1070 of   1440 mtime= 80 17 50  0 secs/step (sys) =  0.15
+ Step   1080 of   1440 mtime= 80 18  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,18, 0 to tiegcm.scntr_mareqx_smin_001.nc (  18 of   24)
+ Step   1090 of   1440 mtime= 80 18 10  0 secs/step (sys) =  0.15
+ Step   1100 of   1440 mtime= 80 18 20  0 secs/step (sys) =  0.15
+ Step   1110 of   1440 mtime= 80 18 30  0 secs/step (sys) =  0.15
+ Step   1120 of   1440 mtime= 80 18 40  0 secs/step (sys) =  0.15
+ Step   1130 of   1440 mtime= 80 18 50  0 secs/step (sys) =  0.15
+ Step   1140 of   1440 mtime= 80 19  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,19, 0 to tiegcm.scntr_mareqx_smin_001.nc (  19 of   24)
+ Step   1150 of   1440 mtime= 80 19 10  0 secs/step (sys) =  0.15
+ Step   1160 of   1440 mtime= 80 19 20  0 secs/step (sys) =  0.15
+ Step   1170 of   1440 mtime= 80 19 30  0 secs/step (sys) =  0.15
+ Step   1180 of   1440 mtime= 80 19 40  0 secs/step (sys) =  0.15
+ Step   1190 of   1440 mtime= 80 19 50  0 secs/step (sys) =  0.16
+ Step   1200 of   1440 mtime= 80 20  0  0 secs/step (sys) =  0.16
+ Wrote secondary history  80,20, 0 to tiegcm.scntr_mareqx_smin_001.nc (  20 of   24)
+ Step   1210 of   1440 mtime= 80 20 10  0 secs/step (sys) =  0.15
+ Step   1220 of   1440 mtime= 80 20 20  0 secs/step (sys) =  0.15
+ Step   1230 of   1440 mtime= 80 20 30  0 secs/step (sys) =  0.15
+ Step   1240 of   1440 mtime= 80 20 40  0 secs/step (sys) =  0.15
+ Step   1250 of   1440 mtime= 80 20 50  0 secs/step (sys) =  0.15
+ Step   1260 of   1440 mtime= 80 21  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,21, 0 to tiegcm.scntr_mareqx_smin_001.nc (  21 of   24)
+ Step   1270 of   1440 mtime= 80 21 10  0 secs/step (sys) =  0.15
+ Step   1280 of   1440 mtime= 80 21 20  0 secs/step (sys) =  0.15
+ Step   1290 of   1440 mtime= 80 21 30  0 secs/step (sys) =  0.15
+ Step   1300 of   1440 mtime= 80 21 40  0 secs/step (sys) =  0.15
+ Step   1310 of   1440 mtime= 80 21 50  0 secs/step (sys) =  0.15
+ Step   1320 of   1440 mtime= 80 22  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,22, 0 to tiegcm.scntr_mareqx_smin_001.nc (  22 of   24)
+ Step   1330 of   1440 mtime= 80 22 10  0 secs/step (sys) =  0.15
+ Step   1340 of   1440 mtime= 80 22 20  0 secs/step (sys) =  0.15
+ Step   1350 of   1440 mtime= 80 22 30  0 secs/step (sys) =  0.15
+ Step   1360 of   1440 mtime= 80 22 40  0 secs/step (sys) =  0.15
+ Step   1370 of   1440 mtime= 80 22 50  0 secs/step (sys) =  0.15
+ Step   1380 of   1440 mtime= 80 23  0  0 secs/step (sys) =  0.15
+ Wrote secondary history  80,23, 0 to tiegcm.scntr_mareqx_smin_001.nc (  23 of   24)
+ Step   1390 of   1440 mtime= 80 23 10  0 secs/step (sys) =  0.15
+ Step   1400 of   1440 mtime= 80 23 20  0 secs/step (sys) =  0.15
+ Step   1410 of   1440 mtime= 80 23 30  0 secs/step (sys) =  0.15
+ Step   1420 of   1440 mtime= 80 23 40  0 secs/step (sys) =  0.15
+ Step   1430 of   1440 mtime= 80 23 50  0 secs/step (sys) =  0.15
+ Advancing day (previous,present)=   80 2002   81 2002 sfeps=  0.1007E+01
+ Step   1440 of   1440 mtime= 81  0  0  0 secs/step (sys) =  0.15
+ Wrote primary   history  81, 0, 0 to tiegcm.pcntr_mareqx_smin_001.nc (   2 of    2)
+ Wrote secondary history  81, 0, 0 to tiegcm.scntr_mareqx_smin_001.nc (  24 of   24)
+
+ MPI run with ntask =   4
+ nstep=    1440 step=      60
+ Model simulation time hours=     24.00 days=      1.00
+ Cpu time for run =     221.09
+
+ ------------------------------------------------------------------------
+ Total wallclock time mins=      4.04 hours=      0.07
+ Total MPI timing mins=  0.2880E+00 hours=  0.4801E-02 %Total runtime=     7.12
+ Subroutine          Time (mins)  %Total mpi  %Total run
+ mp_gather2root_prim  0.6965E-02        2.42        0.17
+ mp_gather2root_sech  0.5550E-02        1.93        0.14
+ mp_gather2root_lbc   0.8515E-04        0.03        0.00
+ mp_bndlats           0.2675E-01        9.29        0.66
+ mp_bndlats_f2d       0.2000E-02        0.69        0.05
+ mp_bndlons           0.2378E-01        8.26        0.59
+ mp_bndlons_f3d       0.3626E-01       12.59        0.90
+ mp_polelats          0.4027E-01       13.98        1.00
+ mp_polelat_f3d       0.9236E-02        3.21        0.23
+ mp_gatherlons_f3d    0.2835E-01        9.84        0.70
+ mp_scatterlons_f3d   0.1474E-01        5.12        0.36
+ mp_periodic_f4d      0.1473E-01        5.11        0.36
+ mp_periodic_f3d      0.1156E-01        4.01        0.29
+ mp_periodic_f2d      0.5169E-03        0.18        0.01
+ mp_bndlats_kmh       0.5201E-03        0.18        0.01
+ mp_bndlons_kmh       0.6021E-03        0.21        0.01
+ mp_mageq             0.2385E-02        0.83        0.06
+ mp_mageq_jpm1        0.3030E-01       10.52        0.75
+ mp_mageq_jpm3        0.2628E-02        0.91        0.06
+ mp_magpole_2d        0.4535E-02        1.57        0.11
+ mp_magpole_3d        0.2903E-04        0.01        0.00
+ mp_magpoles          0.1092E-02        0.38        0.03
+ mp_conjugate_points  0.2464E-06        0.00        0.00
+ mp_foldhem           0.6090E-02        2.11        0.15
+ mp_mag_periodic_f2d  0.3398E-02        1.18        0.08
+ mp_gather_pdyn       0.9455E-02        3.28        0.23
+ mp_mag_halos         0.1496E-02        0.52        0.04
+ mp_geo_halos         0.0000E+00        0.00        0.00
+ mp_geo_halos_f3d     0.4010E-02        1.39        0.10
+ mp_scatter_coeff1
+ mp_scatter_phim      0.2837E-03        0.10        0.01
+ mp_gather_f2d       0.1055E-02        0.37        0.03
+ mp_scatter_f2d       0.1701E-03        0.06        0.00
+
+ ------------------------------------------------------------------------
+
+ ------------------------------------------------------------------------
+ Report MPI wall-clock timing (mpi_wtime)  mytid=   0  istep=    1440  nstep=    1440
+ Total Time (mins) in 'pefield                       ' =   0.1437E+00 (  3.55% of total run time)
+ Total Time (mins) in 'dynamo_inputs                 ' =   0.5095E+00 ( 12.60% of total run time)
+ Total Time (mins) in 'pdynamo_fieldline_integrals   ' =   0.6748E-01 (  1.67% of total run time)
+ Total Time (mins) in 'pdynamo_complete_integrals    ' =   0.3988E-01 (  0.99% of total run time)
+ Total Time (mins) in 'pdynamo_rhspde                ' =   0.2649E-03 (  0.01% of total run time)
+ Total Time (mins) in 'stencils                      ' =   0.1488E-01 (  0.37% of total run time)
+ T1 MPI run with ntask =   4
+ Total Time (mins) in 'highlat_poten                 ' =   0.3768E-03 (  0.01% of total run time)
+ Total Time (mins) in 'pthreed                       ' =   0.4948E+00 ( 12.24% of total run time)
+ ------------------------------------------------------------------------
+
+
+ ------------------------------------------------------------------------
+ TIMER (system_clock)
+ Elapsed run time      =     242.63 (secs)    4.04 (mins)   0.07 (hrs)
+
+ Elapsed init time     =     5.78 secs,  0.002 hrs,   2.4% (includes source i/o)
+ Elapsed step time     =   215.26 secs,  0.060 hrs,  88.7%
+   Elapsed prep time   =   257.07 secs,  0.071 hrs, 106.0%
+   Elapsed apxparm time=     0.27 secs,  0.000 hrs, 100.0%
+   Elapsed dynamics    =   117.22 secs,  0.033 hrs,  48.3%
+     Elapsed qrj       =    15.92 secs,  0.004 hrs,   6.6%
+     Elapsed oplus     =    12.91 secs,  0.004 hrs,   5.3%
+     Elapsed cmpminor  =    19.31 secs,  0.005 hrs,   8.0% (n4s,n2d,no)
+     Elapsed cmpmajor  =    12.70 secs,  0.004 hrs,   5.2% (o2, o, he)
+     Elapsed dt        =     2.80 secs,  0.001 hrs,   1.2%
+     Elapsed duv       =     6.77 secs,  0.002 hrs,   2.8%
+   Elapsed pdynamo     =    42.06 secs,  0.012 hrs,  17.3%
+   Elapsed magpres_grav=     3.72 secs,  0.001 hrs,   1.5%
+ Elapsed i/o           =    23.59 secs,  0.007 hrs,   9.7%
+   Elapsed Primary io  =     2.01 secs,  0.001 hrs,   0.8%
+   Elapsed Secondary   =    21.58 secs,  0.006 hrs,   8.9%
+
+ Average secs/step =     0.15
+ Average mins/simulated day  =     4.04
+ ------------------------------------------------------------------------
+
+ End execution of tiegcm_trunk at 12/22/15  143045
+ NORMAL EXIT

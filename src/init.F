@@ -201,6 +201,18 @@
       if (ibgrddata > 0) 
      |  write(6,"('  bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
 !
+! Background saber/tidi, msis/hwm:
+      ibgrddata = 0
+      if (len_trim(bgrddata_ncfile) > 0) ibgrddata = 1
+      if (ibgrddata > 0)
+     |  write(6,"('  bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
+!
+! CTMT lbc data file:
+      ictmt = 0
+      if (len_trim(ctmt_ncfile) > 0) ictmt = 1
+      if (ictmt > 0)
+     |  write(6,"('  ctmt_ncfile = ',a)") trim(ctmt_ncfile)
+!
 ! ixtimep is 4th dimension index to fg-array for previous time step
 ! ixtimec is 4th dimension index to fg-array for current time step
 ! (see fogcm.f)
@@ -266,7 +278,6 @@
       write(6,"('  igswm_nm_sdi= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating semidiurnal tidal database will',
      |  ' be used.)')") igswm_nm_sdi
-     
       write(6,"('  ictmt= ',i6,4x,
      |  '(If > 0, CTMT tidal database will be used.)')") ictmt
      

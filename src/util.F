@@ -364,54 +364,9 @@
 ! AIX uses system().
 !
       character(len=*),intent(in) :: command
-#if defined(UNICOS) || defined(IRIX)
-      integer,external :: ishell
-      isystem = ishell(trim(command))
-#elif defined (AIX)
-      integer,external :: system
-      isystem = system(trim(command)//"\0")
-#elif defined(OSF1)
-      integer,external :: system
-      isystem = system(trim(command))
-#elif defined(SUN)
-      integer,external :: system
-      isystem = system(trim(command))
-#elif defined(LINUX)
-      integer,external :: system
-      isystem = system(trim(command))
-#else
-      integer,external :: system
-      isystem = system(trim(command))
-#endif
+      call system(trim(command))
+      isystem = 0
       end function isystem
-!-------------------------------------------------------------------
-      real function cputime()
-!
-! Return user cpu time:
-!
-      implicit none
-!
-! Cray unicos and SGI IRIX use the second() function:
-!
-#if defined(UNICOS) || defined(IRIX)
-      real(kind=4),external :: second
-      cputime = second()
-#elif AIX || LINUX
-!
-! IBM AIX uses sub cpu_time
-! To use other than default time type use setrteopts, e.g.:
-!     call setrteopts('cpu_time_type=usertime')
-! (see p.589 of AIX Language Reference)
-!
-      real :: time
-      call cpu_time(time)
-      cputime = time
-#elif OSF1
-      cputime = 0. ! don't know of one on OSF, except in ncaru
-#elif SUN
-      cputime = 0. ! don't know of one on SUN, except in ncaru
-#endif
-      end function cputime 
 !-------------------------------------------------------------------
       real function mtime_delta(mtime0,mtime1)
 !
@@ -868,6 +823,9 @@
 ! timing is started in the first call, and before timing is completed 
 ! in the second call.
 !
+#ifdef MPI
+      use mpi
+#endif
       implicit none
 !
 ! Args:
@@ -880,9 +838,6 @@
       integer :: ier
       integer,save :: ncalls=0 ! only for non-AIX warning message.
       real :: time1 ! ending time
-#ifdef MPI
-#include <mpif.h>
-#endif
 #ifdef AIX
       real,external :: rtc
 #endif
@@ -920,6 +875,7 @@
       subroutine getcwdir(cwd)
 #ifdef MPI
       use mpi_module,only: mytid
+      use mpi
 #endif
 !
 ! Return current working directory in cwd:
@@ -928,9 +884,6 @@
       character(len=*),intent(out) :: cwd
       integer,external :: isystem,nextlu
       integer :: istat,lu,ier
-#ifdef MPI
-#include <mpif.h>
-#endif
 !
 #ifdef MPI
       if (mytid==0) then
@@ -953,45 +906,6 @@
       close(lu)
 #endif
       end subroutine getcwdir
-!-----------------------------------------------------------------------
-      subroutine getprocessid(pid)
-#ifdef MPI
-      use mpi_module,only: mytid
-#endif
-!
-! Return current working directory in pid:
-!
-      implicit none
-      integer,intent(out) :: pid
-      integer,external :: isystem,nextlu
-      integer :: istat,lu,ier
-#ifdef MPI
-#include <mpif.h>
-#endif
-!
-#ifdef MPI
-      if (mytid==0) then
-        istat = isystem('echo $$ > pid')
-        if (istat /= 0) 
-     |    write(6,"('>>> WARNING getprocessid: error return ',
-     |    'isystem(''echo $$ > pid'')')")
-      endif
-      call mpi_barrier(MPI_COMM_WORLD,ier)
-      lu = nextlu()
-      open(lu,file='pid',status='old')
-      read(lu,*) pid
-      close(lu)
-#else
-      istat = isystem('echo $$ > pid')
-      if (istat /= 0) 
-     |  write(6,"('>>> WARNING getprocessid: error return ',
-     |  'isystem(''echo $$ > pid'')')")
-      lu = nextlu()
-      open(lu,file='pid',status='old')
-      read(lu,"(i10)") pid
-      close(lu)
-#endif
-      end subroutine getprocessid
 !-----------------------------------------------------------------------
       character(len=*) function trcase(string)
 !
@@ -1022,28 +936,43 @@
       end function trcase
 !-----------------------------------------------------------------------
       subroutine shutdown(msg)
+      use my_esmf
+#ifdef MPI
+      use mpi
+#endif
 !
 ! An fatal error has occurred -- shut down the model, including MPI.
 !
       implicit none
-#ifdef MPI
-#include <mpif.h>
-#endif
 !
 ! Args:
       character(len=*) :: msg
 !
 ! Local:
-      integer :: ier
-      character(len=80) :: errorcode
+      integer :: ier,errorcode
+!     character(len=80) :: errorcode
 !
       write(6,"(/,28('>'),' MODEL SHUTDOWN ',28('<'))")
       write(6,"('Shutdown: stop message: ',a)") trim(msg)
 #ifdef MPI
+!
+! ESMF is nested inside MPI, so shutdown ESMF first:
+      call ESMF_Finalize(endflag=ESMF_END_KEEPMPI,rc=ier)
+      if (ier /= ESMF_SUCCESS) then
+        write(6,"('>>> Shutdown: error return from ESMF_Finalize:',
+     |    ' ier=',i4)") ier
+      else
+        write(6,"('Shutdown after ESMF_Finalize')")
+      endif
+!
+! Shutdown MPI:
       write(6,"('Shutdown calling mpi_abort..')")
       write(6,"(72('>'))")
       call mpi_abort(MPI_COMM_WORLD,errorcode,ier)
 #endif
+      write(6,"(/,'For information, please see TGCM Users Guide at ',
+     |  /,'http://www.hao.ucar.edu/modeling/tgcm/doc/userguide')")
+      write(6,"(72('>'))")
       stop 'shutdown'
       end subroutine shutdown
 !-----------------------------------------------------------------------

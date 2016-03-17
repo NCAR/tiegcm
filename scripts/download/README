@@ -1,0 +1,33 @@
+
+Shell script to tar source and data files for download from the 
+download page on the tgcm website: 
+
+http://www.hao.ucar.edu/modeling/tgcm/download.php
+
+See $source_home and $data_home in make_downloads for locations
+of the source and data directories to be tarballed.
+
+You will need at least 5.5G disk to download all files and make
+a default 5-deg run. This is normally executed in a scratch or
+project directory on yellowstone (or whatever current NCAR Super).
+
+Execute make_downloads in this directory to create 3 tar files:
+(these will extract into directories of the same name)
+  tiegcm2.0.tar            # The svn tag (src, scripts, doc, etc)
+  tiegcm_res2.5_data.tar   # startup and data files for 2.5-deg resolution
+  tiegcm_res5.0_data.tar   # startup and data files for 5.0-deg resolution
+
+The following files are also included in the source file (tiegcm2.0.tar):
+  README.download     # Instructions to the user
+  tiegcm-linux.job    # Default Linux job script
+  tiegcm-ys.job       # Default yellowstone script
+  tiegcm_res2.5.inp   # Default 2.5-deg resolution namelist input
+  tiegcm_res5.0.inp   # Default 5.0-deg resolution namelist input
+
+The 3 tar files can be copied to webpub for the above download page.
+
+After download and extraction, the user should be able to execute the 
+job script appropriate for the system in use, to build the model and 
+execute a default 5-deg run. The job scripts can be modified to make 
+2.5-deg runs, which will access startup and data files in tiegcm_res2.5_data.
+

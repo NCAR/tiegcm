@@ -1,0 +1,13 @@
+#!/usr/bin/perl
+ 
+$step = $ARGV[0]; # timestep in seconds
+$secs = $ARGV[1]; # WC seconds per step
+
+if (! $step or ! $secs) { 
+  die "Usage: 'minsperday step secs' where: step = time-step in seconds, secs = WC seconds per step\n";
+}
+
+$minspday = ((24.*3600.)/$step*$secs)/60.; # WC minutes per day
+$daysin12 = (12.*60.)/$minspday;           # Number of days in 12 hours WC
+
+print "step = $step, secs-per-step = $secs -> WC minutes per day = $minspday (about $daysin12 days in a 12 hour run)\n";

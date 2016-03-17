@@ -281,7 +281,6 @@
         endif
       endif
 !
-!
 ! Get AMIE data
       if (iamie==1) then
         iprint = 0
@@ -289,7 +288,7 @@
         if (iprint>0) write(6,"('advance calling getamie...')")
         call getamie(iyear,iday,int(secs),amie_ibkg,iprint)
       endif
-!      
+!
 ! Get GSWM tidal boundary data:
 !
 !      call getgswm(istep,iyear,iday,secs)
@@ -308,32 +307,26 @@
 ! Report to stdout:
       if (time2print(nstep,istep)) then
         if (istep > 1) then
-          write(6,"('Step ',i6,' of ',i6,' mtime=',4i3,
+          write(6,"('Step ',i8,' of ',i8,' mtime=',4i3,
      |      ' secs/step (',a,') =',f6.2)") istep,nstep,modeltime,
      |      timing_type,secs_per_step
         else
-          write(6,"('Step ',i6,' of ',i6,' mtime=',3i3)")
+          write(6,"('Step ',i8,' of ',i8,' mtime=',3i3)")
      |      istep,nstep,modeltime(1:3)
         endif
-        if (len_trim(gpi_ncfile) > 0.and.len_trim(imf_ncfile) > 0) then
 !
-! If both GPI and IMF data run, then only f10.7 flux is used from
-! the gpi file. GPI power and ctpoten are overwritten as follows:
-! power is calculated from bz,swvel (see above), and ctpoten is from
-! weimer (Weimer is called later, so do not print ctpoten here)
+! GPI data run:
+        if (len_trim(gpi_ncfile) > 0) then
+          write(6,"('GPI run: mtime=',3i3,' power=',f8.3,' ctpoten=',
+     |      f8.3,' f107=',f8.3,' f107a=',f8.3)")modeltime(1:3),
+     |      power,ctpoten,f107,f107a
+        endif
 !
-          write(6,"('GPI+IMF run: istep=',i6,' GPI f107=',f8.3,
-     |      ' f107a=',f8.3,' power from bzimf,swvel=',f8.3)")
-     |      istep,f107,f107a,power
-        elseif (len_trim(gpi_ncfile) > 0) then
-          write(6,"('GPI run: istep=',i6,' power=',f8.3,' ctpoten=',
-     |      f8.3,' f107=',f8.3,' f107a=',f8.3)") istep,power,ctpoten,
-     |      f107,f107a
-        elseif (len_trim(imf_ncfile) > 0) then
-          write(6,"('IMF run: istep=',i6,' bx=',f8.3,' by=',f8.3,' bz=',
-     |      f8.3,' swvel=',f8.3,' swden=',f8.3,' ctpoten (prev step)=',
-     |      f8.3,' power=',f8.3)") istep,bximf,byimf,bzimf,swvel,swden,
-     |      ctpoten,power
+! Weimer/IMF/OMNI data run:
+        if (len_trim(imf_ncfile) > 0) then
+          write(6,"('IMF run: mtime=',3i3,' bx=',f8.3,' by=',f8.3,
+     |      ' bz=',f8.3,' swvel=',f8.3,' swden=',f8.3)")
+     |      modeltime(1:3),bximf,byimf,bzimf,swvel,swden
         endif
       endif ! time2print
 !
@@ -639,9 +632,11 @@
           vlbc_nm_glb(lon0:lon1,lat0:lat1)=vlbc_nm(lon0:lon1,lat0:lat1)
         endif
 !
-! Saving extraoutput here from master only - G. Lu, Aug. 27, 2003
-        call prep_output(1,nlevp1,lon0,lon1,lat0,lat1)
-        if (mytid==0) call extraoutput
+! Saving amieoutput here from master only - G. Lu, Aug. 27, 2003
+        if (iamie > 0) then
+          call prep_output(1,nlevp1,lon0,lon1,lat0,lat1)
+          if (mytid==0) call amieoutput
+        endif
 #else
 !
 ! Update foutput if serial non-MPI run:

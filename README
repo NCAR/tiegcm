@@ -3,17 +3,20 @@ Model root directory for TIEGCM:
 
 Subdir		Description		Summary of Contents
 ----------------------------------------------------------------------------------
-doc/		Documentation		User Guide, Model Description, Release Doc
+benchmarks/     Benchmark scripts       Scripts that use tgcmrun to make benchmark runs
+doc/		Documentation		User Guide, Model Description, Release Docs
 scripts/	Support scripts 	Job scripts, Make files, Utilities
-src/		Source code		Source files *.F, *.h
-tests/		Benchmark tests		Scripts for benchmark runs
+src/		Source code		Source files *.F, *.F90, *.h
+tgcmrun/	Benchmark tests		Python program to make benchmark runs
 
 For a brief set of instructions to build the model and make a short default
-run, see doc/README.download.
+run, see scripts/download/README.download.
 
 Please also see the main TGCM website: 
-
 http://www.hao.ucar.edu/modeling/tgcm 
 
+Additional data may be available on the hao public ftp site:
+http://download.hao.ucar.edu/pub/tgcm
+
 User's Guide, Model Description, and Release documentation are available from 
-the main website (as well as in your local doc directory).
+the main website (as well as the source for these docs in your local doc directory).

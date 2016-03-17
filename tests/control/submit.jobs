@@ -1,9 +1,0 @@
-#! /bin/tcsh -f
-tiegcm_decsol_smax.job ; sleep 5
-tiegcm_decsol_smin.job ; sleep 5
-tiegcm_junsol_smax.job ; sleep 5
-tiegcm_junsol_smin.job ; sleep 5
-tiegcm_mareqx_smax.job ; sleep 5
-tiegcm_mareqx_smin.job ; sleep 5
-tiegcm_sepeqx_smax.job ; sleep 5
-tiegcm_sepeqx_smin.job

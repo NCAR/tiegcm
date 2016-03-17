@@ -1,0 +1,42 @@
+
+Model:		TIEGCM
+Svn Tag:	tiegcm2.0
+Release Date:	March, 2016
+
+Source and data tar files to build and execute the model can
+be downloaded from the TGCM download website. You will be
+asked to provide an email address, but no password is necessary.
+
+http://www.hao.ucar.edu/modeling/tgcm/download.php
+
+These 3 tar files are available for download:
+  tiegcm2.0.tar             # source code of exported svn tag (30 MB)
+  tiegcm_res5.0_data.tar    # startup and data files for 5.0-deg model (1.5 GB)
+  tiegcm_res2.5_data.tar    # startup and data files for 2.5-deg model (4 GB)
+
+Download and extract these files into a large temporary disk space 
+(you can download only the data tarball for the resolution you want). 
+To download the source file, the 5-degree data file, and make a default
+run, you will need about 1.8G of disk. For the 2.5-deg data and default
+run, you will need about 5.3G.
+
+Extracting these 3 tar files will result in directories of the same name.
+In addition, the source file (tiegcm2.0.tar) also contains the following
+default job scripts and namelist input files:
+
+  tiegcm-linux.job          # job script for 64-bit Linux desktop
+  tiegcm-ys.job             # job script for NCAR supercomputer "yellowstone"
+  tiegcm_res5.0.inp         # default namelist input file for 5.0-deg resolution model
+  tiegcm_res2.5.inp         # default namelist input file for 2.5-deg resolution model
+
+At this point you should be able to execute the job script appropriate
+to the system you are running on by simply typing the name on the command line.
+The job script will build the model, and execute a default 5-deg run. The job 
+scripts can be easily modified to make a 2.5-degree run (read the comments at 
+the top of the job scripts).
+
+By default, output history files will be created in the execution directory (execdir)
+
+See the TIEGCM User's Guide for more information:
+
+http://www.hao.ucar.edu/modeling/tgcm/doc/userguide/html/

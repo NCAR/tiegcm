@@ -1,0 +1,54 @@
+#
+# Included makefile for building tiegcm with gfortran compiler on Linux desktop. 
+# Using GNU Fortran (GCC) 4.4.7 20120313 (Red Hat 4.4.7-16)
+#
+F90    = /usr/bin/gfortran
+MPIF90 = /usr/lib64/openmpi/bin/mpif90
+MPIRUN = /usr/lib64/openmpi/bin/mpirun
+FFLAGS = -fdefault-real-8
+FFLAGS += -fno-range-check # required for sub check_nans in util.F
+OPTIM   = -O3
+#
+# btf 12/16/15: Model crashes with FPE in qrj.F if built with 
+#               these debug flags:
+#
+DBGFLAGS   = -ffpe-trap=invalid,zero,overflow,underflow
+DBGFLAGS   += -fbounds-check -fdump-core -fbacktrace
+#
+# Library and Include file paths:
+#
+# These "generic" settings for netcdf do not work with gfort:
+#/opt/local/netcdf/linux86-64/lib/libnetcdf.a(fort-vario.o):(.data+0x0): undefined reference to `__pgdbg_stub'
+#
+#LIB_NETCDF = /opt/local/netcdf/linux86-64/lib
+#INC_NETCDF = /opt/local/netcdf/linux86-64/include
+#
+# These settings (netcdf 4.1.1) for netcdf work with gfortran:
+#
+LIB_NETCDF = /home/tgcm/intel/netcdf-4.1.1/lib
+INC_NETCDF = /home/tgcm/intel/netcdf-4.1.1/include
+#
+# Makefile will include $(LIB_ESMF)/esmf.mk
+# This ESMF lib was built with gfortran/openmpi with /usr/lib64/openmpi/bin/mpif90
+#
+LIB_ESMF = /home/tgcm/esmf/gfort/esmf_6_3_0rp1/lib/libO/Linux.gfortran.64.openmpi.default
+LIBS     = -lcurl
+#
+HOST     = $(shell hostname)
+#
+# Make machines.ini file for MPI execution: 
+#
+prereq: machines.ini mpirun.command
+machines.ini: export HN=$(HOST)
+machines.ini: export NP=$(NPROC)
+machines.ini: FORCE
+	@echo "Making machines.ini.."
+	@echo `hostname` > machines.ini
+	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini
+
+mpirun.command: FORCE
+	@echo "Making mpirun.command: MPIRUN=$(MPIRUN)"
+	@echo $(MPIRUN) > mpirun.command
+
+FORCE:
+

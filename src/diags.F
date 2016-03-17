@@ -108,21 +108,21 @@
       diags(n)%long_name  = 'JE13D: Eastward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 !
       n = n+1
       diags(n)%short_name = 'JE23D'
       diags(n)%long_name  = 'JE23D: Downward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 !     
       n = n+1
       diags(n)%short_name = 'JQR'
       diags(n)%long_name  = 'JQR: Upward current density (2d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'none' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 !     
       n = n+1
       diags(n)%short_name = 'KQLAM'
@@ -130,7 +130,7 @@
      |  'KQLAM: Height-integrated current density (+north)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 !     
       n = n+1
       diags(n)%short_name = 'KQPHI'
@@ -138,7 +138,7 @@
      |  'KQPHI: Height-integrated current density (+east)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 !
       n = n+1
       diags(n)%short_name = 'LAMDA_HAL'
@@ -198,21 +198,21 @@
 !
       n = n+1
       diags(n)%short_name = 'UI_ExB'
-      diags(n)%long_name  = 'UI: Zonal Ion Drift (ExB)'
+      diags(n)%long_name  = 'UI: Zonal ExB Velocity'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
       diags(n)%short_name = 'VI_ExB'
-      diags(n)%long_name  = 'VI: Meridional Ion Drift (ExB)'
+      diags(n)%long_name  = 'VI: Meridional ExB Velocity'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
       diags(n)%short_name = 'WI_ExB'
-      diags(n)%long_name  = 'WI: Vertical Ion Drift (ExB)'
+      diags(n)%long_name  = 'WI: Vertical ExB Velocity'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
@@ -333,35 +333,35 @@
 !
       n = n+1
       diags(n)%short_name = 'CUSP'
-      diags(n)%long_name  = 'CUSP (cusp2d*ec)'
+      diags(n)%long_name  = 'CUSP Low Energy Electron Flux'
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'DRIZZLE'
-      diags(n)%long_name  = 'DRIZZLE (drzl2d*ed)'
+      diags(n)%long_name  = 'DRIZZLE Low Energy Electron Flux'
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'ALFA'
-      diags(n)%long_name  = 'ALFA'
+      diags(n)%long_name  = 'Aurora Characteristic Energy'
       diags(n)%units      = 'keV'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'NFLUX'
-      diags(n)%long_name  = 'NFLUX'
+      diags(n)%long_name  = 'Aurora Number Flux'
       diags(n)%units      = '#/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
 !
       n = n+1
       diags(n)%short_name = 'EFLUX'
-      diags(n)%long_name  = 'EFLUX'
+      diags(n)%long_name  = 'Aurora Energy Flux'
       diags(n)%units      = 'erg/cm2/s'
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamics.F'
@@ -1033,14 +1033,14 @@
 
       end subroutine mkdiag_SCHT
 !-----------------------------------------------------------------------
-      subroutine mkdiag_MU_M(name,fkm,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_MU_M(name,mu_m,lev0,lev1,lon0,lon1,lat)
 !
-! Molecular viscosity coefficient (fkm passed from cpktkm.F):
+! Molecular viscosity coefficient (mu_m passed from cpktkm.F):
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: fkm
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: mu_m
 !
 ! Local:
       integer,save :: ix=0,firstcall=0
@@ -1050,20 +1050,20 @@
       if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,fkm,diags(ix)%levels,lev0,lev1,
+     |  diags(ix)%units,mu_m,diags(ix)%levels,lev0,lev1,
      |  'lon',lon0,lon1,lat)
 
       end subroutine mkdiag_MU_M
 !-----------------------------------------------------------------------
-      subroutine mkdiag_JQR(name,fkm,lon0,lon1,lat0,lat1)
+      subroutine mkdiag_JQR(name,jqr,lon0,lon1,lat0,lat1)
 !
 ! Upward current density at top of ionospheric shell 
-! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
+! (jqr passed from current.F90 with current_kq==1 in dynamo.F):
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lat0,lat1,lon0,lon1
-      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: jqr
 !
 ! Local:
       integer,save :: ix=0,firstcall=0
@@ -1073,19 +1073,19 @@
       if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
+     |  diags(ix)%units,jqr,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
 
       end subroutine mkdiag_JQR
 !-----------------------------------------------------------------------
-      subroutine mkdiag_KQLAM(name,fkm,lon0,lon1,lat0,lat1)
+      subroutine mkdiag_KQLAM(name,kqlam,lon0,lon1,lat0,lat1)
 !
 ! magn. northward height-integrated current density
-! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
+! (kqlam passed from current.F90 with current_kq==1 in dynamo.F):
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lat0,lat1,lon0,lon1
-      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: kqlam
 !
 ! Local:
       integer,save :: ix=0,firstcall=0
@@ -1095,19 +1095,19 @@
       if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
+     |  diags(ix)%units,kqlam,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
 
       end subroutine mkdiag_KQLAM
 !-----------------------------------------------------------------------
-      subroutine mkdiag_KQPHI(name,fkm,lon0,lon1,lat0,lat1)
+      subroutine mkdiag_KQPHI(name,kqphi,lon0,lon1,lat0,lat1)
 !
 ! magn. eastward height-integrated current density 
-! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
+! (kqphi passed from current.F90 with current_kq==1 in dynamo.F):
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lat0,lat1,lon0,lon1
-      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: fkm
+      real,intent(in),dimension(lon0:lon1,lat0:lat1) :: kqphi
 !
 ! Local:
       integer,save :: ix=0,firstcall=0
@@ -1117,41 +1117,19 @@
       if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
+     |  diags(ix)%units,kqphi,'mlon',lon0,lon1,'mlat',lat0,lat1,0)
 
       end subroutine mkdiag_KQPHI
 !-----------------------------------------------------------------------
-      subroutine mkdiag_JE13D(name,fkm,lon0,lon1,lev0,lev1,lat)
+      subroutine mkdiag_JE13D(name,je13d,lon0,lon1,lev0,lev1,lat)
 !
-! magn. eastward current density
-! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
-!
-! Args:
-      character(len=*),intent(in) :: name
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lon0:lon1,lev0:lev1) :: fkm
-!
-! Local:
-      integer,save :: ix=0,firstcall=0
-
-      firstcall = firstcall+1
-      if (firstcall == 1) ix = checkf(name)
-      if (ix==0) return
-
-      call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
-
-      end subroutine mkdiag_JE13D
-!-----------------------------------------------------------------------
-      subroutine mkdiag_JE23D(name,fkm,lon0,lon1,lev0,lev1,lat)
-!
-! magn. equator-/downward current density
-! (fkm passed from current.F with icalkqlam==1 in dynamo.F):
+! Eastward current density (geomagnetic grid)
+! (je13d passed from current.F90 with current_kq==1 in dynamo.F):
 !
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat
-      real,intent(in),dimension(lon0:lon1,lev0:lev1) :: fkm
+      real,intent(in),dimension(lon0:lon1,lev0:lev1) :: je13d
 !
 ! Local:
       integer,save :: ix=0,firstcall=0
@@ -1161,7 +1139,29 @@
       if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,fkm,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
+     |  diags(ix)%units,je13d,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
+
+      end subroutine mkdiag_JE13D
+!-----------------------------------------------------------------------
+      subroutine mkdiag_JE23D(name,je23d,lon0,lon1,lev0,lev1,lat)
+!
+! Equator-/downward current density (geomagnetic grid)
+! (je23d passed from current.F90 with current_kq==1 in dynamo.F):
+!
+! Args:
+      character(len=*),intent(in) :: name
+      integer,intent(in) :: lon0,lon1,lev0,lev1,lat
+      real,intent(in),dimension(lon0:lon1,lev0:lev1) :: je23d
+!
+! Local:
+      integer,save :: ix=0,firstcall=0
+
+      firstcall = firstcall+1
+      if (firstcall == 1) ix = checkf(name)
+      if (ix==0) return
+
+      call addfld(diags(ix)%short_name,diags(ix)%long_name,
+     |  diags(ix)%units,je23d,'mlon',lon0,lon1,'mlev',lev0,lev1,lat)
 
       end subroutine mkdiag_JE23D
 !-----------------------------------------------------------------------

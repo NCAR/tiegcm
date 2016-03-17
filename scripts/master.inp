@@ -1,0 +1,152 @@
+&tgcm_input
+!
+! Master namelist file describing all namelist parameters.
+! This file serves as a reference for tiegcm namelist input parameters.
+! If unchanged, using this file for namelist input should result 
+!   in a default run (march equinox, solar min). 
+!
+ LABEL = 'tiegcm res=5.0'
+ START_YEAR = 2002
+ START_DAY  = 80
+ CALENDAR_ADVANCE = 1
+!
+! SOURCE:       Start-up history file (for initial runs only)
+! SOURCE_START: Time of history on start-up file (initial runs only)
+!
+ SOURCE = '$TGCMDATA/tiegcm_res5.0_mareqx_smin_prim.nc'
+ SOURCE_START = 80,0,0 ! source time
+!
+! START: Start time (day,hour,minute)
+! STOP:  Stop time (day,hour,minute)
+! STEP:  Timestep (seconds)
+!
+ START = 80,0,0
+ STOP  = 85,0,0
+!
+! Default step for sres is 60 seconds, although 120 can often
+! be used during quiet solar conditions.
+!
+ STEP  = 60
+!
+! Primary History parameters:
+!
+ HIST = 1,0,0
+ OUTPUT = 'tiegcm.pcntr_mareqx_smin_001.nc'
+ MXHIST_PRIM = 10
+!
+! Secondary History parameters:
+!
+ SECSTART = 80,1,0
+ SECSTOP  = 81,0,0
+ SECHIST  =  0,1,0
+ SECOUT   = 'tiegcm.scntr_mareqx_smin_001.nc'
+ MXHIST_SECH = 24
+ SECFLDS = 'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI',
+           'TEC','O2P','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN',
+           'QJOULE','HMF2','NMF2','Z','ZG'
+!
+! Diagnostic fields available with this release:
+!SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
+!          'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
+!          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M','O_N2','WN',
+!          'BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2','PHIM2D','N2',
+!          'CUSP','DRIZZLE','ALFA','NFLUX','EFLUX'
+!
+! These diagnostic currents are available only if namelist CURRENT_KQ = 1
+!	   'KQPHI','KQLAM','JQR','JE13D','JE23D' 
+!
+! If HPSS_PATH is set, a csh script will be made in the execdir that,
+! when executed, will copy history disk files to the NCAR HPSS in the 
+! directory HPSS_PATH (must have an HPSS account at NCAR CISL)
+!
+!HPSS_PATH = '/home/foster/tiegcm'
+!
+! Hough-mode tidal amplitudes and phases:
+ TIDE = 0.,0.,0.,0.,0.,0.,0.,0.,0.,0.
+ TIDE2 = 0.,0.
+!
+! At 5 deg resolution, use gswm migrating tides only.
+! At 2.5 deg resolution, optionally use both migrating 
+!   and non-migrating tides.
+!
+ GSWM_MI_DI_NCFILE  = '$TGCMDATA/gswm_diurn_5.0d_99km.nc'
+ GSWM_MI_SDI_NCFILE = '$TGCMDATA/gswm_semi_5.0d_99km.nc'
+!GSWM_NM_DI_NCFILE  = '$TGCMDATA/gswm_nonmig_diurn_5.0d_99km.nc'
+!GSWM_NM_SDI_NCFILE = '$TGCMDATA/gswm_nonmig_semi_5.0d_99km.nc'
+!
+! SABER tidal data for T,Z:
+!SABER_NCFILE = $TGCMDATA/
+!
+! TIDI tidal data for U,V:
+!TIDI_NCFILE = $TGCMDATA/
+!
+! Background tidal data for T,U,V,Z (one or the other file, not both):
+! BGRDDATA_NCFILE = '$TGCMDATA/bgndlbc_hwm_msis.nc'
+! BGRDDATA_NCFILE = '$TGCMDATA/bgndlbc_saber_hrdi.nc'
+!
+! CTMT_NCFILE = '$TGCMDATA/ctmt_tides.nc'
+!
+! Potential model can be 'HEELIS' (optionally with GPI data),
+! or 'WEIMER' (optionally with IMF data). If WEIMER, both IMF 
+! and GPI may be specified, but only f10.7 will be used from GPI.
+!
+ POTENTIAL_MODEL = 'HEELIS'
+!POTENTIAL_MODEL = 'WEIMER'
+!
+! If potential model is HEELIS, GPI data can be used to calculate 
+! POWER and CTPOTEN from Kp data, and to use data for f10.7 flux. 
+! If GPI_NCFILE is specified, one or more of POWER,CTPOTEN,F107,F107A 
+! must be commented out (data will be used for those that are commented
+! out, otherwise the user-provided values will be used).
+!
+!GPI_NCFILE = '$TGCMDATA/gpi_1960001-2015365.nc'
+!
+! If KP is specified, and POWER and/or CTPOTEN are commented,
+! then the given KP will be used to calculate POWER and/or CTPOTEN
+!
+!KP = 2.0
+ POWER   = 18.
+ CTPOTEN = 30.
+ F107    = 70.
+ F107A   = 70.
+!
+! If potential model is WEIMER, data file IMF_NCFILE can be specified 
+! to read one or more of BXIMF,BYIMF,BZIMF,SWVEL,SWDEN. If IMF_NCFILE 
+! is specified and POWER is not provided, it will be calculated from 
+! BZ,SWVEL. Also, if IMF_NCFILE is provided, user cannot provide CTPOTEN 
+! (it will be calculated from the Weimer potential).
+!
+!IMF_NCFILE = '$TGCMDATA/imf_OMNI_2002001-2002365.nc'
+!
+!BXIMF   = 0.
+!BYIMF   = 0.
+!BZIMF   = -5.
+!SWVEL   = 400.
+!SWDEN   = 4.0
+!SEE_NCFILE = '$TGCMDATA/see__L3_merged_2005007_007.nc'
+ AURORA = 1
+ COLFAC = 1.5
+ DYNAMO = 1
+!
+! If CURRENT_PG=1, current due to plasma pressure gradient and gravity is calculated
+! and included as a forcing term in the dynamo equation (default=1) (ignored if DYNAMO=0)
+!
+ CURRENT_PG = 1
+!
+! If CURRENT_KQ=1, then height-integrated current density of current sheet, and
+! upward current density at the top of the ionosphere is calculated (default=0)
+! (ignored if DYNAMO=0) (see current.F90 to save JQR, JE13D, JE23D, KQPHI, KQLAM)
+!
+ CURRENT_KQ = 0
+!
+! If calc_helium=1, helium is calculated as a major composition species.
+! If calc_helium=0, helium is zeroed out.
+!
+ CALC_HELIUM = 1
+!
+! AMIE data files:
+!
+!AMIENH = '$TGCMDATA/amie_apr01_10_2010_nh_ssusi.nc'
+!AMIESH = '$TGCMDATA/amie_apr01_10_2010_sh_ssusi.nc'
+!AMIE_IBKG = 0
+/

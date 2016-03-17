@@ -1,0 +1,36 @@
+&tgcm_input
+!
+! step=20 at .15 sec/step -> 11 mins/day -> 65 days in 12 hours
+!
+! 0:Wrote primary   history  55, 0, 0 to /glade/p/hao/tgcm/tiegcm2.0/benchmarks/tiegcm_res2.5_climatology/tiegcm_res2.5_climatology_smax/hist/tiegcm2.0_res2.5_climatology_smax_prim_003.nc (  55 of   55)
+! 0:Wrote primary   history 121, 0, 0 to ../hist/tiegcm2.0_res2.5_climatology_smax_prim_007.nc (  66 of   70)
+!
+LABEL = 'tiegcm2.0_res2.5_climatology_smax'
+START_YEAR = 2002  ! arbitrary for climatology run
+START_DAY = 121
+CALENDAR_ADVANCE = 1
+!SOURCE = '/glade/p/hao/tgcm/data/tiegcm2.0/tiegcm_res2.5_climatology_smax_prim.nc'
+!SOURCE_START = 1 0 0
+START = 121 0 0
+STOP = 180,0,0
+STEP = 20
+HIST = 1 0 0
+OUTPUT = '../hist/tiegcm2.0_res2.5_climatology_smax_prim_001.nc','to',
+         '../hist/tiegcm2.0_res2.5_climatology_smax_prim_020.nc','by','1'
+MXHIST_PRIM = 20
+GSWM_MI_DI_NCFILE = '/glade/p/hao/tgcm/data/tiegcm2.0/gswm_diurn_2.5d_99km.nc'
+GSWM_MI_SDI_NCFILE = '/glade/p/hao/tgcm/data/tiegcm2.0/gswm_semi_2.5d_99km.nc'
+GSWM_NM_DI_NCFILE = '/glade/p/hao/tgcm/data/tiegcm2.0/gswm_nonmig_diurn_2.5d_99km.nc'
+GSWM_NM_SDI_NCFILE = '/glade/p/hao/tgcm/data/tiegcm2.0/gswm_nonmig_semi_2.5d_99km.nc'
+POTENTIAL_MODEL = 'HEELIS'
+POWER = 40.
+CTPOTEN = 60.
+F107 = 200.
+F107A = 200.
+AURORA = 1
+COLFAC = 1.5
+DYNAMO = 1
+CURRENT_PG = 1
+CURRENT_KQ = 0
+CALC_HELIUM = 1
+/

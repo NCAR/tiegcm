@@ -1,0 +1,30 @@
+#!/bin/tcsh
+#
+# Seasonal Climatology runs of tiegcm. 5-day runs for each equinox and each solstice: 
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#
+# TIEGCM 5.0-deg res:
+#
+ tgcmrun -run_name=decsol_smax -model_name=tiegcm -model_res=5.0 -submit=yes -stdout_dir=tiegcm_res5.0_decsol_smax
+ tgcmrun -run_name=decsol_smin -model_name=tiegcm -model_res=5.0 -submit=yes -stdout_dir=tiegcm_res5.0_decsol_smin
+ tgcmrun -run_name=junsol_smax -model_name=tiegcm -model_res=5.0 -submit=yes -stdout_dir=tiegcm_res5.0_junsol_smax
+ tgcmrun -run_name=junsol_smin -model_name=tiegcm -model_res=5.0 -submit=yes -stdout_dir=tiegcm_res5.0_junsol_smin
+ tgcmrun -run_name=mareqx_smax -model_name=tiegcm -model_res=5.0 -submit=yes -stdout_dir=tiegcm_res5.0_mareqx_smax
+ tgcmrun -run_name=mareqx_smin -model_name=tiegcm -model_res=5.0 -submit=yes -stdout_dir=tiegcm_res5.0_mareqx_smin
+ tgcmrun -run_name=sepeqx_smax -model_name=tiegcm -model_res=5.0 -submit=yes -stdout_dir=tiegcm_res5.0_sepeqx_smax
+ tgcmrun -run_name=sepeqx_smin -model_name=tiegcm -model_res=5.0 -submit=yes -stdout_dir=tiegcm_res5.0_sepeqx_smin
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#
+# TIEGCM 2.5-deg res:
+#
+ tgcmrun -run_name=decsol_smax -model_name=tiegcm -model_res=2.5 -submit=yes -stdout_dir=tiegcm_res2.5_decsol_smax
+ tgcmrun -run_name=decsol_smin -model_name=tiegcm -model_res=2.5 -submit=yes -stdout_dir=tiegcm_res2.5_decsol_smin
+ tgcmrun -run_name=junsol_smax -model_name=tiegcm -model_res=2.5 -submit=yes -stdout_dir=tiegcm_res2.5_junsol_smax
+ tgcmrun -run_name=junsol_smin -model_name=tiegcm -model_res=2.5 -submit=yes -stdout_dir=tiegcm_res2.5_junsol_smin
+ tgcmrun -run_name=mareqx_smax -model_name=tiegcm -model_res=2.5 -submit=yes -stdout_dir=tiegcm_res2.5_mareqx_smax
+ tgcmrun -run_name=mareqx_smin -model_name=tiegcm -model_res=2.5 -submit=yes -stdout_dir=tiegcm_res2.5_mareqx_smin
+ tgcmrun -run_name=sepeqx_smax -model_name=tiegcm -model_res=2.5 -submit=yes -stdout_dir=tiegcm_res2.5_sepeqx_smax
+ tgcmrun -run_name=sepeqx_smin -model_name=tiegcm -model_res=2.5 -submit=yes -stdout_dir=tiegcm_res2.5_sepeqx_smin
+

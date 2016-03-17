@@ -1,0 +1,70 @@
+#!/bin/tcsh
+#
+# Make listings of log files, history files, post-processing, etc.
+#
+set mycwd = `pwd`
+set home = $mycwd
+set model = tiegcm
+set resolutions = ('5.0' '2.5')
+
+ set filenames = ( \
+   list.stdout     \
+   list.tails      \
+   list.ncfiles    \
+   list.timing     \
+   list.psfiles    \
+   list.pdffiles   \
+   list.diskusage  \
+   list.dirs       \
+   list.contents   \
+ )
+
+foreach file ($filenames)
+  set filepath = $home/$file
+  echo Making file $file \($filepath\)
+  echo "Make listings from $home" >! $filepath # overwrite any pre-existing
+  foreach res ($resolutions)
+    set dirs = ( \
+      $home/${model}_res${res}_climatology \
+      $home/${model}_res${res}_seasons \
+      $home/${model}_res${res}_storms \
+    )
+    foreach dir ($dirs)
+      if (-d $dir) then
+        cd $dir
+      else
+        echo ">>> Could not find directory $dir"
+        continue
+      endif
+      echo " "           >> $filepath
+      echo "Group: $dir" >> $filepath
+      set cases = `ls -d *`
+      foreach case ($cases)
+        echo "Case $case" >> $filepath
+        if ($file == 'list.stdout' ) ls -lF $case/stdout/*.out >> $filepath 
+        if ($file == 'list.tails'  ) tail   $case/stdout/*.out >> $filepath 
+        if ($file == 'list.ncfiles') ls -lF $case/hist/*.nc    >> $filepath 
+#       if ($file == 'list.timing' ) fgrep 'Average secs' $case/stdout/*.out >>  $filepath
+        if ($file == 'list.timing' ) fgrep 'Elapsed run' $case/stdout/*.out  >>  $filepath
+        if ($file == 'list.psfiles') ls -lF $case/proc/*.ps    >> $filepath
+        if ($file == 'list.pdffiles')ls -lF $case/proc/*.pdf   >> $filepath
+
+        if ($file == 'list.contents') then
+          echo "  Case path: $dir/$case/hist" >> $filepath
+          echo "  Case path: $dir/$case/hist"
+          foreach ncpath ($case/hist/*.nc)
+            set contents = `tgcm_ncdump $ncpath | grep 'contents = ' `
+            set ncfile = `/bin/basename $ncpath`
+            echo "    $ncfile:r $contents" >> $filepath
+            echo "    $ncfile:r $contents" 
+          end
+        endif
+
+      end # foreach case 
+    end # foreach dir
+  end # foreach res
+  if ($file == 'list.diskusage') then
+    cd $home # assuming benchmark group dirs are here
+    du -h --total tiegcm_res* >&! $file
+  endif
+end # foreach file

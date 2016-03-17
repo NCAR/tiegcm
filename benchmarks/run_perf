@@ -1,0 +1,82 @@
+#!/bin/tcsh
+#
+# tiegcm performance testing: 
+# Model run is made for a single case with different numbers of processors (mpi tasks)
+# (At hao, may need to add -tgcmdata=/glade/p/hao/tgcm/data/tiegcm2.0 or reset $TGCMDATA)
+#
+  set run_name = 'decsol_smax'
+#-----------------------------------------------------------------------------------
+#
+# tiegcm res5.0:
+#
+set case = tiegcm_res5.0_perf
+
+set run = tiegcm_res5.0_nproc08
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 8  -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res5.0_nproc16
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 16 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res5.0_nproc24
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 24 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res5.0_nproc32
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 32 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res5.0_nproc48
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 48 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res5.0_nproc64
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 64 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res5.0_nproc72
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 72 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res5.0_nproc80
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 80 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+#
+#-----------------------------------------------------------------------------------
+#
+# tiegcm res2.5:
+#
+set case = tiegcm_res2.5_perf
+
+set run = tiegcm_res2.5_nproc08
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 8  -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res2.5_nproc16
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 16 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res2.5_nproc24
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 24 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res2.5_nproc32
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 32 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res2.5_nproc48
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 48 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res2.5_nproc64
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 64 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res2.5_nproc72
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 72 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run
+
+set run = tiegcm_res2.5_nproc80
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 80 -submit yes \
+  -execdir=$TGCMTEMP/$case/$run/run -stdout_dir=$case/$run

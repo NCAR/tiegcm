@@ -28,7 +28,7 @@
       use qrj_module,only: qrj,qtotal,qop,qo2p,qn2p,qnp,qnop
       use chapman_module,only: chapman
       use oplus_module,only: oplus
-      use input_module,only: iaurora=>aurora
+      use input_module,only: iaurora=>aurora,iamie
       use aurora_module,only: aurora
       use aurora_module,only: cusp2d,drzl2d,alfa2d,nflx2d,eflux2d
       use n4s_module,only: comp_n4s,minor_n4s
@@ -138,16 +138,18 @@
      |  wi(levd0,lond0,latd0),     ! W ion velocity output
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after ionvel')")
-      if (diags) then
-        do lat=lat0,lat1
-          call addfld('UI_ExB','Zonal ExB Ion Drift','cm/s',
-     |      ui(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
-          call addfld('VI_ExB','Meridional ExB Ion Drift','cm/s',
-     |      vi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
-          call addfld('WI_ExB','Vertical ExB Ion Drift','cm/s',
-     |      wi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
-        enddo
-      endif
+!
+! mkdiags_UI,VI,WI are called from ionvel.
+!     if (diags) then
+!       do lat=lat0,lat1
+!         call addfld('UI_ExB','Zonal ExB Velocity','cm/s',
+!    |      ui(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+!         call addfld('VI_ExB','Meridional ExB Velocity','cm/s',
+!    |      vi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+!         call addfld('WI_ExB','Vertical ExB Velocity','cm/s',
+!    |      wi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+!       enddo
+!     endif
 !
 ! Calculate column densities and line integrals of o2, o, and n2.
 ! Prognostics z,tn,o2,o1,barm are input, diagnostics vo2,vo1,vn2,
@@ -763,23 +765,26 @@
           call addfld('QJI_TN','Joule Heating for TN',' ',
      |      qji_tn(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         endif
-!
-! Calculate 2d (lon,lat) diagnostics for secondary histories:
-! (see call dyndiag_sech below after lat loop)
-!
-        call dyndiag(
-     |    ped (levd0,lond0,lat),     ! pedersen conductivity
-     |    hall(levd0,lond0,lat),     ! hall conductivity
-     |    qji_tn(levd0,lond0,lat),   ! ion Joule heating for tn
-     |    z   (levd0,lond0,lat,itc), ! updated Z from addiag
-     |    un  (levd0,lond0,lat,itp), ! neutral zonal velocity
-     |    vn  (levd0,lond0,lat,itp), ! neutral meridional velocity
-     |    ui  (levd0,lond0,lat),     ! ion zonal velocity
-     |    vi  (levd0,lond0,lat),     ! ion meridional velocity
-     |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       
       if (debug) write(6,"('dynamics after qjoule_tn')")
+!
+! Calculate 2d (lon,lat) diagnostics for amie run:
+!
+      if (iamie > 0) then
+        do lat=lat0,lat1
+          call dyndiag(
+     |      ped (levd0,lond0,lat),     ! pedersen conductivity
+     |      hall(levd0,lond0,lat),     ! hall conductivity
+     |      qji_tn(levd0,lond0,lat),   ! ion Joule heating for tn
+     |      z   (levd0,lond0,lat,itc), ! updated Z from addiag
+     |      un  (levd0,lond0,lat,itp), ! neutral zonal velocity
+     |      vn  (levd0,lond0,lat,itp), ! neutral meridional velocity
+     |      ui  (levd0,lond0,lat),     ! ion zonal velocity
+     |      vi  (levd0,lond0,lat),     ! ion meridional velocity
+     |      1,nlevp1,lon0,lon1,lat)
+        enddo ! lat=lat0,lat1
+      endif
 !
 ! Advance neutral temperature:
 !

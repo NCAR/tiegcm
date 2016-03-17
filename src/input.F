@@ -16,10 +16,10 @@
 ! Principle interface to the model is via a single call to sub input 
 !   (which makes calls to the input module subroutines), and via 
 !   "use input_module" statements in model subprograms.
-! This module is dependent on the model header file "params.h"
+! This module is dependent on the model source file "params.F"
 !
 ! Procedure to add new input parameters:
-!   0. Add any necessary parameter declarations in params.h
+!   0. Add any necessary parameter declarations in params.F
 !      (these are generally for dimensioning input variables)
 !   1. Declare new module variables in proper category below
 !      (e.g., model-wide, primary histories, secondary histories, etc)
@@ -36,36 +36,24 @@
 !
       character(len=1024) :: 
      |  label,           ! optional generic text label for this run
-     |  tempdir,         ! temporary directory 
-     |  magvol,          ! absolute or relative path to magnetic data file
      |  amievol,         ! absolute or relative path to amie data file (optional)
      |  amiesh,          ! file or mss path of amie SH data file (optional)
      |  amienh,          ! file or mss path of amie NH data file (optional)
-     |  seeflux,         ! file or mss path of SEE photon data file (optional)
      |  hpss_path        ! hpss directory for dispose of output history files
-!
-! date and calday are no longer supported, and are replaced by start_day, 
-! start_year, and calendar_advance. Date and calday are retained here so 
-! error usage statements can be issued if user sets one of them.
 !
       integer ::
      |  start_day,       ! starting day of year (integer 0->365)
      |  start_year,      ! starting year (4-digit integer yyyy)
      |  calendar_advance,! if > 0, advance calendar day from start_day
-     |  date(3),         ! old: model starting year, day ( 2 ints yyyy,dd)
-     |  calday,          ! old: starting calendar day (0-mxday)
      |  mxday,           ! calendar day (0-mxday)
      |  step,            ! model time step (integer seconds)
-     |  dispose,         ! deprecated -- formerly for dispose to mss
      |  eddy_dif,	 ! 0/1 flag for DOY dependent eddy diffusion (difk, dift, xmue)
      |  dynamo,          ! 0/1 flag for dynamo
      |  current_pg,      ! 0/1 flag to add current due to plasma pressure and gravity to rhs (default 1)
      |  current_kq,      ! 0/1 flag to calculate height-integrated current density (default 0)
-     |  tideann,         ! 0/1 flag for annual tide (deprecated as of May 2008)
      |  aurora,          ! 0/1 flag for aurora
      |  iamie,           ! 0/1 flag for AMIE data (not in namelist read)
      |  amie_ibkg,       ! 0/1/2 flag for read real, 1st, or 24-hr averaged data
-     |  iseeflux,        ! 0/1 flag for SEE flux data
      |  ntask_lat,       ! number of tasks in latitude  dimension
      |  ntask_lon,       ! number of tasks in longitude dimension
      |  ntask_maglat,    ! number of tasks in mag latitude  dimension (not namelist)
@@ -79,7 +67,8 @@
      |  f107,            ! 10.7 cm daily solar flux
      |  f107a,           ! 10.7 cm average (81-day) solar flux
      |  colfac,          ! collision factor
-     |  joulefac         ! joule heating factor (see sub qjoule_tn (qjoule.F))
+     |  joulefac,        ! joule heating factor (see sub qjoule_tn (qjoule.F))
+     |  opdiffcap        ! Maximum O+ diffusion (see sub rrk in oplus.F)
 !
 ! Input parameters that can be either constant or time-dependent:
       real ::
@@ -145,7 +134,7 @@
 !     character(len=16) ::
 !    |  gpi_names(ngpivars)      ! names of gpi_vars
 !
-! Primary history user input (dimension parameters are in params.h):
+! Primary history user input (dimension parameters are in params.F):
       character(len=1024) :: 
      |  source,            ! file containing source history (optional)
      |  output(mxhvols)    ! output file(s) (required)
@@ -154,11 +143,10 @@
      |  start(3,mxseries), ! primary history model start time(s)
      |  stop(3,mxseries),  ! primary history model stop time(s)
      |  hist(3,mxseries),  ! primary history disk write frequency
-     |  save(3,mxseries),  ! deprecated
      |  mxhist_prim,       ! max number of histories per primary file
      |  noutput            ! number of output files given
 !
-! Secondary history user input (dimension parameters are in params.h):
+! Secondary history user input (dimension parameters are in params.F):
       character(len=1024) :: 
      |  secsource,            ! file containing source sec_history (for mhd)
      |  secout(mxhvols)       ! secondary history output file(s)
@@ -168,18 +156,17 @@
      |  secstart(3,mxseries), ! secondary history model start time(s)
      |  secstop(3,mxseries),  ! secondary history model stop time(s)
      |  sechist(3,mxseries),  ! secondary history disk write frequency
-     |  secsave(3,mxseries),  ! deprecated
      |  mxhist_sech,          ! max number of histories per secondary file
      |  sech_nbyte            ! 4 or 8: write real or double values to secondary file
 !
 ! Namelist for read:
       namelist/tgcm_input/ 
-     |  label,tempdir,magvol,amievol,date,calday,step,dispose,
-     |  source,source_start,output,start,stop,hist,save,
-     |  secout,secstart,secstop,sechist,secflds,secsave,
+     |  label,step,
+     |  source,source_start,output,start,stop,hist,
+     |  secout,secstart,secstop,sechist,secflds,
      |  potential_model,eddy_dif,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
-     |  kp,colfac,joulefac,tideann,aurora,gpi_ncfile,gswm_mi_di_ncfile,
+     |  kp,colfac,joulefac,aurora,gpi_ncfile,gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,ntask_lat,ntask_lon,
      |  start_day,start_year,calendar_advance,see_ncfile,
@@ -188,7 +175,7 @@
      |  imf_ncfile,saber_ncfile,tidi_ncfile,ctmt_ncfile,hme_ncfiles,
      |  bgrddata_ncfile,sech_nbyte,f107_time,f107a_time,hpss_path,
      |  current_pg,current_kq,calc_helium,enforce_opfloor,amiesh,
-     |  amienh,amie_ibkg,seeflux,tgcmlb_ncfiles
+     |  amienh,amie_ibkg,tgcmlb_ncfiles
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -217,8 +204,8 @@
 ! Initialize:
       call inp_init
 !
-! Do namelist read:
-      call inp_read(mytid)
+! Do namelist read (see source file input_read.F):
+      call inp_read
 !
 ! Validate model-wide input:
 ! (this can be split out into separate routines later)
@@ -247,12 +234,9 @@
 ! Initialize input variables:
 !
       label   = ' '
-      tempdir = ' '
-      magvol  = ' '
       amievol = ' '
       amiesh  = ' '
       amienh  = ' '
-      seeflux = ' '
       hpss_path = ' '
 !
       gpi_ncfile  = ' '       ! user input gpi file path
@@ -270,22 +254,17 @@
 
       saber_ncfile = ' '      ! SABER data file
       tidi_ncfile = ' '       ! TIDI data file
-      
       ctmt_ncfile = ' '       ! CTMT data file
       hme_ncfiles(:) = ' '    ! HME files for lb perturbation
       tgcmlb_ncfiles(:) = ' ' ! TGCM files for lb perturbation
 
       bgrddata_ncfile = ' '   ! Background data file
-
-      date(:) = ispval ! old
-      calday  = ispval ! old
 !
       start_day  = ispval
       start_year = ispval
       calendar_advance = ispval
 !
       step    = ispval
-      dispose = ispval
       eddy_dif = ispval  ! new as of 4/10
       dynamo  = ispval
       current_pg = 1     ! on by default
@@ -293,10 +272,8 @@
       tide(:) = spval
       tide2(:)= spval
       tide3m3(:) = spval
-      tideann = ispval
       aurora  = ispval
-      iseeflux  = 0    ! will be set 1 if amienh or amiesh files are given
-      iamie     = 0    ! will be set 1 if amienh or amiesh files are given
+      iamie   = 0      ! will be set 1 if amienh or amiesh files are given
       amie_ibkg = 0    ! default is read in real time amie data
       ntask_lat = ispval
       ntask_lon = ispval
@@ -304,6 +281,7 @@
       joulefac= spval
       calc_helium = ispval
       enforce_opfloor = ispval
+      opdiffcap = spval
 
       f107    = spval
       f107a   = spval
@@ -336,7 +314,6 @@
       start(:,:) = ispval
       stop(:,:)  = ispval
       hist(:,:)  = ispval
-      save(:,:)  = ispval
       mxhist_prim = 10 ! default max number of histories per primary file
       if (dlat == 2.5) mxhist_prim = 4 ! 2.5 degree horizontal resolution 
 !
@@ -346,7 +323,6 @@
       secstart(:,:) = ispval
       secstop(:,:)  = ispval
       sechist(:,:)  = ispval
-      secsave(:,:)  = ispval
       mxhist_sech = 24 ! default max number of histories per sech file
       if (dlat == 2.5) mxhist_sech = 10 ! 2.5 degree horizontal resolution 
       sech_nbyte    = ispval
@@ -371,13 +347,6 @@
         call shutdown('LOGNAME')
       endif
 !
-! 4/08: tempdir is deprecated:
-      if (len_trim(tempdir) > 0) then
-        write(6,"('>>> WARNING input: namelist read parameter ',
-     |    '''TEMPDIR'' is deprecated. The value ',a,' will be ',
-     |    'ignored.')") trim(tempdir) 
-      endif
-!
 ! Model time step (secs):
 ! If step < 60, it is assumed to be in minutes (enforce step <= 10 
 !   minutes), otherwise is in seconds (must be multiple of 60, i.e.,
@@ -392,20 +361,6 @@
         write(6,"(/,'>>> INPUT: bad time step STEP: ',i5,
      |    ' (must be > 0)',/)") step
         call shutdown('STEP')
-      endif
-!
-! Old starting date and calday (no longer supported):
-      if (any(date/=ispval)) then
-        write(6,"(/,'>>> INPUT: DATE is no longer supported as an ',
-     |    'input parameter.')")
-        call usage_calendar
-        call shutdown('date')
-      endif
-      if (calday /= ispval) then
-        write(6,"(/,'>>> INPUT: CALDAY is no longer supported ',
-     |    'as an input parameter.')")
-        call usage_calendar
-        call shutdown('calday')
       endif
 !
 ! Verify start_year, start_day, calendar_advance:
@@ -463,45 +418,40 @@
 !        parameter names in tiegcm1, writing new file /TGCM/data/magfield.nc
 !        (/TGCM/data/magdat.nc was unchanged). This is still for 5.0h resolution.
 !
-! 4/05: Restoring magfield for runs with DYNAMO==0 (tiegcm1.8)
-!
-!     n = len_trim(magvol)
-!     if (n <= 0) then
-!       write(6,"('Input: did not read value for MAGVOL',
-!    |    ' (magnetic field data file)')")
-!       write(magvol,"('/TGCM/data/magfield.nc')")
-!       write(6,"('  Will use default MAGVOL = ',a)") magvol
-!     else
-!       write(6,"('Input: will use magnetic data file ',a)") 
-!    |    trim(magvol)
-!     endif
-! 
 ! Tide:
-      n = size(tide)-count(tide==spval)
-      if (n /= 10) then
-        write(6,"(/,'>>> INPUT: must have 10 entries for TIDE,',
-     |    ' got ',i3)") n
-        call shutdown('TIDE')
-      endif
-      do i=1,5
-        if (tide(i) < 0.) then
-          write(6,"(/,'>>> INPUT: amplitudes for TIDE(1:5) must ',
-     |      'be > 0.: tide=',/,(5e12.4))") tide
+      if (all(tide==spval)) then
+        tide(:) = 0.
+      else
+        n = size(tide)-count(tide==spval)
+        if (n /= 10) then
+          write(6,"(/,'>>> INPUT: must have 10 entries for TIDE,',
+     |      ' got ',i3)") n
           call shutdown('TIDE')
         endif
-      enddo
+        do i=1,5
+          if (tide(i) < 0.) then
+            write(6,"(/,'>>> INPUT: amplitudes for TIDE(1:5) must ',
+     |        'be > 0.: tide=',/,(5e12.4))") tide
+            call shutdown('TIDE')
+          endif
+        enddo
+      endif
 !
 ! Tide2:
-      n = size(tide2)-count(tide2==spval)
-      if (n /= 2) then
-        write(6,"(/,'>>> INPUT: must have 2 entries for TIDE2,',
-     |    ' got ',i3)") n
-        call shutdown('TIDE2')
-      endif
-      if (tide2(1) < 0.) then
-        write(6,"(/,'>>> INPUT: amplitude for TIDE2(1) must ',
-     |    'be > 0.: tide2=',e12.4)") tide2
-        call shutdown('TIDE2')
+      if (all(tide2==spval)) then
+        tide2(:) = 0.
+      else
+        n = size(tide2)-count(tide2==spval)
+        if (n /= 2) then
+          write(6,"(/,'>>> INPUT: must have 2 entries for TIDE2,',
+     |      ' got ',i3)") n
+          call shutdown('TIDE2')
+        endif
+        if (tide2(1) < 0.) then
+          write(6,"(/,'>>> INPUT: amplitude for TIDE2(1) must ',
+     |      'be > 0.: tide2=',e12.4)") tide2
+          call shutdown('TIDE2')
+        endif
       endif
 !
 ! Tide3m3 not in tiegcm:
@@ -515,21 +465,10 @@
         endif
       endif
 !
-! Annual tide flag:
-! 5/1/08 btf: Annual tide is removed from versions later than 1-83:
-!
-      if (tideann /= 0 .and. tideann /= ispval) then
-        write(6,"(/,'>>> INPUT: TIDEANN=',i3)") tideann
-        write(6,"('Annual tide is no longer available in ',
-     |    'tiegcm versions later than v1-83.',/,' Please ',
-     |    'remove TIDEANN from the namelist read file.')")
-        call shutdown('TIDEANN')
-      endif
-!
 ! Aurora flag:
       if (aurora==ispval) then
-        write(6,"(/,'Input: setting default AURORA = 0')")
-        aurora = 0
+        write(6,"(/,'Input: setting default AURORA = 1')")
+        aurora = 1
       endif
 !
 ! Number of tasks in lat,lon dimensions (ntask_lat*ntask_lon must == ntask):
@@ -646,6 +585,16 @@
         write(6,"('Input: Using default joulefac = ',f9.2)") joulefac
       endif
 !
+! O+ diffusion cap:
+      if (opdiffcap==spval) then
+        opdiffcap = 0. ! default is off
+        write(6,"('Input: default diffusion maximum (opdiffcap) is',
+     |    ' turned off by default.')")
+      else
+        write(6,"('Input: O+ diffusion maximum (opdiffcap)=',es12.4)")
+     |    opdiffcap
+      endif
+!
 ! If calc_helium == 1 then calculate helium, otherwise zero out helium.
 !
       if (calc_helium==ispval) then
@@ -695,17 +644,6 @@
         write(6,"('Will read AMIE data inputs')")
         iamie = 1
         potential_model = 'AMIE'
-      endif
-!
-! Read TIME-SEE flux data
-! gl - 3/05/2005
-!
-      n = len_trim(seeflux)
-      if (n > 0) then
-        write(6,"('Read SEE flux Data as inputs')")
-        iseeflux = 1
-      else
-        write(6,"('input: iseeflux=',i3)") iseeflux
       endif
 !
 ! Save certain params as originally read by namelist read:
@@ -818,21 +756,6 @@
 ! 8-byte integer step:
       step8 = step
 !
-! Dispose flag is deprecated:
-      if (dispose==ispval) then
-        dispose = 0
-      else
-        write(6,"(/,72('-'),/,'>>> WARNING: DISPOSE namelist read',
-     |    ' parameter is deprecated in TIEGCM.',/,' For dispose to',
-     |    ' the NCAR hpss, a csh script named dispose_xxxxx.hsi',
-     |    ' will',/,'be written to the exec directory, and will',
-     |    ' contain necessary hsi commands',/,'to dispose history',
-     |    ' files to the hpss.',/,72('-'))")
-        if (dispose > 0) 
-     |    call shutdown('namelist DISPOSE is deprecated')
-        dispose = 0 
-      endif
-!
 ! Model start time(s):
       n = size(start)-count(start==ispval)
       if (mod(n,3) /= 0) then
@@ -870,8 +793,8 @@
         endif
       enddo 
 !
-! If advancing in calendar time (calday > 0), then the starting model 
-!   day must be the same as the starting calendar day (calday):
+! If advancing in calendar time, then the starting model 
+!   day must be the same as the starting calendar day.
 !
       if (calendar_advance > 0) then
         if (start(1,1) /= start_day) then
@@ -977,14 +900,6 @@
         endif
       enddo 
 !
-! History save frequencies SAVE is deprecated:
-      n = size(save)-count(save==ispval)
-      if (n > 0) then
-        write(6,"(/,'>>> Input parameter SAVE has been deprecated.')")
-        write(6,"('    Please remove it from the namelist input file')")
-        call shutdown('namelist SAVE is deprecated')
-      endif
-!
 ! Must have same number of time sequences:
       if (nstarts /= nstops .or. nstarts /= nhists .or. 
      |    nstops  /= nhists) then
@@ -1085,9 +1000,11 @@
       output = hvols
 !
 ! Expand any env vars imbedded in output:
+      noutput = 0
       do i=1,mxhvols
         if (len_trim(output(i)) > 0) then
           call expand_path(output(i))
+          noutput = noutput+1
 !         write(6,"('Input: Expanded output file ',a,' to ',/,'  ',a)")
 !    |      trim(hvols(i)),trim(output(i))
         endif
@@ -1364,15 +1281,6 @@
 !       call shutdown('SECSTART')
 !     endif
 !
-! Secondary history save frequencies:
-      n = size(secsave)-count(secsave==ispval)
-      if (n > 0) then
-        write(6,"(/,'>>> Input parameter SECSAVE has been',
-     |    ' deprecated.')")
-        write(6,"('    Please remove it from the namelist input file')")
-        call shutdown('namelist SECSAVE is deprecated')
-      endif
-!
 ! Must have same number of time sequences:
       if (nstarts /= nstops .or. nstarts /= nhists .or. 
      |    nstops  /= nhists) then
@@ -1534,13 +1442,6 @@
       if (len_trim(label) > 0)
      |  write(6,"('  label  = ',a,/,4x,'(optional text label for',
      |    ' current run)')") trim(label)      
-      if (len_trim(tempdir) > 0)
-     |  write(6,"('  tempdir = ',a,' (runtime temporary directory)')") 
-     |    trim(tempdir)      
-      if (len_trim(magvol) > 0)
-     |  write(6,"('  magvol = ',a,/,4x,
-     |    '(file or mss path containing magnetic data)')")
-     |    trim(magvol)      
 
       write(6,"('  High-lat electric potential model:  ',
      |      'potential_model = ',a)") trim(potential_model)
@@ -1597,18 +1498,18 @@
       if (len_trim(bgrddata_ncfile) > 0) write(6,"('  Bgrddata file: ',
      |    'bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
 
+
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amievol)
+
       if (len_trim(amienh) > 0)
      |  write(6,"('  amienh = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amienh)
       if (len_trim(amiesh) > 0)
      |  write(6,"('  amiesh = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amiesh)
-      if (len_trim(seeflux) > 0)
-     |  write(6,"('  seeflux = ',a,/,4x,
-     |    '(file or mss path containing SEE flux )')") trim(seeflux)
+
       if (len_trim(hpss_path) > 0)
      |  write(6,"('  hpss_path = ',a,4x,
      |    '(hpss directory for hsi dispose script)')") trim(hpss_path)
@@ -1717,14 +1618,12 @@
      |  /,4x,5e8.1,5f6.2)") tide
       write(6,"('  tide2 (amplitude and phase of diurnal tide) =',
      |  /,4x,e8.1,f6.2)") tide2
-!     write(6,"('  tide3m3 (amplitude and phase of 2-day wave)=',
-!    |  /,4x,e8.1,f6.2)") tide3m3
-!     write(6,"('  tideann = ',i2,' (0/1 flag for annual tides)')")
-!    |  tideann
       write(6,"('  aurora  = ',i2,' (0/1 flag for aurora)')") aurora
       write(6,"('  colfac = ',f9.3,' (collision factor)')") colfac
       write(6,"('  joulefac = ',f9.3,' (joule heating factor)')") 
      |  joulefac
+      write(6,"('  diffcap  = ',es12.4,' (Maximum O+ diffusion)')") 
+     |  opdiffcap
       write(6,"('  calc_helium = ',i4,' (0/1 flag for helium)')") 
      |  calc_helium
 
@@ -2321,7 +2220,7 @@
 !
       implicit none
       integer :: igswm, isaber, itidi, ihough, ictmt, ihme, itgcmlb 
-!      
+      
       igswm = 0
       if (len_trim(gswm_mi_di_ncfile ) > 0.or.
      |    len_trim(gswm_mi_sdi_ncfile) > 0.or.
@@ -2339,6 +2238,8 @@
       if (tgcmlb_nfiles > 0.) itgcmlb = 1
       ihough = 0
       if (any(tide2 /= 0).or.any(tide  /= 0.)) ihough = 1
+      ictmt = 0
+      if (len_trim(ctmt_ncfile) > 0.) ictmt = 1
 !
 ! Hough-modes, gswm, saber/tidi and ctmt tgcmlb are mutually exclusive: 
 !
@@ -2382,6 +2283,22 @@
      |      ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
+      endif
+!
+! Background lbc data (T,U,V,Z) is available only at 2.5-deg resolution:
+!
+      if (len_trim(bgrddata_ncfile) > 0.and.dlat==5.0) then
+        write(6,"(/,'>>> Background lbc data files (BGRDDATA_NCFILE)',
+     |    ' are available only at the 2.5-degree model resolution.')")
+        call shutdown('BGRDDATA_NCFILE not allowed at 5-deg resolution')
+      endif
+!
+! CTMT data is available only at 2.5-deg resolution:
+!
+      if (len_trim(ctmt_ncfile) > 0.and.dlat==5.0) then
+        write(6,"(/,'>>> CTMT data are available only at the ',
+     |    '2.5-degree model resolution.')")
+        call shutdown('CTMT_NCFILE not allowed at 5-deg resolution')
       endif
 
       end subroutine inp_lbc

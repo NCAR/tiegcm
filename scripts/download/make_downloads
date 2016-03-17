@@ -1,0 +1,66 @@
+#!/bin/tcsh
+#
+# The tiegcm2.0 source directory should be in $source_home:
+#   (it should be svn exported (e.g., "svn export tiegcm2.0"))
+#   tiegcm2.0/
+#
+# The following scripts should be in $source_home:
+#   README.download
+#   tiegcm-linux.job
+#   tiegcm-ys.job
+#   tiegcm_res5.0.inp
+#   tiegcm_res2.5.inp
+#
+# Two data directories should be present in $data_home:
+#   tiegcm_res5.0_data/
+#   tiegcm_res2.5_data/
+#
+set mycwd = `pwd`
+set model = tiegcm2.0
+set source_home = /glade/p/hao/tgcm/$model/download
+set data_home   = /glade/p/hao/tgcm/data
+#
+# Make source download tar file:
+#
+cd $source_home
+if (! -d $model) then
+  echo ">>> Cannot find source directory $source_home/$model"
+  exit
+endif
+if (! -f tiegcm-linux.job || ! -f tiegcm-ys.job) \
+  echo ">>> WARNING: Cannot find tiegcm-linux.job and/or tiegcm-ys.job"
+if (! -f tiegcm_res5.0.inp || ! -f tiegcm_res2.5.inp) \
+  echo ">>> WARNING: Cannot find tiegcm_res5.0.inp and/or tiegcm_res2.5.inp"
+set tarfile = $model.tar
+tar -cf $tarfile $model README.download tiegcm-linux.job tiegcm-ys.job tiegcm_res5.0.inp tiegcm_res2.5.inp
+if ($source_home != $mycwd) mv $tarfile $mycwd
+echo Saved source tar file $tarfile
+#exit
+#
+# Save 5.0-deg data download files:
+#
+if (! -d $data_home/tiegcm_res5.0_data) then
+  echo ">>> Cannot find data directory tiegcm_res5.0_data"
+  exit
+endif
+cd $data_home
+set tarfile = tiegcm_res5.0_data.tar
+tar -cf $tarfile tiegcm_res5.0_data
+if ($data_home != $mycwd) mv $tarfile $mycwd
+echo Saved $tarfile
+#echo Compressing $tarfile...
+#gzip $tarfile
+#
+# Save 2.5-deg data download files:
+#
+cd $data_home
+if (! -d tiegcm_res2.5_data) then
+  echo ">>> Cannot find data directory ${model}_res2.5_data
+  exit
+endif
+set tarfile = tiegcm_res2.5_data.tar
+tar -cf $tarfile tiegcm_res2.5_data
+if ($data_home != $mycwd) mv $tarfile $mycwd
+echo Saved $tarfile
+#echo Compressing $tarfile...
+#gzip $tarfile

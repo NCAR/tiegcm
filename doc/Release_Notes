@@ -1,114 +1,62 @@
 
-Release Notes for tiegcm1.95 ($SVN/tiegcm/tags/tiegcm1.95 in the hao repository)
-Release date: June 20, 2013
-Author: Ben Foster (foster@ucar.edu), for the AIM section at HAO.
+Release Notes for tiegcm2.0 ($SVN/tiegcm/tags/tiegcm2.0 in the hao repository)
+Release date:  March, 2016
 
-Source code for version tiegcm1.95 is available at the TGCM download web page:
-http://www.hao.ucar.edu/modeling/tgcm/download.php
+Source code and data files for version tiegcm2.0 is available at the TGCM download web page
+http://www.hao.ucar.edu/modeling/tgcm/download.php:
 
-Note that data files for tiegcm1.94 (available as tiegcm1.94_data.tar.gz from 
-the download page) will work with tiegcm1.95.
-
---------------------------------------------------------------------------------------
-Performance Example:
-
-The one-year climatology benchmark, using 16 MPI tasks on Yellowstone averaged 0.10 secs/step,
-or 1.2 minutes per simulated day with a 2-minute timestep. The run finished 365 days in 
-7.3 hours wallclock.
-
-On an hao linux desktop (Optiplex 980), using 4 MPI tasks, the model averaged 0.30 secs/step, 
-or 3.6 minutes per simulated day. Faster times can be expected on newer desktop machines.
+Source Code and supporting utilities: tiegcm2.0.tar.gz
+Data for 5.0-degree resolution model: tiegcm2.0_res5.0_data.tar.gz 
+Data for 2.5-degree resolution model: tiegcm2.0_res2.5_data.tar.gz 
 
 --------------------------------------------------------------------------------------
-Summary of modifications made to the source code since tiegcm1.94.2
-(revision r739 on January 6, 2012):
+Primary Modifications:
 
-1. Bug Fixes:
- 
-  - Repair bug in diags when HMF2,NMF2 are requested, and add conditional to sub hnmf2 
-    to avoid divide by zero when code has been built in debug mode (r759).
+  2.5-degree horizontal resolution:
+    The model has now been tuned to our satisfaction for community use at the 
+    2.5-degree horizontal resolution (with four grid-points per scale height 
+    in the vertical coordinate). User's are encouraged to run the model at the 
+    2.5-degree resolution, since it provides a more realistic ionosphere than 
+    the 5-degree model. All benchmark runs and source history files are available 
+    at both 5-degree and 2.5-degree resolutions.
 
-  - Add max checks to insure that the zpotenm3d geopotential used in sub nosocrdens
-   (current.F) is >= h0 to avoid NaNQ in KQPHI and KQLAM near the magnetic equator (r808).
- 
-  - Correct buffer length in mp_updateephi, mp_updatelam, mp_updateemz (mpi.F).
-    This was apparently causing a corruption of f4d(n)%data under Linux/intel (r837).
+  Parallel dynamo: 
+    The electro-dynamo code was parallelized with pure MPI. Transformations between the 
+    geographic and geomagnetic grids in the MPI environment are accomplished with the 
+    Earth System Modeling Framework (ESMF library). This resulted in a performance 
+    speed-up of about 25% at the 5-degree resolution, and almost 50% at the 2.5-degree 
+    resolution when using 64-processors on the NCAR supercomputer system.
 
-  - Fix units bug in eddy and molecular viscosity coefficients in duv.F, resulting in 4-5% 
-    change in electron density in E and F regions, up to 4-5% change in zonal wind, 
-    negligible changes in meridional wind, and negligible effects on neutral density in 
-    the upper thermosphere (~0.5%) (r880).
+  Helium: 
+    Helium is now calculated as a major species at both resolutions.
+    If a source history without helium is used (i.e., versions earlier than v2.0), 
+    helium will be initialized to a global value (0.1154e-5), and will evolve from there. 
+    Helium is always saved on primary histories, and can be saved on secondary histories
+    as 'HE'. Thanks to Eric Sutton for leading this effort.
 
-  - Change in the "floor" of the EUVAC solar fluxes from 0.8 times the reference spectrum 
-    to 0.1 times the reference spectrum.  This makes insignificant difference for F10.7 of 
-    70 or above, but becomes important for "anomalously low" fluxes corresponding to F10.7 
-    in the low 60's (r928).
+  Argon: 
+    Argon is now calculated as a minor species. Argon is always saved on primary 
+    histories, and can be saved on secondary histories as 'AR'.
 
-  - In sub filter2 (filter.F), make part of argument to cos function a real instead of 
-    an integer (effects of this change were not quantified) (r945).
+  Additional diagnostics: 
+    Several new diagnostic fields have been added, including N2, ZGMID, CUSP, 
+    DRIZZLE, ALFA, NFLUX, and EFLUX (see src/diags.F, or the User Guide for 
+    more information).
 
-  - Fixed long-time netcdf error message "string match to name in use".  This error was not 
-    fatal, was essentially a warning, but was annoying and confusing (r945).
+Make/Build System:
 
-  - More of an improvement than a bugfix: Calculation of time-dependent CO2 concentration
-    used in calculation of implicit and explicit cooling terms in newton.F. This results
-    in 370 ppm in 2000, doubling to 740 ppm in 2100. In previous revisions, CO2 concentration
-    was constant at 350 ppm (r946).
+  Compilers: 
+    We now support three compilers for Linux desktop systems:
+    Intel, PGI, and GNU gfortran. On the NCAR supercomputer system, only Intel
+    is supported.  Intel is the default compiler on both systems, because it
+    consistently out-performs the other compilers.
 
---------------------------------------------------------------------------------------
-2. Make/Build System:
+  ESMF Library. The parallel dynamo now requires that the ESMF library
+    be linked. See the User's Guide for more information.
 
-  - Add logic to job scripts to force gmake clean if debug flag has changed (r796).
-  - Add logic to job scripts to enable seamless switching between model resolutions (r884,r913).
+Performance:
 
-  - Add new job script for the NWSC yellowstone machine, tiegcm-ys.job in the scripts 
-    directory. Also add Make.intel_ys and Make.pgi_ys for building on yellowstone, and
-    run.lsf (made by tiegcm-ys.job) for submitting to yellowstone queues (r868).
-
-  - Modify scripts/tiegcm-ys.job to allow serial non-mpi runs on the interactive node (r913).
-
---------------------------------------------------------------------------------------
-3. User Interface:
-
-  - Add -l option to Linux Intel mpirun command to prefix stdout lines with mpi task ids (r769).
- 
-  - Add diagnostic FOF2 (r775), and diagnostics BX,BY,BZ,BMAG,EX,EY,EZ,ED1,ED2,PHIM2D
-    (see diags.F) (r945).
-
-  - Stop the model with an error message if the number of available mpi tasks is not
-    one of valid_pecounts for which the model has been validated (1,4,8,12,16,24,32,48,64)
-    (r798).
-
-  - Update linux job scripts for all benchmark test runs in the tests directory (r945).
-
---------------------------------------------------------------------------------------
-4. Performance/Memory:
-
-  - Restrict number of calls to checkf in diags.F, avoiding memory-accumulation
-    problems generated by Intel/ifort implementation of intrinsic function len_trim (r751).
-
-  - Remove redundant calls to mk_polelat, mp_bndlats and mp_bndlons from advance.F. 
-    Remove unnecessary calls to mp_bndlons_f3d and mp_periodic_f3d at end of dt.F (r759).
-
-  - Eliminate sub mp_updatephi (mpi.F), since it is no longer necessary.  Changed subs 
-    mp_updateemphi, mp_updateemlam and mp_updateemz (mpi.F) to use mpi_bcast rather than 
-    mpi_send/recv calls (r826).
-
-  - Reduce statically allocated memory in gswm module by dynamically allocating arrays to 
-    be read from the data file on subdomains only, rather than globally (r920).
-
---------------------------------------------------------------------------------------
-5. Coupling:
-
-  - Merge modifications of CMIT-coupled tiegcm1.94.2 tag to the trunk (r752)
-
-  - Change name of sub getcwd to getcwdir and sub getpid to getprocessid to avoid naming 
-    conflicts (r762).
-
---------------------------------------------------------------------------------------
-6. Legacy Rewrite:
-
-  - Introduced refactored apex code apex.F90. This is a free-format f90 rewrite of the 
-    legacy code apex_subs.F (circa 1995-2000 by Art Richmond, Roy Barnes, et.al.)
-    Old source file apex_subs.F was removed (r931).
-
+  Please see doc/perf.table for summary of estimated performance timings
+  including average seconds per step and wallclock minutes per simulated
+  day at default processor counts on linux desktop and NCAR supercomputer
+  systems. The table is also in the User Guide (see index entry "perf.table").

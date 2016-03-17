@@ -1,4 +1,4 @@
-
+Aurora Characteristic Energy'
 .. index:: diagnostic fields
 
 .. _diagnostics:
@@ -28,6 +28,10 @@ A :download:`text version of the table <_static/diags.table>` is also available,
 and is printed to stdout by a model run (ordering of the fields in the text table 
 may be different than in the below table).
 
+Also note that prognostic variables that are saved on the primary histories can also
+be saved on secondary histories by adding the short name to SECFLDS. See 
+:ref:`Primary History Fields <primaryfields>` for a table of the prognostic fields.
+
 .. _diag_fields:
 
 ============================== ====================================== ============ ==========
@@ -44,7 +48,7 @@ Short Name                     Long Name                              Units     
 :ref:`LAMDA_PED <LAMDA_PED>`   Pedersen Ion Drag Coefficient          1/s          3d geo
 :ref:`UI_ExB <UI_ExB>`         Zonal Ion Drift                        cm/s         3d geo
 :ref:`VI_ExB <VI_ExB>`         Meridional Ion Drift                   cm/s         3d geo
-:ref:`WI_ExB <UI_ExB>`         Vertical Ion Drift                     cm/s         3d geo
+:ref:`WI_ExB <WI_ExB>`         Vertical Ion Drift                     cm/s         3d geo
 :ref:`MU_M <MU_M>`             Molecular Viscosity Coefficient        g/cm/s       3d geo
 :ref:`WN <WN>`                 Neutral Vertical Wind                  cm/s         3d geo
 :ref:`O_N2 <O_N2>`             O/N2 Ratio                             [none]       3d geo
@@ -69,19 +73,28 @@ Short Name                     Long Name                              Units     
 :ref:`ED1 <ED1>`               Mag eastward component electric field  V/m          3d mag
 :ref:`ED2 <ED2>`               Mag downward component electric field  V/m          3d mag
 :ref:`PHIM2D <PHIM2D>`         2d Electric Potential on magnetic grid V            2d mag
+:ref:`N2 <N2>`                 Molecular Nitrogen                     mmr          3d geo
+:ref:`ZGMID <ZGMID>`           Geometric Height at midpoints          cm           3d geo
+:ref:`CUSP <CUSP>`             Cusp Low Energy Electron Flux          erg/cm2/s    2d geo
+:ref:`DRIZZLE <DRIZZLE>`       Drizzle Low Energy Electron Flux       erg/cm2/s    2d geo
+:ref:`ALFA <ALFA>`             Aurora Characteristic Energy           keV          2d geo
+:ref:`NFLUX <NFLUX>`           Aurora Number Flux                     #/cm2/s      2d geo
+:ref:`EFLUX <EFLUX>`           Aurora Energy Flux                     erg/cm2/s    2d geo
 ============================== ====================================== ============ ==========
 
 
 Saving Fields/Arrays from the Source Code
 -----------------------------------------
 
-  In addition to the "sanctioned" diagnostics, arbitrary 2d and 3d arrays can be saved 
-  from the model to secondary histories by inserting a call to subroutine *addfld* 
+  In addition to the "sanctioned" diagnostics above, arbitrary 2d and 3d arrays can be 
+  saved from the model to secondary histories by inserting a call to subroutine *addfld* 
   (:download:`addfld.F <../../src/addfld.F>`) in the source code.  (See the chapter on 
   :ref:`Modifying Source Code <modifying_source>` in this document for information about 
-  modifying the source code.) There are many examples of this in the source code, just 
-  grep on "call addfld".  For more information about how to make calls to addfld, please 
-  see comments in the addfld.F source file.  
+  modifying the source code.) There are hundreds of examples of this in the source code, 
+  some commented, others uncommented. To put these on secondary histories, uncomment
+  the addfld call if necessary, and add the short name (first argument) to the secondary 
+  history field list (SECFLDS) in the namelist input file.  For more information about 
+  how to make calls to addfld, please see comments in the addfld.F source file.  
 
   Here are a couple of examples of addfld calls from near the end of subroutine
   qrj (qrj.F). These calls are inside a latitude loop, where the loop variable
@@ -124,7 +137,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: CO2_COOL Global maps at Zp -4, +2:
 
-   .. image:: _static/images/co2_cool.png
+   .. image:: _static/images/diags/CO2_COOL_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/CO2_COOL_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -152,7 +167,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: NO_COOL Global maps at Zp -4, +2:
 
-   .. image:: _static/images/no_cool.png
+   .. image:: _static/images/diags/NO_COOL_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/NO_COOL_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -187,7 +204,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: DEN Global maps at Zp -4, +2:
 
-   .. image:: _static/images/den.png
+   .. image:: _static/images/diags/DEN_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/DEN_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -219,7 +238,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: HEATING Global maps at Zp -4, +2:
 
-   .. image:: _static/images/heating.png
+   .. image:: _static/images/diags/DEN_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/DEN_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -255,7 +276,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: HMF2 Global map:
 
-   .. image:: _static/images/hmf2.png
+   .. image:: _static/images/diags/HMF2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -284,7 +305,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: NMF2 Global map:
 
-   .. image:: _static/images/nmf2.png
+   .. image:: _static/images/diags/NMF2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -310,11 +331,6 @@ Details of Diagnostic Field Calculations
    :download:`elden.F <../../src/elden.F>`, as follows:
 
       call mkdiag_HNMF2('FOF2',z,electrons,lev0,lev1,lon0,lon1,lat)
-
-   Sample images: FOF2 Global map:
-
-   .. image:: _static/images/fof2.png
-      :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
 
@@ -351,7 +367,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: TEC Global map
 
-   .. image:: _static/images/tec.png
+   .. image:: _static/images/diags/TEC.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -394,7 +410,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: SCHT Global maps at Zp -4, +2:
 
-   .. image:: _static/images/scht.png
+   .. image:: _static/images/diags/SCHT_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/SCHT_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -440,7 +458,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: SIGMA_HAL Global maps at Zp -4, +2:
 
-   .. image:: _static/images/sigma_hal.png
+   .. image:: _static/images/diags/SIGMA_HAL_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/SIGMA_HAL_zpp2.png
       :align: center
    
    :ref:`Back to diagnostics table <diag_fields>`
@@ -486,7 +506,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: SIGMA_PED Global maps at Zp -4, +2:
 
-   .. image:: _static/images/sigma_ped.png
+   .. image:: _static/images/diags/SIGMA_PED_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/SIGMA_PED_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -511,7 +533,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: LAMDA_HAL Global maps at Zp -4, +2:
 
-   .. image:: _static/images/lamda_hal.png
+   .. image:: _static/images/diags/LAMDA_HAL_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/LAMDA_HAL_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -536,7 +560,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: LAMDA_PED Global maps at Zp -4, +2:
 
-   .. image:: _static/images/lamda_ped.png
+   .. image:: _static/images/diags/LAMDA_PED_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/LAMDA_PED_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -575,9 +601,9 @@ Details of Diagnostic Field Calculations
    to save the field to secondary histories. The field is converted from m/s to cm/s
    in ionvel before the call to mkdiag_UI. 
 
-   Sample images: UI_ExB Global maps at Zp -4, +2:
+   Sample images: UI_ExB Global maps at Zp +2:
 
-   .. image:: _static/images/ui_exb.png
+   .. image:: _static/images/diags/UI_ExB_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -616,9 +642,9 @@ Details of Diagnostic Field Calculations
    to save the field to secondary histories. The field is converted from m/s to cm/s
    in ionvel before the call to mkdiag_VI.
 
-   Sample images: VI_ExB Global maps at Zp -4, +2:
+   Sample images: VI_ExB Global maps at Zp +2:
 
-   .. image:: _static/images/vi_exb.png
+   .. image:: _static/images/diags/VI_ExB_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -657,9 +683,9 @@ Details of Diagnostic Field Calculations
    to save the field to secondary histories.  The field is converted from m/s to cm/s 
    in ionvel before the call to mkdiag_WI.
 
-   Sample images: WI_ExB Global maps at Zp -4, +2:
+   Sample images: WI_ExB Global maps at Zp +2:
 
-   .. image:: _static/images/wi_exb.png
+   .. image:: _static/images/diags/WI_ExB_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -687,7 +713,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: MU_M Global maps at Zp -4, +2:
 
-   .. image:: _static/images/mu_m.png
+   .. image:: _static/images/diags/MU_M_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/MU_M_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -763,7 +791,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: WN Global maps at Zp -4, +2:
 
-   .. image:: _static/images/wn.png
+   .. image:: _static/images/diags/WN_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/WN_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -836,7 +866,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: O_N2 Global maps at Zp -4, +2:
 
-   .. image:: _static/images/o_n2.png
+   .. image:: _static/images/diags/O_N2_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/O_N2_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -882,7 +914,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: QJOULE Global maps at Zp -4, +2:
 
-   .. image:: _static/images/qjoule.png
+   .. image:: _static/images/diags/QJOULE_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/QJOULE_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -967,7 +1001,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: QJOULE_INTEG North polar projection
 
-   .. image:: _static/images/qjoule_integ_npol.png
+   .. image:: _static/images/diags/QJOULE_INTEG.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -984,19 +1018,21 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Eastward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
-   Je1/D is calculated in subroutine *nosocrdens* in source file :download:`current.F <../../src/current.F>`, 
+   Je1/D is calculated in subroutine *nosocrdens* in source file :download:`current.F90 <../../src/current.F90>`, 
    and saved to secondary histories by subroutine *mkdiag_JE13D* (:download:`diags.F <../../src/diags.F>`)
    
    .. note::
 
-      JE13D is calculated and saved ONLY if the integer parameter icalkqlam is set to 1 in source file 
-      :download:`dynamo.F <../../src/dynamo.F>` (the default is icalkqlam=0).
+      JE13D is calculated and saved ONLY if namelist parameter CURRENT_KQ = 1 
+      (the default is CURRENT_KQ = 0).
 
    Sample images: JE13D North polar projection at Zp -4, +2
 
-   .. image:: _static/images/je13d_npol.png
+   .. image:: _static/images/diags/JE13D_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/JE13D_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1013,19 +1049,21 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Downward current density (3d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'mlev' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
-   Je2/D is calculated in subroutine *nosocrdens* in source file :download:`current.F <../../src/current.F>`, 
+   Je2/D is calculated in subroutine *nosocrdens* in source file :download:`current.F90 <../../src/current.F90>`, 
    and saved to secondary histories by subroutine *mkdiag_JE23D* (:download:`diags.F <../../src/diags.F>`)
    
    .. note::
 
-      JE23D is calculated and saved ONLY if the integer parameter icalkqlam is set to 1 in source file 
-      :download:`dynamo.F <../../src/dynamo.F>` (the default is icalkqlam=0).
+      JE23D is calculated and saved ONLY if namelist parameter CURRENT_KQ = 1 
+      (the default is CURRENT_KQ = 0).
 
    Sample images: JE23D North polar projection at Zp -4, +2
 
-   .. image:: _static/images/je23d_npol.png
+   .. image:: _static/images/diags/JE23D_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/JE23D_zpp2.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1043,21 +1081,21 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Upward current density (2d)'
       diags(n)%units      = 'A/m2'
       diags(n)%levels     = 'none' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
    Jqr is calculated in subroutine *nosocrrt* in source file 
-   :download:`current.F <../../src/current.F>`,
+   :download:`current.F90 <../../src/current.F90>`,
    and saved to secondary histories by subroutine *mkdiag_JQR* 
    (:download:`diags.F <../../src/diags.F>`)
    
    .. note::
 
-      Jqr is calculated and saved ONLY if the integer parameter icalkqlam is set to 1 in source file 
-      :download:`dynamo.F <../../src/dynamo.F>` (the default is icalkqlam=0).
+      JQR is calculated and saved ONLY if namelist parameter CURRENT_KQ = 1 
+      (the default is CURRENT_KQ = 0).
 
    Sample images: JQR North polar projection 
 
-   .. image:: _static/images/jqr_npol.png
+   .. image:: _static/images/diags/JQR_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1075,19 +1113,19 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Height-integrated current density (+north)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
-   Kqlam is calculated in subroutine *nosocrdens* in source file :download:`current.F <../../src/current.F>`,
+   Kqlam is calculated in subroutine *nosocrdens* in source file :download:`current.F90 <../../src/current.F90>`,
    and saved to secondary histories by subroutine *mkdiag_KQLAM* (:download:`diags.F <../../src/diags.F>`)
    
    .. note::
 
-      Kqlam is calculated and saved ONLY if the integer parameter icalkqlam is set to 1 in source file 
-      :download:`dynamo.F <../../src/dynamo.F>` (the default is icalkqlam=0).
+      KQLAM is calculated and saved ONLY if namelist parameter CURRENT_KQ = 1 
+      (the default is CURRENT_KQ = 0).
 
    Sample images: KQLAM North polar projection
 
-   .. image:: _static/images/kqlam_npol.png
+   .. image:: _static/images/diags/KQLAM_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1105,19 +1143,20 @@ Details of Diagnostic Field Calculations
       diags(n)%long_name  = 'Height-integrated current density (+east)'
       diags(n)%units      = 'A/m'
       diags(n)%levels     = 'none' 
-      diags(n)%caller     = 'current.F'
+      diags(n)%caller     = 'current.F90'
 
-   Kqphi is calculated in subroutine *nosocrdens* in source file :download:`current.F <../../src/current.F>`,
-   and saved to secondary histories by subroutine *mkdiag_KQLAM* (:download:`diags.F <../../src/diags.F>`)
+   KQPHI is calculated in subroutine *nosocrdens* in source file :download:`current.F90 <../../src/current.F90>`,
+   and saved to secondary histories by subroutine *mkdiag_KQPHI* (:download:`diags.F <../../src/diags.F>`)
+
    
    .. note::
 
-      Kqphi is calculated and saved ONLY if the integer parameter icalkqlam is set to 1 in source file 
-      :download:`dynamo.F <../../src/dynamo.F>` (the default is icalkqlam=0).
+      KQLAM is calculated and saved ONLY if namelist parameter CURRENT_KQ = 1 
+      (the default is CURRENT_KQ = 0).
 
    Sample images: KQPHI North polar projection 
 
-   .. image:: _static/images/kqphi_npol.png
+   .. image:: _static/images/diags/KQPHI_nhem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
@@ -1139,7 +1178,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: BX cylindrical equidistant projection 
 
-   .. image:: _static/images/bx.png
+   .. image:: _static/images/diags/BX.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1159,7 +1198,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: BY cylindrical equidistant projection 
 
-   .. image:: _static/images/by.png
+   .. image:: _static/images/diags/BY.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1179,7 +1218,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: BZ cylindrical equidistant projection 
 
-   .. image:: _static/images/bz.png
+   .. image:: _static/images/diags/BZ.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1199,7 +1238,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: BMAG cylindrical equidistant projection 
 
-   .. image:: _static/images/bmag.png
+   .. image:: _static/images/diags/BMAG.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1219,7 +1258,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: EX cylindrical equidistant projection 
 
-   .. image:: _static/images/ex.png
+   .. image:: _static/images/diags/EX_zpp2.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1239,7 +1278,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: EY cylindrical equidistant projection 
 
-   .. image:: _static/images/ey.png
+   .. image:: _static/images/diags/EY_zpp2.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1259,7 +1298,7 @@ Details of Diagnostic Field Calculations
 
    Sample images: EZ cylindrical equidistant projection 
 
-   .. image:: _static/images/ez.png
+   .. image:: _static/images/diags/EZ_zpp2.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1277,9 +1316,9 @@ Details of Diagnostic Field Calculations
       diags(n)%levels     = 'imlev' 
       diags(n)%caller     = 'dynamo.F'
 
-   Sample images: ED1 cylindrical equidistant projection 
+   Sample images: ED1 north hemisphere polar projection
 
-   .. image:: _static/images/ed1.png
+   .. image:: _static/images/diags/ED1_nhem.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1297,9 +1336,9 @@ Details of Diagnostic Field Calculations
       diags(n)%levels     = 'imlev' 
       diags(n)%caller     = 'dynamo.F'
 
-   Sample images: ED2 cylindrical equidistant projection 
+   Sample images: ED2 north hemisphere polar projection
 
-   .. image:: _static/images/ed2.png
+   .. image:: _static/images/diags/ED2_nhem.png
       :align: center
 
 --------------------------------------------------------------------------------------------
@@ -1317,9 +1356,157 @@ Details of Diagnostic Field Calculations
       diags(n)%levels     = 'none'
       diags(n)%caller     = 'dynamo.F'
 
-   Sample images: PHIM2D cylindrical equidistant projection 
+   Sample images: PHIM2D polar projection (north and south):
 
-   .. image:: _static/images/phim2d.png
+   .. image:: _static/images/diags/PHIM2D_nhem.png
+      :align: center
+   .. image:: _static/images/diags/PHIM2D_shem.png
       :align: center
 
    :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: N2, diagnostic fields; N2
+.. _N2:
+.. describe:: N2
+
+   Diagnostic field: Molecular Nitrogen (mmr)::
+
+      diags(n)%short_name = 'N2'
+      diags(n)%long_name  = 'N2: Molecular Nitrogen'
+      diags(n)%units      = 'mmr'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'comp.F'
+
+   Sample images: N2 cylindrical equidistant projection 
+
+   .. image:: _static/images/diags/N2_zpm4.png
+      :align: center
+   .. image:: _static/images/diags/N2_zpp2.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: ZGMID, diagnostic fields; ZGMID
+.. _ZGMID:
+.. describe:: ZGMID
+
+   Diagnostic field: Geometric Height at Midpoints::
+
+      diags(n)%short_name = 'ZGMID'
+      diags(n)%long_name  = 'ZGMID: Geometric Height at midpoints'
+      diags(n)%units      = 'cm'
+      diags(n)%levels     = 'lev'
+      diags(n)%caller     = 'addiag.F'
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: CUSP, diagnostic fields; CUSP
+.. _CUSP:
+.. describe:: CUSP
+
+   Cusp low energy electron flux (erg/cm2/s)::
+
+      diags(n)%short_name = 'CUSP'
+      diags(n)%long_name  = 'Cusp low energy electron flux'
+      diags(n)%units      = 'erg/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: CUSP polar equidistant projection 
+
+   .. image:: _static/images/diags/CUSP_nhem.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: DRIZZLE, diagnostic fields; DRIZZLE
+.. _DRIZZLE:
+.. describe:: DRIZZLE
+
+   Drizzle low energy electron flux (erg/cm2/s)::
+
+      diags(n)%short_name = 'DRIZZLE'
+      diags(n)%long_name  = 'Drizzle low energy electron flux'
+      diags(n)%units      = 'erg/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: DRIZZLE polar projection 
+
+   .. image:: _static/images/diags/DRIZZLE_nhem.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: ALFA, diagnostic fields; ALFA
+.. _ALFA:
+.. describe:: ALFA
+
+   Aurora Characteristic Energy (keV)::
+
+      diags(n)%short_name = 'ALFA'
+      diags(n)%long_name  = 'Aurora Characteristic Energy'
+      diags(n)%units      = 'keV'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: ALFA polar projection 
+
+   .. image:: _static/images/diags/alfa.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: NFLUX, diagnostic fields; NFLUX
+.. _NFLUX:
+.. describe:: NFLUX
+
+   Aurora Number Flux (#/cm2/s)::
+
+      diags(n)%short_name = 'NFLUX'
+      diags(n)%long_name  = 'Aurora Number Flux'
+      diags(n)%units      = '#/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: NFLUX polar projection 
+
+   .. image:: _static/images/diags/NFLUX_nhem.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------
+
+.. index:: EFLUX, diagnostic fields; EFLUX
+.. _EFLUX:
+.. describe:: EFLUX
+
+   Aurora Energy Flux (#/cm2/s)::
+
+      diags(n)%short_name = 'EFLUX'
+      diags(n)%long_name  = 'Aurora Energy Flux'
+      diags(n)%units      = 'erg/cm2/s'
+      diags(n)%levels     = 'none'
+      diags(n)%caller     = 'dynamics.F'
+
+   Sample images: EFLUX polar projection 
+
+   .. image:: _static/images/diags/EFLUX_nhem.png
+      :align: center
+
+   :ref:`Back to diagnostics table <diag_fields>`
+
+--------------------------------------------------------------------------------------------

@@ -1,0 +1,23 @@
+
+This file: $modeldir/scripts/README
+Information about utilities found in the scripts directory of the model root directory.
+
+Make.gfort_hao64 	  Make file for the GNU gfortran compiler on Linux desktop systems.
+Make.intel_hao64 	  Make file for the Intel compiler on Linux desktop systems.
+Make.pgi_hao64 		  Make file for the PGI compiler on Linux desktop systems.
+Make.intel_ys 		  Make file for the Intel compiler on the NCAR supercomputer.
+Makefile 		  Main Makefile for all supported platforms.
+abspath 		  Utility to obtain full linux paths
+change_nlcomment	  Utility to change comment character in namelist input files
+master.inp		  Master namelist file describing all available namelist parameters.
+minsperday                Calculates WC minutes per simulated day, given timestep and WC secs/step
+mkdepends		  Script to determine dependencies at build time.
+mklogs			  Utility to parse the stdout file into log files for each mpi task.
+rmbinchars		  Utility to remove binary characters from stdout files.
+run.lsf			  Example LSF run script (created by the job script)
+tgcm_contents		  Utility to determine histories on an output netCDF history file.
+tgcm_put		  Utility to store history files on the NCAR hpss.
+tiegcm-linux.job	  Default job script for Linux desktop platform.
+tiegcm-ys.job		  Default job script for NCAR supercomputer.
+tiegcm_res2.5_default.inp Default namelist input file for 2.5-degree resolution
+tiegcm_res5.0_default.inp Default namelist input file for 5.0-degree resolution

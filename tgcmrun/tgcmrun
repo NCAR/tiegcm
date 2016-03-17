@@ -1,0 +1,186 @@
+#!/usr/bin/env python
+import sys, os
+from classes import Run,Job,Namelist,Version
+from utils import getenv
+from getoptions import get_args, get_options
+#-----------------------------------------------------------------------
+#
+# If set, the following environment variables will be used for defaults or in namelist parameters:
+# If they are not set, the user will be prompted to set them in the run setup.
+#
+# TGCMDATA: Directory containing data files used by the model (netcdf data and history files)
+#   (TGCMDATA is used in several namelist parameter file paths, and is expanded at model run time)
+# TGCMTEMP: Large temp directory where model can be compiled, executed, and history output stored.
+# TIEGCM_ROOT: Path to tiegcm model root directory containing source code, scripts, etc.
+# TIMEGCM_ROOT: Path to timegcm model root directory containing source code, scripts, etc.
+#
+#-----------------------------------------------------------------------
+#
+# Get command line arguments provided, if any:
+#
+args = get_args() # argparse Namespace object
+#
+# Print defined command line arguments, and set command_line true or false.
+#
+dict = vars(args) # turn args into a dictionary for convenience
+command_line = 0
+for key in dict.keys():
+  if dict[key]: 
+    command_line = 1
+
+while True:
+  run = Run()
+  job = Job()
+
+  run.name   = get_options('run_name'  ,run,job,args.run_name)   # will only check for command-line option
+  run.number = get_options('run_number',run,job,args.run_number) # if run.name is set, use that to get number
+
+  run.name = run.get_name(run.number) # get name from number
+#
+# Order may be significant due to dependencies:
+#
+  job.model_name   = get_options('model_name'  ,run,job,args.model_name)
+  job.model_root   = get_options('model_root'  ,run,job,args.model_root) # env var TIEGCM_ROOT,TIMEGCM_ROOT
+  job.model_res    = get_options('model_res'   ,run,job,args.model_res)
+  job.machine      = get_options('machine'     ,run,job,args.machine)
+  job.execdir      = get_options('execdir'     ,run,job,args.execdir)    # env var TGCMTEMP/run
+  job.execute      = get_options('execute'     ,run,job,args.execute)    # execute only if execute is TRUE
+  job.nprocs       = get_options('nprocs'      ,run,job,args.nprocs)     # command-line only
+  job.project      = get_options('project'     ,run,job,args.project)    # command-line only
+  job.queue        = get_options('queue'       ,run,job,args.queue)      # command-line only
+  job.wallclock    = get_options('wc'          ,run,job,args.wc)         # command-line only
+  job.step         = get_options('step'        ,run,job,args.step)       # command-line only
+  job.submitflag   = get_options('submit'      ,run,job,args.submit)     # command-line only
+  job.stdout_dir   = get_options('stdout_dir'  ,run,job,args.stdout_dir) # command-line only
+  job.hist_dir     = get_options('hist_dir'    ,run,job,args.hist_dir)   # command-line only
+  job.compiler     = get_options('compiler'    ,run,job,args.compiler)   # Linux platfor only (not ys)
+  tgcmdata         = get_options('tgcmdata'    ,run,job,args.tgcmdata)   # env var TGCMDATA
+#
+# If stdout_dir, then go there - everything now will happen in that directory:
+#
+  if job.stdout_dir:
+    os.chdir(job.stdout_dir)
+    print 'Tgcmrun moved to directory ',job.stdout_dir
+ 
+  version = Version()
+  job.model_version = version.name(job.model_name)
+  job.model_tag = version.tag(job.model_name)
+
+  run.fullname(job,run.name)
+
+  print '\n----------------------------- Run ',run.fullname,' --------------------------------\n'
+#
+# Set run parameters (most importantly, namelist modifications):
+# Note: after going to tiegcm2.0, the model_res argument to set_run will no longer be necessary. 
+#
+  run.set_run(job,tgcmdata)
+#
+# Make instance of Namelist, and set file paths:
+# nl.default_file: default namelist file in model_root/scripts (read)
+# nl.new_file: namelist file for current run (write)
+#
+  nl = Namelist()
+#
+# Default namelist file:
+#
+# IMPORTANT: 
+#   The default namelist file in tgcmrun directory should NOT be changed, 
+#   because the modify_namelist method is heavily dependent on the exact 
+#   form of this file (it modifies, adds and removes the default pairs to 
+#   make its own files) Therefore, use read-only default namelist file in
+#   model_root/tgcmrun, so the user can modify default files in the scripts 
+#   dir without breaking tgcmrun.
+#
+  nl.default_file = job.model_root+'/tgcmrun/'+job.model_name+'_res'+job.model_res+'_default.inp'
+
+  if not os.path.isfile(nl.default_file):
+    print ">>> Cannot find default namelist file ",nl.default_file
+    sys.exit()
+  nl.new_file = run.fullname+'.inp'
+  nl.make_namelist(nl.default_file,nl.new_file,run.list_mods,run.list_rm,run.fullname,tgcmdata)
+#
+# Construct path to default job script and check for existence:
+#
+  job.script_default = job.model_root+'/tgcmrun/'+job.model_name+'_'+job.machine+'_default.job'
+  if not os.path.isfile(job.script_default):
+    print '>>> Cannot find default job script ',job.script_default
+    sys.exit()
+  job.stdin  = "'"+nl.new_file+"'"
+#
+# stdout may or may not have stdout_dir (command-line only):
+# If stdout_dir, then we are executing in that directory, so
+# do not prepend stdout_dir to job.stdout.
+#
+  job.stdout = "'"+run.fullname+".out'"
+#
+# Construct path to job script for this run, and make it:
+# This also is heavily dependent on the default job script in local dir.
+#
+  job.script_run = './'+run.fullname+'.job'
+  job.make_jobscript(run)
+#
+# Print job parameters and prompt for submission:
+#
+  print '\nJob parameters for run ',run.fullname,' (',run.desc,'):'
+  print 'Job script:           ',job.script_run
+  print 'Machine/platform:     ',job.machine
+  print 'Compiler:             ',job.compiler
+  print 'Model version:        ',job.model_version
+  print 'Model root directory: ',job.model_root
+  print 'Model resolution:     ',job.model_res
+  print 'Execution directory:  ',job.execdir
+  print 'Namelist input file:  ',job.stdin
+  print 'Standard out file:    ',job.stdout 
+  print 'Standard out dir:     ',job.stdout_dir
+  print 'History out dir:      ',job.hist_dir
+  print 'TGCMDATA env var:     ',tgcmdata
+#
+# Print any LSF arguments found on the command-line:
+#
+  if job.nprocs or job.wallclock or job.project or job.queue or job.submitflag or job.execute:
+    print '\nCommand-line arguments for run ',run.fullname,': '
+  if job.submitflag:print 'Submit flag: ',job.submitflag
+  if job.execute:   print 'Execute flag:',job.execute
+  if job.nprocs:    print '#BSUB -n ',job.nprocs
+  if job.wallclock: print '#BSUB -W ',job.wallclock
+  if job.project:   print '#BSUB -P ',job.project
+  if job.queue:     print '#BSUB -q ',job.queue
+#
+# Print warning if SOURCE file is specified but does not exist:
+#
+  sourcefile = ''
+  stdin = job.stdin.replace('"','')
+  stdin = stdin.replace("'","")
+  f = open(stdin,'r')
+  lines = f.readlines()  
+  for line in lines:
+    if 'SOURCE' in line and 'SOURCE_START' not in line:
+      list = line.split()
+      sourcefile = list[2]
+      sourcefile = sourcefile.replace("'","")
+      if not os.path.isfile(sourcefile):
+        print '>>> WARNING: Cannot find SOURCE file ',sourcefile
+
+#       sourcefile = sourcefile.replace(job.model_tag,"")
+#       if not os.path.isfile(sourcefile):
+#         print '>>> WARNING: Also cannot find SOURCE file ',sourcefile
+#       else:
+#         print 'Will use SOURCE = ',sourcefile
+
+#
+# Submit job or not:
+# 
+  if job.submitflag:
+    if job.submitflag == 'yes':
+      job.submit(run.fullname)
+  else:
+    answer = raw_input('\nSubmit this job? (yes/no/q[uit]) (default=yes): ')
+    if answer == 'q' or answer == 'quit':
+      sys.exit() 
+    elif answer == '' or answer == 'yes':
+      job.submit(run.fullname)
+    elif answer == 'no':
+      if not command_line: continue # go back up and get another run
+
+  if command_line: sys.exit()
+

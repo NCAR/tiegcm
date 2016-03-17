@@ -270,9 +270,9 @@
         if (maxval(spflux(:,index1,istruct)) ==0) then
 	   index1=index1-1
 	   if (index1 < 1 ) then
-	      write(6,"('>>>No non zero solar spectrum available ',
-     |	                'for interpolation')")
-              call shutdown('soldata')
+             write(6,"('>>> No non zero solar spectrum available ',
+     |         'for interpolation')")
+             call shutdown('soldata')
            endif
         else
 	   exit
@@ -283,9 +283,9 @@
         if (maxval(spflux(:,index2,istruct)) ==0) then
 	   index2=index2+1
 	   if (index2 >ndate ) then
-	      write(6,"('>>>No non zero solar spectrum available ',
-     |	                'for interpolation')")
-              call shutdown('soldata')
+             write(6,"('>>>No non zero solar spectrum available ',
+     |         'for interpolation')")
+             call shutdown('soldata')
            endif
         else
 	   exit

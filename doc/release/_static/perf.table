@@ -1,0 +1,38 @@
+
+Performance estimates for TIEGCM and TIMEGCM based on benchmark runs:
+
+Model:        tiegcm at 5.0 and 2.5-degree resolutions
+Step:         Timestep in seconds
+Nproc:        Number of processors (mpi tasks)
+WC Sec/Step:  Wallclock seconds per timestep
+WC Min/Day:   Wallclock minutes per simulated day
+Days/12h:     Number of simulated days in 12 hours WC (estimate)
+Ave Mem:      Average memory usage (from yellowstone LSF reports)
+Compiler:     Results when built with the Intel compiler.
+
+===============================================================================================
+
+Runs made on NCAR yellowstone.ucar.edu (linux cluster IBM supercomputer (16-way nodes)):
+Linux yslogin4 2.6.32-358.el6.x86_64 #1 SMP Tue Jan 29 11:47:41 EST 2013 x86_64 x86_64 x86_64 GNU/Linux
+
+Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Ave Mem
+-----------------------------------------------------------------------------------------------
+tiegcm5.0	60	16	.07		1.65		428		3.5 GB
+tiegcm2.5	30	64	.15		7.25		100		32 GB
+-----------------------------------------------------------------------------------------------
+
+===============================================================================================
+
+Runs made on linux desktop (Optiplex 7020):
+Linux kokanee 2.6.32-573.8.1.el6.x86_64 #1 SMP Tue Nov 10 18:01:38 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+
+Notes: 
+ - Showing range of timing results due to variable load balancing on the linux desktop platform.
+ - Optimization level was -O3 for all compilers.
+ - Performance estimates not currently available for TIMEGCM.
+
+Model		Step	Nproc	WC Sec/Step	WC Min/Day	Days/12h	Ave Mem
+-----------------------------------------------------------------------------------------------
+tiegcm5.0	60	8	.10		2.4		300		1.5 GB
+tiegcm2.5	30	8	.60		28.8		25		5 GB
+-----------------------------------------------------------------------------------------------

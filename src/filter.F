@@ -101,10 +101,10 @@
       nn=(/43,18, 9, 5, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
      |      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 9,18,43/) ! 5.0 deg
 #elif (NLAT==72 && NLON==144)
-      nn=(/90,90,40,40,22,22,14,14,10,10, 8, 8, 6, 6, 4, 4, 2, 2,
+      nn=(/200,90,40,40,22,22,14,14,10,10, 8, 8, 6, 6, 4, 4, 2, 2,
      |      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
      |      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-     |      2, 2, 4, 4, 6, 6, 8, 8,10,10,14,14,22,22,40,40,90,90/) ! 2.5 deg
+     |      2, 2, 4, 4, 6, 6, 8, 8,10,10,14,14,22,22,40,40,90,200/) ! 2.5 deg
 #else
       UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
 #endif
@@ -121,8 +121,6 @@
 #else
       UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
 #endif
-
-
 !
 ! Load field data into fx (1-nlon <- 3-nlonp2)
       nlevs = lev1-lev0+1
@@ -155,12 +153,12 @@
 !
       do k=lev0,lev1
         do i=n1,nlon
-          coslon = cos(((i+2-n1)/2.)*dlamda/2.)
+          coslon = cos(((i+1-n1)/2.)*dlamda/2.)
           if (coslon >= 0.1) then
             smoothfunc = coslon**(2*nn(lat))
-            fx(i+2,k) = fx(i+2,k)*smoothfunc
+            fx(i+1,k) = fx(i+1,k)*smoothfunc
           else
-            fx(i+2,k) = 0.
+            fx(i+1,k) = 0.
           endif
         enddo ! i=1,nlon
       enddo ! k=lev0,lev1

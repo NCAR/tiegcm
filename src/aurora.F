@@ -58,7 +58,7 @@
       use cons_module,only: ! see cons.F
      |  dphi, ! delta latitude geographic (radians)
      |  dtr,  ! degrees to radians (pi/180)
-     |  pi,   ! 4.*atan(1.)
+     |  pi,    ! 4.*atan(1.)
      |  crit  ! may be changed from default if amie run
       use params_module,only: nlon,nlonp4,nlevp1,nlat,glat
       use addfld_module,only: addfld
@@ -151,8 +151,8 @@
      |  dskofa(2),    ! offset of oval in radians towards 18 MLT (f(By))
      |  phid(2),      ! dayside convection entrance in MLT (subtract 12h since 0=noon) converted to radians (f(By))
      |  phin(2),      ! night convection entrance in MLT (subtract 12h since 0=noon) converted to radians (f(By))
-     |  rradp(2),     ! radius of polar-cap circle in radians for drizls
      |  rrad(2),      ! radius of auroral circle in radians
+     |  rradp(2),     ! radius of polar-cap circle in radians for drizls
      |  alfa0,        ! average of noon and midnight characteristic Maxw energies
      |  ralfa,ralfa2, ! difference ratios of characteristic energies
      |  rrote,        ! MLT of maximum auroral energy flux converted to radians
@@ -444,12 +444,8 @@
 !       rradp(inorth) = crad(inorth)-2.5*dtr
         rradp(isouth) = crad(isouth) + h2*dtr
         rradp(inorth) = crad(inorth) + h2*dtr
-!       if (rradp(isouth) > 29.*dtr) rradp(isouth) = 29.*dtr
-!       if (rradp(inorth) > 29.*dtr) rradp(inorth) = 29.*dtr
         if (rradp(isouth) > 31.*dtr) rradp(isouth) = 31.*dtr
         if (rradp(inorth) > 31.*dtr) rradp(inorth) = 31.*dtr
-!       if (rradp(isouth) > 33.*dtr) rradp(isouth) = 33.*dtr
-!       if (rradp(inorth) > 33.*dtr) rradp(inorth) = 33.*dtr
 !       write(6,"('crad =',2f6.2,'  rrad=',2f6.2,'  rradp=',2f6.2,
 !    |  ' power =',f5.1,' plev =',f5.2)")
 !    |  crad/dtr,rrad/dtr,rradp/dtr,hp_amie,plevel
@@ -467,14 +463,7 @@
         crit(2) = 40. * dtr
         if (crit(1) > 35.*dtr) crit(1) = 35.*dtr
 !       write(6,"('aurora: crit(1:2) = ',2f7.1)")crit(:)/dtr
-! Move CRIT to 3-degree lower for April 17, 2002
-        if (iyear==2002 .and. modeltime(1)==107 .and.
-     |   modeltime(2)>13 .and. pcp_nh_amie*1.e-3 > 100.) then
-          crit(1) = crit(1) - (pcp_nh_amie*1.e-3 - 100.)*0.08*dtr
-          crit(2) = crit(2) - (pcp_nh_amie*1.e-3 - 100.)*0.08*dtr
-          crit(2) = max(crit(1),crit(2))
-        endif
-!
+
       endif
 !
 ! Report to stdout:
@@ -778,7 +767,7 @@
         if (iamie > 0) then
 ! Insure ekvg mean energy >= 1.:
 !         if (lat==5) write(6,"('Using AMIE aurora flux >>>',4g10.3)")
-!    |   minval(ekvg),maxval(ekvg),minval(efxg),maxval(efxg)
+!    |      minval(ekvg),maxval(ekvg),minval(efxg),maxval(efxg)
           ekvg(i,lat) = max(ekvg(i,lat),1.)
           alfa(i+2) = ekvg(i,lat)/2.
           alfa2(i+2) = alfa20
@@ -799,6 +788,7 @@
      |      exp(-((clat-rrad(ihem))/
      |      halfwidth(i))**2) / (2.*alfa2(i+2)*1.602E-9)
         endif
+
       enddo ! i=1,nlon
 !
 ! Periodic points:
@@ -833,14 +823,14 @@
 !                                                        Wenbin  wang
 !
 #if defined(INTERCOMM) || defined(CISMAH)
-      do i=1,nlonp4
-       alfa(i)=geng(i,lat)+0.01
-       flux(i)=gflx(i,lat)+0.01
-       if(alfa(i)<=0.)alfa(i)=0.01
-       if(flux(i)<=0.)flux(i)=0.01
-       eflux(i) = flux(i)*fac_p2e*alfa(i)
-!       write(6,*)alfa(i),flux(i),i,lat
-      enddo
+     do i=1,nlonp4
+      alfa(i)=geng(i,lat)+0.01
+      flux(i)=gflx(i,lat)+0.01
+      if(alfa(i)<=0.)alfa(i)=0.01
+      if(flux(i)<=0.)flux(i)=0.01
+      eflux(i) = flux(i)*fac_p2e*alfa(i)
+!     write(6,*)alfa(i),flux(i),i,lat
+     enddo
 #endif
 
       end subroutine aurora_heat
@@ -910,18 +900,16 @@
 !
       qia(:) = 0.
 !
-!     if (istep > 228) then
-!       write(6,"('aurora_ions: lat=',i2,' flux1=',/,(10e12.4))")
+!     write(6,"('aurora_ions: lat=',i2,' flux1=',/,(10e12.4))")
 !    |  lat,flux1
-!       write(6,"('aurora_ions: lat=',i2,' alfa1=',/,(10e12.4))")
+!     write(6,"('aurora_ions: lat=',i2,' alfa1=',/,(10e12.4))")
 !    |  lat,alfa1
-!       write(6,"('aurora_ions: lat=',i2,' alfa2=',/,(6e12.4))")
+!     write(6,"('aurora_ions: lat=',i2,' alfa2=',/,(6e12.4))")
 !    |  lat,alfa2
-!       write(6,"('aurora_ions: lat=',i2,' cusp =',/,(6e12.4))")
+!     write(6,"('aurora_ions: lat=',i2,' cusp =',/,(6e12.4))")
 !    |  lat,cusp 
-!       write(6,"('aurora_ions: lat=',i2,' drizl=',/,(6e12.4))")
+!     write(6,"('aurora_ions: lat=',i2,' drizl=',/,(6e12.4))")
 !    |  lat,drizl 
-!     endif
 !
       do i=lon0,lon1
         do k=lev0,lev1
@@ -955,28 +943,15 @@
 !     klev = int((zlev-zpbot)/dzp)+1
 !     write(6,"('zlev=',f8.2,' klev=',i3)") zlev,klev
 !
-!     call aion(xalfa1,alfa1_ion,lev0,lev1,lon0,lon1,lat) ! s7,s3
       if (.not.use_cion) then
         call aion(xalfa1,alfa1_ion,lev0,lev1,lon0,lon1,lat)
-      else
-        call cion(xalfa1,alfa1_ion,alfa1,lev0,lev1,lon0,lon1,lat)
-      endif
-!     call aion(xalfa2,alfa2_ion,lev0,lev1,lon0,lon1,lat) ! s8,s4
-      if (.not.use_cion) then
         call aion(xalfa2,alfa2_ion,lev0,lev1,lon0,lon1,lat)
-      else
-        call cion(xalfa2,alfa2_ion,alfa1,lev0,lev1,lon0,lon1,lat)
-      endif
-!     call aion(xcusp ,cusp_ion ,lev0,lev1,lon0,lon1,lat) ! s9,s5
-      if (.not.use_cion) then
         call aion(xcusp,cusp_ion,lev0,lev1,lon0,lon1,lat)
-      else
-        call cion(xcusp,cusp_ion,alfa1,lev0,lev1,lon0,lon1,lat)
-      endif
-!     call aion(xdrizl,drizl_ion,lev0,lev1,lon0,lon1,lat) ! s10,s6
-      if (.not.use_cion) then
         call aion(xdrizl,drizl_ion,lev0,lev1,lon0,lon1,lat)
       else
+        call cion(xalfa1,alfa1_ion,alfa1,lev0,lev1,lon0,lon1,lat)
+        call cion(xalfa2,alfa2_ion,alfa1,lev0,lev1,lon0,lon1,lat)
+        call cion(xcusp,cusp_ion,alfa1,lev0,lev1,lon0,lon1,lat)
         call cion(xdrizl,drizl_ion,alfa1,lev0,lev1,lon0,lon1,lat)
       endif
 
@@ -997,13 +972,14 @@
       if (e30 > 1.e-19)
      |  call aion(xalfa3, alfa3_ion,lev0,lev1,lon0,lon1,lat)
 !
-      qaurora = 0
+      qaurora = 0.
       do i=lon0,lon1
 ! 11/08 EMERY added eflux=flux*fac_p2e*alfa;  eflux1 better than flux1 if alfa quite variable
-!	falfa1(i) = eflux1(i)/fac_p2e  ! s7  This should be equivalent to alfa1*flux1
+!       falfa1(i) = eflux1(i)/fac_p2e  ! s7  This should be equivalent to alfa1*flux1
         falfa1(i) = alfa1(i)*flux1(i)  ! s7
-!	falfa2(i) = eflux2(i)/fac_p2e  ! s8  This should be equivalent to alfa2*flux2
+!       falfa2(i) = eflux2(i)/fac_p2e  ! s8  This should be equivalent to alfa2*flux2
         falfa2(i) = alfa2(i)*flux2(i)  ! s8
+
         fcusp (i) = cusp(i)*alfac*fc   ! s9
         fdrizl(i) = drizl(i)*alfad*fd  ! s10
 !	falfa3(i) = eflux3(i)/fac_p2e  ! s13 This should be equivalent to alfa3*flux3
@@ -1053,18 +1029,16 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
-!     if (istep > 228) then
-!      write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' falfa1=',/,
+!     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' falfa1=',/,
 !    |  (10e12.4))") lat,lon0,lon1,falfa1
-!      write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qsum=',/,
+!     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qsum=',/,
 !    |  (8e12.4))") lat,lon0,lon1,qsum
-!      write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qo2p_aur=',/,
+!     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qo2p_aur=',/,
 !    |  (9e12.4))") lat,lon0,lon1,qo2p_aur
-!      write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qop_aur=',/,
+!     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qop_aur=',/,
 !    |  (9e12.4))") lat,lon0,lon1,qop_aur
-!      write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qn2p_aur=',/,
+!     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' qn2p_aur=',/,
 !    |  (9e12.4))") lat,lon0,lon1,qn2p_aur
-!     endif
 !     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' falfa2=',/,
 !    |  (6e12.4))") lat,lon0,lon1,falfa2
 !     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' fcusp=',/,
@@ -1227,7 +1201,6 @@
           enddo ! i=lon0,lon1
       enddo ! k=lev0,lev1
       end subroutine bion
-
 !-----------------------------------------------------------------------
       subroutine cion(si,so,alpha,lev0,lev1,lon0,lon1,lat)
 !
@@ -1284,3 +1257,4 @@
         enddo
       enddo
       end subroutine cion
+

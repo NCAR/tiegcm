@@ -1,0 +1,48 @@
+&tgcm_input
+!
+! Namelist input file for run tiegcm_res5.0_mareqx_smax
+! Continuation run from day 85.
+!
+LABEL = 'tiegcm_res5.0_mareqx_smax'
+START_YEAR = 2002
+START_DAY = 85
+CALENDAR_ADVANCE = 1
+!
+! No SOURCE file for continuation run:
+!
+!SOURCE = '/glade/p/hao/tgcm/data/tiegcm2.0/tiegcm_res5.0_mareqx_smax_prim.nc'
+!SOURCE_START = 80 0 0
+
+START = 85 0 0
+STOP = 90 0 0
+STEP = 60
+HIST = 1 0 0
+OUTPUT = 'tiegcm_res5.0_mareqx_smax_prim_001.nc'
+MXHIST_PRIM = 10
+SECSTART = 80 1 0
+SECSTOP = 85 0 0
+SECHIST = 0 1 0
+!
+! Initial run wrote to secondary files 001->005
+! Now continue with secondary files 006->010
+!
+SECOUT = 'tiegcm_res5.0_mareqx_smax_sech_006.nc','to','tiegcm_res5.0_mareqx_smax_sech_010.nc','by','1'
+
+MXHIST_SECH = 24
+SECFLDS = 'TN','UN','VN','O2','O1','N2','NO','N4S','HE','NE','TE','TI','TEC','O2P','OP','OMEGA','POTEN','UI_ExB','VI_ExB','WI_ExB','DEN','QJOULE','Z','ZG'
+TIDE = 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+TIDE2 = 0. 0.
+GSWM_MI_DI_NCFILE = '/glade/p/hao/tgcm/data/gswm_diurn_5.0d_99km.nc'
+GSWM_MI_SDI_NCFILE = '/glade/p/hao/tgcm/data/gswm_semi_5.0d_99km.nc'
+POTENTIAL_MODEL = 'HEELIS'
+POWER = 40.
+CTPOTEN = 60.
+F107 = 200.
+F107A = 200.
+AURORA = 1
+COLFAC = 1.5
+DYNAMO = 1
+CURRENT_PG = 1
+CURRENT_KQ = 0
+CALC_HELIUM = 1
+/

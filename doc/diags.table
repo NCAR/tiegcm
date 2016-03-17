@@ -1,56 +1,61 @@
-------------------------------------------------------------------------------------------------
-Table of Available Diagnostic Fields:
+Table of Available Diagnostic Fields
 Shortnames may be added to namelist SECFLDS
-
 Field   Shortname       Units           Levels  Caller          Longname
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   1    CO2_COOL        erg/g/s         lev     newton.F        CO2 Cooling
-   2    NO_COOL         erg/g/s         lev     newton.F        NO Cooling
-   3    DEN             g/cm3           ilev    dt.F            Total Density
-   4    HEATING         erg/g/s         lev     dt.F            Total Heating
-   5    HMF2            km              none    elden.F         HMF2 Height of the F2 Layer
-   6    NMF2            1/cm3           none    elden.F         NMF2 Peak Density of the F2 Layer
-   7    FOF2            MHz             none    elden.F         FOF2 Critical Frequency of the F2 Layer
-   8    JE13D           A/m2            mlev    current.F       JE13D Eastward current density (3d)
-   9    JE23D           A/m2            mlev    current.F       JE23D Downward current density (3d)
-  10    JQR             A/m2            none    current.F       JQR Upward current density (2d)
-  11    KQLAM           A/m             none    current.F       KQLAM Height-integrated current density (+north)
-  12    KQPHI           A/m             none    current.F       KQPHI Height-integrated current density (+east)
-  13    LAMDA_HAL       1/s             lev     lamdas.F        LAMDA_HAL Hall Ion Drag Coefficient
-  14    LAMDA_PED       1/s             lev     lamdas.F        LAMDA_PED Pedersen Ion Drag Coefficient
-  15    MU_M            g/cm/s          lev     cpktkm.F        MU_M Molecular Viscosity Coefficient
-  16    QJOULE          erg/g/s         lev     qjoule.F        QJOULE Joule Heating
-  17    SCHT            km              lev     addiag.F        SCHT Pressure Scale Height
-  18    SIGMA_HAL       S/m             lev     lamdas.F        SIGMA_HAL Hall Conductivity
-  19    SIGMA_PED       S/m             lev     lamdas.F        SIGMA_PED Pedersen Conductivity
-  20    TEC             1/cm2           none    elden.F         TEC Total Electron Content
-  21    UI_ExB          cm/s            ilev    ionvel.F        UI Zonal Ion Drift (ExB)
-  22    VI_ExB          cm/s            ilev    ionvel.F        VI Meridional Ion Drift (ExB)
-  23    WI_ExB          cm/s            ilev    ionvel.F        WI Vertical Ion Drift (ExB)
-  24    WN              cm/s            ilev    swdot.F         WN Neutral Vertical Wind (plus up)
-  25    O_N2            none            lev     comp.F          O/N2 RATIO
-  26    QJOULE_INTEG    erg/cm2/s       none    qjoule.F        Height-integrated Joule Heating
-  27    BX                              none    oplus.F         BX/BMAG Normalized eastward component of magnetic field
-  28    BY                              none    oplus.F         BY/BMAG Normalized northward component of magnetic field
-  29    BZ                              none    oplus.F         BZ/BMAG Normalized upward component of magnetic field
-  30    BMAG            Gauss           none    oplus.F         BMAG Magnetic field magnitude
-  31    EX              V/m             ilev    ionvel.F        EX Geographic zonal component of electric field
-  32    EY              V/m             ilev    ionvel.F        EY Geographic meridional component of electric field
-  33    EZ              V/m             ilev    ionvel.F        EZ Geographic vertical component of electric field
-  34    ED1             V/m             imlev   dynamo.F        ED1 Magnetic eastward component of electric field
-  35    ED2             V/m             imlev   dynamo.F        ED2 Magnetic downward (equatorward) component of electric field
-  36    PHIM2D          V               none    dynamo.F        PHIM2D 2d Electric Potential on magnetic grid
+ 1    CO2_COOL        erg/g/s         lev     newton.F        CO2 Cooling
+ 2    NO_COOL         erg/g/s         lev     newton.F        NO Cooling
+ 3    DEN             g/cm3           ilev    dt.F            Total Density
+ 4    HEATING         erg/g/s         lev     dt.F            Total Heating
+ 5    HMF2            km              none    elden.F         HMF2 Height of the F2 Layer
+ 6    NMF2            1/cm3           none    elden.F         NMF2 Peak Density of the F2 Layer
+ 7    FOF2            MHz             none    elden.F         FOF2 Critical Frequency of the F2 Layer
+ 8    JE13D           A/m2            mlev    current.F       JE13D Eastward current density (3d) (icalkqlam=1)
+ 9    JE23D           A/m2            mlev    current.F       JE23D Downward current density (3d) (icalkqlam=1)
+10    JQR             A/m2            none    current.F       JQR Upward current density (2d) (icalkqlam=1)
+11    KQLAM           A/m             none    current.F       KQLAM Height-integrated current density (+north) (icalkqlam=1)
+12    KQPHI           A/m             none    current.F       KQPHI Height-integrated current density (+east) (icalkqlam=1)
+13    LAMDA_HAL       1/s             lev     lamdas.F        LAMDA_HAL Hall Ion Drag Coefficient
+14    LAMDA_PED       1/s             lev     lamdas.F        LAMDA_PED Pedersen Ion Drag Coefficient
+15    MU_M            g/cm/s          lev     cpktkm.F        MU_M Molecular Viscosity Coefficient
+16    QJOULE          erg/g/s         lev     qjoule.F        QJOULE Joule Heating
+17    SCHT            km              lev     addiag.F        SCHT Pressure Scale Height
+18    SIGMA_HAL       S/m             lev     lamdas.F        SIGMA_HAL Hall Conductivity
+19    SIGMA_PED       S/m             lev     lamdas.F        SIGMA_PED Pedersen Conductivity
+20    TEC             1/cm2           none    elden.F         TEC Total Electron Content
+21    UI_ExB          cm/s            ilev    ionvel.F        UI Zonal Ion Drift (ExB)
+22    VI_ExB          cm/s            ilev    ionvel.F        VI Meridional Ion Drift (ExB)
+23    WI_ExB          cm/s            ilev    ionvel.F        WI Vertical Ion Drift (ExB)
+24    WN              cm/s            ilev    swdot.F         WN Neutral Vertical Wind (plus up)
+25    O_N2            none            lev     comp.F          O/N2 RATIO
+26    QJOULE_INTEG    erg/cm2/s       none    qjoule.F        Height-integrated Joule Heating
+27    BX                              none    oplus.F         BX/BMAG Normalized eastward component of magnetic field
+28    BY                              none    oplus.F         BY/BMAG Normalized northward component of magnetic field
+29    BZ                              none    oplus.F         BZ/BMAG Normalized upward component of magnetic field
+30    BMAG            Gauss           none    oplus.F         BMAG Magnetic field magnitude
+31    EX              V/m             ilev    pdynamo.F       EX Zonal component of electric field
+32    EY              V/m             ilev    pdynamo.F       EY Meridional component of electric field
+33    EZ              V/m             ilev    pdynamo.F       EZ Vertical component of electric field
+34    ED1             V/m             imlev   pdynamo.F       ED1 Magnetic eastward component of electric field
+35    ED2             V/m             imlev   pdynamo.F       ED2 Magnetic downward (equatorward) component of electric field
+36    PHIM2D          V               none    pdynamo.F       PHIM2D 2d Electric Potential on magnetic grid
+37    N2              mmr             lev     comp.F          N2 Molecular Nitrogen
+38    ZGMID           cm              lev     addiag.F        ZGMID Geometric Height at midpoints
+39    CUSP            erg/cm2/s       none    dynamics.F      CUSP (cusp2d*ec)
+40    DRIZZLE         erg/cm2/s       none    dynamics.F      DRIZZLE (drzl2d*ed)
+41    ALFA            keV             none    dynamics.F      ALFA
+42    NFLUX           #/cm2/s         none    dynamics.F      NFLUX
+43    EFLUX           erg/cm2/s       none    dynamics.F      EFLUX
 ------------------------------------------------------------------------------------------------
 
 Namelist to put diagnostic fields on secondary histories:
 
-;SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','QJOULE','QJOULE_INTEG',
-;          'SIGMA_PED','SIGMA_HAL','TEC','UI_ExB','VI_ExB','WI_ExB',
-;          'LAMDA_PED','LAMDA_HAL','HMF2','NMF2','SCHT','MU_M','O_N2','WN',
-;          'BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2','PHIM2D'
-;
-; These additional diagnostics on magnetic grid are available only if 
-; icalkqlam==1 in dynamo.F:
-;
-; SECFLDS = 'KQPHI','KQLAM','JQR','JE13D','JE23D'
+SECFLDS = 'CO2_COOL','NO_COOL','DEN','HEATING','HMF2','NMF2','FOF2',
+          'LAMDA_HAL','LAMDA_PED','MU_M','QJOULE','QJOULE_INTEG','SCHT',
+          'SIGMA_HAL','SIGMA_PED','TEC','UI_ExB','VI_ExB','WI_ExB','WN',
+          'O_N2','BX','BY','BZ','BMAG','EX','EY','EZ','ED1','ED2','PHIM2D',
+          'N2','ZGMID','CUSP','DRIZZLE','ALFA','NFLUX','EFLUX'
+!
+! These additional diagnostic currents are available only if icalkqlam==1 (dynamo.F)
+!          'KQPHI','KQLAM','JQR','JE13D','JE23D'
+
 ------------------------------------------------------------------------------------------------

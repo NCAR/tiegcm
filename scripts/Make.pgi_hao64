@@ -1,14 +1,14 @@
 #
-# Included makefile for generic 64-bit HAO machines.
-# Example machines and their unames:
-#   - HAO 64-bit Linux system iris.hao.ucar.edu
-#     System: Linux iris 2.6.18-194.11.1.el5 #1 SMP Tue Aug 10 19:05:06 EDT 2010 x86_64 x86_64 x86_64 GNU/Linux
-#
-# Compilers and flags:
+# Included makefile for PGI compiler on 64-bit HAO Linux desktops.
+# Using pgf90 9.0-4 64-bit target on x86-64 Linux -tp nehalem-64
 #
 F90      = pgf90
 MPIF90   = /opt/local/pgi-9.04/linux86-64/9.0/mpi/mpich/bin/mpif90
 MPIRUN   = /opt/local/pgi-9.04/linux86-64/9.0/mpi/mpich/bin/mpirun
+
+#MPIF90   = /opt/local/pgi-15.5/linux86-64/2015/mpi/mpich/bin/mpif90
+#MPIRUN   = /opt/local/pgi-15.5/linux86-64/2015/mpi/mpich/bin/mpirun
+
 FFLAGS   = -r8
 DBGFLAGS = -C -Mchkstk -Mpgicoff -traceback
 #
@@ -19,13 +19,11 @@ HOST     = $(shell hostname)
 #
 # Library and Include file paths:
 #
- LIB_NETCDF = /opt/local/netcdf/linux86-64/lib
- INC_NETCDF = /opt/local/netcdf/linux86-64/include
-#LIB_NETCDF = /home/tgcm/netcdf-4.1.1/lib
-#INC_NETCDF = /home/tgcm/netcdf-4.1.1/include
+LIB_NETCDF = /opt/local/netcdf/linux86-64/lib
+INC_NETCDF = /opt/local/netcdf/linux86-64/include
 #
-# ESMF 6.3.0r for PGI compiler (this is not working yet, as of 3/27/14):
 LIB_ESMF = /home/tgcm/esmf/pgi-9.04/lib/libO/Linux.pgi.64.mpich.default
+include $(LIB_ESMF)/esmf.mk
 #
 # Make machines.ini file for MPI execution: 
 #

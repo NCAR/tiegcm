@@ -14,14 +14,11 @@ itself, subject to the Academic Research License Agreement
 
 For more information about the TIEGCM and other related models, please see:
 
-* `Main TGCM website <http://www.hao.ucar.edu/modeling/tgcm/>`_
+* `Main TGCM website <http://www.hao.ucar.edu/modeling/tgcm>`_
 
 * :base_url:`TIEGCM Release Documentation <release/html>` for version |version|.
 
-* :base_url:`TIEGCM Model Description <description/tiegcm_modeldes_6Oct09.pdf>`
+* `Model Description <http://www.hao.ucar.edu/modeling/tgcm/doc/description/model_description.pdf>`_
 
 * `tgcmgroup email list <http://mailman.ucar.edu/mailman/listinfo/tgcmgroup>`_ 
 
-
-To contact a live body at NCAR/HAO, send email to Ben Foster at foster@ucar.edu
-(see also :ref:`Contact Information <contact>`)

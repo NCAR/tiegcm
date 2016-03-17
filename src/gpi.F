@@ -225,26 +225,44 @@
 !
 ! Check that requested date is available:
       iyd_cur = iyear*1000+iday
-      if (iyd_cur < iyd_beg .or. iyd_cur > iyd_end) then
-        write(6,"(/,'>>> getgpi: requested year-day is not available',
-     |    ' from gpi data file:')")
-        write(6,"(4x,'Requested year-day=',i8,' iyd_beg=',i8,
-     |    ' iyd_end=',i8,/)") iyd_cur,iyd_beg,iyd_end
-        write(6,"(72('-'),/)")
-        call shutdown('GPI')
-      endif
+
+!     if (iyd_cur < iyd_beg .or. iyd_cur > iyd_end) then
+!       write(6,"(/,'>>> getgpi: requested year-day is not available',
+!    |    ' from gpi data file:')")
+!       write(6,"(4x,'Requested year-day=',i8,' iyd_beg=',i8,
+!    |    ' iyd_end=',i8,/)") iyd_cur,iyd_beg,iyd_end
+!       write(6,"(72('-'),/)")
+!       call shutdown('GPI')
+!     endif
 !
 ! Get data for current day:
+!
       call getdat(iyd_cur,f107_cur,f107a_cur,fkp_cur,loc)
+!
+! 2/24/16 btf: This is to allow a gpi run to day 366 (day 1 of the
+!   next year) when the gpi file only goes to 365,23,0:
+!   
       if (loc == 0) then
-        write(6,"(/,'>>> getgpi: error finding iyd_cur=',i8,' in GPI ',
-     |    'data.')") iyd_cur
-        call shutdown('GPI')
+        f107 = gpi_f107d(ngpidays)
+        f107a = gpi_f107a(ngpidays)
+!       write(6,"(/,'>>> getgpi: error finding iyd_cur=',i8,' in GPI ',
+!    |    'data: using last f107=',f8.2,' f107a=',f8.2)") iyd_cur,
+!    |    f107,f107a
+        goto 500
       endif
-      if (loc <= 1 .or. loc >= ngpidays) then
-        write(6,"('>>> WARNING getgpi: loc=',i6,' ngpidays=',i6,
-     |    ' loc index is too close to first or last days.')") 
-     |    loc ,ngpidays
+!
+! This allows gpi run to progress beyond 2 days prior to end of
+! gpi file, bypassing f107 interpolation that requires 2 days
+! beyond current day.
+!
+      if (iyd_cur < iyd_beg .or. iyd_cur > iyd_end) then
+        f107 = f107_cur
+        f107a = f107a_cur
+!       write(6,"('Note getgpi cannot interpolate: iyd_cur=',i8,
+!    |    ' iyd_beg=',i8,' iyd_end=',i8,'  Using current f107=',
+!    |    f8.2,' f107a=',f8.2)") 
+!    |    iyd_cur,iyd_beg,iyd_end,f107,f107a
+        goto 500
       endif
 !
 ! Previous day's data:
@@ -304,6 +322,7 @@
 ! If need power or ctpoten, interpolate kp to current time, and
 ! calculate power and/or ctpoten from the interpolated kp:
 !
+  500 continue      
       if (ipower > 0 .or. ictpoten > 0) then
 !
 ! If constant namelist Kp was provided, use it instead of data:

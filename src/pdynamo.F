@@ -8,16 +8,14 @@
 !
 !
       use params_module,only: nmlevp1,nmlon,nmlonp1,nlon,nlonp4,nlat,
-     |  nmlat,gmlat,nmlath,nlev,nlevp1,mlev0,mlev1,nmlev_diff
+     |  nmlat,gmlat,nmlath,nlev,nlevp1,mlev0,mlev1,nmlev_diff,dlat,spval
       use addfld_module,only: addfld
       use mpitime_module,only: mpi_timer
       use mpi_module,only: mlat0,mlat1,mlon0,mlon1,lon0,lon1,lat0,lat1,
      |  mp_mag_periodic_f2d
-!CAF     |  mp_mag_periodic_f2d, mp_mag_halos
       use heelis_module,only: phihm
       use init_module,only: istep
       use input_module,only: current_pg,current_kq
-      use mpi
       implicit none
 !
 ! 3d pointers to fields regridded to magnetic subdomains (i,j,k):
@@ -151,6 +149,7 @@
 !   coefficients for all 5 levels of resolution.
 !
       integer :: nc(6)
+      integer :: mlevtop ! for saving mag fields to sechist
 
       real ::
      |  c0(nmlon0,nmlat0,10),
@@ -410,13 +409,21 @@
 ! For esmf_set3d_geo call:
       real,dimension(mlev0:mlev1,lon0:lon1,lat0:lat1,8) :: f3d
       character(len=8) :: fnames(8)
-      if (debug)
-     | write(6,"('Enter dynamo_inputs: un=',2e12.4,' vn=',2e12.4,
-     |  ' wn=',2e12.4,' zpot=',2e12.4,' ped=',2e12.4,' hal=',2e12.4)")
-     |  minval(un),maxval(un),minval(vn),maxval(vn),
-     |  minval(wn),maxval(wn),minval(zpot),maxval(zpot),
-     |  minval(ped),maxval(ped),minval(hal),maxval(hal)
-
+!
+!     write(6,"('Enter dynamo_inputs: un=',2e12.4,' vn=',2e12.4,
+!    |  ' wn=',2e12.4,' zpot=',2e12.4,' ped=',2e12.4,' hal=',2e12.4)")
+!    |  minval(un),maxval(un),minval(vn),maxval(vn),
+!    |  minval(wn),maxval(wn),minval(zpot),maxval(zpot),
+!    |  minval(ped),maxval(ped),minval(hal),maxval(hal)
+!
+! mlevtop is for saving mag fields with addfld, see below: 
+!   (actually mlevtop one level below the top):
+!   At 5.0-deg: mlev0,mlev1 = -2,29 mag_field(81,97,mlev0:mlev1)
+!   At 2.5-deg: mlev0,mlev1 = -5,57 mag_field(81,97,mlev0:mlev1)
+!
+      mlevtop = mlev1+2                  ! 5.0-deg (mlev1=57)
+      if (dlat == 2.5) mlevtop = mlev1+5 ! 2.5-deg (mlev1=63)
+!
 ! First, transfer lev0:lev1 (and all geo i,j) from inputs to xxxdyn:
       do j=lat0,lat1
         do i=lon0,lon1
@@ -436,20 +443,26 @@
 ! Set three equally spaced levels for Z, take U, V, and W
 ! to be constant, and extrapolate sigmas exponentially.
 !
+! 3/3/16 btf (as per Astrid and Art): Change extrapolation of Pedersen and Hall:
+!   from (float(nmlev_diff-1)*rl1)) to (2.*rl1)) for peddyn, and
+!   from (float(nmlev_diff-1)*rl2)) to (2.*rl2)) for haldyn.
+! According to Astrid This will lead to smaller conductivities between
+!   zp -8.5 to zp -7.
+!
           do k=lev0-1,mlev0,-1
             zpotdyn(k,i,j) = h0+float(k+nmlev_diff-1)*
      |        (zpotdyn(lev0,i,j)-h0)/float(nmlev_diff)
             peddyn(k,i,j) = peddyn(lev0,i,j)*exp((zpotdyn(k,i,j)+
      |        zpotdyn(k+1,i,j)-zpotdyn(lev0,i,j)-zpotdyn(lev0+1,i,j))/
-     |        (float(nmlev_diff-1)*rl1))
+     |        (2.*rl1))
             haldyn(k,i,j) = haldyn(1,i,j)*exp((zpotdyn(k,i,j)+
      |        zpotdyn(k+1,i,j)-zpotdyn(lev0,i,j)-zpotdyn(lev0+1,i,j))/
-     |        (float(nmlev_diff-1)*rl2))
+     |        (2.*rl2))
             undyn(k,i,j) = undyn(lev0,i,j)
             vndyn(k,i,j) = vndyn(lev0,i,j)
             wndyn(k,i,j) = wndyn(lev0,i,j)
-            je1pg(k,i,j) = je1pg(lev0,i,j)
-            je2pg(k,i,j) = je1pg(lev0,i,j)
+            je1pg(k,i,j) = 0.
+            je2pg(k,i,j) = 0.
           enddo
         enddo ! i=lon0,lon1
       enddo ! j=lat0,lat1
@@ -467,20 +480,20 @@
 !     enddo
 !
 ! real,dimension(mlev0:mlev1,lon0:lon1,lat0:lat1) ::
-!     do j=lat0,lat1
-!       call addfld('Z_DYN',' ',' ',zpotdyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('U_DYN',' ',' ',undyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('V_DYN',' ',' ',vndyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('W_DYN',' ',' ',wndyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('PED_DYN',' ',' ',peddyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('HAL_DYN',' ',' ',haldyn(1:nlevp1,:,j),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,j)
-!     enddo
+      do j=lat0,lat1
+        call addfld('Z_DYN',' ',' ',zpotdyn(1:nlev,:,j),
+     |    'ilev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('U_DYN',' ',' ',undyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('V_DYN',' ',' ',vndyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('W_DYN',' ',' ',wndyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('PED_DYN',' ',' ',peddyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('HAL_DYN',' ',' ',haldyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+      enddo
 !
 ! Calculate some 2d and 3d fields:
       call calc_adotv(zpotdyn,undyn,vndyn,wndyn,
@@ -591,26 +604,26 @@
 !
 ! Save original fields on geographic grid to secondary histories:
 !
-!     do j=lat0,lat1
-!       call addfld('PED_GEO',' ','S/m',ped(:,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('HAL_GEO',' ','S/m',hal(:,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('ZPOT_GEO',' ','cm',zpot(:,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+      do j=lat0,lat1
+        call addfld('PED_GEO',' ','S/m',ped(:,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('HAL_GEO',' ','S/m',hal(:,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('ZPOT_GEO',' ','cm',zpot(:,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
 !
 ! Beware, adotv1,2, etc have levels mlev0:mlev1, e.g., -2:nlevp1,
 ! so must specify lev0:lev1
 !
-!       call addfld('ADOTV1_GEO',' ',' ',adotv1(lev0:lev1,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('ADOTV2_GEO',' ',' ',adotv2(lev0:lev1,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('JE1PG_GEO',' ',' ',je1pg(lev0:lev1,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('JE2PG_GEO',' ',' ',je2pg(lev0:lev1,:,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!     enddo
+        call addfld('ADOTV1_GEO',' ',' ',adotv1(lev0:lev1,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('ADOTV2_GEO',' ',' ',adotv2(lev0:lev1,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('JE1PG_GEO',' ',' ',je1pg(lev0:lev1,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+        call addfld('JE2PG_GEO',' ',' ',je2pg(lev0:lev1,:,j),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,j)
+      enddo
 !     call addfld('SINI_GEO',' ',' ',sini,
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !     call addfld('ADOTA1_GEO',' ',' ',adota1,
@@ -722,26 +735,40 @@
 ! (note cannot use mlev0=-2 in addfld call)
 !
       do j=mlat0,mlat1
-        call addfld('ZMAG','ZMAG from pdynamo','cm',
-     |    zpot_mag(:,j,:),'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
+        call addfld('ZMAG','ZMAG from pdynamo','km',
+     |    zpot_mag(:,j,mlev0:mlev1-1)*1.e-5,'mlon',mlon0,mlon1,
+     |    'imlev',1,mlevtop,j)
       enddo
 
-!     do j=mlat0,mlat1
-!       call addfld('PED_MAG','PED on mag grid','S/m',
-!    |    ped_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('HAL_MAG','HALL on mag grid','S/m',
-!    |    hal_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('ZPOT_MAG','ZPOT on mag grid','cm',
-!    |    zpot_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-!       call addfld('ADOTV1_MAG','ADOTV1 on mag grid',' ',
-!    |    adotv1_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('ADOTV2_MAG','ADOTV2 on mag grid',' ',
-!    |    adotv2_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('JE1PG_MAG','JE1PG on mag grid',' ',
-!    |    je1pg_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!       call addfld('JE2PG_MAG','JE2PG on mag grid',' ',
-!    |    je2pg_mag(:,j,1:mlev1),'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!     enddo
+      do j=mlat0,mlat1
+        call addfld('PED_MAG','PED on mag grid','S/m',
+     |    ped_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
+        call addfld('HAL_MAG','HALL on mag grid','S/m',
+     |    hal_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
+        call addfld('ZPOT_MAG','ZPOT on mag grid','cm',
+     |    zpot_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'imlev',1,mlevtop,j)
+
+        call addfld('ADOTV1_MAG','ADOTV1 on mag grid',' ',
+     |    adotv1_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
+        call addfld('ADOTV2_MAG','ADOTV2 on mag grid',' ',
+     |    adotv2_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
+        call addfld('JE1PG_MAG','JE1PG on mag grid',' ',
+     |    je1pg_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+
+        call addfld('JE2PG_MAG','JE2PG on mag grid',' ',
+     |    je2pg_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |    'mlev',1,mlevtop,j)
+      enddo
 
 !     call addfld('SINI_MAG',  'SINI on mag grid',' ',
 !    |  sini_mag,'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
@@ -1965,128 +1992,38 @@
       use cons_module,only: dlatm,dlonm,pi_dyn,ylatm,rtd,crit
 ! Local:
       logical,parameter :: mod_heelis = .false.   ! true == modified
-      integer :: i,j,jn,js,jfit,jj,j0
-      real :: fac, phi_add
-      real,dimension(nmlonp1,nmlat) :: phim
+      integer :: i,j,jn,js
+      real :: fac
 !
 ! Add empirical model potential at high latitude:
       fac = 1.0
       if (mod_heelis) fac = 0.  ! modified heelis
-!
-!  Set phim=phihm of the chosen high-latitude model
-      if (iamie <= 0) then
-        do j=mlat0,mlat1
-          if (j > nmlath) cycle   ! south only (including equator)
-          jn = nmlat-j+1
-          js = nmlath-j+1 
-          do i=mlon0,mlon1
-            phim2d(i,j) = rim1(i,j)+fac*(1.-pfrac(i,js))*(phihm(i,j)-
-     |        phihm(i,jn))
 
-          enddo
-        enddo
-  
-        do j=mlat0,mlat1
-          if (j <= nmlath) cycle ! north only (excluding equator)
-          do i=mlon0,mlon1
-            phim2d(i,j) = rim1(i,j)
-          enddo
-        enddo
-	
-      else      !amie run
-        jfit = 0
-        if (debug) write (6,"('hilat_poten:min,max(rim1)=',2g10.2)")
-     |       minval(rim1),maxval(rim1)
-        do i=1,nmlonp1
-          do j=1,nmlat
-            j0 = nmlat-j+1
-            phim(i,j) = phihm(i,j)
-            phi_add = 0.
-            if (iyear==2004 .and. (modeltime(1)==314 .and.
-     |        modeltime(2) >= 19 .and. pcp_nh_amie > 180.e3) .or.
-     |        (iyear==2004 .and. modeltime(1)==315 .and.
-     |        pcp_nh_amie > 150.e3)) then
-              do jj=1,nmlat0-1
-                if ((90./rtd-abs(ylatm(jj))) < crit(1)) jfit = jj
-              enddo
-              phi_add =0.08*phihm(i,nmlat-jfit)
-            endif
-            if (j > jfit+3 .and. j <= (nmlat-jfit)) then
-              phim(i,j) = phihm(i,j)+phi_add
-            endif
-          enddo ! j=1,nmlat0-1
-        enddo ! i=1,nmlonp1
-
+      do j=mlat0,mlat1
+        if (j > nmlath) cycle   ! south only (including equator)
+        jn = nmlat-j+1
+        js = nmlath-j+1
         do i=mlon0,mlon1
-          do j=mlat0,mlat1
-            if (j > nmlath) cycle   ! south only (including equator)
-            j0 = nmlath-j+1
-            jn = nmlat-j+1
-            phim2d(i,j) = rim1(i,j)+(1.-pfrac(i,j0))*(phihm(i,j)-
-     |         phihm(i,jn))
-            phi_add = 0.
-            if (iyear==2004 .and. (modeltime(1)==314 .and.
-     |        modeltime(2) >= 19 .and. pcp_nh_amie > 180.e3) .or.
-     |        (iyear==2004 .and. modeltime(1)==315 .and.
-     |        pcp_nh_amie > 150.e3)) then
-              do jj=1,nmlat0-1
-                if ((90./rtd-abs(ylatm(jj))) < crit(1)) jfit = jj
-              enddo
-              phi_add =0.08*phihm(i,nmlat-jfit)
-            endif
-            if (j > jfit+3 .and. j <= (nmlat-jfit)) then
-              phim2d(i,j) = phim2d(i,j)+phi_add
-            endif
-!        if (i.eq.10 .and. j.eq.8)write(6,"('SH phiasym=',3i3,3f13.4)")
-!    |          j,jn,j0,pfrac(i,j),phihm(i,j),phihm(i,jn)
-!        if (i.eq.10 .and. j.eq.8)write(6,"('ylatm=',/,10(f8.4))")
-!    |           ylatm(:)
-!        if (i.eq.10 .and. j.eq.8)write(6,"('pfrac=',/,10(f8.4))")
-!    |           pfrac(i,:)
-          enddo
-        enddo
+          phim2d(i,j) = rim1(i,j)+fac*(1.-pfrac(i,js))*(phihm(i,j)-
+     |    phihm(i,jn))
 
-        do j=mlat0,mlat1
-          if (j <= nmlath) cycle ! north only (excluding equator)
-          do i=mlon0,mlon1
-            js = nmlat-j+1
-            j0 = j-nmlath+1
-            phim2d(i,j) = rim1(i,j)
-!           phim2d(i,j) = rim1(i,j)+fac*(1.-pfrac(i,j0))*(phihm(i,j)-
-!    |         phihm(i,js))*0.5
-            phi_add = 0.
-            if (iyear==2004 .and. (modeltime(1)==314 .and.
-     |        modeltime(2) >= 19 .and. pcp_nh_amie > 180.e3) .or.
-     |        (iyear==2004 .and. modeltime(1)==315 .and.
-     |        pcp_nh_amie > 150.e3)) then
-              do jj=1,nmlat0-1
-                if ((90./rtd-abs(ylatm(jj))) < crit(1)) jfit = jj
-              enddo
-              phi_add =0.08*phihm(i,nmlat-jfit)
-            endif
-            if (j > jfit+3 .and. j <= (nmlat-jfit)) then
-              phim2d(i,j) = phim2d(i,j)+phi_add
-            endif
-!        if (i.eq.10 .and. j.eq.88)write(6,"('NH phiasym=',3i3,3f13.4)")
-!    |          j,jn,j0,pfrac(i,j0),phihm(i,j),phihm(i,js)
-          enddo
         enddo
+      enddo
 
-      endif ! is amie
-      if (debug)
-     |  write(6,"('highlat_poten: amie phim2d max,min = ',2e12.4)")
-     |    maxval(phim2d),minval(phim2d)
+      do j=mlat0,mlat1
+        if (j <= nmlath) cycle ! north only (excluding equator)
+        do i=mlon0,mlon1
+          phim2d(i,j) = rim1(i,j)
+        enddo
+      enddo
 !
 ! There is also a PHIM2D saved at beginning of pthreed below.
-      call addfld('PHIM2D',' ','VOLTS',
-     |  phim2d(mlon0:mlon1,mlat0:mlat1),
-     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
-      call addfld('PHIM',' ','VOLTS',
-     |  phim(mlon0:mlon1,mlat0:mlat1),
-     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
-      call addfld('RIM1',' ','VOLTS',
-     |  rim1(mlon0:mlon1,mlat0:mlat1),
-     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+!     call addfld('PHIM2D',' ','VOLTS',
+!    |  phim2d(mlon0:mlon1,mlat0:mlat1),
+!    |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+!     call addfld('RIM1',' ','VOLTS',
+!    |  rim1(mlon0:mlon1,mlat0:mlat1),
+!    |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
 
       end subroutine highlat_poten
 !-----------------------------------------------------------------------
@@ -2604,20 +2541,18 @@
 ! Cannot use mlev0 (-2) in addfld call, so plot from level 1:
 !
       do j=mlat0,mlat1
-        call addfld('PHIM3D',' ',' ',phim3d(mlon0:mlon1,j,1:mlev1),
-     |    'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-
-        call addfld('EMX',' ',' ',ephi3d(mlon0:mlon1,j,1:mlev1),
-     |    'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-        call addfld('EMY',' ',' ',elam3d(mlon0:mlon1,j,1:mlev1),
-     |    'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-        call addfld('EMZ',' ',' ',emz3d(mlon0:mlon1,j,1:mlev1),
-     |    'mlon',mlon0,mlon1,'imlev',1,mlev1,j)
-
-        call mkdiag_ED12('ED1',ed13d(mlon0:mlon1,j,1:mlev1),
-     |    mlon0,mlon1,1,mlev1,j)
-        call mkdiag_ED12('ED2',ed23d(mlon0:mlon1,j,1:mlev1),
-     |    mlon0,mlon1,1,mlev1,j)
+        call addfld('PHIM3D',' ',' ',phim3d(:,j,mlev0:mlev1-1),
+     |    'mlon',mlon0,mlon1,'mlev',1,mlevtop,j)
+        call addfld('EMX',' ',' ',ephi3d(:,j,mlev0:mlev1-1),
+     |    'mlon',mlon0,mlon1,'mlev',1,mlevtop,j)
+        call addfld('EMY',' ',' ',elam3d(:,j,mlev0:mlev1-1),
+     |    'mlon',mlon0,mlon1,'mlev',1,mlevtop,j)
+        call addfld('EMZ',' ',' ',emz3d(:,j,mlev0:mlev1-1),
+     |    'mlon',mlon0,mlon1,'mlev',1,mlevtop,j)
+        call mkdiag_ED12('ED1',ed13d(:,j,mlev0:mlev1-1),
+     |    mlon0,mlon1,1,mlevtop,j)
+        call mkdiag_ED12('ED2',ed23d(:,j,mlev0:mlev1-1),
+     |    mlon0,mlon1,1,mlevtop,j)
       enddo
       if (debug) write(6,"('pthreed returning')")
       end subroutine pthreed
@@ -3982,12 +3917,6 @@ c      enddo
         end do
       end do
 !     write(6,*) 'L2norm (global root task) = ',l2norm
-      if (debug)
-     |  write(6,"('solver: amie rim_glb max,min = ',2e12.4)")
-     |    maxval(rim_glb),minval(rim_glb)
-      if (debug)
-     |  write(6,"('solver: amie ressolv max,min = ',2e12.4)")
-     |    maxval(ressolv),minval(ressolv)
 
       end subroutine solver
 !-----------------------------------------------------------------------

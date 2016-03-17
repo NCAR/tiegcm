@@ -104,18 +104,30 @@
      |  p_coeff,q_coeff,r_coeff, ! coefficients for tridiagonal solver (s1,s2,s3)
      |  bdotu,            ! was s7 (B.U)
      |  op_loss,          ! was s13
-     |  tp                ! te+ti
+     |  tp1               ! 0.5*(te+ti)
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
 !
-! For O+ "smooth floor" (ignored if enforce_opfloor is false):
-!     logical :: enforce_opfloor = .false.
-      real :: opmin=1000.,opfloor,glondeg,slt,dum
+! For O+ "smooth floor" (ignored if enforce_opfloor = 0)
+! (default namelist enforce_opfloor = 1). The floor is a
+! spatial gaussian based on the O+ minimum (opmin below).
+!
+      real :: opfloor,glondeg,slt,dum
+!
+! 1/21/16 btf: O+ minimum increased from 1000 to 3000.
+! (This alleviates numerical instability that can develop
+!  near the equator at the top of the model in some cases,
+!  e.g., it allows the 2.5-deg June solstice solar max 
+!  benchmark to run with step=30 rather than step=20, and
+!  may improve stability in other cases as well.)
+!
+      real :: opmin=3000.
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
      |  bvel,
      |  diffj,       ! (D/(H*DZ)*2.*TP+M*G/R)*N(O+) (s7,s8,s9)
-     |  tpj,         ! N(O+)*(te+ti) (s3-s7)
+     |  tp,          ! Plasma temperature (te+ti)
+     |  tr,          ! Reduced temperature 0.5*(tn+ti)
      |  bdotdh_op,   ! (b(h)*del(h))*phi
      |  bdotdh_opj,  ! (b(h)*del(h))*phi
      |  bdotdh_diff, ! (b(h)*del(h))*phi
@@ -175,8 +187,8 @@
 !
       call oplus_flux(opflux,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('oplus after oplus_flux.')")
-      call addfld('OPFLUX',' ',' ',opflux,
-     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('OPFLUX',' ',' ',opflux,
+!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
 ! Divergence is returned in dvb(lon0:lon1,lat0:lat1) by sub divb:
       call divb(dvb,lon0,lon1,lat0,lat1)
@@ -198,66 +210,62 @@
         call mkdiag_BXYZ('BZ',    bz (lon0:lon1,lat),lon0,lon1,lat)
         call mkdiag_BMAG('BMAG',bmod2(lon0:lon1,lat),lon0,lon1,lat)
 !
-! Set tp's:
-! 8/28/13: Wenbin says this is wrong, it should be using tn instead of
-!          te, that he presented this in 2011, but it was not changed
-!          in the repository. We will get back to this later, after He 
-!          is fixed.
+! Set reduced temperature (average of tn and ti)
+!
+! 1/2/16 btf: 
+!   This was previously set incorrectly as tp = 0.5*(te+ti)) 
+!   (see also plasma temp tp). Correcting this resulted in a
+!   40% change in ambipolar diffusion DJ, but only 10% or so
+!   change in O+ and Ne, and very small differences in NMF2,HMF2,TEC.
+!   Wenbin feels there should be larger changes in these fields
+!   as a consequence of fixing this bug. 
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          tpj(k,i,jm1) = 0.5*(te(k,i,jm1)+ti(k,i,jm1))
-          tpj(k,i,lat) = 0.5*(te(k,i,lat)+ti(k,i,lat))
-          tpj(k,i,jp1) = 0.5*(te(k,i,jp1)+ti(k,i,jp1))
+          tr(k,i,jm1) = 0.5*(tn(k,i,jm1)+ti(k,i,jm1))
+          tr(k,i,lat) = 0.5*(tn(k,i,lat)+ti(k,i,lat))
+          tr(k,i,jp1) = 0.5*(tn(k,i,jp1)+ti(k,i,jp1))
         enddo
       enddo
-
-!     call addfld('TP_JM1',' ',' ',tpj(:,lon0:lon1,jm1),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('TP_J',' ',' ',tpj(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('TP_JP1',' ',' ',tpj(:,lon0:lon1,jp1),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      tr(lev1,:,:) = 0.
+!     call addfld('TR','TR: reduced temperature (0.5*(tn+ti))',' ',
+!    |  tr(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! rrk returns djm1,dj,djp1:
 !
       call rrk(
-     |  tn (:,lon0:lon1,jm1),barm(:,lon0:lon1,jm1),
-     |  o2 (:,lon0:lon1,jm1),o1(:,lon0:lon1,jm1),
-     |  n2 (:,lon0:lon1,jm1),he(:,lon0:lon1,jm1),
-     |  tpj(:,lon0:lon1,jm1),dj(:,lon0:lon1,jm1),
+     |  tn(:,lon0:lon1,jm1),barm(:,lon0:lon1,jm1),
+     |  o2(:,lon0:lon1,jm1),o1(:,lon0:lon1,jm1),
+     |  n2(:,lon0:lon1,jm1),he(:,lon0:lon1,jm1),
+     |  tr(:,lon0:lon1,jm1),dj(:,lon0:lon1,jm1),
      |  lon0,lon1,lev0,lev1,lat)
 
       call rrk(
-     |  tn (:,lon0:lon1,lat),barm(:,lon0:lon1,lat),
-     |  o2 (:,lon0:lon1,lat),o1(:,lon0:lon1,lat),
-     |  n2 (:,lon0:lon1,lat),he(:,lon0:lon1,lat),
-     |  tpj(:,lon0:lon1,lat),dj(:,lon0:lon1,lat),
+     |  tn(:,lon0:lon1,lat),barm(:,lon0:lon1,lat),
+     |  o2(:,lon0:lon1,lat),o1(:,lon0:lon1,lat),
+     |  n2(:,lon0:lon1,lat),he(:,lon0:lon1,lat),
+     |  tr(:,lon0:lon1,lat),dj(:,lon0:lon1,lat),
      |  lon0,lon1,lev0,lev1,lat)
 
       call rrk(
-     |  tn (:,lon0:lon1,jp1),barm(:,lon0:lon1,jp1),
-     |  o2 (:,lon0:lon1,jp1),o1(:,lon0:lon1,jp1),
-     |  n2 (:,lon0:lon1,jp1),he(:,lon0:lon1,jp1),
-     |  tpj(:,lon0:lon1,jp1),dj(:,lon0:lon1,jp1),
+     |  tn(:,lon0:lon1,jp1),barm(:,lon0:lon1,jp1),
+     |  o2(:,lon0:lon1,jp1),o1(:,lon0:lon1,jp1),
+     |  n2(:,lon0:lon1,jp1),he(:,lon0:lon1,jp1),
+     |  tr(:,lon0:lon1,jp1),dj(:,lon0:lon1,jp1),
      |  lon0,lon1,lev0,lev1,lat)
 
       if (debug) write(6,"('oplus after rrk: lat=',i3)") lat
+!     call addfld('DJ','DJ: Ambipolar Diffusion of O+',' ',
+!    |    dj(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
-! Top level is invalid, so exclude it:
-!     call addfld('DJM1',' ',' ',dj(lev0:lev1-1,lon0:lon1,jm1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('LOG10DJ  ',' ',' ',
-!    |    log10(dj(lev0:lev1-1,lon0:lon1,lat)),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('DJP1',' ',' ',dj(lev0:lev1-1,lon0:lon1,jp1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-
+! Plasma temperature:
       do i=lon0,lon1
         do k=lev0,lev1-1
-          tpj(k,i,jm1) = 2.*tpj(k,i,jm1) 
-          tpj(k,i,lat) = 2.*tpj(k,i,lat)
-          tpj(k,i,jp1) = 2.*tpj(k,i,jp1) 
+          tp(k,i,jm1) = te(k,i,jm1)+ti(k,i,jm1)
+          tp(k,i,lat) = te(k,i,lat)+ti(k,i,lat)
+          tp(k,i,jp1) = te(k,i,jp1)+ti(k,i,jp1)
         enddo
       enddo
       if (debug) write(6,"('oplus after tpj: lat=',i3)") lat
@@ -273,12 +281,7 @@
         enddo
       enddo
       if (debug) write(6,"('oplus after hj: lat=',i3)") lat
-
-!     call addfld('HJM1',' ',' ',hj(lev0:lev1-1,:,jm1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('HJ  ',' ',' ',hj(lev0:lev1-1,:,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('HJP1',' ',' ',hj(lev0:lev1-1,:,jp1),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! bvel @ jm1 = (B.U)*N(O+)    (J-1) (was s6)
@@ -302,64 +305,39 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
       if (debug) write(6,"('oplus after bvel: lat=',i3)") lat
-
-!     call addfld('BVEL_JM1',' ',' ',bvel(lev0:lev1-1,lon0:lon1,jm1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('BVEL_J'  ,' ',' ',bvel(lev0:lev1-1,lon0:lon1,j0),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('BVEL_JP1',' ',' ',bvel(lev0:lev1-1,lon0:lon1,jp1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-
-!     subroutine diffus(tp,en,hj,ans,lon0,lon1,lev0,lev1,lat)
-!     real,dimension(lev0:lev1,lon0:lon1),intent(in) :: tp,en,hj
-!     real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
 !
-      tpj(lev1,:,jm1:jp1) = 0.
+      tp(lev1,:,jm1:jp1) = 0.
       call diffus(
-     |  tpj  (:,lon0:lon1,jm1),op(:,lon0:lon1,jm1),hj(:,:,jm1),
+     |  tp(:,lon0:lon1,jm1),op(:,lon0:lon1,jm1),hj(:,:,jm1),
      |  diffj(:,lon0:lon1,jm1),lon0,lon1,lev0,lev1,lat)
       call diffus(
-     |  tpj  (:,lon0:lon1,lat),op(:,lon0:lon1,lat),hj(:,:,lat),
+     |  tp(:,lon0:lon1,lat),op(:,lon0:lon1,lat),hj(:,:,lat),
      |  diffj(:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
       call diffus(
-     |  tpj  (:,lon0:lon1,jp1),op(:,lon0:lon1,jp1),hj(:,:,jp1),
+     |  tp(:,lon0:lon1,jp1),op(:,lon0:lon1,jp1),hj(:,:,jp1),
      |  diffj(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,lat)
 
       if (debug) write(6,"('oplus after diffus: lat=',i3)") lat
-!     call addfld('DIFF_JM1',' ',' ',diffj(:,lon0:lon1,jm1),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('DIFF_J  ',' ',' ',diffj(:,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('DIFF_JP1',' ',' ',diffj(:,lon0:lon1,jp1),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('DIFFJ','DIFFJ after diffus',' ',
+!    |  diffj(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
-! tpjm2 = 2.*TP*N(O+)    (J-2)
-! tpjm1 = 2.*TP*N(O+)    (J-1)
-! tp    = 2.*TP*N(O+)    (J)
-! tpjp1 = 2.*TP*N(O+)    (J+1)
-! tpjp2 = 2.*TP*N(O+)    (J+2)
-!
+! Plasma temperature times O+
       do i=lon0,lon1
         do k=lev0,lev1-1
-          tpj(k,i,jm2) = op(k,i,jm2)*(te(k,i,jm2)+ti(k,i,jm2))
-          tpj(k,i,jm1) = tpj(k,i,jm1)*op(k,i,jm1)
-          tpj(k,i,lat  ) = tpj(k,i,lat  )*op(k,i,lat)
-          tpj(k,i,jp1) = tpj(k,i,jp1)*op(k,i,jp1)
-          tpj(k,i,jp2) = op(k,i,jp2)*(te(k,i,jp2)+ti(k,i,jp2))
+          tp(k,i,jm2) = op(k,i,jm2)*(te(k,i,jm2)+ti(k,i,jm2))
+          tp(k,i,jm1) = tp(k,i,jm1)*op(k,i,jm1)
+          tp(k,i,lat) = tp(k,i,lat)*op(k,i,lat)
+          tp(k,i,jp1) = tp(k,i,jp1)*op(k,i,jp1)
+          tp(k,i,jp2) = op(k,i,jp2)*(te(k,i,jp2)+ti(k,i,jp2))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
       if (debug) write(6,"('oplus after tpj2: lat=',i3)") lat
-
-!     call addfld('TPJM2',' ',' ',tpj(lev0:lev1-1,lon0:lon1,jm2),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('TPJM1',' ',' ',tpj(lev0:lev1-1,lon0:lon1,jm1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('TP   ',' ',' ',tpj(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('TPJP1',' ',' ',tpj(lev0:lev1-1,lon0:lon1,jp1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('TPJP2',' ',' ',tpj(lev0:lev1-1,lon0:lon1,jp2),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('TPJ','TP after times OP',' ',
+!    |  tp(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Shapiro smoother: optm1 is O+ at time n-1 (optm1_smooth was s1)
 ! optm1_smooth will be used in explicit terms below.
@@ -385,7 +363,7 @@
       f5(:,:,:,1) = dj(:,:,:)
       f5(:,:,:,2) = bvel(:,:,:)
       f5(:,:,:,3) = diffj(:,:,:)
-      f5(:,:,:,4) = tpj(:,:,:)
+      f5(:,:,:,4) = tp(:,:,:)
       f5(:,:,:,5) = optm1_smooth(:,:,:)
 
       call mp_bndlons_f3d(f5,nlevs,lon0,lon1,lat0,lat1,5,0)
@@ -393,7 +371,7 @@
       dj(:,:,:)           = f5(:,:,:,1)
       bvel(:,:,:)         = f5(:,:,:,2)
       diffj(:,:,:)        = f5(:,:,:,3)
-      tpj(:,:,:)          = f5(:,:,:,4)
+      tp(:,:,:)          = f5(:,:,:,4)
       optm1_smooth(:,:,:) = f5(:,:,:,5)
 !
 ! Periodic points for dj:
@@ -426,27 +404,22 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfld('BDOTDH',' ',' ',bdotdh_op(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('BDOTDH_1',' ',' ',
+!    |  bdotdh_op(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! bdotdh_opjm1 = (B(H).DEL(H))*2.*TP*N(O+)    (J-1)
 ! bdotdh_opj   = (B(H).DEL(H))*2.*TP*N(O+)      (J)
 ! bdotdh_opjp1 = (B(H).DEL(H))*2.*TP*N(O+)    (J+1)
 !
       call bdotdh(
-     |  tpj(:,lon0:lon1,jm2),
-     |  tpj(:,:,jm1),
-     |  tpj(:,lon0:lon1,lat  ),
+     |  tp(:,lon0:lon1,jm2),tp(:,:,jm1),tp(:,lon0:lon1,lat),
      |  bdotdh_opj(:,lon0:lon1,jm1),lon0,lon1,lev0,lev1,jm1)
       call bdotdh(
-     |  tpj(:,lon0:lon1,jm1),
-     |  tpj(:,:,lat  ),
-     |  tpj(:,lon0:lon1,jp1),
+     |  tp(:,lon0:lon1,jm1),tp(:,:,lat),tp(:,lon0:lon1,jp1),
      |  bdotdh_opj(:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
       call bdotdh(
-     |  tpj(:,lon0:lon1,lat  ),
-     |  tpj(:,:,jp1),
-     |  tpj(:,lon0:lon1,jp2),
+     |  tp(:,lon0:lon1,lat),tp(:,:,jp1),tp(:,lon0:lon1,jp2),
      |  bdotdh_opj(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,jp1)
 !
       do i=lon0,lon1
@@ -456,6 +429,10 @@
           bdotdh_opj(k,i,jp1) = bdotdh_opj(k,i,jp1)*dj(k,i,jp1)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
+
+!     call addfld('BDOTDH_2',' ',' ',
+!    |  bdotdh_op(lev0:lev1-1,lon0:lon1,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
         if (debug) 
      |    write(6,"('oplus end second lat scan: lat=',i3)") lat
@@ -493,14 +470,10 @@
      |  bdotdh_opj(:,lon0:lon1,jp1),
      |  bdotdh_diff(:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
 
-!     call addfld('BDOT_DIF',' ',' ',bdotdh_diff(lev0:lev1-1,lon0:lon1,
-!    |  lat),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('BDOT_JM1',' ',' ',bdotdh_opj(lev0:lev1-1,lon0:lon1,
-!    |  jm1),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('BDOT_J'  ,' ',' ',bdotdh_opj(lev0:lev1-1,lon0:lon1,
 !    |  lat),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('BDOT_JP1',' ',' ',bdotdh_opj(lev0:lev1-1,lon0:lon1,
-!    |  jp1),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('BDOT_DIF',' ',' ',bdotdh_diff(lev0:lev1-1,lon0:lon1,
+!    |  lat),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! bdzdvb_op = (BZ*D/(H*DZ)+DIV(*B))*S2
 ! bdzdvb returns bdzdvb_op.
@@ -508,8 +481,8 @@
       call bdzdvb(bdotdh_opj(:,lon0:lon1,lat),dvb(:,lat),hj(:,:,lat),
      |  bdzdvb_op,lev0,lev1,lon0,lon1,lat)
 
-!     call addfld('BDZDVB',' ',' ',bdzdvb_op(lev0:lev1-1,:),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('BDZDVB',' ',' ',
+!    |  bdzdvb_op(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Collect explicit terms:
       do i=lon0,lon1
@@ -555,6 +528,7 @@
 ! Periodic points for explicit terms.
 ! This is apparently unnecessary:
 !     call periodic_f2d(explicit,lon0,lon1,nlevs)
+
 !     call addfld('EXPLIC1',' ',' ',explicit(lev0:lev1-1,:),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
@@ -564,10 +538,13 @@
 !      
       do i=lon0,lon1
         do k=lev0,lev1-1
-          hdz(k,i) = 1./(hj(k,i,lat)*dz)            ! s15
-          tp(k,i) = 0.5*(ti(k,i,j0)+te(k,i,j0))     ! s14
+          hdz(k,i) = 1./(hj(k,i,lat)*dz)
+          tp1(k,i) = 0.5*(ti(k,i,j0)+te(k,i,j0))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
+
+!     call addfld('TP1',' ',' ',tp1(lev0:lev1-1,:),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('HDZ',' ',' ',hdz(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
@@ -575,22 +552,22 @@
       gmr = grav*rmass_op/(2.*gask)
       do i=lon0,lon1
         do k=lev0,lev1-2
-          tphdz1(k+1,i) = 2.*tp(k+1,i)*(0.5*(hdz(k,i)+hdz(k+1,i)))+
+          tphdz1(k+1,i) = 2.*tp1(k+1,i)*(0.5*(hdz(k,i)+hdz(k+1,i)))+
      |      gmr ! s13
-          tphdz0(k+1,i) = 2.*tp(k  ,i)*(0.5*(hdz(k,i)+hdz(k+1,i)))-
+          tphdz0(k+1,i) = 2.*tp1(k  ,i)*(0.5*(hdz(k,i)+hdz(k+1,i)))-
      |      gmr ! s12
         enddo ! k=lev0,lev1-2
       enddo ! i=lon0,lon1
 !
 ! Upper and lower boundaries:
       do i=lon0,lon1
-        tphdz1(lev0,i) = 2.*tp(lev0,i)*
+        tphdz1(lev0,i) = 2.*tp1(lev0,i)*
      |                   (1.5*hdz(lev0,i)-0.5*hdz(lev0+1,i))+gmr
-        tphdz1(lev1,i) = 2.*(2.*tp(lev1-1,i)-tp(lev1-2,i))*
+        tphdz1(lev1,i) = 2.*(2.*tp1(lev1-1,i)-tp1(lev1-2,i))*
      |                   (1.5*hdz(lev1-1,i)-0.5*hdz(lev1-2,i))+gmr
-        tphdz0(lev0,i) = 2.*(2.*tp(lev0,i)-tp(lev0+1,i))*
+        tphdz0(lev0,i) = 2.*(2.*tp1(lev0,i)-tp1(lev0+1,i))*
      |                   (1.5*hdz(lev0,i)-0.5*hdz(lev0+1,i))-gmr
-        tphdz0(lev1,i) = 2.*tp(lev1-1,i)*
+        tphdz0(lev1,i) = 2.*tp1(lev1-1,i)*
      |                   (1.5*hdz(lev1-1,i)-0.5*hdz(lev1-2,i))-gmr
       enddo ! i=lon0,lon1
 
@@ -602,7 +579,7 @@
 ! djint = dj at interfaces:
       do i=lon0,lon1
         do k=lev0,lev1-2
-          djint(k+1,i) = 0.5*(dj(k,i,lat)+dj(k+1,i,lat)) ! s11=.5*(s8(k)+s8(k+1))
+          djint(k+1,i) = 0.5*(dj(k,i,lat)+dj(k+1,i,lat))
         enddo ! k=lev0,lev1-2
         djint(lev0,i) = (1.5*dj(lev0  ,i,lat)-0.5*dj(lev0+1,i,lat))
         djint(lev1,i) = (1.5*dj(lev1-1,i,lat)-0.5*dj(lev1-2,i,lat))
@@ -770,7 +747,6 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-!
           psi_n2(k,i) = n2(k,i,j0) ! n2 mixing ratio
 !
           xiop2p(k,i,lat) = 
@@ -1040,18 +1016,19 @@
 !
       end subroutine divb
 !-----------------------------------------------------------------------
-      subroutine rrk(t,rms,ps1,ps2,n2,he,tp,ans,lon0,lon1,lev0,lev1,lat)
+      subroutine rrk(t,rms,ps1,ps2,n2,he,tr,ans,lon0,lon1,lev0,lev1,lat)
 !
 ! Returns ambipolar diffusion coefficient in ans.
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,boltz,
      |  p0,expz,rmassinv_he
-      use input_module,only: colfac
+      use input_module,only: colfac,opdiffcap
+      use init_module,only: istep
 !
 ! Args:
       integer,intent(in) :: lon0,lon1,lev0,lev1,lat
       real,dimension(lev0:lev1,lon0:lon1),intent(in) ::
-     |  t,rms,ps1,ps2,n2,he,tp
+     |  t,rms,ps1,ps2,n2,he,tr
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
 !
 ! Local:
@@ -1063,12 +1040,30 @@
 ! 8/28/13 btf: Use n2=1-o2-o-he, and include O+/He collision rate from Wenbin:
 !
           ans(k,i) = 1.42E17*boltz*t(k,i)/(p0*expz(k)*.5*(rms(k,i)+
-     |      rms(k+1,i))*(ps2(k,i)*rmassinv_o1*sqrt(tp(k,i))*(1.-0.064*
-     |      alog10(tp(k,i)))**2*colfac+18.6*n2(k,i)*rmassinv_n2+18.1*
+     |      rms(k+1,i))*(ps2(k,i)*rmassinv_o1*sqrt(tr(k,i))*(1.-0.064*
+     |      alog10(tr(k,i)))**2*colfac+18.6*n2(k,i)*rmassinv_n2+18.1*
      |      ps1(k,i)*rmassinv_o2+3.6*he(k,i)*rmassinv_he))
-
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
+!
+! 1/30/16 btf:
+! Cap ambipolar diffusion coefficient. Namelist parameter OPDIFFCAP.
+! This was tested with various values (1.5e8, 3e8, 6e8, 8e8),
+! and was found to improve numerical stability in some storm cases, 
+! for example the November, 2003 and July, 2000 storms, with Weimer
+! potential model and IMF/OMNI data. Both of these cases generally 
+! will not complete if timestep is longer than 10 sec. The Nov, 2003
+! may succeed with opdiffcap turned off, but the July, 2000 
+! "Bastille day storm" will succeed only with step=10 and opdiffcap=6.e8.
+!
+      if (opdiffcap /= 0.) then ! default is off
+        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)") 
+     |    opdiffcap
+        where(ans(:,:) > opdiffcap)
+          ans(:,:) = opdiffcap
+        endwhere
+      endif
+
       end subroutine rrk
 !-----------------------------------------------------------------------
       subroutine diffus(tp,en,hj,ans,lon0,lon1,lev0,lev1,lat)
@@ -1079,8 +1074,7 @@
 !
 ! Args:
       integer :: lon0,lon1,lev0,lev1,lat
-      real,dimension(lev0:lev1,lon0:lon1),intent(in) ::
-     |  tp,en,hj
+      real,dimension(lev0:lev1,lon0:lon1),intent(in) :: tp,en,hj
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
 !
 ! Local:

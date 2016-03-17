@@ -1,0 +1,162 @@
+#!/bin/tcsh
+#
+# Make runs of post-processor to generate plots from one-year climatology benchmark runs:
+#
+set mycwd = `pwd`
+set home = /glade/p/hao/tgcm/tiegcm_benchmarks            # base working directory
+set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make multiple proc runs
+
+set singleut  = no   # generally do not make instantaneous plots for climatology
+set multiut   = yes  # make time slices (ut on x-axis)
+set select    = yes  # less comprehensive (fewer fields, fewer plots)
+set make_pdf  = yes  # will make pdf files from the ps, using ps2pdf
+set remove_ps = yes  # remove ps file after making pdf (only if make_pdf=yes)
+
+set resolutions = ( \
+  '5.0' \
+  '2.5' \
+)
+
+foreach res ($resolutions)
+
+  if ($res == '5.0') then
+    set exec = $home/postproc/tgcmproc_f90/build/tgcmproc_sres_f90  # single-res processor executable
+  else if ($res == '2.5') then
+    set exec = $home/postproc/tgcmproc_f90/build/tgcmproc_dres_f90  # double-res processor executable
+  else
+    echo ">>> Unknown resolution: $res"
+    exit 
+  endif
+
+  set runs = ( \
+    tiegcm_res${res}_climatology_smax \
+    tiegcm_res${res}_climatology_smin \
+  )
+
+  set case   = tiegcm_res${res}_climatology
+  set work   = $home/$case
+
+  foreach run ($runs)
+    echo "------------------ $run --------------------"
+    set outdir  = $work/$run/proc
+    set histdir = $work/$run/hist
+#
+# All file paths are absolute, except for history files, which are relative to $histdir
+#
+    cd $histdir
+    echo tgcmproc moved to $histdir
+#
+# Generally do not make single-ut plots for climatologies
+# see singleut flag above.
+#
+# Instantaneous maps, slices, etc, at last history: 
+# Normally, do not do singleut plots for full-year climatology,
+#  see singleut flag above.
+#
+    if ($singleut == 'yes') then
+      $proc -submit yes -executable $exec -singleut=1 \
+        -nlfile $outdir/${run}_singleut.inp \
+        -stdout $outdir/${run}_singleut.out \
+        -flnm_ps $outdir/${run}_singleut.ps \
+        \*sech\*.nc
+      echo Completed singleut for run $run
+      if ($make_pdf == 'yes') then
+        ps2pdf $outdir/${run}_singleut.ps $outdir/${run}_singleut.pdf
+        if ($remove_ps == 'yes') rm $outdir/${run}_singleut.ps
+      endif
+    endif
+#
+# Time-dependent plots with day/ut on x-axis:
+#
+# ut vs zp (tell ps2pdf to not autorotate):
+    set mtimes = "1,0,0,'to',365,0,0,'by',1440"
+    set days = "days001-365"
+    if ($multiut == 'yes') then
+      $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes -pltutlat=0 \
+        -nlfile  $outdir/${run}_${days}_utvert.inp \
+        -stdout  $outdir/${run}_${days}_utvert.out \
+        -flnm_ps $outdir/${run}_${days}_utvert.ps  \
+        \*prim\*.nc
+      echo Completed daily utvert for $run $days
+      if ($make_pdf == 'yes') then
+        ps2pdf -dAutoRotatePages=/None \
+          $outdir/${run}_${days}_utvert.ps \
+          $outdir/${run}_${days}_utvert.pdf
+        if ($remove_ps == 'yes') rm $outdir/${run}_${days}_utvert.ps
+      endif
+#
+# ut vs latitude:
+      $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes -pltutvert=0 \
+        -nlfile  $outdir/${run}_${days}_utlat.inp \
+        -stdout  $outdir/${run}_${days}_utlat.out \
+        -flnm_ps $outdir/${run}_${days}_utlat.ps  \
+        \*prim\*.nc
+      echo Completed daily utlat for $run $days
+      if ($make_pdf == 'yes') then
+        ps2pdf $outdir/${run}_${days}_utlat.ps \
+               $outdir/${run}_${days}_utlat.pdf
+        if ($remove_ps == 'yes') rm $outdir/${run}_${days}_utlat.ps
+      endif
+    endif # multiut
+#
+# "Select" means a selected subgroup of fields is processed:
+# Only primary histories are saved in climatologies, so save OMEGA instead of WN.
+#
+    if ($select == 'yes') then
+      set cfields = "'TN','UN','VN','OMEGA','HE','NE','TE','TI','HMF2','NMF2','POTEN','Z'"
+#
+# Generally do not make single-ut plots for climatologies
+# see singleut flag above.
+#
+      if ($singleut == 'yes') then
+        $proc -submit yes -executable $exec -singleut=1 \
+          -nlfile  $outdir/${run}_singleut_select.inp \
+          -stdout  $outdir/${run}_singleut_select.out \
+          -flnm_ps $outdir/${run}_singleut_select.ps  \
+          -fmap_zpht '-4. 0. 2. 4.' \
+          -cfields $cfields \
+          \*prim\*.nc
+        echo Completed singleut daily select for $run
+        if ($make_pdf == 'yes') then
+          ps2pdf $outdir/${run}_singleut_select.ps $outdir/${run}_singleut_select.pdf
+          if ($remove_ps == 'yes') rm $outdir/${run}_singleut_select.ps
+        endif
+      endif # singleut
+
+      if ($multiut == 'yes') then
+#
+# ut vs zp (tell ps2pdf to not autorotate):
+        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes -pltutlat=0 \
+          -nlfile  $outdir/${run}_${days}_utvert_select.inp \
+          -stdout  $outdir/${run}_${days}_utvert_select.out \
+          -flnm_ps $outdir/${run}_${days}_utvert_select.ps  \
+          -cfields $cfields \
+          \*prim\*.nc
+        echo Completed multiut daily select for $run $days
+        if ($make_pdf == 'yes') then
+          ps2pdf -dAutoRotatePages=/None \
+            $outdir/${run}_${days}_utvert_select.ps \
+            $outdir/${run}_${days}_utvert_select.pdf
+          if ($remove_ps == 'yes') rm $outdir/${run}_${days}_utvert_select.ps
+        endif
+#
+# ut vs lat:
+        $proc -submit yes -executable $exec -multiut=1 -mtimes $mtimes -pltutvert=0 \
+          -nlfile  $outdir/${run}_${days}_utlat_select.inp \
+          -stdout  $outdir/${run}_${days}_utlat_select.out \
+          -flnm_ps $outdir/${run}_${days}_utlat_select.ps  \
+          -cfields $cfields \
+          \*prim\*.nc
+        echo Completed multiut daily select for $run $days
+        if ($make_pdf == 'yes') then
+          ps2pdf $outdir/${run}_${days}_utlat_select.ps \
+                 $outdir/${run}_${days}_utlat_select.pdf
+          if ($remove_ps == 'yes') rm $outdir/${run}_${days}_utlat_select.ps
+        endif
+      endif # multiut
+    endif # select
+
+  end # foreach run
+  cd $mycwd
+  echo tgcmproc moved back to $mycwd
+end # foreach res

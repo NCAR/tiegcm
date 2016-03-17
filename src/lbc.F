@@ -60,8 +60,7 @@
       subroutine tuvz_lbc(istep,iyear,iday,secs,itp)
 !
 ! Update lower boundary subdomains of T,U,V,Z
-! This is called every timestep from advance, after getgswm and 
-!   before addiag.
+! This is called every timestep from advance.
 !
       use mpi_module,only: lon0,lon1,lat0,lat1
       use init_module,only: iter,
@@ -92,7 +91,7 @@
 ! Args:
       integer,intent(in) :: istep,iyear,iday,itp
       real,intent(in) :: secs
-! local      
+! local  
       integer :: i,j
       real :: rstep
       complex :: t_expt_sdi, t_expt_di, uvz_expt_sdi, uvz_expt_di
@@ -123,8 +122,9 @@
      |    len_trim(tidi_ncfile) > 0.or.
      |    len_trim(ctmt_ncfile) > 0) goto 100
 !
-! Add gswm or Hough mode perturbations:
-! am 3/2015: moved from advanced to lbc since it makes more sense
+! Add gswm perturbations:
+! 12/2/15 btf: moved from advance.F to lbc.F
+!
       call getgswm(istep,iyear,iday,secs)
 !      
 ! GSWM migrating diurnal:

@@ -22,11 +22,10 @@
       use qrj_module,only: init_qrj
       use lbc,only: init_lbc
       use magfield_module,only: magdyn
+      use amie_module,only: init_amie
       use getapex_module,only: apxparm
       use timing_module,only: timer,timer_report,init_timer
       use mpi_module,only: mytid,ntask
-      use amie_module,only: init_amie
-      use seeflux_module,only: init_seeflux
       use diags_module,only: init_diags
       use cons_module,only: consdyn,set_geogrid
       use mpitime_module,only: report_mpitime
@@ -45,7 +44,7 @@
       implicit none
 !
 ! Local:
-      integer :: ier,icount_tgcm,icount_apex,nsecs
+      integer :: ier,icount_tgcm,icount_apex
       real :: cpu1,cpu2
       character(len=8) ::
      |  rundate,           ! current local date
@@ -56,6 +55,7 @@
      |  time0_run, time1_run,
      |  time0_init,time1_init
       real :: starttime,endtime
+      real :: hours,days
       real,external :: mpi_wtime
 !
 #ifndef IRIX
@@ -85,8 +85,6 @@
 ! Initialize timing (must be called after mp_init):
       call init_timer
 !
-
-!
 ! Init timing for the run, get cwd and pid, get user input,
 !   set up 2d decomposition.
 !
@@ -94,8 +92,9 @@
       call timer(time0_init,time1_init,'INIT',0,0) ! start init timing
       call getcwdir(cwd)
       write(6,"('Current working directory (cwd) = ',a)") trim(cwd)
-      call getprocessid(pid)
-      write(6,"('Process ID (pid) = ',i8)") pid
+!
+! Namelist read and input verification:
+!
       call input(mytid,ntask) ! get user input (mpi)
       if (mytid==0.and.len_trim(hpss_path) > 0) call init_dispose
 !
@@ -119,16 +118,13 @@
 !
 ! Do 2d decomposition of geographic and magnetic grids:
       call mp_distribute_geo
-      write(6,"('tgcm after distribute_geo')")
       call mp_distribute_mag
-      write(6,"('tgcm after distribute_mag')")
 !
 ! Make all task structures available to all tasks:
       call mp_exchange_tasks(1)
 !
 ! Set up geo and mag ESMF grids (esmf.F):
       call esmf_init
-      write(6,"('tgcm after esmf_init')")
 #endif
 
 #if defined(INTERCOMM) || defined(CISMAH)
@@ -153,8 +149,7 @@
 ! Read amie data files if requested
 ! (this is not in init_module to avoid circular dependencies)
       call init_amie
-      call init_seeflux
-!
+!      
 ! Read source history:
       call readsource(ier)
 !
@@ -174,12 +169,11 @@
 #ifdef MPI
       write(6,"('MPI run with ntask = ',i3)") ntask
 #endif
-      write(6,"('nstep=',i5,' step=',i5)") nstep,step
-      nsecs = nstep*step
-      write(6,"('Model simulation time = ',i8,' secs ',/,
-     |  '  (minutes=',f10.2,', hours=',f8.2,', days=',f10.6,')')")
-     |  nsecs,real(nsecs)/60.,real(nsecs)/3600.,
-     |  real(nsecs)/(24.*3600.)
+      write(6,"('nstep=',i8,' step=',i8)") nstep,step
+      hours = real(nstep*step)/3600. ! seconds to hours
+      days  = hours/24.
+      write(6,"('Model simulation time: hours=',f10.2,' days=',f10.2)")
+     |  hours,days
 !
 ! End timing:
 !
