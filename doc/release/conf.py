@@ -45,7 +45,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'TIEGCM Release'
-copyright = u'2016, NCAR/HAO'
+copyright = u'2016, NCAR High Altitude Observatory'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -196,7 +196,7 @@ htmlhelp_basename = 'tiegcm195doc'
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
   ('index', 'tiegcm20.tex', u'tiegcm2.0 Documentation',
-   u'NCAR/HAO', 'manual'),
+   u'NCAR High Altitude Observatory', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -229,5 +229,5 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'tiegcm195', u'tiegcm2.0 Documentation',
-     [u'NCAR/HAO'], 1)
+     [u'NCAR High Altitude Observatory'], 1)
 ]
