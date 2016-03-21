@@ -12,11 +12,16 @@ part of their research.  We also welcome development efforts on the model
 itself, subject to the Academic Research License Agreement
 :download:`tiegcmlicense.txt <_static/tiegcmlicense.txt>`.
 
-For more information about the TIEGCM and other related models, please see:
+.. _tiegcm_links:
+
+Related TIEGCM Documents and Links
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * `Main TGCM website <http://www.hao.ucar.edu/modeling/tgcm>`_
 
 * :base_url:`TIEGCM Release Documentation <release/html>` for version |version|.
+
+* :base_url:`TIEGCM Benchmark Results <postproc/html/benchmarks.html>` for version |version|.
 
 * `Model Description <http://www.hao.ucar.edu/modeling/tgcm/doc/description/model_description.pdf>`_
 

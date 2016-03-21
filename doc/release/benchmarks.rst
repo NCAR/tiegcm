@@ -4,6 +4,11 @@
 |modeluc| Version |version| Benchmark Runs
 ==========================================
 
+.. note::
+
+  Benchmark results (pdf plot files) for version |tgcm_version| are available here: 
+  :base_url:`Post-processing of TIEGCM benchmarks <postproc/html/benchmarks.html>`
+
 Benchmark runs are provided in three groups: full-year climatology, seasonal, and solar storm events.
 Here is a table of runs at 2.5-degree model resolution (there is also a set at the 5-degree resolution)::
  
@@ -65,6 +70,11 @@ Here is a table of runs at 2.5-degree model resolution (there is also a set at t
 
 Selected Results of |tgcm_version_uc| Benchmark Runs 
 ----------------------------------------------------
+
+.. note::
+
+  Benchmark results (pdf plot files) for version |tgcm_version| are available here: 
+  :base_url:`Post-processing of TIEGCM benchmarks <postproc/html/benchmarks.html>`
 
 Results of the benchmark runs are available in 2d plots of time series, grid slices, and maps.
 These are multi-page PDF files, arranged as follows:

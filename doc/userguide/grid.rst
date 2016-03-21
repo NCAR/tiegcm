@@ -141,14 +141,14 @@ as what is used in, e.g., tropospheric meteorology, because it is referenced to 
 g that is different from the value of g at the surface (~980 cm/s2).
 
 We can correct the geopotential height z to obtain geometric height zg.  This is performed 
-inside the models by subroutine zgcalc, using an empirical formulation of the variation of 
-g over the globe (including centripetal force), and vertical integration, to account for 
-the variation with altitude.  It can also be done, using the same subroutine, in the 
-Fortran model processers, and is also available in various IDL processing routines.  
-Geometric height zg is now forced onto secondary histories (i.e., it is output whether you 
+inside the models by subroutine calczg (addiag.F), using an empirical formulation of the 
+variation of g over the globe (including centripetal force), and vertical integration, to 
+account for the variation with altitude.  It can also be done, using the same subroutine, 
+in the Fortran model processers, and is also available in various IDL processing routines.  
+Geometric height ZG is now forced onto secondary histories (i.e., it is output whether you 
 request it or not) but not on primary histories (because primary histories contain only 
 what is necessary to re-start the model).  However, some older secondary history files 
-may not include zg which necessitates that it be calculated in the post-processing if 
+may not include ZG which necessitates that it be calculated in the post-processing if 
 needed for data comparison.
 
 Now we come to the final complication, which is the distinction between model interfaces 
@@ -169,12 +169,30 @@ Specified at  I   I   M   M   M   M   M   M   M   M   M   M   M   I   M   M   I 
 In order to register midpoint quantities in altitude, it is therefore necessary to 
 interpolate from the midpoints to the interfaces.  Alternatively, it may be simpler 
 to interpolate zg from the interfaces to the midpoints.  For TIE-GCM 2.0, a new output 
-variable has been added, zm, which is geometric height that has been interpolated to 
-the mid points.  However, older history files do not include zm.  As with zg, it is 
+variable has been added, ZGMID, which is geometric height that has been interpolated to 
+the mid points.  However, older history files do not include ZGMID.  As with ZG, it is 
 available on secondary histories but not on primary histories.
 
 In output histories, quantities specified at interfaces are defined by the ilev 
 coordinate variable and quantities specified at midpoints are defined by the lev 
 coordinate variable.  These quantities are generally numerically identical, but their 
 definitions in the files can serve as a reminder of what is defined where. 
+
+Height-related Variables on |modeluc| Secondary Histories:
+
+.. note::
+
+ Variables Z, ZG, and ZMAG are forced onto secondary histories. To save ZGMID to
+ secondary histories, add ZGMID to the fields list in the namelist input file:
+ SECFLDS='ZGMID'
+
+============== ============================================
+Variable Name  Description
+============== ============================================
+Z              Geopotential Height (cm)
+ZG             Geometric Height (cm)
+ZGMID          Geometric Height at Midpoints (cm)
+ZMAG           Geopotential Height on Geomagnetic Grid (km)
+============== ============================================
+
 
