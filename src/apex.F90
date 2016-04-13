@@ -2412,7 +2412,7 @@ subroutine cofrm(date)
       t = 1.0
       tc = 0.0
     end if
-    ll    = 2865
+    ll    = 3060
     nmx   = 13
     nc    = nmx*(nmx+2)
     kmx   = (nmx+1)*(nmx+2)/2
