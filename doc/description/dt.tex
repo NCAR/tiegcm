@@ -69,7 +69,7 @@ The thermodynamic equation is solved to get the neutral temperature
    Z}\right]\right\} - \mathbf{v}_n\cdot \nabla T_n - \notag  \\
    {}&  W \left(
    \frac{\partial T_n}{\partial Z} + \frac{R^* T_n}{C_p \overline{m}}
-   \right) + \frac{Q^{exp}-e^z \; L^{exp}}{C_p} - L^{imp} \label{eq:dt_1}
+   \right) + \frac{Q^{exp}-e^z \; L^{exp}}{C_p} - L^{imp}  T_n\label{eq:dt_1}
 \end{align}
 %
 with $T_n$ the neutral temperature, $t$ the time, $g$ the
@@ -106,7 +106,7 @@ thermodynamic equation with implicit and explicit terms
   \frac{\partial T_n^{t+\Delta t}}{\partial Z}\right\} + \notag \\
   {}& \frac{g e^z}{p_0 C_p}\frac{\partial}{\partial Z}
   \left\{K_E H^2 C_p
-   \frac{g}{C_p}\right\} - \mathbf{v}_n^t\cdot \nabla T_n^t - \\
+   \frac{g} \rho {C_p}\right\} - \mathbf{v}_n^t\cdot \nabla T_n^t - \\
    {}& W^{t+\Delta t}\frac{\partial T_n}{\partial Z}
     - W^{t+\Delta t}\frac{R^* T_n^{t+\Delta t}}{C_p \overline{m}}
     + \frac{Q^{exp}}{C_p}- \frac{e^z \; L^{exp}}{C_p}- L^{imp} T_n^{t + \Delta t}
@@ -524,12 +524,12 @@ The right hand side is
 At the height level $k$ the following terms are added to $Q$
 %
 \begin{align}
-  Q(k,i) = Q^*(k,i) + C_p^{mid}\left\{ \frac{1}{2 \Delta t} + L^{imp}
+  Q(k,i) = Q^*(k,i) + e^{-z} C_p^{mid}\left\{ \frac{1}{2 \Delta t} + L^{imp}
   \right\} + w^{mid}\frac{R}{\overline{m}}
 \end{align}
 %
-with the values at the midpoint level $C_p^{mid}(z+\frac{1}{2} +
-\Delta z) = C_p(z) + C_p(z + \Delta z)$ and $w^{mid}(z+\frac{1}{2} +
+with the values at the midpoint level $C_p^{mid}(z+\frac{1}{2}
+\Delta z) = C_p(z) + C_p(z + \Delta z)$ and $w^{mid}(z+\frac{1}{2} 
 \Delta z) = w(z) + w(z+\Delta z)$. At the lower boundary the
 following condition is used
 %
