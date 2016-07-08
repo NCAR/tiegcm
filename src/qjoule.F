@@ -160,7 +160,7 @@
           vel_zonal(k,i) = .5*(ui(k,i)+ui(k+1,i))-un(k,i)  ! s2
           vel_merid(k,i) = .5*(vi(k,i)+vi(k+1,i))-vn(k,i)  ! s3
           vel_vert(k,i)  = .5*(wi(k,i)+wi(k+1,i)-scheight(k,i)*
-     |         ( w(k,i)-w(k+1,i)) )
+     |         ( w(k,i)+w(k+1,i)) )
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
       do i=lon0,lon1
