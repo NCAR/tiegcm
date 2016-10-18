@@ -82,7 +82,7 @@
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
       use ctmt_module,only: get_ctmt,ctmt_t,ctmt_z,ctmt_u,ctmt_v
-      use hme_module,only: get_hme,hme_t,hme_z,hme_u,hme_v,hme_rho
+      use hme_module,only: get_hme,hme_t,hme_z,hme_u,hme_v
       use tgcmlb_module,only: get_tgcmlb,tgcmlb_t,tgcmlb_z,tgcmlb_u,
      |  tgcmlb_v
       use hist_module,only: modeltime
@@ -246,7 +246,6 @@
 ! Add HME perturbations:
       if (hme_nfiles > 0 ) then
         call get_hme(modeltime)
-        call cal_hme_z(istep,itp,t_lbc,hme_z_loc,hme_t,hme_rho) 
 !     
         do j=lat0,lat1
           do i=lon0,lon1

@@ -5,7 +5,7 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !      
-! Read HME boundary perturbations T, U, V, W, Z, RHO and interpolate
+! Read HME boundary perturbations T, U, V, W, Z and interpolate
 !   to model grid and time, and calculates Z.
 !
 ! HME tidal components: daily files with hourly data (0UT-23UT)on the tiegcm dres grid
@@ -40,8 +40,7 @@
      |  hme_z, 
      |  hme_t, 
      |  hme_u, 
-     |  hme_v, 
-     |  hme_rho 
+     |  hme_v
 !
 ! Current hme_ncfile being used for nudging (for histories):
       character(len=mxlen_filename) :: hme_ncfile_curr
@@ -60,8 +59,8 @@
       logical,save :: isread(mxtime)=.false.
       integer :: istat
       real,dimension(nlon,nlat) ::       ! LB
-     |  tlb0, ulb0, vlb0, zlb0, rlb0,  ! data at time index itime0
-     |  tlb1, ulb1, vlb1, zlb1, rlb1   ! data at time index itime1
+     |  tlb0, ulb0, vlb0, zlb0,  ! data at time index itime0
+     |  tlb1, ulb1, vlb1, zlb1   ! data at time index itime1
 
   100 continue
       if (ncid==0) call readfile(ncfiles(ifile),ifile,ncid)
@@ -75,24 +74,23 @@
      
       if (yfrac >= yfrac0 .and. yfrac < yfrac1) then
         if (.not.isread(itime0)) then
-          call read_hme(ncid,ifile,itime0,tlb0,ulb0,vlb0,zlb0, rlb0)  ! read in LB values
+          call read_hme(ncid,ifile,itime0,tlb0,ulb0,vlb0,zlb0)  ! read in LB values
           isread(itime0) = .true.
         endif
         if (.not.isread(itime1)) then
-          call read_hme(ncid,ifile,itime1,tlb1,ulb1,vlb1,zlb1,rlb1)  ! read in LB values
+          call read_hme(ncid,ifile,itime1,tlb1,ulb1,vlb1,zlb1)  ! read in LB values
           isread(itime1) = .true.
         endif   
      
 ! Interpolate LB values    
         call interpdata_lbc(modeltime,yfrac,yfrac0,yfrac1,
-     |      tlb0,ulb0,vlb0,zlb0,rlb0,tlb1,ulb1,vlb1,zlb1,rlb1)
+     |      tlb0,ulb0,vlb0,zlb0,tlb1,ulb1,vlb1,zlb1)
 !	
         hme_ncfile_curr = ncfiles(ifile) ! for history file
 !
 	
       else ! next timestep on file
         tlb0 = tlb1 ; ulb0 = ulb1 ; vlb0 = vlb1 ; zlb0 = zlb1
-        rlb0 = rlb1
 !	
         if (itime0 > itime1) then
           itime0 = 1
@@ -269,16 +267,16 @@
 !
       end function yfrac_hme
 !--------------------------------------------------------------------------
-      subroutine read_hme(ncid,ifile,itime,t,u,v,z,rho)
+      subroutine read_hme(ncid,ifile,itime,t,u,v,z)
       implicit none
 !
 ! Read 2d data t,u,v,w, rho from hme file.
-! THME [deg K]; UHME,VHME,WHME [m/s]; ZHME [m]; RhoHME [%] 
+! THME [deg K]; UHME,VHME,WHME [m/s]; ZHME [m]
 ! The file is already open under ncid.
 !
 ! Args:
       integer,intent(in) :: ncid,ifile,itime
-      real,dimension(nlon,nlat),intent(out) :: t,u,v,z,rho
+      real,dimension(nlon,nlat),intent(out) :: t,u,v,z
 !
 ! Local:
       integer :: istat,id,start3(3),count3(3)
@@ -336,27 +334,15 @@
         call handle_ncerr(istat,
      |  'read_hme: Error getting variable Z')
          call shutdown('read_hme Z')
-      endif	 
-      istat = nf_inq_varid(ncid,"RHO",id)
-      if (istat /= NF_NOERR) then
-        call handle_ncerr(istat,
-     |  'read_hme: Error getting RHO var id')
-         call shutdown('read_hme RHO')
-      endif	 
-      istat = nf_get_vara_double(ncid,id,start3,count3,rho)
-      if (istat /= NF_NOERR) then
-        call handle_ncerr(istat,
-     |  'read_hme: Error getting variable RHO')
-         call shutdown('read_hme RHO')
       endif	
 
       end subroutine read_hme
 !-----------------------------------------------------------------------
       subroutine interpdata_lbc(modeltime,yfrac,yfrac0,yfrac1,
-     |  t0,u0,v0,z0,rho0,t1,u1,v1,z1,rho1)
+     |  t0,u0,v0,z0,t1,u1,v1,z1)
 !
-! Interpolate to yfrac between t0,u0,v0,z0,rho0 at yfrac0 and t1,u1,v1,z1,rho1 at yfrac1.
-! Return module data hme_t,hme_u,hme_v,hme_z,hme_rho w/ unit conversion where necessary.
+! Interpolate to yfrac between t0,u0,v0,z0 at yfrac0 and t1,u1,v1,z1 at yfrac1.
+! Return module data hme_t,hme_u,hme_v,hme_z w/ unit conversion where necessary.
 ! Function time_interp is in util.F.
 !
       use mpi_module,only: lat0,lat1,lon0,lon1
@@ -366,7 +352,7 @@
       integer,intent(in) :: modeltime(4)
       real,intent(in) :: yfrac,yfrac0,yfrac1
       real,dimension(nlon,nlat),intent(in) :: 
-     | t0,u0,v0,z0,rho0,t1,u1,v1,z1,rho1
+     | t0,u0,v0,z0,t1,u1,v1,z1
 !
 ! Local:
       integer :: i,j,k
@@ -384,8 +370,6 @@
      |        yfrac1,yfrac)
             hme_z(i,j)= time_interp(z0(i-2,j),z1(i-2,j),yfrac0,
      |        yfrac1,yfrac)
-            hme_rho(i,j)= time_interp(rho0(i-2,j),rho1(i-2,j),yfrac0,
-     |        yfrac1,yfrac)
           enddo ! i=1,nlon
 !
 ! Periodic points:
@@ -397,98 +381,13 @@
           hme_v(nlon+3:nlon+4,j) = hme_v(3:4,j)
           hme_z(1:2,j) = hme_z(nlon+1:nlon+2,j)
           hme_z(nlon+3:nlon+4,j) = hme_z(3:4,j)
-          hme_rho(1:2,j) = hme_rho(nlon+1:nlon+2,j)
-          hme_rho(nlon+3:nlon+4,j) = hme_rho(3:4,j)
         enddo ! j=1,nlat
 !
 ! Convert from m/s to cm/s and m to cm:
-      hme_rho = hme_rho*0.01 	! convert from [%] to [-]
       hme_u = hme_u*100. ! convert from m/s to cm/s
       hme_v = hme_v*100. ! convert from m/s to cm/s
       hme_z = hme_z*100. ! convert from m to cm
 !
       end subroutine interpdata_lbc
 !-----------------------------------------------------------------------
-      end module hme_module      
-!-----------------------------------------------------------------------
-      subroutine cal_hme_z(istep,itp,tbgrd,zprt,tprt,rhoprt)
-      
-      use mpi_module,only: lon0,lon1,lat0,lat1
-      use params_module,only: nlonp4,nlat
-      use cons_module,only: 
-     |   grav,           ! 870. [cm/s2] accel due to gravity
-     |   boltz,          ! 1.38E-16 [ergs/K] boltzman's constant 
-     |   rmassinv,
-     !   avo             ! 6.023e23 [#/mol] Avogadro constant 
-      use fields_module,only: o2,o1,barm
-      implicit none
-!
-! calculates the zpert 
-!   zprt = - R/g0*tbgrd*(pprt/p0 + tprt/tbgrd)
-! with R = kb/m [cm2/s2]  kb Boltzman constant; m mass
-!
-      integer,intent(in):: istep,  ! step
-     |          itp               ! index of previous step
-      real,intent(in) :: 
-     |    tbgrd(nlonp4,nlat), ! t_lbc
-     |    tprt(nlonp4,nlat),  ! tn pert HME [k]
-     |    rhoprt(nlonp4,nlat) ! rho_pertr/rho_bgrd  HME [-]
-      real,intent(out):: zprt(nlonp4,nlat)
-      
-      integer :: i,j,k
-      real :: barm_lb(lon0:lon1,lat0:lat1),
-     |     barm_tmp(2)
-      
-!     if(istep == 1) then
-! 
-! barm = mean molecular weight (k+1/2): [g/mol]
-! barm_lb [g]
-!
-        do j=lat0,lat1
-          do i=lon0,lon1
-            do k=1,2
-              barm_tmp(k) = 1./
-     |  	(o2(k,i,j,itp)*rmassinv(1)+o1(k,i,j,itp)*rmassinv(2)+
-     |  	(1.-o2(k,i,j,itp)-o1(k,i,j,itp))*rmassinv(3))
-            enddo
-            barm_lb(i,j) = 1.5*barm_tmp(1)-0.5*barm_tmp(2)
-            barm_lb(i,j) = barm_lb(i,j)/avo
-          enddo
-        enddo
-!     else  ! not first timestep
-!
-! barm1 = barm(k=0) (linear extrapolation)
-!
-!       do j=lat0,lat1
-!         do i=lon0,lon1
-!           barm_lb(i,j) = 1.5*barm(1,i,j,itp)-0.5*barm(2,i,j,itp)
-!           barm_lb(i,j) = barm_lb(i,j)/avo
-!         enddo
-!       enddo
-!     endif ! end first timestep
-!    
-! kb/m/g*Tn  [ergs/K /g / (cm/s2) *K] = [cm]
-      do j=lat0,lat1
-        do i=lon0,lon1
-          zprt(i,j) = -boltz/grav/barm_lb(i,j)*tbgrd(i,j)*
-     |         (rhoprt(i,j)+tprt(i,j)/tbgrd(i,j))
-
-!         write(6,"('cal_hme_z: istep=',i3,' j=',i3,' i=',i3,
-!    |      ' barm_lb=',e12.4,' tprt=',e12.4,' tbgrd=',e12.4,
-!    |      ' rhoprt=',e12.4,' zprt=',e12.4)") istep,j,i,
-!    |      barm_lb(i,j),tprt(i,j),tbgrd(i,j),rhoprt(i,j),zprt(i,j)
-
-!          write(6,*) 'HME1',i,j,boltz/grav/barm_lb(i,j)*tprt(i,j)
-!          write(6,*) 'HME2',i,j,
-!     |  	boltz/grav/barm_lb(i,j)*tbgrd(i,j)*
-!     |         (rhoprt(i,j))
-!          write(6,*) 'HME3',i,j,
-!     |  	boltz/grav/barm_lb(i,j)*tbgrd(i,j)*
-!     |         (tprt(i,j)/tbgrd(i,j))
-        enddo
-      enddo
-!     write(6,"('cal_hme_z: istep=',i3,' barm_lb min,max=',2e12.4,
-!    |  ' zprt min,max=',2e12.4)") istep,minval(barm_lb),
-!    |  maxval(barm_lb),minval(zprt),maxval(zprt)
-        
-      end subroutine cal_hme_z
+      end module hme_module 
