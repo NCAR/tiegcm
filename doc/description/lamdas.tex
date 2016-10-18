@@ -249,7 +249,7 @@ $\underline{\lambda}^{mag}$ is
 with the x--direction in magnetic east, and y--direction magnetic
 north. The inclination of the geomagnetic
 field lines is $I$. Note that in the code lyxnorot
-[= $\lambda^{mag}_{yx}$] has the wrong sign, but is not used, being
+[= $\lambda^{mag}_{yx}$] has a sign change, but is not used, being
 replaced by -lxynorot [$= -\lambda^{mag}_{xy}$].  The
 ion drag tensor can be rotated in geographic direction by using the
 rotation matrix $\mathbf{R}$
@@ -265,6 +265,8 @@ rotation matrix $\mathbf{R}$
 with the declination $D$ of the geomagnetic field. Applying the
 rotation to the ion drag tensor
 $\mathbf{R}\underline{\lambda}^{mag}\mathbf{R}^{-1}$ leads to
+ (Note that in the code $\lambda_{yx}(code) = -\lambda_{yx}$ but this
+ sign change is taken into account in the momentum equation)
 %
 \begin{gather}
   \Lambda =
