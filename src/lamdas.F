@@ -366,6 +366,8 @@
         lamda2(lev1,i)= sqrt(lamda2tmp(lev1-1,i)**3/lamda2tmp(lev1-2,i))
 !
 ! Non-rotated lamdas:
+! l^mag_yx = lyxnorot in code
+! l^mag_yx(code) = -l^magyx = l^magxy ; note a sign change in the code but it is NOT used later
         do k=lev0,lev1
           lxxnorot(k,i) = lamda1(k,i)
           lyynorot(k,i) = lamda1(k,i)*sin2dip(i)
@@ -395,7 +397,8 @@
 !
 ! Rotate lamdas for displacement of geomagnetic and geographic poles:
 ! (full levels)
-!
+! Note: l_yx(code) = -l_yx (rotated; but this sign change is taken into 
+! account in the momentum equation in duv.F
       do i=lon0,lon1
         do k=lev0,lev1
           lxx(k,i)= lxxnorot(k,i)*cos2dec(i)+lyynorot(k,i)*sn2dec(i,lat)

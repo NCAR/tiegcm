@@ -205,7 +205,10 @@
 !    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('ADVEC_V2','ADVEC_V2',' ',advec_vn(:,:,lat),
 !    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-
+!
+! Note: lyx(code) = -lyx; (see subroutine lamdas) this sign change is taken 
+! into account below by using -lyx(code)
+!
         do i=lon0,lon1
           do k=lev0,lev1-1
             ss(1,k,i) = expz(k)*(.25*((lxx(k,i,lat)+lxx(k+1,i,lat))*
@@ -339,6 +342,8 @@
 !     Q(1,2) = -exp(-s) * (f+u/r*tan(theta)-lamxy)
 !      and 
 !     Q(2,1) = exp(-s) * (f+u/r*tan(theta)-lamyx)
+! Note: l_yx(code) = -l_yx (see subroutine lamdas)
+! this sign change is taken into account below by using -lyx(code)
 !
             qq(1,2,k,i) = cor(lat)+un(k,i,lat)/re*tanphi(lat)
             qq(2,1,k,i) = qq(1,2,k,i)
