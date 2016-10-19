@@ -233,6 +233,8 @@
 	 endif   
       else
          maxday = 365.  ! counting starts with 0
+	 if(modeltime(1).eq.366) then ! should be day 1 of next year
+	    iyear_loc = iyear-1
       endif
 !
       isecs = modeltime(2)*3600+modeltime(3)*60+modeltime(4)
