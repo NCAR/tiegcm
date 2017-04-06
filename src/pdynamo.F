@@ -2071,6 +2071,7 @@
       real :: ed2i0j0,ed2i1j0,ed2i0j1,ed2i1j1
       real :: ephi0j0,ephi1j0,ephi0j1,ephi1j1
       real :: elam0j0,elam1j0,elam0j1,elam1j1
+      real :: fac_elam   ! accounts for height height variation of referenc eheight elam_2D
 !
 ! External:
       integer,external :: ixfind
@@ -2368,6 +2369,9 @@
 
             thetam(i)=(re+zpotm3d(i,j,mlev0))/(re+zpotm3d(i,j,k))
             thetam(i) = acos(sqrt(thetam(i))*cosltm*(1.-eps))
+	    
+	    fac_elam = tan(ylatm(j))/tan(thetam(i)*sym)  ! for scaling at height other than the reference
+	                                                 ! height tan(lambda_q)/tan(lambda_m); at pole fac_elam=1.
 
             pslot(i) = thetam(i)*180./pi+1.
             islot(i) = pslot(i)
@@ -2464,6 +2468,7 @@
             elam3d(i,j,k) = (1.-qslot(i))*((1.-pslot(i))*
      |        elam0j0 + pslot(i) * elam1j0) + qslot(i)*((1.-pslot(i))*
      |        elam0j1 + pslot(i) * elam1j1)
+            elam3d(i,j,k) = elam3d(i,j,k)*fac_elam  ! add scaling variation
 
           enddo ! i=mlon0,mlon1
         enddo ! j=mlat0,mlat1
