@@ -154,11 +154,12 @@
       do k=lev0,lev1
         do i=n1,nlon
           coslon = cos(((i+1-n1)/2.)*dlamda/2.)
-          if (coslon >= 0.1) then
-            smoothfunc = coslon**(2*nn(lat))
-            fx(i+1,k) = fx(i+1,k)*smoothfunc
+	  ! to avoid underflows and crash in debug mode
+          if ((coslon<0.1) .or. (coslon<0.9 .and. nn(lat)>50)) then
+             fx(i,k) = 0.
           else
-            fx(i+1,k) = 0.
+             smoothfunc = coslon**(2*nn(lat))
+             fx(i,k) = fx(i,k)*smoothfunc
           endif
         enddo ! i=1,nlon
       enddo ! k=lev0,lev1
