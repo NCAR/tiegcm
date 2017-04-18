@@ -39,7 +39,12 @@ FC        := $(F90)
 
 # Add ESMF stuff (LIB_ESMF is set in MAKE_MACHINE)
 # See also targets below for source files that depend on esmf.
+ifeq ($(MPIRUN),mpiexec_mpt)
+LIBS += -lesmf
+else
 LIBS += -L $(LIB_ESMF) -lesmf
+endif
+
 include $(LIB_ESMF)/esmf.mk
 INC_DIRS += $(ESMF_F90COMPILEPATHS)
 LDFLAGS  += $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS)
@@ -52,7 +57,11 @@ ifeq ($(F90),/usr/bin/gfortran)
   ESMF_F90COMPILER = $(MPIF90)
   @echo "set ESMF_F90COMPILER = $(ESMF_F90COMPILER)"
 endif
-
+# On cheyenne set esmf compiler to mpif90
+ifeq ($(MPIRUN),mpiexec_mpt)
+  ESMF_F90COMPILER = $(MPIF90)
+endif
+#
 Depends::
 	@echo "OS           =$(OS)" 
 	@echo "MAKE_MACHINE =$(MAKE_MACHINE)"
