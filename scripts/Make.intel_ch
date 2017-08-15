@@ -32,7 +32,7 @@ HOST     = $(shell hostname)
 # ESMF lib on yellowstone:
 # (tiegcm-ch.job does "module load esmf_libs/7.0.0")
 #
-ESMF_LIBDIR = /glade/u/apps/ch/opt/esmf/7.0.0-ncdfio-mpi/intel/16.0.3/lib/libO/Linux.intel.64.mpi.default
+#ESMF_LIBDIR = /glade/u/apps/ch/opt/esmf/7.0.0-ncdfio-mpi/intel/16.0.3/lib/libO/Linux.intel.64.mpi.default
 export ESMF_LIBDIR
 LIB_ESMF = $(ESMF_LIBDIR)
 include $(LIB_ESMF)/esmf.mk
