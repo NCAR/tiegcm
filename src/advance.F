@@ -57,6 +57,9 @@
 ! Routines and timing for parallel dynamo (pdynamo.F):
       use pdynamo_module,only: dynamo_inputs,pdynamo,pefield,
      |  prepare_phig3d,nmlat0,phihm 
+! am_de2     
+      use de2_empirical_module, only: de2_empirical_poten,
+     |   first_time
 
 #if defined(INTERCOMM) || defined(CISMAH)
       use cism_coupling_module,only: import, export, geng,gflx
@@ -265,6 +268,16 @@
 !    |    ' bz=',f8.2,' swvel=',f8.2,' power=',f8.2)")
 !    |    bzimf,swvel,power
       endif
+      
+! If the potential model is  and power was not provided
+! by namelist, then calculate power from bz and swvel.
+      if (potential_model(1:13)=='DE2_EMPIRICAL'.and.
+     |  rd_power==spval) then
+        power = hp_from_bz_swvel(bzimf,swvel)
+!       write(6,"('Advance calculated power from bz,swvel: ',
+!    |    ' bz=',f8.2,' swvel=',f8.2,' power=',f8.2)")
+!    |    bzimf,swvel,power
+      endif
 !
 ! If Kp was provided, calculate power and/or ctpoten
 ! (see also sub check_solar in input.F)
@@ -291,7 +304,7 @@
 !
 ! Get GSWM tidal boundary data:
 !
-      call getgswm(istep,iyear,iday,secs)
+!      call getgswm(istep,iyear,iday,secs)
 !
 ! Update lower boundaries of t,u,v,z:
 !
@@ -474,6 +487,12 @@
       elseif (potential_model == 'HEELIS') then
         call heelis
         if (debug) write(6,"('advance after heelis: istep=',i4)") istep
+!
+      elseif (potential_model == 'DE2_EMPIRICAL') then ! am_de2
+        if (istep==1) first_time = .true.
+        call de2_empirical_poten
+        if (debug) write(6,"('advance after de2emp: istep=',i4)") istep,
+     |	 first_time
       else  !  potential_model='NONE'
         do j=1,nmlat0
           do i=1,nmlonp1

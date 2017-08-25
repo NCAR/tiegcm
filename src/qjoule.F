@@ -134,7 +134,9 @@
 ! Local:
       integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) ::vel_zonal,vel_merid,
-     |  vel_vert,scheight        ! scale height  
+     |  vel_vert,scheight,   ! scale height
+     |  qji_tn_wm3,          ! ion joule heating per mass 
+     |  rho                  ! density  
       real :: joulefac
 !
 #if defined(INTERCOMM) || defined(CISMAH)
@@ -171,6 +173,9 @@
 !
 ! Apply joule heating factor (formerly in dt.F):
           qji_tn(k,i) = qji_tn(k,i) * joulefac
+	  
+          ! Joule heating in [W/m^3]  ergs/s/cm^3 -> W/m^2
+	  qji_tn_Wm3(k,i) = qji_tn(k,i)*rho(k,i)*1.e-1
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !

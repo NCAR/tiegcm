@@ -70,29 +70,32 @@
      |  gswm_mi_sdi_ncfile, ! gswm migrating semi-diurnal data file
      |  gswm_nm_di_ncfile,  ! gswm non-migrating diurnal data file
      |  gswm_nm_sdi_ncfile  ! gswm non-migrating semi-diurnal data file
-      use gswm_module,only: getgswm, ! (nlonp4,nlat)
+      use gswm_module,only: getgswm,       ! (nlonp4,nlat)
      |  gswm_mi_di_z, gswm_mi_sdi_z, gswm_nm_di_z, gswm_nm_sdi_z,
      |  gswm_mi_di_t, gswm_mi_sdi_t, gswm_nm_di_t, gswm_nm_sdi_t,
      |  gswm_mi_di_u, gswm_mi_sdi_u, gswm_nm_di_u, gswm_nm_sdi_u,
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
       use bgrd_data_module,only: get_bgrddata,! (nlonp4,nlat)
      |  bgrddata_z, bgrddata_t, bgrddata_u, bgrddata_v
-      use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile
+      use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile,
+     | hme_nfiles,tgcmlb_nfiles
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
       use ctmt_module,only: get_ctmt,ctmt_t,ctmt_z,ctmt_u,ctmt_v
+      use hme_module,only: get_hme,hme_t,hme_z,hme_u,hme_v
+      use tgcmlb_module,only: get_tgcmlb,tgcmlb_t,tgcmlb_z,tgcmlb_u,
+     |  tgcmlb_v
       use hist_module,only: modeltime
-
+      
       implicit none
-!
 ! Args:
       integer,intent(in) :: istep,iyear,iday,itp
       real,intent(in) :: secs
-!
-! Local:
+! local  
       integer :: i,j
       real :: rstep
       complex :: t_expt_sdi, t_expt_di, uvz_expt_sdi, uvz_expt_di
+      real,dimension(nlonp4,nlat) :: hme_z_loc
 !
 ! Calculate exponentials
       rstep = float(step)
@@ -103,29 +106,27 @@
 !
 ! Set background constants 
       if (ibgrddata > 0 ) then ! background based on data
-        call get_bgrddata(istep,iyear,iday,secs)
-        t_lbc(lon0:lon1,lat0:lat1) = bgrddata_t(lon0:lon1,lat0:lat1)
-        u_lbc(lon0:lon1,lat0:lat1) = bgrddata_u(lon0:lon1,lat0:lat1)
-        v_lbc(lon0:lon1,lat0:lat1) = bgrddata_v(lon0:lon1,lat0:lat1)
-        z_lbc(lon0:lon1,lat0:lat1) = bgrddata_z(lon0:lon1,lat0:lat1)
+	call get_bgrddata(istep,iyear,iday,secs)
+	t_lbc(lon0:lon1,lat0:lat1) = bgrddata_t(lon0:lon1,lat0:lat1)
+	u_lbc(lon0:lon1,lat0:lat1) = bgrddata_u(lon0:lon1,lat0:lat1)
+	v_lbc(lon0:lon1,lat0:lat1) = bgrddata_v(lon0:lon1,lat0:lat1)
+	z_lbc(lon0:lon1,lat0:lat1) = bgrddata_z(lon0:lon1,lat0:lat1)
       else !(default see cons module):
         t_lbc(lon0:lon1,lat0:lat1) = tbound
         u_lbc(lon0:lon1,lat0:lat1) = 0.
         v_lbc(lon0:lon1,lat0:lat1) = 0.
-        z_lbc(lon0:lon1,lat0:lat1) = zbound
+        z_lbc(lon0:lon1,lat0:lat1) = zbound	
       endif
 
       if (len_trim(saber_ncfile) > 0 .or.
-     |    len_trim(tidi_ncfile) > 0 .or.
+     |    len_trim(tidi_ncfile) > 0.or.
      |    len_trim(ctmt_ncfile) > 0) goto 100
 !
 ! Add gswm perturbations:
 ! 12/2/15 btf: moved from advance.F to lbc.F
 !
       call getgswm(istep,iyear,iday,secs)
-!
-! Add gswm or Hough mode perturbations:
-!
+!      
 ! GSWM migrating diurnal:
       if (len_trim(gswm_mi_di_ncfile) > 0) then
         do j=lat0,lat1
@@ -226,9 +227,9 @@
         enddo
 !       write(6,"('tuvz_lbc: added tidi_u,v to u_lbc,v_lbc')")
       endif
-!
+      
 ! Add CTMT perturbations:
-      if (len_trim(ctmt_ncfile) > 0 )
+      if (len_trim(ctmt_ncfile) > 0 ) 
      |  call get_ctmt(istep,iyear,iday,secs)
 !
       if (len_trim(ctmt_ncfile) > 0) then
@@ -241,16 +242,55 @@
           enddo
         enddo
       endif
+      
+! Add HME perturbations:
+      if (hme_nfiles > 0 ) then
+        call get_hme(modeltime)
+!     
+        do j=lat0,lat1
+          do i=lon0,lon1
+            t_lbc(i,j) = t_lbc(i,j)+hme_t(i,j)
+            z_lbc(i,j) = z_lbc(i,j)+hme_z(i,j)
+            u_lbc(i,j) = u_lbc(i,j)+hme_u(i,j)
+            v_lbc(i,j) = v_lbc(i,j)+hme_v(i,j)
+          enddo
+        enddo
+        call addfld('T_HME','T_HME',' ',hme_t(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('U_HME','U_HME',' ',hme_u(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('V_HME','V_HME',' ',hme_v(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('Z_HME','Z_HME',' ',hme_z(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('ZL_HME','ZL_HME',' ',hme_z_loc(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+      endif
+      
+! Add TGCMlb perturbations:
+      if (tgcmlb_nfiles > 0 ) then
+        call get_tgcmlb(modeltime)
+!     
+        do j=lat0,lat1
+          do i=lon0,lon1
+            t_lbc(i,j) = t_lbc(i,j)+tgcmlb_t(i,j)
+            z_lbc(i,j) = z_lbc(i,j)+tgcmlb_z(i,j)
+            u_lbc(i,j) = u_lbc(i,j)+tgcmlb_u(i,j)
+            v_lbc(i,j) = v_lbc(i,j)+tgcmlb_v(i,j)
+          enddo
+        enddo
+      endif
 !
 ! Save 2d boundaries to secondary histories:
-!     call addfld('T_LBC','T_LBC',' ',t_lbc(lon0:lon1,lat0:lat1),
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld('U_LBC','U_LBC',' ',u_lbc(lon0:lon1,lat0:lat1),
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld('V_LBC','V_LBC',' ',v_lbc(lon0:lon1,lat0:lat1),
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld('Z_LBC','Z_LBC',' ',z_lbc(lon0:lon1,lat0:lat1),
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('T_LBC1','T_LBC1',' ',t_lbc(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('U_LBC1','U_LBC1',' ',u_lbc(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('V_LBC1','V_LBC1',' ',v_lbc(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('Z_LBC1','Z_LBC1',' ',z_lbc(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!
       end subroutine tuvz_lbc
 !-----------------------------------------------------------------------
       subroutine bndry_semidiurnal

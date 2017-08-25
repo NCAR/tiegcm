@@ -473,7 +473,7 @@
      |    alfac,ec,fc
         write(6,"('  drizzle: alfad=',f8.3,' ed=',f8.3,' fd=',e12.4)")
      |    alfad,ed,fd
-	write(6,"('  auroral radius = max of rhp,rcp=',2f10.3)") rhp,rcp
+	write(6,"('  auroral radius = max of rhp,rcp=',2e10.3)") rhp,rcp
 	write(6,"('  roth, rote (MLT) =',2f10.3)") roth,rote
 	write(6,"('  1/e-widths = h1,h2=',2f10.3)") h1,h2
         write(6,"('  energy flux = e1,e2=',2f10.3)") e1,e2
@@ -955,14 +955,14 @@
         call cion(xdrizl,drizl_ion,alfa1,lev0,lev1,lon0,lon1,lat)
       endif
 
-!     call addfld('ALFA1',' ',' ',alfa1_ion,'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('ALFA2',' ',' ',alfa2_ion,'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('CUSP',' ',' ',cusp_ion,'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('DRIZL',' ',' ',drizl_ion,'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
+      call addfld('ALFA1',' ',' ',alfa1_ion,'lev',lev0,lev1,
+     |  'lon',lon0,lon1,lat)
+      call addfld('ALFA2',' ',' ',alfa2_ion,'lev',lev0,lev1,
+     |  'lon',lon0,lon1,lat)
+      call addfld('CUSP',' ',' ',cusp_ion,'lev',lev0,lev1,
+     |  'lon',lon0,lon1,lat)
+      call addfld('DRIZL',' ',' ',drizl_ion,'lev',lev0,lev1,
+     |  'lon',lon0,lon1,lat)
 !
 ! Solar protons:
       if (flx_sp > 1.e-19)
@@ -1127,14 +1127,14 @@
      |    (1.5*qn2p_aur(lev1-1,i)-0.5*qn2p_aur(lev1-2,i))
       enddo ! i=lon0,lon1
 
-!     call addfld('QO2P',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOP' ,' ',' ',qop(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QN2P' ,' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QNP' ,' ',' ',qnp(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QO2P',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QOP' ,' ',' ',qop(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QN2P' ,' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QNP' ,' ',' ',qnp(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       end subroutine aurora_ions
 !-----------------------------------------------------------------------

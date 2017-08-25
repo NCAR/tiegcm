@@ -521,7 +521,11 @@
      |        3.818e+08, 8.448e+08, 3.655e+09, 2.364e+09,
      |        1.142e+09, 1.459e+09, 4.830e+09, 2.861e+09,
      |        8.380e+09, 4.342e+09, 5.612e+09, 1.270e+09,
-     |        5.326e+08, 2.850e+07, 2.000e+06, 1.000e+04,
+! am 3/2015 modified according to Fang et al. 2008 to increase 
+! E-region Hall conductivity     
+!     |        5.326e+08, 2.850e+07, 2.000e+06, 1.000e+04,
+     |        2.343e+09, 1.254e+08, 8.800e+06, 1.000e+04,
+!     
      |        5.010e+01/)
 !
 ! scaling factor A as defined in EUVAC model

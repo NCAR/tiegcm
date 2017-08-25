@@ -49,6 +49,8 @@
      |  step,            ! model time step (integer seconds)
      |  eddy_dif,	 ! 0/1 flag for DOY dependent eddy diffusion (difk, dift, xmue)
      |  dynamo,          ! 0/1 flag for dynamo
+     |  poyntheating,    ! 0/1 for joule heating/poynting flux heating am_de2
+     |  efieldvar,       ! 0/1 flag for E-field variation  am_de2
      |  current_pg,      ! 0/1 flag to add current due to plasma pressure and gravity to rhs (default 1)
      |  current_kq,      ! 0/1 flag to calculate height-integrated current density (default 0)
      |  aurora,          ! 0/1 flag for aurora
@@ -110,7 +112,7 @@
 !             can be either WEIMER01 or WEIMER05.
 !
      |  potential_model,  ! electric potential model used
-                          !  Values can be 'HEELIS', 'WEIMER', or 'NONE'
+                          !  Values can be 'HEELIS', 'WEIMER', 'DE2_EMPIRICAL' or 'NONE'
                           !  If absent, the default value is set to 'HEELIS'
      |  weimer_ncfile,    ! path to netcdf weimer01 coefficients file
      |  wei05sc_ncfile,   ! path to netcdf data files for weimer05 model
@@ -124,7 +126,9 @@
      |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
      |  saber_ncfile,       ! SABER data (T,Z)
      |  tidi_ncfile,        ! TIDI data (U,V)
-     |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z)
+     |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z)     
+     |  hme_ncfiles(mxhvols), ! hme files for lbcperturbations
+     |  tgcmlb_ncfiles(mxhvols), ! tgcm files for lbcperturbations
      |  bgrddata_ncfile     ! background data (T,U,V,Z; V=0)
 
 !     integer,parameter :: ngpivars = 4
@@ -170,10 +174,11 @@
      |  start_day,start_year,calendar_advance,see_ncfile,
      |  ctpoten_time,power_time,bximf_time,byimf_time,bzimf_time,
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
-     |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
-     |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  enforce_opfloor,bgrddata_ncfile,ctmt_ncfile,opdiffcap,
-     |  amienh,amiesh,amie_ibkg
+     |  imf_ncfile,saber_ncfile,tidi_ncfile,ctmt_ncfile,hme_ncfiles,
+     |  bgrddata_ncfile,sech_nbyte,f107_time,f107a_time,hpss_path,
+     |  current_pg,current_kq,calc_helium,enforce_opfloor,amiesh,
+     |  amienh,amie_ibkg,tgcmlb_ncfiles,
+     |  poyntheating,efieldvar  ! am_de2
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -187,6 +192,8 @@
 ! Current working (execution) directory (set by tgcm.F):
       character(len=120) :: cwd  ! current working directory
       integer :: pid ! current process id
+      integer :: hme_nfiles
+      integer :: tgcmlb_nfiles
 !
       contains
 !-------------------------------------------------------------------
@@ -250,8 +257,11 @@
 
       saber_ncfile = ' '      ! SABER data file
       tidi_ncfile = ' '       ! TIDI data file
+      ctmt_ncfile = ' '       ! CTMT data file
+      hme_ncfiles(:) = ' '    ! HME files for lb perturbation
+      tgcmlb_ncfiles(:) = ' ' ! TGCM files for lb perturbation
+
       bgrddata_ncfile = ' '   ! Background data file
-      ctmt_ncfile = ' '       ! CTMT data file for lbc tides 
 !
       start_day  = ispval
       start_year = ispval
@@ -260,6 +270,8 @@
       step    = ispval
       eddy_dif = ispval  ! new as of 4/10
       dynamo  = ispval
+      poyntheating= ispval    !  for joule heating/poynting flux heating am_de2
+      efieldvar= 0       ! off by default flag for E-field variation  am_de2
       current_pg = 1     ! on by default
       current_kq = 0     ! off by default
       tide(:) = spval
@@ -538,13 +550,33 @@
 ! SABER and/or TIDI data files:
       if (len_trim(saber_ncfile) > 0) call expand_path(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0)  call expand_path(tidi_ncfile)
+      
+! CTMT data files:
+      if (len_trim(ctmt_ncfile) > 0) call expand_path(ctmt_ncfile)
+!
+! HME data files:
+!
+      hme_nfiles=0
+      do n=1,mxhvols
+        if (len_trim(hme_ncfiles(n)) > 0) then
+          hme_nfiles = hme_nfiles+1
+          call expand_path(hme_ncfiles(n))
+        endif
+      enddo
+      
+! TGCM LB data files:
+!
+      tgcmlb_nfiles=0
+      do n=1,mxhvols
+        if (len_trim(tgcmlb_ncfiles(n)) > 0) then
+          tgcmlb_nfiles = tgcmlb_nfiles+1
+          call expand_path(tgcmlb_ncfiles(n))
+        endif
+      enddo
 !
 ! background data files:
-      if (len_trim(bgrddata_ncfile) > 0)
+      if (len_trim(bgrddata_ncfile) > 0) 
      | call expand_path(bgrddata_ncfile)
-!
-! CTMT data files (lbc tides):
-      if (len_trim(ctmt_ncfile) > 0) call expand_path(ctmt_ncfile)
 !
 ! Collision factor:
       if (colfac==spval) then
@@ -598,6 +630,19 @@
         if (dynamo <= 0)
      |    write(6,"('Input: Will NOT call dynamo: namelist dynamo=',
      |      i4)") dynamo
+      endif
+! am_de2      
+      if (poyntheating==ispval.or.poyntheating==0) then
+        poyntheating = 0
+      else
+        poyntheating = 1 
+        write(6,"('Will use Poynting heating')")
+      endif     
+      if (efieldvar==ispval.or.efieldvar==0) then
+        efieldvar = 0
+      else
+        efieldvar = 1 
+        write(6,"('Will use Efield variability')")
       endif
 !
 ! eddy_dif = 1 -> use DOY-dependent eddy diffusion
@@ -1450,21 +1495,39 @@
      |    'saber_ncfile = ',a)") trim(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0) write(6,"('  TIDI data file: ',
      |    'tidi_ncfile = ',a)") trim(tidi_ncfile)
-
-      if (len_trim(bgrddata_ncfile) > 0) write(6,"('  Bgrddata file: ',
-     |    'bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
+     
       if (len_trim(ctmt_ncfile) > 0) write(6,"('  CTMT data file: ',
      |    'ctmt_ncfile = ',a)") trim(ctmt_ncfile)
+
+      if (hme_nfiles > 0) then
+        do i=1,hme_nfiles
+          write(6,"('HME_NCFILES(',i3,') = ',a)")
+     |      i,trim(hme_ncfiles(i))
+        enddo
+      endif
+      
+      if (tgcmlb_nfiles > 0) then
+        do i=1,tgcmlb_nfiles
+          write(6,"('TGCMLB_NCFILES(',i3,') = ',a)")
+     |      i,trim(tgcmlb_ncfiles(i))
+        enddo
+      endif
+     
+      if (len_trim(bgrddata_ncfile) > 0) write(6,"('  Bgrddata file: ',
+     |    'bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
+
 
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amievol)
+
       if (len_trim(amienh) > 0)
      |  write(6,"('  amienh = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amienh)
       if (len_trim(amiesh) > 0)
      |  write(6,"('  amiesh = ',a,/,4x,
      |    '(file or mss path containing amie data)')") trim(amiesh)
+
       if (len_trim(hpss_path) > 0)
      |  write(6,"('  hpss_path = ',a,4x,
      |    '(hpss directory for hsi dispose script)')") trim(hpss_path)
@@ -1564,6 +1627,20 @@
         write(6,"('  current_kq = ',i2,
      |    ' (Calculate height-integrated current density)')")
      |    current_kq
+      endif
+      
+! Additional Joule heating am_de2      
+      if (poyntheating == 0) then
+         write(6, "('  poyntheating == 0: Joule heating will be used')")
+      else
+         write(6, "('  poyntheating != 0: Heating is calculated from 
+     | poynting flux')")
+      endif
+      write(6,*) 'efieldvar = ',efieldvar
+      if (efieldvar == 0) then
+         write(6, "('  efieldvar == 0: efieldvar will not be used')")
+      else
+         write(6, "('  efieldvar != 0: efieldvar will be used')")
       endif
 !
 ! More model-wide inputs:
@@ -1915,6 +1992,8 @@
           write(6,"('wei05sc_ncfile=',a)") trim(wei05sc_ncfile)
         case('HEELIS')
           write (6,"('Will use the Heelis potential model')")
+        case('DE2_EMPIRICAL')
+          write (6,"('Will use the DE2_EMPIRICAL potential model')")
         case('AMIE')
           write (6,"('Will use the AMIE potential input')")
         case('NONE')
@@ -1960,6 +2039,12 @@
         if (potential_model(1:6)=='WEIMER') then
           write(6,"(/,'>>> INPUT: Cannot provide KP namelist input',
      |      ' with a WEIMER run.')")
+          call shutdown('KP input')
+        endif
+!
+        if (potential_model(1:13)=='DE2_EMPIRICAL') then
+          write(6,"(/,'>>> INPUT: Cannot provide KP namelist input',
+     |      ' with a DE2_EMPIRICAL run.')")
           call shutdown('KP input')
         endif
 !
@@ -2045,14 +2130,16 @@
 !
 ! Check parameters needed for Weimer potential model:
 !
-      if (potential_model(1:6)=='WEIMER') then
+      if (potential_model(1:6)=='WEIMER'.or.
+     |       potential_model(1:13)=='DE2_EMPIRICAL') then
 !
 ! GPI data not allowed with Weimer potential model:
 ! If gpi data is requested with Weimer, then only f10.7 will be
 ! used from the gpi file.
         if (len_trim(gpi_ncfile) > 0) then
           write(6,"('Note INPUT: gpi_ncfile has been specified with',
-     |      ' Weimer convection model.',/,'  In this case, only ',
+     |      ' Weimer/DE2_EMPIRICAL convection model.',/,
+     |      '  In this case, only ',
      |      'f10.7 flux will be used from the gpi file.')")
 !         write(6,"(/,'>>> INPUT: GPI data runs (gpi_ncfile) can',
 !    |      ' be requested only with HEELIS potential model.')")
@@ -2062,9 +2149,10 @@
 ! Weimer non-gpi run must provide f107:
         if (len_trim(gpi_ncfile) <= 0.and.(f107==spval.or.f107a==spval)) 
      |    then
-          write(6,"(/,'>>> Weimer potential model without GPI data',
+          write(6,"(/,'>>> Weimer/DE2_EMPIRICAL potential model',
+     |      '  without GPI data',
      |      ' must provide namelist f107,f107a')") 
-          call shutdown('WEIMER non-GPI without f107')
+          call shutdown('WEIMER/DE2 non-GPI without f107')
         endif
 !
 ! ctpoten cannot be provided by the user, since it will be
@@ -2174,8 +2262,8 @@
 ! Validate lower boundary options:
 !
       implicit none
-      integer :: igswm, isaber, itidi, ihough, ictmt
-!
+      integer :: igswm, isaber, itidi, ihough, ictmt, ihme, itgcmlb 
+      
       igswm = 0
       if (len_trim(gswm_mi_di_ncfile ) > 0.or.
      |    len_trim(gswm_mi_sdi_ncfile) > 0.or.
@@ -2185,38 +2273,57 @@
       if (len_trim(saber_ncfile) > 0.) isaber = 1
       itidi = 0
       if (len_trim(tidi_ncfile) > 0.) itidi = 1
+      ictmt = 0
+      if (len_trim(ctmt_ncfile) > 0.) ictmt = 1
+      ihme = 0
+      if (hme_nfiles > 0.) ihme = 1
+      itgcmlb = 0
+      if (tgcmlb_nfiles > 0.) itgcmlb = 1
       ihough = 0
       if (any(tide2 /= 0).or.any(tide  /= 0.)) ihough = 1
       ictmt = 0
       if (len_trim(ctmt_ncfile) > 0.) ictmt = 1
 !
-! Hough-modes, gswm, saber/tidi, and ctmt are mutually exclusive: 
+! Hough-modes, gswm, saber/tidi and ctmt tgcmlb are mutually exclusive: 
 !
       if (igswm==1) then
-        if (isaber==1.or.itidi==1.or.ihough==1.or.ictmt==1) then
-          write(6,"('GSWM must be exclusive of SABER,TIDI,CTMT,HOUGH')")
-          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
-     |      ' ictmt=',i2,' ihough=',i2)") igswm,isaber,itidi,ictmt,
-     |      ihough
-          call shutdown('inp_lbc')
+        if (isaber==1.or.itidi==1.or.ihough==1.or.ictmt==1.or.ihme==1.
+     |      or.itgcmlb==1)
+     |    then
+         write(6,"('GSWM must be exclusive of SABER,TIDI,HOUGH,CTMT,',
+     |    'HME TGCMlb')")
+         write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
+     |      ' ihough=',i2,' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |      igswm,isaber,itidi,ihough,ictmt,ihme,itgcmlb
+         call shutdown('inp_lbc')
         endif 
       endif
       if (ihough==1) then
-        if (isaber==1.or.itidi==1.or.igswm==1.or.ictmt==1) then
-          write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM,CTMT')")
-          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,' ictmt=',i2,
-     |      ' ihough=',i2)") igswm,isaber,itidi,ictmt,ihough
+        if (isaber==1.or.itidi==1.or.igswm==1.or.ictmt==1.or.ihme==1.
+     |      or.itgcmlb==1) 
+     |    then
+          write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM,CTMT,',
+     |    'HME')")
+          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
+     |     ' ihough=',i2,' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |     igswm,isaber,itidi,ihough,ictmt,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif
-!
-! saber and tidi can be specified separately or together,
-! but either are exclusive of gswm and hough. 
       if (isaber==1.or.itidi==1) then
-        if (igswm==1.or.ihough==1.or.ictmt==1) then
-          write(6,"('SABER/TIDI must be exclusive of GSWM,HOUGH,CTMT')")
-          write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,' ictmt=',i2,
-     |      ' ihough=',i2)") igswm,isaber,itidi,ihough
+        if (ictmt==1.or.ihme==1.or.itgcmlb==1) then
+          write(6,"('SABERR/TIDI must be exclusive of CTMT,HME')")
+          write(6,"(' isaber=',i2,' itidi=',i2,
+     |      ' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") isaber,itidi,
+     |       ictmt,ihme,itgcmlb
+          call shutdown('inp_lbc')
+        endif 
+      endif
+      if (ictmt==1) then
+        if (ihme==1.or.itgcmlb==1) then
+          write(6,"('CTMT must be exclusive of HME and TGCM lb')")
+          write(6,"(' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") ictmt,
+     |      ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif

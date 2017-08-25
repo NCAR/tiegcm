@@ -19,7 +19,7 @@
       use lbc,only: t_lbc
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
-      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm
+      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,z,itc
       use addfld_module
       use diags_module,only: mkdiag_DEN,mkdiag_HEAT
 #ifdef MPI
@@ -57,7 +57,7 @@
       integer :: k,i,lonbeg,lonend,lat
       integer :: nk,nkm1,nlevs
       complex :: expt,expt2
-      real :: rstep
+      real :: rstep,zdiff
       real :: tnlbc(lon0:lon1,lat0:lat1) ! lower boundary condition
 !
 ! Local at 2d:
@@ -81,7 +81,9 @@
 ! Local at 3d (tnsmooth needs lat dimension only for sub smooth):
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
      |  tnsmooth,   ! zonal and meridional smoothing of tn_nm
-     |  advec_tn    ! horizontal advection (output of sub advec)
+     |  advec_tn,   ! horizontal advection (output of sub advec)
+     |  qji_int,    ! for diagnostic integrated Joule heating
+     |  qji_tn_Wm3  ! for diagnostic Joule heating [W/m^3]
 !
       nk = lev1-lev0+1
       nkm1 = nk-1
@@ -171,8 +173,35 @@
 ! (Note joulefac was applied in sub qji_tn)
 !
 	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)
+	  
+          ! Integral of Joule heating for diagnostic
+          h(k,i) = gask*tn(k,i,lat)/mbar(k,i)
+          rho(k,i) = p0*expz(k)/h(k,i)  	   ! g/cm^3
+	  zdiff = (z(k+1,i,lat,itc)-z(k,i,lat,itc))
+	  qji_int(1,i,lat) =qji_int(1,i,lat)+ qji_tn(k,i,lat)*zdiff*
+     |        rho(k,i)*1.e-3	 ! e-3 from 10^-7/10^-4 ergs/s/cm^2 -> W/m^2
+     
+          ! Joule heating in [W/m^3]  ergs/s/cm^3 -> W/m^2
+	  qji_tn_Wm3(k,i,lat) = qji_tn(k,i,lat)*rho(k,i)*1.e-1
+	  
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
+!         call addfld('POYNTNHEATING', 
+!     &       'Poynting flux heating the neutrals (Poynting)','ergs/s/g',
+!     &       poynting_flux(lev0:lev1-1,:)/rho(lev0:lev1-1,:)* 10.,
+!     &       'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+         call addfld('JOULENHEATING', 
+     &       'Joule heating the neutrals', 'ergs/s/g',
+     &       qji_tn(lev0:lev1-1,:, lat),
+     &       'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+         call addfld('JOULHEAT_Wm3', 
+     &       'Joule heating the neutrals', 'W/m^3',
+     &       qji_tn_Wm3(lev0:lev1-1,:, lat),
+     &       'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+          call addfld('INTJOULENHEAT', 
+     &       'int. Joule heating neutrals', 'W/m^2',
+     &       qji_int(lev0:lev1-1,:, lat),
+     &       'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('HEATING1',' ',' ',total_heat(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !

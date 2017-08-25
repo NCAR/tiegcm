@@ -45,6 +45,10 @@
 ! 3d electric potential for mag to geo regridding:
       type(ESMF_Field),save :: mag_phi3d,mag_ephi3d,mag_elam3d,mag_emz3d
       type(ESMF_Field),save :: geo_phi3d,geo_ephi3d,geo_elam3d,geo_emz3d
+      
+! 2d electric potential for mag to geo regridding:
+      type(ESMF_Field),save :: mag_Ed1SD,mag_Ed2SD
+      type(ESMF_Field),save :: geo_Ed1SD,geo_Ed2SD
 
       type(ESMF_RouteHandle),save :: ! route handles for Regridding
      |  routehandle_geo2mag, routehandle_mag2geo,
@@ -167,6 +171,11 @@
      |  mlev0,mlev1)
       call esmf_create_magfield(mag_emz3d ,mag_src_grid,'EMZ3D   ',
      |  mlev0,mlev1)
+! 2d fields on source mag grid for mag2geo:
+      call esmf_create_magfield(mag_Ed1SD ,mag_src_grid,'ED1SD   ',
+     |  0,0)
+      call esmf_create_magfield(mag_Ed2SD,mag_src_grid,'ED2SD   ',
+     |  0,0)
 !
 ! 2d fields on destination geo grid for mag2geo:
 #if defined(INTERCOMM) || defined(CISMAH)
@@ -184,6 +193,11 @@
      |  mlev0,mlev1)
       call esmf_create_geofield(geo_emz3d ,geo_des_grid,'EMZ3D   ',
      |  mlev0,mlev1)
+! 2d fields on destination geo grid for mag2geo:
+      call esmf_create_geofield(geo_Ed1SD ,geo_des_grid,'ED1SD   ',
+     |  0,0)
+      call esmf_create_geofield(geo_Ed2SD ,geo_des_grid,'ED2SD   ',
+     |  0,0)
 !
 ! Get 3d bounds of source mag field:
       call ESMF_FieldGet(mag_phi3d,localDe=0,farrayPtr=fptr,
@@ -297,8 +311,10 @@
 ! mag2geo 2d fields:
 !
 ! Use esmf index list and weights for 3d fields:
-#if defined(INTERCOMM) || defined(CISMAH)
-      call ESMF_FieldRegridStore(srcField=mag_zigm1,dstField=geo_zigm1, 
+! for Efield_var need the mapping am 7/2017
+!#if defined(INTERCOMM) || defined(CISMAH)
+!      call ESMF_FieldRegridStore(srcField=mag_zigm1,dstField=geo_zigm1, 
+      call ESMF_FieldRegridStore(srcField=mag_Ed1SD,dstField=geo_Ed1SD, 
      |  regridMethod=ESMF_REGRIDMETHOD_BILINEAR,
      |  polemethod=ESMF_POLEMETHOD_ALLAVG,
      |  routeHandle=routehandle_mag2geo_2d,
@@ -311,7 +327,8 @@
         call shutdown('esmf_FieldRegridStore')
       endif
 
-      call ESMF_FieldSMMStore(mag_zigm1,geo_zigm1,
+!      call ESMF_FieldSMMStore(mag_zigm1,geo_zigm1,
+      call ESMF_FieldSMMStore(mag_Ed1SD,geo_Ed1SD,
      |  routehandle_mag2geo_2d, factorList,factorIndexList,rc=rc) 
 
       if (rc /= ESMF_SUCCESS) then
@@ -319,7 +336,7 @@
      |    'ESMF_FieldSMMStore for 2d mag2geo: rc=',i4)") rc
         call shutdown('ESMF_FieldSMMStore')
       endif
-#endif
+!#endif
 
       end subroutine esmf_init
 !-----------------------------------------------------------------------
@@ -924,7 +941,7 @@
       enddo       ! n=1,nf
       end subroutine esmf_set3d_mag
 !-----------------------------------------------------------------------
-#if defined(INTERCOMM) || defined(CISMAH)
+!#if defined(INTERCOMM) || defined(CISMAH)
       subroutine esmf_set2d_mag(fields,fnames,f,nf,
      |  ilon0,ilon1,ilat0,ilat1)
 !
@@ -963,7 +980,7 @@
         enddo     ! mlat
       enddo       ! n=1,nf
       end subroutine esmf_set2d_mag
-#endif
+!#endif
 !-----------------------------------------------------------------------
       subroutine esmf_get_3dfield(field, fptr, name)
 !

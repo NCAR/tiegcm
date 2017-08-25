@@ -110,6 +110,8 @@
      |    saber_ncfile,      ! SABER U,Z lbc data file
      |    tidi_ncfile,       ! TIDI U,V lbc data file
      |    ctmt_ncfile,       ! CTMT lbc data file
+     |    hme_ncfile,        ! HME lbc data file
+     |    tgcmlb_ncfile,     ! TGCM lbc data file
      |    bgrddata_ncfile    ! Background data file
         integer ::
      |    nlat,              ! number of latitude grid points
@@ -246,8 +248,12 @@
 
       h%saber_ncfile = '[none]'
       h%tidi_ncfile = '[none]'
-      h%bgrddata_ncfile = '[none]'
+      
       h%ctmt_ncfile = '[none]'
+      h%hme_ncfile  = '[none]'
+      h%tgcmlb_ncfile  = '[none]'
+      
+      h%bgrddata_ncfile = '[none]'
 
       h%nflds  = 0
       h%dynamo = .false.
@@ -451,6 +457,8 @@
       write(6,"(2x,'saber_ncfile = ',a)") trim(h%saber_ncfile)
       write(6,"(2x,'tidi_ncfile  = ',a)") trim(h%tidi_ncfile)
       write(6,"(2x,'ctmt_ncfile  = ',a)") trim(h%ctmt_ncfile)
+      write(6,"(2x,'hme_ncfile  = ',a)") trim(h%hme_ncfile)
+      write(6,"(2x,'tgcmlb_ncfile  = ',a)")    trim(h%tgcmlb_ncfile)
       write(6,"(2x,'bgrddata_ncfile = ',a)") trim(h%bgrddata_ncfile)
 
       write(6,"(2x,'tuv_lbc_intop=',i3,' (if 1, then lbc of t,u,v',

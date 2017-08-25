@@ -68,7 +68,7 @@
 ! Integer flags set according to user-requested files:
       use init_module,only:  ibgrddata   ! 0/1 flag to get background data
 !
-! Driver for obtaining GSWM data, called once per timestep from advance.
+! Driver for obtaining Bgrd data, called once per timestep from advance.
 !
 ! Args:
       integer,intent(in) :: istep,iyear,iday
@@ -80,7 +80,7 @@
       iprint = 0
       if (istep==1) iprint = 1
 !
-! Get gswm migrating diurnal tide data:
+! Get Bgrd migrating diurnal tide data:
       if (ibgrddata > 0) then
         if (istep==1) call rd_bgrddata(bgrddata_ncfile)
         call mk_bgrddata(iyear,iday,int(secs),iprint)
@@ -109,7 +109,7 @@
       dskfile = ' '
       call getfile(ncfile,dskfile)
       write(6,"(/,72('-'))")
-      write(6,"('Reading BGRDDATA data file ',a)") trim(ncfile)
+      write(6,"('Reading Bgrd data file ',a)") trim(ncfile)
 !
 ! Open netcdf file:
       call nc_open(ncid,dskfile,'OLD','READ')
@@ -190,7 +190,7 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_bgrddata: Error getting variable Z')
       z = z*100. 	! convert from m to cm
-!     write(6,"('rdgswm ',a,': z min,max=',2e12.4)") 
+!     write(6,"('rdbgrd ',a,': z min,max=',2e12.4)") 
 !    |  type,minval(z),maxval(z)
 !
 ! Get TN perturbation [deg K]:
@@ -203,7 +203,7 @@
       t(3:nlon+2,:,:,:) = tmp(:,:,:,:)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_bgrddata: Error getting variable TN')
-!     write(6,"('rdgswm ',a,': tn min,max=',2e12.4)") 
+!     write(6,"('rdbgrd ',a,': tn min,max=',2e12.4)") 
 !    |  type,minval(t),maxval(t)
 !
 ! Get UN perturbation [m/s]:
@@ -217,7 +217,7 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_bgrddata: Error getting variable UN')
       u = u*100. 	! convert to cm/s
-!     write(6,"('rdgswm ',a,': un min,max=',2e12.4)") 
+!     write(6,"('rdbgrd ',a,': un min,max=',2e12.4)") 
 !    |  type,minval(u),maxval(u)
 !
 ! Get VN perturbation [m/s]:
@@ -231,7 +231,7 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_bgrddata: Error getting variable VN')
       v = v*100. 	! convert to cm/s
-!     write(6,"('rdgswm ',a,': vn min,max=',2e12.4)") 
+!     write(6,"('rdbgrd ',a,': vn min,max=',2e12.4)") 
 !    |  type,minval(v),maxval(v)
 !
 ! Transfer to private module data (whole-array assignments):
@@ -278,7 +278,7 @@
      |  z_nxtmo_nxthr, t_nxtmo_nxthr, u_nxtmo_nxthr, v_nxtmo_nxthr
       real :: fbgrd(lon0:lon1,lat0:lat1,4) ! for mp calls
 !   
-! Data: GSWM data given at the middle of each month 
+! Data: bgrd data given at the middle of each month 
 !       -> day of year for this data assuming non-leap year
 !         J  F  M  A   M   J   J   A   S   O   N   D   J
       data ndmon_nl                                ! non_leap
@@ -403,7 +403,7 @@
        bgrddata_u(lon0:lon1,lat0:lat1) = u
        bgrddata_v(lon0:lon1,lat0:lat1) = v
 !
-! Do mpi periodic points exchange for gswm with f2d(:)
+! Do mpi periodic points exchange for bgrd with f2d(:)
 ! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
 !
 #ifdef MPI

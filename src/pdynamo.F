@@ -57,6 +57,9 @@
 ! 3d electric field on geographic subdomains (see sub pefield):
 ! (nlevp1,lon0-2,lon1+2,lat0:lat1)
       real,allocatable,dimension(:,:,:),save :: ex,ey,ez
+ !     
+! E-field variation from DE-empirical model
+      real,dimension(nmlonp1,nmlat),save :: Ed1SD_mag,Ed2SD_mag
 !
 ! 3d electric potential on geographic subdomains (lon0:lon1,lat0:lat1,nlevp1)
 ! This will be regridded from phim3d for output to history files.
@@ -2005,8 +2008,7 @@
         js = nmlath-j+1
         do i=mlon0,mlon1
           phim2d(i,j) = rim1(i,j)+fac*(1.-pfrac(i,js))*(phihm(i,j)-
-     |    phihm(i,jn))
-
+     |    phihm(i,jn))	  
         enddo
       enddo
 
@@ -2018,12 +2020,15 @@
       enddo
 !
 ! There is also a PHIM2D saved at beginning of pthreed below.
-!     call addfld('PHIM2D',' ','VOLTS',
-!    |  phim2d(mlon0:mlon1,mlat0:mlat1),
-!    |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
-!     call addfld('RIM1',' ','VOLTS',
-!    |  rim1(mlon0:mlon1,mlat0:mlat1),
-!    |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+      call addfld('PHIM2D-h',' ','VOLTS',
+     |  phim2d(mlon0:mlon1,mlat0:mlat1),
+     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+      call addfld('RIM1-h',' ','VOLTS',
+     |  rim1(mlon0:mlon1,mlat0:mlat1),
+     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+      call addfld('PHIHM',' ','VOLTS',
+     |  phihm(mlon0:mlon1,mlat0:mlat1),
+     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
 
       end subroutine highlat_poten
 !-----------------------------------------------------------------------
@@ -2570,13 +2575,18 @@
 ! phim3d, otherwise use electric field on mag subdomains from pthreed of 
 ! the previous step.
 !
-      use cons_module,only: dt0dts,dlatm,dlonm,pi,rcos0s,table
+      use cons_module,only: dt0dts,dlatm,dlonm,pi,rcos0s,
+     |  table,r0,dt1dts,dt0dts,ylatm,rtd
       use mpi_module,only: mp_magpole_3d,mp_mag_halos,mp_magpoles,
      |  mytid
       use magfield_module,only: alatm,alonm  ! (nlonp1,0:nlatp1)
       use my_esmf,only: mag_ephi3d,mag_elam3d,mag_emz3d,
-     |                  geo_ephi3d,geo_elam3d,geo_emz3d
+     |                  geo_ephi3d,geo_elam3d,geo_emz3d,
+     |                  mag_Ed1SD,mag_Ed2SD,
+     |                  geo_Ed1SD,geo_Ed2SD
       use diags_module,only: mkdiag_EXYZ
+      use input_module,only: efieldvar
+      
       implicit none
 !
 ! Local:
@@ -2589,6 +2599,14 @@
       real,dimension(nlonp4) :: pslot,qslot,thetam
       real,dimension(lon0:lon1,lat0:lat1,mlev0:mlev1) :: 
      |  exgeo,eygeo,ezgeo
+      real,dimension(lon0:lon1,lat0:lat1) :: 
+     |  ed1sd_geo,   ! zonal electric field variation(geographic grid) 
+     |  ed2sd_geo    ! meridional electric field variation(geographic grid) 
+      integer :: Efield_dir,Efield_dir_ij      ! am_de2
+      real :: 
+     |  calc_Ed1_gra(lon0:lon1,lat0:lat1), ! am_de2
+     |  calc_Ed2_gra(lon0:lon1,lat0:lat1) 
+      real :: fac,fac_sin
 
       if (debug) write(6,"('Enter pefield: istep=',i3)") istep
 
@@ -2710,19 +2728,52 @@
           enddo
         enddo ! k=mlev0+1,mlev1-1
       endif ! istep == 1
+      
 !
 ! If istep > 1, then ephi3d, elam3d and emz3d were set by pthreed
 ! in the previous step.
 !
-!     do j=mlat0,mlat1
-!     call addfld('EMX_EFLD','EMX in pefield',' ',ephi3d(:,j,1:mlev1),
-!    |    'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!     call addfld('EMY_EFLD','EMY in pefield',' ',elam3d(:,j,1:mlev1),
-!    |    'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!     call addfld('EMZ_EFLD','EMZ in pefield',' ',emz3d(:,j,1:mlev1),
-!    |    'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
-!     enddo ! j=1,nmlat
+      do j=mlat0,mlat1
+      call addfld('EMX_EFLD','EMX in pefield',' ',ephi3d(:,j,1:mlev1),
+     |	 'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+      call addfld('EMY_EFLD','EMY in pefield',' ',elam3d(:,j,1:mlev1),
+     |	 'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+      call addfld('EMZ_EFLD','EMZ in pefield',' ',emz3d(:,j,1:mlev1),
+     |	 'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+      enddo ! j=1,nmlat
 !
+! direction fo the E-field variation, which flip over every time step.
+! since mapping is done at high latitude where field lines are almost vertical
+! we do not map teh 2D electric field to 3D   
+      if (debug) write(6,"('pefield before EVar')")   
+      if (efieldvar .ne. 0.and.istep.gt.1) then
+         Efield_dir = mod(istep,2)*2 - 1 
+         Efield_dir = -1 * Efield_dir
+	 
+         write(6,*) 'pefield EVar-ap',Efield_dir
+	 ! add the electric field variability [V/m]
+	 fac = 1.e-2*r0*Efield_dir  ! multiply by re+h convert from [cm] to [m]
+         do j=mlat0,mlat1
+	  if(abs(ylatm(j)*rtd).gt.50) then  ! DE2 is only calculated poleward of 50 deg
+	    fac_sin = -ylatm(j)/abs(ylatm(j))*dt1dts(j)/dt0dts(j)  ! |1/sinIm| - watch since 1/0 at equator
+	                                                           ! change sign in NH sinde elam is northward
+            do i=mlon0,mlon1
+             ephi3d(i,j,:)=ephi3d(i,j,:)+Ed1SD_mag(i,j)*fac
+             elam3d(i,j,:)=elam3d(i,j,:)+Ed2SD_mag(i,j)*fac*fac_sin  
+            enddo
+	  endif
+          call addfld('EMX_EFLD_A','EMX w.Var',' ',ephi3d(:,j,1:mlev1),
+     |	 'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+          call addfld('EMY_EFLD_A','EMY w.Var',' ',elam3d(:,j,1:mlev1),
+     |	 'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+         call addfld('EMZ_EFLD_A','EMZ w.Var',' ',emz3d(:,j,1:mlev1),
+     |	 'mlon',mlon0,mlon1,'mlev',1,mlev1,j)
+         enddo	 
+      else
+         Efield_dir = 0
+      endif 
+!
+      
 ! Use ESMF to regrid the electric field to the geographic grid:      
 !     allocate(ephi3d(mlon0:mlon1,mlat0:mlat1,mlev0:mlev1),stat=istat)
 !     real,dimension(lon0:lon1,lat0:lat1,mlev0:mlev1) :: exgeo,...
@@ -2732,6 +2783,31 @@
       call mag2geo_3d(elam3d,eygeo,mag_elam3d,geo_elam3d,'ELAM3D  ')
       call mag2geo_3d(emz3d, ezgeo,mag_emz3d ,geo_emz3d ,'EMZ3D   ')
       if (debug) write(6,"('pefield after mag2geo_3d')")
+      
+! direction fo the E-field variation, which flip over every time step.
+! since mapping is done at high latitude where field lines are almost vertical
+! we do not map teh 2D electric field to 3D   
+!      if (debug) write(6,"('pefield before EVar')")   
+!      if (Efield_var .ne. 0.and.istep.gt.1) then
+!         Efield_dir = mod(istep,2)*2 - 1 
+!         Efield_dir = -1 * Efield_dir
+!         call mag2geo_2d(Ed1SD_mag(mlon0:mlon1,mlat0:mlat1),ed1sd_geo,
+!     |         mag_Ed1SD,geo_Ed1SD,'ED1SD   ')
+!         call mag2geo_2d(Ed2SD_mag(mlon0:mlon1,mlat0:mlat1),ed2sd_geo,
+!     |         mag_Ed1SD,geo_Ed1SD,'ED2SD   ') 
+!	 
+!        if (debug) write(6,"('pefield EVar-ap')") 
+!	 ! add the electric field variability
+!         do j=lat0,lat1
+!          do i=lon0,lon1
+!           exgeo(i,j,:) = exgeo(i,j,:)+ed1sd_geo(i,j)*Efield_dir
+!           eygeo(i,j,:) = eygeo(i,j,:)+ed2sd_geo(i,j)*Efield_dir*(-1)  ! check sign
+!          enddo
+!         enddo	 
+!      else
+!         Efield_dir = 0
+!      endif 
+!      if (debug) write(6,"('pefield after EVar')") 
 !
 ! Define ex,ey,ez on geographic subdomains for ionvel:
       do k=1,nlevp1
@@ -2813,7 +2889,7 @@
       end subroutine mag2geo_3d
 !-----------------------------------------------------------------------
 !
-#if defined(INTERCOMM) || defined(CISMAH)
+!#if defined(INTERCOMM) || defined(CISMAH)
       subroutine mag2geo_2d(fmag,fgeo,ESMF_mag,ESMF_geo,fname)
 !
 ! Convert field on geomagnetic grid fmag to geographic grid in fgeo.
@@ -2853,7 +2929,7 @@
       enddo
 
       end subroutine mag2geo_2d
-#endif
+!#endif
 !-----------------------------------------------------------------------
       subroutine geo2mag_3d(fgeo,fmag,ESMF_geo,ESMF_mag,fname)
 !
@@ -3799,11 +3875,33 @@ c      enddo
 !
 ! Local:
       integer :: nint,i0,j0,i,j,n,jj
+      real :: fac_hl(nmlon0,nmlat0)
 !
 ! Compute separation of grid points for this resolution:
       nint = (nmlon0-1)/(inlon-1)
       i0 = 1-nint
       j0 = 1-nint
+!      
+! calculate FAC based on high latitude electric potential
+! add FAC_HL to  c(10) but not pole
+! set pfrac to 0 or 1
+      if (nint==1) then
+        do j=1,inlat
+          do i=1,inlon
+            fac_hl(i,j) = (
+     +       c(i,j,1)*phihm(i+1,j)+
+     +       c(i,j,2)*phihm(i+1,j+1)+
+     +       c(i,j,3)*phihm(i,j+1)+
+     +       c(i,j,4)*phihm(i-1,j+1)+
+     +       c(i,j,5)*phihm(i-1,j)+
+     +       c(i,j,6)*phihm(i-1,j-1)+
+     +       c(i,j,7)*phihm(i,j-1)+
+     +       c(i,j,8)*phihm(i+1,j-1)+
+     +       c(i,j,9)*phihm(i,j)) 
+          enddo ! i=1,inlon
+        enddo ! j=1,inlat
+      endif
+
 !
 ! If nint==1, then we are at the highest resolution.
 ! Correct RHS, which is in c(10)
