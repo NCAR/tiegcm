@@ -10,7 +10,7 @@
       use params_module,only: nmlevp1,nmlon,nmlonp1,nlon,nlonp4,nlat,
      |  nmlat,gmlat,nmlath,nlev,nlevp1,mlev0,mlev1,nmlev_diff,dlat,spval
       use addfld_module,only: addfld
-      use mpitime_module,only: mpi_timer
+      use mpitime_module,only: mpi_timer 
       use mpi_module,only: mlat0,mlat1,mlon0,mlon1,lon0,lon1,lat0,lat1,
      |  mp_mag_periodic_f2d
       use heelis_module,only: phihm
@@ -3985,7 +3985,7 @@ c      enddo
       jntl = 0
       ier = 0
       isolve = 2
-      call mudmod(rim_glb,phisolv,jntl,isolve,ier)! solver in mudmod.F
+      call mudmod(rim_glb,jntl,isolve,ier)! solver in mudmod.F
       if (ier < 0 ) then       ! not converged
         write(6,*) 'muh: use direct solver'
         call muh(rim_glb,jntl)            ! solver in mud.F
