@@ -81,7 +81,8 @@
 !
       use input_module,only: ctpoten
       use cons_module,only: rtd,ylonm,ylatm
-      use pdynamo_module,only: nmlat0,phihm
+      use pdynamo_module,only: nmlat0
+      use heelis_module,only: phihm
       use magfield_module,only: sunlons 
       use init_module,only: iyear,iday,uthr
       implicit none
