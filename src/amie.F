@@ -467,8 +467,9 @@
 !
       use hist_module,only: modeltime
       use input_module,only: iamie,amiesh,amienh
-      use cons_module,only: pi,ylonm,ylatm
-      use magfield_module,only: im,jm,dim,djm
+      use cons_module,only: pi,ylonm,ylatm,rtd
+      use magfield_module,only: im,jm,dim,djm,
+     |  sunlons  ! geomag. dipole longitude of subsol. point from subroutine sunloc_apex
 !
 ! Args:
       integer,intent(in) :: iyear,iday,iutsec,amie_ibkg,iprint
@@ -1069,7 +1070,10 @@
 !     enddo
 
 ! mlongitude starts from 180 degree
-      rot = 250./15. - iutsec/3600.
+!      rot = 250./15. - iutsec/3600.
+      rot = sunlons(1)*rtd
+      if(rot.lt.0) rot = rot + 360.    ! 0 to 360 degrees
+      rot = rot/15.                    ! convert from degree to hrs
       dmltm = 24./float(lonmx)
       do i=1,lonp1
         xmlt = (i-1)*dmltm - rot + 24.
@@ -1196,12 +1200,12 @@ C     ****
 !       call addfsech_ij('TIEEKV',' ',' ',tieekv,1,nmlonp1,1,nmlat)
 !       call addfsech_ij('TIEEFX',' ',' ',tieefx,1,nmlonp1,1,nmlat)
 
-        call addfld('TIEPOT',' ',' ',tiepot,'mlon',1,nmlonp1,
-     |    'mlat',1,nmlat,0)
-        call addfld('TIEEKV',' ',' ',tieekv,'mlon',1,nmlonp1,
-     |    'mlat',1,nmlat,0)
-        call addfld('TIEEFX',' ',' ',tieefx,'mlon',1,nmlonp1,
-     |    'mlat',1,nmlat,0)
+        call addfld('TIEPOT','AMIE Potential','V',tiepot,'mlon',1,
+     |    nmlonp1,'mlat',1,nmlat,0)
+        call addfld('TIEEKV','AMIE Mean Energy','keV',tieekv,'mlon',1,
+     |    nmlonp1,'mlat',1,nmlat,0)
+        call addfld('TIEEFX','AMIE Energy Flux','mW/m2',tieefx,'mlon',
+     |    1,nmlonp1,'mlat',1,nmlat,0)
 
         do i=1,nlon
           potg_sech(i+2,:) = potg(i,1:nlat)
@@ -1220,12 +1224,12 @@ C     ****
 !       call addfsech_ij('EKVG',' ',' ',ekvg_sech,1,nlonp4,1,nlat)
 !       call addfsech_ij('EFXG',' ',' ',efxg_sech,1,nlonp4,1,nlat)
 
-        call addfld('POTG',' ',' ',potg_sech,'lon',1,nlonp4,
-     |    'lat',1,nlat,0)
-        call addfld('EKVG',' ',' ',ekvg_sech,'lon',1,nlonp4,
-     |    'lat',1,nlat,0)
-        call addfld('EFXG',' ',' ',efxg_sech,'lon',1,nlonp4,
-     |    'lat',1,nlat,0)
+        call addfld('POTG','AMIE Potential','V',potg_sech,'lon',1,
+     |    nlonp4,'lat',1,nlat,0)
+        call addfld('EKVG','AMIE mean Eneregy','keV',ekvg_sech,
+     |    'lon',1,nlonp4,'lat',1,nlat,0)
+        call addfld('EFXG','AMIE Energy Flux','mW/m2',efxg_sech,
+     |    'lon',1,nlonp4,'lat',1,nlat,0)
       endif
 !      
       if (iprint > 0) then

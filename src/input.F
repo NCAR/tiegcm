@@ -125,7 +125,9 @@
      |  saber_ncfile,       ! SABER data (T,Z)
      |  tidi_ncfile,        ! TIDI data (U,V)
      |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z)
-     |  bgrddata_ncfile     ! background data (T,U,V,Z; V=0)
+     |  bgrddata_ncfile,    ! background data (T,U,V,Z; V=0)
+     |  amienh_ncfile,      ! AMIE NH    
+     |  amiesh_ncfile       ! AMIE SH    
 
 !     integer,parameter :: ngpivars = 4
 !     real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
@@ -252,6 +254,9 @@
       tidi_ncfile = ' '       ! TIDI data file
       bgrddata_ncfile = ' '   ! Background data file
       ctmt_ncfile = ' '       ! CTMT data file for lbc tides 
+      
+      amienh_ncfile = ' '       ! AMIE NH data file
+      amiesh_ncfile = ' '       ! AMIE NH data file
 !
       start_day  = ispval
       start_year = ispval
@@ -617,6 +622,8 @@
         write(6,"('Will read AMIE data inputs')")
         iamie = 1
         potential_model = 'AMIE'
+	amienh_ncfile = trim(amienh)
+	amiesh_ncfile = trim(amiesh)
       endif
 !
 ! Save certain params as originally read by namelist read:

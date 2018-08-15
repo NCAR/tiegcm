@@ -787,6 +787,7 @@
           flux2(i+2) = e20*(1.-re2*coslamda(i))*
      |      exp(-((clat-rrad(ihem))/
      |      halfwidth(i))**2) / (2.*alfa2(i+2)*1.602E-9)
+          eflux(i+2) = flux(i+2)*fac_p2e*alfa(i+2)
         endif
 
       enddo ! i=1,nlon
