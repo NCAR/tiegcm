@@ -143,7 +143,7 @@ CCCCCCCCCCCCCCCCCCC save secondary histories CCCCCCCCCCCCCCCCCCCCC
         qjoule_sec(2,j,:) = qjoule_sec(nlon+2,j,:) ! 74 <- 2
         qjoule_sec(nlonp1+2,j,:) = qjoule_sec(3,j,:) ! 75 <- 3
         qjoule_sec(nlonp1+3,j,:) = qjoule_sec(4,j,:) ! 76 <- 4
-        call addfld('QJOULE',' ',' ',qjoule_sec(1:nlonp4,j,:),
+        call addfld('QJOULE_AMIE',' ',' ',qjoule_sec(1:nlonp4,j,:),
      |             'lon',1,nlonp4,'lev',1,nlevp1,j)
 
         qjh_tot_sec(:,:,:) = qamie_sec(:,:,:) + qwind_sec(:,:,:)

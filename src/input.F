@@ -127,7 +127,9 @@
      |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z)     
      |  hme_ncfiles(mxhvols), ! hme files for lbcperturbations
      |  tgcmlb_ncfiles(mxhvols), ! tgcm files for lbcperturbations
-     |  bgrddata_ncfile     ! background data (T,U,V,Z; V=0)
+     |  bgrddata_ncfile,    ! background data (T,U,V,Z; V=0)
+     |  amienh_ncfile,      ! AMIE NH    
+     |  amiesh_ncfile       ! AMIE SH    
 
 !     integer,parameter :: ngpivars = 4
 !     real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
@@ -259,6 +261,9 @@
       tgcmlb_ncfiles(:) = ' ' ! TGCM files for lb perturbation
 
       bgrddata_ncfile = ' '   ! Background data file
+      
+      amienh_ncfile = ' '       ! AMIE NH data file
+      amiesh_ncfile = ' '       ! AMIE NH data file
 !
       start_day  = ispval
       start_year = ispval
@@ -644,6 +649,8 @@
         write(6,"('Will read AMIE data inputs')")
         iamie = 1
         potential_model = 'AMIE'
+	amienh_ncfile = trim(amienh)
+	amiesh_ncfile = trim(amiesh)
       endif
 !
 ! Save certain params as originally read by namelist read:

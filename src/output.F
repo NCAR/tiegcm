@@ -343,7 +343,8 @@
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
      |  saber_ncfile,tidi_ncfile,ctmt_ncfile,bgrddata_ncfile,joulefac,
-     |  gpi_ncfile,hme_nfiles,tgcmlb_nfiles
+     |  gpi_ncfile,hme_nfiles,tgcmlb_nfiles,
+     |  amienh_ncfile,amiesh_ncfile
       use mpi_module,only: ntask
 
       use init_module,only: logname,host,system,iyear,iday,istep,
@@ -536,8 +537,11 @@
       if (len_trim(ctmt_ncfile) == 0) h%ctmt_ncfile = '[none]'
       h%bgrddata_ncfile= bgrddata_ncfile
       if (len_trim(bgrddata_ncfile) == 0) h%bgrddata_ncfile = '[none]'
-      h%ctmt_ncfile= ctmt_ncfile
-      if (len_trim(ctmt_ncfile) == 0) h%ctmt_ncfile = '[none]'
+      
+      h%amienh_ncfile= amienh_ncfile
+      if (len_trim(amienh_ncfile) == 0) h%amienh_ncfile = '[none]'
+      h%amiesh_ncfile= amiesh_ncfile
+      if (len_trim(amiesh_ncfile) == 0) h%amiesh_ncfile = '[none]'
 
       h%hme_ncfile= hme_ncfile_curr
       if (hme_nfiles == 0) h%hme_ncfile = '[none]'
