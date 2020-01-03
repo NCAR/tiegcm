@@ -66,7 +66,7 @@ cat << EOF >! $runscript
 # For 2.5-deg res, STEP= 60, nproc=64, allow 4.5 mins per simulated day (0.17 secs/step)
 #
 #  (2 nodes, 32 procs/node)
-#PBS -l select=2:ncpus=32:mpiprocs=32
+#PBS -l select=2:ncpus=36:mpiprocs=36
 #
 EOF
 #
@@ -75,9 +75,9 @@ EOF
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# Update ESMF module on ch as of 4/12/17:
-set lib_esmf = esmf-7.0.0-ncdfio-mpi-O
-module load esmf_libs/7.0.0 $lib_esmf
+# Update ESMF module on ch as of 7/19:
+set lib_esmf = esmf-7.1.0r-ncdfio-mpi-O
+module load esmf_libs/7.1.0r $lib_esmf
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"
