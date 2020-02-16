@@ -242,7 +242,7 @@
         electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
       enddo ! i=lon0,lon1
 !     call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
-!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
+!    |  'ilev',lev0,lev1,'lon',i0,i1,lat)
 !
 ! Save diagnostic tec (total electron content):
       call mkdiag_TEC('TEC',tec,z,electrons,lev0,lev1,lon0,lon1,lat)
