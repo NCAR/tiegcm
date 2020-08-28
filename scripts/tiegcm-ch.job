@@ -75,9 +75,9 @@ EOF
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# Update ESMF module on ch as of 7/19:
-set lib_esmf = esmf-7.1.0r-ncdfio-mpi-O
-module load esmf_libs/7.1.0r $lib_esmf
+# Update ESMF module on ch as of 8/20
+set lib_esmf = esmf-8.0.0-ncdfio-mpi-O
+module load esmf_libs/8.0.0 $lib_esmf
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"
