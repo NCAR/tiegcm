@@ -441,16 +441,20 @@ subroutine apex_mall(glat,glon,alt,hr, b,bhat,bmag,si,alon,xlatm,vmp,w,&
 
 end subroutine apex_mall
 !-----------------------------------------------------------------------
-subroutine apex_q2g(qdlat,qdlon,alt,gdlat,gdlon,ier)
+subroutine apex_q2g(qdlat_in,qdlon,alt,gdlat,gdlon,ier)
 !
 ! Convert from quasi-dipole to geodetic coordinates. This subroutine
 ! (input magnetic, output geodetic) is the functional inverse of 
 ! subroutine apex_mall (input geodetic, output magnetic). Sub apex_mka
 ! must be called before this routine.
 !
+! 20160811 ADR If qdlat_inis +/-90, move it a little off the pole so that
+!  when gdlat,gdlon are used in apex_mall the directions of the base vectors
+!  are varying appropriately with longitude
+!
 ! Args:
   real,intent(in) ::  & ! inputs
-    qdlat,            & ! quasi-dipole latitude (deg)
+    qdlat_in,            & ! quasi-dipole latitude (deg)
     qdlon,            & ! quasi-dipole longitude (deg)
     alt                 ! altitude (km)
 
@@ -462,7 +466,7 @@ subroutine apex_q2g(qdlat,qdlon,alt,gdlat,gdlon,ier)
 ! Local:
   real :: x0,y0,z0,xnorm,xdif,ydif,zdif,dist2,hgrd2e,hgrd2n,hgrd2,&
     angdist,distlon,glatx,cal,sal,coslm,slm,cad,sad,slp,clm2,slm2,&
-    sad2,cal2,clp2,clp,dylon
+    sad2,cal2,clp2,clp,dylon,qdlat
   real :: ylat,ylon ! first guess output by gm2gc, input to intrp
   integer :: iter
   integer,parameter :: niter=20
@@ -477,7 +481,10 @@ subroutine apex_q2g(qdlat,qdlon,alt,gdlat,gdlon,ier)
     dmxdh,dmydh,dmzdh,dmvdh
   real :: cth,sth  ! output of adpl
   character(len=5) :: edge
-
+  
+  qdlat = amax1(qdlat_in,-90.+sqrt(precise)*rtd)
+  qdlat = amin1(qdlat   ,-90.-sqrt(precise)*rtd)
+!
   ier = 0 ; gdlat = 0. ; gdlon = 0.
 !
 ! Determine quasi-cartesian coordinates on a unit sphere of the
