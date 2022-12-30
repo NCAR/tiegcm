@@ -290,8 +290,8 @@
       endif
 !
 ! Get GSWM tidal boundary data:
-!
-      call getgswm(istep,iyear,iday,secs)
+! am 8/2021 moved to lbc.F into subroutine tuvz_lbc
+!      call getgswm(istep,iyear,iday,secs)
 !
 ! Update lower boundaries of t,u,v,z:
 !

@@ -124,7 +124,9 @@
      |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
      |  saber_ncfile,       ! SABER data (T,Z)
      |  tidi_ncfile,        ! TIDI data (U,V)
-     |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z)
+     |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z) 
+     |  hme_ncfiles(mxhvols),    ! hme files for lbcperturbations
+     |  tgcmlb_ncfiles(mxhvols), ! tgcm files for lbcperturbations
      |  bgrddata_ncfile,    ! background data (T,U,V,Z; V=0)
      |  amienh_ncfile,      ! AMIE NH    
      |  amiesh_ncfile       ! AMIE SH    
@@ -175,7 +177,7 @@
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
      |  enforce_opfloor,bgrddata_ncfile,ctmt_ncfile,opdiffcap,
-     |  amienh,amiesh,amie_ibkg
+     |  amienh,amiesh,amie_ibkg,hme_ncfiles,tgcmlb_ncfiles
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -189,6 +191,8 @@
 ! Current working (execution) directory (set by tgcm.F):
       character(len=120) :: cwd  ! current working directory
       integer :: pid ! current process id
+      integer :: hme_nfiles
+      integer :: tgcmlb_nfiles
 !
       contains
 !-------------------------------------------------------------------
@@ -252,8 +256,10 @@
 
       saber_ncfile = ' '      ! SABER data file
       tidi_ncfile = ' '       ! TIDI data file
-      bgrddata_ncfile = ' '   ! Background data file
       ctmt_ncfile = ' '       ! CTMT data file for lbc tides 
+      hme_ncfiles(:) = ' '    ! HME files for lb perturbation
+      tgcmlb_ncfiles(:) = ' ' ! TGCM files for lb perturbation
+      bgrddata_ncfile = ' '   ! Background data file
       
       amienh_ncfile = ' '       ! AMIE NH data file
       amiesh_ncfile = ' '       ! AMIE NH data file
@@ -543,13 +549,33 @@
 ! SABER and/or TIDI data files:
       if (len_trim(saber_ncfile) > 0) call expand_path(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0)  call expand_path(tidi_ncfile)
+      
+! CTMT data files (lbc tides):
+      if (len_trim(ctmt_ncfile) > 0) call expand_path(ctmt_ncfile)
+! HME data files:
+!
+      hme_nfiles=0
+      do n=1,mxhvols
+        if (len_trim(hme_ncfiles(n)) > 0) then
+          hme_nfiles = hme_nfiles+1
+          call expand_path(hme_ncfiles(n))
+        endif
+      enddo
+      
+! TGCM LB data files:
+!
+      tgcmlb_nfiles=0
+      do n=1,mxhvols
+        if (len_trim(tgcmlb_ncfiles(n)) > 0) then
+          tgcmlb_nfiles = tgcmlb_nfiles+1
+          call expand_path(tgcmlb_ncfiles(n))
+        endif
+      enddo
 !
 ! background data files:
       if (len_trim(bgrddata_ncfile) > 0)
      | call expand_path(bgrddata_ncfile)
 !
-! CTMT data files (lbc tides):
-      if (len_trim(ctmt_ncfile) > 0) call expand_path(ctmt_ncfile)
 !
 ! Collision factor:
       if (colfac==spval) then
@@ -1457,11 +1483,26 @@
      |    'saber_ncfile = ',a)") trim(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0) write(6,"('  TIDI data file: ',
      |    'tidi_ncfile = ',a)") trim(tidi_ncfile)
+     
+      if (len_trim(ctmt_ncfile) > 0) write(6,"('  CTMT data file: ',
+     |    'ctmt_ncfile = ',a)") trim(ctmt_ncfile)
+     
+      if (hme_nfiles > 0) then
+        do i=1,hme_nfiles
+          write(6,"('HME_NCFILES(',i3,') = ',a)")
+     |      i,trim(hme_ncfiles(i))
+        enddo
+      endif
+      
+      if (tgcmlb_nfiles > 0) then
+        do i=1,tgcmlb_nfiles
+          write(6,"('TGCMLB_NCFILES(',i3,') = ',a)")
+     |      i,trim(tgcmlb_ncfiles(i))
+        enddo
+      endif
 
       if (len_trim(bgrddata_ncfile) > 0) write(6,"('  Bgrddata file: ',
      |    'bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
-      if (len_trim(ctmt_ncfile) > 0) write(6,"('  CTMT data file: ',
-     |    'ctmt_ncfile = ',a)") trim(ctmt_ncfile)
 
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
@@ -2181,7 +2222,7 @@
 ! Validate lower boundary options:
 !
       implicit none
-      integer :: igswm, isaber, itidi, ihough, ictmt
+      integer :: igswm, isaber, itidi, ihough, ictmt, ihme, itgcmlb
 !
       igswm = 0
       if (len_trim(gswm_mi_di_ncfile ) > 0.or.
@@ -2192,27 +2233,37 @@
       if (len_trim(saber_ncfile) > 0.) isaber = 1
       itidi = 0
       if (len_trim(tidi_ncfile) > 0.) itidi = 1
+      ihme = 0
+      if (hme_nfiles > 0.) ihme = 1
+      itgcmlb = 0
+      if (tgcmlb_nfiles > 0.) itgcmlb = 1
       ihough = 0
       if (any(tide2 /= 0).or.any(tide  /= 0.)) ihough = 1
       ictmt = 0
       if (len_trim(ctmt_ncfile) > 0.) ictmt = 1
 !
-! Hough-modes, gswm, saber/tidi, and ctmt are mutually exclusive: 
+! Hough-modes, gswm, saber/tidi,ctmt tgcmlb hme are mutually exclusive: 
 !
       if (igswm==1) then
-        if (isaber==1.or.itidi==1.or.ihough==1.or.ictmt==1) then
-          write(6,"('GSWM must be exclusive of SABER,TIDI,CTMT,HOUGH')")
+        if (isaber==1.or.itidi==1.or.ihough==1.or.ictmt==1.or.ihme==1.
+     |      or.itgcmlb==1) then
+          write(6,"('GSWM must be exclusive of SABER,TIDI,CTMT,HOUGH,',
+     |    'HME TGCMlb')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
-     |      ' ictmt=',i2,' ihough=',i2)") igswm,isaber,itidi,ictmt,
-     |      ihough
+     |      ' ictmt=',i2,' ihough=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |      igswm,isaber,itidi,ictmt,ihough,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif
+!      
       if (ihough==1) then
-        if (isaber==1.or.itidi==1.or.igswm==1.or.ictmt==1) then
-          write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM,CTMT')")
+        if (isaber==1.or.itidi==1.or.igswm==1.or.ictmt==1.or.ihme==1.
+     |      or.itgcmlb==1) then
+          write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM,CTMT,',
+     |    'HME, TGCMlb')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,' ictmt=',i2,
-     |      ' ihough=',i2)") igswm,isaber,itidi,ictmt,ihough
+     |      ' ihough=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |      igswm,isaber,itidi,ictmt,ihough,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif
@@ -2220,20 +2271,24 @@
 ! saber and tidi can be specified separately or together,
 ! but either are exclusive of gswm and hough. 
       if (isaber==1.or.itidi==1) then
-        if (igswm==1.or.ihough==1.or.ictmt==1) then
-          write(6,"('SABER/TIDI must be exclusive of GSWM,HOUGH,CTMT')")
+        if (igswm==1.or.ihough==1.or.ictmt==1.or.ihme==1.or.
+     |        itgcmlb==1) then
+          write(6,"('SABER/TIDI must be exclusive of GSWM,HOUGH,CTMT,',
+     |    'HME TGCMlb')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,' ictmt=',i2,
-     |      ' ihough=',i2)") igswm,isaber,itidi,ihough
+     |      ' ihough=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |      igswm,isaber,itidi,ihough,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif
-!
-! Background lbc data (T,U,V,Z) is available only at 2.5-deg resolution:
-!
-      if (len_trim(bgrddata_ncfile) > 0.and.dlat==5.0) then
-        write(6,"(/,'>>> Background lbc data files (BGRDDATA_NCFILE)',
-     |    ' are available only at the 2.5-degree model resolution.')")
-        call shutdown('BGRDDATA_NCFILE not allowed at 5-deg resolution')
+!      
+      if (ictmt==1) then
+        if (ihme==1.or.itgcmlb==1) then
+          write(6,"('CTMT must be exclusive of HME and TGCM lb')")
+          write(6,"(' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") ictmt,
+     |      ihme,itgcmlb
+          call shutdown('inp_lbc')
+        endif 
       endif
 !
 ! CTMT data is available only at 2.5-deg resolution:
@@ -2242,6 +2297,14 @@
         write(6,"(/,'>>> CTMT data are available only at the ',
      |    '2.5-degree model resolution.')")
         call shutdown('CTMT_NCFILE not allowed at 5-deg resolution')
+      endif
+!
+! Background lbc data (T,U,V,Z) is available only at 2.5-deg resolution:
+!
+      if (len_trim(bgrddata_ncfile) > 0.and.dlat==5.0) then
+        write(6,"(/,'>>> Background lbc data files (BGRDDATA_NCFILE)',
+     |    ' are available only at the 2.5-degree model resolution.')")
+        call shutdown('BGRDDATA_NCFILE not allowed at 5-deg resolution')
       endif
 
       end subroutine inp_lbc

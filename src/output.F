@@ -13,6 +13,8 @@
      |  nc_fileinfo, ! make contents string for current file
      |  def_fsech,
      |  datasource_kp ! defined here
+      use hme_module,only: hme_ncfile_curr
+      use tgcmlb_module,only: tgcmlb_ncfile_curr
 
       use dispose_module,only: add_dispose
 !
@@ -341,7 +343,7 @@
      |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
      |  saber_ncfile,tidi_ncfile,joulefac,gpi_ncfile,bgrddata_ncfile,
-     |  ctmt_ncfile,
+     |  ctmt_ncfile,hme_nfiles,tgcmlb_nfiles,
      |  amienh_ncfile,amiesh_ncfile
       use mpi_module,only: ntask
 
@@ -530,10 +532,14 @@
       if (len_trim(saber_ncfile) == 0) h%saber_ncfile = '[none]'
       h%tidi_ncfile= tidi_ncfile
       if (len_trim(saber_ncfile) == 0) h%tidi_ncfile = '[none]'
-      h%bgrddata_ncfile= bgrddata_ncfile
-      if (len_trim(bgrddata_ncfile) == 0) h%bgrddata_ncfile = '[none]'
       h%ctmt_ncfile= ctmt_ncfile
       if (len_trim(ctmt_ncfile) == 0) h%ctmt_ncfile = '[none]'
+      h%hme_ncfile= hme_ncfile_curr
+      if (hme_nfiles == 0) h%hme_ncfile = '[none]'   
+      h%tgcmlb_ncfile= tgcmlb_ncfile_curr
+      if (tgcmlb_nfiles == 0) h%tgcmlb_ncfile = '[none]'
+      h%bgrddata_ncfile= bgrddata_ncfile
+      if (len_trim(bgrddata_ncfile) == 0) h%bgrddata_ncfile = '[none]'
       
       h%amienh_ncfile= amienh_ncfile
       if (len_trim(amienh_ncfile) == 0) h%amienh_ncfile = '[none]'

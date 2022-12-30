@@ -8,7 +8,8 @@ MPIRUN   = mpiexec_mpt
 FFLAGS   = -r8 -heap-arrays
 #
 # See https://www2.cisl.ucar.edu/resources/computational-systems/cheyenne/code-development-support
-#FFLAGS += 
+#FFLAGS += -DGAMERA -132 -traceback
+FFLAGS += -132 -traceback
 #
 # DBGFLAGS are used by the Makefile only if the job script
 # has "set debug = true"
@@ -32,8 +33,10 @@ HOST     = $(shell hostname)
 # ESMF lib on yellowstone:
 # (tiegcm-ch.job does "module load esmf_libs/7.0.0")
 #
-#ESMF_LIBDIR = /glade/u/apps/ch/opt/esmf/7.0.0-ncdfio-mpi/intel/16.0.3/lib/libO/Linux.intel.64.mpi.default
+#ESMF_LIBDIR = /glade/u/apps/ch/opt/esmf/7.0.0-ncdfio-mpi/intel/17.0.1/lib/libO/Linux.intel.64.mpi.default
+#ESMF_LIBDIR = /glade/u/home/phamkh/opt-intel-19.0.2/esmf-build/lib/libO/Linux.intel.64.mpi.default
 export ESMF_LIBDIR
+
 LIB_ESMF = $(ESMF_LIBDIR)
 include $(LIB_ESMF)/esmf.mk
 LIBS = -L$(LIB_ESMF) -Wl,-rpath=$(LIB_ESMF) -lesmf
