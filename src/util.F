@@ -1215,6 +1215,18 @@
       endif
       end subroutine check_nans
 !-------------------------------------------------------------------
+      real function time_interp(f0,f1,time0,time1,time)
+      implicit none
+!
+! Do linear interpolation between f0 (at time0) and 
+! f1 (at time1) to time.
+!
+! Args:
+      real,intent(in) :: f0,f1,time0,time1,time
+!
+      time_interp = f0+(f1-f0)*(time-time0)/(time1-time0)
+      end function time_interp
+!-------------------------------------------------------------------
       subroutine finterpb(f0,f1,fout,n,isec0,isec1,isec)
       implicit none
 !
