@@ -5,8 +5,8 @@
  CALENDAR_ADVANCE = 1
  SOURCE = '$TGCMDATA/tiegcm_res5.0_mareqx_smin_prim.nc'
  SOURCE_START = 80 0 0
- START = 80 0 0
- STOP  = 81 0 0
+ PRISTART = 80 0 0
+ PRISTOP  = 81 0 0
  STEP  = 60
  HIST = 1 0 0
  OUTPUT = 'tiegcm_res5.0_mareqx_smin_prim_001.nc'
