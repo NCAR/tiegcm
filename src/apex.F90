@@ -448,13 +448,13 @@ subroutine apex_q2g(qdlat_in,qdlon,alt,gdlat,gdlon,ier)
 ! subroutine apex_mall (input geodetic, output magnetic). Sub apex_mka
 ! must be called before this routine.
 !
-! 20160811 ADR If qdlat_inis +/-90, move it a little off the pole so that
-!  when gdlat,gdlon are used in apex_mall the directions of the base vectors
-!  are varying appropriately with longitude
+! 20160811 ADR If qdlat_in is +/- 90, move it a little off the pole so
+!  that when gdlat, gdlon are used in apxmall the directions of the base
+!  vectors vary appropriately with longitude.
 !
 ! Args:
   real,intent(in) ::  & ! inputs
-    qdlat_in,            & ! quasi-dipole latitude (deg)
+    qdlat_in,         & ! quasi-dipole latitude (deg)
     qdlon,            & ! quasi-dipole longitude (deg)
     alt                 ! altitude (km)
 
@@ -481,10 +481,9 @@ subroutine apex_q2g(qdlat_in,qdlon,alt,gdlat,gdlon,ier)
     dmxdh,dmydh,dmzdh,dmvdh
   real :: cth,sth  ! output of adpl
   character(len=5) :: edge
-  
+
   qdlat = amax1(qdlat_in,-90.+sqrt(precise)*rtd)
-  qdlat = amin1(qdlat   ,-90.-sqrt(precise)*rtd)
-!
+  qdlat = amin1(qdlat   , 90.-sqrt(precise)*rtd)
   ier = 0 ; gdlat = 0. ; gdlon = 0.
 !
 ! Determine quasi-cartesian coordinates on a unit sphere of the
@@ -2329,8 +2328,8 @@ subroutine cofrm(date)
     	  1.66,   -0.45,   -0.59,    1.08,   -1.14,   -0.31,  &  	
     	 -0.07,    0.78,    0.54,   -0.18,    0.10,    0.38,  &  	
     	  0.49,    0.02,    0.44,    0.42,   -0.25,   -0.26,  &  	
-    	 -0.53,   -0.26,   -0.79/)			  	
-  
+    	 -0.53,   -0.26,   -0.79/)   
+	 
    g2(:,5) = (/                                               & ! 2015
      -29441.46,-1501.77, 4795.99,-2445.88, 3012.20,-2845.41,  &  
        1676.35, -642.17, 1350.33,-2352.26, -115.29, 1225.85,  &
@@ -2364,7 +2363,7 @@ subroutine cofrm(date)
      	  1.56,   -0.42,   -0.50,    0.96,   -1.24,   -0.19,  &
      	 -0.10,    0.81,    0.42,   -0.13,   -0.04,    0.38,  &
      	  0.48,    0.08,    0.48,    0.46,   -0.30,   -0.35,  &
-     	 -0.43,   -0.36,   -0.71/)	 			  	
+     	 -0.43,   -0.36,   -0.71/)		 	 			  	
   
    g2(:,6) = (/                                               & ! 2020
       -29404.8, -1450.9,  4652.5, -2499.6,  2982.0, -2991.6,  & 
