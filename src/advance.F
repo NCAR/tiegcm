@@ -19,7 +19,7 @@
       use heelis_module,only: heelis
       use wei05sc,only: weimer05,       ! Weimer 2005 model
      |  wei05sc_fac  ! field-aligned current diagnostic (nmlonp1,nmlat)
-      use input_module,only: start,step,idynamo=>dynamo,
+      use input_module,only: pristart,step,idynamo=>dynamo,
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
      |  imf_ncfile,current_pg,current_kq,iamie,amie_ibkg,amiesh,amienh
       use input_module,only: 
@@ -123,7 +123,7 @@
 !
 ! Init timestep index, modeltime, and nsecs:
       istep = 0
-      modeltime(1:3) = start(:,1)
+      modeltime(1:3) = pristart(:,1)
       modeltime(4) = 0
       call modeltime_to_nsecs(modeltime,nsecs) ! sets nsecs, includes day
       timing_type = 'sys'
@@ -290,8 +290,8 @@
       endif
 !
 ! Get GSWM tidal boundary data:
-!
-      call getgswm(istep,iyear,iday,secs)
+! am 8/2021 moved to lbc.F into subroutine tuvz_lbc
+!      call getgswm(istep,iyear,iday,secs)
 !
 ! Update lower boundaries of t,u,v,z:
 !

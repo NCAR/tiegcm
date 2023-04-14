@@ -188,7 +188,7 @@
 !-------------------------------------------------------------------
       subroutine hist_initype(h,istep)
       use params_module,only: zibot
-      use input_module,only: start_year,start_day,start,
+      use input_module,only: start_year,start_day,pristart,
      |  calendar_advance,source_start,source
 !
 ! Initialize a history structure:
@@ -216,7 +216,7 @@
       if (nsource > 0) then
         h%initial_year  = start_year
         h%initial_day   = start_day 
-        h%initial_mtime = start(:,1)
+        h%initial_mtime = pristart(:,1)
         h%initial_file = source
         h%source_mtime  = source_start
       endif
@@ -497,8 +497,8 @@
 ! (this routine is called from init module after input validation)
 !
       use params_module,only: mxseries,mxhvols
-      use input_module,only: start,stop,step,source,output,mkhvols,
-     |  hist,secsource,secstart,secstop,sechist,secout,
+      use input_module,only: pristart,pristop,step,source,output,
+     |  mkhvols,hist,secsource,secstart,secstop,sechist,secout,
      |  secflds
 !
 ! Local:
@@ -511,12 +511,12 @@
       integer,external :: numfiles
 !
 ! Number of primary history time series:
-      nseries_prim = (size(start)-count(start==ispval))/3
+      nseries_prim = (size(pristart)-count(pristart==ispval))/3
 !
       secs_start(:) = 0
       do i=1,nseries_prim
-        secs_start(i) = mtime_to_nsec(start(:,i))
-        secs_stop(i)  = mtime_to_nsec(stop(:,i))
+        secs_start(i) = mtime_to_nsec(pristart(:,i))
+        secs_stop(i)  = mtime_to_nsec(pristop(:,i))
       enddo
 !
 ! Total number of timesteps this run:

@@ -12,7 +12,7 @@
 ! mxhist_[prim,sech] histories). This is called from input.
 !
       use input_module,only: step,
-     |  mxhist_prim,start   ,stop,   hist,
+     |  mxhist_prim,pristart   ,pristop,   hist,
      |  mxhist_sech,secstart,secstop,sechist
       implicit none
 !
@@ -39,9 +39,9 @@
 ! Iterate through each primary history time series:
         do i=1,nseries
           idelsecs = mtime_to_nsec(hist(:,i)) ! delta secs between histories
-          nsecstop = mtime_to_nsec(stop(:,i)) ! stop secs
+          nsecstop = mtime_to_nsec(pristop(:,i)) ! stop secs
           numfiles = numfiles+1 ! start new file at each new time series
-          nsecs = mtime_to_nsec(start(:,i)) ! time in secs
+          nsecs = mtime_to_nsec(pristart(:,i)) ! time in secs
 ! debug:
 !         call nsecs_to_modeltime(nsecs,mtime_curr)
 !         call nsecs_to_modeltime(nsecstop,mtime_stop)
@@ -56,7 +56,7 @@
 ! Otherwise, set nsecs to first history in the new series:
 !
           if (i > 1) then
-            if (all(start(:,i) == stop(:,i-1)))
+            if (all(pristart(:,i) == pristop(:,i-1)))
      |        nsecs = nsecs+idelsecs
           endif
 !

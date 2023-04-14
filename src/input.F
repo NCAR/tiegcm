@@ -124,7 +124,9 @@
      |  gswm_nm_sdi_ncfile, ! gswm non-migrating semi-diurnal data file
      |  saber_ncfile,       ! SABER data (T,Z)
      |  tidi_ncfile,        ! TIDI data (U,V)
-     |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z)
+     |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z) 
+     |  hme_ncfiles(mxhvols),    ! hme files for lbcperturbations
+     |  tgcmlb_ncfiles(mxhvols), ! tgcm files for lbcperturbations
      |  bgrddata_ncfile,    ! background data (T,U,V,Z; V=0)
      |  amienh_ncfile,      ! AMIE NH    
      |  amiesh_ncfile       ! AMIE SH    
@@ -140,8 +142,8 @@
      |  output(mxhvols)    ! output file(s) (required)
       integer ::
      |  source_start(3),   ! source history model time
-     |  start(3,mxseries), ! primary history model start time(s)
-     |  stop(3,mxseries),  ! primary history model stop time(s)
+     |  pristart(3,mxseries), ! primary history model start time(s)
+     |  pristop(3,mxseries),  ! primary history model stop time(s)
      |  hist(3,mxseries),  ! primary history disk write frequency
      |  mxhist_prim,       ! max number of histories per primary file
      |  noutput            ! number of output files given
@@ -162,7 +164,7 @@
 ! Namelist for read:
       namelist/tgcm_input/ 
      |  label,step,
-     |  source,source_start,output,start,stop,hist,
+     |  source,source_start,output,pristart,pristop,hist,
      |  secout,secstart,secstop,sechist,secflds,
      |  potential_model,eddy_dif,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
@@ -175,7 +177,7 @@
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
      |  enforce_opfloor,bgrddata_ncfile,ctmt_ncfile,opdiffcap,
-     |  amienh,amiesh,amie_ibkg
+     |  amienh,amiesh,amie_ibkg,hme_ncfiles,tgcmlb_ncfiles
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -189,6 +191,8 @@
 ! Current working (execution) directory (set by tgcm.F):
       character(len=120) :: cwd  ! current working directory
       integer :: pid ! current process id
+      integer :: hme_nfiles
+      integer :: tgcmlb_nfiles
 !
       contains
 !-------------------------------------------------------------------
@@ -252,8 +256,10 @@
 
       saber_ncfile = ' '      ! SABER data file
       tidi_ncfile = ' '       ! TIDI data file
-      bgrddata_ncfile = ' '   ! Background data file
       ctmt_ncfile = ' '       ! CTMT data file for lbc tides 
+      hme_ncfiles(:) = ' '    ! HME files for lb perturbation
+      tgcmlb_ncfiles(:) = ' ' ! TGCM files for lb perturbation
+      bgrddata_ncfile = ' '   ! Background data file
       
       amienh_ncfile = ' '       ! AMIE NH data file
       amiesh_ncfile = ' '       ! AMIE NH data file
@@ -309,8 +315,8 @@
       source = ' '
       output = ' '
       source_start(:) = ispval
-      start(:,:) = ispval
-      stop(:,:)  = ispval
+      pristart(:,:) = ispval
+      pristop(:,:)  = ispval
       hist(:,:)  = ispval
       mxhist_prim = 10 ! default max number of histories per primary file
       if (dlat == 2.5) mxhist_prim = 4 ! 2.5 degree horizontal resolution 
@@ -543,13 +549,33 @@
 ! SABER and/or TIDI data files:
       if (len_trim(saber_ncfile) > 0) call expand_path(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0)  call expand_path(tidi_ncfile)
+      
+! CTMT data files (lbc tides):
+      if (len_trim(ctmt_ncfile) > 0) call expand_path(ctmt_ncfile)
+! HME data files:
+!
+      hme_nfiles=0
+      do n=1,mxhvols
+        if (len_trim(hme_ncfiles(n)) > 0) then
+          hme_nfiles = hme_nfiles+1
+          call expand_path(hme_ncfiles(n))
+        endif
+      enddo
+      
+! TGCM LB data files:
+!
+      tgcmlb_nfiles=0
+      do n=1,mxhvols
+        if (len_trim(tgcmlb_ncfiles(n)) > 0) then
+          tgcmlb_nfiles = tgcmlb_nfiles+1
+          call expand_path(tgcmlb_ncfiles(n))
+        endif
+      enddo
 !
 ! background data files:
       if (len_trim(bgrddata_ncfile) > 0)
      | call expand_path(bgrddata_ncfile)
 !
-! CTMT data files (lbc tides):
-      if (len_trim(ctmt_ncfile) > 0) call expand_path(ctmt_ncfile)
 !
 ! Collision factor:
       if (colfac==spval) then
@@ -737,7 +763,7 @@
       step8 = step
 !
 ! Model start time(s):
-      n = size(start)-count(start==ispval)
+      n = size(pristart)-count(pristart==ispval)
       if (mod(n,3) /= 0) then
         write(6,"(/,'>>> INPUT: START must be given as series of ',
      |    '3-integer triplet times',/,11x,'(day,hr,min).',/)")
@@ -750,24 +776,24 @@
         call shutdown('START')
       endif
       do i=1,nstarts
-        call validate_mtime(start(:,i),mxday,'START')
+        call validate_mtime(pristart(:,i),mxday,'START')
       enddo
 !
 ! Start time(s) must be multiple of step, and must increase: 
       nsec_start(:) = 0
       do i=1,nstarts
-        nsec_start(i) = mtime_to_nsec(start(:,i))
+        nsec_start(i) = mtime_to_nsec(pristart(:,i))
         if (mod(nsec_start(i),step8) /= 0) then
           write(6,"(/,'>>> INPUT: START time ',i1,' must be a ',
      |      'multiple of step:',/,11x,'START=',3i4,' STEP=',i4,/)")
-     |      i,start(:,i),step
+     |      i,pristart(:,i),step
           call shutdown('START')
         endif
         if (i > 1) then
           if (nsec_start(i-1) > nsec_start(i)) then
             write(6,"(/,'>>> INPUT: START times must increase.',/,
      |        11x,'START ',i2,' = ',3i4,' START ',i2,' = ',3i4,
-     |        /)") i-1,start(:,i-1),i,start(:,i)
+     |        /)") i-1,pristart(:,i-1),i,pristart(:,i)
             call shutdown('START')
           endif
         endif
@@ -777,11 +803,11 @@
 !   day must be the same as the starting calendar day.
 !
       if (calendar_advance > 0) then
-        if (start(1,1) /= start_day) then
+        if (pristart(1,1) /= start_day) then
           write(6,"(/,'>>> INPUT: Starting calendar day START_DAY =',
      |      i4)") start_day
           write(6,"(11x,'Starting model day START(1)=',i4)")
-     |      start(1,1)
+     |      pristart(1,1)
           write(6,"(11x,'CALENDAR_ADVANCE = ',i2)") calendar_advance
           write(6,"('If the model is to be advanced in calendar time,',
      |      ' the starting model day',/,'  must be equal to the ',
@@ -791,7 +817,7 @@
       endif
 !
 ! Stop time(s):
-      n = size(stop)-count(stop==ispval)
+      n = size(pristop)-count(pristop==ispval)
       if (mod(n,3) /= 0) then
         write(6,"(/,'>>> INPUT: STOP must be given as series of ',
      |    '3-integer triplet times (day,hr,min).',/)")
@@ -804,23 +830,23 @@
         call shutdown('STOP')
       endif
       do i=1,nstops
-        call validate_mtime(stop(:,i),mxday,'STOP')
+        call validate_mtime(pristop(:,i),mxday,'STOP')
       enddo
 !
 ! Stop time(s) must be multiple of step, and must increase: 
       nsec_stop(:) = 0
       do i=1,nstops
-        nsec_stop(i) = mtime_to_nsec(stop(:,i))
+        nsec_stop(i) = mtime_to_nsec(pristop(:,i))
         if (mod(nsec_stop(i),step8) /= 0) then
           write(6,"(/,'>>> INPUT: STOP time ',i1,' must be a ',
      |      'multiple of step:',/,11x,'STOP=',3i4,' STEP=',i4,/)")
-     |      i,stop(:,i),step
+     |      i,pristop(:,i),step
           call shutdown('STOP')
         endif
         if (i > 1) then
           if (nsec_stop(i-1) > nsec_stop(i)) then
             write(6,"(/,'>>> INPUT: STOP times must increase.',/,
-     |        11x,'STOP 1 =',3i4,' STOP 2 =',3i4,/)") stop
+     |        11x,'STOP 1 =',3i4,' STOP 2 =',3i4,/)") pristop
             call shutdown('STOP')
           endif
         endif
@@ -833,14 +859,14 @@
 !       for a new run with START=1,0,0. (note mxday==366)
 !
       if (nsec_start(1)==nsec_stop(1)) then
-        write(6,"(/,'NOTE input: start(1)==stop(1): no time steps',
+        write(6,"(/,'NOTE input: pristart(1)==pristop(1): no time steps',
      |    ' will be taken this run.')")
       else
         do i=1,nstops
           if (nsec_start(i) >= nsec_stop(i)) then
             write(6,"(/,'>>> INPUT: STOP time ',i1,' must be > ',
      |        'START time',/,11x,'STOP time ',i1,' = ',3i4,
-     |        ' START =',3i4,/)") i,i,stop(:,i),start(:,i)
+     |        ' START =',3i4,/)") i,i,pristop(:,i),pristart(:,i)
             call shutdown('START/STOP')
           endif
         enddo
@@ -905,7 +931,7 @@
           write(6,"(11x,'nsteps ',i1,' = ',i6,' nsteps_hist ',i1,
      |      ' = ',i3)") i,nsteps,i,nsteps_hist(i)
           write(6,"(11x,'START',i1,' = ',3i4,' STOP',i1,' = ',3i4,
-     |      ' HIST',i1,' = ',3i4,/)") i,start(:,i),i,stop(:,i),
+     |      ' HIST',i1,' = ',3i4,/)") i,pristart(:,i),i,pristop(:,i),
      |      i,hist(:,i)
           call shutdown('HIST')
         endif
@@ -918,9 +944,9 @@
             write(6,"(/,'>>> INPUT: primary history time series',
      |        ' cannot overlap.')")
             write(6,"(11x,'For series ',i2,': START=',3i4,
-     |        ' STOP=',3i4)") i-1,start(:,i-1),start(:,i-1)
+     |        ' STOP=',3i4)") i-1,pristart(:,i-1),pristart(:,i-1)
             write(6,"(11x,'For series ',i2,': START=',3i4,
-     |        ' STOP=',3i4,/)") i,start(:,i),stop(:,i)
+     |        ' STOP=',3i4,/)") i,pristart(:,i),pristop(:,i)
             call shutdown('START/STOP')
           endif
         enddo
@@ -954,11 +980,11 @@
 !
 ! Model start time hr,min must be same as source_start hr,min:
 ! (days can be different)
-        if (start(2,1) /= source_start(2) .or.
-     |      start(3,1) /= source_start(3)) then
+        if (pristart(2,1) /= source_start(2) .or.
+     |      pristart(3,1) /= source_start(3)) then
           write(6,"(/,'>>> INPUT: START time (hr,min) ',
      |      'must be the same as SOURCE_START time.')")
-          write(6,"('  START        = ',3i4)") start(:,1)
+          write(6,"('  START        = ',3i4)") pristart(:,1)
           write(6,"('  SOURCE_START = ',3i4)") source_start(:)
           write(6,"('  (START and SOURCE_START days can be ',
      |      'different)',/)")
@@ -1126,20 +1152,20 @@
 !
 ! Secondary start times must be >= first primary start times and
 ! <= last primary stop time:
-      nseriesp = (size(start)-count(start==ispval))/3
+      nseriesp = (size(pristart)-count(pristart==ispval))/3
       do i=1,nstarts
-        if (nsec_start(i) < mtime_to_nsec(start(:,1))) then
+        if (nsec_start(i) < mtime_to_nsec(pristart(:,1))) then
           write(6,"(/,'>>> INPUT: all secondary start times SECSTART',
      |      ' must be >= first model START time.')")
           write(6,"(11x,'First model START = ',3i4,' SECSTART ',i2,
-     |      ' = ',3i4,/)") start(:,1),i,secstart(:,i)
+     |      ' = ',3i4,/)") pristart(:,1),i,secstart(:,i)
           call shutdown('SECSTART')
         endif
-        if (nsec_start(i) > mtime_to_nsec(stop(:,nseriesp))) then
+        if (nsec_start(i) > mtime_to_nsec(pristop(:,nseriesp))) then
           write(6,"(/,'>>> INPUT: all secondary start times SECSTART',
      |      ' must be <= last model STOP time.')")
           write(6,"(11x,' SECSTART ',i2,' = ',3i4,' last STOP=',
-     |      3i4)") secstart(:,1),i,stop(:,nseriesp)
+     |      3i4)") secstart(:,1),i,pristop(:,nseriesp)
           call shutdown('SECSTART')
         endif
       enddo
@@ -1197,11 +1223,11 @@
 ! Secondary stop times must be <= last primary stop time:
       nstarts = n/3 ! number of start times given
       do i=1,nstarts
-        if (nsec_stop(i) > mtime_to_nsec(stop(:,nseriesp))) then
+        if (nsec_stop(i) > mtime_to_nsec(pristop(:,nseriesp))) then
           write(6,"(/,'>>> INPUT: all secondary stop times must be',
      |      ' <= final model stop time.')")
           write(6,"('For sech time series ',i2,': SECSTOP=',3i4,
-     |      ' Model STOP = ',3i4,/)") i,secstop(:,i),stop(:,nseriesp)
+     |      ' Model STOP = ',3i4,/)") i,secstop(:,i),pristop(:,nseriesp)
           call shutdown('SECSTOP')
         endif
       enddo
@@ -1252,7 +1278,7 @@
 !   initial runs.
 !
 !     nsrc = len_trim(source)
-!     if (nsrc > 0.and.nsec_start(1)==mtime_to_nsec(start(:,1))) then      
+!     if (nsrc > 0.and.nsec_start(1)==mtime_to_nsec(pristart(:,1))) then      
 !       write(6,"(/,'>>> INPUT: If an initial run, secondary start ',
 !    |    ' time SECSTART must not be same as START time.')")
 !       call nsecs_to_modeltime(nsec_start(1)+nsec_hist(1),mtime)
@@ -1457,11 +1483,26 @@
      |    'saber_ncfile = ',a)") trim(saber_ncfile)
       if (len_trim(tidi_ncfile) > 0) write(6,"('  TIDI data file: ',
      |    'tidi_ncfile = ',a)") trim(tidi_ncfile)
+     
+      if (len_trim(ctmt_ncfile) > 0) write(6,"('  CTMT data file: ',
+     |    'ctmt_ncfile = ',a)") trim(ctmt_ncfile)
+     
+      if (hme_nfiles > 0) then
+        do i=1,hme_nfiles
+          write(6,"('HME_NCFILES(',i3,') = ',a)")
+     |      i,trim(hme_ncfiles(i))
+        enddo
+      endif
+      
+      if (tgcmlb_nfiles > 0) then
+        do i=1,tgcmlb_nfiles
+          write(6,"('TGCMLB_NCFILES(',i3,') = ',a)")
+     |      i,trim(tgcmlb_ncfiles(i))
+        enddo
+      endif
 
       if (len_trim(bgrddata_ncfile) > 0) write(6,"('  Bgrddata file: ',
      |    'bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
-      if (len_trim(ctmt_ncfile) > 0) write(6,"('  CTMT data file: ',
-     |    'ctmt_ncfile = ',a)") trim(ctmt_ncfile)
 
       if (len_trim(amievol) > 0)
      |  write(6,"('  amievol = ',a,/,4x,
@@ -1511,12 +1552,12 @@
       write(6,"('  output (primary history output files) = ',
      |  /,(4x,a,', ',a))") 
      |  (trim(output(i)),i=1,n)
-      n = (size(start)-count(start==ispval))/3
+      n = (size(pristart)-count(pristart==ispval))/3
       write(6,"('  start (model start times) =',
-     |  /,4(4x,i3,',',i2,',',i2))") (start(:,i),i=1,n)
-      n = (size(stop)-count(stop==ispval))/3
+     |  /,4(4x,i3,',',i2,',',i2))") (pristart(:,i),i=1,n)
+      n = (size(pristop)-count(pristop==ispval))/3
       write(6,"('  stop (model stop times) =',
-     |  /,4(4x,i3,',',i2,',',i2))") (stop(:,i),i=1,n)
+     |  /,4(4x,i3,',',i2,',',i2))") (pristop(:,i),i=1,n)
       n = (size(hist)-count(hist==ispval))/3
       write(6,"('  hist (primary history disk write frequencies) =',
      |  /,4(4x,i3,',',i2,',',i2))") (hist(:,i),i=1,n)
@@ -1773,8 +1814,8 @@
             ntimes = ntimes+1
           endif
         enddo ! i=1,mxtimes
-        nsec_start = mtime_to_nsec(start(:,1)) ! model start time
-        nsec_stop = mtime_to_nsec(stop(:,1))   ! model stop time
+        nsec_start = mtime_to_nsec(pristart(:,1)) ! model start time
+        nsec_stop = mtime_to_nsec(pristop(:,1))   ! model stop time
 !
 ! First time must be model start time:
         if (ntimes > 0) then
@@ -1792,7 +1833,7 @@
      |          nsec > nsec_stop) then
               write(6,"(/,'>>> INPUT: ',a,' time ',3i4,' is outside ',
      |          'model START/STOP times: START=',3i4,' STOP=',3i4)")
-     |          trim(name),int(timedep(1:3,i)),start(:,1),stop(:,1)
+     |         trim(name),int(timedep(1:3,i)),pristart(:,1),pristop(:,1)
               call shutdown('validate_timedep')
             endif 
           enddo
@@ -2181,7 +2222,7 @@
 ! Validate lower boundary options:
 !
       implicit none
-      integer :: igswm, isaber, itidi, ihough, ictmt
+      integer :: igswm, isaber, itidi, ihough, ictmt, ihme, itgcmlb
 !
       igswm = 0
       if (len_trim(gswm_mi_di_ncfile ) > 0.or.
@@ -2192,27 +2233,37 @@
       if (len_trim(saber_ncfile) > 0.) isaber = 1
       itidi = 0
       if (len_trim(tidi_ncfile) > 0.) itidi = 1
+      ihme = 0
+      if (hme_nfiles > 0.) ihme = 1
+      itgcmlb = 0
+      if (tgcmlb_nfiles > 0.) itgcmlb = 1
       ihough = 0
       if (any(tide2 /= 0).or.any(tide  /= 0.)) ihough = 1
       ictmt = 0
       if (len_trim(ctmt_ncfile) > 0.) ictmt = 1
 !
-! Hough-modes, gswm, saber/tidi, and ctmt are mutually exclusive: 
+! Hough-modes, gswm, saber/tidi,ctmt tgcmlb hme are mutually exclusive: 
 !
       if (igswm==1) then
-        if (isaber==1.or.itidi==1.or.ihough==1.or.ictmt==1) then
-          write(6,"('GSWM must be exclusive of SABER,TIDI,CTMT,HOUGH')")
+        if (isaber==1.or.itidi==1.or.ihough==1.or.ictmt==1.or.ihme==1.
+     |      or.itgcmlb==1) then
+          write(6,"('GSWM must be exclusive of SABER,TIDI,CTMT,HOUGH,',
+     |    'HME TGCMlb')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,
-     |      ' ictmt=',i2,' ihough=',i2)") igswm,isaber,itidi,ictmt,
-     |      ihough
+     |      ' ictmt=',i2,' ihough=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |      igswm,isaber,itidi,ictmt,ihough,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif
+!      
       if (ihough==1) then
-        if (isaber==1.or.itidi==1.or.igswm==1.or.ictmt==1) then
-          write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM,CTMT')")
+        if (isaber==1.or.itidi==1.or.igswm==1.or.ictmt==1.or.ihme==1.
+     |      or.itgcmlb==1) then
+          write(6,"('HOUGH must be exclusive of SABER,TIDI,GSWM,CTMT,',
+     |    'HME, TGCMlb')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,' ictmt=',i2,
-     |      ' ihough=',i2)") igswm,isaber,itidi,ictmt,ihough
+     |      ' ihough=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |      igswm,isaber,itidi,ictmt,ihough,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif
@@ -2220,20 +2271,24 @@
 ! saber and tidi can be specified separately or together,
 ! but either are exclusive of gswm and hough. 
       if (isaber==1.or.itidi==1) then
-        if (igswm==1.or.ihough==1.or.ictmt==1) then
-          write(6,"('SABER/TIDI must be exclusive of GSWM,HOUGH,CTMT')")
+        if (igswm==1.or.ihough==1.or.ictmt==1.or.ihme==1.or.
+     |        itgcmlb==1) then
+          write(6,"('SABER/TIDI must be exclusive of GSWM,HOUGH,CTMT,',
+     |    'HME TGCMlb')")
           write(6,"('igswm=',i2,' isaber=',i2,' itidi=',i2,' ictmt=',i2,
-     |      ' ihough=',i2)") igswm,isaber,itidi,ihough
+     |      ' ihough=',i2,' ihme=',i2,' itgcmlb=',i2)") 
+     |      igswm,isaber,itidi,ihough,ihme,itgcmlb
           call shutdown('inp_lbc')
         endif 
       endif
-!
-! Background lbc data (T,U,V,Z) is available only at 2.5-deg resolution:
-!
-      if (len_trim(bgrddata_ncfile) > 0.and.dlat==5.0) then
-        write(6,"(/,'>>> Background lbc data files (BGRDDATA_NCFILE)',
-     |    ' are available only at the 2.5-degree model resolution.')")
-        call shutdown('BGRDDATA_NCFILE not allowed at 5-deg resolution')
+!      
+      if (ictmt==1) then
+        if (ihme==1.or.itgcmlb==1) then
+          write(6,"('CTMT must be exclusive of HME and TGCM lb')")
+          write(6,"(' ictmt=',i2,' ihme=',i2,' itgcmlb=',i2)") ictmt,
+     |      ihme,itgcmlb
+          call shutdown('inp_lbc')
+        endif 
       endif
 !
 ! CTMT data is available only at 2.5-deg resolution:
@@ -2242,6 +2297,14 @@
         write(6,"(/,'>>> CTMT data are available only at the ',
      |    '2.5-degree model resolution.')")
         call shutdown('CTMT_NCFILE not allowed at 5-deg resolution')
+      endif
+!
+! Background lbc data (T,U,V,Z) is available only at 2.5-deg resolution:
+!
+      if (len_trim(bgrddata_ncfile) > 0.and.dlat==5.0) then
+        write(6,"(/,'>>> Background lbc data files (BGRDDATA_NCFILE)',
+     |    ' are available only at the 2.5-degree model resolution.')")
+        call shutdown('BGRDDATA_NCFILE not allowed at 5-deg resolution')
       endif
 
       end subroutine inp_lbc
