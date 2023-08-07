@@ -58,6 +58,7 @@ while True:
 #
 # If stdout_dir, then go there - everything now will happen in that directory:
 #
+  print 'job.machine',job.machine
   if job.stdout_dir:
     os.chdir(job.stdout_dir)
     print 'Tgcmrun moved to directory ',job.stdout_dir
@@ -102,6 +103,7 @@ while True:
 # Construct path to default job script and check for existence:
 #
   job.script_default = job.model_root+'/tgcmrun/'+job.model_name+'_'+job.machine+'_default.job'
+  print "Job script",job.script_default
   if not os.path.isfile(job.script_default):
     print '>>> Cannot find default job script ',job.script_default
     sys.exit()
