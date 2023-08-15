@@ -1,0 +1,274 @@
+#!/bin/tcsh
+# Job script to build and execute TIEGCM on the NCAR supercomputer yellowstone,
+# or similar system running PBS (Load Sharing Facility)
+#
+# This script should be executed on the yellowstone command line.
+# It will compile in execdir on the interactive login node, then create and 
+# submit an PBS script based on the #QSUB resources specified below.
+#
+# User should set shell variables and #QSUB settings below:
+#
+#   modeldir:  Root directory to model source (may be an SVN working dir)
+#   execdir:   Directory in which to build and execute (will be created if necessary)
+#   tgcmdata:  Directory in which startup history and data files are accessed.
+#              (If tgcmdata is not set, the model will use env var TGCMDATA)
+#   input:     Namelist input file for the chosen model resolution
+#   output:    Stdout file from model execution (will be created)
+#   modelres:  Model resolution (5.0 or 2.5 degrees)
+#   make:      Build file with platform-specific compile parameters (in scripts dir)
+#   mpi:       TRUE/FALSE for MPI run (non-MPI runs are not supported in v2.0 and later)
+#   debug:     If TRUE, build and execute a "debug" run (debug compiler flags are set)
+#   exec:      If TRUE, execute the model (build only if exec is FALSE)
+#   utildir:   Directory containing supporting scripts (default $modeldir/scripts)
+#   runscript: PBS script with run commands (submitted with bsub from execdir)
+#
+# To switch to 2.5-deg resolution, set modelres below to 2.5,
+# and change execdir, tgcmdata and namelist input if necessary.
+# Also reset number of processors accordingly below (#BSUB -n).
+#
+set modeldir = tiegcm2.0
+set modelres = 2.5
+set execdir   = $modeldir/build/src
+set bindir    = $modeldir/build/bin
+set tgcmdata = /glade/p/hao/tgcm/data/tiegcm2.0
+set input    = $modeldir/scripts/tiegcm_res2.5_default.inp
+set output   = tiegcm.out
+
+set make     = Make.intel_ch
+set mpi       = TRUE   # must be TRUE for tiegcm2.0 and later
+set debug     = FALSE
+set exec      = TRUE
+set utildir   = $modeldir/scripts
+set runscript = run.pbs
+
+set execdir   = `perl $utildir/abspath $execdir`
+set runscript = `perl $utildir/abspath $runscript`
+set bindir    = `perl $utildir/abspath $bindir`
+if (-d $execdir) rm -r $execdir
+if (! -d $execdir) mkdir -p $execdir
+if (! -d $bindir)  mkdir -p $bindir
+
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                               End user settings
+#                        Shell Script for TIEGCM Linux job
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Update ESMF module on ch as of 8/20
+set lib_esmf = esmf-8.0.0-ncdfio-mpi-O
+module load esmf_libs/8.0.0 $lib_esmf
+#
+set mycwd = `pwd`
+echo "" ; echo "${0}:"
+echo "  Begin execution at `date`"
+echo "  Current working directory: $mycwd"
+echo "  System: `uname -a`"  
+echo ""
+#
+# Verify directories and make_machine file (make execdir if necessary).
+# Get absolute path for dirs that are accessed from the execdir.
+#
+if (! -d $modeldir) then
+  echo ">>> Cannot find model directory $modeldir <<<"
+  exit 1
+endif
+#
+# Executable file name:
+#set model = tiegcm.exe
+set model = tiegcm-standalone-${modelres}.x
+if (! -d $utildir) then
+  echo ">>> Cannot find model scripts directory $utildir <<<" 
+  exit 1
+endif
+set utildir = `perl $utildir/abspath $utildir`
+
+set srcdir  = $modeldir/src
+if (! -d $srcdir) then
+  echo ">>> Cannot find model source directory $srcdir <<<"
+  exit 1
+endif
+set srcdir = `perl $utildir/abspath $srcdir`
+#
+# Set data directory:
+#   If tgcmdata is set above, use it to set (override) env var TGCMDATA
+#   If tgcmdata not set above, use env var TGCMDATA
+#   If neither are set, print a warning and set both to cwd.
+#   Finally, print warning if the directory does not exist.
+#
+if ($?tgcmdata) then
+  set tgcmdata = `perl $utildir/abspath $tgcmdata`
+  setenv TGCMDATA $tgcmdata
+  echo Set env var TGCMDATA = $TGCMDATA
+else
+  if ($?TGCMDATA) then
+    set tgcmdata = $TGCMDATA
+    echo Set tgcmdata = $TGCMDATA
+  else
+    echo WARNING: TGCMDATA is not set - using cwd
+    set tgcmdata = .
+    setenv TGCMDATA $tgcmdata
+  endif
+endif
+if (! -d $tgcmdata) echo ">>> Cannot find data directory $tgcmdata"
+
+if ($modelres != 5.0 && $modelres != 2.5) then
+  echo ">>> Unknown model resolution $modelres <<<"
+  exit 1
+endif
+#
+# Copy make files to execdir if necessary:
+#
+if (! -f $execdir/$make)     cp $utildir/env/$make $execdir
+if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
+if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
+#
+# Make default namelist input file if not provided by user:
+#
+if (! -f $input) then
+  echo ">>> Cannot find namelist input file $input <<<"
+  exit 1
+endif
+
+set model  = $execdir/$model
+set input  = `perl $utildir/abspath $input`
+set output = `perl $utildir/abspath $output`
+set util   = `perl $utildir/abspath $utildir`
+set mklogs = $util/mklogs         # Nov, 2015: mklogs rewritten in python
+set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdout files
+#
+# Report to stdout:
+#
+ set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
+#set svn_revision = 'tiegcm2.0' # for svn tag instead of revision number
+
+echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svn_revision)"
+echo "  Exec directory:    $execdir"
+echo "  Source directory:  $srcdir"
+echo "  Data directory:    $tgcmdata"
+echo "  Make machine file: $make"
+echo "  Namelist input:    $input"
+echo "  Stdout Output:     $output"
+echo "  Model resolution:  $modelres"
+echo "  Debug:             $debug"
+echo "  MPI job:           $mpi"
+#
+# If debug flag has changed from last gmake, clean execdir
+# and reset debug file:
+#
+if (-f $execdir/debug) then
+  set lastdebug = `cat $execdir/debug` 
+  if ($lastdebug != $debug) then
+    echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $debug >! $execdir/debug
+  endif
+else
+  echo $debug >! $execdir/debug
+  echo "Created file debug with debug flag = $debug"
+endif
+#
+# If mpi flag has changed from last gmake, clean execdir
+# and reset mpi file:
+#
+if (-f $execdir/mpi) then
+  set lastmpi = `cat $execdir/mpi` 
+  if ($lastmpi != $mpi) then
+    echo "Clean execdir $execdir because mpi flag switched from $lastmpi to $mpi"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $mpi >! $execdir/mpi
+  endif
+else
+  echo $mpi >! $execdir/mpi
+  echo "Created file mpi with mpi flag = $mpi"
+endif
+#
+# Copy defs header file to execdir, if necessary, according to 
+# requested resolution. This should seamlessly switch between
+# resolutions according to $modelres.
+#
+set defs = $srcdir/defs5.0
+if ($modelres == 2.5) set defs = $srcdir/defs2.5
+if (-f $execdir/defs.h) then
+  cmp -s $execdir/defs.h $defs
+  if ($status == 1) then # files differ -> switch resolutions
+    echo "Switching defs.h for model resolution $modelres"
+    cp $defs $execdir/defs.h
+  else
+    echo "defs.h already set for model resolution $modelres"
+  endif 
+else # defs.h does not exist in execdir -> copy appropriate defs file
+  echo "Copying $defs to $execdir/defs.h for resolution $modelres"
+  cp $defs $execdir/defs.h
+endif
+#
+# cd to execdir and run make:
+#
+cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
+echo ""
+echo "Begin building $model in `pwd`"
+#
+# Build Make.env file in exec dir, containing needed env vars for Makefile:
+#
+cat << EOF >! Make.env
+MAKE_MACHINE  = $make
+DIRS          = . $srcdir 
+MPI           = $mpi
+EXECNAME      = $model
+NAMELIST      = $input
+OUTPUT        = $output
+DEBUG         = $debug
+SVN_REVISION  = $svn_revision
+EOF
+#
+# Build the model:
+gmake -j8 all || echo ">>> Error return from gmake all" && exit 1
+#
+if ($exec == "FALSE") then
+  echo "Am NOT executing the model because exec = $exec"
+  # Cleanup
+  echo "Cleaning up compiling"
+  cp $model $bindir
+  exit 0
+endif
+#
+# Set data directory in PBS script:
+#
+cat << EOF >> $runscript
+  setenv TGCMDATA $tgcmdata
+EOF
+#
+# MPI/PBS job: append mpirun.pbs command to PBS script 
+# (it has #BSUBs from above)
+#
+if ($mpi == "TRUE") then  # MPI PBS job
+  cat << EOF >> $runscript
+  setenv MP_LABELIO YES
+  setenv MP_SHARED_MEMORY yes
+#
+# Execute:
+  mpiexec_mpt -p "%g:" $model $input >&! $output
+#
+# Save stdout:
+  $rmbinchars $output # remove any non-ascii chars in stdout file
+  $mklogs $output     # break stdout into per-task log files
+  cd $output:h
+#
+# Make tar file of task log files:
+  tar -cf $output.tar *task*.out 
+  echo Saved stdout tar file $output.tar 
+  rm *task*.out
+EOF
+  echo " "
+  echo "Submitting PBS script $runscript for MPI run"
+  qsub < $runscript
+#
+# Non-mpi job: simple execution statement on the interactive node.
+# If you want to submit pbs job, you can use a here-doc like above
+# to put the execution statement in the runscript, then submit with
+# bsub as above.
+#
+else
+  echo "Executing serial non-MPI run in background on the interactive node.." 
+  $model < $input >&! $output &
+endif
+exit 0
