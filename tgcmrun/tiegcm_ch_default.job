@@ -28,7 +28,7 @@
 # and change execdir, tgcmdata and namelist input if necessary.
 # Also reset number of processors accordingly below (#PBS -n).
 #
-set modeldir = /glade/u/home/wiltbemj/src/tiegcm
+set modeldir = /glade/u/home/nikhilr/tiegcm_func/tiegcm2.0
 set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm.exec
 set bindir   = $execdir/bin
 set tgcmdata = /glade/p/hao/tgcm/data/tiegcm2.0
