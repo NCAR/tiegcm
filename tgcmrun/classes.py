@@ -166,6 +166,7 @@ class Job:
   script_default = ''      # job default script: file path (read)
   script_run = ''          # job script for run: file path (write)
   execdir = ''             # directory path (may or may not exist)
+  bindir = ''             # directory path (may or may not exist)
   execute = ''             # execute model only if execute=TRUE
   stdin = ''               # namelist input file (read)
   stdout = ''              # standard out file (write)
@@ -183,6 +184,7 @@ class Job:
     found_input = 0
     found_output = 0
     found_execdir = 0
+    found_bindir = 0
     found_runscript = 0
     for line in open(self.script_default):
 #
@@ -199,6 +201,13 @@ class Job:
         newline = 'set execdir = '+self.execdir+'\n'
         f.write(newline)
         found_execdir = 1
+#
+# Executable directory:
+      elif 'set bindir' in line and not found_bindir: # only first occurrence      
+        newline = 'set bindir = '+self.bindir+'\n'
+        f.write(newline)
+        found_bindir = 1
+
 #
 # Namelist input file:
       elif 'set input' in line and not found_input: # only first occurrence

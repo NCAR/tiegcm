@@ -11,6 +11,7 @@
 #
 #   modeldir:  Root directory to model source (may be an SVN working dir)
 #   execdir:   Directory in which to build and execute (will be created if necessary)
+#   bindir:   Directory in which the executable will be saved (will be created if necessary)
 #   tgcmdata:  Directory in which startup history and data files are accessed.
 #              (If tgcmdata is not set, the model will use env var TGCMDATA)
 #   input:     Namelist input file for the chosen model resolution
@@ -29,6 +30,7 @@
 #
 set modeldir = /glade/u/home/wiltbemj/src/tiegcm
 set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm.exec
+set bindir   = $execdir/bin
 set tgcmdata = /glade/p/hao/tgcm/data/tiegcm2.0
 set input    = $modeldir/scripts/tiegcm_res2.5_default.inp
 set output   = tiegcm_res2.5.out
@@ -42,7 +44,11 @@ set runscript = run.pbs
 
 set execdir   = `perl $utildir/abspath $execdir`
 set runscript = `perl $utildir/abspath $runscript`
+set bindir    = `perl $utildir/abspath $bindir`
+if (-d $execdir) rm -r $execdir
 if (! -d $execdir) mkdir -p $execdir
+if (! -d $bindir)  mkdir -p $bindir
+
 #
 # Set PBS resource usage (create the runscript in execdir):
 # (run commands are appended to this script below)
@@ -135,7 +141,7 @@ endif
 #
 # Copy make files to execdir if necessary:
 #
-if (! -f $execdir/$make)     cp $utildir/$make $execdir
+if (! -f $execdir/$make)     cp $utildir/env/$make $execdir
 if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
 if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
 #
@@ -242,6 +248,9 @@ gmake all || echo ">>> Error return from gmake all" && exit 1
 #
 if ($exec == "FALSE") then
   echo "Am NOT executing the model because exec = $exec"
+  # Cleanup
+  echo "Cleaning up compiling"
+  cp $model $bindir
   exit 0
 endif
 #

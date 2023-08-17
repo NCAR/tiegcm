@@ -44,6 +44,7 @@ while True:
   job.model_res    = get_options('model_res'   ,run,job,args.model_res)
   job.machine      = get_options('machine'     ,run,job,args.machine)
   job.execdir      = get_options('execdir'     ,run,job,args.execdir)    # env var TGCMTEMP/run
+  job.bindir       = get_options('bindir'     ,run,job,args.bindir)    # env var TGCMTEMP/run/bin
   job.execute      = get_options('execute'     ,run,job,args.execute)    # execute only if execute is TRUE
   job.nprocs       = get_options('nprocs'      ,run,job,args.nprocs)     # command-line only
   job.project      = get_options('project'     ,run,job,args.project)    # command-line only
@@ -131,6 +132,7 @@ while True:
   print 'Model root directory: ',job.model_root
   print 'Model resolution:     ',job.model_res
   print 'Execution directory:  ',job.execdir
+  print 'Bin directory:        ',job.bindir
   print 'Namelist input file:  ',job.stdin
   print 'Standard out file:    ',job.stdout 
   print 'Standard out dir:     ',job.stdout_dir

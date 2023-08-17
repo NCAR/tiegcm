@@ -37,7 +37,7 @@ set output   = tiegcm.out
 set make     = Make.intel_ch
 set mpi       = TRUE   # must be TRUE for tiegcm2.0 and later
 set debug     = FALSE
-set exec      = TRUE
+set exec      = FALSE
 set utildir   = $modeldir/scripts
 set runscript = run.pbs
 

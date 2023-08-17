@@ -48,6 +48,7 @@ def get_args():
   help_model_root = "Model root directory (default: env vars TIEGCM_ROOT or TIMEGCM_ROOT)"
   help_machine    = "Machine or platform (either 'ch' (cheyenne) or 'linux' (generic Linux))"
   help_execdir    = "Directory where model will be built and executed (default: env var TGCMTEMP)"
+  help_bindir    = "Directory where model executable will be saved (default: env var TGCMTEMP/bin)"
   help_tgcmdata   = "Path to data files needed by the model (default: env var TGCMDATA)"
   help_nprocs     = "Number of processors (total MPI tasks)"
   help_project    = "Authorized NCAR project number, e.g.: #PBS -P P28100036 (ch only)"
@@ -69,6 +70,7 @@ def get_args():
     ['machine'    , help_machine],
     ['compiler'   , help_compiler],
     ['execdir'    , help_execdir],
+    ['bindir'    , help_bindir],
     ['execute'    , help_execute],
     ['tgcmdata'   , help_tgcmdata],
     ['nprocs'     , help_nprocs],
@@ -295,18 +297,44 @@ def get_options(arg,run,job,option):
     else:
       tgcmtemp = getenv('TGCMTEMP') # User's large scratch temp directory
       if tgcmtemp != '':            # env var is set
-        execdir = tgcmtemp+'/'+job.model_name+'_'+'res'+job.model_res+'_'+run.name+'/run'
+        execdir = tgcmtemp+'/'+job.model_name+'_'+'res'+job.model_res+'_'+run.name+'/build/src'
         print 'Set ',execdir,' as execdir for ',run.name
         return execdir
       else: # prompt for execdir
-        print 'Env var ',TGCMTEMP,' is not set.'
+        print 'Env var TGCMTEMP is not set.'
         answer = raw_input('Enter execution directory (execdir) for run '+run.name+': ')
+        answer=answer+'/src'
         if not os.path.isdir:
           os.path.makedirs(answer)
           print "Made execdir directory ",answer," for run ",run.name
         else:
           print 'Set ',answer,' as execdir for ',run.name,' Note: the job script will make this directory for the run.'
+
         return answer
+#
+# Directory in which to save executable files:
+# (absolute path or relative to execdir)
+#
+  elif arg == 'bindir':
+    if option: # job script will validate
+      return option
+    else:
+      split_execdir = parts = job.execdir.rsplit("/", 1)
+      bindir = split_execdir[0] + '/bin'
+      return bindir
+#      if execdir != '':            # env var is set
+#        bindir = execdir+'/bin'
+#        print 'Set ',bindir,' as bindir for ',run.name
+#        return bindir
+#      else: # prompt for bindir
+#        answer = raw_input('Enter execution directory (bindir) for run '+run.name+': ')
+#        if not os.path.isdir:
+#          os.path.makedirs(answer)
+#          print "Made bindir directory ",answer," for run ",run.name
+#        else:
+#          print 'Set ',answer,' as bindir for ',run.name,' Note: the job script will make this directory for the run.'
+#        return answer
+#
 #
 # If execdir exists, prompt for whether to empty the directory prior to the run.
 #
@@ -347,7 +375,7 @@ def get_options(arg,run,job,option):
     else:
       default_tgcmdata = ''
       if job.machine == 'ch':
-        default_tgcmdata = '/glade/p/hao/tgcm/data'
+        default_tgcmdata = '/glade/p/hao/tgcm/data/tiegcm2.0'
       tgcmdata = getenv('TGCMDATA',default=default_tgcmdata)
       if tgcmdata:
         if not os.path.isdir(tgcmdata):
@@ -365,6 +393,7 @@ def get_options(arg,run,job,option):
         else:
           get_options(arg,run,job,option)
     return tgcmdata
+
 #
 # Number of processors (mpi tasks) (command-line only):
 #
