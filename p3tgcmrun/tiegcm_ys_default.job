@@ -1,16 +1,16 @@
 #!/bin/tcsh
+#
 # Job script to build and execute TIEGCM on the NCAR supercomputer yellowstone,
-# or similar system running PBS (Load Sharing Facility)
+# or similar system running LSF (Load Sharing Facility)
 #
 # This script should be executed on the yellowstone command line.
 # It will compile in execdir on the interactive login node, then create and 
-# submit an PBS script based on the #QSUB resources specified below.
+# submit an LSF script based on the #BSUB resources specified below.
 #
-# User should set shell variables and #QSUB settings below:
+# User should set shell variables and #BSUB settings below:
 #
 #   modeldir:  Root directory to model source (may be an SVN working dir)
 #   execdir:   Directory in which to build and execute (will be created if necessary)
-#   bindir:   Directory in which the executable will be saved (will be created if necessary)
 #   tgcmdata:  Directory in which startup history and data files are accessed.
 #              (If tgcmdata is not set, the model will use env var TGCMDATA)
 #   input:     Namelist input file for the chosen model resolution
@@ -21,43 +21,71 @@
 #   debug:     If TRUE, build and execute a "debug" run (debug compiler flags are set)
 #   exec:      If TRUE, execute the model (build only if exec is FALSE)
 #   utildir:   Directory containing supporting scripts (default $modeldir/scripts)
-#   runscript: PBS script with run commands (submitted with bsub from execdir)
+#   runscript: LSF script with run commands (submitted with bsub from execdir)
 #
 # To switch to 2.5-deg resolution, set modelres below to 2.5,
 # and change execdir, tgcmdata and namelist input if necessary.
 # Also reset number of processors accordingly below (#BSUB -n).
 #
-set modeldir = tiegcm2.0
-set modelres = 2.5
-set execdir   = $modeldir/build/src
-set bindir    = $modeldir/build/bin
-set tgcmdata = /glade/p/hao/tgcm/data/tiegcm2.0
-set input    = $modeldir/scripts/tiegcm_res2.5_default.inp
+set modeldir = tiegcm_trunk
+set execdir  = /glade/scratch/$user/tiegcm_trunk/tiegcm.exec
+#set tgcmdata = /glade/p/hao/tgcm/data/tiegcm2.0
+set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
 set output   = tiegcm.out
-
-set make     = Make.intel_ch
+set modelres = 5.0
+set make     = Make.intel_ys
 set mpi       = TRUE   # must be TRUE for tiegcm2.0 and later
 set debug     = FALSE
-set exec      = FALSE
+set exec      = TRUE
 set utildir   = $modeldir/scripts
-set runscript = run.pbs
+set runscript = run.lsf
 
 set execdir   = `perl $utildir/abspath $execdir`
 set runscript = `perl $utildir/abspath $runscript`
-set bindir    = `perl $utildir/abspath $bindir`
-if (-d $execdir) rm -r $execdir
 if (! -d $execdir) mkdir -p $execdir
-if (! -d $bindir)  mkdir -p $bindir
-
+#
+# Set LSF resource usage (create the runscript in execdir):
+# (run commands are appended to this script below)
+#
+cat << EOF >! $runscript
+#!/bin/tcsh
+#
+#BSUB -J tiegcm
+#BSUB -P P28100036
+##BSUB -P NHAO0004
+#BSUB -q premium
+#BSUB -o tiegcm.%J.out
+#BSUB -e tiegcm.%J.out
+#BSUB -N
+#BSUB -u $LOGNAME@ucar.edu
+#BSUB -W 0:30
+#
+# Recommended for single-res (5.0 deg) tiegcm:
+# -n16,ptile=16 (1 node, 16 procs/node)
+# Note: -n 1 is permitted.
+# For 5.0-deg res, STEP= 60, nproc=16, allow 2.0 mins per simulated day (0.08 secs/step)
+# For 5.0-deg res, STEP=120, nproc=16, allow 1.0 mins per simulated day (0.08 secs/step)
+#BSUB -n 16
+#BSUB -R "span[ptile=16]"
+#
+# Recommended for double-res (2.5 deg) tiegcm: 
+# -n64,ptile=16 (4 nodes, 16 procs/node)
+# Note: -n 1 is permitted.
+# For 2.5-deg res, STEP= 30, nproc=64, allow 8.5 mins per simulated day (0.17 secs/step)
+# For 2.5-deg res, STEP= 60, nproc=64, allow 4.5 mins per simulated day (0.17 secs/step)
+##BSUB -n 64
+##BSUB -R "span[ptile=16]"
+#
+EOF
 #
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                               End user settings
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# Update ESMF module on ch as of 8/20
-set lib_esmf = esmf-8.0.0-ncdfio-mpi-O
-module load esmf_libs/8.0.0 $lib_esmf
+# Update ESMF module on ys as of 4/14/14:
+set lib_esmf = esmf-6.3.0r-ncdfio-mpi-O
+module load esmf $lib_esmf
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"
@@ -75,8 +103,8 @@ if (! -d $modeldir) then
 endif
 #
 # Executable file name:
-#set model = tiegcm.exe
-set model = tiegcm-standalone-${modelres}.x
+set model = tiegcm.exe
+
 if (! -d $utildir) then
   echo ">>> Cannot find model scripts directory $utildir <<<" 
   exit 1
@@ -119,7 +147,7 @@ endif
 #
 # Copy make files to execdir if necessary:
 #
-if (! -f $execdir/$make)     cp $utildir/env/$make $execdir
+if (! -f $execdir/$make)     cp $utildir/$make $execdir
 if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
 if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
 #
@@ -226,28 +254,25 @@ gmake -j8 all || echo ">>> Error return from gmake all" && exit 1
 #
 if ($exec == "FALSE") then
   echo "Am NOT executing the model because exec = $exec"
-  # Cleanup
-  echo "Cleaning up compiling"
-  cp $model $bindir
   exit 0
 endif
 #
-# Set data directory in PBS script:
+# Set data directory in LSF script:
 #
 cat << EOF >> $runscript
   setenv TGCMDATA $tgcmdata
 EOF
 #
-# MPI/PBS job: append mpirun.pbs command to PBS script 
+# MPI/LSF job: append mpirun.lsf command to LSF script 
 # (it has #BSUBs from above)
 #
-if ($mpi == "TRUE") then  # MPI PBS job
+if ($mpi == "TRUE") then  # MPI LSF job
   cat << EOF >> $runscript
   setenv MP_LABELIO YES
   setenv MP_SHARED_MEMORY yes
 #
 # Execute:
-  mpiexec_mpt -p "%g:" $model $input >&! $output
+  mpirun.lsf $model $input >&! $output
 #
 # Save stdout:
   $rmbinchars $output # remove any non-ascii chars in stdout file
@@ -260,11 +285,11 @@ if ($mpi == "TRUE") then  # MPI PBS job
   rm *task*.out
 EOF
   echo " "
-  echo "Submitting PBS script $runscript for MPI run"
-  qsub < $runscript
+  echo "Submitting LSF script $runscript for MPI run"
+  bsub < $runscript
 #
 # Non-mpi job: simple execution statement on the interactive node.
-# If you want to submit pbs job, you can use a here-doc like above
+# If you want to submit lsf job, you can use a here-doc like above
 # to put the execution statement in the runscript, then submit with
 # bsub as above.
 #

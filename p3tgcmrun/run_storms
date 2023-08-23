@@ -1,0 +1,48 @@
+#!/bin/tcsh
+#
+# Three storm cases with [heelis,GPI] and [weimer,OMNI,GPI] at both resolutions,
+# for a total of 12 runs.
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#
+# November 2003 "Halloween storm":
+#
+ tgcmrun -run_name nov2003_heelis_gpi -model_name tiegcm -model_res 5.0 -submit yes 
+   -stdout_dir tiegcm_res5.0_nov2003_heelis_gpi
+ tgcmrun -run_name nov2003_weimer_imf -model_name tiegcm -model_res 5.0 -submit yes \
+   -stdout_dir tiegcm_res5.0_nov2003_weimer_imf
+
+ tgcmrun -run_name nov2003_heelis_gpi -model_name tiegcm -model_res 2.5 -submit yes \
+   -stdout_dir tiegcm_res2.5_nov2003_heelis_gpi
+ tgcmrun -run_name nov2003_weimer_imf -model_name tiegcm -model_res 2.5 -submit yes \
+   -stdout_dir tiegcm_res2.5_nov2003_weimer_imf
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#
+# December 2006 "AGU storm":
+#
+ tgcmrun -run_name dec2006_heelis_gpi -model_name tiegcm -model_res 5.0 -submit yes \
+   -stdout_dir tiegcm_res5.0_dec2006_heelis_gpi
+ tgcmrun -run_name dec2006_weimer_imf -model_name tiegcm -model_res 5.0 -submit yes \
+   -stdout_dir tiegcm_res5.0_dec2006_weimer_imf
+
+ tgcmrun -run_name dec2006_heelis_gpi -model_name tiegcm -model_res 2.5 -submit yes \
+   -stdout_dir tiegcm_res2.5_dec2006_heelis_gpi
+ tgcmrun -run_name dec2006_weimer_imf -model_name tiegcm -model_res 2.5 -submit yes \
+   -stdout_dir tiegcm_res2.5_dec2006_weimer_imf
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#
+# Whole Heliosphere Interval, 2008: 
+#
+ tgcmrun -run_name whi2008_heelis_gpi -model_name tiegcm -model_res 5.0 -submit yes \
+   -stdout_dir tiegcm_res5.0_whi2008_heelis_gpi
+ tgcmrun -run_name whi2008_weimer_imf -model_name tiegcm -model_res 5.0 -submit yes \
+   -stdout_dir tiegcm_res5.0_whi2008_weimer_imf
+
+ tgcmrun -run_name whi2008_heelis_gpi -model_name tiegcm -model_res 2.5 -submit yes \
+   -stdout_dir tiegcm_res2.5_whi2008_heelis_gpi
+ tgcmrun -run_name whi2008_weimer_imf -model_name tiegcm -model_res 2.5 -submit yes \
+   -stdout_dir tiegcm_res2.5_whi2008_weimer_imf
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 

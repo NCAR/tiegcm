@@ -1,0 +1,43 @@
+#!/bin/tcsh
+#
+# Make namelist and job scripts (do not compile or submit runs):
+#
+#==========================================================================================
+set stdout_dir = benchmark_scripts_res5.0
+
+ tgcmrun -run_number 0 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 1 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 2 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 3 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 4 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 5 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 6 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 7 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 8 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 9 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 10 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 11 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 12 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 13 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 14 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 16 -model_name tiegcm -model_res 5.0 -submit no -stdout_dir $stdout_dir
+
+#==========================================================================================
+set stdout_dir = benchmark_scripts_res2.5
+
+ tgcmrun -run_number 0 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 1 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 2 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 3 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 4 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 5 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 6 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 7 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 8 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 9 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 10 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 11 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 12 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 13 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 14 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir
+ tgcmrun -run_number 16 -model_name tiegcm -model_res 2.5 -submit no -stdout_dir $stdout_dir

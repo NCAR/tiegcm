@@ -1,0 +1,23 @@
+#!/bin/tcsh
+#
+# Climatology:
+# Start a climatology run with Jan 1-5.
+#
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#
+# Climatology smax,smin at res5.0:
+#
+tgcmrun -run_name climatology_smax -model_name tiegcm -model_res 5.0 -submit yes \
+  -stdout_dir tiegcm_res5.0_climatology_smax
+tgcmrun -run_name climatology_smin -model_name tiegcm -model_res 5.0 -submit yes \
+  -stdout_dir tiegcm_res5.0_climatology_smin
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+#
+# Climatology smax,smin at res2.5:
+#
+tgcmrun -run_name climatology_smax -model_name tiegcm -model_res 2.5 -submit yes \
+  -stdout_dir tiegcm_res2.5_climatology_smax
+tgcmrun -run_name climatology_smin -model_name tiegcm -model_res 2.5 -submit yes \
+  -stdout_dir tiegcm_res2.5_climatology_smin
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+

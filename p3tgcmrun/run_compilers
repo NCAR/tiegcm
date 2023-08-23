@@ -1,0 +1,44 @@
+#!/bin/tcsh
+#
+# Build and run the model with different compilers.
+#
+# Compiler option is valid on desktop linux platforms only
+# (i.e., not yellowstone or other supercomputer cluster,
+#  where intel compiler is assumed)
+#
+# -compiler option must be 'intel', 'pgi', 'gfortran' (default is intel)
+#
+#-----------------------------------------------------------------------------
+set run_name = 'decsol_smax'
+#
+# tiegcm res5.0:
+#
+set case = tiegcm_res5.0_intel
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -submit yes \
+  -compiler intel -execdir /hao/aim/foster/$case -stdout_dir $case
+ 
+set case = tiegcm_res5.0_pgi
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -submit yes \
+  -compiler pgi -execdir /hao/aim/foster/$case -stdout_dir $case
+ 
+set case = tiegcm_res5.0_gfort
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -submit yes \
+  -compiler gfort -execdir /hao/aim/foster/$case -stdout_dir $case
+#
+#-----------------------------------------------------------------------------
+#
+# tiegcm res2.5:
+# (-submit=no, so can change run length before executing)
+#
+set case = tiegcm_res2.5_intel
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -submit no \
+  -compiler intel -execdir /hao/aim/foster/$case -stdout_dir $case
+
+set case = tiegcm_res2.5_pgi
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -submit no \
+  -compiler pgi -execdir /hao/aim/foster/$case -stdout_dir $case
+
+set case = tiegcm_res2.5_gfort
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -submit no \
+  -compiler gfort -execdir /hao/aim/foster/$case -stdout_dir $case
+

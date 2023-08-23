@@ -1,0 +1,28 @@
+#!/bin/tcsh
+#
+# tiegcm performance testing: 
+# A model benchmark run is made with different numbers of processors (mpi tasks). 
+#
+  set run_name = 'decsol_smax'
+#
+# tiegcm res5.0:
+#
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 8  -submit yes -stdout_dir tiegcm_res5.0_nproc08
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 16 -submit yes -stdout_dir tiegcm_res5.0_nproc16
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 24 -submit yes -stdout_dir tiegcm_res5.0_nproc24
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 32 -submit yes -stdout_dir tiegcm_res5.0_nproc32
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 48 -submit yes -stdout_dir tiegcm_res5.0_nproc48
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 64 -submit yes -stdout_dir tiegcm_res5.0_nproc64
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 72 -submit yes -stdout_dir tiegcm_res5.0_nproc72
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 5.0 -nprocs 80 -submit yes -stdout_dir tiegcm_res5.0_nproc80
+#
+# tiegcm res2.5:
+#
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 8  -submit yes -stdout_dir tiegcm_res2.5_nproc08
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 16 -submit yes -stdout_dir tiegcm_res2.5_nproc16
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 24 -submit yes -stdout_dir tiegcm_res2.5_nproc24
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 32 -submit yes -stdout_dir tiegcm_res2.5_nproc32
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 48 -submit yes -stdout_dir tiegcm_res2.5_nproc48
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 64 -submit yes -stdout_dir tiegcm_res2.5_nproc64
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 72 -submit yes -stdout_dir tiegcm_res2.5_nproc72
+tgcmrun -run_name $run_name -model_name tiegcm -model_res 2.5 -nprocs 80 -submit yes -stdout_dir tiegcm_res2.5_nproc80
