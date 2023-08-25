@@ -1,5 +1,4 @@
 import re,os,subprocess,sys
-from utils import getenv,replace_string,remove_comments
 
 #----------------------- Begin Class Version definition ---------------------
 class Version:
@@ -153,7 +152,7 @@ class Namelist:
 
     f.write('/\n')
     f.close()
-#   print 'Wrote namelist file ',file
+#   print('Wrote namelist file ',file
 
 #----------------------- Begin Class Job definition ---------------------
 class Job:
@@ -179,7 +178,7 @@ class Job:
   compiler = ''            # Compiler (intel, pgi, or gfort) (Linux platform only, not ch super)
 
   def make_jobscript(self,run):
-    print 'Openning job script',self.script_default
+    print('Openning job script',self.script_default)
     f = open(self.script_run,'w')
     found_input = 0
     found_output = 0
@@ -201,13 +200,11 @@ class Job:
         newline = 'set execdir = '+self.execdir+'\n'
         f.write(newline)
         found_execdir = 1
-#
 # Executable directory:
       elif 'set bindir' in line and not found_bindir: # only first occurrence      
         newline = 'set bindir = '+self.bindir+'\n'
         f.write(newline)
-        found_bindir = 1
-
+        found_bindir = 1        
 #
 # Namelist input file:
       elif 'set input' in line and not found_input: # only first occurrence
@@ -233,7 +230,7 @@ class Job:
 #   referring to nprocs for res2.5
 # 
       elif '#PBS -l select' in line and '##PBS -l select' not in line: 
-        print 'Inside PBS select', line
+        print('Inside PBS select', line)
         if self.nprocs:
           newline = '#PBS -l select '+str(self.nprocs)+'\n'
           f.write(newline)
@@ -318,13 +315,13 @@ class Job:
       elif 'set make' in line and self.machine != 'ch':
         if self.compiler == 'intel':
           newline = 'set make = Make.intel_hao64'
-	elif self.compiler == 'pgi':
+        elif self.compiler == 'pgi':
           newline = 'set make = Make.pgi_hao64'
-	elif self.compiler == 'gfort':
+        elif self.compiler == 'gfort':
           newline = 'set make = Make.gfort_hao64'
-	else:
-	  print '>>> Unknown compiler ',self.compiler
-	  sys.exit()
+        else:
+	        print('>>> Unknown compiler ',self.compiler)
+	        sys.exit()
         f.write(newline+'\n')
 #
 # Otherwise, no change to this line in default job script:
@@ -333,14 +330,14 @@ class Job:
 
     f.close()
     os.popen('chmod u+x '+self.script_run)    # make it executable
-#   print "Wrote job script ",self.script_run
+#   print("Wrote job script ",self.script_run
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # def calc_wallclock
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   def submit(self,run_fullname):
-    print "Submitting ",self.script_run," for run ",run_fullname
+    print("Submitting ",self.script_run," for run ",run_fullname)
     subprocess.call([self.script_run])
   
 #----------------------- Begin Class Run definition ---------------------
@@ -417,7 +414,7 @@ class Run(Job,Namelist):
 # run.number must be an integer between 0 and run.nruns-1:
 #   1. Try converting it to an integer, if this fails return 0
 #   2. If it is an integer, and within range, return 1, otherwise return 0
-# This is done silently, so calling function can print its own errors.
+# This is done silently, so calling function can print(its own errors.
 #
     try:
       int(run_number)
@@ -441,14 +438,14 @@ class Run(Job,Namelist):
 # This will be used to prompt user for the desired run.
 #
   def print_runs(self):
-    print '\nThe following runs are available:' 
+    print('\nThe following runs are available:')
     header = '''
 NUMBER\tNAME\t\tDESCRIPTION
 ------\t----\t\t-----------'''
-    print header
+    print(header)
     n = 0
     while n < self.nruns:
-      print n,"\t",self.names[n][0],"\t",self.names[n][1]
+      print(n,"\t",self.names[n][0],"\t",self.names[n][1])
       n = n+1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
@@ -523,7 +520,7 @@ NUMBER\tNAME\t\tDESCRIPTION
       if self.name=='dec2006_heelis_gpi': source='timegcm_dres.p_dec2006.nc'
 
     if source == '':
-      print '>>> Could not find old source history file for ',version,' ',self.name
+      print('>>> Could not find old source history file for ',version,' ',self.name)
       sys.exit()
     else:
       source = "'"+tgcmdata+"/"+source+"'"
@@ -893,7 +890,7 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
         if job.model_res == '2.5': 
           if int(job.step) > 10: 
-            print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds'
+            print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
             job.step = '10' # reduce timestep for res2.5 to 10 seconds
 
       self.list_mods = [
@@ -1104,7 +1101,7 @@ NUMBER\tNAME\t\tDESCRIPTION
 
       if job.model_res == '2.5': 
         if int(job.step) > 15: 
-          print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 15 seconds'
+          print('NOTE ',self.name,': Changing timestep from ',job.step,' to 15 seconds')
           job.step = '15' # force timestep for res2.5 to 15 seconds
 
       self.list_mods = [
@@ -1156,7 +1153,7 @@ NUMBER\tNAME\t\tDESCRIPTION
       opdiffcap = '0.'
       if job.model_res == '2.5': 
         if int(job.step) > 10: 
-          print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds'
+          print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
           job.step = '10' # force timestep for res2.5 to 10 seconds
         opdiffcap = '6.e8'
 
@@ -1276,7 +1273,7 @@ NUMBER\tNAME\t\tDESCRIPTION
       stop = '366,0,0' # step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
       if job.model_res == '2.5': 
         if int(job.step) > 20: 
-          print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 20 seconds'
+          print('NOTE ',self.name,': Changing timestep from ',job.step,' to 20 seconds')
           job.step = '20' # force timestep for res2.5 to 20 seconds
         stop = '55,0,0'
 

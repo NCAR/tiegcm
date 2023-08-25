@@ -106,7 +106,7 @@ def get_options(arg,run,job,option):
         return run.get_number(run.name)
     if option:              # check for command-line argument
       if not run.validate_number(option):
-        print '>>> Bad run number found on command-line: ',option,' (Must be an integer >= 0 and <= ',run.nruns-1,')'
+        print('>>> Bad run number found on command-line: ',option,' (Must be an integer >= 0 and <= ',run.nruns-1,')')
         sys.exit()
       else:
         return option
@@ -118,7 +118,7 @@ def get_options(arg,run,job,option):
 # Note: type returned by raw_input is always a string.
 # run.number has to be an integer (it will used to index into lists, etc)
 #
-        answer = raw_input("\nEnter number of desired run (0-"+str(run.nruns-1)+") ('q' to quit, 'p' to print list, default=0): ")
+        answer = input("\nEnter number of desired run (0-"+str(run.nruns-1)+") ('q' to quit, 'p' to print list, default=0): ")
         if answer == 'q': 
           sys.exit()        # quit the app
         elif answer == '':
@@ -130,7 +130,7 @@ def get_options(arg,run,job,option):
           if run.validate_number(answer): # if this succeeds, it returns integer (not a string)
             return answer
           else:
-            print '>>> Bad run number: ',answer,' (Must be an integer >= 0 and <= ',run.nruns-1,')'
+            print('>>> Bad run number: ',answer,' (Must be an integer >= 0 and <= ',run.nruns-1,')')
             answer = ''     # go back up to prompt ("while not" loop) w/o printing list
 
   elif arg == 'run_name':
@@ -139,7 +139,7 @@ def get_options(arg,run,job,option):
         run.name = option
         return run.name
       else:
-        print '>>> Invalid run name: ',option,' found on command line.'
+        print('>>> Invalid run name: ',option,' found on command line.')
         sys.exit()
 #
 # Get run.model_name:
@@ -147,21 +147,21 @@ def get_options(arg,run,job,option):
   elif arg == 'model_name':
     if option:
       if option != 'tiegcm' and option != 'timegcm':
-        print ">>> Unknown model name on the command line: '",option,"' (must be 'tiegcm' or 'timegcm')"
+        print('>>> Unknown model name on the command line: ',option,"' (must be 'tiegcm' or 'timegcm')")
         sys.exit()
       run.model_name = option
     else:
       job.user = os.getlogin() 
       answer = ''
       while answer != 'tiegcm' and answer != 'timegcm':
-        answer = raw_input("Run "+run.name+": Enter model name ('tiegcm' or 'timegcm', default=tiegcm): ")
+        answer = input("Run "+run.name+": Enter model name ('tiegcm' or 'timegcm', default=tiegcm): ")
         if answer == 'q':
           sys.exit()
         elif answer == '':
           answer = 'tiegcm'
           continue
         elif answer != 'tiegcm' and answer != 'timegcm':
-          print ">>> Unknown model name ",answer," (must be 'tiegcm' or 'timegcm')"
+          print('>>> Unknown model name ',answer," (must be 'tiegcm' or 'timegcm')")
           get_options(arg,run,job,option)
       run.model_name = answer
     return run.model_name
@@ -180,12 +180,12 @@ def get_options(arg,run,job,option):
   elif arg == 'model_root':
     if option:
       if not os.path.isdir(option):
-        print '>>> Cannot find model_root directory provided on the command line: ',option
+        print('>>> Cannot find model_root directory provided on the command line: ',option)
         sys.exit()
       else:
         scripts_dir = option+'/scripts'
         if not os.path.isdir(scripts_dir):
-          print '>>> Model root ',option,' from command line exists, but scripts directory ',scripts_dir,' does not exist.'
+          print('>>> Model root ',option,' from command line exists, but scripts directory ',scripts_dir,' does not exist.')
           sys.exit()
       return option
 #
@@ -199,29 +199,29 @@ def get_options(arg,run,job,option):
       envvalue = getenv(envvar)
       if envvalue != '':
         rootdir = envvalue   
-#       print 'Got env var ',envvar,' = ',rootdir,' (needed for ',job.model_name,' model_root)'
+#       print(Got env var ),envvar,' = ',rootdir,' (needed for ',job.model_name,' model_root)'
 #
 # model_root not on command-line, and env var not set, so prompt user:
 #
       else:
-        print 'Environment variable ',envvar,' is not set.'
-        answer = raw_input('Run '+run.name+': Enter model_root directory for '+job.model_name+' (q to quit): ')
+        print('Environment variable ',envvar,' is not set.')
+        answer = input('Run '+run.name+': Enter model_root directory for '+job.model_name+' (q to quit): ')
         if answer == 'q':
           sys.exit()
         if answer == '':
           get_options(arg,run,job,option) # try again
         rootdir = answer
-        print 'Got response to prompt: rootdir=',rootdir
+        print('Got response to prompt: rootdir=',rootdir)
 #
 # Check for directory existence of either env var value, or prompt response:
 #
       if not os.path.isdir(rootdir):
-        print '>>> Cannot find model root directory ',rootdir
+        print('>>> Cannot find model root directory ',rootdir)
         get_options(arg,run,job,option) # try again
       
       scripts_dir = rootdir+'/scripts'
       if not os.path.isdir(scripts_dir):
-        print '>>> Model root ',rootdir,' exists, but scripts directory ',scripts_dir,' does not exist.'
+        print('>>> Model root ',rootdir,' exists, but scripts directory ',scripts_dir,' does not exist.')
         get_options(arg,run,job,option) # try again
       return rootdir
 #
@@ -230,20 +230,20 @@ def get_options(arg,run,job,option):
   elif arg == 'model_res':
     if option:
       if option != '5.0' and option != '2.5':
-        print ">>> Unknown model resolution on the command line: '",option,"' (must be 5.0 or 2.5)"
+        print('>>> Unknown model resolution on the command line: ',option,"' (must be 5.0 or 2.5)")
         sys.exit()
       run.model_res = option
     else:
       answer = ''
       while answer != '5.0' and answer != '2.5':
-        answer = raw_input("Run "+run.name+": Enter model resolution (5.0 or 2.5, default=5.0): ")
+        answer = input("Run "+run.name+": Enter model resolution (5.0 or 2.5, default=5.0): ")
         if answer == 'q':
           sys.exit()
         elif answer == '':
           model_res = '5.0' 
           answer = model_res
         elif answer != '5.0' and answer != '2.5':
-          print ">>> Unknown model resolution (must be 5.0 or 2.5)"
+          print('>>> Unknown model resolution (must be 5.0 or 2.5)')
         run.model_res = answer
     return run.model_res
 #
@@ -252,15 +252,15 @@ def get_options(arg,run,job,option):
   elif arg == 'machine':
     if option:
       if option not in ['ch','linux']:
-        print '>>> Unrecognized machine type found on command line: ',option
-        print "    Machine must be either 'ch' (cheyenne) or 'linux'"
+        print('>>> Unrecognized machine type found on command line: ',option)
+        print("    Machine must be either 'ch' (cheyenne) or 'linux'")
         sys.exit()
       job.machine = option
     else:
       job.machine = ''
       for line in os.popen('uname -a'): uname = line
       loc = uname.find('cheyenne')
-      print '  uname', uname 
+      print(  uname), uname 
       if loc >= 0:
         job.machine = 'ch'
       else:
@@ -268,7 +268,7 @@ def get_options(arg,run,job,option):
         if loc >= 0:
           job.machine = 'linux'
       if job.machine == '':
-        print ">>> Could not determine machine (must be either 'linux' or 'ch')"
+        print(">>> Could not determine machine (must be either 'linux' or 'ch')")
         sys.exit()
     return job.machine
 #
@@ -278,13 +278,13 @@ def get_options(arg,run,job,option):
   elif arg == 'compiler':
     if option:
       if job.machine != 'linux':
-        print ">>> The '-compiler' option is valid only for the linux desktop platform"
-        print "    Machine = ",job.machine
-	sys.exit()
+        print(">>> The '-compiler' option is valid only for the linux desktop platform")
+        print("    Machine = ",job.machine)
+        sys.exit()
       if option != 'intel' and option != 'pgi' and option != 'gfort':
-        print ">>> Invalid value for 'compiler' option: ",option
-        print ">>> Value for 'compiler' option must be 'intel', 'pgi', or 'gfort'"
-	sys.exit()
+        print(">>> Invalid value for 'compiler' option: ",option)
+        print(">>> Value for 'compiler' option must be 'intel' +  'pgi' +  or 'gfort'")
+        sys.exit()
       return option
     else:                     # default is intel
       return 'intel'
@@ -296,20 +296,18 @@ def get_options(arg,run,job,option):
       return option
     else:
       tgcmtemp = getenv('TGCMTEMP') # User's large scratch temp directory
-      if tgcmtemp != '':            # env var is set
+      if tgcmtemp != None :            # env var is set
         execdir = tgcmtemp+'/'+job.model_name+'_'+'res'+job.model_res+'_'+run.name+'/build/src'
-        print 'Set ',execdir,' as execdir for ',run.name
+        print('Set ',execdir,' as execdir for ',run.name)
         return execdir
       else: # prompt for execdir
-        print 'Env var TGCMTEMP is not set.'
-        answer = raw_input('Enter execution directory (execdir) for run '+run.name+': ')
-        answer=answer+'/src'
+        print('Env var TGCMTEMP is not set.')
+        answer = input('Enter execution directory (execdir) for run '+run.name+': ')
         if not os.path.isdir:
           os.path.makedirs(answer)
-          print "Made execdir directory ",answer," for run ",run.name
+          print('Made execdir directory ',answer," for run ",run.name)
         else:
-          print 'Set ',answer,' as execdir for ',run.name,' Note: the job script will make this directory for the run.'
-
+          print('Set ',answer,' as execdir for ',run.name,' Note: the job script will make this directory for the run.')
         return answer
 #
 # Directory in which to save executable files:
@@ -321,44 +319,31 @@ def get_options(arg,run,job,option):
     else:
       split_execdir = parts = job.execdir.rsplit("/", 1)
       bindir = split_execdir[0] + '/bin'
-      return bindir
-#      if execdir != '':            # env var is set
-#        bindir = execdir+'/bin'
-#        print 'Set ',bindir,' as bindir for ',run.name
-#        return bindir
-#      else: # prompt for bindir
-#        answer = raw_input('Enter execution directory (bindir) for run '+run.name+': ')
-#        if not os.path.isdir:
-#          os.path.makedirs(answer)
-#          print "Made bindir directory ",answer," for run ",run.name
-#        else:
-#          print 'Set ',answer,' as bindir for ',run.name,' Note: the job script will make this directory for the run.'
-#        return answer
-#
+      return bindir  
 #
 # If execdir exists, prompt for whether to empty the directory prior to the run.
 #
 #   if os.path.isdir(job.execdir):
-#     print "Use existing execdir ",job.execdir,"? (yes/no)" 
-#     answer = raw_input("  If no, all files in the directory will be removed prior to running the run) (default=yes): ")
+#     print(Use existing execdir ),job.execdir,"? (yes/no)" 
+#     answer = input("  If no, all files in the directory will be removed prior to running the run) (default=yes): ")
 #     if answer == 'q':
 #       sys.exit()
 #     elif answer == 'no':
 #       for file in os.listdir(job.execdir):
 #         os.remove(job.execdir+'/'+file)
-#       print "Removed files in execdir ",job.execdir
+#       print(Removed files in execdir ),job.execdir
 #     else:
-#       print "Files NOT removed from execdir ",job.execdir
+#       print(Files NOT removed from execdir ),job.execdir
 #   else:
 #     os.makedirs(job.execdir) # this makes parents and leaf as necessary
-#     print "Made directory ",job.execdir," for run ",run_name
+#     print(Made directory ),job.execdir," for run ",run_name
 #
 # Execution flag TRUE/FALSE (command-line only):
 #
   elif arg == 'exec':
     if option:
       if option != 'yes' and option != 'no':
-        print ">>> Bad value for ",arg,": '",option,"' (must be 'yes' or 'no' )"
+        print('>>> Bad value for ',arg,": '",option,"' (must be 'yes' or 'no' )")
         sys.exit()
       return option
     else:
@@ -369,31 +354,33 @@ def get_options(arg,run,job,option):
   elif arg == 'tgcmdata':
     if option:
       if not os.path.isdir(option):
-        print '>>> Could not find tgcmdata directory found on command line: ',option
+        print('>>> Could not find tgcmdata directory found on command line: ',option)
         sys.exit()
       tgcmdata = option
     else:
       default_tgcmdata = ''
       if job.machine == 'ch':
-        default_tgcmdata = '/glade/p/hao/tgcm/data/tiegcm2.0'
-      tgcmdata = getenv('TGCMDATA',default=default_tgcmdata)
+        default_tgcmdata = '/glade/p/hao/tgcm/data'
+      else:
+        tgcmdata = getenv('TGCMDATA',default=default_tgcmdata)
+      tgcmdata = default_tgcmdata
       if tgcmdata:
         if not os.path.isdir(tgcmdata):
-          print '>>> Could not find TGCMDATA directory ',tgcmdata
-          print '    Am setting tgcmdata to execdir ',job.execdir
+          print('>>> Could not find TGCMDATA directory ',tgcmdata)
+          print('    Am setting tgcmdata to execdir ',job.execdir)
           tgcmdata = job.execdir
       else:
-        print 'Env var TGCMDATA is not set.'
-        answer = raw_input('Enter directory containing data for model '+job.model_name+' (default='+execdir+' or q to quit): ')
+        print('Env var TGCMDATA is not set.')
+        execdir = '/glade/scratch/$user/tiegcm_trunk/tiegcm.exec'
+        answer = input('Enter directory containing data for model '+job.model_name+' (default='+ execdir +' or q to quit): ')
         if answer == 'q':
           sys.exit()
         if answer == '':
-          print "NOTE: Setting tgcmdata to execdir (",tgcmdata,")"
+          print('NOTE: Setting tgcmdata to execdir (',tgcmdata,")")
           tgcmdata = job.execdir
         else:
           get_options(arg,run,job,option)
     return tgcmdata
-
 #
 # Number of processors (mpi tasks) (command-line only):
 #
@@ -402,7 +389,7 @@ def get_options(arg,run,job,option):
       try: 
         job.nprocs = int(option)
       except:
-        print '\n>>> Ooops, bad value for -nprocs option: ',option,' (must be an integer)' 
+        print('\n>>> Ooops +  bad value for -nprocs option: ',option,' (must be an integer)' )
         sys.exit()
       return job.nprocs
 #
@@ -441,7 +428,7 @@ def get_options(arg,run,job,option):
   elif arg == 'submit':
     if option:
       if option != 'yes' and option != 'no':
-        print "\n>>> Oooops, bad value for -submit: ",option," (must be 'yes' or 'no')"
+        print('\n>>> Oooops +  bad value for -submit: ',option," (must be 'yes' or 'no')")
         sys.exit()
       job.submitflag = option
       return job.submitflag
@@ -452,9 +439,9 @@ def get_options(arg,run,job,option):
     if option:
       if not os.path.isdir(option):
         os.makedirs(option) # this makes parents and leaf as necessary
-        print 'Made stdout directory ',option
+        print('Made stdout directory ',option)
       else: # do not clean stdout dir 
-        print 'Will use existing stdout directory ',option
+        print('Will use existing stdout directory ',option)
       job.stdout_dir = option
       return job.stdout_dir
 #
@@ -471,9 +458,9 @@ def get_options(arg,run,job,option):
 
       if not os.path.isdir(histdir):
         os.makedirs(histdir) # this makes parents and leaf as necessary
-        print 'Made history directory ',histdir
+        print('Made history directory ',histdir)
       else: # do not clean hist dir 
-        print 'Will use existing history directory ',histdir
+        print('Will use existing history directory ',histdir)
 
       if option[0] != '/':    # relative to execdir
         histdir = option      # this goes in the namelist read file
@@ -497,20 +484,20 @@ def get_options(arg,run,job,option):
 #
 # elif arg == 'source':
 #   if option:
-#     print 'source file from command-line: ',option
+#     print(source file from command-line: ),option
 #     if not os.path.isfile(option):
-#       print '>>> Cannot find source history file "',option,'" (this was read from the command-line)'
+#       print(>>> Cannot find source history file "),option,'" (this was read from the command-line)'
 #       sys.exit()
 #     else:
-#       print 'Source history file (SOURCE) from command line: ',option
-#       print 'NOTE: You may need to change SOURCE_START in the namelist input file(s).'
+#       print(Source history file (SOURCE) from command line: ),option
+#       print(NOTE: You may need to change SOURCE_START in the namelist input file(s).)
 #       job.source = option
 #       return job.source
 #
 # Unknown option:
 #
   else:
-    print '>>> Unknown arg: ',arg
+    print('>>> Unknown arg: ',arg)
     return None
 
 #-----------------------------------------------------------------------
