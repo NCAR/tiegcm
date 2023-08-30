@@ -1,4 +1,4 @@
-import re,os,subprocess,sys
+import re,os,subprocess,sys, stat
 
 #----------------------- Begin Class Version definition ---------------------
 class Version:
@@ -338,7 +338,12 @@ class Job:
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   def submit(self,run_fullname):
     print("Submitting ",self.script_run," for run ",run_fullname)
-    subprocess.call([self.script_run])
+    try:
+      subprocess.call([self.script_run])
+    except PermissionError:
+      print("Setting execute permission for "+self.script_run)
+      os.chmod(self.script_run, os.stat(self.script_run).st_mode | 0o111)
+      subprocess.call([self.script_run])
   
 #----------------------- Begin Class Run definition ---------------------
 class Run(Job,Namelist):
