@@ -289,6 +289,18 @@ def get_options(arg,run,job,option):
     else:                     # default is intel
       return 'intel'
 #
+# Stdout directory:
+#
+  elif arg == 'stdout_dir':
+    if option:
+      if not os.path.isdir(option):
+        os.makedirs(option) # this makes parents and leaf as necessary
+        print('Made stdout directory ',option)
+      else: # do not clean stdout dir 
+        print('Will use existing stdout directory ',option)
+      job.stdout_dir = option
+      return job.stdout_dir
+#
 # Get execution directory:
 #
   elif arg == 'execdir':
@@ -302,7 +314,9 @@ def get_options(arg,run,job,option):
         return execdir
       else: # prompt for execdir
         print('Env var TGCMTEMP is not set.')
-        answer = input('Enter execution directory (execdir) for run '+run.name+': ')
+        #answer = input('Enter execution directory (execdir) for run '+run.name+': ')
+        print("this is the directoty"+job.stdout_dir)
+        answer = './build/src'
         if not os.path.isdir:
           os.path.makedirs(answer)
           print('Made execdir directory ',answer," for run ",run.name)
@@ -318,7 +332,7 @@ def get_options(arg,run,job,option):
       return option
     else:
       split_execdir = parts = job.execdir.rsplit("/", 1)
-      bindir = split_execdir[0] + '/bin'
+      bindir = split_execdir[0] + '/bin/'+job.stdout_dir+'.x'
       return bindir  
 #
 # If execdir exists, prompt for whether to empty the directory prior to the run.
@@ -432,18 +446,6 @@ def get_options(arg,run,job,option):
         sys.exit()
       job.submitflag = option
       return job.submitflag
-#
-# Stdout directory:
-#
-  elif arg == 'stdout_dir':
-    if option:
-      if not os.path.isdir(option):
-        os.makedirs(option) # this makes parents and leaf as necessary
-        print('Made stdout directory ',option)
-      else: # do not clean stdout dir 
-        print('Will use existing stdout directory ',option)
-      job.stdout_dir = option
-      return job.stdout_dir
 #
 # Directory in which to save history files:
 # (absolute path or relative to execdir)

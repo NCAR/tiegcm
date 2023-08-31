@@ -42,6 +42,7 @@ while True:
   job.model_root   = get_options('model_root'  ,run,job,args.model_root) # env var TIEGCM_ROOT,TIMEGCM_ROOT
   job.model_res    = get_options('model_res'   ,run,job,args.model_res)
   job.machine      = get_options('machine'     ,run,job,args.machine)
+  job.stdout_dir   = get_options('stdout_dir'  ,run,job,args.stdout_dir) # command-line only
   job.execdir      = get_options('execdir'     ,run,job,args.execdir)    # env var TGCMTEMP/build
   job.bindir       = get_options('bindir'     ,run,job,args.bindir)    # env var TGCMTEMP/build/bin
   job.execute      = get_options('execute'     ,run,job,args.execute)    # execute only if execute is TRUE
@@ -51,7 +52,6 @@ while True:
   job.wallclock    = get_options('wc'          ,run,job,args.wc)         # command-line only
   job.step         = get_options('step'        ,run,job,args.step)       # command-line only
   job.submitflag   = get_options('submit'      ,run,job,args.submit)     # command-line only
-  job.stdout_dir   = get_options('stdout_dir'  ,run,job,args.stdout_dir) # command-line only
   job.hist_dir     = get_options('hist_dir'    ,run,job,args.hist_dir)   # command-line only
   job.compiler     = get_options('compiler'    ,run,job,args.compiler)   # Linux platfor only (not ys)
   tgcmdata         = get_options('tgcmdata'    ,run,job,args.tgcmdata)   # env var TGCMDATA

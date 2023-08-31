@@ -47,7 +47,7 @@ set runscript = `perl $utildir/abspath $runscript`
 set bindir    = `perl $utildir/abspath $bindir`
 if (-d $execdir) rm -r $execdir
 if (! -d $execdir) mkdir -p $execdir
-if (! -d $bindir)  mkdir -p $bindir
+if (! -d $bindir)  mkdir -p `dirname $bindir`
 
 #
 # Set PBS resource usage (create the runscript in execdir):
@@ -166,6 +166,7 @@ set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdou
 
 echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svn_revision)"
 echo "  Exec directory:    $execdir"
+echo "  Bin directory:    $bindir"
 echo "  Source directory:  $srcdir"
 echo "  Data directory:    $tgcmdata"
 echo "  Make machine file: $make"
@@ -246,13 +247,14 @@ EOF
 # Build the model:
 gmake all || echo ">>> Error return from gmake all" && exit 1
 #
-if ($exec == "FALSE") then
-  echo "Am NOT executing the model because exec = $exec"
-  # Cleanup
-  echo "Cleaning up compiling"
-  cp $model $bindir
-  exit 0
-endif
+cp $model $bindir
+#if ($exec == "FALSE") then
+#  echo "Am NOT executing the model because exec = $exec"
+#  # Cleanup
+#  echo "Cleaning up compiling"
+#  cp $model $bindir
+#  exit 0
+#endif
 #
 # Set data directory in LSF script:
 #
