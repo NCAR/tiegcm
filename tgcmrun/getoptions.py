@@ -332,7 +332,7 @@ def get_options(arg,run,job,option):
       return option
     else:
       split_execdir = parts = job.execdir.rsplit("/", 1)
-      bindir = split_execdir[0] + '/bin/'+job.stdout_dir+'.x'
+      bindir = split_execdir[0] + '/bin/'+'tiegcm_res'+run.model_res+'_'+run.name+'.x'
       return bindir  
 #
 # If execdir exists, prompt for whether to empty the directory prior to the run.
