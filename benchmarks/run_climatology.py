@@ -12,14 +12,13 @@ submit = "yes"
 execute = "yes"
 resolutions = ['5.0', '2.5']
 runs = [
-    'decsol_smax', 'decsol_smin', 'junsol_smax', 'junsol_smin',
-    'mareqx_smax', 'mareqx_smin', 'sepeqx_smax', 'sepeqx_smin'
+    'climatology_smax', 'climatology_smin'
 ]
 
 
 # Looping through resolutions and runs
 for res in resolutions:
-    case = f"tiegcm_res{res}_seasons"
+    case = f"tiegcm_res{res}_climatology"
     work = f"{home}/{case}"
     
     for run in runs:
