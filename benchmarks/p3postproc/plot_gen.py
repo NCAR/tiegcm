@@ -1,0 +1,63 @@
+
+import netCDF4 as nc
+import numpy as np
+import matplotlib.pyplot as plt
+from data_parse import lat_lon_lev, lat_lon_ilev
+
+
+def plt_var_time_lev(dataset, variable_name, selected_time, selected_lev_ilev):
+    """
+    Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
+    
+    Parameters:
+        - dataset (str): Path to the NetCDF file.
+        - variable_name (str): The name of the variable with lat, lon, ilev dimensions.
+            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
+                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
+                                'Z', 'POTEN']
+        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - selected_ilev (float): The selected ilevel value.
+    
+    Returns:
+        - Contour plot.
+    """
+    # Printing Execution data
+    
+    print("---------------["+variable_name+"]---["+selected_time+"]---["+str(selected_lev_ilev)+"]---------------")
+    # Generate 2D arrays, extract variable_unit
+
+    try:
+        data_array, selected_lev_ilev, variable_unit,variable_long_name=lat_lon_lev(dataset, variable_name, selected_time, selected_lev_ilev)
+        var_lev_ilev= "Midpoint levels"
+    except:
+        data_array, selected_lev_ilev, variable_unit,variable_long_name=lat_lon_ilev(dataset, variable_name, selected_time, selected_lev_ilev)
+        var_lev_ilev= "Interface levels"
+    # Extract values, latitudes, and longitudes from the array
+    values = [row[0] for row in data_array]
+    lats = [row[1] for row in data_array]
+    lons = [row[2] for row in data_array]
+    
+    # Convert lists to 2D arrays for plotting
+    unique_lats = sorted(list(set(lats)))
+    unique_lons = sorted(list(set(lons)))
+    values_2d = np.array(values).reshape(len(unique_lats), len(unique_lons))
+    
+    # Generate contour plot
+    plot=plt.figure(figsize=(24, 12))
+    contour_filled = plt.contourf(unique_lons, unique_lats, values_2d, cmap='jet', levels=20)
+    contour_lines = plt.contour(unique_lons, unique_lats, values_2d, colors='black', linewidths=0.5, levels=20)
+    #print(unique_lons, unique_lats)
+    plt.clabel(contour_lines, inline=True, fontsize=12, colors='black')
+    cbar = plt.colorbar(contour_filled, label=var_lev_ilev)
+    cbar.set_label(var_lev_ilev, size=24)
+    cbar.ax.tick_params(labelsize=12)
+    plt.title(variable_name+' ('+variable_unit+')\n'+variable_long_name+'\n ZP='+str(selected_lev_ilev),fontsize=32 )   #selected_lev_ilev is not the used lev_ilev fix this
+    plt.xlabel('Longitude',fontsize=24)
+    plt.ylabel('Latitude',fontsize=24)
+    plt.xticks([value for value in unique_lons if value % 30 == 0],fontsize=12)  
+    #plt.yticks([value for value in unique_lats if value % 30 == 0],fontsize=12)
+    plt.yticks(fontsize=12)   
+    plt.savefig('test.jpeg', format="jpeg")
+    plt.show()
+    #plot, ax = plt.subplots()
+    return(plot)
