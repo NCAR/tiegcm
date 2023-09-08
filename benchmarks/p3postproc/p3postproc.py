@@ -5,7 +5,7 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from data_parse1 import timestep
+from data_parse import timestep
 from plot_gen import plt_lat_lon
 
 
@@ -21,8 +21,8 @@ fig3 = plt_lat_lon(dataset, "ZG", "2002-12-21T01:00:00", 2.0)
 
 pdf_multi_path = "/glade/u/home/nikhilr/tiegcm_func/tiegcm2.0/benchmarks/p3postproc/test.pdf"
 with PdfPages(pdf_multi_path) as pdf:
-    pdf.savefig(fig1)
-    pdf.savefig(fig2)
-    pdf.savefig(fig3)
+    pdf.savefig(fig1, bbox_inches='tight', pad_inches=1.2)
+    pdf.savefig(fig2, bbox_inches='tight', pad_inches=1.2)
+    pdf.savefig(fig3, bbox_inches='tight', pad_inches=1.2)
 #print(lat_lon_lev(dataset, "TN", "2002-12-21T00:00:00", 2.25))
 #print(lat_lon_ilev(dataset, "NE", "2002-12-21T00:00:00", -6.5))
