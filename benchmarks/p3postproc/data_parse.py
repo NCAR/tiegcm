@@ -1,128 +1,214 @@
+import os
 import netCDF4 as nc
 import numpy as np
 import matplotlib.pyplot as plt
+import xarray as xr
 
-def lat_lon_lev(dataset, variable_name, selected_time, selected_lev):
-    """Extracts a 2D array of variable values, latitude, and longitude for a given variable name, time, and lev.
+
+
+def timestep(directory, type):
+    """
+    Reads all .nc files in the given directory and generates an array with id, timestamp, and filename.
     
-    Parameters:
-        - dataset (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with lat, lon, lev dimensions.
-            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM']
-        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - selected_lev (float): The selected level value.
+    Args:
+    - directory (str): Path to the directory containing the .nc files.
+    - type (str): Type of datasets (prim or sech)
     
     Returns:
-        - 2D array containing [variable values, latitude, longitude] for the selected time and level.
+    - timestep_array (list): List of [id, timestamp, filename] for each .nc file in the directory.
     """
-    valid_variables = ['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM']
-    if variable_name not in valid_variables:
+    
+    # Get all .nc files with the type in the name from the directory
+    nc_files = [f for f in os.listdir(directory) if f.endswith('.nc') and type in f]
+    
+    # Extract timestamps from each file
+    timestamps = []
+    for nc_file in nc_files:
+        ds = xr.open_dataset(os.path.join(directory, nc_file))
+        for timestamp in ds['time'].values:
+            timestamps.append((timestamp, nc_file))
+    
+    # Sort files by timestamp
+    sorted_files = sorted(timestamps, key=lambda x: x[0])
+    
+    # Generate the timestep array
+    timestep_array = [[idx, ts_file[0], ts_file[1]] for idx, ts_file in enumerate(sorted_files)]
+    
+    print(timestep_array[0][1])
+
+    return timestep_array
+
+def lat_lon_lev(dataset, variable_name, selected_time, selected_lev):
+    """
+    Extract data from the dataset based on the given variable name, timestamp, and lev value.
+    
+    Args:
+    - variable_name (str): Name of the variable to extract.
+    - selected_time (str): Timestamp to filter the data.
+    - selected_lev (float): Level value to filter the data.
+    
+    Returns:
+    - var_lat_lon (array): 2D array of [variable values, lat, lon] for the given timestamp and lev.
+    - variable_unit (str): Unit of the variable.
+    - variable_long_name (str): Long name of the variable.
+    - selected_ut (float): UT value in hours for selected_time.
+    """
+
+    # Load the dataset using xarray
+    ds = xr.open_dataset(dataset)   
+    
+    if 'lev' not in ds[variable_name].dims:
         raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'lev'")
-    valid_lev= [-6.75, -6.25, -5.75, -5.25, -4.75, -4.25, -3.75, -3.25, -2.75,
-       -2.25, -1.75, -1.25, -0.75, -0.25,  0.25,  0.75,  1.25,  1.75,
-        2.25,  2.75,  3.25,  3.75,  4.25,  4.75,  5.25,  5.75,  6.25,
-        6.75,  7.25]
-    if selected_lev not in valid_lev:
-        print("The lev "+ str(selected_lev)+" isn't in the listed valid values")
-        valid_lev = np.asarray(valid_lev)
-        idx = (np.abs(valid_lev - selected_lev)).argmin()
-        selected_lev = valid_lev[idx]
-        print("Selecting the closest valid lev "+ str(selected_lev))   
-    # Open the NetCDF file
-    ds = nc.Dataset(dataset, 'r')
+        return 0
 
-    variable_unit=ds.variables[variable_name].units
-    variable_long_name=ds.variables[variable_name].long_name
-    # Extract time, latitude, longitude, level and variable_unit variables
-    variable_unit=ds.variables[variable_name].units
-    time_var = ds.variables['time']
-    lat_var = ds.variables['lat']
-    lon_var = ds.variables['lon']
-    lev_var = ds.variables['lev']
-    
-    # Convert time variable to string format for comparison
-    time_values = nc.num2date(time_var[:], time_var.units)
-    time_str_values = [t.isoformat() for t in time_values]
-    
-    # Find the index of the selected time and level
-    time_idx = time_str_values.index(selected_time)
-    lev_idx = list(lev_var[:]).index(selected_lev)
-    
-    # Extract the data for the given variable, time, and level
-    data_var = ds.variables[variable_name]
-    data_values = data_var[time_idx, lev_idx, :, :]
-    
-    # Create a 2D array of [variable values, lat, lon]
-    result = []
-    for i, lat in enumerate(lat_var[:]):
-        for j, lon in enumerate(lon_var[:]):
-            result.append([data_values[i][j], lat, lon])
-    
-    # Close the dataset
-    ds.close()
-    
-    return result,selected_lev, variable_unit,variable_long_name
+    selected_lev = valid_lev_ilev(ds, selected_lev, 'lev')  
 
+    # Extract the data for the given selected_time and lev
+    data = ds[variable_name].sel(time=selected_time, lev=selected_lev)
+    
+    # Extract variable attributes
+    variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+    variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
+    selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
+    selected_mtime = get_mtime(ds,selected_time)
+
+    # Convert data to 2D array format: [variable values, lat, lon]
+    lat_values = data['lat'].values
+    lon_values = data['lon'].values
+    variable_values = data.values
+    
+    var_lat_lon = [[variable_values[i][j], lat_values[i], lon_values[j]] for i in range(len(lat_values)) for j in range(len(lon_values))]
+    
+
+    return var_lat_lon, selected_lev, variable_unit, variable_long_name, selected_ut, selected_mtime
 
 
 def lat_lon_ilev(dataset, variable_name, selected_time, selected_ilev):
-    """Extracts a 2D array of variable values, latitude, and longitude for a given variable name, time, and ilev.
+    """
+    Extract data from the dataset based on the given variable name, timestamp, and ilev value.
     
-    Parameters:
-        - dataset (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with lat, lon, ilev dimensions.
-            - Valid variables:['NE', 'OMEGA', 'Z', 'POTEN']
-        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - selected_ilev (float): The selected ilevel value.
+    Args:
+    - variable_name (str): Name of the variable to extract.
+    - selected_time (str): Timestamp to filter the data.
+    - selected_ilev (float): ilevel value to filter the data.
     
     Returns:
-        - 2D array containing [variable values, latitude, longitude] for the selected time and ilevel.
+    - var_lat_lon (array): 2D array of [variable values, lat, lon] for the given timestamp and ilev.
+    - variable_unit (str): Unit of the variable.
+    - variable_long_name (str): Long name of the variable.
+    - selected_ut (float): UT value in hours for selected_time.
     """
-    valid_variables = ['NE', 'OMEGA', 'Z', 'POTEN']
-    if variable_name not in valid_variables:
+
+    # Load the dataset using xarray
+    ds = xr.open_dataset(dataset)   
+    
+    if 'ilev' not in ds[variable_name].dims:
         raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'ilev'")
+        return 0
+ 
+    selected_ilev = valid_lev_ilev(ds, selected_ilev, 'ilev')
 
-    valid_ilev= [-7. , -6.5, -6. , -5.5, -5. , -4.5, -4. , -3.5, -3. , -2.5, -2. ,
-       -1.5, -1. , -0.5,  0. ,  0.5,  1. ,  1.5,  2. ,  2.5,  3. ,  3.5,
-        4. ,  4.5,  5. ,  5.5,  6. ,  6.5,  7. ]
-    if selected_ilev not in valid_ilev:
-        print("The lev "+ str(selected_ilev)+" isn't in the listed valid values")
+    # Extract the data for the given selected_time and ilev
+    data = ds[variable_name].sel(time=selected_time, ilev=selected_ilev)
+    
+    # Extract variable attributes
+    variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+    variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
+    selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
+    selected_mtime=get_mtime(ds,selected_time)
+
+    # Convert data to 2D array format: [variable values, lat, lon]
+    lat_values = data['lat'].values
+    lon_values = data['lon'].values
+    variable_values = data.values
+    
+    var_lat_lon = [[variable_values[i][j], lat_values[i], lon_values[j]] for i in range(len(lat_values)) for j in range(len(lon_values))]
+    
+    return var_lat_lon, selected_ilev, variable_unit, variable_long_name, selected_ut, selected_mtime
+
+
+
+def valid_lev_ilev(ds, selected_lev_ilev, lev_ilev):
+    """Checks if the given lev or ilev value is in the dataset and if not gets the closest valid value
+    
+    Parameters:
+    - ds (xarray): The loaded dataset opened using xarray.
+    - selected_time (str): Timestamp to filter the data.
+    
+    Returns:
+    - selected_lev_ilev (float): A value of lev or ilev present in the dataset.
+    """
+    valid_ilev= ds[lev_ilev].values
+
+    if selected_lev_ilev not in valid_ilev:
+        print("The "+lev_ilev+" "+ str(selected_lev_ilev)+" isn't in the listed valid values")
         valid_ilev = np.asarray(valid_ilev)
-        idx = (np.abs(valid_ilev - selected_ilev)).argmin()
-        selected_ilev = valid_ilev[idx]
-        print("Selecting the closest valid lev "+ str(selected_ilev))  
+        idx = (np.abs(valid_ilev - selected_lev_ilev)).argmin()
+        selected_lev_ilev = valid_ilev[idx]
+        print("Selecting the closest valid "+lev_ilev+" "+ str(selected_lev_ilev))  
+    return selected_lev_ilev
 
-    # Open the NetCDF file
-    ds = nc.Dataset(dataset, 'r')
+def calc_avg_ht(data_array, time, lev, dataset):
+    """
+    Compute the average ZG value for a given set of lat, lon, and lev from a dataset.
     
-    variable_unit=ds.variables[variable_name].units
-    variable_long_name=ds.variables[variable_name].long_name
-    # Extract time, latitude, longitude, and ilevel variables
-    time_var = ds.variables['time']
-    lat_var = ds.variables['lat']
-    lon_var = ds.variables['lon']
-    ilev_var = ds.variables['ilev']
+    Parameters:
+    - data_array (list): A list of [varval, lat, lon].
+    - lev (float): The level for which to retrieve data.
+    - dataset: The dataset containing the ZG variable.
     
-    # Convert time variable to string format for comparison
-    time_values = nc.num2date(time_var[:], time_var.units)
-    time_str_values = [t.isoformat() for t in time_values]
-    
-    # Find the index of the selected time and ilevel
-    time_idx = time_str_values.index(selected_time)
-    ilev_idx = list(ilev_var[:]).index(selected_ilev)
-    
-    # Extract the data for the given variable, time, and ilevel
-    data_var = ds.variables[variable_name]
-    data_values = data_var[time_idx, ilev_idx, :, :]
-    
-    # Create a 2D array of [variable values, lat, lon]
-    result = []
-    for i, lat in enumerate(lat_var[:]):
-        for j, lon in enumerate(lon_var[:]):
-            result.append([data_values[i][j], lat, lon])
-    
-    # Close the dataset
-    ds.close()
-    
-    return result,selected_ilev, variable_unit,variable_long_name
+    Returns:
+    - float: The average ZG value for the given conditions.
+    """
+    total = 0
+    count = len(data_array)
+    ds = xr.open_dataset(dataset)
+    lev = valid_lev_ilev(ds, lev, 'ilev')  
+    for entry in data_array:
+        lat, lon = entry[1], entry[2]
+        total += ds['ZG'].sel(time=time, lat=lat, lon=lon, ilev=lev).item()
+        
+    return round((total / count if count != 0 else 0)/100000,2)
 
+
+def min_max(data_array):
+    """Find the minimum and maximum values of varval from the 2D array
+    
+    Parameters:
+    - data_array (list): A list of [varval, lat, lon].
+    
+    Returns:
+    - min_val (float): Minimum value of the variable in the array.
+    - max_val (float): Maximum value of the variable in the array.
+    """
+    varvals = [row[0] for row in data_array]
+    return min(varvals), max(varvals)
+
+def get_mtime(ds, selected_time):
+    """Find the mtime array for the corresponding selected time.
+    
+    Parameters:
+    - ds (xarray): The loaded dataset opened using xarray.
+    - selected_time (str): Timestamp to filter the data.
+    
+    Returns:
+    - array: mtime array containing [Day,Hour,Min].
+    """
+    import numpy as np
+    import xarray as xr
+
+    # Convert input string to numpy datetime64 format
+    selected_time = np.datetime64(selected_time)
+
+    # Extract time and mtime variables from the dataset
+    time_variable = ds['time'].values
+    mtime_variable = ds['mtime'].values
+
+    # Find the index corresponding to the input time
+    index = np.where(time_variable == selected_time)
+
+    # Extract and return the corresponding mtime value
+    if index[0].size > 0:
+        return mtime_variable[index[0][0]]
+    else:
+        return None
