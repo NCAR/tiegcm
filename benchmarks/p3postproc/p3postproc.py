@@ -10,19 +10,20 @@ from plot_gen import plt_lat_lon
 
 
 
-dataset = '/glade/u/home/nikhilr/tiegcm_func/postproc/tiegcm_res5.0_decsol_smax/hist/tiegcm_res5.0_decsol_smax_sech_001.nc'
+dataset = '/glade/u/home/nikhilr/tiegcm_func/postproc/tiegcm_res5.0_decsol_smax/hist/tiegcm_res5.0_decsol_smax_sech_005.nc'
 timestep_array=timestep('/glade/u/home/nikhilr/tiegcm_func/postproc/tiegcm_res5.0_decsol_smax/hist/', 'sech')
-
+print(timestep_array[119][1])
 print("-------------------------Plot Generation--------------------------")
-fig1 = plt_lat_lon(dataset, "TE", timestep_array[0][1], -4.0)
-fig2 = plt_lat_lon(dataset, "Z", "2002-12-21T01:00:00", -2.0)
-fig3 = plt_lat_lon(dataset, "ZG", "2002-12-21T01:00:00", 2.0)
-
+fig1 = plt_lat_lon(dataset, "POTEN", timestep_array[119][1], 4.0)
+fig2 = plt_lat_lon(dataset, "TN", timestep_array[119][1], 0.0)
+fig3 = plt_lat_lon(dataset, "TN", timestep_array[119][1], 2.0)
+fig4 = plt_lat_lon(dataset, "TN", timestep_array[119][1], 4.0)
 
 pdf_multi_path = "/glade/u/home/nikhilr/tiegcm_func/tiegcm2.0/benchmarks/p3postproc/test.pdf"
 with PdfPages(pdf_multi_path) as pdf:
     pdf.savefig(fig1, bbox_inches='tight', pad_inches=1.2)
     pdf.savefig(fig2, bbox_inches='tight', pad_inches=1.2)
     pdf.savefig(fig3, bbox_inches='tight', pad_inches=1.2)
+    pdf.savefig(fig4, bbox_inches='tight', pad_inches=1.2)
 #print(lat_lon_lev(dataset, "TN", "2002-12-21T00:00:00", 2.25))
 #print(lat_lon_ilev(dataset, "NE", "2002-12-21T00:00:00", -6.5))
