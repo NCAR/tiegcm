@@ -1,5 +1,4 @@
 import os
-import netCDF4 as nc
 import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
@@ -69,6 +68,7 @@ def lat_lon_lev(dataset, variable_name, selected_time, selected_lev):
     
     Args:
     - variable_name (str): Name of the variable to extract.
+        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
     - selected_time (str): Timestamp to filter the data.
     - selected_lev (float): Level value to filter the data.
     
@@ -119,6 +119,7 @@ def lat_lon_ilev(dataset, variable_name, selected_time, selected_ilev):
     
     Args:
     - variable_name (str): Name of the variable to extract.
+        - valid variables: ['WN', 'NE', 'POTEN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'DEN', 'Z', 'ZG']
     - selected_time (str): Timestamp to filter the data.
     - selected_ilev (float): ilevel value to filter the data.
     
@@ -163,6 +164,36 @@ def lat_lon_ilev(dataset, variable_name, selected_time, selected_ilev):
     return var_lat_lon, selected_ilev, variable_unit, variable_long_name, selected_ut, selected_mtime
 
 
+def var_lev(dataset, variable_name, selected_time, selected_lat, selected_lon): #make var_ilev next
+    """
+    Extracts data from the dataset for a given variable name, latitude, longitude, and time.
+    
+    Parameters:
+    - variable_name (str): Name of the variable to retrieve.
+    - selected_lat (float): Latitude value.
+    - selected_lon (float): Longitude value.
+    - selected_time (int): Index of the time dimension.
+    
+    Returns:
+    - list: A list of [lev, var_val] pairs.
+    """
+    # Load the dataset using xarray
+    ds = xr.open_dataset(dataset) 
+
+    # Extract the variable data for the specified time, latitude, and longitude
+    data = ds[variable_name].sel(time=selected_time, lat=selected_lat, lon=selected_lon, method="nearest")
+    
+    variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+    variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
+    selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
+    selected_mtime=get_mtime(ds,selected_time)
+
+    # Create a list of [var_val, lev] pairs
+    var_lev_arr = [[data_val.item(), lev_val] for data_val, lev_val in zip(data.values, ds['lev'].values)]
+    
+    return var_lev_arr , variable_unit, variable_long_name, selected_ut, selected_mtime 
+
+
 
 def valid_lev_ilev(ds, selected_lev_ilev, lev_ilev):
     """
@@ -190,6 +221,9 @@ def valid_lev_ilev(ds, selected_lev_ilev, lev_ilev):
     return selected_levs_ilevs
 
 
+
+
+
 def calc_avg_ht(data_array, time, lev, dataset):
     """
     Compute the average Z value for a given set of lat, lon, and lev from a dataset.
@@ -209,16 +243,16 @@ def calc_avg_ht(data_array, time, lev, dataset):
     if len(levs) == 1:
         for entry in data_array:
             lat, lon = entry[1], entry[2]
-            total += ds['Z'].sel(time=time, lat=lat, lon=lon, ilev=levs[0]).item()
+            total += ds['ZG'].sel(time=time, lat=lat, lon=lon, ilev=levs[0]).item()
         return round((total / count if count != 0 else 0)/100000,2)
     if len(levs) == 2:
         for entry in data_array:
             lat, lon = entry[1], entry[2]
-            total += ds['Z'].sel(time=time, lat=lat, lon=lon, ilev=levs[0]).item()
+            total += ds['ZG'].sel(time=time, lat=lat, lon=lon, ilev=levs[0]).item()
         avg_ht_1=(total / count if count != 0 else 0)/100000
         for entry in data_array:
             lat, lon = entry[1], entry[2]
-            total += ds['Z'].sel(time=time, lat=lat, lon=lon, ilev=levs[1]).item()
+            total += ds['ZG'].sel(time=time, lat=lat, lon=lon, ilev=levs[1]).item()
         avg_ht_2=(total / count if count != 0 else 0)/100000
         return round((avg_ht_1+avg_ht_2)/2,2)
 
@@ -236,6 +270,8 @@ def min_max(data_array):
     varvals = [row[0] for row in data_array]
     return min(varvals), max(varvals)
 
+
+
 def get_mtime(ds, selected_time):
     """Find the mtime array for the corresponding selected time.
     
@@ -246,9 +282,6 @@ def get_mtime(ds, selected_time):
     Returns:
     - array: mtime array containing [Day,Hour,Min].
     """
-    import numpy as np
-    import xarray as xr
-
     # Convert input string to numpy datetime64 format
     selected_time = np.datetime64(selected_time)
 
@@ -298,3 +331,46 @@ def avg_var_lat_lon(var_lat_lon1, var_lat_lon2):
                        for lat, lon in lat_lon_dict]
     
     return avg_var_lat_lon
+
+
+
+def get_avg_ht_arr(dataset, time, lat, lon):
+    """
+    Extracts ZG values for a given time, latitude, and longitude.
+    
+    Args:
+    - time (str): Desired time in the format 'YYYY-MM-DDTHH:MM:SS'
+    - lat (float): Desired latitude value
+    - lon (float): Desired longitude value
+    - dataset (xarray.Dataset): The dataset containing the ZG values. Default is the loaded dataset.
+    
+    Returns:
+    - list: A list of lists where each inner list contains [ilev_val, ZG_val]
+    """
+
+    ds = xr.open_dataset(dataset)
+    # Extract the ZG values for the specified time, latitude, and longitude
+    selected_zg = ds['ZG'].sel(time=time, lat=lat, lon=lon)
+
+    # Convert the values from cm to km
+    selected_zg_km = selected_zg / 100000  # 1 km = 100000 cm
+    
+    # Extract the ilev values for the same selection
+    ilev_values = selected_zg['ilev'].values
+
+    # Combine the ilev and ZG values into a single list
+    combined_values = list(zip(ilev_values, selected_zg_km.values))
+
+    averaged_array = []
+    
+    # Iterate over the zg_array and calculate the average for consecutive values
+    for i in range(len(combined_values) - 1):
+        avg_lev = (combined_values[i][0] + combined_values[i+1][0]) / 2
+        avg_zg = (combined_values[i][1] + combined_values[i+1][1]) / 2
+        averaged_array.append((avg_lev, avg_zg))
+    averaged_array.append((7.25, float('nan')))
+    zg_values_array = [item[1] for item in averaged_array]
+
+    return zg_values_array
+
+    #return combined_values

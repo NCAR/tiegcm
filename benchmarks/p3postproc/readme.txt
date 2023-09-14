@@ -10,3 +10,4 @@ cond env contains
     -netcdf4
     -cartopy
     -numpy
+    -xarray
