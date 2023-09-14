@@ -60,6 +60,64 @@ def get_var_lat_lon (data, variable_name, selected_time, selected_lev_ilev): #ch
 
     return var_lat_lon
 
+def get_var_lev_lat (ds, variable_name, selected_time, selected_lat): #changeup this
+    """
+    Extracts data from the dataset based on the given criteria using loops.
+    
+    Parameters:
+    - variable (str): The variable name to extract data for.
+    - time_index (int): The index of the time dimension to extract data for.
+    - latitude_value (float): The latitude value to extract data for.
+    
+    Returns:
+    - array (2D): A 2D array containing data for the given criteria.
+    """
+    
+    # Extract the specific variable data
+    var_data = ds[variable_name].sel(time=selected_time, lat=selected_lat, method='nearest')
+    
+    # Construct the 2D array using loops
+    var_lev_lat = []
+    for lev in var_data.lev.values:
+        for lon in var_data.lon.values:
+            if var_data.sel(lev=lev, lon=lon).values.item() != 9.999999616903162e+35:  #removes nan values
+                var_lev_lat.append([var_data.sel(lev=lev, lon=lon).values.item(), lev, lon])
+
+    return var_lev_lat
+
+
+def lev_lon (dataset, variable_name, selected_time, selected_lat):
+    """
+    Extract data from the dataset based on the given variable name, timestamp, and lev value.
+    
+    Args:
+    - variable_name (str): Name of the variable to extract.
+        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
+    - selected_time (str): Timestamp to filter the data.
+    - selected_lev (float): Level value to filter the data.
+    
+    Returns:
+    - var_lat_lon (array): 2D array of [variable values, lat, lon] for the given timestamp and lev.
+    - variable_unit (str): Unit of the variable.
+    - variable_long_name (str): Long name of the variable.
+    - selected_ut (float): UT value in hours for selected_time.
+    """
+
+    # Load the dataset using xarray
+    ds = xr.open_dataset(dataset)   
+
+    # Extract variable attributes
+    variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+    variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
+    selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
+    selected_mtime = get_mtime(ds,selected_time)
+    
+
+    # Extract the data for the given selected_time and lat
+    ds = xr.open_dataset(dataset)   
+    var_lev_lat=get_var_lev_lat (ds, variable_name, selected_time, selected_lat)
+    return(var_lev_lat, selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime)
+
 
 
 def lat_lon_lev(dataset, variable_name, selected_time, selected_lev):
