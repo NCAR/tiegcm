@@ -1,120 +1,103 @@
-#!/usr/bin/env python
-import os,sys
-#
-# Each file argument is an mpi stdout log file from yellowstone, with
-#   a list of mpi tasks that printed the line prepended to each line.
-# This code creates a new file "taskfile" for each mpi task, and
-#   writes each line that task printed to its taskfile.
-#
-#-----------------------------------------------------------------------
+#!/usr/bin/env python3
+import os, sys
 
-def make_taskfile(filename,proc):
-  dot = '.'
-  parts = file.split(dot)
-  parts.pop(len(parts)-1)
-  fileroot = dot.join(parts)
-  if proc < 10:
-    procnum = '000'+str(proc)
-  elif proc < 100:
-    procnum = '00'+str(proc)
-  elif proc < 1000:
-    procnum = '0'+str(proc)
-  else:
-    procnum = str(proc)
-  taskfile = fileroot+'_task'+procnum+'.out'
-  return taskfile
-  
-#-----------------------------------------------------------------------
+# This script processes MPI stdout log files. Each line in the log file may 
+# be associated with one or more MPI tasks. The script splits the lines from 
+# the original log file into separate files, each containing output from a 
+# specific MPI task.
 
+def make_taskfile(filename, proc):
+    """Generate a task-specific filename based on the given MPI task number."""
+    dot = '.'
+    parts = filename.split(dot)
+    parts.pop(len(parts)-1)
+    fileroot = dot.join(parts)
+    
+    # Format process number to have leading zeros
+    if proc < 10:
+        procnum = '000' + str(proc)
+    elif proc < 100:
+        procnum = '00' + str(proc)
+    elif proc < 1000:
+        procnum = '0' + str(proc)
+    else:
+        procnum = str(proc)
+
+    # Return the new task-specific filename
+    taskfile = fileroot + '_task' + procnum + '.out'
+    return taskfile
+
+# Check for command line arguments
 if len(sys.argv) == 1:
-  print 'mklogs: Need at least one file argument.'
-  sys.exit()
+    print('mklogs: Need at least one file argument.')
+    sys.exit()
 
+# Process each file passed as an argument
 for arg in sys.argv[1:]:
-  file = arg
-  if not os.path.isfile(file):
-    print '>>> mklogs: Could not open file ',file
-    continue
-#
-# Open, read, and close arg file:
-#
-  f = open(file,'r')
-  print 'mklogs: Extracting log files from ',file
-  lines = f.readlines()  
-  lines = [line.rstrip() for line in lines]
-  f.close()
-#
-# For each line:
-# There are 3 possible prefix types on each line (before the first ":")
-#   One or more procs: 20,27,49,56
-#   Range of procs:    36-40
-#   Combination:       17,32-33,37-40,47
-#
-  proclist = []                  # list of procs for each line (2d)
-  maxproc = -1
-  for line in lines:
-    line = line.split(':')
-    procs = line[0]             # procs definition (3 possible, as described above)
-    procs = procs.split(',')    # list of 1 or more procs and/or ranges
-    plist = []                  # will be list of procs for this line
-    for string in procs:
-      if '-' not in string:     # not a range, append the proc 
-        plist.append(string)
-      else:                     # append range of procs, e.g., "36-40"
-        list = string.split('-')
-#
-# Make sure we are dealing with integer strings:
-#
-        try: int(list[0])
-	except: continue
-        try: int(list[1])
-	except: continue
-#
-# Loop over procs within range, inclusive:
-#
-        proc0 = int(list[0])
-        proc1 = int(list[1])
-        proc = proc0
-        while proc <= proc1:      # loop over procs within range 
-          plist.append(str(proc)) # append each proc to plist
-          proc = proc+1
+    filename = arg
+    if not os.path.isfile(filename):
+        print(f'>>> mklogs: Could not open file {filename}')
+        continue
 
-      for proc in plist:          # update maxproc
-        try: int(proc)
-        except: continue
-        if int(proc) > maxproc: maxproc = int(proc)
-#
-# append plist to proclist for current line in file:
-#
-    proclist.append(plist)        
-#
-# Now open all maxproc+1 task files for writing (0->maxproc):
-#
-  f = [] # file descriptors
-  nproc = 0
-  while nproc <= maxproc:
-    taskfile = make_taskfile(file,nproc)
-    f.append('f'+str(nproc))
-    f[nproc] = open(taskfile,'w')
-    nproc = nproc+1 
-#
-# Write text from each line to each procfile in proclist[nline]:
-#
-  nline = 0
-  for line in lines:
-    line = line.split(':')
-    for proc in proclist[nline]: 
-      try: int(proc)
-      except: continue
-      string = ''.join(line[1:])
-      f[int(proc)].write(string+'\n')
-    nline = nline+1
-#
-# Close task files:
-#
-  nproc = 0
-  while nproc <= maxproc:
-    f[nproc].close()
-    nproc = nproc+1
+    # Read the file and strip unnecessary whitespaces
+    with open(filename, 'r') as f:
+        print(f'mklogs: Extracting log files from {filename}')
+        lines = f.readlines()
+        lines = [line.rstrip() for line in lines]
 
-# End args loop
+    # List to store the MPI tasks associated with each line
+    proclist = []
+    maxproc = -1  # Track the highest task number
+    for line in lines:
+        line_parts = line.split(':')
+        procs = line_parts[0]
+        procs = procs.split(',')
+        plist = []
+
+        # Process the MPI tasks string, which could be individual numbers or ranges
+        for string in procs:
+            if '-' not in string:  # Single MPI task
+                plist.append(string)
+            else:  # Range of MPI tasks
+                list_range = string.split('-')
+                try:
+                    start = int(list_range[0])
+                    end = int(list_range[1])
+                except ValueError:
+                    continue
+                # Add each task in the range to the list
+                for proc in range(start, end + 1):
+                    plist.append(str(proc))
+
+            # Update the highest task number found
+            for proc in plist:
+                try:
+                    val = int(proc)
+                except ValueError:
+                    continue
+                if val > maxproc:
+                    maxproc = val
+
+        # Store the list of MPI tasks for this line
+        proclist.append(plist)
+
+    # Create a new file for each MPI task
+    files = []
+    for nproc in range(maxproc + 1):
+        taskfile = make_taskfile(filename, nproc)
+        files.append(open(taskfile, 'w'))
+
+    # Distribute lines from the original file to the task-specific files
+    for idx, line in enumerate(lines):
+        line_parts = line.split(':')
+        for proc in proclist[idx]:
+            try:
+                val = int(proc)
+            except ValueError:
+                continue
+            string = ''.join(line_parts[1:])
+            files[val].write(string + '\n')
+
+    # Close all the task-specific files
+    for file in files:
+        file.close()
