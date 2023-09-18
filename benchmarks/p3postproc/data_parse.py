@@ -39,21 +39,25 @@ def timestep(directory, type):
 
 
 
-def lev_lon (ds, variable_name, selected_time, selected_lat):
+def lev_ilev_lon (ds, variable_name, selected_time, selected_lat):
     """
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
     Args:
+    - ds (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to extract.
         - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
     - selected_time (str): Timestamp to filter the data.
     - selected_lev (float): Level value to filter the data.
     
     Returns:
-    - var_lat_lon (array): 2D array of [variable values, lat, lon] for the given timestamp and lev.
+    - variable_values (xarray): An xarray object of variable values for the given timestamp and latitude.
+    - lons (xarray): An xarray object of longitude values.
+    - levs_ilevs (xarray): An xarray object of selected lev or ilev values.
     - variable_unit (str): Unit of the variable.
     - variable_long_name (str): Long name of the variable.
     - selected_ut (float): UT value in hours for selected_time.
+    - selected_mtime (array): An array containing Day, Hour, Min of the model run
     """
 
     # Load the dataset using xarray
@@ -64,19 +68,19 @@ def lev_lon (ds, variable_name, selected_time, selected_lat):
     variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
     selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
     selected_mtime = get_mtime(ds,selected_time)
-    
-
-    # Extract the data for the given selected_time and lat  
-    #var_lev_lat=get_var_lev_lat (ds, variable_name, selected_time, selected_lat)
 
     data = ds[variable_name].sel(time=selected_time, lat=selected_lat, method='nearest')
-    unique_lons = data.lon.values
+    lons = data.lon.values
 
     not_all_nan_indices = ~np.isnan(data.values).all(axis=1)
-    var_data = data.values[not_all_nan_indices, :]
-    unique_levs = data.lev.values[not_all_nan_indices]
-    
-    return(var_data,unique_lons,unique_levs, selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime)
+    variable_values = data.values[not_all_nan_indices, :]
+    try:
+        levs_ilevs = data.lev.values[not_all_nan_indices]
+    except:
+        levs_ilevs = data.ilev.values[not_all_nan_indices]
+    return(variable_values, lons, levs_ilevs, selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime)
+
+
 
 
 
@@ -85,20 +89,22 @@ def lat_lon_lev(ds, variable_name, selected_time, selected_lev):
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
     Args:
+    - ds (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to extract.
         - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
     - selected_time (str): Timestamp to filter the data.
     - selected_lev (float): Level value to filter the data.
     
     Returns:
-    - var_lat_lon (array): 2D array of [variable values, lat, lon] for the given timestamp and lev.
+    - variable_values (xarray):  An xarray object of variable values for the given timestamp and lev.
+    - selected_lev (str): A string of the selected lev.
+    - lons (xarray): An xarray object of longitude values.
+    - lats (xarray): An xarray object of latitude values.
     - variable_unit (str): Unit of the variable.
     - variable_long_name (str): Long name of the variable.
     - selected_ut (float): UT value in hours for selected_time.
+    - selected_mtime (array): An array containing Day, Hour, Min of the model run.
     """
-
-    # Load the dataset using xarray
-    #ds = xr.open_dataset(dataset)   
     
     if 'lev' not in ds[variable_name].dims:
         raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'lev'")
@@ -112,32 +118,30 @@ def lat_lon_lev(ds, variable_name, selected_time, selected_lev):
     selected_mtime = get_mtime(ds,selected_time)
     
 
-
-    lev_ilev = 'lev'
     # Extract the data for the given selected_time and lev
     if selected_lev in ds['lev'].values:
         data = ds[variable_name].sel(time=selected_time, lev=selected_lev).values
-        unique_lons = data.lon.values
-        unique_lats = data.lat.values
-        var_lat_lon = data.values
+        lons = data.lon.values
+        lats = data.lat.values
+        variable_values = data.values
     else:
-        print(f"The {lev_ilev} {selected_lev} isn't in the listed valid values.")
+        print(f"The lev {selected_lev} isn't in the listed valid values.")
         sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - selected_lev))
         closest_lev1 = sorted_levs[0]
         closest_lev2 = sorted_levs[1]
-        print(f"Averaging from the closest valid {lev_ilev}s: {closest_lev1} and {closest_lev2}")
+        print(f"Averaging from the closest valid levs: {closest_lev1} and {closest_lev2}")
         # Extract data for the two closest lev values using .sel()
         data1 = ds[variable_name].sel(time=selected_time, lev=closest_lev1)
-        unique_lons = data1.lon.values
-        unique_lats = data1.lat.values
-        var_lat_lon_1 = data1.values
+        lons = data1.lon.values
+        lats = data1.lat.values
+        variable_values_1 = data1.values
 
         data2 = ds[variable_name].sel(time=selected_time, lev=closest_lev2)
-        var_lat_lon_2 = data2.values
+        variable_values_2 = data2.values
         # Return the averaged data
-        var_lat_lon = (var_lat_lon_1 + var_lat_lon_2) / 2
+        variable_values = (variable_values_1 + variable_values_2) / 2
 
-    return var_lat_lon, selected_lev, unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime
+    return variable_values, selected_lev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime
 
 
 def lat_lon_ilev(ds, variable_name, selected_time, selected_ilev):
@@ -145,16 +149,21 @@ def lat_lon_ilev(ds, variable_name, selected_time, selected_ilev):
     Extract data from the dataset based on the given variable name, timestamp, and ilev value.
     
     Args:
+    - ds (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to extract.
         - valid variables: ['WN', 'NE', 'POTEN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'DEN', 'Z', 'ZG']
     - selected_time (str): Timestamp to filter the data.
     - selected_ilev (float): ilevel value to filter the data.
     
     Returns:
-    - var_lat_lon (array): 2D array of [variable values, lat, lon] for the given timestamp and ilev.
+    - variable_values (xarray):  An xarray object of variable values for the given timestamp and lev.
+    - selected_ilev (str): A string of the selected ilev.
+    - lons (xarray): An xarray object of longitude values.
+    - lats (xarray): An xarray object of latitude values.
     - variable_unit (str): Unit of the variable.
     - variable_long_name (str): Long name of the variable.
     - selected_ut (float): UT value in hours for selected_time.
+    - selected_mtime (array): An array containing Day, Hour, Min of the model run.
     """
 
     # Load the dataset using xarray
@@ -172,48 +181,52 @@ def lat_lon_ilev(ds, variable_name, selected_time, selected_ilev):
     selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
     selected_mtime=get_mtime(ds,selected_time)
 
-    lev_ilev = 'lev'
     # Extract the data for the given selected_time and lev
     if selected_ilev in ds['ilev'].values:
-        data = ds[variable_name].sel(time=selected_time, ilev=selected_ilev).values
-        unique_lons = data.lon.values
-        unique_lats = data.lat.values
-        var_lat_lon = data.values
+        data = ds[variable_name].sel(time=selected_time, ilev=selected_ilev)
+        lons = data.lon.values
+        lats = data.lat.values
+        variable_values = data.values
     else:
-        print(f"The {lev_ilev} {selected_ilev} isn't in the listed valid values.")
+        print(f"The ilev {selected_ilev} isn't in the listed valid values.")
         sorted_levs = sorted(ds['ilev'].values, key=lambda x: abs(x - selected_ilev))
         closest_lev1 = sorted_levs[0]
         closest_lev2 = sorted_levs[1]
-        print(f"Averaging from the closest valid {lev_ilev}s: {closest_lev1} and {closest_lev2}")
+        print(f"Averaging from the closest valid ilevs: {closest_lev1} and {closest_lev2}")
         # Extract data for the two closest lev values using .sel()
         data1 = ds[variable_name].sel(time=selected_time, ilev=closest_lev1)
-        unique_lons = data1.lon.values
-        unique_lats = data1.lat.values
-        var_lat_lon_1 = data1.values
+        lons = data1.lon.values
+        lats = data1.lat.values
+        variable_values_1 = data1.values
 
         data2 = ds[variable_name].sel(time=selected_time, ilev=closest_lev2)
-        var_lat_lon_2 = data2.values
+        variable_values_2 = data2.values
         # Return the averaged data
-        var_lat_lon = (var_lat_lon_1 + var_lat_lon_2) / 2
+        variable_values = (variable_values_1 + variable_values_2) / 2
 
-    return var_lat_lon, selected_ilev, unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime
+    return variable_values, selected_ilev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime
 
 
-def var_lev(ds, variable_name, selected_time, selected_lat, selected_lon): #make var_ilev next
+def lev_ilev_var(ds, variable_name, selected_time, selected_lat, selected_lon):
     """
     Extracts data from the dataset for a given variable name, latitude, longitude, and time.
     
     Parameters:
+    - ds (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to retrieve.
+    - selected_time (str): Timestamp to filter the data.
     - selected_lat (float): Latitude value.
     - selected_lon (float): Longitude value.
     - selected_time (int): Index of the time dimension.
     
     Returns:
-    - list: A list of [lev, var_val] pairs.
+    - variable_values (xarray):  An xarray object of variable values for the given timestamp and lev.
+    - levs_ilevs (xarray): An xarray object of selected lev or ilev values.
+    - variable_unit (str): Unit of the variable.
+    - variable_long_name (str): Long name of the variable.
+    - selected_ut (float): UT value in hours for selected_time.
+    - selected_mtime (array): An array containing Day, Hour, Min of the model run.
     """
-    # Load the dataset using xarray
-    #ds = xr.open_dataset(dataset) 
 
     # Extract the variable data for the specified time, latitude, and longitude
     data = ds[variable_name].sel(time=selected_time, lat=selected_lat, lon=selected_lon, method="nearest")
@@ -222,65 +235,32 @@ def var_lev(ds, variable_name, selected_time, selected_lat, selected_lon): #make
     variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
     selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
     selected_mtime=get_mtime(ds,selected_time)
-    # Create a list of [var_val, lev] pairs
-    #var_lev_arr = [[data_val.item(), lev_val] for data_val, lev_val in zip(data.values, ds['lev'].values)]
-    
 
-    #valid_indices = ~np.isnan(data.values)
-    var_values = data.values#[valid_indices]
-    lev_values = ds['lev'].values#[valid_indices]
+    valid_indices = ~np.isnan(data.values)
+    variable_values = data.values[valid_indices]
+    try:
+        levs_ilevs = ds['lev'].values[valid_indices]
+    except:
+        levs_ilevs = ds['ilev'].values[valid_indices]
 
-    return var_values , lev_values, variable_unit, variable_long_name, selected_ut, selected_mtime 
+    return variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime 
 
-
-
-
-
-def valid_lev_ilev(ds, selected_lev_ilev, lev_ilev):
-    """
-    Checks if the given lev or ilev value is in the dataset and if not gets the two closest valid values.
-    
-    Parameters:
-    - ds (xarray): The loaded dataset opened using xarray.
-    - selected_lev_ilev (float): Desired lev or ilev value.
-    - lev_ilev (str): Dimension name ('lev' or 'ilev') in the dataset.
-    
-    Returns:
-    - selected_levs (list): A list containing one or two values of lev or ilev present in the dataset.
-    """
-    valid_levs_ilevs = ds[lev_ilev].values
-
-    if selected_lev_ilev not in valid_levs_ilevs:
-        print(f"The {lev_ilev} {selected_lev_ilev} isn't in the listed valid values.")
-        valid_levs_ilevs = np.asarray(valid_levs_ilevs)
-        idx = (np.abs(valid_levs_ilevs - selected_lev_ilev)).argsort()[:2]
-        selected_levs_ilevs = valid_levs_ilevs[idx]
-        print(f"Averaging from the closest valid {lev_ilev}s: {selected_levs_ilevs[0]} and {selected_levs_ilevs[1]}")
-    else:
-        selected_levs_ilevs = [selected_lev_ilev]
-
-    return selected_levs_ilevs
-
-
-
-
-
-def calc_avg_ht(ds, selected_time, lev):
+def calc_avg_ht(ds, selected_time, selected_lev_ilev):
     """
     Compute the average Z value for a given set of lat, lon, and lev from a dataset.
     
     Parameters:
-    - data_array (list): A list of [varval, lat, lon].
-    - lev (float): The level for which to retrieve data.
-    - dataset: The dataset containing the Z variable.
+    - ds (xarray): The loaded dataset opened using xarray.
+    - selected_time (str): Timestamp to filter the data.
+    - selected_lev_ilev (float): The level for which to retrieve data.
     
     Returns:
-    - float: The average Z value for the given conditions.
+    - float: The average ZG value for the given conditions.
     """
-    if lev in ds['ilev'].values:
-        heights = ds['ZG'].sel(time=selected_time, ilev=lev).values
+    if selected_lev_ilev in ds['ilev'].values:
+        heights = ds['ZG'].sel(time=selected_time, ilev=selected_lev_ilev).values
     else:
-        sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - lev))
+        sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - selected_lev_ilev))
         closest_lev1 = sorted_levs[0]
         closest_lev2 = sorted_levs[1]
         
@@ -293,18 +273,18 @@ def calc_avg_ht(ds, selected_time, lev):
     avg_ht= round(heights.mean()/ 100000, 2)
     return avg_ht
 
-def min_max(data):
+def min_max(variable_values):
     """Find the minimum and maximum values of varval from the 2D array
     
     Parameters:
-    - data_array (list): A list of [varval, lat, lon].
+    - variable_values (xarray): A list of variable values.
     
     Returns:
     - min_val (float): Minimum value of the variable in the array.
     - max_val (float): Maximum value of the variable in the array.
     """
     
-    return np.nanmin(data), np.nanmax(data)
+    return np.nanmin(variable_values), np.nanmax(variable_values)
 
 
 
@@ -333,41 +313,6 @@ def get_mtime(ds, selected_time):
         return mtime_variable[index[0][0]]
     else:
         return None
-
-
-def avg_var_lat_lon(var_lat_lon1, var_lat_lon2):
-    """
-    Computes the average variable value for each lat-lon pair from two var_lat_lon arrays.
-    
-    Args:
-    - var_lat_lon1 (array): First list of [variable values, lat, lon].
-    - var_lat_lon2 (array): Second list of [variable values, lat, lon].
-    
-    Returns:
-    - avg_var_lat_lon (array): List of averaged [variable values, lat, lon] for each lat-lon pair.
-    """
-    
-    # Create a dictionary with lat-lon pairs as keys and their values as lists
-    lat_lon_dict = {}
-    
-    for var_val, lat, lon in var_lat_lon1:
-        if (lat, lon) in lat_lon_dict:
-            lat_lon_dict[(lat, lon)].append(var_val)
-        else:
-            lat_lon_dict[(lat, lon)] = [var_val]
-    
-    for var_val, lat, lon in var_lat_lon2:
-        if (lat, lon) in lat_lon_dict:
-            lat_lon_dict[(lat, lon)].append(var_val)
-        else:
-            lat_lon_dict[(lat, lon)] = [var_val]
-            
-    # Compute the average for each lat-lon pair
-    avg_var_lat_lon = [[sum(lat_lon_dict[(lat, lon)]) / len(lat_lon_dict[(lat, lon)]), lat, lon] 
-                       for lat, lon in lat_lon_dict]
-    
-    return avg_var_lat_lon
-
 
 
 def get_avg_ht_arr(ds, time, lat, lon):
@@ -410,3 +355,46 @@ def get_avg_ht_arr(ds, time, lat, lon):
     return zg_values_array
 
     #return combined_values
+
+
+def lev_ilev_lat (ds, variable_name, selected_time, selected_lon):
+    """
+    Extract data from the dataset based on the given variable name, timestamp, and lev value.
+    
+    Args:
+    - ds (xarray): The loaded dataset opened using xarray.
+    - variable_name (str): Name of the variable to extract.
+        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
+    - selected_time (str): Timestamp to filter the data.
+    - selected_lev (float): Level value to filter the data.
+    
+    Returns:
+    - variable_values (xarray): An xarray object of variable values for the given timestamp and latitude.
+    - lats (xarray): An xarray object of latgitude values.
+    - levs_ilevs (xarray): An xarray object of selected lev or ilev values.
+    - variable_unit (str): Unit of the variable.
+    - variable_long_name (str): Long name of the variable.
+    - selected_ut (float): UT value in hours for selected_time.
+    - selected_mtime (array): An array containing Day, Hour, Min of the model run
+    """
+
+    # Load the dataset using xarray
+    #ds = xr.open_dataset(dataset)   
+
+    # Extract variable attributes
+    variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+    variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
+    selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
+    selected_mtime = get_mtime(ds,selected_time)
+
+    data = ds[variable_name].sel(time=selected_time, lon=selected_lon, method='nearest')
+    lats = data.lat.values
+
+    not_all_nan_indices = ~np.isnan(data.values).all(axis=1)
+    variable_values = data.values[not_all_nan_indices, :]
+    try:
+        levs_ilevs = data.lev.values[not_all_nan_indices]
+    except:
+        levs_ilevs = data.ilev.values[not_all_nan_indices]
+    return(variable_values, lats, levs_ilevs, selected_lon, variable_unit, variable_long_name, selected_ut, selected_mtime)
+

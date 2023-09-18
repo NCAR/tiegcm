@@ -1,7 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from data_parse import lat_lon_lev, lat_lon_ilev,calc_avg_ht, min_max, var_lev, get_avg_ht_arr, lev_lon
+from data_parse import lat_lon_lev, lat_lon_ilev,calc_avg_ht, min_max, lev_ilev_var, get_avg_ht_arr, lev_ilev_lon, lev_ilev_lat
 
 def longitude_to_local_time(longitude):
     """
@@ -18,6 +18,23 @@ def longitude_to_local_time(longitude):
     local_time = (longitude / 15) % 24
     return local_time
 
+def color_scheme(variable_name):
+    density_type = ['NE', 'DEN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE']
+    temp_type = ['TN', 'TE', 'TI', 'QJOULE']
+    wind_type = ['WN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'UN', 'VN']
+    if variable_name in density_type:
+        cmap_color = 'viridis'
+        contour_color = 'white'
+    elif variable_name in temp_type:
+        cmap_color = 'inferno'
+        contour_color = 'white'
+    elif variable_name in wind_type:
+        cmap_color = 'bwr'
+        contour_color = 'black'
+    else:
+        cmap_color = 'viridis'
+        contour_color = 'white'
+    return cmap_color, contour_color
 
 def plt_lat_lon(dataset, variable_name, selected_time, selected_lev_ilev):
     """
@@ -40,10 +57,10 @@ def plt_lat_lon(dataset, variable_name, selected_time, selected_lev_ilev):
     print("---------------["+variable_name+"]---["+str(selected_time)+"]---["+str(selected_lev_ilev)+"]---------------")
     # Generate 2D arrays, extract variable_unit
 
-    #try:
-    data, selected_lev_ilev,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime =lat_lon_lev(dataset, variable_name, selected_time, selected_lev_ilev)
-    #except ValueError:
-    #    data, selected_lev_ilev,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime=lat_lon_ilev(dataset, variable_name, selected_time, selected_lev_ilev)
+    try:
+        data, selected_lev_ilev,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime =lat_lon_lev(dataset, variable_name, selected_time, selected_lev_ilev)
+    except ValueError:
+        data, selected_lev_ilev,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime=lat_lon_ilev(dataset, variable_name, selected_time, selected_lev_ilev)
 
     
     avg_ht=calc_avg_ht(dataset, selected_time,selected_lev_ilev)
@@ -52,19 +69,7 @@ def plt_lat_lon(dataset, variable_name, selected_time, selected_lev_ilev):
     selected_hour=selected_mtime[1]
     selected_min=selected_mtime[2]
 
-    density_type = ['NE', 'DEN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE']
-    temp_type = ['TN', 'TE', 'TI', 'QJOULE']
-    wind_type = ['WN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'UN', 'VN']
-    if variable_name in density_type:
-        cmap_color = 'viridis'
-        contour_color = 'white'
-    elif variable_name in temp_type:
-        cmap_color = 'inferno'
-        contour_color = 'white'
-    elif variable_name in wind_type:
-        cmap_color = 'bwr'
-        contour_color = 'black'
-
+    cmap_color, contour_color = color_scheme(variable_name)
     # Extract values, latitudes, and longitudes from the array
 
     # Generate contour plot
@@ -124,9 +129,9 @@ def plt_lev_var(dataset, variable_name, selected_time, selected_lat, selected_lo
     print("---------------["+variable_name+"]---["+str(selected_time)+"]---["+str(selected_lat)+"]---["+str(selected_lon)+"]---------------")
 
 
-    var_values , lev_values, variable_unit, variable_long_name, selected_ut, selected_mtime = var_lev(dataset, variable_name, selected_time, selected_lat, selected_lon)
+    variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime = lev_ilev_var(dataset, variable_name, selected_time, selected_lat, selected_lon)
 
-    min_val, max_val = min_max(var_values)
+    min_val, max_val = min_max(variable_values)
     #print(min_val, max_val)
     selected_day=selected_mtime[0]
     selected_hour=selected_mtime[1]
@@ -139,8 +144,8 @@ def plt_lev_var(dataset, variable_name, selected_time, selected_lat, selected_lo
     
     # Plotting
     
-    plot = plt.figure(figsize=(20, 12))
-    plt.plot(var_values, lev_values)
+    plot = plt.figure(figsize=(22, 12))
+    plt.plot(variable_values, levs_ilevs)
     plt.xlabel(variable_long_name, fontsize=28, labelpad=15)
     plt.ylabel('LN(P0/P) (INTERFACES)', fontsize=28)
     plt.xticks(fontsize=18)  
@@ -152,7 +157,7 @@ def plt_lev_var(dataset, variable_name, selected_time, selected_lat, selected_lo
     '''
     ax = plt.gca()
     ax2 = ax.twinx()
-    ax2.plot(var_values, zg_values, 'r--', alpha=0)  # Plot with alpha=0 to make it invisible
+    ax2.plot(variable_values, zg_values, 'r--', alpha=0)  # Plot with alpha=0 to make it invisible
     ax2.set_ylabel('Height (in km)', fontsize=28, labelpad=15, color='black')
     ax2.tick_params(axis='y', labelcolor='black', labelsize=18)
     plt.show()
@@ -186,32 +191,21 @@ def plt_lev_lon(dataset, variable_name, selected_time, selected_lat):
     
     print("---------------["+variable_name+"]---["+str(selected_time)+"]---["+str(selected_lat)+"]---------------")
     # Generate 2D arrays, extract variable_unit
-    data, unique_lons, unique_levs,selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime =lev_lon (dataset, variable_name, selected_time, selected_lat)
+    variable_values, unique_lons, unique_levs,selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime = lev_ilev_lon(dataset, variable_name, selected_time, selected_lat)
 
     
-    min_val, max_val = min_max(data)
+    min_val, max_val = min_max(variable_values)
     selected_day=selected_mtime[0]
     selected_hour=selected_mtime[1]
     selected_min=selected_mtime[2]
 
-    density_type = ['NE', 'DEN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE']
-    temp_type = ['TN', 'TE', 'TI', 'QJOULE']
-    wind_type = ['WN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'UN', 'VN']
-    if variable_name in density_type:
-        cmap_color = 'viridis'
-        contour_color = 'white'
-    elif variable_name in temp_type:
-        cmap_color = 'inferno'
-        contour_color = 'white'
-    elif variable_name in wind_type:
-        cmap_color = 'bwr'
-        contour_color = 'black'
+    cmap_color, contour_color = color_scheme(variable_name)
 
     
     # Generate contour plot
     plot=plt.figure(figsize=(24, 12))
-    contour_filled = plt.contourf(unique_lons, unique_levs, data, cmap= cmap_color, levels=20)
-    contour_lines = plt.contour(unique_lons, unique_levs, data, colors=contour_color, linewidths=0.5, levels=20)
+    contour_filled = plt.contourf(unique_lons, unique_levs, variable_values, cmap= cmap_color, levels=20)
+    contour_lines = plt.contour(unique_lons, unique_levs, variable_values, colors=contour_color, linewidths=0.5, levels=20)
     plt.clabel(contour_lines, inline=True, fontsize=16, colors=contour_color)
     cbar = plt.colorbar(contour_filled, label=variable_name+" ["+variable_unit+"]")
     cbar.set_label(variable_name+" ["+variable_unit+"]", size=28, labelpad=15)
@@ -246,3 +240,63 @@ def plt_lev_lon(dataset, variable_name, selected_time, selected_lat):
     return(plot)
 
 
+def plt_lev_lat(dataset, variable_name, selected_time, selected_lon):
+    """
+    Generates a contour plot for the given 2D array of variable values, latitude, and latgitude.
+    
+    Parameters:
+        - dataset (str): Path to the NetCDF file.
+        - variable_name (str): The name of the variable with lat, lat, ilev dimensions.
+            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
+                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
+                                'Z', 'POTEN']
+        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - selected_ilev (float): The selected ilevel value.
+    
+    Returns:
+        - Contour plot.
+    """
+    # Printing Execution data
+    
+    print("---------------["+variable_name+"]---["+str(selected_time)+"]---["+str(selected_lon)+"]---------------")
+    # Generate 2D arrays, extract variable_unit
+    variable_values, unique_lats, unique_levs,selected_lon, variable_unit, variable_long_name, selected_ut, selected_mtime = lev_ilev_lat(dataset, variable_name, selected_time, selected_lon)
+
+    
+    min_val, max_val = min_max(variable_values)
+    selected_day=selected_mtime[0]
+    selected_hour=selected_mtime[1]
+    selected_min=selected_mtime[2]
+
+    cmap_color, contour_color = color_scheme(variable_name)
+
+    
+    # Generate contour plot
+    plot=plt.figure(figsize=(24, 12))
+    contour_filled = plt.contourf(unique_lats, unique_levs, variable_values, cmap= cmap_color, levels=20)
+    contour_lines = plt.contour(unique_lats, unique_levs, variable_values, colors=contour_color, linewidths=0.5, levels=20)
+    plt.clabel(contour_lines, inline=True, fontsize=16, colors=contour_color)
+    cbar = plt.colorbar(contour_filled, label=variable_name+" ["+variable_unit+"]")
+    cbar.set_label(variable_name+" ["+variable_unit+"]", size=28, labelpad=15)
+    cbar.ax.tick_params(labelsize=18)
+    plt.title(variable_long_name+' '+variable_name+' ('+variable_unit+') '+'\n\n',fontsize=36 )   
+    plt.text(0, 8,'UT='+str(selected_ut) +'  LON='+str(selected_lon)+" SLT="+str(longitude_to_local_time(selected_lon))+"Hrs", ha='center', va='center',fontsize=28) 
+    plt.ylabel('LN(P0/P) (INTERFACES)',fontsize=28)
+    plt.xlabel('Latitude (Deg)',fontsize=28)
+    plt.xticks(fontsize=18)  
+    plt.yticks(fontsize=18) 
+
+
+
+    # Add subtext to the plot
+    plt.text(-45, -9, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28)
+    plt.text(45, -9, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28)
+    plt.text(45, -10, "Day, Hour, Min = "+str(selected_day)+","+str(selected_hour)+","+str(selected_min), ha='center', va='center',fontsize=28)
+    #plt.text(-90, -10, str(dataset.split("/")[-1]), ha='center', va='center',fontsize=28)
+
+    plt.show()
+    #plot, ax = plt.subplots()
+
+    
+    
+    return(plot)
