@@ -1,7 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from data_parse import lat_lon_lev, lat_lon_ilev,calc_avg_ht, min_max, lev_ilev_var, get_avg_ht_arr, lev_ilev_lon, lev_ilev_lat
+from data_parse import lat_lon_lev, lat_lon_ilev,calc_avg_ht, min_max, lev_ilev_var, get_avg_ht_arr, lev_ilev_lon, lev_ilev_lat,lev_ilev_time, lat_time_lev,lat_time_ilev
 
 def longitude_to_local_time(longitude):
     """
@@ -180,7 +180,7 @@ def plt_lev_lon(dataset, variable_name, selected_time, selected_lat):
         - variable_name (str): The name of the variable with lat, lon, ilev dimensions.
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
-                                'Z', 'POTEN']
+                                'Z', 'POTEN']le
         - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
         - selected_ilev (float): The selected ilevel value.
     
@@ -299,4 +299,189 @@ def plt_lev_lat(dataset, variable_name, selected_time, selected_lon):
 
     
     
+    return(plot)
+
+
+
+
+
+def plt_lev_time(datasets, variable_name, selected_lat, selected_lon):
+    """
+    Generates a contour plot for the given 2D array of variable values, latitude, and latgitude.
+    
+    Parameters:
+        - dataset (str): Path to the NetCDF file.
+        - variable_name (str): The name of the variable with lat, lat, ilev dimensions.
+            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
+                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
+                                'Z', 'POTEN']
+        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - selected_ilev (float): The selected ilevel value.
+    
+    Returns:
+        - Contour plot.
+    """
+
+    variable_values_all, levs_ilevs, mtime_values, selected_lon, variable_unit, variable_long_name = lev_ilev_time(datasets, variable_name, selected_lat, selected_lon)
+    
+    # Assuming the levels are consistent across datasets, but using the minimum size for safety
+    
+
+    print("---------------["+variable_name+"]---["+str(selected_lat)+"]---["+str(selected_lon)+"]---------------")
+    
+    min_val, max_val = np.nanmin(variable_values_all), np.nanmax(variable_values_all)
+
+    cmap_color, contour_color = color_scheme(variable_name)
+
+    unique_days = sorted(list(set([day for day, _, _ in mtime_values])))
+    day_indices = [i for i, (day, _, _) in enumerate(mtime_values) if i == 0 or mtime_values[i-1][0] != day]
+
+    plot=plt.figure(figsize=(24, 12))
+    X, Y = np.meshgrid(range(len(mtime_values)), levs_ilevs)
+    contour_filled = plt.contourf(X, Y, variable_values_all, cmap=cmap_color, levels=20)
+    contour_lines = plt.contour(X, Y, variable_values_all, colors=contour_color, linewidths=0.5, levels=20)
+    plt.clabel(contour_lines, inline=True, fontsize=16, colors=contour_color)
+    cbar = plt.colorbar(contour_filled, label=variable_name+" ["+variable_unit+"]")
+    cbar.set_label(variable_name+" ["+variable_unit+"]", size=28, labelpad=15)
+    cbar.ax.tick_params(labelsize=18)
+    plt.xticks(day_indices, unique_days, rotation=45)
+    plt.xlabel("Model Time (Day) from "+str(np.nanmin(unique_days))+" to "+str(np.nanmax(unique_days)) ,fontsize=28)
+    plt.ylabel('LN(P0/P) (INTERFACES)',fontsize=28)
+    
+    plt.title(variable_long_name+' '+variable_name+' ('+variable_unit+') '+'\n\n',fontsize=36 )   
+    
+    plt.tight_layout()
+    plt.xticks(fontsize=18)  
+    plt.yticks(fontsize=18) 
+
+
+
+    # Add subtext to the plot
+    plt.text(0.5, 1.08,'  LAT='+str(selected_lat)+" SLT="+str(longitude_to_local_time(selected_lon))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    plt.text(0.5, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
+    plt.text(0.5, -0.25, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
+
+    return(plot)
+
+
+
+def plt_lev_time(datasets, variable_name, selected_lat, selected_lon):
+    """
+    Generates a contour plot for the given 2D array of variable values, latitude, and latgitude.
+    
+    Parameters:
+        - dataset (str): Path to the NetCDF file.
+        - variable_name (str): The name of the variable with lat, lat, ilev dimensions.
+            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
+                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
+                                'Z', 'POTEN']
+        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - selected_ilev (float): The selected ilevel value.
+    
+    Returns:
+        - Contour plot.
+    """
+
+    variable_values_all, levs_ilevs, mtime_values, selected_lon, variable_unit, variable_long_name = lev_ilev_time(datasets, variable_name, selected_lat, selected_lon)
+    
+    # Assuming the levels are consistent across datasets, but using the minimum size for safety
+    
+
+    print("---------------["+variable_name+"]---["+str(selected_lat)+"]---["+str(selected_lon)+"]---------------")
+    
+    min_val, max_val = np.nanmin(variable_values_all), np.nanmax(variable_values_all)
+
+    cmap_color, contour_color = color_scheme(variable_name)
+
+    unique_days = sorted(list(set([day for day, _, _ in mtime_values])))
+    day_indices = [i for i, (day, _, _) in enumerate(mtime_values) if i == 0 or mtime_values[i-1][0] != day]
+
+    plot=plt.figure(figsize=(20, 12))
+    X, Y = np.meshgrid(range(len(mtime_values)), levs_ilevs)
+    contour_filled = plt.contourf(X, Y, variable_values_all, cmap=cmap_color, levels=20)
+    contour_lines = plt.contour(X, Y, variable_values_all, colors=contour_color, linewidths=0.5, levels=20)
+    plt.clabel(contour_lines, inline=True, fontsize=16, colors=contour_color)
+    cbar = plt.colorbar(contour_filled, label=variable_name+" ["+variable_unit+"]")
+    cbar.set_label(variable_name+" ["+variable_unit+"]", size=28, labelpad=15)
+    cbar.ax.tick_params(labelsize=18)
+    plt.xticks(day_indices, unique_days, rotation=45)
+    plt.xlabel("Model Time (Day) from "+str(np.nanmin(unique_days))+" to "+str(np.nanmax(unique_days)) ,fontsize=28)
+    plt.ylabel('LN(P0/P) (INTERFACES)',fontsize=28)
+    
+    plt.title(variable_long_name+' '+variable_name+' ('+variable_unit+') '+'\n\n',fontsize=36 )   
+    
+    plt.tight_layout()
+    plt.xticks(fontsize=18)  
+    plt.yticks(fontsize=18) 
+
+
+
+    # Add subtext to the plot
+    plt.text(0.5, 1.08,'  LAT='+str(selected_lat)+" SLT="+str(longitude_to_local_time(selected_lon))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    plt.text(0.5, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
+    plt.text(0.5, -0.25, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
+
+    return(plot)
+
+
+
+def plt_lat_time(datasets, variable_name, selected_lev, selected_lon):
+    """
+    Generates a contour plot for the given 2D array of variable values, latitude, and latgitude.
+    
+    Parameters:
+        - dataset (str): Path to the NetCDF file.
+        - variable_name (str): The name of the variable with lat, lat, ilev dimensions.
+            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
+                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
+                                'Z', 'POTEN']
+        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - selected_ilev (float): The selected ilevel value.
+    
+    Returns:
+        - Contour plot.
+    """
+    print("---------------["+variable_name+"]---["+str(selected_lev)+"]---["+str(selected_lon)+"]---------------")
+
+    try:
+        variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name = lat_time_lev(datasets, variable_name, selected_lev, selected_lon)
+    except:
+        variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name = lat_time_ilev(datasets, variable_name, selected_lev, selected_lon)
+    # Assuming the levels are consistent across datasets, but using the minimum size for safety
+    
+
+    
+    
+    min_val, max_val = np.nanmin(variable_values_all), np.nanmax(variable_values_all)
+
+    cmap_color, contour_color = color_scheme(variable_name)
+
+    unique_days = sorted(list(set([day for day, _, _ in mtime_values])))
+    day_indices = [i for i, (day, _, _) in enumerate(mtime_values) if i == 0 or mtime_values[i-1][0] != day]
+
+    plot=plt.figure(figsize=(20, 12))
+    X, Y = np.meshgrid(range(len(mtime_values)), lats)
+    contour_filled = plt.contourf(X, Y, variable_values_all, cmap=cmap_color, levels=20)
+    contour_lines = plt.contour(X, Y, variable_values_all, colors=contour_color, linewidths=0.5, levels=20)
+    plt.clabel(contour_lines, inline=True, fontsize=16, colors=contour_color)
+    cbar = plt.colorbar(contour_filled, label=variable_name+" ["+variable_unit+"]")
+    cbar.set_label(variable_name+" ["+variable_unit+"]", size=28, labelpad=15)
+    cbar.ax.tick_params(labelsize=18)
+    plt.xticks(day_indices, unique_days, rotation=45)
+    plt.xlabel("Model Time (Day) from "+str(np.nanmin(unique_days))+" to "+str(np.nanmax(unique_days)) ,fontsize=28)
+    plt.ylabel('LN(P0/P) (INTERFACES)',fontsize=28)
+    
+    plt.title(variable_long_name+' '+variable_name+' ('+variable_unit+') '+'\n\n',fontsize=36 )   
+    
+    plt.tight_layout()
+    plt.xticks(fontsize=18)  
+    plt.yticks(fontsize=18) 
+
+
+
+    # Add subtext to the plot
+    plt.text(0.5, 1.08,'  ZP='+str(selected_lev)+" SLT="+str(longitude_to_local_time(selected_lon))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    plt.text(0.5, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
+    plt.text(0.5, -0.25, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
+
     return(plot)
