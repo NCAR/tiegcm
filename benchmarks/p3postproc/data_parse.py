@@ -46,7 +46,9 @@ def lev_ilev_lon (ds, variable_name, selected_time, selected_lat):
     Args:
     - ds (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to extract.
-        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
+        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
+                            'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
+                            'Z', 'POTEN']  
     - selected_time (str): Timestamp to filter the data.
     - selected_lev (float): Level value to filter the data.
     
@@ -214,6 +216,9 @@ def lev_ilev_var(ds, variable_name, selected_time, selected_lat, selected_lon):
     Parameters:
     - ds (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to retrieve.
+        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
+                            'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
+                            'Z', 'POTEN']  
     - selected_time (str): Timestamp to filter the data.
     - selected_lat (float): Latitude value.
     - selected_lon (float): Longitude value.
@@ -366,7 +371,7 @@ def lev_ilev_lat (ds, variable_name, selected_time, selected_lon):
     - variable_name (str): Name of the variable to extract.
         - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
     - selected_time (str): Timestamp to filter the data.
-    - selected_lev (float): Level value to filter the data.
+    - selected_lon (float): Longitude to filter the data.
     
     Returns:
     - variable_values (xarray): An xarray object of variable values for the given timestamp and latitude.
@@ -408,14 +413,16 @@ def lev_ilev_time (datasets, variable_name, selected_lat, selected_lon):
     Args:
     - ds (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to extract.
-        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
-    - selected_time (str): Timestamp to filter the data.
-    - selected_lev (float): Level value to filter the data.
+        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
+                            'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
+                            'Z', 'POTEN'] 
+    - selected_lat (str): Latitude to filter the data.
+    - selected_lon (float): Longitude to filter the data.
     
     Returns:
     - variable_values (xarray): An xarray object of variable values for the given timestamp and latitude.
-    - lats (xarray): An xarray object of latgitude values.
     - levs_ilevs (xarray): An xarray object of selected lev or ilev values.
+    - mtime_values (xarray): An xarray object of mtime arrays.
     - variable_unit (str): Unit of the variable.
     - variable_long_name (str): Long name of the variable.
     - selected_ut (float): UT value in hours for selected_time.
@@ -476,13 +483,13 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon):
     - ds (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to extract.
         - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
-    - selected_time (str): Timestamp to filter the data.
     - selected_lev (float): Level value to filter the data.
+    - selected_lon (float): Longitude value to filter the data.
     
     Returns:
     - variable_values (xarray): An xarray object of variable values for the given timestamp and latitude.
     - lats (xarray): An xarray object of latgitude values.
-    - levs_ilevs (xarray): An xarray object of selected lev or ilev values.
+    - mtime_values (xarray): An xarray object of mtime arrays.
     - variable_unit (str): Unit of the variable.
     - variable_long_name (str): Long name of the variable.
     - selected_ut (float): UT value in hours for selected_time.
@@ -551,14 +558,14 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon):
     Args:
     - ds (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to extract.
-        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
-    - selected_time (str): Timestamp to filter the data.
+        - valid variables: ['WN', 'NE', 'POTEN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'DEN', 'Z', 'ZG']    
     - selected_ilev (float): ilevel value to filter the data.
+    - selected_lon (float): Longitude value to filter the data.
     
     Returns:
     - variable_values (xarray): An xarray object of variable values for the given timestamp and latitude.
     - lats (xarray): An xarray object of latgitude values.
-    - levs_ilevs (xarray): An xarray object of selected lev or ilev values.
+    - mtime_values (xarray): An xarray object of mtime arrays.
     - variable_unit (str): Unit of the variable.
     - variable_long_name (str): Long name of the variable.
     - selected_ut (float): UT value in hours for selected_time.
@@ -617,3 +624,7 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon):
 
 
     return(variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name)
+
+
+
+

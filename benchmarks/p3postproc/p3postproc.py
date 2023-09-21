@@ -39,8 +39,8 @@ fig7 =plt_lev_lon(dataset, "ZG", timestep_array[119][1], -62.50)
 fig8 =plt_lev_lon(dataset, "UN", timestep_array[119][1], -62.50)
 fig9 =plt_lev_lat(dataset, "UN", timestep_array[119][1], 0.0)
 fig10 =plt_lev_lat(dataset, "UN", timestep_array[119][1], -180.0)
-fig11 = plt_lev_time(datasets, "TN", -62.50, -180.0)
-fig12 = plt_lat_time(datasets, "TN", -4.00, 0.0)
+fig11 = plt_lev_time(datasets, "TN", -42.50, -180.0)
+fig12 = plt_lat_time(datasets, "TN", 0.0, -180.0)
 #fig8 = test(dataset, "TN", timestep_array[119][1], -4.25)
 pdf_multi_path = "/glade/u/home/nikhilr/tiegcm_func/tiegcm2.0/benchmarks/p3postproc/test.pdf"
 with PdfPages(pdf_multi_path) as pdf:
