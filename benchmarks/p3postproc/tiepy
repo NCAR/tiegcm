@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import os
+import inspect
+import matplotlib.pyplot as plt
+import xarray as xr
+from getoptions import get_options
+from plot_gen import plt_lat_lon, plt_lev_var, plt_lev_lon, plt_lev_lat, plt_lev_time, plt_lat_time
+
+def main():
+    args = get_options()
+    
+    plot_functions = {
+        'lat_lon': plt_lat_lon,
+        'lev_var': plt_lev_var,
+        'lev_lon': plt_lev_lon,
+        'lev_lat': plt_lev_lat,
+        'lev_time': plt_lev_time,
+        'lat_time': plt_lat_time,
+    }
+    
+    plot_function = plot_functions.get(args.plot_type)
+    
+    if plot_function:
+        datasets = []
+        if args.dir:
+            files = sorted(os.listdir(args.dir)) 
+            for file in files:
+                if file.endswith('.nc') and (args.dataset_filter is None or args.dataset_filter in file):
+                    file_path = os.path.join(args.dir, file)
+                    #print(file_path)
+                    datasets.append(xr.open_dataset(file_path))
+        if args.plot_type in ['plt_lev_time', 'plt_lat_time'] and not datasets:
+            raise ValueError(f"{args.plot_type} requires non-empty datasets array.")
+
+        
+        # Inspect the function signature and construct the arguments dictionary accordingly
+        function_args = {}
+        for param in inspect.signature(plot_function).parameters.keys():
+            if hasattr(args, param):
+                function_args[param] = getattr(args, param)
+            elif param == 'datasets':
+                function_args['datasets'] = datasets
+
+        plot_object = plot_function(**function_args)
+        
+        if args.output_format:
+            filename = f"output_plot.{args.output_format}"
+            plt.savefig(filename, format=args.output_format)
+            print(f"Plot saved as {filename}")
+        else:
+            plt.show()
+    else:
+        print(f"Invalid plot_type: {args.plot_type}")
+
+if __name__ == "__main__":
+    main()

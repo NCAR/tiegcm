@@ -36,34 +36,34 @@ def color_scheme(variable_name):
         contour_color = 'white'
     return cmap_color, contour_color
 
-def plt_lat_lon(dataset, variable_name, selected_time, selected_lev_ilev):
+def plt_lat_lon(datasets, variable_name, time, level):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
     
     Parameters:
         - dataset (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with lat, lon, ilev dimensions.
+        - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                                 'Z', 'POTEN']
-        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - selected_lev_ilev (float): The selected lev/ilev value.
+        - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - level (float): The selected lev/ilev value.
     
     Returns:
         - Contour plot.
     """
     # Printing Execution data
     
-    print("---------------["+variable_name+"]---["+str(selected_time)+"]---["+str(selected_lev_ilev)+"]---------------")
+    print("---------------["+variable_name+"]---["+str(time)+"]---["+str(level)+"]---------------")
     # Generate 2D arrays, extract variable_unit
 
     try:
-        data, selected_lev_ilev,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime =lat_lon_lev(dataset, variable_name, selected_time, selected_lev_ilev)
+        data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime =lat_lon_lev(datasets, variable_name, time, level)
     except ValueError:
-        data, selected_lev_ilev,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime=lat_lon_ilev(dataset, variable_name, selected_time, selected_lev_ilev)
+        data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime=lat_lon_ilev(datasets, variable_name, time, level)
 
     
-    avg_ht=calc_avg_ht(dataset, selected_time,selected_lev_ilev)
+    avg_ht=calc_avg_ht(datasets, time,level)
     min_val, max_val = min_max(data)
     selected_day=selected_mtime[0]
     selected_hour=selected_mtime[1]
@@ -81,7 +81,7 @@ def plt_lat_lon(dataset, variable_name, selected_time, selected_lev_ilev):
     cbar.set_label(variable_name + " [" + variable_unit + "]", size=28, labelpad=15)
     cbar.ax.tick_params(labelsize=18)
     plt.title(variable_long_name + ' ' + variable_name + ' (' + variable_unit + ') ' + '\n\n', fontsize=36)
-    plt.text(0, 110, 'UT=' + str(selected_ut) + '  ZP=' + str(selected_lev_ilev)+' AVG HT=' + str(avg_ht), ha='center', va='center', fontsize=28)
+    plt.text(0, 110, 'UT=' + str(selected_ut) + '  ZP=' + str(level)+' AVG HT=' + str(avg_ht), ha='center', va='center', fontsize=28)
     plt.ylabel('Latitude', fontsize=28)
     plt.xlabel('Longitude (Deg)', fontsize=28)
     plt.xticks([value for value in unique_lons if value % 30 == 0],fontsize=18)
@@ -95,7 +95,7 @@ def plt_lat_lon(dataset, variable_name, selected_time, selected_lev_ilev):
     ax2.set_xlim(ax.get_xlim())
     ax2_xticks = ax.get_xticks()
     ax2.set_xticks(ax2_xticks)
-    ax2.set_xticklabels([str(int(longitude_to_local_time(lon) % 24)) for lon in ax2_xticks],fontsize=18)
+    ax2.set_xticklabels([str(int(longitude_to_local_time(longitude) % 24)) for longitude in ax2_xticks],fontsize=18)
     ax2.set_xlabel('Local Time (Hrs)', labelpad=15, fontsize=28)
 
     # Add subtext to the plot
@@ -114,29 +114,29 @@ def plt_lat_lon(dataset, variable_name, selected_time, selected_lev_ilev):
 
 
 
-def plt_lev_var(dataset, variable_name, selected_time, selected_lat, selected_lon):
+def plt_lev_var(dataset, variable_name, time, latitude, longitude):
     """
     Plots the given data as a line plot.
     
     Parameters:
     - dataset (str): Path to the NetCDF file.
-    - variable_name (str): The name of the variable with lat, lon, ilev dimensions.
+    - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
         - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                             'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                             'Z', 'POTEN']le
-    - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
-    - selected_lat (float): Latitude value to filter the data.
-    - selected_lon (float): Longitude value to filter the data.
+    - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+    - latitude (float): Latitude value to filter the data.
+    - longitude (float): Longitude value to filter the data.
 
     Returns:
     - Contour plot.
     """
     # Printing Execution data
     
-    print("---------------["+variable_name+"]---["+str(selected_time)+"]---["+str(selected_lat)+"]---["+str(selected_lon)+"]---------------")
+    print("---------------["+variable_name+"]---["+str(time)+"]---["+str(latitude)+"]---["+str(longitude)+"]---------------")
 
 
-    variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime = lev_ilev_var(dataset, variable_name, selected_time, selected_lat, selected_lon)
+    variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime = lev_ilev_var(dataset, variable_name, time, latitude, longitude)
 
     min_val, max_val = min_max(variable_values)
     #print(min_val, max_val)
@@ -145,7 +145,7 @@ def plt_lev_var(dataset, variable_name, selected_time, selected_lat, selected_lo
     selected_min=selected_mtime[2]
 
 
-    #zg_values = get_avg_ht_arr(dataset, selected_time, selected_lat, selected_lon)
+    #zg_values = get_avg_ht_arr(dataset, time, latitude, longitude)
     #print(len(zg_values))
 
     
@@ -170,7 +170,7 @@ def plt_lev_var(dataset, variable_name, selected_time, selected_lat, selected_lo
     plt.show()
     '''
 
-    plt.text(0.5, 1.08,'UT='+str(selected_ut) +'  LAT='+str(selected_lat)+" SLT="+str(longitude_to_local_time(selected_lon))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    plt.text(0.5, 1.08,'UT='+str(selected_ut) +'  LAT='+str(latitude)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.text(0.5, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.text(0.5, -0.25, "Day, Hour, Min = "+str(selected_day)+","+str(selected_hour)+","+str(selected_min), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
     #plt.text(0.5, -0.3, str(dataset.split("/")[-1]), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
@@ -178,27 +178,27 @@ def plt_lev_var(dataset, variable_name, selected_time, selected_lat, selected_lo
     return(plot)
 
 
-def plt_lev_lon(dataset, variable_name, selected_time, selected_lat):
+def plt_lev_lon(dataset, variable_name, time, latitude):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
     
     Parameters:
         - dataset (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with lat, lon, ilev dimensions.
+        - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                                 'Z', 'POTEN']le
-        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - selected_lon (float): Longitude value to filter the data.
+        - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - longitude (float): Longitude value to filter the data.
     
     Returns:
         - Contour plot.
     """
     # Printing Execution data
     
-    print("---------------["+variable_name+"]---["+str(selected_time)+"]---["+str(selected_lat)+"]---------------")
+    print("---------------["+variable_name+"]---["+str(time)+"]---["+str(latitude)+"]---------------")
     # Generate 2D arrays, extract variable_unit
-    variable_values, unique_lons, unique_levs,selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime = lev_ilev_lon(dataset, variable_name, selected_time, selected_lat)
+    variable_values, unique_lons, unique_levs,latitude, variable_unit, variable_long_name, selected_ut, selected_mtime = lev_ilev_lon(dataset, variable_name, time, latitude)
 
     
     min_val, max_val = min_max(variable_values)
@@ -218,7 +218,7 @@ def plt_lev_lon(dataset, variable_name, selected_time, selected_lat):
     cbar.set_label(variable_name+" ["+variable_unit+"]", size=28, labelpad=15)
     cbar.ax.tick_params(labelsize=18)
     plt.title(variable_long_name+' '+variable_name+' ('+variable_unit+') '+'\n\n',fontsize=36 )   
-    plt.text(0, 9,'UT='+str(selected_ut) +'  LAT='+str(selected_lat), ha='center', va='center',fontsize=28) 
+    plt.text(0, 9,'UT='+str(selected_ut) +'  LAT='+str(latitude), ha='center', va='center',fontsize=28) 
     plt.ylabel('LN(P0/P) (INTERFACES)',fontsize=28)
     plt.xlabel('Longitude (Deg)',fontsize=28)
     plt.xticks([value for value in unique_lons if value % 30 == 0],fontsize=18)  
@@ -230,7 +230,7 @@ def plt_lev_lon(dataset, variable_name, selected_time, selected_lat):
     ax2.set_xlim(ax.get_xlim())
     ax2_xticks = ax.get_xticks()
     ax2.set_xticks(ax2_xticks)
-    ax2.set_xticklabels([str(int(longitude_to_local_time(lon) % 24)) for lon in ax2_xticks],fontsize=18)
+    ax2.set_xticklabels([str(int(longitude_to_local_time(longitude) % 24)) for longitude in ax2_xticks],fontsize=18)
     ax2.set_xlabel('Local Time (Hrs)', labelpad=15, fontsize=28)
 
     # Add subtext to the plot
@@ -247,17 +247,17 @@ def plt_lev_lon(dataset, variable_name, selected_time, selected_lat):
     return(plot)
 
 
-def plt_lev_lat(dataset, variable_name, selected_time, selected_lon):
+def plt_lev_lat(dataset, variable_name, time, longitude):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and latgitude.
     
     Parameters:
         - dataset (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with lat, lat, ilev dimensions.
+        - variable_name (str): The name of the variable with latitude, latitude, ilev dimensions.
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                                 'Z', 'POTEN']
-        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
         - selected_ilev (float): The selected ilevel value.
     
     Returns:
@@ -265,9 +265,9 @@ def plt_lev_lat(dataset, variable_name, selected_time, selected_lon):
     """
     # Printing Execution data
     
-    print("---------------["+variable_name+"]---["+str(selected_time)+"]---["+str(selected_lon)+"]---------------")
+    print("---------------["+variable_name+"]---["+str(time)+"]---["+str(longitude)+"]---------------")
     # Generate 2D arrays, extract variable_unit
-    variable_values, unique_lats, unique_levs,selected_lon, variable_unit, variable_long_name, selected_ut, selected_mtime = lev_ilev_lat(dataset, variable_name, selected_time, selected_lon)
+    variable_values, unique_lats, unique_levs,longitude, variable_unit, variable_long_name, selected_ut, selected_mtime = lev_ilev_lat(dataset, variable_name, time, longitude)
 
     
     min_val, max_val = min_max(variable_values)
@@ -287,7 +287,7 @@ def plt_lev_lat(dataset, variable_name, selected_time, selected_lon):
     cbar.set_label(variable_name+" ["+variable_unit+"]", size=28, labelpad=15)
     cbar.ax.tick_params(labelsize=18)
     plt.title(variable_long_name+' '+variable_name+' ('+variable_unit+') '+'\n\n',fontsize=36 )   
-    plt.text(0, 8,'UT='+str(selected_ut) +'  LON='+str(selected_lon)+" SLT="+str(longitude_to_local_time(selected_lon))+"Hrs", ha='center', va='center',fontsize=28) 
+    plt.text(0, 8,'UT='+str(selected_ut) +'  LON='+str(longitude)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28) 
     plt.ylabel('LN(P0/P) (INTERFACES)',fontsize=28)
     plt.xlabel('Latitude (Deg)',fontsize=28)
     plt.xticks(fontsize=18)  
@@ -311,29 +311,31 @@ def plt_lev_lat(dataset, variable_name, selected_time, selected_lon):
 
 
 
-def plt_lev_time(datasets, variable_name, selected_lat, selected_lon):
+def plt_lev_time(datasets, variable_name, latitude, longitude):
     """
-    Generates a contour plot for the given 2D array of variable values, lev, and time.
+    Generates a contour plot for the given 2D array of variable values, level, and time.
     
     Parameters:
         - dataset (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with lat, lat, ilev dimensions.
+        - variable_name (str): The name of the variable with latitude, latitude, ilev dimensions.
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                                 'Z', 'POTEN']
-        - selected_lat (float): Latitude value to filter the data.
-        - selected_lon (float): Longitude value to filter the data.
+        - latitude (float): Latitude value to filter the data.
+        - longitude (float): Longitude value to filter the data.
     
     Returns:
         - Contour plot.
     """
+    latitude = float(latitude)
+    longitude = float(longitude)
 
-    variable_values_all, levs_ilevs, mtime_values, selected_lon, variable_unit, variable_long_name = lev_ilev_time(datasets, variable_name, selected_lat, selected_lon)
+    #print(datasets)
+    variable_values_all, levs_ilevs, mtime_values, longitude, variable_unit, variable_long_name = lev_ilev_time(datasets, variable_name, latitude, longitude)
     
     # Assuming the levels are consistent across datasets, but using the minimum size for safety
-    
 
-    print("---------------["+variable_name+"]---["+str(selected_lat)+"]---["+str(selected_lon)+"]---------------")
+    print("---------------["+variable_name+"]---["+str(latitude)+"]---["+str(longitude)+"]---------------")
     
     min_val, max_val = np.nanmin(variable_values_all), np.nanmax(variable_values_all)
     step_val = 1.00e+01
@@ -363,7 +365,7 @@ def plt_lev_time(datasets, variable_name, selected_lat, selected_lon):
 
 
     # Add subtext to the plot
-    plt.text(0.5, 1.08,'  LAT='+str(selected_lat)+" SLT="+str(longitude_to_local_time(selected_lon))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    plt.text(0.5, 1.08,'  LAT='+str(latitude)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.text(0.5, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
     plt.text(0.5, -0.25, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
 
@@ -371,29 +373,29 @@ def plt_lev_time(datasets, variable_name, selected_lat, selected_lon):
 
 
 
-def plt_lat_time(datasets, variable_name, selected_lev, selected_lon):
+def plt_lat_time(datasets, variable_name, level, longitude):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and time.
     
     Parameters:
         - dataset (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with lat, lat, ilev dimensions.
+        - variable_name (str): The name of the variable with latitude, latitude, ilev dimensions.
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                                 'Z', 'POTEN']
-        - selected_time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - selected_lev (float): Lev value to filter the data.
-        - selected_lon (float): Longitude value to filter the data.
+        - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - level (float): Lev value to filter the data.
+        - longitude (float): Longitude value to filter the data.
     
     Returns:
         - Contour plot.
     """
-    print("---------------["+variable_name+"]---["+str(selected_lev)+"]---["+str(selected_lon)+"]---------------")
+    print("---------------["+variable_name+"]---["+str(level)+"]---["+str(longitude)+"]---------------")
 
     try:
-        variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name = lat_time_lev(datasets, variable_name, selected_lev, selected_lon)
+        variable_values_all, lats, mtime_values, longitude, variable_unit, variable_long_name = lat_time_lev(datasets, variable_name, level, longitude)
     except:
-        variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name = lat_time_ilev(datasets, variable_name, selected_lev, selected_lon)
+        variable_values_all, lats, mtime_values, longitude, variable_unit, variable_long_name = lat_time_ilev(datasets, variable_name, level, longitude)
     # Assuming the levels are consistent across datasets, but using the minimum size for safety
     
 
@@ -426,7 +428,7 @@ def plt_lat_time(datasets, variable_name, selected_lev, selected_lon):
 
 
     # Add subtext to the plot
-    plt.text(0.5, 1.08,'  ZP='+str(selected_lev)+" SLT="+str(longitude_to_local_time(selected_lon))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    plt.text(0.5, 1.08,'  ZP='+str(level)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.text(0.5, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
     plt.text(0.5, -0.25, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
 
