@@ -36,6 +36,8 @@ print(npstr)
 datasets = [[dataset5,'tiegcm_res5.0_decsol_smax_sech_001.nc'],[dataset4,'tiegcm_res5.0_decsol_smax_sech_002.nc'],[dataset3,'tiegcm_res5.0_decsol_smax_sech_003.nc'],[dataset2,'tiegcm_res5.0_decsol_smax_sech_004.nc'], [dataset,'tiegcm_res5.0_decsol_smax_sech_005.nc']]
 print("-------------------------Plot Generation--------------------------")
 fig1 = plt_lat_lon(datasets, "TN", -4.0, None, mtime=[360,0,0])
+
+'''
 fig2 = plt_lat_lon(datasets, "O2", 0.0, time=timestep_array[119][1])
 fig3 = plt_lat_lon(datasets, "VN", 2.0, timestep_array[119][1], )
 fig4 = plt_lat_lon(datasets, "ZG", 4.0, timestep_array[119][1], )
@@ -47,11 +49,12 @@ fig9 =plt_lev_lat(datasets, "UN", 0.0, timestep_array[119][1],)
 fig10 =plt_lev_lat(datasets, "UN", -180.0, timestep_array[119][1],)
 fig11 = plt_lev_time(datasets, "TN", -42.50, -180.0)
 fig12 = plt_lat_time(datasets, "TN", 0.0, -180.0)
-
+'''
 
 pdf_multi_path = "/glade/u/home/nikhilr/tiegcm_func/tiegcm2.0/benchmarks/p3postproc/test.pdf"
 with PdfPages(pdf_multi_path) as pdf:
     pdf.savefig(fig1, bbox_inches='tight', pad_inches=0.5)
+    '''
     pdf.savefig(fig2, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig3, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig4, bbox_inches='tight', pad_inches=0.5)
@@ -63,6 +66,6 @@ with PdfPages(pdf_multi_path) as pdf:
     pdf.savefig(fig10, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig11, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig12, bbox_inches='tight', pad_inches=0.5)
-
+    '''
 #print(lat_lon_lev(dataset, "TN", "2002-12-21T00:00:00", 2.25))
 #print(lat_lon_ilev(dataset, "NE", "2002-12-21T00:00:00", -6.5))

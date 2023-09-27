@@ -10,6 +10,8 @@ import numpy as np
 def main():
     args = get_options()
     
+
+    # Map plot types to their respective functions
     plot_functions = {
         'lat_lon': plt_lat_lon,
         'lev_var': plt_lev_var,
@@ -19,54 +21,57 @@ def main():
         'lat_time': plt_lat_time,
     }
     
+    # Get the plotting function based on the user input plot type
     plot_function = plot_functions.get(args.plot_type)
     
+    
     if plot_function:
+        # Checking if a directory is provided in the arguments
         datasets = []
         if args.dir:
             files = sorted(os.listdir(args.dir)) 
             for file in files:
                 if file.endswith('.nc') and (args.dataset_filter is None or args.dataset_filter in file):
                     file_path = os.path.join(args.dir, file)
-                    #print(file_path)
-                    datasets.append([xr.open_dataset(file_path), file])
-        if args.plot_type in ['plt_lev_time', 'plt_lat_time'] and not datasets:
-            raise ValueError(f"{args.plot_type} requires non-empty datasets array.")
-        
-        if args.time:  # If a time argument is specified
-            available_times = set()  # Using a set to avoid duplicate times
+                    datasets.append([xr.open_dataset(file_path), file]) #loading datasets to xarray
+
+        # Check and validate the specified time argument
+        if args.time: 
+            available_times = set()  
             for ds, filename in datasets:
-                times = ds['time'].values  # Assuming 'time' is the name of the time dimension in your datasets
+                times = ds['time'].values  
                 available_times.update(times)
             if np.datetime64(args.time) not in available_times:
                 raise ValueError(f"The specified time {args.time} is not available in the datasets. Available times are {available_times}")
             args.time = np.datetime64(args.time)
 
-        if args.mtime:  # If an mtime argument is specified
-            available_mtimes = set()  # Using a set to avoid duplicate mtimes
+        # Check and validate the specified time argument
+        if args.mtime:  
+            available_mtimes = set()  
             for ds, filename in datasets:
-                mtimes = [tuple(m) for m in ds['mtime'].values]  # Convert each mtime to tuple for hashing
+                mtimes = [tuple(m) for m in ds['mtime'].values]  
                 available_mtimes.update(mtimes)
-            input_mtime = tuple(args.mtime)  # Assuming args.mtime is already a list
+            input_mtime = tuple(args.mtime)  
             if input_mtime not in available_mtimes:
-                sorted_mtimes = sorted(list(available_mtimes))  # Sort the available mtimes
+                sorted_mtimes = sorted(list(available_mtimes))  
                 raise ValueError(f"The specified mtime {args.mtime} is not available in the datasets. Available mtimes are {sorted_mtimes}")
             args.mtime = input_mtime
 
-        # Inspect the function signature and construct the arguments dictionary accordingly
+        # Build the arguments dictionary for the plotting function based on its signature
         function_args = {}
         for param in inspect.signature(plot_function).parameters.keys():
             if hasattr(args, param):
                 function_args[param] = getattr(args, param)
             elif param == 'datasets':
                 function_args['datasets'] = datasets
-
+        
+        # Call the plotting function with the constructed arguments
         plot_object = plot_function(**function_args)
         
-
+        # Save the plot if an output format is specified
         if args.output_format:
             filename = f"output_plot.{args.output_format}"
-            plt.savefig(filename, format=args.output_format, bbox_inches='tight', pad_inches=0.5)
+            plt.savefig(filename, dpi=100, format=args.output_format, bbox_inches='tight', pad_inches=0.5)
             print(f"Plot saved as {filename}")
         else:
             plt.show()

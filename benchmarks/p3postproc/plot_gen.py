@@ -1,7 +1,9 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from data_parse import lat_lon_lev, lat_lon_ilev,calc_avg_ht, min_max, lev_ilev_var, get_avg_ht_arr, lev_ilev_lon, lev_ilev_lat,lev_ilev_time, lat_time_lev,lat_time_ilev, get_time
+from data_parse import lat_lon_lev, lat_lon_ilev,calc_avg_ht, min_max, lev_ilev_var, lev_ilev_lon, lev_ilev_lat,lev_ilev_time, lat_time_lev,lat_time_ilev, get_time
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 
 def longitude_to_local_time(longitude):
     """
@@ -36,7 +38,7 @@ def color_scheme(variable_name):
         contour_color = 'white'
     return cmap_color, contour_color
 
-def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None):
+def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlines=False):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
     
@@ -46,7 +48,25 @@ def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None):
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                                 'Z', 'POTEN']
-        - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - mtime (array): The selected time in the format [Day, Hour, Min]
+        - level (float): The selected lev/ilev value.
+    
+    Returns:
+        - Contour plot.
+    """
+    # Printing Execution data
+    """
+    Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
+    
+    Parameters:
+        - datasets (str): Path to the NetCDF file.
+        - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
+            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
+                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
+                                'Z', 'POTEN']
+        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - mtime (array): The selected time in the format [Day, Hour, Min]
         - level (float): The selected lev/ilev value.
     
     Returns:
@@ -75,6 +95,17 @@ def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None):
 
     # Generate contour plot
     plot = plt.figure(figsize=(20, 12))
+
+
+    # Check if add_coastlines parameter is True
+    if coastlines:
+        # Create a GeoAxes instance with a specific projection
+        ax = plt.axes(projection=ccrs.PlateCarree())
+        # Add coastlines to this GeoAxes instance
+        ax.add_feature(cfeature.COASTLINE, edgecolor='white', linewidth=3)
+    else:
+        ax = plt.gca()
+
     contour_filled = plt.contourf(unique_lons, unique_lats, data, cmap=cmap_color, levels=20)
     contour_lines = plt.contour(unique_lons, unique_lats, data, colors=contour_color, linewidths=0.5, levels=20)
     plt.clabel(contour_lines, inline=True, fontsize=16, colors=contour_color)
@@ -91,7 +122,7 @@ def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None):
     plt.show()
 
     # Add Local Time secondary x-axis
-    ax = plt.gca()
+    #ax = plt.gca()
     ax2 = ax.twiny()
     ax2.set_xlim(ax.get_xlim())
     ax2_xticks = ax.get_xticks()
@@ -125,7 +156,8 @@ def plt_lev_var(datasets, variable_name, latitude, longitude, time= None, mtime=
         - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                             'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                             'Z', 'POTEN']le
-    - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+    - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
+    - mtime (array): The selected time in the format [Day, Hour, Min]
     - latitude (float): Latitude value to filter the data.
     - longitude (float): Longitude value to filter the data.
 
@@ -190,7 +222,8 @@ def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None):
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                                 'Z', 'POTEN']le
-        - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - mtime (array): The selected time in the format [Day, Hour, Min]
         - longitude (float): Longitude value to filter the data.
     
     Returns:
@@ -260,7 +293,8 @@ def plt_lev_lat(datasets, variable_name, longitude, time= None, mtime=None):
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                                 'Z', 'POTEN']
-        - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - mtime (array): The selected time in the format [Day, Hour, Min]
         - selected_ilev (float): The selected ilevel value.
     
     Returns:
@@ -387,7 +421,8 @@ def plt_lat_time(datasets, variable_name, level, longitude):
             - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                                 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
                                 'Z', 'POTEN']
-        - time (str): The selected datetime in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
+        - mtime (array): The selected time in the format [Day, Hour, Min]
         - level (float): Lev value to filter the data.
         - longitude (float): Longitude value to filter the data.
     
