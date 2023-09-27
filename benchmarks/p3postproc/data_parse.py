@@ -61,17 +61,18 @@ def lev_ilev_lon (datasets, variable_name, selected_time, selected_lat):
     - selected_ut (float): UT value in hours for selected_time.
     - selected_mtime (array): An array containing Day, Hour, Min of the model run
     """
-
+    
+    
     # Load the dataset using xarray
     #ds = xr.open_dataset(dataset)   
-    for ds in datasets:
+    for ds, filenames in datasets:
         if selected_time in ds['time'].values:
             # Extract variable attributes
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
             selected_mtime = get_mtime(ds,selected_time)
-
+            filename = filenames
             data = ds[variable_name].sel(time=selected_time, lat=selected_lat, method='nearest')
             lons = data.lon.values
 
@@ -81,7 +82,7 @@ def lev_ilev_lon (datasets, variable_name, selected_time, selected_lat):
                 levs_ilevs = data.lev.values[not_all_nan_indices]
             except:
                 levs_ilevs = data.ilev.values[not_all_nan_indices]
-    return(variable_values, lons, levs_ilevs, selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime)
+    return(variable_values, lons, levs_ilevs, selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime, filename)
 
 
 
@@ -108,7 +109,10 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev):
     - selected_ut (float): UT value in hours for selected_time.
     - selected_mtime (array): An array containing Day, Hour, Min of the model run.
     """
-    for ds in datasets:
+
+
+    
+    for ds, filenames in datasets:
         if selected_time in ds['time'].values:
             if 'lev' not in ds[variable_name].dims:
                 raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'lev'")
@@ -120,7 +124,7 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev):
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
             selected_mtime = get_mtime(ds,selected_time)
-            
+            filename = filenames
 
             # Extract the data for the given selected_time and lev
             if selected_lev in ds['lev'].values:
@@ -145,7 +149,7 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev):
                 # Return the averaged data
                 variable_values = (variable_values_1 + variable_values_2) / 2
 
-    return variable_values, selected_lev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime
+    return variable_values, selected_lev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
 
 
 def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
@@ -169,10 +173,11 @@ def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
     - selected_ut (float): UT value in hours for selected_time.
     - selected_mtime (array): An array containing Day, Hour, Min of the model run.
     """
-
+    
+    selected_ilev = float(selected_ilev)
     # Load the dataset using xarray
     #ds = xr.open_dataset(dataset)   
-    for ds in datasets:
+    for ds, filenames in datasets:
         if selected_time in ds['time'].values:
             if 'ilev' not in ds[variable_name].dims:
                 raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'ilev'")
@@ -185,7 +190,7 @@ def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
             selected_mtime=get_mtime(ds,selected_time)
-
+            filename = filenames
             # Extract the data for the given selected_time and lev
             if selected_ilev in ds['ilev'].values:
                 data = ds[variable_name].sel(time=selected_time, ilev=selected_ilev)
@@ -209,7 +214,7 @@ def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
                 # Return the averaged data
                 variable_values = (variable_values_1 + variable_values_2) / 2
 
-    return variable_values, selected_ilev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime
+    return variable_values, selected_ilev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
 
 
 def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_lon):
@@ -235,7 +240,10 @@ def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_
     - selected_ut (float): UT value in hours for selected_time.
     - selected_mtime (array): An array containing Day, Hour, Min of the model run.
     """
-    for ds in datasets:
+    
+    
+    selected_lon = float(selected_lon)
+    for ds, filenames in datasets:
         if selected_time in ds['time'].values:
             # Extract the variable data for the specified time, latitude, and longitude
             data = ds[variable_name].sel(time=selected_time, lat=selected_lat, lon=selected_lon, method="nearest")
@@ -244,7 +252,7 @@ def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
             selected_mtime=get_mtime(ds,selected_time)
-
+            filename = filenames
             valid_indices = ~np.isnan(data.values)
             variable_values = data.values[valid_indices]
             try:
@@ -252,7 +260,7 @@ def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_
             except:
                 levs_ilevs = ds['ilev'].values[valid_indices]
 
-    return variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime 
+    return variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime, filename 
 
 def calc_avg_ht(datasets, selected_time, selected_lev_ilev):
     """
@@ -266,7 +274,9 @@ def calc_avg_ht(datasets, selected_time, selected_lev_ilev):
     Returns:
     - float: The average ZG value for the given conditions.
     """
-    for ds in datasets:
+    
+    
+    for ds, filenames in datasets:
         if selected_time in ds['time'].values:
             if selected_lev_ilev in ds['ilev'].values:
                 heights = ds['ZG'].sel(time=selected_time, ilev=selected_lev_ilev).values
@@ -297,7 +307,29 @@ def min_max(variable_values):
     
     return np.nanmin(variable_values), np.nanmax(variable_values)
 
-
+def get_time(datasets, mtime):
+    """
+    This function takes a dataset and mtime as parameters, searches for the time value 
+    in the dataset corresponding to mtime, and returns the np.datetime64 time value.
+    
+    :param dataset: xarray Dataset object
+    :param mtime: List of integers representing [day, hour, minute]
+    :return: np.datetime64 object representing the corresponding time value
+    """
+    for ds, filenames in datasets:
+        # Convert mtime to numpy array for comparison
+        mtime_array = np.array(mtime)
+        
+        # Find the index where mtime matches in the dataset
+        idx = np.where(np.all(ds['mtime'].values == mtime_array, axis=1))[0]
+        
+        if len(idx) == 0:
+            continue  # Return None if no matching time is found
+        
+        # Get the corresponding datetime64 value from the time variable
+        time = ds['time'].values[idx][0]
+        
+        return time
 
 def get_mtime(ds, selected_time):
     """Find the mtime array for the corresponding selected time.
@@ -310,7 +342,7 @@ def get_mtime(ds, selected_time):
     - array: mtime array containing [Day,Hour,Min].
     """
     # Convert input string to numpy datetime64 format
-    selected_time = np.datetime64(selected_time)
+    
 
     # Extract time and mtime variables from the dataset
     time_variable = ds['time'].values
@@ -388,15 +420,16 @@ def lev_ilev_lat (datasets, variable_name, selected_time, selected_lon):
     - selected_ut (float): UT value in hours for selected_time.
     - selected_mtime (array): An array containing Day, Hour, Min of the model run
     """
-
-    for ds in datasets:
+    
+    selected_lon = float(selected_lon)
+    for ds, filenames in datasets:
         if selected_time in ds['time'].values:
             # Extract variable attributes
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
             selected_mtime = get_mtime(ds,selected_time)
-
+            filename = filenames
             data = ds[variable_name].sel(time=selected_time, lon=selected_lon, method='nearest')
             lats = data.lat.values
 
@@ -406,7 +439,7 @@ def lev_ilev_lat (datasets, variable_name, selected_time, selected_lon):
                 levs_ilevs = data.lev.values[not_all_nan_indices]
             except:
                 levs_ilevs = data.ilev.values[not_all_nan_indices]
-    return(variable_values, lats, levs_ilevs, selected_lon, variable_unit, variable_long_name, selected_ut, selected_mtime)
+    return(variable_values, lats, levs_ilevs, selected_lon, variable_unit, variable_long_name, selected_ut, selected_mtime,filename)
 
 
 
@@ -433,7 +466,8 @@ def lev_ilev_time (datasets, variable_name, selected_lat, selected_lon):
     - selected_ut (float): UT value in hours for selected_time.
     - selected_mtime (array): An array containing Day, Hour, Min of the model run
     """
-
+    
+    selected_lon = float(selected_lon)
     # Load the dataset using xarray
     #ds = xr.open_dataset(dataset)   
 
@@ -444,7 +478,7 @@ def lev_ilev_time (datasets, variable_name, selected_lat, selected_lon):
     combined_mtime = []
     levs_ilevs_all = []
     
-    for ds in datasets:
+    for ds, filenames in datasets:
         variable_unit = ds[variable_name].attrs.get('units', 'N/A')
         variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
         mtime_values = ds['mtime'].values
@@ -501,6 +535,8 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon):
     - selected_mtime (array): An array containing Day, Hour, Min of the model run
     """
 
+    
+    selected_lon = float(selected_lon)
     # Load the dataset using xarray
     #ds = xr.open_dataset(dataset)   
 
@@ -511,14 +547,14 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon):
     lats_all = []
     
     avg_info_print = 0
-    for ds in datasets:
+    for ds, filenames in datasets:
         if 'lev' not in ds[variable_name].dims:
             raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'lev'")
             return 0
         variable_unit = ds[variable_name].attrs.get('units', 'N/A')
         variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
         mtime_values = ds['mtime'].values
-        
+        filename = filenames
         if selected_lev in ds['lev'].values:
             data = ds[variable_name].sel(lev=selected_lev, lon=selected_lon, method='nearest')
             variable_values = data.T 
@@ -551,7 +587,7 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon):
 
 
 
-    return(variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name)
+    return(variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name, filename)
 
 
 
@@ -576,7 +612,8 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon):
     - selected_ut (float): UT value in hours for selected_time.
     - selected_mtime (array): An array containing Day, Hour, Min of the model run
     """
-
+    selected_ilev = float(selected_ilev)
+    selected_lon = float(selected_lon)
     # Load the dataset using xarray
     #ds = xr.open_dataset(dataset)   
 
@@ -587,14 +624,13 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon):
     lats_all = []
     
     avg_info_print = 0
-    for ds in datasets:
+    for ds, filenames in datasets:
         if 'ilev' not in ds[variable_name].dims:
             raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'ilev'")
             return 0
         variable_unit = ds[variable_name].attrs.get('units', 'N/A')
         variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
         mtime_values = ds['mtime'].values
-        
         if selected_ilev in ds['ilev'].values:
             data = ds[variable_name].sel(ilev=selected_ilev, lon=selected_lon, method='nearest')
             variable_values = data.T 

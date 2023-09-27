@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 from getoptions import get_options
 from plot_gen import plt_lat_lon, plt_lev_var, plt_lev_lon, plt_lev_lat, plt_lev_time, plt_lat_time
-
+import numpy as np
 def main():
     args = get_options()
     
@@ -29,11 +29,30 @@ def main():
                 if file.endswith('.nc') and (args.dataset_filter is None or args.dataset_filter in file):
                     file_path = os.path.join(args.dir, file)
                     #print(file_path)
-                    datasets.append(xr.open_dataset(file_path))
+                    datasets.append([xr.open_dataset(file_path), file])
         if args.plot_type in ['plt_lev_time', 'plt_lat_time'] and not datasets:
             raise ValueError(f"{args.plot_type} requires non-empty datasets array.")
-
         
+        if args.time:  # If a time argument is specified
+            available_times = set()  # Using a set to avoid duplicate times
+            for ds, filename in datasets:
+                times = ds['time'].values  # Assuming 'time' is the name of the time dimension in your datasets
+                available_times.update(times)
+            if np.datetime64(args.time) not in available_times:
+                raise ValueError(f"The specified time {args.time} is not available in the datasets. Available times are {available_times}")
+            args.time = np.datetime64(args.time)
+
+        if args.mtime:  # If an mtime argument is specified
+            available_mtimes = set()  # Using a set to avoid duplicate mtimes
+            for ds, filename in datasets:
+                mtimes = [tuple(m) for m in ds['mtime'].values]  # Convert each mtime to tuple for hashing
+                available_mtimes.update(mtimes)
+            input_mtime = tuple(args.mtime)  # Assuming args.mtime is already a list
+            if input_mtime not in available_mtimes:
+                sorted_mtimes = sorted(list(available_mtimes))  # Sort the available mtimes
+                raise ValueError(f"The specified mtime {args.mtime} is not available in the datasets. Available mtimes are {sorted_mtimes}")
+            args.mtime = input_mtime
+
         # Inspect the function signature and construct the arguments dictionary accordingly
         function_args = {}
         for param in inspect.signature(plot_function).parameters.keys():
@@ -44,9 +63,10 @@ def main():
 
         plot_object = plot_function(**function_args)
         
+
         if args.output_format:
             filename = f"output_plot.{args.output_format}"
-            plt.savefig(filename, format=args.output_format)
+            plt.savefig(filename, format=args.output_format, bbox_inches='tight', pad_inches=0.5)
             print(f"Plot saved as {filename}")
         else:
             plt.show()
