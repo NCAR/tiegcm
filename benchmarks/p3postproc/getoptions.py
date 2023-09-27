@@ -14,7 +14,8 @@ def get_options():
     parser.add_argument('--dataset_filter', type=str, help='Filter to load datasets.')
     parser.add_argument('--output_format', type=str, choices=['jpeg', 'pdf'], help='Format to save the plots.')
     parser.add_argument('--coastlines', type=bool, help='Add coast lines to the plots.')
-    
+    parser.add_argument('-levmin','--level_minimum', type=float, help='Minimum level to plot')
+    parser.add_argument('-levmax','--level_maximum', type=float, help='Maximum level to plot')
     args = parser.parse_args()
     
     plot_requirements = {
