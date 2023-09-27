@@ -337,7 +337,7 @@ def plt_lev_lat(datasets, variable_name, longitude, time= None, mtime=None):
     plt.text(-45, -9, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28)
     plt.text(45, -9, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28)
     plt.text(45, -10, "Day, Hour, Min = "+str(selected_day)+","+str(selected_hour)+","+str(selected_min), ha='center', va='center',fontsize=28)
-    plt.text(-90, -10, str(filename), ha='center', va='center',fontsize=28)
+    plt.text(-45, -10, str(filename), ha='center', va='center',fontsize=28)
 
     plt.show()
     #plot, ax = plt.subplots()

@@ -71,7 +71,7 @@ def main():
         # Save the plot if an output format is specified
         if args.output_format:
             filename = f"output_plot.{args.output_format}"
-            plt.savefig(filename, dpi=100, format=args.output_format, bbox_inches='tight', pad_inches=0.5)
+            plt.savefig(filename, format=args.output_format, bbox_inches='tight', pad_inches=0.5)
             print(f"Plot saved as {filename}")
         else:
             plt.show()
