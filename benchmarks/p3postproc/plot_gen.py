@@ -20,6 +20,25 @@ def longitude_to_local_time(longitude):
     local_time = (longitude / 15) % 24
     return local_time
 
+def local_time_to_longitude(local_time):
+    """
+    Convert local time to longitude.
+    
+    Parameters:
+        - local_time (float): Local time value.
+    
+    Returns:
+        - longitude (float): Longitude corresponding to the given local time.
+    """
+    # Each hour of local time corresponds to 15 degrees of longitude
+    longitude = (local_time * 15) % 360
+    
+    # Adjusting the longitude to be between -180 and 180 degrees
+    if longitude > 180:
+        longitude = longitude - 360
+    
+    return longitude
+
 def color_scheme(variable_name):
     density_type = ['NE', 'DEN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE']
     temp_type = ['TN', 'TE', 'TI', 'QJOULE']
@@ -38,7 +57,7 @@ def color_scheme(variable_name):
         contour_color = 'white'
     return cmap_color, contour_color
 
-def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlines=False):
+def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlines=False, latitude_minimum = -87.5, latitude_maximum = 87.5, longitude_minimum = -180., longitude_maximum = 175.):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
     
@@ -118,6 +137,9 @@ def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlin
     plt.xlabel('Longitude (Deg)', fontsize=28)
     plt.xticks([value for value in unique_lons if value % 30 == 0],fontsize=18)
     plt.yticks(fontsize=18)
+    plt.xlim(longitude_minimum,longitude_maximum)
+    plt.ylim(latitude_minimum,latitude_maximum)
+
     plt.tight_layout()
     plt.show()
 
@@ -146,7 +168,7 @@ def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlin
 
 
 
-def plt_lev_var(datasets, variable_name, latitude, longitude, level_minimum = -8, level_maximum = 8, time= None, mtime=None):
+def plt_lev_var(datasets, variable_name, latitude, longitude = None, localtime = None, level_minimum = -8, level_maximum = 8, time= None, mtime=None):
     """
     Plots the given data as a line plot.
     
@@ -167,6 +189,8 @@ def plt_lev_var(datasets, variable_name, latitude, longitude, level_minimum = -8
     # Printing Execution data
     if time == None:
         time = get_time(datasets, mtime)
+    if longitude == None:
+        longitude = local_time_to_longitude(localtime)
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(latitude)+"]---["+str(longitude)+"]---------------")
 
 
@@ -212,7 +236,7 @@ def plt_lev_var(datasets, variable_name, latitude, longitude, level_minimum = -8
     return(plot)
 
 
-def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_maximum = 6.75, time= None, mtime=None):
+def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_maximum = 6.75, longitude_minimum = -180., longitude_maximum = 175., time= None, mtime=None):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
     
@@ -259,7 +283,9 @@ def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_
     plt.xlabel('Longitude (Deg)',fontsize=28)
     plt.xticks([value for value in unique_lons if value % 30 == 0],fontsize=18)  
     plt.yticks(fontsize=18) 
+    plt.xlim(longitude_minimum,longitude_maximum)
     plt.ylim(level_minimum, level_maximum)
+
     # Add Local Time secondary x-axis
     ax = plt.gca()
     ax2 = ax.twiny()
@@ -283,7 +309,7 @@ def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_
     return(plot)
 
 
-def plt_lev_lat(datasets, variable_name, longitude, level_minimum = -6.75, level_maximum = 6.75, time= None, mtime=None):
+def plt_lev_lat(datasets, variable_name, longitude = None, localtime = None, level_minimum = -6.75, level_maximum = 6.75, latitude_minimum = -87.5,latitude_maximum = 87.5, time= None, mtime=None):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and latgitude.
     
@@ -303,6 +329,9 @@ def plt_lev_lat(datasets, variable_name, longitude, level_minimum = -6.75, level
     # Printing Execution data
     if time == None:
         time = get_time(datasets, mtime)
+    if longitude == None:
+        longitude = local_time_to_longitude(localtime)
+
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(longitude)+"]---------------")
     # Generate 2D arrays, extract variable_unit
     variable_values, unique_lats, unique_levs,longitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_lat(datasets, variable_name, time, longitude)
@@ -330,9 +359,9 @@ def plt_lev_lat(datasets, variable_name, longitude, level_minimum = -6.75, level
     plt.xlabel('Latitude (Deg)',fontsize=28)
     plt.xticks(fontsize=18)  
     plt.yticks(fontsize=18) 
+    plt.xlim(latitude_minimum,latitude_maximum)
     plt.ylim(level_minimum,level_maximum)
-
-
+    
     # Add subtext to the plot
     plt.text(0.25, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
     plt.text(0.75, -0.2, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
@@ -349,7 +378,7 @@ def plt_lev_lat(datasets, variable_name, longitude, level_minimum = -6.75, level
 
 
 
-def plt_lev_time(datasets, variable_name, latitude, longitude,  level_minimum = -6.75, level_maximum = 6.75):
+def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime = None,  level_minimum = -6.75, level_maximum = 6.75):
     """
     Generates a contour plot for the given 2D array of variable values, level, and time.
     
@@ -367,6 +396,8 @@ def plt_lev_time(datasets, variable_name, latitude, longitude,  level_minimum = 
     """
     latitude = float(latitude)
     longitude = float(longitude)
+    if longitude == None:
+        longitude = local_time_to_longitude(localtime)
 
     #print(datasets)
     variable_values_all, levs_ilevs, mtime_values, longitude, variable_unit, variable_long_name = lev_ilev_time(datasets, variable_name, latitude, longitude)
@@ -411,7 +442,7 @@ def plt_lev_time(datasets, variable_name, latitude, longitude,  level_minimum = 
 
 
 
-def plt_lat_time(datasets, variable_name, level, longitude):
+def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = None, latitude_minimum = -87.5,latitude_maximum = 87.5):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and time.
     
@@ -429,6 +460,9 @@ def plt_lat_time(datasets, variable_name, level, longitude):
     Returns:
         - Contour plot.
     """
+    if longitude == None:
+        longitude = local_time_to_longitude(localtime)
+        
     print("---------------["+variable_name+"]---["+str(level)+"]---["+str(longitude)+"]---------------")
 
     try:
@@ -463,7 +497,7 @@ def plt_lat_time(datasets, variable_name, level, longitude):
     plt.tight_layout()
     plt.xticks(fontsize=18)  
     plt.yticks(fontsize=18) 
-
+    plt.ylim(latitude_minimum,latitude_maximum)
 
 
     # Add subtext to the plot

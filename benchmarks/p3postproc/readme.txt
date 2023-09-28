@@ -5,7 +5,7 @@ For p3postproc here are the requirements:
     -conda activate {env_name}
     - chmod +x * on the directory
     - ./tiepy with the arguments  
-        - Example: ./tiepy --plot_type lev_lat --dir /glade/u/home/nikhilr/tiegcm_func/postproc/tiegcm_res5.0_decsol_smax/hist/ --dataset_filter sech -var TN -mtime 360 0 0 -lon 0.0 --output_format jpeg
+        - Example: ./tiepy --plot_type lev_lat -dir /glade/u/home/nikhilr/tiegcm_func/postproc/tiegcm_res5.0_decsol_smax/hist/ --dataset_filter sech -var TN -mtime 360 0 0 -lon 0.0 --output_format jpeg
 
 
 cond env contains 

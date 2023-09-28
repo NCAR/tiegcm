@@ -24,15 +24,16 @@ def main():
     # Get the plotting function based on the user input plot type
     plot_function = plot_functions.get(args.plot_type)
     
+    print(plot_function)
     
     if plot_function:
         # Checking if a directory is provided in the arguments
         datasets = []
-        if args.dir:
-            files = sorted(os.listdir(args.dir)) 
+        if args.directory:
+            files = sorted(os.listdir(args.directory)) 
             for file in files:
                 if file.endswith('.nc') and (args.dataset_filter is None or args.dataset_filter in file):
-                    file_path = os.path.join(args.dir, file)
+                    file_path = os.path.join(args.directory, file)
                     datasets.append([xr.open_dataset(file_path), file]) #loading datasets to xarray
 
         # Check and validate the specified time argument
