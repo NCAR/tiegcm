@@ -57,7 +57,7 @@ def color_scheme(variable_name):
         contour_color = 'white'
     return cmap_color, contour_color
 
-def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlines=False, latitude_minimum = -87.5, latitude_maximum = 87.5, longitude_minimum = -180., longitude_maximum = 175.):
+def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlines=False, latitude_minimum = -87.5, latitude_maximum = 87.5, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None ):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
     
@@ -94,6 +94,11 @@ def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlin
     # Printing Execution data
     if time == None:
         time = get_time(datasets, mtime)
+    if localtime_minimum != None:
+        longitude_minimum = local_time_to_longitude(localtime_minimum)
+    if localtime_maximum != None:
+        longitude_maximum = local_time_to_longitude(localtime_maximum)
+    
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(level)+"]---------------")
     # Generate 2D arrays, extract variable_unit
     
@@ -236,7 +241,7 @@ def plt_lev_var(datasets, variable_name, latitude, longitude = None, localtime =
     return(plot)
 
 
-def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_maximum = 6.75, longitude_minimum = -180., longitude_maximum = 175., time= None, mtime=None):
+def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_maximum = 6.75, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None, time= None, mtime=None):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
     
@@ -256,6 +261,11 @@ def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_
     # Printing Execution data
     if time == None:
         time = get_time(datasets, mtime)
+    if localtime_minimum != None:
+        longitude_minimum = local_time_to_longitude(localtime_minimum)
+    if localtime_maximum != None:
+        longitude_maximum = local_time_to_longitude(localtime_maximum)
+        
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(latitude)+"]---------------")
     # Generate 2D arrays, extract variable_unit
     variable_values, unique_lons, unique_levs,latitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_lon(datasets, variable_name, time, latitude)
@@ -462,7 +472,7 @@ def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = N
     """
     if longitude == None:
         longitude = local_time_to_longitude(localtime)
-        
+
     print("---------------["+variable_name+"]---["+str(level)+"]---["+str(longitude)+"]---------------")
 
     try:
