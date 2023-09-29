@@ -33,9 +33,11 @@ def main():
             output_directory = os.path.join(args.output_directory, 'proc')
             os.makedirs(output_directory, exist_ok=True)
             output = os.path.join(output_directory, filename)
+            
             with PdfPages(output) as pdf:
-                while True:  # Keep running until the user inputs "exit"           
-                    next_command = input("Enter command or 'exit' to terminate: ")
+                while True:  # Keep running until the user inputs "exit"  
+                    print("Enter command or 'exit' to terminate: ")
+                    next_command = input()
                     if next_command.strip().lower() == 'exit':
                         break 
                     else:                   
@@ -45,8 +47,9 @@ def main():
                         pdf.savefig(plot, bbox_inches='tight', pad_inches=0.5)
                         plt.close(plot)
         else:
-            while True:  # Keep running until the user inputs "exit"           
-                next_command = input("Enter command or 'exit' to terminate: ")
+            while True:  # Keep running until the user inputs "exit"
+                print("Enter command or 'exit' to terminate: ")           
+                next_command = input()
                 if next_command.strip().lower() == 'exit':
                     break 
                 else:                   
