@@ -1,5 +1,5 @@
 import argparse
-
+import os
 def get_options():
     parser = argparse.ArgumentParser(description='Generate different types of plots based on user input.')
     
@@ -13,8 +13,9 @@ def get_options():
     parser.add_argument('-ut','--localtime', type=float, help='Selected localtime / longitude for the plot.')
 
     parser.add_argument('-dir','--directory', type=str, help='Directory path containing the datasets.')
-    parser.add_argument('--dataset_filter', type=str, help='Filter to load datasets.')
-    parser.add_argument('--output_format', type=str, choices=['jpeg', 'pdf'], help='Format to save the plots.')
+    parser.add_argument('--dataset_filter', type=str,choices=['prim', 'sech'], help='Filter to load datasets.')
+    parser.add_argument('-stdout','--output_directory', type=str, default=str(os.getcwd()), help='Directory to save the plots. Default: Current working directory')
+    parser.add_argument('--output_format', type=str, choices=['jpeg', 'pdf', 'script'], default='jpeg', help='Format to save the plots. Default: jpeg')
 
 
     parser.add_argument('--coastlines', type=bool, help='Add coast lines to the lat_lon plots')
@@ -62,60 +63,89 @@ def get_options():
         'valid_localtimes': [12.0, 12.33, 12.67, 13.0, 13.33, 13.67, 14.0, 14.33, 14.67, 15.0, 15.33, 15.67, 16.0, 16.33, 16.67, 17.0, 17.33, 17.67, 18.0, 18.33, 18.67, 19.0, 19.33, 19.67, 20.0, 20.33, 20.67, 21.0, 21.33, 21.67, 22.0, 22.33, 22.67, 23.0, 23.33, 23.67, 0.0, 0.33, 0.67, 1.0, 1.33, 1.67, 2.0, 2.33, 2.67, 3.0, 3.33, 3.67, 4.0, 4.33, 4.67, 5.0, 5.33, 5.67, 6.0, 6.33, 6.67, 7.0, 7.33, 7.67, 8.0, 8.33, 8.67, 9.0, 9.33, 9.67, 10.0, 10.33, 10.67, 11.0, 11.33, 11.67]
     }
 
+
+    #
+    # Check and verify required arguments and values for the plots.
+    #
     if args.plot_type in plot_requirements:
         requirements = plot_requirements[args.plot_type]
+        #
+        # Check for required arguments except time, mtime, longitude, localtime.
+        #
         for arg in requirements['required']:
-            if arg in ['time', 'mtime', 'longitude', 'localtime']:  # Skip checking for 'time', 'mtime', 'longitude', and 'localtime' here
+            if arg in ['time', 'mtime', 'longitude', 'localtime']:
                 continue
             if getattr(args, arg) is None:
                 parser.error(f"{args.plot_type} requires the argument --{arg}")
-        
+        #
+        # Enforce that either 'time' or 'mtime' must be provided
+        #
+        if 'time' in requirements['required'] or 'mtime' in requirements['required']:
+            if getattr(args, 'time') is None and getattr(args, 'mtime') is None:
+                parser.error(f"{args.plot_type} requires either the argument --time or --mtime")
+        #
         # Check if 'longitude' or 'localtime' is in requirements and at least one of them is provided
+        #
         if 'longitude' in requirements['required'] or 'localtime' in requirements['required']:
             if getattr(args, 'longitude') is None and getattr(args, 'localtime') is None:
                 parser.error(f"{args.plot_type} requires either the argument --longitude or --localtime")
         
-        # Enforce that either 'time' or 'mtime' must be provided
-        if 'time' in requirements['required'] or 'mtime' in requirements['required']:
-            if getattr(args, 'time') is None and getattr(args, 'mtime') is None:
-                parser.error(f"{args.plot_type} requires either the argument --time or --mtime")
-
-        
+        #
+        # Check if valid values of 'longitude' or 'localtime' is provided.
+        #
         if 'longitude' in requirements['required'] or 'localtime' in requirements['required']:
             if args.longitude is not None and args.longitude not in valid_values['valid_longitudes']:
                 parser.error(f"Invalid longitude for {args.plot_type}. \n              Valid longitudes are {str(valid_values['valid_longitudes'])}")
             elif args.localtime is not None and args.localtime not in valid_values['valid_localtimes']:
                 parser.error(f"Invalid localtime for {args.plot_type}. \n              Valid localtimes are {str(valid_values['valid_localtimes'])}")
-        
+        #
+        # Check if valid values of 'level' is provided.
+        #
         if 'level' in requirements['required']:
             if float(args.level) not in valid_values['valid_levels']:
                 parser.error(f"Invalid level for {args.plot_type}. \n              Valid levels are {str(valid_values['valid_levels'])}")
-
+        #
+        # Check if valid values of 'latitude' is provided.
+        #
         if 'latitude' in requirements['required']:
             if args.latitude not in valid_values['valid_latitudes']:
                 parser.error(f"Invalid latitude for {args.plot_type}. \n              Valid latitudes are {str(valid_values['valid_latitudes'])}")
-
+        #
+        # Check if valid values of 'variable_name' is provided.
+        #
         if 'variable_name' in requirements['required']:     
             if args.variable_name not in valid_values['valid_variables']:
                 parser.error(f"Invalid variable_name for {args.plot_type}. \n              Valid variables are {' '.join(valid_values['valid_variables'])}")
+    
+    #
+    # Check and verify optional arguments for the plots.
+    #
 
+    #
+    # Check if coastlines is used and applies to the provided plot.
+    #
     if args.plot_type != 'lat_lon' :
         if args.coastlines is not None:
             parser.error(f"--coastlines can only be used with plot types: lat_lon") 
-
+    #
+    # Check if level_minimum and/or level_maximum is used and applies to the provided plot.
+    #
     level_bound_plots = ['lev_var', 'lev_lon', 'lev_lat', 'lev_time']
     if args.plot_type not in level_bound_plots:
         if args.level_minimum is not None or args.level_maximum is not None:
             parser.error(f"--level_minimum and --level_maximum can only be used with plot types: {', '.join(level_bound_plots)} \n              Valid optoins for {args.plot_type}: {', '.join(plot_requirements[args.plot_type]['optional'])} ")     
-
+    #
+    # Check if longitude_minimum/localtime_minimum and/or longitude_maximum/localtime_maximum is used and applies to the provided plot.
+    #
     longitude_bound_plots = ['lat_lon', 'lev_lon']
     if args.plot_type not in longitude_bound_plots:
         if args.longitude_minimum is not None or args.longitude_maximum is not None:
             parser.error(f"--longitude_minimum and --longitude_maximum can only be used with plot types: {', '.join(longitude_bound_plots)} \n              Valid optoins for {args.plot_type}: {', '.join(plot_requirements[args.plot_type]['optional'])} ") 
         if args.localtime_minimum is not None or args.localtime_maximum is not None:
             parser.error(f"--localtime_minimum and --localtime_maximum can only be used with plot types: {', '.join(longitude_bound_plots)} \n              Valid optoins for {args.plot_type}: {', '.join(plot_requirements[args.plot_type]['optional'])} ") 
-
-
+    #
+    # Check if latitude_minimum and/or latitude_maximum is used and applies to the provided plot.
+    #
     latitude_bound_plots = ['lat_lon', 'lev_lat', 'lat_time']
     if args.plot_type not in latitude_bound_plots:
         if args.latitude_minimum is not None or args.latitude_maximum is not None:
