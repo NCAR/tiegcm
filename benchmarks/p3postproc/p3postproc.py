@@ -53,7 +53,6 @@ fig12 = plt_lat_time(datasets, "TN", 0.0, -180.0)
 pdf_multi_path = "/glade/u/home/nikhilr/tiegcm_func/tiegcm2.0/benchmarks/p3postproc/test.pdf"
 with PdfPages(pdf_multi_path) as pdf:
     pdf.savefig(fig1, bbox_inches='tight', pad_inches=0.5)
-    '''
     pdf.savefig(fig2, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig3, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig4, bbox_inches='tight', pad_inches=0.5)
@@ -65,6 +64,6 @@ with PdfPages(pdf_multi_path) as pdf:
     pdf.savefig(fig10, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig11, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig12, bbox_inches='tight', pad_inches=0.5)
-    '''
+
 #print(lat_lon_lev(dataset, "TN", "2002-12-21T00:00:00", 2.25))
 #print(lat_lon_ilev(dataset, "NE", "2002-12-21T00:00:00", -6.5))
