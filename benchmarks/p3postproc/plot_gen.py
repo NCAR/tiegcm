@@ -1,7 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from data_parse import lat_lon_lev, lat_lon_ilev,calc_avg_ht, min_max, lev_ilev_var, lev_ilev_lon, lev_ilev_lat,lev_ilev_time, lat_time_lev,lat_time_ilev, get_time
+from data_parse import lat_lon_lev, lat_lon_ilev,lat_lon, calc_avg_ht, min_max, lev_ilev_var, lev_ilev_lon, lev_ilev_lat,lev_ilev_time, lat_time_lev,lat_time_ilev, get_time
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
@@ -30,13 +30,16 @@ def local_time_to_longitude(local_time):
     Returns:
         - longitude (float): Longitude corresponding to the given local time.
     """
-    # Each hour of local time corresponds to 15 degrees of longitude
-    longitude = (local_time * 15) % 360
-    
-    # Adjusting the longitude to be between -180 and 180 degrees
-    if longitude > 180:
-        longitude = longitude - 360
-    
+    if local_time == 'mean':
+        longitude = 'mean'
+    else:
+        # Each hour of local time corresponds to 15 degrees of longitude
+        longitude = (local_time * 15) % 360
+        
+        # Adjusting the longitude to be between -180 and 180 degrees
+        if longitude > 180:
+            longitude = longitude - 360
+
     return longitude
 
 def color_scheme(variable_name):
@@ -57,7 +60,7 @@ def color_scheme(variable_name):
         contour_color = 'white'
     return cmap_color, contour_color
 
-def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlines=False, latitude_minimum = -87.5, latitude_maximum = 87.5, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None ):
+def plt_lat_lon(datasets, variable_name, level = None, time= None, mtime=None, coastlines=False, latitude_minimum = -87.5, latitude_maximum = 87.5, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None ):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
     
@@ -102,13 +105,16 @@ def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlin
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(level)+"]---------------")
     # Generate 2D arrays, extract variable_unit
     
-    try:
-        data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon_lev(datasets, variable_name, time, level)
-    except ValueError:
-        data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon_ilev(datasets, variable_name, time, level)
-
+    if level != None:
+        try:
+            data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon_lev(datasets, variable_name, time, level)
+        except ValueError:
+            data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon_ilev(datasets, variable_name, time, level)
+        avg_ht=calc_avg_ht(datasets, time,level)
+    else:
+        data, unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon(datasets, variable_name, time)
     
-    avg_ht=calc_avg_ht(datasets, time,level)
+    
     min_val, max_val = min_max(data)
     selected_day=selected_mtime[0]
     selected_hour=selected_mtime[1]
@@ -137,7 +143,10 @@ def plt_lat_lon(datasets, variable_name, level, time= None, mtime=None, coastlin
     cbar.set_label(variable_name + " [" + variable_unit + "]", size=28, labelpad=15)
     cbar.ax.tick_params(labelsize=18)
     plt.title(variable_long_name + ' ' + variable_name + ' (' + variable_unit + ') ' + '\n\n', fontsize=36)
-    plt.text(0, 110, 'UT=' + str(selected_ut) + '  ZP=' + str(level)+' AVG HT=' + str(avg_ht), ha='center', va='center', fontsize=28)
+    if level != None:
+        plt.text(0, 110, 'UT=' + str(selected_ut) + '  ZP=' + str(level)+' AVG HT=' + str(avg_ht), ha='center', va='center', fontsize=28)
+    else:
+        plt.text(0, 110, 'UT=' + str(selected_ut), ha='center', va='center', fontsize=28)
     plt.ylabel('Latitude', fontsize=28)
     plt.xlabel('Longitude (Deg)', fontsize=28)
     plt.xticks([value for value in unique_lons if value % 30 == 0],fontsize=18)
@@ -182,7 +191,7 @@ def plt_lev_var(datasets, variable_name, latitude, longitude = None, localtime =
     - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
         - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                             'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
-                            'Z', 'POTEN']le
+                            'Z', 'POTEN']
     - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
     - mtime (array): The selected time in the format [Day, Hour, Min]
     - latitude (float): Latitude value to filter the data.
@@ -233,7 +242,14 @@ def plt_lev_var(datasets, variable_name, latitude, longitude = None, localtime =
     plt.show()
     '''
 
-    plt.text(0.5, 1.08,'UT='+str(selected_ut) +'  LAT='+str(latitude)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    if longitude == 'mean' and latitude == 'mean':
+        plt.text(0.5, 1.08,'UT='+str(selected_ut) +"  LAT= Mean SLT= Mean", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    elif longitude == 'mean':
+        plt.text(0.5, 1.08,'UT='+str(selected_ut) +'  LAT='+str(latitude)+" SLT= Mean", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    elif latitude == 'mean':
+        plt.text(0.5, 1.08,'UT='+str(selected_ut) +'  LAT= Mean'+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    else:
+        plt.text(0.5, 1.08,'UT='+str(selected_ut) +'  LAT='+str(latitude)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.text(0.5, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.text(0.5, -0.25, "Day, Hour, Min = "+str(selected_day)+","+str(selected_hour)+","+str(selected_min), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
     plt.text(0.5, -0.3, str(filename), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
@@ -241,7 +257,7 @@ def plt_lev_var(datasets, variable_name, latitude, longitude = None, localtime =
     return(plot)
 
 
-def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_maximum = 6.75, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None, time= None, mtime=None):
+def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_maximum = 6.75, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None, time= None, mtime=None, mean = False):
     """
     Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
     
@@ -288,7 +304,10 @@ def plt_lev_lon(datasets, variable_name, latitude, level_minimum = -6.75, level_
     cbar.set_label(variable_name+" ["+variable_unit+"]", size=28, labelpad=15)
     cbar.ax.tick_params(labelsize=18)
     plt.title(variable_long_name+' '+variable_name+' ('+variable_unit+') '+'\n\n',fontsize=36 )   
-    plt.text(0.5, 1.08,'UT='+str(selected_ut) +'  LAT='+str(latitude), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    if latitude == 'mean':
+        plt.text(0.5, 1.18,'UT='+str(selected_ut) +' ZONAL MEANS', ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    else:
+        plt.text(0.5, 1.18,'UT='+str(selected_ut) +'  LAT='+str(latitude), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.ylabel('LN(P0/P) (INTERFACES)',fontsize=28)
     plt.xlabel('Longitude (Deg)',fontsize=28)
     plt.xticks([value for value in unique_lons if value % 30 == 0],fontsize=18)  
@@ -364,7 +383,10 @@ def plt_lev_lat(datasets, variable_name, longitude = None, localtime = None, lev
     cbar.set_label(variable_name+" ["+variable_unit+"]", size=28, labelpad=15)
     cbar.ax.tick_params(labelsize=18)
     plt.title(variable_long_name+' '+variable_name+' ('+variable_unit+') '+'\n\n',fontsize=36 )   
-    plt.text(0.5, 1.08,'UT='+str(selected_ut) +'  LON='+str(longitude)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    if longitude == 'mean':
+          plt.text(0.5, 1.08,'UT='+str(selected_ut) +' ZONAL MEANS', ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    else:
+        plt.text(0.5, 1.08,'UT='+str(selected_ut) +'  LON='+str(longitude)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.ylabel('LN(P0/P) (INTERFACES)',fontsize=28)
     plt.xlabel('Latitude (Deg)',fontsize=28)
     plt.xticks(fontsize=18)  

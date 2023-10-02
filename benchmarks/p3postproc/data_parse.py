@@ -73,7 +73,11 @@ def lev_ilev_lon (datasets, variable_name, selected_time, selected_lat):
             selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
             selected_mtime = get_mtime(ds,selected_time)
             filename = filenames
-            data = ds[variable_name].sel(time=selected_time, lat=selected_lat, method='nearest')
+            if selected_lat == "mean":
+                # if selected_lon is "mean", then we calculate the mean over all longitudes.
+                data = ds[variable_name].sel(time=selected_time).mean(dim='lat')
+            else:
+                data = ds[variable_name].sel(time=selected_time, lat=selected_lat, method='nearest')
             lons = data.lon.values
 
             not_all_nan_indices = ~np.isnan(data.values).all(axis=1)
@@ -128,7 +132,7 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev):
 
             # Extract the data for the given selected_time and lev
             if selected_lev in ds['lev'].values:
-                data = ds[variable_name].sel(time=selected_time, lev=selected_lev).values
+                data = ds[variable_name].sel(time=selected_time, lev=selected_lev)
                 lons = data.lon.values
                 lats = data.lat.values
                 variable_values = data.values
@@ -216,6 +220,50 @@ def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
 
     return variable_values, selected_ilev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
 
+def lat_lon(datasets, variable_name, selected_time):
+    """
+    Extract data from the dataset based on the given variable name, timestamp, and lev value.
+    
+    Args:
+    - ds (xarray): The loaded dataset opened using xarray.
+    - variable_name (str): Name of the variable to extract.
+        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
+    - selected_time (str): Timestamp to filter the data.
+    
+    Returns:
+    - variable_values (xarray):  An xarray object of variable values for the given timestamp and lev.
+    - selected_lev (str): A string of the selected lev.
+    - lons (xarray): An xarray object of longitude values.
+    - lats (xarray): An xarray object of latitude values.
+    - variable_unit (str): Unit of the variable.
+    - variable_long_name (str): Long name of the variable.
+    - selected_ut (float): UT value in hours for selected_time.
+    - selected_mtime (array): An array containing Day, Hour, Min of the model run.
+    """
+
+
+    
+    for ds, filenames in datasets:
+        if selected_time in ds['time'].values:
+
+            # Extract variable attributes
+            variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+            variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
+            selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
+            selected_mtime = get_mtime(ds,selected_time)
+            filename = filenames
+
+            # Extract the data for the given selected_time and lev
+            data = ds[variable_name].sel(time=selected_time)
+            lons = data.lon.values
+            lats = data.lat.values
+            variable_values = data.values
+
+
+    return variable_values, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
+
+
+
 
 def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_lon):
     """
@@ -242,12 +290,21 @@ def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_
     """
     
     
-    selected_lon = float(selected_lon)
     for ds, filenames in datasets:
         if selected_time in ds['time'].values:
-            # Extract the variable data for the specified time, latitude, and longitude
-            data = ds[variable_name].sel(time=selected_time, lat=selected_lat, lon=selected_lon, method="nearest")
-            
+
+            if selected_lon == "mean" and selected_lat == "mean":
+                # if selected_lon is "mean", then we calculate the mean over all longitudes.
+                data = ds[variable_name].sel(time=selected_time, lat=selected_lat).mean(dim=['lon', 'lat'])
+            elif selected_lon == "mean":
+                data = ds[variable_name].sel(time=selected_time, lat=selected_lat).mean(dim='lon')
+
+            elif selected_lat == "mean":
+                data = ds[variable_name].sel(time=selected_time, lat=selected_lat).mean(dim='lat')
+            else:
+                data = ds[variable_name].sel(time=selected_time, lat=selected_lat, lon=selected_lon, method="nearest")
+
+
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
@@ -259,8 +316,7 @@ def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_
                 levs_ilevs = ds['lev'].values[valid_indices]
             except:
                 levs_ilevs = ds['ilev'].values[valid_indices]
-
-    return variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime, filename 
+            return variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime, filename 
 
 def calc_avg_ht(datasets, selected_time, selected_lev_ilev):
     """
@@ -421,7 +477,6 @@ def lev_ilev_lat (datasets, variable_name, selected_time, selected_lon):
     - selected_mtime (array): An array containing Day, Hour, Min of the model run
     """
     
-    selected_lon = float(selected_lon)
     for ds, filenames in datasets:
         if selected_time in ds['time'].values:
             # Extract variable attributes
@@ -430,14 +485,19 @@ def lev_ilev_lat (datasets, variable_name, selected_time, selected_lon):
             selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
             selected_mtime = get_mtime(ds,selected_time)
             filename = filenames
-            data = ds[variable_name].sel(time=selected_time, lon=selected_lon, method='nearest')
+            if selected_lon == "mean":
+                # if selected_lon is "mean", then we calculate the mean over all longitudes.
+                data = ds[variable_name].sel(time=selected_time).mean(dim='lon')
+            else:
+                selected_lon = float(selected_lon)
+                data = ds[variable_name].sel(time=selected_time, lon=selected_lon, method='nearest')
             lats = data.lat.values
 
             not_all_nan_indices = ~np.isnan(data.values).all(axis=1)
             variable_values = data.values[not_all_nan_indices, :]
             try:
                 levs_ilevs = data.lev.values[not_all_nan_indices]
-            except:
+            except AttributeError:
                 levs_ilevs = data.ilev.values[not_all_nan_indices]
     return(variable_values, lats, levs_ilevs, selected_lon, variable_unit, variable_long_name, selected_ut, selected_mtime,filename)
 

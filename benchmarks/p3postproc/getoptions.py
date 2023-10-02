@@ -8,9 +8,9 @@ def get_options():
     parser.add_argument('-time','--time', type=str, help='Selected time for the plot in YYYY-MM-DDTHH:MM:SS format.')
     parser.add_argument('-mtime','--mtime',  nargs=3, type=int, help='Selected time for the plot in [Day, Hour, Min] format.')
     parser.add_argument('-lev','--level', type=float, help='Selected lev/ilev for the plot.')
-    parser.add_argument('-lat', '--latitude', type=float, help='Selected latitude for the plot.')
-    parser.add_argument('-lon','--longitude', type=float, help='Selected longitude for the plot.')
-    parser.add_argument('-ut','--localtime', type=float, help='Selected localtime / longitude for the plot.')
+    parser.add_argument('-lat', '--latitude', type=str, help='Selected latitude for the plot.')
+    parser.add_argument('-lon','--longitude', type=str, help='Selected longitude for the plot.')
+    parser.add_argument('-ut','--localtime', type=str, help='Selected localtime / longitude for the plot.')
 
     parser.add_argument('-ds','--dataset', type=str, help='Path to the sigular dataset') #dependency check
     parser.add_argument('-dir','--directory', type=str, help='Directory path containing the datasets.')
@@ -58,15 +58,15 @@ def get_options():
                     'optional': ['latitude_minimum','latitude_maximum']
                     },
     }
-    
+    '''
     valid_values = {
-        'valid_variables': ['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D', 'TI', 'TE', 'O2P', 'TN_NM', 'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 'Z', 'POTEN'],
+        'valid_variables': ['TN', 'UN', 'VN', 'WN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'NE', 'TE', 'TI', 'TEC', 'O2P', 'OP', 'POTEN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'DEN', 'QJOULE', 'HMF2', 'NMF2', 'Z', 'ZG', 'ZMAG', 'TLBC', 'ULBC', 'VLBC', 'TLBC_NM', 'ULBC_NM', 'VLBC_NM', 'LBC'],
         'valid_longitudes': [-180., -175., -170., -165., -160., -155., -150., -145., -140., -135., -130., -125., -120., -115., -110., -105., -100.,  -95., -90.,  -85.,  -80.,  -75.,  -70.,  -65.,  -60.,  -55.,  -50., -45.,  -40.,  -35.,  -30.,  -25.,  -20.,  -15.,  -10.,   -5.,  0.,    5.,   10.,   15.,   20.,   25.,   30.,   35.,   40., 45.,   50.,   55.,   60.,   65.,   70.,   75.,   80.,   85., 90.,   95.,  100.,  105.,  110.,  115.,  120.,  125.,  130., 135.,  140.,  145.,  150.,  155.,  160.,  165.,  170.,  175.],
         'valid_latitudes': [-87.5, -82.5, -77.5, -72.5, -67.5, -62.5, -57.5, -52.5, -47.5, -42.5, -37.5, -32.5, -27.5, -22.5, -17.5, -12.5,  -7.5,  -2.5, 2.5, 7.5,  12.5,  17.5,  22.5,  27.5,  32.5,  37.5,  42.5, 47.5,  52.5,  57.5,  62.5,  67.5,  72.5,  77.5,  82.5,  87.5],
         'valid_levels': [-7.  , -6.75, -6.5 , -6.25, -6.  , -5.75, -5.5 , -5.25, -5.  , -4.75, -4.5 , -4.25, -4.  , -3.75, -3.5 , -3.25, -3.  , -2.75, -2.5 , -2.25, -2.  , -1.75, -1.5 , -1.25, -1.  , -0.75, -0.5 , -0.25,  0.  ,  0.25,  0.5 ,  0.75,  1.  ,  1.25,  1.5 ,  1.75, 2.  ,  2.25,  2.5 ,  2.75,  3.  ,  3.25,  3.5 ,  3.75,  4.  , 4.25,  4.5 ,  4.75,  5.  ,  5.25,  5.5 ,  5.75,  6.  ,  6.25, 6.5 ,  6.75,  7.  ,  7.25],
         'valid_localtimes': [12.0, 12.33, 12.67, 13.0, 13.33, 13.67, 14.0, 14.33, 14.67, 15.0, 15.33, 15.67, 16.0, 16.33, 16.67, 17.0, 17.33, 17.67, 18.0, 18.33, 18.67, 19.0, 19.33, 19.67, 20.0, 20.33, 20.67, 21.0, 21.33, 21.67, 22.0, 22.33, 22.67, 23.0, 23.33, 23.67, 0.0, 0.33, 0.67, 1.0, 1.33, 1.67, 2.0, 2.33, 2.67, 3.0, 3.33, 3.67, 4.0, 4.33, 4.67, 5.0, 5.33, 5.67, 6.0, 6.33, 6.67, 7.0, 7.33, 7.67, 8.0, 8.33, 8.67, 9.0, 9.33, 9.67, 10.0, 10.33, 10.67, 11.0, 11.33, 11.67]
     }
-
+    '''
     if args.recursive:
         print('Entering Interactive Mode')
 
@@ -98,7 +98,7 @@ def get_options():
         if 'longitude' in requirements['required'] or 'localtime' in requirements['required']:
             if getattr(args, 'longitude') is None and getattr(args, 'localtime') is None:
                 parser.error(f"{args.plot_type} requires either the argument --longitude or --localtime")
-        
+        '''
         #
         # Check if valid values of 'longitude' or 'localtime' is provided.
         #
@@ -125,7 +125,7 @@ def get_options():
         if 'variable_name' in requirements['required']:     
             if args.variable_name not in valid_values['valid_variables']:
                 parser.error(f"Invalid variable_name for {args.plot_type}. \n              Valid variables are {' '.join(valid_values['valid_variables'])}")
-                
+        '''        
         #
         # Check and verify optional arguments for the plots.
         #
@@ -169,5 +169,13 @@ def get_options():
             if args.dataset.endswith('.nc') is not True:
                 parser.error(f"{args.plot_type} expects '.nc' files")
 
+    if args.latitude != 'mean' and args.latitude != None:
+        args.latitude = float(args.latitude)
+
+    if args.longitude != 'mean'and args.longitude != None:
+        args.longitude = float(args.longitude)
+
+    if args.localtime != 'mean'and args.localtime != None:
+        args.localtime = float(args.localtime)
 
     return args
