@@ -130,28 +130,36 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev):
             selected_mtime = get_mtime(ds,selected_time)
             filename = filenames
 
-            # Extract the data for the given selected_time and lev
-            if selected_lev in ds['lev'].values:
-                data = ds[variable_name].sel(time=selected_time, lev=selected_lev)
+
+            if selected_lev == "mean":
+                # if selected_lon is "mean", then we calculate the mean over all longitudes.
+                data = ds[variable_name].sel(time=selected_time).mean(dim='lev')
                 lons = data.lon.values
                 lats = data.lat.values
                 variable_values = data.values
             else:
-                print(f"The lev {selected_lev} isn't in the listed valid values.")
-                sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - selected_lev))
-                closest_lev1 = sorted_levs[0]
-                closest_lev2 = sorted_levs[1]
-                print(f"Averaging from the closest valid levs: {closest_lev1} and {closest_lev2}")
-                # Extract data for the two closest lev values using .sel()
-                data1 = ds[variable_name].sel(time=selected_time, lev=closest_lev1)
-                lons = data1.lon.values
-                lats = data1.lat.values
-                variable_values_1 = data1.values
+                # Extract the data for the given selected_time and lev
+                if selected_lev in ds['lev'].values:
+                    data = ds[variable_name].sel(time=selected_time, lev=selected_lev)
+                    lons = data.lon.values
+                    lats = data.lat.values
+                    variable_values = data.values
+                else:
+                    print(f"The lev {selected_lev} isn't in the listed valid values.")
+                    sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - selected_lev))
+                    closest_lev1 = sorted_levs[0]
+                    closest_lev2 = sorted_levs[1]
+                    print(f"Averaging from the closest valid levs: {closest_lev1} and {closest_lev2}")
+                    # Extract data for the two closest lev values using .sel()
+                    data1 = ds[variable_name].sel(time=selected_time, lev=closest_lev1)
+                    lons = data1.lon.values
+                    lats = data1.lat.values
+                    variable_values_1 = data1.values
 
-                data2 = ds[variable_name].sel(time=selected_time, lev=closest_lev2)
-                variable_values_2 = data2.values
-                # Return the averaged data
-                variable_values = (variable_values_1 + variable_values_2) / 2
+                    data2 = ds[variable_name].sel(time=selected_time, lev=closest_lev2)
+                    variable_values_2 = data2.values
+                    # Return the averaged data
+                    variable_values = (variable_values_1 + variable_values_2) / 2
 
     return variable_values, selected_lev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
 
@@ -195,28 +203,36 @@ def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
             selected_ut = ds['ut'].sel(time=selected_time).values.item() / (1e9 * 3600)
             selected_mtime=get_mtime(ds,selected_time)
             filename = filenames
-            # Extract the data for the given selected_time and lev
-            if selected_ilev in ds['ilev'].values:
-                data = ds[variable_name].sel(time=selected_time, ilev=selected_ilev)
+
+            if selected_ilev == "mean":
+                # if selected_lon is "mean", then we calculate the mean over all longitudes.
+                data = ds[variable_name].sel(time=selected_time).mean(dim='lev')
                 lons = data.lon.values
                 lats = data.lat.values
                 variable_values = data.values
             else:
-                print(f"The ilev {selected_ilev} isn't in the listed valid values.")
-                sorted_levs = sorted(ds['ilev'].values, key=lambda x: abs(x - selected_ilev))
-                closest_lev1 = sorted_levs[0]
-                closest_lev2 = sorted_levs[1]
-                print(f"Averaging from the closest valid ilevs: {closest_lev1} and {closest_lev2}")
-                # Extract data for the two closest lev values using .sel()
-                data1 = ds[variable_name].sel(time=selected_time, ilev=closest_lev1)
-                lons = data1.lon.values
-                lats = data1.lat.values
-                variable_values_1 = data1.values
+                # Extract the data for the given selected_time and lev
+                if selected_ilev in ds['ilev'].values:
+                    data = ds[variable_name].sel(time=selected_time, ilev=selected_ilev)
+                    lons = data.lon.values
+                    lats = data.lat.values
+                    variable_values = data.values
+                else:
+                    print(f"The ilev {selected_ilev} isn't in the listed valid values.")
+                    sorted_levs = sorted(ds['ilev'].values, key=lambda x: abs(x - selected_ilev))
+                    closest_lev1 = sorted_levs[0]
+                    closest_lev2 = sorted_levs[1]
+                    print(f"Averaging from the closest valid ilevs: {closest_lev1} and {closest_lev2}")
+                    # Extract data for the two closest lev values using .sel()
+                    data1 = ds[variable_name].sel(time=selected_time, ilev=closest_lev1)
+                    lons = data1.lon.values
+                    lats = data1.lat.values
+                    variable_values_1 = data1.values
 
-                data2 = ds[variable_name].sel(time=selected_time, ilev=closest_lev2)
-                variable_values_2 = data2.values
-                # Return the averaged data
-                variable_values = (variable_values_1 + variable_values_2) / 2
+                    data2 = ds[variable_name].sel(time=selected_time, ilev=closest_lev2)
+                    variable_values_2 = data2.values
+                    # Return the averaged data
+                    variable_values = (variable_values_1 + variable_values_2) / 2
 
     return variable_values, selected_ilev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
 
@@ -295,12 +311,12 @@ def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_
 
             if selected_lon == "mean" and selected_lat == "mean":
                 # if selected_lon is "mean", then we calculate the mean over all longitudes.
-                data = ds[variable_name].sel(time=selected_time, lat=selected_lat).mean(dim=['lon', 'lat'])
+                data = ds[variable_name].sel(time=selected_time).mean(dim=['lon', 'lat'])
             elif selected_lon == "mean":
                 data = ds[variable_name].sel(time=selected_time, lat=selected_lat).mean(dim='lon')
 
             elif selected_lat == "mean":
-                data = ds[variable_name].sel(time=selected_time, lat=selected_lat).mean(dim='lat')
+                data = ds[variable_name].sel(time=selected_time, lon=selected_lon).mean(dim='lat')
             else:
                 data = ds[variable_name].sel(time=selected_time, lat=selected_lat, lon=selected_lon, method="nearest")
 
@@ -542,8 +558,18 @@ def lev_ilev_time (datasets, variable_name, selected_lat, selected_lon):
         variable_unit = ds[variable_name].attrs.get('units', 'N/A')
         variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
         mtime_values = ds['mtime'].values
-    
-        data = ds[variable_name].sel(lat=selected_lat, lon=selected_lon, method='nearest')
+        if selected_lon == "mean" and selected_lat == "mean":
+
+            # if selected_lon is "mean", then we calculate the mean over all longitudes.
+            data = ds[variable_name].mean(dim=['lon', 'lat'])
+        elif selected_lon == "mean":
+            data = ds[variable_name].sel(lat=selected_lat).mean(dim='lon')
+
+        elif selected_lat == "mean":
+            data = ds[variable_name].sel(lon=selected_lon).mean(dim='lat')
+        else:
+            #data = ds[variable_name].sel(time=selected_time, lat=selected_lat, lon=selected_lon, method="nearest")    
+            data = ds[variable_name].sel(lat=selected_lat, lon=selected_lon, method='nearest')
 
         variable_values = data.T 
         try:
@@ -615,26 +641,59 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon):
         variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
         mtime_values = ds['mtime'].values
         filename = filenames
-        if selected_lev in ds['lev'].values:
-            data = ds[variable_name].sel(lev=selected_lev, lon=selected_lon, method='nearest')
+
+        if selected_lon == 'mean' and selected_lev == 'mean':
+            data = ds[variable_name].sel(method='nearest').mean(dim=['lev', 'lon'])
+            variable_values = data.T 
+            lats = data.lat.values    
+            lats_all = lats_all[:variable_values.shape[0]]
+        if selected_lon =='mean':
+            if selected_lev in ds['lev'].values:
+                data = ds[variable_name].sel(lev=selected_lev, method='nearest').mean(dim='lon')
+                variable_values = data.T 
+                lats = data.lat.values    
+                lats_all = lats_all[:variable_values.shape[0]]
+            else:
+                sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - selected_lev))
+                closest_lev1 = sorted_levs[0]
+                closest_lev2 = sorted_levs[1]
+                if avg_info_print == 0:
+                    print(f"The lev {selected_lev} isn't in the listed valid values.")
+                    print(f"Averaging from the closest valid levs: {closest_lev1} and {closest_lev2}")
+                    avg_info_print = 1
+                data1 = ds[variable_name].sel(lev=closest_lev1, method='nearest').mean(dim='lon')
+                variable_values_1 = data1.T 
+                lats = data1.lat.values    
+                lats_all = lats_all[:variable_values_1.shape[0]]
+                data2 = ds[variable_name].sel(lev=closest_lev2, method='nearest').mean(dim='lon')
+                variable_values_2 = data2.T 
+                variable_values = (variable_values_1 + variable_values_2) / 2
+        if selected_lev == 'mean':
+            data = ds[variable_name].sel(lon=selected_lon, method='nearest').mean(dim='lev')
             variable_values = data.T 
             lats = data.lat.values    
             lats_all = lats_all[:variable_values.shape[0]]
         else:
-            sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - selected_lev))
-            closest_lev1 = sorted_levs[0]
-            closest_lev2 = sorted_levs[1]
-            if avg_info_print == 0:
-                print(f"The lev {selected_lev} isn't in the listed valid values.")
-                print(f"Averaging from the closest valid levs: {closest_lev1} and {closest_lev2}")
-                avg_info_print = 1
-            data1 = ds[variable_name].sel(lev=closest_lev1, lon=selected_lon, method='nearest')
-            variable_values_1 = data1.T 
-            lats = data1.lat.values    
-            lats_all = lats_all[:variable_values_1.shape[0]]
-            data2 = ds[variable_name].sel(lev=closest_lev2, lon=selected_lon, method='nearest')
-            variable_values_2 = data2.T 
-            variable_values = (variable_values_1 + variable_values_2) / 2
+            if selected_lev in ds['lev'].values:
+                data = ds[variable_name].sel(lev=selected_lev, lon=selected_lon, method='nearest')
+                variable_values = data.T 
+                lats = data.lat.values    
+                lats_all = lats_all[:variable_values.shape[0]]
+            else:
+                sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - selected_lev))
+                closest_lev1 = sorted_levs[0]
+                closest_lev2 = sorted_levs[1]
+                if avg_info_print == 0:
+                    print(f"The lev {selected_lev} isn't in the listed valid values.")
+                    print(f"Averaging from the closest valid levs: {closest_lev1} and {closest_lev2}")
+                    avg_info_print = 1
+                data1 = ds[variable_name].sel(lev=closest_lev1, lon=selected_lon, method='nearest')
+                variable_values_1 = data1.T 
+                lats = data1.lat.values    
+                lats_all = lats_all[:variable_values_1.shape[0]]
+                data2 = ds[variable_name].sel(lev=closest_lev2, lon=selected_lon, method='nearest')
+                variable_values_2 = data2.T 
+                variable_values = (variable_values_1 + variable_values_2) / 2
 
         variable_values_all.append(variable_values)
         combined_mtime.extend(mtime_values)
@@ -691,27 +750,59 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon):
         variable_unit = ds[variable_name].attrs.get('units', 'N/A')
         variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
         mtime_values = ds['mtime'].values
-        if selected_ilev in ds['ilev'].values:
-            data = ds[variable_name].sel(ilev=selected_ilev, lon=selected_lon, method='nearest')
+        
+        if selected_lon == 'mean' and selected_ilev == 'mean':
+            data = ds[variable_name].sel(method='nearest').mean(dim=['ilev', 'lon'])
+            variable_values = data.T 
+            lats = data.lat.values    
+            lats_all = lats_all[:variable_values.shape[0]]
+        if selected_lon =='mean':
+            if selected_ilev in ds['ilev'].values:
+                data = ds[variable_name].sel(ilev=selected_ilev, method='nearest').mean(dim='lon')
+                variable_values = data.T 
+                lats = data.lat.values    
+                lats_all = lats_all[:variable_values.shape[0]]
+            else:
+                sorted_levs = sorted(ds['ilev'].values, key=lambda x: abs(x - selected_ilev))
+                closest_lev1 = sorted_levs[0]
+                closest_lev2 = sorted_levs[1]
+                if avg_info_print == 0:
+                    print(f"The ilev {selected_ilev} isn't in the listed valid values.")
+                    print(f"Averaging from the closest valid levs: {closest_lev1} and {closest_lev2}")
+                    avg_info_print = 1
+                data1 = ds[variable_name].sel(ilev=closest_lev1, method='nearest').mean(dim='lon')
+                variable_values_1 = data1.T 
+                lats = data1.lat.values    
+                lats_all = lats_all[:variable_values_1.shape[0]]
+                data2 = ds[variable_name].sel(ilev=closest_lev2, method='nearest').mean(dim='lon')
+                variable_values_2 = data2.T 
+                variable_values = (variable_values_1 + variable_values_2) / 2
+        if selected_ilev == 'mean':
+            data = ds[variable_name].sel(lon=selected_lon, method='nearest').mean(dim='ilev')
             variable_values = data.T 
             lats = data.lat.values    
             lats_all = lats_all[:variable_values.shape[0]]
         else:
-            
-            sorted_ilevs = sorted(ds['ilev'].values, key=lambda x: abs(x - selected_ilev))
-            closest_ilev1 = sorted_ilevs[0]
-            closest_ilev2 = sorted_ilevs[1]
-            if avg_info_print == 0:
-                print(f"The ilev {selected_ilev} isn't in the listed valid values.")
-                print(f"Averaging from the closest valid ilevs: {closest_ilev1} and {closest_ilev2}")
-                avg_info_print = 1
-            data1 = ds[variable_name].sel(ilev=closest_ilev1, lon=selected_lon, method='nearest')
-            variable_values_1 = data1.T 
-            lats = data1.lat.values    
-            lats_all = lats_all[:variable_values_1.shape[0]]
-            data2 = ds[variable_name].sel(ilev=closest_ilev2, lon=selected_lon, method='nearest')
-            variable_values_2 = data2.T 
-            variable_values = (variable_values_1 + variable_values_2) / 2
+            if selected_ilev in ds['ilev'].values:
+                data = ds[variable_name].sel(ilev=selected_ilev, lon=selected_lon, method='nearest')
+                variable_values = data.T 
+                lats = data.lat.values    
+                lats_all = lats_all[:variable_values.shape[0]]
+            else:
+                sorted_levs = sorted(ds['ilev'].values, key=lambda x: abs(x - selected_ilev))
+                closest_lev1 = sorted_levs[0]
+                closest_lev2 = sorted_levs[1]
+                if avg_info_print == 0:
+                    print(f"The ilev {selected_ilev} isn't in the listed valid values.")
+                    print(f"Averaging from the closest valid levs: {closest_lev1} and {closest_lev2}")
+                    avg_info_print = 1
+                data1 = ds[variable_name].sel(ilev=closest_lev1, lon=selected_lon, method='nearest')
+                variable_values_1 = data1.T 
+                lats = data1.lat.values    
+                lats_all = lats_all[:variable_values_1.shape[0]]
+                data2 = ds[variable_name].sel(ilev=closest_lev2, lon=selected_lon, method='nearest')
+                variable_values_2 = data2.T 
+                variable_values = (variable_values_1 + variable_values_2) / 2
 
         variable_values_all.append(variable_values)
         combined_mtime.extend(mtime_values)

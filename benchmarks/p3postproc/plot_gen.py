@@ -110,7 +110,8 @@ def plt_lat_lon(datasets, variable_name, level = None, time= None, mtime=None, c
             data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon_lev(datasets, variable_name, time, level)
         except ValueError:
             data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon_ilev(datasets, variable_name, time, level)
-        avg_ht=calc_avg_ht(datasets, time,level)
+        if level != 'mean':
+            avg_ht=calc_avg_ht(datasets, time,level)
     else:
         data, unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon(datasets, variable_name, time)
     
@@ -143,7 +144,9 @@ def plt_lat_lon(datasets, variable_name, level = None, time= None, mtime=None, c
     cbar.set_label(variable_name + " [" + variable_unit + "]", size=28, labelpad=15)
     cbar.ax.tick_params(labelsize=18)
     plt.title(variable_long_name + ' ' + variable_name + ' (' + variable_unit + ') ' + '\n\n', fontsize=36)
-    if level != None:
+    if level == 'mean':
+        plt.text(0, 110, 'UT=' + str(selected_ut) + '  ZP=' + str(level), ha='center', va='center', fontsize=28)
+    elif level != None:
         plt.text(0, 110, 'UT=' + str(selected_ut) + '  ZP=' + str(level)+' AVG HT=' + str(avg_ht), ha='center', va='center', fontsize=28)
     else:
         plt.text(0, 110, 'UT=' + str(selected_ut), ha='center', va='center', fontsize=28)
@@ -426,15 +429,13 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
     Returns:
         - Contour plot.
     """
-    latitude = float(latitude)
-    longitude = float(longitude)
+
     if longitude == None:
         longitude = local_time_to_longitude(localtime)
 
     #print(datasets)
     variable_values_all, levs_ilevs, mtime_values, longitude, variable_unit, variable_long_name = lev_ilev_time(datasets, variable_name, latitude, longitude)
     
-    # Assuming the levels are consistent across datasets, but using the minimum size for safety
 
     print("---------------["+variable_name+"]---["+str(latitude)+"]---["+str(longitude)+"]---------------")
     
@@ -466,7 +467,14 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
 
 
     # Add subtext to the plot
-    plt.text(0.5, 1.08,'  LAT='+str(latitude)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    if longitude == 'mean' and latitude == 'mean':
+        plt.text(0.5, 1.08,'  LAT= Mean SLT= Mean', ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    elif longitude == 'mean':
+        plt.text(0.5, 1.08,'  LAT='+str(latitude)+" SLT= Mean", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    elif latitude == 'mean':
+        plt.text(0.5, 1.08,'  LAT= Mean'+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    else:
+        plt.text(0.5, 1.08,'  LAT='+str(latitude)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.text(0.5, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
     plt.text(0.5, -0.25, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
 
@@ -533,7 +541,14 @@ def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = N
 
 
     # Add subtext to the plot
-    plt.text(0.5, 1.08,'  ZP='+str(level)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    if level == 'mean' and longitude == 'mean':
+            plt.text(0.5, 1.08,'  ZP= Mean SLT= Mean', ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    elif longitude == 'mean':
+            plt.text(0.5, 1.08,'  ZP='+str(level)+" SLT= Mean", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    elif level == 'mean':
+            plt.text(0.5, 1.08,'  ZP= Mean'+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
+    else:
+        plt.text(0.5, 1.08,'  ZP='+str(level)+" SLT="+str(longitude_to_local_time(longitude))+"Hrs", ha='center', va='center',fontsize=28, transform=plt.gca().transAxes) 
     plt.text(0.5, -0.2, "Min, Max = "+str("{:.2e}".format(min_val))+", "+str("{:.2e}".format(max_val)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
     plt.text(0.5, -0.25, "Contour Interval = "+str("{:.2e}".format((max_val-min_val)/20)), ha='center', va='center',fontsize=28, transform=plt.gca().transAxes)
 

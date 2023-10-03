@@ -169,6 +169,9 @@ def get_options():
             if args.dataset.endswith('.nc') is not True:
                 parser.error(f"{args.plot_type} expects '.nc' files")
 
+    if args.level != 'mean' and args.level != None:
+        args.level = float(args.level)
+
     if args.latitude != 'mean' and args.latitude != None:
         args.latitude = float(args.latitude)
 

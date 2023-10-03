@@ -32,7 +32,7 @@ dataset5 = xr.open_dataset(os.path.join(dir,file5))
 datasets = [[dataset5,'tiegcm_res5.0_decsol_smax_sech_001.nc'],[dataset4,'tiegcm_res5.0_decsol_smax_sech_002.nc'],[dataset3,'tiegcm_res5.0_decsol_smax_sech_003.nc'],[dataset2,'tiegcm_res5.0_decsol_smax_sech_004.nc'], [dataset,'tiegcm_res5.0_decsol_smax_sech_005.nc']]
 print("-------------------------Plot Generation--------------------------")
 
-fig1 = plt_lat_lon(datasets, "TN", -4.0, None, mtime=[360,0,0])
+fig1 = plt_lat_lon(datasets, "TN", level = 'mean', mtime=[360,0,0])
 fig2 = plt_lat_lon(datasets, "O2", 0.0, time=timestep_array[119][1])
 fig3 = plt_lat_lon(datasets, "VN", 2.0, timestep_array[119][1], )
 fig4 = plt_lat_lon(datasets, "ZG", 4.0, timestep_array[119][1], )
@@ -40,12 +40,10 @@ fig5 = plt_lev_var(datasets, "UN", -62.50, localtime = 0.0, mtime = [360, 0, 0])
 fig6 = plt_lev_var(datasets, "ZG", latitude = -62.50, localtime = 'mean', mtime = [360, 0, 0])
 fig7 = plt_lev_lon(datasets, "ZG", latitude = -62.50 , mtime = [360, 0, 0])
 fig8 =plt_lev_lon(datasets, "UN", latitude = 'mean', mtime = [360, 0, 0])
-
 fig9 =plt_lev_lat(datasets, "TN", longitude = 'mean', mtime = [360, 0, 0])
-
 fig10 =plt_lev_lat(datasets, "UN", longitude = -180.0, mtime = [360, 0, 0])
-fig11 = plt_lev_time(datasets, "TN", -42.50, -180.0)
-fig12 = plt_lat_time(datasets, "TN", 0.0, -180.0)
+fig11 = plt_lev_time(datasets, "TN", latitude = -42.50, longitude = -180.0)
+fig12 = plt_lat_time(datasets, "TN", level = 0.0, longitude = -180.0)
 
 
 
