@@ -1,7 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from data_parse import lat_lon_lev, lat_lon_ilev,lat_lon, calc_avg_ht, min_max, lev_ilev_var, lev_ilev_lon, lev_ilev_lat,lev_ilev_time, lat_time_lev,lat_time_ilev, get_time
+from .data_parse import lat_lon_lev, lat_lon_ilev,lat_lon, calc_avg_ht, min_max, lev_ilev_var, lev_ilev_lon, lev_ilev_lat,lev_ilev_time, lat_time_lev,lat_time_ilev, get_time
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
@@ -15,8 +15,6 @@ def longitude_to_local_time(longitude):
     Returns:
         - local_time (float): Local time corresponding to the given longitude.
     """
-    # Longitude is given in degrees, and every 15 degrees corresponds to 1 hour difference in local time
-    # Longitude 0 corresponds to local time 0
     local_time = (longitude / 15) % 24
     return local_time
 

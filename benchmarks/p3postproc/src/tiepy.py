@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-
 import os
 import sys  
 import inspect
 import matplotlib.pyplot as plt
 import xarray as xr
 import numpy as np
-from getoptions import get_options
-from plot_gen import plt_lat_lon, plt_lev_var, plt_lev_lon, plt_lev_lat, plt_lev_time, plt_lat_time
+from .getoptions import get_options
+from .plot_gen import plt_lat_lon, plt_lev_var, plt_lev_lon, plt_lev_lat, plt_lev_time, plt_lat_time
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 

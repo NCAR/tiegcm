@@ -7,7 +7,7 @@ def get_options():
     parser.add_argument('-var','--variable_name', type=str, help='Name of the variable to be plotted.')
     parser.add_argument('-time','--time', type=str, help='Selected time for the plot in YYYY-MM-DDTHH:MM:SS format.')
     parser.add_argument('-mtime','--mtime',  nargs=3, type=int, help='Selected time for the plot in [Day, Hour, Min] format.')
-    parser.add_argument('-lev','--level', type=float, help='Selected lev/ilev for the plot.')
+    parser.add_argument('-lev','--level', type=str, help='Selected lev/ilev for the plot.')
     parser.add_argument('-lat', '--latitude', type=str, help='Selected latitude for the plot.')
     parser.add_argument('-lon','--longitude', type=str, help='Selected longitude for the plot.')
     parser.add_argument('-ut','--localtime', type=str, help='Selected localtime / longitude for the plot.')
@@ -168,17 +168,37 @@ def get_options():
         if args.dataset:
             if args.dataset.endswith('.nc') is not True:
                 parser.error(f"{args.plot_type} expects '.nc' files")
-
+    #
+    # Setting variable type float if level value is numerical 
+    #
     if args.level != 'mean' and args.level != None:
-        args.level = float(args.level)
-
+        try:
+            args.level = float(args.level)
+        except:
+            parser.error(f"{args.plot_type} expects --level values to be numerical float values or 'mean'")
+    #
+    # Setting variable type float if latitude value is numerical 
+    #
     if args.latitude != 'mean' and args.latitude != None:
-        args.latitude = float(args.latitude)
-
+        try:
+            args.latitude = float(args.latitude)
+        except:
+            parser.error(f"{args.plot_type} expects --latitude values to be numerical float values or 'mean'")
+    #
+    # Setting variable type float if longitude value is numerical 
+    #
     if args.longitude != 'mean'and args.longitude != None:
-        args.longitude = float(args.longitude)
-
+        try:
+            args.longitude = float(args.longitude)
+        except:
+            parser.error(f"{args.plot_type} expects --longitude values to be numerical float values or 'mean'")
+    #
+    # Setting variable type float if localtime value is numerical 
+    #
     if args.localtime != 'mean'and args.localtime != None:
-        args.localtime = float(args.localtime)
+        try:
+            args.localtime = float(args.localtime)
+        except:
+            parser.error(f"{args.plot_type} expects --localtime values to be numerical float values or 'mean'")
 
     return args
