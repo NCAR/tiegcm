@@ -92,7 +92,7 @@
       character(len=*),intent(inout) :: str
       character(len=len(str)) :: newstr
       integer,intent(in) :: num,ndigits
-      integer :: i,ipos,ndollar
+      integer :: ipos,ndollar
       character(len=16) :: format,numstr
 !
       if (ndigits<=0) return
@@ -112,7 +112,7 @@
       subroutine replace_substr(s,subold,subnew,sout)
       character(len=*),intent(in) :: s,subold,subnew
       character(len=*),intent(out) :: sout
-      integer :: i,ii,ipos,lonsubnew,lensubold,lens
+      integer :: i,ii,ipos,lensubold,lens
 !
 ! Init sout to input s:
       sout = s

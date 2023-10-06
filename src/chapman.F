@@ -5,24 +5,19 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-      use params_module,only: nlonp4,nlat,dz
+      use params_module,only: nlonp4,nlat
       use addfld_module,only: addfld
       implicit none
       real,dimension(nlonp4,nlat) :: 
-     |  chi,         ! solar zenith angle
-     |  sin_chi,     ! sin(chi)
-     |  cos_chi,     ! cos(chi)
-     |  rt_sinchi,   ! sqrt(sin(chi))
-     |  slt          ! local time
+     |  chi         ! solar zenith angle
 !
       contains
 !-----------------------------------------------------------------------
       subroutine chapman(z,tn,o2,o1,n2,barm,vo2,vo1,vn2,sco2,sco1,scn2,
      |  lev0,lev1,lon0,lon1,lat)
-      use params_module,only: dz
-      use init_module,only: secs,sin_sundec,cos_sundec,idn,uthr
-      use cons_module,only: pi,dphi,dlamda,re,rmass_o2,rmass_o1,rmass_n2
-      use hist_module,only: modeltime ! for diag
+      use params_module,only: nlon,nlonp2,glat,glon
+      use init_module,only: secs,sin_sundec,cos_sundec,idn
+      use cons_module,only: pi,dtr,re,rmass_o2,rmass_o1,rmass_n2
       use fields_module,only: tlbc
 !
 ! Calculate line integrals for o2,o n2:
@@ -46,39 +41,48 @@
      |  scn2  ! n2 slant column integration
 !
 ! Local:
-      real :: rlat,coslat,sinlat,factor,rtpi,fmin,fmax
+      real :: rlat,coslat,sinlat,rtpi
       integer :: k,i
       real :: rp(lev0:lev1,lon0:lon1), ! z+re
      |        ti(lev0:lev1,lon0:lon1)  ! tn at interfaces
+      real,dimension(nlonp4) :: glon0
       real,dimension(lev0:lev1,lon0:lon1) :: ! for diagnostic plotting
      |  chi_plt, slt_plt, idn_plt
+      real,dimension(lon0:lon1) ::
+     |  sin_chi,     ! sin(chi)
+     |  cos_chi,     ! cos(chi)
+     |  rt_sinchi,   ! sqrt(sin(chi))
+     |  slt          ! local time
 !
 ! Set up sun related geometry according to current model date and time.
 ! Also set day/night index idn (init_module).
 !
+      glon0(3:nlonp2) = glon
+      glon0(1:2) = glon(nlon-1:nlon)
+      glon0(nlonp2+1:nlonp4) = glon(1:2)
+!
       rtpi = sqrt(pi)
-      rlat = -.5*pi+(float(lat-1)+.5)*dphi
+      rlat = glat(lat)*dtr
       coslat=cos(rlat)
       sinlat=sin(rlat)
       idn(lon0:lon1) = 1
       do i=lon0,lon1
-        slt(i,lat)=amod(secs/3600.+(float(i-3)*dlamda+pi)*12./pi,24.)
+        slt(i)=amod(secs/3600.+glon0(i)/15.,24.)
         chi(i,lat)=acos(sin_sundec*sinlat+cos_sundec*coslat*
-     |    cos(pi*(slt(i,lat)-12.)/12.))
-        sin_chi(i,lat) = sin(chi(i,lat))
-        cos_chi(i,lat) = cos(chi(i,lat))
-        rt_sinchi(i,lat) = sqrt(sin_chi(i,lat))
+     |    cos(pi*(slt(i)-12.)/12.))
+        sin_chi(i) = sin(chi(i,lat))
+        cos_chi(i) = cos(chi(i,lat))
+        rt_sinchi(i) = sqrt(sin_chi(i))
         if (chi(i,lat) > 1.8326) idn(i) = 0
 
         chi_plt(:,i) = chi(i,lat)
-        slt_plt(:,i) = slt(i,lat)
+        slt_plt(:,i) = slt(i)
         idn_plt(:,i) = idn(i)
       enddo                
 
-!     write(6,"('chapman: lat=',i3,' modeltime=',4i4,
-!    |  ' uthr=',f5.2,/,'slt=',(6e12.4))") lat,modeltime,uthr
+!     write(6,"('chapman: lat=',i3) lat
 !     write(6,"('chi=',(12f5.2))") chi(:,lat)
-!     write(6,"('slt=',(12f5.2))") slt(:,lat)
+!     write(6,"('slt=',(12f5.2))") slt(:)
 !     write(6,"('idn=',(12i2))") idn(:)
 
 !     call addfld('CHI',' ',' ',chi_plt,
@@ -113,17 +117,17 @@
 ! Calculate line integrals (vo[x] and sco[x] are output):
 !
       call line_integ(o2,rmass_o2,vo2,sco2,ti,barm,
-     |  cos_chi(lon0:lon1,lat),sin_chi(lon0:lon1,lat),
-     |  rt_sinchi(lon0:lon1,lat),rp,idn(lon0:lon1),
-     |  lon0,lon1,lev0,lev1,lat,1)
+     |  cos_chi(lon0:lon1),sin_chi(lon0:lon1),
+     |  rt_sinchi(lon0:lon1),rp,idn(lon0:lon1),
+     |  lon0,lon1,lev0,lev1)
       call line_integ(o1,rmass_o1,vo1,sco1,ti,barm,
-     |  cos_chi(lon0:lon1,lat),sin_chi(lon0:lon1,lat),
-     |  rt_sinchi(lon0:lon1,lat),rp,idn(lon0:lon1),
-     |  lon0,lon1,lev0,lev1,lat,2)
+     |  cos_chi(lon0:lon1),sin_chi(lon0:lon1),
+     |  rt_sinchi(lon0:lon1),rp,idn(lon0:lon1),
+     |  lon0,lon1,lev0,lev1)
       call line_integ(n2,rmass_n2,vn2,scn2,ti,barm,
-     |  cos_chi(lon0:lon1,lat),sin_chi(lon0:lon1,lat),
-     |  rt_sinchi(lon0:lon1,lat),rp,idn(lon0:lon1),
-     |  lon0,lon1,lev0,lev1,lat,3)
+     |  cos_chi(lon0:lon1),sin_chi(lon0:lon1),
+     |  rt_sinchi(lon0:lon1),rp,idn(lon0:lon1),
+     |  lon0,lon1,lev0,lev1)
 !
 ! Save column number densities:
 !     call addfld('VO2',' ',' ',vo2(:,lon0:lon1),
@@ -144,13 +148,13 @@
       end subroutine chapman
 !-----------------------------------------------------------------------
       subroutine line_integ(f,fmass,v,s,ti,barm,cos_chi,sin_chi,
-     |  rt_sinchi,rp,idn,lon0,lon1,lev0,lev1,lat,if)
+     |  rt_sinchi,rp,idn,lon0,lon1,lev0,lev1)
       use params_module,only: dz
       use cons_module,only: expz,grav,p0,avo,gask,pi,re
       implicit none
 !
 ! Args:
-      integer,intent(in) :: lon0,lon1,lev0,lev1,lat,if
+      integer,intent(in) :: lon0,lon1,lev0,lev1
       real,intent(in) :: fmass
       real,dimension(lev0:lev1,lon0:lon1),intent(in) :: 
      |  ti,        ! tn at interfaces

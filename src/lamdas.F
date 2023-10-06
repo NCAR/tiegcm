@@ -1,6 +1,7 @@
 !
-      subroutine lamdas(tn,barm,o2,o1,n2,ti,te,o2p,op,nop, lxx,lyy,lxy,
-     |  lyx,lamda1,ped_out,hall_out,lev0,lev1,lon0,lon1,lat)
+      subroutine lamdas(tn,xnmbar,o2,o1,n2,ti,te,o2p,op,nop,Etot,
+     |  lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Qa,Q2,
+     |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -12,10 +13,10 @@
 ! Pedersen/ Hall conductivities [S/m] (half levels)
 !
       use params_module,only: nlonp4
-      use magfield_module,only: bmod2,sn2dec,sncsdc,csdec,sndec
+      use magfield_module,only: bmod2,sn2dec,csdec,sndec
       use cons_module,only: dipmin,rmassinv_o2,rmassinv_o1,rmassinv_n2,
-     |  p0,expz,rmass_o2,rmass_o1,boltz,avo
-      use magfield_module,only: dipmag
+     |  rmass_o2,rmass_o1,avo,rtd
+      use magfield_module,only: dipmag,rlatm
       use input_module,only: colfac
       use addfld_module,only: addfld
       use diags_module,only: mkdiag_SIGMAPED,mkdiag_SIGMAHAL,
@@ -26,7 +27,7 @@
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
      |  tn,   ! neutral temperature (deg K)
-     |  barm, ! mean molecular mass
+     |  xnmbar,! for conversion to volume density
      |  o2,   ! molecular oxygen (mmr)
      |  o1,   ! atomic oxygen    (mmr)
      |  n2,   ! molecular nitrogen (mmr)
@@ -34,7 +35,8 @@
      |  te,   ! electron temperature (deg K)
      |  o2p,  ! O2+ number density (1/cm3)
      |  op,   ! O+  number density (1/cm3)
-     |  nop   ! NO+ number density (1/cm3)
+     |  nop,  ! NO+ number density (1/cm3)
+     |  Etot  ! Total electric field
 !
 ! Output args:
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) ::
@@ -44,17 +46,20 @@
      |  lyx,     ! lamda YX term [1/s] 
      |  lamda1,  ! lamda_1 (sigma_p * B^2) / rho [1/s] magnetic eastward direction
      |  ped_out, ! pedersen conductivity (siemens/m) (will be input to dynamo)
-     |  hall_out ! hall conductivity (siemens/m) (will be input to dynamo)
+     |  hall_out,! hall conductivity (siemens/m) (will be input to dynamo)
+     |  Qa,Q2    ! electrojet turbulent heating
 !
 ! Local:
-      integer :: k,i,l,lonbeg,lonend,i0,i1
+      integer :: k,i,lonbeg,lonend,i0,i1
       real :: sqrt_te         ! sqrt(te)
       real,parameter :: qe=1.602e-19,  ! electron charge (coulomb)
      |    qeomeo10 =  1.7588028E7,     ! qe/m_e/10 [C/g]
-     |    qeoNao10 =  9.6489E3         ! qe/N_a/10 [C/mol]
+     |    qeoNao10 =  9.6489E3,        ! qe/N_a/10 [C/mol]
+     |    Me       =  9.109E-31,       ! electron mass [kg]
+     |    Mp       =  1.6726E-27,      ! proton mass [kg]
+     |    Kb       =  1.38E-23         ! Boltzmann's constant [J/K]
       real,parameter :: rmass_nop = 30.! [g/mol]
       real,parameter :: rmassinv_nop=1./rmass_nop ! inverted rmass
-      real,dimension(lev0:lev1,lon0:lon1) :: ped_plt,hall_plt
 !
 ! Local (lon):
       real,dimension(lon0:lon1) :: 
@@ -65,7 +70,6 @@
 !
 ! Local (lev,lon):
       real,dimension(lev0:lev1,lon0:lon1) ::
-     |  xnmbar,     ! for conversion to volume density
      |  xn2,        ! N2 (1-o2-o-he mmr)
      |  tnti,       ! average of tn and ti
      |  o2_cm3, o1_cm3, n2_cm3, ! major species number densities (cm3)
@@ -98,12 +102,15 @@
      |  rnu_op,     ! [[op ~o2]n(o2)+[op ~o]n(o)+[op ~n2]n(n2)]/w(op )
      |  rnu_nop,    ! [[nop~o2]n(o2)+[nop~o]n(o)+[nop~n2]n(n2)]/w(nop)
 ! 
-     |  rnu_ne      ! electron~neutral
+     |  rnu_ne,     ! electron~neutral
+     |  Ki,         ! ratio between ion gyro frequency and ion-neutral collision frequency
+     |  Mi,         ! mean ion molecular mass
+     |  E1,
+     |  Q1          ! regular electron ohmic heating
 !
 ! Save input args to secondary history:
 !     real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
 !    |  tn,   ! neutral temperature (deg K)
-!    |  barm, ! mean molecular mass
 !    |  o2,   ! molecular oxygen (mmr)
 !    |  o1,   ! atomic oxygen    (mmr)
 !    |  n2,   ! molecular nitrogen (mmr)
@@ -116,8 +123,6 @@
       i0 = lon0 ; i1 = lon1
 
 !     call addfld('TN_lam',' ',' ',tn(:,i0:i1),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('BARM_lam',' ',' ',barm(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('O2_lam',' ',' ',o2(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -212,7 +217,6 @@
 ! Major species number densities [1/cm^3]:
 ! mass density [g/cm^3/mol]: xnmbar half levels
 ! pressure at half level: p0*expz(k) [dyn/cm^2]
-! mean molecular weight at full level: barm [g/mol]
 ! Boltzmann constant [erg/K]
 ! neutral temperature [K]
 ! mass mixing rations[-]: o2, o1, xn2
@@ -220,13 +224,10 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          xnmbar(k,i) = p0*expz(k)*.5*(barm(k,i)+barm(k+1,i))/
-     |      (boltz*tn(k,i))
           o2_cm3(k,i) = o2(k,i)*xnmbar(k,i)*rmassinv_o2
           o1_cm3(k,i) = o1(k,i)*xnmbar(k,i)*rmassinv_o1
           xn2(k,i) = n2(k,i)
           xn2(k,i) = xn2(k,i)*rmassinv_n2            ! this part varies from timegcm
-          if (xn2(k,i) < 1.e-20) xn2(k,i) = 1.e-20   ! done as in tiegcm
           n2_cm3(k,i) = xn2(k,i)*xnmbar(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
@@ -320,6 +321,7 @@
      |       o2p(k,i)/(1.+rnu_o2p(k,i)**2)-
      |       nop(k,i)/(1.+rnu_nop(k,i)**2))
 
+          if (sigma_hall(k,i) < 1e-20) sigma_hall(k,i) = 1e-20
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -366,8 +368,6 @@
         lamda2(lev1,i)= sqrt(lamda2tmp(lev1-1,i)**3/lamda2tmp(lev1-2,i))
 !
 ! Non-rotated lamdas:
-! l^mag_yx = lyxnorot in code
-! l^mag_yx(code) = -l^magyx = l^magxy ; note a sign change in the code but it is NOT used later
         do k=lev0,lev1
           lxxnorot(k,i) = lamda1(k,i)
           lyynorot(k,i) = lamda1(k,i)*sin2dip(i)
@@ -397,8 +397,7 @@
 !
 ! Rotate lamdas for displacement of geomagnetic and geographic poles:
 ! (full levels)
-! Note: l_yx(code) = -l_yx (rotated; but this sign change is taken into 
-! account in the momentum equation in duv.F
+!
       do i=lon0,lon1
         do k=lev0,lev1
           lxx(k,i)= lxxnorot(k,i)*cos2dec(i)+lyynorot(k,i)*sn2dec(i,lat)
@@ -435,5 +434,52 @@
 ! Save diagnostic conductivities (midpoints):
       call mkdiag_SIGMAPED('SIGMA_PED',ped_out,lev0,lev1,lon0,lon1,lat)
       call mkdiag_SIGMAHAL('SIGMA_HAL',hall_out,lev0,lev1,lon0,lon1,lat)
+
+! ratio between ion gyro frequency and ion-neutral collision frequency
+      Ki = 1/ne*(op(:,lon0:lon1)/rnu_op+
+     |  o2p(:,lon0:lon1)/rnu_o2p+
+     |  nop(:,lon0:lon1)/rnu_nop)
+
+! mean ion molecular mass [g/mol]
+      Mi = 1/ne*(op(:,lon0:lon1)*rmass_o1+
+     |  o2p(:,lon0:lon1)*rmass_o2+
+     |  nop(:,lon0:lon1)*rmass_nop)
+
+! Calculate electrojet turbulent heating, added by Jing Liu
+! ne: 1/cm^3*1E6 -> 1/m^3
+! bmod2: G*1E-4 -> T
+! Qa,Q1,Q2: J*1E-7 -> erg
+      E1 = (1.0+rnu_ne/Ki)*sqrt(Kb*(1.0+Ki**2)/(1.0-Ki**2)*
+     |  (te(:,lon0:lon1)+ti(:,lon0:lon1))/(Mi*Mp))
+      do i = lon0,lon1
+        E1(:,i) = E1(:,i)*bmod2(i,lat)*1E-4
+      enddo
+
+      Q1 = Me*rnu_ne*ne*1E6*Etot(:,lon0:lon1)**2
+      Q2(:,lon0:lon1) = Mi*Mp*1E6*
+     |  Ki**2*(Etot(:,lon0:lon1)-E1)**2/(1.0+Ki**2)*
+     |  (Etot(:,lon0:lon1)/E1*(1.0+rnu_ne/Ki)-1.0)
+      do i = lon0,lon1
+        Q1(:,i) = Q1(:,i)/(omega_e_inv(i)*(bmod2(i,lat)*1E-4)**2)
+        Q2(:,i) = Q2(:,i)/(bmod2(i,lat)*1E-4)**2*
+     |    (op(:,i)*rnu_op(:,i)/omega_op_inv(i)+
+     |    o2p(:,i)*rnu_o2p(:,i)/omega_o2p_inv(i)+
+     |    nop(:,i)*rnu_nop(:,i)/omega_nop_inv(i))
+      enddo
+      Qa(:,lon0:lon1) = Q1+Q2(:,lon0:lon1)
+
+      do i = lon0,lon1
+        if (abs(rlatm(i,lat))*rtd < 50.0) then
+          Q1(:,i) = 0.0
+          Q2(:,i) = 0.0
+          Qa(:,i) = 0.0
+        else
+          where (Ki(:,i)>1.0 .or. Etot(:,i)<=E1(:,i))
+            Q1(:,i) = 0.0
+            Q2(:,i) = 0.0
+            Qa(:,i) = 0.0
+          endwhere
+        endif
+      enddo
 
       end subroutine lamdas

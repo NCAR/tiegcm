@@ -11,7 +11,6 @@
 ! 7/13/06 btf: Using fsechist%data associated status to determine 
 !              firstcall, rather than unames.
 !
-      use params_module
       implicit none
       contains
 !-----------------------------------------------------------------------
@@ -133,10 +132,12 @@
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
 ! Use modules:
-      use fields_module,only: fsechist,f4d,nf4d,shortname_len
+      use params_module,only: nlevp1,nilevp1,nlonp4,nlat,
+     |  nmlevp1,nimlevp1,nmlonp1,nmlat,mxfsech,spval
+      use fields_module,only: fsechist,f4d,nf4d
       use hist_module,only: isechist,modeltime
       use init_module,only: istep
-      use mpi_module,only: lat0,lat1,lon0,lon1
+      use mpi_module,only: lat0,lat1,lon0,lon1,mlat0,mlat1,mlon0,mlon1
       implicit none
 !
 ! Args:
@@ -147,10 +148,8 @@
 ! Local:
       integer :: ier,i,j,k,ii,ix,ixf4d,iseries_p,iseries_s
       integer :: idim1,idim2,idim3,ihdim1,ihdim2,ihdim3
-      logical :: time2write,wrprim,wrsech,newseries_prim,
-     |  newseries_sech,found
+      logical :: time2write,wrprim,wrsech,newseries_prim,newseries_sech
       logical :: mag,geo,firstcall
-      real :: fmin,fmax
       character(len=8) :: dname3
       integer :: istep1=-1
 !
@@ -269,7 +268,8 @@
       fsechist(ix)%task0_only = .false.
       if ((index(dname1,'lon') > 0 .and. lb1==1.and.ub1==idim1) .or.
      |    (index(dname2,'lon') > 0 .and. lb2==1.and.ub2==idim2))
-     |  fsechist(ix)%task0_only = .true.
+!    |  fsechist(ix)%task0_only = .true.
+     |  call shutdown('task0_only calls to addfld are not supported')
 !
 ! Mag or geo:
       geo = .true. ; mag = .false.
@@ -382,7 +382,13 @@
         ihdim2=fsechist(ix)%dimsizes(2)
         ihdim3=fsechist(ix)%dimsizes(3)
         if (idx > 0) then
-          allocate(fsechist(ix)%data(ihdim1,ihdim2,ihdim3),stat=ier)
+          if (geo) then
+            allocate(fsechist(ix)%data(lon0:lon1,lat0:lat1,nlevp1),
+     |        stat=ier)
+          else
+            allocate(fsechist(ix)%data(mlon0:mlon1,mlat0:mlat1,nmlevp1),
+     |        stat=ier)
+          endif
           if (ier /= 0) then
             write(6,"(/,'>>> Error allocating 3d (ihdim1=',i3,
      |        ',ihdim2=',i3,',ihdim3=',i3,') for field ',a)") 
@@ -399,7 +405,12 @@
 !
 ! 2d (i,j):
         else ! idx==0 (no lev dimension)
-          allocate(fsechist(ix)%data(ihdim1,ihdim2,1),stat=ier)
+          if (geo) then
+            allocate(fsechist(ix)%data(lon0:lon1,lat0:lat1,1),stat=ier)
+          else
+            allocate(fsechist(ix)%data(mlon0:mlon1,mlat0:mlat1,1),
+     |        stat=ier)
+          endif
           if (ier /= 0) then
             write(6,"(/,'>>> Error allocating 2d (ihdim1=',i3,
      |        ' ihdim2=',i3,' for field ',a)") ihdim1,ihdim2,
@@ -509,20 +520,6 @@
         write(6,"('  task0_only = ', l5)") fsechist(ix)%task0_only
       endif ! first call for this field
 !
-! Print non-spval min,max, i.e., portion contributed by current task:
-!     if (fsechist(ix)%ndims==3) then
-!       call fminmaxspv(fsechist(ix)%data(:,:,:),
-!    |    fsechist(ix)%dimsizes(1)*fsechist(ix)%dimsizes(2)*
-!    |    fsechist(ix)%dimsizes(3),fmin,fmax,spval)
-!       write(6,"('  3-d min,max (non-spval portion so far)= ',
-!    |    2e12.4)") fmin,fmax
-!     else
-!       call fminmaxspv(fsechist(ix)%data(:,:,1),
-!    |    fsechist(ix)%dimsizes(1)*fsechist(ix)%dimsizes(2),
-!    |    fmin,fmax,spval)
-!       write(6,"('  2-d min,max (non-spval portion so far)= ',
-!    |    2e12.4)") fmin,fmax
-!     endif
       end subroutine addfld
 !-----------------------------------------------------------------------
       end module addfld_module

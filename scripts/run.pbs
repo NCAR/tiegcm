@@ -1,0 +1,25 @@
+#!/bin/bash
+#PBS -N tiegcm
+#PBS -A P28100036
+#PBS -q main
+#PBS -o tiegcm.out
+#PBS -j oe
+#PBS -l job_priority=regular
+#PBS -l select=1:ncpus=64:mpiprocs=64:mem=200gb
+#PBS -l walltime=12:00:00
+
+export TGCMDATA=/glade/p/hao/tgcm/data
+
+# Execute:
+cd /glade/derecho/scratch/phamkh/tiegcm2.5/tiegcm.exec
+mpirun -np 64 /glade/derecho/scratch/phamkh/tiegcm2.5/tiegcm.exec/tiegcm.exe /glade/u/home/phamkh/tiegcmrc/TIEGCM2.5/scripts/tiegcm2.5_default.inp >& /glade/u/home/phamkh/tiegcmrc/TIEGCM2.5/scripts/tiegcm.out
+
+# Save stdout:
+/glade/u/home/phamkh/tiegcmrc/TIEGCM2.5/scripts/rmbinchars /glade/u/home/phamkh/tiegcmrc/TIEGCM2.5/scripts/tiegcm.out # remove any non-ascii chars in stdout file
+/glade/u/home/phamkh/tiegcmrc/TIEGCM2.5/scripts/mklogs /glade/u/home/phamkh/tiegcmrc/TIEGCM2.5/scripts/tiegcm.out     # break stdout into per-task log files
+cd /glade/u/home/phamkh/tiegcmrc/TIEGCM2.5/scripts
+
+# Make tar file of task log files:
+tar -cf /glade/u/home/phamkh/tiegcmrc/TIEGCM2.5/scripts/tiegcm.out.tar *task*.out
+echo "Saved stdout tar file /glade/u/home/phamkh/tiegcmrc/TIEGCM2.5/scripts/tiegcm.out.tar"
+rm *task*.out

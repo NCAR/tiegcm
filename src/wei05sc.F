@@ -196,8 +196,8 @@
       ctpoten = 0.5*(weictpoten(1)+weictpoten(2))
 !      write (6,"(1x,'weimer05: CPS,N ctpoten=',3f8.1)") weictpoten,
 !     |    ctpoten
-!      write(6,"(i4,':weimer05: istep=',i8,' mtime=',3i4,' ctpoten=',
-!    |  f8.3)") mytid,istep,modeltime(1:3),ctpoten
+!      write(6,"(i4,':weimer05: istep=',i8,' mtime=',4i4,' ctpoten=',
+!    |  f8.3)") mytid,istep,modeltime,ctpoten
 !
 ! Note calculation of pfrac for dynamo is done by sub colath (colath.F),
 ! called from advance.
@@ -569,7 +569,7 @@
       real,intent(out) :: epot
 !
 ! Local:
-      integer :: inside,j,m,mm,skip
+      integer :: inside,j,m,skip
       real :: z,phir,plm,colat,nlm
       real :: phim(2),cospm(2),sinpm(2)
 !
@@ -688,8 +688,8 @@
       real,intent(out) :: nlm
 !
 ! Local:
-      integer :: istat,i,j,l,m,skip
-      real :: th0,out(1),colata(1),plm1
+      integer :: i,j,l,m,skip
+      real :: th0,out(1),colata(1)
       real :: cth(mxtablesize)
       real,save :: prevth0=1.e36
       integer,save :: tablesize
@@ -751,7 +751,7 @@
       real,intent(out) :: plmtable(tablesize)
 !
 ! Local:
-      integer :: i,k,ii
+      integer :: i,k
       real :: rm,rk,div,ans,xn
       real,dimension(tablesize) :: a,x,tmp,table
 !
@@ -797,7 +797,6 @@
       real,intent(in) :: rn
 !
 ! Local:
-      integer :: i,n
       real :: rm
 !
       if (m == 0) then 
@@ -1377,9 +1376,8 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 
       FUNCTION SIND (DEG)
       implicit none
-      real :: sind,d2r,r2d,deg
-      PARAMETER ( D2R =  0.0174532925199432957692369076847 ,
-     +            R2D = 57.2957795130823208767981548147)
+      real :: sind,d2r,deg
+      PARAMETER ( D2R =  0.0174532925199432957692369076847)
       SIND = SIN (DEG * D2R)
       RETURN
 !     END
@@ -1387,9 +1385,8 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 
       FUNCTION COSD (DEG)
       implicit none
-      real :: cosd,d2r,r2d,deg
-      PARAMETER ( D2R =  0.0174532925199432957692369076847 ,
-     +            R2D = 57.2957795130823208767981548147)
+      real :: cosd,d2r,deg
+      PARAMETER ( D2R =  0.0174532925199432957692369076847)
 
       COSD = COS (DEG * D2R)
       RETURN
@@ -1398,9 +1395,8 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 
       FUNCTION ASIND (RNUM)
       implicit none
-      real :: asind,d2r,r2d,rnum
-      PARAMETER ( D2R =  0.0174532925199432957692369076847 ,
-     +            R2D = 57.2957795130823208767981548147)
+      real :: asind,r2d,rnum
+      PARAMETER ( R2D = 57.2957795130823208767981548147)
       ASIND = R2D * ASIN (RNUM)
       RETURN
 !     END
@@ -1408,9 +1404,8 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 
       FUNCTION ATAN2D (RNUM1,RNUM2)
       implicit none
-      real :: atan2d,d2r,r2d,rnum1,rnum2
-      PARAMETER ( D2R =  0.0174532925199432957692369076847 ,
-     +            R2D = 57.2957795130823208767981548147)
+      real :: atan2d,r2d,rnum1,rnum2
+      PARAMETER ( R2D = 57.2957795130823208767981548147)
       ATAN2D = R2D * ATAN2 (RNUM1,RNUM2)
       RETURN
 !     END
@@ -1455,13 +1450,11 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
      |                        dskofc
       use magfield_module,only: sunlons 
       use input_module,only:  ! from user input
-     |  byimf    ! By component of IMF (nT)      (e.g., 0.)
-! 05/08:  Added bzimf,ctpoten,power
-     | ,bzimf    ! Bz component of IMF (nT)      (e.g., 0.)
-     | ,ctpoten  ! cross-cap potential (kV)      (e.g., 45.)
-     | ,power    ! hemispheric power   (GW)      (e.g., 16.)
+     |  byimf,   ! By component of IMF (nT)      (e.g., 0.)
+! 05/08:  Added power
+     |  power    ! hemispheric power   (GW)      (e.g., 16.)
       use cons_module,only: rtd,
-     |  ylonm,ylatm  ! magnetic grid lons, lats in radians
+     |  ylonm    ! magnetic grid lons in radians
       implicit none
 !
 ! Args:
@@ -1472,11 +1465,10 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
       real :: rccp,racp,rahp,ramx,diffrac,plevel,tmltmin,tmltmax
       real :: diffrac2
       real :: offcdegp(2),dskofcp(2),radegp(2)
-      integer :: i,i1,i2,j,j1,j2
+      integer :: i,j,j1,j2
       real :: vnx(2,2),hem,mltd,mltn
       integer :: jnx(2,2),inx(2,2)
       real :: offcdeg,dskof,arad,crad
-      real :: cosl06,sinl06,colat06,cosm06,cosl18,sinl18,colat18,cosm18
       real :: byloc
 
 ! Limit size of byimf in phin and phid calculations (as in aurora.F) 
@@ -1523,11 +1515,9 @@ C          input degrees instead of radians:  SIND, COSD, ASIND, ATAN2D
 	if (tmltmin .gt. 24.) tmltmin = tmltmin - 24.
 	tmltmax = (ylonm(inx(ih,2))-sunlons(1)) * rtd/15. + 12.
 	if (tmltmax .gt. 24.) tmltmax = tmltmax - 24.
-!       write (6,"('ih Bz By Hp ctpoten,wei min/max potV,lat,mlt=',i2,
-!    |    5f8.2,2x,e12.4,2f8.2,2x,e12.4,2f8.2))") ih,bzimf,byimf,power,
-!    |    ctpoten,weictpoten(ih),
-!    |    vnx(ih,1),ylatm(jnx(ih,1))*rtd,tmltmin,
-!    |    vnx(ih,2),ylatm(jnx(ih,2))*rtd,tmltmax
+!       write (6,"('ih Bz By Hp,wei min/max potV,lat,mlt=',i2,
+!    |    3f8.2,2x,e12.4,f8.2,2x,e12.4,f8.2))") ih,byimf,power,
+!    |    weictpoten(ih),vnx(ih,1),tmltmin,vnx(ih,2),tmltmax
 ! 05/08: From aurora_cons, calculate convection and aurora radii using IMF convection
 !   and power (plevel);  racp (DMSP/NOAA) - rccp (AMIE) = 5.32 (Bz>0) to 6.62 (Bz<0) deg
 !  Heelis et al [1980, JGR, 85, pp 3315-3324] Fig 8: ra=rc+2deg, and is 2.5 deg to dusk

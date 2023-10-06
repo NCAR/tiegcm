@@ -14,11 +14,11 @@
 ! !IROUTINE: mudmod
 ! !INTERFACE:
 !
-      subroutine mudmod(pe,jntl,isolve,ier)
+      subroutine mudmod(pe,phi,jntl,isolve,ier)
 ! !USES:
-      use pdynamo_module,only: nc,ncee,cee
-      use timing_module,only: timer,timing
-      use init_module,only: istep
+      use params_module,only: nres_grid
+      use pdynamo_module,only: cee
+      use timing_module,only: timer
       implicit none
 !
 ! !DESCRIPTION: multigrid solver with modified stencil
@@ -56,7 +56,7 @@ c
 c     set grid size params
 c
       integer iixp,jjyq,iiex,jjey,nnx,nny,llwork
-      parameter (iixp = 5 , jjyq = 3, iiex = 5, jjey = 5 )
+      parameter (iixp = 5, jjyq = 3, iiex = nres_grid, jjey = nres_grid)
       parameter (nnx=iixp*2**(iiex-1)+1, nny=jjyq*2**(jjey-1)+1)
 c
 c     estimate work space for point relaxation (see mud2cr.d)
@@ -375,8 +375,7 @@ c
 	  itx = ktxbgn(k)
 	  ity = ktybgn(k)
 	  klevel = k
-	  call dismd2cr(nx,ny,work(ic),work(itx),work(ity),
-     +                  work,ierror,isolve)
+	  call dismd2cr(nx,ny,work(ic),work(itx),work(ity),work,isolve)
 	  end do
 	return
       end if   ! end of intl=0 initialization call block
@@ -418,7 +417,6 @@ c------------------------------------------------------------------------
       integer kpbgn,kcbgn,ktxbgn,ktybgn,nxk,nyk,isx,jsy
       integer k,kb,ip,ic,ir,ipc,irc,icc
       integer ncx,ncy,jj,ij,i,j,iter
-      integer iw,itx,ity,ierror
       common/imud2cr/intl,nxa,nxb,nyc,nyd,ixp,jyq,iex,jey,nfx,nfy,
      +               iguess, maxcy,method,nwork,lwork,itero,ngrid,
      +               klevel,kcur,kcycle,iprer,ipost,intpol,kps
@@ -788,9 +786,8 @@ c
      +             maxcy,method,nwork,lwork,itero,ngrid,klevel,kcur,
      +             kcycle,iprer,ipost,intpol,kps
       real xa,xb,yc,yd,tolmax,relmax
-      integer nx,ny,i,j,kbdy,l,im1,jm1,ier,jc,nnx,nny
+      integer nx,ny,i,j,l
       real cf(nx,ny,*)
-      real dlx,dlx2,dlxx,dly,dly2,dlyy,cmin,alfmax,cemax
       common/imud2cr/intl,nxa,nxb,nyc,nyd,ixp,jyq,iex,jey,nfx,nfy,
      +               iguess, maxcy,method,nwork,lwork,itero,ngrid,
      +               klevel,kcur,kcycle,iprer,ipost,intpol,kps

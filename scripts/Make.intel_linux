@@ -1,0 +1,47 @@
+#
+# Included makefile for Intel ifort compiler with openmpi on 64-bit Linux machines.
+#
+MPIF90 = mpif90
+MPIRUN = mpirun
+FFLAGS = -r8
+#
+#FFLAGS += -mcmodel=medium
+#
+# DBGFLAGS are used by the Makefile only if the job script
+# has "set debug = true"
+#
+DBGFLAGS = -debug full,extended -traceback
+DBGFLAGS += -check all,noarg_temp_created -fp-stack-check
+DBGFLAGS += -warn all -nogen-interfaces
+#
+# -fpe-all=0 traps all floating point exceptions.
+# The model is not guaranteed not to crash if this option is set.
+#
+#DBGFLAGS += -fpe-all=0
+#
+# Makefile will use OPTIM = -g if set debug=TRUE in job script.
+OPTIM    = -O2
+LIBS     = -lcurl
+HOST     = $(shell hostname)
+#
+# Library and Include file paths:
+#
+# ESMF lib:
+# (Makefile does "include $(ESMFMKFILE)")
+ESMFMKFILE = /usr/local/esmf/lib/libO/Linux.intel.64.intelmpi.default/esmf.mk
+#
+# Make machines.ini file for MPI execution:
+#
+prereq: machines.ini mpirun.command
+machines.ini: export HN=$(HOST)
+machines.ini: export NP=$(NPROC)
+machines.ini: FORCE
+	@echo "Making machines.ini.."
+	@echo `hostname` > machines.ini
+	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini
+
+mpirun.command: FORCE
+	@echo "Making mpirun.command: MPIRUN=$(MPIRUN)"
+	@echo $(MPIRUN) > mpirun.command
+
+FORCE:

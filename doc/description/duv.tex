@@ -256,17 +256,16 @@ added to the matrix $\mathbf{G}$ in units of $[1/s]$
 %
 The fourth and fifth term in the momentuum equation
 $\lambda_{xx}(v_{ExB,x}- u_n^{t+\Delta t}) + \lambda_{xy}(v_{ExB,y}-
-v_n^{t+\Delta t})$ and $\lambda_{yy}(v_{ExB,y}- v_n^{t+\Delta t}) +
-\lambda_{yx}(v_{ExB,x}- u_n^{t+\Delta t})$ are the ion drag terms.
+v_n^{t+\Delta t})$ and $\lambda_{yy}(v_{ExB,x}- u_n^{t+\Delta t}) +
+\lambda_{yx}(v_{ExB,y}- u_n^{t+\Delta t})$ are the ion drag terms.
 The terms with the electrodynamic drift velocity are added to the
-right hand side. (Note that in the code $\lambda_{yx}(code) =-\lambda_{yx} $
-and this sign change is taken into account in the code)
+right hand side.
 %
 \begin{gather}
   \mathbf{RHS}^2= \mathbf{RHS}^1 + e^{-z}
    \begin{pmatrix}
      \lambda_{xx}^{t, mid} v_{ExB,x}^{t, mid} + \lambda_{xy}^{t, mid} v_{ExB,y}^{t, mid}  \\
-     \lambda_{yy}^{t, mid} v_{ExB,y}^{t, mid} + \lambda_{yx}^{t, mid} v_{ExB,x}^{t, mid}
+     \lambda_{yy}^{t, mid} v_{ExB,y}^{t, mid} - \lambda_{yx}^{t, mid} v_{ExB,x}^{t, mid}
    \end{pmatrix}
 \end{gather}
 %
@@ -279,14 +278,13 @@ electrodynamic drift velocity
 are on the interface levels. \\
 %
 The terms with the neutral velocity are added to the left hand side
-in units of $[1/s]$.(Note that in the code $\lambda_{yx}(code) =-\lambda_{yx} $
-and this sign change is taken into account in the code)
+in units of $[1/s]$.
 %
 \begin{gather}
   \mathbf{Q}^3= \mathbf{Q}^2 + e^{-z}
    \begin{pmatrix}
        \lambda_{xx}^{t, mid} &  \lambda_{xy}^{t, mid}\\
-       \lambda_{yx}^{t, mid} & \lambda_{yy}^{t, mid}
+      -\lambda_{yx}^{t, mid} & \lambda_{yy}^{t, mid}
    \end{pmatrix}
 \end{gather}
 %

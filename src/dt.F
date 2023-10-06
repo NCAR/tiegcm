@@ -1,6 +1,6 @@
 !
-      subroutine dt(tn,tn_nm,un,vn,o2,o1,n2,barm,cp,kt,km,hdt,qji_tn,
-     |  cool_imp,cool_exp,w_upd,tn_upd,tn_nm_upd,
+      subroutine dt(tn,tn_nm,un,vn,o1,mbar,xnmbar,scht,schti,
+     |  cp,kt,km,hdt,qji_tn,cool_imp,cool_exp,w_upd,tn_upd,tn_nm_upd,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -10,21 +10,18 @@
 ! Advance neutral temperature at current latitude: 
 ! 4/4/05 btf: added gswm lbc option (eliminated dt_gswm.F)
 !
-      use params_module,only: nlonp4,dz,nlat,spval
+      use params_module,only: nlonp4,dz,spval
       use input_module,only: step
-      use init_module,only: iter,igetgswm,iday
-      use cons_module,only: freq_semidi,tbound,shapiro,dtx2inv,expz,
-     |  rmassinv_o2,rmassinv_o1,rmassinv_n2,tsurplus,p0,boltz,avo,grav,
-     |  gask,expzmid,expzmid_inv,dift,dtsmooth,dtsmooth_div2,kut
+      use init_module,only: iday
+      use cons_module,only: dtx2inv,expz,rmassinv_o1,tsurplus,p0,avo,
+     |  grav,gask,expzmid_inv,dift,dtsmooth,dtsmooth_div2
       use lbc,only: t_lbc
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm
-      use addfld_module
+      use addfld_module,only: addfld
       use diags_module,only: mkdiag_DEN,mkdiag_HEAT
-#ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
-#endif
       implicit none
 !
 ! Args:
@@ -36,10 +33,11 @@
      |  tn_nm, ! neutral temperature, time n-1 
      |  un,    ! neutral zonal velocity (cm/sec)
      |  vn,    ! neutral zonal velocity (cm/sec)
-     |  o2,    ! molecular oxygen (mmr)
      |  o1,    ! atomic oxygen (mmr)
-     |  n2,    ! molecular nitrogen (mmr)
-     |  barm,  ! mean molecular weight
+     |  mbar,  ! mean molecular weight
+     |  xnmbar,! p0*e(-z)*mbar/kT
+     |  scht,  ! scale height at midpoints
+     |  schti, ! scale height at interfaces
      |  cp,    ! specific heat (ergs/deg/gm)           (sub cpktkm)
      |  kt,    ! molecular diffusion (ergs/cm/deg/sec) (sub cpktkm)
      |  km,    ! molecular viscosity (gm/cm/sec)       (sub cpktkm)
@@ -56,14 +54,11 @@
 ! Local:
       integer :: k,i,lonbeg,lonend,lat
       integer :: nk,nkm1,nlevs
-      complex :: expt,expt2
-      real :: rstep
       real :: tnlbc(lon0:lon1,lat0:lat1) ! lower boundary condition
 !
 ! Local at 2d:
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  cptn,       ! cp*exp(-s)*(V.del(T(n))-1/(2*DT))*T(n-1) (k+1/2)
-     |  mbar,       ! mean molecular weight
      |  qm,         ! heating due to molecular diffusion
      |  total_heat, ! total heating
      |  dudz,       ! du/dz(k)
@@ -123,7 +118,7 @@
 ! Begin second latitude scan:
       do lat=lat0,lat1
 !
-! Set cptn and mbar (k+1/2):
+! Set cptn (k+1/2):
 ! (Earlier versions apparently assumed zero periodic points for
 !  tnsmooth, since they were not set in smoothing. See sub smooth,
 !  where the periodic points are set to zero to avoid NaNS fpe
@@ -133,11 +128,6 @@
         do k=lev0,lev1-1
           cptn(k,i) = .5*(cp(k,i,lat)+cp(k+1,i,lat))*expz(k)*
      |      (advec_tn(k,i,lat)-dtx2inv*tnsmooth(k,i,lat))
-!
-! 2/28/05 btf: Use k rather than k+1 in mbar calculation
-!              (as in recent versions of time-gcm, e.g., timegcm1.2)
-          mbar(k,i) = 1./(o2(k,i,lat)*rmassinv_o2 +
-     |      o1(k,i,lat)*rmassinv_o1 + n2(k,i,lat)*rmassinv_n2)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -149,7 +139,7 @@
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('CPTN0',' ',' ',cptn,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('MBAR' ,' ',' ',mbar(lev0:lev1-1,:),
+!     call addfld('MBAR' ,' ',' ',mbar(lev0:lev1-1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Total heat sources are in total_heat (s5).
@@ -164,8 +154,8 @@
 !
 ! Add heating due to atomic oxygen recombination:
           total_heat(k,i) = total_heat(k,i)+tsurplus*rkm12(k,i,lat)*
-     |      (p0*expz(k)*mbar(k,i)/(boltz*tn(k,i,lat))*o1(k,i,lat)*
-     |      rmassinv_o1)**2*avo/mbar(k,i)
+     |      (xnmbar(k,i,lat)*o1(k,i,lat)*rmassinv_o1)**2*
+     |      avo/mbar(k,i,lat)
 !
 ! Add ion joule heating (from sub qjoule_tn, qjoule.F)
 ! (Note joulefac was applied in sub qji_tn)
@@ -197,8 +187,8 @@
 ! qm = heating due to molecular diffusion:
 ! (km = molecular viscosity from sub cpktkm)
         do k=lev0,lev1-1
-          qm(k,i) = grav**2*mbar(k,i)*.5*(km(k,i,lat)+km(k+1,i,lat))/
-     |      (p0*gask*expz(k)*tn(k,i,lat))*(dudz(k,i)**2+dvdz(k,i)**2)
+          qm(k,i) = grav*.5*(km(k,i,lat)+km(k+1,i,lat))/
+     |      (p0*expz(k)*scht(k,i,lat))*(dudz(k,i)**2+dvdz(k,i)**2)
 !
 ! Add qm to total heating:
           total_heat(k,i) = total_heat(k,i)+qm(k,i)
@@ -227,20 +217,17 @@
       do i=lon0,lon1
         do k=lev0+1,lev1-1
           tni(k,i) = .5*(tn(k-1,i,lat)+tn(k,i,lat))
-          h(k,i) = gask*tni(k,i)/barm(k,i,lat)
-          rho(k,i) = p0*expzmid_inv*expz(k)/h(k,i)
-          h(k,i) = h(k,i)/grav
+          h(k,i) = schti(k,i,lat)
+          rho(k,i) = p0*expzmid_inv*expz(k)/(h(k,i)*grav)
         enddo ! k=lev0+1,lev1-1
 !
 ! Boundaries:
         tni(lev0,i) = tlbc(i,lat)         ! Lower boundary is in tlbc = tn(itp)
         tni(lev1,i) = tn(lev1-1,i,lat)
-        h(lev0,i) = gask*tni(lev0,i)/barm(lev0,i,lat)
-        h(lev1,i) = gask*tni(lev1,i)/barm(lev1,i,lat)
-        rho(lev0,i) = p0*expzmid_inv*expz(lev0)/h(lev0,i)
-        rho(lev1,i) = p0*expzmid_inv*expz(lev1-1)/h(lev1,i)
-        h(lev0,i) = h(lev0,i)/grav
-        h(lev1,i) = h(lev1,i)/grav
+        h(lev0,i) = schti(lev0,i,lat)
+        h(lev1,i) = schti(lev1,i,lat)
+        rho(lev0,i) = p0*expzmid_inv*expz(lev0)/(h(lev0,i)*grav)
+        rho(lev1,i) = p0*expzmid_inv*expz(lev1-1)/(h(lev1,i)*grav)
 !
 ! G = g*(kT + H**2*rho*cp*kE)/(p0*H*Ds**2) (s2)
 ! F = g*(kE*H**3*rho*g/T)/(p0*2*H*Ds)      (s3)
@@ -299,7 +286,7 @@
         do k=lev0,lev1-1
           qpart(k,i) = 
      |      .5*(cp(k,i,lat)+cp(k+1,i,lat))*(dtx2inv+cool_imp(k,i,lat))+
-     |      .5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))*gask/mbar(k,i) 
+     |      .5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))*gask/mbar(k,i,lat) 
           rhs(k,i) = rhs(k,i)+cool_exp(k,i,lat)
           q(k,i) = q(k,i)-expz(k)*qpart(k,i)
         enddo ! k=lev0,lev1-1
@@ -349,7 +336,7 @@
       enddo ! lat=lat0,lat1
 !
 ! Filter updated tn:
-      call filter_tn(tn_upd,lev0,lev1,lon0,lon1,lat0,lat1,kut)
+      call filter_tn(tn_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Third latitude scan:
       do lat=lat0,lat1
@@ -391,22 +378,16 @@
       enddo ! lat=lat0,lat1
       end subroutine dt
 !-----------------------------------------------------------------------
-      subroutine filter_tn(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut)
+      subroutine filter_tn(fout,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Filter updated TN
 !
-      use params_module,only: nlat,nlonp4,nlon
-      use filter_module,only: filter
-#ifdef MPI
+      use params_module,only: nlonp4
       use mpi_module,only: mp_gatherlons_f3d,mp_scatterlons_f3d,mytidi
       implicit none
-#else
-      implicit none
-      integer :: mytidi=0
-#endif
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1,kut(nlat)
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
       real,intent(inout) :: fout(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
 !
 ! VT vampir tracing:
@@ -416,9 +397,8 @@
 #endif
 !
 ! Local:
-      integer :: i,j,nlevs,nlons,nlats
+      integer :: i,j,nlevs,nlons,nlats,ier
       real :: fik(nlonp4,lev0:lev1),fkij(lev0:lev1,nlonp4,lat0:lat1)
-      real :: fmin,fmax
 !
 #ifdef VT
 !     code = 131 ; state = 'filter_tn' ; activity='Filtering'
@@ -437,27 +417,22 @@
         enddo
       enddo ! j=lat0,lat1
 !
-#ifdef MPI
-!
 ! Gather longitudes into tasks in first longitude column of task table
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
       call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,'TN')
-#endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
       if (mytidi==0) then
 !
 ! Define 2d array with all longitudes for filter at each latitude:
         latscan: do j=lat0,lat1
-          if (kut(j) >= nlon/2) cycle latscan
           do i=1,nlonp4
             fik(i,:) = fkij(:,i,j)
           enddo ! i=1,nlonp4
 !
-! Remove wave numbers > kut(lat):
-          call filter(fik,lev0,lev1,kut(j),j)
+          call ringfilter(fik,lev0,lev1,3,'TN',j)
 !
 ! Return filtered array to fkij:
           do i=1,nlonp4
@@ -465,13 +440,11 @@
           enddo ! i=1,nlonp4
         enddo latscan ! j=lat0,lat1
       endif ! mytidi==0
-#ifdef MPI
 !
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
       call mp_scatterlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,'TN')
-#endif
 !
 ! Return filtered array to fout at current task longitudes and latitudes:
       do j=lat0,lat1

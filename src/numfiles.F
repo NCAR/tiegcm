@@ -12,7 +12,7 @@
 ! mxhist_[prim,sech] histories). This is called from input.
 !
       use input_module,only: step,
-     |  mxhist_prim,start   ,stop,   hist,
+     |  mxhist_prim,pristart,pristop,prihist,
      |  mxhist_sech,secstart,secstop,sechist
       implicit none
 !
@@ -26,10 +26,9 @@
       integer,intent(out) :: nhist_total   ! total histories to be written
 !
 ! Local:
-      integer :: i,mtime(3),nhfile,nhseries,modeltime(4)
+      integer :: i,nhfile,nhseries
       integer(kind=8) :: nsecs,idelsecs,nsecstop
       integer(kind=8),external :: mtime_to_nsec
-      integer :: mtime_curr(4),mtime_stop(4)
 !
 ! Primary histories:
       if (type=='prim') then
@@ -38,17 +37,10 @@
 !
 ! Iterate through each primary history time series:
         do i=1,nseries
-          idelsecs = mtime_to_nsec(hist(:,i)) ! delta secs between histories
-          nsecstop = mtime_to_nsec(stop(:,i)) ! stop secs
+          idelsecs = mtime_to_nsec(prihist(:,i)) ! delta secs between histories
+          nsecstop = mtime_to_nsec(pristop(:,i)) ! stop secs
           numfiles = numfiles+1 ! start new file at each new time series
-          nsecs = mtime_to_nsec(start(:,i)) ! time in secs
-! debug:
-!         call nsecs_to_modeltime(nsecs,mtime_curr)
-!         call nsecs_to_modeltime(nsecstop,mtime_stop)
-!         write(6,"(/,'numfiles prim: i=',i2,' mtime_curr=',3i4,
-!    |      ' mtime_stop=',3i4,' numfiles=',i2)") 
-!    |      i,mtime_curr(1:3),mtime_stop(1:3),numfiles
-! end debug
+          nsecs = mtime_to_nsec(pristart(:,i)) ! time in secs
 !
 ! If start history of a new time series is the same as last history
 ! of the previous time series, we do not rewrite the start history 
@@ -56,7 +48,7 @@
 ! Otherwise, set nsecs to first history in the new series:
 !
           if (i > 1) then
-            if (all(start(:,i) == stop(:,i-1)))
+            if (all(pristart(:,i) == pristop(:,i-1)))
      |        nsecs = nsecs+idelsecs
           endif
 !
@@ -76,12 +68,7 @@
               numfiles = numfiles+1
               nhfile = 1
             endif
-! debug:
-!           call nsecs_to_modeltime(nsecs,mtime_curr)
-!           write(6,"(' primhist: i=',i2,' mtime_curr=',3i4,
-!    |        ' nhseries=',i2,' nhfile=',i2,' numfiles=',i2)")
-!    |        i,mtime_curr(1:3),nhseries,nhfile,numfiles
-! end debug
+!
             nsecs = nsecs+idelsecs
             if (nsecs > nsecstop) exit primloop
           enddo primloop
@@ -108,13 +95,6 @@
           nsecstop = mtime_to_nsec(secstop(:,i))
           numfiles = numfiles+1 ! start new file at each new time series
           nsecs = mtime_to_nsec(secstart(:,i))
-! debug:
-!         call nsecs_to_modeltime(nsecs,mtime_curr)
-!         call nsecs_to_modeltime(nsecstop,mtime_stop)
-!         write(6,"(/,'numfiles sech: i=',i2,' mtime_curr=',3i4,
-!    |      ' mtime_stop=',3i4,' numfiles=',i2)") 
-!    |      i,mtime_curr(1:3),mtime_stop(1:3),numfiles
-! end debug
 !
 ! If start history of a new time series is the same as last history
 ! of the previous time series, we do not rewrite the start history 
@@ -133,12 +113,7 @@
               numfiles = numfiles+1
               nhfile = 1
             endif
-! debug:
-!           call nsecs_to_modeltime(nsecs,mtime_curr)
-!           write(6,"(' sech: i=',i2,' mtime_curr=',3i4,
-!    |        ' nhseries=',i2,' nhfile=',i2,' numfiles=',i2)")
-!    |        i,mtime_curr(1:3),nhseries,nhfile,numfiles
-! end debug
+!
             nsecs = nsecs+idelsecs
             if (nsecs > nsecstop) exit sechloop
           enddo sechloop

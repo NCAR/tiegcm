@@ -7,33 +7,26 @@
 !
 ! Read source history.
 !
-      use params_module,only: nlon,nlonp2,nlonp4,nlevp1,nlat
-      use input_module,only: source,source_start,output,start,
+      use params_module,only: nlevp1
+      use input_module,only: source,source_start,output,pristart,
      |  f107,f107a,power,noutput
-      use hist_module,only: nsource,nhist,ioutfile,ncid,iprint,h
+      use hist_module,only: nsource,nhist,ioutfile,ncid
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm,
-     |  he,he_nm,field_initval,ar,ar_nm
+     |  he,he_nm,field_initval,ar,ar_nm,gzigm1,gzigm2,gnsrhs,itp
       use ar_module,only: ar_glbm
-      use mpi_module,only: lat0,lat1,lon0,lon1
+      use mpi_module,only: lat0,lat1,lon0,lon1,
+     |  mp_periodic_f4d,mp_periodic_f2d,mp_bndlons_f2d,mp_bndlats_f2d
       use pdynamo_module,only: define_phim3d
       use lbc,only: pshelb
-#ifdef MPI
-      use mpi_module,only: mp_periodic_f4d,mp_periodic_f2d,
-     |  mp_bndlons_f2d,mp_bndlats_f2d
-#endif
-      use fields_module,only: itp,un,f4d,nf4d_hist
       implicit none
 !
 ! Arg:
       integer,intent(out) :: ier
 !
 ! Local:
-      integer :: lu,nth,ncid_source,j,i,k
-      real :: fmin,fmax,fminj,fmaxj
-#ifdef MPI
-      real :: flbc(lon0:lon1,lat0:lat1,6)
-      real :: flbc_2(lon0-2:lon1+2,lat0-2:lat1+2,6)
-#endif
+      integer :: nth,i,k
+      real :: flbc(lon0:lon1,lat0:lat1,9)
+      real :: flbc_2(lon0-2:lon1+2,lat0-2:lat1+2,9)
 !
       ier = 0
 !
@@ -43,8 +36,7 @@
 !
 ! Source was provided -- read source history from source file:
       if (nsource==1) then 
-        call rdsource(source,source_start,ncid,nth,
-     |    .false.,iprint)
+        call rdsource(source,source_start,ncid,nth,.false.)
         if (ncid==0) call shutdown('Source history not found')
         nhist  = 0         ! no histories on output file
         ioutfile = 0       ! no output file currently in use
@@ -52,7 +44,7 @@
 ! Source file was not provided -- search output files:
       else
         do i = 1,noutput
-          call rdsource(output(i),start(:,1),ncid,nth,.true.,iprint)
+          call rdsource(output(i),pristart(:,1),ncid,nth,.false.)
           if (ncid > 0) then   ! history was found (not found if ncid==0)
             nhist  = nth       ! number of histories on current output file
             ioutfile = i       ! current output file name is output(ioutfile)
@@ -60,8 +52,8 @@
           endif
         enddo
         if (ncid == 0) then    ! history not found on any output file
-          write(6,"('>>> rdsource: starting history at mtime ',3i4,
-     |      ' was not found on OUTPUT files.')")
+          write(6,"('>>> rdsource: starting history at mtime ',4i4,
+     |      ' was not found on OUTPUT files.')") pristart(:,1)
           call shutdown('Starting history not found on output files')
         endif
       endif
@@ -76,7 +68,6 @@
 !  is allocated only for task-local subdomain block.
 ! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
 !
-#ifdef MPI
       call mp_periodic_f4d(itp)
 !
 ! Periodic points for t,u,v lbc
@@ -89,8 +80,11 @@
       flbc_2(:,:,4) = tlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
       flbc_2(:,:,5) = ulbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
       flbc_2(:,:,6) = vlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,7) = gzigm1(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,8) = gzigm2(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,9) = gnsrhs(lon0-2:lon1+2,lat0-2:lat1+2)
 
-      call mp_bndlons_f2d(flbc_2,lon0,lon1,lat0,lat1,6)
+      call mp_bndlons_f2d(flbc_2,lon0,lon1,lat0,lat1,9)
 
       tlbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,1)
       ulbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,2)
@@ -98,6 +92,9 @@
       tlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,4)
       ulbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,5)
       vlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,6)
+      gzigm1(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,7)
+      gzigm2(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,8)
+      gnsrhs(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,9)
 !    
       flbc_2(:,:,1) = tlbc(lon0-2:lon1+2,lat0-2:lat1+2)
       flbc_2(:,:,2) = ulbc(lon0-2:lon1+2,lat0-2:lat1+2)
@@ -105,8 +102,11 @@
       flbc_2(:,:,4) = tlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
       flbc_2(:,:,5) = ulbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
       flbc_2(:,:,6) = vlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,7) = gzigm1(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,8) = gzigm2(lon0-2:lon1+2,lat0-2:lat1+2)
+      flbc_2(:,:,9) = gnsrhs(lon0-2:lon1+2,lat0-2:lat1+2)
 
-      call mp_bndlats_f2d(flbc_2,lon0,lon1,lat0,lat1,6)
+      call mp_bndlats_f2d(flbc_2,lon0,lon1,lat0,lat1,9)
 
       tlbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,1)
       ulbc(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,2)
@@ -114,6 +114,9 @@
       tlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,4)
       ulbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,5)
       vlbc_nm(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,6)
+      gzigm1(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,7)
+      gzigm2(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,8)
+      gnsrhs(lon0-2:lon1+2,lat0-2:lat1+2) = flbc_2(:,:,9)
 !
       flbc(:,:,1) = tlbc(lon0:lon1,lat0:lat1)
       flbc(:,:,2) = ulbc(lon0:lon1,lat0:lat1)
@@ -121,8 +124,11 @@
       flbc(:,:,4) = tlbc_nm(lon0:lon1,lat0:lat1)
       flbc(:,:,5) = ulbc_nm(lon0:lon1,lat0:lat1)
       flbc(:,:,6) = vlbc_nm(lon0:lon1,lat0:lat1)
+      flbc(:,:,7) = gzigm1(lon0:lon1,lat0:lat1)
+      flbc(:,:,8) = gzigm2(lon0:lon1,lat0:lat1)
+      flbc(:,:,9) = gnsrhs(lon0:lon1,lat0:lat1)
 
-      call mp_periodic_f2d(flbc,lon0,lon1,lat0,lat1,6)
+      call mp_periodic_f2d(flbc,lon0,lon1,lat0,lat1,9)
 
       tlbc(lon0:lon1,lat0:lat1) = flbc(:,:,1)
       ulbc(lon0:lon1,lat0:lat1) = flbc(:,:,2)
@@ -130,23 +136,11 @@
       tlbc_nm(lon0:lon1,lat0:lat1) = flbc(:,:,4)
       ulbc_nm(lon0:lon1,lat0:lat1) = flbc(:,:,5)
       vlbc_nm(lon0:lon1,lat0:lat1) = flbc(:,:,6)
+      gzigm1(lon0:lon1,lat0:lat1) = flbc(:,:,7)
+      gzigm2(lon0:lon1,lat0:lat1) = flbc(:,:,8)
+      gnsrhs(lon0:lon1,lat0:lat1) = flbc(:,:,9)
 !
       call define_phim3d(itp)
-#else
-      do lat=lat0,lat1
-        do i=1,2
-          ulbc(i,lat)        = ulbc(nlon+i,lat)
-          ulbc(nlonp2+i,lat) = ulbc(i+2,lat)
-          vlbc(i,lat)        = vlbc(nlon+i,lat)
-          vlbc(nlonp2+i,lat) = vlbc(i+2,lat)
-          ulbc_nm(i,lat)        = ulbc_nm(nlon+i,lat)
-          ulbc_nm(nlonp2+i,lat) = ulbc_nm(i+2,lat)
-          vlbc_nm(i,lat)        = vlbc_nm(nlon+i,lat)
-          vlbc_nm(nlonp2+i,lat) = vlbc_nm(i+2,lat)
-        enddo
-      enddo
-      call set_periodic_f4d(itp)
-#endif
 !
 ! If argon was not read from the source history, then set it to
 ! column global means (see ar_glbm(nlevp1) in comp_ar.F).
@@ -173,38 +167,31 @@
 !
       end subroutine readsource
 !-------------------------------------------------------------------
-      subroutine rdsource(filepath,mtime,ncid,nthist,
-     |  reopen_append,iprint)
+      subroutine rdsource(filepath,mtime,ncid,nthist,reopen_append)
 !
 ! Acquire and read source history:
 !
 ! On input:
 !   filepath = mss path to history file
-!   mtime(3) = model time of requested source history
+!   mtime(4) = model time of requested source history
 !   reopen_append: if true, reopen the file for later writing after
 !                  reading the history.
-!   iprint: if > 0, report to stdout
 !
 ! On output:
 !   ncid   = file id of history file
 !   nthist = source history is nth history on the file 
-!   global history structure h is defined (see nc_rdhist)
 !
       use nchist_module,only: nc_open,nc_close,nc_rdhist
       implicit none
 ! 
 ! Args:
       character(len=*),intent(in) :: filepath
-      integer,intent(in) :: mtime(3),iprint
+      integer,intent(in) :: mtime(4)
       integer,intent(out) :: nthist,ncid
       logical,intent(in) :: reopen_append
 !
 ! Local:
-      integer ::
-     |  mday,mhour,mmin, ! model day,hour,minute from header
-     |  j,               ! latitude loop index
-     |  ier              ! error flag
-      real :: dum,rj
+      integer :: ier              ! error flag
       character(len=120) :: diskfile
 !
 ! Acquire source file:

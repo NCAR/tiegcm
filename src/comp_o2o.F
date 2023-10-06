@@ -1,5 +1,5 @@
 !
-      subroutine comp_o2o(tn,o2,o1,n2,he,barm,op,no,n4s,n2d,o2p,ne,
+      subroutine comp_o2o(o1,mbar,xnmbar,op,no,n4s,n2d,o2p,ne,
      |  n2p,nplus,nop,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -8,9 +8,8 @@
 !
 ! Calculates fs array which gives sources and sinks for comp (o2,o). 
 !
-      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,
-     |  rmassinv_he,p0,expz,boltz,rmass_no,rmass_n4s,rmass_n2d,rmass_o2,
-     |  rmass_o1
+      use cons_module,only: rmassinv_o2,rmassinv_o1,
+     |  rmass_no,rmass_n4s,rmass_n2d,rmass_o2,rmass_o1
       use qrj_module,only: rj,qo2p,qop
       use chemrates_module,only: rk4,rk5,rk6,rk7,rk8,rk9,rk10,beta2,
      |  beta6,ra1,ra2,beta3,beta8,rk1,beta1,rkm12,rk3,fs
@@ -22,12 +21,9 @@
 !
 ! All input arrays are at current time step (itp): 
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  tn,    ! neutral temperature (deg K) 
-     |  o2,    ! O2 (mmr)
      |  o1,    ! O1 (mmr)
-     |  n2,    ! N2 (mmr)
-     |  he,    ! He (mmr)
-     |  barm,  ! mean molecular weight
+     |  mbar,  ! mean molecular weight
+     |  xnmbar,! p0*e(-z)*mbar/kT
      |  op,    ! O+
      |  no,    ! nitric oxide
      |  n4s,   ! N(4s)
@@ -44,7 +40,6 @@
      |  rji,            ! RJ at interfaces (qrj module)
      |  qo2pi,          ! O2+ ionization at interfaces (qrj module)
      |  qopi,           ! O+ ionization at interfaces
-     |  xnmbar,         ! p0*e(-z)*barm
      |  pox1,pox2,      ! OX production terms
      |  lox1,lox2,lox3, ! OX loss terms
      |  po21,po22,po23, ! O2 production terms
@@ -52,17 +47,9 @@
 !
       nk = lev1-lev0+1
 
-!     call addfld('TN_O2O',' ',' ',tn(:,lon0:lon1),'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('O2_O2O',' ',' ',o2(:,lon0:lon1),'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
 !     call addfld('O1_O2O',' ',' ',o1(:,lon0:lon1),'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)
-!     call addfld('N2_O2O',' ',' ',n2(:,lon0:lon1),'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('HE_O2O',' ',' ',he(:,lon0:lon1),'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('BARM_O2O',' ',' ',barm(:,lon0:lon1),'lev',lev0,lev1,
+!     call addfld('MBAR_O2O',' ',' ',mbar(:,lon0:lon1),'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)
 !     call addfld('OP_O2O',' ',' ',op(:,lon0:lon1),'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)
@@ -94,10 +81,6 @@
           qo2pi(k,i) = 0.5*(qo2p(k,i,lat)+qo2p(k+1,i,lat))
           qopi (k,i) = 0.5*(qop(k,i,lat)+qop(k+1,i,lat))
 !
-! n*mbar (k+1/2):
-          xnmbar(k,i) = expz(k)*p0/(boltz*tn(k,i)*(o2(k,i)*rmassinv_o2+
-     |     o1(k,i)*rmassinv_o1+he(k,i)*rmassinv_he+n2(k,i)*rmassinv_n2))
-!
 ! OX production:
 ! s1
           pox1(k,i) = xnmbar(k,i)**2*
@@ -115,14 +98,12 @@
      |      nplus(k,i)+2.*rji(k,i)
 !
 ! OX loss:
-          lox1(k,i) = 2.*rkm12(k,i,lat)*xnmbar(k,i)/
-     |      (.5*(barm(k,i)+barm(k+1,i)))
+          lox1(k,i) = 2.*rkm12(k,i,lat)*xnmbar(k,i)/mbar(k,i)
           lox2(k,i) = rk3(k,i,lat)*n2p(k,i)+rk8*nplus(k,i)
           lox3(k,i) = qopi(k,i)
 !
 ! O2 production:
-          po21(k,i) = rkm12(k,i,lat)*xnmbar(k,i)/
-     |      (.5*(barm(k,i)+barm(k+1,i)))
+          po21(k,i) = rkm12(k,i,lat)*xnmbar(k,i)/mbar(k,i)
 !
           po22(k,i) = 0.
           po23(k,i) = rk5*no(k,i)/rmass_no*o2p(k,i)*xnmbar(k,i)
@@ -163,7 +144,7 @@
 !       write(6,"('fs(:,k,2,0,lat)=',/,(6e12.4))") fs(:,k,2,0,lat)
 !     enddo ! k=lev0,lev1-1
 
-!     call addfld('MBAR_O2O',' ',' ',xnmbar,'lev',lev0,lev1,
+!     call addfld('MBAR_O2O',' ',' ',xnmbar(:,lon0:lon1),'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)
 !     call addfld('POX1',' ',' ',pox1,'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)

@@ -126,7 +126,7 @@
       character(len=*),intent(in) :: diskfile,annotation
 !
 ! Local:
-      integer :: i,iline,istat,iprint=1
+      integer :: iline
       character(len=1020) :: hpss_file,string
       character(len=8) :: opt
       character(len=lenrec) :: hsiput_cmd, annotate_cmd

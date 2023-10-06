@@ -46,7 +46,7 @@ subroutine noso_coef
 ! Local:
 !
   integer :: i,j,jnpole,jspole,n,jn,js,je
-  real :: dfac,dfac1n,dfac1s,dfac2n,dfac2s
+  real :: dfac,dfac1n,dfac1s,dfac2n
   real,dimension(nmlonp1,nmlat) :: nszigmc,nszigm2,nszigm11,nszigm22,nsrhs
   real,dimension(0:nmlon0+1,nmlat) :: array
   real :: cs(nmlat)
@@ -468,16 +468,16 @@ subroutine nscnm(array,nmlon0,nmlat,nsc,ncoef,nmlath)
 end subroutine nscnm
 !-----------------------------------------------------------------------
 subroutine noso_crrt
-  use cons_module,only: dt0dts,rcos0s,pi,r0,re,ylatm
-  use mpi_module,only: mlon0,mlon1,mlat0,mlat1,mp_allgather_2d
+  use cons_module,only: dt0dts,rcos0s,pi,r0,ylatm
+  use mpi_module,only: mp_allgather_2d
   use pdynamo_module,only: phim=>phim_glb ! (nmlonp1,nmlat) on root task only
 !
 ! Calculate current for both hemisphere:
 ! [stencil*potential -RHS] = R**2 * J_mr / dt0dts / rcos0s
 !
 ! Local:
-  integer :: j,i,k,n,jmod,jmin,jmax,jn,js
-  real :: vtmp,r0sq,fac,facmax,lat,lmin,lmax,pol
+  integer :: j,i,jmin,jmax,jn,js
+  real :: r0sq,fac,facmax,lat,lmin,lmax,pol
   real,dimension(nmlonp1,nmlat,nmlevp1) :: tout
 !
 ! External:
@@ -675,9 +675,9 @@ subroutine noso_crdens
 !
 ! Local:
 !
-  integer :: k,i,j,len
+  integer :: k,i,j
   real :: fac,adotam,ed1h,ed2h,sinlamq,coslamq2,facsin,lamm,sinlamm,act
-  real :: sinim,facq,dh,actpk,r0m,difflm,epsn,epss,eps(2)
+  real :: sinim,facq,dh,actpk,r0m,difflm,epsn,epss
   real,dimension(nmlat) :: fsums,afsums,fsumn,afsumn
   real,dimension(mlon0:mlon1,mlat0:mlat1,mlev0:mlev1) :: &
     je13d,je23d,  & ! output current density

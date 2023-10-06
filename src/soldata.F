@@ -7,11 +7,7 @@
 !
       use input_module,only: see_ncfile
       implicit none
-#ifdef SUN
-#include <netcdf3.inc>
-#else
 #include <netcdf.inc>
-#endif
       integer :: 
      |  nstruct,    ! # of structure_elements (unlimited dim)
      |  ndate,      ! # dates
@@ -219,13 +215,13 @@
       write(6,"('Finished reading solar flux data',/,72('-'))")
       end subroutine rd_soldata
 !-------------------------------------------------------------------
-      subroutine get_soldata(iyear,iday,iutsec,istep)
+      subroutine get_soldata(iyear,iday,iutsec)
 !
 ! Args:
-      integer,intent(in) :: iyear,iday,iutsec,istep
+      integer,intent(in) :: iyear,iday,iutsec
 !
 ! Local:
-      integer :: index,index1,index2,i
+      integer :: index,index1,index2
       real :: iuttime,iyfrac
       integer,parameter :: istruct = 1
 !

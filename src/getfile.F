@@ -14,9 +14,7 @@
      |  local     ! local disk file name returned
 !
 ! Local:
-      integer :: istat
       logical :: exists
-      character(len=1024) :: cmd
 !
 ! External (util.F):
       integer,external :: isystem

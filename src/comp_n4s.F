@@ -66,29 +66,26 @@
 !
       end subroutine alloc_n4s
 !-----------------------------------------------------------------------
-      subroutine comp_n4s(tn,o2,o1,n2,barm,xnmbarm,no,n2d,ne,o2p,op,n2p,
+      subroutine comp_n4s(o2,o1,n2,xnmbar,xnmbari,no,n2d,ne,o2p,op,n2p,
      |  nplus,nop,lev0,lev1,lon0,lon1,lat)
 !
 ! Advance n4s by one time step. This is called from dynamics at
 ! each subdomain latitude.
 !
       use qrj_module,only: qtef
-      use cons_module,only: brn2d,p0,expz,expzmid_inv,boltz,
-     |  rmass_n4s,rmassinv_n2d,rmassinv_o2,rmassinv_o1,
-     |  rmassinv_n2,rmassinv_no
+      use cons_module,only: brn2d,rmass_n4s,
+     |  rmassinv_n2d,rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no
       use chemrates_module,only: beta1,beta3,beta4,beta5,beta7,
      |  beta8,beta17,ra1,ra3,rk2,rk4,rk6,rk8
-      use fields_module,only: tlbc ! lower boundary interface level of TN
 !
 ! Input args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
      |  n2,      ! molecular nitrogen (mmr)
-     |  barm,    ! mean molecular weight
-     |  xnmbarm, ! p0*e(-z)*barm/kT
+     |  xnmbar,  ! p0*e(-z)*mbar/kT
+     |  xnmbari, ! p0*e(-z)*barm/kT
      |  no,      ! nitric oxide (mmr)
      |  n2d,     ! N2D (mmr) (from sub comp_n2d)
      |  ne,      ! N2D (mmr)
@@ -112,13 +109,9 @@
 ! Lower boundary:
 ! n4s_lbc(:,1)=A, n4s_lbc(:,2)=B, n4s_lbc(:,3)=C define lower boundary 
 !   condition where A*DPSX/DZ + B*PSX + C = 0.
-! Note tn(lev1,i) assumes tn bottom boundary is stored in top slot.
 !
       do i=lon0,lon1
-!       xnmbar_lbc = p0*expz(1)*expzmid_inv*barm(lev0,i)/
-!    |    (boltz*tn(lev1,i))
-        xnmbar_lbc = p0*expz(1)*expzmid_inv*barm(lev0,i)/
-     |    (boltz*tlbc(i,lat))
+        xnmbar_lbc = xnmbari(lev0,i)
 !
 ! Value at bottom given by photochemical equilibrium.
         n4s_lbc(i,1,lat) = 0.
@@ -144,25 +137,25 @@
         do k=lev0,lev1-1
 !
           n4s_prod(k,i,lat) = (.5*(qtef(k,i,lat)+qtef(k+1,i,lat))*
-     |      (1.-brn2d))+xnmbarm(k,i)*(n2d(k,i)*rmassinv_n2d*
-     |      (xnmbarm(k,i)*beta4*o1(k,i)*rmassinv_o1+
+     |      (1.-brn2d))+xnmbar(k,i)*(n2d(k,i)*rmassinv_n2d*
+     |      (xnmbar(k,i)*beta4*o1(k,i)*rmassinv_o1+
      |      beta5(k,i,lat)*.5*(ne(k,i)+ne(k+1,i))+beta7)+
      |      .5*(beta8(k,i,lat)+beta8(k+1,i,lat))*no(k,i)*rmassinv_no)+
-     |      xnmbarm(k,i)*(rk2(k,i,lat)*op(k,i)*n2(k,i)*rmassinv_n2+
+     |      xnmbar(k,i)*(rk2(k,i,lat)*op(k,i)*n2(k,i)*rmassinv_n2+
      |      rk6*nplus(k,i)*o2(k,i)*rmassinv_o2+
      |      rk8*nplus(k,i)*o1(k,i)*rmassinv_o1)+
      |      sqrt(ne(k,i)*ne(k+1,i))*(ra1(k,i,lat)*nop(k,i)*0.15+
      |      ra3(k,i,lat)*n2p(k,i)*1.1)
 !
-          n4s_loss(k,i,lat) = -xnmbarm(k,i)*(beta1(k,i,lat)*o2(k,i)*
+          n4s_loss(k,i,lat) = -xnmbar(k,i)*(beta1(k,i,lat)*o2(k,i)*
      |      rmassinv_o2+beta3(k,i,lat)*no(k,i)*rmassinv_no+
-     |      xnmbarm(k,i)*beta17(k,i,lat)*o1(k,i)*rmassinv_o1*
+     |      xnmbar(k,i)*beta17(k,i,lat)*o1(k,i)*rmassinv_o1*
      |      n2(k,i)*rmassinv_n2)-rk4*o2p(k,i)
 
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfld('MBAR_N4S'  ,' ',' ',xnmbarm(lev0:lev1-1,i0:i1),
+!     call addfld('MBAR_N4S'  ,' ',' ',xnmbar(lev0:lev1-1,i0:i1),
 !    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
 !     call addfld('N4S_PROD',' ',' ',n4s_prod(lev0:lev1-1,i0:i1,lat),
 !    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
@@ -171,8 +164,8 @@
  
       end subroutine comp_n4s
 !-----------------------------------------------------------------------
-      subroutine minor_n4s(tn,o2,o1,n2,he,n4s,n4s_nm1,n4s_out,
-     |  n4s_nm1_out,lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine minor_n4s(tn,o2,o1,he,mbar,barm,xnmbar,w,n4s,n4s_nm1,
+     |  n4s_out,n4s_nm1_out,lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_n4s
 !
 ! Input args:
@@ -182,8 +175,11 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
-     |  n2,      ! molecular nitrogen (mmr)
      |  he,      ! helium (mmr)
+     |  mbar,    ! mean molecular weight
+     |  barm,    ! mean molecular weight
+     |  xnmbar,  ! p0*e(-z)*mbar/kT
+     |  w,       ! vertical wind
      |  n4s,     ! N4S (mmr)
      |  n4s_nm1  ! N4S at time n-1 
 !
@@ -193,27 +189,16 @@
      |  n4s_out,    ! N4S output 
      |  n4s_nm1_out ! N4S output at time n-1
 !
-! Local:
-      integer :: lat
-!
 !     write(6,"('enter minor_n4s')")
 !
 ! Minor returns n4s_out and n4s_nm1_out. Module data n4s_prod,
 ! n4s_loss, etc, were defined by comp_n4s.  
 !
-      call minor(tn,o2,o1,n2,he,n4s,n4s_nm1,n4s_out,n4s_nm1_out,
-     |  n4s_loss,n4s_prod,n4s_lbc,n4s_ubc,rmass_n4s,phi_n4s,
-     |  alfa_n4s,lev0,lev1,lon0,lon1,lat0,lat1,0,'N4S')
+      call minor(tn,o2,o1,he,mbar,barm,xnmbar,w,n4s,n4s_nm1,
+     |  n4s_out,n4s_nm1_out,n4s_loss,n4s_prod,n4s_lbc,n4s_ubc,
+     |  rmass_n4s,phi_n4s,alfa_n4s,lev0,lev1,lon0,lon1,lat0,lat1,
+     |  0,'N4S')
 
-!     do lat=lat0,lat1
-!       call addfld('N4S_OUT' ,' ',' ',
-!    |    n4s_out(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!       call addfld('N4S_TM1' ,' ',' ',
-!    |    n4s_nm1_out(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     enddo ! lat=lat0,lat1
- 
       end subroutine minor_n4s
 !
       end module n4s_module

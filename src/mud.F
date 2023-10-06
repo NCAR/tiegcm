@@ -25,9 +25,9 @@ c     the common subroutine file "mudcom.f" is attached to the end
       subroutine mud(pe,jntl,isolve,ier)
 !
 ! !USES:
-      use pdynamo_module,only: nc,ncee,cee
-      use timing_module,only: timer,timing
-      use init_module,only: istep
+      use params_module,only: nres_grid
+      use pdynamo_module,only: cee
+      use timing_module,only: timer
 !
 ! !DESCRIPTION: multigrid solver with modified stencil
 !     input 
@@ -52,7 +52,7 @@ c
 c     set grid size params
 c
       integer iixp,jjyq,iiex,jjey,nnx,nny,llwork
-      parameter (iixp = 5 , jjyq = 3, iiex = 5, jjey = 5 )
+      parameter (iixp = 5, jjyq = 3, iiex = nres_grid, jjey = nres_grid)
       parameter (nnx=iixp*2**(iiex-1)+1, nny=jjyq*2**(jjey-1)+1)
 c
 c     estimate work space for point relaxation (see mud2cr.d)
@@ -63,7 +63,7 @@ c
 c     put integer and floating point argument names in contiguous
 c     storage for labelling in vectors iprm,fprm
 c
-      integer iprm(16),mgopt(4)
+      integer iprm(17),mgopt(4)
       real fprm(6)
       integer intl,nxa,nxb,nyc,nyd,ixp,jyq,iex,jey,nx,ny,
      +              iguess,maxcy,method,nwork,lwrkqd,itero
@@ -417,8 +417,7 @@ c
 	  itx = ktxbgn(k)
 	  ity = ktybgn(k)
 	  klevel = k
-	  call dismd2cr(nx,ny,work(ic),work(itx),work(ity),
-     +                  work,ierror,isolve)
+	  call dismd2cr(nx,ny,work(ic),work(itx),work(ity),work,isolve)
 	  end do
 	return
       end if   ! end of intl=0 initialization call block
@@ -726,8 +725,9 @@ c
       return
       end
 
-      subroutine dismd2cr(nx,ny,cf,tx,ty,wk,ier,isolve)
-      use pdynamo_module,only: nc,ncee,cee,ceee
+      subroutine dismd2cr(nx,ny,cf,tx,ty,wk,isolve)
+      use params_module,only: nres_grid
+      use pdynamo_module,only: nc,cee,ceee
 c
 c     discretize elliptic pde for mud2cr, set nonfatal errors
 c
@@ -736,7 +736,7 @@ c
 !     integer intl,nxa,nxb,nyc,nyd,ixp,jyq,iex,jey,nfx,nfy,iguess,
 !    +             maxcy,method,nwork,lwork,itero,ngrid,klevel,kcur,
 !    +             kcycle,iprer,ipost,intpol,kps
-      integer nx,ny,i,j,l,im1,jm1,ier,nnx,nny
+      integer nx,ny,i,j,l,im1,jm1,nnx,nny
       real cf(nx,ny,10),tx(nx,ny,*),ty(ny,nx,*)
       real wk(*)
       integer        intl,nxa,nxb,nyc,nyd,ixp,jyq,iex,jey,nfx,nfy,
@@ -760,7 +760,7 @@ c
 	call shutdown('dismd2cr')
       ENDIF
       if (isolve >= 0) then
-        CALL CEEE(CEE(NC(6-KLEVEL)),NX,NY,CF)
+        CALL CEEE(CEE(NC(nres_grid+1-KLEVEL)),NX,NY,CF)
       else
         write(6,"('>>> mud: invalid isolve=',i3)") isolve
         call shutdown('isolve')
@@ -1104,7 +1104,7 @@ c
 c     line relaxation in the x direction (periodic or nonperiodic)
 c
       implicit none
-      integer nx,ny,i,ib,j,ii
+      integer nx,ny,i,ib,j
       integer intl,nxa,nxb,nyc,nyd,ixp,jyq,iex,jey,nfx,nfy,iguess,
      +             maxcy,method,nwork,lwork,itero,ngrid,klevel,kcur,
      +             kcycle,iprer,ipost,intpol,kps

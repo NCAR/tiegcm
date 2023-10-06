@@ -13,6 +13,7 @@
 !
       use input_module,only: tgcm_input
       use mpi
+      use mpi_module,only: TIEGCM_WORLD
       implicit none
       character(len=1024) :: inputfile,line
       integer :: ier,stat
@@ -21,7 +22,7 @@
       call getarg(1,inputfile)
       write(6,"(/,'Reading namelist input data from ',a)") 
      |  trim(inputfile)
-      call mpi_bcast(inputfile,1024,MPI_CHARACTER,0,MPI_COMM_WORLD,ier)
+      call mpi_bcast(inputfile,1024,MPI_CHARACTER,0,TIEGCM_WORLD,ier)
       open(10,file=trim(inputfile)) 
 !
 ! Do the namelist read:

@@ -1,6 +1,6 @@
 ! 
-      subroutine settei(tn,o2,o1,n2,ne,te,ti,op,o2p,nop,barm,qji_ti,
-     |  te_out,ti_out,lev0,lev1,lon0,lon1,lat)
+      subroutine settei(tn,o2,o1,n2,ne,te,ti,op,o2p,nop,xnmbar,xnmbari,
+     |  scht,schti,qji_ti,Qa,Q2,te_out,ti_out,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -9,9 +9,9 @@
 ! Calculate electron and ion temperatures.
 !
       use params_module,only: dz,nlonp4,spval
-      use cons_module,only: pi,rtd,evergs,p0,expz,expzmid,expzmid_inv,
-     |  boltz,rmassinv_o2,rmassinv_o1,rmassinv_n2,gask,grav,dipmin,avo
-      use input_module,only: f107
+      use cons_module,only: pi,rtd,evergs,
+     |  rmassinv_o2,rmassinv_o1,rmassinv_n2,dipmin,avo
+      use input_module,only: f107,et
       use chapman_module,only: chi   ! solar zenith angle (nlonp4,nlat)
       use magfield_module,only: rlatm,dipmag
       use aurora_module,only: qteaur ! (nlonp4,nlat)
@@ -40,8 +40,12 @@
      |  op,      ! O+
      |  o2p,     ! O2+
      |  nop,     ! NO+
-     |  barm,    ! mean molecular weight
-     |  qji_ti   ! joule heating from qjoule_ti (used ui,vi)
+     |  xnmbar,  ! p0*e(-z)*mbar/kT  (midpoints)
+     |  xnmbari, ! p0*e(-z)*barm/kT  (interfaces)
+     |  scht,    ! scale height (midpoints)
+     |  schti,   ! scale height (interfaces)
+     |  qji_ti,  ! joule heating from qjoule_ti (used ui,vi)
+     |  Qa,Q2    ! electrojet turbulent heating
 !
 ! Output args:
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) ::
@@ -63,7 +67,6 @@
      |  o2n,       ! O2 number density (midpoints or interfaces)
      |  o1n,       ! O1 number density (midpoints or interfaces)
      |  n2n,       ! N2 number density (midpoints or interfaces)
-     |  xnmbar,    ! p0*e(-z)*barm/kT  (minpoints or interfaces)
      |  root_te,   ! sqrt(te)
      |  root_tn,   ! sqrt(tn)
      |  root_ne,   ! sqrt(ne)
@@ -118,8 +121,6 @@
      |  qteaur_ki,   ! for diagnostic plotting of qteaur
      |  sindipmag_ki ! for diagnostic plotting of sindipmag
 !
-      real,dimension(lev0:lev1) :: expzp ! e(-z) (midpoints or interfaces)
-!
 #ifdef VT
 !     code = 126 ; state = 'settei' ; activity='ModelCode'
       call vtbegin(126,ier)
@@ -137,12 +138,23 @@
       do i=lon0,lon1
         if (abs(rlatm(i,lat))-pi/4.5 >= 0.) then
           a(i) = 1.
-        else
-          a(i) = .5*(1.+sin(pi*(abs(rlatm(i,lat))-pi/9.)/(pi/4.5)))
+!       else
+!         a(i) = .5*(1.+sin(pi*(abs(rlatm(i,lat))-pi/9.)/(pi/4.5)))
+! Dang, 2019, set a(i)=0 between +10 and -10 magnetic latitude          
+        elseif (abs(rlatm(i,lat))-pi/18 <= 0.) then
+          a(i) = 0.
+        else 
+! Dang, 2019, change parameter: pi/9.->pi/12., pi/4.5->6, per Hanli and Wenbin
+!         a(i) = .5*(1.+sin(pi*(abs(rlatm(i,lat))-pi/12.)/(pi/6.)))
+! Pham, 2021, try to fix huge gradients in low lat 
+          a(i) = .5*(1.+cos(pi*(abs(rlatm(i,lat))-pi/4.5)/(pi/6.)))
         endif 
 !
 ! Increased heat flux for TE fom protonosphere.
-        fed(i) = ( -5.0e+7*f107te*a(i)-4.0e+7*f107te)*1.2
+!       fed(i) = ( -5.0e+7*f107te*a(i)-4.0e+7*f107te)*1.2
+! Dang, 2019, FeDCoef2 yields a non-zero downward flux at the equator.
+! Remove per Wenbin's suggestion, and FeDCoef1 is changed from -5e7 to -9e7.
+        fed(i) = -9.0e+7*f107te*a(i)
         fen(i) = fed(i)/2.
         fed(i) = fed(i)+qteaur(i,lat)     ! t4
         fen(i) = fen(i)+qteaur(i,lat)     ! t5
@@ -230,17 +242,11 @@
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Convert o2,o,n2 to number density (interfaces):
-      do k=lev0,lev1-1
-        expzp(k) = expzmid_inv*expz(k)
-      enddo ! k=lev0,lev1
-      expzp(lev1) = expzmid*expz(lev1-1)
       do i=lon0,lon1
         do k=lev0,lev1
-! xnmbar at interfaces:
-          xnmbar(k,i) = p0*expzp(k)*barm(k,i)/(boltz*tn_int(k,i)) ! s8
-          o2n(k,i) = xnmbar(k,i)*o2n(k,i)*rmassinv_o2       ! s13
-          o1n(k,i) = xnmbar(k,i)*o1n(k,i)*rmassinv_o1       ! s12
-          n2n(k,i) = xnmbar(k,i)*n2n(k,i)*rmassinv_n2       ! s11
+          o2n(k,i) = xnmbari(k,i)*o2n(k,i)*rmassinv_o2       ! s13
+          o1n(k,i) = xnmbari(k,i)*o1n(k,i)*rmassinv_o1       ! s12
+          n2n(k,i) = xnmbari(k,i)*n2n(k,i)*rmassinv_n2       ! s11
           root_te(k,i) = sqrt(te_int(k,i))
 !
           tek0(k,i) = 7.5e5/
@@ -253,17 +259,17 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
-!     call addfld('XNMBARI',' ',' ',xnmbar,
+!     call addfld('XNMBARI',' ',' ',xnmbari(:,lon0:lon1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('TEK0'   ,' ',' ',tek0  ,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       do i=lon0,lon1
         do k=lev0,lev1-1
-          h_mid(k,i) = gask*tn(k,i)/(.5*(barm(k,i)+barm(k+1,i))*grav) ! s7
+          h_mid(k,i) = scht(k,i)  ! s7
         enddo ! k=lev0,lev1-1
         do k=lev0,lev1
-          h_int(k,i) = gask*tn_int(k,i)/(barm(k,i)*grav)              ! s6
+          h_int(k,i) = schti(k,i) ! s6
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
@@ -402,24 +408,29 @@
 !
       do i=lon0,lon1 ! (DO 20)
         do k=lev0,lev1-1
-          xnmbar(k,i) = p0*expz(k)*.5*(barm(k,i)+barm(k+1,i))/
-     |      (boltz*tn(k,i))
           o2n(k,i) = xnmbar(k,i)*o2(k,i)*rmassinv_o2  ! s14
           o1n(k,i) = xnmbar(k,i)*o1(k,i)*rmassinv_o1  ! s13
-          n2n(k,i) = n2(k,i)
-          if (n2n(k,i) < 0.) n2n(k,i) = 0.
-          n2n(k,i) = xnmbar(k,i)*n2n(k,i)*rmassinv_n2 ! s12
+          n2n(k,i) = xnmbar(k,i)*n2(k,i)*rmassinv_n2  ! s12
 !
 ! Calculate source term qe (s10)
 ! Comment from earlier version (maybe the *1.0 below was once *2.0):
 !   "Correction facor of 2 increase in TE heating rate"
 !
-          qe(k,i) = alog(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+0.1*o1n(k,i)))
-          qe(k,i) = exp(-((((0.001996*qe(k,i)+0.08034)*qe(k,i)+1.166)*
-     |              qe(k,i)+6.941)*qe(k,i)+12.75))*1.0
+!         qe(k,i) = alog(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+0.1*o1n(k,i)))
+!         qe(k,i) = exp(-((((0.001996*qe(k,i)+0.08034)*qe(k,i)+1.166)*
+!    |              qe(k,i)+6.941)*qe(k,i)+12.75))*1.0
+! Modified according to Smithtro & Solomon (2008), by Yihui Cai, 2021/10
+          qe(k,i) = alog(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+1.0*o1n(k,i)))
+          qe(k,i) = exp(-((((((0.00001249*qe(k,i)+0.0005755)*qe(k,i)
+     |              +0.009346)*qe(k,i)+0.059)*qe(k,i)+0.04392)*
+     |              qe(k,i)-1.056)*qe(k,i)-5.342))*1.0
 !
 ! Subtract qe from right-hand-side:
           rhs(k,i) = rhs(k,i)-qe(k,i)*qtot(k,i)*evergs
+!
+! Subtract electrojet turbulent heating from rhs
+          if (et) rhs(k,i) = rhs(k,i)-Qa(k,i)*10.0
+!
           root_te(k,i) = sqrt(te(k,i))
 !
 ! Electron/N2 collision A(E,N2,VIB) (s9):
@@ -442,7 +453,7 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1 (end DO 20)
 
-!     call addfld('XNMBARM',' ',' ',xnmbar(lev0:lev1-1,:),
+!     call addfld('XNMBAR',' ',' ',xnmbar(lev0:lev1-1,lon0:lon1),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('O2N'    ,' ',' ',o2n(lev0:lev1-1,:)   ,
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
@@ -470,6 +481,10 @@
 ! Start total of electron/neutral loss rate (s11):
 !
         loss_en(k,i) = loss_en2(k,i)
+!
+! cooling correction
+        if (et .and. te(k,i)>500.0 .and. Q2(k,i)>0.0)
+     |    loss_en(k,i)=loss_en(k,i)*exp(-7.54E-4*(te(k,i)-500.0))
 !
 ! Electron/O2 loss rates: (L0(E,O2)+L0(E,O2,ROT)+L0(E,O2,VIB)/NE
 !

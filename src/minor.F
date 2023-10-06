@@ -1,7 +1,7 @@
 !
-      subroutine minor(tn,o2,o1,n2,he,fcomp,fcomp_tm1,fcomp_out,
-     |  fcomp_tm1_out,sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,
-     |  lon0,lon1,lat0,lat1,idebug,name)
+      subroutine minor(tn,o2,o1,he,mbar,barm,xnmbar,w,fcomp,fcomp_tm1,
+     |  fcomp_out,fcomp_tm1_out,sloss,sprod,flbc,fubc,rmx,phix,alfax,
+     |  lev0,lev1,lon0,lon1,lat0,lat1,idebug,name)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -10,19 +10,17 @@
 ! Advance minor species fcomp by one time step.
 ! This is called from comp_no and comp_n4s.
 !
-      use params_module,only: nlat,nlon,nlonp4,dlat,glat
+      use params_module,only: nlonp4,dlat,glat
       use lbc,only: b,fb ! b(nlonp4,2,2), fb(nlonp4,2)
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
-     |  boltz,p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
+     |  p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
      |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,
-     |  dtsmooth_div2,difhor,kut,rmassinv_he
+     |  dtsmooth_div2,difhor,rmassinv_he
       use init_module,only: iday
-      use fields_module,only: w,itc,itp,tlbc
+      use fields_module,only: tlbc
       use addfld_module,only: addfld
-#ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
      |  mp_periodic_f2d
-#endif
 !
 ! VT means vampir tracing:
 !
@@ -40,8 +38,11 @@
      |  tn,       ! neutral temperature (deg K)
      |  o2,       ! molecular oxygen (mmr)
      |  o1,       ! atomic oxygen (mmr)
-     |  n2,       ! molecular nitrogen (mmr)
      |  he,       ! helium (mmr)
+     |  mbar,     ! mean molecular weight
+     |  barm,     ! mean molecular weight
+     |  xnmbar,   ! p0*e(-z)*mbar/kT
+     |  w,        ! vertical wind
      |  fcomp,    ! input species (for finite diffs in advec)
      |  fcomp_tm1 ! input species at time n-1 
 !
@@ -78,7 +79,7 @@
 !
       integer :: nk,nkm1,nlevs
       real,parameter :: small=1.e-12, tau=1.86e+3, t00=273.
-      real :: salfa12,salfa21,salfax1,salfax2,rlat,dfac
+      real :: salfa12,salfa21,salfax1,salfax2,rlat
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  hadvec,   ! horizontal advection (output of sub advec) (s13)
      |  do2dz,    ! do2/dz(k)    (s6)
@@ -86,8 +87,8 @@
      |  pso2,     ! o2           (s8)
      |  pso1,     ! o1           (s9)
      |  dmdz,     ! dm/dz(k)     (s10)
-     |  xmbar_k,  ! mbar (k)     (s11)
-     |  xmbar_kh, ! mbar (k+1/2) (s12)
+     |  xmbar_k,  ! barm (k)     (s11)
+     |  xmbar_kh, ! mbar (k)     (s12)
      |  tni,      ! tn (k)       (s5)
      |  s0prod,   ! sprod*mx/nmbar (s15)
      |  alfa11,alfa12,alfa21,alfa22, ! (s1,s2,s3,s4)
@@ -159,7 +160,6 @@
 
       enddo ! lat=lat0,lat1
 !------------------------- End first latitude scan ---------------------
-#ifdef MPI
 !
 ! Get subdomain boundary longitudes for ftm1_jdif, to complete shapiro
 ! time smoother. (mp_periodic_f3d call opened up 8/31/11)
@@ -167,7 +167,6 @@
       call mp_periodic_f3d(ftm1_jdif(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1,1)
       call mp_bndlons_f3d(ftm1_jdif,nlevs,lon0,lon1,lat0,lat1,1,0)
-#endif
 !----------------------- Begin second latitude scan --------------------
       do lat=lat0,lat1
 !       write(6,"('Minor second latitude scan: lat=',i3)") lat
@@ -190,15 +189,13 @@
 ! Horizontal advection (pass k vs i slices at full task subdomain 
 ! longitudes, and the 5 latitudes centered over the current latitude).
 !
-      call advec(fcomp(:,:,lat-2:lat+2),hadvec,lev0,lev1,lon0,lon1,
-     |  lat,0)
+      call advec(fcomp(:,:,lat-2:lat+2),hadvec,lev0,lev1,lon0,lon1,lat)
 !
 ! Periodic points for advection:
-#ifdef MPI
+!
 ! Oct, 2010: Comment this call to prevent divergence in N4S and NO
 !   between runs w/ different numbers of processors (see also divrg.F):
 !     call mp_periodic_f2d(hadvec,lon0,lon1,lat,lat)
-#endif
 !
 ! Set periodic points to zero:
 !     if (lon0==1) hadvec(:,lon0:lon0+1) = 0.
@@ -227,14 +224,11 @@
      |     bhe(i)*rmassinv_he)
       enddo ! i=lon0,lon1
 !
-! xmbar_kh = mbar(k+1/2):
+! xmbar_kh = mbar, xmbar_k = barm:
       do i=lon0,lon1
         do k=lev0,lev1
-          xmbar_kh(k,i) = 1./
-     |      (o2(k,i,lat)*rmassinv_o2+
-     |       o1(k,i,lat)*rmassinv_o1+
-     |       n2(k,i,lat)*rmassinv_n2+
-     |       he(k,i,lat)*rmassinv_he)
+          xmbar_kh(k,i) = mbar(k,i,lat)
+          xmbar_k(k,i) = barm(k,i,lat)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 !
@@ -255,7 +249,6 @@
 ! Levels 2 -> lev1:
       do i=lon0,lon1
         do k=lev0+1,lev1
-          xmbar_k(k,i) = .5*(xmbar_kh(k,i)+xmbar_kh(k-1,i))
           dmdz(k,i) = (xmbar_kh(k,i)-xmbar_kh(k-1,i))/dzp
           pso1(k,i) = .5*(o1(k,i,lat)+o1(k-1,i,lat))
           pso2(k,i) = .5*(o2(k,i,lat)+o2(k-1,i,lat))
@@ -294,8 +287,7 @@
  
       do i=lon0,lon1
         do k=lev0,lev1-1
-          s0prod(k,i) = sprod(k,i,lat)*rmx*boltz*tn(k,i,lat)/  ! s15
-     |      (p0*expz(k)*xmbar_kh(k,i))
+          s0prod(k,i) = sprod(k,i,lat)*rmx/xnmbar(k,i,lat)  ! s15
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -386,12 +378,12 @@
 ! s1
           p_coef(k,i) = ax(k,i)/dzp*(1./dzp+.5*thdiff(k,i))-expz(k)*
      |      (expzmid_inv*difk(k,iday)*dfactor(i)*(1./dzp-.5*dmdz(k,i))+
-     |      0.25*(w(k,i,lat,itc)+w(k+1,i,lat,itc)))/
+     |      0.25*(w(k,i,lat)+w(k+1,i,lat)))/
      |      dzp
 ! s3
           r_coef(k,i) = ax(k+1,i)/dzp*(1./dzp-.5*thdiff(k+1,i))-expz(k)*
      |      (expzmid*difk(k+1,iday)*dfactor(i)*(1./dzp+.5*dmdz(k+1,i))-
-     |      0.25*(w(k,i,lat,itc)+w(k+1,i,lat,itc)))/
+     |      0.25*(w(k,i,lat)+w(k+1,i,lat)))/
      |      dzp
 ! s2
           q_coef(k,i) = 
@@ -429,7 +421,7 @@
         call addfld('FSMOOTH',' ',' ',
      |    ftm1_smooth(lev0:lev1-1,lon0:lon1,lat),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('W_OMEGA',' ',' ',w(lev0:lev1,lon0:lon1,lat,itc),
+        call addfld('W_OMEGA',' ',' ',w(lev0:lev1,lon0:lon1,lat),
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('P_COEF' ,' ',' ',p_coef(lev0:lev1-1,:),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
@@ -461,7 +453,7 @@
 ! not including ghost cells.
 !
       call filter_minor(fcomp_out(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,kut,name)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,name)
 !
 !----------------------- Begin third latitude scan --------------------
       do lat=lat0,lat1
@@ -488,12 +480,10 @@
 !----------------------- End third latitude scan ----------------------
 !
 ! Periodic points for fcomp_out and fcomp_tm1_out:
-#ifdef MPI
       call mp_periodic_f3d(fcomp_out(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1,1)
       call mp_periodic_f3d(fcomp_tm1_out(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1,1)
-#endif
 !
 !----------------------- Begin fourth latitude scan --------------------
       do lat=lat0,lat1
@@ -537,25 +527,17 @@
 !
       end subroutine minor
 !-----------------------------------------------------------------------
-      subroutine filter_minor(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut,
-     |  name)
+      subroutine filter_minor(fout,lev0,lev1,lon0,lon1,lat0,lat1,name)
 !
 ! Filter minor species (called from minor after trsolv)
 !
-      use params_module,only: nlonp4,nlon,nlat
-      use filter_module,only: filter2
+      use params_module,only: nlonp4
 !
-#ifdef MPI
       use mpi_module,only: mp_gatherlons_f3d,mp_scatterlons_f3d,mytidi
       implicit none
-#else
-      implicit none
-      integer :: mytidi=0
-#endif
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      integer,intent(in) :: kut(nlat)
       real,intent(inout) :: fout(lev0:lev1,lon0:lon1,lat0:lat1)
       character(len=*),intent(in) :: name
 !
@@ -568,7 +550,6 @@
 ! Local:
       integer :: i,j,ier
       real :: f_ik(nlonp4,lev0:lev1),f_kij(lev0:lev1,nlonp4,lat0:lat1)
-      real :: fmin,fmax
 !
 #ifdef VT
 !     code = 123 ; state = 'filter_minor' ; activity='Filtering'
@@ -584,14 +565,11 @@
         enddo
       enddo
 !
-#ifdef MPI
-!
 ! Gather longitudes into tasks in first longitude column of task table
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
       call mp_gatherlons_f3d(f_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,name)
-#endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
       if (mytidi==0) then
@@ -599,13 +577,12 @@
 ! Loop through subdomain latitudes:
         latscan: do j=lat0,lat1
 !
-! Define 2d array with all longitudes for filter2:
+! Define 2d array with all longitudes for filter:
           do i=1,nlonp4
             f_ik(i,:) = f_kij(:,i,j)
           enddo ! i=1,nlonp4
 !
-! Do the filtering (requires fft):
-          call filter2(f_ik,lev0,lev1,kut(j),j)
+          call ringfilter(f_ik,lev0,lev1,3,name,j)
 !
 ! Return filtered array to f_kij:
           do i=1,nlonp4
@@ -613,14 +590,12 @@
           enddo ! i=1,nlonp4
         enddo latscan ! j=lat0,lat1
       endif ! mytidi==0
-#ifdef MPI
 !
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
       call mp_scatterlons_f3d(f_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
      |  name)
-#endif
 !
 ! Return filtered array to fout at current task longitudes:
       do j=lat0,lat1

@@ -66,16 +66,15 @@
 !
       contains
 !-----------------------------------------------------------------------
-      subroutine qrj(sco2,sco1,scn2,tn,no,o2,o1,n2,n4s,xnmbari,
+      subroutine qrj(sco2,sco1,scn2,tn,no,o2,o1,he,n2,xnmbari,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate heating and dissociation rates.
 !
-      use input_module,only: f107,f107a
+      use input_module,only: f107
       use init_module,only: sfeps
-      use cons_module,only: t0,expz,avo,rmassinv_n4s,rmassinv_no,
-     |  rmassinv_o2,rmassinv_o1,rmassinv_n2,expzmid,gask,
-     |  expzmid_inv,p0,check_exp
+      use cons_module,only: avo,rmassinv_n4s,rmassinv_no,
+     |  rmassinv_o2,rmassinv_o1,rmassinv_n2,check_exp
       use lbc,only: fb,b
       use chemrates_module,only: beta9
       use fields_module,only: tlbc
@@ -84,7 +83,7 @@
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
      |  sco2,sco1,scn2,     ! chapman integrals
-     |  tn,no,o2,o1,n2,n4s, ! tn and species mass mixing ratios
+     |  tn,no,o2,o1,he,n2,  ! tn and species mass mixing ratios
      |  xnmbari             ! p0*e(-z)*barm/kT at interfaces
 !
 ! VT vampir tracing:
@@ -103,10 +102,11 @@
      |  cband=9.03E-19  , ! shumann-runge
      |  e3=0.33         ,
      |  hc = 1.9845E-16   ! C(60)
-      real :: rlmeuvinv(lmax),rlmsrcinv(l1),factor,fmin,fmax
+      real :: rlmeuvinv(lmax),rlmsrcinv(l1)
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  o2i,    ! o2  at interfaces (s1)
      |  o1i,    ! o   at interfaces (s2)
+     |  hei,    ! he  at interfaces
      |  n2i,    ! n2  at interfaces (s3)
      |  n4si,   ! n4s at interfaces (s4)
      |  tni     ! tn  at interfaces (s6)
@@ -135,7 +135,7 @@
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  sum1,   ! sum(o2,o,n2)(sigma*chapman)   (s5)
      |  sum2,   ! sum(o2,o,n2)(sigma*psi/rmass) (s6)
-     |  sum3    ! sum(o2,o,n2,n4s)(sigmas)      (s7)
+     |  sum3    ! sum(o2,o,n2)(sigmas)      (s7)
       logical,parameter :: 
      |  debug=.false.     ! insert print statements
 !
@@ -171,6 +171,7 @@
         do k=lev0,lev1-1
           o2i (k+1,i) = 0.5*(o2(k,i)+o2(k+1,i))
           o1i (k+1,i) = 0.5*(o1(k,i)+o1(k+1,i))
+          hei (k+1,i) = 0.5*(he(k,i)+he(k+1,i))
           n2i (k+1,i) = 0.5*(n2(k,i)+n2(k+1,i))
           n4si(k+1,i) = 0.
         enddo
@@ -179,22 +180,17 @@
 ! Bottom boundary:
       do i=lon0,lon1
         o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+
-     |    fb(i,1))
+     |    b(i,1,3)*he(1,i)+fb(i,1))
         o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+
-     |    fb(i,2))
+     |    b(i,2,3)*he(1,i)+fb(i,2))
+        hei(1,i) = .5*(b(i,3,1)*o2(1,i)+b(i,3,2)*o1(1,i)+
+     |    (b(i,3,3)+1.)*he(1,i)+fb(i,3))
         n4si(1,i) = 0.
 !
 ! btf tiegcm_he 8/21/13: Not sure about n2i bottom boundary. 
-! For now, use 1-o2i-o1i since helium is negligible at this height.
+! For now, use 1-o2i-o1i-hei.
 !
-        n2i(1,i) = 1.-o2i(1,i)-o1i(1,i)
-      enddo
-!
-! N2 at interfaces:
-      do k=lev0,lev1
-        do i=lon0,lon1                       !!! temporal fix CISM
-          if(n2i(k,i)<=0.)n2i(k,i)=1.e-5     !!! temporal fix CISM
-        enddo                                !!! temporal fix CISM
+        n2i(1,i) = 1.-o2i(1,i)-o1i(1,i)-hei(1,i)
       enddo
 !
 ! calculate variables for transferring mass density to number density
@@ -235,7 +231,7 @@
       do l=l1+1,lmax   !  from 0.5A to 1050A
         sum1(:,:) = 0. ! sum(o2,o,n2)(sigma*chapman)
         sum2(:,:) = 0. ! sum(o2,o,n2)(sigma*psi/rmass)
-        sum3(:,:) = 0. ! sum(o2,o,n2,n4s)(sigmas)
+        sum3(:,:) = 0. ! sum(o2,o,n2)(sigmas)
         htfac=hc*rlmeuvinv(l)
         do i=lon0,lon1
           do k=lev0,lev1
@@ -360,11 +356,7 @@
 ! Quench:
       do i=lon0,lon1
         do k=lev0,lev1
-          factor = avo*p0/gask*expz(1)*expzmid**(2*k-3)
-          quenchfac(k,i) = factor/((o2i(k,i)*rmassinv_o2+
-     |                              o1i(k,i)*rmassinv_o1+
-     |                              n2i(k,i)*rmassinv_n2)*tni(k,i))
-          quenchfac(k,i) = quenchfac(k,i)*
+          quenchfac(k,i) = xnmbari(k,i)*
      |      (quench(1)*n2i(k,i)*rmassinv_n2+
      |       quench(2)*o2i(k,i)*rmassinv_o2)
           quenchfac(k,i) = quench(3)*quenchfac(k,i)/
@@ -448,7 +440,7 @@
 !---------------------------------------------------------------
       subroutine init_sflux
       use input_module,only: f107,f107a,see_ncfile
-      use init_module,only: sfeps,iday,iyear,secs,istep
+      use init_module,only: sfeps,iday,iyear,secs
       use soldata_module,only: get_soldata,soldata,nwave
 !
 ! Flux initialization once per time step, called from advance.
@@ -467,7 +459,7 @@
            fsrc(n)   = sflux(n)*sfeps
          enddo
       else
-         call get_soldata(iyear,iday,int(secs),istep)
+         call get_soldata(iyear,iday,int(secs))
          if (nwave /= lmax) then
             write(6,"('init_sflux(): wave bins mismatch: nwave=',i4,
      |         ' lmax=',i4)") nwave,lmax
@@ -521,7 +513,9 @@
      |        3.818e+08, 8.448e+08, 3.655e+09, 2.364e+09,
      |        1.142e+09, 1.459e+09, 4.830e+09, 2.861e+09,
      |        8.380e+09, 4.342e+09, 5.612e+09, 1.270e+09,
-     |        5.326e+08, 2.850e+07, 2.000e+06, 1.000e+04,
+! am 3/2015 modified according to Fang et al. 2008 to increase E-region Hall conductivity
+!    |        5.326e+08, 2.850e+07, 2.000e+06, 1.000e+04,
+     |        2.343e+09, 1.254e+08, 8.800e+06, 1.000e+04,
      |        5.010e+01/)
 !
 ! scaling factor A as defined in EUVAC model

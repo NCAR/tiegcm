@@ -1,6 +1,6 @@
 !
-      subroutine elden(tn,barm,op,op_upd,o2,o1,n2,n2d,no,n4s,xiop2p,
-     |  xiop2d,z,nplus,n2p,nop,o2p,electrons,lev0,lev1,lon0,lon1,lat)
+      subroutine elden(xnmbar,op,op_upd,o2,o1,n2,n2d,no,n4s,xiop2p,
+     |  xiop2d,nplus,n2p,nop,o2p,electrons,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -9,13 +9,12 @@
 ! Solve for electron density.
 ! Also calculate ions N+ (nplus), N2+ (n2p), NO+ (nop), and O2+ (o2p).
 !
-      use cons_module,only: p0,expz,boltz,rmassinv_o2,rmassinv_n2d,
+      use cons_module,only: rmassinv_o2,rmassinv_n2d,
      |  rmassinv_o1,rmassinv_n2,rmassinv_no,rmassinv_n4s
       use chemrates_module,only: rk1,rk2,rk3,rk4,rk5,rk6,rk7,rk8,
      |  rk9,rk10,rk16,rk23,rk26,beta9,ra1,ra2,ra3
       use qrj_module,only: qnp,qnop,qo2p,qn2p
       use addfld_module,only: addfld
-      use diags_module,only: mkdiag_TEC,mkdiag_HNMF2
       implicit none
 !
 ! Args:
@@ -23,8 +22,7 @@
 !
 ! Input args: press vs longitude input fields (2d (k,i)):
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: 
-     |  tn,    ! neutral temperature (deg K)
-     |  barm,  ! mean molecular weight
+     |  xnmbar,! for conversion from mmr to cm3
      |  op,    ! O+ ion (current time-step)
      |  op_upd,! O+ ion (updated, from sub oplus)
      |  o2,    ! molecular oxygen (mmr)
@@ -34,8 +32,7 @@
      |  no,    ! nitric oxide
      |  n4s,   ! n4s
      |  xiop2p,! from oplus
-     |  xiop2d,! from oplus
-     |  z      ! geopotential
+     |  xiop2d ! from oplus
 !
 ! Output args (particles/cm3):
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) :: 
@@ -48,20 +45,13 @@
 ! Local:
       integer :: k,i,i0,i1
       real,dimension(lev0:lev1,lon0:lon1) :: 
-     |  xnmbarm,        ! for conversion from mmr to cm3
      |  a0,a1,a2,a3,a4, ! coefficients for quartic solver
      |  a,b,c,d,e,fg,h, ! terms for quartic coefficients
      |  root            ! output from quartic solver
-      real,dimension(lon0:lon1) ::
-     |  tec		! diagnostic total electron content
 
 !     write(6,"('enter elden: lat=',i2)") lat
       i0 = lon0 ; i1 = lon1
 !
-!     call addfld('TN_ELD' ,' ',' ',tn    (:,i0:i1),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('BAR_ELD',' ',' ',barm  (:,i0:i1),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('OP_ELD' ,' ',' ',op    (:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('OP1_ELD',' ',' ',op_upd(:,i0:i1),
@@ -83,20 +73,18 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          xnmbarm(k,i) = p0*expz(k)*.5*(barm(k,i)+barm(k+1,i))/
-     |      (boltz*tn(k,i))
 !
 ! N+ ion (output):
           nplus(k,i) = (0.5*(qnp(k,i,lat)+qnp(k+1,i,lat))+
-     |      rk10*op(k,i)*n2d(k,i)*xnmbarm(k,i)*rmassinv_n2d) /
-     |      (xnmbarm(k,i)*((rk6+rk7)*o2(k,i)*rmassinv_o2+
+     |      rk10*op(k,i)*n2d(k,i)*xnmbar(k,i)*rmassinv_n2d) /
+     |      (xnmbar(k,i)*((rk6+rk7)*o2(k,i)*rmassinv_o2+
      |      rk8*o1(k,i)*rmassinv_o1))
 !
 ! Set up terms for quartic coefficients:
 !
 ! A = QI(NO+)+K2*N(O+)*N(N2)+K7*N(N+)*N(02)+B9*N(NO) (s10)
 !
-          a(k,i) = .5*(qnop(k,i,lat)+qnop(k+1,i,lat))+xnmbarm(k,i)*
+          a(k,i) = .5*(qnop(k,i,lat)+qnop(k+1,i,lat))+xnmbar(k,i)*
      |      (rk2(k,i,lat)*op_upd(k,i)*n2(k,i)*rmassinv_n2+
      |       rk7*nplus(k,i)*o2(k,i)*rmassinv_o2+
      |       .5*(beta9(k,i,lat)+beta9(k+1,i,lat))*no(k,i)*rmassinv_no)
@@ -104,13 +92,13 @@
 ! B = QI(O2+)+K1*N(O+)*N(O2)+K6*N(N+)*N(02) (s9)
 ! (very small "diamond diffs" with tgcm15 due to op_upd)
 !
-          b(k,i) = .5*(qo2p(k,i,lat)+qo2p(k+1,i,lat))+xnmbarm(k,i)*
+          b(k,i) = .5*(qo2p(k,i,lat)+qo2p(k+1,i,lat))+xnmbar(k,i)*
      |      (rk1(k,i,lat)*op_upd(k,i)+rk6*nplus(k,i))*o2(k,i)*
      |       rmassinv_o2+rk26*xiop2d(k,i)*o2(k,i)*rmassinv_o2
 !
 ! C = K4*N(N4S)+K5*N(NO) (s8)
 !
-          c(k,i) = xnmbarm(k,i)*(rk4*n4s(k,i)*rmassinv_n4s+
+          c(k,i) = xnmbar(k,i)*(rk4*n4s(k,i)*rmassinv_n4s+
      |       rk5*no(k,i)*rmassinv_no)
 !
 ! D = QI(N2+) (s7)
@@ -120,7 +108,7 @@
 !
 ! E =K3*N(O)+K9*N(O2) (s6)
 !
-          e(k,i) = xnmbarm(k,i)*(rk3(k,i,lat)*o1(k,i)*rmassinv_o1+
+          e(k,i) = xnmbar(k,i)*(rk3(k,i,lat)*o1(k,i)*rmassinv_o1+
      |       rk9*o2(k,i)*rmassinv_o2)
 !
 ! F+G = N(O+)+N(N+) (s5)
@@ -130,7 +118,7 @@
 !
 ! H = K9*N(02)
 !
-          h(k,i) = xnmbarm(k,i)*rk9*o2(k,i)*rmassinv_o2
+          h(k,i) = xnmbar(k,i)*rk9*o2(k,i)*rmassinv_o2
 !
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ! Coefficients for quartic solver: a0,a1,a2,a3,a4
@@ -164,7 +152,7 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !
-!     call addfld('XNMBARM' ,' ',' ',xnmbarm,
+!     call addfld('XNMBAR' ,' ',' ',xnmbar(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',i0,i1,lat)
 !     call addfld('NPLUS'   ,' ',' ',nplus(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',i0,i1,lat)
@@ -188,7 +176,7 @@
 !
 ! Solve quartic. Vquart returns electron density Ne in root:
 !
-      call vquart(a0,a1,a2,a3,a4,root,lev0,lev1,lon0,lon1,lat)
+      call vquart(a0,a1,a2,a3,a4,root,lev0,lev1,lon0,lon1)
 
 !     call addfld('ROOT',' ',' ',root,'lev',lev0,lev1,'lon',i0,i1,lat)
 !
@@ -242,19 +230,11 @@
         electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
       enddo ! i=lon0,lon1
 !     call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
-!    |  'ilev',lev0,lev1,'lon',i0,i1,lat)
-!
-! Save diagnostic tec (total electron content):
-      call mkdiag_TEC('TEC',tec,z,electrons,lev0,lev1,lon0,lon1,lat)
-!
-! Save diagnostics hmf2, nmf2:
-      call mkdiag_HNMF2('HMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
-      call mkdiag_HNMF2('NMF2',z,electrons,lev0,lev1,lon0,lon1,lat)
-      call mkdiag_HNMF2('FOF2',z,electrons,lev0,lev1,lon0,lon1,lat)
+!    |  'lev',lev0,lev1,'lon',i0,i1,lat)
 
       end subroutine elden
 !-----------------------------------------------------------------------
-      subroutine vquart(a0,a1,a2,a3,a4,root,lev0,lev1,lon0,lon1,lat)
+      subroutine vquart(a0,a1,a2,a3,a4,root,lev0,lev1,lon0,lon1)
       use addfld_module,only: addfld
       implicit none
 !
@@ -267,7 +247,7 @@
 ! This is called by elden for electron density.
 ! 
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      integer,intent(in) :: lev0,lev1,lon0,lon1
       real,dimension(lev0:lev1,lon0:lon1),intent(in)  :: a0,a1,a2,a3,a4
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: root
 !
@@ -326,10 +306,5 @@
      |      root(k,i)-w2(k,i))))/a4(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-
-!     call addfld('W1'    ,' ',' ',w1,'lev',lev0,lev1,'lon',i0,i1,lat)
-!     call addfld('W2'    ,' ',' ',w2,'lev',lev0,lev1,'lon',i0,i1,lat)
-!     call addfld('W3'    ,' ',' ',w3,'lev',lev0,lev1,'lon',i0,i1,lat)
-!     call addfld('VQROOT',' ',' ',root,'lev',lev0,lev1,'lon',i0,i1,lat)
 
       end subroutine vquart

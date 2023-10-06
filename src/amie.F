@@ -1,4 +1,3 @@
-#include "defs.h"
 !      
       module amie_module
 !      
@@ -10,11 +9,7 @@
       use addfld_module,only: addfld
       implicit none
 !
-#ifdef SUN
-#include "netcdf3.inc"
-#else
-#include "netcdf.inc"
-#endif 
+#include <netcdf.inc>
 !
 ! Define parameters for AMIE input data file:
       integer,parameter :: 
@@ -31,10 +26,6 @@
      |  tiepot(nmlonp1,nmlat),tieekv(nmlonp1,nmlat),
      |  tieefx(nmlonp1,nmlat),potg(nlonp1,0:nlatp1),
      |  efxg(nlonp1,0:nlatp1),ekvg(nlonp1,0:nlatp1)
-! defined output AMIE fields in TGCM geographic grid
-      real,dimension(nlonp4,nlat) :: 
-     |  potg_sech, ekvg_sech, efxg_sech
-      real,dimension(nmlonp1,-2:nlevp1) :: tiepot_sech
 !
 ! Define fields for AMIE input data file:
 ! electric potential in Volt
@@ -61,6 +52,9 @@
      |  cusplat_nh_amie, cuspmlt_nh_amie, cusplat_sh_amie,
      |  cuspmlt_sh_amie, hpi_sh_amie, hpi_nh_amie, pcp_sh_amie,
      |  pcp_nh_amie, crad(2), phida(2)
+!
+! Auroral boundaries from AMIE energy flux, 1 for SH, 2 for NH
+      real,dimension(2,nlon) :: aurbound
 !
       contains 
 !-----------------------------------------------------------------------
@@ -93,10 +87,10 @@
 ! Local:
       character(len=80) :: dskfile
       integer :: istat,ntimes,ncid,ndims,nvars,ngatts,idunlim,ier
-      integer :: id_lon,id_lat,id_time,lon,lat,mlt,
-     |    idv_year,idv_mon,idv_day,idv_jday,
-     |    idv_iter,idv_ut,idv_lon,idv_lat,idv_pot,idv_ekv,
-     |    idv_efx,idv_cusplat,idv_cuspmlt,idv_hpi,idv_pcp
+      integer :: id_lon,id_lat,id_time,
+     |    idv_year,idv_mon,idv_day,idv_jday,idv_ut,
+     |    idv_pot,idv_ekv,idv_efx,
+     |    idv_cusplat,idv_cuspmlt,idv_hpi,idv_pcp
 !
 ! Acquire mss file:
       dskfile = ' '
@@ -282,10 +276,10 @@
 ! Local:
       character(len=80) :: dskfile
       integer :: istat,ntimes,ncid,ndims,nvars,ngatts,idunlim,ier
-      integer :: id_lon,id_lat,id_time,lon,lat,mlt,
-     |    idv_year,idv_mon,idv_day,idv_jday,
-     |    idv_iter,idv_ut,idv_lon,idv_lat,idv_pot,idv_ekv,
-     |    idv_efx,idv_cusplat,idv_cuspmlt,idv_hpi,idv_pcp
+      integer :: id_lon,id_lat,id_time,
+     |    idv_year,idv_mon,idv_day,idv_jday,idv_ut,
+     |    idv_pot,idv_ekv,idv_efx,
+     |    idv_cusplat,idv_cuspmlt,idv_hpi,idv_pcp
 !
 ! Acquire mss file:
       dskfile = ' '
@@ -468,24 +462,30 @@
       use hist_module,only: modeltime
       use input_module,only: iamie,amiesh,amienh
       use cons_module,only: pi,ylonm,ylatm,rtd
-      use magfield_module,only: im,jm,dim,djm,
+      use magfield_module,only: im,jm,dim,djm,rlatm,
      |  sunlons  ! geomag. dipole longitude of subsol. point from subroutine sunloc_apex
+      use mpi_module,only: lon0,lon1,lat0,lat1,mlon0,mlon1,mlat0,mlat1
 !
 ! Args:
       integer,intent(in) :: iyear,iday,iutsec,amie_ibkg,iprint
 !
 ! Local:
+      real,parameter :: ab_efx = 0.02
       real :: 
      |   potm(lonp1,jmxm),efxm(lonp1,jmxm),ekvm(lonp1,jmxm),
      |   alat(jmxm),alon(lonp1),alatm(jmxm),alonm(lonp1)
-      integer :: ier,lw,liw,isign,intpol(2)
+      integer :: ier,lw,liw,intpol(2)
       integer,allocatable :: iw(:)
       real,allocatable :: w(:)
       integer :: i,j,ndmon_nl(13),ndmon_lp(13),nonleap
       integer :: nn, iset, iset1, m, mp1, n, amie_debug,amieday
       integer :: iboxcar,inpt
-      real    :: model_ut, denoma, f1, f2, fmin, fmax, maxefx
+      real    :: model_ut, denoma, f1, f2, maxefx
       real    :: del,xmlt,dmlat,dlatm,dlonm,dmltm,rot,dtr
+!
+! defined output AMIE fields in TGCM geographic grid
+      real,dimension(nlonp4,lat0:lat1) :: 
+     |  potg_sech, ekvg_sech, efxg_sech
 !   
 ! Data: GSWM data given at the middle of each month 
 !       -> day of year for this data assuming non-leap year
@@ -579,11 +579,11 @@
 !       call shutdown('getamie')
 !     endif
       if (modeltime(3).lt.0.or.modeltime(3).gt.59) then
-        write(6,"('>>> getamie: bad imin=',3i4)") modeltime(3)
+        write(6,"('>>> getamie: bad imin=',i4)") modeltime(3)
         call shutdown('getamie')
       endif
       if (modeltime(4).lt.0.or.modeltime(4).gt.59) then
-        write(6,"('>>> getamie: bad isec=',3i4)") modeltime(4)
+        write(6,"('>>> getamie: bad isec=',i4)") modeltime(4)
         call shutdown('getamie')
       endif
 !     model_ut = (modeltime(1)-amieday)*24. + float(iutsec)/3600.
@@ -1070,9 +1070,9 @@
 !     enddo
 
 ! mlongitude starts from 180 degree
-!      rot = 250./15. - iutsec/3600.
+!     rot = 250./15. - iutsec/3600.
       rot = sunlons(1)*rtd
-      if(rot.lt.0) rot = rot + 360.    ! 0 to 360 degrees
+      if (rot < 0.) rot = rot+360.     ! 0 to 360 degrees
       rot = rot/15.                    ! convert from degree to hrs
       dmltm = 24./float(lonmx)
       do i=1,lonp1
@@ -1171,11 +1171,11 @@ C  Convert from TGCM distorted magnetic grid to geographic one
 !    |    DIM(1,0),DJM(1,0),IMAXGP,IMAXMP,IMAXG,JMAXG+2,IMAXM,JMAXM)
 
        call mag2geo(tiepot(1,1),potg(1,0),im(1,0),jm(1,0),
-     |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+     |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2)
        call mag2geo(tieekv(1,1),ekvg(1,0),im(1,0),jm(1,0),
-     |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+     |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2)
        call mag2geo(tieefx(1,1),efxg(1,0),im(1,0),jm(1,0),
-     |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2,nmlon,nmlat)
+     |    dim(1,0),djm(1,0),nlonp1,nmlonp1,nlon,nlat+2)
 C     ****
 C     ****     INSERT PERIODIC POINTS
 C     ****
@@ -1188,29 +1188,22 @@ C     ****
 ! temp - save the AMIE output in geographic grid
       amie_debug = 1
       if (amie_debug > 0) then
-!     do j=1,nmlat
-!       do i=1,nmlonp1
-!         tiepot_sech(i,:) = tiepot(i,j)
-!       enddo
-!       call addfld('TIEPOT',' ',' ',tiepot_sech(:,1:nlevp1),
-!    |    'mlon',1,nmlonp1,'mlev',1,nlevp1,j)
-!     enddo
 ! tiepot(nmlonp1,nmlat)
 !       call addfsech_ij('TIEPOT',' ',' ',tiepot,1,nmlonp1,1,nmlat)
 !       call addfsech_ij('TIEEKV',' ',' ',tieekv,1,nmlonp1,1,nmlat)
 !       call addfsech_ij('TIEEFX',' ',' ',tieefx,1,nmlonp1,1,nmlat)
 
-        call addfld('TIEPOT','AMIE Potential','V',tiepot,'mlon',1,
-     |    nmlonp1,'mlat',1,nmlat,0)
-        call addfld('TIEEKV','AMIE Mean Energy','keV',tieekv,'mlon',1,
-     |    nmlonp1,'mlat',1,nmlat,0)
-        call addfld('TIEEFX','AMIE Energy Flux','mW/m2',tieefx,'mlon',
-     |    1,nmlonp1,'mlat',1,nmlat,0)
+        call addfld('TIEPOT',' ',' ',tiepot(mlon0:mlon1,mlat0:mlat1),
+     |    'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+        call addfld('TIEEKV',' ',' ',tieekv(mlon0:mlon1,mlat0:mlat1),
+     |    'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+        call addfld('TIEEFX',' ',' ',tieefx(mlon0:mlon1,mlat0:mlat1),
+     |    'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
 
         do i=1,nlon
-          potg_sech(i+2,:) = potg(i,1:nlat)
-          ekvg_sech(i+2,:) = ekvg(i,1:nlat)
-          efxg_sech(i+2,:) = efxg(i,1:nlat)
+          potg_sech(i+2,:) = potg(i,lat0:lat1)
+          ekvg_sech(i+2,:) = ekvg(i,lat0:lat1)
+          efxg_sech(i+2,:) = efxg(i,lat0:lat1)
         enddo
         do i=1,2
           potg_sech(i,:) = potg_sech(nlon+i,:)
@@ -1224,18 +1217,33 @@ C     ****
 !       call addfsech_ij('EKVG',' ',' ',ekvg_sech,1,nlonp4,1,nlat)
 !       call addfsech_ij('EFXG',' ',' ',efxg_sech,1,nlonp4,1,nlat)
 
-        call addfld('POTG','AMIE Potential','V',potg_sech,'lon',1,
-     |    nlonp4,'lat',1,nlat,0)
-        call addfld('EKVG','AMIE mean Eneregy','keV',ekvg_sech,
-     |    'lon',1,nlonp4,'lat',1,nlat,0)
-        call addfld('EFXG','AMIE Energy Flux','mW/m2',efxg_sech,
-     |    'lon',1,nlonp4,'lat',1,nlat,0)
+        call addfld('POTG',' ',' ',potg_sech(lon0:lon1,:),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('EKVG',' ',' ',ekvg_sech(lon0:lon1,:),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('EFXG',' ',' ',efxg_sech(lon0:lon1,:),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
       endif
 !      
       if (iprint > 0) then
         write(6,"('getamie: AMIE data interpolated to date and time')")
         write(6,"(72('-'),/)")
       endif
+
+! Sheng, 2017/07, Find auroral boundaries from AMIE energy flux
+! Similar to find auroral boundaries in import_mage
+      aurbound = 15.
+      do i=1,nlon
+        do j=nlat/2,1,-1
+          if (efxg(i,j) >= ab_efx) exit
+        enddo
+        if (j >= 1) aurbound(1,i) = max(rlatm(i+2,j),15.)
+        do j=nlat/2,nlat
+          if (efxg(i,j) >= ab_efx) exit
+        enddo
+        if (j <= nlat) aurbound(2,i) = max(rlatm(i+2,j),15.)
+      enddo
+
       end subroutine getamie    
 !-------------------------------------------------------------------
       subroutine boxcar_ave(x,y,lon,lat,mtime,itime,ibox)
@@ -1267,11 +1275,10 @@ C     ****
 !
       end subroutine boxcar_ave
 !-----------------------------------------------------------------------
-      subroutine mag2geo(am,ag,im,jm,dim,djm,lg,lm,nlong,nlatg,nlonm,
-     |  nlatm)
+      subroutine mag2geo(am,ag,im,jm,dim,djm,lg,lm,nlong,nlatg)
 !
 ! Args:
-      integer,intent(in) :: lg,lm,nlong,nlatg,nlonm,nlatm
+      integer,intent(in) :: lg,lm,nlong,nlatg
       integer,intent(in) :: im(lg,*),jm(lg,*)
       real,intent(in) :: am(lm,*),dim(lg,*),djm(lg,*)
       real,intent(out) :: ag(lg,*)

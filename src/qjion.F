@@ -1,5 +1,5 @@
 !
-      subroutine qjion(tn,o2,o1,n2,o2p,op,n4s,n2d,no,ne,barm,
+      subroutine qjion(o2,o1,n2,o2p,op,n4s,n2d,no,ne,xnmbar,xnmbari,
      |  n2p,nplus,nop,xiop2p,xiop2d, lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -11,8 +11,7 @@
 ! This routine modifies Q(k,i) from qrj module (all args are input).
 !
       use cons_module,only: avo,evergs,rmassinv_o2,rmassinv_o1,
-     |  rmassinv_n2,rmassinv_no,rmassinv_n2d,rmassinv_n4s,p0,boltz,
-     |  expz,expzmid,expzmid_inv
+     |  rmassinv_n2,rmassinv_no,rmassinv_n2d,rmassinv_n4s
       use chemrates_module,only: 
      |  rk1,rk2,rk3,rk4,rk5,rk6,rk7,rk8,rk9,rk10,ra1,ra2,ra3,rk16,rk17,
      |  rk18,rk19,rk20,rk21,rk22,rk23,rk24,rk25,rk26,rk27
@@ -31,7 +30,6 @@
 ! Args (all input):
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: 
-     |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
      |  n2,      ! molecular nitrogen (mmr)
@@ -41,7 +39,8 @@
      |  n2d,     ! N(2D) (updated from comp_n2d)
      |  no,      ! nitric oxide
      |  ne,      ! electron density (cm3)
-     |  barm   , ! p0*e(-z)*barm/kT
+     |  xnmbar,  ! p0*e(-z)*mbar/kT (xnmbar at midpoints)  (s12)
+     |  xnmbari, ! p0*e(-z)*barm/kT (xnmbar at interfaces) (s11)
      |  n2p,     ! N2+ (from elden)
      |  nplus,   ! N+  (from elden)
      |  nop,     ! NO+ (from elden)
@@ -53,34 +52,15 @@
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  qtot,    ! total ionization rate                 (s1)
      |  qphoto,  ! photo-electron heating of neutral gas (s2)
-     |  qic,     ! ion chemistry heating of neutral gas  (s3)
-     |  xnmbarm, ! p0*e(-z)*barm/kT ("(K)" -- averaged)        (s12)
-     |  xnmbari  ! p0*e(-z)*barm/kT ("(K+1/2)" -- not averaged (s11)
+     |  qic      ! ion chemistry heating of neutral gas  (s3)
       real,dimension(lev0:lev1) :: aureff
 !
       aureff(:) = 0.05 ! this is local (not the aureff from aurora module).
 !
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          xnmbarm(k,i) = p0*expz(k)*.5*(barm(k,i)+barm(k+1,i))/    ! s12 (K+1/2)
-     |      (boltz*tn(k,i))
-        enddo ! k=lev0,lev1
-        do k=lev0+1,lev1-1
-          xnmbari(k,i) = p0*expzmid_inv*expz(k)*barm(k,i)/         ! s11 (K)
-     |      (boltz*.5*(tn(k,i)+tn(k-1,i)))
-        enddo ! k=lev0+1,lev1-1
-        xnmbari(lev0,i) = p0*expzmid_inv*expz(lev0)*barm(lev0,i)/  ! s11 bottom
-     |    (boltz*.5*(3.*tn(lev0,i)-tn(lev0+1,i)))
-        xnmbari(lev1,i) = p0*expzmid*expz(lev1-1)*barm(lev1,i)/    ! s11 top
-     |    (boltz*.5*(3.*tn(lev1-1,i)-tn(lev1-2,i)))
-      enddo ! i=lon0,lon1
 !
-! xnmbari = xnmbar at interfaces (averaged in the column == S11 (K))
-! xnmbarm = xnmbar at interfaces (NOT averaged in the column == S12 (K+1/2))
-!
-!     call addfld('XNMBARM' ,' ',' ',xnmbarm,
+!     call addfld('XNMBAR' ,' ',' ',xnmbar(:,lon0:lon1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('XNMBARI' ,' ',' ',xnmbari,
+!     call addfld('XNMBARI' ,' ',' ',xnmbari(:,lon0:lon1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! qtot = total ionization rate = sum(Qxx) = 
@@ -116,7 +96,7 @@
      |      rk5*no(k,i)*rmassinv_no*2.813))+
      |      .5*(ne(k,i)+ne(k+1,i))*(ra1(k,i,lat)*nop(k,i)*0.854+
      |       ra2(k,i,lat)*o2p(k,i)*5.2755+
-     |       ra3(k,i,lat)*n2p(k,i)*3.678)/xnmbarm(k,i))*evergs+
+     |       ra3(k,i,lat)*n2p(k,i)*3.678)/xnmbar(k,i))*evergs+
 !
      |      (avo*(((rk16*3.02+rk17*0.7)*n2(k,i)*rmassinv_n2+
      |       rk18*o1(k,i)*rmassinv_o1*5.0)*xiop2p(k,i)+
@@ -126,7 +106,7 @@
      |      (.5*(ne(k,i)+ne(k+1,i))*((rk19(k,i,lat)*5.0+
      |       rk20(k,i,lat)*1.69)*xiop2p(k,i)+rk25(k,i,lat)*3.31*
      |       xiop2d(k,i))-(rk21*5.02+rk22*1.69)*xiop2p(k,i)-
-     |       rk27*3.33*xiop2d(k,i))/xnmbarm(k,i))*evergs
+     |       rk27*3.33*xiop2d(k,i))/xnmbar(k,i))*evergs
 !
 ! Insure qic > 0:
           if (qic(k,i) < 1.e-30) qic(k,i) = 1.e-30

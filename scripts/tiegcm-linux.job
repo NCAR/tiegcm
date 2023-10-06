@@ -1,80 +1,90 @@
-#! /bin/csh
+#!/bin/bash
 #
 # Job script to build and execute the model on a 64-bit Linux desktop machine.
 #
-# User should set shell variables below (paths below are examples on the hao network)
+# User should set shell variables below:
 #
 #   modeldir:  Root directory to model source (may be an SVN working dir)
 #   execdir:   Directory in which to build and execute (will be created if necessary)
 #   tgcmdata:  Directory in which startup history and data files are accessed.
 #              (If tgcmdata is not set, the model will use env var TGCMDATA)
+#   utildir:   Directory containing supporting scripts (default $modeldir/scripts)
 #   input:     Namelist input file for the chosen model resolution
 #   output:    Stdout file from model execution (will be created)
-#   modelres:  Model resolution (5.0 or 2.5 degrees)
+#   horires:   Model resolution (5, 2.5, 1.25 or 0.625 degrees)
+#   vertres:   Model resolution (0.5, 0.25, 0.125 or 0.0625 degrees)
+#   zitop:     Pressure level at model upper boundary
+#   nres_grid: Number of levels for multigrid solver (magnetic grid)
+#   coupling:  Whether to couple with GAMERA via MPI
 #   make:      Build file with platform-specific compile parameters (in scripts dir)
-#   mpi:       TRUE/FALSE for MPI run (non-MPI runs are not supported in v2.0 and later)
 #   debug:     If TRUE, build and execute a "debug" run (debug compiler flags are set)
-#   exec:      If TRUE, execute the model (build only if exec is FALSE)
-#   utildir:   Directory containing supporting scripts (default $modeldir/scripts)
-#   runscript: LSF script with run commands (submitted with bsub from execdir)
+#   execute:   If TRUE, execute the model (build only if execute is FALSE)
 #
-# To switch to 2.5-deg resolution, set modelres below to 2.5,
+# To switch to 2.5x0.25-deg resolution, set horires below to 2.5 and vertres to 0.25,
 # and change execdir, tgcmdata and namelist input if necessary.
 #
-set modeldir = tiegcm_trunk
-set execdir  = /hao/aim/$user/tiegcm_trunk/tiegcm.exec
-set tgcmdata = /hao/aim/tgcm/data/tiegcm2.0
-set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
-set output   = tiegcm.out
-set make     = Make.intel_hao64
-set modelres = 5.0
-set mpi      = TRUE  # must be TRUE for tiegcm2.0 and later
-set nproc    = 4     # nproc=1 is permitted
-set debug    = FALSE
-set exec     = TRUE
-set utildir  = $modeldir/scripts
-# 
+modeldir=$TGCMHOME
+execdir="/scratch/$USER/tiegcm"
+tgcmdata="tiegcm_data"
+utildir="$modeldir/scripts"
+input="$utildir/tiegcm_default.inp"
+output="tiegcm.out"
+make="Make.intel_linux"
+horires="2.5"
+vertres="0.25"
+zitop=7
+nres_grid=5
+coupling="FALSE"
+nproc=4     # nproc=1 is permitted
+debug="FALSE"
+execute="FALSE"
+#
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-set mycwd = `pwd`
+mycwd=`pwd`
 echo "" ; echo "${0}:"
 echo "  Begin execution at `date`"
 echo "  Current working directory: $mycwd"
-echo "  System: `uname -a`"  
+echo "  System: `uname -a`"
 echo ""
 #
 # Verify directories and make_machine file (make execdir if necessary).
 # Get absolute path for dirs that are accessed from the execdir.
 #
-if (! -d $modeldir) then
+if [ ! -d $modeldir ]
+then
   echo ">>> Cannot find model directory $modeldir <<<"
   exit 1
-endif
-set model = $modeldir:t
+fi
+model=`basename $modeldir`
 
-if ($model == '') then
+if [ $model == "" ]
+then
   echo "Please remove trailing slash from modeldir $modeldir"
   exit
-endif
+fi
 
-if (! -d $utildir) then
-  echo ">>> Cannot find model scripts directory $utildir <<<" 
+if [ ! -d $utildir ]
+then
+  echo ">>> Cannot find model scripts directory $utildir <<<"
   exit 1
-endif
+fi
 
-set srcdir  = $modeldir/src
-if (! -d $srcdir) then
+srcdir="$modeldir/src"
+if [ ! -d $srcdir ]
+then
   echo ">>> Cannot find model source directory $srcdir <<<"
   exit 1
-endif
-set srcdir = `perl $utildir/abspath $srcdir`
+fi
+srcdir=`perl $utildir/abspath $srcdir`
 
-if (! -d $execdir) then
-  echo "Making exec directory $execdir" 
+if [ ! -d $execdir ]
+then
+  echo "Making exec directory $execdir"
   mkdir -p $execdir
-endif
+fi
 #
 # Set data directory:
 #   If tgcmdata is set above, use it to set (override) env var TGCMDATA
@@ -82,166 +92,230 @@ endif
 #   If neither are set, print a warning and set both to cwd.
 #   Finally, print warning if the directory does not exist.
 #
-if ($?tgcmdata) then
-  set tgcmdata = `perl $utildir/abspath $tgcmdata`
-  setenv TGCMDATA $tgcmdata
-  echo Set env var TGCMDATA = $TGCMDATA
+if [ -v tgcmdata ]
+then
+  tgcmdata=`perl $utildir/abspath $tgcmdata`
+  export TGCMDATA=$tgcmdata
+  echo "Set env var TGCMDATA = $TGCMDATA"
 else
-  if ($?TGCMDATA) then
-    set tgcmdata = $TGCMDATA
-    echo Set tgcmdata = $TGCMDATA
+  if [ -v TGCMDATA ]
+  then
+    tgcmdata=$TGCMDATA
+    echo "Set tgcmdata = $TGCMDATA"
   else
-    echo WARNING: TGCMDATA is not set - using cwd
-    set tgcmdata = .
-    setenv TGCMDATA $tgcmdata
-  endif
-endif
-if (! -d $tgcmdata) echo ">>> Cannot find data directory $tgcmdata"
+    echo "WARNING: TGCMDATA is not set - using cwd"
+    tgcmdata=.
+    export TGCMDATA=$tgcmdata
+  fi
+fi
+if [ ! -d $tgcmdata ]
+then
+  echo ">>> Cannot find data directory $tgcmdata"
+fi
 
-if ($modelres != 5.0 && $modelres != 2.5) then
-  echo ">>> Unknown model resolution $modelres <<<"
+if [ $horires != "5" ] && [ $horires != "2.5" ] && [ $horires != "1.25" ] && [ $horires != "0.625" ]
+then
+  echo ">>> Unknown model horizontal resolution $horires <<<"
   exit 1
-endif
+fi
+if [ $vertres != "0.5" ] && [ $vertres != "0.25" ] && [ $vertres != "0.125" ] && [ $vertres != "0.0625" ]
+then
+  echo ">>> Unknown model vertical resolution $vertres <<<"
+  exit 1
+fi
 #
 # Copy make files to execdir if necessary:
 #
-if (-f $make) then # set by user above
+if [ -f $make ]
+then # set by user above
   cp $make $execdir
-  echo Copied $make to $execdir
+  echo "Copied $make to $execdir"
 else
   cp $utildir/$make $execdir
-  echo Copied $utildir/$make to $execdir
-endif
-if (! -f $execdir/Makefile)  cp $utildir/Makefile $execdir
-if (! -f $execdir/mkdepends) cp $utildir/mkdepends $execdir
+  echo "Copied $utildir/$make to $execdir"
+fi
+if [ ! -f $execdir/Makefile ]
+then
+  cp $utildir/Makefile $execdir
+fi
+if [ ! -f $execdir/mkdepends ]
+then
+  cp $utildir/mkdepends $execdir
+fi
 #
 # Namelist input file must exist:
 #
-if (! -f $input) then
+if [ ! -f $input ]
+then
   echo ">>> Cannot find namelist input file $input <<<"
   exit 1
-endif
-set input  = `perl $utildir/abspath $input`
-set output = `perl $utildir/abspath $output`
-set util   = `perl $utildir/abspath $utildir`
-set mklogs = $util/mklogs
-set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdout files
+fi
+input=`perl $utildir/abspath $input`
+output=`perl $utildir/abspath $output`
+util=`perl $utildir/abspath $utildir`
+mklogs=$util/mklogs
+rmbinchars=$util/rmbinchars # Nov, 2015: remove non-ascii chars from stdout files
 #
 # Report to stdout:
 #
-set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
-echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svn_revision)"
+svn_revision="tiegcm2.5" # for svn tag instead of revision number
+#if [ -x `command -v svnversion` ]
+#then
+#  svn_revision=`svnversion $modeldir`
+#else
+#  svn_revision="[none]"
+#fi
+
+echo -n "  Model directory:   $modeldir"
+echo " (SVN revision $svn_revision)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"
 echo "  Data directory:    $tgcmdata"
 echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
-echo "  Model resolution:  $modelres"
+echo "  Model resolution:  $horires x $vertres"
+echo "  Coupling:          $coupling"
 echo "  Debug flag:        $debug"
+#
+# If coupling flag has changed from last gmake, clean execdir
+# and reset coupling file:
+#
+if [ -f $execdir/coupling ]
+then
+  lastcoupling=`cat $execdir/coupling`
+  if [ $lastcoupling != $coupling ]
+  then
+    echo "Clean execdir $execdir because coupling flag switched from $lastcoupling to $coupling"
+    mycwd=`pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $coupling > $execdir/coupling
+  fi
+else
+  echo $coupling > $execdir/coupling
+  echo "Created file coupling with coupling flag = $coupling"
+fi
 #
 # If debug flag has changed from last gmake, clean execdir
 # and reset debug file:
 #
-if (-f $execdir/debug) then
-  set lastdebug = `cat $execdir/debug` 
-  if ($lastdebug != $debug) then
+if [ -f $execdir/debug ]
+then
+  lastdebug=`cat $execdir/debug`
+  if [ $lastdebug != $debug ]
+  then
     echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
-    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
-    echo $debug >! $execdir/debug
-  endif
+    mycwd=`pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $debug > $execdir/debug
+  fi
 else
-  echo $debug >! $execdir/debug
+  echo $debug > $execdir/debug
   echo "Created file debug with debug flag = $debug"
-endif
+fi
 #
-# Copy defs header file to execdir, if necessary, according to 
+# Copy defs header file to execdir, if necessary, according to
 # requested resolution. This should seamlessly switch between
-# resolutions according to $modelres.
+# resolutions according to $horires and $vertres.
 #
-set defs = $srcdir/defs5.0
-if ($modelres == 2.5) set defs = $srcdir/defs2.5
-if (-f $execdir/defs.h) then
+defs=defs.h
+
+cat << EOF > $defs
+#define DLAT $horires
+#define DLON $horires
+#define GLON1 -180
+#define DLEV $vertres
+#define ZIBOT -7
+#define ZITOP $zitop
+#define NRES_GRID $nres_grid
+EOF
+
+if [ -f $execdir/defs.h ]
+then
   cmp -s $execdir/defs.h $defs
-  if ($status == 1) then # files differ -> switch resolutions
-    echo "Switching defs.h for model resolution $modelres"
+  status=$?
+  if [ $status -ne 0 ]
+  then # files differ -> switch resolutions
+    echo "Switching defs.h for model resolution $horires x $vertres"
+    mycwd=`pwd` ; cd $execdir ; gmake clean ; cd $mycwd
     cp $defs $execdir/defs.h
   else
-    echo "defs.h already set for model resolution $modelres"
-  endif 
+    echo "defs.h already set for model resolution $horires x $vertres"
+  fi
 else # defs.h does not exist in execdir -> copy appropriate defs file
-  echo "Copying $defs to $execdir/defs.h for resolution $modelres"
+  echo "Copying $defs to $execdir/defs.h for resolution $horires x $vertres"
   cp $defs $execdir/defs.h
-endif
+fi
 #
 # cd to execdir and run make:
 #
-cd $execdir || echo ">>> Cannot cd to execdir $execdir" && exit 1
+cd $execdir
+status=$?
+if [ $status -ne 0 ]
+then
+  echo ">>> Cannot cd to execdir $execdir"
+  exit 1
+fi
 echo ""
 echo "Begin building $model in `pwd`"
 #
 # Build Make.env file in exec dir, containing needed env vars for Makefile:
 #
-cat << EOF >! Make.env
+cat << EOF > Make.env
 MAKE_MACHINE  = $make
-DIRS          = . $srcdir 
-MPI           = $mpi
+DIRS          = . $srcdir
 NPROC         = $nproc
 EXECNAME      = $model
 NAMELIST      = $input
 OUTPUT        = $output
+COUPLING      = $coupling
 DEBUG         = $debug
 SVN_REVISION  = $svn_revision
 EOF
 #
 gmake machines.ini
 gmake mpirun.command
-set mpirun = `cat mpirun.command`
+mpirun=`cat mpirun.command`
 #
-set compiler = 'unknown'
-if ($make == Make.intel_hao64) then
-  set compiler = intel
-else if ($make == Make.pgi_hao64) then
-  set compiler = pgi
-else if ($make == Make.gfort_hao64) then
-  set compiler = gfort
-endif
-echo Compiler: $compiler
+compiler="unknown"
+if [ $make == "Make.intel_linux" ]
+then
+  compiler="intel"
+fi
+echo "Compiler: $compiler"
 #
 # Build the model:
-gmake -j4 all || echo ">>> Error return from gmake all" && exit 1
+gmake -j4 all
+status=$?
+if [ $status -ne 0 ]
+then
+  echo ">>> Error return from gmake all"
+  exit 1
+fi
 #
-# Execute Linux job (MPI or non-MPI run):
+# Execute Linux job (MPI run):
 #
-if ($exec == "TRUE") then
-  set model = ./$model
+if [ $execute == "TRUE" ]
+then
+  model=./$model
   echo "$model output will go to $output"
-  if ($mpi == "TRUE") then
-    echo Executing $mpirun with executable $model at `date`
+  echo "Executing $mpirun with executable $model at `date`"
 #
 # Execute mpirun with the model executable ($model), and a single argument
 # providing the path to the namelist input file:
 #
-    $mpirun -machinefile machines.ini -np $nproc $model $input >&! $output
+  $mpirun -machinefile machines.ini -np $nproc $model $input >& $output
 
-    echo "Linux MPI run of $model completed at `date`"
-    $rmbinchars $output # remove any non-ascii chars in stdout file
+  echo "Linux MPI run of $model completed at `date`"
+  $rmbinchars $output # remove any non-ascii chars in stdout file
 #
 # Do not call mklogs if built with PGI or gfortran:
 # (only intel has ability to prefix task ids to stdout lines)
 #
-    if ($compiler == 'intel') then
-      $mklogs $output     # break stdout into per-task log files
-    else
-      echo "Am not calling mklogs because model was not built with intel"
-    endif
-  else # MPI is FALSE
-    echo "Executing $model for Linux non-MPI run."
-    $model < $input >&! $output || \
-      echo ">>> ${0} Execution of $model FAILED at `date`" && \
-      echo "See output in $output"
-    echo "Linux non-MPI run of $model completed at `date`"
-  endif
+  if [ $compiler == "intel" ]
+  then
+    $mklogs $output     # break stdout into per-task log files
+  else
+    echo "Am not calling mklogs because model was not built with intel"
+  fi
 else
-  echo "I am NOT executing $model (exec was not set)"
-endif
+  echo "I am NOT executing $model (execute was not set)"
+fi
 exit 0

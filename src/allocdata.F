@@ -9,10 +9,9 @@
 ! init_fields in fields.F. This is not in field.F in order to 
 ! avoid circular module dependencies.
 !
-      use params_module,only: nlevp1,nlonp4,nlat
-      use fields_module,only: f4d,f3d,nf4d,nf3d,field_initval,foutput,
-     |  fzg
-      use mpi_module,only: lon0,lon1,lat0,lat1,mytid
+      use params_module,only: nlevp1
+      use fields_module,only: nf4d,foutput,fzg,fnrh,fkmh
+      use mpi_module,only: lon0,lon1,lat0,lat1
       use chemrates_module,only: alloc_tdep
       use qrj_module,only: alloc_q
       use n4s_module,only: alloc_n4s
@@ -23,10 +22,11 @@
       use bgrd_data_module,only: alloc_bgrddata
       use ctmt_module,only: alloc_ctmt
       use pdynamo_module,only: alloc_pdyn
+      use dyndiag_module,only: alloc_dyndiag
       implicit none
 !
 ! Local:
-      integer :: i,istat,nlons,nlats,len 
+      integer :: istat
 !
 ! Allocate temperature-dependent chemical reaction rates:
       call alloc_tdep
@@ -55,55 +55,38 @@
 ! Allocate needed fields for parallel dynamo (pdynamo.F):
       call alloc_pdyn
 !
-! We are not doing parallel i/o to netcdf output histories, so when
-! it comes time to write a history, the task subdomains are gathered
-! to the root task (see call mp_gather2root in advance), and only
-! the root task writes to the file. Here we allocate the full 3d grid
-! for all history fields on the root task. This is where the data
-! will be gathered and written by the root when a history is written. 
+      call alloc_dyndiag(lon0-2,lon1+2,lat0-2,lat1+2)
+!
+! We are doing parallel i/o to netcdf output histories,
+! so when it comes time to write a history,
+! the task subdomains are directly written to the file.
 !
 ! The pointer is declared in fields.F:
-!     real,pointer :: foutput(:,:,:,:) ! (nlevp1,nlonp4,nlat,nf4d)
+!     real,pointer :: foutput(:,:,:,:) ! (nlevp1,lon0:lon1,lat0:lat1,nf4d)
 ! 
-#ifdef MPI
-      if (mytid==0) then
-        allocate(foutput(nlevp1,nlonp4,nlat,nf4d),stat=istat)
-        if (istat /= 0) then
-          write(6,"('>>> allocdata: error allocating 3d data for ',
-     |      'all fields on root task: nlevp1=',i3,' nlonp4=',i3,
-     |      ' nlat=',i3,' nf4d=',i3,' istat=',i3)")
-     |      nlevp1,nlonp4,nlat,nf4d,istat
-        else
-          write(6,"('Allocated 3d data for all fields on root task:')")
-          len = nlevp1*nlonp4*nlat*nf4d
-          write(6,"('  nlevp1*nlonp4*nlat*nf4d = ',i3,'*',i3,'*',
-     |      i3,'*',i3,' = ',i10,' words *8 = ',i12,' bytes.')")
-     |      nlevp1,nlonp4,nlat,nf4d,len,len*8
-        endif
-      endif
-      allocate(fzg(nlevp1,nlonp4,nlat),stat=istat)
-      if (istat /= 0) then
-        write(6,"('>>> allocdata: error allocating fzg')")
-      else
-        write(6,"('allocdata: all tasks allocate fzg: nlevp1=',i4,
-     |    ' nlonp4=',i4,' nlat=',i4)") nlevp1,nlonp4,nlat
-      endif
-#else
-      allocate(foutput(nlevp1,nlonp4,nlat,nf4d),stat=istat)
+      allocate(foutput(nlevp1,lon0:lon1,lat0:lat1,nf4d),stat=istat)
       if (istat /= 0) then
         write(6,"('>>> allocdata: error allocating 3d data for ',
-     |    'all fields on root task: nlevp1=',i3,' nlonp4=',i3,
-     |    ' nlat=',i3,' nf4d=',i3,' istat=',i3)")
-     |    nlevp1,nlonp4,nlat,nf4d,istat
-      else
-        write(6,"('Allocated 3d data for all fields on root task:')")
-        len = nlevp1*nlonp4*nlat*nf4d
-        write(6,"('  nlevp1*nlonp4*nlat*nf4d = ',i3,'*',i3,'*',
-     |    i3,'*',i3,' = ',i10,' words *8 = ',i12,' bytes.')")
-     |    nlevp1,nlonp4,nlat,nf4d,len,len*8
+     |    'all fields on the current task: istat=',i3)") istat
+        call shutdown('allocdata')
       endif
-      allocate(fzg(nlevp1,nlonp4,nlat),stat=istat)
-      if (istat /= 0) 
-     |  write(6,"('>>> allocdata: error allocating fzg')")
-#endif
+!
+      allocate(fzg(nlevp1,lon0:lon1,lat0:lat1),stat=istat)
+      if (istat /= 0) then
+        write(6,"('>>> allocdata: error allocating fzg')")
+        call shutdown('allocdata')
+      endif
+!
+      allocate(fnrh(nlevp1,lon0-2:lon1+2,lat0-2:lat1+2),stat=istat)
+      if (istat /= 0) then
+        write(6,"('>>> allocdata: error allocating fnrh')")
+        call shutdown('allocdata')
+      endif
+!
+      allocate(fkmh(nlevp1,lon0-2:lon1+2,lat0-2:lat1+2),stat=istat)
+      if (istat /= 0) then
+        write(6,"('>>> allocdata: error allocating fkmh')")
+        call shutdown('allocdata')
+      endif
+!
       end subroutine allocdata

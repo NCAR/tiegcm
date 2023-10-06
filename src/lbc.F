@@ -17,7 +17,7 @@
 ! Total lower boundary conditions returned by this module.
 ! (dimensioned at full global grid, but defined at subdomains only)
 !
-      real,dimension(nlonp4,nlat) :: t_lbc, u_lbc, v_lbc, z_lbc
+      real,dimension(:,:),allocatable :: t_lbc, u_lbc, v_lbc, z_lbc
 !
 ! Diurnal and semi-diurnal tidal perturbations using Hough functions: 
 !
@@ -41,7 +41,13 @@
 ! Called once per run from tgcm.
 !
       use cons_module,only: t0cons=>t0
+      use mpi_module,only: lon0,lon1,lat0,lat1
       implicit none
+!
+      allocate(t_lbc(lon0:lon1,lat0:lat1))
+      allocate(u_lbc(lon0:lon1,lat0:lat1))
+      allocate(v_lbc(lon0:lon1,lat0:lat1))
+      allocate(z_lbc(lon0:lon1,lat0:lat1))
 !
 ! t0 in cons is zeroed out:
       t0cons(:) = 0.
@@ -57,7 +63,7 @@
       call bndcmp
       end subroutine init_lbc
 !-----------------------------------------------------------------------
-      subroutine tuvz_lbc(istep,iyear,iday,secs,itp)
+      subroutine tuvz_lbc(istep,iday,secs)
 !
 ! Update lower boundary subdomains of T,U,V,Z
 ! This is called every timestep from advance.
@@ -86,7 +92,7 @@
       implicit none
 !
 ! Args:
-      integer,intent(in) :: istep,iyear,iday,itp
+      integer,intent(in) :: istep,iday
       real,intent(in) :: secs
 !
 ! Local:
@@ -103,7 +109,7 @@
 !
 ! Set background constants 
       if (ibgrddata > 0 ) then ! background based on data
-        call get_bgrddata(istep,iyear,iday,secs)
+        call get_bgrddata(istep,iday,secs)
         t_lbc(lon0:lon1,lat0:lat1) = bgrddata_t(lon0:lon1,lat0:lat1)
         u_lbc(lon0:lon1,lat0:lat1) = bgrddata_u(lon0:lon1,lat0:lat1)
         v_lbc(lon0:lon1,lat0:lat1) = bgrddata_v(lon0:lon1,lat0:lat1)
@@ -122,7 +128,7 @@
 ! Add gswm perturbations:
 ! 12/2/15 btf: moved from advance.F to lbc.F
 !
-      call getgswm(istep,iyear,iday,secs)
+      call getgswm(istep,iday,secs)
 !
 ! Add gswm or Hough mode perturbations:
 !
@@ -228,8 +234,7 @@
       endif
 !
 ! Add CTMT perturbations:
-      if (len_trim(ctmt_ncfile) > 0 )
-     |  call get_ctmt(istep,iyear,iday,secs)
+      if (len_trim(ctmt_ncfile) > 0 ) call get_ctmt(istep,iday,secs)
 !
       if (len_trim(ctmt_ncfile) > 0) then
         do j=lat0,lat1
@@ -268,7 +273,7 @@
       complex :: dzb(nlat)
       real :: b(5,19),rl(5),bhour(5),rlamda,xdot(19),ydot(19),
      |  ptscal,theta,ptjm(2*nlat+1)
-      integer :: n,jm,l,lm1,m,mm1,j,ld,i,nm1
+      integer :: n,jm,l,m,mm1,j,ld,i,nm1
 !
       complex zee(5),cl(5),expdlm
       data b/

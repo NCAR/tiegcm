@@ -7,7 +7,7 @@
 ! Read and import netcdf files containing SABER (T,Z) and TIDI (U,V) data.
 !
       use input_module,only: mxlen_filename
-      use nchist_module,only:nc_open,nc_close,handle_ncerr
+      use nchist_module,only:handle_ncerr
       use params_module,only: model_nlon=>nlon, model_nlat=>nlat
       use init_module,only: iyear,istep
       use hist_module,only: nstep
@@ -48,7 +48,7 @@
       integer,intent(in) :: modeltime(4)
 !
 ! Local:
-      integer :: mtime0(3),mtime1(3),mtime(3)
+      integer :: mtime0(4),mtime1(4),mtime(4)
 !
 ! Return silently if data files were not provided:
       if (len_trim(saber_ncfile) == 0 .and.
@@ -57,21 +57,21 @@
 ! Get model run start and stop times, and current modeltime:
       mtime0 = start_mtime    ! start model time
       mtime1 = stop_mtime     ! stop model time
-      mtime = modeltime(1:3)  ! current model time
+      mtime = modeltime       ! current model time
 !
 ! For perpetual run, use data for the first day (24 hours), 
 ! then repeat that day of data throughout the perpetual run. 
 ! (use only hour and minute from the current model time)
 !
       if (calendar_advance <= 0) then
-        mtime0 = (/start_day,  0,0/)
-        mtime1 = (/start_day+1,0,0/)
+        mtime0 = (/start_day,  0,0,0/)
+        mtime1 = (/start_day+1,0,0,0/)
         mtime(1) = start_day
       endif
 
       if (istep==1)
      |  write(6,"('get_saber_tidi: calendar_advance=',i2,
-     |    ' mtime0=',3i4,' mtime1=',3i4)") calendar_advance,
+     |    ' mtime0=',4i4,' mtime1=',4i4)") calendar_advance,
      |    mtime0,mtime1
 !
 ! Saber data is requested:
@@ -102,7 +102,7 @@
 ! read_saber and read_tidi. Also validate nlon,nlat dimensions.
 !
 ! Args:
-      integer,intent(in)  :: ncid,mtime0(3),mtime1(3)
+      integer,intent(in)  :: ncid,mtime0(4),mtime1(4)
       integer,intent(out) :: istart,istop
       character(len=*) :: dtype  ! 'SABER' or 'TIDI'
 !
@@ -172,14 +172,14 @@
 ! Calculate fractional year for start and stop times:
       if (mod(iyear,4) == 0) then
         start_yfrac = iyear+(mtime0(1)-1+(mtime0(2)/24.)+
-     |    (mtime0(3)/(24.*60.)))/366.
+     |    (mtime0(3)/(24.*60.))+mtime0(4)/86400.)/366.
         stop_yfrac = iyear+(mtime1(1)-1+(mtime1(2)/24.)+
-     |    (mtime1(3)/(24.*60.)))/366.
+     |    (mtime1(3)/(24.*60.))+mtime1(4)/86400.)/366.
       else
         start_yfrac = iyear+(mtime0(1)-1+(mtime0(2)/24.)+
-     |    (mtime0(3)/(24.*60.)))/365.
+     |    (mtime0(3)/(24.*60.))+mtime0(4)/86400.)/365.
         stop_yfrac = iyear+(mtime1(1)-1+(mtime1(2)/24.)+
-     |    (mtime1(3)/(24.*60.)))/365.
+     |    (mtime1(3)/(24.*60.))+mtime1(4)/86400.)/365.
       endif
 !
 ! Search for start time in data:
@@ -191,7 +191,7 @@
       enddo
       if (istart==0) then
         write(6,"('>>> ',a,' Could not bracket model start',
-     |    ' time ',3i4,' start_yfrac=',f15.6,' dtype=',a)") 
+     |    ' time ',4i4,' start_yfrac=',f15.6,' dtype=',a)") 
      |  dtype,mtime0,start_yfrac
         call shutdown('read_data_times') 
       endif
@@ -204,7 +204,7 @@
         endif
       enddo
       if (istop==0) then
-        write(6,"('>>> ',a,' Could not bracket model stop time ',3i4,
+        write(6,"('>>> ',a,' Could not bracket model stop time ',4i4,
      |    ' stop_yfrac=',f15.6)") dtype,mtime1,stop_yfrac 
         call shutdown('read_data_times') 
       endif
@@ -216,8 +216,8 @@
       endif
       ntime = istop-istart+1 ! defines module data ntime
 
-      write(6,"('Read ',a,' data from start mtime ',3i4,
-     |  ' to stop mtime ',3i4,' ntimes=',i6)") 
+      write(6,"('Read ',a,' data from start mtime ',4i4,
+     |  ' to stop mtime ',4i4,' ntimes=',i6)") 
      |  dtype,mtime0,mtime1,ntime
 !
 ! Define module data year-fractions and ntimes:
@@ -246,11 +246,11 @@
 !
 !
 ! Args:
-      integer,intent(in) :: mtime0(3),mtime1(3)
+      integer,intent(in) :: mtime0(4),mtime1(4)
       character(len=*),intent(in) :: ncfile
 !
 ! Local:
-      integer :: ncid,istat,i,ntime,istart_saber,istop_saber
+      integer :: ncid,istat,ntime,istart_saber,istop_saber
       integer :: idv_t,idv_z
       integer :: start(3),count(3)
       character(len=mxlen_filename) :: dskfile
@@ -261,8 +261,8 @@
       write(6,"(/,72('-'))")
 !
 ! Open netcdf file:
-      call nc_open(ncid,dskfile,'OLD','READ')
-      if (ncid==0) then
+      istat = nf_open(dskfile,NF_NOWRITE,ncid)
+      if (istat /= NF_NOERR) then
         write(6,"(/,'>>> read_saber: error opening netcdf saber ',
      |    'file ',a,' dskfile ',a)") trim(ncfile),trim(dskfile)
         call shutdown('read_saber')
@@ -337,7 +337,10 @@
      |  minval(saber_data_t),maxval(saber_data_t),trim(units_t)
       write(6,"('Z perturbations data min,max=',2e12.4,' (',a,')')") 
      |  minval(saber_data_z),maxval(saber_data_z),trim(units_z)
-
+!
+! Close netcdf file:
+      istat = nf_close(ncid)
+!
       write(6,"(/,72('-'))")
       end subroutine read_saber
 !-----------------------------------------------------------------------
@@ -348,12 +351,12 @@
 ! once per run from get_saber_tidi.
 !
 ! Args:
-      integer,intent(in) :: mtime0(3),mtime1(3)
+      integer,intent(in) :: mtime0(4),mtime1(4)
       character(len=*),intent(in) :: ncfile
 !
 ! Local:
-      integer :: ncid,istat,i,ntime,istart_tidi,istop_tidi
-      integer :: idv_u,idv_v,itime,j
+      integer :: ncid,istat,ntime,istart_tidi,istop_tidi
+      integer :: idv_u,idv_v
       integer :: start(3),count(3)
       character(len=mxlen_filename) :: dskfile
       character(len=80) :: units_u,units_v
@@ -363,8 +366,8 @@
       write(6,"(/,72('-'))")
 !
 ! Open netcdf file:
-      call nc_open(ncid,dskfile,'OLD','READ')
-      if (ncid==0) then
+      istat = nf_open(dskfile,NF_NOWRITE,ncid)
+      if (istat /= NF_NOERR) then
         write(6,"(/,'>>> read_tidi: error opening netcdf tidi ',
      |    'file ',a,' dskfile ',a)") trim(ncfile),trim(dskfile)
         call shutdown('read_tidi')
@@ -451,7 +454,10 @@
      |  minval(tidi_data_u),maxval(tidi_data_u),trim(units_u)
       write(6,"('V perturbations data min,max=',2e12.4,' (',a,')')") 
      |  minval(tidi_data_v),maxval(tidi_data_v),trim(units_v)
-
+!
+! Close netcdf file:
+      istat = nf_close(ncid)
+!
       write(6,"(72('-'))")
       end subroutine read_tidi
 !-----------------------------------------------------------------------
@@ -463,7 +469,7 @@
       use mpi_module,only: lon0,lon1,lat0,lat1
 !
 ! Args:
-      integer,intent(in) :: mtime(3)
+      integer,intent(in) :: mtime(4)
 !
 ! Local:
       integer :: ndays,i,j,i0,i1,istat,ibeg,iend
@@ -474,7 +480,7 @@
       ndays = 365
       if (mod(iyear,4) == 0) ndays = 366
       yfrac = iyear+(mtime(1)-1+(mtime(2)/24.)+
-     |    (mtime(3)/(24.*60.)))/float(ndays)
+     |    (mtime(3)/(24.*60.))+mtime(4)/86400.)/float(ndays)
 !
 ! Bracket model time between data i0,i1 times:
       i0 = 0 ; i1 = 0
@@ -487,7 +493,7 @@
       enddo
       if (i0==0.and.i1==0) then
         write(6,"('>>> interp_saber: could not bracket model yfrac',
-     |    ' =',f15.6,' mtime=',3i5)") yfrac,mtime
+     |    ' =',f15.6,' mtime=',4i5)") yfrac,mtime
         call shutdown('interp_saber')
       endif
 !
@@ -510,11 +516,9 @@
       do j=lat0,lat1
         do i=ibeg,iend
           saber_t(i,j) = finterp1(saber_data_t(i-2,j,i0),
-     |      saber_data_t(i-2,j,i1),saber_yfrac(i0),saber_yfrac(i1),
-     |      yfrac)
+     |      saber_data_t(i-2,j,i1),saber_yfrac(i0),saber_yfrac(i1))
           saber_z(i,j) = finterp1(saber_data_z(i-2,j,i0),
-     |      saber_data_z(i-2,j,i1),saber_yfrac(i0),saber_yfrac(i1),
-     |      yfrac)
+     |      saber_data_z(i-2,j,i1),saber_yfrac(i0),saber_yfrac(i1))
         enddo ! i=lon0,lon1
 
 !       write(6,"('before set_per: j=',i4,' ibeg,iend=',2i4,
@@ -527,7 +531,7 @@
       call set_periodic(saber_z,lon0,lon1,lat0,lat1)
 
       if (time2print(nstep,istep))
-     |  write(6,"('interp_saber: mtime=',3i4,' saber_t min,max=',
+     |  write(6,"('interp_saber: mtime=',4i4,' saber_t min,max=',
      |    2e12.4,' saber_z min,max=',2e12.4)") mtime,
      |    minval(saber_t),maxval(saber_t),
      |    minval(saber_z),maxval(saber_z)
@@ -542,7 +546,7 @@
       use mpi_module,only: lon0,lon1,lat0,lat1
 !
 ! Args:
-      integer,intent(in) :: mtime(3)
+      integer,intent(in) :: mtime(4)
 !
 ! Local:
       integer :: ndays,i,j,i0,i1,istat,ibeg,iend
@@ -553,7 +557,7 @@
       ndays = 365
       if (mod(iyear,4) == 0) ndays = 366
       yfrac = iyear+(mtime(1)-1+(mtime(2)/24.)+
-     |    (mtime(3)/(24.*60.)))/float(ndays)
+     |    (mtime(3)/(24.*60.))+mtime(4)/86400.)/float(ndays)
 !
 ! Bracket model time between data i0,i1 times:
       i0 = 0 ; i1 = 0
@@ -566,7 +570,7 @@
       enddo
       if (i0==0.and.i1==0) then
         write(6,"('>>> interp_tidi: could not bracket model yfrac',
-     |    ' =',f15.6,' mtime=',3i5)") yfrac,mtime
+     |    ' =',f15.6,' mtime=',4i5)") yfrac,mtime
         call shutdown('interp_tidi')
       endif
 !
@@ -589,11 +593,9 @@
       do j=lat0,lat1
         do i=ibeg,iend
           tidi_u(i,j) = finterp1(tidi_data_u(i-2,j,i0),
-     |      tidi_data_u(i-2,j,i1),tidi_yfrac(i0),tidi_yfrac(i1),
-     |      yfrac)
+     |      tidi_data_u(i-2,j,i1),tidi_yfrac(i0),tidi_yfrac(i1))
           tidi_v(i,j) = finterp1(tidi_data_v(i-2,j,i0),
-     |      tidi_data_v(i-2,j,i1),tidi_yfrac(i0),tidi_yfrac(i1),
-     |      yfrac)
+     |      tidi_data_v(i-2,j,i1),tidi_yfrac(i0),tidi_yfrac(i1))
         enddo
       enddo
 !
@@ -602,38 +604,32 @@
       call set_periodic(tidi_v,lon0,lon1,lat0,lat1)
 
       if (time2print(nstep,istep))
-     |  write(6,"('interp_tidi:  mtime=',3i4,' tidi_u min,max =',
+     |  write(6,"('interp_tidi:  mtime=',4i4,' tidi_u min,max =',
      |    2e12.4,' tidi_v min,max =',2e12.4)") mtime,
      |    minval(tidi_u),maxval(tidi_u),
      |    minval(tidi_v),maxval(tidi_v)
 
       end subroutine  interp_tidi
 !-----------------------------------------------------------------------
-      real function finterp1(f0,f1,frac0,frac1,frac)
+      real function finterp1(f0,f1,frac0,frac1)
 !
 ! Args:
-      real,intent(in) :: f0,f1,frac0,frac1,frac
+      real,intent(in) :: f0,f1,frac0,frac1
 !
       finterp1 = f0+(f1-f0)*(frac1-frac0)/(frac1-frac0)
       end function finterp1
 !-----------------------------------------------------------------------
       subroutine set_periodic(f,lon0,lon1,lat0,lat1)
-      use params_module,only: nlonp4
-#ifdef MPI
       use mpi_module,only: mp_periodic_f2d
-#endif
 !
 ! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
 ! lons 1,2 <- 72,73 and lons 75,76 <- 3,4
 !
       integer,intent(in) :: lon0,lon1,lat0,lat1
       real,intent(inout) :: f(lon0:lon1,lat0:lat1)
-#ifdef MPI
+
       call mp_periodic_f2d(f,lon0,lon1,lat0,lat1,1)
-#else
-      f(1:2,:)              = f(nlonp4-3:nlonp4-2,:)
-      f(nlonp4-1:nlonp4,:)  = f(3:4,:)
-#endif
+
       end subroutine set_periodic
 !-----------------------------------------------------------------------
       end module saber_tidi

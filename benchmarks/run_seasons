@@ -6,8 +6,8 @@
 # $modelroot: Model root directory (with src, scripts, etc)
 # $tgcmrun:   Path to tgcmrun executable (python)
 #
- set home      = /glade/p/hao/tgcm/tiegcm_benchmarks
- set modelroot = $home/tiegcm_trunk
+ set home      = /glade/p/hao/tgcm/tiegcm2.0/benchmarks
+ set modelroot = /glade/p/hao/tgcm/tiegcm2.0/tiegcm2.0
  set tgcmdata  = /glade/p/hao/tgcm/data/tiegcm2.0
  set tgcmrun   = $modelroot/tgcmrun/tgcmrun
  set queue     = regular # for LSF jobs

@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-#!/opt/local/bin/perl
 use Cwd;
 
 $path = shift;

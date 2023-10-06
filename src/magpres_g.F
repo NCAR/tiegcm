@@ -42,9 +42,8 @@
      |  grav,       ! 870.cm/s^2 accel due to gravity (dep on l.bndry)
      |  boltz,      ! boltzman's constant  cm^2*g/s^2/K    
      |  rmass_o2 , rmass_o1, rmass_n2,  ! 32,16,28
-     |  rmass_n4s, rmass_no, rmass_op,   ! 14,30,16
+     |  rmass_n4s, rmass_no,            ! 14,30
      |  ylatg,  	! geographic latitudes (radians)
-     |  ylong,    	! geographic longitudes (radians)
      |  dlatg,dlong,    ! pi/float(nlat) 2.*pi/float(nlon)
      |  re,             ! earth radius (cm)  6.37122e8  
      |  r0,             ! r_e+h0
@@ -59,11 +58,7 @@
      |  dvec,     ! d_1,d_2 referenced to h_0 (nlonp1,nlat,3,2)
      |  dddarr    ! D referenced to h_0 (nlonp1,nlat) 
       use addfld_module,only: addfld
-#ifdef MPI
       use mpi_module,only: mp_periodic_f3d
-#else
-      use params_module,only: nlon,nlonp2
-#endif     
       implicit none
 !
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
@@ -298,7 +293,6 @@
       enddo  ! lat-loop
 !
 ! periodic point longitude
-#ifdef MPI
       ftmp(:,:,:,1) = je1oD_geo(:,lon0:lon1,lat0:lat1)
       ftmp(:,:,:,2) = je2oD_geo(:,lon0:lon1,lat0:lat1)
 
@@ -306,16 +300,6 @@
 
       je1oD_geo(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,1)
       je2oD_geo(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,2)
-#else	
-      do lat=lat0,lat1
-        do i=1,2
-          je1oD_geo(:,i,lat)	    = je1oD_geo(:,nlon+i,lat)
-          je1oD_geo(:,nlonp2+i,lat) = je1oD_geo(:,i+2,lat)
-          je2oD_geo(:,i,lat)	    = je2oD_geo(:,nlon+i,lat)
-          je2oD_geo(:,nlonp2+i,lat) = je2oD_geo(:,i+2,lat)
-        enddo
-      enddo
-#endif
 !      
 !     do lat=lat0,lat1
 !       call addfld('je1oD_pg_geo' ,'je1oD_pg_geo','A/cm^2',je1oD_geo

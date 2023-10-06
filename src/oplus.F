@@ -17,14 +17,10 @@
 #endif
       implicit none
 !
-! 1/8/08 btf: add option to call filter() and/or filter2() for oplus.
-! Default for tiegcm is callfilt1=.false. and callfilt2=.true.
-      logical :: callfilt1=.false.  ! if true, call filter()
-      logical :: callfilt2=.true.   ! if true, call filter2()
       contains
 !-----------------------------------------------------------------------
-      subroutine oplus(tn,te,ti,o2,o1,n2,he,n2d,ne,u,v,w,barm,ui,vi,wi,
-     |  xnmbar,op,optm1,opout,optm1out,xiop2p,xiop2d,
+      subroutine oplus(tn,te,ti,o2,o1,n2,he,n2d,ne,u,v,w,ui,vi,wi,
+     |  xnmbar,scht,op,optm1,opout,optm1out,xiop2p,xiop2d,Fe,Fn,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Update O+ ion at 3d task subdomain.
@@ -33,11 +29,10 @@
 ! There are 4 latitude scans, with 3d mpi calls in between the loops.
 !   (see also 3d gather/scatter calls in sub filter_op).
 !
-      use params_module,only: zpmid,glat,glon  ! for O+ minimum
-      use init_module,only: secs,istep         ! for O+ minimum
+      use params_module,only: zpmid,glat  ! for O+ minimum
       use cons_module,only: rmass_op,gask,grav,re,cs,dphi,dlamda,
-     |  shapiro,dtx2inv,boltz,expz,rmassinv_o2,rmassinv_o1,
-     |  rmassinv_n2,rmassinv_n2d,p0,dtsmooth,dtsmooth_div2,kut
+     |  shapiro,dtx2inv,rmassinv_o2,rmassinv_o1,
+     |  rmassinv_n2,rmassinv_n2d,dtsmooth,dtsmooth_div2
       use qrj_module,only: 
      |  qop2p, ! O+(2p) ionization from qrj, used in xiop2p
      |  qop2d, ! O+(2d) ionization from qrj, used in xiop2d
@@ -45,11 +40,10 @@
       use chemrates_module,only: ! needed chemical reaction rates
      |  rk1 ,rk2 ,rk10,rk16,rk17,rk18,rk19,rk20,
      |  rk21,rk22,rk23,rk24,rk25,rk26,rk27
-      use input_module,only: enforce_opfloor
-#ifdef MPI
+      use input_module,only: enforce_opfloor,nstep_sub
+      use magfield_module,only: dipmag,sndec,csdec
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
-     |  mp_polelats_f3d,mp_geo_halos_f3d
-#endif
+     |  mp_polelats_f3d,mp_geo_halos_f3d,mp_bndlats_f3d
 !
 ! Args:
       integer,intent(in) :: 
@@ -66,11 +60,11 @@
      |  n2d,        ! n2d
      |  ne,         ! electron density
      |  u,v,w,      ! neutral wind velocities (zonal, meridional, omega)
-     |  barm,       ! mean molecular mass
      |  optm1,      ! O+ at time n-1
      |  op,         ! O+ ion
      |  ui,vi,wi,   ! zonal, meridional, and vertical ion velocities
-     |  xnmbar      ! p0*e(-z)*barm/kT
+     |  xnmbar,     ! p0*e(-z)*mbar/kT
+     |  scht        ! scale height
 !
 ! N2 is intent(inout) for setting halo points (mp_geo_halos_f3d call below)
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
@@ -81,11 +75,11 @@
      |  intent(out) ::
      |  opout,    ! O+ output for next timestep
      |  optm1out, ! O+ output for time n-1
-     |  xiop2p,xiop2d
+     |  xiop2p,xiop2d,Fe,Fn
 !
 ! Local:
-      integer :: k,i,ii,lonbeg,lonend,lat,ier,nlevs
-      integer :: jm2,jm1,j0,jp1,jp2 ! lat-2, lat-1, lat, lat+1, lat+2 
+      integer :: k,i,lonbeg,lonend,lat,ier,nlevs
+      integer :: jm2,jm1,jp1,jp2 ! lat-2, lat-1, lat+1, lat+2 
       real,dimension(lon0:lon1,lat0:lat1) :: 
      |  opflux,    ! upward number flux of O+ (returned by sub oplus_flux) (t7)
      |  dvb        ! output of sub divb
@@ -111,7 +105,7 @@
 ! (default namelist enforce_opfloor = 1). The floor is a
 ! spatial gaussian based on the O+ minimum (opmin below).
 !
-      real :: opfloor,glondeg,slt,dum
+      real :: opfloor,wd
 !
 ! 1/21/16 btf: O+ minimum increased from 1000 to 3000.
 ! (This alleviates numerical instability that can develop
@@ -132,7 +126,8 @@
      |  bdotdh_opj,  ! (b(h)*del(h))*phi
      |  bdotdh_diff, ! (b(h)*del(h))*phi
      |  dj,          ! diffusion coefficients (s13,s14,s15)
-     |  optm1_smooth ! op at time n-1, with shapiro smoother (was s1)
+     |  optm1_smooth,! op at time n-1, with shapiro smoother (was s1)
+     |  vni
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,5) :: f5
       logical,parameter :: debug=.false. ! if set write print statements to stdout
 !
@@ -148,7 +143,6 @@
 ! Number of pressure levels (this will equal nlevp1):
       nlevs = lev1-lev0+1 ! for bndlons calls
 
-#ifdef MPI
 !
 ! Make latitudes j=-1,0 from j=2,1, and j=nlat+1,nlat+2 from nlat-1,nlat for n2, 
 ! then define 2d halos points.  Note that mp_geo_halos_f3d and mp_polelats_f3d 
@@ -158,7 +152,6 @@
       call mp_polelats_f3d(n2(:,lon0:lon1,:),   ! 3rd dim is lat0-2:lat1+2
      |  lev0,lev1,lon0,lon1,lat0,lat1,1,(/1./)) ! last arg means no change in polesign
       call mp_geo_halos_f3d(n2,lev0,lev1,lon0,lon1,lat0,lat1,1)      
-#endif
 !
 ! Save inputs to secondary history file:
 ! 
@@ -196,19 +189,19 @@
 !     call addfld('OP_DIVB',' ',' ',dvb,
 !    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
+      call mkdiag_BXYZ('BX',bx(lon0:lon1,lat0:lat1),lon0,lon1,lat0,lat1)
+      call mkdiag_BXYZ('BY',by(lon0:lon1,lat0:lat1),lon0,lon1,lat0,lat1)
+      call mkdiag_BXYZ('BZ',bz(lon0:lon1,lat0:lat1),lon0,lon1,lat0,lat1)
+      call mkdiag_BMAG('BMAG',bmod2(lon0:lon1,lat0:lat1),
+     |  lon0,lon1,lat0,lat1)
+!
 !----------------------- Begin first latitude scan ---------------------
       do lat=lat0,lat1
         if (debug) write(6,"('oplus begin first lat scan: lat=',i3)")lat
         jm2 = lat-2
         jm1 = lat-1
-        j0  = lat
         jp1 = lat+1
         jp2 = lat+2
-
-        call mkdiag_BXYZ('BX',    bx (lon0:lon1,lat),lon0,lon1,lat)
-        call mkdiag_BXYZ('BY',    by (lon0:lon1,lat),lon0,lon1,lat)
-        call mkdiag_BXYZ('BZ',    bz (lon0:lon1,lat),lon0,lon1,lat)
-        call mkdiag_BMAG('BMAG',bmod2(lon0:lon1,lat),lon0,lon1,lat)
 !
 ! Set reduced temperature (average of tn and ti)
 !
@@ -234,31 +227,28 @@
 !
 ! rrk returns djm1,dj,djp1:
 !
-      call rrk(
-     |  tn(:,lon0:lon1,jm1),barm(:,lon0:lon1,jm1),
+      call rrk(xnmbar(:,lon0:lon1,jm1),
      |  o2(:,lon0:lon1,jm1),o1(:,lon0:lon1,jm1),
      |  n2(:,lon0:lon1,jm1),he(:,lon0:lon1,jm1),
      |  tr(:,lon0:lon1,jm1),dj(:,lon0:lon1,jm1),
-     |  lon0,lon1,lev0,lev1,lat)
+     |  vni(:,lon0:lon1,jm1),lon0,lon1,lev0,lev1)
 
-      call rrk(
-     |  tn(:,lon0:lon1,lat),barm(:,lon0:lon1,lat),
+      call rrk(xnmbar(:,lon0:lon1,lat),
      |  o2(:,lon0:lon1,lat),o1(:,lon0:lon1,lat),
      |  n2(:,lon0:lon1,lat),he(:,lon0:lon1,lat),
      |  tr(:,lon0:lon1,lat),dj(:,lon0:lon1,lat),
-     |  lon0,lon1,lev0,lev1,lat)
+     |  vni(:,lon0:lon1,lat),lon0,lon1,lev0,lev1)
 
-      call rrk(
-     |  tn(:,lon0:lon1,jp1),barm(:,lon0:lon1,jp1),
+      call rrk(xnmbar(:,lon0:lon1,jp1),
      |  o2(:,lon0:lon1,jp1),o1(:,lon0:lon1,jp1),
      |  n2(:,lon0:lon1,jp1),he(:,lon0:lon1,jp1),
      |  tr(:,lon0:lon1,jp1),dj(:,lon0:lon1,jp1),
-     |  lon0,lon1,lev0,lev1,lat)
+     |  vni(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1)
 
       if (debug) write(6,"('oplus after rrk: lat=',i3)") lat
-!     call addfld('DJ','DJ: Ambipolar Diffusion of O+',' ',
-!    |    dj(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('DJ','DJ: Ambipolar Diffusion of O+',' ',
+     |    dj(lev0:lev1-1,lon0:lon1,lat),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Plasma temperature:
       do i=lon0,lon1
@@ -272,12 +262,9 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          hj(k,i,jm1) = gask*tn(k,i,jm1)/
-     |      (0.5*(barm(k,i,jm1)+barm(k+1,i,jm1))*grav)
-          hj(k,i,lat  ) = gask*tn(k,i,j0 )/
-     |      (0.5*(barm(k,i,j0 )+barm(k+1,i,j0 ))*grav)
-          hj(k,i,jp1) = gask*tn(k,i,jp1)/
-     |      (0.5*(barm(k,i,jp1)+barm(k+1,i,jp1))*grav)
+          hj(k,i,jm1) = scht(k,i,jm1)
+          hj(k,i,lat) = scht(k,i,lat)
+          hj(k,i,jp1) = scht(k,i,jp1)
         enddo
       enddo
       if (debug) write(6,"('oplus after hj: lat=',i3)") lat
@@ -295,9 +282,9 @@
      |      hj(k,i,jm1)*bz(i,jm1)*0.5*(w(k,i,jm1)+w(k+1,i,jm1)))*
      |      op(k,i,jm1) 
           bvel(k,i,lat) = 
-     |      (bx(i,lat)*u(k,i,j0)+by(i,lat)*v(k,i,j0)+
-     |      hj(k,i,lat)*bz(i,lat)*0.5*(w(k,i,j0)+w(k+1,i,j0)))*
-     |      op(k,i,j0)
+     |      (bx(i,lat)*u(k,i,lat)+by(i,lat)*v(k,i,lat)+
+     |      hj(k,i,lat)*bz(i,lat)*0.5*(w(k,i,lat)+w(k+1,i,lat)))*
+     |      op(k,i,lat)
           bvel(k,i,jp1) = 
      |      (bx(i,jp1)*u(k,i,jp1)+by(i,jp1)*v(k,i,jp1)+ 
      |      hj(k,i,jp1)*bz(i,jp1)*0.5*(w(k,i,jp1)+w(k+1,i,jp1)))*
@@ -305,19 +292,19 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
       if (debug) write(6,"('oplus after bvel: lat=',i3)") lat
-!     call addfld('BVEL_J'  ,' ',' ',bvel(lev0:lev1-1,lon0:lon1,j0),
+!     call addfld('BVEL_J'  ,' ',' ',bvel(lev0:lev1-1,lon0:lon1,lat),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
       tp(lev1,:,jm1:jp1) = 0.
       call diffus(
      |  tp(:,lon0:lon1,jm1),op(:,lon0:lon1,jm1),hj(:,:,jm1),
-     |  diffj(:,lon0:lon1,jm1),lon0,lon1,lev0,lev1,lat)
+     |  diffj(:,lon0:lon1,jm1),lon0,lon1,lev0,lev1)
       call diffus(
      |  tp(:,lon0:lon1,lat),op(:,lon0:lon1,lat),hj(:,:,lat),
-     |  diffj(:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
+     |  diffj(:,lon0:lon1,lat),lon0,lon1,lev0,lev1)
       call diffus(
      |  tp(:,lon0:lon1,jp1),op(:,lon0:lon1,jp1),hj(:,:,jp1),
-     |  diffj(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1,lat)
+     |  diffj(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1)
 
       if (debug) write(6,"('oplus after diffus: lat=',i3)") lat
 !     call addfld('DIFFJ','DIFFJ after diffus',' ',
@@ -343,10 +330,10 @@
 ! optm1_smooth will be used in explicit terms below.
       do i=lon0,lon1
         do k=lev0,lev1-1
-          optm1_smooth(k,i,lat) = optm1(k,i,j0)-shapiro*
+          optm1_smooth(k,i,lat) = optm1(k,i,lat)-shapiro/nstep_sub*
      |      (optm1(k,i,jp2)+optm1(k,i,jm2)-4.*
      |      (optm1(k,i,jp1)+optm1(k,i,jm1))+6.*
-     |       optm1(k,i,j0))
+     |       optm1(k,i,lat))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !     call addfld('OPTM1_SM0' ,' ',' ',
@@ -355,9 +342,18 @@
 !
         if (debug) write(6,"('oplus end first lat scan: lat=',i3)") lat
       enddo ! lat=lat0,lat1
-!------------------------- End first latitude scan ---------------------
-#ifdef MPI
 !
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            wd = vni(k,i,lat)*diffj(k,i,lat)*dj(k,i,lat)*
+     |        sin(dipmag(i,lat))*cos(dipmag(i,lat))
+            Fe(k,i,lat) = wd*sndec(i,lat)
+            Fn(k,i,lat) = wd*csdec(i,lat)
+          enddo
+        enddo
+      enddo
+!------------------------- End first latitude scan ---------------------
 !
 ! Boundary longitudes:
       f5(:,:,:,1) = dj(:,:,:)
@@ -378,14 +374,12 @@
       call mp_periodic_f3d(dj(:,lon0:lon1,lat0-1:lat1+1),lev0,lev1,
      |  lon0,lon1,lat0,lat1,1)
 !
-#endif
 !----------------------- Begin second latitude scan --------------------
       do lat=lat0,lat1
         if (debug) 
      |    write(6,"('oplus begin first lat scan: lat=',i3)") lat
         jm2 = lat-2
         jm1 = lat-1
-        j0  = lat
         jp1 = lat+1
         jp2 = lat+2
 !
@@ -439,15 +433,12 @@
       enddo ! lat=lat0,lat1
 !------------------------ End second latitude scan ---------------------
 !
-#ifdef MPI
-!
 ! Periodic points for bdotdh_opj (output from bdotdh above):
       call mp_periodic_f3d(bdotdh_opj(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1,1)
 !
 ! Boundary longitudes for bdotdh_opj (input to below call to bdotdh):
       call mp_bndlons_f3d(bdotdh_opj,nlevs,lon0,lon1,lat0,lat1,1,0)
-#endif
 !
 !----------------------- Begin third latitude scan ---------------------
       do lat=lat0,lat1
@@ -455,7 +446,6 @@
      |    write(6,"('oplus begin third lat scan: lat=',i3)") lat
         jm2 = lat-2
         jm1 = lat-1
-        j0  = lat
         jp1 = lat+1
         jp2 = lat+2
 !
@@ -515,8 +505,8 @@
      |      (1./(cs(lat)*dlamda)*(bx(i,lat)*
      |      (bvel(k,i+1,lat)-bvel(k,i-1,lat))+
      |      0.5*(ui(k,i,lat)+ui(k+1,i,lat))*bmod2(i,lat)**2*
-     |      (op(k,i+1,j0)/bmod2(i+1,lat)**2-
-     |       op(k,i-1,j0)/bmod2(i-1,lat)**2))+
+     |      (op(k,i+1,lat)/bmod2(i+1,lat)**2-
+     |       op(k,i-1,lat)/bmod2(i-1,lat)**2))+
 !
      |      1./dphi*(by(i,lat)*(bvel(k,i,jp1)-bvel(k,i,jm1))+
      |      0.5*(vi(k,i,lat)+vi(k+1,i,lat))*bmod2(i,lat)**2*
@@ -539,7 +529,7 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
           hdz(k,i) = 1./(hj(k,i,lat)*dz)
-          tp1(k,i) = 0.5*(ti(k,i,j0)+te(k,i,j0))
+          tp1(k,i) = 0.5*(ti(k,i,lat)+te(k,i,lat))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -629,10 +619,10 @@
       do i=lonbeg,lonend
         do k=lev0,lev1-1
           explicit(k,i) = explicit(k,i)-(optm1_smooth(k,i,lat)-
-     |      shapiro*
+     |      shapiro/nstep_sub*
      |      (optm1_smooth(k,i+2,lat)+optm1_smooth(k,i-2,lat)-4.*
      |      (optm1_smooth(k,i+1,lat)+optm1_smooth(k,i-1,lat))+6.*
-     |       optm1_smooth(k,i,lat)))*dtx2inv
+     |       optm1_smooth(k,i,lat)))*dtx2inv*nstep_sub
         enddo ! k=lev0,lev1
       enddo ! i=lonbeg,lonend
 
@@ -662,8 +652,8 @@
 ! bdotu = B.U (s7)
       do i=lon0,lon1
         do k=lev0,lev1-1
-          bdotu(k,i) = bx(i,lat)*u(k,i,j0)+by(i,lat)*v(k,i,j0)+
-     |      hj(k,i,lat)*bz(i,lat)*0.5*(w(k,i,j0)+w(k+1,i,j0))
+          bdotu(k,i) = bx(i,lat)*u(k,i,lat)+by(i,lat)*v(k,i,lat)+
+     |      hj(k,i,lat)*bz(i,lat)*0.5*(w(k,i,lat)+w(k+1,i,lat))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !     call addfld('BDOTU' ,' ',' ',bdotu(lev0:lev1-1,:),
@@ -705,7 +695,7 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
           q_coeff(k,i) = q_coeff(k,i)-bdotu(k,i)*dvb(i,lat)*bz(i,lat)-
-     |      dtx2inv
+     |      dtx2inv*nstep_sub
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !
@@ -747,25 +737,25 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          psi_n2(k,i) = n2(k,i,j0) ! n2 mixing ratio
+          psi_n2(k,i) = n2(k,i,lat) ! n2 mixing ratio
 !
           xiop2p(k,i,lat) = 
      |      0.5*(qop2p(k,i,lat)+qop2p(k+1,i,lat))/((xnmbar(k,i,lat)*
      |      ((rk16+rk17)*psi_n2(k,i)*rmassinv_n2+
-     |      rk18*o1(k,i,j0)*rmassinv_o1))+(rk19(k,i,lat)+rk20(k,i,lat))*
-     |      ne(k,i,j0)+rk21+rk22)
+     |      rk18*o1(k,i,lat)*rmassinv_o1))+
+     |      (rk19(k,i,lat)+rk20(k,i,lat))*ne(k,i,lat)+rk21+rk22)
 ! 
           xiop2d(k,i,lat) = 
      |      (0.5*(qop2d(k,i,lat)+qop2d(k+1,i,lat))+(rk20(k,i,lat)*
-     |      ne(k,i,j0)+rk22)*xiop2p(k,i,lat))/((xnmbar(k,i,lat)*
+     |      ne(k,i,lat)+rk22)*xiop2p(k,i,lat))/((xnmbar(k,i,lat)*
      |      (rk23*psi_n2(k,i)*rmassinv_n2+rk24*
-     |      o1(k,i,j0)*rmassinv_o1+rk26*o2(k,i,j0)*rmassinv_o2))+
-     |      rk25(k,i,lat)*ne(k,i,j0)+rk27)
+     |      o1(k,i,lat)*rmassinv_o1+rk26*o2(k,i,lat)*rmassinv_o2))+
+     |      rk25(k,i,lat)*ne(k,i,lat)+rk27)
 ! 
           op_loss(k,i) = 
-     |      xnmbar(k,i,lat)*(rk1(k,i,lat)*o2(k,i,j0)*rmassinv_o2+
+     |      xnmbar(k,i,lat)*(rk1(k,i,lat)*o2(k,i,lat)*rmassinv_o2+
      |      rk2(k,i,lat)*psi_n2(k,i)*rmassinv_n2+rk10*
-     |      n2d(k,i,j0)*rmassinv_n2d)
+     |      n2d(k,i,lat)*rmassinv_n2d)
 !
           q_coeff(k,i) = q_coeff(k,i)-op_loss(k,i)
         enddo ! k=lev0,lev1-1
@@ -785,8 +775,6 @@
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('OP_TN' ,' ',' ',tn(lev0:lev1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('OP_BARM' ,' ',' ',barm(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('OP_RK19' ,' ',' ',rk19(lev0:lev1-1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('OP_RK25' ,' ',' ',rk25(lev0:lev1-1,lon0:lon1,lat),
@@ -797,11 +785,10 @@
         do k=lev0,lev1-1
           explicit(k,i) = explicit(k,i)-
      |      0.5*(qop(k,i,lat)+qop(k+1,i,lat))-(rk19(k,i,lat)*
-     |      ne(k,i,j0)+rk21)*
-     |      xiop2p(k,i,lat)-(rk25(k,i,lat)*ne(k,i,j0)+rk27)*
+     |      ne(k,i,lat)+rk21)*
+     |      xiop2p(k,i,lat)-(rk25(k,i,lat)*ne(k,i,lat)+rk27)*
      |      xiop2d(k,i,lat)-(rk18*xiop2p(k,i,lat)+rk24*xiop2d(k,i,lat))*
-     |      o1(k,i,j0)*rmassinv_o1*p0*expz(k)*0.5*(barm(k,i,j0)+
-     |      barm(k+1,i,j0))/(boltz*tn(k,i,j0))
+     |      o1(k,i,lat)*rmassinv_o1*xnmbar(k,i,lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !     call addfld('EXPLIC4',' ',' ',explicit(lev0:lev1-1,:),
@@ -843,7 +830,7 @@
 ! Filter updated O+:
 ! 
       call filter_op(opout(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,kut,'OPLUS')
+     |  lev0,lev1,lon0,lon1,lat0,lat1,'OPLUS')
 !
 !----------------------- Begin fourth latitude scan ---------------------
       do lat=lat0,lat1
@@ -892,14 +879,9 @@
 !
 ! Report time and location to stdout when opout < opfloor:
 !             if (opout   (k,i,lat) /= 1.e-5) then
-!               ii = i ; if (i > nlon) ii = i-nlon
-!               glondeg = glon(ii)
-!               slt = fslt(dum,secs/3600.,glondeg,1)
 !               write(6,"('OPLUS: enforce O+ min: opout=',e12.4,
-!    |            ' opfloor=',e12.4,' lat,lon=',2f9.2,' zpmid=',f8.2,
-!    |            ' istep=',i5,' uthr=',f8.2,' slt=',f8.2)") 
-!    |            opout(k,i,lat),opfloor,glat(lat),glondeg,zpmid(k),
-!    |            istep,secs/3600.,slt
+!    |            ' opfloor=',e12.4,' lat=',f9.2,' zpmid=',f8.2)") 
+!    |            opout(k,i,lat),opfloor,glat(lat),zpmid(k)
 !             endif ! report if not 1.e-5
 
               opout(k,i,lat) = opfloor
@@ -912,12 +894,13 @@
       enddo ! lat=lat0,lat1
 !
 ! Periodic points for outputs:
-#ifdef MPI
       call mp_periodic_f3d(opout(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1,1)
       call mp_periodic_f3d(optm1out(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1,1)
-#endif
+!
+      call mp_bndlats_f3d(opout,nlevs,lon0,lon1,lat0,lat1,1)
+      call mp_bndlons_f3d(opout,nlevs,lon0,lon1,lat0,lat1,1,0)
 !
 ! Save outputs on secondary history for diagnostics:
 !     do lat=lat0,lat1
@@ -1016,33 +999,37 @@
 !
       end subroutine divb
 !-----------------------------------------------------------------------
-      subroutine rrk(t,rms,ps1,ps2,n2,he,tr,ans,lon0,lon1,lev0,lev1,lat)
+      subroutine rrk(rms,ps1,ps2,n2,he,tr,ans,vni,
+     |  lon0,lon1,lev0,lev1)
 !
-! Returns ambipolar diffusion coefficient in ans.
+! Returns ambipolar diffusion coefficient in ans and vni.
 !
-      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,boltz,
-     |  p0,expz,rmassinv_he
+      use params_module,only: zpint
+      use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,
+     |  rmassinv_he
       use input_module,only: colfac,opdiffcap
       use init_module,only: istep
 !
 ! Args:
-      integer,intent(in) :: lon0,lon1,lev0,lev1,lat
+      integer,intent(in) :: lon0,lon1,lev0,lev1
       real,dimension(lev0:lev1,lon0:lon1),intent(in) ::
-     |  t,rms,ps1,ps2,n2,he,tr
-      real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
+     |  rms,ps1,ps2,n2,he,tr
+      real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans,vni
 !
 ! Local:
       integer :: k,i
+      real :: opdiffcap_k
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
 !
 ! 8/28/13 btf: Use n2=1-o2-o-he, and include O+/He collision rate from Wenbin:
 !
-          ans(k,i) = 1.42E17*boltz*t(k,i)/(p0*expz(k)*.5*(rms(k,i)+
-     |      rms(k+1,i))*(ps2(k,i)*rmassinv_o1*sqrt(tr(k,i))*(1.-0.064*
+          vni(k,i) = ps2(k,i)*rmassinv_o1*sqrt(tr(k,i))*(1.-0.064*
      |      alog10(tr(k,i)))**2*colfac+18.6*n2(k,i)*rmassinv_n2+18.1*
-     |      ps1(k,i)*rmassinv_o2+3.6*he(k,i)*rmassinv_he))
+     |      ps1(k,i)*rmassinv_o2+3.6*he(k,i)*rmassinv_he
+          ans(k,i) = 1.42E17/(rms(k,i)*vni(k,i))
+          vni(k,i) = 16*3.53E-11*vni(k,i)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 !
@@ -1059,21 +1046,27 @@
       if (opdiffcap /= 0.) then ! default is off
         if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)") 
      |    opdiffcap
-        where(ans(:,:) > opdiffcap)
-          ans(:,:) = opdiffcap
-        endwhere
+!       where(ans(:,:) > opdiffcap)
+!         ans(:,:) = opdiffcap
+!       endwhere
+        do k=lev0,lev1-1
+          opdiffcap_k = opdiffcap/(1+2**(zpint(k)-6))
+          do i=lon0,lon1
+            if (ans(k,i) > opdiffcap_k) ans(k,i) = opdiffcap_k
+          enddo
+        enddo
       endif
 
       end subroutine rrk
 !-----------------------------------------------------------------------
-      subroutine diffus(tp,en,hj,ans,lon0,lon1,lev0,lev1,lat)
+      subroutine diffus(tp,en,hj,ans,lon0,lon1,lev0,lev1)
 !
 ! Evaluates ans = (d/(h*dz)*tp+m*g/r)*en
 !
       use cons_module,only: rmass_op,grav,gask
 !
 ! Args:
-      integer :: lon0,lon1,lev0,lev1,lat
+      integer :: lon0,lon1,lev0,lev1
       real,dimension(lev0:lev1,lon0:lon1),intent(in) :: tp,en,hj
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans
 !
@@ -1108,7 +1101,7 @@
 ! Evaluates ans = (b(h)*del(h))*phi
 !
 ! Args:
-      integer :: iperiodic,lon0,lon1,lev0,lev1,lat
+      integer :: lon0,lon1,lev0,lev1,lat
       real,dimension(lev0:lev1,lon0:lon1),intent(in)    :: phijm1,phijp1
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(inout) :: phij
       real,dimension(lev0:lev1,lon0:lon1),intent(out)   :: ans
@@ -1170,28 +1163,21 @@
       enddo ! i=lon0,lon1
       end subroutine bdzdvb
 !-----------------------------------------------------------------------
-      subroutine filter_op(opout,lev0,lev1,lon0,lon1,lat0,lat1,kut,name)
+      subroutine filter_op(opout,lev0,lev1,lon0,lon1,lat0,lat1,name)
 !
 ! Filter updated O+. This is called from outside latitude loop,
 ! i.e., once per timestep.
 !
-      use filter_module,only: filter,filter2
-#ifdef MPI
       use mpi_module,only: mytidi,mp_gatherlons_f3d,mp_scatterlons_f3d
-#else
-      integer :: mytidi=0
-#endif
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      integer,intent(in) :: kut(nlat)
       real,intent(inout) :: opout(lev0:lev1,lon0:lon1,lat0:lat1)
       character(len=*),intent(in) :: name
 !
 ! Local:
       integer :: i,j,ier
       real :: op_ik(nlonp4,lev0:lev1),op_kij(lev0:lev1,nlonp4,lat0:lat1)
-      real :: fmin,fmax
 !
 #ifdef VT
 !     code = 124 ; state = 'filter_op' ; activity='Filtering'
@@ -1206,15 +1192,12 @@
         enddo
       enddo ! j=lat0,lat1
 !
-#ifdef MPI
-!
 ! Gather longitudes into tasks in first longitude column of task table
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
       call mp_gatherlons_f3d(op_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
      |  name)
-#endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
         if (mytidi==0) then
@@ -1222,20 +1205,13 @@
 ! Loop through subdomain latitudes:
           latscan: do j=lat0,lat1
 !
-! Define 2d array at all longitudes for filter2:
+! Define 2d array at all longitudes for filter:
             do i=1,nlonp4
               op_ik(i,:) = op_kij(:,i,j)
             enddo ! i=1,nlonp4
 !
-! Do the filtering (requires fft):
-! call filter and/or filter2 according to module logicals callfilt1,callfilt2:
-!
-! If requested, call filter2(), as in composition comp_major and minor:
-            if (callfilt2) call filter2(op_ik,lev0,lev1,kut(j),j)
-!
-! If requested, call filter(), as in dt,duv,etc:
-!
-            if (callfilt1) call filter(op_ik,lev0,lev1,kut(j),j)
+! Do the filtering:
+            call ringfilter(op_ik,lev0,lev1,3,name,j)
 !
 ! Return filtered array to op_kij:
             do i=1,nlonp4
@@ -1243,14 +1219,12 @@
             enddo ! i=1,nlonp4
           enddo latscan ! j=lat0,lat1
         endif ! mytidi==0
-#ifdef MPI
 !
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
 !
       call mp_scatterlons_f3d(op_kij,lev0,lev1,lon0,lon1,lat0,lat1,1,
      |  name)
-#endif
 !
 ! Return filtered array to opout at task subdomain:
       do j=lat0,lat1

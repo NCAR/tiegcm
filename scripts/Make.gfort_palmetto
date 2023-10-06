@@ -1,0 +1,51 @@
+#
+# Included makefile for GNU gfortran compiler on Clemson palmetto:
+# palmetto is using gfortran 9.5.0
+#
+MPIF90 = mpifort
+MPIRUN = mpirun
+FFLAGS = -fdefault-real-8 -fno-range-check
+#
+# See https://docs.rcd.clemson.edu/palmetto/
+#FFLAGS += -mcmodel=medium
+#
+# DBGFLAGS are used by the Makefile only if the job script
+# has "set debug = true"
+#
+DBGFLAGS = -Og -fcheck=all -fbacktrace
+DBGFLAGS += -Wall -Wextra
+DBGFLAGS += -Wpedantic -Wcharacter-truncation -Wconversion-extra
+DBGFLAGS += -Wfrontend-loop-interchange -Wimplicit-interface -Wimplicit-procedure
+DBGFLAGS += -Wuse-without-only -Walign-commons -Wrealloc-lhs -Wrealloc-lhs-all
+#
+# -ffpe-trap=invalid,zero,overflow traps all floating point exceptions.
+# The model is not guaranteed not to crash if this option is set.
+#
+#DBGFLAGS += -ffpe-trap=invalid,zero,overflow
+#
+# Makefile will use OPTIM = -g if set debug=TRUE in job script.
+OPTIM    = -O2
+LIBS     = -lcurl
+HOST     = $(shell hostname)
+#
+# Library and Include file paths:
+#
+# ESMF lib on palmetto:
+# (Makefile does "include $(ESMFMKFILE)")
+ESMFMKFILE = /zfs/luatmos/software/lib/libO/Linux.gfortran.64.openmpi.default/esmf.mk
+#
+# Make machines.ini file for MPI execution:
+#
+prereq: machines.ini mpirun.command
+machines.ini: export HN=$(HOST)
+machines.ini: export NP=$(NPROC)
+machines.ini: FORCE
+	@echo "Making machines.ini.."
+	@echo `hostname` > machines.ini
+	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini
+
+mpirun.command: FORCE
+	@echo "Making mpirun.command: MPIRUN=$(MPIRUN)"
+	@echo $(MPIRUN) > mpirun.command
+
+FORCE:

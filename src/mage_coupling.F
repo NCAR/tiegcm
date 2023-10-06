@@ -1,0 +1,561 @@
+!-----------------------------------------------------------------------
+      module mage_coupling_module
+!-----------------------------------------------------------------------
+! DESCRIPTION:
+
+! Module for MPI coupling TIEGCM with GAMERA and REMIX (MAGE).
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!  Preprocessor flag  !!  Source Code        !!  Notes               !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!  GAMERA             !!  mage_coupling.F    !!  MPI                 !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-----------------------------------------------------------------------
+      use params_module,only: nlonp4,nlat,nlatp1
+      implicit none
+
+      real,dimension(nlonp4,nlat) ::
+     |  gpot,        ! potential in geographic coordinates, periodic boundary
+     |  geng,        ! energy in geographic coordinates, periodic boundary
+     |  gflx         ! flux in geographic coordinates, periodic boundary
+!    |  gBbeAvgEng,  ! BBE Precip Average Eng-geo, periodic boundary
+!    |  gBbeNumFlux, ! BBE Precip Num flux-geo, periodic boundary
+!    |  gCuspAvgEng, ! Cusp Precip Average Eng-geo, periodic boundary
+!    |  gCuspNumFlux ! Cusp Precip Num flux-geo, periodic boundary
+
+! Potential in geographic coordinates from M-I coupler
+! Note: gpotm latitude dimension is defined to match mag2geo specifications
+      real,dimension(nlonp4,0:nlatp1) :: gpotm
+
+      real :: aurllbN,aurllbS ! all are co-lats in radians
+
+! Change the following parameters if adding more variables
+      integer,parameter ::
+     |  nmixinvar = 3, ! Potential, Flux, Energy
+     |  nmixoutvar = 2 ! Pedersen, Hall
+
+      contains 
+!-----------------------------------------------------------------------
+      subroutine initialize_coupling
+
+! This subroutine initialize MPI interface for data exchange
+! Send REMIX the grid information
+
+      use params_module,only: nlatp2,nlonp1,glat,glon
+      use cons_module,only: dtr
+
+      integer :: ierr
+      real,dimension(nlatp2) :: glatp2
+      real,dimension(nlonp1) :: glonp1
+
+      gpot = 0
+      geng = 0.5
+      gflx = 0
+      gpotm = 0
+      aurllbN = 10*dtr
+      aurllbS = 10*dtr
+
+! Hard code the poles
+      glatp2(2:nlatp2-1) = glat
+      glatp2(1) = -90
+      glatp2(nlatp2) = 90
+
+! Periodic boundary
+      glonp1(1:nlonp1-1) = glon
+      glonp1(nlonp1) = glon(1)+360
+
+#ifdef GAMERA
+
+      call init_mpi_remix(glatp2,glonp1)
+
+#endif
+
+      end subroutine initialize_coupling
+!-----------------------------------------------------------------------
+      subroutine import_mage
+
+! 1. Receive arrays (pot, eng, flx) from REMIX on process zero
+! 2. Broadcast to all MPI tasks
+! 3. Set periodic boundaries for gpot, geng, gflx, gpotm
+! 4. Clean up pole values for the dynamo solver
+
+      use params_module,only: nlatp2,nlon,nlonp1,nlonp2
+      use mpi_module,only: mytid,TIEGCM_WORLD,handle_mpi_err
+      use mpi
+
+      integer :: ierr,i,j
+      real*8,dimension(nlatp2,nlonp1,nmixinvar) :: var2d
+
+!     write(6,"('TIEGCM (',i3,'): inside receive')") mytid
+
+      var2d = 0.
+
+#ifdef GAMERA
+      if (mytid == 0) then
+
+        call import_remix(var2d)
+! Unit conversion
+        var2d(:,:,1) = var2d(:,:,1)*1e3 ! potential: kV -> V
+        var2d(:,:,2) = var2d(:,:,2)*0.5 ! mean energy -> characteristic energy
+      endif
+
+      call mpi_bcast(var2d, nlatp2*nlonp1*nmixinvar, 
+     |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
+      if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
+
+! Process the imported data
+      do j = 1,nlat
+        do i = 1,nlon
+          gpot(i+2,j) = var2d(j+1,i,1)
+          geng(i+2,j) = var2d(j+1,i,2)
+          gflx(i+2,j) = var2d(j+1,i,3)
+          gpotm(i+2,j) = var2d(j+1,i,1)
+        enddo
+        gpotm(nlonp1+2,j) = var2d(j+1,nlonp1,1)
+      enddo
+
+#endif
+      end subroutine import_mage
+!-----------------------------------------------------------------------
+
+      subroutine process_import
+
+#ifdef GAMERA  
+      use params_module,only: nlatp2,nlon,nlonp1,nlonp2,glat
+      use input_module,only: ctpoten
+      use cons_module,only: pi
+      use mpi_module,only: mytid,handle_mpi_err,TIEGCM_WORLD
+      use mpi
+
+      integer :: v,ierr,i,j,js,jn
+      real :: polev1,polev2,
+     |   cpmaxsh,cpminsh,cpmaxnh,cpminnh
+      real*8 :: nfluxllb = 1.0e7
+      real*8,dimension(nlon) :: aurllbj
+  
+
+! Dynamo solver requires pole values for gpotm
+! Linearly interpolate to add pole values
+
+! Southern Hemisphere: j=0
+      polev1=0.
+      polev2=0.
+      do i=1,nlonp1
+        polev1=polev1+gpotm(i+2,1)
+        polev2=polev2+gpotm(i+2,2)
+      enddo
+
+      do i=1,nlonp1
+        gpotm(i+2,0)=(9.*polev1-polev2)/(8.*float(nlonp1))
+      enddo
+
+! Northern Hemisphere: j=nlatp1
+      polev1=0.
+      polev2=0.
+      do i=1,nlonp1
+        polev1=polev1+gpotm(i+2,nlat)
+        polev2=polev2+gpotm(i+2,nlat-1)
+      enddo
+      do i=1,nlonp1
+        gpotm(i+2,nlatp1)=(9.*polev1-polev2)/(8.*float(nlonp1))
+      enddo
+
+! Set periodic points
+      do j = 1,nlat
+        do i = 1,2
+          gpot(i,j) = gpot(nlon+i,j)
+          geng(i,j) = geng(nlon+i,j)
+          gflx(i,j) = gflx(nlon+i,j)
+          gpotm(i,j) = gpotm(nlon+i,j)
+
+          gpot(nlonp2+i,j) = gpot(i+2,j)
+          geng(nlonp2+i,j) = geng(i+2,j)
+          gflx(nlonp2+i,j) = gflx(i+2,j)
+          gpotm(nlonp2+i,j) = gpotm(i+2,j)
+        enddo
+      enddo
+
+!!!  08/11:  FIXME: While merging TIEGCM 1.94.1 into LTR-2.1.4-beta, I found
+!!!          the following code segment.  Does CTPOTEN really need to be
+!!!          calculated here?  What does CTPOTEN do in the input namelist?
+!!!          Isn't CTPOTEN read from the GPI file?  Is MAGE ready for the 
+!!!          dynamic crit mods?  Commenting this code out for now.  Need
+!!!          to talk with Ben on this.  Compare to TIEGCM revisions r571
+!!!          and r575 (TIEGCM repository).
+!!!
+!!!!
+!!!! 01/11:  Find ctpoten (kV) or min/max average from both hemispheres (gpot in V)
+!!!!         ctpoten is NOT (yet) used to find theta0 in aurora_cons, where theta0
+!!!!         is used in colath for crit(1,2).  Set theta0=10 so crit1,2=15,30 deg (old).
+!!!!
+!!!      cpmaxsh = -1000000.
+!!!      cpmaxnh = -1000000.
+!!!      cpminsh =  1000000.
+!!!      cpminnh =  1000000.
+!!!
+!!!      do js=1,nlat/2
+!!!       jn=nlat/2+js
+!!!       do ii=1,nlonp1+1
+!!!	cpmaxsh = max(cpmaxsh,gpot(ii,js))
+!!!	cpminsh = min(cpminsh,gpot(ii,js))
+!!!	cpmaxnh = max(cpmaxnh,gpot(ii,jn))
+!!!	cpminnh = min(cpminnh,gpot(ii,jn))
+!!!       enddo
+!!!      enddo
+
+      cpmaxsh = maxval(gpot(:,1:nlat/2))
+      cpmaxnh = maxval(gpot(:,nlat/2+1:nlat))
+      cpminsh = minval(gpot(:,1:nlat/2))
+      cpminnh = minval(gpot(:,nlat/2+1:nlat))
+
+      ctpoten = 0.5*(cpmaxsh-cpminsh+cpmaxnh-cpminnh)*0.001
+
+      ! Find the lowest lat of all MLT where mixFlux drops to below certain threshold.
+      ! Pass it into colath.F, replace crit(1) and 2.
+      ! Make NH/SH separately.
+      ! Note in cism_adhoc.F, allocate(mixPot(nmixlat,nmixlon)), allocate(mixlon(nmixlon,nmixlat))
+      aurllbN = 0.D0
+      aurllbS = 0.D0
+      aurllbj = 0.D0
+      do j=1,nlon   ! NORTH
+        do i=nlat/2+1,nlat
+          if(gflx(j+2,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
+        enddo
+        aurllbj(i) = max(90.-glat(i),15.) ! aurllbj is co-lat.
+      enddo
+      aurllbN = maxval(aurllbj)
+
+      aurllbj = 0.D0
+      do j=1,nlon   ! SOUTH
+        do i=nlat/2,1,-1
+          if(gflx(j+2,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
+        enddo
+        aurllbj(i) = max(90.-glat(i),15.) ! aurllbj is co-lat.
+      enddo
+      aurllbS = maxval(aurllbj)
+
+#endif
+
+      end subroutine process_import
+
+!-----------------------------------------------------------------------
+      subroutine export_mage(modeltime)
+
+! ... Shared Module Variables ..........................................
+      use params_module,only: nlatp2,nlon,nlonp1,nlonp2
+      use fields_module,only: gzigm1,gzigm2,gnsrhs
+      use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f2d,mytid,
+     |  ntask,tasks,myAppId,voltId,mixCplComm,mixCplRank,handle_mpi_err
+      use addfld_module,only: addfld
+      use mpi
+
+! ... Parameter variables ..............................................
+      integer,dimension(4),intent(in) :: modeltime
+
+! ... Local variables ..................................................
+      integer :: i,j,v,ierr
+      real,dimension(nlatp2,nlonp1,nmixoutvar) :: var2d
+      real,dimension(nlonp4,nlat) :: gzigm1_glb,gzigm2_glb,gnsrhs_glb
+
+! ... Begin ............................................................
+
+! Prepare data for export
+#ifdef GAMERA
+      where(gzigm1 < 0.2) gzigm1 = 0.2
+      where(gzigm2 < 0.2) gzigm2 = 0.2
+
+      call mp_gather_f2d(gzigm1(lon0:lon1,lat0:lat1),gzigm1_glb,
+     |  tasks(:)%lon0,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
+     |  ntask,nlonp4,nlat,1)
+      call mp_gather_f2d(gzigm2(lon0:lon1,lat0:lat1),gzigm2_glb,
+     |  tasks(:)%lon0,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
+     |  ntask,nlonp4,nlat,1)
+      call mp_gather_f2d(gnsrhs(lon0:lon1,lat0:lat1),gnsrhs_glb,
+     |  tasks(:)%lon0,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
+     |  ntask,nlonp4,nlat,1)
+
+      if (mytid == 0) then
+        do j = 2,nlatp1
+          do i = 1,nlonp1
+            var2d(j,i,1) = gzigm1_glb(i+2,j-1)
+            var2d(j,i,2) = gzigm2_glb(i+2,j-1)
+          enddo
+        enddo
+        var2d(1,:,1) = sum(gzigm1_glb(3:nlonp2,1))/nlon
+        var2d(nlatp2,:,1) = sum(gzigm1_glb(3:nlonp2,nlat))/nlon
+        var2d(1,:,2) = sum(gzigm2_glb(3:nlonp2,1))/nlon
+        var2d(nlatp2,:,2) = sum(gzigm2_glb(3:nlonp2,nlat))/nlon
+
+        write(6,"('Sending at: ',4i4)") modeltime
+
+! Export the data
+        if (mixCplComm /= MPI_COMM_NULL) then
+          do v = 1,nmixoutvar
+            call mpi_send(var2d(:,:,v), nlatp2*nlonp1,
+     |        MPI_DOUBLE_PRECISION, mixCplRank,
+     |        (myAppId+voltId)*100+v, mixCplComm, ierr)
+            if (ierr /= 0)
+     |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
+          enddo
+        endif
+      endif
+
+! Save exchange variables to secondary history files
+
+!     call addfld('gpot','Potential from M-I Coupler (geographic)',' ',
+!    |  gpot(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('geng','Energy from M-I Coupler', ' ',
+!    |  geng(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('gflx','Number Flux from M-I Coupler', ' ',
+!    |  gflx(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('gpotm','Potential from M-I Coupler (geographic)',' ',
+!    |  gpotm(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+
+#endif
+      end subroutine export_mage
+!-----------------------------------------------------------------------
+      subroutine finalize_coupling
+      end subroutine finalize_coupling
+!-----------------------------------------------------------------------
+      subroutine mage_ucurrent(rim1,rim2,mlon0,mlon1,mlat0,mlat1,nsrhs)
+!
+! 3/20/14 btf: This routine moved from old serial dynamo (where it was
+!   called after sub transf, and followed by 3 calls to mag2geo). 
+!   The call to this routine is now in pdynamo after sub complete_integrals, 
+!   however as of this date. 
+!
+! DESCRIPTION:
+!
+! This subroutine calculate height-integrated neutral wind generated
+! field-aligned current (dynamo) to be passed to the M-I coupler to
+! solve electric potential. This subroutine is based on the subroutine
+! 'nosocoef' in 'current.F' written by Astrid Maute.
+! The height-integrated neutral wind field-alined current is calculated in a
+! Quisi-Dipole Coordinate that is defined in detail in Richmond (1995). This
+! coordinate system removes the 1/|sinI_m| factor in the partial differential
+! equation for the electric potential in the Modified Apex Coordinate system.
+! 1/|sinI_m| is not defined at magnetic equator in the Modified Apex
+! Coordinate system, but is well defined in the Quisi-Dipole Coordinate system
+! (I still need to see how this works).
+! The neutral dynamo currents are already calculted in subroutine
+! 'fieldline-integrals' in the 'dynamo.F' as a global variable
+! 'rim(nmlonp1,nmlat,2)'. Subroutine 'rshpde' has the formula to calculate
+! height-integrated neutral wind current, but the current there is the sum
+! of two hemispheres. We want a global distribution of this current for the M-I
+! coupler. Thus the code here is an expanded version of that in "rhspde", but a
+! stripped version of "nosocoef". 'nosocoef' also calculates other
+! coefficients (lhs) for the potential equation to obtain total field-aligned currents
+! including both magnetosphere and thermosphere originated currents. We only need
+! thermospheric originated currents for the MAGE M-I coupler.
+!
+! This subroutine is called by subroutine 'dynamo' after 'call transfer'
+! in 'dynamo.F'
+!                                                  ---------- Wenbin Wang 09/20/05
+! USES
+!
+      use params_module,only: nmlon,nmlonp1,nmlat,nmlath
+      use cons_module,only: dlonm,dlatm,pi,r0
+      use mpi_module,only: mp_mag_periodic_f2d
+
+!
+! PARAMETERS:
+! RETURN VALUE: nsrhs(nmlonp1,nmlat)   ! defined as a global variable above
+!
+! !REVISION HISTORY:
+!
+! EOP
+!
+! Calculate height-integrated field-aligned neutral wind currents for both hemisphere
+!
+      integer,intent(in) :: mlon0,mlon1,mlat0,mlat1
+      real,intent(in) :: rim1(mlon0-1:mlon1+1,mlat0-1:mlat1+1),
+     |                      rim2(mlon0-1:mlon1+1,mlat0-1:mlat1+1)
+      real,intent(out) :: nsrhs(mlon0-1:mlon1+1,mlat0-1:mlat1+1)
+
+!
+! Local:
+!
+      real,parameter :: unitvm(nmlon)=1.
+      real :: cs(mlat0-1:mlat1+1)
+      real :: dfac
+      real :: fmsub(mlon0:mlon1,mlat0:mlat1)
+      integer :: j,i
+      integer mlon00,mlon11,mlat00,mlat11
+      integer latstart, latend
+!
+! Externals:
+!
+      real,external :: sddot ! in util.F
+!
+! Set halos indexes
+!
+      mlon00=mlon0-1 ; mlon11=mlon1+1
+      mlat00=mlat0-1 ; mlat11=mlat1+1
+!
+! Calculate coefficients for dynamo pde for both hemisphere
+!
+!
+! Clear arrays
+!
+      nsrhs(:,:)    = 0.0
+!
+! Calculate magnetic latitude cosin array
+!
+      do j = mlat00,mlat11     
+        cs(j) = cos(-pi/2.+(j-1)*dlatm)
+      enddo
+!
+! Calculate right hand side of pde from rim1 and rim2
+!
+      latstart=mlat0
+      latend=mlat1
+      if (latstart==1) then 
+        latstart=2
+      endif
+      if (latend==nmlat) then 
+        latend=nmlat-1
+      endif
+      do j = latstart,latend  
+        if (j == nmlath) cycle  ! skip equator
+        !
+        ! Differentiate rim(1) w.r.t lamda
+        !
+        do i = mlon0,mlon1
+          if (i /= 1 .and. i /= nmlonp1) then  ! Skip longitudinal boundaries
+            nsrhs(i,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim1(i+1,j)-rim1(i-1,j))
+          else ! Values at longitudinal boundaries
+            if (i==1) then
+              nsrhs(1,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim1(2,j)-rim1(0,j))
+            else
+              nsrhs(nmlonp1,j)  = 1.0/(dlonm*cs(j))*
+     |                      0.5*(rim1(mlon0,j)-rim1(nmlonp1-1,j))
+            endif
+          endif
+        enddo
+      enddo  ! j loop
+!
+! Differentiate rim(2) w.r.t theta0
+!
+      do j = mlat0,mlat1  ! south pole to north pole
+        if (j==1) then ! Calculate south pole value
+           nsrhs(mlon0,1)     = -2./float(nmlon)*
+     |               sddot(nmlon,unitvm,rim2(mlon0,2))/cs(2)
+           ! Extend over longitude
+           nsrhs(:,1) = nsrhs(mlon0,1)
+        elseif (j==nmlat) then ! Calculate calculate north pole value 
+           nsrhs(mlon0,nmlat) = -2./float(nmlon)*
+     |               sddot(nmlon,unitvm,rim2(mlon0,nmlat-1))/cs(mlat0-1)
+           ! Extend over longitude
+           nsrhs(:,nmlat) = nsrhs(mlon0,nmlat)
+         elseif (j==nmlath) then ! Calculate equator values
+           do i=mlon0,mlon1
+             if (i==1) then
+               nsrhs(i,j) = 0.5/dlonm*(rim1(i+1,j)-rim1(i-1,j))
+               nsrhs(i,j) = nsrhs(i,j) + 1./dlatm*(cs(j)*
+     |                 rim2(i,j)+ cs(j+1)*rim2(i,j+1))
+             elseif (i==nmlonp1) then
+               nsrhs(i,j) = 0.5/dlonm*(rim1(nmlonp1+1,j)-rim1(i-1,j))
+               nsrhs(i,j) = nsrhs(i,j) + 1./dlatm*(cs(j)*
+     |                 rim2(i,j)+ cs(j+1)*rim2(i,j+1))
+             else
+               nsrhs(i,j) = 0.5/dlonm*(rim1(i+1,j)-rim1(i-1,j))
+               nsrhs(i,j) = nsrhs(i,j) + 1./dlatm*(cs(j)*
+     |                    rim2(i,j)+ cs(j+1)*rim2(i,j+1))
+             endif
+
+           enddo
+
+         elseif (j<nmlath) then !calculate south pole to equator
+           do i = mlon0,mlon1
+             nsrhs(i,j)  = nsrhs(i,j) - 1.0/(dlatm*cs(j))*0.5*
+     |               (rim2(i,j+1)*cs(j+1)-rim2(i,j-1)*cs(j-1))
+           enddo
+         else !calculate north pole to equator
+           do i = mlon0,mlon1
+             nsrhs(i,j) = nsrhs(i,j) + 1.0/(dlatm*cs(j))*0.5*
+     |               (rim2(i,j+1)*cs(j+1)-rim2(i,j-1)*cs(j-1))
+           enddo
+         endif
+      enddo
+!
+! Periodic points
+!
+      fmsub(:,:)=nsrhs(mlon0:mlon1,mlat0:mlat1)
+      call mp_mag_periodic_f2d(fmsub,mlon0,mlon1,mlat0,mlat1,1)
+
+      nsrhs(mlon0:mlon1,mlat0:mlat1) = fmsub(:,:)
+!
+! Scale rhs by refernce radius (R_E + H0) in meters dfac = r0*1e-2
+!
+      dfac = r0*1.0e-2
+      nsrhs(:,:) = -1.*nsrhs(:,:)/dfac
+!
+      end subroutine mage_ucurrent
+
+!-------------------------------------------------------------------
+
+      subroutine init_mpi_remix(glatp2,glonp1)
+
+      use params_module,only: nlatp2,nlonp1
+      use mpi_module,only: myAppId,voltId,mixCplComm,mixCplRank,
+     |  handle_mpi_err
+      use mpi
+
+      integer :: ierr
+      real,dimension(nlatp2) :: glatp2
+      real,dimension(nlonp1) :: glonp1
+
+      if (mixCplComm /= MPI_COMM_NULL) then
+        write(*,*) "TGCM: Start init_mpi_remix"
+        call mpi_send(nlatp2, 1, MPI_INTEGER,
+     |    mixCplRank, (myAppId+voltId)*100+1, mixCplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        call mpi_send(nlonp1, 1, MPI_INTEGER,
+     |    mixCplRank, (myAppId+voltId)*100+2, mixCplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        call mpi_send(glatp2, nlatp2, MPI_DOUBLE_PRECISION,
+     |    mixCplRank, (myAppId+voltId)*100+3, mixCplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        call mpi_send(glonp1, nlonp1, MPI_DOUBLE_PRECISION,
+     |    mixCplRank, (myAppId+voltId)*100+4, mixCplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        write(*,*) "TGCM: Done init_mpi_remix"
+      endif
+
+      end subroutine init_mpi_remix
+
+      subroutine import_remix(var2d)
+
+      use params_module,only: nlatp2,nlonp1
+      use mpi_module,only: myAppId,voltId,mixCplComm,mixCplRank,
+     |  handle_mpi_err
+      use mpi
+
+        integer :: v,ierr,i,j
+        real*8,dimension(nlatp2,nlonp1,nmixinvar) :: var2d
+
+        if (mixCplComm /= MPI_COMM_NULL) then
+          do v = 1,nmixinvar
+          write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100+v
+            call mpi_recv(var2d(:,:,v), nlatp2*nlonp1,
+     |        MPI_DOUBLE_PRECISION, mixCplRank,
+     |        (myAppId+voltId)*100+v, mixCplComm,
+     |        MPI_STATUS_IGNORE, ierr)
+            if (ierr /= 0) call handle_mpi_err(ierr,
+     |        'import: TIEGCM recv from REMIX')
+          enddo
+        endif
+
+      end subroutine import_remix
+
+      end module mage_coupling_module

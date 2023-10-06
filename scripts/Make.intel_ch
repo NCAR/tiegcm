@@ -1,44 +1,37 @@
 #
-# Included makefile for Intel ifort compiler on NCAR yellowstone:
-# As of December 2015, yellowstone is using intel 12.1.5.
+# Included makefile for Intel ifort compiler on NCAR cheyenne:
+# cheyenne is using intel 19.1.1
 #
-F90      = ifort
-MPIF90   = mpif90
-MPIRUN   = mpiexec_mpt
-FFLAGS   = -r8 -heap-arrays
+MPIF90 = mpif90
+MPIRUN = mpiexec_mpt
+FFLAGS = -r8
 #
-# See https://www2.cisl.ucar.edu/resources/computational-systems/cheyenne/code-development-support
-#FFLAGS += 
+# See https://arc.ucar.edu/knowledge_base/72581227
+#FFLAGS += -mcmodel=medium
 #
 # DBGFLAGS are used by the Makefile only if the job script
 # has "set debug = true"
 #
-DBGFLAGS = -debug full -debug extended -traceback 
-DBGFLAGS += -check bounds -check format -check output_conversion -check pointers -check uninit
+DBGFLAGS = -debug full,extended -traceback
+DBGFLAGS += -check all,noarg_temp_created -fp-stack-check
+DBGFLAGS += -warn all -nogen-interfaces
 #
-# -fpe-all=0 traps all floating point exceptions. The model is not
-#   guaranteed not to crash if this option is set.
-# -nowarn is used to eliminate warnings that result in huge stderr files.
+# -fpe-all=0 traps all floating point exceptions.
+# The model is not guaranteed not to crash if this option is set.
 #
-DBGFLAGS += -fpe-all=0 -nowarn 
+#DBGFLAGS += -fpe-all=0
 #
 # Makefile will use OPTIM = -g if set debug=TRUE in job script.
-OPTIM    = -O3
+OPTIM    = -O2
 LIBS     = -lcurl
 HOST     = $(shell hostname)
 #
 # Library and Include file paths:
 #
-# ESMF lib on yellowstone:
-# (tiegcm-ch.job does "module load esmf_libs/7.0.0")
+# ESMF lib on cheyenne:
+# (tiegcm-ch.job does "module load esmf_libs/8.3.0")
 #
-#ESMF_LIBDIR = /glade/u/apps/ch/opt/esmf/7.0.0-ncdfio-mpi/intel/16.0.3/lib/libO/Linux.intel.64.mpi.default
-export ESMF_LIBDIR
-LIB_ESMF = $(ESMF_LIBDIR)
-include $(LIB_ESMF)/esmf.mk
-LIBS = -L$(LIB_ESMF) -Wl,-rpath=$(LIB_ESMF) -lesmf
-#
-# Make machines.ini file for MPI execution: 
+# Make machines.ini file for MPI execution:
 #
 prereq: machines.ini mpirun.command
 machines.ini: export HN=$(HOST)

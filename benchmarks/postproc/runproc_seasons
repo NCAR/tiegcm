@@ -4,7 +4,7 @@
 # (instantaneous and time-dependent)
 #
 set mycwd = `pwd`
-set home = /glade/p/hao/tgcm/tiegcm_benchmarks            # base working directory
+set home = /glade/p/hao/tgcm/tiegcm2.0/benchmarks         # base working directory
 set proc = $home/postproc/tgcmproc_f90/tgcmproc/tgcmproc  # python app to make multiple proc runs
 
 set singleut  = yes  # make instantaneous plots
@@ -30,14 +30,14 @@ foreach res ($resolutions)
   endif
 
   set runs = ( \
-    tiegcm_res${res}_decsol_smax \
-    tiegcm_res${res}_decsol_smin \
+#   tiegcm_res${res}_decsol_smax \
+#   tiegcm_res${res}_decsol_smin \
     tiegcm_res${res}_junsol_smax \
-    tiegcm_res${res}_junsol_smin \
-    tiegcm_res${res}_mareqx_smax \
-    tiegcm_res${res}_mareqx_smin \
-    tiegcm_res${res}_sepeqx_smax \
-    tiegcm_res${res}_sepeqx_smin \
+#   tiegcm_res${res}_junsol_smin \
+#   tiegcm_res${res}_mareqx_smax \
+#   tiegcm_res${res}_mareqx_smin \
+#   tiegcm_res${res}_sepeqx_smax \
+#   tiegcm_res${res}_sepeqx_smin \
   )
 
   set case   = tiegcm_res${res}_seasons

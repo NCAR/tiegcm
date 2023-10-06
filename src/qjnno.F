@@ -1,5 +1,5 @@
 !
-      subroutine qjnno(tn,o2,o1,ne,no,n4s,n2d,xnmbar,
+      subroutine qjnno(o2,o1,ne,no,n4s,n2d,xnmbar,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -10,7 +10,7 @@
 ! due to N, NO chemistry.
 !
       use cons_module,only: evergs,avo,rmassinv_n4s,rmassinv_no,
-     |  rmassinv_o2,rmassinv_o1,rmassinv_n2d,expz
+     |  rmassinv_o2,rmassinv_o1,rmassinv_n2d
       use chemrates_module,only: beta1,beta2,beta3,beta4,beta5,beta6
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use addfld_module,only: addfld
@@ -19,14 +19,13 @@
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: 
-     |  tn,    ! neutral temperature (deg K)
      |  o2,    ! molecular oxygen (mmr)
      |  o1,    ! atomic oxygen (mmr)
      |  ne,    ! electron density (cm3)
      |  no,    ! nitric oxide
      |  n4s,   ! N(4S)
      |  n2d,   ! N(2D) (updated from comp_n2d)
-     |  xnmbar ! p0*e(-z)*barm/kT
+     |  xnmbar ! p0*e(-z)*mbar/kT
 !
 ! Local:
       integer :: k,i
@@ -54,7 +53,7 @@
       do i=lon0,lon1
         do k=lev0+1,lev1-1
           dq(k,i) = deltaq(k-1,i)*deltaq(k,i)
-          if (dq(k,i) < 0.) dq(k,i) = 1.e-20
+          if (dq(k,i) < 1.e-20) dq(k,i) = 1.e-20
           qtotal(k,i,lat) = qtotal(k,i,lat)+sqrt(dq(k,i)) 
         enddo ! k=lev0+1,lev1-1
 !

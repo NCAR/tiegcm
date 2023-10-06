@@ -19,8 +19,8 @@
 ! this routine can be called from single (e.g., from sub outhist) or 
 ! multiple threads/tasks (e.g. advnce and addfld).
 !
-      use input_module,only: step,start,stop,hist,secstart,secstop,
-     |  sechist
+      use input_module,only: step,pristart,pristop,prihist,
+     |  secstart,secstop,sechist
       use hist_module,only: nsource,isechist,nseries_prim,
      |  nseries_sech
       implicit none
@@ -64,8 +64,8 @@
 !
       iseries_p = 0
       primloop: do i=1,nseries_prim
-        nsec_start = mtime_to_nsec(start(:,i))
-        nsec_stop  = mtime_to_nsec(stop (:,i))
+        nsec_start = mtime_to_nsec(pristart(:,i))
+        nsec_stop  = mtime_to_nsec(pristop (:,i))
         if (nsecs >= nsec_start.and.nsecs <= nsec_stop) then
           iseries_p = i
 !
@@ -73,14 +73,14 @@
           if (nsecs==nsec_start) then
             newseries_prim = .true.
             if (i > 1) then
-              nsec_stop_prev = mtime_to_nsec(stop(:,i-1))
+              nsec_stop_prev = mtime_to_nsec(pristop(:,i-1))
               if (nsecs == nsec_stop_prev) newseries_prim = .false.
             endif
           else
             if (i > 1) then
-              nstep_hist = mtime_to_nstep(hist(:,i),step)
+              nstep_hist = mtime_to_nstep(prihist(:,i),step)
               nsec_hist = nstep_hist*step
-              nsec_stop_prev = mtime_to_nsec(stop(:,i-1))
+              nsec_stop_prev = mtime_to_nsec(pristop(:,i-1))
               if (nsecs-nsec_hist == nsec_start.and.
      |            nsec_start == nsec_stop_prev) newseries_prim = .true.
             endif
@@ -100,9 +100,9 @@
 !
 ! Check for primary history write:
         if (iseries_p > 0) then
-          nsec_start = mtime_to_nsec(start(:,iseries_p))
-          nsec_stop  = mtime_to_nsec(stop (:,iseries_p))
-          nstep_hist = mtime_to_nstep(hist(:,iseries_p),step)
+          nsec_start = mtime_to_nsec(pristart(:,iseries_p))
+          nsec_stop  = mtime_to_nsec(pristop (:,iseries_p))
+          nstep_hist = mtime_to_nstep(prihist(:,iseries_p),step)
 
 !         write(6,"('wrhist call mtime_to_nstep: iseries_p=',
 !    |      i2,' step=',i4)") iseries_p,step
@@ -149,7 +149,7 @@
 !
 ! Step 0 of run:
         if (istep==0) then
-          if (isechist > 0.and.all(modeltime(1:3)==secstart(:,1))) then
+          if (isechist > 0.and.all(modeltime==secstart(:,1))) then
             wrhist = .true.
             wrsech = .true.
             newseries_sech = .true.

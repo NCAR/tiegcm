@@ -1,4 +1,3 @@
-#include <defs.h>
 !
       module gpi_module
 !
@@ -35,11 +34,7 @@
 !
       implicit none
 !
-#ifdef SUN
-#include <netcdf3.inc>
-#else
 #include <netcdf.inc>
-#endif
 ! 
 ! Global gpi data read from gpi data file:
       integer,parameter :: 
@@ -65,11 +60,11 @@
 ! below.  If mpi job, only the master task executes this routine.
 !
       use input_module,only: gpi_ncfile,mxlen_filename
-      use nchist_module,only: nc_open,nc_close,handle_ncerr
+      use nchist_module,only: handle_ncerr
 !
 ! Local:
       character(len=mxlen_filename) :: dskfile
-      integer :: istat,ncid,nkp,i,ier
+      integer :: istat,ncid,nkp,i
       integer :: id_ndays,id_nkp,idv_iyd,idv_f107d,idv_f107a,idv_kp
 !
 ! Acquire mss file:
@@ -80,8 +75,8 @@
       write(6,"('RDGPI: read GPI data file:')")
 !
 ! Open netcdf file:
-      call nc_open(ncid,dskfile,'OLD','READ')
-      if (ncid==0) then
+      istat = nf_open(dskfile,NF_NOWRITE,ncid)
+      if (istat /= NF_NOERR) then
         write(6,"(/,'>>> rdgpi: error opening netcdf gpi file ',
      |    a)") trim(dskfile)
         call shutdown('rdgpi')
@@ -164,7 +159,7 @@
       write(6,"('First and last year-days = ',2i8)") iyd_beg,iyd_end
 !
 ! Close the file:
-      call nc_close(ncid)
+      istat = nf_close(ncid)
       write(6,"('Completed read from GPI data file ',a)") trim(dskfile)
       write(6,"(72('-'),/)")
       end subroutine rdgpi
@@ -184,7 +179,7 @@
       integer,intent(in) :: iyear,iday,iutsec,iprint
 !
 ! Local:
-      integer :: i,iyd_cur,iyd_prv,iyd_nxt,loc,ier,
+      integer :: i,iyd_cur,loc,ier,
      |  if107,if107a,ipower,ictpoten,isecmin,isecmax,isec0,isec1
       real :: f107_cur, f107a_cur, fkp_cur(8),  ! at current day
      |        f107_prv, f107a_prv, fkp_prv(8),  ! at previous day
@@ -448,7 +443,7 @@ c
       real,intent(out) :: fout
 !
 ! Local:
-      integer :: itim_dat(3),itim_req(3),ncalls,i
+      integer :: itim_dat(3),itim_req(3),ncalls
       real :: frac0,frac1
 !
       data ncalls/0/ ! for print only

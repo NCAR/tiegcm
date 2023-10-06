@@ -7,7 +7,7 @@ Benchmark Runs
 .. note::
 
   Benchmark results (pdf plot files) for version |tgcm_version| are available here: 
-  :base_url:`Post-processing of TIEGCM benchmarks <postproc/html/benchmarks.html>`
+  :base_url:`Release Benchmarks Results <release/html/benchmarks.html>`
 
 A series of benchmark runs are made for each major release of the |model|
 These runs (for |tgcm_version|) were made using the python scripts in the 

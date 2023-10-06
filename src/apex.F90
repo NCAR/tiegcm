@@ -209,7 +209,7 @@ subroutine apex_mka(date,gplat,gplon,gpalt,nlat,nlon,nalt,ier)
   integer :: i,j,k,kpol,istat
   real :: reqore,rqorm1,cp,ct,st,sp,stmcpm,stmspm,ctm
   real :: aht,alat,phia,bmag,xmag,ymag,zdown,vmp ! apex_sub output
-  real :: vnor,rp,reqam1,a,slp,clp,phiar
+  real :: vnor,rp,reqam1,slp,clp,phiar
 !
 ! Some parts of the legacy apex code use constants to set dtr,rtd,
 ! other parts use rtd=45./atan(1.), dtr=1./rtd. Differences are
@@ -441,20 +441,16 @@ subroutine apex_mall(glat,glon,alt,hr, b,bhat,bmag,si,alon,xlatm,vmp,w,&
 
 end subroutine apex_mall
 !-----------------------------------------------------------------------
-subroutine apex_q2g(qdlat_in,qdlon,alt,gdlat,gdlon,ier)
+subroutine apex_q2g(qdlat,qdlon,alt,gdlat,gdlon,ier)
 !
 ! Convert from quasi-dipole to geodetic coordinates. This subroutine
 ! (input magnetic, output geodetic) is the functional inverse of 
 ! subroutine apex_mall (input geodetic, output magnetic). Sub apex_mka
 ! must be called before this routine.
 !
-! 20160811 ADR If qdlat_inis +/-90, move it a little off the pole so that
-!  when gdlat,gdlon are used in apex_mall the directions of the base vectors
-!  are varying appropriately with longitude
-!
 ! Args:
   real,intent(in) ::  & ! inputs
-    qdlat_in,            & ! quasi-dipole latitude (deg)
+    qdlat,            & ! quasi-dipole latitude (deg)
     qdlon,            & ! quasi-dipole longitude (deg)
     alt                 ! altitude (km)
 
@@ -466,7 +462,7 @@ subroutine apex_q2g(qdlat_in,qdlon,alt,gdlat,gdlon,ier)
 ! Local:
   real :: x0,y0,z0,xnorm,xdif,ydif,zdif,dist2,hgrd2e,hgrd2n,hgrd2,&
     angdist,distlon,glatx,cal,sal,coslm,slm,cad,sad,slp,clm2,slm2,&
-    sad2,cal2,clp2,clp,dylon,qdlat
+    sad2,cal2,clp2,clp,dylon
   real :: ylat,ylon ! first guess output by gm2gc, input to intrp
   integer :: iter
   integer,parameter :: niter=20
@@ -481,10 +477,7 @@ subroutine apex_q2g(qdlat_in,qdlon,alt,gdlat,gdlon,ier)
     dmxdh,dmydh,dmzdh,dmvdh
   real :: cth,sth  ! output of adpl
   character(len=5) :: edge
-  
-  qdlat = amax1(qdlat_in,-90.+sqrt(precise)*rtd)
-  qdlat = amin1(qdlat   ,-90.-sqrt(precise)*rtd)
-!
+
   ier = 0 ; gdlat = 0. ; gdlon = 0.
 !
 ! Determine quasi-cartesian coordinates on a unit sphere of the
@@ -964,7 +957,7 @@ subroutine linapx(gdlat,glon,alt,aht,alat,alon,xmag,ymag,zmag,fmag)
 ! coordinates of the starting point
 !
   iflag = 2 ! gclat,r are returned
-  call convrt(iflag,gdlat,alt,gclat,r,'linapx')
+  call convrt(iflag,gdlat,alt,gclat,r)
 
   singml = ctp*sin(gclat*dtr) + stp*cos(gclat*dtr)*cos((glon-elon)*dtr)
   cgml2 = max(0.25,1.-singml*singml)
@@ -998,7 +991,7 @@ subroutine linapx(gdlat,glon,alt,aht,alat,alon,xmag,ymag,zmag,fmag)
   if (nstp >= maxs) then
     rho = sqrt(y(1)*y(1) + y(2)*y(2))
     iflag = 3 ! xlat and ht are returned
-    call convrt(iflag,xlat,ht,rho,y(3),'linapx')
+    call convrt(iflag,xlat,ht,rho,y(3))
     xlon = rtd*atan2(y(2),y(1))
     iflag = 1
     call feldg(iflag,xlat,xlon,ht,bnrth,beast,bdown,babs)
@@ -1018,7 +1011,7 @@ subroutine linapx(gdlat,glon,alt,aht,alat,alon,xmag,ymag,zmag,fmag)
 
 end subroutine linapx
 !-----------------------------------------------------------------------
-subroutine convrt(iflag,gdlat,alt,x1,x2,caller)
+subroutine convrt(iflag,gdlat,alt,x1,x2)
 !
 ! Convert space point from geodetic to geocentric or vice versa.
 !
@@ -1050,7 +1043,6 @@ subroutine convrt(iflag,gdlat,alt,x1,x2,caller)
   integer,intent(in) :: iflag
   real,intent(inout) :: gdlat,alt
   real,intent(inout) :: x1,x2
-  character(len=*),intent(in) :: caller
 !
 ! Local:
   real :: sinlat,coslat,d,z,rho,rkm,scl,gclat,ri,a2,a4,a6,a8,&
@@ -1143,7 +1135,7 @@ subroutine gd2cart(gdlat,glon,alt,x,y,z)
   integer :: iflag
 
   iflag = 1 ! Convert from geodetic to cylindrical (rho,z are output)
-  call convrt(iflag,gdlat,alt,rho,z,'gd2cart')
+  call convrt(iflag,gdlat,alt,rho,z)
 
   ang = glon*dtr
   x = rho*cos(ang)
@@ -1506,7 +1498,7 @@ subroutine fndapx(alt,zmag,a,alat,alon)
   iflag_convrt = 3
   do i=1,3
     rho = sqrt(yapx(1,i)**2+yapx(2,i)**2)
-    call convrt(iflag_convrt,gdlt,ht(i),rho,yapx(3,i),'fndapx')
+    call convrt(iflag_convrt,gdlt,ht(i),rho,yapx(3,i))
     gdln = rtd*atan2(yapx(2,i),yapx(1,i))
     call feldg(iflag_feldg,gdlt,gdln,ht(i),x,ydum,z(i),f)
   enddo 
@@ -1584,7 +1576,7 @@ subroutine gm2gc(gmlat,gmlon,gclat,gclon)
   real,intent(out) :: gclat,gclon
 !
 ! Local:
-  real :: ylat,ylon,stm,ctm,ctc
+  real :: stm,ctm,ctc
 
   stm = cos(gmlat*dtr)
   ctm = sin(gmlat*dtr)
@@ -1683,22 +1675,22 @@ subroutine intrp(glat,glon,alt, gplat,gplon,gpalt, nlat,nlon,nalt, &
     return 
   endif
 
-  call trilin(xarray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,fx,dfxdn,dfxde,dfxdd)
+  call trilin(xarray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,fx,dfxdn,dfxde,dfxdd)
   dfxdth = -dfxdn*rtd/dlat
   dfxdln =  dfxde*rtd/dlon
   dfxdh  = -hti*hti*dfxdd/(re*diht)
 
-  call trilin(yarray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,fy,dfydn,dfyde,dfydd)
+  call trilin(yarray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,fy,dfydn,dfyde,dfydd)
   dfydth = -dfydn*rtd/dlat
   dfydln =  dfyde*rtd/dlon
   dfydh  = -hti*hti*dfydd/(re*diht)
 
-  call trilin(zarray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,fz,dfzdn,dfzde,dfzdd)
+  call trilin(zarray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,fz,dfzdn,dfzde,dfzdd)
   dfzdth = -dfzdn*rtd/dlat
   dfzdln =  dfzde*rtd/dlon
   dfzdh  = -hti*hti*dfzdd/(re*diht)
 
-  call trilin(varray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,fv,dfvdn,dfvde,dfvdd)
+  call trilin(varray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,fv,dfvdn,dfvde,dfvdd)
   dfvdth = -dfvdn*rtd/dlat
   dfvdln =  dfvde*rtd/dlon
   dfvdh  = -hti*hti*dfvdd/(re*diht)
@@ -1712,11 +1704,11 @@ subroutine intrp(glat,glon,alt, gplat,gplon,gpalt, nlat,nlon,nalt, &
     omfac = 1. - fac
     xi = xi - 1.
     i0 = i0 + 1
-    call trilin (xarray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
+    call trilin (xarray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
     dfxdln = dfxdln*omfac + fac*dmdfde*rtd/dlon
-    call trilin (yarray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
+    call trilin (yarray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
     dfydln = dfydln*omfac + fac*dmdfde*rtd/dlon
-    call trilin (varray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
+    call trilin (varray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
     dfvdln = dfvdln*omfac + fac*dmdfde*rtd/dlon
   endif
 
@@ -1725,22 +1717,19 @@ subroutine intrp(glat,glon,alt, gplat,gplon,gpalt, nlat,nlon,nalt, &
     omfac = 1. - fac
     xi = xi + 1.
     i0 = i0 - 1
-    call trilin (xarray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
+    call trilin (xarray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
     dfxdln = dfxdln*omfac + fac*dmdfde*rtd/dlon
-    call trilin (yarray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
+    call trilin (yarray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
     dfydln = dfydln*omfac + fac*dmdfde*rtd/dlon
-    call trilin (varray(i0:i0+1,j0:j0+1,k0:k0+1),nlat,nlon,xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
+    call trilin (varray(i0:i0+1,j0:j0+1,k0:k0+1),xi,yj,zk,dmf,dmdfdn,dmdfde,dmdfdd)
     dfvdln = dfvdln*omfac + fac*dmdfde*rtd/dlon
   endif
 
 end subroutine intrp
 !-----------------------------------------------------------------------
-subroutine trilin(u,nlat,nlon,xi,yj,zk,fu,dfudx,dfudy,dfudz)
+subroutine trilin(u,xi,yj,zk,fu,dfudx,dfudy,dfudz)
 !
 ! Args:
-  integer,intent(in) :: &
-    nlat,               & ! first dimension of u from calling routine
-    nlon                  ! second dimension of u from calling routine
   real,intent(in)    :: &
     u(1:2,1:2,1:2),     & ! u(1,1,1) is address of lower corner of interpolation box
     xi,  & ! fractional distance across box in x direction

@@ -1,4 +1,3 @@
-#include <defs.h>
 !
       module getapex_module
 !
@@ -74,22 +73,10 @@
       real,intent(in) :: date
 !
 ! Local:
-!
-! msgun = Fortran unit number for diagnostics
-! ngrf  = Number of epochs in the current DGRF/IGRF; see COFRM in
-!         file magfld.f
-!
-      integer,parameter :: 
-     |  msgun=6, 
-     |  ngrf=8
-!
-! Local:
-      integer :: j,i,ii,ist,jjm,jjg
-      integer :: iplot=0
+      integer :: j,i,ist,jjm,jjg
       real :: rekm,h0km,alt,hr,ror03,glat,glon,dellat,bmag,alon,xlatm,
      |  vmp,w,d,be3,sim,xlatqd,f,xlonmi,qdlon,qdlat,gdlat,xlongi,frki,
-     |  frkj,dellon,si,gdlon,date1(1),re
-      character(len=80) :: title
+     |  frkj,dellon,si,gdlon,re
 !
 ! Non-scalar arguments returned by APXMALL:
       real :: 
@@ -265,23 +252,21 @@
 ! Contour some results:
 ! subroutine mkcon(f,i0,i1,cint,log,xlab,ylab,title)
 !
-!     if (iplot > 0) then
-!
 ! av(nlonp1,0:nlatp1,3,2): the two magnetic vectors a1,a2
 ! AV(:,:,1:3,1:2)
 !     do i=1,2
-!       do ii=1,3
-!         write(title,"('AV(:,:,',i1,',',i1,')')") ii,i
-!         call mkcon(av(:,:,ii,i),imaxgp,jmaxgp,0.,0,'Geog Longitude',
+!       do j=1,3
+!         write(title,"('AV(:,:,',i1,',',i1,')')") j,i
+!         call mkcon(av(:,:,j,i),imaxgp,jmaxgp,0.,0,'Geog Longitude',
 !    |      'Geog Latitude',trim(title))
 !       enddo
 !     enddo
 !
 ! RJAC(:,:,1:2,1:2) 
 !     do i=1,2 
-!       do ii=1,2
-!         write(title,"('RJAC(:,:,',i1,',',i1,')')") ii,i
-!         call mkcon(rjac(:,:,ii,i),imaxgp,jmaxgp,0.,0,'Geog Longitude',
+!       do j=1,2
+!         write(title,"('RJAC(:,:,',i1,',',i1,')')") j,i
+!         call mkcon(rjac(:,:,j,i),imaxgp,jmaxgp,0.,0,'Geog Longitude',
 !    |      'Geog Latitude',trim(title))
 !       enddo
 !     enddo
@@ -327,9 +312,9 @@
 !
 ! dvec:
 !     do i=1,2
-!       do ii=1,3
-!         write(title,"('DVEC(:,:,',i1,',',i1,')')") ii,i
-!         call mkcon(dvec(:,:,ii,i),imaxgp,jmaxg,0.,0,'Geog Longitude',
+!       do j=1,3
+!         write(title,"('DVEC(:,:,',i1,',',i1,')')") j,i
+!         call mkcon(dvec(:,:,j,i),imaxgp,jmaxg,0.,0,'Geog Longitude',
 !    |      'Geog Latitude',trim(title))
 !       enddo
 !     enddo
@@ -363,8 +348,6 @@
 !     write(title,"('JG')")
 !     call mkcon(float(jg),imaxmp,jmaxm,0.,0,'Geomag Longitude',
 !    |  'Geomag Latitude',trim(title))
-!
-!     endif ! iplot
 !
       end subroutine apxparm
       end module getapex_module

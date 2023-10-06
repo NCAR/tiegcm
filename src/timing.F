@@ -11,9 +11,6 @@
 #ifdef AIX
       real,external :: rtc
 #endif
-#ifdef MPI
-#include <mpif.h>
-#endif
 !
 ! timing%level == 0 -> no timing
 ! timing%level == 1 -> timing on broad code segments only
@@ -110,15 +107,14 @@
 !
 ! Local:
       real :: esecs 
-      integer :: i
 !
 ! Use system_clock:
       if (timing%sys) then                  ! using sys timing
         if (ibegend == 0) then              ! start sys timing
-          call start_timing(time0,seg,ibarrier)     ! time0 is output
+          call start_timing(time0,ibarrier)     ! time0 is output
           time1 = 0.
         else                                ! end sys timing
-          call end_timing(time0,seg,esecs,ibarrier) ! time0 in, esecs out
+          call end_timing(time0,esecs,ibarrier) ! time0 in, esecs out
           time1 = esecs
         endif  
       endif
@@ -126,10 +122,10 @@
 ! Use rtc:
       if (timing%rtc) then                           ! using rtc timing
         if (ibegend == 0) then
-          call rtc_timer(time0,time1,seg,0,ibarrier) ! start rtc timing
+          call rtc_timer(time0,time1,0,ibarrier) ! start rtc timing
           time1 = 0.
         else
-          call rtc_timer(time0,time1,seg,1,ibarrier) ! end rtc timing
+          call rtc_timer(time0,time1,1,ibarrier) ! end rtc timing
           esecs = time1
         endif  
       endif
@@ -179,14 +175,15 @@
       endif ! end rtc timing
       end subroutine timer
 !-----------------------------------------------------------------------
-      subroutine start_timing(count_out,string,ibarrier)
+      subroutine start_timing(count_out,ibarrier)
 !
 ! f90 intrinsic system_clock returns current clock count, number of
 ! clock counts per second, and max possible value of the count.
 !
+      use mpi_module,only: TIEGCM_WORLD
+!
 ! Args:
       real,intent(out) :: count_out
-      character(len=*),intent(in) :: string
       integer,intent(in) :: ibarrier
 !
 ! Local:
@@ -194,24 +191,24 @@
 !
       call system_clock(icount1,icount_rate,icount_max)
       count_out = float(icount1)
-#ifdef MPI
-        if (ibarrier > 0) call mpi_barrier(MPI_COMM_WORLD,ier)
-#endif
 
-!     write(6,"('start_timing for ',a,': secs=',f10.3)") 
-!    |  trim(string),real(icount1)/real(icount_rate)
+      if (ibarrier > 0) call mpi_barrier(TIEGCM_WORLD,ier)
+
+!     write(6,"('start_timing: secs=',f10.3)") 
+!    |  real(icount1)/real(icount_rate)
 
       end subroutine start_timing
 !-----------------------------------------------------------------------
-      subroutine end_timing(count_in,string,esecs,ibarrier)
+      subroutine end_timing(count_in,esecs,ibarrier)
 !
 ! f90 intrinsic system_clock returns current clock count, number of
 ! clock counts per second, and max possible value of the count.
 !
+      use mpi_module,only: TIEGCM_WORLD
+!
 ! Args:
       real,intent(in) :: count_in
       real,intent(out) :: esecs
-      character(len=*),intent(in) :: string
       integer,intent(in) :: ibarrier
 !
 ! Local:
@@ -224,16 +221,15 @@
       secs1 = real(icount1)/real(icount_rate)
       secs2 = real(icount2)/real(icount_rate)
       esecs = secs2-secs1
-#ifdef MPI
-        if (ibarrier > 0) call mpi_barrier(MPI_COMM_WORLD,ier)
-#endif
 
-!     write(6,"('end_timing for ',a,' : secs1=',f10.3,' secs2=',f10.3,
-!    |  ' elapsed=',f10.3)") trim(string),secs1,secs2,esecs
+      if (ibarrier > 0) call mpi_barrier(TIEGCM_WORLD,ier)
+
+!     write(6,"('end_timing: secs1=',f10.3,' secs2=',f10.3,
+!    |  ' elapsed=',f10.3)") secs1,secs2,esecs
 
       end subroutine end_timing
 !-----------------------------------------------------------------------
-      subroutine rtc_timer(time0,tsec,seg,ibegend,ibarrier)
+      subroutine rtc_timer(time0,tsec,ibegend,ibarrier)
 !
 ! Timer: this routine is called twice for each timing result.
 ! It uses the AIX real-time-clock function rtc() (not available on
@@ -244,13 +240,13 @@
 ! timing is started in the first call, and before timing is completed 
 ! in the second call.
 !
+      use mpi_module,only: TIEGCM_WORLD
       implicit none
 !
 ! Args:
       real,intent(inout) :: time0  ! starting time
       real,intent(out) :: tsec      ! elapsed time in millisecs
       integer,intent(in) :: ibegend,ibarrier
-      character(len=*),intent(in) :: seg 
 !
 ! Local:
       integer :: ier
@@ -268,25 +264,23 @@
 !
 ! Begin: return time0 as starting time:
       if (ibegend == 0) then
-#ifdef MPI
-        if (ibarrier > 0) call mpi_barrier(MPI_COMM_WORLD,ier)
-#endif
+
+      if (ibarrier > 0) call mpi_barrier(TIEGCM_WORLD,ier)
+
 #ifdef AIX
         time0 = rtc()   
-!       write(6,"('rtc_timer begin: seg ',a,' time0=',f15.2)") 
-!    |    trim(seg),time0
+!       write(6,"('rtc_timer begin: time0=',f15.2)") time0
 #endif
 !
 ! End: time0 is now input, return time1-time0 in tsec:
       else
-#ifdef MPI
-        if (ibarrier > 0) call mpi_barrier(MPI_COMM_WORLD,ier)
-#endif
+
+        if (ibarrier > 0) call mpi_barrier(TIEGCM_WORLD,ier)
+
 #ifdef AIX
         time1 = rtc()   
         tsec = time1-time0
-!       write(6,"('rtc_timer end: seg ',a,' elapsed=',f8.2)") 
-!    |    trim(seg),tsec
+!       write(6,"('rtc_timer end: elapsed=',f8.2)") tsec
 #endif
       endif
       end subroutine rtc_timer

@@ -21,7 +21,7 @@
 # To switch to 2.5-deg resolution, set modelres below to 2.5,
 # and change execdir, tgcmdata and namelist input if necessary.
 #
-set modeldir = tiegcm_trunk
+set modeldir = tiegcm2.0
 set execdir  = /hao/aim/$user/tiegcm_trunk/tiegcm.exec
 #set tgcmdata = /hao/aim/tgcm/data/tiegcm2.0
 set input    = $modeldir/scripts/tiegcm_res5.0_default.inp
@@ -129,7 +129,10 @@ set rmbinchars = $util/rmbinchars # Nov, 2015: remove non-ascii chars from stdou
 #
 # Report to stdout:
 #
-set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
+# For tiegcm2.0 tag:
+ set svn_revision = 'tiegcm2.0'
+#set svn_revision = `svnversion $modeldir` || set svn_revision = "[none]"
+
 echo -n "  Model directory:   $modeldir" && echo " (SVN revision $svn_revision)"
 echo "  Exec directory:    $execdir"
 echo "  Source directory:  $srcdir"

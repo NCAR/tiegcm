@@ -54,28 +54,24 @@
 !
       end subroutine alloc_no
 !-----------------------------------------------------------------------
-      subroutine comp_no(tn,o2,o1,n2,barm,xnmbar,n4s,n2d,ne,o2p,
+      subroutine comp_no(o2,o1,n2,xnmbar,xnmbari,n4s,n2d,o2p,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Advance NO by one time step:
 !
-      use cons_module,only: nob,rmass_no,p0,boltz,expz,
-     |  expzmid_inv,rmassinv_o2,rmassinv_n4s,rmassinv_n2d,
-     |  rmassinv_o1,rmassinv_n2
+      use cons_module,only: nob,rmass_no,
+     |  rmassinv_o2,rmassinv_n4s,rmassinv_n2d,rmassinv_o1,rmassinv_n2
       use chemrates_module,only: beta1,beta2,beta3,beta6,beta8,beta9,
      |  beta9n,beta17,rk5
-      use fields_module,only: tlbc ! lower boundary interface level of TN
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  tn,         ! neutral temperature (deg K)
      |  o2, o1, n2, ! o2, o, n2 mass mixing ratios
-     |  barm,       ! mean molecular weight
-     |  xnmbar,     ! p0*e(-z)*barm/kT
+     |  xnmbar,     ! p0*e(-z)*mbar/kT
+     |  xnmbari,    ! p0*e(-z)*barm/kT
      |  n4s,        ! N(4S)
      |  n2d,        ! N(2D)
-     |  ne,         ! electron density
      |  o2p         ! O2+
 !
 ! Local:
@@ -92,14 +88,10 @@
         no_ubc(i,lat) = 0.
 !
 ! Lower boundary:
-! (note tn(lev1,i) assumes bottom boundary of tn is in top slot):
 !
         no_lbc(i,1,lat) = 0.
         no_lbc(i,2,lat) = 1.
-!       no_lbc(i,3,lat) = -nob(lat)*rmass_no*boltz*tn(lev1,i)/
-!    |    (p0*expzmid_inv*expz(lev0)*barm(lev0,i))
-        no_lbc(i,3,lat) = -nob(lat)*rmass_no*boltz*tlbc(i,lat)/
-     |    (p0*expzmid_inv*expz(lev0)*barm(lev0,i))
+        no_lbc(i,3,lat) = -nob(lat)*rmass_no/xnmbari(lev0,i)
       enddo ! i=lon0,lon1
 !
 ! Sources:
@@ -133,8 +125,8 @@
 !
       end subroutine comp_no
 !-----------------------------------------------------------------------
-      subroutine minor_no(tn,o2,o1,n2,he,no,no_nm1,no_out,no_nm1_out,
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine minor_no(tn,o2,o1,he,mbar,barm,xnmbar,w,no,no_nm1,
+     |  no_out,no_nm1_out,lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_no
 !
 ! Input args at full task subdomains:
@@ -143,8 +135,11 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
-     |  n2,      ! molecular nitrogen (mmr)
      |  he,      ! helium (mmr)
+     |  mbar,    ! mean molecular weight
+     |  barm,    ! mean molecular weight
+     |  xnmbar,  ! p0*e(-z)*mbar/kT
+     |  w,       ! vertical wind
      |  no,      ! NO (mmr)
      |  no_nm1   ! NO at time n-1
 !
@@ -154,9 +149,6 @@
      |  no_out,    ! NO output
      |  no_nm1_out ! NO output at time n-1
 !
-! Local:
-      integer :: lat
-!
 ! Minor returns no_out and no_nm1_out. Module data no_prod,
 ! no_loss, etc, were defined by comp_no.
 !
@@ -164,18 +156,9 @@
 !    |  sloss,sprod,flbc,fubc,rmx,phix,alfax,lev0,lev1,lon0,lon1,lat0,
 !    |  lat1,idebug)
 
-      call minor(tn,o2,o1,n2,he,no,no_nm1,no_out,no_nm1_out,
-     |  no_loss,no_prod,no_lbc,no_ubc,rmass_no,phi_no,alfa_no,
-     |  lev0,lev1,lon0,lon1,lat0,lat1,0,'NO')
-
-!     do lat=lat0,lat1
-!       call addfld('NO_OUT' ,' ',' ',
-!    |    no_out(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!       call addfld('NO_TM1' ,' ',' ',
-!    |    no_nm1_out(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     enddo ! lat=lat0,lat1
+      call minor(tn,o2,o1,he,mbar,barm,xnmbar,w,no,no_nm1,
+     |  no_out,no_nm1_out,no_loss,no_prod,no_lbc,no_ubc,
+     |  rmass_no,phi_no,alfa_no,lev0,lev1,lon0,lon1,lat0,lat1,0,'NO')
 
       end subroutine minor_no
 !-----------------------------------------------------------------------

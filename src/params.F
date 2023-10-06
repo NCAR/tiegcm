@@ -10,27 +10,27 @@
 ! tiegcmlicense.txt.
 !
 ! Geographic grid parameters:
+      real,parameter ::
+     |  dlat  = DLAT,                ! delta latitude
+     |  glat1 = -90+dlat/2,          ! first latitude
+     |  dlon  = DLON,                ! delta longitude
+     |  glon1 = GLON1,               ! first longitude
+     |  dlev  = DLEV,                ! delta level (same for midpoints and interfaces)
+     |  dz    = dlev,                ! delta level (alias for dlev)
+     |  zitop = ZITOP,               ! top interface level
+     |  zibot = ZIBOT,               ! bottom interface level
+     |  zmtop = zitop+dz/2,          ! top midpoint level
+     |  zmbot = zibot+dz/2           ! bottom midpoint level
       integer,parameter :: 
-     |  nlat = NLAT,                 ! number of latitudes
-     |  nlon = NLON,                 ! number of longitudes
-     |  nlev = NLEV,                 ! number of midpoint levels 
-     |  nilev = NLEV,                ! number of interface levels
+     |  nlat = 180/dlat,             ! number of latitudes
+     |  nlon = 360/dlon,             ! number of longitudes
+     |  nlev = (zitop-zibot)/dlev,   ! number of midpoint levels 
+     |  nilev = nlev,                ! number of interface levels
      |  nlonp4 = nlon+4,             ! includes periodic points in lon
      |  nlevp1 = nlev+1,
      |  nilevp1 = nilev+1,
      |  nlonp1=nlon+1, nlatp1=nlat+1,
      |  nlonp2=nlon+2, nlatp2=nlat+2
-      real,parameter ::
-     |  glat1 = GLAT1,               ! first latitude
-     |  dlat  = DLAT,                ! delta latitude
-     |  glon1 = GLON1,               ! first longitude
-     |  dlon  = DLON,                ! delta longitude
-     |  dlev  = (ZITOP-ZIBOT)/NLEV,  ! delta level (same for midpoints and interfaces)
-     |  dz    = dlev,                ! delta level (alias for dlev)
-     |  zmtop = ZMTOP,               ! top midpoint level
-     |  zmbot = ZMBOT,               ! bottom midpoint level
-     |  zitop = ZITOP,               ! top interface level
-     |  zibot = ZIBOT                ! bottom interface level
       real :: glon(nlon),glat(nlat),zpmid(nlevp1),zpint(nlevp1)
       real,parameter ::
      |  spval = 1.e36
@@ -39,8 +39,9 @@
 !
 ! Magnetic grid:
       integer,parameter ::
-     |  nmlat = 97,         ! number of magnetic latitudes
-     |  nmlon = 80,         ! number of magnetic longitudes
+     |  nres_grid = NRES_GRID,
+     |  nmlat = 3*2**nres_grid+1,    ! number of magnetic latitudes
+     |  nmlon = 5*2**(nres_grid-1),  ! number of magnetic longitudes
      |  nmlonp1=nmlon+1,
      |  nmlonp2=nmlon+2,
      |  nmlatp1=nmlat+1,
@@ -50,20 +51,15 @@
       real,parameter :: zpibot_dyn = -8.5  ! bottom interface boundary of dynamo
       real,parameter :: dmlev = dlev
 !
-! nmlev_diff = number of levels from zibot down to zpibot_dyn (3 at 5-deg, 6 at 2.5-deg)
-! nmlevp1 = total number of mag levels (-2 -> 29 = 32 levels at 5-deg)
+! nmlev_diff = number of levels from zibot down to zpibot_dyn
+! nmlevp1 = total number of mag levels
 !
       integer,parameter ::
      |  nmlev_diff = int((zibot-zpibot_dyn)/dlev), 
      |  nmlevp1 = nlevp1+nmlev_diff, 
      |  nimlevp1= nmlevp1
 !
-! At 5-deg resolution:
-!   mlev0 = -2, mlev1 = nlevp1 = 29
-! At 2.5-deg resolution:
-!   mlev0 = -5, mlev1 = nlevp1 = 57
-!
-      integer,parameter :: mlev0 = 1 - nmlev_diff ! (-2 at 5-deg, -5 at 2.5-deg)
+      integer,parameter :: mlev0 = 1 - nmlev_diff
       integer,parameter :: mlev1 = nlevp1
 
       real :: gmlon(nmlonp1), ! magnetic longitude (deg)

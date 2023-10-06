@@ -17,9 +17,9 @@
      |  mxfsech,spval,nmlat,nmlonp1,mlev0,mlev1
       implicit none
       integer,parameter :: 
-     |  nf4d          = 30, ! number of 4-d fields
+     |  nf4d          = 35, ! number of 4-d fields
      |  nf4d_hist     = 28, ! number of 4-d fields on primary histories
-     |  nf3d          = 46  ! number of 3-d fields
+     |  nf3d          = 48  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
       integer,parameter :: 
@@ -48,11 +48,12 @@
 ! Indices, to f4d fields, e.g. f4d(i_tn)%data is neutral temperature.
       integer ::
      |  i_tn    ,i_un     ,i_vn     ,i_o2     ,i_o1     ,
-     |  i_n4s   ,i_no     ,i_op     ,i_n2d    ,i_ti     ,
-     |  i_te    ,i_ne     ,i_o2p    ,i_w      ,i_z      ,
-     |  i_poten ,i_tn_nm  ,i_un_nm  ,i_vn_nm  ,i_o2_nm  ,
-     |  i_o1_nm ,i_n4s_nm ,i_no_nm  ,i_op_nm  ,i_barm   ,
-     |  i_vc    ,i_he     ,i_he_nm  ,i_ar     ,i_ar_nm
+     |  i_he    ,i_op     ,i_n4s    ,i_no     ,i_ar     ,
+     |  i_ti    ,i_te     ,i_ne     ,i_w      ,i_n2d    ,
+     |  i_o2p   ,i_z      ,i_poten  ,i_tn_nm  ,i_un_nm  ,
+     |  i_vn_nm ,i_o2_nm  ,i_o1_nm  ,i_he_nm  ,i_op_nm  ,
+     |  i_n4s_nm,i_no_nm  ,i_ar_nm  ,i_mbar   ,i_barm   ,
+     |  i_xnmbar,i_xnmbari,i_scht   ,i_schti  ,i_vc
 !
 ! Allocatable target arrays for 4-d fields:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 ,2)
@@ -60,11 +61,12 @@
 !
       real,dimension(:,:,:,:),target,allocatable :: ! (k,i,j,2)
      |  tn      ,un       ,vn       ,o2       ,o1       ,
-     |  n4s     ,no       ,op       ,n2d      ,ti       ,
-     |  te      ,ne       ,o2p      ,w        ,z        ,
-     |  poten   ,tn_nm    ,un_nm    ,vn_nm    ,o2_nm    ,
-     |  o1_nm   ,n4s_nm   ,no_nm    ,op_nm    ,barm     ,
-     |  vc      ,he       ,he_nm    ,ar       ,ar_nm
+     |  he      ,op       ,n4s      ,no       ,ar       ,
+     |  ti      ,te       ,ne       ,w        ,n2d      ,
+     |  o2p     ,z        ,poten    ,tn_nm    ,un_nm    ,
+     |  vn_nm   ,o2_nm    ,o1_nm    ,he_nm    ,op_nm    ,
+     |  n4s_nm  ,no_nm    ,ar_nm    ,mbar     ,barm     ,
+     |  xnmbar  ,xnmbari  ,scht     ,schti    ,vc
 !
 ! 3-d fields structure type:
 ! Data pointers will point to allocatable target arrays.
@@ -88,14 +90,14 @@
 ! 3-d fields and indices, e.g., reference f3d(kldt)%data
       integer :: 
      |  i_kldt   ,i_kldu    ,i_kldv    ,i_kldo2 ,i_kldo1 ,i_kldhe,
-     |  i_xnmbar ,i_xnmbari ,i_xnmbarm ,i_cp    ,i_kt    ,
-     |  i_km     ,i_ui      ,i_vi      ,i_wi    ,i_vo2   ,
-     |  i_vo1    ,i_vn2     ,i_sco2    ,i_sco1  ,i_scn2  ,
+     |  i_cp     ,i_kt      ,i_km      ,i_ui    ,i_vi    ,i_wi,
+     |  i_vo2    ,i_vo1     ,i_vn2     ,i_sco2  ,i_sco1  ,i_scn2,
      |  i_xiop2p ,i_xiop2d  ,i_nplus   ,i_n2p   ,i_nop   ,
-     |  i_lxx    ,i_lyy     ,i_lxy     ,i_lyx   ,i_qji_ti,
-     |  i_qji_tn ,i_cool_implicit      ,i_cool_explicit  ,
+     |  i_lxx    ,i_lyy     ,i_lxy     ,i_lyx   ,i_qji_ti,i_qji_tn,
+     |  i_cool_implicit     ,i_cool_explicit    ,
      |  i_hdt    ,i_hdu     ,i_hdv     ,i_hdo2  ,i_hdo1  ,i_hdhe,
-     |  i_ped    ,i_hall    ,i_lam1    ,i_zg    ,i_n2    ,i_wn
+     |  i_ped    ,i_hall    ,i_lam1    ,i_zg    ,i_n2    ,i_wn,
+     |  i_Fe     ,i_Fn      ,i_Etot    ,i_Qa    ,i_Q2
 !
 ! Allocatable target arrays 3-d:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 )
@@ -103,15 +105,14 @@
 !
       real,dimension(:,:,:),target,allocatable :: ! (k,i,j)
      |  kldt     ,kldu     ,kldv     ,kldo2    ,kldo1   ,kldhe,
-     |  xnmbar   ,xnmbari  ,xnmbarm  ,cp       ,kt      ,
-     |  km       ,ui       ,vi       ,wi       ,vo2     ,
-     |  vo1      ,vn2      ,sco2     ,sco1     ,scn2    ,
+     |  cp       ,kt       ,km       ,ui       ,vi      ,wi,
+     |  vo2      ,vo1      ,vn2      ,sco2     ,sco1    ,scn2,
      |  xiop2p   ,xiop2d   ,nplus    ,n2p      ,nop     ,
-     |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti  ,
-     |  qji_tn   ,cool_implicit      ,cool_explicit     ,
+     |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti  ,qji_tn,
+     |  cool_implicit      ,cool_explicit      ,
      |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1    ,hdhe,
-     |  ped      ,hall     ,lam1     ,zg       ,n2      ,wn
-
+     |  ped      ,hall     ,lam1     ,zg       ,n2      ,wn,
+     |  Fe       ,Fn       ,Etot     ,Qa       ,Q2
 !
 ! 2-d field type (used for 2d secondary history fields):
       type fields_2d
@@ -162,7 +163,7 @@
 !
       logical,parameter :: fakeflds = .false.
 !
-      real,dimension(nlevp1,nlonp4+1,-2:nlat) ::
+      real,dimension(:,:,:),allocatable ::
      |  fnrh,  ! eddy viscosity
      |  fkmh   ! M/T
 !
@@ -171,14 +172,13 @@
       real,allocatable,dimension(:,:) ::
      |  tlbc,     ulbc,     vlbc,     ! subdomains (lond0:lond1,latd0:latd1)
      |  tlbc_nm,  ulbc_nm,  vlbc_nm,  ! subdomains (lond0:lond1,latd0:latd1)
-     |  tlbc_glb, ulbc_glb, vlbc_glb, ! global (nlonp4,nlat)
-     |  tlbc_nm_glb, ulbc_nm_glb, vlbc_nm_glb  ! global (nlonp4,nlat)
+     |  gzigm1,   gzigm2,   gnsrhs
 !
 ! Full 3d grid with all primary history fields for writing to netcdf
 ! history files. This will be allocated only on the root task 
 ! (see allocdata):
-      real,allocatable :: foutput(:,:,:,:) ! (nlevp1,nlonp4,nlat,nf4d_hist)
-      real,allocatable :: fzg(:,:,:)       ! (nlevp1,nlonp4,nlat)
+      real,allocatable :: foutput(:,:,:,:) ! (nlevp1,lon0:lon1,lat0:lat1,nf4d_hist)
+      real,allocatable :: fzg(:,:,:)       ! (nlevp1,lon0:lon1,lat0:lat1)
 !
 ! Magnetic field diagnostics (see getapex.F, apex.F90, diags.F)
 !     real,dimension(nlonp4,nlat) ::
@@ -190,7 +190,7 @@
       contains
 !-----------------------------------------------------------------------
 !
-      subroutine init_4d(lon0,lon1,lat0,lat1,mytid,iprint)
+      subroutine init_4d(lon0,lon1,lat0,lat1,iprint)
 !
 ! Set names, units, indices and pointers for f4d and f3d field structures,
 ! and allocate 3d and 4d field arrays. Also make other data allocations.
@@ -198,7 +198,7 @@
       implicit none
 !
 ! Args:
-      integer,intent(in) :: lon0,lon1,lat0,lat1,mytid,iprint
+      integer,intent(in) :: lon0,lon1,lat0,lat1,iprint
 !
 ! Local:
       integer :: n,istat,i
@@ -257,6 +257,22 @@
       f4d(n)%data => o1
       i_o1 = n ; n = n+1
 !
+      allocate(he(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('HELIUM')")
+      f4d(n)%short_name = ("HE")
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => he
+      i_he = n ; n = n+1
+!
+      allocate(op(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('O+ ION')")
+      f4d(n)%short_name = ("OP")
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => op
+      i_op = n ; n = n+1
+!
       allocate(n4s(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('N4S')")
       f4d(n)%short_name = ("N4S")
@@ -273,14 +289,6 @@
       f4d(n)%data => no
       i_no = n ; n = n+1
 !
-      allocate(he(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('HELIUM')")
-      f4d(n)%short_name = ("HE")
-      f4d(n)%units = "mmr"
-      f4d(n)%vcoord = "midpoints"
-      f4d(n)%data => he
-      i_he = n ; n = n+1
-!
       allocate(ar(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('ARGON (AR)')")
       f4d(n)%short_name = ("AR")
@@ -288,22 +296,6 @@
       f4d(n)%vcoord = "midpoints"
       f4d(n)%data => ar
       i_ar = n ; n = n+1
-!
-      allocate(op(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('O+ ION')")
-      f4d(n)%short_name = ("OP")
-      f4d(n)%units = "cm-3"
-      f4d(n)%vcoord = "midpoints"
-      f4d(n)%data => op
-      i_op = n ; n = n+1
-!
-      allocate(n2d(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('N2D')")
-      f4d(n)%short_name = ("N2D")
-      f4d(n)%units = "mmr"
-      f4d(n)%vcoord = "midpoints"
-      f4d(n)%data => n2d
-      i_n2d = n ; n = n+1
 !
       allocate(ti(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('ION TEMPERATURE')")
@@ -329,14 +321,6 @@
       f4d(n)%data => ne
       i_ne = n ; n = n+1
 !
-      allocate(o2p(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('O2+ ION')")
-      f4d(n)%short_name = ("O2P")
-      f4d(n)%units = "cm-3"
-      f4d(n)%vcoord = "midpoints"
-      f4d(n)%data => o2p
-      i_o2p = n ; n = n+1
-!
 ! 10/27/05 btf: "W" is replaced by "OMEGA":
 !
 !     allocate(w(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
@@ -354,6 +338,22 @@
       f4d(n)%vcoord = "interfaces"
       f4d(n)%data => w
       i_w = n ; n = n+1
+!
+      allocate(n2d(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('N2D')")
+      f4d(n)%short_name = ("N2D")
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => n2d
+      i_n2d = n ; n = n+1
+!
+      allocate(o2p(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('O2+ ION')")
+      f4d(n)%short_name = ("O2P")
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => o2p
+      i_o2p = n ; n = n+1
 !
       allocate(z(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('GEOPOTENTIAL HEIGHT')")
@@ -411,6 +411,22 @@
       f4d(n)%data => o1_nm
       i_o1_nm = n ; n = n+1
 !
+      allocate(he_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('HELIUM (TIME N-1)')")
+      f4d(n)%short_name = ("HE_NM")
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => he_nm
+      i_he_nm = n ; n = n+1
+!
+      allocate(op_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('OP (TIME N-1)')")
+      f4d(n)%short_name = ("OP_NM")
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => op_nm
+      i_op_nm = n ; n = n+1
+!
       allocate(n4s_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('N4S (TIME N-1)')")
       f4d(n)%short_name = ("N4S_NM")
@@ -427,22 +443,6 @@
       f4d(n)%data => no_nm
       i_no_nm = n ; n = n+1
 !
-      allocate(op_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('OP (TIME N-1)')")
-      f4d(n)%short_name = ("OP_NM")
-      f4d(n)%units = "cm-3"
-      f4d(n)%vcoord = "midpoints"
-      f4d(n)%data => op_nm
-      i_op_nm = n ; n = n+1
-!
-      allocate(he_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('HELIUM (TIME N-1)')")
-      f4d(n)%short_name = ("HE_NM")
-      f4d(n)%units = "mmr"
-      f4d(n)%vcoord = "midpoints"
-      f4d(n)%data => he_nm
-      i_he_nm = n ; n = n+1
-!
       allocate(ar_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('ARGON (TIME N-1)')")
       f4d(n)%short_name = ("AR_NM")
@@ -451,13 +451,54 @@
       f4d(n)%data => ar_nm
       i_ar_nm = n ; n = n+1
 !
+      allocate(mbar(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('MEAN MOLECULAR WEIGHT')")
+      f4d(n)%short_name = ("MBAR")
+      f4d(n)%units = ' '
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => mbar
+      i_mbar = n ; n = n+1
+!
       allocate(barm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('MEAN MOLECULAR WEIGHT')")
       f4d(n)%short_name = ("BARM")
       f4d(n)%units = ' '
-      f4d(n)%vcoord = "midpoints"
+      f4d(n)%vcoord = "interfaces"
       f4d(n)%data => barm
       i_barm = n ; n = n+1
+!
+      allocate(xnmbar(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('p0*e(-z)/kT*mbar')")
+      f4d(n)%short_name = ("XNMBAR")
+      f4d(n)%units = ' '
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => xnmbar
+      i_xnmbar = n ; n = n+1
+!
+      allocate(xnmbari(levd0:levd1,lond0:lond1,latd0:latd1,2),
+     |  stat=istat)
+      write(f4d(n)%long_name,"('p0*e(-z)/kT*barm')")
+      f4d(n)%short_name = ("XNMBARI")
+      f4d(n)%units = ' '
+      f4d(n)%vcoord = "interfaces"
+      f4d(n)%data => xnmbari
+      i_xnmbari = n ; n = n+1
+!
+      allocate(scht(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('SCALE HEIGHT AT MIDPOINTS')")
+      f4d(n)%short_name = ("SCHT")
+      f4d(n)%units = 'cm'
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => scht
+      i_scht = n ; n = n+1
+!
+      allocate(schti(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('SCALE HEIGHT AT INTERFACES')")
+      f4d(n)%short_name = ("SCHTI")
+      f4d(n)%units = 'cm'
+      f4d(n)%vcoord = "interfaces"
+      f4d(n)%data => schti
+      i_schti = n ; n = n+1
 !
       allocate(vc(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('COS(PHI)*VN')")
@@ -523,7 +564,7 @@
       endif
       end subroutine init_4d
 !-----------------------------------------------------------------------
-      subroutine init_3d(lon0,lon1,lat0,lat1,mytid,iprint)
+      subroutine init_3d(iprint)
 !
 ! Set names, units, indices and pointers for f4d and f3d field structures,
 ! and allocate 3d and 4d field arrays. Also make other data allocations.
@@ -531,7 +572,7 @@
       implicit none
 !
 ! Args:
-      integer,intent(in) :: lon0,lon1,lat0,lat1,mytid,iprint
+      integer,intent(in) :: iprint
 !
 ! Local:
       integer :: n,istat
@@ -581,27 +622,6 @@
       f3d(n)%units = " "
       f3d(n)%data => kldhe
       i_kldhe = n ; n = n+1
-
-      allocate(xnmbar(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('p0*e(-z)/kT*barm')")
-      f3d(n)%short_name = ("XNMBAR")
-      f3d(n)%units = ' '
-      f3d(n)%data => xnmbar
-      i_xnmbar = n ; n = n+1
-!
-      allocate(xnmbari(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('p0*e(-z)/kT*barm at interfaces')")
-      f3d(n)%short_name = ("XNMBARI")
-      f3d(n)%units = ' '
-      f3d(n)%data => xnmbari
-      i_xnmbari = n ; n = n+1
-!
-      allocate(xnmbarm(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('p0*e(-z)/kT*barm at midpoints')")
-      f3d(n)%short_name = ("XNMBARM")
-      f3d(n)%units = ' '
-      f3d(n)%data => xnmbarm
-      i_xnmbarm = n ; n = n+1
 !
       allocate(cp(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
       write(f3d(n)%long_name,"('SPECIFIC HEAT')")
@@ -864,6 +884,42 @@
       f3d(n)%data => wn
       i_wn = n ; n = n+1
 !
+      allocate(Fe(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Eastward Field-Aligned Ion Drag')")
+      f3d(n)%short_name = "Fe"
+      f3d(n)%units = "m/s"
+      f3d(n)%data => Fe
+      i_Fe = n ; n = n+1
+!
+      allocate(Fn(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Northward Field-Aligned Ion Drag')")
+      f3d(n)%short_name = "Fn"
+      f3d(n)%units = "m/s"
+      f3d(n)%data => Fn
+      i_Fn = n ; n = n+1
+!
+      allocate(Etot(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Total Electric Field')")
+      f3d(n)%short_name = "Etot"
+      f3d(n)%units = "m/s"
+      f3d(n)%data => Etot
+      i_Etot = n ; n = n+1
+!
+      allocate(Qa(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Electrojet Turbulent Heating')")
+      f3d(n)%short_name = "Qa"
+      f3d(n)%units = "m/s"
+      f3d(n)%data => Qa
+      i_Qa = n ; n = n+1
+!
+      allocate(Q2(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,
+     |  "('Parameter for Electrojet Turbulent Heating')")
+      f3d(n)%short_name = "Q2"
+      f3d(n)%units = "m/s"
+      f3d(n)%data => Q2
+      i_Q2 = n ; n = n+1
+!
 ! Check number of fields allocated:
       if (n-1 /= nf3d) then
         write(6,"(/,'>>> init_3d: wrong number of 3-d fields?',
@@ -906,7 +962,7 @@
       implicit none
 !
 ! Local:
-      integer :: i,iprog,ier
+      integer :: i,iprog
 !
 ! External:
       integer,external :: strloc
@@ -946,11 +1002,8 @@
       enddo ! i=1,nfsech
       end subroutine init_fsech
 !-----------------------------------------------------------------------
-      subroutine init_lbc(lon0,lon1,lat0,lat1)
+      subroutine init_lbc
       implicit none
-!
-! Arg:
-      integer,intent(in) :: lon0,lon1,lat0,lat1
 !
 ! Local:
       integer :: istat
@@ -975,26 +1028,17 @@
       if (istat /= 0) call shutdown('bad allocate of vlbc_nm')
       write(6,"('init_lbc_nm: allocated subdomains tlbc_nm, ulbc_nm,',
      |  ' vlbc_nm')")
+
+      allocate(gzigm1(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of gzigm1')
+      allocate(gzigm2(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of gzigm2')
+      allocate(gnsrhs(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of gnsrhs')
 !
-! Global domain (subdomains will be gathered into these arrays
-! for writing to the history, see sub mp_gather2root_lbc in mpi.F):
-      allocate(tlbc_glb(nlonp4,nlat),stat=istat)
-      if (istat /= 0) call shutdown('bad allocate of tlbc_glb')
-      allocate(ulbc_glb(nlonp4,nlat),stat=istat)
-      if (istat /= 0) call shutdown('bad allocate of ulbc_glb')
-      allocate(vlbc_glb(nlonp4,nlat),stat=istat)
-      if (istat /= 0) call shutdown('bad allocate of vlbc_glb')
-      write(6,"('init_lbc: allocated globals tlbc_glb, ulbc_glb,',
-     |  ' vlbc_glb: nlonp4=',i3,' nlat=',i3)") nlonp4,nlat
-     
-      allocate(tlbc_nm_glb(nlonp4,nlat),stat=istat)
-      if (istat /= 0) call shutdown('bad allocate of tlbc_nm_glb')
-      allocate(ulbc_nm_glb(nlonp4,nlat),stat=istat)
-      if (istat /= 0) call shutdown('bad allocate of ulbc_nm_glb')
-      allocate(vlbc_nm_glb(nlonp4,nlat),stat=istat)
-      if (istat /= 0) call shutdown('bad allocate of vlbc_nm_glb')
-      write(6,"('init_lbc: allocated globals tlbc_nm_glb, ulbc_nm_glb,',
-     |  ' vlbc_nm_glb: nlonp4=',i3,' nlat=',i3)") nlonp4,nlat
+      gzigm1 = 0.
+      gzigm2 = 0.
+      gnsrhs = 0.
 !
       end subroutine init_lbc
 !-----------------------------------------------------------------------

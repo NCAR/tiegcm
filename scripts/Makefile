@@ -2,17 +2,13 @@
 # On Input:
 #   File Srcfiles contains list of source files
 #   File $(MAKE_MACHINE) (e.g. generic_hao64) contains compiler specific Make vars
-#     F90: f90 compiler (e.g., pgf90, ifort, etc)
 #     MPIF90: f90 compiler for MPI jobs (e.g., mpif90)
 #     FFLAGS: compiler flags (e.g., -r8)
-#     OPTIM: optimization flag (e.g., -O3)
+#     OPTIM: optimization flag (e.g., -O2)
 #     DBGFLAGS: Debug flags
-#     INC_NETCDF: Include directory for netcdf
-#     LIB_NETCDF: Library directory for netcdf
 #   File Make.env contains additional information from the job script
-#     MAKE_MACHINE: File containing machine-specific compiler flags, etc          
+#     MAKE_MACHINE: File containing machine-specific compiler flags, etc
 #     DIRS:     List of source-code directories (in Make.env)
-#     MPI:      TRUE or FALSE
 #     EXECNAME: Name of executable to make
 #     DEBUG:    TRUE or FALSE
 #
@@ -29,38 +25,27 @@ space    := $(null) $(null)
 
 OS        := $(shell uname -s)
 VPATH     := $(subst $(space),:,$(DIRS))
-INC_DIRS  := $(foreach dir,$(DIRS),-I$(dir)) -I$(INC_NETCDF)
+INC_DIRS  := $(foreach dir,$(DIRS),-I$(dir))
 SOURCES   := $(shell cat Srcfiles)
 OBJS      := $(addsuffix .o, $(basename $(SOURCES)))
 # LIBS may be specified in Make.machine file, so append here
-LIBS      += -L$(LIB_NETCDF) -lnetcdf 
-COUPLING  := NO
-FC        := $(F90)
+LIBS      += -lnetcdff
+FC        := $(MPIF90)
 
-# Add ESMF stuff (LIB_ESMF is set in MAKE_MACHINE)
+# Add ESMF stuff
 # See also targets below for source files that depend on esmf.
-ifeq ($(MPIRUN),mpiexec_mpt)
 LIBS += -lesmf
-else
-LIBS += -L $(LIB_ESMF) -lesmf
-endif
 
-include $(LIB_ESMF)/esmf.mk
+
+include $(ESMFMKFILE)
 INC_DIRS += $(ESMF_F90COMPILEPATHS)
 LDFLAGS  += $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS)
 LDFLAGS  += $(ESMF_F90ESMFLINKLIBS)
 #
 # With gfortran compiler, esmf compiler is mpifort instead of mpif90,
-# so force it to use $(MPIF90), which is set by Make.gfort_hao64.
+# so force it to use $(MPIF90), which is set by Make.machine.
 #
-ifeq ($(F90),/usr/bin/gfortran)
-  ESMF_F90COMPILER = $(MPIF90)
-  @echo "set ESMF_F90COMPILER = $(ESMF_F90COMPILER)"
-endif
-# On cheyenne set esmf compiler to mpif90
-ifeq ($(MPIRUN),mpiexec_mpt)
-  ESMF_F90COMPILER = $(MPIF90)
-endif
+ESMF_F90COMPILER = $(MPIF90)
 #
 Depends::
 	@echo "OS           =$(OS)" 
@@ -69,10 +54,8 @@ Depends::
 	@echo "INC_DIRS     =$(INC_DIRS)"
 	@echo "VPATH        =$(VPATH)"
 	@echo "FC           =$(FC)"
-	@echo "MPI          =$(MPI)"
-	@echo "LIB_NETCDF   =$(LIB_NETCDF)"
-	@echo "INC_NETCDF   =$(INC_NETCDF)"
 	@echo "EXECNAME     =$(EXECNAME)"
+	@echo "COUPLING     =$(COUPLING)"
 	@echo "DEBUG        =$(DEBUG)"
 	perl mkdepends $(DIRS)
 	$(MAKE) $(EXECNAME)
@@ -90,15 +73,8 @@ $(EXECNAME): $(OBJS)
 	$(FC) -o $@ $(OBJS) $(LIBS) $(LDFLAGS)
 
 CPPFLAGS := $(null)
-ifeq ($(MPI),TRUE)
-  CPPFLAGS += -DMPI
-  FC := $(MPIF90)
-endif
-ifeq ($(COUPLING), INTERCOMM)
-  CPPFLAGS += -DINTERCOMM
-endif
-ifeq ($(COUPLING), ADHOC)
-  CPPFLAGS += -DCISMAH
+ifeq ($(COUPLING),TRUE)
+  CPPFLAGS += -DGAMERA
 endif
 ifeq ($(DEBUG),TRUE)
   CPPFLAGS += -DDEBUG
@@ -138,4 +114,3 @@ veryclean:
 	rm -f Depends Srcfiles *.o *.mod $(EXECNAME) Makefile Make.env $(MAKE_MACHINE) machines.ini mkdepends defs.h cwd fort*
 
 include Depends
-

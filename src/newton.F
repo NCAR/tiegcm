@@ -1,5 +1,5 @@
 !
-      subroutine newton(tn,o2,o1,n2,no,barm,cp,cool_implicit,
+      subroutine newton(tn,o2,o1,n2,no,barm,xnmbar,cp,cool_implicit,
      |  cool_explicit,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -10,11 +10,10 @@
 !
       use params_module,only: dz
       use cons_module,only: rmass_co2,p0,expz,expzmid_inv,boltz,
-     |  avto,avo,rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no,
-     |  gask
+     |  avo,rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no
       use addfld_module,only: addfld
       use diags_module,only: mkdiag_CO2COOL,mkdiag_NOCOOL
-      use init_module,only: sfeps,iday,iyear,secs,istep
+      use init_module,only: iday,iyear,secs
       implicit none
 !
 ! Args:
@@ -26,7 +25,8 @@
      |  n2,      ! molecular nitrogen (mmr)
      |  no,      ! nitric oxide (mmr)
      |  cp,      ! specific heat
-     |  barm     ! mean molecular weight
+     |  barm,    ! mean molecular weight
+     |  xnmbar   ! p0*e(-z)*mbar/kT
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) ::
      |  cool_implicit, cool_explicit ! output
 !
@@ -95,7 +95,7 @@
 !
 ! a(no) (s11):
           ano(k,i) = 
-     |      .5*(barm(k,i)+barm(k+1,i))*avo*p0*expz(k)/(gask*tn(k,i))*
+     |      xnmbar(k,i)*
      |      (4.2e-11*o1(k,i)*rmassinv_o1+
      |       2.4e-14*o2(k,i)*rmassinv_o2)
 !
@@ -131,18 +131,19 @@
       end subroutine newton
 !-----------------------------------------------------------------------
       subroutine newto3p(tn,o1,cp,cool_implicit,cool_explicit,
-     |  lev0,lev1,lon0,lon1,lat)
+     |  lev0,lev1,lon0,lon1)
 !
 ! Add O(3P) cooling to implicit and explicit cooling terms.
 ! This is called from dynamics after newton.
 !
-      use params_module,only: dz
+      use params_module,only: zibot,zpint
       use cons_module,only: avo,rmassinv_o1,expz
       use addfld_module,only: addfld
+      use interp_module,only: interp1d
       implicit none
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      integer,intent(in) :: lev0,lev1,lon0,lon1
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
      |  tn,      ! neutral temperature (deg K)
      |  o1,      ! atomic oxygen (mmr)
@@ -160,33 +161,14 @@
      |  bn(3) = (/228.,228.,325./)
       real :: xfac(lev0:lev1)
       real,dimension(lev0:lev1,lon0:lon1) :: fac1,fac2
-!
-      if (dz==0.5) then
-        xfac =
+      real,dimension(29),parameter ::
+     |  zpint_5 = (/(zibot+(k-1)*0.5, k=1,29)/),
+     |  xfac_5 =
      |    (/0.1000E-01, 0.1000E-01, 0.1000E-01, 0.5000E-01, 0.1000E+00,
      |      0.2000E+00, 0.4000E+00, 0.5500E+00, 0.7000E+00, 0.7500E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00/)
-      elseif (dz==0.25) then
-        xfac =
-     |    (/0.1000E-01, 0.1000E-01, 0.1000E-01, 0.1000E-01, 0.1000E-01,
-     |      0.3000E-01, 0.5000E-01, 0.7500E-01, 0.1000E+00, 0.1500E+00,
-     |      0.2000E+00, 0.3000E+00, 0.4000E+00, 0.4750E+00, 0.5500E+00,
-     |      0.6250E+00, 0.7000E+00, 0.7250E+00, 0.7500E+00, 0.7750E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00, 0.8000E+00,
-     |      0.8000E+00, 0.8000E+00/)
-      else
-        write(6,"('>>> WARNING newto3p: unsupported dz=',f10.3)") dz
-        call shutdown('newto3p')
-      endif
+     |      (0.8000E+00, k=1,19)/)
+!
+      xfac = interp1d(zpint,zpint_5,xfac_5)
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -219,10 +201,5 @@
           cool_explicit(k,i) = cool_explicit(k,i)+fac1(k,i)*expz(k)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-!
-!     call addfld('COOLIMP' ,' ',' ',cool_implicit(:,lon0:lon1),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('COOLEXP' ,' ',' ',cool_explicit(:,lon0:lon1),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
       end subroutine newto3p

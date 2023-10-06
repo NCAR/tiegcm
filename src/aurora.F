@@ -56,7 +56,6 @@
 ! 1/24/08 btf:Changed alfad,ed, alfac,ec as per Wenbin.
 !
       use cons_module,only: ! see cons.F
-     |  dphi, ! delta latitude geographic (radians)
      |  dtr,  ! degrees to radians (pi/180)
      |  pi,    ! 4.*atan(1.)
      |  crit  ! may be changed from default if amie run
@@ -183,7 +182,8 @@
      |  colat(nlon),    ! auroral magnetic co-latitude from offset center (radians)
      |  sinlat(nlon), coslat(nlon),     ! sin,cos of dlat_aur (rlatm) magnetic latitude
      |  coslon(nlon), sinlon(nlon),     ! sin,cos of dlon_aur+offset
-     |  alon(nlon)                      ! auroral magnetic longitude where 0=noon shifted by -offset (radians)
+     |  alon(nlon),                     ! auroral magnetic longitude where 0=noon shifted by -offset (radians)
+     |  aurbound(nlon)                  ! equatorward auroral boundary for SAPS calculation
 !
 ! Local-time dependent energy and particle fluxes:
 ! (see subs aurora_heat and aurora_cusp)
@@ -193,27 +193,19 @@
      |  drizl(nlonp4),cusp(nlonp4),                 ! polar drizzle and cusp
      |  qteaur(nlonp4,nlat),                        ! for electron temperature
      |  eflux(nlonp4),eflux2(nlonp4),eflux3(nlonp4) ! energy flux
-
-! 11/08 EMERY added energy flux eflux and eflux2d
-      real :: cusp2d(nlonp4,nlat),drzl2d(nlonp4,nlat),
-     |        alfa2d(nlonp4,nlat),nflx2d(nlonp4,nlat),
-     |        eflux2d(nlonp4,nlat)
 !
 ! aureff = vertical profile for auroral heating efficiency (used by qjion)
 ! 
-      real :: aureff(nlevp1)
-      real :: bdriz(nlevp1)   ! vertical profile for background drizzle
+!     real :: aureff(nlevp1)
+!     real :: bdriz(nlevp1)   ! vertical profile for background drizzle
 !
 ! Subroutines internal to aurora module.
       contains
 !-----------------------------------------------------------------------
-#include <defs.h>
-      subroutine aurora_cons(iprint,iyear,iday,secs)
+      subroutine aurora_cons(iprint)
 !
 ! Set auroral constants (called from sub advance once per time-step).
 !
-      use params_module,only: dz,nlev
-      use hist_module,only:   modeltime
       use input_module,only:  ! from user input
      |  byimf,   ! BY component of IMF (nT)      (e.g., 0.)
      |  ctpoten, ! cross-cap potential (kV)      (e.g., 45.)
@@ -222,8 +214,7 @@
      |  potential_model  ! electric potential model used
 !
 ! Args:
-      integer,intent(in) :: iprint,iday,iyear
-      real,intent(in) :: secs
+      integer,intent(in) :: iprint
 !
 ! Local:
       real,parameter :: convert=3.1211e+8
@@ -235,50 +226,20 @@
       real,parameter :: e=1.e-10
 !
 ! Auroral heating efficiency (nlevp1) according to vertical resolution 
-! (NLEV==28, dz==.5, or NLEV==56, dz==.25)
+! The dimension length (29) is hard-coded
+! in case the model's upper bounday is extended above 7
+! extrapolation is allowed, see xfac/ar_glbm for details
 !
-#if (NLEV==28)
-      aureff =
+      real,dimension(29),parameter ::
+     |  aureff_5 =
      |(/0.55,0.55,0.55,0.55,0.55,0.55,0.55,0.55,0.55,0.55,0.55,0.55,
      |  0.55,0.50,0.45,0.37,0.30,0.20,0.16,0.13,0.10,0.08,0.07,0.06,
-     |  0.05,0.05,0.05,0.05,0.05/)
-      bdriz =
+     |  0.05,0.05,0.05,0.05,0.05/),
+     |  bdriz_5 =
      |(/2.17E-4,4.48E-3,3.78E-2,1.55E-1,3.26E-1,3.85E-1,3.50E-1,2.81E-1,
      |  2.04E-1,1.38E-1,8.74E-2,5.23E-2,3.01E-2,1.68E-2,9.27E-3,5.08E-3,
      |  2.79E-3,1.55E-3,8.62E-4,4.85E-4,2.76E-4,1.58E-4,9.11E-5,5.28E-5,
      |  3.08E-5,1.79E-5,1.04E-5,6.01E-6,3.49E-6/)
-#elif (NLEV==56)
-        aureff =
-     |  (/0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00,
-     |    0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00,
-     |    0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00,
-     |    0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00,
-     |    0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00, 0.5500E+00,
-     |    0.5250E+00, 0.5000E+00, 0.4750E+00, 0.4500E+00, 0.4100E+00,
-     |    0.3700E+00, 0.3350E+00, 0.3000E+00, 0.2500E+00, 0.2000E+00,
-     |    0.1800E+00, 0.1600E+00, 0.1450E+00, 0.1300E+00, 0.1150E+00,
-     |    0.1000E+00, 0.9000E-01, 0.8000E-01, 0.7500E-01, 0.7000E-01,
-     |    0.6500E-01, 0.6000E-01, 0.5500E-01, 0.5000E-01, 0.5000E-01,
-     |    0.5000E-01, 0.5000E-01, 0.5000E-01, 0.5000E-01, 0.5000E-01,
-     |    0.5000E-01, 0.5000E-01/)
-        bdriz =
-     |  (/0.2170E-03, 0.2349E-02, 0.4480E-02, 0.2114E-01, 0.3780E-01,
-     |    0.9640E-01, 0.1550E+00, 0.2405E+00, 0.3260E+00, 0.3555E+00,
-     |    0.3850E+00, 0.3675E+00, 0.3500E+00, 0.3155E+00, 0.2810E+00,
-     |    0.2425E+00, 0.2040E+00, 0.1710E+00, 0.1380E+00, 0.1127E+00,
-     |    0.8740E-01, 0.6985E-01, 0.5230E-01, 0.4120E-01, 0.3010E-01,
-     |    0.2345E-01, 0.1680E-01, 0.1303E-01, 0.9270E-02, 0.7175E-02,
-     |    0.5080E-02, 0.3935E-02, 0.2790E-02, 0.2170E-02, 0.1550E-02,
-     |    0.1206E-02, 0.8620E-03, 0.6735E-03, 0.4850E-03, 0.3805E-03,
-     |    0.2760E-03, 0.2170E-03, 0.1580E-03, 0.1246E-03, 0.9110E-04,
-     |    0.7195E-04, 0.5280E-04, 0.4180E-04, 0.3080E-04, 0.2435E-04,
-     |    0.1790E-04, 0.1415E-04, 0.1040E-04, 0.8205E-05, 0.6010E-05,
-     |    0.4750E-05, 0.3490E-05/)
-#else
-        write(6,"('>>> aurora: unsupported NLEV=',i4,' dz=',f10.4)")
-     |    nlev,dz
-        call shutdown('aurora dz')
-#endif
 !
 ! Add limits to byimf if use the Heelis convection pattern,this is to have 
 ! asymmetric dawn and dusk convection cells and By effect. --Wenbin Wang 12/02/2008
@@ -320,11 +281,11 @@
       rh = (h2 - h1) / (h1 + h2)
 !
       theta0(isouth) = (-3.80+8.48*(ctpoten**0.1875))*dtr
-#if defined(INTERCOMM) || defined(CISMAH)
-! Set theta0 = 10 deg so crit(1,2)=15,30 (old values in cons.F) in colath.F for CISM
+!
+! Set theta0 = 10 deg so crit(1,2)=15,30 (old values in cons.F) in colath.F for MAGE
 ! This is commented as per coupled tiegcm1.94.2:
 !     theta0(isouth) = 10.*dtr
-#endif
+!
       theta0(inorth) = theta0(isouth)
       offa(isouth) = 1.0*dtr
       offa(inorth) = 1.0*dtr
@@ -437,7 +398,7 @@
         rroth = roth * dtr
         rrote = rote * dtr
 ! For Sep 10 (Day 253) 2005 storm interval
-        h2 = 4.5 + 0.11*hp_amie
+!       h2 = 4.5 + 0.11*hp_amie
 ! For October 2003 storm
 !       h2 = 4.5 + 0.15*hp_amie
 !       rradp(isouth) = crad(isouth)-1.5*dtr
@@ -487,22 +448,24 @@
       endif
       end subroutine aurora_cons
 !-----------------------------------------------------------------------
-      subroutine aurora(tn,o2,o1,n2,barm,lev0,lev1,lon0,lon1,lat)
+      subroutine aurora(tn,o2,o1,n2,barm,xnmbar,scht,
+     |  lev0,lev1,lon0,lon1,lat)
 !
 ! Auroral parameterization driver.
 ! (called by sub dynamics, from inside parallel latitude scan)
 !
       use magfield_module,only: 
      |  rlatm,rlonm, ! magnetic latitude,longitude grid (radians)
-     |  sunlons      ! sun's mag longitudes (see sub sunloc, magfield.F) 
-      use params_module,only: nlat,zibot,dz
-      use mpi_module,only: lat0,lat1
+     |  sunlons,     ! sun's mag longitudes (see sub sunloc, magfield.F) 
+     |  csdec,sndec
+      use params_module,only: nlonp2,spval
 !
-      use qrj_module,only:       ! for diag only
-     |  qo2p,  ! o2+ ionization
-     |  qop,   ! o+  ionization
-     |  qn2p,  ! n2+ ionization
-     |  qnp    ! n+  ionization
+! Add SAPS ion drifts to regular ion drifts from dynamo and convection pattern
+      use input_module,only: saps,kp
+      use gpi_module,only: fkp
+      use amie_module,only: amie_aurbound=>aurbound
+      use subaur_module,only: subaur_drift
+      use fields_module,only: ui,vi
 !
 ! Args:
       integer,intent(in) :: 
@@ -514,14 +477,20 @@
      |  o2,    ! O2 mass mixing ratio
      |  o1,    ! O mass mixing ratio
      |  n2,    ! N2 mass mixing ratio (1-o2-o-he)
-     |  barm   ! mean molecular weight (see sub addiag)
+     |  barm,  ! mean molecular weight (see sub addiag)
+     |  xnmbar,! p0*e(-z)*mbar/kT
+     |  scht   ! scale height
 !
 ! Local:
       integer :: i,ier
       integer,parameter :: nlond2 = max(1,nlon/2)
       real :: aurlat  ! boundary lat below which auroral is not calculated
                       ! (32.5 degrees at 5 degree resolution)
-      real :: ofda,cosofa,sinofa,aslona
+      real :: ofda,cosofa,sinofa,aslona,skp,vns,ves,vvs
+      real,dimension(nlonp4) ::
+     |  smlt,  ! magnetic local time for SAPS calculation
+     |  smlat  ! latitude of the equatorward boundary of aurora
+      real, dimension(lon0:lon1) :: sui,svi,swi ! SAPS ion drifts
 !
 #ifdef VT
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
@@ -531,26 +500,9 @@
 !     write(6,"('Enter aurora: lat=',i4,' glat=',f8.2,' lon0,1=',2i4)")
 !    |  lat,glat(lat),lon0,lon1
 !
-! Save ionization rates on entry to secondary history:
-!     call addfld('QO2P_PRE',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOP_PRE' ,' ',' ',qop(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QN2P_PRE',' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!
-! Initialize diagnostics to insure they have values before the
-! below return when lat < 32.5.
-!
-      cusp2d(:,lat) = 0.
-      drzl2d(:,lat) = 0.
-      alfa2d(:,lat) = 0.
-      nflx2d(:,lat) = 0.
-      eflux2d(:,lat) = 0.
-!
 ! Check latitude, and return if below aurlat (32.5 deg at 5 deg res):
 !
-      aurlat = (float(lat-nlat)-0.5)*dphi+pi/2.
+      aurlat = glat(lat)*dtr
       do_aurora = .true.
       if (abs(aurlat) < pi/6.) do_aurora = .false.
       if (.not.do_aurora) then
@@ -592,34 +544,64 @@
 !     write(6,"('aurora: lat=',i2,' alon =',/,(6e12.4))") lat,alon
 !
 ! Make cusp:
-      call aurora_cusp(lat)
+      call aurora_cusp
 !
 ! Make alfa, flux, and drizzle:
       call aurora_heat(lat)
 
-! Save aurora oval on exit to full arrays so can save later to secondary history
-      do i=lon0,lon1
-        cusp2d(i,lat)=cusp(i)
-        drzl2d(i,lat)=drizl(i)
-        alfa2d(i,lat)=alfa(i)
-        nflx2d(i,lat)=flux(i)
-        eflux2d(i,lat)=eflux(i)
+! Sheng, 2017/07, Calculate SAPS ion drifts
+      if (iamie == 0) then
+        smlt(3:nlonp2) = modulo(12.+alon/(dtr*h2deg),24.)
+        smlat(3:nlonp2) = (colat-aurbound)/dtr
+      else
+        smlt(3:nlonp2) = modulo(12.+dlon_aur/(dtr*h2deg),24.)
+        smlat(3:nlonp2) =
+     |    (abs(amie_aurbound(ihem,:))-abs(rlatm(3:nlonp2,lat)))/dtr
+      endif
+      do i=1,2 
+        smlt(i) = smlt(nlon+i)
+        smlt(nlonp2+i) = smlt(i+2)
+        smlat(i) = smlat(nlon+i)
+        smlat(nlonp2+i) = smlat(i+2)
       enddo
+      if (kp == spval) then
+        skp = fkp
+      else
+        skp = kp
+      endif
+      sui(lon0:lon1) = 0.
+      svi(lon0:lon1) = 0.
+      swi(lon0:lon1) = 0.
+      if (saps .and. skp>=1. .and. skp<=9) then
+        do i=lon0,lon1
+! TODO: Need some explanation of these numbers
+          if (smlat(i)>0. .and. smlat(i)<10.) then
+            call subaur_drift(smlat(i),smlt(i),skp,vns,ves,vvs)
+            if (ihem == 1) then ! southern hemisphere, ihem=1
+              sui(i) = -ves*csdec(i,lat) - vns*sndec(i,lat)
+              svi(i) = ves*sndec(i,lat) - vns*csdec(i,lat)
+            endif
+            if (ihem == 2) then ! northern hemisphere, ihem=2
+              sui(i) = -ves*csdec(i,lat) + vns*sndec(i,lat)
+              svi(i) = ves*sndec(i,lat) + vns*csdec(i,lat)
+            endif
+            swi(i) = vvs
+          endif
+! Add SAPS drift to ion velocities (m/s to cm/s)
+          ui(lev0:lev1,i,lat) = ui(lev0:lev1,i,lat)+sui(i)*100.
+          vi(lev0:lev1,i,lat) = vi(lev0:lev1,i,lat)+svi(i)*100.
+!         wi(lev0:lev1,i,lat) = wi(lev0:lev1,i,lat)+swi(i)*100.
+        enddo
+      endif
 !
 ! Auroral additions to ionization rates:
 ! Sub aurora_ions is a standalone subroutine, i.e., not in aurora_module.
 ! Pass module data to aurora_ions through argument list.
 !
-!     subroutine aurora_ions(drizl,cusp,alfa1,alfa2,flux1,flux2,
-!    |  tn,o2,o1,barm,zpbot,dzp,lev0,lev1,lon0,lon1,lat)
-!
-! 11/08 EMERY added eflux=flux*fac_p2e*alfa - (better for falfa1 if alfa quite variable)
-      call aurora_ions(fac_p2e,
-     |  drizl(lon0:lon1), cusp (lon0:lon1),
+      call aurora_ions(drizl(lon0:lon1), cusp (lon0:lon1),
      |  alfa (lon0:lon1), alfa2(lon0:lon1), alfa3(lon0:lon1),
-     |  eflux(lon0:lon1), eflux2(lon0:lon1), eflux3(lon0:lon1),
      |  flux (lon0:lon1), flux2(lon0:lon1), flux3(lon0:lon1),
-     |  tn,o2,o1,n2,barm,zibot,dz,lev0,lev1,lon0,lon1,lat)
+     |  tn,o2,o1,n2,barm,xnmbar,scht,lev0,lev1,lon0,lon1,lat)
 !
 #ifdef VT
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
@@ -628,14 +610,11 @@
 
       end subroutine aurora
 !-----------------------------------------------------------------------
-      subroutine aurora_cusp(lat)
+      subroutine aurora_cusp
       use params_module,only: nlonp2
       use cons_module,only: check_exp
 !
 ! Calculate horizontal variation of polar cusp heating (was polht.F)
-!
-! Args:
-      integer,intent(in) :: lat
 !
 ! Local:
       integer :: i
@@ -656,9 +635,9 @@
      |                 exp(-(atan2(sin(alon(i)-phid(ihem)),
      |                             cos(alon(i)-phid(ihem)))/s20)**2)
 
-!         write(6,"('cusp: lat=',i3,' i=',i3,' ihem=',i2,' theta0=',
+!         write(6,"('cusp: i=',i3,' ihem=',i2,' theta0=',
 !    |      e12.4,' colat=',e12.4,' alon=',e12.4,' phid=',e12.4,
-!    |      ' cusp=',e12.4)") lat,i,ihem,theta0(ihem),colat(i),
+!    |      ' cusp=',e12.4)") i,ihem,theta0(ihem),colat(i),
 !    |      alon(i),phid(ihem),cusp(i+2)
 
         else
@@ -674,8 +653,7 @@
         cusp(i) = cusp(nlon+i)     ! 1:2 <- 73:74 at 5 deg res
         cusp(nlonp2+i) = cusp(i+2) ! 75:76 <- 3:4
       enddo
-!     write(6,"('aurora_cusp: lat=',i2,' cusp=',/,(6e12.4))") 
-!    |  lat,cusp
+!     write(6,"('aurora_cusp: cusp=',/,(6e12.4))") cusp
       end subroutine aurora_cusp 
 !-----------------------------------------------------------------------
       subroutine aurora_heat(lat)
@@ -683,9 +661,7 @@
 ! Calculate alfa, flux, and drizzle.
 !
       use params_module,only: nlon,nlonp2
-#if defined(INTERCOMM) || defined(CISMAH)
-      use cism_coupling_module,only: geng,gflx     !CISM
-#endif
+      use mage_coupling_module,only: geng,gflx     !MAGE
 !
 ! Args:
       integer,intent(in) :: lat
@@ -741,6 +717,9 @@
 !     write(6,"('aurora_heat: lat=',i3,' alfa=',/,(6e12.4))")
 !    |  lat,alfa
 !
+! Calculate equatorward boundary of aurora for SAPS calculation 
+      aurbound = rrad(ihem)+halfwidth
+!
 ! Flux, drizzle, alfa2, flux2:
       do i=1,nlon
 !
@@ -787,7 +766,6 @@
           flux2(i+2) = e20*(1.-re2*coslamda(i))*
      |      exp(-((clat-rrad(ihem))/
      |      halfwidth(i))**2) / (2.*alfa2(i+2)*1.602E-9)
-          eflux(i+2) = flux(i+2)*fac_p2e*alfa(i+2)
         endif
 
       enddo ! i=1,nlon
@@ -823,24 +801,23 @@
 ! will not change simulations.
 !                                                        Wenbin  wang
 !
-#if defined(INTERCOMM) || defined(CISMAH)
-     do i=1,nlonp4
-      alfa(i)=geng(i,lat)+0.01
-      flux(i)=gflx(i,lat)+0.01
-      if(alfa(i)<=0.)alfa(i)=0.01
-      if(flux(i)<=0.)flux(i)=0.01
-      eflux(i) = flux(i)*fac_p2e*alfa(i)
-!     write(6,*)alfa(i),flux(i),i,lat
-     enddo
+#ifdef GAMERA
+      do i=1,nlonp4
+        alfa(i)=geng(i,lat)+0.01
+        flux(i)=gflx(i,lat)+0.01
+        if(alfa(i)<=0.)alfa(i)=0.01
+        if(flux(i)<=0.)flux(i)=0.01
+        eflux(i) = flux(i)*fac_p2e*alfa(i)
+!       write(6,*)alfa(i),flux(i),i,lat
+      enddo
 #endif
 
       end subroutine aurora_heat
       end module aurora_module
 !-----------------------------------------------------------------------
-! 11/08 EMERY added eflux=flux*fac_p2e*alfa (better when alfa quite variable)
-      subroutine aurora_ions (fac_p2e,drizl,cusp,alfa1,alfa2,alfa3,
-     |  eflux1,eflux2,eflux3,flux1,flux2,flux3,
-     |  tn,o2,o1,n2,barm,zpbot,dzp,lev0,lev1,lon0,lon1,lat)
+      subroutine aurora_ions (drizl,cusp,alfa1,alfa2,alfa3,
+     |  flux1,flux2,flux3,tn,o2,o1,n2,barm,xnmbar,scht,
+     |  lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate aroral additions to ionization rates.
 ! Note this routine is standalone, not in aurora_module.
@@ -850,8 +827,7 @@
      |  expz,  ! exp(-zp) where zp is log pressure (ln(p0/p))
      |  grav,  ! gravity
      |  gask,  ! gas constant (8.314e7)
-     |  boltz, ! boltzman's constant (1.38e-16)
-     |  rmass_o2, rmass_o1, rmass_n2,        ! molelcular weights of o2,o,n2
+     |  rmass_o2, rmass_n2,        ! molelcular weights of o2,n2
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2, ! 1./rmass
      |  avo    ! avogadro number (6.023e23)
 !
@@ -864,25 +840,21 @@
      |  qtef   ! n  production rate (cm^-3s-1)
 !
 ! Auroral parameters:
-      use aurora_module,only: alfac, alfad, alfa_sp, ec,ed, fc,fd,
+      use aurora_module,only: alfac, alfad, alfa_sp, fc,fd,
      |  flx_sp, e30, add_sproton, add_helectron
       use addfld_module,only: addfld
-      use init_module,only: istep
       implicit none
 !
 ! Args:
-      real,intent(in) :: fac_p2e                ! convert from particle to energy flux
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,intent(in),dimension(lon0:lon1) :: drizl,cusp,
-     |  alfa1,alfa2,alfa3,eflux1,eflux2,eflux3,flux1,flux2,flux3
-! 11/08 EMERY added eflux=flux*fac_p2e*alfa as eflux1
-      real,intent(in) :: zpbot,dzp
+     |  alfa1,alfa2,alfa3,flux1,flux2,flux3
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  tn,o2,o1,n2,barm
+     |  tn,o2,o1,n2,barm,xnmbar,scht
 !
 ! Local:
-      integer :: i,k,nlevs
-      real :: zlev,klev,xn2
+      integer :: i,k
+      real :: xn2
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  p0ez, xalfa1, xalfa2, xcusp, xdrizl,       ! input to sub aion
      |  xalfa_sp, xalfa3,
@@ -890,7 +862,8 @@
      |  alfa1_ion, alfa2_ion, alfa3_ion,           ! output from sub aion
      |  alfasp_bion,                               ! output from sub bion
      |  barm_t, qsum, denom, p0ez_mbar, tk_mbar,
-     |  qo2p_aur, qop_aur, qn2p_aur ! auroral ionization for O2+, O+, N2+
+     |  qo2p_aur, qop_aur, qn2p_aur,! auroral ionization for O2+, O+, N2+
+     |  qo2p_a, qop_a, qn2p_a
       real,dimension(lon0:lon1) ::
      |  falfa1, falfa2, fcusp, fdrizl, falfa_sp, falfa3
       real :: qia(5) ! low energy proton source (not in use, 1/02)
@@ -921,10 +894,8 @@
           xcusp (k,i) = p0ez(k,i)/alfac
           xdrizl(k,i) = p0ez(k,i)/alfad
 !
-          p0ez_mbar(k,i) = p0*expz(k)/(boltz*tn(k,i)*
-     |      (o2(k,i)*rmassinv_o2+
-     |       o1(k,i)*rmassinv_o1+
-     |       n2(k,i)*rmassinv_n2))/avo
+          p0ez_mbar(k,i) = xnmbar(k,i)/avo
+! TODO: Need to check whether this should be gask*tn/(grav*mbar)
           tk_mbar(k,i) = gask*tn(k,i)/(grav*barm(k,i))*p0ez_mbar(k,i)
           xalfa_sp(k,i) = ((tk_mbar(k,i)/0.00271)**0.58140)/alfa_sp
         enddo ! k=lev0,lev1
@@ -940,20 +911,16 @@
 !
 ! Sub aion calculates auroral electrons: 
 !
-!     zlev = -7.5 ! time-gcm only
-!     klev = int((zlev-zpbot)/dzp)+1
-!     write(6,"('zlev=',f8.2,' klev=',i3)") zlev,klev
-!
       if (.not.use_cion) then
-        call aion(xalfa1,alfa1_ion,lev0,lev1,lon0,lon1,lat)
-        call aion(xalfa2,alfa2_ion,lev0,lev1,lon0,lon1,lat)
-        call aion(xcusp,cusp_ion,lev0,lev1,lon0,lon1,lat)
-        call aion(xdrizl,drizl_ion,lev0,lev1,lon0,lon1,lat)
+        call aion(xalfa1,alfa1_ion,lev0,lev1,lon0,lon1)
+        call aion(xalfa2,alfa2_ion,lev0,lev1,lon0,lon1)
+        call aion(xcusp,cusp_ion,lev0,lev1,lon0,lon1)
+        call aion(xdrizl,drizl_ion,lev0,lev1,lon0,lon1)
       else
-        call cion(xalfa1,alfa1_ion,alfa1,lev0,lev1,lon0,lon1,lat)
-        call cion(xalfa2,alfa2_ion,alfa1,lev0,lev1,lon0,lon1,lat)
-        call cion(xcusp,cusp_ion,alfa1,lev0,lev1,lon0,lon1,lat)
-        call cion(xdrizl,drizl_ion,alfa1,lev0,lev1,lon0,lon1,lat)
+        call cion(xalfa1,alfa1_ion,alfa1,lev0,lev1,lon0,lon1)
+        call cion(xalfa2,alfa2_ion,alfa1,lev0,lev1,lon0,lon1)
+        call cion(xcusp,cusp_ion,alfa1,lev0,lev1,lon0,lon1)
+        call cion(xdrizl,drizl_ion,alfa1,lev0,lev1,lon0,lon1)
       endif
 
 !     call addfld('ALFA1',' ',' ',alfa1_ion,'lev',lev0,lev1,
@@ -967,31 +934,26 @@
 !
 ! Solar protons:
       if (flx_sp > 1.e-19)
-     |  call bion(xalfa_sp,alfasp_bion,lev0,lev1,lon0,lon1,lat)
+     |  call bion(xalfa_sp,alfasp_bion,lev0,lev1,lon0,lon1)
 !
 ! High energy electrons:
       if (e30 > 1.e-19)
-     |  call aion(xalfa3, alfa3_ion,lev0,lev1,lon0,lon1,lat)
+     |  call aion(xalfa3, alfa3_ion,lev0,lev1,lon0,lon1)
 !
       qaurora = 0.
       do i=lon0,lon1
-! 11/08 EMERY added eflux=flux*fac_p2e*alfa;  eflux1 better than flux1 if alfa quite variable
-!       falfa1(i) = eflux1(i)/fac_p2e  ! s7  This should be equivalent to alfa1*flux1
         falfa1(i) = alfa1(i)*flux1(i)  ! s7
-!       falfa2(i) = eflux2(i)/fac_p2e  ! s8  This should be equivalent to alfa2*flux2
         falfa2(i) = alfa2(i)*flux2(i)  ! s8
 
         fcusp (i) = cusp(i)*alfac*fc   ! s9
         fdrizl(i) = drizl(i)*alfad*fd  ! s10
-!	falfa3(i) = eflux3(i)/fac_p2e  ! s13 This should be equivalent to alfa3*flux3
         falfa3(i) = alfa3(i)*flux3(i)  ! s13 (high energy electrons)
 !
 ! Pressure column, bottom to top:
         do k=lev0,lev1-1
           falfa_sp(i) = drizl(i)*p0ez_mbar(k,i)*flx_sp*1.e6/
      |      (tk_mbar(k,i)*35.)
-          barm_t(k,i) = grav*0.5*(barm(k,i)+barm(k+1,i))/(35.e-3*gask* ! s11
-     |      tn(k,i))
+          barm_t(k,i) = 1./(35.e-3*scht(k,i)) ! s11
           qsum(k,i) = 
      |      falfa1(i)*alfa1_ion(k,i)+  ! s7*s3
      |      falfa2(i)*alfa2_ion(k,i)+  ! s8*s4
@@ -1025,7 +987,6 @@
 !
 ! Production of N2+ (equation (13) in Roble,1987)
           xn2 = n2(k,i)
-          if (xn2 <= 1.e-8) xn2 = 1.e-8
           qn2p_aur(k,i) = qsum(k,i)*0.7*xn2/(rmass_n2*denom(k,i))+qia(1)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
@@ -1063,69 +1024,40 @@
       call addfld('QAURORA',' ','cm-3 s-1',qaurora,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
+      do i=lon0,lon1
+        do k=lev0+1,lev1-1
+          qo2p_a(k,i) = sqrt(qo2p_aur(k,i)*qo2p_aur(k-1,i))
+          qop_a (k,i) = sqrt(qop_aur (k,i)*qop_aur (k-1,i))
+          qn2p_a(k,i) = sqrt(qn2p_aur(k,i)*qn2p_aur(k-1,i))
+        enddo
+!
+! Extrapolate lower boundary:
+        qo2p_a(lev0,i) =
+     |    max(1.5*qo2p_aur(lev0,i)-0.5*qo2p_aur(lev0+1,i),0.)
+        qop_a (lev0,i) =
+     |    max(1.5*qop_aur (lev0,i)-0.5*qop_aur (lev0+1,i),0.)
+        qn2p_a(lev0,i) =
+     |    max(1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i),0.)
+!
+! Extrapolate upper boundary:
+        qo2p_a(lev1,i) =
+     |    max(1.5*qo2p_aur(lev1-1,i)-0.5*qo2p_aur(lev1-2,i),0.)
+        qop_a (lev1,i) =
+     |    max(1.5*qop_aur (lev1-1,i)-0.5*qop_aur (lev1-2,i),0.)
+        qn2p_a(lev1,i) =
+     |    max(1.5*qn2p_aur(lev1-1,i)-0.5*qn2p_aur(lev1-2,i),0.)
+      enddo
+!
 ! Add auroral to total ionization rates for o2+, o+, and n2+
 ! (see qrj_module)
       do i=lon0,lon1
-        do k=lev0+1,lev1-1
-          qo2p(k,i,lat) = qo2p(k,i,lat)+sqrt(qo2p_aur(k,i)*
-     |      qo2p_aur(k-1,i))
-          qop (k,i,lat) = qop (k,i,lat)+sqrt(qop_aur (k,i)*
-     |      qop_aur(k-1,i))
-          qn2p(k,i,lat) = qn2p(k,i,lat)+sqrt(qn2p_aur(k,i)*
-     |      qn2p_aur(k-1,i))
-          qnp (k,i,lat) = qnp (k,i,lat)+
-     |      .22/.7 * sqrt(qn2p_aur(k,i)*qn2p_aur(k-1,i))
-          qtef(k,i,lat) = qtef(k,i,lat)+1.57*sqrt(qn2p_aur(k,i)*
-     |      qn2p_aur(k-1,i))
-        enddo ! k=lev0+2,lev1-1
-!
-! Extrapolate lower boundary:
-! TIEGCM-1.9x bug fix from Wenbin's old LTR/CMIT-2.5 code
-#if defined(INTERCOMM) || defined(CISMAH)
-        if(1.5*qo2p_aur(lev0,i) > 0.5*qo2p_aur(lev0+1,i))then
-         qo2p(lev0,i,lat) = qo2p(lev0,i,lat)+1.5*qo2p_aur(lev0,i)-
-     |     0.5*qo2p_aur(lev0+1,i)
-        endif                         !!! CISM fix
-        if(1.5*qop_aur (lev0,i) > 0.5*qop_aur (lev0+1,i))then
-         qop (lev0,i,lat) = qop (lev0,i,lat)+1.5*qop_aur (lev0,i)-
-     |     0.5*qop_aur (lev0+1,i)
-        endif
-        if(1.5*qn2p_aur(lev0,i) > 0.5*qn2p_aur(lev0+1,i))then
-         qn2p(lev0,i,lat) = qn2p(lev0,i,lat)+1.5*qn2p_aur(lev0,i)-
-     |     0.5*qn2p_aur(lev0+1,i)
-        endif
-        if(1.5*qn2p_aur(lev0,i) > 0.5*qn2p_aur(lev0+1,i))then
-         qnp (lev0,i,lat) = qnp (lev0,i,lat)+ .22/.7 *
-     |     (1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i))
-        endif
-        if(1.5*qn2p_aur(lev0,i) > 0.5*qn2p_aur(lev0+1,i))then
-         qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
-     |     0.5*qn2p_aur(lev0+1,i))
-        endif
-#else
-        qo2p(lev0,i,lat) = qo2p(lev0,i,lat)+1.5*qo2p_aur(lev0,i)-
-     |    0.5*qo2p_aur(lev0+1,i)        
-        qop (lev0,i,lat) = qop (lev0,i,lat)+1.5*qop_aur (lev0,i)-
-     |    0.5*qop_aur (lev0+1,i)        
-        qn2p(lev0,i,lat) = qn2p(lev0,i,lat)+1.5*qn2p_aur(lev0,i)-
-     |    0.5*qn2p_aur(lev0+1,i)        
-        qnp (lev0,i,lat) = qnp (lev0,i,lat)+ .22/.7 * 
-     |    (1.5*qn2p_aur(lev0,i)-0.5*qn2p_aur(lev0+1,i))
-        qtef(lev0,i,lat) = qtef(lev0,i,lat)+1.57*(1.5*qn2p_aur(lev0,i)-
-     |    0.5*qn2p_aur(lev0+1,i))        
-#endif
-!
-! Extrapolate upper boundary:
-        qo2p(lev1,i,lat)= qo2p(lev1,i,lat)+1.5*qo2p_aur(lev1-1,i)-
-     |    0.5*qo2p_aur(lev1-2,i)
-        qop (lev1,i,lat)= qop (lev1,i,lat)+1.5*qop_aur (lev1-1,i)-
-     |    0.5*qop_aur (lev1-2,i)
-        qn2p(lev1,i,lat)= qn2p(lev1,i,lat)+1.5*qn2p_aur(lev1-1,i)-
-     |    0.5*qn2p_aur(lev1-2,i)
-        qnp (lev1,i,lat)= qnp (lev1,i,lat)+ .22/.7 * 
-     |    (1.5*qn2p_aur(lev1-1,i)-0.5*qn2p_aur(lev1-2,i))
-        qtef(lev1,i,lat) = qtef(lev1,i,lat)+1.57*
-     |    (1.5*qn2p_aur(lev1-1,i)-0.5*qn2p_aur(lev1-2,i))
+        do k=lev0,lev1
+          qo2p(k,i,lat) = qo2p(k,i,lat)+qo2p_a(k,i)
+          qop (k,i,lat) = qop (k,i,lat)+qop_a (k,i)
+          qn2p(k,i,lat) = qn2p(k,i,lat)+qn2p_a(k,i)
+          qnp (k,i,lat) = qnp (k,i,lat)+.22/.7*qn2p_a(k,i)
+          qtef(k,i,lat) = qtef(k,i,lat)+1.57*qn2p_a(k,i)
+        enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
 !     call addfld('QO2P',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
@@ -1139,14 +1071,14 @@
 
       end subroutine aurora_ions
 !-----------------------------------------------------------------------
-      subroutine aion(si,so,lev0,lev1,lon0,lon1,lat)
+      subroutine aion(si,so,lev0,lev1,lon0,lon1)
       implicit none
 !
 ! Calculates integrated f(x) needed for total auroral ionization.
 ! See equations (10-12) in Roble,1987.
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      integer,intent(in) :: lev0,lev1,lon0,lon1
       real,intent(in)  :: si(lev0:lev1,lon0:lon1)
       real,intent(out) :: so(lev0:lev1,lon0:lon1)
 !
@@ -1173,14 +1105,14 @@
       enddo ! k=lev0,lev1
       end subroutine aion
 !-----------------------------------------------------------------------
-      subroutine bion(si,so,lev0,lev1,lon0,lon1,lat)
+      subroutine bion(si,so,lev0,lev1,lon0,lon1)
       implicit none
 !
 ! Calculates integrated f(x) needed for total auroral ionization.
 ! See equations (10-12) in Roble,1987.
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      integer,intent(in) :: lev0,lev1,lon0,lon1
       real,intent(in)  :: si(lev0:lev1,lon0:lon1)
       real,intent(out) :: so(lev0:lev1,lon0:lon1)
 !
@@ -1203,7 +1135,7 @@
       enddo ! k=lev0,lev1
       end subroutine bion
 !-----------------------------------------------------------------------
-      subroutine cion(si,so,alpha,lev0,lev1,lon0,lon1,lat)
+      subroutine cion(si,so,alpha,lev0,lev1,lon0,lon1)
 !
 ! Calculate a normalized energy deposition function, which is produced by
 ! electron precipitation with a characteristic energy from 100 eV to 1 MeV.
@@ -1219,7 +1151,7 @@
       implicit none
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      integer,intent(in) :: lev0,lev1,lon0,lon1
       real,intent(in)  :: si(lev0:lev1,lon0:lon1),alpha(lon0:lon1)
       real,intent(out) :: so(lev0:lev1,lon0:lon1)
 !

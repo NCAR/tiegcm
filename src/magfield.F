@@ -14,16 +14,8 @@
 !
       use params_module,only: nmlonp1,nmlat,nlat,nlonp4,nlatp2,nlonp2,
      |  nlon,nlonp1,nlevp1,nmlon,nlatp1
-      use nchist_module,only: nc_open,nc_close,handle_ncerr
       use addfld_module,only: addfld
       implicit none
-!
-! Netcdf header file:
-#ifdef SUN
-#include <netcdf3.inc>
-#else
-#include <netcdf.inc>
-#endif
 !
       real,dimension(nlonp1,0:nlatp1) ::
      |  alatm,   ! geomagnetic latitude at each geographic grid point (radians)
@@ -111,23 +103,14 @@
 !
       contains
 !-----------------------------------------------------------------------
-#include <defs.h>
       subroutine magdyn
 !
 ! Define magnetic field and related quantities:
+      use cons_module,only: dipmin
 !
 ! Local:
 !
-! sin10 should be the same as dipmin (see cons.F)
-!
-#if (NLAT==36 && NLON==72)
-      real,parameter :: sin10=0.17   ! 5.0 deg horizontal resolution
-#elif (NLAT==72 && NLON==144)
-      real,parameter :: sin10=0.24   ! 2.5 deg horizontal resolution
-#else
-      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
-#endif
-      real :: cos10
+      real :: cosdipmin
 !
 ! Field are calculated in local arrays dimensioned -1:nlonp2, then transferred 
 !   to module data bx,by,bz,bmod2 at 1:nlonp4 for use in the model.
@@ -135,7 +118,7 @@
       real,dimension(-1:nlonp2,-1:nlatp2) :: bxtmp,bytmp,bztmp,bmod2tmp
       integer :: i,j
 !
-      cos10 = sqrt(1.-sin10**2)
+      cosdipmin = sqrt(1.-dipmin**2)
       do j = 1,nlat
         do i = 1,nlon
           rlatm(i+2,j) = alatm(i,j)
@@ -152,10 +135,10 @@
           bmod2tmp(i,j) = bmod(i,j)
 !
 ! Set minimum dip to 10 degrees
-          if (abs(bztmp(i,j))-sin10 < 0.) then
-            bxtmp(i,j)=bxtmp(i,j)*(cos10/sqrt(1.-bztmp(i,j)**2))
-            bytmp(i,j)=bytmp(i,j)*(cos10/sqrt(1.-bztmp(i,j)**2))
-            bztmp(i,j)=sign(sin10,bztmp(i,j))
+          if (abs(bztmp(i,j))-dipmin < 0.) then
+            bxtmp(i,j)=bxtmp(i,j)*(cosdipmin/sqrt(1.-bztmp(i,j)**2))
+            bytmp(i,j)=bytmp(i,j)*(cosdipmin/sqrt(1.-bztmp(i,j)**2))
+            bztmp(i,j)=sign(dipmin,bztmp(i,j))
           endif
         enddo
       enddo

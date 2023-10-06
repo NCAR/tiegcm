@@ -1,5 +1,5 @@
 !
-      subroutine ionvel(z,ui,vi,wi,lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine ionvel(z,ui,vi,wi,Etot,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -9,18 +9,14 @@
 ! (electric field ex,ey,ez was calculated in efield module, efield.F)
 ! (this was old sub vdrift2)
 !
-      use params_module,only: nlon,nlonp2,nlonp4
+      use params_module,only: nlonp4
       use cons_module,only: re
       use pdynamo_module,only: ex,ey,ez ! (nlevp1,lon0-2:lon1+2,lat0:lat1)
 
       use magfield_module,only: rjac,xb,yb,zb,bmod
       use addfld_module,only: addfld
       use diags_module,only: mkdiag_UI,mkdiag_VI,mkdiag_WI
-#ifdef MPI
       use mpi_module,only: mp_periodic_f3d
-#else
-      use params_module,only: nlon,nlonp2
-#endif
       implicit none
 !
 ! Args:
@@ -28,10 +24,10 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) :: z
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
-     |  intent(out) :: ui,vi,wi
+     |  intent(out) :: ui,vi,wi,Etot
 !
 ! Local:
-      integer :: k,i,nlevs,lonbeg,lonend,lat,ier
+      integer :: k,i,lonbeg,lonend,lat,ier
       real,dimension(lev0:lev1,lon0:lon1) :: eex,eey,eez
       real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,3)
 !
@@ -106,8 +102,8 @@
             wi(k,i,lat) =  (eex(k,i)*xb(i-2,lat)-eey(k,i)*yb(i-2,lat))*
      |        1.e6/bmod(i-2,lat)**2
 
-#if defined(INTERCOMM) || defined(CISMAH)
-            ! CMIT modification
+#ifdef GAMERA
+            ! MAGE modification
             if (vi(k,i,lat) > 2000.0) vi(k,i,lat) = 2000.0
             if (ui(k,i,lat) > 2000.0) ui(k,i,lat) = 2000.0
             if (vi(k,i,lat) < -2000.0) vi(k,i,lat) = -2000.0
@@ -125,11 +121,12 @@
           wi(:,i,lat) = wi(:,i,lat)*100.
         enddo 
 !
+        Etot(:,lon0:lon1,lat) = sqrt(eex**2+eey**2+eez**2)*1E2
+!
 ! End latitude scan:
       enddo ! lat=lat0,lat1
 !
 ! Periodic points for ion velocities:
-#ifdef MPI
       ftmp(:,:,:,1) = ui(:,lon0:lon1,lat0:lat1)
       ftmp(:,:,:,2) = vi(:,lon0:lon1,lat0:lat1)
       ftmp(:,:,:,3) = wi(:,lon0:lon1,lat0:lat1)
@@ -139,18 +136,6 @@
       ui(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,1)
       vi(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,2)
       wi(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,3)
-#else
-      do lat=lat0,lat1
-        do i=1,2
-          ui(:,i,lat) = ui(:,nlon+i,lat)
-          ui(:,nlonp2+i,lat) = ui(:,i+2,lat)
-          vi(:,i,lat) = vi(:,nlon+i,lat)
-          vi(:,nlonp2+i,lat) = vi(:,i+2,lat)
-          wi(:,i,lat) = wi(:,nlon+i,lat)
-          wi(:,nlonp2+i,lat) = wi(:,i+2,lat)
-        enddo
-      enddo
-#endif
 
 ! real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
 !     write(6,"('end ionvel: ui=',2e12.4,' vi=',2e12.4,' wi=',2e12.4)")

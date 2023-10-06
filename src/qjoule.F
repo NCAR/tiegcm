@@ -7,7 +7,7 @@
       contains
 !-----------------------------------------------------------------------
       subroutine qjoule_ti(un,vn,w,ui,vi,wi,lam1,op,nplus,
-     |    n2p,nop,o2p,barm,tn,qji_ti,lev0,lev1,lon0,lon1,lat)
+     |    n2p,nop,o2p,mbar,scht,qji_ti,lev0,lev1,lon0,lon1)
 !
 ! Calculate ion joule heating for use in ion temperature.
 ! This is called from sub dynamics before settei. Qji_ti output from
@@ -25,16 +25,14 @@
 !     now
 !       Q_JI = m_n/(m_n+m_i) * lambda_1 * [ (u_i-u_n)^2 + (v_i-v_n)^2+ (w_i-w_n)^2]
 !
-      use cons_module,only: avo,        ! avogadro number 6.023e23 particles / mole
-     |  grav,   ! acceler. due to gravity at lower boundary [cm/s^2]
-     |  gask,   ! gas konstant 8.314e7 [ergs/K/mol]
+      use cons_module,only:
      |  rmass_o2 , rmass_o1, rmass_n2,  ! 32,16,28 [g/mol]
-     |  rmass_n4s, rmass_no, rmass_op   ! 14,30,16 [g/mol]
+     |  rmass_n4s, rmass_no             ! 14,30    [g/mol]
       use addfld_module,only: addfld
       implicit none
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      integer,intent(in) :: lev0,lev1,lon0,lon1
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: 
      |  un,vn,          ! zonal, meridional  neutral velocity [cm/s]
      |  w,              ! dimensionless vertical  neutral velocity omega [1/s] (interface)
@@ -45,8 +43,8 @@
      |  n2p,       	! N2+ 1/cm^3 at half levels
      |  nop,       	! NO+  1/cm^3 at half levels
      |  o2p,        	! O2+  1/cm^3 at half levels
-     |  barm,           ! mean molecular weight (interface)
-     |  tn              ! neutral temperature (deg K)
+     |  mbar,           ! mean molecular weight (midpoint)
+     |  scht            ! scale height
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) :: 
      |  qji_ti          ! ion joule heating for ti (output) [ergs/s/g]
 !
@@ -68,14 +66,13 @@
           m_i = m_i/(op(k,i) + o2p(k,i)+nplus(k,i)+ n2p(k,i)+
      |          nop(k,i))
 ! mean molecular weight of neutrals at half level [g/mol]
-          m_n = .5*(barm(k,i)+barm(k+1,i))
+          m_n = mbar(k,i)
 ! ratio m_n/(m_n+m_i)	
 	  mfac = m_i+m_n
 	  mfac = m_n/mfac
 	  
 ! scale height H [cm] to convert omega [1/s] to vertical neutral wind [cm/s]
-          vert_vel(k,i) = 0.5*(w(k,i)+w(k+1,i))*gask*tn(k,i)/
-     |        (.5*(barm(k,i)+barm(k+1,i))*grav)
+          vert_vel(k,i) = 0.5*(w(k,i)+w(k+1,i))*scht(k,i)
      
 ! Ion velocities at half levels
           uii(k,i) = .5*(ui(k,i)+ui(k+1,i))  ! s6
@@ -90,12 +87,9 @@
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfld('QJI_TI','QJI_TI ',' ',qji_ti(lev0:lev1-1,lon0:lon1),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-
       end subroutine qjoule_ti
 !-----------------------------------------------------------------------
-      subroutine qjoule_tn(un,vn,w,ui,vi,wi,lam1,barm,tn,qji_tn,
+      subroutine qjoule_tn(un,vn,w,ui,vi,wi,lam1,scht,qji_tn,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate ion joule heating for neutral temperature.
@@ -111,11 +105,8 @@
 !     to
 !       Q_J = lambda_1 * [ (u_i-u_n)^2 + (v_i-v_n)^2 + (w_i-w_n)^2]
 !
-      use cons_module,only:
-     |  grav,   ! acceler. due to gravity at lower boundary [cm/s^2]
-     |  gask    ! gas konstant 8.314e7 [ergs/K/mol]
       use addfld_module,only: addfld
-      use diags_module,only: mkdiag_QJOULE,mkdiag_QJOULE_INTEG
+      use diags_module,only: mkdiag_QJOULE
       use input_module,only: joulefac_input => joulefac
       implicit none
 !     
@@ -126,20 +117,18 @@
      |  w,              ! dimensionless vertical  neutral velocity omega [1/s] (interface)
      |  ui,vi,wi,       ! zonal, meridional, vertical ion velocity (interface)
      |  lam1,           ! lambda_1 ion drag coefficient
-     |  barm,           ! mean molecular weight (interface)
-     |  tn              ! neutral temperature (deg K)
+     |  scht            ! scale height
        real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) :: 
      |  qji_tn          ! ion joule heating for tn (output)
 !
 ! Local:
       integer :: k,i
-      real,dimension(lev0:lev1,lon0:lon1) ::vel_zonal,vel_merid,
-     |  vel_vert,scheight        ! scale height  
+      real,dimension(lev0:lev1,lon0:lon1) ::vel_zonal,vel_merid,vel_vert
       real :: joulefac
 !
-#if defined(INTERCOMM) || defined(CISMAH)
+#ifdef GAMERA
 !
-! CMIT: When copled to the LFM, the currents are strong
+! MAGE: When copled to the GAMERA, the currents are strong
 !       so we need to reduce joulefac from 1.5 to 1.0:
 !
       joulefac = 1.0 ! joule heating multiplication factor
@@ -155,11 +144,9 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          scheight(k,i) = gask*tn(k,i)/
-     |        (.5*(barm(k,i)+barm(k+1,i))*grav)
           vel_zonal(k,i) = .5*(ui(k,i)+ui(k+1,i))-un(k,i)  ! s2
           vel_merid(k,i) = .5*(vi(k,i)+vi(k+1,i))-vn(k,i)  ! s3
-          vel_vert(k,i)  = .5*(wi(k,i)+wi(k+1,i)-scheight(k,i)*
+          vel_vert(k,i)  = .5*(wi(k,i)+wi(k+1,i)-scht(k,i)*
      |         ( w(k,i)+w(k+1,i)) )
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
@@ -194,10 +181,6 @@
 !
 ! Save diagnostic Total Joule Heating:
       call mkdiag_QJOULE('QJOULE',qji_tn,lev0,lev1,lon0,lon1,lat)
-!
-! Save diagnostic Height-integrated Joule Heating:
-      call mkdiag_QJOULE_INTEG('QJOULE_INTEG',qji_tn(:,lon0:lon1),
-     |  lev0,lev1,lon0,lon1,lat)
 
       end subroutine qjoule_tn
 !-----------------------------------------------------------------------

@@ -35,8 +35,8 @@
 ! Remove comments from namelist file (filename) and write the results
 ! to file unit luout.  See rmcomments for additional documentation.
 !
-! This subroutine was created for CMIT:  when TIEGCM is coupled to
-! CMIT, namelist cannot be reliably read from stdin.
+! This subroutine was created for MAGE:  when TIEGCM is coupled to
+! MAGE, namelist cannot be reliably read from stdin.
 !
 ! Args:
       character(len=*),intent(in) :: filename
@@ -76,9 +76,8 @@
 ! Local:
       character(len=1) :: comchar
       logical isopen
-      integer :: i,lens,ios,compos,nline,nlcfields
+      integer :: ios,compos,nline
       character(len=6400) :: line
-      character(len=64) :: newcfields(30)
 !
       if (luin <= 0) then
         write(6,"('>>> rmcomments: bad input luin=',i5)") luin
@@ -337,8 +336,7 @@
 !
       real,intent(in) :: x 
       integer,intent(in) :: iprint
-      real,parameter :: xmin=-708., xmax=+709., 
-     |  big=.1e305, small=.1e-305
+      real,parameter :: xmin=-708., xmax=+709., big=.1e305
 !
 #if defined(IRIX) || defined(AIX) || defined(OSF1) || defined(SUN) || defined(LINUX)
       if (x >= xmin .and. x <= xmax) then
@@ -370,15 +368,15 @@
 !-------------------------------------------------------------------
       real function mtime_delta(mtime0,mtime1)
 !
-! Return difference in time (minutes) from mtime0 to mtime1:
+! Return difference in time (seconds) from mtime0 to mtime1:
 !
       implicit none
       integer,intent(in) :: mtime0(4),mtime1(4)
-      real :: rmins0,rmins1
+      real :: rsecs0,rsecs1
 !
-      rmins0 = mtime0(1)*1440.+mtime0(2)*60.+mtime0(3)+mtime0(4)/60.
-      rmins1 = mtime1(1)*1440.+mtime1(2)*60.+mtime1(3)+mtime1(4)/60.
-      mtime_delta = rmins1-rmins0
+      rsecs0 = mtime0(1)*86400.+mtime0(2)*3600.+mtime0(3)*60.+mtime0(4)
+      rsecs1 = mtime1(1)*86400.+mtime1(2)*3600.+mtime1(3)*60.+mtime1(4)
+      mtime_delta = rsecs1-rsecs0
 !     if (mtime_delta < 0.) then
 !       write(6,"('>>> WARNING mtime_delta: negative delta: mtime0=',
 !    |    4i4,' mtime1=',4i4,' delta=',f10.2)") 
@@ -391,8 +389,8 @@
 !
 ! Given model time mtime (day,hr,min,sec) and iyear (4-digit year),
 ! return imo (2 digit month), ida (2 digit day of the month), and
-! a date string "minutes since yyyy-m-d". Function value is real
-! minutes into the day from modeltime(2:4) hour, min, and sec.
+! a date string "seconds since yyyy-m-d". Function value is real
+! seconds into the day from modeltime(2:4) hour, min, and sec.
 !
 ! Args:
       integer,intent(in) :: iyear,mtime(4)
@@ -400,7 +398,7 @@
       character(len=*),intent(out) :: datestr
 !
 ! Local:
-      character(len=2) :: f_mon,f_day,f_hr,f_min
+      character(len=2) :: f_mon,f_day,f_hr,f_min,f_sec
       character(len=120) :: format
       integer :: ndmon(12) =
 !          J  F  M  A  M  J  J  A  S  O  N  D
@@ -434,107 +432,105 @@
       imo = m
       ida = id
 !
-! Return real minutes:
-      mtime_to_datestr = float(mtime(2))*60.+float(mtime(3))+
-     |                   float(mtime(4))/60.
+! Return real seconds:
+      mtime_to_datestr = float(mtime(2))*3600.+float(mtime(3))*60.+
+     |                   float(mtime(4))
 !
 ! Return date string:
       if (imo <= 9) then
-        if (ida <= 9) then
-          f_day = 'i1'
-          f_mon = 'i1'
-        else ! ida > 9
-          f_day = 'i2'
-          f_mon = 'i1'
-        endif
+        f_mon = 'i1'
       else ! imo > 9
-        if (ida <= 9) then
-          f_day = 'i1'
-          f_mon = 'i2'
-        else ! ida > 9
-          f_day = 'i2'
-          f_mon = 'i2'
-        endif
+        f_mon = 'i2'
       endif
+
+      if (ida <= 9) then
+        f_day = 'i1'
+      else ! ida > 9
+        f_day = 'i2'
+      endif
+
       if (mtime(2) <= 9) then
-        if (mtime(3) <= 9) then
-          f_hr = 'i1'
-          f_min = 'i1'
-        else
-          f_hr = 'i1'
-          f_min = 'i2'
-        endif
+        f_hr = 'i1'
       else
-        if (mtime(3) <= 9) then
-          f_hr = 'i2'
-          f_min = 'i1'
-        else
-          f_hr = 'i2'
-          f_min = 'i2'
-        endif
+        f_hr = 'i2'
+      endif
+
+      if (mtime(3) <= 9) then
+        f_min = 'i1'
+      else
+        f_min = 'i2'
+      endif
+
+      if (mtime(4) <= 9) then
+        f_sec = 'i1'
+      else
+        f_sec = 'i2'
       endif
 !
 ! Example format:
-!   ('minutes since ',i4,'-',i1,'-',i2,' ',i1,':',i2,':0')
+!   ('seconds since ',i4,'-',i1,'-',i2,' ',i1,':',i2,':',i2)
 ! Example date string:
-!   minutes since 1997-3-21 0:0:0
+!   seconds since 1997-3-21 0:0:0
 !
-      format = '(''minutes since '',i4,''-'','//f_mon//',''-'','//f_day
-      format = trim(format)//','' '','//f_hr//','':'','//f_min//','
-      format = trim(format)//''':0'')'
-      write(datestr,format) iyear,imo,ida,mtime(2),mtime(3)
+      format = "('seconds since ',i4,'-',"//f_mon//",'-',"//f_day
+      format = trim(format)//",' ',"//f_hr//",':',"//f_min//",':',"
+      format = trim(format)//f_sec//")"
+      write(datestr,format) iyear,imo,ida,mtime(2),mtime(3),mtime(4)
       end function mtime_to_datestr
 !-----------------------------------------------------------------------
-      integer function mtime_to_mins(mtime)
+      integer function mtime_to_secs(mtime)
       implicit none
 !
-! Given model time mtime (day,hr,min), return equivalent time 
-! in minutes (includes day):
+! Given model time mtime (day,hr,min,sec), return equivalent time 
+! in seconds (includes day):
 !
 ! Arg:
-      integer,intent(in)  :: mtime(3)
+      integer,intent(in)  :: mtime(4)
 !
-      mtime_to_mins = mtime(1)*24*60+mtime(2)*60+mtime(3)
-      end function mtime_to_mins
+      mtime_to_secs = mtime(1)*86400+mtime(2)*3600+mtime(3)*60+mtime(4)
+      end function mtime_to_secs
 !-----------------------------------------------------------------------
       integer function mtime_to_nstep(mtime,istepsecs)
       implicit none
 !
-! Return number of steps from time 0,0,0 to given model time 
-! mtime(day,hr,min) (istepsecs is time step in seconds)
+! Return number of steps from time 0,0,0,0 to given model time 
+! mtime(day,hr,min,sec) (istepsecs is time step in seconds)
 ! (This function used to be itera in earlier versions of tgcm)
 !
 ! Args:
-      integer,intent(in) :: mtime(3),istepsecs
+      integer,intent(in) :: mtime(4),istepsecs
 !
-      mtime_to_nstep=((mtime(1)*24+mtime(2))*60+mtime(3))*60/istepsecs
+      mtime_to_nstep=(((mtime(1)*24+mtime(2))*60+mtime(3))*60+mtime(4))
+     |  /istepsecs
       end function mtime_to_nstep
 !-----------------------------------------------------------------------
       integer(kind=8) function mtime_to_nsec(mtime)
       implicit none
       integer(kind=8),parameter :: nsecperday=24*60*60 ! 86400 seconds/day
-      integer,intent(in) :: mtime(3)
+      integer,intent(in) :: mtime(4)
       mtime_to_nsec = mtime(1)*nsecperday + mtime(2)*3600 + mtime(3)*60
+     |  + mtime(4)
       end function mtime_to_nsec
 !-----------------------------------------------------------------------
-      subroutine mins_to_mtime(mins,mtime)
+      subroutine secs_to_mtime(secs,mtime)
       implicit none
 !
-! Given minutes mins, return equivalent model time (day,hr,min)
+! Given seconds secs, return equivalent model time (day,hr,min,sec)
 !
 ! Args:
-      integer,intent(in) :: mins
-      integer,intent(out) :: mtime(3)
+      integer,intent(in) :: secs
+      integer,intent(out) :: mtime(4)
 !
 ! Local:
-      integer,parameter :: minperday=24*60
+      integer,parameter :: secperday=24*60*60
 !
       mtime(:) = 0
-      if (mins==0) return
-      mtime(1) = mins/minperday                        ! days
-      mtime(2) = mod(mins,minperday)/60                ! hours
-      mtime(3) = mins-(mtime(1)*minperday+mtime(2)*60) ! minutes
-      end subroutine mins_to_mtime
+      if (secs==0) return
+      mtime(1) = secs/secperday                                      ! days
+      mtime(2) = mod(secs,secperday)/3600                            ! hours
+      mtime(3) = (secs-(mtime(1)*secperday+mtime(2)*3600))/60        ! minutes
+      mtime(4) = secs-(mtime(1)*secperday+mtime(2)*3600+mtime(3)*60) ! seconds
+      end subroutine secs_to_mtime
 !-------------------------------------------------------------------
       subroutine nsecs_to_modeltime(nsecs,modeltime)
       implicit none
@@ -637,69 +633,15 @@
 !-------------------------------------------------------------------
       subroutine gethostsname(host)
 !
-! Return a host name, by various methods depending on platform:
+! Return a host name:
 !
       implicit none
 !
 ! Args:
       character(len=*),intent(out) :: host
 !
-! Local:
-      integer :: istat
+      call hostnm(host)
 !
-! External:
-#if defined(UNICOS)
-      integer,external :: gethost
-#endif
-#if defined(AIX)
-      integer,external :: gethostname
-#endif
-!
-      host = ' '
-#ifdef UNICOS
-      istat = gethost(host)
-      if (istat <= 0) then
-        write(6,"('>>> gethostname UNICOS: error ',i4,' from gethost')") 
-     |    istat
-        host = 'unknown'
-      endif
-#elif defined(AIX)
-      istat = gethostname(host) ! this yields "bb0001en" on babyblue
-      if (istat /= 0) then
-        write(6,"('>>> gethostname AIX: error ',i4,
-     |    ' from gethostname')") istat
-        host = 'unknown'
-      endif
-#elif defined(OSF1)
-!
-! There is a gethostname function on prospect (compaq), but apparently 
-! there is no fortran binding.
-      write(6,"('>>> gethostsname: do not know how to get host name ',
-     |  'under OSF1')")
-      host = 'unknown'
-#elif defined(IRIX)
-!
-! Under IRIX, the interactive environment (e.g. utefe) defines $HOST, 
-! whereas the batch environment (e.g. ute) defines $QSUB_HOST.
-! 
-      call getenv('HOST',host)                             ! interactive
-      if (len_trim(host)==0) call getenv('QSUB_HOST',host) ! batch
-      if (len_trim(host)==0) then
-        write(6,"(/,'>>> gethost under IRIX: Cannot get HOST or ',
-     |    'QSUB_HOST environment variables.',/)")
-        host = 'unknown'
-      endif
-#elif defined(SUN) || defined(LINUX)
-      call getenv('HOST',host)
-      if (len_trim(host)==0) then
-        write(6,"(/,'>>> gethost: Cannot get HOST environment ',
-     |    'variable.',/)")
-        host = 'unknown'
-      endif
-#else
-      write(6,"('>>> WARNING gethost: unresolved OS cpp directive.')")
-      host = 'unknown'
-#endif
       end subroutine gethostsname
 !-----------------------------------------------------------------------
       integer function strloc(strarray,nstr,substr)
@@ -823,9 +765,8 @@
 ! timing is started in the first call, and before timing is completed 
 ! in the second call.
 !
-#ifdef MPI
       use mpi
-#endif
+      use mpi_module,only : TIEGCM_WORLD
       implicit none
 !
 ! Args:
@@ -853,18 +794,18 @@
 !
 ! Begin: return time0 as starting time:
       if (trim(begend)=='start'.or.trim(begend)=='begin') then
-#ifdef MPI
-        call mpi_barrier(MPI_COMM_WORLD,ier)
-#endif
+!
+        call mpi_barrier(TIEGCM_WORLD,ier)
+!
 #ifdef AIX
         time0 = rtc()   
 #endif
 !
 ! End: time0 is now input, return time1-time0 in tsec:
       elseif (trim(begend)=='end') then
-#ifdef MPI
-        call mpi_barrier(MPI_COMM_WORLD,ier)
-#endif
+!
+        call mpi_barrier(TIEGCM_WORLD,ier)
+!
 #ifdef AIX
         time1 = rtc()   
         tsec = time1-time0
@@ -873,10 +814,9 @@
       end subroutine timer
 !-----------------------------------------------------------------------
       subroutine getcwdir(cwd)
-#ifdef MPI
-      use mpi_module,only: mytid
+!
+      use mpi_module,only: mytid, TIEGCM_WORLD
       use mpi
-#endif
 !
 ! Return current working directory in cwd:
 !
@@ -885,29 +825,20 @@
       integer,external :: isystem,nextlu
       integer :: istat,lu,ier
 !
-#ifdef MPI
       if (mytid==0) then
         istat = isystem('pwd > cwd')
         if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
      |    'isystem(''pwd > cwd'')')")
       endif
-      call mpi_barrier(MPI_COMM_WORLD,ier)
+      call mpi_barrier(TIEGCM_WORLD,ier)
       lu = nextlu()
       open(lu,file='cwd',status='old')
       read(lu,"(a)") cwd
       close(lu)
-#else
-      istat = isystem('pwd > cwd')
-      if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
-     |  'isystem(''pwd > cwd'')')")
-      lu = nextlu()
-      open(lu,file='cwd',status='old')
-      read(lu,"(a)") cwd
-      close(lu)
-#endif
+!
       end subroutine getcwdir
 !-----------------------------------------------------------------------
-      character(len=*) function trcase(string)
+      character(len=n) function trcase(string,n)
 !
 ! Translate case of input string string, i.e., return string like string,
 ! but with lower case character converted to upper case, and vice-versa.
@@ -915,7 +846,8 @@
       implicit none
 !
 ! Args:
-      character(len=*),intent(in) :: string
+      integer,intent(in) :: n
+      character(len=n),intent(in) :: string
 !
 ! Local:
       character(len=*),parameter :: ucase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -936,10 +868,9 @@
       end function trcase
 !-----------------------------------------------------------------------
       subroutine shutdown(msg)
-      use my_esmf
-#ifdef MPI
+      use my_esmf,only: ESMF_Finalize,ESMF_END_KEEPMPI,ESMF_SUCCESS
       use mpi
-#endif
+      use mpi_module,only: TIEGCM_WORLD
 !
 ! An fatal error has occurred -- shut down the model, including MPI.
 !
@@ -954,7 +885,6 @@
 !
       write(6,"(/,28('>'),' MODEL SHUTDOWN ',28('<'))")
       write(6,"('Shutdown: stop message: ',a)") trim(msg)
-#ifdef MPI
 !
 ! ESMF is nested inside MPI, so shutdown ESMF first:
       call ESMF_Finalize(endflag=ESMF_END_KEEPMPI,rc=ier)
@@ -968,8 +898,8 @@
 ! Shutdown MPI:
       write(6,"('Shutdown calling mpi_abort..')")
       write(6,"(72('>'))")
-      call mpi_abort(MPI_COMM_WORLD,errorcode,ier)
-#endif
+      call mpi_abort(TIEGCM_WORLD,errorcode,ier)
+
       write(6,"(/,'For information, please see TGCM Users Guide at ',
      |  /,'http://www.hao.ucar.edu/modeling/tgcm/doc/userguide')")
       write(6,"(72('>'))")

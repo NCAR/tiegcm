@@ -9,32 +9,29 @@
       implicit none
 #include <netcdf.inc>
 !
-! All are allocated ndata except for f107d and f107a, which
-! are allocated ndays.
+! All are allocated ndata.
 ! 
       integer :: ndata,ndays
       real :: missing
       integer,dimension(:),target,allocatable :: days
       real,dimension(:),target,allocatable :: date,
-     |  uttime,yfrac,bx,by,bz,swvel,swden,kp,f107d,f107a
+     |  uttime,yfrac,bx,by,bz,swvel,swden
 
       contains
 !-----------------------------------------------------------------------
-      subroutine getimf(iyear,iday,iutsec,istep,iprint)
+      subroutine getimf(iyear,iday,iutsec,istep)
       use input_module,only: bximf,byimf,bzimf,swvel_inp=>swvel,
-     |  swden_inp=>swden,f107_inp=>f107,f107a_inp=>f107a,
-     |  rd_f107,rd_f107a,rd_bximf,rd_byimf,rd_bzimf,rd_swvel,rd_swden
+     |  swden_inp=>swden,rd_bximf,rd_byimf,rd_bzimf,rd_swvel,rd_swden
       use params_module,only: spval
       implicit none
 !
 ! Args:
-      integer,intent(in) :: iyear,iday,iutsec,istep,iprint
+      integer,intent(in) :: iyear,iday,iutsec,istep
 !
 ! Local:
       real :: model_uttime,model_yfrac,model_dfrac,ut
       integer :: index,index1,index2,i,iyyyy4
-      real :: model_bx,model_by,model_bz,model_swvel,model_swden,
-     |  model_kp,model_f107d,model_f107a
+      real :: model_bx,model_by,model_bz,model_swvel,model_swden
       integer(kind=8) :: iyearday,iyyyy,iddd
 !
 ! External:
@@ -138,9 +135,6 @@
 ! swden
         call finterpb(swden(index1),swden(index2),model_swden,1,
      |    yfrac(index1),yfrac(index2),model_yfrac)
-! kp
-        call finterpb(kp(index1),kp(index2),model_kp,1,
-     |    yfrac(index1),yfrac(index2),model_yfrac)
       endif
 !
 ! Get index to requested day for solar flux:
@@ -152,19 +146,6 @@
 !    |     model_dfrac,ndays,days(1),days(ndays)
 !        call shutdown('getimf: IMF data not available')
 !     endif
-!     index1=index
-!     index2=index+1
-!     if (index2 <= ndays) then
-!
-! Interpolate solar flux:
-!
-! f107d
-!       call finterpb(f107d(index1),f107d(index2),model_f107d,1,
-!    |    real(days(index1)),real(days(index2)),model_dfrac)
-! f107a
-!       call finterpb(f107a(index1),f107a(index2),model_f107a,1,
-!    |    real(days(index1)),real(days(index2)),model_dfrac)
-!     endif
 !
 ! Transfer new interpolated data to model variables:
 ! (input has already determined that at least one of these
@@ -175,14 +156,11 @@
       if (rd_bzimf == spval) bzimf = model_bz
       if (rd_swvel == spval) swvel_inp = model_swvel
       if (rd_swden == spval) swden_inp = model_swden
-!     if (rd_f107  == spval) f107_inp  = model_f107d
-!     if (rd_f107a == spval) f107a_inp = model_f107a
 
-!     write(6,"('getimf: data interpolated to modeltime ',3i4,':')")
-!    |  modeltime(1:3)
+!     write(6,"('getimf: data interpolated to modeltime ',4i4,':')")
+!    |  modeltime
 !     write(6,"('  bximf,byimf,bzimf = ',3f8.2,' swvel=',f8.2,
-!    |  ' swden=',f8.2,' f107d,f107a=',2f8.2)") bximf,byimf,bzimf,
-!    |  swvel_inp,swden_inp,f107_inp,f107a_inp
+!    |  ' swden=',f8.2)") bximf,byimf,bzimf,swvel_inp,swden_inp
 
       end subroutine getimf
 !-----------------------------------------------------------------------
@@ -194,9 +172,8 @@
       integer :: istat,ncid,istep
       character(len=240) :: char240
       character(len=mxlen_filename) :: dskfile
-      integer :: id_ndata,id_ndays,idv_date,idv_uttime,idv_yfrac,
-     |  idv_bx,idv_by,idv_bz,idv_swvel,idv_swden,idv_kp,
-     |  idv_f107d,idv_f107a,idv_missing,idv_days
+      integer :: id_ndata,idv_date,
+     |  idv_bx,idv_by,idv_bz,idv_swvel,idv_swden
       real :: fmin,fmax
 !
       dskfile = ' '
@@ -283,31 +260,13 @@
       call fminmaxspv(swden,ndata,fmin,fmax,missing)
       write(6,"('rdimf: swden min,max=',2f8.2)") fmin,fmax
 
-! kp:
-!     istat = nf_inq_varid(ncid,'kp',idv_kp)
-!     istat = nf_get_var_double(ncid,idv_kp,kp)
-!     call fminmaxspv(kp,ndata,fmin,fmax,missing)
-!     write(6,"('rdimf: kp min,max=',2f8.2)") fmin,fmax
-
-! f107d:
-!     istat = nf_inq_varid(ncid,'f107d',idv_f107d)
-!     istat = nf_get_var_double(ncid,idv_f107d,f107d)
-!     call fminmaxspv(f107d,ndays,fmin,fmax,missing)
-!     write(6,"('rdimf: f107d min,max=',2f8.2)") fmin,fmax
-
-! f107a:
-!     istat = nf_inq_varid(ncid,'f107a',idv_f107a)
-!     istat = nf_get_var_double(ncid,idv_f107a,f107a)
-!     call fminmaxspv(f107a,ndays,fmin,fmax,missing)
-!     write(6,"('rdimf: f107a min,max=',2f8.2)") fmin,fmax
-
       write(6,"(72('-'),/)")
       end subroutine rdimf
 !-----------------------------------------------------------------------
       subroutine alloc_imf
 
 ! real,dimension(:),target,allocatable ::
-!   uttime,yfrac,bx,by,bz,swvel,swden,kp,f107d,f107a
+!   uttime,yfrac,bx,by,bz,swvel,swden
 
       integer :: istat
       allocate(date(ndata),stat=istat)
@@ -318,11 +277,8 @@
       allocate(bz(ndata),stat=istat)
       allocate(swvel(ndata),stat=istat)
       allocate(swden(ndata),stat=istat)
-      allocate(kp(ndata),stat=istat)
 
 !     allocate(days(ndays),stat=istat)
-!     allocate(f107d(ndays),stat=istat)
-!     allocate(f107a(ndays),stat=istat)
 
       end subroutine alloc_imf
 !-----------------------------------------------------------------------
@@ -332,7 +288,7 @@
 !
       write(6,"(/,'>>> getimf: Encountered missing ',a,' in imf',
      |  ' data file (missing=',e12.4,'):')") trim(name),missing
-      write(6,"('mtime=',3i4)") modeltime(1:3)
+      write(6,"('mtime=',4i4)") modeltime
       write(6,"('imf data file = ',a)") trim(imf_ncfile)
       write(6,"('index1=',i8,' date(index1)=',f12.4,' uttime(index1)=',
      |  f8.3)") i0,date(i0),uttime(i0)

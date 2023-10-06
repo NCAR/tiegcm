@@ -462,19 +462,20 @@
       end subroutine mkdiag_QJOULE
 !-----------------------------------------------------------------------
       subroutine mkdiag_TEC(name,tec,z,electrons,lev0,lev1,lon0,lon1,
-     |  lat)
+     |  lat0,lat1)
 !
 ! Calculate 2d global height-integrated diagnostic TEC (Total Electron Content)
-! This is called from sub elden, elden.F at latitude lat.
+! This is called from sub dynacmis after elden.
 !
 ! Args:
       character(len=*),intent(in) :: name
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: z,electrons
-      real,intent(out) :: tec(lon0:lon1)
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)
+     |  :: z,electrons
+      real,intent(out) :: tec(lon0:lon1,lat0:lat1)
 !
 ! Local:
-      integer :: i,k
+      integer :: i,lat,k
       integer,save :: ix=0,firstcall=0
 
       firstcall = firstcall+1
@@ -482,16 +483,19 @@
       if (ix==0) return
 !
 ! Integrate electron content in height at current latitude:
-      tec(:) = 0.
+      tec = 0.
       do i=lon0,lon1
-        do k=lev0,lev1-1
-          tec(i) = tec(i)+(z(k+1,i)-z(k,i))*electrons(k,i)
+        do lat=lat0,lat1
+          do k=lev0,lev1-1
+            tec(i,lat) = tec(i,lat)+
+     |        (z(k+1,i,lat)-z(k,i,lat))*electrons(k,i,lat)
+          enddo
         enddo
       enddo
 !
 ! Save on secondary histories:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,tec(:),'lon',lon0,lon1,'lat',lat,lat,0)
+     |  diags(ix)%units,tec,'lon',lon0,lon1,'lat',lat0,lat1,0)
       end subroutine mkdiag_TEC
 !-----------------------------------------------------------------------
       subroutine mkdiag_UI(name,ui,lev0,lev1,lon0,lon1,lat0,lat1)
@@ -769,14 +773,14 @@
       endif
       end subroutine mkdiag_EXYZ
 !-----------------------------------------------------------------------
-      subroutine mkdiag_BXYZ(name,bxyz,lon0,lon1,lat)
+      subroutine mkdiag_BXYZ(name,bxyz,lon0,lon1,lat0,lat1)
 !
 ! Called by oplus.F
 !
 ! Args:
       character(len=*),intent(in) :: name
-      integer,intent(in) :: lon0,lon1,lat
-      real,dimension(lon0:lon1),intent(in) :: bxyz
+      integer,intent(in) :: lon0,lon1,lat0,lat1
+      real,dimension(lon0:lon1,lat0:lat1),intent(in) :: bxyz
 !
 ! Local:
       integer,save :: ibx=-1,iby=-1,ibz=-1
@@ -789,24 +793,24 @@
 ! Save 2d field on secondary histories:
       if (trim(name)=='BX'.and.ibx > 0) then
         call addfld(diags(ibx)%short_name,diags(ibx)%long_name,
-     |    diags(ibx)%units,bxyz,'lon',lon0,lon1,'lat',lat,lat,0)
+     |    diags(ibx)%units,bxyz,'lon',lon0,lon1,'lat',lat0,lat1,0)
       elseif (trim(name)=='BY'.and.iby > 0) then
         call addfld(diags(iby)%short_name,diags(iby)%long_name,
-     |    diags(iby)%units,bxyz,'lon',lon0,lon1,'lat',lat,lat,0)
+     |    diags(iby)%units,bxyz,'lon',lon0,lon1,'lat',lat0,lat1,0)
       elseif (trim(name)=='BZ'.and.ibz > 0) then
         call addfld(diags(ibz)%short_name,diags(ibz)%long_name,
-     |    diags(ibz)%units,bxyz,'lon',lon0,lon1,'lat',lat,lat,0)
+     |    diags(ibz)%units,bxyz,'lon',lon0,lon1,'lat',lat0,lat1,0)
       endif
       end subroutine mkdiag_BXYZ
 !-----------------------------------------------------------------------
-      subroutine mkdiag_BMAG(name,bmag,lon0,lon1,lat)
+      subroutine mkdiag_BMAG(name,bmag,lon0,lon1,lat0,lat1)
 !
 ! Called by oplus.F
 !
 ! Args:
       character(len=*),intent(in) :: name
-      integer,intent(in) :: lon0,lon1,lat
-      real,dimension(lon0:lon1),intent(in) :: bmag
+      integer,intent(in) :: lon0,lon1,lat0,lat1
+      real,dimension(lon0:lon1,lat0:lat1),intent(in) :: bmag
 !
 ! Local:
       integer,save :: ix=0,firstcall=0
@@ -816,7 +820,7 @@
       if (ix==0) return
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,bmag,'lon',lon0,lon1,'lat',lat,lat,0)
+     |  diags(ix)%units,bmag,'lon',lon0,lon1,'lat',lat0,lat1,0)
 
       end subroutine mkdiag_BMAG
 !-----------------------------------------------------------------------
@@ -850,15 +854,16 @@
       endif
       end subroutine mkdiag_ED12
 !-----------------------------------------------------------------------
-      subroutine mkdiag_HNMF2(name,ht,ne,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_HNMF2(name,ht,ne,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Args:
       character(len=*),intent(in) :: name
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: ht,ne
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
+      real,intent(in),dimension(lev0:lev1,lon0:lon1,lat0:lat1) :: ht,ne
 !
 ! Local:
-      real,dimension(lon0:lon1) :: hmf2,nmf2,fof2
+      integer :: lat
+      real,dimension(lon0:lon1,lat0:lat1) :: hmf2,nmf2,fof2
       integer,save :: ixhmf2=-1,ixnmf2=-1,ixfof2=-1
 
       if (trim(name)=='HMF2'.and.ixhmf2==-1) ixhmf2 = checkf(name)
@@ -867,19 +872,22 @@
       if (ixhmf2<=0.and.ixnmf2<=0.and.ixfof2<=0) return
 !
 ! Calculate hmf2,nmf2,fof2 from ne at current latitude:
-      call hnmf2(ht,ne,hmf2,nmf2,fof2,lev0,lev1,lon0,lon1,lat) 
+      do lat = lat0,lat1
+        call hnmf2(ht(:,:,lat),ne(:,:,lat),hmf2(:,lat),
+     |    nmf2(:,lat),fof2(:,lat),lev0,lev1,lon0,lon1,lat)
+      enddo
 !
 ! Save 2d field on secondary histories:
       if (trim(name)=='HMF2'.and.ixhmf2 > 0) then
         hmf2 = hmf2*1.e-5 ! cm to km
         call addfld(diags(ixhmf2)%short_name,diags(ixhmf2)%long_name,
-     |    diags(ixhmf2)%units,hmf2,'lon',lon0,lon1,'lat',lat,lat,0)
+     |    diags(ixhmf2)%units,hmf2,'lon',lon0,lon1,'lat',lat0,lat1,0)
       elseif (trim(name)=='NMF2'.and.ixnmf2 > 0) then
         call addfld(diags(ixnmf2)%short_name,diags(ixnmf2)%long_name,
-     |    diags(ixnmf2)%units,nmf2,'lon',lon0,lon1,'lat',lat,lat,0)
+     |    diags(ixnmf2)%units,nmf2,'lon',lon0,lon1,'lat',lat0,lat1,0)
       elseif (trim(name)=='FOF2'.and.ixfof2 > 0) then
         call addfld(diags(ixfof2)%short_name,diags(ixfof2)%long_name,
-     |    diags(ixfof2)%units,fof2,'lon',lon0,lon1,'lat',lat,lat,0)
+     |    diags(ixfof2)%units,fof2,'lon',lon0,lon1,'lat',lat0,lat1,0)
       endif
       end subroutine mkdiag_HNMF2
 !-----------------------------------------------------------------------
@@ -1206,7 +1214,7 @@
 
       end subroutine mkdiag_WN
 !-----------------------------------------------------------------------
-      subroutine mkdiag_O_N2(name,o1,o2,n2,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_O_N2(name,o1,n2,lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate O/N2 ratio from o2 and o (mmr). 
 ! N2 is passed in (3d array in fields.F), where n2=1-o2-o-he
@@ -1214,7 +1222,7 @@
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: o1,o2,n2
+      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: o1,n2
 !
 ! Local:
       real,dimension(lev0:lev1,lon0:lon1) :: o_n2
@@ -1254,7 +1262,7 @@
       end subroutine mkdiag_N2
 !-----------------------------------------------------------------------
       subroutine mkdiag_QJOULE_INTEG(name,qji_tn,lev0,lev1,lon0,lon1,
-     |  lat)
+     |  lat0,lat1)
       use cons_module,only: p0,grav
       use params_module,only: zpint
 !
@@ -1263,13 +1271,13 @@
 !
 ! Args
       character(len=*),intent(in) :: name
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: qji_tn
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
+      real,intent(in),dimension(lev0:lev1,lon0:lon1,lat0:lat1) :: qji_tn
 !
 ! Local:
-      integer :: k,i
-      real,dimension(lon0:lon1) :: qji_integ
-      real,dimension(lev0:lev1,lon0:lon1) :: qj
+      integer :: k,i,lat
+      real,dimension(lon0:lon1,lat0:lat1) :: qji_integ
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) :: qj
       real :: myp0,mygrav
       integer,save :: ix=0,firstcall=0
 
@@ -1286,9 +1294,11 @@
       
       qji_integ = 0.
       do i=lon0,lon1
-        do k=lev0,lev1-1
-          qji_integ(i) = qji_integ(i) + myp0/mygrav*exp(-zpint(k))*
-     |      qj(k,i)*dlev
+        do lat=lat0,lat1
+          do k=lev0,lev1-1
+            qji_integ(i,lat) = qji_integ(i,lat) +
+     |        myp0/mygrav*exp(-zpint(k))*qj(k,i,lat)*dlev
+          enddo
         enddo
       enddo
 !
@@ -1298,7 +1308,7 @@
 !
 ! Save 2d field on secondary history:
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,qji_integ,'lon',lon0,lon1,'lat',lat,lat,0)
+     |  diags(ix)%units,qji_integ,'lon',lon0,lon1,'lat',lat0,lat1,0)
 
       end subroutine mkdiag_QJOULE_INTEG
 !-----------------------------------------------------------------------

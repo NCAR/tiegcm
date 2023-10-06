@@ -12,7 +12,8 @@
       use params_module,only: gmlon,gmlat,glat,glon,nlev,nlevp1,nlon,
      |  nlat,nmlon,nmlat,mlev0,mlev1
       use mpi_module,only: tasks,lon0,lon1,lat0,lat1,ntask,
-     |  ntaski,ntaskj,nmagtaski,nmagtaskj,mlon0,mlon1,mlat0,mlat1,mytid
+     |  ntaski,ntaskj,nmagtaski,nmagtaskj,mlon0,mlon1,mlat0,mlat1,mytid,
+     |  TIEGCM_WORLD
       use getapex_module,only: gdlatdeg,gdlondeg ! (nmlonp1,nmlat)
       implicit none
 !
@@ -37,10 +38,8 @@
 ! 2d (i,j) ESMF fields on magnetic subdomains:
       type(ESMF_Field),save :: mag_sini, mag_adota1, mag_adota2,
      |  mag_a1dta2, mag_be3
-#if defined(INTERCOMM) || defined(CISMAH)
       type(ESMF_Field),save :: mag_zigm1, mag_zigm2, mag_nsrhs
       type(ESMF_Field),save :: geo_zigm1, geo_zigm2, geo_nsrhs
-#endif
 !
 ! 3d electric potential for mag to geo regridding:
       type(ESMF_Field),save :: mag_phi3d,mag_ephi3d,mag_elam3d,mag_emz3d
@@ -53,38 +52,26 @@
       contains
 !-----------------------------------------------------------------------
       subroutine esmf_init
-      use cons_module,only: rtd
 !
 ! Called once per run at model initialization.
 ! Create ESMF grids for geographic and magnetic, and create ESMF fields
 !   as necessary on both grids. Define the 2d coordinates for each grid,
 !   and save an ESMF routehandles for geo2mag and mag2geo regridding.
 !
-      integer :: rc,istat
+      integer :: rc
       integer(ESMF_KIND_I4),pointer :: factorIndexList(:,:) ! esmf (2,nw)
       real(ESMF_KIND_R8),pointer :: factorList(:)           ! esmf weights (nw)
-!
-! Global geo indices for geo2mag with all 4 corners. nlat+2 includes poles
-! (Used for diagnostics only)
-      integer(ESMF_KIND_I4) :: geoIndex_g2m(nlon,nlat+2) 
-      integer(ESMF_KIND_I4),pointer :: geoIndexSeq_g2m(:)  ! reshaped geoIndex
-      integer(ESMF_KIND_I4),pointer :: magIndex_g2m(:,:)   ! nmlatlons,nmaglats
-      integer(ESMF_KIND_I4),pointer :: magIndexSeq_g2m(:)  ! reshaped magIndex
-!
-! Global mag indices for mag2geo for diagnostic/debug:
-      integer(ESMF_KIND_I4) :: magIndex_m2g(nmlon,nmlat) 
-      integer(ESMF_KIND_I4),pointer :: magIndexSeq_m2g(:)  ! reshaped magIndex
-      integer(ESMF_KIND_I4),pointer :: geoIndex_m2g(:,:)   ! nlonp4,nlat+2
-      integer(ESMF_KIND_I4),pointer :: geoIndexSeq_m2g(:)  ! reshaped geoIndex
-
       real(ESMF_KIND_R8),pointer :: fptr(:,:,:)  ! for info only
       integer :: lbnd_destgeo(3),ubnd_destgeo(3) ! 3d bounds of destination geo grid
       integer :: lbnd_destmag(3),ubnd_destmag(3) ! 3d bounds of destination mag grid
-      integer :: lbnd_srcgeo(3),ubnd_srcgeo(3)   ! 3d bounds of source geo grid
       integer :: lbnd_srcmag(3),ubnd_srcmag(3)   ! 3d bounds of source mag grid
+      integer :: srcTermProcessing
+!
+      srcTermProcessing = 0
 !
 ! Open esmf:
-      call ESMF_Initialize(logkindflag=ESMF_LOGKIND_MULTI,rc=rc)
+      call ESMF_Initialize(mpiCommunicator=TIEGCM_WORLD,
+     |  logkindflag=ESMF_LOGKIND_MULTI,rc=rc)
 !
 ! Make magnetic and geographic grids for geo2mag regridding:
       call create_geo_grid(geo_src_grid,'src')  ! geo source grid
@@ -99,43 +86,29 @@
 !   assign any values.
 !
 ! 3d fields on source geo grid (these exclude periodic points):
-      call esmf_create_geofield(geo_ped,geo_src_grid,'PED     ' ,
-     |  mlev0,mlev1)
-      call esmf_create_geofield(geo_hal ,geo_src_grid,'HAL     ',
-     |  mlev0,mlev1)
-      call esmf_create_geofield(geo_zpot,geo_src_grid,'ZPOT    ',
-     |  mlev0,mlev1)
-      call esmf_create_geofield(geo_adotv1,geo_src_grid,'ADOTV1  ',
-     |  mlev0,mlev1)
-      call esmf_create_geofield(geo_adotv2,geo_src_grid,'ADOTV2  ',
-     |  mlev0,mlev1)
-      call esmf_create_geofield(geo_je1pg,geo_src_grid,'JE1PG   ',
-     |  mlev0,mlev1)
-      call esmf_create_geofield(geo_je2pg,geo_src_grid,'JE2PG   ',
-     |  mlev0,mlev1)
+      call esmf_create_geofield(geo_ped,geo_src_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_hal ,geo_src_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_zpot,geo_src_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_adotv1,geo_src_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_adotv2,geo_src_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_je1pg,geo_src_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_je2pg,geo_src_grid,mlev0,mlev1)
 !
 ! 2d fields on source geo grid (these exclude periodic points:
-      call esmf_create_geofield(geo_sini  ,geo_src_grid,'SINI    ',0,0)
-      call esmf_create_geofield(geo_adota1,geo_src_grid,'ADOTA1  ',0,0)
-      call esmf_create_geofield(geo_adota2,geo_src_grid,'ADOTA2  ',0,0)
-      call esmf_create_geofield(geo_a1dta2,geo_src_grid,'A1DTA2  ',0,0)
-      call esmf_create_geofield(geo_be3   ,geo_src_grid,'BE3     ',0,0)
+      call esmf_create_geofield(geo_sini  ,geo_src_grid,0,0)
+      call esmf_create_geofield(geo_adota1,geo_src_grid,0,0)
+      call esmf_create_geofield(geo_adota2,geo_src_grid,0,0)
+      call esmf_create_geofield(geo_a1dta2,geo_src_grid,0,0)
+      call esmf_create_geofield(geo_be3   ,geo_src_grid,0,0)
 !
 ! 3d fields on destination mag grid (will include periodic point):
-      call esmf_create_magfield(mag_ped ,mag_des_grid,'PED     ',
-     |  mlev0,mlev1)
-      call esmf_create_magfield(mag_hal ,mag_des_grid,'HAL     ',
-     |  mlev0,mlev1)
-      call esmf_create_magfield(mag_zpot,mag_des_grid,'ZPOT    ',
-     |  mlev0,mlev1)
-      call esmf_create_magfield(mag_adotv1,mag_des_grid,'ADOTV1  ' ,
-     |  mlev0,mlev1)
-      call esmf_create_magfield(mag_adotv2,mag_des_grid,'ADOTV2  ' ,
-     |  mlev0,mlev1)
-      call esmf_create_magfield(mag_je1pg,mag_des_grid,'JE1PG   ' ,
-     |  mlev0,mlev1)
-      call esmf_create_magfield(mag_je2pg,mag_des_grid,'JE2PG   ' ,
-     |  mlev0,mlev1)
+      call esmf_create_magfield(mag_ped ,mag_des_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_hal ,mag_des_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_zpot,mag_des_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_adotv1,mag_des_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_adotv2,mag_des_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_je1pg,mag_des_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_je2pg,mag_des_grid,mlev0,mlev1)
 !
 ! Get 3d bounds of destination mag field:
       call ESMF_FieldGet(mag_ped,localDe=0,farrayPtr=fptr,
@@ -145,45 +118,33 @@
 !    |  lbnd_destmag,ubnd_destmag
 !
 ! 2d fields on destination mag grid (will include periodic point):
-      call esmf_create_magfield(mag_sini  ,mag_des_grid,'SINI    ',0,0)
-      call esmf_create_magfield(mag_adota1,mag_des_grid,'ADOTA1  ',0,0)
-      call esmf_create_magfield(mag_adota2,mag_des_grid,'ADOTA2  ',0,0)
-      call esmf_create_magfield(mag_a1dta2,mag_des_grid,'A1DTA2  ',0,0)
-      call esmf_create_magfield(mag_be3   ,mag_des_grid,'BE3     ',0,0)
+      call esmf_create_magfield(mag_sini  ,mag_des_grid,0,0)
+      call esmf_create_magfield(mag_adota1,mag_des_grid,0,0)
+      call esmf_create_magfield(mag_adota2,mag_des_grid,0,0)
+      call esmf_create_magfield(mag_a1dta2,mag_des_grid,0,0)
+      call esmf_create_magfield(mag_be3   ,mag_des_grid,0,0)
 !
-! 2d source mag grid for CISM
-#if defined(INTERCOMM) || defined(CISMAH)
-      call esmf_create_magfield(mag_zigm1 ,mag_src_grid,'ZIGM1 ',0,0)
-      call esmf_create_magfield(mag_zigm2 ,mag_src_grid,'ZIGM2 ',0,0)
-      call esmf_create_magfield(mag_nsrhs ,mag_src_grid,'NSRHS ',0,0)
-#endif
+! 2d source mag grid for MAGE
+      call esmf_create_magfield(mag_zigm1 ,mag_src_grid,0,0)
+      call esmf_create_magfield(mag_zigm2 ,mag_src_grid,0,0)
+      call esmf_create_magfield(mag_nsrhs ,mag_src_grid,0,0)
 !
 ! 3d fields on source mag grid for mag2geo:
-      call esmf_create_magfield(mag_phi3d ,mag_src_grid,'PHIM3D  ',
-     |  mlev0,mlev1)
-      call esmf_create_magfield(mag_ephi3d,mag_src_grid,'EPHI3D  ',
-     |  mlev0,mlev1)
-      call esmf_create_magfield(mag_elam3d,mag_src_grid,'ELAM3D  ',
-     |  mlev0,mlev1)
-      call esmf_create_magfield(mag_emz3d ,mag_src_grid,'EMZ3D   ',
-     |  mlev0,mlev1)
+      call esmf_create_magfield(mag_phi3d ,mag_src_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_ephi3d,mag_src_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_elam3d,mag_src_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_emz3d ,mag_src_grid,mlev0,mlev1)
 !
 ! 2d fields on destination geo grid for mag2geo:
-#if defined(INTERCOMM) || defined(CISMAH)
-      call esmf_create_geofield(geo_zigm1 ,geo_des_grid,'ZIGM1 ',0,0)
-      call esmf_create_geofield(geo_zigm2 ,geo_des_grid,'ZIGM2 ',0,0)
-      call esmf_create_geofield(geo_nsrhs ,geo_des_grid,'NSRHS ',0,0)
-#endif
+      call esmf_create_geofield(geo_zigm1 ,geo_des_grid,0,0)
+      call esmf_create_geofield(geo_zigm2 ,geo_des_grid,0,0)
+      call esmf_create_geofield(geo_nsrhs ,geo_des_grid,0,0)
 !
 ! 3d fields on destination geo grid for mag2geo:
-      call esmf_create_geofield(geo_phi3d ,geo_des_grid,'PHIG3D  ',
-     |  mlev0,mlev1)
-      call esmf_create_geofield(geo_ephi3d,geo_des_grid,'EPHI3D  ',
-     |  mlev0,mlev1)
-      call esmf_create_geofield(geo_elam3d,geo_des_grid,'ELAM3D  ',
-     |  mlev0,mlev1)
-      call esmf_create_geofield(geo_emz3d ,geo_des_grid,'EMZ3D   ',
-     |  mlev0,mlev1)
+      call esmf_create_geofield(geo_phi3d ,geo_des_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_ephi3d,geo_des_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_elam3d,geo_des_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_emz3d ,geo_des_grid,mlev0,mlev1)
 !
 ! Get 3d bounds of source mag field:
       call ESMF_FieldGet(mag_phi3d,localDe=0,farrayPtr=fptr,
@@ -241,7 +202,8 @@
 !
 ! Use esmf index list and weights for 3d fields:
       call ESMF_FieldSMMStore(geo_ped,mag_ped,routehandle_geo2mag,
-     |  factorList,factorIndexList,rc=rc) 
+     |  factorList,factorIndexList,rc=rc,
+     |  srcTermProcessing=srcTermProcessing) 
 
       if (rc /= ESMF_SUCCESS) then
         write(6,"('>>> esmf_init: error return from ',
@@ -253,7 +215,8 @@
 !
 ! Use esmf index list and weights for 2d fields:
       call ESMF_FieldSMMStore(geo_sini,mag_sini,routehandle_geo2mag_2d,
-     |  factorList,factorIndexList,rc=rc) 
+     |  factorList,factorIndexList,rc=rc,
+     |  srcTermProcessing=srcTermProcessing) 
  
       if (rc /= ESMF_SUCCESS) then
         write(6,"('>>> esmf_init: error return from ',
@@ -286,7 +249,8 @@
 !
 ! Use esmf index list and weights for 3d fields:
       call ESMF_FieldSMMStore(mag_phi3d,geo_phi3d,routehandle_mag2geo,
-     |  factorList,factorIndexList,rc=rc) 
+     |  factorList,factorIndexList,rc=rc,
+     |  srcTermProcessing=srcTermProcessing) 
 
       if (rc /= ESMF_SUCCESS) then
         write(6,"('>>> esmf_init: error return from ',
@@ -297,7 +261,6 @@
 ! mag2geo 2d fields:
 !
 ! Use esmf index list and weights for 3d fields:
-#if defined(INTERCOMM) || defined(CISMAH)
       call ESMF_FieldRegridStore(srcField=mag_zigm1,dstField=geo_zigm1, 
      |  regridMethod=ESMF_REGRIDMETHOD_BILINEAR,
      |  polemethod=ESMF_POLEMETHOD_ALLAVG,
@@ -312,14 +275,14 @@
       endif
 
       call ESMF_FieldSMMStore(mag_zigm1,geo_zigm1,
-     |  routehandle_mag2geo_2d, factorList,factorIndexList,rc=rc) 
+     |  routehandle_mag2geo_2d, factorList,factorIndexList,rc=rc,
+     |  srcTermProcessing=srcTermProcessing) 
 
       if (rc /= ESMF_SUCCESS) then
         write(6,"('>>> esmf_init: error return from ',
      |    'ESMF_FieldSMMStore for 2d mag2geo: rc=',i4)") rc
         call shutdown('ESMF_FieldSMMStore')
       endif
-#endif
 
       end subroutine esmf_init
 !-----------------------------------------------------------------------
@@ -333,12 +296,11 @@
       character(len=*),intent(in) :: srcdes
 !
 ! Local:
-      integer :: i,j,k,n,rc,istat
+      integer :: i,j,n,rc,istat
       integer :: lbnd(2),ubnd(2)
       real(ESMF_KIND_R8),pointer :: coordX(:,:),coordY(:,:)
       integer,allocatable :: nmlons_task(:) ! dim nmagtaski
       integer,allocatable :: nmlats_task(:) ! dim nmagtaskj
-      type(ESMF_VM) :: vm
 !
 ! We are creating either a source grid or a destination grid:
       if (srcdes /= 'src' .and. srcdes /= 'des') then
@@ -469,7 +431,7 @@
       character(len=*),intent(in) :: srcdes
 !
 ! Local:
-      integer :: i,j,k,n,rc,istat,lbnd_lat,ubnd_lat,lbnd_lon,ubnd_lon,
+      integer :: i,j,n,rc,istat,lbnd_lat,ubnd_lat,lbnd_lon,ubnd_lon,
      |  lbnd(1),ubnd(1)
       real(ESMF_KIND_R8),pointer :: coordX(:),coordY(:)
       integer,allocatable :: nlons_task(:) ! dim ntaski
@@ -637,7 +599,7 @@
 
       end subroutine create_geo_grid
 !-----------------------------------------------------------------------
-      subroutine esmf_create_geofield(field,grid,name,mlev0,mlev1)
+      subroutine esmf_create_geofield(field,grid,mlev0,mlev1)
 !
 ! Create ESMF field (2d or 3d) on geo grid (will exclude periodic points)
 ! If mlev1 == 0, field is 2d (i,j), otherwise field is 3d,
@@ -647,7 +609,6 @@
 ! Args:
       integer,intent(in) :: mlev0,mlev1 ! if mlev0,1==0, field is 2d (i,j)
       type(ESMF_Grid),intent(in) :: grid
-      character(len=*),intent(in) :: name
       type(ESMF_Field),intent(out) :: field
 !
 ! Local:
@@ -664,8 +625,7 @@
      |    staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
 
         if (rc /= ESMF_SUCCESS) call shutdown('ESMF_FieldCreate 3d')
-!       write(6,"('Created 3d (i,j,k) esmf geo field ',a)") 
-!    |    name
+!       write(6,"('Created 3d (i,j,k) esmf geo field ')")
 !
 ! Create 2d field (i,j):
       else                ! create 2d field
@@ -674,11 +634,11 @@
         field = ESMF_FieldCreate(grid, arrayspec, 
      |    staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
         if (rc /= ESMF_SUCCESS) call shutdown('ESMF_FieldCreate 2d')
-!       write(6,"('Created 2d (i,j) esmf geo field ',a)") name
+!       write(6,"('Created 2d (i,j) esmf geo field ')")
       endif
       end subroutine esmf_create_geofield
 !-----------------------------------------------------------------------
-      subroutine esmf_create_magfield(field,grid,name,mlev0,mlev1)
+      subroutine esmf_create_magfield(field,grid,mlev0,mlev1)
 !
 ! Create ESMF field (2d or 3d) on mag grid. This will include the
 !   mag periodic point, which will be zero after regridding.
@@ -688,7 +648,6 @@
 ! Args:
       integer,intent(in) :: mlev0,mlev1
       type(ESMF_Grid),intent(in) :: grid
-      character(len=*),intent(in) :: name
       type(ESMF_Field),intent(out) :: field
 !
 ! Local:
@@ -739,7 +698,7 @@
       endif
       end subroutine esmf_create_magfield
 !-----------------------------------------------------------------------
-      subroutine esmf_set3d_geo(fields,fnames,f,nf,ilev0,ilev1,
+      subroutine esmf_set3d_geo(fields,f,nf,ilev0,ilev1,
      |  ilon0,ilon1,ilat0,ilat1)
 !
 ! Set values of a 3d ESMF field on geographic source grid, prior to
@@ -750,7 +709,6 @@
 ! Args:
       integer,intent(in) :: nf
       type(ESMF_Field) ,intent(in) :: fields(nf) ! esmf fields on geo grid
-      character(len=*) ,intent(in) :: fnames(nf) ! field names
 !
 ! f is input data on model subdomains (including periodic points)
 ! (note esmf source field excludes periodic points)
@@ -760,7 +718,6 @@
 ! Local:
       integer,parameter :: mxf=8 ! for call by dynamo_inputs
       integer :: i,j,k,rc,n,istat
-      integer,save :: ncalls=0
       integer,save :: lbnd(3),ubnd(3) ! lower,upper bounds of 3d field
 !
 ! fptr is esmf pointer (i,j,k) to 3d field, set by this subroutine
@@ -835,8 +792,7 @@
       deallocate(ftmp)
       end subroutine esmf_set3d_geo
 !-----------------------------------------------------------------------
-      subroutine esmf_set2d_geo(field,grid,fname,f,ilon0,ilon1,
-     |  ilat0,ilat1)
+      subroutine esmf_set2d_geo(field,f,ilon0,ilon1,ilat0,ilat1)
 !
 ! Set values of a 2d ESMF field on geographic source grid, prior to
 !   geographic to magnetic grid transformation. (Essentially the same
@@ -845,8 +801,6 @@
 !
 ! Args:
       type(ESMF_Field) ,intent(in) :: field
-      type(ESMF_Grid)  ,intent(in) :: grid
-      character(len=*) ,intent(in) :: fname  ! field name
       integer      ,intent(in) :: ilon0,ilon1,ilat0,ilat1
       real         ,intent(in) :: f(ilon0:ilon1,ilat0:ilat1)
 !
@@ -875,14 +829,14 @@
         endif       ! interior latitudes only
       enddo
 !
-!     write(6,"('esmf_set2d_geo field ',a,': lon bnds=',2i4,
+!     write(6,"('esmf_set2d_geo field: lon bnds=',2i4,
 !    |  ' lat bnds=',2i4,' 2d mnmx=',2e12.4)") 
-!    |  fname,lbnd(1),ubnd(1),lbnd(2),ubnd(2),
+!    |  lbnd(1),ubnd(1),lbnd(2),ubnd(2),
 !    |  minval(fptr(:,:)),maxval(fptr(:,:))
 
       end subroutine esmf_set2d_geo
 !-----------------------------------------------------------------------
-      subroutine esmf_set3d_mag(fields,fnames,f,nf,ilev0,ilev1,
+      subroutine esmf_set3d_mag(fields,f,nf,ilev0,ilev1,
      |  ilon0,ilon1,ilat0,ilat1)
 !
 ! Set values of a 3d ESMF field on magnetic grid, prior to magnetic to 
@@ -891,7 +845,6 @@
 ! Args:
       integer,intent(in) :: nf
       type(ESMF_Field) ,intent(in) :: fields(nf) ! esmf fields on mag grid
-      character(len=*) ,intent(in) :: fnames(nf) ! field names
 !
 ! f is input data on model subdomains:
 ! (note esmf source field excludes periodic points)
@@ -899,8 +852,8 @@
       real,intent(in) :: f(ilon0:ilon1,ilat0:ilat1,ilev0:ilev1,nf)
 !
 ! Local:
-      integer :: i,j,k,rc,n,istat
-      integer,save :: ncalls=0,lbnd(3),ubnd(3) ! lower,upper bounds of 3d field
+      integer :: i,j,k,rc,n
+      integer,save :: lbnd(3),ubnd(3) ! lower,upper bounds of 3d field
 !
 ! fptr is esmf pointer (i,j,k) to 3d field, set by this subroutine
       real(ESMF_KIND_R8),pointer :: fptr(:,:,:)
@@ -924,9 +877,7 @@
       enddo       ! n=1,nf
       end subroutine esmf_set3d_mag
 !-----------------------------------------------------------------------
-#if defined(INTERCOMM) || defined(CISMAH)
-      subroutine esmf_set2d_mag(fields,fnames,f,nf,
-     |  ilon0,ilon1,ilat0,ilat1)
+      subroutine esmf_set2d_mag(fields,f,nf,ilon0,ilon1,ilat0,ilat1)
 !
 ! Set values of a 2d ESMF field on magnetic grid, prior to magnetic to 
 ! geographic grid transformation.
@@ -934,7 +885,6 @@
 ! Args:
       integer,intent(in) :: nf
       type(ESMF_Field) ,intent(in) :: fields(nf) ! esmf fields on mag grid
-      character(len=*) ,intent(in) :: fnames(nf) ! field names
 !
 ! f is input data on model subdomains:
 ! (note esmf source field excludes periodic points)
@@ -942,8 +892,8 @@
       real,intent(in) :: f(ilon0:ilon1,ilat0:ilat1,nf)
 !
 ! Local:
-      integer :: i,j,rc,n,istat
-      integer,save :: ncalls=0,lbnd(2),ubnd(2) ! lower,upper bounds of 2d field
+      integer :: i,j,rc,n
+      integer,save :: lbnd(2),ubnd(2) ! lower,upper bounds of 2d field
 !
 ! fptr is esmf pointer (i,j) to 2d field, set by this subroutine
       real(ESMF_KIND_R8),pointer :: fptr(:,:)
@@ -963,7 +913,6 @@
         enddo     ! mlat
       enddo       ! n=1,nf
       end subroutine esmf_set2d_mag
-#endif
 !-----------------------------------------------------------------------
       subroutine esmf_get_3dfield(field, fptr, name)
 !
@@ -976,7 +925,7 @@
       character(len=*),intent(in) :: name
 !
 ! Local:
-      integer :: rc,k,lbnd(3),ubnd(3)
+      integer :: rc,lbnd(3),ubnd(3)
       character(len=80) :: errmsg
 
       call ESMF_FieldGet(field,localDe=0,farrayPtr=fptr,
@@ -1049,7 +998,8 @@
 ! may be made from apex or esmf indices and weights (see call 
 ! ESMF_FieldSMMStore in sub esmf_init)
 !
-            call ESMF_FieldSMM(srcfield,dstfield,routehandle,rc=rc)
+            call ESMF_FieldSMM(srcfield,dstfield,routehandle,rc=rc,
+     |        termorderflag=ESMF_TERMORDER_SRCSEQ)
 
             if (rc /= ESMF_SUCCESS) then
               write(6,"(/,'>>> esmf_regrid: error return from ',
@@ -1064,7 +1014,8 @@
 ! ESMF_FieldSMMStore in sub esmf_init)
 !
             routehandle = routehandle_geo2mag
-            call ESMF_FieldSMM(srcfield,dstfield,routehandle,rc=rc)
+            call ESMF_FieldSMM(srcfield,dstfield,routehandle,rc=rc,
+     |        termorderflag=ESMF_TERMORDER_SRCSEQ)
             if (rc /= ESMF_SUCCESS) then
               write(6,"(/,'>>> esmf_regrid: error return from ',
      |          'ESMF_FieldSMM for 3d ',a,': rc=',i4)") trim(direction),
@@ -1082,7 +1033,8 @@
           if (ndim==2) then
             routehandle = routehandle_mag2geo_2d
           endif
-          call ESMF_FieldSMM(srcfield,dstfield,routehandle,rc=rc)
+          call ESMF_FieldSMM(srcfield,dstfield,routehandle,rc=rc,
+     |      termorderflag=ESMF_TERMORDER_SRCSEQ)
           if (rc /= ESMF_SUCCESS) then
             write(6,"(/,'>>> esmf_regrid: error return from ',
      |        'ESMF_FieldSMM for 3d ',a,': rc=',i4)") trim(direction),

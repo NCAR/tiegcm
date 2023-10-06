@@ -1,5 +1,4 @@
 !
-#include <defs.h>
       module cons_module
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -31,16 +30,6 @@
      |  p0   = 5.0e-4,       ! standard pressure                  C(81)
      |  gask = 8.314e7,      ! gas constant                       C(57)
      |  grav_par = 3.986004415e20, ! standard gravitational parameter (cm^3/sec^2)
-!
-! dipmin should be same as sin10 (see magfield.F):
-!
-#if (NLAT==36 && NLON==72)
-     |  dipmin = 0.17,       ! minimum mag dip angle (5.0 deg horizontal res)
-#elif (NLAT==72 && NLON==144)
-     |  dipmin = 0.24,       ! minimum mag dip angle (2.5 deg horizontal res)
-#else
-      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
-#endif
      |  brn2d = 0.6,         !
      |  tbound = 181.0,      ! background tn at lower boundary (tiegcm)
      |  atm_amu = 28.9,      ! mean mass of surface atmosphere    C(24)
@@ -127,7 +116,8 @@
      |  difk(nlev+1,ndays),   ! background eddy diffusion
      |  dift(nlev+1,ndays),   ! background thermal conductivity
      |  xmue(nlev+1,ndays),   ! eddy viscosity (?)
-     |  zbound          ! background low bound of Z (formerly ZBA in annual tide)
+     |  zbound,         ! background low bound of Z (formerly ZBA in annual tide)
+     |  dipmin          ! minimum mag dip angle
 !
 ! Constants for dynamo and electric field calculations:
       real,parameter :: h0 =9.0e6, r0 =re+h0    ! use mean earth radius
@@ -155,31 +145,6 @@
 ! This is not a parameter because it may be changed by sub colath (colath.F).
       real :: crit(2) = (/0.261799387, 0.523598775/)
 !
-! Kut is used in filtering longitudinal waves (see filter.F):
-!
-#if (NLAT==36 && NLON==72)                 /* 5.0 deg horizontal resolution */
-      integer,parameter :: kut(nlat) =
-     |  (/1,2,3,5,6,7,9,10,11,13,14,15,17,17,17,17,17,17,17,17,17,17,17,
-     |    17,15,14,13,11,10,9,7,6,5,3,2,1/)
-#elif (NLAT==72 && NLON==144)              /* 2.5 deg horizontal resolution */
-       integer,parameter :: kut(nlat) =
-     |   (/1  ,1  ,2  ,2  ,4  ,4  ,8  ,8  ,10 ,10 ,12 ,12,
-     |     15 ,15 ,18 ,18 ,22 ,22 ,26 ,26 ,30 ,30 ,32 ,32,
-     |     34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34,
-     |     34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34 ,34,
-     |     32 ,32 ,30 ,30 ,26 ,26 ,22 ,22 ,18 ,18 ,15 ,15,
-     |     12 ,12 ,10 ,10 ,8  ,8  ,4  ,4  ,2  ,2  ,1  ,1/)
-!      integer,parameter :: kut(nlat) =
-!    |   (/0  ,0  ,1  ,2  ,3  ,4  ,5  ,6  , 7 , 8 , 9 ,10,
-!    |     15 ,15 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17,
-!    |     17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17,
-!    |     17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17,
-!    |     17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,17 ,15 ,15,
-!    |     10 , 9 , 8 , 7 ,6  ,5  ,4  ,3  ,2  ,1  ,0  ,0/)
-#else
-      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
-#endif
-!
 ! If check_exp is set true, certain routines will use expo() (util.F)
 ! instead of exp(). expo checks for out of range arguments to the
 ! exponential, substituting large or small results if the argument
@@ -202,6 +167,10 @@
 
       integer,parameter :: difhor=1
 !
+! smoothing factors for ring filter
+      integer :: nlat_filter
+      integer,dimension(:),allocatable :: chunk_array
+!
       contains
 !-----------------------------------------------------------------------
       subroutine init_cons
@@ -213,7 +182,7 @@
 ! Local:
       real :: z,expdz,phi
       real :: omega = 7.292E-5
-      integer :: m,k,i,j,nfsech,js
+      integer :: m,k,i,j,js
       integer :: calday(ndays)         ! calenday day in a year
       real :: coeff(9)
       real :: theta(ndays)
@@ -313,6 +282,7 @@
       dlamda2_4div3 = 4./(3.*dlamda**2)   ! C(10)
       dlamda2_1div12 = 1./(12.*dlamda**2) ! C(11)
       zbound = 136.291/sqrt(2.)*1.e5  ! background lower boundary of Z (cm)
+      dipmin = sin(dlat*2*dtr)
 !
 ! expz(kmax) is exp(-zp) at midpoints:
 ! expz (will replace EXPS) (expz(nlev+1) not used).
@@ -358,14 +328,36 @@
       dzgrav = grav/gask   ! C(65)
 !
 ! Adjust smoothing constant as function of timestep:
+! default_step: default step for shapiro=dt/def*fac.
 !
-#if (NLAT==36 && NLON==72)
-      default_step = 60.   ! default step at 5.0 deg for shapiro=dt/def*fac
-#elif (NLAT==72 && NLON==144)
-      default_step = 30.   ! default step at 2.5 deg for shapiro=dt/def*fac
-#else
-      UNKNOWN NLAT,NLON      ! compilation will stop here if unknown res
-#endif
+      if (nlat==36 .and. nlon==72) then
+        default_step = 60.
+        nlat_filter = 4
+        allocate(chunk_array(nlat_filter))
+        chunk_array = (/3,9,18,36/)
+      elseif (nlat==72 .and. nlon==144) then
+        default_step = 30.
+        nlat_filter = 8
+        allocate(chunk_array(nlat_filter))
+        chunk_array = (/3,9,18,18,36,36,72,72/)
+      elseif (nlat==144 .and. nlon==288) then
+        default_step = 10.
+        nlat_filter = 16
+        allocate(chunk_array(nlat_filter))
+        chunk_array =
+     |    (/3,3,9,9,18,18,18,36,36,36,72,72,72,144,144,144/)
+      elseif (nlat==288 .and. nlon==576) then
+        default_step = 5.
+        nlat_filter = 34
+        allocate(chunk_array(nlat_filter))
+        chunk_array =
+     |    (/9,9,9,9,18,18,18,18,
+     |    36,36,36,36,72,72,72,72,72,72
+     |    144,144,144,144,144,144,144,144,
+     |    288,288,288,288,288,288,288,288/)
+      else
+        call shutdown('Unknown combination of lat x lon')
+      endif
 !
 ! shapiro = dt/def*smooth_fac
       smooth_fac = 3.e-3
@@ -389,7 +381,6 @@
      |  freq_3m3,freq_semidi
       write(6,"('  dipmin = ',f8.3)") dipmin
       write(6,"('  check_exp = ',l1)") check_exp
-      write(6,"('  kut (for filtering) = ',36i3)") kut
       write(6,"('  step=',i4,' smooth_fac=',es9.2,' shapiro=',es9.2)")
      |  step,smooth_fac,shapiro
 !
@@ -409,7 +400,6 @@
      |  theta0(nmlat),
      |  hamh0(nmlat)
       real :: dtheta,table2(91,3:5),tanths2
-      real :: fac,rmin,rmax,rmag
 !
 ! Must define pi, rtd, dtr, because consdyn is called before init_cons:
       pi = 4.*atan(1.)                ! C(110)

@@ -8,22 +8,32 @@
 ! Perform message-passing and related operations in distributed memory 
 !   system, e.g., AIX.
 !
-      use params_module
+      use params_module,only: nlevp1,nlon,nlonp4,nlat,
+     |  nmlevp1,nmlonp1,nmlat,nmlath,gmlat
       use fields_module,only: fields_4d,fields_3d,f4d,f3d,nf3d,
-     |  nf4d,nf4d_hist,fsechist,foutput,tlbc,ulbc,vlbc,tlbc_glb,
-     |  ulbc_glb,vlbc_glb,emphi3d,emlam3d,emz3d,fzg,tlbc_nm,ulbc_nm,
-     |  vlbc_nm,tlbc_nm_glb,ulbc_nm_glb,vlbc_nm_glb
-#ifdef MPI
+     |  nf4d,nf4d_hist,fsechist,foutput,tlbc,ulbc,vlbc,
+     |  emphi3d,emlam3d,emz3d,fzg,tlbc_nm,ulbc_nm,vlbc_nm,
+     |  gzigm1,gzigm2,gnsrhs
       use mpi
-#endif
       use hist_module,only: nfsech
       use input_module,only: ntask_lat,ntask_lon,
      |  ntask_maglat,ntask_maglon
       implicit none
-#ifdef MPI
+!
       integer ::
-     |  irstat(MPI_STATUS_SIZE)      ! mpi receive status
-#endif
+     |  irstat(MPI_STATUS_SIZE),      ! mpi receive status
+     |  TIEGCM_WORLD,                 ! tiegcm's communicator
+     |  mixCplComm, mixCplRank        ! mix coupling communicator
+!
+! Since model names are relatively unique, I'm going to try assigning AppId
+! via word value as calculated using a simple letter to number conversion
+! e.g. A = 1, B= 2, C = 3
+! Current model values are:
+! TIEGCM = 57, GAMERA = 45, HIDRA = 40, REMIX = 69, VOLTRON = 116, RCM = 34
+      integer, parameter :: ! For MPI-based coupling tag
+     |  myAppId = 57,       ! tiegcmID
+     |  voltId  = 116,      ! voltronID
+     |  gamId   = 45        ! gameraID
 !
 ! VT means vampir tracing:
 !
@@ -101,6 +111,7 @@
      |  time_gather2root_sech = 0.,
      |  time_gather2root_lbc = 0.,
      |  time_bndlats = 0.,
+     |  time_bndlats_f3d = 0.,
      |  time_bndlats_f2d = 0.,
      |  time_bndlons = 0.,
      |  time_bndlons_f3d = 0.,
@@ -127,15 +138,12 @@
      |  time_geo_halos_f3d = 0.,
      |  time_scatter_coeffs = 0.,
      |  time_scatter_phim = 0.,
-     |  time_bndlats_kmh = 0.,
-     |  time_bndlons_kmh = 0.,
      |  time_mag_jslot = 0.,
      |  time_gather_f2d = 0.,
      |  time_scatter_f2d = 0.
 !
 ! If not an mpi job, this module contains no subroutines.
 !
-#ifdef MPI
       contains
 !-----------------------------------------------------------------------
       subroutine mp_init
@@ -143,9 +151,8 @@
 ! Initialize mpi and get ntask and mytid (called from tgcm.F before input):
 !
 ! Local:
-      integer :: ier,n,j,i
-      integer,dimension(11) :: 
-     |  valid_pecounts=(/1,4,8,12,16,24,32,48,64,72,80/)
+      logical :: is_prime
+      integer :: ier,i,fullrank,color,mixCplCommSize,tmpComm
 !
       ier = 0
 #ifdef VT
@@ -161,25 +168,108 @@
       write(6,"('mp_init: starting vampir tracing..')")
       call vttraceon(ier) ! start vampir tracing
 #endif
-      call mpi_comm_size(MPI_COMM_WORLD,ntask,ier)
-      if (ier /= 0) then
-        write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
-        call shutdown('mpi_comm_size error')
-      endif
-      if (.not.any(ntask == valid_pecounts)) then
-        write(6,"(/,'>>> This model may not run properly or will ',
-     |    'perform poorly with nask=',i4,/,' Please either change ',
-     |    'valid_pecounts in sub mp_init of source file mpi.F,',/,
-     |    ' or use one of these processor counts for which the model ',
-     |    'has been validated:',/,(12i6))") ntask,valid_pecounts
-        call shutdown('invalid ntask')
-      endif
-
-      call mpi_comm_rank(MPI_COMM_WORLD,mytid,ier)
+      call mpi_comm_rank(MPI_COMM_WORLD,fullrank,ier)
       if (ier /= 0) then
         write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
         call shutdown('mpi_comm_rank error')
       endif
+
+! MPI_COMM_WORLD includes processes for other components (GAMERA/REMIX)
+! Divide it into several sub communicators for each component
+      call mpi_comm_split(MPI_COMM_WORLD,
+     |  myAppId,fullrank,TIEGCM_WORLD,ier)
+      if (ier /= 0) then
+        write(6,"('>>> Error from mpi_comm_split: ier=',i4)") ier
+        call shutdown('mpi_comm_split error')
+      endif
+! TIEGCM_WORLD is now the communicator for TIEGCM
+! If not coupled to MAGE, TIEGCM_WORLD is essentially MPI_COMM_WORLD
+! But with a different name (tag)
+
+      call mpi_comm_size(TIEGCM_WORLD,ntask,ier)
+      if (ier /= 0) then
+        write(6,"('>>> Error from mpi_comm_split: ier=',i4)") ier
+        call shutdown('mpi_comm_split error')
+      endif
+
+      is_prime = .true.
+      do i = 2,int(sqrt(dble(ntask)))
+        if (mod(ntask,i) == 0) then
+          is_prime = .false.
+          exit
+        endif
+      enddo
+      if (ntask/=1 .and. ntask/=2 .and. is_prime) then
+        write(6,"(/,'>>> This model may not run properly or will ',
+     |    'perform poorly with nask=',i4,/,' Please use another ',
+     |    'processor count')") ntask
+        call shutdown('invalid ntask')
+      endif
+
+      call mpi_comm_rank(TIEGCM_WORLD,mytid,ier)
+      if (ier /= 0) then
+        write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
+        call shutdown('mpi_comm_rank error')
+      endif
+
+! Create a second communicator to transfer data between TIEGCM and REMIX
+! This communicator only includes the root processes
+! TIEGCM root sends/receives data from/to REMIX root
+      if (mytid == 0) then
+        color = myAppId+voltID ! Unique ID on both sides (TIEGCM/VOLTRON)
+      else
+        color = MPI_UNDEFINED  ! No message passing on other processes
+      endif
+      call mpi_comm_split(MPI_COMM_WORLD,color,mytid,mixCplComm,ier)
+      if (ier /= 0) then
+        write(6,"('>>> Error from mpi_comm_split: ier=',i4)") ier
+        call shutdown('mpi_comm_split error')
+      endif
+
+! This can only happen to the root (mytid == 0)
+      if (mixCplComm /= MPI_COMM_NULL) then
+        call mpi_comm_size(mixCplComm,mixCplCommSize,ier)
+        if (ier /= 0) then
+          write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
+          call shutdown('mpi_comm_size error')
+        endif
+
+! At most two processes will register in mixCplComm (TIEGCM root, REMIX root)
+! Therefore mixCplCommSize is either 1 or 2
+        if (mixCplCommSize == 1) then
+
+! Only one process registered in mixCplComm (TIEGCM root)
+! No coupling will take place, free up the resources
+          call mpi_comm_free(mixCplComm,ier)
+          if (ier /= 0) then
+            write(6,"('>>> Error from mpi_comm_free: ier=',i4)") ier
+            call shutdown('mpi_comm_free error')
+          endif
+          mixCplComm = MPI_COMM_NULL
+        else
+
+! There is another process registered in mixCplComm (REMIX root)
+          call mpi_comm_rank(mixCplComm,mixCplRank,ier)
+          if (ier /= 0) then
+            write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
+            call shutdown('mpi_comm_rank error')
+          endif
+
+          write(6,"('TIEGCM: mixCplComm,mixCplCommSize,mixCplRank,tag=',
+     |      4i4)") mixCplComm,mixCplCommSize,mixCplRank,myAppId+voltID
+
+! mixCplRank is TIEGCM rank in mixCplComm
+! REMIX rank is the other (0/1)
+          mixCplRank = 1-mixCplRank
+        endif
+      endif
+!
+#ifdef GAMERA
+! gam2volt
+! WARNING THIS IS HARDCODED TO OCCUR ONCE. MAY CAUSE ISSUES WITH MULTIPLE COUPLINGS
+      call mpi_comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, 
+     |  mytid, tmpComm, ier)
+#endif
 !
 ! Allocate array of tasks (user defined type(task)):
       allocate(tasks(0:ntask-1),stat=ier)
@@ -402,7 +492,7 @@
 !
 ! Create subgroup communicators for each task column:
 ! These communicators will be used by sub mp_mag_jslot (mpi.F).
-      call mpi_comm_split(MPI_COMM_WORLD,mod(mytid,nmagtaski),mytid,
+      call mpi_comm_split(TIEGCM_WORLD,mod(mytid,nmagtaski),mytid,
      |  cols_comm,ier)
       call MPI_Comm_rank(cols_comm,tidcol,ier)
 
@@ -423,7 +513,7 @@
 !   to all tasks (directly passing mpi derived data types is reportedly
 !   not stable, or not available until MPI 2.x).
 !
-      integer :: n,ier,i
+      integer :: n,ier
       integer,parameter :: len_task_type = 17 ! see type task above
       integer,allocatable,save ::
      |  itasks_send(:,:), ! send buffer
@@ -465,7 +555,7 @@
 ! Send itasks_send and receive itasks_recv:
       call mpi_alltoall(itasks_send,len_task_type,MPI_INTEGER,
      |                  itasks_recv,len_task_type,MPI_INTEGER,
-     |                  MPI_COMM_WORLD,ier)
+     |                  TIEGCM_WORLD,ier)
       if (ier /= 0)
      |  call handle_mpi_err(ier,'mpi_alltoall to send/recv itasks')
 !
@@ -598,15 +688,12 @@
 !
       character(len=*),intent(in) :: type
 !
-! Local:
-      integer :: i
-!
 ! Gather for either primary and secondary histories.
 ! If primary, also gather f3d field subdomains zg to global fzg.
       if (trim(type)=='prim') then
          call mp_gather2root_prim(ixt)
       elseif(trim(type)=='sech') then
-         call mp_gather2root_sechist(ixt)
+         call mp_gather2root_sechist
       else
         write(6,"('mp_gather2root: unknown type ',a,' should be prim ',
      |    'or sech')")
@@ -615,7 +702,7 @@
 !
 ! Gather lower boundary condition arrays tlbc,ulbc,vlbc and 
 ! tlbc_nm,ulbc_nm,vlbc_nm:
-      call mp_gather2root_lbc(ixt)
+      call mp_gather2root_lbc
 !
       end subroutine mp_gather2root
 !-----------------------------------------------------------------------      
@@ -629,10 +716,9 @@
       integer,intent(in) :: ixt
 !
 ! Local:
-      integer :: isrc,ireqrecv,ireqsend,ier,n,i,j,k,l,len,
+      integer :: ireqrecv,ireqsend,ier,n,i,len,
      |  ilon0,ilon1,ilat0,ilat1,nlons,nlats,msgtag
       integer :: idest = 0
-      real :: fmin,fmax
       real,allocatable,save :: rcvbuf(:,:,:,:),sndbuf(:,:,:,:)
       real :: starttime,endtime
 !
@@ -677,7 +763,7 @@
 ! Receive subdomains from slave tasks:
         do n=1,ntask-1   ! receive from slaves only
           msgtag = n
-          call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,MPI_COMM_WORLD,
+          call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,TIEGCM_WORLD,
      |      ireqrecv,ier)
           if (ier /= 0) 
      |      call handle_mpi_err(ier,'mp_gather2root irecv from n')
@@ -701,7 +787,7 @@
 !
 ! Root task stores data in full 3d grid array foutput. This is a pointer
 ! declared in fields module (fields.F), and allocated by the root task 
-! only in sub allocdata: foutput(nlevp1,nlonp4,nlat,nf4d).
+! only in sub allocdata: foutput(nlevp1,lon0:lon1,lat0:lat1,nf4d).
 !
             foutput(:,ilon0:ilon1,ilat0:ilat1,i) =
      |        rcvbuf(:,1:nlons,1:nlats,i)
@@ -736,7 +822,7 @@
 !
 ! Send to root:
         msgtag = mytid
-        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,MPI_COMM_WORLD,
+        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,TIEGCM_WORLD,
      |    ireqsend,ier)
         if (ier /= 0) 
      |    call handle_mpi_err(ier,'mp_gather2root_prim isend to root')
@@ -754,7 +840,7 @@
       endif
       end subroutine mp_gather2root_prim
 !-----------------------------------------------------------------------      
-      subroutine mp_gather2root_sechist(ixt)
+      subroutine mp_gather2root_sechist
 !
 ! Master task must collect all data (except its own) into its secondary 
 !   fields array fsechist(:)%data prior to writing a history. Slaves send 
@@ -765,14 +851,10 @@
 !              instead of ilon0:ilon1,ilat0:ilat1. This was causing slave
 !              tasks to hang on deallocation of sndbuf.
 !
-! Args:
-      integer,intent(in) :: ixt
-!
 ! Local:
-      integer :: isrc,ireqrecv,ireqsend,ier,n,i,j,k,l,len,ilon0,ilon1,
+      integer :: ireqrecv,ireqsend,ier,n,i,len,ilon0,ilon1,
      |  ilat0,ilat1,msgtag,nlons,nlats,nlevs,maxlon,maxlat,maxlev
       integer :: idest = 0
-      real :: fmin,fmax
       real :: starttime,endtime
       real,allocatable,save :: rcvbuf(:,:,:,:),sndbuf(:,:,:,:)
 
@@ -810,7 +892,7 @@
 !
         do n=1,ntask-1   ! receive from slaves only
           msgtag = n
-          call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,MPI_COMM_WORLD,
+          call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,TIEGCM_WORLD,
      |      ireqrecv,ier)
           if (ier /= 0) 
      |      call handle_mpi_err(ier,'mp_gather2root_sech irecv from n')
@@ -902,7 +984,7 @@
 !
 ! Send to root:
         msgtag = mytid
-        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,MPI_COMM_WORLD,
+        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,TIEGCM_WORLD,
      |    ireqsend,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_gather2root isend to root')
@@ -918,39 +1000,39 @@
       endif
       end subroutine mp_gather2root_sechist
 !-----------------------------------------------------------------------
-      subroutine mp_gather2root_lbc(ixt)
+      subroutine mp_gather2root_lbc
 !
 ! Gather t,u,v lbc at t and t-1 to root task (tlbc,ulbc,vlbc subdomains are gathered
 ! to tlbc_glb,ulbc_glb,vlbc_glb and tlbc_nm_glb,ulbc_nm_glb,vlbc_nm_glb , see fields.F)
-!
-! Args:
-      integer,intent(in) :: ixt
 !
 ! Local:
       integer :: ier,len,msgtag,ireqrecv,nlats,nlons,ireqsend,
      |  ilat1,ilon0,n,ilat0,ilon1
       integer :: idest = 0
-      real :: fmin,fmax
       real :: starttime,endtime
       real,allocatable,save :: rcvbuf(:,:,:),sndbuf(:,:,:)
+      real,dimension(nlonp4,nlat) ::
+     |  tlbc_glb,ulbc_glb,vlbc_glb,
+     |  tlbc_nm_glb,ulbc_nm_glb,vlbc_nm_glb,
+     |  gzigm1_glb,gzigm2_glb,gnsrhs_glb
 
       if (mpi_timing) starttime = mpi_wtime()
 !
 ! Allocate send and receive buffers:
       if (.not.allocated(rcvbuf)) then
-        allocate(rcvbuf(mxlon,mxlat,6),stat=ier)
+        allocate(rcvbuf(mxlon,mxlat,9),stat=ier)
         if (ier /= 0)
      |    write(6,"('>>> mp_gather2root_lbc: error allocating rcvbuf:',
      |      ' mxlon=',i3,' mxlat=',i3,' ier=',i4)") mxlon,mxlat,ier
       endif
       if (.not.allocated(sndbuf)) then
-        allocate(sndbuf(mxlon,mxlat,6),stat=ier)
+        allocate(sndbuf(mxlon,mxlat,9),stat=ier)
         if (ier /= 0)
      |    write(6,"('>>> mp_gather2root_lbc: error allocating sndbuf:',
      |      ' mxlon=',i3,' mxlat=',i3,' ier=',i4)") mxlon,mxlat,ier
       endif
       rcvbuf = 0. ; sndbuf = 0.
-      len = mxlon*mxlat*6 ! buffer length
+      len = mxlon*mxlat*9 ! buffer length
 !
 ! Root receives from all other tasks:
       if (mytid==0) then ! root task
@@ -962,11 +1044,14 @@
         tlbc_nm_glb(lon0:lon1,lat0:lat1) = tlbc_nm(lon0:lon1,lat0:lat1)
         ulbc_nm_glb(lon0:lon1,lat0:lat1) = ulbc_nm(lon0:lon1,lat0:lat1)
         vlbc_nm_glb(lon0:lon1,lat0:lat1) = vlbc_nm(lon0:lon1,lat0:lat1)
+        gzigm1_glb(lon0:lon1,lat0:lat1) = gzigm1(lon0:lon1,lat0:lat1)
+        gzigm2_glb(lon0:lon1,lat0:lat1) = gzigm2(lon0:lon1,lat0:lat1)
+        gnsrhs_glb(lon0:lon1,lat0:lat1) = gnsrhs(lon0:lon1,lat0:lat1)
 !
 ! Receive subdomains from slave tasks:
         do n=1,ntask-1   ! receive from slaves only
           msgtag = n
-          call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,MPI_COMM_WORLD,
+          call mpi_irecv(rcvbuf,len,MPI_REAL8,n,msgtag,TIEGCM_WORLD,
      |      ireqrecv,ier)
           if (ier /= 0) 
      |      call handle_mpi_err(ier,'mp_gather2root_lbc irecv from n')
@@ -997,6 +1082,9 @@
           tlbc_nm_glb(ilon0:ilon1,ilat0:ilat1)=rcvbuf(1:nlons,1:nlats,4)
           ulbc_nm_glb(ilon0:ilon1,ilat0:ilat1)=rcvbuf(1:nlons,1:nlats,5)
           vlbc_nm_glb(ilon0:ilon1,ilat0:ilat1)=rcvbuf(1:nlons,1:nlats,6)
+          gzigm1_glb(ilon0:ilon1,ilat0:ilat1)=rcvbuf(1:nlons,1:nlats,7)
+          gzigm2_glb(ilon0:ilon1,ilat0:ilat1)=rcvbuf(1:nlons,1:nlats,8)
+          gnsrhs_glb(ilon0:ilon1,ilat0:ilat1)=rcvbuf(1:nlons,1:nlats,9)
         enddo ! n=1,ntask-1
 !
 ! Non-root tasks send to master:
@@ -1014,10 +1102,13 @@
         sndbuf(1:nlons,1:nlats,4) = tlbc_nm(lon0:lon1,lat0:lat1)
         sndbuf(1:nlons,1:nlats,5) = ulbc_nm(lon0:lon1,lat0:lat1)
         sndbuf(1:nlons,1:nlats,6) = vlbc_nm(lon0:lon1,lat0:lat1)
+        sndbuf(1:nlons,1:nlats,7) = gzigm1(lon0:lon1,lat0:lat1)
+        sndbuf(1:nlons,1:nlats,8) = gzigm2(lon0:lon1,lat0:lat1)
+        sndbuf(1:nlons,1:nlats,9) = gnsrhs(lon0:lon1,lat0:lat1)
 !
 ! Send to root:
         msgtag = mytid
-        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,MPI_COMM_WORLD,
+        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,TIEGCM_WORLD,
      |    ireqsend,ier)
         if (ier /= 0) 
      |    call handle_mpi_err(ier,'mp_gather2root_lbc isend to root')
@@ -1101,7 +1192,7 @@
 ! Do the gather:      
       len = mxsub1*mxsub2*nf ! max size of 2d subdomain
       call mpi_gather(sndbuf,len,MPI_REAL8,rcvbuf,len,MPI_REAL8,root,
-     |  MPI_COMM_WORLD,ier)
+     |  TIEGCM_WORLD,ier)
 !
 ! Define global output on the root task from receive buffer of each task:
       if (mytid==root) then
@@ -1193,7 +1284,7 @@
 ! Do the scatter:
       len = mxsub1*mxsub2*nf ! max size of 2d subdomain
       call mpi_scatter(sndbuf,len,MPI_REAL8,rcvbuf,len,MPI_REAL8,root,
-     |  MPI_COMM_WORLD,ier)
+     |  TIEGCM_WORLD,ier)
 !
 ! Define output subdomains:
       do n=1,nf
@@ -1229,7 +1320,6 @@
      |  sndbuf1(:,:,:,:), ! send buffer for lat1-1,lat1   (k,i,2,nf)
      |  rcvbuf0(:,:,:,:), ! recv buffer for lat0-2,lat0-1 (k,i,2,nf)
      |  rcvbuf1(:,:,:,:)  ! recv buffer for lat1+1,lat1+2 (k,i,2,nf)
-      real :: fmin,fmax
       real :: starttime,endtime
 !
 #ifdef VT
@@ -1291,22 +1381,22 @@
       enddo
 !
 ! Send lat0:lat0+1 (sndbuf0) to jprev:
-      call mpi_isend(sndbuf0,len,MPI_REAL8,jprev,1,MPI_COMM_WORLD,
+      call mpi_isend(sndbuf0,len,MPI_REAL8,jprev,1,TIEGCM_WORLD,
      |  jsend0,ier)
       if (ier /= 0) call handle_mpi_err(ier,'mp_bndlats send0 to jprev')
 !
 ! Send lat1-1:lat1 (sndbuf1) to jnext:
-      call mpi_isend(sndbuf1,len,MPI_REAL8,jnext,1,MPI_COMM_WORLD,
+      call mpi_isend(sndbuf1,len,MPI_REAL8,jnext,1,TIEGCM_WORLD,
      |  jsend1,ier)
       if (ier /= 0) call handle_mpi_err(ier,'mp_bndlats send1 to jnext')
 !
 ! Receive lat0-2:lat0-1 (rcvbuf0) from jprev:
-      call mpi_irecv(rcvbuf0,len,MPI_REAL8,jprev,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvbuf0,len,MPI_REAL8,jprev,1,TIEGCM_WORLD,
      |  jrecv0,ier)
       if (ier /= 0) call handle_mpi_err(ier,'mp_bndlats recv0 fm jprev')
 !
 ! Receive lat1+1:lat1+2 (rcvbuf1) from jnext:
-      call mpi_irecv(rcvbuf1,len,MPI_REAL8,jnext,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvbuf1,len,MPI_REAL8,jnext,1,TIEGCM_WORLD,
      |  jrecv1,ier)
       if (ier /= 0) call handle_mpi_err(ier,'mp_bndlats recv1 fm jnext')
 !
@@ -1345,6 +1435,132 @@
 #endif
       end subroutine mp_bndlats
 !-----------------------------------------------------------------------
+      subroutine mp_bndlats_f3d(f,id1,i0,i1,j0,j1,nf)
+!
+! Exchange boundary latitude data between tasks. 
+! Each task sends its lat0,lat0+1 data to task jprev, and its lat1-1,lat1
+!   data to jnext.
+! Each task receives its lat0-2,lat0-1 data from task jprev, and its
+!   lat1+1,lat1+2 data from task jnext.
+!
+! Args:
+      integer,intent(in) :: id1,i0,i1,j0,j1,nf
+      real,intent(inout) :: f(id1,i0-2:i1+2,j0-2:j1+2,nf)
+!
+! Local:
+      integer :: n,nlons,ier,len,jnext,jprev,jsend0,jsend1,
+     |  jrecv0,jrecv1
+      real,allocatable,save :: 
+     |  sndbuf0(:,:,:,:), ! send buffer for j0  ,j0+1 (id1,i,2,nf)
+     |  sndbuf1(:,:,:,:), ! send buffer for j1-1,j1   (id1,i,2,nf)
+     |  rcvbuf0(:,:,:,:), ! recv buffer for j0-2,j0-1 (id1,i,2,nf)
+     |  rcvbuf1(:,:,:,:)  ! recv buffer for j1+1,j1+2 (id1,i,2,nf)
+      real :: starttime,endtime
+      integer :: ireq(4),istat(MPI_STATUS_SIZE,4),nfsave=0
+!
+#ifdef VT
+!     call vtsymdef(100, 'mp_bndlats_f2d','Communication',ier)
+      call vtbegin(100,ier)
+#endif
+      if (mpi_timing) starttime = mpi_wtime()
+!
+! Allocate send and receive buffers (only fields with %mpi==true):
+! This may be called w/ different nf -- when nf is greater than the
+! previous nf, deallocate the buffers so they will be reallocated w/
+! the new larger nf (note 1:nf in the isend/irecv calls):
+!
+      if (nf > nfsave) then
+        if (allocated(sndbuf0)) deallocate(sndbuf0)
+        if (allocated(sndbuf1)) deallocate(sndbuf1)
+        if (allocated(rcvbuf0)) deallocate(rcvbuf0)
+        if (allocated(rcvbuf1)) deallocate(rcvbuf1)
+        nfsave = nf
+      endif
+      if (.not.allocated(sndbuf0)) then
+        allocate(sndbuf0(id1,mxlon,2,nf),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_bndlats_f3d: error allocating sndbuf0.')")
+      endif
+      if (.not.allocated(sndbuf1)) then
+        allocate(sndbuf1(id1,mxlon,2,nf),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_bndlats_f3d: error allocating sndbuf1.')")
+      endif
+      if (.not.allocated(rcvbuf0)) then
+        allocate(rcvbuf0(id1,mxlon,2,nf),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_bndlats_f3d: error allocating rcvbuf0.')")
+      endif
+      if (.not.allocated(rcvbuf1)) then
+        allocate(rcvbuf1(id1,mxlon,2,nf),stat=ier)
+        if (ier /= 0)
+     |    write(6,"('>>> mp_bndlats_f3d: error allocating rcvbuf1.')")
+      endif
+      rcvbuf0 = 0. ; sndbuf0 = 0.
+      rcvbuf1 = 0. ; sndbuf1 = 0.
+      len    = id1*mxlon*2*nf
+      nlons = i1-i0+1
+!
+! Locate adjacent tasks (includes null tasks top and bottom)
+      jprev = itask_table(mytidi,mytidj-1) ! task above (south)
+      jnext = itask_table(mytidi,mytidj+1) ! task below (north)
+!
+! Load sndbuf0 with j0,j0+1 and sndbuf1 with j1-1,j1:
+      do n=1,nf
+        sndbuf0(:,1:nlons,:,n) = f(:,i0:i1,j0  :j0+1,n)
+        sndbuf1(:,1:nlons,:,n) = f(:,i0:i1,j1-1:j1  ,n)
+      enddo
+!
+! Send j0:j0+1 (sndbuf0) to jprev:
+      call mpi_isend(sndbuf0(:,:,:,1:nf),len,MPI_REAL8,jprev,1,
+     |  TIEGCM_WORLD,jsend0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f3d send0 to jprev')
+!
+! Send j1-1:j1 (sndbuf1) to jnext:
+      call mpi_isend(sndbuf1(:,:,:,1:nf),len,MPI_REAL8,jnext,1,
+     |  TIEGCM_WORLD,jsend1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f3d send1 to jnext')
+!
+! Receive j0-2:j0-1 (rcvbuf0) from jprev:
+      call mpi_irecv(rcvbuf0(:,:,:,1:nf),len,MPI_REAL8,jprev,1,
+     |  TIEGCM_WORLD,jrecv0,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f3d recv0 fm jprev')
+!
+! Receive j1+1:j1+2 (rcvbuf1) from jnext:
+      call mpi_irecv(rcvbuf1(:,:,:,1:nf),len,MPI_REAL8,jnext,1,
+     |  TIEGCM_WORLD,jrecv1,ier)
+      if (ier /= 0) 
+     |  call handle_mpi_err(ier,'mp_bndlats_f3d recv1 fm jnext')
+!
+! Wait for completions:
+! integer :: ireq(4),istat(4)
+      ireq = (/jsend0,jsend1,jrecv0,jrecv1/)
+      istat = 0
+      call mpi_waitall(4,ireq,istat,ier)
+      if (ier /= 0) call handle_mpi_err(ier,'mp_bndlats_f3d waitall')
+!
+! Copy j0-2:j0-1 from rcvbuf0, and j1+1:j1+2 from rcvbuf1:
+      do n=1,nf
+        if (j0 /= 1) then
+          f(:,i0:i1,j0-2:j0-1,n) = rcvbuf0(:,1:nlons,:,n)
+        endif
+        if (j1 /= nlat) then
+          f(:,i0:i1,j1+1:j1+2,n) = rcvbuf1(:,1:nlons,:,n)
+        endif
+      enddo
+      if (mpi_timing) then
+        endtime = mpi_wtime()
+        time_bndlats_f3d=time_bndlats_f3d+(endtime-starttime)
+      endif
+#ifdef VT
+!     call vtsymdef(100, 'mp_bndlats_f3d','Communication',ier)
+      call vtend(100,ier)
+#endif
+      end subroutine mp_bndlats_f3d
+!-----------------------------------------------------------------------
       subroutine mp_bndlats_f2d(f,i0,i1,j0,j1,nf)
 !
 ! Exchange boundary latitude data between tasks. 
@@ -1358,14 +1574,13 @@
       real,intent(inout) :: f(i0-2:i1+2,j0-2:j1+2,nf)
 !
 ! Local:
-      integer :: n,nlons,ier,len,jnext,jprev,nflds,jsend0,jsend1,
+      integer :: n,nlons,ier,len,jnext,jprev,jsend0,jsend1,
      |  jrecv0,jrecv1
       real,allocatable,save :: 
      |  sndbuf0(:,:,:), ! send buffer for j0  ,j0+1 (i,2,nf)
      |  sndbuf1(:,:,:), ! send buffer for j1-1,j1   (i,2,nf)
      |  rcvbuf0(:,:,:), ! recv buffer for j0-2,j0-1 (i,2,nf)
      |  rcvbuf1(:,:,:)  ! recv buffer for j1+1,j1+2 (i,2,nf)
-      real :: fmin,fmax
       real :: starttime,endtime
       integer :: ireq(4),istat(MPI_STATUS_SIZE,4),nfsave=0
 !
@@ -1424,25 +1639,25 @@
 !
 ! Send j0:j0+1 (sndbuf0) to jprev:
       call mpi_isend(sndbuf0(:,:,1:nf),len,MPI_REAL8,jprev,1,
-     |  MPI_COMM_WORLD,jsend0,ier)
+     |  TIEGCM_WORLD,jsend0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlats_f2d send0 to jprev')
 !
 ! Send j1-1:j1 (sndbuf1) to jnext:
       call mpi_isend(sndbuf1(:,:,1:nf),len,MPI_REAL8,jnext,1,
-     |  MPI_COMM_WORLD,jsend1,ier)
+     |  TIEGCM_WORLD,jsend1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlats_f2d send1 to jnext')
 !
 ! Receive j0-2:j0-1 (rcvbuf0) from jprev:
       call mpi_irecv(rcvbuf0(:,:,1:nf),len,MPI_REAL8,jprev,1,
-     |  MPI_COMM_WORLD,jrecv0,ier)
+     |  TIEGCM_WORLD,jrecv0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlats_f2d recv0 fm jprev')
 !
 ! Receive j1+1:j1+2 (rcvbuf1) from jnext:
       call mpi_irecv(rcvbuf1(:,:,1:nf),len,MPI_REAL8,jnext,1,
-     |  MPI_COMM_WORLD,jrecv1,ier)
+     |  TIEGCM_WORLD,jrecv1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlats_f2d recv1 fm jnext')
 !
@@ -1498,7 +1713,6 @@
      |  sndbuf1(:,:,:,:), ! send buffer for lon1-1,lon1   (k,2,j,nf)
      |  rcvbuf0(:,:,:,:), ! recv buffer for lon0-2,lon0-1 (k,2,j,nf)
      |  rcvbuf1(:,:,:,:)  ! recv buffer for lon1+1,lon1+2 (k,2,j,nf)
-      real :: fmin,fmax
       real :: starttime,endtime
 #ifdef VT
 !     call vtsymdef(101, 'mp_bndlons','Communication',ier)
@@ -1559,22 +1773,22 @@
       enddo
 !
 ! Send lon0:lon0+1 (sndbuf0) to iprev:
-      call mpi_isend(sndbuf0,len,MPI_REAL8,iprev,1,MPI_COMM_WORLD,
+      call mpi_isend(sndbuf0,len,MPI_REAL8,iprev,1,TIEGCM_WORLD,
      |  isend0,ier)
       if (ier /= 0) call handle_mpi_err(ier,'mp_bndlons send0 to iprev')
 !
 ! Send lon1-1:lon1 (sndbuf1) to inext:
-      call mpi_isend(sndbuf1,len,MPI_REAL8,inext,1,MPI_COMM_WORLD,
+      call mpi_isend(sndbuf1,len,MPI_REAL8,inext,1,TIEGCM_WORLD,
      |  isend1,ier)
       if (ier /= 0) call handle_mpi_err(ier,'mp_bndlons send1 to inext')
 !
 ! Receive lon0-2:lon0-1 (rcvbuf0) from iprev:
-      call mpi_irecv(rcvbuf0,len,MPI_REAL8,iprev,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvbuf0,len,MPI_REAL8,iprev,1,TIEGCM_WORLD,
      |  irecv0,ier)
       if (ier /= 0) call handle_mpi_err(ier,'mp_bndlons recv0 fm iprev')
 !
 ! Receive lon1+1:lon1+2 (rcvbuf1) from inext:
-      call mpi_irecv(rcvbuf1,len,MPI_REAL8,inext,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvbuf1,len,MPI_REAL8,inext,1,TIEGCM_WORLD,
      |  irecv1,ier)
       if (ier /= 0) call handle_mpi_err(ier,'mp_bndlons recv1 fm inext')
 !
@@ -1728,25 +1942,25 @@
 !
 ! Send i0:i0+1 (sndbuf0) to task iprev:
       call mpi_isend(sndbuf0(:,:,:,1:nf),len,MPI_REAL8,iprev,1,
-     |  MPI_COMM_WORLD,isend0,ier)
+     |  TIEGCM_WORLD,isend0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlons_f3d send0 to iprev')
 !
 ! Send i1-1:i1 (sndbuf1) to task inext:
       call mpi_isend(sndbuf1(:,:,:,1:nf),len,MPI_REAL8,inext,1,
-     |  MPI_COMM_WORLD,isend1,ier)
+     |  TIEGCM_WORLD,isend1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlons_f3d send1 to inext')
 !
 ! Receive i0-2:i0-1 (rcvbuf0) from task iprev:
       call mpi_irecv(rcvbuf0(:,:,:,1:nf),len,MPI_REAL8,iprev,1,
-     |  MPI_COMM_WORLD,irecv0,ier)
+     |  TIEGCM_WORLD,irecv0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlons_f3d recv0 fm iprev')
 !
 ! Receive i1+1:i1+2 (rcvbuf1) from task inext:
       call mpi_irecv(rcvbuf1(:,:,:,1:nf),len,MPI_REAL8,inext,1,
-     |  MPI_COMM_WORLD,irecv1,ier)
+     |  TIEGCM_WORLD,irecv1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlons_f3d recv1 fm inext')
 !
@@ -1811,16 +2025,14 @@
       real,intent(inout) :: f(i0-2:i1+2,j0-2:j1+2,nf)
 !
 ! Local:
-      integer :: n,ier,len,inext,iprev,isend0,isend1,nlats,j,
+      integer :: n,ier,len,inext,iprev,isend0,isend1,j,
      |  irecv0,irecv1,jbeg,jend,nfsave=0
       real,allocatable,save :: 
      |  sndbuf0(:,:,:), ! send buffer for i0  ,i0+1 (2,mxlat+4,nf)
      |  sndbuf1(:,:,:), ! send buffer for i1-1,i1   (2,mxlat+4,nf)
      |  rcvbuf0(:,:,:), ! recv buffer for i0-2,i0-1 (2,mxlat+4,nf)
      |  rcvbuf1(:,:,:)  ! recv buffer for i1+1,i1+2 (2,mxlat+4,nf)
-      real :: fmin,fmax
       integer :: ireq(4),istat(MPI_STATUS_SIZE,4)
-      integer :: j0_iprev,j1_iprev,j0_inext,j1_inext
       real :: starttime,endtime
 #ifdef VT
 !     call vtsymdef(102, 'mp_bndlons_f2d','Communication',ier)
@@ -1880,25 +2092,25 @@
 !
 ! Send i0:i0+1 (sndbuf0) to task iprev:
       call mpi_isend(sndbuf0(:,:,1:nf),len,MPI_REAL8,iprev,1,
-     |  MPI_COMM_WORLD,isend0,ier)
+     |  TIEGCM_WORLD,isend0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlons_f2d send0 to iprev')
 !
 ! Send i1-1:i1 (sndbuf1) to task inext:
       call mpi_isend(sndbuf1(:,:,1:nf),len,MPI_REAL8,inext,1,
-     |  MPI_COMM_WORLD,isend1,ier)
+     |  TIEGCM_WORLD,isend1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlons_f2d send1 to inext')
 !
 ! Receive i0-2:i0-1 (rcvbuf0) from task iprev:
       call mpi_irecv(rcvbuf0(:,:,1:nf),len,MPI_REAL8,iprev,1,
-     |  MPI_COMM_WORLD,irecv0,ier)
+     |  TIEGCM_WORLD,irecv0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlons_f2d recv0 fm iprev')
 !
 ! Receive i1+1:i1+2 (rcvbuf1) from task inext:
       call mpi_irecv(rcvbuf1(:,:,1:nf),len,MPI_REAL8,inext,1,
-     |  MPI_COMM_WORLD,irecv1,ier)
+     |  TIEGCM_WORLD,irecv1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_bndlons_f2d recv1 fm inext')
 !
@@ -1926,7 +2138,7 @@
         time_bndlons_f2d=time_bndlons_f2d+(endtime-starttime)
       endif
 #ifdef VT
-!     call vtsymdef(102, 'mp_bndlons_f3d','Communication',ier)
+!     call vtsymdef(102, 'mp_bndlons_f2d','Communication',ier)
       call vtend(102,ier)
 #endif
       end subroutine mp_bndlons_f2d
@@ -1958,7 +2170,6 @@
       real,allocatable,save ::
      |  rcvbuf(:,:,:,:,:), ! recv for new lats on this task (k,ineed,2,nf,nt)
      |  sndbuf(:,:,:,:,:)  ! send for new lats on remote task (k,ihave,2,nf,nt)
-      real :: fmin,fmax,signchange
       real :: starttime,endtime
 
       if (mpi_timing) starttime = mpi_wtime()
@@ -2121,7 +2332,7 @@
           iit = iit+1
           itsend = itsend+1
           call mpi_isend(sndbuf(1,1,1,1,iit),lensend,MPI_REAL8,it,1,
-     |      MPI_COMM_WORLD,isend(iit),ier)
+     |      TIEGCM_WORLD,isend(iit),ier)
           if (ier /= 0) call handle_mpi_err(ier,'mp_polelats send')
         endif
       enddo
@@ -2133,7 +2344,7 @@
         if (irecvfm(1,it)/=-1.and.irecvfm(2,it)/=-1) then 
           iit = iit+1
           call mpi_irecv(rcvbuf(1,1,1,1,iit),lenrecv,MPI_REAL8,it,1,
-     |      MPI_COMM_WORLD,irecv(iit),ier)
+     |      TIEGCM_WORLD,irecv(iit),ier)
           if (ier /= 0) call handle_mpi_err(ier,'mp_polelats recv')
         endif
       enddo
@@ -2227,7 +2438,6 @@
       real,allocatable,save ::
      |  rcvbuf(:,:,:,:,:), ! recv for new lats on this task (k,ineed,2,nf,nt)
      |  sndbuf(:,:,:,:,:)  ! send for new lats on remote task (k,ihave,2,nf,nt)
-      real :: fmin,fmax,signchange
       real :: starttime,endtime
 
       if (mpi_timing) starttime = mpi_wtime()
@@ -2397,7 +2607,7 @@
           iit = iit+1
           itsend = itsend+1
           call mpi_isend(sndbuf(1,1,1,1,iit),lensend,MPI_REAL8,it,1,
-     |      MPI_COMM_WORLD,isend(iit),ier)
+     |      TIEGCM_WORLD,isend(iit),ier)
           if (ier /= 0) call handle_mpi_err(ier,'mp_polelats send')
         endif
       enddo
@@ -2409,7 +2619,7 @@
         if (irecvfm(1,it)/=-1.and.irecvfm(2,it)/=-1) then 
           iit = iit+1
           call mpi_irecv(rcvbuf(1,1,1,1,iit),lenrecv,MPI_REAL8,it,1,
-     |      MPI_COMM_WORLD,irecv(iit),ier)
+     |      TIEGCM_WORLD,irecv(iit),ier)
           if (ier /= 0) call handle_mpi_err(ier,'mp_polelats recv')
         endif
       enddo
@@ -2492,18 +2702,13 @@
       character(len=*),intent(in) :: name
 !
 ! Local:
-      integer :: i,k,j,n,nlons,nlats,nlonrecv,nlevs,len,idest,isrc,ier,
+      integer :: k,j,n,nlons,nlats,nlonrecv,nlevs,len,idest,isrc,ier,
      |  isend,irecv,itask,lonrecv0,lonrecv1,mtag
-      real :: fmin,fmax
       real :: starttime,endtime
       real,allocatable,save ::
      |  sndbuf(:,:,:,:), ! send buffer (nlevs,mxlon,mxlat,nflds)
      |  rcvbuf(:,:,:,:)  ! recv buffer (nlevs,mxlon,mxlat,nflds)
-#if defined(INTERCOMM) || defined(CISMAH)
-      integer,parameter :: mxnf=7        ! 7 2d fields for CISM
-#else
-      integer,parameter :: mxnf=6        ! 6 2d fields
-#endif
+      integer,parameter :: mxnf=7        ! 7 2d fields for MAGE
 
 #ifdef VT
 !     call vtsymdef(106, 'mp_gatherlons_f3d','Communication',ier)
@@ -2566,7 +2771,7 @@
         do itask=1,ntaski-1
           isrc = itask_table(itask,mytidj)
           mtag = isrc+mytid
-          call mpi_irecv(rcvbuf,len,MPI_REAL8,isrc,mtag,MPI_COMM_WORLD,
+          call mpi_irecv(rcvbuf,len,MPI_REAL8,isrc,mtag,TIEGCM_WORLD,
      |      irecv,ier)
           if (ier /= 0) 
      |      call handle_mpi_err(ier,'mp_gatherlons_f3d recv fm isrc')
@@ -2598,7 +2803,7 @@
           enddo ! j=j0,j1
         enddo ! n=1,nflds
         mtag = idest+mytid
-        call mpi_isend(sndbuf,len,MPI_REAL8,idest,mtag,MPI_COMM_WORLD,
+        call mpi_isend(sndbuf,len,MPI_REAL8,idest,mtag,TIEGCM_WORLD,
      |    isend,ier)
         if (ier /= 0) 
      |    call handle_mpi_err(ier,'mp_gatherlons_f3d send0 to idest')
@@ -2630,9 +2835,8 @@
       character(len=*),intent(in) :: name
 !
 ! Local:
-      integer :: i,k,j,n,nlevs,nlons,nlats,nlonsend,len,idest,isrc,ier,
+      integer :: k,j,n,nlevs,nlons,nlats,nlonsend,len,idest,isrc,ier,
      |  isend,irecv,itask,lonsend0,lonsend1,mtag
-      real :: fmin,fmax
       real :: starttime,endtime
       real,allocatable,save ::
      |  sndbuf(:,:,:,:), ! send buffer (nlevs,mxlon,nlats,nflds)
@@ -2706,7 +2910,7 @@
             enddo ! j=j0,j1
           enddo ! n=1,nflds
           mtag = idest+mytid
-          call mpi_isend(sndbuf,len,MPI_REAL8,idest,mtag,MPI_COMM_WORLD,
+          call mpi_isend(sndbuf,len,MPI_REAL8,idest,mtag,TIEGCM_WORLD,
      |      isend,ier)
           if (ier /= 0) 
      |      call handle_mpi_err(ier,'mp_scatterlons_f3d send to idest')
@@ -2719,7 +2923,7 @@
       else
         isrc = itask_table(0,mytidj)
         mtag = isrc+mytid
-        call mpi_irecv(rcvbuf,len,MPI_REAL8,isrc,mtag,MPI_COMM_WORLD,
+        call mpi_irecv(rcvbuf,len,MPI_REAL8,isrc,mtag,TIEGCM_WORLD,
      |    irecv,ier)
         if (ier /= 0) 
      |    call handle_mpi_err(ier,'mp_scatterlons_f3d recv fm isrc')
@@ -2756,7 +2960,7 @@
       integer,intent(in) :: ixt
 !
 ! Local:
-      integer :: idest,isrc,isend,irecv,ier,i,j,jj,n,len,k,nlats,mtag,
+      integer :: idest,isrc,ier,j,jj,n,len,nlats,mtag,
      |  status(MPI_STATUS_SIZE)
       real,allocatable,save :: sndbuf(:,:,:,:) ! (nlevp1,nlats,nf4d_hist,2)
       real,allocatable,save :: rcvbuf(:,:,:,:) ! (nlevp1,nlats,nf4d_hist,2)
@@ -2822,7 +3026,7 @@
         isrc  = idest
         mtag = idest+mytid
         call mpi_sendrecv(sndbuf, len, MPI_REAL8, idest, mtag, rcvbuf,
-     |       len, MPI_REAL8, isrc, isrc+mytid+1, MPI_COMM_WORLD, status,
+     |       len, MPI_REAL8, isrc, isrc+mytid+1, TIEGCM_WORLD, status,
      |       ier)
         if (ier /= 0) call handle_mpi_err(ier,
      |      'mp_periodic_f4d sendrecv from west end')
@@ -2843,7 +3047,7 @@
         isrc  = idest
         mtag = idest+mytid+1
         call mpi_sendrecv(sndbuf, len, MPI_REAL8, idest, mtag, rcvbuf,
-     |       len, MPI_REAL8, isrc, isrc+mytid, MPI_COMM_WORLD, status,
+     |       len, MPI_REAL8, isrc, isrc+mytid, TIEGCM_WORLD, status,
      |       ier)
         if (ier /= 0) call handle_mpi_err(ier,
      |      'mp_periodic_f4d sendrecv from east end')
@@ -2902,7 +3106,6 @@
       call vtbegin(109,ier)
 #endif
       if (mpi_timing) starttime = mpi_wtime()
-#ifdef MPI
 !
 ! Serial run of an MPI job (1 task):
       if (ntask==1) then
@@ -2914,7 +3117,6 @@
         enddo
         return
       endif
-#endif
 !
 ! The restriction that every task must carry at least 4 longitudes
 ! means that tasks with mytidi==0 will have lons 1->4 and tasks 
@@ -2965,12 +3167,12 @@
         enddo
 
         call mpi_isend(sndbuf(:,:,:,1:nf),len,MPI_REAL8,idest,1,
-     |    MPI_COMM_WORLD,isend,ier)
+     |    TIEGCM_WORLD,isend,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_periodic_f3d send to idest')
         isrc  = idest
         call mpi_irecv(rcvbuf(:,:,:,1:nf),len,MPI_REAL8,isrc,1,
-     |    MPI_COMM_WORLD,irecv,ier)
+     |    TIEGCM_WORLD,irecv,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_periodic_f3d recv fm isrc')
 !
@@ -2989,12 +3191,12 @@
         enddo
 
         call mpi_isend(sndbuf(:,:,:,1:nf),len,MPI_REAL8,idest,1,
-     |    MPI_COMM_WORLD,isend,ier)
+     |    TIEGCM_WORLD,isend,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_periodic_f3d send to idest')
         isrc  = idest
         call mpi_irecv(rcvbuf(:,:,:,1:nf),len,MPI_REAL8,isrc,1,
-     |    MPI_COMM_WORLD,irecv,ier)
+     |    TIEGCM_WORLD,irecv,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_periodic_f3d recv fm isrc')
       endif
@@ -3108,12 +3310,12 @@
           enddo ! j=lat0,lat1
         enddo
         call mpi_isend(sndbuf(:,:,1:nf),len,MPI_REAL8,idest,1,
-     |    MPI_COMM_WORLD,isend,ier)
+     |    TIEGCM_WORLD,isend,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_periodic_f2d send to idest')
         isrc  = idest
         call mpi_irecv(rcvbuf(:,:,1:nf),len,MPI_REAL8,isrc,1,
-     |    MPI_COMM_WORLD,irecv,ier)
+     |    TIEGCM_WORLD,irecv,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_periodic_f2d recv fm isrc')
 !
@@ -3127,12 +3329,12 @@
           enddo ! j=lat0,lat1
         enddo
         call mpi_isend(sndbuf(:,:,1:nf),len,MPI_REAL8,idest,1,
-     |    MPI_COMM_WORLD,isend,ier)
+     |    TIEGCM_WORLD,isend,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_periodic_f2d send to idest')
         isrc  = idest
         call mpi_irecv(rcvbuf(:,:,1:nf),len,MPI_REAL8,isrc,1,
-     |    MPI_COMM_WORLD,irecv,ier)
+     |    TIEGCM_WORLD,irecv,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_periodic_f2d recv fm isrc')
       endif
@@ -3185,7 +3387,7 @@
      |  fmsub(lon0-2:lon1+2,lat0-2:lat1+2,nf)
 !
 ! Local:
-      integer :: i,j,ifld,west,east,north,south,len,isend0,isend1,
+      integer :: i,ifld,west,east,north,south,len,isend0,isend1,
      |  irecv0,irecv1,ier,nlats,istat(MPI_STATUS_SIZE,4),ireq(4),
      |  nlons
       real,dimension(2,lat1-lat0+1,nf) ::
@@ -3222,26 +3424,26 @@
       enddo ! ifld=1,nf
 !
 ! Send lon0:lon0+1 to the west:
-      call mpi_isend(sndlon0,len,MPI_REAL8,west,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlon0,len,MPI_REAL8,west,1,TIEGCM_WORLD,
      |  isend0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_geo_halos send lon0:lon0+1 to west')
 !
 ! Send lon1-1:lon1 to the east:
-      call mpi_isend(sndlon1,len,MPI_REAL8,east,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlon1,len,MPI_REAL8,east,1,TIEGCM_WORLD,
      |    isend1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_geo_halos send lon1-1:lon1 to east')
 !
 ! Recv lon0-2:lon0-1 from west:
-      call mpi_irecv(rcvlon0,len,MPI_REAL8,west,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlon0,len,MPI_REAL8,west,1,TIEGCM_WORLD,
      |  irecv0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
      |    'mp_geo_halos recv lon0-2:lon0-1 from west')
 !
 ! Recv lon1+1:lon1+2 from east:
-      call mpi_irecv(rcvlon1,len,MPI_REAL8,east,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlon1,len,MPI_REAL8,east,1,TIEGCM_WORLD,
      |  irecv1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
@@ -3308,28 +3510,28 @@
       enddo
 !
 ! Send lat0:lat0+1 to south:
-      call mpi_isend(sndlat0,len,MPI_REAL8,south,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlat0,len,MPI_REAL8,south,1,TIEGCM_WORLD,
      |  isend0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
      |    'mp_geo_halos send lat0:lat0+1 to south')
 !
 ! Send lat1-1:lat1 to north:
-      call mpi_isend(sndlat1,len,MPI_REAL8,north,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlat1,len,MPI_REAL8,north,1,TIEGCM_WORLD,
      |  isend1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
      |    'mp_geo_halos send lat1-1:lat1 to north')
 !
 ! Recv lat0-2:lat0-1 from south:
-      call mpi_irecv(rcvlat0,len,MPI_REAL8,south,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlat0,len,MPI_REAL8,south,1,TIEGCM_WORLD,
      |  irecv0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
      |    'mp_geo_halos recv lat0-2:lat0-1 from south')
 !
 ! Recv lat1+1:lat1+2 from north:
-      call mpi_irecv(rcvlat1,len,MPI_REAL8,north,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlat1,len,MPI_REAL8,north,1,TIEGCM_WORLD,
      |  irecv1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
@@ -3392,7 +3594,7 @@
      |  fmsub(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,nf)
 !
 ! Local:
-      integer :: k,i,j,ifld,west,east,north,south,len,isend0,isend1,
+      integer :: k,i,ifld,west,east,north,south,len,isend0,isend1,
      |  irecv0,irecv1,ier,nlats,istat(MPI_STATUS_SIZE,4),ireq(4),
      |  nlons
       real,dimension(lev0:lev1,2,lat1-lat0+1,nf) ::
@@ -3431,26 +3633,26 @@
       enddo ! ifld=1,nf
 !
 ! Send lon0:lon0+1 to the west:
-      call mpi_isend(sndlon0,len,MPI_REAL8,west,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlon0,len,MPI_REAL8,west,1,TIEGCM_WORLD,
      |  isend0,ier)
       if (ier /= 0) call handle_mpi_err(ier,
      |  'mp_geo_halos_f3d send lon0:lon0+1 to west')
 !
 ! Send lon1-1:lon1 to the east:
-      call mpi_isend(sndlon1,len,MPI_REAL8,east,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlon1,len,MPI_REAL8,east,1,TIEGCM_WORLD,
      |    isend1,ier)
       if (ier /= 0) call handle_mpi_err(ier,
      |  'mp_geo_halos_f3d send lon1-1:lon1 to east')
 !
 ! Recv lon0-2:lon0-1 from west:
-      call mpi_irecv(rcvlon0,len,MPI_REAL8,west,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlon0,len,MPI_REAL8,west,1,TIEGCM_WORLD,
      |  irecv0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
      |    'mp_geo_halos_f3d recv lon0-2:lon0-1 from west')
 !
 ! Recv lon1+1:lon1+2 from east:
-      call mpi_irecv(rcvlon1,len,MPI_REAL8,east,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlon1,len,MPI_REAL8,east,1,TIEGCM_WORLD,
      |  irecv1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
@@ -3509,28 +3711,28 @@
       enddo
 !
 ! Send lat0:lat0+1 to south:
-      call mpi_isend(sndlat0,len,MPI_REAL8,south,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlat0,len,MPI_REAL8,south,1,TIEGCM_WORLD,
      |  isend0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
      |    'mp_geo_halos_f3d send lat0:lat0+1 to south')
 !
 ! Send lat1-1:lat1 to north:
-      call mpi_isend(sndlat1,len,MPI_REAL8,north,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlat1,len,MPI_REAL8,north,1,TIEGCM_WORLD,
      |  isend1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
      |    'mp_geo_halos_f3d send lat1-1:lat1 to north')
 !
 ! Recv lat0-2:lat0-1 from south:
-      call mpi_irecv(rcvlat0,len,MPI_REAL8,south,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlat0,len,MPI_REAL8,south,1,TIEGCM_WORLD,
      |  irecv0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
      |    'mp_geo_halos_f3d recv lat0-2:lat0-1 from south')
 !
 ! Recv lat1+1:lat1+2 from north:
-      call mpi_irecv(rcvlat1,len,MPI_REAL8,north,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlat1,len,MPI_REAL8,north,1,TIEGCM_WORLD,
      |  irecv1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,
@@ -3639,7 +3841,7 @@
           do itask=0,ntask-1
             if (itask /= mytid.and.tasks(itask)%mytidi==mytidi) then
               call mpi_isend(sndbuf,len,MPI_REAL8,itask,1,
-     |          MPI_COMM_WORLD,ireqsend,ier)
+     |          TIEGCM_WORLD,ireqsend,ier)
               if (ier /= 0) call handle_mpi_err(ier,'mp_mageq isend')
               call mpi_wait(ireqsend,irstat,ier)
             endif ! another task in mytidi
@@ -3654,7 +3856,7 @@
           do j=tasks(itask)%mlat0,tasks(itask)%mlat1
             if (j == jlateq.and.tasks(itask)%mytidi==mytidi) then
               call mpi_irecv(rcvbuf,len,MPI_REAL8,itask,1,
-     |          MPI_COMM_WORLD,ireqrecv,ier)
+     |          TIEGCM_WORLD,ireqrecv,ier)
               if (ier /= 0) call handle_mpi_err(ier,'mp_mageq irecv')
               call mpi_wait(ireqrecv,irstat,ier)
               do n=1,nf
@@ -3710,60 +3912,39 @@
       real,intent(out) :: feq_jpm1(nmlonp1,2,nf) ! eq-1,eq+1
 !
 ! Local:
-      integer :: ifld,j,ier,len,jlateq,itask,i0,i1
-      real,allocatable,save :: sndbuf(:,:,:,:), rcvbuf(:,:,:,:)
+      integer :: j,ier,len,jlateq
+      real,allocatable,save :: sndbuf(:,:,:)
       real :: starttime,endtime
 
       if (mpi_timing) starttime = mpi_wtime()
 !
 ! Allocate buffers once per run:
       if (.not.allocated(sndbuf)) then
-        allocate(sndbuf(nmlonp1,2,nf,0:ntask-1),stat=ier)
+        allocate(sndbuf(nmlonp1,2,nf),stat=ier)
         if (ier /= 0) 
      |    call shutdown('mp_mageq_jpm1 error allocating sndbuf')
       endif
-      if (.not.allocated(rcvbuf)) then
-        allocate(rcvbuf(nmlonp1,2,nf,0:ntask-1),stat=ier)
-        if (ier /= 0) 
-     |    call shutdown('mp_mageq_jpm1 error allocating rcvbuf')
-      endif
       sndbuf = 0.
-      rcvbuf = 0.
+      feq_jpm1 = 0.
       len = nmlonp1*2*nf
 !
 ! Load send buffer w/ eq +/- 1 for current subdomain
-! (redundant to all tasks for alltoall)
 !
       jlateq = (nmlat+1)/2 
-      do itask=0,ntask-1
-        do j=mlat0,mlat1
-          if (j == jlateq+1) then     ! equator+1
-            sndbuf(mlon0:mlon1,1,:,itask) = f(mlon0:mlon1,j,:)
-          elseif (j == jlateq-1) then ! equator-1
-            sndbuf(mlon0:mlon1,2,:,itask) = f(mlon0:mlon1,j,:)
-          endif ! j==jlateq
-        enddo ! j=mlat0,mlat1
-      enddo ! itask
+      do j=mlat0,mlat1
+        if (j == jlateq+1) then     ! equator+1
+          sndbuf(mlon0:mlon1,1,:) = f(mlon0:mlon1,j,:)
+        elseif (j == jlateq-1) then ! equator-1
+          sndbuf(mlon0:mlon1,2,:) = f(mlon0:mlon1,j,:)
+        endif ! j==jlateq
+      enddo ! j=mlat0,mlat1
 !
 ! Do the exchange:
-      call mpi_alltoall(sndbuf,len,MPI_REAL8,
-     |                  rcvbuf,len,MPI_REAL8,MPI_COMM_WORLD,ier)
+      call mpi_allreduce(sndbuf(:,:,1:nf),feq_jpm1(:,:,1:nf),len,
+     |  MPI_REAL8,MPI_SUM,TIEGCM_WORLD,ier)
       if (ier /= 0)
-     |  call handle_mpi_err(ier,'mp_mageq_jpm1 call mpi_alltoall')
-!
-! Unpack receive buffer to output feq_jpm1(nmlonp1,2,nf)   
-! rcvbuf(nmlonp1,2,nf,0:ntask-1)
-      do itask=0,ntask-1
-        i0 = tasks(itask)%mlon0 ; i1 = tasks(itask)%mlon1
-        do j=tasks(itask)%mlat0,tasks(itask)%mlat1
-          if (j == jlateq+1) then     ! equator+1
-            feq_jpm1(i0:i1,1,:) = rcvbuf(i0:i1,1,:,itask)
-          elseif (j == jlateq-1) then ! equator-1
-            feq_jpm1(i0:i1,2,:) = rcvbuf(i0:i1,2,:,itask)
-          endif
-        enddo ! j=mlat0,mlat1
-      enddo ! itask
-!
+     |  call handle_mpi_err(ier,'mp_mageq_jpm1 call mpi_allreduce')
+
 ! Periodic point:
       feq_jpm1(nmlonp1,:,:) = feq_jpm1(1,:,:)
 
@@ -3803,14 +3984,10 @@
       real,intent(out) :: feq_jpm3(nmlonp1,-3:3,nf)
 !
 ! Local:
-      integer :: ifld,j,ier,len,jlateq,itask,i0,i1
-      real,allocatable,save :: sndbuf(:,:,:,:), rcvbuf(:,:,:,:)
+      integer :: j,ier,len,jlateq
+      real,allocatable,save :: sndbuf(:,:,:)
       real :: starttime,endtime
-#if defined(INTERCOMM) || defined(CISMAH)
-      integer,parameter :: mxnf=7        ! 7 2d fields for CISM
-#else
-      integer,parameter :: mxnf=6        ! 6 2d fields
-#endif
+      integer,parameter :: mxnf=7        ! 7 2d fields for MAGE
 
       if (mpi_timing) starttime = mpi_wtime()
 
@@ -3822,71 +3999,41 @@
 !
 ! Allocate buffers once per run (max number of fields):
       if (.not.allocated(sndbuf)) then
-        allocate(sndbuf(nmlonp1,-3:3,mxnf,0:ntask-1),stat=ier)
+        allocate(sndbuf(nmlonp1,-3:3,mxnf),stat=ier)
         if (ier /= 0) 
      |    call shutdown('mp_mageq_jpm3 error allocating sndbuf')
       endif
-      if (.not.allocated(rcvbuf)) then
-        allocate(rcvbuf(nmlonp1,-3:3,mxnf,0:ntask-1),stat=ier) 
-        if (ier /= 0) 
-     |    call shutdown('mp_mageq_jpm3 error allocating rcvbuf')
-      endif
       sndbuf = 0.
-      rcvbuf = 0.
+      feq_jpm3 = 0.
       len = nmlonp1*7*nf
 !
 ! Load send buffer w/ eq +/- 1 for current subdomain
-! (redundant to all tasks for alltoall)
 !
       jlateq = (nmlat+1)/2 
-      do itask=0,ntask-1
-        do j=mlat0,mlat1
-          if (j == jlateq-3) then       ! equator-3
-            sndbuf(mlon0:mlon1,-3,1:nf,itask) = f(mlon0:mlon1,j,:)
-          elseif (j == jlateq-2) then   ! equator-2
-            sndbuf(mlon0:mlon1,-2,1:nf,itask) = f(mlon0:mlon1,j,:)
-          elseif (j == jlateq-1) then   ! equator-1
-            sndbuf(mlon0:mlon1,-1,1:nf,itask) = f(mlon0:mlon1,j,:)
-          elseif (j == jlateq) then     ! equator
-            sndbuf(mlon0:mlon1,0,1:nf,itask) = f(mlon0:mlon1,j,:)
-          elseif (j == jlateq+1) then   ! equator
-            sndbuf(mlon0:mlon1,1,1:nf,itask) = f(mlon0:mlon1,j,:)
-          elseif (j == jlateq+2) then   ! equator
-            sndbuf(mlon0:mlon1,2,1:nf,itask) = f(mlon0:mlon1,j,:)
-          elseif (j == jlateq+3) then   ! equator
-            sndbuf(mlon0:mlon1,3,1:nf,itask) = f(mlon0:mlon1,j,:)
-          endif ! j==jlateq
-        enddo ! j=mlat0,mlat1
-      enddo ! itask
+      do j=mlat0,mlat1
+        if (j == jlateq-3) then       ! equator-3
+          sndbuf(mlon0:mlon1,-3,1:nf) = f(mlon0:mlon1,j,:)
+        elseif (j == jlateq-2) then   ! equator-2
+          sndbuf(mlon0:mlon1,-2,1:nf) = f(mlon0:mlon1,j,:)
+        elseif (j == jlateq-1) then   ! equator-1
+          sndbuf(mlon0:mlon1,-1,1:nf) = f(mlon0:mlon1,j,:)
+        elseif (j == jlateq) then     ! equator
+          sndbuf(mlon0:mlon1,0,1:nf) = f(mlon0:mlon1,j,:)
+        elseif (j == jlateq+1) then   ! equator
+          sndbuf(mlon0:mlon1,1,1:nf) = f(mlon0:mlon1,j,:)
+        elseif (j == jlateq+2) then   ! equator
+          sndbuf(mlon0:mlon1,2,1:nf) = f(mlon0:mlon1,j,:)
+        elseif (j == jlateq+3) then   ! equator
+          sndbuf(mlon0:mlon1,3,1:nf) = f(mlon0:mlon1,j,:)
+        endif ! j==jlateq
+      enddo ! j=mlat0,mlat1
 !
 ! Do the exchange:
-      call mpi_alltoall(sndbuf(:,:,1:nf,:),len,MPI_REAL8,
-     |  rcvbuf(:,:,1:nf,:),len,MPI_REAL8,MPI_COMM_WORLD,ier)
+      call mpi_allreduce(sndbuf(:,:,1:nf),feq_jpm3(:,:,1:nf),len,
+     |  MPI_REAL8,MPI_SUM,TIEGCM_WORLD,ier)
       if (ier /= 0)
-     |  call handle_mpi_err(ier,'mp_mageq_jpm3 call mpi_alltoall')
-!
-! Unpack receive buffer to output feq_jpm3(nmlonp1,-3:3,nf)   
-! rcvbuf(nmlonp1,-3:3,nf,0:ntask-1)
-      do itask=0,ntask-1
-        i0 = tasks(itask)%mlon0 ; i1 = tasks(itask)%mlon1
-        do j=tasks(itask)%mlat0,tasks(itask)%mlat1
-          if (j == jlateq-3) then         ! equator-3
-            feq_jpm3(i0:i1,-3,:) = rcvbuf(i0:i1,-3,1:nf,itask)
-          elseif (j == jlateq-2) then     ! equator-2
-            feq_jpm3(i0:i1,-2,:) = rcvbuf(i0:i1,-2,1:nf,itask)
-          elseif (j == jlateq-1) then     ! equator-1
-            feq_jpm3(i0:i1,-1,:) = rcvbuf(i0:i1,-1,1:nf,itask)
-          elseif (j == jlateq) then       ! equator
-            feq_jpm3(i0:i1,0,:) = rcvbuf(i0:i1,0,1:nf,itask)
-          elseif (j == jlateq+1) then     ! equator+1
-            feq_jpm3(i0:i1,1,:) = rcvbuf(i0:i1,1,1:nf,itask)
-          elseif (j == jlateq+2) then     ! equator+2
-            feq_jpm3(i0:i1,2,:) = rcvbuf(i0:i1,2,1:nf,itask)
-          elseif (j == jlateq+3) then     ! equator+3
-            feq_jpm3(i0:i1,3,:) = rcvbuf(i0:i1,3,1:nf,itask)
-          endif
-        enddo ! j=mlat0,mlat1
-      enddo ! itask
+     |  call handle_mpi_err(ier,'mp_mageq_jpm3 call mpi_allreduce')
+
 !
 ! Periodic point:
       feq_jpm3(nmlonp1,:,:) = feq_jpm3(1,:,:)
@@ -3926,14 +4073,10 @@
       real,intent(out) :: fpole_jpm2(nglblon,4,nf)
 !
 ! Local:
-      integer :: j,k,ier,len,itask,i0,i1,j0,j1
-      real,allocatable,save :: sndbuf(:,:,:,:),rcvbuf(:,:,:,:)
+      integer :: j,ier,len
+      real,allocatable,save :: sndbuf(:,:,:)
       real :: starttime,endtime
-#if defined(INTERCOMM) || defined(CISMAH)
-      integer,parameter :: mxnf=7        ! 7 2d fields for CISM
-#else
-      integer,parameter :: mxnf=6        ! 6 2d fields
-#endif
+      integer,parameter :: mxnf=7        ! 7 2d fields for MAGE
 
       if (mpi_timing) starttime = mpi_wtime()
 
@@ -3945,60 +4088,34 @@
 !
 ! Allocate the max number of fields, only once per run:
       if (.not.allocated(sndbuf)) then
-        allocate(sndbuf(nglblon,4,mxnf,0:ntask-1),stat=ier)
+        allocate(sndbuf(nglblon,4,mxnf),stat=ier)
         if (ier /= 0)
      |    call shutdown('mp_magpole_2d: error allocating sndbuf')
       endif
-      if (.not.allocated(rcvbuf)) then
-        allocate(rcvbuf(nglblon,4,mxnf,0:ntask-1),stat=ier)
-        if (ier /= 0)
-     |    call shutdown('mp_magpole_2d: error allocating rcvbuf')
-      endif
       sndbuf = 0.
-      rcvbuf = 0.
+      fpole_jpm2 = 0.
       len = nglblon*4*nf
 !
 ! Load send buffer with values at poles +/- 2 for current subdomain
-! (redundant to all tasks for alltoall)
 !
-      do itask=0,ntask-1
-        do j=ilat0,ilat1
-          if (j==jspole+1) then             ! south pole +1
-            sndbuf(ilon0:ilon1,1,1:nf,itask) = f(ilon0:ilon1,j,:)
-          elseif (j==jspole+2) then         ! south pole +2
-            sndbuf(ilon0:ilon1,2,1:nf,itask) = f(ilon0:ilon1,j,:)
-          elseif (j==jnpole-1) then         ! north pole -1
-            sndbuf(ilon0:ilon1,3,1:nf,itask) = f(ilon0:ilon1,j,:)
-          elseif (j==jnpole-2) then         ! north pole -2
-            sndbuf(ilon0:ilon1,4,1:nf,itask) = f(ilon0:ilon1,j,:)
-          endif
-        enddo
+      do j=ilat0,ilat1
+        if (j==jspole+1) then             ! south pole +1
+          sndbuf(ilon0:ilon1,1,1:nf) = f(ilon0:ilon1,j,:)
+        elseif (j==jspole+2) then         ! south pole +2
+          sndbuf(ilon0:ilon1,2,1:nf) = f(ilon0:ilon1,j,:)
+        elseif (j==jnpole-1) then         ! north pole -1
+          sndbuf(ilon0:ilon1,3,1:nf) = f(ilon0:ilon1,j,:)
+        elseif (j==jnpole-2) then         ! north pole -2
+          sndbuf(ilon0:ilon1,4,1:nf) = f(ilon0:ilon1,j,:)
+        endif
       enddo
 !
 ! Do the exchange:
-      call mpi_alltoall(sndbuf(:,:,1:nf,:),len,MPI_REAL8,
-     |  rcvbuf(:,:,1:nf,:),len,MPI_REAL8,MPI_COMM_WORLD,ier)
+      call mpi_allreduce(sndbuf(:,:,1:nf),fpole_jpm2(:,:,1:nf),len,
+     |  MPI_REAL8,MPI_SUM,TIEGCM_WORLD,ier)
       if (ier /= 0)
-     |  call handle_mpi_err(ier,'mp_magpole_2d call mpi_alltoall')
-!
-! Unpack rcvbuf into output fpole_jpm2(nglblon,4,nf)
-      do itask=0,ntask-1
-        i0 = tasks(itask)%mlon0
-        i1 = tasks(itask)%mlon1
-        j0 = tasks(itask)%mlat0
-        j1 = tasks(itask)%mlat1
-        do j=j0,j1
-          if (j==jspole+1) then             ! south pole +1
-            fpole_jpm2(i0:i1,1,:) = rcvbuf(i0:i1,1,1:nf,itask)
-          elseif (j==jspole+2) then         ! south pole +2
-            fpole_jpm2(i0:i1,2,:) = rcvbuf(i0:i1,2,1:nf,itask)  
-          elseif (j==jnpole-1) then         ! north pole -1
-            fpole_jpm2(i0:i1,3,:) = rcvbuf(i0:i1,3,1:nf,itask)  
-          elseif (j==jnpole-2) then         ! north pole -2
-            fpole_jpm2(i0:i1,4,:) = rcvbuf(i0:i1,4,1:nf,itask)  
-          endif
-        enddo
-      enddo
+     |  call handle_mpi_err(ier,'mp_magpole_2d call mpi_allreduce')
+
       if (mpi_timing) then
         endtime = mpi_wtime()
         time_magpole_2d=time_magpole_2d+(endtime-starttime)
@@ -4027,14 +4144,10 @@
       real,intent(out) :: fpole_jpm2(nglblon,4,nlev,nf)
 !
 ! Local:
-      integer :: j,k,ier,len,itask,i0,i1,j0,j1
-      real,allocatable,save :: sndbuf(:,:,:,:,:),rcvbuf(:,:,:,:,:)
+      integer :: j,k,ier,len
+      real,allocatable,save :: sndbuf(:,:,:,:)
       real :: starttime,endtime
-#if defined(INTERCOMM) || defined(CISMAH)
-      integer,parameter :: mxnf=7        ! 7 2d fields for CISM
-#else
-      integer,parameter :: mxnf=6        ! 6 2d fields
-#endif
+      integer,parameter :: mxnf=7        ! 7 2d fields for MAGE
 
       if (mpi_timing) starttime = mpi_wtime()
 
@@ -4046,62 +4159,36 @@
 !
 ! Allocate the max number of fields, only once per run:
       if (.not.allocated(sndbuf)) then
-        allocate(sndbuf(nglblon,4,nlev,mxnf,0:ntask-1),stat=ier)
+        allocate(sndbuf(nglblon,4,nlev,mxnf),stat=ier)
         if (ier /= 0)
      |    call shutdown('mp_magpole_3d: error allocating sndbuf')
       endif
-      if (.not.allocated(rcvbuf)) then
-        allocate(rcvbuf(nglblon,4,nlev,mxnf,0:ntask-1),stat=ier)
-        if (ier /= 0)
-     |    call shutdown('mp_magpole_3d: error allocating rcvbuf')
-      endif
       sndbuf = 0.
-      rcvbuf = 0.
+      fpole_jpm2 = 0.
       len = nglblon*4*nlev*nf
 !
 ! Load send buffer with values at poles +/- 2 for current subdomain
-! (redundant to all tasks for alltoall)
 !
-      do itask=0,ntask-1
-        do j=ilat0,ilat1
-          do k=1,nlev
+      do j=ilat0,ilat1
+        do k=1,nlev
           if (j==jspole+1) then             ! south pole +1
-            sndbuf(ilon0:ilon1,1,k,1:nf,itask) = f(ilon0:ilon1,j,k,:)
+            sndbuf(ilon0:ilon1,1,k,1:nf) = f(ilon0:ilon1,j,k,:)
           elseif (j==jspole+2) then         ! south pole +2
-            sndbuf(ilon0:ilon1,2,k,1:nf,itask) = f(ilon0:ilon1,j,k,:)
+            sndbuf(ilon0:ilon1,2,k,1:nf) = f(ilon0:ilon1,j,k,:)
           elseif (j==jnpole-1) then         ! north pole -1
-            sndbuf(ilon0:ilon1,3,k,1:nf,itask) = f(ilon0:ilon1,j,k,:)
+            sndbuf(ilon0:ilon1,3,k,1:nf) = f(ilon0:ilon1,j,k,:)
           elseif (j==jnpole-2) then         ! north pole -2
-            sndbuf(ilon0:ilon1,4,k,1:nf,itask) = f(ilon0:ilon1,j,k,:)
+            sndbuf(ilon0:ilon1,4,k,1:nf) = f(ilon0:ilon1,j,k,:)
           endif
-          enddo
         enddo
       enddo
 !
 ! Do the exchange:
-      call mpi_alltoall(sndbuf(:,:,:,1:nf,:),len,MPI_REAL8,
-     |  rcvbuf(:,:,:,1:nf,:),len,MPI_REAL8,MPI_COMM_WORLD,ier)
+      call mpi_allreduce(sndbuf(:,:,:,1:nf),fpole_jpm2(:,:,:,1:nf),len,
+     |  MPI_REAL8,MPI_SUM,TIEGCM_WORLD,ier)
       if (ier /= 0)
-     |  call handle_mpi_err(ier,'mp_magpole_3d call mpi_alltoall')
-!
-! Unpack rcvbuf into output fpole_jpm2(nglblon,4,nf)
-      do itask=0,ntask-1
-        i0 = tasks(itask)%mlon0
-        i1 = tasks(itask)%mlon1
-        j0 = tasks(itask)%mlat0
-        j1 = tasks(itask)%mlat1
-        do j=j0,j1
-          if (j==jspole+1) then             ! south pole +1
-            fpole_jpm2(i0:i1,1,:,:) = rcvbuf(i0:i1,1,:,1:nf,itask)
-          elseif (j==jspole+2) then         ! south pole +2
-            fpole_jpm2(i0:i1,2,:,:) = rcvbuf(i0:i1,2,:,1:nf,itask)  
-          elseif (j==jnpole-1) then         ! north pole -1
-            fpole_jpm2(i0:i1,3,:,:) = rcvbuf(i0:i1,3,:,1:nf,itask)  
-          elseif (j==jnpole-2) then         ! north pole -2
-            fpole_jpm2(i0:i1,4,:,:) = rcvbuf(i0:i1,4,:,1:nf,itask)  
-          endif
-        enddo
-      enddo
+     |  call handle_mpi_err(ier,'mp_magpole_3d call mpi_allreduce')
+
       if (mpi_timing) then
         endtime = mpi_wtime()
         time_magpole_3d=time_magpole_3d+(endtime-starttime)
@@ -4127,8 +4214,8 @@
       real,intent(out) :: fpoles(nglblon,2,nf)
 !
 ! Local:
-      integer :: j,k,ier,len,itask,i0,i1,j0,j1
-      real,allocatable,save :: sndbuf(:,:,:,:),rcvbuf(:,:,:,:)
+      integer :: j,ier,len
+      real,allocatable,save :: sndbuf(:,:,:)
       real :: starttime,endtime
       integer,parameter :: mxnf=nmlevp1
 
@@ -4142,52 +4229,30 @@
 !
 ! Allocate the max number of fields, only once per run:
       if (.not.allocated(sndbuf)) then
-        allocate(sndbuf(nglblon,2,mxnf,0:ntask-1),stat=ier)
+        allocate(sndbuf(nglblon,2,mxnf),stat=ier)
         if (ier /= 0)
      |    call shutdown('mp_magpoles: error allocating sndbuf')
       endif
-      if (.not.allocated(rcvbuf)) then
-        allocate(rcvbuf(nglblon,2,mxnf,0:ntask-1),stat=ier)
-        if (ier /= 0)
-     |    call shutdown('mp_magpoles: error allocating rcvbuf')
-      endif
       sndbuf = 0.
-      rcvbuf = 0.
+      fpoles = 0.
       len = nglblon*2*nf
 !
 ! Load send buffer with values at poles +/- 2 for current subdomain
-! (redundant to all tasks for alltoall)
 !
-      do itask=0,ntask-1
-        do j=ilat0,ilat1
-          if (j==jspole) then             ! south pole
-            sndbuf(ilon0:ilon1,1,1:nf,itask) = f(ilon0:ilon1,j,:)
-          elseif (j==jnpole) then         ! npole pole
-            sndbuf(ilon0:ilon1,2,1:nf,itask) = f(ilon0:ilon1,j,:)
-          endif
-        enddo
+      do j=ilat0,ilat1
+        if (j==jspole) then             ! south pole
+          sndbuf(ilon0:ilon1,1,1:nf) = f(ilon0:ilon1,j,:)
+        elseif (j==jnpole) then         ! npole pole
+          sndbuf(ilon0:ilon1,2,1:nf) = f(ilon0:ilon1,j,:)
+        endif
       enddo
 !
 ! Do the exchange:
-      call mpi_alltoall(sndbuf(:,:,1:nf,:),len,MPI_REAL8,
-     |  rcvbuf(:,:,1:nf,:),len,MPI_REAL8,MPI_COMM_WORLD,ier)
+      call mpi_allreduce(sndbuf(:,:,1:nf),fpoles(:,:,1:nf),len,
+     |  MPI_REAL8,MPI_SUM,TIEGCM_WORLD,ier)
       if (ier /= 0)
-     |  call handle_mpi_err(ier,'mp_magpoles call mpi_alltoall')
-!
-! Unpack rcvbuf into output fpoles(nglblon,2,nf)
-      do itask=0,ntask-1
-        i0 = tasks(itask)%mlon0
-        i1 = tasks(itask)%mlon1
-        j0 = tasks(itask)%mlat0
-        j1 = tasks(itask)%mlat1
-        do j=j0,j1
-          if (j==jspole) then             ! south pole
-            fpoles(i0:i1,1,:) = rcvbuf(i0:i1,1,1:nf,itask)
-          elseif (j==jnpole) then         ! north pole
-            fpoles(i0:i1,2,:) = rcvbuf(i0:i1,2,1:nf,itask)  
-          endif
-        enddo
-      enddo
+     |  call handle_mpi_err(ier,'mp_magpoles call mpi_allreduce')
+
       if (mpi_timing) then
         endtime = mpi_wtime()
         time_magpoles=time_magpoles+(endtime-starttime)
@@ -4197,7 +4262,7 @@
       subroutine conjugate_points
 !
 ! Local:
-      integer :: ier,i,j,js,jn,itask,ii,jj
+      integer :: ier,j,js,jn,itask,jj
       real :: starttime,endtime
 
       if (mpi_timing) starttime = mpi_wtime()
@@ -4299,7 +4364,7 @@
       real,intent(inout) :: f(mlon0:mlon1,mlat0:mlat1,nf)
 !
 ! Local:
-      integer :: i,j,n,len,itask,ifld,ier,nmlons
+      integer :: j,n,len,itask,ifld,ier,nmlons
       real :: sndbuf(mxmaglon,mxmaglat,nf,0:ntask-1)
       real :: rcvbuf(mxmaglon,mxmaglat,nf,0:ntask-1)
       integer :: jsend(0:ntask-1),jrecv(0:ntask-1)
@@ -4326,7 +4391,7 @@
             enddo
           enddo ! ifld=1,nf
           call mpi_isend(sndbuf(1,1,1,itask),len,MPI_REAL8,
-     |      itask,1,MPI_COMM_WORLD,jsend(itask),ier)
+     |      itask,1,TIEGCM_WORLD,jsend(itask),ier)
           call mpi_wait(jsend(itask),irstat,ier)
         endif ! nsend_south(itask) > 0
       enddo ! itask=0,ntask-1
@@ -4338,7 +4403,7 @@
       do itask=0,ntask-1
         if (nrecv_north(itask) > 0 .and. itask /= mytid) then
           call mpi_irecv(rcvbuf(1,1,1,itask),len,MPI_REAL8,
-     |      itask,1,MPI_COMM_WORLD,jrecv(itask),ier)
+     |      itask,1,TIEGCM_WORLD,jrecv(itask),ier)
           call mpi_wait(jrecv(itask),irstat,ier)
           do ifld=1,nf
             do n=1,nrecv_north(itask)
@@ -4388,7 +4453,7 @@
       real,intent(inout) :: f(mlon0:mlon1,mlat0:mlat1,nf)
 !
 ! Local:
-      integer :: j,ier,idest,isrc,len,ireqsend,ireqrecv,ifld,msgtag
+      integer :: j,ier,idest,isrc,len,ireqsend,ireqrecv,msgtag
       real :: sndbuf(mxmaglat,nf),rcvbuf(mxmaglat,nf)
       real :: starttime,endtime
 
@@ -4402,7 +4467,7 @@
           sndbuf(j-mlat0+1,:) = f(1,j,:)
         enddo
         msgtag = mytid
-        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,MPI_COMM_WORLD,
+        call mpi_isend(sndbuf,len,MPI_REAL8,idest,msgtag,TIEGCM_WORLD,
      |    ireqsend,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_mag_periodic_f2d send to idest')
@@ -4415,7 +4480,7 @@
       elseif (mytidi==ntaski-1) then
         isrc = itask_table_mag(0,mytidj)
         msgtag = isrc
-        call mpi_irecv(rcvbuf,len,MPI_REAL8,isrc,msgtag,MPI_COMM_WORLD,
+        call mpi_irecv(rcvbuf,len,MPI_REAL8,isrc,msgtag,TIEGCM_WORLD,
      |    ireqrecv,ier)
         if (ier /= 0)
      |    call handle_mpi_err(ier,'mp_periodic_f2d recv fm isrc')
@@ -4445,7 +4510,7 @@
       real,intent(out) :: fmglb(nmlonp1,nmlat,nf)
 !
 ! Local:
-      integer :: len,i,j,ifld,ier,itask,i0,i1,j0,j1,nlons,nlats
+      integer :: len,j,ifld,ier,itask,i0,i1,j0,j1,nlons,nlats
       real,dimension(mxmaglon,mxmaglat,nf) :: sndbuf
       real,dimension(mxmaglon,mxmaglat,nf,0:ntask-1) :: rcvbuf
       real :: starttime,endtime
@@ -4466,7 +4531,7 @@
 !
 ! Gather to root:
       call mpi_gather(sndbuf,len,MPI_REAL8,rcvbuf,len,MPI_REAL8,0,
-     |  MPI_COMM_WORLD,ier)
+     |  TIEGCM_WORLD,ier)
       if (ier /= 0)
      |  call handle_mpi_err(ier,'mp_gather_pdyn: mpi_gather to root')
 !
@@ -4518,7 +4583,7 @@
 
       len = nlon_glb*nlat_glb
       call mpi_allgather(sndbuf,len,MPI_REAL8,
-     |                   rcvbuf,len,MPI_REAL8,MPI_COMM_WORLD,ier) 
+     |                   rcvbuf,len,MPI_REAL8,TIEGCM_WORLD,ier) 
       if (ier /= 0) then
         call handle_mpi_err(ier,
      |    '>>> mp_allgather_2d: error return from mpi_allgather')
@@ -4565,7 +4630,7 @@
      |                            nf0:nf1)
 !
 ! Local:
-      integer :: i,j,ifld,west,east,north,south,len,isend0,isend1,
+      integer :: ifld,west,east,north,south,len,isend0,isend1,
      |  irecv0,irecv1,ier,nmlats,istat(MPI_STATUS_SIZE,4),ireq(4),
      |  nmlons,nf
       real,dimension(mlat1-mlat0+1,nf0:nf1) ::
@@ -4617,25 +4682,25 @@
       enddo ! ifld=nf0,nf1
 !
 ! Send mlon0 to the west:
-      call mpi_isend(sndlon0,len,MPI_REAL8,west,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlon0,len,MPI_REAL8,west,1,TIEGCM_WORLD,
      |  isend0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_mag_halos send mlon0 to west')
 !
 ! Send mlon1 to the east:
-      call mpi_isend(sndlon1,len,MPI_REAL8,east,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlon1,len,MPI_REAL8,east,1,TIEGCM_WORLD,
      |    isend1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_mag_halos send mlon1 to east')
 !
 ! Recv mlon0-1 from west:
-      call mpi_irecv(rcvlon0,len,MPI_REAL8,west,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlon0,len,MPI_REAL8,west,1,TIEGCM_WORLD,
      |  irecv0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_mag_halos recv mlon0 from west')
 !
 ! Recv mlon1+1 from east:
-      call mpi_irecv(rcvlon1,len,MPI_REAL8,east,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlon1,len,MPI_REAL8,east,1,TIEGCM_WORLD,
      |  irecv1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_mag_halos recv mlon1 from east')
@@ -4694,25 +4759,25 @@
       enddo
 !
 ! Send mlat0 to south:
-      call mpi_isend(sndlat0,len,MPI_REAL8,south,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlat0,len,MPI_REAL8,south,1,TIEGCM_WORLD,
      |  isend0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_mag_halos send mlat0 to south')
 !
 ! Send mlat1 to north:
-      call mpi_isend(sndlat1,len,MPI_REAL8,north,1,MPI_COMM_WORLD,
+      call mpi_isend(sndlat1,len,MPI_REAL8,north,1,TIEGCM_WORLD,
      |  isend1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_mag_halos send mlat1 to north')
 !
 ! Recv mlat0-1 from south:
-      call mpi_irecv(rcvlat0,len,MPI_REAL8,south,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlat0,len,MPI_REAL8,south,1,TIEGCM_WORLD,
      |  irecv0,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_mag_halos recv mlat0-1 from south')
 !
 ! Recv mlat1+1 from north:
-      call mpi_irecv(rcvlat1,len,MPI_REAL8,north,1,MPI_COMM_WORLD,
+      call mpi_irecv(rcvlat1,len,MPI_REAL8,north,1,TIEGCM_WORLD,
      |  irecv1,ier)
       if (ier /= 0) 
      |  call handle_mpi_err(ier,'mp_mag_halos recv mlat1+1 from north')
@@ -4756,19 +4821,19 @@
 ! Note: root task should not reference coef_rhs or coef_cofum
 !
 ! Args:
-      real,intent(in) :: rhs(nmlonp1,nmlat),cofum(nmlonp1,nmlat,9)
+      real,intent(inout) :: rhs(nmlonp1,nmlat),cofum(nmlonp1,nmlat,9)
       real,intent(out) :: coef_rhs(mlon0:mlon1,mlat0:mlat1)
       real,intent(out) :: coef_cofum(mlon0:mlon1,mlat0:mlat1,9)
 !
 ! Local:
-      integer :: ier,len,i,j,n
+      integer :: ier,len,i,j
       real :: starttime,endtime
 
       if (mpi_timing) starttime = mpi_wtime()
 !
 ! Broadcast rhs (from pdynamo c0(:,:,10))
       len = nmlat*nmlonp1
-      call mpi_bcast(rhs,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
+      call mpi_bcast(rhs,len,MPI_REAL8,0,TIEGCM_WORLD,ier)
       if (ier /= 0) call handle_mpi_err(ier,
      |    'mp_scatter_coeffs: bcast global rhs')
 !     write(6,"('mp_scatter_coeffs after bcast: rhs min,max=',2e12.4)")
@@ -4776,7 +4841,7 @@
 !
 ! Broadcast cofum (from pdynamo cofum(:,:,1-9)):
       len = nmlat*nmlonp1*9
-      call mpi_bcast(cofum,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
+      call mpi_bcast(cofum,len,MPI_REAL8,0,TIEGCM_WORLD,ier)
       if (ier /= 0) call handle_mpi_err(ier,
      |    'mp_scatter_coeffs: bcast global cofum')
 !     write(6,"('mp_scatter_coeffs after bcast: cofum min,max=',
@@ -4800,7 +4865,7 @@
       end subroutine mp_scatter_coeffs
 !-----------------------------------------------------------------------
       subroutine mp_scatter_phim(phim_glb,phim)
-      real,intent(in) :: phim_glb(nmlonp1,nmlat)
+      real,intent(inout) :: phim_glb(nmlonp1,nmlat)
       real,intent(out) :: phim(mlon0:mlon1,mlat0:mlat1)
 !
 ! Local:
@@ -4811,7 +4876,7 @@
 !
 ! Broadcast global phim (from pdynamo phim(nmlonp1,nmlat)):
       len = nmlat*nmlonp1
-      call mpi_bcast(phim_glb,len,MPI_REAL8,0,MPI_COMM_WORLD,ier)
+      call mpi_bcast(phim_glb,len,MPI_REAL8,0,TIEGCM_WORLD,ier)
       if (ier /= 0) call handle_mpi_err(ier,
      |    'mp_scatter_phim: bcast global phim')
 !     write(6,"('mp_scatter_phim after bcast: phim min,max=',2e12.4)")
@@ -4844,7 +4909,7 @@
 !int MPI_Bcast( void *buffer, int count, MPI_Datatype datatype, int root, 
 !               MPI_Comm comm )
 
-      call mpi_bcast(buff,len,MPI_REAL8,root,MPI_COMM_WORLD,ier)
+      call mpi_bcast(buff,len,MPI_REAL8,root,TIEGCM_WORLD,ier)
       if (ier /= 0) then
         call handle_mpi_err(ier,
      |    '>>> mp_bcast_real: error return from mpi_bcast')
@@ -4872,147 +4937,141 @@
       real,intent(out) :: fout(mlon00:mlon11,mxneed,nf) ! returned data at needed lats
 !
 ! Local:
-      integer :: ier,njneed,i,j,n,nj,idest,ireq(2),
-     |  isend(ntask),irecv(ntask),icount,
-     |  len,istat,nlons,isrc,msgid,ifld
+      integer,parameter :: sndbuf_cntr_max = 50 ! Maximum number of ibsend from one mpi task
+      integer :: ier,njneed,i,j,n,nj,idest,
+     |     icount,len,nlons,isrc,msgid,ifld,sndbuf_cntr,buffer_size
       integer :: tij ! rank in cols_comm (0 to nmagtaskj-1)
       integer :: jhave(mxneed),njhave,wid
       integer :: peersneed(mxneed,0:nmagtaskj-1)
       integer :: jneedall (mxneed,0:nmagtaskj-1)
-      real,allocatable :: sndbuf(:,:,:)
-      real,allocatable :: rcvbuf(:,:,:)
+      real :: sndbuf(mxmaglon+2,mxneed,nf,sndbuf_cntr_max)
+      real :: rcvbuf(mxmaglon+2,mxneed,nf)
+      real :: buffer((mxmaglon+2)*mxneed*nf*sndbuf_cntr_max)
+      integer :: irstat(MPI_STATUS_SIZE)          ! mpi receive status
+      integer :: isstat(MPI_STATUS_SIZE,sndbuf_cntr_max) !mpi_ibsend wait status
+      integer :: ibsend_requests(sndbuf_cntr_max) !array of ibsend requests
       real :: starttime,endtime
       integer,external :: ixfind
 
       if (mpi_timing) starttime = mpi_wtime()
 !
-      if (.not.allocated(sndbuf)) then
-        allocate(sndbuf(mxmaglon+2,mxneed,nf),stat=ier) ! +2 for single halos
-        if (ier /= 0)
-     |    call shutdown('mp_mag_jslot: error allocating sndbuf')
-      endif
-      if (.not.allocated(rcvbuf)) then
-        allocate(rcvbuf(mxmaglon+2,mxneed,nf),stat=ier)
-        if (ier /= 0)
-     |    call shutdown('mp_mag_jslot: error allocating rcvbuf')
-      endif
+
       sndbuf = 0.
       rcvbuf = 0.
       njneed = 0
+      ibsend_requests = 0
+      sndbuf_cntr = 0
       do j=1,mxneed
-        if (jneed(j) /= -1) njneed=njneed+1
+         if (jneed(j) /= -1) njneed=njneed+1
       enddo
       if (any(jneed(1:njneed)==-1)) call shutdown('mp_mag_jslot jneed')
-!
+      !
       call MPI_Comm_rank(cols_comm,tij,ier)
-!     if (njneed >  0) then
-!       write(6,"('mp_mag_jslot: tij=',i3,' nmagtaskj=',i3,' njneed=',
-!    |    i3,' jneed=',/,(20i3))") tij,nmagtaskj,njneed,jneed(1:njneed)
-!     endif ! njneed > 0
-!
-! Send needed lat indices to all tasks in my column:
-! (redundant for alltoall)
+      buffer_size = (mxmaglon+2)*mxneed*nf*sndbuf_cntr_max
+      call MPI_buffer_attach(buffer,buffer_size,ier)
+      if (ier /= 0)
+     |     call handle_mpi_err(ier,
+     |     'mp_mag_jslot call mpi_buffer_attach')
+
+      !
+      ! Send needed lat indices to all tasks in my column:
+      ! (redundant for alltoall)
       do n=0,nmagtaskj-1
-        jneedall(:,n) = jneed(:)
+         jneedall(:,n) = jneed(:)
       enddo
 
       call mpi_alltoall(jneedall,mxneed,MPI_INTEGER,
-     |  peersneed,mxneed,MPI_INTEGER,cols_comm,ier)
+     |     peersneed,mxneed,MPI_INTEGER,cols_comm,ier)
       if (ier /= 0)
-     |  call handle_mpi_err(ier,'mp_mag_jslot call mpi_alltoall')
-!
-! Check if I have any needed lats, and who to send to:
+     |     call handle_mpi_err(ier,'mp_mag_jslot call mpi_alltoall')
+      !
+      ! Check if I have any needed lats, and who to send to:
       do n=0,nmagtaskj-1
-        if (n==tij) cycle
-        njhave = 0
-        do j=1,mxneed
-          if (peersneed(j,n) >= mlat00.and.peersneed(j,n) <= mlat11)then
-            njhave = njhave+1 
-            jhave(njhave) = peersneed(j,n)
-            idest = n
-            wid = itask_table(mytidi,idest)
-          endif
-        enddo
-        if (njhave > 0) then
-!         write(6,"('mp_mag_jslot: tij=',i3,' send to n=',i3,' njhave=',
-!    |      i3,' jhave=',/,(20i4))") tij,n,njhave,jhave(1:njhave)
-!
-! Load send buffer:
-          nlons = mlon11-mlon00+1
-          do ifld=1,nf
-            do j=1,njhave
-              do i=mlon00,mlon11
-                sndbuf(i-mlon00+1,j,ifld) = fin(i,jhave(j),ifld)
-              enddo
-!             write(6,"('mp_mag_jslot: tij=',i3,' Send jhave ',i4,
-!    |          ' to task ',i3,' (world_comm task',i3,') ifld=',i3,
-!    |          ' data=',/,(6e12.4))") tij,jhave(j),idest,wid,ifld,
-!    |          sndbuf(1:nlons,j,ifld)
-            enddo
-          enddo
-          len = nlons*njhave*nf
-          msgid = mytid+wid
-
-          call mpi_send(sndbuf(1:nlons,1:njhave,:),len,MPI_REAL8,
-     |      idest,1,cols_comm,ier)
-
-!         call mpi_isend(sndbuf(1:nlons,1:njhave,:),len,MPI_REAL8,
-!    |      idest,1,cols_comm,msgid,ier)
-!         call mpi_wait(mytid+idest,irstat,ier)
-        endif
-      enddo ! n=0,nmagtaskj-1
-!
-! Determine which tasks to receive which lats from. Task to
-! receive from must be in same task column magtidi as I am.
-      if (njneed > 0) then
-        njhave = 0
-        jhave(:) = -1
-        do n=0,ntask-1
-          njhave = 0
-          do j=1,njneed
-            if (jneed(j) >= tasks(n)%mlat0-1 .and. 
-     |          jneed(j) <= tasks(n)%mlat1+1) then
-              njhave = njhave+1
-              jhave(njhave) = jneed(j)
+         if (n==tij) cycle
+         njhave = 0
+         do j=1,mxneed
+            if (peersneed(j,n) >= mlat00.and.
+     |          peersneed(j,n) <= mlat11)then
+               njhave = njhave+1
+               jhave(njhave) = peersneed(j,n)
+               idest = n
+               wid = itask_table(mytidi,idest)
             endif
-          enddo
-          if (njhave > 0 .and. tasks(n)%magtidi==magtidi) then
-            isrc = tasks(n)%magtidj ! task id in cols_comm to recv from
+         enddo
+         if (njhave > 0) then
+
+            sndbuf_cntr = sndbuf_cntr + 1
+            if (sndbuf_cntr > sndbuf_cntr_max) 
+     |         call shutdown('sndbuf_cntr exceeded sndbuf_cntr_max')
+
+            !
+            ! Load send buffer:
             nlons = mlon11-mlon00+1
-            len = nlons*njhave*nf
-            msgid = mytid+n
-
-            call mpi_recv(rcvbuf(1:nlons,1:njhave,:),len,MPI_REAL8,
-     |        isrc,1,cols_comm,irstat,ier)
-
-!           call mpi_irecv(rcvbuf(1:nlons,1:njhave,:),len,MPI_REAL8,
-!    |        isrc,1,cols_comm,msgid,ier)
-!           call mpi_wait(mytid+isrc,irstat,ier)
-!
-! Get data from receive buffer:
-! real,intent(out) :: fout(mlon00:mlon11,mxneed) ! returned data at needed lats
             do ifld=1,nf
-              do j=1,njhave
-                nj = ixfind(jneed,mxneed,jhave(j),icount)
-                if (nj==0) call shutdown('jhave(j) not in jneed') 
-                do i=mlon00,mlon11
-                  fout(i,nj,ifld) = rcvbuf(i-mlon00+1,j,ifld)
-                enddo
-!               write(6,"('mp_mag_jslot: tij=',i3,' Receive j=',i4,
-!    |            ' jhave(j)=',i4,' from task ',i3,' (comm_world task ',
-!    |            i3,') nj=',i4,' ifld=',i3,' data=',/,(6e12.4))") 
-!    |            tij,j,jhave(j),isrc,n,nj,ifld,fout(:,nj,ifld)
-              enddo ! j=1,njhave
-            enddo ! ifld=1,nf
-          endif ! jhave > 0
-        enddo ! n=0,ntask-1
+               do j=1,njhave
+                  do i=mlon00,mlon11
+                     sndbuf(i-mlon00+1,j,ifld,sndbuf_cntr) = 
+     |                 fin(i,jhave(j),ifld)
+                  enddo
+               enddo
+            enddo
+            len = nlons*njhave*nf
+            msgid = mytid+wid*10000
+            call mpi_ibsend(sndbuf(1:nlons,1:njhave,:,sndbuf_cntr),
+     |           len,MPI_REAL8,
+     |          idest,msgid,cols_comm,ibsend_requests(sndbuf_cntr),ier)
+            if (ier /= 0)
+     |          call handle_mpi_err(ier,'mp_mag_jslot call mpi_ibsend')
+         endif
+      enddo ! n=0,nmagtaskj-1
+
+      call MPI_waitall(sndbuf_cntr,ibsend_requests,isstat,ier)
+      if (ier /= 0)
+     |   call handle_mpi_err(ier,'mp_mag_jslot call mpi_waitall')
+      call MPI_buffer_detach(buffer,buffer_size,ier)
+      if (ier /= 0)
+     |  call handle_mpi_err(ier,'mp_mag_jslot call mpi_buffer_detach')
+
+      !
+      ! Determine which tasks to receive which lats from. Task to
+      ! receive from must be in same task column magtidi as I am.
+      if (njneed > 0) then
+         njhave = 0
+         jhave(:) = -1
+         do n=0,ntask-1
+            njhave = 0
+            do j=1,njneed
+               if (jneed(j) >= tasks(n)%mlat0-1 .and.
+     |              jneed(j) <= tasks(n)%mlat1+1) then
+                  njhave = njhave+1
+                  jhave(njhave) = jneed(j)
+               endif
+            enddo
+            if (njhave > 0 .and. tasks(n)%magtidi==magtidi) then
+               isrc = tasks(n)%magtidj ! task id in cols_comm to recv from
+               nlons = mlon11-mlon00+1
+               len = nlons*njhave*nf
+               msgid = mytid*10000+n
+               rcvbuf = 0.
+               call mpi_recv(rcvbuf(1:nlons,1:njhave,:),len,MPI_REAL8, 
+     |              isrc,msgid,cols_comm,irstat,ier)
+               if (ier /= 0)
+     |            call handle_mpi_err(ier,'mp_mag_jslot call mpi_recv')
+               !
+               ! Get data from receive buffer:
+               ! real,intent(out) :: fout(mlon00:mlon11,mxneed) ! returned data at needed lats
+               do ifld=1,nf
+                  do j=1,njhave
+                     nj = ixfind(jneed,mxneed,jhave(j),icount)
+                     if (nj==0) call shutdown('jhave(j) not in jneed')
+                     do i=mlon00,mlon11
+                        fout(i,nj,ifld) = rcvbuf(i-mlon00+1,j,ifld)
+                     enddo
+                  enddo ! j=1,njhave
+               enddo ! ifld=1,nf
+            endif ! jhave > 0
+         enddo ! n=0,ntask-1
       endif ! njneed > 0
-!
-! Wait for completions:
-!     ireq = (/isend,irecv/)
-!     istat = 0
-!     call mpi_waitall(2,ireq,istat,ier)
-!     if (ier /= 0) call handle_mpi_err(ier,'mp_mag_jslot waitall')
 
       if (mpi_timing) then
         endtime = mpi_wtime()
@@ -5049,6 +5108,7 @@
      |  time_gather2root_f3d+
      |  time_gather2root_lbc+
      |  time_bndlats+
+     |  time_bndlats_f3d+
      |  time_bndlats_f2d+
      |  time_bndlons+
      |  time_bndlons_f3d+
@@ -5060,8 +5120,6 @@
      |  time_periodic_f4d+
      |  time_periodic_f3d+
      |  time_periodic_f2d+
-     |  time_bndlats_kmh+
-     |  time_bndlons_kmh+
      |  time_mageq+
      |  time_mageq_jpm1+
      |  time_mageq_jpm3+
@@ -5110,6 +5168,11 @@
      | time_bndlats/60.,
      | time_bndlats/time_totalmpi*100.,
      | time_bndlats/time_totalrun*100.
+
+      write(6,"('mp_bndlats_f3d     ',e12.4,2f12.2)")
+     | time_bndlats_f3d/60.,
+     | time_bndlats_f3d/time_totalmpi*100.,
+     | time_bndlats_f3d/time_totalrun*100.
 
       write(6,"('mp_bndlats_f2d     ',e12.4,2f12.2)")
      | time_bndlats_f2d/60.,
@@ -5160,16 +5223,6 @@
      | time_periodic_f2d/60.,
      | time_periodic_f2d/time_totalmpi*100.,
      | time_periodic_f2d/time_totalrun*100.
-
-      write(6,"('mp_bndlats_kmh     ',e12.4,2f12.2)")
-     | time_bndlats_kmh/60.,
-     | time_bndlats_kmh/time_totalmpi*100.,
-     | time_bndlats_kmh/time_totalrun*100.
-
-      write(6,"('mp_bndlons_kmh     ',e12.4,2f12.2)")
-     | time_bndlons_kmh/60.,
-     | time_bndlons_kmh/time_totalmpi*100.,
-     | time_bndlons_kmh/time_totalrun*100.
 
       write(6,"('mp_mageq           ',e12.4,2f12.2)")
      | time_mageq/60.,
@@ -5258,5 +5311,4 @@
       write(6,"(/,72('-'))")
       end subroutine report_mpi_timing
 !-----------------------------------------------------------------------
-#endif
       end module mpi_module

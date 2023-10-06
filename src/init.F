@@ -13,7 +13,7 @@
       integer :: istep     ! time step index
 !
 ! iter (iteration number): the number of timesteps (at the current 
-! step length) from model time 0,0,0 to current model time (day,hour,min).
+! step length) from model time 0,0,0,0 to current model time (day,hour,min,sec).
 !
       integer :: iter
 !
@@ -25,8 +25,8 @@
       integer :: iday      ! Current model calendar day
       real :: uthr         ! Current ut (decimal hours)
       integer :: 
-     |  start_mtime(3),    ! starting model time (day,hr,min)
-     |  stop_mtime(3)      ! stop model time (day,hr,min)
+     |  start_mtime(4),    ! starting model time (day,hr,min,sec)
+     |  stop_mtime(4)      ! stop model time (day,hr,min,sec)
 !
       integer :: igswm_mi_di  ! 0/1 flag for GSWM data diurnal tide
       integer :: igswm_mi_sdi ! 0/1 flag for GSWM data semidiurnal tide
@@ -64,21 +64,22 @@
 ! Initialize (this is called by tgcm.F after input):
 ! Some init also takes place in inp_model (input_mod.f)
 !
-      use input_module,only: start,stop,step,secflds,
-     |  start_year,start_day,calendar_advance,gpi_ncfile,
+      use input_module,only: pristart,pristop,step,
+     |  start_year,start_day,calendar_advance,
      |  gswm_mi_di_ncfile,ctmt_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
-     |  mxhist_prim,mxhist_sech,output,secout,mkhvols,source_start,
-     |  see_ncfile,bgrddata_ncfile
+     |  mxhist_prim,mxhist_sech,mkhvols,
+     |  see_ncfile,bgrddata_ncfile,calc_helium,saps
       use hist_module,only: hist_init,isechist,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
      |  nfiles_sech,nfsech
       use fields_module,only: init_4d,init_3d,init_lbc,init_fsech,
      |  fsechist
       use cons_module,only: pi,init_cons
-      use filter_module,only: trigs,ntrigs,ifax
-      use mpi_module,only: lon0,lon1,lat0,lat1,mytid
+      use mpi_module,only: lon0,lon1,lat0,lat1
       use soldata_module,only: rd_soldata
+      use he_coefs_module,only: init_he_coefs,nlon_he,trigs,ntrigs,ifax
+      use subaur_module,only: init_saps
 !
 ! External:
       integer,external :: mtime_to_nstep
@@ -86,13 +87,6 @@
 ! Local:
       real :: theta0
       integer :: i,iprintf
-!
-#if (MPI == 0)
-      lon0 = 1
-      lon1 = nlonp4
-      lat0 = 1
-      lat1 = nlat
-#endif
 !
 ! Initialize derived constants (init_cons is in cons_module):
       call init_cons
@@ -115,11 +109,11 @@
 ! Get run date (current date and time):
       call datetime(rundate,runtime)
 !
-! Iter is the number of time steps from 0,0,0 to the current model
+! Iter is the number of time steps from 0,0,0,0 to the current model
 ! time, using the current step length. Iter is incremented once per 
 ! timestep in advnce.
 !
-      iter = mtime_to_nstep(start(:,1),step)
+      iter = mtime_to_nstep(pristart(:,1),step)
 !
 ! iyear and iday are current calendar year and day.
 ! If calendar_advance > 0, the model is advanced in calendar time, 
@@ -208,25 +202,33 @@
 ! Initialize non-input history variables for beginning of run:
       call hist_init
 !
-! setfft calls set99 for fft init. This call returns trigs and ifax,
-! in filter_module.F.
+! Read Helium coefficients
+      if (calc_helium == 1) then
+        call init_he_coefs
 !
-      call setfft(trigs,ifax,ntrigs,nlon)
+! setfft calls set99 for fft init. This call returns trigs and ifax,
+! in he_coefs_module.F.
+!
+        call setfft(trigs,ifax,ntrigs,nlon_he)
+      endif
+!
+! Initialize SAPS, read in data
+      if (saps) call init_saps
 !
 ! Init starting model time:
-      start_mtime = start(:,1)
-      stop_mtime = stop(:,1)
+      start_mtime = pristart(:,1)
+      stop_mtime = pristop(:,1)
 !
 ! Initialize field structures:
       iprintf = 0
-      call init_4d(lon0,lon1,lat0,lat1,mytid,iprintf)
-      call init_3d(lon0,lon1,lat0,lat1,mytid,iprintf)
+      call init_4d(lon0,lon1,lat0,lat1,iprintf)
+      call init_3d(iprintf)
 !
 ! Initialize secondary history fields:
       if (isechist > 0) call init_fsech ! fields.F
 !
 ! Allocate lbc for t,u,v:
-      call init_lbc(lon0,lon1,lat0,lat1)
+      call init_lbc
 !
 ! Initialize sun's declination:
       sundec=atan(tan(23.5*pi/180.)*sin(2.*pi*float(iday-80)/365.))
@@ -267,7 +269,7 @@
      |    '(Starting year of initial run)')") start_year
         write(6,"('  start_day  = ',i6,5x,
      |    '(Starting day of initial run)')") start_day
-        write(6,"('  start_mtime= ',i4,2i3,1x,
+        write(6,"('  start_mtime= ',i4,3i3,1x,
      |    '(Starting mtime of initial run)')") start_mtime
       endif
 !

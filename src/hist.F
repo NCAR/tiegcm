@@ -110,33 +110,29 @@
      |    saber_ncfile,      ! SABER U,Z lbc data file
      |    tidi_ncfile,       ! TIDI U,V lbc data file
      |    ctmt_ncfile,       ! CTMT lbc data file
-     |    hme_ncfile,        ! HME lbc data file
-     |    tgcmlb_ncfile,     ! TGCM lbc data file
-     |    bgrddata_ncfile,   ! Background data file
-     |    amienh_ncfile,     ! AMIE NH data file
-     |    amiesh_ncfile      ! AMIE SH data file
+     |    bgrddata_ncfile    ! Background data file
         integer ::
      |    nlat,              ! number of latitude grid points
      |    nlon,              ! number of longitude grid points
      |    nlev,              ! number of vertical levels
      |    ihist,             ! ihist = nth history on current file
-     |    delhmins,          ! delta minutes between histories
+     |    delhsecs,          ! delta seconds between histories
      |    modeltime(4),      ! model time (day,hour,minute,seconds)
-     |    iter,              ! iteration (# steps from 0,0,0)
+     |    iter,              ! iteration (# steps from 0,0,0,0)
      |    year,              ! 4-digit year
      |    day,               ! calendar day (1-367)
      |    calendar_advance,  ! 0/1
      |    step,              ! time step (seconds)
      |    initial_day,       ! initial starting day
      |    initial_year,      ! initial starting year
-     |    initial_mtime(3),  ! initial starting model time
-     |    source_mtime(3),   ! start time of source history
+     |    initial_mtime(4),  ! initial starting model time
+     |    source_mtime(4),   ! start time of source history
      |    tuv_lbc_intop,     ! 1 (old histories), or 0 (new histories)
      |    ntask_mpi,         ! number of mpi tasks this run
-     |    coupled_cmit       ! 1 if coupled with CISM/CMIT, 0 otherwise
+     |    coupled_mage       ! 1 if coupled with MAGE, 0 otherwise
         real :: 
      |    ut,                ! ut (decimal hours, from modeltime)
-     |    time,              ! model time ("minutes since yyyy-m-d")
+     |    time,              ! model time ("seconds since yyyy-m-d")
      |    missing_value,     ! missing value (usually spval)
      |    zmtop,             ! top midpoint level
      |    zmbot,             ! bottom midpoint level
@@ -188,7 +184,7 @@
 !-------------------------------------------------------------------
       subroutine hist_initype(h,istep)
       use params_module,only: zibot
-      use input_module,only: start_year,start_day,start,
+      use input_module,only: start_year,start_day,pristart,
      |  calendar_advance,source_start,source
 !
 ! Initialize a history structure:
@@ -216,13 +212,13 @@
       if (nsource > 0) then
         h%initial_year  = start_year
         h%initial_day   = start_day 
-        h%initial_mtime = start(:,1)
+        h%initial_mtime = pristart(:,1)
         h%initial_file = source
         h%source_mtime  = source_start
       endif
 
       h%ihist = -1
-      h%delhmins = 0
+      h%delhsecs = 0
       h%modeltime = (/-1,-1,-1,-1/)
       h%nlat = 0
       h%nlon = 0
@@ -250,15 +246,8 @@
 
       h%saber_ncfile = '[none]'
       h%tidi_ncfile = '[none]'
-      
-      h%ctmt_ncfile = '[none]'
-      h%hme_ncfile  = '[none]'
-      h%tgcmlb_ncfile  = '[none]'
-      
       h%bgrddata_ncfile = '[none]'
-      
-      h%amienh_ncfile = '[none]'
-      h%amiesh_ncfile = '[none]'
+      h%ctmt_ncfile = '[none]'
 
       h%nflds  = 0
       h%dynamo = .false.
@@ -266,10 +255,10 @@
       h%tuv_lbc_intop = 0 ! this version writes "new" histories
       h%lbc = zibot
       h%ntask_mpi = 0
-#if defined(INTERCOMM) || defined(CISMAH)
-      h%coupled_cmit = 1
+#ifdef GAMERA
+      h%coupled_mage = 1
 #else
-      h%coupled_cmit = 0
+      h%coupled_mage = 0
 #endif
 !
 ! If istep==0, h%f107, etc were defined from source history: 
@@ -358,15 +347,15 @@
       write(6,"(2x,'run_type   = ',a)") trim(h%run_type)
       write(6,"(2x,'source_file  = ',a)") trim(h%source_file)
       write(6,"(2x,'output_file  = ',a)") trim(h%output_file)
-      write(6,"(2x,'source_mtime = ',3i4)") h%source_mtime
+      write(6,"(2x,'source_mtime = ',4i4)") h%source_mtime
       write(6,"(2x,'initial_year = ',i4)") h%initial_year
       write(6,"(2x,'initial_day  = ',i4)") h%initial_day
-      write(6,"(2x,'initial_mtime= ',3i4)") h%initial_mtime
+      write(6,"(2x,'initial_mtime= ',4i4)") h%initial_mtime
       write(6,"(2x,'type       = ',a)") trim(h%hist_type)
       write(6,"(2x,'ihist      = ',i3,
      |  ' (nth history on history file)')") h%ihist
-      write(6,"(2x,'delhmins= ',i4,
-     |  ' (delta minutes between histories)')") h%delhmins
+      write(6,"(2x,'delhsecs= ',i4,
+     |  ' (delta seconds between histories)')") h%delhsecs
       write(6,"(2x,'calendar year,day = ',i4,',',i3)") h%year,h%day
       if (h%calendar_advance<=0) then
         write(6,"(4x,'(model is NOT being advanced in calendar time)')")
@@ -375,8 +364,8 @@
       endif
       write(6,"(2x,'modeltime = ',i3,',',i2,',',i2,',',i2,
      |  ' (model time day,hour,minute,seconds)')") h%modeltime
-      if (h%time <= 1440.) then
-        write(6,"(2x,'time    = ',f10.2,' (minutes in current day)')") 
+      if (h%time <= 86400.) then
+        write(6,"(2x,'time    = ',f10.2,' (seconds in current day)')") 
      |    h%time
       else
         write(6,"(2x,'time    = ')")
@@ -384,7 +373,7 @@
       write(6,"(2x,'ut      = ',f5.2,' (ut hours)')") h%ut
       write(6,"(2x,'step    = ',i4,' (time step in seconds)')")
      |  h%step
-      write(6,"(2x,'iter    = ',i8,' (number of steps from 0,0,0)')")
+      write(6,"(2x,'iter    = ',i8,' (number of steps from 0,0,0,0)')")
      |  h%iter
       write(6,"(2x,'nlat    = ',i4,' (number of latitudes)')") h%nlat
       write(6,"(2x,'nlon    = ',i4,' (number of longitudes)')") h%nlon
@@ -462,12 +451,7 @@
       write(6,"(2x,'saber_ncfile = ',a)") trim(h%saber_ncfile)
       write(6,"(2x,'tidi_ncfile  = ',a)") trim(h%tidi_ncfile)
       write(6,"(2x,'ctmt_ncfile  = ',a)") trim(h%ctmt_ncfile)
-      write(6,"(2x,'hme_ncfile  = ',a)") trim(h%hme_ncfile)
-      write(6,"(2x,'tgcmlb_ncfile  = ',a)")    trim(h%tgcmlb_ncfile)
       write(6,"(2x,'bgrddata_ncfile = ',a)") trim(h%bgrddata_ncfile)
-      
-      write(6,"(2x,'amienh_ncfile  = ',a)") trim(h%amienh_ncfile)
-      write(6,"(2x,'amiesh_ncfile  = ',a)") trim(h%amiesh_ncfile)
 
       write(6,"(2x,'tuv_lbc_intop=',i3,' (if 1, then lbc of t,u,v',
      |  ' are stored in top k slot (old histories))')") h%tuv_lbc_intop
@@ -475,8 +459,8 @@
      |  'level)')") h%lbc
       write(6,"(2x,'ntask_mpi    =',i4,' (number of MPI tasks)')")
      |  h%ntask_mpi
-      write(6,"(2x,'coupled_cmit =',i4,' (1 if coupled with CISM/CMIT,', 
-     |  ' 0 otherwise)')") h%coupled_cmit
+      write(6,"(2x,'coupled_mage =',i4,' (1 if coupled with MAGE,', 
+     |  ' 0 otherwise)')") h%coupled_mage
 !
       if (associated(h%fnames)) then
         write(6,"('  There are ',i3,' fields on this history,',
@@ -496,27 +480,25 @@
 ! user inputs from the input module:
 ! (this routine is called from init module after input validation)
 !
-      use params_module,only: mxseries,mxhvols
-      use input_module,only: start,stop,step,source,output,mkhvols,
-     |  hist,secsource,secstart,secstop,sechist,secout,
-     |  secflds
+      use params_module,only: mxseries
+      use input_module,only: pristart,pristop,step,source,
+     |  secsource,secstart,secstop,sechist,secflds
 !
 ! Local:
-      integer :: nh,nsteps,i,secs_hist,nsteps_hist,n
+      integer :: i,n
       integer(kind=8) :: secs_start(mxseries),secs_stop(mxseries)
-      character(len=80) :: hvols(mxhvols)
 !
 ! External:
       integer(kind=8),external :: mtime_to_nsec
       integer,external :: numfiles
 !
 ! Number of primary history time series:
-      nseries_prim = (size(start)-count(start==ispval))/3
+      nseries_prim = (size(pristart)-count(pristart==ispval))/4
 !
       secs_start(:) = 0
       do i=1,nseries_prim
-        secs_start(i) = mtime_to_nsec(start(:,i))
-        secs_stop(i)  = mtime_to_nsec(stop(:,i))
+        secs_start(i) = mtime_to_nsec(pristart(:,i))
+        secs_stop(i)  = mtime_to_nsec(pristop(:,i))
       enddo
 !
 ! Total number of timesteps this run:
@@ -555,7 +537,7 @@
      |    size(secflds) -count(len_trim(secflds)==0)
 !
 ! Number of secondary history time series:
-      nseries_sech = (size(secstart)-count(secstart==ispval))/3
+      nseries_sech = (size(secstart)-count(secstart==ispval))/4
 !
 ! isechist: secondary histories flag:
 ! If no secondary history inputs were read, return.
@@ -599,7 +581,7 @@
       endif
       hdest%fnames = hsrc%fnames
       write(6,"('Copied history structure at modeltime ',
-     |  3i4)") hdest%modeltime(1:3)
+     |  4i4)") hdest%modeltime
       end subroutine copyhist
 !-------------------------------------------------------------------
       end module hist_module

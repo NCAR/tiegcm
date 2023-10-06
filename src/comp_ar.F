@@ -1,4 +1,3 @@
-#include <defs.h>
       module ar_module
 !
 ! Advance argon by one time step.
@@ -22,51 +21,14 @@
      |  ar_prod,     ! production of argon (k,i,j)
      |  ar_loss      ! loss of argon       (k,i,j)
 !
-#if (NLEV==28)
-!
-! Initial condition for argon at 5.0-deg resolution. This is used 
-! to expediate equilibration of argon when it is not on the
-! source history (i.e., is zero on startup). These data were 
-! obtained from a run of the glbmean model (Aug, 2014).
-!
-      real,parameter :: ar_glbm(nlevp1) = (/
-     | 1.164e-02, 1.074e-02, 9.443e-03, 7.905e-03, 6.342e-03,
-     | 4.927e-03, 3.737e-03, 2.776e-03, 2.017e-03, 1.430e-03,
-     | 9.855e-04, 6.575e-04, 4.229e-04, 2.613e-04, 1.548e-04,
-     | 8.797e-05, 4.806e-05, 2.535e-05, 1.298e-05, 6.488e-06,
-     | 3.184e-06, 1.541e-06, 7.381e-07, 3.511e-07, 1.662e-07,
-     | 7.840e-08, 3.689e-08, 1.733e-08, 7.436e-09 /)
-
-#elif (NLEV==56)
-!
-! Initial condition for argon at 2.5-deg resolution. This is used 
-! to expediate equilibration of argon when it is not on the
-! source history (i.e., is zero on startup). These data were 
-! obtained from a run of the glbmean model (Aug, 2014).
-!
-      real,parameter :: ar_glbm(nlevp1) = (/
-     | 1.164e-02, 1.124e-02, 1.074e-02, 1.013e-02, 9.443e-03,
-     | 8.691e-03, 7.905e-03, 7.114e-03, 6.342e-03, 5.609e-03,
-     | 4.927e-03, 4.302e-03, 3.737e-03, 3.229e-03, 2.776e-03,
-     | 2.373e-03, 2.017e-03, 1.704e-03, 1.430e-03, 1.192e-03,
-     | 9.855e-04, 8.084e-04, 6.575e-04, 5.298e-04, 4.229e-04,
-     | 3.341e-04, 2.613e-04, 2.022e-04, 1.548e-04, 1.173e-04,
-     | 8.797e-05, 6.533e-05, 4.806e-05, 3.505e-05, 2.535e-05,
-     | 1.820e-05, 1.298e-05, 9.201e-06, 6.488e-06, 4.554e-06,
-     | 3.184e-06, 2.218e-06, 1.541e-06, 1.068e-06, 7.381e-07,
-     | 5.095e-07, 3.511e-07, 2.417e-07, 1.662e-07, 1.142e-07,
-     | 7.840e-08, 5.380e-08, 3.689e-08, 2.529e-08, 1.733e-08,
-     | 1.188e-08, 7.436e-09 /)
-#endif
+      real,dimension(nlevp1) :: ar_glbm
 !
       contains
 !-----------------------------------------------------------------------
-      subroutine comp_ar(ar,lev0,lev1,lon0,lon1,lat)
+      subroutine comp_ar(lon0,lon1,lat)
 !
 ! Input args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  ar           ! argon from previous step
+      integer,intent(in) :: lon0,lon1,lat
 !
 ! Local:
       integer :: i
@@ -88,8 +50,8 @@
 
       end subroutine comp_ar
 !-----------------------------------------------------------------------
-      subroutine minor_ar(tn,o2,o1,n2,he,ar,ar_nm,ar_out,arnm_out,
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine minor_ar(tn,o2,o1,he,mbar,barm,xnmbar,w,ar,ar_nm,
+     |  ar_out,arnm_out,lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_ar
       implicit none
 !
@@ -100,8 +62,11 @@
      |  tn,     ! neutral temperature (deg K)
      |  o2,     ! molecular oxygen (mmr)
      |  o1,     ! oxygen family (mmr)
-     |  n2,     ! molecular nitrogen (mmr)
      |  he,     ! helium (mmr)
+     |  mbar,   ! mean molecular weight
+     |  barm,   ! mean molecular weight
+     |  xnmbar, ! p0*e(-z)*mbar/kT
+     |  w,      ! vertical wind
      |  ar,     ! argon (mmr)
      |  ar_nm   ! argon at time n-1
 !
@@ -114,11 +79,10 @@
 ! Local:
       real,parameter :: phi_ar(3) = (/1.042,1.509,1.176/) ! from tgcm24
       real,parameter :: alfa_ar   = 0.17    ! thermal diffusion coefficient (from tgcm24)
-      real,parameter :: xyar      = 1.e-10  ! from tgcm24
 !
-      call minor(tn,o2,o1,n2,he,ar,ar_nm,ar_out,arnm_out,ar_loss,
-     |  ar_prod,ar_lbc,ar_ubc,rmass_ar,phi_ar,alfa_ar,lev0,lev1,
-     |  lon0,lon1,lat0,lat1,0,'AR')
+      call minor(tn,o2,o1,he,mbar,barm,xnmbar,w,ar,ar_nm,
+     |  ar_out,arnm_out,ar_loss,ar_prod,ar_lbc,ar_ubc,rmass_ar,
+     |  phi_ar,alfa_ar,lev0,lev1,lon0,lon1,lat0,lat1,0,'AR')
 !
       end subroutine minor_ar
 !-----------------------------------------------------------------------
@@ -128,11 +92,30 @@
 ! conditions and production and loss terms. This is called once per run
 ! from sub allocdata (allocdata.F).
 !
+      use params_module,only: zibot,zpint
+      use interp_module,only: interp1d
 ! Args:
       integer,intent(in) :: lon0,lon1,lat0,lat1
 !
 ! Local:
-      integer :: istat
+      integer :: istat,k
+!
+! Initial condition for argon at 5.0-deg resolution. This is used 
+! to expediate equilibration of argon when it is not on the
+! source history (i.e., is zero on startup). These data were 
+! obtained from a run of the glbmean model (Aug, 2014).
+!
+      real,dimension(29),parameter ::
+     | zpint_5 = (/(zibot+(k-1)*0.5,k=1,29)/),
+     | ar_glbm_5 = (/
+     | 1.164e-02, 1.074e-02, 9.443e-03, 7.905e-03, 6.342e-03,
+     | 4.927e-03, 3.737e-03, 2.776e-03, 2.017e-03, 1.430e-03,
+     | 9.855e-04, 6.575e-04, 4.229e-04, 2.613e-04, 1.548e-04,
+     | 8.797e-05, 4.806e-05, 2.535e-05, 1.298e-05, 6.488e-06,
+     | 3.184e-06, 1.541e-06, 7.381e-07, 3.511e-07, 1.662e-07,
+     | 7.840e-08, 3.689e-08, 1.733e-08, 7.436e-09 /)
+!
+      ar_glbm = exp(interp1d(zpint,zpint_5,log(ar_glbm_5)))
 !
 ! Allocate subdomains to boundary conditions:
       allocate(ar_ubc(lon0:lon1,lat0:lat1),stat=istat)

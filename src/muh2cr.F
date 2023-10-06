@@ -21,7 +21,8 @@ c
 !
       subroutine muh(pe,jntl)
 ! !USES:
-      use pdynamo_module,only: nc,ncee,cee
+      use params_module,only: nmlon,nmlat
+      use pdynamo_module,only: cee
       implicit none
 !      
 ! !DESCRIPTION: multigrid solver as direct solver
@@ -44,7 +45,7 @@ c
 c     set grid size params
 c
       integer iixp,jjyq,iiex,jjey,nnx,nny,llwork,iiwork
-      parameter (iixp = 80 , jjyq = 48,iiex = 1, jjey = 1 )
+      parameter (iixp = nmlon , jjyq = (nmlat-1)/2,iiex = 1, jjey = 1 )
       parameter (nnx=iixp*2**(iiex-1)+1, nny=jjyq*2**(jjey-1)+1)
 !
 c
@@ -373,8 +374,7 @@ c
 	  itx = ktxbgn(k)
 	  ity = ktybgn(k)
 	  klevel = k
-	  call dismh2cr(nx,ny,wk(ic),wk(itx),wk(ity),
-     +                  wk,iwk,ierror)
+	  call dismh2cr(nx,ny,wk(ic),wk(itx),wk(ity),wk,iwk)
 	  end do
 	return
       end if   ! end of intl=0 initialization call block
@@ -723,8 +723,9 @@ c
       return
       end
 
-      subroutine dismh2cr(nx,ny,cf,tx,ty,wk,iwk,ier)
-      use pdynamo_module,only: nc,ncee,cee,ceee
+      subroutine dismh2cr(nx,ny,cf,tx,ty,wk,iwk)
+      use params_module,only: nres_grid
+      use pdynamo_module,only: nc,cee,ceee
 c
 c     discretize elliptic pde for muh2cr, set nonfatal errors
 c
@@ -733,7 +734,7 @@ c
      +             maxcy,method,nwork,lwork,itero,ngrid,klevel,kcur,
      +             kcycle,iprer,ipost,intpol,kps
       real xa,xb,yc,yd,tolmax,relmax
-      integer nx,ny,iwk(*),i,j,kbdy,l,im1,jm1,ier,jc
+      integer nx,ny,iwk(*),i,j,l,im1,jm1
       real cf(nx,ny,10),tx(nx,ny,*),ty(ny,nx,*)
       real wk(*)
       common/imud2cr/intl,nxa,nxb,nyc,nyd,ixp,jyq,iex,jey,nfx,nfy,
@@ -754,7 +755,7 @@ c
      |    'klevel = ',8I6)
 c	call shutdown('dismh2cr')
       ENDIF
-      CALL CEEE(CEE(NC(6-KLEVEL-4)),NX,NY,CF)  ! sub ceee is in mud.F
+      CALL CEEE(CEE(NC(nres_grid+1-KLEVEL-4)),NX,NY,CF)  ! sub ceee is in mud.F
 c
 c     set coefficient for specified boundaries
 c
@@ -1454,17 +1455,8 @@ c
      +             maxcy,method,nwork,lwork,itero,ngrid,klevel,kcur,
      +             kcycle,iprer,ipost,intpol,kps
       real xa,xb,yc,yd,tolmax,relmax
-      integer nx,ny,i,j,kbdy
+      integer nx,ny,i,j
       real cf(nx,ny,10),phi(0:nx+1,0:ny+1)
-      real dlx,dlx2,dlxx,dly,dly2,dlyy,dlxy,dlxy2,dlxy4,dxoy,dyox
-      real x,y,cxx,cxy,cyy,cx,cy,ce,c1,c2,c3,c4,c5
-      real c6,c7,c8
-      real alfaa,alfab,alfac,alfad,betaa,betab,betac,betad,det
-      real gamaa,gamab,gamac,gamad
-      real alfim1,alfi,alfip1,betim1,beti,betip1,gamim1,gami,gamip1
-      real alfjm1,alfj,alfjp1,betjm1,betj,betjp1,gamjm1,gamj,gamjp1
-      real gbdim1,gbdi,gbdip1,gbdj,gbdjm1,gbdjp1
-      real gbdya,gbdyb,gbdyc,gbdyd
       common/imud2cr/intl,nxa,nxb,nyc,nyd,ixp,jyq,iex,jey,nfx,nfy,
      +               iguess, maxcy,method,nwork,lwork,itero,ngrid,
      +               klevel,kcur,kcycle,iprer,ipost,intpol,kps

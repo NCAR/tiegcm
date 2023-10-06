@@ -1,39 +1,33 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
-#
-# Remove non-ASCII characters in input file(s):
-#
+
 def strip_non_ascii(string):
-    ''' Returns the string without non ASCII characters'''
+    '''Returns the string without non-ASCII characters'''
     stripped = (c for c in string if 0 < ord(c) < 127)
     return ''.join(stripped)
 
 if len(sys.argv) == 1:
-  print '>>> Please provide input files from which to remove non-ASCII characters.'
-  sys.exit()
+    print('>>> Please provide input files from which to remove non-ASCII characters.')
+    sys.exit()
 
 for infile in sys.argv[1:]:
-# print 'Reading file ',infile
-  f = open(infile,'r')
-  lines = f.readlines()
-  lines = [line.rstrip() for line in lines]
-  f.close()
-#
-# Overwrite input file:
-#
-  f = open(infile,'w')
-  print 'Overwriting file ',infile,' with non-ASCII characters removed.'
-  for line in lines:
-    newline = strip_non_ascii(line)
-    f.write(newline+'\n')
-  f.close()
-#
-# Write to output file infile.txt:
-#
-# outfile = infile+'.txt'
-# print 'Writing file ',outfile
-# f = open(outfile,'w')
-# for line in lines:
-#   newline = strip_non_ascii(line)
-#   f.write(newline+'\n')
-# f.close()
+    # Using with statement to ensure proper file closure
+    with open(infile, 'r', encoding='utf-8', errors='ignore') as f:
+        lines = f.readlines()
+        lines = [line.rstrip() for line in lines]
+
+    # Overwrite input file:
+    with open(infile, 'w', encoding='utf-8') as f:
+        print(f'Overwriting file {infile} with non-ASCII characters removed.')
+        for line in lines:
+            newline = strip_non_ascii(line)
+            f.write(newline + '\n')
+
+    # If you want to write to an output file instead of overwriting the input file, uncomment below:
+    # outfile = infile + '.txt'
+    # with open(outfile, 'w', encoding='utf-8') as f:
+    #     print(f'Writing file {outfile}')
+    #     for line in lines:
+    #         newline = strip_non_ascii(line)
+    #         f.write(newline + '\n')
+

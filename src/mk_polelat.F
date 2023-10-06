@@ -7,7 +7,6 @@
 !
       use params_module,only: nlon,nlevp1
       use fields_module,only: nf4d,f4d
-      use mpi_module,only: lon0,lon1
       implicit none
 !
 ! Make boundary latitude jnew, using jold, i.e., 
@@ -25,12 +24,11 @@
 ! Locals:
       integer,parameter :: imaxh = nlon/2
       integer :: k,i,n,id,ilim
-      real :: sign
 !
 ! Fields loop:
       ilim = nlon/2+2
-!     write(6,"(/,'mklatbnd: jnew=',i2,' jold=',i2,' lon0,1=',2i3,
-!    |  ' ilim=',i3)") jnew,jold,lon0,lon1,ilim
+!     write(6,"(/,'mklatbnd: jnew=',i2,' jold=',i2,' ilim=',i3)")
+!    |  jnew,jold,ilim
       field_loop: do n=1,nf4d
         if (f4d(n)%polesign==0.) cycle field_loop
         do k=1,nlevp1

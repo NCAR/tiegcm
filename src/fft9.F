@@ -323,7 +323,7 @@ C
       LA=1
       DO 80 K=1,NFAX
       IF (IGO.EQ.60) GO TO 60
-   50 CONTINUE
+      CONTINUE
       CALL VPASSM(A(IA),A(IA+INC),WORK(1),WORK(2),TRIGS,
      *   ntrigs,INK,2,JUMP,NX,LOT,NH,IFAX(K+1),LA)
       IGO=60
@@ -627,7 +627,7 @@ C
       LA=1
       DO 80 K=1,NFAX
       IF (IGO.EQ.60) GO TO 60
-   50 CONTINUE
+      CONTINUE
       CALL VPASSM(A(IA),A(IA+INC),WORK(1),WORK(2),TRIGS,
      *   ntrigs,INK,2,JUMP,NX,LOT,NH,IFAX(K+1),LA)
       IGO=60

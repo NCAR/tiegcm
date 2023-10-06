@@ -1462,6 +1462,9 @@ Details of Diagnostic Field Calculations
 
    Sample images: ALFA polar projection 
 
+   .. image:: _static/images/diags/alfa.png
+      :align: center
+
    :ref:`Back to diagnostics table <diag_fields>`
 
 --------------------------------------------------------------------------------------------

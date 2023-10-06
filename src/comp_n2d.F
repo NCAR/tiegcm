@@ -1,5 +1,5 @@
 !
-      subroutine comp_n2d(o2,o1,no,n4s,ne,op,n2p,nop,sco2,xnmbarm,
+      subroutine comp_n2d(o2,o1,no,ne,op,n2p,nop,xnmbar,
      |  n2d,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -25,13 +25,11 @@
      |  o2,     ! molecular oxygen (mmr)
      |  o1,     ! atomic oxygen (mmr)
      |  no,     ! nitric oxide (mmr)
-     |  n4s,    ! N4S (mmr)
      |  ne,     ! electron density (cm3)
      |  op,     ! O+ ion
      |  n2p,    ! N2+ ion
      |  nop,    ! NO+ ion
-     |  sco2,   ! O2 line integral (chapman)
-     |  xnmbarm ! p0*e(-z)*barm/kT
+     |  xnmbar  ! p0*e(-z)*mbar/kT
 !
 ! Output:
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) :: 
@@ -55,12 +53,12 @@
 !
 ! Total production of N2D:
           n2d_prod(k,i) = (.5*(qtef(k,i,lat)+qtef(k+1,i,lat))*brn2d)+
-     |      rk3(k,i,lat)*n2p(k,i)*xnmbarm(k,i)*o1(k,i)*rmassinv_o1+
+     |      rk3(k,i,lat)*n2p(k,i)*xnmbar(k,i)*o1(k,i)*rmassinv_o1+
      |     (ra1(k,i,lat)*nop(k,i)*0.85+ra3(k,i,lat)*n2p(k,i)*0.9)*
      |      sqrt(ne(k,i)*ne(k+1,i))
 !
 ! Total loss of N2D:
-          n2d_loss(k,i) = xnmbarm(k,i)*
+          n2d_loss(k,i) = xnmbar(k,i)*
      |      (beta2*o2(k,i)*rmassinv_o2+
      |       beta4*o1(k,i)*rmassinv_o1+
      |       beta6*no(k,i)*rmassinv_no)+
@@ -68,7 +66,7 @@
      |       rk10*op(k,i)
 !
 ! Update n2d:
-          n2d(k,i)=rmass_n2d*n2d_prod(k,i)/(n2d_loss(k,i)*xnmbarm(k,i))
+          n2d(k,i)=rmass_n2d*n2d_prod(k,i)/(n2d_loss(k,i)*xnmbar(k,i))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 

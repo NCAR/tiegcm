@@ -1,10 +1,9 @@
-#include "defs.h"
       module dyndiag_module
       use params_module,only: nlonp1,nlonp4,nlat,nlevp1,nlatp1
       use addfld_module,only: addfld
       implicit none
 !
-      real, dimension(nlonp4,nlat) ::
+      real, dimension(:,:),allocatable ::
      |  sigp,    ! height integrated pedersen conductivity
      |  sigh,    ! height integrated hall conductivity
      |  qwind,   ! joule heating associated with neutral winds
@@ -14,12 +13,42 @@
      |  fwindu,fwindv, ! horizontal current
      |  famieu,famiev, ! horizontal current from amie
      |  tec      ! total electron content
-      real, dimension(nlonp4,nlat,nlevp1) ::
+      real, dimension(:,:,:),allocatable ::
      |  qwind_sec,qamie_sec,work_sec,wtot_sec,fwindu_sec,
-     |  fwindv_sec,famieu_sec,famiev_sec,famie_sec,fwind_sec,
-     |  ftot_sec,tec_sec,ped_sec,hall_sec,qjoule_sec
+     |  fwindv_sec,famieu_sec,famiev_sec,
+     |  tec_sec,ped_sec,hall_sec,qjoule_sec
 !
       contains
+!-----------------------------------------------------------------------
+      subroutine alloc_dyndiag(lond0,lond1,latd0,latd1)
+
+      integer,intent(in) :: lond0,lond1,latd0,latd1
+
+      allocate(sigp(lond0:lond1,latd0:latd1))
+      allocate(sigh(lond0:lond1,latd0:latd1))
+      allocate(qwind(lond0:lond1,latd0:latd1))
+      allocate(qamie(lond0:lond1,latd0:latd1))
+      allocate(wtot(lond0:lond1,latd0:latd1))
+      allocate(work(lond0:lond1,latd0:latd1))
+      allocate(fwindu(lond0:lond1,latd0:latd1))
+      allocate(fwindv(lond0:lond1,latd0:latd1))
+      allocate(famieu(lond0:lond1,latd0:latd1))
+      allocate(famiev(lond0:lond1,latd0:latd1))
+      allocate(tec(lond0:lond1,latd0:latd1))
+      allocate(qwind_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(qamie_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(work_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(wtot_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(fwindu_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(fwindv_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(famieu_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(famiev_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(tec_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(ped_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(hall_sec(lond0:lond1,latd0:latd1,nlevp1))
+      allocate(qjoule_sec(lond0:lond1,latd0:latd1,nlevp1))
+
+      end subroutine alloc_dyndiag
 !-----------------------------------------------------------------------
       subroutine dyndiag(sigma1,sigma2,qji_tn,z,un,vn,ui,vi,
      |  lev0,lev1,lon0,lon1,lat)
@@ -241,156 +270,72 @@ C Calculate the mechanical work done by wind
 !    |  'lon',lon0,lon1,'lev',lev0,lev1,lat)
       end subroutine dyndiag_sech
 !-----------------------------------------------------------------------
-#ifdef MPI
-      subroutine mp_dyndiag_gather
-      use mpi_module,only: mytid,lon0,lon1,lat0,lat1,mxlat,mxlon,
-     |  ntask,tasks,handle_mpi_err,mpi_real8,mpi_comm_world
-!
-! Local:
-      integer,parameter :: nfld=12
-      integer :: k,i,j,n,nn,ier,len,nlons,nlats,ifld,msgtag,ireqrecv,
-     |  ireqsend,ilon0,ilon1,ilat0,ilat1
-      integer :: idest = 0
-      real :: fmin,fmax
-      real,allocatable :: 
-     |  rcvbuf(:,:,:,:,:), ! Receive buffer for root task (i,j,k,ifld,ntask)
-     |  sndbuf(:,:,:,:)    ! Send buffer for slave tasks (i,j,k,ifld)
-      character(len=8) :: fnames(nfld) =
-     |  (/'PEDERSEN','HALL    ','QAMIE   ','QWIND   ','WTOT    ',
-     |    'WORK    ','DEN_TEC ','FAMIEU  ','FAMIEV  ','FWINDU  ',
-     |    'FWINDV  ','QJOULE  '/)
-!
-! Allocate send buffer for each task, and a receive buffer for the 
-! root task. (mxlon,mxlat are max number of lons,lats held by all tasks)
-!
-      allocate(rcvbuf(mxlon,mxlat,nlevp1,nfld,ntask),stat=ier)
-      if (ier /= 0)
-     |  write(6,"('>>> mp_dynamo_gather: error allocating rcvbuf:',
-     |    ' mxlon=',i3,' mxlat=',i3,' nlevp1=',i3,' nfld=',i3,
-     |    ' ntask=',i3,' ier=',i4)") mxlon,mxlat,nlevp1,nfld,ntask,ier
-!
-      allocate(sndbuf(mxlon,mxlat,nlevp1,nfld),stat=ier)
-      if (ier /= 0)
-     |  write(6,"('>>> mp_dynamo_gather: error allocating sndbuf:',
-     |    ' mxlon=',i3,' mxlat=',i3,' nlevp1=',i3,' nfld=',i3,
-     |    ' ier=',i4)") mxlon,mxlat,nlevp1,nfld,ier
-      len = mxlon*mxlat*nlevp1*nfld ! buffer length
-!
-! Non-root tasks send to master:
-      if (mytid /= 0) then  ! mytid /= 0
-        sndbuf(:,:,:,:) = 0.
-        nlons = lon1-lon0+1
-        nlats = lat1-lat0+1
-        do ifld=1,nfld
-          select case (ifld)
-          case(1)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        ped_sec(lon0:lon1,lat0:lat1,:)
-          case(2)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        hall_sec(lon0:lon1,lat0:lat1,:)
-          case(3)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        qamie_sec(lon0:lon1,lat0:lat1,:)
-          case(4)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        qwind_sec(lon0:lon1,lat0:lat1,:)
-          case(5)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        wtot_sec(lon0:lon1,lat0:lat1,:)
-          case(6)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        work_sec(lon0:lon1,lat0:lat1,:)
-          case(7)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        tec_sec(lon0:lon1,lat0:lat1,:)
-          case(8)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        famieu_sec(lon0:lon1,lat0:lat1,:)
-          case(9)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        famiev_sec(lon0:lon1,lat0:lat1,:)
-          case(10)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        fwindu_sec(lon0:lon1,lat0:lat1,:)
-          case(11)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        fwindv_sec(lon0:lon1,lat0:lat1,:)
-          case(12)
-            sndbuf(1:nlons,1:nlats,:,ifld) = 
-     |        qjoule_sec(lon0:lon1,lat0:lat1,:)
-          end select
-        enddo
-      endif
-!
-! Gather to root:
-      call mpi_gather(sndbuf,len,MPI_REAL8,rcvbuf,len,MPI_REAL8,0,
-     |  MPI_COMM_WORLD,ier)
-      if (ier /= 0)
-     |  call handle_mpi_err(ier,'mp_dynamo_gather: mpi_gather to root')
-!
-! Root sorts data from each task's subdomain into its global arrays:
-! (root task already defined its subdomain in prep_dynamo, so skip
-!  that part of the receive buffer (it sent zeroes to task 0 anyway,
-!  because task0 did not load the send buffer above).
-!
-      if (mytid==0) then
-        do n=1,ntask-1
-          nn = n+1
-          ilon0 = tasks(n)%lon0
-          ilon1 = tasks(n)%lon1
-          ilat0 = tasks(n)%lat0
-          ilat1 = tasks(n)%lat1
-          nlons = ilon1-ilon0+1
-          nlats = ilat1-ilat0+1
-          do ifld=1,nfld
-            select case (ifld)
-            case(1)
-              ped_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(2)
-              hall_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(3)
-              qamie_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(4)
-              qwind_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(5)
-              wtot_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(6)
-              work_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(7)
-              tec_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(8)
-              famieu_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(9)
-              famiev_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(10)
-              fwindu_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(11)
-              fwindv_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            case(12)
-              qjoule_sec(ilon0:ilon1,ilat0:ilat1,:) =
-     |          rcvbuf(1:nlons,1:nlats,:,ifld,nn)
-            end select
-          enddo ! ifld=1,nfld
-        enddo ! n=1,ntask-1 (receive from slaves only)
-      endif ! (mytid==0) then
-!
-! Release local buffer space:
-      deallocate(rcvbuf)
-      deallocate(sndbuf)
-!
-      end subroutine mp_dyndiag_gather
-#endif
-!-----------------------------------------------------------
+      subroutine dyndiag_bndlatlon
+
+      use mpi_module,only: lon0,lon1,lat0,lat1,
+     |  mp_bndlats_f2d,mp_bndlons_f2d,
+     |  mp_bndlats_f3d,mp_bndlons_f3d
+
+      integer,parameter :: nf2d = 11, nf3d = 12
+      real,dimension(lon0-2:lon1+2,lat0-2:lat1+2,nf2d) :: f2d
+      real,dimension(nlevp1,lon0-2:lon1+2,lat0-2:lat1+2,nf3d) :: f3d
+
+      f2d(:,:,1) = sigp
+      f2d(:,:,2) = sigh
+      f2d(:,:,3) = qwind
+      f2d(:,:,4) = qamie
+      f2d(:,:,5) = wtot
+      f2d(:,:,6) = work
+      f2d(:,:,7) = fwindu
+      f2d(:,:,8) = fwindv
+      f2d(:,:,9) = famieu
+      f2d(:,:,10) = famiev
+      f2d(:,:,11) = tec
+
+      call mp_bndlats_f2d(f2d,lon0,lon1,lat0,lat1,nf2d)
+      call mp_bndlons_f2d(f2d,lon0,lon1,lat0,lat1,nf2d)
+
+      sigp = f2d(:,:,1)
+      sigh = f2d(:,:,2)
+      qwind = f2d(:,:,3)
+      qamie = f2d(:,:,4)
+      wtot = f2d(:,:,5)
+      work = f2d(:,:,6)
+      fwindu = f2d(:,:,7)
+      fwindv = f2d(:,:,8)
+      famieu = f2d(:,:,9)
+      famiev = f2d(:,:,10)
+      tec = f2d(:,:,11)
+
+      f3d(:,:,:,1) = qwind_sec
+      f3d(:,:,:,2) = qamie_sec
+      f3d(:,:,:,3) = work_sec
+      f3d(:,:,:,4) = wtot_sec
+      f3d(:,:,:,5) = fwindu_sec
+      f3d(:,:,:,6) = fwindv_sec
+      f3d(:,:,:,7) = famieu_sec
+      f3d(:,:,:,8) = famiev_sec
+      f3d(:,:,:,9) = tec_sec
+      f3d(:,:,:,10) = ped_sec
+      f3d(:,:,:,11) = hall_sec
+      f3d(:,:,:,12) = qjoule_sec
+
+      call mp_bndlats_f3d(f3d,nlevp1,lon0,lon1,lat0,lat1,nf3d)
+      call mp_bndlons_f3d(f3d,nlevp1,lon0,lon1,lat0,lat1,nf3d,0)
+
+      qwind_sec = f3d(:,:,:,1)
+      qamie_sec = f3d(:,:,:,2)
+      work_sec = f3d(:,:,:,3)
+      wtot_sec = f3d(:,:,:,4)
+      fwindu_sec = f3d(:,:,:,5)
+      fwindv_sec = f3d(:,:,:,6)
+      famieu_sec = f3d(:,:,:,7)
+      famiev_sec = f3d(:,:,:,8)
+      tec_sec = f3d(:,:,:,9)
+      ped_sec = f3d(:,:,:,10)
+      hall_sec = f3d(:,:,:,11)
+      qjoule_sec = f3d(:,:,:,12)
+
+      end subroutine dyndiag_bndlatlon
+!-----------------------------------------------------------------------
       end module dyndiag_module

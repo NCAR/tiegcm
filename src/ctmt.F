@@ -16,15 +16,11 @@
 !
       use params_module,only: nlon,nlat,nlonp4,nlonp2
       use mpi_module,only: lon0,lon1,lat0,lat1
-      use nchist_module,only:nc_open,nc_close,handle_ncerr
+      use nchist_module,only:handle_ncerr
       use addfld_module,only: addfld
       implicit none
 !
-#ifdef SUN
-#include <netcdf3.inc>
-#else
 #include <netcdf.inc>
-#endif 
 ! 
 ! CTMT boundary data at model grid, output by this module,
 !   to be used by dt, duv, addiag, etc.
@@ -41,7 +37,7 @@
 !
       contains 
 !-----------------------------------------------------------------------
-      subroutine get_ctmt(istep,iyear,iday,secs) 
+      subroutine get_ctmt(istep,iday,secs) 
 !
 ! Module driver to read nc files, and do time interpolations.
 !
@@ -54,19 +50,13 @@
 ! Driver for obtaining GSWM data, called once per timestep from advance.
 !
 ! Args:
-      integer,intent(in) :: istep,iyear,iday
+      integer,intent(in) :: istep,iday
       real,intent(in) :: secs
-!
-! Local:
-      integer :: iprint
-!
-      iprint = 0
-      if (istep==1) iprint = 1
 !
 ! Get CTMT tide data:
       if (ictmt > 0) then
         if (istep==1) call rd_ctmt(ctmt_ncfile)
-        call mk_ctmt(iyear,iday,int(secs),iprint)
+        call mk_ctmt(iday,int(secs))
       endif
       
       end subroutine get_ctmt
@@ -79,14 +69,14 @@
       character(len=*),intent(in) :: ncfile
 !
 ! Local:
-      integer :: ncid,istat
+      integer :: ncid,istat,lonbeg,lonend
       character(len=mxlen_filename) :: dskfile
       integer :: nlon_rd, nlat_rd, nmonth_rd, nhour_rd
       integer :: id_nmonth, id_nhour, id_nlon, id_nlat
       integer :: idv_z, idv_t, idv_u, idv_v
       character(len=240) :: char240
-      real,dimension(nlonp4,nlat,nmonth,nhour) :: t,u,v,z
-      real,dimension(nlon,nlat,nmonth,nhour) :: tmp
+      integer,dimension(4) :: start,count
+      real,dimension(lon0:lon1,lat0:lat1,nmonth,nhour) :: t,u,v,z
 !
       dskfile = ' '
       call getfile(ncfile,dskfile)
@@ -94,8 +84,8 @@
       write(6,"('Reading CTMT data file ',a)") trim(ncfile)
 !
 ! Open netcdf file:
-      call nc_open(ncid,dskfile,'OLD','READ')
-      if (ncid==0) then
+      istat = nf_open(dskfile,NF_NOWRITE,ncid)
+      if (istat /= NF_NOERR) then
         write(6,"(/,'>>> rd_read: error opening netcdf CTMT ',
      |    'file ',a,' dskfile ',a)") trim(ncfile),trim(dskfile)
         call shutdown('rd_ctmt')
@@ -161,14 +151,21 @@
         call shutdown('rd_ctmt')
       endif
 !
+      lonbeg = lon0
+      if (lon0 == 1) lonbeg = 3
+      lonend = lon1
+      if (lon1 == nlonp4) lonend = nlonp2
+      start = (/lonbeg-2,lat0,1,1/)
+      count = (/lonend-lonbeg+1,lat1-lat0+1,nmonth,nhour/)
+!
 ! Get Z geopotential height perturbation [m]:
 !
       istat = nf_inq_varid(ncid,'Z',idv_z)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_ctmt: Error getting Z var id')
       z = 0. ! init
-      istat = nf_get_var_double(ncid,idv_z,tmp)
-      z(3:nlon+2,:,:,:) = tmp(:,:,:,:)
+      istat = nf_get_vara_double(ncid,idv_z,start,count,
+     |  z(lonbeg:lonend,:,:,:))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_ctmt: Error getting variable Z')
       z = z*100. 	! convert from m to cm
@@ -181,8 +178,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_ctmt: Error getting TN var id')
       t = 0.
-      istat = nf_get_var_double(ncid,idv_t,tmp)
-      t(3:nlon+2,:,:,:) = tmp(:,:,:,:)
+      istat = nf_get_vara_double(ncid,idv_t,start,count,
+     |  t(lonbeg:lonend,:,:,:))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_cmt: Error getting variable TN')
 !     write(6,"('rdgswm ',a,': tn min,max=',2e12.4)") 
@@ -194,8 +191,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_ctmt: Error getting UN var id')
       u = 0.
-      istat = nf_get_var_double(ncid,idv_u,tmp)
-      u(3:nlon+2,:,:,:) = tmp(:,:,:,:)
+      istat = nf_get_vara_double(ncid,idv_u,start,count,
+     |  u(lonbeg:lonend,:,:,:))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_ctmt: Error getting variable UN')
       u = u*100. 	! convert to cm/s
@@ -208,8 +205,8 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_ctmt: Error getting VN var id')
       v = 0.
-      istat = nf_get_var_double(ncid,idv_v,tmp)
-      v(3:nlon+2,:,:,:) = tmp(:,:,:,:)
+      istat = nf_get_vara_double(ncid,idv_v,start,count,
+     |  v(lonbeg:lonend,:,:,:))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'rd_ctmt: Error getting variable VN')
       v = v*100. 	! convert to cm/s
@@ -223,12 +220,12 @@
       v_ctmt(lon0:lon1,lat0:lat1,:,:) = v(lon0:lon1,lat0:lat1,:,:)
 !
 ! Close the file:
-      call nc_close(ncid)
+      istat = nf_close(ncid)
       write(6,"('Completed read from CTMT data file ',a)") trim(ncfile)
       write(6,"(/,72('-'))")
       end subroutine rd_ctmt
 !-----------------------------------------------------------------------
-      subroutine mk_ctmt(iyear,iday,isecs,iprint)
+      subroutine mk_ctmt(iday,isecs)
 !
 ! Use data read from CTMT file to return perturbation in Z
 ! and T at current model date and time. It is assumed that the ctmt file
@@ -239,19 +236,16 @@
 ! interpolated to the modelday
 !
       use hist_module,only: modeltime
-#ifdef MPI
       use mpi_module,only: mp_periodic_f2d
-#endif
       implicit none
 !
 ! Args:
-      integer,intent(in) :: iyear,iday,isecs,iprint
+      integer,intent(in) :: iday,isecs
 !
 ! Local:
-      real :: difsec,difday,sec,secint,dayint
-      integer :: i,j,ndmon_nl(13),ndmon_lp(13),nonleap,
-     |   mon_cur,mon_nxt,ihr_cur,ihr_nxt,nointp=0,
-     |   lonbeg,lonend,i0,i1,j0,j1
+      real :: difsec,difday,secint,dayint
+      integer :: i,ndmon_nl(13),mon_cur,mon_nxt,ihr_cur,ihr_nxt,
+     |   nointp=0,i0,i1,j0,j1
       real,dimension(lon0:lon1,lat0:lat1) :: t,u,v,z,
      |  z_curmo, t_curmo, u_curmo, v_curmo,
      |  z_nxtmo, t_nxtmo, u_nxtmo, v_nxtmo,
@@ -310,10 +304,10 @@
         u_curmo_nxthr = ctmtdat(mon_cur,ihr_nxt+1,'u')
         v_curmo_nxthr = ctmtdat(mon_cur,ihr_nxt+1,'v')
 
-        call timeinterp(z, z_curmo_nxthr, difsec, secint, z_curmo, 1)
-        call timeinterp(t, t_curmo_nxthr, difsec, secint, t_curmo, 1)
-        call timeinterp(u, u_curmo_nxthr, difsec, secint, u_curmo, 1)
-        call timeinterp(v, v_curmo_nxthr, difsec, secint, v_curmo, 1)
+        call timeinterp(z, z_curmo_nxthr, difsec, secint, z_curmo)
+        call timeinterp(t, t_curmo_nxthr, difsec, secint, t_curmo)
+        call timeinterp(u, u_curmo_nxthr, difsec, secint, u_curmo)
+        call timeinterp(v, v_curmo_nxthr, difsec, secint, v_curmo)
 !
 ! Interpolate to next month:
         z = z_nxtmo ; t = t_nxtmo ; u = u_nxtmo ; v = v_nxtmo
@@ -324,10 +318,10 @@
         u_nxtmo_nxthr = ctmtdat(mon_nxt,ihr_nxt+1,'u')
         v_nxtmo_nxthr = ctmtdat(mon_nxt,ihr_nxt+1,'v')
 
-        call timeinterp(z, z_nxtmo_nxthr, difsec, secint, z_nxtmo,1)
-        call timeinterp(t, t_nxtmo_nxthr, difsec, secint, t_nxtmo,1)
-        call timeinterp(u, u_nxtmo_nxthr, difsec, secint, u_nxtmo,1)
-        call timeinterp(v, v_nxtmo_nxthr, difsec, secint, v_nxtmo,1)
+        call timeinterp(z, z_nxtmo_nxthr, difsec, secint, z_nxtmo)
+        call timeinterp(t, t_nxtmo_nxthr, difsec, secint, t_nxtmo)
+        call timeinterp(u, u_nxtmo_nxthr, difsec, secint, u_nxtmo)
+        call timeinterp(v, v_nxtmo_nxthr, difsec, secint, v_nxtmo)
 
       endif ! interpolate to month or not
 !
@@ -359,10 +353,10 @@
 ! Interpolate to ut if necessary to local z,t,u,v:
       select case (nointp)
         case (0)                  ! interpolate
-          call timeinterp(z_curmo,z_nxtmo,difday,dayint,z,1)
-          call timeinterp(t_curmo,t_nxtmo,difday,dayint,t,1)
-          call timeinterp(u_curmo,u_nxtmo,difday,dayint,u,1)
-          call timeinterp(v_curmo,v_nxtmo,difday,dayint,v,1)
+          call timeinterp(z_curmo,z_nxtmo,difday,dayint,z)
+          call timeinterp(t_curmo,t_nxtmo,difday,dayint,t)
+          call timeinterp(u_curmo,u_nxtmo,difday,dayint,u)
+          call timeinterp(v_curmo,v_nxtmo,difday,dayint,v)
         case (1)                  ! no interp (same day as current month)
           z = z_curmo
           t = t_curmo
@@ -387,7 +381,6 @@
 ! Do mpi periodic points exchange for ctmt with f2d(:)
 ! lons 1,2 <- nlonp4-3,nlonp4-2 and nlonp4-1,nlonp4 <- 3,4
 !
-#ifdef MPI
        fctmt(:,:,1) = ctmt_z(lon0:lon1,lat0:lat1)
        fctmt(:,:,2) = ctmt_t(lon0:lon1,lat0:lat1)
        fctmt(:,:,3) = ctmt_u(lon0:lon1,lat0:lat1)
@@ -397,12 +390,6 @@
        ctmt_t(lon0:lon1,lat0:lat1) = fctmt(:,:,2)
        ctmt_u(lon0:lon1,lat0:lat1) = fctmt(:,:,3)
        ctmt_v(lon0:lon1,lat0:lat1) = fctmt(:,:,4)
-#else
-       call set_periodic_f2d(ctmt_z)
-       call set_periodic_f2d(ctmt_t)
-       call set_periodic_f2d(ctmt_u)
-       call set_periodic_f2d(ctmt_v)
-#endif
 
 !       call addfld('ctmt_z','CTMT Z','cm',
 !    |    ctmt_z(i0:i1,j0:j1),'lon',i0,i1,'lat',j0,j1,0)
@@ -443,8 +430,7 @@
 !
       end function ctmtdat
 !-----------------------------------------------------------------------
-      subroutine timeinterp(d1,d2,difd1d2,difint,fout,
-     |  iprnt)
+      subroutine timeinterp(d1,d2,difd1d2,difint,fout)
 !
 ! Interpolate from fields d1,d2  linearly to time difint
 !   (d1 must be at 0 unit time), returning fout
@@ -456,7 +442,6 @@
 !   fout is defined at difint
 !
 ! Args:
-      integer,intent(in) :: iprnt
       real,intent(in)  :: difd1d2,difint,d1(lon0:lon1,lat0:lat1),
      |   d2(lon0:lon1,lat0:lat1)
       real,intent(out) :: fout(lon0:lon1,lat0:lat1)

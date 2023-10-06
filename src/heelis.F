@@ -44,7 +44,7 @@
 ! Calculate heelis potential in geomagnetic coordinates.
 !
 ! Local:
-      integer :: i,j
+      integer :: j
       real,dimension(nmlon) :: dlat,dlon,ratio
       integer,dimension(nmlon) :: iflag
 !
@@ -57,7 +57,7 @@
 ! flwv32 returns single-level Heelis potential in geomag coords:
 !
         if (abs(ylatm(j)) > pi_dyn/6.) then
-          call flwv32(dlat,dlon,ratio,iflag,nmlon,phihm(:,j),j)
+          call flwv32(dlat,dlon,ratio,iflag,nmlon,phihm(:,j))
         else
           phihm(1:nmlon,j) = 0.
         endif
@@ -69,18 +69,17 @@
       enddo ! j=1,nmlat
       end subroutine potm
 !-----------------------------------------------------------------------
-      subroutine flwv32(dlat,dlon,ratio,iflag,nmlon,poten,mlat)
+      subroutine flwv32(dlat,dlon,ratio,iflag,nmlon,poten)
 !
 ! Calculate heelis potential at current magnetic latitude mlat.
 !
       use aurora_module,only: offa,offc,dskofa,dskofc,phin,phid,theta0,
      |  psie,psim,pcen,phidm0,phidp0,phinm0,phinp0,rr1
-      use params_module,only: nlon
       use cons_module,only: pi_dyn
       implicit none
 !
 ! Args:
-      integer,intent(in) :: mlat,nmlon
+      integer,intent(in) :: nmlon
       integer,intent(inout) :: iflag(nmlon)
       real,dimension(nmlon),intent(in)  :: dlat,dlon,ratio
       real,dimension(nmlon+1),intent(out) :: poten
@@ -119,21 +118,22 @@
         phdmmx(n) = phnpmx(n)
       enddo ! n=1,2
 
-!     write(6,"('flwv32: mlat=',i3,' cosofa=',2e12.4)") mlat,cosofa
-!     write(6,"('flwv32: mlat=',i3,' sinofa=',2e12.4)") mlat,sinofa
-!     write(6,"('flwv32: mlat=',i3,' aslona=',2e12.4)") mlat,aslona
-!     write(6,"('flwv32: mlat=',i3,' cosofc=',2e12.4)") mlat,cosofc
-!     write(6,"('flwv32: mlat=',i3,' sinofc=',2e12.4)") mlat,sinofc
-!     write(6,"('flwv32: mlat=',i3,' aslonc=',2e12.4)") mlat,aslonc
-!     write(6,"('flwv32: mlat=',i3,' phdpmx=',2e12.4,' phnpmx=',
-!    |  2e12.4)") mlat,phdpmx,phnpmx
-!     write(6,"('flwv32: mlat=',i3,' phnmmx=',2e12.4,' phdmmx=',
-!    |  2e12.4)") mlat,phnmmx,phdmmx
+!     write(6,"('flwv32: cosofa=',2e12.4)") cosofa
+!     write(6,"('flwv32: sinofa=',2e12.4)") sinofa
+!     write(6,"('flwv32: aslona=',2e12.4)") aslona
+!     write(6,"('flwv32: cosofc=',2e12.4)") cosofc
+!     write(6,"('flwv32: sinofc=',2e12.4)") sinofc
+!     write(6,"('flwv32: aslonc=',2e12.4)") aslonc
+!     write(6,"('flwv32: phdpmx=',2e12.4,' phnpmx=',2e12.4)")
+!    |  phdpmx,phnpmx
+!     write(6,"('flwv32: phnmmx=',2e12.4,' phdmmx=',2e12.4)")
+!    |  phnmmx,phdmmx
 
 !
 ! Set ihem=1,2 for South,North hemisphere:
 !
-      ihem = int(dlat(max0(1,nlon/2))*2./3.1416+2.) 
+! Change nlon to nmlon, Dang, 2017
+      ihem = int(dlat(max0(1,nmlon/2))*2./3.1416+2.) 
       sinth0 = sin(theta0(ihem))
 !
 ! Average amie results show r1=-2.6 for 11.3 degrees
@@ -225,7 +225,7 @@
         endif
       enddo
 
-!     write(6,"(/'flwv32: j=',i2,' ihem=',i2)") mlat,ihem
+!     write(6,"(/'flwv32: ihem=',i2)") ihem
 !     write(6,"('  theta0(ihem)=',e12.4,' pcen(ihem)=',e12.4,
 !    |  ' rr1(ihem)=',e12.4)") theta0(ihem),pcen(ihem),rr1(ihem)
 !     write(6,"('  sinth0=',e12.4,' sinthr1=',e12.4)") sinth0,sinthr1
@@ -234,8 +234,7 @@
 !     write(6,"('  phifun=',/,(6e12.4))") phifun
 !     write(6,"('  phifn2=',/,(6e12.4))") phifn2
 !     write(6,"('  poten =',/,(6e12.4))") poten
-!     write(6,"(/'flwv32: j=',i2,' ihem=',i2,' poten=',/,(6e12.4))") 
-!    |  mlat,ihem,poten   
+!     write(6,"(/'flwv32: ihem=',i2,' poten=',/,(6e12.4))") ihem,poten
 
       end subroutine flwv32
 !-----------------------------------------------------------------------

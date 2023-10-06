@@ -26,8 +26,6 @@
 ! every time step from advance (or from tstwrhist).
 !
       use hist_module,only: iseries_prim,iseries_sech
-      use fields_module,only: itc
-      use timing_module
       implicit none
 !
 ! Args:
@@ -37,7 +35,6 @@
       logical :: time2write,
      |  wrprim, newseries_prim,
      |  wrsech, newseries_sech
-      integer :: icount
 !
 ! External:
       logical,external :: wrhist
@@ -78,9 +75,6 @@
      |  nhist,       ! number of histories on current file (read/write)
      |  modeltime,   ! current model time (read only)
      |  nhist_total, ! total primary histories to be written (read only)
-     |  nsource,     ! 0/1 number of source files provided (read only)
-     |  nsecsource,  ! 0/1 number of secsource files provided (read only)
-     |  nstep,       ! total number of steps this run
      |  iseries_prim,! current primary time series (read only)
      |  copyhist,    ! subroutine to copy history structures
      |  h,sh
@@ -102,7 +96,7 @@
 ! Init:
       diskfile = ' '
       if (iprint > 0) write(6,"(/,72('-'),/,'Primary History Output:',
-     |  ' model time (day,hour,min) = ',4i4)") modeltime
+     |  ' model time (day,hour,min,sec) = ',4i4)") modeltime
       if (ihist_total == 0) then
         iprinthist = 1
       else
@@ -112,7 +106,6 @@
 ! 1/13/16 btf: ioutfile is set by readsource (rdsource.F)
 !     if (ihist_total==0) then       ! first history of a run
 !       ioutfile = 0                 ! first history goes on new file
-!       if (nsource==0) ioutfile = 1 ! first history on first output file
 !     endif
 !
       fullfile = .false.
@@ -176,7 +169,7 @@
 ! Set source history model time, day and year from user's
 ! namelist read for first history of the intial run.
 ! This may be different than the original source history.
-! (i.e., SOURCE_START may be different than START and START_DAY,
+! (i.e., SOURCE_START may be different than PRISTART and START_DAY,
 !  and START_YEAR may be different that year on the source history)
 !
         sh%modeltime = modeltime
@@ -199,8 +192,8 @@
       ihist_total = ihist_total+1
 !
 ! Report to stdout:
-      write(6,"('Wrote primary   history ',i3,',',i2,',',i2,
-     |  ' to ',a,' (',i4,' of ',i4,')')") modeltime(1:3),
+      write(6,"('Wrote primary   history ',i3,',',i2,',',i2,',',i2,
+     |  ' to ',a,' (',i4,' of ',i4,')')") modeltime,
      |  trim(diskfile),ihist_total,nhist_total
 !
 ! Add contents string to the file (as global attribute), and to the
@@ -229,7 +222,6 @@
      |  nsech,       ! number of histories on current file (read/write)
      |  modeltime,   ! current model time (read only)
      |  nsech_total, ! total sech histories to be written (read only)
-     |  nstep,       ! total number of steps this run
      |  iseries_sech ! current secondary time series (read only)
       implicit none
 !
@@ -247,7 +239,7 @@
 ! Init:
       diskfile = ' '
       if (iprint > 0) write(6,"(/,72('-'),/,'Secondary History Output:',
-     |  ' model time (day,hour,min) = ',3i4)") modeltime
+     |  ' model time (day,hour,min,sec) = ',4i4)") modeltime
       if (ihist_total == 0) then
         iprinthist = 1
       else
@@ -310,8 +302,8 @@
       ihist_total = ihist_total+1
 !
 ! Report to stdout:
-      write(6,"('Wrote secondary history ',i3,',',i2,',',i2,
-     |  ' to ',a,' (',i4,' of ',i4,')')") modeltime(1:3),
+      write(6,"('Wrote secondary history ',i3,',',i2,',',i2,',',i2,
+     |  ' to ',a,' (',i4,' of ',i4,')')") modeltime,
      |  trim(diskfile),ihist_total,nsech_total
 !
 ! Add contents string to the file (as global attribute), and to the
@@ -333,21 +325,19 @@
       use params_module,only: tgcm_name,tgcm_version,spval,nlat,
      |  nlon,nlevp1,zibot,zitop,zmbot,zmtop
       use hist_module,only: sh,h,hist_initype,nhist,nsech,modeltime,
-     |  isecout,ioutfile,nsource,nsecsource,iseries_prim,iseries_sech
+     |  isecout,ioutfile,nsource,iseries_prim,iseries_sech
       use input_module,only: output,secout,step,power,ctpoten,kp,
      |  bximf,byimf,bzimf,swvel,swden,al,f107,f107a,tide,tide2,
-     |  colfac,source,hist,sechist,calendar_advance,secsource,
+     |  colfac,source,prihist,sechist,calendar_advance,
      |  gswm_mi_di_ncfile,gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,
-     |  gswm_nm_sdi_ncfile,dynamo,source_start,start,
+     |  gswm_nm_sdi_ncfile,dynamo,source_start,pristart,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
      |  saber_ncfile,tidi_ncfile,joulefac,gpi_ncfile,bgrddata_ncfile,
-     |  ctmt_ncfile,
-     |  amienh_ncfile,amiesh_ncfile
+     |  ctmt_ncfile
       use mpi_module,only: ntask
 
-      use init_module,only: logname,host,system,iyear,iday,istep,
-     |  start_mtime
-      use fields_module,only: nf4d_hist,f4d,fsechist
+      use init_module,only: logname,host,system,iyear,iday,istep
+      use fields_module,only: nf4d_hist,f4d
       use cons_module,only: p0,grav
       use aurora_module,only: e1,e2,h1,h2,alfac,ec,alfad,ed
       use gpi_module,only: kp_gpi=>fkp
@@ -357,12 +347,12 @@
       character(len=*),intent(in) :: hist_type ! primary or secondary
 !
 ! Local:
-      integer :: i,ier,imo,ida,sourceyear,sourceday,sourcemtime(3)
+      integer :: i,ier,imo,ida
       character(len=8) :: write_date,write_time
       character(len=80) :: char80
 !
 ! External:
-      integer,external :: mtime_to_mins,mtime_to_nstep
+      integer,external :: mtime_to_secs,mtime_to_nstep
       real,external :: mtime_to_datestr
 !
 ! Init (note hist_initype deallocates h%fnames):
@@ -377,14 +367,14 @@
       else ! continuation run
         h%run_type = 'continuation'
         h%source_file = output(1)
-        h%source_mtime = start(:,1)
+        h%source_mtime = pristart(:,1)
       endif
 !
 ! Define primary or secondary history structure (hist_mod.f):
       select case(hist_type)
         case ('primary')
           h%ihist = nhist
-          h%delhmins = mtime_to_mins(hist(:,iseries_prim))
+          h%delhsecs = mtime_to_secs(prihist(:,iseries_prim))
 
           h%output_file = output(ioutfile)
           call expand_path(h%output_file)
@@ -408,7 +398,7 @@
           h%nfmag2d  = 0    ! no magnetic 2d fields on primary history
         case ('secondary')
           h%ihist = nsech
-          h%delhmins = mtime_to_mins(sechist(:,iseries_sech))
+          h%delhsecs = mtime_to_secs(sechist(:,iseries_sech))
           h%output_file = secout(isecout)
           call expand_path(h%output_file)
         case default
@@ -429,7 +419,7 @@
       h%model_version = tgcm_version
       h%modeltime = modeltime
       h%time = mtime_to_datestr(h%year,h%modeltime,imo,ida,char80)
-      h%iter  = mtime_to_nstep(modeltime(1:3),step)
+      h%iter  = mtime_to_nstep(modeltime,step)
       h%ut    = float(modeltime(2))+float(modeltime(3))/60.+
      |          float(modeltime(4))/3600.
       h%dtide(:)  = tide2(:)
@@ -534,11 +524,6 @@
       if (len_trim(bgrddata_ncfile) == 0) h%bgrddata_ncfile = '[none]'
       h%ctmt_ncfile= ctmt_ncfile
       if (len_trim(ctmt_ncfile) == 0) h%ctmt_ncfile = '[none]'
-      
-      h%amienh_ncfile= amienh_ncfile
-      if (len_trim(amienh_ncfile) == 0) h%amienh_ncfile = '[none]'
-      h%amiesh_ncfile= amiesh_ncfile
-      if (len_trim(amiesh_ncfile) == 0) h%amiesh_ncfile = '[none]'
 
       h%missing_value = spval
       h%nlat = nlat

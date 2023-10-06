@@ -1,7 +1,7 @@
 !
-      subroutine duv(tn,tn_upd,tn_nm,un,vn,un_nm,vn_nm,w_upd,o2,o1,n2,
-     |  barm,z,hdu,hdv,ui,vi,lxx,lyy,lxy,lyx,km,un_upd,unm_upd,vn_upd,
-     |  vnm_upd,lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine duv(tn,tn_upd,tn_nm,un,vn,un_nm,vn_nm,w_upd,mbar,
+     |  scht,schti,z,hdu,hdv,ui,vi,lxx,lyy,lxy,lyx,km,Fe,Fn,
+     |  un_upd,unm_upd,vn_upd,vnm_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -9,18 +9,15 @@
 !
 ! Advance neutral velocities for current time step:
 !
-      use params_module,only: nlonp4,dz,nlat,spval,nlonp2,nlon
-      use init_module,only: iter,igetgswm,iday
+      use params_module,only: nlonp4,dz,spval
+      use init_module,only: iday
       use lbc,only: u_lbc,v_lbc
-      use cons_module,only: dtx2inv,expz,p0,gask,grav,
-     |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,kut,
-     |  rmassinv_n2,rmassinv_o2,rmassinv_o1
-      use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
+      use cons_module,only: dtx2inv,expz,p0,grav,
+     |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth
+      use fields_module,only: ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
       use addfld_module,only: addfld
-#ifdef MPI
       use mpi_module,only: mp_periodic_f3d,mp_periodic_f2d,
      |  mp_bndlons_f2d,mp_bndlats_f2d
-#endif
       implicit none
 !
 ! Args:
@@ -36,10 +33,9 @@
      |  un_nm,   ! neutral zonal velocity at time n-1
      |  vn_nm,   ! neutral meridional velocity at time n-1
      |  w_upd,   ! updated vertical velocity (swdot.F)
-     |  o2,      ! o2 (for mbar only)
-     |  o1,      ! o1 (for mbar only)
-     |  n2,      ! n2 (for mbar only)
-     |  barm,    ! mean molecular weight
+     |  mbar,    ! mean molecular weight
+     |  scht,    ! scale height at midpoints
+     |  schti,   ! scale height at interfaces
      |  z,       ! geopotential height
      |  hdu,     ! horizontal diffusion of U (hdif3 in hdif.F)
      |  hdv,     ! horizontal diffusion of V (hdif3 in hdif.F)
@@ -49,7 +45,8 @@
      |  lyy,     ! yy ion drag coefficient
      |  lxy,     ! xy ion drag coefficient
      |  lyx,     ! yx ion drag coefficient
-     |  km       ! molecular viscosity (cpktkm.F)
+     |  km,      ! molecular viscosity (cpktkm.F)
+     |  Fe,Fn    ! field-aligned ion drag
 !
 ! Outputs at full subdomain:
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
@@ -60,7 +57,7 @@
      |  vnm_upd  ! updated meridional velocity at time n-1
 !
 ! Local:
-      integer :: k,kk,i,j,lat,lonbeg,lonend
+      integer :: k,kk,i,lat,lonbeg,lonend
       integer :: nk,nkm1,nlevs
       real :: 
      |  unlbc(lon0:lon1), ! un lower boundary (t1)
@@ -78,15 +75,13 @@
       real :: flbc(lon0-2:lon1+2,lat0-2:lat1+2,4) ! ulbc,vlbc,ulbc_nm,vlbc_n
       real :: rtxmue(lev0:lev1) ! sqrt(xmue)
       real,dimension(lev0:lev1,lon0:lon1) ::
-     |  eddyvisc,    ! eddy viscosity (?)
-     |  mbar         ! mean molecular weight (slightly different than barm)
+     |  eddyvisc     ! eddy viscosity (?)
 !
 ! For diagnostic, debug:
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  unlbc_diag,   ! un lbc redundant in vertical, for diagnostic
      |  vnlbc_diag,   ! vn lbc redundant in vertical, for diagnostic
-     |  ss_un,ss_vn,  ! also for diagnostics
-     |  pp11,pp12,pp21,pp22, qq11,qq12,qq21,qq22, rr11,rr12,rr21,rr22
+     |  ss_un,ss_vn   ! also for diagnostics
 !
 ! pp, qq, rr, beta AND gamma are (2 x 2) matrices defined for 
 !   k = 3/2, K-1/2, 1 and i = 3, IMAX+2, 1
@@ -132,7 +127,7 @@
 ! Horizontal pressure forcing output of glp is in zl,zp. Pass full 
 ! subdomains for derivatives in lat and lon (see sub dldp, called by glp):
 !
-      call glp(tn,tn_upd,tn_nm,barm,z,zl,zp,
+      call glp(tn,tn_upd,tn_nm,mbar,z,zl,zp,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Second latitude scan:
@@ -205,18 +200,17 @@
 !    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('ADVEC_V2','ADVEC_V2',' ',advec_vn(:,:,lat),
 !    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-!
-! Note: lyx(code) = -lyx; (see subroutine lamdas) this sign change is taken 
-! into account below by using -lyx(code)
-!
+
         do i=lon0,lon1
           do k=lev0,lev1-1
             ss(1,k,i) = expz(k)*(.25*((lxx(k,i,lat)+lxx(k+1,i,lat))*
      |        (ui(k,i,lat)+ui(k+1,i,lat))+(lxy(k,i,lat)+lxy(k+1,i,lat))*
-     |        (vi(k,i,lat)+vi(k+1,i,lat)))-advec_un(k,i,lat))
+     |        (vi(k,i,lat)+vi(k+1,i,lat)))-advec_un(k,i,lat)+
+     |        Fe(k,i,lat))
             ss(2,k,i) = expz(k)*(.25*((lyy(k,i,lat)+lyy(k+1,i,lat))*
      |        (vi(k,i,lat)+vi(k+1,i,lat))-(lyx(k,i,lat)+lyx(k+1,i,lat))*
-     |        (ui(k,i,lat)+ui(k+1,i,lat)))-advec_vn(k,i,lat))
+     |        (ui(k,i,lat)+ui(k+1,i,lat)))-advec_vn(k,i,lat)+
+     |        Fn(k,i,lat))
             ss_un(k,i) = ss(1,k,i)
             ss_vn(k,i) = ss(2,k,i)
           enddo ! k=lev0,lev1-1
@@ -247,16 +241,8 @@
      |                      xmue(lev1-2,iday))
 !
         do i=lon0,lon1
-          do k=lev0,lev1-1
-            mbar(k,i) = 1./(o2(k,i,lat)*rmassinv_o2 + 
-     |        o1(k,i,lat)*rmassinv_o1 + n2(k,i,lat)*rmassinv_n2)
-          enddo ! k=lev0,lev1-1
-        enddo ! i=lon0,lon1
-!
-        do i=lon0,lon1
           do k=lev0,lev1-1          
-            eddyvisc(k,i) = p0*expz(k)*gask*tn(k,i,lat)*xmue(k,iday)/
-     |                      (mbar(k,i)*grav**2)
+            eddyvisc(k,i) = p0*expz(k)*scht(k,i,lat)*xmue(k,iday)/grav
           enddo ! k=lev0+1,lev1-1          
 !
 ! Upper boundary:
@@ -280,8 +266,8 @@
 
 ! G = g*KM/(P0*H*Ds**2) = g**2*(kM+XMUE)*MBAR*/(P0*R*T*DS**2)
           do k=lev0,lev1
-            g(k,i) = grav**2*(km(k,i,lat)+eddyvisc(k,i))*barm(k,i,lat)/
-     |        (p0*gask*tni(k,i)*dz**2)
+            g(k,i) = grav*(km(k,i,lat)+eddyvisc(k,i))/
+     |        (p0*schti(k,i,lat)*dz**2)
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
 
@@ -342,8 +328,6 @@
 !     Q(1,2) = -exp(-s) * (f+u/r*tan(theta)-lamxy)
 !      and 
 !     Q(2,1) = exp(-s) * (f+u/r*tan(theta)-lamyx)
-! Note: l_yx(code) = -l_yx (see subroutine lamdas)
-! this sign change is taken into account below by using -lyx(code)
 !
             qq(1,2,k,i) = cor(lat)+un(k,i,lat)/re*tanphi(lat)
             qq(2,1,k,i) = qq(1,2,k,i)
@@ -388,35 +372,29 @@
           rr(2,2,lev1-1,i) = 0.
         enddo ! i=lon0,lon1
 
-!       pp11(:,:) = pp(1,1,:,:) ; pp12(:,:) = pp(1,2,:,:)
-!       pp21(:,:) = pp(2,1,:,:) ; pp22(:,:) = pp(2,2,:,:)
-!       qq11(:,:) = qq(1,1,:,:) ; qq12(:,:) = qq(1,2,:,:)
-!       qq21(:,:) = qq(2,1,:,:) ; qq22(:,:) = qq(2,2,:,:)
-!       rr11(:,:) = rr(1,1,:,:) ; rr12(:,:) = rr(1,2,:,:)
-!       rr21(:,:) = rr(2,1,:,:) ; rr22(:,:) = rr(2,2,:,:)
-!       call addfld('PP11',' ',' ',pp11,
+!       call addfld('PP11',' ',' ',pp(1,1,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('PP12',' ',' ',pp12,
+!       call addfld('PP12',' ',' ',pp(1,2,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('PP21',' ',' ',pp21,
+!       call addfld('PP21',' ',' ',pp(2,1,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('PP22',' ',' ',pp22,
+!       call addfld('PP22',' ',' ',pp(2,2,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('QQ11',' ',' ',qq11,
+!       call addfld('QQ11',' ',' ',qq(1,1,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('QQ12',' ',' ',qq12,
+!       call addfld('QQ12',' ',' ',qq(1,2,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('QQ21',' ',' ',qq21,
+!       call addfld('QQ21',' ',' ',qq(2,1,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('QQ22',' ',' ',qq22,
+!       call addfld('QQ22',' ',' ',qq(2,2,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('RR11',' ',' ',rr11,
+!       call addfld('RR11',' ',' ',rr(1,1,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('RR12',' ',' ',rr12,
+!       call addfld('RR12',' ',' ',rr(1,2,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('RR21',' ',' ',rr21,
+!       call addfld('RR21',' ',' ',rr(2,1,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('RR22',' ',' ',rr22,
+!       call addfld('RR22',' ',' ',rr(2,2,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('SS_UN',' ',' ',ss_un,
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -427,8 +405,7 @@
 ! pp,qq,rr,ss are input, beta,gamma,yy,xx are output.
 ! (final solution is in xx)
 !
-        call blktri(pp,qq,rr,ss, beta,gamma,yy,xx,
-     |    lev0,lev1,lon0,lon1,lat)
+        call blktri(pp,qq,rr,ss, beta,gamma,yy,xx,lev0,lev1,lon0,lon1)
 !
 ! Save updated U and V:
         do i=lonbeg,lonend 
@@ -468,9 +445,9 @@
 !
 ! Fourier smoothing of U and V:
       call filter_uv(un_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
-     |  lat0,lat1,kut,'UN')
+     |  lat0,lat1,'UN')
       call filter_uv(vn_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
-     |  lat0,lat1,kut,'VN')
+     |  lat0,lat1,'VN')
 !
 ! Fourth latitude scan:
       do lat=lat0,lat1
@@ -499,7 +476,6 @@
 !
 ! End fourth latitude scan:
       enddo ! lat=lat0,lat1
-#ifdef MPI
 !
 ! Boundary (halo) latitudes:
       flbc(:,:,1) = ulbc(:,:)
@@ -534,20 +510,6 @@
       vlbc(:,:)    = flbc(:,:,2)
       ulbc_nm(:,:) = flbc(:,:,3)
       vlbc_nm(:,:) = flbc(:,:,4)
-#else
-      do j=lat0,lat1
-        do i=1,2
-          ulbc(i,j)        = ulbc(nlon+i,j)
-          ulbc(nlonp2+i,j) = ulbc(i+2,j) 
-          vlbc(i,j)        = vlbc(nlon+i,j)
-          vlbc(nlonp2+i,j) = vlbc(i+2,j)  
-          ulbc_nm(i,j)        = ulbc_nm(nlon+i,j)
-          ulbc_nm(nlonp2+i,j) = ulbc_nm(i+2,j) 
-          vlbc_nm(i,j)        = vlbc_nm(nlon+i,j)
-          vlbc_nm(nlonp2+i,j) = vlbc_nm(i+2,j)  
-        enddo
-      enddo    
-#endif
 !
 !     do lat=lat0,lat1
 !       call addfld('UN_FINAL',' ',' ',un_upd(:,lon0:lon1,lat),
@@ -557,18 +519,15 @@
 !     enddo ! lat=lat0,lat1
       end subroutine duv
 !-----------------------------------------------------------------------
-      subroutine glp(tn,tn_upd,tn_nm,barm,z,zl,zp,
+      subroutine glp(tn,tn_upd,tn_nm,mbar,z,zl,zp,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Horizontal pressure forcing for un,vn: 
 !
-      use params_module,only: nlonp4,nlat
+      use params_module,only: nlonp4
       use cons_module,only: dz,dzgrav,grav,racs,re_inv
-      use init_module,only: iter
       use addfld_module,only: addfld
-#ifdef MPI
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
-#endif
       implicit none
 !
 ! Args:
@@ -579,7 +538,7 @@
      |  tn,      ! neutral temperature (deg K)
      |  tn_upd,  ! updated neutral temperature (from dt.F)
      |  tn_nm,   ! neutral temperature from time n-1
-     |  barm,    ! mean molecular weight
+     |  mbar,    ! mean molecular weight
      |  z        ! geopotential
 !
 ! Outputs at subdomain:
@@ -588,7 +547,6 @@
 !
 ! Local:
       integer :: k,i,nk,nkm1,nlevs,lat,lonbeg,lonend
-      complex :: expt1,expt2,expta
       real,parameter :: wt=0.225
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
      |  ztmp
@@ -619,7 +577,7 @@
 
         do i=lon0,lon1
           do k=lev0,lev1-1
-            barmi(k,i) = .5*(barm(k,i,lat)+barm(k+1,i,lat))    ! s7
+            barmi(k,i) = mbar(k,i,lat)    ! s7
             dztbar(k,i) = (dz/dzgrav) * (tbar(k,i)/barmi(k,i)) ! s7
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
@@ -641,8 +599,6 @@
         enddo ! i=lon0,lon1
       enddo
 !
-#ifdef MPI
-!
 ! Exchange boundary longitudes in ztmp for 4th order differencing in dldp. 
 ! Not necessary if ztmp has been defined at full subdomain, including lon 
 ! halos, but as of 4/02, this was not working (s.a. comments above)
@@ -650,12 +606,7 @@
       call mp_periodic_f3d(ztmp(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1,1)
       call mp_bndlons_f3d(ztmp,nlevs,lon0,lon1,lat0,lat1,1,0)
-#else
 !
-! Set periodic points for serial run:
-      ztmp(:,1:2,:) = ztmp(:,lonend-2:lonend-1,:)
-      ztmp(:,lonend+1:lonend+2,:) = ztmp(:,3:4,:)
-#endif
 !     do lat=lat0,lat1
 !       call addfld('ZTMP',' ',' ',ztmp(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -699,7 +650,6 @@
 ! (for 5 degree resolution), and so the values of periodic 
 ! points of zl and zp are now no longer NaNs.
 !                                                   Wenbin  04/24/08
-#ifdef MPI
       ftmp(:,:,:,1) = zl(:,lon0:lon1,lat0:lat1)
       ftmp(:,:,:,2) = zp(:,lon0:lon1,lat0:lat1)
 
@@ -707,14 +657,7 @@
 
       zl(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,1)
       zp(:,lon0:lon1,lat0:lat1) = ftmp(:,:,:,2)
-#else
 !
-! Set periodic points for serial run:
-      zl(:,1:2,:) = zl(:,lonend-2:lonend-1,:)
-      zl(:,lonend+1:lonend+2,:) = zp(:,3:4,:)
-      zp(:,1:2,:) = zl(:,lonend-2:lonend-1,:)
-      zp(:,lonend+1:lonend+2,:) = zp(:,3:4,:)
-#endif
       end subroutine glp
 !-----------------------------------------------------------------------
       subroutine dldp(zin,z,zl,zp,lev0,lev1,lon0,lon1,lat0,lat1)
@@ -812,7 +755,7 @@
       enddo ! lat=lat0,lat1
       end subroutine dldp
 !-----------------------------------------------------------------------
-      subroutine blktri(a,b,c,f,beta,gamma,y,x,lev0,lev1,lon0,lon1,lat)
+      subroutine blktri(a,b,c,f,beta,gamma,y,x,lev0,lev1,lon0,lon1)
 !
 ! This procedure solves (I2-I1+1) tridiagonal block matrix
 ! systems in which all blocks are 2 x 2 matrices.
@@ -821,7 +764,7 @@
       implicit none
 !
 ! Input args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
+      integer,intent(in) :: lev0,lev1,lon0,lon1
       real,dimension(2,2,lev0:lev1,lon0:lon1),intent(in) ::
      |  a,b,c
       real,dimension(2,lev0:lev1,lon0:lon1),intent(in) ::
@@ -921,23 +864,17 @@
       enddo ! i=lon0,lon1
       end subroutine blktri
 !-----------------------------------------------------------------------
-      subroutine filter_uv(fout,lev0,lev1,lon0,lon1,lat0,lat1,kut,name)
+      subroutine filter_uv(fout,lev0,lev1,lon0,lon1,lat0,lat1,name)
 !
 ! Filter updated W omega:
 !
-      use params_module,only: nlat,nlonp4,nlon
-      use filter_module,only: filter
+      use params_module,only: nlonp4
       use addfld_module,only: addfld
-#ifdef MPI
       use mpi_module,only: mp_gatherlons_f3d,mp_scatterlons_f3d,mytidi
       implicit none
-#else
-      implicit none
-      integer :: mytidi=0
-#endif
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1,kut(nlat)
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
       real,intent(inout) :: fout(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
       character(len=*),intent(in) :: name
 !
@@ -948,9 +885,8 @@
 #endif
 !
 ! Local:
-      integer :: i,j,nlevs
+      integer :: i,j,nlevs,ier
       real :: fik(nlonp4,lev0:lev1),fkij(lev0:lev1,nlonp4,lat0:lat1)
-      real :: fmin,fmax
 !
 #ifdef VT
 !     code = 131 ; state = 'filter_uv' ; activity='Filtering'
@@ -967,27 +903,22 @@
         enddo
       enddo ! j=lat0,lat1
 !
-#ifdef MPI
-!
 ! Gather longitudes into tasks in first longitude column of task table
 !   (leftmost of each j-row) for global fft. (i.e., tasks with mytidi==0 
 !   gather lons from other tasks in that row). This includes all latitudes.
 !
       call mp_gatherlons_f3d(fkij,lev0,lev1,lon0,lon1,lat0,lat1,1,name)
-#endif
 !
 ! Only leftmost tasks at each j-row of tasks does the global filtering:
       if (mytidi==0) then
 !
 ! Define 2d array with all longitudes for filter at each latitude:
         latscan: do j=lat0,lat1
-          if (kut(j) >= nlon/2) cycle latscan
           do i=1,nlonp4
             fik(i,:) = fkij(:,i,j)
           enddo ! i=1,nlonp4
 !
-! Remove wave numbers > kut(lat):
-          call filter(fik,lev0,lev1,kut(j),j)
+          call ringfilter(fik,lev0,lev1,3,name,j)
 !
 ! Return filtered array to fkij:
           do i=1,nlonp4
@@ -995,7 +926,6 @@
           enddo ! i=1,nlonp4
         enddo latscan ! j=lat0,lat1
       endif ! mytidi==0
-#ifdef MPI
 !
 ! Now leftmost task at each j-row must redistribute filtered data
 ! back to other tasks in the j-row (mytidi>0,mytidj) (includes latitude):
@@ -1006,7 +936,6 @@
 !    |  ,2i4,' fkij(:,lon0:lon1,:) min,max=',2e12.4)") lon0,lon1,
 !    |  lat0,lat1,minval(fkij(:,lon0:lon1,:)),
 !    |            maxval(fkij(:,lon0:lon1,:))
-#endif
 !
 ! Return filtered array to fout at current task longitudes and latitudes:
       do j=lat0,lat1
