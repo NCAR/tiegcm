@@ -6,7 +6,7 @@ dataset_filter = "sech"
 output_filename= 'test1223'
 
 # Define the command to run tiepy
-command = ["./tiepy", "-rec", 
+command = ["tiepy", "-rec", 
            "-dir", directory, 
            "--dataset_filter", dataset_filter, 
            "--multiple_output", output_filename]

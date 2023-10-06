@@ -41,6 +41,16 @@ def local_time_to_longitude(local_time):
     return longitude
 
 def color_scheme(variable_name):
+    """
+    Sets color scheme for plots.
+    
+    Parameters:
+        - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
+    
+    Returns:
+        - cmap_color (str): Color scheme of the countour map.
+        - contour_color (str): Color scheme of conutour lines.
+    """
     density_type = ['NE', 'DEN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE']
     temp_type = ['TN', 'TE', 'TI', 'QJOULE']
     wind_type = ['WN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'UN', 'VN']

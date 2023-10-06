@@ -2,39 +2,51 @@ import argparse
 import os
 def get_options():
     parser = argparse.ArgumentParser(description='Generate different types of plots based on user input.')
-    
-    parser.add_argument('--plot_type', type=str, choices=['lat_lon', 'lev_var', 'lev_lon', 'lev_lat', 'lev_time', 'lat_time'], help='Type of the plot to be generated.')
-    parser.add_argument('-var','--variable_name', type=str, help='Name of the variable to be plotted.')
-    parser.add_argument('-time','--time', type=str, help='Selected time for the plot in YYYY-MM-DDTHH:MM:SS format.')
-    parser.add_argument('-mtime','--mtime',  nargs=3, type=int, help='Selected time for the plot in [Day, Hour, Min] format.')
-    parser.add_argument('-lev','--level', type=str, help='Selected lev/ilev for the plot.')
-    parser.add_argument('-lat', '--latitude', type=str, help='Selected latitude for the plot.')
-    parser.add_argument('-lon','--longitude', type=str, help='Selected longitude for the plot.')
-    parser.add_argument('-ut','--localtime', type=str, help='Selected localtime / longitude for the plot.')
-
+    #
+    # Input arugmets
+    #
     parser.add_argument('-ds','--dataset', type=str, help='Path to the sigular dataset') #dependency check
     parser.add_argument('-dir','--directory', type=str, help='Directory path containing the datasets.')
     parser.add_argument('-dsf','--dataset_filter', type=str,choices=['prim', 'sech'], help='Filter to load datasets.')
+    #
+    # Output arugmets
+    #
     parser.add_argument('-outdir','--output_directory', type=str, default=str(os.getcwd()), help='Directory to save the plots. Default: Current working directory')
     parser.add_argument('--output_format', type=str, choices=['jpeg', 'pdf', 'script'], default='jpeg', help='Format to save the plots. Default: jpeg')
     parser.add_argument('-stdout','--standard_output', type=str, help='Custom file Name without extension')
-
-
+    #
+    # Interactive mode arugmets
+    #
+    parser.add_argument('-rec','--recursive', action='store_true', help='Enable interactive mode until the user inputs "exit".')
+    parser.add_argument('-multiout','--multiple_output', type=str, help='Custom file name without extension and Enables multiple output in a single pdf')
+    #
+    # Plot generation primary arguments
+    #
+    parser.add_argument('-plt','--plot_type', type=str, choices=['lat_lon', 'lev_var', 'lev_lon', 'lev_lat', 'lev_time', 'lat_time'], help='Type of the plot to be generated.')
+    parser.add_argument('-var','--variable_name', type=str, help='Name of the variable to be plotted.')
+    parser.add_argument('-time','--time', type=str, help='Selected time for the plot in YYYY-MM-DDTHH:MM:SS format.')
+    parser.add_argument('-mtime','--mtime',  nargs=3, type=int, help='Selected time for the plot in [Day, Hour, Min] format.')
+    parser.add_argument('-zpgit ','--level', type=str, help='Selected lev/ilev for the plot.')
+    parser.add_argument('-lat', '--latitude', type=str, help='Selected latitude for the plot.')
+    parser.add_argument('-lon','--longitude', type=str, help='Selected longitude for the plot.')
+    parser.add_argument('-ut','--localtime', type=str, help='Selected localtime / longitude for the plot.')
+    #
+    # Plot generation secondary arguments
+    #
     parser.add_argument('--coastlines', type=bool, help='Add coast lines to the lat_lon plots')
-
+    #
+    # Plot slicing arguments 
+    #
     parser.add_argument('-zpmin','--level_minimum', type=float, help='Minimum level to slice plots [lev_var, lev_lon, lev_lat, lev_time]')
     parser.add_argument('-zpmax','--level_maximum', type=float, help='Maximum level to slice plots [lev_var, lev_lon, lev_lat, lev_time]')
-
     parser.add_argument('-latmin','--latitude_minimum', type=float, help='Minimum latitude to slice plots [lat_lon, lev_lat, lat_time]')
     parser.add_argument('-latmax','--latitude_maximum', type=float, help='Maximum latitude to slice plots [lat_lon, lev_lat, lat_time]')
-
     parser.add_argument('-lonmin','--longitude_minimum', type=float, help='Minimum longitude to slice plots [lat_lon, lev_lon]')
     parser.add_argument('-lonmax','--longitude_maximum', type=float, help='Maximum longitude to slice plots [lat_lon, lev_lon]')
     parser.add_argument('-utmin','--localtime_minimum', type=float, help='Minimum localtime to slice plots [lat_lon, lev_lon]')
     parser.add_argument('-utmax','--localtime_maximum', type=float, help='Maximum localtime to slice plots [lat_lon, lev_lon]')
 
-    parser.add_argument('-rec','--recursive', action='store_true', help='Enable interactive mode until the user inputs "exit".')
-    parser.add_argument('-multiout','--multiple_output', type=str, help='Custom file name without extension and Enables multiple output in a single pdf')
+    
     args = parser.parse_args()
     
     plot_requirements = {
