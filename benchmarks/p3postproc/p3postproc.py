@@ -4,8 +4,8 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from data_parse import timestep
-from plot_gen import plt_lat_lon, plt_lev_var, plt_lev_lon,plt_lev_lat,plt_lev_time,plt_lat_time
+from src.data_parse import timestep
+from src.plot_gen import plt_lat_lon, plt_lev_var, plt_lev_lon,plt_lev_lat,plt_lev_time,plt_lat_time
 
 
 
@@ -33,13 +33,15 @@ datasets = [[dataset5,'tiegcm_res5.0_decsol_smax_sech_001.nc'],[dataset4,'tiegcm
 print("-------------------------Plot Generation--------------------------")
 
 fig1 = plt_lat_lon(datasets, "TN", level = 'mean', mtime=[360,0,0])
-fig2 = plt_lat_lon(datasets, "O2", 0.0, time=timestep_array[119][1])
-fig3 = plt_lat_lon(datasets, "VN", 2.0, timestep_array[119][1], )
-fig4 = plt_lat_lon(datasets, "ZG", 4.0, timestep_array[119][1], )
-fig5 = plt_lev_var(datasets, "UN", -62.50, localtime = 0.0, mtime = [360, 0, 0])
+fig2 = plt_lat_lon(datasets, "O2", level = 0.0,mtime = [360, 0, 0])
+fig3 = plt_lat_lon(datasets, "VN", level = 2.0, mtime = [360, 0, 0] )
+fig4 = plt_lat_lon(datasets, "ZG", level = 4.0, mtime = [360, 0, 0] )
+fig5 = plt_lev_var(datasets, "UN",latitude = -62.50, localtime = 0.0, mtime = [360, 0, 0])
 fig6 = plt_lev_var(datasets, "ZG", latitude = -62.50, localtime = 'mean', mtime = [360, 0, 0])
-fig7 = plt_lev_lon(datasets, "ZG", latitude = -62.50 , mtime = [360, 0, 0])
-fig8 =plt_lev_lon(datasets, "UN", latitude = 'mean', mtime = [360, 0, 0])
+
+fig7 = plt_lev_lon(datasets, "ZG", latitude = -62.50 , mtime = [360, 0, 0], contour_intervals = 20,variable_unit= 'km')
+fig8 =plt_lev_lon(datasets, "UN", latitude = 'mean', mtime = [360, 0, 0], contour_value= 1.00e+03)
+
 fig9 =plt_lev_lat(datasets, "TN", longitude = 'mean', mtime = [360, 0, 0])
 fig10 =plt_lev_lat(datasets, "UN", longitude = -180.0, mtime = [360, 0, 0])
 fig11 = plt_lev_time(datasets, "TN", latitude = -42.50, longitude = -180.0)
@@ -58,14 +60,13 @@ with PdfPages(pdf_multi_path) as pdf:
     pdf.savefig(fig4, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig5, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig6, bbox_inches='tight', pad_inches=0.5)
+    
     pdf.savefig(fig7, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig8, bbox_inches='tight', pad_inches=0.5)
-    
+
     pdf.savefig(fig9, bbox_inches='tight', pad_inches=0.5)
-    
     pdf.savefig(fig10, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig11, bbox_inches='tight', pad_inches=0.5)
     pdf.savefig(fig12, bbox_inches='tight', pad_inches=0.5)
-    
 #print(lat_lon_lev(dataset, "TN", "2002-12-21T00:00:00", 2.25))
 #print(lat_lon_ilev(dataset, "NE", "2002-12-21T00:00:00", -6.5))

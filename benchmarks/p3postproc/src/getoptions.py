@@ -33,6 +33,9 @@ def get_options():
     #
     # Plot generation secondary arguments
     #
+    parser.add_argument('-cint','--contour_intervals', type=float, help='Selected number interval of contour for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
+    parser.add_argument('-cval','--contour_value', type=float, help='Selected value of interval of contour for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
+    parser.add_argument('-unit','--variable_unit', type=str, help='Selected unit of a given variable for the plot')
     parser.add_argument('--coastlines', type=bool, help='Add coast lines to the lat_lon plots')
     #
     # Plot slicing arguments 
@@ -51,23 +54,23 @@ def get_options():
     
     plot_requirements = {
         'lat_lon': {'required': ['variable_name', 'time', 'mtime', 'level'],
-                    'optional': ['coastlines','latitude_minimum','latitude_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum'],
+                    'optional': ['variable_unit','coastlines','contour_intervals','contour_value','latitude_minimum','latitude_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum'],
                     },
         
         'lev_var': {'required': ['variable_name', 'time', 'mtime', 'latitude', 'longitude', 'localtime'],
-                    'optional': ['level_minimum','level_maximum']
+                    'optional': ['variable_unit','level_minimum','level_maximum']
                     },
         'lev_lon': {'required': ['variable_name', 'time', 'mtime', 'latitude'],
-                    'optional': ['level_minimum','level_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum']
+                    'optional': ['variable_unit','contour_intervals','contour_value','level_minimum','level_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum']
                     },
         'lev_lat': {'required': ['variable_name', 'time', 'mtime', 'longitude', 'localtime'],
-                    'optional': ['level_minimum','level_maximum','latitude_minimum','latitude_maximum']
+                    'optional': ['variable_unit','contour_intervals','contour_value','level_minimum','level_maximum','latitude_minimum','latitude_maximum']
                     },
         'lev_time': {'required': ['variable_name', 'latitude', 'longitude', 'localtime'],
-                    'optional': ['level_minimum','level_maximum'] 
+                    'optional': ['variable_unit','contour_intervals','contour_value','level_minimum','level_maximum'] 
                     },
         'lat_time': {'required': ['variable_name', 'level', 'longitude', 'localtime'],
-                    'optional': ['latitude_minimum','latitude_maximum']
+                    'optional': ['variable_unit','contour_intervals','contour_value','latitude_minimum','latitude_maximum']
                     },
     }
     '''

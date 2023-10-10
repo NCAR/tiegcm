@@ -4,6 +4,64 @@ import matplotlib.pyplot as plt
 import xarray as xr
 
 
+conversion_units = {
+    'cm-3': {'m-3': 1000000.0},
+    'km': {'m': 1000.0},
+    'cm/s': {'m/s': 0.01, 'km/s': 1e-5},
+    'erg/g/s': {'J/kg/s': 1e-7},
+    'ergs/cm2/s': {'J/m2/s': 0.001},
+    'millibars': {'pascals': 100},
+    'microbars': {'pascals': 0.1},
+    'g/cm3': {'kg/m3': 1000.0},
+    'degrees': {'radians': 0.0174533},
+    'degrees_east': {'radians': 0.0174533},
+    'degrees_north': {'radians': 0.0174533},
+    'km/s': {'m/s': 1000.0, 'cm/s': 100000.0},
+    'GW': {'MW': 1000.0, 'kW': 1000000.0, 'W': 1000000000.0},
+    'keV': {'eV': 1000.0, 'J': 1.60218e-16},
+    'nT': {'µT': 0.001, 'T': 1e-9},
+    'cm': {'m': 0.01, 'km': 1e-5},
+    'K': {
+        'C': {'factor': 1, 'offset': -273.15},  # Celsius = Kelvin - 273.15
+        'F': {'factor': 9/5, 'offset': -459.67}  # Fahrenheit = Kelvin * 9/5 - 459.67
+    }
+}
+
+def convert_units(data, from_unit, to_unit):
+    """
+    Convert data from one unit to another based on predefined conversion factors.
+    
+    Parameters:
+    - data: Numeric data to be converted
+    - from_unit: The current unit of the data
+    - to_unit: The desired unit to convert to
+    
+    Returns:
+    - Converted data
+    """
+    
+    if from_unit == to_unit:
+        return data, from_unit
+    
+    # Check if conversion is possible
+    if from_unit in conversion_units and to_unit in conversion_units[from_unit]:
+        conversion = conversion_units[from_unit][to_unit]
+        print(f"Converting from {from_unit} to {to_unit}")
+
+        # Check if conversion is a dictionary or direct float
+        if isinstance(conversion, dict):
+            factor = conversion.get('factor', 1)
+            offset = conversion.get('offset', 0)
+
+            return data * factor + offset, to_unit
+        else:
+            return data * conversion, to_unit
+    else:
+        #raise ValueError(f"No conversion factor found for {from_unit} to {to_unit}")
+        print(f"No conversion factor found for {from_unit} to {to_unit}")
+        return data, from_unit
+
+
 
 def timestep(directory, type):
     """
@@ -39,7 +97,9 @@ def timestep(directory, type):
 
 
 
-def lev_ilev_lon (datasets, variable_name, selected_time, selected_lat):
+
+
+def lev_ilev_lon (datasets, variable_name, selected_time, selected_lat, selected_unit):
     """
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
@@ -82,17 +142,23 @@ def lev_ilev_lon (datasets, variable_name, selected_time, selected_lat):
 
             not_all_nan_indices = ~np.isnan(data.values).all(axis=1)
             variable_values = data.values[not_all_nan_indices, :]
+
+            if selected_unit != None:
+                variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                
+
             try:
                 levs_ilevs = data.lev.values[not_all_nan_indices]
             except:
                 levs_ilevs = data.ilev.values[not_all_nan_indices]
+  
     return(variable_values, lons, levs_ilevs, selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime, filename)
 
 
 
 
 
-def lat_lon_lev(datasets, variable_name, selected_time, selected_lev):
+def lat_lon_lev(datasets, variable_name, selected_time, selected_lev, selected_unit):
     """
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
@@ -137,6 +203,9 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev):
                 lons = data.lon.values
                 lats = data.lat.values
                 variable_values = data.values
+                if selected_unit != None:
+                    variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                    
             else:
                 # Extract the data for the given selected_time and lev
                 if selected_lev in ds['lev'].values:
@@ -144,6 +213,9 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev):
                     lons = data.lon.values
                     lats = data.lat.values
                     variable_values = data.values
+                    if selected_unit != None:
+                        variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                        
                 else:
                     print(f"The lev {selected_lev} isn't in the listed valid values.")
                     sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - selected_lev))
@@ -160,11 +232,14 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev):
                     variable_values_2 = data2.values
                     # Return the averaged data
                     variable_values = (variable_values_1 + variable_values_2) / 2
+                    if selected_unit != None:
+                        variable_values , selected_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                        
 
     return variable_values, selected_lev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
 
 
-def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
+def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev, selected_unit):
     """
     Extract data from the dataset based on the given variable name, timestamp, and ilev value.
     
@@ -210,6 +285,9 @@ def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
                 lons = data.lon.values
                 lats = data.lat.values
                 variable_values = data.values
+                if selected_unit != None:
+                    variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                    
             else:
                 # Extract the data for the given selected_time and lev
                 if selected_ilev in ds['ilev'].values:
@@ -217,6 +295,9 @@ def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
                     lons = data.lon.values
                     lats = data.lat.values
                     variable_values = data.values
+                    if selected_unit != None:
+                        variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                        
                 else:
                     print(f"The ilev {selected_ilev} isn't in the listed valid values.")
                     sorted_levs = sorted(ds['ilev'].values, key=lambda x: abs(x - selected_ilev))
@@ -233,10 +314,13 @@ def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev):
                     variable_values_2 = data2.values
                     # Return the averaged data
                     variable_values = (variable_values_1 + variable_values_2) / 2
+                    if selected_unit != None:
+                        variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                        
 
     return variable_values, selected_ilev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
 
-def lat_lon(datasets, variable_name, selected_time):
+def lat_lon(datasets, variable_name, selected_time, selected_unit):
     """
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
@@ -274,6 +358,9 @@ def lat_lon(datasets, variable_name, selected_time):
             lons = data.lon.values
             lats = data.lat.values
             variable_values = data.values
+            if selected_unit != None:
+                variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                
 
 
     return variable_values, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
@@ -281,7 +368,7 @@ def lat_lon(datasets, variable_name, selected_time):
 
 
 
-def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_lon):
+def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_lon, selected_unit):
     """
     Extracts data from the dataset for a given variable name, latitude, longitude, and time.
     
@@ -328,6 +415,9 @@ def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_
             filename = filenames
             valid_indices = ~np.isnan(data.values)
             variable_values = data.values[valid_indices]
+            if selected_unit != None:
+                variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                
             try:
                 levs_ilevs = ds['lev'].values[valid_indices]
             except:
@@ -472,7 +562,7 @@ def get_avg_ht_arr(ds, time, lat, lon):
     #return combined_values
 
 
-def lev_ilev_lat (datasets, variable_name, selected_time, selected_lon):
+def lev_ilev_lat (datasets, variable_name, selected_time, selected_lon, selected_unit):
     """
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
@@ -511,6 +601,9 @@ def lev_ilev_lat (datasets, variable_name, selected_time, selected_lon):
 
             not_all_nan_indices = ~np.isnan(data.values).all(axis=1)
             variable_values = data.values[not_all_nan_indices, :]
+            if selected_unit != None:
+                variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
+                
             try:
                 levs_ilevs = data.lev.values[not_all_nan_indices]
             except AttributeError:
@@ -520,7 +613,7 @@ def lev_ilev_lat (datasets, variable_name, selected_time, selected_lon):
 
 
 
-def lev_ilev_time (datasets, variable_name, selected_lat, selected_lon):
+def lev_ilev_time (datasets, variable_name, selected_lat, selected_lon, selected_unit):
     """
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
@@ -592,6 +685,9 @@ def lev_ilev_time (datasets, variable_name, selected_lat, selected_lon):
     # Mask out levels with all NaN values
     mask = ~np.isnan(variable_values_all).all(axis=1)
     variable_values_all = variable_values_all[mask, :]
+    if selected_unit != None:
+        variable_values_all ,variable_unit  = convert_units (variable_values_all, variable_unit, selected_unit)
+        
     min_lev_size = min([len(lev) for lev in levs_ilevs_all])
     levs_ilevs = levs_ilevs_all[0][:min_lev_size][mask[:min_lev_size]]
 
@@ -600,7 +696,7 @@ def lev_ilev_time (datasets, variable_name, selected_lat, selected_lon):
 
 
 
-def lat_time_lev (datasets, variable_name, selected_lev, selected_lon):
+def lat_time_lev (datasets, variable_name, selected_lev, selected_lon, selected_unit):
     """
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
@@ -701,6 +797,9 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon):
     
     # Concatenate data along the time dimension
     variable_values_all = np.concatenate(variable_values_all, axis=1)
+    if selected_unit != None:
+        variable_values_all ,variable_unit  = convert_units (variable_values_all, variable_unit, selected_unit)
+        
     mtime_values = combined_mtime
     
 
@@ -711,7 +810,7 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon):
 
 
 
-def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon):
+def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon, selected_unit):
     """
     Extract data from the dataset based on the given variable name, timestamp, and ilev value.
     
@@ -810,6 +909,9 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon):
     
     # Concatenate data along the time dimension
     variable_values_all = np.concatenate(variable_values_all, axis=1)
+    if selected_unit != None:
+        variable_values_all ,variable_unit  = convert_units (variable_values_all, variable_unit, selected_unit)
+        
     mtime_values = combined_mtime
     
 
