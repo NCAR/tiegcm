@@ -12,7 +12,7 @@ def get_options():
     # Output arugmets
     #
     parser.add_argument('-outdir','--output_directory', type=str, default=str(os.getcwd()), help='Directory to save the plots. Default: Current working directory')
-    parser.add_argument('--output_format', type=str, choices=['jpeg', 'pdf', 'script'], default='jpeg', help='Format to save the plots. Default: jpeg')
+    parser.add_argument('-fout','--output_format', type=str, choices=['jpeg', 'pdf', 'script'], default='jpeg', help='Format to save the plots. Default: jpeg')
     parser.add_argument('-stdout','--standard_output', type=str, help='Custom file Name without extension')
     #
     # Interactive mode arugmets
@@ -26,7 +26,7 @@ def get_options():
     parser.add_argument('-var','--variable_name', type=str, help='Name of the variable to be plotted.')
     parser.add_argument('-time','--time', type=str, help='Selected time for the plot in YYYY-MM-DDTHH:MM:SS format.')
     parser.add_argument('-mtime','--mtime',  nargs=3, type=int, help='Selected time for the plot in [Day, Hour, Min] format.')
-    parser.add_argument('-zpgit ','--level', type=str, help='Selected lev/ilev for the plot.')
+    parser.add_argument('-zp ','--level', type=str, help='Selected lev/ilev for the plot.')
     parser.add_argument('-lat', '--latitude', type=str, help='Selected latitude for the plot.')
     parser.add_argument('-lon','--longitude', type=str, help='Selected longitude for the plot.')
     parser.add_argument('-ut','--localtime', type=str, help='Selected localtime / longitude for the plot.')
@@ -36,7 +36,7 @@ def get_options():
     parser.add_argument('-cint','--contour_intervals', type=float, help='Selected number interval of contour for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
     parser.add_argument('-cval','--contour_value', type=float, help='Selected value of interval of contour for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
     parser.add_argument('-unit','--variable_unit', type=str, help='Selected unit of a given variable for the plot')
-    parser.add_argument('--coastlines', type=bool, help='Add coast lines to the lat_lon plots')
+    parser.add_argument('-cstl','--coastlines', type=bool, help='Add coast lines to the lat_lon plots')
     #
     # Plot slicing arguments 
     #
