@@ -31,10 +31,13 @@ def local_time_to_longitude(local_time):
     if local_time == 'mean':
         longitude = 'mean'
     else:
+        #
         # Each hour of local time corresponds to 15 degrees of longitude
+        #
         longitude = (local_time * 15) % 360
-        
+        #
         # Adjusting the longitude to be between -180 and 180 degrees
+        #
         if longitude > 180:
             longitude = longitude - 360
 
@@ -51,56 +54,62 @@ def color_scheme(variable_name):
         - cmap_color (str): Color scheme of the countour map.
         - contour_color (str): Color scheme of conutour lines.
     """
+    #
+    # Setting type of variable 
+    #
     density_type = ['NE', 'DEN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE']
     temp_type = ['TN', 'TE', 'TI', 'QJOULE']
     wind_type = ['WN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'UN', 'VN']
+    #
+    # Color scheme for density type variables
+    #
     if variable_name in density_type:
         cmap_color = 'viridis'
         contour_color = 'white'
+    #
+    # Color scheme for temprature type variables
+    #
     elif variable_name in temp_type:
         cmap_color = 'inferno'
         contour_color = 'white'
+    #
+    # Color scheme for wind type variables
+    #
     elif variable_name in wind_type:
         cmap_color = 'bwr'
         contour_color = 'black'
+    #
+    # Color scheme for all other types of variables
+    #
     else:
         cmap_color = 'viridis'
         contour_color = 'white'
     return cmap_color, contour_color
 
 def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  variable_unit = None, contour_intervals = 20, contour_value = None, coastlines=False, latitude_minimum = -87.5, latitude_maximum = 87.5, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None ):
+
     """
-    Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
+    Generates a Latitude vs Longitude contour plot for a variable.
     
     Parameters:
-        - datasets (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
-            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
-                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
-                                'Z', 'POTEN']
-        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - mtime (array): The selected time in the format [Day, Hour, Min]
-        - level (float): The selected lev/ilev value.
+        datasets (xarray): The loaded dataset/s using xarray.
+        variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
+        time (np.datetime64, optional): The selected time e.g., '2022-01-01T12:00:00'.
+        mtime (array, optional): The selected time as a list e.g., [1, 12, 0] for 1st day, 12 hours, 0 mins.
+        level (float, optional): The selected lev/ilev value.
+        variable_unit (str, optional): The desired unit of the variable.
+        contour_intervals (int, optional): The number of contour intervals. Defaults to 20.
+        contour_value (int, optional): The value between each contour interval.
+        coastlines (bool, optional): Shows coastlines on the plot. Defaults to False.
+        latitude_minimum (float, optional): Minimum latitude to slice plots. Defaults to -87.5.
+        latitude_maximum (float, optional): Maximum latitude to slice plots. Defaults to 87.5.
+        longitude_minimum (float, optional): Minimum longitude to slice plots. Defaults to -180.
+        longitude_maximum (float, optional): Maximum longitude to slice plots. Defaults to 175.
+        localtime_minimum (float, optional): Minimum localtime to slice plots.
+        localtime_maximum (float, optional): Maximum localtime to slice plots.
     
     Returns:
-        - Contour plot.
-    """
-    # Printing Execution data
-    """
-    Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
-    
-    Parameters:
-        - datasets (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
-            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
-                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
-                                'Z', 'POTEN']
-        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - mtime (array): The selected time in the format [Day, Hour, Min]
-        - level (float): The selected lev/ilev value.
-    
-    Returns:
-        - Contour plot.
+        Contour plot.
     """
     # Printing Execution data
     if time == None:
@@ -203,21 +212,22 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
 
 def plt_lev_var(datasets, variable_name, latitude, time= None, mtime=None, longitude = None, localtime = None, variable_unit = None, level_minimum = -8, level_maximum = 8):
     """
-    Plots the given data as a line plot.
+    Generates a Level vs Variable line plot for a given latitude.
     
     Parameters:
-    - datasets (str): Path to the NetCDF file.
-    - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
-        - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
-                            'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
-                            'Z', 'POTEN']
-    - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
-    - mtime (array): The selected time in the format [Day, Hour, Min]
-    - latitude (float): Latitude value to filter the data.
-    - longitude (float): Longitude value to filter the data.
-
+        datasets (xarray): The loaded dataset/s using xarray.
+        variable_name (str): The name of the variable with latitude, longitude, and ilev dimensions.
+        latitude (float): The specific latitude value for the plot.
+        time (np.datetime64, optional): The selected time, e.g., '2022-01-01T12:00:00'.
+        mtime (array, optional): The selected time as a list, e.g., [1, 12, 0] for 1st day, 12 hours, 0 mins.
+        longitude (float, optional): The specific longitude value for the plot.
+        localtime (float, optional): The specific local time value for the plot.
+        variable_unit (str, optional): The desired unit of the variable.
+        level_minimum (float, optional): Minimum level value for the plot. Defaults to -8.
+        level_maximum (float, optional): Maximum level value for the plot. Defaults to 8.
+    
     Returns:
-    - Contour plot.
+        Line plot.
     """
     # Printing Execution data
     if time == None:
@@ -278,20 +288,26 @@ def plt_lev_var(datasets, variable_name, latitude, time= None, mtime=None, longi
 
 def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, variable_unit = None, contour_intervals = 20, contour_value = None,  level_minimum = -6.75, level_maximum = 6.75, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None):
     """
-    Generates a contour plot for the given 2D array of variable values, latitude, and longitude.
+    Generates a Level vs Longitude contour plot for a given latitude.
     
     Parameters:
-        - datasets (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with latitude, longitude, ilev dimensions.
-            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
-                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
-                                'Z', 'POTEN']le
-        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - mtime (array): The selected time in the format [Day, Hour, Min]
-        - longitude (float): Longitude value to filter the data.
+        datasets (xarray): The loaded dataset/s using xarray.
+        variable_name (str): The name of the variable with latitude, longitude, and ilev dimensions.
+        latitude (float): The specific latitude value for the plot.
+        time (np.datetime64, optional): The selected time, e.g., '2022-01-01T12:00:00'.
+        mtime (array, optional): The selected time as a list, e.g., [1, 12, 0] for 1st day, 12 hours, 0 mins.
+        variable_unit (str, optional): The desired unit of the variable.
+        contour_intervals (int, optional): The number of contour intervals. Defaults to 20.
+        contour_value (int, optional): The value between each contour interval.
+        level_minimum (float, optional): Minimum level value for the plot. Defaults to -6.75.
+        level_maximum (float, optional): Maximum level value for the plot. Defaults to 6.75.
+        longitude_minimum (float, optional): Minimum longitude value for the plot. Defaults to -180.
+        longitude_maximum (float, optional): Maximum longitude value for the plot. Defaults to 175.
+        localtime_minimum (float, optional): Minimum localtime value for the plot.
+        localtime_maximum (float, optional): Maximum localtime value for the plot.
     
     Returns:
-        - Contour plot.
+        Contour plot.
     """
     # Printing Execution data
     if time == None:
@@ -366,20 +382,25 @@ def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, varia
 
 def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = None, localtime = None, variable_unit = None, contour_intervals = 20, contour_value = None, level_minimum = -6.75, level_maximum = 6.75, latitude_minimum = -87.5,latitude_maximum = 87.5):
     """
-    Generates a contour plot for the given 2D array of variable values, latitude, and latgitude.
+    Generates a Level vs Latitude contour plot for a specified time and/or longitude.
     
     Parameters:
-        - datasets (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with latitude, latitude, ilev dimensions.
-            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
-                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
-                                'Z', 'POTEN']
-        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - mtime (array): The selected time in the format [Day, Hour, Min]
-        - selected_ilev (float): The selected ilevel value.
+        datasets (xarray): The loaded dataset/s using xarray.
+        variable_name (str): The name of the variable with latitude, longitude, and ilev dimensions.
+        time (np.datetime64, optional): The selected time, e.g., '2022-01-01T12:00:00'.
+        mtime (array, optional): The selected time as a list, e.g., [1, 12, 0] for 1st day, 12 hours, 0 mins.
+        longitude (float, optional): The specific longitude value for the plot.
+        localtime (float, optional): The specific local time value for the plot.
+        variable_unit (str, optional): The desired unit of the variable.
+        contour_intervals (int, optional): The number of contour intervals. Defaults to 20.
+        contour_value (int, optional): The value between each contour interval.
+        level_minimum (float, optional): Minimum level value for the plot. Defaults to -6.75.
+        level_maximum (float, optional): Maximum level value for the plot. Defaults to 6.75.
+        latitude_minimum (float, optional): Minimum latitude value for the plot. Defaults to -87.5.
+        latitude_maximum (float, optional): Maximum latitude value for the plot. Defaults to 87.5.
     
     Returns:
-        - Contour plot.
+        Contour plot.
     """
     # Printing Execution data
     if time == None:
@@ -445,21 +466,23 @@ def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = Non
 
 def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime = None, variable_unit = None, contour_intervals = 20, contour_value = None,  level_minimum = -6.75, level_maximum = 6.75):
     """
-    Generates a contour plot for the given 2D array of variable values, level, and time.
+    Generates a Level vs Time contour plot for a specified latitude and/or longitude.
     
     Parameters:
-        - datasets (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with latitude, latitude, ilev dimensions.
-            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
-                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
-                                'Z', 'POTEN']
-        - latitude (float): Latitude value to filter the data.
-        - longitude (float): Longitude value to filter the data.
+        datasets (xarray): The loaded dataset/s using xarray.
+        variable_name (str): The name of the variable with latitude, longitude, time, and ilev dimensions.
+        latitude (float): The specific latitude value for the plot.
+        longitude (float, optional): The specific longitude value for the plot.
+        localtime (float, optional): The specific local time value for the plot.
+        variable_unit (str, optional): The desired unit of the variable.
+        contour_intervals (int, optional): The number of contour intervals. Defaults to 20.
+        contour_value (int, optional): The value between each contour interval.
+        level_minimum (float, optional): Minimum level value for the plot. Defaults to -6.75.
+        level_maximum (float, optional): Maximum level value for the plot. Defaults to 6.75.
     
     Returns:
-        - Contour plot.
+        Contour plot.
     """
-
     if longitude == None:
         longitude = local_time_to_longitude(localtime)
 
@@ -521,21 +544,22 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
 
 def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = None,  variable_unit = None, contour_intervals = 20, contour_value = None, latitude_minimum = -87.5,latitude_maximum = 87.5):
     """
-    Generates a contour plot for the given 2D array of variable values, latitude, and time.
+    Generates a Latitude vs Time contour plot for a specified level and/or longitude.
     
     Parameters:
-        - datasets (str): Path to the NetCDF file.
-        - variable_name (str): The name of the variable with latitude, latitude, ilev dimensions.
-            - Valid variables:['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
-                                'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
-                                'Z', 'POTEN']
-        - time (np.datetime64): The selected time in the format 'YYYY-MM-DDTHH:MM:SS'.
-        - mtime (array): The selected time in the format [Day, Hour, Min]
-        - level (float): Lev value to filter the data.
-        - longitude (float): Longitude value to filter the data.
+        datasets (xarray): The loaded dataset/s using xarray.
+        variable_name (str): The name of the variable with latitude, longitude, time, and ilev dimensions.
+        level (float): The specific level value for the plot.
+        longitude (float, optional): The specific longitude value for the plot.
+        localtime (float, optional): The specific local time value for the plot.
+        variable_unit (str, optional): The desired unit of the variable.
+        contour_intervals (int, optional): The number of contour intervals. Defaults to 20.
+        contour_value (int, optional): The value between each contour interval.
+        latitude_minimum (float, optional): Minimum latitude value for the plot. Defaults to -87.5.
+        latitude_maximum (float, optional): Maximum latitude value for the plot. Defaults to 87.5.
     
     Returns:
-        - Contour plot.
+        Contour plot.
     """
     if longitude == None:
         longitude = local_time_to_longitude(localtime)
