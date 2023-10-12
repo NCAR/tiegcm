@@ -71,7 +71,7 @@
 !
 ! Open esmf:
       call ESMF_Initialize(mpiCommunicator=TIEGCM_WORLD,
-     |  logkindflag=ESMF_LOGKIND_MULTI,rc=rc)
+     |  logkindflag=ESMF_LOGKIND_MULTI_ON_ERROR,rc=rc)
 !
 ! Make magnetic and geographic grids for geo2mag regridding:
       call create_geo_grid(geo_src_grid,'src')  ! geo source grid

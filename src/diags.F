@@ -23,7 +23,7 @@
 ! adding new fields, and type diags(ndiag) must be defined by sub init_diags 
 ! below.
 !
-      integer,parameter :: ndiag = 43 ! increment this to add new diags
+      integer,parameter :: ndiag = 42 ! increment this to add new diags
       type diag_type
         character(len=longname_len)  :: long_name
         character(len=shortname_len) :: short_name
@@ -167,13 +167,6 @@
       diags(n)%units      = 'erg/g/s'  ! model description has erg/K/s
       diags(n)%levels     = 'lev'
       diags(n)%caller     = 'qjoule.F'
-!
-      n = n+1
-      diags(n)%short_name = 'SCHT'
-      diags(n)%long_name  = 'SCHT: Pressure Scale Height'
-      diags(n)%units      = 'km'
-      diags(n)%levels     = 'lev'
-      diags(n)%caller     = 'addiag.F'
 !
       n = n+1
       diags(n)%short_name = 'SIGMA_HAL'
@@ -995,6 +988,7 @@
 ! RETURN
 ! END
 !-----------------------------------------------------------------------
+! As of TIEGCM v3.0, SCHT is f4d, so this subroutine is no longer needed
       subroutine mkdiag_SCHT(name,zcm,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Calculate pressure scale height from geopotential Z (called from addiag.F)

@@ -39,7 +39,7 @@ set output    = tiegcm.out
 set horires   = 2.5
 set vertres   = 0.25
 set zitop     = 7
-set nres_grid = 5
+set mres      = 2
 set coupling  = FALSE
 set make      = Make.intel_de
 set debug     = FALSE
@@ -127,6 +127,17 @@ if ($horires != 5 && $horires != 2.5 && $horires != 1.25 && $horires != 0.625) t
 endif
 if ($vertres != 0.5 && $vertres != 0.25 && $vertres != 0.125 && $vertres != 0.0625) then
   echo ">>> Unknown model vertical resolution $vertres <<<"
+  exit 1
+endif
+
+if ($mres == 2) then
+  set nres_grid = 5
+else if ($mres == 1) then
+  set nres_grid = 6
+else if ($mres == 0.5) then
+  set nres_grid = 7
+else
+  echo ">>> Unsupported magnetic resolution $mres <<<"
   exit 1
 endif
 #
@@ -274,7 +285,6 @@ cat << EOF >! $runscript
 #PBS -N tiegcm
 #PBS -A $project_code
 #PBS -q $queue
-#PBS -o tiegcm.out
 #PBS -j oe
 #PBS -l job_priority=$job_priority
 #PBS -l select=${nnodes}:ncpus=${ncores_per_node}:mpiprocs=${ncores_per_node}

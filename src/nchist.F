@@ -17,7 +17,8 @@
      |  nf3d,fzg
       use input_module,only: mxlen_filename,
      |  gswm_mi_di_ncfile, gswm_mi_sdi_ncfile, 
-     |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile,ctmt_ncfile
+     |  gswm_nm_di_ncfile, gswm_nm_sdi_ncfile,ctmt_ncfile,
+     |  amienh_ncfile,amiesh_ncfile
       use init_module,only: istep,start_mtime
       implicit none
 !
@@ -67,7 +68,8 @@
      |  idv_sdtide,idv_f4d(nf4d),idv_e1,idv_e2,idv_h1,idv_h2,idv_alfac,
      |  idv_ec,idv_alfad,idv_ed,idv_writedate,idv_saber_ncfile,
      |  idv_tidi_ncfile,idv_crit1,idv_crit2,idv_coupled_mage,
-     |  idv_joulefac,idv_bgrddata_ncfile,idv_ctmt_ncfile
+     |  idv_joulefac,idv_bgrddata_ncfile,idv_ctmt_ncfile,
+     |  idv_amienh_ncfile,idv_amiesh_ncfile
       integer,allocatable :: idv_sech(:)
       integer :: idv_fsech(mxfsech)
 !
@@ -496,7 +498,7 @@
               endif
             endif
 !
-! Starting from v2.5, magnetic grids can change from a previous run,
+! Starting from v3.0, magnetic grids can change from a previous run,
 ! so magnetic coordinates are no longer read from the source file
           case('mlon')
 !           istat = nf_get_var_double(ncid,i,gmlon)
@@ -732,6 +734,16 @@
           case('ctmt_ncfile')
             call rdfilename(ncid,itime,i,trim(varname),filelen,
      |        sh%ctmt_ncfile)
+!
+! AMIE northern hemisphere data file:
+          case('amienh_ncfile')
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%amienh_ncfile)
+!
+! AMIE southern hemisphere data file:
+          case('amiesh_ncfile')
+            call rdfilename(ncid,itime,i,trim(varname),filelen,
+     |        sh%amiesh_ncfile)
 !
 ! NCEP data file: ncep_ncfile(time,filelen), where filelen=mxlen_filename
 ! (ncep files used only by timegcm -- will always be '[none]' for tiegcm)
@@ -1757,6 +1769,16 @@
      |  "long_name","CTMT lbc data file",
      |  "data","U,V, T, Z")
 !
+! Define AMIE northern hemisphere data file:
+      call define_ncfile(ncid,"amienh_ncfile",idv_amienh_ncfile,
+     |  "long_name","AMIE NH data file",
+     |  "data","potential,energy flux, mean energy")
+!
+! Define AMIE southern hemisphere data file:
+      call define_ncfile(ncid,"amiesh_ncfile",idv_amiesh_ncfile,
+     |  "long_name","AMIE SH data file",
+     |  "data","potential,energy flux, mean energy")
+!
 ! Define TIMED SEE data file:
       call define_ncfile(ncid,"see_ncfile",idv_see_ncfile,
      |  "long_name","TIMED SEE data file",
@@ -2028,6 +2050,16 @@
       if (istat /= NF_NOERR) then
         write(char120,"('Error return from nf_put_att_text ',
      |    'for model version global attribute')")
+        call handle_ncerr(istat,char120)
+      endif
+!
+! SVN version (see included file revision.inc, created by the build):
+      write(6,"('nc_define: svn_revision = ',a)") trim(svn_revision)
+      istat = nf_put_att_text(ncid,NF_GLOBAL,"svn_revision",
+     |  len_trim(svn_revision),trim(svn_revision)) 
+      if (istat /= NF_NOERR) then
+        write(char120,"('Error return from nf_put_att_text ',
+     |    'for SVN version global attribute')")
         call handle_ncerr(istat,char120)
       endif
 !
@@ -3028,6 +3060,14 @@
 ! Update ctmt_ncfile:
       call update_ncfile(ncid,"ctmt_ncfile",h%ctmt_ncfile,
      |  idv_ctmt_ncfile,h%ihist)
+!
+! Update amienh_ncfile:
+      call update_ncfile(ncid,"amienh_ncfile",h%amienh_ncfile,
+     |  idv_amienh_ncfile,h%ihist)
+!
+! Update amiesh_ncfile:
+      call update_ncfile(ncid,"amiesh_ncfile",h%amiesh_ncfile,
+     |  idv_amiesh_ncfile,h%ihist)
 !
 ! f107d and f107a (daily and average solar fluxes):
       if (idv_f107d <= 0) then

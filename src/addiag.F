@@ -12,8 +12,7 @@
       use fields_module,only: tlbc
       use addfld_module,only: addfld
       use lbc,only: z_lbc
-      use diags_module,only: mkdiag_SCHT,mkdiag_ZGMID,
-     |  mkdiag_O_N2,mkdiag_N2
+      use diags_module,only: mkdiag_N2,mkdiag_O_N2,mkdiag_ZGMID
       implicit none
 !
 ! Input args:
@@ -160,6 +159,8 @@
             scht(k,i,j) = gask*tn(k,i,j)/(mbar(k,i,j)*grav)
             schti(k,i,j) = gask*tni(k,i)/(barm(k,i,j)*grav)
           enddo
+          scht(lev1,i,j) =
+     |      gask*(2*tn(lev1-1,i,j)-tn(lev1-2,i,j))/(mbar(lev1,i,j)*grav)
         enddo
       enddo ! j=lat0,lat1
 !
@@ -217,8 +218,9 @@
       enddo
 !
 ! Calculate scale height diagnostic (using Z here, not ZG):
-      call mkdiag_SCHT('SCHT',z(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+! As of TIEGCM v3.0, SCHT is f4d, so this call is no longer needed
+!     call mkdiag_SCHT('SCHT',z(:,lon0:lon1,lat0:lat1),
+!    |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 #ifdef VT
 !     code = 116 ; state = 'addiag' ; activity='ModelCode'

@@ -98,14 +98,15 @@
      |  p_coeff,q_coeff,r_coeff, ! coefficients for tridiagonal solver (s1,s2,s3)
      |  bdotu,            ! was s7 (B.U)
      |  op_loss,          ! was s13
-     |  tp1               ! 0.5*(te+ti)
+     |  tp1,              ! 0.5*(te+ti)
+     |  wd
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
 !
 ! For O+ "smooth floor" (ignored if enforce_opfloor = 0)
 ! (default namelist enforce_opfloor = 1). The floor is a
 ! spatial gaussian based on the O+ minimum (opmin below).
 !
-      real :: opfloor,wd
+      real :: opfloor
 !
 ! 1/21/16 btf: O+ minimum increased from 1000 to 3000.
 ! (This alleviates numerical instability that can develop
@@ -246,9 +247,9 @@
      |  vni(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1)
 
       if (debug) write(6,"('oplus after rrk: lat=',i3)") lat
-      call addfld('DJ','DJ: Ambipolar Diffusion of O+',' ',
-     |    dj(lev0:lev1-1,lon0:lon1,lat),
-     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('DJ','DJ: Ambipolar Diffusion of O+',' ',
+!    |    dj(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Plasma temperature:
       do i=lon0,lon1
@@ -346,12 +347,13 @@
       do lat=lat0,lat1
         do i=lon0,lon1
           do k=lev0,lev1-1
-            wd = vni(k,i,lat)*diffj(k,i,lat)*dj(k,i,lat)*
+            wd(k,i) = vni(k,i,lat)*diffj(k,i,lat)*dj(k,i,lat)*
      |        sin(dipmag(i,lat))*cos(dipmag(i,lat))
-            Fe(k,i,lat) = wd*sndec(i,lat)
-            Fn(k,i,lat) = wd*csdec(i,lat)
+            Fe(k,i,lat) = wd(k,i)*sndec(i,lat)
+            Fn(k,i,lat) = wd(k,i)*csdec(i,lat)
           enddo
         enddo
+        call addfld('WD','','',wd,'lev',lev0,lev1,'lon',lon0,lon1,lat)
       enddo
 !------------------------- End first latitude scan ---------------------
 !

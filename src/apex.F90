@@ -448,6 +448,10 @@ subroutine apex_q2g(qdlat,qdlon,alt,gdlat,gdlon,ier)
 ! subroutine apex_mall (input geodetic, output magnetic). Sub apex_mka
 ! must be called before this routine.
 !
+! 20160811 ADR If qdlat is +/-90, move it a little off the pole so that
+!  when gdlat,gdlon are used in apex_mall the directions of the base vectors
+!  are varying appropriately with longitude
+!
 ! Args:
   real,intent(in) ::  & ! inputs
     qdlat,            & ! quasi-dipole latitude (deg)
@@ -462,7 +466,7 @@ subroutine apex_q2g(qdlat,qdlon,alt,gdlat,gdlon,ier)
 ! Local:
   real :: x0,y0,z0,xnorm,xdif,ydif,zdif,dist2,hgrd2e,hgrd2n,hgrd2,&
     angdist,distlon,glatx,cal,sal,coslm,slm,cad,sad,slp,clm2,slm2,&
-    sad2,cal2,clp2,clp,dylon
+    sad2,cal2,clp2,clp,dylon,qdlat_offset
   real :: ylat,ylon ! first guess output by gm2gc, input to intrp
   integer :: iter
   integer,parameter :: niter=20
@@ -478,18 +482,26 @@ subroutine apex_q2g(qdlat,qdlon,alt,gdlat,gdlon,ier)
   real :: cth,sth  ! output of adpl
   character(len=5) :: edge
 
+  if (qdlat == 90.) then 
+    qdlat_offset = 90.-sqrt(precise)*rtd
+  elseif (qdlat == -90.) then
+    qdlat_offset = -90.+sqrt(precise)*rtd
+  else
+    qdlat_offset = qdlat
+  endif
+!
   ier = 0 ; gdlat = 0. ; gdlon = 0.
 !
 ! Determine quasi-cartesian coordinates on a unit sphere of the
 ! desired magnetic lat,lon in quasi-dipole coordinates.
 !
-  x0 = cos (qdlat*dtr) * cos (qdlon*dtr)
-  y0 = cos (qdlat*dtr) * sin (qdlon*dtr)
-  z0 = sin (qdlat*dtr)
+  x0 = cos (qdlat_offset*dtr) * cos (qdlon*dtr)
+  y0 = cos (qdlat_offset*dtr) * sin (qdlon*dtr)
+  z0 = sin (qdlat_offset*dtr)
 !
 ! Initial guess:  use centered dipole, convert to geocentric coords
 !
-  call gm2gc (qdlat,qdlon,ylat,ylon)
+  call gm2gc (qdlat_offset,qdlon,ylat,ylon)
 !
 ! Iterate until (angular distance)**2 (units: radians) is within
 ! precise of location (qdlat,qdlon) on a unit sphere. 

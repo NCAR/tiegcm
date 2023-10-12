@@ -110,7 +110,9 @@
      |    saber_ncfile,      ! SABER U,Z lbc data file
      |    tidi_ncfile,       ! TIDI U,V lbc data file
      |    ctmt_ncfile,       ! CTMT lbc data file
-     |    bgrddata_ncfile    ! Background data file
+     |    bgrddata_ncfile,   ! Background data file
+     |    amienh_ncfile,     ! AMIE NH data file
+     |    amiesh_ncfile      ! AMIE SH data file
         integer ::
      |    nlat,              ! number of latitude grid points
      |    nlon,              ! number of longitude grid points
@@ -246,8 +248,10 @@
 
       h%saber_ncfile = '[none]'
       h%tidi_ncfile = '[none]'
-      h%bgrddata_ncfile = '[none]'
       h%ctmt_ncfile = '[none]'
+      h%bgrddata_ncfile = '[none]'
+      h%amienh_ncfile = '[none]'
+      h%amiesh_ncfile = '[none]'
 
       h%nflds  = 0
       h%dynamo = .false.
@@ -452,6 +456,8 @@
       write(6,"(2x,'tidi_ncfile  = ',a)") trim(h%tidi_ncfile)
       write(6,"(2x,'ctmt_ncfile  = ',a)") trim(h%ctmt_ncfile)
       write(6,"(2x,'bgrddata_ncfile = ',a)") trim(h%bgrddata_ncfile)
+      write(6,"(2x,'amienh_ncfile  = ',a)") trim(h%amienh_ncfile)
+      write(6,"(2x,'amiesh_ncfile  = ',a)") trim(h%amiesh_ncfile)
 
       write(6,"(2x,'tuv_lbc_intop=',i3,' (if 1, then lbc of t,u,v',
      |  ' are stored in top k slot (old histories))')") h%tuv_lbc_intop

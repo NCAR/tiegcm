@@ -128,6 +128,8 @@
      |  tidi_ncfile,        ! TIDI data (U,V)
      |  ctmt_ncfile,        ! CTMT tidal data (T,U,V,Z)
      |  bgrddata_ncfile,    ! background data (T,U,V,Z; V=0)
+     |  amienh_ncfile,      ! AMIE NH
+     |  amiesh_ncfile,      ! AMIE SH
      |  he_coefs_ncfile,    ! coefficients of Helium flux at upper boundary
      |  vedata,             ! SAPS ve data file
      |  vndata,             ! SAPS vn data file
@@ -257,8 +259,10 @@
 
       saber_ncfile = ' '      ! SABER data file
       tidi_ncfile = ' '       ! TIDI data file
-      bgrddata_ncfile = ' '   ! Background data file
       ctmt_ncfile = ' '       ! CTMT data file for lbc tides 
+      bgrddata_ncfile = ' '   ! Background data file
+      amienh_ncfile = ' '     ! AMIE NH data file
+      amiesh_ncfile = ' '     ! AMIE NH data file
       he_coefs_ncfile = ' '   ! Helium coefficients
       vedata = ' '
       vndata = ' '
@@ -646,6 +650,8 @@
         write(6,"('Will read AMIE data inputs')")
         iamie = 1
         potential_model = 'AMIE'
+        amienh_ncfile = trim(amienh)
+        amiesh_ncfile = trim(amiesh)
       endif
 !
 ! Save certain params as originally read by namelist read:
