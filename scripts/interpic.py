@@ -95,6 +95,8 @@ def interpic(fin, hres, vres, zitop, fout):
     src = Dataset(filename=fin)
     dst = Dataset(filename=fout, mode='w')
 
+    print("Creating new primary file: ",fout)
+
     # Copy all attributes from old to new files (even though many of them are not actually used)
     for name in src.ncattrs():
         setattr(dst, name, getattr(src, name))

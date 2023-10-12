@@ -255,8 +255,8 @@
             call shutdown('mpi_comm_rank error')
           endif
 
-          write(6,"('TIEGCM: mixCplComm,mixCplCommSize,mixCplRank,tag=',
-     |      4i4)") mixCplComm,mixCplCommSize,mixCplRank,myAppId+voltID
+!          write(6,"('TIEGCM: mixCplComm,mixCplCommSize,mixCplRank,tag=',
+!     |      4i4)") mixCplComm,mixCplCommSize,mixCplRank,myAppId+voltID
 
 ! mixCplRank is TIEGCM rank in mixCplComm
 ! REMIX rank is the other (0/1)

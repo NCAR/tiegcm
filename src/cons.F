@@ -333,29 +333,34 @@
       if (nlat==36 .and. nlon==72) then
         default_step = 60.
         nlat_filter = 5
-        allocate(chunk_array(nlat_filter))
+        if (.not. allocated(chunk_array)) 
+     |    allocate(chunk_array(nlat_filter))
         chunk_array = (/3,9,18,36,36/)
       elseif (nlat==72 .and. nlon==144) then
         default_step = 30.
-        nlat_filter = 10
-        allocate(chunk_array(nlat_filter))
-        chunk_array = (/3,3,9,9,18,18,36,36,72,72/)
+        nlat_filter = 8
+        if (.not. allocated(chunk_array)) 
+     |    allocate(chunk_array(nlat_filter))
+        chunk_array = (/9,9,18,18,36,36,72,72/)
       elseif (nlat==144 .and. nlon==288) then
         default_step = 10.
-        nlat_filter = 20
-        allocate(chunk_array(nlat_filter))
+        nlat_filter = 18
+        if (.not. allocated(chunk_array)) 
+     |    allocate(chunk_array(nlat_filter))
         chunk_array =
-     |    (/3,3,3,9,9,9,18,18,18,36,36,36,
-     |    72,72,72,72,144,144,144,144/)
+     |    (/3,9,9,18,18,18,
+     |    36,36,36,72,72,72,
+     |    144,144,144,144,144,144/)
       elseif (nlat==288 .and. nlon==576) then
         default_step = 5.
-        nlat_filter = 40
-        allocate(chunk_array(nlat_filter))
+        nlat_filter = 34
+        if (.not. allocated(chunk_array)) 
+     |    allocate(chunk_array(nlat_filter))
         chunk_array =
-     |    (/3,3,3,3,3,9,9,9,9,9,
-     |    18,18,18,18,18,18,36,36,36,36,36,36,
-     |    72,72,72,72,72,72,144,144,144,144,144,144,
-     |    288,288,288,288,288,288/)
+     |    (/3,9,9,9,18,18,18,18,
+     |    36,36,36,36,72,72,72,72,72,72,
+     |    144,144,144,144,144,144,144,144,
+     |    288,288,288,288,288,288,288,288/)
       else
         call shutdown('Unknown combination of lat x lon')
       endif
