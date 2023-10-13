@@ -1,4 +1,4 @@
-
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from .data_parse import lat_lon_lev, lat_lon_ilev,lat_lon, calc_avg_ht, min_max, lev_ilev_var, lev_ilev_lon, lev_ilev_lat,lev_ilev_time, lat_time_lev,lat_time_ilev, get_time
@@ -86,7 +86,7 @@ def color_scheme(variable_name):
         contour_color = 'white'
     return cmap_color, contour_color
 
-def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  variable_unit = None, contour_intervals = None, contour_value = None, coastlines=False, latitude_minimum = -87.5, latitude_maximum = 87.5, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None ):
+def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  variable_unit = None, contour_intervals = None, contour_value = None, coastlines=False, latitude_minimum = None, latitude_maximum = None, longitude_minimum = None, longitude_maximum = None, localtime_minimum = None, localtime_maximum = None ):
 
     """
     Generates a Latitude vs Longitude contour plot for a variable.
@@ -133,7 +133,15 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
     else:
         data, unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon(datasets, variable_name, time)
     
-    
+    if latitude_minimum == None:
+        latitude_minimum = np.nanmin(unique_lats)
+    if latitude_maximum == None:
+        latitude_maximum = np.nanmax(unique_lats)
+    if longitude_minimum == None:
+        longitude_minimum = np.nanmin(unique_lons)
+    if longitude_maximum == None:   
+        longitude_maximum = np.nanmax(unique_lons)
+
     min_val, max_val = min_max(data)
     selected_day=selected_mtime[0]
     selected_hour=selected_mtime[1]
@@ -141,7 +149,6 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
 
     cmap_color, contour_color = color_scheme(variable_name)
     # Extract values, latitudes, and longitudes from the array
-    print(min_val,max_val)
     if contour_value is not None:
         contour_levels = np.arange(min_val, max_val + contour_value, contour_value)
     else:
@@ -211,7 +218,7 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
 
 
 
-def plt_lev_var(datasets, variable_name, latitude, time= None, mtime=None, longitude = None, localtime = None, variable_unit = None, level_minimum = -8, level_maximum = 8):
+def plt_lev_var(datasets, variable_name, latitude, time= None, mtime=None, longitude = None, localtime = None, variable_unit = None, level_minimum = None, level_maximum = None):
     """
     Generates a Level vs Variable line plot for a given latitude.
     
@@ -239,6 +246,11 @@ def plt_lev_var(datasets, variable_name, latitude, time= None, mtime=None, longi
 
 
     variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_var(datasets, variable_name, time, latitude, longitude,  variable_unit)
+
+    if level_minimum == None:
+        level_minimum = np.nanmin(levs_ilevs)
+    if level_maximum == None:
+        level_maximum = np.nanmax(levs_ilevs)
 
     min_val, max_val = min_max(variable_values)
     #print(min_val, max_val)
@@ -287,7 +299,7 @@ def plt_lev_var(datasets, variable_name, latitude, time= None, mtime=None, longi
     return(plot)
 
 
-def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, variable_unit = None, contour_intervals = 20, contour_value = None,  level_minimum = -6.75, level_maximum = 6.75, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None):
+def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, variable_unit = None, contour_intervals = 20, contour_value = None,  level_minimum = None, level_maximum = None, longitude_minimum = None, longitude_maximum = None, localtime_minimum = None, localtime_maximum = None):
     """
     Generates a Level vs Longitude contour plot for a given latitude.
     
@@ -323,7 +335,15 @@ def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, varia
     # Generate 2D arrays, extract variable_unit
     variable_values, unique_lons, unique_levs,latitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_lon(datasets, variable_name, time, latitude, variable_unit)
 
-    
+    if level_minimum == None:
+        level_minimum = np.nanmin(unique_levs)
+    if level_maximum == None:
+        level_maximum = np.nanmax(unique_levs)
+    if longitude_minimum == None:
+        longitude_minimum = np.nanmin(unique_lons)
+    if longitude_maximum == None:   
+        longitude_maximum = np.nanmax(unique_lons)
+
     min_val, max_val = min_max(variable_values)
     selected_day=selected_mtime[0]
     selected_hour=selected_mtime[1]
@@ -382,7 +402,7 @@ def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, varia
     return(plot)
 
 
-def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = None, localtime = None, variable_unit = None, contour_intervals = 20, contour_value = None, level_minimum = -6.75, level_maximum = 6.75, latitude_minimum = -87.5,latitude_maximum = 87.5):
+def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = None, localtime = None, variable_unit = None, contour_intervals = 20, contour_value = None, level_minimum = None, level_maximum = None, latitude_minimum = None,latitude_maximum = None):
     """
     Generates a Level vs Latitude contour plot for a specified time and/or longitude.
     
@@ -415,7 +435,15 @@ def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = Non
     # Generate 2D arrays, extract variable_unit
     variable_values, unique_lats, unique_levs,longitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_lat(datasets, variable_name, time, longitude,  variable_unit)
 
-    
+    if level_minimum == None:
+        level_minimum = np.nanmin(unique_levs)
+    if level_maximum == None:
+        level_maximum = np.nanmax(unique_levs)
+    if latitude_minimum == None:
+        latitude_minimum = np.nanmin(unique_lats)
+    if latitude_maximum == None:
+        latitude_maximum = np.nanmax(unique_lats)
+
     min_val, max_val = min_max(variable_values)
     selected_day=selected_mtime[0]
     selected_hour=selected_mtime[1]
@@ -467,7 +495,7 @@ def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = Non
 
 
 
-def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime = None, variable_unit = None, contour_intervals = 20, contour_value = None,  level_minimum = -6.75, level_maximum = 6.75):
+def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime = None, variable_unit = None, contour_intervals = 20, contour_value = None,  level_minimum = None, level_maximum = None):
     """
     Generates a Level vs Time contour plot for a specified latitude and/or longitude.
     
@@ -493,6 +521,10 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
     #print(datasets)
     variable_values_all, levs_ilevs, mtime_values, longitude, variable_unit, variable_long_name = lev_ilev_time(datasets, variable_name, latitude, longitude, variable_unit)
     
+    if level_minimum == None:
+        level_minimum = np.nanmin(levs_ilevs)
+    if level_maximum == None:
+        level_maximum = np.nanmax(levs_ilevs)
 
     print("---------------["+variable_name+"]---["+str(latitude)+"]---["+str(longitude)+"]---------------")
     
@@ -554,7 +586,7 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
 
 
 
-def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = None,  variable_unit = None, contour_intervals = 20, contour_value = None, latitude_minimum = -87.5,latitude_maximum = 87.5):
+def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = None,  variable_unit = None, contour_intervals = 20, contour_value = None, latitude_minimum = None,latitude_maximum = None):
     """
     Generates a Latitude vs Time contour plot for a specified level and/or longitude.
     
@@ -580,11 +612,15 @@ def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = N
     print("---------------["+variable_name+"]---["+str(level)+"]---["+str(longitude)+"]---------------")
 
     try:
-        variable_values_all, lats, mtime_values, longitude, variable_unit, variable_long_name, filename = lat_time_lev(datasets, variable_name, level, longitude, variable_unit)
+        variable_values_all, unique_lats, mtime_values, longitude, variable_unit, variable_long_name, filename = lat_time_lev(datasets, variable_name, level, longitude, variable_unit)
     except:
-        variable_values_all, lats, mtime_values, longitude, variable_unit, variable_long_name, filename = lat_time_ilev(datasets, variable_name, level, longitude, variable_unit)
+        variable_values_all, unique_lats, mtime_values, longitude, variable_unit, variable_long_name, filename = lat_time_ilev(datasets, variable_name, level, longitude, variable_unit)
     # Assuming the levels are consistent across datasets, but using the minimum size for safety
     
+    if latitude_minimum == None:
+        latitude_minimum = np.nanmin(unique_lats)
+    if latitude_maximum == None:
+        latitude_maximum = np.nanmax(unique_lats)
 
     
     
@@ -609,7 +645,7 @@ def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = N
         time_indices = [i for i, (day, _, _) in enumerate(mtime_values) if i == 0 or mtime_values[i-1][0] != day]
 
     plot = plt.figure(figsize=(20, 12))
-    X, Y = np.meshgrid(range(len(mtime_values)), lats)
+    X, Y = np.meshgrid(range(len(mtime_values)), unique_lats)
     contour_filled = plt.contourf(X, Y, variable_values_all, cmap=cmap_color, levels=contour_levels)
     contour_lines = plt.contour(X, Y, variable_values_all, colors=contour_color, linewidths=0.5, levels=contour_levels)
     plt.clabel(contour_lines, inline=True, fontsize=16, colors=contour_color)

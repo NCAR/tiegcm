@@ -12,7 +12,7 @@ def get_options():
     # Output arugmets
     #
     parser.add_argument('-outdir','--output_directory', type=str, default=str(os.getcwd()), help='Directory to save the plots. Default: Current working directory')
-    parser.add_argument('-fout','--output_format', type=str, choices=['jpeg', 'pdf', 'script'], default='jpeg', help='Format to save the plots. Default: jpeg')
+    parser.add_argument('-fout','--output_format', type=str, choices=['jpeg', 'pdf'], default='jpeg', help='Format to save the plots. Default: jpeg')
     parser.add_argument('-stdout','--standard_output', type=str, help='Custom file Name without extension')
     #
     # Interactive mode arugmets
