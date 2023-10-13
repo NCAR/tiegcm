@@ -107,7 +107,7 @@ def plot_routine(args):
                 times = ds['time'].values  
                 available_times.update(times)
             if np.datetime64(args.time) not in available_times:
-                raise ValueError(f"The specified time {args.time} is not available in the datasets. Available times are {available_times}")
+                raise ValueError(f"The specified time {args.time} is not available in the datasets.") #Available times are {available_times}")
             args.time = np.datetime64(args.time)
         #
         # Check and validate the specified time argument
@@ -120,7 +120,7 @@ def plot_routine(args):
             input_mtime = tuple(args.mtime)  
             if input_mtime not in available_mtimes:
                 sorted_mtimes = sorted(list(available_mtimes))  
-                raise ValueError(f"The specified mtime {args.mtime} is not available in the datasets. Available mtimes are {sorted_mtimes}")
+                raise ValueError(f"The specified mtime {args.mtime} is not available in the datasets.") #Available mtimes are {sorted_mtimes}")
             args.mtime = input_mtime
         #
         # Build the arguments dictionary for the plotting function based on its signature

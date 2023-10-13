@@ -86,7 +86,7 @@ def color_scheme(variable_name):
         contour_color = 'white'
     return cmap_color, contour_color
 
-def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  variable_unit = None, contour_intervals = 20, contour_value = None, coastlines=False, latitude_minimum = -87.5, latitude_maximum = 87.5, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None ):
+def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  variable_unit = None, contour_intervals = None, contour_value = None, coastlines=False, latitude_minimum = -87.5, latitude_maximum = 87.5, longitude_minimum = -180., longitude_maximum = 175., localtime_minimum = None, localtime_maximum = None ):
 
     """
     Generates a Latitude vs Longitude contour plot for a variable.
@@ -118,7 +118,8 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
         longitude_minimum = local_time_to_longitude(localtime_minimum)
     if localtime_maximum != None:
         longitude_maximum = local_time_to_longitude(localtime_maximum)
-    
+    if contour_intervals == None:
+        contour_intervals = 20
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(level)+"]---------------")
     # Generate 2D arrays, extract variable_unit
     
@@ -140,7 +141,7 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
 
     cmap_color, contour_color = color_scheme(variable_name)
     # Extract values, latitudes, and longitudes from the array
-
+    print(min_val,max_val)
     if contour_value is not None:
         contour_levels = np.arange(min_val, max_val + contour_value, contour_value)
     else:
@@ -316,7 +317,8 @@ def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, varia
         longitude_minimum = local_time_to_longitude(localtime_minimum)
     if localtime_maximum != None:
         longitude_maximum = local_time_to_longitude(localtime_maximum)
-        
+    if contour_intervals == None:
+        contour_intervals = 20    
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(latitude)+"]---------------")
     # Generate 2D arrays, extract variable_unit
     variable_values, unique_lons, unique_levs,latitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_lon(datasets, variable_name, time, latitude, variable_unit)
@@ -407,7 +409,8 @@ def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = Non
         time = get_time(datasets, mtime)
     if longitude == None:
         longitude = local_time_to_longitude(localtime)
-
+    if contour_intervals == None:
+        contour_intervals = 20
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(longitude)+"]---------------")
     # Generate 2D arrays, extract variable_unit
     variable_values, unique_lats, unique_levs,longitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_lat(datasets, variable_name, time, longitude,  variable_unit)
@@ -485,7 +488,8 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
     """
     if longitude is None:
         longitude = local_time_to_longitude(localtime)
-
+    if contour_intervals == None:
+        contour_intervals = 20
     #print(datasets)
     variable_values_all, levs_ilevs, mtime_values, longitude, variable_unit, variable_long_name = lev_ilev_time(datasets, variable_name, latitude, longitude, variable_unit)
     
@@ -522,8 +526,8 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
         plt.xticks(time_indices, ["{}-{:02d}h".format(day, hour) for day, hour in unique_times], rotation=45)
         plt.xlabel("Model Time (Day-Hour) from "+str(unique_times[0])+" to "+str(unique_times[-1]), fontsize=28) 
     except:
-        plt.xticks(day_indices, unique_days, rotation=45)
-        plt.xlabel("Model Time (Day) from "+str(np.nanmin(unique_days))+" to "+str(np.nanmax(unique_days)) ,fontsize=28)
+        plt.xticks(time_indices, unique_times, rotation=45)
+        plt.xlabel("Model Time (Day) from "+str(np.nanmin(unique_times))+" to "+str(np.nanmax(unique_times)) ,fontsize=28)
     plt.ylabel('LN(P0/P) (INTERFACES)',fontsize=28)
     
     plt.title(variable_long_name+' '+variable_name+' ('+variable_unit+') '+'\n\n',fontsize=36 )   
@@ -571,7 +575,8 @@ def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = N
     """
     if longitude is None:
         longitude = local_time_to_longitude(localtime)
-
+    if contour_intervals == None:
+        contour_intervals = 20
     print("---------------["+variable_name+"]---["+str(level)+"]---["+str(longitude)+"]---------------")
 
     try:
@@ -615,8 +620,8 @@ def plt_lat_time(datasets, variable_name, level, longitude = None, localtime = N
         plt.xticks(time_indices, ["{}-{:02d}h".format(day, hour) for day, hour in unique_times], rotation=45)
         plt.xlabel("Model Time (Day-Hour) from "+str(unique_times[0])+" to "+str(unique_times[-1]), fontsize=28) 
     except:
-        plt.xticks(day_indices, unique_days, rotation=45)
-        plt.xlabel("Model Time (Day) from "+str(np.nanmin(unique_days))+" to "+str(np.nanmax(unique_days)) ,fontsize=28)
+        plt.xticks(time_indices, unique_times, rotation=45)
+        plt.xlabel("Model Time (Day) from "+str(np.nanmin(unique_times))+" to "+str(np.nanmax(unique_times)) ,fontsize=28)
     
     plt.ylabel('Latitude (Deg)',fontsize=28)
     
