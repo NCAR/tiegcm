@@ -2,64 +2,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
+from .convert_units import convert_units
 
-
-conversion_units = {
-    'cm-3': {'m-3': 1000000.0},
-    'km': {'m': 1000.0},
-    'cm/s': {'m/s': 0.01, 'km/s': 1e-5},
-    'erg/g/s': {'J/kg/s': 1e-7},
-    'ergs/cm2/s': {'J/m2/s': 0.001},
-    'millibars': {'pascals': 100},
-    'microbars': {'pascals': 0.1},
-    'g/cm3': {'kg/m3': 1000.0},
-    'degrees': {'radians': 0.0174533},
-    'degrees_east': {'radians': 0.0174533},
-    'degrees_north': {'radians': 0.0174533},
-    'km/s': {'m/s': 1000.0, 'cm/s': 100000.0},
-    'GW': {'MW': 1000.0, 'kW': 1000000.0, 'W': 1000000000.0},
-    'keV': {'eV': 1000.0, 'J': 1.60218e-16},
-    'nT': {'µT': 0.001, 'T': 1e-9},
-    'cm': {'m': 0.01, 'km': 1e-5},
-    'K': {
-        'C': {'factor': 1, 'offset': -273.15},  # Celsius = Kelvin - 273.15
-        'F': {'factor': 9/5, 'offset': -459.67}  # Fahrenheit = Kelvin * 9/5 - 459.67
-    }
-}
-
-def convert_units(data, from_unit, to_unit):
-    """
-    Convert data from one unit to another based on predefined conversion factors.
-    
-    Parameters:
-    - data: Numeric data to be converted
-    - from_unit: The current unit of the data
-    - to_unit: The desired unit to convert to
-    
-    Returns:
-    - Converted data
-    """
-    
-    if from_unit == to_unit:
-        return data, from_unit
-    
-    # Check if conversion is possible
-    if from_unit in conversion_units and to_unit in conversion_units[from_unit]:
-        conversion = conversion_units[from_unit][to_unit]
-        print(f"Converting from {from_unit} to {to_unit}")
-
-        # Check if conversion is a dictionary or direct float
-        if isinstance(conversion, dict):
-            factor = conversion.get('factor', 1)
-            offset = conversion.get('offset', 0)
-
-            return data * factor + offset, to_unit
-        else:
-            return data * conversion, to_unit
-    else:
-        #raise ValueError(f"No conversion factor found for {from_unit} to {to_unit}")
-        print(f"No conversion factor found for {from_unit} to {to_unit}")
-        return data, from_unit
 
 
 
@@ -104,7 +48,7 @@ def lev_ilev_lon (datasets, variable_name, selected_time, selected_lat, selected
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
     Args:
-    - ds (xarray): The loaded dataset opened using xarray.
+    - datasets (xarray): The loaded dataset opened using xarray.
     - variable_name (str): Name of the variable to extract.
         - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N4S', 'NO', 'HE', 'AR', 'OP', 'N2D','TI', 'TE', 'O2P', 'TN_NM', 
                             'UN_NM', 'VN_NM', 'O2_NM', 'O1_NM', 'N4S_NM', 'NO_NM', 'OP_NM', 'HE_NM', 'AR_NM', 'NE', 'OMEGA', 
@@ -234,9 +178,7 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev, selected_u
                     variable_values = (variable_values_1 + variable_values_2) / 2
                     if selected_unit != None:
                         variable_values , selected_unit  = convert_units (variable_values, variable_unit, selected_unit)
-                        
-
-    return variable_values, selected_lev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
+            return variable_values, selected_lev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
 
 
 def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev, selected_unit):
@@ -400,8 +342,7 @@ def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_
                 # if selected_lon is "mean", then we calculate the mean over all longitudes.
                 data = ds[variable_name].sel(time=selected_time).mean(dim=['lon', 'lat'])
             elif selected_lon == "mean":
-                data = ds[variable_name].sel(time=selected_time, lat=selected_lat).mean(dim='lon')
-
+                data = ds[variable_name].sel(time=selected_time, lat=selected_lat, method="nearest").mean(dim='lon')  #look into method nearest
             elif selected_lat == "mean":
                 data = ds[variable_name].sel(time=selected_time, lon=selected_lon).mean(dim='lat')
             else:
@@ -443,10 +384,10 @@ def calc_avg_ht(datasets, selected_time, selected_lev_ilev):
             if selected_lev_ilev in ds['ilev'].values:
                 heights = ds['ZG'].sel(time=selected_time, ilev=selected_lev_ilev).values
             else:
-                sorted_levs = sorted(ds['lev'].values, key=lambda x: abs(x - selected_lev_ilev))
+                sorted_levs = sorted(ds['ilev'].values, key=lambda x: abs(x - selected_lev_ilev))
                 closest_lev1 = sorted_levs[0]
                 closest_lev2 = sorted_levs[1]
-                
+
                 # Extract data for the two closest lev values using .sel()
                 data1 = ds['ZG'].sel(time=selected_time, ilev=closest_lev1).values
                 data2 = ds['ZG'].sel(time=selected_time, ilev=closest_lev2).values
