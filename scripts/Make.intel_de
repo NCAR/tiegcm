@@ -15,7 +15,6 @@ FFLAGS = -r8
 DBGFLAGS = -debug full,extended -traceback
 DBGFLAGS += -check all,noarg_temp_created -fp-stack-check
 DBGFLAGS += -warn all -nogen-interfaces
-DBGFLAGS = -traceback -check bounds -check uninit -debug all -gen-interfaces -warn interfaces -fp-stack-check
 #
 # -fpe-all=0 traps all floating point exceptions.
 # The model is not guaranteed not to crash if this option is set.

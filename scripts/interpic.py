@@ -75,7 +75,7 @@ def interp3d(variable, inlev, inlat, inlon, outlev, outlat, outlon, extrap):
 
 def interpic(fin, hres, vres, zitop, fout):
     # Some additional attributes for 4D fields
-    lower_cap = 1e-6
+    lower_cap = 1e-8
     fill_top = ['TN', 'UN', 'VN', 'OP', 'TI', 'TE', 'N2D', 'O2P', 'TN_NM', 'UN_NM', 'VN_NM', 'OP_NM']
     mixing_ratio = ['O2', 'O1', 'HE', 'N4S', 'NO', 'AR', 'N2D', 'O2_NM', 'O1_NM', 'HE_NM', 'N4S_NM', 'NO_NM', 'AR_NM']
     extrap_method = {'TN': 'exponential', 'UN': 'linear', 'VN': 'linear', 'O2': 'exponential', 'O1': 'exponential', 'HE': 'exponential',
@@ -95,7 +95,7 @@ def interpic(fin, hres, vres, zitop, fout):
     src = Dataset(filename=fin)
     dst = Dataset(filename=fout, mode='w')
 
-    print("Creating new primary file: ",fout)
+    print('Creating new primary file: ', fout)
 
     # Copy all attributes from old to new files (even though many of them are not actually used)
     for name in src.ncattrs():

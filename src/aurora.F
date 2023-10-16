@@ -60,7 +60,6 @@
      |  pi,    ! 4.*atan(1.)
      |  crit  ! may be changed from default if amie run
       use params_module,only: nlon,nlonp4,nlevp1,nlat,glat
-      use addfld_module,only: addfld
       use amie_module,only: crad,phida,ekvg,efxg,hpi_sh_amie,
      |  hpi_nh_amie,pcp_sh_amie,pcp_nh_amie
       use input_module,only: iamie
@@ -805,8 +804,8 @@
       do i=1,nlonp4
         alfa(i)=geng(i,lat)+0.01
         flux(i)=gflx(i,lat)+0.01
-        if(alfa(i)<=0.)alfa(i)=0.01
-        if(flux(i)<=0.)flux(i)=0.01
+        if(alfa(i)<0.01)alfa(i)=0.01
+        if(flux(i)<0.01)flux(i)=0.01
         eflux(i) = flux(i)*fac_p2e*alfa(i)
 !       write(6,*)alfa(i),flux(i),i,lat
       enddo
@@ -842,7 +841,6 @@
 ! Auroral parameters:
       use aurora_module,only: alfac, alfad, alfa_sp, fc,fd,
      |  flx_sp, e30, add_sproton, add_helectron
-      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
@@ -922,15 +920,6 @@
         call cion(xcusp,cusp_ion,alfa1,lev0,lev1,lon0,lon1)
         call cion(xdrizl,drizl_ion,alfa1,lev0,lev1,lon0,lon1)
       endif
-
-!     call addfld('ALFA1',' ',' ',alfa1_ion,'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('ALFA2',' ',' ',alfa2_ion,'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('CUSP',' ',' ',cusp_ion,'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('DRIZL',' ',' ',drizl_ion,'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
 !
 ! Solar protons:
       if (flx_sp > 1.e-19)
@@ -1008,22 +997,6 @@
 !     write(6,"('aurora: lat=',i3,' lon0,1=',2i3,' fdrizl=',/,
 !    |  (6e12.4))") lat,lon0,lon1,fdrizl
 
-!     call addfld('BARMT'   ,' ',' ',barm_t(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('QSUM'    ,' ',' ',qsum    ,'lev',lev0,lev1,
-!    |  'lon',lon0,lon1,lat)
-!     call addfld('DENOM'   ,' ',' ',denom(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('QO2P_AUR',' ',' ',qo2p_aur(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('QOP_AUR' ,' ',' ',qop_aur(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('QN2P_AUR',' ',' ',qn2p_aur(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-      call addfld('QAURORA',' ','cm-3 s-1',qaurora,
-     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!
       do i=lon0,lon1
         do k=lev0+1,lev1-1
           qo2p_a(k,i) = sqrt(qo2p_aur(k,i)*qo2p_aur(k-1,i))
@@ -1059,15 +1032,6 @@
           qtef(k,i,lat) = qtef(k,i,lat)+1.57*qn2p_a(k,i)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
-
-!     call addfld('QO2P',' ',' ',qo2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOP' ,' ',' ',qop(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QN2P' ,' ',' ',qn2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QNP' ,' ',' ',qnp(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
       end subroutine aurora_ions
 !-----------------------------------------------------------------------

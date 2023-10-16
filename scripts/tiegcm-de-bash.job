@@ -302,7 +302,7 @@ SVN_REVISION  = $svn_revision
 EOF
 #
 # Build the model:
-gmake -j100 all
+gmake -j8 all
 status=$?
 if [ $status -ne 0 ]
 then

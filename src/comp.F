@@ -87,7 +87,7 @@
       delta(:,2)=(/0.,1.,0./)
       delta(:,3)=(/0.,0.,1./)
       t00=273.
-      small = 1.e-6
+      small = 1.e-8
       i0=lon0 ; i1=lon1 ; k0=lev0 ; k1=lev1
 !
       nk = lev1-lev0+1
@@ -929,19 +929,15 @@
 !
             normalize =
      |        o2_upd(k,i,lat)+o1_upd(k,i,lat)+he_upd(k,i,lat)+n2
-            if (normalize > 1.) then
-              o2_upd(k,i,lat) = o2_upd(k,i,lat)/normalize
-              o1_upd(k,i,lat) = o1_upd(k,i,lat)/normalize
-              he_upd(k,i,lat) = he_upd(k,i,lat)/normalize
-            endif
+            o2_upd(k,i,lat) = o2_upd(k,i,lat)/normalize
+            o1_upd(k,i,lat) = o1_upd(k,i,lat)/normalize
+            he_upd(k,i,lat) = he_upd(k,i,lat)/normalize
 !
             normalize =
      |        o2nm_upd(k,i,lat)+o1nm_upd(k,i,lat)+henm_upd(k,i,lat)+n2nm
-            if (normalize > 1.) then
-              o2nm_upd(k,i,lat) = o2nm_upd(k,i,lat)/normalize
-              o1nm_upd(k,i,lat) = o1nm_upd(k,i,lat)/normalize
-              henm_upd(k,i,lat) = henm_upd(k,i,lat)/normalize
-            endif
+            o2nm_upd(k,i,lat) = o2nm_upd(k,i,lat)/normalize
+            o1nm_upd(k,i,lat) = o1nm_upd(k,i,lat)/normalize
+            henm_upd(k,i,lat) = henm_upd(k,i,lat)/normalize
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
 

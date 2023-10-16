@@ -9,6 +9,7 @@
 ! Solve for electron density.
 ! Also calculate ions N+ (nplus), N2+ (n2p), NO+ (nop), and O2+ (o2p).
 !
+      use params_module,only: zpmid
       use cons_module,only: rmassinv_o2,rmassinv_n2d,
      |  rmassinv_o1,rmassinv_n2,rmassinv_no,rmassinv_n4s
       use chemrates_module,only: rk1,rk2,rk3,rk4,rk5,rk6,rk7,rk8,
@@ -43,7 +44,7 @@
      |  electrons  ! electron density (output to f4d(ne))
 !
 ! Local:
-      integer :: k,i,i0,i1
+      integer :: k,i,i0,i1,idx(1),k0
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  a0,a1,a2,a3,a4, ! coefficients for quartic solver
      |  a,b,c,d,e,fg,h, ! terms for quartic coefficients
@@ -71,16 +72,27 @@
 !     call addfld('XIOP2D' ,' ',' ',xiop2d(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
+      idx = minloc(abs(zpmid-9))
+!
       do i=lon0,lon1
-        do k=lev0,lev1-1
 !
 ! N+ ion (output):
+        do k=lev0,lev1-1
           nplus(k,i) = (0.5*(qnp(k,i,lat)+qnp(k+1,i,lat))+
      |      rk10*op(k,i)*n2d(k,i)*xnmbar(k,i)*rmassinv_n2d) /
      |      (xnmbar(k,i)*((rk6+rk7)*o2(k,i)*rmassinv_o2+
      |      rk8*o1(k,i)*rmassinv_o1))
+        enddo
+! N+ shows a spurious increase above 800km which is clearly not physical
+! level out any increases above the altitude where N+ reaches minimum
+! this is done recursively
+        do k=idx(1),lev1-1
+          if (nplus(k,i) > nplus(k-1,i)) nplus(k,i) = nplus(k-1,i)
+        enddo
 !
 ! Set up terms for quartic coefficients:
+!
+        do k=lev0,lev1-1
 !
 ! A = QI(NO+)+K2*N(O+)*N(N2)+K7*N(N+)*N(02)+B9*N(NO) (s10)
 !
