@@ -1,19 +1,11 @@
-# TIEPY
+# TIEGCMPY
 
-Tiepy is a tool used for TIE-GCM post processing and plot generation.
+tiegcmpy is a tool used for TIE-GCM post processing and plot generation.
 
 ## Installation
 
-Build tiepy using python
-
 ```bash
-python setup.py sdist
-```
-
-Install the generated python pip distribution 
-
-```bash
-pip install /dist/tiepy-X.X.X.tar.gz
+pip install tiegcmpy
 ```
 
 ## Requrements 
@@ -27,7 +19,7 @@ pip install /dist/tiepy-X.X.X.tar.gz
 
 ## Usage
 
-Tiepy can be run in two modes:
+tiegcmpy can be run in two modes:
 
 1) Mode: Single Plot
 
@@ -40,14 +32,14 @@ Tiepy can be run in two modes:
 
 Example:
 ```bash
-tiepy --plot_type {plot_type} -dir {directory of datasets} --dataset_filter {primary or secondary files} --output_format {format of output plot} --[Other optional arguments for specific plots]
+tiegcmpy --plot_type {plot_type} -dir {directory of datasets} --dataset_filter {primary or secondary files} --output_format {format of output plot} --[Other optional arguments for specific plots]
 ```
 
 
 ### Mode: Multiple Plot
 #### Option 1: Initiate Interactive mode to generate multiple plots from different datasets
 ```bash
-tiepy -rec
+tiegcmpy -rec
 ```
 Wait for the command input request. 
 ```bash
@@ -62,7 +54,7 @@ Wait for input request. Type another command or 'exit'
 
 #### Option 2: Load dataset for multiple plot generation to multiple files
 ```bash
-tiepy -rec -dir {directory of datasets} --dataset_filter {primary or secondary files} 
+tiegcmpy -rec -dir {directory of datasets} --dataset_filter {primary or secondary files} 
 ```
 Loads datasets into memory and requests for input.
 ```bash
@@ -77,7 +69,7 @@ Type the arguments to request a plot with the output file information
 Wait for input request. Type another command or 'exit'
 #### Option 3: Load dataset for multiple plot generation to a single PDF file 
 ```bash
-tiepy -rec -dir {directory of datasets} --dataset_filter {primary or secondary files} --multiple_output {Output PDF file name}
+tiegcmpy -rec -dir {directory of datasets} --dataset_filter {primary or secondary files} --multiple_output {Output PDF file name}
 ```
 Loads datasets into memory, generates the PDF file and requests for input.
 ```bash

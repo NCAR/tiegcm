@@ -33,9 +33,9 @@ def get_options():
     #
     # Plot generation secondary arguments
     #
+    parser.add_argument('-unit','--variable_unit', type=str, help='Selected unit of a given variable for the plot')
     parser.add_argument('-cint','--contour_intervals', type=float, help='Selected number interval of contour for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
     parser.add_argument('-cval','--contour_value', type=float, help='Selected value of interval of contour for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
-    parser.add_argument('-unit','--variable_unit', type=str, help='Selected unit of a given variable for the plot')
     parser.add_argument('-cstl','--coastlines', type=bool, help='Add coast lines to the lat_lon plots')
     #
     # Plot slicing arguments 
