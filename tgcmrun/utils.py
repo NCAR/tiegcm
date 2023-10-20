@@ -7,18 +7,18 @@ def replace_string(file,oldstr,newstr):
 #
 # Read contents first, then close input file.
 #
-  file_read = open(file,'r')
-  contents = file_read.read()
-  file_read.close()
+  with open(file, 'r') as file_read:
+    contents = file_read.read()
+  
 # print contents
 #
 # Open output file and change chars per line.
 #
-  fw = open(file,'w')
-  for line in contents:
-    newline = line.replace(oldstr,newstr)
-    fw.write(newline)
-  fw.close()
+  with open(file, 'w') as fw:
+    for line in contents:
+      newline = line.replace(oldstr,newstr)
+      fw.write(newline)
+  
 #-----------------------------------------------------------------------
 def remove_comments(file):
 #
@@ -26,26 +26,26 @@ def remove_comments(file):
 #
 # Read input file into list of lines:
 #
-  f = open(file,'r')
-  lines = f.readlines()  
-  lines = [line.rstrip() for line in lines]
-  f.close()
+  with open(file, 'r') as f:
+    lines = f.readlines()
+    lines = [line.rstrip() for line in lines]
+  
 #
 # Reopen input file for writing, and loop over lines,
 # removing comments.
 #
-  f = open(file,'w')
-  nlines = 0
-  for line in lines:
-    nlines = nlines+1
-    loc = 0
-    loc = line.find('!')
-    if loc == 0:           # If comment is in first column (loc==0), skip the line
-      continue
-    elif loc > 0:          # Remove line from comment char to end
-      line = line[:loc-1]
-    f.write(line+'\n')
-  f.close()
+  with open(file, 'w') as f:
+    nlines = 0
+    for line in lines:
+      nlines = nlines+1
+      loc = 0
+      loc = line.find('!')
+      if loc == 0:           # If comment is in first column (loc==0), skip the line
+        continue
+      elif loc > 0:          # Remove line from comment char to end
+        line = line[:loc-1]
+      f.write(line+'\n')
+  
 #-----------------------------------------------------------------------
 def getenv(var,default=''):
 #
@@ -53,13 +53,12 @@ def getenv(var,default=''):
 # there is a default, set the env var to the default and return that
 # value. If the env var is not set and there is no default, return ''.
 #
-  try:
-    value = os.environ[var]
+  value = os.environ.get(var)
+  if value:
     return value
-  except KeyError:
     if default:
       os.environ[var] = default
-      print 'Note: Set env var ',var,' to default: ',default
+      print('Note: Set env var ', var,' to default: ',default)
       return os.environ[var]
     else:
       return ''

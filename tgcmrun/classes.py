@@ -1,5 +1,4 @@
-import re,os,subprocess,sys
-from utils import getenv,replace_string,remove_comments
+import re,os,subprocess,sys, stat
 
 #----------------------- Begin Class Version definition ---------------------
 class Version:
@@ -16,9 +15,9 @@ class Version:
 #
   def tag(self,model_name):
     if model_name == 'tiegcm':
-#     return ''      # can be null (e.g., testing or trunk version)
+      return ''      # can be null (e.g., testing or trunk version)
 #     return '1.95'  # use previous tag to make startup history files
-      return '2.0'   
+#     return '2.0'   
     elif model_name == 'timegcm':
       return '1.42'
 
@@ -153,7 +152,7 @@ class Namelist:
 
     f.write('/\n')
     f.close()
-#   print 'Wrote namelist file ',file
+#   print('Wrote namelist file ',file
 
 #----------------------- Begin Class Job definition ---------------------
 class Job:
@@ -162,26 +161,29 @@ class Job:
   model_root = ''          # directory path (must exist)
   model_res = ''           # model resolution ('5.0' or '2.5')
   model_version = ''       # model version name
-  machine = ''             # ys or linux
+  machine = ''             # ch or linux
   script_default = ''      # job default script: file path (read)
   script_run = ''          # job script for run: file path (write)
   execdir = ''             # directory path (may or may not exist)
+  bindir = ''             # directory path (may or may not exist)
   execute = ''             # execute model only if execute=TRUE
   stdin = ''               # namelist input file (read)
   stdout = ''              # standard out file (write)
   stdout_dir = ''          # directory to receive stdout files
   nprocs = ''              # number of processors (mpi tasks) (command line arg only)
-  wallclock = ''           # wallclock limit for 5.0 or 2.5 deg res (ys only)
-  project = ''             # authorized project number, e.g.: #BSUB -P P28100036
-  queue = ''               # LSF queue, e.g.: #BSUB -q regular
+  wallclock = ''           # wallclock limit for 5.0 or 2.5 deg res (ch only)
+  project = ''             # authorized project number, e.g.: #PBS -P P28100036
+  queue = ''               # LSF queue, e.g.: #PBS -q regular
   submitflag = ''          # Submit flag (not in job script)
-  compiler = ''            # Compiler (intel, pgi, or gfort) (Linux platform only, not ys super)
+  compiler = ''            # Compiler (intel, pgi, or gfort) (Linux platform only, not ch super)
 
   def make_jobscript(self,run):
+    print('Openning job script',self.script_default)
     f = open(self.script_run,'w')
     found_input = 0
     found_output = 0
     found_execdir = 0
+    found_bindir = 0
     found_runscript = 0
     for line in open(self.script_default):
 #
@@ -198,6 +200,11 @@ class Job:
         newline = 'set execdir = '+self.execdir+'\n'
         f.write(newline)
         found_execdir = 1
+# Executable directory:
+      elif 'set bindir' in line and not found_bindir: # only first occurrence      
+        newline = 'set bindir = '+self.bindir+'\n'
+        f.write(newline)
+        found_bindir = 1        
 #
 # Namelist input file:
       elif 'set input' in line and not found_input: # only first occurrence
@@ -219,79 +226,70 @@ class Job:
 # Set some other options:
 #
 # Number of processors (mpi tasks):
-# This depends on the default job script string "##BSUB -n" 
-#   referring to nprocs for res2.5, and line "#BSUB -n" refers
-#   to nprocs for res5.0.
+# This depends on the default job script string "#PBS -l select" 
+#   referring to nprocs for res2.5
 # 
-      elif '##BSUB -n' in line and self.model_res == '2.5': # commented for res2.5
-        if self.nprocs:    # nprocs is on command line
-          newline = '#BSUB -n '+str(self.nprocs)+'\n'
+      elif '#PBS -l select' in line and '##PBS -l select' not in line: 
+        print('Inside PBS select', line)
+        if self.nprocs:
+          newline = '#PBS -l select '+str(self.nprocs)+'\n'
           f.write(newline)
-        else:  # use default (uncomment by removing first '#')
-          newline = line.split()
-          newline[0] = '#BSUB '
-          newline[1] = newline[1]+' '
-          string = ''.join(newline)
-          newline = string+'\n'
-          f.write(newline)
-
-      elif '#BSUB -n' in line and '##BSUB -n' not in line: 
-        if self.model_res == '5.0':
-          if self.nprocs:
-            newline = '#BSUB -n '+str(self.nprocs)+'\n'
+        else:
+          if self.model_res == '5.0':
+            newline = "#PBS -l select=2:ncpus=36:mpiprocs=36 \n"
             f.write(newline)
           else:
             f.write(line)
 #
-# Job name (lsf job only, e.g., ys):
-      elif '#BSUB -J' in line and not '##BSUB -J' in line:
-        newline = '#BSUB -J '+run.fullname+'\n'
+# Job name (pbs job only, e.g., ys):
+      elif '#PBS -N' in line and not '##PBS -N' in line:
+        newline = '#PBS -N '+run.fullname+'\n'
         f.write(newline)
 #
-# lsf script name (will be ignored if not ys):
+# pbs script name (will be ignored if not ch):
       elif 'set runscript' in line and not found_runscript: # only first occurrence
-        newline = 'set runscript = '+run.fullname+'.lsf\n'
+        newline = 'set runscript = '+run.fullname+'.pbs\n'
         f.write(newline)
         found_runscript = 1
 #
-# Set wallclock limit e.g., for 30 minutes: #BSUB -W 0:30
+# Set wallclock limit e.g., for 30 minutes: #PBS -l walltime=00:30:00
 # This will change for different resolutions.
 # This will also change for different nprocs, but I will let that be
 #   the responsibility of the user when setting command line options.
 # Wallclock limit may be optionally set only by command line option.
 # Default values are provided in set_run() method.
 #
-      elif '#BSUB -W' in line and '##BSUB -W' not in line:
+      elif '#PBS -l walltime' in line and '##PBS -l walltime' not in line:
         if self.wallclock:
-          newline = '#BSUB -W '+self.wallclock
+          newline = '#PBS -l walltime='+self.wallclock
         else:
           if run.model_res == '5.0':
-            newline = '#BSUB -W '+run.wc50_default
+            newline = '#PBS -l walltime='+run.wc50_default
           else:
-            newline = '#BSUB -W '+run.wc25_default
+            newline = '#PBS -l walltime='+run.wc25_default
         f.write(newline+'\n')
 #
-# Project number (ys only) (command-line only), e.g.: #BSUB -P P28100036
-# Avoid changing any commented lsf commands (double '##')
+# Project number (ys only) (command-line only), e.g.: #PBS -A P28100036
+# Avoid changing any commented pbs commands (double '##')
 # This will be validated by LSF when the job is submitted.
 #
-      elif '#BSUB -P' in line and '##BSUB -P' not in line:
+      elif '#PBS -A' in line and '##PBS -A' not in line:
         if self.project:             # on the command line
-          newline = '#BSUB -P '+self.project
+          newline = '#PBS -A '+self.project
           f.write(newline+'\n')
         else:                        # use default
           f.write(line)
 #
-# LSF queue, e.g.: #BSUB -q regular (ys only)
-# Avoid changing any commented lsf commands (double '##')
+# LSF queue, e.g.: #PBS -q regular (ys only)
+# Avoid changing any commented pbs commands (double '##')
 # Could test this for validity (premium, regular, etc), but
-#   lsf will take care of this when the job is executed,
+#   pbs will take care of this when the job is executed,
 #   and queues may change. Also user's responsibility to
 #   coordinate wallclock limit and queue.
 #
-      elif '#BSUB -q' in line and '##BSUB -q' not in line:
+      elif '#PBS -q' in line and '##PBS -q' not in line:
         if self.queue:             # on the command line
-          newline = '#BSUB -q '+self.queue
+          newline = '#PBS -q '+self.queue
           f.write(newline+'\n')
         else:                        # use default
           f.write(line)
@@ -308,22 +306,22 @@ class Job:
         else:                        # use default
           f.write(line)
 #
-# Compiler (linux desktop platform only, not ys (not super)):
+# Compiler (linux desktop platform only, not ch (not super)):
 #
 # if compiler=='intel', then makefile is Make.intel_hao64
 # if compiler=='pgi', then makefile is Make.pgi_hao64
 # if compiler=='gfort', then makefile is Make.gfort_hao64
 #
-      elif 'set make' in line and self.machine != 'ys':
+      elif 'set make' in line and self.machine != 'ch':
         if self.compiler == 'intel':
           newline = 'set make = Make.intel_hao64'
-	elif self.compiler == 'pgi':
+        elif self.compiler == 'pgi':
           newline = 'set make = Make.pgi_hao64'
-	elif self.compiler == 'gfort':
+        elif self.compiler == 'gfort':
           newline = 'set make = Make.gfort_hao64'
-	else:
-	  print '>>> Unknown compiler ',self.compiler
-	  sys.exit()
+        else:
+	        print('>>> Unknown compiler ',self.compiler)
+	        sys.exit()
         f.write(newline+'\n')
 #
 # Otherwise, no change to this line in default job script:
@@ -332,15 +330,20 @@ class Job:
 
     f.close()
     os.popen('chmod u+x '+self.script_run)    # make it executable
-#   print "Wrote job script ",self.script_run
+#   print("Wrote job script ",self.script_run
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # def calc_wallclock
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   def submit(self,run_fullname):
-    print "Submitting ",self.script_run," for run ",run_fullname
-    subprocess.call([self.script_run])
+    print("Submitting ",self.script_run," for run ",run_fullname)
+    try:
+      subprocess.call([self.script_run])
+    except PermissionError:
+      print("Setting execute permission for "+self.script_run)
+      os.chmod(self.script_run, os.stat(self.script_run).st_mode | 0o111)
+      subprocess.call([self.script_run])
   
 #----------------------- Begin Class Run definition ---------------------
 class Run(Job,Namelist):
@@ -416,7 +419,7 @@ class Run(Job,Namelist):
 # run.number must be an integer between 0 and run.nruns-1:
 #   1. Try converting it to an integer, if this fails return 0
 #   2. If it is an integer, and within range, return 1, otherwise return 0
-# This is done silently, so calling function can print its own errors.
+# This is done silently, so calling function can print(its own errors.
 #
     try:
       int(run_number)
@@ -440,14 +443,14 @@ class Run(Job,Namelist):
 # This will be used to prompt user for the desired run.
 #
   def print_runs(self):
-    print '\nThe following runs are available:' 
+    print('\nThe following runs are available:')
     header = '''
 NUMBER\tNAME\t\tDESCRIPTION
 ------\t----\t\t-----------'''
-    print header
+    print(header)
     n = 0
     while n < self.nruns:
-      print n,"\t",self.names[n][0],"\t",self.names[n][1]
+      print(n,"\t",self.names[n][0],"\t",self.names[n][1])
       n = n+1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
@@ -522,7 +525,7 @@ NUMBER\tNAME\t\tDESCRIPTION
       if self.name=='dec2006_heelis_gpi': source='timegcm_dres.p_dec2006.nc'
 
     if source == '':
-      print '>>> Could not find old source history file for ',version,' ',self.name
+      print('>>> Could not find old source history file for ',version,' ',self.name)
       sys.exit()
     else:
       source = "'"+tgcmdata+"/"+source+"'"
@@ -547,8 +550,8 @@ NUMBER\tNAME\t\tDESCRIPTION
     if self.name == 'default_run':
       self.list_mods = [] # no changes to default namelist 
       self.list_rm   = []
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # December Solstice, solar max:
@@ -569,8 +572,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'    , '355'],
         ['SOURCE'       , source],
         ['SOURCE_START' , '355 0 0'],
-        ['START'        , '355 0 0'],
-        ['STOP'         , '360 0 0'],
+        ['PRISTART'        , '355 0 0'],
+        ['PRISTOP'         , '360 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '355 1 0'],
@@ -583,8 +586,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ]
 
       self.list_rm   = []
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:45:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # December Solstice, solar min:
@@ -604,8 +607,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'    , '355'],
         ['SOURCE'       , source],
         ['SOURCE_START' , '355 0 0'],
-        ['START'        , '355 0 0'],
-        ['STOP'         , '360 0 0'],
+        ['PRISTART'        , '355 0 0'],
+        ['PRISTOP'         , '360 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '355 1 0'],
@@ -618,8 +621,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ]
 
       self.list_rm = []
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # June Solstice, solar max:
@@ -639,8 +642,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'    , '172'],
         ['SOURCE'       , source],
         ['SOURCE_START' , '172 0 0'],
-        ['START'        , '172 0 0'],
-        ['STOP'         , '177 0 0'],
+        ['PRISTART'        , '172 0 0'],
+        ['PRISTOP'         , '177 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '172 1 0'],
@@ -653,8 +656,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ]
 
       self.list_rm   = []
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # June Solstice, solar min:
@@ -674,8 +677,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'    , '172'],
         ['SOURCE'       , source],
         ['SOURCE_START' , '172 0 0'],
-        ['START'        , '172 0 0'],
-        ['STOP'         , '177 0 0'],
+        ['PRISTART'        , '172 0 0'],
+        ['PRISTOP'         , '177 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '172 1 0'],
@@ -688,8 +691,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ]
 
       self.list_rm   = []
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # March Equinox, solar max:
@@ -709,8 +712,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'    , '80'],
         ['SOURCE'       , source],
         ['SOURCE_START' , '80 0 0'],
-        ['START'        , '80 0 0'],
-        ['STOP'         , '85 0 0'],
+        ['PRISTART'        , '80 0 0'],
+        ['PRISTOP'         , '85 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '80 1 0'],
@@ -723,8 +726,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ]
 
       self.list_rm   = []
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # March Equinox, solar min:
@@ -744,8 +747,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'    , '80'],
         ['SOURCE'       , source],
         ['SOURCE_START' , '80 0 0'],
-        ['START'        , '80 0 0'],
-        ['STOP'         , '85 0 0'],
+        ['PRISTART'        , '80 0 0'],
+        ['PRISTOP'         , '85 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '80 1 0'],
@@ -758,8 +761,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ]
 
       self.list_rm   = []
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # September Equinox, solar max:
@@ -779,8 +782,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'    , '264'],
         ['SOURCE'       , source],
         ['SOURCE_START' , '264 0 0'],
-        ['START'        , '264 0 0'],
-        ['STOP'         , '269 0 0'],
+        ['PRISTART'        , '264 0 0'],
+        ['PRISTOP'         , '269 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '264 1 0'],
@@ -793,8 +796,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ]
 
       self.list_rm   = []
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # September Equinox, solar min:
@@ -814,8 +817,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'    , '264'],
         ['SOURCE'       , source],
         ['SOURCE_START' , '264 0 0'],
-        ['START'        , '264 0 0'],
-        ['STOP'         , '269 0 0'],
+        ['PRISTART'        , '264 0 0'],
+        ['PRISTOP'         , '269 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '264 1 0'],
@@ -828,8 +831,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ]
 
       self.list_rm   = []
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # November 2003 storm case with Heelis and GPI:
@@ -850,8 +853,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'    , '323'],
         ['SOURCE'       , source],
         ['SOURCE_START' , '323 0 0'],
-        ['START'        , '323 0 0'],
-        ['STOP'         , '328 0 0'],
+        ['PRISTART'        , '323 0 0'],
+        ['PRISTOP'         , '328 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'     , '323 1 0'],
@@ -867,8 +870,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['CTPOTEN'      , '0.'],
         ['F107'         , '0.'],
         ['F107A'        , '0.']]
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '1:15' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:15:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # November 2003 storm case with Weimer and IMF, GPI:
@@ -892,7 +895,7 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
         if job.model_res == '2.5': 
           if int(job.step) > 10: 
-            print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds'
+            print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
             job.step = '10' # reduce timestep for res2.5 to 10 seconds
 
       self.list_mods = [
@@ -901,8 +904,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'      , '323'],
         ['SOURCE'         , source],
         ['SOURCE_START'   , '323 0 0'],
-        ['START'          , '323 0 0'],
-        ['STOP'           , '328 0 0'],
+        ['PRISTART'          , '323 0 0'],
+        ['PRISTOP'           , '328 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
         ['SECSTART'       , '323 1 0'],
@@ -919,8 +922,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['CTPOTEN'      , '0.'],
         ['F107'         , '0.'],
         ['F107A'        , '0.']]
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '4:30' # wallclock limit for 2.5-deg res (ys only) (step=10)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '02:30:00' # wallclock limit for 2.5-deg res (ch only) (step=10)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # December, 2006 AGU storm with Heelis and GPI:
@@ -941,8 +944,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'      , '330'],
         ['SOURCE'         , source],
         ['SOURCE_START'   , '330 0 0'],
-        ['START'          , '330 0 0'],
-        ['STOP'           , '360 0 0'],
+        ['PRISTART'          , '330 0 0'],
+        ['PRISTOP'           , '360 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_005.nc','by','1'"],
         ['SECSTART'       , '330 1 0'],
@@ -958,8 +961,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['CTPOTEN'      , '0.'],
         ['F107'         , '0.'],
         ['F107A'        , '0.']]
-      self.wc50_default = '1:00' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '4:00' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '12:00:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '12:00:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # December, 2006 AGU storm with Weimer and IMF:
@@ -980,8 +983,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'      , '330'],
         ['SOURCE'         , source],
         ['SOURCE_START'   , '330 0 0'],
-        ['START'          , '330 0 0'],
-        ['STOP'           , '360 0 0'],
+        ['PRISTART'          , '330 0 0'],
+        ['PRISTOP'           , '360 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_005.nc','by','1'"],
         ['SECSTART'       , '330 1 0'],
@@ -998,8 +1001,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['CTPOTEN'      , '0.'],
         ['F107'         , '0.'],
         ['F107A'        , '0.']]
-      self.wc50_default = '1:00' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '4:00' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '12:00:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '12:00:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Whole Heliosphere Interval, 2008, with Heelis and GPI
@@ -1020,8 +1023,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'      , '81'],
         ['SOURCE'         , source],
         ['SOURCE_START'   , '81 0 0'],
-        ['START'          , '81 0 0'],
-        ['STOP'           , '106 0 0'],
+        ['PRISTART'          , '81 0 0'],
+        ['PRISTOP'           , '106 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
         ['SECSTART'       , '81 1 0'],
@@ -1041,8 +1044,8 @@ NUMBER\tNAME\t\tDESCRIPTION
 # res5.0: 2 min/day * 25 days = 50 mins wc -> 1 hour
 # res2.5: 8 min/day * 25 days = 200 mins -> 3.5 hours
 #
-      self.wc50_default = '1:00' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '3:30' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '12:00:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '12:00:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Whole Heliosphere Interval, 2008, with Weimer, IMF and GPI
@@ -1063,8 +1066,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'      , '81'],
         ['SOURCE'         , source],
         ['SOURCE_START'   , '81 0 0'],
-        ['START'          , '81 0 0'],
-        ['STOP'           , '106 0 0'],
+        ['PRISTART'          , '81 0 0'],
+        ['PRISTOP'           , '106 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
         ['SECSTART'       , '81 1 0'],
@@ -1085,8 +1088,8 @@ NUMBER\tNAME\t\tDESCRIPTION
 # res5.0: 2 min/day * 25 days = 50 mins wc -> 1 hour
 # res2.5: 8 min/day * 25 days = 200 mins -> 3.5 hours
 #
-      self.wc50_default = '1:00' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '3:30' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '12:00:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '12:00:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # July 2000 "Bastille Day" storm, with Heelis and GPI
@@ -1103,7 +1106,7 @@ NUMBER\tNAME\t\tDESCRIPTION
 
       if job.model_res == '2.5': 
         if int(job.step) > 15: 
-          print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 15 seconds'
+          print('NOTE ',self.name,': Changing timestep from ',job.step,' to 15 seconds')
           job.step = '15' # force timestep for res2.5 to 15 seconds
 
       self.list_mods = [
@@ -1112,8 +1115,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'      , '192'],
         ['SOURCE'         , source],
         ['SOURCE_START'   , '192 0 0'],
-        ['START'          , '192 0 0'],
-        ['STOP'           , '202 0 0'],
+        ['PRISTART'          , '192 0 0'],
+        ['PRISTOP'           , '202 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
         ['SECSTART'       , '192 1 0'],
@@ -1133,8 +1136,8 @@ NUMBER\tNAME\t\tDESCRIPTION
 # res5.0: step=60 -> 2 min/day * 10 days = 20 mins wc -> 30 minutes
 # res2.5: step=30 -> 17 min/day * 10 days = 170 mins -> 3.5 hours
 #
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '3:30' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '01:00:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # July 2000 "Bastille Day" storm, with Weimer, IMF, and GPI
@@ -1155,7 +1158,7 @@ NUMBER\tNAME\t\tDESCRIPTION
       opdiffcap = '0.'
       if job.model_res == '2.5': 
         if int(job.step) > 10: 
-          print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds'
+          print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
           job.step = '10' # force timestep for res2.5 to 10 seconds
         opdiffcap = '6.e8'
 
@@ -1165,8 +1168,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'      , '192'],
         ['SOURCE'         , source],
         ['SOURCE_START'   , '192 0 0'],
-        ['START'          , '192 0 0'],
-        ['STOP'           , '202 0 0'],
+        ['PRISTART'          , '192 0 0'],
+        ['PRISTOP'           , '202 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
         ['SECSTART'       , '192 1 0'],
@@ -1188,8 +1191,8 @@ NUMBER\tNAME\t\tDESCRIPTION
 # res5.0: step=60 -> 2 min/day * 10 days = 20 mins wc -> 30 minutes
 # res2.5: step=10 -> 25 min/day * 10 days = 250 mins -> 5.0 hours
 #
-      self.wc50_default = '0:30' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '5:00' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '00:30:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '12:00:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Climatology run with solar minimum:
@@ -1227,8 +1230,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'      , '1'],
         ['SOURCE'         , source],
         ['SOURCE_START'   , '1 0 0'],
-        ['START'          , '1 0 0'],
-        ['STOP'           , stop],
+        ['PRISTART'          , '1 0 0'],
+        ['PRISTOP'           , stop],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_020.nc','by','1'"],
         ['MXHIST_PRIM'    , '20'],     # default is 10
@@ -1247,8 +1250,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['MXHIST_SECH' ,''],
         ['SECFLDS'     ,'']]
 #
-      self.wc50_default = '12:00' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '12:00' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '08:00:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '12:00:00' # wallclock limit for 2.5-deg res (ch only)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
@@ -1275,7 +1278,7 @@ NUMBER\tNAME\t\tDESCRIPTION
       stop = '366,0,0' # step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
       if job.model_res == '2.5': 
         if int(job.step) > 20: 
-          print 'NOTE ',self.name,': Changing timestep from ',job.step,' to 20 seconds'
+          print('NOTE ',self.name,': Changing timestep from ',job.step,' to 20 seconds')
           job.step = '20' # force timestep for res2.5 to 20 seconds
         stop = '55,0,0'
 
@@ -1285,8 +1288,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_DAY'      , '1'],
         ['SOURCE'         , source],
         ['SOURCE_START'   , '1 0 0'],
-        ['START'          , '1 0 0'],
-        ['STOP'           , stop],
+        ['PRISTART'          , '1 0 0'],
+        ['PRISTOP'           , stop],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_020.nc','by','1'"],
         ['MXHIST_PRIM'    , '20'],     # default is 10
@@ -1305,6 +1308,6 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['MXHIST_SECH' ,''],
         ['SECFLDS'     ,'']]
 #
-      self.wc50_default = '12:00' # wallclock limit for 5.0-deg res (ys only)
-      self.wc25_default = '12:00' # wallclock limit for 2.5-deg res (ys only)
+      self.wc50_default = '08:00:00' # wallclock limit for 5.0-deg res (ch only)
+      self.wc25_default = '12:00:00' # wallclock limit for 2.5-deg res (ch only)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -1,7 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys, os
 from classes import Run,Job,Namelist,Version
-from utils import getenv
 from getoptions import get_args, get_options
 #-----------------------------------------------------------------------
 #
@@ -24,7 +23,7 @@ args = get_args() # argparse Namespace object
 #
 dict = vars(args) # turn args into a dictionary for convenience
 command_line = 0
-for key in dict.keys():
+for key in list(dict.keys()):
   if dict[key]: 
     command_line = 1
 
@@ -43,7 +42,9 @@ while True:
   job.model_root   = get_options('model_root'  ,run,job,args.model_root) # env var TIEGCM_ROOT,TIMEGCM_ROOT
   job.model_res    = get_options('model_res'   ,run,job,args.model_res)
   job.machine      = get_options('machine'     ,run,job,args.machine)
-  job.execdir      = get_options('execdir'     ,run,job,args.execdir)    # env var TGCMTEMP/run
+  job.stdout_dir   = get_options('stdout_dir'  ,run,job,args.stdout_dir) # command-line only
+  job.execdir      = get_options('execdir'     ,run,job,args.execdir)    # env var TGCMTEMP/build
+  job.bindir       = get_options('bindir'     ,run,job,args.bindir)    # env var TGCMTEMP/build/bin
   job.execute      = get_options('execute'     ,run,job,args.execute)    # execute only if execute is TRUE
   job.nprocs       = get_options('nprocs'      ,run,job,args.nprocs)     # command-line only
   job.project      = get_options('project'     ,run,job,args.project)    # command-line only
@@ -51,16 +52,16 @@ while True:
   job.wallclock    = get_options('wc'          ,run,job,args.wc)         # command-line only
   job.step         = get_options('step'        ,run,job,args.step)       # command-line only
   job.submitflag   = get_options('submit'      ,run,job,args.submit)     # command-line only
-  job.stdout_dir   = get_options('stdout_dir'  ,run,job,args.stdout_dir) # command-line only
   job.hist_dir     = get_options('hist_dir'    ,run,job,args.hist_dir)   # command-line only
   job.compiler     = get_options('compiler'    ,run,job,args.compiler)   # Linux platfor only (not ys)
   tgcmdata         = get_options('tgcmdata'    ,run,job,args.tgcmdata)   # env var TGCMDATA
 #
 # If stdout_dir, then go there - everything now will happen in that directory:
 #
+  print('job.machine',job.machine)
   if job.stdout_dir:
     os.chdir(job.stdout_dir)
-    print 'Tgcmrun moved to directory ',job.stdout_dir
+    print('Tgcmrun moved to directory ',job.stdout_dir)
  
   version = Version()
   job.model_version = version.name(job.model_name)
@@ -68,7 +69,7 @@ while True:
 
   run.fullname(job,run.name)
 
-  print '\n----------------------------- Run ',run.fullname,' --------------------------------\n'
+  print('\n----------------------------- Run ',run.fullname,' --------------------------------\n')
 #
 # Set run parameters (most importantly, namelist modifications):
 # Note: after going to tiegcm2.0, the model_res argument to set_run will no longer be necessary. 
@@ -94,7 +95,7 @@ while True:
   nl.default_file = job.model_root+'/tgcmrun/'+job.model_name+'_res'+job.model_res+'_default.inp'
 
   if not os.path.isfile(nl.default_file):
-    print ">>> Cannot find default namelist file ",nl.default_file
+    print(">>> Cannot find default namelist file ",nl.default_file)
     sys.exit()
   nl.new_file = run.fullname+'.inp'
   nl.make_namelist(nl.default_file,nl.new_file,run.list_mods,run.list_rm,run.fullname,tgcmdata)
@@ -102,8 +103,9 @@ while True:
 # Construct path to default job script and check for existence:
 #
   job.script_default = job.model_root+'/tgcmrun/'+job.model_name+'_'+job.machine+'_default.job'
+  print("Job script",job.script_default)
   if not os.path.isfile(job.script_default):
-    print '>>> Cannot find default job script ',job.script_default
+    print('>>> Cannot find default job script ',job.script_default)
     sys.exit()
   job.stdin  = "'"+nl.new_file+"'"
 #
@@ -121,30 +123,31 @@ while True:
 #
 # Print job parameters and prompt for submission:
 #
-  print '\nJob parameters for run ',run.fullname,' (',run.desc,'):'
-  print 'Job script:           ',job.script_run
-  print 'Machine/platform:     ',job.machine
-  print 'Compiler:             ',job.compiler
-  print 'Model version:        ',job.model_version
-  print 'Model root directory: ',job.model_root
-  print 'Model resolution:     ',job.model_res
-  print 'Execution directory:  ',job.execdir
-  print 'Namelist input file:  ',job.stdin
-  print 'Standard out file:    ',job.stdout 
-  print 'Standard out dir:     ',job.stdout_dir
-  print 'History out dir:      ',job.hist_dir
-  print 'TGCMDATA env var:     ',tgcmdata
+  print('\nJob parameters for run ',run.fullname,' (',run.desc,'):')
+  print('Job script:           ',job.script_run)
+  print('Machine/platform:     ',job.machine)
+  print('Compiler:             ',job.compiler)
+  print('Model version:        ',job.model_version)
+  print('Model root directory: ',job.model_root)
+  print('Model resolution:     ',job.model_res)
+  print('Execution directory:  ',job.execdir)
+  print('Bin directory:        ',job.bindir)
+  print('Namelist input file:  ',job.stdin)
+  print('Standard out file:    ',job.stdout )
+  print('Standard out dir:     ',job.stdout_dir)
+  print('History out dir:      ',job.hist_dir)
+  print('TGCMDATA env var:     ',tgcmdata)
 #
 # Print any LSF arguments found on the command-line:
 #
   if job.nprocs or job.wallclock or job.project or job.queue or job.submitflag or job.execute:
-    print '\nCommand-line arguments for run ',run.fullname,': '
-  if job.submitflag:print 'Submit flag: ',job.submitflag
-  if job.execute:   print 'Execute flag:',job.execute
-  if job.nprocs:    print '#BSUB -n ',job.nprocs
-  if job.wallclock: print '#BSUB -W ',job.wallclock
-  if job.project:   print '#BSUB -P ',job.project
-  if job.queue:     print '#BSUB -q ',job.queue
+    print('\nCommand-line arguments for run ',run.fullname,': ')
+  if job.submitflag:print('Submit flag: ',job.submitflag)
+  if job.execute:   print('Execute flag:',job.execute)
+  if job.nprocs:    print('#BSUB -n ',job.nprocs)
+  if job.wallclock: print('#BSUB -W ',job.wallclock)
+  if job.project:   print('#BSUB -P ',job.project)
+  if job.queue:     print('#BSUB -q ',job.queue)
 #
 # Print warning if SOURCE file is specified but does not exist:
 #
@@ -159,13 +162,13 @@ while True:
       sourcefile = list[2]
       sourcefile = sourcefile.replace("'","")
       if not os.path.isfile(sourcefile):
-        print '>>> WARNING: Cannot find SOURCE file ',sourcefile
+        print('>>> WARNING: Cannot find SOURCE file ',sourcefile)
 
 #       sourcefile = sourcefile.replace(job.model_tag,"")
 #       if not os.path.isfile(sourcefile):
-#         print '>>> WARNING: Also cannot find SOURCE file ',sourcefile
+#         print('>>> WARNING: Also cannot find SOURCE file ',sourcefile)
 #       else:
-#         print 'Will use SOURCE = ',sourcefile
+#         print('Will use SOURCE = ',sourcefile)
 
 #
 # Submit job or not:
@@ -174,7 +177,7 @@ while True:
     if job.submitflag == 'yes':
       job.submit(run.fullname)
   else:
-    answer = raw_input('\nSubmit this job? (yes/no/q[uit]) (default=yes): ')
+    answer = input('\nSubmit this job? (yes/no/q[uit]) (default=yes): ')
     if answer == 'q' or answer == 'quit':
       sys.exit() 
     elif answer == '' or answer == 'yes':
