@@ -41,6 +41,13 @@ while True:
   job.model_name   = get_options('model_name'  ,run,job,args.model_name)
   job.model_root   = get_options('model_root'  ,run,job,args.model_root) # env var TIEGCM_ROOT,TIMEGCM_ROOT
   job.model_res    = get_options('model_res'   ,run,job,args.model_res)
+
+  job.horires    = get_options('horires'   ,run,job,args.horires)
+  job.vertres    = get_options('vertres'   ,run,job,args.vertres)
+  job.zitop    = get_options('zitop'   ,run,job,args.zitop)
+  job.mres    = get_options('mres'   ,run,job,args.mres)
+
+
   job.machine      = get_options('machine'     ,run,job,args.machine)
   job.stdout_dir   = get_options('stdout_dir'  ,run,job,args.stdout_dir) # command-line only
   job.execdir      = get_options('execdir'     ,run,job,args.execdir)    # env var TGCMTEMP/build
@@ -92,7 +99,7 @@ while True:
 #   model_root/tgcmrun, so the user can modify default files in the scripts 
 #   dir without breaking tgcmrun.
 #
-  nl.default_file = job.model_root+'/tgcmrun/'+job.model_name+'_res'+job.model_res+'_default.inp'
+  nl.default_file = job.model_root+'/tgcmrun/'+job.model_name+'_res'+job.horires+'_default.inp'
 
   if not os.path.isfile(nl.default_file):
     print(">>> Cannot find default namelist file ",nl.default_file)

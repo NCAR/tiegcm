@@ -1,5 +1,21 @@
 import re,os,subprocess,sys, stat
+from interpic import interpic
+import fnmatch
 
+def find_file(pattern, path):
+    """
+    Find a file in the specified path that matches the given pattern. Assumes only one match.
+
+    :param pattern: Pattern to look for in the file names.
+    :param path: Path of the directory to search in.
+    :return: File path if a match is found, else None.
+    """
+    for root, dirs, files in os.walk(path):  # Recursively go through all directories and subdirectories
+        for name in files:
+            if fnmatch.fnmatch(name, pattern):  # Check if file name matches the pattern
+                return os.path.join(root, name)  # If so, return the file path immediately
+
+    return None
 #----------------------- Begin Class Version definition ---------------------
 class Version:
   def name(self,model_name):
@@ -160,6 +176,13 @@ class Job:
   model_name = ''          # tiegcm or timegcm
   model_root = ''          # directory path (must exist)
   model_res = ''           # model resolution ('5.0' or '2.5')
+
+  horires = ''
+  vertres = ''
+  zitop = ''
+  mres = ''
+  coupling = ''
+
   model_version = ''       # model version name
   machine = ''             # ch or linux
   script_default = ''      # job default script: file path (read)
@@ -221,6 +244,26 @@ class Job:
 # Model resolution:
       elif 'set modelres' in line:
         newline = 'set modelres = '+self.model_res+'\n'
+        f.write(newline)
+#
+# Horizontal resolution:
+      elif 'set horires' in line:
+        newline = 'set horires = '+self.horires+'\n'
+        f.write(newline)
+#
+# Model resolution:
+      elif 'set vertres' in line:
+        newline = 'set vertres = '+self.vertres+'\n'
+        f.write(newline)
+#
+# Model resolution:
+      elif 'set zitop' in line:
+        newline = 'set zitop = '+self.zitop+'\n'
+        f.write(newline)
+#
+# Model resolution:
+      elif 'set mres' in line:
+        newline = 'set mres = '+self.mres+'\n'
         f.write(newline)
 #
 # Set some other options:
@@ -296,12 +339,12 @@ class Job:
 #
 # Execution flag in job script:
 #
-      elif 'set exec' in line and 'set execdir' not in line:
+      elif 'set execute' in line and 'set execdir' not in line:
         if self.execute:             # on the command line
           if self.execute == 'yes':
-            newline = 'set exec = TRUE'
+            newline = 'set execute = TRUE'
           else:
-            newline = 'set exec = FALSE'
+            newline = 'set execute = FALSE'
           f.write(newline+'\n')
         else:                        # use default
           f.write(line)
@@ -312,16 +355,21 @@ class Job:
 # if compiler=='pgi', then makefile is Make.pgi_hao64
 # if compiler=='gfort', then makefile is Make.gfort_hao64
 #
-      elif 'set make' in line and self.machine != 'ch':
-        if self.compiler == 'intel':
-          newline = 'set make = Make.intel_hao64'
-        elif self.compiler == 'pgi':
-          newline = 'set make = Make.pgi_hao64'
-        elif self.compiler == 'gfort':
-          newline = 'set make = Make.gfort_hao64'
-        else:
-	        print('>>> Unknown compiler ',self.compiler)
-	        sys.exit()
+      elif 'set make' in line:
+        if self.machine != 'ch' and self.machine != 'de':
+          if self.compiler == 'intel':
+            newline = 'set make = Make.intel_hao64'
+          elif self.compiler == 'pgi':
+            newline = 'set make = Make.pgi_hao64'
+          elif self.compiler == 'gfort':
+            newline = 'set make = Make.gfort_hao64'
+          else:
+            print('>>> Unknown compiler ',self.compiler)
+            sys.exit()
+        elif  self.machine == 'ch':
+          newline = 'set make = Make.intel_ch'
+        elif  self.machine == 'de':
+          newline = 'set make = Make.intel_de'
         f.write(newline+'\n')
 #
 # Otherwise, no change to this line in default job script:
@@ -436,7 +484,7 @@ class Run(Job,Namelist):
 # Run full names are model_name + model_res + short_name 
 # (e.g. tiegcm_res5.0_decsol_smax)
 #
-    self.fullname = job.model_name+job.model_tag+'_res'+job.model_res+'_'+name 
+    self.fullname = job.model_name+job.model_tag+'_res'+job.horires+'x'+job.vertres+'_z'+job.zitop+'_'+name 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Print run numbers, short names, and descriptions:
@@ -452,85 +500,6 @@ NUMBER\tNAME\t\tDESCRIPTION
     while n < self.nruns:
       print(n,"\t",self.names[n][0],"\t",self.names[n][1])
       n = n+1
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# Have to hardwire this for now, but oldsource will not be necessary after
-#   timegcm1.5 and tiegcm2.0 are released.
-#
-  def make_oldsource(self,tgcmdata,version):
-    source = ''
-#
-# tiegcm old (v1.95) history files (this should be complete):
-#
-    if version == 'tiegcm5.0':
-
-      if self.name=='decsol_smax': source='TGCM.tiegcm1.95.pcntr_decsol_smax.nc'
-      if self.name=='decsol_smin': source='TGCM.tiegcm1.95.pcntr_decsol_smin.nc'
-      if self.name=='junsol_smax': source='TGCM.tiegcm1.95.pcntr_junsol_smax.nc'
-      if self.name=='junsol_smin': source='TGCM.tiegcm1.95.pcntr_junsol_smin.nc'
-      if self.name=='mareqx_smax': source='TGCM.tiegcm1.95.pcntr_mareqx_smax.nc'
-      if self.name=='mareqx_smin': source='TGCM.tiegcm1.95.pcntr_mareqx_smin.nc'
-      if self.name=='sepeqx_smax': source='TGCM.tiegcm1.95.pcntr_sepeqx_smax.nc'
-      if self.name=='sepeqx_smin': source='TGCM.tiegcm1.95.pcntr_sepeqx_smin.nc'
-
-      if self.name=='dec2006_heelis_gpi': source='TGCM.tiegcm1.95.p_dec2006_heelis_gpi.nc'
-      if self.name=='dec2006_weimer_imf': source='TGCM.tiegcm1.95.p_dec2006_weimer_imf.nc'
-      if self.name=='nov2003_heelis_gpi': source='TGCM.tiegcm1.95.p_nov2003_heelis_gpi.nc'
-      if self.name=='nov2003_weimer_imf': source='TGCM.tiegcm1.95.p_nov2003_weimer_imf.nc'
-      if self.name=='whi2008_heelis_gpi': source='TGCM.tiegcm1.95.p_whi2008_heelis_gpi.nc'
-      if self.name=='whi2008_weimer_imf': source='TGCM.tiegcm1.95.p_whi2008_weimer_imf.nc'
-      if self.name=='climatology_smin'  : source='TGCM.tiegcm1.95.pclim_heelis.nc'
-      if self.name=='climatology_smax'  : source='TGCM.tiegcm1.95.pclim_heelis.nc'
-
-    elif version == 'tiegcm2.5':
-
-      if self.name=='decsol_smax': source='TGCM.tiegcm1.95_dres.pcntr_decsol_smax.nc'
-      if self.name=='decsol_smin': source='TGCM.tiegcm1.95_dres.pcntr_decsol_smin.nc'
-      if self.name=='junsol_smax': source='TGCM.tiegcm1.95_dres.pcntr_junsol_smax.nc'
-      if self.name=='junsol_smin': source='TGCM.tiegcm1.95_dres.pcntr_junsol_smin.nc'
-      if self.name=='mareqx_smax': source='TGCM.tiegcm1.95_dres.pcntr_mareqx_smax.nc'
-      if self.name=='mareqx_smin': source='TGCM.tiegcm1.95_dres.pcntr_mareqx_smin.nc'
-      if self.name=='sepeqx_smax': source='TGCM.tiegcm1.95_dres.pcntr_sepeqx_smax.nc'
-      if self.name=='sepeqx_smin': source='TGCM.tiegcm1.95_dres.pcntr_sepeqx_smin.nc'
-
-      if self.name=='dec2006_heelis_gpi': source='TGCM.tiegcm1.95_dres.p_dec2006_heelis_gpi.nc'
-      if self.name=='dec2006_weimer_imf': source='TGCM.tiegcm1.95_dres.p_dec2006_weimer_imf.nc'
-      if self.name=='nov2003_heelis_gpi': source='TGCM.tiegcm1.95_dres.p_nov2003_heelis_gpi.nc'
-      if self.name=='nov2003_weimer_imf': source='TGCM.tiegcm1.95_dres.p_nov2003_weimer_imf.nc'
-      if self.name=='whi2008_heelis_gpi': source='TGCM.tiegcm1.95_dres.p_whi2008_heelis_gpi.nc'
-      if self.name=='whi2008_weimer_imf': source='TGCM.tiegcm1.95_dres.p_whi2008_weimer_imf.nc'
-      if self.name=='climatology_smin'  : source='TGCM.tiegcm1.95_dres.pclim_heelis.nc'
-      if self.name=='climatology_smax'  : source='TGCM.tiegcm1.95_dres.pclim_heelis.nc'
-#
-# timegcm old (v1.42) history files (this is incomplete - missing nov2003, whi2008):
-#
-    elif version == 'timegcm5.0':
-
-      if self.name=='decsol_smax': source='TGCM.timegcm1.42.pcntr_dsol_smax.nc'
-      if self.name=='decsol_smin': source='TGCM.timegcm1.42.pcntr_dsol_smin.nc'
-      if self.name=='mareqx_smax': source='TGCM.timegcm1.42.pcntr_eqnx_smax.nc'
-      if self.name=='mareqx_smax': source='TGCM.timegcm1.42.pcntr_eqnx_smin.nc'
-      if self.name=='junsol_smax': source='TGCM.timegcm1.42.pcntr_jsol_smax.nc'
-      if self.name=='junsol_smin': source='TGCM.timegcm1.42.pcntr_jsol_smin.nc'
-      if self.name=='dec2006_heelis_gpi': source='timegcm.p_dec2006.nc'
-
-    elif version == 'timegcm2.5':
-
-      if self.name=='decsol_smax': source='TGCM.timegcm1.42d.pcntr_dsol_smax.nc'
-      if self.name=='decsol_smin': source='TGCM.timegcm1.42d.pcntr_dsol_smin.nc'
-      if self.name=='mareqx_smax': source='TGCM.timegcm1.42d.pcntr_eqnx_smax.nc'
-      if self.name=='mareqx_smin': source='TGCM.timegcm1.42d.pcntr_eqnx_smin.nc'
-      if self.name=='junsol_smax': source='TGCM.timegcm1.42d.pcntr_jsol_smax.nc'
-      if self.name=='junsol_smin': source='TGCM.timegcm1.42d.pcntr_jsol_smin.nc'
-      if self.name=='dec2006_heelis_gpi': source='timegcm_dres.p_dec2006.nc'
-
-    if source == '':
-      print('>>> Could not find old source history file for ',version,' ',self.name)
-      sys.exit()
-    else:
-      source = "'"+tgcmdata+"/"+source+"'"
-
-    return source
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   def set_run(self,job,tgcmdata):
 #
@@ -558,26 +527,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'decsol_smax':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
           
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '355'],
         ['SOURCE'       , source],
-        ['SOURCE_START' , '355 0 0'],
-        ['PRISTART'        , '355 0 0'],
-        ['PRISTOP'         , '360 0 0'],
+        ['SOURCE_START' , '355 0 0 0'],
+        ['PRISTART'        , '355 0 0 0'],
+        ['PRISTOP'         , '360 0 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'     , '355 1 0'],
-        ['SECSTOP'      , '360 0 0'],
+        ['SECSTART'     , '355 1 0 0'],
+        ['SECSTOP'      , '360 0 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
@@ -594,25 +563,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'decsol_smin':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '355'],
         ['SOURCE'       , source],
-        ['SOURCE_START' , '355 0 0'],
-        ['PRISTART'        , '355 0 0'],
-        ['PRISTOP'         , '360 0 0'],
+        ['SOURCE_START' , '355 0 0 0'],
+        ['PRISTART'        , '355 0 0 0'],
+        ['PRISTOP'         , '360 0 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'     , '355 1 0'],
-        ['SECSTOP'      , '360 0 0'],
+        ['SECSTART'     , '355 1 0 0'],
+        ['SECSTOP'      , '360 0 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
@@ -629,25 +599,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'junsol_smax':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+      
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '172'],
         ['SOURCE'       , source],
-        ['SOURCE_START' , '172 0 0'],
-        ['PRISTART'        , '172 0 0'],
-        ['PRISTOP'         , '177 0 0'],
+        ['SOURCE_START' , '172 0 0 0'],
+        ['PRISTART'        , '172 0 0 0'],
+        ['PRISTOP'         , '177 0 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'     , '172 1 0'],
-        ['SECSTOP'      , '177 0 0'],
+        ['SECSTART'     , '172 1 0 0'],
+        ['SECSTOP'      , '177 0 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
@@ -664,25 +635,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'junsol_smin':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '172'],
         ['SOURCE'       , source],
-        ['SOURCE_START' , '172 0 0'],
-        ['PRISTART'        , '172 0 0'],
-        ['PRISTOP'         , '177 0 0'],
+        ['SOURCE_START' , '172 0 0 0'],
+        ['PRISTART'        , '172 0 0 0'],
+        ['PRISTOP'         , '177 0 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'     , '172 1 0'],
-        ['SECSTOP'      , '177 0 0'],
+        ['SECSTART'     , '172 1 0 0'],
+        ['SECSTOP'      , '177 0 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
@@ -699,25 +671,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'mareqx_smax':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '80'],
         ['SOURCE'       , source],
-        ['SOURCE_START' , '80 0 0'],
-        ['PRISTART'        , '80 0 0'],
-        ['PRISTOP'         , '85 0 0'],
+        ['SOURCE_START' , '80 0 0 0'],
+        ['PRISTART'        , '80 0 0 0'],
+        ['PRISTOP'         , '85 0 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'     , '80 1 0'],
-        ['SECSTOP'      , '85 0 0'],
+        ['SECSTART'     , '80 1 0 0'],
+        ['SECSTOP'      , '85 0 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
@@ -734,25 +707,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'mareqx_smin':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '80'],
         ['SOURCE'       , source],
-        ['SOURCE_START' , '80 0 0'],
-        ['PRISTART'        , '80 0 0'],
-        ['PRISTOP'         , '85 0 0'],
+        ['SOURCE_START' , '80 0 0 0'],
+        ['PRISTART'        , '80 0 0 0'],
+        ['PRISTOP'         , '85 0 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'     , '80 1 0'],
-        ['SECSTOP'      , '85 0 0'],
+        ['SECSTART'     , '80 1 0 0'],
+        ['SECSTOP'      , '85 0 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
@@ -769,25 +743,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'sepeqx_smax':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '264'],
         ['SOURCE'       , source],
-        ['SOURCE_START' , '264 0 0'],
-        ['PRISTART'        , '264 0 0'],
-        ['PRISTOP'         , '269 0 0'],
+        ['SOURCE_START' , '264 0 0 0'],
+        ['PRISTART'        , '264 0 0 0'],
+        ['PRISTOP'         , '269 0 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'     , '264 1 0'],
-        ['SECSTOP'      , '269 0 0'],
+        ['SECSTART'     , '264 1 0 0'],
+        ['SECSTOP'      , '269 0 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '40.'],     
         ['CTPOTEN'      , '60.'],
@@ -804,25 +779,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'sepeqx_smin':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_DAY'    , '264'],
         ['SOURCE'       , source],
-        ['SOURCE_START' , '264 0 0'],
-        ['PRISTART'        , '264 0 0'],
-        ['PRISTOP'         , '269 0 0'],
+        ['SOURCE_START' , '264 0 0 0'],
+        ['PRISTART'        , '264 0 0 0'],
+        ['PRISTOP'         , '269 0 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'     , '264 1 0'],
-        ['SECSTOP'      , '269 0 0'],
+        ['SECSTART'     , '264 1 0 0'],
+        ['SECSTOP'      , '269 0 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POWER'        , '18.'],     
         ['CTPOTEN'      , '30.'],
@@ -839,26 +815,27 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'nov2003_heelis_gpi':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_YEAR'   , '2003'],
         ['START_DAY'    , '323'],
         ['SOURCE'       , source],
-        ['SOURCE_START' , '323 0 0'],
-        ['PRISTART'        , '323 0 0'],
-        ['PRISTOP'         , '328 0 0'],
+        ['SOURCE_START' , '323 0 0 0'],
+        ['PRISTART'        , '323 0 0 0'],
+        ['PRISTOP'         , '328 0 0 0'],
         ['STEP'         , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'     , '323 1 0'],
-        ['SECSTOP'      , '328 0 0'],
+        ['SECSTART'     , '323 1 0 0'],
+        ['SECSTOP'      , '328 0 0 0'],
         ['SECOUT'       , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
@@ -878,13 +855,14 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'nov2003_weimer_imf':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+     
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 #
 # As of 11/16/15, the current trunk code for tiegcm_res2.5 will crash in the 
 #   first ~1.5 days if starting from tiegcm2.0 benchmark SOURCE history, and 
@@ -903,13 +881,13 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_YEAR'     , '2003'],
         ['START_DAY'      , '323'],
         ['SOURCE'         , source],
-        ['SOURCE_START'   , '323 0 0'],
-        ['PRISTART'          , '323 0 0'],
-        ['PRISTOP'           , '328 0 0'],
+        ['SOURCE_START'   , '323 0 0 0'],
+        ['PRISTART'          , '323 0 0 0'],
+        ['PRISTOP'           , '328 0 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'       , "'"+job.hist_dir+self.fullname+"_prim_001.nc"+"'"],
-        ['SECSTART'       , '323 1 0'],
-        ['SECSTOP'        , '328 0 0'],
+        ['SECSTART'       , '323 1 0 0'],
+        ['SECSTOP'        , '328 0 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_005.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2003001-2003365.nc'"],
@@ -930,26 +908,27 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'dec2006_heelis_gpi':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2006'],
         ['START_DAY'      , '330'],
         ['SOURCE'         , source],
-        ['SOURCE_START'   , '330 0 0'],
-        ['PRISTART'          , '330 0 0'],
-        ['PRISTOP'           , '360 0 0'],
+        ['SOURCE_START'   , '330 0 0 0'],
+        ['PRISTART'          , '330 0 0 0'],
+        ['PRISTOP'           , '360 0 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_005.nc','by','1'"],
-        ['SECSTART'       , '330 1 0'],
-        ['SECSTOP'        , '360 0 0'],
+        ['SECSTART'       , '330 1 0 0'],
+        ['SECSTOP'        , '360 0 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_032.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
@@ -969,26 +948,27 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'dec2006_weimer_imf':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2006'],
         ['START_DAY'      , '330'],
         ['SOURCE'         , source],
-        ['SOURCE_START'   , '330 0 0'],
-        ['PRISTART'          , '330 0 0'],
-        ['PRISTOP'           , '360 0 0'],
+        ['SOURCE_START'   , '330 0 0 0'],
+        ['PRISTART'          , '330 0 0 0'],
+        ['PRISTOP'           , '360 0 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_005.nc','by','1'"],
-        ['SECSTART'       , '330 1 0'],
-        ['SECSTOP'        , '360 0 0'],
+        ['SECSTART'       , '330 1 0 0'],
+        ['SECSTOP'        , '360 0 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_032.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2006001-2006365.nc'"],
@@ -1009,26 +989,26 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'whi2008_heelis_gpi':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2008'],
         ['START_DAY'      , '81'],
         ['SOURCE'         , source],
-        ['SOURCE_START'   , '81 0 0'],
-        ['PRISTART'          , '81 0 0'],
-        ['PRISTOP'           , '106 0 0'],
+        ['SOURCE_START'   , '81 0 0 0'],
+        ['PRISTART'          , '81 0 0 0'],
+        ['PRISTOP'           , '106 0 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
-        ['SECSTART'       , '81 1 0'],
-        ['SECSTOP'        , '106 0 0'],
+        ['SECSTART'       , '81 1 0 0'],
+        ['SECSTOP'        , '106 0 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
@@ -1052,26 +1032,27 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'whi2008_weimer_imf':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2008'],
         ['START_DAY'      , '81'],
         ['SOURCE'         , source],
-        ['SOURCE_START'   , '81 0 0'],
-        ['PRISTART'          , '81 0 0'],
-        ['PRISTOP'           , '106 0 0'],
+        ['SOURCE_START'   , '81 0 0 0'],
+        ['PRISTART'          , '81 0 0 0'],
+        ['PRISTOP'           , '106 0 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
-        ['SECSTART'       , '81 1 0'],
-        ['SECSTOP'        , '106 0 0'],
+        ['SECSTART'       , '81 1 0 0'],
+        ['SECSTOP'        , '106 0 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2008001-2008366.nc'"],
@@ -1096,13 +1077,14 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'jul2000_heelis_gpi':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42': # not available
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       if job.model_res == '2.5': 
         if int(job.step) > 15: 
@@ -1114,13 +1096,13 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_YEAR'     , '2000'],
         ['START_DAY'      , '192'],
         ['SOURCE'         , source],
-        ['SOURCE_START'   , '192 0 0'],
-        ['PRISTART'          , '192 0 0'],
-        ['PRISTOP'           , '202 0 0'],
+        ['SOURCE_START'   , '192 0 0 0'],
+        ['PRISTART'          , '192 0 0 0'],
+        ['PRISTOP'           , '202 0 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
-        ['SECSTART'       , '192 1 0'],
-        ['SECSTOP'        , '202 0 0'],
+        ['SECSTART'       , '192 1 0 0'],
+        ['SECSTOP'        , '202 0 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'HEELIS'"],
         ['GPI_NCFILE'     , "'"+tgcmdata+"/gpi_1960001-2015365.nc'"]
@@ -1144,13 +1126,14 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'jul2000_weimer_imf':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42': # not available
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 #
 # Note: As of tiegcm/trunk -r1248 (1/31/16), STEP=10 and OPDIFFCAP=6e8 are
 #       necessary for this run to succeed at 2.5-deg (resolution)
@@ -1167,13 +1150,13 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_YEAR'     , '2000'],
         ['START_DAY'      , '192'],
         ['SOURCE'         , source],
-        ['SOURCE_START'   , '192 0 0'],
-        ['PRISTART'          , '192 0 0'],
-        ['PRISTOP'           , '202 0 0'],
+        ['SOURCE_START'   , '192 0 0 0'],
+        ['PRISTART'          , '192 0 0 0'],
+        ['PRISTOP'           , '202 0 0 0'],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_003.nc','by','1'"],
-        ['SECSTART'       , '192 1 0'],
-        ['SECSTOP'        , '202 0 0'],
+        ['SECSTART'       , '192 1 0 0'],
+        ['SECSTOP'        , '202 0 0 0'],
         ['SECOUT'         , "'"+job.hist_dir+self.fullname+"_sech_001.nc','to','"+job.hist_dir+self.fullname+"_sech_025.nc','by','1'"],
         ['POTENTIAL_MODEL', "'WEIMER'"],
         ['IMF_NCFILE'     , "'"+tgcmdata+"/imf_OMNI_2000001-2000366.nc'"],
@@ -1207,13 +1190,14 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'climatology_smin':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 #
 # 5-deg model at 60-sec timestep can simulate a full year in < 12 hours:
 #   step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
@@ -1229,8 +1213,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_YEAR'     , "2002  ! arbitrary for climatology run"], 
         ['START_DAY'      , '1'],
         ['SOURCE'         , source],
-        ['SOURCE_START'   , '1 0 0'],
-        ['PRISTART'          , '1 0 0'],
+        ['SOURCE_START'   , '1 0 0 0'],
+        ['PRISTART'          , '1 0 0 0'],
         ['PRISTOP'           , stop],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_020.nc','by','1'"],
@@ -1260,13 +1244,14 @@ NUMBER\tNAME\t\tDESCRIPTION
 #
     elif self.name == 'climatology_smax':
 
-      if version == 'tiegcm1.95' or version == 'timegcm1.42':
-        source = self.make_oldsource(tgcmdata,version,res)
-      else:
-        source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
-        if not os.path.isfile(source):
-          fullname = self.fullname.replace(job.model_tag,"")
-          source =  "'"+tgcmdata+"/"+fullname+"_prim.nc'"
+    
+      source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
+      if not os.path.isfile(source):
+        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
+        fullname = self.fullname.replace(job.model_tag,"")
+        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 #
 # 5-deg model at 60-sec timestep can simulate a full year in < 12 hours:
 #   step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
@@ -1287,8 +1272,8 @@ NUMBER\tNAME\t\tDESCRIPTION
         ['START_YEAR'     , "2002  ! arbitrary for climatology run"], 
         ['START_DAY'      , '1'],
         ['SOURCE'         , source],
-        ['SOURCE_START'   , '1 0 0'],
-        ['PRISTART'          , '1 0 0'],
+        ['SOURCE_START'   , '1 0 0 0'],
+        ['PRISTART'          , '1 0 0 0'],
         ['PRISTOP'           , stop],
         ['STEP'           , job.step],
         ['OUTPUT'         , "'"+job.hist_dir+self.fullname+"_prim_001.nc','to','"+job.hist_dir+self.fullname+"_prim_020.nc','by','1'"],

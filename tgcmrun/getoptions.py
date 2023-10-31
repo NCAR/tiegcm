@@ -2,6 +2,7 @@ import argparse,sys,os
 from classes import Run,Job
 from utils import getenv
 
+
 #-----------------------------------------------------------------------
 def get_args():
   description='''\
@@ -46,9 +47,18 @@ def get_args():
   help_model_name = "Model name (either 'tiegcm' or 'timegcm')"
   help_model_res  = "Model resolution (either 5.0 or 2.5 degrees)"
   help_model_root = "Model root directory (default: env vars TIEGCM_ROOT or TIMEGCM_ROOT)"
+
+  help_horires = ""
+  help_vertres = ""
+  help_zitop = ""
+  help_mres = ""
+  help_coupling = ""
+
   help_machine    = "Machine or platform (either 'ch' (cheyenne) or 'linux' (generic Linux))"
   help_execdir    = "Directory where model will be built and executed (default: env var TGCMTEMP)"
-  help_bindir    = "Directory where model executable will be saved (default: env var TGCMTEMP/bin)"
+
+  help_bindir    = "Directory where model executable will be saved (default: env var TGCMTEMP/bin)" ###Change
+
   help_tgcmdata   = "Path to data files needed by the model (default: env var TGCMDATA)"
   help_nprocs     = "Number of processors (total MPI tasks)"
   help_project    = "Authorized NCAR project number, e.g.: #PBS -P P28100036 (ch only)"
@@ -65,7 +75,14 @@ def get_args():
     ['run_name'   , help_run_name],
     ['run_number' , help_run_number],
     ['model_name' , help_model_name],
-    ['model_res'  , help_model_res],
+    ['model_res'  , help_model_res], #depricated
+
+    ['horires' , help_horires], #valid horires [5,2.5,0.125.0.625]
+    ['vertres' , help_vertres], #valid vertres [0.5,0.25,0.125,0.0625]
+    ['zitop' , help_zitop],
+    ['mres' , help_mres],
+    ['coupling', help_coupling],
+
     ['model_root' , help_model_root],
     ['machine'    , help_machine],
     ['compiler'   , help_compiler],
@@ -89,6 +106,7 @@ def get_args():
 
 #-----------------------------------------------------------------------
 def get_options(arg,run,job,option):
+  
 #
 # arg is the needed argument (string).
 # 'run' and 'job' are partially defined objects (if promting, order of 
@@ -100,7 +118,9 @@ def get_options(arg,run,job,option):
 #
 # If run_name is not on command line, get it by printing a list, and 
 # prompting the user for the run number:
-# 
+#
+  valid_horires = ['5.0','2.5','0.125','0.625']
+  valid_vertres = ['0.5','0.25','0.125','0.0625']
   if arg == 'run_number':
     if run.name:            # use this if it was set on the command line
         return run.get_number(run.name)
@@ -224,6 +244,7 @@ def get_options(arg,run,job,option):
         print('>>> Model root ',rootdir,' exists, but scripts directory ',scripts_dir,' does not exist.')
         get_options(arg,run,job,option) # try again
       return rootdir
+
 #
 # Get desired model resolution (5.0 or 2.5):
 #
@@ -233,6 +254,7 @@ def get_options(arg,run,job,option):
         print('>>> Unknown model resolution on the command line: ',option,"' (must be 5.0 or 2.5)")
         sys.exit()
       run.model_res = option
+    '''
     else:
       answer = ''
       while answer != '5.0' and answer != '2.5':
@@ -246,29 +268,136 @@ def get_options(arg,run,job,option):
           print('>>> Unknown model resolution (must be 5.0 or 2.5)')
         run.model_res = answer
     return run.model_res
+    '''
+#
+# Horires
+#
+  elif arg == 'horires':
+    if option:
+      if option not in valid_horires:
+        print(f'>>> Unknown horires resolution on the command line: {option} (must be {valid_horires})')
+        sys.exit()
+      run.horires = option
+    else:
+      answer = ''
+      while answer not in valid_horires:
+        answer = input(f"Run {run.name}: Enter horires resolution ({valid_horires}, default=5.0): ")
+        if answer == 'q':
+          sys.exit()
+        elif answer == '':
+          horires = '5.0' 
+          answer = horires
+        elif answer not in valid_horires:
+          print(f'>>> Unknown horires resolution (must be {valid_horires})')
+        run.horires = answer
+    return run.horires
+
+#
+#
+#
+
+#
+# vertres
+#
+  elif arg == 'vertres':
+    if option:
+      if option not in valid_vertres:
+        print(f'>>> Unknown vertres resolution on the command line: {option} (must be {valid_vertres})')
+        sys.exit()
+      run.vertres = option
+    else:
+      answer = ''
+      while answer not in valid_vertres:
+        horires_index = valid_horires.index(job.horires)
+        defalut_vertres = valid_vertres[horires_index]
+        answer = input(f"Run {run.name}: Enter vertres resolution ({valid_vertres}, default={defalut_vertres}): ")
+        if answer == 'q':
+          sys.exit()
+        elif answer == '':
+          vertres = defalut_vertres 
+          answer = vertres
+        elif answer not in valid_vertres:
+          print(f'>>> Unknown vertres resolution (must be {defalut_vertres})')
+        run.vertres = answer
+    return run.vertres
+#
+#
+#
+  elif arg == 'mres':
+    if option:
+      run.mres = option
+    else:
+      run.mres = '2'
+    return run.mres
+#
+# zitop
+#
+  elif arg == 'zitop':
+    if option:
+      try:
+          # First, validate if 'option' is a proper float value
+          option_value = float(option)
+          if option_value < 7 or option_value > 11:
+              print(f'>>> Unknown zitop: {option} (must be a value between 7 and 11)')
+              sys.exit()
+          else:
+              run.zitop = option
+      except ValueError:
+          # Handle the case where 'option' is not a valid float
+          print(f'>>> Invalid zitop value: {option}. It must be a numeric value.')
+          sys.exit()
+    else:
+      while True:  # It's more standard to use 'True' for these kinds of loops
+        answer = input(f"Run {run.name}: Enter zitop resolution (A value between 7 and 11, default= 7): ")
+        if answer.lower() == 'q':  # Also, consider making the quit command case-insensitive
+          sys.exit()
+        elif answer == '':
+          answer = '7'  # If the user presses Enter without typing, default to '7'
+
+        # Validate the 'answer' input
+        try:
+          answer_value = float(answer)
+          if 7 <= answer_value <= 11:
+              run.zitop = answer
+              break  # If a valid value is received, exit the loop
+          else:
+              print(f'>>> Unknown zitop resolution (must be a value between 7 and 11)')
+        except ValueError:
+          # If 'answer' is not a valid float, notify the user
+          print(f'>>> Invalid input: {answer}. Please enter a numeric value between 7 and 11.')       
+    return run.zitop
+#
+#
+#
+
+
+
 #
 # Machine/platform:
 #
   elif arg == 'machine':
     if option:
-      if option not in ['ch','linux']:
+      if option not in ['ch','de','linux']:
         print('>>> Unrecognized machine type found on command line: ',option)
-        print("    Machine must be either 'ch' (cheyenne) or 'linux'")
+        print("    Machine must be either 'de' (derecho), 'ch' (cheyenne) or 'linux'")
         sys.exit()
       job.machine = option
     else:
       job.machine = ''
       for line in os.popen('uname -a'): uname = line
-      loc = uname.find('cheyenne')
+      loc_ch = uname.find('cheyenne')
+      loc_de = uname.find('derecho')
       print(  uname), uname 
-      if loc >= 0:
+      if loc_ch >= 0:
         job.machine = 'ch'
+      elif loc_de >= 0:
+        job.machine = 'de'
       else:
         loc = uname.find('Linux')
         if loc >= 0:
           job.machine = 'linux'
       if job.machine == '':
-        print(">>> Could not determine machine (must be either 'linux' or 'ch')")
+        print(">>> Could not determine machine (must be either 'linux', 'de' or 'ch')")
         sys.exit()
     return job.machine
 #
@@ -432,6 +561,14 @@ def get_options(arg,run,job,option):
 #
 # Execute flag (TRUE/FALSE):
 #
+  elif arg == 'coupling':
+    if option:
+      job.coupling = option
+      return job.coupling
+
+#
+# Coupling flag (TRUE/FALSE):
+#
   elif arg == 'execute':
     if option:
       job.execute = option
@@ -478,8 +615,11 @@ def get_options(arg,run,job,option):
     if option:
       return option
     else:
-      if job.model_res == '5.0': step = '60'
-      if job.model_res == '2.5': step = '30'
+      if job.horires == '5.0': step = '60'
+      if job.horires == '2.5': step = '30'
+      if job.horires == '1.25': step = '10'
+      if job.horires == '0.625': step = '5'
+
       return step
 #
 # Source history file:
