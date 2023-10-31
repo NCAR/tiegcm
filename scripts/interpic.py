@@ -144,7 +144,6 @@ def interpic(fin, hres, vres, zitop, fout):
         for name in variable.ncattrs():
             setattr(varout, name, getattr(variable, name))
 
-        print(varname)
         if varname == 'time':
             varout[:] = variable[:]
         elif varname == 'lon':
@@ -155,10 +154,10 @@ def interpic(fin, hres, vres, zitop, fout):
             varout[:] = lev
         elif varname == 'ilev':
             varout[:] = ilev
+
+        #Skip these variables
         elif varname in ['lat_bnds','lon_bnds','gw','area']:
             continue
-            print(np.shape(varout),np.shape(lat0_bnd),np.shape(variable))
-            varout[:] = lat0_bnd
 
         # Change from old format (3 digits) to new format (4 digits)
         elif varname == 'mtime':
