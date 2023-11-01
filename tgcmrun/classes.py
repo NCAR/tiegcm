@@ -305,11 +305,6 @@ class Job:
       elif '#PBS -l walltime' in line and '##PBS -l walltime' not in line:
         if self.wallclock:
           newline = '#PBS -l walltime='+self.wallclock
-        else:
-          if run.model_res == '5.0':
-            newline = '#PBS -l walltime='+run.wc50_default
-          else:
-            newline = '#PBS -l walltime='+run.wc25_default
         f.write(newline+'\n')
 #
 # Project number (ys only) (command-line only), e.g.: #PBS -A P28100036
@@ -356,7 +351,7 @@ class Job:
 # if compiler=='gfort', then makefile is Make.gfort_hao64
 #
       elif 'set make' in line:
-        if self.machine != 'ch' and self.machine != 'de':
+        if self.machine != 'ch' and self.machine != 'de' and self.machine != 'pf':
           if self.compiler == 'intel':
             newline = 'set make = Make.intel_hao64'
           elif self.compiler == 'pgi':
@@ -370,6 +365,8 @@ class Job:
           newline = 'set make = Make.intel_ch'
         elif  self.machine == 'de':
           newline = 'set make = Make.intel_de'
+        elif  self.machine == 'pf':
+          newline = 'set make = Make.intel_pf'
         f.write(newline+'\n')
 #
 # Otherwise, no change to this line in default job script:
@@ -502,7 +499,11 @@ NUMBER\tNAME\t\tDESCRIPTION
       n = n+1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   def set_run(self,job,tgcmdata):
-#
+    if job.machine == 'de' or job.machine == 'ch':
+      prim_loc = '/glade/work/nikhilr/tiegcm3.0/prim'
+    elif job.machine == 'pf':
+      prim_loc = '/nobackup/nrao3/tiegcm/data/prim'
+
 # Note: after going to tiegcm2.0, the model_res argument will no longer be necessary. 
 #
 # Set namelist modifications for each run:
@@ -529,11 +530,15 @@ NUMBER\tNAME\t\tDESCRIPTION
 
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
           
 
       self.list_mods = [ 
@@ -566,11 +571,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -602,11 +611,15 @@ NUMBER\tNAME\t\tDESCRIPTION
       
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -638,11 +651,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -674,11 +691,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -710,11 +731,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -746,11 +771,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [ 
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -782,11 +811,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -818,11 +851,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
@@ -858,11 +895,15 @@ NUMBER\tNAME\t\tDESCRIPTION
      
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 #
 # As of 11/16/15, the current trunk code for tiegcm_res2.5 will crash in the 
 #   first ~1.5 days if starting from tiegcm2.0 benchmark SOURCE history, and 
@@ -911,11 +952,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -951,11 +996,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -991,11 +1040,15 @@ NUMBER\tNAME\t\tDESCRIPTION
 
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1035,11 +1088,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1080,11 +1137,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
       if job.model_res == '2.5': 
         if int(job.step) > 15: 
@@ -1129,11 +1190,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 #
 # Note: As of tiegcm/trunk -r1248 (1/31/16), STEP=10 and OPDIFFCAP=6e8 are
 #       necessary for this run to succeed at 2.5-deg (resolution)
@@ -1193,11 +1258,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 #
 # 5-deg model at 60-sec timestep can simulate a full year in < 12 hours:
 #   step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
@@ -1247,11 +1316,15 @@ NUMBER\tNAME\t\tDESCRIPTION
     
       source =  "'"+tgcmdata+"/"+self.fullname+"_prim.nc'"
       if not os.path.isfile(source):
-        fin = find_file('*'+self.name+'*', '/glade/work/nikhilr/tiegcm3.0/prim')
         fullname = self.fullname.replace(job.model_tag,"")
-        fout = job.stdout_dir+"/"+fullname+"_prim.nc"
-        interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
-        source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        sec_source = job.stdout_dir+"/"+fullname+"_prim.nc"
+        if not os.path.isfile(sec_source):
+          fin = find_file('*'+self.name+'*', prim_loc)          
+          fout = job.stdout_dir+"/"+fullname+"_prim.nc"
+          interpic(fin,float(job.horires),float(job.vertres),float(job.zitop),fout)
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+        else:
+          source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 #
 # 5-deg model at 60-sec timestep can simulate a full year in < 12 hours:
 #   step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours

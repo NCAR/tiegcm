@@ -377,9 +377,9 @@ def get_options(arg,run,job,option):
 #
   elif arg == 'machine':
     if option:
-      if option not in ['ch','de','linux']:
+      if option not in ['ch','de','pf','linux']:
         print('>>> Unrecognized machine type found on command line: ',option)
-        print("    Machine must be either 'de' (derecho), 'ch' (cheyenne) or 'linux'")
+        print("    Machine must be either 'de' (derecho), 'ch' (cheyenne), 'pf' (pleiades) or 'linux'")
         sys.exit()
       job.machine = option
     else:
@@ -387,17 +387,20 @@ def get_options(arg,run,job,option):
       for line in os.popen('uname -a'): uname = line
       loc_ch = uname.find('cheyenne')
       loc_de = uname.find('derecho')
+      loc_pf = uname.find('pfe')
       print(  uname), uname 
       if loc_ch >= 0:
         job.machine = 'ch'
       elif loc_de >= 0:
         job.machine = 'de'
+      elif loc_pf >= 0:
+        job.machine = 'pf'
       else:
         loc = uname.find('Linux')
         if loc >= 0:
           job.machine = 'linux'
       if job.machine == '':
-        print(">>> Could not determine machine (must be either 'linux', 'de' or 'ch')")
+        print(">>> Could not determine machine (must be either 'linux', 'de', 'ch' or 'pf')")
         sys.exit()
     return job.machine
 #
@@ -502,8 +505,10 @@ def get_options(arg,run,job,option):
       tgcmdata = option
     else:
       default_tgcmdata = ''
-      if job.machine == 'ch':
+      if job.machine == 'ch' or 'de':
         default_tgcmdata = '/glade/p/hao/tgcm/data'
+      elif job.machine == 'pf':
+        default_tgcmdata = '/nobackup/nrao3/tiegcm/data/gswm'
       else:
         tgcmdata = getenv('TGCMDATA',default=default_tgcmdata)
       tgcmdata = default_tgcmdata
