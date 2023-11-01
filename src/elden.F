@@ -72,7 +72,7 @@
 !     call addfld('XIOP2D' ,' ',' ',xiop2d(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
-      idx = minloc(abs(zpmid-9))
+      idx = minloc(abs(zpmid-7))
 !
       do i=lon0,lon1
 !

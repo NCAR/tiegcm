@@ -136,18 +136,18 @@
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
       do i=lon0,lon1
-        if (abs(rlatm(i,lat))-pi/4.5 >= 0.) then
+        if (abs(rlatm(i,lat)) >= pi/4.5) then
           a(i) = 1.
 !       else
 !         a(i) = .5*(1.+sin(pi*(abs(rlatm(i,lat))-pi/9.)/(pi/4.5)))
 ! Dang, 2019, set a(i)=0 between +10 and -10 magnetic latitude          
-        elseif (abs(rlatm(i,lat))-pi/18 <= 0.) then
+        elseif (abs(rlatm(i,lat)) <= pi/18.) then
           a(i) = 0.
         else 
 ! Dang, 2019, change parameter: pi/9.->pi/12., pi/4.5->6, per Hanli and Wenbin
 !         a(i) = .5*(1.+sin(pi*(abs(rlatm(i,lat))-pi/12.)/(pi/6.)))
 ! Pham, 2021, try to fix huge gradients in low lat 
-          a(i) = .5*(1.+cos(pi*(abs(rlatm(i,lat))-pi/4.5)/(pi/6.)))
+          a(i) = .5*(1.+cos(abs(rlatm(i,lat))*6.-pi*4./3.))
         endif 
 !
 ! Increased heat flux for TE fom protonosphere.

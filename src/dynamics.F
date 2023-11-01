@@ -405,16 +405,16 @@
       if (debug) write(6,"('dynamics after oplus')")
 !
 ! Save diagnostic tec (total electron content):
-      call mkdiag_TEC('TEC',tec,z(:,:,:,itc),ne(:,:,:,itc),
-     |  k0,k1,i0,i1,lat0,lat1)
+      call mkdiag_TEC('TEC',tec,z(:,i0:i1,lat0:lat1,itc),
+     |  ne(:,i0:i1,lat0:lat1,itc),k0,k1,i0,i1,lat0,lat1)
 !
 ! Save diagnostics hmf2, nmf2:
-      call mkdiag_HNMF2('HMF2',z(:,:,:,itc),ne(:,:,:,itc),
-     |  k0,k1,i0,i1,lat0,lat1)
-      call mkdiag_HNMF2('NMF2',z(:,:,:,itc),ne(:,:,:,itc),
-     |  k0,k1,i0,i1,lat0,lat1)
-      call mkdiag_HNMF2('FOF2',z(:,:,:,itc),ne(:,:,:,itc),
-     |  k0,k1,i0,i1,lat0,lat1)
+      call mkdiag_HNMF2('HMF2',z(:,i0:i1,lat0:lat1,itc),
+     |  ne(:,i0:i1,lat0:lat1,itc),k0,k1,i0,i1,lat0,lat1)
+      call mkdiag_HNMF2('NMF2',z(:,i0:i1,lat0:lat1,itc),
+     |  ne(:,i0:i1,lat0:lat1,itc),k0,k1,i0,i1,lat0,lat1)
+      call mkdiag_HNMF2('FOF2',z(:,i0:i1,lat0:lat1,itc),
+     |  ne(:,i0:i1,lat0:lat1,itc),k0,k1,i0,i1,lat0,lat1)
 !
 ! Ions and electron density are at interface levels (ilev):
       do lat=lat0,lat1

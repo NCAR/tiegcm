@@ -87,7 +87,7 @@
       delta(:,2)=(/0.,1.,0./)
       delta(:,3)=(/0.,0.,1./)
       t00=273.
-      small = 1.e-8
+      small = 1.e-9
       i0=lon0 ; i1=lon1 ; k0=lev0 ; k1=lev1
 !
       nk = lev1-lev0+1

@@ -277,6 +277,7 @@ C Calculate the mechanical work done by wind
      |  mp_bndlats_f3d,mp_bndlons_f3d
 
       integer,parameter :: nf2d = 11, nf3d = 12
+      integer :: k
       real,dimension(lon0-2:lon1+2,lat0-2:lat1+2,nf2d) :: f2d
       real,dimension(nlevp1,lon0-2:lon1+2,lat0-2:lat1+2,nf3d) :: f3d
 
@@ -307,34 +308,38 @@ C Calculate the mechanical work done by wind
       famiev = f2d(:,:,10)
       tec = f2d(:,:,11)
 
-      f3d(:,:,:,1) = qwind_sec
-      f3d(:,:,:,2) = qamie_sec
-      f3d(:,:,:,3) = work_sec
-      f3d(:,:,:,4) = wtot_sec
-      f3d(:,:,:,5) = fwindu_sec
-      f3d(:,:,:,6) = fwindv_sec
-      f3d(:,:,:,7) = famieu_sec
-      f3d(:,:,:,8) = famiev_sec
-      f3d(:,:,:,9) = tec_sec
-      f3d(:,:,:,10) = ped_sec
-      f3d(:,:,:,11) = hall_sec
-      f3d(:,:,:,12) = qjoule_sec
+      do k = 1,nlevp1
+        f3d(k,:,:,1) = qwind_sec(:,:,k)
+        f3d(k,:,:,2) = qamie_sec(:,:,k)
+        f3d(k,:,:,3) = work_sec(:,:,k)
+        f3d(k,:,:,4) = wtot_sec(:,:,k)
+        f3d(k,:,:,5) = fwindu_sec(:,:,k)
+        f3d(k,:,:,6) = fwindv_sec(:,:,k)
+        f3d(k,:,:,7) = famieu_sec(:,:,k)
+        f3d(k,:,:,8) = famiev_sec(:,:,k)
+        f3d(k,:,:,9) = tec_sec(:,:,k)
+        f3d(k,:,:,10) = ped_sec(:,:,k)
+        f3d(k,:,:,11) = hall_sec(:,:,k)
+        f3d(k,:,:,12) = qjoule_sec(:,:,k)
+      enddo
 
       call mp_bndlats_f3d(f3d,nlevp1,lon0,lon1,lat0,lat1,nf3d)
       call mp_bndlons_f3d(f3d,nlevp1,lon0,lon1,lat0,lat1,nf3d,0)
 
-      qwind_sec = f3d(:,:,:,1)
-      qamie_sec = f3d(:,:,:,2)
-      work_sec = f3d(:,:,:,3)
-      wtot_sec = f3d(:,:,:,4)
-      fwindu_sec = f3d(:,:,:,5)
-      fwindv_sec = f3d(:,:,:,6)
-      famieu_sec = f3d(:,:,:,7)
-      famiev_sec = f3d(:,:,:,8)
-      tec_sec = f3d(:,:,:,9)
-      ped_sec = f3d(:,:,:,10)
-      hall_sec = f3d(:,:,:,11)
-      qjoule_sec = f3d(:,:,:,12)
+      do k = 1,nlevp1
+        qwind_sec(:,:,k) = f3d(k,:,:,1)
+        qamie_sec(:,:,k) = f3d(k,:,:,2)
+        work_sec(:,:,k) = f3d(k,:,:,3)
+        wtot_sec(:,:,k) = f3d(k,:,:,4)
+        fwindu_sec(:,:,k) = f3d(k,:,:,5)
+        fwindv_sec(:,:,k) = f3d(k,:,:,6)
+        famieu_sec(:,:,k) = f3d(k,:,:,7)
+        famiev_sec(:,:,k) = f3d(k,:,:,8)
+        tec_sec(:,:,k) = f3d(k,:,:,9)
+        ped_sec(:,:,k) = f3d(k,:,:,10)
+        hall_sec(:,:,k) = f3d(k,:,:,11)
+        qjoule_sec(:,:,k) = f3d(k,:,:,12)
+      enddo
 
       end subroutine dyndiag_bndlatlon
 !-----------------------------------------------------------------------

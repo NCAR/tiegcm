@@ -286,7 +286,7 @@ cat << EOF >! $runscript
 #PBS -l select=${nnodes}:ncpus=${ncores_per_node}:mpiprocs=${ncores_per_node}
 #PBS -l walltime=$walltime
 
-export TGCMDATA=$tgcmdata
+setenv TGCMDATA $tgcmdata
 
 # Execute:
 cd $execdir

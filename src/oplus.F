@@ -946,11 +946,14 @@
 !
 ! Longitude loop:
         do i=lon0,lon1
-          if (abs(rlatm(i,lat))-pi/24.>=0.) then
+!
+! Change upper boundary flux as electron heat flux in settei
+          if (abs(rlatm(i,lat)) >= pi/4.5) then
             a(i) = 1.
+          elseif (abs(rlatm(i,lat)) <= pi/18.) then
+            a(i) = 0.
           else
-            a(i)=.5*(1.+sin(pi*(abs(rlatm(i,lat))-pi/48.)/(pi/24.)))
-            if (a(i) < 0.05) a(i) = 0.05
+            a(i) = .5*(1.+cos(abs(rlatm(i,lat))*6.-pi*4./3.))
           endif
           fed(i) = phid*a(i)
           fen(i) = phin*a(i)

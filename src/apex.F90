@@ -259,9 +259,18 @@ subroutine apex_mka(date,gplat,gplon,gpalt,nlat,nlon,nalt,ier)
 ! (these also are not deallocated by this module)
 !
   nglon=nlon ; nglat=nlat ; ngalt=nalt
-  allocate(geolat(nglat),stat=istat)
-  allocate(geolon(nglon),stat=istat)
-  allocate(geoalt(ngalt),stat=istat)
+  if (.not. allocated(geolat)) then
+    allocate(geolat(nglat),stat=istat)
+    if (istat /= 0) stop 'allocate geolat'
+  endif
+  if (.not. allocated(geolon)) then
+    allocate(geolon(nglon),stat=istat)
+    if (istat /= 0) stop 'allocate geolon'
+  endif
+  if (.not. allocated(geoalt)) then
+    allocate(geoalt(ngalt),stat=istat)
+    if (istat /= 0) stop 'allocate geoalt'
+  endif
   geolat(:) = gplat(:)
   geolon(:) = gplon(:)
   geoalt(:) = gpalt(:)

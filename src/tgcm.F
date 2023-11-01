@@ -10,7 +10,7 @@
 ! initial cvs import was tiegcm1
 !
       use input_module,only: input,dynamo,step,cwd,hpss_path,
-     |  potential_model,start_year
+     |  potential_model,start_year,start_day
       use dispose_module,only: init_dispose
       use init_module,only: init
       use hist_module,only: nstep
@@ -88,7 +88,7 @@
         call timer(time0_apx,time1_apx,'APXPARM',0,0)
         write(6,"('tgcm: dynamo=',i2,' -- calling apxparm: start_year=',
      |    i5)") dynamo,start_year
-        call apxparm(real(start_year))
+        call apxparm(start_year+start_day/366.)
         call timer(time0_apx,time1_apx,'APXPARM',1,0)
         write(6,"('Time in apxparm = ',f7.3,' (secs)')") time1_apx
       endif

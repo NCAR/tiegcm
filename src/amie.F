@@ -495,63 +495,7 @@
       data ndmon_lp                                ! leap year
      |  /31,60,91,121,152,182,213,244,274,305,335,366,397/ 
 !
-! Reading Charley Barth's auroral modification factor
-      integer, parameter:: nxtimes=47
-      integer :: nxyear,nxday(nxtimes)
-      real :: fxfact_nh, fxfact_sh,fxtime,fxtime1,fxtime2
-      real, dimension(nxtimes):: ut_nh,ut_sh,fx_nh,fx_sh
 ! 
-! External:
-      real,external :: finterp
-!
-      nxyear = 1998
-      nxday(1:nxtimes)=(/267,
-     |  267, 267, 267, 267, 267, 267, 267,
-     |  267, 267, 267, 267, 267, 267, 267,
-     |  267, 268, 268, 268, 268, 268, 268, 
-     |  268, 268, 268, 268, 268, 268, 268, 
-     |  268, 268, 269, 269, 269, 269, 269, 
-     |  269, 269, 269, 269, 269, 269, 269, 
-     |  269, 269, 269, 270/)
-      ut_nh(1:nxtimes)=(/0.0,
-     |   0.68872, 2.28569, 3.88347, 5.47933, 7.07654, 8.67133, 
-     |   10.2672, 11.8640, 13.4619, 15.0575, 16.6542, 18.2520, 
-     |   19.8473, 21.4437, 23.0409, 0.63913, 2.23508, 3.83221, 
-     |   5.42711, 7.02325, 8.62048, 10.2171, 11.8147, 13.4118, 
-     |   15.0064, 16.6022, 18.1989, 19.7967, 21.3921, 22.9884, 
-     |   0.58565, 2.18393, 3.78000, 5.37563, 6.97244, 8.56865, 
-     |   10.1659, 11.7654, 13.3620, 14.9582, 16.5557, 18.1509,  
-     |   19.7470, 21.3442, 22.9422,  0./)
-      fx_nh(1:nxtimes)=(/1.0,
-     |  0.954679, 1.01677, 0.805276, 0.662938, 0.680216, 1.09095, 
-     |  0.883288,0.972496, 0.720709, 0.579112, 0.818075, 1.28912, 
-     |   1.35952, 1.36740,  1.03170,  1.34414,  1.53157, 0.90830, 
-     |  0.824193, 1.10184,  1.35307, 0.999406, 0.788716, 0.76273, 
-     |  0.647832, 0.57241,  0.52249,  1.48004,  2.36089, 1.86270,  
-     |   1.87322, 1.80098,  1.57992,  1.33901,  1.21373, 1.42878, 
-     |   1.28782,  1.2731,  1.31435,  1.13873, 0.984014, 1.04712,
-     |   1.48459, 1.75276,  1.94827,  1./)
-
-      ut_sh(1:nxtimes)=(/0.0,
-     |  0.104409, 1.70090,  3.29847,  4.89378,  6.49047, 8.08820,  
-     |   9.68356, 11.2801,  12.8777,  14.4745,  16.0726, 17.6666, 
-     |   19.2649, 20.8609,  22.4578,  0.05568,  1.65123, 3.24788,  
-     |   4.84236, 6.44144,  8.03825,  9.63280,  11.2301, 12.8267,  
-     |   14.4227, 16.0197,  17.6161,  19.2119,  20.8103, 22.4062,  
-     |   0.02522, 1.59759,  3.19667,  4.79183,  6.38823, 7.98401, 
-     |   9.58092, 11.1789,  12.7793,  14.3752,  15.9723, 17.5671,
-     |   19.1629, 20.7597,  22.3572,  0./)
-
-      fx_sh(1:nxtimes)=(/1.0,
-     |  0.544252, 0.487370, 0.572375, 0.605849, 0.605344, 0.776822, 
-     |  0.895618, 0.641604, 0.590224, 0.638560, 0.739044, 0.863948,  
-     |   1.22977,  1.16256, 0.881014, 0.669191, 0.617876, 0.498846, 
-     |  0.998803, 0.826644, 0.899562,  1.41258,  1.05342, 0.972168,  
-     |   1.00838,  1.50718,  2.00560,  2.01770,  1.85613,  1.31682, 
-     |  0.920968,  1.64630,  2.33071,  1.96759,  1.83485,  1.79565, 
-     |   1.74479,  1.52049,  1.76034,  1.85011,  1.32154,  1.19636,
-     |   1.28152, 1.42212,  1.49638,  1./)
-!
       if (iprint > 0) then
         write(6,"(/,72('-'))")
         write(6,"('GETAMIE:')")
@@ -590,69 +534,6 @@
       model_ut = float(iutsec)/3600.
 
       maxefx=50.
-      if (iyear==2004 .and. amieday==314 .and. abs(model_ut-7.333)<0.1) 
-     |      maxefx=21.
-      if (iyear==2004 .and. amieday==314 .and. abs(model_ut-8.833)<0.1) 
-     |      maxefx=14.
-      if (iyear==2004 .and. amieday==318) maxefx=10.
-      if (iyear==2004 .and. amieday==318 .and. model_ut < 5.75) 
-     |      maxefx=3.
-      if (iyear==2004 .and. amieday==318 .and. abs(model_ut-4.75)<0.1) 
-     |      maxefx=1.
-      if (iyear==2004 .and. amieday==318 .and. abs(model_ut-21.0)<0.1) 
-     |      maxefx=2.
-
-! Find out the multiplication factor from Charley Barth
-      fxfact_nh = 1.
-      fxfact_sh = 1.
-      if (nxyear == iyear) then
-! For the southern hemisphere
-	iset = 0
-	iset1 = nxtimes
-        do i=1,nxtimes
-          fxtime=(nxday(i)-iday)*24.+ut_nh(i)
-	  if (fxtime < model_ut) iset=i
-	enddo
-	iset1 = iset + 1
-	if (iset==0) iset=1
-	if (iset==nxtimes) iset1=iset
-        fxtime1=(iday-nxday(iset))*24.+ut_nh(iset)
-        fxtime2=(iday-nxday(iset1))*24.+ut_nh(iset1)
-	denoma = fxtime2 - fxtime1
-	if (denoma == 0.) then
-	  f1 = 1.
-	  f2 = 0.
-	else
-!	  f1 = (fxtime2-model_ut)/denoma
-!	  f2 = (model_ut-fxtime1)/denoma
-	  f1 = (fxtime2-(model_ut+(modeltime(1)-jday(i))*24.))/denoma
-	  f2 = (model_ut+(modeltime(1)-jday(i))*24.-fxtime1)/denoma
-	endif
-	fxfact_nh = f1*fx_nh(iset)+f2*fx_nh(iset1)
-! For the southern hemisphere
-	iset = nxtimes
-	iset1 = nxtimes
-        do i=1,nxtimes
-          fxtime=(nxday(i)-iday)*24.+ut_sh(i)
-!	  if (fxtime < model_ut) iset=i
-	  if (fxtime < model_ut+(modeltime(1)-jday(i))*24.) iset=i
-	enddo
-	iset1 = iset + 1
-	if (iset==nxtimes) iset1=iset
-        fxtime1=(iday-nxday(iset))*24.+ut_sh(iset)
-        fxtime2=(iday-nxday(iset1))*24.+ut_sh(iset1)
-	denoma = fxtime2 - fxtime1
-	if (denoma == 0.) then
-	  f1 = 1.
-	  f2 = 0.
-	else
-!	  f1 = (fxtime2-model_ut)/denoma
-!	  f2 = (model_ut-fxtime1)/denoma
-	  f1 = (fxtime2-(model_ut+(modeltime(1)-jday(i))*24.))/denoma
-	  f2 = (model_ut+(modeltime(1)-jday(i))*24.-fxtime1)/denoma
-	endif
-	fxfact_sh = f1*fx_sh(iset)+f2*fx_sh(iset1)
-      endif
 ! 
 ! Interpolate AMIE data to modeltime iutsec
 ! amie_ibkg = 0  use real UT AMIE data
@@ -716,17 +597,16 @@
       if (inpt > 0) write(6,"('maxefx = ',f4.1,
      |	 '  Bad efx points SH= ',i3)")maxefx,inpt
 
-          denoma = amie_sh_ut(iset1) - amie_sh_ut(iset)
+          denoma = (amie_sh_ut(iset1)+jday(iset1)*24.) - 
+     |             (amie_sh_ut(iset)+jday(iset)*24.)
           if (denoma == 0.) then
             f1 = 1.
             f2 = 0.
           else
-!           f1 = (amie_sh_ut(iset1) - model_ut)/denoma
-!           f2 = (model_ut - amie_sh_ut(iset))/denoma
-            f1 = (amie_sh_ut(iset1) - (model_ut+(modeltime(1)-
-     |             jday(iset1))*24.))/denoma
-            f2 = (model_ut+(modeltime(1)-jday(iset1))*24. - 
+            f1 = (model_ut+(modeltime(1)-jday(iset))*24. - 
      |             amie_sh_ut(iset))/denoma
+            f2 = (amie_sh_ut(iset1) - (model_ut+(modeltime(1)-
+     |             jday(iset1))*24.))/denoma
           endif
 !       write(6,"('getamie: AMIE SH Data n,iset,modeltime,f1,f2 =',
 !    |    4i5,2f5.2)")n,iset,modeltime(1),jday(iset1),f1,f2
@@ -867,17 +747,16 @@
       if (inpt > 0) write(6,"('maxefx = ',f4.1,
      |	 '  Bad efx points NH= ',i3)")maxefx,inpt
 
-          denoma = amie_nh_ut(iset1) - amie_nh_ut(iset)
+          denoma = (amie_nh_ut(iset1)+jday(iset1)*24.) - 
+     |             (amie_nh_ut(iset)+jday(iset)*24.)
           if (denoma == 0.) then
             f1 = 1.
             f2 = 0.
           else
-!           f1 = (amie_nh_ut(iset1) - model_ut)/denoma
-!           f2 = (model_ut - amie_nh_ut(iset))/denoma
-            f1 = (amie_nh_ut(iset1) - (model_ut+(modeltime(1)-
-     |             jday(iset1))*24.))/denoma
-            f2 = (model_ut+(modeltime(1)-jday(iset1))*24. - 
+            f1 = (model_ut+(modeltime(1)-jday(iset))*24. - 
      |             amie_nh_ut(iset))/denoma
+            f2 = (amie_nh_ut(iset1) - (model_ut+(modeltime(1)-
+     |             jday(iset1))*24.))/denoma
           endif
 !       write(6,"('getamie: AMIE NH Data model_day,model_ut,amie_day,',
 !    |    'amie_ut,f1,f2,iset,iset1 =',i4,f7.1,i4,f7.1,2f5.2,2i3)")
@@ -974,25 +853,6 @@
         enddo
       enddo
       if (inpt > 0) write(6,"('Total bad efx points NH = ',i3)")inpt
-! Multiply Barth's factor for auroral fluxes
-      if (nxyear==iyear) then
-        do j=1,19
-          do i=1,lonp1
-            if (ekv_nh_amie(i,j) > 2.5)
-     |               ekv_nh_amie(i,j) = 1.5*ekv_nh_amie(i,j)
-            if (ekv_sh_amie(i,j) > 2.5)
-     |               ekv_sh_amie(i,j) = 1.5*ekv_sh_amie(i,j)
-          enddo
-        enddo
-      endif
-      fxfact_nh = 1.
-      fxfact_sh = 1.
-      if (fxfact_nh > 1. .or. fxfact_sh > 1.) then
-        write(6,"('Barth Multiplication factors = ',2i5,2f7.3)")
-     |    iyear, nxyear, fxfact_nh, fxfact_sh
-        efx_nh_amie(:,:) = efx_nh_amie(:,:)*fxfact_nh
-        efx_sh_amie(:,:) = efx_sh_amie(:,:)*fxfact_sh
-      endif
 !
 !  The OLTMAX latitude also defines the co-latitude theta0, which in
 !   turn determines crit1(+2.5deg) and crit2(-12.5deg) which are used

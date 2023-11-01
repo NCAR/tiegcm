@@ -66,6 +66,7 @@
       use mpi_module,only: 
      |  mytid,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
      |  mp_bndlons,mp_polelats,mp_periodic_f4d,TIEGCM_WORLD
+      use getapex_module,only: apxparm
 !
       implicit none
 #ifdef VT
@@ -90,6 +91,7 @@
      |  time0_prep,     time1_prep,
      |  time0_init,     time1_init
       character(len=3) :: timing_type
+      logical :: adv
 !
       logical :: debug=.false.
       integer :: lev0=1,lev1=nlevp1
@@ -179,7 +181,7 @@
 ! Update calendar day and sun's location and declination:
 ! (sub advance_day also updates sfeps)
 !
-      if (calendar_advance > 0) call advance_day
+      if (calendar_advance > 0) call advance_day(adv)
       call sunloc_apex(iyear,iday,secs)! locate sun's longitude
       if (debug) write(6,"('advance after sunloc')")
       if (calendar_advance > 0) dday = real(iday)+secs/86400.
@@ -482,6 +484,9 @@
 ! Call dynamo if namelist idynamo > 0:
 !
       if (idynamo > 0) then
+        if (calendar_advance > 0) then
+          if (adv) call apxparm(iyear+iday/366.)
+        endif
 !
 ! Calculate addition to electrodynamo RHS (current due to plasma 
 ! pressure and gravity)
@@ -642,13 +647,15 @@
 !
       end subroutine advance
 !-----------------------------------------------------------------------
-      subroutine advance_day
+      subroutine advance_day(adv)
 !
 ! Advance calendar day if needed. Also update sfeps.
 !
       use init_module,only: iter,iyear,iday,sfeps,sin_sundec,cos_sundec
       use cons_module,only: dt,pi
       implicit none
+!
+      logical,intent(out) :: adv
 !
 ! Local:
       integer :: idayit,idayprev,iyearprev,iyr4,iyr100,iyr400,lpyr,ienda
@@ -688,6 +695,9 @@
 !
         write(6,"('Advancing day (previous,present)=',4i5,' sfeps=',
      |   e12.4)") idayprev,iyearprev,iday,iyear,sfeps
+        adv = .true.
+      else
+        adv = .false.
       endif
       end subroutine advance_day
 !-----------------------------------------------------------------------
