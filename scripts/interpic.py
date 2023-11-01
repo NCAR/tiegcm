@@ -5,6 +5,7 @@ from sys import exit
 from netCDF4 import Dataset
 from argparse import ArgumentParser
 from os.path import isfile, splitext
+import numpy as np
 
 
 # interpolate old or new TIEGCM primary history file into v3.0 format
@@ -153,6 +154,10 @@ def interpic(fin, hres, vres, zitop, fout):
             varout[:] = lev
         elif varname == 'ilev':
             varout[:] = ilev
+
+        #Skip these variables
+        elif varname in ['lat_bnds','lon_bnds','gw','area']:
+            continue
 
         # Change from old format (3 digits) to new format (4 digits)
         elif varname == 'mtime':

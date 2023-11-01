@@ -2053,16 +2053,6 @@
         call handle_ncerr(istat,char120)
       endif
 !
-! SVN version (see included file revision.inc, created by the build):
-      write(6,"('nc_define: svn_revision = ',a)") trim(svn_revision)
-      istat = nf_put_att_text(ncid,NF_GLOBAL,"svn_revision",
-     |  len_trim(svn_revision),trim(svn_revision)) 
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error return from nf_put_att_text ',
-     |    'for SVN version global attribute')")
-        call handle_ncerr(istat,char120)
-      endif
-!
 ! Output path (from namelist):
       istat = nf_put_att_text(ncid,NF_GLOBAL,"output_file",
      |  len_trim(h%output_file),trim(h%output_file))
