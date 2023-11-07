@@ -72,7 +72,7 @@
       real,dimension(lon0:lon1,lat0:lat1) ::
 ! 11/08 EMERY added energy flux eflux and eflux2d
      |  cusp2d,drzl2d,alfa2d,nflx2d,eflux2d,
-     |  tec		! diagnostic total electron content
+     |  tec ! diagnostic total electron content
       logical,external :: time2print
 !
       if (debug) write(6,"(/,'Enter dynamics.')")

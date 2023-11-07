@@ -463,8 +463,8 @@
 ! Args:
       character(len=*),intent(in) :: name
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)
-     |  :: z,electrons
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1),intent(in) ::
+     |  z,electrons
       real,intent(out) :: tec(lon0:lon1,lat0:lat1)
 !
 ! Local:
