@@ -305,6 +305,8 @@ class Job:
       elif '#PBS -l walltime' in line and '##PBS -l walltime' not in line:
         if self.wallclock:
           newline = '#PBS -l walltime='+self.wallclock
+        elif self.machine == 'de':
+          newline = '#PBS -l walltime=12:00:00'
         f.write(newline+'\n')
 #
 # Project number (ys only) (command-line only), e.g.: #PBS -A P28100036
@@ -481,6 +483,7 @@ class Run(Job,Namelist):
 # Run full names are model_name + model_res + short_name 
 # (e.g. tiegcm_res5.0_decsol_smax)
 #
+    #self.fullname = job.model_name+job.model_tag+'_res'+job.horires+'_'+name 
     self.fullname = job.model_name+job.model_tag+'_res'+job.horires+'x'+job.vertres+'_z'+job.zitop+'_'+name 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
@@ -861,6 +864,11 @@ NUMBER\tNAME\t\tDESCRIPTION
         else:
           source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
+      if job.horires == '2.5': 
+        if int(job.step) > 10: 
+          print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
+          job.step = '10' # reduce timestep for res2.5 to 10 seconds
+
       self.list_mods = [
         ['LABEL'        , "'"+self.fullname+"'"],
         ['START_YEAR'   , '2003'],
@@ -912,7 +920,7 @@ NUMBER\tNAME\t\tDESCRIPTION
 # (Interestingly, the current trunk code succeeds with STEP=30, if starting
 #  from the old tiegcm1.95 benchmark SOURCE history)
 #
-        if job.model_res == '2.5': 
+        if job.horires == '2.5': 
           if int(job.step) > 10: 
             print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
             job.step = '10' # reduce timestep for res2.5 to 10 seconds
@@ -961,6 +969,11 @@ NUMBER\tNAME\t\tDESCRIPTION
           source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
         else:
           source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+      
+      if job.horires == '2.5': 
+          if int(job.step) > 10: 
+            print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
+            job.step = '10' # reduce timestep for res2.5 to 10 seconds
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1005,6 +1018,11 @@ NUMBER\tNAME\t\tDESCRIPTION
           source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
         else:
           source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
+
+      if job.horires == '2.5': 
+          if int(job.step) > 10: 
+            print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
+            job.step = '10' # reduce timestep for res2.5 to 10 seconds
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1098,6 +1116,12 @@ NUMBER\tNAME\t\tDESCRIPTION
         else:
           source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
+      if job.horires == '2.5': 
+          if int(job.step) > 10: 
+            print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
+            job.step = '10' # reduce timestep for res2.5 to 10 seconds
+            
+          
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
         ['START_YEAR'     , '2008'],
@@ -1147,7 +1171,7 @@ NUMBER\tNAME\t\tDESCRIPTION
         else:
           source =  "'"+job.stdout_dir+"/"+fullname+"_prim.nc'"
 
-      if job.model_res == '2.5': 
+      if job.horires == '2.5': 
         if int(job.step) > 15: 
           print('NOTE ',self.name,': Changing timestep from ',job.step,' to 15 seconds')
           job.step = '15' # force timestep for res2.5 to 15 seconds
@@ -1204,7 +1228,7 @@ NUMBER\tNAME\t\tDESCRIPTION
 #       necessary for this run to succeed at 2.5-deg (resolution)
 #
       opdiffcap = '0.'
-      if job.model_res == '2.5': 
+      if job.horires == '2.5': 
         if int(job.step) > 10: 
           print('NOTE ',self.name,': Changing timestep from ',job.step,' to 10 seconds')
           job.step = '10' # force timestep for res2.5 to 10 seconds
@@ -1273,9 +1297,10 @@ NUMBER\tNAME\t\tDESCRIPTION
 # 2.5-deg model at 30-sec timestep can complete 80 days in < 12 hours:
 #   step=30 -> 8.2 min/day * 80 days = 656 mins / 60 = 11 hours
 #
-      stop = '366,0,0' # step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
-      if job.model_res == '2.5': 
-        stop = '80,0,0'
+      stop = '366 0 0 0' # step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
+      if job.horires == '2.5': 
+        stop = '80 0 0 0'
+        job.step = '10'
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],
@@ -1333,12 +1358,12 @@ NUMBER\tNAME\t\tDESCRIPTION
 # 2.5-deg model at 20-sec timestep can complete 55 days in < 12 hours:
 #   step=20 -> 12.2 min/day * 55 days = 671 mins / 60 = 11 hours
 #
-      stop = '366,0,0' # step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
-      if job.model_res == '2.5': 
+      stop = '366 0 0 0' # step=60 -> 1.8 min/day * 365 days = 657 mins / 60 = 11 hours
+      if job.horires == '2.5': 
         if int(job.step) > 20: 
           print('NOTE ',self.name,': Changing timestep from ',job.step,' to 20 seconds')
-          job.step = '20' # force timestep for res2.5 to 20 seconds
-        stop = '55,0,0'
+          job.step = '10' # force timestep for res2.5 to 20 seconds
+        stop = '55 0 0 0'
 
       self.list_mods = [
         ['LABEL'          , "'"+self.fullname+"'"],

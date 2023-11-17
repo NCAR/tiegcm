@@ -49,10 +49,11 @@ set runscript = run.pbs
 set project_code    = P28100036
 set queue           = main
 set job_priority    = regular
-set nnodes          = 1
+set nnodes          = 4
 set ncores_per_node = 128
+set mpiprocs        = 72
 set walltime        = "12:00:00"
-@ nprocs            = $nnodes * $ncores_per_node
+@ nprocs            = $nnodes * $mpiprocs
 
 set execdir   = `perl $utildir/abspath $execdir`
 set runscript = `perl $utildir/abspath $runscript`
@@ -287,7 +288,7 @@ cat << EOF >! $runscript
 #PBS -q $queue
 #PBS -j oe
 #PBS -l job_priority=$job_priority
-#PBS -l select=${nnodes}:ncpus=${ncores_per_node}:mpiprocs=${ncores_per_node}
+#PBS -l select=${nnodes}:ncpus=${ncores_per_node}:mpiprocs=${mpiprocs}
 #PBS -l walltime=$walltime
 
 setenv TGCMDATA $tgcmdata
