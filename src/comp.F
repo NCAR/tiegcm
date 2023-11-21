@@ -1,5 +1,5 @@
 !
-      subroutine comp(tn,o2,o2_nm,o1,o1_nm,he,he_nm,w,mbar,
+      subroutine comp(tn,o2,o2_nm,o1,o1_nm,he,he_nm,w,mbar,xnmbar,
      |                hdo2,hdo1,hdhe,o2_upd,o2nm_upd,o1_upd,o1nm_upd,
      |                he_upd,henm_upd,lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -9,14 +9,14 @@
 !
 ! Advance major species O2 and O.
 !
-      use params_module,only: dz,nlonp4,dlat,nlon,glat
+      use params_module,only: dz,nlonp4,dlat,nlon,glat,zpmid
       use init_module,only: iday
       use cons_module,only: pi,hor,dtr,rmassinv_o2,rmassinv_o1,
      |  rmassinv_he,rmassinv_n2,rmass_o2,rmass_o1,rmass_he,expz,expzmid,
      |  expzmid_inv,difk,dtx2inv,dtsmooth,dtsmooth_div2,difhor,
      |  gask,grav,re,p0
       use chemrates_module,only: fs ! from sub comp_o2o
-      use lbc,only: b,fb
+      use lbc,only: b,fb,pshelb
       use fields_module,only: tlbc
       use addfld_module,only: addfld
       use input_module,only: calc_helium
@@ -34,6 +34,7 @@
      |  he_nm,! He (mmr) at time n-1
      |  w,    ! vertical velocity at current timestep
      |  mbar, ! mean molecular weight
+     |  xnmbar,
      |  hdo2, ! O2 horizontal diffusion (hdif3)
      |  hdo1, ! O  horizontal diffusion (hdif3)
      |  hdhe  ! He horizontal diffusion (hdif3)
@@ -45,7 +46,7 @@
 !
 ! Local:
       integer :: k,kk,i,lat,isp,km,kp,ktmp,m,lonbeg,lonend,nlondiv2,n
-      integer :: nk,nkm1,i0,i1,k0,k1
+      integer :: nk,nkm1,i0,i1,k0,k1,idx(1),ktop
       integer,parameter :: io2=1,io1=2,ihe=3 ! indices to O2, O, He respectively
       real,dimension(lon0:lon1,lev0:lev1,3,3) :: gama
       real,dimension(lon0:lon1,lev0:lev1,3)   :: zz
@@ -59,13 +60,14 @@
       real,dimension(lon0:lon1)               :: alpha23,alpha22,
      |                                           alpha33,alpha32,flx00
       real :: rlat
-      real :: alpha(3,3),phi(3,4),delta(3,3),tau,t00,small
-      real :: n2,n2nm,normalize,thdiffalpha
+      real :: alpha(3,3),phi(3,4),delta(3,3),tau,t00
+      real :: zmtop,n2top,n2top1,dn2dz,n2nm,normalize,thdiffalpha
       real :: flxwks
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
      |  o2nm_smooth, o1nm_smooth, henm_smooth, ! smoothed at time n-1
      |  o2_advec,    o1_advec,    he_advec     ! horizontal advection
       real,dimension(lev0:lev1,lon0:lon1,3) :: upd
+      real,dimension(lev0:lev1) :: n2
 ! For diagnostics:
       real,dimension(lev0:lev1,lon0:lon1,3) :: zz_ki
       real,dimension(lev0:lev1,lon0:lon1,3,3) :: gama_ki
@@ -87,7 +89,6 @@
       delta(:,2)=(/0.,1.,0./)
       delta(:,3)=(/0.,0.,1./)
       t00=273.
-      small = 1.e-9
       i0=lon0 ; i1=lon1 ; k0=lev0 ; k1=lev1
 !
       nk = lev1-lev0+1
@@ -212,15 +213,15 @@
 !
 ! ps0 and embar0:
       do i=lon0,lon1
-        ps0(i,io2) = b(i,1,1)*o2(lev0,i,lat)+ 
-     |               b(i,1,2)*o1(lev0,i,lat)+
-     |               b(i,1,3)*he(lev0,i,lat)+fb(i,1)
-        ps0(i,io1) = b(i,2,1)*o2(lev0,i,lat)+
-     |               b(i,2,2)*o1(lev0,i,lat)+
-     |               b(i,2,3)*he(lev0,i,lat)+fb(i,2)
-        ps0(i,ihe) = b(i,3,1)*o2(lev0,i,lat)+
-     |               b(i,3,2)*o1(lev0,i,lat)+
-     |               b(i,3,3)*he(lev0,i,lat)+fb(i,3)
+        ps0(i,io2) = b(1,1)*o2(lev0,i,lat)+ 
+     |               b(1,2)*o1(lev0,i,lat)+
+     |               b(1,3)*he(lev0,i,lat)+fb(1)
+        ps0(i,io1) = b(2,1)*o2(lev0,i,lat)+
+     |               b(2,2)*o1(lev0,i,lat)+
+     |               b(2,3)*he(lev0,i,lat)+fb(2)
+        ps0(i,ihe) = b(3,1)*o2(lev0,i,lat)+
+     |               b(3,2)*o1(lev0,i,lat)+
+     |               b(3,3)*he(lev0,i,lat)+fb(3)
         embar0(i) = 1./(ps0(i,io2)*rmassinv_o2+ps0(i,io1)*rmassinv_o1+
      |              ps0(i,ihe)*rmassinv_he+
      |              (1.-ps0(i,io2)-ps0(i,io1)-ps0(i,ihe))*rmassinv_n2)
@@ -573,17 +574,17 @@
           do m=1,3
             do kk=1,3
               do i=lon0,lon1
-                qk(i,io2,m) = qk(i,io2,m)+pk(i,io2,kk)*b(i,kk,m) 
-                qk(i,io1,m) = qk(i,io1,m)+pk(i,io1,kk)*b(i,kk,m) 
-                qk(i,ihe,m) = qk(i,ihe,m)+pk(i,ihe,kk)*b(i,kk,m)
+                qk(i,io2,m) = qk(i,io2,m)+pk(i,io2,kk)*b(kk,m) 
+                qk(i,io1,m) = qk(i,io1,m)+pk(i,io1,kk)*b(kk,m) 
+                qk(i,ihe,m) = qk(i,ihe,m)+pk(i,ihe,kk)*b(kk,m)
               enddo ! i=lon0,lon1
             enddo ! kk=1,3
           enddo ! m=1,3
           do m=1,3
             do i=lon0,lon1
-              fk(i,io2) = fk(i,io2)-pk(i,io2,m)*fb(i,m)
-              fk(i,io1) = fk(i,io1)-pk(i,io1,m)*fb(i,m)
-              fk(i,ihe) = fk(i,ihe)-pk(i,ihe,m)*fb(i,m)
+              fk(i,io2) = fk(i,io2)-pk(i,io2,m)*fb(m)
+              fk(i,io1) = fk(i,io1)-pk(i,io1,m)*fb(m)
+              fk(i,ihe) = fk(i,ihe)-pk(i,ihe,m)*fb(m)
               pk(i,:,m) = 0.
             enddo ! i=lon0,lon1
           enddo ! m=1,3
@@ -863,8 +864,8 @@
       enddo ! lat=lat0,lat1
 !
       if (calc_helium == 0) then
-        he_upd = small   ! 3d whole array op
-        henm_upd = small ! 3d whole array op
+        he_upd = pshelb   ! 3d whole array op
+        henm_upd = pshelb ! 3d whole array op
       endif
 !
 ! Filter the new composition species:
@@ -906,29 +907,53 @@
 !     call mp_periodic_f3d(o1_upd(:,lon0:lon1,lat0-1:lat1+1),
 !    |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
 !
+      idx = minloc(abs(zpmid-5))
+!
 ! Insure non-negative O2,O:
       do lat=lat0,lat1
         do i=lon0,lon1
           do k=lev0,lev1
-            n2 = 1.-o2_upd(k,i,lat)-o1_upd(k,i,lat)-he_upd(k,i,lat)
+            n2(k) = 1.-o2_upd(k,i,lat)-o1_upd(k,i,lat)-he_upd(k,i,lat)
+          enddo
+!
+! When O2+O+He~=1 (typically around z=9), N2 will not scale properly with altitudes
+! This is an ad-hoc correction to let N2 have the right scaling at very high altitudes
+!
+! Find the level where N2 is no longer a major species
+          do ktop=idx(1),lev1
+            if (n2(ktop) < 0.01) exit ! Typically around z=7
+          enddo
+! Use extrapolation above this height to replace the original values
+! The scaling uses number density instead of mass mixing ratio
+          if (ktop < lev1) then
+            zmtop = zpmid(ktop)
+            n2top = log(n2(ktop)*xnmbar(ktop,i,lat))
+            n2top1 = log(n2(ktop-1)*xnmbar(ktop-1,i,lat))
+            dn2dz = (n2top-n2top1)/dz
+            do k=ktop+1,lev1
+              n2(k) = exp(n2top+dn2dz*(zpmid(k)-zmtop))/xnmbar(k,i,lat)
+            enddo
+          endif
+!
+          do k=lev0,lev1
             n2nm =
      |        1.-o2nm_upd(k,i,lat)-o1nm_upd(k,i,lat)-henm_upd(k,i,lat)
 !
-            if (o2_upd(k,i,lat) < small) o2_upd(k,i,lat) = small
-            if (o1_upd(k,i,lat) < small) o1_upd(k,i,lat) = small
-            if (he_upd(k,i,lat) < small) he_upd(k,i,lat) = small
-            if (n2 < small) n2 = small
+            if (o2_upd(k,i,lat) < 0.) o2_upd(k,i,lat) = 0.
+            if (o1_upd(k,i,lat) < 0.) o1_upd(k,i,lat) = 0.
+            if (he_upd(k,i,lat) < 0.) he_upd(k,i,lat) = 0.
+            if (n2(k) < 0.) n2(k) = 0.
 !
-            if (o2nm_upd(k,i,lat) < small) o2nm_upd(k,i,lat) = small
-            if (o1nm_upd(k,i,lat) < small) o1nm_upd(k,i,lat) = small
-            if (henm_upd(k,i,lat) < small) henm_upd(k,i,lat) = small
-            if (n2nm < small) n2nm = small
+            if (o2nm_upd(k,i,lat) < 0.) o2nm_upd(k,i,lat) = 0.
+            if (o1nm_upd(k,i,lat) < 0.) o1nm_upd(k,i,lat) = 0.
+            if (henm_upd(k,i,lat) < 0.) henm_upd(k,i,lat) = 0.
+            if (n2nm < 0.) n2nm = 0.
 !
 ! EKS comment: divisor should be the same when normalizing
 ! both o2 and o1 to insure non-negativity
 !
             normalize =
-     |        o2_upd(k,i,lat)+o1_upd(k,i,lat)+he_upd(k,i,lat)+n2
+     |        o2_upd(k,i,lat)+o1_upd(k,i,lat)+he_upd(k,i,lat)+n2(k)
             o2_upd(k,i,lat) = o2_upd(k,i,lat)/normalize
             o1_upd(k,i,lat) = o1_upd(k,i,lat)/normalize
             he_upd(k,i,lat) = he_upd(k,i,lat)/normalize
@@ -983,7 +1008,7 @@
 !-----------------------------------------------------------------------
       subroutine filter_o2o(fout,lev0,lev1,lon0,lon1,lat0,lat1)
 !
-! Filter updated W omega:
+! Filter updated O2,O:
 !
       use params_module,only: nlonp4
       use mpi_module,only: mp_gatherlons_f3d,mp_scatterlons_f3d,mytidi

@@ -1,5 +1,5 @@
 !
-      subroutine cpktkm(tn,o2,o1,n2,he,mbar,fcp,fkt,fkm,
+      subroutine cpktkm(tn,o2,o1,he,n2,mbar,fcp,fkt,fkm,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -20,8 +20,8 @@
      |  tn,  ! neutral temperature (deg K)
      |  o2,  ! molecular oxygen (mmr)
      |  o1,  ! atomic oxygen (mmr)
-     |  n2,  ! molecular nitrogen (mmr)
      |  he,  ! helium (mmr)
+     |  n2,  ! molecular nitrogen (mmr)
      |  mbar ! mean molecular weight
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) :: 
      |  fcp, ! specific heat at constant pressure (ergs/deg/gm)
@@ -32,7 +32,7 @@
       integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  fmbar,        ! mean mass
-     |  po2,po1,pn2,phe 
+     |  po2,po1,phe,pn2
       integer :: nlons,nlevs
 !
       nlons = lon1-lon0+1
@@ -56,12 +56,12 @@
           po1(k,i) = fmbar(k,i)*o1(k,i)*rmassinv_o1
           phe(k,i) = fmbar(k,i)*he(k,i)*rmassinv_he
           pn2(k,i) = fmbar(k,i)*n2(k,i)*rmassinv_n2
-          fcp(k,i) = gask*.5*(po2(k,i)*7./32.+pn2(k,i)*7./28.+
-     |                        po1(k,i)*5./16.+phe(k,i)*5./4.)
-          fkm(k,i) = po2(k,i)*4.03 + pn2(k,i)*3.42 + po1(k,i)*3.9 +
-     |               phe(k,i)*3.84
-          fkt(k,i) = (po2(k,i)+pn2(k,i))*56. + po1(k,i)*75.9 + 
-     |                phe(k,i)*299.
+          fcp(k,i) = gask*.5*(po2(k,i)*7./32.+po1(k,i)*5./16.+
+     |                        phe(k,i)*5./4. +pn2(k,i)*7./28.)
+          fkm(k,i) = po2(k,i)*4.03 + po1(k,i)*3.9 +
+     |               phe(k,i)*3.84 + pn2(k,i)*3.42
+          fkt(k,i) = po2(k,i)*56.  + po1(k,i)*75.9 +
+     |               phe(k,i)*299. + pn2(k,i)*56.
         enddo
       enddo
 

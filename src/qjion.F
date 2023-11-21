@@ -52,7 +52,8 @@
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  qtot,    ! total ionization rate                 (s1)
      |  qphoto,  ! photo-electron heating of neutral gas (s2)
-     |  qic      ! ion chemistry heating of neutral gas  (s3)
+     |  qic,     ! ion chemistry heating of neutral gas  (s3)
+     |  qici2
       real,dimension(lev0:lev1) :: aureff
 !
       aureff(:) = 0.05 ! this is local (not the aureff from aurora module).
@@ -107,9 +108,6 @@
      |       rk20(k,i,lat)*1.69)*xiop2p(k,i)+rk25(k,i,lat)*3.31*
      |       xiop2d(k,i))-(rk21*5.02+rk22*1.69)*xiop2p(k,i)-
      |       rk27*3.33*xiop2d(k,i))/xnmbar(k,i))*evergs
-!
-! Insure qic > 0:
-          if (qic(k,i) < 1.e-30) qic(k,i) = 1.e-30
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -121,16 +119,18 @@
 ! Add qphoto and qic to Q (reuse qtot = qphoto+qic):
       do i=lon0,lon1
         do k=lev0,lev1-2
-          qtot(k+1,i) = qphoto(k+1,i)+sqrt(qic(k,i)*qic(k+1,i)) 
-          qtotal(k+1,i,lat) = qtotal(k+1,i,lat)+qtot(k+1,i)
+          qici2(k+1,i) = qic(k,i)*qic(k+1,i)
         enddo ! k=lev0,lev1-1
 !
 ! Bottom and top boundaries:
-        qtot(lev0,i) = qphoto(lev0,i)+sqrt(qic(lev0,i)**3/qic(lev0+1,i))
-        qtot(lev1,i) = qphoto(lev1,i)+sqrt(qic(lev1-1,i)**3/
-     |    qic(lev1-2,i))
-        qtotal(lev0,i,lat) = qtotal(lev0,i,lat)+qtot(lev0,i)
-        qtotal(lev1,i,lat) = qtotal(lev1,i,lat)+qtot(lev1,i)
+        qici2(lev0,i) = qic(lev0,i)**3/qic(lev0+1,i)
+        qici2(lev1,i) = qic(lev1-1,i)**3/qic(lev1-2,i)
+
+        do k=lev0,lev1
+          qtot(k,i) = qphoto(k,i)
+          if (qici2(k,i) > 0.) qtot(k,i) = qtot(k,i)+sqrt(qici2(k,i))
+          qtotal(k,i,lat) = qtotal(k,i,lat)+qtot(k,i)
+        enddo
       enddo ! i=lon0,lon1
 
 !     call addfld('QTOTAL' ,' ',' ',qtotal(:,:,lat),

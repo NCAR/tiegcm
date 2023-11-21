@@ -166,7 +166,7 @@
         rlmsrcinv(i) = 1./rlmsrc(i)
       enddo
 !
-! O2,O,N4S at interface levels:
+! O2,O,He,N4S at interface levels:
       do i=lon0,lon1
         do k=lev0,lev1-1
           o2i (k+1,i) = 0.5*(o2(k,i)+o2(k+1,i))
@@ -179,12 +179,12 @@
 !
 ! Bottom boundary:
       do i=lon0,lon1
-        o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+
-     |    b(i,1,3)*he(1,i)+fb(i,1))
-        o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+
-     |    b(i,2,3)*he(1,i)+fb(i,2))
-        hei(1,i) = .5*(b(i,3,1)*o2(1,i)+b(i,3,2)*o1(1,i)+
-     |    (b(i,3,3)+1.)*he(1,i)+fb(i,3))
+        o2i(1,i) = .5*((b(1,1)+1.)*o2(1,i)+b(1,2)*o1(1,i)+
+     |    b(1,3)*he(1,i)+fb(1))
+        o1i(1,i) = .5*(b(2,1)*o2(1,i)+(b(2,2)+1.)*o1(1,i)+
+     |    b(2,3)*he(1,i)+fb(2))
+        hei(1,i) = .5*(b(3,1)*o2(1,i)+b(3,2)*o1(1,i)+
+     |    (b(3,3)+1.)*he(1,i)+fb(3))
         n4si(1,i) = 0.
 !
 ! btf tiegcm_he 8/21/13: Not sure about n2i bottom boundary. 

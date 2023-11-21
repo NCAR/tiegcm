@@ -20,7 +20,7 @@
       use cons_module,only: pi,dtr,re,rmass_o2,rmass_o1,rmass_n2
       use fields_module,only: tlbc
 !
-! Calculate line integrals for o2,o n2:
+! Calculate line integrals for o2,o,n2:
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
@@ -173,7 +173,7 @@
      |  s          ! output slant-line integral
 !
 ! Local:
-      real,parameter :: big=1.e80
+      real,parameter :: big=1.e80, logbig=log(big)
       integer :: k,i
       real :: factor,rtpi,exparg
       real :: 
@@ -225,7 +225,7 @@
 ! Avoid exceeding max arg to exp on non-unicos platform:
           exparg = rp(k,i)*(1.-sin_chi(i))*factor/ti(k,i)
 
-          if (idn(i)==1.and.exparg < 650.) then ! daytime
+          if (idn(i)==1.and.exparg < logbig) then ! daytime
             r2ig(k,i) = 2.*v(k,i)*exp(exparg)*
      |        rtpi*rt_sinchi(i)*rtrp(k,i)
           else

@@ -30,7 +30,7 @@
 # and change execdir, tgcmdata and namelist input if necessary.
 # Also reset number of processors accordingly below (#PBS -l).
 #
-set modeldir  = $TGCMHOME
+set modeldir  = /glade/campaign/hao/itmodel/tiegcm3.0/tiegcm
 set execdir   = /glade/scratch/$user/tiegcm
 set tgcmdata  = /glade/p/hao/tgcm/data
 set utildir   = $modeldir/scripts
@@ -63,7 +63,7 @@ if (! -d $execdir) mkdir -p $execdir
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Necessary modules on cheyenne
-#module load esmf_libs/8.3.0 esmf-8.3.0-ncdfio-mpt-O
+module load esmf_libs/8.3.0 esmf-8.3.0-ncdfio-mpt-O
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"

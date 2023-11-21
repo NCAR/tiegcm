@@ -6,7 +6,7 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-! Calculates fs array which gives sources and sinks for comp (o2,o). 
+! Calculates fs array which gives sources and sinks for comp (o2,o,he). 
 !
       use cons_module,only: rmassinv_o2,rmassinv_o1,
      |  rmass_no,rmass_n4s,rmass_n2d,rmass_o2,rmass_o1
@@ -115,7 +115,7 @@
 !
           lo22(k,i) = qo2pi(k,i)
 !
-! Matrix coefficients for O-O2-N2 solution:
+! Matrix coefficients for O-O2-He-N2 solution:
           fs(i,k,1,1,lat) = -lo21(k,i)
           fs(i,k,1,2,lat) = xnmbar(k,i)*po21(k,i)*o1(k,i)*rmassinv_o1*
      |      rmass_o2*rmassinv_o1

@@ -79,7 +79,7 @@
      |  rkm12, ! O + O + N2 -> O2 + N2
      |  tvib
 !
-! Matrices for O2,O (set by comp_o2o.F, used by comp.F) 
+! Matrices for O2,O,He (set by comp_o2o.F, used by comp.F) 
       real,allocatable :: fs(:,:,:,:,:) ! (i,k,3,0:3,j)
 !
       contains

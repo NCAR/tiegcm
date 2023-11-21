@@ -19,7 +19,7 @@
 !
       contains
 !-----------------------------------------------------------------------
-      subroutine oplus(tn,te,ti,o2,o1,n2,he,n2d,ne,u,v,w,ui,vi,wi,
+      subroutine oplus(tn,te,ti,o2,o1,he,n2,n2d,ne,u,v,w,ui,vi,wi,
      |  xnmbar,scht,op,optm1,opout,optm1out,xiop2p,xiop2d,Fe,Fn,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -40,7 +40,7 @@
       use chemrates_module,only: ! needed chemical reaction rates
      |  rk1 ,rk2 ,rk10,rk16,rk17,rk18,rk19,rk20,
      |  rk21,rk22,rk23,rk24,rk25,rk26,rk27
-      use input_module,only: enforce_opfloor,nstep_sub
+      use input_module,only: nstep_sub
       use magfield_module,only: dipmag,sndec,csdec
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
      |  mp_polelats_f3d,mp_geo_halos_f3d,mp_bndlats_f3d
@@ -87,7 +87,6 @@
      |  ubca, ubcb ! O+ upper boundary condition (were t2,t3)
       real :: explic = 1., gmr
       real,dimension(lev0:lev1,lon0:lon1) :: 
-     |  psi_n2,           ! n2 mass mixing ratio (1-o2-o-he)
      |  bdzdvb_op,        ! was s7
      |  explicit,         ! was s4
      |  hdz,              ! was s15
@@ -101,21 +100,6 @@
      |  tp1,              ! 0.5*(te+ti)
      |  wd
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
-!
-! For O+ "smooth floor" (ignored if enforce_opfloor = 0)
-! (default namelist enforce_opfloor = 1). The floor is a
-! spatial gaussian based on the O+ minimum (opmin below).
-!
-      real :: opfloor
-!
-! 1/21/16 btf: O+ minimum increased from 1000 to 3000.
-! (This alleviates numerical instability that can develop
-!  near the equator at the top of the model in some cases,
-!  e.g., it allows the 2.5-deg June solstice solar max 
-!  benchmark to run with step=30 rather than step=20, and
-!  may improve stability in other cases as well.)
-!
-      real :: opmin=3000.
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
@@ -230,19 +214,19 @@
 !
       call rrk(xnmbar(:,lon0:lon1,jm1),
      |  o2(:,lon0:lon1,jm1),o1(:,lon0:lon1,jm1),
-     |  n2(:,lon0:lon1,jm1),he(:,lon0:lon1,jm1),
+     |  he(:,lon0:lon1,jm1),n2(:,lon0:lon1,jm1),
      |  tr(:,lon0:lon1,jm1),dj(:,lon0:lon1,jm1),
      |  vni(:,lon0:lon1,jm1),lon0,lon1,lev0,lev1)
 
       call rrk(xnmbar(:,lon0:lon1,lat),
      |  o2(:,lon0:lon1,lat),o1(:,lon0:lon1,lat),
-     |  n2(:,lon0:lon1,lat),he(:,lon0:lon1,lat),
+     |  he(:,lon0:lon1,lat),n2(:,lon0:lon1,lat),
      |  tr(:,lon0:lon1,lat),dj(:,lon0:lon1,lat),
      |  vni(:,lon0:lon1,lat),lon0,lon1,lev0,lev1)
 
       call rrk(xnmbar(:,lon0:lon1,jp1),
      |  o2(:,lon0:lon1,jp1),o1(:,lon0:lon1,jp1),
-     |  n2(:,lon0:lon1,jp1),he(:,lon0:lon1,jp1),
+     |  he(:,lon0:lon1,jp1),n2(:,lon0:lon1,jp1),
      |  tr(:,lon0:lon1,jp1),dj(:,lon0:lon1,jp1),
      |  vni(:,lon0:lon1,jp1),lon0,lon1,lev0,lev1)
 
@@ -739,24 +723,22 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          psi_n2(k,i) = n2(k,i,lat) ! n2 mixing ratio
-!
           xiop2p(k,i,lat) = 
      |      0.5*(qop2p(k,i,lat)+qop2p(k+1,i,lat))/((xnmbar(k,i,lat)*
-     |      ((rk16+rk17)*psi_n2(k,i)*rmassinv_n2+
+     |      ((rk16+rk17)*n2(k,i,lat)*rmassinv_n2+
      |      rk18*o1(k,i,lat)*rmassinv_o1))+
      |      (rk19(k,i,lat)+rk20(k,i,lat))*ne(k,i,lat)+rk21+rk22)
 ! 
           xiop2d(k,i,lat) = 
      |      (0.5*(qop2d(k,i,lat)+qop2d(k+1,i,lat))+(rk20(k,i,lat)*
      |      ne(k,i,lat)+rk22)*xiop2p(k,i,lat))/((xnmbar(k,i,lat)*
-     |      (rk23*psi_n2(k,i)*rmassinv_n2+rk24*
+     |      (rk23*n2(k,i,lat)*rmassinv_n2+rk24*
      |      o1(k,i,lat)*rmassinv_o1+rk26*o2(k,i,lat)*rmassinv_o2))+
      |      rk25(k,i,lat)*ne(k,i,lat)+rk27)
 ! 
           op_loss(k,i) = 
      |      xnmbar(k,i,lat)*(rk1(k,i,lat)*o2(k,i,lat)*rmassinv_o2+
-     |      rk2(k,i,lat)*psi_n2(k,i)*rmassinv_n2+rk10*
+     |      rk2(k,i,lat)*n2(k,i,lat)*rmassinv_n2+rk10*
      |      n2d(k,i,lat)*rmassinv_n2d)
 !
           q_coeff(k,i) = q_coeff(k,i)-op_loss(k,i)
@@ -863,34 +845,10 @@
 ! Insure global non-negative O+:
       do i=lon0,lon1
         do k=lev0,lev1-1      
-          if (opout(k,i,lat)    < 1.e-5) opout(k,i,lat)    = 1.e-5
-          if (optm1out(k,i,lat) < 1.e-5) optm1out(k,i,lat) = 1.e-5
+          if (opout(k,i,lat)    < 0.) opout(k,i,lat)    = 0.
+          if (optm1out(k,i,lat) < 0.) optm1out(k,i,lat) = 0.
         enddo ! k=lev0,lev1-1      
       enddo ! i=lon0,lon1
-!
-! 12/4/14 btf: Enforce O+ minimum if enforce_opfloor is true.
-! Opfloor is Stan's "smooth floor" (product of two Gaussians, 
-!   dependent on latitude and pressure level) (opmin=1000.0):
-!
-      if (enforce_opfloor > 0) then
-        do k=lev0,lev1-1
-          opfloor = opmin*exp(-(glat(lat)/90.0)**2/0.3)*
-     |              exp(-((zpmid(k)-4.25)/zpmid(nlevp1))**2/0.1)
-          do i=lon0,lon1
-            if (opout(k,i,lat) < opfloor) then
-!
-! Report time and location to stdout when opout < opfloor:
-!             if (opout   (k,i,lat) /= 1.e-5) then
-!               write(6,"('OPLUS: enforce O+ min: opout=',e12.4,
-!    |            ' opfloor=',e12.4,' lat=',f9.2,' zpmid=',f8.2)") 
-!    |            opout(k,i,lat),opfloor,glat(lat),zpmid(k)
-!             endif ! report if not 1.e-5
-
-              opout(k,i,lat) = opfloor
-            endif ! opout < opfloor
-          enddo ! i=lon0,lon1
-        enddo ! k=lev0,lev1-1
-      endif ! enforce_opfloor
 !
 ! End fourth and final latitude scan:
       enddo ! lat=lat0,lat1
@@ -1004,7 +962,7 @@
 !
       end subroutine divb
 !-----------------------------------------------------------------------
-      subroutine rrk(rms,ps1,ps2,n2,he,tr,ans,vni,
+      subroutine rrk(rms,ps1,ps2,he,n2,tr,ans,vni,
      |  lon0,lon1,lev0,lev1)
 !
 ! Returns ambipolar diffusion coefficient in ans and vni.
@@ -1018,7 +976,7 @@
 ! Args:
       integer,intent(in) :: lon0,lon1,lev0,lev1
       real,dimension(lev0:lev1,lon0:lon1),intent(in) ::
-     |  rms,ps1,ps2,n2,he,tr
+     |  rms,ps1,ps2,he,n2,tr
       real,dimension(lev0:lev1,lon0:lon1),intent(out) :: ans,vni
 !
 ! Local:
@@ -1030,9 +988,10 @@
 !
 ! 8/28/13 btf: Use n2=1-o2-o-he, and include O+/He collision rate from Wenbin:
 !
-          vni(k,i) = ps2(k,i)*rmassinv_o1*sqrt(tr(k,i))*(1.-0.064*
-     |      alog10(tr(k,i)))**2*colfac+18.6*n2(k,i)*rmassinv_n2+18.1*
-     |      ps1(k,i)*rmassinv_o2+3.6*he(k,i)*rmassinv_he
+          vni(k,i) = 18.1*ps1(k,i)*rmassinv_o2+
+     |      ps2(k,i)*rmassinv_o1*sqrt(tr(k,i))*
+     |      (1.-0.064*alog10(tr(k,i)))**2*colfac+
+     |      3.6*he(k,i)*rmassinv_he+18.6*n2(k,i)*rmassinv_n2
           ans(k,i) = 1.42E17/(rms(k,i)*vni(k,i))
           vni(k,i) = 16*3.53E-11*vni(k,i)
         enddo ! k=lev0,lev1

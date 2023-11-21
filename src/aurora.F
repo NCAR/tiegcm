@@ -23,9 +23,9 @@
 ! There is provision for a low energy (~75 eV) aurora at the location of the
 !  regular (~1-6 keV) aurora in order to simulate the energy flux found
 !  at higher altitudes that is non-Maxwellian, but the flux is usually
-!  set to zero (1.e-80).
+!  set to zero (1.e-30).
 ! There is provision for a proton (MeV) aurora, but the flux is usually
-!  set to zero (1.e-20).
+!  set to zero (1.e-30).
 ! The drizzle is a constant low energy electron flux over the polar cap,
 !  which goes to 1/e over twice the 1/e-width of the aurora at the
 !  radius of the aurora.
@@ -33,7 +33,7 @@
 !  entrance at phid at the convection reversal boundary theta0.  The cusp
 !  falls off over 5 degrees in latitude and over 20 degrees in longitude
 !  to 1/e values of the peak at the center.
-! 1.e-20 and 1.e-80 are used to give a near zero answer.
+! 1.e-30 is used to give a near zero answer.
 !
 ! The polar drizzle and cusp electron energies are low, and soft particles
 !  have great influence on the over-all thermospheric and ionospheric
@@ -124,7 +124,7 @@
       logical :: add_sproton = .false.
       real,parameter ::
      |  alfa_sp = 10.,
-     |  e_sp = 1.e-20
+     |  e_sp = 1.e-30
       real :: flx_sp
 !
 ! High energy electron parameters in the auroral oval (time-gcm only):
@@ -137,8 +137,8 @@
 !     real,parameter :: ! low energy protons:
 !    |  alfap1 = 5.,
 !    |  alfap2 = 15.,
-!    |  pe1 = 1.e-20,
-!    |  pe2 = 1.e-20
+!    |  pe1 = 1.e-30,
+!    |  pe2 = 1.e-30
 !     real :: alfap0,e0p
 !
 ! Additional auroral parameters (see sub aurora_cons):
@@ -217,12 +217,10 @@
 !
 ! Local:
       real,parameter :: convert=3.1211e+8
-      real :: alfa_1,alfa_2,plevel,roth,rote,rcp,rhp,
-     |  alfa21,alfa22,e21,e22
+      real :: alfa_1,alfa_2,plevel,roth,rote,rcp,rhp
       real :: arad(2)
       real :: hp_amie,c25,c35
       real :: byloc   ! local by
-      real,parameter :: e=1.e-10
 !
 ! Auroral heating efficiency (nlevp1) according to vertical resolution 
 ! The dimension length (29) is hard-coded
@@ -302,7 +300,7 @@
       alfa_1 = 1.5
       alfa_2 = 2.
       alfa0 = 0.5*(alfa_1+alfa_2)
-      ralfa = (alfa_2-alfa_1) / (alfa_1+alfa_2+e)
+      ralfa = (alfa_2-alfa_1) / (alfa_1+alfa_2)
 
 ! 12/8/08 scs: In-lined rotation units and cleaned up comments
 !              Old rotation angles were:  roth = 12.18 - 0.89 * plevel
@@ -320,14 +318,10 @@
       rrote = rote * h2deg * dtr
 
       h0 = 0.5 * (h1 + h2) * dtr
-      alfa21 = 0.075
-      alfa22 = 0.075
-      alfa20 = 0.5 * (alfa21 + alfa22)
-      ralfa2 = (alfa22 - alfa21) / (alfa21 + alfa22 + e)
-      e21 = 1.e-80
-      e22 = 1.e-80
-      e20 = 0.5 * (e21 + e22)
-      re2 = (e22 - e21) / (e21 + e22)
+      alfa20 = 0.075
+      ralfa2 = 0.
+      e20 = 1.e-30
+      re2 = 0.
 !
 ! Set cusp and drizzle parameters:
 ! (conversion between particle number density and characteristic
@@ -684,35 +678,27 @@
 ! dtheta    = colat-theta0(ihem)
 ! alfa      = electron energy
 !
-      if (alfa0 > 0.01) then
-        do i=1,nlon
-          coslamda(i) = cos(atan2(sin(alon(i)-rrote),
-     |                            cos(alon(i)-rrote)))
+      do i=1,nlon
+        coslamda(i) = cos(atan2(sin(alon(i)-rrote),cos(alon(i)-rrote)))
 !
 ! Auroral oval 1/e-width (equation (1) in Roble,1987):
-          halfwidth(i)=h0*(1.-rh*cos(atan2(sin(alon(i)-rroth),
-     |      cos(alon(i)-rroth))))
-          dtheta(i) = colat(i)-rrad(ihem)
+        halfwidth(i)=h0*(1.-rh*cos(atan2(sin(alon(i)-rroth),
+     |    cos(alon(i)-rroth))))
+        dtheta(i) = colat(i)-rrad(ihem)
 !
 ! Characteristic energy (equation (2) in Roble,1987):
-          alfa(i+2) =  alfa0*(1.-ralfa*coslamda(i))
-        enddo ! i=1,nlon
-      else
-        do i=1,nlon
-          coslamda(i)=cos(atan2(sin(alon(i)-rrote),cos(alon(i)-rrote))) ! wk1
-          halfwidth(i)=h0*(1.-rh*cos(atan2(sin(alon(i)-rroth),          ! wk2
-     |      cos(alon(i)-rroth))))
-          dtheta(i) = colat(i)-rrad(ihem)                               ! wk3
+        alfa(i+2) =  alfa0*(1.-ralfa*coslamda(i))
+      enddo ! i=1,nlon
 !
 ! 1/02 bf: this alfa not currently in use:
-!         alfa(i+2) = alfk+
-!    |      alf6*exp(-((dtheta(i)-rd6-rd6v*cos(alon(i)) )/rh6)**2)*
-!    |      exp(-(atan2(sin(alon(i)-rrot6),cos(alon(i)-rrot6))/rt6)**2)+
-!    |      alf21*exp(-((dtheta(i)-rd21)/rh21)**2)*
-!    |      exp(-(atan2(sin(alon(i)-rrot21),cos(alon(i)-rrot21))/
-!    |      rt21)**2)
-        enddo ! i=1,nlon
-      endif
+!     do i=1,nlon
+!       alfa(i+2) = alfk+
+!    |    alf6*exp(-((dtheta(i)-rd6-rd6v*cos(alon(i)) )/rh6)**2)*
+!    |    exp(-(atan2(sin(alon(i)-rrot6),cos(alon(i)-rrot6))/rt6)**2)+
+!    |    alf21*exp(-((dtheta(i)-rd21)/rh21)**2)*
+!    |    exp(-(atan2(sin(alon(i)-rrot21),cos(alon(i)-rrot21))/
+!    |    rt21)**2)
+!     enddo ! i=1,nlon
 !     write(6,"('aurora_heat: lat=',i3,' alfa=',/,(6e12.4))")
 !    |  lat,alfa
 !
@@ -746,15 +732,14 @@
 ! Insure ekvg mean energy >= 1.:
 !         if (lat==5) write(6,"('Using AMIE aurora flux >>>',4g10.3)")
 !    |      minval(ekvg),maxval(ekvg),minval(efxg),maxval(efxg)
-          ekvg(i,lat) = max(ekvg(i,lat),1.)
-          alfa(i+2) = ekvg(i,lat)/2.
+          alfa(i+2) = max(ekvg(i,lat),1.)/2.
           alfa2(i+2) = alfa20
           clat = acos(sin(abs(dlat_aur(i))))
 !         drizl(i+2) = exp(-((clat-crad(ihem)+
 !    |      abs(clat-crad(ihem)))/(2.*s10))**2)
 !         drizl(i+2) = exp(-((colat(i)-crad(ihem)+
 !    |      abs(colat(i)-crad(ihem)))/s10)**2)
-          flux(i+2) = max(efxg(i,lat)/(2.*alfa(i+2)*1.602e-9),1.e-20)
+          flux(i+2) = max(efxg(i,lat)/(2.*alfa(i+2)*1.602e-9),1.e-30)
 !          flux2(i+2) = e20*(1.-re2*coslamda(i))*
 !     |      exp(-((clat-crad(ihem))/
 !!    |      exp(-((colat(i)-crad(ihem))/
@@ -802,10 +787,8 @@
 !
 #ifdef GAMERA
       do i=1,nlonp4
-        alfa(i)=geng(i,lat)+0.01
-        flux(i)=gflx(i,lat)+0.01
-        if(alfa(i)<0.01)alfa(i)=0.01
-        if(flux(i)<0.01)flux(i)=0.01
+        alfa(i) = max(geng(i,lat),0.01)
+        flux(i) = max(gflx(i,lat),1.e-30)
         eflux(i) = flux(i)*fac_p2e*alfa(i)
 !       write(6,*)alfa(i),flux(i),i,lat
       enddo
@@ -826,7 +809,6 @@
      |  expz,  ! exp(-zp) where zp is log pressure (ln(p0/p))
      |  grav,  ! gravity
      |  gask,  ! gas constant (8.314e7)
-     |  rmass_o2, rmass_n2,        ! molelcular weights of o2,n2
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2, ! 1./rmass
      |  avo    ! avogadro number (6.023e23)
 !
@@ -852,11 +834,10 @@
 !
 ! Local:
       integer :: i,k
-      real :: xn2
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  p0ez, xalfa1, xalfa2, xcusp, xdrizl,       ! input to sub aion
      |  xalfa_sp, xalfa3,
-     |  flux1_ion, flux2_ion, cusp_ion, drizl_ion, ! output from sub aion
+     |  cusp_ion, drizl_ion,                       ! output from sub aion
      |  alfa1_ion, alfa2_ion, alfa3_ion,           ! output from sub aion
      |  alfasp_bion,                               ! output from sub bion
      |  barm_t, qsum, denom, p0ez_mbar, tk_mbar,
@@ -898,14 +879,6 @@
           xalfa_sp(k,i) = ((tk_mbar(k,i)/0.00271)**0.58140)/alfa_sp
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
-!
-! Init (whole array operations):
-      flux1_ion = 1.e-20
-      flux2_ion = 1.e-20
-      alfa1_ion = 1.e-20
-      alfa2_ion = 1.e-20
-      cusp_ion  = 1.e-20
-      drizl_ion = 1.e-20
 !
 ! Sub aion calculates auroral electrons: 
 !
@@ -967,7 +940,8 @@
      |      0.56 * o1(k,i)*rmassinv_o1
 !
 ! Production of O2+ (equation (15) in Roble,1987):
-          qo2p_aur(k,i) = qsum(k,i)*o2(k,i)/(rmass_o2*denom(k,i))+qia(2)
+          qo2p_aur(k,i) = qsum(k,i)*o2(k,i)*rmassinv_o2/denom(k,i)+
+     |      qia(2)
 !
 ! Production of O+ (equation (16) in Roble,1987):
           qop_aur(k,i) = qsum(k,i)*
@@ -975,8 +949,8 @@
      |       0.56*o1(k,i)*rmassinv_o1)/denom(k,i) + qia(3)
 !
 ! Production of N2+ (equation (13) in Roble,1987)
-          xn2 = n2(k,i)
-          qn2p_aur(k,i) = qsum(k,i)*0.7*xn2/(rmass_n2*denom(k,i))+qia(1)
+          qn2p_aur(k,i) = qsum(k,i)*0.7*n2(k,i)*rmassinv_n2/denom(k,i)+
+     |      qia(1)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
@@ -1005,6 +979,8 @@
         enddo
 !
 ! Extrapolate lower boundary:
+! Use linear extrapolation instead of exponential extrapolation
+! to avoid the divide-by-zero problem q_aur(lev0)**3/q_aur(lev0+1)
         qo2p_a(lev0,i) =
      |    max(1.5*qo2p_aur(lev0,i)-0.5*qo2p_aur(lev0+1,i),0.)
         qop_a (lev0,i) =

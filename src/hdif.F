@@ -332,7 +332,7 @@
 !-----------------------------------------------------------------------
       subroutine hdif3(cp,fnrh,
      |  kldt,kldu,kldv,kldo2,kldo1,kldhe, ! input
-     |  hdt ,hdu ,hdv ,hdo2 ,hdo1,hdhe,   ! output
+     |  hdt ,hdu ,hdv ,hdo2 ,hdo1 ,hdhe , ! output
      |  lev0,lev1,lon0,lon1,lat)
       use mpi_module,only: lat0,lat1
 !

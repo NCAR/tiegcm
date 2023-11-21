@@ -1210,8 +1210,7 @@
 !-----------------------------------------------------------------------
       subroutine mkdiag_O_N2(name,o1,n2,lev0,lev1,lon0,lon1,lat)
 !
-! Calculate O/N2 ratio from o2 and o (mmr). 
-! N2 is passed in (3d array in fields.F), where n2=1-o2-o-he
+! Calculate O/N2 ratio from o and n2 (mmr).
 !
 ! Args:
       character(len=*),intent(in) :: name

@@ -27,7 +27,7 @@
       complex :: bnd_sdi(nlonp4), bnd_di(nlonp4)
 !
 ! For bndcmp:
-      real :: b(nlonp4,3,3),fb(nlonp4,3)
+      real :: b(3,3),fb(3)
 !
 ! This t0 is different than the t0 in cons.
       real :: t0(nlev+1) 
@@ -523,176 +523,86 @@
       end subroutine bndry_diurnal
 !-----------------------------------------------------------------------
       subroutine bndcmp
-C     ****
-C     ****     CALCULATE MATRICES B(nlonp4,2,2) AND VECTORS FB(nlonp4,2)
-C     ****       REPRESENTING THE LOWER BOUBNDARY CONDITION IN COMP,
-C     ****       WHERE PSI1 AND PSI2 ARE CALCULATED:
-C     ****
-C     ****         PSI(K=-1/2) = B * PSI(K=1/2) + FB
-C     ****
-C     ****     BNDCMP CALLS THE SUBROUTINE BNDEF TO DEFINE THE 2 X 2
-C     ****       MATRICES E, F AND THE 2 VECTOR G IN THE GENERAL
-C     ****       LOWER BOUNDARY CONDITION:
-C     ****
-C     ****         E * D(PSI)/DS + F * PSI + G = 0.
-C     ****
-C     ****         WHERE:
-C     ****           PSI = |PSI1| AND THE BOUNDARY CONDITION IS APPLIED
-C     ****                 |    |
-C     ****                 |PSI2|
-C     ****
-C     ****           AT LEVEL ZERO
-C     ****
-C     ****     THIS SUBROUTINE THEN EVALUATES B AND FB FROM:
-C     ****
-C     ****       B = (E/DS - F/2.)**(-1) * (E/DS + F/2.)
-C     ****
-C     ****       FB = (E/DS - F/2.)**(-1) * G
-C     ****
-!
-! Local:
-      real :: ee(nlonp4,3,3),ff(nlonp4,3,3),gg(nlonp4,3),
-     |  wm1(nlonp4,3,3),wm2(nlonp4,3,3),wm3(nlonp4,3,3),
-     |  ws1(nlonp4)
-      integer :: l,m,i
-C     ****
-C     ****     CALL BNDEF TO DEFINE E, F AND G IN S1, S2 AND S3
-C     ****
-      call bndef(ee,ff,gg)
-C     ****
-C     ****     WM1 = (E/DS - F/2.)
-C     ****
-C     ****     WM2 = (E/DS + F/2.)
-C     ****
+
+! calculate matrix b(3,3) and vector fb(3)
+! representing the lower boundary condition in comp,
+! where psi = (o2 o1 he) are calculated as
+! psi(k=-1/2) = b * psi(k=1/2) + fb
+
+! bndcmp defines 3x3 matrices e, f and length-3 vector g
+! in the general lower boundary condition
+! e * d(psi)/ds + f * psi + g = 0.
+
+! this subroutine then evaluates b and fb from:
+! b = (e/ds - f/2.)**(-1) * (e/ds + f/2.)
+! fb = (e/ds - f/2.)**(-1) * g
+
+! local:
+      real,parameter :: alfa = 0.22+0.014 ! lower boundary for o2+o
+
+      real :: ws1
+      real,dimension(3) :: g
+      real,dimension(3,3) :: e,f,wm1,wm2,wm3
+      integer :: l,m
+
+!     |0 0 0|
+! e = |0 1 0|
+!     |0 0 0|
+      e = 0.
+      e(2,2) = 1.
+
+!     |1  1  0|
+! f = |0 -1  0|
+!     |0  0  1|
+      f = 0.
+      f(1,1) = 1.
+      f(1,2) = 1.
+      f(2,2) = -1.
+      f(3,3) = 1.
+
+! g = -(o2+o 0 he)
+      g = -(/alfa,0.,pshelb/)
+
+! wm1 = (e/ds - f/2.)
+! wm2 = (e/ds + f/2.)
       do l = 1,3
         do m = 1,3
-          do i = 1,nlonp4
-            wm1(i,l,m) = ee(i,l,m)/dz-ff(i,l,m)/2.
-            wm2(i,l,m) = ee(i,l,m)/dz+ff(i,l,m)/2.
-          enddo
+          wm1(l,m) = e(l,m)/dz-f(l,m)/2.
+          wm2(l,m) = e(l,m)/dz+f(l,m)/2.
         enddo
       enddo
-C     ****
-C     ****     WM3 = WM1**(-1)
-C     ****
-C     ****     WS1 = DET(WM1)
-C     ****
-      do i = 1,nlonp4
-        ws1(i) = 
-     |    wm1(i,1,1)*(wm1(i,2,2)*wm1(i,3,3)-wm1(i,2,3)*wm1(i,3,2))+
-     |    wm1(i,1,2)*(wm1(i,2,3)*wm1(i,3,1)-wm1(i,2,1)*wm1(i,3,3))+
-     |    wm1(i,1,3)*(wm1(i,2,1)*wm1(i,3,2)-wm1(i,2,2)*wm1(i,3,1))
-      enddo
-C     ****
-C     ****     NOW INVERSE OF WM1 IN WM3
-C     ****
-      do i = 1,nlonp4
-        wm3(i,1,1) =(wm1(i,2,2)*wm1(i,3,3)-wm1(i,2,3)*wm1(i,3,2))/ws1(i)
-        wm3(i,1,2) =(wm1(i,1,3)*wm1(i,3,2)-wm1(i,1,2)*wm1(i,3,3))/ws1(i)
-        wm3(i,1,3) =(wm1(i,1,2)*wm1(i,2,3)-wm1(i,1,3)*wm1(i,2,2))/ws1(i)
-        wm3(i,2,1) =(wm1(i,2,3)*wm1(i,3,1)-wm1(i,2,1)*wm1(i,3,3))/ws1(i)
-        wm3(i,2,2) =(wm1(i,1,1)*wm1(i,3,3)-wm1(i,1,3)*wm1(i,3,1))/ws1(i)
-        wm3(i,2,3) =(wm1(i,1,3)*wm1(i,2,1)-wm1(i,1,1)*wm1(i,2,3))/ws1(i)
-        wm3(i,3,1) =(wm1(i,2,1)*wm1(i,3,2)-wm1(i,2,2)*wm1(i,3,1))/ws1(i)
-        wm3(i,3,2) =(wm1(i,1,2)*wm1(i,3,1)-wm1(i,1,1)*wm1(i,3,2))/ws1(i)
-        wm3(i,3,3) =(wm1(i,1,1)*wm1(i,2,2)-wm1(i,1,2)*wm1(i,2,1))/ws1(i)
-      enddo
-C     ****
-C     ****     B = WM3 * WM2
-C     ****
-! b and fb are bndry_module module data.
+
+! ws1 = det(wm1)
+      ws1 =
+     |  wm1(1,1)*(wm1(2,2)*wm1(3,3)-wm1(2,3)*wm1(3,2))+
+     |  wm1(1,2)*(wm1(2,3)*wm1(3,1)-wm1(2,1)*wm1(3,3))+
+     |  wm1(1,3)*(wm1(2,1)*wm1(3,2)-wm1(2,2)*wm1(3,1))
+
+! now inverse of wm1 in wm3
+      wm3(1,1) =(wm1(2,2)*wm1(3,3)-wm1(2,3)*wm1(3,2))/ws1
+      wm3(1,2) =(wm1(1,3)*wm1(3,2)-wm1(1,2)*wm1(3,3))/ws1
+      wm3(1,3) =(wm1(1,2)*wm1(2,3)-wm1(1,3)*wm1(2,2))/ws1
+      wm3(2,1) =(wm1(2,3)*wm1(3,1)-wm1(2,1)*wm1(3,3))/ws1
+      wm3(2,2) =(wm1(1,1)*wm1(3,3)-wm1(1,3)*wm1(3,1))/ws1
+      wm3(2,3) =(wm1(1,3)*wm1(2,1)-wm1(1,1)*wm1(2,3))/ws1
+      wm3(3,1) =(wm1(2,1)*wm1(3,2)-wm1(2,2)*wm1(3,1))/ws1
+      wm3(3,2) =(wm1(1,2)*wm1(3,1)-wm1(1,1)*wm1(3,2))/ws1
+      wm3(3,3) =(wm1(1,1)*wm1(2,2)-wm1(1,2)*wm1(2,1))/ws1
+
+! b and fb are module data
+
+! b = wm3 * wm2
       do l = 1,3
         do m = 1,3
-          do i = 1,nlonp4
-            b(i,l,m) = wm3(i,l,1)*wm2(i,1,m)+wm3(i,l,2)*wm2(i,2,m)+
-     |                 wm3(i,l,3)*wm2(i,3,m)
-          enddo
+          b(l,m) = wm3(l,1)*wm2(1,m)+wm3(l,2)*wm2(2,m)+wm3(l,3)*wm2(3,m)
         enddo
       enddo
-C     ****
-C     ****     FB = WM3 * G
-C     ****
+
+! fb = wm3 * g
       do l = 1,3
-        do i = 1,nlonp4
-          fb(i,l) = wm3(i,l,1)*gg(i,1)+wm3(i,l,2)*gg(i,2)+wm3(i,l,3)*
-     |              gg(i,3)
-        enddo
+        fb(l) = wm3(l,1)*g(1)+wm3(l,2)*g(2)+wm3(l,3)*g(3)
       enddo
+
       end subroutine bndcmp
-!-----------------------------------------------------------------------
-      subroutine bndef(ee,ff,gg)
-C     ****
-C     ****     BNDEF DEFINES THE LOWER BOUNDARY CONDITION FOR THIS
-C     ****       VERSION OF THE MODEL
-C     ****
-C     ****     THE LOWER BOUNDARY CONDITION FOR COMP IS:
-C     ****
-C     ****       E * D(PSI)/DS + F * PSI +G = 0.
-C     ****
-C     ****         WHERE:
-C     ****           PSI = VECTOR(PSI1,PSI2)
-C     ****           E AND F ARE 2 X 2 MATRICES
-C     ****           G = VECTOR(G1,G2)
-C     ****
-C     ****           E, F AND G MAY BE FUNCTIONS OF LATITUDE & LONGITUDE
-C     ****
-C     ****       THIS SUBROUTINE DEFINES E, F AND G for BNDCMP
-C     ****
-!
-! Args:
-      real,intent(out) :: ee(nlonp4,3,3),ff(nlonp4,3,3),gg(nlonp4,3)
-!
-! Local:
-      real :: alfa
-      integer :: i
-C     ****
-C     ****     IN TIGCM AND TIEGCM:
-C     ****
-C     ****       E = |0.  0.  0.|
-C     ****           |          |
-C     ****           |0.  1.  0.|
-C     ****           |          |
-C     ****           |0.  0.  0.|
-C     ****
-C     ****       F = |1.  1.  0.|
-C     ****           |          |
-C     ****           |0. -1.  0.|
-C     ****           |          |
-C     ****           |0.  0.  1.|
-C     ****
-C     ****       G = |-ALFA|
-C     ****           |     |
-C     ****           |   0.|
-C     ****           |     |
-C     ****           | -HEB|
-C     ****
-C     ****       WHERE:
-C     ****         ALFA = 0.22 + 0.014 = 0.234
-C     ****
-      data alfa/0.234/
-      do i = 1,nlonp4
-        ee(i,1,1) = 0.
-        ee(i,1,2) = 0.
-        ee(i,1,3) = 0.
-        ee(i,2,1) = 0.
-        ee(i,2,2) = 1.
-        ee(i,2,3) = 0.
-        ee(i,3,1) = 0.
-        ee(i,3,2) = 0.
-        ee(i,3,3) = 0.
-        ff(i,1,1) = 1.
-        ff(i,1,2) = 1.
-        ff(i,1,3) = 0.
-        ff(i,2,1) = 0.
-        ff(i,2,2) = -1.
-        ff(i,2,3) = 0.
-        ff(i,3,1) = 0.
-        ff(i,3,2) = 0.
-        ff(i,3,3) = 1.
-        gg(i,1) = -alfa
-        gg(i,2) = 0.
-        gg(i,3) = -pshelb
-      enddo
-      end subroutine bndef
 !-----------------------------------------------------------------------
       end module lbc

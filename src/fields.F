@@ -47,26 +47,26 @@
 !
 ! Indices, to f4d fields, e.g. f4d(i_tn)%data is neutral temperature.
       integer ::
-     |  i_tn    ,i_un     ,i_vn     ,i_o2     ,i_o1     ,
-     |  i_he    ,i_op     ,i_n4s    ,i_no     ,i_ar     ,
-     |  i_ti    ,i_te     ,i_ne     ,i_w      ,i_n2d    ,
-     |  i_o2p   ,i_z      ,i_poten  ,i_tn_nm  ,i_un_nm  ,
-     |  i_vn_nm ,i_o2_nm  ,i_o1_nm  ,i_he_nm  ,i_op_nm  ,
-     |  i_n4s_nm,i_no_nm  ,i_ar_nm  ,i_mbar   ,i_barm   ,
-     |  i_xnmbar,i_xnmbari,i_scht   ,i_schti  ,i_vc
+     |  i_tn     ,i_un     ,i_vn     ,i_o2     ,i_o1     ,
+     |  i_he     ,i_op     ,i_n4s    ,i_no     ,i_ar     ,
+     |  i_ti     ,i_te     ,i_ne     ,i_w      ,i_n2d    ,
+     |  i_o2p    ,i_z      ,i_poten  ,i_tn_nm  ,i_un_nm  ,
+     |  i_vn_nm  ,i_o2_nm  ,i_o1_nm  ,i_he_nm  ,i_op_nm  ,
+     |  i_n4s_nm ,i_no_nm  ,i_ar_nm  ,i_mbar   ,i_barm   ,
+     |  i_xnmbar ,i_xnmbari,i_scht   ,i_schti  ,i_vc
 !
 ! Allocatable target arrays for 4-d fields:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 ,2)
 ! which is the same as: tn(1    :nlev ,lon0-2:lon1+2,lat0-2:lat1+2,2)
 !
       real,dimension(:,:,:,:),target,allocatable :: ! (k,i,j,2)
-     |  tn      ,un       ,vn       ,o2       ,o1       ,
-     |  he      ,op       ,n4s      ,no       ,ar       ,
-     |  ti      ,te       ,ne       ,w        ,n2d      ,
-     |  o2p     ,z        ,poten    ,tn_nm    ,un_nm    ,
-     |  vn_nm   ,o2_nm    ,o1_nm    ,he_nm    ,op_nm    ,
-     |  n4s_nm  ,no_nm    ,ar_nm    ,mbar     ,barm     ,
-     |  xnmbar  ,xnmbari  ,scht     ,schti    ,vc
+     |  tn       ,un       ,vn       ,o2       ,o1       ,
+     |  he       ,op       ,n4s      ,no       ,ar       ,
+     |  ti       ,te       ,ne       ,w        ,n2d      ,
+     |  o2p      ,z        ,poten    ,tn_nm    ,un_nm    ,
+     |  vn_nm    ,o2_nm    ,o1_nm    ,he_nm    ,op_nm    ,
+     |  n4s_nm   ,no_nm    ,ar_nm    ,mbar     ,barm     ,
+     |  xnmbar   ,xnmbari  ,scht     ,schti    ,vc
 !
 ! 3-d fields structure type:
 ! Data pointers will point to allocatable target arrays.
@@ -89,29 +89,29 @@
 !
 ! 3-d fields and indices, e.g., reference f3d(kldt)%data
       integer :: 
-     |  i_kldt   ,i_kldu    ,i_kldv    ,i_kldo2 ,i_kldo1 ,i_kldhe,
-     |  i_cp     ,i_kt      ,i_km      ,i_ui    ,i_vi    ,i_wi,
-     |  i_vo2    ,i_vo1     ,i_vn2     ,i_sco2  ,i_sco1  ,i_scn2,
-     |  i_xiop2p ,i_xiop2d  ,i_nplus   ,i_n2p   ,i_nop   ,
-     |  i_lxx    ,i_lyy     ,i_lxy     ,i_lyx   ,i_qji_ti,i_qji_tn,
-     |  i_cool_implicit     ,i_cool_explicit    ,
-     |  i_hdt    ,i_hdu     ,i_hdv     ,i_hdo2  ,i_hdo1  ,i_hdhe,
-     |  i_ped    ,i_hall    ,i_lam1    ,i_zg    ,i_n2    ,i_wn,
-     |  i_Fe     ,i_Fn      ,i_Etot    ,i_Qa    ,i_Q2
+     |  i_kldt   ,i_kldu   ,i_kldv   ,i_kldo2  ,i_kldo1  ,i_kldhe  ,
+     |  i_cp     ,i_kt     ,i_km     ,i_ui     ,i_vi     ,i_wi     ,
+     |  i_vo2    ,i_vo1    ,i_vn2    ,i_sco2   ,i_sco1   ,i_scn2   ,
+     |  i_xiop2p ,i_xiop2d ,i_nplus  ,i_n2p    ,i_nop    ,
+     |  i_lxx    ,i_lyy    ,i_lxy    ,i_lyx    ,i_qji_ti ,i_qji_tn ,
+     |  i_cool_implicit    ,i_cool_explicit    ,
+     |  i_hdt    ,i_hdu    ,i_hdv    ,i_hdo2   ,i_hdo1   ,i_hdhe   ,
+     |  i_ped    ,i_hall   ,i_lam1   ,i_zg     ,i_n2     ,i_wn     ,
+     |  i_Fe     ,i_Fn     ,i_Etot   ,i_Qa     ,i_Q2
 !
 ! Allocatable target arrays 3-d:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 )
 ! which is the same as: tn(1    :nlev ,lon0-2:lon1+2,lat0-2:lat1+2)
 !
       real,dimension(:,:,:),target,allocatable :: ! (k,i,j)
-     |  kldt     ,kldu     ,kldv     ,kldo2    ,kldo1   ,kldhe,
-     |  cp       ,kt       ,km       ,ui       ,vi      ,wi,
-     |  vo2      ,vo1      ,vn2      ,sco2     ,sco1    ,scn2,
-     |  xiop2p   ,xiop2d   ,nplus    ,n2p      ,nop     ,
-     |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti  ,qji_tn,
+     |  kldt     ,kldu     ,kldv     ,kldo2    ,kldo1    ,kldhe    ,
+     |  cp       ,kt       ,km       ,ui       ,vi       ,wi       ,
+     |  vo2      ,vo1      ,vn2      ,sco2     ,sco1     ,scn2     ,
+     |  xiop2p   ,xiop2d   ,nplus    ,n2p      ,nop      ,
+     |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti   ,qji_tn   ,
      |  cool_implicit      ,cool_explicit      ,
-     |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1    ,hdhe,
-     |  ped      ,hall     ,lam1     ,zg       ,n2      ,wn,
+     |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1     ,hdhe     ,
+     |  ped      ,hall     ,lam1     ,zg       ,n2       ,wn       ,
      |  Fe       ,Fn       ,Etot     ,Qa       ,Q2
 !
 ! 2-d field type (used for 2d secondary history fields):

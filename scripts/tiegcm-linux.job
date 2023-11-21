@@ -23,7 +23,7 @@
 # To switch to 2.5x0.25-deg resolution, set horires below to 2.5 and vertres to 0.25,
 # and change execdir, tgcmdata and namelist input if necessary.
 #
-modeldir=$TGCMHOME
+modeldir=$TGCMROOT
 execdir="/scratch/$USER/tiegcm"
 tgcmdata="tiegcm_data"
 utildir="$modeldir/scripts"

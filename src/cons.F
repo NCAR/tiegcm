@@ -59,22 +59,19 @@
 ! here, and use x*rmassinv in the code.
 !
       real,parameter :: 
-     |  rmass(3) = (/32.,16.,28./), ! o2,o,n2
-     |  rmass_o2 = 32., rmass_o1  = 16., rmass_n2  = 28., 
-     |  rmass_o3 = 48., rmass_n4s = 14., rmass_n2d = 14., 
-     |  rmass_no = 30., rmass_op  = 16., rmass_co2 = 44.,
-     |  rmass_he =  4., rmass_ar  = 40.
+     |  rmass_o2  = 32., rmass_o1 = 16., rmass_he = 4., rmass_n2 = 28.,
+     |  rmass_n4s = 14., rmass_no = 30., rmass_ar = 40., rmass_op = 16.,
+     |  rmass_n2d = 14., rmass_co2 = 44.
       real,parameter ::
      |  rmassinv_o2  = 1./rmass_o2,
      |  rmassinv_o1  = 1./rmass_o1,
-     |  rmassinv_n2  = 1./rmass_n2,
-     |  rmassinv_o3  = 1./rmass_o3,
-     |  rmassinv_n4s = 1./rmass_n4s,
-     |  rmassinv_n2d = 1./rmass_n2d,
-     |  rmassinv_no  = 1./rmass_no,
-     |  rmassinv_op  = 1./rmass_op,
      |  rmassinv_he  = 1./rmass_he,
-     |  rmassinv_ar  = 1./rmass_ar
+     |  rmassinv_n2  = 1./rmass_n2,
+     |  rmassinv_n4s = 1./rmass_n4s,
+     |  rmassinv_no  = 1./rmass_no,
+     |  rmassinv_ar  = 1./rmass_ar,
+     |  rmassinv_op  = 1./rmass_op,
+     |  rmassinv_n2d = 1./rmass_n2d
 !
 ! Model derived constants (see sub init_cons in this module):
 !
@@ -103,7 +100,6 @@
      |  expz(nlev+1),   ! exp(-z) at midpoints
      |  expzmid,        ! exp(-.5*dz)                             C(86)
      |  expzmid_inv,    ! 1./expzmid                              C(87)
-     |  rmassinv(3),    ! inverse of rmass
      |  t0(nlev+1),     ! set by sub lowbound (bndry_mod.F)
      |  racs(nlat),     ! 1./(re*cs(lat))
      |  cs(-1:nlat+2),  ! cos(phi)
@@ -298,9 +294,6 @@
       enddo
       expzmid = exp(-.5*dlev)
       expzmid_inv = 1./expzmid
-      do i=1,3
-        rmassinv(i) = 1./rmass(i)
-      enddo
       js=-(nlat/2)
       do j=1,nlat
         phi=(j+js-.5)*dphi
@@ -333,34 +326,26 @@
       if (nlat==36 .and. nlon==72) then
         default_step = 60.
         nlat_filter = 5
-        if (.not. allocated(chunk_array)) 
-     |    allocate(chunk_array(nlat_filter))
+        allocate(chunk_array(nlat_filter))
         chunk_array = (/3,9,18,36,36/)
       elseif (nlat==72 .and. nlon==144) then
         default_step = 30.
-        nlat_filter = 8
-        if (.not. allocated(chunk_array)) 
-     |    allocate(chunk_array(nlat_filter))
-        chunk_array = (/9,9,18,18,36,36,72,72/)
+        nlat_filter = 10
+        allocate(chunk_array(nlat_filter))
+        chunk_array = (/3,3,9,9,18,18,36,36,72,72/)
       elseif (nlat==144 .and. nlon==288) then
         default_step = 10.
-        nlat_filter = 18
-        if (.not. allocated(chunk_array)) 
-     |    allocate(chunk_array(nlat_filter))
-        chunk_array =
-     |    (/3,9,9,18,18,18,
-     |    36,36,36,72,72,72,
-     |    144,144,144,144,144,144/)
+        nlat_filter = 20
+        allocate(chunk_array(nlat_filter))
+        chunk_array = (/3,3,3,9,9,9,18,18,18,
+     |    36,36,36,72,72,72,72,144,144,144,144/)
       elseif (nlat==288 .and. nlon==576) then
         default_step = 5.
-        nlat_filter = 34
-        if (.not. allocated(chunk_array)) 
-     |    allocate(chunk_array(nlat_filter))
-        chunk_array =
-     |    (/3,9,9,9,18,18,18,18,
-     |    36,36,36,36,72,72,72,72,72,72,
-     |    144,144,144,144,144,144,144,144,
-     |    288,288,288,288,288,288,288,288/)
+        nlat_filter = 40
+        allocate(chunk_array(nlat_filter))
+        chunk_array = (/3,3,3,3,3,9,9,9,9,9,
+     |    18,18,18,18,18,18,36,36,36,36,36,36,72,72,72,72,72,72,
+     |    144,144,144,144,144,144,288,288,288,288,288,288/)
       else
         call shutdown('Unknown combination of lat x lon')
       endif

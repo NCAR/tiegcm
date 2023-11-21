@@ -30,7 +30,7 @@
 # and change execdir, tgcmdata and namelist input if necessary.
 # Also reset number of processors accordingly below (#PBS -l).
 #
-modeldir=$TGCMHOME
+modeldir="/zfs/luatmos/tiegcm/tiegcm3.0"
 execdir="/scratch/$USER/tiegcm"
 tgcmdata="/zfs/luatmos/tiegcm/tiegcm_data"
 utildir="$modeldir/scripts"

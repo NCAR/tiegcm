@@ -7,8 +7,9 @@
 !
 ! Calculate needed terms vc, barm, xnmbar[i,m], and Z:
 !
-      use cons_module,only: cs,rmassinv,rmassinv_he,dz,dzgrav,
-     |  gask,grav,p0,boltz,expz,expzmid,expzmid_inv
+      use cons_module,only: cs,dz,dzgrav,
+     |  gask,grav,p0,boltz,expz,expzmid,expzmid_inv,
+     |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2
       use fields_module,only: tlbc
       use addfld_module,only: addfld
       use lbc,only: z_lbc
@@ -100,8 +101,8 @@
         do i=lon0,lon1
           do k=lev0,lev1
             mbar(k,i,j) = 1./ 
-     |        (o2(k,i,j)*rmassinv(1)+o1(k,i,j)*rmassinv(2)+
-     |         he(k,i,j)*rmassinv_he+n2(k,i,j)*rmassinv(3))
+     |        (o2(k,i,j)*rmassinv_o2+o1(k,i,j)*rmassinv_o1+
+     |         he(k,i,j)*rmassinv_he+n2(k,i,j)*rmassinv_n2)
             xnmbar(k,i,j)=p0*expz(k)*mbar(k,i,j)/
      |        (boltz*tn(k,i,j))
           enddo

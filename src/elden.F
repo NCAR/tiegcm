@@ -44,11 +44,12 @@
      |  electrons  ! electron density (output to f4d(ne))
 !
 ! Local:
-      integer :: k,i,i0,i1,idx(1),k0
+      integer :: k,i,i0,i1,idx(1)
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  a0,a1,a2,a3,a4, ! coefficients for quartic solver
      |  a,b,c,d,e,fg,h, ! terms for quartic coefficients
-     |  root            ! output from quartic solver
+     |  root,           ! output from quartic solver
+     |  np_prod,np_loss,ne2
 
 !     write(6,"('enter elden: lat=',i2)") lat
       i0 = lon0 ; i1 = lon1
@@ -78,10 +79,11 @@
 !
 ! N+ ion (output):
         do k=lev0,lev1-1
-          nplus(k,i) = (0.5*(qnp(k,i,lat)+qnp(k+1,i,lat))+
-     |      rk10*op(k,i)*n2d(k,i)*xnmbar(k,i)*rmassinv_n2d) /
-     |      (xnmbar(k,i)*((rk6+rk7)*o2(k,i)*rmassinv_o2+
-     |      rk8*o1(k,i)*rmassinv_o1))
+          np_prod(k,i) = 0.5*(qnp(k,i,lat)+qnp(k+1,i,lat))+
+     |      rk10*op(k,i)*n2d(k,i)*xnmbar(k,i)*rmassinv_n2d
+          np_loss(k,i) = (rk6+rk7)*o2(k,i)*rmassinv_o2+
+     |      rk8*o1(k,i)*rmassinv_o1
+          nplus(k,i) = np_prod(k,i)/(xnmbar(k,i)*np_loss(k,i))
         enddo
 ! N+ shows a spurious increase above 800km which is clearly not physical
 ! level out any increases above the altitude where N+ reaches minimum
@@ -195,20 +197,10 @@
 ! 1/24/08 btf, maute: Minimum Ne is replaced by new values for flux 
 !                     parameter al in qinite.F
 !
-! Insure positive Ne (at least 3100):
-!     where(root < 3.1e3) root = 3.1e3
-!      do i=lon0,lon1
-!        do k=lev0,lev1-1
-!          if (root(k,i) < 3.1e3) root(k,i) = 3.1e3
-!        enddo 
-!      enddo
-!
 ! Calculate N2+, O2+, NO+ (cm3)
 !
       do i=lon0,lon1      
         do k=lev0,lev1-1
-          if (root(k,i) < 1.) root(k,i) = 1.0  ! insure positive Ne from solver
-	                                       ! in case there is a problem
            n2p(k,i) = d(k,i)/(e(k,i)+ra3(k,i,lat)*root(k,i))    
           o2p(k,i) = (b(k,i)+h(k,i)*d(k,i)/(e(k,i)+ra3(k,i,lat)*
      |      root(k,i)))/(c(k,i)+ra2(k,i,lat)*root(k,i))
@@ -234,12 +226,20 @@
 ! Transfer root to electrons output array:
       do i=lon0,lon1
         do k=lev0,lev1-2
-          electrons(k+1,i) = sqrt(root(k,i)*root(k+1,i))
+          ne2(k+1,i) = root(k,i)*root(k+1,i)
         enddo ! k=lev0,lev1-2
 !
 ! Lower and upper boundaries:
-        electrons(lev0,i) = sqrt(root(lev0  ,i)**3/root(lev0+1,i))
-        electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
+        ne2(lev0,i) = root(lev0  ,i)**3/root(lev0+1,i)
+        ne2(lev1,i) = root(lev1-1,i)**3/root(lev1-2,i)
+
+        do k=lev0,lev1
+          if (ne2(k,i) <= 0.) then
+            electrons(k,i) = 0.
+          else
+            electrons(k,i) = sqrt(ne2(k,i))
+          endif
+        enddo
       enddo ! i=lon0,lon1
 !     call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',i0,i1,lat)
@@ -265,8 +265,8 @@
 !
 ! Local:
       integer :: k,i,nlevs,i0,i1
+      real :: delta
       real,dimension(lev0:lev1,lon0:lon1) :: w1,w2,w3 ! work arrays
-      real,parameter :: e=1.e-300 ! largest exponent on ieee is about 307
 !
       nlevs = lev1-lev0+1
       i0 = lon0 ; i1 = lon1
@@ -278,31 +278,45 @@
      |                12.
 !
 ! w2 = cg
-          w2(k,i) = (a4(k,i)*(a2(k,i)*a0(k,i)-a1(k,i)**2)-a3(k,i)*
-     |      (a3(k,i)*a0(k,i)-a1(k,i)*a2(k,i))+a2(k,i)*(a3(k,i)*a1(k,i)-
-     |      a2(k,i)**2))/4.
+          w2(k,i) = (a4(k,i)*(a2(k,i)*a0(k,i)-a1(k,i)**2)-
+     |      a3(k,i)*(a3(k,i)*a0(k,i)-a1(k,i)*a2(k,i))+
+     |      a2(k,i)*(a3(k,i)*a1(k,i)-a2(k,i)**2))/4.
 !
-! root=rlam=-2.*real((.5*(cmplx(cg,0.)+csqrt(cmplx(cg**2+4.
-!      *ch**3+e,0.)))+cmplx(e,0.))**(1./3.))
+! root=rlam=-2.*(.5*(cg+sqrt(cg**2+4.*ch**3)))**(1./3.)
 ! 
-          root(k,i) = -2.*real((.5*(cmplx(w2(k,i),0.)+
-     |      csqrt(cmplx(w2(k,i)**2+4.*w1(k,i)**3+e,0.)))+
-     |      cmplx(e,0.))**(1./3.))
+          delta = w2(k,i)**2+4.*w1(k,i)**3
+          if (delta <= 0.) then
+            delta = .5*w2(k,i)
+          else
+            delta = .5*(w2(k,i)+sqrt(delta))
+          endif
+          if (delta <= 0.) then
+            root(k,i) = 0.
+          else
+            root(k,i) = -2.*delta**(1./3.)
+          endif
 !
-! W1=P=SQRT(A(5)*RLAM+A(4)**2-A(5)*A(3)+E)
+! W1=P=SQRT(A(5)*RLAM+A(4)**2-A(5)*A(3))
 !
-          w1(k,i) = a4(k,i)*root(k,i)+a3(k,i)**2-a4(k,i)*a2(k,i)+e
-          if (w1(k,i) < 0.) w1(k,i) = 0.
-          w1(k,i) = sqrt(w1(k,i))
+          delta = a4(k,i)*root(k,i)+a3(k,i)**2-a4(k,i)*a2(k,i)
+          if (delta <= 0.) then
+            w1(k,i) = 0.
+          else
+            w1(k,i) = sqrt(delta)
+          endif
 !
-! W2=Q=SQRT((2.*RLAM+A(3))**2-A(5)*A(1)+E)
+! W2=Q=SQRT((2.*RLAM+A(3))**2-A(5)*A(1))
 !
-          w2(k,i) = sqrt((2.*root(k,i)+a2(k,i))**2-a4(k,i)*a0(k,i)+e)
+          delta = (2.*root(k,i)+a2(k,i))**2-a4(k,i)*a0(k,i)
+          if (delta <= 0.) then
+            w2(k,i) = 0.
+          else
+            w2(k,i) = sqrt(delta)
+          endif
 !
-! W3=PQ=2.*A(4)*RLAM+A(4)*A(3)-A(5)*A(2)+E
+! W3=PQ=2.*A(4)*RLAM+A(4)*A(3)-A(5)*A(2)
 !
           w3(k,i) = 2.*a3(k,i)*root(k,i)+a3(k,i)*a2(k,i)-a4(k,i)*a1(k,i)
-     |      +e
 !
 !  W1=P=SIGN(P,Q*PQ)
 !
@@ -314,8 +328,14 @@
 !
 ! Final evaluation of root:
 !
-          root(k,i) = (w3(k,i)+sqrt(w3(k,i)**2-a4(k,i)*(a2(k,i)+2.*
-     |      root(k,i)-w2(k,i))))/a4(k,i)
+          delta = w3(k,i)**2-a4(k,i)*(a2(k,i)+2.*root(k,i)-w2(k,i))
+          if (delta <= 0.) then
+            root(k,i) = w3(k,i)/a4(k,i)
+          else
+            root(k,i) = (w3(k,i)+sqrt(delta))/a4(k,i)
+          endif
+          if (root(k,i) < 0.) root(k,i) = 0.  ! insure positive root from solver
+                                              ! in case there is a problem
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 

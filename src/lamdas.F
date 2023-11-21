@@ -14,8 +14,8 @@
 !
       use params_module,only: nlonp4
       use magfield_module,only: bmod2,sn2dec,csdec,sndec
-      use cons_module,only: dipmin,rmassinv_o2,rmassinv_o1,rmassinv_n2,
-     |  rmass_o2,rmass_o1,avo,rtd
+      use cons_module,only: dipmin,rmass_o2,rmass_o1,rmass_no,
+     |  rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no,avo,rtd
       use magfield_module,only: dipmag,rlatm
       use input_module,only: colfac
       use addfld_module,only: addfld
@@ -58,8 +58,6 @@
      |    Me       =  9.109E-31,       ! electron mass [kg]
      |    Mp       =  1.6726E-27,      ! proton mass [kg]
      |    Kb       =  1.38E-23         ! Boltzmann's constant [J/K]
-      real,parameter :: rmass_nop = 30.! [g/mol]
-      real,parameter :: rmassinv_nop=1./rmass_nop ! inverted rmass
 !
 ! Local (lon):
       real,dimension(lon0:lon1) :: 
@@ -70,7 +68,6 @@
 !
 ! Local (lev,lon):
       real,dimension(lev0:lev1,lon0:lon1) ::
-     |  xn2,        ! N2 (1-o2-o-he mmr)
      |  tnti,       ! average of tn and ti
      |  o2_cm3, o1_cm3, n2_cm3, ! major species number densities (cm3)
      |  sigma_ped,  ! pedersen conductivity (siemens/m)
@@ -161,7 +158,7 @@
 !
         omega_op (i)    = qeoNao10*bgauss(i)*rmassinv_o1
         omega_o2p(i)    = qeoNao10*bgauss(i)*rmassinv_o2
-        omega_nop(i)    = qeoNao10*bgauss(i)*rmassinv_nop
+        omega_nop(i)    = qeoNao10*bgauss(i)*rmassinv_no
         omega_op_inv (i)= 1./omega_op(i)
         omega_o2p_inv(i)= 1./omega_o2p(i)
         omega_nop_inv(i)= 1./omega_nop(i)
@@ -219,16 +216,14 @@
 ! pressure at half level: p0*expz(k) [dyn/cm^2]
 ! Boltzmann constant [erg/K]
 ! neutral temperature [K]
-! mass mixing rations[-]: o2, o1, xn2
+! mass mixing rations[-]: o2, o1, n2
 ! inverse of mean molecular weight [mol/g]:rmassinv_o2, rmassinv_o1, rmassinv_n2
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
           o2_cm3(k,i) = o2(k,i)*xnmbar(k,i)*rmassinv_o2
           o1_cm3(k,i) = o1(k,i)*xnmbar(k,i)*rmassinv_o1
-          xn2(k,i) = n2(k,i)
-          xn2(k,i) = xn2(k,i)*rmassinv_n2            ! this part varies from timegcm
-          n2_cm3(k,i) = xn2(k,i)*xnmbar(k,i)
+          n2_cm3(k,i) = n2(k,i)*xnmbar(k,i)*rmassinv_n2 ! this part varies from timegcm
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -321,7 +316,7 @@
      |       o2p(k,i)/(1.+rnu_o2p(k,i)**2)-
      |       nop(k,i)/(1.+rnu_nop(k,i)**2))
 
-          if (sigma_hall(k,i) < 1e-20) sigma_hall(k,i) = 1e-20
+          if (sigma_hall(k,i) < 1e-30) sigma_hall(k,i) = 1e-30
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -443,7 +438,7 @@
 ! mean ion molecular mass [g/mol]
       Mi = 1/ne*(op(:,lon0:lon1)*rmass_o1+
      |  o2p(:,lon0:lon1)*rmass_o2+
-     |  nop(:,lon0:lon1)*rmass_nop)
+     |  nop(:,lon0:lon1)*rmass_no)
 
 ! Calculate electrojet turbulent heating, added by Jing Liu
 ! ne: 1/cm^3*1E6 -> 1/m^3

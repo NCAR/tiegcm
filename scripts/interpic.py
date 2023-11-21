@@ -4,8 +4,7 @@ from numpy import ndarray, interp, log, exp, linspace, allclose, mean
 from sys import exit
 from netCDF4 import Dataset
 from argparse import ArgumentParser
-from os.path import isfile, splitext
-import numpy as np
+from os.path import isfile, splitext, basename
 
 
 # interpolate old or new TIEGCM primary history file into v3.0 format
@@ -76,14 +75,19 @@ def interp3d(variable, inlev, inlat, inlon, outlev, outlat, outlon, extrap):
 
 def interpic(fin, hres, vres, zitop, fout):
     # Some additional attributes for 4D fields
-    lower_cap = 1e-8
+    lower_cap = 1e-12
     fill_top = ['TN', 'UN', 'VN', 'OP', 'TI', 'TE', 'N2D', 'O2P', 'TN_NM', 'UN_NM', 'VN_NM', 'OP_NM']
     mixing_ratio = ['O2', 'O1', 'HE', 'N4S', 'NO', 'AR', 'N2D', 'O2_NM', 'O1_NM', 'HE_NM', 'N4S_NM', 'NO_NM', 'AR_NM']
-    extrap_method = {'TN': 'exponential', 'UN': 'linear', 'VN': 'linear', 'O2': 'exponential', 'O1': 'exponential', 'HE': 'exponential',
-            'OP': 'exponential', 'N4S': 'exponential', 'NO': 'exponential', 'AR': 'exponential', 'TI': 'exponential', 'TE': 'exponential',
-            'NE': 'exponential', 'OMEGA': 'linear', 'N2D': 'constant',  'O2P': 'constant', 'Z': 'exponential', 'POTEN': 'linear',
-            'TN_NM': 'exponential', 'UN_NM': 'linear', 'VN_NM': 'linear', 'O2_NM': 'exponential', 'O1_NM': 'exponential', 'HE_NM': 'exponential',
-            'OP_NM': 'exponential', 'N4S_NM': 'exponential', 'NO_NM': 'exponential', 'AR_NM': 'exponential'}
+    extrap_method = {'TN': 'exponential', 'UN': 'linear', 'VN': 'linear',
+            'O2': 'exponential', 'O1': 'exponential', 'HE': 'exponential',
+            'OP': 'exponential', 'N4S': 'exponential', 'NO': 'exponential',
+            'AR': 'exponential', 'TI': 'exponential', 'TE': 'exponential',
+            'NE': 'exponential', 'OMEGA': 'linear', 'N2D': 'constant',
+            'O2P': 'constant', 'Z': 'exponential', 'POTEN': 'linear',
+            'TN_NM': 'exponential', 'UN_NM': 'linear', 'VN_NM': 'linear',
+            'O2_NM': 'exponential', 'O1_NM': 'exponential', 'HE_NM': 'exponential',
+            'OP_NM': 'exponential', 'N4S_NM': 'exponential', 'NO_NM': 'exponential',
+            'AR_NM': 'exponential'}
 
     nlon = int(360 / hres)
     lon = linspace(start=-180, stop=180-hres, num=nlon)
@@ -134,6 +138,8 @@ def interpic(fin, hres, vres, zitop, fout):
     lat0_bnd[1: nlat0+1] = lat0
     lat0_bnd[nlat0+1] = 90
 
+    # Longitude wrap is handled in interp2d, skip
+
     for varname, variable in src.variables.items():
         # Name change only
         if varname == 'coupled_cmit':
@@ -155,8 +161,10 @@ def interpic(fin, hres, vres, zitop, fout):
         elif varname == 'ilev':
             varout[:] = ilev
 
-        #Skip these variables
-        elif varname in ['lat_bnds','lon_bnds','gw','area']:
+        # The following variables never appear in standard TIEGCM runs
+        # But they showed up in some non-standard TIEGCM primary histories
+        # If that happens, skip those variables (the list may expand)
+        elif varname in ['lat_bnds', 'lon_bnds', 'gw', 'area']:
             continue
 
         # Change from old format (3 digits) to new format (4 digits)
@@ -226,9 +234,11 @@ def interpic(fin, hres, vres, zitop, fout):
         if 'HE'+ext in src.variables.keys():
             N2 = 1 - src['O2'+ext][:] - src['O1'+ext][:] - src['HE'+ext][:]
         else:
+            # In case HE is not in the old file (non-standard format), it has to be added to the new file
             N2 = 1 - src['O2'+ext][:] - src['O1'+ext][:]
             dst.createVariable(varname='HE'+ext, datatype='f8', dimensions=('time', 'lev', 'lat', 'lon'))
             dst['HE'+ext][:] = lower_cap
+
         N2n = ndarray(shape=(nt, nlev, nlat, nlon))
         N2_bnd = ndarray(shape=(nlev0, nlat0+2, nlon0))
         for it in range(nt):
@@ -238,11 +248,13 @@ def interpic(fin, hres, vres, zitop, fout):
                 N2_bnd[ik, nlat0+1, :] = mean(N2[it, ik, nlat0-1, :])
             N2n[it, :, :, :] = interp3d(variable=N2_bnd, inlev=lev0, inlat=lat0_bnd, inlon=lon0,
                 outlev=lev, outlat=lat, outlon=lon, extrap='exponential')
+
         N2n[N2n < lower_cap] = lower_cap
         N2n[N2n > 1] = 1
         O2n = dst['O2'+ext][:]
         O1n = dst['O1'+ext][:]
         HEn = dst['HE'+ext][:]
+
         normalize = O2n + O1n + HEn + N2n
         dst['O2'+ext][:] = O2n / normalize
         dst['O1'+ext][:] = O1n / normalize
@@ -288,7 +300,7 @@ if __name__ == '__main__':
 
     # Setup default name for output file
     if (args.fout is None):
-        args.fout = '{:s}_{:g}x{:g}_z{:g}.nc'.format(splitext(args.fin)[0], args.hres, args.vres, args.zitop)
+        args.fout = '{:s}_{:g}x{:g}_z{:g}.nc'.format(splitext(basename(args.fin))[0], args.hres, args.vres, args.zitop)
 
     # Echo all information
     print('Input file: {:s}\nHorizontal resolution: {:g}\nVertical resolution: {:g}\nTop pressure level: {:g}\nOutput file: {:s}'

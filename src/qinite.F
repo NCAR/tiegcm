@@ -77,12 +77,12 @@
 !
 ! Bottom boundary for o2i, o1i, hei:
       do i=lon0,lon1
-        o2i(1,i) = .5*((b(i,1,1)+1.)*o2(1,i)+b(i,1,2)*o1(1,i)+
-     |    b(i,1,3)*he(1,i)+fb(i,1))
-        o1i(1,i) = .5*(b(i,2,1)*o2(1,i)+(b(i,2,2)+1.)*o1(1,i)+
-     |    b(i,2,3)*he(1,i)+fb(i,2))
-        hei(1,i) = .5*(b(i,3,1)*o2(1,i)+b(i,3,2)*o1(1,i)+
-     |    (b(i,3,3)+1.)*he(1,i)+fb(i,3))
+        o2i(1,i) = .5*((b(1,1)+1.)*o2(1,i)+b(1,2)*o1(1,i)+
+     |    b(1,3)*he(1,i)+fb(1))
+        o1i(1,i) = .5*(b(2,1)*o2(1,i)+(b(2,2)+1.)*o1(1,i)+
+     |    b(2,3)*he(1,i)+fb(2))
+        hei(1,i) = .5*(b(3,1)*o2(1,i)+b(3,2)*o1(1,i)+
+     |    (b(3,3)+1.)*he(1,i)+fb(3))
 !
 ! btf tiegcm_he 8/21/13: Not sure about n2i bottom boundary. 
 ! For now, use 1-o2i-o1i-hei.

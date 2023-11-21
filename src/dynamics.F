@@ -85,15 +85,15 @@
 !
       do lat=lat0,lat1
         call cpktkm(
-     |    tn(levd0,lond0,lat,itp), ! 4d input
-     |    o2(levd0,lond0,lat,itp), ! 4d input
-     |    o1(levd0,lond0,lat,itp), ! 4d input
-     |    n2(levd0,lond0,lat),     ! 3d input
-     |    he(levd0,lond0,lat,itp), ! 4d input
-     |    mbar(levd0,lond0,lat,itp),!4d input
-     |    cp(levd0,lond0,lat),     ! 3d output
-     |    kt(levd0,lond0,lat),     ! 3d output
-     |    km(levd0,lond0,lat),     ! 3d output
+     |    tn(levd0,lond0,lat,itp),  ! 4d input
+     |    o2(levd0,lond0,lat,itp),  ! 4d input
+     |    o1(levd0,lond0,lat,itp),  ! 4d input
+     |    he(levd0,lond0,lat,itp),  ! 4d input
+     |    n2(levd0,lond0,lat),      ! 3d input
+     |    mbar(levd0,lond0,lat,itp),! 4d input
+     |    cp(levd0,lond0,lat),      ! 3d output
+     |    kt(levd0,lond0,lat),      ! 3d output
+     |    km(levd0,lond0,lat),      ! 3d output
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after cpktkm')")
@@ -335,8 +335,8 @@
      |    ti    (levd0,lond0,latd0,itp),
      |    o2    (levd0,lond0,latd0,itp),
      |    o1    (levd0,lond0,latd0,itp),
-     |    n2    (levd0,lond0,latd0),
      |    he    (levd0,lond0,latd0,itp),
+     |    n2    (levd0,lond0,latd0),
      |    n2d   (levd0,lond0,latd0,itp),
      |    ne    (levd0,lond0,latd0,itp),
      |    un    (levd0,lond0,latd0,itp),
@@ -776,7 +776,7 @@
      |    1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after hdif_bndlatlons')")
 !
-! Make hdt,u,v,o2,o1:
+! Make hdt,u,v,o2,o1,he:
       do lat=lat0,lat1
         call hdif3(
      |    cp(levd0,lond0,lat),     ! specific heat input
@@ -954,6 +954,7 @@
      |  he_nm (levd0,lond0,latd0,itp), ! He (mmr) at time n-1
      |  w     (levd0,lond0,latd0,itp), ! vertical velocity
      |  mbar  (levd0,lond0,latd0,itp), ! mean molecular weight
+     |  xnmbar(levd0,lond0,latd0,itp),
      |  hdo2  (levd0,lond0,latd0),     ! O2 horizontal diffusion (hdif3)
      |  hdo1  (levd0,lond0,latd0),     ! O  horizontal diffusion (hdif3)
      |  hdhe  (levd0,lond0,latd0),     ! He horizontal diffusion (hdif3)

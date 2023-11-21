@@ -11,7 +11,7 @@
 ! This is called from comp_no and comp_n4s.
 !
       use params_module,only: nlonp4,dlat,glat
-      use lbc,only: b,fb ! b(nlonp4,2,2), fb(nlonp4,2)
+      use lbc,only: b,fb
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
      |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,
@@ -78,7 +78,7 @@
       integer :: k,i,lonbeg,lonend,lat,ier
 !
       integer :: nk,nkm1,nlevs
-      real,parameter :: small=1.e-12, tau=1.86e+3, t00=273.
+      real,parameter :: tau=1.86e+3, t00=273.
       real :: salfa12,salfa21,salfax1,salfax2,rlat
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  hadvec,   ! horizontal advection (output of sub advec) (s13)
@@ -211,17 +211,17 @@
       endif
 !
       do i=lon0,lon1
-        bo2(i) = b(i,1,1)*o2(lev0,i,lat)+b(i,1,2)*o1(lev0,i,lat)+
-     |    b(i,1,3)*he(lev0,i,lat)+fb(i,1)
-        bo1(i) = b(i,2,1)*o2(lev0,i,lat)+b(i,2,2)*o1(lev0,i,lat)+
-     |    b(i,2,3)*he(lev0,i,lat)+fb(i,2)
-        bhe(i) = b(i,3,1)*o2(lev0,i,lat)+b(i,3,2)*o1(lev0,i,lat)+
-     |    b(i,3,3)*he(lev0,i,lat)+fb(i,3)
+        bo2(i) = b(1,1)*o2(lev0,i,lat)+b(1,2)*o1(lev0,i,lat)+
+     |    b(1,3)*he(lev0,i,lat)+fb(1)
+        bo1(i) = b(2,1)*o2(lev0,i,lat)+b(2,2)*o1(lev0,i,lat)+
+     |    b(2,3)*he(lev0,i,lat)+fb(2)
+        bhe(i) = b(3,1)*o2(lev0,i,lat)+b(3,2)*o1(lev0,i,lat)+
+     |    b(3,3)*he(lev0,i,lat)+fb(3)
         xmbari(i) = 1./
      |    (bo2(i)*rmassinv_o2+
      |     bo1(i)*rmassinv_o1+
-     |     (1.-bo2(i)-bo1(i)-bhe(i))*rmassinv_n2+
-     |     bhe(i)*rmassinv_he)
+     |     bhe(i)*rmassinv_he+
+     |     (1.-bo2(i)-bo1(i)-bhe(i))*rmassinv_n2)
       enddo ! i=lon0,lon1
 !
 ! xmbar_kh = mbar, xmbar_k = barm:
@@ -496,17 +496,11 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1
-          if (fcomp_out(k,i,lat) < small) then
-!           write(6,"('minor: fcomp_out < small: lat=',i2,' i=',
-!    |        i2,' k=',i2,' fcomp_out=',e12.4)") 
-!    |        lat,i,k,fcomp_out(k,i,lat)
-            fcomp_out(k,i,lat) = small
+          if (fcomp_out(k,i,lat) < 0.) then
+            fcomp_out(k,i,lat) = 0.
           endif
-          if (fcomp_tm1_out(k,i,lat) < small) then
-!           write(6,"('minor: fcomp_tm1_out < small: lat=',i2,' i=',
-!    |        i2,' k=',i2,' fcomp_out=',e12.4)") 
-!    |        lat,i,k,fcomp_tm1_out(k,i,lat)
-            fcomp_tm1_out(k,i,lat) = small
+          if (fcomp_tm1_out(k,i,lat) < 0.) then
+            fcomp_tm1_out(k,i,lat) = 0.
           endif
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1

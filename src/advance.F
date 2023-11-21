@@ -399,8 +399,8 @@
       if (debug) write(6,"('advance after hdif1')")
 !
 ! Horizontal diffusion, second step:
-! hdif2 saves 3d diagnostics f3d (fkldt,u,v,o2,o) at j+1 (0->37)
-! hdif2: WRITE (fkldt,u,v,o2,o1) <- READ (tn_nm,un_nm,vn_nm,o2_nm,o1_nm)
+! hdif2 saves 3d diagnostics f3d (fkldt,u,v,o2,o,he) at j+1 (0->37)
+! hdif2: WRITE (fkldt,u,v,o2,o1,he) <- READ (tn_nm,un_nm,vn_nm,o2_nm,o1_nm,he_nm)
 ! The kld terms will be used later in hdif3.
 !
 ! Call method 1 (contiguous actual args, lat loop inside):
