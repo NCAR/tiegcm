@@ -1,14 +1,16 @@
 #
 # Included makefile for Intel ifort compiler on NASA Pleiades pfe:
-# As of 2020, cheyenne is using intel 19.0.5
+# Pleiades is using intel 2020.4.304
 #
+
 F90      = ifort
 MPIF90   = mpif90
 MPIRUN   = mpiexec_mpt
 FFLAGS   = -r8 -mcmodel=medium
 LDFLAGS  = -mcmodel=medium
+
 #
-# See https://www2.cisl.ucar.edu/resources/computational-systems/cheyenne/code-development-support
+# See https://www.nas.nasa.gov/hecc/support/kb/
 #FFLAGS += 
 #
 # DBGFLAGS are used by the Makefile only if the job script
@@ -28,15 +30,11 @@ HOST     = $(shell hostname)
 #
 # Library and Include file paths:
 #
-# ESMF lib on cheyenne:
-# (tiegcm-ch.job does "module load esmf_libs/8.0.0")
+# ESMF lib on Pleiades:
+# (tiegcm-pf.job does not load the module)
 #
-#ESMF_LIBDIR = /glade/u/apps/ch/opt/esmf/7.0.0-ncdfio-mpi/intel/16.0.3/lib/libO/Linux.intel.64.mpi.default
 export ESMF_LIBDIR
-#LIB_ESMF = $(ESMF_LIBDIR)
-#LIB_ESMF = /glade/u/apps/ch/opt/esmf-mpi-netcdf/8.0.1/mpt/2.22/intel/18.0.5/lib/libO/Linux.intel.64.mpt.default/
 LIB_ESMF = /home6/fvitt/esmf-8_2_0/lib/libO/Linux.intel.64.mpt.default/
-#LIB_ESMF = /glade/u/apps/ch/opt/esmf-mpi-netcdf/8.1.1/mpt/2.22/intel/2021.2/lib/libO/Linux.intel.64.mpiuni.default/
 include $(LIB_ESMF)/esmf.mk
 LIBS = -L$(LIB_ESMF) -Wl,-rpath=$(LIB_ESMF) -lesmf
 #

@@ -32,7 +32,7 @@
 #
 set modeldir = /home7/nrao3/tiegcm/
 set execdir  = /home4/dlin5/TIEGCM2.5/build/
-set tgcmdata = /nobackup/nrao3/tiegcm/data/gswm
+set tgcmdata = /nobackup/nrao3/tiegcm/data/tiegcm3.0
 set input    = $modeldir/scripts/tiegcm2.5_default.inp
 set output   = tiegcm.out
 set horires  = 2.5
@@ -52,7 +52,7 @@ set nnodes          = 1
 set ncores_per_node = 36
 set memsize = 128
 set system = sky_ele
-set walltime        = "01:30:00"
+set walltime        = "08:00:00"
 
 @ nprocs = $nnodes * $ncores_per_node
 
