@@ -96,8 +96,9 @@ def lev_ilev_lon (datasets, variable_name, selected_time, selected_lat, selected
             except:
                 levs_ilevs = data.ilev.values[not_all_nan_indices]
   
-    return(variable_values, lons, levs_ilevs, selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime, filename)
-
+            return(variable_values, lons, levs_ilevs, selected_lat, variable_unit, variable_long_name, selected_ut, selected_mtime, filename)
+    print(f"{selected_time} not found.")
+    return None
 
 
 
@@ -179,7 +180,8 @@ def lat_lon_lev(datasets, variable_name, selected_time, selected_lev, selected_u
                     if selected_unit != None:
                         variable_values , selected_unit  = convert_units (variable_values, variable_unit, selected_unit)
             return variable_values, selected_lev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
-
+    print(f"{selected_time} not found.")
+    return None
 
 def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev, selected_unit):
     """
@@ -260,9 +262,10 @@ def lat_lon_ilev(datasets, variable_name, selected_time, selected_ilev, selected
                         variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
                         
 
-    return variable_values, selected_ilev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
-
-def lat_lon(datasets, variable_name, selected_time, selected_unit):
+                return variable_values, selected_ilev, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
+    print(f"{selected_time} not found.")
+    return None
+def lat_lon(datasets, variable_name, selected_time, selected_unit=None):
     """
     Extract data from the dataset based on the given variable name, timestamp, and lev value.
     
@@ -303,10 +306,9 @@ def lat_lon(datasets, variable_name, selected_time, selected_unit):
             if selected_unit != None:
                 variable_values ,variable_unit  = convert_units (variable_values, variable_unit, selected_unit)
                 
-
-
-    return variable_values, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
-
+            return variable_values, lats, lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename
+    print(f"{selected_time} not found.")
+    return None
 
 
 
@@ -364,6 +366,8 @@ def lev_ilev_var(datasets, variable_name, selected_time, selected_lat, selected_
             except:
                 levs_ilevs = ds['ilev'].values[valid_indices]
             return variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime, filename 
+    print(f"{selected_time} not found.")
+    return None
 
 def calc_avg_ht(datasets, selected_time, selected_lev_ilev):
     """
@@ -549,8 +553,9 @@ def lev_ilev_lat (datasets, variable_name, selected_time, selected_lon, selected
                 levs_ilevs = data.lev.values[not_all_nan_indices]
             except AttributeError:
                 levs_ilevs = data.ilev.values[not_all_nan_indices]
-    return(variable_values, lats, levs_ilevs, selected_lon, variable_unit, variable_long_name, selected_ut, selected_mtime,filename)
-
+        return(variable_values, lats, levs_ilevs, selected_lon, variable_unit, variable_long_name, selected_ut, selected_mtime,filename)
+    print(f"{selected_time} not found.")
+    return None
 
 
 
@@ -657,9 +662,10 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon, selected_
     - selected_ut (float): UT value in hours for selected_time.
     - selected_mtime (array): An array containing Day, Hour, Min of the model run
     """
-
-    
-    selected_lon = float(selected_lon)
+    if selected_lev != 'mean':
+        selected_lev = float(selected_lev)
+    if selected_lon != 'mean':
+        selected_lon = float(selected_lon)
     # Load the dataset using xarray
     #ds = xr.open_dataset(dataset)   
 
@@ -684,7 +690,7 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon, selected_
             variable_values = data.T 
             lats = data.lat.values    
             lats_all = lats_all[:variable_values.shape[0]]
-        if selected_lon =='mean':
+        if selected_lon =='mean' and selected_lev != 'mean':
             if selected_lev in ds['lev'].values:
                 data = ds[variable_name].sel(lev=selected_lev, method='nearest').mean(dim='lon')
                 variable_values = data.T 
@@ -705,12 +711,12 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon, selected_
                 data2 = ds[variable_name].sel(lev=closest_lev2, method='nearest').mean(dim='lon')
                 variable_values_2 = data2.T 
                 variable_values = (variable_values_1 + variable_values_2) / 2
-        if selected_lev == 'mean':
+        if selected_lon !='mean' and selected_lev == 'mean':
             data = ds[variable_name].sel(lon=selected_lon, method='nearest').mean(dim='lev')
             variable_values = data.T 
             lats = data.lat.values    
             lats_all = lats_all[:variable_values.shape[0]]
-        else:
+        if selected_lon !='mean' and selected_lev != 'mean':
             if selected_lev in ds['lev'].values:
                 data = ds[variable_name].sel(lev=selected_lev, lon=selected_lon, method='nearest')
                 variable_values = data.T 
@@ -742,9 +748,6 @@ def lat_time_lev (datasets, variable_name, selected_lev, selected_lon, selected_
         variable_values_all ,variable_unit  = convert_units (variable_values_all, variable_unit, selected_unit)
         
     mtime_values = combined_mtime
-    
-
-
 
     return(variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name, filename)
 
@@ -771,8 +774,10 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon, selecte
     - selected_ut (float): UT value in hours for selected_time.
     - selected_mtime (array): An array containing Day, Hour, Min of the model run
     """
-    selected_ilev = float(selected_ilev)
-    selected_lon = float(selected_lon)
+    if selected_ilev != 'mean':
+        selected_ilev = float(selected_ilev)
+    if selected_lon != 'mean':
+        selected_lon = float(selected_lon)
     # Load the dataset using xarray
     #ds = xr.open_dataset(dataset)   
 
@@ -790,13 +795,14 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon, selecte
         variable_unit = ds[variable_name].attrs.get('units', 'N/A')
         variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
         mtime_values = ds['mtime'].values
+        filename = filenames
         
         if selected_lon == 'mean' and selected_ilev == 'mean':
             data = ds[variable_name].sel(method='nearest').mean(dim=['ilev', 'lon'])
             variable_values = data.T 
             lats = data.lat.values    
             lats_all = lats_all[:variable_values.shape[0]]
-        if selected_lon =='mean':
+        if selected_lon =='mean' and selected_ilev != 'mean':
             if selected_ilev in ds['ilev'].values:
                 data = ds[variable_name].sel(ilev=selected_ilev, method='nearest').mean(dim='lon')
                 variable_values = data.T 
@@ -817,12 +823,12 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon, selecte
                 data2 = ds[variable_name].sel(ilev=closest_lev2, method='nearest').mean(dim='lon')
                 variable_values_2 = data2.T 
                 variable_values = (variable_values_1 + variable_values_2) / 2
-        if selected_ilev == 'mean':
+        if selected_lon !='mean'  and selected_ilev == 'mean':
             data = ds[variable_name].sel(lon=selected_lon, method='nearest').mean(dim='ilev')
             variable_values = data.T 
             lats = data.lat.values    
             lats_all = lats_all[:variable_values.shape[0]]
-        else:
+        elif selected_lon !='mean'  and selected_ilev != 'mean':
             if selected_ilev in ds['ilev'].values:
                 data = ds[variable_name].sel(ilev=selected_ilev, lon=selected_lon, method='nearest')
                 variable_values = data.T 
@@ -857,9 +863,73 @@ def lat_time_ilev (datasets, variable_name, selected_ilev, selected_lon, selecte
     
 
 
-
-    return(variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name)
-
+    return(variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name, filename)
 
 
+
+
+
+def lat_time (datasets, variable_name, selected_lon, selected_unit):
+    """
+    Extract data from the dataset based on the given variable name, timestamp, and lev value.
+    
+    Args:
+    - ds (xarray): The loaded dataset opened using xarray.
+    - variable_name (str): Name of the variable to extract.
+        - valid variables: ['TN', 'UN', 'VN', 'O2', 'O1', 'N2', 'NO', 'N4S', 'HE', 'TE', 'TI', 'O2P', 'OP', 'QJOULE']    
+    - selected_lev (float): Level value to filter the data.
+    - selected_lon (float): Longitude value to filter the data.
+    
+    Returns:
+    - variable_values (xarray): An xarray object of variable values for the given timestamp and latitude.
+    - lats (xarray): An xarray object of latgitude values.
+    - mtime_values (xarray): An xarray object of mtime arrays.
+    - variable_unit (str): Unit of the variable.
+    - variable_long_name (str): Long name of the variable.
+    - selected_ut (float): UT value in hours for selected_time.
+    - selected_mtime (array): An array containing Day, Hour, Min of the model run
+    """
+
+    
+    selected_lon = float(selected_lon)
+    # Load the dataset using xarray
+    #ds = xr.open_dataset(dataset)   
+
+    # Extract variable attributes
+
+    variable_values_all = []
+    combined_mtime = []
+    lats_all = []
+    
+    avg_info_print = 0
+    for ds, filenames in datasets:
+        variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+        variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
+        mtime_values = ds['mtime'].values
+        filename = filenames
+
+        if selected_lon =='mean':
+            data = ds[variable_name].sel(method='nearest').mean(dim='lon')
+            variable_values = data.T 
+            lats = data.lat.values    
+            lats_all = lats_all[:variable_values.shape[0]]
+        else:
+            data = ds[variable_name].sel(lon=selected_lon, method='nearest')
+            variable_values = data.T 
+            lats = data.lat.values    
+            lats_all = lats_all[:variable_values.shape[0]]
+        
+
+        variable_values_all.append(variable_values)
+        combined_mtime.extend(mtime_values)
+        lats_all.append(lats)
+    
+    # Concatenate data along the time dimension
+    variable_values_all = np.concatenate(variable_values_all, axis=1)
+    if selected_unit != None:
+        variable_values_all ,variable_unit  = convert_units (variable_values_all, variable_unit, selected_unit)
+        
+    mtime_values = combined_mtime
+    
+    return(variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name, filename)
 

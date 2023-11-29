@@ -53,8 +53,8 @@ def get_options():
     args = parser.parse_args()
     
     plot_requirements = {
-        'lat_lon': {'required': ['variable_name', 'time', 'mtime', 'level'],
-                    'optional': ['variable_unit','coastlines','contour_intervals','contour_value','latitude_minimum','latitude_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum'],
+        'lat_lon': {'required': ['variable_name', 'time', 'mtime'],
+                    'optional': ['level','variable_unit','coastlines','contour_intervals','contour_value','latitude_minimum','latitude_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum'],
                     },
         
         'lev_var': {'required': ['variable_name', 'time', 'mtime', 'latitude', 'longitude', 'localtime'],
@@ -69,8 +69,8 @@ def get_options():
         'lev_time': {'required': ['variable_name', 'latitude', 'longitude', 'localtime'],
                     'optional': ['variable_unit','contour_intervals','contour_value','level_minimum','level_maximum'] 
                     },
-        'lat_time': {'required': ['variable_name', 'level', 'longitude', 'localtime'],
-                    'optional': ['variable_unit','contour_intervals','contour_value','latitude_minimum','latitude_maximum']
+        'lat_time': {'required': ['variable_name', 'longitude', 'localtime'],
+                    'optional': ['level','variable_unit','contour_intervals','contour_value','latitude_minimum','latitude_maximum']
                     },
     }
     '''
