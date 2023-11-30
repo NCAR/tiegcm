@@ -108,6 +108,9 @@
      |       rk20(k,i,lat)*1.69)*xiop2p(k,i)+rk25(k,i,lat)*3.31*
      |       xiop2d(k,i))-(rk21*5.02+rk22*1.69)*xiop2p(k,i)-
      |       rk27*3.33*xiop2d(k,i))/xnmbar(k,i))*evergs
+!
+! Insure qic > 0:
+          if (qic(k,i) < 0.) qic(k,i) = 0.
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 

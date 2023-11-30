@@ -53,6 +53,7 @@
       do i=lon0,lon1
         do k=lev0+1,lev1-1
           dq(k,i) = deltaq(k-1,i)*deltaq(k,i)
+          if (dq(k,i) < 0.) dq(k,i) = 0.
         enddo ! k=lev0+1,lev1-1
 !
 ! Lower and upper boundaries:

@@ -4,7 +4,7 @@
 #
 MPIF90 = mpif90
 MPIRUN = mpirun
-FFLAGS = -r8
+FFLAGS = -r8 -DINTEL
 #
 # See https://arc.ucar.edu/knowledge_base/72581227
 #FFLAGS += -mcmodel=medium

@@ -4,7 +4,7 @@
 #
 MPIF90 = mpifort
 MPIRUN = mpirun
-FFLAGS = -fdefault-real-8 -fno-range-check
+FFLAGS = -fdefault-real-8 -fno-range-check -DGNU
 #
 # See https://docs.rcd.clemson.edu/palmetto/
 #FFLAGS += -mcmodel=medium

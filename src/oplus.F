@@ -29,7 +29,6 @@
 ! There are 4 latitude scans, with 3d mpi calls in between the loops.
 !   (see also 3d gather/scatter calls in sub filter_op).
 !
-      use params_module,only: zpmid,glat  ! for O+ minimum
       use cons_module,only: rmass_op,gask,grav,re,cs,dphi,dlamda,
      |  shapiro,dtx2inv,rmassinv_o2,rmassinv_o1,
      |  rmassinv_n2,rmassinv_n2d,dtsmooth,dtsmooth_div2

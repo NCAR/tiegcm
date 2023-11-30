@@ -8,6 +8,8 @@
 !
 ! Advance the model in time.
 !
+      logical :: cleanup
+!
       contains
 !-----------------------------------------------------------------------
       subroutine advance
@@ -48,7 +50,7 @@
       use gswm_module,only: getgswm
       use params_module,only: nlonp4,nlat
       use amie_module,only: getamie,tiepot
-      use output,only: outhist
+      use output,only: outhist,output_hist
       use addfld_module,only: addfld
       use lbc,only: tuvz_lbc
 !
@@ -104,6 +106,9 @@
 !     code = 115 ; state = 'advance' ; activity='ModelCode'
       call vtbegin(115,ier)
 #endif
+!
+! A hook for handling OS signals (SIGINT/SIGTERM)
+      call register_signal_handler
 !
       write(6,"(/,'Enter advance: iter=',i10,' nstep=',i10)") iter,nstep
       call timer(time0_init,time1_init,'INIT',0,0)
@@ -606,6 +611,14 @@
       endif ! time2write
       call timer(time0_step,time1,'STEP',0,0) ! resume step timing (non-MPI)
 !
+! Only Intel and GNU can capture SIGINT/SIGTERM and perform cleanup work
+! Other compilers will simply skip this check
+      if (cleanup) then
+! A new volume will always be created for primary histories (restart)
+        call output_hist(istep,.true.)
+        call shutdown('Received termination signal, exiting ...')
+      endif
+!
 ! Periodic points for all updated fields:
       call mp_periodic_f4d(itc)
       if (debug) write(6,"('advance after mp_periodic_f4d')")
@@ -827,5 +840,48 @@
 !    |  ' emlam3d, and emz3d')")
 
       end subroutine nodynamo
+!-----------------------------------------------------------------------
+      subroutine register_signal_handler
+! Register signal handler to OS to catch SIGINT/SIGTERM
+! Intel and GNU have different forms of function calls
+! Other compilers are not supported yet
+
+#ifdef INTEL
+      use ifport,only: signal,sigint,sigterm
+#endif
+
+#ifdef GNU
+! Defined by POSIX, hard code here
+      integer,parameter :: sigint=2,sigterm=15
+#endif
+
+      integer :: ret
+
+#ifdef INTEL
+      ret = signal(sigint,signal_handler,-1)
+      ret = signal(sigterm,signal_handler,-1)
+#endif
+
+#ifdef GNU
+      ret = signal(sigint,signal_handler)
+      ret = signal(sigterm,signal_handler)
+#endif
+
+      cleanup = .false.
+
+      end subroutine register_signal_handler
+!-----------------------------------------------------------------------
+      function signal_handler(signum) result(ret)
+! This handler does only one thing: change the cleanup flag to true
+! Note that only with Intel and GNU this function will be called
+! Otherwise the cleanup flag stays false all the time
+
+      integer,intent(in) :: signum
+      integer :: ret
+
+      cleanup = .true.
+      ret = 0
+
+      end function signal_handler
 !-----------------------------------------------------------------------
       end module advance_module

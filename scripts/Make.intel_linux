@@ -3,7 +3,7 @@
 #
 MPIF90 = mpif90
 MPIRUN = mpirun
-FFLAGS = -r8
+FFLAGS = -r8 -DINTEL
 #
 #FFLAGS += -mcmodel=medium
 #

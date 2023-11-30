@@ -284,17 +284,8 @@
 !
 ! root=rlam=-2.*(.5*(cg+sqrt(cg**2+4.*ch**3)))**(1./3.)
 ! 
-          delta = w2(k,i)**2+4.*w1(k,i)**3
-          if (delta <= 0.) then
-            delta = .5*w2(k,i)
-          else
-            delta = .5*(w2(k,i)+sqrt(delta))
-          endif
-          if (delta <= 0.) then
-            root(k,i) = 0.
-          else
-            root(k,i) = -2.*delta**(1./3.)
-          endif
+          root(k,i) = -2.*real((.5*(w2(k,i)+
+     |      sqrt(cmplx(w2(k,i)**2+4.*w1(k,i)**3))))**(1./3.))
 !
 ! W1=P=SQRT(A(5)*RLAM+A(4)**2-A(5)*A(3))
 !

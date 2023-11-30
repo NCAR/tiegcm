@@ -178,7 +178,7 @@
 ! Local:
       real :: z,expdz,phi
       real :: omega = 7.292E-5
-      integer :: m,k,i,j,js
+      integer :: m,k,j,js
       integer :: calday(ndays)         ! calenday day in a year
       real :: coeff(9)
       real :: theta(ndays)

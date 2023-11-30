@@ -59,7 +59,7 @@
 #endif
 !
 ! Local:
-      integer :: k,i,n,ier
+      integer :: k,i,ier
       integer :: nk,nkm1
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  te_int,    ! electron temperature (interfaces)
@@ -77,7 +77,6 @@
      |  r_coef,    ! coefficient for trisolv     (s3)
      |  rhs,       ! right-hand-side for trisolv (s4)
      |  qtot,      ! total ionization rate       (s11)
-     |  fki,       ! work array
      |  qe,        ! source term                 (s10)
      |  q_eni,     ! heating from electron/neutral and electron/ion collisions
      |  coll_en2v, ! electron/N2vib collision    (s9)
@@ -223,6 +222,11 @@
         o1n(lev1,i)    = 1.5*o1(lev1-1,i)-.5*o1(lev1-2,i)
         n2n(lev1,i)    = 1.5*n2(lev1-1,i)-.5*n2(lev1-2,i)
         tn_int(lev1,i) = 1.5*tn(lev1-1,i)-.5*tn(lev1-2,i)
+!
+! N2:
+        do k=lev0,lev1
+          if (n2n(k,i) < 0.) n2n(k,i) = 0.
+        enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
 !     call addfld('TE_INT'  ,' ',' ',te_int,
@@ -348,8 +352,13 @@
 ! summed in qjion.F, but there is no check for < 1.e-20 there, so summing
 ! all species at each grid point works fine (see qtot in qjion.F).
 !
-      qtot = qo2p(:,:,lat)+qop(:,:,lat)+qn2p(:,:,lat)+qnop(:,:,lat)+
-     |  qnp(:,:,lat)+qop2d(:,:,lat)+qop2p(:,:,lat)
+      do i=lon0,lon1
+        do k=lev0,lev1
+          qtot(k,i) = qo2p(k,i,lat)+qop(k,i,lat)+qn2p(k,i,lat)+
+     |      qnop(k,i,lat)+qnp(k,i,lat)+qop2d(k,i,lat)+qop2p(k,i,lat)
+          if (qtot(k,i) < 0.) qtot(k,i) = 0.
+        enddo
+      enddo
 
 !     call addfld('QTOT_SUM',' ',' ',qtot,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
