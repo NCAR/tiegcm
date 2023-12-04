@@ -93,6 +93,7 @@
      |  loss_in    ! ion/neutral loss            (s9)
       real,parameter ::
      |  fpolar = -3.0e+9,  ! polar te flux
+     |  del    = 1.e-6  ,
 !
 ! Correction factors for neutral heating due to L(E,O1D)
      |  alam = 0.0069   ,
@@ -100,8 +101,7 @@
      |  sd   = 2.3e-11
       real :: 
      |  root2,  ! sqrt(2)
-     |  f107te, ! solar flux
-     |  qtot2,ne2
+     |  f107te  ! solar flux
 !
 ! a,fed,fen,fe,sindipmag have a z dimension only for diagnostic plotting:
       real,dimension(lon0:lon1) ::
@@ -283,6 +283,7 @@
         else
           sindipmag(i) = (sin(dipmin))**2
         endif
+        if (sindipmag(i) < .10) sindipmag(i) = .10
 !
 ! Start coefficients and rhs for trsolv:
         do k=lev0,lev1-1
@@ -356,7 +357,7 @@
         do k=lev0,lev1
           qtot(k,i) = qo2p(k,i,lat)+qop(k,i,lat)+qn2p(k,i,lat)+
      |      qnop(k,i,lat)+qnp(k,i,lat)+qop2d(k,i,lat)+qop2p(k,i,lat)
-          if (qtot(k,i) < 0.) qtot(k,i) = 0.
+            if (qtot(k,i) < 1.e-20) qtot(k,i) = 1.e-20
         enddo
       enddo
 
@@ -365,12 +366,7 @@
 
       do i=lon0,lon1
         do k=lev0,lev1-1
-          qtot2 = qtot(k,i)*qtot(k+1,i)
-          if (qtot2 <= 0.) then
-            qtot(k,i) = 0.
-          else
-            qtot(k,i) = sqrt(qtot2)
-          endif
+          qtot(k,i) = sqrt(qtot(k,i)*qtot(k+1,i))
         enddo
         qtot(lev1,i) = 0.
       enddo ! i=lon0,lon1
@@ -381,12 +377,9 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          ne2 = ne(k,i)*ne(k+1,i)
-          if (ne2 <= 0.) then
-            root_ne(k,i) = 0.
-          else
-            root_ne(k,i) = sqrt(ne2)
-          endif
+          root_ne(k,i) = ne(k,i)*ne(k+1,i)
+          if (root_ne(k,i) < 1.e4) root_ne(k,i) = 1.e4
+          root_ne(k,i) = sqrt(root_ne(k,i))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !     call addfld('ROOT_NE',' ',' ',root_ne(lev0:lev1-1,:),
@@ -434,6 +427,7 @@
 ! Loss due to electron/n2 collision L0(E,N2,VIB)/(NE*N(N2)) (s10)
 !
           loss_en2v(k,i) = 3200.*(1./te(k,i)-1./tn(k,i))
+          loss_en2v(k,i) = sign(abs(loss_en2v(k,i))+del,loss_en2v(k,i))
           loss_en2v(k,i) = -3200./(te(k,i)*tn(k,i))*
      |      (1.-exp(loss_en2v(k,i)))/loss_en2v(k,i)
           loss_en2v(k,i) = 1.3e-4*loss_en2v(k,i)*coll_en2v(k,i)
@@ -482,6 +476,7 @@
 ! Electron/O(1d) loss rates: L0(E,O,1D)/(NE*N(O))
 !
           loss_eo1d(k,i) = 22713.*(1./te(k,i)-1./tn(k,i))
+          loss_eo1d(k,i) = sign(abs(loss_eo1d(k,i))+del,loss_eo1d(k,i))
           loss_eo1d(k,i) = 22713./(te(k,i)*tn(k,i))*
      |      (1.-exp(loss_eo1d(k,i)))/loss_eo1d(k,i)
 !

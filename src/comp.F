@@ -9,7 +9,7 @@
 !
 ! Advance major species O2 and O.
 !
-      use params_module,only: dz,nlonp4,dlat,nlon,glat,zpmid
+      use params_module,only: dz,nlonp4,nlon,glat,zpmid
       use init_module,only: iday
       use cons_module,only: pi,hor,dtr,rmassinv_o2,rmassinv_o1,
      |  rmassinv_he,rmassinv_n2,rmass_o2,rmass_o1,rmass_he,expz,expzmid,
@@ -46,7 +46,7 @@
 !
 ! Local:
       integer :: k,kk,i,lat,isp,km,kp,ktmp,m,lonbeg,lonend,nlondiv2,n
-      integer :: nk,nkm1,i0,i1,k0,k1,idx(1),ktop
+      integer :: nk,nkm1,i0,i1,k0,k1,ktop
       integer,parameter :: io2=1,io1=2,ihe=3 ! indices to O2, O, He respectively
       real,dimension(lon0:lon1,lev0:lev1,3,3) :: gama
       real,dimension(lon0:lon1,lev0:lev1,3)   :: zz
@@ -60,7 +60,7 @@
       real,dimension(lon0:lon1)               :: alpha23,alpha22,
      |                                           alpha33,alpha32,flx00
       real :: rlat
-      real :: alpha(3,3),phi(3,4),delta(3,3),tau,t00
+      real :: alpha(3,3),phi(3,4),delta(3,3),tau,t00,small
       real :: zmtop,n2top,n2top1,dn2dz,n2nm,normalize,thdiffalpha
       real :: flxwks
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
@@ -89,6 +89,7 @@
       delta(:,2)=(/0.,1.,0./)
       delta(:,3)=(/0.,0.,1./)
       t00=273.
+      small = 1.e-9
       i0=lon0 ; i1=lon1 ; k0=lev0 ; k1=lev1
 !
       nk = lev1-lev0+1
@@ -187,7 +188,7 @@
 ! (dfactor was in sub dfact in earlier versions)
 !
       if (difhor > 0) then
-        rlat = (glat(1)+(lat-1)*dlat)*dtr
+        rlat = glat(lat)*dtr
         if (abs(rlat)-pi/4.5 >= 0.) then
           dfactor(:) = hor(lat)+1.
         else
@@ -907,8 +908,6 @@
 !     call mp_periodic_f3d(o1_upd(:,lon0:lon1,lat0-1:lat1+1),
 !    |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
 !
-      idx = minloc(abs(zpmid-5))
-!
 ! Insure non-negative O2,O:
       do lat=lat0,lat1
         do i=lon0,lon1
@@ -920,7 +919,7 @@
 ! This is an ad-hoc correction to let N2 have the right scaling at very high altitudes
 !
 ! Find the level where N2 is no longer a major species
-          do ktop=idx(1),lev1
+          do ktop=lev0,lev1
             if (n2(ktop) < 0.01) exit ! Typically around z=7
           enddo
 ! Use extrapolation above this height to replace the original values
@@ -939,15 +938,15 @@
             n2nm =
      |        1.-o2nm_upd(k,i,lat)-o1nm_upd(k,i,lat)-henm_upd(k,i,lat)
 !
-            if (o2_upd(k,i,lat) < 0.) o2_upd(k,i,lat) = 0.
-            if (o1_upd(k,i,lat) < 0.) o1_upd(k,i,lat) = 0.
-            if (he_upd(k,i,lat) < 0.) he_upd(k,i,lat) = 0.
-            if (n2(k) < 0.) n2(k) = 0.
+            if (o2_upd(k,i,lat) < small) o2_upd(k,i,lat) = small
+            if (o1_upd(k,i,lat) < small) o1_upd(k,i,lat) = small
+            if (he_upd(k,i,lat) < small) he_upd(k,i,lat) = small
+            if (n2(k) < small) n2(k) = small
 !
-            if (o2nm_upd(k,i,lat) < 0.) o2nm_upd(k,i,lat) = 0.
-            if (o1nm_upd(k,i,lat) < 0.) o1nm_upd(k,i,lat) = 0.
-            if (henm_upd(k,i,lat) < 0.) henm_upd(k,i,lat) = 0.
-            if (n2nm < 0.) n2nm = 0.
+            if (o2nm_upd(k,i,lat) < small) o2nm_upd(k,i,lat) = small
+            if (o1nm_upd(k,i,lat) < small) o1nm_upd(k,i,lat) = small
+            if (henm_upd(k,i,lat) < small) henm_upd(k,i,lat) = small
+            if (n2nm < small) n2nm = small
 !
 ! EKS comment: divisor should be the same when normalizing
 ! both o2 and o1 to insure non-negativity

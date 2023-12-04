@@ -49,7 +49,7 @@
      |  a0,a1,a2,a3,a4, ! coefficients for quartic solver
      |  a,b,c,d,e,fg,h, ! terms for quartic coefficients
      |  root,           ! output from quartic solver
-     |  np_prod,np_loss,ne2
+     |  np_prod,np_loss
 
 !     write(6,"('enter elden: lat=',i2)") lat
       i0 = lon0 ; i1 = lon1
@@ -201,6 +201,8 @@
 !
       do i=lon0,lon1      
         do k=lev0,lev1-1
+          if (root(k,i) < 1.) root(k,i) = 1.0  ! insure positive Ne from solver
+	                                       ! in case there is a problem
            n2p(k,i) = d(k,i)/(e(k,i)+ra3(k,i,lat)*root(k,i))    
           o2p(k,i) = (b(k,i)+h(k,i)*d(k,i)/(e(k,i)+ra3(k,i,lat)*
      |      root(k,i)))/(c(k,i)+ra2(k,i,lat)*root(k,i))
@@ -226,20 +228,12 @@
 ! Transfer root to electrons output array:
       do i=lon0,lon1
         do k=lev0,lev1-2
-          ne2(k+1,i) = root(k,i)*root(k+1,i)
+          electrons(k+1,i) = sqrt(root(k,i)*root(k+1,i))
         enddo ! k=lev0,lev1-2
 !
 ! Lower and upper boundaries:
-        ne2(lev0,i) = root(lev0  ,i)**3/root(lev0+1,i)
-        ne2(lev1,i) = root(lev1-1,i)**3/root(lev1-2,i)
-
-        do k=lev0,lev1
-          if (ne2(k,i) <= 0.) then
-            electrons(k,i) = 0.
-          else
-            electrons(k,i) = sqrt(ne2(k,i))
-          endif
-        enddo
+        electrons(lev0,i) = sqrt(root(lev0  ,i)**3/root(lev0+1,i))
+        electrons(lev1,i) = sqrt(root(lev1-1,i)**3/root(lev1-2,i))
       enddo ! i=lon0,lon1
 !     call addfld('NE_ELDEN',' ',' ',electrons(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',i0,i1,lat)
@@ -282,7 +276,7 @@
      |      a3(k,i)*(a3(k,i)*a0(k,i)-a1(k,i)*a2(k,i))+
      |      a2(k,i)*(a3(k,i)*a1(k,i)-a2(k,i)**2))/4.
 !
-! root=rlam=-2.*(.5*(cg+sqrt(cg**2+4.*ch**3)))**(1./3.)
+! root=rlam=-2.*real((.5*(cg+sqrt(cmplx(cg**2+4.*ch**3))))**(1./3.))
 ! 
           root(k,i) = -2.*real((.5*(w2(k,i)+
      |      sqrt(cmplx(w2(k,i)**2+4.*w1(k,i)**3))))**(1./3.))
@@ -325,8 +319,6 @@
           else
             root(k,i) = (w3(k,i)+sqrt(delta))/a4(k,i)
           endif
-          if (root(k,i) < 0.) root(k,i) = 0.  ! insure positive root from solver
-                                              ! in case there is a problem
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 

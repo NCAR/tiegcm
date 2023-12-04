@@ -10,7 +10,7 @@
 ! Advance minor species fcomp by one time step.
 ! This is called from comp_no and comp_n4s.
 !
-      use params_module,only: nlonp4,dlat,glat
+      use params_module,only: nlonp4,glat
       use lbc,only: b,fb
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
@@ -78,7 +78,7 @@
       integer :: k,i,lonbeg,lonend,lat,ier
 !
       integer :: nk,nkm1,nlevs
-      real,parameter :: tau=1.86e+3, t00=273.
+      real,parameter :: small=1.e-12, tau=1.86e+3, t00=273.
       real :: salfa12,salfa21,salfax1,salfax2,rlat
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  hadvec,   ! horizontal advection (output of sub advec) (s13)
@@ -357,7 +357,7 @@
 ! (dfactor was in sub dfact in earlier versions)
 !
       if (difhor > 0) then
-        rlat = (glat(1)+(lat-1)*dlat)*dtr
+        rlat = glat(lat)*dtr
         if (abs(rlat)-pi/4.5 >= 0.) then
           dfactor(:) = hor(lat)+1.
         else
@@ -496,11 +496,17 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1
-          if (fcomp_out(k,i,lat) < 0.) then
-            fcomp_out(k,i,lat) = 0.
+          if (fcomp_out(k,i,lat) < small) then
+!           write(6,"('minor: fcomp_out < small: lat=',i2,' i=',
+!    |        i2,' k=',i2,' fcomp_out=',e12.4)") 
+!    |        lat,i,k,fcomp_out(k,i,lat)
+            fcomp_out(k,i,lat) = small
           endif
-          if (fcomp_tm1_out(k,i,lat) < 0.) then
-            fcomp_tm1_out(k,i,lat) = 0.
+          if (fcomp_tm1_out(k,i,lat) < small) then
+!           write(6,"('minor: fcomp_tm1_out < small: lat=',i2,' i=',
+!    |        i2,' k=',i2,' fcomp_out=',e12.4)") 
+!    |        lat,i,k,fcomp_tm1_out(k,i,lat)
+            fcomp_tm1_out(k,i,lat) = small
           endif
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1

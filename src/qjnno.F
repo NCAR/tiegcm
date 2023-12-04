@@ -53,17 +53,15 @@
       do i=lon0,lon1
         do k=lev0+1,lev1-1
           dq(k,i) = deltaq(k-1,i)*deltaq(k,i)
-          if (dq(k,i) < 0.) dq(k,i) = 0.
+          if (dq(k,i) < 1.e-20) dq(k,i) = 1.e-20
+          qtotal(k,i,lat) = qtotal(k,i,lat)+sqrt(dq(k,i)) 
         enddo ! k=lev0+1,lev1-1
 !
 ! Lower and upper boundaries:
-        dq(lev0,i) = deltaq(lev0,i)**3/deltaq(lev0+1,i)
-        dq(lev1,i) = deltaq(lev1-1,i)**3/deltaq(lev1-2,i)
-
-        do k=lev0,lev1
-          if (dq(k,i) > 0.)
-     |      qtotal(k,i,lat) = qtotal(k,i,lat)+sqrt(dq(k,i))
-        enddo
+        qtotal(lev0,i,lat) = qtotal(lev0,i,lat)+
+     |    1.5*deltaq(lev0,i)-0.5*deltaq(lev0+1,i)
+        qtotal(lev1,i,lat) = qtotal(lev1,i,lat)+
+     |    1.5*deltaq(lev1-1,i)-0.5*deltaq(lev1-2,i)
       enddo ! i=lon0,lon1
 
 !     call addfld('QJNNO_Q' ,' ',' ',qtotal(:,:,lat),

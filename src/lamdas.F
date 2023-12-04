@@ -316,7 +316,7 @@
      |       o2p(k,i)/(1.+rnu_o2p(k,i)**2)-
      |       nop(k,i)/(1.+rnu_nop(k,i)**2))
 
-          if (sigma_hall(k,i) < 1e-30) sigma_hall(k,i) = 1e-30
+          if (sigma_hall(k,i) < 1e-20) sigma_hall(k,i) = 1e-20
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 

@@ -23,9 +23,9 @@
 ! There is provision for a low energy (~75 eV) aurora at the location of the
 !  regular (~1-6 keV) aurora in order to simulate the energy flux found
 !  at higher altitudes that is non-Maxwellian, but the flux is usually
-!  set to zero (1.e-30).
+!  set to zero (1.e-80).
 ! There is provision for a proton (MeV) aurora, but the flux is usually
-!  set to zero (1.e-30).
+!  set to zero (1.e-20).
 ! The drizzle is a constant low energy electron flux over the polar cap,
 !  which goes to 1/e over twice the 1/e-width of the aurora at the
 !  radius of the aurora.
@@ -33,7 +33,7 @@
 !  entrance at phid at the convection reversal boundary theta0.  The cusp
 !  falls off over 5 degrees in latitude and over 20 degrees in longitude
 !  to 1/e values of the peak at the center.
-! 1.e-30 is used to give a near zero answer.
+! 1.e-20 and 1.e-80 are used to give a near zero answer.
 !
 ! The polar drizzle and cusp electron energies are low, and soft particles
 !  have great influence on the over-all thermospheric and ionospheric
@@ -124,7 +124,7 @@
       logical :: add_sproton = .false.
       real,parameter ::
      |  alfa_sp = 10.,
-     |  e_sp = 1.e-30
+     |  e_sp = 1.e-20
       real :: flx_sp
 !
 ! High energy electron parameters in the auroral oval (time-gcm only):
@@ -137,8 +137,8 @@
 !     real,parameter :: ! low energy protons:
 !    |  alfap1 = 5.,
 !    |  alfap2 = 15.,
-!    |  pe1 = 1.e-30,
-!    |  pe2 = 1.e-30
+!    |  pe1 = 1.e-20,
+!    |  pe2 = 1.e-20
 !     real :: alfap0,e0p
 !
 ! Additional auroral parameters (see sub aurora_cons):
@@ -320,7 +320,7 @@
       h0 = 0.5 * (h1 + h2) * dtr
       alfa20 = 0.075
       ralfa2 = 0.
-      e20 = 1.e-30
+      e20 = 1.e-80
       re2 = 0.
 !
 ! Set cusp and drizzle parameters:
@@ -739,7 +739,7 @@
 !    |      abs(clat-crad(ihem)))/(2.*s10))**2)
 !         drizl(i+2) = exp(-((colat(i)-crad(ihem)+
 !    |      abs(colat(i)-crad(ihem)))/s10)**2)
-          flux(i+2) = max(efxg(i,lat)/(2.*alfa(i+2)*1.602e-9),1.e-30)
+          flux(i+2) = max(efxg(i,lat)/(2.*alfa(i+2)*1.602e-9),1.e-20)
 !          flux2(i+2) = e20*(1.-re2*coslamda(i))*
 !     |      exp(-((clat-crad(ihem))/
 !!    |      exp(-((colat(i)-crad(ihem))/
@@ -788,7 +788,7 @@
 #ifdef GAMERA
       do i=1,nlonp4
         alfa(i) = max(geng(i,lat),0.01)
-        flux(i) = max(gflx(i,lat),1.e-30)
+        flux(i) = max(gflx(i,lat),0.01)
         eflux(i) = flux(i)*fac_p2e*alfa(i)
 !       write(6,*)alfa(i),flux(i),i,lat
       enddo

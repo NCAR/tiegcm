@@ -58,8 +58,7 @@
      |  ntask_lon,       ! number of tasks in longitude dimension
      |  ntask_maglat,    ! number of tasks in mag latitude  dimension (not namelist)
      |  ntask_maglon,    ! number of tasks in mag longitude dimension (not namelist)
-     |  calc_helium,     ! calculate helium if calc_helium=1, otherwise set he=0.
-     |  enforce_opfloor  ! if > 0, enforce O+ floor (see oplus.F)
+     |  calc_helium      ! calculate helium if calc_helium=1, otherwise set he=0.
       real ::
      |  tide(10),        ! semidiurnal tide amplitudes and phases
      |  tide2(2),        ! diurnal tide amplitude and phase
@@ -180,7 +179,7 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  enforce_opfloor,bgrddata_ncfile,ctmt_ncfile,opdiffcap,
+     |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,et,saps,
      |  vedata,vndata,vvdata
 !
@@ -289,7 +288,6 @@
       colfac  = spval
       joulefac= spval
       calc_helium = ispval
-      enforce_opfloor = ispval
       opdiffcap = spval
       et = .false.
       saps = .false.
@@ -612,15 +610,6 @@
       call expand_path(vndata)
       if (len_trim(vvdata) == 0) vvdata = '$TGCMDATA/vv.dat'
       call expand_path(vvdata)
-!
-! If enforce_opfloor > 0, then enforce O+ floor (see oplus.F)
-!
-      if (enforce_opfloor==ispval.or.enforce_opfloor > 0) then
-        enforce_opfloor = 1
-      elseif (enforce_opfloor <= 0) then
-        enforce_opfloor = 0
-      endif
-      write(6,"('Input: enforce_opfloor=',i3)") enforce_opfloor
 !
 ! 1/12/05 btf: removed old dynamo (was in dynamo_old.F)
 ! 6/11/08 btf: remove dynamo==0 option
