@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from .data_parse import lat_lon_lev, lat_lon_ilev,lat_lon, calc_avg_ht, min_max, lev_ilev_var, lev_ilev_lon, lev_ilev_lat,lev_ilev_time, lat_time_lev,lat_time_ilev, lat_time, get_time
+from .data_parse import arr_lat_lon,arr_lev_var,arr_lev_lon, arr_lev_lat,arr_lev_time,arr_lat_time, calc_avg_ht, min_max, get_time
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
@@ -122,7 +122,7 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
         contour_intervals = 20
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(level)+"]---------------")
     # Generate 2D arrays, extract variable_unit
-    
+    '''
     if level != None:
         try:
             data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon_lev(datasets, variable_name, time, level, variable_unit)
@@ -132,7 +132,10 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
             avg_ht=calc_avg_ht(datasets, time,level)
     else:
         data, unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =lat_lon(datasets, variable_name, time)
-    
+    '''
+    data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =arr_lat_lon(datasets, variable_name, time, selected_lev_ilev = level, selected_unit = variable_unit, plot_mode = True)
+    if level != 'mean' and level != None:
+            avg_ht=calc_avg_ht(datasets, time,level)
     if latitude_minimum == None:
         latitude_minimum = np.nanmin(unique_lats)
     if latitude_maximum == None:
@@ -177,6 +180,7 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
     cbar.set_label(variable_name + " [" + variable_unit + "]", size=28, labelpad=15)
     cbar.ax.tick_params(labelsize=18)
     plt.title(variable_long_name + ' ' + variable_name + ' (' + variable_unit + ') ' + '\n\n', fontsize=36)
+    
     if level == 'mean':
         plt.text(0, 110, 'UT=' + str(selected_ut) + '  ZP=' + str(level), ha='center', va='center', fontsize=28)
     elif level != None:
@@ -245,7 +249,7 @@ def plt_lev_var(datasets, variable_name, latitude, time= None, mtime=None, longi
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(latitude)+"]---["+str(longitude)+"]---------------")
 
 
-    variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_var(datasets, variable_name, time, latitude, longitude,  variable_unit)
+    variable_values , levs_ilevs, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = arr_lev_var(datasets, variable_name, time, latitude, longitude,  variable_unit, plot_mode = True)
 
     if level_minimum == None:
         level_minimum = np.nanmin(levs_ilevs)
@@ -259,7 +263,6 @@ def plt_lev_var(datasets, variable_name, latitude, time= None, mtime=None, longi
     selected_min=selected_mtime[2]
 
 
-    #zg_values = get_avg_ht_arr(datasets, time, latitude, longitude)
     #print(len(zg_values))
 
     
@@ -333,7 +336,7 @@ def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, varia
         contour_intervals = 20    
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(latitude)+"]---------------")
     # Generate 2D arrays, extract variable_unit
-    variable_values, unique_lons, unique_levs,latitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_lon(datasets, variable_name, time, latitude, variable_unit)
+    variable_values, unique_lons, unique_levs,latitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = arr_lev_lon(datasets, variable_name, time, latitude, variable_unit, plot_mode = True)
 
     if level_minimum == None:
         level_minimum = np.nanmin(unique_levs)
@@ -433,7 +436,7 @@ def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = Non
         contour_intervals = 20
     print("---------------["+variable_name+"]---["+str(time)+"]---["+str(longitude)+"]---------------")
     # Generate 2D arrays, extract variable_unit
-    variable_values, unique_lats, unique_levs,longitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = lev_ilev_lat(datasets, variable_name, time, longitude,  variable_unit)
+    variable_values, unique_lats, unique_levs,longitude, variable_unit, variable_long_name, selected_ut, selected_mtime, filename = arr_lev_lat(datasets, variable_name, time, longitude,  variable_unit, plot_mode = True)
 
     if level_minimum == None:
         level_minimum = np.nanmin(unique_levs)
@@ -519,7 +522,7 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
     if contour_intervals == None:
         contour_intervals = 20
     #print(datasets)
-    variable_values_all, levs_ilevs, mtime_values, longitude, variable_unit, variable_long_name = lev_ilev_time(datasets, variable_name, latitude, longitude, variable_unit)
+    variable_values_all, levs_ilevs, mtime_values, longitude, variable_unit, variable_long_name = arr_lev_time(datasets, variable_name, latitude, longitude, variable_unit, plot_mode = True)
     
     if level_minimum == None:
         level_minimum = np.nanmin(levs_ilevs)
@@ -610,7 +613,7 @@ def plt_lat_time(datasets, variable_name, level = None, longitude = None, localt
     if contour_intervals == None:
         contour_intervals = 20
     print("---------------["+variable_name+"]---["+str(level)+"]---["+str(longitude)+"]---------------")
-
+    '''
     if level != None: 
         try:
             variable_values_all, unique_lats, mtime_values, longitude, variable_unit, variable_long_name, filename = lat_time_lev(datasets, variable_name, level, longitude, variable_unit)
@@ -618,6 +621,8 @@ def plt_lat_time(datasets, variable_name, level = None, longitude = None, localt
             variable_values_all, unique_lats, mtime_values, longitude, variable_unit, variable_long_name, filename = lat_time_ilev(datasets, variable_name, level, longitude, variable_unit)
     else:
         variable_values_all, unique_lats, mtime_values, longitude, variable_unit, variable_long_name, filename = lat_time(datasets, variable_name, longitude, variable_unit)
+    '''
+    variable_values_all, unique_lats, mtime_values, longitude, variable_unit, variable_long_name, filename = arr_lat_time(datasets, variable_name, longitude, level, variable_unit, plot_mode = True)
     # Assuming the levels are consistent across datasets, but using the minimum size for safety
     
     if latitude_minimum == None:
@@ -636,7 +641,7 @@ def plt_lat_time(datasets, variable_name, level = None, longitude = None, localt
     else:
         contour_levels = np.linspace(min_val, max_val, contour_intervals)
     
-    
+
     interval_value = contour_value if contour_value else (max_val - min_val) / (contour_intervals - 1)
 
     mtime_tuples = [tuple(entry) for entry in mtime_values]
