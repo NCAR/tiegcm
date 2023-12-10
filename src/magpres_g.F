@@ -20,7 +20,7 @@
       real, parameter :: matm = 1.6605E-24 ! mass per atomic weight [g]
 !
 ! Module output: 
-      real,dimension(:,:,:),pointer,save :: ! (nlevp1,lon0:lon1,lat0:lat1)
+      real,dimension(:,:,:),pointer :: ! (nlevp1,lon0:lon1,lat0:lat1)
      |  je1oD_geo,  ! J_e1(pg)/D [A/cm^2] 
      |  je2oD_geo   ! J_e2(pg)/D [A/cm^2]
 !       

@@ -37,13 +37,13 @@
 ! amie_pcp_nh(sh) are AMIE polar-cap potential drop
 ! Saved AMIE outputs with suffix _amie
 !
-      real,allocatable,dimension(:,:,:),save :: ! (lonp1,latp1,ntimes)
+      real,allocatable,dimension(:,:,:) :: ! (lonp1,latp1,ntimes)
      |  amie_pot_nh, amie_pot_sh, amie_ekv_nh, amie_ekv_sh,
      |  amie_efx_nh, amie_efx_sh
-      real,allocatable,dimension(:,:),save ::   ! (lonp1,latp1)
+      real,allocatable,dimension(:,:) ::   ! (lonp1,latp1)
      |  pot_nh_amie,pot_sh_amie, ekv_nh_amie,ekv_sh_amie,
      |  efx_nh_amie,efx_sh_amie
-      real, allocatable,dimension(:),save :: ! (ntimes)
+      real, allocatable,dimension(:) :: ! (ntimes)
      |  amie_cusplat_nh, amie_cuspmlt_nh, amie_hpi_nh,
      |  amie_pcp_nh, amie_nh_ut,
      |  amie_cusplat_sh, amie_cuspmlt_sh, amie_hpi_sh,

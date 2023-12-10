@@ -362,7 +362,7 @@
 !----------------------- Begin second latitude scan --------------------
       do lat=lat0,lat1
         if (debug) 
-     |    write(6,"('oplus begin first lat scan: lat=',i3)") lat
+     |    write(6,"('oplus begin second lat scan: lat=',i3)") lat
         jm2 = lat-2
         jm1 = lat-1
         jp1 = lat+1

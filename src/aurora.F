@@ -64,7 +64,6 @@
      |  hpi_nh_amie,pcp_sh_amie,pcp_nh_amie
       use input_module,only: iamie
       implicit none
-      save
 !
 ! VT vampir tracing:
 !

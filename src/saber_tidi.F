@@ -19,7 +19,7 @@
 ! Subdomains interpolated to current model time:
 ! (assigned from globals at every step)
 !
-      real,allocatable,save,dimension(:,:) :: ! (lon0:lon1,lat0:lat1)
+      real,allocatable,dimension(:,:) :: ! (lon0:lon1,lat0:lat1)
      |  saber_t, saber_z, tidi_u, tidi_v
 !
 ! Global data from model run start time to run end time (nlon,nlat,ntime):
@@ -27,9 +27,9 @@
 !
       integer :: nlon,nlat
       integer :: ntime_saber,ntime_tidi
-      real,allocatable,save,dimension(:,:,:) :: ! (nlon,nlat,ntime)
+      real,allocatable,dimension(:,:,:) :: ! (nlon,nlat,ntime)
      |  saber_data_t, saber_data_z, tidi_data_u, tidi_data_v
-      real,allocatable,save,dimension(:) ::     ! fractional year (ntime)
+      real,allocatable,dimension(:) ::     ! fractional year (ntime)
      |  saber_yfrac, tidi_yfrac
       real :: spval_t,spval_z,spval_u,spval_v   ! fill-value (missing data)
 !
@@ -381,7 +381,7 @@
       ntime = istop_tidi-istart_tidi+1
 !
 ! Allocate global data for ntime times:
-!     real,allocatable,save,dimension(:,:,:) :: ! nlon,nlat,ndata
+!     real,allocatable,dimension(:,:,:) :: ! nlon,nlat,ndata
 !    |  saber_data_t, saber_data_z, tidi_data_u, tidi_data_v
 !
       allocate(tidi_data_u(nlon,nlat,ntime),stat=istat)

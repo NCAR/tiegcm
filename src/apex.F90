@@ -40,7 +40,7 @@ module apex
   implicit none
   real,parameter :: re = 6371.2, eps = 1.e-5
 
-  real,allocatable,save :: &
+  real,allocatable :: &
     xarray(:,:,:), & ! cos(quasi-dipole latitude)*cos(apex longitude)
     yarray(:,:,:), & ! cos(quasi-dipole latitude)*sin(apex longitude)
     zarray(:,:,:), & ! sin(quasi-dipole latitude)
@@ -50,7 +50,7 @@ module apex
 ! as passed to apex_mka.
 !
   integer :: nglat,nglon,ngalt
-  real,allocatable,save :: geolat(:), geolon(:), geoalt(:)    
+  real,allocatable :: geolat(:), geolon(:), geoalt(:)    
 
   integer,parameter :: nmax=13
   integer,parameter :: ncoef = nmax*nmax + 2*nmax + 1 ! 196
@@ -1402,7 +1402,6 @@ subroutine dipapx(gdlat,gdlon,alt,bnorth,beast,bdown,a,alon)
 end subroutine dipapx
 !-----------------------------------------------------------------------
 subroutine itrace(iapx)
-  save
 !
 ! Uses 4-point ADAMS formula after initialization.
 ! First 7 iterations advance point by 3 steps.
@@ -1415,8 +1414,9 @@ subroutine itrace(iapx)
 !
 ! Local:
   integer :: i,j
-  real :: yploc(3,4) ! local yp (i.e., not module data yp)
-  real :: term,d2,d6,d12,d24,rc,rp
+  real :: term,rc,rp
+  real,save :: d2,d6,d12,d24, &
+    yploc(3,4) ! local yp (i.e., not module data yp)
 
   iapx = 1
 !

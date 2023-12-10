@@ -21,17 +21,17 @@
 !
 ! 3d pointers to fields regridded to magnetic subdomains (i,j,k):
 ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1)
-      real,pointer,dimension(:,:,:),save :: ped_mag,hal_mag,zpot_mag, 
+      real,pointer,dimension(:,:,:) :: ped_mag,hal_mag,zpot_mag, 
      |  adotv1_mag, adotv2_mag, je1pg_mag, je2pg_mag
 !
 ! 2d pointers to fields on magnetic subdomains (i,j):
 ! (mlon0:mlon1,mlat0:mlat1)
-      real,pointer,dimension(:,:),save :: sini_mag,adota1_mag,
+      real,pointer,dimension(:,:) :: sini_mag,adota1_mag,
      |  adota2_mag,a1dta2_mag,be3_mag
 !
 ! 2d coefficients and RHS terms for PDE on magnetic subdomains 
 ! including halo points:
-      real,allocatable,dimension(:,:),save :: 
+      real,allocatable,dimension(:,:) :: 
      |  zigm11,     ! sigma11*cos(theta0)
      |  zigmc,      ! sigmac
      |  zigm2,      ! sigma2
@@ -39,13 +39,12 @@
      |  rim1,rim2,
      |  rhs,        ! right-hand side
      |  phimsolv,   ! solution direct from solver (nhem only)
-     |  phim2d      ! solution with phihm and both nhem and shem
-      real,allocatable,dimension(:,:),save :: 
+     |  phim2d,     ! solution with phihm and both nhem and shem
      |  zigm1, nsrhs
 !
 ! 3d potential and electric field on mag subdomains (see sub pthreed):
 ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1)
-      real,allocatable,dimension(:,:,:),save :: 
+      real,allocatable,dimension(:,:,:) :: 
      |  phim3d,        ! 3d electric potential
      |  ed13d,ed23d,   ! 3d electric field for current calculations
      |  ephi3d,        ! 3d eastward electric field
@@ -55,23 +54,23 @@
 !
 ! 3d electric field on geographic subdomains (see sub pefield):
 ! (nlevp1,lon0-2,lon1+2,lat0:lat1)
-      real,allocatable,dimension(:,:,:),save :: ex,ey,ez
+      real,allocatable,dimension(:,:,:) :: ex,ey,ez
 !
 ! 3d electric potential on geographic subdomains (lon0:lon1,lat0:lat1,nlevp1)
 ! This will be regridded from phim3d for output to history files.
-      real,allocatable,dimension(:,:,:),save :: phig3d
+      real,allocatable,dimension(:,:,:) :: phig3d
 !
 ! coef_rhs and coef_cofum are allocated without halo points:
-      real,allocatable,dimension(:,:),save :: 
+      real,allocatable,dimension(:,:) :: 
      |  coef_rhs    ! c0(:,:,10) at subdomains (10th only, i.e., rhs)
-      real,allocatable,dimension(:,:,:),save :: coef_cofum  ! cofum(mlon0:1,mlat0:1,1-9)
+      real,allocatable,dimension(:,:,:) :: coef_cofum  ! cofum(mlon0:1,mlat0:1,1-9)
 !
 ! Fields at mag equator (mlon0:mlon1,mlev0:mlev1):
-      real,allocatable,dimension(:,:),save :: 
+      real,allocatable,dimension(:,:) :: 
      |  ped_meq, hal_meq, adotv1_meq, adotv2_meq,         ! (mlon0:mlon1,mlev0:mlev1)
      |  je1pg_meq, je2pg_meq
-      real,allocatable,dimension(:,:,:),save :: fmeq_out  ! (mlon0:mlon1,mlev0:mlev1,6)
-      real,allocatable,dimension(:,:,:,:),save :: fmeq_in ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1,6)
+      real,allocatable,dimension(:,:,:) :: fmeq_out  ! (mlon0:mlon1,mlev0:mlev1,6)
+      real,allocatable,dimension(:,:,:,:) :: fmeq_in ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1,6)
       integer :: jlateq      ! latitude index of mag equator
       
       real,allocatable,dimension(:,:) :: ressolv ! mag subdomains w/o halos
@@ -2286,7 +2285,7 @@
       fmsub1(:,:,4) = ephi
       fmsub1(:,:,5) = elam
       if (debug) write(6,"('pthreed call mp_mag_jslot')")
-      call mp_mag_jslot(fmsub1,mlon00,mlon11,mlat00,mlat11,
+      call mp_mag_jslot(fmsub1,mlon0,mlon1,mlat0,mlat1,
      |  fmneed,jneed,mxneed,5)
       if (debug) write(6,"('pthreed after mp_mag_jslot')")
       phineed = fmneed(:,:,1)
@@ -3629,7 +3628,6 @@ c      enddo
 !
 ! Called from mudpack solvers to transfer coefficients.
 !
-      save
       integer,intent(in) :: nx,ny
       real,intent(in) :: cee(nx,ny,*)
       real,intent(out) :: cf(nx,ny,*)

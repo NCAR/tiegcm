@@ -18,34 +18,34 @@
       implicit none
 !
 ! Geographic and magnetic grids (as source and destination grids):
-      type(ESMF_Grid),save :: 
+      type(ESMF_Grid) :: 
      |  geo_src_grid, mag_src_grid, ! source grids (will not have periodic pts)
      |  geo_des_grid, mag_des_grid  ! destination grids (will have periodic pts)
 !
 ! 3d (i,j,k) ESMF Fields on geographic subdomains:
-      type(ESMF_Field),save :: geo_ped, geo_hal, geo_zpot, 
+      type(ESMF_Field) :: geo_ped, geo_hal, geo_zpot, 
      |  geo_adotv1, geo_adotv2, geo_je1pg, geo_je2pg
-      type(ESMF_Field),save :: esmf_3dfields(8) ! used in pdynamo.F
+      type(ESMF_Field) :: esmf_3dfields(8) ! used in pdynamo.F
 !
 ! 3d (i,j,k) ESMF fields regridded to magnetic subdomains:
-      type(ESMF_Field),save :: mag_ped, mag_hal, mag_zpot, 
+      type(ESMF_Field) :: mag_ped, mag_hal, mag_zpot, 
      |  mag_adotv1, mag_adotv2, mag_je1pg, mag_je2pg
 !
 ! 2d (i,j) ESMF fields on geographic subdomains:
-      type(ESMF_Field),save :: geo_sini, geo_adota1, geo_adota2,
+      type(ESMF_Field) :: geo_sini, geo_adota1, geo_adota2,
      |  geo_a1dta2, geo_be3
 !
 ! 2d (i,j) ESMF fields on magnetic subdomains:
-      type(ESMF_Field),save :: mag_sini, mag_adota1, mag_adota2,
+      type(ESMF_Field) :: mag_sini, mag_adota1, mag_adota2,
      |  mag_a1dta2, mag_be3
-      type(ESMF_Field),save :: mag_zigm1, mag_zigm2, mag_nsrhs
-      type(ESMF_Field),save :: geo_zigm1, geo_zigm2, geo_nsrhs
+      type(ESMF_Field) :: mag_zigm1, mag_zigm2, mag_nsrhs
+      type(ESMF_Field) :: geo_zigm1, geo_zigm2, geo_nsrhs
 !
 ! 3d electric potential for mag to geo regridding:
-      type(ESMF_Field),save :: mag_phi3d,mag_ephi3d,mag_elam3d,mag_emz3d
-      type(ESMF_Field),save :: geo_phi3d,geo_ephi3d,geo_elam3d,geo_emz3d
+      type(ESMF_Field) :: mag_phi3d,mag_ephi3d,mag_elam3d,mag_emz3d
+      type(ESMF_Field) :: geo_phi3d,geo_ephi3d,geo_elam3d,geo_emz3d
 
-      type(ESMF_RouteHandle),save :: ! route handles for Regridding
+      type(ESMF_RouteHandle) :: ! route handles for Regridding
      |  routehandle_geo2mag, routehandle_mag2geo,
      |  routehandle_geo2mag_2d, routehandle_mag2geo_2d
 !
