@@ -854,7 +854,8 @@ def calc_avg_ht(datasets, time, selected_lev_ilev):
     Returns:
     - float: The average ZG value for the given conditions.
     """
-    
+    if isinstance(time, str):
+        time = np.datetime64(time, 'ns')
     
     for ds, filenames in datasets:
         if time in ds['time'].values:
@@ -872,7 +873,9 @@ def calc_avg_ht(datasets, time, selected_lev_ilev):
                 # Return the averaged data
                 heights = (data1 + data2) / 2
             avg_ht= round(heights.mean()/ 100000, 2)
-    return avg_ht
+            return avg_ht
+        else:
+            return 0
 
 def min_max(variable_values):
     """
