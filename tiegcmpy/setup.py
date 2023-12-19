@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='tiegcmpy',
-    version='1.2.2',
+    version='1.2.3',
     author = "Nikhil Rao",
     author_email = "nikhilr@ucar.edu",
     description='A Python3 post processing tool for TIE-GCM',
