@@ -2,6 +2,10 @@
 
 tiegcmpy is a tool used for TIE-GCM post processing and plot generation.
 
+## Updated documentation on readthedocs
+## https://tiegcm-docs.readthedocs.io/en/latest/
+
+
 ## Installation
 
 ```bash

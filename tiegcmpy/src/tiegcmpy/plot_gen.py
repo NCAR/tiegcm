@@ -208,19 +208,20 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
     # Generate contour plot
     plot = plt.figure(figsize=(20, 9))
 
-    
+    if coastlines == True or nightshade == True or gm_equator ==True:
+        subtitle_ht= 100
+        ax = plt.axes(projection=ccrs.PlateCarree())
+    else:
+        subtitle_ht= 115
+        ax = plt.gca()
     # Check if add_coastlines parameter is True
     if coastlines:
-        ax = plt.axes(projection=ccrs.PlateCarree())
         ax.add_feature(cfeature.COASTLINE, edgecolor=line_color, linewidth=3)
     if nightshade:
-
-        print(datetime.fromtimestamp(time.astype('O')/1e9, tz=timezone.utc))
         ax.add_feature(Nightshade(datetime.fromtimestamp(time.astype('O')/1e9, tz=timezone.utc), alpha=0.4))
     if gm_equator:
         ax.plot(unique_lons, [0]*len(unique_lons), color=line_color, linestyle='--', transform=ccrs.Geodetic())
-    else:
-        ax = plt.gca()
+    
     
     contour_filled = plt.contourf(unique_lons, unique_lats, data, cmap=cmap_color, levels=contour_levels)
     contour_lines = plt.contour(unique_lons, unique_lats, data, colors=line_color, linewidths=0.5, levels=contour_levels)
@@ -253,11 +254,11 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
     plt.title(variable_long_name + ' ' + variable_name + ' (' + variable_unit + ') ' + '\n\n', fontsize=36)
     # Add plot subtitle
     if level == 'mean':
-        plt.text(0, 115, 'UT=' + str(selected_ut) + '  ZP=' + str(level), ha='center', va='center', fontsize=28)
+        plt.text(0, subtitle_ht, 'UT=' + str(selected_ut) + '  ZP=' + str(level), ha='center', va='center', fontsize=28)
     elif level != None:
-        plt.text(0, 115, 'UT=' + str(selected_ut) + '  ZP=' + str(level)+' AVG HT=' + str(avg_ht), ha='center', va='center', fontsize=28)
+        plt.text(0, subtitle_ht, 'UT=' + str(selected_ut) + '  ZP=' + str(level)+' AVG HT=' + str(avg_ht), ha='center', va='center', fontsize=28)
     else:
-        plt.text(0, 115, 'UT=' + str(selected_ut), ha='center', va='center', fontsize=28)
+        plt.text(0, subtitle_ht, 'UT=' + str(selected_ut), ha='center', va='center', fontsize=28)
     
 
     # Add subtext to the plot

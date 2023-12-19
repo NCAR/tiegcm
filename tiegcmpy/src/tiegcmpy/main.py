@@ -102,12 +102,12 @@ def plot_routine(args):
         #
         if args.time: 
             available_times = set()  
+            args.time = np.datetime64(args.time, 'ns')
             for ds, filename in datasets:
                 times = ds['time'].values  
                 available_times.update(times)
             if np.datetime64(args.time) not in available_times:
                 raise ValueError(f"The specified time {args.time} is not available in the datasets.") #Available times are {available_times}")
-            args.time = np.datetime64(args.time)
         #
         # Check and validate the specified time argument
         #

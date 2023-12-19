@@ -36,7 +36,12 @@ def get_options():
     parser.add_argument('-unit','--variable_unit', type=str, help='Selected unit of a given variable for the plot')
     parser.add_argument('-cint','--contour_intervals', type=float, help='Selected number interval of contour for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
     parser.add_argument('-cval','--contour_value', type=float, help='Selected value of interval of contour for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
-    parser.add_argument('-cstl','--coastlines', type=bool, help='Add coast lines to the lat_lon plots')
+    parser.add_argument('-ccolor','--cmap_color', type=float, help='Selected color of cmap of contour for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
+    parser.add_argument('-lcolor','--line_color', type=float, help='Selected color of contour lines for the plots [lat_lon, lev_lon, lev_lat, lev_time, lat_time]')
+    parser.add_argument('-cstl','--coastlines', action='store_true', help='Add coast lines to the lat_lon plots')
+    parser.add_argument('-ntsh','--nightshade', action='store_true', help='Add nightshade to the lat_lon plots')
+    parser.add_argument('-gmeq','--gm_equator', action='store_true', help='Add geomagnetic equator to the lat_lon plots')
+
     #
     # Plot slicing arguments 
     #
@@ -54,23 +59,23 @@ def get_options():
     
     plot_requirements = {
         'lat_lon': {'required': ['variable_name', 'time', 'mtime'],
-                    'optional': ['level','variable_unit','coastlines','contour_intervals','contour_value','latitude_minimum','latitude_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum'],
+                    'optional': ['level','variable_unit','coastlines','nightshade','gm_equator','contour_intervals','contour_value','cmap_color','line_color','latitude_minimum','latitude_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum'],
                     },
         
         'lev_var': {'required': ['variable_name', 'time', 'mtime', 'latitude', 'longitude', 'localtime'],
-                    'optional': ['variable_unit','level_minimum','level_maximum']
+                    'optional': ['cmap_color','line_color','variable_unit','level_minimum','level_maximum']
                     },
         'lev_lon': {'required': ['variable_name', 'time', 'mtime', 'latitude'],
-                    'optional': ['variable_unit','contour_intervals','contour_value','level_minimum','level_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum']
+                    'optional': ['cmap_color','line_color','variable_unit','contour_intervals','contour_value','level_minimum','level_maximum','longitude_minimum','longitude_maximum','localtime_minimum','localtime_maximum']
                     },
         'lev_lat': {'required': ['variable_name', 'time', 'mtime', 'longitude', 'localtime'],
-                    'optional': ['variable_unit','contour_intervals','contour_value','level_minimum','level_maximum','latitude_minimum','latitude_maximum']
+                    'optional': ['cmap_color','line_color','variable_unit','contour_intervals','contour_value','level_minimum','level_maximum','latitude_minimum','latitude_maximum']
                     },
         'lev_time': {'required': ['variable_name', 'latitude', 'longitude', 'localtime'],
-                    'optional': ['variable_unit','contour_intervals','contour_value','level_minimum','level_maximum'] 
+                    'optional': ['cmap_color','line_color','variable_unit','contour_intervals','contour_value','level_minimum','level_maximum'] 
                     },
         'lat_time': {'required': ['variable_name', 'longitude', 'localtime'],
-                    'optional': ['level','variable_unit','contour_intervals','contour_value','latitude_minimum','latitude_maximum']
+                    'optional': ['cmap_color','line_color','level','variable_unit','contour_intervals','contour_value','latitude_minimum','latitude_maximum']
                     },
     }
     '''
