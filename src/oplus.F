@@ -94,14 +94,14 @@
      |  divbz,            ! was s7 (DIV(B)+(DH*D*BZ)/(D*BZ)
      |  hdzmbz,hdzpbz,    ! were s10,s9
      |  p_coeff,q_coeff,r_coeff, ! coefficients for tridiagonal solver (s1,s2,s3)
-     |  bdotu,            ! was s7 (B.U)
-     |  op_loss,          ! was s13
      |  tp1,              ! 0.5*(te+ti)
-     |  wd
+     |  wd,bdotdh_djbz,op_prod,op_loss_out,dopdt,
+     |  diffsum,driftsum,windsum
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: 
+     |  bdotu,       ! was s7 (B.U)
      |  bvel,
      |  diffj,       ! (D/(H*DZ)*2.*TP+M*G/R)*N(O+) (s7,s8,s9)
      |  tp,          ! Plasma temperature (te+ti)
@@ -111,7 +111,10 @@
      |  bdotdh_diff, ! (b(h)*del(h))*phi
      |  dj,          ! diffusion coefficients (s13,s14,s15)
      |  optm1_smooth,! op at time n-1, with shapiro smoother (was s1)
-     |  vni
+     |  optm1_smooth2,
+     |  op_loss,     ! was s13
+     |  vni,djbz,vdotn_h,bdotdh_bvel,diffexp,
+     |  diffp,diffq,diffr,driftp,driftq,driftr,windp,windq,windr
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,5) :: f5
       logical,parameter :: debug=.false. ! if set write print statements to stdout
 !
@@ -255,24 +258,29 @@
 !     call addfld('HJ  ',' ',' ',hj(lev0:lev1-1,:,lat),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
+! bdotu = B.U (s7)
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+          bdotu(k,i,jm1) = bx(i,jm1)*u(k,i,jm1)+by(i,jm1)*v(k,i,jm1)+
+     |      hj(k,i,jm1)*bz(i,jm1)*0.5*(w(k,i,jm1)+w(k+1,i,jm1))
+          bdotu(k,i,lat) = bx(i,lat)*u(k,i,lat)+by(i,lat)*v(k,i,lat)+
+     |      hj(k,i,lat)*bz(i,lat)*0.5*(w(k,i,lat)+w(k+1,i,lat))
+          bdotu(k,i,jp1) = bx(i,jp1)*u(k,i,jp1)+by(i,jp1)*v(k,i,jp1)+
+     |      hj(k,i,jp1)*bz(i,jp1)*0.5*(w(k,i,jp1)+w(k+1,i,jp1))
+        enddo ! k=lev0,lev1-1
+      enddo ! i=lon0,lon1
+!     call addfld('BDOTU' ,' ',' ',bdotu(lev0:lev1-1,:,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!
 ! bvel @ jm1 = (B.U)*N(O+)    (J-1) (was s6)
 ! bvel @ j   = (B.U)*N(O+)      (J) (was s7)
 ! bvel @ jp1 = (B.U)*N(O+)    (J+1) (was s8)
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          bvel(k,i,jm1) = 
-     |      (bx(i,jm1)*u(k,i,jm1)+by(i,jm1)*v(k,i,jm1)+ 
-     |      hj(k,i,jm1)*bz(i,jm1)*0.5*(w(k,i,jm1)+w(k+1,i,jm1)))*
-     |      op(k,i,jm1) 
-          bvel(k,i,lat) = 
-     |      (bx(i,lat)*u(k,i,lat)+by(i,lat)*v(k,i,lat)+
-     |      hj(k,i,lat)*bz(i,lat)*0.5*(w(k,i,lat)+w(k+1,i,lat)))*
-     |      op(k,i,lat)
-          bvel(k,i,jp1) = 
-     |      (bx(i,jp1)*u(k,i,jp1)+by(i,jp1)*v(k,i,jp1)+ 
-     |      hj(k,i,jp1)*bz(i,jp1)*0.5*(w(k,i,jp1)+w(k+1,i,jp1)))*
-     |      op(k,i,jp1) 
+          bvel(k,i,jm1) = bdotu(k,i,jm1)*op(k,i,jm1)
+          bvel(k,i,lat) = bdotu(k,i,lat)*op(k,i,lat)
+          bvel(k,i,jp1) = bdotu(k,i,jp1)*op(k,i,jp1)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
       if (debug) write(6,"('oplus after bvel: lat=',i3)") lat
@@ -354,10 +362,14 @@
       diffj(:,:,:)        = f5(:,:,:,3)
       tp(:,:,:)          = f5(:,:,:,4)
       optm1_smooth(:,:,:) = f5(:,:,:,5)
-!
-! Periodic points for dj:
-      call mp_periodic_f3d(dj(:,lon0:lon1,lat0-1:lat1+1),lev0,lev1,
-     |  lon0,lon1,lat0,lat1,1)
+
+      do lat=lat0-1,lat1+1
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            djbz(k,i,lat) = dj(k,i,lat)*bz(i,lat)
+          enddo
+        enddo
+      enddo
 !
 !----------------------- Begin second latitude scan --------------------
       do lat=lat0,lat1
@@ -379,7 +391,7 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          bdotdh_op(k,i,lat) = dj(k,i,lat)*bz(i,lat)*bdotdh_op(k,i,lat)
+          bdotdh_op(k,i,lat) = djbz(k,i,lat)*bdotdh_op(k,i,lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -462,8 +474,9 @@
 ! Collect explicit terms:
       do i=lon0,lon1
         do k=lev0,lev1-1
-          explicit(k,i) = -explic*(bdzdvb_op(k,i)+bdotdh_diff(k,i,lat)+
-     |      bdotdh_op(k,i,lat))
+          diffexp(k,i,lat) =
+     |      bdzdvb_op(k,i)+bdotdh_diff(k,i,lat)+bdotdh_op(k,i,lat)
+          explicit(k,i) = -explic*diffexp(k,i,lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -483,20 +496,25 @@
       lonend = lon1
       if (lon1==nlonp4) lonend = lon1-2
 !
+      call bdotdh(
+     |  bvel(:,lon0:lon1,jm1),bvel(:,:,lat),bvel(:,lon0:lon1,jp1),
+     |  bdotdh_bvel(:,lon0:lon1,lat),lon0,lon1,lev0,lev1,lat)
+!
 ! Note if input flag DYNAMO<=0, then ui,vi,wi velocities will be zero.
       do i=lonbeg,lonend
         do k=lev0,lev1-1
-          explicit(k,i) = explicit(k,i)+1./(2.*re)*
-     |      (1./(cs(lat)*dlamda)*(bx(i,lat)*
-     |      (bvel(k,i+1,lat)-bvel(k,i-1,lat))+
-     |      0.5*(ui(k,i,lat)+ui(k+1,i,lat))*bmod2(i,lat)**2*
+          vdotn_h(k,i,lat) = 1./(2.*re)*
+     |      (1./(cs(lat)*dlamda)*
+     |      (0.5*(ui(k,i,lat)+ui(k+1,i,lat))*bmod2(i,lat)**2*
      |      (op(k,i+1,lat)/bmod2(i+1,lat)**2-
      |       op(k,i-1,lat)/bmod2(i-1,lat)**2))+
 !
-     |      1./dphi*(by(i,lat)*(bvel(k,i,jp1)-bvel(k,i,jm1))+
-     |      0.5*(vi(k,i,lat)+vi(k+1,i,lat))*bmod2(i,lat)**2*
+     |      1./dphi*
+     |      (0.5*(vi(k,i,lat)+vi(k+1,i,lat))*bmod2(i,lat)**2*
      |      (op(k,i,jp1)/bmod2(i,jp1)**2-
      |       op(k,i,jm1)/bmod2(i,jm1)**2)))
+          explicit(k,i) =
+     |      explicit(k,i)+vdotn_h(k,i,lat)+bdotdh_bvel(k,i,lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0+2,lon1-2
 !
@@ -562,14 +580,15 @@
 !     call addfld('DJINT' ,' ',' ',djint,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
+      call bdotdh(
+     |  djbz(:,lon0:lon1,jm1),djbz(:,:,lat),djbz(:,lon0:lon1,jp1),
+     |  bdotdh_djbz,lon0,lon1,lev0,lev1,lat)
+!
 ! divbz = (DIV(B)+(DH*D*BZ)/(D*BZ) (was s7)
       do i=lonbeg,lonend
         do k=lev0,lev1-1
           divbz(k,i) = 
-     |      dvb(i,lat)+1./(re*dj(k,i,lat)*bz(i,lat)**2)*(bx(i,lat)/
-     |      cs(lat)*(dj(k,i+1,lat)*bz(i+1,lat)-dj(k,i-1,lat)*
-     |      bz(i-1,lat))/(2.*dlamda)+by(i,lat)*(dj(k,i,jp1)*
-     |      bz(i,jp1)-dj(k,i,jm1)*bz(i,jm1))/(2.*dphi))
+     |      dvb(i,lat)+bdotdh_djbz(k,i)/(dj(k,i,lat)*bz(i,lat)**2)
         enddo ! k=lev0,lev1-1
       enddo ! i=lonbeg,lonend
 
@@ -601,13 +620,19 @@
 ! Boundary longitudes for optm1_smooth were obtained after first
 ! latitude scan above.
 !
-      do i=lonbeg,lonend
+      do i=lon0,lon1
         do k=lev0,lev1-1
-          explicit(k,i) = explicit(k,i)-(optm1_smooth(k,i,lat)-
-     |      shapiro/nstep_sub*
+          optm1_smooth2(k,i,lat) =
+     |      optm1_smooth(k,i,lat)-shapiro/nstep_sub*
      |      (optm1_smooth(k,i+2,lat)+optm1_smooth(k,i-2,lat)-4.*
      |      (optm1_smooth(k,i+1,lat)+optm1_smooth(k,i-1,lat))+6.*
-     |       optm1_smooth(k,i,lat)))*dtx2inv*nstep_sub
+     |       optm1_smooth(k,i,lat))
+        enddo
+      enddo
+      do i=lonbeg,lonend
+        do k=lev0,lev1-1
+          explicit(k,i) = explicit(k,i)-
+     |      optm1_smooth2(k,i,lat)*dtx2inv*nstep_sub
         enddo ! k=lev0,lev1
       enddo ! i=lonbeg,lonend
 
@@ -620,67 +645,80 @@
 ! Begin coefficients p_coeff, q_coeff, r_coeff  (s1,s2,s3)
       do i=lon0,lon1
         do k=lev0,lev1-1
-          p_coeff(k,i) =   hdzmbz(k,i)*djint(k  ,i)*tphdz0(k  ,i)
-          q_coeff(k,i) = -(hdzpbz(k,i)*djint(k+1,i)*tphdz0(k+1,i)+
-     |                     hdzmbz(k,i)*djint(k  ,i)*tphdz1(k  ,i))
-          r_coeff(k,i) =   hdzpbz(k,i)*djint(k+1,i)*tphdz1(k+1,i)
+          diffp(k,i,lat) =   hdzmbz(k,i)*djint(k  ,i)*tphdz0(k  ,i)
+          diffq(k,i,lat) = -(hdzpbz(k,i)*djint(k+1,i)*tphdz0(k+1,i)+
+     |                       hdzmbz(k,i)*djint(k  ,i)*tphdz1(k  ,i))
+          diffr(k,i,lat) =   hdzpbz(k,i)*djint(k+1,i)*tphdz1(k+1,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfld('P_COEFF0',' ',' ',p_coeff(lev0:lev1-1,:),
+!     call addfld('P_COEFF0',' ',' ',diffp(lev0:lev1-1,:,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('Q_COEFF0',' ',' ',q_coeff(lev0:lev1-1,:),
+!     call addfld('Q_COEFF0',' ',' ',diffq(lev0:lev1-1,:,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('R_COEFF0',' ',' ',r_coeff(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! bdotu = B.U (s7)
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          bdotu(k,i) = bx(i,lat)*u(k,i,lat)+by(i,lat)*v(k,i,lat)+
-     |      hj(k,i,lat)*bz(i,lat)*0.5*(w(k,i,lat)+w(k+1,i,lat))
-        enddo ! k=lev0,lev1-1
-      enddo ! i=lon0,lon1
-!     call addfld('BDOTU' ,' ',' ',bdotu(lev0:lev1-1,:),
+!     call addfld('R_COEFF0',' ',' ',diffr(lev0:lev1-1,:,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Continue coefficients with vertical ion velocity:
       do i=lon0,lon1
         do k=lev0,lev1-2
-          p_coeff(k+1,i) = p_coeff(k+1,i)+
-     |      (bz(i,lat)*bdotu(k,i)+0.5*(wi(k+1,i,lat)+wi(k+2,i,lat)))*
-     |      0.5*hdz(k+1,i)
-          q_coeff(k,i) = q_coeff(k,i)-0.5*(wi(k,i,lat)+wi(k+1,i,lat))*
-     |      6./re
-          r_coeff(k,i) = r_coeff(k,i)-(bz(i,lat)*bdotu(k+1,i)+
-     |      0.5*(wi(k,i,lat)+wi(k+1,i,lat)))*0.5*hdz(k,i) 
+          driftp(k+1,i,lat) =
+     |      0.5*(wi(k+1,i,lat)+wi(k+2,i,lat))*0.5*hdz(k+1,i)
+          driftq(k,i,lat) = -0.5*(wi(k,i,lat)+wi(k+1,i,lat))*6./re
+          driftr(k,i,lat) =
+     |      -0.5*(wi(k,i,lat)+wi(k+1,i,lat))*0.5*hdz(k,i)
         enddo ! k=lev0,lev1-2
       enddo ! i=lon0,lon1
 !
-!     call addfld('P_COEFF1',' ',' ',p_coeff(lev0:lev1-1,:),
+! Upper and lower boundaries:
+      do i=lon0,lon1
+        driftp(lev0,i,lat) = 
+     |    0.5*(wi(lev0,i,lat)+wi(lev0+1,i,lat))*0.5*hdz(lev0,i)
+        driftq(lev1-1,i,lat) =
+     |    -0.5*(wi(lev1,i,lat)+wi(lev1-1,i,lat))*6./re
+        driftr(lev1-1,i,lat) =
+     |    -0.5*(wi(lev1,i,lat)+wi(lev1-1,i,lat))*0.5*hdz(lev1-1,i)
+      enddo ! i=lon0,lon1
+
+!     call addfld('P_COEFF1',' ',' ',driftp(lev0:lev1-1,:,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('Q_COEFF1',' ',' ',q_coeff(lev0:lev1-1,:),
+!     call addfld('Q_COEFF1',' ',' ',driftq(lev0:lev1-1,:,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('R_COEFF1',' ',' ',r_coeff(lev0:lev1-1,:),
+!     call addfld('R_COEFF1',' ',' ',driftr(lev0:lev1-1,:,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!
+! Continue coefficients with vertical neutral wind:
+      do i=lon0,lon1
+        do k=lev0,lev1-2
+          windp(k+1,i,lat) = bz(i,lat)*bdotu(k,i,lat)*0.5*hdz(k+1,i)
+          windq(k,i,lat) = -bdotu(k,i,lat)*dvb(i,lat)*bz(i,lat)
+          windr(k,i,lat) = -bz(i,lat)*bdotu(k+1,i,lat)*0.5*hdz(k,i)
+        enddo ! k=lev0,lev1-2
+      enddo ! i=lon0,lon1
 !
 ! Upper and lower boundaries:
       do i=lon0,lon1
-        p_coeff(lev0,i) = p_coeff(lev0,i)+(bz(i,lat)*
-     |    (2.*bdotu(lev0,i)-bdotu(lev0+1,i))+0.5*
-     |    (wi(lev0,i,lat)+wi(lev0+1,i,lat)))*0.5*hdz(lev0,i)
-        q_coeff(lev1-1,i) = q_coeff(lev1-1,i)-
-     |    0.5*(wi(lev1,i,lat)+wi(lev1-1,i,lat))*6./re
-        r_coeff(lev1-1,i) = r_coeff(lev1-1,i)-
-     |    (bz(i,lat)*(2.*bdotu(lev1-1,i)-bdotu(lev1-2,i))+
-     |    0.5*(wi(lev1,i,lat)+wi(lev1-1,i,lat)))*0.5*hdz(lev1-1,i)
+        windp(lev0,i,lat) = bz(i,lat)*
+     |    (2.*bdotu(lev0,i,lat)-bdotu(lev0+1,i,lat))*0.5*hdz(lev0,i)
+        windq(lev1-1,i,lat) = -bdotu(lev1-1,i,lat)*dvb(i,lat)*bz(i,lat)
+        windr(lev1-1,i,lat) = bz(i,lat)*
+     |   (2.*bdotu(lev1-1,i,lat)-bdotu(lev1-2,i,lat))*0.5*hdz(lev1-1,i)
       enddo ! i=lon0,lon1
+
+!     call addfld('P_COEFF2',' ',' ',windp(lev0:lev1-1,:,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('Q_COEFF2',' ',' ',windq(lev0:lev1-1,:,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('R_COEFF2',' ',' ',windr(lev0:lev1-1,:,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Additions to Q coefficients:
       do i=lon0,lon1
         do k=lev0,lev1-1
-          q_coeff(k,i) = q_coeff(k,i)-bdotu(k,i)*dvb(i,lat)*bz(i,lat)-
-     |      dtx2inv*nstep_sub
+          p_coeff(k,i) = diffp(k,i,lat)+driftp(k,i,lat)+windp(k,i,lat)
+          q_coeff(k,i) = diffq(k,i,lat)+driftq(k,i,lat)+windq(k,i,lat)
+     |      -dtx2inv*nstep_sub
+          r_coeff(k,i) = diffr(k,i,lat)+driftr(k,i,lat)+windr(k,i,lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !
@@ -735,12 +773,12 @@
      |      o1(k,i,lat)*rmassinv_o1+rk26*o2(k,i,lat)*rmassinv_o2))+
      |      rk25(k,i,lat)*ne(k,i,lat)+rk27)
 ! 
-          op_loss(k,i) = 
+          op_loss(k,i,lat) = 
      |      xnmbar(k,i,lat)*(rk1(k,i,lat)*o2(k,i,lat)*rmassinv_o2+
      |      rk2(k,i,lat)*n2(k,i,lat)*rmassinv_n2+rk10*
      |      n2d(k,i,lat)*rmassinv_n2d)
 !
-          q_coeff(k,i) = q_coeff(k,i)-op_loss(k,i)
+          q_coeff(k,i) = q_coeff(k,i)-op_loss(k,i,lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -748,7 +786,7 @@
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('XIOP2D',' ',' ',xiop2d(lev0:lev1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('OP_LOSS',' ',' ',op_loss(lev0:lev1-1,lon0:lon1),
+!     call addfld('OP_LOSS',' ',' ',op_loss(lev0:lev1-1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('OP_QOP',' ',' ',qop(lev0:lev1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -766,14 +804,17 @@
 ! Add source term to RHS (explicit terms):
       do i=lon0,lon1
         do k=lev0,lev1-1
-          explicit(k,i) = explicit(k,i)-
-     |      0.5*(qop(k,i,lat)+qop(k+1,i,lat))-(rk19(k,i,lat)*
+          op_prod(k,i) =
+     |      0.5*(qop(k,i,lat)+qop(k+1,i,lat))+(rk19(k,i,lat)*
      |      ne(k,i,lat)+rk21)*
-     |      xiop2p(k,i,lat)-(rk25(k,i,lat)*ne(k,i,lat)+rk27)*
-     |      xiop2d(k,i,lat)-(rk18*xiop2p(k,i,lat)+rk24*xiop2d(k,i,lat))*
+     |      xiop2p(k,i,lat)+(rk25(k,i,lat)*ne(k,i,lat)+rk27)*
+     |      xiop2d(k,i,lat)+(rk18*xiop2p(k,i,lat)+rk24*xiop2d(k,i,lat))*
      |      o1(k,i,lat)*rmassinv_o1*xnmbar(k,i,lat)
+          explicit(k,i) = explicit(k,i)-op_prod(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
+      call addfld('OP_PROD','','',op_prod(lev0:lev1-1,:),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('EXPLIC4',' ',' ',explicit(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
@@ -781,7 +822,8 @@
       do i=lon0,lon1
         q_coeff(lev0,i) = q_coeff(lev0,i)-p_coeff(lev0,i) 
         explicit(lev0,i) = explicit(lev0,i)-2.*p_coeff(lev0,i)*
-     |    qop(lev0,i,lat)/(1.5*op_loss(lev0,i)-0.5*op_loss(lev0+1,i))
+     |    qop(lev0,i,lat)/
+     |    (1.5*op_loss(lev0,i,lat)-0.5*op_loss(lev0+1,i,lat))
         p_coeff(lev0,i) = 0.
       enddo ! i=lon0,lon1
 
@@ -809,6 +851,39 @@
      |    write(6,"('oplus end third lat scan: lat=',i3)") lat
       enddo ! lat=lat0,lat1
 !------------------------ End third latitude scan ---------------------
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            op_loss_out(k,i) = op_loss(k,i,lat)*opout(k,i,lat)
+            dopdt(k,i) =
+     |        (opout(k,i,lat)-optm1_smooth2(k,i,lat))*dtx2inv*nstep_sub
+          enddo
+          do k=lev0+1,lev1-1
+            diffsum (k,i) = diffexp(k,i,lat)+
+     |        diffp (k,i,lat)*opout(k-1,i,lat)+
+     |        diffq (k,i,lat)*opout(k  ,i,lat)+
+     |        diffr (k,i,lat)*opout(k+1,i,lat)
+            driftsum(k,i) = -vdotn_h(k,i,lat)+
+     |        driftp(k,i,lat)*opout(k-1,i,lat)+
+     |        driftq(k,i,lat)*opout(k  ,i,lat)+
+     |        driftr(k,i,lat)*opout(k+1,i,lat)
+            windsum (k,i) = -bdotdh_bvel(k,i,lat)+
+     |        windp (k,i,lat)*opout(k-1,i,lat)+
+     |        windq (k,i,lat)*opout(k  ,i,lat)+
+     |        windr (k,i,lat)*opout(k+1,i,lat)
+          enddo
+        enddo
+        call addfld('OP_LOSS','','',-op_loss_out(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DOPDT','','',dopdt(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('OP_DIFF','','',diffsum(lev0+1:lev1-1,:),
+     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('OP_DRIFT','','',driftsum(lev0+1:lev1-1,:),
+     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('OP_WIND','','',windsum(lev0+1:lev1-1,:),
+     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+      enddo
 !
 ! Filter updated O+:
 ! 
@@ -1066,7 +1141,7 @@
 ! Args:
       integer :: lon0,lon1,lev0,lev1,lat
       real,dimension(lev0:lev1,lon0:lon1),intent(in)    :: phijm1,phijp1
-      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(inout) :: phij
+      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: phij
       real,dimension(lev0:lev1,lon0:lon1),intent(out)   :: ans
 !
 ! Local:
