@@ -364,7 +364,7 @@
       optm1_smooth(:,:,:) = f5(:,:,:,5)
 
       do lat=lat0-1,lat1+1
-        do i=lon0,lon1
+        do i=lon0-2,lon1+2
           do k=lev0,lev1-1
             djbz(k,i,lat) = dj(k,i,lat)*bz(i,lat)
           enddo
