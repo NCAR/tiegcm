@@ -22,7 +22,8 @@
 !
       integer ::
      |  TIEGCM_WORLD,                 ! tiegcm's communicator
-     |  mixCplComm, mixCplRank        ! mix coupling communicator
+     |  mixCplComm, mixCplRank,       ! mix coupling communicator
+     |  hidraCplComm, hidraCplRank    ! hidra coupling communicator
 !
 ! Since model names are relatively unique, I'm going to try assigning AppId
 ! via word value as calculated using a simple letter to number conversion
@@ -32,7 +33,8 @@
       integer, parameter :: ! For MPI-based coupling tag
      |  myAppId = 57,       ! tiegcmID
      |  voltId  = 116,      ! voltronID
-     |  gamId   = 45        ! gameraID
+     |  gamId   = 45,       ! gameraID
+     |  hidraId = 40        ! hidraID
 !
 ! VT means vampir tracing:
 !
@@ -150,7 +152,7 @@
 !
 ! Local:
       logical :: is_prime
-      integer :: ier,i,fullrank,color,mixCplCommSize,tmpComm
+      integer :: ier,i,fullrank,tmpComm
 !
       ier = 0
 #ifdef VT
@@ -210,57 +212,13 @@
         call shutdown('mpi_comm_rank error')
       endif
 
-! Create a second communicator to transfer data between TIEGCM and REMIX
-! This communicator only includes the root processes
-! TIEGCM root sends/receives data from/to REMIX root
-      if (mytid == 0) then
-        color = myAppId+voltID ! Unique ID on both sides (TIEGCM/VOLTRON)
-      else
-        color = MPI_UNDEFINED  ! No message passing on other processes
-      endif
-      call mpi_comm_split(MPI_COMM_WORLD,color,mytid,mixCplComm,ier)
-      if (ier /= 0) then
-        write(6,"('>>> Error from mpi_comm_split: ier=',i4)") ier
-        call shutdown('mpi_comm_split error')
-      endif
+#ifdef GAMERA
+      call mp_coupling(mytid,myAppId+voltID,mixCplComm,mixCplRank)
+#endif
+#ifdef HIDRA
+      call mp_coupling(mytid,myAppId+hidraID,hidraCplComm,hidraCplRank)
+#endif
 
-! This can only happen to the root (mytid == 0)
-      if (mixCplComm /= MPI_COMM_NULL) then
-        call mpi_comm_size(mixCplComm,mixCplCommSize,ier)
-        if (ier /= 0) then
-          write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
-          call shutdown('mpi_comm_size error')
-        endif
-
-! At most two processes will register in mixCplComm (TIEGCM root, REMIX root)
-! Therefore mixCplCommSize is either 1 or 2
-        if (mixCplCommSize == 1) then
-
-! Only one process registered in mixCplComm (TIEGCM root)
-! No coupling will take place, free up the resources
-          call mpi_comm_free(mixCplComm,ier)
-          if (ier /= 0) then
-            write(6,"('>>> Error from mpi_comm_free: ier=',i4)") ier
-            call shutdown('mpi_comm_free error')
-          endif
-          mixCplComm = MPI_COMM_NULL
-        else
-
-! There is another process registered in mixCplComm (REMIX root)
-          call mpi_comm_rank(mixCplComm,mixCplRank,ier)
-          if (ier /= 0) then
-            write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
-            call shutdown('mpi_comm_rank error')
-          endif
-
-!         write(6,"('TIEGCM: mixCplComm,mixCplCommSize,mixCplRank,tag=',
-!    |      4i4)") mixCplComm,mixCplCommSize,mixCplRank,myAppId+voltID
-
-! mixCplRank is TIEGCM rank in mixCplComm
-! REMIX rank is the other (0/1)
-          mixCplRank = 1-mixCplRank
-        endif
-      endif
 !
 #ifdef GAMERA
 ! gam2volt
@@ -277,6 +235,66 @@
       endif
 !     write(6,"('mp_init: ntask=',i3,' mytid=',i3)") ntask,mytid
       end subroutine mp_init
+!-----------------------------------------------------------------------
+      subroutine mp_coupling(mytid,CommId,CplComm,CplRank)
+      integer :: mytid, CommId, CplComm,CplRank
+      integer :: ier,color,CplCommSize
+! Create a second communicator to transfer data between TIEGCM and REMIX
+! This communicator only includes the root processes
+! TIEGCM root sends/receives data from/to REMIX root
+      if (mytid == 0) then
+        color = CommId ! Unique ID on both sides (TIEGCM/VOLTRON)
+      else
+        color = MPI_UNDEFINED  ! No message passing on other processes
+      endif
+
+      write(*,*) "TGCM COUPLING ON COMM: ",CommId
+      call mpi_comm_split(MPI_COMM_WORLD,color,mytid,CplComm,ier)
+      if (ier /= 0) then
+        write(6,"('>>> Error from mpi_comm_split: ier=',i4)") ier
+        call shutdown('mpi_comm_split error')
+      endif
+
+! This can only happen to the root (mytid == 0)
+      if (CplComm /= MPI_COMM_NULL) then
+        call mpi_comm_size(CplComm,CplCommSize,ier)
+        if (ier /= 0) then
+          write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
+          call shutdown('mpi_comm_size error')
+        endif
+
+! At most two processes will register in CplComm (TIEGCM root, REMIX root)
+! Therefore CplCommSize is either 1 or 2
+        if (CplCommSize == 1) then
+
+! Only one process registered in CplComm (TIEGCM root)
+! No coupling will take place, free up the resources
+          call mpi_comm_free(CplComm,ier)
+          if (ier /= 0) then
+            write(6,"('>>> Error from mpi_comm_free: ier=',i4)") ier
+            call shutdown('mpi_comm_free error')
+          endif
+          CplComm = MPI_COMM_NULL
+        else
+
+! There is another process registered in CplComm (REMIX root)
+          call mpi_comm_rank(CplComm,CplRank,ier)
+          if (ier /= 0) then
+            write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
+            call shutdown('mpi_comm_rank error')
+          endif
+
+!         write(6,"('TIEGCM: CplComm,CplCommSize,CplRank,tag=',
+!    |      4i4)") CplComm,CplCommSize,CplRank,myAppId+voltID
+
+! CplRank is TIEGCM rank in CplComm
+! REMIX rank is the other (0/1)
+          CplRank = 1-CplRank
+        endif
+        write(*,*) "T COUPLING: ",mytid,CplRank,CplCommSize,CplComm
+      endif
+
+      end subroutine mp_coupling
 !-----------------------------------------------------------------------
       subroutine mp_distribute_geo
 !
@@ -1209,6 +1227,55 @@
         time_scatter_f2d=time_scatter_f2d+(endtime-starttime)
       endif
       end subroutine mp_scatter_f2d
+!-----------------------------------------------------------------------
+      subroutine mp_gather_f3d(f3d_sub,f3d_glb,lon0,lon1,lat0,lat1,
+     |  ntasks,nf)
+
+      integer,intent(in) :: lon0,lon1,lat0,lat1,nf
+      integer,intent(in) ::
+     |  ntasks        ! size of comm_world (should be = ntask)
+      real,dimension(nlevp1,lon0:lon1,lat0:lat1,nf),intent(in) ::
+     |  f3d_sub
+      real,dimension(nlevp1,nlonp4,nlat,nf),intent(out) :: f3d_glb
+
+      integer :: n,j,i,k,itask,len,ier
+      real,dimension(nlevp1,mxlon,mxlat,nf) :: sndbuf
+      real,dimension(nlevp1,mxlon,mxlat,nf,0:ntasks-1) :: rcvbuf
+
+      f3d_glb = 0
+      sndbuf = 0
+      rcvbuf = 0
+
+      do n = 1,nf
+        do j = lat0,lat1
+          do i = lon0,lon1
+            do k = 1,nlevp1
+              sndbuf(k,i-lon0+1,j-lat0+1,n) = f3d_sub(k,i,j,n)
+            enddo
+          enddo
+        enddo
+      enddo
+
+      len = nlevp1*mxlon*mxlat*nf
+      call mpi_gather(sndbuf,len,MPI_REAL8,rcvbuf,
+     |  len,MPI_REAL8,0,TIEGCM_WORLD,ier)
+
+      if (mytid == 0) then
+        do itask = 0,ntasks-1
+          do n = 1,nf
+            do j = tasks(itask)%lat0,tasks(itask)%lat1
+              do i = tasks(itask)%lon0,tasks(itask)%lon1
+                do k = 1,nlevp1
+                  f3d_glb(k,i,j,n) = rcvbuf(k,i-tasks(itask)%lon0+1,
+     |              j-tasks(itask)%lat0+1,n,itask)
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      endif
+
+      end subroutine mp_gather_f3d
 !-----------------------------------------------------------------------
       subroutine mp_bndlats(f,mxf,ixt)
 !

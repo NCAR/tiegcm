@@ -56,6 +56,7 @@ Depends::
 	@echo "FC           =$(FC)"
 	@echo "EXECNAME     =$(EXECNAME)"
 	@echo "COUPLING     =$(COUPLING)"
+	@echo "HIDRA        =$(HIDRA)"
 	@echo "DEBUG        =$(DEBUG)"
 	perl mkdepends $(DIRS)
 	$(MAKE) $(EXECNAME)
@@ -75,6 +76,9 @@ $(EXECNAME): $(OBJS)
 CPPFLAGS := $(null)
 ifeq ($(COUPLING),TRUE)
   CPPFLAGS += -DGAMERA
+endif
+ifeq ($(HIDRA),TRUE)
+  CPPFLAGS += -DHIDRA
 endif
 ifeq ($(DEBUG),TRUE)
   CPPFLAGS += -DDEBUG

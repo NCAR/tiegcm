@@ -1082,8 +1082,8 @@
 ! "Bastille day storm" will succeed only with step=10 and opdiffcap=6.e8.
 !
       if (opdiffcap /= 0.) then ! default is off
-        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)") 
-     |    opdiffcap
+!        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)")
+!     |    opdiffcap
 !       where(ans(:,:) > opdiffcap)
 !         ans(:,:) = opdiffcap
 !       endwhere

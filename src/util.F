@@ -898,7 +898,7 @@
 ! Shutdown MPI:
       write(6,"('Shutdown calling mpi_abort..')")
       write(6,"(72('>'))")
-      call mpi_abort(TIEGCM_WORLD,errorcode,ier)
+      call mpi_abort(MPI_COMM_WORLD,errorcode,ier)
 
       write(6,"(/,'For information, please see TGCM Users Guide at ',
      |  /,'http://www.hao.ucar.edu/modeling/tgcm/doc/userguide')")

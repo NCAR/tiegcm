@@ -31,8 +31,10 @@
 
 ! Change the following parameters if adding more variables
       integer,parameter ::
-     |  nmixinvar = 3, ! Potential, Flux, Energy
-     |  nmixoutvar = 2 ! Pedersen, Hall
+     |  nmixinvar  = 3, ! Potential, Flux, Energy
+     |  nmixoutvar = 2, ! Pedersen, Hall
+     |  nhoutvar   = 8, ! TN, UN, VN, OMEGA, O2, O1, NO, Z
+     |  nhinvar    = 0  !
 
       contains 
 !-----------------------------------------------------------------------
@@ -67,6 +69,12 @@
 #ifdef GAMERA
 
       call init_mpi_remix(glatp2,glonp1)
+
+#endif
+
+#ifdef HIDRA
+
+      call init_mpi_hidra()
 
 #endif
 
@@ -240,6 +248,105 @@
 
 !-----------------------------------------------------------------------
       subroutine export_mage(modeltime)
+      integer,dimension(4),intent(in) :: modeltime
+
+#ifdef GAMERA
+      call export_remix(modeltime)
+#endif
+#ifdef HIDRA
+      call export_hidra(modeltime)
+#endif
+
+      end subroutine export_mage
+!-----------------------------------------------------------------------
+      subroutine export_hidra(modeltime)
+
+! ... Shared Module Variables ..........................................
+      use params_module,only: nlon,nlonp4,nlat,nlevp1
+      use fields_module,only: f4d,itp,itc
+      use fields_module,only: i_z,i_tn,i_un,i_vn,i_w,i_o2,i_o1,i_no
+
+      use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f3d,mytid,
+     |  ntask,tasks,myAppId,hidraId,hidraCplComm,hidraCplRank,
+     |  handle_mpi_err
+      use mpi
+
+! ... Parameter variables ..............................................
+      integer,dimension(4),intent(in) :: modeltime
+
+! ... Local variables ..................................................
+      integer :: i,j,v,k,ierr, ilist(nhoutvar)
+      real,dimension(:,:,:,:),allocatable :: f3d_sub,f3d_glb,hidra_out
+
+! ... Begin ............................................................
+
+      ! Number of fields we are passing
+      ! This list must match the order that is in tgcmInterp enumerator
+      ilist = (/i_tn, i_un, i_vn, i_o2, i_o1, i_no, i_w, i_z /)
+
+! Prepare data for export
+      if (.not. allocated(f3d_sub))
+     |  allocate(f3d_sub(nlevp1,lon0:lon1,lat0:lat1,nhoutvar))
+      if (.not. allocated(f3d_glb))
+     |  allocate(f3d_glb(nlevp1,nlonp4,nlat,nhoutvar))
+
+      do v =1, nhoutvar
+       f3d_sub(:,:,:,v) = f4d(ilist(v))%data(:,lon0:lon1,lat0:lat1,itp)
+      enddo
+      call mp_gather_f3d(f3d_sub,f3d_glb,
+     |  lon0,lon1,lat0,lat1,ntask,nhoutvar)
+
+      if (mytid == 0) then
+        if (.not. allocated(hidra_out))
+     |    allocate(hidra_out(nlevp1,nlon,nlat,nhoutvar))
+
+        hidra_out(:,:,:,:) = f3d_glb(:,3:nlon+2,:,:)
+        do i=1,nlon
+          do j=1,nlat
+            do k=1,nlevp1-1
+              if ((f3d_glb(k,i,j,1) .lt.1e-5) .or.
+     |    (isnan(f3d_glb(k,i,j,1)))) then
+              write(*,*) "Bad TN: ",f3d_glb(k,i,j,1),k,i,j
+              endif
+            enddo
+          enddo
+        enddo
+        ! Check fidelity
+        do v=1,nhoutvar
+          write(*,*) 'TGCM: max/min V:',maxval(hidra_out(:,:,:,v)),
+     |      minval(hidra_out(:,:,:,v))
+        enddo
+
+        write(6,"('TGCM: Sending to HIDRA at: ',4i4)") modeltime
+
+! Export the data
+        if (hidraCplComm /= MPI_COMM_NULL) then
+            call mpi_send(hidra_out, nlevp1*nlon*nlat*nhoutvar,
+     |        MPI_DOUBLE_PRECISION, hidraCplRank,
+     |        (myAppId+hidraId)*100, hidraCplComm, ierr)
+            if (ierr /= 0)
+     |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
+            write(*,*) "TGCM: Done sending to HIDRA"
+        endif
+      endif
+
+! Save exchange variables to secondary history files
+
+!     call addfld('gpot','Potential from M-I Coupler (geographic)',' ',
+!    |  gpot(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('geng','Energy from M-I Coupler', ' ',
+!    |  geng(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('gflx','Number Flux from M-I Coupler', ' ',
+!    |  gflx(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+!     call addfld('gpotm','Potential from M-I Coupler (geographic)',' ',
+!    |  gpotm(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
+
+      if (allocated(f3d_sub)) deallocate(f3d_sub)
+      if (allocated(f3d_glb)) deallocate(f3d_glb)
+      if (allocated(hidra_out)) deallocate(hidra_out)
+      end subroutine export_hidra
+!-----------------------------------------------------------------------
+      subroutine export_remix(modeltime)
 
 ! ... Shared Module Variables ..........................................
       use params_module,only: nlatp2,nlon,nlonp1,nlonp2
@@ -260,7 +367,6 @@
 ! ... Begin ............................................................
 
 ! Prepare data for export
-#ifdef GAMERA
       where(gzigm1 < 0.2) gzigm1 = 0.2
       where(gzigm2 < 0.2) gzigm2 = 0.2
 
@@ -311,8 +417,7 @@
 !     call addfld('gpotm','Potential from M-I Coupler (geographic)',' ',
 !    |  gpotm(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
 
-#endif
-      end subroutine export_mage
+      end subroutine export_remix
 !-----------------------------------------------------------------------
       subroutine finalize_coupling
       end subroutine finalize_coupling
@@ -557,5 +662,69 @@
         endif
 
       end subroutine import_remix
+
+!-------------------------------------------------------------------
+
+      subroutine init_mpi_hidra()
+
+      use params_module,only: nlat,nlon,nlevp1
+      use params_module,only: glon,glat,zpmid
+      use cons_module,only  : p0
+      use mpi_module,only: myAppId,hidraId,hidraCplComm,hidraCplRank,
+     |  handle_mpi_err
+      use mpi
+
+      integer :: ierr,icolor
+
+      if (hidraCplComm /= MPI_COMM_NULL) then
+        write(*,*) "TGCM: Start init_mpi_hidra"
+
+        icolor = 1
+        call mpi_send(nlat, 1, MPI_INTEGER,
+     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(nlon, 1, MPI_INTEGER,
+     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(nlevp1, 1, MPI_INTEGER,
+     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        ! Convert p0 from "standard pressure" to mbar (hPA)
+        icolor = icolor + 1
+        call mpi_send(p0/1000., 1, MPI_DOUBLE_PRECISION,
+     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(glat, nlat, MPI_DOUBLE_PRECISION,
+     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(glon, nlon, MPI_DOUBLE_PRECISION,
+     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(zpmid, nlevp1, MPI_DOUBLE_PRECISION,
+     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        write(*,*) "TGCM: Done init_mpi_hidra"
+      endif
+
+      end subroutine init_mpi_hidra
 
       end module mage_coupling_module
