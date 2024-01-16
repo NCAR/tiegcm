@@ -344,12 +344,19 @@
             Fn(k,i,lat) = wd(k,i)*csdec(i,lat)
           enddo
         enddo
-        call addfld('WD','','',wd,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      enddo
+
+      do lat=lat0-1,lat1+1
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            djbz(k,i,lat) = dj(k,i,lat)*bz(i,lat)
+          enddo
+        enddo
       enddo
 !------------------------- End first latitude scan ---------------------
 !
 ! Boundary longitudes:
-      f5(:,:,:,1) = dj(:,:,:)
+      f5(:,:,:,1) = djbz(:,:,:)
       f5(:,:,:,2) = bvel(:,:,:)
       f5(:,:,:,3) = diffj(:,:,:)
       f5(:,:,:,4) = tp(:,:,:)
@@ -357,19 +364,11 @@
 
       call mp_bndlons_f3d(f5,nlevs,lon0,lon1,lat0,lat1,5,0)
 
-      dj(:,:,:)           = f5(:,:,:,1)
+      djbz(:,:,:)         = f5(:,:,:,1)
       bvel(:,:,:)         = f5(:,:,:,2)
       diffj(:,:,:)        = f5(:,:,:,3)
       tp(:,:,:)          = f5(:,:,:,4)
       optm1_smooth(:,:,:) = f5(:,:,:,5)
-
-      do lat=lat0-1,lat1+1
-        do i=lon0-2,lon1+2
-          do k=lev0,lev1-1
-            djbz(k,i,lat) = dj(k,i,lat)*bz(i,lat)
-          enddo
-        enddo
-      enddo
 !
 !----------------------- Begin second latitude scan --------------------
       do lat=lat0,lat1
@@ -1082,8 +1081,8 @@
 ! "Bastille day storm" will succeed only with step=10 and opdiffcap=6.e8.
 !
       if (opdiffcap /= 0.) then ! default is off
-!        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)")
-!     |    opdiffcap
+        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)") 
+     |    opdiffcap
 !       where(ans(:,:) > opdiffcap)
 !         ans(:,:) = opdiffcap
 !       endwhere
