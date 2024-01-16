@@ -22,8 +22,10 @@
 !
       integer ::
      |  TIEGCM_WORLD,                 ! tiegcm's communicator
-     |  mixCplComm, mixCplRank,       ! mix coupling communicator
-     |  hidraCplComm, hidraCplRank    ! hidra coupling communicator
+     |  CplComm, CplCommSize, CplRank,
+     |  mixCplRank,hidraCplRank,       ! mix coupling communicator
+     |  hidraNCplRank,hidraSCplRank   ! hidra coupling communicator
+      integer,dimension(:),allocatable :: IAm
 !
 ! Since model names are relatively unique, I'm going to try assigning AppId
 ! via word value as calculated using a simple letter to number conversion
@@ -34,7 +36,11 @@
      |  myAppId = 57,       ! tiegcmID
      |  voltId  = 116,      ! voltronID
      |  gamId   = 45,       ! gameraID
-     |  hidraId = 40        ! hidraID
+     |  rcmId   = 34,       ! rcmID
+     |  mageId  = 26,       ! mageID
+     |  hidraId = 40,       ! hidraID
+     |  hidraNId = 54,      ! hidraNID
+     |  hidraSId = 59       ! hidraSID
 !
 ! VT means vampir tracing:
 !
@@ -152,7 +158,8 @@
 !
 ! Local:
       logical :: is_prime
-      integer :: ier,i,fullrank,tmpComm
+      integer :: ier,i,fullrank,tmpComm,color
+      logical :: doVoltCommSkip = .false.
 !
       ier = 0
 #ifdef VT
@@ -212,19 +219,101 @@
         call shutdown('mpi_comm_rank error')
       endif
 
-#ifdef GAMERA
-      call mp_coupling(mytid,myAppId+voltID,mixCplComm,mixCplRank)
-#endif
-#ifdef HIDRA
-      call mp_coupling(mytid,myAppId+hidraID,hidraCplComm,hidraCplRank)
-#endif
+!!!!!
+      if (mytid == 0) then
+        color = mageId ! Unique ID for all coupling ranks
+      else
+        color = MPI_UNDEFINED  ! No message passing on other processes
+      endif
 
+      write(*,*) "TGCM COUPLING ON COMM: ",mageId
+      call mpi_comm_split(MPI_COMM_WORLD,color,mytid,CplComm,ier)
+      if (ier /= 0) then
+        write(6,"('>>> Error from mpi_comm_split: ier=',i4)") ier
+        call shutdown('mpi_comm_split error')
+      endif
+
+! This can only happen to the root (mytid == 0)
+      if (CplComm /= MPI_COMM_NULL) then
+        call mpi_comm_size(CplComm,CplCommSize,ier)
+        if (ier /= 0) then
+          write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
+          call shutdown('mpi_comm_size error')
+        endif
+
+! At most two processes will register in CplComm (TIEGCM root, REMIX root)
+! Therefore CplCommSize is either 1 or 2
+        if (CplCommSize == 1) then
+
+! Only one process registered in CplComm (TIEGCM root)
+! No coupling will take place, free up the resources
+          call mpi_comm_free(CplComm,ier)
+          if (ier /= 0) then
+            write(6,"('>>> Error from mpi_comm_free: ier=',i4)") ier
+            call shutdown('mpi_comm_free error')
+          endif
+          CplComm = MPI_COMM_NULL
+        else
+
+! There is another process registered in CplComm (REMIX root)
+          call mpi_comm_rank(CplComm,CplRank,ier)
+          if (ier /= 0) then
+            write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
+            call shutdown('mpi_comm_rank error')
+          endif
+
+          if (.not.allocated(IAm)) allocate(IAm(CplCommSize))
+          IAm(CplRank+1) = myAppId
+
+          do i=1,CplCommSize
+            call MPI_Bcast(IAm(i), 1, MPI_INTEGER, i-1, CplComm, ier)
+          enddo
+
+          do i=1,CplCommSize
+            ! Skip Self
+            if (i == CplRank+1) continue
+            ! Assign rank if match
+            select case (IAm(i))
+              case (voltId)
+                mixCplRank = i-1
+                doVoltCommSkip = .true.
+                write(*,*) "T coupling to remix"
+              case (gamId)
+                write(*,*) "T not coupling to Gam yet"
+              case (rcmId)
+                write(*,*) "T not coupling to RCM yet"
+              case (hidraNId)
+                hidraNCplRank = i-1
+                write(*,*) "T coupling to hidraN"
+              case (hidraSId)
+                hidraSCplRank = i-1
+                write(*,*) "T coupling to hidraS"
+              case (hidraId)
+                hidraCplRank = i-1
+                write(*,*) "T coupling to hidra"
+              case default
+                write(*,*) "T does not know about this Coupling ID: ",
+     |              IAm(i)
+              end select
+          enddo
+        endif
+        write(*,'(A,I0,A,I0,A,I0,A)') "T COUPLING to ",CplCommSize,
+     |     " Models on ",CplRank," Rank on ",CplComm," Comm"
+      endif
+
+      ! only mytid == 0 should have updated doVoltCommSkip
+      call MPI_BCAST(doVoltCommSkip,1,MPI_LOGICAL,0,TIEGCM_WORLD,ier)
+      call MPI_BCAST(CplCommSize,1,MPI_INTEGER,0,TIEGCM_WORLD,ier)
+      if (.not.allocated(IAm)) allocate(IAm(CplCommSize))
+      call MPI_BCAST(IAm,CplCommSize,MPI_INTEGER,0,TIEGCM_WORLD,ier)
 !
 #ifdef GAMERA
+     if (doVoltCommSkip) then
 ! gam2volt
 ! WARNING THIS IS HARDCODED TO OCCUR ONCE. MAY CAUSE ISSUES WITH MULTIPLE COUPLINGS
       call mpi_comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, 
      |  mytid, tmpComm, ier)
+     endif
 #endif
 !
 ! Allocate array of tasks (user defined type(task)):

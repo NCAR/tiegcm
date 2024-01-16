@@ -45,8 +45,11 @@
 
       use params_module,only: nlatp2,nlonp1,glat,glon
       use cons_module,only: dtr
+      use mpi_module,only: CplCommSize,CplRank,IAm,myAppId,
+     |  voltId,gamId,rcmId,hidraNId,hidraSId,hidraId,
+     |  hidraNCplRank,hidraSCplRank,hidraCplRank
 
-      integer :: ierr
+      integer :: ierr,i
       real,dimension(nlatp2) :: glatp2
       real,dimension(nlonp1) :: glonp1
 
@@ -66,16 +69,33 @@
       glonp1(1:nlonp1-1) = glon
       glonp1(nlonp1) = glon(1)+360
 
-#ifdef GAMERA
-
-      call init_mpi_remix(glatp2,glonp1)
-
-#endif
-
-#ifdef HIDRA
-
-      call init_mpi_hidra()
-
+#if defined(GAMERA) || defined(HIDRA)
+      do i=1,CplCommSize
+            ! Skip Self
+            if (i == CplRank+1) continue
+            ! Assign rank if match
+            select case (IAm(i))
+              case (voltId)
+                call init_mpi_remix(glatp2,glonp1)
+              case (gamId)
+                write(*,*) "T not coupling to Gam yet"
+              case (rcmId)
+                write(*,*) "T not coupling to RCM yet"
+              case (hidraNId)
+                write(*,*) "T COUPLING TO HIDRAN"
+                call init_mpi_hidra(myAppId+hidraNId,hidraNCplRank)
+              case (hidraSId)
+                write(*,*) "T COUPLING TO HIDRAS"
+                call init_mpi_hidra(myAppId+hidraSId,hidraSCplRank)
+              case (hidraId)
+                write(*,*) "T COUPLING TO HIDRA"
+                call init_mpi_hidra(myAppId+hidraId,hidraCplRank)
+              case default
+                write(*,*) "T does not know about this Coupling ID: ",
+     |              IAm(i)
+              end select
+      enddo
+      write(*,*) "T Done Coupling Init"
 #endif
 
       end subroutine initialize_coupling
@@ -98,7 +118,7 @@
 
       var2d = 0.
 
-#ifdef GAMERA
+#if defined(GAMERA)
       if (mytid == 0) then
 
         call import_remix(var2d)
@@ -128,7 +148,7 @@
 
       subroutine process_import
 
-#ifdef GAMERA  
+#ifdef GAMERA
       use params_module,only: nlatp2,nlon,nlonp1,nlonp2,glat
       use input_module,only: ctpoten
       use cons_module,only: pi
@@ -248,18 +268,119 @@
 
 !-----------------------------------------------------------------------
       subroutine export_mage(modeltime)
-      integer,dimension(4),intent(in) :: modeltime
+        use mpi_module,only: CplCommSize,CplRank,IAm,
+     |  voltId,gamId,rcmId,hidraNId,hidraSId,hidraId,
+     |  hidraNCplRank,hidraSCplRank,hidraCplRank,
+     |  myAppId
 
-#ifdef GAMERA
-      call export_remix(modeltime)
-#endif
-#ifdef HIDRA
-      call export_hidra(modeltime)
-#endif
+      integer,dimension(4),intent(in) :: modeltime
+      logical :: hidra_prep
+
+      real,dimension(:,:,:), allocatable :: mixout
+      real,dimension(:,:,:,:), allocatable :: hidraout
+
+      integer :: nreq,i
+
+      ! Prepare the export data
+      hidra_prep = .false.
+      nreq = 0
+      write(*,*) "T Starting Export Prep"
+      do i=1,CplCommSize
+            ! Skip Self
+            if (i == CplRank+1) continue
+            ! Assign rank if match
+            select case (IAm(i))
+              case (voltId)
+                call prep_export_remix(modeltime,mixout)
+                nreq = nreq + 1
+              case (gamId)
+                write(*,*) "T not coupling to Gam yet"
+              case (rcmId)
+                write(*,*) "T not coupling to RCM yet"
+              case (hidraNId)
+                if (.not.hidra_prep) then
+                  write(*,*) "Prep H Export"
+                  call prep_export_hidra(modeltime,hidraout)
+                  hidra_prep = .true.
+                endif
+                nreq = nreq + 1
+              case (hidraSId)
+                if (.not.hidra_prep) then
+                  write(*,*) "Prep H Export"
+                  call prep_export_hidra(modeltime,hidraout)
+                  hidra_prep = .true.
+                endif
+                nreq = nreq + 1
+              case (hidraId)
+                if (.not.hidra_prep) then
+                  call prep_export_hidra(modeltime,hidraout)
+                  hidra_prep = .true.
+                endif
+                nreq = nreq + 1
+              case default
+                write(*,*) "T does not know about this Coupling ID: ",
+     |              IAm(i)
+              end select
+      enddo
+
+      ! Allocate request array here
+
+
+      ! Send the export data
+      do i=1,CplCommSize
+        ! Skip Self
+        if (i == CplRank+1) continue
+        ! Assign rank if match
+        select case (IAm(i))
+          case (voltId)
+            call export_remix(mixout)
+          case (gamId)
+            write(*,*) "T not coupling to Gam yet"
+          case (rcmId)
+            write(*,*) "T not coupling to RCM yet"
+          case (hidraNId)
+            write(*,*) "Export to HidraN"
+            call export_hidra(hidraout,myAppId+hidraNId,hidraNCplRank)
+          case (hidraSId)
+            write(*,*) "Export to HidraS"
+            call export_hidra(hidraout,myAppId+hidraSId,hidraSCplRank)
+          case (hidraId)
+            call export_hidra(hidraout,myAppId+hidraId,hidraCplRank)
+          case default
+                write(*,*) "T does not know about this Coupling ID: ",
+     |              IAm(i)
+              end select
+      enddo
+
+      ! Deallocate arrays
+      do i=1,CplCommSize
+            ! Skip Self
+            if (i == CplRank+1) continue
+            ! Assign rank if match
+            select case (IAm(i))
+              case (voltId)
+                if (allocated(mixout)) deallocate(mixout)
+              case (gamId)
+                write(*,*) "T not coupling to Gam yet"
+              case (rcmId)
+                write(*,*) "T not coupling to RCM yet"
+              case (hidraNId)
+                if (allocated(hidraout)) deallocate(hidraout)
+              case (hidraSId)
+                if (allocated(hidraout)) deallocate(hidraout)
+              case (hidraId)
+                if (allocated(hidraout)) deallocate(hidraout)
+              case default
+                write(*,*) "T does not know about this Coupling ID: ",
+     |              IAm(i)
+              end select
+      enddo
+
+      ! Deallocate request array here
 
       end subroutine export_mage
 !-----------------------------------------------------------------------
-      subroutine export_hidra(modeltime)
+      subroutine prep_export_hidra(modeltime,hidra_out)
 
 ! ... Shared Module Variables ..........................................
       use params_module,only: nlon,nlonp4,nlat,nlevp1
@@ -267,8 +388,7 @@
       use fields_module,only: i_z,i_tn,i_un,i_vn,i_w,i_o2,i_o1,i_no
 
       use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f3d,mytid,
-     |  ntask,tasks,myAppId,hidraId,hidraCplComm,hidraCplRank,
-     |  handle_mpi_err
+     |  ntask,handle_mpi_err
       use mpi
 
 ! ... Parameter variables ..............................................
@@ -285,6 +405,7 @@
       ilist = (/i_tn, i_un, i_vn, i_o2, i_o1, i_no, i_w, i_z /)
 
 ! Prepare data for export
+      write(*,*) "PREP HIDRA EXPORT STUFF: ",mytid
       if (.not. allocated(f3d_sub))
      |  allocate(f3d_sub(nlevp1,lon0:lon1,lat0:lat1,nhoutvar))
       if (.not. allocated(f3d_glb))
@@ -297,6 +418,7 @@
      |  lon0,lon1,lat0,lat1,ntask,nhoutvar)
 
       if (mytid == 0) then
+        write(*,*) "TGCM: ALLOCATE"
         if (.not. allocated(hidra_out))
      |    allocate(hidra_out(nlevp1,nlon,nlat,nhoutvar))
 
@@ -319,15 +441,6 @@
 
         write(6,"('TGCM: Sending to HIDRA at: ',4i4)") modeltime
 
-! Export the data
-        if (hidraCplComm /= MPI_COMM_NULL) then
-            call mpi_send(hidra_out, nlevp1*nlon*nlat*nhoutvar,
-     |        MPI_DOUBLE_PRECISION, hidraCplRank,
-     |        (myAppId+hidraId)*100, hidraCplComm, ierr)
-            if (ierr /= 0)
-     |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
-            write(*,*) "TGCM: Done sending to HIDRA"
-        endif
       endif
 
 ! Save exchange variables to secondary history files
@@ -343,16 +456,38 @@
 
       if (allocated(f3d_sub)) deallocate(f3d_sub)
       if (allocated(f3d_glb)) deallocate(f3d_glb)
-      if (allocated(hidra_out)) deallocate(hidra_out)
-      end subroutine export_hidra
+      end subroutine prep_export_hidra
+
 !-----------------------------------------------------------------------
-      subroutine export_remix(modeltime)
+
+      subroutine export_hidra(hidra_out,commId,hidraCplRank)
+        use params_module,only: nlon,nlonp4,nlat,nlevp1
+        use mpi_module,only: CplComm,handle_mpi_err,mytid
+        use mpi
+
+        real,dimension(:,:,:,:) :: hidra_out
+        integer :: commId,ierr,hidraCplRank
+
+      ! Export the data
+        if (CplComm /= MPI_COMM_NULL) then
+        write(*,*) "TIEGCM EXPORT TO HIDRA",mytid,commId,hidraCplRank
+            call mpi_send(hidra_out, nlevp1*nlon*nlat*nhoutvar,
+     |        MPI_DOUBLE_PRECISION, hidraCplRank,
+     |        commId*100, CplComm, ierr)
+            if (ierr /= 0)
+     |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
+            write(*,*) "TGCM: Done sending to HIDRA"
+        endif
+      end subroutine export_hidra
+
+!-----------------------------------------------------------------------
+      subroutine prep_export_remix(modeltime,var2d)
 
 ! ... Shared Module Variables ..........................................
       use params_module,only: nlatp2,nlon,nlonp1,nlonp2
       use fields_module,only: gzigm1,gzigm2,gnsrhs
       use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f2d,mytid,
-     |  ntask,tasks,myAppId,voltId,mixCplComm,mixCplRank,handle_mpi_err
+     |  ntask,tasks
       use addfld_module,only: addfld
       use mpi
 
@@ -361,7 +496,7 @@
 
 ! ... Local variables ..................................................
       integer :: i,j,v,ierr
-      real,dimension(nlatp2,nlonp1,nmixoutvar) :: var2d
+      real,dimension(:,:,:),allocatable :: var2d
       real,dimension(nlonp4,nlat) :: gzigm1_glb,gzigm2_glb,gnsrhs_glb
 
 ! ... Begin ............................................................
@@ -381,6 +516,9 @@
      |  ntask,nlonp4,nlat,1)
 
       if (mytid == 0) then
+        if (.not. allocated(var2d)) then
+           allocate(var2d(nlatp2,nlonp1,nmixoutvar))
+        endif
         do j = 2,nlatp1
           do i = 1,nlonp1
             var2d(j,i,1) = gzigm1_glb(i+2,j-1)
@@ -394,16 +532,6 @@
 
         write(6,"('Sending at: ',4i4)") modeltime
 
-! Export the data
-        if (mixCplComm /= MPI_COMM_NULL) then
-          do v = 1,nmixoutvar
-            call mpi_send(var2d(:,:,v), nlatp2*nlonp1,
-     |        MPI_DOUBLE_PRECISION, mixCplRank,
-     |        (myAppId+voltId)*100+v, mixCplComm, ierr)
-            if (ierr /= 0)
-     |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
-          enddo
-        endif
       endif
 
 ! Save exchange variables to secondary history files
@@ -417,7 +545,158 @@
 !     call addfld('gpotm','Potential from M-I Coupler (geographic)',' ',
 !    |  gpotm(lon0:lon1,lat0:lat1),'lon',lon0,lon1,'lat',lat0,lat1,0)
 
+      end subroutine prep_export_remix
+
+!-----------------------------------------------------------------------
+
+      subroutine export_remix(var2d)
+        use params_module,only: nlatp2,nlonp1
+        use mpi_module, only: CplComm,mixCplRank,handle_mpi_err,
+     |   myAppId,voltId
+        use mpi
+
+        real,dimension(:,:,:) :: var2d
+        integer :: v,ierr
+
+! Export the data
+        if (CplComm /= MPI_COMM_NULL) then
+          call mpi_send(var2d, nlatp2*nlonp1*nmixoutvar,
+     |       MPI_DOUBLE_PRECISION, mixCplRank,
+     |       (myAppId+voltId)*100+v, CplComm, ierr)
+          if (ierr /= 0)
+     |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
+        endif
+
       end subroutine export_remix
+!-------------------------------------------------------------------
+
+      subroutine init_mpi_remix(glatp2,glonp1)
+
+      use params_module,only: nlatp2,nlonp1
+      use mpi_module,only: myAppId,voltId,CplComm,mixCplRank,
+     |  handle_mpi_err
+      use mpi
+
+      integer :: ierr
+      real,dimension(nlatp2) :: glatp2
+      real,dimension(nlonp1) :: glonp1
+
+      if (CplComm /= MPI_COMM_NULL) then
+        write(*,*) "TGCM: Start init_mpi_remix"
+        call mpi_send(nlatp2, 1, MPI_INTEGER,
+     |    mixCplRank, (myAppId+voltId)*100+1, CplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        call mpi_send(nlonp1, 1, MPI_INTEGER,
+     |    mixCplRank, (myAppId+voltId)*100+2, CplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        call mpi_send(glatp2, nlatp2, MPI_DOUBLE_PRECISION,
+     |    mixCplRank, (myAppId+voltId)*100+3, CplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        call mpi_send(glonp1, nlonp1, MPI_DOUBLE_PRECISION,
+     |    mixCplRank, (myAppId+voltId)*100+4, CplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        write(*,*) "TGCM: Done init_mpi_remix"
+      endif
+
+      end subroutine init_mpi_remix
+
+!-------------------------------------------------------------------
+
+      subroutine import_remix(var2d)
+
+      use params_module,only: nlatp2,nlonp1
+      use mpi_module,only: myAppId,voltId,CplComm,mixCplRank,
+     |  handle_mpi_err
+      use mpi
+
+        integer :: v,ierr,i,j
+        real,dimension(:,:,:) :: var2d
+
+        if (CplComm /= MPI_COMM_NULL) then
+          do v = 1,nmixinvar
+          write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100+v
+            call mpi_recv(var2d(:,:,v), nlatp2*nlonp1,
+     |        MPI_DOUBLE_PRECISION, mixCplRank,
+     |        (myAppId+voltId)*100+v, CplComm,
+     |        MPI_STATUS_IGNORE, ierr)
+            if (ierr /= 0) call handle_mpi_err(ierr,
+     |        'import: TIEGCM recv from REMIX')
+          enddo
+        endif
+
+      end subroutine import_remix
+
+!-------------------------------------------------------------------
+
+      subroutine init_mpi_hidra(commId,hidraCplRank)
+
+      use params_module,only: nlat,nlon,nlevp1
+      use params_module,only: glon,glat,zpmid
+      use cons_module,only  : p0
+      use mpi_module,only : CplComm,
+     |  handle_mpi_err
+      use mpi
+
+      integer :: ierr,icolor,commId,hidraCplRank
+
+      if (CplComm /= MPI_COMM_NULL) then
+        write(*,*) "TGCM: Start init_mpi_hidra"
+
+        icolor = 1
+        call mpi_send(nlat, 1, MPI_INTEGER,
+     |    hidraCplRank, commId*100+icolor, CplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(nlon, 1, MPI_INTEGER,
+     |    hidraCplRank, commId*100+icolor, CplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(nlevp1, 1, MPI_INTEGER,
+     |    hidraCplRank, commId*100+icolor, CplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        ! Convert p0 from "standard pressure" to mbar (hPA)
+        icolor = icolor + 1
+        call mpi_send(p0/1000., 1, MPI_DOUBLE_PRECISION,
+     |    hidraCplRank, commId*100+icolor, CplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(glat, nlat, MPI_DOUBLE_PRECISION,
+     |    hidraCplRank, commId*100+icolor, CplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(glon, nlon, MPI_DOUBLE_PRECISION,
+     |    hidraCplRank, commId*100+icolor, CplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        icolor = icolor + 1
+        call mpi_send(zpmid, nlevp1, MPI_DOUBLE_PRECISION,
+     |    hidraCplRank, commId*100+icolor, CplComm,ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        write(*,*) "TGCM: Done init_mpi_hidra"
+      endif
+
+      end subroutine init_mpi_hidra
 !-----------------------------------------------------------------------
       subroutine finalize_coupling
       end subroutine finalize_coupling
@@ -599,132 +878,5 @@
 !
       end subroutine mage_ucurrent
 
-!-------------------------------------------------------------------
-
-      subroutine init_mpi_remix(glatp2,glonp1)
-
-      use params_module,only: nlatp2,nlonp1
-      use mpi_module,only: myAppId,voltId,mixCplComm,mixCplRank,
-     |  handle_mpi_err
-      use mpi
-
-      integer :: ierr
-      real,dimension(nlatp2) :: glatp2
-      real,dimension(nlonp1) :: glonp1
-
-      if (mixCplComm /= MPI_COMM_NULL) then
-        write(*,*) "TGCM: Start init_mpi_remix"
-        call mpi_send(nlatp2, 1, MPI_INTEGER,
-     |    mixCplRank, (myAppId+voltId)*100+1, mixCplComm, ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        call mpi_send(nlonp1, 1, MPI_INTEGER,
-     |    mixCplRank, (myAppId+voltId)*100+2, mixCplComm, ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        call mpi_send(glatp2, nlatp2, MPI_DOUBLE_PRECISION,
-     |    mixCplRank, (myAppId+voltId)*100+3, mixCplComm, ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        call mpi_send(glonp1, nlonp1, MPI_DOUBLE_PRECISION,
-     |    mixCplRank, (myAppId+voltId)*100+4, mixCplComm, ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        write(*,*) "TGCM: Done init_mpi_remix"
-      endif
-
-      end subroutine init_mpi_remix
-
-      subroutine import_remix(var2d)
-
-      use params_module,only: nlatp2,nlonp1
-      use mpi_module,only: myAppId,voltId,mixCplComm,mixCplRank,
-     |  handle_mpi_err
-      use mpi
-
-        integer :: v,ierr,i,j
-        real*8,dimension(nlatp2,nlonp1,nmixinvar) :: var2d
-
-        if (mixCplComm /= MPI_COMM_NULL) then
-          do v = 1,nmixinvar
-          write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100+v
-            call mpi_recv(var2d(:,:,v), nlatp2*nlonp1,
-     |        MPI_DOUBLE_PRECISION, mixCplRank,
-     |        (myAppId+voltId)*100+v, mixCplComm,
-     |        MPI_STATUS_IGNORE, ierr)
-            if (ierr /= 0) call handle_mpi_err(ierr,
-     |        'import: TIEGCM recv from REMIX')
-          enddo
-        endif
-
-      end subroutine import_remix
-
-!-------------------------------------------------------------------
-
-      subroutine init_mpi_hidra()
-
-      use params_module,only: nlat,nlon,nlevp1
-      use params_module,only: glon,glat,zpmid
-      use cons_module,only  : p0
-      use mpi_module,only: myAppId,hidraId,hidraCplComm,hidraCplRank,
-     |  handle_mpi_err
-      use mpi
-
-      integer :: ierr,icolor
-
-      if (hidraCplComm /= MPI_COMM_NULL) then
-        write(*,*) "TGCM: Start init_mpi_hidra"
-
-        icolor = 1
-        call mpi_send(nlat, 1, MPI_INTEGER,
-     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        icolor = icolor + 1
-        call mpi_send(nlon, 1, MPI_INTEGER,
-     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        icolor = icolor + 1
-        call mpi_send(nlevp1, 1, MPI_INTEGER,
-     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        ! Convert p0 from "standard pressure" to mbar (hPA)
-        icolor = icolor + 1
-        call mpi_send(p0/1000., 1, MPI_DOUBLE_PRECISION,
-     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        icolor = icolor + 1
-        call mpi_send(glat, nlat, MPI_DOUBLE_PRECISION,
-     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        icolor = icolor + 1
-        call mpi_send(glon, nlon, MPI_DOUBLE_PRECISION,
-     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        icolor = icolor + 1
-        call mpi_send(zpmid, nlevp1, MPI_DOUBLE_PRECISION,
-     |    hidraCplRank, (myAppId+hidraId)*100+icolor, hidraCplComm,ierr)
-        if (ierr /= 0)
-     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
-
-        write(*,*) "TGCM: Done init_mpi_hidra"
-      endif
-
-      end subroutine init_mpi_hidra
 
       end module mage_coupling_module
