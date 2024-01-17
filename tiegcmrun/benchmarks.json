@@ -1,0 +1,352 @@
+{
+    "version": "0.0.0",
+    "decsol_smax": {
+        "type": "seasons",
+        "inp" : {
+            "LABEL":null,
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 355,
+            "SOURCE_START": "355 0 0 0",
+            "PRISTART": "355 0 0 0",
+            "PRISTOP": "360 0 0 0",
+            "STEP": null,
+            "NSTEP_SUB": null,
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "355 1 0 0",
+            "SECSTOP": "360 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POWER":"40.",
+            "CTPOTEN": "60.",
+            "F107": "200.",
+            "F107A": "200.",
+            "CALC_HELIUM": "1",
+            "other_input": [null]
+        }
+    },
+    "decsol_smin": {
+        "type": "seasons",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 355,
+            "SOURCE_START": "355 0 0 0",
+            "PRISTART": "355 0 0 0",
+            "PRISTOP": "360 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "355 1 0 0",
+            "SECSTOP": "360 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POWER":"18.",
+            "CTPOTEN": "30.",
+            "F107": "70.",
+            "F107A": "70.",
+            "other_input": [null]
+        }
+    },
+    "junsol_smax": {
+        "type": "seasons",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 172,
+            "SOURCE_START": "172 0 0 0",
+            "PRISTART": "172 0 0 0",
+            "PRISTOP": "177 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "172 1 0 0",
+            "SECSTOP": "177 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POWER":"40.",
+            "CTPOTEN": "60.",
+            "F107": "200.",
+            "F107A": "200.",
+            "other_input": [null]
+        }
+    },
+    "junsol_smin": {
+        "type": "seasons",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 172,
+            "SOURCE_START": "172 0 0 0",
+            "PRISTART": "172 0 0 0",
+            "PRISTOP": "177 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "172 1 0 0",
+            "SECSTOP": "177 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POWER":"18.",
+            "CTPOTEN": "30.",
+            "F107": "70.",
+            "F107A": "70.",
+            "other_input": [null]
+        }
+    },
+    "mareqx_smax": {
+        "type": "seasons",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 80,
+            "SOURCE_START": "80 0 0 0",
+            "PRISTART": "80 0 0 0",
+            "PRISTOP": "85 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "80 1 0 0",
+            "SECSTOP": "85 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POWER":"40.",
+            "CTPOTEN": "60.",
+            "F107": "200.",
+            "F107A": "200.",
+            "other_input": [null]
+        }
+    },
+    "mareqx_smin": {
+        "type": "seasons",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 80,
+            "SOURCE_START": "80 0 0 0",
+            "PRISTART": "80 0 0 0",
+            "PRISTOP": "85 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "80 1 0 0",
+            "SECSTOP": "85 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POWER":"18.",
+            "CTPOTEN": "30.",
+            "F107": "70.",
+            "F107A": "70.",
+            "other_input": [null]
+        }
+    },
+    "sepeqx_smax": {
+        "type": "seasons",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 264,
+            "SOURCE_START": "264 0 0 0",
+            "PRISTART": "264 0 0 0",
+            "PRISTOP": "269 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "264 1 0 0",
+            "SECSTOP": "269 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POWER":"40.",
+            "CTPOTEN": "60.",
+            "F107": "200.",
+            "F107A": "200.",
+            "other_input": [null]
+        }
+    },
+    "sepeqx_smin": {
+        "type": "seasons",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 264,
+            "SOURCE_START": "264 0 0 0",
+            "PRISTART": "264 0 0 0",
+            "PRISTOP": "269 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "264 1 0 0",
+            "SECSTOP": "269 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POWER":"18.",
+            "CTPOTEN": "30.",
+            "F107": "70.",
+            "F107A": "70.",
+            "other_input": [null]
+        }
+    },
+    "nov2003_heelis_gpi": {
+        "type": "storms",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2003,
+            "START_DAY": 323,
+            "SOURCE_START": "323 0 0 0",
+            "PRISTART": "323 0 0 0",
+            "PRISTOP": "328 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "323 1 0 0",
+            "SECSTOP": "328 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POTENTIAL_MODEL": "HEELIS",
+            "other_input": ["GPI_NCFILE = '+tgcmdata+/gpi_1960001-2015365.nc'"]
+        }
+    },
+    "nov2003_weimer_imf": {
+        "type": "storms",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2003,
+            "START_DAY": 323,
+            "SOURCE_START": "323 0 0 0",
+            "PRISTART": "323 0 0 0",
+            "PRISTOP": "328 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc'",
+            "SECSTART": "323 1 0 0",
+            "SECSTOP": "328 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
+            "POTENTIAL_MODEL": "WEIMER",
+            "other_input": ["GPI_NCFILE = '+tgcmdata+/gpi_1960001-2015365.nc'","IMF_NCFILE = '+tgcmdata+/imf_OMNI_2003001-2003365.nc'"]
+        }
+    },
+    "dec2006_heelis_gpi": {
+        "type": "storms",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2006,
+            "START_DAY": 330,
+            "SOURCE_START": "330 0 0 0",
+            "PRISTART": "330 0 0 0",
+            "PRISTOP": "360 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc',to,'+histdir+/+run_name+_prim_005.nc','by','1'",
+            "SECSTART": "330 1 0 0",
+            "SECSTOP": "360 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_032.nc','by','1'",
+            "POTENTIAL_MODEL": "HEELIS",
+            "other_input": ["GPI_NCFILE = '+tgcmdata+/gpi_1960001-2015365.nc'"]
+        }
+    },
+    "dec2006_weimer_imf": {
+        "type": "storms",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2006,
+            "START_DAY": 330,
+            "SOURCE_START": "330 0 0 0",
+            "PRISTART": "330 0 0 0",
+            "PRISTOP": "360 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc',to,'+histdir+/+run_name+_prim_005.nc','by','1'",
+            "SECSTART": "330 1 0 0",
+            "SECSTOP": "360 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_032.nc','by','1'",
+            "POTENTIAL_MODEL": "WEIMER",
+            "other_input": ["GPI_NCFILE = '+tgcmdata+/gpi_1960001-2015365.nc'","IMF_NCFILE = '+tgcmdata+/imf_OMNI_2003001-2003365.nc'"]
+        }
+    },
+    "whi2008_heelis_gpi": {
+        "type": "storms",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2008,
+            "START_DAY": 81,
+            "SOURCE_START": "81 0 0 0",
+            "PRISTART": "81 0 0 0",
+            "PRISTOP": "106 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc',to,'+histdir+/+run_name+_prim_003.nc','by','1'",
+            "SECSTART": "81 1 0 0",
+            "SECSTOP": "106 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_025.nc','by','1'",
+            "POTENTIAL_MODEL": "HEELIS",
+            "other_input": ["GPI_NCFILE = '+tgcmdata+/gpi_1960001-2015365.nc'"]
+        }
+    },
+    "whi2008_weimer_imf": {
+        "type": "storms",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2008,
+            "START_DAY": 81,
+            "SOURCE_START": "81 0 0 0",
+            "PRISTART": "81 0 0 0",
+            "PRISTOP": "106 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc',to,'+histdir+/+run_name+_prim_003.nc','by','1'",
+            "SECSTART": "81 1 0 0",
+            "SECSTOP": "106 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_025.nc','by','1'",
+            "POTENTIAL_MODEL": "WEIMER",
+            "other_input": ["GPI_NCFILE = '+tgcmdata+/gpi_1960001-2015365.nc'","IMF_NCFILE = '+tgcmdata+/imf_OMNI_2003001-2003365.nc'"]
+        }
+    },
+    "jul2000_heelis_gpi": {
+        "type": "storms",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2000,
+            "START_DAY": 192,
+            "SOURCE_START": "192 0 0 0",
+            "PRISTART": "192 0 0 0",
+            "PRISTOP": "202 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc',to,'+histdir+/+run_name+_prim_003.nc','by','1'",
+            "SECSTART": "192 1 0 0",
+            "SECSTOP": "202 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_025.nc','by','1'",
+            "POTENTIAL_MODEL": "HEELIS",
+            "other_input": ["GPI_NCFILE = '+tgcmdata+/gpi_1960001-2015365.nc'"]
+        }
+    },
+    "jul2000_weimer_imf": {
+        "type": "storms",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2000,
+            "START_DAY": 192,
+            "SOURCE_START": "192 0 0 0",
+            "PRISTART": "192 0 0 0",
+            "PRISTOP": "202 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc',to,'+histdir+/+run_name+_prim_003.nc','by','1'",
+            "SECSTART": "192 1 0 0",
+            "SECSTOP": "202 0 0 0",
+            "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_025.nc','by','1'",
+            "POTENTIAL_MODEL": "WEIMER",
+            "other_input": ["GPI_NCFILE = '+tgcmdata+/gpi_1960001-2015365.nc'","IMF_NCFILE = '+tgcmdata+/imf_OMNI_2003001-2003365.nc'","OPDIFFCAP = '6.e8'"]
+        }
+    },
+    "climatology_smin": {
+        "type": "climatology",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 1,
+            "SOURCE_START": "1 0 0 0",
+            "PRISTART": "1 0 0 0",
+            "PRISTOP": "80 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc',to,'+histdir+/+run_name+_prim_020.nc','by','1'",
+            "SECSTART": null,
+            "SECSTOP": null,
+            "SECHIST": null,
+            "SECOUT": null,
+            "MXHIST_SECH": null,
+            "SECFLDS": [null],
+            "POWER":"18.",
+            "CTPOTEN": "30.",
+            "F107": "70.",
+            "F107A": "70.",
+            "POTENTIAL_MODEL": "HEELIS",
+            "other_input": [null]
+        }
+    },
+    "climatology_smax": {
+        "type": "climatology",
+        "inp" : {
+            "SOURCE": null,
+            "START_YEAR": 2002,
+            "START_DAY": 1,
+            "SOURCE_START": "1 0 0 0",
+            "PRISTART": "1 0 0 0",
+            "PRISTOP": "55 0 0 0",
+            "OUTPUT": "'+histdir+/+run_name+_prim_001.nc',to,'+histdir+/+run_name+_prim_020.nc','by','1'",
+            "MXHIST_PRIM": "20",
+            "SECSTART": null,
+            "SECSTOP": null,
+            "SECHIST": null,
+            "SECOUT": null,
+            "MXHIST_SECH": null,
+            "SECFLDS": [null],
+            "POWER":"40.",
+            "CTPOTEN": "60.",
+            "F107": "200.",
+            "F107A": "200.",
+            "POTENTIAL_MODEL": "HEELIS",
+            "other_input": [null]
+        }
+    }
+}

@@ -1,0 +1,42 @@
+&tgcm_input
+!
+! Namelist input file for run {{inp.LABEL}}
+!
+LABEL = '{{inp.LABEL}}'
+START_YEAR = {{inp.START_YEAR}}
+START_DAY = {{inp.START_DAY}}
+CALENDAR_ADVANCE = {{inp.CALENDAR_ADVANCE}}
+SOURCE = '{{inp.SOURCE}}'
+SOURCE_START = {{inp.SOURCE_START}}
+PRISTART = {{inp.PRISTART}}
+PRISTOP = {{inp.PRISTOP}}
+STEP = {{inp.STEP}}
+NSTEP_SUB = {{inp.NSTEP_SUB}}
+PRIHIST = {{inp.PRIHIST}}
+OUTPUT = {{inp.OUTPUT}}
+MXHIST_PRIM = {{inp.MXHIST_PRIM}}
+{{inp.SECSTART}}
+{{inp.SECSTOP}}
+{{inp.SECHIST}}
+{{inp.SECOUT}}
+{{inp.MXHIST_SECH}}
+{% if inp.SECFLDS|select('ne', None)|list|length > 0 %}
+SECFLDS = {% for SECFLD in inp.SECFLDS %}{% if SECFLD %}'{{SECFLD}}'{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}
+{% endif %}
+{%- for data in inp.GSWM_data %}
+{%- if data != None %}
+{{data}}
+{%- endif %}
+{%- endfor %}
+{%- for data in inp.other_input %}
+{%- if data != None %}
+{{data}}
+{%- endif %}
+{%- endfor %}
+POTENTIAL_MODEL = '{{inp.POTENTIAL_MODEL}}'
+{{inp.POWER}}
+{{inp.CTPOTEN}}
+{{inp.F107}}
+{{inp.F107A}}
+CALC_HELIUM = {{inp.CALC_HELIUM}}
+/

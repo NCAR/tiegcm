@@ -1,0 +1,36 @@
+#!/bin/tcsh
+
+# PBS specifications
+#PBS -N {{simulation.job_name}}
+#PBS -A {{pbs.project_code}}
+#PBS -q {{pbs.queue}}
+#PBS -j oe
+{{pbs.job_priority}}
+#PBS -l {% for key, value in pbs.resource.items() %}{{ value }}{% if not loop.last %}:{% endif %}{% endfor %},walltime={{pbs.walltime}}
+
+# Ser enviroment variables
+setenv TGCMDATA {{model.data.tgcmdata}}
+
+{%- for data in pbs.other_pbs %}
+{%- if data != None %}
+{{data}}
+{%- endif %}
+{%- endfor %}
+
+# Load modules
+module purge
+{%- for module in pbs.modules %}
+module load {{ module }}
+{%- endfor %}
+
+# Execute tiegcm
+cd {{model.data.execdir}}
+mpirun -np {{pbs.nprocs}} {{model.data.execdir}}/{{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.output_file}}
+
+
+cd {{model.data.workdir}}
+
+# Make tar file of task log files:
+tar -cf {{model.data.output_file}}.tar *task*.out
+echo "Saved stdout tar file {{model.data.output_file}}.tar"
+rm *task*.out

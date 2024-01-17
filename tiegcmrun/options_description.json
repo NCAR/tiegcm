@@ -1,0 +1,411 @@
+{
+    "version": "0.0.0",
+
+    "simulation": {
+        "job_name": {
+            "LEVEL": "NOVICE",
+            "prompt": "Name to use for PBS job(s)",
+            "default": "tiegcm"
+        },
+        "hpc_system": {
+            "LEVEL": "NOVICE",
+            "prompt": "Name of HPC system",
+            "default": "derecho",
+            "valids": ["derecho", "pleiades","custom"]
+        }
+    },
+
+    "pbs": {
+        "_common": {
+            "account_name": {
+                "LEVEL": "NOVICE",
+                "prompt": "PBS account name",
+                "default": "."
+            }
+        },
+        "derecho": {
+            "project_code": {
+                "LEVEL": "NOVICE",
+                "prompt": "Project Code",
+                "default": "P28100036"
+            },
+            "queue": {
+                "LEVEL": "BASIC",
+                "prompt": "PBS queue name",
+                "default": "main",
+                "valids": ["develop", "main", "preempt"]
+            },
+            "job_priority": {
+                "LEVEL": "EXPERT",
+                "prompt": "#PBS job priority",
+                "default": "regular",
+                "valids": ["premium", "regular", "economy","preempt"]
+            },
+            "resource": {
+                "select": {
+                    "LEVEL": "BASIC",
+                    "prompt": "Number of nodes to request",
+                    "default": 4
+                },
+                "ncpus": {
+                    "LEVEL": "BASIC",
+                    "prompt": "Number of cores per node",
+                    "default": 128
+                },
+                "mpiprocs": {
+                    "LEVEL": "BASIC",
+                    "prompt": "Number of MPI ranks per node",
+                    "default": "72"
+                }                
+            },
+            "walltime": {
+                "LEVEL": "BASIC",
+                "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
+                "default": "12:00:00"
+            },
+            "nprocs": {
+                "LEVEL": "EXPERT",
+                "prompt": "nprocs = nnodes * mpiprocs",
+                "default": null
+            },
+            "other_pbs": {
+                "LEVEL": "EXPERT",
+                "prompt": "Additional options for PBS -l",
+                "default": ""
+            },
+            "modules": {
+                "LEVEL": "EXPERT",
+                "prompt": "Modules to load",
+                "default": [
+                    "ncarenv/23.06",
+                    "intel/2023.0.0",
+                    "cray-mpich/8.1.25",
+                    "mkl/2023.0.0",
+                    "netcdf-mpi/4.9.2",
+                    "craype/2.7.20",
+                    "ncarcompilers/1.0.0",
+                    "hdf5-mpi/1.12.2",
+                    "esmf/8.5.0"
+                ]
+            },
+            "other_job": {
+                "LEVEL": "EXPERT",
+                "prompt": "Additional settings or env variables",
+                "default": [null]
+            }
+        },
+        "pleiades": {
+            "project_code": {
+                "LEVEL": "NOVICE",
+                "prompt": "Project Code",
+                "default": "P28100036"
+            },
+            "queue": {
+                "LEVEL": "NOVICE",
+                "prompt": "PBS queue name",
+                "default": "main",
+                "valids": ["low", "normal", "long", "debug", "devel"]
+            },
+            "resource": {
+                "model": {
+                    "LEVEL": "EXPERT",
+                    "prompt": "System on PFE to use",
+                    "default": "bro",
+                    "valids": ["bro", "has", "ivy", "san"]
+                },
+                "memsize": {
+                    "LEVEL": "EXPERT",
+                    "prompt": "Size of memory to use",
+                    "default": null
+                },
+                "select": {
+                    "LEVEL": "EXPERT",
+                    "prompt": "Number of nodes to request",
+                    "default": null
+                },
+                "ncpus": {
+                    "LEVEL": "EXPERT",
+                    "prompt": "Number of cores per node",
+                    "default": null
+                },
+                "mpiprocs": {
+                    "LEVEL": "EXPERT",
+                    "prompt": "Number of MPI ranks per node",
+                    "default": "ncpus"
+                }
+            },
+            "walltime": {
+                "LEVEL": "NOVICE",
+                "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
+                "default": "01:00:00"
+            },
+            "nprocs": {
+                "LEVEL": "EXPERT",
+                "prompt": "nprocs = nnodes * mpiprocs",
+                "default": null
+            },
+            "other_pbs": {
+                "LEVEL": "EXPERT",
+                "prompt": "Additional options for PBS -l",
+                "default": ""
+            },
+            "modules": {
+                "LEVEL": "EXPERT",
+                "prompt": "Modules to load",
+                "default": [
+                    "module purge",
+                    "module load nas",
+                    "module load pkgsrc/2023Q3",
+                    "module load comp-intel/2020.4.304",
+                    "module load mpi-hpe/mpt.2.28_25Apr23_rhel87",
+                    "module load mpi-hpe/mpt",
+                    "module load szip/2.1.1",
+                    "module load hdf4/4.2.12",
+                    "module load hdf5/1.8.18_mpt",
+                    "module load netcdf/4.4.1.1_mpt"
+                ]
+            },
+            "other_job": {
+                "LEVEL": "EXPERT",
+                "prompt": "Additional settings or env variables",
+                "default": ["setenv MPI_TYPE_DEPTH 19"]
+            }
+        }
+    },
+
+    "model": {
+        "data": {
+            "modeldir": {
+                "LEVEL": "NOVICE",
+                "prompt": "Directory of model",
+                "default": "TEGCMHOME"
+            },
+            "parentdir": {
+                "LEVEL": "NOVICE",
+                "prompt": "Root directory for all files",
+                "default": null
+            },
+            "execdir": {
+                "LEVEL": "INTERMEDIATE",
+                "prompt": "Execution Directory",
+                "default": "os.getcwd()"
+            },
+            "workdir": {
+                "LEVEL": "INTERMEDIATE",
+                "prompt": "Working Directory",
+                "default": "os.getcwd()"
+            },
+            "histdir": {
+                "LEVEL": "INTERMEDIATE",
+                "prompt": "Output Directory",
+                "default": "os.getcwd()"
+            },
+            "tgcmdata": {
+                "LEVEL": "NOVICE",
+                "prompt": "Directory of Tiegcm Data Files",
+                "default": "/glade/p/hao/tgcm/data"
+            },
+            "input_file": {
+                "LEVEL": "BASIC",
+                "prompt": "Custom Input File / (Enter) to build INP file",
+                "default": null
+            },
+            "output_file": {
+                "LEVEL": "INTERMEDIATE",
+                "prompt": "Custom Output File",
+                "default": null
+            },
+            "make": {
+                "LEVEL": "INTERMEDIATE",
+                "prompt": "Make File",
+                "default": null
+            },
+            "modelexe": {
+                "LEVEL": "EXPERT",
+                "prompt": "Executable Name",
+                "default": "tiegcm.exe"
+            
+            }
+        },
+        "specification": {
+            "horires": {
+                "LEVEL": "NOVICE",
+                "prompt": "Horizontal Resolution",
+                "default": 2.5,
+                "valid": [5, 2.5, 1.25, 0.625]
+            },
+            "vertres": {
+                "LEVEL": "NOVICE",
+                "prompt": "Vertical Resolution",
+                "default": 0.25,
+                "valid": [0.5, 0.25, 0.125, 0.0625]
+            },
+            "zitop": {
+                "LEVEL": "NOVICE",
+                "prompt": "Max level (zitop)",
+                "default": 7,
+                "valid": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+            },
+            "mres": {
+                "LEVEL": "NOVICE",
+                "prompt": "mres",
+                "default": 2,
+                "valid": [2, 1, 0.5]
+            },
+            "nres_grid": {
+                "LEVEL": "EXPERT",
+                "prompt": "nres_grid",
+                "default": null
+            }
+        }
+    },
+    "inp": {
+        "LABEL":{
+            "LEVEL": "BASIC",
+            "prompt": "LABEL",
+            "default": null
+        },
+        "start_date": {
+            "LEVEL": "BASIC",
+            "prompt": "Start date for simulation (yyyy-mm-ddThh:mm:ss) / SKIP",
+            "default": null
+        },
+        "stop_date": {
+            "LEVEL": "BASIC",
+            "prompt": "Stop date for simulation (yyyy-mm-ddThh:mm:ss) / SKIP",
+            "default": null
+        },
+        "SOURCE":{
+            "LEVEL": "BASIC",
+            "prompt": "SOURCE file location",
+            "default": null
+        },
+        "START_YEAR":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Source Start Year",
+            "default": null
+        },
+        "START_DAY":{
+            "LEVEL": "BASIC",
+            "prompt": "Start Day",
+            "default": null
+        },
+        "CALENDAR_ADVANCE":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Calandar Advance",
+            "default": 1
+        },
+        "SOURCE_START":{
+            "LEVEL": "BASIC",
+            "prompt": "SOURCE start date",
+            "default": null
+        },
+        "PRISTART":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Primary start date",
+            "default": null
+        },
+        "PRISTOP":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Primary stop date",
+            "default": null
+        },
+        "STEP":{
+            "LEVEL": "BASIC",
+            "prompt": "STEP number",
+            "default": null
+        },
+        "NSTEP_SUB":{
+            "LEVEL": "BASIC",
+            "prompt": "NSTEP_SUB number",
+            "default": "10"
+        },
+        "PRIHIST":{
+            "LEVEL": "BASIC",
+            "prompt": "Primary History",
+            "default": "1 0 0 0"
+        },
+        "OUTPUT":{
+            "LEVEL": "BASIC",
+            "prompt": "Primary Output",
+            "default": null
+        },
+        "MXHIST_PRIM":{
+            "LEVEL": "BASIC",
+            "prompt": "Max Primary History per Output",
+            "default": 10
+        },
+        "SECSTART":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Secondary Start Date",
+            "default": null
+        },
+        "SECSTOP":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Secondary Stop Date",
+            "default": null
+        },
+        "SECHIST":{
+            "LEVEL": "BASIC",
+            "prompt": "Secondary History",
+            "default": "0 1 0 0"
+        },
+        "SECOUT":{
+            "LEVEL": "BASIC",
+            "prompt": "Secondary Output",
+            "default": null
+        },
+        "MXHIST_SECH":{
+            "LEVEL": "BASIC",
+            "prompt": "Max Secondary History per Output",
+            "default": 24
+        },
+        "SECFLDS":{
+            "LEVEL": "EXPERT",
+            "prompt": "Secondary Output Fields",
+            "default": ["TN","UN","VN","WN","O2","O1","N2","NO","N4S","HE","NE","TE","TI","TEC","O2P","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","DEN","QJOULE","HMF2","NMF2","Z","ZG"]
+        },
+        "POWER":{
+            "LEVEL": "BASIC",
+            "prompt": "POWER",
+            "default": null
+        },
+        "CTPOTEN":{
+            "LEVEL": "BASIC",
+            "prompt": "CTPOTEN",
+            "default": null
+        },
+        "F107":{
+            "LEVEL": "BASIC",
+            "prompt": "F107",
+            "default": null
+        },
+        "F107A":{
+            "LEVEL": "BASIC",
+            "prompt": "F107A",
+            "default": null
+        },
+        "CALC_HELIUM":{
+            "LEVEL": "BASIC",
+            "prompt": "CALC_HELIUM",
+            "default": "1"
+        },
+        "POTENTIAL_MODEL":{
+            "LEVEL": "EXPERT",
+            "prompt": "POTENTIAL_MODEL",
+            "default": "HEELIS"
+        },
+        "GSWM_data":{
+            "LEVEL": "EXPERT",
+            "prompt": "GSWM_data",
+            "default": [null]
+        },
+        "other_input":{
+            "LEVEL": "EXPERT",
+            "prompt": "Other input parameters ",
+            "default": [null]
+        }
+        
+    }
+
+}
