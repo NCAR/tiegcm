@@ -308,12 +308,12 @@
       call MPI_BCAST(IAm,CplCommSize,MPI_INTEGER,0,TIEGCM_WORLD,ier)
 !
 #ifdef GAMERA
-     if (doVoltCommSkip) then
+      if (doVoltCommSkip) then
 ! gam2volt
 ! WARNING THIS IS HARDCODED TO OCCUR ONCE. MAY CAUSE ISSUES WITH MULTIPLE COUPLINGS
       call mpi_comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, 
      |  mytid, tmpComm, ier)
-     endif
+      endif
 #endif
 !
 ! Allocate array of tasks (user defined type(task)):

@@ -90,6 +90,7 @@
       logical :: aluse,  ! logical to use AL in Weimer 2001 model or not
      |  et,              ! logical to calculate electron turbulent heating
      |  saps             ! logical to include empirical SAPS
+
 !
 ! Parameters as read from namelist:
       real :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,rd_byimf,
@@ -133,6 +134,10 @@
      |  vedata,             ! SAPS ve data file
      |  vndata,             ! SAPS vn data file
      |  vvdata              ! SAPS vv data file
+
+
+      logical :: oneway   ! logical to use oneway mix reader
+      character(len=mxlen_filename) :: mixfile ! filename for oneway driving
 
 !     integer,parameter :: ngpivars = 4
 !     real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
@@ -181,7 +186,7 @@
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
      |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,et,saps,
-     |  vedata,vndata,vvdata
+     |  vedata,vndata,vvdata,oneway,mixfile
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -291,6 +296,9 @@
       opdiffcap = spval
       et = .false.
       saps = .false.
+
+      oneway = .false.
+      mixfile = 'msphere.mix.h5'
 
       f107    = spval
       f107a   = spval

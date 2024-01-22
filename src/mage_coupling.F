@@ -12,6 +12,8 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !-----------------------------------------------------------------------
       use params_module,only: nlonp4,nlat,nlatp1
+      use input_module,only: oneway
+      use mage_oneway
       implicit none
 
       real,dimension(nlonp4,nlat) ::
@@ -119,6 +121,7 @@
       var2d = 0.
 
 #if defined(GAMERA)
+      if (.not. oneway) then
       if (mytid == 0) then
 
         call import_remix(var2d)
@@ -141,7 +144,9 @@
         enddo
         gpotm(nlonp1+2,j) = var2d(j+1,nlonp1,1)
       enddo
-
+      else
+        call ca_receive(gpot,geng,gflx,gpotm)
+      endif
 #endif
       end subroutine import_mage
 !-----------------------------------------------------------------------
@@ -699,6 +704,11 @@
       end subroutine init_mpi_hidra
 !-----------------------------------------------------------------------
       subroutine finalize_coupling
+
+      if (oneway) then
+        call ca_close
+      endif
+
       end subroutine finalize_coupling
 !-----------------------------------------------------------------------
       subroutine mage_ucurrent(rim1,rim2,mlon0,mlon1,mlat0,mlat1,nsrhs)
