@@ -440,7 +440,7 @@
       endif
       end subroutine aurora_cons
 !-----------------------------------------------------------------------
-      subroutine aurora(tn,o2,o1,n2,barm,xnmbar,scht,
+      subroutine aurora(tn,o2,o1,he,n2,barm,xnmbar,scht,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Auroral parameterization driver.
@@ -468,6 +468,7 @@
      |  tn,    ! neutral gas temperature (deg K)
      |  o2,    ! O2 mass mixing ratio
      |  o1,    ! O mass mixing ratio
+     |  he,    ! He mass mixing ratio
      |  n2,    ! N2 mass mixing ratio (1-o2-o-he)
      |  barm,  ! mean molecular weight (see sub addiag)
      |  xnmbar,! p0*e(-z)*mbar/kT
@@ -593,7 +594,7 @@
       call aurora_ions(drizl(lon0:lon1), cusp (lon0:lon1),
      |  alfa (lon0:lon1), alfa2(lon0:lon1), alfa3(lon0:lon1),
      |  flux (lon0:lon1), flux2(lon0:lon1), flux3(lon0:lon1),
-     |  tn,o2,o1,n2,barm,xnmbar,scht,lev0,lev1,lon0,lon1,lat)
+     |  tn,o2,o1,he,n2,barm,xnmbar,scht,lev0,lev1,lon0,lon1,lat)
 !
 #ifdef VT
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
@@ -797,7 +798,7 @@
       end module aurora_module
 !-----------------------------------------------------------------------
       subroutine aurora_ions (drizl,cusp,alfa1,alfa2,alfa3,
-     |  flux1,flux2,flux3,tn,o2,o1,n2,barm,xnmbar,scht,
+     |  flux1,flux2,flux3,tn,o2,o1,he,n2,barm,xnmbar,scht,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate aroral additions to ionization rates.
@@ -808,7 +809,7 @@
      |  expz,  ! exp(-zp) where zp is log pressure (ln(p0/p))
      |  grav,  ! gravity
      |  gask,  ! gas constant (8.314e7)
-     |  rmassinv_o2,rmassinv_o1,rmassinv_n2, ! 1./rmass
+     |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2, ! 1./rmass
      |  avo    ! avogadro number (6.023e23)
 !
 ! Total ionizations. Auroral ionization is added to these:
@@ -829,7 +830,7 @@
       real,intent(in),dimension(lon0:lon1) :: drizl,cusp,
      |  alfa1,alfa2,alfa3,flux1,flux2,flux3
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  tn,o2,o1,n2,barm,xnmbar,scht
+     |  tn,o2,o1,he,n2,barm,xnmbar,scht
 !
 ! Local:
       integer :: i,k
@@ -933,10 +934,13 @@
           qsum(k,i) = qsum(k,i)*barm_t(k,i) ! s1 = s1*s11
 !
 ! Denominator of equations (13-16) in Roble,1987.
+! Haonan Wu 2024/01: added He coefficient (vital at high altitudes)
+! and changed N2 coefficient from 0.92 to 1.15 according to Jones & Rees 1973
           denom(k,i) = 
-     |      0.92 * n2(k,i)*rmassinv_n2 +
      |      1.5  * o2(k,i)*rmassinv_o2 + 
-     |      0.56 * o1(k,i)*rmassinv_o1
+     |      0.56 * o1(k,i)*rmassinv_o1 +
+     |      0.43 * he(k,i)*rmassinv_he +
+     |      1.15 * n2(k,i)*rmassinv_n2
 !
 ! Production of O2+ (equation (15) in Roble,1987):
           qo2p_aur(k,i) = qsum(k,i)*o2(k,i)*rmassinv_o2/denom(k,i)+

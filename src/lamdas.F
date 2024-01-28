@@ -1,5 +1,5 @@
 !
-      subroutine lamdas(tn,xnmbar,o2,o1,n2,ti,te,o2p,op,nop,Etot,
+      subroutine lamdas(tn,xnmbar,o2,o1,he,n2,ti,te,o2p,op,nop,Etot,
      |  lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Qa,Q2,
      |  lev0,lev1,lon0,lon1,lat)
 !
@@ -14,8 +14,9 @@
 !
       use params_module,only: nlonp4
       use magfield_module,only: bmod2,sn2dec,csdec,sndec
-      use cons_module,only: dipmin,rmass_o2,rmass_o1,rmass_no,
-     |  rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no,avo,rtd
+      use cons_module,only: dipmin,rmass_o2,rmass_o1,rmass_he,rmass_no,
+     |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,rmassinv_no,avo,
+     |  rtd
       use magfield_module,only: dipmag,rlatm
       use input_module,only: colfac
       use addfld_module,only: addfld
@@ -30,6 +31,7 @@
      |  xnmbar,! for conversion to volume density
      |  o2,   ! molecular oxygen (mmr)
      |  o1,   ! atomic oxygen    (mmr)
+     |  he,   ! helium           (mmr)
      |  n2,   ! molecular nitrogen (mmr)
      |  ti,   ! ion temperature (deg K)
      |  te,   ! electron temperature (deg K)
@@ -69,7 +71,7 @@
 ! Local (lev,lon):
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  tnti,       ! average of tn and ti
-     |  o2_cm3, o1_cm3, n2_cm3, ! major species number densities (cm3)
+     |  o2_cm3, o1_cm3, he_cm3, n2_cm3, ! major species number densities (cm3)
      |  sigma_ped,  ! pedersen conductivity (siemens/m)
      |  sigma_hall, ! hall conductivity (siemens/m)
      |  ne,         ! electron density (assume o2p+op+nop)
@@ -91,13 +93,17 @@
      |  rnu_op_o ,  ! O+  ~ O  collision freq (resonant, temperature dependent)
      |  rnu_nop_o,  ! NO+ ~ O  collision freq (non-resonant)
 !
+     |  rnu_o2p_he, ! O2+ ~ He collision freq (non-resonant)
+     |  rnu_op_he , ! O+  ~ He collision freq (non-resonant)
+     |  rnu_nop_he, ! NO+ ~ He collision freq (non-resonant)
+!
      |  rnu_o2p_n2, ! O2+ ~ N2 collision freq (non-resonant)
      |  rnu_op_n2 , ! O+  ~ N2 collision freq (non-resonant)
      |  rnu_nop_n2, ! NO+ ~ N2 collision freq (non-resonant)
 !
-     |  rnu_o2p,    ! [[o2p~o2]n(o2)+[o2p~o]n(o)+[o2p~n2]n(n2)]/w(o2p)
-     |  rnu_op,     ! [[op ~o2]n(o2)+[op ~o]n(o)+[op ~n2]n(n2)]/w(op )
-     |  rnu_nop,    ! [[nop~o2]n(o2)+[nop~o]n(o)+[nop~n2]n(n2)]/w(nop)
+     |  rnu_o2p,    ! [[o2p~o2]n(o2)+[o2p~o]n(o)+[o2p~he]n(he)+[o2p~n2]n(n2)]/w(o2p)
+     |  rnu_op,     ! [[op ~o2]n(o2)+[op ~o]n(o)+[op ~he]n(he)+[op ~n2]n(n2)]/w(op )
+     |  rnu_nop,    ! [[nop~o2]n(o2)+[nop~o]n(o)+[nop~he]n(he)+[nop~n2]n(n2)]/w(nop)
 ! 
      |  rnu_ne,     ! electron~neutral
      |  Ki,         ! ratio between ion gyro frequency and ion-neutral collision frequency
@@ -110,6 +116,7 @@
 !    |  tn,   ! neutral temperature (deg K)
 !    |  o2,   ! molecular oxygen (mmr)
 !    |  o1,   ! atomic oxygen    (mmr)
+!    |  he,   ! helium           (mmr)
 !    |  n2,   ! molecular nitrogen (mmr)
 !    |  ti,   ! ion temperature (deg K)
 !    |  te,   ! electron temperature (deg K)
@@ -124,6 +131,8 @@
 !     call addfld('O2_lam',' ',' ',o2(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('O1_lam',' ',' ',o1(:,i0:i1),
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('He_lam',' ',' ',he(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('N2_lam',' ',' ',n2(:,i0:i1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -204,6 +213,11 @@
      |      (1.-0.064*alog10(tnti(k,i)))**2*colfac    
           rnu_nop_o(k,i) = 2.44E-10                   ! NO+ ~ O
 !
+! He collision frequencies:
+          rnu_o2p_he(k,i) = 0.70E-10                  ! O2+ ~ He
+          rnu_op_he (k,i) = 1.32E-10                  ! O+  ~ He
+          rnu_nop_he(k,i) = 0.74E-10                  ! NO+ ~ He
+!
 ! N2 collision frequencies:
           rnu_o2p_n2(k,i) = 4.13E-10                  ! O2+ ~ N2
           rnu_op_n2 (k,i) = 6.82E-10                  ! O+  ~ N2
@@ -216,13 +230,14 @@
 ! pressure at half level: p0*expz(k) [dyn/cm^2]
 ! Boltzmann constant [erg/K]
 ! neutral temperature [K]
-! mass mixing rations[-]: o2, o1, n2
-! inverse of mean molecular weight [mol/g]:rmassinv_o2, rmassinv_o1, rmassinv_n2
+! mass mixing rations[-]: o2, o1, he, n2
+! inverse of mean molecular weight [mol/g]:rmassinv_o2, rmassinv_o1, rmassinv_he, rmassinv_n2
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
           o2_cm3(k,i) = o2(k,i)*xnmbar(k,i)*rmassinv_o2
           o1_cm3(k,i) = o1(k,i)*xnmbar(k,i)*rmassinv_o1
+          he_cm3(k,i) = he(k,i)*xnmbar(k,i)*rmassinv_he
           n2_cm3(k,i) = n2(k,i)*xnmbar(k,i)*rmassinv_n2 ! this part varies from timegcm
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
@@ -231,6 +246,8 @@
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('O_CM3' ,' ',' ',o1_cm3,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('HE_CM3' ,' ',' ',he_cm3,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('N2_CM3',' ',' ',n2_cm3,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
@@ -238,20 +255,23 @@
 !    by multiplying with neutral number density [1/cm^3] and sum over neutrals
 ! nu_in is divided by gyrofrequency omega_i
 ! nu_in/omega_i [-]:
-! rnu_o2p = [[o2p~o2]n(o2)+[o2p~o]n(o)+[o2p~n2]n(n2)]/w(o2p)
-! rnu_op  = [[op ~o2]n(o2)+[op ~o]n(o)+[op ~n2]n(n2)]/w(op )
-! rnu_nop = [[nop~o2]n(o2)+[nop~o]n(o)+[nop~n2]n(n2)]/w(nop)
+! rnu_o2p = [[o2p~o2]n(o2)+[o2p~o]n(o)+[o2p~he]n(he)+[o2p~n2]n(n2)]/w(o2p)
+! rnu_op  = [[op ~o2]n(o2)+[op ~o]n(o)+[op ~he]n(he)+[op ~n2]n(n2)]/w(op )
+! rnu_nop = [[nop~o2]n(o2)+[nop~o]n(o)+[nop~he]n(he)+[nop~n2]n(n2)]/w(nop)
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
           rnu_o2p(k,i) = (rnu_o2p_o2(k,i)*o2_cm3(k,i) +
      |                    rnu_o2p_o (k,i)*o1_cm3(k,i) +
+     |                    rnu_o2p_he(k,i)*he_cm3(k,i) +
      |                    rnu_o2p_n2(k,i)*n2_cm3(k,i))*omega_o2p_inv(i)
           rnu_op (k,i) = (rnu_op_o2 (k,i)*o2_cm3(k,i) +
      |                    rnu_op_o  (k,i)*o1_cm3(k,i) +
+     |                    rnu_op_he (k,i)*he_cm3(k,i) +
      |                    rnu_op_n2 (k,i)*n2_cm3(k,i))*omega_op_inv(i)
           rnu_nop(k,i) = (rnu_nop_o2(k,i)*o2_cm3(k,i) +
      |                    rnu_nop_o (k,i)*o1_cm3(k,i) +
+     |                    rnu_nop_he(k,i)*he_cm3(k,i) +
      |                    rnu_nop_n2(k,i)*n2_cm3(k,i))*omega_nop_inv(i)
 !
 ! neutral~electron collision frequency (from Banks & Kockards) nu_en
@@ -260,9 +280,10 @@
 !
           sqrt_te = sqrt(te(k,i))
           rnu_ne(k,i) = 
-     |      (2.33e-11*n2_cm3(k,i)*te(k,i)*(1.-1.21e-4*te(k,i))+
-     |       1.82e-10*o2_cm3(k,i)*sqrt_te*(1.+3.60e-2*sqrt_te)+
-     |       8.90e-11*o1_cm3(k,i)*sqrt_te*(1.+5.70e-4*te(k,i)))*
+     |      (1.82e-10*o2_cm3(k,i)*sqrt_te*(1.+3.60e-2*sqrt_te)+
+     |       8.90e-11*o1_cm3(k,i)*sqrt_te*(1.+5.70e-4*te(k,i))+
+     |       4.60e-10*he_cm3(k,i)*sqrt_te+
+     |       2.33e-11*n2_cm3(k,i)*te(k,i)*(1.-1.21e-4*te(k,i)))*
      |       omega_e_inv(i)
 !
 ! 6/2/06 btf: Multiply rnu_ne by 4, as per Richmond:
@@ -275,9 +296,10 @@
           rnu_ne(k,i) = rnu_ne(k,i)*4.
 
 !         write(6,"('lamdas: lat=',i3,' k=',i3,' i=',i3,' te=',
-!    |      e12.4,' n2=',e12.4,' o2=',e12.4,' o1=',e12.4,' omega_e_inv='
-!    |      ,e12.4,' rnu_ne=',e12.4)") lat,k,i,te(k,i),n2_cm3(k,i),
-!    |      o2_cm3(k,i),o1_cm3(k,i),omega_e_inv(i),rnu_ne(k,i)
+!    |      e12.4,' o2=',e12.4,' o1=',e12.4,' he=',e12.4,' n2=',e12.4,
+!    |      ' omega_e_inv=',e12.4,' rnu_ne=',e12.4)") lat,k,i,te(k,i),
+!    |      o2_cm3(k,i),o1_cm3(k,i),he_cm3(k,i),n2_cm3(k,i),
+!    |      omega_e_inv(i),rnu_ne(k,i)
 
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1

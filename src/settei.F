@@ -1,6 +1,7 @@
 ! 
-      subroutine settei(tn,o2,o1,n2,ne,te,ti,op,o2p,nop,xnmbar,xnmbari,
-     |  scht,schti,qji_ti,Qa,Q2,te_out,ti_out,lev0,lev1,lon0,lon1,lat)
+      subroutine settei(tn,o2,o1,he,n2,ne,te,ti,op,o2p,nop,
+     |  xnmbar,xnmbari,scht,schti,qji_ti,Qa,Q2,te_out,ti_out,
+     |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -10,7 +11,7 @@
 !
       use params_module,only: dz,nlonp4,spval
       use cons_module,only: pi,rtd,evergs,
-     |  rmassinv_o2,rmassinv_o1,rmassinv_n2,dipmin,avo
+     |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,dipmin,avo
       use input_module,only: f107,et
       use chapman_module,only: chi   ! solar zenith angle (nlonp4,nlat)
       use magfield_module,only: rlatm,dipmag
@@ -33,6 +34,7 @@
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
+     |  he,      ! helium (mmr)
      |  n2,      ! molecular nitrogen (mmr)
      |  ne,      ! electron density (cm3)
      |  te,      ! electron temperature (from previous time step)
@@ -66,6 +68,7 @@
      |  tn_int,    ! neutral temperature (interfaces)
      |  o2n,       ! O2 number density (midpoints or interfaces)
      |  o1n,       ! O1 number density (midpoints or interfaces)
+     |  hen,       ! He number density (midpoints or interfaces)
      |  n2n,       ! N2 number density (midpoints or interfaces)
      |  root_te,   ! sqrt(te)
      |  root_tn,   ! sqrt(tn)
@@ -205,6 +208,7 @@
           te_int(k,i) = .5*(te(k,i)+te(k-1,i))
           o2n(k,i)    = .5*(o2(k,i)+o2(k-1,i))
           o1n(k,i)    = .5*(o1(k,i)+o1(k-1,i))
+          hen(k,i)    = .5*(he(k,i)+he(k-1,i))
           n2n(k,i)    = .5*(n2(k,i)+n2(k-1,i))
           tn_int(k,i) = .5*(tn(k,i)+tn(k-1,i))
         enddo ! k=lev0+1,lev1-2
@@ -213,6 +217,7 @@
         te_int(lev0,i) = 1.5*te(lev0,i)-.5*te(lev0+1,i)
         o2n(lev0,i)    = 1.5*o2(lev0,i)-.5*o2(lev0+1,i)
         o1n(lev0,i)    = 1.5*o1(lev0,i)-.5*o1(lev0+1,i)
+        hen(lev0,i)    = 1.5*he(lev0,i)-.5*he(lev0+1,i)
         n2n(lev0,i)    = 1.5*n2(lev0,i)-.5*n2(lev0+1,i)
         tn_int(lev0,i) = 1.5*tn(lev0,i)-.5*tn(lev0+1,i)
 !
@@ -220,6 +225,7 @@
         te_int(lev1,i) = 1.5*te(lev1-1,i)-.5*te(lev1-2,i)
         o2n(lev1,i)    = 1.5*o2(lev1-1,i)-.5*o2(lev1-2,i)
         o1n(lev1,i)    = 1.5*o1(lev1-1,i)-.5*o1(lev1-2,i)
+        hen(lev1,i)    = 1.5*he(lev1-1,i)-.5*he(lev1-2,i)
         n2n(lev1,i)    = 1.5*n2(lev1-1,i)-.5*n2(lev1-2,i)
         tn_int(lev1,i) = 1.5*tn(lev1-1,i)-.5*tn(lev1-2,i)
 !
@@ -231,29 +237,33 @@
 
 !     call addfld('TE_INT'  ,' ',' ',te_int,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!     call addfld('TN_INT'  ,' ',' ',tn_int,
+!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('O2_INT'  ,' ',' ',o2n   ,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('O1_INT'  ,' ',' ',o1n   ,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('TN_INT'  ,' ',' ',tn_int,
+!     call addfld('HE_INT'  ,' ',' ',hen   ,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('N2_INT'  ,' ',' ',n2n   ,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
-! Convert o2,o,n2 to number density (interfaces):
+! Convert o2,o,he,n2 to number density (interfaces):
       do i=lon0,lon1
         do k=lev0,lev1
           o2n(k,i) = xnmbari(k,i)*o2n(k,i)*rmassinv_o2       ! s13
           o1n(k,i) = xnmbari(k,i)*o1n(k,i)*rmassinv_o1       ! s12
+          hen(k,i) = xnmbari(k,i)*hen(k,i)*rmassinv_he
           n2n(k,i) = xnmbari(k,i)*n2n(k,i)*rmassinv_n2       ! s11
           root_te(k,i) = sqrt(te_int(k,i))
 !
           tek0(k,i) = 7.5e5/
-     |      (1.+3.22e4*te_int(k,i)**2/
-     |      ne(k,i)*(root_te(k,i)*
-     |      (2.82e-17 - 3.41e-21   * te_int (k,i))*n2n(k,i)+
-     |      (2.20e-16 + 7.92e-18   * root_te(k,i))*o2n(k,i)+
-     |       1.10e-16 * (1.+5.7e-4 * te_int (k,i))*o1n(k,i)))*evergs
+     |      (1.+3.22e4*te_int(k,i)**2/ne(k,i)*
+     |      ((2.20e-16+7.92e-18*sqrt(te_int(k,i)))*o2n(k,i)+
+     |        1.10e-16*(1.+5.7e-4*te_int(k,i))*o1n(k,i)+
+     |        5.60e-16*hen(k,i)+
+     |       (2.82e-17*sqrt(te_int(k,i))-3.41e-21*sqrt(te_int(k,i)**3))*
+     |        n2n(k,i)))*evergs
 !
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
@@ -385,12 +395,13 @@
 !     call addfld('ROOT_NE',' ',' ',root_ne(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
-! Set up o2,o,n2 number densities at midpoints:
+! Set up o2,o,he,n2 number densities at midpoints:
 !
       do i=lon0,lon1 ! (DO 20)
         do k=lev0,lev1-1
           o2n(k,i) = xnmbar(k,i)*o2(k,i)*rmassinv_o2  ! s14
           o1n(k,i) = xnmbar(k,i)*o1(k,i)*rmassinv_o1  ! s13
+          hen(k,i) = xnmbar(k,i)*he(k,i)*rmassinv_he
           n2n(k,i) = xnmbar(k,i)*n2(k,i)*rmassinv_n2  ! s12
 !
 ! Calculate source term qe (s10)
@@ -401,10 +412,10 @@
 !         qe(k,i) = exp(-((((0.001996*qe(k,i)+0.08034)*qe(k,i)+1.166)*
 !    |              qe(k,i)+6.941)*qe(k,i)+12.75))*1.0
 ! Modified according to Smithtro & Solomon (2008), by Yihui Cai, 2021/10
-          qe(k,i) = alog(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+1.0*o1n(k,i)))
-          qe(k,i) = exp(-((((((0.00001249*qe(k,i)+0.0005755)*qe(k,i)
-     |              +0.009346)*qe(k,i)+0.059)*qe(k,i)+0.04392)*
-     |              qe(k,i)-1.056)*qe(k,i)-5.342))*1.0
+          qe(k,i) = alog(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+o1n(k,i)))
+          qe(k,i) = exp((((((-1.249-5*qe(k,i)-5.755e-4)*qe(k,i)
+     |              -9.346e-3)*qe(k,i)-5.900e-2)*qe(k,i)-4.392e-2)*
+     |              qe(k,i)+1.056)*qe(k,i)+5.342)
 !
 ! Subtract qe from right-hand-side:
           rhs(k,i) = rhs(k,i)-qe(k,i)*qtot(k,i)*evergs
@@ -439,6 +450,8 @@
 !     call addfld('O2N'    ,' ',' ',o2n(lev0:lev1-1,:)   ,
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('O1N'    ,' ',' ',o1n(lev0:lev1-1,:)   ,
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('HEN'    ,' ',' ',hen(lev0:lev1-1,:)   ,
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('N2N'    ,' ',' ',n2n(lev0:lev1-1,:)   ,
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
@@ -514,12 +527,13 @@
           root_tn(k,i) = sqrt(tn(k,i))
 ! 
 ! loss_in = ion/neutral cooling = L0(I,N) =L(I,N)/(TI-TN)
-!
-          loss_in(k,i) = ((6.6e-14*n2n(k,i)+5.8e-14*o2n(k,i)+0.21e-14*
-     |      o1n(k,i)*root2*root_tn(k,i))*op(k,i)+(5.45e-14*o2n(k,i)+
-     |      5.9e-14*n2n(k,i)+4.5e-14*o1n(k,i))*nop(k,i)+(5.8e-14*
-     |      n2n(k,i)+4.4e-14*o1n(k,i)+0.14e-14*o2n(k,i)*root_tn(k,i))*
-     |      o2p(k,i))*evergs
+! (note NO+~He and O2+~He rates are missing, assuming small)
+          loss_in(k,i) =
+     |      ((5.8*o2n(k,i)+0.21*o1n(k,i)*root2*root_tn(k,i)+
+     |      2.8*hen(k,i)+6.6*n2n(k,i))*op(k,i)+
+     |      (5.45*o2n(k,i)+4.5*o1n(k,i)+5.9*n2n(k,i))*nop(k,i)+
+     |      (0.14*o2n(k,i)*root2*root_tn(k,i)+
+     |      4.4*o1n(k,i)+5.8*n2n(k,i))*o2p(k,i))*1e-14*evergs
 !
 ! Complete tridiagonal matrix coefficients and rhs:
 !

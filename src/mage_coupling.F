@@ -13,7 +13,9 @@
 !-----------------------------------------------------------------------
       use params_module,only: nlonp4,nlat,nlatp1
       use input_module,only: oneway
+#ifdef GAMERA
       use mage_oneway
+#endif
       implicit none
 
       real,dimension(nlonp4,nlat) ::
@@ -706,7 +708,9 @@
       subroutine finalize_coupling
 
       if (oneway) then
+#ifdef GAMERA
         call ca_close
+#endif
       endif
 
       end subroutine finalize_coupling
