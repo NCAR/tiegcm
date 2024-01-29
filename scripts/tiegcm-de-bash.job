@@ -21,6 +21,7 @@
 #   zitop:     Pressure level at model upper boundary
 #   nres_grid: Number of levels for multigrid solver (magnetic grid)
 #   coupling:  Whether to couple with GAMERA via MPI
+#   hidra:     Whether to couple with HIDRA via MPI
 #   make:      Build file with platform-specific compile parameters (in scripts dir)
 #   debug:     If TRUE, build and execute a "debug" run (debug compiler flags are set)
 #   execute:   If TRUE, execute the model (build only if execute is FALSE)
@@ -30,7 +31,7 @@
 # and change execdir, tgcmdata and namelist input if necessary.
 # Also reset number of processors accordingly below (#PBS -l).
 #
-modeldir="/glade/campaign/hao/itmodel/tiegcm3.0/tiegcm"
+modeldir="$TGCMHOME"
 execdir="/glade/derecho/scratch/$USER/tiegcm"
 tgcmdata="/glade/p/hao/tgcm/data"
 utildir="$modeldir/scripts"
@@ -41,6 +42,7 @@ vertres="0.25"
 zitop="7"
 mres="2"
 coupling="FALSE"
+hidra="FALSE"
 make="Make.intel_de"
 debug="FALSE"
 execute="FALSE"
@@ -67,9 +69,9 @@ fi
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Necessary modules on derecho
-module load mkl
-module swap netcdf netcdf-mpi
-module load esmf
+#module load mkl
+#module swap netcdf netcdf-mpi
+#module load esmf
 #
 mycwd=`pwd`
 echo "" ; echo "${0}:"
@@ -207,6 +209,7 @@ echo "  Namelist input:    $input"
 echo "  Stdout Output:     $output"
 echo "  Model resolution:  $horires x $vertres"
 echo "  Coupling:          $coupling"
+echo "  Hidra:             $hidra"
 echo "  Debug:             $debug"
 #
 # If coupling flag has changed from last gmake, clean execdir
@@ -225,6 +228,20 @@ else
   echo $coupling > $execdir/coupling
   echo "Created file coupling with coupling flag = $coupling"
 fi
+if [ -f $execdir/hidra ]
+then
+  lasthidra=`cat $execdir/hidra`
+  if [ $lasthidra != $hidra ]
+  then
+    echo "Clean execdir $execdir because hidra flag switched from $lasthidra to $hidra"
+    mycwd=`pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $hidra > $execdir/hidra
+  fi
+else
+  echo $hidra > $execdir/hidra
+  echo "Created file hidra with hidra flag = $hidra"
+fi
+
 #
 # If debug flag has changed from last gmake, clean execdir
 # and reset debug file:
@@ -297,6 +314,7 @@ EXECNAME      = $model
 NAMELIST      = $input
 OUTPUT        = $output
 COUPLING      = $coupling
+HIDRA         = $hidra
 DEBUG         = $debug
 SVN_REVISION  = $svn_revision
 EOF
