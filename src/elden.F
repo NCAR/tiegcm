@@ -79,10 +79,10 @@
 ! With upward extension, due to winter Helium bulge,
 ! atomic oxygen number density becomes too small
 ! which leads to numerical explosion of N+
-! cap minimum O1 number density to 1e7 here to prevent N+ explosion
+! cap minimum O1 number density here to prevent N+ explosion
           o2_cm3(k,i) = o2(k,i)*rmassinv_o2*xnmbar(k,i)
           o1_cm3(k,i) = o1(k,i)*rmassinv_o1*xnmbar(k,i)
-          if (o1_cm3(k,i) < 1e7) o1_cm3(k,i) = 1e7
+          if (o1_cm3(k,i) < 1e4) o1_cm3(k,i) = 1e4
           nplus(k,i) = (0.5*(qnp(k,i,lat)+qnp(k+1,i,lat))+
      |      rk10*op(k,i)*n2d(k,i)*xnmbar(k,i)*rmassinv_n2d) /
      |      ((rk6+rk7)*o2_cm3(k,i)+rk8*o1_cm3(k,i))

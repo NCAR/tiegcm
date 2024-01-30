@@ -86,10 +86,11 @@
 !
 ! Cooling rates (heat loss):
      |  loss_en2v, ! electron/N2vib loss term    (s10)
-     |  loss_en2,  ! electron/N2 loss
      |  loss_eo2,  ! electron/O2 loss
      |  loss_eo1d, ! electron/O(1d) loss
      |  loss_eo1,  ! electron/O loss
+     |  loss_ehe,  ! electron/He loss
+     |  loss_en2,  ! electron/N2 loss
      |  loss_xen,  ! L0*(E,N) (s8)
      |  loss_en,   ! electrons/neutrals loss     (s11)
      |  loss_ei,   ! electron/ion loss           (s10)
@@ -466,25 +467,10 @@
       do i=lon0,lon1 ! (DO 500)
         do k=lev0,lev1-1
 !
-! Electron/N2 loss rate:
-! loss_en2 = (L0(E,N2)+L0(E,N2,ROT)+L0(E,N2,VIB))/NE (s11)
-!
-        loss_en2(k,i) = n2n(k,i)*(1.77E-19*(1.-1.21E-4*te(k,i))*
-     |    te(k,i) + 2.9e-14/root_te(k,i) + loss_en2v(k,i))
-!
-! Start total of electron/neutral loss rate (s11):
-!
-        loss_en(k,i) = loss_en2(k,i)
-!
-! cooling correction
-        if (et .and. te(k,i)>500.0 .and. Q2(k,i)>0.0)
-     |    loss_en(k,i)=loss_en(k,i)*exp(-7.54E-4*(te(k,i)-500.0))
-!
 ! Electron/O2 loss rates: (L0(E,O2)+L0(E,O2,ROT)+L0(E,O2,VIB)/NE
 !
           loss_eo2(k,i) = o2n(k,i)*(1.21e-18*(1.+3.6e-2*root_te(k,i))*
      |      root_te(k,i)+6.9e-14/root_te(k,i)+3.125e-21*te(k,i)**2)
-          loss_en(k,i) = loss_en(k,i)+loss_eo2(k,i)
 !
 ! Electron/O(1d) loss rates: L0(E,O,1D)/(NE*N(O))
 !
@@ -505,8 +491,24 @@
           loss_eo1(k,i) = o1n(k,i)*(7.9e-19*(1.+5.7e-4*te(k,i))*
      |      root_te(k,i)+3.4e-12*(1.-7.e-5*te(k,i))/tn(k,i)*
      |      (150./te(k,i)+0.4))
-
-          loss_en(k,i) = loss_en(k,i)+loss_eo1(k,i)
+!
+! Electron/He loss rate: L0(E,HE)/NE
+!
+          loss_ehe(k,i) = hen(k,i)*2.46e-17*root_te(k,i)
+!
+! Electron/N2 loss rate: (L0(E,N2)+L0(E,N2,ROT)+L0(E,N2,VIB))/NE
+!
+          loss_en2(k,i) = n2n(k,i)*(1.77E-19*(1.-1.21E-4*te(k,i))*
+     |      te(k,i) + 2.9e-14/root_te(k,i) + loss_en2v(k,i))
+!
+! Total electron/neutral loss rate (s11):
+!
+          loss_en(k,i) = loss_eo2(k,i)+loss_eo1(k,i)+
+     |      loss_ehe(k,i)+loss_en2(k,i)
+!
+! Cooling correction from electrojet turbulent heating
+          if (et .and. te(k,i)>500.0 .and. Q2(k,i)>0.0)
+     |      loss_en(k,i)=loss_en(k,i)*exp(-7.54E-4*(te(k,i)-500.0))
 !
 ! loss_xen = L0*(E,N) (s8)
 !
