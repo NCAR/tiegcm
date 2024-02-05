@@ -3,8 +3,7 @@
     "decsol_smax": {
         "type": "seasons",
         "inp" : {
-            "LABEL":null,
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 355,
             "SOURCE_START": "355 0 0 0",
@@ -20,14 +19,13 @@
             "CTPOTEN": "60.",
             "F107": "200.",
             "F107A": "200.",
-            "CALC_HELIUM": "1",
-            "other_input": [null]
+            "CALC_HELIUM": "1"
         }
     },
     "decsol_smin": {
         "type": "seasons",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 355,
             "SOURCE_START": "355 0 0 0",
@@ -40,14 +38,13 @@
             "POWER":"18.",
             "CTPOTEN": "30.",
             "F107": "70.",
-            "F107A": "70.",
-            "other_input": [null]
+            "F107A": "70."
         }
     },
     "junsol_smax": {
         "type": "seasons",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 172,
             "SOURCE_START": "172 0 0 0",
@@ -60,14 +57,13 @@
             "POWER":"40.",
             "CTPOTEN": "60.",
             "F107": "200.",
-            "F107A": "200.",
-            "other_input": [null]
+            "F107A": "200."
         }
     },
     "junsol_smin": {
         "type": "seasons",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 172,
             "SOURCE_START": "172 0 0 0",
@@ -80,14 +76,13 @@
             "POWER":"18.",
             "CTPOTEN": "30.",
             "F107": "70.",
-            "F107A": "70.",
-            "other_input": [null]
+            "F107A": "70."
         }
     },
     "mareqx_smax": {
         "type": "seasons",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 80,
             "SOURCE_START": "80 0 0 0",
@@ -100,14 +95,13 @@
             "POWER":"40.",
             "CTPOTEN": "60.",
             "F107": "200.",
-            "F107A": "200.",
-            "other_input": [null]
+            "F107A": "200."
         }
     },
     "mareqx_smin": {
         "type": "seasons",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 80,
             "SOURCE_START": "80 0 0 0",
@@ -120,14 +114,13 @@
             "POWER":"18.",
             "CTPOTEN": "30.",
             "F107": "70.",
-            "F107A": "70.",
-            "other_input": [null]
+            "F107A": "70."
         }
     },
     "sepeqx_smax": {
         "type": "seasons",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 264,
             "SOURCE_START": "264 0 0 0",
@@ -140,14 +133,13 @@
             "POWER":"40.",
             "CTPOTEN": "60.",
             "F107": "200.",
-            "F107A": "200.",
-            "other_input": [null]
+            "F107A": "200."
         }
     },
     "sepeqx_smin": {
         "type": "seasons",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 264,
             "SOURCE_START": "264 0 0 0",
@@ -160,14 +152,13 @@
             "POWER":"18.",
             "CTPOTEN": "30.",
             "F107": "70.",
-            "F107A": "70.",
-            "other_input": [null]
+            "F107A": "70."
         }
     },
     "nov2003_heelis_gpi": {
         "type": "storms",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2003,
             "START_DAY": 323,
             "SOURCE_START": "323 0 0 0",
@@ -184,7 +175,7 @@
     "nov2003_weimer_imf": {
         "type": "storms",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2003,
             "START_DAY": 323,
             "SOURCE_START": "323 0 0 0",
@@ -201,7 +192,7 @@
     "dec2006_heelis_gpi": {
         "type": "storms",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2006,
             "START_DAY": 330,
             "SOURCE_START": "330 0 0 0",
@@ -218,7 +209,7 @@
     "dec2006_weimer_imf": {
         "type": "storms",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2006,
             "START_DAY": 330,
             "SOURCE_START": "330 0 0 0",
@@ -235,7 +226,7 @@
     "whi2008_heelis_gpi": {
         "type": "storms",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2008,
             "START_DAY": 81,
             "SOURCE_START": "81 0 0 0",
@@ -252,7 +243,7 @@
     "whi2008_weimer_imf": {
         "type": "storms",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2008,
             "START_DAY": 81,
             "SOURCE_START": "81 0 0 0",
@@ -269,7 +260,7 @@
     "jul2000_heelis_gpi": {
         "type": "storms",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2000,
             "START_DAY": 192,
             "SOURCE_START": "192 0 0 0",
@@ -286,7 +277,7 @@
     "jul2000_weimer_imf": {
         "type": "storms",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2000,
             "START_DAY": 192,
             "SOURCE_START": "192 0 0 0",
@@ -303,7 +294,7 @@
     "climatology_smin": {
         "type": "climatology",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 1,
             "SOURCE_START": "1 0 0 0",
@@ -320,14 +311,13 @@
             "CTPOTEN": "30.",
             "F107": "70.",
             "F107A": "70.",
-            "POTENTIAL_MODEL": "HEELIS",
-            "other_input": [null]
+            "POTENTIAL_MODEL": "HEELIS"
         }
     },
     "climatology_smax": {
         "type": "climatology",
         "inp" : {
-            "SOURCE": null,
+            "SOURCE": "+tgcmdata+/prim/+benchmark+_prim.nc",
             "START_YEAR": 2002,
             "START_DAY": 1,
             "SOURCE_START": "1 0 0 0",
@@ -345,8 +335,7 @@
             "CTPOTEN": "60.",
             "F107": "200.",
             "F107A": "200.",
-            "POTENTIAL_MODEL": "HEELIS",
-            "other_input": [null]
+            "POTENTIAL_MODEL": "HEELIS"
         }
     }
 }

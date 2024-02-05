@@ -2,41 +2,106 @@
 !
 ! Namelist input file for run {{inp.LABEL}}
 !
-LABEL = '{{inp.LABEL}}'
-START_YEAR = {{inp.START_YEAR}}
-START_DAY = {{inp.START_DAY}}
-CALENDAR_ADVANCE = {{inp.CALENDAR_ADVANCE}}
-SOURCE = '{{inp.SOURCE}}'
-SOURCE_START = {{inp.SOURCE_START}}
-PRISTART = {{inp.PRISTART}}
-PRISTOP = {{inp.PRISTOP}}
-STEP = {{inp.STEP}}
-NSTEP_SUB = {{inp.NSTEP_SUB}}
-PRIHIST = {{inp.PRIHIST}}
-OUTPUT = {{inp.OUTPUT}}
-MXHIST_PRIM = {{inp.MXHIST_PRIM}}
-{{inp.SECSTART}}
-{{inp.SECSTOP}}
-{{inp.SECHIST}}
-{{inp.SECOUT}}
-{{inp.MXHIST_SECH}}
-{% if inp.SECFLDS|select('ne', None)|list|length > 0 %}
+{%- if inp.LABEL is not none %}
+LABEL = '{{inp.LABEL}}'{%- endif %}
+
+! Source Information
+{%- if inp.SOURCE is not none %}
+SOURCE = '{{inp.SOURCE}}'{%- endif %}
+{%- if inp.SOURCE_START is not none %}
+SOURCE_START = {{inp.SOURCE_START}}{%- endif %}
+
+! Model Information
+{%- if inp.START_YEAR is not none %}
+START_YEAR = {{inp.START_YEAR}}{%- endif %}
+{%- if inp.START_DAY is not none %}
+START_DAY = {{inp.START_DAY}}{%- endif %}
+{%- if inp.CALENDAR_ADVANCE is not none %}
+CALENDAR_ADVANCE = {{inp.CALENDAR_ADVANCE}}{%- endif %}
+{%- if inp.STEP is not none %}
+STEP = {{inp.STEP}}{%- endif %}
+{%- if inp.NSTEP_SUB is not none %}
+NSTEP_SUB = {{inp.NSTEP_SUB}}{%- endif %}
+
+! Primary File Information
+{%- if inp.PRISTART is not none %}
+PRISTART = {{inp.PRISTART}}{%- endif %}
+{%- if inp.PRISTOP is not none %}
+PRISTOP = {{inp.PRISTOP}}{%- endif %}
+{%- if inp.PRIHIST is not none %}
+PRIHIST = {{inp.PRIHIST}}{%- endif %}
+{%- if inp.OUTPUT is not none %}
+OUTPUT = {{inp.OUTPUT}}{%- endif %}
+{%- if inp.MXHIST_PRIM is not none %}
+MXHIST_PRIM = {{inp.MXHIST_PRIM}}{%- endif %}
+
+! Secondary File Information
+{%- if inp.SECSTART is not none %}
+SECSTART = {{inp.SECSTART}}{%- endif %}
+{%- if inp.SECSTOP is not none %}
+SECSTOP = {{inp.SECSTOP}}{%- endif %}
+{%- if inp.SECHIST is not none %}
+SECHIST = {{inp.SECHIST}}{%- endif %}
+{%- if inp.SECOUT is not none %}
+SECOUT = {{inp.SECOUT}}{%- endif %}
+{%- if inp.MXHIST_SECH is not none %}
+MXHIST_SECH = {{inp.MXHIST_SECH}}{%- endif %}
+
+! Secondary Output Fields
+{%- if inp.SECFLDS|select('ne', None)|list|length > 0 %}
 SECFLDS = {% for SECFLD in inp.SECFLDS %}{% if SECFLD %}'{{SECFLD}}'{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}
-{% endif %}
+{%- endif %}
+
+! GSWM Data
 {%- for data in inp.GSWM_data %}
 {%- if data != None %}
 {{data}}
 {%- endif %}
 {%- endfor %}
+
+! Potential Model 
+{%- if inp.POTENTIAL_MODEL is not none %}
+POTENTIAL_MODEL = '{{inp.POTENTIAL_MODEL}}'{%- endif %}
+
+! GPI File
+{%- if inp.GPI_NCFILE is not none %}{{inp.GPI_NCFILE}}{%- endif %}
+
+! IMF File 
+{%- if inp.IMF_NCFILE is not none %}{{inp.IMF_NCFILE}}{%- endif %}
+
+! KP index or POWER & CTPOTEN Information  
+{%- if inp.KP is not none %}
+KP = {{inp.KP}}{%- endif %}
+{%- if inp.POWER is not none %}
+POWER = {{inp.POWER}}{%- endif %}
+{%- if inp.CTPOTEN is not none %}
+CTPOTEN = {{inp.CTPOTEN}}{%- endif %}
+
+! IMF & Solar Wind Information 
+{%- if inp.BXIMF is not none %}
+BXIMF = {{inp.BXIMF}}{%- endif %}
+{%- if inp.BYIMF is not none %}
+BYIMF = {{inp.BYIMF}}{%- endif %}
+{%- if inp.BZIMF is not none %}
+BZIMF = {{inp.BZIMF}}{%- endif %}
+{%- if inp.SWDEN is not none %}
+SWDEN = {{inp.SWDEN}}{%- endif %}
+{%- if inp.SWVEL is not none %}
+SWVEL = {{inp.SWVEL}}{%- endif %}
+
+! F107 Information 
+{%- if inp.F107 is not none %}
+F107 = {{inp.F107}}{%- endif %}
+{%- if inp.F107A is not none %}
+F107A = {{inp.F107A}}{%- endif %}
+
+! Hemlium Calculate
+CALC_HELIUM = 1
+
+! Other Parameters
 {%- for data in inp.other_input %}
 {%- if data != None %}
 {{data}}
 {%- endif %}
 {%- endfor %}
-POTENTIAL_MODEL = '{{inp.POTENTIAL_MODEL}}'
-{{inp.POWER}}
-{{inp.CTPOTEN}}
-{{inp.F107}}
-{{inp.F107A}}
-CALC_HELIUM = {{inp.CALC_HELIUM}}
 /

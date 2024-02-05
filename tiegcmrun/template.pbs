@@ -5,12 +5,12 @@
 #PBS -A {{pbs.project_code}}
 #PBS -q {{pbs.queue}}
 #PBS -j oe
-{{pbs.job_priority}}
+{%- if pbs.job_priority is not none %}
+#PBS -l job_priority={{pbs.job_priority}}{%- endif %}
 #PBS -l {% for key, value in pbs.resource.items() %}{{ value }}{% if not loop.last %}:{% endif %}{% endfor %},walltime={{pbs.walltime}}
 
 # Ser enviroment variables
 setenv TGCMDATA {{model.data.tgcmdata}}
-
 {%- for data in pbs.other_pbs %}
 {%- if data != None %}
 {{data}}
@@ -25,7 +25,7 @@ module load {{ module }}
 
 # Execute tiegcm
 cd {{model.data.execdir}}
-mpirun -np {{pbs.nprocs}} {{model.data.execdir}}/{{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.output_file}}
+mpirun -np {{pbs.nprocs}} {{model.data.execdir}}/{{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.log_file}}
 
 
 cd {{model.data.workdir}}

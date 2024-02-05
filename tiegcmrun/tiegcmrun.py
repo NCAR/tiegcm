@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
 
-"""makeitso for the MAGE magnetosphere software.
+"""makeitso for the TIE-GCM software.
 
-This script is perforsm all of the steps needed to prepare to run a MAGE
-magnetosphere simulation run. By default, this script is interactive - the user
+This script is performs all of the steps that are required to prepare to run a TIE-GCM simulation run. By default, this script is interactive - the user
 is prompted for each decision  that must be made to prepare for the run, based
 on the current "--mode" setting.
 
 The modes are:
+
+"BENCH" - The user requests for a benchmark run for TIE-GCM 
 
 "BASIC" (the default) - the user is prompted to set only a small subset of MAGE
 parameters. All "INTERMEDIATE"- and "EXPERT"-mode parameters are automatically
@@ -37,7 +38,11 @@ from numpy import ndarray, interp, log, exp, linspace, allclose, mean
 from netCDF4 import Dataset
 from argparse import ArgumentParser
 from os.path import isfile, splitext
+import xarray as xr
+import numpy as np
 import fnmatch
+from fractions import Fraction
+from datetime import datetime
 # Import 3rd-party modules.
 
 from jinja2 import Template
@@ -79,6 +84,14 @@ OPTION_DESCRIPTIONS_FILE = os.path.join(SUPPORT_FILES_DIRECTORY, "options_descri
 
 BENCHAMRKS_FILE = os.path.join(SUPPORT_FILES_DIRECTORY, 'benchmarks.json')
 
+
+def get_mtime(file_path):
+    ds = xr.open_dataset(file_path)
+    if 'mtime' in ds.variables:
+        mtime_data = ds['mtime'].values
+    padded_arr = np.pad(mtime_data, [(0, 0), (0, max(4 - mtime_data.shape[1], 0))], mode='constant')
+    string_arr = [" ".join(map(str, row)) for row in padded_arr]
+    return string_arr
 
 def interp2d(variable, inlat, inlon, outlat, outlon):
     ninlat = len(inlat)
@@ -321,6 +334,101 @@ def interpic(fin, hres, vres, zitop, fout):
     src.close()
     dst.close()
 
+def inp_pri_date(start_date_str, stop_date_str):
+    # Parse the start and stop dates
+    start_date = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M:%S")
+    stop_date = datetime.strptime(stop_date_str, "%Y-%m-%dT%H:%M:%S")
+
+    # Extract START_YEAR and START_DAY
+    START_YEAR = start_date.year
+    START_DAY = start_date.timetuple().tm_yday
+
+    # Format PRISTART and PRISTOP
+    PRISTART = [start_date.timetuple().tm_yday,start_date.hour,start_date.minute,start_date.second]#f"{start_date.timetuple().tm_yday} {start_date.hour} {start_date.minute} {start_date.second}"
+    PRISTOP = [stop_date.timetuple().tm_yday,stop_date.hour,stop_date.minute,stop_date.second]#f"{stop_date.timetuple().tm_yday} {stop_date.hour} {stop_date.minute} {stop_date.second}"
+
+    return START_YEAR, START_DAY, PRISTART, PRISTOP
+
+def inp_sec_date(PRISTART, PRISTOP):
+    PRISTART_DAY = PRISTART[0]
+    PRISTOP_DAY = PRISTOP[0]
+    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
+    if n_split_day > 7:
+    # Format PRISTART and PRISTOP
+        SECSTART = PRISTART
+        SECSTOP = PRISTOP
+    else:
+        SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
+        SECSTOP = PRISTOP
+    return SECSTART, SECSTOP
+
+def inp_sec_hist(SECSTART,SECSTOP):
+    SECSTART_DAY = SECSTART[0]
+    SECSTOP_DAY = SECSTOP[0]
+    n_split_day = int(SECSTART_DAY - SECSTOP_DAY)
+    if n_split_day >= 7:
+        SECHIST = "1 0 0 0"
+    else:
+        SECHIST = "0 1 0 0"
+    return SECHIST
+
+def inp_sec_out(SECSTART,SECSTOP,histdir,run_name):
+    SECSTART_DAY = SECSTART[0]
+    SECSTOP_DAY = SECSTOP[0]
+    n_split_day = int(SECSTOP_DAY - SECSTART_DAY)
+    if n_split_day > 7:
+        SEC_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(0)}.nc"
+        SEC_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(n_split_day)}.nc"
+    else:
+        SEC_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(0)}.nc"
+        SEC_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(n_split_day*24)}.nc"
+    SECOUT = f"'{SEC_0}','to','{SEC_N}','by','1'"
+    return SECOUT
+
+def inp_sec_mxhist(SECSTART,SECSTOP):
+    SECSTART_DAY = SECSTART[0]
+    SECSTOP_DAY = SECSTOP[0]
+    n_split_day = int(SECSTOP_DAY - SECSTART_DAY)
+    if n_split_day >= 7:
+        MXHIST_SECH = 1
+    else:
+        MXHIST_SECH = 1
+    return MXHIST_SECH  
+
+
+def inp_pri_out(PRISTART,PRISTOP,histdir,run_name):
+    PRISTART_DAY = PRISTART[0]
+    PRISTOP_DAY = PRISTOP[0]
+    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
+    if n_split_day >= 7:
+        PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(0)}.nc"
+        PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(n_split_day)}.nc"
+    else:
+        PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(0)}.nc"
+        PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(n_split_day*24)}.nc"
+    OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
+    return OUTPUT
+
+def inp_pri_hist(PRISTART,PRISTOP):
+    PRISTART_DAY = PRISTART[0]
+    PRISTOP_DAY = PRISTOP[0]
+    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
+    if n_split_day >= 7:
+        PRIHIST = "1 0 0 0"
+    else:
+        PRIHIST = "0 1 0 0"
+    return PRIHIST  
+
+def inp_pri_mxhist(PRISTART,PRISTOP):
+    PRISTART_DAY = PRISTART[0]
+    PRISTOP_DAY = PRISTOP[0]
+    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
+    if n_split_day >= 7:
+        MXHIST_PRIM = 1
+    else:
+        MXHIST_PRIM = 1
+    return MXHIST_PRIM  
+
 def create_command_line_parser():
     """Create the command-line argument parser.
 
@@ -349,7 +457,7 @@ def create_command_line_parser():
         help="Print debugging output (default: %(default)s)."
     )
     parser.add_argument(
-        "--mode", default="BASIC",
+        "--mode", default=None,
         help="User mode (BASIC|INTERMEDIATE|EXPERT) (default: %(default)s)."
     )
     parser.add_argument(
@@ -421,7 +529,7 @@ def get_run_option(name, description, mode="BASIC"):
     valids = description.get("valids", None)
     # Compare the current mode to the parameter level setting. If the variable
     # level is higher than the user mode, just use the default.
-    if mode == "NOVICE" and level in ["BASIC","INTERMEDIATE", "EXPERT"]:
+    if mode == "BENCH" and level in ["BASIC","INTERMEDIATE", "EXPERT"]:
         return default
     if mode == "BASIC" and level in ["INTERMEDIATE", "EXPERT"]:
         return default
@@ -429,13 +537,20 @@ def get_run_option(name, description, mode="BASIC"):
         return default
 
     # If provided, add the valid values in val1|val2 format to the prompt.
-    if valids is not None:
-        vs = "|".join(valids)
-        prompt += f" ({vs})"
+    if valids is not None: 
+        if name == "vertres":
+            vs = "|".join(map(lambda x: str(Fraction(x)), valids))
+            prompt += f" ({vs})"
+        else:
+            vs = "|".join(map(str,valids))
+            prompt += f" ({vs})"
 
     # If provided, add the default to the prompt.
     if default is not None:
-        prompt += f" [{default}]"
+        if name == "vertres":
+            prompt += f" [{str(Fraction(default))}]"
+        else:
+            prompt += f" [{default}]"
 
     # Prompt the user and fetch the input until a good value is provided.
     ok = False
@@ -448,10 +563,13 @@ def get_run_option(name, description, mode="BASIC"):
                 option_value = option_value +'"' +temp_value + '",'
             elif temp_value == 'none' or temp_value == 'None':
                 option_value = json.loads('[null]')
-            else:
+            elif temp_value == "":
                 if option_value != "":
                     option_value = "["+ option_value[:-1] + "]"
                     option_value = json.loads(option_value)
+                    ok = True
+                elif option_value == "":
+                    option_value = default
                     ok = True
         else:
             # Fetch input from the user.
@@ -464,9 +582,14 @@ def get_run_option(name, description, mode="BASIC"):
             elif option_value == 'none' or option_value == 'None':
                 option_value = None
             # Validate the result. If bad, start over.
-            if valids is not None and option_value not in valids:
-                print(f"Invalid value for option {name}: {option_value}!")
-                continue
+            if name == "vertres":
+                if valids is not None and float(Fraction(option_value)) not in valids:
+                    print(f"Invalid value for option {name}: {option_value}!")
+                    continue
+            else:
+                if valids is not None and option_value not in valids:
+                    print(f"Invalid value for option {name}: {option_value}!")
+                    continue
 
             # Keep this result.
             ok = True
@@ -503,8 +626,10 @@ def prompt_user_for_run_options(args):
     # Save the user mode.
     mode = args.mode
     benchmark = args.benchmark
-    if benchmark != None and mode == 'BASIC':
-        mode = "NOVICE"
+    if benchmark != None and mode == None:
+        mode = "BENCH"
+    elif mode == None:
+        mode = "BASIC"
     # Read the dictionary of option descriptions.
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = json.load(f)
@@ -557,7 +682,8 @@ def prompt_user_for_run_options(args):
     od["tgcmdata"]["default"] = TIEGCMDATA
     o["tgcmdata"] = get_run_option("tgcmdata", od["tgcmdata"], mode)
     o["input_file"] = get_run_option("input_file", od["input_file"], mode)
-    o["output_file"] = get_run_option("output_file", od["output_file"], mode)
+    od["log_file"]["default"] =  f'{o["workdir"]}/{options["simulation"]["job_name"]}.out'
+    o["log_file"] = get_run_option("log_file", od["log_file"], mode)
 
     if od["make"]["default"] == None:
         if options["simulation"]["hpc_system"] == "derecho":
@@ -580,15 +706,13 @@ def prompt_user_for_run_options(args):
 
     od = option_descriptions["model"]["specification"]                
     for on in od:
-        if on == "vertres":
-            if float(horires) == 5:
-                od["vertres"]["default"] = 0.5
-            elif float(horires) == 2.5:
-                od["vertres"]["default"] = 0.25
+        if on == "mres":
+            if float(horires) == 2.5:
+                od["mres"]["default"] = 2
             elif float(horires) == 1.25:
-                od["vertres"]["default"] = 0.125
+                od["mres"]["default"] = 1
             elif float(horires) == 0.625:
-                od["vertres"]["default"] = 0.0625
+                od["mres"]["default"] = 0.5
         o[on] = get_run_option(on, od[on], mode)
         if on =="horires":
             horires = float(o[on])
@@ -623,80 +747,112 @@ def prompt_user_for_run_options(args):
         oben = benchmarks_options[benchmark]["inp"]
         for on in od:
             if on in oben:
-                if on in ["OUTPUT", "SECOUT"]:
+                if on == "SOURCE":
+                    temp_output = oben[on]
+                    temp_output = temp_output.replace("+tgcmdata+", tiegcmdata_dir)
+                    temp_output = temp_output.replace("+benchmark+", benchmark)  
+                    od[on]["default"] = temp_output
+                elif on in ["OUTPUT", "SECOUT"]:
                     temp_output = oben[on]
                     temp_output = temp_output.replace("+histdir+", histdir)
                     temp_output = temp_output.replace("+run_name+", run_name)
                     od[on]["default"] = temp_output
                 elif on in ["GSWM_data", "other_input"]:
-                        temp_output = [item.replace("+tiegcmdata+", tiegcmdata_dir) if item is not None and item != 'null' else item for item in oben[on]]
-                        od[on]["default"] = oben[on]
+                    temp_output = [item.replace("+tiegcmdata+", tiegcmdata_dir) if item is not None and item != 'null' else item for item in oben[on]]
+                    od[on]["default"] = temp_output
                 elif oben[on] == None:
-                    od[on]["default"]
+                    od[on]["default"] = od[on]["default"]
                 else:
                     od[on]["default"] = oben[on]
-
+            
     od["LABEL"]["default"] = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
-
     temp_mode = mode
-
+    skip_inp = []
+    start_stop_set = 0
     for on in od:
-        if on == "start_date":
+        if start_stop_set == 0 and benchmark == None:
+            temp_mode =  "INTERMEDIATE"
+        elif start_stop_set == 1:
+            if on == "PRIHIST":
+                od["PRIHIST"]["default"]=inp_pri_hist(PRISTART,PRISTOP)
+            if on == "OUTPUT":
+                od["OUTPUT"]["default"]=inp_pri_out(PRISTART,PRISTOP,histdir,run_name)
+            if on == "MXHIST_PRIM":
+                od["MXHIST_PRIM"]["default"]=inp_pri_mxhist(PRISTART,PRISTOP)
+            if on == "SECHIST":
+                od["SECHIST"]["default"]=inp_sec_hist(SECSTART,SECSTOP)
+            if on == "SECOUT":
+                od["SECOUT"]["default"]=inp_sec_out(SECSTART,SECSTOP,histdir,run_name)
+            if on == "MXHIST_SECH":
+                od["MXHIST_SECH"]["default"]=inp_sec_mxhist(SECSTART,SECSTOP)
+        if on == "stop_date":
             o[on] = get_run_option(on, od[on], temp_mode)
-            if o[on] == None and benchmark == None:
-                temp_mode =  "INTERMEDIATE"
-        elif on == "SECSTART":
+            if o[on] != None:
+                start_stop_set = 1
+                temp_mode = mode
+                START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_date"], o["stop_date"])
+                od["START_YEAR"]["default"] = START_YEAR
+                od["START_DAY"]["default"] = START_DAY
+                od["PRISTART"]["default"] = ' '.join(map(str, PRISTART))
+                od["PRISTOP"]["default"] = ' '.join(map(str, PRISTOP))
+                SECSTART,SECSTOP = inp_sec_date(PRISTART,PRISTOP)
+                od["SECSTART"]["default"] = ' '.join(map(str, SECSTART))
+                od["SECSTOP"]["default"] = ' '.join(map(str, SECSTOP))
+        elif on == "SOURCE":
             temp_val = get_run_option(on, od[on], temp_mode)
             if temp_val != None:
-                o[on] = "SECSTART = "+str(temp_val)
-        elif on == "SECSTOP":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
-                o[on] = "SECSTOP = "+str(temp_val)
-        elif on == "SECHIST":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
-                o[on] = "SECHIST = "+str(temp_val)
-        elif on == "SECOUT":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
-                o[on] = "SECOUT = "+str(temp_val)
-        elif on == "MXHIST_SECH":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
-                o[on] = "MXHIST_SECH = "+str(temp_val)
-        elif on == "SECFLDS":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
-                o[on] = temp_val
-        elif on == "POWER":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
-                o[on] = "POWER = "+str(temp_val)
-        elif on == "CTPOTEN":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
-                o[on] = "CTPOTEN = "+str(temp_val)
-        elif on == "F107":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
-                o[on] = "F107 = "+str(temp_val)
-        elif on == "F107A":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
-                o[on] = "F107A = "+str(temp_val)    
+                if os.path.isfile(temp_val):
+                    o[on] = temp_val
+                elif os.path.isfile(TIEGCMDATA+temp_val):
+                    o[on] = TIEGCMDATA+temp_val
+        elif on == "SOURCE_START":
+            od["SOURCE_START"]["valids"] = get_mtime(options["inp"]["SOURCE"])
+            temp_mode_1 = temp_mode
+            if len(od["SOURCE_START"]["valids"]) > 1:    
+                temp_mode_1 = "INTERMEDIATE"
+            od["SOURCE_START"]["default"] = od["SOURCE_START"]["valids"][0]
+            o[on] = get_run_option(on, od[on], temp_mode_1)
+        elif on == "POTENTIAL_MODEL":
+            o[on] = get_run_option(on, od[on], temp_mode)
+            if o[on] != "WEIMER":
+                skip_inp_temp = ["BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
+                for item in skip_inp_temp:
+                    if item not in skip_inp:
+                        skip_inp.append(item)
+        elif on == "GPI_NCFILE":
+            o[on] = get_run_option(on, od[on], temp_mode)
+            if o[on] != None:
+                skip_inp_temp = ["KP","POWER","CTPOTEN"]
+                for item in skip_inp_temp:
+                    if item not in skip_inp:
+                        skip_inp.append(item)
+        elif on == "IMF_NCFILE":
+            o[on] = get_run_option(on, od[on], temp_mode)
+            if o[on] != None:
+                skip_inp_temp = ["BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
+                for item in skip_inp_temp:
+                    if item not in skip_inp:
+                        skip_inp.append(item)
+        elif on == "KP" and on not in skip_inp:
+            o[on] = get_run_option(on, od[on], temp_mode)
+            if o[on] != None:
+                skip_inp_temp = ["POWER","CTPOTEN"]
+                for item in skip_inp_temp:
+                    if item not in skip_inp:
+                        skip_inp.append(item)
         elif on == "GSWM_data":
             o[on] = get_run_option(on, od[on], temp_mode)
             if o[on] == [None]:
-                if  float(options["model"]["specification"]["horires"]) == 2.5:
-                    o[on] = [
-                        f"GSWM_MI_DI_NCFILE = '{tiegcmdata_dir}/gswm_diurn_2.5d_99km.nc'",
-                        f"GSWM_MI_SDI_NCFILE = '{tiegcmdata_dir}/gswm_semi_2.5d_99km.nc'",
-                        f"GSWM_NM_DI_NCFILE = '{tiegcmdata_dir}/gswm_nonmig_diurn_2.5d_99km.nc'",
-                        f"GSWM_NM_SDI_NCFILE = '{tiegcmdata_dir}/gswm_nonmig_semi_2.5d_99km.nc'"
-                    ]
-        else:
+                o[on] = [
+                    f"GSWM_MI_DI_NCFILE = '{tiegcmdata_dir}/gswm_diurn_{horires}d_99km.nc'",
+                    f"GSWM_MI_SDI_NCFILE = '{tiegcmdata_dir}/gswm_semi_{horires}d_99km.nc'",
+                    f"GSWM_NM_DI_NCFILE = '{tiegcmdata_dir}/gswm_nonmig_diurn_{horires}d_99km.nc'",
+                    f"GSWM_NM_SDI_NCFILE = '{tiegcmdata_dir}/gswm_nonmig_semi_{horires}d_99km.nc'"
+                ]
+        elif on not in skip_inp:
             o[on] = get_run_option(on, od[on], temp_mode)
+        elif on in skip_inp:
+            o[on] = od[on]["default"]
             
 
     #-------------------------------------------------------------------------
@@ -719,13 +875,14 @@ def prompt_user_for_run_options(args):
         for on in odt:
             if on == "select":
                 if float(horires) == 5:
-                    odt["select"]["default"] = 1
+                    odt["select"]["default"] = 2
                 elif float(horires) == 2.5:
-                    odt["select"]["default"] = 1
+                    odt["select"]["default"] = 2
                 elif float(horires) == 1.25:
                     odt["select"]["default"] = 2
                 elif float(horires) == 0.625:
                     odt["select"]["default"] = 3
+                
             if on == "ncpus":
                 if float(horires) == 5:
                     odt["ncpus"]["default"] = 72
@@ -735,30 +892,33 @@ def prompt_user_for_run_options(args):
                     odt["ncpus"]["default"] = 72
                 elif float(horires) == 0.625:
                     odt["ncpus"]["default"] = 96
+            if on == "mpiprocs":
+                odt["mpiprocs"]["default"] = odt["ncpus"]["default"]
+
     for on in od:
         if on == "resource":
             options["pbs"]["resource"] = {}
             odt = od["resource"]
             ot = options["pbs"]["resource"]
             for ont in odt:
-
-                if ont == "mpiprocs":
-                    ot[ont] = get_run_option(ont, odt[ont], mode)
-                    if ot[ont] == "ncpus":
-                        ot[ont] = ot["ncpus"]
-                    mpiprocs = ot[ont]
-                ot[ont] = get_run_option(ont, odt[ont], mode)
                 if ont == "select":
+                    ot[ont] = get_run_option(ont, odt[ont], mode)
                     nnodes = ot[ont]
                 elif ont == "ncpus":
+                    ot[ont] = get_run_option(ont, odt[ont], mode)
                     ncpus = ot[ont]
+                elif ont == "mpiprocs":
+                    ot[ont] = get_run_option(ont, odt[ont], mode)
+                    mpiprocs = ot[ont]
+                else:
+                    ot[ont] = get_run_option(ont, odt[ont], mode)
                 ot[ont] = ont+"="+str(ot[ont])
-        elif on == "job_priority":
-            o[on] = "#PBS -l job_priority="+get_run_option(on, od[on], mode)
+        elif on =="nprocs":
+            od[on]["default"] = int(nnodes) * int(mpiprocs)
+            o[on] = get_run_option(on, od[on], mode)
         else:
             o[on] = get_run_option(on, od[on], mode)
 
-    o["nprocs"] = int(nnodes) * int(mpiprocs)
     # Return the options dictionary.
     return options
 
@@ -771,7 +931,7 @@ def compile_tiegcm(options, debug, coupling):
     tgcmdata  = o["model"]["data"]["tgcmdata"]
     utildir   = os.path.join(o["model"]["data"]["modeldir"],"scripts")
     input     = o["model"]["data"]["input_file"]
-    output    = o["model"]["data"]["output_file"]
+    output    = o["model"]["data"]["log_file"]
     horires   = float(o["model"]["specification"]["horires"])
     vertres   = float(o["model"]["specification"]["vertres"])
     zitop     = float(o["model"]["specification"]["zitop"])
@@ -969,6 +1129,8 @@ def compile_tiegcm(options, debug, coupling):
     # Build the model
     try:
         subprocess.run(['gmake', '-j8', 'all'], check=True)
+        shutil.copy(model, workdir)
+        print(f"Executable copied from {model} to {workdir}")
     except subprocess.CalledProcessError:
         print(">>> Error return from gmake all")
         sys.exit(1)
@@ -992,6 +1154,7 @@ def create_pbs_scripts(options):
 
 def create_inp_scripts(options):
     global INP_TEMPLATE
+    print(options["inp"])
     if INP_TEMPLATE == None:
         INP_TEMPLATE = os.path.join(options["model"]["data"]["modeldir"],'tiegcmrun/template.inp')
     with open(INP_TEMPLATE, "r", encoding="utf-8") as f:
@@ -1087,8 +1250,8 @@ def main():
         else:
             print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
         options["model"]["data"]["input_file"] = create_inp_scripts(options)
-    if options["model"]["data"]["output_file"] == None:
-        options["model"]["data"]["output_file"] = os.path.join( options["model"]["data"]["workdir"], f"{run_name}.out")
+    if options["model"]["data"]["log_file"] == None:
+        options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"], f"{run_name}.out")
 
 
     if os.path.exists(path):

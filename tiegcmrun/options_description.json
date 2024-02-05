@@ -3,12 +3,12 @@
 
     "simulation": {
         "job_name": {
-            "LEVEL": "NOVICE",
+            "LEVEL": "BENCH",
             "prompt": "Name to use for PBS job(s)",
             "default": "tiegcm"
         },
         "hpc_system": {
-            "LEVEL": "NOVICE",
+            "LEVEL": "BENCH",
             "prompt": "Name of HPC system",
             "default": "derecho",
             "valids": ["derecho", "pleiades","custom"]
@@ -18,44 +18,44 @@
     "pbs": {
         "_common": {
             "account_name": {
-                "LEVEL": "NOVICE",
-                "prompt": "PBS account name",
+                "LEVEL": "BENCH",
+                "prompt": "User account name",
                 "default": "."
             }
         },
         "derecho": {
             "project_code": {
-                "LEVEL": "NOVICE",
+                "LEVEL": "BENCH",
                 "prompt": "Project Code",
                 "default": "P28100036"
             },
             "queue": {
-                "LEVEL": "BASIC",
+                "LEVEL": "INTERMEDIATE",
                 "prompt": "PBS queue name",
                 "default": "main",
                 "valids": ["develop", "main", "preempt"]
             },
             "job_priority": {
-                "LEVEL": "EXPERT",
+                "LEVEL": "INTERMEDIATE",
                 "prompt": "#PBS job priority",
                 "default": "regular",
                 "valids": ["premium", "regular", "economy","preempt"]
             },
             "resource": {
                 "select": {
-                    "LEVEL": "BASIC",
+                    "LEVEL": "EXPERT",
                     "prompt": "Number of nodes to request",
-                    "default": 4
+                    "default": null
                 },
                 "ncpus": {
-                    "LEVEL": "BASIC",
+                    "LEVEL": "EXPERT",
                     "prompt": "Number of cores per node",
-                    "default": 128
+                    "default": null
                 },
                 "mpiprocs": {
-                    "LEVEL": "BASIC",
+                    "LEVEL": "EXPERT",
                     "prompt": "Number of MPI ranks per node",
-                    "default": "72"
+                    "default": null
                 }                
             },
             "walltime": {
@@ -65,7 +65,7 @@
             },
             "nprocs": {
                 "LEVEL": "EXPERT",
-                "prompt": "nprocs = nnodes * mpiprocs",
+                "prompt": "nprocs (nnodes * mpiprocs)",
                 "default": null
             },
             "other_pbs": {
@@ -96,12 +96,12 @@
         },
         "pleiades": {
             "project_code": {
-                "LEVEL": "NOVICE",
-                "prompt": "Project Code",
-                "default": "P28100036"
+                "LEVEL": "BENCH",
+                "prompt": "Project Code (Autoselect)",
+                "default": null
             },
             "queue": {
-                "LEVEL": "NOVICE",
+                "LEVEL": "BENCH",
                 "prompt": "PBS queue name",
                 "default": "main",
                 "valids": ["low", "normal", "long", "debug", "devel"]
@@ -135,13 +135,13 @@
                 }
             },
             "walltime": {
-                "LEVEL": "NOVICE",
+                "LEVEL": "BENCH",
                 "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
-                "default": "01:00:00"
+                "default": "96:00:00"
             },
             "nprocs": {
                 "LEVEL": "EXPERT",
-                "prompt": "nprocs = nnodes * mpiprocs",
+                "prompt": "nprocs (nnodes * mpiprocs)",
                 "default": null
             },
             "other_pbs": {
@@ -168,7 +168,7 @@
             "other_job": {
                 "LEVEL": "EXPERT",
                 "prompt": "Additional settings or env variables",
-                "default": ["setenv MPI_TYPE_DEPTH 19"]
+                "default": ["setenv MPI_TYPE_DEPTH 32"]
             }
         }
     },
@@ -176,13 +176,13 @@
     "model": {
         "data": {
             "modeldir": {
-                "LEVEL": "NOVICE",
+                "LEVEL": "BENCH",
                 "prompt": "Directory of model",
-                "default": "TEGCMHOME"
+                "default": "TIEGCMHOME"
             },
             "parentdir": {
-                "LEVEL": "NOVICE",
-                "prompt": "Root directory for all files",
+                "LEVEL": "BENCH",
+                "prompt": "Root directory for all files for execution",
                 "default": null
             },
             "execdir": {
@@ -201,22 +201,22 @@
                 "default": "os.getcwd()"
             },
             "tgcmdata": {
-                "LEVEL": "NOVICE",
+                "LEVEL": "BENCH",
                 "prompt": "Directory of Tiegcm Data Files",
-                "default": "/glade/p/hao/tgcm/data"
+                "default": null
             },
             "input_file": {
                 "LEVEL": "BASIC",
                 "prompt": "Custom Input File / (Enter) to build INP file",
                 "default": null
             },
-            "output_file": {
+            "log_file": {
                 "LEVEL": "INTERMEDIATE",
-                "prompt": "Custom Output File",
+                "prompt": "Log File",
                 "default": null
             },
             "make": {
-                "LEVEL": "INTERMEDIATE",
+                "LEVEL": "EXPERT",
                 "prompt": "Make File",
                 "default": null
             },
@@ -229,28 +229,28 @@
         },
         "specification": {
             "horires": {
-                "LEVEL": "NOVICE",
-                "prompt": "Horizontal Resolution",
+                "LEVEL": "BENCH",
+                "prompt": "Horizontal Resolution (Deg)",
                 "default": 2.5,
-                "valid": [5, 2.5, 1.25, 0.625]
+                "valids": [2.5, 1.25, 0.625]
             },
             "vertres": {
-                "LEVEL": "NOVICE",
-                "prompt": "Vertical Resolution",
+                "LEVEL": "BENCH",
+                "prompt": "Vertical Resolution (Scale Height)",
                 "default": 0.25,
-                "valid": [0.5, 0.25, 0.125, 0.0625]
+                "valids": [0.25, 0.125, 0.0625]
             },
             "zitop": {
-                "LEVEL": "NOVICE",
-                "prompt": "Max level (zitop)",
+                "LEVEL": "INTERMEDIATE",
+                "prompt": "Highest pressure level",
                 "default": 7,
-                "valid": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                "valids": [7, 8, 9, 10, 11]
             },
             "mres": {
-                "LEVEL": "NOVICE",
-                "prompt": "mres",
+                "LEVEL": "BENCH",
+                "prompt": "Magnetic grid resolution (Deg)",
                 "default": 2,
-                "valid": [2, 1, 0.5]
+                "valids": [2, 1, 0.5]
             },
             "nres_grid": {
                 "LEVEL": "EXPERT",
@@ -280,6 +280,12 @@
             "prompt": "SOURCE file location",
             "default": null
         },
+        "SOURCE_START":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Selected date in SOURCE file",
+            "default": null,
+            "valids": null
+        },
         "START_YEAR":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "Source Start Year",
@@ -291,43 +297,28 @@
             "default": null
         },
         "CALENDAR_ADVANCE":{
-            "LEVEL": "INTERMEDIATE",
-            "prompt": "Calandar Advance",
+            "LEVEL": "EXPERT",
+            "prompt": "Whether the model date changes across one day",
             "default": 1
         },
-        "SOURCE_START":{
-            "LEVEL": "BASIC",
-            "prompt": "SOURCE start date",
-            "default": null
-        },
         "PRISTART":{
-            "LEVEL": "INTERMEDIATE",
-            "prompt": "Primary start date",
+            "LEVEL": "EXPERT",
+            "prompt": "Primary start date (Day,Hour,Min,Sec)",
             "default": null
         },
         "PRISTOP":{
-            "LEVEL": "INTERMEDIATE",
-            "prompt": "Primary stop date",
+            "LEVEL": "EXPERT",
+            "prompt": "Primary stop date (Day,Hour,Min,Sec)",
             "default": null
-        },
-        "STEP":{
-            "LEVEL": "BASIC",
-            "prompt": "STEP number",
-            "default": null
-        },
-        "NSTEP_SUB":{
-            "LEVEL": "BASIC",
-            "prompt": "NSTEP_SUB number",
-            "default": "10"
         },
         "PRIHIST":{
             "LEVEL": "BASIC",
-            "prompt": "Primary History",
+            "prompt": "Primary History (Day,Hour,Min,Sec)",
             "default": "1 0 0 0"
         },
         "OUTPUT":{
             "LEVEL": "BASIC",
-            "prompt": "Primary Output",
+            "prompt": "Primary Output (Day,Hour,Min,Sec)",
             "default": null
         },
         "MXHIST_PRIM":{
@@ -335,19 +326,29 @@
             "prompt": "Max Primary History per Output",
             "default": 10
         },
+        "STEP":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "STEP number",
+            "default": null
+        },
+        "NSTEP_SUB":{
+            "LEVEL": "EXPERT",
+            "prompt": "NSTEP_SUB number",
+            "default": "10"
+        },
         "SECSTART":{
             "LEVEL": "INTERMEDIATE",
-            "prompt": "Secondary Start Date",
+            "prompt": "Secondary Start Date (Day,Hour,Min,Sec)",
             "default": null
         },
         "SECSTOP":{
             "LEVEL": "INTERMEDIATE",
-            "prompt": "Secondary Stop Date",
+            "prompt": "Secondary Stop Date (Day,Hour,Min,Sec)",
             "default": null
         },
         "SECHIST":{
             "LEVEL": "BASIC",
-            "prompt": "Secondary History",
+            "prompt": "Secondary History (Day,Hour,Min,Sec)",
             "default": "0 1 0 0"
         },
         "SECOUT":{
@@ -361,10 +362,31 @@
             "default": 24
         },
         "SECFLDS":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "BASIC",
             "prompt": "Secondary Output Fields",
             "default": ["TN","UN","VN","WN","O2","O1","N2","NO","N4S","HE","NE","TE","TI","TEC","O2P","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","DEN","QJOULE","HMF2","NMF2","Z","ZG"]
         },
+        "POTENTIAL_MODEL":{
+            "LEVEL": "BASIC",
+            "prompt": "High-latitude potential model that is going to be used",
+            "default": "HEELIS",
+            "valids": ["HEELIS", "WEIMER"]
+        },
+        "GPI_NCFILE":{
+            "LEVEL": "BASIC",
+            "prompt": "GPI file",
+            "default": null
+        },
+        "IMF_NCFILE":{
+            "LEVEL": "BASIC",
+            "prompt": "IMF file",
+            "default": null
+        },
+        "KP":{
+            "LEVEL": "BASIC",
+            "prompt": "Kp index",
+            "default": null
+        },  
         "POWER":{
             "LEVEL": "BASIC",
             "prompt": "POWER",
@@ -375,6 +397,31 @@
             "prompt": "CTPOTEN",
             "default": null
         },
+        "BXIMF":{
+            "LEVEL": "BASIC",
+            "prompt": "IMF Bx (Only used if POTENTIAL_MODEL is WEIMER)",
+            "default": null
+        },
+        "BYIMF":{
+            "LEVEL": "BASIC",
+            "prompt": "IMF By (Only used if POTENTIAL_MODEL is WEIMER)",
+            "default": null
+        },
+        "BZIMF":{
+            "LEVEL": "BASIC",
+            "prompt": "IMF Bz (Only used if POTENTIAL_MODEL is WEIMER)",
+            "default": null
+        },
+        "SWDEN":{
+            "LEVEL": "BASIC",
+            "prompt": "Solar wind density (Only used if POTENTIAL_MODEL is WEIMER)",
+            "default": null
+        },
+        "SWVEL":{
+            "LEVEL": "BASIC",
+            "prompt": "Solar wind velocity (Only used if POTENTIAL_MODEL is WEIMER)",
+            "default": null
+        }, 
         "F107":{
             "LEVEL": "BASIC",
             "prompt": "F107",
@@ -385,19 +432,9 @@
             "prompt": "F107A",
             "default": null
         },
-        "CALC_HELIUM":{
-            "LEVEL": "BASIC",
-            "prompt": "CALC_HELIUM",
-            "default": "1"
-        },
-        "POTENTIAL_MODEL":{
-            "LEVEL": "EXPERT",
-            "prompt": "POTENTIAL_MODEL",
-            "default": "HEELIS"
-        },
         "GSWM_data":{
             "LEVEL": "EXPERT",
-            "prompt": "GSWM_data",
+            "prompt": "GSWM data files",
             "default": [null]
         },
         "other_input":{
