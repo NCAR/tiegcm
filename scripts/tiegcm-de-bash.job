@@ -31,9 +31,9 @@
 # and change execdir, tgcmdata and namelist input if necessary.
 # Also reset number of processors accordingly below (#PBS -l).
 #
-modeldir="$TGCMHOME"
+modeldir="/glade/campaign/hao/itmodel/tiegcm3.0/tiegcm"
 execdir="/glade/derecho/scratch/$USER/tiegcm"
-tgcmdata="/glade/p/hao/tgcm/data"
+tgcmdata="/glade/campaign/hao/itmodel/tiegcm3.0/data"
 utildir="$modeldir/scripts"
 input="$utildir/tiegcm_default.inp"
 output="tiegcm.out"
@@ -69,9 +69,9 @@ fi
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
 # Necessary modules on derecho
-#module load mkl
-#module swap netcdf netcdf-mpi
-#module load esmf
+module load mkl
+module swap netcdf netcdf-mpi
+module load esmf
 #
 mycwd=`pwd`
 echo "" ; echo "${0}:"

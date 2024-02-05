@@ -12,10 +12,9 @@ FFLAGS = -r8 -DINTEL
 # DBGFLAGS are used by the Makefile only if the job script
 # has "set debug = true"
 #
-#DBGFLAGS = -debug full,extended -traceback
-#DBGFLAGS += -check all,noarg_temp_created -fp-stack-check
-#DBGFLAGS += -warn all -nogen-interfaces
-DBGFLAGS = -debug full,extended -traceback -check bounds -check uninit -debug all -gen-interfaces -warn interfaces -fp-stack-check -traceback
+DBGFLAGS = -debug full,extended -traceback
+DBGFLAGS += -check all,noarg_temp_created -fp-stack-check
+DBGFLAGS += -warn all -nogen-interfaces
 #
 # -fpe-all=0 traps all floating point exceptions.
 # The model is not guaranteed not to crash if this option is set.

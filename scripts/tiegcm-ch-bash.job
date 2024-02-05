@@ -32,7 +32,7 @@
 #
 modeldir="/glade/campaign/hao/itmodel/tiegcm3.0/tiegcm"
 execdir="/glade/scratch/$USER/tiegcm"
-tgcmdata="/glade/p/hao/tgcm/data"
+tgcmdata="/glade/campaign/hao/itmodel/tiegcm3.0/data"
 utildir="$modeldir/scripts"
 input="$utildir/tiegcm_default.inp"
 output="tiegcm.out"

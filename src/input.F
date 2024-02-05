@@ -90,7 +90,6 @@
       logical :: aluse,  ! logical to use AL in Weimer 2001 model or not
      |  et,              ! logical to calculate electron turbulent heating
      |  saps             ! logical to include empirical SAPS
-
 !
 ! Parameters as read from namelist:
       real :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,rd_byimf,
@@ -134,7 +133,6 @@
      |  vedata,             ! SAPS ve data file
      |  vndata,             ! SAPS vn data file
      |  vvdata              ! SAPS vv data file
-
 
       logical :: oneway   ! logical to use oneway mix reader
       character(len=mxlen_filename) :: mixfile ! filename for oneway driving

@@ -32,7 +32,7 @@
 #
 set modeldir  = /glade/campaign/hao/itmodel/tiegcm3.0/tiegcm
 set execdir   = /glade/scratch/$user/tiegcm
-set tgcmdata  = /glade/p/hao/tgcm/data
+set tgcmdata  = /glade/campaign/hao/itmodel/tiegcm3.0/data
 set utildir   = $modeldir/scripts
 set input     = $utildir/tiegcm_default.inp
 set output    = tiegcm.out
