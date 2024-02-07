@@ -2,16 +2,17 @@
 
 # PBS specifications
 #PBS -N {{simulation.job_name}}
-#PBS -A {{pbs.project_code}}
+{%- if pbs.project_code|default('', true) %}
+#PBS -A {{pbs.project_code}}{%- endif %}
 #PBS -q {{pbs.queue}}
 #PBS -j oe
-{%- if pbs.job_priority is not none %}
+{%- if pbs.job_priority|default('', true) %}
 #PBS -l job_priority={{pbs.job_priority}}{%- endif %}
-#PBS -l {% for key, value in pbs.resource.items() %}{{ value }}{% if not loop.last %}:{% endif %}{% endfor %},walltime={{pbs.walltime}}
+#PBS -l {% for key, value in pbs.resource.items() if key != 'model' %}{{ key }}={{ value }}{% if not loop.last %}:{% endif %}{% endfor %}{% if 'model' in pbs.resource %}:model={{ pbs.resource['model'] }}{% endif %},walltime={{pbs.walltime}}
 
-# Ser enviroment variables
+# Set enviroment variables
 setenv TGCMDATA {{model.data.tgcmdata}}
-{%- for data in pbs.other_pbs %}
+{%- for data in pbs.other_job %}
 {%- if data != None %}
 {{data}}
 {%- endif %}
@@ -25,12 +26,12 @@ module load {{ module }}
 
 # Execute tiegcm
 cd {{model.data.execdir}}
-mpirun -np {{pbs.nprocs}} {{model.data.execdir}}/{{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.log_file}}
+{{pbs.mpi_command}} -np {{pbs.nprocs}} {{model.data.execdir}}/{{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.log_file}}
 
 
 cd {{model.data.workdir}}
 
 # Make tar file of task log files:
-tar -cf {{model.data.output_file}}.tar *task*.out
-echo "Saved stdout tar file {{model.data.output_file}}.tar"
+tar -cf {{model.data.log_file}}.tar *task*.out
+echo "Saved stdout tar file {{model.data.log_file}}.tar"
 rm *task*.out

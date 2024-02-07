@@ -49,6 +49,10 @@ from jinja2 import Template
 
 # Import project modules.
 
+RED = '\033[31m'  # Red text
+GREEN = '\033[32m'  # Green text
+YELLOW = '\033[33m'  # Yellow text
+RESET = '\033[0m'  # Reset to default color
 
 # Program constants
 
@@ -62,14 +66,14 @@ JSON_INDENT = 4
 try:
     TIEGCMDATA = os.environ["TIEGCMDATA"]
 except:
-    os.environ['TIEGCMDATA'] = input(f'Enter TIEGCM data directory [TIEGCMDATA]: ')
+    os.environ['TIEGCMDATA'] = input(f'{RED}Unable to get TIEGCMDATA environment variable.{RESET}\n{YELLOW}Use command export TIEGCMDATA=PathToData to set environment variable.{RESET}\nEnter TIEGCM data directory: ')
     TIEGCMDATA = os.environ["TIEGCMDATA"]
 
 # Path to current tiegcm installation
 try:
     TIEGCMHOME = os.environ["TIEGCMHOME"]
 except:
-    os.environ['TIEGCMHOME'] = input(f'Enter TIEGCM model directory [TIEGCMHOME]: ')
+    os.environ['TIEGCMHOME'] = input(f'{RED}Unable to get TIEGCMHOME environment variable.{RESET}\n{YELLOW}Use command export TIEGCMHOME=PathToTIEGCM to set environment variable.{RESET}\nEnter TIEGCM model directory: ')
     TIEGCMHOME = os.environ["TIEGCMHOME"]
 # Path to directory containing support files for makeitso.
 SUPPORT_FILES_DIRECTORY = os.path.join(TIEGCMHOME, "tiegcmrun")
@@ -473,11 +477,11 @@ def create_command_line_parser():
         help="Print verbose output (default: %(default)s)."
     )
     parser.add_argument(
-        "--execute","-e", action="store_false",
+        "--execute","-e", action="store_true",
         help="Execute TIEGCM (default: %(default)s)."
     )
     parser.add_argument(
-        "--compile","-c", action="store_false",
+        "--compile","-c", action="store_true",
         help="Compile TIEGCM (default: %(default)s)."
     )
     parser.add_argument(
@@ -527,6 +531,8 @@ def get_run_option(name, description, mode="BASIC"):
     prompt = description.get("prompt", "")
     default = description.get("default", None)
     valids = description.get("valids", None)
+    var_description = description.get("description", None)
+    warning = description.get("warning", None)
     # Compare the current mode to the parameter level setting. If the variable
     # level is higher than the user mode, just use the default.
     if mode == "BENCH" and level in ["BASIC","INTERMEDIATE", "EXPERT"]:
@@ -536,6 +542,9 @@ def get_run_option(name, description, mode="BASIC"):
     if mode == "INTERMEDIATE" and level in ["EXPERT"]:
         return default
 
+    if warning is not None:
+        print(f'{RED}{warning}{RESET}')
+    og_prompt = prompt
     # If provided, add the valid values in val1|val2 format to the prompt.
     if valids is not None: 
         if name == "vertres":
@@ -548,17 +557,16 @@ def get_run_option(name, description, mode="BASIC"):
     # If provided, add the default to the prompt.
     if default is not None:
         if name == "vertres":
-            prompt += f" [{str(Fraction(default))}]"
+            prompt += f" [{GREEN}{str(Fraction(default))}{RESET}]"
         else:
-            prompt += f" [{default}]"
+            prompt += f" [{GREEN}{default}{RESET}]"
 
     # Prompt the user and fetch the input until a good value is provided.
     ok = False
     option_value = ""
-    first_pass = True
     while not ok:
-        if name in ("SECFLDS","GSWM_data" ,"other_input", "other_pbs","other_job"):
-            temp_value = input(f"{prompt} or enter: ")
+        if name in ("GSWM_data" ,"other_input", "other_pbs","other_job"):
+            temp_value = input(f"{prompt} / ENTER to go next: ")
             if temp_value != "":
                 option_value = option_value +'"' +temp_value + '",'
             elif temp_value == 'none' or temp_value == 'None':
@@ -571,6 +579,22 @@ def get_run_option(name, description, mode="BASIC"):
                 elif option_value == "":
                     option_value = default
                     ok = True
+            elif temp_value == "?":
+                print(var_description)
+        elif name == "SECFLDS":
+            prompt = og_prompt
+            prompt += f" [{GREEN}{default}{RESET}]"
+            temp_value = input(f"{prompt} / ENTER to go next: ")
+            if temp_value != "":
+                default.append(temp_value) 
+                option_value = default
+            elif temp_value == 'none' or temp_value == 'None':
+                option_value = json.loads('[null]')
+            elif temp_value == "":
+                option_value = default
+                ok = True
+            elif temp_value == "?":
+                print(var_description)
         else:
             # Fetch input from the user.
             option_value = input(f"{prompt}: ")
@@ -581,6 +605,10 @@ def get_run_option(name, description, mode="BASIC"):
             # Use None if user input is none or None.
             elif option_value == 'none' or option_value == 'None':
                 option_value = None
+            
+            elif temp_value == "?":
+                print(var_description)
+                continue
             # Validate the result. If bad, start over.
             if name == "vertres":
                 if valids is not None and float(Fraction(option_value)) not in valids:
@@ -599,6 +627,55 @@ def get_run_option(name, description, mode="BASIC"):
     return option_value
 
 
+def select_resource_defaults(options, option_descriptions):
+    horires = options["model"]["specification"]["horires"]
+    hpc_platform = options["simulation"]["hpc_system"]
+    od = option_descriptions["pbs"][hpc_platform]
+    o = options["pbs"]
+    if hpc_platform == "derecho":
+        od=od["resource"]
+        for on in od:
+            if on == "select":
+                if float(horires) == 2.5:
+                    select_default = 1
+                elif float(horires) == 1.25:
+                    select_default = 2
+                elif float(horires) == 0.625:
+                    select_default = 3         
+            if on == "ncpus":
+                if float(horires) == 2.5:
+                    ncpus_default = 72
+                elif float(horires) == 1.25:
+                    ncpus_default = 72
+                elif float(horires) == 0.625:
+                    ncpus_default = 96
+            if on == "mpiprocs":
+                mpiprocs_default = ncpus_default
+    elif hpc_platform == "pleiades":
+        od=od["resource"]
+        o=o["resource"]
+        if o["model"] == "bro":
+            max_ncpus = 24
+        elif o["model"] == "has":
+            max_ncpus = 24
+        elif o["model"] == "ivy":
+            max_ncpus = 18
+        elif o["model"] == "san":
+            max_ncpus = 12
+        for on in od:
+            if on == "select":
+                if float(horires) == 2.5:
+                    select = 72/max_ncpus
+                if float(horires) == 1.25:
+                    select = 144/max_ncpus
+                if float(horires) == 0.625:
+                    select = 288/max_ncpus
+                select_default = int(select)
+            if on == "ncpus":
+                ncpus_default = max_ncpus
+            if on == "mpiprocs":
+                mpiprocs_default = ncpus_default
+    return select_default,ncpus_default,mpiprocs_default
 def prompt_user_for_run_options(args):
     """Prompt the user for run options.
 
@@ -645,6 +722,11 @@ def prompt_user_for_run_options(args):
     od = option_descriptions["simulation"]
     if benchmark != None:
         od["job_name"]["default"] = benchmark
+    system_name = os.popen('hostname').read().strip()
+    if 'pfe' in system_name.lower():
+        od["hpc_system"]["default"]= "pleiades"
+    else:
+        od["hpc_system"]["default"] = "derecho"
     # Prompt for the parameters.
     for on in ["job_name", "hpc_system"]:
         o[on] = get_run_option(on, od[on], mode)
@@ -766,6 +848,8 @@ def prompt_user_for_run_options(args):
                     od[on]["default"] = oben[on]
             
     od["LABEL"]["default"] = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
+    if options["simulation"]["hpc_system"] == "pleiades":
+        od["SECFLDS"]["warning"] = "Limit SECFLDS. File libraries on pleiades are built without big file support."
     temp_mode = mode
     skip_inp = []
     start_stop_set = 0
@@ -785,7 +869,9 @@ def prompt_user_for_run_options(args):
                 od["SECOUT"]["default"]=inp_sec_out(SECSTART,SECSTOP,histdir,run_name)
             if on == "MXHIST_SECH":
                 od["MXHIST_SECH"]["default"]=inp_sec_mxhist(SECSTART,SECSTOP)
-        if on == "stop_date":
+        if on == "start_date":
+            continue
+        elif on == "stop_date" and benchmark == None:
             o[on] = get_run_option(on, od[on], temp_mode)
             if o[on] != None:
                 start_stop_set = 1
@@ -871,36 +957,27 @@ def prompt_user_for_run_options(args):
     hpc_platform = options["simulation"]["hpc_system"]
     od = option_descriptions["pbs"][hpc_platform]
     if hpc_platform == "derecho":
-        odt=od["resource"]
-        for on in odt:
-            if on == "select":
-                if float(horires) == 5:
-                    odt["select"]["default"] = 2
-                elif float(horires) == 2.5:
-                    odt["select"]["default"] = 2
-                elif float(horires) == 1.25:
-                    odt["select"]["default"] = 2
-                elif float(horires) == 0.625:
-                    odt["select"]["default"] = 3
-                
-            if on == "ncpus":
-                if float(horires) == 5:
-                    odt["ncpus"]["default"] = 72
-                elif float(horires) == 2.5:
-                    odt["ncpus"]["default"] = 72
-                elif float(horires) == 1.25:
-                    odt["ncpus"]["default"] = 72
-                elif float(horires) == 0.625:
-                    odt["ncpus"]["default"] = 96
-            if on == "mpiprocs":
-                odt["mpiprocs"]["default"] = odt["ncpus"]["default"]
-
+        o["mpi_command"] = "mpirun"
+    elif hpc_platform == "pleiades":
+        o["mpi_command"] = "mpiexec_mpt"
     for on in od:
         if on == "resource":
             options["pbs"]["resource"] = {}
             odt = od["resource"]
             ot = options["pbs"]["resource"]
             for ont in odt:
+                if hpc_platform == "derecho":
+                    select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
+                    odt["select"]["default"] = select_default
+                    odt["ncpus"]["default"] = ncpus_default
+                    odt["mpiprocs"]["default"] = mpiprocs_default
+                elif hpc_platform == "pleiades":
+                    if ont == "model":
+                        ot[ont] = get_run_option(ont, odt[ont], mode)
+                        select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
+                        odt["select"]["default"] = select_default
+                        odt["ncpus"]["default"] = ncpus_default
+                        odt["mpiprocs"]["default"] = mpiprocs_default
                 if ont == "select":
                     ot[ont] = get_run_option(ont, odt[ont], mode)
                     nnodes = ot[ont]
@@ -912,7 +989,6 @@ def prompt_user_for_run_options(args):
                     mpiprocs = ot[ont]
                 else:
                     ot[ont] = get_run_option(ont, odt[ont], mode)
-                ot[ont] = ont+"="+str(ot[ont])
         elif on =="nprocs":
             od[on]["default"] = int(nnodes) * int(mpiprocs)
             o[on] = get_run_option(on, od[on], mode)
@@ -1154,7 +1230,6 @@ def create_pbs_scripts(options):
 
 def create_inp_scripts(options):
     global INP_TEMPLATE
-    print(options["inp"])
     if INP_TEMPLATE == None:
         INP_TEMPLATE = os.path.join(options["model"]["data"]["modeldir"],'tiegcmrun/template.inp')
     with open(INP_TEMPLATE, "r", encoding="utf-8") as f:

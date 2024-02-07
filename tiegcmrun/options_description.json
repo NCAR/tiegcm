@@ -5,13 +5,17 @@
         "job_name": {
             "LEVEL": "BENCH",
             "prompt": "Name to use for PBS job(s)",
-            "default": "tiegcm"
+            "default": "tiegcm",
+            "description": null,
+            "warning": null
         },
         "hpc_system": {
             "LEVEL": "BENCH",
             "prompt": "Name of HPC system",
             "default": "derecho",
-            "valids": ["derecho", "pleiades","custom"]
+            "valids": ["derecho", "pleiades"],
+            "description": null,
+            "warning": null
         }
     },
 
@@ -20,58 +24,78 @@
             "account_name": {
                 "LEVEL": "BENCH",
                 "prompt": "User account name",
-                "default": "."
+                "default": ".",
+                "description": null,
+                "warning": null
             }
         },
         "derecho": {
             "project_code": {
                 "LEVEL": "BENCH",
                 "prompt": "Project Code",
-                "default": "P28100036"
+                "default": "P28100036",
+                "description": null,
+                "warning": null
             },
             "queue": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "PBS queue name",
                 "default": "main",
-                "valids": ["develop", "main", "preempt"]
+                "valids": ["develop", "main", "preempt"],
+                "description": null,
+                "warning": null
             },
             "job_priority": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "#PBS job priority",
                 "default": "regular",
-                "valids": ["premium", "regular", "economy","preempt"]
+                "valids": ["premium", "regular", "economy","preempt"],
+                "description": null,
+                "warning": null
             },
             "resource": {
                 "select": {
                     "LEVEL": "EXPERT",
                     "prompt": "Number of nodes to request",
-                    "default": null
+                    "default": null,
+                    "description": null,
+                    "warning": null
                 },
                 "ncpus": {
                     "LEVEL": "EXPERT",
                     "prompt": "Number of cores per node",
-                    "default": null
+                    "default": null,
+                    "description": null,
+                    "warning": null
                 },
                 "mpiprocs": {
                     "LEVEL": "EXPERT",
                     "prompt": "Number of MPI ranks per node",
-                    "default": null
-                }                
+                    "default": null,
+                    "description": null,
+                    "warning": null
+                }               
             },
             "walltime": {
                 "LEVEL": "BASIC",
                 "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
-                "default": "12:00:00"
+                "default": "12:00:00",
+                "description": null,
+                "warning": "Maximum walltime is 12:00:00."
             },
             "nprocs": {
                 "LEVEL": "EXPERT",
                 "prompt": "nprocs (nnodes * mpiprocs)",
-                "default": null
+                "default": null,
+                "description": null,
+                "warning": null
             },
             "other_pbs": {
                 "LEVEL": "EXPERT",
                 "prompt": "Additional options for PBS -l",
-                "default": ""
+                "default": "",
+                "description": null,
+                "warning": null
             },
             "modules": {
                 "LEVEL": "EXPERT",
@@ -86,89 +110,102 @@
                     "ncarcompilers/1.0.0",
                     "hdf5-mpi/1.12.2",
                     "esmf/8.5.0"
-                ]
+                ],
+                "description": null,
+                "warning": null
             },
             "other_job": {
                 "LEVEL": "EXPERT",
                 "prompt": "Additional settings or env variables",
-                "default": [null]
+                "default": [null],
+                "description": null,
+                "warning": null
             }
         },
         "pleiades": {
-            "project_code": {
-                "LEVEL": "BENCH",
-                "prompt": "Project Code (Autoselect)",
-                "default": null
-            },
             "queue": {
                 "LEVEL": "BENCH",
                 "prompt": "PBS queue name",
-                "default": "main",
-                "valids": ["low", "normal", "long", "debug", "devel"]
+                "default": "normal",
+                "valids": ["low", "normal", "long", "debug", "devel"],
+                "description": null,
+                "warning": null
             },
             "resource": {
                 "model": {
                     "LEVEL": "EXPERT",
                     "prompt": "System on PFE to use",
                     "default": "bro",
-                    "valids": ["bro", "has", "ivy", "san"]
-                },
-                "memsize": {
-                    "LEVEL": "EXPERT",
-                    "prompt": "Size of memory to use",
-                    "default": null
+                    "valids": ["bro", "has", "ivy", "san"],
+                    "description": null,
+                    "warning": null
                 },
                 "select": {
                     "LEVEL": "EXPERT",
                     "prompt": "Number of nodes to request",
-                    "default": null
+                    "default": null,
+                    "description": null,
+                    "warning": null
                 },
                 "ncpus": {
                     "LEVEL": "EXPERT",
                     "prompt": "Number of cores per node",
-                    "default": null
+                    "default": null,
+                    "description": null,
+                    "warning": null
                 },
                 "mpiprocs": {
                     "LEVEL": "EXPERT",
                     "prompt": "Number of MPI ranks per node",
-                    "default": "ncpus"
+                    "default": "ncpus",
+                    "description": null,
+                    "warning": null
                 }
             },
             "walltime": {
                 "LEVEL": "BENCH",
                 "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
-                "default": "96:00:00"
+                "default": "96:00:00",
+                "description": null,
+                "warning": "Maximum walltime is 96:00:00."   
             },
             "nprocs": {
                 "LEVEL": "EXPERT",
                 "prompt": "nprocs (nnodes * mpiprocs)",
-                "default": null
+                "default": null,
+                "description": null,
+                "warning": null
             },
             "other_pbs": {
                 "LEVEL": "EXPERT",
                 "prompt": "Additional options for PBS -l",
-                "default": ""
+                "default": "",
+                "description": null,
+                "warning": null
             },
             "modules": {
                 "LEVEL": "EXPERT",
                 "prompt": "Modules to load",
                 "default": [
-                    "module purge",
-                    "module load nas",
-                    "module load pkgsrc/2023Q3",
-                    "module load comp-intel/2020.4.304",
-                    "module load mpi-hpe/mpt.2.28_25Apr23_rhel87",
-                    "module load mpi-hpe/mpt",
-                    "module load szip/2.1.1",
-                    "module load hdf4/4.2.12",
-                    "module load hdf5/1.8.18_mpt",
-                    "module load netcdf/4.4.1.1_mpt"
-                ]
+                    "nas",
+                    "pkgsrc/2023Q3",
+                    "comp-intel/2020.4.304",
+                    "mpi-hpe/mpt.2.28_25Apr23_rhel87",
+                    "mpi-hpe/mpt",
+                    "szip/2.1.1",
+                    "hdf4/4.2.12",
+                    "hdf5/1.8.18_mpt",
+                    "netcdf/4.4.1.1_mpt"
+                ],
+                "description": null,
+                "warning": null
             },
             "other_job": {
                 "LEVEL": "EXPERT",
                 "prompt": "Additional settings or env variables",
-                "default": ["setenv MPI_TYPE_DEPTH 32"]
+                "default": ["setenv MPI_TYPE_DEPTH 32"],
+                "description": null,
+                "warning": null
             }
         }
     },
@@ -178,53 +215,72 @@
             "modeldir": {
                 "LEVEL": "BENCH",
                 "prompt": "Directory of model",
-                "default": "TIEGCMHOME"
+                "default": "TIEGCMHOME",
+                "description": null,
+                "warning": null
             },
             "parentdir": {
                 "LEVEL": "BENCH",
                 "prompt": "Root directory for all files for execution",
-                "default": null
+                "default": null,
+                "description": null,
+                "warning": null
             },
             "execdir": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "Execution Directory",
-                "default": "os.getcwd()"
+                "default": "os.getcwd()",
+                "description": null,
+                "warning": null
             },
             "workdir": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "Working Directory",
-                "default": "os.getcwd()"
+                "default": "os.getcwd()",
+                "description": null,
+                "warning": null
             },
             "histdir": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "Output Directory",
-                "default": "os.getcwd()"
+                "default": "os.getcwd()",
+                "description": null,
+                "warning": null
             },
             "tgcmdata": {
                 "LEVEL": "BENCH",
                 "prompt": "Directory of Tiegcm Data Files",
-                "default": null
+                "default": null,
+                "description": null,
+                "warning": null
             },
             "input_file": {
                 "LEVEL": "BASIC",
-                "prompt": "Custom Input File / (Enter) to build INP file",
-                "default": null
+                "prompt": "Custom Input File / ENTER to build INP file",
+                "default": null,
+                "description": null,
+                "warning": null
             },
             "log_file": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "Log File",
-                "default": null
+                "default": null,
+                "description": null,
+                "warning": null
             },
             "make": {
                 "LEVEL": "EXPERT",
                 "prompt": "Make File",
-                "default": null
+                "default": null,
+                "description": null,
+                "warning": null
             },
             "modelexe": {
                 "LEVEL": "EXPERT",
                 "prompt": "Executable Name",
-                "default": "tiegcm.exe"
-            
+                "default": "tiegcm.exe",
+                "description": null,
+                "warning": null
             }
         },
         "specification": {
@@ -232,30 +288,40 @@
                 "LEVEL": "BENCH",
                 "prompt": "Horizontal Resolution (Deg)",
                 "default": 2.5,
-                "valids": [2.5, 1.25, 0.625]
+                "valids": [2.5, 1.25, 0.625],
+                "description": null,
+                "warning": null
             },
             "vertres": {
                 "LEVEL": "BENCH",
                 "prompt": "Vertical Resolution (Scale Height)",
                 "default": 0.25,
-                "valids": [0.25, 0.125, 0.0625]
+                "valids": [0.25, 0.125, 0.0625],
+                "description": null,
+                "warning": null
             },
             "zitop": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "Highest pressure level",
                 "default": 7,
-                "valids": [7, 8, 9, 10, 11]
+                "valids": [7, 8, 9, 10, 11],
+                "description": null,
+                "warning": null
             },
             "mres": {
                 "LEVEL": "BENCH",
                 "prompt": "Magnetic grid resolution (Deg)",
                 "default": 2,
-                "valids": [2, 1, 0.5]
+                "valids": [2, 1, 0.5],
+                "description": null,
+                "warning": null
             },
             "nres_grid": {
                 "LEVEL": "EXPERT",
                 "prompt": "nres_grid",
-                "default": null
+                "default": null,
+                "description": null,
+                "warning": "Automatically populated. Do not change."
             }
         }
     },
@@ -263,184 +329,256 @@
         "LABEL":{
             "LEVEL": "BASIC",
             "prompt": "LABEL",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "start_date": {
             "LEVEL": "BASIC",
-            "prompt": "Start date for simulation (yyyy-mm-ddThh:mm:ss) / SKIP",
-            "default": null
+            "prompt": "Start date for simulation (yyyy-mm-ddThh:mm:ss)",
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "stop_date": {
             "LEVEL": "BASIC",
-            "prompt": "Stop date for simulation (yyyy-mm-ddThh:mm:ss) / SKIP",
-            "default": null
+            "prompt": "Stop date for simulation (yyyy-mm-ddThh:mm:ss)",
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "SOURCE":{
             "LEVEL": "BASIC",
             "prompt": "SOURCE file location",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "SOURCE_START":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "Selected date in SOURCE file",
             "default": null,
-            "valids": null
+            "valids": null,
+            "description": null,
+            "warning": null
         },
         "START_YEAR":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "Source Start Year",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "START_DAY":{
             "LEVEL": "BASIC",
             "prompt": "Start Day",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "CALENDAR_ADVANCE":{
             "LEVEL": "EXPERT",
             "prompt": "Whether the model date changes across one day",
-            "default": 1
+            "default": 1,
+            "description": null,
+            "warning": null
         },
         "PRISTART":{
             "LEVEL": "EXPERT",
             "prompt": "Primary start date (Day,Hour,Min,Sec)",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "PRISTOP":{
             "LEVEL": "EXPERT",
             "prompt": "Primary stop date (Day,Hour,Min,Sec)",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "PRIHIST":{
             "LEVEL": "BASIC",
             "prompt": "Primary History (Day,Hour,Min,Sec)",
-            "default": "1 0 0 0"
+            "default": "1 0 0 0",
+            "description": null,
+            "warning": null
         },
         "OUTPUT":{
             "LEVEL": "BASIC",
             "prompt": "Primary Output (Day,Hour,Min,Sec)",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "MXHIST_PRIM":{
             "LEVEL": "BASIC",
             "prompt": "Max Primary History per Output",
-            "default": 10
+            "default": 10,
+            "description": null,
+            "warning": null
         },
         "STEP":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "STEP number",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "NSTEP_SUB":{
             "LEVEL": "EXPERT",
             "prompt": "NSTEP_SUB number",
-            "default": "10"
+            "default": "10",
+            "description": null,
+            "warning": null
         },
         "SECSTART":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "Secondary Start Date (Day,Hour,Min,Sec)",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "SECSTOP":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "Secondary Stop Date (Day,Hour,Min,Sec)",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "SECHIST":{
             "LEVEL": "BASIC",
             "prompt": "Secondary History (Day,Hour,Min,Sec)",
-            "default": "0 1 0 0"
+            "default": "0 1 0 0",
+            "description": null,
+            "warning": null
         },
         "SECOUT":{
             "LEVEL": "BASIC",
             "prompt": "Secondary Output",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "MXHIST_SECH":{
             "LEVEL": "BASIC",
             "prompt": "Max Secondary History per Output",
-            "default": 24
+            "default": 24,
+            "description": null,
+            "warning": null
         },
         "SECFLDS":{
             "LEVEL": "BASIC",
             "prompt": "Secondary Output Fields",
-            "default": ["TN","UN","VN","WN","O2","O1","N2","NO","N4S","HE","NE","TE","TI","TEC","O2P","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","DEN","QJOULE","HMF2","NMF2","Z","ZG"]
+            "default": ["TN","UN","VN","NE","TEC","POTEN","Z","ZG"],
+            "description": null,
+            "warning": null
         },
         "POTENTIAL_MODEL":{
             "LEVEL": "BASIC",
             "prompt": "High-latitude potential model that is going to be used",
             "default": "HEELIS",
-            "valids": ["HEELIS", "WEIMER"]
+            "valids": ["HEELIS", "WEIMER"],
+            "description": null,
+            "warning": null
         },
         "GPI_NCFILE":{
             "LEVEL": "BASIC",
             "prompt": "GPI file",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "IMF_NCFILE":{
             "LEVEL": "BASIC",
             "prompt": "IMF file",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "KP":{
             "LEVEL": "BASIC",
             "prompt": "Kp index",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },  
         "POWER":{
             "LEVEL": "BASIC",
             "prompt": "POWER",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "CTPOTEN":{
             "LEVEL": "BASIC",
             "prompt": "CTPOTEN",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "BXIMF":{
             "LEVEL": "BASIC",
-            "prompt": "IMF Bx (Only used if POTENTIAL_MODEL is WEIMER)",
-            "default": null
+            "prompt": "IMF Bx",
+            "default": null,
+            "description": null,
+            "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "BYIMF":{
             "LEVEL": "BASIC",
-            "prompt": "IMF By (Only used if POTENTIAL_MODEL is WEIMER)",
-            "default": null
+            "prompt": "IMF By",
+            "default": null,
+            "description": null,
+            "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "BZIMF":{
             "LEVEL": "BASIC",
-            "prompt": "IMF Bz (Only used if POTENTIAL_MODEL is WEIMER)",
-            "default": null
+            "prompt": "IMF Bz",
+            "default": null,
+            "description": null,
+            "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "SWDEN":{
             "LEVEL": "BASIC",
-            "prompt": "Solar wind density (Only used if POTENTIAL_MODEL is WEIMER)",
-            "default": null
+            "prompt": "Solar wind density",
+            "default": null,
+            "description": null,
+            "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "SWVEL":{
             "LEVEL": "BASIC",
-            "prompt": "Solar wind velocity (Only used if POTENTIAL_MODEL is WEIMER)",
-            "default": null
+            "prompt": "Solar wind velocity",
+            "default": null,
+            "description": null,
+            "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         }, 
         "F107":{
             "LEVEL": "BASIC",
             "prompt": "F107",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "F107A":{
             "LEVEL": "BASIC",
             "prompt": "F107A",
-            "default": null
+            "default": null,
+            "description": null,
+            "warning": null
         },
         "GSWM_data":{
             "LEVEL": "EXPERT",
             "prompt": "GSWM data files",
-            "default": [null]
+            "default": [null],
+            "description": null,
+            "warning": null
         },
         "other_input":{
             "LEVEL": "EXPERT",
             "prompt": "Other input parameters ",
-            "default": [null]
+            "default": [null],
+            "description": null,
+            "warning": null
         }
         
     }

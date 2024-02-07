@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # usage: setupEnvironment.sh
 
-TIEGCMHOME="/glade/u/home/nikhilr/tiegcm_func/tiegcm3.0/tiegcm"
-TIEGCMDATA="/glade/work/nikhilr/tiegcm3.0"
+TIEGCMHOME="/home7/nrao3/tiegcm"
+TIEGCMDATA="/nobackup/nrao3/tiegcm/data/tiegcm3.0"
 SYSTEM="" # derecho or pleiades
 SAVED_MODULES="tiegcm" # Name of existing set of modules saved on system 
-CONDA_ENV="tiegcm" # Name of existing conda env
+CONDA_ENV="my_tiegcm" # Name of existing conda env
 
 
 if [ -z "$SYSTEM" ]; then
@@ -22,6 +22,31 @@ else
     echo "System set: $SYSTEM"
 fi
 
+if [ -z "$TIEGCMHOME" ]; then
+    SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-${(%):-%x}}" )" &> /dev/null && pwd )"
+    ROOT_DIR="$(echo "$SCRIPT_DIR" | sed 's:/tiegcmrun$::')"
+    TIEGCMHOME="$ROOT_DIR"
+    read -p "Enter tiegcm model directory [$TIEGCMHOME]:" TIEGCMHOME_INP
+    if [ -z "$TIEGCMHOME_INP" ]; then
+        echo "TIEGCMHOME set: $TIEGCMHOME"
+        export TIEGCMHOME="$TIEGCMHOME"
+    else
+        echo "TIEGCMHOME set: $TIEGCMHOME_INP"
+        export TIEGCMHOME="$TIEGCMHOME_INP"
+    fi
+else
+    echo "TIEGCMHOME set: $TIEGCMHOME"
+fi
+
+
+if [ -z "$TIEGCMDATA" ]; then
+    read -p "Enter tiegcm data directory [$TIEGCMDATA]:" TIEGCMDATA_INP
+    export TIEGCMDATA="$TIEGCMDATA_INP"
+    echo "TIEGCMDATA set: $TIEGCMDATA_INP"
+else
+    export TIEGCMDATA="$TIEGCMDATA"
+    echo "TIEGCMDATA set: $TIEGCMDATA"
+fi
 
 if [ -z "$SAVED_MODULES" ]; then
     if [ "$SYSTEM" == "derecho" ]; then
@@ -71,10 +96,10 @@ else
     module list
 fi
 
+REQUIREMENTSTXT="${TIEGCMHOME}/tiegcmrun/requirements.txt"
+
 if [ -z "$CONDA_ENV" ]; then
     read -p "Enter conda environment name: " CONDA_ENVINP
-    REQUIREMENTSTXT="${TIEGCMHOME}/tiegcmrun/requirements.txt"
-    
     if conda env list | grep -q "^${CONDA_ENVINP} "; then
         echo "Environment '$CONDA_ENVINP' found."
     else
@@ -122,28 +147,3 @@ fi
 
 
 
-if [ -z "$TIEGCMHOME" ]; then
-    SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-${(%):-%x}}" )" &> /dev/null && pwd )"
-    ROOT_DIR="$(echo "$SCRIPT_DIR" | sed 's:/tiegcmrun$::')"
-    TIEGCMHOME="$ROOT_DIR"
-    read -p "Enter tiegcm model directory [$TIEGCMHOME]:" TIEGCMHOME_INP
-    if [ -z "$TIEGCMHOME_INP" ]; then
-        echo "TIEGCMHOME set: $TIEGCMHOME"
-        export TIEGCMHOME="$TIEGCMHOME"
-    else
-        echo "TIEGCMHOME set: $TIEGCMHOME_INP"
-        export TIEGCMHOME="$TIEGCMHOME_INP"
-    fi
-else
-    echo "TIEGCMHOME set: $TIEGCMHOME"
-fi
-
-
-if [ -z "$TIEGCMDATA" ]; then
-    read -p "Enter tiegcm data directory [$TIEGCMDATA]:" TIEGCMDATA_INP
-    export TIEGCMDATA="$TIEGCMDATA_INP"
-    echo "TIEGCMDATA set: $TIEGCMDATA_INP"
-else
-    export TIEGCMDATA="$TIEGCMDATA"
-    echo "TIEGCMDATA set: $TIEGCMDATA"
-fi
