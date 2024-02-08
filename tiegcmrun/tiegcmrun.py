@@ -763,7 +763,8 @@ def prompt_user_for_run_options(args):
     o["utildir"] = os.path.join(o["modeldir"],'scripts')
     od["tgcmdata"]["default"] = TIEGCMDATA
     o["tgcmdata"] = get_run_option("tgcmdata", od["tgcmdata"], mode)
-    o["input_file"] = get_run_option("input_file", od["input_file"], mode)
+    if benchmark == None:
+        o["input_file"] = get_run_option("input_file", od["input_file"], mode)
     od["log_file"]["default"] =  f'{o["workdir"]}/{options["simulation"]["job_name"]}.out'
     o["log_file"] = get_run_option("log_file", od["log_file"], mode)
 
@@ -866,7 +867,9 @@ def prompt_user_for_run_options(args):
                 od["SECOUT"]["default"]=inp_sec_out(SECSTART,SECSTOP,histdir,run_name)
             if on == "MXHIST_SECH":
                 od["MXHIST_SECH"]["default"]=inp_sec_mxhist(SECSTART,SECSTOP)
-        if on == "start_date":
+        if on == "start_date" and benchmark != None:
+            continue
+        elif on == "stop_date" and benchmark != None:
             continue
         elif on == "stop_date" and benchmark == None:
             o[on] = get_run_option(on, od[on], temp_mode)
