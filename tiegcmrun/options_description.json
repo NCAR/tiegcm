@@ -573,6 +573,34 @@
             "description": null,
             "warning": null
         },
+        "GSWM_MI_DI_NCFILE":{
+            "LEVEL": "EXPERT",
+            "prompt": "GSWM MI_DI data file",
+            "default": null,
+            "description": null,
+            "warning": null
+        },
+        "GSWM_MI_SDI_NCFILE":{
+            "LEVEL": "EXPERT",
+            "prompt": "GSWM MI_SDI data file",
+            "default": null,
+            "description": null,
+            "warning": null
+        },
+        "GSWM_NM_DI_NCFILE":{
+            "LEVEL": "EXPERT",
+            "prompt": "GSWM NM_DI data file",
+            "default": null,
+            "description": null,
+            "warning": null
+        },
+        "GSWM_NM_SDI_NCFILE":{
+            "LEVEL": "EXPERT",
+            "prompt": "GSWM NM_SDI file",
+            "default": null,
+            "description": null,
+            "warning": null
+        },
         "other_input":{
             "LEVEL": "EXPERT",
             "prompt": "Other input parameters ",

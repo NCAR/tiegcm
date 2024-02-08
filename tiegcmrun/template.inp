@@ -53,11 +53,15 @@ SECFLDS = {% for SECFLD in inp.SECFLDS %}{% if SECFLD %}'{{SECFLD}}'{% if not lo
 {%- endif %}
 
 ! GSWM Data
-{%- for data in inp.GSWM_data %}
-{%- if data != None %}
-{{data}}
-{%- endif %}
-{%- endfor %}
+{%- if inp.GSWM_MI_DI_NCFILE is not none %}
+GSWM_MI_DI_NCFILE = '{{inp.GSWM_MI_DI_NCFILE}}'{%- endif %}
+{%- if inp.GSWM_MI_SDI_NCFILE is not none %}
+GSWM_MI_SDI_NCFILE = '{{inp.GSWM_MI_SDI_NCFILE}}'{%- endif %}
+{%- if inp.GSWM_NM_DI_NCFILE is not none %}
+GSWM_NM_DI_NCFILE = '{{inp.GSWM_NM_DI_NCFILE}}'{%- endif %}
+{%- if inp.GSWM_NM_SDI_NCFILE is not none %}
+GSWM_NM_SDI_NCFILE = '{{inp.GSWM_NM_SDI_NCFILE}}'{%- endif %}
+
 
 ! Potential Model 
 {%- if inp.POTENTIAL_MODEL is not none %}
