@@ -66,14 +66,14 @@ JSON_INDENT = 4
 try:
     TIEGCMDATA = os.environ["TIEGCMDATA"]
 except:
-    os.environ['TIEGCMDATA'] = input(f'{RED}Unable to get TIEGCMDATA environment variable.{RESET}\n{YELLOW}Use command export TIEGCMDATA=PathToData to set environment variable.{RESET}\nEnter TIEGCM data directory: ')
+    os.environ['TIEGCMDATA'] = input(f'{RED}Unable to get TIEGCMDATA environment variable.{RESET}\n{YELLOW}Use command export TIEGCMDATA=Path/To/Data to set environment variable.{RESET}\nEnter TIEGCM data directory: ')
     TIEGCMDATA = os.environ["TIEGCMDATA"]
 
 # Path to current tiegcm installation
 try:
     TIEGCMHOME = os.environ["TIEGCMHOME"]
 except:
-    os.environ['TIEGCMHOME'] = input(f'{RED}Unable to get TIEGCMHOME environment variable.{RESET}\n{YELLOW}Use command export TIEGCMHOME=PathToTIEGCM to set environment variable.{RESET}\nEnter TIEGCM model directory: ')
+    os.environ['TIEGCMHOME'] = input(f'{RED}Unable to get TIEGCMHOME environment variable.{RESET}\n{YELLOW}Use command export TIEGCMHOME=Path/To/TIEGCM to set environment variable.{RESET}\nEnter TIEGCM model directory: ')
     TIEGCMHOME = os.environ["TIEGCMHOME"]
 # Path to directory containing support files for makeitso.
 SUPPORT_FILES_DIRECTORY = os.path.join(TIEGCMHOME, "tiegcmrun")
@@ -543,7 +543,7 @@ def get_run_option(name, description, mode="BASIC"):
         return default
 
     if warning is not None:
-        print(f'{RED}{warning}{RESET}')
+        print(f'{YELLOW}{warning}{RESET}')
     og_prompt = prompt
     # If provided, add the valid values in val1|val2 format to the prompt.
     if valids is not None: 
@@ -606,7 +606,7 @@ def get_run_option(name, description, mode="BASIC"):
             elif option_value == 'none' or option_value == 'None':
                 option_value = None
             
-            elif temp_value == "?":
+            elif option_value == "?":
                 print(var_description)
                 continue
             # Validate the result. If bad, start over.
@@ -1014,7 +1014,7 @@ def compile_tiegcm(options, debug, coupling):
     mres      = float(o["model"]["specification"]["mres"])
     nres_grid = float(o["model"]["specification"]["nres_grid"])
     make      = o["model"]["data"]["make"]
-    coupling  = False
+    coupling  = coupling
     modelexe = o["model"]["data"]["modelexe"]
 
     try:
@@ -1260,7 +1260,6 @@ def find_file(pattern, path):
         for name in files:
             if fnmatch.fnmatch(name, pattern):  # Check if file name matches the pattern
                 return os.path.join(root, name)  # If so, return the file path immediately
-
     return None
 def main():
     # Set up the command-line parser.
@@ -1319,6 +1318,8 @@ def main():
             else:
                 prim_loc = os.path.join(tiegcmdata,'prim')
                 in_prim = find_file('*'+options['simulation']['job_name']+'*', prim_loc)
+                if in_prim == None:
+                    in_prim = find_file('*'+options['simulation']['job_name']+'*', tiegcmdata)
                 out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
                 interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
                 options["inp"]["SOURCE"] = out_prim
