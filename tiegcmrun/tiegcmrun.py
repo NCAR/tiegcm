@@ -830,10 +830,7 @@ def prompt_user_for_run_options(args):
         for on in od:
             if on in oben:
                 if on == "SOURCE":
-                    temp_output = oben[on]
-                    temp_output = temp_output.replace("+tgcmdata+", tiegcmdata_dir)
-                    temp_output = temp_output.replace("+benchmark+", benchmark)  
-                    od[on]["default"] = temp_output
+                    od[on]["default"] = find_file('*tiegcm*'+options['simulation']['job_name']+'*', TIEGCMDATA)
                 elif on in ["OUTPUT", "SECOUT"]:
                     temp_output = oben[on]
                     temp_output = temp_output.replace("+histdir+", histdir)
@@ -886,11 +883,15 @@ def prompt_user_for_run_options(args):
                 od["SECSTOP"]["default"] = ' '.join(map(str, SECSTOP))
         elif on == "SOURCE":
             temp_val = get_run_option(on, od[on], temp_mode)
-            if temp_val != None:
+            source_found = False
+            while source_found == False:
                 if os.path.isfile(temp_val):
+                    source_found = True
                     o[on] = temp_val
-                elif os.path.isfile(TIEGCMDATA+temp_val):
-                    o[on] = TIEGCMDATA+temp_val
+                else:
+                    od[on]["warning"] = "Source File Not Found"
+                    temp_val = get_run_option(on, od[on], "BASIC")
+                    o[on] = temp_val
         elif on == "SOURCE_START":
             od["SOURCE_START"]["valids"] = get_mtime(options["inp"]["SOURCE"])
             temp_mode_1 = temp_mode
@@ -1316,13 +1317,11 @@ def main():
                 options["inp"]["SOURCE"] = out_prim
                 interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
             else:
-                prim_loc = os.path.join(tiegcmdata,'prim')
-                in_prim = find_file('*'+options['simulation']['job_name']+'*', prim_loc)
-                if in_prim == None:
-                    in_prim = find_file('*'+options['simulation']['job_name']+'*', tiegcmdata)
+                in_prim = options["inp"]["SOURCE"]
                 out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
                 options["inp"]["SOURCE"] = out_prim
+                interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+
         else:
             print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
         options["model"]["data"]["input_file"] = create_inp_scripts(options)
