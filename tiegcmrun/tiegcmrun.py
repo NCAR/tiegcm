@@ -931,10 +931,10 @@ def prompt_user_for_run_options(args):
             o[on] = get_run_option(on, od[on], temp_mode)
             if o[on] == [None]:
                 o[on] = [
-                    f"GSWM_MI_DI_NCFILE = '{tiegcmdata_dir}/gswm_diurn_{horires}d_99km.nc'",
-                    f"GSWM_MI_SDI_NCFILE = '{tiegcmdata_dir}/gswm_semi_{horires}d_99km.nc'",
-                    f"GSWM_NM_DI_NCFILE = '{tiegcmdata_dir}/gswm_nonmig_diurn_{horires}d_99km.nc'",
-                    f"GSWM_NM_SDI_NCFILE = '{tiegcmdata_dir}/gswm_nonmig_semi_{horires}d_99km.nc'"
+                    f"GSWM_MI_DI_NCFILE = {find_file(f'*gswm_diurn_{horires}d_99km*', tiegcmdata_dir)}",
+                    f"GSWM_MI_SDI_NCFILE = {find_file(f'*gswm_semi_{horires}d_99km*', tiegcmdata_dir)}",
+                    f"GSWM_NM_DI_NCFILE = {find_file(f'*gswm_nonmig_diurn_{horires}d_99km*', tiegcmdata_dir)}",
+                    f"GSWM_NM_SDI_NCFILE = {find_file(f'*gswm_nonmig_semi_{horires}d_99km*', tiegcmdata_dir)}",
                 ]
         elif on not in skip_inp:
             o[on] = get_run_option(on, od[on], temp_mode)
