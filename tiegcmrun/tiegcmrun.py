@@ -906,19 +906,24 @@ def prompt_user_for_run_options(args):
             o[on] = get_run_option(on, od[on], temp_mode_1)
         elif on == "POTENTIAL_MODEL":
             o[on] = get_run_option(on, od[on], temp_mode)
-            if o[on] != "WEIMER":
-                skip_inp_temp = ["BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
+            if o[on] == "HEELIS":
+                skip_inp_temp = ["IMF_NCFILE","BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
                 for item in skip_inp_temp:
                     if item not in skip_inp:
                         skip_inp.append(item)
-        elif on == "GPI_NCFILE":
+            elif o[on] == "WEIMER":
+                skip_inp_temp = ["CTPOTEN"]
+                for item in skip_inp_temp:
+                    if item not in skip_inp:
+                        skip_inp.append(item)
+        elif on == "GPI_NCFILE" and on not in skip_inp:
             o[on] = get_run_option(on, od[on], temp_mode)
             if o[on] != None:
                 skip_inp_temp = ["KP","POWER","CTPOTEN"]
                 for item in skip_inp_temp:
                     if item not in skip_inp:
                         skip_inp.append(item)
-        elif on == "IMF_NCFILE":
+        elif on == "IMF_NCFILE" and on not in skip_inp:
             o[on] = get_run_option(on, od[on], temp_mode)
             if o[on] != None:
                 skip_inp_temp = ["BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]

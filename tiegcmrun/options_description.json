@@ -4,7 +4,7 @@
     "simulation": {
         "job_name": {
             "LEVEL": "BENCH",
-            "prompt": "Name to use for PBS job(s)",
+            "prompt": "Name to use for the job(s)",
             "default": "tiegcm",
             "description": null,
             "warning": null
@@ -90,13 +90,6 @@
                 "description": null,
                 "warning": null
             },
-            "other_pbs": {
-                "LEVEL": "EXPERT",
-                "prompt": "Additional options for PBS -l",
-                "default": "",
-                "description": null,
-                "warning": null
-            },
             "modules": {
                 "LEVEL": "EXPERT",
                 "prompt": "Modules to load",
@@ -165,21 +158,14 @@
             "walltime": {
                 "LEVEL": "BENCH",
                 "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
-                "default": "96:00:00",
+                "default": "12:00:00",
                 "description": null,
-                "warning": "Maximum walltime is 96:00:00."   
+                "warning": "Maximum walltime is on normal queue is 12:00:00."   
             },
             "nprocs": {
                 "LEVEL": "EXPERT",
                 "prompt": "nprocs (nnodes * mpiprocs)",
                 "default": null,
-                "description": null,
-                "warning": null
-            },
-            "other_pbs": {
-                "LEVEL": "EXPERT",
-                "prompt": "Additional options for PBS -l",
-                "default": "",
                 "description": null,
                 "warning": null
             },
@@ -215,71 +201,71 @@
             "modeldir": {
                 "LEVEL": "BENCH",
                 "prompt": "Directory of model",
-                "default": "TIEGCMHOME",
-                "description": null,
+                "default": null,
+                "description": "The root directory where src/ and scripts/ are located.",
                 "warning": null
             },
             "parentdir": {
                 "LEVEL": "BENCH",
                 "prompt": "Root directory for all files for execution",
                 "default": null,
-                "description": null,
+                "description":  "The parent directory where all the run files/subdirectories will be located.",
                 "warning": null
             },
             "execdir": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "Execution Directory",
                 "default": "os.getcwd()",
-                "description": null,
-                "warning": null
+                "description": "The directory where the executable will be located and the model will be run.",
+                "warning": "null"
             },
             "workdir": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "Working Directory",
                 "default": "os.getcwd()",
-                "description": null,
+                "description": "The directory where input files will be located.",
                 "warning": null
             },
             "histdir": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "Output Directory",
                 "default": "os.getcwd()",
-                "description": null,
+                "description": "The directory where output files will be located.",
                 "warning": null
             },
             "tgcmdata": {
                 "LEVEL": "BENCH",
                 "prompt": "Directory of Tiegcm Data Files",
                 "default": null,
-                "description": null,
+                "description": "The directory where some required input data for the model are located.",
                 "warning": null
             },
             "input_file": {
                 "LEVEL": "BASIC",
                 "prompt": "Custom Input File / ENTER to build INP file",
                 "default": null,
-                "description": null,
+                "description": "A text file listing input parameters for the model.",
                 "warning": null
             },
             "log_file": {
                 "LEVEL": "INTERMEDIATE",
                 "prompt": "Log File",
                 "default": null,
-                "description": null,
+                "description": "A text file which is generated during a model run with diagnostic information of the model.",
                 "warning": null
             },
             "make": {
                 "LEVEL": "EXPERT",
                 "prompt": "Make File",
                 "default": null,
-                "description": null,
-                "warning": null
+                "description": "A text file used for building the model.",
+                "warning": "Modify only if you are porting the model to a new machine."
             },
             "modelexe": {
                 "LEVEL": "EXPERT",
                 "prompt": "Executable Name",
                 "default": "tiegcm.exe",
-                "description": null,
+                "description": "The name of the executable.",
                 "warning": null
             }
         },
@@ -289,7 +275,7 @@
                 "prompt": "Horizontal Resolution (Deg)",
                 "default": 2.5,
                 "valids": [2.5, 1.25, 0.625],
-                "description": null,
+                "description": "The longitudinal and latitudinal spacing of the model grid.",
                 "warning": null
             },
             "vertres": {
@@ -297,7 +283,7 @@
                 "prompt": "Vertical Resolution (Scale Height)",
                 "default": 0.25,
                 "valids": [0.25, 0.125, 0.0625],
-                "description": null,
+                "description": "The vertical spacing of the model grid.",
                 "warning": null
             },
             "zitop": {
@@ -306,14 +292,14 @@
                 "default": 7,
                 "valids": [7, 8, 9, 10, 11],
                 "description": null,
-                "warning": null
+                "warning": "The pressure level of the topmost grid."
             },
             "mres": {
                 "LEVEL": "BENCH",
-                "prompt": "Magnetic grid resolution (Deg)",
+                "prompt": "Magnetic grid resolution (Degree)",
                 "default": 2,
                 "valids": [2, 1, 0.5],
-                "description": null,
+                "description": "The magnetic latitudinal spacing at high latitudes.",
                 "warning": null
             },
             "nres_grid": {
@@ -328,9 +314,9 @@
     "inp": {
         "LABEL":{
             "LEVEL": "BASIC",
-            "prompt": "LABEL",
+            "prompt": "Run Label",
             "default": null,
-            "description": null,
+            "description": "A text used to label this model run.",
             "warning": null
         },
         "start_date": {
@@ -351,127 +337,127 @@
             "LEVEL": "BASIC",
             "prompt": "SOURCE file location",
             "default": null,
-            "description": null,
+            "description": "The location of the startup file.",
             "warning": null
         },
         "SOURCE_START":{
             "LEVEL": "INTERMEDIATE",
-            "prompt": "Selected date in SOURCE file",
+            "prompt": "Selected Date in Source Dile",
             "default": null,
             "valids": null,
-            "description": null,
+            "description": "The selected model time (mtime) in the startup file.",
             "warning": null
         },
         "START_YEAR":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "Source Start Year",
             "default": null,
-            "description": null,
+            "description": "The year for this model run.",
             "warning": null
         },
         "START_DAY":{
             "LEVEL": "BASIC",
             "prompt": "Start Day",
             "default": null,
-            "description": null,
+            "description": "The starting day of year for this model run.",
             "warning": null
         },
         "CALENDAR_ADVANCE":{
             "LEVEL": "EXPERT",
             "prompt": "Whether the model date changes across one day",
             "default": 1,
-            "description": null,
+            "description": "1 for model runs with advancing dates (date changes across a model day).\n0 for model runs with constant dates (date doesn’t change across a model day).\nCALENDAR_ADVANCE=0 is usually used to prepare the startup file for a production run;\nCALENDAR_ADVANCE=1 is used in a production run.",
             "warning": null
         },
         "PRISTART":{
             "LEVEL": "EXPERT",
             "prompt": "Primary start date (Day,Hour,Min,Sec)",
             "default": null,
-            "description": null,
+            "description": "The starting model time (Day of year, Hour, Minute, Second) of this model run.\nThe starting time always generates a primary history record.",
             "warning": null
         },
         "PRISTOP":{
             "LEVEL": "EXPERT",
             "prompt": "Primary stop date (Day,Hour,Min,Sec)",
             "default": null,
-            "description": null,
+            "description": "The stopping model time (Day of year, Hour, Minute, Second) of this model run.\nThe stopping time always generates a primary history record.",
             "warning": null
         },
         "PRIHIST":{
             "LEVEL": "BASIC",
             "prompt": "Primary History (Day,Hour,Min,Sec)",
             "default": "1 0 0 0",
-            "description": null,
+            "description": "Model time indicating how long the model generates of two primary history records.",
             "warning": null
         },
         "OUTPUT":{
             "LEVEL": "BASIC",
             "prompt": "Primary Output (Day,Hour,Min,Sec)",
             "default": null,
-            "description": null,
+            "description": "The filenames of primary history files. Multiple files are supported.",
             "warning": null
         },
         "MXHIST_PRIM":{
             "LEVEL": "BASIC",
             "prompt": "Max Primary History per Output",
             "default": 10,
-            "description": null,
+            "description": "The maximum number of records in one primary history file.",
             "warning": null
         },
         "STEP":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "STEP number",
             "default": null,
-            "description": null,
+            "description": "The time step of the model in seconds.",
             "warning": null
         },
         "NSTEP_SUB":{
             "LEVEL": "EXPERT",
             "prompt": "NSTEP_SUB number",
             "default": "10",
-            "description": null,
+            "description": "The number of iterations in one model time step for the O+ solver, the actual O+ time step is STEP/NSTEP_SUB.",
             "warning": null
         },
         "SECSTART":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "Secondary Start Date (Day,Hour,Min,Sec)",
             "default": null,
-            "description": null,
+            "description": "The starting model time (Day of year, Hour, Minute, Second) to generate the first secondary history record.",
             "warning": null
         },
         "SECSTOP":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "Secondary Stop Date (Day,Hour,Min,Sec)",
             "default": null,
-            "description": null,
+            "description": "The stopping model time (Day of year, Hour, Minute, Second) to generate the last secondary history record.",
             "warning": null
         },
         "SECHIST":{
             "LEVEL": "BASIC",
             "prompt": "Secondary History (Day,Hour,Min,Sec)",
             "default": "0 1 0 0",
-            "description": null,
+            "description": "Model time indicating how long the model generates of two secondary history records.",
             "warning": null
         },
         "SECOUT":{
             "LEVEL": "BASIC",
             "prompt": "Secondary Output",
             "default": null,
-            "description": null,
+            "description": "The filenames of secondary history files. Multiple files are supported.",
             "warning": null
         },
         "MXHIST_SECH":{
             "LEVEL": "BASIC",
             "prompt": "Max Secondary History per Output",
             "default": 24,
-            "description": null,
+            "description": "The maximum number of records in one secondary history file.",
             "warning": null
         },
         "SECFLDS":{
             "LEVEL": "BASIC",
             "prompt": "Secondary Output Fields",
             "default": ["TN","UN","VN","NE","TEC","POTEN","Z","ZG"],
-            "description": null,
+            "description": "Names of history fields to be outputted.",
             "warning": null
         },
         "POTENTIAL_MODEL":{
@@ -479,126 +465,119 @@
             "prompt": "High-latitude potential model that is going to be used",
             "default": "HEELIS",
             "valids": ["HEELIS", "WEIMER"],
-            "description": null,
+            "description": "High-latitude potential model that is going to be used: Heelis/Weimer.",
             "warning": null
         },
         "GPI_NCFILE":{
             "LEVEL": "BASIC",
             "prompt": "GPI file",
             "default": null,
-            "description": null,
-            "warning": null
+            "description": "The location of the GPI file containing 3-hourly KP and daily F107, F107A.",
+            "warning": "If GPI file is specified KP and POWER/CTPOTEN are skipped."
         },
         "IMF_NCFILE":{
             "LEVEL": "BASIC",
             "prompt": "IMF file",
             "default": null,
-            "description": null,
-            "warning": null
+            "description": "The location of the IMF file containing hourly BXIMF, BYIMF, BZIMF, SWDEN, SWVEL.",
+            "warning": "This can be set only if POTENTIAL_MODEL is WEIMER.\nIf IMF file is specified BXIMF, BYIMF, BZIMF, SWDEN and SWVEL are skipped."
         },
         "KP":{
             "LEVEL": "BASIC",
             "prompt": "Kp index",
             "default": null,
-            "description": null,
-            "warning": null
+            "description": "If KP is specified and POWER and/or CTPOTEN are skipped, then the given KP will be used with empirical formulas to calculate POWER and/or CTPOTEN, which are used in auroral parameterization and Heelis model.",
+            "warning": "If KP is specified and POWER and/or CTPOTEN are skipped."
         },  
         "POWER":{
             "LEVEL": "BASIC",
             "prompt": "POWER",
             "default": null,
-            "description": null,
+            "description": "Used in auroral parameterization and Heelis model.",
             "warning": null
         },
         "CTPOTEN":{
             "LEVEL": "BASIC",
             "prompt": "CTPOTEN",
             "default": null,
-            "description": null,
+            "description": "Used the auroral parameterization and Heelis model.\nNote that if POTENTIAL_MODEL is WEIMER, then the user is not allowed to provide CTPOTEN because it will be calculated from the Weimer electric potential.",
             "warning": null
         },
         "BXIMF":{
             "LEVEL": "BASIC",
-            "prompt": "IMF Bx",
+            "prompt": "Inter-Magnetic Field Bx in nT",
             "default": null,
             "description": null,
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "BYIMF":{
             "LEVEL": "BASIC",
-            "prompt": "IMF By",
+            "prompt": "Inter-Magnetic Field By in nT",
             "default": null,
             "description": null,
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "BZIMF":{
             "LEVEL": "BASIC",
-            "prompt": "IMF Bz",
+            "prompt": "Inter-Magnetic Field Bz in nT",
             "default": null,
             "description": null,
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "SWDEN":{
             "LEVEL": "BASIC",
-            "prompt": "Solar wind density",
+            "prompt": "Solar Wind Density in cm-3",
             "default": null,
             "description": null,
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "SWVEL":{
             "LEVEL": "BASIC",
-            "prompt": "Solar wind velocity",
+            "prompt": "Solar Wind Velocity in km/s",
             "default": null,
             "description": null,
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         }, 
         "F107":{
             "LEVEL": "BASIC",
-            "prompt": "F107",
+            "prompt": "F10.7",
             "default": null,
-            "description": null,
+            "description": "Daily 10.7 cm solar flux.",
             "warning": null
         },
         "F107A":{
             "LEVEL": "BASIC",
-            "prompt": "F107A",
+            "prompt": "81-Day Average of F10.7",
             "default": null,
-            "description": null,
-            "warning": null
-        },
-        "GSWM_data":{
-            "LEVEL": "EXPERT",
-            "prompt": "GSWM data files",
-            "default": [null],
-            "description": null,
+            "description": "81-day averaged 10.7 cm solar flux.",
             "warning": null
         },
         "GSWM_MI_DI_NCFILE":{
             "LEVEL": "EXPERT",
-            "prompt": "GSWM MI_DI data file",
+            "prompt": "GSWM diurnal migrating data file",
             "default": null,
-            "description": null,
+            "description": "The location of Global Scale Wave Model files containing diurnal migrating tidal perturbations.",
             "warning": null
         },
         "GSWM_MI_SDI_NCFILE":{
             "LEVEL": "EXPERT",
-            "prompt": "GSWM MI_SDI data file",
+            "prompt": "GSWM semidiurnal migrating data file",
             "default": null,
-            "description": null,
+            "description": "The location of Global Scale Wave Model files containing semidiurnal migrating tidal perturbations.",
             "warning": null
         },
         "GSWM_NM_DI_NCFILE":{
             "LEVEL": "EXPERT",
-            "prompt": "GSWM NM_DI data file",
+            "prompt": "GSWM diurnal nonmigrating data file",
             "default": null,
-            "description": null,
+            "description": "The location of Global Scale Wave Model files containing diurnal nonmigrating tidal perturbations.",
             "warning": null
         },
         "GSWM_NM_SDI_NCFILE":{
             "LEVEL": "EXPERT",
-            "prompt": "GSWM NM_SDI file",
+            "prompt": "GSWM semidiurnal nonmigrating file",
             "default": null,
-            "description": null,
+            "description": "The location of Global Scale Wave Model files containing semidiurnal nonmigrating tidal perturbations.",
             "warning": null
         },
         "other_input":{
@@ -606,7 +585,7 @@
             "prompt": "Other input parameters ",
             "default": [null],
             "description": null,
-            "warning": null
+            "warning": "Advanced usage only."
         }
         
     }
