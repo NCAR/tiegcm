@@ -160,7 +160,7 @@
                 "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
                 "default": "12:00:00",
                 "description": null,
-                "warning": "Maximum walltime is on normal queue is 12:00:00."   
+                "warning": "Maximum walltime on normal queue is 12:00:00."   
             },
             "nprocs": {
                 "LEVEL": "EXPERT",

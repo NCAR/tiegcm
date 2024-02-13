@@ -66,14 +66,14 @@ JSON_INDENT = 4
 try:
     TIEGCMDATA = os.environ["TIEGCMDATA"]
 except:
-    os.environ['TIEGCMDATA'] = input(f'{RED}Unable to get TIEGCMDATA environment variable.{RESET}\n{YELLOW}Use command export TIEGCMDATA=Path/To/Data to set environment variable.{RESET}\nEnter TIEGCM data directory: ')
+    os.environ['TIEGCMDATA'] = input(f'{RED}Unable to get TIEGCMDATA environment variable.{RESET}\n{YELLOW}Use command "export TIEGCMDATA=Path/To/Data" to set environment variable.{RESET}\nEnter TIEGCM data directory: ')
     TIEGCMDATA = os.environ["TIEGCMDATA"]
 
 # Path to current tiegcm installation
 try:
     TIEGCMHOME = os.environ["TIEGCMHOME"]
 except:
-    os.environ['TIEGCMHOME'] = input(f'{RED}Unable to get TIEGCMHOME environment variable.{RESET}\n{YELLOW}Use command export TIEGCMHOME=Path/To/TIEGCM to set environment variable.{RESET}\nEnter TIEGCM model directory: ')
+    os.environ['TIEGCMHOME'] = input(f'{RED}Unable to get TIEGCMHOME environment variable.{RESET}\n{YELLOW}Use command "export TIEGCMHOME=Path/To/TIEGCM" to set environment variable.{RESET}\nEnter TIEGCM model directory: ')
     TIEGCMHOME = os.environ["TIEGCMHOME"]
 # Path to directory containing support files for makeitso.
 SUPPORT_FILES_DIRECTORY = os.path.join(TIEGCMHOME, "tiegcmrun")
@@ -1286,8 +1286,32 @@ def main():
     debug = args.debug
     options_path = args.options_path
     verbose = args.verbose
-    coupling = args.coupling    
+    coupling = args.coupling
+    compile = args.compile
+    execute = args.execute
+    benchmark = args.benchmark
+    mode = args.mode    
     # Fetch the run options.
+    if benchmark != None and mode == None:
+        mode = "BENCH"
+    elif mode == None:
+        mode = "BASIC"
+    print("\n")
+    print("Instructions:")
+    print(f"-> Default Selected input parameter is given in {GREEN}GREEN{RESET}")
+    print(f"-> Warnings and Information are given in {YELLOW}YELLOW{RESET}")
+    print(f"-> Errors are given in {RED}RED{RESET}")
+    print(f"-> Valid values (if any) are given in brackets eg. (value1 | value2 | value3) ")
+    print(f"-> Enter '?' for any input parameter to get a detailed description")
+    print(f"\n")
+    print("Run Options:")
+    if benchmark != None:
+        print(f"Benchmark = {benchmark}")
+    print(f"User Mode = {mode}")
+    print(f"Compile = {compile}")
+    print(f"Execute = {execute}")
+    print(f"Coupling = {coupling}")  
+    print(f"\n") 
     if options_path:
         # Read the run options from a JSON file.
         with open(options_path, "r", encoding="utf-8") as f:
