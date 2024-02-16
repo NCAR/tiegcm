@@ -58,7 +58,8 @@
      |  ntask_lon,       ! number of tasks in longitude dimension
      |  ntask_maglat,    ! number of tasks in mag latitude  dimension (not namelist)
      |  ntask_maglon,    ! number of tasks in mag longitude dimension (not namelist)
-     |  calc_helium      ! calculate helium if calc_helium=1, otherwise set he=0.
+     |  calc_helium,     ! calculate helium if calc_helium=1, otherwise set he=0.
+     |  electron_heating
       real ::
      |  tide(10),        ! semidiurnal tide amplitudes and phases
      |  tide2(2),        ! diurnal tide amplitude and phase
@@ -182,7 +183,7 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,
+     |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,electron_heating,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,et,saps,
      |  vedata,vndata,vvdata,oneway,mixfile
 !
@@ -292,6 +293,7 @@
       joulefac= spval
       calc_helium = ispval
       opdiffcap = spval
+      electron_heating = ispval
       et = .false.
       saps = .false.
 
@@ -585,6 +587,19 @@
       else
         write(6,"('Input: O+ diffusion maximum (opdiffcap)=',es12.4)")
      |    opdiffcap
+      endif
+
+      if (electron_heating == ispval) electron_heating = 6
+      if (electron_heating == 4) then
+        write(6,"('Input: thermal electron heating scheme uses',
+     |    'default 4th order Swartz & Nisbet [1972] formula')")
+      elseif (electron_heating == 6) then
+        write(6,"('Input: thermal electron heating scheme uses',
+     |    '6th order Smithtro & Solomon [2008] formula')")
+      else
+        write(6,"('>>> INPUT: ELECTRON_HEATING can only be 4 or 6,'
+     |    'but it is given as',i4)") electron_heating
+        call shutdown('Invalid thermal electron heating scheme')
       endif
 !
 ! If calc_helium == 1 then calculate helium, otherwise zero out helium.

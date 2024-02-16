@@ -12,7 +12,7 @@
       use params_module,only: dz,nlonp4,spval
       use cons_module,only: pi,rtd,evergs,
      |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,dipmin,avo
-      use input_module,only: f107,et
+      use input_module,only: f107,et,electron_heating
       use chapman_module,only: chi   ! solar zenith angle (nlonp4,nlat)
       use magfield_module,only: rlatm,dipmag
       use aurora_module,only: qteaur ! (nlonp4,nlat)
@@ -409,14 +409,17 @@
 ! Comment from earlier version (maybe the *1.0 below was once *2.0):
 !   "Correction facor of 2 increase in TE heating rate"
 !
-!         qe(k,i) = alog(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+0.1*o1n(k,i)))
-!         qe(k,i) = exp(-((((0.001996*qe(k,i)+0.08034)*qe(k,i)+1.166)*
-!    |              qe(k,i)+6.941)*qe(k,i)+12.75))*1.0
+          if (electron_heating == 4) then
+            qe(k,i) = log(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+0.1*o1n(k,i)))
+            qe(k,i) = exp(-((((0.001996*qe(k,i)+0.08034)*qe(k,i)+1.166)*
+     |                qe(k,i)+6.941)*qe(k,i)+12.75))*1.0
+          else
 ! Modified according to Smithtro & Solomon (2008), by Yihui Cai, 2021/10
-          qe(k,i) = alog(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+o1n(k,i)))
-          qe(k,i) = exp((((((-1.249-5*qe(k,i)-5.755e-4)*qe(k,i)
-     |              -9.346e-3)*qe(k,i)-5.900e-2)*qe(k,i)-4.392e-2)*
-     |              qe(k,i)+1.056)*qe(k,i)+5.342)
+            qe(k,i) = log(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+o1n(k,i)))
+            qe(k,i) = exp((((((-1.249-5*qe(k,i)-5.755e-4)*qe(k,i)
+     |                -9.346e-3)*qe(k,i)-5.900e-2)*qe(k,i)-4.392e-2)*
+     |                qe(k,i)+1.056)*qe(k,i)+5.342)
+          endif
 !
 ! Subtract qe from right-hand-side:
           rhs(k,i) = rhs(k,i)-qe(k,i)*qtot(k,i)*evergs
