@@ -429,7 +429,7 @@
       real*8 :: mixtime,gcmtime,csec
       integer :: cyr,cdoy,cmon,cday,chr,cmin
       integer :: i,j,j1,i1,j1p1
-      integer :: istat
+      integer :: istat, oldStep, req(7)
       integer :: id_nlat,id_nlon,idv_colat
       integer :: idv_lon,idv_pot,idv_flx,idv_eng
       character(len=240) :: char240,gStr
@@ -442,13 +442,6 @@
 
       if (mytid == 0) then
       !write(6,*) "ca_receive"
-      ting_pot_interp = 0.0
-      ting_eng_interp = 0.0
-      ting_flux_interp = 0.0
-      ting_bbeAvgEng_interp = 0.0
-      ting_bbeNumFlux_interp = 0.0
-      ting_cuspAvgEng_interp = 0.0
-      ting_cuspNumFlux_interp = 0.0
 
       !inquire(file=mix2gcmLock,exist=fExist)
       !
@@ -474,6 +467,8 @@
       call mjd2ut(MJDs(cStep),cyr,cdoy,cmon,cday,chr,cmin,csec)
       !call ut2mjd(cMJD,utime(1),0,utime(2),utime(3)
 
+      oldStep = cStep
+
       gcmtime = utime(2) + secs/(24.*60.*60.)
       mixtime = cdoy+chr/24.+cmin/(24.*60.)+csec/(24.*60.*60.)
       do while(mixtime < gcmtime)
@@ -488,6 +483,16 @@
       if (mixtime > gcmtime) then
         cStep = max(cStep-1,1)
       endif
+
+      if (oldStep .ne. cStep) then
+
+      ting_pot_interp = 0.0
+      ting_eng_interp = 0.0
+      ting_flux_interp = 0.0
+      ting_bbeAvgEng_interp = 0.0
+      ting_bbeNumFlux_interp = 0.0
+      ting_cuspAvgEng_interp = 0.0
+      ting_cuspNumFlux_interp = 0.0
 
       write(gStr,'(A,I0)') "Step#", cStep
       write(6,*) "REMIX READING: ", cStep, MJDs(cStep),cyr,
@@ -734,24 +739,27 @@
 ! Process the imported data.
 !
 
-      endif
+      endif ! cStep .ne. oldStep
+
+      endif ! mytid
 
       write(*,*) " I AM BCAST: ",mytid
 
-      call mpi_bcast(ting_pot_interp,nlat*nlonp1,MPI_REAL8,0,
-     |     TIEGCM_WORLD,ierr)
-      call mpi_bcast(ting_eng_interp,nlat*nlonp1,MPI_REAL8,0,
-     |     TIEGCM_WORLD,ierr)
-      call mpi_bcast(ting_flux_interp,nlat*nlonp1,MPI_REAL8,0,
-     |     TIEGCM_WORLD,ierr)
-      call mpi_bcast(ting_bbeAvgEng_interp,nlat*nlonp1,MPI_REAL8,0,
-     |     TIEGCM_WORLD,ierr)
-      call mpi_bcast(ting_bbeNumFlux_interp,nlat*nlonp1,MPI_REAL8,0,
-     |     TIEGCM_WORLD,ierr)
-      call mpi_bcast(ting_cuspAvgEng_interp,nlat*nlonp1,MPI_REAL8,0,
-     |     TIEGCM_WORLD,ierr)
-      call mpi_bcast(ting_cuspNumFlux_interp,nlat*nlonp1,MPI_REAL8,0,
-     |     TIEGCM_WORLD,ierr)
+      call mpi_ibcast(ting_pot_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(1),ierr)
+      call mpi_ibcast(ting_eng_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(2),ierr)
+      call mpi_ibcast(ting_flux_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(3),ierr)
+      call mpi_ibcast(ting_bbeAvgEng_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(4),ierr)
+      call mpi_ibcast(ting_bbeNumFlux_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(5),ierr)
+      call mpi_ibcast(ting_cuspAvgEng_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(6),ierr)
+      call mpi_ibcast(ting_cuspNumFlux_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(7),ierr)
+      call mpi_waitall(7,req,MPI_STATUSES_IGNORE,ierr)
 
       write(*,*) " I AM DONE BCAST: ",mytid
 
@@ -1176,7 +1184,7 @@
           use mpi
           character(len=*), intent(in) :: fStr
           integer, intent(out) :: s0, sE, Nstp
-          integer :: ncid, ierr, i, gExist
+          integer ::  ierr, i, gExist
           logical :: isEnd, idFirst
           character(len=240) :: gStr
           integer, parameter :: MAXSTEP0 = 10000
@@ -1198,7 +1206,7 @@
               write(gStr, '(A,I0)') "Step#", i
               write(6, '(A,I0)') "Step#", i
               ! Check if group exists in NetCDF file
-              ierr = nf90_inq_grp_ncid(ncid, trim(gStr), gExist)
+              ierr = nf90_inq_grp_ncid(h5fId, trim(gStr), gExist)
               write(*,*) "Group Found: ",ierr,NF90_NOERR,NF90_ENOGRP
 
               if (gExist == 0) then
