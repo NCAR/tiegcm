@@ -545,12 +545,17 @@ def get_run_option(name, description, mode="BASIC"):
     if warning is not None:
         print(f'{YELLOW}{warning}{RESET}')
     og_prompt = prompt
+    valid_bool = False
+    bool_True = ["YES","Yes","yes","Y","y","TRUE","True","true","T","t","1",True,1]
+    bool_False = ["NO","No","no","N","n","FALSE","False","false","F","f","0",False,0]
     # If provided, add the valid values in val1|val2 format to the prompt.
     if valids is not None: 
         if name == "vertres":
             vs = "|".join(map(lambda x: str(Fraction(x)), valids))
             prompt += f" ({vs})"
         else:
+            if True in valids and False in valids:
+                valid_bool = True
             vs = "|".join(map(str,valids))
             prompt += f" ({vs})"
 
@@ -580,7 +585,7 @@ def get_run_option(name, description, mode="BASIC"):
                     option_value = default
                     ok = True
             elif temp_value == "?":
-                print(var_description)
+                print(f'{YELLOW}{var_description}{RESET}')
         elif name == "SECFLDS":
             prompt = og_prompt
             prompt += f" [{GREEN}{default}{RESET}]"
@@ -594,7 +599,7 @@ def get_run_option(name, description, mode="BASIC"):
                 option_value = default
                 ok = True
             elif temp_value == "?":
-                print(var_description)
+                print(f'{YELLOW}{var_description}{RESET}')
         else:
             # Fetch input from the user.
             option_value = input(f"{prompt}: ")
@@ -605,9 +610,8 @@ def get_run_option(name, description, mode="BASIC"):
             # Use None if user input is none or None.
             elif option_value == 'none' or option_value == 'None':
                 option_value = None
-            
             elif option_value == "?":
-                print(var_description)
+                print(f'{YELLOW}{var_description}{RESET}')
                 continue
             # Validate the result. If bad, start over.
             if name == "vertres":
@@ -615,12 +619,21 @@ def get_run_option(name, description, mode="BASIC"):
                     print(f"Invalid value for option {name}: {option_value}!")
                     continue
             else:
-                if valids is not None and option_value not in valids:
+                if valid_bool == True:
+                    if option_value not in bool_True and option_value not in bool_False:
+                        print(f"Invalid value for option {name}: {option_value}!")
+                        continue
+                elif valids is not None and option_value not in valids:
                     print(f"Invalid value for option {name}: {option_value}!")
                     continue
 
             # Keep this result.
             ok = True
+            if valid_bool == True:
+                if option_value in bool_True:
+                    option_value = True
+                elif option_value in bool_False:
+                    option_value = False
             if option_value != None:
                 option_value = str(option_value)
     # Return the option as a string.
@@ -916,6 +929,8 @@ def prompt_user_for_run_options(args):
                 for item in skip_inp_temp:
                     if item not in skip_inp:
                         skip_inp.append(item)
+        elif on == "ONEWAY":
+            o[on] = get_run_option(on, od[on], temp_mode)            
         elif on == "GPI_NCFILE" and on not in skip_inp:
             o[on] = get_run_option(on, od[on], temp_mode)
             if o[on] != None:

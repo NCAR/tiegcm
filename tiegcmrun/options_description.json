@@ -217,7 +217,7 @@
                 "prompt": "Execution Directory",
                 "default": "os.getcwd()",
                 "description": "The directory where the executable will be located and the model will be run.",
-                "warning": "null"
+                "warning": null
             },
             "workdir": {
                 "LEVEL": "INTERMEDIATE",
@@ -291,8 +291,8 @@
                 "prompt": "Highest pressure level",
                 "default": 7,
                 "valids": [7, 8, 9, 10, 11],
-                "description": null,
-                "warning": "The pressure level of the topmost grid."
+                "description": "The pressure level of the topmost grid.",
+                "warning": null
             },
             "mres": {
                 "LEVEL": "BENCH",
@@ -460,6 +460,14 @@
             "description": "Names of history fields to be outputted.",
             "warning": null
         },
+        "ELECTRON_HEATING":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Thermal Electron Heating Scheme",
+            "default": 6,
+            "valids": [4, 6],
+            "description": "4 for the 4th order scheme (Swartz & Nisbet 1972) and\n 6 for the 6th order scheme (Smithtro & Solomon 2008)",
+            "warning": null
+        }, 
         "POTENTIAL_MODEL":{
             "LEVEL": "BASIC",
             "prompt": "High-latitude potential model that is going to be used",
@@ -468,6 +476,14 @@
             "description": "High-latitude potential model that is going to be used: Heelis/Weimer.",
             "warning": null
         },
+        "ONEWAY":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Enable One-way Coupling To Remix",
+            "default": false,
+            "valids": [true, false],
+            "description": "Enable one-way coupling from remix to TIEGCM. Read remix h5 file. Must be named or linked as msphere.mix.h5.",
+            "warning": "HEELIS must be set for One-way Coupling"
+        }, 
         "GPI_NCFILE":{
             "LEVEL": "BASIC",
             "prompt": "GPI file",

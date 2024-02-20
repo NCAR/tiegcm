@@ -62,10 +62,20 @@ GSWM_NM_DI_NCFILE = '{{inp.GSWM_NM_DI_NCFILE}}'{%- endif %}
 {%- if inp.GSWM_NM_SDI_NCFILE is not none %}
 GSWM_NM_SDI_NCFILE = '{{inp.GSWM_NM_SDI_NCFILE}}'{%- endif %}
 
+! Electron Heating
+{%- if inp.ELECTRON_HEATING is not none %}
+ELECTRON_HEATING = {{inp.ELECTRON_HEATING}}{%- endif %}
 
 ! Potential Model 
 {%- if inp.POTENTIAL_MODEL is not none %}
 POTENTIAL_MODEL = '{{inp.POTENTIAL_MODEL}}'{%- endif %}
+
+! Coupling
+{%- if inp.ONEWAY is true %}
+ONEWAY = .true.
+{%- elif inp.ONEWAY is false %}
+ONEWAY = .false.
+{%- endif %}
 
 ! GPI File
 {%- if inp.GPI_NCFILE is not none %}{{inp.GPI_NCFILE}}{%- endif %}
