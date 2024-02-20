@@ -41,7 +41,7 @@
       integer :: h5fId,inId,gId
 
       integer :: nlatp2,cplStep = 1
-      logical :: do_init = .true.
+      logical :: do_init = .true., firstread = .false.
       real*8, parameter :: pi = 4*atan(1.0d0)
 
 
@@ -484,7 +484,13 @@
         cStep = max(cStep-1,1)
       endif
 
-      if (oldStep .ne. cStep) then
+      if (oldStep .eq. cStep .and. firstread) then
+        firstread = .false.
+      else if (oldStep .ne. cStep) then
+        firstread = .true.
+      endif
+
+      if (firstread) then
 
       ting_pot_interp = 0.0
       ting_eng_interp = 0.0
@@ -494,7 +500,7 @@
       ting_cuspAvgEng_interp = 0.0
       ting_cuspNumFlux_interp = 0.0
 
-      write(gStr,'(A,I0)') "Step#", cStep
+      write(gStr,'(A,I0)') "Step#", s0 + cStep - 1
       write(6,*) "REMIX READING: ", cStep, MJDs(cStep),cyr,
      |  cdoy,cmon,cday,chr,cmin,csec
 
@@ -743,7 +749,7 @@
 
       endif ! mytid
 
-      write(*,*) " I AM BCAST: ",mytid
+      !write(*,*) " I AM BCAST: ",mytid
 
       call mpi_ibcast(ting_pot_interp,nlat*nlonp1,MPI_REAL8,0,
      |     TIEGCM_WORLD,req(1),ierr)
@@ -761,7 +767,7 @@
      |     TIEGCM_WORLD,req(7),ierr)
       call mpi_waitall(7,req,MPI_STATUSES_IGNORE,ierr)
 
-      write(*,*) " I AM DONE BCAST: ",mytid
+      !write(*,*) " I AM DONE BCAST: ",mytid
 
       gpot = 0.
       geng = 0.
@@ -865,10 +871,10 @@
 
           ! Check if this variable is a dataset or attribute
           ! Use nc_inq_varid to check the existence of the variable
-          write(*,*) "2D: ",trim(idStr),inId
+          !write(*,*) "2D: ",trim(idStr),inId
           dsTest = nf90_inq_varid(inId, trim(idStr), dsId)
-          write(*,*) "2D: ",trim(idStr),inId,dsId
-          if (dsTest == nf90_NOERR) write(*,*) "NOERR"
+          !write(*,*) "2D: ",trim(idStr),inId,dsId
+          !if (dsTest == nf90_NOERR) write(*,*) "NOERR"
           if (dsTest == nf90_EBADID) write(*,*) "nf90_EBADID"
           if (dsTest == nf90_ENOTNC4) write(*,*) "nf90_ENOTNC4"
           if (dsTest == nf90_ESTRICTNC3) write(*,*) "nf90_ESTRICTNC3"
@@ -884,8 +890,8 @@
               ierr = nf90_inquire_dimension(inId,dimsId(2),
      |  tmpStr,dims(2))
 
-              write(*,*) "TEST NAME: ",trim(tmpStr)
-              write(*,*) "TEST DIMS: ",dims
+              !write(*,*) "TEST NAME: ",trim(tmpStr)
+              !write(*,*) "TEST DIMS: ",dims
               !N = product(dims)
 
               ! Set relevant values in input chain and allocate memory
@@ -1195,25 +1201,25 @@
 
           ! Check if the file exists
           call CheckFileOrDie(fStr, "Unable to open file")
-          write(*,*) "Opening file",mytid,trim(fStr)
+          !write(*,*) "Opening file",mytid,trim(fStr)
           ! Open the NetCDF file
           !ierr = nf90_open(trim(fStr), NF90_NOWRITE, ncid)
-          write(*,*) "Done open file",mytid
+          !write(*,*) "Done open file",mytid
 
           do while (.not. isEnd)
               gExist = 0
-              write(*,*) "Loop step: ",mytid,i
+              !write(*,*) "Loop step: ",mytid,i
               write(gStr, '(A,I0)') "Step#", i
-              write(6, '(A,I0)') "Step#", i
+              !write(6, '(A,I0)') "Step#", i
               ! Check if group exists in NetCDF file
               ierr = nf90_inq_grp_ncid(h5fId, trim(gStr), gExist)
-              write(*,*) "Group Found: ",ierr,NF90_NOERR,NF90_ENOGRP
+              !write(*,*) "Group Found: ",ierr,NF90_NOERR,NF90_ENOGRP
 
-              if (gExist == 0) then
+              if (ierr .ne. NF90_NOERR) then
                   ! Step doesn't exist, either haven't found first or passed last
                   if (idFirst) then
                       ! Already found first, so we passed the last
-                      write(*,*) "FIRST GROUP: ",i,idFirst,isEnd
+                      !write(*,*) "FIRST GROUP: ",i,idFirst,isEnd
                       isEnd = .true.
                   else
                       ! Haven't yet found first, keep going

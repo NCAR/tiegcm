@@ -37,7 +37,7 @@
       integer,parameter ::
      |  nmixinvar  = 3, ! Potential, Flux, Energy
      |  nmixoutvar = 2, ! Pedersen, Hall
-     |  nhoutvar   = 8, ! TN, UN, VN, OMEGA, O2, O1, NO, Z
+     |  nhoutvar   = 9, ! TN, UN, VN, OMEGA, O2, O1, NO, Z, HE
      |  nhinvar    = 0  !
 
       contains 
@@ -256,6 +256,7 @@
         do i=nlat/2+1,nlat
           if(gflx(j+2,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
         enddo
+        i = min(i,nlat)
         aurllbj(i) = max(90.-glat(i),15.) ! aurllbj is co-lat.
       enddo
       aurllbN = maxval(aurllbj)
@@ -265,6 +266,7 @@
         do i=nlat/2,1,-1
           if(gflx(j+2,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
         enddo
+        i = max(i,1)
         aurllbj(i) = max(90.-glat(i),15.) ! aurllbj is co-lat.
       enddo
       aurllbS = maxval(aurllbj)
@@ -392,7 +394,8 @@
 ! ... Shared Module Variables ..........................................
       use params_module,only: nlon,nlonp4,nlat,nlevp1
       use fields_module,only: f4d,itp,itc
-      use fields_module,only: i_z,i_tn,i_un,i_vn,i_w,i_o2,i_o1,i_no
+      use fields_module,only: i_z,i_tn,i_un,i_vn,i_w,i_o2,i_o1,i_no,
+     |  i_he
 
       use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f3d,mytid,
      |  ntask,handle_mpi_err
@@ -409,7 +412,7 @@
 
       ! Number of fields we are passing
       ! This list must match the order that is in tgcmInterp enumerator
-      ilist = (/i_tn, i_un, i_vn, i_o2, i_o1, i_no, i_w, i_z /)
+      ilist = (/i_tn, i_un, i_vn, i_he, i_o2, i_o1, i_no, i_w, i_z /)
 
 ! Prepare data for export
       write(*,*) "PREP HIDRA EXPORT STUFF: ",mytid
@@ -446,8 +449,10 @@
      |      minval(hidra_out(:,:,:,v))
         enddo
 
-        write(6,"('TGCM: Sending to HIDRA at: ',4i4)") modeltime
-
+        if (mytid == 0) then
+        !write(6,"('TGCM: Sending to HIDRA at: ',4i4)") modeltime
+        write(6,"('GCM2HIDRA: ',4i4)") modeltime
+        endif
       endif
 
 ! Save exchange variables to secondary history files
