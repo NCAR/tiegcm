@@ -370,7 +370,6 @@ def inp_sec_hist(SECSTART,SECSTOP):
     SECSTART_DAY = SECSTART[0]
     SECSTOP_DAY = SECSTOP[0]
     n_split_day = int(SECSTOP_DAY - SECSTART_DAY)
-    print(n_split_day)
     if n_split_day >= 7:
         SECHIST = "1 0 0 0"
     else:
@@ -943,6 +942,8 @@ def prompt_user_for_run_options(args):
                 for item in skip_inp_temp:
                     if item not in skip_inp:
                         skip_inp.append(item)
+                od["F107"]["warning"] = "F10.7 can be read by GPI File and can be skipped."
+                od["F107A"]["warning"] = "81-Day Average of F10.7 can be read by GPI File and can be skipped."
         elif on == "IMF_NCFILE" and on not in skip_inp:
             o[on] = get_run_option(on, od[on], temp_mode)
             if o[on] != None:
