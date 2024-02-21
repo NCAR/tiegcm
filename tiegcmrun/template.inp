@@ -78,10 +78,12 @@ ONEWAY = .false.
 {%- endif %}
 
 ! GPI File
-{%- if inp.GPI_NCFILE is not none %}{{inp.GPI_NCFILE}}{%- endif %}
+{%- if inp.GPI_NCFILE is not none %}
+GPI_NCFILE = '{{inp.GPI_NCFILE}}'{%- endif %}
 
 ! IMF File 
-{%- if inp.IMF_NCFILE is not none %}{{inp.IMF_NCFILE}}{%- endif %}
+{%- if inp.IMF_NCFILE is not none %}
+IMF_NCFILE = '{{inp.IMF_NCFILE}}'{%- endif %}
 
 ! KP index or POWER & CTPOTEN Information  
 {%- if inp.KP is not none %}

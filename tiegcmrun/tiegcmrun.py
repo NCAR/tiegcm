@@ -161,14 +161,19 @@ def interp3d(variable, inlev, inlat, inlon, outlev, outlat, outlon, extrap):
 
 def interpic(fin, hres, vres, zitop, fout):
     # Some additional attributes for 4D fields
-    lower_cap = 1e-8
+    lower_cap = 1e-12
     fill_top = ['TN', 'UN', 'VN', 'OP', 'TI', 'TE', 'N2D', 'O2P', 'TN_NM', 'UN_NM', 'VN_NM', 'OP_NM']
     mixing_ratio = ['O2', 'O1', 'HE', 'N4S', 'NO', 'AR', 'N2D', 'O2_NM', 'O1_NM', 'HE_NM', 'N4S_NM', 'NO_NM', 'AR_NM']
-    extrap_method = {'TN': 'exponential', 'UN': 'linear', 'VN': 'linear', 'O2': 'exponential', 'O1': 'exponential', 'HE': 'exponential',
-            'OP': 'exponential', 'N4S': 'exponential', 'NO': 'exponential', 'AR': 'exponential', 'TI': 'exponential', 'TE': 'exponential',
-            'NE': 'exponential', 'OMEGA': 'linear', 'N2D': 'constant',  'O2P': 'constant', 'Z': 'exponential', 'POTEN': 'linear',
-            'TN_NM': 'exponential', 'UN_NM': 'linear', 'VN_NM': 'linear', 'O2_NM': 'exponential', 'O1_NM': 'exponential', 'HE_NM': 'exponential',
-            'OP_NM': 'exponential', 'N4S_NM': 'exponential', 'NO_NM': 'exponential', 'AR_NM': 'exponential'}
+    extrap_method = {'TN': 'exponential', 'UN': 'linear', 'VN': 'linear',
+            'O2': 'exponential', 'O1': 'exponential', 'HE': 'exponential',
+            'OP': 'exponential', 'N4S': 'exponential', 'NO': 'exponential',
+            'AR': 'exponential', 'TI': 'exponential', 'TE': 'exponential',
+            'NE': 'exponential', 'OMEGA': 'linear', 'N2D': 'constant',
+            'O2P': 'constant', 'Z': 'exponential', 'POTEN': 'linear',
+            'TN_NM': 'exponential', 'UN_NM': 'linear', 'VN_NM': 'linear',
+            'O2_NM': 'exponential', 'O1_NM': 'exponential', 'HE_NM': 'exponential',
+            'OP_NM': 'exponential', 'N4S_NM': 'exponential', 'NO_NM': 'exponential',
+            'AR_NM': 'exponential'}
 
     nlon = int(360 / hres)
     lon = linspace(start=-180, stop=180-hres, num=nlon)
@@ -219,6 +224,8 @@ def interpic(fin, hres, vres, zitop, fout):
     lat0_bnd[1: nlat0+1] = lat0
     lat0_bnd[nlat0+1] = 90
 
+    # Longitude wrap is handled in interp2d, skip
+
     for varname, variable in src.variables.items():
         # Name change only
         if varname == 'coupled_cmit':
@@ -239,6 +246,12 @@ def interpic(fin, hres, vres, zitop, fout):
             varout[:] = lev
         elif varname == 'ilev':
             varout[:] = ilev
+
+        # The following variables never appear in standard TIEGCM runs
+        # But they showed up in some non-standard TIEGCM primary histories
+        # If that happens, skip those variables (the list may expand)
+        elif varname in ['lat_bnds', 'lon_bnds', 'gw', 'area']:
+            continue
 
         # Change from old format (3 digits) to new format (4 digits)
         elif varname == 'mtime':
@@ -307,9 +320,11 @@ def interpic(fin, hres, vres, zitop, fout):
         if 'HE'+ext in src.variables.keys():
             N2 = 1 - src['O2'+ext][:] - src['O1'+ext][:] - src['HE'+ext][:]
         else:
+            # In case HE is not in the old file (non-standard format), it has to be added to the new file
             N2 = 1 - src['O2'+ext][:] - src['O1'+ext][:]
             dst.createVariable(varname='HE'+ext, datatype='f8', dimensions=('time', 'lev', 'lat', 'lon'))
             dst['HE'+ext][:] = lower_cap
+
         N2n = ndarray(shape=(nt, nlev, nlat, nlon))
         N2_bnd = ndarray(shape=(nlev0, nlat0+2, nlon0))
         for it in range(nt):
@@ -319,11 +334,13 @@ def interpic(fin, hres, vres, zitop, fout):
                 N2_bnd[ik, nlat0+1, :] = mean(N2[it, ik, nlat0-1, :])
             N2n[it, :, :, :] = interp3d(variable=N2_bnd, inlev=lev0, inlat=lat0_bnd, inlon=lon0,
                 outlev=lev, outlat=lat, outlon=lon, extrap='exponential')
+
         N2n[N2n < lower_cap] = lower_cap
         N2n[N2n > 1] = 1
         O2n = dst['O2'+ext][:]
         O1n = dst['O1'+ext][:]
         HEn = dst['HE'+ext][:]
+
         normalize = O2n + O1n + HEn + N2n
         dst['O2'+ext][:] = O2n / normalize
         dst['O1'+ext][:] = O1n / normalize
@@ -545,6 +562,7 @@ def get_run_option(name, description, mode="BASIC"):
     if warning is not None:
         print(f'{YELLOW}{warning}{RESET}')
     og_prompt = prompt
+    file_variables = ["GPI_NCFILE","IMF_NCFILE"]
     valid_bool = False
     bool_True = ["YES","Yes","yes","Y","y","TRUE","True","true","T","t","1",True,1]
     bool_False = ["NO","No","no","N","n","FALSE","False","false","F","f","0",False,0]
@@ -646,6 +664,29 @@ def get_run_option(name, description, mode="BASIC"):
                 ok = True
             elif temp_value == "?":
                 print(f'{YELLOW}{var_description}{RESET}')
+        elif name in file_variables:
+            option_value = input(f"{prompt}: ")
+            # Use the default if no user input provided.
+            if option_value == "":
+                option_value = default
+            # Use None if user input is none or None.
+            elif option_value == 'none' or option_value == 'None':
+                option_value = None
+            elif option_value == "?":
+                print(f'{YELLOW}{var_description}{RESET}')
+                continue
+            elif option_value != None:
+                if os.path.exists(option_value) == False:
+                    file_path = find_file(option_value,TIEGCMDATA)
+                    if file_path == None:
+                        print(f'{YELLOW} Unable to find {option_value} in {TIEGCMDATA}.\n Give path to file as an alternative.{RESET}')
+                        continue
+                    else:
+                        option_value = str(file_path)
+                        ok = True
+                else:
+                    option_value = str(option_value)
+                    ok = True
         else:
             # Fetch input from the user.
             option_value = input(f"{prompt}: ")
