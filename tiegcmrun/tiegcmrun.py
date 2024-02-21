@@ -357,9 +357,9 @@ def inp_sec_date(PRISTART, PRISTOP):
     PRISTART_DAY = PRISTART[0]
     PRISTOP_DAY = PRISTOP[0]
     n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
-    if n_split_day > 7:
+    if n_split_day >= 7:
     # Format PRISTART and PRISTOP
-        SECSTART = PRISTART
+        SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
         SECSTOP = PRISTOP
     else:
         SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
@@ -369,7 +369,8 @@ def inp_sec_date(PRISTART, PRISTOP):
 def inp_sec_hist(SECSTART,SECSTOP):
     SECSTART_DAY = SECSTART[0]
     SECSTOP_DAY = SECSTOP[0]
-    n_split_day = int(SECSTART_DAY - SECSTOP_DAY)
+    n_split_day = int(SECSTOP_DAY - SECSTART_DAY)
+    print(n_split_day)
     if n_split_day >= 7:
         SECHIST = "1 0 0 0"
     else:
@@ -874,18 +875,25 @@ def prompt_user_for_run_options(args):
         if start_stop_set == 0 and benchmark == None:
             temp_mode =  "INTERMEDIATE"
         elif start_stop_set == 1:
+            print(f'in {on}')
             if on == "PRIHIST":
                 od["PRIHIST"]["default"]=inp_pri_hist(PRISTART,PRISTOP)
+                print(f'{od[on]["default"]}')
             if on == "OUTPUT":
                 od["OUTPUT"]["default"]=inp_pri_out(PRISTART,PRISTOP,histdir,run_name)
+                print(f'{od[on]["default"]}')
             if on == "MXHIST_PRIM":
                 od["MXHIST_PRIM"]["default"]=inp_pri_mxhist(PRISTART,PRISTOP)
+                print(f'{od[on]["default"]}')
             if on == "SECHIST":
                 od["SECHIST"]["default"]=inp_sec_hist(SECSTART,SECSTOP)
+                print(f'{od[on]["default"]}')
             if on == "SECOUT":
                 od["SECOUT"]["default"]=inp_sec_out(SECSTART,SECSTOP,histdir,run_name)
+                print(f'{od[on]["default"]}')
             if on == "MXHIST_SECH":
                 od["MXHIST_SECH"]["default"]=inp_sec_mxhist(SECSTART,SECSTOP)
+                print(f'{od[on]["default"]}')
         if on == "start_date" and benchmark != None:
             continue
         elif on == "stop_date" and benchmark != None:
