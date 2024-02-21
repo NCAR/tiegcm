@@ -800,7 +800,7 @@ def prompt_user_for_run_options(args):
     #------------------------------------
 
     # Data Options
-
+    input_built = False 
     options["model"]["data"] = {}
     o = options["model"]["data"]
     temp_mode = mode
@@ -828,6 +828,8 @@ def prompt_user_for_run_options(args):
     o["tgcmdata"] = get_run_option("tgcmdata", od["tgcmdata"], mode)
     if benchmark == None:
         o["input_file"] = get_run_option("input_file", od["input_file"], mode)
+        if o["input_file"]  != None:
+            input_built = True
     else:
         o["input_file"] = None
     od["log_file"]["default"] =  f'{o["workdir"]}/{options["simulation"]["job_name"]}.out'
@@ -852,7 +854,8 @@ def prompt_user_for_run_options(args):
     options["model"]["specification"] = {}
     o = options["model"]["specification"]
 
-    od = option_descriptions["model"]["specification"]                
+    od = option_descriptions["model"]["specification"]
+                   
     for on in od:
         if on == "mres":
             if float(horires) == 2.5:
@@ -875,152 +878,159 @@ def prompt_user_for_run_options(args):
 
     #-------------------------------------------------------------------------
     # INP options
-    options["inp"] = {}
-    o = options["inp"]
+    if input_built == False:        
 
-    od = option_descriptions["inp"]     
-    
+        options["inp"] = {}
+        o = options["inp"]
 
-    if float(horires) == 5:
-        od["STEP"]["default"] = 60
-    elif float(horires) == 2.5:
-        od["STEP"]["default"] = 30
-    elif float(horires) == 1.25:
-        od["STEP"]["default"] = 10
-    elif float(horires) == 0.625:
-        od["STEP"]["default"] = 5
-    run_name = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
-    histdir = options["model"]["data"]["histdir"]
-    if benchmark != None:
-        oben = benchmarks_options[benchmark]["inp"]
+        od = option_descriptions["inp"]     
+        
+
+        if float(horires) == 5:
+            od["STEP"]["default"] = 60
+        elif float(horires) == 2.5:
+            od["STEP"]["default"] = 30
+        elif float(horires) == 1.25:
+            od["STEP"]["default"] = 10
+        elif float(horires) == 0.625:
+            od["STEP"]["default"] = 5
+        run_name = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
+        histdir = options["model"]["data"]["histdir"]
+        if benchmark != None:
+            oben = benchmarks_options[benchmark]["inp"]
+            for on in od:
+                if on in oben:
+                    if on == "SOURCE":
+                        od[on]["default"] = find_file('*tiegcm*'+options['simulation']['job_name']+'*', TIEGCMDATA)
+                    elif on in ["OUTPUT", "SECOUT"]:
+                        temp_output = oben[on]
+                        temp_output = temp_output.replace("+histdir+", histdir)
+                        temp_output = temp_output.replace("+run_name+", run_name)
+                        od[on]["default"] = temp_output
+                    elif on in ["other_input"]:
+                        temp_output = [item.replace("+tiegcmdata+", tiegcmdata_dir) if item is not None and item != 'null' else item for item in oben[on]]
+                        od[on]["default"] = temp_output
+                    elif oben[on] == None:
+                        od[on]["default"] = od[on]["default"]
+                    else:
+                        od[on]["default"] = oben[on]
+                
+        od["LABEL"]["default"] = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
+        if options["simulation"]["hpc_system"] == "pleiades":
+            od["SECFLDS"]["warning"] = "Limit SECFLDS. File libraries on pleiades are built without big file support."
+        temp_mode = mode
+        skip_inp = []
+        start_stop_set = 0
         for on in od:
-            if on in oben:
-                if on == "SOURCE":
-                    od[on]["default"] = find_file('*tiegcm*'+options['simulation']['job_name']+'*', TIEGCMDATA)
-                elif on in ["OUTPUT", "SECOUT"]:
-                    temp_output = oben[on]
-                    temp_output = temp_output.replace("+histdir+", histdir)
-                    temp_output = temp_output.replace("+run_name+", run_name)
-                    od[on]["default"] = temp_output
-                elif on in ["other_input"]:
-                    temp_output = [item.replace("+tiegcmdata+", tiegcmdata_dir) if item is not None and item != 'null' else item for item in oben[on]]
-                    od[on]["default"] = temp_output
-                elif oben[on] == None:
-                    od[on]["default"] = od[on]["default"]
-                else:
-                    od[on]["default"] = oben[on]
-            
-    od["LABEL"]["default"] = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
-    if options["simulation"]["hpc_system"] == "pleiades":
-        od["SECFLDS"]["warning"] = "Limit SECFLDS. File libraries on pleiades are built without big file support."
-    temp_mode = mode
-    skip_inp = []
-    start_stop_set = 0
-    for on in od:
-        if start_stop_set == 0 and benchmark == None:
-            temp_mode =  "INTERMEDIATE"
-        elif start_stop_set == 1:
-            if on == "PRIHIST":
-                od["PRIHIST"]["default"]=inp_pri_hist(PRISTART,PRISTOP)
-            if on == "OUTPUT":
-                od["OUTPUT"]["default"]=inp_pri_out(PRISTART,PRISTOP,histdir,run_name)
-            if on == "MXHIST_PRIM":
-                od["MXHIST_PRIM"]["default"]=inp_pri_mxhist(PRISTART,PRISTOP)
-            if on == "SECHIST":
-                od["SECHIST"]["default"]=inp_sec_hist(SECSTART,SECSTOP)
-            if on == "SECOUT":
-                od["SECOUT"]["default"]=inp_sec_out(SECSTART,SECSTOP,histdir,run_name)
-            if on == "MXHIST_SECH":
-                od["MXHIST_SECH"]["default"]=inp_sec_mxhist(SECSTART,SECSTOP)
-        if on == "start_date" and benchmark != None:
-            continue
-        elif on == "stop_date" and benchmark != None:
-            continue
-        elif on == "stop_date" and benchmark == None:
-            o[on] = get_run_option(on, od[on], temp_mode)
-            if o[on] != None:
-                start_stop_set = 1
-                temp_mode = mode
-                START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_date"], o["stop_date"])
-                od["START_YEAR"]["default"] = START_YEAR
-                od["START_DAY"]["default"] = START_DAY
-                od["PRISTART"]["default"] = ' '.join(map(str, PRISTART))
-                od["PRISTOP"]["default"] = ' '.join(map(str, PRISTOP))
-                SECSTART,SECSTOP = inp_sec_date(PRISTART,PRISTOP)
-                od["SECSTART"]["default"] = ' '.join(map(str, SECSTART))
-                od["SECSTOP"]["default"] = ' '.join(map(str, SECSTOP))
-        elif on == "SOURCE":
-            temp_val = get_run_option(on, od[on], temp_mode)
-            source_found = False
-            while source_found == False:
-                if os.path.isfile(temp_val):
-                    source_found = True
-                    o[on] = temp_val
-                else:
-                    od[on]["warning"] = "Source File Not Found"
-                    temp_val = get_run_option(on, od[on], "BASIC")
-                    o[on] = temp_val
-        elif on == "SOURCE_START":
-            od["SOURCE_START"]["valids"] = get_mtime(options["inp"]["SOURCE"])
-            temp_mode_1 = temp_mode
-            if len(od["SOURCE_START"]["valids"]) > 1:    
-                temp_mode_1 = "INTERMEDIATE"
-            od["SOURCE_START"]["default"] = od["SOURCE_START"]["valids"][0]
-            o[on] = get_run_option(on, od[on], temp_mode_1)
-        elif on == "POTENTIAL_MODEL":
-            o[on] = get_run_option(on, od[on], temp_mode)
-            if o[on] == "HEELIS":
-                skip_inp_temp = ["IMF_NCFILE","BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
-                for item in skip_inp_temp:
-                    if item not in skip_inp:
-                        skip_inp.append(item)
-            elif o[on] == "WEIMER":
-                skip_inp_temp = ["CTPOTEN"]
-                for item in skip_inp_temp:
-                    if item not in skip_inp:
-                        skip_inp.append(item)
-        elif on == "ONEWAY":
-            o[on] = get_run_option(on, od[on], temp_mode)            
-        elif on == "GPI_NCFILE" and on not in skip_inp:
-            o[on] = get_run_option(on, od[on], temp_mode)
-            if o[on] != None:
-                skip_inp_temp = ["KP","POWER","CTPOTEN"]
-                for item in skip_inp_temp:
-                    if item not in skip_inp:
-                        skip_inp.append(item)
-                od["F107"]["warning"] = "F10.7 can be read by GPI File and can be skipped."
-                od["F107A"]["warning"] = "81-Day Average of F10.7 can be read by GPI File and can be skipped."
-        elif on == "IMF_NCFILE" and on not in skip_inp:
-            o[on] = get_run_option(on, od[on], temp_mode)
-            if o[on] != None:
-                skip_inp_temp = ["BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
-                for item in skip_inp_temp:
-                    if item not in skip_inp:
-                        skip_inp.append(item)
-        elif on == "KP" and on not in skip_inp:
-            o[on] = get_run_option(on, od[on], temp_mode)
-            if o[on] != None:
-                skip_inp_temp = ["POWER","CTPOTEN"]
-                for item in skip_inp_temp:
-                    if item not in skip_inp:
-                        skip_inp.append(item)
-        elif on == "GSWM_MI_DI_NCFILE":
-            od[on]["default"] = f"{find_file(f'*gswm_diurn_{horires}d_99km*', tiegcmdata_dir)}"
-            o[on] = get_run_option(on, od[on], temp_mode)
-        elif on == "GSWM_MI_SDI_NCFILE":
-            od[on]["default"] = f"{find_file(f'*gswm_semi_{horires}d_99km*', tiegcmdata_dir)}"
-            o[on] = get_run_option(on, od[on], temp_mode)
-        elif on == "GSWM_NM_DI_NCFILE":
-            od[on]["default"] = f"{find_file(f'*gswm_nonmig_diurn_{horires}d_99km*', tiegcmdata_dir)}"
-            o[on] = get_run_option(on, od[on], temp_mode)
-        elif on == "GSWM_NM_SDI_NCFILE":
-            od[on]["default"] = f"{find_file(f'*gswm_nonmig_semi_{horires}d_99km*', tiegcmdata_dir)}"
-            o[on] = get_run_option(on, od[on], temp_mode)
+            if start_stop_set == 0 and benchmark == None:
+                temp_mode =  "INTERMEDIATE"
+            elif start_stop_set == 1:
+                if on == "PRIHIST":
+                    od["PRIHIST"]["default"]=inp_pri_hist(PRISTART,PRISTOP)
+                if on == "OUTPUT":
+                    od["OUTPUT"]["default"]=inp_pri_out(PRISTART,PRISTOP,histdir,run_name)
+                if on == "MXHIST_PRIM":
+                    od["MXHIST_PRIM"]["default"]=inp_pri_mxhist(PRISTART,PRISTOP)
+                if on == "SECHIST":
+                    od["SECHIST"]["default"]=inp_sec_hist(SECSTART,SECSTOP)
+                if on == "SECOUT":
+                    od["SECOUT"]["default"]=inp_sec_out(SECSTART,SECSTOP,histdir,run_name)
+                if on == "MXHIST_SECH":
+                    od["MXHIST_SECH"]["default"]=inp_sec_mxhist(SECSTART,SECSTOP)
+            if on == "start_date" and benchmark != None:
+                continue
+            elif on == "stop_date" and benchmark != None:
+                continue
+            elif on == "stop_date" and benchmark == None:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                if o[on] != None:
+                    start_stop_set = 1
+                    temp_mode = mode
+                    START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_date"], o["stop_date"])
+                    od["START_YEAR"]["default"] = START_YEAR
+                    od["START_DAY"]["default"] = START_DAY
+                    od["PRISTART"]["default"] = ' '.join(map(str, PRISTART))
+                    od["PRISTOP"]["default"] = ' '.join(map(str, PRISTOP))
+                    SECSTART,SECSTOP = inp_sec_date(PRISTART,PRISTOP)
+                    od["SECSTART"]["default"] = ' '.join(map(str, SECSTART))
+                    od["SECSTOP"]["default"] = ' '.join(map(str, SECSTOP))
+            elif on == "SOURCE":
+                temp_val = get_run_option(on, od[on], temp_mode)
+                source_found = False
+                while source_found == False:
+                    if temp_val != None:
+                        if os.path.isfile(temp_val):
+                            source_found = True
+                            o[on] = temp_val
+                        else:
+                            od[on]["warning"] = "Source File Not Found"
+                            temp_val = get_run_option(on, od[on], "BASIC")
+                            o[on] = temp_val
+                    else:
+                        od[on]["warning"] = "Source File Not Found"
+                        temp_val = get_run_option(on, od[on], "BASIC")
+                        o[on] = temp_val
+            elif on == "SOURCE_START":
+                od["SOURCE_START"]["valids"] = get_mtime(options["inp"]["SOURCE"])
+                temp_mode_1 = temp_mode
+                if len(od["SOURCE_START"]["valids"]) > 1:    
+                    temp_mode_1 = "INTERMEDIATE"
+                od["SOURCE_START"]["default"] = od["SOURCE_START"]["valids"][0]
+                o[on] = get_run_option(on, od[on], temp_mode_1)
+            elif on == "POTENTIAL_MODEL":
+                o[on] = get_run_option(on, od[on], temp_mode)
+                if o[on] == "HEELIS":
+                    skip_inp_temp = ["IMF_NCFILE","BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
+                    for item in skip_inp_temp:
+                        if item not in skip_inp:
+                            skip_inp.append(item)
+                elif o[on] == "WEIMER":
+                    skip_inp_temp = ["CTPOTEN"]
+                    for item in skip_inp_temp:
+                        if item not in skip_inp:
+                            skip_inp.append(item)
+            elif on == "ONEWAY":
+                o[on] = get_run_option(on, od[on], temp_mode)            
+            elif on == "GPI_NCFILE" and on not in skip_inp:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                if o[on] != None:
+                    skip_inp_temp = ["KP","POWER","CTPOTEN"]
+                    for item in skip_inp_temp:
+                        if item not in skip_inp:
+                            skip_inp.append(item)
+                    od["F107"]["warning"] = "F10.7 can be read by GPI File and can be skipped."
+                    od["F107A"]["warning"] = "81-Day Average of F10.7 can be read by GPI File and can be skipped."
+            elif on == "IMF_NCFILE" and on not in skip_inp:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                if o[on] != None:
+                    skip_inp_temp = ["BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
+                    for item in skip_inp_temp:
+                        if item not in skip_inp:
+                            skip_inp.append(item)
+            elif on == "KP" and on not in skip_inp:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                if o[on] != None:
+                    skip_inp_temp = ["POWER","CTPOTEN"]
+                    for item in skip_inp_temp:
+                        if item not in skip_inp:
+                            skip_inp.append(item)
+            elif on == "GSWM_MI_DI_NCFILE":
+                od[on]["default"] = f"{find_file(f'*gswm_diurn_{horires}d_99km*', tiegcmdata_dir)}"
+                o[on] = get_run_option(on, od[on], temp_mode)
+            elif on == "GSWM_MI_SDI_NCFILE":
+                od[on]["default"] = f"{find_file(f'*gswm_semi_{horires}d_99km*', tiegcmdata_dir)}"
+                o[on] = get_run_option(on, od[on], temp_mode)
+            elif on == "GSWM_NM_DI_NCFILE":
+                od[on]["default"] = f"{find_file(f'*gswm_nonmig_diurn_{horires}d_99km*', tiegcmdata_dir)}"
+                o[on] = get_run_option(on, od[on], temp_mode)
+            elif on == "GSWM_NM_SDI_NCFILE":
+                od[on]["default"] = f"{find_file(f'*gswm_nonmig_semi_{horires}d_99km*', tiegcmdata_dir)}"
+                o[on] = get_run_option(on, od[on], temp_mode)
 
-        elif on not in skip_inp:
-            o[on] = get_run_option(on, od[on], temp_mode)
-        elif on in skip_inp:
-            o[on] = od[on]["default"]
+            elif on not in skip_inp:
+                o[on] = get_run_option(on, od[on], temp_mode)
+            elif on in skip_inp:
+                o[on] = od[on]["default"]
             
 
     #-------------------------------------------------------------------------
@@ -1448,15 +1458,22 @@ def main():
         compile_tiegcm(options, debug, coupling)
     
     pbs_script = create_pbs_scripts(options)
-
     if args.execute == True:
+        if args.compile == False:
+            if find_file(options["model"]["data"]["modelexe"], execdir) == None:
+                print(f'{RED}Unable to find executable in {execdir}{RESET}')
+                exit(1)
         try:
             result = subprocess.run(['qsub', pbs_script], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             job_id = result.stdout.strip()
             print(f'Job submitted successfully. Job ID: {job_id}')
         except subprocess.CalledProcessError as e:
-            print(f'Error submitting job: {e.stderr}')
-
+            print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
+            print(f"{YELLOW}Check PBS script for erros{RESET}")
+            print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
+    else:
+        print(f"{YELLOW}Execute is set to false{RESET}")
+        print(f"{YELLOW}To submit job use command{RESET} qsub {pbs_script}")
 
 if __name__ == "__main__":
     """Begin main program."""
