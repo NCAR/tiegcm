@@ -591,7 +591,12 @@ def get_run_option(name, description, mode="BASIC"):
             prompt += f" [{GREEN}{default}{RESET}]"
             temp_value = input(f"{prompt} / ENTER to go next: ")
             if temp_value != "":
-                default.append(temp_value) 
+                if "," in temp_value:
+                    temp_value = temp_value.replace("'", "")
+                    default.extend(s.replace(" ", "") for s in temp_value.split(',')) 
+                else:
+                    temp_value = temp_value.replace("'", "")
+                    default.extend(s.replace(" ", "") for s in temp_value.split()) 
                 option_value = default
             elif temp_value == 'none' or temp_value == 'None':
                 option_value = json.loads('[null]')
