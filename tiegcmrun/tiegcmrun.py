@@ -569,6 +569,7 @@ def get_run_option(name, description, mode="BASIC"):
     # Prompt the user and fetch the input until a good value is provided.
     ok = False
     option_value = ""
+    first_pass_modules = True
     while not ok:
         if name in ("other_input", "other_pbs","other_job"):
             temp_value = input(f"{prompt} / ENTER to go next: ")
@@ -597,6 +598,46 @@ def get_run_option(name, description, mode="BASIC"):
                 else:
                     temp_value = temp_value.replace("'", "")
                     default.extend(s.replace(" ", "") for s in temp_value.split()) 
+                option_value = default
+            elif temp_value == 'none' or temp_value == 'None':
+                option_value = json.loads('[null]')
+            elif temp_value == "":
+                option_value = default
+                ok = True
+            elif temp_value == "?":
+                print(f'{YELLOW}{var_description}{RESET}')
+        elif name == "modules":
+            prompt = og_prompt
+            prompt += f" [{GREEN}{default}{RESET}]"
+            temp_value = input(f"{prompt} / ENTER to go next: ")
+            if temp_value != "":
+                if first_pass_modules == True:
+                    default = []
+                    first_pass_modules = False
+                    print("in")
+                if "\n" in temp_value:
+                    temp_value = temp_value.replace("'", "")
+                    temp_array = temp_value.split('\n')
+                    temp_array = [s.replace("module load", "") for s in temp_array]
+                    temp_array = [s.replace(" ", "") for s in temp_array]
+                    default.extend(temp_array) 
+                if "," in temp_value:
+                    temp_value = temp_value.replace("'", "")
+                    temp_array = temp_value.split(',')
+                    temp_array = [s.replace("module load", "") for s in temp_array]
+                    temp_array = [s.replace(" ", "") for s in temp_array]
+                    default.extend(temp_array) 
+                else:
+                    temp_value = temp_value.replace("'", "")
+                    temp_array = temp_value.split()
+                    temp_array = [s.replace("module load", "") for s in temp_array]
+                    temp_array = [s.replace(" ", "") for s in temp_array]
+                    default.extend(temp_array)
+                modules_array_cleaned = []
+                for module in default:
+                    if module not in ['module', 'load']:
+                        modules_array_cleaned.append(module) 
+                default = modules_array_cleaned
                 option_value = default
             elif temp_value == 'none' or temp_value == 'None':
                 option_value = json.loads('[null]')
@@ -987,7 +1028,7 @@ def prompt_user_for_run_options(args):
     # PBS options
     options["pbs"] = {}
     o = options["pbs"]
-
+    skip_pbs = []
     # Common (HPC platform-independent) options
     od = option_descriptions["pbs"]["_common"]
     od["account_name"]["default"] = os.getlogin()
@@ -1033,7 +1074,11 @@ def prompt_user_for_run_options(args):
         elif on =="nprocs":
             od[on]["default"] = int(nnodes) * int(mpiprocs)
             o[on] = get_run_option(on, od[on], mode)
-        else:
+        elif on == "module_list":
+            o[on] = get_run_option(on, od[on], mode)
+            if o[on] != None:
+                skip_pbs.append("modules")
+        elif on not in skip_pbs:
             o[on] = get_run_option(on, od[on], mode)
 
     # Return the options dictionary.

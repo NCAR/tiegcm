@@ -90,6 +90,13 @@
                 "description": null,
                 "warning": null
             },
+            "module_list": {
+                "LEVEL": "EXPERT",
+                "prompt": "Saved Module List",
+                "default": null,
+                "description": null,
+                "warning": "Add a saved list or ENTER to add the invididual modules"
+            },
             "modules": {
                 "LEVEL": "EXPERT",
                 "prompt": "Modules to load",

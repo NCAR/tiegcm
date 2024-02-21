@@ -20,6 +20,8 @@ setenv TGCMDATA {{model.data.tgcmdata}}
 
 # Load modules
 module purge
+{%- if pbs.module_list is not none %}
+module restore {{pbs.module_list}}{%- endif %}
 {%- for module in pbs.modules %}
 module load {{ module }}
 {%- endfor %}
