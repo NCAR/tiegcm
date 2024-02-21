@@ -71,7 +71,8 @@
      |  p, q, r,    ! coefficients for tridiagonal solver
      |  rhs,        ! right hand side of trsolv
      |  qpart,      ! part of q coeff
-     |  tnlbc_diag  ! tnlbc_diag is redundant in vertical
+     |  tnlbc_diag, ! tnlbc_diag is redundant in vertical
+     |  solarq,recombq,conductq,coolq,advecq,adiaq
 !
 ! Local at 3d (tnsmooth needs lat dimension only for sub smooth):
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
@@ -142,31 +143,6 @@
 !     call addfld('MBAR' ,' ',' ',mbar(lev0:lev1-1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
-! Total heat sources are in total_heat (s5).
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-!
-! Solar heating from qrj:
-          total_heat(k,i) = .5*(qtotal(k,i,lat)+qtotal(k+1,i,lat))
-!
-! Add heating from 4th order horizontal diffusion (hdt from sub hdif3):
-          total_heat(k,i) = total_heat(k,i)+hdt(k,i,lat)
-!
-! Add heating due to atomic oxygen recombination:
-          total_heat(k,i) = total_heat(k,i)+tsurplus*rkm12(k,i,lat)*
-     |      (xnmbar(k,i,lat)*o1(k,i,lat)*rmassinv_o1)**2*
-     |      avo/mbar(k,i,lat)
-!
-! Add ion joule heating (from sub qjoule_tn, qjoule.F)
-! (Note joulefac was applied in sub qji_tn)
-!
-	  total_heat(k,i) = total_heat(k,i)+qji_tn(k,i,lat)
-        enddo ! k=lev0,lev1-1
-      enddo ! i=lon0,lon1
-!     call addfld('HEATING1',' ',' ',total_heat(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! Add heating due to molecular diffusion:
 ! du/dz and dv/dz (s10, s11):
       do i=lon0,lon1
         do k=lev0+1,lev1-2
@@ -183,15 +159,34 @@
 ! Upper boundary:
         dudz(lev1-1,i) = dudz(lev1-2,i)/3.
         dvdz(lev1-1,i) = dvdz(lev1-2,i)/3.
+      enddo
+!
+! Total heat sources are in total_heat (s5).
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+!
+! Solar heating from qrj:
+          solarq(k,i) = .5*(qtotal(k,i,lat)+qtotal(k+1,i,lat))
+!
+! Heating due to atomic oxygen recombination:
+          recombq(k,i) = tsurplus*rkm12(k,i,lat)*
+     |      (xnmbar(k,i,lat)*o1(k,i,lat)*rmassinv_o1)**2*
+     |      avo/mbar(k,i,lat)
 !
 ! qm = heating due to molecular diffusion:
 ! (km = molecular viscosity from sub cpktkm)
-        do k=lev0,lev1-1
           qm(k,i) = grav*.5*(km(k,i,lat)+km(k+1,i,lat))/
      |      (p0*expz(k)*scht(k,i,lat))*(dudz(k,i)**2+dvdz(k,i)**2)
 !
-! Add qm to total heating:
-          total_heat(k,i) = total_heat(k,i)+qm(k,i)
+! Add all explicit heating terms together:
+! 1. Solar heating from qrj
+! 2. Heating from 4th order horizontal diffusion (hdt from sub hdif3)
+! 3. Heating due to atomic oxygen recombination
+! 4. Ion joule heating (from sub qjoule_tn, qjoule.F)
+!    (Note joulefac was applied in sub qji_tn)
+! 5. Heating due to molecular diffusion
+          total_heat(k,i) = solarq(k,i)+hdt(k,i,lat)+
+     |      recombq(k,i)+qji_tn(k,i,lat)+qm(k,i)
 !
 ! Complete cptn:
 ! -cp*exp(-s)*(T(k,n-1)/(2*Dt) - V.del(T(k,n)) +Q/cp)
@@ -202,10 +197,16 @@
 
 !     call addfld('CPTN',' ',' ',cptn,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QM'     ,' ',' ',qm(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('HEATING2',' ',' ',total_heat(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('DT_SOLAR',' ',' ',solarq(lev0:lev1-1,:),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('DT_HORDIF',' ',' ',hdt(lev0:lev1-1,:,lat),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('DT_RECOMB',' ',' ',recombq(lev0:lev1-1,:),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('DT_JOULE',' ',' ',qji_tn(lev0:lev1-1,:,lat),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('DT_MOLDIF',' ',' ',qm(lev0:lev1-1,:),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       call mkdiag_HEAT('HEATING',total_heat,lev0,lev1,lon0,lon1,lat)
 !
@@ -331,6 +332,29 @@
 
 !     call addfld('TN_SOLV','Updated TN from trsolv','K',
 !    |  tn_upd(:,lon0:lon1,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!
+      do i=lon0,lon1
+        do k=lev0+1,lev1-1
+          conductq(k,i) = (tn_upd(k-1,i,lat)*(-f(k,i)+g(k,i))+
+     |      tn_upd(k,i,lat)*(f(k+1,i)-f(k,i)-g(k+1,i)-g(k,i))+
+     |      tn_upd(k+1,i,lat)*(f(k+1,i)+g(k+1,i)))/expz(k)
+          coolq(k,i) = -cool_exp(k,i,lat)/expz(k)-
+     |      .5*(cp(k,i,lat)+cp(k+1,i,lat))*
+     |      cool_imp(k,i,lat)*tn_upd(k,i,lat)
+          advecq(k,i) =
+     |      -.5*(cp(k,i,lat)+cp(k+1,i,lat))*advec_tn(k,i,lat)
+          adiaq(k,i) = -.5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))*
+     |      gask/mbar(k,i,lat)*tn_upd(k,i,lat)
+        enddo
+      enddo
+      call addfld('DT_CONDUCT',' ',' ',conductq(lev0+1:lev1-1,:),
+     |  'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('DT_COOL',' ',' ',coolq(lev0+1:lev1-1,:),
+     |  'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('DT_ADVEC',' ',' ',advecq(lev0+1:lev1-1,:),
+     |  'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('DT_ADIA',' ',' ',adiaq(lev0+1:lev1-1,:),
+     |  'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
 !
 ! End second latitude scan:
       enddo ! lat=lat0,lat1

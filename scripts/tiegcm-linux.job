@@ -16,6 +16,7 @@
 #   zitop:     Pressure level at model upper boundary
 #   nres_grid: Number of levels for multigrid solver (magnetic grid)
 #   coupling:  Whether to couple with GAMERA via MPI
+#   hidra:     Whether to couple with HIDRA via MPI
 #   make:      Build file with platform-specific compile parameters (in scripts dir)
 #   debug:     If TRUE, build and execute a "debug" run (debug compiler flags are set)
 #   execute:   If TRUE, execute the model (build only if execute is FALSE)
@@ -35,6 +36,7 @@ vertres="0.25"
 zitop="7"
 mres="2"
 coupling="FALSE"
+hidra="FALSE"
 nproc=4     # nproc=1 is permitted
 debug="FALSE"
 execute="FALSE"
@@ -172,7 +174,7 @@ rmbinchars=$util/rmbinchars # Nov, 2015: remove non-ascii chars from stdout file
 #
 # Report to stdout:
 #
-svn_revision="tiegcm2.5" # for svn tag instead of revision number
+svn_revision="tiegcm3.0" # for svn tag instead of revision number
 #if [ -x `command -v svnversion` ]
 #then
 #  svn_revision=`svnversion $modeldir`
@@ -189,6 +191,7 @@ echo "  Make machine file: $make"
 echo "  Namelist input:    $input"
 echo "  Model resolution:  $horires x $vertres"
 echo "  Coupling:          $coupling"
+echo "  Hidra:             $hidra"
 echo "  Debug flag:        $debug"
 #
 # If coupling flag has changed from last gmake, clean execdir
@@ -206,6 +209,23 @@ then
 else
   echo $coupling > $execdir/coupling
   echo "Created file coupling with coupling flag = $coupling"
+fi
+#
+# If hidra flag has changed from last gmake, clean execdir
+# and reset hidra file:
+#
+if [ -f $execdir/hidra ]
+then
+  lasthidra=`cat $execdir/hidra`
+  if [ $lasthidra != $hidra ]
+  then
+    echo "Clean execdir $execdir because hidra flag switched from $lasthidra to $hidra"
+    mycwd=`pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $hidra > $execdir/hidra
+  fi
+else
+  echo $hidra > $execdir/hidra
+  echo "Created file hidra with hidra flag = $hidra"
 fi
 #
 # If debug flag has changed from last gmake, clean execdir
@@ -280,6 +300,7 @@ EXECNAME      = $model
 NAMELIST      = $input
 OUTPUT        = $output
 COUPLING      = $coupling
+HIDRA         = $hidra
 DEBUG         = $debug
 SVN_REVISION  = $svn_revision
 EOF

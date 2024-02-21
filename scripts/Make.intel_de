@@ -1,6 +1,6 @@
 #
 # Included makefile for Intel ifort compiler on NCAR derecho:
-# derecho is using intel 2021.8.0
+# derecho is using intel 2021.10.0
 #
 MPIF90 = mpif90
 MPIRUN = mpirun
@@ -29,7 +29,7 @@ HOST     = $(shell hostname)
 # Library and Include file paths:
 #
 # ESMF lib on derecho:
-# (tiegcm-de.job does "module load esmf/8.5.0")
+# (tiegcm-de.job does "module load esmf")
 #
 # Make machines.ini file for MPI execution:
 #

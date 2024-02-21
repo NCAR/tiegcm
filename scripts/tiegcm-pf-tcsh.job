@@ -1,10 +1,10 @@
 #!/bin/tcsh
 #
-# Job script to build and execute TIEGCM on the NASA supercomputer Pleiades,
+# Job script to build and execute TIEGCM on the NASA supercomputer pleiades,
 # or similar system running PBS (Load Sharing Facility)
 #
-# This script should be executed on the cheyenne command line.
-# It will compile in execdir on the interactive login node, then create and 
+# This script should be executed on the pleiades command line.
+# It will compile in execdir on the interactive login node, then create and
 # submit an PBS script based on the #PBS resources specified below.
 #
 # User should set shell variables and #PBS settings below:
@@ -21,40 +21,41 @@
 #   zitop:     Pressure level at model upper boundary
 #   nres_grid: Number of levels for multigrid solver (magnetic grid)
 #   coupling:  Whether to couple with GAMERA via MPI
+#   hidra:     Whether to couple with HIDRA via MPI
 #   make:      Build file with platform-specific compile parameters (in scripts dir)
 #   debug:     If TRUE, build and execute a "debug" run (debug compiler flags are set)
 #   execute:   If TRUE, execute the model (build only if execute is FALSE)
 #   runscript: PBS script with run commands (submitted with qsub from execdir)
 #
-# To switch to 2.5x0.25-deg resolution, make horires below to 2.5 and vertres to 0.25,
+# To switch to 2.5x0.25-deg resolution, set horires below to 2.5 and vertres to 0.25,
 # and change execdir, tgcmdata and namelist input if necessary.
 # Also reset number of processors accordingly below (#PBS -l).
 #
-set modeldir = /home7/nrao3/tiegcm/
-set execdir  = /home4/dlin5/TIEGCM2.5/build/
-set tgcmdata = /nobackup/nrao3/tiegcm/data/gswm
-set input    = $modeldir/scripts/tiegcm2.5_default.inp
-set output   = tiegcm.out
-set horires  = 2.5
-set vertres  = 0.25
-set zitop    = 7 
-set mres     = 2 
-set coupling = FALSE 
-set make     = Make.intel_pf
-set debug     = FALSE
-set execute   = FALSE # exec = TRUE
+set modeldir  = /home7/nrao3/tiegcm3.0/tiegcm
+set execdir   = /home7/nrao3/tiegcm3.0/build
+set tgcmdata  = /nobackup/nrao3/tiegcm3.0/data
 set utildir   = $modeldir/scripts
+set input     = $utildir/tiegcm_default.inp
+set output    = tiegcm.out
+set horires   = 2.5
+set vertres   = 0.25
+set zitop     = 7
+set mres      = 2
+set coupling  = FALSE
+set hidra     = FALSE
+set make      = Make.intel_pf
+set debug     = FALSE
+set execute   = FALSE
 set runscript = run.pbs
 
 set project_code    = P28100036
 set queue           = regular
 set nnodes          = 1
 set ncores_per_node = 36
-set memsize = 128
-set system = sky_ele
-set walltime        = "01:30:00"
-
-@ nprocs = $nnodes * $ncores_per_node
+set memsize         = 128
+set system          = sky_ele
+set walltime        = "12:00:00"
+@ nprocs            = $nnodes * $ncores_per_node
 
 set execdir   = `perl $utildir/abspath $execdir`
 set runscript = `perl $utildir/abspath $runscript`
@@ -65,15 +66,14 @@ if (! -d $execdir) mkdir -p $execdir
 #                        Shell Script for TIEGCM Linux job
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# Update ESMF module on ch as of 4/12/17:
-set lib_esmf = esmf-8.0.0-ncdfio-mpi-O
-module load esmf_libs/8.0.0 $lib_esmf
+# Necessary modules on pleiades
+module load esmf_libs/8.0.0 esmf-8.0.0-ncdfio-mpi-O
 #
 set mycwd = `pwd`
 echo "" ; echo "${0}:"
 echo "  Begin execution at `date`"
 echo "  Current working directory: $mycwd"
-echo "  System: `uname -a`"  
+echo "  System: `uname -a`"
 echo ""
 #
 # Verify directories and make_machine file (make execdir if necessary).
@@ -88,7 +88,7 @@ endif
 set modelexe = tiegcm.exe
 
 if (! -d $utildir) then
-  echo ">>> Cannot find model scripts directory $utildir <<<" 
+  echo ">>> Cannot find model scripts directory $utildir <<<"
   exit 1
 endif
 set utildir = `perl $utildir/abspath $utildir`
@@ -128,7 +128,7 @@ if ($horires != 5 && $horires != 2.5 && $horires != 1.25 && $horires != 0.625) t
 endif
 if ($vertres != 0.5 && $vertres != 0.25 && $vertres != 0.125 && $vertres != 0.0625) then
   echo ">>> Unknown model vertical resolution $vertres <<<"
-exit 1
+  exit 1
 endif
 
 if ($mres == 2) then
@@ -168,8 +168,8 @@ if (`where svnversion` == "") then
   set svn_revision = `svnversion $modeldir`
 else
   set svn_revision = "[none]"
- endif
-#set svn_revision = "tiegcm2.5" # for svn tag instead of revision number
+endif
+#set svn_revision = "tiegcm3.0" # for svn tag instead of revision number
 
 echo -n "  Model directory:   $modeldir"
 echo " (SVN revision $svn_revision)"
@@ -181,6 +181,7 @@ echo "  Namelist input:    $input"
 echo "  Stdout Output:     $output"
 echo "  Model resolution:  $horires x $vertres"
 echo "  Coupling:          $coupling"
+echo "  hidra:             $hidra"
 echo "  Debug:             $debug"
 #
 # If coupling flag has changed from last gmake, clean execdir
@@ -198,11 +199,26 @@ else
   echo "Created file coupling with coupling flag = $coupling"
 endif
 #
+# If hidra flag has changed from last gmake, clean execdir
+# and reset hidra file:
+#
+if (-f $execdir/hidra) then
+  set lasthidra = `cat $execdir/hidra`
+  if ($lasthidra != $hidra) then
+    echo "Clean execdir $execdir because hidra flag switched from $lasthidra to $hidra"
+    set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
+    echo $hidra >! $execdir/hidra
+  endif
+else
+  echo $hidra > $execdir/hidra
+  echo "Created file hidra with hidra flag = $hidra"
+endif
+#
 # If debug flag has changed from last gmake, clean execdir
 # and reset debug file:
 #
 if (-f $execdir/debug) then
-  set lastdebug = `cat $execdir/debug` 
+  set lastdebug = `cat $execdir/debug`
   if ($lastdebug != $debug) then
     echo "Clean execdir $execdir because debug flag switched from $lastdebug to $debug"
     set mycwd = `pwd` ; cd $execdir ; gmake clean ; cd $mycwd
@@ -213,7 +229,7 @@ else
   echo "Created file debug with debug flag = $debug"
 endif
 #
-# Copy defs header file to execdir, if necessary, according to 
+# Copy defs header file to execdir, if necessary, according to
 # requested resolution. This should seamlessly switch between
 # resolutions according to $horires and $vertres.
 #
@@ -237,7 +253,7 @@ if (-f $execdir/defs.h) then
     cp $defs $execdir/defs.h
   else
     echo "defs.h already set for model resolution $horires x $vertres"
-      endif 
+  endif
 else # defs.h does not exist in execdir -> copy appropriate defs file
   echo "Copying $defs to $execdir/defs.h for resolution $horires x $vertres"
   cp $defs $execdir/defs.h
@@ -262,6 +278,7 @@ EXECNAME      = $model
 NAMELIST      = $input
 OUTPUT        = $output
 COUPLING      = $coupling
+HIDRA         = $hidra
 DEBUG         = $debug
 SVN_REVISION  = $svn_revision
 EOF
@@ -278,22 +295,20 @@ endif
 #
 # Set data directory in PBS script:
 #
-# MPI/PBS job: append mpirun.command command to PBS script 
+# MPI/PBS job: append mpirun.command command to PBS script
 # (it has #PBSs from above)
 #
 cat << EOF >! $runscript
 #!/bin/tcsh
-#
 #PBS -N tiegcm
 #PBS -A $project_code
 #PBS -q $queue
 #PBS -j oe
-#PBS -l select=${nnodes}:ncpus=${ncores_per_node}:mpiprocs=${ncores_per_node}:mem=${memsize}gb:model=$system,walltime=$walltime
-#
+#PBS -l select=${nnodes}:ncpus=${ncores_per_node}:mpiprocs=${ncores_per_node}:mem=${memsize}gb:model=$system
+#PBS -l walltime=$walltime
 
 setenv TGCMDATA $tgcmdata
 setenv MPI_TYPE_DEPTH 19
-
 
 module purge
 module load nas
@@ -310,17 +325,17 @@ date
 
 # Execute:
 cd $execdir
-  `cat mpirun.command` -np $nprocs $model $input >&! $output
+`cat mpirun.command` -np $nprocs $model $input >&! $output
 
 # Save stdout:
-  $rmbinchars $output # remove any non-ascii chars in stdout file
-  $mklogs $output     # break stdout into per-task log files
-  cd `dirname $output`
+$rmbinchars $output # remove any non-ascii chars in stdout file
+$mklogs $output     # break stdout into per-task log files
+cd `dirname $output`
 
 # Make tar file of task log files:
-  tar -cf $output.tar *task*.out 
-  echo "Saved stdout tar file $output.tar" 
-  rm *task*.out
+tar -cf $output.tar *task*.out
+echo "Saved stdout tar file $output.tar"
+rm *task*.out
 EOF
 #
 if ($execute == "TRUE") then

@@ -81,7 +81,9 @@
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  unlbc_diag,   ! un lbc redundant in vertical, for diagnostic
      |  vnlbc_diag,   ! vn lbc redundant in vertical, for diagnostic
-     |  ss_un,ss_vn   ! also for diagnostics
+     |  ss_un,ss_vn,  ! also for diagnostics
+     |  dudt,dvdt,un_cor,vn_cor,un_cen,vn_cen,un_drag,vn_drag,
+     |  un_drag_coef,vn_drag_coef,un_visc,vn_visc,un_dwdz,vn_dwdz
 !
 ! pp, qq, rr, beta AND gamma are (2 x 2) matrices defined for 
 !   k = 3/2, K-1/2, 1 and i = 3, IMAX+2, 1
@@ -203,14 +205,14 @@
 
         do i=lon0,lon1
           do k=lev0,lev1-1
-            ss(1,k,i) = expz(k)*(.25*((lxx(k,i,lat)+lxx(k+1,i,lat))*
-     |        (ui(k,i,lat)+ui(k+1,i,lat))+(lxy(k,i,lat)+lxy(k+1,i,lat))*
-     |        (vi(k,i,lat)+vi(k+1,i,lat)))-advec_un(k,i,lat)+
-     |        Fe(k,i,lat))
-            ss(2,k,i) = expz(k)*(.25*((lyy(k,i,lat)+lyy(k+1,i,lat))*
-     |        (vi(k,i,lat)+vi(k+1,i,lat))-(lyx(k,i,lat)+lyx(k+1,i,lat))*
-     |        (ui(k,i,lat)+ui(k+1,i,lat)))-advec_vn(k,i,lat)+
-     |        Fn(k,i,lat))
+            un_drag_coef(k,i) = Fe(k,i,lat)+.25*
+     |       ((lxx(k,i,lat)+lxx(k+1,i,lat))*(ui(k,i,lat)+ui(k+1,i,lat))+
+     |        (lxy(k,i,lat)+lxy(k+1,i,lat))*(vi(k,i,lat)+vi(k+1,i,lat)))
+            vn_drag_coef(k,i) = Fn(k,i,lat)+.25*
+     |       ((lyy(k,i,lat)+lyy(k+1,i,lat))*(vi(k,i,lat)+vi(k+1,i,lat))-
+     |        (lyx(k,i,lat)+lyx(k+1,i,lat))*(ui(k,i,lat)+ui(k+1,i,lat)))
+            ss(1,k,i) = expz(k)*(un_drag_coef(k,i)-advec_un(k,i,lat))
+            ss(2,k,i) = expz(k)*(vn_drag_coef(k,i)-advec_vn(k,i,lat))
             ss_un(k,i) = ss(1,k,i)
             ss_vn(k,i) = ss(2,k,i)
           enddo ! k=lev0,lev1-1
@@ -434,6 +436,59 @@
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('VN_SOLV',' ',' ',vn_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            dudt(k,i) = dtx2inv*(un_upd(k,i,lat)-unm_smooth(k,i,lat))
+            dvdt(k,i) = dtx2inv*(vn_upd(k,i,lat)-vnm_smooth(k,i,lat))
+            un_cor(k,i) = cor(lat)*vn_upd(k,i,lat)
+            vn_cor(k,i) = -cor(lat)*un_upd(k,i,lat)
+            un_cen(k,i) = un(k,i,lat)*vn_upd(k,i,lat)/re*tanphi(lat)
+            vn_cen(k,i) = -un(k,i,lat)*un_upd(k,i,lat)/re*tanphi(lat)
+            un_drag(k,i) = un_drag_coef(k,i)-
+     |        .5*(lxx(k,i,lat)+lxx(k+1,i,lat))*un_upd(k,i,lat)-
+     |        .5*(lxy(k,i,lat)+lxy(k+1,i,lat))*vn_upd(k,i,lat)
+            vn_drag(k,i) = vn_drag_coef(k,i)-
+     |        .5*(lyy(k,i,lat)+lyy(k+1,i,lat))*vn_upd(k,i,lat)+
+     |        .5*(lyx(k,i,lat)+lyx(k+1,i,lat))*un_upd(k,i,lat)
+          enddo
+          do k=lev0+1,lev1-1
+            un_visc(k,i) = (g(k+1,i)*un_upd(k+1,i,lat)-
+     |        (g(k+1,i)+g(k,i))*un_upd(k,i,lat)+
+     |        g(k,i)*un_upd(k-1,i,lat))/expz(k)
+            vn_visc(k,i) = (g(k+1,i)*vn_upd(k+1,i,lat)-
+     |        (g(k+1,i)+g(k,i))*vn_upd(k,i,lat)+
+     |        g(k,i)*vn_upd(k-1,i,lat))/expz(k)
+            un_dwdz(k,i) =
+     |        dwdz(k,i)*(un_upd(k+1,i,lat)-un_upd(k-1,i,lat))
+            vn_dwdz(k,i) =
+     |        dwdz(k,i)*(vn_upd(k+1,i,lat)-vn_upd(k-1,i,lat))
+          enddo
+        enddo
+        call addfld('DUV_DUDT',' ',' ',dudt(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_DVDT',' ',' ',dvdt(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_UN_COR'  ,' ',' ',un_cor(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_VN_COR'  ,' ',' ',vn_cor(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_UN_CEN'  ,' ',' ',un_cen(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_VN_CEN'  ,' ',' ',vn_cen(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_UN_DRAG',' ',' ',un_drag(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_VN_DRAG',' ',' ',vn_drag(lev0:lev1-1,:),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_UN_VISC',' ',' ',un_visc(lev0+1:lev1-1,:),
+     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_VN_VISC',' ',' ',vn_visc(lev0+1:lev1-1,:),
+     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_UN_DWDZ',' ',' ',un_dwdz(lev0+1:lev1-1,:),
+     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DUV_VN_DWDZ',' ',' ',vn_dwdz(lev0+1:lev1-1,:),
+     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
 !
 ! End third latitude scan:
       enddo ! lat=lat0,lat1

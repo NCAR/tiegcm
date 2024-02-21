@@ -1922,6 +1922,8 @@
      |  ntimes_ctpoten,'ctpoten')
       call validate_timedep(power,power_time,mxind_time,
      |  ntimes_power,'power')
+      call validate_timedep(bximf,bximf_time,mxind_time,
+     |  ntimes_bximf,'bximf')
       call validate_timedep(byimf,byimf_time,mxind_time,
      |  ntimes_byimf,'byimf')
       call validate_timedep(bzimf,bzimf_time,mxind_time,

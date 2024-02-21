@@ -197,7 +197,7 @@ then
 else
   svn_version="[none]"
 fi
-#svn_revision="tiegcm2.5" # for svn tag instead of revision number
+#svn_revision="tiegcm3.0" # for svn tag instead of revision number
 
 echo -n "  Model directory:   $modeldir"
 echo " (SVN revision $svn_revision)"
@@ -228,6 +228,10 @@ else
   echo $coupling > $execdir/coupling
   echo "Created file coupling with coupling flag = $coupling"
 fi
+#
+# If hidra flag has changed from last gmake, clean execdir
+# and reset hidra file:
+#
 if [ -f $execdir/hidra ]
 then
   lasthidra=`cat $execdir/hidra`
@@ -241,7 +245,6 @@ else
   echo $hidra > $execdir/hidra
   echo "Created file hidra with hidra flag = $hidra"
 fi
-
 #
 # If debug flag has changed from last gmake, clean execdir
 # and reset debug file:
