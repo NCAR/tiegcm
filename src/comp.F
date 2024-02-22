@@ -69,8 +69,13 @@
       real,dimension(lev0:lev1,lon0:lon1,3) :: upd
       real,dimension(lev0:lev1) :: n2
 ! For diagnostics:
-      real,dimension(lev0:lev1,lon0:lon1,3) :: zz_ki
+      real,dimension(lev0:lev1,lon0:lon1,3) :: zz_ki,eddy
       real,dimension(lev0:lev1,lon0:lon1,3,3) :: gama_ki
+      real,dimension(lev0:lev1,lon0:lon1,3,3,3) :: coef
+      real,dimension(lev0:lev1,lon0:lon1) ::
+     |  o2_eddydif,o1_eddydif,he_eddydif,
+     |  o2_moldif,o1_moldif,he_moldif,
+     |  o2_veradv,o1_veradv,he_veradv
 !
 ! Correction factor for diffusion coeff betweeen helium and o2,o,n2:
       real,dimension(lev0:lev1,lon0:lon1,3) :: diff_fac
@@ -132,6 +137,19 @@
       do lat=lat0,lat1
         call advecl(o2,o1,he,o2_advec,o1_advec,he_advec,
      |    lev0,lev1,lon0,lon1,lat0,lat1,lat)
+
+        call addfld('O2_HORADV','O2 horizontal advection',' ',
+     |    o2_advec(:,:,lat),'lev',k0,k1,'lon',i0,i1,lat)
+        call addfld('O1_HORADV','O1 horizontal advection',' ',
+     |    o1_advec(:,:,lat),'lev',k0,k1,'lon',i0,i1,lat)
+        call addfld('HE_HORADV','He horizontal advection',' ',
+     |    he_advec(:,:,lat),'lev',k0,k1,'lon',i0,i1,lat)
+        call addfld('O2_HORDIF','O2 horizontal diffusion',' ',
+     |    hdo2(k0:k1-1,i0:i1,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
+        call addfld('O1_HORDIF','O1 horizontal diffusion',' ',
+     |    hdo1(k0:k1-1,i0:i1,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
+        call addfld('HE_HORDIF','He horizontal diffusion',' ',
+     |    hdhe(k0:k1-1,i0:i1,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
       enddo ! lat=lat0,lat1
 !
 ! Save smoothed o2,o,he at time n-1:
@@ -775,6 +793,22 @@
 !       write(6,"('zz(k+1,io2)=',/,(6e12.4))") zz(:,k+1,io2)
 !       write(6,"('zz(k+1,io1)=',/,(6e12.4))") zz(:,k+1,io1)
 
+        eddy(k,:,1) = expzmid*difk(k+1,iday)*(1./dz+wks4)
+        eddy(k,:,2) =
+     |    expzmid    *difk(k+1,iday)*(1./dz-wks4)+
+     |    expzmid_inv*difk(k  ,iday)*(1./dz+wks3)
+        eddy(k,:,3) = expzmid*difk(k+1,iday)*(1./dz+wks4)
+
+! calculate molecular diffusion coefficients of O2,O1,He
+        do m=1,3
+          do isp=io2,ihe
+            coef(k,:,isp,m,1) = -ak(:,isp,m,km)*(1./dz+ep(:,m,km)/2.)
+            coef(k,:,isp,m,2) =
+     |        ak(:,isp,m,km)*(1./dz-ep(:,m,km)/2.)+
+     |        ak(:,isp,m,kp)*(1./dz+ep(:,m,kp)/2.)
+            coef(k,:,isp,m,3) = -ak(:,isp,m,kp)*(1./dz-ep(:,m,kp)/2.)
+          enddo
+        enddo
 !
 ! End main pressure loop:
       enddo levloop ! k=lev0,lev1-1
@@ -860,6 +894,78 @@
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
 !       call addfld('HE_SOLV',' ',' ',he_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
+!
+      do k=lev0+1,lev1-1
+        o2_eddydif(k,:) = dfactor/expz(k)*
+     |    (eddy(k,:,1)*o2_upd(k-1,lon0:lon1,lat)+
+     |     eddy(k,:,2)*o2_upd(k  ,lon0:lon1,lat)+
+     |     eddy(k,:,3)*o2_upd(k+1,lon0:lon1,lat))
+        o1_eddydif(k,:) = dfactor/expz(k)*
+     |    (eddy(k,:,1)*o1_upd(k-1,lon0:lon1,lat)+
+     |     eddy(k,:,2)*o1_upd(k  ,lon0:lon1,lat)+
+     |     eddy(k,:,3)*o1_upd(k+1,lon0:lon1,lat))
+        he_eddydif(k,:) = dfactor/expz(k)*
+     |    (eddy(k,:,1)*he_upd(k-1,lon0:lon1,lat)+
+     |     eddy(k,:,2)*he_upd(k  ,lon0:lon1,lat)+
+     |     eddy(k,:,3)*he_upd(k+1,lon0:lon1,lat))
+
+        o2_moldif(k,:) = 1./dz/expz(k)*
+     |    (coef(k,:,1,1,1)*o2_upd(k-1,lon0:lon1,lat)+
+     |     coef(k,:,1,1,2)*o2_upd(k  ,lon0:lon1,lat)+
+     |     coef(k,:,1,1,3)*o2_upd(k+1,lon0:lon1,lat)+
+     |     coef(k,:,1,2,1)*o1_upd(k-1,lon0:lon1,lat)+
+     |     coef(k,:,1,2,2)*o1_upd(k  ,lon0:lon1,lat)+
+     |     coef(k,:,1,2,3)*o1_upd(k+1,lon0:lon1,lat)+
+     |     coef(k,:,1,3,1)*he_upd(k-1,lon0:lon1,lat)+
+     |     coef(k,:,1,3,2)*he_upd(k  ,lon0:lon1,lat)+
+     |     coef(k,:,1,3,3)*he_upd(k+1,lon0:lon1,lat))
+        o1_moldif(k,:) = 1./dz/expz(k)*
+     |    (coef(k,:,2,1,1)*o2_upd(k-1,lon0:lon1,lat)+
+     |     coef(k,:,2,1,2)*o2_upd(k  ,lon0:lon1,lat)+
+     |     coef(k,:,2,1,3)*o2_upd(k+1,lon0:lon1,lat)+
+     |     coef(k,:,2,2,1)*o1_upd(k-1,lon0:lon1,lat)+
+     |     coef(k,:,2,2,2)*o1_upd(k  ,lon0:lon1,lat)+
+     |     coef(k,:,2,2,3)*o1_upd(k+1,lon0:lon1,lat)+
+     |     coef(k,:,2,3,1)*he_upd(k-1,lon0:lon1,lat)+
+     |     coef(k,:,2,3,2)*he_upd(k  ,lon0:lon1,lat)+
+     |     coef(k,:,2,3,3)*he_upd(k+1,lon0:lon1,lat))
+        he_moldif(k,:) = 1./dz/expz(k)*
+     |    (coef(k,:,3,1,1)*o2_upd(k-1,lon0:lon1,lat)+
+     |     coef(k,:,3,1,2)*o2_upd(k  ,lon0:lon1,lat)+
+     |     coef(k,:,3,1,3)*o2_upd(k+1,lon0:lon1,lat)+
+     |     coef(k,:,3,2,1)*o1_upd(k-1,lon0:lon1,lat)+
+     |     coef(k,:,3,2,2)*o1_upd(k  ,lon0:lon1,lat)+
+     |     coef(k,:,3,2,3)*o1_upd(k+1,lon0:lon1,lat)+
+     |     coef(k,:,3,3,1)*he_upd(k-1,lon0:lon1,lat)+
+     |     coef(k,:,3,3,2)*he_upd(k  ,lon0:lon1,lat)+
+     |     coef(k,:,3,3,3)*he_upd(k+1,lon0:lon1,lat))
+
+        o2_veradv(k,:) = (w(k,lon0:lon1,lat)+w(k+1,lon0:lon1,lat))*
+     |    (o2_upd(k-1,lon0:lon1,lat)-o2_upd(k+1,lon0:lon1,lat))/(4*dz)
+        o1_veradv(k,:) = (w(k,lon0:lon1,lat)+w(k+1,lon0:lon1,lat))*
+     |    (o1_upd(k-1,lon0:lon1,lat)-o1_upd(k+1,lon0:lon1,lat))/(4*dz)
+        he_veradv(k,:) = (w(k,lon0:lon1,lat)+w(k+1,lon0:lon1,lat))*
+     |    (he_upd(k-1,lon0:lon1,lat)-he_upd(k+1,lon0:lon1,lat))/(4*dz)
+      enddo
+
+      call addfld('O2_EDDYDIF','O2 eddy diffusion',' ',
+     |  o2_eddydif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_EDDYDIF','O1 eddy diffusion',' ',
+     |  o1_eddydif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_EDDYDIF','He eddy diffusion',' ',
+     |  he_eddydif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_MOLDIF','O2 molecular diffusion',' ',
+     |  o2_moldif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_MOLDIF','O1 molecular diffusion',' ',
+     |  o1_moldif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_MOLDIF','He molecular diffusion',' ',
+     |  he_moldif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_VERADV','O2 vertical advection',' ',
+     |  o2_veradv(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_VERADV','O1 vertical advection',' ',
+     |  o1_veradv(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_VERADV','He vertical advection',' ',
+     |  he_veradv(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
 !
 ! End latitude scan:
       enddo ! lat=lat0,lat1
