@@ -289,7 +289,7 @@
       real,dimension(:,:,:,:), allocatable :: hidraout
 
       integer :: nreq,i
-
+#if defined(GAMERA) || defined(HIDRA)
       ! Prepare the export data
       hidra_prep = .false.
       nreq = 0
@@ -386,7 +386,7 @@
       enddo
 
       ! Deallocate request array here
-
+#endif
       end subroutine export_mage
 !-----------------------------------------------------------------------
       subroutine prep_export_hidra(modeltime,hidra_out)

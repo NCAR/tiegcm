@@ -144,7 +144,7 @@
 !    |  gpi_names(ngpivars)      ! names of gpi_vars
 !
 ! Primary history user input (dimension parameters are in params.F):
-      character(len=1024) :: 
+      character(len=mxlen_filename) ::
      |  source,            ! file containing source history (optional)
      |  output(mxhvols)    ! output file(s) (required)
       integer ::
@@ -156,7 +156,7 @@
      |  noutput            ! number of output files given
 !
 ! Secondary history user input (dimension parameters are in params.F):
-      character(len=1024) :: 
+      character(len=mxlen_filename) ::
      |  secsource,            ! file containing source sec_history (for mhd)
      |  secout(mxhvols)       ! secondary history output file(s)
       character(len=16) ::
@@ -197,7 +197,7 @@
      |   'ZMAG            '/)   ! see sub dynamo_inputs in pdynamo.F
 !
 ! Current working (execution) directory (set by tgcm.F):
-      character(len=120) :: cwd  ! current working directory
+      character(len=mxlen_filename) :: cwd  ! current working directory
       integer :: pid ! current process id
 !
       contains

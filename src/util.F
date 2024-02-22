@@ -822,7 +822,7 @@
 !
       implicit none
       character(len=*),intent(out) :: cwd
-      integer,external :: isystem,nextlu
+      integer,external :: isystem,nextlu,getcwd
       integer :: istat,lu,ier
 !
       if (mytid==0) then
@@ -830,11 +830,8 @@
         if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
      |    'isystem(''pwd > cwd'')')")
       endif
-      call mpi_barrier(TIEGCM_WORLD,ier)
-      lu = nextlu()
-      open(lu,file='cwd',status='old')
-      read(lu,"(a)") cwd
-      close(lu)
+      istat = getcwd(cwd)
+      write(*,*) "CWDTEST: ",trim(cwd)
 !
       end subroutine getcwdir
 !-----------------------------------------------------------------------
