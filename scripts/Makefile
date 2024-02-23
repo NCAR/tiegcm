@@ -115,6 +115,6 @@ util.o: util.F
 clean:
 	rm -f Depends Srcfiles *.o *.mod $(EXECNAME)
 veryclean:
-	rm -f Depends Srcfiles *.o *.mod $(EXECNAME) Makefile Make.env $(MAKE_MACHINE) machines.ini mkdepends defs.h cwd fort*
+	rm -f Depends Srcfiles *.o *.mod $(EXECNAME) Makefile Make.env $(MAKE_MACHINE) machines.ini mkdepends defs.h fort*
 
 include Depends

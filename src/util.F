@@ -313,7 +313,7 @@
 !
       real,intent(in) :: x1,x2
 !
-#if defined(IRIX) || defined(AIX)
+#if defined (IRIX) || defined (AIX)
       sdcmplx = dcmplx(x1,x2)
 #elif UNICOS
       sdcmplx = cmplx(x1,x2)
@@ -338,7 +338,7 @@
       integer,intent(in) :: iprint
       real,parameter :: xmin=-708., xmax=+709., big=.1e305
 !
-#if defined(IRIX) || defined(AIX) || defined(OSF1) || defined(SUN) || defined(LINUX)
+#if defined (IRIX) || defined (AIX) || defined (OSF1) || defined (SUN) || defined (LINUX)
       if (x >= xmin .and. x <= xmax) then
         expo = exp(x)
       elseif (x < xmin) then
@@ -812,28 +812,6 @@
 #endif
       endif
       end subroutine timer
-!-----------------------------------------------------------------------
-      subroutine getcwdir(cwd)
-!
-      use mpi_module,only: mytid, TIEGCM_WORLD
-      use mpi
-!
-! Return current working directory in cwd:
-!
-      implicit none
-      character(len=*),intent(out) :: cwd
-      integer,external :: isystem,nextlu,getcwd
-      integer :: istat,lu,ier
-!
-      if (mytid==0) then
-        istat = isystem('pwd > cwd')
-        if (istat /= 0) write(6,"('>>> WARNING getcwdir: error return ',
-     |    'isystem(''pwd > cwd'')')")
-      endif
-      istat = getcwd(cwd)
-      write(*,*) "CWDTEST: ",trim(cwd)
-!
-      end subroutine getcwdir
 !-----------------------------------------------------------------------
       character(len=n) function trcase(string,n)
 !

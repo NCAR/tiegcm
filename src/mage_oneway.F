@@ -1,5 +1,5 @@
 
-#if defined GAMERA
+#ifdef GAMERA
       module mage_oneway
       use input_module,only: mixfile,mxlen_filename
       use params_module,only: nlat, nlon

@@ -178,7 +178,7 @@
 ! single backslash in the hsi script.  xlf90 and PGI compilers require 
 ! escape of the backslash, ifort does not.
 !
-#if defined(AIX) || defined(PGI)
+#if defined (AIX) || defined (PGI)
         annotate_cmd =
      |    trim(annotate_cmd)//' '//'\\"'//trim(annotation)//'\\"'
 #else
