@@ -47,7 +47,7 @@
             },
             "job_priority": {
                 "LEVEL": "INTERMEDIATE",
-                "prompt": "#PBS job priority",
+                "prompt": "PBS job priority",
                 "default": "regular",
                 "valids": ["premium", "regular", "economy","preempt"],
                 "description": null,
@@ -376,6 +376,13 @@
             "description": "1 for model runs with advancing dates (date changes across a model day).\n0 for model runs with constant dates (date doesn’t change across a model day).\nCALENDAR_ADVANCE=0 is usually used to prepare the startup file for a production run;\nCALENDAR_ADVANCE=1 is used in a production run.",
             "warning": null
         },
+        "CADENCE":{
+            "LEVEL": "BASIC",
+            "prompt": "Model Time per Output File (Daily,Hourly,PerMinute,PerSeccond)",
+            "default": [1,0,0,0],
+            "description": "For an output file every Day 1,0,0,0\nFor an output file every Hour 0,1,0,0\nFor an output file every Minute 0,0,1,0\nFor an output file every Second 0,0,0,1",
+            "warning": null
+        },
         "PRISTART":{
             "LEVEL": "EXPERT",
             "prompt": "Primary start date (Day,Hour,Min,Sec)",
@@ -393,8 +400,15 @@
         "PRIHIST":{
             "LEVEL": "BASIC",
             "prompt": "Primary History (Day,Hour,Min,Sec)",
-            "default": "1 0 0 0",
+            "default": null,
             "description": "Model time indicating how long the model generates of two primary history records.",
+            "warning": null
+        },
+        "MXHIST_PRIM":{
+            "LEVEL": "BASIC",
+            "prompt": "Max Primary History per Output",
+            "default": null,
+            "description": "The maximum number of records in one primary history file.",
             "warning": null
         },
         "OUTPUT":{
@@ -402,13 +416,6 @@
             "prompt": "Primary Output (Day,Hour,Min,Sec)",
             "default": null,
             "description": "The filenames of primary history files. Multiple files are supported.",
-            "warning": null
-        },
-        "MXHIST_PRIM":{
-            "LEVEL": "BASIC",
-            "prompt": "Max Primary History per Output",
-            "default": 10,
-            "description": "The maximum number of records in one primary history file.",
             "warning": null
         },
         "STEP":{
@@ -442,8 +449,15 @@
         "SECHIST":{
             "LEVEL": "BASIC",
             "prompt": "Secondary History (Day,Hour,Min,Sec)",
-            "default": "0 1 0 0",
+            "default": null,
             "description": "Model time indicating how long the model generates of two secondary history records.",
+            "warning": null
+        },
+        "MXHIST_SECH":{
+            "LEVEL": "BASIC",
+            "prompt": "Max Secondary History per Output",
+            "default": null,
+            "description": "The maximum number of records in one secondary history file.",
             "warning": null
         },
         "SECOUT":{
@@ -451,13 +465,6 @@
             "prompt": "Secondary Output",
             "default": null,
             "description": "The filenames of secondary history files. Multiple files are supported.",
-            "warning": null
-        },
-        "MXHIST_SECH":{
-            "LEVEL": "BASIC",
-            "prompt": "Max Secondary History per Output",
-            "default": 24,
-            "description": "The maximum number of records in one secondary history file.",
             "warning": null
         },
         "SECFLDS":{
@@ -601,6 +608,13 @@
             "prompt": "GSWM semidiurnal nonmigrating file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing semidiurnal nonmigrating tidal perturbations.",
+            "warning": null
+        },
+        "HE_COEFS_NCFILE":{
+            "LEVEL": "EXPERT",
+            "prompt": "HE Coefs file",
+            "default": null,
+            "description": "The location of HE Coefs file",
             "warning": null
         },
         "other_input":{

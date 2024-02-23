@@ -93,9 +93,8 @@ def get_mtime(file_path):
     ds = xr.open_dataset(file_path)
     if 'mtime' in ds.variables:
         mtime_data = ds['mtime'].values
-    padded_arr = np.pad(mtime_data, [(0, 0), (0, max(4 - mtime_data.shape[1], 0))], mode='constant')
-    string_arr = [" ".join(map(str, row)) for row in padded_arr]
-    return string_arr
+    mtime_arr = np.pad(mtime_data, [(0, 0), (0, max(4 - mtime_data.shape[1], 0))], mode='constant').tolist()
+    return mtime_arr
 
 def interp2d(variable, inlat, inlon, outlat, outlon):
     ninlat = len(inlat)
@@ -370,85 +369,75 @@ def inp_pri_date(start_date_str, stop_date_str):
 
     return START_YEAR, START_DAY, PRISTART, PRISTOP
 
-def inp_sec_date(PRISTART, PRISTOP):
+
+def inp_sec (PRISTART,PRISTOP, CADENCE):
     PRISTART_DAY = PRISTART[0]
     PRISTOP_DAY = PRISTOP[0]
     n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
-    if n_split_day >= 7:
-    # Format PRISTART and PRISTOP
+    if CADENCE == [1,0,0,0]:
+        if n_split_day >= 7:
+            SECHIST = [1,0,0,0]
+            MXHIST_SECH = 1
+            SECSTART = [PRISTART[0]+1,PRISTART[1],PRISTART[2],PRISTART[3]]
+            SECSTOP = PRISTOP
+        else:
+            SECHIST = [0,1,0,0]
+            MXHIST_SECH = 24
+            SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
+            SECSTOP = PRISTOP
+    elif CADENCE == [0,1,0,0]:
+        SECHIST = [0,1,0,0]
+        MXHIST_SECH = 1
         SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
         SECSTOP = PRISTOP
-    else:
-        SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
+    elif CADENCE == [0,0,1,0]: 
+        SECHIST = [0,0,1,0]
+        MXHIST_SECH = 1
+        SECSTART = [PRISTART[0],PRISTART[1],PRISTART[2]+1,PRISTART[3]]
         SECSTOP = PRISTOP
-    return SECSTART, SECSTOP
+    elif CADENCE == [0,0,0,1]:
+        SECHIST = [0,0,0,1]
+        MXHIST_SECH = 1
+        SECSTART = [PRISTART[0],PRISTART[1],PRISTART[2],PRISTART[3]+1]
+        SECSTOP = PRISTOP   
+    return SECHIST, MXHIST_SECH, SECSTART, SECSTOP  
 
-def inp_sec_hist(SECSTART,SECSTOP):
-    SECSTART_DAY = SECSTART[0]
-    SECSTOP_DAY = SECSTOP[0]
-    n_split_day = int(SECSTOP_DAY - SECSTART_DAY)
-    if n_split_day >= 7:
-        SECHIST = "1 0 0 0"
-    else:
-        SECHIST = "0 1 0 0"
-    return SECHIST
+def inp_pri (PRISTART,PRISTOP, CADENCE):
+    PRISTART_DAY = PRISTART[0]
+    PRISTOP_DAY = PRISTOP[0]
+    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
+    if CADENCE == [1,0,0,0]:
+        if n_split_day >= 7:
+            PRIHIST = [1,0,0,0]
+            MXHIST_PRIM = 1
+        else:
+            PRIHIST = [0,1,0,0]
+            MXHIST_PRIM = 24
+    elif CADENCE == [0,1,0,0]:
+        PRIHIST = [0,1,0,0]
+        MXHIST_PRIM = 1
+    elif CADENCE == [0,0,1,0]: 
+        PRIHIST = [0,0,1,0]
+        MXHIST_PRIM = 1
+    elif CADENCE == [0,0,0,1]:
+        PRIHIST = [0,0,0,1]
+        MXHIST_PRIM = 1   
+    return PRIHIST, MXHIST_PRIM  
 
-def inp_sec_out(SECSTART,SECSTOP,histdir,run_name):
-    SECSTART_DAY = SECSTART[0]
-    SECSTOP_DAY = SECSTOP[0]
-    n_split_day = int(SECSTOP_DAY - SECSTART_DAY)
-    if n_split_day > 7:
-        SEC_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(0)}.nc"
-        SEC_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(n_split_day)}.nc"
-    else:
-        SEC_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(0)}.nc"
-        SEC_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(n_split_day*24)}.nc"
+
+
+def inp_pri_out(histdir,run_name):
+    PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(0)}.nc"
+    PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(499)}.nc"
+    OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
+    return OUTPUT
+def inp_sec_out(histdir,run_name):
+    SEC_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(0)}.nc"
+    SEC_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(499)}.nc"
     SECOUT = f"'{SEC_0}','to','{SEC_N}','by','1'"
     return SECOUT
 
-def inp_sec_mxhist(SECSTART,SECSTOP):
-    SECSTART_DAY = SECSTART[0]
-    SECSTOP_DAY = SECSTOP[0]
-    n_split_day = int(SECSTOP_DAY - SECSTART_DAY)
-    if n_split_day >= 7:
-        MXHIST_SECH = 1
-    else:
-        MXHIST_SECH = 1
-    return MXHIST_SECH  
 
-
-def inp_pri_out(PRISTART,PRISTOP,histdir,run_name):
-    PRISTART_DAY = PRISTART[0]
-    PRISTOP_DAY = PRISTOP[0]
-    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
-    if n_split_day >= 7:
-        PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(0)}.nc"
-        PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(n_split_day)}.nc"
-    else:
-        PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(0)}.nc"
-        PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(n_split_day*24)}.nc"
-    OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
-    return OUTPUT
-
-def inp_pri_hist(PRISTART,PRISTOP):
-    PRISTART_DAY = PRISTART[0]
-    PRISTOP_DAY = PRISTOP[0]
-    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
-    if n_split_day >= 7:
-        PRIHIST = "1 0 0 0"
-    else:
-        PRIHIST = "0 1 0 0"
-    return PRIHIST  
-
-def inp_pri_mxhist(PRISTART,PRISTOP):
-    PRISTART_DAY = PRISTART[0]
-    PRISTOP_DAY = PRISTOP[0]
-    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
-    if n_split_day >= 7:
-        MXHIST_PRIM = 1
-    else:
-        MXHIST_PRIM = 1
-    return MXHIST_PRIM  
 
 def create_command_line_parser():
     """Create the command-line argument parser.
@@ -552,17 +541,28 @@ def get_run_option(name, description, mode="BASIC"):
     warning = description.get("warning", None)
     # Compare the current mode to the parameter level setting. If the variable
     # level is higher than the user mode, just use the default.
+    fourvar_variables = ["SOURCE_START","CADENCE","PRISTART","PRISTOP","PRIHIST","SECSTART","SECSTOP","SECHIST"]
+
     if mode == "BENCH" and level in ["BASIC","INTERMEDIATE", "EXPERT"]:
-        return default
+        if name in fourvar_variables and default is not None:
+            return  ' '.join(map(str, default))
+        else:
+            return default
     if mode == "BASIC" and level in ["INTERMEDIATE", "EXPERT"]:
-        return default
+        if name in fourvar_variables:
+            return  ' '.join(map(str, default))
+        else:
+            return default
     if mode == "INTERMEDIATE" and level in ["EXPERT"]:
-        return default
+        if name in fourvar_variables:
+            return  ' '.join(map(str, default))
+        else:
+            return default
 
     if warning is not None:
         print(f'{YELLOW}{warning}{RESET}')
     og_prompt = prompt
-    file_variables = ["GPI_NCFILE","IMF_NCFILE"]
+    file_variables = ["SOURCE","GPI_NCFILE","IMF_NCFILE","GSWM_MI_DI_NCFILE","GSWM_MI_SDI_NCFILE","GSWM_NM_DI_NCFILE","GSWM_NM_SDI_NCFILE","HE_COEFS_NCFILE"]
     valid_bool = False
     bool_True = ["YES","Yes","yes","Y","y","TRUE","True","true","T","t","1",True,1]
     bool_False = ["NO","No","no","N","n","FALSE","False","false","F","f","0",False,0]
@@ -570,7 +570,7 @@ def get_run_option(name, description, mode="BASIC"):
     if valids is not None: 
         if name == "vertres":
             vs = "|".join(map(lambda x: str(Fraction(x)), valids))
-            prompt += f" ({vs})"
+            prompt += f" ({vs})"            
         else:
             if True in valids and False in valids:
                 valid_bool = True
@@ -595,6 +595,7 @@ def get_run_option(name, description, mode="BASIC"):
                 option_value = option_value +'"' +temp_value + '",'
             elif temp_value == 'none' or temp_value == 'None':
                 option_value = json.loads('[null]')
+                ok = True
             elif temp_value == "":
                 if option_value != "":
                     option_value = "["+ option_value[:-1] + "]"
@@ -619,6 +620,7 @@ def get_run_option(name, description, mode="BASIC"):
                 option_value = default
             elif temp_value == 'none' or temp_value == 'None':
                 option_value = json.loads('[null]')
+                ok = True
             elif temp_value == "":
                 option_value = default
                 ok = True
@@ -659,6 +661,7 @@ def get_run_option(name, description, mode="BASIC"):
                 option_value = default
             elif temp_value == 'none' or temp_value == 'None':
                 option_value = json.loads('[null]')
+                ok = True
             elif temp_value == "":
                 option_value = default
                 ok = True
@@ -669,9 +672,11 @@ def get_run_option(name, description, mode="BASIC"):
             # Use the default if no user input provided.
             if option_value == "":
                 option_value = default
+                ok = True
             # Use None if user input is none or None.
             elif option_value == 'none' or option_value == 'None':
                 option_value = None
+                ok = True
             elif option_value == "?":
                 print(f'{YELLOW}{var_description}{RESET}')
                 continue
@@ -682,11 +687,54 @@ def get_run_option(name, description, mode="BASIC"):
                         print(f'{YELLOW} Unable to find {option_value} in {TIEGCMDATA}.\n Give path to file as an alternative.{RESET}')
                         continue
                     else:
+                        print(f'File Found: {file_path}')
                         option_value = str(file_path)
                         ok = True
                 else:
                     option_value = str(option_value)
                     ok = True
+        elif name in fourvar_variables:
+            prompt = og_prompt
+            if valids is not None: 
+                vs = ' | '.join([', '.join(map(str, sublist)) for sublist in valids])
+                prompt += f" ({vs})"
+            default_print = ' '.join(map(str, default))
+            prompt += f" [{GREEN}{default_print}{RESET}]"
+            temp_value = input(f"{prompt}: ")
+            temp_array = []
+            if temp_value not in ["","?","none","None"]:
+                if "," in temp_value:
+                    temp_value = temp_value.replace("'", "")
+                    temp_array.extend(s.replace(" ", "") for s in temp_value.split(',')) 
+                    temp_array = [int(i) for i in temp_array]
+                else:
+                    temp_value = temp_value.replace("'", "")
+                    temp_array.extend(s.replace(" ", "") for s in temp_value.split()) 
+                    temp_array = [int(i) for i in temp_array]
+                option_value = temp_array
+                if len(option_value) != 4 or option_value == [0,0,0,0]:
+                    print(f'{YELLOW}Invalid Value: {option_value}{RESET}')
+                    continue
+                else:
+                    if valids is not None: 
+                        print(option_value)
+                        if option_value not in valids:
+                            print(f'{YELLOW}{option_value} not in {RESET}{valids}')
+                            continue
+                        else:
+                            option_value =' '.join(map(str, option_value))
+                            ok = True
+                    else:
+                        option_value =' '.join(map(str, option_value))
+                        ok = True
+            elif temp_value == 'none' or temp_value == 'None':
+                option_value = json.loads('[null]')
+                ok = True
+            elif temp_value == "":
+                option_value = ' '.join(map(str, default))
+                ok = True
+            elif temp_value == "?":
+                print(f'{YELLOW}{var_description}{RESET}')
         else:
             # Fetch input from the user.
             option_value = input(f"{prompt}: ")
@@ -965,19 +1013,6 @@ def prompt_user_for_run_options(args):
         for on in od:
             if start_stop_set == 0 and benchmark == None:
                 temp_mode =  "INTERMEDIATE"
-            elif start_stop_set == 1:
-                if on == "PRIHIST":
-                    od["PRIHIST"]["default"]=inp_pri_hist(PRISTART,PRISTOP)
-                if on == "OUTPUT":
-                    od["OUTPUT"]["default"]=inp_pri_out(PRISTART,PRISTOP,histdir,run_name)
-                if on == "MXHIST_PRIM":
-                    od["MXHIST_PRIM"]["default"]=inp_pri_mxhist(PRISTART,PRISTOP)
-                if on == "SECHIST":
-                    od["SECHIST"]["default"]=inp_sec_hist(SECSTART,SECSTOP)
-                if on == "SECOUT":
-                    od["SECOUT"]["default"]=inp_sec_out(SECSTART,SECSTOP,histdir,run_name)
-                if on == "MXHIST_SECH":
-                    od["MXHIST_SECH"]["default"]=inp_sec_mxhist(SECSTART,SECSTOP)
             if on == "start_date" and benchmark != None:
                 continue
             elif on == "stop_date" and benchmark != None:
@@ -990,34 +1025,31 @@ def prompt_user_for_run_options(args):
                     START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_date"], o["stop_date"])
                     od["START_YEAR"]["default"] = START_YEAR
                     od["START_DAY"]["default"] = START_DAY
-                    od["PRISTART"]["default"] = ' '.join(map(str, PRISTART))
-                    od["PRISTOP"]["default"] = ' '.join(map(str, PRISTOP))
-                    SECSTART,SECSTOP = inp_sec_date(PRISTART,PRISTOP)
-                    od["SECSTART"]["default"] = ' '.join(map(str, SECSTART))
-                    od["SECSTOP"]["default"] = ' '.join(map(str, SECSTOP))
+                    od["PRISTART"]["default"] = PRISTART
+                    od["PRISTOP"]["default"] = PRISTOP
+                    od["OUTPUT"]["default"]=inp_pri_out(histdir,run_name)
+                    od["SECOUT"]["default"]=inp_sec_out(histdir,run_name)
             elif on == "SOURCE":
-                temp_val = get_run_option(on, od[on], temp_mode)
-                source_found = False
-                while source_found == False:
-                    if temp_val != None:
-                        if os.path.isfile(temp_val):
-                            source_found = True
-                            o[on] = temp_val
-                        else:
-                            od[on]["warning"] = "Source File Not Found"
-                            temp_val = get_run_option(on, od[on], "BASIC")
-                            o[on] = temp_val
-                    else:
-                        od[on]["warning"] = "Source File Not Found"
-                        temp_val = get_run_option(on, od[on], "BASIC")
-                        o[on] = temp_val
+                o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "SOURCE_START":
                 od["SOURCE_START"]["valids"] = get_mtime(options["inp"]["SOURCE"])
+                #for arr in mtime_arr:
                 temp_mode_1 = temp_mode
                 if len(od["SOURCE_START"]["valids"]) > 1:    
                     temp_mode_1 = "INTERMEDIATE"
                 od["SOURCE_START"]["default"] = od["SOURCE_START"]["valids"][0]
                 o[on] = get_run_option(on, od[on], temp_mode_1)
+            elif on == "CADENCE" and benchmark== None:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                CADENCE = [int(i) for i in o[on].split()]
+                SECHIST, MXHIST_SECH, SECSTART, SECSTOP = inp_sec(PRISTART,PRISTOP,CADENCE)
+                PRIHIST, MXHIST_PRIM = inp_pri (PRISTART,PRISTOP, CADENCE)
+                od["PRIHIST"]["default"] =  PRIHIST
+                od["MXHIST_PRIM"]["default"] = str(MXHIST_PRIM)
+                od["SECHIST"]["default"] = SECHIST
+                od["MXHIST_SECH"]["default"] = str(MXHIST_SECH)
+                od["SECSTART"]["default"] = SECSTART
+                od["SECSTOP"]["default"] = SECSTOP
             elif on == "POTENTIAL_MODEL":
                 o[on] = get_run_option(on, od[on], temp_mode)
                 if o[on] == "HEELIS":
@@ -1067,7 +1099,9 @@ def prompt_user_for_run_options(args):
             elif on == "GSWM_NM_SDI_NCFILE":
                 od[on]["default"] = f"{find_file(f'*gswm_nonmig_semi_{horires}d_99km*', tiegcmdata_dir)}"
                 o[on] = get_run_option(on, od[on], temp_mode)
-
+            elif on == "HE_COEFS_NCFILE":
+                od[on]["default"] = f"{find_file(f'*he_coefs_dres*', tiegcmdata_dir)}"
+                o[on] = get_run_option(on, od[on], temp_mode)
             elif on not in skip_inp:
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on in skip_inp:
@@ -1483,6 +1517,8 @@ def main():
                 interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
 
         else:
+            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+            options["inp"]["SOURCE"] = out_prim
             print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
         options["model"]["data"]["input_file"] = create_inp_scripts(options)
     if options["model"]["data"]["log_file"] == None:

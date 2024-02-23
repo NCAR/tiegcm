@@ -62,6 +62,10 @@ GSWM_NM_DI_NCFILE = '{{inp.GSWM_NM_DI_NCFILE}}'{%- endif %}
 {%- if inp.GSWM_NM_SDI_NCFILE is not none %}
 GSWM_NM_SDI_NCFILE = '{{inp.GSWM_NM_SDI_NCFILE}}'{%- endif %}
 
+! HE Coefs Data
+{%- if inp.HE_COEFS_NCFILE is not none %}
+HE_COEFS_NCFILE = '{{inp.HE_COEFS_NCFILE}}'{%- endif %}
+
 ! Electron Heating
 {%- if inp.ELECTRON_HEATING is not none %}
 ELECTRON_HEATING = {{inp.ELECTRON_HEATING}}{%- endif %}
