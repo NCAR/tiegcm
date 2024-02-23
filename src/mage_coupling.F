@@ -73,7 +73,7 @@
       glonp1(1:nlonp1-1) = glon
       glonp1(nlonp1) = glon(1)+360
 
-#if defined (GAMERA) || defined (HIDRA)
+#if defined(GAMERA) || defined(HIDRA)
       do i=1,CplCommSize
             ! Skip Self
             if (i == CplRank+1) continue
@@ -94,6 +94,8 @@
               case (hidraId)
                 write(*,*) "T COUPLING TO HIDRA"
                 call init_mpi_hidra(myAppId+hidraId,hidraCplRank)
+              case (myAppId)
+                write(*,*) "T is T"
               case default
                 write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
@@ -122,7 +124,7 @@
 
       var2d = 0.
 
-#ifdef GAMERA
+#if defined(GAMERA)
       if (.not. oneway) then
       if (mytid == 0) then
 
@@ -289,7 +291,7 @@
       real,dimension(:,:,:,:), allocatable :: hidraout
 
       integer :: nreq,i
-#if defined (GAMERA) || defined (HIDRA)
+#if defined(GAMERA) || defined(HIDRA)
       ! Prepare the export data
       hidra_prep = .false.
       nreq = 0
@@ -326,6 +328,8 @@
                   hidra_prep = .true.
                 endif
                 nreq = nreq + 1
+              case (myAppId)
+                write(*,*) "T is T"
               case default
                 write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
@@ -355,6 +359,8 @@
             call export_hidra(hidraout,myAppId+hidraSId,hidraSCplRank)
           case (hidraId)
             call export_hidra(hidraout,myAppId+hidraId,hidraCplRank)
+          case (myAppId)
+            write(*,*) "T is T"
           case default
                 write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
@@ -379,6 +385,8 @@
                 if (allocated(hidraout)) deallocate(hidraout)
               case (hidraId)
                 if (allocated(hidraout)) deallocate(hidraout)
+              case (myAppId)
+                write(*,*) "T is T"
               case default
                 write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
@@ -568,13 +576,13 @@
         use mpi
 
         real,dimension(:,:,:) :: var2d
-        integer :: v,ierr
+        integer :: ierr
 
 ! Export the data
         if (CplComm /= MPI_COMM_NULL) then
           call mpi_send(var2d, nlatp2*nlonp1*nmixoutvar,
      |       MPI_DOUBLE_PRECISION, mixCplRank,
-     |       (myAppId+voltId)*100+v, CplComm, ierr)
+     |       (myAppId+voltId)*100, CplComm, ierr)
           if (ierr /= 0)
      |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
         endif
@@ -633,15 +641,13 @@
         real,dimension(:,:,:) :: var2d
 
         if (CplComm /= MPI_COMM_NULL) then
-          do v = 1,nmixinvar
-          write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100+v
-            call mpi_recv(var2d(:,:,v), nlatp2*nlonp1,
+          write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100
+            call mpi_recv(var2d, nlatp2*nlonp1*nmixinvar,
      |        MPI_DOUBLE_PRECISION, mixCplRank,
-     |        (myAppId+voltId)*100+v, CplComm,
+     |        (myAppId+voltId)*100, CplComm,
      |        MPI_STATUS_IGNORE, ierr)
             if (ierr /= 0) call handle_mpi_err(ierr,
      |        'import: TIEGCM recv from REMIX')
-          enddo
         endif
 
       end subroutine import_remix

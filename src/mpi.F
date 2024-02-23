@@ -270,8 +270,6 @@
           enddo
 
           do i=1,CplCommSize
-            ! Skip Self
-            if (i == CplRank+1) continue
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)
@@ -291,6 +289,8 @@
               case (hidraId)
                 hidraCplRank = i-1
                 write(*,*) "T coupling to hidra"
+              case (myAppId)
+                write(*,*) "T is T"
               case default
                 write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
