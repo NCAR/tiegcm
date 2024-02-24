@@ -73,7 +73,7 @@
       glonp1(1:nlonp1-1) = glon
       glonp1(nlonp1) = glon(1)+360
 
-#if defined(GAMERA) || defined(HIDRA)
+#if defined (GAMERA) || defined (HIDRA)
       do i=1,CplCommSize
             ! Skip Self
             if (i == CplRank+1) continue
@@ -124,7 +124,7 @@
 
       var2d = 0.
 
-#if defined(GAMERA)
+#ifdef GAMERA
       if (.not. oneway) then
       if (mytid == 0) then
 
@@ -291,7 +291,7 @@
       real,dimension(:,:,:,:), allocatable :: hidraout
 
       integer :: nreq,i
-#if defined(GAMERA) || defined(HIDRA)
+#if defined (GAMERA) || defined (HIDRA)
       ! Prepare the export data
       hidra_prep = .false.
       nreq = 0
