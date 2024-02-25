@@ -406,19 +406,18 @@
           n2n(k,i) = xnmbar(k,i)*n2(k,i)*rmassinv_n2  ! s12
 !
 ! Calculate source term qe (s10)
+          if (electron_heating == 6) then
+! Modified according to Smithtro & Solomon (2008), by Yihui Cai, 2021/10
+            qe(k,i) = log(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+o1n(k,i)))
+            qe(k,i) = exp((((((-1.249e-5*qe(k,i)-5.755e-4)*qe(k,i)
+     |                -9.346e-3)*qe(k,i)-5.900e-2)*qe(k,i)-4.392e-2)*
+     |                qe(k,i)+1.056)*qe(k,i)+5.342)
+          else
 ! Comment from earlier version (maybe the *1.0 below was once *2.0):
 !   "Correction facor of 2 increase in TE heating rate"
-!
-          if (electron_heating == 4) then
             qe(k,i) = log(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+0.1*o1n(k,i)))
             qe(k,i) = exp(-((((0.001996*qe(k,i)+0.08034)*qe(k,i)+1.166)*
      |                qe(k,i)+6.941)*qe(k,i)+12.75))*1.0
-          else
-! Modified according to Smithtro & Solomon (2008), by Yihui Cai, 2021/10
-            qe(k,i) = log(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+o1n(k,i)))
-            qe(k,i) = exp((((((-1.249-5*qe(k,i)-5.755e-4)*qe(k,i)
-     |                -9.346e-3)*qe(k,i)-5.900e-2)*qe(k,i)-4.392e-2)*
-     |                qe(k,i)+1.056)*qe(k,i)+5.342)
           endif
 !
 ! Subtract qe from right-hand-side:
@@ -477,10 +476,10 @@
 !
 ! Electron/O(1d) loss rates: L0(E,O,1D)/(NE*N(O))
 !
-          loss_eo1d(k,i) = 22713.*(1./te(k,i)-1./tn(k,i))
-          loss_eo1d(k,i) = sign(abs(loss_eo1d(k,i))+del,loss_eo1d(k,i))
-          loss_eo1d(k,i) = 22713./(te(k,i)*tn(k,i))*
-     |      (1.-exp(loss_eo1d(k,i)))/loss_eo1d(k,i)
+!         loss_eo1d(k,i) = 22713.*(1./te(k,i)-1./tn(k,i))
+!         loss_eo1d(k,i) = sign(abs(loss_eo1d(k,i))+del,loss_eo1d(k,i))
+!         loss_eo1d(k,i) = 22713./(te(k,i)*tn(k,i))*
+!    |      (1.-exp(loss_eo1d(k,i)))/loss_eo1d(k,i)
 !
 ! loss_eo1d function often fails here with bad argument to exp()
 ! due to high te and/or high loss_eo1d from above.
