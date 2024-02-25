@@ -69,13 +69,11 @@
       real,dimension(lev0:lev1,lon0:lon1,3) :: upd
       real,dimension(lev0:lev1) :: n2
 ! For diagnostics:
-      real,dimension(lev0:lev1,lon0:lon1,3) :: zz_ki,eddy
-      real,dimension(lev0:lev1,lon0:lon1,3,3) :: gama_ki
-      real,dimension(lev0:lev1,lon0:lon1,3,3,3) :: coef
-      real,dimension(lev0:lev1,lon0:lon1) ::
-     |  o2_eddydif,o1_eddydif,he_eddydif,
-     |  o2_moldif,o1_moldif,he_moldif,
-     |  o2_veradv,o1_veradv,he_veradv
+      real,dimension(lev0:lev1,lon0:lon1) :: eddyp,eddyq,eddyr
+      real,dimension(lev0:lev1,lon0:lon1,3) ::
+     |  zz_ki,moldif,eddydif,veradv
+      real,dimension(lev0:lev1,lon0:lon1,3,3) ::
+     |  gama_ki,coefp,coefq,coefr
 !
 ! Correction factor for diffusion coeff betweeen helium and o2,o,n2:
       real,dimension(lev0:lev1,lon0:lon1,3) :: diff_fac
@@ -506,9 +504,15 @@
           wks3(i) = wks4(i)
           wks4(i) = (embar(i,k+1)-embar(i,k))/
      |      (dz*(embar(i,k)+embar(i,k+1)))
+!
+          eddyp(k,i) = expzmid_inv*difk(k,iday)*(1./dz-wks3(i))
+          eddyq(k,i) =
+     |      expzmid    *difk(k+1,iday)*(1./dz-wks4(i))+
+     |      expzmid_inv*difk(k  ,iday)*(1./dz+wks3(i))
+          eddyr(k,i) = expzmid*difk(k+1,iday)*(1./dz+wks4(i))
         enddo ! i=lon0,lon1
 !
-! FINISH CALCULATING AK(K+1/2) AND GENERATE PK, QK, RK
+! calculate molecular diffusion coefficients of O2,O1,He
         do m=1,3
           do isp=io2,ihe
             do i=lon0,lon1
@@ -516,21 +520,30 @@
 ! AK = MBAR/M4*(T00/(T0+T))**0.25/TAU*INV(ALFA)
               ak(i,isp,m,kp) = ak(i,isp,m,kp)*wks1(i)
 
-              pk(i,isp,m) = (ak(i,isp,m,km)*(1./dz+ep(i,m,km)/2.)-
-     |          expz(k)*(expzmid_inv*difk(k,iday)*dfactor(i)*(1./dz-
-     |          wks3(i))+0.25*(w(k,i,lat)+w(k+1,i,lat)))*
-     |          delta(isp,m))/dz
+              coefp(k,i,isp,m) = -ak(i,isp,m,km)*(1./dz+ep(i,m,km)/2.)
+              coefq(k,i,isp,m) =
+     |          ak(i,isp,m,km)*(1./dz-ep(i,m,km)/2.)+
+     |          ak(i,isp,m,kp)*(1./dz+ep(i,m,kp)/2.)
+              coefr(k,i,isp,m) = -ak(i,isp,m,kp)*(1./dz-ep(i,m,kp)/2.)
+            enddo
+          enddo
+        enddo
+!
+! FINISH CALCULATING AK(K+1/2) AND GENERATE PK, QK, RK
+        do m=1,3
+          do isp=io2,ihe
+            do i=lon0,lon1
+              pk(i,isp,m) = -coefp(k,i,isp,m)/dz-
+     |          expz(k)*delta(isp,m)/dz*
+     |          (eddyp(k,i)*dfactor(i)+0.25*(w(k,i,lat)+w(k+1,i,lat)))
 
-              rk(i,isp,m) = (ak(i,isp,m,kp)*(1./dz-ep(i,m,kp)/2.)-
-     |          expz(k)*(expzmid*difk(k+1,iday)*dfactor(i)*(1./dz+
-     |          wks4(i))-0.25*(w(k,i,lat)+w(k+1,i,lat)))*
-     |          delta(isp,m))/dz
+              rk(i,isp,m) = -coefr(k,i,isp,m)/dz-
+     |          expz(k)*delta(isp,m)/dz*
+     |          (eddyr(k,i)*dfactor(i)-0.25*(w(k,i,lat)+w(k+1,i,lat)))
    
-              qk(i,isp,m) = -(ak(i,isp,m,km)*(1./dz-ep(i,m,km)/2.)+
-     |          ak(i,isp,m,kp)*(1./dz+ep(i,m,kp)/2.))/dz+expz(k)*
-     |          (((expzmid*difk(k+1,iday)*(1./dz-wks4(i))+expzmid_inv*
-     |          difk(k,iday)*(1./dz+wks3(i)))*dfactor(i)/dz+dtx2inv)*
-     |          delta(isp,m)-fs(i,k,isp,m,lat))
+              qk(i,isp,m) = -coefq(k,i,isp,m)/dz+
+     |          expz(k)*delta(isp,m)*(eddyq(k,i)*dfactor(i)/dz+dtx2inv)-
+     |          expz(k)*fs(i,k,isp,m,lat)
 
             enddo ! i=lon0,lon1
 
@@ -792,23 +805,6 @@
 !       enddo
 !       write(6,"('zz(k+1,io2)=',/,(6e12.4))") zz(:,k+1,io2)
 !       write(6,"('zz(k+1,io1)=',/,(6e12.4))") zz(:,k+1,io1)
-
-        eddy(k,:,1) = expzmid*difk(k+1,iday)*(1./dz+wks4)
-        eddy(k,:,2) =
-     |    expzmid    *difk(k+1,iday)*(1./dz-wks4)+
-     |    expzmid_inv*difk(k  ,iday)*(1./dz+wks3)
-        eddy(k,:,3) = expzmid*difk(k+1,iday)*(1./dz+wks4)
-
-! calculate molecular diffusion coefficients of O2,O1,He
-        do m=1,3
-          do isp=io2,ihe
-            coef(k,:,isp,m,1) = -ak(:,isp,m,km)*(1./dz+ep(:,m,km)/2.)
-            coef(k,:,isp,m,2) =
-     |        ak(:,isp,m,km)*(1./dz-ep(:,m,km)/2.)+
-     |        ak(:,isp,m,kp)*(1./dz+ep(:,m,kp)/2.)
-            coef(k,:,isp,m,3) = -ak(:,isp,m,kp)*(1./dz-ep(:,m,kp)/2.)
-          enddo
-        enddo
 !
 ! End main pressure loop:
       enddo levloop ! k=lev0,lev1-1
@@ -863,6 +859,66 @@
         enddo ! isp=io2,ihe
       enddo ! k=lev1-1,lev0,-1
 !
+! Upper boundary:
+! kp is carried forward from the last iteration of levloop above.
+      do i=lon0,lon1
+        do isp=io2,ihe
+          upd(lev1,i,isp) =
+     |      (1.+.5*ep(i,io2,kp)*dz)/
+     |      (1.-.5*ep(i,io2,kp)*dz)*upd(lev1-1,i,isp)
+        enddo
+        upd(lev1,i,io1) = upd(lev1,i,io1)+
+     |    (alpha23(i)-alpha22(i))*flx_he(i,lat)/
+     |    (flx00(i)*(1./dz-0.5*ep(i,io1,kp)))
+        upd(lev1,i,ihe) = upd(lev1,i,ihe)+
+     |    (alpha33(i)-alpha32(i))*flx_he(i,lat)/
+     |    (flx00(i)*(1./dz-0.5*ep(i,ihe,kp)))
+      enddo ! i=lon0,lon1
+!
+      moldif = 0.
+      eddydif = 0.
+      veradv = 0.
+      do k=lev0+1,lev1-1
+        do i=lon0,lon1
+          do isp=io2,ihe
+            do m=1,3
+              moldif(k,i,isp) = moldif(k,i,isp)+
+     |          coefp(k,i,isp,m)*upd(k-1,i,m)+
+     |          coefq(k,i,isp,m)*upd(k  ,i,m)+
+     |          coefr(k,i,isp,m)*upd(k+1,i,m)
+            enddo
+            eddydif(k,i,isp) =
+     |        eddyp(k,i)*upd(k-1,i,isp)+
+     |        eddyq(k,i)*upd(k  ,i,isp)+
+     |        eddyr(k,i)*upd(k+1,i,isp)
+            veradv(k,i,isp) =
+     |        (w(k,i,lat)+w(k+1,i,lat))*(upd(k-1,i,isp)-upd(k+1,i,isp))
+          enddo
+          moldif(k,i,:) = moldif(k,i,:)/dz/expz(k)
+          eddydif(k,i,:) = eddydif(k,i,:)*dfactor(i)/expz(k)
+          veradv(k,i,:) = veradv(k,i,:)/(4*dz)
+        enddo
+      enddo
+
+      call addfld('O2_MOLDIF','O2 molecular diffusion',' ',
+     |  moldif(k0+1:k1-1,:,io2),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_MOLDIF','O1 molecular diffusion',' ',
+     |  moldif(k0+1:k1-1,:,io1),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_MOLDIF','He molecular diffusion',' ',
+     |  moldif(k0+1:k1-1,:,ihe),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_EDDYDIF','O2 eddy diffusion',' ',
+     |  eddydif(k0+1:k1-1,:,io2),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_EDDYDIF','O1 eddy diffusion',' ',
+     |  eddydif(k0+1:k1-1,:,io1),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_EDDYDIF','He eddy diffusion',' ',
+     |  eddydif(k0+1:k1-1,:,ihe),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_VERADV','O2 vertical advection',' ',
+     |  veradv(k0+1:k1-1,:,io2),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_VERADV','O1 vertical advection',' ',
+     |  veradv(k0+1:k1-1,:,io1),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_VERADV','He vertical advection',' ',
+     |  veradv(k0+1:k1-1,:,ihe),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+!
 ! Transfer to output arrays:
       do k=lev0,lev1
         o2_upd(k,lon0:lon1,lat) = upd(k,:,io2)
@@ -870,102 +926,12 @@
         he_upd(k,lon0:lon1,lat) = upd(k,:,ihe)
       enddo ! k=lev0,lev1
 !
-! Upper boundary:
-! kp is carried forward from the last iteration of levloop above.
-      do i=lon0,lon1
-        o2_upd(lev1,i,lat) = 
-     |    (1.+.5*ep(i,io2,kp)*dz)/
-     |    (1.-.5*ep(i,io2,kp)*dz)*o2_upd(lev1-1,i,lat)
-        o1_upd(lev1,i,lat) = 
-     |    (1.+.5*ep(i,io1,kp)*dz)/
-     |    (1.-.5*ep(i,io1,kp)*dz)*o1_upd(lev1-1,i,lat)+
-     |    (alpha23(i)-alpha22(i))*flx_he(i,lat)/
-     |    (flx00(i)*(1./dz-0.5*ep(i,io1,kp)))
-        he_upd(lev1,i,lat) = 
-     |    (1.+.5*ep(i,ihe,kp)*dz)/
-     |    (1.-.5*ep(i,ihe,kp)*dz)*he_upd(lev1-1,i,lat)+
-     |    (alpha33(i)-alpha32(i))*flx_he(i,lat)/
-     |    (flx00(i)*(1./dz-0.5*ep(i,ihe,kp)))
-      enddo ! i=lon0,lon1
-!
 !       call addfld('O2_SOLV',' ',' ',o2_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
 !       call addfld('O1_SOLV',' ',' ',o1_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
 !       call addfld('HE_SOLV',' ',' ',he_upd(:,lon0:lon1,lat),
 !    |    'lev',k0,k1,'lon',i0,i1,lat)
-!
-      do k=lev0+1,lev1-1
-        o2_eddydif(k,:) = dfactor/expz(k)*
-     |    (eddy(k,:,1)*o2_upd(k-1,lon0:lon1,lat)+
-     |     eddy(k,:,2)*o2_upd(k  ,lon0:lon1,lat)+
-     |     eddy(k,:,3)*o2_upd(k+1,lon0:lon1,lat))
-        o1_eddydif(k,:) = dfactor/expz(k)*
-     |    (eddy(k,:,1)*o1_upd(k-1,lon0:lon1,lat)+
-     |     eddy(k,:,2)*o1_upd(k  ,lon0:lon1,lat)+
-     |     eddy(k,:,3)*o1_upd(k+1,lon0:lon1,lat))
-        he_eddydif(k,:) = dfactor/expz(k)*
-     |    (eddy(k,:,1)*he_upd(k-1,lon0:lon1,lat)+
-     |     eddy(k,:,2)*he_upd(k  ,lon0:lon1,lat)+
-     |     eddy(k,:,3)*he_upd(k+1,lon0:lon1,lat))
-
-        o2_moldif(k,:) = 1./dz/expz(k)*
-     |    (coef(k,:,1,1,1)*o2_upd(k-1,lon0:lon1,lat)+
-     |     coef(k,:,1,1,2)*o2_upd(k  ,lon0:lon1,lat)+
-     |     coef(k,:,1,1,3)*o2_upd(k+1,lon0:lon1,lat)+
-     |     coef(k,:,1,2,1)*o1_upd(k-1,lon0:lon1,lat)+
-     |     coef(k,:,1,2,2)*o1_upd(k  ,lon0:lon1,lat)+
-     |     coef(k,:,1,2,3)*o1_upd(k+1,lon0:lon1,lat)+
-     |     coef(k,:,1,3,1)*he_upd(k-1,lon0:lon1,lat)+
-     |     coef(k,:,1,3,2)*he_upd(k  ,lon0:lon1,lat)+
-     |     coef(k,:,1,3,3)*he_upd(k+1,lon0:lon1,lat))
-        o1_moldif(k,:) = 1./dz/expz(k)*
-     |    (coef(k,:,2,1,1)*o2_upd(k-1,lon0:lon1,lat)+
-     |     coef(k,:,2,1,2)*o2_upd(k  ,lon0:lon1,lat)+
-     |     coef(k,:,2,1,3)*o2_upd(k+1,lon0:lon1,lat)+
-     |     coef(k,:,2,2,1)*o1_upd(k-1,lon0:lon1,lat)+
-     |     coef(k,:,2,2,2)*o1_upd(k  ,lon0:lon1,lat)+
-     |     coef(k,:,2,2,3)*o1_upd(k+1,lon0:lon1,lat)+
-     |     coef(k,:,2,3,1)*he_upd(k-1,lon0:lon1,lat)+
-     |     coef(k,:,2,3,2)*he_upd(k  ,lon0:lon1,lat)+
-     |     coef(k,:,2,3,3)*he_upd(k+1,lon0:lon1,lat))
-        he_moldif(k,:) = 1./dz/expz(k)*
-     |    (coef(k,:,3,1,1)*o2_upd(k-1,lon0:lon1,lat)+
-     |     coef(k,:,3,1,2)*o2_upd(k  ,lon0:lon1,lat)+
-     |     coef(k,:,3,1,3)*o2_upd(k+1,lon0:lon1,lat)+
-     |     coef(k,:,3,2,1)*o1_upd(k-1,lon0:lon1,lat)+
-     |     coef(k,:,3,2,2)*o1_upd(k  ,lon0:lon1,lat)+
-     |     coef(k,:,3,2,3)*o1_upd(k+1,lon0:lon1,lat)+
-     |     coef(k,:,3,3,1)*he_upd(k-1,lon0:lon1,lat)+
-     |     coef(k,:,3,3,2)*he_upd(k  ,lon0:lon1,lat)+
-     |     coef(k,:,3,3,3)*he_upd(k+1,lon0:lon1,lat))
-
-        o2_veradv(k,:) = (w(k,lon0:lon1,lat)+w(k+1,lon0:lon1,lat))*
-     |    (o2_upd(k-1,lon0:lon1,lat)-o2_upd(k+1,lon0:lon1,lat))/(4*dz)
-        o1_veradv(k,:) = (w(k,lon0:lon1,lat)+w(k+1,lon0:lon1,lat))*
-     |    (o1_upd(k-1,lon0:lon1,lat)-o1_upd(k+1,lon0:lon1,lat))/(4*dz)
-        he_veradv(k,:) = (w(k,lon0:lon1,lat)+w(k+1,lon0:lon1,lat))*
-     |    (he_upd(k-1,lon0:lon1,lat)-he_upd(k+1,lon0:lon1,lat))/(4*dz)
-      enddo
-
-      call addfld('O2_EDDYDIF','O2 eddy diffusion',' ',
-     |  o2_eddydif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O1_EDDYDIF','O1 eddy diffusion',' ',
-     |  o1_eddydif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('HE_EDDYDIF','He eddy diffusion',' ',
-     |  he_eddydif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O2_MOLDIF','O2 molecular diffusion',' ',
-     |  o2_moldif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O1_MOLDIF','O1 molecular diffusion',' ',
-     |  o1_moldif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('HE_MOLDIF','He molecular diffusion',' ',
-     |  he_moldif(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O2_VERADV','O2 vertical advection',' ',
-     |  o2_veradv(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O1_VERADV','O1 vertical advection',' ',
-     |  o1_veradv(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('HE_VERADV','He vertical advection',' ',
-     |  he_veradv(k0+1:k1-1,:),'lev',k0+1,k1-1,'lon',i0,i1,lat)
 !
 ! End latitude scan:
       enddo ! lat=lat0,lat1
