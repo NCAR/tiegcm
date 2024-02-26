@@ -432,20 +432,6 @@
             "description": "The number of iterations in one model time step for the O+ solver, the actual O+ time step is STEP/NSTEP_SUB.",
             "warning": null
         },
-        "SECSTART":{
-            "LEVEL": "INTERMEDIATE",
-            "prompt": "Secondary Start Date (Day,Hour,Min,Sec)",
-            "default": null,
-            "description": "The starting model time (Day of year, Hour, Minute, Second) to generate the first secondary history record.",
-            "warning": null
-        },
-        "SECSTOP":{
-            "LEVEL": "INTERMEDIATE",
-            "prompt": "Secondary Stop Date (Day,Hour,Min,Sec)",
-            "default": null,
-            "description": "The stopping model time (Day of year, Hour, Minute, Second) to generate the last secondary history record.",
-            "warning": null
-        },
         "SECHIST":{
             "LEVEL": "BASIC",
             "prompt": "Secondary History (Day,Hour,Min,Sec)",
@@ -458,6 +444,20 @@
             "prompt": "Max Secondary History per Output",
             "default": null,
             "description": "The maximum number of records in one secondary history file.",
+            "warning": null
+        },
+        "SECSTART":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Secondary Start Date (Day,Hour,Min,Sec)",
+            "default": null,
+            "description": "The starting model time (Day of year, Hour, Minute, Second) to generate the first secondary history record.",
+            "warning": null
+        },
+        "SECSTOP":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Secondary Stop Date (Day,Hour,Min,Sec)",
+            "default": null,
+            "description": "The stopping model time (Day of year, Hour, Minute, Second) to generate the last secondary history record.",
             "warning": null
         },
         "SECOUT":{

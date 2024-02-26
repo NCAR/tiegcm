@@ -377,30 +377,20 @@ def inp_sec (PRISTART,PRISTOP, CADENCE):
     if CADENCE == [1,0,0,0]:
         if n_split_day >= 7:
             SECHIST = [1,0,0,0]
-            MXHIST_SECH = 1
-            SECSTART = [PRISTART[0]+1,PRISTART[1],PRISTART[2],PRISTART[3]]
-            SECSTOP = PRISTOP
+            SECHIST_valids = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
         else:
             SECHIST = [0,1,0,0]
-            MXHIST_SECH = 24
-            SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
-            SECSTOP = PRISTOP
+            SECHIST_valids = [[0,1,0,0],[0,0,1,0],[0,0,0,1]]
     elif CADENCE == [0,1,0,0]:
         SECHIST = [0,1,0,0]
-        MXHIST_SECH = 1
-        SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
-        SECSTOP = PRISTOP
+        SECHIST_valids = [[0,1,0,0],[0,0,1,0],[0,0,0,1]]
     elif CADENCE == [0,0,1,0]: 
         SECHIST = [0,0,1,0]
-        MXHIST_SECH = 1
-        SECSTART = [PRISTART[0],PRISTART[1],PRISTART[2]+1,PRISTART[3]]
-        SECSTOP = PRISTOP
+        SECHIST_valids = [[0,0,1,0],[0,0,0,1]]
     elif CADENCE == [0,0,0,1]:
         SECHIST = [0,0,0,1]
-        MXHIST_SECH = 1
-        SECSTART = [PRISTART[0],PRISTART[1],PRISTART[2],PRISTART[3]+1]
-        SECSTOP = PRISTOP   
-    return SECHIST, MXHIST_SECH, SECSTART, SECSTOP  
+        SECHIST_valids = [[0,0,0,1]]   
+    return SECHIST, SECHIST_valids  
 
 def inp_pri (PRISTART,PRISTOP, CADENCE):
     PRISTART_DAY = PRISTART[0]
@@ -409,21 +399,20 @@ def inp_pri (PRISTART,PRISTOP, CADENCE):
     if CADENCE == [1,0,0,0]:
         if n_split_day >= 7:
             PRIHIST = [1,0,0,0]
-            MXHIST_PRIM = 1
+            PRIHIST_valids = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
         else:
             PRIHIST = [0,1,0,0]
-            MXHIST_PRIM = 24
+            PRIHIST_valids = [[0,1,0,0],[0,0,1,0],[0,0,0,1]]
     elif CADENCE == [0,1,0,0]:
         PRIHIST = [0,1,0,0]
-        MXHIST_PRIM = 1
+        PRIHIST_valids = [[0,1,0,0],[0,0,1,0],[0,0,0,1]]
     elif CADENCE == [0,0,1,0]: 
         PRIHIST = [0,0,1,0]
-        MXHIST_PRIM = 1
+        PRIHIST_valids = [[0,0,1,0],[0,0,0,1]]
     elif CADENCE == [0,0,0,1]:
         PRIHIST = [0,0,0,1]
-        MXHIST_PRIM = 1   
-    return PRIHIST, MXHIST_PRIM  
-
+        PRIHIST_valids = [[0,0,0,1]]  
+    return PRIHIST, PRIHIST_valids  
 
 
 def inp_pri_out(histdir,run_name):
@@ -437,7 +426,95 @@ def inp_sec_out(histdir,run_name):
     SECOUT = f"'{SEC_0}','to','{SEC_N}','by','1'"
     return SECOUT
 
+def inp_mxhist_prim(CADENCE,PRIHIST,PRISTART,PRISTOP):
+    PRISTART_DAY = PRISTART[0]
+    PRISTOP_DAY = PRISTOP[0]
+    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
+    if CADENCE == [1,0,0,0]:
+        if n_split_day >= 7:
+            if PRIHIST == [1,0,0,0]:
+                MXHIST_PRIM = 1
+            elif PRIHIST == [0,1,0,0]:
+                MXHIST_PRIM = 1 * 24
+            elif PRIHIST == [0,0,1,0]:
+                MXHIST_PRIM = 1 * 24 * 60
+            elif PRIHIST == [0,0,0,1]:
+                MXHIST_PRIM = 1 * 24 * 60 * 60
+        else:
+            if PRIHIST == [0,1,0,0]:
+                MXHIST_PRIM = 1 * 24
+            elif PRIHIST == [0,0,1,0]:
+                MXHIST_PRIM = 1 * 24 * 60
+            elif PRIHIST == [0,0,0,1]:
+                MXHIST_PRIM = 1 * 24 * 60 * 60
+    elif CADENCE == [0,1,0,0]:
+        if PRIHIST == [0,1,0,0]:
+            MXHIST_PRIM = 1
+        elif PRIHIST == [0,0,1,0]:
+            MXHIST_PRIM = 1 * 60
+        elif PRIHIST == [0,0,0,1]:
+            MXHIST_PRIM = 1 * 60 * 60
+    elif CADENCE == [0,0,1,0]:
+        if PRIHIST == [0,0,1,0]:
+            MXHIST_PRIM = 1
+        elif PRIHIST == [0,0,0,1]:
+            MXHIST_PRIM = 1 * 60
+    elif CADENCE == [0,0,0,1]:
+        if PRIHIST == [0,0,0,1]:
+            MXHIST_PRIM = 1
+    return MXHIST_PRIM
 
+
+
+def inp_mxhist_sec(CADENCE,SECHIST,PRISTART,PRISTOP):
+    PRISTART_DAY = PRISTART[0]
+    PRISTOP_DAY = PRISTOP[0]
+    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
+    if CADENCE == [1,0,0,0]:
+        if n_split_day >= 7:
+            if SECHIST == [1,0,0,0]:
+                MXHIST_SECH = 1
+            elif SECHIST == [0,1,0,0]:
+                MXHIST_SECH = 1 * 24
+            elif SECHIST == [0,0,1,0]:
+                MXHIST_SECH = 1 * 24 * 60
+            elif SECHIST == [0,0,0,1]:
+                MXHIST_SECH = 1 * 24 * 60 * 60
+        else:
+            if SECHIST == [0,1,0,0]:
+                MXHIST_SECH = 1 * 24
+            elif SECHIST == [0,0,1,0]:
+                MXHIST_SECH = 1 * 24 * 60
+            elif SECHIST == [0,0,0,1]:
+                MXHIST_SECH = 1 * 24 * 60 * 60
+    elif CADENCE == [0,1,0,0]:
+        if SECHIST == [0,1,0,0]:
+            MXHIST_SECH = 1
+        elif SECHIST == [0,0,1,0]:
+            MXHIST_SECH = 1 * 60
+        elif SECHIST == [0,0,0,1]:
+            MXHIST_SECH = 1 * 60 * 60
+    elif CADENCE == [0,0,1,0]:
+        if SECHIST == [0,0,1,0]:
+            MXHIST_SECH = 1
+        elif SECHIST == [0,0,0,1]:
+            MXHIST_SECH = 1 * 60
+    elif CADENCE == [0,0,0,1]:
+        if SECHIST == [0,0,0,1]:
+            MXHIST_SECH = 1
+    return MXHIST_SECH
+
+def inp_sec_date(SECHIST, PRISTART, PRISTOP):
+    if SECHIST == [1,0,0,0]:
+        SECSTART = [PRISTART[0]+1,PRISTART[1],PRISTART[2],PRISTART[3]]
+    elif SECHIST == [0,1,0,0]:
+        SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
+    elif SECHIST == [0,0,1,0]:
+        SECSTART = [PRISTART[0],PRISTART[1],PRISTART[2]+1,PRISTART[3]]
+    elif SECHIST == [0,0,0,1]:
+        SECSTART = [PRISTART[0],PRISTART[1],PRISTART[2],PRISTART[3]+1]
+    SECSTOP = PRISTOP
+    return SECSTART, SECSTOP    
 
 def create_command_line_parser():
     """Create the command-line argument parser.
@@ -634,7 +711,6 @@ def get_run_option(name, description, mode="BASIC"):
                 if first_pass_modules == True:
                     default = []
                     first_pass_modules = False
-                    print("in")
                 if "\n" in temp_value:
                     temp_value = temp_value.replace("'", "")
                     temp_array = temp_value.split('\n')
@@ -717,7 +793,6 @@ def get_run_option(name, description, mode="BASIC"):
                     continue
                 else:
                     if valids is not None: 
-                        print(option_value)
                         if option_value not in valids:
                             print(f'{YELLOW}{option_value} not in {RESET}{valids}')
                             continue
@@ -1042,12 +1117,21 @@ def prompt_user_for_run_options(args):
             elif on == "CADENCE" and benchmark== None:
                 o[on] = get_run_option(on, od[on], temp_mode)
                 CADENCE = [int(i) for i in o[on].split()]
-                SECHIST, MXHIST_SECH, SECSTART, SECSTOP = inp_sec(PRISTART,PRISTOP,CADENCE)
-                PRIHIST, MXHIST_PRIM = inp_pri (PRISTART,PRISTOP, CADENCE)
+                SECHIST, SECHIST_valids = inp_sec(PRISTART,PRISTOP,CADENCE)
+                PRIHIST, PRIHIST_valids= inp_pri (PRISTART,PRISTOP, CADENCE)
                 od["PRIHIST"]["default"] =  PRIHIST
-                od["MXHIST_PRIM"]["default"] = str(MXHIST_PRIM)
+                od["PRIHIST"]["valids"] = PRIHIST_valids
                 od["SECHIST"]["default"] = SECHIST
-                od["MXHIST_SECH"]["default"] = str(MXHIST_SECH)
+                od["SECHIST"]["valids"] = SECHIST_valids
+            elif on == "PRIHIST" and benchmark== None:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                PRIHIST = [int(i) for i in o[on].split()]
+                od["MXHIST_PRIM"]["default"] = inp_mxhist_prim(CADENCE,PRIHIST,PRISTART,PRISTOP)
+            elif on == "SECHIST" and benchmark== None:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                SECHIST = [int(i) for i in o[on].split()]
+                od["MXHIST_SECH"]["default"] = inp_mxhist_sec(CADENCE,SECHIST,PRISTART,PRISTOP)
+                SECSTART, SECSTOP = inp_sec_date(SECHIST, PRISTART, PRISTOP)
                 od["SECSTART"]["default"] = SECSTART
                 od["SECSTOP"]["default"] = SECSTOP
             elif on == "POTENTIAL_MODEL":
