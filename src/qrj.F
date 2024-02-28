@@ -71,13 +71,14 @@
 !
 ! Calculate heating and dissociation rates.
 !
-      use input_module,only: f107
+      use input_module,only: f107,doEclipse
       use init_module,only: sfeps
       use cons_module,only: avo,rmassinv_n4s,rmassinv_no,
      |  rmassinv_o2,rmassinv_o1,rmassinv_n2,check_exp
       use lbc,only: fb,b
       use chemrates_module,only: beta9
       use fields_module,only: tlbc
+      use calculate_ecf_module,only: calculate_ecf
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
@@ -114,6 +115,9 @@
      |  quenchfac, ! (s8)
      |  sigchap,   ! (s9)
      |  p3f        ! (s7)
+      real,dimension(lev0:lev1,lon0:lon1) ::
+     |  eclipfactor,
+     |  newmag_factor
 
 ! temporary loop variables 
       real::
@@ -157,6 +161,17 @@
 !     call addfsech('XNMBARI',' ',' ',xnmbari(:,lon0:lon1),
 !    |  lon0,lon1,nlevs,nlevs,lat)
 !
+
+      if (doEclipse) then
+        call calculate_ecf(eclipfactor,lon0,lon1,lev0,lev1,lat,
+     |    newmag_factor)
+        call addfld('EUV_factor' ,' ',' ', eclipfactor(lev0:lev1,
+     |  lon0:lon1),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('newmag' ,' ',' ', newmag_factor(lev0:lev1,
+     |  lon0:lon1),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+       endif
 !  calculate inverse of wave length
 !
       do i=1,lmax
@@ -240,9 +255,17 @@
      |                            sigeuv(3,l)*scn2(k,i)
 !
             if (.not.check_exp) then
+              if (doEclipse) then
+              sum1(k,i) = feuv(l)*exp(-sum1(k,i))*eclipfactor(k,i)
+              else
               sum1(k,i) = feuv(l)*exp(-sum1(k,i))
+              endif
             else
+              if (doEclipse) then
+              sum1(k,i) = feuv(l)*expo(-sum1(k,i),0)*eclipfactor(k,i)
+              else
               sum1(k,i) = feuv(l)*expo(-sum1(k,i),0)
+              endif
             endif
 
             sum2(k,i) = sum2(k,i)+sigeuv(1,l)*mn_o2(k,i)+
@@ -376,6 +399,9 @@
             else
               sigchap(k,i) = sigsrc(l)*fsrc(l)*
      |          expo(-sigsrc(l)*sco2(k,i),0)
+            endif
+            if(doEclipse) then
+              sigchap(k,i) = sigchap(k,i) * eclipfactor(k,i)
             endif
 !
             sum1(k,i) = sum1(k,i)+sigchap(k,i)*

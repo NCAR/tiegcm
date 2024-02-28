@@ -136,6 +136,7 @@
      |  vvdata              ! SAPS vv data file
 
       logical :: oneway   ! logical to use oneway mix reader
+      logical :: doEclipse ! Do eclipse mask or not
       character(len=mxlen_filename) :: mixfile ! filename for oneway driving
 
 !     integer,parameter :: ngpivars = 4
@@ -185,7 +186,7 @@
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
      |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,electron_heating,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,et,saps,
-     |  vedata,vndata,vvdata,oneway,mixfile
+     |  vedata,vndata,vvdata,oneway,doEclipse,mixfile
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -298,6 +299,7 @@
       saps = .false.
 
       oneway = .false.
+      doEclipse = .false.
       mixfile = 'msphere.mix.h5'
 
       f107    = spval
