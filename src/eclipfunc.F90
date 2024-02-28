@@ -753,12 +753,13 @@ subroutine getcoverage()
 end subroutine getcoverage
 !--------------------------------------------------------------------------
   subroutine findEclipse(syear,smonth,sday)
-	 integer :: iyear,imonth,iday,syear,smonth,sday,I
+	 integer :: iyear,imonth,iday,syear,smonth,sday,i
     iyear=1900;
 
      if (doFill) call fillEclipse()
 
-     do while(iyear<=syear)
+     i = 1
+     do while(iyear<=syear .and. i <= 155)
         iyear = int(eclipse_list(i,1))
         imonth = int(eclipse_list(i,2))
         iday = int(eclipse_list(i,3))
@@ -768,6 +769,7 @@ end subroutine getcoverage
 	       goto 20
         end if
 
+        i = i+1
       end do
 10    close(9)
       write(*,*)'there is no elipse at this time'
