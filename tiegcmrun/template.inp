@@ -109,6 +109,13 @@ SWDEN = {{inp.SWDEN}}{%- endif %}
 {%- if inp.SWVEL is not none %}
 SWVEL = {{inp.SWVEL}}{%- endif %}
 
+! Eclipse Mask
+{%- if inp.DOECLIPSE is true %}
+DOECLIPSE = .true.
+{%- elif inp.DOECLIPSE is false %}
+DOECLIPSE = .false.
+{%- endif %}
+
 ! F107 Information 
 {%- if inp.F107 is not none %}
 F107 = {{inp.F107}}{%- endif %}

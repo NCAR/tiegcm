@@ -481,7 +481,15 @@
             "valids": [4, 6],
             "description": "4 for the 4th order scheme (Swartz & Nisbet 1972) and\n 6 for the 6th order scheme (Smithtro & Solomon 2008)",
             "warning": null
-        }, 
+        },
+        "DOECLIPSE":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "Apply Eclipse Mask",
+            "default": false,
+            "valids": [true, false],
+            "description": "Apply an Eclipse mask if an eclipse occurs during this event. Will do nothing if there are no eclipses during this event.  Applies partial, annular, or total solar eclipse masks.",
+            "warning": null
+        },  
         "POTENTIAL_MODEL":{
             "LEVEL": "BASIC",
             "prompt": "High-latitude potential model that is going to be used",

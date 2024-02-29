@@ -748,7 +748,10 @@ def get_run_option(name, description, mode="BASIC"):
             # Use the default if no user input provided.
             if option_value == "":
                 option_value = default
-                ok = True
+                if name == "SOURCE" and option_value == None:
+                    continue
+                else:
+                    ok = True
             # Use None if user input is none or None.
             elif option_value == 'none' or option_value == 'None':
                 option_value = None
@@ -927,6 +930,9 @@ def prompt_user_for_run_options(args):
     ------
     None
     """
+
+    global TIEGCMDATA
+    global TIEGCMHOME
     # Save the user mode.
     mode = args.mode
     benchmark = args.benchmark
@@ -990,6 +996,7 @@ def prompt_user_for_run_options(args):
     o["utildir"] = os.path.join(o["modeldir"],'scripts')
     od["tgcmdata"]["default"] = TIEGCMDATA
     o["tgcmdata"] = get_run_option("tgcmdata", od["tgcmdata"], mode)
+    
     if benchmark == None:
         o["input_file"] = get_run_option("input_file", od["input_file"], mode)
         if o["input_file"]  != None:
@@ -1010,7 +1017,8 @@ def prompt_user_for_run_options(args):
 
     o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode)
 
-    tiegcmdata_dir = o["tgcmdata"]
+    TIEGCMDATA = o["tgcmdata"]
+    
     #------------------------------------
 
     # Specification Options
@@ -1065,14 +1073,14 @@ def prompt_user_for_run_options(args):
             for on in od:
                 if on in oben:
                     if on == "SOURCE":
-                        od[on]["default"] = find_file('*tiegcm*'+options['simulation']['job_name']+'*', TIEGCMDATA)
+                        od[on]["default"] = find_file('*tiegcm*'+options['simulation']['job_name']+'*.nc', TIEGCMDATA)
                     elif on in ["OUTPUT", "SECOUT"]:
                         temp_output = oben[on]
                         temp_output = temp_output.replace("+histdir+", histdir)
                         temp_output = temp_output.replace("+run_name+", run_name)
                         od[on]["default"] = temp_output
                     elif on in ["other_input"]:
-                        temp_output = [item.replace("+tiegcmdata+", tiegcmdata_dir) if item is not None and item != 'null' else item for item in oben[on]]
+                        temp_output = [item.replace("+tiegcmdata+", TIEGCMDATA) if item is not None and item != 'null' else item for item in oben[on]]
                         od[on]["default"] = temp_output
                     elif oben[on] == None:
                         od[on]["default"] = od[on]["default"]
@@ -1106,6 +1114,8 @@ def prompt_user_for_run_options(args):
                     od["SECOUT"]["default"]=inp_sec_out(histdir,run_name)
             elif on == "SOURCE":
                 o[on] = get_run_option(on, od[on], temp_mode)
+                if o[on] == None:
+                    o[on] = get_run_option(on, od[on], "BASIC")
             elif on == "SOURCE_START":
                 od["SOURCE_START"]["valids"] = get_mtime(options["inp"]["SOURCE"])
                 #for arr in mtime_arr:
@@ -1172,19 +1182,19 @@ def prompt_user_for_run_options(args):
                         if item not in skip_inp:
                             skip_inp.append(item)
             elif on == "GSWM_MI_DI_NCFILE":
-                od[on]["default"] = f"{find_file(f'*gswm_diurn_{horires}d_99km*', tiegcmdata_dir)}"
+                od[on]["default"] = f"{find_file(f'*gswm_diurn_{horires}d_99km*', TIEGCMDATA)}"
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "GSWM_MI_SDI_NCFILE":
-                od[on]["default"] = f"{find_file(f'*gswm_semi_{horires}d_99km*', tiegcmdata_dir)}"
+                od[on]["default"] = f"{find_file(f'*gswm_semi_{horires}d_99km*', TIEGCMDATA)}"
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "GSWM_NM_DI_NCFILE":
-                od[on]["default"] = f"{find_file(f'*gswm_nonmig_diurn_{horires}d_99km*', tiegcmdata_dir)}"
+                od[on]["default"] = f"{find_file(f'*gswm_nonmig_diurn_{horires}d_99km*', TIEGCMDATA)}"
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "GSWM_NM_SDI_NCFILE":
-                od[on]["default"] = f"{find_file(f'*gswm_nonmig_semi_{horires}d_99km*', tiegcmdata_dir)}"
+                od[on]["default"] = f"{find_file(f'*gswm_nonmig_semi_{horires}d_99km*', TIEGCMDATA)}"
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "HE_COEFS_NCFILE":
-                od[on]["default"] = f"{find_file(f'*he_coefs_dres*', tiegcmdata_dir)}"
+                od[on]["default"] = f"{find_file(f'*he_coefs_dres*', TIEGCMDATA)}"
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on not in skip_inp:
                 o[on] = get_run_option(on, od[on], temp_mode)
