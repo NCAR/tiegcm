@@ -164,7 +164,7 @@
       itc = itmp
 !
 ! Initialize eclipse list with external data
-      call read_eclipse_list(eclipse_list)
+      if (doEclipse) call read_eclipse_list(eclipse_list)
 !
       call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
       if (timing%level >= 2)
