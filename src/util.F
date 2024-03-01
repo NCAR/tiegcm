@@ -1381,3 +1381,27 @@
       return
       end
 !-------------------------------------------------------------------
+      subroutine to_month_day(year,doy,month,day)
+      implicit none
+!
+! convert doy to month,day pair
+!
+      integer,intent(in) :: year,doy
+      integer,intent(out) :: month,day
+
+      integer,dimension(12) :: days_in_month
+
+      days_in_month = (/31,28,31,30,31,30,31,31,30,31,30,31/)
+      if (mod(year,400)==0 .or.
+     |  (mod(year,4)==0 .and. mod(year,100)/=0)) days_in_month(2) = 29
+
+      day = doy
+      do month = 1,12
+        if (day > days_in_month(month)) then
+          day = day - days_in_month(month)
+        else
+          exit
+        endif
+      enddo
+
+      end subroutine to_month_day

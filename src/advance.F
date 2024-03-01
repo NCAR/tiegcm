@@ -22,7 +22,8 @@
       use wei05sc,only: weimer05        ! Weimer 2005 model
       use input_module,only: pristart,step,idynamo=>dynamo,
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
-     |  imf_ncfile,current_pg,current_kq,iamie,amie_ibkg
+     |  imf_ncfile,current_pg,current_kq,iamie,amie_ibkg,
+     |  doEclipse,eclipse_list
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
      |  ctpoten,ctpoten_time,ntimes_ctpoten, rd_ctpoten,
@@ -53,6 +54,7 @@
       use output,only: outhist,output_hist
       use addfld_module,only: addfld
       use lbc,only: tuvz_lbc
+      use eclipse_module,only: read_eclipse_list,find_eclipse
 !
 ! Routines and timing for parallel dynamo (pdynamo.F):
       use pdynamo_module,only: dynamo_inputs,pdynamo,pefield,
@@ -76,7 +78,7 @@
 #endif
 !
 ! Local:
-      integer :: i,j,itmp,ier,iprint
+      integer :: i,j,itmp,ier,iprint,month,day
       integer :: cmodeltime(4) !MAGE coupling time
       real :: fmin,fmax
       integer(kind=8) :: nsecs ! current model time in seconds,
@@ -160,6 +162,9 @@
       itmp = itp
       itp = itc
       itc = itmp
+!
+! Initialize eclipse list with external data
+      call read_eclipse_list(eclipse_list)
 !
       call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
       if (timing%level >= 2)
@@ -273,6 +278,12 @@
 ! Update lower boundaries of t,u,v,z:
 !
       call tuvz_lbc(istep,iday,secs)
+!
+! Update eclipse elements array if necessary:
+      if (doEclipse) then
+        call to_month_day(iyear,iday,month,day)
+        call find_eclipse(iyear,month,day)
+      endif
 !
 ! Receive aurora parameters from the M-I coupler for MAGE
 !

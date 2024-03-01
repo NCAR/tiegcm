@@ -78,7 +78,6 @@
       use lbc,only: fb,b
       use chemrates_module,only: beta9
       use fields_module,only: tlbc
-      use calculate_ecf_module,only: calculate_ecf
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
@@ -115,9 +114,7 @@
      |  quenchfac, ! (s8)
      |  sigchap,   ! (s9)
      |  p3f        ! (s7)
-      real,dimension(lev0:lev1,lon0:lon1) ::
-     |  eclipfactor,
-     |  newmag_factor
+      real,dimension(lev0:lev1,lon0:lon1) :: mag_factor,eclipse_factor
 
 ! temporary loop variables 
       real::
@@ -161,17 +158,15 @@
 !     call addfsech('XNMBARI',' ',' ',xnmbari(:,lon0:lon1),
 !    |  lon0,lon1,nlevs,nlevs,lat)
 !
-
       if (doEclipse) then
-        call calculate_ecf(eclipfactor,lon0,lon1,lev0,lev1,lat,
-     |    newmag_factor)
-        call addfld('EUV_factor' ,' ',' ', eclipfactor(lev0:lev1,
-     |  lon0:lon1),
-     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-        call addfld('newmag' ,' ',' ', newmag_factor(lev0:lev1,
-     |  lon0:lon1),
-     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call calculate_ecf(mag_factor,eclipse_factor,
+     |    lev0,lev1,lon0,lon1,lat)
+        call addfld('mag_factor',' ',' ',mag_factor,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('eclipse_factor',' ',' ',eclipse_factor,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
        endif
+
 !  calculate inverse of wave length
 !
       do i=1,lmax
@@ -255,18 +250,11 @@
      |                            sigeuv(3,l)*scn2(k,i)
 !
             if (.not.check_exp) then
-              if (doEclipse) then
-              sum1(k,i) = feuv(l)*exp(-sum1(k,i))*eclipfactor(k,i)
-              else
               sum1(k,i) = feuv(l)*exp(-sum1(k,i))
-              endif
             else
-              if (doEclipse) then
-              sum1(k,i) = feuv(l)*expo(-sum1(k,i),0)*eclipfactor(k,i)
-              else
               sum1(k,i) = feuv(l)*expo(-sum1(k,i),0)
-              endif
             endif
+            if (doEclipse) sum1(k,i) = sum1(k,i)*eclipse_factor(k,i)
 
             sum2(k,i) = sum2(k,i)+sigeuv(1,l)*mn_o2(k,i)+
      |                            sigeuv(2,l)*mn_o1(k,i)+
@@ -400,9 +388,8 @@
               sigchap(k,i) = sigsrc(l)*fsrc(l)*
      |          expo(-sigsrc(l)*sco2(k,i),0)
             endif
-            if(doEclipse) then
-              sigchap(k,i) = sigchap(k,i) * eclipfactor(k,i)
-            endif
+            if (doEclipse)
+     |        sigchap(k,i) = sigchap(k,i)*eclipse_factor(k,i)
 !
             sum1(k,i) = sum1(k,i)+sigchap(k,i)*
      |        (hc*rlmsrcinv(l)-do22+quenchfac(k,i))

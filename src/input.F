@@ -31,9 +31,11 @@
 !       to the input values. These may be referenced from included
 !       header files or other modules).
 !
+      integer,parameter :: mxlen_filename=1024
+!
 ! Namelist user input variables:
 !
-      character(len=1024) :: 
+      character(len=mxlen_filename) :: 
      |  label,           ! optional generic text label for this run
      |  amievol,         ! absolute or relative path to amie data file (optional)
      |  amiesh,          ! file or mss path of amie SH data file (optional)
@@ -90,7 +92,9 @@
      |  ntimes_f107,ntimes_f107a
       logical :: aluse,  ! logical to use AL in Weimer 2001 model or not
      |  et,              ! logical to calculate electron turbulent heating
-     |  saps             ! logical to include empirical SAPS
+     |  saps,            ! logical to include empirical SAPS
+     |  doEclipse,       ! logical to do eclipse mask or not
+     |  oneway           ! logical to use oneway mix reader
 !
 ! Parameters as read from namelist:
       real :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,rd_byimf,
@@ -103,7 +107,6 @@
       integer :: indices_interp=1 
 !
 ! Import data file names:
-      integer,parameter :: mxlen_filename=1024
       character(len=mxlen_filename) ::
 !
 ! 4/2/08 btf: Introducing Weimer 2005 model (wei05sc.F).
@@ -133,11 +136,9 @@
      |  he_coefs_ncfile,    ! coefficients of Helium flux at upper boundary
      |  vedata,             ! SAPS ve data file
      |  vndata,             ! SAPS vn data file
-     |  vvdata              ! SAPS vv data file
-
-      logical :: oneway   ! logical to use oneway mix reader
-      logical :: doEclipse ! Do eclipse mask or not
-      character(len=mxlen_filename) :: mixfile ! filename for oneway driving
+     |  vvdata,             ! SAPS vv data file
+     |  eclipse_list,       ! Eclipse list data file
+     |  mixfile             ! filename for oneway driving
 
 !     integer,parameter :: ngpivars = 4
 !     real :: gpi_vars(ngpivars) ! f107,f107a,power,ctpoten
@@ -186,7 +187,7 @@
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
      |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,electron_heating,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,et,saps,
-     |  vedata,vndata,vvdata,oneway,doEclipse,mixfile
+     |  vedata,vndata,vvdata,doEclipse,eclipse_list,oneway,mixfile
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -271,6 +272,8 @@
       vedata = ' '
       vndata = ' '
       vvdata = ' '
+      eclipse_list = ' '
+      mixfile = 'msphere.mix.h5'
 !
       start_day  = ispval
       start_year = ispval
@@ -297,10 +300,8 @@
       electron_heating = ispval
       et = .false.
       saps = .false.
-
-      oneway = .false.
       doEclipse = .false.
-      mixfile = 'msphere.mix.h5'
+      oneway = .false.
 
       f107    = spval
       f107a   = spval
@@ -634,6 +635,11 @@
       if (len_trim(vvdata) == 0) vvdata = '$TGCMDATA/vv.dat'
       call expand_path(vvdata)
 !
+! Eclipse list data file:
+      if (len_trim(eclipse_list) == 0)
+     |  eclipse_list = '$TGCMDATA/eclipse_list.nc'
+      call expand_path(eclipse_list)
+!
 ! 1/12/05 btf: removed old dynamo (was in dynamo_old.F)
 ! 6/11/08 btf: remove dynamo==0 option
 !
@@ -765,8 +771,8 @@
       integer(kind=8) :: step8,
      |  nsec_start(mxseries),nsec_stop(mxseries),
      |  nsec_hist (mxseries)
-      character(len=1024) :: ch1024
-      character(len=1024) :: hvols(mxhvols)
+      character(len=mxlen_filename) :: ch1024
+      character(len=mxlen_filename) :: hvols(mxhvols)
 !
 ! External:
       integer,external :: numfiles
@@ -1080,8 +1086,8 @@
       integer(kind=8) :: step8,
      |  nsec_start(mxseries_sech),nsec_stop(mxseries_sech),
      |  nsec_hist (mxseries_sech)
-      character(len=1024) :: ch1024
-      character(len=1024) :: hvols(mxhvols)
+      character(len=mxlen_filename) :: ch1024
+      character(len=mxlen_filename) :: hvols(mxhvols)
 !
 ! External:
       integer,external :: numfiles
