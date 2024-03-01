@@ -28,7 +28,7 @@ module load {{ module }}
 
 # Execute tiegcm
 cd {{model.data.execdir}}
-{{pbs.mpi_command}} -np {{pbs.nprocs}} {{model.data.execdir}}/{{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.log_file}}
+{{pbs.mpi_command}} -np {{pbs.nprocs}} {{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.log_file}}
 
 
 cd {{model.data.workdir}}

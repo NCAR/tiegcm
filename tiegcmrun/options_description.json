@@ -269,10 +269,10 @@
                 "warning": "Modify only if you are porting the model to a new machine."
             },
             "modelexe": {
-                "LEVEL": "EXPERT",
-                "prompt": "Executable Name",
-                "default": "tiegcm.exe",
-                "description": "The name of the executable.",
+                "LEVEL": "BENCH",
+                "prompt": "Executable:",
+                "default": null,
+                "description": "The path of existing or name of the executable.",
                 "warning": null
             }
         },

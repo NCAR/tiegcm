@@ -1014,9 +1014,12 @@ def prompt_user_for_run_options(args):
         elif options["simulation"]["hpc_system"] == "None":
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_linux')
     o["make"] = get_run_option("make", od["make"], mode)
-
+    od["modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.exe")
     o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode)
-
+    if os.path.isfile(o["modelexe"]) == False:
+        o["modelexe"] = os.path.join(o["execdir"],o["modelexe"])
+        if args.compile == False:
+            print(f'{YELLOW}Unable to find {o["modelexe"]}, model must be compiled. Use --compile or -c {RESET}')
     TIEGCMDATA = o["tgcmdata"]
     
     #------------------------------------
@@ -1280,8 +1283,8 @@ def compile_tiegcm(options, debug, coupling):
     nres_grid = float(o["model"]["specification"]["nres_grid"])
     make      = o["model"]["data"]["make"]
     coupling  = coupling
-    modelexe = o["model"]["data"]["modelexe"]
-
+    modelexe = os.path.basename(o["model"]["data"]["modelexe"])
+    model = o["model"]["data"]["modelexe"]
     try:
         os.makedirs(workdir)
     except:
@@ -1358,7 +1361,7 @@ def compile_tiegcm(options, debug, coupling):
         print(f">>> Cannot find namelist input file {input} <<<")
         sys.exit(1)
     
-    model = os.path.join(execdir, modelexe)
+    
     input = os.path.abspath(input)
     output = os.path.abspath(output)
     util = os.path.abspath(utildir)
