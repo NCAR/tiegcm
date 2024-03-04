@@ -1193,7 +1193,7 @@ def prompt_user_for_run_options(args):
             elif on == "GPI_NCFILE" and on not in skip_inp:
                 o[on] = get_run_option(on, od[on], temp_mode)
                 if o[on] != None:
-                    skip_inp_temp = ["KP","POWER","CTPOTEN"]
+                    skip_inp_temp = ["KP","POWER","CTPOTEN","F107","F107A"]
                     for item in skip_inp_temp:
                         if item not in skip_inp:
                             skip_inp.append(item)
