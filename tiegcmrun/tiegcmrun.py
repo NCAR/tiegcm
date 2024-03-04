@@ -389,7 +389,10 @@ def inp_sec (PRISTART,PRISTOP, CADENCE):
         SECHIST_valids = [[0,0,1,0],[0,0,0,1]]
     elif CADENCE == [0,0,0,1]:
         SECHIST = [0,0,0,1]
-        SECHIST_valids = [[0,0,0,1]]   
+        SECHIST_valids = [[0,0,0,1]]
+    else:
+        SECHIST = None
+        SECHIST_valids = None  
     return SECHIST, SECHIST_valids  
 
 def inp_pri (PRISTART,PRISTOP, CADENCE):
@@ -411,7 +414,10 @@ def inp_pri (PRISTART,PRISTOP, CADENCE):
         PRIHIST_valids = [[0,0,1,0],[0,0,0,1]]
     elif CADENCE == [0,0,0,1]:
         PRIHIST = [0,0,0,1]
-        PRIHIST_valids = [[0,0,0,1]]  
+        PRIHIST_valids = [[0,0,0,1]]
+    else:
+        PRIHIST = None
+        PRIHIST_valids = None  
     return PRIHIST, PRIHIST_valids  
 
 
@@ -440,6 +446,8 @@ def inp_mxhist_prim(CADENCE,PRIHIST,PRISTART,PRISTOP):
                 MXHIST_PRIM = 1 * 24 * 60
             elif PRIHIST == [0,0,0,1]:
                 MXHIST_PRIM = 1 * 24 * 60 * 60
+            else:
+                MXHIST_PRIM = None    
         else:
             if PRIHIST == [0,1,0,0]:
                 MXHIST_PRIM = 1 * 24
@@ -447,6 +455,8 @@ def inp_mxhist_prim(CADENCE,PRIHIST,PRISTART,PRISTOP):
                 MXHIST_PRIM = 1 * 24 * 60
             elif PRIHIST == [0,0,0,1]:
                 MXHIST_PRIM = 1 * 24 * 60 * 60
+            else:
+                MXHIST_PRIM = None
     elif CADENCE == [0,1,0,0]:
         if PRIHIST == [0,1,0,0]:
             MXHIST_PRIM = 1
@@ -454,14 +464,22 @@ def inp_mxhist_prim(CADENCE,PRIHIST,PRISTART,PRISTOP):
             MXHIST_PRIM = 1 * 60
         elif PRIHIST == [0,0,0,1]:
             MXHIST_PRIM = 1 * 60 * 60
+        else:
+            MXHIST_PRIM = None
     elif CADENCE == [0,0,1,0]:
         if PRIHIST == [0,0,1,0]:
             MXHIST_PRIM = 1
         elif PRIHIST == [0,0,0,1]:
             MXHIST_PRIM = 1 * 60
+        else:
+            MXHIST_PRIM = None
     elif CADENCE == [0,0,0,1]:
         if PRIHIST == [0,0,0,1]:
             MXHIST_PRIM = 1
+        else:
+            MXHIST_PRIM = None
+    else:
+        MXHIST_PRIM = None
     return MXHIST_PRIM
 
 
@@ -480,6 +498,8 @@ def inp_mxhist_sec(CADENCE,SECHIST,PRISTART,PRISTOP):
                 MXHIST_SECH = 1 * 24 * 60
             elif SECHIST == [0,0,0,1]:
                 MXHIST_SECH = 1 * 24 * 60 * 60
+            else:
+                MXHIST_SECH = None
         else:
             if SECHIST == [0,1,0,0]:
                 MXHIST_SECH = 1 * 24
@@ -487,6 +507,8 @@ def inp_mxhist_sec(CADENCE,SECHIST,PRISTART,PRISTOP):
                 MXHIST_SECH = 1 * 24 * 60
             elif SECHIST == [0,0,0,1]:
                 MXHIST_SECH = 1 * 24 * 60 * 60
+            else:
+                MXHIST_SECH = None
     elif CADENCE == [0,1,0,0]:
         if SECHIST == [0,1,0,0]:
             MXHIST_SECH = 1
@@ -494,25 +516,27 @@ def inp_mxhist_sec(CADENCE,SECHIST,PRISTART,PRISTOP):
             MXHIST_SECH = 1 * 60
         elif SECHIST == [0,0,0,1]:
             MXHIST_SECH = 1 * 60 * 60
+        else:
+            MXHIST_SECH = None
     elif CADENCE == [0,0,1,0]:
         if SECHIST == [0,0,1,0]:
             MXHIST_SECH = 1
         elif SECHIST == [0,0,0,1]:
             MXHIST_SECH = 1 * 60
+        else:
+            MXHIST_SECH = None
     elif CADENCE == [0,0,0,1]:
         if SECHIST == [0,0,0,1]:
             MXHIST_SECH = 1
+        else:
+            MXHIST_SECH = None
+    else:
+        MXHIST_SECH = None
     return MXHIST_SECH
 
 def inp_sec_date(SECHIST, PRISTART, PRISTOP):
-    if SECHIST == [1,0,0,0]:
-        SECSTART = [PRISTART[0]+1,PRISTART[1],PRISTART[2],PRISTART[3]]
-    elif SECHIST == [0,1,0,0]:
-        SECSTART = [PRISTART[0],PRISTART[1]+1,PRISTART[2],PRISTART[3]]
-    elif SECHIST == [0,0,1,0]:
-        SECSTART = [PRISTART[0],PRISTART[1],PRISTART[2]+1,PRISTART[3]]
-    elif SECHIST == [0,0,0,1]:
-        SECSTART = [PRISTART[0],PRISTART[1],PRISTART[2],PRISTART[3]+1]
+    #SECHIST_add = [1 if x != 0 else 0 for x in SECHIST]
+    SECSTART = [x + y for x, y in zip(PRISTART, SECHIST)]
     SECSTOP = PRISTOP
     return SECSTART, SECSTOP    
 
@@ -775,10 +799,12 @@ def get_run_option(name, description, mode="BASIC"):
         elif name in fourvar_variables:
             prompt = og_prompt
             if valids is not None: 
-                vs = ' | '.join([', '.join(map(str, sublist)) for sublist in valids])
+                prompt += " Example:"
+                vs =' | '.join([','.join(map(str, sublist)) for sublist in valids])
                 prompt += f" ({vs})"
-            default_print = ' '.join(map(str, default))
-            prompt += f" [{GREEN}{default_print}{RESET}]"
+            if default not in [None, [None]] :    
+                default_print = ' '.join(map(str, default))
+                prompt += f" [{GREEN}{default_print}{RESET}]"
             temp_value = input(f"{prompt}: ")
             temp_array = []
             if temp_value not in ["","?","none","None"]:
@@ -797,8 +823,9 @@ def get_run_option(name, description, mode="BASIC"):
                 else:
                     if valids is not None: 
                         if option_value not in valids:
-                            print(f'{YELLOW}{option_value} not in {RESET}{valids}')
-                            continue
+                            print(f'{YELLOW}{option_value} not in default list. \nSetting dependent defaults/suggested values to None.{RESET}')
+                            option_value =' '.join(map(str, option_value))
+                            ok = True
                         else:
                             option_value =' '.join(map(str, option_value))
                             ok = True

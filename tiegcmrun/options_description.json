@@ -380,6 +380,7 @@
             "LEVEL": "BASIC",
             "prompt": "Model Time per Output File (Daily,Hourly,PerMinute,PerSeccond)",
             "default": [1,0,0,0],
+            "valids": [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]],
             "description": "For an output file every Day 1,0,0,0\nFor an output file every Hour 0,1,0,0\nFor an output file every Minute 0,0,1,0\nFor an output file every Second 0,0,0,1",
             "warning": null
         },
