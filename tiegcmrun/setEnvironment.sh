@@ -49,18 +49,17 @@ fi
 
 if [ -z "$SAVED_MODULES" ]; then
     if [ "$SYSTEM" == "derecho" ]; then
-        module purge
+        module --force purge
         module load conda
-        module load ncarenv/23.06
-        module load intel/2023.0.0
-        module load cray-mpich/8.1.25
-        module load mkl/2023.0.0
-        module load netcdf-mpi/4.9.2
-        module load craype/2.7.20
+        module load ncarenv/23.09
+        module load craype/2.7.23
+        module load intel/2023.2.1
         module load ncarcompilers/1.0.0
+        module load cray-mpich/8.1.27
+        module load mkl/2023.2.0
         module load hdf5-mpi/1.12.2
-        module load esmf/8.5.0
-        
+        module load netcdf-mpi/4.9.2
+        module load esmf/8.6.0
         module list
 
         read -p "Save Module List (y/n)? " answer

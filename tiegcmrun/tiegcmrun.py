@@ -831,6 +831,8 @@ def get_run_option(name, description, mode="BASIC"):
                 if valids is not None and float(Fraction(option_value)) not in valids:
                     print(f"Invalid value for option {name}: {option_value}!")
                     continue
+                else:
+                    option_value=float(Fraction(option_value))
             elif name in ["horires","ELECTRON_HEATING","zitop","mres"]:
                 if valids is not None and float(option_value) not in valids:
                     print(f"Invalid value for option {name}: {option_value}!")
