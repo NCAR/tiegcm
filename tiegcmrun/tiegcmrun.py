@@ -898,18 +898,23 @@ def select_resource_defaults(options, option_descriptions):
                 if float(horires) == 2.5:
                     select_default = 1
                 elif float(horires) == 1.25:
-                    select_default = 2
+                    select_default = 1
                 elif float(horires) == 0.625:
-                    select_default = 3         
+                    select_default = 2         
             if on == "ncpus":
                 if float(horires) == 2.5:
-                    ncpus_default = 72
+                    ncpus_default = 128
                 elif float(horires) == 1.25:
-                    ncpus_default = 72
+                    ncpus_default = 128
                 elif float(horires) == 0.625:
-                    ncpus_default = 96
+                    ncpus_default = 128
             if on == "mpiprocs":
-                mpiprocs_default = ncpus_default
+                if float(horires) == 2.5:
+                    mpiprocs_default = 128
+                elif float(horires) == 1.25:
+                    mpiprocs_default = 128
+                elif float(horires) == 0.625:
+                    mpiprocs_default = 256
     elif hpc_platform == "pleiades":
         od=od["resource"]
         o=o["resource"]
@@ -1283,7 +1288,7 @@ def prompt_user_for_run_options(args):
                 else:
                     ot[ont] = get_run_option(ont, odt[ont], mode)
         elif on =="nprocs":
-            od[on]["default"] = int(nnodes) * int(mpiprocs)
+            od[on]["default"] = int(mpiprocs) #int(nnodes) * int(mpiprocs)
             o[on] = get_run_option(on, od[on], mode)
         elif on == "module_list":
             o[on] = get_run_option(on, od[on], mode)
