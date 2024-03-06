@@ -67,6 +67,8 @@
      |        zpmag(nmlevp1),   ! magnetic midpoint levels
      |        zpimag(nimlevp1)  ! magnetic interface levels
 !
+      real,dimension(nlonp4) :: glon0 ! include ghost points (1->nlonp4)
+!
 ! For modules hist_mod and input_mod:
       character(len=16),parameter :: tgcm_version = 'tiegcm_trunk    '
 !

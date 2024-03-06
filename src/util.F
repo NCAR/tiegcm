@@ -1381,6 +1381,26 @@
       return
       end
 !-------------------------------------------------------------------
+      function isclose(a,b) result(flag)
+      implicit none
+!
+! check whether a and b are absolutely or relatively close
+!
+      real,intent(in) :: a,b
+      logical :: flag
+
+      real,parameter :: eps = 1e-9
+      real :: d
+
+      d = abs(a-b)
+      if (d<eps .or. (d<eps*abs(a) .and. d<eps*abs(b))) then
+        flag = .true.
+      else
+        flag = .false.
+      endif
+
+      end function isclose
+!-------------------------------------------------------------------
       subroutine to_month_day(year,doy,month,day)
       implicit none
 !
@@ -1405,3 +1425,49 @@
       enddo
 
       end subroutine to_month_day
+!-------------------------------------------------------------------
+      function to_doy(year,month,day) result(doy)
+      implicit none
+!
+! convert month,day pair to doy
+!
+      integer,intent(in) :: year,month,day
+      integer :: doy
+
+      integer :: mn
+      integer,dimension(12) :: days_in_month
+
+      days_in_month = (/31,28,31,30,31,30,31,31,30,31,30,31/)
+      if (mod(year,400)==0 .or.
+     |  (mod(year,4)==0 .and. mod(year,100)/=0)) days_in_month(2) = 29
+
+      doy = 0
+      do mn = 1,month-1
+        doy = doy + days_in_month(mn)
+      enddo
+      doy = doy + day
+
+      end function to_doy
+!-------------------------------------------------------------------
+      function to_datenum(year,day) result(datenum)
+      implicit none
+!
+! calculate the number of days from 1970-001 to a given date
+!
+      integer,intent(in) :: year,day
+      integer :: datenum
+
+      integer :: yr
+
+      datenum = 0
+      do yr = 1970,year-1
+        if (mod(yr,400)==0 .or.
+     |    (mod(yr,4)==0 .and. mod(yr,100)/=0)) then
+          datenum = datenum + 366
+        else
+          datenum = datenum + 365
+        endif
+      enddo
+      datenum = datenum + day
+
+      end function to_datenum

@@ -170,6 +170,15 @@
      |  mxhist_sech,          ! max number of histories per secondary file
      |  sech_nbyte            ! 4 or 8: write real or double values to secondary file
 !
+      character(len=mxlen_filename) :: nudge_ncpre,nudge_ncpost
+      character(len=mxlen_filename),dimension(mxhvols) :: nudge_ncfile
+      character(len=16),dimension(mxfsech) :: nudge_flds
+      logical,dimension(mxfsech) :: nudge_lbc,nudge_f4d
+      logical :: nudge_use_refdate
+      integer,dimension(2) :: nudge_refdate
+      real,dimension(2) :: nudge_sponge,nudge_delta,nudge_power
+      real :: nudge_alpha
+!
 ! Namelist for read:
       namelist/tgcm_input/ 
      |  label,step,nstep_sub,
@@ -187,7 +196,10 @@
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
      |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,electron_heating,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,et,saps,
-     |  vedata,vndata,vvdata,doEclipse,eclipse_list,oneway,mixfile
+     |  vedata,vndata,vvdata,doEclipse,eclipse_list,oneway,mixfile,
+     |  nudge_ncpre,nudge_ncfile,nudge_ncpost,nudge_flds,
+     |  nudge_lbc,nudge_f4d,nudge_use_refdate,nudge_refdate,
+     |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -346,6 +358,20 @@
       mxhist_sech = 24 ! default max number of histories per sech file
       if (dlat == 2.5) mxhist_sech = 10 ! 2.5 degree horizontal resolution 
       sech_nbyte    = ispval
+
+      nudge_ncpre = ' '
+      nudge_ncfile = ' '
+      nudge_ncpost = ' '
+      nudge_flds = ' '
+      nudge_lbc = .false.
+      nudge_f4d = .false.
+      nudge_use_refdate = .false.
+      nudge_refdate = ispval
+      nudge_sponge = spval
+      nudge_delta = spval
+      nudge_power = spval
+      nudge_alpha = spval
+
       end subroutine inp_init
 !-------------------------------------------------------------------
       subroutine inp_model(ntask)
@@ -2305,6 +2331,35 @@
         write(6,"(/,'>>> CTMT data are available only at the ',
      |    '2.5-degree model resolution.')")
         call shutdown('CTMT_NCFILE not allowed at 5-deg resolution')
+      endif
+!
+! check for the compliance of nudging parameters
+      if (count(len_trim(nudge_ncfile)>0) > 0) then
+        if (nudge_refdate(1) == ispval) nudge_refdate(1) = start_year
+        if (nudge_refdate(2) == ispval) nudge_refdate(2) = start_day
+        if (any(nudge_sponge < 0))
+     |    call shutdown('NUDGE_SPONGE must be non-negative')
+        where (nudge_sponge == spval) nudge_sponge = 0
+        if (any(nudge_delta <= 0))
+     |    call shutdown('NUDGE_DELTA must be positive')
+        where (nudge_delta == spval) nudge_delta = 1
+        if (any(nudge_power <= 0))
+     |    call shutdown('NUDGE_POWER must be positive')
+        where (nudge_power == spval) nudge_power = 1
+        if (nudge_alpha < 0)
+     |    call shutdown('NUDGE_ALPHA must be non-negative')
+        if (nudge_alpha == spval) nudge_alpha = 0
+      else
+        if (len_trim(nudge_ncpre)>0 .or. len_trim(nudge_ncpost)>0 .or.
+     |    any(len_trim(nudge_flds)>0) .or.
+     |    any(nudge_lbc) .or. any(nudge_f4d) .or.
+     |    nudge_use_refdate .or. any(nudge_refdate/=ispval) .or.
+     |    any(nudge_sponge/=spval) .or. any(nudge_delta/=spval) .or.
+     |    any(nudge_power/=spval) .or. nudge_alpha/=spval)
+     |    call shutdown('NUDGE_NCFILE must set if any of '//
+     |    'NUDGE_NCPRE,NUDGE_NCPOST,NUDGE_FLDS,NUDGE_LBC,NUDGE_F4D,'//
+     |    'NUDGE_USE_REFDATE,NUDGE_REFDATE,NUDGE_SPONGE,NUDGE_DELTA,'//
+     |    'NUDGE_POWER,NUDGE_ALPHA is set')
       endif
 
       end subroutine inp_lbc

@@ -24,3 +24,5 @@ Change of physics:
 - Use a sixth\-order polynomial for thermal electron heating efficiency \(Yihui Cai\)\.
 - Electrojet turbulent heating, default off \(Jing Liu\)\.
 - Empirical SAPS, default off \(Cheng Sheng\)\.
+- Support eclipse solar EUV masking \(Tong Dang\)\.
+- Support lower boundary forcing by external data \(SD nudging, Haonan Wu\)\.

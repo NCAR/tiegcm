@@ -23,6 +23,7 @@
       use input_module,only: pristart,step,idynamo=>dynamo,
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
      |  imf_ncfile,current_pg,current_kq,iamie,amie_ibkg,
+     |  start_day,nudge_lbc,nudge_f4d,nudge_alpha,
      |  doEclipse,eclipse_list
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
@@ -49,12 +50,21 @@
       use gpi_module,only: rdgpi,getgpi
       use imf_module,only: getimf
       use gswm_module,only: getgswm
-      use params_module,only: nlonp4,nlat
+      use params_module,only: nlonp4,nlat,
+     |  nlon,nlonp2,dlon,glon,glon0
       use amie_module,only: getamie,tiepot
       use output,only: outhist,output_hist
       use addfld_module,only: addfld
-      use lbc,only: tuvz_lbc
+      use lbc,only: tuvz_lbc,t_lbc,u_lbc,v_lbc,z_lbc
       use eclipse_module,only: read_eclipse_list,find_eclipse
+      use nudge_module,only:
+     |  nudge_check=>check,nudge_init=>init,
+     |  nudge_update=>update,nudge_finalize=>finalize,
+     |  nudge_nlb=>nlb,nudge_nf4d=>nf4d,
+     |  nudge_time=>time,nudge_itime=>itime,
+     |  ext_lbc=>lbc,ext_f4d=>f4d,lbc_flag,
+     |  f4d_idx,wrap,maxlev,latbeg,latend,lonbeg,lonend,
+     |  offbeg,offend,lonbeg1,lonend1,hori_weight,vert_weight
 !
 ! Routines and timing for parallel dynamo (pdynamo.F):
       use pdynamo_module,only: dynamo_inputs,pdynamo,pefield,
@@ -78,9 +88,9 @@
 #endif
 !
 ! Local:
-      integer :: i,j,itmp,ier,iprint,month,day
+      integer :: i,j,itmp,ier,iprint,month,day,modelsec,ifld,k
       integer :: cmodeltime(4) !MAGE coupling time
-      real :: fmin,fmax
+      real :: fmin,fmax,delta,fac1,fac2
       integer(kind=8) :: nsecs ! current model time in seconds,
                                ! including model day
       logical :: time2write,wrprim,wrsech,newseries_sech,newseries_prim
@@ -96,6 +106,9 @@
      |  time0_init,     time1_init
       character(len=3) :: timing_type
       logical :: adv
+      real,dimension(:,:),allocatable :: wt,ext_fld,tmp_lbc
+      real,dimension(:,:,:),allocatable :: tmp_f4d,nclbc
+      real,dimension(:,:,:,:),allocatable :: ncf4d
 !
       logical :: debug=.false.
       integer :: lev0=1,lev1=nlevp1
@@ -103,6 +116,7 @@
 ! External:
       logical,external :: wrhist,time2print
       real,external :: hp_from_bz_swvel,hp_from_kp,ctpoten_from_kp
+      integer,external :: mtime_to_secs
 !
 #ifdef VT
 !     code = 115 ; state = 'advance' ; activity='ModelCode'
@@ -165,6 +179,26 @@
 !
 ! Initialize eclipse list with external data
       if (doEclipse) call read_eclipse_list(eclipse_list)
+!
+! glon0 corresponds to lon0:lon1 (1,nlonp4)
+      glon0(3:nlonp2) = glon
+      glon0(1:2) = glon(1)-(/2,1/)*dlon
+      glon0(nlonp2+1:nlonp4) = glon(nlon)+(/1,2/)*dlon
+
+! this nudge_lbc is from nudge module, not from input module
+      if (any(nudge_lbc) .or. any(nudge_f4d)) then
+        if (mytid == 0) call nudge_check
+        call nudge_init
+
+        if (latbeg < latend) then
+          allocate(wt(lon0:lon1,latbeg:latend))
+          allocate(ext_fld(lon0:lon1,latbeg:latend))
+          allocate(tmp_lbc(lon0:lon1,latbeg:latend))
+          allocate(tmp_f4d(maxlev,lon0:lon1,latbeg:latend))
+          allocate(nclbc(lon0:lon1,latbeg:latend,nudge_nlb))
+          allocate(ncf4d(maxlev,lon0:lon1,latbeg:latend,nudge_nf4d))
+        endif
+      endif
 !
       call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
       if (timing%level >= 2)
@@ -283,6 +317,76 @@
       if (doEclipse) then
         call to_month_day(iyear,iday,month,day)
         call find_eclipse(iyear,month,day)
+      endif
+!
+      modelsec = mtime_to_secs(modeltime)-start_day*86400
+
+! read external fields and interpolate spatially
+! this sets up both ext_lbc and ext_f4d
+      if (any(nudge_lbc) .or. any(nudge_f4d)) then
+        if (latbeg<latend .and. nudge_time(nudge_itime+1)<modelsec)
+     |    call nudge_update(modelsec)
+        delta = nudge_time(nudge_itime+1)-nudge_time(nudge_itime)
+        fac1 = (nudge_time(nudge_itime+1)-modelsec)/delta
+        fac2 = (modelsec-nudge_time(nudge_itime))/delta
+      endif
+
+! lower boundary based on nudge data
+      if (any(nudge_lbc)) then
+        if (latbeg<latend .and.
+     |    nudge_time(nudge_itime)<=modelsec .and.
+     |    modelsec<=nudge_time(nudge_itime+1)) then
+
+! temporal interpolation
+          nclbc = fac1*ext_lbc(:,:,1,:)+fac2*ext_lbc(:,:,2,:)
+          wt = nudge_alpha*hori_weight
+
+          do ifld = 1,nudge_nlb
+            if (lbc_flag(ifld)) then
+              select case (ifld)
+                case (1)
+                  tmp_lbc = t_lbc(lon0:lon1,latbeg:latend)
+                case (2)
+                  tmp_lbc = u_lbc(lon0:lon1,latbeg:latend)
+                case (3)
+                  tmp_lbc = v_lbc(lon0:lon1,latbeg:latend)
+                case (4)
+                  tmp_lbc = z_lbc(lon0:lon1,latbeg:latend)
+              endselect
+
+              ext_fld = wt*nclbc(:,:,ifld)+(1-wt)*tmp_lbc
+
+! find the corresponding grid and replace the model fields
+              if (wrap) then
+                tmp_lbc = ext_fld
+              else
+                if (lonbeg<lonend .and. offbeg==offend)
+     |            tmp_lbc(lonbeg:lonend,:) = ext_fld(lonbeg:lonend,:)
+
+                if (lonbeg<lonend .and. offbeg+1==offend) then
+                  tmp_lbc(lonbeg:lonend1,:) = ext_fld(lonbeg:lonend1,:)
+                  tmp_lbc(lonbeg1:lonend,:) = ext_fld(lonbeg1:lonend,:)
+                endif
+
+                if (lonbeg>lonend .and. offbeg==offend+1) then
+                  tmp_lbc(lonbeg:lon1,:) = ext_fld(lonbeg:lon1,:)
+                  tmp_lbc(lon0:lonend,:) = ext_fld(lon0:lonend,:)
+                endif
+              endif
+
+              select case (ifld)
+                case (1)
+                  t_lbc(lon0:lon1,latbeg:latend) = tmp_lbc
+                case (2)
+                  u_lbc(lon0:lon1,latbeg:latend) = tmp_lbc
+                case (3)
+                  v_lbc(lon0:lon1,latbeg:latend) = tmp_lbc
+                case (4)
+                  z_lbc(lon0:lon1,latbeg:latend) = tmp_lbc
+              endselect
+            endif
+          enddo
+        endif
       endif
 !
 ! Receive aurora parameters from the M-I coupler for MAGE
@@ -576,6 +680,50 @@
      |      idynamo
       endif ! idynamo
 !
+      if (any(nudge_f4d)) then
+        if (latbeg<latend .and.
+     |    nudge_time(nudge_itime)<=modelsec .and.
+     |    modelsec<=nudge_time(nudge_itime+1)) then
+
+          ncf4d = fac1*ext_f4d(:,:,:,1,:)+fac2*ext_f4d(:,:,:,2,:)
+
+          do ifld = 1,nudge_nf4d
+            if (nudge_f4d(ifld)) then
+              tmp_f4d = f4d(f4d_idx(ifld))%
+     |          data(1:maxlev,lon0:lon1,latbeg:latend,itc)
+
+              do k = 1,maxlev
+                wt = nudge_alpha*hori_weight*vert_weight(k,ifld)
+                ext_fld = wt*ncf4d(k,:,:,ifld)+(1-wt)*tmp_f4d(k,:,:)
+
+                if (wrap) then
+                  tmp_f4d(k,:,:) = ext_fld
+                else
+                  if (lonbeg<lonend .and. offbeg==offend)
+     |              tmp_f4d(k,lonbeg:lonend,:) =
+     |              ext_fld(lonbeg:lonend,:)
+
+                  if (lonbeg<lonend .and. offbeg+1==offend) then
+                    tmp_f4d(k,lonbeg:lonend1,:) =
+     |                ext_fld(lonbeg:lonend1,:)
+                    tmp_f4d(k,lonbeg1:lonend,:) =
+     |                ext_fld(lonbeg1:lonend,:)
+                  endif
+
+                  if (lonbeg>lonend .and. offbeg==offend+1) then
+                    tmp_f4d(k,lonbeg:lon1,:) = ext_fld(lonbeg:lon1,:)
+                    tmp_f4d(k,lon0:lonend,:) = ext_fld(lon0:lonend,:)
+                  endif
+                endif
+              enddo
+
+              f4d(f4d_idx(ifld))%
+     |          data(1:maxlev,lon0:lon1,latbeg:latend,itc) = tmp_f4d
+            endif
+          enddo
+        endif
+      endif
+!
 #ifdef VT
 !       code = 127 ; state = 'timestep' ; activity='ModelCode'
         call vtend(127,ier)
@@ -662,6 +810,10 @@
         if (debug) write(6,"('advance end iteration for step ',i4)")
      |    istep
         goto 100
+      endif
+!
+      if (any(nudge_lbc) .or. any(nudge_f4d)) then
+        if (latbeg < latend) call nudge_finalize
       endif
 !
 #ifdef VT
