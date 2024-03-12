@@ -44,7 +44,7 @@
       use pdynamo_module,only: pefield
       use aurora_module,only: aurora_cons
       use hdif_module,only: hdif1,hdif2
-      use current,only: noso_crrt,noso_crdens
+      use current,only: noso_crrt,noso_crdens,nscrrt_glb=>nscrrt
       use timing_module,only: timer,timing
       use mpitime_module,only: mpi_timer
       use gpi_module,only: rdgpi,getgpi
@@ -69,6 +69,7 @@
 ! Routines and timing for parallel dynamo (pdynamo.F):
       use pdynamo_module,only: dynamo_inputs,pdynamo,pefield,
      |  prepare_phig3d,nmlat0,phihm 
+      use diags_module,only: mkdiag_JQR
 
       use mage_coupling_module,only: import_mage, export_mage,
      |  process_import
@@ -79,6 +80,7 @@
 !
       use mpi_module,only: 
      |  mytid,mp_bndlats,ntask,lat0,lat1,lon0,lon1,
+     |  mlat0,mlat1,mlon0,mlon1,mp_scatter_phim,
      |  mp_bndlons,mp_polelats,mp_periodic_f4d,TIEGCM_WORLD
       use getapex_module,only: apxparm
 !
@@ -106,6 +108,7 @@
      |  time0_init,     time1_init
       character(len=3) :: timing_type
       logical :: adv
+      real,dimension(mlon0:mlon1,mlat0:mlat1) :: nscrrt
       real,dimension(:,:),allocatable :: wt,ext_fld,tmp_lbc
       real,dimension(:,:,:),allocatable :: tmp_f4d,nclbc
       real,dimension(:,:,:,:),allocatable :: ncf4d
@@ -666,6 +669,11 @@
 !
         if (current_kq > 0) then
           if (mytid==0) call noso_crrt
+!
+! Save JQR: Upward current density (2d)
+!
+          call mp_scatter_phim(nscrrt_glb,nscrrt)
+          call mkdiag_JQR('JQR',nscrrt,mlon0,mlon1,mlat0,mlat1)
           call noso_crdens
         endif
 !

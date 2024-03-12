@@ -27,7 +27,7 @@ module current
     zigm11_glb,zigm22_glb,zigmc_glb,zigm2_glb,rhs_glb,rim_glb,nmlon0
   use addfld_module,only: addfld
   use diags_module,only: mkdiag_JE13D, mkdiag_JE23D, mkdiag_KQLAM, &
-    mkdiag_KQPHI, mkdiag_JQR
+    mkdiag_KQPHI
   implicit none
   real,parameter :: unitv(nmlon)=1.
   real,dimension(nmlon0,nmlat,10) :: nscoef ! nmlon0==nmlonp1
@@ -644,10 +644,6 @@ subroutine noso_crrt
       tout(i,j,:) = nscrrt(i,j) ! copy for secondary history field
     enddo           ! endo i-loop
   enddo             ! enddo j-loop
-!
-! Save JQR: Upward current density (2d)
-!
-  call mkdiag_JQR('JQR',nscrrt,1,nmlon0,1,nmlat)
 
 end subroutine noso_crrt
 !-----------------------------------------------------------------------
