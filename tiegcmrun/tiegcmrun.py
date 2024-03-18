@@ -564,6 +564,10 @@ def create_command_line_parser():
         help="Overwrite existing options file (default: %(default)s)."
     )
     parser.add_argument(
+        "--onlycompile","-oc", action="store_true",
+        help="Only Compile Tiegcm (default: %(default)s)."
+    )
+    parser.add_argument(
         "--debug", "-d", action="store_true",
         help="Print debugging output (default: %(default)s)."
     )
@@ -967,6 +971,8 @@ def prompt_user_for_run_options(args):
 
     global TIEGCMDATA
     global TIEGCMHOME
+    input_build_skip = False
+    pbs_build_skip = False
     # Save the user mode.
     mode = args.mode
     benchmark = args.benchmark
@@ -974,6 +980,10 @@ def prompt_user_for_run_options(args):
         mode = "BENCH"
     elif mode == None:
         mode = "BASIC"
+    onlycompile = args.onlycompile
+    if onlycompile == True:
+        input_build_skip = True
+        pbs_build_skip = True
     # Read the dictionary of option descriptions.
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = json.load(f)
@@ -1004,7 +1014,7 @@ def prompt_user_for_run_options(args):
     #------------------------------------
 
     # Data Options
-    input_built = False 
+     
     options["model"]["data"] = {}
     o = options["model"]["data"]
     temp_mode = mode
@@ -1034,7 +1044,7 @@ def prompt_user_for_run_options(args):
     if benchmark == None:
         o["input_file"] = get_run_option("input_file", od["input_file"], mode)
         if o["input_file"]  != None:
-            input_built = True
+            input_build_skip = True
     else:
         o["input_file"] = None
     od["log_file"]["default"] =  f'{o["workdir"]}/{options["simulation"]["job_name"]}.out'
@@ -1087,7 +1097,7 @@ def prompt_user_for_run_options(args):
 
     #-------------------------------------------------------------------------
     # INP options
-    if input_built == False:        
+    if input_build_skip == False:        
 
         options["inp"] = {}
         o = options["inp"]
@@ -1240,62 +1250,62 @@ def prompt_user_for_run_options(args):
             
 
     #-------------------------------------------------------------------------
+    if pbs_build_skip == False:
+        # PBS options
+        options["pbs"] = {}
+        o = options["pbs"]
+        skip_pbs = []
+        # Common (HPC platform-independent) options
+        od = option_descriptions["pbs"]["_common"]
+        od["account_name"]["default"] = os.getlogin()
+        for on in od:
+            o[on] = get_run_option(on, od[on], mode)
 
-    # PBS options
-    options["pbs"] = {}
-    o = options["pbs"]
-    skip_pbs = []
-    # Common (HPC platform-independent) options
-    od = option_descriptions["pbs"]["_common"]
-    od["account_name"]["default"] = os.getlogin()
-    for on in od:
-        o[on] = get_run_option(on, od[on], mode)
-
-    # HPC platform-specific options
-    hpc_platform = options["simulation"]["hpc_system"]
-    od = option_descriptions["pbs"][hpc_platform]
-    if hpc_platform == "derecho":
-        o["mpi_command"] = "mpirun"
-    elif hpc_platform == "pleiades":
-        o["mpi_command"] = "mpiexec_mpt"
-    for on in od:
-        if on == "resource":
-            options["pbs"]["resource"] = {}
-            odt = od["resource"]
-            ot = options["pbs"]["resource"]
-            for ont in odt:
-                if hpc_platform == "derecho":
-                    select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
-                    odt["select"]["default"] = select_default
-                    odt["ncpus"]["default"] = ncpus_default
-                    odt["mpiprocs"]["default"] = mpiprocs_default
-                elif hpc_platform == "pleiades":
-                    if ont == "model":
-                        ot[ont] = get_run_option(ont, odt[ont], mode)
+        # HPC platform-specific options
+        hpc_platform = options["simulation"]["hpc_system"]
+        od = option_descriptions["pbs"][hpc_platform]
+        if hpc_platform == "derecho":
+            o["mpi_command"] = "mpirun"
+        elif hpc_platform == "pleiades":
+            o["mpi_command"] = "mpiexec_mpt"
+        for on in od:
+            if on == "resource":
+                options["pbs"]["resource"] = {}
+                odt = od["resource"]
+                ot = options["pbs"]["resource"]
+                for ont in odt:
+                    if hpc_platform == "derecho":
                         select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
                         odt["select"]["default"] = select_default
                         odt["ncpus"]["default"] = ncpus_default
                         odt["mpiprocs"]["default"] = mpiprocs_default
-                if ont == "select":
-                    ot[ont] = get_run_option(ont, odt[ont], mode)
-                    nnodes = ot[ont]
-                elif ont == "ncpus":
-                    ot[ont] = get_run_option(ont, odt[ont], mode)
-                    ncpus = ot[ont]
-                elif ont == "mpiprocs":
-                    ot[ont] = get_run_option(ont, odt[ont], mode)
-                    mpiprocs = ot[ont]
-                else:
-                    ot[ont] = get_run_option(ont, odt[ont], mode)
-        elif on =="nprocs":
-            od[on]["default"] = int(mpiprocs) #int(nnodes) * int(mpiprocs)
-            o[on] = get_run_option(on, od[on], mode)
-        elif on == "module_list":
-            o[on] = get_run_option(on, od[on], mode)
-            if o[on] != None:
-                skip_pbs.append("modules")
-        elif on not in skip_pbs:
-            o[on] = get_run_option(on, od[on], mode)
+                    elif hpc_platform == "pleiades":
+                        if ont == "model":
+                            ot[ont] = get_run_option(ont, odt[ont], mode)
+                            select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
+                            odt["select"]["default"] = select_default
+                            odt["ncpus"]["default"] = ncpus_default
+                            odt["mpiprocs"]["default"] = mpiprocs_default
+                    if ont == "select":
+                        ot[ont] = get_run_option(ont, odt[ont], mode)
+                        nnodes = ot[ont]
+                    elif ont == "ncpus":
+                        ot[ont] = get_run_option(ont, odt[ont], mode)
+                        ncpus = ot[ont]
+                    elif ont == "mpiprocs":
+                        ot[ont] = get_run_option(ont, odt[ont], mode)
+                        mpiprocs = ot[ont]
+                    else:
+                        ot[ont] = get_run_option(ont, odt[ont], mode)
+            elif on =="nprocs":
+                od[on]["default"] = int(mpiprocs) #int(nnodes) * int(mpiprocs)
+                o[on] = get_run_option(on, od[on], mode)
+            elif on == "module_list":
+                o[on] = get_run_option(on, od[on], mode)
+                if o[on] != None:
+                    skip_pbs.append("modules")
+            elif on not in skip_pbs:
+                o[on] = get_run_option(on, od[on], mode)
 
     # Return the options dictionary.
     return options
@@ -1308,8 +1318,14 @@ def compile_tiegcm(options, debug, coupling):
     outdir = o["model"]["data"]["histdir"]
     tgcmdata  = o["model"]["data"]["tgcmdata"]
     utildir   = os.path.join(o["model"]["data"]["modeldir"],"scripts")
-    input     = o["model"]["data"]["input_file"]
-    output    = o["model"]["data"]["log_file"]
+    try:
+        input     = o["model"]["data"]["input_file"]
+    except:
+        input = ""
+    try:
+        output    = o["model"]["data"]["log_file"]
+    except:
+        output = ""
     horires   = float(o["model"]["specification"]["horires"])
     vertres   = float(o["model"]["specification"]["vertres"])
     zitop     = float(o["model"]["specification"]["zitop"])
@@ -1391,13 +1407,16 @@ def compile_tiegcm(options, debug, coupling):
     if not os.path.isfile(os.path.join(execdir, 'mkdepends')):
         shutil.copy(os.path.join(utildir, 'mkdepends'), execdir)
 
+    """
     if not os.path.isfile(input):
         print(f">>> Cannot find namelist input file {input} <<<")
         sys.exit(1)
+    """
     
-    
-    input = os.path.abspath(input)
-    output = os.path.abspath(output)
+    if input == '' or output == '':
+        input = os.path.abspath(input)
+        output = os.path.abspath(output)
+        
     util = os.path.abspath(utildir)
 
 
@@ -1634,26 +1653,28 @@ def main():
     horires = options["model"]["specification"]["horires"]
     vertres = options["model"]["specification"]["vertres"]
     zitop = options["model"]["specification"]["zitop"]
-    if options["model"]["data"]["input_file"] == None or not os.path.isfile(options["model"]["data"]["input_file"]):
-        if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
-            if args.benchmark == None:
-                in_prim = options["inp"]["SOURCE"]
-                out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                options["inp"]["SOURCE"] = out_prim
-                interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
-            else:
-                in_prim = options["inp"]["SOURCE"]
-                out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                options["inp"]["SOURCE"] = out_prim
-                interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
 
-        else:
-            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-            options["inp"]["SOURCE"] = out_prim
-            print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
-        options["model"]["data"]["input_file"] = create_inp_scripts(options)
-    if options["model"]["data"]["log_file"] == None:
-        options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"], f"{run_name}.out")
+    if args.onlycompile == False:
+        if options["model"]["data"]["input_file"] == None or not os.path.isfile(options["model"]["data"]["input_file"]):
+            if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
+                if args.benchmark == None:
+                    in_prim = options["inp"]["SOURCE"]
+                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                    options["inp"]["SOURCE"] = out_prim
+                    interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+                else:
+                    in_prim = options["inp"]["SOURCE"]
+                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                    options["inp"]["SOURCE"] = out_prim
+                    interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+
+            else:
+                out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                options["inp"]["SOURCE"] = out_prim
+                print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
+            options["model"]["data"]["input_file"] = create_inp_scripts(options)
+        if options["model"]["data"]["log_file"] == None:
+            options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"], f"{run_name}.out")
 
 
     if os.path.exists(path):
@@ -1662,10 +1683,11 @@ def main():
     with open(path, "w", encoding="utf-8") as f:
         json.dump(options, f, indent=JSON_INDENT)
 
-    if args.compile == True:
+    if args.compile == True or args.onlycompile == True:
         compile_tiegcm(options, debug, coupling)
     
-    pbs_script = create_pbs_scripts(options)
+    if args.onlycompile == False:
+        pbs_script = create_pbs_scripts(options)
     if args.execute == True:
         if args.compile == False:
             if find_file(options["model"]["data"]["modelexe"], execdir) == None:
@@ -1679,7 +1701,7 @@ def main():
             print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
             print(f"{YELLOW}Check PBS script for erros{RESET}")
             print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
-    else:
+    elif args.onlycompile == False:
         print(f"{YELLOW}Execute is set to false{RESET}")
         print(f"{YELLOW}To submit job use command{RESET} qsub {pbs_script}")
 
