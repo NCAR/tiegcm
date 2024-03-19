@@ -42,7 +42,8 @@ import xarray as xr
 import numpy as np
 import fnmatch
 from fractions import Fraction
-from datetime import datetime
+from datetime import datetime, timedelta
+from math import ceil
 # Import 3rd-party modules.
 
 from jinja2 import Template
@@ -354,6 +355,31 @@ def interpic(fin, hres, vres, zitop, fout):
     src.close()
     dst.close()
 
+
+
+def segment_time(start_time_str, stop_time_str, interval_array):
+    # Convert start_time and stop_time to datetime objects
+    start = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M:%S')
+    stop = datetime.strptime(stop_time_str, '%Y-%m-%dT%H:%M:%S')
+    
+    # Extract interval values from the array
+    days, hours, minutes, seconds = interval_array
+    
+    # Create a timedelta object using the interval values
+    delta = timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
+    
+    # Generate the intervals
+    intervals = []
+    current = start
+    while current < stop:
+        next_time = min(current + delta, stop)
+        intervals.append([current.strftime('%Y-%m-%dT%H:%M:%S'), next_time.strftime('%Y-%m-%dT%H:%M:%S')])
+        current = next_time
+    
+    return intervals
+
+
+
 def inp_pri_date(start_date_str, stop_date_str):
     # Parse the start and stop dates
     start_date = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M:%S")
@@ -369,175 +395,167 @@ def inp_pri_date(start_date_str, stop_date_str):
 
     return START_YEAR, START_DAY, PRISTART, PRISTOP
 
+def valid_hist(start_date, stop_date):
+    start = datetime.strptime(start_date, '%Y-%m-%dT%H:%M:%S')
+    stop = datetime.strptime(stop_date, '%Y-%m-%dT%H:%M:%S')
+    total_duration = stop - start
+    total_seconds = total_duration.total_seconds()
+    
+    valid_divisions = []
+    
+    # Calculate valid divisions for days
+    total_days = total_duration.days
+    for n_day in range(1, total_days + 1):
+        valid_divisions.append([n_day,0,0,0])
+    
+    # Calculate valid divisions for hours
+    hours_divisions = [1, 2, 3, 4, 6, 12, 18, 24]
+    for n_hour in hours_divisions:
+        if total_seconds % (n_hour * 3600) == 0:
+            valid_divisions.append([0,n_hour,0,0])
+            
+    # Calculate valid divisions for minutes
+    minutes_divisions = [1, 2, 5, 10, 15, 30, 45, 60]
+    for n_min in minutes_divisions:
+        if total_seconds % (n_min * 60) == 0:
+            valid_divisions.append([0,0,n_min,0])
+    
+    # Calculate valid divisions for seconds
+    seconds_divisions = [1, 2, 5, 10, 15, 30, 45, 60]
+    for n_sec in seconds_divisions:
+        if total_seconds % n_sec == 0:
+            valid_divisions.append([0,0,0,n_sec])
+    
+    return valid_divisions
 
-def inp_sec (PRISTART,PRISTOP, CADENCE):
+def inp_mxhist(start_time, stop_time, x_hist, mxhist_warn):
+    start = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
+    stop = datetime.strptime(stop_time, '%Y-%m-%dT%H:%M:%S')
+    total_duration = stop - start
+    total_seconds = total_duration.total_seconds()
+    
+    seconds_in_day = 86400
+    seconds_in_hour = 3600
+    seconds_in_min = 60
+    
+    n_day, n_hour, n_min, n_sec = x_hist
+    step_seconds = (n_day * 86400) + (n_hour * 3600) + (n_min * 60) + n_sec
+    
+    if step_seconds == 0:
+        return "Invalid prihist: step cannot be 0."
+    
+    mxhist_day = seconds_in_day / step_seconds
+    mxhist_hour = seconds_in_hour / step_seconds
+    mxhist_min = seconds_in_min / step_seconds
+    if mxhist_day >= 1:
+        mxhist_warn = (mxhist_warn + "\n" if mxhist_warn is not None else "") + f"For a Daily output set MXHIST to {int(mxhist_day)}"
+    if mxhist_hour >= 1:
+        mxhist_warn = mxhist_warn +  f"\nFor a Hourly output set MXHIST to {int(mxhist_hour)}"
+    if mxhist_min >= 1:
+        mxhist_warn = mxhist_warn + f"\nFor a Minutely output set MXHIST to {int(mxhist_min)}"
+    MXHIST = mxhist_day
+    return(int(MXHIST), mxhist_warn)
+
+
+def inp_sechist (PRISTART,PRISTOP):
     PRISTART_DAY = PRISTART[0]
     PRISTOP_DAY = PRISTOP[0]
     n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
-    if CADENCE == [1,0,0,0]:
-        if n_split_day >= 7:
-            SECHIST = [1,0,0,0]
-            SECHIST_valids = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
-        else:
-            SECHIST = [0,1,0,0]
-            SECHIST_valids = [[0,1,0,0],[0,0,1,0],[0,0,0,1]]
-    elif CADENCE == [0,1,0,0]:
+    if n_split_day >= 7:
+        SECHIST = [1,0,0,0]
+    else:
         SECHIST = [0,1,0,0]
-        SECHIST_valids = [[0,1,0,0],[0,0,1,0],[0,0,0,1]]
-    elif CADENCE == [0,0,1,0]: 
-        SECHIST = [0,0,1,0]
-        SECHIST_valids = [[0,0,1,0],[0,0,0,1]]
-    elif CADENCE == [0,0,0,1]:
-        SECHIST = [0,0,0,1]
-        SECHIST_valids = [[0,0,0,1]]
-    else:
-        SECHIST = None
-        SECHIST_valids = None  
-    return SECHIST, SECHIST_valids  
+    return SECHIST
 
-def inp_pri (PRISTART,PRISTOP, CADENCE):
+def inp_prihist(PRISTART,PRISTOP):
     PRISTART_DAY = PRISTART[0]
     PRISTOP_DAY = PRISTOP[0]
     n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
-    if CADENCE == [1,0,0,0]:
-        if n_split_day >= 7:
-            PRIHIST = [1,0,0,0]
-            PRIHIST_valids = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
-        else:
-            PRIHIST = [0,1,0,0]
-            PRIHIST_valids = [[0,1,0,0],[0,0,1,0],[0,0,0,1]]
-    elif CADENCE == [0,1,0,0]:
+    if n_split_day >= 7:
+        PRIHIST = [1,0,0,0]
+    else:
         PRIHIST = [0,1,0,0]
-        PRIHIST_valids = [[0,1,0,0],[0,0,1,0],[0,0,0,1]]
-    elif CADENCE == [0,0,1,0]: 
-        PRIHIST = [0,0,1,0]
-        PRIHIST_valids = [[0,0,1,0],[0,0,0,1]]
-    elif CADENCE == [0,0,0,1]:
-        PRIHIST = [0,0,0,1]
-        PRIHIST_valids = [[0,0,0,1]]
+    return PRIHIST  
+
+def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir,run_name):
+    # Convert start and stop times to datetime
+    start = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
+    stop = datetime.strptime(stop_time, '%Y-%m-%dT%H:%M:%S')
+    
+    # Calculate total duration in seconds
+    total_seconds = (stop - start).total_seconds()
+    
+    # Convert prihist to seconds
+    n_day, n_hour, n_min, n_sec = PRIHIST
+    step_seconds = (n_day * 86400) + (n_hour * 3600) + (n_min * 60) + n_sec
+    
+    # Calculate model data per output file in seconds
+    data_per_file_seconds = step_seconds * int(MXHIST_PRIM)
+    
+    # Calculate the total number of files, rounding up
+    number_of_files = ceil(total_seconds / data_per_file_seconds)
+    pri_files_n = pri_files + number_of_files
+    if pri_files == 0:
+        if number_of_files == 1:
+                OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files+1)}.nc'"
+        else:
+            PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files)}.nc"
+            PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files_n)}.nc"
+            OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
     else:
-        PRIHIST = None
-        PRIHIST_valids = None  
-    return PRIHIST, PRIHIST_valids  
+        if number_of_files == 1:
+            OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files+1)}.nc'"
+        else:
+            PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files)}.nc"
+            PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files_n)}.nc"
+            OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
+    return OUTPUT, pri_files_n
 
-
-def inp_pri_out(histdir,run_name):
-    PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(0)}.nc"
-    PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(499)}.nc"
-    OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
-    return OUTPUT
-def inp_sec_out(histdir,run_name):
-    SEC_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(0)}.nc"
-    SEC_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(499)}.nc"
-    SECOUT = f"'{SEC_0}','to','{SEC_N}','by','1'"
-    return SECOUT
-
-def inp_mxhist_prim(CADENCE,PRIHIST,PRISTART,PRISTOP):
-    PRISTART_DAY = PRISTART[0]
-    PRISTOP_DAY = PRISTOP[0]
-    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
-    if CADENCE == [1,0,0,0]:
-        if n_split_day >= 7:
-            if PRIHIST == [1,0,0,0]:
-                MXHIST_PRIM = 1
-            elif PRIHIST == [0,1,0,0]:
-                MXHIST_PRIM = 1 * 24
-            elif PRIHIST == [0,0,1,0]:
-                MXHIST_PRIM = 1 * 24 * 60
-            elif PRIHIST == [0,0,0,1]:
-                MXHIST_PRIM = 1 * 24 * 60 * 60
-            else:
-                MXHIST_PRIM = None    
-        else:
-            if PRIHIST == [0,1,0,0]:
-                MXHIST_PRIM = 1 * 24
-            elif PRIHIST == [0,0,1,0]:
-                MXHIST_PRIM = 1 * 24 * 60
-            elif PRIHIST == [0,0,0,1]:
-                MXHIST_PRIM = 1 * 24 * 60 * 60
-            else:
-                MXHIST_PRIM = None
-    elif CADENCE == [0,1,0,0]:
-        if PRIHIST == [0,1,0,0]:
-            MXHIST_PRIM = 1
-        elif PRIHIST == [0,0,1,0]:
-            MXHIST_PRIM = 1 * 60
-        elif PRIHIST == [0,0,0,1]:
-            MXHIST_PRIM = 1 * 60 * 60
-        else:
-            MXHIST_PRIM = None
-    elif CADENCE == [0,0,1,0]:
-        if PRIHIST == [0,0,1,0]:
-            MXHIST_PRIM = 1
-        elif PRIHIST == [0,0,0,1]:
-            MXHIST_PRIM = 1 * 60
-        else:
-            MXHIST_PRIM = None
-    elif CADENCE == [0,0,0,1]:
-        if PRIHIST == [0,0,0,1]:
-            MXHIST_PRIM = 1
-        else:
-            MXHIST_PRIM = None
+def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir,run_name):
+    # Convert start and stop times to datetime
+    start = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
+    stop = datetime.strptime(stop_time, '%Y-%m-%dT%H:%M:%S')
+    sechist_delta = timedelta(days=SECHIST[0], hours=SECHIST[1], minutes=SECHIST[2], seconds=SECHIST[3])
+    start = start + sechist_delta
+    # Calculate total duration in seconds
+    
+    total_seconds = (stop - start).total_seconds()
+    
+    # Convert prihist to seconds
+    n_day, n_hour, n_min, n_sec = SECHIST
+    step_seconds = (n_day * 86400) + (n_hour * 3600) + (n_min * 60) + n_sec
+    
+    # Calculate model data per output file in seconds
+    data_per_file_seconds = step_seconds * int(MXHIST_SECH)
+    
+    # Calculate the total number of files, rounding up
+    number_of_files = ceil(total_seconds / data_per_file_seconds)
+    sec_files_n = sec_files + number_of_files
+    
+    if sec_files == 0:
+        if number_of_files == 1:
+            SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files)}.nc'"
+        else:    
+            SECH_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files)}.nc"
+            SECH_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files_n)}.nc"
+            SECOUT = f"'{SECH_0}','to','{SECH_N}','by','1'"
     else:
-        MXHIST_PRIM = None
-    return MXHIST_PRIM
-
-
-
-def inp_mxhist_sec(CADENCE,SECHIST,PRISTART,PRISTOP):
-    PRISTART_DAY = PRISTART[0]
-    PRISTOP_DAY = PRISTOP[0]
-    n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
-    if CADENCE == [1,0,0,0]:
-        if n_split_day >= 7:
-            if SECHIST == [1,0,0,0]:
-                MXHIST_SECH = 1
-            elif SECHIST == [0,1,0,0]:
-                MXHIST_SECH = 1 * 24
-            elif SECHIST == [0,0,1,0]:
-                MXHIST_SECH = 1 * 24 * 60
-            elif SECHIST == [0,0,0,1]:
-                MXHIST_SECH = 1 * 24 * 60 * 60
-            else:
-                MXHIST_SECH = None
+        if number_of_files == 1:
+            SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files)}.nc'"
         else:
-            if SECHIST == [0,1,0,0]:
-                MXHIST_SECH = 1 * 24
-            elif SECHIST == [0,0,1,0]:
-                MXHIST_SECH = 1 * 24 * 60
-            elif SECHIST == [0,0,0,1]:
-                MXHIST_SECH = 1 * 24 * 60 * 60
-            else:
-                MXHIST_SECH = None
-    elif CADENCE == [0,1,0,0]:
-        if SECHIST == [0,1,0,0]:
-            MXHIST_SECH = 1
-        elif SECHIST == [0,0,1,0]:
-            MXHIST_SECH = 1 * 60
-        elif SECHIST == [0,0,0,1]:
-            MXHIST_SECH = 1 * 60 * 60
-        else:
-            MXHIST_SECH = None
-    elif CADENCE == [0,0,1,0]:
-        if SECHIST == [0,0,1,0]:
-            MXHIST_SECH = 1
-        elif SECHIST == [0,0,0,1]:
-            MXHIST_SECH = 1 * 60
-        else:
-            MXHIST_SECH = None
-    elif CADENCE == [0,0,0,1]:
-        if SECHIST == [0,0,0,1]:
-            MXHIST_SECH = 1
-        else:
-            MXHIST_SECH = None
-    else:
-        MXHIST_SECH = None
-    return MXHIST_SECH
+            SECH_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files+1)}.nc"
+            SECH_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files_n+1)}.nc"
+            SECOUT = f"'{SECH_0}','to','{SECH_N}','by','1'"
+    return SECOUT, sec_files_n
 
-def inp_sec_date(SECHIST, PRISTART, PRISTOP):
-    #SECHIST_add = [1 if x != 0 else 0 for x in SECHIST]
-    SECSTART = [x + y for x, y in zip(PRISTART, SECHIST)]
-    SECSTOP = PRISTOP
+def inp_sec_date(start_time, stop_time, SECHIST):
+    start = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
+    stop = datetime.strptime(stop_time, '%Y-%m-%dT%H:%M:%S')
+    sechist_delta = timedelta(days=SECHIST[0], hours=SECHIST[1], minutes=SECHIST[2], seconds=SECHIST[3])
+    start = start + sechist_delta
+    SECSTART = [start.timetuple().tm_yday,start.hour,start.minute,start.second]#f"{start_date.timetuple().tm_yday} {start_date.hour} {start_date.minute} {start_date.second}"
+    SECSTOP = [stop.timetuple().tm_yday,stop.hour,stop.minute,stop.second]#f"{stop_date.timetuple().tm_yday} {stop_date.hour} {stop_date.minute} {stop_date.second}"
+
     return SECSTART, SECSTOP    
 
 def create_command_line_parser():
@@ -646,7 +664,7 @@ def get_run_option(name, description, mode="BASIC"):
     warning = description.get("warning", None)
     # Compare the current mode to the parameter level setting. If the variable
     # level is higher than the user mode, just use the default.
-    fourvar_variables = ["SOURCE_START","CADENCE","PRISTART","PRISTOP","PRIHIST","SECSTART","SECSTOP","SECHIST"]
+    fourvar_variables = ["SOURCE_START","segment","PRISTART","PRISTOP","PRIHIST","SECSTART","SECSTOP","SECHIST"]
 
     if mode == "BENCH" and level in ["BASIC","INTERMEDIATE", "EXPERT"]:
         if name in fourvar_variables and default is not None:
@@ -694,21 +712,19 @@ def get_run_option(name, description, mode="BASIC"):
     option_value = ""
     first_pass_modules = True
     while not ok:
-        if name in ("other_input", "other_pbs","other_job"):
+        if name in ("other_input", "other_pbs","other_job","job_chain"):
+            prompt = og_prompt
+            prompt += f" [{GREEN}{default}{RESET}]"
             temp_value = input(f"{prompt} / ENTER to go next: ")
             if temp_value != "":
-                option_value = option_value +'"' +temp_value + '",'
+                default.append(temp_value)
+                option_value = default
             elif temp_value == 'none' or temp_value == 'None':
                 option_value = json.loads('[null]')
                 ok = True
             elif temp_value == "":
-                if option_value != "":
-                    option_value = "["+ option_value[:-1] + "]"
-                    option_value = json.loads(option_value)
-                    ok = True
-                elif option_value == "":
-                    option_value = default
-                    ok = True
+                option_value = default
+                ok = True
             elif temp_value == "?":
                 print(f'{YELLOW}{var_description}{RESET}')
         elif name == "SECFLDS":
@@ -840,7 +856,10 @@ def get_run_option(name, description, mode="BASIC"):
                 option_value = json.loads('[null]')
                 ok = True
             elif temp_value == "":
-                option_value = ' '.join(map(str, default))
+                if default not in [None,[None]]:
+                    option_value = ' '.join(map(str, default))
+                else:
+                    option_value = [None]
                 ok = True
             elif temp_value == "?":
                 print(f'{YELLOW}{var_description}{RESET}')
@@ -1157,8 +1176,19 @@ def prompt_user_for_run_options(args):
                     od["START_DAY"]["default"] = START_DAY
                     od["PRISTART"]["default"] = PRISTART
                     od["PRISTOP"]["default"] = PRISTOP
-                    od["OUTPUT"]["default"]=inp_pri_out(histdir,run_name)
-                    od["SECOUT"]["default"]=inp_sec_out(histdir,run_name)
+            elif on == "segment" and benchmark == None:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                if o[on] != [None]:
+                    segment = [int(i) for i in o[on].split()]
+                    runtimes = segment_time(o["start_date"], o["stop_date"], segment)
+                    segment_warn_0 = f"Segmentation is set to {segment}.\n"
+                    segment_warn_1 = f" is set for one segment\neg.{runtimes[0][0]} to {runtimes[0][1]}" 
+                    od["PRIHIST"]["warning"] = (od["PRIHIST"]["warning"] + "\n" if od["PRIHIST"]["warning"]  is not None else "") + segment_warn_0 + "PRIHIST" + segment_warn_1
+                    od["MXHIST_PRIM"]["warning"] = (od["MXHIST_PRIM"]["warning"] + "\n" if od["MXHIST_PRIM"]["warning"]  is not None else "") + segment_warn_0 + "MXHIST_PRIM" + segment_warn_1
+                    od["SECHIST"]["warning"] = (od["SECHIST"]["warning"] + "\n" if od["SECHIST"]["warning"]  is not None else "") + segment_warn_0 + "SECHIST" + segment_warn_1
+                    od["MXHIST_SECH"]["warning"] = (od["MXHIST_SECH"]["warning"] + "\n" if od["MXHIST_SECH"]["warning"]  is not None else "") + segment_warn_0 + "MXHIST_SECH" + segment_warn_1
+                    od["OUTPUT"]["warning"] = (od["OUTPUT"]["warning"] + "\n" if od["OUTPUT"]["warning"]  is not None else "") + "Primary Output can be ignored. Will be set on segmentation"
+                    od["SECOUT"]["warning"] = (od["SECOUT"]["warning"] + "\n" if od["SECOUT"]["warning"]  is not None else "") + "Secondary Output can be ignored. Will be set on segmentation"
             elif on == "SOURCE":
                 o[on] = get_run_option(on, od[on], temp_mode)
                 if o[on] == None:
@@ -1171,26 +1201,39 @@ def prompt_user_for_run_options(args):
                     temp_mode_1 = "INTERMEDIATE"
                 od["SOURCE_START"]["default"] = od["SOURCE_START"]["valids"][0]
                 o[on] = get_run_option(on, od[on], temp_mode_1)
-            elif on == "CADENCE" and benchmark== None:
-                o[on] = get_run_option(on, od[on], temp_mode)
-                CADENCE = [int(i) for i in o[on].split()]
-                SECHIST, SECHIST_valids = inp_sec(PRISTART,PRISTOP,CADENCE)
-                PRIHIST, PRIHIST_valids= inp_pri (PRISTART,PRISTOP, CADENCE)
-                od["PRIHIST"]["default"] =  PRIHIST
-                od["PRIHIST"]["valids"] = PRIHIST_valids
-                od["SECHIST"]["default"] = SECHIST
-                od["SECHIST"]["valids"] = SECHIST_valids
             elif on == "PRIHIST" and benchmark== None:
+                PRIHIST = inp_prihist(PRISTART,PRISTOP)
+                od["PRIHIST"]["default"] =  PRIHIST
                 o[on] = get_run_option(on, od[on], temp_mode)
                 PRIHIST = [int(i) for i in o[on].split()]
-                od["MXHIST_PRIM"]["default"] = inp_mxhist_prim(CADENCE,PRIHIST,PRISTART,PRISTOP)
+                MXHIST_PRIM_set ,MXHIST_PRIM_warning_set  = inp_mxhist(o["start_date"], o["stop_date"], PRIHIST, od["MXHIST_PRIM"]["warning"])
+                od["MXHIST_PRIM"]["default"] = MXHIST_PRIM_set
+                od["MXHIST_PRIM"]["warning"] = MXHIST_PRIM_warning_set
+            elif on == "MXHIST_PRIM" and benchmark== None:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                MXHIST_PRIM = int(o[on])
+            elif on == "OUTPUT" and benchmark== None:
+                OUTPUT, pri_files_n = inp_pri_out(o["start_date"], o["stop_date"], PRIHIST, MXHIST_PRIM, 0, histdir,run_name)
+                od["OUTPUT"]["default"] = OUTPUT
+                o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "SECHIST" and benchmark== None:
+                SECHIST = inp_prihist(PRISTART,PRISTOP)
+                od["SECHIST"]["default"] =  SECHIST
                 o[on] = get_run_option(on, od[on], temp_mode)
                 SECHIST = [int(i) for i in o[on].split()]
-                od["MXHIST_SECH"]["default"] = inp_mxhist_sec(CADENCE,SECHIST,PRISTART,PRISTOP)
-                SECSTART, SECSTOP = inp_sec_date(SECHIST, PRISTART, PRISTOP)
+                MXHIST_SECH_set ,MXHIST_SECH_warning_set  = inp_mxhist(o["start_date"], o["stop_date"], SECHIST, od["MXHIST_SECH"]["warning"])
+                od["MXHIST_SECH"]["default"] = MXHIST_SECH_set
+                od["MXHIST_SECH"]["warning"] = MXHIST_SECH_warning_set
+                SECSTART, SECSTOP = inp_sec_date(o["start_date"], o["stop_date"], SECHIST)
                 od["SECSTART"]["default"] = SECSTART
-                od["SECSTOP"]["default"] = SECSTOP
+                od["SECSTOP"]["default"] = SECSTOP                
+            elif on == "MXHIST_SECH" and benchmark== None:
+                o[on] = get_run_option(on, od[on], temp_mode)
+                MXHIST_SECH = int(o[on])
+            elif on == "SECOUT" and benchmark== None:
+                SECOUT, sec_files_n = inp_sec_out(o["start_date"], o["stop_date"],  SECHIST, MXHIST_SECH, 0, histdir,run_name)
+                od["SECOUT"]["default"] = SECOUT
+                o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "POTENTIAL_MODEL":
                 o[on] = get_run_option(on, od[on], temp_mode)
                 if o[on] == "HEELIS":
@@ -1532,7 +1575,7 @@ def compile_tiegcm(options, debug, coupling):
         print(">>> Error return from gmake all")
         sys.exit(1)
 
-def create_pbs_scripts(options):
+def create_pbs_scripts(options,run_name,segment_number):
     global PBS_TEMPLATE
     if PBS_TEMPLATE == None:
         PBS_TEMPLATE = os.path.join(options["model"]["data"]["modeldir"],'tiegcmrun/template.pbs')
@@ -1541,15 +1584,16 @@ def create_pbs_scripts(options):
     template = Template(template_content)
     opt = copy.deepcopy(options) 
     pbs_content = template.render(opt)
-    pbs_script = os.path.join(
-            opt["model"]["data"]["workdir"],
-            f"{opt['simulation']['job_name']}_{opt['model']['specification']['horires']}x{opt['model']['specification']['vertres']}.pbs"
-        )
+    workdir = opt["model"]["data"]["workdir"]
+    if segment_number == None:
+        pbs_script = os.path.join(workdir,f"{run_name}.pbs")
+    else:
+        pbs_script = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number)}.pbs")
     with open(pbs_script, "w", encoding="utf-8") as f:
             f.write(pbs_content)
     return pbs_script
 
-def create_inp_scripts(options):
+def create_inp_scripts(options,run_name,segment_number):
     global INP_TEMPLATE
     if INP_TEMPLATE == None:
         INP_TEMPLATE = os.path.join(options["model"]["data"]["modeldir"],'tiegcmrun/template.inp')
@@ -1559,10 +1603,10 @@ def create_inp_scripts(options):
     opt = copy.deepcopy(options) 
     inp_content = template.render(opt)
     workdir = opt["model"]["data"]["workdir"]
-    inp_script = os.path.join(
-            workdir,
-            f"{opt['simulation']['job_name']}_{opt['model']['specification']['horires']}x{opt['model']['specification']['vertres']}.inp"
-        )
+    if segment_number == None:
+        inp_script = os.path.join(workdir,f"{run_name}.inp")
+    else:
+        inp_script = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number)}.inp")
     if not os.path.exists(workdir):
         os.makedirs(workdir)
     with open(inp_script, "w", encoding="utf-8") as f:
@@ -1653,9 +1697,59 @@ def main():
     horires = options["model"]["specification"]["horires"]
     vertres = options["model"]["specification"]["vertres"]
     zitop = options["model"]["specification"]["zitop"]
+    if args.onlycompile == True:
+        compile_tiegcm(options, debug, coupling)
+    else:
+        if options["inp"]["segment"] not in (None,[None],""):
+            if options["model"]["data"]["input_file"] == None or not os.path.isfile(options["model"]["data"]["input_file"]):
+                if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
+                    if args.benchmark == None:
+                        in_prim = options["inp"]["SOURCE"]
+                        out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                        options["inp"]["SOURCE"] = out_prim
+                        interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+                    else:
+                        in_prim = options["inp"]["SOURCE"]
+                        out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                        options["inp"]["SOURCE"] = out_prim
+                        interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
 
-    if args.onlycompile == False:
-        if options["model"]["data"]["input_file"] == None or not os.path.isfile(options["model"]["data"]["input_file"]):
+                else:
+                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                    options["inp"]["SOURCE"] = out_prim
+                    print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
+                options["model"]["data"]["input_file"] = create_inp_scripts(options,run_name,None)
+            if options["model"]["data"]["log_file"] == None:
+                options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"], f"{run_name}.out")
+
+
+            if os.path.exists(path):
+                if not clobber:
+                    raise FileExistsError(f"Options file {path} exists!")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(options, f, indent=JSON_INDENT)
+
+            if args.compile == True:
+                compile_tiegcm(options, debug, coupling)
+            
+            pbs_script = create_pbs_scripts(options,run_name,None)
+            if args.execute == True:
+                if args.compile == False:
+                    if find_file(options["model"]["data"]["modelexe"], execdir) == None and os.path.exists(options["model"]["data"]["modelexe"]) == False :
+                        print(f'{RED}Unable to find executable in {execdir}{RESET}')
+                        exit(1)
+                try:
+                    result = subprocess.run(['qsub', pbs_script], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    job_id = result.stdout.strip()
+                    print(f'Job submitted successfully. Job ID: {job_id}')
+                except subprocess.CalledProcessError as e:
+                    print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
+                    print(f"{YELLOW}Check PBS script for erros{RESET}")
+                    print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
+            else:
+                print(f"{YELLOW}Execute is set to false{RESET}")
+                print(f"{YELLOW}To submit job use command{RESET} qsub {pbs_script}")
+        else:
             if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
                 if args.benchmark == None:
                     in_prim = options["inp"]["SOURCE"]
@@ -1667,43 +1761,89 @@ def main():
                     out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
                     options["inp"]["SOURCE"] = out_prim
                     interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
-
             else:
                 out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
                 options["inp"]["SOURCE"] = out_prim
                 print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
-            options["model"]["data"]["input_file"] = create_inp_scripts(options)
-        if options["model"]["data"]["log_file"] == None:
-            options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"], f"{run_name}.out")
+            segment_times = segment_time(options["inp"]["start_date"], options["inp"]["stop_date"], [int(i) for i in options["inp"]["segment"].split()])
+            #segment_number = 0
+            pri_files = 0
+            sec_files = 0
+            og_options = copy.deepcopy(options)
+            PRIHIST = og_options["inp"]["PRIHIST"]
+            MXHIST_PRIM = og_options["inp"]["MXHIST_PRIM"]
+            SECHIST = og_options["inp"]["SECHIST"]
+            MXHIST_SECH = og_options["inp"]["MXHIST_SECH"]
+            histdir = og_options["model"]["data"]["histdir"]
+            job_name = og_options["simulation"]["job_name"]
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(options, f, indent=JSON_INDENT)
+            for segment_number, segment in enumerate(segment_times):
+                segment_options = copy.deepcopy(og_options)
+                segment_start = segment[0]
+                segment_stop = segment[1]
+                segment_options["simulation"]["job_name"] =  job_name+"{:03d}".format(segment_number)
+                if segment_number == 0:
+                    segment_options["inp"]["SOURCE"] = og_options["inp"]["SOURCE"]
+                    segment_options["inp"]["SOURCE_START"] = og_options["inp"]["SOURCE_START"]
+                    segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
+                    segment_options["inp"]["START_YEAR"] = segment_START_YEAR
+                    segment_options["inp"]["START_DAY"] = segment_START_DAY
+                    segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
+                    segment_options["inp"]["PRISTOP"] = ' '.join(map(str, segment_PRISTOP))
+                    segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
+                    print(segment_OUTPUT)
+                    segment_options["inp"]["OUTPUT"] = segment_OUTPUT
 
 
-    if os.path.exists(path):
-        if not clobber:
-            raise FileExistsError(f"Options file {path} exists!")
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(options, f, indent=JSON_INDENT)
+                else:
+                    segment_options["inp"]["SOURCE"] = None
+                    segment_options["inp"]["SOURCE_START"] = None
+                    segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
+                    segment_options["inp"]["START_YEAR"] = segment_START_YEAR
+                    segment_options["inp"]["START_DAY"] = segment_START_DAY
+                    segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
+                    segment_options["inp"]["PRISTOP"] = ' '.join(map(str, segment_PRISTOP))
+                    segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
+                    segment_options["inp"]["OUTPUT"] = segment_OUTPUT
+                segment_SECSTART, segment_SECSTOP = inp_sec_date(segment_start, segment_stop, [int(i) for i in SECHIST.split()])
+                segment_options["inp"]["SECSTART"] = ' '.join(map(str, segment_SECSTART))
+                segment_options["inp"]["SECSTOP"] = ' '.join(map(str, segment_SECSTOP))
+                segment_SECOUT, sec_files = inp_sec_out(segment_start, segment_stop, [int(i) for i in SECHIST.split()], MXHIST_SECH, sec_files, histdir,run_name)
+                segment_options["inp"]["SECOUT"] = segment_SECOUT
+                segment_options["model"]["data"]["input_file"] = create_inp_scripts(segment_options,run_name,segment_number)
+                if segment_number == 0:
+                    init_inp = segment_options["model"]["data"]["input_file"]
+                segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}_{'{:03d}'.format(segment_number)}.out")
+                if segment_number != len(segment_times) - 1:
+                    next_pbs = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number+1)}.pbs")
+                    segment_options["pbs"]["job_chain"] = [f"qsub {next_pbs}"]
+                else:
+                    segment_options["pbs"]["job_chain"] = [None]
+                pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
+                if segment_number == 0:
+                    init_pbs = pbs_script
 
-    if args.compile == True or args.onlycompile == True:
-        compile_tiegcm(options, debug, coupling)
-    
-    if args.onlycompile == False:
-        pbs_script = create_pbs_scripts(options)
-    if args.execute == True:
-        if args.compile == False:
-            if find_file(options["model"]["data"]["modelexe"], execdir) == None:
-                print(f'{RED}Unable to find executable in {execdir}{RESET}')
-                exit(1)
-        try:
-            result = subprocess.run(['qsub', pbs_script], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            job_id = result.stdout.strip()
-            print(f'Job submitted successfully. Job ID: {job_id}')
-        except subprocess.CalledProcessError as e:
-            print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
-            print(f"{YELLOW}Check PBS script for erros{RESET}")
-            print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
-    elif args.onlycompile == False:
-        print(f"{YELLOW}Execute is set to false{RESET}")
-        print(f"{YELLOW}To submit job use command{RESET} qsub {pbs_script}")
+            options["model"]["data"]["input_file"] = init_inp
+            if args.compile == True:
+                compile_tiegcm(options, debug, coupling)
+
+            if args.execute == True:
+                if args.compile == False:
+                    if find_file(options["model"]["data"]["modelexe"], execdir) == None:
+                        print(f'{RED}Unable to find executable in {execdir}{RESET}')
+                        exit(1)
+                try:
+                    result = subprocess.run(['qsub', init_pbs], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    job_id = result.stdout.strip()
+                    print(f'Job submitted successfully. Job ID: {job_id}')
+                except subprocess.CalledProcessError as e:
+                    print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
+                    print(f"{YELLOW}Check PBS script for erros{RESET}")
+                    print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
+            else:
+                print(f"{YELLOW}Execute is set to false{RESET}")
+                print(f"{YELLOW}To submit job use command{RESET} qsub {pbs_script}")
 
 if __name__ == "__main__":
     """Begin main program."""

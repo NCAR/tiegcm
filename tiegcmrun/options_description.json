@@ -347,6 +347,13 @@
             "description": "The location of the startup file.",
             "warning": null
         },
+        "segment":{
+            "LEVEL": "BASIC",
+            "prompt": "Segmentation, Model time per job (Day,Hour,Minute,Seccond)",
+            "default": [null],
+            "description": "For a job every model day 1,0,0,0",
+            "warning": null
+        },
         "SOURCE_START":{
             "LEVEL": "INTERMEDIATE",
             "prompt": "Selected Date in Source Dile",
@@ -374,14 +381,6 @@
             "prompt": "Whether the model date changes across one day",
             "default": 1,
             "description": "1 for model runs with advancing dates (date changes across a model day).\n0 for model runs with constant dates (date doesn’t change across a model day).\nCALENDAR_ADVANCE=0 is usually used to prepare the startup file for a production run;\nCALENDAR_ADVANCE=1 is used in a production run.",
-            "warning": null
-        },
-        "CADENCE":{
-            "LEVEL": "BASIC",
-            "prompt": "Model Time per Output File (Daily,Hourly,PerMinute,PerSeccond)",
-            "default": [1,0,0,0],
-            "valids": [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]],
-            "description": "For an output file every Day 1,0,0,0\nFor an output file every Hour 0,1,0,0\nFor an output file every Minute 0,0,1,0\nFor an output file every Second 0,0,0,1",
             "warning": null
         },
         "PRISTART":{
@@ -414,7 +413,7 @@
         },
         "OUTPUT":{
             "LEVEL": "BASIC",
-            "prompt": "Primary Output (Day,Hour,Min,Sec)",
+            "prompt": "Primary Output",
             "default": null,
             "description": "The filenames of primary history files. Multiple files are supported.",
             "warning": null

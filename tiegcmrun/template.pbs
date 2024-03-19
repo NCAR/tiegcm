@@ -37,3 +37,10 @@ cd {{model.data.workdir}}
 tar -cf {{model.data.log_file}}.tar *task*.out
 echo "Saved stdout tar file {{model.data.log_file}}.tar"
 rm *task*.out
+
+# Job chaining
+{%- for data in pbs.job_chain %}
+{%- if data != None %}
+{{data}}
+{%- endif %}
+{%- endfor %}
