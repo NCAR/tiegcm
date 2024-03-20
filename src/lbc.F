@@ -537,10 +537,11 @@
 ! b = (e/ds - f/2.)**(-1) * (e/ds + f/2.)
 ! fb = (e/ds - f/2.)**(-1) * g
 
+      use matutil_module,only: matinv3
+
 ! local:
       real,parameter :: alfa = 0.22+0.014 ! lower boundary for o2+o
 
-      real :: ws1
       real,dimension(3) :: g
       real,dimension(3,3) :: e,f,wm1,wm2,wm3
       integer :: l,m
@@ -572,22 +573,8 @@
         enddo
       enddo
 
-! ws1 = det(wm1)
-      ws1 =
-     |  wm1(1,1)*(wm1(2,2)*wm1(3,3)-wm1(2,3)*wm1(3,2))+
-     |  wm1(1,2)*(wm1(2,3)*wm1(3,1)-wm1(2,1)*wm1(3,3))+
-     |  wm1(1,3)*(wm1(2,1)*wm1(3,2)-wm1(2,2)*wm1(3,1))
-
 ! now inverse of wm1 in wm3
-      wm3(1,1) =(wm1(2,2)*wm1(3,3)-wm1(2,3)*wm1(3,2))/ws1
-      wm3(1,2) =(wm1(1,3)*wm1(3,2)-wm1(1,2)*wm1(3,3))/ws1
-      wm3(1,3) =(wm1(1,2)*wm1(2,3)-wm1(1,3)*wm1(2,2))/ws1
-      wm3(2,1) =(wm1(2,3)*wm1(3,1)-wm1(2,1)*wm1(3,3))/ws1
-      wm3(2,2) =(wm1(1,1)*wm1(3,3)-wm1(1,3)*wm1(3,1))/ws1
-      wm3(2,3) =(wm1(1,3)*wm1(2,1)-wm1(1,1)*wm1(2,3))/ws1
-      wm3(3,1) =(wm1(2,1)*wm1(3,2)-wm1(2,2)*wm1(3,1))/ws1
-      wm3(3,2) =(wm1(1,2)*wm1(3,1)-wm1(1,1)*wm1(3,2))/ws1
-      wm3(3,3) =(wm1(1,1)*wm1(2,2)-wm1(1,2)*wm1(2,1))/ws1
+      wm3 = matinv3(wm1)
 
 ! b and fb are module data
 

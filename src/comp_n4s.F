@@ -29,7 +29,10 @@
       real,allocatable,dimension(:,:,:) ::
      |  n4s_prod,     ! production of n4s (k,i,j)
      |  n4s_loss      ! loss of n4s       (k,i,j)
-      real :: phi_n4s(3) = (/0.651, 0.731, 0.741/)
+!
+! N4S~He coefficient (0.627) is guessed based on F~He coefficient from
+! http://demonstrations.wolfram.com/BinaryDiffusionCoefficientsForGases
+      real :: phi_n4s(4) = (/0.651, 0.731, 0.627, 0.741/)
       real,parameter :: alfa_n4s = 0. ! thermal diffusion coefficient
 !
       contains

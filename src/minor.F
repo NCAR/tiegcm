@@ -15,9 +15,10 @@
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,dzp,
      |  p0,expz,rmass_o2,rmass_o1,rmass_n2,hor,dtr,pi,shapiro,
      |  difk,expzmid_inv,expzmid,dtx2inv,grav,avo,dtsmooth,
-     |  dtsmooth_div2,difhor,rmassinv_he
+     |  dtsmooth_div2,difhor,rmass_he,rmassinv_he
       use init_module,only: iday
       use fields_module,only: tlbc
+      use matutil_module,only: matinv3
       use addfld_module,only: addfld
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
      |  mp_periodic_f2d
@@ -56,7 +57,7 @@
       real,dimension(lon0:lon1,lat0:lat1),intent(in) :: fubc
 !
       real,intent(in) :: 
-     |  phix(3), ! diffusion vector
+     |  phix(4), ! diffusion vector
      |  rmx,     ! molecular weight of fcomp minor species
      |  alfax    ! thermal diffusion coefficient
 !
@@ -75,23 +76,24 @@
      |  fcomp_tm1_out  ! output species at time n-1
 !
 ! Local:
-      integer :: k,i,lonbeg,lonend,lat,ier
+      integer :: k,i,lonbeg,lonend,lat,n,ier
 !
       integer :: nk,nkm1,nlevs
       real,parameter :: small=1.e-12, tau=1.86e+3, t00=273.
-      real :: salfa12,salfa21,salfax1,salfax2,rlat
+      real :: rlat
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  hadvec,   ! horizontal advection (output of sub advec) (s13)
      |  do2dz,    ! do2/dz(k)    (s6)
      |  do1dz,    ! do1/dz(k)    (s7)
+     |  dhedz,    ! dhe/dz(k)
      |  pso2,     ! o2           (s8)
      |  pso1,     ! o1           (s9)
+     |  pshe,     ! he
      |  dmdz,     ! dm/dz(k)     (s10)
      |  xmbar_k,  ! barm (k)     (s11)
      |  xmbar_kh, ! mbar (k)     (s12)
      |  tni,      ! tn (k)       (s5)
      |  s0prod,   ! sprod*mx/nmbar (s15)
-     |  alfa11,alfa12,alfa21,alfa22, ! (s1,s2,s3,s4)
      |  ex,ax,    ! (s12,s11)
      |  thdiff,   ! thermal diffusion term (s12)
      |  p_coef,q_coef,r_coef,f_rhs ! coefficients for tridiagonal solver
@@ -109,7 +111,13 @@
      |  bo2,bo1,bhe,  ! (t4,t5)
      |  dfactor       ! (t7) (formerly output of sub dfact)
 !
-      real :: phi(2,3)
+! Following diffusion related variables are from comp
+      real :: phi(3,4) ! mutual thermal diffusion coefficients among major species
+      real,dimension(3) ::
+     |  ss,       ! exponent factor for diff_fac
+     |  diff_fac, ! Correction factor for diffusion coeff betweeen helium and o2,o,n2
+     |  salfax,salfaxinvalfa
+      real,dimension(3,3) :: alfa,invalfa
 !
 #ifdef VT
 !     code = 114 ; state = 'minor' ; activity='ModelCode'
@@ -118,13 +126,16 @@
 !
 !     write(6,"('Enter minor')")
 
-      phi(1,:) = (/0.   , 1.35,  1.11 /)
-      phi(2,:) = (/0.673, 0.  ,  0.769/)
+      phi(:,1)=(/0.  ,0.673,0.270/)
+      phi(:,2)=(/1.35,0.   ,0.404/)
+      phi(:,3)=(/2.16,1.616,0.   /)
+      phi(:,4)=(/1.11,0.769,0.322/)
 
-      salfa12=phi(1,2)-phi(1,3)
-      salfa21=phi(2,1)-phi(2,3)
-      salfax1=phix(1)-phix(3)
-      salfax2=phix(2)-phix(3)
+      ss = (/1.710, 1.749, 1.718/) ! for o2,o,n2
+
+      salfax(1)=phix(1)-phix(4)
+      salfax(2)=phix(2)-phix(4)
+      salfax(3)=phix(3)-phix(4)
 
       nk = lev1-lev0+1
       nkm1 = nk-1
@@ -232,18 +243,20 @@
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 !
-! btf 6/16/14: To be completely correct and consistent, need to
+! To be completely correct and consistent, need to
 !   add pshe and dhedz below (including calculation of ex), to 
 !   include helium in diffusion of minor species.
+! Ben Foster 2014/06/16 pointed it out, Haonan Wu 2024/03/20 implemented
 !
 ! Lower boundary:
       do i=lon0,lon1
-        xmbar_k(lev0,i) = .5*(xmbari(i)+xmbar_kh(lev0,i))
         dmdz(lev0,i) = (xmbar_kh(lev0,i)-xmbari(i))/dzp
         pso1(lev0,i) = .5*(bo1(i)+o1(lev0,i,lat))  
         pso2(lev0,i) = .5*(bo2(i)+o2(lev0,i,lat))  
+        pshe(lev0,i) = .5*(bhe(i)+he(lev0,i,lat))
         do1dz(lev0,i) = (o1(lev0,i,lat)-bo1(i))/dzp
         do2dz(lev0,i) = (o2(lev0,i,lat)-bo2(i))/dzp
+        dhedz(lev0,i) = (he(lev0,i,lat)-bhe(i))/dzp
       enddo ! i=lon0,lon1
 !
 ! Levels 2 -> lev1:
@@ -252,8 +265,10 @@
           dmdz(k,i) = (xmbar_kh(k,i)-xmbar_kh(k-1,i))/dzp
           pso1(k,i) = .5*(o1(k,i,lat)+o1(k-1,i,lat))
           pso2(k,i) = .5*(o2(k,i,lat)+o2(k-1,i,lat))
+          pshe(k,i) = .5*(he(k,i,lat)+he(k-1,i,lat))
           do1dz(k,i) = (o1(k,i,lat)-o1(k-1,i,lat))/dzp
           do2dz(k,i) = (o2(k,i,lat)-o2(k-1,i,lat))/dzp
+          dhedz(k,i) = (he(k,i,lat)-he(k-1,i,lat))/dzp
         enddo ! k=lev0+1,lev1
       enddo ! i=lon0,lon1
 !
@@ -277,9 +292,13 @@
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('PSO2'    ,' ',' ',pso2    ,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('PSHE'    ,' ',' ',pshe    ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('DO1DZ'   ,' ',' ',do1dz   ,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('DO2DZ'   ,' ',' ',do2dz   ,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('DHEDZ'   ,' ',' ',dhedz   ,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('TNI'     ,' ',' ',tni     ,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -293,38 +312,58 @@
 
       do i=lon0,lon1
         do k=lev0,lev1
-          alfa11(k,i) = -(phi(1,3)+salfa12*pso1(k,i)) ! s1
-          alfa12(k,i) = salfa12*pso2(k,i)             ! s2
-          alfa21(k,i) = salfa21*pso1(k,i)             ! s3
-          alfa22(k,i) = -(phi(2,3)+salfa21*pso2(k,i)) ! s4
 !
-          ex(k,i) =                                   ! s12
-     |      ((salfax1*alfa22(k,i)-salfax2*alfa21(k,i))*(do2dz(k,i)-
+! Correction factors for mutual diffusion of helium with o2,o,n2
+          do n = 1,3
+            diff_fac(n) = (tni(k,i)/t00)**(1.75-ss(n))
+          enddo
+!
+! alpha matrix (also see comp)
+          alfa(1,1) = -(phi(1,4)+
+     |      (phi(1,2)-phi(1,4))*pso1(k,i)+
+     |      (diff_fac(1)*phi(1,3)-phi(1,4))*pshe(k,i))
+          alfa(2,2) = -(phi(2,4)+
+     |      (phi(2,1)-phi(2,4))*pso2(k,i)+
+     |      (diff_fac(2)*phi(2,3)-phi(2,4))*pso1(k,i))
+          alfa(3,3) = -(diff_fac(3)*phi(3,4)+
+     |      (diff_fac(1)*phi(3,1)-diff_fac(3)*phi(3,4))*pso2(k,i)+
+     |      (diff_fac(2)*phi(3,2)-diff_fac(3)*phi(3,4))*pso1(k,i))
+          alfa(1,2) = (phi(1,2)-phi(1,4))*pso2(k,i)
+          alfa(1,3) = (diff_fac(1)*phi(1,3)-phi(1,4))*pso2(k,i)
+          alfa(2,1) = (phi(2,1)-phi(2,4))*pso1(k,i)
+          alfa(2,3) = (diff_fac(2)*phi(2,3)-phi(2,4))*pso1(k,i)
+          alfa(3,1) =
+     |      (diff_fac(1)*phi(3,1)-diff_fac(3)*phi(3,4))*pshe(k,i)
+          alfa(3,2) =
+     |      (diff_fac(2)*phi(3,2)-diff_fac(3)*phi(3,4))*pshe(k,i)
+!
+! alpha_x * inv(alpha)
+          invalfa = matinv3(alfa)
+          do n = 1,3
+            salfaxinvalfa(n) = dot_product(salfax,invalfa(:,n))
+          enddo
+!
+! 1-(m+dm/dz/m) + alpha_x*inv(alpha)*(dps/dz-(1-(mi+dm/dz/m))*ps)
+          ex(k,i) = 1.-(rmx+dmdz(k,i))/xmbar_k(k,i)+
+     |      salfaxinvalfa(1)*(do2dz(k,i)-
      |      (1.-(rmass_o2+dmdz(k,i))/xmbar_k(k,i))*pso2(k,i))+
-     |      (salfax2*alfa11(k,i)-salfax1*alfa12(k,i))*
-     |      (do1dz(k,i)-(1.-(rmass_o1+dmdz(k,i))/xmbar_k(k,i))*
-     |      pso1(k,i)))/(alfa11(k,i)*alfa22(k,i)-alfa12(k,i)*
-     |      alfa21(k,i))+1.-(rmx+dmdz(k,i))/xmbar_k(k,i)
+     |      salfaxinvalfa(2)*(do1dz(k,i)-
+     |      (1.-(rmass_o1+dmdz(k,i))/xmbar_k(k,i))*pso1(k,i))+
+     |      salfaxinvalfa(3)*(dhedz(k,i)-
+     |      (1.-(rmass_he+dmdz(k,i))/xmbar_k(k,i))*pshe(k,i))
 !
           dmdz(k,i) = dmdz(k,i)/xmbar_k(k,i)          ! s10
 !
           ax(k,i) = 
      |      -xmbar_k(k,i)/(tau*rmass_n2)*(t00/tni(k,i))**0.25/
-     |      (phix(3)+salfax1*pso2(k,i)+salfax2*pso1(k,i))
+     |      (phix(4)+salfax(1)*pso2(k,i)+
+     |      salfax(2)*pso1(k,i)+salfax(3)*pshe(k,i))
 
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
       if (idebug > 0) then
         call addfld('S0PROD',' ',' ',s0prod,
-     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-        call addfld('ALFA11',' ',' ',alfa11,
-     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-        call addfld('ALFA12',' ',' ',alfa12,
-     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-        call addfld('ALFA21',' ',' ',alfa21,
-     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-        call addfld('ALFA22',' ',' ',alfa22,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('EX_MNR'    ,' ',' ',ex,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)

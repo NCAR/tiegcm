@@ -77,7 +77,10 @@
      |  arnm_out   ! ar output at time n-1
 !
 ! Local:
-      real,parameter :: phi_ar(3) = (/1.042,1.509,1.176/) ! from tgcm24
+!
+! Ar~He coefficient (0.732) is from Wasik and McCulloh (1969)
+! Measurements of Gaseous Diffusion Coefficients by a Gas Chromatographic Technique
+      real,parameter :: phi_ar(4) = (/1.042,1.509,0.732,1.176/) ! from tgcm24
       real,parameter :: alfa_ar   = 0.17    ! thermal diffusion coefficient (from tgcm24)
 !
       call minor(tn,o2,o1,he,mbar,barm,xnmbar,w,ar,ar_nm,

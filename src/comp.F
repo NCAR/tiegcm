@@ -20,6 +20,7 @@
       use fields_module,only: tlbc
       use addfld_module,only: addfld
       use input_module,only: calc_helium
+      use matutil_module,only: matinv3
       implicit none
 !
 ! Args:
@@ -56,7 +57,7 @@
       real,dimension(lon0:lon1,3,3)           :: ep,pk,qk,rk,wkm1
       real,dimension(lon0:lon1,3)             :: fk,wkv1,ps0
       real,dimension(lon0:lon1)               :: wks1,wks3,wks4,
-     |                                           embar0,dfactor,detalpha
+     |                                           embar0,dfactor
       real,dimension(lon0:lon1)               :: alpha23,alpha22,
      |                                           alpha33,alpha32,flx00
       real :: rlat
@@ -176,11 +177,12 @@
 ! (use tn at interfaces)
 ! real,dimension(lev0:lev1,lon0:lon1,3) :: diff_fac
 !
+! Haonan Wu 2024/03: correct TN lower boundary to t_lbc (not (tn(lev0)+tlbc)/2)
       do i=lon0,lon1
         do k=lev0,lev1
           do n=1,3 ! o2,o,n2
             if (k==lev0) then
-              diff_fac(k,i,n) = (0.5*(tlbc(i,lat)+tn(k,i,lat))/t00)**
+              diff_fac(k,i,n) = (tlbc(i,lat)/t00)**
      |          (1.75-ss(n))
             else if (k==lev1) then
               diff_fac(k,i,n) = (tn(k-1,i,lat)/t00)**(1.75-ss(n))
@@ -263,8 +265,8 @@
      |               (rmass_o1+(embar(i,lev0)-embar0(i))/dz)
         ep(i,ihe,kp) = 1.-(2./(embar0(i)+embar(i,lev0)))*
      |               (rmass_he+(embar(i,lev0)-embar0(i))/dz)
-     |               -thdiffalpha*(tn(lev0,i,lat)-tlbc(i,lat))/
-     |               (dz*.5*(tlbc(i,lat)+tn(lev0,i,lat)))
+     |               -thdiffalpha*(tn(lev0,i,lat)-tlbc(i,lat))*2/
+     |               (dz*tlbc(i,lat))
         zz(i,1,:) = 0.
       enddo ! i=lon0,lon1
 
@@ -323,27 +325,11 @@
      |                    diff_fac(lev0,i,3)*phi(ihe,4))*
      |                    .5*(ps0(i,ihe)+he(lev0,i,lat))
 
-! DET(ALFA)
-          detalpha(i) = alpha(1,1)*(alpha(2,2)*alpha(3,3)
-     |                             -alpha(2,3)*alpha(3,2))
-     |                 +alpha(1,2)*(alpha(2,3)*alpha(3,1)
-     |                             -alpha(2,1)*alpha(3,3))
-     |                 +alpha(1,3)*(alpha(2,1)*alpha(3,2)
-     |                             -alpha(2,2)*alpha(3,1))
-
-! AK = ADJ(ALFA) at this point; will later become MBAR/M4*(T00/(T0+T))**0.25/TAU*INV(ALFA)
-          ak(i,1,1,kp) = alpha(2,2)*alpha(3,3) - alpha(2,3)*alpha(3,2)
-          ak(i,2,2,kp) = alpha(1,1)*alpha(3,3) - alpha(1,3)*alpha(3,1)
-          ak(i,3,3,kp) = alpha(1,1)*alpha(2,2) - alpha(1,2)*alpha(2,1)
-          ak(i,1,2,kp) = alpha(1,3)*alpha(3,2) - alpha(1,2)*alpha(3,3)
-          ak(i,1,3,kp) = alpha(1,2)*alpha(2,3) - alpha(1,3)*alpha(2,2)
-          ak(i,2,3,kp) = alpha(1,3)*alpha(2,1) - alpha(1,1)*alpha(2,3)
-          ak(i,2,1,kp) = alpha(2,3)*alpha(3,1) - alpha(2,1)*alpha(3,3)
-          ak(i,3,1,kp) = alpha(2,1)*alpha(3,2) - alpha(2,2)*alpha(3,1)
-          ak(i,3,2,kp) = alpha(3,1)*alpha(1,2) - alpha(1,1)*alpha(3,2)
+! AK = INV(ALFA)
+          ak(i,:,:,kp) = matinv3(alpha)
         enddo ! i=lon0,lon1
 !
-! WKS1=MBAR/M3*(T00/(T0+T))*0.25/(TAU*DET(ALFA)) AT LEVEL 1/2
+! WKS1=MBAR/M3*(T00/(T0+T))*0.25/TAU AT LEVEL 1/2
 ! tn lower boundary is stored in top slot tn(lev1..). 
       do i=lon0,lon1
 !       wks1(i) = 0.5*(embar0(i)+embar(i,lev0))*rmassinv_n2*
@@ -351,7 +337,7 @@
 !    |    ak(i,1,2,kp)*ak(i,2,1,kp)))
 ! Lower boundary of tn is now in tlbc:
         wks1(i) = 0.5*(embar0(i)+embar(i,lev0))*rmassinv_n2* 
-     |    (t00/tlbc(i,lat))**0.25/(tau*detalpha(i)) ! Should this use 0.5*(tlbc(i,lat)+tn(lev0,i,lat))?
+     |    (t00/tlbc(i,lat))**0.25/tau
       enddo ! i=lon0,lon1
 !     write(6,"('comp: lat=',i3,' wks1=',/,(6e12.4))") lat,wks1
 !
@@ -465,36 +451,18 @@
      |                    diff_fac(k+1,i,3)*phi(ihe,4))*
      |                    .5*(he(k,i,lat)+he(k+1,i,lat))
 
-! DET(ALFA)
-          detalpha(i) = alpha(1,1)*(alpha(2,2)*alpha(3,3)
-     |                             -alpha(2,3)*alpha(3,2))
-     |                 +alpha(1,2)*(alpha(2,3)*alpha(3,1)
-     |                             -alpha(2,1)*alpha(3,3))
-     |                 +alpha(1,3)*(alpha(2,1)*alpha(3,2)
-     |                             -alpha(2,2)*alpha(3,1))
-
-! AK = ADJ(ALFA) at this point; will later become MBAR/M4*(T00/(T0+T))**0.25/TAU*INV(ALFA)
-          ak(i,1,1,kp) = alpha(2,2)*alpha(3,3) - alpha(2,3)*alpha(3,2)
-          ak(i,2,2,kp) = alpha(1,1)*alpha(3,3) - alpha(1,3)*alpha(3,1)
-          ak(i,3,3,kp) = alpha(1,1)*alpha(2,2) - alpha(1,2)*alpha(2,1)
-          ak(i,1,2,kp) = alpha(1,3)*alpha(3,2) - alpha(1,2)*alpha(3,3)
-          ak(i,1,3,kp) = alpha(1,2)*alpha(2,3) - alpha(1,3)*alpha(2,2)
-          ak(i,2,3,kp) = alpha(1,3)*alpha(2,1) - alpha(1,1)*alpha(2,3)
-          ak(i,2,1,kp) = alpha(2,3)*alpha(3,1) - alpha(2,1)*alpha(3,3)
-          ak(i,3,1,kp) = alpha(2,1)*alpha(3,2) - alpha(2,2)*alpha(3,1)
-          ak(i,3,2,kp) = alpha(3,1)*alpha(1,2) - alpha(1,1)*alpha(3,2)
+! AK = INV(ALFA)
+          ak(i,:,:,kp) = matinv3(alpha)
         enddo ! i=lon0,lon1
 !
-! WKS1=MBAR/M4*(T00/(T0+T))**0.25/(TAU*DET(ALFA))
+! WKS1=MBAR/M4*(T00/(T0+T))**0.25/TAU
         do i=lon0,lon1
           if (k==lev1-1) then 
             wks1(i) = 0.5*(embar(i,k)+embar(i,k+1))*rmassinv_n2* 
-     |        (t00/tn(k,i,lat))**0.25/ 
-     |        (tau*detalpha(i))
+     |        (t00/tn(k,i,lat))**0.25/tau
           else
             wks1(i) = 0.5*(embar(i,k)+embar(i,k+1))*rmassinv_n2*
-     |        (t00/(.5*(tn(k,i,lat)+tn(k+1,i,lat))))**0.25/
-     |        (tau*detalpha(i))
+     |        (t00/(.5*(tn(k,i,lat)+tn(k+1,i,lat))))**0.25/tau
           endif ! ubc
 !           write(6,"(/,'comp: k=',i3,' i=',i3,' lat=',i3)") 
 !    |        k,i,lat
@@ -721,30 +689,8 @@
 !       upper block diagonal matrices in the Thomas algorithm solution 
 !       to the block tridiagonal system of equations
         do i=lon0,lon1
-! WKS1=DET(ALFA)
-!          wks1(i) = qk(i,1,1)*qk(i,2,2)-qk(i,1,2)*qk(i,2,1)
-          wks1(i) = qk(i,1,1)*(qk(i,2,2)*qk(i,3,3)-qk(i,2,3)*qk(i,3,2))
-     |             +qk(i,1,2)*(qk(i,2,3)*qk(i,3,1)-qk(i,2,1)*qk(i,3,3))
-     |             +qk(i,1,3)*(qk(i,2,1)*qk(i,3,2)-qk(i,2,2)*qk(i,3,1))
 ! WKM1=INV(ALFA)
-          wkm1(i,io2,1) = (qk(i,2,2)*qk(i,3,3) - qk(i,2,3)*qk(i,3,2))/
-     |                    wks1(i)
-          wkm1(i,io2,2) = (qk(i,1,3)*qk(i,3,2) - qk(i,1,2)*qk(i,3,3))/
-     |                    wks1(i)
-          wkm1(i,io2,3) = (qk(i,1,2)*qk(i,2,3) - qk(i,1,3)*qk(i,2,2))/
-     |                    wks1(i)
-          wkm1(i,io1,1) = (qk(i,2,3)*qk(i,3,1) - qk(i,2,1)*qk(i,3,3))/
-     |                    wks1(i)
-          wkm1(i,io1,2) = (qk(i,1,1)*qk(i,3,3) - qk(i,1,3)*qk(i,3,1))/
-     |                    wks1(i)
-          wkm1(i,io1,3) = (qk(i,1,3)*qk(i,2,1) - qk(i,1,1)*qk(i,2,3))/
-     |                    wks1(i)
-          wkm1(i,ihe,1) = (qk(i,2,1)*qk(i,3,2) - qk(i,2,2)*qk(i,3,1))/
-     |                    wks1(i)
-          wkm1(i,ihe,2) = (qk(i,1,2)*qk(i,3,1) - qk(i,1,1)*qk(i,3,2))/
-     |                    wks1(i)
-          wkm1(i,ihe,3) = (qk(i,1,1)*qk(i,2,2) - qk(i,1,2)*qk(i,2,1))/
-     |                    wks1(i)
+          wkm1(i,:,:) = matinv3(qk(i,:,:))
         enddo ! i=lon0,lon1
 !
 ! WKM1=ALFAI
