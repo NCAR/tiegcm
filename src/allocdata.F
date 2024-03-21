@@ -14,6 +14,7 @@
       use mpi_module,only: lon0,lon1,lat0,lat1
       use chemrates_module,only: alloc_tdep
       use qrj_module,only: alloc_q
+      use n2d_module,only: alloc_n2d
       use n4s_module,only: alloc_n4s
       use no_module,only: alloc_no
       use ar_module,only: alloc_ar
@@ -39,6 +40,7 @@
 !
 ! Allocate boundary conditions and production and loss terms
 ! for minor composition species:
+      call alloc_n2d(lon0,lon1,lat0,lat1)
       call alloc_n4s(lon0,lon1,lat0,lat1)
       call alloc_no (lon0,lon1,lat0,lat1)
       call alloc_ar (lon0,lon1,lat0,lat1)

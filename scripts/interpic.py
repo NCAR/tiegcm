@@ -77,17 +77,17 @@ def interpic(fin, hres, vres, zitop, fout):
     # Some additional attributes for 4D fields
     lower_cap = 1e-12
     fill_top = ['TN', 'UN', 'VN', 'OP', 'TI', 'TE', 'N2D', 'O2P', 'TN_NM', 'UN_NM', 'VN_NM', 'OP_NM']
-    mixing_ratio = ['O2', 'O1', 'HE', 'N4S', 'NO', 'AR', 'N2D', 'O2_NM', 'O1_NM', 'HE_NM', 'N4S_NM', 'NO_NM', 'AR_NM']
+    mixing_ratio = ['O2', 'O1', 'HE', 'N2D', 'N4S', 'NO', 'AR', 'O2_NM', 'O1_NM', 'HE_NM', 'N2D_NM', 'N4S_NM', 'NO_NM', 'AR_NM']
     extrap_method = {'TN': 'exponential', 'UN': 'linear', 'VN': 'linear',
             'O2': 'exponential', 'O1': 'exponential', 'HE': 'exponential',
-            'OP': 'exponential', 'N4S': 'exponential', 'NO': 'exponential',
-            'AR': 'exponential', 'TI': 'exponential', 'TE': 'exponential',
-            'NE': 'exponential', 'OMEGA': 'linear', 'N2D': 'constant',
+            'OP': 'exponential', 'N2D': 'exponential', 'N4S': 'exponential',
+            'NO': 'exponential', 'AR': 'exponential', 'TI': 'exponential',
+            'TE': 'exponential', 'NE': 'exponential', 'OMEGA': 'linear', 
             'O2P': 'constant', 'Z': 'exponential', 'POTEN': 'linear',
             'TN_NM': 'exponential', 'UN_NM': 'linear', 'VN_NM': 'linear',
             'O2_NM': 'exponential', 'O1_NM': 'exponential', 'HE_NM': 'exponential',
-            'OP_NM': 'exponential', 'N4S_NM': 'exponential', 'NO_NM': 'exponential',
-            'AR_NM': 'exponential'}
+            'OP_NM': 'exponential', 'N2D_NM': 'exponential', 'N4S_NM': 'exponential',
+            'NO_NM': 'exponential', 'AR_NM': 'exponential'}
 
     nlon = int(360 / hres)
     lon = linspace(start=-180, stop=180-hres, num=nlon)

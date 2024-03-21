@@ -17,8 +17,8 @@
      |  mxfsech,spval,nmlat,nmlonp1,mlev0,mlev1
       implicit none
       integer,parameter :: 
-     |  nf4d          = 35, ! number of 4-d fields
-     |  nf4d_hist     = 28, ! number of 4-d fields on primary histories
+     |  nf4d          = 36, ! number of 4-d fields
+     |  nf4d_hist     = 29, ! number of 4-d fields on primary histories
      |  nf3d          = 48  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
@@ -48,12 +48,13 @@
 ! Indices, to f4d fields, e.g. f4d(i_tn)%data is neutral temperature.
       integer ::
      |  i_tn     ,i_un     ,i_vn     ,i_o2     ,i_o1     ,
-     |  i_he     ,i_op     ,i_n4s    ,i_no     ,i_ar     ,
-     |  i_ti     ,i_te     ,i_ne     ,i_w      ,i_n2d    ,
+     |  i_he     ,i_op     ,i_n2d    ,i_n4s    ,i_no     ,
+     |  i_ar     ,i_ti     ,i_te     ,i_ne     ,i_w      ,
      |  i_o2p    ,i_z      ,i_poten  ,i_tn_nm  ,i_un_nm  ,
      |  i_vn_nm  ,i_o2_nm  ,i_o1_nm  ,i_he_nm  ,i_op_nm  ,
-     |  i_n4s_nm ,i_no_nm  ,i_ar_nm  ,i_mbar   ,i_barm   ,
-     |  i_xnmbar ,i_xnmbari,i_scht   ,i_schti  ,i_vc
+     |  i_n2d_nm ,i_n4s_nm ,i_no_nm  ,i_ar_nm  ,i_mbar   ,
+     |  i_barm   ,i_xnmbar ,i_xnmbari,i_scht   ,i_schti  ,
+     |  i_vc
 !
 ! Allocatable target arrays for 4-d fields:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 ,2)
@@ -61,12 +62,13 @@
 !
       real,dimension(:,:,:,:),target,allocatable :: ! (k,i,j,2)
      |  tn       ,un       ,vn       ,o2       ,o1       ,
-     |  he       ,op       ,n4s      ,no       ,ar       ,
-     |  ti       ,te       ,ne       ,w        ,n2d      ,
+     |  he       ,op       ,n2d      ,n4s      ,no       ,
+     |  ar       ,ti       ,te       ,ne       ,w        ,
      |  o2p      ,z        ,poten    ,tn_nm    ,un_nm    ,
      |  vn_nm    ,o2_nm    ,o1_nm    ,he_nm    ,op_nm    ,
-     |  n4s_nm   ,no_nm    ,ar_nm    ,mbar     ,barm     ,
-     |  xnmbar   ,xnmbari  ,scht     ,schti    ,vc
+     |  n2d_nm   ,n4s_nm   ,no_nm    ,ar_nm    ,mbar     ,
+     |  barm     ,xnmbar   ,xnmbari  ,scht     ,schti    ,
+     |  vc
 !
 ! 3-d fields structure type:
 ! Data pointers will point to allocatable target arrays.
@@ -273,6 +275,14 @@
       f4d(n)%data => op
       i_op = n ; n = n+1
 !
+      allocate(n2d(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('N2D')")
+      f4d(n)%short_name = ("N2D")
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => n2d
+      i_n2d = n ; n = n+1
+!
       allocate(n4s(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('N4S')")
       f4d(n)%short_name = ("N4S")
@@ -338,14 +348,6 @@
       f4d(n)%vcoord = "interfaces"
       f4d(n)%data => w
       i_w = n ; n = n+1
-!
-      allocate(n2d(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
-      write(f4d(n)%long_name,"('N2D')")
-      f4d(n)%short_name = ("N2D")
-      f4d(n)%units = "mmr"
-      f4d(n)%vcoord = "midpoints"
-      f4d(n)%data => n2d
-      i_n2d = n ; n = n+1
 !
       allocate(o2p(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('O2+ ION')")
@@ -426,6 +428,14 @@
       f4d(n)%vcoord = "midpoints"
       f4d(n)%data => op_nm
       i_op_nm = n ; n = n+1
+!
+      allocate(n2d_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('N2D (TIME N-1)')")
+      f4d(n)%short_name = ("N2D_NM")
+      f4d(n)%units = "mmr"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => n2d_nm
+      i_n2d_nm = n ; n = n+1
 !
       allocate(n4s_nm(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('N4S (TIME N-1)')")

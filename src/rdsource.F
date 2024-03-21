@@ -12,7 +12,8 @@
      |  f107,f107a,power,noutput
       use hist_module,only: nsource,nhist,ioutfile,ncid
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm,
-     |  he,he_nm,field_initval,ar,ar_nm,gzigm1,gzigm2,gnsrhs,itp
+     |  he,he_nm,field_initval,ar,ar_nm,n2d,n2d_nm,gzigm1,gzigm2,gnsrhs,
+     |  itp
       use ar_module,only: ar_glbm
       use mpi_module,only: lat0,lat1,lon0,lon1,
      |  mp_periodic_f4d,mp_periodic_f2d,mp_bndlons_f2d,mp_bndlats_f2d
@@ -141,6 +142,14 @@
       gnsrhs(lon0:lon1,lat0:lat1) = flbc(:,:,9)
 !
       call define_phim3d(itp)
+!
+! If n2d_nm was not read from the source history, then set it to n2d
+!
+      if (all(n2d_nm==field_initval)) then
+        write(6,"('readsource: N2D_NM apparently not read from source',
+     |    ' history. Will init N2D_NM to N2D')")
+        n2d_nm = n2d
+      endif
 !
 ! If argon was not read from the source history, then set it to
 ! column global means (see ar_glbm(nlevp1) in comp_ar.F).

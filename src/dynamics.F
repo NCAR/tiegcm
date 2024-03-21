@@ -26,6 +26,7 @@
       use oplus_module,only: oplus
       use input_module,only: iaurora=>aurora,iamie,nstep_sub
       use aurora_module,only: aurora,cusp,drizl,alfa,flux,eflux
+      use n2d_module,only: comp_n2d,minor_n2d
       use n4s_module,only: comp_n4s,minor_n4s
       use no_module,only: comp_no,minor_no
       use ar_module,only: comp_ar,minor_ar
@@ -477,9 +478,12 @@
           call addfld('SIGMAHAL','Hall Conductivity','S/m',
      |      hall(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         endif
+      enddo ! lat=lat0,lat1
 !
-! Calculate n2d:
-        call timer(time0,time1,'CMPMINOR',0,0) ! start comp minor timing
+! Advance n2d:
+!
+      call timer(time0,time1,'CMPMINOR',0,0) ! start comp minor timing
+      do lat=lat0,lat1
         call comp_n2d(
      |    o2  (levd0,lond0,lat,itp),
      |    o1  (levd0,lond0,lat,itp),
@@ -489,10 +493,29 @@
      |    n2p (levd0,lond0,lat),
      |    nop (levd0,lond0,lat),
      |    xnmbar(levd0,lond0,lat,itp),
-     |    n2d (levd0,lond0,lat,itc), ! N2D output
+     |    xnmbari(levd0,lond0,lat,itp),
      |    1,nlevp1,lon0,lon1,lat)
-        if (debug) write(6,"('dynamics after comp_n2d: lat=',i3)") lat
       enddo ! lat=lat0,lat1
+      if (debug) write(6,"('dynamics after comp_n2d')")
+!
+! Minor_n2d calls sub minor, which has 3d mpi calls, including gather/scatter
+! for fft filtering. Full 3d task subdomains are passed.
+!
+      call minor_n2d(
+     |    tn     (levd0,lond0,latd0,itp),  ! TN (deg K)
+     |    o2     (levd0,lond0,latd0,itp),  ! O2 (mmr)
+     |    o1     (levd0,lond0,latd0,itp),  ! O (mmr)
+     |    he     (levd0,lond0,latd0,itp),  ! HE (mmr)
+     |    mbar   (levd0,lond0,latd0,itp),  ! mean molecular weight
+     |    barm   (levd0,lond0,latd0,itp),  ! mean molecular weight
+     |    xnmbar (levd0,lond0,latd0,itp),  ! p0*e(-z)*mbar/kT
+     |    w      (levd0,lond0,latd0,itc),  ! vertical wind
+     |    n2d    (levd0,lond0,latd0,itp),  ! n2d from previous step
+     |    n2d_nm (levd0,lond0,latd0,itp),  ! n2d at time n-1
+     |    n2d    (levd0,lond0,latd0,itc),  ! output n2d
+     |    n2d_nm (levd0,lond0,latd0,itc),  ! output n2d at time n-1
+     |    1,nlevp1,lon0,lon1,lat0,lat1)
+      if (debug) write(6,"('dynamics after minor_n2d')")
       call timer(time0,time1,'CMPMINOR',1,0) ! suspend comp minor timing
       time1_cmpminor = time1_cmpminor+time1
       if (diags) then
