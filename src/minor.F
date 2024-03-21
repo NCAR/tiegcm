@@ -324,7 +324,7 @@
      |      (diff_fac(1)*phi(1,3)-phi(1,4))*pshe(k,i))
           alfa(2,2) = -(phi(2,4)+
      |      (phi(2,1)-phi(2,4))*pso2(k,i)+
-     |      (diff_fac(2)*phi(2,3)-phi(2,4))*pso1(k,i))
+     |      (diff_fac(2)*phi(2,3)-phi(2,4))*pshe(k,i))
           alfa(3,3) = -(diff_fac(3)*phi(3,4)+
      |      (diff_fac(1)*phi(3,1)-diff_fac(3)*phi(3,4))*pso2(k,i)+
      |      (diff_fac(2)*phi(3,2)-diff_fac(3)*phi(3,4))*pso1(k,i))
