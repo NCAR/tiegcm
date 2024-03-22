@@ -666,6 +666,9 @@
      |  eclipse_list = '$TGCMDATA/eclipse_list.nc'
       call expand_path(eclipse_list)
 !
+! nudging data files:
+      if (len_trim(nudge_ncfile) > 0) call expand_path(nudge_ncfile)
+!
 ! 1/12/05 btf: removed old dynamo (was in dynamo_old.F)
 ! 6/11/08 btf: remove dynamo==0 option
 !
