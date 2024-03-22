@@ -449,6 +449,8 @@
      |    te  (levd0,lond0,lat,itp),
      |    o2p (levd0,lond0,lat,itp),
      |    op  (levd0,lond0,lat,itp),
+     |    nplus(levd0,lond0,lat),
+     |    n2p (levd0,lond0,lat),
      |    nop (levd0,lond0,lat),
      |    Etot(levd0,lond0,lat),
      |    lxx (levd0,lond0,lat), ! LXX output

@@ -1,6 +1,6 @@
 !
-      subroutine lamdas(tn,xnmbar,o2,o1,he,n2,ti,te,o2p,op,nop,Etot,
-     |  lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Qa,Q2,
+      subroutine lamdas(tn,xnmbar,o2,o1,he,n2,ti,te,o2p,op,nplus,
+     |  n2p,nop,Etot,lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Qa,Q2,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -14,9 +14,10 @@
 !
       use params_module,only: nlonp4
       use magfield_module,only: bmod2,sn2dec,csdec,sndec
-      use cons_module,only: dipmin,rmass_o2,rmass_o1,rmass_he,rmass_no,
-     |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,rmassinv_no,avo,
-     |  rtd
+      use cons_module,only: dipmin,avo,rtd,
+     |  rmass_o2,rmass_o1,rmass_he,rmass_n2,rmass_no,rmass_n4s,
+     |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,
+     |  rmassinv_no,rmassinv_n4s
       use magfield_module,only: dipmag,rlatm
       use input_module,only: colfac
       use addfld_module,only: addfld
@@ -37,6 +38,8 @@
      |  te,   ! electron temperature (deg K)
      |  o2p,  ! O2+ number density (1/cm3)
      |  op,   ! O+  number density (1/cm3)
+     |  nplus,! N+ number density (1/cm3)
+     |  n2p,  ! N2+ number density (1/cm3)
      |  nop,  ! NO+ number density (1/cm3)
      |  Etot  ! Total electric field
 !
@@ -64,9 +67,10 @@
 ! Local (lon):
       real,dimension(lon0:lon1) :: 
      |  bgauss, qe_fac, sindip, cosdip, cos2dip, sin2dip, cos2dec,
-     |  omega_o2p    ,omega_op    ,omega_nop,
-     |  omega_o2p_inv,omega_op_inv,omega_nop_inv,
-     |  omega_e      ,omega_e_inv
+     |  omega_o2p    ,omega_op     ,omega_np     ,
+     |  omega_n2p    ,omega_nop    ,omega_e      ,
+     |  omega_o2p_inv,omega_op_inv ,omega_np_inv ,
+     |  omega_n2p_inv,omega_nop_inv,omega_e_inv
 !
 ! Local (lev,lon):
       real,dimension(lev0:lev1,lon0:lon1) ::
@@ -74,7 +78,7 @@
      |  o2_cm3, o1_cm3, he_cm3, n2_cm3, ! major species number densities (cm3)
      |  sigma_ped,  ! pedersen conductivity (siemens/m)
      |  sigma_hall, ! hall conductivity (siemens/m)
-     |  ne,         ! electron density (assume o2p+op+nop)
+     |  ne,         ! electron density (assume o2p+op+nplus+n2p+nop)
      |  lamda2,     ! sighal*b**2/rho
      |  lamda1tmp,  ! temporary lamda1
      |  lamda2tmp,  ! temporary lamda2
@@ -84,25 +88,37 @@
      |  lyxnorot,   ! YX before rotation
 !
 ! Ion-neutral momentum transfer collision frequencies:
+! 2024/03/21 Haonan Wu: There used to be only O2+, O+, and NO+ in the calculation.
+! To be more self-consistent, include N+ and N2+ in the calculation as well.
 !
      |  rnu_o2p_o2, ! O2+ ~ O2 collision freq (resonant, temperature dependent)
      |  rnu_op_o2 , ! O+  ~ O2 collision freq (non-resonant)
+     |  rnu_np_o2 , ! N+  ~ O2 collision freq (non-resonant)
+     |  rnu_n2p_o2, ! N2+ ~ O2 collision freq (non-resonant)
      |  rnu_nop_o2, ! NO+ ~ O2 collision freq (non-resonant)
 !
      |  rnu_o2p_o,  ! O2+ ~ O  collision freq (non-resonant)
      |  rnu_op_o ,  ! O+  ~ O  collision freq (resonant, temperature dependent)
+     |  rnu_np_o ,  ! N+  ~ O  collision freq (non-resonant)
+     |  rnu_n2p_o,  ! N2+ ~ O  collision freq (non-resonant)
      |  rnu_nop_o,  ! NO+ ~ O  collision freq (non-resonant)
 !
      |  rnu_o2p_he, ! O2+ ~ He collision freq (non-resonant)
      |  rnu_op_he , ! O+  ~ He collision freq (non-resonant)
+     |  rnu_np_he , ! N+  ~ He collision freq (non-resonant)
+     |  rnu_n2p_he, ! N2+ ~ He collision freq (non-resonant)
      |  rnu_nop_he, ! NO+ ~ He collision freq (non-resonant)
 !
      |  rnu_o2p_n2, ! O2+ ~ N2 collision freq (non-resonant)
      |  rnu_op_n2 , ! O+  ~ N2 collision freq (non-resonant)
+     |  rnu_np_n2 , ! N+  ~ N2 collision freq (non-resonant)
+     |  rnu_n2p_n2, ! N2+ ~ N2 collision freq (resonant, temperature dependent)
      |  rnu_nop_n2, ! NO+ ~ N2 collision freq (non-resonant)
 !
      |  rnu_o2p,    ! [[o2p~o2]n(o2)+[o2p~o]n(o)+[o2p~he]n(he)+[o2p~n2]n(n2)]/w(o2p)
      |  rnu_op,     ! [[op ~o2]n(o2)+[op ~o]n(o)+[op ~he]n(he)+[op ~n2]n(n2)]/w(op )
+     |  rnu_np,     ! [[np ~o2]n(o2)+[np ~o]n(o)+[np ~he]n(he)+[np ~n2]n(n2)]/w(np )
+     |  rnu_n2p,    ! [[n2p~o2]n(o2)+[n2p~o]n(o)+[n2p~he]n(he)+[n2p~n2]n(n2)]/w(n2p)
      |  rnu_nop,    ! [[nop~o2]n(o2)+[nop~o]n(o)+[nop~he]n(he)+[nop~n2]n(n2)]/w(nop)
 ! 
      |  rnu_ne,     ! electron~neutral
@@ -167,9 +183,13 @@
 !
         omega_op (i)    = qeoNao10*bgauss(i)*rmassinv_o1
         omega_o2p(i)    = qeoNao10*bgauss(i)*rmassinv_o2
+        omega_np (i)    = qeoNao10*bgauss(i)*rmassinv_n4s
+        omega_n2p(i)    = qeoNao10*bgauss(i)*rmassinv_n2
         omega_nop(i)    = qeoNao10*bgauss(i)*rmassinv_no
         omega_op_inv (i)= 1./omega_op(i)
         omega_o2p_inv(i)= 1./omega_o2p(i)
+        omega_np_inv (i)= 1./omega_np(i)
+        omega_n2p_inv(i)= 1./omega_n2p(i)
         omega_nop_inv(i)= 1./omega_nop(i)
         omega_e(i)      = qeomeo10*bgauss(i)
         omega_e_inv(i)  = 1./omega_e(i)
@@ -205,22 +225,31 @@
           rnu_o2p_o2(k,i) = 2.59E-11*sqrt(tnti(k,i))* ! O2+ ~ O2 (resonant)
      |      (1.-0.073*alog10(tnti(k,i)))**2
           rnu_op_o2 (k,i) = 6.64E-10                  ! O+  ~ O2
+          rnu_np_o2 (k,i) = 7.25E-10                  ! N+  ~ O2
+          rnu_n2p_o2(k,i) = 4.49E-10                  ! N2+ ~ O2
           rnu_nop_o2(k,i) = 4.27E-10                  ! NO+ ~ O2
 !
 ! O collision frequencies:
           rnu_o2p_o(k,i) = 2.31E-10                   ! O2+ ~ O
           rnu_op_o (k,i) = 3.67e-11*sqrt(tnti(k,i))*  ! O+  ~ O (resonant)
      |      (1.-0.064*alog10(tnti(k,i)))**2*colfac    
+          rnu_np_o (k,i) = 4.42E-10                   ! N+  ~ O
+          rnu_n2p_o(k,i) = 2.58E-10                   ! N2+ ~ O
           rnu_nop_o(k,i) = 2.44E-10                   ! NO+ ~ O
 !
 ! He collision frequencies:
           rnu_o2p_he(k,i) = 0.70E-10                  ! O2+ ~ He
           rnu_op_he (k,i) = 1.32E-10                  ! O+  ~ He
+          rnu_np_he (k,i) = 1.49E-10                  ! N+  ~ He
+          rnu_n2p_he(k,i) = 0.79E-10                  ! N2+ ~ He
           rnu_nop_he(k,i) = 0.74E-10                  ! NO+ ~ He
 !
 ! N2 collision frequencies:
           rnu_o2p_n2(k,i) = 4.13E-10                  ! O2+ ~ N2
           rnu_op_n2 (k,i) = 6.82E-10                  ! O+  ~ N2
+          rnu_np_n2 (k,i) = 7.47E-10                  ! N+  ~ N2
+          rnu_n2p_n2(k,i) = 5.14E-11*sqrt(tnti(k,i))* ! N2+ ~ N2 (resonant)
+     |      (1.-0.069*alog10(tnti(k,i)))**2
           rnu_nop_n2(k,i) = 4.34E-10                  ! NO+ ~ N2
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
@@ -269,6 +298,14 @@
      |                    rnu_op_o  (k,i)*o1_cm3(k,i) +
      |                    rnu_op_he (k,i)*he_cm3(k,i) +
      |                    rnu_op_n2 (k,i)*n2_cm3(k,i))*omega_op_inv(i)
+          rnu_np (k,i) = (rnu_np_o2 (k,i)*o2_cm3(k,i) +
+     |                    rnu_np_o  (k,i)*o1_cm3(k,i) +
+     |                    rnu_np_he (k,i)*he_cm3(k,i) +
+     |                    rnu_np_n2 (k,i)*n2_cm3(k,i))*omega_np_inv(i)
+          rnu_n2p(k,i) = (rnu_n2p_o2(k,i)*o2_cm3(k,i) +
+     |                    rnu_n2p_o (k,i)*o1_cm3(k,i) +
+     |                    rnu_n2p_he(k,i)*he_cm3(k,i) +
+     |                    rnu_n2p_n2(k,i)*n2_cm3(k,i))*omega_n2p_inv(i)
           rnu_nop(k,i) = (rnu_nop_o2(k,i)*o2_cm3(k,i) +
      |                    rnu_nop_o (k,i)*o1_cm3(k,i) +
      |                    rnu_nop_he(k,i)*he_cm3(k,i) +
@@ -322,12 +359,15 @@
         do k=lev0,lev1-1
 !
 ! ne = electron density assuming charge equilibrium [1/cm3]:
-          ne(k,i) = op(k,i)+o2p(k,i)+nop(k,i) 
+! (Using ne from fields module will fail, not sure about the reason)
+          ne(k,i) = op(k,i)+o2p(k,i)+nplus(k,i)+n2p(k,i)+nop(k,i)
 !
 ! Pedersen conductivity [S/m] (half level):
           sigma_ped(k,i) = qe_fac(i)*
      |      ((op (k,i)*rnu_op (k,i)/(1.+rnu_op (k,i)**2))+
      |       (o2p(k,i)*rnu_o2p(k,i)/(1.+rnu_o2p(k,i)**2))+
+     |       (nplus(k,i)*rnu_np(k,i)/(1.+rnu_np(k,i)**2))+
+     |       (n2p(k,i)*rnu_n2p(k,i)/(1.+rnu_n2p(k,i)**2))+
      |       (nop(k,i)*rnu_nop(k,i)/(1.+rnu_nop(k,i)**2))+
      |       (ne (k,i)*rnu_ne (k,i)/(1.+rnu_ne (k,i)**2)))
 !
@@ -336,6 +376,8 @@
      |      (ne (k,i)/(1.+rnu_ne (k,i)**2)-
      |       op (k,i)/(1.+rnu_op (k,i)**2)-
      |       o2p(k,i)/(1.+rnu_o2p(k,i)**2)-
+     |       nplus(k,i)/(1.+rnu_np(k,i)**2)-
+     |       n2p(k,i)/(1.+rnu_n2p(k,i)**2)-
      |       nop(k,i)/(1.+rnu_nop(k,i)**2))
 
           if (sigma_hall(k,i) < 1e-20) sigma_hall(k,i) = 1e-20
@@ -455,11 +497,15 @@
 ! ratio between ion gyro frequency and ion-neutral collision frequency
       Ki = 1/ne*(op(:,lon0:lon1)/rnu_op+
      |  o2p(:,lon0:lon1)/rnu_o2p+
+     |  nplus(:,lon0:lon1)/rnu_np+
+     |  n2p(:,lon0:lon1)/rnu_n2p+
      |  nop(:,lon0:lon1)/rnu_nop)
 
 ! mean ion molecular mass [g/mol]
       Mi = 1/ne*(op(:,lon0:lon1)*rmass_o1+
      |  o2p(:,lon0:lon1)*rmass_o2+
+     |  nplus(:,lon0:lon1)*rmass_n4s+
+     |  n2p(:,lon0:lon1)*rmass_n2+
      |  nop(:,lon0:lon1)*rmass_no)
 
 ! Calculate electrojet turbulent heating, added by Jing Liu
@@ -481,6 +527,8 @@
         Q2(:,i) = Q2(:,i)/(bmod2(i,lat)*1E-4)**2*
      |    (op(:,i)*rnu_op(:,i)/omega_op_inv(i)+
      |    o2p(:,i)*rnu_o2p(:,i)/omega_o2p_inv(i)+
+     |    nplus(:,i)*rnu_np(:,i)/omega_np_inv(i)+
+     |    n2p(:,i)*rnu_n2p(:,i)/omega_n2p_inv(i)+
      |    nop(:,i)*rnu_nop(:,i)/omega_nop_inv(i))
       enddo
       Qa(:,lon0:lon1) = Q1+Q2(:,lon0:lon1)
