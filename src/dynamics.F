@@ -738,6 +738,8 @@
      |    ti  (levd0,lond0,lat,itp),
      |    op  (levd0,lond0,lat,itp),
      |    o2p (levd0,lond0,lat,itp),
+     |    nplus(levd0,lond0,lat),
+     |    n2p (levd0,lond0,lat),
      |    nop (levd0,lond0,lat),
      |    xnmbar(levd0,lond0,lat,itp),
      |    xnmbari(levd0,lond0,lat,itp),

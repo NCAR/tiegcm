@@ -1,5 +1,5 @@
 ! 
-      subroutine settei(tn,o2,o1,he,n2,ne,te,ti,op,o2p,nop,
+      subroutine settei(tn,o2,o1,he,n2,ne,te,ti,op,o2p,nplus,n2p,nop,
      |  xnmbar,xnmbari,scht,schti,qji_ti,Qa,Q2,te_out,ti_out,
      |  lev0,lev1,lon0,lon1,lat)
 !
@@ -11,7 +11,8 @@
 !
       use params_module,only: dz,nlonp4,spval
       use cons_module,only: pi,rtd,evergs,
-     |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,dipmin,avo
+     |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,dipmin,avo,
+     |  rmass_o1,rmassinv_n4s,rmassinv_no
       use input_module,only: f107,et,electron_heating
       use chapman_module,only: chi   ! solar zenith angle (nlonp4,nlat)
       use magfield_module,only: rlatm,dipmag
@@ -41,6 +42,8 @@
      |  ti,      ! ion temperature (from previous time step)
      |  op,      ! O+
      |  o2p,     ! O2+
+     |  nplus,   ! N+
+     |  n2p,     ! N2+
      |  nop,     ! NO+
      |  xnmbar,  ! p0*e(-z)*mbar/kT  (midpoints)
      |  xnmbari, ! p0*e(-z)*barm/kT  (interfaces)
@@ -104,7 +107,6 @@
      |  ad   = 0.0091   ,
      |  sd   = 2.3e-11
       real :: 
-     |  root2,  ! sqrt(2)
      |  f107te  ! solar flux
 !
 ! a,fed,fen,fe,sindipmag have a z dimension only for diagnostic plotting:
@@ -129,7 +131,6 @@
       call vtbegin(126,ier)
 #endif
 !
-      root2 = sqrt(2.)
       f107te = f107
       if (f107te > 235.) f107te = 235.
       nk = lev1-lev0+1
@@ -440,10 +441,13 @@
 !
 ! Loss due to electron/n2 collision L0(E,N2,VIB)/(NE*N(N2)) (s10)
 !
-          loss_en2v(k,i) = 3200.*(1./te(k,i)-1./tn(k,i))
-          loss_en2v(k,i) = sign(abs(loss_en2v(k,i))+del,loss_en2v(k,i))
-          loss_en2v(k,i) = -3200./(te(k,i)*tn(k,i))*
-     |      (1.-exp(loss_en2v(k,i)))/loss_en2v(k,i)
+! Separate the case when te is approaching tn to avoid calculating 0/0
+          if (abs(te(k,i)-tn(k,i)) < del) then
+            loss_en2v(k,i) = 3200./tn(k,i)**2
+          else
+            loss_en2v(k,i) = 1./(te(k,i)-tn(k,i))*
+     |        (1.-exp(-3200.*(te(k,i)-tn(k,i))/(te(k,i)*tn(k,i))))
+          endif
           loss_en2v(k,i) = 1.3e-4*loss_en2v(k,i)*coll_en2v(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1 (end DO 20)
@@ -476,10 +480,12 @@
 !
 ! Electron/O(1d) loss rates: L0(E,O,1D)/(NE*N(O))
 !
-!         loss_eo1d(k,i) = 22713.*(1./te(k,i)-1./tn(k,i))
-!         loss_eo1d(k,i) = sign(abs(loss_eo1d(k,i))+del,loss_eo1d(k,i))
-!         loss_eo1d(k,i) = 22713./(te(k,i)*tn(k,i))*
-!    |      (1.-exp(loss_eo1d(k,i)))/loss_eo1d(k,i)
+!         if (abs(te(k,i)-tn(k,i)) < del) then
+!           loss_eo1d(k,i) = 22713./tn(k,i)**2
+!         else
+!           loss_eo1d(k,i) = 1./(te(k,i)-tn(k,i))*
+!    |        (1.-exp(-22713.*(te(k,i)-tn(k,i))/(te(k,i)*tn(k,i))))
+!         endif
 !
 ! loss_eo1d function often fails here with bad argument to exp()
 ! due to high te and/or high loss_eo1d from above.
@@ -526,18 +532,26 @@
 ! interactions between electrons and ions.
 !
           loss_ei(k,i) = 3.2e-8*root_ne(k,i)/(root_te(k,i)*te(k,i))*
-     |      15.*(op(k,i)+0.5*o2p(k,i)+0.53*nop(k,i))*evergs
+     |      15.*evergs*rmass_o1*
+     |      (op(k,i)*rmassinv_o1+o2p(k,i)*rmassinv_o2+
+     |      nplus(k,i)*rmassinv_n4s+n2p(k,i)*rmassinv_n2+
+     |      nop(k,i)*rmassinv_no)
 
-          root_tn(k,i) = sqrt(tn(k,i))
+          root_tn(k,i) = sqrt(2*tn(k,i))
 ! 
 ! loss_in = ion/neutral cooling = L0(I,N) =L(I,N)/(TI-TN)
-! (note NO+~He and O2+~He rates are missing, assuming small)
-          loss_in(k,i) =
-     |      ((5.8*o2n(k,i)+0.21*o1n(k,i)*root2*root_tn(k,i)+
-     |      2.8*hen(k,i)+6.6*n2n(k,i))*op(k,i)+
-     |      (5.45*o2n(k,i)+4.5*o1n(k,i)+5.9*n2n(k,i))*nop(k,i)+
-     |      (0.14*o2n(k,i)*root2*root_tn(k,i)+
-     |      4.4*o1n(k,i)+5.8*n2n(k,i))*o2p(k,i))*1e-14*evergs
+! (rates not on Rees & Roble 1975 were calculated based on Banks 1966)
+          loss_in(k,i) = 1e-14*evergs*
+     |      (op(k,i)*(5.8*o2n(k,i)+0.21*o1n(k,i)*root_tn(k,i)+
+     |      2.8*hen(k,i)+6.6*n2n(k,i))+
+     |      o2p(k,i)*(0.14*o2n(k,i)*root_tn(k,i)+
+     |      4.36*o1n(k,i)+1.63*hen(k,i)+5.81*n2n(k,i))+
+     |      nplus(k,i)*(5.84*o2n(k,i)+5.84*o1n(k,i)+
+     |      3.05*hen(k,i)+6.56*n2n(k,i))+
+     |      n2p(k,i)*(5.54*o2n(k,i)+4.65*o1n(k,i)+
+     |      1.82*hen(k,i)+0.27*n2n(k,i)*root_tn(k,i))+
+     |      nop(k,i)*(5.45*o2n(k,i)+4.5*o1n(k,i)+
+     |      1.72*hen(k,i)+5.92*n2n(k,i)))
 !
 ! Complete tridiagonal matrix coefficients and rhs:
 !

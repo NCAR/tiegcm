@@ -75,14 +75,14 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
 !
-! N+ ion (output):
-! With upward extension, due to winter Helium bulge,
-! atomic oxygen number density becomes too small
-! which leads to numerical explosion of N+
-! cap minimum O1 number density here to prevent N+ explosion
+! N+ ion (output): (Haonan Wu updated 2024/01)
+! With upward extension, around Z=10 near the winter pole,
+! the divisor becomes too small, leading to N+ explosion.
+! This is either due to O+ or N2D too high at these altitudes.
+! Cap minimum O1 number density here to prevent N+ explosion.
           o2_cm3(k,i) = o2(k,i)*rmassinv_o2*xnmbar(k,i)
           o1_cm3(k,i) = o1(k,i)*rmassinv_o1*xnmbar(k,i)
-          if (o1_cm3(k,i) < 1e4) o1_cm3(k,i) = 1e4
+          if (o1_cm3(k,i) < 1e6) o1_cm3(k,i) = 1e6
           nplus(k,i) = (0.5*(qnp(k,i,lat)+qnp(k+1,i,lat))+
      |      rk10*op(k,i)*n2d(k,i)*xnmbar(k,i)*rmassinv_n2d) /
      |      ((rk6+rk7)*o2_cm3(k,i)+rk8*o1_cm3(k,i))
