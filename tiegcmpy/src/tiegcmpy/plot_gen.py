@@ -546,7 +546,7 @@ def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = Non
 
 
 
-def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime = None, variable_unit = None, contour_intervals = 20, contour_value = None, cmap_color = None, line_color = 'white',  level_minimum = None, level_maximum = None):
+def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime = None, variable_unit = None, contour_intervals = 10, contour_value = None, cmap_color = None, line_color = 'white',  level_minimum = None, level_maximum = None, mtime_minimum=None, mtime_maximum=None):
     """
     Generates a Level vs Time contour plot for a specified latitude and/or longitude.
     
@@ -581,6 +581,29 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
 
     print("---------------["+variable_name+"]---["+str(latitude)+"]---["+str(longitude)+"]---------------")
     
+
+
+    num_deleted_before = 0
+    num_deleted_after = 0
+
+    if mtime_minimum is not None and mtime_maximum is not None:
+        new_mtime_values = []
+        for t_mtime in mtime_values:
+            mtime_total_minutes = t_mtime[0] * 24 * 60 *60 + t_mtime[1] * 60 *60+ t_mtime[2] *60+ t_mtime[3]
+            mtime_min_total = mtime_minimum[0] * 24 * 60*60 + mtime_minimum[1] * 60 *60+ mtime_minimum[2]*60 + mtime_minimum[3]
+            mtime_max_total = mtime_maximum[0] * 24 * 60*60 + mtime_maximum[1] * 60 *60+ mtime_maximum[2]*60 + mtime_minimum[3]
+        
+            if all(mtime_minimum[i] <= t <= mtime_maximum[i] for i, t in enumerate(t_mtime[:4])):
+                new_mtime_values.append(t_mtime)
+            else:
+                if mtime_total_minutes < mtime_min_total:
+                    num_deleted_before += 1
+                elif mtime_total_minutes > mtime_max_total:
+                    num_deleted_after += 1
+        mtime_values = new_mtime_values
+        mtime_values_sorted = sorted(mtime_values, key=lambda x: (x[0], x[1], x[2], x[3]))
+        variable_values_all = variable_values_all[:, num_deleted_before:-num_deleted_after]
+
     min_val, max_val = np.nanmin(variable_values_all), np.nanmax(variable_values_all)
 
     if cmap_color == None:
@@ -597,6 +620,9 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
     try:    # Modify this part to show both day and hour
         unique_times = sorted(list(set([(day, hour) for day, hour, _, _ in mtime_values])))
         time_indices = [i for i, (day, hour, _, _) in enumerate(mtime_tuples) if i == 0 or mtime_tuples[i-1][:2] != (day, hour)]
+        if len(time_indices) >=10:
+            unique_times = sorted(list(set([day for day, _, _, _ in mtime_values])))
+            time_indices = [i for i, (day, _, _, _) in enumerate(mtime_values) if i == 0 or mtime_values[i-1][0] != day]
     except:
         unique_times = sorted(list(set([day for day, _, _ in mtime_values])))
         time_indices = [i for i, (day, _, _) in enumerate(mtime_values) if i == 0 or mtime_values[i-1][0] != day]
@@ -641,7 +667,7 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
 
 
 
-def plt_lat_time(datasets, variable_name, level = None, longitude = None, localtime = None,  variable_unit = None, contour_intervals = 10, contour_value = None, cmap_color = None, line_color = 'white', latitude_minimum = None,latitude_maximum = None):
+def plt_lat_time(datasets, variable_name, level = None, longitude = None, localtime = None,  variable_unit = None, contour_intervals = 10, contour_value = None, cmap_color = None, line_color = 'white', latitude_minimum = None,latitude_maximum = None, mtime_minimum=None, mtime_maximum=None):
     """
     Generates a Latitude vs Time contour plot for a specified level and/or longitude.
     
@@ -676,14 +702,30 @@ def plt_lat_time(datasets, variable_name, level = None, longitude = None, localt
     '''
     variable_values_all, unique_lats, mtime_values, longitude, variable_unit, variable_long_name, filename = arr_lat_time(datasets, variable_name, longitude, level, variable_unit, plot_mode = True)
     # Assuming the levels are consistent across datasets, but using the minimum size for safety
-    
     if latitude_minimum == None:
         latitude_minimum = np.nanmin(unique_lats)
     if latitude_maximum == None:
         latitude_maximum = np.nanmax(unique_lats)
+    num_deleted_before = 0
+    num_deleted_after = 0
 
-    
-    
+    if mtime_minimum is not None and mtime_maximum is not None:
+        new_mtime_values = []
+        for t_mtime in mtime_values:
+            mtime_total_minutes = t_mtime[0] * 24 * 60 *60 + t_mtime[1] * 60 *60+ t_mtime[2] *60+ t_mtime[3]
+            mtime_min_total = mtime_minimum[0] * 24 * 60*60 + mtime_minimum[1] * 60 *60+ mtime_minimum[2]*60 + mtime_minimum[3]
+            mtime_max_total = mtime_maximum[0] * 24 * 60*60 + mtime_maximum[1] * 60 *60+ mtime_maximum[2]*60 + mtime_minimum[3]
+        
+            if all(mtime_minimum[i] <= t <= mtime_maximum[i] for i, t in enumerate(t_mtime[:4])):
+                new_mtime_values.append(t_mtime)
+            else:
+                if mtime_total_minutes < mtime_min_total:
+                    num_deleted_before += 1
+                elif mtime_total_minutes > mtime_max_total:
+                    num_deleted_after += 1
+        mtime_values = new_mtime_values
+        mtime_values_sorted = sorted(mtime_values, key=lambda x: (x[0], x[1], x[2], x[3]))
+        variable_values_all = variable_values_all[:, num_deleted_before:-num_deleted_after]
     min_val, max_val = np.nanmin(variable_values_all), np.nanmax(variable_values_all)
     
     if cmap_color == None:
@@ -694,7 +736,6 @@ def plt_lat_time(datasets, variable_name, level = None, longitude = None, localt
     else:
         contour_levels = np.linspace(min_val, max_val, contour_intervals)
     
-
     interval_value = contour_value if contour_value else (max_val - min_val) / (contour_intervals - 1)
 
     mtime_tuples = [tuple(entry) for entry in mtime_values]

@@ -574,31 +574,62 @@ def arr_lev_time (datasets, variable_name, selected_lat, selected_lon, selected_
         - variable_long_name (str): The long descriptive name of the variable.
     """
 
-    
-    selected_lon = float(selected_lon)
-    
+    try:
+        selected_lon = float(selected_lon)
+    except:
+        selected_lon = selected_lon
+    if selected_lon == 180:
+            selected_lon = -180
     variable_values_all = []
     combined_mtime = []
     levs_ilevs_all = []
-    
+    avg_info_print = 0
     for ds, filenames in datasets:
         variable_unit = ds[variable_name].attrs.get('units', 'N/A')
         variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
         mtime_values = ds['mtime'].values
         if selected_lon == "mean" and selected_lat == "mean":
-
-            # if selected_lon is "mean", then we calculate the mean over all longitudes.
+            # if selected_lon is "mean", then we calculate the mean over all longitudes. This doesn't work fix
             data = ds[variable_name].mean(dim=['lon', 'lat'])
+            variable_values = data.T 
         elif selected_lon == "mean":
-            data = ds[variable_name].sel(lat=selected_lat).mean(dim='lon')
-
+            if selected_lat in ds['lat'].values:
+                data = ds[variable_name].sel(lat=selected_lat).mean(dim='lon')
+                variable_values = data.T 
+            else:
+                sorted_lats = sorted(ds['lat'].values, key=lambda x: abs(x - selected_lat))
+                closest_lat1 = sorted_lats[0]
+                closest_lat2 = sorted_lats[1]
+                if avg_info_print == 0:
+                    print(f"The lat {selected_lat} isn't in the listed valid values.")
+                    print(f"Averaging from the closest valid levs: {closest_lat1} and {closest_lat2}")
+                    avg_info_print = 1
+                data1 = ds[variable_name].sel(lat=closest_lat1, method='nearest').mean(dim='lon')
+                variable_values_1 = data1.T 
+                data2 = ds[variable_name].sel(lat=closest_lat2, method='nearest').mean(dim='lon')
+                variable_values_2 = data2.T 
+                variable_values = (variable_values_1 + variable_values_2) / 2
         elif selected_lat == "mean":
-            data = ds[variable_name].sel(lon=selected_lon).mean(dim='lat')
+            if selected_lon in ds['lon'].values:
+                data = ds[variable_name].sel(lon=selected_lon).mean(dim='lat')
+                variable_values = data.T 
+            else:
+                sorted_lons = sorted(ds['lat'].values, key=lambda x: abs(x - selected_lon))
+                closest_lon1 = sorted_lons[0]
+                closest_lon2 = sorted_lons[1]
+                if avg_info_print == 0:
+                    print(f"The lon {selected_lon} isn't in the listed valid values.")
+                    print(f"Averaging from the closest valid levs: {closest_lon1} and {closest_lon2}")
+                    avg_info_print = 1
+                data1 = ds[variable_name].sel(lon=closest_lon1, method='nearest').mean(dim='lat')
+                variable_values_1 = data1.T 
+                data2 = ds[variable_name].sel(lon=closest_lon2, method='nearest').mean(dim='lat')
+                variable_values_2 = data2.T 
+                variable_values = (variable_values_1 + variable_values_2) / 2
         else:
             #data = ds[variable_name].sel(time=time, lat=selected_lat, lon=selected_lon, method="nearest")    
             data = ds[variable_name].sel(lat=selected_lat, lon=selected_lon, method='nearest')
-
-        variable_values = data.T 
+            variable_values = data.T 
         try:
             levs_ilevs = data.lev.values
         except:
@@ -662,6 +693,7 @@ def arr_lat_time(datasets, variable_name, selected_lon,selected_lev_ilev = None,
     combined_mtime = []
     lats_all = []
     avg_info_print = 0
+
     for ds, filenames in datasets:
         if first_pass == True:
             lev_ilev = check_var_dims(ds, variable_name)
@@ -674,7 +706,6 @@ def arr_lat_time(datasets, variable_name, selected_lon,selected_lev_ilev = None,
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             mtime_values = ds['mtime'].values
             filename = filenames
-
             if selected_lon == 'mean' and selected_lev_ilev == 'mean':
                 data = ds[variable_name].sel(method='nearest').mean(dim=['lev', 'lon'])
                 variable_values = data.T 
@@ -731,10 +762,8 @@ def arr_lat_time(datasets, variable_name, selected_lon,selected_lev_ilev = None,
             combined_mtime.extend(mtime_values)
             lats_all.append(lats)
         
-
         elif lev_ilev == 'ilev':
             first_pass == False
-            
             avg_info_print = 0
             if 'ilev' not in ds[variable_name].dims:
                 raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'ilev'")
@@ -828,17 +857,16 @@ def arr_lat_time(datasets, variable_name, selected_lon,selected_lev_ilev = None,
             combined_mtime.extend(mtime_values)
             lats_all.append(lats)
             
-            # Concatenate data along the time dimension
-        variable_values_all = np.concatenate(variable_values_all, axis=1)
-        if selected_unit != None:
-            variable_values_all ,variable_unit  = convert_units (variable_values_all, variable_unit, selected_unit)
-            
-        mtime_values = combined_mtime
+    # Concatenate data along the time dimension
+    variable_values_all = np.concatenate(variable_values_all, axis=1)
+    if selected_unit != None:
+        variable_values_all ,variable_unit  = convert_units (variable_values_all, variable_unit, selected_unit)
         
-        if plot_mode == True:    
-            return variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name, filename
-        else:
-            return variable_values_all
+    mtime_values = combined_mtime
+    if plot_mode == True:    
+        return variable_values_all, lats, mtime_values, selected_lon, variable_unit, variable_long_name, filename
+    else:
+        return variable_values_all
 
 
 
