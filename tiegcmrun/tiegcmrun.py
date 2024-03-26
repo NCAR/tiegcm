@@ -1142,9 +1142,14 @@ def prompt_user_for_run_options(args):
                         od[on]["default"] = find_file('*tiegcm*'+options['simulation']['job_name']+'*.nc', TIEGCMDATA)
                     elif on in ["OUTPUT", "SECOUT"]:
                         temp_output = oben[on]
-                        temp_output = temp_output.replace("+histdir+", histdir)
-                        temp_output = temp_output.replace("+run_name+", run_name)
+                        try:
+                            temp_output = temp_output.replace("+histdir+", histdir)
+                            temp_output = temp_output.replace("+run_name+", run_name)
+                        except:
+                            temp_output = temp_output
                         od[on]["default"] = temp_output
+                    elif on in ["GPI_NCFILE","IMF_NCFILE"]:
+                        od[on]["default"] = find_file(oben[on], TIEGCMDATA)
                     elif on in ["other_input"]:
                         temp_output = [item.replace("+tiegcmdata+", TIEGCMDATA) if item is not None and item != 'null' else item for item in oben[on]]
                         od[on]["default"] = temp_output
