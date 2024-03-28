@@ -221,6 +221,9 @@
 ! the MIX phihm was transformed only on root task
 #ifdef GAMERA
       call mp_bcast_real(phihm,nmlonp1*nmlat,0)
+      call addfld ('PHIHM','REMIX Electric Potential',
+     |    'V',phihm(mlon0:mlon1,mlat0:mlat1),
+     |    'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
 #endif
 !
 ! rim1 after solver is needed for highlat_poten. rim_glb is distributed 
@@ -2502,6 +2505,12 @@
         call mkdiag_ED12('ED2',ed23d(:,j,mlev0:mlev1-1),
      |    mlon0,mlon1,1,mlevtop,j)
       enddo
+      call addfld('ED12D','ED1 2D',' ',
+     |  ed1(mlon0:mlon1,mlat0:mlat1),
+     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
+      call addfld('ED22D','ED2 2D',' ',
+     |  ed1(mlon0:mlon1,mlat0:mlat1),
+     |  'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
       if (debug) write(6,"('pthreed returning')")
       end subroutine pthreed
 !-----------------------------------------------------------------------

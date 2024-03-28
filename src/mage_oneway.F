@@ -41,7 +41,7 @@
       integer :: h5fId,inId,gId
 
       integer :: nlatp2,cplStep = 1
-      logical :: do_init = .true., firstread = .false.
+      logical :: do_init = .true., firstread = .true.
       real*8, parameter :: pi = 4*atan(1.0d0)
 
 
@@ -111,7 +111,7 @@
       call StepInfo(trim(filename),s0,sE,nSteps)
       write(6,*) "TGCM: nSteps",mytid,s0,sE,nSteps
       if (.not. allocated(MJDs) ) allocate(MJDs(nSteps))
-      write(6,*) "TGCM: StepMJDs",mytid
+      write(6,*) "TGCM: StepMJDs",mytid,MJDs
       call StepMJDs(trim(filename),s0,sE,MJDs)
       write(6,*) "TGCM init done",mytid
       cStep = 1
@@ -127,10 +127,9 @@
       !    allocate(gridY(nmixlat,nmixlon))
       !end if
       !
+      call closeGroup()
       call read2DVariable("X",gridX)
       call read2DVariable("Y",gridY)
-
-
 
       !size of the Mix grid
       nji=shape(gridX)
@@ -441,7 +440,7 @@
       end if
 
       if (mytid == 0) then
-      !write(6,*) "ca_receive"
+      write(6,*) "ca_receive",firstread
 
       !inquire(file=mix2gcmLock,exist=fExist)
       !
@@ -484,13 +483,15 @@
         cStep = max(cStep-1,1)
       endif
 
-      if (oldStep .eq. cStep .and. firstread) then
-        firstread = .false.
-      else if (oldStep .ne. cStep) then
+
+      if (oldStep .ne. cStep) then
         firstread = .true.
       endif
 
+      write(*,*) "MIXREAD:",mixtime,gcmtime,cStep,oldStep,firstread
+
       if (firstread) then
+      firstread = .false.
 
       ting_pot_interp = 0.0
       ting_eng_interp = 0.0
@@ -790,7 +791,6 @@
          enddo
       enddo
 
-
       end subroutine ca_receive
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -854,6 +854,11 @@
           inId = gId
       end subroutine openGroup
 
+      subroutine closeGroup()
+          ! Reassign inId back to the root Id
+          inId = h5fId
+      end subroutine closeGroup
+
       ! Function to read 2D variable from NetCDF file
       subroutine read2DVariable(idStr, Q, gStrO)
           logical :: dsExist
@@ -873,8 +878,8 @@
           ! Use nc_inq_varid to check the existence of the variable
           !write(*,*) "2D: ",trim(idStr),inId
           dsTest = nf90_inq_varid(inId, trim(idStr), dsId)
-          !write(*,*) "2D: ",trim(idStr),inId,dsId
-          !if (dsTest == nf90_NOERR) write(*,*) "NOERR"
+          write(*,*) "2DREAD: ",trim(idStr),inId,dsId
+          if (dsTest == nf90_NOERR) write(*,*) "NOERR"
           if (dsTest == nf90_EBADID) write(*,*) "nf90_EBADID"
           if (dsTest == nf90_ENOTNC4) write(*,*) "nf90_ENOTNC4"
           if (dsTest == nf90_ESTRICTNC3) write(*,*) "nf90_ESTRICTNC3"
@@ -935,14 +940,6 @@
           ! Close the NetCDF file
           ierr = nf90_close(h5fId)
       end subroutine closeMixFile
-
-      ! Function to close NetCDF group
-      subroutine closeGroup
-          integer :: ierr
-
-          ! Close the current NetCDF group
-          ierr =  nf90_close(inId)
-      end subroutine closeGroup
 
       !subroutine readVariable(ncid,varname,varout)
       !character(len=*) :: varname
@@ -1277,11 +1274,10 @@
 
               ! Check if attribute "MJD" exists
               !ierr = nf90_inq_attid(inId, NF90_GLOBAL, "MJD", gId)
-              ierr = nf90_inq_varid(inId,"MJD",gId)
               aX = .true.
               if (aX) then
                   ! Read the "MJD" attribute
-                  ierr = nf90_get_att(inId, gId, "MJD", MJDs(n))
+                  ierr = nf90_get_att(inId, NF90_GLOBAL, "MJD", MJDs(n))
               else
                   MJDs(n) = -TINY
               endif

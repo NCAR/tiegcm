@@ -82,20 +82,20 @@
               case (voltId)
                 call init_mpi_remix(glatp2,glonp1)
               case (gamId)
-                write(*,*) "T not coupling to Gam yet"
+                !write(*,*) "T not coupling to Gam yet"
               case (rcmId)
-                write(*,*) "T not coupling to RCM yet"
+                !write(*,*) "T not coupling to RCM yet"
               case (hidraNId)
-                write(*,*) "T COUPLING TO HIDRAN"
+                !write(*,*) "T COUPLING TO HIDRAN"
                 call init_mpi_hidra(myAppId+hidraNId,hidraNCplRank)
               case (hidraSId)
-                write(*,*) "T COUPLING TO HIDRAS"
+                !write(*,*) "T COUPLING TO HIDRAS"
                 call init_mpi_hidra(myAppId+hidraSId,hidraSCplRank)
               case (hidraId)
-                write(*,*) "T COUPLING TO HIDRA"
+                !write(*,*) "T COUPLING TO HIDRA"
                 call init_mpi_hidra(myAppId+hidraId,hidraCplRank)
               case (myAppId)
-                write(*,*) "T is T"
+                !write(*,*) "T is T"
               case default
                 write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
@@ -282,7 +282,7 @@
         use mpi_module,only: CplCommSize,CplRank,IAm,
      |  voltId,gamId,rcmId,hidraNId,hidraSId,hidraId,
      |  hidraNCplRank,hidraSCplRank,hidraCplRank,
-     |  myAppId
+     |  myAppId,mytid
 
       integer,dimension(4),intent(in) :: modeltime
       logical :: hidra_prep
@@ -295,7 +295,7 @@
       ! Prepare the export data
       hidra_prep = .false.
       nreq = 0
-      write(*,*) "T Starting Export Prep"
+      if (mytid == 0) write(*,*) "T Starting Export Prep"
       do i=1,CplCommSize
             ! Skip Self
             if (i == CplRank+1) continue
@@ -305,19 +305,19 @@
                 call prep_export_remix(modeltime,mixout)
                 nreq = nreq + 1
               case (gamId)
-                write(*,*) "T not coupling to Gam yet"
+                !write(*,*) "T not coupling to Gam yet"
               case (rcmId)
-                write(*,*) "T not coupling to RCM yet"
+                !write(*,*) "T not coupling to RCM yet"
               case (hidraNId)
                 if (.not.hidra_prep) then
-                  write(*,*) "Prep H Export"
+                  !write(*,*) "Prep H Export"
                   call prep_export_hidra(modeltime,hidraout)
                   hidra_prep = .true.
                 endif
                 nreq = nreq + 1
               case (hidraSId)
                 if (.not.hidra_prep) then
-                  write(*,*) "Prep H Export"
+                  !write(*,*) "Prep H Export"
                   call prep_export_hidra(modeltime,hidraout)
                   hidra_prep = .true.
                 endif
@@ -329,7 +329,7 @@
                 endif
                 nreq = nreq + 1
               case (myAppId)
-                write(*,*) "T is T"
+                !write(*,*) "T is T"
               case default
                 write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
@@ -348,19 +348,19 @@
           case (voltId)
             call export_remix(mixout)
           case (gamId)
-            write(*,*) "T not coupling to Gam yet"
+            !write(*,*) "T not coupling to Gam yet"
           case (rcmId)
-            write(*,*) "T not coupling to RCM yet"
+            !write(*,*) "T not coupling to RCM yet"
           case (hidraNId)
-            write(*,*) "Export to HidraN"
+            !write(*,*) "Export to HidraN"
             call export_hidra(hidraout,myAppId+hidraNId,hidraNCplRank)
           case (hidraSId)
-            write(*,*) "Export to HidraS"
+            !write(*,*) "Export to HidraS"
             call export_hidra(hidraout,myAppId+hidraSId,hidraSCplRank)
           case (hidraId)
             call export_hidra(hidraout,myAppId+hidraId,hidraCplRank)
           case (myAppId)
-            write(*,*) "T is T"
+            !write(*,*) "T is T"
           case default
                 write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
@@ -376,9 +376,9 @@
               case (voltId)
                 if (allocated(mixout)) deallocate(mixout)
               case (gamId)
-                write(*,*) "T not coupling to Gam yet"
+                !write(*,*) "T not coupling to Gam yet"
               case (rcmId)
-                write(*,*) "T not coupling to RCM yet"
+                !write(*,*) "T not coupling to RCM yet"
               case (hidraNId)
                 if (allocated(hidraout)) deallocate(hidraout)
               case (hidraSId)
@@ -386,7 +386,7 @@
               case (hidraId)
                 if (allocated(hidraout)) deallocate(hidraout)
               case (myAppId)
-                write(*,*) "T is T"
+                !write(*,*) "T is T"
               case default
                 write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
@@ -423,7 +423,7 @@
       ilist = (/i_tn, i_un, i_vn, i_he, i_o2, i_o1, i_no, i_w, i_z /)
 
 ! Prepare data for export
-      write(*,*) "PREP HIDRA EXPORT STUFF: ",mytid
+      !write(*,*) "PREP HIDRA EXPORT STUFF: ",mytid
       if (.not. allocated(f3d_sub))
      |  allocate(f3d_sub(nlevp1,lon0:lon1,lat0:lat1,nhoutvar))
       if (.not. allocated(f3d_glb))
@@ -550,7 +550,7 @@
         var2d(1,:,2) = sum(gzigm2_glb(3:nlonp2,1))/nlon
         var2d(nlatp2,:,2) = sum(gzigm2_glb(3:nlonp2,nlat))/nlon
 
-        write(6,"('Sending at: ',4i4)") modeltime
+        write(6,"('TGCM: Sending at: ',4i4)") modeltime
 
       endif
 
@@ -641,7 +641,7 @@
         real,dimension(:,:,:) :: var2d
 
         if (CplComm /= MPI_COMM_NULL) then
-          write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100
+          !write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100
             call mpi_recv(var2d, nlatp2*nlonp1*nmixinvar,
      |        MPI_DOUBLE_PRECISION, mixCplRank,
      |        (myAppId+voltId)*100, CplComm,
