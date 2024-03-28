@@ -810,8 +810,8 @@
       do i=lon0,lon1
         do isp=io2,ihe
           upd(lev1,i,isp) =
-     |      (1.+.5*ep(i,io2,kp)*dz)/
-     |      (1.-.5*ep(i,io2,kp)*dz)*upd(lev1-1,i,isp)
+     |      (1.+.5*ep(i,isp,kp)*dz)/
+     |      (1.-.5*ep(i,isp,kp)*dz)*upd(lev1-1,i,isp)
         enddo
         upd(lev1,i,io1) = upd(lev1,i,io1)+
      |    (alpha23(i)-alpha22(i))*flx_he(i,lat)/
