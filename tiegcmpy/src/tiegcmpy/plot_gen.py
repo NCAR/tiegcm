@@ -592,9 +592,8 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
             mtime_total_minutes = t_mtime[0] * 24 * 60 *60 + t_mtime[1] * 60 *60+ t_mtime[2] *60+ t_mtime[3]
             mtime_min_total = mtime_minimum[0] * 24 * 60*60 + mtime_minimum[1] * 60 *60+ mtime_minimum[2]*60 + mtime_minimum[3]
             mtime_max_total = mtime_maximum[0] * 24 * 60*60 + mtime_maximum[1] * 60 *60+ mtime_maximum[2]*60 + mtime_minimum[3]
-        
-            if all(mtime_minimum[i] <= t <= mtime_maximum[i] for i, t in enumerate(t_mtime[:4])):
-                new_mtime_values.append(t_mtime)
+            if mtime_total_minutes >= mtime_min_total and mtime_total_minutes <= mtime_max_total:                
+                new_mtime_values.append(t_mtime)  
             else:
                 if mtime_total_minutes < mtime_min_total:
                     num_deleted_before += 1
@@ -715,9 +714,8 @@ def plt_lat_time(datasets, variable_name, level = None, longitude = None, localt
             mtime_total_minutes = t_mtime[0] * 24 * 60 *60 + t_mtime[1] * 60 *60+ t_mtime[2] *60+ t_mtime[3]
             mtime_min_total = mtime_minimum[0] * 24 * 60*60 + mtime_minimum[1] * 60 *60+ mtime_minimum[2]*60 + mtime_minimum[3]
             mtime_max_total = mtime_maximum[0] * 24 * 60*60 + mtime_maximum[1] * 60 *60+ mtime_maximum[2]*60 + mtime_minimum[3]
-        
-            if all(mtime_minimum[i] <= t <= mtime_maximum[i] for i, t in enumerate(t_mtime[:4])):
-                new_mtime_values.append(t_mtime)
+            if mtime_total_minutes >= mtime_min_total and mtime_total_minutes <= mtime_max_total:
+                new_mtime_values.append(t_mtime)   
             else:
                 if mtime_total_minutes < mtime_min_total:
                     num_deleted_before += 1
