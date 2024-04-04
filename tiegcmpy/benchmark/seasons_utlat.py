@@ -11,7 +11,7 @@ dataset_filter = "sech"
 
 for bench_name in bench_names:
     dirs.append(dir+'/'+bench_name+'/hist')
-    outs.append(dir+'/'+bench_name+'/hist'+'/'+bench_name+'_singleut.pdf')
+    outs.append(dir+'/'+bench_name+'/hist'+'/'+bench_name+'_utlat.pdf')
 
 
 fullTime= time.time()
