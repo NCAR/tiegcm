@@ -21,7 +21,7 @@
 ! NO~He coefficient (0.662) is from Langenberg et al. (2020)
 ! Technical note: Determination of binary gas phase diffusion
 ! coefficients of unstable and adsorbing atmospheric trace gases at
-! low temperature – Arrested Flow and Twin Tube method
+! low temperature - Arrested Flow and Twin Tube method
       real :: phi_no(4) = (/0.814, 0.866, 0.662, 0.926/)
       real,parameter :: alfa_no = 0. ! thermal diffusion coefficient
 !

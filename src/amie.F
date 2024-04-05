@@ -13,13 +13,10 @@
 !
 ! Define parameters for AMIE input data file:
       integer,parameter :: 
-     |  mxgdays = 10,     ! maximum number of days of AMIE data
-     |  mxtimes = 5881,   ! maximum number of times of AMIE data per day
-     |  ithtrns = 30,     ! corresponding to trans lat 40-deg
-     |  ithmx = 55,       ! maximum number of latitudes of AMIE data
-     |  jmxm = 2*ithmx-1, ! maximum number of global latitudes
-     |  lonmx = 36        ! maximum number of longitudes of AMIE data
-      integer :: lonp1,latp1
+     |  mxtimes = 5881   ! maximum number of times of AMIE data per day
+      integer :: lonp1,latp1,
+     |  ithmx, ! number of latitudes of AMIE data if extended to equator
+     |  jmxm   ! number of global latitudes (=2*ithmx-1)
       integer,dimension(mxtimes) :: year,month,day,jday
 ! Define AMIE output fields
       real :: 
@@ -88,9 +85,11 @@
       character(len=80) :: dskfile
       integer :: istat,ntimes,ncid,ndims,nvars,ngatts,idunlim,ier
       integer :: id_lon,id_lat,id_time,
-     |    idv_year,idv_mon,idv_day,idv_jday,idv_ut,
+     |    idv_lat,idv_year,idv_mon,idv_day,idv_jday,idv_ut,
      |    idv_pot,idv_ekv,idv_efx,
      |    idv_cusplat,idv_cuspmlt,idv_hpi,idv_pcp
+      real :: dlat
+      real,dimension(:),allocatable :: amielat
 !
 ! Acquire mss file:
       dskfile = ' '
@@ -120,6 +119,15 @@
       if (istat /= NF_NOERR) call rpt_ncerr(istat,
      |  'rdamie_nh: Error getting AMIE latitude dimension')
       write(6,"('lonp1=',i3,' latp1=',i3)") lonp1,latp1
+!
+! Get AMIE latitude and set module grid size
+      allocate(amielat(latp1))
+      istat = nf_inq_varid(ncid,'lat',idv_lat)
+      istat = nf_get_var_double(ncid,idv_lat,amielat)
+      dlat = (amielat(1)-amielat(latp1))/(latp1-1)
+      ithmx = int(90/dlat)+1
+      jmxm = 2*ithmx-1
+      deallocate(amielat)
 !
 ! Get time dimension:
       istat = nf_inq_unlimdim(ncid,id_time)
@@ -277,9 +285,11 @@
       character(len=80) :: dskfile
       integer :: istat,ntimes,ncid,ndims,nvars,ngatts,idunlim,ier
       integer :: id_lon,id_lat,id_time,
-     |    idv_year,idv_mon,idv_day,idv_jday,idv_ut,
+     |    idv_lat,idv_year,idv_mon,idv_day,idv_jday,idv_ut,
      |    idv_pot,idv_ekv,idv_efx,
      |    idv_cusplat,idv_cuspmlt,idv_hpi,idv_pcp
+      real :: dlat
+      real,dimension(:),allocatable :: amielat
 !
 ! Acquire mss file:
       dskfile = ' '
@@ -305,6 +315,15 @@
       istat = nf_inq_dimlen(ncid,id_lat,latp1)
       if (istat /= NF_NOERR) call rpt_ncerr(istat,
      |  'rdamie_sh: Error getting AMIE latitude dimension')
+!
+! Get AMIE latitude and set module grid size
+      allocate(amielat(latp1))
+      istat = nf_inq_varid(ncid,'lat',idv_lat)
+      istat = nf_get_var_double(ncid,idv_lat,amielat)
+      dlat = (amielat(1)-amielat(latp1))/(latp1-1)
+      ithmx = int(90/dlat)+1
+      jmxm = 2*ithmx-1
+      deallocate(amielat)
 !
 ! Get time dimension:
       istat = nf_inq_unlimdim(ncid,id_time)
@@ -934,7 +953,7 @@
       rot = sunlons(1)*rtd
       if (rot < 0.) rot = rot+360.     ! 0 to 360 degrees
       rot = rot/15.                    ! convert from degree to hrs
-      dmltm = 24./float(lonmx)
+      dmltm = 24./float(lonp1-1)
       do i=1,lonp1
         xmlt = (i-1)*dmltm - rot + 24.
         xmlt = AMOD(xmlt,24.)
@@ -975,8 +994,8 @@ C  DMLAT=lat spacing in degrees of AMIE apex grid
       dtr = pi/180.
       DMLAT = 180. / FLOAT(jmxm-1)
       DLATM = DMLAT*dtr
-      DLONM = 2.*PI/FLOAT(lonmx)
-      DMLTM = 24./FLOAT(lonmx)
+      DLONM = 2.*PI/FLOAT(lonp1-1)
+      DMLTM = 24./FLOAT(lonp1-1)
 C     ****
 C     ****     SET ARRAY YLATM (LATITUDE VALUES FOR GEOMAGNETIC GRID
 C     ****
