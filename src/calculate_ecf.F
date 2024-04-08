@@ -1,5 +1,5 @@
       subroutine calculate_ecf(mag_factor,eclipse_factor,
-     |  lon0,lon1,lev0,lev1,lat)
+     |  lev0,lev1,lon0,lon1,lat)
 ! calculate the rest EUV flux during eclipse period, Dang 2017/08
 
       use params_module,only: nlon,glat,glon
@@ -11,7 +11,7 @@
 
       implicit none
 
-      integer,intent(in) :: lon0,lon1,lev0,lev1,lat
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,dimension(lev0:lev1,lon0:lon1),intent(out) ::
      |  mag_factor,eclipse_factor
 
