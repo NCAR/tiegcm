@@ -1,8 +1,8 @@
       subroutine calculate_ecf(mag_factor,eclipse_factor,
      |  lon0,lon1,lev0,lev1,lat)
-! calculate the rest EUV flux during eclipse period, Dang 2017
+! calculate the rest EUV flux during eclipse period, Dang 2017/08
 
-      use params_module,only: nlon,nlonp4,glat,glon
+      use params_module,only: nlon,glat,glon
       use cons_module,only: re,pi
       use hist_module,only: modeltime
       use chapman_module,only: chi
@@ -25,17 +25,13 @@
       sza = pi-asin(rekm/(rekm+height))
 
       call to_month_day(iyear,iday,month,day)
-      ut = modeltime(2)+modeltime(3)/60+modeltime(4)/3600
+      ut = modeltime(2)+modeltime(3)/60.0+modeltime(4)/3600.0
 
       latitude = glat(lat)
       do i = lon0,lon1
-        if (i==1 .or. i==2) then
-          ishift = i-2+nlon
-        elseif (i==nlonp4-1 .or. i==nlonp4) then
-          ishift = i-2-nlon
-        else
-          ishift = i-2
-        endif
+        ishift = i-2
+        if (ishift <= 0) ishift = ishift+nlon
+        if (ishift >= nlon+1) ishift = ishift-nlon
         longitude = glon(ishift)
         slt = modulo(ut+longitude/15, 24.0)
         if (chi(i,lat) <= sza) then

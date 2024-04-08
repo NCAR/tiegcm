@@ -166,7 +166,7 @@
         call addfld('eclipse_factor',' ',' ',eclipse_factor,
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
        endif
-
+!
 !  calculate inverse of wave length
 !
       do i=1,lmax

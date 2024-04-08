@@ -257,7 +257,7 @@ module eclipse_module
     observer_constants(2) = height*1e3
     observer_constants(3) = 0
 
-    latr = observer_constants(0)*dtr
+    latr = latitude*dtr
     reduced_lat = atan(aspect_ratio*tan(latr))
     observer_constants(4) = aspect_ratio*sin(reduced_lat) + observer_constants(2)/re*sin(latr)
     observer_constants(5) =              cos(reduced_lat) + observer_constants(2)/re*cos(latr)
@@ -424,7 +424,7 @@ module eclipse_module
 
 ! Entry conditions -
 !   1. The mid array must be populated
-!   2. There mut be either a total or annular eclipse at the location!
+!   2. There must be either a total or annular eclipse at the location!
 
     real :: tmp,n
   
