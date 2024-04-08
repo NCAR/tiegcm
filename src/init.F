@@ -69,7 +69,7 @@
      |  gswm_mi_di_ncfile,ctmt_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,mkhvols,
-     |  see_ncfile,bgrddata_ncfile,calc_helium,saps
+     |  see_ncfile,bgrddata_ncfile,calc_helium,saps,subaur_data
       use hist_module,only: hist_init,isechist,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
      |  nfiles_sech,nfsech
@@ -213,7 +213,7 @@
       endif
 !
 ! Initialize SAPS, read in data
-      if (saps) call init_saps
+      if (saps) call init_saps(subaur_data)
 !
 ! Init starting model time:
       start_mtime = pristart(:,1)

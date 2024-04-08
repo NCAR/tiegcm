@@ -569,7 +569,7 @@
         do i=lon0,lon1
 ! TODO: Need some explanation of these numbers
           if (smlat(i)>0. .and. smlat(i)<10.) then
-            call subaur_drift(smlat(i),smlt(i),skp,vns,ves,vvs)
+            call subaur_drift(smlt(i),smlat(i),skp,vns,ves,vvs)
             if (ihem == 1) then ! southern hemisphere, ihem=1
               sui(i) = -ves*csdec(i,lat) - vns*sndec(i,lat)
               svi(i) = ves*sndec(i,lat) - vns*csdec(i,lat)

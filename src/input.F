@@ -134,9 +134,7 @@
      |  amienh_ncfile,      ! AMIE NH
      |  amiesh_ncfile,      ! AMIE SH
      |  he_coefs_ncfile,    ! coefficients of Helium flux at upper boundary
-     |  vedata,             ! SAPS ve data file
-     |  vndata,             ! SAPS vn data file
-     |  vvdata,             ! SAPS vv data file
+     |  subaur_data,        ! SAPS data file
      |  eclipse_list,       ! Eclipse list data file
      |  mixfile             ! filename for oneway driving
 
@@ -196,7 +194,7 @@
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
      |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,electron_heating,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,et,saps,
-     |  vedata,vndata,vvdata,doEclipse,eclipse_list,oneway,mixfile,
+     |  subaur_data,doEclipse,eclipse_list,oneway,mixfile,
      |  nudge_ncpre,nudge_ncfile,nudge_ncpost,nudge_flds,
      |  nudge_lbc,nudge_f4d,nudge_use_refdate,nudge_refdate,
      |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha
@@ -281,9 +279,7 @@
       amienh_ncfile = ' '     ! AMIE NH data file
       amiesh_ncfile = ' '     ! AMIE NH data file
       he_coefs_ncfile = ' '   ! Helium coefficients
-      vedata = ' '
-      vndata = ' '
-      vvdata = ' '
+      subaur_data = ' '
       eclipse_list = ' '
       mixfile = 'msphere.mix.h5'
 !
@@ -654,12 +650,9 @@
       call expand_path(he_coefs_ncfile)
 !
 ! SAPS data files:
-      if (len_trim(vedata) == 0) vedata = '$TGCMDATA/ve.dat'
-      call expand_path(vedata)
-      if (len_trim(vndata) == 0) vndata = '$TGCMDATA/vn.dat'
-      call expand_path(vndata)
-      if (len_trim(vvdata) == 0) vvdata = '$TGCMDATA/vv.dat'
-      call expand_path(vvdata)
+      if (len_trim(subaur_data) == 0)
+     |  subaur_data = '$TGCMDATA/subaur_data.nc'
+      call expand_path(subaur_data)
 !
 ! Eclipse list data file:
       if (len_trim(eclipse_list) == 0)
@@ -2246,14 +2239,13 @@
         endif
       endif
 !
-! KP/GPI_NCFILE and VEDATA/VNDATA/VVDATA must set if SAPS is turned on
+! KP/GPI_NCFILE and SUBAUR_DATA must set if SAPS is turned on
       if (saps) then
         if (kp==spval .and. all(kp_time==spval) .and.
      |    len_trim(gpi_ncfile)==0)
      |    call shutdown('KP/GPI_NCFILE must set if SAPS is TRUE')
-        if (len_trim(vedata)==0 .or. len_trim(vndata)==0 .or.
-     |    len_trim(vvdata)==0)
-     |    call shutdown('VEDATA/VNDATA/VVDATA must set if SAPS is TRUE')
+        if (len_trim(subaur_data) == 0)
+     |    call shutdown('SUBAUR_DATA must set if SAPS is TRUE')
       endif
 !
 ! Report to stdout for debug: 

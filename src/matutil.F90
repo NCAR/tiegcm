@@ -127,4 +127,4 @@ module matutil_module
 
   end function matinv4
 !-------------------------------------------------------------------
-endmodule matutil_module
+end module matutil_module

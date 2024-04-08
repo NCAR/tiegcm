@@ -689,6 +689,6 @@ module eclipse_module
     write(6, "('NetCDF error encountered: ', a, ', when calling ', a)") &
       trim(nf90_strerror(ncerr)), funcname
 
-  endsubroutine handle_error
+  end subroutine handle_error
 !-----------------------------------------------------------------------
 end module eclipse_module
