@@ -1,6 +1,6 @@
 ! 
       subroutine settei(tn,o2,o1,he,n2,ne,te,ti,op,o2p,nplus,n2p,nop,
-     |  xnmbar,xnmbari,scht,schti,qji_ti,Qa,Q2,te_out,ti_out,
+     |  xnmbar,xnmbari,scht,schti,qji_ti,Q1,Q2,te_out,ti_out,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -16,6 +16,8 @@
       use input_module,only: f107,et,electron_heating
       use chapman_module,only: chi   ! solar zenith angle (nlonp4,nlat)
       use magfield_module,only: rlatm,dipmag
+      use fields_module,only: tlbc
+      use lbc,only: fb,b
       use aurora_module,only: qteaur ! (nlonp4,nlat)
       use qrj_module,only: ! Q is modified, all others are input.
      |  qtotal,! total heating 
@@ -50,7 +52,8 @@
      |  scht,    ! scale height (midpoints)
      |  schti,   ! scale height (interfaces)
      |  qji_ti,  ! joule heating from qjoule_ti (used ui,vi)
-     |  Qa,Q2    ! electrojet turbulent heating
+     |  Q1,      ! electron ohmic heating
+     |  Q2       ! electrojet turbulent heating
 !
 ! Output args:
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) ::
@@ -216,25 +219,33 @@
         enddo ! k=lev0+1,lev1-2
 !
 ! Bottom:
-        te_int(lev0,i) = 1.5*te(lev0,i)-.5*te(lev0+1,i)
-        o2n(lev0,i)    = 1.5*o2(lev0,i)-.5*o2(lev0+1,i)
-        o1n(lev0,i)    = 1.5*o1(lev0,i)-.5*o1(lev0+1,i)
-        hen(lev0,i)    = 1.5*he(lev0,i)-.5*he(lev0+1,i)
-        n2n(lev0,i)    = 1.5*n2(lev0,i)-.5*n2(lev0+1,i)
-        tn_int(lev0,i) = 1.5*tn(lev0,i)-.5*tn(lev0+1,i)
+! 2023/02 Dong Lin: added minimum cap for te (Te>=Tn)
+! 2024/04 Haonan Wu: changed the lower boundary calculation of major species
+        te_int(lev0,i) =
+     |    max(1.5*te(lev0,i)-.5*te(lev0+1,i),tlbc(i,lat))
+        o2n(lev0,i)    = .5*(fb(1)+
+     |    (b(1,1)+1.)*o2(lev0,i)+
+     |     b(1,2)    *o1(lev0,i)+
+     |     b(1,3)    *he(lev0,i))
+        o1n(lev0,i)    = .5*(fb(2)+
+     |     b(2,1)    *o2(lev0,i)+
+     |    (b(2,2)+1.)*o1(lev0,i)+
+     |     b(2,3)    *he(lev0,i))
+        hen(lev0,i)    = .5*(fb(3)+
+     |     b(3,1)    *o2(lev0,i)+
+     |     b(3,2)    *o1(lev0,i)+
+     |    (b(3,3)+1.)*he(lev0,i))
+        n2n(lev0,i)    =
+     |    max(1.-o2n(lev0,i)-o1n(lev0,i)-hen(lev0,i),0.)
+        tn_int(lev0,i) = tlbc(i,lat)
 !
 ! Top:
         te_int(lev1,i) = 1.5*te(lev1-1,i)-.5*te(lev1-2,i)
-        o2n(lev1,i)    = 1.5*o2(lev1-1,i)-.5*o2(lev1-2,i)
-        o1n(lev1,i)    = 1.5*o1(lev1-1,i)-.5*o1(lev1-2,i)
-        hen(lev1,i)    = 1.5*he(lev1-1,i)-.5*he(lev1-2,i)
-        n2n(lev1,i)    = 1.5*n2(lev1-1,i)-.5*n2(lev1-2,i)
+        o2n(lev1,i)    = .5*(o2(lev1,i)+o2(lev1-1,i))
+        o1n(lev1,i)    = .5*(o1(lev1,i)+o1(lev1-1,i))
+        hen(lev1,i)    = .5*(he(lev1,i)+he(lev1-1,i))
+        n2n(lev1,i)    = .5*(n2(lev1,i)+n2(lev1-1,i))
         tn_int(lev1,i) = 1.5*tn(lev1-1,i)-.5*tn(lev1-2,i)
-!
-! N2:
-        do k=lev0,lev1
-          if (n2n(k,i) < 0.) n2n(k,i) = 0.
-        enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
 !     call addfld('TE_INT'  ,' ',' ',te_int,
@@ -261,10 +272,10 @@
 !
           tek0(k,i) = 7.5e5/
      |      (1.+3.22e4*te_int(k,i)**2/ne(k,i)*
-     |      ((2.20e-16+7.92e-18*sqrt(te_int(k,i)))*o2n(k,i)+
-     |        1.10e-16*(1.+5.7e-4*te_int(k,i))*o1n(k,i)+
-     |        5.60e-16*hen(k,i)+
-     |       (2.82e-17*sqrt(te_int(k,i))-3.41e-21*sqrt(te_int(k,i)**3))*
+     |      ((2.20e-16 + 7.92e-18   * root_te(k,i))*o2n(k,i)+
+     |        1.10e-16 * (1.+5.7e-4 * te_int (k,i))*o1n(k,i)+
+     |        5.60e-16 * hen(k,i)+
+     |       (2.82e-17 - 3.41e-21   * te_int (k,i))*root_te(k,i)*
      |        n2n(k,i)))*evergs
 !
         enddo ! k=lev0,lev1
@@ -425,7 +436,7 @@
           rhs(k,i) = rhs(k,i)-qe(k,i)*qtot(k,i)*evergs
 !
 ! Subtract electrojet turbulent heating from rhs
-          if (et) rhs(k,i) = rhs(k,i)-Qa(k,i)*10.0
+          if (et) rhs(k,i) = rhs(k,i)-(Q1(k,i)+Q2(k,i))*10.0
 !
           root_te(k,i) = sqrt(te(k,i))
 !
@@ -659,6 +670,12 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
           if (te_out(k,i) < tn(k,i)) te_out(k,i) = tn(k,i)
+!
+! 2023/02 Dong Lin: N2 cross section becomes negative
+! when te>2.82e-17/3.41e-21=8269.7K. With ET enabled,
+! Te can go very high in the E region causing problems.
+! The following Te cap can help prevent from such problem
+!         if (te_out(k,i) > 6000.0) te_out(k,i) = 6000.0
         enddo
       enddo
 !

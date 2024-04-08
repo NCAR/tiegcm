@@ -114,7 +114,7 @@
      |  cool_implicit      ,cool_explicit      ,
      |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1     ,hdhe     ,
      |  ped      ,hall     ,lam1     ,zg       ,n2       ,wn       ,
-     |  Fe       ,Fn       ,Etot     ,Qa       ,Q2
+     |  Fe       ,Fn       ,Etot     ,Q1       ,Q2
 !
 ! 2-d field type (used for 2d secondary history fields):
       type fields_2d
@@ -915,16 +915,15 @@
       f3d(n)%data => Etot
       i_Etot = n ; n = n+1
 !
-      allocate(Qa(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('Electrojet Turbulent Heating')")
-      f3d(n)%short_name = "Qa"
+      allocate(Q1(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Electron Ohmic Heating')")
+      f3d(n)%short_name = "Q1"
       f3d(n)%units = "m/s"
-      f3d(n)%data => Qa
+      f3d(n)%data => Q1
       i_Qa = n ; n = n+1
 !
       allocate(Q2(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,
-     |  "('Parameter for Electrojet Turbulent Heating')")
+      write(f3d(n)%long_name,"('Electrojet Turbulent Heating')")
       f3d(n)%short_name = "Q2"
       f3d(n)%units = "m/s"
       f3d(n)%data => Q2

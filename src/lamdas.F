@@ -1,6 +1,6 @@
 !
       subroutine lamdas(tn,xnmbar,o2,o1,he,n2,ti,te,o2p,op,nplus,
-     |  n2p,nop,Etot,lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Qa,Q2,
+     |  n2p,nop,Etot,lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Q1,Q2,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -52,7 +52,8 @@
      |  lamda1,  ! lamda_1 (sigma_p * B^2) / rho [1/s] magnetic eastward direction
      |  ped_out, ! pedersen conductivity (siemens/m) (will be input to dynamo)
      |  hall_out,! hall conductivity (siemens/m) (will be input to dynamo)
-     |  Qa,Q2    ! electrojet turbulent heating
+     |  Q1,      ! electron ohmic heating
+     |  Q2       ! electrojet turbulent heating
 !
 ! Local:
       integer :: k,i,lonbeg,lonend,i0,i1
@@ -124,8 +125,7 @@
      |  rnu_ne,     ! electron~neutral
      |  Ki,         ! ratio between ion gyro frequency and ion-neutral collision frequency
      |  Mi,         ! mean ion molecular mass
-     |  E1,
-     |  Q1          ! regular electron ohmic heating
+     |  E1
 !
 ! Save input args to secondary history:
 !     real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
@@ -511,39 +511,32 @@
 ! Calculate electrojet turbulent heating, added by Jing Liu
 ! ne: 1/cm^3*1E6 -> 1/m^3
 ! bmod2: G*1E-4 -> T
-! Qa,Q1,Q2: J*1E-7 -> erg
+! Q1,Q2: J*1E-7 -> erg
       E1 = (1.0+rnu_ne/Ki)*sqrt(Kb*(1.0+Ki**2)/(1.0-Ki**2)*
      |  (te(:,lon0:lon1)+ti(:,lon0:lon1))/(Mi*Mp))
       do i = lon0,lon1
         E1(:,i) = E1(:,i)*bmod2(i,lat)*1E-4
       enddo
 
-      Q1 = Me*rnu_ne*ne*1E6*Etot(:,lon0:lon1)**2
-      Q2(:,lon0:lon1) = Mi*Mp*1E6*
-     |  Ki**2*(Etot(:,lon0:lon1)-E1)**2/(1.0+Ki**2)*
-     |  (Etot(:,lon0:lon1)/E1*(1.0+rnu_ne/Ki)-1.0)
+      Q1 = 0.0
+      Q2 = 0.0
       do i = lon0,lon1
-        Q1(:,i) = Q1(:,i)/(omega_e_inv(i)*(bmod2(i,lat)*1E-4)**2)
-        Q2(:,i) = Q2(:,i)/(bmod2(i,lat)*1E-4)**2*
-     |    (op(:,i)*rnu_op(:,i)/omega_op_inv(i)+
-     |    o2p(:,i)*rnu_o2p(:,i)/omega_o2p_inv(i)+
-     |    nplus(:,i)*rnu_np(:,i)/omega_np_inv(i)+
-     |    n2p(:,i)*rnu_n2p(:,i)/omega_n2p_inv(i)+
-     |    nop(:,i)*rnu_nop(:,i)/omega_nop_inv(i))
-      enddo
-      Qa(:,lon0:lon1) = Q1+Q2(:,lon0:lon1)
-
-      do i = lon0,lon1
-        if (abs(rlatm(i,lat))*rtd < 50.0) then
-          Q1(:,i) = 0.0
-          Q2(:,i) = 0.0
-          Qa(:,i) = 0.0
-        else
-          where (Ki(:,i)>1.0 .or. Etot(:,i)<=E1(:,i))
-            Q1(:,i) = 0.0
-            Q2(:,i) = 0.0
-            Qa(:,i) = 0.0
-          endwhere
+        if (abs(rlatm(i,lat))*rtd > 50.0) then
+          do k = lev0,lev1
+            if (Ki(k,i)<1.0 .and. Etot(k,i)>E1(k,i)) then
+              Q1(k,i) = Me*ne(k,i)*1E6*Etot(k,i)**2/
+     |          (bmod2(i,lat)*1E-4)**2*rnu_ne(k,i)/omega_e_inv(i)
+              Q2(k,i) = Mi(k,i)*Mp*1E6*
+     |          Ki(k,i)**2*(Etot(k,i)-E1(k,i))**2/(1.0+Ki(k,i)**2)*
+     |          (Etot(k,i)/E1(k,i)*(1.0+rnu_ne(k,i)/Ki(k,i))-1.0)/
+     |          (bmod2(i,lat)*1E-4)**2*
+     |          (op(k,i)*rnu_op(k,i)/omega_op_inv(i)+
+     |          o2p(k,i)*rnu_o2p(k,i)/omega_o2p_inv(i)+
+     |          nplus(k,i)*rnu_np(k,i)/omega_np_inv(i)+
+     |          n2p(k,i)*rnu_n2p(k,i)/omega_n2p_inv(i)+
+     |          nop(k,i)*rnu_nop(k,i)/omega_nop_inv(i))
+            endif
+          enddo
         endif
       enddo
 

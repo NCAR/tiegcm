@@ -460,7 +460,7 @@
      |    lam1(levd0,lond0,lat), ! LAM1 output
      |    ped (levd0,lond0,lat), ! pedersen conductivity output
      |    hall(levd0,lond0,lat), ! hall conductivity output
-     |    Qa  (levd0,lond0,lat), ! electrojet turbulent heating output
+     |    Q1  (levd0,lond0,lat), ! electron ohmic heating output
      |    Q2  (levd0,lond0,lat), ! electrojet turbulent heating output
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after lamdas: lat=',i3)") lat
@@ -748,7 +748,7 @@
      |    scht(levd0,lond0,lat,itp),
      |    schti(levd0,lond0,lat,itp),
      |    qji_ti(levd0,lond0,lat),
-     |    Qa  (levd0,lond0,lat),
+     |    Q1  (levd0,lond0,lat),
      |    Q2  (levd0,lond0,lat),
      |    te  (levd0,lond0,lat,itc), ! output
      |    ti  (levd0,lond0,lat,itc), ! output
