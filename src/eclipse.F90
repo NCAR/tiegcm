@@ -179,7 +179,7 @@ module eclipse_module
 
 ! Calculate the actual ratio of the obscured diameter of the solar photosphere
       R = 0.5
-      M = floor(100000*mid(37)+0.5)/100000
+      M = floor(100000.*mid(37)+0.5)/100000.
       D = sqrt(4*M*R-M**2)
       if (ut <= tm) then 
         d1 = (tm-ut)/(tm-t1)*D
@@ -208,11 +208,11 @@ module eclipse_module
       Sc0 = PI*(Rc**2-Rp**2)
 
       dl = 2-mag*2
-      if (dl < Rc-Rp) then 
+      if (dl <= Rc-Rp) then
         A1 = 0
-        E = 2*Rp**2*acos(dl/2/Rp) - dl*sqrt(Rp**2 - dl**2/4)
+        E = 2*Rp**2*acos(dl/2/Rp) - dl*sqrt(Rp**2 - (dl**2.)/4.)
       elseif (dl < 2*Rp) then
-        E = 2*Rp**2*acos(dl/2/Rp) - dl*sqrt(Rp**2 - dl**2/4)
+        E = 2*Rp**2*acos(dl/2/Rp) - dl*sqrt(Rp**2 - (dl**2.)/4.)
         Xd = (Rc**2 - Rp**2 + dl**2)/2/dl
         A2 = Rc**2*acos(Xd/Rc) - Xd*sqrt(Rc**2 - Xd**2)
         A3 = Rp**2*acos((dl-Xd)/Rp) - (dl-Xd)*sqrt(Rp**2-(dl-Xd)**2)
@@ -342,10 +342,12 @@ module eclipse_module
 ! We are looking at an "external" contact UNLESS this is a total eclipse AND we are looking at
 ! c2 or c3, in which case it is an INTERNAL contact! Note that if we are looking at mid eclipse,
 ! then we may not have determined the type of eclipse (mid[39]) just yet!
-    if (mid(39)==3 .and. abs(typepe)==1) then
-      contacttype = -1
+    if (typepe == 0) then
+      contacttype = 1.0
+    else if (mid(39)==3 .and. abs(typepe)==1) then
+      contacttype = -1.
     else
-      contacttype = 1
+      contacttype = 1.
     endif
 
 ! Calculate p
