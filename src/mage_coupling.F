@@ -51,7 +51,8 @@
       use cons_module,only: dtr
       use mpi_module,only: CplCommSize,CplRank,IAm,myAppId,
      |  voltId,gamId,rcmId,hidraNId,hidraSId,hidraId,
-     |  hidraNCplRank,hidraSCplRank,hidraCplRank
+     |  hidraNCplRank,hidraSCplRank,hidraCplRank,
+     |  mytid
 
       integer :: ierr,i
       real,dimension(nlatp2) :: glatp2
@@ -97,7 +98,9 @@
               case (myAppId)
                 !write(*,*) "T is T"
               case default
-                write(*,*) "T does not know about this Coupling ID: ",
+                if (IAm(i) .eq. 0) cycle
+                if (mytid == 0)
+     |  write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
               end select
       enddo
@@ -269,7 +272,7 @@
           if(gflx(j+2,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
         enddo
         i = max(i,1)
-        aurllbj(i) = max(90.-glat(i),15.) ! aurllbj is co-lat.
+        aurllbj(i) = max(90.+glat(i),15.) ! aurllbj is co-lat from south pole! Backwards.
       enddo
       aurllbS = maxval(aurllbj)
 
@@ -331,7 +334,9 @@
               case (myAppId)
                 !write(*,*) "T is T"
               case default
-                write(*,*) "T does not know about this Coupling ID: ",
+                if (IAm(i) .eq. 0) cycle
+                if (mytid == 0)
+     |  write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
               end select
       enddo
@@ -362,7 +367,9 @@
           case (myAppId)
             !write(*,*) "T is T"
           case default
-                write(*,*) "T does not know about this Coupling ID: ",
+                if (IAm(i) .eq. 0) cycle
+                if (mytid == 0)
+     |  write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
               end select
       enddo
@@ -388,7 +395,9 @@
               case (myAppId)
                 !write(*,*) "T is T"
               case default
-                write(*,*) "T does not know about this Coupling ID: ",
+                if (IAm(i) .eq. 0) cycle
+                if (mytid == 0)
+     |  write(*,*) "T does not know about this Coupling ID: ",
      |              IAm(i)
               end select
       enddo

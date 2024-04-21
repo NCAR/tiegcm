@@ -14,9 +14,12 @@
       real*8, allocatable,dimension(:,:) :: xtgcm,ytgcm,ztgcm
       real*8, allocatable,dimension(:,:) :: mixX,mixY,mixZ
       real*8, allocatable,dimension(:,:) :: mixlat,mixlon,mixcolat
-      real*8, allocatable,dimension(:,:) :: mixPot,mixEng,
-     |  mixFlux,mixBEng
-      real*8, allocatable,dimension(:,:) :: mixBFlux,mixCEng,mixCFlux
+      real*8, allocatable,dimension(:,:) :: mixPotN,mixEngN,
+     |  mixFluxN,mixBEngN
+      real*8, allocatable,dimension(:,:) :: mixBFluxN,mixCEngN,mixCFluxN
+      real*8, allocatable,dimension(:,:) :: mixPotS,mixEngS,
+     |  mixFluxS,mixBEngS
+      real*8, allocatable,dimension(:,:) :: mixBFluxS,mixCEngS,mixCFluxS
       real*8, allocatable,dimension(:,:) :: tmpvar
       real*8, allocatable,dimension(:,:) :: mixOutX,mixOutY,mixOutZ
       real*8 :: LowLatBoundary
@@ -42,6 +45,7 @@
 
       integer :: nlatp2,cplStep = 1
       logical :: do_init = .true., firstread = .true.
+      logical :: step1140Fix = .true.
       real*8, parameter :: pi = 4*atan(1.0d0)
 
 
@@ -111,8 +115,8 @@
       call StepInfo(trim(filename),s0,sE,nSteps)
       write(6,*) "TGCM: nSteps",mytid,s0,sE,nSteps
       if (.not. allocated(MJDs) ) allocate(MJDs(nSteps))
-      write(6,*) "TGCM: StepMJDs",mytid,MJDs
       call StepMJDs(trim(filename),s0,sE,MJDs)
+      write(6,*) "TGCM: StepMJDs",mytid,MJDs
       write(6,*) "TGCM init done",mytid
       cStep = 1
 
@@ -176,26 +180,49 @@
       if (.not.allocated(mixlon)) then
          allocate(mixlon(nmixlon,nmixlat))
       endif
-      if (.not.allocated(mixPot)) then
-         allocate(mixPot(nmixlat,nmixlon))
+      ! Allocate North Arrays
+      if (.not.allocated(mixPotN)) then
+         allocate(mixPotN(nmixlat,nmixlon))
       endif
-      if (.not.allocated(mixEng)) then
-         allocate(mixEng(nmixlat,nmixlon))
+      if (.not.allocated(mixEngN)) then
+         allocate(mixEngN(nmixlat,nmixlon))
       endif
-      if (.not.allocated(mixFlux)) then
-         allocate(mixFlux(nmixlat,nmixlon))
+      if (.not.allocated(mixFluxN)) then
+         allocate(mixFluxN(nmixlat,nmixlon))
       endif
-      if (.not.allocated(mixBEng)) then
-         allocate(mixBEng(nmixlat,nmixlon))
+      if (.not.allocated(mixBEngN)) then
+         allocate(mixBEngN(nmixlat,nmixlon))
       endif
-      if (.not.allocated(mixBFlux)) then
-         allocate(mixBFlux(nmixlat,nmixlon))
+      if (.not.allocated(mixBFluxN)) then
+         allocate(mixBFluxN(nmixlat,nmixlon))
       endif
-      if (.not.allocated(mixCEng)) then
-         allocate(mixCEng(nmixlat,nmixlon))
+      if (.not.allocated(mixCEngN)) then
+         allocate(mixCEngN(nmixlat,nmixlon))
       endif
-      if (.not.allocated(mixCFlux)) then
-         allocate(mixCFlux(nmixlat,nmixlon))
+      if (.not.allocated(mixCFluxN)) then
+         allocate(mixCFluxN(nmixlat,nmixlon))
+      endif
+      ! Allocate South Arrays
+      if (.not.allocated(mixPotS)) then
+         allocate(mixPotS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixEngS)) then
+         allocate(mixEngS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixFluxS)) then
+         allocate(mixFluxS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixBEngS)) then
+         allocate(mixBEngS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixBFluxS)) then
+         allocate(mixBFluxS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixCEngS)) then
+         allocate(mixCEngS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixCFluxS)) then
+         allocate(mixCFluxS(nmixlat,nmixlon))
       endif
 
 ! Initialize MIX variables
@@ -212,13 +239,22 @@
       enddo
       mixlon(:,1) = mixlon(:,2)
       LowLatBoundary = minval(mixlat)
-      mixPot   = 0.0
-      mixEng   = 0.0
-      mixFlux  = 0.0
-      mixBEng  = 0.0
-      mixBFlux = 0.0
-      mixCEng  = 0.0
-      mixCFlux = 0.0
+      ! North
+      mixPotN   = 0.0
+      mixEngN   = 0.0
+      mixFluxN  = 0.0
+      mixBEngN  = 0.0
+      mixBFluxN = 0.0
+      mixCEngN  = 0.0
+      mixCFluxN = 0.0
+      ! South
+      mixPotS   = 0.0
+      mixEngS   = 0.0
+      mixFluxS  = 0.0
+      mixBEngS  = 0.0
+      mixBFluxS = 0.0
+      mixCEngS  = 0.0
+      mixCFluxS = 0.0
       if (mytid == 0) then
          !write(6,*) "mix Z: ",mixZ
          write(6,*) "mix Lat grid1: ", mixlat(1,:)
@@ -507,32 +543,56 @@
 
       !call openMixFile(filename,gStr)
       call openGroup(gStr)
-      call read2DVariable("Potential NORTH",mixPot)
-      call read2DVariable("Number flux NORTH",mixFlux)
-      call read2DVariable("Average energy NORTH",mixEng)
+      call read2DVariable("Potential NORTH",mixPotN)
+      call read2DVariable("Number flux NORTH",mixFluxN)
+      call read2DVariable("Average energy NORTH",mixEngN)
 
-      mixPot = mixPot*1.e3 !Volts!
-      mixBEng  = 0.
-      mixBFlux = 0.
-      mixCEng  = 0.
-      mixCFlux = 0.
+      ! SOUTH
+      call read2DVariable("Potential SOUTH",mixPotS)
+      call read2DVariable("Number flux SOUTH",mixFluxS)
+      call read2DVariable("Average energy SOUTH",mixEngS)
+
+      if (mytid==0) then
+      write(6,*) "TGCM: before transformN: ", minval(mixPotN),
+     |  maxval(mixPotN)
+      write(6,*) "TGCM: before transformS: ", minval(mixPotS),
+     |  maxval(mixPotS)
+      endif
+
+      mixPotN = mixPotN*1.e3 !Volts!
+      mixBEngN  = 0.
+      mixBFluxN = 0.
+      mixCEngN  = 0.
+      mixCFluxN = 0.
+      mixPotS = mixPotS*1.e3 !Volts!
+      mixBEngS  = 0.
+      mixBFluxS = 0.
+      mixCEngS  = 0.
+      mixCFluxS = 0.
+
+      endif !firstread
 
 ! NORTH
       write(6,*) "TGCM: CA_receive time: ",utime(1),
      | utime(2),utime(3),utime(4),utime(5)
       call RECALC(utime(1),utime(2),utime(3),utime(4),utime(5))
       if (mytid == 0) then
-      write(6,*) "TGCM: before PotN: ", minval(mixPot),maxval(mixPot)
-      write(6,*) "TGCM: minloc: ", minloc(abs(mixPot-minval(mixPot)),2)
-      write(6,*) "TGCM: before EngN: ", minval(mixEng),maxval(mixEng)
-      write(6,*) "TGCM: before FluxN: ", minval(mixFlux),maxval(mixFlux)
-      write(6,*) "TGCM: before BEngN: ", minval(mixBEng),maxval(mixBEng)
+      write(6,*) "TGCM: before PotN: ", minval(mixPotN),maxval(mixPotN)
+      write(6,*) "TGCM: minloc: ", minloc(abs(mixPotN-
+     |  minval(mixPotN)),2)
+      write(6,*) "TGCM: before EngN: ", minval(mixEngN),
+     |  maxval(mixEngN)
+      write(6,*) "TGCM: before FluxN: ", minval(mixFluxN),
+     |  maxval(mixFluxN)
+      write(6,*) "TGCM: before BEngN: ", minval(mixBEngN),
+     |  maxval(mixBEngN)
       write(6,*) "TGCM: before BFluxN: ",
-     |  minval(mixBFlux),maxval(mixBFlux)
-      write(6,*) "TGCM: before CEngN: ", minval(mixCEng),maxval(mixCEng)
+     |  minval(mixBFluxN),maxval(mixBFluxN)
+      write(6,*) "TGCM: before CEngN: ", minval(mixCEngN),
+     |  maxval(mixCEngN)
       write(6,*) "TGCM: before CFluxN: ",
-     |  minval(mixCFlux),maxval(mixCFlux)
-      write(6,*) "TGCM: shape mixPot:", shape(mixPot)
+     |  minval(mixCFluxN),maxval(mixCFluxN)
+      write(6,*) "TGCM: shape mixPotN:", shape(mixPotN)
       endif
 
       do i=1,nlat
@@ -575,20 +635,20 @@
       endif
 
       ! interpolate MIX data to temp (tgcm) position
-      FPot = (/mixPot(i1,j1),mixPot(i1,j1p1),
-     |    mixPot(i1-1,j1),mixPot(i1-1,j1p1) /)
-      FEng = (/mixEng(i1,j1),mixEng(i1,j1p1),
-     |    mixEng(i1-1,j1),mixEng(i1-1,j1p1) /)
-      FFlux = (/mixFlux(i1,j1),mixFlux(i1,j1p1),
-     |    mixFlux(i1-1,j1),mixFlux(i1-1,j1p1) /)
-      FBEng = (/mixBEng(i1,j1),mixBEng(i1,j1p1),
-     |    mixBEng(i1-1,j1),mixBEng(i1-1,j1p1) /)
-      FBFlux = (/mixBFlux(i1,j1),mixBFlux(i1,j1p1),
-     |    mixBFlux(i1-1,j1),mixBFlux(i1-1,j1p1) /)
-      FCEng = (/mixCEng(i1,j1),mixCEng(i1,j1p1),
-     |    mixCEng(i1-1,j1),mixCEng(i1-1,j1p1) /)
-      FCFlux = (/mixCFlux(i1,j1),mixCFlux(i1,j1p1),
-     |    mixCFlux(i1-1,j1),mixCFlux(i1-1,j1p1) /)
+      FPot = (/mixPotN(i1,j1),mixPotN(i1,j1p1),
+     |    mixPotN(i1-1,j1),mixPotN(i1-1,j1p1) /)
+      FEng = (/mixEngN(i1,j1),mixEngN(i1,j1p1),
+     |    mixEngN(i1-1,j1),mixEngN(i1-1,j1p1) /)
+      FFlux = (/mixFluxN(i1,j1),mixFluxN(i1,j1p1),
+     |    mixFluxN(i1-1,j1),mixFluxN(i1-1,j1p1) /)
+      FBEng = (/mixBEngN(i1,j1),mixBEngN(i1,j1p1),
+     |    mixBEngN(i1-1,j1),mixBEngN(i1-1,j1p1) /)
+      FBFlux = (/mixBFluxN(i1,j1),mixBFluxN(i1,j1p1),
+     |    mixBFluxN(i1-1,j1),mixBFluxN(i1-1,j1p1) /)
+      FCEng = (/mixCEngN(i1,j1),mixCEngN(i1,j1p1),
+     |    mixCEngN(i1-1,j1),mixCEngN(i1-1,j1p1) /)
+      FCFlux = (/mixCFluxN(i1,j1),mixCFluxN(i1,j1p1),
+     |    mixCFluxN(i1-1,j1),mixCFluxN(i1-1,j1p1) /)
 
       ting_pot_interp(i,j) = dot_product(mapping,FPot)
       tempproduct = mapping(1)*FPot(1)+mapping(2)*FPot(2)+
@@ -637,18 +697,6 @@
       endif
 
 ! SOUTH
-      call read2DVariable("Potential SOUTH",mixPot)
-      call read2DVariable("Number flux SOUTH",mixFlux)
-      call read2DVariable("Average energy SOUTH",mixEng)
-
-      mixPot = mixPot*1.e3 !Volts!
-
-      if (mytid==0) then
-      write(6,*) "TGCM: before transformS: ", minval(mixPot),
-     |  maxval(mixPot)
-      endif
-
-! SOUTH
       do i=1,nlat
          do j=1,nlon
             !if (glat(i) .lt. 0) then
@@ -684,20 +732,20 @@
 
       !mapping = 1./4.*(/1.,1.,1.,1./)
       ! interpolate MIX data to temp (tgcm) position
-      FPot = (/mixPot(i1,j1),mixPot(i1,j1p1),
-     |    mixPot(i1-1,j1),mixPot(i1-1,j1p1) /)
-      FEng = (/mixEng(i1,j1),mixEng(i1,j1p1),
-     |    mixEng(i1-1,j1),mixEng(i1-1,j1p1) /)
-      FFlux = (/mixFlux(i1,j1),mixFlux(i1,j1p1),
-     |    mixFlux(i1-1,j1),mixFlux(i1-1,j1p1) /)
-      FBEng = (/mixBEng(i1,j1),mixBEng(i1,j1p1),
-     |    mixBEng(i1-1,j1),mixBEng(i1-1,j1p1) /)
-      FBFlux = (/mixBFlux(i1,j1),mixBFlux(i1,j1p1),
-     |    mixBFlux(i1-1,j1),mixBFlux(i1-1,j1p1) /)
-      FCEng = (/mixCEng(i1,j1),mixCEng(i1,j1p1),
-     |    mixCEng(i1-1,j1),mixCEng(i1-1,j1p1) /)
-      FCFlux = (/mixCFlux(i1,j1),mixCFlux(i1,j1p1),
-     |    mixCFlux(i1-1,j1),mixCFlux(i1-1,j1p1) /)
+      FPot = (/mixPotS(i1,j1),mixPotS(i1,j1p1),
+     |    mixPotS(i1-1,j1),mixPotS(i1-1,j1p1) /)
+      FEng = (/mixEngS(i1,j1),mixEngS(i1,j1p1),
+     |    mixEngS(i1-1,j1),mixEngS(i1-1,j1p1) /)
+      FFlux = (/mixFluxS(i1,j1),mixFluxS(i1,j1p1),
+     |    mixFluxS(i1-1,j1),mixFluxS(i1-1,j1p1) /)
+      FBEng = (/mixBEngS(i1,j1),mixBEngS(i1,j1p1),
+     |    mixBEngS(i1-1,j1),mixBEngS(i1-1,j1p1) /)
+      FBFlux = (/mixBFluxS(i1,j1),mixBFluxS(i1,j1p1),
+     |    mixBFluxS(i1-1,j1),mixBFluxS(i1-1,j1p1) /)
+      FCEng = (/mixCEngS(i1,j1),mixCEngS(i1,j1p1),
+     |    mixCEngS(i1-1,j1),mixCEngS(i1-1,j1p1) /)
+      FCFlux = (/mixCFluxS(i1,j1),mixCFluxS(i1,j1p1),
+     |    mixCFluxS(i1-1,j1),mixCFluxS(i1-1,j1p1) /)
 
       ting_pot_interp(i,j) = dot_product(mapping,FPot)
       ting_eng_interp(i,j) = max(dot_product(mapping,FEng),0.0)
@@ -745,8 +793,6 @@
 !
 ! Process the imported data.
 !
-
-      endif ! cStep .ne. oldStep
 
       endif ! mytid
 
@@ -1190,7 +1236,9 @@
           integer ::  ierr, i, gExist
           logical :: isEnd, idFirst
           character(len=240) :: gStr
-          integer, parameter :: MAXSTEP0 = 10000
+          ! This is approximately one carrington rotations at 1 minute outputs
+          ! This should be on the upper limit of a magnetosphere run, but who knows!
+          integer, parameter :: MAXSTEP0 = 40000
 
           isEnd = .false.
           idFirst = .false.
@@ -1206,6 +1254,10 @@
           do while (.not. isEnd)
               gExist = 0
               !write(*,*) "Loop step: ",mytid,i
+              if (step1140Fix .and. i == 1140) then
+                i = i+1
+                cycle
+              endif
               write(gStr, '(A,I0)') "Step#", i
               !write(6, '(A,I0)') "Step#", i
               ! Check if group exists in NetCDF file
@@ -1269,6 +1321,10 @@
           !call openMixFile(ncFile)
 
           do n = 1, Nstp
+              if (step1140Fix .and. n == 1140) then
+                MJDs(n) = MJDs(n-1)
+                cycle
+              endif
               write(gStr, '(A,I0)') "Step#", s0 + n - 1
               call openGroup(trim(gStr))
 
