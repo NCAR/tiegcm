@@ -78,6 +78,8 @@ def arr_var (datasets, variable_name, time, selected_unit=None, plot_mode = Fals
         if time in ds['time'].values:
             # Extract variable attributes
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+            if variable_unit == 'cm/s' and selected_unit == None:
+                selected_unit = 'm/s'
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=time).values.item() / (1e9 * 3600)
             selected_mtime = get_mtime(ds,time)
@@ -168,6 +170,8 @@ def arr_lev_lon (datasets, variable_name, time, selected_lat, selected_unit= Non
         if time in ds['time'].values:
             # Extracting variable attributes and time information
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+            if variable_unit == 'cm/s' and selected_unit == None:
+                selected_unit = 'm/s'
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=time).values.item() / (1e9 * 3600)
             selected_mtime = get_mtime(ds,time)
@@ -249,6 +253,8 @@ def arr_lat_lon(datasets, variable_name, time, selected_lev_ilev = None, selecte
 
                 # Extract variable attributes
                 variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+                if variable_unit == 'cm/s' and selected_unit == None:
+                    selected_unit = 'm/s'
                 variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
                 selected_ut = ds['ut'].sel(time=time).values.item() / (1e9 * 3600)
                 selected_mtime = get_mtime(ds,time)
@@ -327,6 +333,8 @@ def arr_lat_lon(datasets, variable_name, time, selected_lev_ilev = None, selecte
                             
                 # Extract variable attributes
                 variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+                if variable_unit == 'cm/s' and selected_unit == None:
+                    selected_unit = 'm/s'
                 variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
                 selected_ut = ds['ut'].sel(time=time).values.item() / (1e9 * 3600)
                 selected_mtime=get_mtime(ds,time)
@@ -404,6 +412,8 @@ def arr_lat_lon(datasets, variable_name, time, selected_lev_ilev = None, selecte
 
                 # Extract variable attributes
                 variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+                if variable_unit == 'cm/s' and selected_unit == None:
+                    selected_unit = 'm/s'
                 variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
                 selected_ut = ds['ut'].sel(time=time).values.item() / (1e9 * 3600)
                 selected_mtime = get_mtime(ds,time)
@@ -467,6 +477,8 @@ def arr_lev_var(datasets, variable_name, time, selected_lat, selected_lon, selec
 
 
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+            if variable_unit == 'cm/s' and selected_unit == None:
+                selected_unit = 'm/s'
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=time).values.item() / (1e9 * 3600)
             selected_mtime=get_mtime(ds,time)
@@ -520,6 +532,8 @@ def arr_lev_lat (datasets, variable_name, time, selected_lon, selected_unit=None
         if time in ds['time'].values:
             # Extract variable attributes
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+            if variable_unit == 'cm/s' and selected_unit == None:
+                selected_unit = 'm/s'
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             selected_ut = ds['ut'].sel(time=time).values.item() / (1e9 * 3600)
             selected_mtime = get_mtime(ds,time)
@@ -586,6 +600,8 @@ def arr_lev_time (datasets, variable_name, selected_lat, selected_lon, selected_
     avg_info_print = 0
     for ds, filenames in datasets:
         variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+        if variable_unit == 'cm/s' and selected_unit == None:
+            selected_unit = 'm/s'
         variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
         mtime_values = ds['mtime'].values
         if selected_lon == "mean" and selected_lat == "mean":
@@ -703,6 +719,8 @@ def arr_lat_time(datasets, variable_name, selected_lon,selected_lev_ilev = None,
                 raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'lev'")
                 return 0
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+            if variable_unit == 'cm/s' and selected_unit == None:
+                selected_unit = 'm/s'
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             mtime_values = ds['mtime'].values
             filename = filenames
@@ -769,6 +787,8 @@ def arr_lat_time(datasets, variable_name, selected_lon,selected_lev_ilev = None,
                 raise ValueError("The variable "+variable_name+" doesn't use the dimensions 'lat', 'lon', 'ilev'")
                 return 0
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+            if variable_unit == 'cm/s' and selected_unit == None:
+                selected_unit = 'm/s'
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             mtime_values = ds['mtime'].values
             filename = filenames
@@ -837,6 +857,8 @@ def arr_lat_time(datasets, variable_name, selected_lon,selected_lev_ilev = None,
 
             avg_info_print = 0
             variable_unit = ds[variable_name].attrs.get('units', 'N/A')
+            if variable_unit == 'cm/s' and selected_unit == None:
+                selected_unit = 'm/s'
             variable_long_name = ds[variable_name].attrs.get('long_name', 'N/A')
             mtime_values = ds['mtime'].values
             filename = filenames
