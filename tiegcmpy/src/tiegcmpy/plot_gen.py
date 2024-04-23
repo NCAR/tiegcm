@@ -7,7 +7,7 @@ import cartopy.feature as cfeature
 from cartopy.feature.nightshade import Nightshade
 from datetime import datetime, timezone
 import matplotlib.ticker as mticker
-
+import math
 
 def longitude_to_local_time(longitude):
     """
@@ -123,7 +123,7 @@ def test(datasets, variable_name, time, level=None, selected_unit=None):
 
     return fig
 
-def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  variable_unit = None, contour_intervals = None, contour_value = None, cmap_color = None, line_color = 'white', coastlines=False, nightshade=False, gm_equator=False, latitude_minimum = None, latitude_maximum = None, longitude_minimum = None, longitude_maximum = None, localtime_minimum = None, localtime_maximum = None ):
+def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  variable_unit = None, contour_intervals = None, contour_value = None,symmetric_interval= False, cmap_color = None, line_color = 'white', coastlines=False, nightshade=False, gm_equator=False, latitude_minimum = None, latitude_maximum = None, longitude_minimum = None, longitude_maximum = None, localtime_minimum = None, localtime_maximum = None ):
 
     """
     Generates a Latitude vs Longitude contour plot for a variable.
@@ -177,7 +177,7 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
     if isinstance(time, str):
         time = np.datetime64(time, 'ns')
 
-    data, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =arr_lat_lon(datasets, variable_name, time, selected_lev_ilev = level, selected_unit = variable_unit, plot_mode = True)
+    variable_values, level,  unique_lats, unique_lons, variable_unit, variable_long_name, selected_ut, selected_mtime, filename =arr_lat_lon(datasets, variable_name, time, selected_lev_ilev = level, selected_unit = variable_unit, plot_mode = True)
     if level != 'mean' and level != None:
             avg_ht=calc_avg_ht(datasets, time,level)
     if latitude_minimum == None:
@@ -189,7 +189,7 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
     if longitude_maximum == None:   
         longitude_maximum = np.nanmax(unique_lons)
 
-    min_val, max_val = min_max(data)
+    min_val, max_val = min_max(variable_values)
     selected_day=selected_mtime[0]
     selected_hour=selected_mtime[1]
     selected_min=selected_mtime[2]
@@ -199,8 +199,21 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
     # Extract values, latitudes, and longitudes from the array
     if contour_value is not None:
         contour_levels = np.arange(min_val, max_val + contour_value, contour_value)
-    else:
+        interval_value = contour_value
+    elif symmetric_interval == False:
         contour_levels = np.linspace(min_val, max_val, contour_intervals)
+        interval_value = (max_val - min_val) / (contour_intervals - 1)
+    elif symmetric_interval == True:
+        range_half = math.ceil(max(abs(min_val), abs(max_val))/10)*10
+        interval_value = range_half / (contour_intervals // 2)  # Divide by 2 to get intervals for one side
+        positive_levels = np.arange(interval_value, range_half + interval_value, interval_value)
+        negative_levels = -np.flip(positive_levels)  # Generate negative levels symmetrically
+        contour_levels = np.concatenate((negative_levels, [0], positive_levels))
+    if -180 in unique_lons:
+        lon_idx = np.where(unique_lons == -180)[0][-1]  # Get the index of the last occurrence of -180
+        unique_lons = np.append(unique_lons, 180)
+        variable_values = np.insert(variable_values, -1, variable_values[:, lon_idx], axis=1)
+
     # Generate contour plot
     
     interval_value = contour_value if contour_value else (max_val - min_val) / (contour_intervals - 1)
@@ -223,8 +236,8 @@ def plt_lat_lon(datasets, variable_name, time= None, mtime=None, level = None,  
         ax.plot(unique_lons, [0]*len(unique_lons), color=line_color, linestyle='--', transform=ccrs.Geodetic())
     
     
-    contour_filled = plt.contourf(unique_lons, unique_lats, data, cmap=cmap_color, levels=contour_levels)
-    contour_lines = plt.contour(unique_lons, unique_lats, data, colors=line_color, linewidths=0.5, levels=contour_levels)
+    contour_filled = plt.contourf(unique_lons, unique_lats, variable_values, cmap=cmap_color, levels=contour_levels)
+    contour_lines = plt.contour(unique_lons, unique_lats, variable_values, colors=line_color, linewidths=0.5, levels=contour_levels)
     plt.clabel(contour_lines, inline=True, fontsize=16, colors=line_color)
     cbar = plt.colorbar(contour_filled, label=variable_name + " [" + variable_unit + "]",fraction=0.046, pad=0.04)
     cbar.set_label(variable_name + " [" + variable_unit + "]", size=28, labelpad=15)
@@ -344,7 +357,7 @@ def plt_lev_var(datasets, variable_name, latitude, time= None, mtime=None, longi
     return(plot)
 
 
-def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, variable_unit = None, contour_intervals = 20, contour_value = None, cmap_color = None, line_color = 'white',  level_minimum = None, level_maximum = None, longitude_minimum = None, longitude_maximum = None, localtime_minimum = None, localtime_maximum = None):
+def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, variable_unit = None, contour_intervals = 20, contour_value = None,symmetric_interval= False, cmap_color = None, line_color = 'white',  level_minimum = None, level_maximum = None, longitude_minimum = None, longitude_maximum = None, localtime_minimum = None, localtime_maximum = None):
     """
     Generates a Level vs Longitude contour plot for a given latitude.
     
@@ -401,13 +414,22 @@ def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, varia
 
     if contour_value is not None:
         contour_levels = np.arange(min_val, max_val + contour_value, contour_value)
-    else:
+        interval_value = contour_value
+    elif symmetric_interval == False:
         contour_levels = np.linspace(min_val, max_val, contour_intervals)
-    # Generate contour plot
-    
-    interval_value = contour_value if contour_value else (max_val - min_val) / (contour_intervals - 1)
+        interval_value = (max_val - min_val) / (contour_intervals - 1)
+    elif symmetric_interval == True:
+        range_half = math.ceil(max(abs(min_val), abs(max_val))/10)*10
+        interval_value = range_half / (contour_intervals // 2)  # Divide by 2 to get intervals for one side
+        positive_levels = np.arange(interval_value, range_half + interval_value, interval_value)
+        negative_levels = -np.flip(positive_levels)  # Generate negative levels symmetrically
+        contour_levels = np.concatenate((negative_levels, [0], positive_levels))
+    if -180 in unique_lons:
+        lon_idx = np.where(unique_lons == -180)[0][-1]  # Get the index of the last occurrence of -180
+        unique_lons = np.append(unique_lons, 180)
+        variable_values = np.insert(variable_values, -1, variable_values[:, lon_idx], axis=1)
 
-
+    # Generate contour plot   
     plot=plt.figure(figsize=(24, 12))
     contour_filled = plt.contourf(unique_lons, unique_levs, variable_values, cmap= cmap_color, levels=contour_levels)
     contour_lines = plt.contour(unique_lons, unique_levs, variable_values, colors=line_color, linewidths=0.5, levels=contour_levels)
@@ -450,7 +472,7 @@ def plt_lev_lon(datasets, variable_name, latitude, time= None, mtime=None, varia
     return(plot)
 
 
-def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = None, localtime = None, variable_unit = None, contour_intervals = 20, contour_value = None, cmap_color = None, line_color = 'white', level_minimum = None, level_maximum = None, latitude_minimum = None,latitude_maximum = None):
+def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = None, localtime = None, variable_unit = None, contour_intervals = 20, contour_value = None,symmetric_interval= False, cmap_color = None, line_color = 'white', level_minimum = None, level_maximum = None, latitude_minimum = None,latitude_maximum = None):
     """
     Generates a Level vs Latitude contour plot for a specified time and/or longitude.
     
@@ -504,8 +526,17 @@ def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = Non
 
     if contour_value is not None:
         contour_levels = np.arange(min_val, max_val + contour_value, contour_value)
-    else:
+        interval_value = contour_value
+    elif symmetric_interval == False:
         contour_levels = np.linspace(min_val, max_val, contour_intervals)
+        interval_value = (max_val - min_val) / (contour_intervals - 1)
+    elif symmetric_interval == True:
+        range_half = math.ceil(max(abs(min_val), abs(max_val))/10)*10
+        interval_value = range_half / (contour_intervals // 2)  # Divide by 2 to get intervals for one side
+        positive_levels = np.arange(interval_value, range_half + interval_value, interval_value)
+        negative_levels = -np.flip(positive_levels)  # Generate negative levels symmetrically
+        contour_levels = np.concatenate((negative_levels, [0], positive_levels))
+
     
     
     interval_value = contour_value if contour_value else (max_val - min_val) / (contour_intervals - 1)
@@ -546,7 +577,7 @@ def plt_lev_lat(datasets, variable_name, time= None, mtime=None, longitude = Non
 
 
 
-def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime = None, variable_unit = None, contour_intervals = 10, contour_value = None, cmap_color = None, line_color = 'white',  level_minimum = None, level_maximum = None, mtime_minimum=None, mtime_maximum=None):
+def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime = None, variable_unit = None, contour_intervals = 10, contour_value = None,symmetric_interval= False, cmap_color = None, line_color = 'white',  level_minimum = None, level_maximum = None, mtime_minimum=None, mtime_maximum=None):
     """
     Generates a Level vs Time contour plot for a specified latitude and/or longitude.
     
@@ -610,8 +641,17 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
 
     if contour_value is not None:
         contour_levels = np.arange(min_val, max_val + contour_value, contour_value)
-    else:
+        interval_value = contour_value
+    elif symmetric_interval == False:
         contour_levels = np.linspace(min_val, max_val, contour_intervals)
+        interval_value = (max_val - min_val) / (contour_intervals - 1)
+    elif symmetric_interval == True:
+        range_half = math.ceil(max(abs(min_val), abs(max_val))/10)*10
+        interval_value = range_half / (contour_intervals // 2)  # Divide by 2 to get intervals for one side
+        positive_levels = np.arange(interval_value, range_half + interval_value, interval_value)
+        negative_levels = -np.flip(positive_levels)  # Generate negative levels symmetrically
+        contour_levels = np.concatenate((negative_levels, [0], positive_levels))
+
     
     
     interval_value = contour_value if contour_value else (max_val - min_val) / (contour_intervals - 1)
@@ -666,7 +706,7 @@ def plt_lev_time(datasets, variable_name, latitude, longitude = None, localtime 
 
 
 
-def plt_lat_time(datasets, variable_name, level = None, longitude = None, localtime = None,  variable_unit = None, contour_intervals = 10, contour_value = None, cmap_color = None, line_color = 'white', latitude_minimum = None,latitude_maximum = None, mtime_minimum=None, mtime_maximum=None):
+def plt_lat_time(datasets, variable_name, level = None, longitude = None, localtime = None,  variable_unit = None, contour_intervals = 10, contour_value = None,symmetric_interval= False, cmap_color = None, line_color = 'white', latitude_minimum = None,latitude_maximum = None, mtime_minimum=None, mtime_maximum=None):
     """
     Generates a Latitude vs Time contour plot for a specified level and/or longitude.
     
@@ -731,8 +771,17 @@ def plt_lat_time(datasets, variable_name, level = None, longitude = None, localt
 
     if contour_value is not None:
         contour_levels = np.arange(min_val, max_val + contour_value, contour_value)
-    else:
+        interval_value = contour_value
+    elif symmetric_interval == False:
         contour_levels = np.linspace(min_val, max_val, contour_intervals)
+        interval_value = (max_val - min_val) / (contour_intervals - 1)
+    elif symmetric_interval == True:
+        range_half = math.ceil(max(abs(min_val), abs(max_val))/10)*10
+        interval_value = range_half / (contour_intervals // 2)  # Divide by 2 to get intervals for one side
+        positive_levels = np.arange(interval_value, range_half + interval_value, interval_value)
+        negative_levels = -np.flip(positive_levels)  # Generate negative levels symmetrically
+        contour_levels = np.concatenate((negative_levels, [0], positive_levels))
+
     
     interval_value = contour_value if contour_value else (max_val - min_val) / (contour_intervals - 1)
 
