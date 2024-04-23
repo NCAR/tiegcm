@@ -50,6 +50,7 @@ for x in range(len(bench_names)):
         #
         # Define the list of variable_names and levels to be sent to tiepy when it requests input
         variable_names = ['TN', 'UN', 'VN','O2','O1','NO','HE','NE','TE','TI','OP','POTEN','UI_ExB','VI_ExB','WI_ExB','HMF2','NMF2', 'Z']
+        wind_type = ['WN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'UN', 'VN']
         gen_levels = [-7.00, -4.00, 2.00, 6.00]
         mtimes = mtime_set#[[360, 0, 0, 0]]
         plot_types = ['lat_lon']
@@ -88,8 +89,12 @@ for x in range(len(bench_names)):
         for mtime in mtimes:
             for var in variable_names:
                 for localtime in localtimes:
+                        if var in wind_type:
+                            sym_interval=True
+                        else:
+                            sym_interval=False
                         startTimeplot = time.time()
-                        plot = plt_lev_lat(datasets, var,mtime=mtime, localtime = localtime)
+                        plot = plt_lev_lat(datasets, var,mtime=mtime, localtime = localtime,symmetric_interval=sym_interval)
                         pdf.savefig(plot, bbox_inches='tight', pad_inches=0.5)
                         plt.close(plot)
                         print("Took %f seconds" %(time.time() - startTimeplot))
@@ -106,8 +111,12 @@ for x in range(len(bench_names)):
         for mtime in mtimes:
             for var in variable_names:
                 for latitude in latitudes:
+                        if var in wind_type:
+                            sym_interval=True
+                        else:
+                            sym_interval=False
                         startTimeplot = time.time()
-                        plot = plt_lev_lon(datasets, var,mtime=mtime, latitude = latitude)
+                        plot = plt_lev_lon(datasets, var,mtime=mtime, latitude = latitude,symmetric_interval=sym_interval)
                         pdf.savefig(plot, bbox_inches='tight', pad_inches=0.5)
                         plt.close(plot)
                         print("Took %f seconds" %(time.time() - startTimeplot))

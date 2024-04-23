@@ -30,6 +30,7 @@ for x in range(len(bench_names)):
         #
         # Define the list of variable_names and levels to be sent to tiepy when it requests input
         variable_names = ['UN', 'VN','WN','HE','NE','TEC','OP','POTEN','UI_ExB','VI_ExB','WI_ExB','HMF2','NMF2', 'Z']
+        wind_type = ['WN', 'UI_ExB', 'VI_ExB', 'WI_ExB', 'UN', 'VN']
         gen_levels = [-4.00, 0.00, 4.00]
         gen_localtimes = [0.0, 12.0]
         startTime = time.time()
@@ -60,8 +61,12 @@ for x in range(len(bench_names)):
                 localtimes = gen_localtimes
             for lvl in levels:
                 for localtime in localtimes:
+                    if var in wind_type:
+                        sym_interval=True
+                    else:
+                        sym_interval=False
                     startTimeplot = time.time()
-                    plot = plt_lat_time(datasets, var, level = lvl,localtime = localtime)
+                    plot = plt_lat_time(datasets, var, level = lvl,localtime = localtime,symmetric_interval=sym_interval)
                     pdf.savefig(plot, bbox_inches='tight', pad_inches=0.5)
                     plt.close(plot)
                     print("Took %f seconds" %(time.time() - startTimeplot))
