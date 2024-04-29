@@ -13,11 +13,11 @@
       use hist_module,only: nsource,nhist,ioutfile,ncid
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm,
      |  he,he_nm,field_initval,ar,ar_nm,n2d,n2d_nm,gzigm1,gzigm2,gnsrhs,
-     |  itp
+     |  zigm1,zigm2,itp
       use ar_module,only: ar_glbm
       use mpi_module,only: lat0,lat1,lon0,lon1,mlat0,mlat1,mlon0,mlon1,
      |  mp_periodic_f4d,mp_periodic_f2d,mp_bndlons_f2d,mp_bndlats_f2d
-      use pdynamo_module,only: define_phim3d,geo2mag_2d,zigm1,zigm2
+      use pdynamo_module,only: define_phim3d,geo2mag_2d
       use lbc,only: pshelb
       use my_esmf,only: geo_adota1,geo_adota2,mag_adota1,mag_adota2
       implicit none

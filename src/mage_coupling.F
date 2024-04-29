@@ -11,17 +11,19 @@
 !!  GAMERA             !!  mage_coupling.F    !!  MPI                 !!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !-----------------------------------------------------------------------
-      use params_module,only: nlonp4,nlat,nlatp1
+      use params_module,only: nlonp4,nlat,nlatp1,
+     |  nmlatp1,nmlonp1,nmlat,nmlon
       use input_module,only: oneway
+      !use pdynamo_module,only: phihm
 #ifdef GAMERA
       use mage_oneway
 #endif
       implicit none
 
       real,dimension(nlonp4,nlat) ::
-     |  gpot,        ! potential in geographic coordinates, periodic boundary
      |  geng,        ! energy in geographic coordinates, periodic boundary
-     |  gflx         ! flux in geographic coordinates, periodic boundary
+     |  gflx,        ! flux in geographic coordinates, periodic boundary
+     |  gpot         ! potential in geographic coordinates, periodic boundary
 !    |  gBbeAvgEng,  ! BBE Precip Average Eng-geo, periodic boundary
 !    |  gBbeNumFlux, ! BBE Precip Num flux-geo, periodic boundary
 !    |  gCuspAvgEng, ! Cusp Precip Average Eng-geo, periodic boundary
@@ -30,15 +32,21 @@
 ! Potential in geographic coordinates from M-I coupler
 ! Note: gpotm latitude dimension is defined to match mag2geo specifications
       real,dimension(nlonp4,0:nlatp1) :: gpotm
+! Values on APEX grid
+      real,dimension(nmlonp1,nmlat) :: apotm,aflxm
 
       real :: aurllbN,aurllbS ! all are co-lats in radians
 
 ! Change the following parameters if adding more variables
       integer,parameter ::
-     |  nmixinvar  = 3, ! Potential, Flux, Energy
-     |  nmixoutvar = 2, ! Pedersen, Hall
+     |  nmixinapex = 2, ! APEX Potential, Flux (for auroral bc)
+     |  nmixingeo  = 2, ! GEO Flux, Energy
+     |  nmixoutapex= 2, ! APEX Pedersen, Hall
+     |  nmixoutgeo = 0, ! No GEO exports
      |  nhoutvar   = 9, ! TN, UN, VN, OMEGA, O2, O1, NO, Z, HE
      |  nhinvar    = 0  !
+
+      real*8,dimension(nmlonp1,2) :: aurorabc1d
 
       contains 
 !-----------------------------------------------------------------------
@@ -47,7 +55,8 @@
 ! This subroutine initialize MPI interface for data exchange
 ! Send REMIX the grid information
 
-      use params_module,only: nlatp2,nlonp1,glat,glon
+      use params_module,only: nlatp2,nlonp1,glat,glon,
+     |  nmlatp1,nmlonp1,gmlat,gmlon
       use cons_module,only: dtr
       use mpi_module,only: CplCommSize,CplRank,IAm,myAppId,
      |  voltId,gamId,rcmId,hidraNId,hidraSId,hidraId,
@@ -58,12 +67,14 @@
       real,dimension(nlatp2) :: glatp2
       real,dimension(nlonp1) :: glonp1
 
-      gpot = 0
+      !gpot = 0
       geng = 0.5
       gflx = 0
       gpotm = 0
-      aurllbN = 10*dtr
-      aurllbS = 10*dtr
+      apotm = 0
+      aflxm  = 0
+      !aurllbN = 10*dtr
+      !aurllbS = 10*dtr
 
 ! Hard code the poles
       glatp2(2:nlatp2-1) = glat
@@ -81,7 +92,7 @@
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)
-                call init_mpi_remix(glatp2,glonp1)
+                call init_mpi_remix(glatp2,glonp1,gmlat,gmlon)
               case (gamId)
                 !write(*,*) "T not coupling to Gam yet"
               case (rcmId)
@@ -121,35 +132,52 @@
       use mpi
 
       integer :: ierr,i,j
-      real*8,dimension(nlatp2,nlonp1,nmixinvar) :: var2d
+      real*8,dimension(nlatp2,nlonp1,nmixingeo) :: gvar2d
+      real*8,dimension(nmlat,nmlonp1,nmixinapex) :: avar2d
 
 !     write(6,"('TIEGCM (',i3,'): inside receive')") mytid
 
-      var2d = 0.
+      avar2d = 0.
+      gvar2d = 0.
 
 #ifdef GAMERA
       if (.not. oneway) then
       if (mytid == 0) then
 
-        call import_remix(var2d)
+        call import_remix(avar2d,gvar2d)
 ! Unit conversion
-        var2d(:,:,1) = var2d(:,:,1)*1e3 ! potential: kV -> V
-        var2d(:,:,2) = var2d(:,:,2)*0.5 ! mean energy -> characteristic energy
+        avar2d(:,:,1) = avar2d(:,:,1)*1e3 ! potential: kV -> V
+        gvar2d(:,:,1) = gvar2d(:,:,1)*0.5 ! mean energy -> characteristic energy
       endif
 
-      call mpi_bcast(var2d, nlatp2*nlonp1*nmixinvar, 
+      call mpi_bcast(avar2d, nmlat*nmlonp1*nmixinapex,
      |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
       if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
+
+      call mpi_bcast(gvar2d, nlatp2*nlonp1*nmixingeo,
+     |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
+      if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
+
+!      call mpi_bcast(aurorabc1d, nmlonp1*2,
+!     |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
+!      if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
 
 ! Process the imported data
       do j = 1,nlat
         do i = 1,nlon
-          gpot(i+2,j) = var2d(j+1,i,1)
-          geng(i+2,j) = var2d(j+1,i,2)
-          gflx(i+2,j) = var2d(j+1,i,3)
-          gpotm(i+2,j) = var2d(j+1,i,1)
+          !gpot(i+2,j) = var2d(j+1,i,1)
+          geng(i+2,j) = gvar2d(j+1,i,1)
+          gflx(i+2,j) = gvar2d(j+1,i,2)
+          !gpotm(i+2,j) = var2d(j+1,i,1)
         enddo
-        gpotm(nlonp1+2,j) = var2d(j+1,nlonp1,1)
+        !gpotm(nlonp1+2,j) = var2d(j+1,nlonp1,1)
+      enddo
+      do j=1,nmlat
+        do i=1,nmlonp1
+          ! nmlonp1,nmlat
+          apotm(i,j) = avar2d(j,i,1)
+          aflxm(i,j) = avar2d(j,i,2)
+        enddo
       enddo
       else
         call ca_receive(gpot,geng,gflx,gpotm)
@@ -161,7 +189,7 @@
       subroutine process_import
 
 #ifdef GAMERA
-      use params_module,only: nlatp2,nlon,nlonp1,nlonp2,glat
+      use params_module,only: nlatp2,nlon,nlonp1,nlonp2,gmlat,gmlon
       use input_module,only: ctpoten
       use cons_module,only: pi
       use mpi_module,only: mytid,handle_mpi_err,TIEGCM_WORLD
@@ -178,40 +206,40 @@
 ! Linearly interpolate to add pole values
 
 ! Southern Hemisphere: j=0
-      polev1=0.
-      polev2=0.
-      do i=1,nlonp1
-        polev1=polev1+gpotm(i+2,1)
-        polev2=polev2+gpotm(i+2,2)
-      enddo
+      !polev1=0.
+      !polev2=0.
+      !do i=1,nlonp1
+      !  polev1=polev1+gpotm(i+2,1)
+      !  polev2=polev2+gpotm(i+2,2)
+      !enddo
 
-      do i=1,nlonp1
-        gpotm(i+2,0)=(9.*polev1-polev2)/(8.*float(nlonp1))
-      enddo
+      !do i=1,nlonp1
+      !  gpotm(i+2,0)=(9.*polev1-polev2)/(8.*float(nlonp1))
+      !enddo
 
 ! Northern Hemisphere: j=nlatp1
-      polev1=0.
-      polev2=0.
-      do i=1,nlonp1
-        polev1=polev1+gpotm(i+2,nlat)
-        polev2=polev2+gpotm(i+2,nlat-1)
-      enddo
-      do i=1,nlonp1
-        gpotm(i+2,nlatp1)=(9.*polev1-polev2)/(8.*float(nlonp1))
-      enddo
+      !polev1=0.
+      !polev2=0.
+      !do i=1,nlonp1
+      !  polev1=polev1+gpotm(i+2,nlat)
+      !  polev2=polev2+gpotm(i+2,nlat-1)
+      !enddo
+      !do i=1,nlonp1
+      !  gpotm(i+2,nlatp1)=(9.*polev1-polev2)/(8.*float(nlonp1))
+      !enddo
 
 ! Set periodic points
       do j = 1,nlat
         do i = 1,2
-          gpot(i,j) = gpot(nlon+i,j)
+          !gpot(i,j) = gpot(nlon+i,j)
           geng(i,j) = geng(nlon+i,j)
           gflx(i,j) = gflx(nlon+i,j)
-          gpotm(i,j) = gpotm(nlon+i,j)
+          !gpotm(i,j) = gpotm(nlon+i,j)
 
-          gpot(nlonp2+i,j) = gpot(i+2,j)
+          !gpot(nlonp2+i,j) = gpot(i+2,j)
           geng(nlonp2+i,j) = geng(i+2,j)
           gflx(nlonp2+i,j) = gflx(i+2,j)
-          gpotm(nlonp2+i,j) = gpotm(i+2,j)
+          !gpotm(nlonp2+i,j) = gpotm(i+2,j)
         enddo
       enddo
 
@@ -243,38 +271,43 @@
 !!!       enddo
 !!!      enddo
 
-      cpmaxsh = maxval(gpot(:,1:nlat/2))
-      cpmaxnh = maxval(gpot(:,nlat/2+1:nlat))
-      cpminsh = minval(gpot(:,1:nlat/2))
-      cpminnh = minval(gpot(:,nlat/2+1:nlat))
+!!!      cpmaxsh = maxval(gpot(:,1:nlat/2))
+!!!      cpmaxnh = maxval(gpot(:,nlat/2+1:nlat))
+!!!      cpminsh = minval(gpot(:,1:nlat/2))
+!!!      cpminnh = minval(gpot(:,nlat/2+1:nlat))
 
-      ctpoten = 0.5*(cpmaxsh-cpminsh+cpmaxnh-cpminnh)*0.001
+!!!      ctpoten = 0.5*(cpmaxsh-cpminsh+cpmaxnh-cpminnh)*0.001
 
       ! Find the lowest lat of all MLT where mixFlux drops to below certain threshold.
       ! Pass it into colath.F, replace crit(1) and 2.
       ! Make NH/SH separately.
       ! Note in cism_adhoc.F, allocate(mixPot(nmixlat,nmixlon)), allocate(mixlon(nmixlon,nmixlat))
+
+      ! real*8,dimension(nlonp1,2) :: aurorabc1d
+
       aurllbN = 0.D0
       aurllbS = 0.D0
-      aurllbj = 0.D0
-      do j=1,nlon   ! NORTH
-        do i=nlat/2+1,nlat
-          if(gflx(j+2,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
+      aurorabc1d = 0.D0
+      do j=1,nmlonp1   ! NORTH
+        do i=nmlat/2+1,nmlat
+          if(aflxm(j,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
         enddo
-        i = min(i,nlat)
-        aurllbj(i) = max(90.-glat(i),15.) ! aurllbj is co-lat.
+        i = min(i,nmlat)
+        aurorabc1d(j,1) = max(90.-gmlat(i),15.) ! aurllbj is co-lat.
       enddo
-      aurllbN = maxval(aurllbj)
+!!!      aurllbN = maxval(aurllbj)
 
-      aurllbj = 0.D0
-      do j=1,nlon   ! SOUTH
-        do i=nlat/2,1,-1
-          if(gflx(j+2,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
+      do j=1,nmlonp1   ! SOUTH
+        do i=nmlat/2,1,-1
+          if(aflxm(j,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
         enddo
         i = max(i,1)
-        aurllbj(i) = max(90.+glat(i),15.) ! aurllbj is co-lat from south pole! Backwards.
+        aurorabc1d(j,2) = max(90.+gmlat(i),15.) ! aurllbj is co-lat from south pole! Backwards.
       enddo
-      aurllbS = maxval(aurllbj)
+!!!      aurllbS = maxval(aurllbj)
+         aurllbN = maxval(aurorabc1d(:,1))
+         aurllbS = maxval(aurorabc1d(:,2))
+         !write(*,*) "TGCMCPL: aurora: ",aurllbN,aurllbS
 
 #endif
 
@@ -290,7 +323,7 @@
       integer,dimension(4),intent(in) :: modeltime
       logical :: hidra_prep
 
-      real,dimension(:,:,:), allocatable :: mixout
+      real,dimension(:,:,:), allocatable :: mixgeoout,mixapexout
       real,dimension(:,:,:,:), allocatable :: hidraout
 
       integer :: nreq,i
@@ -305,7 +338,7 @@
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)
-                call prep_export_remix(modeltime,mixout)
+                call prep_export_remix(modeltime,mixapexout,mixgeoout)
                 nreq = nreq + 1
               case (gamId)
                 !write(*,*) "T not coupling to Gam yet"
@@ -351,7 +384,7 @@
         ! Assign rank if match
         select case (IAm(i))
           case (voltId)
-            call export_remix(mixout)
+            call export_remix(mixapexout,mixgeoout)
           case (gamId)
             !write(*,*) "T not coupling to Gam yet"
           case (rcmId)
@@ -381,7 +414,8 @@
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)
-                if (allocated(mixout)) deallocate(mixout)
+                if (allocated(mixapexout)) deallocate(mixapexout)
+                if (allocated(mixgeoout)) deallocate(mixgeoout)
               case (gamId)
                 !write(*,*) "T not coupling to Gam yet"
               case (rcmId)
@@ -510,14 +544,17 @@
       end subroutine export_hidra
 
 !-----------------------------------------------------------------------
-      subroutine prep_export_remix(modeltime,var2d)
+      subroutine prep_export_remix(modeltime,avar2d,gvar2d)
 
 ! ... Shared Module Variables ..........................................
       use params_module,only: nlatp2,nlon,nlonp1,nlonp2
       use fields_module,only: gzigm1,gzigm2,gnsrhs
-      use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f2d,mytid,
-     |  ntask,tasks
+      use mpi_module,only: mytid,ntask,tasks
+      use mpi_module,only: mlat0,mlat1,mlon0,mlon1,
+     |  mp_gather_pdyn
+      use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f2d
       use addfld_module,only: addfld
+      use fields_module,only: zigm1,zigm2
       use mpi
 
 ! ... Parameter variables ..............................................
@@ -525,43 +562,84 @@
 
 ! ... Local variables ..................................................
       integer :: i,j,v,ierr
-      real,dimension(:,:,:),allocatable :: var2d
-      real,dimension(nlonp4,nlat) :: gzigm1_glb,gzigm2_glb,gnsrhs_glb
+      real,dimension(:,:,:),allocatable :: avar2d,gvar2d
+
+      real :: amsub(mlon0:mlon1,mlat0:mlat1,nmixoutapex)
+      real :: amglb(nmlonp1,nmlat,nmixoutapex)
+
+      real,allocatable,dimension(:,:,:) :: gsub
+      real,allocatable,dimension(:,:,:) :: gglb
 
 ! ... Begin ............................................................
 
 ! Prepare data for export
-      where(gzigm1 < 0.2) gzigm1 = 0.2
-      where(gzigm2 < 0.2) gzigm2 = 0.2
+      amsub(:,:,1) = zigm1(mlon0:mlon1,mlat0:mlat1)
+      amsub(:,:,2) = zigm2(mlon0:mlon1,mlat0:mlat1)
 
-      call mp_gather_f2d(gzigm1(lon0:lon1,lat0:lat1),gzigm1_glb,
-     |  tasks(:)%lon0,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
-     |  ntask,nlonp4,nlat,1)
-      call mp_gather_f2d(gzigm2(lon0:lon1,lat0:lat1),gzigm2_glb,
-     |  tasks(:)%lon0,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
-     |  ntask,nlonp4,nlat,1)
-      call mp_gather_f2d(gnsrhs(lon0:lon1,lat0:lat1),gnsrhs_glb,
-     |  tasks(:)%lon0,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
-     |  ntask,nlonp4,nlat,1)
+      where(amsub < 0.2) amsub = 0.2
+
+      call mp_gather_pdyn(amsub,mlon0,mlon1,mlat0,mlat1,
+     |  amglb,nmlonp1,nmlat,nmixoutapex)
 
       if (mytid == 0) then
-        if (.not. allocated(var2d)) then
-           allocate(var2d(nlatp2,nlonp1,nmixoutvar))
+        if (.not. allocated(avar2d)) then
+           allocate(avar2d(nmlat,nmlonp1,nmixoutapex))
         endif
-        do j = 2,nlatp1
-          do i = 1,nlonp1
-            var2d(j,i,1) = gzigm1_glb(i+2,j-1)
-            var2d(j,i,2) = gzigm2_glb(i+2,j-1)
+        do v=1,nmixoutapex
+          do j = 1,nmlat
+            do i = 1,nmlonp1
+              avar2d(j,i,v) = amglb(i,j,v)
+            enddo
           enddo
+          ! Fill pole with average
+          !avar2d(1,:,v) = sum(amglb(1:nmlon,1,v))/nmlon
+          !avar2d(nmlatp2,:,v) = sum(amglb(1:nmlon,nmlat,v))/nmlon
         enddo
-        var2d(1,:,1) = sum(gzigm1_glb(3:nlonp2,1))/nlon
-        var2d(nlatp2,:,1) = sum(gzigm1_glb(3:nlonp2,nlat))/nlon
-        var2d(1,:,2) = sum(gzigm2_glb(3:nlonp2,1))/nlon
-        var2d(nlatp2,:,2) = sum(gzigm2_glb(3:nlonp2,nlat))/nlon
-
-        write(6,"('TGCM: Sending at: ',4i4)") modeltime
-
       endif
+
+        if (nmixoutgeo .ne. 0) then
+          ! Prepare geographic output arrays
+          ! Gather GEO arrays
+          if (.not. allocated(gsub))
+     |  allocate(gsub(lon0:lon1,lat0:lat1,nmixoutgeo))
+          if (.not. allocated(gglb))
+     |  allocate(gglb(nlonp4,nlat,nmixoutgeo))
+          do v=1,nmixoutgeo
+          select case(v)
+          case (1)
+          gsub(:,:,v) = gzigm1
+          case(2)
+          gsub(:,:,v) = gzigm2
+          where(gsub < 0.2) gsub = 0.2
+          case(3)
+          gsub(:,:,v) = gnsrhs
+          end select
+          enddo
+
+          call mp_gather_f2d(gsub(lon0:lon1,lat0:lat1,nmixoutgeo),gglb,
+     |  tasks(:)%lon0,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
+     |  ntask,nlonp4,nlat,nmixoutgeo)
+
+      if (mytid == 0) then
+        if (.not. allocated(gvar2d)) then
+           allocate(gvar2d(nlatp2,nlonp1,nmixoutgeo))
+        endif
+          do v=1,nmixoutgeo
+            write(*,*) "Preparing GEO stuff here"
+            do j = 2,nlatp1
+              do i = 1,nlonp1
+                gvar2d(j,i,v) = gglb(i+2,j-1,v)
+              enddo
+            enddo
+            gvar2d(1,:,1) = sum(gglb(3:nlonp2,1,v))/nlon
+            gvar2d(nlatp2,:,1) = sum(gglb(3:nlonp2,nlat,v))/nlon
+          enddo
+
+        endif
+      endif
+
+        if (mytid == 0)
+     | write(6,"('TGCM: Sending at: ',4i4)") modeltime
 
 ! Save exchange variables to secondary history files
 
@@ -578,57 +656,103 @@
 
 !-----------------------------------------------------------------------
 
-      subroutine export_remix(var2d)
+      subroutine export_remix(avar2d,gvar2d)
         use params_module,only: nlatp2,nlonp1
         use mpi_module, only: CplComm,mixCplRank,handle_mpi_err,
      |   myAppId,voltId
         use mpi
 
-        real,dimension(:,:,:) :: var2d
+        real,dimension(:,:,:) :: avar2d,gvar2d
         integer :: ierr
 
 ! Export the data
         if (CplComm /= MPI_COMM_NULL) then
-          call mpi_send(var2d, nlatp2*nlonp1*nmixoutvar,
+
+          if ( nmixoutgeo .ne. 0) then
+          call mpi_send(gvar2d, nlatp2*nlonp1*nmixoutgeo,
      |       MPI_DOUBLE_PRECISION, mixCplRank,
      |       (myAppId+voltId)*100, CplComm, ierr)
           if (ierr /= 0)
      |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
+          endif
+
+          if ( nmixoutapex .ne. 0) then
+          call mpi_send(avar2d, nmlat*nmlonp1*nmixoutapex,
+     |       MPI_DOUBLE_PRECISION, mixCplRank,
+     |       (myAppId+voltId)*100, CplComm, ierr)
+          if (ierr /= 0)
+     |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
+          endif
+
         endif
 
       end subroutine export_remix
 !-------------------------------------------------------------------
 
-      subroutine init_mpi_remix(glatp2,glonp1)
+      subroutine init_mpi_remix(glatp2,glonp1,gmlat,gmlon)
 
       use params_module,only: nlatp2,nlonp1
       use mpi_module,only: myAppId,voltId,CplComm,mixCplRank,
      |  handle_mpi_err
       use mpi
 
-      integer :: ierr
+      integer :: ierr,i
       real,dimension(nlatp2) :: glatp2
       real,dimension(nlonp1) :: glonp1
+      real,dimension(nmlat):: gmlat
+      real,dimension(nmlonp1):: gmlon
 
       if (CplComm /= MPI_COMM_NULL) then
+        i = 0
+
         write(*,*) "TGCM: Start init_mpi_remix"
+        write(*,*) "TGCM: Sending GEO"
+        i = i + 1
         call mpi_send(nlatp2, 1, MPI_INTEGER,
-     |    mixCplRank, (myAppId+voltId)*100+1, CplComm, ierr)
+     |    mixCplRank, (myAppId+voltId)*100+i, CplComm, ierr)
         if (ierr /= 0)
      |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
 
+        i = i + 1
         call mpi_send(nlonp1, 1, MPI_INTEGER,
-     |    mixCplRank, (myAppId+voltId)*100+2, CplComm, ierr)
+     |    mixCplRank, (myAppId+voltId)*100+i, CplComm, ierr)
         if (ierr /= 0)
      |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
 
+        i = i + 1
         call mpi_send(glatp2, nlatp2, MPI_DOUBLE_PRECISION,
-     |    mixCplRank, (myAppId+voltId)*100+3, CplComm, ierr)
+     |    mixCplRank, (myAppId+voltId)*100+i, CplComm, ierr)
         if (ierr /= 0)
      |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
 
+        i = i + 1
         call mpi_send(glonp1, nlonp1, MPI_DOUBLE_PRECISION,
-     |    mixCplRank, (myAppId+voltId)*100+4, CplComm, ierr)
+     |    mixCplRank, (myAppId+voltId)*100+i, CplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        write(*,*) "TGCM: Sending APEX"
+        i = i + 1
+        call mpi_send(nmlat, 1, MPI_INTEGER,
+     |    mixCplRank, (myAppId+voltId)*100+i, CplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        i = i + 1
+        call mpi_send(nmlonp1, 1, MPI_INTEGER,
+     |    mixCplRank, (myAppId+voltId)*100+i, CplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        i = i + 1
+        call mpi_send(gmlat, nmlat, MPI_DOUBLE_PRECISION,
+     |    mixCplRank, (myAppId+voltId)*100+i, CplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        i = i + 1
+        call mpi_send(gmlon, nmlonp1, MPI_DOUBLE_PRECISION,
+     |    mixCplRank, (myAppId+voltId)*100+i, CplComm, ierr)
         if (ierr /= 0)
      |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
 
@@ -639,7 +763,7 @@
 
 !-------------------------------------------------------------------
 
-      subroutine import_remix(var2d)
+      subroutine import_remix(avar2d,gvar2d)
 
       use params_module,only: nlatp2,nlonp1
       use mpi_module,only: myAppId,voltId,CplComm,mixCplRank,
@@ -647,16 +771,34 @@
       use mpi
 
         integer :: v,ierr,i,j
-        real,dimension(:,:,:) :: var2d
+        real,dimension(:,:,:) :: avar2d,gvar2d
 
         if (CplComm /= MPI_COMM_NULL) then
           !write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100
-            call mpi_recv(var2d, nlatp2*nlonp1*nmixinvar,
+          if (nmixingeo .ne. 0) then
+            call mpi_recv(gvar2d, nlatp2*nlonp1*nmixingeo,
      |        MPI_DOUBLE_PRECISION, mixCplRank,
      |        (myAppId+voltId)*100, CplComm,
      |        MPI_STATUS_IGNORE, ierr)
             if (ierr /= 0) call handle_mpi_err(ierr,
      |        'import: TIEGCM recv from REMIX')
+          endif
+          if (nmixinapex .ne. 0) then
+            call mpi_recv(avar2d, nmlat*nmlonp1*nmixinapex,
+     |        MPI_DOUBLE_PRECISION, mixCplRank,
+     |        (myAppId+voltId)*100, CplComm,
+     |        MPI_STATUS_IGNORE, ierr)
+            if (ierr /= 0) call handle_mpi_err(ierr,
+     |        'import: TIEGCM recv from REMIX')
+          endif
+
+!!!            call mpi_recv(aurorabc, nmlonp1*2,
+!!!     |        MPI_DOUBLE_PRECISION, mixCplRank,
+!!!     |        (myAppId+voltId)*100, CplComm,
+!!!     |        MPI_STATUS_IGNORE, ierr)
+!!!            if (ierr /= 0) call handle_mpi_err(ierr,
+!!!     |        'import: TIEGCM recv from REMIX')
+
         endif
 
       end subroutine import_remix

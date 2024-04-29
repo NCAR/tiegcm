@@ -17,6 +17,7 @@
       use heelis_module,only: phihm
       use init_module,only: istep
       use input_module,only: current_pg,current_kq
+      use fields_module,only: zigm1,zigm2,nsrhs
       implicit none
 !
 ! 3d pointers to fields regridded to magnetic subdomains (i,j,k):
@@ -34,13 +35,13 @@
       real,allocatable,dimension(:,:) :: 
      |  zigm11,     ! sigma11*cos(theta0)
      |  zigmc,      ! sigmac
-     |  zigm2,      ! sigma2
      |  zigm22,     ! sigma22/cos(theta0)
      |  rim1,rim2,
      |  rhs,        ! right-hand side
      |  phimsolv,   ! solution direct from solver (nhem only)
-     |  phim2d,     ! solution with phihm and both nhem and shem
-     |  zigm1, nsrhs
+     |  phim2d     ! solution with phihm and both nhem and shem
+!     |  zigm1, nsrhs,
+!     |  zigm2,      ! sigma2
 !
 ! 3d potential and electric field on mag subdomains (see sub pthreed):
 ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1)
@@ -1283,7 +1284,7 @@
       fmsub(:,:,4) = zigm2 (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,5) = rim1  (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,6) = rim2  (mlon0:mlon1,mlat0:mlat1)
-      fmsub(:,:,7) = zigm1(mlon0:mlon1,mlat0:mlat1)
+      fmsub(:,:,7) = zigm1 (mlon0:mlon1,mlat0:mlat1)
 
       call mp_mageq_jpm1(fmsub,mlon0,mlon1,mlat0,mlat1,nmlonp1,
      |  feq_jpm1,nf2d)
@@ -3125,7 +3126,8 @@
 !
 ! Convert GAMERA geographic potential to geomagnetic coordinates
 !
-      call mage_pot2mag
+!      call mage_pot2mag
+      call mage_mag2mag
 c      do jj=1,nmlat
 c       do i=1,nmlonp1
 c        write(6,*)phihm(i,jj),i,jj
@@ -3912,6 +3914,13 @@ c      enddo
       enddo
 
       end subroutine mage_pot2mag
+
+      subroutine mage_mag2mag
+
+        use mage_coupling_module,  only:apotm
+        phihm = apotm
+
+      end subroutine
 !-----------------------------------------------------------------------
       subroutine geo2mag(fmag,fgeo,long,latg,wght,nlonp1_geo,nlonp1_mag,
      |  nlat_mag,lat)
