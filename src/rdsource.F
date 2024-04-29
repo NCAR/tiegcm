@@ -15,10 +15,11 @@
      |  he,he_nm,field_initval,ar,ar_nm,n2d,n2d_nm,gzigm1,gzigm2,gnsrhs,
      |  itp
       use ar_module,only: ar_glbm
-      use mpi_module,only: lat0,lat1,lon0,lon1,
+      use mpi_module,only: lat0,lat1,lon0,lon1,mlat0,mlat1,mlon0,mlon1,
      |  mp_periodic_f4d,mp_periodic_f2d,mp_bndlons_f2d,mp_bndlats_f2d
-      use pdynamo_module,only: define_phim3d
+      use pdynamo_module,only: define_phim3d,geo2mag_2d,zigm1,zigm2
       use lbc,only: pshelb
+      use my_esmf,only: geo_adota1,geo_adota2,mag_adota1,mag_adota2
       implicit none
 !
 ! Arg:
@@ -142,6 +143,13 @@
       gnsrhs(lon0:lon1,lat0:lat1) = flbc(:,:,9)
 !
       call define_phim3d(itp)
+!
+! Get field-line integrated Pedersen/Hall conductances on mag grids,
+! used to send conductances (mag) to magnetosphere before the main loop
+      call geo2mag_2d(gzigm1(lon0:lon1,lat0:lat1),
+     |  zigm1(mlon0:mlon1,mlat0:mlat1),geo_adota1,mag_adota1,'ZIGM1')
+      call geo2mag_2d(gzigm2(lon0:lon1,lat0:lat1),
+     |  zigm2(mlon0:mlon1,mlat0:mlat1),geo_adota2,mag_adota2,'ZIGM2')
 !
 ! If n2d_nm was not read from the source history, then set it to n2d
 !

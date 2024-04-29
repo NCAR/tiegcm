@@ -2875,6 +2875,43 @@
 
       end subroutine geo2mag_3d
 !-----------------------------------------------------------------------
+      subroutine geo2mag_2d(fgeo,fmag,ESMF_geo,ESMF_mag,fname)
+!
+! Convert field on geographic grid fgeo to geomagnetic grid in fmag.
+!
+      use my_esmf,only: esmf_set2d_geo,esmf_regrid,esmf_get_2dfield,
+     |  ESMF_Field
+!
+! Args:
+      character(len=*) :: fname
+      type(ESMF_Field),intent(inout) :: ESMF_geo, ESMF_mag
+      real,intent(in) :: fgeo(lon0:lon1,lat0:lat1)
+      real,intent(out) :: fmag(mlon0:mlon1,mlat0:mlat1)
+!
+! Local:
+      integer :: j
+      type(ESMF_Field) :: geofields
+      real,pointer,dimension(:,:) :: fptr
+
+      fmag = 0.
+      geofields = ESMF_geo
+!
+! Put fgeo into ESMF geo field on geo source grid:
+      call esmf_set2d_geo(geofields,fgeo,lon0,lon1,lat0,lat1)
+!
+! Regrid to magnetic destination grid, defining ESMF_mag:
+      call esmf_regrid(ESMF_geo,ESMF_mag,'geo2mag',2)
+!
+! Put regridded mag field into pointer:
+      call esmf_get_2dfield(ESMF_mag,fptr,fname)
+!
+! Transfer from pointer to output arg:
+      do j=mlat0,mlat1
+        fmag(:,j) = fptr(:,j)
+      enddo
+
+      end subroutine geo2mag_2d
+!-----------------------------------------------------------------------
       subroutine prepare_phig3d(wrprim,wrsech)
 !
 ! If its time to write a history, convert phim3d to geographic grid in
