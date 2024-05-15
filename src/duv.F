@@ -118,10 +118,10 @@
         call advec(vn(:,:,lat-2:lat+2),advec_vn(:,:,lat), 
      |    lev0,lev1,lon0,lon1,lat)
 
-!       call addfld('ADVEC_U0','ADVEC_U0',' ',advec_un(:,:,lat),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('ADVEC_V0','ADVEC_V0',' ',advec_vn(:,:,lat),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+       call addfld('ADVEC_U0','ADVEC_U0',' ',advec_un(:,:,lat),
+     |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+       call addfld('ADVEC_V0','ADVEC_V0',' ',advec_vn(:,:,lat),
+     |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End first latitude scan:
       enddo ! lat=lat0,lat1
@@ -149,10 +149,10 @@
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
-!       call addfld('ADVEC_U1','ADVEC_U1',' ',advec_un(:,:,lat),
-!    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('ADVEC_V1','ADVEC_V1',' ',advec_vn(:,:,lat),
-!    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+       call addfld('ADVEC_U1','ADVEC_U1',' ',advec_un(:,:,lat),
+     |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+       call addfld('ADVEC_V1','ADVEC_V1',' ',advec_vn(:,:,lat),
+     |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End second lat scan:
       enddo ! lat=lat0,lat1

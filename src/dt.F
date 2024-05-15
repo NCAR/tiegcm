@@ -10,7 +10,7 @@
 ! Advance neutral temperature at current latitude: 
 ! 4/4/05 btf: added gswm lbc option (eliminated dt_gswm.F)
 !
-      use params_module,only: nlonp4,dz,spval
+      use params_module,only: nlonp4,dz,spval,rp
       use input_module,only: step
       use init_module,only: iday
       use cons_module,only: dtx2inv,expz,rmassinv_o1,tsurplus,p0,avo,
@@ -28,7 +28,8 @@
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
 !
 ! Full subdomains:
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
+      real(rp),dimension(lev0:lev1,lon0-2:
+     |  lon1+2,lat0-2:lat1+2),intent(in)::
      |  tn,    ! neutral temperature (deg K)
      |  tn_nm, ! neutral temperature, time n-1 
      |  un,    ! neutral zonal velocity (cm/sec)
@@ -46,7 +47,7 @@
      |  cool_imp, ! implicit cooling (newton.F)
      |  cool_exp, ! explicit cooling (newton.F)
      |  w_upd  ! updated vertical velocity (swdot.F)
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(out) ::
      |  tn_upd,   ! updated tn (output)
      |  tn_nm_upd ! updated tn at time n-1 (output)
@@ -54,10 +55,10 @@
 ! Local:
       integer :: k,i,lonbeg,lonend,lat
       integer :: nk,nkm1,nlevs
-      real :: tnlbc(lon0:lon1,lat0:lat1) ! lower boundary condition
+      real(rp) :: tnlbc(lon0:lon1,lat0:lat1) ! lower boundary condition
 !
 ! Local at 2d:
-      real,dimension(lev0:lev1,lon0:lon1) ::
+      real(rp),dimension(lev0:lev1,lon0:lon1) ::
      |  cptn,       ! cp*exp(-s)*(V.del(T(n))-1/(2*DT))*T(n-1) (k+1/2)
      |  qm,         ! heating due to molecular diffusion
      |  total_heat, ! total heating
@@ -75,7 +76,7 @@
      |  solarq,recombq,conductq,coolq,advecq,adiaq
 !
 ! Local at 3d (tnsmooth needs lat dimension only for sub smooth):
-      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
+      real(rp),dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
      |  tnsmooth,   ! zonal and meridional smoothing of tn_nm
      |  advec_tn    ! horizontal advection (output of sub advec)
 !
@@ -127,7 +128,7 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-          cptn(k,i) = .5*(cp(k,i,lat)+cp(k+1,i,lat))*expz(k)*
+          cptn(k,i) = .5_rp*(cp(k,i,lat)+cp(k+1,i,lat))*expz(k)*
      |      (advec_tn(k,i,lat)-dtx2inv*tnsmooth(k,i,lat))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
@@ -146,19 +147,19 @@
 ! du/dz and dv/dz (s10, s11):
       do i=lon0,lon1
         do k=lev0+1,lev1-2
-          dudz(k,i) = (un(k+1,i,lat)-un(k-1,i,lat))/(2.*dz)  ! s10
-          dvdz(k,i) = (vn(k+1,i,lat)-vn(k-1,i,lat))/(2.*dz)  ! s11
+          dudz(k,i) = (un(k+1,i,lat)-un(k-1,i,lat))/(2._rp*dz)  ! s10
+          dvdz(k,i) = (vn(k+1,i,lat)-vn(k-1,i,lat))/(2._rp*dz)  ! s11
         enddo ! k=lev0+1,lev1-2
 !
 ! Lower boundary is in ulbc,vlbc: 
-        dudz(1,i) = (un(1,i,lat)+1./3.*un(2,i,lat)-4./3.*
+        dudz(1,i) = (un(1,i,lat)+1._rp/3._rp*un(2,i,lat)-4._rp/3._rp*
      |    ulbc(i,lat))/dz
-        dvdz(1,i) = (vn(1,i,lat)+1./3.*vn(2,i,lat)-4./3.*
+        dvdz(1,i) = (vn(1,i,lat)+1._rp/3._rp*vn(2,i,lat)-4._rp/3._rp*
      |    vlbc(i,lat))/dz
 !
 ! Upper boundary:
-        dudz(lev1-1,i) = dudz(lev1-2,i)/3.
-        dvdz(lev1-1,i) = dvdz(lev1-2,i)/3.
+        dudz(lev1-1,i) = dudz(lev1-2,i)/3._rp
+        dvdz(lev1-1,i) = dvdz(lev1-2,i)/3._rp
       enddo
 !
 ! Total heat sources are in total_heat (s5).
@@ -166,7 +167,7 @@
         do k=lev0,lev1-1
 !
 ! Solar heating from qrj:
-          solarq(k,i) = .5*(qtotal(k,i,lat)+qtotal(k+1,i,lat))
+          solarq(k,i) = .5_rp*(qtotal(k,i,lat)+qtotal(k+1,i,lat))
 !
 ! Heating due to atomic oxygen recombination:
           recombq(k,i) = tsurplus*rkm12(k,i,lat)*
@@ -175,7 +176,7 @@
 !
 ! qm = heating due to molecular diffusion:
 ! (km = molecular viscosity from sub cpktkm)
-          qm(k,i) = grav*.5*(km(k,i,lat)+km(k+1,i,lat))/
+          qm(k,i) = grav*.5_rp*(km(k,i,lat)+km(k+1,i,lat))/
      |      (p0*expz(k)*scht(k,i,lat))*(dudz(k,i)**2+dvdz(k,i)**2)
 !
 ! Add all explicit heating terms together:
@@ -217,7 +218,7 @@
 ! Levels 2 through lev1-1:
       do i=lon0,lon1
         do k=lev0+1,lev1-1
-          tni(k,i) = .5*(tn(k-1,i,lat)+tn(k,i,lat))
+          tni(k,i) = .5_rp*(tn(k-1,i,lat)+tn(k,i,lat))
           h(k,i) = schti(k,i,lat)
           rho(k,i) = p0*expzmid_inv*expz(k)/(h(k,i)*grav)
         enddo ! k=lev0+1,lev1-1
@@ -265,7 +266,7 @@
 ! Level k-1/2
         p(lev1-1,i) =  g(lev1-1,i)-f(lev1-1,i)
         q(lev1-1,i) = -g(lev1-1,i)-f(lev1-1,i)
-        r(lev1-1,i) = 0.
+        r(lev1-1,i) = 0._rp
         rhs(lev1-1,i) = cptn(lev1-1,i)
       enddo ! i=lon0,lon1
 
@@ -286,8 +287,9 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
           qpart(k,i) = 
-     |      .5*(cp(k,i,lat)+cp(k+1,i,lat))*(dtx2inv+cool_imp(k,i,lat))+
-     |      .5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))*gask/mbar(k,i,lat) 
+     |      .5_rp*(cp(k,i,lat)+cp(k+1,i,lat))*(dtx2inv+
+     |      cool_imp(k,i,lat))+
+     |      .5_rp*(w_upd(k,i,lat)+w_upd(k+1,i,lat))*gask/mbar(k,i,lat)
           rhs(k,i) = rhs(k,i)+cool_exp(k,i,lat)
           q(k,i) = q(k,i)-expz(k)*qpart(k,i)
         enddo ! k=lev0,lev1-1
@@ -310,8 +312,8 @@
         q(lev0,i) = q(lev0,i)-p(lev0,i)
 !
 ! Diffs in rhs lbc ??:
-        rhs(lev0,i) = rhs(lev0,i)-2.*p(lev0,i)*tnlbc(i,lat)
-        p(lev0,i) = 0.
+        rhs(lev0,i) = rhs(lev0,i)-2._rp*p(lev0,i)*tnlbc(i,lat)
+        p(lev0,i) = 0._rp
       enddo ! i=lon0,lon1
 
 !     call addfld('P_COEF2',' ',' ',p,
@@ -339,11 +341,11 @@
      |      tn_upd(k,i,lat)*(f(k+1,i)-f(k,i)-g(k+1,i)-g(k,i))+
      |      tn_upd(k+1,i,lat)*(f(k+1,i)+g(k+1,i)))/expz(k)
           coolq(k,i) = -cool_exp(k,i,lat)/expz(k)-
-     |      .5*(cp(k,i,lat)+cp(k+1,i,lat))*
+     |      .5_rp*(cp(k,i,lat)+cp(k+1,i,lat))*
      |      cool_imp(k,i,lat)*tn_upd(k,i,lat)
           advecq(k,i) =
-     |      -.5*(cp(k,i,lat)+cp(k+1,i,lat))*advec_tn(k,i,lat)
-          adiaq(k,i) = -.5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))*
+     |      -.5_rp*(cp(k,i,lat)+cp(k+1,i,lat))*advec_tn(k,i,lat)
+          adiaq(k,i) = -.5_rp*(w_upd(k,i,lat)+w_upd(k+1,i,lat))*
      |      gask/mbar(k,i,lat)*tn_upd(k,i,lat)
         enddo
       enddo
@@ -392,7 +394,7 @@
         if (lon1==nlonp4) lonend = nlonp4
         do i=lonbeg,lonend
           do k=lev0,lev1
-            if (tn_upd(k,i,lat) < 100.) tn_upd(k,i,lat) = 100.
+            if (tn_upd(k,i,lat) < 100._rp) tn_upd(k,i,lat) = 100._rp
           enddo
         enddo
 !       call addfld('TN_FINAL',' ',' ',tn_upd(:,lon0:lon1,lat),
@@ -406,13 +408,14 @@
 !
 ! Filter updated TN
 !
-      use params_module,only: nlonp4
+      use params_module,only: nlonp4,rp
       use mpi_module,only: mp_gatherlons_f3d,mp_scatterlons_f3d,mytidi
       implicit none
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,intent(inout) :: fout(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
+      real(rp),intent(inout) ::
+     |  fout(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
 !
 ! VT vampir tracing:
 !
@@ -422,7 +425,7 @@
 !
 ! Local:
       integer :: i,j,nlevs,nlons,nlats,ier
-      real :: fik(nlonp4,lev0:lev1),fkij(lev0:lev1,nlonp4,lat0:lat1)
+      real(rp) :: fik(nlonp4,lev0:lev1),fkij(lev0:lev1,nlonp4,lat0:lat1)
 !
 #ifdef VT
 !     code = 131 ; state = 'filter_tn' ; activity='Filtering'
@@ -434,7 +437,7 @@
       nlats = lat1-lat0+1
 !
 ! Define lons in fkij from current task:
-      fkij = 0.
+      fkij = 0._rp
       do j=lat0,lat1
         do i=lon0,lon1
           fkij(:,i,j) = fout(:,i,j)

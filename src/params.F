@@ -4,23 +4,25 @@
 #include <defs.h>
 !
       module params_module
+      use, intrinsic :: iso_fortran_env
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
 ! Geographic grid parameters:
+      integer,parameter :: rp = REAL64
       real,parameter ::
      |  dlat  = DLAT,                ! delta latitude
-     |  glat1 = -90+dlat/2,          ! first latitude
+     |  glat1 = -90._rp+dlat/2._rp,          ! first latitude
      |  dlon  = DLON,                ! delta longitude
      |  glon1 = GLON1,               ! first longitude
      |  dlev  = DLEV,                ! delta level (same for midpoints and interfaces)
      |  dz    = dlev,                ! delta level (alias for dlev)
      |  zitop = ZITOP,               ! top interface level
      |  zibot = ZIBOT,               ! bottom interface level
-     |  zmtop = zitop+dz/2,          ! top midpoint level
-     |  zmbot = zibot+dz/2           ! bottom midpoint level
+     |  zmtop = zitop+dz/2._rp,          ! top midpoint level
+     |  zmbot = zibot+dz/2._rp           ! bottom midpoint level
       integer,parameter :: 
      |  nlat = 180/dlat,             ! number of latitudes
      |  nlon = 360/dlon,             ! number of longitudes
@@ -33,7 +35,7 @@
      |  nlonp2=nlon+2, nlatp2=nlat+2
       real :: glon(nlon),glat(nlat),zpmid(nlevp1),zpint(nlevp1)
       real,parameter ::
-     |  spval = 1.e36
+     |  spval = 1.e36_rp
       integer,parameter ::
      |  ispval = 999
 !
@@ -47,8 +49,8 @@
      |  nmlatp1=nmlat+1,
      |  nmlath=(nmlat+1)/2  ! index to magnetic equator
 
-      real,parameter :: zpbot_dyn  = -8.25 ! bottom midpoint boundary of dynamo
-      real,parameter :: zpibot_dyn = -8.5  ! bottom interface boundary of dynamo
+      real,parameter :: zpbot_dyn  = -8.25_rp ! bottom midpoint boundary of dynamo
+      real,parameter :: zpibot_dyn = -8.5_rp  ! bottom interface boundary of dynamo
       real,parameter :: dmlev = dlev
 !
 ! nmlev_diff = number of levels from zibot down to zpibot_dyn

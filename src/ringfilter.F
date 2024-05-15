@@ -7,19 +7,19 @@
 ! 2. Calculate the avg values of each chunk
 ! 3. Do the restruction based on the mean value of each chunk
 
-      use params_module,only: nlon,nlonp2,nlonp4,nlat
+      use params_module,only: nlon,nlonp2,nlonp4,nlat,rp
       use cons_module,only: dlamda,nlat_filter,chunk_array
       implicit none
 
       integer,intent(in) :: lev0,lev1,order,lat
-      real,dimension(nlonp4,lev0:lev1),intent(inout) :: f
+      real(rp),dimension(nlonp4,lev0:lev1),intent(inout) :: f
       character(len=*),intent(in) :: name
 
       integer :: i,m,n,nchnk,ichnk,im2,im1,ip1,ip2
-      real :: ang
-      real,dimension(lev0:lev1) :: a0,left,right,fa,fb
-      real,dimension(order,lev0:lev1) :: a,b
-      real,dimension(nlon,lev0:lev1) :: w,wm,fx,avg
+      real(rp) :: ang
+      real(rp),dimension(lev0:lev1) :: a0,left,right,fa,fb
+      real(rp),dimension(order,lev0:lev1) :: a,b
+      real(rp),dimension(nlon,lev0:lev1) :: w,wm,fx,avg
 
       nchnk = 0
       if (lat <= nlat_filter) then
@@ -40,8 +40,8 @@
 
 ! Fourier series to nth order
       a0 = sum(w,1)/nlon
-      a = 0
-      b = 0
+      a = 0._rp
+      b = 0._rp
       do i = 1,nlon
         ang = i*dlamda
         do m = 1,order
@@ -49,8 +49,8 @@
           b(m,:) = b(m,:)+w(i,:)*sin(m*ang)
         enddo
       enddo
-      a = 2*a/nlon
-      b = 2*b/nlon
+      a = 2._rp*a/nlon
+      b = 2._rp*b/nlon
 
 ! reconstruct based on Fourier series (taken as mean)
       do i = 1,nlon
@@ -80,15 +80,18 @@
         if (ip1 >= nchnk+1) ip1 = ip1-nchnk
         ip2 = ichnk+2
         if (ip2 >= nchnk+1) ip2 = ip2-nchnk
-        left = (-avg(im2,:)+7*avg(im1,:)+7*avg(ichnk,:)-avg(ip1,:))/12
-        right = (-avg(im1,:)+7*avg(ichnk,:)+7*avg(ip1,:)-avg(ip2,:))/12
-        fa = (left+right-2*avg(ichnk,:))/n**2
-        fb = (3*avg(ichnk,:)-2*left-right)/n
+        left = (-avg(im2,:)+7._rp*avg(im1,:)+
+     |  7._rp*avg(ichnk,:)-avg(ip1,:))/12._rp
+        right = (-avg(im1,:)+7._rp*avg(ichnk,:)+
+     |  7._rp*avg(ip1,:)-avg(ip2,:))/12._rp
+        fa = (left+right-2._rp*avg(ichnk,:))/n**2
+        fb = (3._rp*avg(ichnk,:)-2._rp*left-right)/n
 
         if (trim(name) == 'OPLUS') then
 ! piece-wise polynomial reconstruction
           do m = 1,n
-            fx((ichnk-1)*n+m,:) = fa*(3*m**2-3*m+1)+fb*(2*m-1)+left
+            fx((ichnk-1)*n+m,:) = fa*(3._rp*m**2-3._rp*m+1._rp)+
+     |  fb*(2._rp*m-1._rp)+left
           enddo
         else
 ! piece-wise linear reconstruction
