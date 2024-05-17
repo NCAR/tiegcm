@@ -194,7 +194,7 @@
       integer,parameter :: mxdims=20 ! assume <= mxdims dimensions
       integer,parameter :: mxvars=100 ! max # 4d vars
       integer :: istat,id_time,id_mtimedim,mtime_read(4),ntimes,
-     |  i,istart2(2),icount2(2),j
+     |  i,istart2(2),icount2(2),j,ivar1(1)
       integer :: ndims,nvars,ngatts,idunlim,itype,natts,len,
      |  iddims(mxdims),iscalar,id
       character(len=80) :: varname
@@ -312,8 +312,8 @@
 ! If tuv_lbc_intop global attribute is not on the file, assume
 ! "old" history, i.e., tuv_lbc_intop==1:
 !
-      istat=nf_get_att_int(ncid,NF_GLOBAL,"tuv_lbc_intop",
-     |  sh%tuv_lbc_intop)
+      istat=nf_get_att_int(ncid,NF_GLOBAL,"tuv_lbc_intop",ivar1)
+      sh%tuv_lbc_intop=ivar1(1)
       if (istat /= NF_NOERR) then ! old hist
         write(6,"('nc_rdhist: did not find tuv_lbc_intop in source',
      |    ' history ',a,' --> assuming tuv_lbc_intop==1')") 
@@ -523,16 +523,16 @@
 ! (If an initial run, initial times were set by sub hist_initype (hist.F))
 !
             if (nsource <= 0) then
-              istat=nf_get_att_int(ncid,i,"initial_year",
-     |          sh%initial_year)
+              istat=nf_get_att_int(ncid,i,"initial_year",ivar1)
+              sh%initial_year=ivar1(1)
               if (istat /= NF_NOERR)
      |          call handle_ncerr(istat,'getting att initial_year')
-              istat=nf_get_att_int(ncid,i,"initial_day",
-     |          sh%initial_day)
+              istat=nf_get_att_int(ncid,i,"initial_day",ivar1)
+              sh%initial_day=ivar1(1)
               if (istat /= NF_NOERR)
      |          call handle_ncerr(istat,'getting att initial_day')
-              istat=nf_get_att_int(ncid,i,"initial_mtime",
-     |          sh%initial_mtime)
+              istat=nf_get_att_int(ncid,i,"initial_mtime",ivar1)
+              sh%initial_mtime=ivar1(1)
               if (istat /= NF_NOERR)
      |          call handle_ncerr(istat,'getting att initial_mtime')
             endif
@@ -1200,7 +1200,7 @@
       integer,intent(in) :: ncid
 !
 ! Local:
-      integer :: i,istat,idum,ivar1(1),imo,ida,startmtime(4),nbytes
+      integer :: i,istat,idum(1),ivar1(1),imo,ida,startmtime(4),nbytes
       character(len=120) :: char120
       character(len=80) :: char80
       character(len=24) :: create_date,create_time
@@ -1300,11 +1300,11 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining units of time dimension variable')
       istat = nf_put_att_int(ncid,idv_time,"initial_year",NF_INT,1,
-     |  h%initial_year)
+     |  (/h%initial_year/))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining initial_year of time dimension variable')
       istat = nf_put_att_int(ncid,idv_time,"initial_day",NF_INT,1,
-     |  h%initial_day)
+     |  (/h%initial_day/))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining initial_day of time dimension variable')
       istat = nf_put_att_int(ncid,idv_time,"initial_mtime",NF_INT,4,
@@ -1546,11 +1546,11 @@
 ! Source date and time are attributes of time var 
 ! (they are also global file attributes):
       istat = nf_put_att_int(ncid,idv_time,"initial_year",NF_INT,1,
-     |  sh%initial_year)
+     |  (/sh%initial_year/))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      | 'Error defining initial_year of time dimension variable')
       istat = nf_put_att_int(ncid,idv_time,"initial_day",NF_INT,1,
-     |  sh%initial_day)
+     |  (/sh%initial_day/))
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      | 'Error defining initial_day of time dimension variable')
       istat = nf_put_att_int(ncid,idv_time,"initial_mtime",NF_INT,4,
@@ -2221,7 +2221,7 @@
      | call handle_ncerr(istat,'Error giving values to zpint coord var')
 !
 ! Bottom interface level LBC for t,u,v lbc:
-      istat = nf_put_var_double(ncid,idv_lbc,zibot)
+      istat = nf_put_var_double(ncid,idv_lbc,(/zibot/))
       if (istat /= NF_NOERR)
      | call handle_ncerr(istat,'Error giving value to LBC scalar var')
 !
@@ -4182,7 +4182,7 @@
       integer :: istat,idvmtime,idtime,ntimes,idvyear,idvday,
      |  mtime_beg(4),mtime_end(4),istart2(2),icount2(2),
      |  iyear_beg,iyear_end,iday_beg,iday_end,idelhist,
-     |  ibegiyd,iendiyd
+     |  ibegiyd,iendiyd,ivar1(1)
       character(len=16) :: mversion,htype
       character(len=80) :: contents_desc
 !
@@ -4242,7 +4242,8 @@
 !
 ! Get delta time between histories (seconds), model version,
 ! and history type:
-      istat = nf_get_att_int (ncid,NF_GLOBAL,"delhist_secs",idelhist)
+      istat = nf_get_att_int (ncid,NF_GLOBAL,"delhist_secs",ivar1)
+      idelhist=ivar1(1)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'nc_fileinfo: Error getting attribute delhist_secs')
       mversion = ' '

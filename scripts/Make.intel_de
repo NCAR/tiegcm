@@ -23,7 +23,6 @@ DBGFLAGS += -warn all -nogen-interfaces
 #
 # Makefile will use OPTIM = -g if set debug=TRUE in job script.
 OPTIM    = -O2
-LIBS     = -lcurl
 HOST     = $(shell hostname)
 #
 # Library and Include file paths:

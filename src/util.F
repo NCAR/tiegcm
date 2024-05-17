@@ -1024,26 +1024,26 @@
 !
 ! Local:
       real :: plus_inf,minus_inf,plus_nanq,minus_nanq,sig_nan
-!
-! For double precision 8-byte reals (-qrealsize=8):
-      data plus_inf   /z'7ff0000000000000'/  ! INF   (overflow)
-      data minus_inf  /z'fff0000000000000'/  ! -INF  (underflow)
-      data plus_nanq  /z'7ff8000000000000'/  ! NaNQ  (plus quiet NaN)
-      data minus_nanq /z'fff8000000000000'/  ! -NaNQ (minus quiet NaN)
-      data sig_nan    /z'7ff0000000000001'/  ! NaNS  (signalling NaN)
-!
-! For single precision (4-byte) reals:
-!     data plus_inf   /z'7f800000'/  ! INF   (overflow)
-!     data minus_inf  /z'ff800000'/  ! -INF  (underflow)
-!     data plus_nanq  /z'7fc00000'/  ! NaNQ  (plus quiet NaN)
-!     data minus_nanq /z'ffc00000'/  ! -NaNQ (minus quiet NaN)
-!     data sig_nan    /z'7f800001'/  ! NaNS  (signalling NaN)
-!
       integer :: i1,i2,i3
       integer :: 
      |  n_plus_inf,   ! number of INF
      |  n_minus_inf,  ! number of -INF
      |  n_nan         ! total number of NaNs (+/-NaNQ and NaNS)
+!
+! For double precision 8-byte reals (-qrealsize=8):
+      plus_inf   = int(z'7ff0000000000000')  ! INF   (overflow)
+      minus_inf  = int(z'fff0000000000000')  ! -INF  (underflow)
+      plus_nanq  = int(z'7ff8000000000000')  ! NaNQ  (plus quiet NaN)
+      minus_nanq = int(z'fff8000000000000')  ! -NaNQ (minus quiet NaN)
+      sig_nan    = int(z'7ff0000000000001')  ! NaNS  (signalling NaN)
+!
+! For single precision (4-byte) reals:
+!     plus_inf   = int(z'7f800000')  ! INF   (overflow)
+!     minus_inf  = int(z'ff800000')  ! -INF  (underflow)
+!     plus_nanq  = int(z'7fc00000')  ! NaNQ  (plus quiet NaN)
+!     minus_nanq = int(z'ffc00000')  ! -NaNQ (minus quiet NaN)
+!     sig_nan    = int(z'7f800001')  ! NaNS  (signalling NaN)
+!
 !
 ! Init:
       n_plus_inf = 0

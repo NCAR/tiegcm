@@ -4,8 +4,8 @@
 #
 MPIF90 = mpifort
 MPIRUN = mpirun
-FFLAGS = -fdefault-real-8 -fno-range-check -DGNU
-LDFLAGS = -L/zfs/luatmos/software/lib
+FFLAGS = -fdefault-real-8 -frecursive -I${NETCDF_FORTRAN_ROOT}/include -DGNU
+LDFLAGS = -L${NETCDF_FORTRAN_ROOT}/lib
 #
 # See https://docs.rcd.clemson.edu/palmetto/
 #FFLAGS += -mcmodel=medium
@@ -26,14 +26,13 @@ DBGFLAGS += -Wuse-without-only -Walign-commons -Wrealloc-lhs -Wrealloc-lhs-all
 #
 # Makefile will use OPTIM = -g if set debug=TRUE in job script.
 OPTIM    = -O2
-LIBS     = -lcurl
 HOST     = $(shell hostname)
 #
 # Library and Include file paths:
 #
 # ESMF lib on palmetto:
 # (Makefile does "include $(ESMFMKFILE)")
-ESMFMKFILE = /zfs/luatmos/software/lib/libO/Linux.gfortran.64.openmpi.default/esmf.mk
+ESMFMKFILE = /project/xianl/luatmos/software/lib/libO/Linux.gfortran.64.openmpi.default/esmf.mk
 #
 # Make machines.ini file for MPI execution:
 #
