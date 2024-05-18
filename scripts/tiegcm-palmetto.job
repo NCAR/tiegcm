@@ -46,7 +46,7 @@ hidra="FALSE"
 make="Make.gfort_palmetto"
 debug="FALSE"
 execute="FALSE"
-runscript="run.pbs"
+runscript="run.sh"
 
 queue="luspace"
 nnodes=1

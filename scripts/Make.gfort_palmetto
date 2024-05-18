@@ -4,7 +4,7 @@
 #
 MPIF90 = mpifort
 MPIRUN = mpirun
-FFLAGS = -fdefault-real-8 -frecursive -I${NETCDF_FORTRAN_ROOT}/include -DGNU
+FFLAGS = -fdefault-real-8 -I${NETCDF_FORTRAN_ROOT}/include -DGNU
 LDFLAGS = -L${NETCDF_FORTRAN_ROOT}/lib
 #
 # See https://docs.rcd.clemson.edu/palmetto/
@@ -13,7 +13,7 @@ LDFLAGS = -L${NETCDF_FORTRAN_ROOT}/lib
 # DBGFLAGS are used by the Makefile only if the job script
 # has "set debug = true"
 #
-DBGFLAGS = -Og -fcheck=all -fbacktrace
+DBGFLAGS = -Og -fcheck=all,no-array-temps -fbacktrace
 DBGFLAGS += -Wall -Wextra
 DBGFLAGS += -Wpedantic -Wcharacter-truncation -Wconversion-extra
 DBGFLAGS += -Wfrontend-loop-interchange -Wimplicit-interface -Wimplicit-procedure
