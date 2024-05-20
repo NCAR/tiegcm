@@ -1282,19 +1282,24 @@ def prompt_user_for_run_options(args):
                         if item not in skip_inp:
                             skip_inp.append(item)
             elif on == "GSWM_MI_DI_NCFILE":
-                od[on]["default"] = f"{find_file(f'*gswm_diurn_{horires}d_99km*', TIEGCMDATA)}"
+                GSWM_MI_DI_NCFILE = find_file(f'*gswm_diurn_{horires}d_99km*', TIEGCMDATA)
+                od[on]["default"] = f"{GSWM_MI_DI_NCFILE}" if GSWM_MI_DI_NCFILE is not None else None
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "GSWM_MI_SDI_NCFILE":
-                od[on]["default"] = f"{find_file(f'*gswm_semi_{horires}d_99km*', TIEGCMDATA)}"
+                GSWM_MI_SDI_NCFILE = find_file(f'*gswm_semi_{horires}d_99km*', TIEGCMDATA)
+                od[on]["default"] = f"{GSWM_MI_SDI_NCFILE}" if GSWM_MI_SDI_NCFILE is not None else None
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "GSWM_NM_DI_NCFILE":
-                od[on]["default"] = f"{find_file(f'*gswm_nonmig_diurn_{horires}d_99km*', TIEGCMDATA)}"
+                GSWM_NM_DI_NCFILE = find_file(f'*gswm_nonmig_diurn_{horires}d_99km*', TIEGCMDATA)
+                od[on]["default"] = f"{GSWM_NM_DI_NCFILE}" if GSWM_NM_DI_NCFILE is not None else None
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "GSWM_NM_SDI_NCFILE":
-                od[on]["default"] = f"{find_file(f'*gswm_nonmig_semi_{horires}d_99km*', TIEGCMDATA)}"
+                GSWM_NM_SDI_NCFILE = find_file(f'*gswm_nonmig_semi_{horires}d_99km*', TIEGCMDATA)
+                od[on]["default"] = f"{GSWM_NM_SDI_NCFILE}" if GSWM_NM_SDI_NCFILE is not None else None
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "HE_COEFS_NCFILE":
-                od[on]["default"] = f"{find_file(f'*he_coefs_dres*', TIEGCMDATA)}"
+                HE_COEFS_NCFILE = f"{find_file(f'*he_coefs_dres*', TIEGCMDATA)}"
+                od[on]["default"] = f"{HE_COEFS_NCFILE}" if HE_COEFS_NCFILE is not None else None
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on not in skip_inp:
                 o[on] = get_run_option(on, od[on], temp_mode)
