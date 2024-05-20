@@ -13,13 +13,13 @@
             "LEVEL": "BENCH",
             "prompt": "Name of HPC system",
             "default": "derecho",
-            "valids": ["derecho", "pleiades"],
+            "valids": ["derecho", "pleiades","linux"],
             "description": null,
             "warning": null
         }
     },
 
-    "pbs": {
+    "job": {
         "_common": {
             "account_name": {
                 "LEVEL": "BENCH",
@@ -281,7 +281,7 @@
                 "LEVEL": "BENCH",
                 "prompt": "Horizontal Resolution (Deg)",
                 "default": 2.5,
-                "valids": [2.5, 1.25, 0.625],
+                "valids": [5.0, 2.5, 1.25, 0.625],
                 "description": "The longitudinal and latitudinal spacing of the model grid.",
                 "warning": null
             },
@@ -289,7 +289,7 @@
                 "LEVEL": "BENCH",
                 "prompt": "Vertical Resolution (Scale Height)",
                 "default": 0.25,
-                "valids": [0.25, 0.125, 0.0625],
+                "valids": [0.5, 0.25, 0.125, 0.0625],
                 "description": "The vertical spacing of the model grid.",
                 "warning": null
             },
@@ -315,6 +315,14 @@
                 "default": null,
                 "description": null,
                 "warning": "Automatically populated. Do not change."
+            },
+            "segmentation":{
+                "LEVEL": "EXPERT",
+                "prompt": "Segmentation",
+                "default": false,
+                "valids": [true, false],
+                "description": "Segmenting Job into multiple runs",
+                "warning": null
             }
         }
     },

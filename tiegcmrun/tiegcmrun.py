@@ -912,27 +912,27 @@ def get_run_option(name, description, mode="BASIC"):
 def select_resource_defaults(options, option_descriptions):
     horires = options["model"]["specification"]["horires"]
     hpc_platform = options["simulation"]["hpc_system"]
-    od = option_descriptions["pbs"][hpc_platform]
-    o = options["pbs"]
+    od = option_descriptions["job"][hpc_platform]
+    o = options["job"]
     if hpc_platform == "derecho":
         od=od["resource"]
         for on in od:
             if on == "select":
-                if float(horires) == 2.5:
+                if float(horires) == 2.5 or float(horires) == 5:
                     select_default = 1
                 elif float(horires) == 1.25:
                     select_default = 1
                 elif float(horires) == 0.625:
                     select_default = 2         
             if on == "ncpus":
-                if float(horires) == 2.5:
+                if float(horires) == 2.5 or float(horires) == 5:
                     ncpus_default = 128
                 elif float(horires) == 1.25:
                     ncpus_default = 128
                 elif float(horires) == 0.625:
                     ncpus_default = 128
             if on == "mpiprocs":
-                if float(horires) == 2.5:
+                if float(horires) == 2.5 or float(horires) == 5:
                     mpiprocs_default = 128
                 elif float(horires) == 1.25:
                     mpiprocs_default = 128
@@ -951,7 +951,7 @@ def select_resource_defaults(options, option_descriptions):
             max_ncpus = 12
         for on in od:
             if on == "select":
-                if float(horires) == 2.5:
+                if float(horires) == 2.5 or float(horires) == 5:
                     select = 72/max_ncpus
                 if float(horires) == 1.25:
                     select = 144/max_ncpus
@@ -1021,8 +1021,10 @@ def prompt_user_for_run_options(args):
     system_name = os.popen('hostname').read().strip()
     if 'pfe' in system_name.lower():
         od["hpc_system"]["default"]= "pleiades"
-    else:
+    elif 'derecho' in system_name.lower():
         od["hpc_system"]["default"] = "derecho"
+    else:
+        od["hpc_system"]["default"] = "linux"
     # Prompt for the parameters.
     for on in ["job_name", "hpc_system"]:
         o[on] = get_run_option(on, od[on], mode)
@@ -1074,7 +1076,7 @@ def prompt_user_for_run_options(args):
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_de')
         elif options["simulation"]["hpc_system"] == "pleiades":
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_pf')
-        elif options["simulation"]["hpc_system"] == "None":
+        elif options["simulation"]["hpc_system"] == "linux":
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_linux')
     o["make"] = get_run_option("make", od["make"], mode)
     od["modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.exe")
@@ -1113,7 +1115,9 @@ def prompt_user_for_run_options(args):
             o["nres_grid"] = 6
         elif float(o["mres"]) == 0.5:
             o["nres_grid"] = 7
-
+    if input_build_skip == True:
+        input_build_skip = True
+        o["segmentation"] = False
     #-------------------------------------------------------------------------
     # INP options
     if input_build_skip == False:        
@@ -1184,6 +1188,7 @@ def prompt_user_for_run_options(args):
             elif on == "segment" and benchmark == None:
                 o[on] = get_run_option(on, od[on], temp_mode)
                 if o[on] != [None]:
+                    options["model"]["specification"]["segmentation"] = True
                     segment = [int(i) for i in o[on].split()]
                     runtimes = segment_time(o["start_date"], o["stop_date"], segment)
                     segment_warn_0 = f"Segmentation is set to {segment}.\n"
@@ -1298,29 +1303,32 @@ def prompt_user_for_run_options(args):
             
 
     #-------------------------------------------------------------------------
+    hpc_platform = options["simulation"]["hpc_system"]
+    if hpc_platform == "linux":
+        pbs_build_skip = True
     if pbs_build_skip == False:
         # PBS options
-        options["pbs"] = {}
-        o = options["pbs"]
+        options["job"] = {}
+        o = options["job"]
         skip_pbs = []
         # Common (HPC platform-independent) options
-        od = option_descriptions["pbs"]["_common"]
+        od = option_descriptions["job"]["_common"]
         od["account_name"]["default"] = os.getlogin()
         for on in od:
             o[on] = get_run_option(on, od[on], mode)
 
         # HPC platform-specific options
         hpc_platform = options["simulation"]["hpc_system"]
-        od = option_descriptions["pbs"][hpc_platform]
+        od = option_descriptions["job"][hpc_platform]
         if hpc_platform == "derecho":
             o["mpi_command"] = "mpirun"
         elif hpc_platform == "pleiades":
             o["mpi_command"] = "mpiexec_mpt"
         for on in od:
             if on == "resource":
-                options["pbs"]["resource"] = {}
+                options["job"]["resource"] = {}
                 odt = od["resource"]
-                ot = options["pbs"]["resource"]
+                ot = options["job"]["resource"]
                 for ont in odt:
                     if hpc_platform == "derecho":
                         select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
@@ -1678,7 +1686,7 @@ def main():
         print(f"options = {options}")
 
     # Move to the run directory.
-    #os.chdir(options["pbs"]["run_directory"])
+    #os.chdir(options["job"]["run_directory"])
     run_name = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
     execdir   = options["model"]["data"]["execdir"]
     workdir = options["model"]["data"]["workdir"]
@@ -1702,31 +1710,34 @@ def main():
     horires = options["model"]["specification"]["horires"]
     vertres = options["model"]["specification"]["vertres"]
     zitop = options["model"]["specification"]["zitop"]
+    if options.get("inp") == None:
+        input_file_generatred = True
+    else:
+        input_file_generatred = False
     if args.onlycompile == True:
         compile_tiegcm(options, debug, coupling)
     else:
-        if options["inp"]["segment"] not in (None,[None],""):
+        if options["model"]["specification"]["segmentation"] == False:
             if options["model"]["data"]["input_file"] == None or not os.path.isfile(options["model"]["data"]["input_file"]):
-                if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
-                    if args.benchmark == None:
-                        in_prim = options["inp"]["SOURCE"]
-                        out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                        options["inp"]["SOURCE"] = out_prim
-                        interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+                if input_file_generatred == False:
+                    if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
+                        if args.benchmark == None:
+                            in_prim = options["inp"]["SOURCE"]
+                            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                            options["inp"]["SOURCE"] = out_prim
+                            interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+                        else:
+                            in_prim = options["inp"]["SOURCE"]
+                            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                            options["inp"]["SOURCE"] = out_prim
+                            interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
                     else:
-                        in_prim = options["inp"]["SOURCE"]
                         out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
                         options["inp"]["SOURCE"] = out_prim
-                        interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
-
-                else:
-                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                    options["inp"]["SOURCE"] = out_prim
-                    print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
-                options["model"]["data"]["input_file"] = create_inp_scripts(options,run_name,None)
+                        print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
+                    options["model"]["data"]["input_file"] = create_inp_scripts(options,run_name,None)
             if options["model"]["data"]["log_file"] == None:
                 options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"], f"{run_name}.out")
-
 
             if os.path.exists(path):
                 if not clobber:
@@ -1737,8 +1748,9 @@ def main():
             if args.compile == True:
                 compile_tiegcm(options, debug, coupling)
             
-            pbs_script = create_pbs_scripts(options,run_name,None)
-            if args.execute == True:
+            if options["simulation"]["hpc_system"] != "linux":
+                pbs_script = create_pbs_scripts(options,run_name,None)
+            if args.execute == True and options["simulation"]["hpc_system"] != "linux":
                 if args.compile == False:
                     if find_file(options["model"]["data"]["modelexe"], execdir) == None and os.path.exists(options["model"]["data"]["modelexe"]) == False :
                         print(f'{RED}Unable to find executable in {execdir}{RESET}')
@@ -1751,9 +1763,12 @@ def main():
                     print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
                     print(f"{YELLOW}Check PBS script for erros{RESET}")
                     print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
-            else:
+            elif options["simulation"]["hpc_system"] != "linux":
                 print(f"{YELLOW}Execute is set to false{RESET}")
                 print(f"{YELLOW}To submit job use command{RESET} qsub {pbs_script}")
+            else:
+                print(f"{YELLOW}HPC System is set to linux{RESET}")
+                print(f"{YELLOW}To run the model use command{RESET} mpirun {options['model']['data']['modelexe']} {options['model']['data']['input_file']}")
         else:
             if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
                 if args.benchmark == None:
@@ -1820,14 +1835,17 @@ def main():
                 if segment_number == 0:
                     init_inp = segment_options["model"]["data"]["input_file"]
                 segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}_{'{:03d}'.format(segment_number)}.out")
-                if segment_number != len(segment_times) - 1:
-                    next_pbs = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number+1)}.pbs")
-                    segment_options["pbs"]["job_chain"] = [f"qsub {next_pbs}"]
-                else:
-                    segment_options["pbs"]["job_chain"] = [None]
-                pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
-                if segment_number == 0:
-                    init_pbs = pbs_script
+                if options["simulation"]["hpc_system"] != "linux":
+                    if segment_number != len(segment_times) - 1:
+                        next_pbs = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number+1)}.pbs")
+                        segment_options["job"]["job_chain"] = [f"qsub {next_pbs}"]
+                    else:
+                        segment_options["job"]["job_chain"] = [None]
+                    
+                    pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
+                    if segment_number == 0:
+                        init_pbs = pbs_script
+                
 
             options["model"]["data"]["input_file"] = init_inp
             if args.compile == True:

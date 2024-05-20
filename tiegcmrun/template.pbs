@@ -2,17 +2,17 @@
 
 # PBS specifications
 #PBS -N {{simulation.job_name}}
-{%- if pbs.project_code|default('', true) %}
-#PBS -A {{pbs.project_code}}{%- endif %}
-#PBS -q {{pbs.queue}}
+{%- if job.project_code|default('', true) %}
+#PBS -A {{job.project_code}}{%- endif %}
+#PBS -q {{job.queue}}
 #PBS -j oe
-{%- if pbs.job_priority|default('', true) %}
-#PBS -l job_priority={{pbs.job_priority}}{%- endif %}
-#PBS -l {% for key, value in pbs.resource.items() if key != 'model' %}{{ key }}={{ value }}{% if not loop.last %}:{% endif %}{% endfor %}{% if 'model' in pbs.resource %}:model={{ pbs.resource['model'] }}{% endif %},walltime={{pbs.walltime}}
+{%- if job.job_priority|default('', true) %}
+#PBS -l job_priority={{job.job_priority}}{%- endif %}
+#PBS -l {% for key, value in job.resource.items() if key != 'model' %}{{ key }}={{ value }}{% if not loop.last %}:{% endif %}{% endfor %}{% if 'model' in job.resource %}:model={{ job.resource['model'] }}{% endif %},walltime={{job.walltime}}
 
 # Set enviroment variables
 setenv TGCMDATA {{model.data.tgcmdata}}
-{%- for data in pbs.other_job %}
+{%- for data in job.other_job %}
 {%- if data != None %}
 {{data}}
 {%- endif %}
@@ -20,15 +20,15 @@ setenv TGCMDATA {{model.data.tgcmdata}}
 
 # Load modules
 module --force purge
-{%- if pbs.module_list is not none %}
-module restore {{pbs.module_list}}{%- endif %}
-{%- for module in pbs.modules %}
+{%- if job.module_list is not none %}
+module restore {{job.module_list}}{%- endif %}
+{%- for module in job.modules %}
 module load {{ module }}
 {%- endfor %}
 
 # Execute tiegcm
 cd {{model.data.execdir}}
-{{pbs.mpi_command}} -np {{pbs.nprocs}} {{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.log_file}}
+{{job.mpi_command}} -np {{job.nprocs}} {{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.log_file}}
 
 
 cd {{model.data.workdir}}
@@ -39,7 +39,7 @@ echo "Saved stdout tar file {{model.data.log_file}}.tar"
 rm *task*.out
 
 # Job chaining
-{%- for data in pbs.job_chain %}
+{%- for data in job.job_chain %}
 {%- if data != None %}
 {{data}}
 {%- endif %}
