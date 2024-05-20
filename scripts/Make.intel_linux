@@ -27,7 +27,7 @@ HOST     = $(shell hostname)
 #
 # ESMF lib:
 # (Makefile does "include $(ESMFMKFILE)")
-ESMFMKFILE = /usr/local/esmf/lib/libO/Linux.intel.64.intelmpi.default/esmf.mk
+#ESMFMKFILE = /usr/local/esmf/lib/libO/Linux.intel.64.intelmpi.default/esmf.mk
 #
 # Make machines.ini file for MPI execution:
 #
