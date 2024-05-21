@@ -21,32 +21,31 @@ parameters, with "EXPERT" parameters set to defaults.
 "EXPERT" - The user is prompted for *all* adjustable parameters.
 """
 
-
-# Import standard modules.
+# Import standard modules
 import argparse
+from argparse import ArgumentParser
 import copy
 import datetime
+from datetime import datetime, timedelta
 import json
 import os
+from os.path import isfile, splitext
 import subprocess
 import sys
 import shutil
-import subprocess
 import filecmp
+import fnmatch
 from textwrap import dedent
+from fractions import Fraction
+from math import ceil
+
+# Import 3rd-party modules
+import numpy as np
 from numpy import ndarray, interp, log, exp, linspace, allclose, mean
 from netCDF4 import Dataset
-from argparse import ArgumentParser
-from os.path import isfile, splitext
 import xarray as xr
-import numpy as np
-import fnmatch
-from fractions import Fraction
-from datetime import datetime, timedelta
-from math import ceil
-# Import 3rd-party modules.
-
 from jinja2 import Template
+
 
 # Import project modules.
 
