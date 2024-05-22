@@ -60,7 +60,7 @@
      |                                           embar0,dfactor
       real,dimension(lon0:lon1)               :: alpha23,alpha22,
      |                                           alpha33,alpha32,flx00
-      real :: rlat
+      real :: rlat,wi
       real :: alpha(3,3),phi(3,4),delta(3,3),tau,t00,small
       real :: zmtop,n2top,n2top1,dn2dz,n2nm,normalize,thdiffalpha
       real :: flxwks
@@ -73,8 +73,7 @@
       real,dimension(lev0:lev1,lon0:lon1) :: eddyp,eddyq,eddyr
       real,dimension(lev0:lev1,lon0:lon1,3) ::
      |  zz_ki,moldif,eddydif,veradv
-      real,dimension(lev0:lev1,lon0:lon1,3,3) ::
-     |  gama_ki,coefp,coefq,coefr
+      real,dimension(lev0:lev1,lon0:lon1,3,3) :: gama_ki,molp,molq,molr
 !
 ! Correction factor for diffusion coeff betweeen helium and o2,o,n2:
       real,dimension(lev0:lev1,lon0:lon1,3) :: diff_fac
@@ -472,46 +471,57 @@
           wks3(i) = wks4(i)
           wks4(i) = (embar(i,k+1)-embar(i,k))/
      |      (dz*(embar(i,k)+embar(i,k+1)))
-!
-          eddyp(k,i) = expzmid_inv*difk(k,iday)*(1./dz-wks3(i))
-          eddyq(k,i) =
-     |      expzmid    *difk(k+1,iday)*(1./dz-wks4(i))+
-     |      expzmid_inv*difk(k  ,iday)*(1./dz+wks3(i))
-          eddyr(k,i) = expzmid*difk(k+1,iday)*(1./dz+wks4(i))
         enddo ! i=lon0,lon1
 !
-! calculate molecular diffusion coefficients of O2,O1,He
+! FINISH CALCULATING AK(K+1/2)
         do m=1,3
           do isp=io2,ihe
             do i=lon0,lon1
 !             ak = inv(alpha)
 ! AK = MBAR/M4*(T00/(T0+T))**0.25/TAU*INV(ALFA)
               ak(i,isp,m,kp) = ak(i,isp,m,kp)*wks1(i)
-
-              coefp(k,i,isp,m) = -ak(i,isp,m,km)*(1./dz+ep(i,m,km)/2.)
-              coefq(k,i,isp,m) =
-     |          ak(i,isp,m,km)*(1./dz-ep(i,m,km)/2.)+
-     |          ak(i,isp,m,kp)*(1./dz+ep(i,m,kp)/2.)
-              coefr(k,i,isp,m) = -ak(i,isp,m,kp)*(1./dz-ep(i,m,kp)/2.)
             enddo
           enddo
         enddo
 !
-! FINISH CALCULATING AK(K+1/2) AND GENERATE PK, QK, RK
+! calculate molecular diffusion coefficients of O2,O1,He
         do m=1,3
           do isp=io2,ihe
             do i=lon0,lon1
-              pk(i,isp,m) = -coefp(k,i,isp,m)/dz-
-     |          expz(k)*delta(isp,m)/dz*
-     |          (eddyp(k,i)*dfactor(i)+0.25*(w(k,i,lat)+w(k+1,i,lat)))
+              molp(k,i,isp,m) = ak(i,isp,m,km)*(1./dz+ep(i,m,km)/2.)
+              molr(k,i,isp,m) = ak(i,isp,m,kp)*(1./dz-ep(i,m,kp)/2.)
+              molq(k,i,isp,m) =
+     |          -(ak(i,isp,m,km)*(1./dz-ep(i,m,km)/2.)+
+     |            ak(i,isp,m,kp)*(1./dz+ep(i,m,kp)/2.))
+            enddo
+          enddo
+        enddo
+!
+! calculate eddy diffusion coefficients
+        do i=lon0,lon1
+          eddyp(k,i) = expzmid_inv*difk(k,iday)*(1./dz-wks3(i))
+          eddyr(k,i) = expzmid*difk(k+1,iday)*(1./dz+wks4(i))
+          eddyq(k,i) =
+     |      expzmid_inv*difk(k,iday)*(1./dz+wks3(i))+
+     |      expzmid*difk(k+1,iday)*(1./dz-wks4(i))
+        enddo
+!
+! calculate vertical advection coefficients
+        wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
+!
+! GENERATE PK, QK, RK
+        do m=1,3
+          do isp=io2,ihe
+            do i=lon0,lon1
+              pk(i,isp,m) = molp(k,i,isp,m)/dz-expz(k)*
+     |          (eddyp(k,i)*dfactor(i)+0.5*wi)*delta(isp,m)/dz
 
-              rk(i,isp,m) = -coefr(k,i,isp,m)/dz-
-     |          expz(k)*delta(isp,m)/dz*
-     |          (eddyr(k,i)*dfactor(i)-0.25*(w(k,i,lat)+w(k+1,i,lat)))
+              rk(i,isp,m) = molr(k,i,isp,m)/dz-expz(k)*
+     |          (eddyr(k,i)*dfactor(i)-0.5*wi)*delta(isp,m)/dz
    
-              qk(i,isp,m) = -coefq(k,i,isp,m)/dz+
-     |          expz(k)*delta(isp,m)*(eddyq(k,i)*dfactor(i)/dz+dtx2inv)-
-     |          expz(k)*fs(i,k,isp,m,lat)
+              qk(i,isp,m) = molq(k,i,isp,m)/dz+expz(k)*
+     |          ((eddyq(k,i)*dfactor(i)/dz+dtx2inv)*delta(isp,m)-
+     |          fs(i,k,isp,m,lat))
 
             enddo ! i=lon0,lon1
 
@@ -751,6 +761,7 @@
 !       enddo
 !       write(6,"('zz(k+1,io2)=',/,(6e12.4))") zz(:,k+1,io2)
 !       write(6,"('zz(k+1,io1)=',/,(6e12.4))") zz(:,k+1,io1)
+
 !
 ! End main pressure loop:
       enddo levloop ! k=lev0,lev1-1
@@ -825,24 +836,24 @@
       eddydif = 0.
       veradv = 0.
       do k=lev0+1,lev1-1
+        wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
         do i=lon0,lon1
           do isp=io2,ihe
             do m=1,3
-              moldif(k,i,isp) = moldif(k,i,isp)+
-     |          coefp(k,i,isp,m)*upd(k-1,i,m)+
-     |          coefq(k,i,isp,m)*upd(k  ,i,m)+
-     |          coefr(k,i,isp,m)*upd(k+1,i,m)
+              moldif(k,i,isp) = moldif(k,i,isp)-
+     |          (molp(k,i,isp,m)*upd(k-1,i,m)+
+     |           molq(k,i,isp,m)*upd(k  ,i,m)+
+     |           molr(k,i,isp,m)*upd(k+1,i,m))
             enddo
             eddydif(k,i,isp) =
      |        eddyp(k,i)*upd(k-1,i,isp)+
      |        eddyq(k,i)*upd(k  ,i,isp)+
      |        eddyr(k,i)*upd(k+1,i,isp)
-            veradv(k,i,isp) =
-     |        (w(k,i,lat)+w(k+1,i,lat))*(upd(k-1,i,isp)-upd(k+1,i,isp))
+            veradv(k,i,isp) = wi*0.5*(upd(k-1,i,isp)-upd(k+1,i,isp))
           enddo
           moldif(k,i,:) = moldif(k,i,:)/dz/expz(k)
           eddydif(k,i,:) = eddydif(k,i,:)*dfactor(i)/expz(k)
-          veradv(k,i,:) = veradv(k,i,:)/(4*dz)
+          veradv(k,i,:) = veradv(k,i,:)/dz
         enddo
       enddo
 
