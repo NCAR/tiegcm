@@ -375,6 +375,12 @@
       phinm0(:) = 90.*dtr
       rr1(:) = -2.6
 !
+! move phin shift here from heelis.F
+      if (phin(isouth) < phid(isouth))
+     |  phin(isouth) = phin(isouth)+pi*2
+      if (phin(inorth) < phid(inorth))
+     |  phin(inorth) = phin(inorth)+pi*2
+!
 ! Recalculate some parameters if an amie run:
       if (iamie > 0) then
         theta0(:) = crad(:) ! radians from amie module
@@ -440,8 +446,7 @@
       endif
       end subroutine aurora_cons
 !-----------------------------------------------------------------------
-      subroutine aurora(tn,o2,o1,he,n2,barm,xnmbar,scht,
-     |  lev0,lev1,lon0,lon1,lat)
+      subroutine aurora(o2,o1,he,n2,xnmbar,scht,lev0,lev1,lon0,lon1,lat)
 !
 ! Auroral parameterization driver.
 ! (called by sub dynamics, from inside parallel latitude scan)
@@ -465,12 +470,10 @@
      |  lon0,lon1,  ! first,last longitude indices of current domain
      |  lat         ! current latitude index 
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  tn,    ! neutral gas temperature (deg K)
      |  o2,    ! O2 mass mixing ratio
      |  o1,    ! O mass mixing ratio
      |  he,    ! He mass mixing ratio
      |  n2,    ! N2 mass mixing ratio (1-o2-o-he)
-     |  barm,  ! mean molecular weight (see sub addiag)
      |  xnmbar,! p0*e(-z)*mbar/kT
      |  scht   ! scale height
 !
@@ -594,7 +597,7 @@
       call aurora_ions(drizl(lon0:lon1), cusp (lon0:lon1),
      |  alfa (lon0:lon1), alfa2(lon0:lon1), alfa3(lon0:lon1),
      |  flux (lon0:lon1), flux2(lon0:lon1), flux3(lon0:lon1),
-     |  tn,o2,o1,he,n2,barm,xnmbar,scht,lev0,lev1,lon0,lon1,lat)
+     |  o2,o1,he,n2,xnmbar,scht,lev0,lev1,lon0,lon1,lat)
 !
 #ifdef VT
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
@@ -798,7 +801,7 @@
       end module aurora_module
 !-----------------------------------------------------------------------
       subroutine aurora_ions (drizl,cusp,alfa1,alfa2,alfa3,
-     |  flux1,flux2,flux3,tn,o2,o1,he,n2,barm,xnmbar,scht,
+     |  flux1,flux2,flux3,o2,o1,he,n2,xnmbar,scht,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate aroral additions to ionization rates.
@@ -830,7 +833,7 @@
       real,intent(in),dimension(lon0:lon1) :: drizl,cusp,
      |  alfa1,alfa2,alfa3,flux1,flux2,flux3
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  tn,o2,o1,he,n2,barm,xnmbar,scht
+     |  o2,o1,he,n2,xnmbar,scht
 !
 ! Local:
       integer :: i,k
@@ -840,7 +843,7 @@
      |  cusp_ion, drizl_ion,                       ! output from sub aion
      |  alfa1_ion, alfa2_ion, alfa3_ion,           ! output from sub aion
      |  alfasp_bion,                               ! output from sub bion
-     |  barm_t, qsum, denom, p0ez_mbar, tk_mbar,
+     |  qsum, denom,
      |  qo2p_aur, qop_aur, qn2p_aur,! auroral ionization for O2+, O+, N2+
      |  qo2p_a, qop_a, qn2p_a
       real,dimension(lon0:lon1) ::
@@ -873,10 +876,8 @@
           xcusp (k,i) = p0ez(k,i)/alfac
           xdrizl(k,i) = p0ez(k,i)/alfad
 !
-          p0ez_mbar(k,i) = xnmbar(k,i)/avo
-! TODO: Need to check whether this should be gask*tn/(grav*mbar)
-          tk_mbar(k,i) = gask*tn(k,i)/(grav*barm(k,i))*p0ez_mbar(k,i)
-          xalfa_sp(k,i) = ((tk_mbar(k,i)/0.00271)**0.58140)/alfa_sp
+          xalfa_sp(k,i) =
+     |      (scht(k,i)*xnmbar(k,i)/avo/0.00271)**0.58140/alfa_sp
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 !
@@ -895,12 +896,10 @@
       endif
 !
 ! Solar protons:
-      if (flx_sp > 1.e-19)
-     |  call bion(xalfa_sp,alfasp_bion,lev0,lev1,lon0,lon1)
+      call bion(xalfa_sp,alfasp_bion,lev0,lev1,lon0,lon1)
 !
 ! High energy electrons:
-      if (e30 > 1.e-19)
-     |  call aion(xalfa3, alfa3_ion,lev0,lev1,lon0,lon1)
+      call aion(xalfa3, alfa3_ion,lev0,lev1,lon0,lon1)
 !
       qaurora = 0.
       do i=lon0,lon1
@@ -913,15 +912,14 @@
 !
 ! Pressure column, bottom to top:
         do k=lev0,lev1-1
-          falfa_sp(i) = drizl(i)*p0ez_mbar(k,i)*flx_sp*1.e6/
-     |      (tk_mbar(k,i)*35.)
-          barm_t(k,i) = 1./(35.e-3*scht(k,i)) ! s11
+          falfa_sp(i) = drizl(i)*flx_sp*1.e6/(scht(k,i)*35.)
           qsum(k,i) = 
      |      falfa1(i)*alfa1_ion(k,i)+  ! s7*s3
      |      falfa2(i)*alfa2_ion(k,i)+  ! s8*s4
      |      fcusp (i)*cusp_ion (k,i)+  ! s9*s5
      |      fdrizl(i)*drizl_ion(k,i)   ! s10*s6
-          qaurora(k,i) = barm_t(k,i)*(falfa1(i)*alfa1_ion(k,i)+
+          qaurora(k,i) = 1.e3/(scht(k,i)*35.)*
+     |                  (falfa1(i)*alfa1_ion(k,i)+
      |                   falfa2(i)*alfa2_ion(k,i))
 !
 ! Include solar protons if add_sproton is set, and high energy electrons
@@ -931,7 +929,7 @@
           if (add_sproton)
      |      qsum(k,i) = qsum(k,i) + falfa_sp(i)*alfasp_bion(k,i)
 !
-          qsum(k,i) = qsum(k,i)*barm_t(k,i) ! s1 = s1*s11
+          qsum(k,i) = qsum(k,i)*1.e3/(scht(k,i)*35.) ! s1 = s1*s11
 !
 ! Denominator of equations (13-16) in Roble,1987.
 ! Haonan Wu 2024/01: added He coefficient (vital at high altitudes)

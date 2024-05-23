@@ -273,12 +273,10 @@
 ! Add aurora particle precip and ionization:
         if (iaurora > 0) then
           call aurora(
-     |      tn  (levd0,lond0,lat,itp),
      |      o2  (levd0,lond0,lat,itp),
      |      o1  (levd0,lond0,lat,itp),
      |      he  (levd0,lond0,lat,itp),
      |      n2  (levd0,lond0,lat),
-     |      barm(levd0,lond0,lat,itp),
      |      xnmbar(levd0,lond0,lat,itp),
      |      scht(levd0,lond0,lat,itp),
      |      1,nlevp1,lon0,lon1,lat)

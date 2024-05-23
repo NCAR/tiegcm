@@ -347,7 +347,7 @@
 !
           qq(1,1,lev0,i) = qq(1,1,lev0,i)-pp(1,1,lev0,i)
           qq(1,2,lev0,i) = qq(1,2,lev0,i)-pp(1,2,lev0,i)
-          qq(2,1,lev0,i) = qq(2,1,lev0,i)-pp(1,2,lev0,i)
+          qq(2,1,lev0,i) = qq(2,1,lev0,i)-pp(2,1,lev0,i)
           qq(2,2,lev0,i) = qq(2,2,lev0,i)-pp(2,2,lev0,i)
           ss(1,lev0,i) = ss(1,lev0,i)-2.*(pp(1,1,lev0,i)*unlbc(i)+
      |                                    pp(1,2,lev0,i)*vnlbc(i))
