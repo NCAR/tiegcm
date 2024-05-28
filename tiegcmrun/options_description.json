@@ -349,7 +349,7 @@
             "warning": null
         },
         "SOURCE":{
-            "LEVEL": "BASIC",
+            "LEVEL": "BENCH",
             "prompt": "SOURCE file location",
             "default": null,
             "description": "The location of the startup file.",
@@ -357,9 +357,9 @@
         },
         "segment":{
             "LEVEL": "BASIC",
-            "prompt": "Segmentation, Model time per job (Day,Hour,Minute,Seccond)",
+            "prompt": "Segmentation, Model time per job (Day, Hour, Minute, Seccond)/ ENTER to skip",
             "default": [null],
-            "description": "For a job every model day 1,0,0,0",
+            "description": "TIEGCMrun will split for multiple job runs. For a job every model day 1,0,0,0",
             "warning": null
         },
         "SOURCE_START":{

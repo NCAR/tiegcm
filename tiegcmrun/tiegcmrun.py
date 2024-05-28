@@ -47,17 +47,16 @@ import xarray as xr
 from jinja2 import Template
 
 
-# Import project modules.
 
+# Program constants
 RED = '\033[31m'  # Red text
 GREEN = '\033[32m'  # Green text
 YELLOW = '\033[33m'  # Yellow text
 RESET = '\033[0m'  # Reset to default color
 
-# Program constants
 
 # Program description.
-DESCRIPTION = "Interactive script to prepare a MAGE magnetosphere model run."
+DESCRIPTION = "Interactive script to prepare a TIEGCM model run."
 
 # Indent level for JSON output.
 JSON_INDENT = 4
@@ -90,6 +89,15 @@ BENCHAMRKS_FILE = os.path.join(SUPPORT_FILES_DIRECTORY, 'benchmarks.json')
 
 
 def get_mtime(file_path):
+    """
+    Get the 'mtime' data from the given file path.
+
+    Parameters:
+    file_path (str): The path to the file.
+
+    Returns:
+    list: A list containing the 'mtime' data, padded with zeros if necessary.
+    """
     ds = xr.open_dataset(file_path)
     if 'mtime' in ds.variables:
         mtime_data = ds['mtime'].values
@@ -97,6 +105,20 @@ def get_mtime(file_path):
     return mtime_arr
 
 def interp2d(variable, inlat, inlon, outlat, outlon):
+    """
+    Interpolates a 2D variable from input latitude and longitude grid to output latitude and longitude grid.
+
+    Parameters:
+    variable (ndarray): 2D array of the variable to be interpolated.
+    inlat (ndarray): 1D array of input latitudes.
+    inlon (ndarray): 1D array of input longitudes.
+    outlat (ndarray): 1D array of output latitudes.
+    outlon (ndarray): 1D array of output longitudes.
+
+    Returns:
+    ndarray: 2D array of the interpolated variable on the output grid.
+    """
+
     ninlat = len(inlat)
     noutlon = len(outlon)
 
@@ -112,6 +134,22 @@ def interp2d(variable, inlat, inlon, outlat, outlon):
 
 
 def interp3d(variable, inlev, inlat, inlon, outlev, outlat, outlon, extrap):
+    """
+    Interpolates a 3-dimensional variable from one set of levels and grid points to another set of levels and grid points.
+
+    Args:
+        variable (ndarray): The input variable with shape (ninlev, inlat, inlon).
+        inlev (ndarray): The input levels.
+        inlat (ndarray): The input latitudes.
+        inlon (ndarray): The input longitudes.
+        outlev (ndarray): The output levels.
+        outlat (ndarray): The output latitudes.
+        outlon (ndarray): The output longitudes.
+        extrap (str): The extrapolation method. Must be one of 'constant', 'linear', or 'exponential'.
+
+    Returns:
+        ndarray: The interpolated variable with shape (noutlev, noutlat, noutlon).
+    """
     ninlev = len(inlev)
     noutlev = len(outlev)
     noutlat = len(outlat)
@@ -159,6 +197,19 @@ def interp3d(variable, inlev, inlat, inlon, outlev, outlat, outlon, extrap):
 
 
 def interpic(fin, hres, vres, zitop, fout):
+    """
+    Interpolate and create a new primary file from an old TIEGCM primary file.
+
+    Parameters:
+    - fin (str): The filename of the old TIEGCM primary file.
+    - hres (float): The horizontal resolution for the new primary file.
+    - vres (float): The vertical resolution for the new primary file.
+    - zitop (float): The top altitude for the new primary file.
+    - fout (str): The filename of the new primary file to be created.
+
+    Returns:
+    None
+    """
     # Some additional attributes for 4D fields
     lower_cap = 1e-12
     fill_top = ['TN', 'UN', 'VN', 'OP', 'TI', 'TE', 'N2D', 'O2P', 'TN_NM', 'UN_NM', 'VN_NM', 'OP_NM']
@@ -357,6 +408,17 @@ def interpic(fin, hres, vres, zitop, fout):
 
 
 def segment_time(start_time_str, stop_time_str, interval_array):
+    """
+    Generate a list of time intervals between a start time and stop time based on a given interval array.
+
+    Args:
+        start_time_str (str): The start time in the format '%Y-%m-%dT%H:%M:%S'.
+        stop_time_str (str): The stop time in the format '%Y-%m-%dT%H:%M:%S'.
+        interval_array (list): A list containing the interval values in the order [days, hours, minutes, seconds].
+
+    Returns:
+        list: A list of time intervals in the format [[start_time, end_time], [start_time, end_time], ...].
+    """
     # Convert start_time and stop_time to datetime objects
     start = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M:%S')
     stop = datetime.strptime(stop_time_str, '%Y-%m-%dT%H:%M:%S')
@@ -380,6 +442,20 @@ def segment_time(start_time_str, stop_time_str, interval_array):
 
 
 def inp_pri_date(start_date_str, stop_date_str):
+    """
+    Convert start and stop date strings to datetime objects and extract relevant information.
+
+    Args:
+        start_date_str (str): Start date string in the format "%Y-%m-%dT%H:%M:%S".
+        stop_date_str (str): Stop date string in the format "%Y-%m-%dT%H:%M:%S".
+
+    Returns:
+        tuple: A tuple containing the following values:
+            - START_YEAR (int): The year of the start date.
+            - START_DAY (int): The day of the year of the start date.
+            - PRISTART (list): A list containing the day of the year, hour, minute, and second of the start date.
+            - PRISTOP (list): A list containing the day of the year, hour, minute, and second of the stop date.
+    """
     # Parse the start and stop dates
     start_date = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M:%S")
     stop_date = datetime.strptime(stop_date_str, "%Y-%m-%dT%H:%M:%S")
@@ -389,12 +465,24 @@ def inp_pri_date(start_date_str, stop_date_str):
     START_DAY = start_date.timetuple().tm_yday
 
     # Format PRISTART and PRISTOP
-    PRISTART = [start_date.timetuple().tm_yday,start_date.hour,start_date.minute,start_date.second]#f"{start_date.timetuple().tm_yday} {start_date.hour} {start_date.minute} {start_date.second}"
-    PRISTOP = [stop_date.timetuple().tm_yday,stop_date.hour,stop_date.minute,stop_date.second]#f"{stop_date.timetuple().tm_yday} {stop_date.hour} {stop_date.minute} {stop_date.second}"
+    PRISTART = [start_date.timetuple().tm_yday, start_date.hour, start_date.minute, start_date.second]
+    PRISTOP = [stop_date.timetuple().tm_yday, stop_date.hour, stop_date.minute, stop_date.second]
 
     return START_YEAR, START_DAY, PRISTART, PRISTOP
 
 def valid_hist(start_date, stop_date):
+    """
+    Calculate valid divisions for a given time range.
+
+    Parameters:
+    start_date (str): The start date in the format '%Y-%m-%dT%H:%M:%S'.
+    stop_date (str): The stop date in the format '%Y-%m-%dT%H:%M:%S'.
+
+    Returns:
+    list: A list of valid divisions for days, hours, minutes, and seconds.
+    Each division is represented as a list [days, hours, minutes, seconds].
+    """
+
     start = datetime.strptime(start_date, '%Y-%m-%dT%H:%M:%S')
     stop = datetime.strptime(stop_date, '%Y-%m-%dT%H:%M:%S')
     total_duration = stop - start
@@ -428,6 +516,22 @@ def valid_hist(start_date, stop_date):
     return valid_divisions
 
 def inp_mxhist(start_time, stop_time, x_hist, mxhist_warn):
+    """
+    Calculate the MXHIST value based on the given start and stop times, and x_hist values.
+
+    Args:
+        start_time (str): The start time in the format '%Y-%m-%dT%H:%M:%S'.
+        stop_time (str): The stop time in the format '%Y-%m-%dT%H:%M:%S'.
+        x_hist (tuple): A tuple containing the number of days, hours, minutes, and seconds for x_hist.
+        mxhist_warn (str): A warning message for MXHIST.
+
+    Returns:
+        tuple: A tuple containing the calculated MXHIST value and the updated mxhist_warn message.
+
+    Raises:
+        None
+
+    """
     start = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
     stop = datetime.strptime(stop_time, '%Y-%m-%dT%H:%M:%S')
     total_duration = stop - start
@@ -456,27 +560,64 @@ def inp_mxhist(start_time, stop_time, x_hist, mxhist_warn):
     return(int(MXHIST), mxhist_warn)
 
 
-def inp_sechist (PRISTART,PRISTOP):
+def inp_sechist(PRISTART, PRISTOP):
+    """
+    Determines the value of SECHIST based on the given PRISTART and PRISTOP.
+
+    Parameters:
+    PRISTART (list): A list containing the start day.
+    PRISTOP (list): A list containing the stop day.
+
+    Returns:
+    list: A list containing the value of SECHIST.
+
+    """
     PRISTART_DAY = PRISTART[0]
     PRISTOP_DAY = PRISTOP[0]
     n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
     if n_split_day >= 7:
-        SECHIST = [1,0,0,0]
+        SECHIST = [1, 0, 0, 0]
     else:
-        SECHIST = [0,1,0,0]
+        SECHIST = [0, 1, 0, 0]
     return SECHIST
 
-def inp_prihist(PRISTART,PRISTOP):
+def inp_prihist(PRISTART, PRISTOP):
+    """
+    Calculate the PRIHIST list based on the PRISTART and PRISTOP values.
+
+    Parameters:
+    PRISTART (list): A list containing the start day of the PRIHIST period.
+    PRISTOP (list): A list containing the stop day of the PRIHIST period.
+
+    Returns:
+    list: The PRIHIST list, which is either [1, 0, 0, 0] or [0, 1, 0, 0] based on the number of days in the PRIHIST period.
+    """
     PRISTART_DAY = PRISTART[0]
     PRISTOP_DAY = PRISTOP[0]
     n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
     if n_split_day >= 7:
-        PRIHIST = [1,0,0,0]
+        PRIHIST = [1, 0, 0, 0]
     else:
-        PRIHIST = [0,1,0,0]
-    return PRIHIST  
+        PRIHIST = [0, 1, 0, 0]
+    return PRIHIST
 
-def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir,run_name):
+def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir, run_name):
+    """
+    Generate the output file names and the total number of files based on the given parameters.
+
+    Parameters:
+    start_time (str): The start time in the format '%Y-%m-%dT%H:%M:%S'.
+    stop_time (str): The stop time in the format '%Y-%m-%dT%H:%M:%S'.
+    PRIHIST (tuple): A tuple containing the number of days, hours, minutes, and seconds for PRIHIST.
+    MXHIST_PRIM (int): The maximum number of primary history files.
+    pri_files (int): The number of existing primary history files.
+    histdir (str): The directory where the history files are stored.
+    run_name (str): The name of the run.
+
+    Returns:
+    tuple: A tuple containing the output file names and the updated number of primary history files.
+
+    """
     # Convert start and stop times to datetime
     start = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
     stop = datetime.strptime(stop_time, '%Y-%m-%dT%H:%M:%S')
@@ -510,31 +651,47 @@ def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir,
             OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
     return OUTPUT, pri_files_n
 
-def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir,run_name):
+def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir, run_name):
+    """
+    Calculate the output file names and the total number of files for the secondary history output.
+
+    Args:
+        start_time (str): The start time of the simulation in the format '%Y-%m-%dT%H:%M:%S'.
+        stop_time (str): The stop time of the simulation in the format '%Y-%m-%dT%H:%M:%S'.
+        SECHIST (list): A list of integers representing the duration of each secondary history output file in days, hours, minutes, and seconds.
+        MXHIST_SECH (int): The maximum number of secondary history output files per primary history output file.
+        sec_files (int): The number of existing secondary history output files.
+        histdir (str): The directory where the history output files are stored.
+        run_name (str): The name of the simulation run.
+
+    Returns:
+        tuple: A tuple containing the output file name pattern and the updated number of secondary history output files.
+
+    """
     # Convert start and stop times to datetime
     start = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
     stop = datetime.strptime(stop_time, '%Y-%m-%dT%H:%M:%S')
     sechist_delta = timedelta(days=SECHIST[0], hours=SECHIST[1], minutes=SECHIST[2], seconds=SECHIST[3])
     start = start + sechist_delta
+
     # Calculate total duration in seconds
-    
     total_seconds = (stop - start).total_seconds()
-    
+
     # Convert prihist to seconds
     n_day, n_hour, n_min, n_sec = SECHIST
     step_seconds = (n_day * 86400) + (n_hour * 3600) + (n_min * 60) + n_sec
-    
+
     # Calculate model data per output file in seconds
     data_per_file_seconds = step_seconds * int(MXHIST_SECH)
-    
+
     # Calculate the total number of files, rounding up
     number_of_files = ceil(total_seconds / data_per_file_seconds)
     sec_files_n = sec_files + number_of_files
-    
+
     if sec_files == 0:
         if number_of_files == 1:
             SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files)}.nc'"
-        else:    
+        else:
             SECH_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files)}.nc"
             SECH_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files_n)}.nc"
             SECOUT = f"'{SECH_0}','to','{SECH_N}','by','1'"
@@ -548,14 +705,32 @@ def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir,
     return SECOUT, sec_files_n
 
 def inp_sec_date(start_time, stop_time, SECHIST):
+    """
+    Calculate the SECSTART and SECSTOP values based on the given start_time, stop_time, and SECHIST.
+
+    Parameters:
+    start_time (str): The start time in the format '%Y-%m-%dT%H:%M:%S'.
+    stop_time (str): The stop time in the format '%Y-%m-%dT%H:%M:%S'.
+    SECHIST (list): A list containing the number of days, hours, minutes, and seconds to be added to the start time.
+
+    Returns:
+    tuple: A tuple containing the SECSTART and SECSTOP values.
+
+    Example:
+    start_time = '2022-01-01T00:00:00'
+    stop_time = '2022-01-02T00:00:00'
+    SECHIST = [1, 0, 0, 0]
+    inp_sec_date(start_time, stop_time, SECHIST)
+    # Output: ([1, 0, 0, 0], [2, 0, 0, 0])
+    """
     start = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
     stop = datetime.strptime(stop_time, '%Y-%m-%dT%H:%M:%S')
     sechist_delta = timedelta(days=SECHIST[0], hours=SECHIST[1], minutes=SECHIST[2], seconds=SECHIST[3])
     start = start + sechist_delta
-    SECSTART = [start.timetuple().tm_yday,start.hour,start.minute,start.second]#f"{start_date.timetuple().tm_yday} {start_date.hour} {start_date.minute} {start_date.second}"
-    SECSTOP = [stop.timetuple().tm_yday,stop.hour,stop.minute,stop.second]#f"{stop_date.timetuple().tm_yday} {stop_date.hour} {stop_date.minute} {stop_date.second}"
+    SECSTART = [start.timetuple().tm_yday,start.hour,start.minute,start.second]
+    SECSTOP = [stop.timetuple().tm_yday,stop.hour,stop.minute,stop.second]
 
-    return SECSTART, SECSTOP    
+    return SECSTART, SECSTOP
 
 def create_command_line_parser():
     """Create the command-line argument parser.
@@ -592,10 +767,12 @@ def create_command_line_parser():
         "--mode", default=None,
         help="User mode (BASIC|INTERMEDIATE|EXPERT) (default: %(default)s)."
     )
+    """
     parser.add_argument(
         "--coupling","-co", action="store_true",
         help="Enable coupling (default: %(default)s)."
     )
+    """
     parser.add_argument(
         "--options_path", "-o", default=None,
         help="Path to JSON file of options (default: %(default)s)"
@@ -619,8 +796,20 @@ def create_command_line_parser():
     return parser
 
 def valid_bench(value):
+    """
+    Validate the benchmark option.
+
+    Args:
+        value (str): The benchmark option to validate.
+
+    Returns:
+        str: The validated benchmark option.
+
+    Raises:
+        argparse.ArgumentTypeError: If the value is not a valid benchmark option.
+    """
     # Custom validation logic
-    if value not in [ None, 
+    if value not in [None, 
                      'seasons', 'decsol_smax', 'decsol_smin', 'junsol_smax', 'junsol_smin','mareqx_smax', 'mareqx_smin', 'sepeqx_smax', 'sepeqx_smin',
                      'storms', 'dec2006_heelis_gpi', 'dec2006_weimer_imf', 'jul2000_heelis_gpi', 'jul2000_weimer_imf', 'nov2003_heelis_gpi', 'nov2003_weimer_imf', 'whi2008_heelis_gpi', 'whi2008_weimer_imf',
                      'climatology', 'climatology_smax', 'climatology_smin' 
@@ -909,6 +1098,17 @@ def get_run_option(name, description, mode="BASIC"):
 
 
 def select_resource_defaults(options, option_descriptions):
+    """
+    Selects the default values for the 'select', 'ncpus', and 'mpiprocs' options based on the given input options.
+
+    Args:
+        options (dict): A dictionary containing the input options.
+        option_descriptions (dict): A dictionary containing the descriptions of the available options.
+
+    Returns:
+        tuple: A tuple containing the default values for 'select', 'ncpus', and 'mpiprocs' options.
+
+    """
     horires = options["model"]["specification"]["horires"]
     hpc_platform = options["simulation"]["hpc_system"]
     od = option_descriptions["job"][hpc_platform]
@@ -962,6 +1162,8 @@ def select_resource_defaults(options, option_descriptions):
             if on == "mpiprocs":
                 mpiprocs_default = ncpus_default
     return select_default,ncpus_default,mpiprocs_default
+
+
 def prompt_user_for_run_options(args):
     """Prompt the user for run options.
 
@@ -1371,6 +1573,16 @@ def prompt_user_for_run_options(args):
     return options
 
 def compile_tiegcm(options, debug, coupling):
+    """
+    Compiles the TIEGCM model with the given options.
+
+    Args:
+        options (dict): A dictionary containing the model options.
+        debug (bool): A boolean indicating whether to enable debug mode.
+        coupling (bool): A boolean indicating whether to enable coupling.
+
+    Returns:None
+    """
     o = options
     modeldir  = o["model"]["data"]["modeldir"]
     execdir   = o["model"]["data"]["execdir"]
@@ -1592,25 +1804,51 @@ def compile_tiegcm(options, debug, coupling):
         print(">>> Error return from gmake all")
         sys.exit(1)
 
-def create_pbs_scripts(options,run_name,segment_number):
+def create_pbs_scripts(options, run_name, segment_number):
+    """
+    Create PBS scripts for running TIEGCM model.
+
+    Args:
+        options (dict): A dictionary containing the model options.
+        run_name (str): The name of the run.
+        segment_number (int or None): The segment number of the run. If None, a single PBS script is created.
+
+    Returns:
+        str: The filepath of the created PBS script.
+
+    Raises:
+        FileNotFoundError: If the PBS template file is not found.
+
+    """
     global PBS_TEMPLATE
     if PBS_TEMPLATE == None:
-        PBS_TEMPLATE = os.path.join(options["model"]["data"]["modeldir"],'tiegcmrun/template.pbs')
+        PBS_TEMPLATE = os.path.join(options["model"]["data"]["modeldir"], 'tiegcmrun/template.pbs')
     with open(PBS_TEMPLATE, "r", encoding="utf-8") as f:
         template_content = f.read()
     template = Template(template_content)
-    opt = copy.deepcopy(options) 
+    opt = copy.deepcopy(options)
     pbs_content = template.render(opt)
     workdir = opt["model"]["data"]["workdir"]
     if segment_number == None:
-        pbs_script = os.path.join(workdir,f"{run_name}.pbs")
+        pbs_script = os.path.join(workdir, f"{run_name}.pbs")
     else:
-        pbs_script = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number)}.pbs")
+        pbs_script = os.path.join(workdir, f"{run_name}_{'{:03d}'.format(segment_number)}.pbs")
     with open(pbs_script, "w", encoding="utf-8") as f:
-            f.write(pbs_content)
+        f.write(pbs_content)
     return pbs_script
 
-def create_inp_scripts(options,run_name,segment_number):
+def create_inp_scripts(options, run_name, segment_number):
+    """
+    Create input scripts for running the TIEGCM model.
+
+    Args:
+        options (dict): A dictionary containing the model options.
+        run_name (str): The name of the run.
+        segment_number (int): The segment number.
+
+    Returns:
+        str: The path to the created input script.
+    """
     global INP_TEMPLATE
     if INP_TEMPLATE == None:
         INP_TEMPLATE = os.path.join(options["model"]["data"]["modeldir"],'tiegcmrun/template.inp')
@@ -1627,7 +1865,7 @@ def create_inp_scripts(options,run_name,segment_number):
     if not os.path.exists(workdir):
         os.makedirs(workdir)
     with open(inp_script, "w", encoding="utf-8") as f:
-            f.write(inp_content)    
+        f.write(inp_content)    
     return inp_script
 
 def find_file(pattern, path):
@@ -1643,6 +1881,9 @@ def find_file(pattern, path):
             if fnmatch.fnmatch(name, pattern):  # Check if file name matches the pattern
                 return os.path.join(root, name)  # If so, return the file path immediately
     return None
+
+
+
 def main():
     # Set up the command-line parser.
     parser = create_command_line_parser()
@@ -1653,7 +1894,7 @@ def main():
     debug = args.debug
     options_path = args.options_path
     verbose = args.verbose
-    coupling = args.coupling
+    coupling = False#args.coupling
     compile = args.compile
     execute = args.execute
     benchmark = args.benchmark
@@ -1677,7 +1918,7 @@ def main():
     print(f"User Mode = {mode}")
     print(f"Compile = {compile}")
     print(f"Execute = {execute}")
-    print(f"Coupling = {coupling}")  
+    #print(f"Coupling = {coupling}")  
     print(f"\n") 
     if options_path:
         # Read the run options from a JSON file.
