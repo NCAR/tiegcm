@@ -1,4 +1,0 @@
-cartopy 
-numpy 
-matplotlib 
-xarray
