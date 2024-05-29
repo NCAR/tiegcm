@@ -8,7 +8,7 @@
 ! Read source history.
 !
       use params_module,only: nlon,nlonp2,nlonp4,nlevp1,nlat
-      use input_module,only: source,source_start,output,start,
+      use input_module,only: source,source_start,output,pristart,
      |  f107,f107a,power,noutput
       use hist_module,only: nsource,nhist,ioutfile,ncid,iprint,h
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm,
@@ -52,7 +52,7 @@
 ! Source file was not provided -- search output files:
       else
         do i = 1,noutput
-          call rdsource(output(i),start(:,1),ncid,nth,.true.,iprint)
+          call rdsource(output(i),pristart(:,1),ncid,nth,.true.,iprint)
           if (ncid > 0) then   ! history was found (not found if ncid==0)
             nhist  = nth       ! number of histories on current output file
             ioutfile = i       ! current output file name is output(ioutfile)

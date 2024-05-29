@@ -678,7 +678,7 @@
           return
         endif
         if (amie_ibkg == 0) then
-          iset = nn
+          iset  =  0   ! am 2022_Nov original was nn but  SH has also 0
           iset1 = nn
           do i=1,nn
 !           if (amie_sh_ut(i) < model_ut) iset = i

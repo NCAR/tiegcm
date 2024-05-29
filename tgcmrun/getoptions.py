@@ -34,7 +34,7 @@ def get_args():
         TIEGCM_ROOT:  Path to the tiegcm model root directory containing source code, scripts, tgcmrun, etc.
         TIMEGCM_ROOT: Path to the timegcm model root directory containing source code, scripts, tgcmrun, etc.
 
-      A word of caution: this code was developed with Python 2.7.7 on the NCAR machine yellowstone,
+      A word of caution: this code was developed with Python 2.7.7 on the NCAR machine cheyenne,
       and may be sensitive to version change (As of Nov 2015, it has not been tested with Python 3.x)
 '''
   parser = argparse.ArgumentParser(
@@ -46,13 +46,13 @@ def get_args():
   help_model_name = "Model name (either 'tiegcm' or 'timegcm')"
   help_model_res  = "Model resolution (either 5.0 or 2.5 degrees)"
   help_model_root = "Model root directory (default: env vars TIEGCM_ROOT or TIMEGCM_ROOT)"
-  help_machine    = "Machine or platform (either 'ys' (yellowstone) or 'linux' (generic Linux))"
+  help_machine    = "Machine or platform (either 'ch' (cheyenne) or 'linux' (generic Linux))"
   help_execdir    = "Directory where model will be built and executed (default: env var TGCMTEMP)"
   help_tgcmdata   = "Path to data files needed by the model (default: env var TGCMDATA)"
   help_nprocs     = "Number of processors (total MPI tasks)"
-  help_project    = "Authorized NCAR project number, e.g.: #BSUB -P P28100036 (ys only)"
-  help_queue      = "LSF queue name, e.g.: #BSUB -q regular (ys only)"
-  help_wc         = "Wallclock limit e.g.: '01:30' is 1 hour, 30 minutes (ys only)"
+  help_project    = "Authorized NCAR project number, e.g.: #PBS -P P28100036 (ch only)"
+  help_queue      = "LSF queue name, e.g.: #PBS -q regular (ch only)"
+  help_wc         = "Wallclock limit e.g.: '01:30' is 1 hour, 30 minutes (ch only)"
   help_step       = "Model timestep (seconds) default=60 for res5.0, default=30 for res2.5"
   help_submit     = "Submit job without prompting user? (yes/no))"
   help_execute    = "Execution flag for job script ('yes'/'no') (default: 'yes')"
@@ -249,23 +249,24 @@ def get_options(arg,run,job,option):
 #
   elif arg == 'machine':
     if option:
-      if option != 'ys' and option != 'linux':
+      if option not in ['ch','linux']:
         print '>>> Unrecognized machine type found on command line: ',option
-        print "    Machine must be either 'ys' (yellowstone) or 'linux'"
+        print "    Machine must be either 'ch' (cheyenne) or 'linux'"
         sys.exit()
       job.machine = option
     else:
       job.machine = ''
       for line in os.popen('uname -a'): uname = line
-      loc = uname.find('yslogin')
+      loc = uname.find('cheyenne')
+      print '  uname', uname 
       if loc >= 0:
-        job.machine = 'ys'
+        job.machine = 'ch'
       else:
         loc = uname.find('Linux')
         if loc >= 0:
           job.machine = 'linux'
       if job.machine == '':
-        print ">>> Could not determine machine (must be either 'linux' or 'ys')"
+        print ">>> Could not determine machine (must be either 'linux' or 'ch')"
         sys.exit()
     return job.machine
 #
@@ -345,7 +346,7 @@ def get_options(arg,run,job,option):
       tgcmdata = option
     else:
       default_tgcmdata = ''
-      if job.machine == 'ys':
+      if job.machine == 'ch':
         default_tgcmdata = '/glade/p/hao/tgcm/data'
       tgcmdata = getenv('TGCMDATA',default=default_tgcmdata)
       if tgcmdata:
@@ -376,21 +377,21 @@ def get_options(arg,run,job,option):
         sys.exit()
       return job.nprocs
 #
-# Project number (ys only) (command-line only):
+# Project number (ch only) (command-line only):
 #
   elif arg == 'project':
     if option:
       job.project = option
       return job.project
 #
-# LSF queue, e.g.: #BSUB -q regular (ys only) (command-line only):
+# LSF queue, e.g.: #PBS -q regular (ch only) (command-line only):
 #
   elif arg == 'queue':
     if option:
       job.queue = option
       return job.queue
 #
-# Wallclock limit (ys only):
+# Wallclock limit (ch only):
 #
   elif arg == 'wc':
     if option:

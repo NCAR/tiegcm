@@ -77,10 +77,14 @@
      |  gswm_mi_di_v, gswm_mi_sdi_v, gswm_nm_di_v, gswm_nm_sdi_v
       use bgrd_data_module,only: get_bgrddata,! (nlonp4,nlat)
      |  bgrddata_z, bgrddata_t, bgrddata_u, bgrddata_v
-      use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile
+      use input_module,only: saber_ncfile, tidi_ncfile, ctmt_ncfile,
+     | hme_nfiles,tgcmlb_nfiles
       use saber_tidi,only: get_saber_tidi,saber_t,saber_z,
      |  tidi_u,tidi_v
       use ctmt_module,only: get_ctmt,ctmt_t,ctmt_z,ctmt_u,ctmt_v
+      use hme_module,only: get_hme,hme_t,hme_z,hme_u,hme_v
+      use tgcmlb_module,only: get_tgcmlb,tgcmlb_t,tgcmlb_z,tgcmlb_u,
+     |  tgcmlb_v
       use hist_module,only: modeltime
 
       implicit none
@@ -93,6 +97,7 @@
       integer :: i,j
       real :: rstep
       complex :: t_expt_sdi, t_expt_di, uvz_expt_sdi, uvz_expt_di
+      real,dimension(nlonp4,nlat) :: hme_z_loc
 !
 ! Calculate exponentials
       rstep = float(step)
@@ -115,9 +120,11 @@
         z_lbc(lon0:lon1,lat0:lat1) = zbound
       endif
 
-      if (len_trim(saber_ncfile) > 0 .or.
+      if (len_trim(saber_ncfile) > 0.or.
      |    len_trim(tidi_ncfile) > 0 .or.
-     |    len_trim(ctmt_ncfile) > 0) goto 100
+     |    len_trim(ctmt_ncfile) > 0 .or.
+     |    tgcmlb_nfiles > 0         .or.
+     |    hme_nfiles > 0) goto 100
 !
 ! Add gswm perturbations:
 ! 12/2/15 btf: moved from advance.F to lbc.F
@@ -238,6 +245,49 @@
             z_lbc(i,j) = z_lbc(i,j)+ctmt_z(i,j)
             u_lbc(i,j) = u_lbc(i,j)+ctmt_u(i,j)
             v_lbc(i,j) = v_lbc(i,j)+ctmt_v(i,j)
+          enddo
+        enddo
+      endif
+      
+! Add HME perturbations:
+      if (hme_nfiles > 0 ) then
+        call get_hme(modeltime)
+!     
+        do j=lat0,lat1
+          do i=lon0,lon1
+            t_lbc(i,j) = t_lbc(i,j)+hme_t(i,j)
+            z_lbc(i,j) = z_lbc(i,j)+hme_z(i,j)
+            u_lbc(i,j) = u_lbc(i,j)+hme_u(i,j)
+            v_lbc(i,j) = v_lbc(i,j)+hme_v(i,j)
+          enddo
+        enddo
+        call addfld('T_HME','T_HME',' ',hme_t(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('U_HME','U_HME',' ',hme_u(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('V_HME','V_HME',' ',hme_v(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('Z_HME','Z_HME',' ',hme_z(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('ZL_HME','ZL_HME',' ',hme_z_loc(lon0:lon1,lat0:lat1),
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+      endif
+      
+! Add TGCMlb perturbations:
+      if (tgcmlb_nfiles > 0 ) then
+!        t_lbc(lon0:lon1,lat0:lat1) = 0.  ! uncomment only if background is in LB tgcmlb arrays
+!        u_lbc(lon0:lon1,lat0:lat1) = 0.
+!        v_lbc(lon0:lon1,lat0:lat1) = 0.
+!        z_lbc(lon0:lon1,lat0:lat1) = 0. 
+!       
+        call get_tgcmlb(modeltime)
+!     
+        do j=lat0,lat1
+          do i=lon0,lon1
+            t_lbc(i,j) = t_lbc(i,j)+tgcmlb_t(i,j)
+            z_lbc(i,j) = z_lbc(i,j)+tgcmlb_z(i,j)
+            u_lbc(i,j) = u_lbc(i,j)+tgcmlb_u(i,j)
+            v_lbc(i,j) = v_lbc(i,j)+tgcmlb_v(i,j)
           enddo
         enddo
       endif

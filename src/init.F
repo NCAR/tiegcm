@@ -34,6 +34,8 @@
       integer :: igswm_nm_sdi ! 0/1 flag for GSWM data nonmigrating semidiurnal tide
       integer :: igetgswm     ! will be 1 only if at least one of the above flags are set
       integer :: ictmt        ! 0/1 flag to get CTMT data
+      integer :: ihme         ! 0/1 flag to get HME data
+      integer :: itgcmlb      ! 0/1 flag to get TGCM lb data
       integer :: ibgrddata    ! 0/1 flag to get background data
 !
       character(len=16) ::
@@ -64,12 +66,13 @@
 ! Initialize (this is called by tgcm.F after input):
 ! Some init also takes place in inp_model (input_mod.f)
 !
-      use input_module,only: start,stop,step,secflds,
+      use input_module,only: pristart,pristop,step,secflds,
      |  start_year,start_day,calendar_advance,gpi_ncfile,
      |  gswm_mi_di_ncfile,ctmt_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,output,secout,mkhvols,source_start,
-     |  see_ncfile,bgrddata_ncfile
+     |  see_ncfile,bgrddata_ncfile,
+     |  hme_nfiles,tgcmlb_nfiles
       use hist_module,only: hist_init,isechist,nstep,nhist_total,
      |  nsech_total,nsource,nseries_prim,nseries_sech,nfiles_prim,
      |  nfiles_sech,nfsech
@@ -119,7 +122,7 @@
 ! time, using the current step length. Iter is incremented once per 
 ! timestep in advnce.
 !
-      iter = mtime_to_nstep(start(:,1),step)
+      iter = mtime_to_nstep(pristart(:,1),step)
 !
 ! iyear and iday are current calendar year and day.
 ! If calendar_advance > 0, the model is advanced in calendar time, 
@@ -177,6 +180,22 @@
       igetgswm = 0
       if (igswm_mi_di>0 .or. igswm_mi_sdi>0 .or.
      |    igswm_nm_di>0 .or. igswm_nm_sdi>0) igetgswm = 1
+     
+! CTMT lbc data file:
+      ictmt = 0
+      if (len_trim(ctmt_ncfile) > 0) ictmt = 1
+      if (ictmt > 0)
+     |  write(6,"('  ctmt_ncfile = ',a)") trim(ctmt_ncfile)
+     
+      ihme = 0
+      if (hme_nfiles > 0) ihme = 1
+      if (ihme > 0) 
+     |  write(6,"('  hme_nfiles = ',a)") hme_nfiles
+     
+      itgcmlb = 0
+      if (tgcmlb_nfiles > 0) itgcmlb = 1
+      if (itgcmlb > 0) 
+     |  write(6,"('  tgcmlb_nfiles = ',a)") tgcmlb_nfiles
 !
 ! Background saber/tidi, msis/hwm:
       ibgrddata = 0
@@ -184,11 +203,6 @@
       if (ibgrddata > 0)
      |  write(6,"('  bgrddata_ncfile = ',a)") trim(bgrddata_ncfile)
 !
-! CTMT lbc data file:
-      ictmt = 0
-      if (len_trim(ctmt_ncfile) > 0) ictmt = 1
-      if (ictmt > 0)
-     |  write(6,"('  ctmt_ncfile = ',a)") trim(ctmt_ncfile)
 !
 ! ixtimep is 4th dimension index to fg-array for previous time step
 ! ixtimec is 4th dimension index to fg-array for current time step
@@ -214,8 +228,8 @@
       call setfft(trigs,ifax,ntrigs,nlon)
 !
 ! Init starting model time:
-      start_mtime = start(:,1)
-      stop_mtime = stop(:,1)
+      start_mtime = pristart(:,1)
+      stop_mtime = pristop(:,1)
 !
 ! Initialize field structures:
       iprintf = 0
@@ -255,11 +269,15 @@
       write(6,"('  igswm_nm_sdi= ',i6,4x,
      |  '(If > 0, GSWM nonmigrating semidiurnal tidal database will',
      |  ' be used.)')") igswm_nm_sdi
+      write(6,"('  ictmt= ',i6,4x,
+     |  '(If > 0, CTMT tidal database will be used.)')") ictmt  
+      write(6,"('  ihme= ',i6,4x,
+     |  '(If > 0, HME tidal database will be used.)')") ihme 
+      write(6,"('  itgcmlb= ',i6,4x,
+     |  '(If > 0, TGCM lb files will be used.)')") itgcmlb
       write(6,"('  ibgrddata= ',i6,4x,
      |  '(If > 0, background datafile will',
      |  ' be used.)')") ibgrddata
-      write(6,"('  ictmt= ',i6,4x,
-     |  '(If > 0, CTMT tidal database will be used.)')") ictmt
 !
       if (nsource > 0) then
         write(6,"(/,'This is an initial run:')")
