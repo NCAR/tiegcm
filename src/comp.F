@@ -506,13 +506,14 @@
      |      expzmid*difk(k+1,iday)*(1./dz-wks4(i))
         enddo
 !
-! calculate vertical advection coefficients
-        wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
-!
 ! GENERATE PK, QK, RK
         do m=1,3
           do isp=io2,ihe
             do i=lon0,lon1
+!
+! calculate vertical advection coefficients
+              wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
+
               pk(i,isp,m) = molp(k,i,isp,m)/dz-expz(k)*
      |          (eddyp(k,i)*dfactor(i)+0.5*wi)*delta(isp,m)/dz
 
@@ -836,8 +837,8 @@
       eddydif = 0.
       veradv = 0.
       do k=lev0+1,lev1-1
-        wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
         do i=lon0,lon1
+          wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
           do isp=io2,ihe
             do m=1,3
               moldif(k,i,isp) = moldif(k,i,isp)-
