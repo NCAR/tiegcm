@@ -502,21 +502,19 @@
 !
       do lat=lat0,lat1
         do k=lev0+1,lev1-1
-          wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
           do i=lon0,lon1
-            moldif(k,i) =
-     |        -(molp(k,i)*fcomp_out(k-1,i,lat)+
-     |          molq(k,i)*fcomp_out(k  ,i,lat)+
-     |          molr(k,i)*fcomp_out(k+1,i,lat))
-            eddydif(k,i) =
-     |        eddyp(k,i)*fcomp_out(k-1,i,lat)+
-     |        eddyq(k,i)*fcomp_out(k  ,i,lat)+
-     |        eddyr(k,i)*fcomp_out(k+1,i,lat)
-            veradv(k,i) = 0.5*wi*(fcomp_out(k-1,i,lat)-fcomp(k+1,i,lat))
+            wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
+            moldif(k,i) = -1/dzp/expz(k)*
+     |        (molp(k,i)*fcomp_out(k-1,i,lat)+
+     |         molq(k,i)*fcomp_out(k  ,i,lat)+
+     |         molr(k,i)*fcomp_out(k+1,i,lat))
+            eddydif(k,i) = dfactor(i)/expz(k)*
+     |        (eddyp(k,i)*fcomp_out(k-1,i,lat)+
+     |         eddyq(k,i)*fcomp_out(k  ,i,lat)+
+     |         eddyr(k,i)*fcomp_out(k+1,i,lat))
+            veradv(k,i) = 0.5*wi/dzp*
+     |        (fcomp_out(k-1,i,lat)-fcomp(k+1,i,lat))
           enddo
-          moldif(k,:) = moldif(k,:)/dzp/expz(k)
-          eddydif(k,:) = eddydif(k,:)*dfactor(i)/expz(k)
-          veradv(k,:) = veradv(k,:)/dzp
         enddo
 !
         call addfld(name//'_MOLDIF',
