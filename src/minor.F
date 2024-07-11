@@ -97,7 +97,8 @@
      |  ex,ax,    ! (s12,s11)
      |  thdiff,   ! thermal diffusion term (s12)
      |  p_coef,q_coef,r_coef,f_rhs, ! coefficients for tridiagonal solver
-     |  molp,molq,molr,eddyp,eddyq,eddyr,moldif,eddydif,veradv
+     |  molp,molq,molr,eddyp,eddyq,eddyr,moldif,eddydif,veradv,
+     |  loss_out,dpdt
 !
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
      |  ftm1_smooth  ! time-smoothed field at time n-1 (s10)
@@ -221,10 +222,6 @@
         call addfld('SPROD' ,' ',' ',sprod(:,lon0:lon1,lat),
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
       endif
-!
-      call addfld(name//'_HORADV',
-     |  name//' horizontal advection',' ',
-     |  hadvec,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
       do i=lon0,lon1
         bo2(i) = b(1,1)*o2(lev0,i,lat)+b(1,2)*o1(lev0,i,lat)+
@@ -424,8 +421,8 @@
           molp(k,i) = ax(k  ,i)*(1./dzp+.5*thdiff(k  ,i))
           molr(k,i) = ax(k+1,i)*(1./dzp-.5*thdiff(k+1,i))
           molq(k,i) =
-     |      -(ax(k  ,i)*(1./dzp-.5*thdiff(k  ,i))+
-     |        ax(k+1,i)*(1./dzp+.5*thdiff(k+1,i)))
+     |      ax(k  ,i)*(1./dzp-.5*thdiff(k  ,i))+
+     |      ax(k+1,i)*(1./dzp+.5*thdiff(k+1,i))
 !
 ! eddy diffusion coefficients
           eddyp(k,i) = expzmid_inv*difk(k,iday)*(1./dzp-.5*dmdz(k,i))
@@ -443,7 +440,7 @@
           r_coef(k,i) = molr(k,i)/dzp-expz(k)*
      |      (eddyr(k,i)*dfactor(i)-0.5*wi)/dzp
 ! s2
-          q_coef(k,i) = molq(k,i)/dzp+expz(k)*
+          q_coef(k,i) = -molq(k,i)/dzp+expz(k)*
      |      (eddyq(k,i)*dfactor(i)/dzp+dtx2inv-sloss(k,i,lat))
 ! s4
           f_rhs(k,i) = expz(k)*(ftm1_smooth(k,i,lat)*
@@ -497,39 +494,49 @@
       if (idebug > 0)
      |  call addfld('MNR_SOLV'  ,' ',' ',fcomp_out(:,lon0:lon1,lat),
      |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-
-      enddo ! lat=lat0,lat1
 !
-      do lat=lat0,lat1
-        do k=lev0+1,lev1-1
-          do i=lon0,lon1
-            wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
-            moldif(k,i) = -1/dzp/expz(k)*
-     |        (molp(k,i)*fcomp_out(k-1,i,lat)+
-     |         molq(k,i)*fcomp_out(k  ,i,lat)+
-     |         molr(k,i)*fcomp_out(k+1,i,lat))
-            eddydif(k,i) = dfactor(i)/expz(k)*
-     |        (eddyp(k,i)*fcomp_out(k-1,i,lat)+
-     |         eddyq(k,i)*fcomp_out(k  ,i,lat)+
-     |         eddyr(k,i)*fcomp_out(k+1,i,lat))
-            veradv(k,i) = 0.5*wi/dzp*
-     |        (fcomp_out(k-1,i,lat)-fcomp(k+1,i,lat))
-          enddo
+      do i=lon0,lon1
+        do k=lev0,lev1
+          dpdt(k,i) = dtx2inv*
+     |      (fcomp_out(k,i,lat)-ftm1_smooth(k,i,lat))
         enddo
-!
-        call addfld(name//'_MOLDIF',
-     |    name//' molecular diffusion',' ',
-     |    moldif(lev0+1:lev1-1,:),
-     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
-        call addfld(name//'_EDDYDIF',
-     |    name//' eddy diffusion',' ',
-     |    eddydif(lev0+1:lev1-1,:),
-     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
-        call addfld(name//'_VERADV',
-     |    name//' vertical advection',' ',
-     |    veradv(lev0+1:lev1-1,:),
-     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+        do k=lev0,lev1-1
+          loss_out(k,i) = sloss(k,i,lat)*fcomp_out(k,i,lat)
+        enddo
+        do k=lev0+1,lev1-1
+          wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
+          moldif(k,i) = -1/expz(k)/dzp*
+     |      (molp(k,i)*fcomp_out(k-1,i,lat)-
+     |       molq(k,i)*fcomp_out(k  ,i,lat)+
+     |       molr(k,i)*fcomp_out(k+1,i,lat))
+          eddydif(k,i) = dfactor(i)/dzp*
+     |      (eddyp(k,i)*fcomp_out(k-1,i,lat)-
+     |       eddyq(k,i)*fcomp_out(k  ,i,lat)+
+     |       eddyr(k,i)*fcomp_out(k+1,i,lat))
+          veradv(k,i) = wi/(2*dzp)*
+     |      (fcomp_out(k+1,i,lat)-fcomp_out(k-1,i,lat))
+        enddo
       enddo
+!
+      call addfld('D'//name//'DT',name//' changing rate','s-1',
+     |  dpdt,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld(name//'_PROD',name//' production','s-1',
+     |  s0prod(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld(name//'_LOSS',name//' loss','s-1',
+     |  loss_out(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld(name//'_MOLDIF',name//' molecular diffusion','s-1',
+     |  moldif(lev0+1:lev1-1,:),
+     |  'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+      call addfld(name//'_EDDYDIF',name//' eddy diffusion','s-1',
+     |  eddydif(lev0+1:lev1-1,:),
+     |  'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+      call addfld(name//'_VERADV',name//' vertical advection','s-1',
+     |  -veradv(lev0+1:lev1-1,:),
+     |  'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+      call addfld(name//'_HORADV',name//' horizontal advection','s-1',
+     |  -hadvec(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!
+      enddo ! lat=lat0,lat1
 !----------------------- End second latitude scan ----------------------
 !
 ! Wave filter the minor species output. Filter_minor does 3d gather/scatter

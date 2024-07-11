@@ -59,7 +59,7 @@
 ! Local:
       integer :: k,kk,i,lat,lonbeg,lonend
       integer :: nk,nkm1,nlevs
-      real :: 
+      real :: wi,
      |  unlbc(lon0:lon1), ! un lower boundary (t1)
      |  vnlbc(lon0:lon1)  ! vn lower boundary (t2)
       real,dimension(lev0:lev1,lon0:lon1) ::
@@ -82,8 +82,8 @@
      |  unlbc_diag,   ! un lbc redundant in vertical, for diagnostic
      |  vnlbc_diag,   ! vn lbc redundant in vertical, for diagnostic
      |  ss_un,ss_vn,  ! also for diagnostics
-     |  dudt,dvdt,un_cor,vn_cor,un_cen,vn_cen,un_drag,vn_drag,
-     |  un_drag_coef,vn_drag_coef,un_visc,vn_visc,un_dwdz,vn_dwdz
+     |  dudt,dvdt,du_cor,dv_cor,du_cen,dv_cen,du_drag,dv_drag,
+     |  un_drag_coef,vn_drag_coef,du_visc,dv_visc,du_veradv,dv_veradv
 !
 ! pp, qq, rr, beta AND gamma are (2 x 2) matrices defined for 
 !   k = 3/2, K-1/2, 1 and i = 3, IMAX+2, 1
@@ -118,10 +118,10 @@
         call advec(vn(:,:,lat-2:lat+2),advec_vn(:,:,lat), 
      |    lev0,lev1,lon0,lon1,lat)
 
-       call addfld('ADVEC_U0','ADVEC_U0',' ',advec_un(:,:,lat),
-     |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-       call addfld('ADVEC_V0','ADVEC_V0',' ',advec_vn(:,:,lat),
-     |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('ADVEC_U0','ADVEC_U0',' ',advec_un(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('ADVEC_V0','ADVEC_V0',' ',advec_vn(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! End first latitude scan:
       enddo ! lat=lat0,lat1
@@ -131,31 +131,6 @@
 !
       call glp(tn,tn_upd,tn_nm,mbar,z,zl,zp,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
-!
-! Second latitude scan:
-      do lat=lat0,lat1
-
-!      call addfld('ZL','ZL',' ',zl(:,:,lat),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-!      call addfld('ZP','ZP',' ',zp(:,:,lat),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-
-        do i=lon0,lon1
-          do k=lev0,lev1-1
-            advec_un(k,i,lat) = advec_un(k,i,lat)+
-     |        zl(k,i,lat)-hdu(k,i,lat)
-            advec_vn(k,i,lat) = advec_vn(k,i,lat)+
-     |        zp(k,i,lat)-hdv(k,i,lat)
-          enddo ! k=lev0,lev1-1
-        enddo ! i=lon0,lon1
-
-       call addfld('ADVEC_U1','ADVEC_U1',' ',advec_un(:,:,lat),
-     |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-       call addfld('ADVEC_V1','ADVEC_V1',' ',advec_vn(:,:,lat),
-     |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-!
-! End second lat scan:
-      enddo ! lat=lat0,lat1
 !
 ! Smooth un,vn at time n-1 with 2-part shapiro smoother.
 ! Input un_nm,vn_nm at full subdomain.
@@ -189,20 +164,6 @@
 !       call addfld('VNLBC_DUV','VNLBC_DUV',' ',vnlbc_diag,
 !    |    'lon',lon0,lon1,'lat',lat0,lat1,0)
 
-        do i=lonbeg,lonend
-          do k=lev0,lev1-1
-            advec_un(k,i,lat) = advec_un(k,i,lat)-
-     |        dtx2inv*unm_smooth(k,i,lat)
-            advec_vn(k,i,lat) = advec_vn(k,i,lat)-
-     |        dtx2inv*vnm_smooth(k,i,lat)
-          enddo ! k=lev0,lev1
-        enddo ! i=lon0,lon1
-
-!       call addfld('ADVEC_U2','ADVEC_U2',' ',advec_un(:,:,lat),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('ADVEC_V2','ADVEC_V2',' ',advec_vn(:,:,lat),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-
         do i=lon0,lon1
           do k=lev0,lev1-1
             un_drag_coef(k,i) = Fe(k,i,lat)+.25*
@@ -211,8 +172,12 @@
             vn_drag_coef(k,i) = Fn(k,i,lat)+.25*
      |       ((lyy(k,i,lat)+lyy(k+1,i,lat))*(vi(k,i,lat)+vi(k+1,i,lat))-
      |        (lyx(k,i,lat)+lyx(k+1,i,lat))*(ui(k,i,lat)+ui(k+1,i,lat)))
-            ss(1,k,i) = expz(k)*(un_drag_coef(k,i)-advec_un(k,i,lat))
-            ss(2,k,i) = expz(k)*(vn_drag_coef(k,i)-advec_vn(k,i,lat))
+            ss(1,k,i) = expz(k)*(dtx2inv*unm_smooth(k,i,lat)+
+     |        hdu(k,i,lat)+un_drag_coef(k,i)-
+     |        advec_un(k,i,lat)-zl(k,i,lat))
+            ss(2,k,i) = expz(k)*(dtx2inv*vnm_smooth(k,i,lat)+
+     |        hdv(k,i,lat)+vn_drag_coef(k,i)-
+     |        advec_vn(k,i,lat)-zp(k,i,lat))
             ss_un(k,i) = ss(1,k,i)
             ss_vn(k,i) = ss(2,k,i)
           enddo ! k=lev0,lev1-1
@@ -282,8 +247,8 @@
 ! dwdz = exp(-s)*w(k+1/2)/(2.*Ds)
         do i=lon0,lon1
           do k=lev0,lev1-1
-            dwdz(k,i) = 0.5*expz(k)*(w_upd(k,i,lat)+w_upd(k+1,i,lat))/
-     |        (2.*dz)
+            wi = 0.5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))
+            dwdz(k,i) = expz(k)*wi/(2.*dz)
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
@@ -441,54 +406,77 @@
           do k=lev0,lev1-1
             dudt(k,i) = dtx2inv*(un_upd(k,i,lat)-unm_smooth(k,i,lat))
             dvdt(k,i) = dtx2inv*(vn_upd(k,i,lat)-vnm_smooth(k,i,lat))
-            un_cor(k,i) = cor(lat)*vn_upd(k,i,lat)
-            vn_cor(k,i) = -cor(lat)*un_upd(k,i,lat)
-            un_cen(k,i) = un(k,i,lat)*vn_upd(k,i,lat)/re*tanphi(lat)
-            vn_cen(k,i) = -un(k,i,lat)*un_upd(k,i,lat)/re*tanphi(lat)
-            un_drag(k,i) = un_drag_coef(k,i)-
+            du_cor(k,i) = cor(lat)*vn_upd(k,i,lat)
+            dv_cor(k,i) = -cor(lat)*un_upd(k,i,lat)
+            du_cen(k,i) = un(k,i,lat)/re*tanphi(lat)*vn_upd(k,i,lat)
+            dv_cen(k,i) = -un(k,i,lat)/re*tanphi(lat)*un_upd(k,i,lat)
+            du_drag(k,i) = un_drag_coef(k,i)-
      |        .5*(lxx(k,i,lat)+lxx(k+1,i,lat))*un_upd(k,i,lat)-
      |        .5*(lxy(k,i,lat)+lxy(k+1,i,lat))*vn_upd(k,i,lat)
-            vn_drag(k,i) = vn_drag_coef(k,i)-
+            dv_drag(k,i) = vn_drag_coef(k,i)-
      |        .5*(lyy(k,i,lat)+lyy(k+1,i,lat))*vn_upd(k,i,lat)+
      |        .5*(lyx(k,i,lat)+lyx(k+1,i,lat))*un_upd(k,i,lat)
           enddo
-          do k=lev0+1,lev1-1
-            un_visc(k,i) = (g(k+1,i)*un_upd(k+1,i,lat)-
-     |        (g(k+1,i)+g(k,i))*un_upd(k,i,lat)+
-     |        g(k,i)*un_upd(k-1,i,lat))/expz(k)
-            vn_visc(k,i) = (g(k+1,i)*vn_upd(k+1,i,lat)-
-     |        (g(k+1,i)+g(k,i))*vn_upd(k,i,lat)+
-     |        g(k,i)*vn_upd(k-1,i,lat))/expz(k)
-            un_dwdz(k,i) =
-     |        dwdz(k,i)*(un_upd(k+1,i,lat)-un_upd(k-1,i,lat))
-            vn_dwdz(k,i) =
-     |        dwdz(k,i)*(vn_upd(k+1,i,lat)-vn_upd(k-1,i,lat))
+          do k=lev0+1,lev1-2
+            wi = 0.5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))
+            du_visc(k,i) = 1/expz(k)*
+     |        (g(k  ,i)        *un_upd(k-1,i,lat)-
+     |        (g(k+1,i)+g(k,i))*un_upd(k  ,i,lat)+
+     |         g(k+1,i)        *un_upd(k+1,i,lat))
+            dv_visc(k,i) = 1/expz(k)*
+     |        (g(k  ,i)        *vn_upd(k-1,i,lat)-
+     |        (g(k+1,i)+g(k,i))*vn_upd(k  ,i,lat)+
+     |         g(k+1,i)        *vn_upd(k+1,i,lat))
+            du_veradv(k,i) = wi/(2*dz)*
+     |        (un_upd(k+1,i,lat)-un_upd(k-1,i,lat))
+            dv_veradv(k,i) = wi/(2*dz)*
+     |        (vn_upd(k+1,i,lat)-vn_upd(k-1,i,lat))
           enddo
         enddo
-        call addfld('DUV_DUDT',' ',' ',dudt(lev0:lev1-1,:),
+        call addfld('DUDT','U changing rate','cm/s2',
+     |    dudt(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DVDT','V changing rate','cm/s2',
+     |    dvdt(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DU_CORIOLIS','U Coriolis force','cm/s2',
+     |    du_cor(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DV_CORIOLIS','V Coriolis force','cm/s2',
+     |    dv_cor(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DU_CENTRIFUGAL','U centrifugal force','cm/s2',
+     |    du_cen(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DV_CENTRIFUGAL','V centrifugal force','cm/s2',
+     |    dv_cen(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DU_IONDRAG','U ion drag','cm/s2',
+     |    du_drag(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DV_IONDRAG','V ion drag','cm/s2',
+     |    dv_drag(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DU_PRESSURE','U pressure gradient force','cm/s2',
+     |    -zl(lev0:lev1-1,:,lat),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DV_PRESSURE','V pressure gradient force','cm/s2',
+     |    -zp(lev0:lev1-1,:,lat),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DU_HORDIF','U horizontal diffusion','cm/s2',
+     |    hdu(lev0:lev1-1,lon0:lon1,lat),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_DVDT',' ',' ',dvdt(lev0:lev1-1,:),
+        call addfld('DV_HORDIF','V horizontal diffusion','cm/s2',
+     |    hdv(lev0:lev1-1,lon0:lon1,lat),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_UN_COR'  ,' ',' ',un_cor(lev0:lev1-1,:),
+        call addfld('DU_VISCOUS','U viscous force','cm/s2',
+     |    du_visc(lev0+1:lev1-2,:),
+     |    'lev',lev0+1,lev1-2,'lon',lon0,lon1,lat)
+        call addfld('DV_VISCOUS','V viscous force','cm/s2',
+     |    dv_visc(lev0+1:lev1-2,:),
+     |    'lev',lev0+1,lev1-2,'lon',lon0,lon1,lat)
+        call addfld('DU_HORADV','U horizontal advection','cm/s2',
+     |    -advec_un(lev0:lev1-1,:,lat),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_VN_COR'  ,' ',' ',vn_cor(lev0:lev1-1,:),
+        call addfld('DV_HORADV','V horizontal advection','cm/s2',
+     |    -advec_vn(lev0:lev1-1,:,lat),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_UN_CEN'  ,' ',' ',un_cen(lev0:lev1-1,:),
-     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_VN_CEN'  ,' ',' ',vn_cen(lev0:lev1-1,:),
-     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_UN_DRAG',' ',' ',un_drag(lev0:lev1-1,:),
-     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_VN_DRAG',' ',' ',vn_drag(lev0:lev1-1,:),
-     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_UN_VISC',' ',' ',un_visc(lev0+1:lev1-1,:),
-     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_VN_VISC',' ',' ',vn_visc(lev0+1:lev1-1,:),
-     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_UN_DWDZ',' ',' ',un_dwdz(lev0+1:lev1-1,:),
-     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DUV_VN_DWDZ',' ',' ',vn_dwdz(lev0+1:lev1-1,:),
-     |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('DU_VERADV','U vertical advection','cm/s2',
+     |    -du_veradv(lev0+1:lev1-2,:),
+     |    'lev',lev0+1,lev1-2,'lon',lon0,lon1,lat)
+        call addfld('DV_VERADV','V vertical advection','cm/s2',
+     |    -dv_veradv(lev0+1:lev1-2,:),
+     |    'lev',lev0+1,lev1-2,'lon',lon0,lon1,lat)
 !
 ! End third latitude scan:
       enddo ! lat=lat0,lat1
