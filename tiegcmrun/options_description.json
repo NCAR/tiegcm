@@ -377,7 +377,7 @@
             "warning": null
         },
         "SOURCE_START":{
-            "LEVEL": "INTERMEDIATE",
+            "LEVEL": "BASIC",
             "prompt": "Selected Date in Source Dile",
             "default": null,
             "valids": null,
@@ -605,14 +605,14 @@
             "warning": "HEELIS must be set for One-way Coupling"
         },
         "AMIENH":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "INTERMEDIATE",
             "prompt": "AMIE Northern Hemisphere Data",
             "default": null,
             "description": "Data files containing output from the AMIE model to be imported into TIEGCM. AMIENH is northern hemisphere. Contact Gang Lu (ganglu@ucar.edu) for more information.",
             "warning": null
         },  
         "AMIESH":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "INTERMEDIATE",
             "prompt": "AMIE Southern Hemisphere Data",
             "default": null,
             "description": "Data files containing output from the AMIE model to be imported into TIEGCM. AMIESH is southern hemisphere. Contact Gang Lu (ganglu@ucar.edu) for more information.",
@@ -707,7 +707,7 @@
             "warning": null
         },
         "DOECLIPSE":{
-            "LEVEL": "INTERMEDIATE",
+            "LEVEL": "EXPERT",
             "prompt": "Apply Eclipse Mask",
             "default": null,
             "valids": [true, false],
@@ -723,28 +723,28 @@
             "warning": null
         },                     
         "GSWM_MI_DI_NCFILE":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "INTERMEDIATE",
             "prompt": "GSWM diurnal migrating data file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing diurnal migrating tidal perturbations.",
             "warning": null
         },
         "GSWM_MI_SDI_NCFILE":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "INTERMEDIATE",
             "prompt": "GSWM semidiurnal migrating data file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing semidiurnal migrating tidal perturbations.",
             "warning": null
         },
         "GSWM_NM_DI_NCFILE":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "INTERMEDIATE",
             "prompt": "GSWM diurnal nonmigrating data file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing diurnal nonmigrating tidal perturbations.",
             "warning": null
         },
         "GSWM_NM_SDI_NCFILE":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "INTERMEDIATE",
             "prompt": "GSWM semidiurnal nonmigrating file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing semidiurnal nonmigrating tidal perturbations.",
