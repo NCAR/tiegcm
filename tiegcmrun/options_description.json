@@ -313,7 +313,7 @@
                 "LEVEL": "EXPERT",
                 "prompt": "nres_grid",
                 "default": null,
-                "description": null,
+                "description": "An advanced configuration parameter that is automatically determined based on other settings. Manual adjustment is not recommended, as it can impact the model's performance and results.",
                 "warning": "Automatically populated. Do not change."
             },
             "segmentation":{
@@ -331,28 +331,42 @@
             "LEVEL": "BASIC",
             "prompt": "Run Label",
             "default": null,
-            "description": "A text used to label this model run.",
+            "description": "A text used to label this model run. It is written to output history files as a global file attribute. This parameter is purely a user convenience, and does not effect the model run in any way.",
             "warning": null
         },
-        "start_date": {
+        "start_time": {
             "LEVEL": "BASIC",
-            "prompt": "Start date for simulation (yyyy-mm-ddThh:mm:ss)",
+            "prompt": "Start time for simulation (yyyy-mm-ddThh:mm:ss)",
             "default": null,
             "description": null,
             "warning": null
         },
-        "stop_date": {
+        "stop_time": {
             "LEVEL": "BASIC",
-            "prompt": "Stop date for simulation (yyyy-mm-ddThh:mm:ss)",
+            "prompt": "Stop time for simulation (yyyy-mm-ddThh:mm:ss)",
             "default": null,
             "description": null,
             "warning": null
+        },
+        "secondary_start_time": {
+            "LEVEL": "BASIC",
+            "prompt": "Start Time for Secondary History Output (yyyy-mm-ddThh:mm:ss)",
+            "default": null,
+            "description": null,
+            "warning": "secondary_start_time should not be earlier than start_time. Keep default if segmenting runs."
+        },
+        "secondary_stop_time": {
+            "LEVEL": "BASIC",
+            "prompt": "Stop Time for Secondary History Output (yyyy-mm-ddThh:mm:ss)",
+            "default": null,
+            "description": null,
+            "warning": "secondary_stop_time should not be later than stop_time. Keep default if segmenting runs."
         },
         "SOURCE":{
             "LEVEL": "BENCH",
             "prompt": "SOURCE file location",
             "default": null,
-            "description": "The location of the startup file.",
+            "description": "The location of the startup file. It must be a TIEGCM history with the same grid resolution as the model being run. It does not need to be from the same model version as that being run.",
             "warning": null
         },
         "segment":{
@@ -363,12 +377,12 @@
             "warning": null
         },
         "SOURCE_START":{
-            "LEVEL": "INTERMEDIATE",
+            "LEVEL": "BASIC",
             "prompt": "Selected Date in Source Dile",
             "default": null,
             "valids": null,
-            "description": "The selected model time (mtime) in the startup file.",
-            "warning": null
+            "description": "The selected model time (mtime) in the startup file. This option is typically used to specify the desired time stamp when there are multiple time stamps in one source file.",
+            "warning": "If the SOURCE_START history is not found on the SOURCE file, the model will print an error message and stop."
         },
         "START_YEAR":{
             "LEVEL": "INTERMEDIATE",
@@ -378,7 +392,7 @@
             "warning": null
         },
         "START_DAY":{
-            "LEVEL": "BASIC",
+            "LEVEL": "EXPERT",
             "prompt": "Start Day",
             "default": null,
             "description": "The starting day of year for this model run.",
@@ -416,28 +430,28 @@
             "LEVEL": "BASIC",
             "prompt": "Max Primary History per Output",
             "default": null,
-            "description": "The maximum number of records in one primary history file.",
+            "description": "The maximum number of records in one primary history file. When this amount of histories have been written to the current OUTPUT file, the next OUTPUT file is created and it receives subsequent histories. This parameter can be adjusted to control the size of primary output files.",
             "warning": null
         },
         "OUTPUT":{
-            "LEVEL": "BASIC",
+            "LEVEL": "EXPERT",
             "prompt": "Primary Output",
             "default": null,
             "description": "The filenames of primary history files. Multiple files are supported.",
             "warning": null
         },
         "STEP":{
-            "LEVEL": "INTERMEDIATE",
+            "LEVEL": "BASIC",
             "prompt": "STEP number",
             "default": null,
-            "description": "The time step of the model in seconds.",
+            "description": "The time step of the model in seconds. Default value is 60 seconds for 5-degree resolution, 30 seconds for 2.5-degree resolution, 10 seconds for 1.25-degree resolution, and 5 seconds for 0.625-degree resolution. During periods of quiet solar activity, the model can often be run at larger time steps. During periods of intense solar activity, the model may become numerically unstable. In this case, reducing the time step may be necessary for the model get through the rough period.",
             "warning": null
         },
         "NSTEP_SUB":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "BASIC",
             "prompt": "NSTEP_SUB number",
             "default": "10",
-            "description": "The number of iterations in one model time step for the O+ solver, the actual O+ time step is STEP/NSTEP_SUB.",
+            "description": "The number of iterations in one model time step for the O+ solver, the actual O+ time step is STEP/NSTEP_SUB. In geomagnetic quiet time, this number can typically be set as 10, but in storm time, a larger number (20 or even 50) is usually required to overcome the numerical stability.",
             "warning": null
         },
         "SECHIST":{
@@ -455,49 +469,41 @@
             "warning": null
         },
         "SECSTART":{
-            "LEVEL": "INTERMEDIATE",
+            "LEVEL": "EXPERT",
             "prompt": "Secondary Start Date (Day,Hour,Min,Sec)",
             "default": null,
             "description": "The starting model time (Day of year, Hour, Minute, Second) to generate the first secondary history record.",
             "warning": null
         },
         "SECSTOP":{
-            "LEVEL": "INTERMEDIATE",
+            "LEVEL": "EXPERT",
             "prompt": "Secondary Stop Date (Day,Hour,Min,Sec)",
             "default": null,
             "description": "The stopping model time (Day of year, Hour, Minute, Second) to generate the last secondary history record.",
             "warning": null
         },
         "SECOUT":{
-            "LEVEL": "BASIC",
+            "LEVEL": "EXPERT",
             "prompt": "Secondary Output",
             "default": null,
-            "description": "The filenames of secondary history files. Multiple files are supported.",
+            "description": "The maximum number of records in one secondary history file. When this amount of histories have been written to the current SECOUT file, the next SECOUT file is created and it receives subsequent histories. This parameter can be adjusted to control the size of secondary output files.",
             "warning": null
         },
         "SECFLDS":{
             "LEVEL": "BASIC",
             "prompt": "Secondary Output Fields",
             "default": ["TN","UN","VN","NE","TEC","POTEN","Z","ZG"],
-            "description": "Names of history fields to be outputted.",
+            "description": "Names of history fields to be outputted. These may be either fields that are also saved on primary histories (so-called 'prognostic' fields), fields that have been requested via addfld calls in the source code, or fields available via the diagnostics module.",
             "warning": null
         },
         "ELECTRON_HEATING":{
-            "LEVEL": "INTERMEDIATE",
+            "LEVEL": "EXPERT",
             "prompt": "Thermal Electron Heating Scheme",
             "default": 6,
             "valids": [4, 6],
             "description": "4 for the 4th order scheme (Swartz & Nisbet 1972) and\n 6 for the 6th order scheme (Smithtro & Solomon 2008)",
             "warning": null
         },
-        "DOECLIPSE":{
-            "LEVEL": "INTERMEDIATE",
-            "prompt": "Apply Eclipse Mask",
-            "default": false,
-            "valids": [true, false],
-            "description": "Apply an Eclipse mask if an eclipse occurs during this event. Will do nothing if there are no eclipses during this event.  Applies partial, annular, or total solar eclipse masks.",
-            "warning": null
-        },  
         "POTENTIAL_MODEL":{
             "LEVEL": "BASIC",
             "prompt": "High-latitude potential model that is going to be used",
@@ -506,34 +512,26 @@
             "description": "High-latitude potential model that is going to be used: Heelis/Weimer.",
             "warning": null
         },
-        "ONEWAY":{
-            "LEVEL": "INTERMEDIATE",
-            "prompt": "Enable One-way Coupling To Remix",
-            "default": false,
-            "valids": [true, false],
-            "description": "Enable one-way coupling from remix to TIEGCM. Read remix h5 file. Must be named or linked as msphere.mix.h5.",
-            "warning": "HEELIS must be set for One-way Coupling"
-        }, 
         "GPI_NCFILE":{
             "LEVEL": "BASIC",
             "prompt": "GPI file",
             "default": null,
-            "description": "The location of the GPI file containing 3-hourly KP and daily F107, F107A.",
-            "warning": "If GPI file is specified KP and POWER/CTPOTEN are skipped."
+            "description": "The location of the GPI file containing 3-hourly KP and daily F107, F107A to drive high-latitude convection and the auroral precipitation oval.",
+            "warning": "If GPI_NCFILE is specified, then KP and POWER/CTPOTEN are skipped. If further POTENTIAL_MODEL is WEIMER and IMF_NCFILE is specified, then the Weimer model and aurora will be driven by the IMF data, and only F107 and F107A will be read from the GPI data file."
         },
         "IMF_NCFILE":{
             "LEVEL": "BASIC",
             "prompt": "IMF file",
             "default": null,
-            "description": "The location of the IMF file containing hourly BXIMF, BYIMF, BZIMF, SWDEN, SWVEL.",
-            "warning": "This can be set only if POTENTIAL_MODEL is WEIMER.\nIf IMF file is specified BXIMF, BYIMF, BZIMF, SWDEN and SWVEL are skipped."
+            "description": "The location of the IMF file containing hourly BXIMF, BYIMF, BZIMF, SWDEN, SWVEL. The data will be used to drive the Weimer 2005 potential model.",
+            "warning": "This can be set only if POTENTIAL_MODEL is WEIMER. If IMF file is specified BXIMF, BYIMF, BZIMF, SWDEN, and SWVEL are skipped. If the current model time is not available on the IMF data file, the model will print an error message and stop."
         },
         "KP":{
             "LEVEL": "BASIC",
             "prompt": "Kp index",
             "default": null,
             "description": "If KP is specified and POWER and/or CTPOTEN are skipped, then the given KP will be used with empirical formulas to calculate POWER and/or CTPOTEN, which are used in auroral parameterization and Heelis model.",
-            "warning": "If KP is specified and POWER and/or CTPOTEN are skipped."
+            "warning": "If KP is specified and POWER and/or CTPOTEN are skipped, then the given KP will be used to calculate POWER and/or CTPOTEN using empirical formulas, which are used in auroral parameterization and Heelis model."
         },  
         "POWER":{
             "LEVEL": "BASIC",
@@ -547,7 +545,7 @@
             "prompt": "CTPOTEN",
             "default": null,
             "description": "Used the auroral parameterization and Heelis model.\nNote that if POTENTIAL_MODEL is WEIMER, then the user is not allowed to provide CTPOTEN because it will be calculated from the Weimer electric potential.",
-            "warning": null
+            "warning": "If POTENTIAL_MODEL is WEIMER, then the user is not allowed to provide CTPOTEN because it will be calculated from the Weimer electric potential."
         },
         "BXIMF":{
             "LEVEL": "BASIC",
@@ -598,29 +596,155 @@
             "description": "81-day averaged 10.7 cm solar flux.",
             "warning": null
         },
-        "GSWM_MI_DI_NCFILE":{
+        "ONEWAY":{
             "LEVEL": "EXPERT",
+            "prompt": "Enable One-way Coupling To Remix",
+            "default": false,
+            "valids": [true, false],
+            "description": "Enable one-way coupling from remix to TIEGCM. Read remix h5 file. Must be named or linked as msphere.mix.h5.",
+            "warning": "HEELIS must be set for One-way Coupling"
+        },
+        "AMIENH":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "AMIE Northern Hemisphere Data",
+            "default": null,
+            "description": "Data files containing output from the AMIE model to be imported into TIEGCM. AMIENH is northern hemisphere. Contact Gang Lu (ganglu@ucar.edu) for more information.",
+            "warning": null
+        },  
+        "AMIESH":{
+            "LEVEL": "INTERMEDIATE",
+            "prompt": "AMIE Southern Hemisphere Data",
+            "default": null,
+            "description": "Data files containing output from the AMIE model to be imported into TIEGCM. AMIESH is southern hemisphere. Contact Gang Lu (ganglu@ucar.edu) for more information.",
+            "warning": null
+        },  
+        "AURORA":{
+            "LEVEL": "EXPERT",
+            "prompt": "Flag for Auroral Parameterization",
+            "default": null,
+            "valids": [0, 1],
+            "description": "If AURORA is 1, use Roble & Ridley (1987) auroral model; if 0, no auroral model is applied. Default is 1.",
+            "warning": null
+        },  
+        "DYNAMO":{
+            "LEVEL": "EXPERT",
+            "prompt": "Flag for Electrodynamo Calculation",
+            "default": null,
+            "valids": [0, 1],
+            "description": "If DYNAMO is 1, then dynamo (pdynamo.F) will be called, and ion drift velocities will be calculated. If 0, then dynamo will not be called, and ion drift velocities will be zero. Default is 1.",
+            "warning": null
+        },
+        "CALC_HELIUM":{
+            "LEVEL": "EXPERT",
+            "prompt": "Flag for Helium Calculation",
+            "default": null,
+            "valids": [0, 1],
+            "description": "If CALC_HELIUM is 1, Helium is calculated as a major composition species. If 0, Helium is zeroed out. If CALC_HELIUM is 1 and the source history does not have Helium, then Helium will be initialized globally to 0.1154E-5. Default is 1.",
+            "warning": null
+        },
+        "EDDY_DIF":{
+            "LEVEL": "EXPERT",
+            "prompt": "Flag for Day-of-Year Dependent Eddy Diffusion Coefficient",
+            "default": null,
+            "valids": [0, 1],
+            "description": "If EDDY_DIF is 1, then day-of-year dependent eddy diffusion will be calculated, otherwise eddy diffusion will be set to pressure-dependent constants. See cons.F. Default is 0.",
+            "warning": null
+        },
+        "JOULEFAC":{
+            "LEVEL": "EXPERT",
+            "prompt": "Joule Heating Factor",
+            "default": null,
+            "valids": null,
+            "description": "This factor is multiplied by the joule heating calculation (see subroutine qjoule_tn in qjoule.F). Default is 1.5.",
+            "warning": null
+        },                 
+        "COLFAC":{
+            "LEVEL": "EXPERT",
+            "prompt": "O-O+ Collision Frequency Factor",
+            "default": null,
+            "valids": null,
+            "description": "O-O+ collision frequency, alias the 'Burnside Factor'. Default is 1.5, but there have been recommendations for 1.3. COLFAC is used in lamdas.F and oplus.F. Default is 1.5.",
+            "warning": null
+        },
+        "OPDIFFCAP":{
+            "LEVEL": "EXPERT",
+            "prompt": "Maximum O+ Ambipolar Diffusion coefficient",
+            "default": null,
+            "valids": null,
+            "description": "Optional cap on ambipolar diffusion coefficient for O+. This can improve model stability in the topside F-region, but it is only recommended as a last resort since it will change model results. Default is 0, i.e., no cap. If this is non-zero (provided by the user), then it is implemented in subroutine rrk of oplus.F.",
+            "warning": null
+        }, 
+        "CURRENT_PG": {
+            "LEVEL": "EXPERT",
+            "prompt": "Flag for Pressure Gradient and Gravity Force in Electrodynamo",
+            "default": null,
+            "valids": [0, 1],
+            "description": "If CURRENT_PG is 1, current due to plasma pressure gradient and gravity is calculated and included as a forcing term in the dynamo equation (ignored if DYNAMO is 0). Default is 1.",
+            "warning": null
+        },
+        "CURRENT_KQ": {
+            "LEVEL": "EXPERT",
+            "prompt": "Flag for Current Sheet Calculation in Electrodynamo",
+            "default": null,
+            "valids": [0, 1],
+            "description": "If CURRENT_KQ is 1, then height-integrated current density of current sheet, and upward current density at the top of the ionosphere is calculated (ignored if DYNAMO is 0). See current.F90 to save JQR, JE13D, JE23D, KQPHI, KQLAM.Default is 0.",
+            "warning": null
+        },
+        "ET": {
+            "LEVEL": "EXPERT",
+            "prompt": "Flag for Calculating Electrojet Turbulent Heating",
+            "default": null,
+            "valids": [true, false],
+            "description": "If ET is true, then electrojet turbulent heating is calculated and applied to the electron thermodynamic equation. Default is false.",
+            "warning": null
+        },
+        "SAPS": {
+            "LEVEL": "EXPERT",
+            "prompt": "Flag for Including Empirical SAPS",
+            "default": null,
+            "valids": [true, false],
+            "description": "If SAPS is true, then an empirical sub-auroral polarization streams (SAPS) ion drift is added to UI, VI. Default is false.",
+            "warning": null
+        },
+        "DOECLIPSE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Apply Eclipse Mask",
+            "default": null,
+            "valids": [true, false],
+            "description": "Apply an Eclipse mask if an eclipse occurs during this event. Will do nothing if there are no eclipses during this event.  Applies partial, annular, or total solar eclipse masks. Default is false.",
+            "warning": null
+        },
+        "ECLIPSE_LIST": {
+            "LEVEL": "EXPERT",
+            "prompt": "Data File for Eclipse List",
+            "default": null,
+            "valids": null,
+            "description": "The location of eclipse list data file used for eclipse mask.",
+            "warning": null
+        },                     
+        "GSWM_MI_DI_NCFILE":{
+            "LEVEL": "INTERMEDIATE",
             "prompt": "GSWM diurnal migrating data file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing diurnal migrating tidal perturbations.",
             "warning": null
         },
         "GSWM_MI_SDI_NCFILE":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "INTERMEDIATE",
             "prompt": "GSWM semidiurnal migrating data file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing semidiurnal migrating tidal perturbations.",
             "warning": null
         },
         "GSWM_NM_DI_NCFILE":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "INTERMEDIATE",
             "prompt": "GSWM diurnal nonmigrating data file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing diurnal nonmigrating tidal perturbations.",
             "warning": null
         },
         "GSWM_NM_SDI_NCFILE":{
-            "LEVEL": "EXPERT",
+            "LEVEL": "INTERMEDIATE",
             "prompt": "GSWM semidiurnal nonmigrating file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing semidiurnal nonmigrating tidal perturbations.",
@@ -632,6 +756,152 @@
             "default": null,
             "description": "The location of HE Coefs file",
             "warning": null
+        },
+        "BGRDDATA_NCFILE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Data File for Zonal Mean Climatology of T, U, V, Z",
+            "default": null,
+            "description": "Data file providing zonal mean climatology of T, U, V, and Z coming from either empirical models (e.g., MSIS, HWM) or reanalysis data (e.g., NOGAPS-ALPHA). If no input file is specified, a flat lower boundary (U = V = 0, T = 181K, Z = 96.4km) is employed by default.",
+            "warning": null
+        },
+        "CTMT_NCFILE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Data File for Tidal Perturbation of T, U, V, Z",
+            "default": null,
+            "description": "The location of Climatological Tidal Model of the Thermosphere files containing all tidal perturbations.",
+            "warning": null
+        },
+        "SABER_NCFILE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Data File for Tidal Perturbation of T, Z from SABER",
+            "default": null,
+            "description": "The location of SABER files containing tidal perturbations of temperature and geopotential height.",
+            "warning": null
+        },
+        "TIDI_NCFILE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Data File for Tidal Perturbation of U, V from TIDI",
+            "default": null,
+            "description": "The location of TIDI files containing tidal perturbations of zonal and meridional neutral winds.",
+            "warning": null
+        },
+        "TIDE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Hough Mode Amplitudes and Phases of Semi-Diurnal Tides",
+            "default": null,
+            "description": "TIDE should be specified only for experiments where amplitude and phases of the tides must be used. Default is [0, 0, 0, 0, 0, 0, 0, 0, 0, 0].",
+            "warning": null
+        },
+        "TIDE2":{
+            "LEVEL": "EXPERT",
+            "prompt": "Hough Mode Amplitudes and Phases of Diurnal Tides",
+            "default": null,
+            "description": "TIDE should be specified only for experiments where amplitude and phases of the tides must be used. Default is [0, 0].",
+            "warning": null
+        },
+        "MIXFILE": {
+            "LEVEL": "EXPERT",
+            "prompt": "Data File for Remix",
+            "default": "msphere.mix.h5",
+            "valids": null,
+            "description": "The location of remix data file.",
+            "warning": null
+        },
+        "NUDGE_NCPRE": {
+            "LEVEL": "EXPERT",
+            "prompt": "The Common Part of NUDGE_NCFILE Filenames (Prefix)",
+            "default": null,
+            "valids": null,
+            "description": "NUDGE_NCPRE + NUDGE_NCFILE + NUDGE_NCPOST consist the full name of the data file.",
+            "warning": null
+        },
+        "NUDGE_NCPOST": {
+            "LEVEL": "EXPERT",
+            "prompt": "The Common Part of NUDGE_NCFILE Filenames (Postfix)",
+            "default": null,
+            "valids": null,
+            "description": "NUDGE_NCPRE + NUDGE_NCFILE + NUDGE_NCPOST consist the full name of the data file.",
+            "warning": null
+        },
+        "NUDGE_NCFILE": {
+            "LEVEL": "EXPERT",
+            "prompt": "The Varying Part of NUDGE_NCFILE Filenames",
+            "default": null,
+            "valids": null,
+            "description": "There can be multiple entries in NUDGE_NCFILE. NUDGE_NCPRE + NUDGE_NCFILE + NUDGE_NCPOST consist the full name of the data file.",
+            "warning": null
+        },
+        "NUDGE_FLDS": {
+            "LEVEL": "EXPERT",
+            "prompt": "Names of the Fields to Be Nudged",
+            "default": null,
+            "valids": null,
+            "description": "The specified fields will be used to replace the internal model fields near the lower boundary.",
+            "warning": null
+        },
+        "NUDGE_LBC": {
+            "LEVEL": "EXPERT",
+            "prompt": "Flags for Lower Boundary Replacement",
+            "default": null,
+            "valids": [true, false],
+            "description": "NUDGE_LBC has the same amount of entries as NUDGE_FLDS and it specifies whether the corresponding NUDGE_FLDS will be used as the lower boundary of TIEGCM. Defaults are false.",
+            "warning": "Valid lower boundary fields are TN, UN, VN, Z, therefore true flags in NUDGE_LBC other than those corresponding to TN, UN, VN, Z will be ignored."
+        },
+        "NUDGE_F4D": {
+            "LEVEL": "EXPERT",
+            "prompt": "Flags for Internal Field Nudging",
+            "default": null,
+            "valids": [true, false],
+            "description": "NUDGE_F4D has the same amount of entries as NUDGE_FLDS and it specifies whether the corresponding NUDGE_FLDS will be used to replace the internal TIEGCM fields near the lower boundary. Defaults are false.",
+            "warning": "If the corresponding flags for TN, UN, VN, Z are true in NUDGE_F4D, the flags in NUDGE_LBC should also be true to be consistent."
+        },
+        "NUDGE_USE_REFDATE": {
+            "LEVEL": "EXPERT",
+            "prompt": "Flags for Time Specification",
+            "default": null,
+            "valids": [true, false],
+            "description": "NUDGE_USE_REFDATE specifies whether NUDGE_REFDATE will be used. Note that if NUDGE_USE_REFDATE is true, then the 'time' variable in NUDGE_NCFILE will be used and 'date', 'datesec' will be ignored; otherwise the 'time' variable will be ignored and 'date', 'datesec' will be used. Default is false.",
+            "warning": null
+        },
+        "NUDGE_REFDATE": {
+            "LEVEL": "EXPERT",
+            "prompt": "The Zero Point of the Time Variable in NUDGE_NCFILE",
+            "default": null,
+            "valids": null,
+            "description": "The two integers specify the year and day-of-year of the 'time' variable's zero point in NUDGE_NCFILE. This is useful if the user wants to manually shift the time of external fields to perform some theoretical studies.",
+            "warning": null
+        },
+        "NUDGE_SPONGE": {
+            "LEVEL": "EXPERT",
+            "prompt": "TIEGCM Range to Nudge",
+            "default": null,
+            "valids": null,
+            "description": "The first number specifies the horizontal range in degree for TIEGCM to be nudged to NUDGE_NCFILE; the second number specifies the vertical range in scale height for TIEGCM to be nudged to NUDGE_NCFILE. Horizontal sponge layer is rarely used and the first number is usually 0 unless regional nudging is desired. Default is [0, 0].",
+            "warning": "NUDGE_SPONGE should not exceed the lon/lat/lev/ilev range in NUDGE_NCFILE. If it does, the model will issue an error message and quit."
+        },
+        "NUDGE_DELTA": {
+            "LEVEL": "EXPERT",
+            "prompt": "Exponential Decaying Factor for Relaxation",
+            "default": null,
+            "valids": null,
+            "description": "The first number specifies the horizontal exponential decaying factor in degree; the second number specifies the vertical exponential factor in scale height. These numbers should be set up to allow a smooth transition from external NUDGE_NCFILE fields to internal TIEGCM fields. In the transition region, the portion of external fields takes the form of exp(-(d/NUDGE_DELTA)^NUDGE_POWER) where d is the distance from the boundary in degree (horizontal) or scale height (vertical). Default is [1, 1].",
+            "warning": null
+        },
+        "NUDGE_POWER": {
+            "LEVEL": "EXPERT",
+            "prompt": "Decaying Power for Relaxation",
+            "default": null,
+            "valids": null,
+            "description": "The first number specifies the power of horizontal decaying factor; the second number specifies the power of vertical exponential factor. In the transition region, the portion of external fields takes the form of exp(-(d/NUDGE_DELTA)^NUDGE_POWER) where d is the distance from the boundary in degree (horizontal) or scale height (vertical).Default is [1, 1].",
+            "warning": null
+        },
+        "NUDGE_ALPHA": {
+            "LEVEL": "EXPERT",
+            "prompt": "General Relaxation Factor",
+            "default": null,
+            "valids": null,
+            "description": "A multiplier applied to the horizontal and vertical relaxation factor to specify the general relaxation factor. It is the portion of external fields in total fields at the boundary.Default is 0 (no nudging).",
+            "warning": "NUDGE_ALPHA should be between 0 and 1."
         },
         "other_input":{
             "LEVEL": "EXPERT",
