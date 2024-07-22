@@ -141,9 +141,7 @@
      |  f ! input field with ghost cells for finite differencing
       real(rp),dimension(lon0:lon1),intent(in) :: lbc ! lower boundary
 !
-! advecv_out is intent(inout) because it is passed in as output from
-! previous call to horizontal advection (see dt.F).
-      real(rp),dimension(lev0:lev1,lon0:lon1),intent(inout) ::
+      real(rp),dimension(lev0:lev1,lon0:lon1),intent(out) ::
      |  advecv_out
 !
 ! Local:
@@ -171,10 +169,9 @@
           advec(k,i) = (advec(k,i)+advec(k+1,i))*dsig
         enddo ! k=lev0,lev1-1
 !
-! Return vertical advection. Horizontal advection is already in advecv_out
-! on input (see call from sub dt).
+! Return vertical advection.
         do k=lev0,lev1-1
-          advecv_out(k,i) = advecv_out(k,i)+advec(k,i)
+          advecv_out(k,i) = advec(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1 
 !

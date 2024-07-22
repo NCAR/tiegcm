@@ -457,34 +457,34 @@ def inp_pri_date(start_date_str, stop_date_str):
             - PRISTOP (list): A list containing the day of the year, hour, minute, and second of the stop date.
     """
     # Parse the start and stop dates
-    start_date = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M:%S")
-    stop_date = datetime.strptime(stop_date_str, "%Y-%m-%dT%H:%M:%S")
+    start_time = datetime.strptime(start_date_str, "%Y-%m-%dT%H:%M:%S")
+    stop_time = datetime.strptime(stop_date_str, "%Y-%m-%dT%H:%M:%S")
 
     # Extract START_YEAR and START_DAY
-    START_YEAR = start_date.year
-    START_DAY = start_date.timetuple().tm_yday
+    START_YEAR = start_time.year
+    START_DAY = start_time.timetuple().tm_yday
 
     # Format PRISTART and PRISTOP
-    PRISTART = [start_date.timetuple().tm_yday, start_date.hour, start_date.minute, start_date.second]
-    PRISTOP = [stop_date.timetuple().tm_yday, stop_date.hour, stop_date.minute, stop_date.second]
+    PRISTART = [start_time.timetuple().tm_yday, start_time.hour, start_time.minute, start_time.second]
+    PRISTOP = [stop_time.timetuple().tm_yday, stop_time.hour, stop_time.minute, stop_time.second]
 
     return START_YEAR, START_DAY, PRISTART, PRISTOP
 
-def valid_hist(start_date, stop_date):
+def valid_hist(start_time, stop_time):
     """
     Calculate valid divisions for a given time range.
 
     Parameters:
-    start_date (str): The start date in the format '%Y-%m-%dT%H:%M:%S'.
-    stop_date (str): The stop date in the format '%Y-%m-%dT%H:%M:%S'.
+    start_time (str): The start date in the format '%Y-%m-%dT%H:%M:%S'.
+    stop_time (str): The stop date in the format '%Y-%m-%dT%H:%M:%S'.
 
     Returns:
     list: A list of valid divisions for days, hours, minutes, and seconds.
     Each division is represented as a list [days, hours, minutes, seconds].
     """
 
-    start = datetime.strptime(start_date, '%Y-%m-%dT%H:%M:%S')
-    stop = datetime.strptime(stop_date, '%Y-%m-%dT%H:%M:%S')
+    start = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S')
+    stop = datetime.strptime(stop_time, '%Y-%m-%dT%H:%M:%S')
     total_duration = stop - start
     total_seconds = total_duration.total_seconds()
     
@@ -560,20 +560,20 @@ def inp_mxhist(start_time, stop_time, x_hist, mxhist_warn):
     return(int(MXHIST), mxhist_warn)
 
 
-def inp_sechist(PRISTART, PRISTOP):
+def inp_sechist(SECSTART, SECSTOP):
     """
-    Determines the value of SECHIST based on the given PRISTART and PRISTOP.
+    Determines the value of SECHIST based on the given SECSTART and SECSTOP.
 
     Parameters:
-    PRISTART (list): A list containing the start day.
-    PRISTOP (list): A list containing the stop day.
+    SECSTART (list): A list containing the start day.
+    SECSTOP (list): A list containing the stop day.
 
     Returns:
     list: A list containing the value of SECHIST.
 
     """
-    PRISTART_DAY = PRISTART[0]
-    PRISTOP_DAY = PRISTOP[0]
+    PRISTART_DAY = SECSTART[0]
+    PRISTOP_DAY = SECSTOP[0]
     n_split_day = int(PRISTOP_DAY - PRISTART_DAY)
     if n_split_day >= 7:
         SECHIST = [1, 0, 0, 0]
@@ -853,7 +853,6 @@ def get_run_option(name, description, mode="BASIC"):
     # Compare the current mode to the parameter level setting. If the variable
     # level is higher than the user mode, just use the default.
     fourvar_variables = ["SOURCE_START","segment","PRISTART","PRISTOP","PRIHIST","SECSTART","SECSTOP","SECHIST"]
-
     if mode == "BENCH" and level in ["BASIC","INTERMEDIATE", "EXPERT"]:
         if name in fourvar_variables and default is not None:
             return  ' '.join(map(str, default))
@@ -873,10 +872,11 @@ def get_run_option(name, description, mode="BASIC"):
     if warning is not None:
         print(f'{YELLOW}{warning}{RESET}')
     og_prompt = prompt
-    file_variables = ["SOURCE","GPI_NCFILE","IMF_NCFILE","GSWM_MI_DI_NCFILE","GSWM_MI_SDI_NCFILE","GSWM_NM_DI_NCFILE","GSWM_NM_SDI_NCFILE","HE_COEFS_NCFILE"]
+    file_variables = ["SOURCE","GPI_NCFILE","IMF_NCFILE","AMIENH","AMIESH","GSWM_MI_DI_NCFILE","GSWM_MI_SDI_NCFILE","GSWM_NM_DI_NCFILE","GSWM_NM_SDI_NCFILE","HE_COEFS_NCFILE","BGRDDATA_NCFILE","CTMT_NCFILE","SABER_NCFILE","TIDI_NCFILE","MIXFILE"]
     valid_bool = False
     bool_True = ["YES","Yes","yes","Y","y","TRUE","True","true","T","t","1",True,1]
     bool_False = ["NO","No","no","N","n","FALSE","False","false","F","f","0",False,0]
+    array_variables = ["TIDE","TIDE2","NUDGE_FLDS","NUDGE_SPONGE","NUDGE_DELTA","NUDGE_POWER"]
     # If provided, add the valid values in val1|val2 format to the prompt.
     if valids is not None: 
         if name == "vertres":
@@ -935,6 +935,28 @@ def get_run_option(name, description, mode="BASIC"):
                 ok = True
             elif temp_value == "?":
                 print(f'{YELLOW}{var_description}{RESET}')
+            """
+            elif name in array_variables:
+                prompt = og_prompt
+                prompt += f" [{GREEN}{default}{RESET}]"
+                temp_value = input(f"{prompt} / ENTER to go next: ")
+                if temp_value != "":
+                    if "," in temp_value:
+                        temp_value = temp_value.replace("'", "")
+                        default.extend(s.replace(" ", "") for s in temp_value.split(',')) 
+                    else:
+                        temp_value = temp_value.replace("'", "")
+                        default.extend(s.replace(" ", "") for s in temp_value.split()) 
+                    option_value = default
+                elif temp_value == 'none' or temp_value == 'None':
+                    option_value = json.loads('[null]')
+                    ok = True
+                elif temp_value == "":
+                    option_value = default
+                    ok = True
+                elif temp_value == "?":
+                    print(f'{YELLOW}{var_description}{RESET}')
+            """
         elif name == "modules":
             prompt = og_prompt
             prompt += f" [{GREEN}{default}{RESET}]"
@@ -1075,11 +1097,17 @@ def get_run_option(name, description, mode="BASIC"):
                 if valids is not None and float(option_value) not in valids:
                     print(f"Invalid value for option {name}: {option_value}!")
                     continue
+            elif name in ["AURORA","DYNAMO","CALC_HELIUM","EDDY_DIF","JOULEFAC","COLFAC","OPDIFFCAP","CURRENT_PG","CURRENT_KQ","NUDGE_ALPHA"]:
+                if option_value != None: 
+                    if float(option_value) not in valids:
+                        print(f"Invalid value for option {name}: {option_value}!")
+                        continue
             else:
                 if valid_bool == True:
                     if option_value not in bool_True and option_value not in bool_False:
-                        print(f"Invalid value for option {name}: {option_value}!")
-                        continue
+                        if mode !="EXPERT":
+                            print(f"Invalid value for option {name}: {option_value}!")
+                            continue
                 elif valids is not None and option_value not in valids:
                     print(f"Invalid value for option {name}: {option_value}!")
                     continue
@@ -1091,7 +1119,7 @@ def get_run_option(name, description, mode="BASIC"):
                     option_value = True
                 elif option_value in bool_False:
                     option_value = False
-            if option_value != None:
+            if option_value != None and type(option_value) != bool:
                 option_value = str(option_value)
     # Return the option as a string.
     return option_value
@@ -1316,6 +1344,7 @@ def prompt_user_for_run_options(args):
             o["nres_grid"] = 6
         elif float(o["mres"]) == 0.5:
             o["nres_grid"] = 7
+    
     if input_build_skip == True:
         input_build_skip = True
         o["segmentation"] = False
@@ -1372,26 +1401,34 @@ def prompt_user_for_run_options(args):
         for on in od:
             if start_stop_set == 0 and benchmark == None:
                 temp_mode =  "INTERMEDIATE"
-            if on == "start_date" and benchmark != None:
+            if on == "start_time" and benchmark != None:
                 continue
-            elif on == "stop_date" and benchmark != None:
+            elif on == "stop_time" and benchmark != None:
                 continue
-            elif on == "stop_date" and benchmark == None:
+            elif on == "stop_time" and benchmark == None:
                 o[on] = get_run_option(on, od[on], temp_mode)
                 if o[on] != None:
                     start_stop_set = 1
                     temp_mode = mode
-                    START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_date"], o["stop_date"])
+                    START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_time"], o["stop_time"])
                     od["START_YEAR"]["default"] = START_YEAR
                     od["START_DAY"]["default"] = START_DAY
                     od["PRISTART"]["default"] = PRISTART
                     od["PRISTOP"]["default"] = PRISTOP
+            elif on == "secondary_start_time" and benchmark == None:
+                od["secondary_start_time"]["default"] = o["start_time"]
+                o[on] = get_run_option(on, od[on], temp_mode)
+                #od["SECSTART"]["default"] = o[on]
+            elif on == "secondary_stop_time" and benchmark == None:
+                od["secondary_stop_time"]["default"] = o["stop_time"]
+                o[on] = get_run_option(on, od[on], temp_mode)
+                #od["SECSTOP"]["default"] = o[on]
             elif on == "segment" and benchmark == None:
                 o[on] = get_run_option(on, od[on], temp_mode)
                 if o[on] != [None]:
                     options["model"]["specification"]["segmentation"] = True
                     segment = [int(i) for i in o[on].split()]
-                    runtimes = segment_time(o["start_date"], o["stop_date"], segment)
+                    runtimes = segment_time(o["start_time"], o["stop_time"], segment)
                     segment_warn_0 = f"Segmentation is set to {segment}.\n"
                     segment_warn_1 = f" is set for one segment\neg.{runtimes[0][0]} to {runtimes[0][1]}" 
                     od["PRIHIST"]["warning"] = (od["PRIHIST"]["warning"] + "\n" if od["PRIHIST"]["warning"]  is not None else "") + segment_warn_0 + "PRIHIST" + segment_warn_1
@@ -1417,32 +1454,32 @@ def prompt_user_for_run_options(args):
                 od["PRIHIST"]["default"] =  PRIHIST
                 o[on] = get_run_option(on, od[on], temp_mode)
                 PRIHIST = [int(i) for i in o[on].split()]
-                MXHIST_PRIM_set ,MXHIST_PRIM_warning_set  = inp_mxhist(o["start_date"], o["stop_date"], PRIHIST, od["MXHIST_PRIM"]["warning"])
+                MXHIST_PRIM_set ,MXHIST_PRIM_warning_set  = inp_mxhist(o["start_time"], o["stop_time"], PRIHIST, od["MXHIST_PRIM"]["warning"])
                 od["MXHIST_PRIM"]["default"] = MXHIST_PRIM_set
                 od["MXHIST_PRIM"]["warning"] = MXHIST_PRIM_warning_set
             elif on == "MXHIST_PRIM" and benchmark== None:
                 o[on] = get_run_option(on, od[on], temp_mode)
                 MXHIST_PRIM = int(o[on])
             elif on == "OUTPUT" and benchmark== None:
-                OUTPUT, pri_files_n = inp_pri_out(o["start_date"], o["stop_date"], PRIHIST, MXHIST_PRIM, 0, histdir,run_name)
+                OUTPUT, pri_files_n = inp_pri_out(o["start_time"], o["stop_time"], PRIHIST, MXHIST_PRIM, 0, histdir,run_name)
                 od["OUTPUT"]["default"] = OUTPUT
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "SECHIST" and benchmark== None:
-                SECHIST = inp_prihist(PRISTART,PRISTOP)
+                SECHIST = inp_sechist(PRISTART,PRISTOP)
                 od["SECHIST"]["default"] =  SECHIST
                 o[on] = get_run_option(on, od[on], temp_mode)
                 SECHIST = [int(i) for i in o[on].split()]
-                MXHIST_SECH_set ,MXHIST_SECH_warning_set  = inp_mxhist(o["start_date"], o["stop_date"], SECHIST, od["MXHIST_SECH"]["warning"])
+                MXHIST_SECH_set ,MXHIST_SECH_warning_set  = inp_mxhist(o["start_time"], o["stop_time"], SECHIST, od["MXHIST_SECH"]["warning"])
                 od["MXHIST_SECH"]["default"] = MXHIST_SECH_set
                 od["MXHIST_SECH"]["warning"] = MXHIST_SECH_warning_set
-                SECSTART, SECSTOP = inp_sec_date(o["start_date"], o["stop_date"], SECHIST)
+                SECSTART, SECSTOP = inp_sec_date(o["secondary_start_time"], o["secondary_stop_time"], SECHIST)
                 od["SECSTART"]["default"] = SECSTART
                 od["SECSTOP"]["default"] = SECSTOP                
             elif on == "MXHIST_SECH" and benchmark== None:
                 o[on] = get_run_option(on, od[on], temp_mode)
                 MXHIST_SECH = int(o[on])
             elif on == "SECOUT" and benchmark== None:
-                SECOUT, sec_files_n = inp_sec_out(o["start_date"], o["stop_date"],  SECHIST, MXHIST_SECH, 0, histdir,run_name)
+                SECOUT, sec_files_n = inp_sec_out(o["secondary_start_time"], o["secondary_stop_time"],  SECHIST, MXHIST_SECH, 0, histdir,run_name)
                 od["SECOUT"]["default"] = SECOUT
                 o[on] = get_run_option(on, od[on], temp_mode)
             elif on == "POTENTIAL_MODEL":
@@ -2030,7 +2067,7 @@ def main():
                 out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
                 options["inp"]["SOURCE"] = out_prim
                 print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
-            segment_times = segment_time(options["inp"]["start_date"], options["inp"]["stop_date"], [int(i) for i in options["inp"]["segment"].split()])
+            segment_times = segment_time(options["inp"]["start_time"], options["inp"]["stop_time"], [int(i) for i in options["inp"]["segment"].split()])
             #segment_number = 0
             pri_files = 0
             sec_files = 0

@@ -72,8 +72,9 @@
 ! For diagnostics:
       real,dimension(lev0:lev1,lon0:lon1) :: eddyp,eddyq,eddyr
       real,dimension(lev0:lev1,lon0:lon1,3) ::
-     |  zz_ki,moldif,eddydif,veradv
-      real,dimension(lev0:lev1,lon0:lon1,3,3) :: gama_ki,molp,molq,molr
+     |  zz_ki,dpdt,prod,loss_sum,moldif_sum,eddydif,veradv
+      real,dimension(lev0:lev1,lon0:lon1,3,3) ::
+     |  gama_ki,loss,molp,molq,molr,moldif
 !
 ! Correction factor for diffusion coeff betweeen helium and o2,o,n2:
       real,dimension(lev0:lev1,lon0:lon1,3) :: diff_fac
@@ -135,19 +136,6 @@
       do lat=lat0,lat1
         call advecl(o2,o1,he,o2_advec,o1_advec,he_advec,
      |    lev0,lev1,lon0,lon1,lat0,lat1,lat)
-
-        call addfld('O2_HORADV','O2 horizontal advection',' ',
-     |    o2_advec(:,:,lat),'lev',k0,k1,'lon',i0,i1,lat)
-        call addfld('O1_HORADV','O1 horizontal advection',' ',
-     |    o1_advec(:,:,lat),'lev',k0,k1,'lon',i0,i1,lat)
-        call addfld('HE_HORADV','He horizontal advection',' ',
-     |    he_advec(:,:,lat),'lev',k0,k1,'lon',i0,i1,lat)
-        call addfld('O2_HORDIF','O2 horizontal diffusion',' ',
-     |    hdo2(k0:k1-1,i0:i1,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
-        call addfld('O1_HORDIF','O1 horizontal diffusion',' ',
-     |    hdo1(k0:k1-1,i0:i1,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
-        call addfld('HE_HORDIF','He horizontal diffusion',' ',
-     |    hdhe(k0:k1-1,i0:i1,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
       enddo ! lat=lat0,lat1
 !
 ! Save smoothed o2,o,he at time n-1:
@@ -491,8 +479,8 @@
               molp(k,i,isp,m) = ak(i,isp,m,km)*(1./dz+ep(i,m,km)/2.)
               molr(k,i,isp,m) = ak(i,isp,m,kp)*(1./dz-ep(i,m,kp)/2.)
               molq(k,i,isp,m) =
-     |          -(ak(i,isp,m,km)*(1./dz-ep(i,m,km)/2.)+
-     |            ak(i,isp,m,kp)*(1./dz+ep(i,m,kp)/2.))
+     |          ak(i,isp,m,km)*(1./dz-ep(i,m,km)/2.)+
+     |          ak(i,isp,m,kp)*(1./dz+ep(i,m,kp)/2.)
             enddo
           enddo
         enddo
@@ -520,7 +508,7 @@
               rk(i,isp,m) = molr(k,i,isp,m)/dz-expz(k)*
      |          (eddyr(k,i)*dfactor(i)-0.5*wi)*delta(isp,m)/dz
    
-              qk(i,isp,m) = molq(k,i,isp,m)/dz+expz(k)*
+              qk(i,isp,m) = -molq(k,i,isp,m)/dz+expz(k)*
      |          ((eddyq(k,i)*dfactor(i)/dz+dtx2inv)*delta(isp,m)-
      |          fs(i,k,isp,m,lat))
 
@@ -833,49 +821,88 @@
      |    (flx00(i)*(1./dz-0.5*ep(i,ihe,kp)))
       enddo ! i=lon0,lon1
 !
-      moldif = 0.
-      eddydif = 0.
-      veradv = 0.
-      do k=lev0+1,lev1-1
-        do i=lon0,lon1
+      do i=lon0,lon1
+        do k=lev0,lev1
+          dpdt(k,i,io2) = dtx2inv*(upd(k,i,io2)-o2nm_smooth(k,i,lat))
+          dpdt(k,i,io1) = dtx2inv*(upd(k,i,io1)-o1nm_smooth(k,i,lat))
+          dpdt(k,i,ihe) = dtx2inv*(upd(k,i,ihe)-henm_smooth(k,i,lat))
+        enddo
+        do k=lev0,lev1-1
+          do isp=io2,ihe
+            prod(k,i,isp) = fs(i,k,isp,0,lat)
+            do m=1,3
+              loss(k,i,isp,m) = fs(i,k,isp,m,lat)*upd(k,i,m)
+            enddo
+          enddo
+        enddo
+        do k=lev0+1,lev1-1
           wi = 0.5*(w(k,i,lat)+w(k+1,i,lat))
           do isp=io2,ihe
             do m=1,3
-              moldif(k,i,isp) = moldif(k,i,isp)-
-     |          (molp(k,i,isp,m)*upd(k-1,i,m)+
+              moldif(k,i,isp,m) = -1/expz(k)/dz*
+     |          (molp(k,i,isp,m)*upd(k-1,i,m)-
      |           molq(k,i,isp,m)*upd(k  ,i,m)+
      |           molr(k,i,isp,m)*upd(k+1,i,m))
             enddo
-            eddydif(k,i,isp) =
-     |        eddyp(k,i)*upd(k-1,i,isp)+
-     |        eddyq(k,i)*upd(k  ,i,isp)+
-     |        eddyr(k,i)*upd(k+1,i,isp)
-            veradv(k,i,isp) = wi*0.5*(upd(k-1,i,isp)-upd(k+1,i,isp))
+            eddydif(k,i,isp) = dfactor(i)/dz*
+     |        (eddyp(k,i)*upd(k-1,i,isp)-
+     |         eddyq(k,i)*upd(k  ,i,isp)+
+     |         eddyr(k,i)*upd(k+1,i,isp))
+            veradv(k,i,isp) = wi/(2*dz)*(upd(k+1,i,isp)-upd(k-1,i,isp))
           enddo
-          moldif(k,i,:) = moldif(k,i,:)/dz/expz(k)
-          eddydif(k,i,:) = eddydif(k,i,:)*dfactor(i)/expz(k)
-          veradv(k,i,:) = veradv(k,i,:)/dz
         enddo
       enddo
+      loss_sum = sum(loss,dim=4)
+      moldif_sum = sum(moldif,dim=4)
 
-      call addfld('O2_MOLDIF','O2 molecular diffusion',' ',
-     |  moldif(k0+1:k1-1,:,io2),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O1_MOLDIF','O1 molecular diffusion',' ',
-     |  moldif(k0+1:k1-1,:,io1),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('HE_MOLDIF','He molecular diffusion',' ',
-     |  moldif(k0+1:k1-1,:,ihe),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O2_EDDYDIF','O2 eddy diffusion',' ',
+      call addfld('DO2DT','O2 changing rate','s-1',
+     |  dpdt(:,:,io2),'lev',k0,k1,'lon',i0,i1,lat)
+      call addfld('DO1DT','O1 changing rate','s-1',
+     |  dpdt(:,:,io1),'lev',k0,k1,'lon',i0,i1,lat)
+      call addfld('DHEDT','He changing rate','s-1',
+     |  dpdt(:,:,ihe),'lev',k0,k1,'lon',i0,i1,lat)
+      call addfld('O2_PROD','O2 production','s-1',
+     |  prod(k0:k1-1,:,io2),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_PROD','O1 production','s-1',
+     |  prod(k0:k1-1,:,io1),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_PROD','He production','s-1',
+     |  prod(k0:k1-1,:,ihe),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_LOSS','O2 loss','s-1',
+     |  loss_sum(k0:k1-1,:,io2),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_LOSS','O1 loss','s-1',
+     |  loss_sum(k0:k1-1,:,io1),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_LOSS','He loss','s-1',
+     |  loss_sum(k0:k1-1,:,ihe),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_HORDIF','O2 horizontal diffusion','s-1',
+     |  hdo2(k0:k1-1,i0:i1,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_HORDIF','O1 horizontal diffusion','s-1',
+     |  hdo1(k0:k1-1,i0:i1,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_HORDIF','He horizontal diffusion','s-1',
+     |  hdhe(k0:k1-1,i0:i1,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_MOLDIF','O2 molecular diffusion','s-1',
+     |  moldif_sum(k0+1:k1-1,:,io2),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_MOLDIF','O1 molecular diffusion','s-1',
+     |  moldif_sum(k0+1:k1-1,:,io1),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_MOLDIF','He molecular diffusion','s-1',
+     |  moldif_sum(k0+1:k1-1,:,ihe),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_EDDYDIF','O2 eddy diffusion','s-1',
      |  eddydif(k0+1:k1-1,:,io2),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O1_EDDYDIF','O1 eddy diffusion',' ',
+      call addfld('O1_EDDYDIF','O1 eddy diffusion','s-1',
      |  eddydif(k0+1:k1-1,:,io1),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('HE_EDDYDIF','He eddy diffusion',' ',
+      call addfld('HE_EDDYDIF','He eddy diffusion','s-1',
      |  eddydif(k0+1:k1-1,:,ihe),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O2_VERADV','O2 vertical advection',' ',
-     |  veradv(k0+1:k1-1,:,io2),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('O1_VERADV','O1 vertical advection',' ',
-     |  veradv(k0+1:k1-1,:,io1),'lev',k0+1,k1-1,'lon',i0,i1,lat)
-      call addfld('HE_VERADV','He vertical advection',' ',
-     |  veradv(k0+1:k1-1,:,ihe),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_VERADV','O2 vertical advection','s-1',
+     |  -veradv(k0+1:k1-1,:,io2),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_VERADV','O1 vertical advection','s-1',
+     |  -veradv(k0+1:k1-1,:,io1),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_VERADV','He vertical advection','s-1',
+     |  -veradv(k0+1:k1-1,:,ihe),'lev',k0+1,k1-1,'lon',i0,i1,lat)
+      call addfld('O2_HORADV','O2 horizontal advection','s-1',
+     |  -o2_advec(k0:k1-1,:,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('O1_HORADV','O1 horizontal advection','s-1',
+     |  -o1_advec(k0:k1-1,:,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
+      call addfld('HE_HORADV','He horizontal advection','s-1',
+     |  -he_advec(k0:k1-1,:,lat),'lev',k0,k1-1,'lon',i0,i1,lat)
 !
 ! Transfer to output arrays:
       do k=lev0,lev1

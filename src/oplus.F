@@ -830,8 +830,6 @@
           explicit(k,i) = explicit(k,i)-op_prod(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-      call addfld('OP_PROD','','',op_prod(lev0:lev1-1,:),
-     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('EXPLIC4',' ',' ',explicit(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
@@ -871,9 +869,9 @@
       do lat=lat0,lat1
         do i=lon0,lon1
           do k=lev0,lev1-1
+            dopdt(k,i) = dtx2inv*nstep_sub*
+     |        (opout(k,i,lat)-optm1_smooth2(k,i,lat))
             op_loss_out(k,i) = op_loss(k,i,lat)*opout(k,i,lat)
-            dopdt(k,i) =
-     |        (opout(k,i,lat)-optm1_smooth2(k,i,lat))*dtx2inv*nstep_sub
           enddo
           do k=lev0+1,lev1-1
             diffsum (k,i) = diffexp(k,i,lat)+
@@ -890,15 +888,24 @@
      |        windr (k,i,lat)*opout(k+1,i,lat)
           enddo
         enddo
-        call addfld('OP_LOSS','','',-op_loss_out(lev0:lev1-1,:),
+        call addfld('DOPDT','O+ changing rate','cm-3s-1',
+     |    dopdt(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('OP_PROD','O+ production','cm-3s-1',
+     |    op_prod(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+        call addfld('OP_LOSS','O+ loss','cm-3s-1',
+     |    -op_loss_out(lev0:lev1-1,:),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DOPDT','','',dopdt(lev0:lev1-1,:),
-     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('OP_DIFF','','',diffsum(lev0+1:lev1-1,:),
+        call addfld('OP_DIFF',
+     |    'O+ transport due to ambipolar diffusion','cm-3s-1',
+     |    diffsum(lev0+1:lev1-1,:),
      |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('OP_DRIFT','','',driftsum(lev0+1:lev1-1,:),
+        call addfld('OP_DRIFT',
+     |    'O+ transport due to ion drift','cm-3s-1',
+     |     driftsum(lev0+1:lev1-1,:),
      |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('OP_WIND','','',windsum(lev0+1:lev1-1,:),
+        call addfld('OP_WIND',
+     |    'O+ transport due to neutral wind','cm-3s-1',
+     |    windsum(lev0+1:lev1-1,:),
      |    'lev',lev0+1,lev1-1,'lon',lon0,lon1,lat)
       enddo
 !
