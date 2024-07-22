@@ -70,7 +70,8 @@
      |  f107a,           ! 10.7 cm average (81-day) solar flux
      |  colfac,          ! collision factor
      |  joulefac,        ! joule heating factor (see sub qjoule_tn (qjoule.F))
-     |  opdiffcap        ! Maximum O+ diffusion (see sub rrk in oplus.F)
+     |  opdiffcap,       ! Maximum O+ diffusion (see sub rrk in oplus.F)
+     |  zpslope,zptrans,te_cap,ti_cap
 !
 ! Input parameters that can be either constant or time-dependent:
       real ::
@@ -197,7 +198,8 @@
      |  subaur_data,doEclipse,eclipse_list,oneway,mixfile,
      |  nudge_ncpre,nudge_ncfile,nudge_ncpost,nudge_flds,
      |  nudge_lbc,nudge_f4d,nudge_use_refdate,nudge_refdate,
-     |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha
+     |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha,
+     |  zpslope,zptrans,te_cap,ti_cap
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -305,6 +307,10 @@
       joulefac= spval
       calc_helium = ispval
       opdiffcap = spval
+      zpslope = 1
+      zptrans = 6
+      te_cap = spval
+      ti_cap = spval
       electron_heating = ispval
       et = .false.
       saps = .false.

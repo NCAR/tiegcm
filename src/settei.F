@@ -9,7 +9,7 @@
 !
 ! Calculate electron and ion temperatures.
 !
-      use params_module,only: dz,nlonp4,spval
+      use params_module,only: dz,nlonp4,spval,rp
       use cons_module,only: pi,rtd,evergs,
      |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,dipmin,avo,
      |  rmass_o1,rmassinv_n4s,rmassinv_no
@@ -33,7 +33,7 @@
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
+      real(rp),dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
      |  tn,      ! neutral temperature (deg K)
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
@@ -56,7 +56,7 @@
      |  Q2       ! electrojet turbulent heating
 !
 ! Output args:
-      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out) ::
+      real(rp),dimension(lev0:lev1,lon0-2:lon1+2),intent(out) ::
      |  te_out,  ! output electron temperature (deg K) 
      |  ti_out   ! output ion temperature (deg K)
 !
@@ -69,7 +69,7 @@
 ! Local:
       integer :: k,i,ier
       integer :: nk,nkm1
-      real,dimension(lev0:lev1,lon0:lon1) ::
+      real(rp),dimension(lev0:lev1,lon0:lon1) ::
      |  te_int,    ! electron temperature (interfaces)
      |  tn_int,    ! neutral temperature (interfaces)
      |  o2n,       ! O2 number density (midpoints or interfaces)
@@ -101,7 +101,7 @@
      |  loss_en,   ! electrons/neutrals loss     (s11)
      |  loss_ei,   ! electron/ion loss           (s10)
      |  loss_in    ! ion/neutral loss            (s9)
-      real,parameter ::
+      real(rp),parameter ::
      |  fpolar = -3.0e+9,  ! polar te flux
      |  del    = 1.e-6  ,
 !
@@ -109,17 +109,17 @@
      |  alam = 0.0069   ,
      |  ad   = 0.0091   ,
      |  sd   = 2.3e-11
-      real :: 
+      real(rp) ::
      |  f107te  ! solar flux
 !
 ! a,fed,fen,fe,sindipmag have a z dimension only for diagnostic plotting:
-      real,dimension(lon0:lon1) ::
+      real(rp),dimension(lon0:lon1) ::
      |  a,fed,fen, ! day/night
      |  fe,        ! heat flux at upper boundary
      |  sindipmag  ! sin(dipmag)
 !
 ! For diagnostic plotting:
-      real,dimension(lev0:lev1-1,lon0:lon1) ::
+      real(rp),dimension(lev0:lev1-1,lon0:lon1) ::
      |  a_ki,        ! for diagnostic plotting of a
      |  fed_ki,      ! for diagnostic plotting of fed
      |  fen_ki,      ! for diagnostic plotting of fen
@@ -128,6 +128,8 @@
      |  chi_ki,      ! for diagnostic plotting of chi
      |  qteaur_ki,   ! for diagnostic plotting of qteaur
      |  sindipmag_ki ! for diagnostic plotting of sindipmag
+
+      real(rp) :: tlimit = 10000._rp
 !
 #ifdef VT
 !     code = 126 ; state = 'settei' ; activity='ModelCode'
@@ -135,7 +137,7 @@
 #endif
 !
       f107te = f107
-      if (f107te > 235.) f107te = 235.
+      if (f107te > 235._rp) f107te = 235._rp
       nk = lev1-lev0+1
       nkm1 = nk-1
 
@@ -143,42 +145,45 @@
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
       do i=lon0,lon1
-        if (abs(rlatm(i,lat)) >= pi/4.5) then
-          a(i) = 1.
+        if (abs(rlatm(i,lat)) >= pi/4.5_rp) then
+          a(i) = 1._rp
 !       else
 !         a(i) = .5*(1.+sin(pi*(abs(rlatm(i,lat))-pi/9.)/(pi/4.5)))
 ! Dang, 2019, set a(i)=0 between +10 and -10 magnetic latitude          
-        elseif (abs(rlatm(i,lat)) <= pi/18.) then
-          a(i) = 0.
+        elseif (abs(rlatm(i,lat)) <= pi/18._rp) then
+          a(i) = 0._rp
         else 
 ! Dang, 2019, change parameter: pi/9.->pi/12., pi/4.5->6, per Hanli and Wenbin
 !         a(i) = .5*(1.+sin(pi*(abs(rlatm(i,lat))-pi/12.)/(pi/6.)))
 ! Pham, 2021, try to fix huge gradients in low lat 
-          a(i) = .5*(1.+cos(abs(rlatm(i,lat))*6.-pi*4./3.))
+          a(i) = .5_rp*(1._rp+cos(abs(rlatm(i,lat))*
+     |           6._rp-pi*4._rp/3._rp))
         endif 
 !
 ! Increased heat flux for TE fom protonosphere.
 !       fed(i) = ( -5.0e+7*f107te*a(i)-4.0e+7*f107te)*1.2
 ! Dang, 2019, FeDCoef2 yields a non-zero downward flux at the equator.
 ! Remove per Wenbin's suggestion, and FeDCoef1 is changed from -5e7 to -9e7.
-        fed(i) = -9.0e+7*f107te*a(i)
-        fen(i) = fed(i)/2.
+        fed(i) = -9.0e+7_rp*f107te*a(i)
+        fen(i) = fed(i)/2._rp
         fed(i) = fed(i)+qteaur(i,lat)     ! t4
         fen(i) = fen(i)+qteaur(i,lat)     ! t5
-        if (chi(i,lat)-.5*pi >= 0.) then  ! chi==t2
+        if (chi(i,lat)-.5_rp*pi >= 0._rp) then  ! chi==t2
           fe(i) = fen(i)                ! t1
         else
           fe(i) = fed(i)
         endif
-        if ((chi(i,lat)*rtd-80.)*(chi(i,lat)*rtd-100.)>=0.) then
+        if ((chi(i,lat)*rtd-80._rp)*
+     |    (chi(i,lat)*rtd-100._rp)>=0._rp) then
           fe(i) = fe(i)*evergs
         else
-          fe(i) = (.5*(fed(i)+fen(i))+.5*(fed(i)-fen(i))*
-     |      cos(pi*(chi(i,lat)*rtd-80.)/20.))*evergs
+          fe(i) = (.5*(fed(i)+fen(i))+.5_rp*(fed(i)-fen(i))*
+     |      cos(pi*(chi(i,lat)*rtd-80._rp)/20._rp))*evergs
         endif
 !
 ! Add fpolar if magnetic latitude >= 60 degrees:
-        if (abs(rlatm(i,lat))-pi/3.>=0.) fe(i) = fe(i)+fpolar*evergs
+        if (abs(rlatm(i,lat))-pi/3._rp>=0._rp)
+     |      fe(i) = fe(i)+fpolar*evergs
 !
 ! For plotting (first dimension is lev0:lev1-1):
         a_ki  (:,i) = a(i)
@@ -210,42 +215,42 @@
 ! te,o2,o,n2,tn at interfaces: 
       do i=lon0,lon1
         do k=lev0+1,lev1-1
-          te_int(k,i) = .5*(te(k,i)+te(k-1,i))
-          o2n(k,i)    = .5*(o2(k,i)+o2(k-1,i))
-          o1n(k,i)    = .5*(o1(k,i)+o1(k-1,i))
-          hen(k,i)    = .5*(he(k,i)+he(k-1,i))
-          n2n(k,i)    = .5*(n2(k,i)+n2(k-1,i))
-          tn_int(k,i) = .5*(tn(k,i)+tn(k-1,i))
+          te_int(k,i) = .5_rp*(te(k,i)+te(k-1,i))
+          o2n(k,i)    = .5_rp*(o2(k,i)+o2(k-1,i))
+          o1n(k,i)    = .5_rp*(o1(k,i)+o1(k-1,i))
+          hen(k,i)    = .5_rp*(he(k,i)+he(k-1,i))
+          n2n(k,i)    = .5_rp*(n2(k,i)+n2(k-1,i))
+          tn_int(k,i) = .5_rp*(tn(k,i)+tn(k-1,i))
         enddo ! k=lev0+1,lev1-2
 !
 ! Bottom:
 ! 2023/02 Dong Lin: added minimum cap for te (Te>=Tn)
 ! 2024/04 Haonan Wu: changed the lower boundary calculation of major species
         te_int(lev0,i) =
-     |    max(1.5*te(lev0,i)-.5*te(lev0+1,i),tlbc(i,lat))
+     |    max(1.5_rp*te(lev0,i)-.5_rp*te(lev0+1,i),tlbc(i,lat))
         o2n(lev0,i)    = .5*(fb(1)+
-     |    (b(1,1)+1.)*o2(lev0,i)+
+     |    (b(1,1)+1._rp)*o2(lev0,i)+
      |     b(1,2)    *o1(lev0,i)+
      |     b(1,3)    *he(lev0,i))
-        o1n(lev0,i)    = .5*(fb(2)+
+        o1n(lev0,i)    = .5_rp*(fb(2)+
      |     b(2,1)    *o2(lev0,i)+
-     |    (b(2,2)+1.)*o1(lev0,i)+
+     |    (b(2,2)+1._rp)*o1(lev0,i)+
      |     b(2,3)    *he(lev0,i))
-        hen(lev0,i)    = .5*(fb(3)+
+        hen(lev0,i)    = .5_rp*(fb(3)+
      |     b(3,1)    *o2(lev0,i)+
      |     b(3,2)    *o1(lev0,i)+
-     |    (b(3,3)+1.)*he(lev0,i))
+     |    (b(3,3)+1._rp)*he(lev0,i))
         n2n(lev0,i)    =
-     |    max(1.-o2n(lev0,i)-o1n(lev0,i)-hen(lev0,i),0.)
+     |    max(1._rp-o2n(lev0,i)-o1n(lev0,i)-hen(lev0,i),0._rp)
         tn_int(lev0,i) = tlbc(i,lat)
 !
 ! Top:
-        te_int(lev1,i) = 1.5*te(lev1-1,i)-.5*te(lev1-2,i)
-        o2n(lev1,i)    = .5*(o2(lev1,i)+o2(lev1-1,i))
-        o1n(lev1,i)    = .5*(o1(lev1,i)+o1(lev1-1,i))
-        hen(lev1,i)    = .5*(he(lev1,i)+he(lev1-1,i))
-        n2n(lev1,i)    = .5*(n2(lev1,i)+n2(lev1-1,i))
-        tn_int(lev1,i) = 1.5*tn(lev1-1,i)-.5*tn(lev1-2,i)
+        te_int(lev1,i) = 1.5_rp*te(lev1-1,i)-.5*te(lev1-2,i)
+        o2n(lev1,i)    = .5_rp*(o2(lev1,i)+o2(lev1-1,i))
+        o1n(lev1,i)    = .5_rp*(o1(lev1,i)+o1(lev1-1,i))
+        hen(lev1,i)    = .5_rp*(he(lev1,i)+he(lev1-1,i))
+        n2n(lev1,i)    = .5_rp*(n2(lev1,i)+n2(lev1-1,i))
+        tn_int(lev1,i) = 1.5_rp*tn(lev1-1,i)-.5_rp*tn(lev1-2,i)
       enddo ! i=lon0,lon1
 
 !     call addfld('TE_INT'  ,' ',' ',te_int,
@@ -270,12 +275,12 @@
           n2n(k,i) = xnmbari(k,i)*n2n(k,i)*rmassinv_n2       ! s11
           root_te(k,i) = sqrt(te_int(k,i))
 !
-          tek0(k,i) = 7.5e5/
-     |      (1.+3.22e4*te_int(k,i)**2/ne(k,i)*
-     |      ((2.20e-16 + 7.92e-18   * root_te(k,i))*o2n(k,i)+
-     |        1.10e-16 * (1.+5.7e-4 * te_int (k,i))*o1n(k,i)+
-     |        5.60e-16 * hen(k,i)+
-     |       (2.82e-17 - 3.41e-21   * te_int (k,i))*root_te(k,i)*
+          tek0(k,i) = 7.5e5_rp/
+     |      (1._rp+3.22e4_rp*te_int(k,i)**2/ne(k,i)*
+     |      ((2.20e-16_rp + 7.92e-18_rp   * root_te(k,i))*o2n(k,i)+
+     |        1.10e-16_rp * (1._rp+5.7e-4_rp * te_int (k,i))*o1n(k,i)+
+     |        5.60e-16_rp * hen(k,i)+
+     |       (2.82e-17_rp - 3.41e-21_rp   * te_int (k,i))*root_te(k,i)*
      |        n2n(k,i)))*evergs
 !
         enddo ! k=lev0,lev1
@@ -306,27 +311,28 @@
         else
           sindipmag(i) = (sin(dipmin))**2
         endif
-        if (sindipmag(i) < .10) sindipmag(i) = .10
+        if (sindipmag(i) < .10_rp) sindipmag(i) = .10_rp
 !
 ! Start coefficients and rhs for trsolv:
         do k=lev0,lev1-1
-          p_coef(k,i) = 2./7.*sindipmag(i)/(h_mid(k,i)*dz**2) ! s1
+          p_coef(k,i) = 2._rp/7._rp*sindipmag(i)/(h_mid(k,i)*dz**2) ! s1
           r_coef(k,i) = p_coef(k,i)*tek0(k+1,i)/h_int(k+1,i)  ! s3
           p_coef(k,i) = p_coef(k,i)*tek0(k  ,i)/h_int(k  ,i)  ! s1
           q_coef(k,i) = -(p_coef(k,i)+r_coef(k,i))            ! s2
-          rhs(k,i) = 0.                                       ! s4
+          rhs(k,i) = 0._rp                                       ! s4
         enddo ! k=lev0,lev1-1
 !
 ! Bottom boundary:
         q_coef(lev0,i) = q_coef(lev0,i)-p_coef(lev0,i)
-        rhs(lev0,i) = rhs(lev0,i)-2.*p_coef(lev0,i)*tn_int(lev0,i)**3.5
-        p_coef(lev0,i) = 0.
+        rhs(lev0,i) = rhs(lev0,i)-2._rp*p_coef(lev0,i)*
+     |                tn_int(lev0,i)**3.5_rp
+        p_coef(lev0,i) = 0._rp
 !
 ! Upper boundary:
         q_coef(lev1-1,i) = q_coef(lev1-1,i)+r_coef(lev1-1,i)
-        rhs(lev1-1,i) = rhs(lev1-1,i)+r_coef(lev1-1,i)*dz*3.5*
+        rhs(lev1-1,i) = rhs(lev1-1,i)+r_coef(lev1-1,i)*dz*3.5_rp*
      |    h_int(lev1,i)*fe(i)/tek0(lev1,i)
-        r_coef(lev1-1,i) = 0.
+        r_coef(lev1-1,i) = 0._rp
       enddo ! i=lon0,lon1
 
       do i=lon0,lon1
@@ -380,7 +386,7 @@
         do k=lev0,lev1
           qtot(k,i) = qo2p(k,i,lat)+qop(k,i,lat)+qn2p(k,i,lat)+
      |      qnop(k,i,lat)+qnp(k,i,lat)+qop2d(k,i,lat)+qop2p(k,i,lat)
-            if (qtot(k,i) < 1.e-20) qtot(k,i) = 1.e-20
+            if (qtot(k,i) < 1.e-20_rp) qtot(k,i) = 1.e-20_rp
         enddo
       enddo
 
@@ -391,7 +397,7 @@
         do k=lev0,lev1-1
           qtot(k,i) = sqrt(qtot(k,i)*qtot(k+1,i))
         enddo
-        qtot(lev1,i) = 0.
+        qtot(lev1,i) = 0._rp
       enddo ! i=lon0,lon1
 !     call addfld('QTOT',' ',' ',qtot   ,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -401,7 +407,7 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
           root_ne(k,i) = ne(k,i)*ne(k+1,i)
-          if (root_ne(k,i) < 1.e4) root_ne(k,i) = 1.e4
+          if (root_ne(k,i) < 1.e4_rp) root_ne(k,i) = 1.e4_rp
           root_ne(k,i) = sqrt(root_ne(k,i))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
@@ -421,45 +427,48 @@
           if (electron_heating == 6) then
 ! Modified according to Smithtro & Solomon (2008), by Yihui Cai, 2021/10
             qe(k,i) = log(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+o1n(k,i)))
-            qe(k,i) = exp((((((-1.249e-5*qe(k,i)-5.755e-4)*qe(k,i)
-     |                -9.346e-3)*qe(k,i)-5.900e-2)*qe(k,i)-4.392e-2)*
-     |                qe(k,i)+1.056)*qe(k,i)+5.342)
+            qe(k,i) = exp((((((-1.249e-5_rp*qe(k,i)-5.755e-4_rp)*qe(k,i)
+     |                -9.346e-3_rp)*qe(k,i)-5.900e-2_rp)*qe(k,i)-
+     |                4.392e-2_rp)*qe(k,i)+1.056_rp)*qe(k,i)+5.342_rp)
           else
 ! Comment from earlier version (maybe the *1.0 below was once *2.0):
 !   "Correction facor of 2 increase in TE heating rate"
-            qe(k,i) = log(root_ne(k,i)/(o2n(k,i)+n2n(k,i)+0.1*o1n(k,i)))
-            qe(k,i) = exp(-((((0.001996*qe(k,i)+0.08034)*qe(k,i)+1.166)*
-     |                qe(k,i)+6.941)*qe(k,i)+12.75))*1.0
+            qe(k,i) = log(root_ne(k,i)/(o2n(k,i)+
+     |                n2n(k,i)+0.1_rp*o1n(k,i)))
+            qe(k,i) = exp(-((((0.001996_rp*qe(k,i)+0.08034_rp)*
+     |                qe(k,i)+1.166_rp)*
+     |                qe(k,i)+6.941_rp)*qe(k,i)+12.75_rp))*1.0_rp
           endif
 !
 ! Subtract qe from right-hand-side:
           rhs(k,i) = rhs(k,i)-qe(k,i)*qtot(k,i)*evergs
 !
 ! Subtract electrojet turbulent heating from rhs
-          if (et) rhs(k,i) = rhs(k,i)-(Q1(k,i)+Q2(k,i))*10.0
+          if (et) rhs(k,i) = rhs(k,i)-(Q1(k,i)+Q2(k,i))*10.0_rp
 !
           root_te(k,i) = sqrt(te(k,i))
 !
 ! Electron/N2 collision A(E,N2,VIB) (s9):
 !
-        if (te(k,i) >= 1000.) then
-          coll_en2v(k,i) = 2.e-7*exp(-4605.2/te(k,i))
+        if (te(k,i) >= 1000._rp) then
+          coll_en2v(k,i) = 2.e-7_rp*exp(-4605.2_rp/te(k,i))
         else
-          coll_en2v(k,i) = 5.71e-8*exp(-3352.6/te(k,i))
+          coll_en2v(k,i) = 5.71e-8_rp*exp(-3352.6_rp/te(k,i))
         endif
-        if (te(k,i) > 2000.)
-     |    coll_en2v(k,i) = 2.53e-6*root_te(k,i)*exp(-17620./te(k,i))
+        if (te(k,i) > 2000._rp)
+     |    coll_en2v(k,i) = 2.53e-6_rp*root_te(k,i)*
+     |    exp(-17620._rp/te(k,i))
 !
 ! Loss due to electron/n2 collision L0(E,N2,VIB)/(NE*N(N2)) (s10)
 !
 ! Separate the case when te is approaching tn to avoid calculating 0/0
           if (abs(te(k,i)-tn(k,i)) < del) then
-            loss_en2v(k,i) = 3200./tn(k,i)**2
+            loss_en2v(k,i) = 3200._rp/tn(k,i)**2
           else
-            loss_en2v(k,i) = 1./(te(k,i)-tn(k,i))*
-     |        (1.-exp(-3200.*(te(k,i)-tn(k,i))/(te(k,i)*tn(k,i))))
+            loss_en2v(k,i) = 1._rp/(te(k,i)-tn(k,i))*
+     |        (1._rp-exp(-3200._rp*(te(k,i)-tn(k,i))/(te(k,i)*tn(k,i))))
           endif
-          loss_en2v(k,i) = 1.3e-4*loss_en2v(k,i)*coll_en2v(k,i)
+          loss_en2v(k,i) = 1.3e-4_rp*loss_en2v(k,i)*coll_en2v(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1 (end DO 20)
 
@@ -486,8 +495,10 @@
 !
 ! Electron/O2 loss rates: (L0(E,O2)+L0(E,O2,ROT)+L0(E,O2,VIB)/NE
 !
-          loss_eo2(k,i) = o2n(k,i)*(1.21e-18*(1.+3.6e-2*root_te(k,i))*
-     |      root_te(k,i)+6.9e-14/root_te(k,i)+3.125e-21*te(k,i)**2)
+          loss_eo2(k,i) = o2n(k,i)*(1.21e-18_rp*(1._rp+
+     |      3.6e-2_rp*root_te(k,i))*
+     |      root_te(k,i)+6.9e-14_rp/root_te(k,i)+
+     |      3.125e-21_rp*te(k,i)**2)
 !
 ! Electron/O(1d) loss rates: L0(E,O,1D)/(NE*N(O))
 !
@@ -503,22 +514,23 @@
 !         loss_eo1d(k,i) = 1.57e-12*exp((2.4e4+0.3*(te(k,i)-1500.)-
 !    |      1.947e-5*(te(k,i)-1500.)*(te(k,i)-4000.))*(te(k,i)-3000.)/
 !    |      (3000.*te(k,i)))*loss_eo1d(k,i)
-          loss_eo1d(k,i) = 0.
+          loss_eo1d(k,i) = 0._rp
 !
 ! Electron/O1 loss rates: (L0(E,O)+L0(E,O,F))/NE
 !
-          loss_eo1(k,i) = o1n(k,i)*(7.9e-19*(1.+5.7e-4*te(k,i))*
-     |      root_te(k,i)+3.4e-12*(1.-7.e-5*te(k,i))/tn(k,i)*
-     |      (150./te(k,i)+0.4))
+          loss_eo1(k,i) = o1n(k,i)*(7.9e-19_rp*
+     |      (1._rp+5.7e-4_rp*te(k,i))*
+     |      root_te(k,i)+3.4e-12_rp*(1._rp-7.e-5_rp*te(k,i))/tn(k,i)*
+     |      (150._rp/te(k,i)+0.4_rp))
 !
 ! Electron/He loss rate: L0(E,HE)/NE
 !
-          loss_ehe(k,i) = hen(k,i)*2.46e-17*root_te(k,i)
+          loss_ehe(k,i) = hen(k,i)*2.46e-17_rp*root_te(k,i)
 !
 ! Electron/N2 loss rate: (L0(E,N2)+L0(E,N2,ROT)+L0(E,N2,VIB))/NE
 !
-          loss_en2(k,i) = n2n(k,i)*(1.77E-19*(1.-1.21E-4*te(k,i))*
-     |      te(k,i) + 2.9e-14/root_te(k,i) + loss_en2v(k,i))
+          loss_en2(k,i) = n2n(k,i)*(1.77E-19_rp*(1.-1.21E-4_rp*te(k,i))*
+     |      te(k,i) + 2.9e-14_rp/root_te(k,i) + loss_en2v(k,i))
 !
 ! Total electron/neutral loss rate (s11):
 !
@@ -526,12 +538,13 @@
      |      loss_ehe(k,i)+loss_en2(k,i)
 !
 ! Cooling correction from electrojet turbulent heating
-          if (et .and. te(k,i)>500.0 .and. Q2(k,i)>0.0)
-     |      loss_en(k,i)=loss_en(k,i)*exp(-7.54E-4*(te(k,i)-500.0))
+          if (et .and. te(k,i)>500.0_rp .and. Q2(k,i)>0.0_rp)
+     |      loss_en(k,i)=loss_en(k,i)*
+     |      exp(-7.54E-4_rp*(te(k,i)-500.0_rp))
 !
 ! loss_xen = L0*(E,N) (s8)
 !
-          loss_xen(k,i) = (loss_en(k,i)+o1n(k,i)*(1.-alam/(ad+sd*
+          loss_xen(k,i) = (loss_en(k,i)+o1n(k,i)*(1._rp-alam/(ad+sd*
      |      n2n(k,i)))*loss_eo1d(k,i))*root_ne(k,i)*evergs
 !
 ! Complete total electron/neutral loss rate L0(E,N) (s11):
@@ -542,8 +555,8 @@
 ! Calculate L0(E,I) = L(E,I)/(TE-TI), where L(E,I) is loss due to
 ! interactions between electrons and ions.
 !
-          loss_ei(k,i) = 3.2e-8*root_ne(k,i)/(root_te(k,i)*te(k,i))*
-     |      15.*evergs*rmass_o1*
+          loss_ei(k,i) = 3.2e-8_rp*root_ne(k,i)/(root_te(k,i)*te(k,i))*
+     |      15._rp*evergs*rmass_o1*
      |      (op(k,i)*rmassinv_o1+o2p(k,i)*rmassinv_o2+
      |      nplus(k,i)*rmassinv_n4s+n2p(k,i)*rmassinv_n2+
      |      nop(k,i)*rmassinv_no)
@@ -552,24 +565,24 @@
 ! 
 ! loss_in = ion/neutral cooling = L0(I,N) =L(I,N)/(TI-TN)
 ! (rates not on Rees & Roble 1975 were calculated based on Banks 1966)
-          loss_in(k,i) = 1e-14*evergs*
-     |      (op(k,i)*(5.8*o2n(k,i)+0.21*o1n(k,i)*root_tn(k,i)+
-     |      2.8*hen(k,i)+6.6*n2n(k,i))+
-     |      o2p(k,i)*(0.14*o2n(k,i)*root_tn(k,i)+
-     |      4.36*o1n(k,i)+1.63*hen(k,i)+5.81*n2n(k,i))+
-     |      nplus(k,i)*(5.84*o2n(k,i)+5.84*o1n(k,i)+
-     |      3.05*hen(k,i)+6.56*n2n(k,i))+
+          loss_in(k,i) = 1e-14_rp*evergs*
+     |      (op(k,i)*(5.8_rp*o2n(k,i)+0.21_rp*o1n(k,i)*root_tn(k,i)+
+     |      2.8_rp*hen(k,i)+6.6_rp*n2n(k,i))+
+     |      o2p(k,i)*(0.14_rp*o2n(k,i)*root_tn(k,i)+
+     |      4.36_rp*o1n(k,i)+1.63_rp*hen(k,i)+5.81_rp*n2n(k,i))+
+     |      nplus(k,i)*(5.84_rp*o2n(k,i)+5.84_rp*o1n(k,i)+
+     |      3.05_rp*hen(k,i)+6.56_rp*n2n(k,i))+
      |      n2p(k,i)*(5.54*o2n(k,i)+4.65*o1n(k,i)+
-     |      1.82*hen(k,i)+0.27*n2n(k,i)*root_tn(k,i))+
-     |      nop(k,i)*(5.45*o2n(k,i)+4.5*o1n(k,i)+
-     |      1.72*hen(k,i)+5.92*n2n(k,i)))
+     |      1.82_rp*hen(k,i)+0.27_rp*n2n(k,i)*root_tn(k,i))+
+     |      nop(k,i)*(5.45_rp*o2n(k,i)+4.5_rp*o1n(k,i)+
+     |      1.72_rp*hen(k,i)+5.92_rp*n2n(k,i)))
 !
 ! Complete tridiagonal matrix coefficients and rhs:
 !
 ! q_coef = q_coef-(L0(E,N)+L0(E,I))/TE**2.5 = Q
 !
           q_coef(k,i) = q_coef(k,i)-(loss_en(k,i)+loss_ei(k,i))/
-     |      te(k,i)**2.5
+     |      te(k,i)**2.5_rp
 !          
 ! rhs = rhs-L0(E,N)*TN-L0(E,I)*TI
 !
@@ -604,10 +617,10 @@
 !
       do i=lon0,lon1 ! (DO 24)
         do k=lev0,lev1-1
-          if (te(k,i)-ti(k,i) >= 0.) then
+          if (te(k,i)-ti(k,i) >= 0._rp) then
             q_eni(k,i)=loss_ei(k,i)*(te(k,i)-ti(k,i))
           else
-            q_eni(k,i) = 0.
+            q_eni(k,i) = 0._rp
           endif
           q_eni(k,i) = (loss_xen(k,i)*(te(k,i)-tn(k,i))+q_eni(k,i))
      |      *avo/xnmbar(k,i)
@@ -621,14 +634,14 @@
       do i=lon0,lon1 ! (DO 27)
         do k=lev0,lev1-2
           qtotal(k+1,i,lat) = qtotal(k+1,i,lat)+
-     |      .5*(q_eni(k,i)+q_eni(k+1,i))
+     |      .5_rp*(q_eni(k,i)+q_eni(k+1,i))
         enddo ! k=lev0,lev1-2
 !
 ! Upper and lower boundaries:
-        qtotal(lev0,i,lat) = qtotal(lev0,i,lat)+1.5*q_eni(lev0,i)-
-     |    0.5*q_eni(lev0+1,i)
-        qtotal(lev1,i,lat) = qtotal(lev1,i,lat)+1.5*q_eni(lev1-1,i)-
-     |    0.5*q_eni(lev1-2,i)
+        qtotal(lev0,i,lat) = qtotal(lev0,i,lat)+1.5_rp*q_eni(lev0,i)-
+     |    0.5_rp*q_eni(lev0+1,i)
+        qtotal(lev1,i,lat) = qtotal(lev1,i,lat)+1.5_rp*q_eni(lev1-1,i)-
+     |    0.5_rp*q_eni(lev1-2,i)
       enddo ! i=lon0,lon1 ! (DO 27)
 
 !     call addfld('Q_TOT',' ',' ',qtotal(:,:,lat),
@@ -660,7 +673,7 @@
 ! Te = Te**(2./7.):
       do i=lon0,lon1
         do k=lev0,lev1-1
-          te_out(k,i) = te_out(k,i)**(2./7.)
+          te_out(k,i) = te_out(k,i)**(2._rp/7._rp)
         enddo
       enddo
 !
@@ -670,6 +683,8 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
           if (te_out(k,i) < tn(k,i)) te_out(k,i) = tn(k,i)
+          ! Apply cap to prevent superstorm from exploding
+          if (te_out(k,i) > tlimit) te_out(k,i) = tlimit
 !
 ! 2023/02 Dong Lin: N2 cross section becomes negative
 ! when te>2.82e-17/3.41e-21=8269.7K. With ET enabled,
@@ -697,6 +712,8 @@
 !
 ! ti must be at least as large as tn:
           if (ti_out(k,i) < tn(k,i)) ti_out(k,i) = tn(k,i)
+          ! Apply cap to prevent superstorm from exploding
+          if (ti_out(k,i) > tlimit) ti_out(k,i) = tlimit
         enddo
       enddo
 !
