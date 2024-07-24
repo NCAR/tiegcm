@@ -19,7 +19,7 @@
       use lbc,only: b,fb,pshelb
       use fields_module,only: tlbc
       use addfld_module,only: addfld
-      use input_module,only: calc_helium
+      use input_module,only: calc_helium,enforce_n2
       use matutil_module,only: matinv3
       implicit none
 !
@@ -62,13 +62,12 @@
      |                                           alpha33,alpha32,flx00
       real :: rlat,wi
       real :: alpha(3,3),phi(3,4),delta(3,3),tau,t00,small
-      real :: zmtop,n2top,n2top1,dn2dz,n2nm,normalize,thdiffalpha
+      real :: zmtop,n2top,n2top1,dn2dz,normalize,thdiffalpha
       real :: flxwks
-      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) :: n2,n2nm,
      |  o2nm_smooth, o1nm_smooth, henm_smooth, ! smoothed at time n-1
      |  o2_advec,    o1_advec,    he_advec     ! horizontal advection
       real,dimension(lev0:lev1,lon0:lon1,3) :: upd
-      real,dimension(lev0:lev1) :: n2
 ! For diagnostics:
       real,dimension(lev0:lev1,lon0:lon1) :: eddyp,eddyq,eddyr
       real,dimension(lev0:lev1,lon0:lon1,3) ::
@@ -965,57 +964,71 @@
 !     call mp_periodic_f3d(o1_upd(:,lon0:lon1,lat0-1:lat1+1),
 !    |  lev0,lev1,lon0,lon1,lat0-1,lat1+1)
 !
-! Insure non-negative O2,O:
+! Insure non-negative O2,O,He,N2:
       do lat=lat0,lat1
         do i=lon0,lon1
           do k=lev0,lev1
-            n2(k) = 1.-o2_upd(k,i,lat)-o1_upd(k,i,lat)-he_upd(k,i,lat)
-          enddo
-!
-! When O2+O+He~=1 (typically around z=9), N2 will not scale properly with altitudes
-! This is an ad-hoc correction to let N2 have the right scaling at very high altitudes
-!
-! Find the level where N2 is no longer a major species
-          do ktop=lev0,lev1
-            if (n2(ktop) < 0.01) exit ! Typically around z=7
-          enddo
-! Use extrapolation above this height to replace the original values
-! The scaling uses number density instead of mass mixing ratio
-          if (ktop < lev1) then
-            zmtop = zpmid(ktop)
-            n2top = log(n2(ktop)*xnmbar(ktop,i,lat))
-            n2top1 = log(n2(ktop-1)*xnmbar(ktop-1,i,lat))
-            dn2dz = (n2top-n2top1)/dz
-            do k=ktop+1,lev1
-              n2(k) = exp(n2top+dn2dz*(zpmid(k)-zmtop))/xnmbar(k,i,lat)
-            enddo
-          endif
-!
-          do k=lev0,lev1
-            n2nm =
-     |        1.-o2nm_upd(k,i,lat)-o1nm_upd(k,i,lat)-henm_upd(k,i,lat)
-!
             if (o2_upd(k,i,lat) < small) o2_upd(k,i,lat) = small
             if (o1_upd(k,i,lat) < small) o1_upd(k,i,lat) = small
             if (he_upd(k,i,lat) < small) he_upd(k,i,lat) = small
-            if (n2(k) < small) n2(k) = small
 !
             if (o2nm_upd(k,i,lat) < small) o2nm_upd(k,i,lat) = small
             if (o1nm_upd(k,i,lat) < small) o1nm_upd(k,i,lat) = small
             if (henm_upd(k,i,lat) < small) henm_upd(k,i,lat) = small
-            if (n2nm < small) n2nm = small
+!
+            n2(k,i,lat) =
+     |        1.-o2_upd(k,i,lat)-o1_upd(k,i,lat)-he_upd(k,i,lat)
+            n2nm(k,i,lat) =
+     |        1.-o2nm_upd(k,i,lat)-o1nm_upd(k,i,lat)-henm_upd(k,i,lat)
+!
+            if (n2(k,i,lat) < small) n2(k,i,lat) = small
+            if (n2nm(k,i,lat) < small) n2nm(k,i,lat) = small
+          enddo
+        enddo
+      enddo
+!
+! When O2+O+He~=1 (typically around z=9), N2 will not scale properly with altitudes
+! This is an ad-hoc correction to let N2 have the right scaling at very high altitudes
+      if (enforce_n2) then
+        do lat=lat0,lat1
+          do i=lon0,lon1
+!
+! Find the level where N2 is no longer a major species
+            do ktop=lev0,lev1
+              if (n2(ktop,i,lat) < 0.01) exit ! Typically around z=7
+            enddo
+! Use extrapolation above this height to replace the original values
+! The scaling uses number density instead of mass mixing ratio
+            if (ktop < lev1) then
+              zmtop = zpmid(ktop)
+              n2top = log(n2(ktop,i,lat)*xnmbar(ktop,i,lat)*rmassinv_n2)
+              n2top1 =
+     |          log(n2(ktop-1,i,lat)*xnmbar(ktop-1,i,lat)*rmassinv_n2)
+              dn2dz = (n2top-n2top1)/dz
+              do k=ktop+1,lev1
+                n2(k,i,lat) = exp(n2top+dn2dz*(zpmid(k)-zmtop))/
+     |            xnmbar(k,i,lat)/rmassinv_n2
+              enddo
+            endif
+          enddo
+        enddo
+      endif
+!
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1
 !
 ! EKS comment: divisor should be the same when normalizing
 ! both o2 and o1 to insure non-negativity
 !
-            normalize =
-     |        o2_upd(k,i,lat)+o1_upd(k,i,lat)+he_upd(k,i,lat)+n2(k)
+            normalize = o2_upd(k,i,lat)+o1_upd(k,i,lat)+
+     |        he_upd(k,i,lat)+n2(k,i,lat)
             o2_upd(k,i,lat) = o2_upd(k,i,lat)/normalize
             o1_upd(k,i,lat) = o1_upd(k,i,lat)/normalize
             he_upd(k,i,lat) = he_upd(k,i,lat)/normalize
 !
-            normalize =
-     |        o2nm_upd(k,i,lat)+o1nm_upd(k,i,lat)+henm_upd(k,i,lat)+n2nm
+            normalize = o2nm_upd(k,i,lat)+o1nm_upd(k,i,lat)+
+     |        henm_upd(k,i,lat)+n2nm(k,i,lat)
             o2nm_upd(k,i,lat) = o2nm_upd(k,i,lat)/normalize
             o1nm_upd(k,i,lat) = o1nm_upd(k,i,lat)/normalize
             henm_upd(k,i,lat) = henm_upd(k,i,lat)/normalize
