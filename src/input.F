@@ -307,7 +307,7 @@
       calc_helium = ispval
       opdiffcap = spval
       electron_heating = ispval
-      enforce_n2 = .true.
+      enforce_n2 = .false.
       et = .false.
       saps = .false.
       doEclipse = .false.
