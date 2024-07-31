@@ -270,9 +270,16 @@
             },
             "modelexe": {
                 "LEVEL": "BENCH",
-                "prompt": "Executable:",
+                "prompt": "Standalone Executable",
                 "default": null,
-                "description": "The path of existing or name of the executable.",
+                "description": "The path of existing or name of the standalone executable.",
+                "warning": null
+            },
+            "coupled_modelexe": {
+                "LEVEL": "BENCH",
+                "prompt": "Coupled Executable",
+                "default": null,
+                "description": "The path of existing or name of the coupled executable.",
                 "warning": null
             }
         },

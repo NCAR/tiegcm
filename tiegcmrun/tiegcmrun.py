@@ -767,12 +767,10 @@ def create_command_line_parser():
         "--mode", default=None,
         help="User mode (BASIC|INTERMEDIATE|EXPERT) (default: %(default)s)."
     )
-    """
     parser.add_argument(
         "--coupling","-co", action="store_true",
         help="Enable coupling (default: %(default)s)."
     )
-    """
     parser.add_argument(
         "--options_path", "-o", default=None,
         help="Path to JSON file of options (default: %(default)s)"
@@ -1312,8 +1310,17 @@ def prompt_user_for_run_options(args):
     o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode)
     if os.path.isfile(o["modelexe"]) == False:
         o["modelexe"] = os.path.join(o["execdir"],o["modelexe"])
-        if args.compile == False:
-            print(f'{YELLOW}Unable to find {o["modelexe"]}, model must be compiled. Use --compile or -c {RESET}')
+        if args.compile == False and args.onlycompile == False:
+            print(f'{YELLOW}Unable to find {o["modelexe"]}, model must be compiled. Use --compile/-c or --onlycompile/-oc {RESET}')
+    if args.coupling == True:
+        od["coupled_modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.x")
+        o["coupled_modelexe"] = get_run_option("coupled_modelexe", od["coupled_modelexe"], mode)
+        if os.path.isfile(o["coupled_modelexe"]) == False:
+            o["coupled_modelexe"] = os.path.join(o["execdir"],o["coupled_modelexe"])
+            #o["modelexe"] = o["coupled_modelexe"]
+            if args.compile == False and args.onlycompile == False:
+                print(f'{YELLOW}Unable to find {o["coupled_modelexe"]}, model must be compiled. Use --compile/-c or --onlycompile/-oc {RESET}')
+
     TIEGCMDATA = o["tgcmdata"]
     
     #------------------------------------
@@ -1642,8 +1649,12 @@ def compile_tiegcm(options, debug, coupling):
     nres_grid = float(o["model"]["specification"]["nres_grid"])
     make      = o["model"]["data"]["make"]
     coupling  = coupling
-    modelexe = os.path.basename(o["model"]["data"]["modelexe"])
-    model = o["model"]["data"]["modelexe"]
+    if coupling == True:
+        modelexe = os.path.basename(o["model"]["data"]["coupled_modelexe"])
+        model = o["model"]["data"]["coupled_modelexe"]
+    else:
+        modelexe = os.path.basename(o["model"]["data"]["modelexe"])
+        model = o["model"]["data"]["modelexe"]
     try:
         os.makedirs(workdir)
     except:
@@ -1921,7 +1932,7 @@ def find_file(pattern, path):
 
 
 
-def main():
+def tiegcmrun(args=None):
     # Set up the command-line parser.
     parser = create_command_line_parser()
     args = parser.parse_args()
@@ -1931,8 +1942,9 @@ def main():
     debug = args.debug
     options_path = args.options_path
     verbose = args.verbose
-    coupling = False#args.coupling
+    coupling = args.coupling
     compile = args.compile
+    onlycompile = args.onlycompile
     execute = args.execute
     benchmark = args.benchmark
     mode = args.mode    
@@ -1941,6 +1953,10 @@ def main():
         mode = "BENCH"
     elif mode == None:
         mode = "BASIC"
+    if compile == True or onlycompile == True:
+        compile_flag = True
+    elif compile == False and onlycompile == False:
+        compile_flag = False
     print("\n")
     print("Instructions:")
     print(f"-> Default Selected input parameter is given in {GREEN}GREEN{RESET}")
@@ -1953,9 +1969,9 @@ def main():
     if benchmark != None:
         print(f"Benchmark = {benchmark}")
     print(f"User Mode = {mode}")
-    print(f"Compile = {compile}")
+    print(f"Compile = {compile_flag}")
     print(f"Execute = {execute}")
-    #print(f"Coupling = {coupling}")  
+    print(f"Coupling = {coupling}")  
     print(f"\n") 
     if options_path:
         # Read the run options from a JSON file.
@@ -2151,5 +2167,5 @@ def main():
                 print(f"{YELLOW}To submit job use command{RESET} qsub {pbs_script}")
 
 if __name__ == "__main__":
-    """Begin main program."""
-    main()
+    """Begin tiegcmrun program."""
+    tiegcmrun()
