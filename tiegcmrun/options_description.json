@@ -385,7 +385,7 @@
         },
         "SOURCE_START":{
             "LEVEL": "BASIC",
-            "prompt": "Selected Date in Source Dile",
+            "prompt": "Selected date in source file",
             "default": null,
             "valids": null,
             "description": "The selected model time (mtime) in the startup file. This option is typically used to specify the desired time stamp when there are multiple time stamps in one source file.",

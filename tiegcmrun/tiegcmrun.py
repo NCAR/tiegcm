@@ -791,6 +791,10 @@ def create_command_line_parser():
         "--benchmark", "-bench", default = None, type=valid_bench,
         help="Bechmark run name  (default: %(default)s)."
     )
+    parser.add_argument(
+        "--engage", default=None,
+        help="Path to JSON file of engage options (default: %(default)s)."
+    )
     return parser
 
 def valid_bench(value):
@@ -815,7 +819,7 @@ def valid_bench(value):
         raise argparse.ArgumentTypeError(f"{value} is not a valid benchmark option.")
     return value
 
-def get_run_option(name, description, mode="BASIC"):
+def get_run_option(name, description, mode="BASIC", skip_parameters=[]):
     """Prompt the user for a single run option.
 
     Prompt the user for a single run option. If no user input is provided,
@@ -851,11 +855,19 @@ def get_run_option(name, description, mode="BASIC"):
     # Compare the current mode to the parameter level setting. If the variable
     # level is higher than the user mode, just use the default.
     fourvar_variables = ["SOURCE_START","segment","PRISTART","PRISTOP","PRIHIST","SECSTART","SECSTOP","SECHIST"]
+    if name in ['start_time', 'stop_time', 'LABEL']:
+        print(description,mode)
+    
     if mode == "BENCH" and level in ["BASIC","INTERMEDIATE", "EXPERT"]:
         if name in fourvar_variables and default is not None:
             return  ' '.join(map(str, default))
         else:
             return default
+    if mode == "BASIC" and name in skip_parameters:
+        if name in fourvar_variables and default is not None:
+            return  ' '.join(map(str, default))
+        else:
+            return default    
     if mode == "BASIC" and level in ["INTERMEDIATE", "EXPERT"]:
         if name in fourvar_variables:
             return  ' '.join(map(str, default))
@@ -1219,9 +1231,12 @@ def prompt_user_for_run_options(args):
     global TIEGCMHOME
     input_build_skip = False
     pbs_build_skip = False
+    base_skip = False
     # Save the user mode.
     mode = args.mode
     benchmark = args.benchmark
+    engage= args.engage
+    skip_parameters = engage["skip"]
     if benchmark != None and mode == None:
         mode = "BENCH"
     elif mode == None:
@@ -1239,22 +1254,24 @@ def prompt_user_for_run_options(args):
     options = {}
 
     #-------------------------------------------------------------------------
-
-    # General options for the simulation
-    o = options["simulation"] = {}
-    od = option_descriptions["simulation"]
-    if benchmark != None:
-        od["job_name"]["default"] = benchmark
-    system_name = os.popen('hostname').read().strip()
-    if 'pfe' in system_name.lower():
-        od["hpc_system"]["default"]= "pleiades"
-    elif 'derecho' in system_name.lower():
-        od["hpc_system"]["default"] = "derecho"
-    else:
-        od["hpc_system"]["default"] = "linux"
-    # Prompt for the parameters.
-    for on in ["job_name", "hpc_system"]:
-        o[on] = get_run_option(on, od[on], mode)
+    if base_skip == False:
+        # General options for the simulation
+        o = options["simulation"] = {}
+        od = option_descriptions["simulation"]
+        if benchmark != None:
+            od["job_name"]["default"] = benchmark
+        elif engage != None:
+            od["job_name"]["default"] = engage["job_name"]
+        system_name = os.popen('hostname').read().strip()
+        if 'pfe' in system_name.lower():
+            od["hpc_system"]["default"]= "pleiades"
+        elif 'derecho' in system_name.lower():
+            od["hpc_system"]["default"] = "derecho"
+        else:
+            od["hpc_system"]["default"] = "linux"
+        # Prompt for the parameters.
+        for on in ["job_name", "hpc_system"]:
+            o[on] = get_run_option(on, od[on], mode, skip_parameters)
     #-------------------------------------------------------------------------
 
     # Model options
@@ -1268,35 +1285,43 @@ def prompt_user_for_run_options(args):
     temp_mode = mode
     od = option_descriptions["model"]["data"]
     od["modeldir"]["default"] = TIEGCMHOME 
-    o["modeldir"] = get_run_option("modeldir", od["modeldir"], mode)
-    od["parentdir"]["default"] = os.getcwd() 
-    o["parentdir"] = get_run_option("parentdir", od["parentdir"], mode)
-    if o["parentdir"] == None:
-        temp_mode = "INTERMEDIATE"
-        o["execdir"] = get_run_option("execdir", od["execdir"], temp_mode)
-        od["workdir"]["default"] = o["execdir"]
-        od["histdir"]["default"] = o["execdir"]
+    o["modeldir"] = get_run_option("modeldir", od["modeldir"], mode, skip_parameters)
+    if engage != None:
+        od["parentdir"]["default"] = engage["parentdir"]
+        o["parentdir"] = get_run_option("parentdir", od["parentdir"], mode, skip_parameters)
+        od["execdir"]["default"] = o["parentdir"]
+        od["workdir"]["default"] = o["parentdir"]
+        od["histdir"]["default"] = o["parentdir"]
+        o["execdir"] = get_run_option("execdir", od["execdir"], mode, skip_parameters)
     else:
-        od["execdir"]["default"] = os.path.join(o["parentdir"],"exec")
-        od["workdir"]["default"] = os.path.join(o["parentdir"],"stdout")
-        od["histdir"]["default"] = os.path.join(o["parentdir"],"hist")
-        o["execdir"] = get_run_option("execdir", od["execdir"], mode)
+        od["parentdir"]["default"] = os.getcwd() 
+        o["parentdir"] = get_run_option("parentdir", od["parentdir"], mode, skip_parameters)
+        if o["parentdir"] == None:
+            temp_mode = "INTERMEDIATE"
+            o["execdir"] = get_run_option("execdir", od["execdir"], temp_mode, skip_parameters)
+            od["workdir"]["default"] = o["execdir"]
+            od["histdir"]["default"] = o["execdir"]
+        else:
+            od["execdir"]["default"] = os.path.join(o["parentdir"],"exec")
+            od["workdir"]["default"] = os.path.join(o["parentdir"],"stdout")
+            od["histdir"]["default"] = os.path.join(o["parentdir"],"hist")
+            o["execdir"] = get_run_option("execdir", od["execdir"], mode, skip_parameters)
 
-    o["workdir"] = get_run_option("workdir", od["workdir"], temp_mode)
-    o["histdir"] = get_run_option("histdir", od["histdir"], temp_mode)
+    o["workdir"] = get_run_option("workdir", od["workdir"], temp_mode, skip_parameters)
+    o["histdir"] = get_run_option("histdir", od["histdir"], temp_mode, skip_parameters)
     temp_mode = mode    
     o["utildir"] = os.path.join(o["modeldir"],'scripts')
     od["tgcmdata"]["default"] = TIEGCMDATA
-    o["tgcmdata"] = get_run_option("tgcmdata", od["tgcmdata"], mode)
-    
-    if benchmark == None:
-        o["input_file"] = get_run_option("input_file", od["input_file"], mode)
-        if o["input_file"]  != None:
-            input_build_skip = True
-    else:
-        o["input_file"] = None
+    o["tgcmdata"] = get_run_option("tgcmdata", od["tgcmdata"], mode, skip_parameters)
+    if base_skip == False:
+        if benchmark == None or engage == None:
+            o["input_file"] = get_run_option("input_file", od["input_file"], mode, skip_parameters)
+            if o["input_file"]  != None:
+                input_build_skip = True
+        else:
+            o["input_file"] = None
     od["log_file"]["default"] =  f'{o["workdir"]}/{options["simulation"]["job_name"]}.out'
-    o["log_file"] = get_run_option("log_file", od["log_file"], mode)
+    o["log_file"] = get_run_option("log_file", od["log_file"], mode, skip_parameters)
 
     if od["make"]["default"] == None:
         if options["simulation"]["hpc_system"] == "derecho":
@@ -1305,16 +1330,16 @@ def prompt_user_for_run_options(args):
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_pf')
         elif options["simulation"]["hpc_system"] == "linux":
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_linux')
-    o["make"] = get_run_option("make", od["make"], mode)
+    o["make"] = get_run_option("make", od["make"], mode, skip_parameters)
     od["modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.exe")
-    o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode)
+    o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters)
     if os.path.isfile(o["modelexe"]) == False:
         o["modelexe"] = os.path.join(o["execdir"],o["modelexe"])
         if args.compile == False and args.onlycompile == False:
             print(f'{YELLOW}Unable to find {o["modelexe"]}, model must be compiled. Use --compile/-c or --onlycompile/-oc {RESET}')
     if args.coupling == True:
         od["coupled_modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.x")
-        o["coupled_modelexe"] = get_run_option("coupled_modelexe", od["coupled_modelexe"], mode)
+        o["coupled_modelexe"] = get_run_option("coupled_modelexe", od["coupled_modelexe"], mode, skip_parameters)
         if os.path.isfile(o["coupled_modelexe"]) == False:
             o["coupled_modelexe"] = os.path.join(o["execdir"],o["coupled_modelexe"])
             #o["modelexe"] = o["coupled_modelexe"]
@@ -1333,14 +1358,23 @@ def prompt_user_for_run_options(args):
     od = option_descriptions["model"]["specification"]
                    
     for on in od:
-        if on == "mres":
+        if engage != None:
+            od["horires"]["default"] = engage["horires"]
+        if on == "vertres":
+            if float(horires) == 2.5:
+                od["vertres"]["default"] = 0.25
+            elif float(horires) == 1.25:
+                od["vertres"]["default"] = 0.125
+            elif float(horires) == 0.625:
+                od["vertres"]["default"] = 0.0625
+        elif on == "mres":
             if float(horires) == 2.5:
                 od["mres"]["default"] = 2
             elif float(horires) == 1.25:
                 od["mres"]["default"] = 1
             elif float(horires) == 0.625:
                 od["mres"]["default"] = 0.5
-        o[on] = get_run_option(on, od[on], mode)
+        o[on] = get_run_option(on, od[on], mode, skip_parameters)
         if on =="horires":
             horires = float(o[on])
 
@@ -1363,8 +1397,6 @@ def prompt_user_for_run_options(args):
         o = options["inp"]
 
         od = option_descriptions["inp"]     
-        
-
         if float(horires) == 5:
             od["STEP"]["default"] = 60
         elif float(horires) == 2.5:
@@ -1407,13 +1439,19 @@ def prompt_user_for_run_options(args):
         start_stop_set = 0
         for on in od:
             if start_stop_set == 0 and benchmark == None:
-                temp_mode =  "INTERMEDIATE"
+                temp_mode =  "BASIC"  # "INTERMEDIATE"
             if on == "start_time" and benchmark != None:
                 continue
             elif on == "stop_time" and benchmark != None:
                 continue
+            elif on == "start_time" and benchmark == None:
+                if engage != None:
+                    od["start_time"]["default"] = engage["start_time"]
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on == "stop_time" and benchmark == None:
-                o[on] = get_run_option(on, od[on], temp_mode)
+                if engage != None:
+                    od["stop_time"]["default"] = engage["stop_time"]
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] != None:
                     start_stop_set = 1
                     temp_mode = mode
@@ -1424,14 +1462,15 @@ def prompt_user_for_run_options(args):
                     od["PRISTOP"]["default"] = PRISTOP
             elif on == "secondary_start_time" and benchmark == None:
                 od["secondary_start_time"]["default"] = o["start_time"]
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 #od["SECSTART"]["default"] = o[on]
             elif on == "secondary_stop_time" and benchmark == None:
                 od["secondary_stop_time"]["default"] = o["stop_time"]
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 #od["SECSTOP"]["default"] = o[on]
             elif on == "segment" and benchmark == None:
-                o[on] = get_run_option(on, od[on], temp_mode)
+                od["segment"]["default"] = engage["segment"]
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] != [None]:
                     options["model"]["specification"]["segmentation"] = True
                     segment = [int(i) for i in o[on].split()]
@@ -1445,7 +1484,7 @@ def prompt_user_for_run_options(args):
                     od["OUTPUT"]["warning"] = (od["OUTPUT"]["warning"] + "\n" if od["OUTPUT"]["warning"]  is not None else "") + "Primary Output can be ignored. Will be set on segmentation"
                     od["SECOUT"]["warning"] = (od["SECOUT"]["warning"] + "\n" if od["SECOUT"]["warning"]  is not None else "") + "Secondary Output can be ignored. Will be set on segmentation"
             elif on == "SOURCE":
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] == None:
                     o[on] = get_run_option(on, od[on], "BASIC")
             elif on == "SOURCE_START":
@@ -1459,22 +1498,22 @@ def prompt_user_for_run_options(args):
             elif on == "PRIHIST" and benchmark== None:
                 PRIHIST = inp_prihist(PRISTART,PRISTOP)
                 od["PRIHIST"]["default"] =  PRIHIST
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 PRIHIST = [int(i) for i in o[on].split()]
                 MXHIST_PRIM_set ,MXHIST_PRIM_warning_set  = inp_mxhist(o["start_time"], o["stop_time"], PRIHIST, od["MXHIST_PRIM"]["warning"])
                 od["MXHIST_PRIM"]["default"] = MXHIST_PRIM_set
                 od["MXHIST_PRIM"]["warning"] = MXHIST_PRIM_warning_set
             elif on == "MXHIST_PRIM" and benchmark== None:
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 MXHIST_PRIM = int(o[on])
             elif on == "OUTPUT" and benchmark== None:
                 OUTPUT, pri_files_n = inp_pri_out(o["start_time"], o["stop_time"], PRIHIST, MXHIST_PRIM, 0, histdir,run_name)
                 od["OUTPUT"]["default"] = OUTPUT
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on == "SECHIST" and benchmark== None:
                 SECHIST = inp_sechist(PRISTART,PRISTOP)
                 od["SECHIST"]["default"] =  SECHIST
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 SECHIST = [int(i) for i in o[on].split()]
                 MXHIST_SECH_set ,MXHIST_SECH_warning_set  = inp_mxhist(o["start_time"], o["stop_time"], SECHIST, od["MXHIST_SECH"]["warning"])
                 od["MXHIST_SECH"]["default"] = MXHIST_SECH_set
@@ -1483,14 +1522,14 @@ def prompt_user_for_run_options(args):
                 od["SECSTART"]["default"] = SECSTART
                 od["SECSTOP"]["default"] = SECSTOP                
             elif on == "MXHIST_SECH" and benchmark== None:
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 MXHIST_SECH = int(o[on])
             elif on == "SECOUT" and benchmark== None:
                 SECOUT, sec_files_n = inp_sec_out(o["secondary_start_time"], o["secondary_stop_time"],  SECHIST, MXHIST_SECH, 0, histdir,run_name)
                 od["SECOUT"]["default"] = SECOUT
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on == "POTENTIAL_MODEL":
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] == "HEELIS":
                     skip_inp_temp = ["IMF_NCFILE","BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
                     for item in skip_inp_temp:
@@ -1502,9 +1541,9 @@ def prompt_user_for_run_options(args):
                         if item not in skip_inp:
                             skip_inp.append(item)
             elif on == "ONEWAY":
-                o[on] = get_run_option(on, od[on], temp_mode)            
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)            
             elif on == "GPI_NCFILE" and on not in skip_inp:
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] != None:
                     skip_inp_temp = ["KP","POWER","CTPOTEN","F107","F107A"]
                     for item in skip_inp_temp:
@@ -1513,14 +1552,14 @@ def prompt_user_for_run_options(args):
                     od["F107"]["warning"] = "F10.7 can be read by GPI File and can be skipped."
                     od["F107A"]["warning"] = "81-Day Average of F10.7 can be read by GPI File and can be skipped."
             elif on == "IMF_NCFILE" and on not in skip_inp:
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] != None:
                     skip_inp_temp = ["BXIMF","BYIMF","BZIMF","SWDEN","SWVEL"]
                     for item in skip_inp_temp:
                         if item not in skip_inp:
                             skip_inp.append(item)
             elif on == "KP" and on not in skip_inp:
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] != None:
                     skip_inp_temp = ["POWER","CTPOTEN"]
                     for item in skip_inp_temp:
@@ -1529,25 +1568,25 @@ def prompt_user_for_run_options(args):
             elif on == "GSWM_MI_DI_NCFILE":
                 GSWM_MI_DI_NCFILE = find_file(f'*gswm_diurn_{horires}d_99km*', TIEGCMDATA)
                 od[on]["default"] = f"{GSWM_MI_DI_NCFILE}" if GSWM_MI_DI_NCFILE is not None else None
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on == "GSWM_MI_SDI_NCFILE":
                 GSWM_MI_SDI_NCFILE = find_file(f'*gswm_semi_{horires}d_99km*', TIEGCMDATA)
                 od[on]["default"] = f"{GSWM_MI_SDI_NCFILE}" if GSWM_MI_SDI_NCFILE is not None else None
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on == "GSWM_NM_DI_NCFILE":
                 GSWM_NM_DI_NCFILE = find_file(f'*gswm_nonmig_diurn_{horires}d_99km*', TIEGCMDATA)
                 od[on]["default"] = f"{GSWM_NM_DI_NCFILE}" if GSWM_NM_DI_NCFILE is not None else None
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on == "GSWM_NM_SDI_NCFILE":
                 GSWM_NM_SDI_NCFILE = find_file(f'*gswm_nonmig_semi_{horires}d_99km*', TIEGCMDATA)
                 od[on]["default"] = f"{GSWM_NM_SDI_NCFILE}" if GSWM_NM_SDI_NCFILE is not None else None
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on == "HE_COEFS_NCFILE":
                 HE_COEFS_NCFILE = f"{find_file(f'*he_coefs_dres*', TIEGCMDATA)}"
                 od[on]["default"] = f"{HE_COEFS_NCFILE}" if HE_COEFS_NCFILE is not None else None
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on not in skip_inp:
-                o[on] = get_run_option(on, od[on], temp_mode)
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on in skip_inp:
                 o[on] = od[on]["default"]
             
@@ -1565,7 +1604,7 @@ def prompt_user_for_run_options(args):
         od = option_descriptions["job"]["_common"]
         od["account_name"]["default"] = os.getlogin()
         for on in od:
-            o[on] = get_run_option(on, od[on], mode)
+            o[on] = get_run_option(on, od[on], mode, skip_parameters)
 
         # HPC platform-specific options
         hpc_platform = options["simulation"]["hpc_system"]
@@ -1587,31 +1626,31 @@ def prompt_user_for_run_options(args):
                         odt["mpiprocs"]["default"] = mpiprocs_default
                     elif hpc_platform == "pleiades":
                         if ont == "model":
-                            ot[ont] = get_run_option(ont, odt[ont], mode)
+                            ot[ont] = get_run_option(ont, odt[ont], mode, skip_parameters)
                             select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
                             odt["select"]["default"] = select_default
                             odt["ncpus"]["default"] = ncpus_default
                             odt["mpiprocs"]["default"] = mpiprocs_default
                     if ont == "select":
-                        ot[ont] = get_run_option(ont, odt[ont], mode)
+                        ot[ont] = get_run_option(ont, odt[ont], mode, skip_parameters)
                         nnodes = ot[ont]
                     elif ont == "ncpus":
-                        ot[ont] = get_run_option(ont, odt[ont], mode)
+                        ot[ont] = get_run_option(ont, odt[ont], mode, skip_parameters)
                         ncpus = ot[ont]
                     elif ont == "mpiprocs":
-                        ot[ont] = get_run_option(ont, odt[ont], mode)
+                        ot[ont] = get_run_option(ont, odt[ont], mode, skip_parameters)
                         mpiprocs = ot[ont]
                     else:
-                        ot[ont] = get_run_option(ont, odt[ont], mode)
+                        ot[ont] = get_run_option(ont, odt[ont], mode, skip_parameters)
             elif on =="nprocs":
                 od[on]["default"] = int(mpiprocs) #int(nnodes) * int(mpiprocs)
-                o[on] = get_run_option(on, od[on], mode)
+                o[on] = get_run_option(on, od[on], mode, skip_parameters)
             elif on == "module_list":
-                o[on] = get_run_option(on, od[on], mode)
+                o[on] = get_run_option(on, od[on], mode, skip_parameters)
                 if o[on] != None:
                     skip_pbs.append("modules")
             elif on not in skip_pbs:
-                o[on] = get_run_option(on, od[on], mode)
+                o[on] = get_run_option(on, od[on], mode, skip_parameters)
 
     # Return the options dictionary.
     return options
@@ -1931,13 +1970,204 @@ def find_file(pattern, path):
     return None
 
 
+def alter_datetime_seconds(datetime_str, seconds):
+    # Parse the input datetime string
+    dt = datetime.fromisoformat(datetime_str)
+    
+    # Subtract the seconds using timedelta
+    new_dt = dt - timedelta(seconds=seconds)
+    
+    # Return the new datetime as a string in the same format
+    return new_dt.isoformat()
+
+def seconds_to_dhms(seconds):
+    # Calculate the number of days
+    days = seconds // (24 * 3600)
+    seconds %= (24 * 3600)
+    
+    # Calculate the number of hours
+    hours = seconds // 3600
+    seconds %= 3600
+    
+    # Calculate the number of minutes
+    minutes = seconds // 60
+    
+    # Calculate the remaining seconds
+    seconds %= 60
+    
+    return [days, hours, minutes, seconds]
+
+def gamres_to_res(gamres):
+    "D", "Q", "O", "H"
+    if gamres == "D":
+        return 2.5 , 2.5
+    elif gamres == "Q":
+        return 1.25 , 1.25
+    elif gamres == "O":
+        return 1.25 , 0.625
+    elif gamres == "H":
+        return 1.25 ,0.625
+
+def engage_parser(engage_parameters):
+    """
+    Parse the engage.json file and return the options dictionary.
+
+    Args:
+        engage_jsonfile (str): The path to the engage.json file.
+
+    Returns:
+        dict: The options dictionary.
+    """
+
+    o = engage_parameters["simulation"]
+    
+    hpc_system = o['hpc_system']
+    coupled_job_name = o['job_name']
+    coupled_start_date = o['start_date']
+    stop_date = o['stop_date']
+
+    use_segments = o['use_segments']
+    segment_duration = o['segment_duration']
+    segment = seconds_to_dhms(segment_duration)
+    horires_standalone, horires_coupled = gamres_to_res(o['gamera_grid_type'])
+    
+    o = engage_parameters["coupling"]
+    gamera_spin_up_time = o['gamera_spin_up_time']
+    gcm_spin_up_time = o['gcm_spin_up_time']
+    
+    start_date = alter_datetime_seconds(coupled_start_date,gamera_spin_up_time+gcm_spin_up_time)
+    vultron_dtOut = o['dtOut']
+    hist = seconds_to_dhms(vultron_dtOut)
+
+    root_directory = o['root_directory']
+    
+
+    eo = engage_options = {}
+    
+    eo['job_name'] = coupled_job_name
+    eo['hpc_system'] = hpc_system
+    eo['start_time'] = start_date
+    eo['coupled_start_time'] = coupled_start_date
+    eo['stop_time'] = stop_date
+    eo['segment'] = segment
+    eo['segment_seconds'] = segment_duration
+    eo['horires'] = horires_standalone
+    eo['horires_coupled'] = horires_coupled
+    eo["voltron_dtOut"] = vultron_dtOut
+    eo['parentdir'] = root_directory
+
+    eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH']
+
+    
+    return engage_options
+
+
+def segment_inp_pbs(options, run_name, pbs):
+    segment_times = segment_time(options["inp"]["start_time"], options["inp"]["stop_time"], [int(i) for i in options["inp"]["segment"].split()])
+    pri_files = 0
+    sec_files = 0
+    og_options = copy.deepcopy(options)
+    PRIHIST = og_options["inp"]["PRIHIST"]
+    MXHIST_PRIM = og_options["inp"]["MXHIST_PRIM"]
+    SECHIST = og_options["inp"]["SECHIST"]
+    MXHIST_SECH = og_options["inp"]["MXHIST_SECH"]
+    histdir = og_options["model"]["data"]["histdir"]
+    workdir = og_options["model"]["data"]["workdir"]
+    job_name = og_options["simulation"]["job_name"]
+    inp_files = []
+    pbs_files = []
+    pristart_times = []
+    with open(os.path.join(workdir,f'{run_name}.json'), "w", encoding="utf-8") as f:
+        json.dump(options, f, indent=JSON_INDENT)
+    for segment_number, segment in enumerate(segment_times):
+        segment_options = copy.deepcopy(og_options)
+        segment_start = segment[0]
+        segment_stop = segment[1]
+        segment_options["simulation"]["job_name"] =  job_name+"{:03d}".format(segment_number)
+        if segment_number == 0:
+            segment_options["inp"]["SOURCE"] = og_options["inp"]["SOURCE"]
+            segment_options["inp"]["SOURCE_START"] = og_options["inp"]["SOURCE_START"]
+            segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
+            segment_options["inp"]["START_YEAR"] = segment_START_YEAR
+            segment_options["inp"]["START_DAY"] = segment_START_DAY
+            segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
+            segment_options["inp"]["PRISTOP"] = ' '.join(map(str, segment_PRISTOP))
+            segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
+            segment_options["inp"]["OUTPUT"] = segment_OUTPUT
+        else:
+            segment_options["inp"]["SOURCE"] = None
+            segment_options["inp"]["SOURCE_START"] = None
+            segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
+            segment_options["inp"]["START_YEAR"] = segment_START_YEAR
+            segment_options["inp"]["START_DAY"] = segment_START_DAY
+            segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
+            segment_options["inp"]["PRISTOP"] = ' '.join(map(str, segment_PRISTOP))
+            segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
+            segment_options["inp"]["OUTPUT"] = segment_OUTPUT
+        segment_SECSTART, segment_SECSTOP = inp_sec_date(segment_start, segment_stop, [int(i) for i in SECHIST.split()])
+        segment_options["inp"]["SECSTART"] = ' '.join(map(str, segment_SECSTART))
+        segment_options["inp"]["SECSTOP"] = ' '.join(map(str, segment_SECSTOP))
+        segment_SECOUT, sec_files = inp_sec_out(segment_start, segment_stop, [int(i) for i in SECHIST.split()], MXHIST_SECH, sec_files, histdir,run_name)
+        segment_options["inp"]["SECOUT"] = segment_SECOUT
+        segment_options["model"]["data"]["input_file"] = create_inp_scripts(segment_options,run_name,segment_number)
+        pristart_times.append(segment_options["inp"]["PRISTART"])
+        if segment_number == 0:
+            init_inp = segment_options["model"]["data"]["input_file"]
+        segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}_{'{:03d}'.format(segment_number)}.out")
+        if pbs == True:
+            if options["simulation"]["hpc_system"] != "linux":
+                if segment_number != len(segment_times) - 1:
+                    next_pbs = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number+1)}.pbs")
+                    segment_options["job"]["job_chain"] = [f"qsub {next_pbs}"]
+                else:
+                    segment_options["job"]["job_chain"] = [None]
+                
+                pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
+                if segment_number == 0:
+                    init_pbs = pbs_script
+            else:
+                pbs_script = None
+        else:
+            pbs_script = None
+        inp_files.append(segment_options["model"]["data"]["input_file"])
+        pbs_files.append(pbs_script)
+    return inp_files, pbs_files, pristart_times
+
+def engage_run(options, debug, coupling, engage):
+    options_standalone = copy.deepcopy(options)
+    options_coupling = copy.deepcopy(options)
+    #For standalone
+    pbs=True
+    options_standalone["simulation"]["job_name"] = "teigcm_standalone_"+engage["job_name"]
+    options_standalone["inp"]["stop_time"] = engage["coupled_start_time"]
+    options_standalone["inp"]["PRIHIST"] = '1 0 0 0'
+    options_standalone["inp"]["MXHIST_PRIM"] = 1
+    options_standalone["inp"]["SECHIST"] = '0 1 0 0'
+    options_standalone["inp"]["MXHIST_SECH"] = 24
+    options_standalone["inp"]["segment"] = '1 0 0 0'
+    options_standalone["model"]["data"]["workdir"] = os.path.join(engage["parentdir"],"tiegcm_standalone")
+    if not os.path.exists(options_standalone["model"]["data"]["workdir"]):
+        os.makedirs(options_standalone["model"]["data"]["workdir"])
+    options_standalone["model"]["data"]["histdir"] = os.path.join(engage["parentdir"],"tiegcm_standalone")
+    standalone_inp_files,standalone_pbs_files, pristart_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs)
+    #For coupled
+    pbs=False
+    options_coupling["inp"]["SOURCE"] = standalone_inp_files[-1]
+    options_coupling["simulation"]["job_name"] = "teigcm_"+engage["job_name"]
+    options_coupling["inp"]["start_time"] = engage["coupled_start_time"]
+    options_coupling["inp"]["PRIHIST"] = " ".join(str(i) for i in engage["segment"])
+    options_coupling["inp"]["MXHIST_PRIM"] = 1
+    options_coupling["inp"]["SECHIST"] = " ".join(str(i) for i in seconds_to_dhms(engage["voltron_dtOut"]))
+    options_coupling["inp"]["MXHIST_SECH"] = int(engage["segment_seconds"]/engage["voltron_dtOut"])
+    standalone_inp_files,standalone_pbs_files, pristart_times = segment_inp_pbs(options_coupling, options_coupling["simulation"]["job_name"],pbs)
 
 def tiegcmrun(args=None):
     # Set up the command-line parser.
     parser = create_command_line_parser()
-    args = parser.parse_args()
-    if args.debug:
-        print(f"args = {args}")
+    if args is not None:
+        args = parser.parse_args(args)
+    else:
+        args = parser.parse_args()
     clobber = args.clobber
     debug = args.debug
     options_path = args.options_path
@@ -1947,7 +2177,9 @@ def tiegcmrun(args=None):
     onlycompile = args.onlycompile
     execute = args.execute
     benchmark = args.benchmark
-    mode = args.mode    
+    engage = args.engage
+    args.engage = engage_parser(json.loads(engage))
+    mode = args.mode   
     # Fetch the run options.
     if benchmark != None and mode == None:
         mode = "BENCH"
@@ -1972,7 +2204,10 @@ def tiegcmrun(args=None):
     print(f"Compile = {compile_flag}")
     print(f"Execute = {execute}")
     print(f"Coupling = {coupling}")  
+    if args.engage != None:
+        print(f"Engage = {args.engage}")
     print(f"\n") 
+
     if options_path:
         # Read the run options from a JSON file.
         with open(options_path, "r", encoding="utf-8") as f:
@@ -2014,6 +2249,23 @@ def tiegcmrun(args=None):
         input_file_generatred = False
     if args.onlycompile == True:
         compile_tiegcm(options, debug, coupling)
+    elif args.engage != None:
+        if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
+                if args.benchmark == None:
+                    in_prim = options["inp"]["SOURCE"]
+                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                    options["inp"]["SOURCE"] = out_prim
+                    interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+                else:
+                    in_prim = options["inp"]["SOURCE"]
+                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                    options["inp"]["SOURCE"] = out_prim
+                    interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+        else:
+            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+            options["inp"]["SOURCE"] = out_prim
+            print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
+        engage_run(options, debug, coupling, args.engage)
     else:
         if options["model"]["specification"]["segmentation"] == False:
             if options["model"]["data"]["input_file"] == None or not os.path.isfile(options["model"]["data"]["input_file"]):
@@ -2083,68 +2335,9 @@ def tiegcmrun(args=None):
                 out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
                 options["inp"]["SOURCE"] = out_prim
                 print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
-            segment_times = segment_time(options["inp"]["start_time"], options["inp"]["stop_time"], [int(i) for i in options["inp"]["segment"].split()])
-            #segment_number = 0
-            pri_files = 0
-            sec_files = 0
-            og_options = copy.deepcopy(options)
-            PRIHIST = og_options["inp"]["PRIHIST"]
-            MXHIST_PRIM = og_options["inp"]["MXHIST_PRIM"]
-            SECHIST = og_options["inp"]["SECHIST"]
-            MXHIST_SECH = og_options["inp"]["MXHIST_SECH"]
-            histdir = og_options["model"]["data"]["histdir"]
-            job_name = og_options["simulation"]["job_name"]
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(options, f, indent=JSON_INDENT)
-            for segment_number, segment in enumerate(segment_times):
-                segment_options = copy.deepcopy(og_options)
-                segment_start = segment[0]
-                segment_stop = segment[1]
-                segment_options["simulation"]["job_name"] =  job_name+"{:03d}".format(segment_number)
-                if segment_number == 0:
-                    segment_options["inp"]["SOURCE"] = og_options["inp"]["SOURCE"]
-                    segment_options["inp"]["SOURCE_START"] = og_options["inp"]["SOURCE_START"]
-                    segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
-                    segment_options["inp"]["START_YEAR"] = segment_START_YEAR
-                    segment_options["inp"]["START_DAY"] = segment_START_DAY
-                    segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
-                    segment_options["inp"]["PRISTOP"] = ' '.join(map(str, segment_PRISTOP))
-                    segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
-                    print(segment_OUTPUT)
-                    segment_options["inp"]["OUTPUT"] = segment_OUTPUT
-
-
-                else:
-                    segment_options["inp"]["SOURCE"] = None
-                    segment_options["inp"]["SOURCE_START"] = None
-                    segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
-                    segment_options["inp"]["START_YEAR"] = segment_START_YEAR
-                    segment_options["inp"]["START_DAY"] = segment_START_DAY
-                    segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
-                    segment_options["inp"]["PRISTOP"] = ' '.join(map(str, segment_PRISTOP))
-                    segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
-                    segment_options["inp"]["OUTPUT"] = segment_OUTPUT
-                segment_SECSTART, segment_SECSTOP = inp_sec_date(segment_start, segment_stop, [int(i) for i in SECHIST.split()])
-                segment_options["inp"]["SECSTART"] = ' '.join(map(str, segment_SECSTART))
-                segment_options["inp"]["SECSTOP"] = ' '.join(map(str, segment_SECSTOP))
-                segment_SECOUT, sec_files = inp_sec_out(segment_start, segment_stop, [int(i) for i in SECHIST.split()], MXHIST_SECH, sec_files, histdir,run_name)
-                segment_options["inp"]["SECOUT"] = segment_SECOUT
-                segment_options["model"]["data"]["input_file"] = create_inp_scripts(segment_options,run_name,segment_number)
-                if segment_number == 0:
-                    init_inp = segment_options["model"]["data"]["input_file"]
-                segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}_{'{:03d}'.format(segment_number)}.out")
-                if options["simulation"]["hpc_system"] != "linux":
-                    if segment_number != len(segment_times) - 1:
-                        next_pbs = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number+1)}.pbs")
-                        segment_options["job"]["job_chain"] = [f"qsub {next_pbs}"]
-                    else:
-                        segment_options["job"]["job_chain"] = [None]
-                    
-                    pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
-                    if segment_number == 0:
-                        init_pbs = pbs_script
-                
-
+            inp_files, pbs_files, pristart_times = segment_inp_pbs(options, run_name, pbs=True)
+            init_inp = inp_files[0]    
+            init_pbs = pbs_files[0]
             options["model"]["data"]["input_file"] = init_inp
             if args.compile == True:
                 compile_tiegcm(options, debug, coupling)
