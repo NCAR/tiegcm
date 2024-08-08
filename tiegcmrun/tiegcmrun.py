@@ -1022,15 +1022,19 @@ def get_run_option(name, description, mode="BASIC", skip_parameters=[]):
                 print(f'{YELLOW}{var_description}{RESET}')
                 continue
             elif option_value != None:
-                if os.path.exists(option_value) == False:
-                    file_path = find_file(option_value,TIEGCMDATA)
-                    if file_path == None:
-                        print(f'{YELLOW} Unable to find {option_value} in {TIEGCMDATA}.\n Give path to file as an alternative.{RESET}')
+                if os.path.isfile(option_value) == False:
+                    if os.path.isdir(option_value) == True:
+                        print(f'{YELLOW} {option_value} is a directory. Please provide a file path.{RESET}')
                         continue
                     else:
-                        print(f'File Found: {file_path}')
-                        option_value = str(file_path)
-                        ok = True
+                        file_path = find_file(option_value,TIEGCMDATA)
+                        if file_path == None:
+                            print(f'{YELLOW} Unable to find {option_value} in {TIEGCMDATA}.\n Give path to file as an alternative.{RESET}')
+                            continue
+                        else:
+                            print(f'File Found: {file_path}')
+                            option_value = str(file_path)
+                            ok = True
                 else:
                     option_value = str(option_value)
                     ok = True
@@ -1622,7 +1626,7 @@ def prompt_user_for_run_options(args):
                     else:
                         ot[ont] = get_run_option(ont, odt[ont], mode, skip_parameters)
             elif on =="nprocs":
-                od[on]["default"] = int(mpiprocs) #int(nnodes) * int(mpiprocs)
+                od[on]["default"] = int(nnodes) * int(mpiprocs) #int(mpiprocs)
                 o[on] = get_run_option(on, od[on], mode, skip_parameters)
             elif on == "module_list":
                 o[on] = get_run_option(on, od[on], mode, skip_parameters)
@@ -2089,6 +2093,7 @@ def segment_inp_pbs(options, run_name, pbs):
     job_name = og_options["simulation"]["job_name"]
     inp_files = []
     pbs_files = []
+    log_files = []
     pristart_times = []
     with open(os.path.join(workdir,f'{run_name}.json'), "w", encoding="utf-8") as f:
         json.dump(options, f, indent=JSON_INDENT)
@@ -2144,7 +2149,8 @@ def segment_inp_pbs(options, run_name, pbs):
             pbs_script = None
         inp_files.append(segment_options["model"]["data"]["input_file"])
         pbs_files.append(pbs_script)
-    return inp_files, pbs_files, pristart_times
+        log_files.append(segment_options["model"]["data"]["log_file"])
+    return inp_files, pbs_files,log_files, pristart_times
 
 def engage_run(options, debug, coupling, engage):
     options_standalone = copy.deepcopy(options)
@@ -2162,9 +2168,11 @@ def engage_run(options, debug, coupling, engage):
     if not os.path.exists(options_standalone["model"]["data"]["workdir"]):
         os.makedirs(options_standalone["model"]["data"]["workdir"])
     options_standalone["model"]["data"]["histdir"] = os.path.join(engage["parentdir"],"tiegcm_standalone")
-    standalone_inp_files,standalone_pbs_files, pristart_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs)
+    standalone_inp_files,standalone_pbs_files, standalone_log_files,pristart_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs)
     #For coupled
     pbs=False
+    options_coupling["model"]["data"]["modelexe"] = options_coupling["model"]["data"]["coupled_modelexe"]
+    coupling_modelexe=options_coupling["model"]["data"]["coupled_modelexe"]
     options_coupling["model"]["specification"]["horires"] = float(engage["horires_coupled"])
     vertres, mres, nres_grid, STEP = resolution_solver(engage["horires_coupled"])
     options_coupling["model"]["specification"]["vertres"] = vertres
@@ -2179,10 +2187,17 @@ def engage_run(options, debug, coupling, engage):
     options_coupling["inp"]["MXHIST_PRIM"] = 1
     options_coupling["inp"]["SECHIST"] = " ".join(str(i) for i in seconds_to_dhms(engage["voltron_dtOut"]))
     options_coupling["inp"]["MXHIST_SECH"] = int(engage["segment_seconds"]/engage["voltron_dtOut"])
-    standalone_inp_files,standalone_pbs_files, pristart_times = segment_inp_pbs(options_coupling, options_coupling["simulation"]["job_name"],pbs)
+    coupling_inp_files,coupling_pbs_files, coupling_log_files, pristart_times = segment_inp_pbs(options_coupling, options_coupling["simulation"]["job_name"],pbs)
+    select_coupling,ncpus_coupling,mpiprocs_coupling=select_resource_defaults(options_coupling,option_descriptions)
+    options_coupling["job"]["resource"]["select"] = select_coupling
+    options_coupling["job"]["resource"]["ncpus"] = ncpus_coupling
+    options_coupling["job"]["resource"]["mpiprocs"] = mpiprocs_coupling
+    nprocs_coupling = int(mpiprocs_coupling)*int(select_coupling)
+    options_coupling["job"]["nprocs"] = nprocs_coupling
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = json.load(f)
-    select_coupling,ncpus_coupling,mpiprocs_coupling=select_resource_defaults(options_coupling,option_descriptions)
+    
+    return standalone_pbs_files,select_coupling,ncpus_coupling,mpiprocs_coupling,nprocs_coupling,coupling_modelexe,coupling_inp_files,coupling_log_files
 
 def tiegcmrun(args=None):
     # Set up the command-line parser.
@@ -2287,7 +2302,8 @@ def tiegcmrun(args=None):
             out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
             options["inp"]["SOURCE"] = out_prim
             print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
-        engage_run(options, debug, coupling, args.engage)
+        standalone_pbs_files,select_coupling,ncpus_coupling,mpiprocs_coupling,nprocs_coupling,coupling_modelexe,coupling_inp_files,coupling_log_files = engage_run(options, debug, coupling, args.engage)
+        return (standalone_pbs_files,select_coupling,ncpus_coupling,mpiprocs_coupling,nprocs_coupling,coupling_modelexe,coupling_inp_files,coupling_log_files)
     else:
         if options["model"]["specification"]["segmentation"] == False:
             if options["model"]["data"]["input_file"] == None or not os.path.isfile(options["model"]["data"]["input_file"]):
