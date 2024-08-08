@@ -855,9 +855,7 @@ def get_run_option(name, description, mode="BASIC", skip_parameters=[]):
     # Compare the current mode to the parameter level setting. If the variable
     # level is higher than the user mode, just use the default.
     fourvar_variables = ["SOURCE_START","segment","PRISTART","PRISTOP","PRIHIST","SECSTART","SECSTOP","SECHIST"]
-    if name in ['start_time', 'stop_time', 'LABEL']:
-        print(description,mode)
-    
+
     if mode == "BENCH" and level in ["BASIC","INTERMEDIATE", "EXPERT"]:
         if name in fourvar_variables and default is not None:
             return  ' '.join(map(str, default))
@@ -1361,30 +1359,17 @@ def prompt_user_for_run_options(args):
         if engage != None:
             od["horires"]["default"] = engage["horires"]
         if on == "vertres":
-            if float(horires) == 2.5:
-                od["vertres"]["default"] = 0.25
-            elif float(horires) == 1.25:
-                od["vertres"]["default"] = 0.125
-            elif float(horires) == 0.625:
-                od["vertres"]["default"] = 0.0625
+            od["vertres"]["default"] = vertres
         elif on == "mres":
-            if float(horires) == 2.5:
-                od["mres"]["default"] = 2
-            elif float(horires) == 1.25:
-                od["mres"]["default"] = 1
-            elif float(horires) == 0.625:
-                od["mres"]["default"] = 0.5
+            od["mres"]["default"] = mres
         o[on] = get_run_option(on, od[on], mode, skip_parameters)
         if on =="horires":
             horires = float(o[on])
+            vertres, mres, nres_grid, STEP = resolution_solver(horires)
 
     if o["nres_grid"] == None:
-        if float(o["mres"]) == 2:
-            o["nres_grid"] = 5
-        elif float(o["mres"]) == 1:
-            o["nres_grid"] = 6
-        elif float(o["mres"]) == 0.5:
-            o["nres_grid"] = 7
+        o["nres_grid"] = nres_grid
+
     
     if input_build_skip == True:
         input_build_skip = True
@@ -1397,14 +1382,8 @@ def prompt_user_for_run_options(args):
         o = options["inp"]
 
         od = option_descriptions["inp"]     
-        if float(horires) == 5:
-            od["STEP"]["default"] = 60
-        elif float(horires) == 2.5:
-            od["STEP"]["default"] = 30
-        elif float(horires) == 1.25:
-            od["STEP"]["default"] = 10
-        elif float(horires) == 0.625:
-            od["STEP"]["default"] = 5
+        od["STEP"]["default"] = STEP
+
         run_name = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
         histdir = options["model"]["data"]["histdir"]
         if benchmark != None:
@@ -1654,6 +1633,34 @@ def prompt_user_for_run_options(args):
 
     # Return the options dictionary.
     return options
+
+def resolution_solver(horires):
+    if float(horires) == 5:
+        vertres = 0.5
+        mres = 2
+        STEP = 60
+    elif float(horires) == 2.5:
+        vertres = 0.25
+        mres = 2
+        STEP = 30
+    elif float(horires) == 1.25:
+        vertres = 0.125
+        mres = 1
+        STEP = 10
+    elif float(horires) == 0.625:
+        vertres = 0.0625
+        mres = 0.5
+        STEP = 5
+
+    if mres == 2:
+        nres_grid = 5
+    elif mres == 1:
+        nres_grid = 6
+    elif mres == 0.5:
+        nres_grid = 7
+    return vertres, mres, nres_grid, STEP
+
+
 
 def compile_tiegcm(options, debug, coupling):
     """
@@ -2027,21 +2034,27 @@ def engage_parser(engage_parameters):
     stop_date = o['stop_date']
 
     use_segments = o['use_segments']
-    segment_duration = o['segment_duration']
+    segment_duration = int(float((o['segment_duration'])))
     segment = seconds_to_dhms(segment_duration)
     horires_standalone, horires_coupled = gamres_to_res(o['gamera_grid_type'])
     
     o = engage_parameters["coupling"]
-    gamera_spin_up_time = o['gamera_spin_up_time']
-    gcm_spin_up_time = o['gcm_spin_up_time']
+    gamera_spin_up_time = int(o['gamera_spin_up_time'])
+    gcm_spin_up_time = int(o['gcm_spin_up_time'])
     
     start_date = alter_datetime_seconds(coupled_start_date,gamera_spin_up_time+gcm_spin_up_time)
-    vultron_dtOut = o['dtOut']
+    vultron_dtOut = int(float(o['dtOut']))
     hist = seconds_to_dhms(vultron_dtOut)
 
     root_directory = o['root_directory']
     
-
+    if o['root_directory'] == '.':
+        # Get the full path to the current directory
+        full_path = os.path.abspath(os.curdir)
+    else:
+        # Otherwise, use the provided path
+        full_path = os.path.abspath(o['root_directory'])
+    root_directory= full_path
     eo = engage_options = {}
     
     eo['job_name'] = coupled_job_name
@@ -2138,7 +2151,7 @@ def engage_run(options, debug, coupling, engage):
     options_coupling = copy.deepcopy(options)
     #For standalone
     pbs=True
-    options_standalone["simulation"]["job_name"] = "teigcm_standalone_"+engage["job_name"]
+    options_standalone["simulation"]["job_name"] = "tiegcm_standalone_"+engage["job_name"]
     options_standalone["inp"]["stop_time"] = engage["coupled_start_time"]
     options_standalone["inp"]["PRIHIST"] = '1 0 0 0'
     options_standalone["inp"]["MXHIST_PRIM"] = 1
@@ -2152,14 +2165,24 @@ def engage_run(options, debug, coupling, engage):
     standalone_inp_files,standalone_pbs_files, pristart_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs)
     #For coupled
     pbs=False
+    options_coupling["model"]["specification"]["horires"] = float(engage["horires_coupled"])
+    vertres, mres, nres_grid, STEP = resolution_solver(engage["horires_coupled"])
+    options_coupling["model"]["specification"]["vertres"] = vertres
+    options_coupling["model"]["specification"]["mres"] = mres
+    options_coupling["model"]["specification"]["nres_grid"] = nres_grid
+    options_coupling["inp"]["STEP"] = STEP
     options_coupling["inp"]["SOURCE"] = standalone_inp_files[-1]
-    options_coupling["simulation"]["job_name"] = "teigcm_"+engage["job_name"]
+    options_coupling["inp"]["SOURCE_START"] = pristart_times[-1]
+    options_coupling["simulation"]["job_name"] = "tiegcm_"+engage["job_name"]
     options_coupling["inp"]["start_time"] = engage["coupled_start_time"]
     options_coupling["inp"]["PRIHIST"] = " ".join(str(i) for i in engage["segment"])
     options_coupling["inp"]["MXHIST_PRIM"] = 1
     options_coupling["inp"]["SECHIST"] = " ".join(str(i) for i in seconds_to_dhms(engage["voltron_dtOut"]))
     options_coupling["inp"]["MXHIST_SECH"] = int(engage["segment_seconds"]/engage["voltron_dtOut"])
     standalone_inp_files,standalone_pbs_files, pristart_times = segment_inp_pbs(options_coupling, options_coupling["simulation"]["job_name"],pbs)
+    with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
+        option_descriptions = json.load(f)
+    select_coupling,ncpus_coupling,mpiprocs_coupling=select_resource_defaults(options_coupling,option_descriptions)
 
 def tiegcmrun(args=None):
     # Set up the command-line parser.
@@ -2205,7 +2228,7 @@ def tiegcmrun(args=None):
     print(f"Execute = {execute}")
     print(f"Coupling = {coupling}")  
     if args.engage != None:
-        print(f"Engage = {args.engage}")
+        print(f"Engage = True")
     print(f"\n") 
 
     if options_path:
@@ -2219,7 +2242,6 @@ def tiegcmrun(args=None):
         print(f"options = {options}")
 
     # Move to the run directory.
-    #os.chdir(options["job"]["run_directory"])
     run_name = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
     execdir   = options["model"]["data"]["execdir"]
     workdir = options["model"]["data"]["workdir"]
