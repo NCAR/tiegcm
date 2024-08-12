@@ -688,7 +688,7 @@ def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir,
     number_of_files = ceil(total_seconds / data_per_file_seconds)
     sec_files_n = sec_files + number_of_files
 
-    if sec_files == 0:
+    if sec_files == 1:
         if number_of_files == 1:
             SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files)}.nc'"
         else:
@@ -2153,6 +2153,8 @@ def segment_inp_pbs(options, run_name, pbs):
     return inp_files, pbs_files,log_files, pristart_times
 
 def engage_run(options, debug, coupling, engage):
+    with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
+        option_descriptions = json.load(f)
     options_standalone = copy.deepcopy(options)
     options_coupling = copy.deepcopy(options)
     #For standalone
