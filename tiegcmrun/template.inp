@@ -52,20 +52,6 @@ MXHIST_SECH = {{inp.MXHIST_SECH}}{%- endif %}
 SECFLDS = {% for SECFLD in inp.SECFLDS %}{% if SECFLD %}'{{SECFLD}}'{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}
 {%- endif %}
 
-! GSWM Data
-{%- if inp.GSWM_MI_DI_NCFILE is not none %}
-GSWM_MI_DI_NCFILE = '{{inp.GSWM_MI_DI_NCFILE}}'{%- endif %}
-{%- if inp.GSWM_MI_SDI_NCFILE is not none %}
-GSWM_MI_SDI_NCFILE = '{{inp.GSWM_MI_SDI_NCFILE}}'{%- endif %}
-{%- if inp.GSWM_NM_DI_NCFILE is not none %}
-GSWM_NM_DI_NCFILE = '{{inp.GSWM_NM_DI_NCFILE}}'{%- endif %}
-{%- if inp.GSWM_NM_SDI_NCFILE is not none %}
-GSWM_NM_SDI_NCFILE = '{{inp.GSWM_NM_SDI_NCFILE}}'{%- endif %}
-
-! HE Coefs Data
-{%- if inp.HE_COEFS_NCFILE is not none %}
-HE_COEFS_NCFILE = '{{inp.HE_COEFS_NCFILE}}'{%- endif %}
-
 ! Electron Heating
 {%- if inp.ELECTRON_HEATING is not none %}
 ELECTRON_HEATING = {{inp.ELECTRON_HEATING}}{%- endif %}
@@ -109,21 +95,123 @@ SWDEN = {{inp.SWDEN}}{%- endif %}
 {%- if inp.SWVEL is not none %}
 SWVEL = {{inp.SWVEL}}{%- endif %}
 
-! Eclipse Mask
-{%- if inp.DOECLIPSE is true %}
-DOECLIPSE = .true.
-{%- elif inp.DOECLIPSE is false %}
-DOECLIPSE = .false.
-{%- endif %}
-
 ! F107 Information 
 {%- if inp.F107 is not none %}
 F107 = {{inp.F107}}{%- endif %}
 {%- if inp.F107A is not none %}
 F107A = {{inp.F107A}}{%- endif %}
 
-! Hemlium Calculate
-CALC_HELIUM = 1
+! Eclipse Mask
+{%- if inp.DOECLIPSE is true %}
+DOECLIPSE = .true.
+{%- elif inp.DOECLIPSE is false %}
+DOECLIPSE = .false.
+{%- endif %}
+{%- if inp.ECLIPSE_LIST is not none %}
+ECLIPSE_LIST = {{inp.ECLIPSE_LIST}}{%- endif %}
+
+! Flags
+{%- if inp.AURORA is not none %}
+AURORA = {{inp.AURORA}}{%- endif %}
+{%- if inp.DYNAMO is not none %}
+DYNAMO = {{inp.DYNAMO}}{%- endif %}
+{%- if inp.CALC_HELIUM is not none %}
+CALC_HELIUM = {{inp.CALC_HELIUM}}{%- endif %}
+{%- if inp.EDDY_DIF is not none %}
+EDDY_DIF = {{inp.EDDY_DIF}}{%- endif %}
+{%- if inp.JOULEFAC is not none %}
+JOULEFAC = {{inp.JOULEFAC}}{%- endif %}
+{%- if inp.COLFAC is not none %}
+COLFAC = {{inp.COLFAC}}{%- endif %}
+{%- if inp.OPDIFFCAP is not none %}
+OPDIFFCAP = {{inp.OPDIFFCAP}}{%- endif %}
+{%- if inp.CURRENT_PG is not none %}
+CURRENT_PG = {{inp.CURRENT_PG}}{%- endif %}
+{%- if inp.CURRENT_KQ is not none %}
+CURRENT_KQ = {{inp.CURRENT_KQ}}{%- endif %}
+{%- if inp.ET is true %}
+ET = .true.
+{%- elif inp.ET is false %}
+ET = .false.
+{%- endif %}
+{%- if inp.SAPS is true %}
+SAPS = .true.
+{%- elif inp.SAPS is false %}
+SAPS = .false.
+{%- endif %}
+
+! GSWM Data
+{%- if inp.GSWM_MI_DI_NCFILE is not none %}
+GSWM_MI_DI_NCFILE = '{{inp.GSWM_MI_DI_NCFILE}}'{%- endif %}
+{%- if inp.GSWM_MI_SDI_NCFILE is not none %}
+GSWM_MI_SDI_NCFILE = '{{inp.GSWM_MI_SDI_NCFILE}}'{%- endif %}
+{%- if inp.GSWM_NM_DI_NCFILE is not none %}
+GSWM_NM_DI_NCFILE = '{{inp.GSWM_NM_DI_NCFILE}}'{%- endif %}
+{%- if inp.GSWM_NM_SDI_NCFILE is not none %}
+GSWM_NM_SDI_NCFILE = '{{inp.GSWM_NM_SDI_NCFILE}}'{%- endif %}
+
+! HE Coefs Data
+{%- if inp.HE_COEFS_NCFILE is not none %}
+HE_COEFS_NCFILE = '{{inp.HE_COEFS_NCFILE}}'{%- endif %}
+
+! AMIE
+{%- if inp.AMIENH is not none %}
+AMIENH = '{{inp.AMIENH}}'{%- endif %}
+{%- if inp.AMIESH is not none %}
+AMIESH = '{{inp.AMIESH}}'{%- endif %}
+
+! Tide
+{%- if inp.TIDI_NCFILE is not none %}
+TIDI_NCFILE = '{{inp.TIDI_NCFILE}}'{%- endif %}
+{%- if inp.TIDE is not none %}
+TIDE = '{{inp.TIDE}}'{%- endif %}
+{%- if inp.TIDE2 is not none %}
+TIDE2 = '{{inp.TIDE2}}'{%- endif %}
+
+! Support Files 
+{%- if inp.BGRDDATA_NCFILE is not none %}
+BGRDDATA_NCFILE = '{{inp.BGRDDATA_NCFILE}}'{%- endif %}
+{%- if inp.CTMT_NCFILE is not none %}
+CTMT_NCFILE = '{{inp.CTMT_NCFILE}}'{%- endif %}
+{%- if inp.SABER_NCFILE is not none %}
+SABER_NCFILE = '{{inp.SABER_NCFILE}}'{%- endif %}
+{%- if inp.MIXFILE is not none %}
+MIXFILE = {{inp.MIXFILE}}{%- endif %}
+
+! NUGE
+{%- if inp.NUDGE_NCPRE is not none %}
+NUDGE_NCPRE = '{{inp.NUDGE_NCPRE}}'{%- endif %}
+{%- if inp.NUDGE_NCPOST is not none %}
+NUDGE_NCPOST = '{{inp.NUDGE_NCPOST}}'{%- endif %}
+{%- if inp.NUDGE_NCFILE is not none %}
+NUDGE_NCFILE = '{{inp.NUDGE_NCFILE}}'{%- endif %}
+{%- if inp.NUDGE_FLDS is not none %}
+NUDGE_FLDS = '{{inp.NUDGE_FLDS}}'{%- endif %}
+{%- if inp.NUDGE_LBC is true %}
+NUDGE_LBC = .true.
+{%- elif inp.NUDGE_LBC is false %}
+NUDGE_LBC = .false.
+{%- endif %}
+{%- if inp.NUDGE_F4D is true %}
+NUDGE_F4D = .true.
+{%- elif inp.NUDGE_F4D is false %}
+NUDGE_F4D = .false.
+{%- endif %}
+{%- if inp.NUDGE_USE_REFDATE is true %}
+NUDGE_USE_REFDATE = .true.
+{%- elif inp.NUDGE_USE_REFDATE is false %}
+NUDGE_USE_REFDATE = .false.
+{%- endif %}
+{%- if inp.NUDGE_REFDATE is not none %}
+NUDGE_REFDATE = '{{inp.NUDGE_REFDATE}}'{%- endif %}
+{%- if inp.NUDGE_SPONGE is not none %}
+NUDGE_SPONGE = '{{inp.NUDGE_SPONGE}}'{%- endif %}
+{%- if inp.NUDGE_DELTA is not none %}
+NUDGE_DELTA = '{{inp.NUDGE_DELTA}}'{%- endif %}
+{%- if inp.NUDGE_POWER is not none %}
+NUDGE_POWER = '{{inp.NUDGE_POWER}}'{%- endif %}
+{%- if inp.NUDGE_ALPHA is not none %}
+NUDGE_ALPHA = '{{inp.NUDGE_ALPHA}}'{%- endif %}
 
 ! Other Parameters
 {%- for data in inp.other_input %}
