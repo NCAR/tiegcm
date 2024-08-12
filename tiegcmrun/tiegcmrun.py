@@ -688,16 +688,16 @@ def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir,
     number_of_files = ceil(total_seconds / data_per_file_seconds)
     sec_files_n = sec_files + number_of_files
 
-    if sec_files == 1:
+    if sec_files == 0:
         if number_of_files == 1:
-            SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files)}.nc'"
+            SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files+1)}.nc'"
         else:
-            SECH_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files)}.nc"
-            SECH_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files_n)}.nc"
+            SECH_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files+1)}.nc"
+            SECH_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files_n+1)}.nc"
             SECOUT = f"'{SECH_0}','to','{SECH_N}','by','1'"
     else:
         if number_of_files == 1:
-            SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files)}.nc'"
+            SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files+1)}.nc'"
         else:
             SECH_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files+1)}.nc"
             SECH_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files_n+1)}.nc"
@@ -1930,7 +1930,7 @@ def create_pbs_scripts(options, run_name, segment_number):
     if segment_number == None:
         pbs_script = os.path.join(workdir, f"{run_name}.pbs")
     else:
-        pbs_script = os.path.join(workdir, f"{run_name}_{'{:03d}'.format(segment_number)}.pbs")
+        pbs_script = os.path.join(workdir, f"{run_name}_{'{:03d}'.format(segment_number+1)}.pbs")
     with open(pbs_script, "w", encoding="utf-8") as f:
         f.write(pbs_content)
     return pbs_script
@@ -1959,7 +1959,7 @@ def create_inp_scripts(options, run_name, segment_number):
     if segment_number == None:
         inp_script = os.path.join(workdir,f"{run_name}.inp")
     else:
-        inp_script = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number)}.inp")
+        inp_script = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number+1)}.inp")
     if not os.path.exists(workdir):
         os.makedirs(workdir)
     with open(inp_script, "w", encoding="utf-8") as f:
@@ -2131,7 +2131,7 @@ def segment_inp_pbs(options, run_name, pbs):
         pristart_times.append(segment_options["inp"]["PRISTART"])
         if segment_number == 0:
             init_inp = segment_options["model"]["data"]["input_file"]
-        segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}_{'{:03d}'.format(segment_number)}.out")
+        segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}_{'{:03d}'.format(segment_number+1)}.out")
         if pbs == True:
             if options["simulation"]["hpc_system"] != "linux":
                 if segment_number != len(segment_times) - 1:
