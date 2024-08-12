@@ -1249,6 +1249,7 @@ def prompt_user_for_run_options(args):
     if onlycompile == True:
         input_build_skip = True
         pbs_build_skip = True
+        skip_parameters = ['input_file','log_file','job_name','modeldir','parentdir','tgcmdata']
     # Read the dictionary of option descriptions.
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = json.load(f)
