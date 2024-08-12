@@ -1239,6 +1239,7 @@ def prompt_user_for_run_options(args):
     mode = args.mode
     benchmark = args.benchmark
     engage= args.engage
+    coupling = args.coupling
     if engage != None:
         skip_parameters = engage["skip"]
     if benchmark != None and mode == None:
@@ -1250,6 +1251,8 @@ def prompt_user_for_run_options(args):
         input_build_skip = True
         pbs_build_skip = True
         skip_parameters = ['input_file','log_file','job_name','modeldir','parentdir','tgcmdata']
+        if coupling == True:
+            skip_parameters.append('modelexe')
     # Read the dictionary of option descriptions.
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = json.load(f)
