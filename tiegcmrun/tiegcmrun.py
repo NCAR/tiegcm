@@ -1234,11 +1234,13 @@ def prompt_user_for_run_options(args):
     input_build_skip = False
     pbs_build_skip = False
     base_skip = False
+    skip_parameters = []
     # Save the user mode.
     mode = args.mode
     benchmark = args.benchmark
     engage= args.engage
-    skip_parameters = engage["skip"]
+    if engage != None:
+        skip_parameters = engage["skip"]
     if benchmark != None and mode == None:
         mode = "BENCH"
     elif mode == None:
@@ -1452,7 +1454,8 @@ def prompt_user_for_run_options(args):
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 #od["SECSTOP"]["default"] = o[on]
             elif on == "segment" and benchmark == None:
-                od["segment"]["default"] = engage["segment"]
+                if engage != None:
+                    od["segment"]["default"] = engage["segment"]
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] != [None]:
                     options["model"]["specification"]["segmentation"] = True
@@ -2210,7 +2213,8 @@ def tiegcmrun(args=None):
     execute = args.execute
     benchmark = args.benchmark
     engage = args.engage
-    args.engage = engage_parser(json.loads(engage))
+    if args.engage != None:
+        args.engage = engage_parser(json.loads(engage))
     mode = args.mode   
     # Fetch the run options.
     if benchmark != None and mode == None:
