@@ -2050,15 +2050,7 @@ def engage_parser(engage_parameters):
     vultron_dtOut = int(float(o['dtOut']))
     hist = seconds_to_dhms(vultron_dtOut)
 
-    root_directory = o['root_directory']
-    
-    if o['root_directory'] == '.':
-        # Get the full path to the current directory
-        full_path = os.path.abspath(os.curdir)
-    else:
-        # Otherwise, use the provided path
-        full_path = os.path.abspath(o['root_directory'])
-    root_directory= full_path
+    root_directory= os.path.abspath(os.curdir)
     eo = engage_options = {}
     
     eo['job_name'] = coupled_job_name
