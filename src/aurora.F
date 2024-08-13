@@ -166,7 +166,7 @@
      |  phinm0(2),    ! angle curvature of convection on minus side of nightside entrance (rad)
      |  rr1(2)        ! exponential fall-off of convection from convection radius
 !
-! Auroral circle coordinates:
+! Auroral circle coordinates (see sub aurora):
       real,dimension(nlonp4,nlat) ::
      |  dlat_aur, ! = rlatm = magnetic latitude (radians)
      |  dlon_aur, ! = rlonm-sunlons = magnetic longitude (or MLT-12 where 0=noon) converted to radians
@@ -674,20 +674,23 @@
         enddo
       enddo
 !
-! Auroral additions to ionization rates:
-! Sub aurora_ions is a standalone subroutine, i.e., not in aurora_module.
-! Pass module data to aurora_ions through argument list.
-!
       do lat=lat0,lat1
 !
 ! Check latitude, and return if below aurlat (32.5 deg at 5 deg res):
 !
         aurlat = glat(lat)*dtr
         if (abs(aurlat) >= pi/6.) then
+!
+! Auroral additions to ionization rates:
+! Sub aurora_ions is a standalone subroutine, i.e., not in aurora_module.
+! Pass module data to aurora_ions through argument list.
+!
           call aurora_ions(
-     |      drizl(:,lat), cusp (:,lat),
-     |      alfa (:,lat), alfa2(:,lat), alfa3(:,lat),
-     |      flux (:,lat), flux2(:,lat), flux3(:,lat),
+     |      drizl(lon0:lon1,lat), cusp (lon0:lon1,lat),
+     |      alfa (lon0:lon1,lat),
+     |      alfa2(lon0:lon1,lat), alfa3(lon0:lon1,lat),
+     |      flux (lon0:lon1,lat),
+     |      flux2(lon0:lon1,lat), flux3(lon0:lon1,lat),
      |      o2(:,:,lat),o1(:,:,lat),he(:,:,lat),n2(:,:,lat),
      |      xnmbar(:,:,lat),scht(:,:,lat),lev0,lev1,lon0,lon1,lat)
         endif
