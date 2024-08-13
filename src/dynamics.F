@@ -71,8 +71,6 @@
       real,dimension(levd0:levd1,lond0:lond1,latd0:latd1,2) ::
      |  op_i,op_nm_i
       real,dimension(lon0:lon1,lat0:lat1) ::
-! 11/08 EMERY added energy flux eflux and eflux2d
-     |  cusp2d,drzl2d,alfa2d,nflx2d,eflux2d,
      |  tec ! diagnostic total electron content
       logical,external :: time2print
 !
@@ -207,15 +205,6 @@
 #endif
       time1_qrj = 0.
 !
-! Initialize diagnostics to insure they have values before the
-! below return when lat < 32.5.
-!
-      cusp2d = 0.
-      drzl2d = 0.
-      alfa2d = 0.
-      nflx2d = 0.
-      eflux2d = 0.
-!
       do lat=lat0,lat1
 !
 ! Calculate ionization and heating rates:
@@ -269,43 +258,35 @@
      |    vn2    (levd0,lond0,lat),
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after qinite: lat=',i3)") lat
+      enddo ! lat=lat0,lat1 for qrj, qinite
 !
 ! Add aurora particle precip and ionization:
-        if (iaurora > 0) then
-          call aurora(
-     |      o2  (levd0,lond0,lat,itp),
-     |      o1  (levd0,lond0,lat,itp),
-     |      he  (levd0,lond0,lat,itp),
-     |      n2  (levd0,lond0,lat),
-     |      xnmbar(levd0,lond0,lat,itp),
-     |      scht(levd0,lond0,lat,itp),
-     |      1,nlevp1,lon0,lon1,lat)
-          if (debug) write(6,"('dynamics after aurora: lat=',i3)") lat
-        endif
-!
-! Save aurora oval on exit to full arrays so can save later to secondary history
-        cusp2d(:,lat)=cusp(lon0:lon1)
-        drzl2d(:,lat)=drizl(lon0:lon1)
-        alfa2d(:,lat)=alfa(lon0:lon1)
-        nflx2d(:,lat)=flux(lon0:lon1)
-        eflux2d(:,lat)=eflux(lon0:lon1)
-      enddo ! lat=lat0,lat1 for qrj, qinite, and aurora
-      if (debug) write(6,"('dynamics after qrj,qinite,aurora')")
+      if (iaurora > 0) then
+        call aurora(
+     |    o2  (levd0,lond0,latd0,itp),
+     |    o1  (levd0,lond0,latd0,itp),
+     |    he  (levd0,lond0,latd0,itp),
+     |    n2  (levd0,lond0,latd0),
+     |    xnmbar(levd0,lond0,latd0,itp),
+     |    scht(levd0,lond0,latd0,itp),
+     |    1,nlevp1,lon0,lon1,lat0,lat1)
+        if (debug) write(6,"('dynamics after aurora')")
 !
 ! Save auroral diagnostics (see diags.F):
 !
-      if (iaurora > 0) then
-        call mkdiag_CUSP('CUSP',cusp2d(lon0:lon1,lat0:lat1),
+        call mkdiag_CUSP('CUSP',cusp(lon0:lon1,lat0:lat1),
      |    lon0,lon1,lat0,lat1)
-        call mkdiag_DRIZZLE('DRIZZLE',drzl2d(lon0:lon1,lat0:lat1),
+        call mkdiag_DRIZZLE('DRIZZLE',drizl(lon0:lon1,lat0:lat1),
      |    lon0,lon1,lat0,lat1)
-        call mkdiag_ALFA('ALFA',alfa2d(lon0:lon1,lat0:lat1),
+        call mkdiag_ALFA('ALFA',alfa(lon0:lon1,lat0:lat1),
      |    lon0,lon1,lat0,lat1)
-        call mkdiag_NFLUX('NFLUX',nflx2d(lon0:lon1,lat0:lat1),
+        call mkdiag_NFLUX('NFLUX',flux(lon0:lon1,lat0:lat1),
      |    lon0,lon1,lat0,lat1)
-        call mkdiag_EFLUX('EFLUX',eflux2d(lon0:lon1,lat0:lat1),
+        call mkdiag_EFLUX('EFLUX',eflux(lon0:lon1,lat0:lat1),
      |    lon0,lon1,lat0,lat1)
+!
       endif
+      if (debug) write(6,"('dynamics after qrj,qinite,aurora')")
 !
 ! Report timing from above latitude loop:
       if (timing%level >= 2.and.time2print(nstep,istep))
