@@ -369,6 +369,14 @@
             "description": null,
             "warning": "secondary_stop_time should not be later than stop_time. Keep default if segmenting runs."
         },
+        "solar_flux_level": {
+            "LEVEL": "BASIC",
+            "prompt": "F107 flux level for TIEGCM spin up",
+            "default": "low",
+            "valids": ["low", "medium", "high"],
+            "description": null,
+            "warning": "Low = 70, Medium = 140 , High = 200"
+        },
         "SOURCE":{
             "LEVEL": "BENCH",
             "prompt": "SOURCE file location",
@@ -523,6 +531,7 @@
             "LEVEL": "BASIC",
             "prompt": "GPI file",
             "default": null,
+            "valids": null,
             "description": "The location of the GPI file containing 3-hourly KP and daily F107, F107A to drive high-latitude convection and the auroral precipitation oval.",
             "warning": "If GPI_NCFILE is specified, then KP and POWER/CTPOTEN are skipped. If further POTENTIAL_MODEL is WEIMER and IMF_NCFILE is specified, then the Weimer model and aurora will be driven by the IMF data, and only F107 and F107A will be read from the GPI data file."
         },

@@ -40,8 +40,8 @@ from fractions import Fraction
 from math import ceil
 
 # Import 3rd-party modules
-import numpy as np
-from numpy import ndarray, interp, log, exp, linspace, allclose, mean
+#import numpy as np
+from numpy import pad, ndarray, interp, log, exp, linspace, allclose, mean
 from netCDF4 import Dataset
 import xarray as xr
 from jinja2 import Template
@@ -101,7 +101,7 @@ def get_mtime(file_path):
     ds = xr.open_dataset(file_path)
     if 'mtime' in ds.variables:
         mtime_data = ds['mtime'].values
-    mtime_arr = np.pad(mtime_data, [(0, 0), (0, max(4 - mtime_data.shape[1], 0))], mode='constant').tolist()
+    mtime_arr = pad(mtime_data, [(0, 0), (0, max(4 - mtime_data.shape[1], 0))], mode='constant').tolist()
     return mtime_arr
 
 def interp2d(variable, inlat, inlon, outlat, outlon):
@@ -1136,6 +1136,38 @@ def get_run_option(name, description, mode="BASIC", skip_parameters=[]):
     # Return the option as a string.
     return option_value
 
+def select_source_defaults(options, option_descriptions):
+    """
+    Select the default values for the 'source' option based on the given input options.
+
+    Args:
+        options (dict): A dictionary containing the input options.
+        option_descriptions (dict): A dictionary containing the descriptions of the available options.
+
+    Returns:
+        str: The default value for the 'source' option.
+
+    """
+    start_time = options["inp"]["start_time"]
+    time_dhms = time_to_dhms(start_time)
+    flux_level = options["inp"]["solar_flux_level"]
+    if flux_level == "low":
+        f107 = 70
+    elif flux_level == "medium":
+        f107 = 140
+    elif flux_level == "high":
+        f107 = 200
+    if time_dhms[0] >= 1 and time_dhms[0] <81:
+        source_default = find_file(f"decsol_f{f107}*",TIEGCMDATA)
+    elif time_dhms[0] >= 81 and time_dhms[0] <173:
+        source_default = find_file(f'junsol_f{f107}*',TIEGCMDATA)
+    elif time_dhms[0] >= 173 and time_dhms[0] <265:
+        source_default = find_file(f'mareqx_f{f107}*',TIEGCMDATA)
+    elif time_dhms[0] >= 265 and time_dhms[0] <356:
+        source_default = find_file(f'seqex_f{f107}*',TIEGCMDATA)
+    elif time_dhms[0] >= 356:
+        source_default = find_file(f'decsol_f{f107}*',TIEGCMDATA)       
+    return source_default    
 
 def select_resource_defaults(options, option_descriptions):
     """
@@ -1473,7 +1505,11 @@ def prompt_user_for_run_options(args):
                     od["MXHIST_SECH"]["warning"] = (od["MXHIST_SECH"]["warning"] + "\n" if od["MXHIST_SECH"]["warning"]  is not None else "") + segment_warn_0 + "MXHIST_SECH" + segment_warn_1
                     od["OUTPUT"]["warning"] = (od["OUTPUT"]["warning"] + "\n" if od["OUTPUT"]["warning"]  is not None else "") + "Primary Output can be ignored. Will be set on segmentation"
                     od["SECOUT"]["warning"] = (od["SECOUT"]["warning"] + "\n" if od["SECOUT"]["warning"]  is not None else "") + "Secondary Output can be ignored. Will be set on segmentation"
+            elif on == "solar_flux_level" and benchmark == None:
+                o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on == "SOURCE":
+                if benchmark == None:
+                    od["SOURCE"]["default"] = select_source_defaults(options, option_descriptions)    
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] == None:
                     o[on] = get_run_option(on, od[on], "BASIC")
@@ -1533,6 +1569,8 @@ def prompt_user_for_run_options(args):
             elif on == "ONEWAY":
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)            
             elif on == "GPI_NCFILE" and on not in skip_inp:
+                if engage != None:
+                    od["GPI_NCFILE"]["default"] =  find_file('gpi_*', TIEGCMDATA)
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 if o[on] != None:
                     skip_inp_temp = ["KP","POWER","CTPOTEN","F107","F107A"]
@@ -1937,7 +1975,7 @@ def create_pbs_scripts(options, run_name, segment_number):
     if segment_number == None:
         pbs_script = os.path.join(workdir, f"{run_name}.pbs")
     else:
-        pbs_script = os.path.join(workdir, f"{run_name}_{'{:03d}'.format(segment_number+1)}.pbs")
+        pbs_script = os.path.join(workdir, f"{run_name}-{'{:03d}'.format(segment_number+1)}.pbs")
     with open(pbs_script, "w", encoding="utf-8") as f:
         f.write(pbs_content)
     return pbs_script
@@ -1966,7 +2004,7 @@ def create_inp_scripts(options, run_name, segment_number):
     if segment_number == None:
         inp_script = os.path.join(workdir,f"{run_name}.inp")
     else:
-        inp_script = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number+1)}.inp")
+        inp_script = os.path.join(workdir,f"{run_name}-{'{:03d}'.format(segment_number+1)}.inp")
     if not os.path.exists(workdir):
         os.makedirs(workdir)
     with open(inp_script, "w", encoding="utf-8") as f:
@@ -1997,6 +2035,19 @@ def alter_datetime_seconds(datetime_str, seconds):
     
     # Return the new datetime as a string in the same format
     return new_dt.isoformat()
+
+def time_to_dhms(time_str):
+
+    # Convert string to datetime object
+    time = datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
+    
+    # Extract day of year, hour of day, minute of hour, and second of minute
+    day = time.timetuple().tm_yday
+    hour = time.hour
+    minute = time.minute
+    second = time.second
+    
+    return [day, hour, minute, second]
 
 def seconds_to_dhms(seconds):
     # Calculate the number of days
@@ -2130,7 +2181,7 @@ def segment_inp_pbs(options, run_name, pbs):
         pristart_times.append(segment_options["inp"]["PRISTART"])
         if segment_number == 0:
             init_inp = segment_options["model"]["data"]["input_file"]
-        segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}_{'{:03d}'.format(segment_number+1)}.out")
+        segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}-{'{:03d}'.format(segment_number+1)}.out")
         if pbs == True:
             if options["simulation"]["hpc_system"] != "linux":
                 if segment_number != len(segment_times) - 1:
@@ -2158,7 +2209,7 @@ def engage_run(options, debug, coupling, engage):
     options_coupling = copy.deepcopy(options)
     #For standalone
     pbs=True
-    options_standalone["simulation"]["job_name"] = "tiegcm_standalone_"+engage["job_name"]
+    options_standalone["simulation"]["job_name"] = f'{engage["job_name"]}-tiegcm-standalone'
     options_standalone["inp"]["stop_time"] = engage["coupled_start_time"]
     options_standalone["inp"]["PRIHIST"] = '1 0 0 0'
     options_standalone["inp"]["MXHIST_PRIM"] = 1
@@ -2182,7 +2233,7 @@ def engage_run(options, debug, coupling, engage):
     options_coupling["inp"]["STEP"] = STEP
     options_coupling["inp"]["SOURCE"] = standalone_inp_files[-1]
     options_coupling["inp"]["SOURCE_START"] = pristart_times[-1]
-    options_coupling["simulation"]["job_name"] = "tiegcm_"+engage["job_name"]
+    options_coupling["simulation"]["job_name"] = f'{engage["job_name"]}-tiegcm'
     options_coupling["inp"]["start_time"] = engage["coupled_start_time"]
     options_coupling["inp"]["PRIHIST"] = " ".join(str(i) for i in engage["segment"])
     options_coupling["inp"]["MXHIST_PRIM"] = 1
