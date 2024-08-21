@@ -1632,6 +1632,8 @@ def prompt_user_for_run_options(args):
         od = option_descriptions["job"]["_common"]
         od["account_name"]["default"] = os.getlogin()
         for on in od:
+            if engage != None:
+                    od['account_name']['default'] = engage['account_name']
             o[on] = get_run_option(on, od[on], mode, skip_parameters)
 
         # HPC platform-specific options
@@ -1639,6 +1641,10 @@ def prompt_user_for_run_options(args):
         od = option_descriptions["job"][hpc_platform]
         if hpc_platform == "derecho":
             o["mpi_command"] = "mpirun"
+            if engage != None:
+                    od['queue']['default'] = engage['queue']
+                    od['job_priority']['default'] = engage['job_priority']
+                    od['walltime']['default'] = engage['walltime']
         elif hpc_platform == "pleiades":
             o["mpi_command"] = "mpiexec_mpt"
         for on in od:
@@ -1677,6 +1683,10 @@ def prompt_user_for_run_options(args):
                 o[on] = get_run_option(on, od[on], mode, skip_parameters)
                 if o[on] != None:
                     skip_pbs.append("modules")
+            elif on == "modules" and on not in skip_pbs:
+                if engage != None:
+                    od[on]["default"] = engage["modules"]
+                o[on] = get_run_option(on, od[on], mode, skip_parameters)
             elif on not in skip_pbs:
                 o[on] = get_run_option(on, od[on], mode, skip_parameters)
 
@@ -2100,12 +2110,21 @@ def engage_parser(engage_parameters):
     segment = seconds_to_dhms(segment_duration)
     horires_standalone, horires_coupled = gamres_to_res(o['gamera_grid_type'])
     
+    o = engage_parameters["pbs"]
+    account_name = o['account_name']
+    queue = o['queue']
+    job_priority = o['job_priority']
+    walltime = o['walltime']
+    modules = o['modules']
+
     o = engage_parameters["coupling"]
     gamera_spin_up_time = int(o['gamera_spin_up_time'])
     gcm_spin_up_time = int(o['gcm_spin_up_time'])
     
     start_date = alter_datetime_seconds(coupled_start_date,gamera_spin_up_time+gcm_spin_up_time)
-    vultron_dtOut = int(float(o['dtOut']))
+    
+    o = engage_parameters["vultron"]
+    vultron_dtOut = int(float(o['output']['dtOut']))
     hist = seconds_to_dhms(vultron_dtOut)
 
     root_directory= os.path.abspath(os.curdir)
@@ -2123,8 +2142,14 @@ def engage_parser(engage_parameters):
     eo["voltron_dtOut"] = vultron_dtOut
     eo['parentdir'] = root_directory
 
-    eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH']
+    eo['account_name'] = account_name
+    eo['queue'] = queue
+    eo['job_priority'] = job_priority
+    eo['walltime'] = walltime
+    eo['modules'] = modules
 
+
+    eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','queue','job_priority','walltime']
     
     return engage_options
 
@@ -2187,6 +2212,7 @@ def segment_inp_pbs(options, run_name, pbs):
                 if segment_number != len(segment_times) - 1:
                     next_pbs = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number+1)}.pbs")
                     segment_options["job"]["job_chain"] = [f"qsub {next_pbs}"]
+                    segment_options["job"]["job_chain"] = [None]
                 else:
                     segment_options["job"]["job_chain"] = [None]
                 
@@ -2220,6 +2246,12 @@ def engage_run(options, debug, coupling, engage):
     if not os.path.exists(options_standalone["model"]["data"]["workdir"]):
         os.makedirs(options_standalone["model"]["data"]["workdir"])
     options_standalone["model"]["data"]["histdir"] = os.path.join(engage["parentdir"],"tiegcm_standalone")
+    
+    in_prim = options_standalone["inp"]["SOURCE"]
+    out_prim = f'{options_standalone["model"]["data"]["workdir"]}/{options_standalone["simulation"]["job_name"]}_prim.nc'
+    options["inp"]["SOURCE"] = out_prim
+    interpic (in_prim,float(options_standalone['model']['specification']['horires']),float(options_standalone['model']['specification']['vertres']),float(options_standalone['model']['specification']['zitop']),out_prim)
+    
     standalone_inp_files,standalone_pbs_files, standalone_log_files,pristart_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs)
     #For coupled
     pbs=False
@@ -2249,7 +2281,7 @@ def engage_run(options, debug, coupling, engage):
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = json.load(f)
     
-    return standalone_pbs_files,select_coupling,ncpus_coupling,mpiprocs_coupling,nprocs_coupling,coupling_modelexe,coupling_inp_files,coupling_log_files
+    return options_coupling,standalone_pbs_files,coupling_inp_files
 
 def tiegcmrun(args=None):
     # Set up the command-line parser.
@@ -2340,23 +2372,19 @@ def tiegcmrun(args=None):
     if args.onlycompile == True:
         compile_tiegcm(options, debug, coupling)
     elif args.engage != None:
+        """
         if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
-                if args.benchmark == None:
-                    in_prim = options["inp"]["SOURCE"]
-                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                    options["inp"]["SOURCE"] = out_prim
-                    interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
-                else:
-                    in_prim = options["inp"]["SOURCE"]
-                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                    options["inp"]["SOURCE"] = out_prim
-                    interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+            in_prim = options["inp"]["SOURCE"]
+            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+            options["inp"]["SOURCE"] = out_prim
+            interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
         else:
             out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
             options["inp"]["SOURCE"] = out_prim
             print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
-        standalone_pbs_files,select_coupling,ncpus_coupling,mpiprocs_coupling,nprocs_coupling,coupling_modelexe,coupling_inp_files,coupling_log_files = engage_run(options, debug, coupling, args.engage)
-        return (standalone_pbs_files,select_coupling,ncpus_coupling,mpiprocs_coupling,nprocs_coupling,coupling_modelexe,coupling_inp_files,coupling_log_files)
+        """
+        options_coupling,standalone_pbs_files,coupling_inp_files = engage_run(options, debug, coupling, args.engage)
+        return (options_coupling,standalone_pbs_files,coupling_inp_files)
     else:
         if options["model"]["specification"]["segmentation"] == False:
             if options["model"]["data"]["input_file"] == None or not os.path.isfile(options["model"]["data"]["input_file"]):
