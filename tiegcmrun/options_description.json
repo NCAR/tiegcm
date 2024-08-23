@@ -818,7 +818,7 @@
         "MIXFILE": {
             "LEVEL": "EXPERT",
             "prompt": "Data File for Remix",
-            "default": "msphere.mix.h5",
+            "default": null,
             "valids": null,
             "description": "The location of remix data file.",
             "warning": null

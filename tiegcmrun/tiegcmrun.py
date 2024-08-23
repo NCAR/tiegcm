@@ -1985,7 +1985,7 @@ def create_pbs_scripts(options, run_name, segment_number):
     if segment_number == None:
         pbs_script = os.path.join(workdir, f"{run_name}.pbs")
     else:
-        pbs_script = os.path.join(workdir, f"{run_name}-{'{:03d}'.format(segment_number+1)}.pbs")
+        pbs_script = os.path.join(workdir, f"{run_name}-{'{:02d}'.format(segment_number+1)}.pbs")
     with open(pbs_script, "w", encoding="utf-8") as f:
         f.write(pbs_content)
     return pbs_script
@@ -2014,7 +2014,7 @@ def create_inp_scripts(options, run_name, segment_number):
     if segment_number == None:
         inp_script = os.path.join(workdir,f"{run_name}.inp")
     else:
-        inp_script = os.path.join(workdir,f"{run_name}-{'{:03d}'.format(segment_number+1)}.inp")
+        inp_script = os.path.join(workdir,f"{run_name}-{'{:02d}'.format(segment_number+1)}.inp")
     if not os.path.exists(workdir):
         os.makedirs(workdir)
     with open(inp_script, "w", encoding="utf-8") as f:
@@ -2123,9 +2123,9 @@ def engage_parser(engage_parameters):
     
     start_date = alter_datetime_seconds(coupled_start_date,gamera_spin_up_time+gcm_spin_up_time)
     
-    o = engage_parameters["vultron"]
-    vultron_dtOut = int(float(o['output']['dtOut']))
-    hist = seconds_to_dhms(vultron_dtOut)
+    o = engage_parameters["voltron"]
+    voltron_dtOut = int(float(o['output']['dtOut']))
+    hist = seconds_to_dhms(voltron_dtOut)
 
     root_directory= os.path.abspath(os.curdir)
     eo = engage_options = {}
@@ -2139,7 +2139,7 @@ def engage_parser(engage_parameters):
     eo['segment_seconds'] = segment_duration
     eo['horires'] = horires_standalone
     eo['horires_coupled'] = horires_coupled
-    eo["voltron_dtOut"] = vultron_dtOut
+    eo["voltron_dtOut"] = voltron_dtOut
     eo['parentdir'] = root_directory
 
     eo['account_name'] = account_name
@@ -2170,13 +2170,14 @@ def segment_inp_pbs(options, run_name, pbs):
     pbs_files = []
     log_files = []
     pristart_times = []
+    pristop_times = []
     with open(os.path.join(workdir,f'{run_name}.json'), "w", encoding="utf-8") as f:
         json.dump(options, f, indent=JSON_INDENT)
     for segment_number, segment in enumerate(segment_times):
         segment_options = copy.deepcopy(og_options)
         segment_start = segment[0]
         segment_stop = segment[1]
-        segment_options["simulation"]["job_name"] =  job_name+"{:03d}".format(segment_number)
+        segment_options["simulation"]["job_name"] =  job_name+"-{:02d}".format(segment_number)
         if segment_number == 0:
             segment_options["inp"]["SOURCE"] = og_options["inp"]["SOURCE"]
             segment_options["inp"]["SOURCE_START"] = og_options["inp"]["SOURCE_START"]
@@ -2204,13 +2205,14 @@ def segment_inp_pbs(options, run_name, pbs):
         segment_options["inp"]["SECOUT"] = segment_SECOUT
         segment_options["model"]["data"]["input_file"] = create_inp_scripts(segment_options,run_name,segment_number)
         pristart_times.append(segment_options["inp"]["PRISTART"])
+        pristop_times.append(segment_options["inp"]["PRISTOP"])
         if segment_number == 0:
             init_inp = segment_options["model"]["data"]["input_file"]
         segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}-{'{:03d}'.format(segment_number+1)}.out")
         if pbs == True:
             if options["simulation"]["hpc_system"] != "linux":
                 if segment_number != len(segment_times) - 1:
-                    next_pbs = os.path.join(workdir,f"{run_name}_{'{:03d}'.format(segment_number+1)}.pbs")
+                    next_pbs = os.path.join(workdir,f"{run_name}-{'{:02d}'.format(segment_number+1)}.pbs")
                     segment_options["job"]["job_chain"] = [f"qsub {next_pbs}"]
                     segment_options["job"]["job_chain"] = [None]
                 else:
@@ -2226,7 +2228,7 @@ def segment_inp_pbs(options, run_name, pbs):
         inp_files.append(segment_options["model"]["data"]["input_file"])
         pbs_files.append(pbs_script)
         log_files.append(segment_options["model"]["data"]["log_file"])
-    return inp_files, pbs_files,log_files, pristart_times
+    return inp_files, pbs_files,log_files, pristart_times, pristop_times
 
 def engage_run(options, debug, coupling, engage):
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
@@ -2252,7 +2254,7 @@ def engage_run(options, debug, coupling, engage):
     options["inp"]["SOURCE"] = out_prim
     interpic (in_prim,float(options_standalone['model']['specification']['horires']),float(options_standalone['model']['specification']['vertres']),float(options_standalone['model']['specification']['zitop']),out_prim)
     
-    standalone_inp_files,standalone_pbs_files, standalone_log_files,pristart_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs)
+    standalone_inp_files,standalone_pbs_files, standalone_log_files,pristart_times, pristop_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs)
     #For coupled
     pbs=False
     options_coupling["model"]["data"]["modelexe"] = options_coupling["model"]["data"]["coupled_modelexe"]
@@ -2264,14 +2266,14 @@ def engage_run(options, debug, coupling, engage):
     options_coupling["model"]["specification"]["nres_grid"] = nres_grid
     options_coupling["inp"]["STEP"] = STEP
     options_coupling["inp"]["SOURCE"] = standalone_inp_files[-1]
-    options_coupling["inp"]["SOURCE_START"] = pristart_times[-1]
-    options_coupling["simulation"]["job_name"] = f'{engage["job_name"]}-tiegcm'
+    options_coupling["inp"]["SOURCE_START"] = pristop_times[-1]
+    options_coupling["simulation"]["job_name"] = f'{engage["job_name"]}'
     options_coupling["inp"]["start_time"] = engage["coupled_start_time"]
     options_coupling["inp"]["PRIHIST"] = " ".join(str(i) for i in engage["segment"])
     options_coupling["inp"]["MXHIST_PRIM"] = 1
     options_coupling["inp"]["SECHIST"] = " ".join(str(i) for i in seconds_to_dhms(engage["voltron_dtOut"]))
     options_coupling["inp"]["MXHIST_SECH"] = int(engage["segment_seconds"]/engage["voltron_dtOut"])
-    coupling_inp_files,coupling_pbs_files, coupling_log_files, pristart_times = segment_inp_pbs(options_coupling, options_coupling["simulation"]["job_name"],pbs)
+    coupling_inp_files,coupling_pbs_files, coupling_log_files, pristart_times, pristop_times = segment_inp_pbs(options_coupling, options_coupling["simulation"]["job_name"],pbs)
     select_coupling,ncpus_coupling,mpiprocs_coupling=select_resource_defaults(options_coupling,option_descriptions)
     options_coupling["job"]["resource"]["select"] = select_coupling
     options_coupling["job"]["resource"]["ncpus"] = ncpus_coupling
