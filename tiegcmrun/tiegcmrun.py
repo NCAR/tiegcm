@@ -1693,7 +1693,7 @@ def prompt_user_for_run_options(args):
     # Return the options dictionary.
     return options
 
-def resolution_solver(horires):
+def resolution_solver(horires, engage_options=None):
     if float(horires) == 5:
         vertres = 0.5
         mres = 2
@@ -1717,6 +1717,10 @@ def resolution_solver(horires):
         nres_grid = 6
     elif mres == 0.5:
         nres_grid = 7
+    
+    if engage_options != None:
+        STEP = engage_options["STEP"]
+    
     return vertres, mres, nres_grid, STEP
 
 
@@ -2118,14 +2122,17 @@ def engage_parser(engage_parameters):
     modules = o['modules']
 
     o = engage_parameters["coupling"]
+    
     gamera_spin_up_time = int(o['gamera_spin_up_time'])
     gcm_spin_up_time = int(o['gcm_spin_up_time'])
+    conda_env = o['conda_env']
     
     start_date = alter_datetime_seconds(coupled_start_date,gamera_spin_up_time+gcm_spin_up_time)
     
     o = engage_parameters["voltron"]
     voltron_dtOut = int(float(o['output']['dtOut']))
     hist = seconds_to_dhms(voltron_dtOut)
+    STEP = int(float(o['coupling']['dtCouple']))
 
     root_directory= os.path.abspath(os.curdir)
     eo = engage_options = {}
@@ -2139,6 +2146,7 @@ def engage_parser(engage_parameters):
     eo['segment_seconds'] = segment_duration
     eo['horires'] = horires_standalone
     eo['horires_coupled'] = horires_coupled
+    eo['STEP'] = STEP
     eo["voltron_dtOut"] = voltron_dtOut
     eo['parentdir'] = root_directory
 
@@ -2147,14 +2155,14 @@ def engage_parser(engage_parameters):
     eo['job_priority'] = job_priority
     eo['walltime'] = walltime
     eo['modules'] = modules
-
+    eo['conda_env'] = conda_env
 
     eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','queue','job_priority','walltime']
     
     return engage_options
 
 
-def segment_inp_pbs(options, run_name, pbs):
+def segment_inp_pbs(options, run_name, pbs, engage_options=None):
     segment_times = segment_time(options["inp"]["start_time"], options["inp"]["stop_time"], [int(i) for i in options["inp"]["segment"].split()])
     pri_files = 0
     sec_files = 0
@@ -2173,6 +2181,7 @@ def segment_inp_pbs(options, run_name, pbs):
     pristop_times = []
     with open(os.path.join(workdir,f'{run_name}.json'), "w", encoding="utf-8") as f:
         json.dump(options, f, indent=JSON_INDENT)
+    last_segment_time = len(segment_times) - 1 
     for segment_number, segment in enumerate(segment_times):
         segment_options = copy.deepcopy(og_options)
         segment_start = segment[0]
@@ -2211,13 +2220,27 @@ def segment_inp_pbs(options, run_name, pbs):
         segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}-{'{:03d}'.format(segment_number+1)}.out")
         if pbs == True:
             if options["simulation"]["hpc_system"] != "linux":
+                '''
                 if segment_number != len(segment_times) - 1:
                     next_pbs = os.path.join(workdir,f"{run_name}-{'{:02d}'.format(segment_number+1)}.pbs")
                     segment_options["job"]["job_chain"] = [f"qsub {next_pbs}"]
                     segment_options["job"]["job_chain"] = [None]
                 else:
                     segment_options["job"]["job_chain"] = [None]
-                
+                '''
+                if segment_number == last_segment_time and engage_options != None:
+                    interpolation_script = os.path.join(segment_options["model"]["data"]["workdir"],f'interpolation.py')
+                    with open(interpolation_script, "w", encoding="utf-8") as f:
+                        f.write("import sys\n")
+                        f.write(f"sys.path.append('{TIEGCMHOME}/tiegcmrun')\n")
+                        f.write("import tiegcmrun\n")
+                        f.write("print(f'tiegcmrum from {tiegcmrun.__file__}')\n")
+                        vertres_coupled, mres_coupled, nres_grid_coupled, STEP_coupled = resolution_solver(engage_options["horires_coupled"],engage_options)
+                        SOURCE_coupling = os.path.join(os.path.dirname(segment_options["model"]["data"]["workdir"]),f'{engage_options["job_name"]}_prim.nc')
+                        input_standalone = segment_options["inp"]["SECOUT"].strip("'")
+                        f.write(f"tiegcmrun.interpic('{input_standalone}',{float(engage_options['horires_coupled'])},{float(vertres_coupled)},{float(segment_options['model']['specification']['zitop'])},'{SOURCE_coupling}')\n")
+                        interpolation_pbs = [f'conda activate {engage_options["conda_env"]}',f'python {interpolation_script}']
+                    segment_options["job"]["job_chain"] = interpolation_pbs
                 pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
                 if segment_number == 0:
                     init_pbs = pbs_script
@@ -2253,19 +2276,19 @@ def engage_run(options, debug, coupling, engage):
     out_prim = f'{options_standalone["model"]["data"]["workdir"]}/{options_standalone["simulation"]["job_name"]}_prim.nc'
     options["inp"]["SOURCE"] = out_prim
     interpic (in_prim,float(options_standalone['model']['specification']['horires']),float(options_standalone['model']['specification']['vertres']),float(options_standalone['model']['specification']['zitop']),out_prim)
-    
-    standalone_inp_files,standalone_pbs_files, standalone_log_files,pristart_times, pristop_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs)
+    standalone_inp_files,standalone_pbs_files, standalone_log_files,pristart_times, pristop_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs, engage)
     #For coupled
     pbs=False
     options_coupling["model"]["data"]["modelexe"] = options_coupling["model"]["data"]["coupled_modelexe"]
     coupling_modelexe=options_coupling["model"]["data"]["coupled_modelexe"]
     options_coupling["model"]["specification"]["horires"] = float(engage["horires_coupled"])
-    vertres, mres, nres_grid, STEP = resolution_solver(engage["horires_coupled"])
+    vertres, mres, nres_grid, STEP = resolution_solver(engage["horires_coupled"],engage)
     options_coupling["model"]["specification"]["vertres"] = vertres
     options_coupling["model"]["specification"]["mres"] = mres
     options_coupling["model"]["specification"]["nres_grid"] = nres_grid
     options_coupling["inp"]["STEP"] = STEP
-    options_coupling["inp"]["SOURCE"] = standalone_inp_files[-1]
+    SOURCE_coupling = os.path.join(options_coupling["model"]["data"]["workdir"],f'{engage["job_name"]}_prim.nc')
+    options_coupling["inp"]["SOURCE"] = SOURCE_coupling #standalone_inp_files[-1]
     options_coupling["inp"]["SOURCE_START"] = pristop_times[-1]
     options_coupling["simulation"]["job_name"] = f'{engage["job_name"]}'
     options_coupling["inp"]["start_time"] = engage["coupled_start_time"]
