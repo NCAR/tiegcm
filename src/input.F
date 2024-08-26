@@ -70,7 +70,13 @@
      |  f107a,           ! 10.7 cm average (81-day) solar flux
      |  colfac,          ! collision factor
      |  joulefac,        ! joule heating factor (see sub qjoule_tn (qjoule.F))
-     |  opdiffcap        ! Maximum O+ diffusion (see sub rrk in oplus.F)
+     |  opdiffcap,       ! Maximum O+ diffusion (see sub rrk in oplus.F)
+     |  opdiffrate,      ! vertical decaying rate of O+ diffusion cap
+     |  opdifflev,       ! transition altitude of O+ diffusion cap
+     |  opfloor,         ! minimum O+
+     |  oprate,          ! vertical decaying rate of O+ floor
+     |  oplev,           ! transition altitude of O+ floor
+     |  oplatwidth       ! latitude band to apply O+ floor
 !
 ! Input parameters that can be either constant or time-dependent:
       real ::
@@ -193,12 +199,13 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,electron_heating,
+     |  bgrddata_ncfile,ctmt_ncfile,electron_heating,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,enforce_n2,et,saps,
      |  subaur_data,doEclipse,eclipse_list,oneway,mixfile,
      |  nudge_ncpre,nudge_ncfile,nudge_ncpost,nudge_flds,
      |  nudge_lbc,nudge_f4d,nudge_use_refdate,nudge_refdate,
-     |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha
+     |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha,
+     |  opdiffcap,opdiffrate,opdifflev,opfloor,oprate,oplev,oplatwidth
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -305,13 +312,20 @@
       colfac  = spval
       joulefac= spval
       calc_helium = ispval
-      opdiffcap = spval
       electron_heating = ispval
       enforce_n2 = .false.
       et = .false.
       saps = .false.
       doEclipse = .false.
       oneway = .false.
+
+      opdiffcap = spval
+      opdiffrate = spval
+      opdifflev = spval
+      opfloor = spval
+      oprate = spval
+      oplev = spval
+      oplatwidth = spval
 
       f107    = spval
       f107a   = spval
@@ -614,6 +628,51 @@
       else
         write(6,"('Input: O+ diffusion maximum (opdiffcap)=',es12.4)")
      |    opdiffcap
+      endif
+      if (opdiffrate==spval) then
+        opdiffrate = 0. ! default is off
+        write(6,"('Input: default diffusion decaying rate (opdiffrate)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ diffusion decaying rate (opdiffrate)='
+     |    ,es12.4)") opdiffrate
+      endif
+      if (opdifflev==spval) then
+        write(6,"('Input: default diffusion capping level (opdifflev)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ diffusion capping level (opdifflev)='
+     |    ,es12.4)") opdifflev
+      endif
+!
+! O+ floor:
+      if (opfloor==spval) then
+        opfloor = 0. ! default is off
+        write(6,"('Input: default O+ minimum (opfloor) is',
+     |    ' turned off by default.')")
+      else
+        write(6,"('Input: O+ minimum (opfloor)=',es12.4)") opfloor
+      endif
+      if (oprate==spval) then
+        oprate = 0. ! default is off
+        write(6,"('Input: default O+ decaying rate (oprate)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ decaying rate (oprate)=',es12.4)") oprate
+      endif
+      if (oplev==spval) then
+        write(6,"('Input: default O+ flooring level (oplev)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ flooring level (oplev)=',es12.4)") oplev
+      endif
+      if (oplatwidth==spval) then
+        oplatwidth = 0. ! default is off
+        write(6,"('Input: default O+ flooring latitude band',
+     |    ' (oplatwidth) is turned off by default.')")
+      else
+        write(6,"('Input: O+ flooring latitude band (oplatwidth)=',
+     |    es12.4)") oplatwidth
       endif
 
       if (electron_heating == ispval) electron_heating = 6
