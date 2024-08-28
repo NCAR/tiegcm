@@ -150,6 +150,7 @@ def interp3d(variable, inlev, inlat, inlon, outlev, outlat, outlon, extrap):
     Returns:
         ndarray: The interpolated variable with shape (noutlev, noutlat, noutlon).
     """
+    
     ninlev = len(inlev)
     noutlev = len(outlev)
     noutlat = len(outlat)
@@ -210,6 +211,7 @@ def interpic(fin, hres, vres, zitop, fout):
     Returns:
     None
     """
+    print(f"Interpolating primary file {fin} to create new primary file {fout} at horizontal resolution {hres} and vertical resolution {vres} with zitop {zitop}.")
     # Some additional attributes for 4D fields
     lower_cap = 1e-12
     fill_top = ['TN', 'UN', 'VN', 'OP', 'TI', 'TE', 'N2D', 'O2P', 'TN_NM', 'UN_NM', 'VN_NM', 'OP_NM']
@@ -1160,9 +1162,9 @@ def select_source_defaults(options, option_descriptions):
     if time_dhms[0] >= 1 and time_dhms[0] <81:
         source_default = find_file(f"decsol_f{f107}*",TIEGCMDATA)
     elif time_dhms[0] >= 81 and time_dhms[0] <173:
-        source_default = find_file(f'junsol_f{f107}*',TIEGCMDATA)
-    elif time_dhms[0] >= 173 and time_dhms[0] <265:
         source_default = find_file(f'mareqx_f{f107}*',TIEGCMDATA)
+    elif time_dhms[0] >= 173 and time_dhms[0] <265:
+        source_default = find_file(f'junsol_f{f107}*',TIEGCMDATA)
     elif time_dhms[0] >= 265 and time_dhms[0] <356:
         source_default = find_file(f'seqex_f{f107}*',TIEGCMDATA)
     elif time_dhms[0] >= 356:
@@ -2040,12 +2042,16 @@ def find_file(pattern, path):
     return None
 
 
-def alter_datetime_seconds(datetime_str, seconds):
+def get_engage_start_time(datetime_str, seconds):
     # Parse the input datetime string
     dt = datetime.fromisoformat(datetime_str)
     
     # Subtract the seconds using timedelta
     new_dt = dt - timedelta(seconds=seconds)
+    
+    if new_dt.time() != datetime.min.time():
+        # Adjust to the previous midnight
+        new_dt = datetime.combine(new_dt.date(), datetime.min.time())
     
     # Return the new datetime as a string in the same format
     return new_dt.isoformat()
@@ -2127,7 +2133,7 @@ def engage_parser(engage_parameters):
     gcm_spin_up_time = int(o['gcm_spin_up_time'])
     conda_env = o['conda_env']
     
-    start_date = alter_datetime_seconds(coupled_start_date,gamera_spin_up_time+gcm_spin_up_time)
+    start_date = get_engage_start_time(coupled_start_date,gamera_spin_up_time+gcm_spin_up_time)
     
     o = engage_parameters["voltron"]
     voltron_dtOut = int(float(o['output']['dtOut']))
@@ -2186,7 +2192,7 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
         segment_options = copy.deepcopy(og_options)
         segment_start = segment[0]
         segment_stop = segment[1]
-        segment_options["simulation"]["job_name"] =  job_name+"-{:02d}".format(segment_number)
+        segment_options["simulation"]["job_name"] =  job_name+"-{:02d}".format(segment_number +1)
         if segment_number == 0:
             segment_options["inp"]["SOURCE"] = og_options["inp"]["SOURCE"]
             segment_options["inp"]["SOURCE_START"] = og_options["inp"]["SOURCE_START"]
@@ -2235,10 +2241,11 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
                         f.write(f"sys.path.append('{TIEGCMHOME}/tiegcmrun')\n")
                         f.write("import tiegcmrun\n")
                         f.write("print(f'tiegcmrum from {tiegcmrun.__file__}')\n")
-                        vertres_coupled, mres_coupled, nres_grid_coupled, STEP_coupled = resolution_solver(engage_options["horires_coupled"],engage_options)
+                        horires_coupled = engage_options["horires_coupled"]
+                        vertres_coupled, mres_coupled, nres_grid_coupled, STEP_coupled = resolution_solver(horires_coupled,engage_options)
                         SOURCE_coupling = os.path.join(os.path.dirname(segment_options["model"]["data"]["workdir"]),f'{engage_options["job_name"]}_prim.nc')
                         input_standalone = segment_options["inp"]["SECOUT"].strip("'")
-                        f.write(f"tiegcmrun.interpic('{input_standalone}',{float(engage_options['horires_coupled'])},{float(vertres_coupled)},{float(segment_options['model']['specification']['zitop'])},'{SOURCE_coupling}')\n")
+                        f.write(f"tiegcmrun.interpic('{input_standalone}',{float(horires_coupled)},{float(vertres_coupled)},{float(segment_options['model']['specification']['zitop'])},'{SOURCE_coupling}')\n")
                         interpolation_pbs = [f'conda activate {engage_options["conda_env"]}',f'python {interpolation_script}']
                     segment_options["job"]["job_chain"] = interpolation_pbs
                 pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
@@ -2274,8 +2281,10 @@ def engage_run(options, debug, coupling, engage):
     
     in_prim = options_standalone["inp"]["SOURCE"]
     out_prim = f'{options_standalone["model"]["data"]["workdir"]}/{options_standalone["simulation"]["job_name"]}_prim.nc'
-    options["inp"]["SOURCE"] = out_prim
-    interpic (in_prim,float(options_standalone['model']['specification']['horires']),float(options_standalone['model']['specification']['vertres']),float(options_standalone['model']['specification']['zitop']),out_prim)
+    options_standalone["inp"]["SOURCE"] = out_prim
+    horires_standalone= engage["horires"]
+    vertres_standalone, mres_standalone, nres_grid_standalone, STEP_standalone = resolution_solver(horires_standalone,engage)
+    interpic (in_prim,float(horires_standalone),float(vertres_standalone),float(options_standalone['model']['specification']['zitop']),out_prim)    
     standalone_inp_files,standalone_pbs_files, standalone_log_files,pristart_times, pristop_times=segment_inp_pbs(options_standalone, options_standalone["simulation"]["job_name"],pbs, engage)
     #For coupled
     pbs=False
