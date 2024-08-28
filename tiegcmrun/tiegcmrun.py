@@ -1689,6 +1689,10 @@ def prompt_user_for_run_options(args):
                 if engage != None:
                     od[on]["default"] = engage["modules"]
                 o[on] = get_run_option(on, od[on], mode, skip_parameters)
+            elif on == "project_code":
+                if engage != None:
+                    od[on]["default"] = engage["project_code"]
+                o[on] = get_run_option(on, od[on], mode, skip_parameters)
             elif on not in skip_pbs:
                 o[on] = get_run_option(on, od[on], mode, skip_parameters)
 
@@ -2157,13 +2161,14 @@ def engage_parser(engage_parameters):
     eo['parentdir'] = root_directory
 
     eo['account_name'] = account_name
+    eo['project_code'] = account_name
     eo['queue'] = queue
     eo['job_priority'] = job_priority
     eo['walltime'] = walltime
     eo['modules'] = modules
     eo['conda_env'] = conda_env
 
-    eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','queue','job_priority','walltime']
+    eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','walltime']
     
     return engage_options
 
