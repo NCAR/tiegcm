@@ -1192,11 +1192,11 @@ def select_resource_defaults(options, option_descriptions):
         for on in od:
             if on == "select":
                 if float(horires) == 2.5 or float(horires) == 5:
-                    select_default = 1
+                    select_default = 3
                 elif float(horires) == 1.25:
-                    select_default = 1
+                    select_default = 3
                 elif float(horires) == 0.625:
-                    select_default = 2         
+                    select_default = 3         
             if on == "ncpus":
                 if float(horires) == 2.5 or float(horires) == 5:
                     ncpus_default = 128
@@ -1206,11 +1206,11 @@ def select_resource_defaults(options, option_descriptions):
                     ncpus_default = 128
             if on == "mpiprocs":
                 if float(horires) == 2.5 or float(horires) == 5:
-                    mpiprocs_default = 128
+                    mpiprocs_default = 96
                 elif float(horires) == 1.25:
-                    mpiprocs_default = 128
+                    mpiprocs_default = 96
                 elif float(horires) == 0.625:
-                    mpiprocs_default = 256
+                    mpiprocs_default = 96
     elif hpc_platform == "pleiades":
         od=od["resource"]
         o=o["resource"]
@@ -2095,11 +2095,11 @@ def gamres_to_res(gamres):
     if gamres == "D":
         return 2.5 , 2.5
     elif gamres == "Q":
-        return 1.25 , 1.25
+        return 2.5 , 1.25
     elif gamres == "O":
-        return 1.25 , 0.625
+        return 2.5 , 0.625
     elif gamres == "H":
-        return 1.25 ,0.625
+        return 2.5 ,0.625
 
 def engage_parser(engage_parameters):
     """
