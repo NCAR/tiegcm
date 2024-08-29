@@ -32,13 +32,6 @@ cd {{model.data.execdir}}
 {{job.mpi_command}} -np {{job.nprocs}} {{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.log_file}}
 
 
-cd {{model.data.workdir}}
-
-# Make tar file of task log files:
-tar -cf {{model.data.log_file}}.tar *task*.out
-echo "Saved stdout tar file {{model.data.log_file}}.tar"
-rm *task*.out
-
 # Job chaining
 {%- for data in job.job_chain %}
 {%- if data != None %}
