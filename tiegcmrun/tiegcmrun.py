@@ -639,17 +639,17 @@ def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir,
     pri_files_n = pri_files + number_of_files
     if pri_files == 0:
         if number_of_files == 1:
-                OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files+1)}.nc'"
+                OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
         else:
-            PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files)}.nc"
-            PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files_n)}.nc"
+            PRIM_0 = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc"
+            PRIM_N = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files_n)}.nc"
             OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
     else:
         if number_of_files == 1:
-            OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files+1)}.nc'"
+            OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
         else:
-            PRIM_0 = f"{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files)}.nc"
-            PRIM_N = f"{histdir}/{run_name}_prim_{'{:03d}'.format(pri_files_n)}.nc"
+            PRIM_0 = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc"
+            PRIM_N = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files_n)}.nc"
             OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
     return OUTPUT, pri_files_n
 
@@ -692,17 +692,17 @@ def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir,
 
     if sec_files == 0:
         if number_of_files == 1:
-            SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files+1)}.nc'"
+            SECOUT = f"'{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files+1)}.nc'"
         else:
-            SECH_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files+1)}.nc"
-            SECH_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files_n+1)}.nc"
+            SECH_0 = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files+1)}.nc"
+            SECH_N = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files_n+1)}.nc"
             SECOUT = f"'{SECH_0}','to','{SECH_N}','by','1'"
     else:
         if number_of_files == 1:
-            SECOUT = f"'{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files+1)}.nc'"
+            SECOUT = f"'{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files+1)}.nc'"
         else:
-            SECH_0 = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files+1)}.nc"
-            SECH_N = f"{histdir}/{run_name}_sech_{'{:03d}'.format(sec_files_n+1)}.nc"
+            SECH_0 = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files+1)}.nc"
+            SECH_N = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files_n+1)}.nc"
             SECOUT = f"'{SECH_0}','to','{SECH_N}','by','1'"
     return SECOUT, sec_files_n
 
@@ -2209,9 +2209,9 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
             segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
             segment_options["inp"]["OUTPUT"] = segment_OUTPUT
         else:
-            segment_options["inp"]["SOURCE"] = None
-            segment_options["inp"]["SOURCE_START"] = None
             segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
+            segment_options["inp"]["SOURCE"] = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc"
+            segment_options["inp"]["SOURCE_START"] = ' '.join(map(str, segment_PRISTART))
             segment_options["inp"]["START_YEAR"] = segment_START_YEAR
             segment_options["inp"]["START_DAY"] = segment_START_DAY
             segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
@@ -2228,7 +2228,7 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
         pristop_times.append(segment_options["inp"]["PRISTOP"])
         if segment_number == 0:
             init_inp = segment_options["model"]["data"]["input_file"]
-        segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}-{'{:03d}'.format(segment_number+1)}.out")
+        segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}-{'{:02d}'.format(segment_number+1)}.out")
         if pbs == True:
             if options["simulation"]["hpc_system"] != "linux":
                 '''
@@ -2249,7 +2249,7 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
                         horires_coupled = engage_options["horires_coupled"]
                         vertres_coupled, mres_coupled, nres_grid_coupled, STEP_coupled = resolution_solver(horires_coupled,engage_options)
                         SOURCE_coupling = os.path.join(os.path.dirname(segment_options["model"]["data"]["workdir"]),f'{engage_options["job_name"]}_prim.nc')
-                        input_standalone = segment_options["inp"]["SECOUT"].strip("'")
+                        input_standalone = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc"
                         f.write(f"tiegcmrun.interpic('{input_standalone}',{float(horires_coupled)},{float(vertres_coupled)},{float(segment_options['model']['specification']['zitop'])},'{SOURCE_coupling}')\n")
                         interpolation_pbs = [f'conda activate {engage_options["conda_env"]}',f'python {interpolation_script}']
                     segment_options["job"]["job_chain"] = interpolation_pbs
@@ -2310,6 +2310,7 @@ def engage_run(options, debug, coupling, engage):
     options_coupling["inp"]["MXHIST_PRIM"] = 1
     options_coupling["inp"]["SECHIST"] = " ".join(str(i) for i in seconds_to_dhms(engage["voltron_dtOut"]))
     options_coupling["inp"]["MXHIST_SECH"] = int(engage["segment_seconds"]/engage["voltron_dtOut"])
+    options_coupling["inp"]["ONEWAY"] = True
     coupling_inp_files,coupling_pbs_files, coupling_log_files, pristart_times, pristop_times = segment_inp_pbs(options_coupling, options_coupling["simulation"]["job_name"],pbs)
     select_coupling,ncpus_coupling,mpiprocs_coupling=select_resource_defaults(options_coupling,option_descriptions)
     options_coupling["job"]["resource"]["select"] = select_coupling
