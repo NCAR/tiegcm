@@ -2216,8 +2216,28 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
             segment_options["inp"]["START_DAY"] = segment_START_DAY
             segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
             segment_options["inp"]["PRISTOP"] = ' '.join(map(str, segment_PRISTOP))
-            segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
-            segment_options["inp"]["OUTPUT"] = segment_OUTPUT
+            if segment_number == last_segment_time and engage_options != None:
+                segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
+                segment_PRISTOP_day, segment_PRISTOP_hour, segment_PRISTOP_minute, segment_PRISTOP_second = segment_PRISTOP
+                if segment_PRISTOP_second != 0:
+                    segment_PRIHIST = [0, 0, 0, 1]
+                    segment_MXHIST_PRIM = segment_PRISTOP_minute*60 + segment_PRISTOP_hour*60 + segment_PRISTOP_second
+                elif segment_PRISTOP_minute != 0:
+                    segment_PRIHIST = [0, 0, 1, 0]
+                    segment_MXHIST_PRIM = segment_PRISTOP_hour*60 + segment_PRISTOP_minute
+                elif segment_PRISTOP_hour != 0:
+                    segment_PRIHIST = [0, 1, 0, 0]
+                    segment_MXHIST_PRIM = segment_PRISTOP_hour
+                else:
+                    segment_PRIHIST = PRIHIST
+                    segment_MXHIST_PRIM = MXHIST_PRIM
+                segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, segment_PRIHIST, segment_MXHIST_PRIM, pri_files, histdir,run_name)
+                segment_options["inp"]["PRIHIST"] = ' '.join(map(str, segment_PRIHIST))
+                segment_options["inp"]["MXHIST_PRIM"] = segment_MXHIST_PRIM
+                segment_options["inp"]["OUTPUT"] = segment_OUTPUT
+            else:
+                segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
+                segment_options["inp"]["OUTPUT"] = segment_OUTPUT
         segment_SECSTART, segment_SECSTOP = inp_sec_date(segment_start, segment_stop, [int(i) for i in SECHIST.split()])
         segment_options["inp"]["SECSTART"] = ' '.join(map(str, segment_SECSTART))
         segment_options["inp"]["SECSTOP"] = ' '.join(map(str, segment_SECSTOP))
