@@ -2229,7 +2229,7 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
                     segment_PRIHIST = [0, 1, 0, 0]
                     segment_MXHIST_PRIM = segment_PRISTOP_hour
                 else:
-                    segment_PRIHIST = PRIHIST
+                    segment_PRIHIST = [int(i) for i in PRIHIST.split()]
                     segment_MXHIST_PRIM = MXHIST_PRIM
                 segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, segment_PRIHIST, segment_MXHIST_PRIM, pri_files, histdir,run_name)
                 segment_options["inp"]["PRIHIST"] = ' '.join(map(str, segment_PRIHIST))
