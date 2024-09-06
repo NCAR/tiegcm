@@ -2331,7 +2331,6 @@ def engage_run(options, debug, coupling, engage):
     options_coupling["inp"]["MXHIST_PRIM"] = 1
     options_coupling["inp"]["SECHIST"] = " ".join(str(i) for i in seconds_to_dhms(engage["voltron_dtOut"]))
     options_coupling["inp"]["MXHIST_SECH"] = int(engage["segment_seconds"]/engage["voltron_dtOut"])
-    options_coupling["inp"]["ONEWAY"] = True
     options_coupling["inp"]["GSWM_MI_DI_NCFILE"] = find_file(f'*gswm_diurn_{horires_coupling}d_99km*', TIEGCMDATA)
     options_coupling["inp"]["GSWM_MI_SDI_NCFILE"] = find_file(f'*gswm_semi_{horires_coupling}d_99km*', TIEGCMDATA)
     options_coupling["inp"]["GSWM_NM_DI_NCFILE"] = find_file(f'*gswm_nonmig_diurn_{horires_coupling}d_99km*', TIEGCMDATA)
