@@ -1158,8 +1158,8 @@
 !
       if (opdiffcap /= 0. .and. opdiffrate /= 0 .and.
      |    opdifflev /= spval) then ! default is off
-        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)") 
-     |    opdiffcap
+!        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)")
+!     |    opdiffcap
 !       where(ans(:,:) > opdiffcap)
 !         ans(:,:) = opdiffcap
 !       endwhere

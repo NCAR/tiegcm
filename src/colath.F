@@ -35,6 +35,7 @@
         ! starts at 15 degree
         !crit(1) = crit1deg+max(7.5_rp+crit1deg*(-5._rp/30._rp),-5._rp)
         crit(1) = crit1deg + 5._rp
+        !crit(1) = crit1deg
         crit(1) = max(crit(1),15._rp)/rtd
         ! starts at 25 degree
         !crit(2) = crit1deg+max(20._rp+crit1deg*(-10._rp/30._rp),5._rp)
