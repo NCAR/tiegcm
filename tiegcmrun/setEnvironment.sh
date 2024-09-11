@@ -111,14 +111,17 @@ if [ -z "$CONDA_ENV" ]; then
         if [ "$SYSTEM" == "pleiades" ]; then
             export CONDA_PKGS_DIRS=/nobackup/$USER/.conda/pkgs
         fi
-        conda activate "$CONDA_ENVINP"
+        if [ "$SYSTEM" == "pleiades" ]; then
+            source activate "$CONDA_ENVINP"
+        else
+            conda activate "$CONDA_ENVINP"
+        fi
         pip install -r "${REQUIREMENTSTXT}"
     else
         if [ "$SYSTEM" == "pleiades" ]; then
             source activate "$CONDA_ENVINP"
         else
             conda activate "$CONDA_ENVINP"
-
         fi
         pip install -r "${REQUIREMENTSTXT}"
         # INSTALLREQ=FALSE

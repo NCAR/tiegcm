@@ -20,6 +20,9 @@
       real(rp),dimension(lev0:lev1) :: a0,left,right,fa,fb
       real(rp),dimension(order,lev0:lev1) :: a,b
       real(rp),dimension(nlon,lev0:lev1) :: w,wm,fx,avg
+      real(rp),dimension(nlon,lev0:lev1) :: spline_a, spline_b,
+     |    spline_c, spline_d
+      real(rp),dimension(nlon,lev0:lev1) :: poly_a,poly_b,poly_c,poly_d
 
       nchnk = 0
       if (lat <= nlat_filter) then
@@ -93,6 +96,50 @@
             fx((ichnk-1)*n+m,:) = fa*(3._rp*m**2-3._rp*m+1._rp)+
      |  fb*(2._rp*m-1._rp)+left
           enddo
+!
+!            spline_a(ichnk,:) = avg(ichnk,:)
+!            spline_b(ichnk,:) = (avg(ip1,:) - avg(im1,:)) / (2.0_rp * n)
+!            spline_c(ichnk,:) = (avg(im1,:) - 2.0_rp*avg(ichnk,:) + avg
+!     |  (ip1,:)) / (2.0_rp * n**2)
+!            spline_d(ichnk,:) = (avg(ip1,:) - avg(ichnk,:)) / (n**3) -
+!     |  spline_b(ichnk,:) / n
+!
+!            do m = 1,n
+!            fx((ichnk-1)*n + m,:) = spline_a(ichnk,:) +
+!     |                               spline_b(ichnk,:) * m +
+!     |                               spline_c(ichnk,:) * m**2 +
+!     |                               spline_d(ichnk,:) * m**3
+!            enddo
+!
+!        ! Polynomial coefficients
+!        poly_a(ichnk,:) = avg(ichnk,:)
+!        poly_b(ichnk,:) = (avg(ip1,:) - avg(im1,:)) / (2.0_rp * n)
+!        poly_c(ichnk,:) = (avg(im1,:) - 2.0_rp*avg(ichnk,:) + avg(ip1,:)
+!     |     ) / (2.0_rp * n**2)
+!        poly_d(ichnk,:) = (avg(ip1,:) - avg(ichnk,:)) / (n**3) - poly_b(
+!     |     ichnk,:) / n
+!        do m = 1,n
+!            fx((ichnk-1)*n + m,:) = poly_a(ichnk,:) +
+!     &                               poly_b(ichnk,:) * m +
+!     &                               poly_c(ichnk,:) * m**2 +
+!     &                               poly_d(ichnk,:) * m**3
+!        enddo
+!        left = (-avg(im2, :) + 7._rp * avg(im1, :) + 7._rp *
+!     |    avg(ichnk, :) - avg(ip1, :)) / 12._rp
+!        right = (-avg(im1, :) + 7._rp * avg(ichnk, :) + 7._rp *
+!     |    avg(ip1, :) - avg(ip2, :)) / 12._rp
+!        poly_a(ichnk, :) = avg(ichnk, :)
+!        poly_b(ichnk, :) = (right - left) / (2.0_rp * n)
+!        poly_c(ichnk, :) = (left - 2.0_rp * avg(ichnk, :) +
+!     |    right) / (2.0_rp * n**2)
+!        poly_d(ichnk, :) = (avg(ip1, :) - avg(ichnk, :)) /
+!     |    (n**3) - poly_b(ichnk, :) / n
+!        do m = 1, n
+!            fx((ichnk-1)*n + m, :) = poly_a(ichnk, :) +
+!     |           poly_b(ichnk, :) * m +
+!     |           poly_c(ichnk, :) * m**2 +
+!     |           poly_d(ichnk, :) * m**3
+!        enddo
         else
 ! piece-wise linear reconstruction
           do m = 1,n

@@ -29,8 +29,9 @@
 ! There are 4 latitude scans, with 3d mpi calls in between the loops.
 !   (see also 3d gather/scatter calls in sub filter_op).
 !
+      use params_module,only: zpmid,spval  ! for O+ minimum
       use cons_module,only: rmass_op,gask,grav,re,cs,dphi,dlamda,
-     |  shapiro,dtx2inv,rmassinv_o2,rmassinv_o1,
+     |  shapiro,dtx2inv,rtd,rmassinv_o2,rmassinv_o1,
      |  rmassinv_n2,rmassinv_n2d,dtsmooth,dtsmooth_div2
       use qrj_module,only: 
      |  qop2p, ! O+(2p) ionization from qrj, used in xiop2p
@@ -39,8 +40,8 @@
       use chemrates_module,only: ! needed chemical reaction rates
      |  rk1 ,rk2 ,rk10,rk16,rk17,rk18,rk19,rk20,
      |  rk21,rk22,rk23,rk24,rk25,rk26,rk27
-      use input_module,only: nstep_sub
-      use magfield_module,only: dipmag,sndec,csdec
+      use input_module,only: nstep_sub,opfloor,oprate,oplev,oplatwidth
+      use magfield_module,only: dipmag,sndec,csdec,rlatm
       use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
      |  mp_polelats_f3d,mp_geo_halos_f3d,mp_bndlats_f3d
 !
@@ -98,6 +99,18 @@
      |  wd,bdotdh_djbz,op_prod,op_loss_out,dopdt,
      |  diffsum,driftsum,windsum
       real(rp),dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
+!
+! For O+ "smooth floor". The floor is a
+! spatial gaussian based on the O+ minimum (opmin below).
+!
+! 1/21/16 btf: O+ minimum increased from 1000 to 3000.
+! (This alleviates numerical instability that can develop
+!  near the equator at the top of the model in some cases,
+!  e.g., it allows the 2.5-deg June solstice solar max 
+!  benchmark to run with step=30 rather than step=20, and
+!  may improve stability in other cases as well.)
+!
+      real :: opmin
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
@@ -948,6 +961,28 @@
         enddo ! k=lev0,lev1-1      
       enddo ! i=lon0,lon1
 !
+! 12/4/14 btf: Enforce O+ minimum.
+! Opfloor is Stan's "smooth floor" (product of two Gaussians, 
+!   dependent on latitude and pressure level) (opmin=1000.0):
+!
+! 2024/08 Haonan Wu:
+!   Change the altitude distribution of O+ minimum from Gaussian to logistic,
+!   also change the latitude distribution based on magnetic latitudes
+!   instead of geographic latitudes
+!
+      if (opfloor/=0. .and. oprate/=0. .and.
+     |    oplev/=spval .and. oplatwidth/=0.) then
+        do k=lev0,lev1-1
+          do i=lon0,lon1
+            opmin = opfloor*exp(-(rlatm(i,lat)*rtd/oplatwidth)**2)
+     |        /(1+exp(-oprate*(zpmid(k)-oplev)))
+            if (opout(k,i,lat) < opmin) then
+              opout(k,i,lat) = opmin
+            endif ! opout < opmin
+          enddo ! i=lon0,lon1
+        enddo ! k=lev0,lev1-1
+      endif
+!
 ! End fourth and final latitude scan:
       enddo ! lat=lat0,lat1
 !
@@ -957,8 +992,15 @@
       call mp_periodic_f3d(optm1out(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1,1)
 !
+      call mp_polelats_f3d(opout(:,lon0:lon1,:),
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1,(/1./))
       call mp_bndlats_f3d(opout,nlevs,lon0,lon1,lat0,lat1,1)
       call mp_bndlons_f3d(opout,nlevs,lon0,lon1,lat0,lat1,1,0)
+!
+      call mp_polelats_f3d(optm1out(:,lon0:lon1,:),
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1,(/1./))
+      call mp_bndlats_f3d(optm1out,nlevs,lon0,lon1,lat0,lat1,1)
+      call mp_bndlons_f3d(optm1out,nlevs,lon0,lon1,lat0,lat1,1,0)
 !
 ! Save outputs on secondary history for diagnostics:
 !     do lat=lat0,lat1
@@ -1067,10 +1109,10 @@
 !
 ! Returns ambipolar diffusion coefficient in ans and vni.
 !
-      use params_module,only: zpint
+      use params_module,only: zpmid,spval
       use cons_module,only: rmassinv_o2,rmassinv_o1,rmassinv_n2,
      |  rmassinv_he
-      use input_module,only: colfac,opdiffcap,zpslope,zptrans
+      use input_module,only: colfac,opdiffcap,opdiffrate,opdifflev
       use init_module,only: istep
 !
 ! Args:
@@ -1081,7 +1123,7 @@
 !
 ! Local:
       integer :: k,i
-      real :: opdiffcap_k
+      real :: opdiffmax
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -1107,18 +1149,25 @@
 ! may succeed with opdiffcap turned off, but the July, 2000 
 ! "Bastille day storm" will succeed only with step=10 and opdiffcap=6.e8.
 !
-      if (opdiffcap /= 0._rp) then ! default is off
-        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)") 
-     |    opdiffcap
+! 2024/08 Haonan Wu:
+!   Change the altitude distribution of maximum O+ diffusion flux
+!   from Gaussian to logistic based on input parameters
+!   this may help stabilize the model in some storm cases
+!   which needs a steeper cap during the main phase
+!   but also needs a smoother cap during the recovery phase
+!
+      if (opdiffcap /= 0. .and. opdiffrate /= 0 .and.
+     |    opdifflev /= spval) then ! default is off
+!        if (istep==1) write(6,"('oplus rrk: opdiffcap = ',es12.4)")
+!     |    opdiffcap
 !       where(ans(:,:) > opdiffcap)
 !         ans(:,:) = opdiffcap
 !       endwhere
         do k=lev0,lev1-1
-! use to be 1+2**(zpint(k)-6)
-          opdiffcap_k = opdiffcap/(1._rp
-     |       +exp(zpslope*(zpint(k)-zptrans)))
+          opdiffmax = opdiffcap/
+     |      (1+exp(opdiffrate*(zpmid(k)-opdifflev)))
           do i=lon0,lon1
-            if (ans(k,i) > opdiffcap_k) ans(k,i) = opdiffcap_k
+            if (ans(k,i) > opdiffmax) ans(k,i) = opdiffmax
           enddo
         enddo
       endif
