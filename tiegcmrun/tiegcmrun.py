@@ -1731,7 +1731,7 @@ def resolution_solver(horires, engage_options=None):
 
 
 
-def compile_tiegcm(options, debug, coupling):
+def compile_tiegcm(options, debug, coupling = False):
     """
     Compiles the TIEGCM model with the given options.
 
@@ -1770,6 +1770,8 @@ def compile_tiegcm(options, debug, coupling):
     else:
         modelexe = os.path.basename(o["model"]["data"]["modelexe"])
         model = o["model"]["data"]["modelexe"]
+    debug = debug
+    
     try:
         os.makedirs(workdir)
     except:
@@ -1804,7 +1806,7 @@ def compile_tiegcm(options, debug, coupling):
     srcdir = os.path.abspath(srcdir)  
 
     if tgcmdata == "None":
-        tgcmdata = os.environ['TGCMDATA']
+        tgcmdata = os.environ['TIEGCMDATA']
         print(f"Set tgcmdata = {tgcmdata}")
 
     if not os.path.isdir(tgcmdata):
@@ -1837,16 +1839,9 @@ def compile_tiegcm(options, debug, coupling):
     # Copy Makefile if it does not exist in execdir
     if not os.path.isfile(os.path.join(execdir, 'Makefile')):
         shutil.copy(os.path.join(utildir, 'Makefile'), execdir)
-
     # Copy mkdepends if it does not exist in execdir
     if not os.path.isfile(os.path.join(execdir, 'mkdepends')):
         shutil.copy(os.path.join(utildir, 'mkdepends'), execdir)
-
-    """
-    if not os.path.isfile(input):
-        print(f">>> Cannot find namelist input file {input} <<<")
-        sys.exit(1)
-    """
     
     if input == '' or output == '':
         input = os.path.abspath(input)
@@ -1861,7 +1856,6 @@ def compile_tiegcm(options, debug, coupling):
     if os.path.isfile(coupling_file_path):
         with open(coupling_file_path, 'r') as file:
             lastcoupling = file.read().strip().lower() == 'true'
-
         # Compare coupling values
         if lastcoupling != coupling:
             print(f"Clean execdir {execdir} because coupling flag switched from {lastcoupling} to {coupling}")
@@ -2097,9 +2091,9 @@ def gamres_to_res(gamres):
     elif gamres == "Q":
         return 2.5 , 1.25
     elif gamres == "O":
-        return 2.5 , 0.625
+        return 1.25 , 0.625
     elif gamres == "H":
-        return 2.5 ,0.625
+        return 1.25 ,0.625
 
 def engage_parser(engage_parameters):
     """
