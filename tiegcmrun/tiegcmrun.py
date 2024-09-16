@@ -517,7 +517,7 @@ def valid_hist(start_time, stop_time):
     
     return valid_divisions
 
-def inp_mxhist(start_time, stop_time, x_hist, mxhist_warn):
+def inp_mxhist(start_time, stop_time, x_hist, mxhist_warn, segment = None):
     """
     Calculate the MXHIST value based on the given start and stop times, and x_hist values.
 
@@ -551,18 +551,23 @@ def inp_mxhist(start_time, stop_time, x_hist, mxhist_warn):
     
     mxhist_day = seconds_in_day / step_seconds
     mxhist_hour = seconds_in_hour / step_seconds
-    mxhist_min = seconds_in_min / step_seconds
-    if mxhist_day >= 1:
-        mxhist_warn = (mxhist_warn + "\n" if mxhist_warn is not None else "") + f"For a Daily output set MXHIST to {int(mxhist_day)}"
-    if mxhist_hour >= 1:
-        mxhist_warn = mxhist_warn +  f"\nFor a Hourly output set MXHIST to {int(mxhist_hour)}"
-    if mxhist_min >= 1:
-        mxhist_warn = mxhist_warn + f"\nFor a Minutely output set MXHIST to {int(mxhist_min)}"
-    MXHIST = mxhist_day
+    mxhist_min = seconds_in_min / step_seconds    
+    if segment == None:
+        if mxhist_day >= 1:
+            mxhist_warn = (mxhist_warn + "\n" if mxhist_warn is not None else "") + f"For a Daily output set MXHIST to {int(mxhist_day)}"
+        if mxhist_hour >= 1:
+            mxhist_warn = mxhist_warn +  f"\nFor a Hourly output set MXHIST to {int(mxhist_hour)}"
+        if mxhist_min >= 1:
+            mxhist_warn = mxhist_warn + f"\nFor a Minutely output set MXHIST to {int(mxhist_min)}"
+        MXHIST = mxhist_day
+    else:
+        segment_seconds = (segment[0] * 86400) + (segment[1] * 3600) + (segment[2] * 60) + segment[3]
+        MXHIST = segment_seconds/step_seconds
+        mxhist_warn = f"MXHIST minimum = 1, maximum = {int(MXHIST)} for segment run."
     return(int(MXHIST), mxhist_warn)
 
 
-def inp_sechist(SECSTART, SECSTOP):
+def inp_sechist(SECSTART, SECSTOP, segment = None):
     """
     Determines the value of SECHIST based on the given SECSTART and SECSTOP.
 
@@ -581,9 +586,13 @@ def inp_sechist(SECSTART, SECSTOP):
         SECHIST = [1, 0, 0, 0]
     else:
         SECHIST = [0, 1, 0, 0]
+    
+    if segment != None:
+        SECHIST = [1 if x != 0 else 0 for x in segment]
+
     return SECHIST
 
-def inp_prihist(PRISTART, PRISTOP):
+def inp_prihist(PRISTART, PRISTOP, segment = None):
     """
     Calculate the PRIHIST list based on the PRISTART and PRISTOP values.
 
@@ -601,6 +610,9 @@ def inp_prihist(PRISTART, PRISTOP):
         PRIHIST = [1, 0, 0, 0]
     else:
         PRIHIST = [0, 1, 0, 0]
+
+    if segment != None:
+        PRIHIST = [1 if x != 0 else 0 for x in segment]
     return PRIHIST
 
 def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir, run_name):
@@ -688,23 +700,21 @@ def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir,
 
     # Calculate the total number of files, rounding up
     number_of_files = ceil(total_seconds / data_per_file_seconds)
-    sec_files_n = sec_files + number_of_files
+    sec_files_start = sec_files + 1  # Start numbering from next file
+    sec_files_end = sec_files_start + number_of_files  # End numbering based on number of files
 
-    if sec_files == 0:
-        if number_of_files == 1:
-            SECOUT = f"'{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files+1)}.nc'"
-        else:
-            SECH_0 = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files+1)}.nc"
-            SECH_N = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files_n+1)}.nc"
-            SECOUT = f"'{SECH_0}','to','{SECH_N}','by','1'"
+    if number_of_files == 1:
+        # If only one file is being generated
+        SECOUT = f"'{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files_start)}.nc'"
+        sec_files_end = sec_files_start
     else:
-        if number_of_files == 1:
-            SECOUT = f"'{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files+1)}.nc'"
-        else:
-            SECH_0 = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files+1)}.nc"
-            SECH_N = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files_n+1)}.nc"
-            SECOUT = f"'{SECH_0}','to','{SECH_N}','by','1'"
-    return SECOUT, sec_files_n
+        # If multiple files are being generated
+        SECH_0 = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files_start)}.nc"
+        SECH_N = f"{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files_end)}.nc"
+        SECOUT = f"'{SECH_0}','to','{SECH_N}','by','1'"
+
+    # Return the new sec_files value for subsequent calls
+    return SECOUT, sec_files_end
 
 def inp_sec_date(start_time, stop_time, SECHIST):
     """
@@ -1435,7 +1445,7 @@ def prompt_user_for_run_options(args):
             for on in od:
                 if on in oben:
                     if on == "SOURCE":
-                        od[on]["default"] = find_file('*tiegcm*'+options['simulation']['job_name']+'*.nc', TIEGCMDATA)
+                        od[on]["default"] = find_file(options['simulation']['job_name']+'.nc', TIEGCMDATA)
                     elif on in ["OUTPUT", "SECOUT"]:
                         temp_output = oben[on]
                         try:
@@ -1459,6 +1469,7 @@ def prompt_user_for_run_options(args):
             od["SECFLDS"]["warning"] = "Limit SECFLDS. File libraries on pleiades are built without big file support."
         temp_mode = mode
         skip_inp = []
+        segment = None
         start_stop_set = 0
         for on in od:
             if start_stop_set == 0 and benchmark == None:
@@ -1524,11 +1535,11 @@ def prompt_user_for_run_options(args):
                 od["SOURCE_START"]["default"] = od["SOURCE_START"]["valids"][0]
                 o[on] = get_run_option(on, od[on], temp_mode_1)
             elif on == "PRIHIST" and benchmark== None:
-                PRIHIST = inp_prihist(PRISTART,PRISTOP)
+                PRIHIST = inp_prihist(PRISTART,PRISTOP, segment)
                 od["PRIHIST"]["default"] =  PRIHIST
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 PRIHIST = [int(i) for i in o[on].split()]
-                MXHIST_PRIM_set ,MXHIST_PRIM_warning_set  = inp_mxhist(o["start_time"], o["stop_time"], PRIHIST, od["MXHIST_PRIM"]["warning"])
+                MXHIST_PRIM_set ,MXHIST_PRIM_warning_set  = inp_mxhist(o["start_time"], o["stop_time"], PRIHIST, od["MXHIST_PRIM"]["warning"], segment)
                 od["MXHIST_PRIM"]["default"] = MXHIST_PRIM_set
                 od["MXHIST_PRIM"]["warning"] = MXHIST_PRIM_warning_set
             elif on == "MXHIST_PRIM" and benchmark== None:
@@ -1539,11 +1550,11 @@ def prompt_user_for_run_options(args):
                 od["OUTPUT"]["default"] = OUTPUT
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
             elif on == "SECHIST" and benchmark== None:
-                SECHIST = inp_sechist(PRISTART,PRISTOP)
+                SECHIST = inp_sechist(PRISTART,PRISTOP, segment)
                 od["SECHIST"]["default"] =  SECHIST
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters)
                 SECHIST = [int(i) for i in o[on].split()]
-                MXHIST_SECH_set ,MXHIST_SECH_warning_set  = inp_mxhist(o["start_time"], o["stop_time"], SECHIST, od["MXHIST_SECH"]["warning"])
+                MXHIST_SECH_set ,MXHIST_SECH_warning_set  = inp_mxhist(o["start_time"], o["stop_time"], SECHIST, od["MXHIST_SECH"]["warning"],segment)
                 od["MXHIST_SECH"]["default"] = MXHIST_SECH_set
                 od["MXHIST_SECH"]["warning"] = MXHIST_SECH_warning_set
                 SECSTART, SECSTOP = inp_sec_date(o["secondary_start_time"], o["secondary_stop_time"], SECHIST)
@@ -2245,14 +2256,6 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
         segment_options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"],f"{run_name}-{'{:02d}'.format(segment_number+1)}.out")
         if pbs == True:
             if options["simulation"]["hpc_system"] != "linux":
-                '''
-                if segment_number != len(segment_times) - 1:
-                    next_pbs = os.path.join(workdir,f"{run_name}-{'{:02d}'.format(segment_number+1)}.pbs")
-                    segment_options["job"]["job_chain"] = [f"qsub {next_pbs}"]
-                    segment_options["job"]["job_chain"] = [None]
-                else:
-                    segment_options["job"]["job_chain"] = [None]
-                '''
                 if segment_number == last_segment_time and engage_options != None:
                     interpolation_script = os.path.join(segment_options["model"]["data"]["workdir"],f'interpolation.py')
                     with open(interpolation_script, "w", encoding="utf-8") as f:
@@ -2370,6 +2373,7 @@ def tiegcmrun(args=None):
         compile_flag = True
     elif compile == False and onlycompile == False:
         compile_flag = False
+    submit_all_jobs_script = ''
     print("\n")
     print("Instructions:")
     print(f"-> Default Selected input parameter is given in {GREEN}GREEN{RESET}")
@@ -2417,47 +2421,34 @@ def tiegcmrun(args=None):
     except:
         print(f"{execdir} exitsts")
     # Save the options dictionary as a JSON file in the current directory.
-    path = f"{workdir}/{run_name}.json"
+    json_path = f"{workdir}/{run_name}.json"
     
     tiegcmdata = options["model"]["data"]["tgcmdata"]
     horires = options["model"]["specification"]["horires"]
     vertres = options["model"]["specification"]["vertres"]
     zitop = options["model"]["specification"]["zitop"]
+    
     if options.get("inp") == None:
         input_file_generatred = True
     else:
         input_file_generatred = False
+    print(input_file_generatred)
     if args.onlycompile == True:
         compile_tiegcm(options, debug, coupling)
     elif args.engage != None:
-        """
-        if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
-            in_prim = options["inp"]["SOURCE"]
-            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-            options["inp"]["SOURCE"] = out_prim
-            interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
-        else:
-            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-            options["inp"]["SOURCE"] = out_prim
-            print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
-        """
         options_coupling,standalone_pbs_files,coupling_inp_files = engage_run(options, debug, coupling, args.engage)
         return (options_coupling,standalone_pbs_files,coupling_inp_files)
     else:
+        if args.compile == True:
+            compile_tiegcm(options, debug, coupling)
         if options["model"]["specification"]["segmentation"] == False:
             if options["model"]["data"]["input_file"] == None or not os.path.isfile(options["model"]["data"]["input_file"]):
                 if input_file_generatred == False:
                     if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
-                        if args.benchmark == None:
-                            in_prim = options["inp"]["SOURCE"]
-                            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                            options["inp"]["SOURCE"] = out_prim
-                            interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
-                        else:
-                            in_prim = options["inp"]["SOURCE"]
-                            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                            options["inp"]["SOURCE"] = out_prim
-                            interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+                        in_prim = options["inp"]["SOURCE"]
+                        out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                        options["inp"]["SOURCE"] = out_prim
+                        interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
                     else:
                         out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
                         options["inp"]["SOURCE"] = out_prim
@@ -2466,76 +2457,80 @@ def tiegcmrun(args=None):
             if options["model"]["data"]["log_file"] == None:
                 options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"], f"{run_name}.out")
 
-            if os.path.exists(path):
+            if os.path.exists(json_path):
                 if not clobber:
-                    raise FileExistsError(f"Options file {path} exists!")
-            with open(path, "w", encoding="utf-8") as f:
+                    raise FileExistsError(f"Options file {json_path} exists!")
+            with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(options, f, indent=JSON_INDENT)
 
-            if args.compile == True:
-                compile_tiegcm(options, debug, coupling)
-            
             if options["simulation"]["hpc_system"] != "linux":
                 pbs_script = create_pbs_scripts(options,run_name,None)
-            if args.execute == True and options["simulation"]["hpc_system"] != "linux":
-                if args.compile == False:
-                    if find_file(options["model"]["data"]["modelexe"], execdir) == None and os.path.exists(options["model"]["data"]["modelexe"]) == False :
-                        print(f'{RED}Unable to find executable in {execdir}{RESET}')
-                        exit(1)
-                try:
-                    result = subprocess.run(['qsub', pbs_script], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    job_id = result.stdout.strip()
-                    print(f'Job submitted successfully. Job ID: {job_id}')
-                except subprocess.CalledProcessError as e:
-                    print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
-                    print(f"{YELLOW}Check PBS script for erros{RESET}")
-                    print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
-            elif options["simulation"]["hpc_system"] != "linux":
-                print(f"{YELLOW}Execute is set to false{RESET}")
-                print(f"{YELLOW}To submit job use command{RESET} qsub {pbs_script}")
-            else:
-                print(f"{YELLOW}HPC System is set to linux{RESET}")
-                print(f"{YELLOW}To run the model use command{RESET} mpirun {options['model']['data']['modelexe']} {options['model']['data']['input_file']}")
         else:
             if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
-                if args.benchmark == None:
-                    in_prim = options["inp"]["SOURCE"]
-                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                    options["inp"]["SOURCE"] = out_prim
-                    interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
-                else:
-                    in_prim = options["inp"]["SOURCE"]
-                    out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
-                    options["inp"]["SOURCE"] = out_prim
-                    interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+                in_prim = options["inp"]["SOURCE"]
+                out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+                options["inp"]["SOURCE"] = out_prim
+                interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
             else:
                 out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
                 options["inp"]["SOURCE"] = out_prim
                 print(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc exists')
-            inp_files, pbs_files, pristart_times = segment_inp_pbs(options, run_name, pbs=True)
+            inp_files, pbs_files,log_files, pristart_times, pristop_times = segment_inp_pbs(options, run_name, pbs=True)
             init_inp = inp_files[0]    
             init_pbs = pbs_files[0]
             options["model"]["data"]["input_file"] = init_inp
-            if args.compile == True:
-                compile_tiegcm(options, debug, coupling)
 
-            if args.execute == True:
-                if args.compile == False:
-                    if find_file(options["model"]["data"]["modelexe"], execdir) == None:
-                        print(f'{RED}Unable to find executable in {execdir}{RESET}')
-                        exit(1)
-                try:
-                    result = subprocess.run(['qsub', init_pbs], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    job_id = result.stdout.strip()
-                    print(f'Job submitted successfully. Job ID: {job_id}')
-                except subprocess.CalledProcessError as e:
-                    print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
-                    print(f"{YELLOW}Check PBS script for erros{RESET}")
-                    print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
+            # Create a single script which will submit all of the PBS jobs in order.
+            os.chdir(workdir)
+            submit_all_jobs_script = (f"{options['simulation']['job_name']}_pbs.sh")
+            with open(submit_all_jobs_script, "w", encoding="utf-8") as f:
+                cmd = f"#!/bin/bash\n"
+                f.write(cmd)
+                cmd = f"# TIEGCM Jobs\n"
+                f.write(cmd)
+                tiegcm_pbs = pbs_files[0]
+                cmd = f"tiegcm_job_id=`qsub {tiegcm_pbs}`\n"
+                f.write(cmd)
+                cmd = "echo $tiegcm_job_id\n"
+                f.write(cmd)
+                for tiegcm_pbs in pbs_files[1:]:
+                    cmd = "old_tiegcm_job_id=$tiegcm_job_id\n"
+                    f.write(cmd)
+                    cmd = f"tiegcm_job_id=`qsub -W depend=afterok:$old_tiegcm_job_id {tiegcm_pbs}`\n"
+                    f.write(cmd)
+                    cmd = "echo $tiegcm_job_id\n"
+                    f.write(cmd)
+            os.chmod(submit_all_jobs_script, 0o755)
+
+    if args.execute == True and options["simulation"]["hpc_system"] != "linux":
+        if args.compile == False:
+            if find_file(options["model"]["data"]["modelexe"], execdir) == None and os.path.exists(options["model"]["data"]["modelexe"]) == False :
+                print(f'{RED}Unable to find executable in {execdir}{RESET}')
+                exit(1)
+        try:
+            if submit_all_jobs_script == '':
+                result = subprocess.run(['qsub', pbs_script], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                job_id = result.stdout.strip()
+                print(f'Job submitted successfully. Job ID: {job_id}')
             else:
-                print(f"{YELLOW}Execute is set to false{RESET}")
-                print(f"{YELLOW}To submit job use command{RESET} qsub {pbs_script}")
-
+                result = subprocess.run(['./'+submit_all_jobs_script], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                print(f'Jobs submitted successfully')
+        except subprocess.CalledProcessError as e:
+            print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
+            print(f"{YELLOW}Check PBS script for errors{RESET}")
+            if submit_all_jobs_script == '':
+                print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
+            else:
+                print(f"To submit job use command {YELLOW} ./{submit_all_jobs_script}{RESET}")
+    elif options["simulation"]["hpc_system"] != "linux":
+        print(f"{YELLOW}Execute is set to false{RESET}")
+        if submit_all_jobs_script == '':
+                print(f"To submit job use command {YELLOW}qsub {pbs_script}{RESET}")
+        else:
+            print(f"To submit job use command {YELLOW} ./{submit_all_jobs_script}{RESET}")
+    else:
+        print(f"{YELLOW}HPC System is set to linux{RESET}")
+        print(f"{YELLOW}To run the model use command{RESET} mpirun {options['model']['data']['modelexe']} {options['model']['data']['input_file']}")
 if __name__ == "__main__":
     """Begin tiegcmrun program."""
     tiegcmrun()
