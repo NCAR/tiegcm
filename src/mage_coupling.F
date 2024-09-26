@@ -384,7 +384,7 @@
       ! Prepare the export data
       hidra_prep = .false.
       nreq = 0
-      if (mytid == 0) write(*,*) "T Starting Export Prep"
+      !if (mytid == 0) write(*,*) "T Starting Export Prep"
       do i=1,CplCommSize
             ! Skip Self
             if (i == CplRank+1) continue

@@ -13,7 +13,7 @@
       use cons_module,only: pi,rtd,evergs,
      |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,dipmin,avo,
      |  rmass_o1,rmassinv_n4s,rmassinv_no
-      use input_module,only: f107,et,electron_heating
+      use input_module,only: f107,et,electron_heating, ti_cap, te_cap
       use chapman_module,only: chi   ! solar zenith angle (nlonp4,nlat)
       use magfield_module,only: rlatm,dipmag
       use fields_module,only: tlbc
@@ -128,8 +128,6 @@
      |  chi_ki,      ! for diagnostic plotting of chi
      |  qteaur_ki,   ! for diagnostic plotting of qteaur
      |  sindipmag_ki ! for diagnostic plotting of sindipmag
-
-      real(rp) :: tlimit = 10000._rp
 !
 #ifdef VT
 !     code = 126 ; state = 'settei' ; activity='ModelCode'
@@ -684,7 +682,7 @@
         do k=lev0,lev1-1
           if (te_out(k,i) < tn(k,i)) te_out(k,i) = tn(k,i)
           ! Apply cap to prevent superstorm from exploding
-          if (te_out(k,i) > tlimit) te_out(k,i) = tlimit
+          if (te_out(k,i) > te_cap) te_out(k,i) = te_cap
 !
 ! 2023/02 Dong Lin: N2 cross section becomes negative
 ! when te>2.82e-17/3.41e-21=8269.7K. With ET enabled,
@@ -713,7 +711,7 @@
 ! ti must be at least as large as tn:
           if (ti_out(k,i) < tn(k,i)) ti_out(k,i) = tn(k,i)
           ! Apply cap to prevent superstorm from exploding
-          if (ti_out(k,i) > tlimit) ti_out(k,i) = tlimit
+          if (ti_out(k,i) > ti_cap) ti_out(k,i) = ti_cap
         enddo
       enddo
 !

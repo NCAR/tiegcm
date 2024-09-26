@@ -314,8 +314,8 @@
       colfac  = spval
       joulefac= spval
       calc_helium = ispval
-      te_cap = spval
-      ti_cap = spval
+      te_cap = 10000._rp
+      ti_cap = 10000._rp
       electron_heating = ispval
       enforce_n2 = .false.
       et = .false.
