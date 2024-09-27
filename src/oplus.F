@@ -259,7 +259,6 @@
      |  ppolar = 0.
       integer :: k,i,lat,lonbeg,lonend,nlevs
       real :: gmr,a,fed,fen,dbxdx,dbydy,tr,djmin,
-     |  o2_cm3,o1_cm3,n2_cm3,he_cm3,n2d_cm3,
      |  ubca, ubcb ! O+ upper boundary condition (were t2,t3)
       real,dimension(lev0:lev1) :: bdotu1
       real,dimension(lon0:lon1,lat0:lat1) ::
@@ -275,7 +274,8 @@
      |  hdzi,bdotdh_djbz,
      |  djint_tphdz0,djint_tphdz1,
      |  djint_tphdz0_1,djint_tphdz1_1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) :: djbz
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
+     |  o2_cm3,o1_cm3,he_cm3,n2_cm3,n2d_cm3,djbz
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,2) :: tmpf3d
 !
 ! Number of pressure levels (this will equal nlevp1):
@@ -356,6 +356,18 @@
       do lat=lat0-2,lat1+2
         do i=lon0-2,lon1+2
           do k=lev0,lev1-1
+            o2_cm3(k,i,lat) = xnmbar(k,i,lat)*o2(k,i,lat)*rmassinv_o2
+            o1_cm3(k,i,lat) = xnmbar(k,i,lat)*o1(k,i,lat)*rmassinv_o1
+            he_cm3(k,i,lat) = xnmbar(k,i,lat)*he(k,i,lat)*rmassinv_he
+            n2_cm3(k,i,lat) = xnmbar(k,i,lat)*n2(k,i,lat)*rmassinv_n2
+            n2d_cm3(k,i,lat) = xnmbar(k,i,lat)*n2d(k,i,lat)*rmassinv_n2d
+          enddo
+        enddo
+      enddo
+!
+      do lat=lat0-2,lat1+2
+        do i=lon0-2,lon1+2
+          do k=lev0,lev1-1
 !
 ! Set reduced temperature (average of tn and ti)
 !
@@ -368,15 +380,12 @@
 !   as a consequence of fixing this bug.
 !
             tr = 0.5*(tn(k,i,lat)+ti(k,i,lat))
-            o2_cm3 = xnmbar(k,i,lat)*o2(k,i,lat)*rmassinv_o2
-            o1_cm3 = xnmbar(k,i,lat)*o1(k,i,lat)*rmassinv_o1
-            he_cm3 = xnmbar(k,i,lat)*he(k,i,lat)*rmassinv_he
-            n2_cm3 = xnmbar(k,i,lat)*n2(k,i,lat)*rmassinv_n2
 !
 ! 8/28/13 btf: Use n2=1-o2-o-he, and include O+/He collision rate from Wenbin:
 !
-            dj(k,i,lat) = 1.42E17/(18.1*o2_cm3+3.6*he_cm3+18.6*n2_cm3+
-     |        o1_cm3*sqrt(tr)*(1.-0.064*log10(tr))**2*colfac)
+            dj(k,i,lat) = 1.42E17/(18.1*o2_cm3(k,i,lat)+
+     |        3.6*he_cm3(k,i,lat)+18.6*n2_cm3(k,i,lat)+
+     |        o1_cm3(k,i,lat)*sqrt(tr)*(1.-0.064*log10(tr))**2*colfac)
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0-2,lon1+2
       enddo ! lat=lat0-2,lat1+2
@@ -712,24 +721,20 @@
       do lat=lat0,lat1
         do i=lon0,lon1
           do k=lev0,lev1-1
-            o2_cm3 = xnmbar(k,i,lat)*o2(k,i,lat)*rmassinv_o2
-            o1_cm3 = xnmbar(k,i,lat)*o1(k,i,lat)*rmassinv_o1
-            n2_cm3 = xnmbar(k,i,lat)*n2(k,i,lat)*rmassinv_n2
-            n2d_cm3 = xnmbar(k,i,lat)*n2d(k,i,lat)*rmassinv_n2d
-!
             xiop2p(k,i,lat) =
      |        0.5*(qop2p(k,i,lat)+qop2p(k+1,i,lat))/
-     |        ((rk16+rk17)*n2_cm3+rk18*o1_cm3+
+     |        ((rk16+rk17)*n2_cm3(k,i,lat)+rk18*o1_cm3(k,i,lat)+
      |        (rk19(k,i,lat)+rk20(k,i,lat))*ne(k,i,lat)+rk21+rk22)
 !
             xiop2d(k,i,lat) =
      |        (0.5*(qop2d(k,i,lat)+qop2d(k+1,i,lat))+
      |        (rk20(k,i,lat)*ne(k,i,lat)+rk22)*xiop2p(k,i,lat))/
-     |        (rk23*n2_cm3+rk24*o1_cm3+rk26*o2_cm3+
+     |        (rk23*n2_cm3(k,i,lat)+rk24*o1_cm3(k,i,lat)+
+     |        rk26*o2_cm3(k,i,lat)+
      |        rk25(k,i,lat)*ne(k,i,lat)+rk27)
 !
-            op_loss(k,i,lat) =
-     |        rk1(k,i,lat)*o2_cm3+rk2(k,i,lat)*n2_cm3+rk10*n2d_cm3
+            op_loss(k,i,lat) = rk1(k,i,lat)*o2_cm3(k,i,lat)+
+     |        rk2(k,i,lat)*n2_cm3(k,i,lat)+rk10*n2d_cm3(k,i,lat)
 !
             q_coeff(k,i,lat) = q_coeff(k,i,lat)-op_loss(k,i,lat)
           enddo ! k=lev0,lev1-1
@@ -764,7 +769,8 @@
      |        0.5*(qop(k,i,lat)+qop(k+1,i,lat))+
      |        (rk19(k,i,lat)*ne(k,i,lat)+rk21)*xiop2p(k,i,lat)+
      |        (rk25(k,i,lat)*ne(k,i,lat)+rk27)*xiop2d(k,i,lat)+
-     |        (rk18*xiop2p(k,i,lat)+rk24*xiop2d(k,i,lat))*o1_cm3
+     |        (rk18*xiop2p(k,i,lat)+rk24*xiop2d(k,i,lat))*
+     |        o1_cm3(k,i,lat)
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
       enddo ! lat=lat0,lat1
