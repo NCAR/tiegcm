@@ -341,7 +341,6 @@
      |  Fe    (levd0,lond0,latd0),
      |  Fn    (levd0,lond0,latd0),
      |  1,nlevp1,lon0,lon1,lat0,lat1)
-!
       if (debug) write(6,"('dynamics after oplus')")
       call timer(time0,time1,'OPLUS',1,0) ! end oplus timing
       if (timing%level >= 2.and.time2print(nstep,istep))

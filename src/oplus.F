@@ -27,10 +27,7 @@
 ! Outputs are opout, optm1out, xiop2p, xiop2d, Fe, and Fn,
 ! all other args are input.
 !
-      use params_module,only: zpmid,spval  ! for O+ minimum
-      use cons_module,only: rtd
-      use input_module,only: nstep_sub,opfloor,oprate,oplev,oplatwidth
-      use magfield_module,only: rlatm
+      use input_module,only: nstep_sub
       use mpi_module,only: mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
       use addfld_module,only: addfld
 !
@@ -71,18 +68,7 @@
      |  p_coeff,q_coeff,r_coeff,optm1_smooth,
      |  op_sub,optm1_sub,opout_sub,optm1out_sub,
      |  diffj,diffexp,vdotn_h,bdotdh_bvel
-!
-! For O+ "smooth floor". The floor is a
-! spatial gaussian based on the O+ minimum (opmin below).
-!
-! 1/21/16 btf: O+ minimum increased from 1000 to 3000.
-! (This alleviates numerical instability that can develop
-!  near the equator at the top of the model in some cases,
-!  e.g., it allows the 2.5-deg June solstice solar max
-!  benchmark to run with step=30 rather than step=20, and
-!  may improve stability in other cases as well.)
-!
-      real :: opmin
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,2) :: tmpf3d
 !
 ! Number of pressure levels (this will equal nlevp1):
       nlevs = lev1-lev0+1 ! for bndlons calls
@@ -113,14 +99,13 @@
      |    op_sub,opout_sub,diffj,diffexp,vdotn_h,bdotdh_bvel,
      |    lev0,lev1,lon0,lon1,lat0,lat1)
 !
-        if (istep == nstep_sub) then
-          call calc_terms(xnmbar,diffj,Fe,Fn,
-     |      opout_sub,optm1_smooth,op_prod,op_loss,
-     |      diffexp,diffp,diffq,diffr,
-     |      vdotn_h,driftp,driftq,driftr,
-     |      bdotdh_bvel,windp,windq,windr,
-     |      lev0,lev1,lon0,lon1,lat0,lat1)
-        endif
+        if (istep == nstep_sub)
+     |    call calc_terms(xnmbar,diffj,Fe,Fn,
+     |    opout_sub,optm1_smooth,op_prod,op_loss,
+     |    diffexp,diffp,diffq,diffr,
+     |    vdotn_h,driftp,driftq,driftr,
+     |    bdotdh_bvel,windp,windq,windr,
+     |    lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Filter updated O+:
 !
@@ -133,37 +118,29 @@
 !    |      'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !       enddo ! lat=lat0,lat1
 !
-! 12/4/14 btf: Enforce O+ minimum.
-! Opfloor is Stan's "smooth floor" (product of two Gaussians,
-!   dependent on latitude and pressure level) (opmin=1000.0):
-!
-! 2024/08 Haonan Wu:
-!   Change the altitude distribution of O+ minimum from Gaussian to logistic,
-!   also change the latitude distribution based on magnetic latitudes
-!   instead of geographic latitudes
-!
-        if (opfloor/=0. .and. oprate/=0. .and.
-     |      oplev/=spval .and. oplatwidth/=0.) then
-          do lat=lat0,lat1
-            do i=lon0,lon1
-              do k=lev0,lev1-1
-                opmin = opfloor*exp(-(rlatm(i,lat)*rtd/oplatwidth)**2)/
-     |            (1+exp(-oprate*(zpmid(k)-oplev)))
-                if (opout_sub(k,i,lat) < opmin) then
-                  opout_sub(k,i,lat) = opmin
-                endif ! opout_sub < opmin
-              enddo ! k=lev0,lev1-1
-            enddo ! i=lon0,lon1
-          enddo ! lat=lat0,lat1
-        endif
-!
-        call mp_polelats_f3d(opout_sub(:,lon0:lon1,:),
-     |    lev0,lev1,lon0,lon1,lat0,lat1,1,(/1./))
-        call mp_bndlats_f3d(opout_sub,nlevs,lon0,lon1,lat0,lat1,1)
-        call mp_bndlons_f3d(opout_sub,nlevs,lon0,lon1,lat0,lat1,1,0)
-!
         call post_oplus(op_sub,optm1_sub,opout_sub,optm1out_sub,
      |    lev0,lev1,lon0,lon1,lat0,lat1)
+!
+        do lat=lat0,lat1
+          do i=lon0,lon1
+            do k=lev0,lev1
+              tmpf3d(k,i,lat,1) = opout_sub(k,i,lat)
+              tmpf3d(k,i,lat,2) = optm1out_sub(k,i,lat)
+            enddo ! k=lev0,lev1
+          enddo ! i=lon0,lon1
+        enddo ! lat=lat0,lat1
+        call mp_polelats_f3d(tmpf3d(:,lon0:lon1,:,:),
+     |    lev0,lev1,lon0,lon1,lat0,lat1,2,(/1.,1./))
+        call mp_bndlats_f3d(tmpf3d,nlevs,lon0,lon1,lat0,lat1,2)
+        call mp_bndlons_f3d(tmpf3d,nlevs,lon0,lon1,lat0,lat1,2,0)
+        do lat=lat0-2,lat1+2
+          do i=lon0-2,lon1+2
+            do k=lev0,lev1
+              opout_sub(k,i,lat) = tmpf3d(k,i,lat,1)
+              optm1out_sub(k,i,lat) = tmpf3d(k,i,lat,2)
+            enddo ! k=lev0,lev1
+          enddo ! i=lon0-2,lon1+2
+        enddo ! lat=lat0-2,lat1+2
 !
         do lat=lat0-2,lat1+2
           do i=lon0-2,lon1+2
@@ -403,8 +380,8 @@
 ! 2024/08 Haonan Wu: Change the original constant O+ diffusion cap
 !   to an altitude-dependent cap (use logistic function for now)
 !
-      if (opdiffcap/=0. .and. opdiffrate/=0. .and. opdifflev/=spval)
-     |  then
+      if (opdiffcap/=0. .and. opdiffrate/=0. .and.
+     |    opdifflev/=spval) then
         do lat=lat0-2,lat1+2
           do i=lon0-2,lon1+2
             do k=lev0,lev1-1
@@ -437,7 +414,7 @@
           do k=lev0,lev1-1
             bdotu(k,i,lat) =
      |        bx(i,lat)*un(k,i,lat)+by(i,lat)*vn(k,i,lat)+
-     |        bz(i,lat)*scht(k,i,lat)*0.5*(w(k,i,lat)+w(k+1,i,lat))
+     |        scht(k,i,lat)*bz(i,lat)*0.5*(w(k,i,lat)+w(k+1,i,lat))
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 !       call addfld('BDOTU' ,' ',' ',bdotu(lev0:lev1-1,lon0:lon1,lat),
@@ -1172,9 +1149,9 @@
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
 
-!     call addfld('OPTM1_SM1' ,' ',' ',
-!    |  optm1_smooth(lev0:lev1-1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('OPTM1_SM1' ,' ',' ',
+!    |    optm1_smooth(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !       call addfld('EXPLIC2' ,' ',' ',explicit(lev0:lev1-1,:,lat),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
       enddo ! lat=lat0,lat1
@@ -1246,7 +1223,10 @@
 ! Post-processing time smoothing.
 ! This is called after filter_op
 !
-      use cons_module,only: dtsmooth,dtsmooth_div2
+      use params_module,only: zpmid,spval  ! for O+ minimum
+      use cons_module,only: rtd,dtsmooth,dtsmooth_div2
+      use input_module,only: opfloor,oprate,oplev,oplatwidth
+      use magfield_module,only: rlatm
 !
 ! Args:
       integer,intent(in) ::
@@ -1273,6 +1253,18 @@
 ! Local:
       integer :: k,i,lat
 !
+! For O+ "smooth floor". The floor is a
+! spatial gaussian based on the O+ minimum (opmin below).
+!
+! 1/21/16 btf: O+ minimum increased from 1000 to 3000.
+! (This alleviates numerical instability that can develop
+!  near the equator at the top of the model in some cases,
+!  e.g., it allows the 2.5-deg June solstice solar max
+!  benchmark to run with step=30 rather than step=20, and
+!  may improve stability in other cases as well.)
+!
+      real :: opmin
+!
 ! Time smoothing:
 !
 ! optm1out(k,i,lat): New O+ at current latitude and time n-1.
@@ -1280,32 +1272,56 @@
 ! optm1(k,i,lat)   : O+ at current latitude and time n-1.
 ! opout(k,i,lat)   : New O+ at current latitude and time.
 !
-      do lat=lat0-2,lat1+2
-        do i=lon0-2,lon1+2
+      do lat=lat0,lat1
+        do i=lon0,lon1
           do k=lev0,lev1-1
             optm1out(k,i,lat) = dtsmooth*op(k,i,lat)+
      |        dtsmooth_div2*(optm1(k,i,lat)+opout(k,i,lat))
           enddo ! k=lev0,lev1-1
-        enddo ! i=lon0-2,lon1+2
-      enddo ! lat=lat0-2,lat1+2
+        enddo ! i=lon0,lon1
+      enddo ! lat=lat0,lat1
 !
 ! Upper boundary:
-      do lat=lat0-2,lat1+2
-        do i=lon0-2,lon1+2
+      do lat=lat0,lat1
+        do i=lon0,lon1
           opout(lev1,i,lat) = 0.
           optm1out(lev1,i,lat) = 0.
-        enddo ! i=lon0-2,lon1+2
-      enddo ! lat=lat0-2,lat1+2
+        enddo ! i=lon0,lon1
+      enddo ! lat=lat0,lat1
 !
 ! Insure global non-negative O+:
-      do lat=lat0-2,lat1+2
-        do i=lon0-2,lon1+2
+      do lat=lat0,lat1
+        do i=lon0,lon1
           do k=lev0,lev1-1
             if (opout(k,i,lat)    < 0.) opout(k,i,lat)    = 0.
             if (optm1out(k,i,lat) < 0.) optm1out(k,i,lat) = 0.
           enddo ! k=lev0,lev1-1
-        enddo ! i=lon0-2,lon1+2
-      enddo ! lat=lat0-2,lat1+2
+        enddo ! i=lon0,lon1
+      enddo ! lat=lat0,lat1
+!
+! 12/4/14 btf: Enforce O+ minimum.
+! Opfloor is Stan's "smooth floor" (product of two Gaussians,
+!   dependent on latitude and pressure level):
+!
+! 2024/08 Haonan Wu:
+!   Change the altitude distribution of O+ minimum from Gaussian to logistic,
+!   also change the latitude distribution based on magnetic latitudes
+!   instead of geographic latitudes
+!
+      if (opfloor/=0. .and. oprate/=0. .and.
+     |    oplev/=spval .and. oplatwidth/=0.) then
+        do lat=lat0,lat1
+          do i=lon0,lon1
+            do k=lev0,lev1-1
+              opmin = opfloor*exp(-(rlatm(i,lat)*rtd/oplatwidth)**2)/
+     |          (1+exp(-oprate*(zpmid(k)-oplev)))
+              if (opout(k,i,lat) < opmin) then
+                opout(k,i,lat) = opmin
+              endif ! opout < opmin
+            enddo ! k=lev0,lev1-1
+          enddo ! i=lon0,lon1
+        enddo ! lat=lat0,lat1
+      endif
 !
 ! Save outputs on secondary history for diagnostics:
 !     do lat=lat0,lat1
