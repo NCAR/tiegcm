@@ -96,7 +96,7 @@
      |  hdzmbz,hdzpbz,    ! were s10,s9
      |  p_coeff,q_coeff,r_coeff, ! coefficients for tridiagonal solver (s1,s2,s3)
      |  tp1,              ! 0.5*(te+ti)
-     |  wd,bdotdh_djbz,op_prod,op_loss_out,dopdt,
+     |  wd,bdotdh_djbz,op_loss_out,dopdt,
      |  diffsum,driftsum,windsum
       real,dimension(lev0:lev1,lon0:lon1,lat0-1:lat1+1) :: hj ! (s10-s12)
 !
@@ -125,6 +125,7 @@
      |  dj,          ! diffusion coefficients (s13,s14,s15)
      |  optm1_smooth,! op at time n-1, with shapiro smoother (was s1)
      |  optm1_smooth2,
+     |  op_prod,
      |  op_loss,     ! was s13
      |  vni,djbz,vdotn_h,bdotdh_bvel,diffexp,
      |  diffp,diffq,diffr,driftp,driftq,driftr,windp,windq,windr
@@ -816,13 +817,13 @@
 ! Add source term to RHS (explicit terms):
       do i=lon0,lon1
         do k=lev0,lev1-1
-          op_prod(k,i) =
+          op_prod(k,i,lat) =
      |      0.5*(qop(k,i,lat)+qop(k+1,i,lat))+(rk19(k,i,lat)*
      |      ne(k,i,lat)+rk21)*
      |      xiop2p(k,i,lat)+(rk25(k,i,lat)*ne(k,i,lat)+rk27)*
      |      xiop2d(k,i,lat)+(rk18*xiop2p(k,i,lat)+rk24*xiop2d(k,i,lat))*
      |      o1(k,i,lat)*rmassinv_o1*xnmbar(k,i,lat)
-          explicit(k,i) = explicit(k,i)-op_prod(k,i)
+          explicit(k,i) = explicit(k,i)-op_prod(k,i,lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 !     call addfld('EXPLIC4',' ',' ',explicit(lev0:lev1-1,:),
@@ -886,7 +887,8 @@
         call addfld('DOPDT','O+ changing rate','cm-3s-1',
      |    dopdt(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
         call addfld('OP_PROD','O+ production','cm-3s-1',
-     |    op_prod(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+     |    op_prod(lev0:lev1-1,lon0:lon1,lat),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
         call addfld('OP_LOSS','O+ loss','cm-3s-1',
      |    -op_loss_out(lev0:lev1-1,:),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
