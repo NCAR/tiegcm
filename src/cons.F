@@ -350,10 +350,16 @@
      |     144,144,144,144,144,144/)
       elseif (nlat==288 .and. nlon==576) then
         default_step = 5.0_rp
-        nlat_filter = 40
+!        nlat_filter = 40
+!        allocate(chunk_array(nlat_filter))
+!        chunk_array = (/3,3,3,3,3,9,9,9,9,9,
+!     |    18,18,18,18,18,18,36,36,36,36,36,36,72,72,72,72,72,72,
+!     |    144,144,144,144,144,144,288,288,288,288,288,288/)
+        nlat_filter = 34
         allocate(chunk_array(nlat_filter))
-        chunk_array = (/3,3,3,3,3,9,9,9,9,9,
-     |    18,18,18,18,18,18,36,36,36,36,36,36,72,72,72,72,72,72,
+        chunk_array = (/3,3,3,9,9,9,
+     |    18,18,18,36,36,36,36,36,
+     |    72,72,72,72,72,72,72,72,
      |    144,144,144,144,144,144,288,288,288,288,288,288/)
       else
         call shutdown('Unknown combination of lat x lon')

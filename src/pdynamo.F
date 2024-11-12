@@ -2998,6 +2998,7 @@
 !-----------------------------------------------------------------------
       subroutine stencils
       use cons_module,only: pi_dyn,dlatm,dlonm
+      use input_module,only: oneway
 !
 ! Locals:
       integer :: i,j,jj,jjj,j0,n,ncc,nmaglon,nmaglat
@@ -3139,8 +3140,11 @@
 !
 ! Convert GAMERA geographic potential to geomagnetic coordinates
 !
-!      call mage_pot2mag
-      call mage_mag2mag
+      if (oneway) then
+        call mage_pot2mag
+      else
+        call mage_mag2mag
+      endif
 c      do jj=1,nmlat
 c       do i=1,nmlonp1
 c        write(6,*)phihm(i,jj),i,jj
