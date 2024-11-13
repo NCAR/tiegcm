@@ -535,6 +535,11 @@
               sh%initial_mtime=ivar1(1)
               if (istat /= NF_NOERR)
      |          call handle_ncerr(istat,'getting att initial_mtime')
+              if ((sh%initial_mtime(1) .eq. 0) .or. 
+     |           (sh%initial_mtime(1) .eq. sh%initial_mtime(2) .and. 
+     |           sh%initial_mtime(2) .eq. sh%initial_mtime(3) )) then
+                sh%initial_mtime = sh%source_mtime
+              endif
             endif
 !
           case('mtime') ! already got it from hist search above

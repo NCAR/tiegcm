@@ -12,7 +12,7 @@
 !
 ! Geographic grid parameters:
       integer,parameter :: rp = REAL64
-      real,parameter ::
+      real(rp),parameter ::
      |  dlat  = DLAT,                ! delta latitude
      |  glat1 = -90._rp+dlat/2._rp,          ! first latitude
      |  dlon  = DLON,                ! delta longitude
@@ -33,8 +33,8 @@
      |  nilevp1 = nilev+1,
      |  nlonp1=nlon+1, nlatp1=nlat+1,
      |  nlonp2=nlon+2, nlatp2=nlat+2
-      real :: glon(nlon),glat(nlat),zpmid(nlevp1),zpint(nlevp1)
-      real,parameter ::
+      real(rp) :: glon(nlon),glat(nlat),zpmid(nlevp1),zpint(nlevp1)
+      real(rp),parameter ::
      |  spval = 1.e36_rp
       integer,parameter ::
      |  ispval = 999
@@ -49,9 +49,9 @@
      |  nmlatp1=nmlat+1,
      |  nmlath=(nmlat+1)/2  ! index to magnetic equator
 
-      real,parameter :: zpbot_dyn  = -8.25_rp ! bottom midpoint boundary of dynamo
-      real,parameter :: zpibot_dyn = -8.5_rp  ! bottom interface boundary of dynamo
-      real,parameter :: dmlev = dlev
+      real(rp),parameter :: zpbot_dyn  = -8.25_rp ! bottom midpoint boundary of dynamo
+      real(rp),parameter :: zpibot_dyn = -8.5_rp  ! bottom interface boundary of dynamo
+      real(rp),parameter :: dmlev = dlev
 !
 ! nmlev_diff = number of levels from zibot down to zpibot_dyn
 ! nmlevp1 = total number of mag levels
@@ -64,12 +64,12 @@
       integer,parameter :: mlev0 = 1 - nmlev_diff
       integer,parameter :: mlev1 = nlevp1
 
-      real :: gmlon(nmlonp1), ! magnetic longitude (deg)
+      real(rp) :: gmlon(nmlonp1), ! magnetic longitude (deg)
      |        gmlat(nmlat),   ! magnetic latitude (deg)
      |        zpmag(nmlevp1),   ! magnetic midpoint levels
      |        zpimag(nimlevp1)  ! magnetic interface levels
 !
-      real,dimension(nlonp4) :: glon0 ! include ghost points (1->nlonp4)
+      real(rp),dimension(nlonp4) :: glon0 ! include ghost points (1->nlonp4)
 !
 ! For modules hist_mod and input_mod:
       character(len=16),parameter :: tgcm_version = 'tiegcm_trunk    '
