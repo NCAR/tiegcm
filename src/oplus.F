@@ -836,7 +836,7 @@
       do i=lon0,lon1
         do k=lev0,lev1-1
           op_prod(k,i,lat) =
-     |      0.5*(qop(k,i,lat)+qop(k+1,i,lat))+(rk19(k,i,lat)*
+     |      0.5_rp*(qop(k,i,lat)+qop(k+1,i,lat))+(rk19(k,i,lat)*
      |      ne(k,i,lat)+rk21)*
      |      xiop2p(k,i,lat)+(rk25(k,i,lat)*ne(k,i,lat)+rk27)*
      |      xiop2d(k,i,lat)+(rk18*xiop2p(k,i,lat)+rk24*xiop2d(k,i,lat))*
