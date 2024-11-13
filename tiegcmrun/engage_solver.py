@@ -66,7 +66,8 @@ def engage_parser(engage_parameters):
     o = engage_parameters["pbs"]
     account_name = o['account_name']
     queue = o['queue']
-    job_priority = o['job_priority']
+    if hpc_system == "derecho":
+        job_priority = o['job_priority']
     walltime = o['walltime']
     modules = o['modules']
 
@@ -102,12 +103,17 @@ def engage_parser(engage_parameters):
     eo['account_name'] = account_name
     eo['project_code'] = account_name
     eo['queue'] = queue
-    eo['job_priority'] = job_priority
+    
     eo['walltime'] = walltime
     eo['modules'] = modules
     eo['conda_env'] = conda_env
-
-    eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','walltime']
+    
+    if hpc_system == "derecho":
+        eo['job_priority'] = job_priority
+    elif hpc_system == 'pleiades':
+        eo["model"] = "bro"
+    
+    eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','model','walltime']
     
     return engage_options
 

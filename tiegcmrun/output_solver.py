@@ -187,7 +187,10 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
                         SOURCE_coupling = os.path.join(os.path.dirname(segment_options["model"]["data"]["workdir"]),f'{engage_options["job_name"]}_prim.nc')
                         input_standalone = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc"
                         f.write(f"interpolation.interpic('{input_standalone}',{float(horires_coupled)},{float(vertres_coupled)},{float(segment_options['model']['specification']['zitop'])},'{SOURCE_coupling}')\n")
-                        interpolation_pbs = [f'conda activate {engage_options["conda_env"]}',f'python {interpolation_script}']
+                        if options["simulation"]["hpc_system"] == "derecho":
+                            interpolation_pbs = [f'conda activate {engage_options["conda_env"]}',f'python {interpolation_script}']
+                        elif options["simulation"]["hpc_system"] == "pleiades":
+                            interpolation_pbs =  [f'source activate {engage_options["conda_env"]}',f'python {interpolation_script}']
                     segment_options["job"]["job_chain"] = interpolation_pbs
                 pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
                 if segment_number == 0:
