@@ -883,6 +883,9 @@ def prompt_user_for_run_options(args):
                     od['walltime']['default'] = engage['walltime']
         elif hpc_platform == "pleiades":
             o["mpi_command"] = "mpiexec_mpt"
+            if engage != None:
+                od['queue']['default'] = engage['queue']
+                od['walltime']['default'] = engage['walltime']
         for on in od:
             if on == "resource":
                 options["job"]["resource"] = {}
