@@ -11,7 +11,8 @@
 #PBS -l {% for key, value in job.resource.items() if key != 'model' %}{{ key }}={{ value }}{% if not loop.last %}:{% endif %}{% endfor %}{% if 'model' in job.resource %}:model={{ job.resource['model'] }}{% endif %},walltime={{job.walltime}}
 
 # Set enviroment variables
-setenv TGCMDATA {{model.data.tgcmdata}}
+setenv TIEGCMDATA {{model.data.tgcmdata}}
+setenv TIEGCMHOME {{model.data.modeldir}}
 {%- for data in job.other_job %}
 {%- if data != None %}
 {{data}}
@@ -30,13 +31,6 @@ module load {{ module }}
 cd {{model.data.execdir}}
 {{job.mpi_command}} -np {{job.nprocs}} {{model.data.modelexe}} {{model.data.input_file}} >&! {{model.data.log_file}}
 
-
-cd {{model.data.workdir}}
-
-# Make tar file of task log files:
-tar -cf {{model.data.log_file}}.tar *task*.out
-echo "Saved stdout tar file {{model.data.log_file}}.tar"
-rm *task*.out
 
 # Job chaining
 {%- for data in job.job_chain %}

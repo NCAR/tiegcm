@@ -270,9 +270,16 @@
             },
             "modelexe": {
                 "LEVEL": "BENCH",
-                "prompt": "Executable:",
+                "prompt": "Standalone Executable",
                 "default": null,
-                "description": "The path of existing or name of the executable.",
+                "description": "The path of existing or name of the standalone executable.",
+                "warning": null
+            },
+            "coupled_modelexe": {
+                "LEVEL": "BENCH",
+                "prompt": "Coupled Executable",
+                "default": null,
+                "description": "The path of existing or name of the coupled executable.",
                 "warning": null
             }
         },
@@ -362,6 +369,14 @@
             "description": null,
             "warning": "secondary_stop_time should not be later than stop_time. Keep default if segmenting runs."
         },
+        "solar_flux_level": {
+            "LEVEL": "BASIC",
+            "prompt": "F107 flux level for TIEGCM spin up",
+            "default": "low",
+            "valids": ["low", "medium", "high"],
+            "description": null,
+            "warning": "Low = 70, Medium = 140 , High = 200"
+        },
         "SOURCE":{
             "LEVEL": "BENCH",
             "prompt": "SOURCE file location",
@@ -378,7 +393,7 @@
         },
         "SOURCE_START":{
             "LEVEL": "BASIC",
-            "prompt": "Selected Date in Source Dile",
+            "prompt": "Selected date in source file",
             "default": null,
             "valids": null,
             "description": "The selected model time (mtime) in the startup file. This option is typically used to specify the desired time stamp when there are multiple time stamps in one source file.",
@@ -516,6 +531,7 @@
             "LEVEL": "BASIC",
             "prompt": "GPI file",
             "default": null,
+            "valids": null,
             "description": "The location of the GPI file containing 3-hourly KP and daily F107, F107A to drive high-latitude convection and the auroral precipitation oval.",
             "warning": "If GPI_NCFILE is specified, then KP and POWER/CTPOTEN are skipped. If further POTENTIAL_MODEL is WEIMER and IMF_NCFILE is specified, then the Weimer model and aurora will be driven by the IMF data, and only F107 and F107A will be read from the GPI data file."
         },
@@ -802,7 +818,7 @@
         "MIXFILE": {
             "LEVEL": "EXPERT",
             "prompt": "Data File for Remix",
-            "default": "msphere.mix.h5",
+            "default": null,
             "valids": null,
             "description": "The location of remix data file.",
             "warning": null
