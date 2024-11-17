@@ -2,7 +2,7 @@
 #ifdef GAMERA
       module mage_oneway
       use input_module,only: mixfile,mxlen_filename
-      use params_module,only: nlat, nlon
+      use params_module,only: nlat, nlon, rp
       use nchist_module,only:handle_ncerr
       use dates
       use netcdf
@@ -26,6 +26,7 @@
       real*8, parameter :: TINY=1.e-8
       real*8,dimension(:,:,:),allocatable :: ting_ped_interp,
      |  ting_hall_interp
+     real(rp),allocatable,dimension(:,:) :: mixaurorabc1d
       integer :: nmixlon,nmixlat
       integer,parameter :: iSMtoGSM=1,iGSMtoSM=-1,
      |  iGEOtoGSM=1,iGSMtoGEO=-1
@@ -223,6 +224,10 @@
       endif
       if (.not.allocated(mixCFluxS)) then
          allocate(mixCFluxS(nmixlat,nmixlon))
+      endif
+
+      if (.not. allocated(mixaurorabc1d)) then
+         allocate(mixaurorabc1d(nmixlon,2))
       endif
 
 ! Initialize MIX variables
@@ -433,7 +438,7 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      subroutine ca_receive(gpot,geng,gflx,gpotm)
+      subroutine ca_receive(gpot,geng,gflx,gpotm,aurllbN,aurllbS)
 !
 ! This is a subroutine to receive auroral data via file exchanges
 ! via HDF5 format from REMIX
@@ -469,6 +474,7 @@
       integer :: idv_lon,idv_pot,idv_flx,idv_eng
       character(len=240) :: char240,gStr
       logical :: fExist = .false.
+      real(rp) :: nfluxllb = 1.0e7_rp
 
       if (cplStep == 1 .and. do_init) then
         call ca_init
@@ -569,6 +575,23 @@
       mixBFluxS = 0.
       mixCEngS  = 0.
       mixCFluxS = 0.
+
+      ! find auroral boundary
+      do j=1,nmixlon
+         do i=1,nmixlat
+            if (mixfluxN(i,j) >= nfluxllb) exit
+         enddo
+         i = min(i,nmixlat)
+         mixaurorabc1d(j,1) = max(90.0_rp-mixlat(i),15._rp) ! aurllbj is co-lat.
+      enddo
+      ! find auroral boundary
+      do j=1,nmixlon
+         do i=1,nmixlat
+            if (mixfluxS(i,j) >= nfluxllb) exit
+         enddo
+         i = min(i,nmixlat)
+         mixaurorabc1d(j,2) = max(90.0_rp-mixlat(i),15._rp) ! aurllbj is co-lat.
+      enddo
 
       endif !firstread
 
@@ -836,6 +859,9 @@
             gpotm(ii+2,jj)=ting_pot_interp(jj,ii)
          enddo
       enddo
+
+      aurllbN = maxval(mixaurorabc1d(:,1))
+      aurllbS = maxval(mixaurorabc1d(:,2))
 
       end subroutine ca_receive
 

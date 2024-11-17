@@ -181,7 +181,7 @@
         enddo
       enddo
       else
-        call ca_receive(gpot,geng,gflx,gpotm)
+        call ca_receive(gpot,geng,gflx,gpotm,aurllbN,aurllbS)
       endif
 #endif
       end subroutine import_mage
@@ -288,12 +288,13 @@
 
       ! real*8,dimension(nlonp1,2) :: aurorabc1d
 
+      if (.not. oneway) then
       aurllbN = 0.0_rp
       aurllbS = 0.0_rp
       aurorabc1d = 0.0_rp
       do j=1,nmlonp1   ! NORTH
         do i=nmlat/2+1,nmlat
-          if(aflxm(j,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
+            if(aflxm(j,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
         enddo
         i = min(i,nmlat)
         aurorabc1d(j,1) = max(90.0_rp-gmlat(i),15._rp) ! aurllbj is co-lat.
@@ -302,7 +303,7 @@
 
       do j=1,nmlonp1   ! SOUTH
         do i=nmlat/2,1,-1
-          if(aflxm(j,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
+            if(aflxm(j,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
         enddo
         i = max(i,1)
         aurorabc1d(j,2) = max(90._rp+gmlat(i),15._rp) ! aurllbj is co-lat from south pole! Backwards.
@@ -311,6 +312,8 @@
         aurllbN = maxval(aurorabc1d(:,1))
         aurllbS = maxval(aurorabc1d(:,2))
         !write(*,*) "TGCMCPL: aurora: ",aurllbN,aurllbS
+
+      endif  ! oneway check
 
 !        ! Let's try a new method
 !        aurorabc1d = 0.0_rp
