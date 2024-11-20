@@ -340,11 +340,11 @@
         chunk_array = (/3,3,9,9,18,18,36,36,72,72/)
       elseif (nlat==144 .and. nlon==288) then
         default_step = 10.0_rp
-        nlat_filter = 15 !21
+        nlat_filter = 21 !21
         allocate(chunk_array(nlat_filter))
 !        chunk_array = (/3,3,3,9,9,9,18,18,18,
 !     |    36,36,36,72,72,72,72,144,144,144,144,144/)
-         chunk_array = (/9,18,18,
+         chunk_array = (/3,3,3,9,9,9,18,18,18,
      |     36,36,36,
      |     72,72,72,
      |     144,144,144,144,144,144/)

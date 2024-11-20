@@ -26,7 +26,7 @@
       real*8, parameter :: TINY=1.e-8
       real*8,dimension(:,:,:),allocatable :: ting_ped_interp,
      |  ting_hall_interp
-     real(rp),allocatable,dimension(:,:) :: mixaurorabc1d
+      real(rp),allocatable,dimension(:,:) :: mixaurorabc1d
       integer :: nmixlon,nmixlat
       integer,parameter :: iSMtoGSM=1,iGSMtoSM=-1,
      |  iGEOtoGSM=1,iGSMtoGEO=-1
@@ -74,7 +74,7 @@
       real*8,allocatable,dimension(:,:) :: gridX,gridY
       integer :: i,j,jp1,nji(2)
       character(len=mxlen_filename) :: filename
-      character(len=240) :: mixfile = "msphere.mix.h5"
+      !character(len=240) :: mixfile = "msphere.mix.h5"
       integer :: npath
       logical isFileOK
 
@@ -447,6 +447,7 @@
       use init_module,only: iyear,iday,secs
       use mpi_module,only: mytid,TIEGCM_WORLD
       use nchist_module,only:handle_ncerr
+      use cons_module,only: rtd
       use geopack
       use mpi
 
@@ -582,7 +583,7 @@
             if (mixfluxN(i,j) >= nfluxllb) exit
          enddo
          i = min(i,nmixlat)
-         mixaurorabc1d(j,1) = max(90.0_rp-mixlat(i),15._rp) ! aurllbj is co-lat.
+         mixaurorabc1d(j,1) = max(90.0_rp-mixlat(j,i)*rtd,15._rp) ! aurllbj is co-lat.
       enddo
       ! find auroral boundary
       do j=1,nmixlon
@@ -590,7 +591,7 @@
             if (mixfluxS(i,j) >= nfluxllb) exit
          enddo
          i = min(i,nmixlat)
-         mixaurorabc1d(j,2) = max(90.0_rp-mixlat(i),15._rp) ! aurllbj is co-lat.
+         mixaurorabc1d(j,2) = max(90.0_rp-mixlat(j,i)*rtd,15._rp) ! aurllbj is co-lat.
       enddo
 
       endif !firstread
@@ -779,7 +780,8 @@
       ting_cuspAvgEng_interp(i,j) = max(dot_product(mapping,FCEng),0.0)
       ting_cuspNumFlux_interp(i,j) =
      |   max(dot_product(mapping,FCFlux),0.0)
-      if (mytid == 0 .and. ting_pot_interp(i,j) .gt. maxval(FPot)) then
+      if (mytid==0.and.
+     |   abs(ting_pot_interp(i,j)).gt.maxval(abs(FPot))*2.0) then
          write(6,*) "TGCM: OOB POTS: ", ting_pot_interp(i,j),i,j,i1,j1
          write(6,*) "TGCM: OOB LOCS: ", tempLon,tempLat,mixLon(j1,i1),
      |    mixLat(j1,i1)
