@@ -37,7 +37,7 @@
      |      evergs*avo*xnmbar(k,i)*(n4s(k,i)*rmassinv_n4s*
      |      (beta1(k,i,lat)*o2(k,i)*rmassinv_o2*1.4+
      |       beta3(k,i,lat)*no(k,i)*rmassinv_no*2.68)+
-     |      n2d(k,i)*rmassinv_n2d*(beta2*o2(k,i)*rmassinv_o2* 
+     |      n2d(k,i)*rmassinv_n2d*(beta2(k,i,lat)*o2(k,i)*rmassinv_o2*
      |      1.84+beta4*o1(k,i)*rmassinv_o1*
      |      2.38+beta5(k,i,lat)*.5*(ne(k,i)+ne(k+1,i))*2.38/
      |      xnmbar(k,i)+beta6*no(k,i)*rmassinv_no*5.63))
