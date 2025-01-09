@@ -205,26 +205,30 @@ def select_resource_defaults(options, option_descriptions):
         od=od["resource"]
         o=o["resource"]
         if o["model"] == "bro":
-            max_ncpus = 24
+            max_ncpus = 28
+            mpiprocs_default = 24
         elif o["model"] == "has":
             max_ncpus = 24
+            mpiprocs_default = 24
         elif o["model"] == "ivy":
-            max_ncpus = 18
+            max_ncpus = 20
+            mpiprocs_default = 18
         elif o["model"] == "san":
-            max_ncpus = 12
+            max_ncpus = 16
+            mpiprocs_default = 12
         for on in od:
             if on == "select":
                 if float(horires) == 2.5 or float(horires) == 5:
-                    select = 72/max_ncpus
+                    select = 72/mpiprocs_default
                 if float(horires) == 1.25:
-                    select = 144/max_ncpus
+                    select = 144/mpiprocs_default
                 if float(horires) == 0.625:
-                    select = 288/max_ncpus
+                    select = 288/mpiprocs_default
                 select_default = int(select)
             if on == "ncpus":
                 ncpus_default = max_ncpus
             if on == "mpiprocs":
-                mpiprocs_default = ncpus_default
+                mpiprocs_default = mpiprocs_default
     return select_default,ncpus_default,mpiprocs_default
 
 def find_file(pattern, path):

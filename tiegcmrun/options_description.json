@@ -687,9 +687,73 @@
             "prompt": "Maximum O+ Ambipolar Diffusion coefficient",
             "default": null,
             "valids": null,
-            "description": "Optional cap on ambipolar diffusion coefficient for O+. This can improve model stability in the topside F-region, but it is only recommended as a last resort since it will change model results. Default is 0, i.e., no cap. If this is non-zero (provided by the user), then it is implemented in subroutine rrk of oplus.F.",
+            "description": "This works with OPDIFFRATE and OPDIFFLEV to determine the altitude dependence of maximum O+ ambipolar diffusive flux. This can improve model stability in the topside F-region, but it is only recommended as a last resort since it will change model results. Default is 0, i.e., no cap. If this is non-zero (provided by the user), then it is implemented in subroutine rrk of oplus.F.",
             "warning": null
-        }, 
+        },
+        "OPDIFFRATE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of maximum O+ ambipolar diffusive flux (rate)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPDIFFCAP and OPDIFFLEV to determine the altitude dependence of maximum O+ ambipolar diffusive flux. This can improve model stability in the topside F-region, but it is only recommended as a last resort since it will change model results.",
+            "warning": null
+        },
+        "OPDIFFLEV":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of maximum O+ ambipolar diffusive flux (level)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPDIFFCAP and OPDIFFLEV to determine the altitude dependence of maximum O+ ambipolar diffusive flux. This can improve model stability in the topside F-region, but it is only recommended as a last resort since it will change model results.",
+            "warning": null
+        },
+        "OPFLOOR":{
+            "LEVEL": "EXPERT",
+            "prompt": "Minimum O+ density",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPRATE, OPLEV and OPLATWIDTH to form a latitudinal Gaussian shaped floor and altitudinal logistic shaped floor. The floor is applied to O+ at low-to-mid latitudes in the F-region in order to keep the model stable when the ionosphere gets very low in density.",
+            "warning": null
+        },
+        "OPRATE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of minimum O+ density (rate)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPFLOOR, OPLEV and OPLATWIDTH to form a latitudinal Gaussian shaped floor and altitudinal logistic shaped floor. The floor is applied to O+ at low-to-mid latitudes in the F-region in order to keep the model stable when the ionosphere gets very low in density.",
+            "warning": null
+        },
+        "OPLEV":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of minimum O+ density (level)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPFLOOR, OPRATE and OPLATWIDTH to form a latitudinal Gaussian shaped floor and altitudinal logistic shaped floor. The floor is applied to O+ at low-to-mid latitudes in the F-region in order to keep the model stable when the ionosphere gets very low in density.",
+            "warning": null
+        },
+        "OPLATWIDTH":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of minimum O+ density (latitude)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPFLOOR, OPRATE and OPLEV to form a latitudinal Gaussian shaped floor and altitudinal logistic shaped floor. The floor is applied to O+ at low-to-mid latitudes in the F-region in order to keep the model stable when the ionosphere gets very low in density.",
+            "warning": null
+        },
+        "TE_CAP":{
+            "LEVEL": "EXPERT",
+            "prompt": "Maximum electron temperature",
+            "default": null,
+            "valids": null,
+            "description": "The maximum electron temperature allowed for the model. Implemented in settei.F.",
+            "warning": null
+        },  
+        "TI_CAP":{
+            "LEVEL": "EXPERT",
+            "prompt": "Maximum ion temperature",
+            "default": null,
+            "valids": null,
+            "description": "The maximum ion temperature allowed for the model. Implemented in settei.F.",
+            "warning": null
+        },
         "CURRENT_PG": {
             "LEVEL": "EXPERT",
             "prompt": "Flag for Pressure Gradient and Gravity Force in Electrodynamo",
