@@ -145,6 +145,15 @@ def engage_run(options, debug, coupling, engage):
     options_standalone["inp"]["SECHIST"] = '0 1 0 0'
     options_standalone["inp"]["MXHIST_SECH"] = 24
     options_standalone["inp"]["segment"] = '1 0 0 0'
+    options_standalone["inp"]["OPDIFFCAP"] = '2e9'
+    options_standalone["inp"]["OPDIFFRATE"] = '0.3'
+    options_standalone["inp"]["OPDIFFLEV"] = '7'
+    options_standalone["inp"]["OPFLOOR"] = '3000'
+    options_standalone["inp"]["OPRATE"] = '0.3'
+    options_standalone["inp"]["OPLEV"] = '7'
+    options_standalone["inp"]["OPLATWIDTH"] = '20'
+    options_standalone["inp"]["TE_CAP"] = '8000'
+    options_standalone["inp"]["TI_CAP"] = '8000'
     options_standalone["model"]["data"]["workdir"] = os.path.join(engage["parentdir"],"tiegcm_standalone")
     if not os.path.exists(options_standalone["model"]["data"]["workdir"]):
         os.makedirs(options_standalone["model"]["data"]["workdir"])
@@ -177,6 +186,15 @@ def engage_run(options, debug, coupling, engage):
     options_coupling["inp"]["MXHIST_PRIM"] = 1
     options_coupling["inp"]["SECHIST"] = " ".join(str(i) for i in seconds_to_dhms(engage["voltron_dtOut"]))
     options_coupling["inp"]["MXHIST_SECH"] = int(engage["segment_seconds"]/engage["voltron_dtOut"])
+    options_coupling["inp"]["OPDIFFCAP"] = '2e9'
+    options_coupling["inp"]["OPDIFFRATE"] = '0.3'
+    options_coupling["inp"]["OPDIFFLEV"] = '7'
+    options_coupling["inp"]["OPFLOOR"] = '3000'
+    options_coupling["inp"]["OPRATE"] = '0.3'
+    options_coupling["inp"]["OPLEV"] = '7'
+    options_coupling["inp"]["OPLATWIDTH"] = '20'
+    options_coupling["inp"]["TE_CAP"] = '8000'
+    options_coupling["inp"]["TI_CAP"] = '8000'
     options_coupling["inp"]["GSWM_MI_DI_NCFILE"] = find_file(f'*gswm_diurn_{horires_coupling}d_99km*', TIEGCMDATA)
     options_coupling["inp"]["GSWM_MI_SDI_NCFILE"] = find_file(f'*gswm_semi_{horires_coupling}d_99km*', TIEGCMDATA)
     options_coupling["inp"]["GSWM_NM_DI_NCFILE"] = find_file(f'*gswm_nonmig_diurn_{horires_coupling}d_99km*', TIEGCMDATA)
