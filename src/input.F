@@ -7,7 +7,7 @@
 !
       use params_module,only: mxhvols,mxseries,mxseries_sech,mxfsech,
      |  nlat,nlon,nlev,glat1,dlat,glon1,dlon,tgcm_version,tgcm_name,
-     |  spval,ispval,nlonp4,mxind_time,nmlat,nmlonp1
+     |  spval,ispval,nlonp4,mxind_time,nmlat,nmlonp1,rp
       use mk_hvols,only: mkhvols
       implicit none
 !
@@ -62,7 +62,7 @@
      |  ntask_maglon,    ! number of tasks in mag longitude dimension (not namelist)
      |  calc_helium,     ! calculate helium if calc_helium=1, otherwise set he=0.
      |  electron_heating
-      real ::
+      real(rp) ::
      |  tide(10),        ! semidiurnal tide amplitudes and phases
      |  tide2(2),        ! diurnal tide amplitude and phase
      |  tide3m3(2),      ! 2-day wave amplitude and phase
@@ -76,10 +76,11 @@
      |  opfloor,         ! minimum O+
      |  oprate,          ! vertical decaying rate of O+ floor
      |  oplev,           ! transition altitude of O+ floor
-     |  oplatwidth       ! latitude band to apply O+ floor
+     |  oplatwidth,      ! latitude band to apply O+ floor
+     |  te_cap,ti_cap
 !
 ! Input parameters that can be either constant or time-dependent:
-      real ::
+      real(rp) ::
      |  power,           ! hemispheric power (gw) (hpower on histories)
      |  ctpoten,         ! cross-cap potential (volts)
      |  bximf,           ! BX component of IMF
@@ -89,7 +90,7 @@
      |  swden,           ! Solar wind density in #/cm3
      |  al,              ! AL lower magnetic auroral activity index in nT
      |  kp               ! Kp index
-      real,dimension(5,mxind_time) :: power_time,ctpoten_time,
+      real(rp),dimension(5,mxind_time) :: power_time,ctpoten_time,
      |  bximf_time,byimf_time,bzimf_time,swvel_time,swden_time,al_time,
      |  kp_time,f107_time,f107a_time
       integer :: 
@@ -104,8 +105,8 @@
      |  oneway           ! logical to use oneway mix reader
 !
 ! Parameters as read from namelist:
-      real :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,rd_byimf,
-     |  rd_bzimf,rd_swvel,rd_swden,rd_kp
+      real(rp) :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,
+     |  rd_byimf,rd_bzimf,rd_swvel,rd_swden,rd_kp
 !
 ! If indices_interp==1, time-dependent indices (power_time, ctpoten_time, etc)
 ! will be interpolated to model time, otherwise they will change only
@@ -181,8 +182,8 @@
       logical,dimension(mxfsech) :: nudge_lbc,nudge_f4d
       logical :: nudge_use_refdate
       integer,dimension(2) :: nudge_refdate
-      real,dimension(2) :: nudge_sponge,nudge_delta,nudge_power
-      real :: nudge_alpha
+      real(rp),dimension(2) :: nudge_sponge,nudge_delta,nudge_power
+      real(rp) :: nudge_alpha
 !
 ! Namelist for read:
       namelist/tgcm_input/ 
@@ -205,7 +206,8 @@
      |  nudge_ncpre,nudge_ncfile,nudge_ncpost,nudge_flds,
      |  nudge_lbc,nudge_f4d,nudge_use_refdate,nudge_refdate,
      |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha,
-     |  opdiffcap,opdiffrate,opdifflev,opfloor,oprate,oplev,oplatwidth
+     |  opdiffcap,opdiffrate,opdifflev,opfloor,oprate,oplev,oplatwidth,
+     |  te_cap,ti_cap
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -312,6 +314,8 @@
       colfac  = spval
       joulefac= spval
       calc_helium = ispval
+      te_cap = 10000._rp
+      ti_cap = 10000._rp
       electron_heating = ispval
       enforce_n2 = .false.
       et = .false.
@@ -1874,7 +1878,7 @@
 ! Validate times and values in user provided time series.
 !
 ! Args:
-      real,intent(in) :: constant,timedep(5,mxtimes)
+      real(rp),intent(in) :: constant,timedep(5,mxtimes)
       integer,intent(in) :: mxtimes
       integer,intent(out) :: ntimes
       character(len=*),intent(in) :: name

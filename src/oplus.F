@@ -39,7 +39,7 @@
      |  lat0,lat1  ! first,last latitude  indices for current task (S->N)
 !
 ! Input fields (full 3d task subdomain):
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) ::
      |  tn, te, ti, ! neutral, electron, and ion temperatures (deg K)
      |  o2, o1, he, ! O2, O, He mass mixing ratios
@@ -54,7 +54,7 @@
      |  optm1       ! O+ at time n-1
 !
 ! Output fields (full 3d task subdomain):
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(out) ::
      |  opout,    ! O+ output for next timestep
      |  optm1out, ! O+ output for time n-1

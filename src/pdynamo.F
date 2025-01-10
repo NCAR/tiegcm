@@ -17,7 +17,7 @@
       use heelis_module,only: phihm
       use init_module,only: istep
       use input_module,only: current_pg,current_kq
-      use fields_module,only: zigm1,zigm2,nsrhs
+      use fields_module,only: nsrhs
       implicit none
 !
 ! 3d pointers to fields regridded to magnetic subdomains (i,j,k):
@@ -39,9 +39,9 @@
      |  rim1,rim2,
      |  rhs,        ! right-hand side
      |  phimsolv,   ! solution direct from solver (nhem only)
-     |  phim2d     ! solution with phihm and both nhem and shem
-!     |  zigm1, nsrhs,
-!     |  zigm2,      ! sigma2
+     |  phim2d,     ! solution with phihm and both nhem and shem
+     |  zigm1,
+     |  zigm2      ! sigma2
 !
 ! 3d potential and electric field on mag subdomains (see sub pthreed):
 ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1)
@@ -1080,6 +1080,8 @@
       end subroutine fieldline_integrals
 !-----------------------------------------------------------------------
       subroutine alloc_pdyn
+
+      use fields_module,only: azigm1,azigm2
 !
 ! Allocate and initialize arrays for parallel dynamo (module data)
 ! (called once per run from allocdata.F)
@@ -1099,6 +1101,9 @@
       allocate(zigmc(mlon00:mlon11,mlat00:mlat11) ,stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: zigmc')
       zigmc = 0.
+      allocate(zigm1(mlon00:mlon11,mlat00:mlat11),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: zigm1')
+      zigm1 = 0.
       allocate(zigm2(mlon00:mlon11,mlat00:mlat11) ,stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: zigm2')
       zigm2 = 0.
@@ -1120,9 +1125,12 @@
       allocate(phim2d(mlon00:mlon11,mlat00:mlat11),stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: phim2d')
       phim2d = 0.
-      allocate(zigm1(mlon00:mlon11,mlat00:mlat11),stat=istat)
-      if (istat /= 0) call shutdown('alloc_pdyn: zigm1')
-      zigm1 = 0.
+      allocate(azigm1(mlon00:mlon11,mlat00:mlat11),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: azigm1')
+      azigm1 = 0.
+      allocate(azigm2(mlon00:mlon11,mlat00:mlat11),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: azigm2')
+      azigm2 = 0.
       allocate(nsrhs(mlon00:mlon11,mlat00:mlat11),stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: nsrhs')
       nsrhs = 0.
@@ -1251,6 +1259,7 @@
       use mpi_module,only: mytid
       use mpi_module,only: mp_mag_halos
       use fields_module,only: gzigm1,gzigm2,gnsrhs
+      use fields_module,only: azigm1,azigm2
       use mage_coupling_module,only: mage_ucurrent
       use my_esmf,only: 
      |  mag_zigm1, mag_zigm2, mag_nsrhs,
@@ -1581,6 +1590,10 @@
 ! Transform height-integrated parameters from APEX coordinates to geographic
 ! coordinates to be passed to the M-I coupled in the MAGE
 !
+
+      ! This is to grab zigm1 on the APEX grid for coupling before hemispheres are folded
+      azigm1 = zigm1
+      azigm2 = zigm2
 
       call mag2geo_2d(zigm1(mlon0:mlon1,mlat0:mlat1),
      |     gzigm1(lon0:lon1,lat0:lat1),mag_zigm1,geo_zigm1,'ZIGM1   ')
@@ -2985,6 +2998,7 @@
 !-----------------------------------------------------------------------
       subroutine stencils
       use cons_module,only: pi_dyn,dlatm,dlonm
+      use input_module,only: oneway
 !
 ! Locals:
       integer :: i,j,jj,jjj,j0,n,ncc,nmaglon,nmaglat
@@ -3126,8 +3140,11 @@
 !
 ! Convert GAMERA geographic potential to geomagnetic coordinates
 !
-!      call mage_pot2mag
-      call mage_mag2mag
+      if (oneway) then
+        call mage_pot2mag
+      else
+        call mage_mag2mag
+      endif
 c      do jj=1,nmlat
 c       do i=1,nmlonp1
 c        write(6,*)phihm(i,jj),i,jj

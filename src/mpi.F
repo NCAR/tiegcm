@@ -219,102 +219,17 @@
         call shutdown('mpi_comm_rank error')
       endif
 
-!!!!!
-      if (mytid == 0) then
-        color = mageId ! Unique ID for all coupling ranks
-      else
-        color = MPI_UNDEFINED  ! No message passing on other processes
-      endif
+      call mp_coupling(mytid)
 
-      write(*,*) "TGCM COUPLING ON COMM: ",mageId
-      call mpi_comm_split(MPI_COMM_WORLD,color,mytid,CplComm,ier)
-      if (ier /= 0) then
-        write(6,"('>>> Error from mpi_comm_split: ier=',i4)") ier
-        call shutdown('mpi_comm_split error')
-      endif
-
-! This can only happen to the root (mytid == 0)
-      if (CplComm /= MPI_COMM_NULL) then
-        call mpi_comm_size(CplComm,CplCommSize,ier)
-        if (ier /= 0) then
-          write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
-          call shutdown('mpi_comm_size error')
-        endif
-
-! At most two processes will register in CplComm (TIEGCM root, REMIX root)
-! Therefore CplCommSize is either 1 or 2
-        if (CplCommSize == 1) then
-
-! Only one process registered in CplComm (TIEGCM root)
-! No coupling will take place, free up the resources
-          call mpi_comm_free(CplComm,ier)
-          if (ier /= 0) then
-            write(6,"('>>> Error from mpi_comm_free: ier=',i4)") ier
-            call shutdown('mpi_comm_free error')
-          endif
-          CplComm = MPI_COMM_NULL
-        else
-
-! There is another process registered in CplComm (REMIX root)
-          call mpi_comm_rank(CplComm,CplRank,ier)
-          if (ier /= 0) then
-            write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
-            call shutdown('mpi_comm_rank error')
-          endif
-
-          if (.not.allocated(IAm)) allocate(IAm(CplCommSize))
-          IAm(CplRank+1) = myAppId
-
-          do i=1,CplCommSize
-            call MPI_Bcast(IAm(i), 1, MPI_INTEGER, i-1, CplComm, ier)
-          enddo
-
-          do i=1,CplCommSize
-            ! Assign rank if match
-            select case (IAm(i))
-              case (voltId)
-                mixCplRank = i-1
-                doVoltCommSkip = .true.
-                write(*,*) "T coupling to remix"
-              case (gamId)
-                write(*,*) "T not coupling to Gam yet"
-              case (rcmId)
-                write(*,*) "T not coupling to RCM yet"
-              case (hidraNId)
-                hidraNCplRank = i-1
-                write(*,*) "T coupling to hidraN"
-              case (hidraSId)
-                hidraSCplRank = i-1
-                write(*,*) "T coupling to hidraS"
-              case (hidraId)
-                hidraCplRank = i-1
-                write(*,*) "T coupling to hidra"
-              case (myAppId)
-                write(*,*) "T is T"
-              case default
-                write(*,*) "T does not know about this Coupling ID: ",
-     |              IAm(i)
-              end select
-          enddo
-        endif
-        write(*,'(A,I0,A,I0,A,I0,A)') "T COUPLING to ",CplCommSize,
-     |     " Models on ",CplRank," Rank on ",CplComm," Comm"
-      endif
-
-      ! only mytid == 0 should have updated doVoltCommSkip
-      call MPI_BCAST(doVoltCommSkip,1,MPI_LOGICAL,0,TIEGCM_WORLD,ier)
-      call MPI_BCAST(CplCommSize,1,MPI_INTEGER,0,TIEGCM_WORLD,ier)
-      if (.not.allocated(IAm)) allocate(IAm(CplCommSize))
-      call MPI_BCAST(IAm,CplCommSize,MPI_INTEGER,0,TIEGCM_WORLD,ier)
 !
-#ifdef GAMERA
-      if (doVoltCommSkip) then
+!@#ifdef GAMERA
+!@      if (doVoltCommSkip) then
 ! gam2volt
 ! WARNING THIS IS HARDCODED TO OCCUR ONCE. MAY CAUSE ISSUES WITH MULTIPLE COUPLINGS
-      call mpi_comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, 
-     |  mytid, tmpComm, ier)
-      endif
-#endif
+!@      call mpi_comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, 
+!@     |  mytid, tmpComm, ier)
+!@      endif
+!@#endif
 !
 ! Allocate array of tasks (user defined type(task)):
       allocate(tasks(0:ntask-1),stat=ier)
@@ -325,66 +240,137 @@
 !     write(6,"('mp_init: ntask=',i3,' mytid=',i3)") ntask,mytid
       end subroutine mp_init
 !-----------------------------------------------------------------------
-      subroutine mp_coupling(mytid,CommId,CplComm,CplRank)
-      integer :: mytid, CommId, CplComm,CplRank
-      integer :: ier,color,CplCommSize
-! Create a second communicator to transfer data between TIEGCM and REMIX
+      subroutine mp_coupling(mytid)
+      integer :: mytid
+      integer :: ier,color,i
+
+      integer :: tmpComm
+      tmpComm = MPI_COMM_WORLD
+! Create a second communicator to transfer data between TIEGCM and MAGE
 ! This communicator only includes the root processes
-! TIEGCM root sends/receives data from/to REMIX root
+! TIEGCM root sends/receives data from/to MAGE root
+
+!!!!!
       if (mytid == 0) then
-        color = CommId ! Unique ID on both sides (TIEGCM/VOLTRON)
+      color = mageId ! Unique ID for all coupling ranks
       else
-        color = MPI_UNDEFINED  ! No message passing on other processes
+      color = MPI_UNDEFINED  ! No message passing on other processes
       endif
 
-      write(*,*) "TGCM COUPLING ON COMM: ",CommId
-      call mpi_comm_split(MPI_COMM_WORLD,color,mytid,CplComm,ier)
-      if (ier /= 0) then
-        write(6,"('>>> Error from mpi_comm_split: ier=',i4)") ier
-        call shutdown('mpi_comm_split error')
-      endif
-
-! This can only happen to the root (mytid == 0)
+      tmpComm = MPI_COMM_WORLD
+      call mp_get_coupling_comm(tmpComm,color,
+     |     0, CplComm)
+    
+    ! This can only happen to the root (mytid == 0)
       if (CplComm /= MPI_COMM_NULL) then
         call mpi_comm_size(CplComm,CplCommSize,ier)
         if (ier /= 0) then
-          write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
-          call shutdown('mpi_comm_size error')
+            write(6,"('>>> Error from mpi_comm_size: ier=',i4)") ier
+            call shutdown('mpi_comm_size error')
         endif
-
-! At most two processes will register in CplComm (TIEGCM root, REMIX root)
-! Therefore CplCommSize is either 1 or 2
+    
+    ! At most two processes will register in CplComm (TIEGCM root, REMIX root)
+    ! Therefore CplCommSize is either 1 or 2
         if (CplCommSize == 1) then
-
-! Only one process registered in CplComm (TIEGCM root)
-! No coupling will take place, free up the resources
-          call mpi_comm_free(CplComm,ier)
-          if (ier /= 0) then
-            write(6,"('>>> Error from mpi_comm_free: ier=',i4)") ier
-            call shutdown('mpi_comm_free error')
-          endif
-          CplComm = MPI_COMM_NULL
+    
+    ! Only one process registered in CplComm (TIEGCM root)
+    ! No coupling will take place, free up the resources
+            call mpi_comm_free(CplComm,ier)
+            if (ier /= 0) then
+                write(6,"('>>> Error from mpi_comm_free: ier=',i4)") ier
+                call shutdown('mpi_comm_free error')
+            endif
+            CplComm = MPI_COMM_NULL
         else
+    
+    ! There is another process registered in CplComm (REMIX root)
+            call mpi_comm_rank(CplComm,CplRank,ier)
+            if (ier /= 0) then
+                write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
+                call shutdown('mpi_comm_rank error')
+            endif
 
-! There is another process registered in CplComm (REMIX root)
-          call mpi_comm_rank(CplComm,CplRank,ier)
-          if (ier /= 0) then
-            write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
-            call shutdown('mpi_comm_rank error')
-          endif
+            if (.not.allocated(IAm)) allocate(IAm(CplCommSize))
+                IAm(CplRank+1) = myAppId
 
-!         write(6,"('TIEGCM: CplComm,CplCommSize,CplRank,tag=',
-!    |      4i4)") CplComm,CplCommSize,CplRank,myAppId+voltID
+            do i=1,CplCommSize
+               call MPI_Bcast(IAm(i), 1, MPI_INTEGER, i-1, CplComm, ier)
+            enddo
 
-! CplRank is TIEGCM rank in CplComm
-! REMIX rank is the other (0/1)
-          CplRank = 1-CplRank
+            do i=1,CplCommSize
+            ! Assign rank if match
+            select case (IAm(i))
+                case (voltId)
+                    mixCplRank = i-1
+                    write(*,*) "T coupling to remix"
+                case (gamId)
+                    write(*,*) "T not coupling to Gam yet"
+                case (rcmId)
+                    write(*,*) "T not coupling to RCM yet"
+                case (hidraNId)
+                    hidraNCplRank = i-1
+                    write(*,*) "T coupling to hidraN"
+                case (hidraSId)
+                    hidraSCplRank = i-1
+                    write(*,*) "T coupling to hidraS"
+                case (hidraId)
+                    hidraCplRank = i-1
+                    write(*,*) "T coupling to hidra"
+                case (myAppId)
+                    write(*,*) "T is T"
+                case default
+                    write(*,*) "T does not know about",
+     |              " this Coupling ID: ", IAm(i)
+            end select
+            enddo
         endif
-        write(*,*) "T COUPLING: ",mytid,CplRank,CplCommSize,CplComm
-      endif
+            write(*,'(A,I0,A,I0,A,I0,A)') "T COUPLING to ",CplCommSize,
+     |       " Models on ",CplRank," Rank on ",CplComm," Comm"
+        endif
+    
+        call MPI_BCAST(CplCommSize,1,MPI_INTEGER,0,TIEGCM_WORLD,ier)
+        if (.not.allocated(IAm)) allocate(IAm(CplCommSize))
+        call MPI_BCAST(IAm,CplCommSize,MPI_INTEGER,0,TIEGCM_WORLD,ier)
 
       end subroutine mp_coupling
 !-----------------------------------------------------------------------
+      subroutine mp_get_coupling_comm(
+     |  couplingPool,appId,key,coupledComm)
+
+        integer, intent(inout) :: couplingPool
+        integer, intent(in) :: appId, key
+        integer, intent(inout) :: coupledComm
+
+        integer :: ierr, myRank, appIdCpy
+        appIdCpy = appId ! 
+        ! mpi_bcast doesn't interact well with intent(in)
+
+        ! tell everyone I'm the broadcasting root
+        ! broadcast which app I'm creating a communicator with, split with it, and then
+        ! create a smaller pool that excludes that app
+        call MPI_comm_rank(couplingPool, myRank, ierr)
+        call MPI_Allreduce(MPI_IN_PLACE, myRank, 1, MPI_INTEGER,
+     |      MPI_MAX, couplingPool, ierr)
+        ! This Bcast is causing a lot of issues. I don't know if this is needed or 
+        ! if it will cause problems for voltron and other models. The behavior here is odd.
+        call MPI_Bcast(appIdCpy, 1, MPI_INTEGER, myRank,
+     |      couplingPool, ierr)
+        ! This is a quick hack to force only rank 0 to couple
+        if (mytid /= 0) then 
+            appIdCpy = MPI_UNDEFINED
+        endif
+
+        call MPI_comm_split(couplingPool, appIdCpy, key,
+     |      coupledComm, ierr)
+        ! key is never used when making the exclusion pool, 0 is used to preserve order
+        call MPI_comm_split(couplingPool, myAppId, 0,
+     |      couplingPool, ierr)
+
+      end subroutine mp_get_coupling_comm
+
+!-----------------------------------------------------------------------
+
+      
       subroutine mp_distribute_geo
 !
 ! Set up 2-d data decomposition in lat,lon. Define structure array 

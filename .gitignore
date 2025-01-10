@@ -1,0 +1,42 @@
+#build and run directories
+build/*
+stdout/*
+exec/*
+
+
+## Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.pyc
+*__genmod.f90
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*.x
+
+# Data files
+*.mp4
+*.h5
+*.xmf
+*.hdf
+*.png
+*.h5part
