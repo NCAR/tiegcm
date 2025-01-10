@@ -125,6 +125,22 @@ JOULEFAC = {{inp.JOULEFAC}}{%- endif %}
 COLFAC = {{inp.COLFAC}}{%- endif %}
 {%- if inp.OPDIFFCAP is not none %}
 OPDIFFCAP = {{inp.OPDIFFCAP}}{%- endif %}
+{%- if inp.OPDIFFRATE is not none %}
+OPDIFFRATE = {{inp.OPDIFFRATE}}{%- endif %}
+{%- if inp.OPDIFFLEV is not none %}
+OPDIFFLEV = {{inp.OPDIFFLEV}}{%- endif %}
+{%- if inp.OPFLOOR is not none %}
+OPFLOOR = {{inp.OPFLOOR}}{%- endif %}
+{%- if inp.OPRATE is not none %}
+OPRATE = {{inp.OPRATE}}{%- endif %}
+{%- if inp.OPLEV is not none %}
+OPLEV = {{inp.OPLEV}}{%- endif %}
+{%- if inp.OPLATWIDTH is not none %}
+OPLATWIDTH = {{inp.OPLATWIDTH}}{%- endif %}
+{%- if inp.TE_CAP is not none %}
+TE_CAP = {{inp.TE_CAP}}{%- endif %}
+{%- if inp.TI_CAP is not none %}
+TI_CAP = {{inp.TI_CAP}}{%- endif %}
 {%- if inp.CURRENT_PG is not none %}
 CURRENT_PG = {{inp.CURRENT_PG}}{%- endif %}
 {%- if inp.CURRENT_KQ is not none %}
