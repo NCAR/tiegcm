@@ -675,6 +675,10 @@
 ! Add SAPS drift to ion velocities (m/s to cm/s)
       if (saps) then
         do lat=lat0,lat1
+          call addfld('UI_wo_SAPS','ion drift without SAPS','cm/s',
+     |      ui(:,lon0:lon1,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
+          call addfld('VI_wo_SAPS','ion drift without SAPS','cm/s',
+     |      vi(:,lon0:lon1,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
           do i=lon0,lon1
             do k=lev0,lev1
               ui(k,i,lat) = ui(k,i,lat)+sui(i,lat)*100.
@@ -682,10 +686,6 @@
 !             wi(k,i,lat) = wi(k,i,lat)+swi(i,lat)*100.
             enddo
           enddo
-          call addfld('UI_w_SAPS','ion drift with SAPS','cm/s',
-     |      ui(:,lon0:lon1,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
-          call addfld('VI_w_SAPS','ion drift with SAPS','cm/s',
-     |      vi(:,lon0:lon1,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
         enddo
         call addfld('UI_SAPS','SAPS ion drift','m/s',sui,
      |    'lon',lon0,lon1,'lat',lat0,lat1,0)
