@@ -9,13 +9,15 @@
 ! (electric field ex,ey,ez was calculated in efield module, efield.F)
 ! (this was old sub vdrift2)
 !
-      use params_module,only: nlonp4
+      use params_module,only: nlonp4,nlonp2,nlon,glat
       use cons_module,only: re
       use pdynamo_module,only: ex,ey,ez ! (nlevp1,lon0-2:lon1+2,lat0:lat1)
 
       use magfield_module,only: rjac,xb,yb,zb,bmod
       use addfld_module,only: addfld
-      use mpi_module,only: mp_periodic_f3d
+      use diags_module,only: mkdiag_UI,mkdiag_VI,mkdiag_WI
+      use mpi_module,only: mp_periodic_f3d,
+     |  mytidi,mp_gatherlons_f3d,mp_scatterlons_f3d
       implicit none
 !
 ! Args:
@@ -26,9 +28,11 @@
      |  intent(out) :: ui,vi,wi,Etot
 !
 ! Local:
-      integer :: k,i,lonbeg,lonend,lat,ier
+      real,parameter :: highlat_limit = 85
+      integer :: ifld,k,i,lonbeg,lonend,lat,ier
       real,dimension(lev0:lev1,lon0:lon1) :: eex,eey,eez
-      real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,3)
+      real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,3),poleave
+      real,dimension(lev0:lev1,nlonp4,lat0:lat1,3) :: exyz
 !
 ! VT vampir tracing:
 !
@@ -45,6 +49,8 @@
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==nlonp4) lonend = lon1-2
+!
+      exyz = 0
 !
 ! Latitude scan:
       do lat=lat0,lat1
@@ -83,12 +89,49 @@
           eez(lev1,i) = 2.*eez(lev1-1,i)-eez(lev1-2,i)
         enddo
 
-!        call addfld('EEX','E_x','V/cm',eex,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!        call addfld('EEY','E_y','V/cm',eey,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!        call addfld('EEZ','E_z','V/cm',eez,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        do i=lonbeg,lonend
+          do k=lev0,lev1
+            exyz(k,i,lat,1) = eex(k,i)
+            exyz(k,i,lat,2) = eey(k,i)
+            exyz(k,i,lat,3) = eez(k,i)
+          enddo
+        enddo
+      enddo
+!
+      call mp_gatherlons_f3d(exyz,lev0,lev1,
+     |  lon0,lon1,lat0,lat1,3,'EXYZ')
+      if (mytidi==0) then
+        do lat=lat0,lat1
+          if (abs(glat(lat)) > highlat_limit) then
+            do ifld=1,3
+              do k=lev0,lev1
+                poleave = sum(exyz(k,3:nlonp2,lat,ifld))/nlon
+                do i=1,nlonp4
+                  exyz(k,i,lat,ifld) = poleave
+                enddo
+              enddo
+            enddo
+          endif
+        enddo
+      endif
+      call mp_scatterlons_f3d(exyz,lev0,lev1,
+     |  lon0,lon1,lat0,lat1,3,'EXYZ')
+!
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1
+            eex(k,i) = exyz(k,i,lat,1)
+            eey(k,i) = exyz(k,i,lat,2)
+            eez(k,i) = exyz(k,i,lat,3)
+          enddo
+        enddo
+
+        call addfld('EEX','E_x','V/cm',eex,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('EEY','E_y','V/cm',eey,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('EEZ','E_z','V/cm',eez,
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! ion velocities = (e x b/b**2) (x 1.e6 for m/sec)
 ! ui = zonal, vi = meridional, wi = vertical
