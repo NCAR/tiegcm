@@ -102,7 +102,8 @@
      |  et,              ! logical to calculate electron turbulent heating
      |  saps,            ! logical to include empirical SAPS
      |  doEclipse,       ! logical to do eclipse mask or not
-     |  oneway           ! logical to use oneway mix reader
+     |  oneway,          ! logical to use oneway mix reader
+     |  duff             ! logical to choose reaction rate for N(2D)+O2->NO+O
 !
 ! Parameters as read from namelist:
       real(rp) :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,
@@ -200,7 +201,7 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  bgrddata_ncfile,ctmt_ncfile,electron_heating,
+     |  bgrddata_ncfile,ctmt_ncfile,electron_heating,duff,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,enforce_n2,et,saps,
      |  subaur_data,doEclipse,eclipse_list,oneway,mixfile,
      |  nudge_ncpre,nudge_ncfile,nudge_ncpost,nudge_flds,
@@ -322,6 +323,7 @@
       saps = .false.
       doEclipse = .false.
       oneway = .false.
+      duff = .false.
 
       opdiffcap = spval
       opdiffrate = spval

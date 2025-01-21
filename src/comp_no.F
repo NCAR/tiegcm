@@ -104,8 +104,8 @@
         do k=lev0,lev1-1
 !
           no_prod(k,i,lat) = xnmbar(k,i)**2*o2(k,i)*rmassinv_o2*
-     |      (beta1(k,i,lat)*n4s(k,i)*rmassinv_n4s+beta2*n2d(k,i)*
-     |      rmassinv_n2d)
+     |      (beta1(k,i,lat)*n4s(k,i)*rmassinv_n4s+
+     |       beta2(k,i,lat)*n2d(k,i)*rmassinv_n2d)
 !
           no_prod(k,i,lat) = no_prod(k,i,lat)+xnmbar(k,i)**3*
      |      beta17(k,i,lat)*o1(k,i)*rmassinv_o1*n2(k,i)*
