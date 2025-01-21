@@ -19,7 +19,8 @@
 !          change call to qjoule_tn to include vertical velocity
 !
       use fields_module
-      use mpi_module,only: lon0,lon1,lat0,lat1,distribute_1d,mp_close
+      use mpi_module,only: lon0,lon1,lat0,lat1,distribute_1d,mp_close,
+     |  mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
       use chemrates_module,only: chemrates_tdep
       use qrj_module,only: qrj,qtotal,qop,qo2p,qn2p,qnp,qnop
       use chapman_module,only: chapman
@@ -51,7 +52,7 @@
 #endif
 !
 ! Local:
-      integer :: lat,ier,itp_sub,itc_sub,istep_sub,itmp
+      integer :: lat,ier
       integer :: i0,i1,nk,nkm1,nlats,k0,k1
       logical,parameter :: debug=.false.  ! add prints to stdout
 !
@@ -68,8 +69,6 @@
 !
       logical,parameter :: diags=.true. ! put fields on sec hist
       real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor
-      real,dimension(levd0:levd1,lond0:lond1,latd0:latd1,2) ::
-     |  op_i,op_nm_i
       real,dimension(lon0:lon1,lat0:lat1) ::
      |  tec ! diagnostic total electron content
       logical,external :: time2print
@@ -304,47 +303,44 @@
 ! Full task subdomains (including ghost cells) are passed.
 !
       call timer(time0,time1,'OPLUS',0,0) ! start oplus timing
-      itp_sub = itp
-      itc_sub = itc
-      op_i = op
-      op_nm_i = op_nm
-! O+ sub-cycling, Dang, 2017
-      do istep_sub=1,nstep_sub
-        call oplus(
-     |    tn    (levd0,lond0,latd0,itp),
-     |    te    (levd0,lond0,latd0,itp),
-     |    ti    (levd0,lond0,latd0,itp),
-     |    o2    (levd0,lond0,latd0,itp),
-     |    o1    (levd0,lond0,latd0,itp),
-     |    he    (levd0,lond0,latd0,itp),
-     |    n2    (levd0,lond0,latd0),
-     |    n2d   (levd0,lond0,latd0,itp),
-     |    ne    (levd0,lond0,latd0,itp),
-     |    un    (levd0,lond0,latd0,itp),
-     |    vn    (levd0,lond0,latd0,itp),
-     |    w     (levd0,lond0,latd0,itp),
-     |    ui    (levd0,lond0,latd0),
-     |    vi    (levd0,lond0,latd0),
-     |    wi    (levd0,lond0,latd0),
-     |    xnmbar(levd0,lond0,latd0,itp),
-     |    scht  (levd0,lond0,latd0,itp),
-     |    op_i   (levd0,lond0,latd0,itp_sub),
-     |    op_nm_i(levd0,lond0,latd0,itp_sub),
-     |    op_i   (levd0,lond0,latd0,itc_sub), ! out
-     |    op_nm_i(levd0,lond0,latd0,itc_sub), ! out
-     |    xiop2p(levd0,lond0,latd0),          ! out
-     |    xiop2d(levd0,lond0,latd0),          ! out
-     |    Fe    (levd0,lond0,latd0),          ! out
-     |    Fn    (levd0,lond0,latd0),          ! out
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
-        if (istep_sub /= nstep_sub) then
-          itmp = itp_sub
-          itp_sub = itc_sub
-          itc_sub = itmp
-        endif
-      enddo
-      op(:,:,:,itc) = op_i(:,:,:,itc_sub)
-      op_nm(:,:,:,itc) = op_nm_i(:,:,:,itc_sub)
+!
+! Make latitudes j=-1,0 from j=2,1, and j=nlat+1,nlat+2 from nlat-1,nlat for n2, 
+! then define 2d halos points.  Note that mp_geo_halos_f3d and mp_polelats_f3d 
+! do not define "outside corner" halo points, but this should be ok since 
+! cross-derivatives are not performed.
+!
+      call mp_polelats_f3d(n2(:,lon0:lon1,:),   ! 3rd dim is lat0-2:lat1+2
+     |  1,nlevp1,lon0,lon1,lat0,lat1,1,(/1./))  ! last arg means no change in polesign
+      call mp_bndlats_f3d(n2,nk,lon0,lon1,lat0,lat1,1)
+      call mp_bndlons_f3d(n2,nk,lon0,lon1,lat0,lat1,1,0)
+!
+      call oplus(
+     |  tn    (levd0,lond0,latd0,itp),
+     |  te    (levd0,lond0,latd0,itp),
+     |  ti    (levd0,lond0,latd0,itp),
+     |  o2    (levd0,lond0,latd0,itp),
+     |  o1    (levd0,lond0,latd0,itp),
+     |  he    (levd0,lond0,latd0,itp),
+     |  n2    (levd0,lond0,latd0),
+     |  n2d   (levd0,lond0,latd0,itp),
+     |  ne    (levd0,lond0,latd0,itp),
+     |  un    (levd0,lond0,latd0,itp),
+     |  vn    (levd0,lond0,latd0,itp),
+     |  w     (levd0,lond0,latd0,itp),
+     |  ui    (levd0,lond0,latd0),
+     |  vi    (levd0,lond0,latd0),
+     |  wi    (levd0,lond0,latd0),
+     |  xnmbar(levd0,lond0,latd0,itp),
+     |  scht  (levd0,lond0,latd0,itp),
+     |  op    (levd0,lond0,latd0,itp),
+     |  op_nm (levd0,lond0,latd0,itp),
+     |  op    (levd0,lond0,latd0,itc), ! out
+     |  op_nm (levd0,lond0,latd0,itc), ! out
+     |  xiop2p(levd0,lond0,latd0),     ! out
+     |  xiop2d(levd0,lond0,latd0),     ! out
+     |  Fe    (levd0,lond0,latd0),
+     |  Fn    (levd0,lond0,latd0),
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after oplus')")
       call timer(time0,time1,'OPLUS',1,0) ! end oplus timing
       if (timing%level >= 2.and.time2print(nstep,istep))
