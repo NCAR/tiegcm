@@ -108,7 +108,7 @@
         n2d_lbc(i,3,lat) = -rmass_n2d/xnmbari(lev0,i)*
      |    qtef(lev0,i,lat)*brn2d/
      |    (xnmbari(lev0,i)*
-     |    (beta2*o2(lev0,i)*rmassinv_o2+
+     |    (beta2(lev0,i,lat)*o2(lev0,i)*rmassinv_o2+
      |     beta4*o1(lev0,i)*rmassinv_o1+
      |     beta6*no(lev0,i)*rmassinv_no)+
      |     beta7+beta5(lev0,i,lat)*ne(lev0,i))
@@ -127,7 +127,7 @@
 !
 ! Total loss of N2D:
           n2d_loss(k,i,lat) = -(xnmbar(k,i)*
-     |      (beta2*o2(k,i)*rmassinv_o2+
+     |      (beta2(k,i,lat)*o2(k,i)*rmassinv_o2+
      |       beta4*o1(k,i)*rmassinv_o1+
      |       beta6*no(k,i)*rmassinv_no)+
      |       beta7+beta5(k,i,lat)*sqrt(ne(k,i)*ne(k+1,i))+
