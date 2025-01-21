@@ -9,7 +9,7 @@
 ! (electric field ex,ey,ez was calculated in efield module, efield.F)
 ! (this was old sub vdrift2)
 !
-      use params_module,only: nlonp4,nlonp2,nlon,glat
+      use params_module,only: nlonp4,nlonp2,nlon,glat,rp,dlat
       use cons_module,only: re
       use pdynamo_module,only: ex,ey,ez ! (nlevp1,lon0-2:lon1+2,lat0:lat1)
 
@@ -22,17 +22,17 @@
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) :: z
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(out) :: ui,vi,wi,Etot
 !
 ! Local:
-      real,parameter :: highlat_limit = 85
+      real(rp) :: highlat_limit = 85
       integer :: ifld,k,i,lonbeg,lonend,lat,ier
-      real,dimension(lev0:lev1,lon0:lon1) :: eex,eey,eez
-      real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,3),poleave
-      real,dimension(lev0:lev1,nlonp4,lat0:lat1,3) :: exyz
+      real(rp),dimension(lev0:lev1,lon0:lon1) :: eex,eey,eez
+      real(rp) :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,3),poleave
+      real(rp),dimension(lev0:lev1,nlonp4,lat0:lat1,3) :: exyz
 !
 ! VT vampir tracing:
 !
@@ -45,6 +45,8 @@
       call vtbegin(121,ier)
 #endif
 !
+      highlat_limit = 90._rp - 2*dlat
+      
       lonbeg = lon0
       if (lon0==1) lonbeg = 3
       lonend = lon1
