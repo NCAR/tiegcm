@@ -759,7 +759,7 @@
       integer :: k,i,lat,ier,nlevs
       real(rp) :: mgr
       real(rp),dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
-     |  uii,vii,dtpopdz,dbdotdh_opjdz,
+     |  uii,vii,dbdotdh_opjdz,
      |  bdotdh_op,        ! (b(h)*del(h))*phi
      |  bdotdh_diff,      ! (b(h)*del(h))*phi
      |  bdzdvb_op,        ! was s7
@@ -767,7 +767,7 @@
 !
 ! Local fields at 3d subdomain (must be 3d to bridge latitude scans):
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
-     |  tpop,bvel,opb,bdotdh_opj ! (b(h)*del(h))*phi
+     |  tpop,bvel,opb,dtpopdz,bdotdh_opj ! (b(h)*del(h))*phi
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,2) ::
      |  tmpf3d
 !
