@@ -656,7 +656,7 @@
           else
             skp = kp
           endif
-          if (saps .and. skp>=1. .and. skp<=9) then
+          if (saps .and. skp>=0 .and. skp<=9) then
             if (smlat>0. .and. smlat<10.) then
               call subaur_drift(smlt,smlat,skp,vns,ves,vvs)
               if (ihem == 1) then ! southern hemisphere, ihem=1
