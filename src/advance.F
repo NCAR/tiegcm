@@ -43,7 +43,6 @@
       use magfield_module,only: sunloc_apex
       use pdynamo_module,only: pefield
       use aurora_module,only: aurora_cons
-      use hdif_module,only: hdif1,hdif2
       use current,only: noso_crrt,noso_crdens,nscrrt_glb=>nscrrt
       use timing_module,only: timer,timing
       use mpitime_module,only: mpi_timer
@@ -505,46 +504,6 @@
 ! For Z, itc==itp (itp was set by addiag):
       z(:,:,:,itc) = z(:,:,:,itp)
       if (debug) write(6,"('advance after z')")
-!
-! Horizontal diffusion, first step:
-! hdif1 saves nrh and kmh at lats -2->nlat in nrh and kmh using
-!   fields un_nm and vn_nm at j+1 and j+2, and tn_nm and mbar at j+1.
-! hdif1 calls mp_bnd[lats,lons]_f3d
-!
-      call hdif1(
-     |  tn_nm(levd0,lond0,latd0,itp),
-     |  un_nm(levd0,lond0,latd0,itp),
-     |  vn_nm(levd0,lond0,latd0,itp),
-     |  mbar (levd0,lond0,latd0,itp),
-     |  fnrh (levd0,lond0,latd0),
-     |  fkmh (levd0,lond0,latd0),
-     |  1,nlevp1,lon0,lon1,lat0,lat1)
-      if (debug) write(6,"('advance after hdif1')")
-!
-! Horizontal diffusion, second step:
-! hdif2 saves 3d diagnostics f3d (fkldt,u,v,o2,o,he) at j+1 (0->37)
-! hdif2: WRITE (fkldt,u,v,o2,o1,he) <- READ (tn_nm,un_nm,vn_nm,o2_nm,o1_nm,he_nm)
-! The kld terms will be used later in hdif3.
-!
-! Call method 1 (contiguous actual args, lat loop inside):
-! Average over 20 steps = .014 sec. 
-      call hdif2(
-     |  tn_nm(levd0,lond0,latd0,itp),  ! 4d input
-     |  un_nm(levd0,lond0,latd0,itp),  ! 4d input
-     |  vn_nm(levd0,lond0,latd0,itp),  ! 4d input
-     |  o2_nm(levd0,lond0,latd0,itp),  ! 4d input
-     |  o1_nm(levd0,lond0,latd0,itp),  ! 4d input
-     |  he_nm(levd0,lond0,latd0,itp),  ! 4d input
-     |  fnrh (levd0,lond0,latd0),      ! 3d input
-     |  fkmh (levd0,lond0,latd0),      ! 3d input
-     |  kldt (levd0,lond0,latd0),      ! 3d output
-     |  kldu (levd0,lond0,latd0),      ! 3d output
-     |  kldv (levd0,lond0,latd0),      ! 3d output
-     |  kldo2(levd0,lond0,latd0),      ! 3d output
-     |  kldo1(levd0,lond0,latd0),      ! 3d output
-     |  kldhe(levd0,lond0,latd0),      ! 3d output
-     |  1,nlevp1,lon0,lon1,lat0,lat1)
-      if (debug) write(6,"('advance after hdif2')")
 !
 ! Dynamo calls Heelis (heelis.F), Weimer (wei05sc.F), or neither
 !   for high latitude electric potential, according to user-provided

@@ -31,7 +31,7 @@
       use n4s_module,only: comp_n4s,minor_n4s
       use no_module,only: comp_no,minor_no
       use ar_module,only: comp_ar,minor_ar
-      use hdif_module,only: hdif3,hdif_bndlatlons
+      use hdif_module,only: hdif
       use timing_module,only: timer,timing
       use addfld_module,only: addfld
       use qjoule,only: qjoule_tn,qjoule_ti
@@ -781,34 +781,24 @@
         enddo
       endif
 !
-! Calculate horizontal diffusion terms for t,u,v,o2,o1,he, using
-! coefficients from hdif2 (hdif2 was called from advance).
-!
-! Make boundary latitudes/longitudes available for inputs to hdif3:
-      call hdif_bndlatlons(kldt,kldu,kldv,kldo2,kldo1,kldhe,
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
-      if (debug) write(6,"('dynamics after hdif_bndlatlons')")
-!
-! Make hdt,u,v,o2,o1,he:
-      do lat=lat0,lat1
-        call hdif3(
-     |    cp(levd0,lond0,lat),     ! specific heat input
-     |    fnrh (levd0,lond0,latd0),! 3d input
-     |    kldt (levd0,lond0,latd0),! 3d input from hdif2 for tn
-     |    kldu (levd0,lond0,latd0),! 3d input from hdif2 for un
-     |    kldv (levd0,lond0,latd0),! 3d input from hdif2 for vn
-     |    kldo2(levd0,lond0,latd0),! 3d input from hdif2 for o2
-     |    kldo1(levd0,lond0,latd0),! 3d input from hdif2 for o1
-     |    kldhe(levd0,lond0,latd0),! 3d input from hdif2 for he
-     |    hdt (levd0,lond0,lat),   ! 2d tn output at current lat
-     |    hdu (levd0,lond0,lat),   ! 2d un output at current lat
-     |    hdv (levd0,lond0,lat),   ! 2d vn output at current lat
-     |    hdo2(levd0,lond0,lat),   ! 2d o2 output at current lat
-     |    hdo1(levd0,lond0,lat),   ! 2d o1 output at current lat
-     |    hdhe(levd0,lond0,lat),   ! 2d he output at current lat
-     |    1,nlevp1,lon0,lon1,lat)
-      enddo ! lat=lat0,lat1
-      if (debug) write(6,"('dynamics after hdif3')")
+! Calculate horizontal diffusion terms for t,u,v,o2,o1,he:
+      call hdif(
+     |  cp   (levd0,lond0,latd0),     ! specific heat input
+     |  mbar (levd0,lond0,latd0,itp), ! mean molecular weight input
+     |  tn_nm(levd0,lond0,latd0,itp), ! 4d input
+     |  un_nm(levd0,lond0,latd0,itp), ! 4d input
+     |  vn_nm(levd0,lond0,latd0,itp), ! 4d input
+     |  o2_nm(levd0,lond0,latd0,itp), ! 4d input
+     |  o1_nm(levd0,lond0,latd0,itp), ! 4d input
+     |  he_nm(levd0,lond0,latd0,itp), ! 4d input
+     |  hdt  (levd0,lond0,latd0), ! 3d tn output
+     |  hdu  (levd0,lond0,latd0), ! 3d un output
+     |  hdv  (levd0,lond0,latd0), ! 3d vn output
+     |  hdo2 (levd0,lond0,latd0), ! 3d o2 output
+     |  hdo1 (levd0,lond0,latd0), ! 3d o1 output
+     |  hdhe (levd0,lond0,latd0), ! 3d he output
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
+      if (debug) write(6,"('dynamics after hdif')")
 !
 ! Calculate joule heating for tn (3d field qji_tn):
       do lat=lat0,lat1

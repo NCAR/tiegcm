@@ -1,13 +1,9 @@
-! 
       module hdif_module
 !
-! This software is part of the NCAR TIE-GCM.  Use is governed by the 
-! Open Source Academic Research License Agreement contained in the file 
+! This software is part of the NCAR TIE-GCM.  Use is governed by the
+! Open Source Academic Research License Agreement contained in the file
 ! tiegcmlicense.txt.
 !
-      use params_module,only: nlevp1,nlonp4,nlat
-      use addfld_module,only: addfld
-      use mpi_module,only: mpi_timing
       implicit none
 !
 ! VT vampir tracing:
@@ -16,455 +12,345 @@
 #include <VT.inc>
 #endif
 !
+! 2025/01/24 Haonan Wu: The previous version doesn't fill halo points.
+! Reorganized so that halo points are filled before horizontal derivatives.
+!
+! Reference:
+!   Washington and Williamson (1977),
+!   A Description of the NCAR Global Circulation Models,
+!     III. Numerical Approximations
+!       C. Discrete Equations
+!         3. Physical Processes
+!           a. Subgrid Scale Diffusion
+!
       contains
 !-----------------------------------------------------------------------
+      subroutine hdif(cp,mbar,tn_nm,un_nm,vn_nm,o2_nm,o1_nm,he_nm,
+     |  hdt,hdu,hdv,hdo2,hdo1,hdhe,lev0,lev1,lon0,lon1,lat0,lat1)
 !
-      subroutine hdif1(tn_nm,un_nm,vn_nm,mbar,fnrh,fkmh,
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
+! Calculate horizontal diffusion terms for t,u,v,o2,o1,he.
 !
-! Save global kmh (eddy viscosity) and nrh (M/T) for use in hdif2
-!   and hdif3. This routine is called from advance.
-!
-      use cons_module,only: t0,cs,dlamda,dphi,re_inv
-      use mpi_module,only: mp_bndlats_f3d,mp_bndlons_f3d
-      implicit none
+      use params_module,only: nlat,nlatp1,nlatp2
+      use cons_module,only: cs,dlamda,dphi,re
+      use mpi_module,only: mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
+      use addfld_module,only: addfld
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
-     |  tn_nm, ! neutral temperature at time n-1
-     |  un_nm, ! zonal velocity at time n-1
-     |  vn_nm, ! meridional velocity at time n-1
-     |  mbar   ! mean molecular weight
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)
+     |  :: cp, ! specific heat
+     |  mbar,  ! mean molecular weight
+     |  tn_nm, ! neutral temperature at time n-1 (deg K)
+     |  un_nm, ! zonal velocity at time n-1 (cm/s)
+     |  vn_nm, ! meridional velocity at time n-1 (cm/s)
+     |  o2_nm, ! molecular oxygen at time n-1 (mmr)
+     |  o1_nm, ! atomic oxygen at time n-1 (mmr)
+     |  he_nm  ! helium at time n-1 (mmr)
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(out)
-     |  :: fnrh,fkmh  ! eddy viscosity, M/T
+     |  :: hdt, hdu, hdv, hdo2, hdo1, hdhe  ! output
 !
 ! Local:
-      integer :: k,i,lat,nlevs,ier
-      real :: abcsj,abcsjp,con1,con2,con3,delt,dels
-      real :: cp2 = 0.2
+      real,parameter :: cp2 = 0.2
+      integer :: k,i,lat,n,nlevs,ier
+      real :: con1,con2,con3
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
+     |  avkmh, ! average kmh
+     |  nrh,   ! eddy viscosity, M/T
+     |  cpi
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1,6) ::
+     |  kldout,hdout
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
+     |  du,dv,um,vm,dup,dvp,ump,vmp,delt,dels,kmh,
+     |  kldt,  ! tn horizontal diffusion term
+     |  kldu,  ! un horizontal diffusion term
+     |  kldv,  ! vn horizontal diffusion term
+     |  kldo1, ! o1 horizontal diffusion term
+     |  kldo2, ! o2 horizontal diffusion term
+     |  kldhe  ! He horizontal diffusion term
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,2) :: f2
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,4) :: f4
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,6) :: f6
 !
 #ifdef VT
-!     code = 119 ; state = 'hdif1' ; activity='ModelCode'
+!     code = 119 ; state = 'hdif' ; activity='ModelCode'
       call vtbegin(119,ier)
 #endif
 !
-! Latitude loop starts at lat0-2.
-! kmh and nrh are defined from lat0-2 to lat1+2
-! in which lat1+2 is from mp_bndlats
+      nlevs = lev1-lev0+1
 !
-      do lat=lat0-2,lat1+1
-!
-! KMH = eddy viscosity = 2*K0*K0*SQRT(DS*DS+DT*DT)
-! cs(lat) = cos(lat)
-!
-        abcsj = abs(cs(lat))
-        abcsjp = abs(cs(lat+1))
-        con1 = re_inv*.5/dlamda
-        con2 = re_inv/(dphi*(abcsj+abcsjp))
-        con3 = 2.*cp2*cp2
-!
+      do lat=lat0-2,lat1+2
         do i=lon0-2,lon1+1
           do k=lev0,lev1-1
-
-!           write(6,"('lat=',i2,' i=',i2,' k=',i2,
-!    |        ' lat0,1=',2i3,' lon0,1=',2i3,' lev0,1=',2i3)")
-!    |        lat,i,k,lat0,lat1,lon0,lon1,lev0,lev1
-
-            delt = 
-     |        con1*((un_nm(k,i+1,lat+1)-un_nm(k,i,lat+1))/cs(lat+1)+
-     |              (un_nm(k,i+1,lat)-un_nm(k,i,lat))/cs(lat))-
-     |        con2*((vn_nm(k,i+1,lat+1)+vn_nm(k,i,lat+1))*abcsjp -
-     |              (vn_nm(k,i+1,lat)+vn_nm(k,i,lat))*abcsj)
-            dels = 
-     |        con1*((vn_nm(k,i+1,lat+1)-vn_nm(k,i,lat+1))/cs(lat+1)+
-     |              (vn_nm(k,i+1,lat)-vn_nm(k,i,lat))/cs(lat))+
-     |        con2*((un_nm(k,i+1,lat+1)+un_nm(k,i,lat+1))*abcsjp -
-     |              (un_nm(k,i+1,lat)+un_nm(k,i,lat))*abcsj)
-            fkmh(k,i,lat) = con3*sqrt(dels*dels+delt*delt)
+            f4(k,i,lat,1) = (un_nm(k,i+1,lat)-un_nm(k,i,lat))/cs(lat)
+            f4(k,i,lat,2) = (vn_nm(k,i+1,lat)-vn_nm(k,i,lat))/cs(lat)
+            f4(k,i,lat,3) =
+     |        (un_nm(k,i+1,lat)+un_nm(k,i,lat))*abs(cs(lat))
+            f4(k,i,lat,4) =
+     |        (vn_nm(k,i+1,lat)+vn_nm(k,i,lat))*abs(cs(lat))
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0-2,lon1+1
-      enddo ! lat=lat0-2,lat1+1
+      enddo ! lat=lat0-2,lat1+2
 !
-! NRH = mbar(k) / (tnm(k)+(t0(k)+t0(k+1))*0.5)
+! Exchange boundary lons in f4:
+      call mp_bndlons_f3d(f4,nlevs,lon0,lon1,lat0,lat1,4,0)
+!
       do lat=lat0-2,lat1+2
         do i=lon0-2,lon1+2
           do k=lev0,lev1-1
-            fnrh(k,i,lat) = mbar(k,i,lat) /
-     |                      (tn_nm(k,i,lat)+((t0(k)+t0(k+1))*.5))
+            du(k,i,lat) = f4(k,i,lat,1)
+            dv(k,i,lat) = f4(k,i,lat,2)
+            um(k,i,lat) = f4(k,i,lat,3)
+            vm(k,i,lat) = f4(k,i,lat,4)
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat=lat0-2,lat1+2
+!
+      do lat=lat0-2,lat1+1
+        do i=lon0-2,lon1+2
+          do k=lev0,lev1-1
+            f4(k,i,lat,1) = du(k,i,lat+1)
+            f4(k,i,lat,2) = dv(k,i,lat+1)
+            f4(k,i,lat,3) = um(k,i,lat+1)
+            f4(k,i,lat,4) = vm(k,i,lat+1)
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat=lat0-2,lat1+1
+!
+! Exchange boundary lats in f4:
+      call mp_bndlats_f3d(f4,nlevs,lon0,lon1,lat0,lat1,4)
+!
+! Extrapolate north pole:
+      if (lat1 == nlat) then
+        do i=lon0-2,lon1+2
+          do k=lev0,lev1-1
+            do n=1,4
+              f4(k,i,nlatp2,n) = 2*f4(k,i,nlatp1,n)-f4(k,i,nlat,n)
+            enddo ! n=1,4
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      endif
+!
+      do lat=lat0-2,lat1+2
+        do i=lon0-2,lon1+2
+          do k=lev0,lev1-1
+            dup(k,i,lat) = f4(k,i,lat,1)
+            dvp(k,i,lat) = f4(k,i,lat,2)
+            ump(k,i,lat) = f4(k,i,lat,3)
+            vmp(k,i,lat) = f4(k,i,lat,4)
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat=lat0-2,lat1+2
+!
+      con1 = 1/(2*re*dlamda)
+      do lat=lat0-2,lat1+1
+        con2 = 1/(re*dphi*(abs(cs(lat))+abs(cs(lat+1))))
+        do i=lon0-2,lon1+2
+          do k=lev0,lev1-1
+            f2(k,i,lat,1) =
+     |        con1*(dup(k,i,lat)+du(k,i,lat))-
+     |        con2*(vmp(k,i,lat)-vm(k,i,lat))
+            f2(k,i,lat,2) =
+     |        con1*(dvp(k,i,lat)+dv(k,i,lat))+
+     |        con2*(ump(k,i,lat)-um(k,i,lat))
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat=lat0-2,lat1+1
+!
+! Exchange boundary lats in f2:
+      call mp_bndlats_f3d(f2,nlevs,lon0,lon1,lat0,lat1,2)
+!
+! Extrapolate north pole
+      if (lat1 == nlat) then
+        do i=lon0-2,lon1+2
+          do k=lev0,lev1-1
+            do n=1,2
+              f2(k,i,nlatp2,n) = 2*f2(k,i,nlatp1,n)-f2(k,i,nlat,n)
+            enddo ! n=1,2
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      endif
+!
+! KMH = eddy viscosity = 2*K0*K0*SQRT(DS*DS+DT*DT)
+      con3 = 2*cp2**2
+      do lat=lat0-2,lat1+2
+        do i=lon0-2,lon1+2
+          do k=lev0,lev1-1
+            delt(k,i,lat) = f2(k,i,lat,1)
+            dels(k,i,lat) = f2(k,i,lat,2)
+            kmh(k,i,lat) = con3*sqrt(dels(k,i,lat)**2+delt(k,i,lat)**2)
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat=lat0-2,lat1+2
+!
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+!
+! avkmh = average kmh:
+            avkmh(k,i,lat) = (kmh(k,i-1,lat  )+kmh(k,i,lat  )+
+     |                        kmh(k,i-1,lat+1)+kmh(k,i,lat+1))*0.25
+!
+! NRH = mbar(k) / tnm(k)
+            nrh(k,i,lat) = mbar(k,i,lat)/tn_nm(k,i,lat)
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0,lon1
+      enddo ! lat=lat0,lat1
+!
+! CALC RHO*KMH*(L*L(D*D)(PSI)) AT J AND N-1
+!
+! Define kldx at i=1,nlonp4 and lat.
+! (note prognostic inputs at time n-1 have lon0-2->lon1+2 from bndlons
+!  call in advance)
+!
+! FOR PSI = T,U,V,O2,O,He
+      call lsqdsq(tn_nm,kldout(:,:,:,1),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(un_nm,kldout(:,:,:,2),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(vn_nm,kldout(:,:,:,3),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(o2_nm,kldout(:,:,:,4),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(o1_nm,kldout(:,:,:,5),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(he_nm,kldout(:,:,:,6),lev0,lev1,lon0,lon1,lat0,lat1)
+!
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            do n=1,6
+              f6(k,i,lat,n) = kldout(k,i,lat,n)*
+     |          avkmh(k,i,lat)*nrh(k,i,lat)
+            enddo ! n=1,6
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0,lon1
+      enddo ! lat=lat0,lat1
+!
+! Exchange boundary latitudes/longitudes of horizontal diffusion coeffs.
+      call mp_polelats_f3d(f6(:,lon0:lon1,:,:),
+     |  lev0,lev1,lon0,lon1,lat0,lat1,6,(/1.,1.,1.,1.,1.,1./))
+      call mp_bndlats_f3d(f6,nlevs,lon0,lon1,lat0,lat1,6)
+      call mp_bndlons_f3d(f6,nlevs,lon0,lon1,lat0,lat1,6,0)
+!
+      do lat=lat0-2,lat1+2
+        do i=lon0-2,lon1+2
+          do k=lev0,lev1-1
+            kldt(k,i,lat) = f6(k,i,lat,1)
+            kldu(k,i,lat) = f6(k,i,lat,2)
+            kldv(k,i,lat) = f6(k,i,lat,3)
+            kldo2(k,i,lat) = f6(k,i,lat,4)
+            kldo1(k,i,lat) = f6(k,i,lat,5)
+            kldhe(k,i,lat) = f6(k,i,lat,6)
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat=lat0-2,lat1+2
+!
+! Calculate horizontal diffusion terms for t,u,v,o2,o1,he.
+!
+! Make hdx from kldx:
+      call lsqdsq(kldt,hdout(:,:,:,1),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(kldu,hdout(:,:,:,2),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(kldv,hdout(:,:,:,3),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(kldo2,hdout(:,:,:,4),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(kldo1,hdout(:,:,:,5),lev0,lev1,lon0,lon1,lat0,lat1)
+      call lsqdsq(kldhe,hdout(:,:,:,6),lev0,lev1,lon0,lon1,lat0,lat1)
+!
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1-1
+            cpi(k,i,lat) = .5*(cp(k,i,lat)+cp(k+1,i,lat))
+            hdt(k,i,lat) = -hdout(k,i,lat,1)/nrh(k,i,lat)*cpi(k,i,lat)
+            hdu(k,i,lat) = -hdout(k,i,lat,2)/nrh(k,i,lat)
+            hdv(k,i,lat) = -hdout(k,i,lat,3)/nrh(k,i,lat)
+            hdo2(k,i,lat) = -hdout(k,i,lat,4)/nrh(k,i,lat)
+            hdo1(k,i,lat) = -hdout(k,i,lat,5)/nrh(k,i,lat)
+            hdhe(k,i,lat) = -hdout(k,i,lat,6)/nrh(k,i,lat)
+          enddo ! k=lev0,lev1-1
+          hdt(lev1,i,lat) = 0.
+          hdu(lev1,i,lat) = 0.
+          hdv(lev1,i,lat) = 0.
+          hdo2(lev1,i,lat) = 0.
+          hdo1(lev1,i,lat) = 0.
+          hdhe(lev1,i,lat) = 0.
+        enddo ! i=lon0,lon1
+!
+!       call addfld('DELT',' ',' ',delt(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('DELS',' ',' ',dels(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('KMH',' ',' ',kmh(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('AVKMH',' ',' ',avkmh(lev0:lev1-1,:,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('NRH',' ',' ',nrh(lev0:lev1-1,:,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('KLDT',' ',' ',kldt(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('KLDU',' ',' ',kldu(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('KLDV',' ',' ',kldv(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('KLDO2',' ',' ',kldo2(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('KLDO1',' ',' ',kldo1(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('KLDHE',' ',' ',kldhe(lev0:lev1-1,lon0:lon1,lat),
+!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!       call addfld('HDT',' ',' ',hdt(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('HDU',' ',' ',hdu(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('HDV',' ',' ',hdv(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('HDO2',' ',' ',hdo2(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('HDO1',' ',' ',hdo1(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('HDHE',' ',' ',hdhe(:,lon0:lon1,lat),
+!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      enddo ! lat=lat0,lat1
+!
+#ifdef VT
+!     code = 119 ; state = 'hdif' ; activity='ModelCode'
+      call vtend(119,ier)
+#endif
+      end subroutine hdif
+!-----------------------------------------------------------------------
+      subroutine lsqdsq(fj,fout,lev0,lev1,lon0,lon1,lat0,lat1)
+!
+! Subroutine to calculate L**2DEL**2(PSI)
+!
+      use cons_module,only: cs
+!
+! Args:
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
+      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)
+     |  :: fj
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1),intent(out) :: fout
+!
+! Local:
+      real :: dlam,dpsi,dpsip,dpsim
+      integer :: k,i,lat
+!
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1
+!
+! fout = PSI(I+1)+PSI(I-1)-2*PSI(I)
+            dlam = fj(k,i+1,lat)+fj(k,i-1,lat)-2*fj(k,i,lat)
+!
+! DPSIP=(PSI(J+1)-PSI(J))*.5*(CS(J+1)+CS(J))
+            dpsip = (fj(k,i,lat+1)-fj(k,i,lat))*
+     |        (0.5*(cs(lat+1)+cs(lat)))
+!
+! DPSIM=(PSI(J)-PSI(J-1))*.5*(CS(J)+CS(J-1))
+            dpsim = (fj(k,i,lat)-fj(k,i,lat-1))*
+     |        (0.5*(cs(lat)+cs(lat-1)))
+!
+! DPSI = (DPSIP-DPSIM)/CS(J)
+            dpsi = (dpsip-dpsim)/cs(lat)
+!
+! S = DLAM + DPSI = (L**2)(D**2)PSI
+            fout(k,i,lat) = dlam + dpsi
           enddo
         enddo
       enddo
 !
-! Exchange boundary lats and lons in fkmh:
-      nlevs = lev1-lev0+1
-      call mp_bndlats_f3d(fkmh,nlevs,lon0,lon1,lat0,lat1,1)
-      call mp_bndlons_f3d(fkmh,nlevs,lon0,lon1,lat0,lat1,1,0)
-!
-!     do lat=lat0,lat1
-!         call addfld('FNRH',' ',' ',fnrh(lev0:lev1-1,lon0:lon1,lat),
-!    |      'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!         call addfld('FKMH',' ',' ',fkmh(lev0:lev1-1,lon0:lon1,lat),
-!    |      'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     enddo ! lat=lat0,lat1
-!
-#ifdef VT
-!     code = 119 ; state = 'hdif1' ; activity='ModelCode'
-      call vtend(119,ier)
-#endif
-      end subroutine hdif1
-!-----------------------------------------------------------------------
-!
-      subroutine hdif2(tn_nm,un_nm,vn_nm,o2_nm,o1_nm,he_nm,fnrh,fkmh,
-     |  fkldt,fkldu,fkldv,fkldo2,fkldo1,fkldhe,
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-!
-! Save fkldx horizontal diffusion terms for hdif3. fkmh and fnrh are 
-! module data, and were calculated by hdif1.
-!
-      implicit none
-!
-! Input args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
-     |  tn_nm,  ! neutral temperature at time n-1 (deg K)
-     |  un_nm,  ! zonal velocity at time n-1 (cm/s)
-     |  vn_nm,  ! meridional velocity at time n-1 (cm/s)
-     |  o2_nm,  ! molecular oxygen at time n-1 (mmr)
-     |  o1_nm,  ! atomic oxygen at time n-1 (mmr)
-     |  he_nm,  ! helium at time n-1 (mmr)
-     |  fnrh,   ! eddy viscosity
-     |  fkmh    ! M/T
-!
-! Ouput args:
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
-     |  intent(out) ::
-     |  fkldt,  ! tn horizontal diffusion term
-     |  fkldu,  ! un horizontal diffusion term
-     |  fkldv,  ! vn horizontal diffusion term
-     |  fkldo1, ! o1 horizontal diffusion term
-     |  fkldo2, ! o2 horizontal diffusion term
-     |  fkldhe  ! He horizontal diffusion term
-!
-! Local:
-      integer :: k,i,lat,ier
-      real :: 
-     |  avkmh (lev0:lev1,lon0:lon1), ! average kmh
-     |  rhokmh(lev0:lev1,lon0:lon1)  ! nrh*avkmh
-!
-#ifdef VT
-!     code = 120 ; state = 'hdif2' ; activity='ModelCode'
-      call vtbegin(120,ier)
-#endif
-!
-! Latitude scan:
-      do lat=lat0-1,lat1+1
-!       write(6,"('hdif2: lat=',i3)") lat
-!
-! avkmh = average fkmh:
-! Allocation of fkmh in sub allocdata (fields_module.F):
-!     allocate(fkmh(nlevp1,lon0-2:lon1+2,lat0-2:lat1+2),stat=ier)
-!
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          avkmh(k,i) = (fkmh(k,i-1,lat  )+fkmh(k,i,lat  )+
-     |                  fkmh(k,i-1,lat+1)+fkmh(k,i,lat+1))*0.25
-        enddo
-      enddo
-!     if (lat > 0)
-!    |  call addfld('AVKMH',' ',' ',avkmh(lev0:lev1-1,lon0:lon1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! rhokmh = rho*avg(kmh)
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          rhokmh(k,i) = avkmh(k,i)*fnrh(k,i,lat)
-        enddo
-        rhokmh(lev1,i) = 0. ! added to prevent NaNS init fpe
-      enddo
-!
-!     if (lat > 0)
-!    |  call addfld('RHOKMH',' ',' ',rhokmh(lev0:lev1-1,lon0:lon1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! CALC RHO*KMH*(L*L(D*D)(PSI)) AT J AND N-1
-!
-! Define fkldx at i=1,nlonp4 and lat.
-! (note prognostic inputs at time n-1 have lon0-2->lon1+2 from bndlons 
-!  call in advance)
-!
-! FOR PSI = U
-      call lsqdsq(un_nm(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            un_nm(lev0:lev1,lon0-1:lon1+1,lat),
-     |            un_nm(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            avkmh(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1
-          fkldu(k,i,lat) = avkmh(k,i)*rhokmh(k,i)
-        enddo
-      enddo
-!     if (lat > 0)
-!    |  call addfld('FKLDU',' ',' ',fkldu(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! FOR PSI = V
-      call lsqdsq(vn_nm(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            vn_nm(lev0:lev1,lon0-1:lon1+1,lat),
-     |            vn_nm(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            avkmh(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1
-          fkldv(k,i,lat) = avkmh(k,i)*rhokmh(k,i)
-        enddo
-      enddo
-!     if (lat > 0)
-!    |  call addfld('FKLDV',' ',' ',fkldv(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! FOR PSI = T
-      call lsqdsq(tn_nm(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            tn_nm(lev0:lev1,lon0-1:lon1+1,lat),
-     |            tn_nm(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            avkmh(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1
-          fkldt(k,i,lat) = avkmh(k,i)*rhokmh(k,i)
-        enddo
-      enddo
-!     if (lat > 0)
-!    |  call addfld('FKLDT',' ',' ',fkldt(lev0:lev1-1,lon0:lon1,lat),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! FOR PSI = O2
-      call lsqdsq(o2_nm(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            o2_nm(lev0:lev1,lon0-1:lon1+1,lat),
-     |            o2_nm(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            avkmh(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1
-          fkldo2(k,i,lat) = avkmh(k,i)*rhokmh(k,i)
-        enddo
-      enddo
-!     if (lat > 0)
-!    |  call addfld('FKLDO2',' ',' ',fkldo2(lev0:lev1-1,lon0:lon1,lat)
-!    |    ,'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! FOR PSI = O
-      call lsqdsq(o1_nm(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            o1_nm(lev0:lev1,lon0-1:lon1+1,lat),
-     |            o1_nm(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            avkmh(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1
-          fkldo1(k,i,lat) = avkmh(k,i)*rhokmh(k,i)
-        enddo
-      enddo
-!     if (lat > 0)
-!    |  call addfld('FKLDO1',' ',' ',fkldo1(lev0:lev1-1,lon0:lon1,lat)
-!    |    ,'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! FOR PSI = He
-      call lsqdsq(he_nm(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            he_nm(lev0:lev1,lon0-1:lon1+1,lat),
-     |            he_nm(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            avkmh(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1
-          fkldhe(k,i,lat) = avkmh(k,i)*rhokmh(k,i)
-        enddo
-      enddo
-!     if (lat > 0)
-!    |  call addfld('FKLDHE',' ',' ',fkldhe(lev0:lev1-1,lon0:lon1,lat)
-!    |    ,'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-      enddo ! lat=lat0-1,lat1+1
-!
-#ifdef VT
-!     code = 120 ; state = 'hdif2' ; activity='ModelCode'
-      call vtend(120,ier)
-#endif
-      end subroutine hdif2
-!-----------------------------------------------------------------------
-      subroutine hdif_bndlatlons(kldt,kldu,kldv,kldo2,kldo1,kldhe,
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-!
-! Exchange boundary latitudes/longitudes of horizontal diffusion coeffs
-! calculated by hdif2. This is called from dynamics, in preparation 
-! for hdif3.
-!
-      use mpi_module,only: mp_bndlats_f3d,mp_bndlons_f3d
-!
-! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
-     |  intent(inout) :: kldt,kldu,kldv,kldo2,kldo1,kldhe
-!
-! Local:
-      integer :: nlevs
-      real :: f(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,6)
-
-      nlevs = lev1-lev0+1
-
-      f(:,:,:,1) = kldt
-      f(:,:,:,2) = kldu
-      f(:,:,:,3) = kldv
-      f(:,:,:,4) = kldo2
-      f(:,:,:,5) = kldo1
-      f(:,:,:,6) = kldhe
-
-      call mp_bndlats_f3d(f,nlevs,lon0,lon1,lat0,lat1,6)
-      call mp_bndlons_f3d(f,nlevs,lon0,lon1,lat0,lat1,6,0)
-
-      kldt = f(:,:,:,1)
-      kldu = f(:,:,:,2)
-      kldv = f(:,:,:,3)
-      kldo2 = f(:,:,:,4)
-      kldo1 = f(:,:,:,5)
-      kldhe = f(:,:,:,6)
-
-      end subroutine hdif_bndlatlons
-!-----------------------------------------------------------------------
-      subroutine hdif3(cp,fnrh,
-     |  kldt,kldu,kldv,kldo2,kldo1,kldhe, ! input
-     |  hdt ,hdu ,hdv ,hdo2 ,hdo1 ,hdhe , ! output
-     |  lev0,lev1,lon0,lon1,lat)
-      use mpi_module,only: lat0,lat1
-!
-! Calculate horizontal diffusion terms for t,u,v,o2,o1,he at current latitude, 
-! using coefficients that were output by hdif2. (hdif2 is called from advance, 
-! hdif3 is called from dynamics). Sub kld_bndlons has been called prior to
-! this routine so tasks have boundary longitudes for kldt,u,v,o2,o1,he.
-!
-      implicit none
-!
-! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-!
-! 2d input:
-      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: cp
-!
-! 3d input at full task subdomain:
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
-     |  fnrh, ! eddy viscosity
-     |  kldt,kldu,kldv,kldo2,kldo1,kldhe ! input from hdif2
-!
-! 2d output for current latitude:
-      real,dimension(lev0:lev1,lon0-2:lon1+2),intent(out):: 
-     |  hdt ,hdu ,hdv ,hdo2 ,hdo1, hdhe  ! output
-!
-! Local:
-      integer :: k,i
-      real,dimension(lev0:lev1,lon0:lon1) :: 
-     |  fnrh_inv, hdout, cpi 
-!
-! fnrh is eddy viscosity (hdif module data), output by hdif1:
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          fnrh_inv(k,i) = -1. / fnrh(k,i,lat)
-        enddo ! k=lev0,lev1-1
-      enddo ! i=lon0,lon1
-!
-! Make hdu from kldu (hdu was nflh):
-      call lsqdsq(kldu(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            kldu(lev0:lev1,lon0-1:lon1+1,lat  ),
-     |            kldu(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            hdout(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          hdu(k,i) = hdout(k,i)*fnrh_inv(k,i)
-        enddo ! k=lev0,lev1-1
-        hdu(lev1,i) = 0.
-      enddo ! i=lon0,lon1
-!     call addfld('HDU',' ',' ',hdu(lev0:lev1-1,lon0:lon1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! Make hdv from kldv (hdv was nfph):
-      call lsqdsq(kldv(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            kldv(lev0:lev1,lon0-1:lon1+1,lat  ),
-     |            kldv(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            hdout(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          hdv(k,i) = hdout(k,i)*fnrh_inv(k,i)
-        enddo ! k=lev0,lev1-1
-        hdv(lev1,i) = 0.
-      enddo ! i=lon0,lon1
-!     call addfld('HDV',' ',' ',hdv(lev0:lev1-1,lon0:lon1),
-!    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! Make hdt from kldt (was nqdh):
-      call lsqdsq(kldt(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            kldt(lev0:lev1,lon0-1:lon1+1,lat  ),
-     |            kldt(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            hdout(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          cpi(k,i) = .5*(cp(k,i)+cp(k+1,i))
-        enddo ! k=lev0,lev1-1
-      enddo ! i=lon0,lon1
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          hdt(k,i) = hdout(k,i)*fnrh_inv(k,i)*cpi(k,i)
-        enddo ! k=lev0,lev1-1
-        hdt(lev1,i) = 0.
-      enddo ! i=lon0,lon1
-!     call addfld('HDT',' ',' ',hdt(lev0:lev1-1,lon0:lon1),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! Make hdo2 from kldo2 (was npsdh):
-      call lsqdsq(kldo2(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            kldo2(lev0:lev1,lon0-1:lon1+1,lat  ),
-     |            kldo2(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            hdout(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          hdo2(k,i) = hdout(k,i)*fnrh_inv(k,i)
-        enddo ! k=lev0,lev1-1
-        hdo2(lev1,i) = 0.
-      enddo ! i=lon0,lon1
-!     call addfld('HDO2',' ',' ',hdo2(lev0:lev1-1,lon0:lon1),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! Make hdo1 from kldo1 (was npsdh2):
-      call lsqdsq(kldo1(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            kldo1(lev0:lev1,lon0-1:lon1+1,lat  ),
-     |            kldo1(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            hdout(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          hdo1(k,i) = hdout(k,i)*fnrh_inv(k,i)
-        enddo ! k=lev0,lev1-1
-        hdo1(lev1,i) = 0.
-      enddo ! i=lon0,lon1
-!     call addfld('HDO1',' ',' ',hdo1(lev0:lev1-1,lon0:lon1),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-! Make hdhe from kldhe:
-      call lsqdsq(kldhe(lev0:lev1,lon0-1:lon1+1,lat+1),
-     |            kldhe(lev0:lev1,lon0-1:lon1+1,lat  ),
-     |            kldhe(lev0:lev1,lon0-1:lon1+1,lat-1),
-     |            hdout(lev0:lev1,lon0:lon1),lon0,lon1,
-     |            lev0,lev1,lat)
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          hdhe(k,i) = hdout(k,i)*fnrh_inv(k,i)
-        enddo ! k=lev0,lev1-1
-        hdhe(lev1,i) = 0.
-      enddo ! i=lon0,lon1
-!     call addfld('HDHE',' ',' ',hdhe(lev0:lev1-1,lon0:lon1),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!
-      end subroutine hdif3
+      end subroutine lsqdsq
 !-----------------------------------------------------------------------
       end module hdif_module
