@@ -34,7 +34,6 @@
       use hdif_module,only: hdif3,hdif_bndlatlons
       use timing_module,only: timer,timing
       use addfld_module,only: addfld
-      use qjoule,only: qjoule_tn,qjoule_ti
       use diags_module,only: mkdiag_CUSP,mkdiag_DRIZZLE,mkdiag_ALFA,
      |  mkdiag_NFLUX,mkdiag_EFLUX,mkdiag_TEC,mkdiag_HNMF2,
      |  mkdiag_QJOULE_INTEG,mkdiag_UI,mkdiag_VI,mkdiag_WI
@@ -688,8 +687,8 @@
 !
       do lat=lat0,lat1
 !
-! Joule heating for ion temperature:
-        call qjoule_ti(
+! Joule heating for ion temperature and tn:
+        call qjoule(
      |    un (levd0,lond0,lat,itp), ! zonal neutral velocity input
      |    vn (levd0,lond0,lat,itp), ! meridional velocity input
      |    w  (levd0,lond0,lat,itp), ! vertical velocity input
@@ -705,11 +704,14 @@
      |    mbar(levd0,lond0,lat,itp),! mean molecular weight
      |    scht(levd0,lond0,lat,itp),! scale height
      |    qji_ti(levd0,lond0,lat),  ! ion joule heating output
-     |    1,nlevp1,lon0,lon1)
-        if (debug) write(6,"('dynamics after qjoule_ti: lat=',i3)")lat
+     |    qji_tn(levd0,lond0,lat),  ! ion joule heating output
+     |    1,nlevp1,lon0,lon1,lat)
+        if (debug) write(6,"('dynamics after qjoule: lat=',i3)")lat
         if (diags) then
           call addfld('QJI_TI','Joule Heating for TI',' ',
      |      qji_ti(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+          call addfld('QJI_TN','Joule Heating for TN',' ',
+     |      qji_tn(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
         endif
 !
         call settei(
@@ -744,6 +746,10 @@
      |      ti(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
         endif
       enddo ! lat=lat0,lat1
+!
+! Save diagnostic Height-integrated Joule Heating:
+      call mkdiag_QJOULE_INTEG('QJOULE_INTEG',
+     |  qji_tn(:,i0:i1,lat0:lat1),k0,k1,i0,i1,lat0,lat1)
 !
 ! Implicit and explicit cooling terms:
       do lat=lat0,lat1
@@ -809,30 +815,6 @@
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after hdif3')")
-!
-! Calculate joule heating for tn (3d field qji_tn):
-      do lat=lat0,lat1
-        call qjoule_tn(
-     |    un (levd0,lond0,lat,itp), ! zonal neutral velocity input
-     |    vn (levd0,lond0,lat,itp), ! meridional velocity input
-     |    w  (levd0,lond0,lat,itp), ! vertical velocity input
-     |    ui (levd0,lond0,lat),     ! zonal ion velocity input
-     |    vi (levd0,lond0,lat),     ! meridional ion velocity input
-     |    wi (levd0,lond0,lat),     ! vertical ion velocity input
-     |    lam1(levd0,lond0,lat),    ! lambda_1 ion drag coefficient
-     |    scht(levd0,lond0,lat,itp),! scale height
-     |    qji_tn(levd0,lond0,lat),  ! ion joule heating output
-     |    1,nlevp1,lon0,lon1,lat)
-        if (diags) then
-          call addfld('QJI_TN','Joule Heating for TN',' ',
-     |      qji_tn(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
-        endif
-      enddo ! lat=lat0,lat1
-      if (debug) write(6,"('dynamics after qjoule_tn')")
-!
-! Save diagnostic Height-integrated Joule Heating:
-      call mkdiag_QJOULE_INTEG('QJOULE_INTEG',
-     |  qji_tn(:,i0:i1,lat0:lat1),k0,k1,i0,i1,lat0,lat1)
 !
 ! Calculate 2d (lon,lat) diagnostics for amie run:
 !
