@@ -760,18 +760,8 @@
      |    cool_explicit(levd0,lond0,lat), ! output explicit cooling
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after newton: lat=',i3)") lat
-!
-! Add O(3P) contribution to cooling terms:
-        call newto3p(
-     |    tn  (levd0,lond0,lat,itp),
-     |    o1  (levd0,lond0,lat,itp),
-     |    cp  (levd0,lond0,lat),
-     |    cool_implicit(levd0,lond0,lat), ! output implicit cooling
-     |    cool_explicit(levd0,lond0,lat), ! output explicit cooling
-     |    1,nlevp1,lon0,lon1)
-        if (debug) write(6,"('dynamics after newto3p: lat=',i3)") lat
       enddo ! lat=lat0,lat1
-      if (debug) write(6,"('dynamics after newton,newto3p')")
+      if (debug) write(6,"('dynamics after newton')")
       if (diags) then
         do lat=lat0,lat1
           call addfld('COOL_IMP',' ',' ',cool_implicit(:,i0:i1,lat),
