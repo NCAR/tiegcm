@@ -217,7 +217,6 @@
      |      sco2(levd0,lond0,lat),
      |      sco1(levd0,lond0,lat),
      |      scn2(levd0,lond0,lat),
-     |      tn  (levd0,lond0,lat,itp),
      |      no  (levd0,lond0,lat,itp),
      |      o2  (levd0,lond0,lat,itp),
      |      o1  (levd0,lond0,lat,itp),
