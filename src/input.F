@@ -323,7 +323,7 @@
       saps = .false.
       doEclipse = .false.
       oneway = .false.
-      duff = .false.
+      duff = .true.
 
       opdiffcap = spval
       opdiffrate = spval
