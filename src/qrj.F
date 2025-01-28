@@ -433,16 +433,16 @@
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('QTEF'  ,' ',' ',  qtef(lev0:lev1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QO2P'  ,' ',' ',  qo2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QN2P'  ,' ',' ',  qn2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QNP'   ,' ',' ',   qnp(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOPa'   ,' ',' ',  qop(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QNOP'  ,' ',' ',  qnop(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QO2P'  ,' ',' ',  qo2p(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QN2P'  ,' ',' ',  qn2p(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QNP'   ,' ',' ',   qnp(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QOPa'   ,' ',' ',  qop(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QNOP'  ,' ',' ',  qnop(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 #ifdef VT
 !     code = 118 ; state = 'qrj' ; activity='ModelCode'

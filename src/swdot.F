@@ -75,7 +75,7 @@
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
       real,intent(inout) :: wout(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2)
-      real(rp) :: wlimit = 0.007_rp
+      real(rp) :: wlimit = 0.004_rp
       character(len=*),intent(in) :: name
 !
 ! VT vampir tracing:
