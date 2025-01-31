@@ -36,7 +36,7 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) :: 
      |  un,vn,          ! zonal, meridional  neutral velocity [cm/s]
      |  w,              ! dimensionless vertical  neutral velocity omega [1/s] (interface)
-     |  ui,vi,wi,       ! zonal, meridional, vertical ion velocity (ExB) [cm/s] (interface)
+     |  ui,vi,wi,       ! zonal, meridional, vertical ion velocity [cm/s] (interface)
      |  lam1,           ! lambda_1 ion drag coefficients [1/s] (interface)
      |  op,        	! O+ 1/cm^3  at half levels
      |  nplus,     	! N+  1/cm^3 at half levels

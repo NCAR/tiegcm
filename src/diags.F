@@ -190,22 +190,22 @@
       diags(n)%caller     = 'elden.F'
 !
       n = n+1
-      diags(n)%short_name = 'UI_ExB'
-      diags(n)%long_name  = 'UI: Zonal ExB Velocity'
+      diags(n)%short_name = 'UI'
+      diags(n)%long_name  = 'UI: Zonal Ion Velocity'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
-      diags(n)%short_name = 'VI_ExB'
-      diags(n)%long_name  = 'VI: Meridional ExB Velocity'
+      diags(n)%short_name = 'VI'
+      diags(n)%long_name  = 'VI: Meridional Ion Velocity'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
 !
       n = n+1
-      diags(n)%short_name = 'WI_ExB'
-      diags(n)%long_name  = 'WI: Vertical ExB Velocity'
+      diags(n)%short_name = 'WI'
+      diags(n)%long_name  = 'WI: Vertical Ion Velocity'
       diags(n)%units      = 'cm/s'
       diags(n)%levels     = 'ilev'
       diags(n)%caller     = 'ionvel.F'
@@ -493,7 +493,7 @@
 !-----------------------------------------------------------------------
       subroutine mkdiag_UI(name,ui,lev0,lev1,lon0,lon1,lat0,lat1)
 !
-! Save 3d diagnostic UI_ExB. This is called from ionvel.F. 
+! Save 3d diagnostic UI. This is called from ionvel.F. 
 ! This routine simply passes ui from ionvel to addfld.
 ! Levels at interfaces. Incoming units are cm/s, but is put
 ! on the history in m/s.
@@ -521,7 +521,7 @@
 !-----------------------------------------------------------------------
       subroutine mkdiag_VI(name,vi,lev0,lev1,lon0,lon1,lat0,lat1)
 !
-! Save 3d diagnostic VI_ExB. This is called from ionvel.F. 
+! Save 3d diagnostic VI. This is called from ionvel.F. 
 ! This routine simply passes vi from ionvel to addfld.
 ! Levels at interfaces. Incoming units are cm/s, but is put
 ! on the history in m/s.
@@ -549,7 +549,7 @@
 !-----------------------------------------------------------------------
       subroutine mkdiag_WI(name,wi,lev0,lev1,lon0,lon1,lat0,lat1)
 !
-! Save 3d diagnostic WI_ExB. This is called from ionvel.F. 
+! Save 3d diagnostic WI. This is called from ionvel.F. 
 ! This routine simply passes wi from ionvel to addfld.
 ! Levels at interfaces. Incoming units are cm/s, but is put
 ! on the history in m/s.

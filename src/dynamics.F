@@ -59,7 +59,7 @@
 ! If diags is set true, the following fields will be written to
 ! secondary histories:
 !
-! SECFLDS = 'CP','KT','KM','W_OMEGA','UI_ExB','VI_ExB','WI_ExB',
+! SECFLDS = 'CP','KT','KM','W_OMEGA','UI','VI','WI',
 !           'SCO2','SCO1','SCN2','QTOTAL','QOP','QO2P','QN2P','QNP',
 !           'QNOP','OPLUS','XIOP2P','XIOP2D','NP_diag','N2P_diag',
 !           'NOP_diag','O2P_diag','ELDEN','LXX','LYY','LXY','LYX',
@@ -124,10 +124,21 @@
         enddo
       endif
 !
-! Calculate ExB ion drift velocities from electric field:
+! Calculate ion velocities from electric field:
 !
       call ionvel(
      |  z (levd0,lond0,latd0,itc), ! geopotential input
+     |  tn(levd0,lond0,latd0,itp),
+     |  un(levd0,lond0,latd0,itp),
+     |  vn(levd0,lond0,latd0,itp),
+     |  o2(levd0,lond0,latd0,itp),
+     |  o1(levd0,lond0,latd0,itp),
+     |  he(levd0,lond0,latd0,itp),
+     |  n2(levd0,lond0,latd0),
+     |  w(levd0,lond0,latd0,itp),
+     |  ti(levd0,lond0,latd0,itp),
+     |  xnmbar(levd0,lond0,latd0,itp),
+     |  scht(levd0,lond0,latd0,itp),
      |  ui(levd0,lond0,latd0),     ! U ion velocity output
      |  vi(levd0,lond0,latd0),     ! V ion velocity output
      |  wi(levd0,lond0,latd0),     ! W ion velocity output
@@ -138,11 +149,11 @@
 ! mkdiags_UI,VI,WI are called from ionvel.
 !     if (diags) then
 !       do lat=lat0,lat1
-!         call addfld('UI_ExB','Zonal ExB Velocity','cm/s',
+!         call addfld('UI','Zonal Ion Velocity','cm/s',
 !    |      ui(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
-!         call addfld('VI_ExB','Meridional ExB Velocity','cm/s',
+!         call addfld('VI','Meridional Ion Velocity','cm/s',
 !    |      vi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
-!         call addfld('WI_ExB','Vertical ExB Velocity','cm/s',
+!         call addfld('WI','Vertical Ion Velocity','cm/s',
 !    |      wi(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
 !       enddo
 !     endif
@@ -292,12 +303,12 @@
      |  write(6,"('Time in QRJ =          ',
      |    f12.2,' Dynamics: step ',i5)") time1_qrj,istep
 !
-! Save ion drifts if requested:
-      call mkdiag_UI('UI_ExB',ui(:,lon0:lon1,lat0:lat1),
+! Save ion velocities if requested:
+      call mkdiag_UI('UI',ui(:,lon0:lon1,lat0:lat1),
      |  1,nlevp1,lon0,lon1,lat0,lat1)
-      call mkdiag_VI('VI_ExB',vi(:,lon0:lon1,lat0:lat1),
+      call mkdiag_VI('VI',vi(:,lon0:lon1,lat0:lat1),
      |  1,nlevp1,lon0,lon1,lat0,lat1)
-      call mkdiag_WI('WI_ExB',wi(:,lon0:lon1,lat0:lat1),
+      call mkdiag_WI('WI',wi(:,lon0:lon1,lat0:lat1),
      |  1,nlevp1,lon0,lon1,lat0,lat1)
 !
 #ifdef VT
@@ -693,9 +704,9 @@
      |    un (levd0,lond0,lat,itp), ! zonal neutral velocity input
      |    vn (levd0,lond0,lat,itp), ! meridional velocity input
      |    w  (levd0,lond0,lat,itp), ! vertical velocity input
-     |    ui (levd0,lond0,lat),     ! zonal ion velocity input (ExB)
-     |    vi (levd0,lond0,lat),     ! meridional ion velocity input (ExB)
-     |    wi (levd0,lond0,lat),     ! vertical ion velocity input (ExB)
+     |    ui (levd0,lond0,lat),     ! zonal ion velocity input
+     |    vi (levd0,lond0,lat),     ! meridional ion velocity input
+     |    wi (levd0,lond0,lat),     ! vertical ion velocity input
      |    lam1(levd0,lond0,lat),    ! lambda_1 ion drag coefficient [1/s]
      |    op (levd0,lond0,lat,itp), ! O+ 1/cm^3
      |    nplus(levd0,lond0,lat),   ! N+  1/cm^3

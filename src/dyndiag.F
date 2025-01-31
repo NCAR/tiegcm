@@ -100,9 +100,9 @@
      |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
 !
-! Calculate the Joule heating due to wind and ion drift
+! Calculate the Joule heating due to wind and ion velocity
 !  qwind = Joule Heting due to wind
-!  qamie = Joule Heating due to ion drift
+!  qamie = Joule Heating due to ion velocity
 !  work = the mechanical work
 !  wtot = total electromagnetic power
 !

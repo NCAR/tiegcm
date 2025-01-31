@@ -656,21 +656,21 @@
       i_km = n ; n = n+1
 !
       allocate(ui(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('ZONAL ION DRIFT VELOCITY')")
+      write(f3d(n)%long_name,"('ZONAL ION VELOCITY')")
       f3d(n)%short_name = "UI"
       f3d(n)%units = " "
       f3d(n)%data => ui
       i_ui = n ; n = n+1
 !
       allocate(vi(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('MERIDIONAL ION DRIFT VELOCITY')")
+      write(f3d(n)%long_name,"('MERIDIONAL ION VELOCITY')")
       f3d(n)%short_name = "VI"
       f3d(n)%units = " "
       f3d(n)%data => vi
       i_vi = n ; n = n+1
 !
       allocate(wi(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('VERTICAL ION DRIFT VELOCITY')")
+      write(f3d(n)%long_name,"('VERTICAL ION VELOCITY')")
       f3d(n)%short_name = "WI"
       f3d(n)%units = " "
       f3d(n)%data => wi

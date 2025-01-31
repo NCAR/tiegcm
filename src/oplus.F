@@ -890,11 +890,11 @@
      |        bdzdvb_op(k,i,lat)+bdotdh_diff(k,i,lat)+bdotdh_op(k,i,lat)
 !
 ! Note if input flag DYNAMO<=0, then ui,vi,wi velocities will be zero.
-            vdotn_h(k,i,lat) = bmod2(i,lat)**2/(2.*re)*
+            vdotn_h(k,i,lat) = 1/(2.*re)*
      |        (uii(k,i,lat)/(cs(lat)*dlamda)*
-     |         (opb(k,i+1,lat)-opb(k,i-1,lat))+
+     |         (op(k,i+1,lat)-op(k,i-1,lat))+
      |         vii(k,i,lat)/dphi*
-     |         (opb(k,i,lat+1)-opb(k,i,lat-1)))
+     |         (op(k,i,lat+1)-op(k,i,lat-1)))
 !
 ! Collect explicit terms:
 ! Sum O+ at time n-1 to explicit terms: N(O+)/(2*DT) (N-1) (was s4)
