@@ -99,7 +99,7 @@
      |  ntimes_f107,ntimes_f107a
       logical :: aluse,  ! logical to use AL in Weimer 2001 model or not
      |  enforce_n2,      ! logical to correct the N2 altitude profile
-     |  et,              ! logical to calculate electron turbulent heating
+     |  do_et,              ! logical to calculate electron turbulent heating
      |  saps,            ! logical to include empirical SAPS
      |  doEclipse,       ! logical to do eclipse mask or not
      |  oneway,          ! logical to use oneway mix reader
@@ -202,7 +202,7 @@
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
      |  bgrddata_ncfile,ctmt_ncfile,electron_heating,duff,
-     |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,enforce_n2,et,saps,
+     |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,enforce_n2,do_et,saps,
      |  subaur_data,doEclipse,eclipse_list,oneway,mixfile,
      |  nudge_ncpre,nudge_ncfile,nudge_ncpost,nudge_flds,
      |  nudge_lbc,nudge_f4d,nudge_use_refdate,nudge_refdate,
@@ -319,7 +319,7 @@
       ti_cap = 10000._rp
       electron_heating = ispval
       enforce_n2 = .false.
-      et = .false.
+      do_et = .false.
       saps = .false.
       doEclipse = .false.
       oneway = .false.

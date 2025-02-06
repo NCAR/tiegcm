@@ -24,12 +24,12 @@
 !
 ! 3d (i,j,k) ESMF Fields on geographic subdomains:
       type(ESMF_Field) :: geo_ped, geo_hal, geo_zpot, 
-     |  geo_adotv1, geo_adotv2, geo_je1pg, geo_je2pg
+     |  geo_adotv1, geo_adotv2, geo_je1pg, geo_je2pg, geo_ped_ref
       type(ESMF_Field) :: esmf_3dfields(8) ! used in pdynamo.F
 !
 ! 3d (i,j,k) ESMF fields regridded to magnetic subdomains:
       type(ESMF_Field) :: mag_ped, mag_hal, mag_zpot, 
-     |  mag_adotv1, mag_adotv2, mag_je1pg, mag_je2pg
+     |  mag_adotv1, mag_adotv2, mag_je1pg, mag_je2pg, mag_ped_ref
 !
 ! 2d (i,j) ESMF fields on geographic subdomains:
       type(ESMF_Field) :: geo_sini, geo_adota1, geo_adota2,
@@ -38,8 +38,8 @@
 ! 2d (i,j) ESMF fields on magnetic subdomains:
       type(ESMF_Field) :: mag_sini, mag_adota1, mag_adota2,
      |  mag_a1dta2, mag_be3
-      type(ESMF_Field) :: mag_zigm1, mag_zigm2, mag_nsrhs
-      type(ESMF_Field) :: geo_zigm1, geo_zigm2, geo_nsrhs
+      type(ESMF_Field) :: mag_zigm1, mag_zigm2, mag_nsrhs, mag_zigm1_ref
+      type(ESMF_Field) :: geo_zigm1, geo_zigm2, geo_nsrhs, geo_zigm1_ref
 !
 ! 3d electric potential for mag to geo regridding:
       type(ESMF_Field) :: mag_phi3d,mag_ephi3d,mag_elam3d,mag_emz3d
@@ -87,6 +87,7 @@
 !
 ! 3d fields on source geo grid (these exclude periodic points):
       call esmf_create_geofield(geo_ped,geo_src_grid,mlev0,mlev1)
+      call esmf_create_geofield(geo_ped_ref,geo_src_grid,mlev0,mlev1)
       call esmf_create_geofield(geo_hal ,geo_src_grid,mlev0,mlev1)
       call esmf_create_geofield(geo_zpot,geo_src_grid,mlev0,mlev1)
       call esmf_create_geofield(geo_adotv1,geo_src_grid,mlev0,mlev1)
@@ -103,6 +104,7 @@
 !
 ! 3d fields on destination mag grid (will include periodic point):
       call esmf_create_magfield(mag_ped ,mag_des_grid,mlev0,mlev1)
+      call esmf_create_magfield(mag_ped_ref,mag_des_grid,mlev0,mlev1)
       call esmf_create_magfield(mag_hal ,mag_des_grid,mlev0,mlev1)
       call esmf_create_magfield(mag_zpot,mag_des_grid,mlev0,mlev1)
       call esmf_create_magfield(mag_adotv1,mag_des_grid,mlev0,mlev1)
@@ -112,6 +114,12 @@
 !
 ! Get 3d bounds of destination mag field:
       call ESMF_FieldGet(mag_ped,localDe=0,farrayPtr=fptr,
+     |  computationalLBound=lbnd_destmag,
+     |  computationalUBound=ubnd_destmag,rc=rc)
+!     write(6,"('esmf_init: lbnd_destmag=',3i4,' ubnd_destmag=',3i4)")
+!    |  lbnd_destmag,ubnd_destmag
+
+      call ESMF_FieldGet(mag_ped_ref,localDe=0,farrayPtr=fptr,
      |  computationalLBound=lbnd_destmag,
      |  computationalUBound=ubnd_destmag,rc=rc)
 !     write(6,"('esmf_init: lbnd_destmag=',3i4,' ubnd_destmag=',3i4)")
@@ -126,6 +134,7 @@
 !
 ! 2d source mag grid for MAGE
       call esmf_create_magfield(mag_zigm1 ,mag_src_grid,0,0)
+      call esmf_create_magfield(mag_zigm1_ref ,mag_src_grid,0,0)
       call esmf_create_magfield(mag_zigm2 ,mag_src_grid,0,0)
       call esmf_create_magfield(mag_nsrhs ,mag_src_grid,0,0)
 !
@@ -137,6 +146,7 @@
 !
 ! 2d fields on destination geo grid for mag2geo:
       call esmf_create_geofield(geo_zigm1 ,geo_des_grid,0,0)
+      call esmf_create_geofield(geo_zigm1_ref ,geo_des_grid,0,0)
       call esmf_create_geofield(geo_zigm2 ,geo_des_grid,0,0)
       call esmf_create_geofield(geo_nsrhs ,geo_des_grid,0,0)
 !
@@ -198,12 +208,34 @@
         call shutdown('esmf_FieldRegridStore for 3d geo2mag')
       endif
 !
+      call ESMF_FieldRegridStore(srcField=geo_ped_ref,
+     |  dstField=mag_ped_ref,regridMethod=ESMF_REGRIDMETHOD_BILINEAR,
+     |  polemethod=ESMF_POLEMETHOD_ALLAVG,
+     |  routeHandle=routehandle_geo2mag,factorIndexList=factorIndexList,
+     |  factorList=factorList,rc=rc)
+
+      if (rc /= ESMF_SUCCESS) then
+        write(6,"('>>> esmf_init: error return from ',
+     |    'ESMF_FieldRegridStore for 3d geo2mag: rc=',i4)") rc
+        call shutdown('esmf_FieldRegridStore for 3d geo2mag')
+      endif
+!
 ! Store route handle for geo2mag 3d fields:
 !
 ! Use esmf index list and weights for 3d fields:
       call ESMF_FieldSMMStore(geo_ped,mag_ped,routehandle_geo2mag,
      |  factorList,factorIndexList,rc=rc,
      |  srcTermProcessing=srcTermProcessing) 
+
+      if (rc /= ESMF_SUCCESS) then
+        write(6,"('>>> esmf_init: error return from ',
+     |    'ESMF_FieldSMMStore for 3d geo2mag: rc=',i4)") rc
+        call shutdown('ESMF_FieldSMMStore')
+      endif
+
+      call ESMF_FieldSMMStore(geo_ped_ref,mag_ped_ref,
+     |  routehandle_geo2mag,factorList,factorIndexList,rc=rc,
+     |  srcTermProcessing=srcTermProcessing)
 
       if (rc /= ESMF_SUCCESS) then
         write(6,"('>>> esmf_init: error return from ',
@@ -277,6 +309,29 @@
       call ESMF_FieldSMMStore(mag_zigm1,geo_zigm1,
      |  routehandle_mag2geo_2d, factorList,factorIndexList,rc=rc,
      |  srcTermProcessing=srcTermProcessing) 
+
+      if (rc /= ESMF_SUCCESS) then
+        write(6,"('>>> esmf_init: error return from ',
+     |    'ESMF_FieldSMMStore for 2d mag2geo: rc=',i4)") rc
+        call shutdown('ESMF_FieldSMMStore')
+      endif
+
+      call ESMF_FieldRegridStore(srcField=mag_zigm1_ref,
+     |  dstField=geo_zigm1_ref,regridMethod=ESMF_REGRIDMETHOD_BILINEAR,
+     |  polemethod=ESMF_POLEMETHOD_ALLAVG,
+     |  routeHandle=routehandle_mag2geo_2d,
+     |  factorIndexList=factorIndexList,
+     |  factorList=factorList,rc=rc)
+
+      if (rc /= ESMF_SUCCESS) then
+        write(6,"('>>> esmf_init: error return from ',
+     |    'ESMF_FieldRegridStore for 2d mag2geo: rc=',i4)") rc
+        call shutdown('esmf_FieldRegridStore')
+      endif
+
+      call ESMF_FieldSMMStore(mag_zigm1_ref,geo_zigm1_ref,
+     |  routehandle_mag2geo_2d, factorList,factorIndexList,rc=rc,
+     |  srcTermProcessing=srcTermProcessing)
 
       if (rc /= ESMF_SUCCESS) then
         write(6,"('>>> esmf_init: error return from ',

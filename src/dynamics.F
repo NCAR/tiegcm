@@ -445,6 +445,7 @@
      |    hall(levd0,lond0,lat), ! hall conductivity output
      |    Q1  (levd0,lond0,lat), ! electron ohmic heating output
      |    Q2  (levd0,lond0,lat), ! electrojet turbulent heating output
+     |    Knc (levd0,lond0,lat), ! Nonlinear current coefficient for Pedersen conductacne
      |    1,nlevp1,lon0,lon1,lat)
         if (debug) write(6,"('dynamics after lamdas: lat=',i3)") lat
         if (diags) then

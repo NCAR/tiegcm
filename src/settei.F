@@ -13,7 +13,7 @@
       use cons_module,only: pi,rtd,evergs,
      |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2,dipmin,avo,
      |  rmass_o1,rmassinv_n4s,rmassinv_no
-      use input_module,only: f107,et,electron_heating, ti_cap, te_cap
+      use input_module,only: f107,do_et,electron_heating, ti_cap, te_cap
       use chapman_module,only: chi   ! solar zenith angle (nlonp4,nlat)
       use magfield_module,only: rlatm,dipmag
       use fields_module,only: tlbc
@@ -442,7 +442,9 @@
           rhs(k,i) = rhs(k,i)-qe(k,i)*qtot(k,i)*evergs
 !
 ! Subtract electrojet turbulent heating from rhs
-          if (et) rhs(k,i) = rhs(k,i)-(Q1(k,i)+Q2(k,i))*10.0_rp
+          ! Q1/Q2 are electron ohmic and turbulent heating rates,
+          ! updated in lamdas, called before settei in dynamics.
+          if (do_et) rhs(k,i) = rhs(k,i)-(Q1(k,i)+Q2(k,i))*10.0_rp
 !
           root_te(k,i) = sqrt(te(k,i))
 !
@@ -536,7 +538,7 @@
      |      loss_ehe(k,i)+loss_en2(k,i)
 !
 ! Cooling correction from electrojet turbulent heating
-          if (et .and. te(k,i)>500.0_rp .and. Q2(k,i)>0.0_rp)
+          if (do_et .and. te(k,i)>500.0_rp .and. Q2(k,i)>0.0_rp)
      |      loss_en(k,i)=loss_en(k,i)*
      |      exp(-7.54E-4_rp*(te(k,i)-500.0_rp))
 !

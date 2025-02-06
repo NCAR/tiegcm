@@ -42,7 +42,7 @@
       integer,parameter ::
      |  nmixinapex = 2, ! APEX Potential, Flux (for auroral bc)
      |  nmixingeo  = 2, ! GEO Flux, Energy
-     |  nmixoutapex= 2, ! APEX Pedersen, Hall
+     |  nmixoutapex= 3, ! APEX Pedersen, Hall, Pedersen_ref
      |  nmixoutgeo = 0, ! No GEO exports
      |  nhoutvar   = 9, ! TN, UN, VN, OMEGA, O2, O1, NO, Z, HE
      |  nhinvar    = 0  !
@@ -602,13 +602,13 @@
 
 ! ... Shared Module Variables ..........................................
       use params_module,only: nlatp2,nlon,nlonp1,nlonp2
-      use fields_module,only: gzigm1,gzigm2,gnsrhs
+      use fields_module,only: gzigm1,gzigm2,gnsrhs,gzigm1_ref
       use mpi_module,only: mytid,ntask,tasks
       use mpi_module,only: mlat0,mlat1,mlon0,mlon1,
      |  mp_gather_pdyn
       use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f2d
       use addfld_module,only: addfld
-      use fields_module,only: azigm1,azigm2
+      use fields_module,only: azigm1,azigm2,azigm1_ref
       use mpi
 
 ! ... Parameter variables ..............................................
@@ -629,6 +629,7 @@
 ! Prepare data for export
       amsub(:,:,1) = azigm1(mlon0:mlon1,mlat0:mlat1)
       amsub(:,:,2) = azigm2(mlon0:mlon1,mlat0:mlat1)
+      amsub(:,:,3) = azigm1_ref(mlon0:mlon1,mlat0:mlat1)
 
       where(amsub < 0.2_rp) amsub = 0.2_rp
 
@@ -639,6 +640,7 @@
         if (.not. allocated(avar2d)) then
            allocate(avar2d(nmlat,nmlonp1,nmixoutapex))
         endif
+        write(*,*) "Preparing APEX stuff here"
         do v=1,nmixoutapex
           do j = 1,nmlat
             do i = 1,nmlonp1
@@ -651,33 +653,37 @@
         enddo
       endif
 
-        if (nmixoutgeo .ne. 0) then
-          ! Prepare geographic output arrays
-          ! Gather GEO arrays
-          if (.not. allocated(gsub))
-     |  allocate(gsub(lon0:lon1,lat0:lat1,nmixoutgeo))
-          if (.not. allocated(gglb))
-     |  allocate(gglb(nlonp4,nlat,nmixoutgeo))
-          do v=1,nmixoutgeo
+      if (nmixoutgeo .ne. 0) then
+        ! Prepare geographic output arrays
+        ! Gather GEO arrays
+        if (.not. allocated(gsub))
+     |     allocate(gsub(lon0:lon1,lat0:lat1,nmixoutgeo))
+        if (.not. allocated(gglb))
+     |     allocate(gglb(nlonp4,nlat,nmixoutgeo))
+        do v=1,nmixoutgeo
+          ! this loop is effectively off when nmixoutgeo=0 above.
+          ! the new coupling scheme directly passes azigm1/2/1_ref to remix.
           select case(v)
-          case (1)
-          gsub(:,:,v) = gzigm1
-          case(2)
-          gsub(:,:,v) = gzigm2
-          where(gsub < 0.2_rp) gsub = 0.2_rp
-          case(3)
-          gsub(:,:,v) = gnsrhs
+            case (1)
+              gsub(:,:,v) = gzigm1
+            case(2)
+              gsub(:,:,v) = gzigm2
+              where(gsub < 0.2_rp) gsub = 0.2_rp
+            case(3)
+              gsub(:,:,v) = gnsrhs
+            case(4)
+              gsub(:,:,v) = gzigm1_ref
           end select
-          enddo
+        enddo
 
-          call mp_gather_f2d(gsub(lon0:lon1,lat0:lat1,nmixoutgeo),gglb,
-     |  tasks(:)%lon0,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
-     |  ntask,nlonp4,nlat,nmixoutgeo)
+        call mp_gather_f2d(gsub(lon0:lon1,lat0:lat1,nmixoutgeo),gglb,
+     |    tasks(:)%lon0,tasks(:)%lon1,tasks(:)%lat0,tasks(:)%lat1,
+     |    ntask,nlonp4,nlat,nmixoutgeo)
 
-      if (mytid == 0) then
-        if (.not. allocated(gvar2d)) then
-           allocate(gvar2d(nlatp2,nlonp1,nmixoutgeo))
-        endif
+        if (mytid == 0) then
+          if (.not. allocated(gvar2d)) then
+            allocate(gvar2d(nlatp2,nlonp1,nmixoutgeo))
+          endif
           do v=1,nmixoutgeo
             write(*,*) "Preparing GEO stuff here"
             do j = 2,nlatp1
@@ -692,8 +698,8 @@
         endif
       endif
 
-        if (mytid == 0)
-     | write(6,"('TGCM: Sending at: ',4i4)") modeltime
+      if (mytid == 0)
+     |  write(6,"('TGCM: Sending at: ',4i4)") modeltime
 
 ! Save exchange variables to secondary history files
 
@@ -723,18 +729,18 @@
         if (CplComm /= MPI_COMM_NULL) then
 
           if ( nmixoutgeo .ne. 0) then
-          call mpi_send(gvar2d, nlatp2*nlonp1*nmixoutgeo,
-     |       MPI_DOUBLE_PRECISION, mixCplRank,
-     |       (myAppId+voltId)*100, CplComm, ierr)
-          if (ierr /= 0)
+            call mpi_send(gvar2d, nlatp2*nlonp1*nmixoutgeo,
+     |        MPI_DOUBLE_PRECISION, mixCplRank,
+     |        (myAppId+voltId)*100, CplComm, ierr)
+            if (ierr /= 0)
      |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
           endif
 
           if ( nmixoutapex .ne. 0) then
-          call mpi_send(avar2d, nmlat*nmlonp1*nmixoutapex,
-     |       MPI_DOUBLE_PRECISION, mixCplRank,
-     |       (myAppId+voltId)*100, CplComm, ierr)
-          if (ierr /= 0)
+            call mpi_send(avar2d, nmlat*nmlonp1*nmixoutapex,
+     |        MPI_DOUBLE_PRECISION, mixCplRank,
+     |        (myAppId+voltId)*100, CplComm, ierr)
+            if (ierr /= 0)
      |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
           endif
 

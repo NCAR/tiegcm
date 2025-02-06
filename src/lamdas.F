@@ -1,6 +1,6 @@
 !
       subroutine lamdas(tn,xnmbar,o2,o1,he,n2,ti,te,o2p,op,nplus,
-     |  n2p,nop,Etot,lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Q1,Q2,
+     |  n2p,nop,Etot,lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Q1,Q2,Knc,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -51,6 +51,7 @@
      |  lamda1,  ! lamda_1 (sigma_p * B^2) / rho [1/s] magnetic eastward direction
      |  ped_out, ! pedersen conductivity (siemens/m) (will be input to dynamo)
      |  hall_out,! hall conductivity (siemens/m) (will be input to dynamo)
+     |  Knc,     ! Nonlinear current coefficient for Pedersen conductacne
      |  Q1,      ! electron ohmic heating
      |  Q2       ! electrojet turbulent heating
 !
@@ -91,11 +92,17 @@
      |  dip,rot_xx,rot_yy,rot_xy,
      |  omega_o2p,omega_op ,omega_np,
      |  omega_n2p,omega_nop,omega_e
+
+! reference pedersen conductivity (siemens/m) without ET effects.
+! The name of _ref may be in other studies such as eclipse, flare etc.
+! size should be consistent with ped_out.
+      real,dimension(lev0:lev1,lon0-2:lon1+2) :: ped_ref_out
 !
 ! Local (lev,lon):
       real,dimension(lev0:lev1,lon0:lon1) ::
      |  tr,         ! average of tn and ti
      |  o2_cm3, o1_cm3, he_cm3, n2_cm3, ! major species number densities (cm3)
+     |  sigma_ped_ref,  ! pedersen conductivity without ET effects (siemens/m)
      |  sigma_ped,  ! pedersen conductivity (siemens/m)
      |  sigma_hall, ! hall conductivity (siemens/m)
      |  ne,         ! electron density (assume o2p+op+nplus+n2p+nop)
@@ -359,21 +366,10 @@
           lxy(k,i)= lamda2(k,i)*sin(dip(i))-lamda1(k,i)*rot_xy(i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
-!
-! Output conductivities [S/m] (half levels):
-      do i=lon0,lon1
-        do k=lev0,lev1
-          ped_out(k,i)  = sigma_ped(k,i)
-          hall_out(k,i) = sigma_hall(k,i)
-        enddo
-      enddo
-!
-! Save diagnostic conductivities (midpoints):
-      call mkdiag_SIGMAPED('SIGMA_PED',ped_out,lev0,lev1,lon0,lon1,lat)
-      call mkdiag_SIGMAHAL('SIGMA_HAL',hall_out,lev0,lev1,lon0,lon1,lat)
 
       Q1 = 0.0
       Q2 = 0.0
+      Knc = 0.0
 
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -407,6 +403,11 @@
 ! ne: 1/cm^3*1E6 -> 1/m^3
 ! bmod2: G*1E-4 -> T
 ! Q1,Q2: J*1E-7 -> erg
+! E1,E2: 1E-2 -> V/m 
+!    (boltz=1.38E-16 erg/K from cons needs x1e-7 to be in SI unit.
+!     mp=1.67e-24 g, needs x1e-3 to be in SI unit.
+!     together in sqrt(1e-7/1e-3) gives 1E-2 for E2 to be in SI unit [V/m]
+!     and consistent with Etot [V/m]).
           if (abs(rlatm(i,lat))*rtd>50.0 .and. ki(k,i)<1.0) then
             E2 = 1E-2*sqrt(boltz*(te(k,i)+ti(k,i))*(1.0+ki(k,i)**2)/
      |        (mp*mi(k,i)*(1.0-ki(k,i)**2)))*bmod2(i,lat)*1E-4
@@ -418,16 +419,40 @@
               Q2(k,i) = mp*mi(k,i)*1E3*nu_i(k,i)*
      |          ((Etot(k,i)-E1)/(bmod2(i,lat)*1E-4))**2*
      |          (Etot(k,i)/E2-1.0)*ki(k,i)**2/(1.0+ki(k,i)**2)
+              Knc(k,i) = (1.0-ki(k,i)**2)/(1.0+ki(k,i)**2)
+     |          *(Etot(k,i)-E1)**2/(Etot(k,i)*E1)
             endif
           endif
         enddo
       enddo
+!
+! Output conductivities [S/m] (half levels):
+      do i=lon0,lon1
+        do k=lev0,lev1
+          ! default ped_out has ET effects when do_et is true.
+          ! use ped_ref_out to store the ped without ET.
+          ! Note ped_ref_out = ped_out/(1+Knc)
+          ped_ref_out(k,i)  = sigma_ped(k,i)
+          ped_out(k,i)  = sigma_ped(k,i)*(1.0+Knc(k,i))
+          hall_out(k,i) = sigma_hall(k,i)
+        enddo
+      enddo
+!
+! Save diagnostic conductivities (midpoints):
+      call mkdiag_SIGMAPED('SIGMA_PED',ped_out,lev0,lev1,lon0,lon1,lat)
+      call mkdiag_SIGMAHAL('SIGMA_HAL',hall_out,lev0,lev1,lon0,lon1,lat)
 
       call addfld('Q1','Electron Ohmic Heating',' ',
      |  Q1(lev0:lev1-1,lon0:lon1),
      |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
       call addfld('Q2','Electrojet Turbulent Heating',' ',
      |  Q2(lev0:lev1-1,lon0:lon1),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('Knc','Nonlinear current coefficient',' ',
+     |  Knc(lev0:lev1-1,lon0:lon1),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('SIGMA_PED_REF','Pedersen conductivity without ET',
+     |  'S/m',ped_ref_out(lev0:lev1-1,lon0:lon1),
      |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine lamdas

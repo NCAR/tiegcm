@@ -13,7 +13,7 @@
       use fields_module,only: fields_4d,fields_3d,f4d,f3d,nf3d,
      |  nf4d,nf4d_hist,fsechist,foutput,tlbc,ulbc,vlbc,
      |  emphi3d,emlam3d,emz3d,fzg,tlbc_nm,ulbc_nm,vlbc_nm,
-     |  gzigm1,gzigm2,gnsrhs
+     |  gzigm1,gzigm2,gnsrhs,gzigm1_ref
       use mpi
       use hist_module,only: nfsech
       use input_module,only: ntask_lat,ntask_lon,
@@ -1038,12 +1038,12 @@
      |  ilat1,ilon0,n,ilat0,ilon1,istat(MPI_STATUS_SIZE,ntask-1)
       integer :: idest = 0
       real :: starttime,endtime
-      real,dimension(mxlon,mxlat,9,ntask-1) :: rcvbuf
-      real,dimension(mxlon,mxlat,9) :: sndbuf
+      real,dimension(mxlon,mxlat,10,ntask-1) :: rcvbuf
+      real,dimension(mxlon,mxlat,10) :: sndbuf
       real,dimension(nlonp4,nlat) ::
      |  tlbc_glb,ulbc_glb,vlbc_glb,
      |  tlbc_nm_glb,ulbc_nm_glb,vlbc_nm_glb,
-     |  gzigm1_glb,gzigm2_glb,gnsrhs_glb
+     |  gzigm1_glb,gzigm2_glb,gnsrhs_glb,gzigm1_ref_glb
 
       if (mpi_timing) starttime = mpi_wtime()
 !
@@ -1063,6 +1063,8 @@
         gzigm1_glb(lon0:lon1,lat0:lat1) = gzigm1(lon0:lon1,lat0:lat1)
         gzigm2_glb(lon0:lon1,lat0:lat1) = gzigm2(lon0:lon1,lat0:lat1)
         gnsrhs_glb(lon0:lon1,lat0:lat1) = gnsrhs(lon0:lon1,lat0:lat1)
+        gzigm1_ref_glb(lon0:lon1,lat0:lat1) = 
+     |   gzigm1_ref(lon0:lon1,lat0:lat1)
 !
 ! Receive subdomains from slave tasks:
         do n=1,ntask-1   ! receive from slaves only
@@ -1109,6 +1111,8 @@
      |      rcvbuf(1:nlons,1:nlats,8,n)
           gnsrhs_glb(ilon0:ilon1,ilat0:ilat1) =
      |      rcvbuf(1:nlons,1:nlats,9,n)
+          gzigm1_ref_glb(ilon0:ilon1,ilat0:ilat1) =
+     |      rcvbuf(1:nlons,1:nlats,10,n)
         enddo ! n=1,ntask-1
 !
 ! Non-root tasks send to master:
@@ -1129,6 +1133,7 @@
         sndbuf(1:nlons,1:nlats,7) = gzigm1(lon0:lon1,lat0:lat1)
         sndbuf(1:nlons,1:nlats,8) = gzigm2(lon0:lon1,lat0:lat1)
         sndbuf(1:nlons,1:nlats,9) = gnsrhs(lon0:lon1,lat0:lat1)
+        sndbuf(1:nlons,1:nlats,10) = gzigm1_ref(lon0:lon1,lat0:lat1)
 !
 ! Send to root:
         msgtag = mytid
