@@ -15,7 +15,6 @@
 
       use magfield_module,only: rjac,xb,yb,zb,bmod
       use addfld_module,only: addfld
-      use diags_module,only: mkdiag_UI,mkdiag_VI,mkdiag_WI
       use mpi_module,only: mp_periodic_f3d,
      |  mytidi,mp_gatherlons_f3d,mp_scatterlons_f3d
       implicit none
