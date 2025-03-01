@@ -23,7 +23,7 @@
       use input_module,only: pristart,step,idynamo=>dynamo,
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
      |  imf_ncfile,current_pg,current_kq,iamie,amie_ibkg,
-     |  start_day,nudge_lbc,nudge_f4d,nudge_alpha,
+     |  start_day,nudge_lbc,nudge_f4d,nudge_flds,nudge_alpha,
      |  doEclipse,eclipse_list
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
@@ -65,6 +65,7 @@
      |  ext_lbc=>lbc,ext_f4d=>f4d,lbc_flag,
      |  f4d_idx,wrap,maxlev,latbeg,latend,lonbeg,lonend,
      |  offbeg,offend,lonbeg1,lonend1,hori_weight,vert_weight
+      use char_module,only:find_index
 !
 ! Routines and timing for parallel dynamo (pdynamo.F):
       use pdynamo_module,only: dynamo_inputs,pdynamo,pefield,
@@ -90,7 +91,7 @@
 #endif
 !
 ! Local:
-      integer :: i,j,itmp,ier,iprint,month,day,modelsec,ifld,k
+      integer :: i,j,itmp,ier,iprint,month,day,modelsec,ifld,iz,k
       integer :: cmodeltime(4) !MAGE coupling time
       real :: fmin,fmax,delta,fac1,fac2
       integer(kind=8) :: nsecs ! current model time in seconds,
@@ -110,7 +111,7 @@
       logical :: adv
       real,dimension(mlon0:mlon1,mlat0:mlat1) :: nscrrt
       real,dimension(:,:),allocatable :: wt,ext_fld,tmp_lbc
-      real,dimension(:,:,:),allocatable :: tmp_f4d,nclbc
+      real,dimension(:,:,:),allocatable :: tmp_f4d,ncz,nclbc
       real,dimension(:,:,:,:),allocatable :: ncf4d
 !
       logical :: debug=.false.
@@ -198,6 +199,7 @@
           allocate(ext_fld(lon0:lon1,latbeg:latend))
           allocate(tmp_lbc(lon0:lon1,latbeg:latend))
           allocate(tmp_f4d(maxlev,lon0:lon1,latbeg:latend))
+          allocate(ncz(maxlev,lon0:lon1,latbeg:latend))
           allocate(nclbc(lon0:lon1,latbeg:latend,nudge_nlb))
           allocate(ncf4d(maxlev,lon0:lon1,latbeg:latend,nudge_nf4d))
         endif
@@ -505,6 +507,41 @@
 ! For Z, itc==itp (itp was set by addiag):
       z(:,:,:,itc) = z(:,:,:,itp)
       if (debug) write(6,"('advance after z')")
+!
+      iz = find_index('Z',nudge_flds)
+      if (iz/=0 .and. nudge_f4d(iz)) then
+        if (latbeg<latend .and.
+     |      nudge_time(nudge_itime)<=modelsec .and.
+     |      modelsec<=nudge_time(nudge_itime+1)) then
+
+          ncz = fac1*ext_f4d(:,:,:,1,iz)+fac2*ext_f4d(:,:,:,2,iz)
+          tmp_f4d = z(1:maxlev,lon0:lon1,latbeg:latend,itc)
+
+          do k = 1,maxlev
+            wt = nudge_alpha*hori_weight*vert_weight(k,iz)
+            ext_fld = wt*ncz(k,:,:)+(1-wt)*tmp_f4d(k,:,:)
+
+            if (wrap) then
+              tmp_f4d(k,:,:) = ext_fld
+            else
+              if (lonbeg<lonend .and. offbeg==offend)
+     |          tmp_f4d(k,lonbeg:lonend,:) = ext_fld(lonbeg:lonend,:)
+
+              if (lonbeg<lonend .and. offbeg+1==offend) then
+                tmp_f4d(k,lonbeg:lonend1,:) = ext_fld(lonbeg:lonend1,:)
+                tmp_f4d(k,lonbeg1:lonend,:) = ext_fld(lonbeg1:lonend,:)
+              endif
+
+              if (lonbeg>lonend .and. offbeg==offend+1) then
+                tmp_f4d(k,lonbeg:lon1,:) = ext_fld(lonbeg:lon1,:)
+                tmp_f4d(k,lon0:lonend,:) = ext_fld(lon0:lonend,:)
+              endif
+            endif
+          enddo
+
+          z(1:maxlev,lon0:lon1,latbeg:latend,itc) = tmp_f4d
+        endif
+      endif
 !
 ! Horizontal diffusion, first step:
 ! hdif1 saves nrh and kmh at lats -2->nlat in nrh and kmh using
