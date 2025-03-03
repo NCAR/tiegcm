@@ -622,10 +622,10 @@
      |      ti	(levd0,lond0,latd0,itp),   ! ion temperature K
      |      ne	(levd0,lond0,latd0,itp),   ! electron density 1/cm^3
      |      op	(levd0,lond0,latd0,itp),   ! O+ 1/cm^3
-     |      nplus (levd0,lond0,latd0),	   ! N+  1/cm^3
-     |      n2p	(levd0,lond0,latd0),	   ! N2+ 1/cm^3
-     |      nop	(levd0,lond0,latd0),	   ! NO+  1/cm^3
-     |      o2p	(levd0,lond0,latd0,itp),   ! O2+  1/cm^3
+     |      np  (levd0,lond0,latd0,itp),   ! N+  1/cm^3
+     |      n2p (levd0,lond0,latd0,itp),   ! N2+ 1/cm^3
+     |      nop (levd0,lond0,latd0,itp),   ! NO+  1/cm^3
+     |      o2p (levd0,lond0,latd0,itp),   ! O2+  1/cm^3
      |      1,nlevp1,lon0,lon1,lat0,lat1)
           if (debug) write(6,"('advance after magpres_grav: istep=',
      |      i4)") istep

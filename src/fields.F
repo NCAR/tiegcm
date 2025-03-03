@@ -17,9 +17,9 @@
      |  mxfsech,spval,nmlat,nmlonp1,mlev0,mlev1
       implicit none
       integer,parameter :: 
-     |  nf4d          = 36, ! number of 4-d fields
+     |  nf4d          = 41, ! number of 4-d fields
      |  nf4d_hist     = 29, ! number of 4-d fields on primary histories
-     |  nf3d          = 48  ! number of 3-d fields
+     |  nf3d          = 43  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
       integer,parameter :: 
@@ -54,7 +54,8 @@
      |  i_vn_nm  ,i_o2_nm  ,i_o1_nm  ,i_he_nm  ,i_op_nm  ,
      |  i_n2d_nm ,i_n4s_nm ,i_no_nm  ,i_ar_nm  ,i_mbar   ,
      |  i_barm   ,i_xnmbar ,i_xnmbari,i_scht   ,i_schti  ,
-     |  i_vc
+     |  i_vc     ,i_np     ,i_n2p    ,i_nop    ,i_op2p   ,
+     |  i_op2d
 !
 ! Allocatable target arrays for 4-d fields:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 ,2)
@@ -68,7 +69,8 @@
      |  vn_nm    ,o2_nm    ,o1_nm    ,he_nm    ,op_nm    ,
      |  n2d_nm   ,n4s_nm   ,no_nm    ,ar_nm    ,mbar     ,
      |  barm     ,xnmbar   ,xnmbari  ,scht     ,schti    ,
-     |  vc
+     |  vc       ,np       ,n2p      ,nop      ,op2p     ,
+     |  op2d
 !
 ! 3-d fields structure type:
 ! Data pointers will point to allocatable target arrays.
@@ -94,7 +96,6 @@
      |  i_kldt   ,i_kldu   ,i_kldv   ,i_kldo2  ,i_kldo1  ,i_kldhe  ,
      |  i_cp     ,i_kt     ,i_km     ,i_ui     ,i_vi     ,i_wi     ,
      |  i_vo2    ,i_vo1    ,i_vn2    ,i_sco2   ,i_sco1   ,i_scn2   ,
-     |  i_xiop2p ,i_xiop2d ,i_nplus  ,i_n2p    ,i_nop    ,
      |  i_lxx    ,i_lyy    ,i_lxy    ,i_lyx    ,i_qji_ti ,i_qji_tn ,
      |  i_cool_implicit    ,i_cool_explicit    ,
      |  i_hdt    ,i_hdu    ,i_hdv    ,i_hdo2   ,i_hdo1   ,i_hdhe   ,
@@ -109,7 +110,6 @@
      |  kldt     ,kldu     ,kldv     ,kldo2    ,kldo1    ,kldhe    ,
      |  cp       ,kt       ,km       ,ui       ,vi       ,wi       ,
      |  vo2      ,vo1      ,vn2      ,sco2     ,sco1     ,scn2     ,
-     |  xiop2p   ,xiop2d   ,nplus    ,n2p      ,nop      ,
      |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti   ,qji_tn   ,
      |  cool_implicit      ,cool_explicit      ,
      |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1     ,hdhe     ,
@@ -519,6 +519,46 @@
       f4d(n)%data => vc
       i_vc = n ; n = n+1
 !
+      allocate(np(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('N+ ION')")
+      f4d(n)%short_name = ("NP")
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => np
+      i_np = n ; n = n+1
+!
+      allocate(n2p(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('N2+ ION')")
+      f4d(n)%short_name = ("N2P")
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => n2p
+      i_n2p = n ; n = n+1
+!
+      allocate(nop(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('NO+ ION')")
+      f4d(n)%short_name = ("NOP")
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => nop
+      i_nop = n ; n = n+1
+!
+      allocate(op2p(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('O+(2P) ION')")
+      f4d(n)%short_name = ("OP2P")
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => op2p
+      i_op2p = n ; n = n+1
+!
+      allocate(op2d(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('O+(2D) ION')")
+      f4d(n)%short_name = ("OP2D")
+      f4d(n)%units = "cm-3"
+      f4d(n)%vcoord = "midpoints"
+      f4d(n)%data => op2d
+      i_op2d = n ; n = n+1
+!
 ! Check number of fields allocated:
       if (n-1 /= nf4d) then
         write(6,"(/,'>>> init_4d: wrong number of 4-d fields?',
@@ -717,41 +757,6 @@
       f3d(n)%units = " "
       f3d(n)%data => scn2
       i_scn2 = n ; n = n+1
-!
-      allocate(xiop2p(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('XIOP2P')")
-      f3d(n)%short_name = "XIOP2P"
-      f3d(n)%units = " "
-      f3d(n)%data => xiop2p
-      i_xiop2p = n ; n = n+1
-!
-      allocate(xiop2d(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('XIOP2D')")
-      f3d(n)%short_name = "XIOP2D"
-      f3d(n)%units = " "
-      f3d(n)%data => xiop2d
-      i_xiop2d = n ; n = n+1
-!
-      allocate(nplus(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('N+ ION')")
-      f3d(n)%short_name = "NPLUS"
-      f3d(n)%units = " "
-      f3d(n)%data => nplus
-      i_nplus = n ; n = n+1
-!
-      allocate(n2p(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('N2+ ION')")
-      f3d(n)%short_name = "N2P"
-      f3d(n)%units = " "
-      f3d(n)%data => n2p
-      i_n2p = n ; n = n+1
-!
-      allocate(nop(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('NO+ ION')")
-      f3d(n)%short_name = "NOP"
-      f3d(n)%units = " "
-      f3d(n)%data => nop
-      i_nop = n ; n = n+1
 !
       allocate(lxx(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
       write(f3d(n)%long_name,"('LAMDA ION DRAG XX')")

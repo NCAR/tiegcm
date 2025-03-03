@@ -20,12 +20,12 @@
 !
       contains
 !-----------------------------------------------------------------------
-      subroutine oplus(tn,te,ti,o2,o1,he,n2,n2d,ne,un,vn,w,ui,vi,wi,
-     |  xnmbar,scht,op,optm1,opout,optm1out,xiop2p,xiop2d,Fe,Fn,
+      subroutine oplus(tn,te,ti,o2,o1,he,n2,n2d,un,vn,w,ui,vi,wi,
+     |  xnmbar,scht,op,optm1,opout,optm1out,op_prod,op_loss,Fe,Fn,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Update O+ ion at 3d task subdomain.
-! Outputs are opout, optm1out, xiop2p, xiop2d, Fe, and Fn,
+! Outputs are opout, optm1out, Fe, and Fn,
 ! all other args are input.
 !
       use params_module,only: rp
@@ -46,27 +46,27 @@
      |  o2, o1, he, ! O2, O, He mass mixing ratios
      |  n2,         ! N2 mass mixing ratio
      |  n2d,        ! N(2D) mass mixing ratio
-     |  ne,         ! electron density
      |  un,vn,w,    ! neutral wind velocities (zonal, meridional, omega)
      |  ui,vi,wi,   ! zonal, meridional, and vertical ion velocities
      |  xnmbar,     ! p0*e(-z)*mbar/kT
      |  scht,       ! scale height
      |  op,         ! O+ ion
-     |  optm1       ! O+ at time n-1
+     |  optm1,      ! O+ at time n-1
+     |  op_prod,op_loss
 !
 ! Output fields (full 3d task subdomain):
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(out) ::
      |  opout,    ! O+ output for next timestep
      |  optm1out, ! O+ output for time n-1
-     |  xiop2p,xiop2d,Fe,Fn
+     |  Fe,Fn
 !
 ! Local:
       integer :: k,i,lat,nlevs,istep
       real(rp),dimension(lon0-2:lon1+2,lat0-2:lat1+2) ::
      |  dvb,ubcrhs,lbcrhs
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
-     |  tp,dj,bdotu,op_prod,op_loss,diffp,diffq,diffr,
+     |  tp,dj,bdotu,diffp,diffq,diffr,
      |  driftp,driftq,driftr,windp,windq,windr,
      |  p_coeff,q_coeff,r_coeff,optm1_smooth,
      |  op_sub,optm1_sub,opout_sub,optm1out_sub,
@@ -78,10 +78,9 @@
       nlevs = lev1-lev0+1 ! for bndlons calls
 !
       call prep_oplus(tn,te,ti,
-     |  o2,o1,he,n2,n2d,ne,un,vn,w,wi,xnmbar,scht,
-     |  dvb,ubcrhs,lbcrhs,tp,dj,bdotu,xiop2p,xiop2d,
-     |  op_prod,op_loss,diffp,diffq,diffr,
-     |  driftp,driftq,driftr,windp,windq,windr,
+     |  o2,o1,he,n2,n2d,un,vn,w,wi,xnmbar,scht,
+     |  dvb,ubcrhs,lbcrhs,tp,dj,bdotu,op_loss,
+     |  diffp,diffq,diffr,driftp,driftq,driftr,windp,windq,windr,
      |  p_coeff,q_coeff,r_coeff,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -166,10 +165,9 @@
       end subroutine oplus
 !-----------------------------------------------------------------------
       subroutine prep_oplus(tn,te,ti,
-     |  o2,o1,he,n2,n2d,ne,un,vn,w,wi,xnmbar,scht,
-     |  dvb,ubcrhs,lbcrhs,tp,dj,bdotu,xiop2p,xiop2d,
-     |  op_prod,op_loss,diffp,diffq,diffr,
-     |  driftp,driftq,driftr,windp,windq,windr,
+     |  o2,o1,he,n2,n2d,un,vn,w,wi,xnmbar,scht,
+     |  dvb,ubcrhs,lbcrhs,tp,dj,bdotu,op_loss,
+     |  diffp,diffq,diffr,driftp,driftq,driftr,windp,windq,windr,
      |  p_coeff,q_coeff,r_coeff,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -183,12 +181,7 @@
      |  opdiffcap,opdiffrate,opdifflev
       use chapman_module,only: chi     ! was t2 in old sub opflux
       use qrj_module,only:
-     |  qop2p, ! O+(2p) ionization from qrj, used in xiop2p
-     |  qop2d, ! O+(2d) ionization from qrj, used in xiop2d
      |  qop    ! O+ ionization from qrj
-      use chemrates_module,only: ! needed chemical reaction rates
-     |  rk1 ,rk2 ,rk10,rk16,rk17,rk18,rk19,rk20,
-     |  rk21,rk22,rk23,rk24,rk25,rk26,rk27
       use magfield_module,only: bx,by,bz,bmod2, ! (nlonp4,-1:nlat+2)
      |  rlatm
       use mpi_module,only: mp_periodic_f2d,
@@ -209,11 +202,11 @@
      |  o2, o1, he, ! O2, O, He mass mixing ratios
      |  n2,         ! N2 mass mixing ratio
      |  n2d,        ! N(2D) mass mixing ratio
-     |  ne,         ! electron density
      |  un,vn,w,    ! neutral wind velocities (zonal, meridional, omega)
      |  wi,         ! vertical ion velocities
      |  xnmbar,     ! p0*e(-z)*mbar/kT
-     |  scht        ! scale height
+     |  scht,       ! scale height
+     |  op_loss     ! was s13
 !
 ! Output fields (full 2d task subdomain):
       real(rp),dimension(lon0-2:lon1+2,lat0-2:lat1+2),intent(out) ::
@@ -226,9 +219,6 @@
      |  tp,          ! Plasma temperature 0.5*(te+ti)
      |  dj,          ! diffusion coefficients (s13,s14,s15)
      |  bdotu,       ! was s7 (B.U)
-     |  op_prod,     ! production rate
-     |  op_loss,     ! was s13
-     |  xiop2p,xiop2d,
      |  diffp,diffq,diffr,      ! tridiagonal coefficients related to diffusion
      |  driftp,driftq,driftr,   ! tridiagonal coefficients related to ion drift
      |  windp,windq,windr,      ! tridiagonal coefficients related to wind
@@ -491,51 +481,12 @@
           do k=lev0,lev1-1
             djint_tphdz0_1(k,i,lat) = djint_tphdz0(k+1,i,lat)
             djint_tphdz1_1(k,i,lat) = djint_tphdz1(k+1,i,lat)
-!
-! xiop2p and xiop2d are outputs:
-            xiop2p(k,i,lat) =
-     |        0.5*(qop2p(k,i,lat)+qop2p(k+1,i,lat))/
-     |        ((rk16+rk17)*n2_cm3(k,i,lat)+
-     |         rk18*o1_cm3(k,i,lat)+
-     |         (rk19(k,i,lat)+rk20(k,i,lat))*ne(k,i,lat)+
-     |         rk21+rk22)
-            xiop2d(k,i,lat) =
-     |        (0.5*(qop2d(k,i,lat)+qop2d(k+1,i,lat))+
-     |         rk20(k,i,lat)*xiop2p(k,i,lat)*ne(k,i,lat)+
-     |         rk22*xiop2p(k,i,lat))/
-     |        (rk23*n2_cm3(k,i,lat)+
-     |         rk24*o1_cm3(k,i,lat)+
-     |         rk25(k,i,lat)*ne(k,i,lat)+
-     |         rk26*o2_cm3(k,i,lat)+
-     |         rk27)
-!
-! Sources and sinks
-            op_prod(k,i,lat) =
-     |        0.5*(qop(k,i,lat)+qop(k+1,i,lat))+
-     |        rk18*xiop2p(k,i,lat)*o1_cm3(k,i,lat)+
-     |        rk19(k,i,lat)*xiop2p(k,i,lat)*ne(k,i,lat)+
-     |        rk21*xiop2p(k,i,lat)+
-     |        rk24*xiop2d(k,i,lat)*o1_cm3(k,i,lat)+
-     |        rk25(k,i,lat)*xiop2d(k,i,lat)*ne(k,i,lat)+
-     |        rk27*xiop2d(k,i,lat)
-            op_loss(k,i,lat) =
-     |        rk1(k,i,lat)*o2_cm3(k,i,lat)+
-     |        rk2(k,i,lat)*n2_cm3(k,i,lat)+
-     |        rk10*n2d_cm3(k,i,lat)
           enddo ! k=lev0,lev1-1
 !
           djint_tphdz0_1(lev1,i,lat) =
      |      2.*djint_tphdz0(lev1,i,lat)-djint_tphdz0(lev1-1,i,lat)
           djint_tphdz1_1(lev1,i,lat) =
      |      2.*djint_tphdz1(lev1,i,lat)-djint_tphdz1(lev1-1,i,lat)
-          xiop2p(lev1,i,lat) =
-     |      2.*xiop2p(lev1-1,i,lat)-xiop2p(lev1-2,i,lat)
-          xiop2d(lev1,i,lat) =
-     |      2.*xiop2d(lev1-1,i,lat)-xiop2d(lev1-2,i,lat)
-          op_prod(lev1,i,lat) =
-     |      2.*op_prod(lev1-1,i,lat)-op_prod(lev1-2,i,lat)
-          op_loss(lev1,i,lat) =
-     |      2.*op_loss(lev1-1,i,lat)-op_loss(lev1-2,i,lat)
 !
           do k=lev0,lev1
 !
@@ -613,14 +564,6 @@
 !       call addfld('HDZMBZ' ,' ',' ',hdzmbz(:,:,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('HDZPBZ' ,' ',' ',hdzpbz(:,:,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('XIOP2P',' ',' ',xiop2p(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('XIOP2D',' ',' ',xiop2d(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('OP_LOSS_COEF',' ',' ',op_loss(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('OP_PROD',' ',' ',op_prod(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('P_COEFF',' ',' ',
 !    |    p_coeff(lev0:lev1-1,lon0:lon1,lat),

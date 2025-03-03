@@ -18,11 +18,15 @@
 !          factors, include vertical component
 !          change call to qjoule_tn to include vertical velocity
 !
+      use params_module,only: nlev,nlevp1
+      use cons_module,only: rmass_o2,rmass_o1,rmass_n2,step=>dt
       use fields_module
       use mpi_module,only: lon0,lon1,lat0,lat1,distribute_1d,mp_close,
      |  mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
-      use chemrates_module,only: chemrates_tdep
-      use qrj_module,only: qrj,qtotal,qop,qo2p,qn2p,qnp,qnop
+      use chemrates_module,only: chemrates_tdep,
+     |  rk16,rk17,rk18,rk21,rk22,rk23,rk24,rk26,rk27,
+     |  rk1,rk2,rk3,rk19,rk20,rk25,ra1,ra2,ra3,beta9
+      use qrj_module,only: qrj,qtotal,qop,qo2p,qn2p,qnp,qnop,qop2p,qop2d
       use chapman_module,only: chapman
       use oplus_module,only: oplus
       use input_module,only: iaurora=>aurora,iamie,nstep_sub
@@ -39,6 +43,7 @@
      |  mkdiag_NFLUX,mkdiag_EFLUX,mkdiag_TEC,mkdiag_HNMF2,
      |  mkdiag_QJOULE_INTEG,mkdiag_UI,mkdiag_VI,mkdiag_WI
       use dyndiag_module,only: dyndiag
+      use ionden_module,only: calculate_prodloss,ionden_local
 
       implicit none
 !
@@ -52,7 +57,7 @@
 #endif
 !
 ! Local:
-      integer :: lat,ier
+      integer :: k,i,lat,ier
       integer :: i0,i1,nk,nkm1,nlats,k0,k1
       logical,parameter :: debug=.false.  ! add prints to stdout
 !
@@ -68,9 +73,15 @@
 !           'QJI_TN','TN_UPD','UN_UPD','VN_UPD','O2_UPD','O1_UPD'
 !
       logical,parameter :: diags=.true. ! put fields on sec hist
-      real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor
+      real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor,
+     |  o2_cm3,o1_cm3,n2_cm3,
+     |  beta9m,qopm,qo2pm,qnpm,qn2pm,qnopm,qop2pm,qop2dm,
+     |  o2p_prod,np_prod,n2p_prod,nop_prod,op2p_prod,op2d_prod,
+     |  o2p_loss,np_loss,n2p_loss,nop_loss,op2p_loss,op2d_loss
       real,dimension(lon0:lon1,lat0:lat1) ::
      |  tec ! diagnostic total electron content
+      real,dimension(nlevp1) :: nem
+      real,dimension(nlevp1,lond0:lond1,latd0:latd1) :: op_prod,op_loss
       logical,external :: time2print
 !
       if (debug) write(6,"(/,'Enter dynamics.')")
@@ -322,6 +333,104 @@
       call mp_bndlats_f3d(n2,nk,lon0,lon1,lat0,lat1,1)
       call mp_bndlons_f3d(n2,nk,lon0,lon1,lat0,lat1,1,0)
 !
+      if (istep == 1) then
+        do concurrent (lat=lat0:lat1, i=lon0:lon1, k=1:nlev)
+          o2_cm3 = xnmbar(k,i,lat,itp)*o2(k,i,lat,itp)/rmass_o2
+          o1_cm3 = xnmbar(k,i,lat,itp)*o1(k,i,lat,itp)/rmass_o1
+          n2_cm3 = xnmbar(k,i,lat,itp)*n2(k,i,lat)/rmass_n2
+          nem(k) = sqrt(ne(k,i,lat,itp)*ne(k+1,i,lat,itp))
+          qop2pm = (qop2p(k,i,lat)+qop2p(k+1,i,lat))/2
+          qop2dm = (qop2d(k,i,lat)+qop2d(k+1,i,lat))/2
+          op2p(k,i,lat,itc) = qop2pm/
+     |      ((rk16+rk17)*n2_cm3+rk18*o1_cm3+
+     |       (rk19(k,i,lat)+rk20(k,i,lat))*nem(k)+rk21+rk22)
+          op2d(k,i,lat,itc) = (qop2dm+
+     |       rk20(k,i,lat)*op2p(k,i,lat,itc)*nem(k)+
+     |       rk22*op2p(k,i,lat,itc))/
+     |      (rk23*n2_cm3+rk24*o1_cm3+rk25(k,i,lat)*nem(k)+
+     |       rk26*o2_cm3+rk27)
+        enddo
+        do lat=lat0,lat1
+          call elden(
+     |      xnmbar(levd0,lond0,lat,itp),
+     |      op    (levd0,lond0,lat,itp), ! O+ at current time step
+     |      op    (levd0,lond0,lat,itp), ! O+ updated by sub oplus
+     |      o2    (levd0,lond0,lat,itp),
+     |      o1    (levd0,lond0,lat,itp),
+     |      n2    (levd0,lond0,lat),
+     |      n2d   (levd0,lond0,lat,itp),
+     |      no    (levd0,lond0,lat,itp),
+     |      n4s   (levd0,lond0,lat,itp),
+     |      op2p  (levd0,lond0,lat,itc),  ! from oplus
+     |      op2d  (levd0,lond0,lat,itc),  ! from oplus
+     |      np    (levd0,lond0,lat,itc),  ! N+  output
+     |      n2p   (levd0,lond0,lat,itc),  ! N2+ output
+     |      nop   (levd0,lond0,lat,itc),  ! NO+ output
+     |      o2p   (levd0,lond0,lat,itc),  ! O2+ output
+     |      ne    (levd0,lond0,lat,itc),  ! electron density output
+     |      1,nlevp1,lon0,lon1,lat)
+        enddo
+        do concurrent (lat=lat0:lat1, i=lon0:lon1, k=1:nlev)
+          np(k,i,lat,itp) = np(k,i,lat,itc)
+          n2p(k,i,lat,itp) = n2p(k,i,lat,itc)
+          nop(k,i,lat,itp) = nop(k,i,lat,itc)
+          op2p(k,i,lat,itp) = op2p(k,i,lat,itc)
+          op2d(k,i,lat,itp) = op2d(k,i,lat,itc)
+        enddo
+      endif
+      do concurrent (lat=lat0:lat1, i=lon0:lon1, k=1:nlev)
+        nem(k) = sqrt(ne(k,i,lat,itp)*ne(k+1,i,lat,itp))
+        beta9m = (beta9(k,i,lat)+beta9(k+1,i,lat))/2
+        qopm = (qop(k,i,lat)+qop(k+1,i,lat))/2
+        qo2pm = (qo2p(k,i,lat)+qo2p(k+1,i,lat))/2
+        qnpm = (qnp(k,i,lat)+qnp(k+1,i,lat))/2
+        qn2pm = (qn2p(k,i,lat)+qn2p(k+1,i,lat))/2
+        qnopm = (qnop(k,i,lat)+qnop(k+1,i,lat))/2
+        qop2pm = (qop2p(k,i,lat)+qop2p(k+1,i,lat))/2
+        qop2dm = (qop2d(k,i,lat)+qop2d(k+1,i,lat))/2
+        call calculate_prodloss(
+     |    xnmbar(k,i,lat,itp),
+     |    o2    (k,i,lat,itp),
+     |    o1    (k,i,lat,itp),
+     |    n2    (k,i,lat),
+     |    n2d   (k,i,lat,itp),
+     |    n4s   (k,i,lat,itp),
+     |    no    (k,i,lat,itp),
+     |    nem   (k),
+     |    op    (k,i,lat,itp),
+     |    o2p   (k,i,lat,itp),
+     |    np    (k,i,lat,itp),
+     |    n2p   (k,i,lat,itp),
+     |    op2p  (k,i,lat,itp),
+     |    op2d  (k,i,lat,itp),
+     |    rk1   (k,i,lat),
+     |    rk2   (k,i,lat),
+     |    rk3   (k,i,lat),
+     |    rk19  (k,i,lat),
+     |    rk20  (k,i,lat),
+     |    rk25  (k,i,lat),
+     |    ra1   (k,i,lat),
+     |    ra2   (k,i,lat),
+     |    ra3   (k,i,lat),
+     |    beta9m,qopm,qo2pm,qnpm,qn2pm,qnopm,qop2pm,qop2dm,
+     |    op_prod(k,i,lat),o2p_prod,np_prod,n2p_prod,
+     |    nop_prod,op2p_prod,op2d_prod,
+     |    op_loss(k,i,lat),o2p_loss,np_loss,n2p_loss,
+     |    nop_loss,op2p_loss,op2d_loss)
+        o2p(k,i,lat,itc) = ionden_local(step,
+     |    o2p(k,i,lat,itp),o2p_prod,o2p_loss)
+        np(k,i,lat,itc) = ionden_local(step,
+     |    np(k,i,lat,itp),np_prod,np_loss)
+        n2p(k,i,lat,itc) = ionden_local(step,
+     |    n2p(k,i,lat,itp),n2p_prod,n2p_loss)
+        nop(k,i,lat,itc) = ionden_local(step,
+     |    nop(k,i,lat,itp),nop_prod,nop_loss)
+        op2p(k,i,lat,itc) = ionden_local(step,
+     |    op2p(k,i,lat,itp),op2p_prod,op2p_loss)
+        op2d(k,i,lat,itc) = ionden_local(step,
+     |    op2d(k,i,lat,itp),op2d_prod,op2d_loss)
+      enddo
+!
       call oplus(
      |  tn    (levd0,lond0,latd0,itp),
      |  te    (levd0,lond0,latd0,itp),
@@ -331,7 +440,6 @@
      |  he    (levd0,lond0,latd0,itp),
      |  n2    (levd0,lond0,latd0),
      |  n2d   (levd0,lond0,latd0,itp),
-     |  ne    (levd0,lond0,latd0,itp),
      |  un    (levd0,lond0,latd0,itp),
      |  vn    (levd0,lond0,latd0,itp),
      |  w     (levd0,lond0,latd0,itp),
@@ -344,8 +452,8 @@
      |  op_nm (levd0,lond0,latd0,itp),
      |  op    (levd0,lond0,latd0,itc), ! out
      |  op_nm (levd0,lond0,latd0,itc), ! out
-     |  xiop2p(levd0,lond0,latd0),     ! out
-     |  xiop2d(levd0,lond0,latd0),     ! out
+     |  op_prod(levd0,lond0,latd0),     ! out
+     |  op_loss(levd0,lond0,latd0),     ! out
      |  Fe    (levd0,lond0,latd0),
      |  Fn    (levd0,lond0,latd0),
      |  1,nlevp1,lon0,lon1,lat0,lat1)
@@ -358,35 +466,26 @@
         do lat=lat0,lat1
           call addfld('OPLUS' ,'O+ Ion',' ',op(:,i0:i1,lat,itc),
      |      'lev',k0,k1,'lon',i0,i1,lat)
-          call addfld('XIOP2P','O+(2P)',' ',xiop2p(:,i0:i1,lat),
+          call addfld('XIOP2P','O+(2P)',' ',op2p(:,i0:i1,lat,itc),
      |      'lev',k0,k1,'lon',i0,i1,lat)
-          call addfld('XIOP2D','O+(2D)',' ',xiop2d(:,i0:i1,lat),
+          call addfld('XIOP2D','O+(2D)',' ',op2d(:,i0:i1,lat,itc),
      |      'lev',k0,k1,'lon',i0,i1,lat)
         enddo
       endif
 !
 ! Electron density:
 !
-      do lat=lat0,lat1
-        call elden(
-     |    xnmbar(levd0,lond0,lat,itp),
-     |    op    (levd0,lond0,lat,itp), ! O+ at current time step
-     |    op    (levd0,lond0,lat,itc), ! O+ updated by sub oplus
-     |    o2    (levd0,lond0,lat,itp),
-     |    o1    (levd0,lond0,lat,itp),
-     |    n2    (levd0,lond0,lat),
-     |    n2d   (levd0,lond0,lat,itp),
-     |    no    (levd0,lond0,lat,itp),
-     |    n4s   (levd0,lond0,lat,itp),
-     |    xiop2p(levd0,lond0,lat),      ! from oplus
-     |    xiop2d(levd0,lond0,lat),      ! from oplus
-     |    nplus (levd0,lond0,lat),      ! N+  output
-     |    n2p   (levd0,lond0,lat),      ! N2+ output
-     |    nop   (levd0,lond0,lat),      ! NO+ output
-     |    o2p   (levd0,lond0,lat,itc),  ! O2+ output
-     |    ne    (levd0,lond0,lat,itc),  ! electron density output
-     |    1,nlevp1,lon0,lon1,lat)
-      enddo ! lat=lat0,lat1
+      do concurrent (lat=lat0:lat1, i=lon0:lon1)
+        do k=1,nlev
+          nem(k) = max(op(k,i,lat,itc)+o2p(k,i,lat,itc)+
+     |      np(k,i,lat,itc)+n2p(k,i,lat,itc)+nop(k,i,lat,itc),1.0)
+        enddo
+        do k=2,nlev
+          ne(k,i,lat,itc) = sqrt(nem(k-1)*nem(k))
+        enddo
+        ne(1,i,lat,itc) = sqrt(nem(1)**3/nem(2))
+        ne(nlevp1,i,lat,itc) = sqrt(nem(nlev)**3/nem(nlev-1))
+      enddo
       if (debug) write(6,"('dynamics after oplus')")
 !
 ! Save diagnostic tec (total electron content):
@@ -404,11 +503,11 @@
 ! Ions and electron density are at interface levels (ilev):
       do lat=lat0,lat1
         if (diags) then
-          call addfld('NP_diag' ,'N+ Ion' ,'cm^3',nplus(:,i0:i1,lat),
+          call addfld('NP_diag' ,'N+ Ion' ,'cm^3',np(:,i0:i1,lat,itc),
      |      'ilev',k0,k1,'lon',i0,i1,lat)
-          call addfld('N2P_diag','N2+ Ion','cm^3',n2p(:,i0:i1,lat),
+          call addfld('N2P_diag','N2+ Ion','cm^3',n2p(:,i0:i1,lat,itc),
      |      'ilev',k0,k1,'lon',i0,i1,lat)
-          call addfld('NOP_diag','NO+ Ion','cm^3',nop(:,i0:i1,lat),
+          call addfld('NOP_diag','NO+ Ion','cm^3',nop(:,i0:i1,lat,itc),
      |      'ilev',k0,k1,'lon',i0,i1,lat)
           call addfld('O2P_diag','O2+ Ion','cm^3',o2p(:,i0:i1,lat,itc),
      |      'ilev',k0,k1,'lon',i0,i1,lat)
@@ -432,9 +531,9 @@
      |    te  (levd0,lond0,lat,itp),
      |    o2p (levd0,lond0,lat,itp),
      |    op  (levd0,lond0,lat,itp),
-     |    nplus(levd0,lond0,lat),
-     |    n2p (levd0,lond0,lat),
-     |    nop (levd0,lond0,lat),
+     |    np  (levd0,lond0,lat,itp),
+     |    n2p (levd0,lond0,lat,itp),
+     |    nop (levd0,lond0,lat,itp),
      |    Etot(levd0,lond0,lat),
      |    lxx (levd0,lond0,lat), ! LXX output
      |    lyy (levd0,lond0,lat), ! LYY output
@@ -475,8 +574,8 @@
      |    no  (levd0,lond0,lat,itp),
      |    ne  (levd0,lond0,lat,itp),
      |    op  (levd0,lond0,lat,itp),
-     |    n2p (levd0,lond0,lat),
-     |    nop (levd0,lond0,lat),
+     |    n2p (levd0,lond0,lat,itp),
+     |    nop (levd0,lond0,lat,itp),
      |    xnmbar(levd0,lond0,lat,itp),
      |    xnmbari(levd0,lond0,lat,itp),
      |    1,nlevp1,lon0,lon1,lat)
@@ -525,9 +624,9 @@
      |    ne     (levd0,lond0,lat,itp),  ! Ne
      |    o2p    (levd0,lond0,lat,itp),  ! O2+
      |    op     (levd0,lond0,lat,itp),  ! O+
-     |    n2p    (levd0,lond0,lat),      ! N2+ from elden
-     |    nplus  (levd0,lond0,lat),      ! N+  from elden
-     |    nop    (levd0,lond0,lat),      ! NO+ from elden
+     |    n2p    (levd0,lond0,lat,itp),  ! N2+ from elden
+     |    np     (levd0,lond0,lat,itp),  ! N+  from elden
+     |    nop    (levd0,lond0,lat,itp),  ! NO+ from elden
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1 
       if (debug) write(6,"('dynamics after comp_n4s')")
@@ -675,11 +774,11 @@
      |    ne    (levd0,lond0,lat,itp),
      |    xnmbar(levd0,lond0,lat,itp),
      |    xnmbari(levd0,lond0,lat,itp),
-     |    n2p   (levd0,lond0,lat),     ! from elden
-     |    nplus (levd0,lond0,lat),     ! from elden
-     |    nop   (levd0,lond0,lat),     ! from elden
-     |    xiop2p(levd0,lond0,lat),     ! from oplus 
-     |    xiop2d(levd0,lond0,lat),     ! from oplus
+     |    n2p   (levd0,lond0,lat,itp), ! from elden
+     |    np    (levd0,lond0,lat,itp), ! from elden
+     |    nop   (levd0,lond0,lat,itp), ! from elden
+     |    op2p  (levd0,lond0,lat,itp), ! from oplus 
+     |    op2d  (levd0,lond0,lat,itp), ! from oplus
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after qjion')")
@@ -698,9 +797,9 @@
      |    wi (levd0,lond0,lat),     ! vertical ion velocity input (ExB)
      |    lam1(levd0,lond0,lat),    ! lambda_1 ion drag coefficient [1/s]
      |    op (levd0,lond0,lat,itp), ! O+ 1/cm^3
-     |    nplus(levd0,lond0,lat),   ! N+  1/cm^3
-     |    n2p(levd0,lond0,lat),     ! N2+ 1/cm^3
-     |    nop(levd0,lond0,lat),     ! NO+  1/cm^3
+     |    np (levd0,lond0,lat,itp), ! N+  1/cm^3
+     |    n2p(levd0,lond0,lat,itp), ! N2+ 1/cm^3
+     |    nop(levd0,lond0,lat,itp), ! NO+  1/cm^3
      |    o2p(levd0,lond0,lat,itp), ! O2+  1/cm^3
      |    mbar(levd0,lond0,lat,itp),! mean molecular weight
      |    scht(levd0,lond0,lat,itp),! scale height
@@ -723,9 +822,9 @@
      |    ti  (levd0,lond0,lat,itp),
      |    op  (levd0,lond0,lat,itp),
      |    o2p (levd0,lond0,lat,itp),
-     |    nplus(levd0,lond0,lat),
-     |    n2p (levd0,lond0,lat),
-     |    nop (levd0,lond0,lat),
+     |    np  (levd0,lond0,lat,itp),
+     |    n2p (levd0,lond0,lat,itp),
+     |    nop (levd0,lond0,lat,itp),
      |    xnmbar(levd0,lond0,lat,itp),
      |    xnmbari(levd0,lond0,lat,itp),
      |    scht(levd0,lond0,lat,itp),
@@ -946,9 +1045,9 @@
      |    n2d  (levd0,lond0,lat,itp), ! N(2D)
      |    o2p  (levd0,lond0,lat,itp), ! O2+
      |    ne   (levd0,lond0,lat,itp), ! electron density
-     |    n2p  (levd0,lond0,lat),     ! N2+
-     |    nplus(levd0,lond0,lat),     ! N+
-     |    nop  (levd0,lond0,lat),     ! NO+
+     |    n2p  (levd0,lond0,lat,itp), ! N2+
+     |    np   (levd0,lond0,lat,itp), ! N+
+     |    nop  (levd0,lond0,lat,itp), ! NO+
      |    1,nlevp1,lon0,lon1,lat)
       enddo ! lat=lat0,lat1
       if (debug) write(6,"('dynamics after comp_o2o')")
