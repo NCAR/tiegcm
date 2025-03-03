@@ -94,7 +94,7 @@
      |      sqrt(ne(k,i)*ne(k+1,i))
 ! s2
           pox2(k,i) = xnmbar(k,i)*(beta1(k,i,lat)*n4s(k,i)/rmass_n4s+
-     |      beta2*n2d(k,i)/rmass_n2d)+rk1(k,i,lat)*op(k,i)+rk7*
+     |      beta2(k,i,lat)*n2d(k,i)/rmass_n2d)+rk1(k,i,lat)*op(k,i)+rk7*
      |      nplus(k,i)+2.*rji(k,i)
 !
 ! OX loss:
@@ -110,8 +110,8 @@
 !
 ! O2 loss:
           lo21(k,i) = xnmbar(k,i)*(beta1(k,i,lat)*n4s(k,i)/rmass_n4s+
-     |      beta2*n2d(k,i)/rmass_n2d)+rk1(k,i,lat)*op(k,i)+(rk6+rk7)*
-     |      nplus(k,i)+rk9*n2p(k,i)+rji(k,i)
+     |      beta2(k,i,lat)*n2d(k,i)/rmass_n2d)+rk1(k,i,lat)*op(k,i)+
+     |      (rk6+rk7)*nplus(k,i)+rk9*n2p(k,i)+rji(k,i)
 !
           lo22(k,i) = qo2pi(k,i)
 !

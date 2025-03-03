@@ -368,7 +368,7 @@
      |  dt_joule(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
       call addfld('DT_MOLDIF','Molecular diffusive heating','erg/g/s',
      |  dt_moldif(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-      call addfld('DT_COOL','Newtonian cooling','K/s',
+      call addfld('DT_COOL','Radiative cooling','K/s',
      |  dt_cool(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
       call addfld('DT_HORADV','Horizontal advective heating','K/s',
      |  -horadv_tn(lev0:lev1-1,:,lat),
