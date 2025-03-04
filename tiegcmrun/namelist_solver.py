@@ -227,14 +227,14 @@ def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir,
     pri_files_n = pri_files + number_of_files
     if pri_files == 0:
         if number_of_files == 1:
-                OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
+                OUTPUT = OUTPUT = f"'{histdir}/{run_name}_temp_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
         else:
             PRIM_0 = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc"
             PRIM_N = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files_n)}.nc"
             OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
     else:
         if number_of_files == 1:
-            OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
+            OUTPUT = OUTPUT = f"'{histdir}/{run_name}_temp_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
         else:
             PRIM_0 = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc"
             PRIM_N = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files_n)}.nc"
