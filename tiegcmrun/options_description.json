@@ -180,18 +180,32 @@
                 "LEVEL": "EXPERT",
                 "prompt": "Modules to load",
                 "default": [
-                    "nas",
-                    "pkgsrc/2023Q3",
                     "comp-intel/2020.4.304",
-                    "mpi-hpe/mpt.2.28_25Apr23_rhel87",
-                    "mpi-hpe/mpt",
+                    "mpi-hpe/mpt.2.30",
                     "szip/2.1.1",
-                    "hdf4/4.2.12",
-                    "hdf5/1.8.18_mpt",
-                    "netcdf/4.4.1.1_mpt"
+                    "hdf5/1.12.3_mpt"
                 ],
                 "description": null,
                 "warning": null
+            },
+            "moduledir": {
+                "LEVEL": "EXPERT",
+                "prompt": "Module directory",
+                "default": [
+                    "/nasa/modulefiles/testing",
+                    "/swbuild/analytix/tools/modulefiles"
+                ]
+            },
+            "local_modules": {
+                "LEVEL": "EXPERT",
+                "prompt": "Commands to add local module PATH",
+                "default": [
+                    "setenv PREFIX /u/nrao3/local3",
+                    "setenv LIBRARY_PATH ${LIBRARY_PATH}:$PREFIX/lib",
+                    "setenv LD_LIBRARY_PATH $LIBRARY_PATH",
+                    "setenv CPATH $PREFIX/include",
+                    "setenv PATH ${PATH}:$PREFIX/bin"
+                ]
             },
             "other_job": {
                 "LEVEL": "EXPERT",

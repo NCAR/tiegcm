@@ -190,7 +190,7 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
                         if options["simulation"]["hpc_system"] == "derecho":
                             interpolation_pbs = [f'conda activate {engage_options["conda_env"]}',f'python {interpolation_script}']
                         elif options["simulation"]["hpc_system"] == "pleiades":
-                            interpolation_pbs =  [f'source activate {engage_options["conda_env"]}',f'python {interpolation_script}']
+                            interpolation_pbs =  [f'source /swbuild/analytix/tools/miniconda3_220407/bin/activate.csh {engage_options["conda_env"]}',f'python {interpolation_script}']
                     segment_options["job"]["job_chain"] = interpolation_pbs
                 pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
                 if segment_number == 0:

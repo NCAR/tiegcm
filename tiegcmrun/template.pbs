@@ -22,10 +22,17 @@ setenv TIEGCMHOME {{model.data.modeldir}}
 
 # Load modules
 module --force purge
-{%- if job.module_list is not none %}
-module restore {{job.module_list}}{%- endif %}
+{%- for moduledir in job.moduledir %}
+module use -a {{ moduledir }}
+{%- endfor %}
+# {%- if job.module_list is not none %}
+# module restore {{job.module_list}}{%- endif %}
 {%- for module in job.modules %}
 module load {{ module }}
+{%- endfor %}
+
+{%- for local_modules in job.local_modules %}
+{{ local_modules }}
 {%- endfor %}
 
 # Execute tiegcm

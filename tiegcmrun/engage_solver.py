@@ -16,9 +16,10 @@ import json
 import copy
 from datetime import datetime, timedelta
 
-from misc import seconds_to_dhms, resolution_solver, find_file, select_resource_defaults
+from misc import seconds_to_dhms, resolution_solver, find_file, select_resource_defaults, get_mtime
 from output_solver import segment_inp_pbs
 from interpolation import interpic
+from namelist_solver import inp_pri_date
 
 
 # Path to current tiegcm datafiles
@@ -116,6 +117,84 @@ def engage_parser(engage_parameters):
     eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','model','walltime']
     
     return engage_options
+
+def engage_options_updater(options, engage_options, option_descriptions):
+    # General options for the simulation
+    o = options["simulation"] 
+    o["job_name"] = engage_options["job_name"]
+    o["hpc_system"] = engage_options["hpc_system"]
+    # Data Options
+     
+    o = options["model"]["data"]
+    o["parentdir"] = engage_options["parentdir"]
+    o["execdir"] = o["parentdir"]
+    o["workdir"] = o["parentdir"]
+    o["histdir"] = o["parentdir"]
+    # Specification Options
+    o = options["model"]["specification"]
+    o["horires"] = engage_options["horires"]
+    vertres, mres, nres_grid, STEP = resolution_solver(o["horires"])
+    if o.get("vertres") is None:
+        o["vertres"] = vertres
+    if o.get("mres") is None:
+        o["mres"] = mres
+    if o.get("nres_grid") is None:
+        o["nres_grid"] = nres_grid
+    # INP options
+    o = options["inp"]
+    if o.get("STEP") is None:
+        o["STEP"] = STEP
+    o["start_time"] = engage_options["start_time"]
+    o["stop_time"] = engage_options["stop_time"]
+    o["segment"] = " ".join(map(str, engage_options["segment"]))
+    if o.get("SOURCE_START") is None:
+        o["SOURCE_START"] =  " ".join(map(str, get_mtime(options["inp"]["SOURCE"])[0]))
+    START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_time"], o["stop_time"])
+    if o.get("START_YEAR") is None:
+        o["START_YEAR"] = START_YEAR
+    if o.get("START_DAY") is None:
+        o["START_DAY"] = START_DAY
+    # PBS options
+    o = options["job"]
+    o["account_name"] = engage_options["account_name"]
+    hpc_platform = options["simulation"]["hpc_system"]
+    if hpc_platform == "derecho":
+        if o.get("mpi_command") is None:
+            o["mpi_command"] = "mpirun"
+        o['queue'] = engage_options['queue']
+        o['job_priority'] = engage_options['job_priority']
+        o['walltime'] = engage_options['walltime']
+    elif hpc_platform == "pleiades":
+        if o.get("mpi_command") is None:
+            o["mpi_command"] = "mpiexec_mpt"
+        o['queue'] = engage_options['queue']
+        o['walltime'] = engage_options['walltime']
+    on = options["job"]["resource"] = {}
+    if hpc_platform == "derecho":
+        select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
+        if on.get("select") is None:
+            on["select"] = select_default
+        if on.get("ncpus") is None:
+            on["ncpus"] = ncpus_default
+        if on.get("mpiprocs") is None:
+            on["mpiprocs"] = mpiprocs_default
+    elif hpc_platform == "pleiades":
+        if on.get("model") is None:
+            on["model"] = "bro"
+        select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
+        if on.get("select") is None:
+            on["select"] = select_default
+        if on.get("ncpus") is None:
+            on["ncpus"] = ncpus_default
+        if on.get("mpiprocs") is None:
+            on["mpiprocs"] = mpiprocs_default
+    
+    o["nprocs"] = int(on["select"]) * int(on["mpiprocs"])
+    o["modules"] = engage_options["modules"]
+    o["project_code"] = engage_options["project_code"]
+    
+    return options
+
 
 def get_engage_start_time(datetime_str, seconds):
     # Parse the input datetime string
