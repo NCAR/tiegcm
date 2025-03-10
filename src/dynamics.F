@@ -81,7 +81,8 @@
       real,dimension(lon0:lon1,lat0:lat1) ::
      |  tec ! diagnostic total electron content
       real,dimension(nlevp1) :: nem
-      real,dimension(nlevp1,lond0:lond1,latd0:latd1) :: op_prod,op_loss
+      real,dimension(nlevp1,lond0:lond1,latd0:latd1) ::
+     |  op_prod,op_loss,op_lam,ne_lam
       logical,external :: time2print
 !
       if (debug) write(6,"(/,'Enter dynamics.')")
@@ -377,6 +378,18 @@
           op2p(k,i,lat,itp) = op2p(k,i,lat,itc)
           op2d(k,i,lat,itp) = op2d(k,i,lat,itc)
         enddo
+        do concurrent (lat=lat0:lat1, i=lon0:lon1)
+          do k=1,nlev
+            nem(k) = op(k,i,lat,itp)+o2p(k,i,lat,itp)+
+     |        np(k,i,lat,itp)+n2p(k,i,lat,itp)+nop(k,i,lat,itp)+
+     |        op2p(k,i,lat,itp)+op2d(k,i,lat,itp)
+          enddo
+          do k=2,nlev
+            ne(k,i,lat,itp) = sqrt(nem(k-1)*nem(k))
+          enddo
+          ne(1,i,lat,itp) = sqrt(nem(1)**3/nem(2))
+          ne(nlevp1,i,lat,itp) = sqrt(nem(nlev)**3/nem(nlev-1))
+        enddo
       endif
       do concurrent (lat=lat0:lat1, i=lon0:lon1, k=1:nlev)
         nem(k) = sqrt(ne(k,i,lat,itp)*ne(k+1,i,lat,itp))
@@ -478,7 +491,8 @@
       do concurrent (lat=lat0:lat1, i=lon0:lon1)
         do k=1,nlev
           nem(k) = max(op(k,i,lat,itc)+o2p(k,i,lat,itc)+
-     |      np(k,i,lat,itc)+n2p(k,i,lat,itc)+nop(k,i,lat,itc),1.0)
+     |      np(k,i,lat,itc)+n2p(k,i,lat,itc)+nop(k,i,lat,itc)+
+     |      op2p(k,i,lat,itc)+op2d(k,i,lat,itc),1.0)
         enddo
         do k=2,nlev
           ne(k,i,lat,itc) = sqrt(nem(k-1)*nem(k))
@@ -518,6 +532,12 @@
 !
 ! Lamda ion drag coefficients:
 !
+      do concurrent (lat=lat0:lat1, i=lon0:lon1, k=1:nlev)
+        op_lam(k,i,lat) = op(k,i,lat,itp)+
+     |    op2p(k,i,lat,itp)+op2d(k,i,lat,itp)
+        ne_lam(k,i,lat) = op_lam(k,i,lat)+o2p(k,i,lat,itp)+
+     |    np(k,i,lat,itp)+n2p(k,i,lat,itp)+nop(k,i,lat,itp)
+      enddo
       time1_cmpminor = 0.
       do lat=lat0,lat1
         call lamdas(
@@ -530,10 +550,11 @@
      |    ti  (levd0,lond0,lat,itp),
      |    te  (levd0,lond0,lat,itp),
      |    o2p (levd0,lond0,lat,itp),
-     |    op  (levd0,lond0,lat,itp),
+     |    op_lam(levd0,lond0,lat),
      |    np  (levd0,lond0,lat,itp),
      |    n2p (levd0,lond0,lat,itp),
      |    nop (levd0,lond0,lat,itp),
+     |    ne_lam(levd0,lond0,lat),
      |    Etot(levd0,lond0,lat),
      |    lxx (levd0,lond0,lat), ! LXX output
      |    lyy (levd0,lond0,lat), ! LYY output

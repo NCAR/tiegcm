@@ -1,6 +1,6 @@
 !
       subroutine lamdas(tn,xnmbar,o2,o1,he,n2,ti,te,o2p,op,nplus,
-     |  n2p,nop,Etot,lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Q1,Q2,
+     |  n2p,nop,ne,Etot,lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Q1,Q2,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
@@ -40,6 +40,7 @@
      |  nplus,! N+ number density (1/cm3)
      |  n2p,  ! N2+ number density (1/cm3)
      |  nop,  ! NO+ number density (1/cm3)
+     |  ne,
      |  Etot  ! Total electric field
 !
 ! Output args:
@@ -98,7 +99,6 @@
      |  o2_cm3, o1_cm3, he_cm3, n2_cm3, ! major species number densities (cm3)
      |  sigma_ped,  ! pedersen conductivity (siemens/m)
      |  sigma_hall, ! hall conductivity (siemens/m)
-     |  ne,         ! electron density (assume o2p+op+nplus+n2p+nop)
      |  lamda2,     ! sighal*b**2/rho
      |  lamda1tmp,  ! temporary lamda1
      |  lamda2tmp,  ! temporary lamda2
@@ -264,10 +264,6 @@
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
-!
-! ne = electron density assuming charge equilibrium [1/cm3]:
-! (Using ne from fields module will fail, not sure about the reason)
-          ne(k,i) = op(k,i)+o2p(k,i)+nplus(k,i)+n2p(k,i)+nop(k,i)
 !
 ! Pedersen conductivity [S/m] (half level):
           sigma_ped(k,i) = qe*1.e10/bmod2(i,lat)*
