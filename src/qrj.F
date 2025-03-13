@@ -427,21 +427,21 @@
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('RJ'    ,' ',' ',rj(lev0:lev1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOP2Pa' ,' ',' ',qop2p(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('QOP2Da' ,' ',' ', qop2d(lev0:lev1,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QOP2Pa_EUV',' ',' ', qop2p(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+      call addfld('QOP2Da_EUV',' ',' ', qop2d(lev0:lev1,lon0:lon1,lat),
+     |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('QTEF'  ,' ',' ',  qtef(lev0:lev1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-      call addfld('QO2P'  ,' ',' ',  qo2p(lev0:lev1,lon0:lon1,lat),
+      call addfld('QO2P_EUV'  ,' ',' ',  qo2p(lev0:lev1,lon0:lon1,lat),
      |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-      call addfld('QN2P'  ,' ',' ',  qn2p(lev0:lev1,lon0:lon1,lat),
+      call addfld('QN2P_EUV'  ,' ',' ',  qn2p(lev0:lev1,lon0:lon1,lat),
      |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-      call addfld('QNP'   ,' ',' ',   qnp(lev0:lev1,lon0:lon1,lat),
+      call addfld('QNP_EUV'   ,' ',' ',   qnp(lev0:lev1,lon0:lon1,lat),
      |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-      call addfld('QOPa'   ,' ',' ',  qop(lev0:lev1,lon0:lon1,lat),
+      call addfld('QOPa_EUV'   ,' ',' ',  qop(lev0:lev1,lon0:lon1,lat),
      |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-      call addfld('QNOP'  ,' ',' ',  qnop(lev0:lev1,lon0:lon1,lat),
+      call addfld('QNOP_EUV'  ,' ',' ',  qnop(lev0:lev1,lon0:lon1,lat),
      |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 #ifdef VT
