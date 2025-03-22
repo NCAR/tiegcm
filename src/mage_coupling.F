@@ -627,9 +627,9 @@
 ! ... Begin ............................................................
 
 ! Prepare data for export
-      amsub(:,:,1) = azigm1(mlon0:mlon1,mlat0:mlat1)
+      amsub(:,:,1) = azigm1_ref(mlon0:mlon1,mlat0:mlat1) ! azigm1_ref includes Knc modification.
       amsub(:,:,2) = azigm2(mlon0:mlon1,mlat0:mlat1)
-      amsub(:,:,3) = azigm1_ref(mlon0:mlon1,mlat0:mlat1)
+      amsub(:,:,3) = azigm1(mlon0:mlon1,mlat0:mlat1)     ! azigm1 is the default sigma_ped without Knc.
 
       where(amsub < 0.2_rp) amsub = 0.2_rp
 

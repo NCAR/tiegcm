@@ -403,7 +403,7 @@
             zpotdyn(k,i,j) = zpot(k,i,j)
             peddyn(k,i,j)  = ped(k,i,j)
             haldyn(k,i,j)  = hal(k,i,j)
-            ped_refdyn(k,i,j)  = ped(k,i,j)/(1.0+Knc(k,i,j)) ! note ped has ET by default.
+            ped_refdyn(k,i,j)  = ped(k,i,j)*(1.0+Knc(k,i,j)) ! note ped_ref has ET.
             je1pg(k,i,j)   = je1oD_geo(k,i,j)
             je2pg(k,i,j)   = je2oD_geo(k,i,j)
           enddo ! k=lev0,lev1
@@ -1728,7 +1728,7 @@
 !    |  'mlat',mlat0,mlat1,0)
 
       call addfld('gzigm1_ref',
-     |     'Pedersen Conductance without ET (geographic)', 'S',
+     |     'Pedersen Conductance with ET (geographic)', 'S',
      |     gzigm1_ref(lon0:lon1, lat0:lat1), 'lon',lon0,lon1, 'lat',
      |     lat0,lat1,  0)
 !

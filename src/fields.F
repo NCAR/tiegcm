@@ -933,7 +933,7 @@
       allocate(Knc(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
       write(f3d(n)%long_name,"('Nonlinear current coefficient')")
       f3d(n)%short_name = "Knc"
-      f3d(n)%units = "m/s"
+      f3d(n)%units = "1"
       f3d(n)%data => Knc
       i_Knc = n ; n = n+1
 !

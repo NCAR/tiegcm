@@ -432,8 +432,8 @@
           ! default ped_out has ET effects when do_et is true.
           ! use ped_ref_out to store the ped without ET.
           ! Note ped_ref_out = ped_out/(1+Knc)
-          ped_ref_out(k,i)  = sigma_ped(k,i)
-          ped_out(k,i)  = sigma_ped(k,i)*(1.0+Knc(k,i))
+          ped_out(k,i)  = sigma_ped(k,i)
+          ped_ref_out(k,i)  = sigma_ped(k,i)*(1.0+Knc(k,i))
           hall_out(k,i) = sigma_hall(k,i)
         enddo
       enddo
@@ -451,7 +451,7 @@
       call addfld('Knc','Nonlinear current coefficient',' ',
      |  Knc(lev0:lev1-1,lon0:lon1),
      |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-      call addfld('SIGMA_PED_REF','Pedersen conductivity without ET',
+      call addfld('SIGMA_PED_REF','Pedersen conductivity with ET',
      |  'S/m',ped_ref_out(lev0:lev1-1,lon0:lon1),
      |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
