@@ -10,7 +10,7 @@
       use params_module,only: nlevp1
       use input_module,only: source,source_start,output,pristart,
      |  f107,f107a,power,noutput
-      use hist_module,only: nsource,nhist,ioutfile,ncid
+      use hist_module,only: nsource,nhist,ioutfile
       use fields_module,only: tlbc,ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm,
      |  he,he_nm,field_initval,ar,ar_nm,n2d,n2d_nm,gzigm1,gzigm2,gnsrhs,
      |  azigm1,azigm2,itp
@@ -38,22 +38,22 @@
 !
 ! Source was provided -- read source history from source file:
       if (nsource==1) then 
-        call rdsource(source,source_start,ncid,nth,.false.)
-        if (ncid==0) call shutdown('Source history not found')
+        call rdsource(source,source_start,nth)
+        if (nth==0) call shutdown('Source history not found')
         nhist  = 0         ! no histories on output file
         ioutfile = 0       ! no output file currently in use
 !
 ! Source file was not provided -- search output files:
       else
         do i = 1,noutput
-          call rdsource(output(i),pristart(:,1),ncid,nth,.false.)
-          if (ncid > 0) then   ! history was found (not found if ncid==0)
+          call rdsource(output(i),pristart(:,1),nth)
+          if (nth > 0) then    ! history was found (not found if ncid==0)
             nhist  = nth       ! number of histories on current output file
             ioutfile = i       ! current output file name is output(ioutfile)
             exit               ! exit the loop if history is found
           endif
         enddo
-        if (ncid == 0) then    ! history not found on any output file
+        if (nth == 0) then     ! history not found on any output file
           write(6,"('>>> rdsource: starting history at mtime ',4i4,
      |      ' was not found on OUTPUT files.')") pristart(:,1)
           call shutdown('Starting history not found on output files')
@@ -184,31 +184,28 @@
 !
       end subroutine readsource
 !-------------------------------------------------------------------
-      subroutine rdsource(filepath,mtime,ncid,nthist,reopen_append)
+      subroutine rdsource(filepath,mtime,nthist)
 !
 ! Acquire and read source history:
 !
 ! On input:
 !   filepath = mss path to history file
 !   mtime(4) = model time of requested source history
-!   reopen_append: if true, reopen the file for later writing after
-!                  reading the history.
 !
 ! On output:
-!   ncid   = file id of history file
 !   nthist = source history is nth history on the file 
 !
-      use nchist_module,only: nc_open,nc_close,nc_rdhist
+      use nchist_module,only: nc_rdhist
       implicit none
+#include <netcdf.inc>
 ! 
 ! Args:
       character(len=*),intent(in) :: filepath
       integer,intent(in) :: mtime(4)
-      integer,intent(out) :: nthist,ncid
-      logical,intent(in) :: reopen_append
+      integer,intent(out) :: nthist
 !
 ! Local:
-      integer :: ier              ! error flag
+      integer :: ncid,ier              ! error flag
       character(len=120) :: diskfile
 !
 ! Acquire source file:
@@ -218,8 +215,8 @@
      |  /,'  (disk file is ',a,')')") trim(filepath),trim(diskfile)
 !
 ! Open existing netcdf file for read-only:
-      call nc_open(ncid,diskfile,'OLD','READ')
-      if (ncid==0) then
+      ier = nf_open(diskfile,NF_NOWRITE,ncid)
+      if (ier/=NF_NOERR) then
         write(6,"(/,'>>> rdsource: error opening ',a,' as a ',
      |    'netcdf file.')") trim(diskfile)
 !       return
@@ -228,14 +225,14 @@
 !
 ! Search for and read the source history:
       call nc_rdhist(ncid,diskfile,mtime,nthist,ier)
-      if (ier > 0) then
-        call nc_close(ncid)
-        ncid = 0
-        return
+!
+      ier = nf_close(ncid)
+      if (ier/=NF_NOERR) then
+        write(6,"(/,'>>> rdsource: error closing ',a,' as a ',
+     |    'netcdf file.')") trim(diskfile)
+        call shutdown('close netcdf source history file')
       endif
 !
-! Reopen file for writing if necessary:
-      if (reopen_append) call nc_open(ncid,diskfile,'OLD','WRITE')
       end subroutine rdsource
 !-----------------------------------------------------------------------
       subroutine set_periodic_f4d(itx)

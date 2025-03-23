@@ -561,6 +561,10 @@
 !
       nfsech = size(secflds)-count(len_trim(secflds)==0)
       nfiles_sech = numfiles('sech',nseries_sech,1,0,nsech_total)
+!
+      ncid = 0
+      ncidsech = 0
+!
       end subroutine hist_init
 !-------------------------------------------------------------------
       subroutine copyhist(hsrc,hdest)

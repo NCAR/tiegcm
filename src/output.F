@@ -6,10 +6,8 @@
 ! tiegcmlicense.txt.
 !
       use nchist_module,only: ! nchist_mod.F
-     |  nc_open,     ! subroutine to open a netcdf file
      |  nc_define,   ! subroutine to define vars in a new netcdf file
      |  nc_wrhist,   ! subroutine to write history to an open netcdf file
-     |  nc_close,    ! subroutine to close a netcdf file
      |  nc_fileinfo, ! make contents string for current file
      |  def_fsech,
      |  datasource_kp ! defined here
@@ -79,7 +77,10 @@
      |  copyhist,    ! subroutine to copy history structures
      |  h,sh
       use init_module,only: iyear,iday
+      use mpi_module,only: TIEGCM_WORLD
+      use mpi
       implicit none
+#include <netcdf.inc>
 !
 ! Args:
       integer,intent(in) :: istep
@@ -88,7 +89,7 @@
 !
 ! Local:
       character(len=1024) :: diskfile 
-      integer :: iprinthist
+      integer :: iprinthist,istat
       integer,save :: ihist_total=0
       logical :: fullfile
       character(len=1024) :: fileinfo
@@ -125,6 +126,16 @@
 ! path, otherwise open OUTPUT path as provided by namelist input.
 !
       if (newseries.or.fullfile) then  ! open new file
+        if (ncid/=0) then ! close the current volume before opening a new one
+          istat = nf_close(ncid)
+          if (istat/=NF_NOERR) then
+            write(6,"(/,'>>> output_hist: Error closing primary ',
+     |        'history output file ',a)") trim(diskfile)
+            call shutdown('closing primary history output file')
+          endif
+          ncid = 0
+        endif
+!
         ioutfile = ioutfile+1
         if (ioutfile > noutput) then
           write(6,"('>>> Out of primary output files: noutput=',i4,
@@ -136,25 +147,30 @@
      |    ' time series ',i2,' at model time ',4i4)") iseries_prim,
      |    modeltime
         diskfile = trim(output(ioutfile))
-        call nc_open(ncid,diskfile,'REPLACE','WRITE')
-        if (ncid==0) then
+        istat = nf_create_par(diskfile,ior(NF_NETCDF4,NF_MPIIO),
+     |    TIEGCM_WORLD,MPI_INFO_NULL,ncid)
+        if (istat/=NF_NOERR) then
           write(6,"(/,'>>> output_hist: Error opening new primary ',
-     |      'output history file ',a)") trim(diskfile)
-          call shutdown('opening new primary output history file')
+     |      'history output file ',a)") trim(diskfile)
+          call shutdown('opening new primary history output file')
         else
           write(6,"('Opened new primary history file ',a,
      |      ' (ioutfile=',i3,')')") trim(diskfile),ioutfile
         endif
       else                            ! append to existing file
         diskfile = trim(output(ioutfile))
-        call nc_open(ncid,diskfile,'OLD','APPEND')
+!
+! When the current output volume is not full, we should have ncid/=0 normally.
+! But on startup, output volume is not opened, we have ncid==0 in this case.
+! This usually happen when source is blank (continuation run).
         if (ncid==0) then
-          write(6,"(/,'>>> output_hist: Error opening existing primary',
-     |      'output history file',a)") trim(diskfile)
-          call shutdown('opening existing primary output history file')
-        else
-!         write(6,"('Will append to primary history file (ioutfile=',i4,
-!    |      ' nhist=',i4,' file=',a)") ioutfile,nhist,trim(diskfile)
+          istat = nf_open_par(diskfile,ior(NF_WRITE,NF_MPIIO),
+     |      TIEGCM_WORLD,MPI_INFO_NULL,ncid)
+          if (istat/=NF_NOERR) then
+            write(6,"(/,'>>> output_hist: Error opening existing',
+     |        ' primary history output file',a)") trim(diskfile)
+            call shutdown('open existing primary history output file')
+          endif
         endif
       endif ! newseries
 !
@@ -185,7 +201,7 @@
 !
 ! Define new nc file with history h:
       if (newseries.or.fullfile)
-     |  call nc_define(ncid)  ! define new primary history file
+     |  call nc_define('prim',ncid)  ! define new primary history file
 !
 ! Write the history:
       call nc_wrhist(ncid,diskfile,iprinthist)  ! write the history
@@ -202,7 +218,14 @@
       call nc_fileinfo(ncid,fileinfo)
       if (len_trim(hpss_path) > 0) 
      |  call add_dispose(trim(diskfile),trim(fileinfo))
-      call nc_close(ncid)
+!
+      istat = nf_sync(ncid)
+      if (istat/=NF_NOERR) then
+        write(6,"(/,'>>> output_hist: Error synchronizing',
+     |    ' primary history output file',a)") trim(diskfile)
+        call shutdown('synchronizing primary history output file')
+      endif
+!
       end subroutine output_hist
 !-----------------------------------------------------------------------
       subroutine output_sechist(newseries)
@@ -223,7 +246,10 @@
      |  modeltime,   ! current model time (read only)
      |  nsech_total, ! total sech histories to be written (read only)
      |  iseries_sech ! current secondary time series (read only)
+      use mpi_module,only: TIEGCM_WORLD
+      use mpi
       implicit none
+#include <netcdf.inc>
 !
 ! Args:
       logical,intent(in) :: 
@@ -231,7 +257,7 @@
 !
 ! Local:
       character(len=1024) :: diskfile 
-      integer :: iprinthist
+      integer :: iprinthist,istat
       integer,save :: ihist_total=0
       logical :: fullfile
       character(len=1024) :: fileinfo
@@ -255,14 +281,25 @@
 ! otherwise open SECOUT path as provided by namelist input:
 !
       if (newseries.or.fullfile) then       ! open new file
+        if (ncidsech/=0) then ! close the current volume before opening a new one
+          istat = nf_close(ncidsech)
+          if (istat/=NF_NOERR) then
+            write(6,"(/,'>>> output_sechist: Error closing output ',
+     |        'file ',a)") trim(diskfile)
+            call shutdown('closing secondary history output file')
+          endif
+          ncidsech = 0
+        endif
+!
         isecout = isecout+1
         nsech = 0             ! number of histories on current file
         if (newseries) write(6,"(/,'Starting secondary history',
      |    ' time series ',i2,' at model time ',4i4)") iseries_sech,
      |    modeltime
         diskfile = trim(secout(isecout))
-        call nc_open(ncidsech,diskfile,'REPLACE','WRITE')
-        if (ncidsech==0) then
+        istat = nf_create_par(diskfile,ior(NF_NETCDF4,NF_MPIIO),
+     |    TIEGCM_WORLD,MPI_INFO_NULL,ncidsech)
+        if (istat/=NF_NOERR) then
           write(6,"(/,'>>> output_sechist: Error opening new output ',
      |      'file ',a)") trim(diskfile)
           call shutdown('opening new secondary history output file')
@@ -272,11 +309,18 @@
         endif
       else                                 ! append to existing file
         diskfile = trim(secout(isecout))
-        call nc_open(ncidsech,diskfile,'OLD','APPEND')
+!
+! When the current output volume is not full, we should have ncid/=0 normally.
+! But on startup, output volume is not opened, we have ncid==0 in this case.
+! This usually happen when source is blank (continuation run).
         if (ncidsech==0) then
-          write(6,"(/,'>>> output_sechist: Error opening existing ',
-     |      'secondary history output file ',a)") trim(diskfile)
-          call shutdown('open existing secondary history output file')
+          istat = nf_open_par(diskfile,ior(NF_WRITE,NF_MPIIO),
+     |      TIEGCM_WORLD,MPI_INFO_NULL,ncidsech)
+          if (istat/=NF_NOERR) then
+            write(6,"(/,'>>> output_sechist: Error opening existing ',
+     |        'secondary history output file ',a)") trim(diskfile)
+            call shutdown('open existing secondary history output file')
+          endif
         endif
       endif ! newseries
 !
@@ -289,7 +333,7 @@
 !    |  ncidsech,nsech,newseries,fullfile
 
       if (newseries.or.fullfile) 
-     |  call nc_define(ncidsech)  ! define new secondary history file
+     |  call nc_define('sech',ncidsech)  ! define new secondary history file
 !
 ! First history of first secondary file does not define diags because
 ! addfld has not been called yet. Therefore, if this is the 2nd history
@@ -312,7 +356,14 @@
       call nc_fileinfo(ncidsech,fileinfo)
       if (len_trim(hpss_path) > 0) 
      |  call add_dispose(trim(diskfile),trim(fileinfo))
-      call nc_close(ncidsech)
+!
+      istat = nf_sync(ncidsech)
+      if (istat/=NF_NOERR) then
+        write(6,"(/,'>>> output_sechist: Error synchronizing',
+     |    ' secondary history output file',a)") trim(diskfile)
+        call shutdown('synchronizing secondary history output file')
+      endif
+!
       end subroutine output_sechist
 !-----------------------------------------------------------------------
       subroutine define_hist(hist_type)

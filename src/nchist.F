@@ -30,7 +30,7 @@
 #include <netcdf.inc>
 !
       integer,private ::
-     |  id_time,                   ! dimension id for time (unlimited)
+     |  id_time,                   ! dimension id for time
      |  id_mtimedim,               ! dimension id for model time (4)
      |  id_lon,id_lat,             ! horizontal dimension ids
      |  id_lev,id_ilev,            ! vertical dimension ids (midpoints,interfaces)
@@ -222,9 +222,9 @@
       endif
 !
 ! Get number of histories (times) on the file:
-      istat = nf_inq_unlimdim(ncid,id_time) ! id of unlimited record var
+      istat = nf_inq_dimid(ncid,'time',id_time) ! id of record var
       if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error getting unlimited dimension id')
+     |  'Error getting dimension id')
       istat = nf_inq_dimlen(ncid,id_time,ntimes) ! length of time var
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error getting length of time record variable')
@@ -1185,7 +1185,7 @@
 !
       end subroutine rdf4d
 !-----------------------------------------------------------------------
-      subroutine nc_define(ncid)
+      subroutine nc_define(filetype,ncid)
 !
 ! Define dimensions, variables and attributes in a new history
 !   netcdf dataset (file has been opened, but no histories written yet).
@@ -1198,10 +1198,11 @@
 !     is taken out of define mode (ready to receive histories)
 !
       use hist_module,only: h,sh,nsource
-      use input_module,only: potential_model
+      use input_module,only: potential_model,mxhist_prim,mxhist_sech
       use params_module,only: tgcm_name,tgcm_version
 !
 ! Args:
+      character(len=*),intent(in) :: filetype
       integer,intent(in) :: ncid
 !
 ! Local:
@@ -1215,7 +1216,16 @@
 ! Define dimensions (field vars will be (time,lev,lat,lon) in
 ! CDL notation. Mag fields will be (time,[mlev or imlev],mlat,mlon): 
 !
-      istat = nf_def_dim(ncid,"time",NF_UNLIMITED,id_time)
+! 2025/03 Haonan Wu: change time from unlimited dimension to fixed size,
+!   also change from collective read/write to independent read/write
+      select case (trim(filetype))
+      case ('prim')
+        istat = nf_def_dim(ncid,"time",mxhist_prim,id_time)
+      case ('sech')
+        istat = nf_def_dim(ncid,"time",mxhist_sech,id_time)
+      case default
+        call shutdown('Unknown file type: '//trim(filetype))
+      endselect
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining time dimension')
 !
@@ -2773,9 +2783,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of time')
       endif
-      istat = nf_var_par_access(ncid,idv_time,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting time nf_collective')
+!      istat = nf_var_par_access(ncid,idv_time,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting time nf_collective')
 ! 1/29/08 btf: Use seconds rather than days 
 !              (see time units "seconds since.." above)
 !     istat = nf_put_var1_double(ncid,idv_time,h%ihist,rdays)
@@ -2797,9 +2807,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of mtime')
       endif
-      istat = nf_var_par_access(ncid,idv_mtime,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting mtime nf_collective')
+!      istat = nf_var_par_access(ncid,idv_mtime,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting mtime nf_collective')
 !
 ! If model day is > 365, write actual day of year, i.e. day-365
 ! (e.g., if model day is 366, write model day 1 to the history)
@@ -2833,9 +2843,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of year')
       endif
-      istat = nf_var_par_access(ncid,idv_year,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting year nf_collective')
+!      istat = nf_var_par_access(ncid,idv_year,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting year nf_collective')
       istat = nf_put_var1_int(ncid,idv_year,h%ihist,h%year)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_int defining ',
@@ -2851,9 +2861,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of day')
       endif
-      istat = nf_var_par_access(ncid,idv_day,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting day nf_collective')
+!      istat = nf_var_par_access(ncid,idv_day,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting day nf_collective')
       istat = nf_put_var1_int(ncid,idv_day,h%ihist,h%day)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_int defining ',
@@ -2868,10 +2878,10 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of calendar_advance')
       endif
-      istat = nf_var_par_access(ncid,idv_calendar_adv,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access '//
-     |  'setting calendar_advance nf_collective')
+!      istat = nf_var_par_access(ncid,idv_calendar_adv,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access '//
+!     |  'setting calendar_advance nf_collective')
       istat = nf_put_var1_int(ncid,idv_calendar_adv,h%ihist,
      |  h%calendar_advance)
       if (istat /= NF_NOERR) then
@@ -2887,9 +2897,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of write_date')
       endif
-      istat = nf_var_par_access(ncid,idv_writedate,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting write_date nf_collective')
+!      istat = nf_var_par_access(ncid,idv_writedate,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting write_date nf_collective')
       start_2d(1) = 1
       start_2d(2) = h%ihist
       count_2d(1) = len(h%write_date) 
@@ -2908,9 +2918,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of iter')
       endif
-      istat = nf_var_par_access(ncid,idv_iter,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting iter nf_collective')
+!      istat = nf_var_par_access(ncid,idv_iter,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting iter nf_collective')
       istat = nf_put_var1_int(ncid,idv_iter,h%ihist,h%iter)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_int defining ',
@@ -2924,9 +2934,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ntask_mpi')
       endif
-      istat = nf_var_par_access(ncid,idv_ntask,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting ntask_mpi nf_collective')
+!      istat = nf_var_par_access(ncid,idv_ntask,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting ntask_mpi nf_collective')
       istat = nf_put_var1_int(ncid,idv_ntask,h%ihist,h%ntask_mpi)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_int defining ',
@@ -2941,10 +2951,10 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of coupled_mage')
       endif
-      istat = nf_var_par_access(ncid,idv_coupled_mage,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access '//
-     |  'setting coupled_mage nf_collective')
+!      istat = nf_var_par_access(ncid,idv_coupled_mage,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access '//
+!     |  'setting coupled_mage nf_collective')
       istat = nf_put_var1_int(ncid,idv_coupled_mage,h%ihist,
      |  h%coupled_mage)
       if (istat /= NF_NOERR) then
@@ -2960,9 +2970,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ut')
       endif
-      istat = nf_var_par_access(ncid,idv_ut,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting ut nf_collective')
+!      istat = nf_var_par_access(ncid,idv_ut,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting ut nf_collective')
       istat = nf_put_var1_double(ncid,idv_ut,h%ihist,h%ut)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -2981,9 +2991,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of dtide')
       endif
-      istat = nf_var_par_access(ncid,idv_dtide,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting dtide nf_collective')
+!      istat = nf_var_par_access(ncid,idv_dtide,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting dtide nf_collective')
       var2(:) = h%dtide(:)
       istat = nf_put_vara_double(ncid,idv_dtide,start_2d,count_2d,var2)
       if (istat /= NF_NOERR) then
@@ -3002,9 +3012,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of sdtide')
       endif
-      istat = nf_var_par_access(ncid,idv_sdtide,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting sdtide nf_collective')
+!      istat = nf_var_par_access(ncid,idv_sdtide,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting sdtide nf_collective')
       var10(:) = h%sdtide(:)
       istat = nf_put_vara_double(ncid,idv_sdtide,start_2d,count_2d,
      |  var10)
@@ -3070,9 +3080,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of f107d')
       endif
-      istat = nf_var_par_access(ncid,idv_f107d,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting f107d nf_collective')
+!      istat = nf_var_par_access(ncid,idv_f107d,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting f107d nf_collective')
       istat = nf_put_var1_double(ncid,idv_f107d,h%ihist,h%f107d)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3085,9 +3095,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of f107a')
       endif
-      istat = nf_var_par_access(ncid,idv_f107a,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting f107a nf_collective')
+!      istat = nf_var_par_access(ncid,idv_f107a,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting f107a nf_collective')
       istat = nf_put_var1_double(ncid,idv_f107a,h%ihist,h%f107a)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3101,9 +3111,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of hpower')
       endif
-      istat = nf_var_par_access(ncid,idv_hpower,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting hpower nf_collective')
+!      istat = nf_var_par_access(ncid,idv_hpower,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting hpower nf_collective')
       istat = nf_put_var1_double(ncid,idv_hpower,h%ihist,h%hpower)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3117,9 +3127,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ctpoten')
       endif
-      istat = nf_var_par_access(ncid,idv_ctpoten,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting ctpoten nf_collective')
+!      istat = nf_var_par_access(ncid,idv_ctpoten,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting ctpoten nf_collective')
       istat = nf_put_var1_double(ncid,idv_ctpoten,h%ihist,h%ctpoten)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3134,9 +3144,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of Kp')
       endif
-      istat = nf_var_par_access(ncid,idv_kp,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting Kp nf_collective')
+!      istat = nf_var_par_access(ncid,idv_kp,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting Kp nf_collective')
       istat = nf_put_var1_double(ncid,idv_kp,h%ihist,h%kp)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3150,9 +3160,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of bximf')
       endif
-      istat = nf_var_par_access(ncid,idv_bximf,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting bximf nf_collective')
+!      istat = nf_var_par_access(ncid,idv_bximf,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting bximf nf_collective')
       istat = nf_put_var1_double(ncid,idv_bximf,h%ihist,h%bximf)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3165,9 +3175,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of byimf')
       endif
-      istat = nf_var_par_access(ncid,idv_byimf,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting byimf nf_collective')
+!      istat = nf_var_par_access(ncid,idv_byimf,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting byimf nf_collective')
       istat = nf_put_var1_double(ncid,idv_byimf,h%ihist,h%byimf)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3180,9 +3190,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of bzimf')
       endif
-      istat = nf_var_par_access(ncid,idv_bzimf,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting bzimf nf_collective')
+!      istat = nf_var_par_access(ncid,idv_bzimf,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting bzimf nf_collective')
       istat = nf_put_var1_double(ncid,idv_bzimf,h%ihist,h%bzimf)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3196,9 +3206,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of swvel')
       endif
-      istat = nf_var_par_access(ncid,idv_swvel,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting swvel nf_collective')
+!      istat = nf_var_par_access(ncid,idv_swvel,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting swvel nf_collective')
       istat = nf_put_var1_double(ncid,idv_swvel,h%ihist,h%swvel)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3211,9 +3221,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of swden')
       endif
-      istat = nf_var_par_access(ncid,idv_swden,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting swden nf_collective')
+!      istat = nf_var_par_access(ncid,idv_swden,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting swden nf_collective')
       istat = nf_put_var1_double(ncid,idv_swden,h%ihist,h%swden)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3227,9 +3237,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of al')
       endif
-      istat = nf_var_par_access(ncid,idv_al,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting al nf_collective')
+!      istat = nf_var_par_access(ncid,idv_al,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting al nf_collective')
       istat = nf_put_var1_double(ncid,idv_al,h%ihist,h%al)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3243,9 +3253,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of colfac')
       endif
-      istat = nf_var_par_access(ncid,idv_colfac,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting colfac nf_collective')
+!      istat = nf_var_par_access(ncid,idv_colfac,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting colfac nf_collective')
       istat = nf_put_var1_double(ncid,idv_colfac,h%ihist,h%colfac)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3259,9 +3269,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of joulefac')
       endif
-      istat = nf_var_par_access(ncid,idv_joulefac,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting joulefac nf_collective')
+!      istat = nf_var_par_access(ncid,idv_joulefac,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting joulefac nf_collective')
       istat = nf_put_var1_double(ncid,idv_joulefac,h%ihist,h%joulefac)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3340,9 +3350,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of e1')
       endif
-      istat = nf_var_par_access(ncid,idv_e1,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting e1 nf_collective')
+!      istat = nf_var_par_access(ncid,idv_e1,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting e1 nf_collective')
       istat = nf_put_var1_double(ncid,idv_e1,h%ihist,h%e1)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3355,9 +3365,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of e2')
       endif
-      istat = nf_var_par_access(ncid,idv_e2,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting e2 nf_collective')
+!      istat = nf_var_par_access(ncid,idv_e2,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting e2 nf_collective')
       istat = nf_put_var1_double(ncid,idv_e2,h%ihist,h%e2)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3371,9 +3381,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of h1')
       endif
-      istat = nf_var_par_access(ncid,idv_h1,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting h1 nf_collective')
+!      istat = nf_var_par_access(ncid,idv_h1,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting h1 nf_collective')
       istat = nf_put_var1_double(ncid,idv_h1,h%ihist,h%h1)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3386,9 +3396,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of h2')
       endif
-      istat = nf_var_par_access(ncid,idv_h2,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting h2 nf_collective')
+!      istat = nf_var_par_access(ncid,idv_h2,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting h2 nf_collective')
       istat = nf_put_var1_double(ncid,idv_h2,h%ihist,h%h2)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3402,9 +3412,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of alfac')
       endif
-      istat = nf_var_par_access(ncid,idv_alfac,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting alfac nf_collective')
+!      istat = nf_var_par_access(ncid,idv_alfac,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting alfac nf_collective')
       istat = nf_put_var1_double(ncid,idv_alfac,h%ihist,h%alfac)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3417,9 +3427,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ec')
       endif
-      istat = nf_var_par_access(ncid,idv_ec,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting ec nf_collective')
+!      istat = nf_var_par_access(ncid,idv_ec,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting ec nf_collective')
       istat = nf_put_var1_double(ncid,idv_ec,h%ihist,h%ec)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3433,9 +3443,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of alfad')
       endif
-      istat = nf_var_par_access(ncid,idv_alfad,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting alfad nf_collective')
+!      istat = nf_var_par_access(ncid,idv_alfad,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting alfad nf_collective')
       istat = nf_put_var1_double(ncid,idv_alfad,h%ihist,h%alfad)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3448,9 +3458,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ec')
       endif
-      istat = nf_var_par_access(ncid,idv_ed,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting ed nf_collective')
+!      istat = nf_var_par_access(ncid,idv_ed,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting ed nf_collective')
       istat = nf_put_var1_double(ncid,idv_ed,h%ihist,h%ed)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3465,9 +3475,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of crit1')
       endif
-      istat = nf_var_par_access(ncid,idv_crit1,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting crit1 nf_collective')
+!      istat = nf_var_par_access(ncid,idv_crit1,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting crit1 nf_collective')
       istat = nf_put_var1_double(ncid,idv_crit1,h%ihist,crit1)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3481,9 +3491,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of crit1')
       endif
-      istat = nf_var_par_access(ncid,idv_crit2,nf_collective)
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'Error from nf_var_par_access setting crit2 nf_collective')
+!      istat = nf_var_par_access(ncid,idv_crit2,nf_collective)
+!      if (istat /= NF_NOERR) call handle_ncerr(istat,
+!     |  'Error from nf_var_par_access setting crit2 nf_collective')
       istat = nf_put_var1_double(ncid,idv_crit2,h%ihist,crit2)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3712,12 +3722,12 @@
      |      trim(fsechist(ix)%short_name)
           call handle_ncerr(istat,char80)
         endif
-        istat = nf_var_par_access(ncid,idvar,nf_collective)
-        if (istat /= NF_NOERR) then
-          write(char80,"('wrfsech: Error setting ',a,' nf_collective')")
-     |      trim(fsechist(ix)%short_name)
-          call handle_ncerr(istat,char80)
-        endif
+!        istat = nf_var_par_access(ncid,idvar,nf_collective)
+!        if (istat /= NF_NOERR) then
+!          write(char80,"('wrfsech: Error setting ',a,' nf_collective')")
+!     |      trim(fsechist(ix)%short_name)
+!          call handle_ncerr(istat,char80)
+!        endif
 !
 ! 3d+time field:
         if (fsechist(ix)%dimsizes(3) > 0) then
@@ -3895,12 +3905,12 @@
           call handle_ncerr(istat,char120)
         endif
       endif
-      istat = nf_var_par_access(ncid,idv,nf_collective)
-      if (istat /= NF_NOERR) then
-        write(char120,"('Error from nf_var_par_access setting ',
-     |    a,' nf_collective')") trim(vname)
-        call handle_ncerr(istat,char120)
-      endif
+!      istat = nf_var_par_access(ncid,idv,nf_collective)
+!      if (istat /= NF_NOERR) then
+!        write(char120,"('Error from nf_var_par_access setting ',
+!     |    a,' nf_collective')") trim(vname)
+!        call handle_ncerr(istat,char120)
+!      endif
       start(1) = 1
       start(2) = ihist
       count(2) = 1
@@ -3964,12 +3974,12 @@
 !       write(6,"('wrlbc: vname=',a,' idv on input=',i3)") 
 !    |    trim(vname),idv
       endif
-      istat = nf_var_par_access(ncid,idv,nf_collective)
-      if (istat /= NF_NOERR) then
-        write(char80,"('Error setting ',a,' nf_collective')")
-     |    trim(vname)
-        call handle_ncerr(istat,char80)
-      endif
+!      istat = nf_var_par_access(ncid,idv,nf_collective)
+!      if (istat /= NF_NOERR) then
+!        write(char80,"('Error setting ',a,' nf_collective')")
+!     |    trim(vname)
+!        call handle_ncerr(istat,char80)
+!      endif
 !
       fglb(:,:) = flbc(lon0:lon1,lat0:lat1)
       istat = nf_put_vara_double(ncid,idv,start_3d,count_3d,
@@ -4017,12 +4027,12 @@
      |      trim(name)
           call handle_ncerr(istat,char120)
         endif
-        istat = nf_var_par_access(ncid,idvar,nf_collective)
-        if (istat /= NF_NOERR) then
-          write(char120,"('wrf4d: Error setting ',a,' nf_collective')")
-     |      trim(name)
-          call handle_ncerr(istat,char120)
-        endif
+!        istat = nf_var_par_access(ncid,idvar,nf_collective)
+!        if (istat /= NF_NOERR) then
+!          write(char120,"('wrf4d: Error setting ',a,' nf_collective')")
+!     |      trim(name)
+!          call handle_ncerr(istat,char120)
+!        endif
         start_4d(1:3) = 1
         start_4d(4) = itime
         count_4d(1) = 1
@@ -4055,12 +4065,12 @@
      |    trim(name)
         call handle_ncerr(istat,char120)
       endif
-      istat = nf_var_par_access(ncid,idvar,nf_collective)
-      if (istat /= NF_NOERR) then
-        write(char120,"('wrf4d: Error setting ',a,' nf_collective')")
-     |    trim(name)
-        call handle_ncerr(istat,char120)
-      endif
+!      istat = nf_var_par_access(ncid,idvar,nf_collective)
+!      if (istat /= NF_NOERR) then
+!        write(char120,"('wrf4d: Error setting ',a,' nf_collective')")
+!     |    trim(name)
+!        call handle_ncerr(istat,char120)
+!      endif
 !
 ! Put data onto netcdf file (this is where the majority of output
 !   i/o happens). 
@@ -4125,12 +4135,12 @@
         enddo
       enddo
 !
-      istat = nf_var_par_access(ncid,idv,nf_collective)
-      if (istat /= NF_NOERR) then
-        write(char120,"('wrf3d: Error return from nf_var_par_access',
-     |    ' setting ',a,' nf_collective',i2)") name
-        call handle_ncerr(istat,char120)
-      endif
+!      istat = nf_var_par_access(ncid,idv,nf_collective)
+!      if (istat /= NF_NOERR) then
+!        write(char120,"('wrf3d: Error return from nf_var_par_access',
+!     |    ' setting ',a,' nf_collective',i2)") name
+!        call handle_ncerr(istat,char120)
+!      endif
 !
 ! Put data onto netcdf file (this is where the majority of output
 !   i/o happens). 
@@ -4178,13 +4188,14 @@
 ! via "hsi ls -lA". Example fileinfo string:
 !
 ! 96080  80, 0, 0, 0 to 96084  84, 0, 0, 0 by  43200 tgcm22 primary
+      use hist_module,only: h
 !
 ! Args:
       integer,intent(in) :: ncid
       character(len=*),intent(out) :: fileinfo
 !
 ! Local:
-      integer :: istat,idvmtime,idtime,ntimes,idvyear,idvday,
+      integer :: istat,idvmtime,idvyear,idvday,
      |  mtime_beg(4),mtime_end(4),istart2(2),icount2(2),
      |  iyear_beg,iyear_end,iday_beg,iday_end,idelhist,
      |  ibegiyd,iendiyd,ivar1(1)
@@ -4193,14 +4204,6 @@
 !
 ! Init:
       fileinfo = ' '
-!
-! Get number of histories (times) on the file:
-      istat = nf_inq_unlimdim(ncid,idtime) ! id of unlimited record var
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'nc_fileinfo: Error getting unlimited dimension id')
-      istat = nf_inq_dimlen(ncid,idtime,ntimes) ! length of time var
-      if (istat /= NF_NOERR) call handle_ncerr(istat,
-     |  'nc_fileinfo: Error getting length of time record variable')
 !
 ! Get id for mtime variable:
       istat = nf_inq_varid(ncid,"mtime",idvmtime) 
@@ -4217,7 +4220,7 @@
      |  mtime_beg)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'nc_fileinfo: Error getting beginning mtime')
-      istart2(2) = ntimes
+      istart2(2) = h%ihist
       istat = nf_get_vara_int(ncid,idvmtime,istart2,icount2,
      |  mtime_end)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
@@ -4230,7 +4233,7 @@
       istat = nf_get_var1_int(ncid,idvyear,1,iyear_beg)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'nc_fileinfo: Error getting variable year')
-      istat = nf_get_var1_int(ncid,idvyear,ntimes,iyear_end)
+      istat = nf_get_var1_int(ncid,idvyear,h%ihist,iyear_end)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'nc_fileinfo: Error getting variable year')
 !
@@ -4241,7 +4244,7 @@
       istat = nf_get_var1_int(ncid,idvday,1,iday_beg)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'nc_fileinfo: Error getting variable day')
-      istat = nf_get_var1_int(ncid,idvday,ntimes,iday_end)
+      istat = nf_get_var1_int(ncid,idvday,h%ihist,iday_end)
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'nc_fileinfo: Error getting variable day')
 !
