@@ -4,6 +4,9 @@
 #PBS -N {{simulation.job_name}}
 {%- if job.project_code|default('', true) %}
 #PBS -A {{job.project_code}}{%- endif %}
+{%- if job.group_list|default('', true) and job.group_list != "None" %}
+#PBS -W group_list={{ job.group_list }}
+{%- endif %}
 #PBS -q {{job.queue}}
 #PBS -j oe
 {%- if job.job_priority|default('', true) %}

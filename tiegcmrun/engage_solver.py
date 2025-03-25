@@ -69,6 +69,8 @@ def engage_parser(engage_parameters):
     queue = o['queue']
     if hpc_system == "derecho":
         job_priority = o['job_priority']
+    elif hpc_system == 'pleiades':
+        group_list = o['group_list']
     walltime = o['walltime']
     modules = o['modules']
 
@@ -103,6 +105,10 @@ def engage_parser(engage_parameters):
 
     eo['account_name'] = account_name
     eo['project_code'] = account_name
+    if hpc_system == 'pleiades':
+        eo['group_list'] = group_list
+    else:
+        eo['group_list'] = None
     eo['queue'] = queue
     
     eo['walltime'] = walltime
@@ -114,7 +120,7 @@ def engage_parser(engage_parameters):
     elif hpc_system == 'pleiades':
         eo["model"] = "bro"
     
-    eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','model','walltime']
+    eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','model','walltime']
     
     return engage_options
 
@@ -165,6 +171,7 @@ def engage_options_updater(options, engage_options, option_descriptions):
         o['job_priority'] = engage_options['job_priority']
         o['walltime'] = engage_options['walltime']
     elif hpc_platform == "pleiades":
+        o['group_list'] = engage_options['group_list']
         if o.get("mpi_command") is None:
             o["mpi_command"] = "mpiexec_mpt"
         o['queue'] = engage_options['queue']

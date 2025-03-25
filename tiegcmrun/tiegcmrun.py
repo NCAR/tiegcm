@@ -538,12 +538,15 @@ def prompt_user_for_run_options(args):
         elif engage != None:
             od["job_name"]["default"] = engage["job_name"]
         system_name = os.popen('hostname').read().strip()
-        if 'pfe' in system_name.lower():
-            od["hpc_system"]["default"]= "pleiades"
-        elif 'derecho' in system_name.lower():
-            od["hpc_system"]["default"] = "derecho"
+        if engage != None:
+            od["hpc_system"]["default"] = engage["hpc_system"]
         else:
-            od["hpc_system"]["default"] = "linux"
+            if 'pfe' in system_name.lower():
+                od["hpc_system"]["default"]= "pleiades"
+            elif 'derecho' in system_name.lower():
+                od["hpc_system"]["default"] = "derecho"
+            else:
+                od["hpc_system"]["default"] = "linux"
         # Prompt for the parameters.
         for on in ["job_name", "hpc_system"]:
             o[on] = get_run_option(on, od[on], mode, skip_parameters)
@@ -888,6 +891,7 @@ def prompt_user_for_run_options(args):
         elif hpc_platform == "pleiades":
             o["mpi_command"] = "mpiexec_mpt"
             if engage != None:
+                od['group_list']['default'] = engage['group_list']
                 od['queue']['default'] = engage['queue']
                 od['walltime']['default'] = engage['walltime']
         for on in od:

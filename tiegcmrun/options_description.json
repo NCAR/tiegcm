@@ -123,6 +123,11 @@
             }
         },
         "pleiades": {
+            "group_list": {
+                "LEVEL": "BASIC",
+                "prompt": "PBS group list",
+                "default": null
+            },
             "queue": {
                 "LEVEL": "BENCH",
                 "prompt": "PBS queue name",
