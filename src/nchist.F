@@ -1372,7 +1372,7 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining short_name of midpoint levels coord var')
 ! lev coord var is unitless:
-      istat = nf_put_att_text(ncid,idv_lev,"units",0," ")
+      istat = nf_put_att_text(ncid,idv_lev,"units",1," ")
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining units of midpoint levels coord var')
 ! positive='up'
@@ -1415,7 +1415,7 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining short_name of interface levels coord var')
 ! ilev coord var is unitless:
-      istat = nf_put_att_text(ncid,idv_ilev,"units",0," ")
+      istat = nf_put_att_text(ncid,idv_ilev,"units",1," ")
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining units of interface levels coord var')
 ! positive='up'
@@ -1486,7 +1486,7 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining short_name of mlev levels coord var')
 ! units of mlev (unitless):
-      istat = nf_put_att_text(ncid,idv_mlev,"units",0," ")
+      istat = nf_put_att_text(ncid,idv_mlev,"units",1," ")
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining units of mlev coordinate variable')
 ! positive attribute of mlev:
@@ -1529,7 +1529,7 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining short_name of imlev levels coord var')
 ! units of imlev (unitless):
-      istat = nf_put_att_text(ncid,idv_imlev,"units",0," ")
+      istat = nf_put_att_text(ncid,idv_imlev,"units",1," ")
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining units of imlev coordinate variable')
 ! positive attribute of imlev:
@@ -1662,7 +1662,7 @@
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining coupled_mage variable')
       istat = nf_put_att_text(ncid,idv_coupled_mage,"long_name",
-     |  40,'1 if coupled with MAGE, 0 otherwise')
+     |  35,'1 if coupled with MAGE, 0 otherwise')
       if (istat /= NF_NOERR) call handle_ncerr(istat,
      |  'Error defining long_name of coupled_mage variable')
 !
@@ -2349,7 +2349,7 @@
 ! Give long name attribute:
       if (len_trim(longname) > 0) then
         istat = nf_put_att_text(ncid,idvar,"long_name",
-     |    len_trim(longname),longname)
+     |    len_trim(longname),trim(longname))
         if (istat /= NF_NOERR) then
           write(char80,"('Error defining long_name of double variable ',
      |      a)") name
@@ -2360,7 +2360,7 @@
 ! Give units attribute:
       if (len_trim(units) > 0) then
         istat = nf_put_att_text(ncid,idvar,"units",len_trim(units),
-     |    units)
+     |    trim(units))
         if (istat /= NF_NOERR) then
           write(char80,"('Error defining units of variable ',a)") name
           call handle_ncerr(istat,trim(char80))
@@ -2396,7 +2396,7 @@
         istat = nf_def_var(ncid,trim(vname),NF_DOUBLE,3,ids3,idv)
       else
         if (sech_nbyte==4) then
-          istat = nf_def_var(ncid,trim(vname),NF_REAL,3,ids3,idv)
+          istat = nf_def_var(ncid,trim(vname),NF_FLOAT,3,ids3,idv)
         else
           istat = nf_def_var(ncid,trim(vname),NF_DOUBLE,3,ids3,idv)
         endif
@@ -2539,7 +2539,7 @@
           if (istat == 0) isdef = 1  ! var is already defined -- cannot redef
           if (isdef == 0) then ! safe to define
             if (sech_nbyte == 4) then ! write 4-byte reals
-              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_REAL,
+              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_FLOAT,
      |          4,idimids,idv_fsech(ix)) ! returns idv_fsech(ix)
             else                      ! write 8-byte doubles
               istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
@@ -2574,7 +2574,7 @@
           if (istat == 0) isdef = 1  ! var is already defined -- cannot redef
           if (isdef == 0) then ! safe to define
             if (sech_nbyte == 4) then ! write 4-byte reals
-              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_REAL,
+              istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_FLOAT,
      |          3,idimids(1:3),idv_fsech(ix)) ! returns idv_fsech(ix)
             else
               istat = nf_def_var(ncid,fsechist(ix)%short_name,NF_DOUBLE,
@@ -2665,7 +2665,7 @@
 !   nbytes == 8 means write 8-byte doubles (either secondary or primary files).
 !
       if (nbytes == 4) then     ! write 4-byte reals
-        istat = nf_def_var(ncid,f%short_name,NF_REAL,4,idimids,idvar)
+        istat = nf_def_var(ncid,f%short_name,NF_FLOAT,4,idimids,idvar)
       else                      ! write 8-byte doubles
         istat = nf_def_var(ncid,f%short_name,NF_DOUBLE,4,idimids,idvar)
       endif
@@ -2693,7 +2693,7 @@
 !              and do not add alternate units.
 !
       istat = nf_put_att_text(ncid,idvar,"units",len_trim(f%units),
-     |  f%units)
+     |  trim(f%units))
       if (istat /= NF_NOERR) then
         write(char80,"('Error defining units of 4-d',
      |    ' variable ',a,': units = ',a)") trim(f%short_name),
@@ -3676,6 +3676,9 @@
       endif
       write(6,*) 'Checkpoint 85: Wrote timestep variable'
 !
+! skip updating global attributes for testing
+      if (.false.) then
+!
 ! Update run_type (initial or continuation):
       write(6,*) 'Checkpoint 86: Entering redefine mode
      |  for global attributes'
@@ -3730,6 +3733,8 @@
       if (istat /= NF_NOERR)
      |  call handle_ncerr(istat,'Error from nf_enddef')
       write(6,*) 'Checkpoint 92: Exited define mode'
+!
+      endif
 !
 ! Add fields data to primary history:
 ! Currently (2/00), only prognostic fields are written to the
