@@ -197,14 +197,18 @@
         h%tuv_lbc_intop = 0 ! this code always writes new histories
       else
         call define_hist('primary')
+        write(6,*) 'define_hist ran for primary history file'
       endif
 !
 ! Define new nc file with history h:
-      if (newseries.or.fullfile)
-     |  call nc_define('prim',ncid)  ! define new primary history file
+      if (newseries.or.fullfile) then
+        call nc_define('prim',ncid)  ! define new primary history file
+        write(6,*) 'nc_define ran for primary history file'
+      endif
 !
 ! Write the history:
       call nc_wrhist(ncid,diskfile,iprinthist)  ! write the history
+      write(6,*) 'nc_wrhist called for primary history file'
       ihist_total = ihist_total+1
 !
 ! Report to stdout:
@@ -327,22 +331,30 @@
 ! Define current history structure:
       nsech = nsech+1 ! increment number of histories on current file
       call define_hist('secondary')
+      write(6,*) 'define_hist ran for secondary history file'
 
 !     write(6,"('output_sechist after define_hist: ncidsech=',i3,
 !    |  ' nsech=',i2,' newseries=',l1,' fullfile=',l1)") 
 !    |  ncidsech,nsech,newseries,fullfile
 
-      if (newseries.or.fullfile) 
-     |  call nc_define('sech',ncidsech)  ! define new secondary history file
+      if (newseries.or.fullfile) then
+        call nc_define('sech',ncidsech)  ! define new secondary history file
+        write(6,*) 'nc_define ran for secondary history file'
+      endif
 !
 ! First history of first secondary file does not define diags because
 ! addfld has not been called yet. Therefore, if this is the 2nd history
 ! of the first file, define diags now:
 !
-      if (isecout==1.and.nsech==2) call def_fsech(ncidsech)
+      if (isecout==1.and.nsech==2) then
+        call def_fsech(ncidsech)
+        write(6,*) 'def_fsech called for secondary history file'
+      endif
 !
 ! Write the history:
+      write(6,*) 'nc_wrhist is being called'
       call nc_wrhist(ncidsech,diskfile,iprinthist)  ! write the history
+      write(6,*) 'nc_wrhist ran for secondary history file'
       ihist_total = ihist_total+1
 !
 ! Report to stdout:

@@ -2745,6 +2745,8 @@
 ! External:
       integer,external :: strloc
       real,external :: mtime_delta
+! Checkpoint 1: Starting nc_wrhist
+      write(6,*) 'Checkpoint 1: Starting nc_wrhist'
 !
 ! Time: decimal days since start time of initial run:
 ! h%initial_mtime was set by sub hist_initype (if initial run),
@@ -2755,7 +2757,8 @@
 ! 
       mtimeinit = sh%initial_mtime
       rsecs = mtime_delta(mtimeinit,h%modeltime)
-
+      write(6,*) 'Checkpoint 2: After mtime_delta calculation, rsecs
+     |  = ', rsecs
 !     write(6,"('nc_wrhist calc rsecs: h%year=',i5,' h%modeltime=',
 !    |  4i4,' sh%year=',i5,' mtimeinit=',4i4,' rsecs=',f12.2)") 
 !    |  h%year,h%modeltime,sh%year,mtimeinit,rsecs 
@@ -2763,17 +2766,20 @@
       if (mtimeinit(1) > h%modeltime(1)) then
         mtimeinit(:) = h%modeltime(:)
         rsecs = mtime_delta(mtimeinit,h%modeltime)
+        write(6,*) 'Checkpoint 3: Reset mtimeinit, new rsecs = ', rsecs
         write(6,"('nc_wrhist: reset mtimeinit = h%modeltime = ',4i5)")
      |    mtimeinit
       endif
       rdays = rsecs/86400.
       
       if (rsecs < 0.) then
+        write(6,*) 'Checkpoint 4: Negative rsecs detected, aborting'
         write(6,"(/,'>>> nc_wrhist: time from initial start must be',
      |    ' >= 0: mtimeinit=',4i4,'  h%modeltime=',4i4,' delta (secs)=',
      |    f10.2)") mtimeinit,h%modeltime,rsecs
         call shutdown('delta time from init run')
       else
+        write(6,*) 'Checkpoint 5: rsecs >= 0, continuing'
 !       write(6,"('nc_wrhist: mtimeinit=',4i4,' h%modeltime=',4i4,
 !    |    ' delta (secs)=',f10.2,' delta (days)=',f8.2)")
 !    |    mtimeinit,h%modeltime,rsecs,rdays
@@ -2783,6 +2789,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of time')
       endif
+      write(6,*) 'Checkpoint 6: Inquired varid "time", idv_time =
+     |  ', idv_time
 !      istat = nf_var_par_access(ncid,idv_time,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting time nf_collective')
@@ -2796,6 +2804,7 @@
      |    ' delta (days)=',f8.2)") h%modeltime,mtimeinit,rdays
         call handle_ncerr(istat,char240)
       endif
+      write(6,*) 'Checkpoint 7: Wrote time variable'
 !
 ! Model time (day,hour,minute,second):
       start_2d(1) = 1
@@ -2807,6 +2816,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of mtime')
       endif
+      write(6,*) 'Checkpoint 8: Inquired varid "mtime", idv_mtime 
+     | = ', idv_mtime
 !      istat = nf_var_par_access(ncid,idv_mtime,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting mtime nf_collective')
@@ -2835,6 +2846,7 @@
      |    ' h%modeltime=',4i4,' istat=',i5)") h%ihist,h%modeltime,istat
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 9: Wrote mtime variable'
 !
 ! Calendar year (initially from input, then updated if model is
 ! advancing calendar time):
@@ -2843,6 +2855,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of year')
       endif
+      write(6,*) 'Checkpoint 10: Inquired varid "year", idv_year
+     |  = ', idv_year
+
 !      istat = nf_var_par_access(ncid,idv_year,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting year nf_collective')
@@ -2853,6 +2868,7 @@
      |    h%ihist,h%year
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 11: Wrote calendar year variable'
 !
 ! Calendar day (initially from input, then updated if model is
 ! advancing calendar time):
@@ -2861,6 +2877,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of day')
       endif
+      write(6,*) 'Checkpoint 12: Inquired varid "day", idv_day
+     |  = ', idv_day
 !      istat = nf_var_par_access(ncid,idv_day,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting day nf_collective')
@@ -2871,6 +2889,7 @@
      |    h%ihist,h%day
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 13: Wrote calendar day variable'
 !
 ! Calendar advance:
       if (idv_calendar_adv <= 0) then
@@ -2878,6 +2897,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of calendar_advance')
       endif
+      write(6,*) 'Checkpoint 14: Inquired varid "calendar_advance",
+     |  idv_calendar_adv = ', idv_calendar_adv
 !      istat = nf_var_par_access(ncid,idv_calendar_adv,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access '//
@@ -2890,6 +2911,7 @@
      |    ': h%calendar_advance=',i5)") h%ihist,h%calendar_advance
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 15: Wrote calendar advance variable'
 !
 ! Date and time history was written:
       if (idv_writedate <= 0) then
@@ -2897,6 +2919,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of write_date')
       endif
+      write(6,*) 'Checkpoint 16: Inquired varid "write_date",
+     | idv_writedate = ', idv_writedate
 !      istat = nf_var_par_access(ncid,idv_writedate,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting write_date nf_collective')
@@ -2911,6 +2935,7 @@
      |    'h%write_date=',a)") trim(h%write_date)
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 17: Wrote write_date variable'
 !
 ! Iteration number (number of steps from 0,0,0,0 to current mtime):
       if (idv_iter <= 0) then
@@ -2918,6 +2943,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of iter')
       endif
+      write(6,*) 'Checkpoint 18: Inquired varid "iter", idv_iter =
+     |  ', idv_iter
 !      istat = nf_var_par_access(ncid,idv_iter,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting iter nf_collective')
@@ -2927,6 +2954,7 @@
      |    'iter at h%ihist=',i3,': h%iter=',i8)") h%ihist,h%iter
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 19: Wrote iter variable'
 !
 ! Number of mpi tasks:
       if (idv_ntask <= 0) then
@@ -2934,6 +2962,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ntask_mpi')
       endif
+      write(6,*) 'Checkpoint 20: Inquired varid "ntask_mpi",
+     |  idv_ntask = ', idv_ntask
 !      istat = nf_var_par_access(ncid,idv_ntask,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting ntask_mpi nf_collective')
@@ -2944,6 +2974,7 @@
      |    h%ntask_mpi
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 21: Wrote ntask_mpi variable'
 !
 ! If coupled with MAGE:
       if (idv_coupled_mage <= 0) then
@@ -2951,6 +2982,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of coupled_mage')
       endif
+      write(6,*) 'Checkpoint 22: Inquired varid "coupled_mage",
+     |  idv_coupled_mage = ', idv_coupled_mage
 !      istat = nf_var_par_access(ncid,idv_coupled_mage,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access '//
@@ -2963,6 +2996,7 @@
      |    h%ihist,h%coupled_mage
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 23: Wrote coupled_mage variable'
 !
 ! Universal time (decimal hours):
       if (idv_ut <= 0) then
@@ -2970,6 +3004,7 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ut')
       endif
+      write(6,*) 'Checkpoint 24: Inquired varid "ut", idv_ut = ', idv_ut
 !      istat = nf_var_par_access(ncid,idv_ut,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting ut nf_collective')
@@ -2979,6 +3014,7 @@
      |    'ut at h%ihist=',i3,': h%ut=',i8)") h%ihist,h%ut
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 25: Wrote ut variable'
 !
 ! 1/31/01: tides are now time dependent 2d vars:
 ! Diurnal tide (dtide(time,2):
@@ -2991,6 +3027,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of dtide')
       endif
+      write(6,*) 'Checkpoint 26: Inquired varid "dtide", idv_dtide
+     |      = ', idv_dtide
 !      istat = nf_var_par_access(ncid,idv_dtide,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting dtide nf_collective')
@@ -3001,6 +3039,7 @@
      |    'dtide at h%ihist=',i3,': h%dtide=',i8)") h%ihist,h%dtide
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 27: Wrote dtide variable'
 !
 ! Semi-diurnal tide (sdtide(time,10):
       start_2d(1) = 1
@@ -3012,6 +3051,7 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of sdtide')
       endif
+      write(6,*) 'Checkpoint 28: Inquired varid "sdtide", idv_sdtide = ', idv_sdtide
 !      istat = nf_var_par_access(ncid,idv_sdtide,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting sdtide nf_collective')
@@ -3023,8 +3063,10 @@
      |    'sdtide at h%ihist=',i3,': h%sdtide=',i8)") h%ihist,h%sdtide
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 29: Wrote sdtide variable'
 !
 ! Update gpi_ncfile:
+      write(6,*) 'Checkpoint 30: Starting update_ncfile calls'
       call update_ncfile(ncid,"gpi_ncfile",h%gpi_ncfile,idv_gpi_ncfile,
      |  h%ihist)
 !
@@ -3073,6 +3115,7 @@
 ! Update amiesh_ncfile:
       call update_ncfile(ncid,"amiesh_ncfile",h%amiesh_ncfile,
      |  idv_amiesh_ncfile,h%ihist)
+      write(6,*) 'Checkpoint 31: Finished update_ncfile calls'
 !
 ! f107d and f107a (daily and average solar fluxes):
       if (idv_f107d <= 0) then
@@ -3088,13 +3131,18 @@
         write(char120,"('Error from nf_put_var1_double defining ',
      |    'f107d at h%ihist=',i3,': h%f107d=',i8)") h%ihist,h%f107d
         call handle_ncerr(istat,char120)
+        write(6,*) 'Checkpoint 32: Inquired varid "f107d",
+     |   idv_f107d = ', idv_f107d
       endif
-!
+      write(6,*) 'Checkpoint 33: Wrote f107d variable'
+!     
       if (idv_f107a <= 0) then
         istat = nf_inq_varid(ncid,"f107a",idv_f107a)
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of f107a')
       endif
+      write(6,*) 'Checkpoint 34: Inquired varid "f107a",
+     |  idv_f107a = ', idv_f107a
 !      istat = nf_var_par_access(ncid,idv_f107a,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting f107a nf_collective')
@@ -3104,6 +3152,7 @@
      |    'f107a at h%ihist=',i3,': h%f107a=',i8)") h%ihist,h%f107a
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 35: Wrote f107a variable'
 !
 ! Hemispheric power:
       if (idv_hpower <= 0) then
@@ -3111,6 +3160,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of hpower')
       endif
+      write(6,*) 'Checkpoint 36: Inquired varid "hpower",
+     |  idv_hpower = ', idv_hpower
 !      istat = nf_var_par_access(ncid,idv_hpower,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting hpower nf_collective')
@@ -3120,6 +3171,7 @@
      |    'hpower at h%ihist=',i3,': h%hpower=',i8)") h%ihist,h%hpower
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 37: Wrote hpower variable'
 !
 ! Cross-tail potential:
       if (idv_ctpoten <= 0) then
@@ -3127,6 +3179,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ctpoten')
       endif
+      write(6,*) 'Checkpoint 38: Inquired varid "ctpoten",
+     |  idv_ctpoten = ', idv_ctpoten
 !      istat = nf_var_par_access(ncid,idv_ctpoten,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting ctpoten nf_collective')
@@ -3137,6 +3191,7 @@
      |    h%ihist,h%ctpoten
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 39: Wrote ctpoten variable'
 !
 ! Kp index:
       if (idv_kp <= 0) then
@@ -3144,6 +3199,9 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of Kp')
       endif
+      write(6,*) 'Checkpoint 40: Inquired varid "Kp", idv_kp =
+     |  ', idv_kp
+      
 !      istat = nf_var_par_access(ncid,idv_kp,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting Kp nf_collective')
@@ -3153,6 +3211,7 @@
      |    'Kp at h%ihist=',i3,': h%kp=',i8)") h%ihist,h%kp
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 41: Wrote Kp variable'
 !
 ! BX,BY,BZ imf:
       if (idv_bximf <= 0) then
@@ -3160,6 +3219,7 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of bximf')
       endif
+      write(6,*) 'Checkpoint 42: Inquired varid "bximf"', idv_bximf
 !      istat = nf_var_par_access(ncid,idv_bximf,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting bximf nf_collective')
@@ -3169,12 +3229,14 @@
      |    'bximf at h%ihist=',i3,': h%bximf=',i8)") h%ihist,h%bximf
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 43: Wrote bximf variable'
 !
       if (idv_byimf <= 0) then
         istat = nf_inq_varid(ncid,"byimf",idv_byimf)
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of byimf')
       endif
+      write(6,*) 'Checkpoint 44: Inquired varid "byimf"', idv_byimf
 !      istat = nf_var_par_access(ncid,idv_byimf,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting byimf nf_collective')
@@ -3184,12 +3246,14 @@
      |    'byimf at h%ihist=',i3,': h%byimf=',i8)") h%ihist,h%byimf
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 45: Wrote byimf variable'
 !
       if (idv_bzimf <= 0) then
         istat = nf_inq_varid(ncid,"bzimf",idv_bzimf)
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of bzimf')
       endif
+      write(6,*) 'Checkpoint 46: Inquired varid "bzimf"', idv_bzimf
 !      istat = nf_var_par_access(ncid,idv_bzimf,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting bzimf nf_collective')
@@ -3199,6 +3263,7 @@
      |    'bzimf at h%ihist=',i3,': h%bzimf=',i8)") h%ihist,h%bzimf
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 47: Wrote bzimf variable'
 !
 ! swvel,swden:
       if (idv_swvel <= 0) then
@@ -3206,6 +3271,7 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of swvel')
       endif
+      write(6,*) 'Checkpoint 48: Inquired varid "swvel"', idv_swvel
 !      istat = nf_var_par_access(ncid,idv_swvel,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting swvel nf_collective')
@@ -3215,12 +3281,14 @@
      |    'swvel at h%ihist=',i3,': h%swvel=',i8)") h%ihist,h%swvel
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 49: Wrote swvel variable'
 !
       if (idv_swden <= 0) then
         istat = nf_inq_varid(ncid,"swden",idv_swden)
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of swden')
       endif
+      write(6,*) 'Checkpoint 50: Inquired varid "swden"', idv_swden
 !      istat = nf_var_par_access(ncid,idv_swden,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting swden nf_collective')
@@ -3230,6 +3298,7 @@
      |    'swden at h%ihist=',i3,': h%swden=',i8)") h%ihist,h%swden
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 51: Wrote swden variable'
 !
 ! al:
       if (idv_al <= 0) then
@@ -3237,6 +3306,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of al')
       endif
+      write(6,*) 'Checkpoint 52: Inquired varid "al", idv_al =
+     |  ', idv_al
 !      istat = nf_var_par_access(ncid,idv_al,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting al nf_collective')
@@ -3246,6 +3317,7 @@
      |    'al at h%ihist=',i3,': h%al=',i8)") h%ihist,h%al
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 53: Wrote al variable'
 !
 ! Collision factor:
       if (idv_colfac <= 0) then
@@ -3253,6 +3325,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of colfac')
       endif
+      write(6,*) 'Checkpoint 54: Inquired varid "colfac",
+     |  idv_colfac = ', idv_colfac 
 !      istat = nf_var_par_access(ncid,idv_colfac,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting colfac nf_collective')
@@ -3262,6 +3336,7 @@
      |    'colfac at h%ihist=',i3,': h%colfac=',i8)") h%ihist,h%colfac
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 55: Wrote colfac variable'
 !
 ! Joule heating factor:
       if (idv_joulefac <= 0) then
@@ -3269,6 +3344,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of joulefac')
       endif
+      write(6,*) 'Checkpoint 56: Inquired varid "joulefac",
+     |  idv_joulefac = ', idv_joulefac 
 !      istat = nf_var_par_access(ncid,idv_joulefac,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting joulefac nf_collective')
@@ -3279,6 +3356,7 @@
      |    h%ihist,h%joulefac
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 57: Wrote joulefac variable'
 !
 ! alfa30:
 !     if (idv_alfa30 <= 0) then
@@ -3350,6 +3428,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of e1')
       endif
+      write(6,*) 'Checkpoint 58: Inquired varid "e1", idv_e1 =
+     |  ', idv_e1 
 !      istat = nf_var_par_access(ncid,idv_e1,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting e1 nf_collective')
@@ -3359,12 +3439,15 @@
      |    'e1 at h%ihist=',i3,': h%e1=',i8)") h%ihist,h%e1
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 59: Wrote e1 variable'
 !
       if (idv_e2 <= 0) then
         istat = nf_inq_varid(ncid,"e2",idv_e2)
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of e2')
       endif
+      write(6,*) 'Checkpoint 60: Inquired varid "e2", idv_e2 =
+     |  ', idv_e2 
 !      istat = nf_var_par_access(ncid,idv_e2,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting e2 nf_collective')
@@ -3374,6 +3457,7 @@
      |    'e2 at h%ihist=',i3,': h%e2=',i8)") h%ihist,h%e2
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 61: Wrote e2 variable'
 !
 ! h1,h2:
       if (idv_h1 <= 0) then
@@ -3381,6 +3465,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of h1')
       endif
+      write(6,*) 'Checkpoint 62: Inquired varid "h1", idv_h1 =
+     |  ', idv_h1 
 !      istat = nf_var_par_access(ncid,idv_h1,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting h1 nf_collective')
@@ -3390,12 +3476,15 @@
      |    'h1 at h%ihist=',i3,': h%h1=',i8)") h%ihist,h%h1
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 63: Wrote h1 variable'
 !
       if (idv_h2 <= 0) then
         istat = nf_inq_varid(ncid,"h2",idv_h2)
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of h2')
       endif
+      write(6,*) 'Checkpoint 64: Inquired varid "h2", idv_h2 =
+     |  ', idv_h2 
 !      istat = nf_var_par_access(ncid,idv_h2,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting h2 nf_collective')
@@ -3405,6 +3494,7 @@
      |    'h2 at h%ihist=',i3,': h%h2=',i8)") h%ihist,h%h2
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 65: Wrote h2 variable'
 !
 ! alfac,ec:
       if (idv_alfac <= 0) then
@@ -3412,6 +3502,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of alfac')
       endif
+      write(6,*) 'Checkpoint 66: Inquired varid "alfac", idv_alfac =
+     |  ', idv_alfac 
 !      istat = nf_var_par_access(ncid,idv_alfac,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting alfac nf_collective')
@@ -3421,12 +3513,15 @@
      |    'alfac at h%ihist=',i3,': h%alfac=',i8)") h%ihist,h%alfac
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 67: Wrote alfac variable'
 !
       if (idv_ec <= 0) then
         istat = nf_inq_varid(ncid,"ec",idv_ec)
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ec')
       endif
+      write(6,*) 'Checkpoint 68: Inquired varid "ec", idv_ec =
+     |  ', idv_ec 
 !      istat = nf_var_par_access(ncid,idv_ec,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting ec nf_collective')
@@ -3436,6 +3531,7 @@
      |    'ec at h%ihist=',i3,': h%ec=',i8)") h%ihist,h%ec
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 69: Wrote ec variable'
 !
 ! alfad,ed:
       if (idv_alfad <= 0) then
@@ -3443,6 +3539,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of alfad')
       endif
+      write(6,*) 'Checkpoint 70: Inquired varid "alfad", idv_alfad =
+     |  ', idv_alfad 
 !      istat = nf_var_par_access(ncid,idv_alfad,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting alfad nf_collective')
@@ -3452,12 +3550,15 @@
      |    'alfad at h%ihist=',i3,': h%alfad=',i8)") h%ihist,h%alfad
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 71: Wrote alfad variable'
 !
       if (idv_ed <= 0) then
         istat = nf_inq_varid(ncid,"ed",idv_ed)
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of ec')
       endif
+      write(6,*) 'Checkpoint 72: Inquired varid "ed", idv_ed =
+     |  ', idv_ed 
 !      istat = nf_var_par_access(ncid,idv_ed,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting ed nf_collective')
@@ -3467,6 +3568,7 @@
      |    'ed at h%ihist=',i3,': h%ed=',i8)") h%ihist,h%ed
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 73: Wrote ed variable'
 !
 ! crit1,2:
       crit1 = crit(1)*rtd
@@ -3475,6 +3577,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of crit1')
       endif
+      write(6,*) 'Checkpoint 74: Inquired varid "crit1", idv_crit1 =
+     |  ', idv_crit1 
 !      istat = nf_var_par_access(ncid,idv_crit1,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting crit1 nf_collective')
@@ -3484,6 +3588,7 @@
      |    'crit1 at h%ihist=',i3,': h%crit1=',i8)") h%ihist,crit1
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 75: Wrote crit1 variable'      
 !
       crit2 = crit(2)*rtd
       if (idv_crit2 <= 0) then
@@ -3491,6 +3596,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of crit1')
       endif
+      write(6,*) 'Checkpoint 76: Inquired varid "crit2", idv_crit2 =
+     |  ', idv_crit2 
 !      istat = nf_var_par_access(ncid,idv_crit2,nf_collective)
 !      if (istat /= NF_NOERR) call handle_ncerr(istat,
 !     |  'Error from nf_var_par_access setting crit2 nf_collective')
@@ -3500,6 +3607,7 @@
      |    'crit2 at h%ihist=',i3,': h%crit2=',i8)") h%ihist,crit2
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 77: Wrote crit2 variable'
 !
 ! Reference pressure used to convert ln(p0/p) to pressure (hPa):
 ! (h%p0 was set in sub define_hist, output.F)
@@ -3508,12 +3616,15 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of p0')
       endif
+      write(6,*) 'Checkpoint 78: Inquired varid "p0", idv_p0 =
+     |  ', idv_p0 
       istat = nf_put_var1_double(ncid,idv_p0,h%ihist,h%p0)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
      |    'p0 at h%ihist=',i3,': h%p0=',i8)") h%ihist,h%p0
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 79: Wrote p0 variable'
 !
 ! Reference pressure used by the model (microbars):
 ! (h%p0_model was set in sub define_hist, output.F)
@@ -3522,6 +3633,8 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of p0_model')
       endif
+      write(6,*) 'Checkpoint 80: Inquired varid "p0_model", idv_p0_model =
+     |  ', idv_p0_model 
       istat = nf_put_var1_double(ncid,idv_p0_model,h%ihist,h%p0_model)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
@@ -3529,6 +3642,7 @@
      |    h%ihist,h%p0_model
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 81: Wrote p0_model variable'
 !
 ! Gravitational constant used in the model:
       if (idv_grav <= 0) then
@@ -3536,12 +3650,15 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of grav')
       endif
+      write(6,*) 'Checkpoint 82: Inquired varid "grav", idv_grav =
+     |  ', idv_grav 
       istat = nf_put_var1_double(ncid,idv_grav,h%ihist,h%grav)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_double defining ',
      |    'grav at h%ihist=',i3,': h%grav=',i8)") h%ihist,h%grav
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 83: Wrote grav variable'
 !
 ! Timestep (seconds):
       if (idv_step <= 0) then
@@ -3549,18 +3666,23 @@
         if (istat /= NF_NOERR) call handle_ncerr(istat,
      |    'Error from nf_inq_varid getting var id of timestep')
       endif
+      write(6,*) 'Checkpoint 84: Inquired varid "timestep", idv_step =
+     |  ', idv_step 
       istat = nf_put_var1_int(ncid,idv_step,h%ihist,h%step)
       if (istat /= NF_NOERR) then
         write(char120,"('Error from nf_put_var1_int defining ',
      |    'ut at h%ihist=',i3,': h%step=',i4)") h%ihist,h%step
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 85: Wrote timestep variable'
 !
 ! Update run_type (initial or continuation):
+      write(6,*) 'Checkpoint 86: Entering redefine mode
+     |  for global attributes'
       istat = nf_redef(ncid) ! put dataset in define mode
       if (istat /= NF_NOERR)
      |  call handle_ncerr(istat,'Error from nf_redef')
-
+      write(6,*) 'Checkpoint 87: In redefine mode'
       istat = nf_put_att_text(ncid,NF_GLOBAL,"run_type",
      |  len_trim(h%run_type),trim(h%run_type))
       if (istat /= NF_NOERR) then
@@ -3568,6 +3690,7 @@
      |    'for run_type global attribute')")
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 88: Updated run_type attribute'
 !
 ! Update source_file and source mtime:
       if (h%run_type(1:4)=='init') then ! initial source file
@@ -3583,6 +3706,7 @@
      |    'for source_file global attribute')")
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 89: Updated source_file attribute'
       istat = nf_put_att_int(ncid,NF_GLOBAL,"source_mtime",NF_INT,4,
      |  h%source_mtime)
       if (istat /= NF_NOERR) then
@@ -3590,6 +3714,7 @@
      |    'for source_mtime global attribute')")
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 90: Updated source_mtime attribute'
 !
 ! Update number of histories on the file (global attribute):
       ivar1(1) = h%ihist
@@ -3599,10 +3724,12 @@
      |    'for nhist global attribute')")
         call handle_ncerr(istat,char120)
       endif
+      write(6,*) 'Checkpoint 91: Updated nhist attribute'
 !
       istat = nf_enddef(ncid) ! take out of define mode
       if (istat /= NF_NOERR)
      |  call handle_ncerr(istat,'Error from nf_enddef')
+      write(6,*) 'Checkpoint 92: Exited define mode'
 !
 ! Add fields data to primary history:
 ! Currently (2/00), only prognostic fields are written to the
@@ -3612,6 +3739,7 @@
       idv_tlbc_nm = 0 ; idv_ulbc_nm = 0 ; idv_vlbc_nm = 0 ! forces wrlbc to inquire
       idv_gzigm1 = 0 ; idv_gzigm2 = 0 ; idv_gnsrhs = 0
       if (h%hist_type(1:3)=='pri') then
+        write(6,*) 'Checkpoint 93: Processing primary history fields'
         do i=1,nf4d_hist
           call wrf4d(ncid,f4d(i)%short_name,h%ihist,fakeflds,i)
 !
@@ -3619,6 +3747,8 @@
 ! then gathered to fzg by mp_gather2root_f3d):
 ! 3/1/06 btf: do not write ZG to primary histories.
         enddo ! i=1,nf4d_hist
+        write(6,*) 'Checkpoint 94: Completed wrf4d calls for pri',
+     &          'mary history'
 !
 ! Update t,u,v lbc to primary history: 
 !
@@ -3633,9 +3763,11 @@
         call wrlbc(ncid,"gzigm1",gzigm1,h%ihist,idv_gzigm1,'pri')
         call wrlbc(ncid,"gzigm2",gzigm2,h%ihist,idv_gzigm2,'pri')
         call wrlbc(ncid,"gnsrhs",gnsrhs,h%ihist,idv_gnsrhs,'pri')
+        write(6,*) 'Checkpoint 95: Completed primary history fields'
 !
 ! Add fields data to secondary history:
       elseif (h%hist_type(1:3)=='sec') then
+        write(6,*) 'Checkpoint 96: Processing secondary history fields'
         call wrfsech(ncid,h%ihist) ! write secondary prog and diag fields
 !
 ! Update t,u,v lbc to secondary history:
@@ -3648,14 +3780,21 @@
         call wrlbc(ncid,"gzigm1",gzigm1,h%ihist,idv_gzigm1,'sec')
         call wrlbc(ncid,"gzigm2",gzigm2,h%ihist,idv_gzigm2,'sec')
         call wrlbc(ncid,"gnsrhs",gnsrhs,h%ihist,idv_gnsrhs,'sec')
+        write(6,*) 'Checkpoint 97: Completed secondary history fields'
       else
+        write(6,*) 'Checkpoint 98: Unknown history type: ', h%hist_type
         write(6,"(/,'>>> WARNING nc_wrhist: unknown h%hist_type=',a)") 
      |    h%hist_type
       endif
 !
 ! Report to stdout:
 !     write(6,"('nc_wrhist: iprint=',i3)") iprint
-      if (iprint > 0) call hist_print(h,'WRITE',diskfile)
+      if (iprint > 0) then
+        write(6,*) 'Checkpoint 99: Calling hist_print'
+        call hist_print(h,'WRITE',diskfile)
+        write(6,*) 'Checkpoint 100: Completed hist_print'
+      endif
+      write(6,*) 'Checkpoint 101: Exiting nc_wrhist'
       end subroutine nc_wrhist
 !-----------------------------------------------------------------------
       subroutine wrfsech(ncid,itime)
