@@ -265,6 +265,7 @@
       integer,save :: ihist_total=0
       logical :: fullfile
       character(len=1024) :: fileinfo
+      integer :: my_rank
 !
 ! Init:
       diskfile = ' '
@@ -278,6 +279,9 @@
       if (ihist_total==0) isecout = 0 ! first history of a run
       fullfile = .false.
       if (nsech==mxhist_sech) fullfile = .true.
+
+
+      call MPI_Comm_rank(TIEGCM_WORLD, my_rank, istat)
 !
 ! Open new file if starting a new time series, or file was filled
 ! at last write:
@@ -331,7 +335,7 @@
 ! Define current history structure:
       nsech = nsech+1 ! increment number of histories on current file
       call define_hist('secondary')
-      write(6,*) 'define_hist ran for secondary history file'
+      write(6,'("Rank ", i4, ": define_hist ran")') my_rank
 
 !     write(6,"('output_sechist after define_hist: ncidsech=',i3,
 !    |  ' nsech=',i2,' newseries=',l1,' fullfile=',l1)") 
@@ -339,7 +343,7 @@
 
       if (newseries.or.fullfile) then
         call nc_define('sech',ncidsech)  ! define new secondary history file
-        write(6,*) 'nc_define ran for secondary history file'
+        write(6,'("Rank ", i4, ": nc_define ran")') my_rank
       endif
 !
 ! First history of first secondary file does not define diags because
@@ -348,13 +352,14 @@
 !
       if (isecout==1.and.nsech==2) then
         call def_fsech(ncidsech)
-        write(6,*) 'def_fsech called for secondary history file'
+        write(6,'("Rank ", i4, ": def_fsech called sec")') my_rank
       endif
 !
 ! Write the history:
-      write(6,*) 'nc_wrhist is being called'
+      write(6,'("Rank ", i4, ": nc_wrhist is being called")') my_rank
       call nc_wrhist(ncidsech,diskfile,iprinthist)  ! write the history
-      write(6,*) 'nc_wrhist ran for secondary history file'
+      write(6,'("Rank ", i4, ": nc_wrhist ran for
+     |  secondary history file")') my_rank
       ihist_total = ihist_total+1
 !
 ! Report to stdout:
@@ -365,16 +370,30 @@
 ! Add contents string to the file (as global attribute), and to the
 ! hpss dispose script:
       fileinfo = ' '
+      write(6,'("Rank ", i4, ": nc_fileinfo is being called")') my_rank
       call nc_fileinfo(ncidsech,fileinfo)
-      if (len_trim(hpss_path) > 0) 
-     |  call add_dispose(trim(diskfile),trim(fileinfo))
+      write(6,'("Rank ", i4, ": nc_fileinfo ran",
+     |  " for secondary history file")') my_rank
+      if (len_trim(hpss_path) > 0) then
+        write(6,'("Rank ", i4, ": add_dispose is being",
+     |    " called")') my_rank
+        call add_dispose(trim(diskfile),trim(fileinfo))
+        write(6,'("Rank ", i4, ": add_dispose ran for",
+     |      " secondary history file")') my_rank
+      endif
 !
+      write(6,'("Rank ", i4, ": nf_sync is being called")') my_rank
       istat = nf_sync(ncidsech)
+      write(6,'("Rank ", i4, ": output_sechist: nf_sync ran",
+     |  " for secondary history file")') my_rank
       if (istat/=NF_NOERR) then
         write(6,"(/,'>>> output_sechist: Error synchronizing',
      |    ' secondary history output file',a)") trim(diskfile)
         call shutdown('synchronizing secondary history output file')
       endif
+      write(6,'("Rank ", i4, ": nf_sync ran for
+     |  secondary history file")') my_rank
+      write(6,'("Rank ", i4, ": end of output_sechist")') my_rank
 !
       end subroutine output_sechist
 !-----------------------------------------------------------------------

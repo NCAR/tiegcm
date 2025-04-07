@@ -4414,6 +4414,8 @@
      |                 i5.5,' ',i3,' ',i2,' ',i2,' ',i2,' by ',i6,
      |  ' ',a,' ',a)") ibegiyd, mtime_beg,iendiyd, mtime_end, 
      |  idelhist,trim(mversion),trim(htype)
+! skip updating global attributes for testing
+      if (.false.) then
 !
 ! Add file info string and description of file info global attributes:
       istat = nf_redef(ncid)
@@ -4433,6 +4435,7 @@
       if (istat /= NF_NOERR)
      |  call handle_ncerr(istat,'nc_fileinfo: Error from nf_enddef')
 !     write(6,"('nc_fileinfo: fileinfo=',a)") trim(fileinfo)
+      endif
       end subroutine nc_fileinfo
 !-----------------------------------------------------------------------
       subroutine rdfilename(ncid,itime,idv,vname,filelen,filename)
