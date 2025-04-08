@@ -76,11 +76,11 @@ def engage_parser(engage_parameters):
 
     o = engage_parameters["coupling"]
     
-    gamera_spin_up_time = int(o['gamera_spin_up_time'])
+    gr_warm_up_time = int(o['gr_warm_up_time'])
     gcm_spin_up_time = int(o['gcm_spin_up_time'])
     conda_env = o['conda_env']
     
-    start_date = get_engage_start_time(coupled_start_date,gamera_spin_up_time+gcm_spin_up_time)
+    start_date = get_engage_start_time(coupled_start_date,gr_warm_up_time+gcm_spin_up_time)
     
     o = engage_parameters["voltron"]
     voltron_dtOut = int(float(o['output']['dtOut']))
