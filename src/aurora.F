@@ -458,6 +458,7 @@
       use amie_module,only: amie_aurbound=>aurbound
       use subaur_module,only: subaur_drift
       use fields_module,only: ui,vi
+      use addfld_module,only: addfld
 !
 ! Args:
       integer,intent(in) :: 
@@ -479,14 +480,13 @@
      |  s20 = .34906585,
      |  pi_cusp = 3.1415927, ! hard-wired by tgcm15
      |  s10 = 0.174532925
-      integer :: i,lat,im2
+      integer :: i,lat,im2,k
       real :: aurlat  ! boundary lat below which auroral is not calculated
                       ! (32.5 degrees at 5 degree resolution)
       real :: ofda,cosofa,sinofa,aslona,skp,vns,ves,vvs,
      |  aurbound,       ! equatorward auroral boundary for SAPS calculation
      |  smlt,           ! magnetic local time for SAPS calculation
      |  smlat,          ! latitude of the equatorward boundary of aurora
-     |  sui,svi,swi,    ! SAPS ion drifts
      |  sinlat, coslat, ! sin,cos of dlat_aur (rlatm) magnetic latitude
      |  coslon, sinlon, ! sin,cos of dlon_aur+offset
      |  cusplon,        ! longitude of cusp
@@ -497,11 +497,16 @@
      |  dtheta,         ! latitudinal variation (Gaussian)
      |  aurspread,      ! Gaussian spread: exp(-(dtheta/halfwidth)**2)
      |  clat
+      real,dimension(lon0:lon1,lat0:lat1) :: sui,svi,swi    ! SAPS ion drifts
 !
 #ifdef VT
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
       call vtbegin(130,ier)
 #endif
+!
+      sui = 0.
+      svi = 0.
+      swi = 0.
 !
       do lat=lat0,lat1
         do i=lon0,lon1
@@ -651,28 +656,44 @@
           else
             skp = kp
           endif
-          if (saps .and. skp>=1. .and. skp<=9) then
-            sui = 0.
-            svi = 0.
-            swi = 0.
+          if (saps .and. skp>=0 .and. skp<=9) then
             if (smlat>0. .and. smlat<10.) then
               call subaur_drift(smlt,smlat,skp,vns,ves,vvs)
               if (ihem == 1) then ! southern hemisphere, ihem=1
-                sui = -ves*csdec(i,lat) - vns*sndec(i,lat)
-                svi =  ves*sndec(i,lat) - vns*csdec(i,lat)
+                sui(i,lat) = -ves*csdec(i,lat) - vns*sndec(i,lat)
+                svi(i,lat) =  ves*sndec(i,lat) - vns*csdec(i,lat)
               else                ! northern hemisphere, ihem=2
-                sui = -ves*csdec(i,lat) + vns*sndec(i,lat)
-                svi =  ves*sndec(i,lat) + vns*csdec(i,lat)
+                sui(i,lat) = -ves*csdec(i,lat) + vns*sndec(i,lat)
+                svi(i,lat) =  ves*sndec(i,lat) + vns*csdec(i,lat)
               endif
-              swi = vvs
+              swi(i,lat) = vvs
             endif
-! Add SAPS drift to ion velocities (m/s to cm/s)
-            ui(lev0:lev1,i,lat) = ui(lev0:lev1,i,lat)+sui*100.
-            vi(lev0:lev1,i,lat) = vi(lev0:lev1,i,lat)+svi*100.
-!           wi(lev0:lev1,i,lat) = wi(lev0:lev1,i,lat)+swi*100.
           endif
         enddo
       enddo
+!
+! Add SAPS drift to ion velocities (m/s to cm/s)
+      if (saps) then
+        do lat=lat0,lat1
+          call addfld('UI_wo_SAPS','ion drift without SAPS','cm/s',
+     |      ui(:,lon0:lon1,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
+          call addfld('VI_wo_SAPS','ion drift without SAPS','cm/s',
+     |      vi(:,lon0:lon1,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
+          do i=lon0,lon1
+            do k=lev0,lev1
+              ui(k,i,lat) = ui(k,i,lat)+sui(i,lat)*100.
+              vi(k,i,lat) = vi(k,i,lat)+svi(i,lat)*100.
+!             wi(k,i,lat) = wi(k,i,lat)+swi(i,lat)*100.
+            enddo
+          enddo
+        enddo
+        call addfld('UI_SAPS','SAPS ion drift','m/s',sui,
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('VI_SAPS','SAPS ion drift','m/s',svi,
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+        call addfld('WI_SAPS','SAPS ion drift','m/s',swi,
+     |    'lon',lon0,lon1,'lat',lat0,lat1,0)
+      endif
 !
       do lat=lat0,lat1
 !

@@ -37,7 +37,7 @@
       use qjoule,only: qjoule_tn,qjoule_ti
       use diags_module,only: mkdiag_CUSP,mkdiag_DRIZZLE,mkdiag_ALFA,
      |  mkdiag_NFLUX,mkdiag_EFLUX,mkdiag_TEC,mkdiag_HNMF2,
-     |  mkdiag_QJOULE_INTEG
+     |  mkdiag_QJOULE_INTEG,mkdiag_UI,mkdiag_VI,mkdiag_WI
       use dyndiag_module,only: dyndiag
 
       implicit none
@@ -291,6 +291,14 @@
       if (timing%level >= 2.and.time2print(nstep,istep))
      |  write(6,"('Time in QRJ =          ',
      |    f12.2,' Dynamics: step ',i5)") time1_qrj,istep
+!
+! Save ion drifts if requested:
+      call mkdiag_UI('UI_ExB',ui(:,lon0:lon1,lat0:lat1),
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
+      call mkdiag_VI('VI_ExB',vi(:,lon0:lon1,lat0:lat1),
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
+      call mkdiag_WI('WI_ExB',wi(:,lon0:lon1,lat0:lat1),
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
 !
 #ifdef VT
 !     code = 122 ; state = 'ions' ; activity='ModelCode'
