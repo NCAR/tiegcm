@@ -23,7 +23,8 @@
 ! 3d pointers to fields regridded to magnetic subdomains (i,j,k):
 ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1)
       real,pointer,dimension(:,:,:) :: ped_mag,hal_mag,zpot_mag, 
-     |  adotv1_mag, adotv2_mag, je1pg_mag, je2pg_mag, ped_ref_mag
+     |  adotv1_mag, adotv2_mag, je1pg_mag, je2pg_mag, 
+     |  ped_ref_mag, hal_ref_mag
 !
 ! 2d pointers to fields on magnetic subdomains (i,j):
 ! (mlon0:mlon1,mlat0:mlat1)
@@ -42,6 +43,7 @@
      |  phim2d,     ! solution with phihm and both nhem and shem
      |  zigm1,
      |  zigm1_ref,
+     |  zigm2_ref,
      |  zigm2      ! sigma2
 !
 ! 3d potential and electric field on mag subdomains (see sub pthreed):
@@ -70,17 +72,17 @@
 ! Fields at mag equator (mlon0:mlon1,mlev0:mlev1):
       real,allocatable,dimension(:,:) :: 
      |  ped_meq, hal_meq, adotv1_meq, adotv2_meq,         ! (mlon0:mlon1,mlev0:mlev1)
-     |  je1pg_meq, je2pg_meq, ped_ref_meq
-      real,allocatable,dimension(:,:,:) :: fmeq_out  ! (mlon0:mlon1,mlev0:mlev1,6)
-      real,allocatable,dimension(:,:,:,:) :: fmeq_in ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1,6)
+     |  je1pg_meq, je2pg_meq, ped_ref_meq, hal_ref_meq
+      real,allocatable,dimension(:,:,:) :: fmeq_out  ! (mlon0:mlon1,mlev0:mlev1,8)
+      real,allocatable,dimension(:,:,:,:) :: fmeq_in ! (mlon0:mlon1,mlat0:mlat1,mlev0:mlev1,8)
       integer :: jlateq      ! latitude index of mag equator
       
       real,allocatable,dimension(:,:) :: ressolv ! mag subdomains w/o halos
       real :: l2norm
 !
 ! Global longitude values near mag equator and poles for complete_integrals and rhs.
-! The nf2d 8 fields are: zigm11,zigm22,zigmc,zigm1,zigm1_ref,zigm2,rim1,rim2
-      integer,parameter :: nf2d=8        ! 8 2d fields for MAGE
+! The nf2d 9 fields are: zigm11,zigm22,zigmc,zigm1,zigm1_ref,zigm2_ref,zigm2,rim1,rim2
+      integer,parameter :: nf2d=9        ! 2d fields for MAGE
       real :: feq_jpm1(nmlonp1,2,nf2d)   ! 6 fields at 2 lats (eq-1, eq+1)
       real :: fpole_jpm2(nmlonp1,4,nf2d) ! fields at S pole+1,2 and N pole-1,2
 !
@@ -308,7 +310,7 @@
       if (debug) write(6,"('pdynamo returning')")
       end subroutine pdynamo
 !-----------------------------------------------------------------------
-      subroutine dynamo_inputs(un,vn,wn,zpot,ped,hal,Knc,
+      subroutine dynamo_inputs(un,vn,wn,zpot,ped,hal,KncP,KncH,
      |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Provide needed field inputs to the dynamo by regridding the fields
@@ -325,13 +327,14 @@
 
       use my_esmf,only: ! esmf 3d (i,j,k) fields on geo grid
      |  geo_ped, geo_hal, geo_zpot, geo_adotv1, geo_adotv2,
-     |  geo_je1pg, geo_je2pg, geo_ped_ref
+     |  geo_je1pg, geo_je2pg, geo_ped_ref, geo_hal_ref
       use my_esmf,only: ! esmf 2d (i,j) fields on geo grid
      |  geo_sini, geo_adota1, geo_adota2, geo_a1dta2, geo_be3
 
       use my_esmf,only: ! esmf 3d (i,j,k) fields on mag grid
      |  mag_ped, mag_hal, mag_zpot, mag_adotv1, mag_adotv2,
-     |  mag_je1pg, mag_je2pg, esmf_3dfields, mag_ped_ref
+     |  mag_je1pg, mag_je2pg, esmf_3dfields, 
+     |  mag_ped_ref, mag_hal_ref
       use my_esmf,only: ! esmf 2d (i,j) fields on mag grid
      |  mag_sini, mag_adota1, mag_adota2, mag_a1dta2, mag_be3
 
@@ -348,7 +351,8 @@
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1),
      |  intent(inout)::
      |  zpot, ! geopotential height
-     |  Knc,  ! Nonlinear current coefficient for Pedersen conductacne (lamdas.F)
+     |  KncP, ! Nonlinear current coefficient for Pedersen conductacne (lamdas.F)
+     |  KncH, ! Nonlinear current coefficient for Hall conductacne (lamdas.F)
      |  ped,  ! pedersen conductivity (lamdas.F)
      |  hal   ! hall conductivity     (lamdas.F)
 !
@@ -357,7 +361,7 @@
 !
 ! 3d locals dimensioned mlev0:mlev1
       real,dimension(mlev0:mlev1,lon0:lon1,lat0:lat1) ::
-     |  undyn,vndyn,wndyn,zpotdyn,peddyn,haldyn,ped_refdyn
+     |  undyn,vndyn,wndyn,zpotdyn,peddyn,haldyn,ped_refdyn,hal_refdyn
 
       real,dimension(mlev0:mlev1,lon0:lon1,lat0:lat1) :: 
      |  adotv1,adotv2,je1pg,je2pg
@@ -378,15 +382,15 @@
       real,external :: sddot ! util.F
 !
 ! For esmf_set3d_geo call:
-      real,dimension(mlev0:mlev1,lon0:lon1,lat0:lat1,8) :: f3d
-      character(len=8) :: fnames(9)
+      real,dimension(mlev0:mlev1,lon0:lon1,lat0:lat1,9) :: f3d
+      character(len=8) :: fnames(10)
 !
 !     write(6,"('Enter dynamo_inputs: un=',2e12.4,' vn=',2e12.4,
 !    |  ' wn=',2e12.4,' zpot=',2e12.4,' ped=',2e12.4,' hal=',2e12.4)")
 !    |  minval(un),maxval(un),minval(vn),maxval(vn),
 !    |  minval(wn),maxval(wn),minval(zpot),maxval(zpot),
 !    |  minval(ped),maxval(ped),minval(hal),maxval(hal),
-!    |  minval(Knc),maxval(Knc)
+!    |  minval(KncP),maxval(KncP),minval(KncH),maxval(KncH)
 !
 ! mlevtop is for saving mag fields with addfld, see below: 
 !   (actually mlevtop one level below the top):
@@ -403,7 +407,8 @@
             zpotdyn(k,i,j) = zpot(k,i,j)
             peddyn(k,i,j)  = ped(k,i,j)
             haldyn(k,i,j)  = hal(k,i,j)
-            ped_refdyn(k,i,j)  = ped(k,i,j)*(1.0+Knc(k,i,j)) ! note ped_ref has ET.
+            ped_refdyn(k,i,j) = ped(k,i,j)*(1.0+KncP(k,i,j)) ! note ped_ref has ET.
+            hal_refdyn(k,i,j) = hal(k,i,j)*(1.0+KncH(k,i,j)) ! note hal_ref has ET.
             je1pg(k,i,j)   = je1oD_geo(k,i,j)
             je2pg(k,i,j)   = je2oD_geo(k,i,j)
           enddo ! k=lev0,lev1
@@ -431,6 +436,10 @@
             haldyn(k,i,j) = haldyn(1,i,j)*exp((zpotdyn(k,i,j)+
      |        zpotdyn(k+1,i,j)-zpotdyn(lev0,i,j)-zpotdyn(lev0+1,i,j))/
      |        (2.*rl2))
+            hal_refdyn(k,i,j) = hal_refdyn(1,i,j)*exp(
+     |        (zpotdyn(k,i,j)+zpotdyn(k+1,i,j)
+     |        -zpotdyn(lev0,i,j)-zpotdyn(lev0+1,i,j))/
+     |        (2.*rl2))
             undyn(k,i,j) = undyn(lev0,i,j)
             vndyn(k,i,j) = vndyn(lev0,i,j)
             wndyn(k,i,j) = wndyn(lev0,i,j)
@@ -443,13 +452,14 @@
 !     do k=lev0-1,mlev0,-1
 !       write(6,"('dynamo_inputs: k=',i4,' mlev0=',i4,' undyn=',2e12.4,
 !    |    ' vndyn=',2e12.4,' wndyn=',2e12.4,' zpotdyn=',2e12.4,
-!    |    ' peddyn=',2e12.4,' ped_refdyn=',2e12.4,' haldyn=',2e12.4)") k,mlev0,
+!    |    ' peddyn=',2e12.4,' ped_refdyn=',2e12.4,' haldyn=',2e12.4,' hal_refdyn=',2e12.4)") k,mlev0,
 !    |    minval(undyn(k,:,:)),maxval(undyn(k,:,:)),
 !    |    minval(vndyn(k,:,:)),maxval(vndyn(k,:,:)),
 !    |    minval(wndyn(k,:,:)),maxval(wndyn(k,:,:)),
 !    |    minval(zpotdyn(k,:,:)),maxval(zpotdyn(k,:,:)),
 !    |    minval(peddyn(k,:,:)),maxval(peddyn(k,:,:)),
 !    |    minval(ped_refdyn(k,:,:)),maxval(ped_refdyn(k,:,:)),
+!    |    minval(hal_refdyn(k,:,:)),maxval(hal_refdyn(k,:,:)),
 !    |    minval(haldyn(k,:,:)),maxval(haldyn(k,:,:))
 !     enddo
 !
@@ -468,6 +478,8 @@
         call addfld('PED_REF_DYN',' ',' ',ped_refdyn(1:nlev,:,j),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
         call addfld('HAL_DYN',' ',' ',haldyn(1:nlev,:,j),
+     |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
+        call addfld('HAL_REF_DYN',' ',' ',hal_refdyn(1:nlev,:,j),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
       enddo
 !
@@ -506,18 +518,20 @@
       f3d(:,:,:,3) = adotv1
       f3d(:,:,:,4) = adotv2
       f3d(:,:,:,5) = ped_refdyn(:,lon0:lon1,lat0:lat1)
-      call mp_periodic_f3d(f3d,mlev0,mlev1,lon0,lon1,lat0,lat1,5)
+      f3d(:,:,:,6) = hal_refdyn(:,lon0:lon1,lat0:lat1)
+      call mp_periodic_f3d(f3d,mlev0,mlev1,lon0,lon1,lat0,lat1,6)
       peddyn(:,lon0:lon1,lat0:lat1) = f3d(:,:,:,1)
       haldyn(:,lon0:lon1,lat0:lat1) = f3d(:,:,:,2)
       adotv1 = f3d(:,:,:,3) 
       adotv2 = f3d(:,:,:,4) 
       ped_refdyn(:,lon0:lon1,lat0:lat1) = f3d(:,:,:,5)
+      hal_refdyn(:,lon0:lon1,lat0:lat1) = f3d(:,:,:,6)
 !
 ! Set 3d field values on geographic source grid:
 !
       fnames = (/'PED     ','HAL     ','ZPOT    ','SCHT    ',
      |           'ADOTV1  ','ADOTV2  ','JE1PG   ','JE2PG   ',
-     |           'PED_REF'/)
+     |           'PED_REF' ,'HAL_REF'/)
 
       f3d(:,:,:,1) = peddyn
       f3d(:,:,:,2) = haldyn
@@ -527,6 +541,7 @@
       f3d(:,:,:,6) = je1pg
       f3d(:,:,:,7) = je2pg
       f3d(:,:,:,8) = ped_refdyn
+      f3d(:,:,:,9) = hal_refdyn
 
       esmf_3dfields(1) = geo_ped
       esmf_3dfields(2) = geo_hal
@@ -536,9 +551,10 @@
       esmf_3dfields(6) = geo_je1pg
       esmf_3dfields(7) = geo_je2pg
       esmf_3dfields(8) = geo_ped_ref
+      esmf_3dfields(9) = geo_hal_ref
 
       call esmf_set3d_geo(esmf_3dfields,
-     |  f3d,8,mlev0,mlev1,lon0,lon1,lat0,lat1)
+     |  f3d,9,mlev0,mlev1,lon0,lon1,lat0,lat1)
 
       geo_ped    = esmf_3dfields(1)
       geo_hal    = esmf_3dfields(2)
@@ -548,6 +564,7 @@
       geo_je1pg  = esmf_3dfields(6)
       geo_je2pg  = esmf_3dfields(7)
       geo_ped_ref= esmf_3dfields(8)
+      geo_hal_ref= esmf_3dfields(9)
 
       peddyn  = f3d(:,:,:,1)
       haldyn  = f3d(:,:,:,2)
@@ -557,6 +574,7 @@
       je1pg   = f3d(:,:,:,6)
       je2pg   = f3d(:,:,:,7)
       ped_refdyn  = f3d(:,:,:,8)
+      hal_refdyn  = f3d(:,:,:,9)
 !
 ! 2d fields need only be calculated in first timestep:
       if (istep==1) then
@@ -622,6 +640,7 @@
       call esmf_regrid(geo_je1pg  ,mag_je1pg,  'geo2mag',3)
       call esmf_regrid(geo_je2pg  ,mag_je2pg,  'geo2mag',3)
       call esmf_regrid(geo_ped_ref,mag_ped_ref,'geo2mag',3)
+      call esmf_regrid(geo_hal_ref,mag_hal_ref,'geo2mag',3)
 !
 ! Regrid 2d geo fields to mag grid:
       if (istep==1) then
@@ -649,6 +668,7 @@
       call esmf_get_3dfield(mag_je1pg ,je1pg_mag, "JE1PG   ")
       call esmf_get_3dfield(mag_je2pg ,je2pg_mag, "JE1PG   ")
       call esmf_get_3dfield(mag_ped_ref,ped_ref_mag,   "PED_REF ")
+      call esmf_get_3dfield(mag_hal_ref,hal_ref_mag,   "HAL_REF ")
 !
 ! Get regridded 2d mag fields:
 ! First arg is input ESMF field, second is output pointer:
@@ -675,10 +695,11 @@
       fmeq_in(:,:,:,5) = je1pg_mag(:,:,:)
       fmeq_in(:,:,:,6) = je2pg_mag(:,:,:)
       fmeq_in(:,:,:,7) = ped_ref_mag(:,:,:)
+      fmeq_in(:,:,:,8) = hal_ref_mag(:,:,:)
 !
 ! Tasks w/ mag equator send eq data(i,k) to other tasks in their tidi:
 !
-      call mp_mageq(fmeq_in,fmeq_out,7,mlon0,mlon1,mlat0,mlat1,
+      call mp_mageq(fmeq_in,fmeq_out,8,mlon0,mlon1,mlat0,mlat1,
      |  mlev0,mlev1)
 !
 ! Output arrays now have mag equator data on longitude subdomain
@@ -692,6 +713,7 @@
       je1pg_meq(:,:)  = fmeq_out(:,:,5)
       je2pg_meq(:,:)  = fmeq_out(:,:,6)
       ped_ref_meq(:,:)= fmeq_out(:,:,7)
+      hal_ref_meq(:,:)= fmeq_out(:,:,8)
 !
 ! Save geopotential on magnetic grid in zpotm3d, then
 ! limit max zpot_mag to h0 for use in fieldline integrals
@@ -734,6 +756,10 @@
         call addfld('HAL_MAG','HALL on mag grid','S/m',
      |    hal_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
      |    'mlev',1,mlevtop,j)
+
+        call addfld('HAL_REF_MAG','REF HAL on mag grid','S/m',
+     |       hal_ref_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
+     |       'mlev',1,mlevtop,j)
 
         call addfld('ZPOT_MAG','ZPOT on mag grid','cm',
      |    zpot_mag(:,j,mlev0:mlev1-1),'mlon',mlon0,mlon1,
@@ -890,7 +916,8 @@
 ! Local:
       integer :: i,j,k
       real :: sinlm, clm2, absinim, ra, sqomrra, sqrra, afac, htfac
-      real :: rora,del,omdel,sig1,sig2,ue1,ue2,fac,je1pg,je2pg,sig1_ref
+      real :: rora,del,omdel,sig1,sig2,ue1,ue2,fac,je1pg,je2pg
+      real :: sig1_ref, sig2_ref
       real,dimension(mlon0:mlon1) :: aam
       real,dimension(mlon0:mlon1,mlev0:mlev1) ::
      |  rrm, rtramrm, htfunc, htfunc2, je1pg_diag,je2pg_diag
@@ -904,6 +931,7 @@
       rim2   = 0.
       zigm1  = 0.
       zigm1_ref  = 0.
+      zigm2_ref  = 0.
 
       je1pg_diag  = 0.
       je2pg_diag  = 0.
@@ -996,6 +1024,7 @@
             sig1 = omdel*ped_mag(i,j,k) + del*ped_meq(i,k)
             sig1_ref = omdel*ped_ref_mag(i,j,k) + del*ped_ref_meq(i,k)
             sig2 = omdel*hal_mag(i,j,k) + del*hal_meq(i,k)
+            sig2_ref = omdel*hal_ref_mag(i,j,k) + del*hal_ref_meq(i,k)
             ue1  = omdel*adotv1_mag(i,j,k) + del*adotv1_meq(i,k)
             ue2  = omdel*adotv2_mag(i,j,k) + del*adotv2_meq(i,k)
 
@@ -1022,6 +1051,8 @@
             zigm1(i,j) = zigm1(i,j) + sig1*rtramrm(i,k)*htfunc(i,k)
             zigm1_ref(i,j) = zigm1_ref(i,j) +
      |        sig1_ref*rtramrm(i,k)*htfunc(i,k)
+            zigm2_ref(i,j) = zigm2_ref(i,j) +
+     |        sig2_ref*rtramrm(i,k)*htfunc(i,k)
 
 ! 
 ! rim1: int [sigma_p*d_1^2/D u_e2+(sigma_h-(sigma_p*d_1*d_2)/D) u_e1] ds
@@ -1084,6 +1115,7 @@
           zigm2(i,j)  = 1.e-2*zigm2 (i,j)*aam(i)
           zigm1(i,j)  = 1.e-2*zigm1(i,j)*aam(i)
           zigm1_ref(i,j)  = 1.e-2*zigm1_ref(i,j)*aam(i)
+          zigm2_ref(i,j)  = 1.e-2*zigm2_ref(i,j)*aam(i)
           rim1(i,j)   = 1.e-2*rim1(i,j)*aam(i)*be3_mag(i,j)
           rim2(i,j)   = 1.e-2*rim2(i,j)*aam(i)*be3_mag(i,j)
         enddo ! i = 1,nmlon
@@ -1112,7 +1144,7 @@
 !-----------------------------------------------------------------------
       subroutine alloc_pdyn
 
-      use fields_module,only: azigm1,azigm2,azigm1_ref
+      use fields_module,only: azigm1,azigm2,azigm1_ref,azigm2_ref
 !
 ! Allocate and initialize arrays for parallel dynamo (module data)
 ! (called once per run from allocdata.F)
@@ -1141,6 +1173,9 @@
       allocate(zigm2(mlon00:mlon11,mlat00:mlat11) ,stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: zigm2')
       zigm2 = 0.
+      allocate(zigm2_ref(mlon00:mlon11,mlat00:mlat11),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: zigm2_ref')
+      zigm2_ref = 0.
       allocate(zigm22(mlon00:mlon11,mlat00:mlat11),stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: zigm22')
       zigm22 = 0.
@@ -1168,6 +1203,9 @@
       allocate(azigm2(mlon00:mlon11,mlat00:mlat11),stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: azigm2')
       azigm2 = 0.
+      allocate(azigm2_ref(mlon00:mlon11,mlat00:mlat11),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: azigm2_ref')
+      azigm2_ref = 0.
       allocate(nsrhs(mlon00:mlon11,mlat00:mlat11),stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: nsrhs')
       nsrhs = 0.
@@ -1226,6 +1264,9 @@
       allocate(hal_meq(mlon0:mlon1,mlev0:mlev1),stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: hal_meq')
       hal_meq = 0.
+      allocate(hal_ref_meq(mlon0:mlon1,mlev0:mlev1),stat=istat)
+      if (istat /= 0) call shutdown('alloc_pdyn: hal_ref_meq')
+      hal_ref_meq = 0.
       allocate(adotv1_meq(mlon0:mlon1,mlev0:mlev1),stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: adotv1_meq')
       adotv1_meq = 0.
@@ -1244,13 +1285,13 @@
       write(6,"('alloc_pdyn: allocate fmeq_in with mlev0,1=',2i4)")
      |  mlev0,mlev1
 
-      allocate(fmeq_in(mlon0:mlon1,mlat0:mlat1,mlev0:mlev1,7),
+      allocate(fmeq_in(mlon0:mlon1,mlat0:mlat1,mlev0:mlev1,8),
      |  stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: fmeq_in')
       fmeq_in = 0.
 !
 ! Fields output by mp_mageq (7 fields at mag subdomain i,k)
-      allocate(fmeq_out(mlon0:mlon1,mlev0:mlev1,7),stat=istat)
+      allocate(fmeq_out(mlon0:mlon1,mlev0:mlev1,8),stat=istat)
       if (istat /= 0) call shutdown('alloc_pdyn: fmeq_out')
       fmeq_out = 0.
 
@@ -1298,12 +1339,12 @@
       use mpi_module,only: mp_mageq_jpm1,mp_magpole_2d,mp_mag_foldhem
       use mpi_module,only: mytid
       use mpi_module,only: mp_mag_halos
-      use fields_module,only: gzigm1,gzigm2,gnsrhs,gzigm1_ref
-      use fields_module,only: azigm1,azigm2,azigm1_ref
+      use fields_module,only: gzigm1,gzigm2,gnsrhs,gzigm1_ref,gzigm2_ref
+      use fields_module,only: azigm1,azigm2,azigm1_ref,azigm2_ref
       use mage_coupling_module,only: mage_ucurrent
       use my_esmf,only: 
-     |  mag_zigm1, mag_zigm2, mag_nsrhs, mag_zigm1_ref,
-     |  geo_zigm1, geo_zigm2, geo_nsrhs, geo_zigm1_ref
+     |  mag_zigm1, mag_zigm2, mag_nsrhs, mag_zigm1_ref, mag_zigm2_ref,
+     |  geo_zigm1, geo_zigm2, geo_nsrhs, geo_zigm1_ref, geo_zigm2_ref
 
       implicit none
 !
@@ -1335,6 +1376,7 @@
       fmsub(:,:,6) = rim2  (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,7) = zigm1 (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,8) = zigm1_ref(mlon0:mlon1,mlat0:mlat1)
+      fmsub(:,:,9) = zigm2_ref(mlon0:mlon1,mlat0:mlat1)
 
       call mp_mageq_jpm1(fmsub,mlon0,mlon1,mlat0,mlat1,nmlonp1,
      |  feq_jpm1,nf2d)
@@ -1379,6 +1421,8 @@
      |                                  feq_jpm1(mlon0:mlon1,2,7))
           zigm1_ref(mlon0:mlon1,j) = .060*(feq_jpm1(mlon0:mlon1,1,8)+
      |                                  feq_jpm1(mlon0:mlon1,2,8))
+          zigm2_ref(mlon0:mlon1,j) = .060*(feq_jpm1(mlon0:mlon1,1,9)+
+     |                                  feq_jpm1(mlon0:mlon1,2,9))
 
 !
 ! Include the boundary condition at the equator eq.(5.30) in
@@ -1480,6 +1524,7 @@
       fmsub(:,:,6) = rim2  (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,7) = zigm1 (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,8) = zigm1_ref(mlon0:mlon1,mlat0:mlat1)
+      fmsub(:,:,9) = zigm2_ref(mlon0:mlon1,mlat0:mlat1)
 !
 ! mp_magpole_2d returns fpole_jpm2(nmlonp1,1->4,nf) as:
 !   1: j = 2       (spole+1)
@@ -1541,6 +1586,10 @@
      |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,1,8))-
      |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,2,8)))/
      |      (3.*float(nmlon))
+          zigm2_ref(mlon0,j) = (4.*
+     |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,1,9))-
+     |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,2,9)))/
+     |      (3.*float(nmlon))
 !
 ! Extend south pole over longitude:
           do i=mlon0+1,mlon1
@@ -1550,6 +1599,7 @@
             zigm2 (i,j) = zigm2 (mlon0,j)
             zigm1 (i,j) = zigm1 (mlon0,j)
             zigm1_ref(i,j) = zigm1_ref(mlon0,j)
+            zigm2_ref(i,j) = zigm2_ref(mlon0,j)
           enddo ! i=mlon0,mlon1
 !
 ! RHS vector (I_1,I_2): average over south pole:
@@ -1588,6 +1638,10 @@
      |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,3,8))-
      |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,4,8)))/
      |      (3.*float(nmlon))
+          zigm2_ref(mlon0,j) = (4.*
+     |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,3,9))-
+     |      sddot(nmlon,unitvm,fpole_jpm2(1:nmlon,4,9)))/
+     |      (3.*float(nmlon))
 !
 ! Extend north pole over longitude:
           do i=mlon0+1,mlon1
@@ -1597,6 +1651,7 @@
             zigm2 (i,j) = zigm2 (mlon0,j)
             zigm1 (i,j) = zigm1 (mlon0,j)
             zigm1_ref(i,j) = zigm1_ref(mlon0,j)
+            zigm2_ref(i,j) = zigm2_ref(mlon0,j)
           enddo ! i=mlon0,mlon1
 !
 ! RHS vector (I_1,I_2): average over north pole:
@@ -1649,6 +1704,7 @@
       azigm1 = zigm1
       azigm1_ref = zigm1_ref
       azigm2 = zigm2
+      azigm2_ref = zigm2_ref
 
       call mag2geo_2d(zigm1(mlon0:mlon1,mlat0:mlat1),
      |     gzigm1(lon0:lon1,lat0:lat1),mag_zigm1,geo_zigm1,'ZIGM1   ')
@@ -1657,6 +1713,9 @@
      |     geo_zigm1_ref,'ZIGM1_REF')
       call mag2geo_2d(zigm2(mlon0:mlon1,mlat0:mlat1),
      |     gzigm2(lon0:lon1,lat0:lat1),mag_zigm2,geo_zigm2,'ZIGM2   ')
+      call mag2geo_2d(zigm2_ref(mlon0:mlon1,mlat0:mlat1),
+     |     gzigm2_ref(lon0:lon1,lat0:lat1),mag_zigm2_ref,
+     |     geo_zigm2_ref,'ZIGM2_REF')
       call mag2geo_2d(nsrhs(mlon0:mlon1,mlat0:mlat1),
      |     gnsrhs(lon0:lon1,lat0:lat1),mag_nsrhs,geo_nsrhs,'NSRHS   ')
 
@@ -1682,6 +1741,7 @@
       fmsub(:,:,6) = rim2  (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,7) = zigm1 (mlon0:mlon1,mlat0:mlat1)
       fmsub(:,:,8) = zigm1_ref(mlon0:mlon1,mlat0:mlat1)
+      fmsub(:,:,9) = zigm2_ref(mlon0:mlon1,mlat0:mlat1)
 
       call mp_mag_foldhem(fmsub,mlon0,mlon1,mlat0,mlat1,nf2d)
       call mp_mag_periodic_f2d(fmsub,mlon0,mlon1,mlat0,mlat1,nf2d) 
@@ -1694,6 +1754,7 @@
       rim2  (mlon0:mlon1,mlat0:mlat1) = fmsub(:,:,6)
       zigm1 (mlon0:mlon1,mlat0:mlat1) = fmsub(:,:,7)
       zigm1_ref(mlon0:mlon1,mlat0:mlat1) = fmsub(:,:,8)
+      zigm2_ref(mlon0:mlon1,mlat0:mlat1) = fmsub(:,:,9)
 !
 ! Reverse sign of zigmc in northern hemisphere.
       do j=mlat0,mlat1
@@ -1730,6 +1791,11 @@
       call addfld('gzigm1_ref',
      |     'Pedersen Conductance with ET (geographic)', 'S',
      |     gzigm1_ref(lon0:lon1, lat0:lat1), 'lon',lon0,lon1, 'lat',
+     |     lat0,lat1,  0)
+
+      call addfld('gzigm2_ref',
+     |     'Hall Conductance with ET (geographic)', 'S',
+     |     gzigm2_ref(lon0:lon1, lat0:lat1), 'lon',lon0,lon1, 'lat',
      |     lat0,lat1,  0)
 !
       end subroutine complete_integrals

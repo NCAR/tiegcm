@@ -648,7 +648,8 @@
      |    z    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
      |    ped  (lev0:lev1,lon0:lon1,lat0:lat1),     ! from lamdas.F
      |    hall (lev0:lev1,lon0:lon1,lat0:lat1),     ! from lamdas.F
-     |    Knc  (lev0:lev1,lon0:lon1,lat0:lat1),     ! from lamdas.F
+     |    KncP (lev0:lev1,lon0:lon1,lat0:lat1),     ! from lamdas.F
+     |    KncH (lev0:lev1,lon0:lon1,lat0:lat1),     ! from lamdas.F
      |    1,nlevp1,lon0,lon1,lat0,lat1)
         call mpi_timer('dynamo_inputs',1,0)
         if (debug) write(6,"('advance after dynamo_inputs: istep=',

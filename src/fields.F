@@ -19,7 +19,7 @@
       integer,parameter :: 
      |  nf4d          = 36, ! number of 4-d fields
      |  nf4d_hist     = 29, ! number of 4-d fields on primary histories
-     |  nf3d          = 49  ! number of 3-d fields
+     |  nf3d          = 50  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
       integer,parameter :: 
@@ -99,7 +99,8 @@
      |  i_cool_implicit    ,i_cool_explicit    ,
      |  i_hdt    ,i_hdu    ,i_hdv    ,i_hdo2   ,i_hdo1   ,i_hdhe   ,
      |  i_ped    ,i_hall   ,i_lam1   ,i_zg     ,i_n2     ,i_wn     ,
-     |  i_Fe     ,i_Fn     ,i_Etot   ,i_Q1     ,i_Q2     ,i_Knc
+     |  i_Fe     ,i_Fn     ,i_Etot   ,i_Q1     ,i_Q2     ,i_KncP   ,
+     |  i_KncH
 !
 ! Allocatable target arrays 3-d:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 )
@@ -114,7 +115,8 @@
      |  cool_implicit      ,cool_explicit      ,
      |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1     ,hdhe     ,
      |  ped      ,hall     ,lam1     ,zg       ,n2       ,wn       ,
-     |  Fe       ,Fn       ,Etot     ,Q1       ,Q2       ,Knc
+     |  Fe       ,Fn       ,Etot     ,Q1       ,Q2       ,KncP     ,
+     |  KncH
 !
 ! 2-d field type (used for 2d secondary history fields):
       type fields_2d
@@ -174,8 +176,10 @@
       real,allocatable,dimension(:,:) ::
      |  tlbc,     ulbc,     vlbc,     ! subdomains (lond0:lond1,latd0:latd1)
      |  tlbc_nm,  ulbc_nm,  vlbc_nm,  ! subdomains (lond0:lond1,latd0:latd1)
-     |  gzigm1,   gzigm2,   gnsrhs,   gzigm1_ref, 
-     |  azigm1,   azigm2,   nsrhs,    azigm1_ref ! allocated in pdynamo
+     |  gzigm1,   gzigm2,   gnsrhs,   
+     |  gzigm1_ref,  gzigm2_ref, 
+     |  azigm1,   azigm2,   nsrhs ,   
+     |  azigm1_ref,  azigm2_ref ! allocated in pdynamo
 !
 ! Full 3d grid with all primary history fields for writing to netcdf
 ! history files. This will be allocated only on the root task 
@@ -930,12 +934,19 @@
       f3d(n)%data => Q2
       i_Q2 = n ; n = n+1
 !
-      allocate(Knc(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      allocate(KncP(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
       write(f3d(n)%long_name,"('Nonlinear current coefficient')")
-      f3d(n)%short_name = "Knc"
+      f3d(n)%short_name = "KncP"
       f3d(n)%units = "1"
-      f3d(n)%data => Knc
-      i_Knc = n ; n = n+1
+      f3d(n)%data => KncP
+      i_KncP = n ; n = n+1
+!
+      allocate(KncH(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('Nonlinear current coefficient Hall')")
+      f3d(n)%short_name = "KncH"
+      f3d(n)%units = "1"
+      f3d(n)%data => KncH
+      i_KncH = n ; n = n+1
 !
 ! Check number of fields allocated:
       if (n-1 /= nf3d) then
@@ -1052,12 +1063,15 @@
       if (istat /= 0) call shutdown('bad allocate of gzigm1_ref')
       allocate(gzigm2(lond0:lond1,latd0:latd1),stat=istat)
       if (istat /= 0) call shutdown('bad allocate of gzigm2')
+      allocate(gzigm2_ref(lond0:lond1,latd0:latd1),stat=istat)
+      if (istat /= 0) call shutdown('bad allocate of gzigm2_ref')
       allocate(gnsrhs(lond0:lond1,latd0:latd1),stat=istat)
       if (istat /= 0) call shutdown('bad allocate of gnsrhs')
 !
       gzigm1 = 0.
       gzigm1_ref = 0.
       gzigm2 = 0.
+      gzigm2_ref = 0.
       gnsrhs = 0.
 !
       end subroutine init_lbc

@@ -1,7 +1,7 @@
 !
       subroutine lamdas(tn,xnmbar,o2,o1,he,n2,ti,te,o2p,op,nplus,
-     |  n2p,nop,Etot,lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Q1,Q2,Knc,
-     |  lev0,lev1,lon0,lon1,lat)
+     |  n2p,nop,Etot,lxx,lyy,lxy,lyx,lamda1,ped_out,hall_out,Q1,Q2,KncP,
+     |  KncH,lev0,lev1,lon0,lon1,lat)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -51,7 +51,8 @@
      |  lamda1,  ! lamda_1 (sigma_p * B^2) / rho [1/s] magnetic eastward direction
      |  ped_out, ! pedersen conductivity (siemens/m) (will be input to dynamo)
      |  hall_out,! hall conductivity (siemens/m) (will be input to dynamo)
-     |  Knc,     ! Nonlinear current coefficient for Pedersen conductacne
+     |  KncP,    ! Nonlinear current coefficient for Pedersen conductacne
+     |  KncH,    ! Nonlinear current coefficient for Hall conductacne
      |  Q1,      ! electron ohmic heating
      |  Q2       ! electrojet turbulent heating
 !
@@ -97,6 +98,7 @@
 ! The name of _ref may be in other studies such as eclipse, flare etc.
 ! size should be consistent with ped_out.
       real,dimension(lev0:lev1,lon0-2:lon1+2) :: ped_ref_out
+      real,dimension(lev0:lev1,lon0-2:lon1+2) :: hall_ref_out
 !
 ! Local (lev,lon):
       real,dimension(lev0:lev1,lon0:lon1) ::
@@ -369,7 +371,8 @@
 
       Q1 = 0.0
       Q2 = 0.0
-      Knc = 0.0
+      KncP = 0.0
+      KncH = 0.0
 
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -419,7 +422,10 @@
               Q2(k,i) = mp*mi(k,i)*1E3*nu_i(k,i)*
      |          ((Etot(k,i)-E1)/(bmod2(i,lat)*1E-4))**2*
      |          (Etot(k,i)/E2-1.0)*ki(k,i)**2/(1.0+ki(k,i)**2)
-              Knc(k,i) = (1.0-ki(k,i)**2)/(1.0+ki(k,i)**2)
+              KncP(k,i) = (1.0-ki(k,i)**2)/(1.0+ki(k,i)**2)
+     |          *(Etot(k,i)-E1)**2/(Etot(k,i)*E1)
+              KncH(k,i) = (2.0*ki(k,i))/(1.0+ki(k,i)**2)
+     |          *(1.0+1.0/(ke(k,i)*ki(k,i)))
      |          *(Etot(k,i)-E1)**2/(Etot(k,i)*E1)
             endif
           endif
@@ -429,12 +435,14 @@
 ! Output conductivities [S/m] (half levels):
       do i=lon0,lon1
         do k=lev0,lev1
-          ! default ped_out has ET effects when do_et is true.
-          ! use ped_ref_out to store the ped without ET.
-          ! Note ped_ref_out = ped_out/(1+Knc)
+          ! default ped_out/hall_out has ET effects when do_et is true.
+          ! use ped_ref_out/hall_ref_out to store the ped without ET.
+          ! Note ped_ref_out = ped_out/(1+KncP)
+          ! and hall_ref_out = hall_out/(1+KncH)
           ped_out(k,i)  = sigma_ped(k,i)
-          ped_ref_out(k,i)  = sigma_ped(k,i)*(1.0+Knc(k,i))
+          ped_ref_out(k,i)  = sigma_ped(k,i)*(1.0+KncP(k,i))
           hall_out(k,i) = sigma_hall(k,i)
+          hall_ref_out(k,i) = sigma_hall(k,i)*(1.0+KncH(k,i))
         enddo
       enddo
 !
@@ -448,11 +456,17 @@
       call addfld('Q2','Electrojet Turbulent Heating',' ',
      |  Q2(lev0:lev1-1,lon0:lon1),
      |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-      call addfld('Knc','Nonlinear current coefficient',' ',
-     |  Knc(lev0:lev1-1,lon0:lon1),
+      call addfld('KncP','Pedersen nonlinear current coefficient',' ',
+     |  KncP(lev0:lev1-1,lon0:lon1),
      |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
       call addfld('SIGMA_PED_REF','Pedersen conductivity with ET',
      |  'S/m',ped_ref_out(lev0:lev1-1,lon0:lon1),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('KncH','Hall nonlinear current coefficient',' ',
+     |  KncH(lev0:lev1-1,lon0:lon1),
+     |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+      call addfld('SIGMA_HALL_REF','Hall conductivity with ET',
+     |  'S/m',hall_ref_out(lev0:lev1-1,lon0:lon1),
      |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine lamdas
