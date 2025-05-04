@@ -42,7 +42,7 @@
       integer,parameter ::
      |  nmixinapex = 2, ! APEX Potential, Flux (for auroral bc)
      |  nmixingeo  = 2, ! GEO Flux, Energy
-     |  nmixoutapex= 3, ! APEX Pedersen, Hall, Pedersen_ref
+     |  nmixoutapex= 4, ! APEX Pedersen, Hall, Pedersen_ref
      |  nmixoutgeo = 0, ! No GEO exports
      |  nhoutvar   = 9, ! TN, UN, VN, OMEGA, O2, O1, NO, Z, HE
      |  nhinvar    = 0  !
