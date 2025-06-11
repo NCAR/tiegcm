@@ -270,9 +270,16 @@
             },
             "modelexe": {
                 "LEVEL": "BENCH",
-                "prompt": "Executable:",
+                "prompt": "Standalone Executable",
                 "default": null,
-                "description": "The path of existing or name of the executable.",
+                "description": "The path of existing or name of the standalone executable.",
+                "warning": null
+            },
+            "coupled_modelexe": {
+                "LEVEL": "BENCH",
+                "prompt": "Coupled Executable",
+                "default": null,
+                "description": "The path of existing or name of the coupled executable.",
                 "warning": null
             }
         },
@@ -362,6 +369,14 @@
             "description": null,
             "warning": "secondary_stop_time should not be later than stop_time. Keep default if segmenting runs."
         },
+        "solar_flux_level": {
+            "LEVEL": "BASIC",
+            "prompt": "F107 flux level for TIEGCM spin up",
+            "default": "low",
+            "valids": ["low", "medium", "high"],
+            "description": null,
+            "warning": "Low = 70, Medium = 140 , High = 200"
+        },
         "SOURCE":{
             "LEVEL": "BENCH",
             "prompt": "SOURCE file location",
@@ -378,7 +393,7 @@
         },
         "SOURCE_START":{
             "LEVEL": "BASIC",
-            "prompt": "Selected Date in Source Dile",
+            "prompt": "Selected date in source file",
             "default": null,
             "valids": null,
             "description": "The selected model time (mtime) in the startup file. This option is typically used to specify the desired time stamp when there are multiple time stamps in one source file.",
@@ -516,6 +531,7 @@
             "LEVEL": "BASIC",
             "prompt": "GPI file",
             "default": null,
+            "valids": null,
             "description": "The location of the GPI file containing 3-hourly KP and daily F107, F107A to drive high-latitude convection and the auroral precipitation oval.",
             "warning": "If GPI_NCFILE is specified, then KP and POWER/CTPOTEN are skipped. If further POTENTIAL_MODEL is WEIMER and IMF_NCFILE is specified, then the Weimer model and aurora will be driven by the IMF data, and only F107 and F107A will be read from the GPI data file."
         },
@@ -671,9 +687,73 @@
             "prompt": "Maximum O+ Ambipolar Diffusion coefficient",
             "default": null,
             "valids": null,
-            "description": "Optional cap on ambipolar diffusion coefficient for O+. This can improve model stability in the topside F-region, but it is only recommended as a last resort since it will change model results. Default is 0, i.e., no cap. If this is non-zero (provided by the user), then it is implemented in subroutine rrk of oplus.F.",
+            "description": "This works with OPDIFFRATE and OPDIFFLEV to determine the altitude dependence of maximum O+ ambipolar diffusive flux. This can improve model stability in the topside F-region, but it is only recommended as a last resort since it will change model results. Default is 0, i.e., no cap. If this is non-zero (provided by the user), then it is implemented in subroutine rrk of oplus.F.",
             "warning": null
-        }, 
+        },
+        "OPDIFFRATE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of maximum O+ ambipolar diffusive flux (rate)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPDIFFCAP and OPDIFFLEV to determine the altitude dependence of maximum O+ ambipolar diffusive flux. This can improve model stability in the topside F-region, but it is only recommended as a last resort since it will change model results.",
+            "warning": null
+        },
+        "OPDIFFLEV":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of maximum O+ ambipolar diffusive flux (level)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPDIFFCAP and OPDIFFLEV to determine the altitude dependence of maximum O+ ambipolar diffusive flux. This can improve model stability in the topside F-region, but it is only recommended as a last resort since it will change model results.",
+            "warning": null
+        },
+        "OPFLOOR":{
+            "LEVEL": "EXPERT",
+            "prompt": "Minimum O+ density",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPRATE, OPLEV and OPLATWIDTH to form a latitudinal Gaussian shaped floor and altitudinal logistic shaped floor. The floor is applied to O+ at low-to-mid latitudes in the F-region in order to keep the model stable when the ionosphere gets very low in density.",
+            "warning": null
+        },
+        "OPRATE":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of minimum O+ density (rate)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPFLOOR, OPLEV and OPLATWIDTH to form a latitudinal Gaussian shaped floor and altitudinal logistic shaped floor. The floor is applied to O+ at low-to-mid latitudes in the F-region in order to keep the model stable when the ionosphere gets very low in density.",
+            "warning": null
+        },
+        "OPLEV":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of minimum O+ density (level)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPFLOOR, OPRATE and OPLATWIDTH to form a latitudinal Gaussian shaped floor and altitudinal logistic shaped floor. The floor is applied to O+ at low-to-mid latitudes in the F-region in order to keep the model stable when the ionosphere gets very low in density.",
+            "warning": null
+        },
+        "OPLATWIDTH":{
+            "LEVEL": "EXPERT",
+            "prompt": "Altitude dependence of minimum O+ density (latitude)",
+            "default": null,
+            "valids": null,
+            "description": "This works with OPFLOOR, OPRATE and OPLEV to form a latitudinal Gaussian shaped floor and altitudinal logistic shaped floor. The floor is applied to O+ at low-to-mid latitudes in the F-region in order to keep the model stable when the ionosphere gets very low in density.",
+            "warning": null
+        },
+        "TE_CAP":{
+            "LEVEL": "EXPERT",
+            "prompt": "Maximum electron temperature",
+            "default": null,
+            "valids": null,
+            "description": "The maximum electron temperature allowed for the model. Implemented in settei.F.",
+            "warning": null
+        },  
+        "TI_CAP":{
+            "LEVEL": "EXPERT",
+            "prompt": "Maximum ion temperature",
+            "default": null,
+            "valids": null,
+            "description": "The maximum ion temperature allowed for the model. Implemented in settei.F.",
+            "warning": null
+        },
         "CURRENT_PG": {
             "LEVEL": "EXPERT",
             "prompt": "Flag for Pressure Gradient and Gravity Force in Electrodynamo",
@@ -802,7 +882,7 @@
         "MIXFILE": {
             "LEVEL": "EXPERT",
             "prompt": "Data File for Remix",
-            "default": "msphere.mix.h5",
+            "default": null,
             "valids": null,
             "description": "The location of remix data file.",
             "warning": null

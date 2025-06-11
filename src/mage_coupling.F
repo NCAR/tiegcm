@@ -12,7 +12,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !-----------------------------------------------------------------------
       use params_module,only: nlonp4,nlat,nlatp1,
-     |  nmlatp1,nmlonp1,nmlat,nmlon
+     |  nmlatp1,nmlonp1,nmlat,nmlon,rp
       use input_module,only: oneway
       !use pdynamo_module,only: phihm
 #ifdef GAMERA
@@ -20,7 +20,7 @@
 #endif
       implicit none
 
-      real,dimension(nlonp4,nlat) ::
+      real(rp),dimension(nlonp4,nlat) ::
      |  geng,        ! energy in geographic coordinates, periodic boundary
      |  gflx,        ! flux in geographic coordinates, periodic boundary
      |  gpot         ! potential in geographic coordinates, periodic boundary
@@ -31,11 +31,12 @@
 
 ! Potential in geographic coordinates from M-I coupler
 ! Note: gpotm latitude dimension is defined to match mag2geo specifications
-      real,dimension(nlonp4,0:nlatp1) :: gpotm
+      real(rp),dimension(nlonp4,0:nlatp1) :: gpotm
 ! Values on APEX grid
-      real,dimension(nmlonp1,nmlat) :: apotm,aflxm
+      real(rp),dimension(nmlonp1,nmlat) :: apotm,aflxm,
+     |  grad_x,grad_y,grad_mag
 
-      real :: aurllbN,aurllbS ! all are co-lats in radians
+      real(rp) :: aurllbN,aurllbS ! all are co-lats in radians
 
 ! Change the following parameters if adding more variables
       integer,parameter ::
@@ -46,7 +47,7 @@
      |  nhoutvar   = 9, ! TN, UN, VN, OMEGA, O2, O1, NO, Z, HE
      |  nhinvar    = 0  !
 
-      real*8,dimension(nmlonp1,2) :: aurorabc1d
+      real(rp),dimension(nmlonp1,2) :: aurorabc1d
 
       contains 
 !-----------------------------------------------------------------------
@@ -64,26 +65,26 @@
      |  mytid
 
       integer :: ierr,i
-      real,dimension(nlatp2) :: glatp2
-      real,dimension(nlonp1) :: glonp1
+      real(rp),dimension(nlatp2) :: glatp2
+      real(rp),dimension(nlonp1) :: glonp1
 
       !gpot = 0
-      geng = 0.5
-      gflx = 0
-      gpotm = 0
-      apotm = 0
-      aflxm  = 0
+      geng = 0.5_rp
+      gflx = 0.0_rp
+      gpotm = 0.0_rp
+      apotm = 0.0_rp
+      aflxm  = 0.0_rp
       !aurllbN = 10*dtr
       !aurllbS = 10*dtr
 
 ! Hard code the poles
       glatp2(2:nlatp2-1) = glat
-      glatp2(1) = -90
-      glatp2(nlatp2) = 90
+      glatp2(1) = -90.0_rp
+      glatp2(nlatp2) = 90.0_rp
 
 ! Periodic boundary
       glonp1(1:nlonp1-1) = glon
-      glonp1(nlonp1) = glon(1)+360
+      glonp1(nlonp1) = glon(1)+360.0_rp
 
 #if defined (GAMERA) || defined (HIDRA)
       do i=1,CplCommSize
@@ -132,13 +133,13 @@
       use mpi
 
       integer :: ierr,i,j
-      real*8,dimension(nlatp2,nlonp1,nmixingeo) :: gvar2d
-      real*8,dimension(nmlat,nmlonp1,nmixinapex) :: avar2d
+      real(rp),dimension(nlatp2,nlonp1,nmixingeo) :: gvar2d
+      real(rp),dimension(nmlat,nmlonp1,nmixinapex) :: avar2d
 
 !     write(6,"('TIEGCM (',i3,'): inside receive')") mytid
 
-      avar2d = 0.
-      gvar2d = 0.
+      avar2d = 0.0_rp
+      gvar2d = 0.0_rp
 
 #ifdef GAMERA
       if (.not. oneway) then
@@ -146,8 +147,8 @@
 
         call import_remix(avar2d,gvar2d)
 ! Unit conversion
-        avar2d(:,:,1) = avar2d(:,:,1)*1e3 ! potential: kV -> V
-        gvar2d(:,:,1) = gvar2d(:,:,1)*0.5 ! mean energy -> characteristic energy
+        avar2d(:,:,1) = avar2d(:,:,1)*1e3_rp ! potential: kV -> V
+        gvar2d(:,:,1) = gvar2d(:,:,1)*0.5_rp ! mean energy -> characteristic energy
       endif
 
       call mpi_bcast(avar2d, nmlat*nmlonp1*nmixinapex,
@@ -191,15 +192,17 @@
 #ifdef GAMERA
       use params_module,only: nlatp2,nlon,nlonp1,nlonp2,gmlat,gmlon
       use input_module,only: ctpoten
-      use cons_module,only: pi
+      use cons_module,only: pi,dlatm,dlonm
       use mpi_module,only: mytid,handle_mpi_err,TIEGCM_WORLD
       use mpi
 
       integer :: v,ierr,i,j,js,jn
-      real :: polev1,polev2,
-     |   cpmaxsh,cpminsh,cpmaxnh,cpminnh
-      real*8 :: nfluxllb = 1.0e7
-      real*8,dimension(nlon) :: aurllbj
+      real(rp) :: polev1,polev2,
+     |   cpmaxsh,cpminsh,cpmaxnh,cpminnh,
+     |   temp
+      real(rp) :: nfluxllb = 1.0e7_rp
+      real(rp) :: potllb = 5000._rp ! 1 kV
+      real(rp),dimension(nlon) :: aurllbj
   
 
 ! Dynamo solver requires pole values for gpotm
@@ -285,15 +288,15 @@
 
       ! real*8,dimension(nlonp1,2) :: aurorabc1d
 
-      aurllbN = 0.D0
-      aurllbS = 0.D0
-      aurorabc1d = 0.D0
+      aurllbN = 0.0_rp
+      aurllbS = 0.0_rp
+      aurorabc1d = 0.0_rp
       do j=1,nmlonp1   ! NORTH
         do i=nmlat/2+1,nmlat
           if(aflxm(j,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
         enddo
         i = min(i,nmlat)
-        aurorabc1d(j,1) = max(90.-gmlat(i),15.) ! aurllbj is co-lat.
+        aurorabc1d(j,1) = max(90.0_rp-gmlat(i),15._rp) ! aurllbj is co-lat.
       enddo
 !!!      aurllbN = maxval(aurllbj)
 
@@ -302,12 +305,62 @@
           if(aflxm(j,i)>=nfluxllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
         enddo
         i = max(i,1)
-        aurorabc1d(j,2) = max(90.+gmlat(i),15.) ! aurllbj is co-lat from south pole! Backwards.
+        aurorabc1d(j,2) = max(90._rp+gmlat(i),15._rp) ! aurllbj is co-lat from south pole! Backwards.
       enddo
 !!!      aurllbS = maxval(aurllbj)
-         aurllbN = maxval(aurorabc1d(:,1))
-         aurllbS = maxval(aurorabc1d(:,2))
-         !write(*,*) "TGCMCPL: aurora: ",aurllbN,aurllbS
+        aurllbN = maxval(aurorabc1d(:,1))
+        aurllbS = maxval(aurorabc1d(:,2))
+        !write(*,*) "TGCMCPL: aurora: ",aurllbN,aurllbS
+
+!        ! Let's try a new method
+!        aurorabc1d = 0.0_rp
+!        grad_x = 0.0_rp
+!        grad_y = 0.0_rp
+!        grad_mag = 0.0_rp
+!
+!        ! dumb gradient
+!        do j = 2,nmlon
+!          do i=nmlat/2+2,nmlat-1
+!            grad_x(j,i) = (apotm(j+1,i) - apotm(j-1,i))/(2.0_rp)!*dlonm)
+!            grad_y(j,i) = (apotm(j,i+1) - apotm(j,i-1))/(2.0_rp)!*dlatm)
+!          end do
+!          do i=nmlat/2-1,2,-1
+!            grad_x(j,i) = (apotm(j+1,i) - apotm(j-1,i))/(2.0_rp)!*dlonm)
+!            grad_y(j,i) = (apotm(j,i-1) - apotm(j,i+1))/(2.0_rp)!*dlatm)
+!          end do
+!        end do
+!
+!        ! Compute the magnitude of the gradient
+!        do j = 2, nmlon
+!            do i = nmlat/2+2,nmlat-1
+!                grad_mag(i,j) = sqrt(grad_x(j,i)**2 + grad_y(j,i)**2)
+!            end do
+!        end do
+!
+!        ! Calculate gradient boundary
+!        do j=1,nmlonp1   ! NORTH
+!          do i=nmlat/2+1,nmlat
+!            if(grad_mag(j,i)>=potllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
+!          enddo
+!          i = min(i,nmlat)
+!          aurorabc1d(j,1) = max(90.0_rp-gmlat(i),15._rp) ! aurllbj is co-lat.
+!        enddo
+!!!!      aurllbN = maxval(aurllbj)
+!
+!        do j=1,nmlonp1   ! SOUTH
+!          do i=nmlat/2,1,-1
+!            if(grad_mag(j,i)>=potllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
+!          enddo
+!          i = max(i,1)
+!          aurorabc1d(j,2) = max(90._rp+gmlat(i),15._rp) ! aurllbj is co-lat from south pole! Backwards.
+!        enddo
+!
+!        ! Keep the higher latitude between auroral and pot boundary
+!        temp = maxval(aurorabc1d(:,1))
+!        aurllbN = min(temp,aurllbN)
+!        temp = maxval(aurorabc1d(:,2))
+!        aurllbS = min(temp,aurllbS)
+
 
 #endif
 
@@ -323,15 +376,15 @@
       integer,dimension(4),intent(in) :: modeltime
       logical :: hidra_prep
 
-      real,dimension(:,:,:), allocatable :: mixgeoout,mixapexout
-      real,dimension(:,:,:,:), allocatable :: hidraout
+      real(rp),dimension(:,:,:), allocatable :: mixgeoout,mixapexout
+      real(rp),dimension(:,:,:,:), allocatable :: hidraout
 
       integer :: nreq,i
 #if defined (GAMERA) || defined (HIDRA)
       ! Prepare the export data
       hidra_prep = .false.
       nreq = 0
-      if (mytid == 0) write(*,*) "T Starting Export Prep"
+      !if (mytid == 0) write(*,*) "T Starting Export Prep"
       do i=1,CplCommSize
             ! Skip Self
             if (i == CplRank+1) continue
@@ -457,7 +510,8 @@
 
 ! ... Local variables ..................................................
       integer :: i,j,v,k,ierr, ilist(nhoutvar)
-      real,dimension(:,:,:,:),allocatable :: f3d_sub,f3d_glb,hidra_out
+      real(rp),dimension(:,:,:,:),allocatable :: f3d_sub,f3d_glb,
+     |  hidra_out
 
 ! ... Begin ............................................................
 
@@ -487,7 +541,7 @@
         do i=1,nlon
           do j=1,nlat
             do k=1,nlevp1-1
-              if ((f3d_glb(k,i,j,1) .lt.1e-5) .or.
+              if ((f3d_glb(k,i,j,1) .lt.1e-5_rp) .or.
      |    (isnan(f3d_glb(k,i,j,1)))) then
               write(*,*) "Bad TN: ",f3d_glb(k,i,j,1),k,i,j
               endif
@@ -528,7 +582,7 @@
         use mpi_module,only: CplComm,handle_mpi_err,mytid
         use mpi
 
-        real,dimension(:,:,:,:) :: hidra_out
+        real(rp),dimension(:,:,:,:) :: hidra_out
         integer :: commId,ierr,hidraCplRank
 
       ! Export the data
@@ -554,7 +608,7 @@
      |  mp_gather_pdyn
       use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f2d
       use addfld_module,only: addfld
-      use fields_module,only: zigm1,zigm2
+      use fields_module,only: azigm1,azigm2
       use mpi
 
 ! ... Parameter variables ..............................................
@@ -562,21 +616,21 @@
 
 ! ... Local variables ..................................................
       integer :: i,j,v,ierr
-      real,dimension(:,:,:),allocatable :: avar2d,gvar2d
+      real(rp),dimension(:,:,:),allocatable :: avar2d,gvar2d
 
-      real :: amsub(mlon0:mlon1,mlat0:mlat1,nmixoutapex)
-      real :: amglb(nmlonp1,nmlat,nmixoutapex)
+      real(rp) :: amsub(mlon0:mlon1,mlat0:mlat1,nmixoutapex)
+      real(rp) :: amglb(nmlonp1,nmlat,nmixoutapex)
 
-      real,allocatable,dimension(:,:,:) :: gsub
-      real,allocatable,dimension(:,:,:) :: gglb
+      real(rp),allocatable,dimension(:,:,:) :: gsub
+      real(rp),allocatable,dimension(:,:,:) :: gglb
 
 ! ... Begin ............................................................
 
 ! Prepare data for export
-      amsub(:,:,1) = zigm1(mlon0:mlon1,mlat0:mlat1)
-      amsub(:,:,2) = zigm2(mlon0:mlon1,mlat0:mlat1)
+      amsub(:,:,1) = azigm1(mlon0:mlon1,mlat0:mlat1)
+      amsub(:,:,2) = azigm2(mlon0:mlon1,mlat0:mlat1)
 
-      where(amsub < 0.2) amsub = 0.2
+      where(amsub < 0.2_rp) amsub = 0.2_rp
 
       call mp_gather_pdyn(amsub,mlon0,mlon1,mlat0,mlat1,
      |  amglb,nmlonp1,nmlat,nmixoutapex)
@@ -610,7 +664,7 @@
           gsub(:,:,v) = gzigm1
           case(2)
           gsub(:,:,v) = gzigm2
-          where(gsub < 0.2) gsub = 0.2
+          where(gsub < 0.2_rp) gsub = 0.2_rp
           case(3)
           gsub(:,:,v) = gnsrhs
           end select
@@ -662,7 +716,7 @@
      |   myAppId,voltId
         use mpi
 
-        real,dimension(:,:,:) :: avar2d,gvar2d
+        real(rp),dimension(:,:,:) :: avar2d,gvar2d
         integer :: ierr
 
 ! Export the data
@@ -697,10 +751,10 @@
       use mpi
 
       integer :: ierr,i
-      real,dimension(nlatp2) :: glatp2
-      real,dimension(nlonp1) :: glonp1
-      real,dimension(nmlat):: gmlat
-      real,dimension(nmlonp1):: gmlon
+      real(rp),dimension(nlatp2) :: glatp2
+      real(rp),dimension(nlonp1) :: glonp1
+      real(rp),dimension(nmlat):: gmlat
+      real(rp),dimension(nmlonp1):: gmlon
 
       if (CplComm /= MPI_COMM_NULL) then
         i = 0
@@ -771,7 +825,7 @@
       use mpi
 
         integer :: v,ierr,i,j
-        real,dimension(:,:,:) :: avar2d,gvar2d
+        real(rp),dimension(:,:,:) :: avar2d,gvar2d
 
         if (CplComm /= MPI_COMM_NULL) then
           !write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100
@@ -928,17 +982,17 @@
 ! Calculate height-integrated field-aligned neutral wind currents for both hemisphere
 !
       integer,intent(in) :: mlon0,mlon1,mlat0,mlat1
-      real,intent(in) :: rim1(mlon0-1:mlon1+1,mlat0-1:mlat1+1),
+      real(rp),intent(in) :: rim1(mlon0-1:mlon1+1,mlat0-1:mlat1+1),
      |                      rim2(mlon0-1:mlon1+1,mlat0-1:mlat1+1)
-      real,intent(out) :: nsrhs(mlon0-1:mlon1+1,mlat0-1:mlat1+1)
+      real(rp),intent(out) :: nsrhs(mlon0-1:mlon1+1,mlat0-1:mlat1+1)
 
 !
 ! Local:
 !
-      real,parameter :: unitvm(nmlon)=1.
-      real :: cs(mlat0-1:mlat1+1)
-      real :: dfac
-      real :: fmsub(mlon0:mlon1,mlat0:mlat1)
+      real(rp),parameter :: unitvm(nmlon)=1.
+      real(rp) :: cs(mlat0-1:mlat1+1)
+      real(rp) :: dfac
+      real(rp) :: fmsub(mlon0:mlon1,mlat0:mlat1)
       integer :: j,i
       integer mlon00,mlon11,mlat00,mlat11
       integer latstart, latend

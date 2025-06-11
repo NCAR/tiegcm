@@ -1,4 +1,5 @@
 numpy
 netCDF4
+xarray
 jinja2
 xarray

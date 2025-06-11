@@ -15,7 +15,6 @@
 
       use magfield_module,only: rjac,xb,yb,zb,bmod
       use addfld_module,only: addfld
-      use diags_module,only: mkdiag_UI,mkdiag_VI,mkdiag_WI
       use mpi_module,only: mp_periodic_f3d
       implicit none
 !
@@ -145,14 +144,6 @@
 !    |  maxval(vi(:,lon0:lon1,lat0:lat1)),
 !    |  minval(wi(:,lon0:lon1,lat0:lat1)),
 !    |  maxval(wi(:,lon0:lon1,lat0:lat1))
-!
-! Save ion drifts if requested:
-      call mkdiag_UI('UI_ExB',ui(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-      call mkdiag_VI('VI_ExB',vi(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-      call mkdiag_WI('WI_ExB',wi(:,lon0:lon1,lat0:lat1),
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 #ifdef VT
 !     code = 121 ; state = 'ionvel' ; activity='ModelCode'

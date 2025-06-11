@@ -175,7 +175,7 @@
      |  tlbc,     ulbc,     vlbc,     ! subdomains (lond0:lond1,latd0:latd1)
      |  tlbc_nm,  ulbc_nm,  vlbc_nm,  ! subdomains (lond0:lond1,latd0:latd1)
      |  gzigm1,   gzigm2,   gnsrhs,
-     !  zigm1,    zigm2,    nsrhs
+     !  azigm1,    azigm2,    nsrhs
 !
 ! Full 3d grid with all primary history fields for writing to netcdf
 ! history files. This will be allocated only on the root task 

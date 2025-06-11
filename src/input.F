@@ -7,7 +7,7 @@
 !
       use params_module,only: mxhvols,mxseries,mxseries_sech,mxfsech,
      |  nlat,nlon,nlev,glat1,dlat,glon1,dlon,tgcm_version,tgcm_name,
-     |  spval,ispval,nlonp4,mxind_time,nmlat,nmlonp1
+     |  spval,ispval,nlonp4,mxind_time,nmlat,nmlonp1,rp
       use mk_hvols,only: mkhvols
       implicit none
 !
@@ -62,7 +62,7 @@
      |  ntask_maglon,    ! number of tasks in mag longitude dimension (not namelist)
      |  calc_helium,     ! calculate helium if calc_helium=1, otherwise set he=0.
      |  electron_heating
-      real ::
+      real(rp) ::
      |  tide(10),        ! semidiurnal tide amplitudes and phases
      |  tide2(2),        ! diurnal tide amplitude and phase
      |  tide3m3(2),      ! 2-day wave amplitude and phase
@@ -70,10 +70,17 @@
      |  f107a,           ! 10.7 cm average (81-day) solar flux
      |  colfac,          ! collision factor
      |  joulefac,        ! joule heating factor (see sub qjoule_tn (qjoule.F))
-     |  opdiffcap        ! Maximum O+ diffusion (see sub rrk in oplus.F)
+     |  opdiffcap,       ! Maximum O+ diffusion (see sub rrk in oplus.F)
+     |  opdiffrate,      ! vertical decaying rate of O+ diffusion cap
+     |  opdifflev,       ! transition altitude of O+ diffusion cap
+     |  opfloor,         ! minimum O+
+     |  oprate,          ! vertical decaying rate of O+ floor
+     |  oplev,           ! transition altitude of O+ floor
+     |  oplatwidth,      ! latitude band to apply O+ floor
+     |  te_cap,ti_cap
 !
 ! Input parameters that can be either constant or time-dependent:
-      real ::
+      real(rp) ::
      |  power,           ! hemispheric power (gw) (hpower on histories)
      |  ctpoten,         ! cross-cap potential (volts)
      |  bximf,           ! BX component of IMF
@@ -83,7 +90,7 @@
      |  swden,           ! Solar wind density in #/cm3
      |  al,              ! AL lower magnetic auroral activity index in nT
      |  kp               ! Kp index
-      real,dimension(5,mxind_time) :: power_time,ctpoten_time,
+      real(rp),dimension(5,mxind_time) :: power_time,ctpoten_time,
      |  bximf_time,byimf_time,bzimf_time,swvel_time,swden_time,al_time,
      |  kp_time,f107_time,f107a_time
       integer :: 
@@ -95,11 +102,12 @@
      |  et,              ! logical to calculate electron turbulent heating
      |  saps,            ! logical to include empirical SAPS
      |  doEclipse,       ! logical to do eclipse mask or not
-     |  oneway           ! logical to use oneway mix reader
+     |  oneway,          ! logical to use oneway mix reader
+     |  duff             ! logical to choose reaction rate for N(2D)+O2->NO+O
 !
 ! Parameters as read from namelist:
-      real :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,rd_byimf,
-     |  rd_bzimf,rd_swvel,rd_swden,rd_kp
+      real(rp) :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,
+     |  rd_byimf,rd_bzimf,rd_swvel,rd_swden,rd_kp
 !
 ! If indices_interp==1, time-dependent indices (power_time, ctpoten_time, etc)
 ! will be interpolated to model time, otherwise they will change only
@@ -175,8 +183,8 @@
       logical,dimension(mxfsech) :: nudge_lbc,nudge_f4d
       logical :: nudge_use_refdate
       integer,dimension(2) :: nudge_refdate
-      real,dimension(2) :: nudge_sponge,nudge_delta,nudge_power
-      real :: nudge_alpha
+      real(rp),dimension(2) :: nudge_sponge,nudge_delta,nudge_power
+      real(rp) :: nudge_alpha
 !
 ! Namelist for read:
       namelist/tgcm_input/ 
@@ -193,12 +201,14 @@
      |  kp_time,al_time,swden_time,swvel_time,indices_interp,
      |  imf_ncfile,saber_ncfile,tidi_ncfile,sech_nbyte,f107_time,
      |  f107a_time,hpss_path,current_pg,current_kq,calc_helium,
-     |  bgrddata_ncfile,ctmt_ncfile,opdiffcap,electron_heating,
+     |  bgrddata_ncfile,ctmt_ncfile,electron_heating,duff,
      |  amienh,amiesh,amie_ibkg,he_coefs_ncfile,enforce_n2,et,saps,
      |  subaur_data,doEclipse,eclipse_list,oneway,mixfile,
      |  nudge_ncpre,nudge_ncfile,nudge_ncpost,nudge_flds,
      |  nudge_lbc,nudge_f4d,nudge_use_refdate,nudge_refdate,
-     |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha
+     |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha,
+     |  opdiffcap,opdiffrate,opdifflev,opfloor,oprate,oplev,oplatwidth,
+     |  te_cap,ti_cap
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =
@@ -305,13 +315,23 @@
       colfac  = spval
       joulefac= spval
       calc_helium = ispval
-      opdiffcap = spval
+      te_cap = 10000._rp
+      ti_cap = 10000._rp
       electron_heating = ispval
       enforce_n2 = .false.
       et = .false.
       saps = .false.
       doEclipse = .false.
       oneway = .false.
+      duff = .false.
+
+      opdiffcap = spval
+      opdiffrate = spval
+      opdifflev = spval
+      opfloor = spval
+      oprate = spval
+      oplev = spval
+      oplatwidth = spval
 
       f107    = spval
       f107a   = spval
@@ -614,6 +634,51 @@
       else
         write(6,"('Input: O+ diffusion maximum (opdiffcap)=',es12.4)")
      |    opdiffcap
+      endif
+      if (opdiffrate==spval) then
+        opdiffrate = 0. ! default is off
+        write(6,"('Input: default diffusion decaying rate (opdiffrate)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ diffusion decaying rate (opdiffrate)='
+     |    ,es12.4)") opdiffrate
+      endif
+      if (opdifflev==spval) then
+        write(6,"('Input: default diffusion capping level (opdifflev)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ diffusion capping level (opdifflev)='
+     |    ,es12.4)") opdifflev
+      endif
+!
+! O+ floor:
+      if (opfloor==spval) then
+        opfloor = 0. ! default is off
+        write(6,"('Input: default O+ minimum (opfloor) is',
+     |    ' turned off by default.')")
+      else
+        write(6,"('Input: O+ minimum (opfloor)=',es12.4)") opfloor
+      endif
+      if (oprate==spval) then
+        oprate = 0. ! default is off
+        write(6,"('Input: default O+ decaying rate (oprate)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ decaying rate (oprate)=',es12.4)") oprate
+      endif
+      if (oplev==spval) then
+        write(6,"('Input: default O+ flooring level (oplev)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ flooring level (oplev)=',es12.4)") oplev
+      endif
+      if (oplatwidth==spval) then
+        oplatwidth = 0. ! default is off
+        write(6,"('Input: default O+ flooring latitude band',
+     |    ' (oplatwidth) is turned off by default.')")
+      else
+        write(6,"('Input: O+ flooring latitude band (oplatwidth)=',
+     |    es12.4)") oplatwidth
       endif
 
       if (electron_heating == ispval) electron_heating = 6
@@ -1815,7 +1880,7 @@
 ! Validate times and values in user provided time series.
 !
 ! Args:
-      real,intent(in) :: constant,timedep(5,mxtimes)
+      real(rp),intent(in) :: constant,timedep(5,mxtimes)
       integer,intent(in) :: mxtimes
       integer,intent(out) :: ntimes
       character(len=*),intent(in) :: name
