@@ -16,7 +16,7 @@ import json
 import copy
 from datetime import datetime, timedelta
 
-from misc import seconds_to_dhms, resolution_solver, find_file, select_resource_defaults, get_mtime
+from misc import seconds_to_dhms, resolution_solver, find_file, select_resource_defaults, get_mtime, select_source_defaults
 from output_solver import segment_inp_pbs
 from interpolation import interpic
 from namelist_solver import inp_pri_date
@@ -128,6 +128,7 @@ def engage_options_updater(options, engage_options, option_descriptions):
     # General options for the simulation
     o = options["simulation"] 
     o["job_name"] = engage_options["job_name"]
+    run_name = o["job_name"]
     o["hpc_system"] = engage_options["hpc_system"]
     # Data Options
      
@@ -139,6 +140,7 @@ def engage_options_updater(options, engage_options, option_descriptions):
     # Specification Options
     o = options["model"]["specification"]
     o["horires"] = engage_options["horires"]
+    horires = o["horires"]
     vertres, mres, nres_grid, STEP = resolution_solver(o["horires"])
     if o.get("vertres") is None:
         o["vertres"] = vertres
@@ -146,6 +148,7 @@ def engage_options_updater(options, engage_options, option_descriptions):
         o["mres"] = mres
     if o.get("nres_grid") is None:
         o["nres_grid"] = nres_grid
+    zitop = o["zitop"]
     # INP options
     o = options["inp"]
     if o.get("STEP") is None:
@@ -153,6 +156,17 @@ def engage_options_updater(options, engage_options, option_descriptions):
     o["start_time"] = engage_options["start_time"]
     o["stop_time"] = engage_options["stop_time"]
     o["segment"] = " ".join(map(str, engage_options["segment"]))
+    options_temp = copy.deepcopy(options)
+    if o.get("SOURCE") is None:
+        print("No SOURCE file specified, creating a new one.")
+        source = select_source_defaults(options_temp, option_descriptions)  
+        if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
+            in_prim = source
+            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+            o["SOURCE"] = out_prim
+            interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+        else:
+            o["SOURCE"] = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'    
     if o.get("SOURCE_START") is None:
         o["SOURCE_START"] =  " ".join(map(str, get_mtime(options["inp"]["SOURCE"])[0]))
     START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_time"], o["stop_time"])
@@ -195,6 +209,12 @@ def engage_options_updater(options, engage_options, option_descriptions):
             on["ncpus"] = ncpus_default
         if on.get("mpiprocs") is None:
             on["mpiprocs"] = mpiprocs_default
+        if on.get("moduledir") is None:
+            on["moduledir"] = option_descriptions["job"]["pleiades"]["moduledir"]["default"]
+        if on.get("local_modules") is None:
+            on["local_modules"] = option_descriptions["job"]["pleiades"]["local_modules"]["default"]
+        if on.get("other_job") is None:
+            on["other_job"] = option_descriptions["job"]["pleiades"]["other_job"]["default"]
     
     o["nprocs"] = int(on["select"]) * int(on["mpiprocs"])
     o["modules"] = engage_options["modules"]
@@ -225,6 +245,7 @@ def engage_run(options, debug, coupling, engage):
     #For standalone
     pbs=True
     options_standalone["simulation"]["job_name"] = f'{engage["job_name"]}-tiegcm-standalone'
+    horires_standalone = float(engage["horires"])
     options_standalone["inp"]["stop_time"] = engage["coupled_start_time"]
     options_standalone["inp"]["PRIHIST"] = '1 0 0 0'
     options_standalone["inp"]["MXHIST_PRIM"] = 1
@@ -240,6 +261,10 @@ def engage_run(options, debug, coupling, engage):
     options_standalone["inp"]["OPLATWIDTH"] = '20'
     options_standalone["inp"]["TE_CAP"] = '8000'
     options_standalone["inp"]["TI_CAP"] = '8000'
+    options_standalone["inp"]["GSWM_MI_DI_NCFILE"] = find_file(f'*gswm_diurn_{horires_standalone}d_99km*', TIEGCMDATA)
+    options_standalone["inp"]["GSWM_MI_SDI_NCFILE"] = find_file(f'*gswm_semi_{horires_standalone}d_99km*', TIEGCMDATA)
+    options_standalone["inp"]["GSWM_NM_DI_NCFILE"] = find_file(f'*gswm_nonmig_diurn_{horires_standalone}d_99km*', TIEGCMDATA)
+    options_standalone["inp"]["GSWM_NM_SDI_NCFILE"] = find_file(f'*gswm_nonmig_semi_{horires_standalone}d_99km*', TIEGCMDATA)
     options_standalone["model"]["data"]["workdir"] = os.path.join(engage["parentdir"],"tiegcm_standalone")
     if not os.path.exists(options_standalone["model"]["data"]["workdir"]):
         os.makedirs(options_standalone["model"]["data"]["workdir"])
