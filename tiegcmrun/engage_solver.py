@@ -159,14 +159,14 @@ def engage_options_updater(options, engage_options, option_descriptions):
     options_temp = copy.deepcopy(options)
     if o.get("SOURCE") is None:
         print("No SOURCE file specified, creating a new one.")
-        source = select_source_defaults(options_temp, option_descriptions)  
-        if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'):
+        o["SOURCE"] = select_source_defaults(options_temp, option_descriptions)  
+        """
+        if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/tiegcm_standalone/{run_name}-tiegcm-standalone_temp.nc'):
             in_prim = source
-            out_prim = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'
+            out_prim = f'{options["model"]["data"]["workdir"]}/tiegcm_standalone/{run_name}-tiegcm-standalone_temp.nc'
             o["SOURCE"] = out_prim
             interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
-        else:
-            o["SOURCE"] = f'{options["model"]["data"]["workdir"]}/{run_name}_prim.nc'    
+        """
     if o.get("SOURCE_START") is None:
         o["SOURCE_START"] =  " ".join(map(str, get_mtime(options["inp"]["SOURCE"])[0]))
     START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_time"], o["stop_time"])
@@ -210,11 +210,11 @@ def engage_options_updater(options, engage_options, option_descriptions):
         if on.get("mpiprocs") is None:
             on["mpiprocs"] = mpiprocs_default
         if on.get("moduledir") is None:
-            on["moduledir"] = option_descriptions["job"]["pleiades"]["moduledir"]["default"]
+            options["job"]["moduledir"] = option_descriptions["job"]["pleiades"]["moduledir"]["default"]
         if on.get("local_modules") is None:
-            on["local_modules"] = option_descriptions["job"]["pleiades"]["local_modules"]["default"]
+            options["job"]["local_modules"] = option_descriptions["job"]["pleiades"]["local_modules"]["default"]
         if on.get("other_job") is None:
-            on["other_job"] = option_descriptions["job"]["pleiades"]["other_job"]["default"]
+            options["job"]["other_job"] = option_descriptions["job"]["pleiades"]["other_job"]["default"]
     
     o["nprocs"] = int(on["select"]) * int(on["mpiprocs"])
     o["modules"] = engage_options["modules"]
