@@ -70,7 +70,7 @@
      |  nu_nop_o2 = 4.27E-10, ! NO+ ~ O2
      |  nu_o2p_o  = 2.31E-10, ! O2+ ~ O
      |  nu_np_o   = 4.42E-10, ! N+  ~ O
-     |  nu_n2p_o  = 4.42E-10, ! N2+ ~ O
+     |  nu_n2p_o  = 2.58E-10, ! N2+ ~ O
      |  nu_nop_o  = 2.44E-10, ! NO+ ~ O
      |  nu_o2p_he = 0.70E-10, ! O2+ ~ He
      |  nu_op_he  = 1.32E-10, ! O+  ~ He
