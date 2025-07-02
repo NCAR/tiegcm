@@ -28,7 +28,8 @@ HOST     = $(shell hostname)
 # Library and Include file paths:
 #
 # ESMF lib on Pleiades:
-export ESMFMKFILE=/home6/fvitt/esmf-8_2_0/lib/libO/Linux.intel.64.mpt.default/esmf.mk
+# export ESMFMKFILE=/home6/fvitt/esmf-8_2_0/lib/libO/Linux.intel.64.mpt.default/esmf.mk
+export ESMFMKFILE=/home7/nrao3/local3/esmf/lib/libO/Linux.intelgcc.64.mpt.default/esmf.mk
 #
 # Make machines.ini file for MPI execution:
 #

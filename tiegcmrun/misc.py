@@ -219,11 +219,11 @@ def select_resource_defaults(options, option_descriptions):
         for on in od:
             if on == "select":
                 if float(horires) == 2.5 or float(horires) == 5:
-                    select = 72/mpiprocs_default
+                    select = 1#4/mpiprocs_default
                 if float(horires) == 1.25:
-                    select = 144/mpiprocs_default
+                    select = 1#8/mpiprocs_default
                 if float(horires) == 0.625:
-                    select = 288/mpiprocs_default
+                    select = 1#12/mpiprocs_default
                 select_default = int(select)
             if on == "ncpus":
                 ncpus_default = max_ncpus
