@@ -40,7 +40,7 @@ from jinja2 import Template
 # Import local modules
 from compile import compile_tiegcm
 from interpolation import interpic
-from engage_solver import engage_parser, engage_run
+from engage_solver import engage_parser, engage_run, engage_options_updater
 from namelist_solver import inp_pri_date,valid_hist,inp_mxhist,inp_sechist,inp_prihist,inp_pri_out,inp_sec_out,inp_sec_date
 from output_solver import create_inp_scripts, create_pbs_scripts, segment_inp_pbs
 from misc import get_mtime, segment_time, valid_bench, find_file, resolution_solver, select_resource_defaults, select_source_defaults
@@ -538,12 +538,15 @@ def prompt_user_for_run_options(args):
         elif engage != None:
             od["job_name"]["default"] = engage["job_name"]
         system_name = os.popen('hostname').read().strip()
-        if 'pfe' in system_name.lower():
-            od["hpc_system"]["default"]= "pleiades"
-        elif 'derecho' in system_name.lower():
-            od["hpc_system"]["default"] = "derecho"
+        if engage != None:
+            od["hpc_system"]["default"] = engage["hpc_system"]
         else:
-            od["hpc_system"]["default"] = "linux"
+            if 'pfe' in system_name.lower():
+                od["hpc_system"]["default"]= "pleiades"
+            elif 'derecho' in system_name.lower():
+                od["hpc_system"]["default"] = "derecho"
+            else:
+                od["hpc_system"]["default"] = "linux"
         # Prompt for the parameters.
         for on in ["job_name", "hpc_system"]:
             o[on] = get_run_option(on, od[on], mode, skip_parameters)
@@ -690,6 +693,10 @@ def prompt_user_for_run_options(args):
         od["LABEL"]["default"] = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
         if options["simulation"]["hpc_system"] == "pleiades":
             od["SECFLDS"]["warning"] = "Limit SECFLDS. File libraries on pleiades are built without big file support."
+        #if engage != None:
+        #    print(od["SECFLDS"]["default"])
+        #    od["SECFLDS"]["default"] = '["TN","UN","VN","NE","TEC","POTEN","Z","ZG","O2","O1","N2","N4S","HE","NO","NO_COOL","WN"]'
+             
         temp_mode = mode
         skip_inp = []
         segment = None
@@ -884,6 +891,7 @@ def prompt_user_for_run_options(args):
         elif hpc_platform == "pleiades":
             o["mpi_command"] = "mpiexec_mpt"
             if engage != None:
+                od['group_list']['default'] = engage['group_list']
                 od['queue']['default'] = engage['queue']
                 od['walltime']['default'] = engage['walltime']
         for on in od:
@@ -990,6 +998,10 @@ def tiegcmrun(args=None):
         # Read the run options from a JSON file.
         with open(options_path, "r", encoding="utf-8") as f:
             options = json.load(f)
+        if engage != None:
+            with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
+                option_descriptions = json.load(f)
+            options = engage_options_updater(options, args.engage, option_descriptions)
     else:
         # Prompt the user for the run options.
         options = prompt_user_for_run_options(args)
@@ -1025,7 +1037,6 @@ def tiegcmrun(args=None):
         input_file_generatred = True
     else:
         input_file_generatred = False
-    print(input_file_generatred)
     if args.onlycompile == True:
         compile_tiegcm(options, debug, coupling, hidra)
     elif args.engage != None:
