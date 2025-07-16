@@ -156,7 +156,7 @@ def select_source_defaults(options, option_descriptions):
     elif time_dhms[0] >= 173 and time_dhms[0] <265:
         source_default = find_file(f'junsol_f{f107}*',TIEGCMDATA)
     elif time_dhms[0] >= 265 and time_dhms[0] <356:
-        source_default = find_file(f'seqex_f{f107}*',TIEGCMDATA)
+        source_default = find_file(f'sepeqx_f{f107}*',TIEGCMDATA)
     elif time_dhms[0] >= 356:
         source_default = find_file(f'decsol_f{f107}*',TIEGCMDATA)       
     return source_default    
