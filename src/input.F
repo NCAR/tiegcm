@@ -103,7 +103,8 @@
      |  saps,            ! logical to include empirical SAPS
      |  doEclipse,       ! logical to do eclipse mask or not
      |  oneway,          ! logical to use oneway mix reader
-     |  duff             ! logical to choose reaction rate for N(2D)+O2->NO+O
+     |  duff,            ! logical to choose reaction rate for N(2D)+O2->NO+O
+     |  add_diffuse,add_mono,add_bbe
 !
 ! Parameters as read from namelist:
       real(rp) :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,
@@ -208,7 +209,7 @@
      |  nudge_lbc,nudge_f4d,nudge_use_refdate,nudge_refdate,
      |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha,
      |  opdiffcap,opdiffrate,opdifflev,opfloor,oprate,oplev,oplatwidth,
-     |  te_cap,ti_cap
+     |  te_cap,ti_cap,add_diffuse,add_mono,add_bbe
 !
 ! List of fields that are always written to secondary histories:
       character(len=16) :: secflds_mandatory(6) =

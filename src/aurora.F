@@ -447,10 +447,13 @@
      |  sunlons,     ! sun's mag longitudes (see sub sunloc, magfield.F) 
      |  csdec,sndec
       use params_module,only: nlon,spval,glat
-      use input_module,only: iamie
+      use input_module,only: iamie,add_diffuse,add_mono,add_bbe
       use cons_module,only: pi,dtr
       use amie_module,only: ekvg,efxg
-      use mage_coupling_module,only: geng,gflx     !MAGE
+      use mage_coupling_module,only: geng,gflx,     !MAGE
+     |  gdiffuseeng,gdiffuseflx,
+     |  gmonoeng,gmonoflx,
+     |  gBbeAvgEng,gBbeNumFlux
 !
 ! Add SAPS ion drifts to regular ion drifts from dynamo and convection pattern
       use input_module,only: saps,kp
@@ -497,7 +500,8 @@
      |  dtheta,         ! latitudinal variation (Gaussian)
      |  aurspread,      ! Gaussian spread: exp(-(dtheta/halfwidth)**2)
      |  clat
-      real,dimension(lon0:lon1,lat0:lat1) :: sui,svi,swi    ! SAPS ion drifts
+      real,dimension(lon0:lon1,lat0:lat1) :: sui,svi,swi,    ! SAPS ion drifts
+     |  BbeAlfa,BbeFlux ! BBE characteristic energy, number flux
 !
 #ifdef VT
 !     code = 130 ; state = 'aurora' ; activity='ModelCode'
@@ -598,6 +602,9 @@
 ! For electron temperature (used in settei):  
           qteaur(i,lat) = -7.e+8*aurspread
 !
+          BbeAlfa(i,lat) = 1.e-20
+          BbeFlux(i,lat) = 0.0
+!
 ! Recalculate alfa, flux, drizl if an amie run (as in old sub amiepa):
           if (iamie > 0) then
             if (i <= 2) then
@@ -630,8 +637,21 @@
 !                                                        Wenbin  wang
 !
 #ifdef GAMERA
-          alfa(i,lat) = max(geng(i,lat),0.01)
-          flux(i,lat) = max(gflx(i,lat),0.01)
+          alfa(i,lat) = 0.0
+          flux(i,lat) = 0.0
+          if (add_diffuse) then
+            alfa(i,lat) = alfa(i,lat)+gdiffuseeng(i,lat)
+            flux(i,lat) = flux(i,lat)+gdiffuseflx(i,lat)
+          endif
+          if (add_mono) then
+            alfa(i,lat) = alfa(i,lat)+gmonoeng(i,lat)
+            flux(i,lat) = flux(i,lat)+gmonoflx(i,lat)
+          endif
+          if (add_bbe) then
+            BbeAlfa(i,lat) = max(gBbeAvgEng(i,lat),1.e-20)
+            BbeFlux(i,lat) = gBbeNumFlux(i,lat)
+          endif
+          alfa(i,lat) = max(alfa(i,lat),1.e-20)
           eflux(i,lat) = flux(i,lat)*fac_p2e*alfa(i,lat)
 #endif
 
@@ -695,6 +715,27 @@
      |    'lon',lon0,lon1,'lat',lat0,lat1,0)
       endif
 !
+      call addfld('DIFFUSEENG','Diffuse characteristic energy','keV',
+     |  gdiffuseeng(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('DIFFUSEFLX','Diffuse number flux','cm-2s-1',
+     |  gdiffuseflx(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!
+      call addfld('MONOENG','Mono characteristic energy','keV',
+     |  gmonoeng(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('MONOFLX','Mono number flux','cm-2s-1',
+     |  gmonoflx(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!
+      call addfld('BBEENG','BBE characteristic energy','keV',
+     |  gBbeAvgEng(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+      call addfld('BBEFLX','BBE number flux','cm-2s-1',
+     |  gBbeNumFlux(lon0:lon1,lat0:lat1),
+     |  'lon',lon0,lon1,'lat',lat0,lat1,0)
+!
       do lat=lat0,lat1
 !
 ! Check latitude, and return if below aurlat (32.5 deg at 5 deg res):
@@ -708,9 +749,9 @@
 !
           call aurora_ions(
      |      drizl(lon0:lon1,lat), cusp (lon0:lon1,lat),
-     |      alfa (lon0:lon1,lat),
+     |      BbeAlfa(lon0:lon1,lat), alfa (lon0:lon1,lat),
      |      alfa2(lon0:lon1,lat), alfa3(lon0:lon1,lat),
-     |      flux (lon0:lon1,lat),
+     |      BbeFlux(lon0:lon1,lat), flux (lon0:lon1,lat),
      |      flux2(lon0:lon1,lat), flux3(lon0:lon1,lat),
      |      o2(:,:,lat),o1(:,:,lat),he(:,:,lat),n2(:,:,lat),
      |      xnmbar(:,:,lat),scht(:,:,lat),lev0,lev1,lon0,lon1,lat)
@@ -726,8 +767,8 @@
 !-----------------------------------------------------------------------
       end module aurora_module
 !-----------------------------------------------------------------------
-      subroutine aurora_ions (drizl,cusp,alfa1,alfa2,alfa3,
-     |  flux1,flux2,flux3,o2,o1,he,n2,xnmbar,scht,
+      subroutine aurora_ions (drizl,cusp,bbealfa,alfa1,alfa2,alfa3,
+     |  bbeflux,flux1,flux2,flux3,o2,o1,he,n2,xnmbar,scht,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate aroral additions to ionization rates.
@@ -757,23 +798,23 @@
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,intent(in),dimension(lon0:lon1) :: drizl,cusp,
-     |  alfa1,alfa2,alfa3,flux1,flux2,flux3
+     |  bbealfa,alfa1,alfa2,alfa3,bbeflux,flux1,flux2,flux3
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
      |  o2,o1,he,n2,xnmbar,scht
 !
 ! Local:
       integer :: i,k
       real,dimension(lev0:lev1,lon0:lon1) :: 
-     |  p0ez, xalfa1, xalfa2, xcusp, xdrizl,       ! input to sub aion
+     |  p0ez, xbbealfa, xalfa1, xalfa2, xcusp, xdrizl,       ! input to sub aion
      |  xalfa_sp, xalfa3,
      |  cusp_ion, drizl_ion,                       ! output from sub aion
-     |  alfa1_ion, alfa2_ion, alfa3_ion,           ! output from sub aion
+     |  bbealfa_ion, alfa1_ion, alfa2_ion, alfa3_ion,           ! output from sub aion
      |  alfasp_bion,                               ! output from sub bion
      |  qsum, denom,
      |  qo2p_aur, qop_aur, qn2p_aur,! auroral ionization for O2+, O+, N2+
      |  qo2p_a, qop_a, qn2p_a
       real,dimension(lon0:lon1) ::
-     |  falfa1, falfa2, fcusp, fdrizl, falfa_sp, falfa3
+     |  fbbealfa, falfa1, falfa2, fcusp, fdrizl, falfa_sp, falfa3
       real :: qia(5) ! low energy proton source (not in use, 1/02)
       real,dimension(lev0:lev1,lon0:lon1) :: qaurora,
      |  o2_cm3,o1_cm3,he_cm3,n2_cm3
@@ -797,6 +838,7 @@
       do i=lon0,lon1
         do k=lev0,lev1
           p0ez(k,i) = (p0*expz(k)/(grav*4.e-6))**0.606
+          xbbealfa(k,i) = p0ez(k,i)/bbealfa(i)
           xalfa1(k,i) = p0ez(k,i)/alfa1(i)
           xalfa2(k,i) = p0ez(k,i)/alfa2(i)
           xalfa3(k,i) = p0ez(k,i)/alfa3(i) ! alfa3(:)==alfa30
@@ -816,11 +858,13 @@
 ! Sub aion calculates auroral electrons: 
 !
       if (.not.use_cion) then
+        call aion(xbbealfa,bbealfa_ion,lev0,lev1,lon0,lon1)
         call aion(xalfa1,alfa1_ion,lev0,lev1,lon0,lon1)
         call aion(xalfa2,alfa2_ion,lev0,lev1,lon0,lon1)
         call aion(xcusp,cusp_ion,lev0,lev1,lon0,lon1)
         call aion(xdrizl,drizl_ion,lev0,lev1,lon0,lon1)
       else
+        call cion(xbbealfa,bbealfa_ion,bbealfa,lev0,lev1,lon0,lon1)
         call cion(xalfa1,alfa1_ion,alfa1,lev0,lev1,lon0,lon1)
         call cion(xalfa2,alfa2_ion,alfa1,lev0,lev1,lon0,lon1)
         call cion(xcusp,cusp_ion,alfa1,lev0,lev1,lon0,lon1)
@@ -835,6 +879,7 @@
 !
       qaurora = 0.
       do i=lon0,lon1
+        fbbealfa(i) = bbealfa(i)*bbeflux(i)
         falfa1(i) = alfa1(i)*flux1(i)  ! s7
         falfa2(i) = alfa2(i)*flux2(i)  ! s8
 
@@ -845,13 +890,14 @@
 ! Pressure column, bottom to top:
         do k=lev0,lev1-1
           falfa_sp(i) = drizl(i)*flx_sp*1.e6/(scht(k,i)*35.)
-          qsum(k,i) = 
+          qsum(k,i) = fbbealfa(i)*bbealfa_ion(k,i)+
      |      falfa1(i)*alfa1_ion(k,i)+  ! s7*s3
      |      falfa2(i)*alfa2_ion(k,i)+  ! s8*s4
      |      fcusp (i)*cusp_ion (k,i)+  ! s9*s5
      |      fdrizl(i)*drizl_ion(k,i)   ! s10*s6
           qaurora(k,i) = 1.e3/(scht(k,i)*35.)*
-     |                  (falfa1(i)*alfa1_ion(k,i)+
+     |                  (fbbealfa(i)*bbealfa_ion(k,i)+
+     |                   falfa1(i)*alfa1_ion(k,i)+
      |                   falfa2(i)*alfa2_ion(k,i))
 !
 ! Include solar protons if add_sproton is set, and high energy electrons

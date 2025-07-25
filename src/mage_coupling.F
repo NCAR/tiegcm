@@ -23,9 +23,13 @@
       real(rp),dimension(nlonp4,nlat) ::
      |  geng,        ! energy in geographic coordinates, periodic boundary
      |  gflx,        ! flux in geographic coordinates, periodic boundary
-     |  gpot         ! potential in geographic coordinates, periodic boundary
-!    |  gBbeAvgEng,  ! BBE Precip Average Eng-geo, periodic boundary
-!    |  gBbeNumFlux, ! BBE Precip Num flux-geo, periodic boundary
+     |  gpot,        ! potential in geographic coordinates, periodic boundary
+     |  gdiffuseeng, ! Diffuse energy in geographic coordinates, periodic boundary
+     |  gdiffuseflx, ! Diffuse flux in geographic coordinates, periodic boundary
+     |  gmonoeng,    ! Mono energy in geographic coordinates, periodic boundary
+     |  gmonoflx,    ! Mono flux in geographic coordinates, periodic boundary
+     |  gBbeAvgEng,  ! BBE Precip Average Eng-geo, periodic boundary
+     |  gBbeNumFlux  ! BBE Precip Num flux-geo, periodic boundary
 !    |  gCuspAvgEng, ! Cusp Precip Average Eng-geo, periodic boundary
 !    |  gCuspNumFlux ! Cusp Precip Num flux-geo, periodic boundary
 
@@ -69,8 +73,14 @@
       real(rp),dimension(nlonp1) :: glonp1
 
       !gpot = 0
-      geng = 0.5_rp
+      geng = 0.0_rp
       gflx = 0.0_rp
+      gdiffuseeng = 0.0_rp
+      gdiffuseflx = 0.0_rp
+      gmonoeng = 0.0_rp
+      gmonoflx = 0.0_rp
+      gBbeAvgEng = 0.0_rp
+      gBbeNumFlux = 0.0_rp
       gpotm = 0.0_rp
       apotm = 0.0_rp
       aflxm  = 0.0_rp
@@ -169,6 +179,14 @@
           !gpot(i+2,j) = var2d(j+1,i,1)
           geng(i+2,j) = gvar2d(j+1,i,1)
           gflx(i+2,j) = gvar2d(j+1,i,2)
+! These fields are used only in one-way mode (read from mix data file)
+! Zero them out in two-way mode at the moment
+          gdiffuseeng(i+2,j) = 0.0_rp
+          gdiffuseflx(i+2,j) = 0.0_rp
+          gmonoeng(i+2,j) = 0.0_rp
+          gmonoflx(i+2,j) = 0.0_rp
+          gBbeAvgEng(i+2,j) = 0.0_rp
+          gBbeNumFlux(i+2,j) = 0.0_rp
           !gpotm(i+2,j) = var2d(j+1,i,1)
         enddo
         !gpotm(nlonp1+2,j) = var2d(j+1,nlonp1,1)
@@ -181,7 +199,11 @@
         enddo
       enddo
       else
-        call ca_receive(gpot,geng,gflx,gpotm,aurllbN,aurllbS)
+        call ca_receive(gpot,geng,gflx,
+     |    gdiffuseeng,gdiffuseflx,
+     |    gmonoeng,gmonoflx,
+     |    gBbeAvgEng,gBbeNumFlux,
+     |    gpotm,aurllbN,aurllbS)
       endif
 #endif
       end subroutine import_mage
@@ -237,11 +259,23 @@
           !gpot(i,j) = gpot(nlon+i,j)
           geng(i,j) = geng(nlon+i,j)
           gflx(i,j) = gflx(nlon+i,j)
+          gdiffuseeng(i,j) = gdiffuseeng(nlon+i,j)
+          gdiffuseflx(i,j) = gdiffuseflx(nlon+i,j)
+          gmonoeng(i,j) = gmonoeng(nlon+i,j)
+          gmonoflx(i,j) = gmonoflx(nlon+i,j)
+          gBbeAvgEng(i,j) = gBbeAvgEng(nlon+i,j)
+          gBbeNumFlux(i,j) = gBbeNumFlux(nlon+i,j)
           !gpotm(i,j) = gpotm(nlon+i,j)
 
           !gpot(nlonp2+i,j) = gpot(i+2,j)
           geng(nlonp2+i,j) = geng(i+2,j)
           gflx(nlonp2+i,j) = gflx(i+2,j)
+          gdiffuseeng(nlonp2+i,j) = gdiffuseeng(i+2,j)
+          gdiffuseflx(nlonp2+i,j) = gdiffuseflx(i+2,j)
+          gmonoeng(nlonp2+i,j) = gmonoeng(i+2,j)
+          gmonoflx(nlonp2+i,j) = gmonoflx(i+2,j)
+          gBbeAvgEng(nlonp2+i,j) = gBbeAvgEng(i+2,j)
+          gBbeNumFlux(nlonp2+i,j) = gBbeNumFlux(i+2,j)
           !gpotm(nlonp2+i,j) = gpotm(i+2,j)
         enddo
       enddo

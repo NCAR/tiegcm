@@ -15,11 +15,11 @@
       real*8, allocatable,dimension(:,:) :: mixX,mixY,mixZ
       real*8, allocatable,dimension(:,:) :: mixlat,mixlon,mixcolat
       real*8, allocatable,dimension(:,:) :: mixPotN,mixEngN,
-     |  mixFluxN,mixBEngN
-      real*8, allocatable,dimension(:,:) :: mixBFluxN,mixCEngN,mixCFluxN
+     |  mixFluxN,mixBEngN,mixBFluxN,mixCEngN,mixCFluxN,mixAurTypeN,
+     |  mixDiffuseEngN,mixDiffuseFluxN,mixMonoEngN,mixMonoFluxN
       real*8, allocatable,dimension(:,:) :: mixPotS,mixEngS,
-     |  mixFluxS,mixBEngS
-      real*8, allocatable,dimension(:,:) :: mixBFluxS,mixCEngS,mixCFluxS
+     |  mixFluxS,mixBEngS,mixBFluxS,mixCEngS,mixCFluxS,mixAurTypeS,
+     |  mixDiffuseEngS,mixDiffuseFluxS,mixMonoEngS,mixMonoFluxS
       real*8, allocatable,dimension(:,:) :: tmpvar
       real*8, allocatable,dimension(:,:) :: mixOutX,mixOutY,mixOutZ
       real*8 :: LowLatBoundary
@@ -40,7 +40,11 @@
      |  ting_bbeAvgEng_interp, ! BBE Average Energy geo coord from MIX
      |  ting_bbeNumFlux_interp,  ! BBE Number flux geo coord from MIX
      |  ting_cuspAvgEng_interp, ! Cusp Average Energy geo coord from MIX
-     |  ting_cuspNumFlux_interp  ! Cusp Number flux geo coord from MIX
+     |  ting_cuspNumFlux_interp,  ! Cusp Number flux geo coord from MIX
+     |  ting_diffuseeng_interp,  ! Diffuse energy in geo coord from MIX
+     |  ting_diffuseflux_interp, ! Diffuse flux in geo coord from MIX
+     |  ting_monoeng_interp,     ! Mono energy in geo coord from MIX
+     |  ting_monoflux_interp     ! Mono flux in geo coord from MIX
 
       integer :: h5fId,inId,gId
 
@@ -104,6 +108,18 @@
       endif
       if (.not. allocated(ting_cuspNumFlux_interp)) then
         allocate(ting_cuspNumFlux_interp(nlat,nlonp1))
+      endif
+      if (.not. allocated(ting_diffuseeng_interp)) then
+        allocate(ting_diffuseeng_interp(nlat,nlonp1))
+      endif
+      if (.not. allocated(ting_diffuseflux_interp)) then
+        allocate(ting_diffuseflux_interp(nlat,nlonp1))
+      endif
+      if (.not. allocated(ting_monoeng_interp)) then
+        allocate(ting_monoeng_interp(nlat,nlonp1))
+      endif
+      if (.not. allocated(ting_monoflux_interp)) then
+        allocate(ting_monoflux_interp(nlat,nlonp1))
       endif
 
       if (mytid == 0) then
@@ -203,6 +219,21 @@
       if (.not.allocated(mixCFluxN)) then
          allocate(mixCFluxN(nmixlat,nmixlon))
       endif
+      if (.not.allocated(mixAurTypeN)) then
+         allocate(mixAurTypeN(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixDiffuseEngN)) then
+         allocate(mixDiffuseEngN(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixDiffuseFluxN)) then
+         allocate(mixDiffuseFluxN(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixMonoEngN)) then
+         allocate(mixMonoEngN(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixMonoFluxN)) then
+         allocate(mixMonoFluxN(nmixlat,nmixlon))
+      endif
       ! Allocate South Arrays
       if (.not.allocated(mixPotS)) then
          allocate(mixPotS(nmixlat,nmixlon))
@@ -224,6 +255,21 @@
       endif
       if (.not.allocated(mixCFluxS)) then
          allocate(mixCFluxS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixAurTypeS)) then
+         allocate(mixAurTypeS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixDiffuseEngS)) then
+         allocate(mixDiffuseEngS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixDiffuseFluxS)) then
+         allocate(mixDiffuseFluxS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixMonoEngS)) then
+         allocate(mixMonoEngS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixMonoFluxS)) then
+         allocate(mixMonoFluxS(nmixlat,nmixlon))
       endif
 
       if (.not. allocated(mixaurorabc1d)) then
@@ -252,6 +298,11 @@
       mixBFluxN = 0.0
       mixCEngN  = 0.0
       mixCFluxN = 0.0
+      mixAurTypeN = 0.0
+      mixDiffuseEngN = 0.0
+      mixDiffuseFluxN = 0.0
+      mixMonoEngN = 0.0
+      mixMonoFluxN = 0.0
       ! South
       mixPotS   = 0.0
       mixEngS   = 0.0
@@ -260,6 +311,11 @@
       mixBFluxS = 0.0
       mixCEngS  = 0.0
       mixCFluxS = 0.0
+      mixAurTypeS = 0.0
+      mixDiffuseEngS = 0.0
+      mixDiffuseFluxS = 0.0
+      mixMonoEngS = 0.0
+      mixMonoFluxS = 0.0
       if (mytid == 0) then
          !write(6,*) "mix Z: ",mixZ
          write(6,*) "mix Lat grid1: ", mixlat(1,:)
@@ -438,7 +494,11 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      subroutine ca_receive(gpot,geng,gflx,gpotm,aurllbN,aurllbS)
+      subroutine ca_receive(gpot,geng,gflx,
+     |  gdiffuseeng,gdiffuseflx,
+     |  gmonoeng,gmonoflx,
+     |  gBbeAvgEng,gBbeNumFlux,
+     |  gpotm,aurllbN,aurllbS)
 !
 ! This is a subroutine to receive auroral data via file exchanges
 ! via HDF5 format from REMIX
@@ -454,7 +514,13 @@
       real,dimension(nlonp4,nlat) ::
      |  gpot,        ! potential in geographic coordinates, periodic boundary
      |  geng,        ! energy in geographic coordinates, periodic boundary
-     |  gflx         ! flux in geographic coordinates, periodic boundary
+     |  gflx,        ! flux in geographic coordinates, periodic boundary
+     |  gdiffuseeng, ! diffuse energy in geographic coordinates, periodic boundary
+     |  gdiffuseflx, ! diffuse flux in geographic coordinates, periodic boundary
+     |  gmonoeng,    ! mono energy in geographic coordinates, periodic boundary
+     |  gmonoflx,    ! mono flux in geographic coordinates, periodic boundary
+     |  gBbeAvgEng,  ! BBE energy in geographic coordinates, periodic boundary
+     |  gBbeNumFlux  ! BBE flux in geographic coordinates, periodic boundary
       real,dimension(nlonp4,0:nlatp1) :: gpotm
 
 !
@@ -463,14 +529,15 @@
       character(len=mxlen_filename) :: filename
       integer,dimension(5) :: utime
       real*8,dimension(4) :: x,mapping
-      real*8,dimension(4) :: FPot,FEng,FFlux,FBEng,FBFlux,FCEng,FCFlux
+      real*8,dimension(4) :: FPot,FEng,FFlux,FBEng,FBFlux,FCEng,FCFlux,
+     |  FDiffuseEng,FDiffuseFlux,FMonoEng,FMonoFlux
       real*8 :: xgsm,ygsm,zgsm,xsm,ysm,zsm
       real*8 :: tempLat, tempLon,tempproduct
       real*8 :: tempcolat
       real*8 :: mixtime,gcmtime,csec
       integer :: cyr,cdoy,cmon,cday,chr,cmin
       integer :: i,j,j1,i1,j1p1
-      integer :: istat, oldStep, req(7)
+      integer :: istat, oldStep, req(11)
       integer :: id_nlat,id_nlon,idv_colat
       integer :: idv_lon,idv_pot,idv_flx,idv_eng
       character(len=240) :: char240,gStr
@@ -543,6 +610,10 @@
       ting_bbeNumFlux_interp = 0.0
       ting_cuspAvgEng_interp = 0.0
       ting_cuspNumFlux_interp = 0.0
+      ting_diffuseeng_interp = 0.0
+      ting_diffuseflux_interp = 0.0
+      ting_monoeng_interp = 0.0
+      ting_monoflux_interp = 0.0
 
       write(gStr,'(A,I0)') "Step#", s0 + cStep - 1
       write(6,*) "REMIX READING: ", cStep, MJDs(cStep),cyr,
@@ -553,11 +624,17 @@
       call read2DVariable("Potential NORTH",mixPotN)
       call read2DVariable("Number flux NORTH",mixFluxN)
       call read2DVariable("Average energy NORTH",mixEngN)
+      call read2DVariable("BBE number flux NORTH",mixBFluxN)
+      call read2DVariable("BBE average energy NORTH",mixBEngN)
+      call read2DVariable("Auroral model type NORTH",mixAurTypeN)
 
       ! SOUTH
       call read2DVariable("Potential SOUTH",mixPotS)
       call read2DVariable("Number flux SOUTH",mixFluxS)
       call read2DVariable("Average energy SOUTH",mixEngS)
+      call read2DVariable("BBE number flux SOUTH",mixBFluxS)
+      call read2DVariable("BBE average energy SOUTH",mixBEngS)
+      call read2DVariable("Auroral model type SOUTH",mixAurTypeS)
 
       if (mytid==0) then
       write(6,*) "TGCM: before transformN: ", minval(mixPotN),
@@ -567,15 +644,35 @@
       endif
 
       mixPotN = mixPotN*1.e3 !Volts!
-      mixBEngN  = 0.
-      mixBFluxN = 0.
       mixCEngN  = 0.
       mixCFluxN = 0.
+      mixDiffuseEngN = mixEngN
+      mixDiffuseFluxN = mixFluxN
+      where (abs(mixAurTypeN-3) < 0.1_rp)
+        mixDiffuseEngN = 0.0_rp
+        mixDiffuseFluxN = 0.0_rp
+      endwhere
+      mixMonoEngN = mixEngN
+      mixMonoFluxN = mixFluxN
+      where (abs(mixAurTypeN-1)<0.1_rp .or. abs(mixAurTypeN-2)<0.1_rp)
+        mixMonoEngN = 0.0_rp
+        mixMonoFluxN = 0.0_rp
+      endwhere
       mixPotS = mixPotS*1.e3 !Volts!
-      mixBEngS  = 0.
-      mixBFluxS = 0.
       mixCEngS  = 0.
       mixCFluxS = 0.
+      mixDiffuseEngS = mixEngS
+      mixDiffuseFluxS = mixFluxS
+      where (abs(mixAurTypeS-3) < 0.1_rp)
+        mixDiffuseEngS = 0.0_rp
+        mixDiffuseFluxS = 0.0_rp
+      endwhere
+      mixMonoEngS = mixEngS
+      mixMonoFluxS = mixFluxS
+      where (abs(mixAurTypeS-1)<0.1_rp .or. abs(mixAurTypeS-2)<0.1_rp)
+        mixMonoEngS = 0.0_rp
+        mixMonoFluxS = 0.0_rp
+      endwhere
 
       ! find auroral boundary
       do j=1,nmixlon
@@ -673,6 +770,14 @@
      |    mixCEngN(i1-1,j1),mixCEngN(i1-1,j1p1) /)
       FCFlux = (/mixCFluxN(i1,j1),mixCFluxN(i1,j1p1),
      |    mixCFluxN(i1-1,j1),mixCFluxN(i1-1,j1p1) /)
+      FDiffuseEng = (/mixDiffuseEngN(i1,j1),mixDiffuseEngN(i1,j1p1),
+     |    mixDiffuseEngN(i1-1,j1),mixDiffuseEngN(i1-1,j1p1) /)
+      FDiffuseFlux = (/mixDiffuseFluxN(i1,j1),mixDiffuseFluxN(i1,j1p1),
+     |    mixDiffuseFluxN(i1-1,j1),mixDiffuseFluxN(i1-1,j1p1) /)
+      FMonoEng = (/mixMonoEngN(i1,j1),mixMonoEngN(i1,j1p1),
+     |    mixMonoEngN(i1-1,j1),mixMonoEngN(i1-1,j1p1) /)
+      FMonoFlux = (/mixMonoFluxN(i1,j1),mixMonoFluxN(i1,j1p1),
+     |    mixMonoFluxN(i1-1,j1),mixMonoFluxN(i1-1,j1p1) /)
 
       ting_pot_interp(i,j) = dot_product(mapping,FPot)
       tempproduct = mapping(1)*FPot(1)+mapping(2)*FPot(2)+
@@ -684,6 +789,14 @@
       ting_cuspAvgEng_interp(i,j) = max(dot_product(mapping,FCEng),0.0)
       ting_cuspNumFlux_interp(i,j) = max(dot_product(
      |   mapping,FCFlux),0.0)
+      ting_diffuseeng_interp(i,j) =
+     |   max(dot_product(mapping,FDiffuseEng),0.0)
+      ting_diffuseflux_interp(i,j) =
+     |   max(dot_product(mapping,FDiffuseFlux),0.0)
+      ting_monoeng_interp(i,j) =
+     |   max(dot_product(mapping,FMonoEng),0.0)
+      ting_monoflux_interp(i,j) =
+     |   max(dot_product(mapping,FMonoFlux),0.0)
       if (mytid == 0 .and. tempproduct.ne.ting_pot_interp(i,j)) then
          write(6,*) "TGCM: OOB POTN: ", ting_pot_interp(i,j),i,j,i1,j1
          write(6,*) "TGCM: OOB LOCN: ", tempLon,tempLat,mixLon(j1,i1),
@@ -770,6 +883,14 @@
      |    mixCEngS(i1-1,j1),mixCEngS(i1-1,j1p1) /)
       FCFlux = (/mixCFluxS(i1,j1),mixCFluxS(i1,j1p1),
      |    mixCFluxS(i1-1,j1),mixCFluxS(i1-1,j1p1) /)
+      FDiffuseEng = (/mixDiffuseEngS(i1,j1),mixDiffuseEngS(i1,j1p1),
+     |    mixDiffuseEngS(i1-1,j1),mixDiffuseEngS(i1-1,j1p1) /)
+      FDiffuseFlux = (/mixDiffuseFluxS(i1,j1),mixDiffuseFluxS(i1,j1p1),
+     |    mixDiffuseFluxS(i1-1,j1),mixDiffuseFluxS(i1-1,j1p1) /)
+      FMonoEng = (/mixMonoEngS(i1,j1),mixMonoEngS(i1,j1p1),
+     |    mixMonoEngS(i1-1,j1),mixMonoEngS(i1-1,j1p1) /)
+      FMonoFlux = (/mixMonoFluxS(i1,j1),mixMonoFluxS(i1,j1p1),
+     |    mixMonoFluxS(i1-1,j1),mixMonoFluxS(i1-1,j1p1) /)
 
       ting_pot_interp(i,j) = dot_product(mapping,FPot)
       ting_eng_interp(i,j) = max(dot_product(mapping,FEng),0.0)
@@ -780,6 +901,14 @@
       ting_cuspAvgEng_interp(i,j) = max(dot_product(mapping,FCEng),0.0)
       ting_cuspNumFlux_interp(i,j) =
      |   max(dot_product(mapping,FCFlux),0.0)
+      ting_diffuseeng_interp(i,j) =
+     |   max(dot_product(mapping,FDiffuseEng),0.0)
+      ting_diffuseflux_interp(i,j) =
+     |   max(dot_product(mapping,FDiffuseFlux),0.0)
+      ting_monoeng_interp(i,j) =
+     |   max(dot_product(mapping,FMonoEng),0.0)
+      ting_monoflux_interp(i,j) =
+     |   max(dot_product(mapping,FMonoFlux),0.0)
       if (mytid==0.and.
      |   abs(ting_pot_interp(i,j)).gt.maxval(abs(FPot))*2.0) then
          write(6,*) "TGCM: OOB POTS: ", ting_pot_interp(i,j),i,j,i1,j1
@@ -803,11 +932,17 @@
       ting_bbeNumFlux_interp(:,nlonp1) = ting_bbeNumFlux_interp(:,1)
       ting_cuspAvgEng_interp(:,nlonp1) = ting_cuspAvgEng_interp(:,1)
       ting_cuspNumFlux_interp(:,nlonp1) = ting_cuspNumFlux_interp(:,1)
+      ting_diffuseeng_interp(:,nlonp1) = ting_diffuseeng_interp(:,1)
+      ting_diffuseflux_interp(:,nlonp1) = ting_diffuseflux_interp(:,1)
+      ting_monoeng_interp(:,nlonp1) = ting_monoeng_interp(:,1)
+      ting_monoflux_interp(:,nlonp1) = ting_monoflux_interp(:,1)
 
       ! convert to correct energy
       ting_eng_interp = ting_eng_interp *0.5 !mean energy -> characteristic energy
       ting_bbeAvgEng_interp = ting_bbeAvgEng_interp*0.5
       ting_cuspAvgEng_interp = ting_cuspAvgEng_interp*0.5
+      ting_diffuseeng_interp = ting_diffuseeng_interp*0.5
+      ting_monoeng_interp = ting_monoeng_interp*0.5
 
       !call closeGroup()
       !call closeMixfile()
@@ -837,13 +972,27 @@
      |     TIEGCM_WORLD,req(6),ierr)
       call mpi_ibcast(ting_cuspNumFlux_interp,nlat*nlonp1,MPI_REAL8,0,
      |     TIEGCM_WORLD,req(7),ierr)
-      call mpi_waitall(7,req,MPI_STATUSES_IGNORE,ierr)
+      call mpi_ibcast(ting_diffuseeng_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(8),ierr)
+      call mpi_ibcast(ting_diffuseflux_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(9),ierr)
+      call mpi_ibcast(ting_monoeng_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(10),ierr)
+      call mpi_ibcast(ting_monoflux_interp,nlat*nlonp1,MPI_REAL8,0,
+     |     TIEGCM_WORLD,req(11),ierr)
+      call mpi_waitall(11,req,MPI_STATUSES_IGNORE,ierr)
 
       !write(*,*) " I AM DONE BCAST: ",mytid
 
       gpot = 0.
       geng = 0.
       gflx = 0.
+      gdiffuseeng = 0.
+      gdiffuseflx = 0.
+      gmonoeng = 0.
+      gmonoflx = 0.
+      gBbeAvgEng = 0.
+      gBbeNumFlux = 0.
       gpotm = 0.
 
       do jj=1,nlat
@@ -852,8 +1001,12 @@
             gpot(ii+2,jj)=ting_pot_interp(jj,ii) !/1.2
             geng(ii+2,jj)=ting_eng_interp(jj,ii)
             gflx(ii+2,jj)=ting_flux_interp(jj,ii)
-!            gBbeAvgEng(ii+2,jj)=ting_bbeAvgEng_interp(jj,ii)
-!            gBbeNumFlux(ii+2,jj)=ting_bbeNumFlux_interp(jj,ii)
+            gdiffuseeng(ii+2,jj)=ting_diffuseeng_interp(jj,ii)
+            gdiffuseflx(ii+2,jj)=ting_diffuseflux_interp(jj,ii)
+            gmonoeng(ii+2,jj)=ting_monoeng_interp(jj,ii)
+            gmonoflx(ii+2,jj)=ting_monoflux_interp(jj,ii)
+            gBbeAvgEng(ii+2,jj)=ting_bbeAvgEng_interp(jj,ii)
+            gBbeNumFlux(ii+2,jj)=ting_bbeNumFlux_interp(jj,ii)
 !            gCuspAvgEng(ii+2,jj)=ting_cuspAvgEng_interp(jj,ii)
 !            gCuspNumFlux(ii+2,jj)=ting_cuspNumFlux_interp(jj,ii)
          enddo
