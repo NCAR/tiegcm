@@ -71,6 +71,7 @@ def engage_parser(engage_parameters):
         job_priority = o['job_priority']
     elif hpc_system == 'pleiades':
         group_list = o['group_list']
+        node_type = o['other'].split('=')[1]
     walltime = o['walltime']
     modules = o['modules']
 
@@ -118,7 +119,7 @@ def engage_parser(engage_parameters):
     if hpc_system == "derecho":
         eo['job_priority'] = job_priority
     elif hpc_system == 'pleiades':
-        eo["model"] = "bro"
+        eo['model'] = node_type
     
     eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','model','walltime']
     
@@ -201,7 +202,8 @@ def engage_options_updater(options, engage_options, option_descriptions):
             on["mpiprocs"] = mpiprocs_default
     elif hpc_platform == "pleiades":
         if on.get("model") is None:
-            on["model"] = "bro"
+            on["model"] = engage_options["model"]
+        print(f"Using model type: {on['model']}")
         select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
         if on.get("select") is None:
             on["select"] = select_default

@@ -216,6 +216,12 @@ def select_resource_defaults(options, option_descriptions):
         elif o["model"] == "san":
             max_ncpus = 16
             mpiprocs_default = 12
+        elif o["model"] == "sky_ele":
+            max_ncpus = 40
+            mpiprocs_default = 36
+        elif o["model"] == "bro_ele":
+            max_ncpus = 28
+            mpiprocs_default = 24
         for on in od:
             if on == "select":
                 if float(horires) == 2.5 or float(horires) == 5:
