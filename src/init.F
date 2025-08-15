@@ -4,7 +4,6 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-      use params_module,only: nlon,nlat,nlonp4
       implicit none
 !
 ! istep: the current time step index. istep is initialized
@@ -53,9 +52,6 @@
      |  sundec,         ! sun's declination (updated in advnce)
      |  sin_sundec,     ! sin(sundec) (updated in advnceday)
      |  cos_sundec      ! cos(sundec) (updated in advnceday)
-!
-! Day/night index is set by chapman.F:
-      integer :: idn(nlonp4)        ! day/night index
 !
       contains
 !-----------------------------------------------------------------------

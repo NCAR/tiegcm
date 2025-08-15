@@ -8,7 +8,7 @@
 ! Module used to calculcate the Heelis model potential in both hemispheres
 ! Byimf, Ctpoten and Power at a minimum using paramaters from aurora_cons
 !
-      use params_module,only: nmlat,nmlonp1,nmlon,nmlonp1
+      use params_module,only: nmlat,nmlonp1
       implicit none
       integer,parameter :: nmlat0=(nmlat+1)/2
       real,dimension(nmlonp1,nmlat)  :: phihm  ! potential in magnetic
@@ -35,6 +35,7 @@
       end subroutine heelis
 !-----------------------------------------------------------------------
       subroutine potm
+      use params_module,only: nmlon
       use magfield_module,only: sunlons 
       use cons_module,only: 
      |  ylonm,ylatm, ! magnetic grid lons, lats
@@ -69,6 +70,7 @@
 !
 ! Calculate heelis potential at current magnetic latitude mlat.
 !
+      use params_module,only: nmlon
       use aurora_module,only: offc,dskofc,phin,phid,theta0,
      |  psie,psim,pcen,phidm0,phidp0,phinm0,phinp0,rr1
       use cons_module,only: pi
@@ -82,11 +84,11 @@
 ! Local:
       integer :: i,n,ihem
       real :: 
-     |  sinthr1,psi(8),phirc,sinth0,
+     |  sinthr1,psi(8),sinth0,
      |  ofdc,cosofc,sinofc,aslonc,
      |  phdpmx,phnpmx,phnmmx,phdmmx,
      |  sinlat,coslat,sincolat,
-     |  width,fac1,fac2
+     |  width,dphi,fac1,fac2
       real,dimension(nmlon) :: sinlon,coslon,alon,colat,
      |  alonrc,alonrcrot,phifun,phifn2
       real :: phi(nmlon,8)
@@ -135,9 +137,9 @@
         sinlon(i) = sin(dlon(i)+aslonc)
         coslon(i) = cos(dlon(i)+aslonc)
         colat(i) = acos(cosofc*sinlat-sinofc*coslat*coslon(i))
-        alon(i) = amod(atan2(sinlon(i)*coslat,
+        alon(i) = modulo(atan2(sinlon(i)*coslat,
      |    sinlat*sinofc+cosofc*coslat*coslon(i))-
-     |    aslonc+3.*pi,2.*pi)-pi
+     |    aslonc,2.*pi)
 !
 ! Boundaries for longitudinal function:
 !
@@ -155,11 +157,8 @@
         phi(i,3)=phi(i,7)-2.*pi
         phi(i,8)=phi(i,4)+2.*pi
 !
-! Add ring current rotation to potential (phirc)
-!
-        phirc = 0.
-        alonrc(i) = amod(alon(i)+phirc+5.*pi,2.*pi)-pi
-        alonrcrot(i) = amod(alon(i)+phirc+6.*pi,2.*pi)-pi
+        alonrc(i) = modulo(alon(i)+pi,2.*pi)-pi
+        alonrcrot(i) = alon(i)-pi
       enddo ! i=1,nmlon
 !
 ! Longitudinal variation:
@@ -193,10 +192,10 @@
       do i=1,nmlon
         if (colat(i) < theta0(ihem)) then
           width = colat(i)/theta0(ihem)
-          poten(i) = (2.*(pcen(ihem)-phifun(i))+
-     |      (phifun(i)-phifn2(i))*0.75)*width**3 +
+          dphi = (phifun(i)-phifn2(i))*0.75
+          poten(i) = (2.*(pcen(ihem)-phifun(i))+dphi)*width**3 +
      |      (1.5*(phifun(i)+phifn2(i))-3.*pcen(ihem))*width**2 +
-     |      0.75*(phifun(i)-phifn2(i))*width + pcen(ihem)
+     |      dphi*width + pcen(ihem)
         else
           sincolat = sin(colat(i))
 !

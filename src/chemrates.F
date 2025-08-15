@@ -5,8 +5,6 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-      use params_module,only: nlevp1,nlonp4
-!
 ! Chemical reaction rates.
 !
 ! Temperature independent rates are real parameters (constants),
@@ -26,59 +24,55 @@
       real,parameter ::
 !
 ! Ion chemistry:
-     |  rk4   = 1.0E-10,  ! O2+ + N4S -> NO+ + O   + 4.21 eV
-     |  rk5   = 4.4E-10,  ! O2+ + NO  -> NO+ + O2  + 2.813 eV
-     |  rk6   = 4.0E-10,  ! N+  + O2  -> O2+ + N4S + 2.486 eV
-     |  rk7   = 2.0E-10,  ! N+  + O2  -> NO+ + O   + 6.669 eV
-     |  rk8   = 1.0E-12,  ! N+  + O   -> O+  + N   + 0.98 eV
-     |  rk9   = 6.0E-11,  ! N2+ + O2  -> O2+ + N2  + 3.52 eV
-     |  rk10  = 1.3E-10,  ! O+  + N2D -> N+  + O   + 1.45 eV
-     |  rk16  = 4.8E-10,  ! O+(2P) + N2 -> N2+ + O  + 3.02 eV
-     |  rk17  = 1.0E-10,  ! O+(2P) + N2 -> N+  + NO + 0.70 eV
-     |  rk18  = 4.0E-10,  ! O+(2P) + O  -> O+  + O  + 5.2 eV
-     |  rk21  = 0.047,    ! O+(2P)      -> O+  + hv (2470A)
-     |  rk22  = 0.171,    ! O+(2P)      -> O+  + hv (7320A)
-     |  rk23  = 8.E-10,   ! O+(2D)      -> N2+O     + 1.33 eV
-     |  rk24  = 5.0E-12,  ! O+(2D) + O  -> O+(4S) +e+ 3.31 eV
-     |  rk26  = 7.E-10,   ! O+(2D) + O2 -> O2+O     + 4.865 eV
-     |  rk27  = 7.7E-5,
+     |  rk4  = 1.0E-10, ! O2+    + N(4S) -> NO+    + O     + 4.21  eV
+     |  rk5  = 4.4E-10, ! O2+    + NO    -> NO+    + O2    + 2.813 eV
+     |  rk6  = 4.0E-10, ! N+     + O2    -> O2+    + N(4S) + 2.486 eV
+     |  rk7  = 2.0E-10, ! N+     + O2    -> NO+    + O     + 6.699 eV
+     |  rk8  = 1.0E-12, ! N+     + O     -> O+(4S) + N(4S) + 0.98  eV
+     |  rk9  = 6.0E-11, ! N2+    + O2    -> O2+    + N2    + 3.52  eV
+     |  rk10 = 1.3E-10, ! O+(4S) + N(2D) -> N+     + O     + 1.45  eV
+     |  rk16 = 4.8E-10, ! O+(2P) + N2    -> N2+    + O     + 3.02  eV
+     |  rk17 = 1.0E-10, ! O+(2P) + N2    -> N+     + NO    + 0.7   eV
+     |  rk18 = 4.0E-10, ! O+(2P) + O     -> O+(4S) + O     + 5.0   eV
+     |  rk21 = 0.047,   ! O+(2P)         -> O+(4S) + hv     (5.02  eV)
+     |  rk22 = 0.171,   ! O+(2P)         -> O+(2D) + hv     (1.69  eV)
+     |  rk23 = 8.E-10,  ! O+(2D) + N2    -> N2+    + O     + 1.33  eV
+     |  rk24 = 5.0E-12, ! O+(2D) + O     -> O+(4S) + O     + 3.31  eV
+     |  rk26 = 7.E-10,  ! O+(2D) + O2    -> O2+    + O     + 4.87  eV
+     |  rk27 = 7.7E-5,  ! O+(2D)         -> O+(4S) + hv     (3.33  eV)
 !
 ! Neutral chemistry:
-!     |  beta2 = 5.0E-12,  ! N2D + O2 -> NO  + O1D + 1.84 eV
-     |  beta4 = 7.0E-13,  ! N2D + O  -> N4S + O   + 2.38 eV
-     |  beta6 = 7.0E-11,  ! N2D + NO -> N2  + O   + 5.63 eV
-     |  beta7 = 1.06E-5   ! N2D      -> N4S + hv
+!     |  beta2 = 5.0E-12, ! N(2D) + O2 -> NO    + O + 1.84 eV
+     |  beta4 = 7.0E-13, ! N(2D) + O  -> N(4S) + O + 2.38 eV
+     |  beta6 = 7.0E-11, ! N(2D) + NO -> N2    + O + 5.63 eV
+     |  beta7 = 1.06E-5  ! N(2D)      -> N(4S) + hv
 !
 ! Temperature dependent chemical reaction rate coefficients. 
 ! These are set by rates_tdep for every latitude at every timestep. 
 !
-!     real,dimension(nlevp1,nlonp4) :: 
-!
       real,dimension(:,:,:),allocatable :: ! (nlevp1,lon0:lon1,lat0:lat1)
 !
 ! Ion chemistry:
-     |  rk1, ! O+  + O2 -> O + O2+ + 1.555 eV
-     |  rk2, ! O+  + N2 -> NO+ + N4s + 1.0888 eV
-     |  rk3, ! N2+ + O  -> NO+ + N2D + 0.70 eV
-     |  ra1, ! NO+ + e  -> (20% N4S + O + 2.75 eV), (80% N2D + O + 0.38 eV)
-     |  ra2, ! O2+ + e  -> (15% O   + O + 6.95 eV), (85% O   + O + 4.98 eV)
-     |  ra3, ! N2+ + e  -> (10% N4S + N4S + 5.82 eV), (90% N4S + N2D + 3.44 eV)
+     |  rk1,  ! O+(4S) + O2 -> O2+    + O     + 1.555  eV
+     |  rk2,  ! O+(4S) + N2 -> NO+    + N(4S) + 1.0888 eV
+     |  rk3,  ! N2+    + O  -> NO+    + N(2D) + 0.70   eV
+     |  rk19, ! O+(2P) + e  -> O+(4S) + e     + 5.0    eV
+     |  rk20, ! O+(2P) + e  -> O+(2D) + e     + 1.69   eV
+     |  rk25, ! O+(2D) + e  -> O+(4S) + e     + 3.31   eV
+     |  ra1,  ! NO+    + e  -> 20% [N(4S) + O     + 2.75 eV], 80% [N(2D) + O     + 0.38 eV]
+     |  ra2,  ! O2+    + e  -> 15% [O     + O     + 6.95 eV], 85% [O     + O     + 4.98 eV]
+     |  ra3,  ! N2+    + e  -> 10% [N(4S) + N(4S) + 5.82 eV], 90% [N(4S) + N(2D) + 3.44 eV]
 !
 ! Neutral chemistry:
-     |  beta1, ! N4S + O2 -> NO  + O + 1.4  eV
-     |  beta2, ! N2D + O2 -> NO  + O1D + 1.84 eV
-     |  beta3, ! N4S + NO -> N2  + O + 3.25 eV
-     |  beta5, ! N2D + e  -> N4S + e + 2.38 eV
-     |  beta8, ! NO  + hv -> N4S + O
-     |  beta9, ! NO  + hv/Ly-a -> NO+ + e
-     |  beta9n,
-     |  beta17,
-
-     |  rk19,  ! O+(2P) + e -> O+(4S) + e + 5.0  eV
-     |  rk20,  ! O+(2P) + e -> O+(2O) + e + 1.69 eV
-     |  rk25,  ! O+(2D) + e -> O+(4S) + e + 3.31 eV
-     |  rkm12, ! O + O + N2 -> O2 + N2
-     |  tvib
+     |  beta1,  ! N(4S) + O2 -> NO    + O + 1.4  eV
+     |  beta2,  ! N(2D) + O2 -> NO    + O + 1.84 eV
+     |  beta3,  ! N(4S) + NO -> N2    + O + 2.68 eV
+     |  beta5,  ! N(2D) + e  -> N(4S) + e + 2.38 eV
+     |  beta8,  ! NO    + hv -> N(4S) + O
+     |  beta9,  ! NO    + hv -> NO+   + e
+     |  beta9n, ! NO         -> ?
+     |  beta17, ! O + N2 + N(4S) -> NO + N2
+     |  rkm12   ! O + O  + N2    -> O2 + N2 + 5.11eV
 !
 ! Matrices for O2,O,He (set by comp_o2o.F, used by comp.F) 
       real,allocatable :: fs(:,:,:,:,:) ! (i,k,3,0:3,j)
@@ -90,6 +84,7 @@
 ! Allocate temperature-dependent reaction rates for task subdomain: 
 ! Called once per run from init_fields.
 !
+      use params_module,only: nlevp1
       use mpi_module,only: lon0,lon1,lat0,lat1
       integer :: istat
 !
@@ -147,9 +142,6 @@
       allocate(rkm12(nlevp1,lon0:lon1,lat0:lat1),stat=istat)
       if (istat /= 0) write(6,"('>>> alloc_tdep: error allocating',
      |  ' rkm12: stat=',i3)") istat
-      allocate(tvib(nlevp1,lon0:lon1,lat0:lat1),stat=istat)
-      if (istat /= 0) write(6,"('>>> alloc_tdep: error allocating',
-     |  ' tvib: stat=',i3)") istat
 !
       allocate(fs(lon0:lon1,nlevp1,3,0:3,lat0:lat1),stat=istat)
       if (istat /= 0) write(6,"('>>> alloc_tdep: error allocating',
@@ -180,10 +172,8 @@
 !
 ! Local:
       integer :: k,i
-      real :: ti1(lev0:lev1,lon0:lon1), 
-     |        ti2(lev0:lev1,lon0:lon1), 
-     |        ti3(lev0:lev1,lon0:lon1),
-     |        etvib(lev0:lev1,lon0:lon1)
+      real,dimension(lev0:lev1,lon0:lon1) ::
+     |  tr,ti1,ti2,ti3,ter,rtte,etvib
 !
 ! expo() (util.F) is used only if check_exp is true. This will avoid
 ! NaNS fpe, but will degrade performance. Check_exp is in cons.F.
@@ -196,67 +186,64 @@
 !
 ! ti1 = T1/300. (S15)    ti2 = T2/300. (S14)   ti3 = TR/300. (S13)
 !
-          ti1(k,i) = (0.667* ti(k,i)+0.333 *tn(k,i))/300.
-          ti2(k,i) = (0.6363*ti(k,i)+0.3637*tn(k,i))/300.
-          ti3(k,i) = .5*(ti(k,i)+tn(k,i))/300.
+          tr (k,i) = .5*(ti(k,i)+tn(k,i))
+          ti1(k,i) = (2.*ti(k,i)+   tn(k,i))/( 3.*300.)
+          ti2(k,i) = (7.*ti(k,i)+4.*tn(k,i))/(11.*300.)
+          ti3(k,i) = tr(k,i)/300.
+          ter(k,i) = te(k,i)/300.
+          rtte(k,i) = sqrt(ter(k,i))
 !
-! Rate coefficient for O+ + O2 -> O + O2+ + 1.555eV (HIERL)
-          rk1(k,i,lat)=1.6E-11*ti1(k,i)**(-0.52)+5.5E-11*
-     |      exp(-22.85/ti1(k,i))
+! rk1: O+(4S) + O2 -> O2+ + O + 1.555 eV (HIERL)
+          rk1(k,i,lat)=1.6E-11/ti1(k,i)**0.52+
+     |      5.5E-11/exp(22.85/ti1(k,i))
 !
-! k2: O+  + N2 -> NO+ + N4s + 1.0888 eV
-! (assumes t2/300 in ti2)
-          rk2(k,i,lat)=(8.6E-14*ti2(k,i)-5.92E-13)*ti2(k,i)+1.533E-12
-!
-! Rate coefficient for O+ + N2 -> N + NO+
+! Rate coefficient for O+(4S) + N2 -> NO+ + N(4S)
 ! See also sub altv (altv.f). Tvib is output of sub altv, if it
 ! is called (see dynamics.f).
 !
-          tvib(k,i,lat) = tn(k,i)            ! tvib in crates_tdep.h
-          etvib(k,i) = exp(-3353./tvib(k,i,lat)) ! etvib is local
+          etvib(k,i) = exp(-3353./tn(k,i)) ! etvib is local
 !
-! rk2: O+  + N2 -> NO+ + N4s + 1.0888 eV
+! rk2: O+(4S) + N2 -> NO+ + N(4S) + 1.0888 eV
+! (assumes t2/300 in ti2)
           rk2(k,i,lat) = (((((270.*etvib(k,i)+220.)*etvib(k,i)+85.)*
-     |      etvib(k,i)+38.)*etvib(k,i)+1.)*rk2(k,i,lat)*etvib(k,i)+
-     |      rk2(k,i,lat))*(1.-etvib(k,i))
+     |      etvib(k,i)+38.)*etvib(k,i)+1.)*etvib(k,i)+1.)*
+     |      (1.-etvib(k,i))*
+     |      ((8.6E-14*ti2(k,i)-5.92E-13)*ti2(k,i)+1.533E-12)
 !
-! rk3: N2+ + O  -> NO+ + N2D + 0.70 eV
-          if (300.*ti3(k,i) >= 1500.) then
+! rk3: N2+ + O -> NO+ + N(2D) + 0.70 eV
+          if (tr(k,i) >= 1500.) then
             rk3(k,i,lat)=5.2E-11*ti3(k,i)**0.2
           else
-            rk3(k,i,lat)=1.4E-10*ti3(k,i)**(-0.44)
+            rk3(k,i,lat)=1.4E-10/ti3(k,i)**0.44
           endif
 !
-! rk19: O+(2P) + e -> O+(4S) + e + 5.0  eV
-          rk19(k,i,lat) = 4.0E-8*sqrt(300./te(k,i))
+! rk19: O+(2P) + e -> O+(4S) + e + 5.0 eV
+          rk19(k,i,lat) = 4.0E-8/rtte(k,i)
 !
-! rk20: O+(2P) + e -> O+(2O) + e + 1.69 eV
-          rk20(k,i,lat) = 1.5E-7*sqrt(300./te(k,i))
+! rk20: O+(2P) + e -> O+(2D) + e + 1.69 eV
+          rk20(k,i,lat) = 1.5E-7/rtte(k,i)
 !
 ! rk25: O+(2D) + e -> O+(4S) + e + 3.31 eV
-          rk25(k,i,lat) = 6.6E-8*sqrt(300./te(k,i))
+          rk25(k,i,lat) = 6.6E-8/rtte(k,i)
 !
-! rkm12: O + O + N2 -> O2 + N2 (loss of O to O2)
-! (same for O + O + O2 -> O2 + O2, Dickinson, et.al., 1984)
-          rkm12(k,i,lat) = 9.59E-34*exp(480./tn(k,i))
+! ra1: NO+ + e -> 20% [N(4S) + O + 2.75 eV], 80% [N(2D) + O + 0.38 eV]
+          ra1(k,i,lat)=4.2E-7/ter(k,i)**0.85
 !
-! ra1: NO+ + e  -> (20% N4S + O + 2.75 eV), (80% N2D + O + 0.38 eV)
-          ra1(k,i,lat)=4.2E-7*(300./te(k,i))**0.85
-!
-! ra2: O2+ + e  -> (15% O   + O + 6.95 eV), (85% O   + O + 4.98 eV)
+! ra2: O2+ + e -> 15% [O + O + 6.95 eV], 85% [O + O + 4.98 eV]
           if (te(k,i) >= 1200.) then
-            ra2(k,i,lat)=1.6E-7*(300./te(k,i))**0.55
+            ra2(k,i,lat)=1.6E-7/ter(k,i)**0.55
           else
 ! ra2: notes replace 2.7e-7 with 1.95e-7
-            ra2(k,i,lat)=2.7E-7*(300./te(k,i))**0.7 
+            ra2(k,i,lat)=2.7E-7/ter(k,i)**0.7 
           endif
 !
-! ra3: N2+ + e  -> (10% N4S + N4S + 5.82 eV), (90% N4S + N2D + 3.44 eV)
-          ra3(k,i,lat)=1.8E-7*(300./te(k,i))**0.39
+! ra3: N2+ + e  -> 10% [N(4S) + N(4S) + 5.82 eV], 90% [N(4S) + N(2D) + 3.44 eV]
+          ra3(k,i,lat)=1.8E-7/ter(k,i)**0.39
 !
-! beta1: N4S + O2 -> NO  + O + 1.4  eV
-          beta1(k,i,lat) = 1.5E-11*exp(-3600./tn(k,i))
+! beta1: N(4S) + O2 -> NO + O + 1.4 eV
+          beta1(k,i,lat) = 1.5E-11/exp(3600./tn(k,i))
 !
+! beta2: N(2D) + O2 -> NO + O + 1.84 eV
 ! New reaction rate from Duff et al. (2003), suggested by Sheng et al. (2017)
           if (duff) then
             beta2(k,i,lat) = 6.2e-12*tn(k,i)/300.
@@ -264,13 +251,13 @@
             beta2(k,i,lat) = 5e-12
           endif
 !
-! beta3: N4S + NO -> N2  + O + 3.25 eV
+! beta3: N(4S) + NO -> N2 + O + 2.68 eV
           beta3(k,i,lat) =3.4e-11*sqrt(tn(k,i)/300.)
 !
-! beta5: N2D + e  -> N4S + e + 2.38 eV
-          beta5(k,i,lat) = 3.6E-10*sqrt(te(k,i)/300.)
+! beta5: N(2D) + e -> N(4S) + e + 2.38 eV
+          beta5(k,i,lat) = 3.6E-10*rtte(k,i)
 !
-! beta8: NO  + hv -> N4S + O
+! beta8: NO + hv -> N(4S) + O
           if (.not.check_exp) then
             beta8(k,i,lat) = 4.5E-6*(1.+0.11*(f107-65.)/165.)*
      |        exp(-1.E-8*fno2(k,i)**0.38)*sfeps
@@ -279,17 +266,25 @@
      |        expo(-1.E-8*fno2(k,i)**0.38,0)*sfeps
           endif
 !
-! beta9: NO  + hv/Ly-a -> NO+ + e
+! beta9: NO + hv/Ly-a -> NO+ + e
           if (.not.check_exp) then
-            beta9(k,i,lat)=2.91E11*(1.+0.2*(f107-65.)/100.)*2.E-18*
+            beta9(k,i,lat)=5.82E-7*(1.+0.2*(f107-65.)/100.)*
      |        exp(-8.E-21*fno2(k,i))*sfeps
           else
-            beta9(k,i,lat)=2.91E11*(1.+0.2*(f107-65.)/100.)*2.E-18*
+            beta9(k,i,lat)=5.82E-7*(1.+0.2*(f107-65.)/100.)*
      |        expo(-8.E-21*fno2(k,i),0)*sfeps
           endif
-          beta9n(k,i,lat)=5.E9*(1.+0.2*(f107-65.)/100.)*2.E-18*
+!
+! beta9n: NO  -> ?
+          beta9n(k,i,lat)=1.E-8*(1.+0.2*(f107-65.)/100.)*
      |      exp(-8.E-21*fnvo2(k,i))*sfeps
-          beta17(k,i,lat)=1.E-32*sqrt(300./te(k,i))
+!
+! beta17: O + N2 + N(4S) -> NO + N2
+          beta17(k,i,lat)=1.E-32/rtte(k,i)
+!
+! rkm12: O + O + N2 -> O2 + N2 (loss of O to O2)
+! (same for O + O + O2 -> O2 + O2, Dickinson, et al., 1984)
+          rkm12(k,i,lat) = 9.59E-34*exp(480./tn(k,i))
         enddo ! i=lon0,lon1
       enddo ! k=lev0,lev1
 !
@@ -301,9 +296,9 @@
 
         beta8(lev1,i,lat)=4.5E-6*(1.+0.11*(f107-65.)/165.)*
      |    exp(-1.E-8*fno2(lev1,i)**0.38)
-        beta9(lev1,i,lat)=2.91E11*(1.+0.2*(f107-65.)/100.)*2.E-18*
+        beta9(lev1,i,lat)=5.82E-7*(1.+0.2*(f107-65.)/100.)*
      |    exp(-8.E-21*fno2(lev1,i))
-        beta9n(lev1,i,lat)=5.E9*(1.+0.2*(f107-65.)/100.)*2.E-18*
+        beta9n(lev1,i,lat)=1.E-8*(1.+0.2*(f107-65.)/100.)*
      |    exp(-8.E-21*fnvo2(lev1,i))
       enddo
       end subroutine chemrates_tdep

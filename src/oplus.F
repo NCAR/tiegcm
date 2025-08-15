@@ -29,6 +29,7 @@
 ! all other args are input.
 !
       use params_module,only: rp
+      use cons_module,only: shapiro
       use input_module,only: nstep_sub
       use mpi_module,only: mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
       use addfld_module,only: addfld
@@ -95,8 +96,8 @@
       enddo ! lat=lat0-2,lat1+2
 !
       do istep=1,nstep_sub
-        call smooth_oplus(optm1_sub,optm1_smooth,
-     |    lev0,lev1,lon0,lon1,lat0,lat1)
+        call smooth(optm1_sub,optm1_smooth(:,lon0:lon1,lat0:lat1),
+     |    shapiro/nstep_sub,lev0,lev1,lon0,lon1,lat0,lat1)
 !
         call iterate_oplus(dvb,ubcrhs,lbcrhs,tp,dj,bdotu,
      |    optm1_smooth,op_prod,ui,vi,scht,p_coeff,q_coeff,r_coeff,
@@ -635,78 +636,6 @@
 !
       end subroutine prep_oplus
 !-----------------------------------------------------------------------
-      subroutine smooth_oplus(optm1,optm1_smooth,
-     |  lev0,lev1,lon0,lon1,lat0,lat1)
-!
-! Shapiro smoother for O+
-!
-      use params_module,only: rp
-      use cons_module,only: shapiro
-      use input_module,only: nstep_sub
-      use addfld_module,only: addfld
-!
-! Args:
-      integer,intent(in) ::
-     |  lev0,lev1, ! first,last pressure  indices for current task (bot->top)
-     |  lon0,lon1, ! first,last longitude indices for current task (W->E)
-     |  lat0,lat1  ! first,last latitude  indices for current task (S->N)
-!
-! Input fields (full 3d task subdomain):
-      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
-     |  intent(in) ::
-     |  optm1      ! O+ at time n-1
-!
-! Output fields (full 3d task subdomain):
-      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
-     |  intent(out) ::
-     |  optm1_smooth ! op at time n-1, with shapiro smoother (was s1)
-!
-! Local:
-      integer :: k,i,lat
-      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0:lat1) ::
-     |  optm1_smooth1 ! op at time n-1, with shapiro smoother (was s1)
-!
-! Shapiro smoother: optm1 is O+ at time n-1 (optm1_smooth was s1)
-! optm1_smooth will be used in explicit terms below.
-      do lat=lat0,lat1
-        do i=lon0-2,lon1+2
-          do k=lev0,lev1
-            optm1_smooth1(k,i,lat) = optm1(k,i,lat)-
-     |        shapiro/nstep_sub*
-     |        (optm1(k,i,lat+2)+optm1(k,i,lat-2)-
-     |        4.*(optm1(k,i,lat+1)+optm1(k,i,lat-1))+
-     |        6.*optm1(k,i,lat))
-          enddo ! k=lev0,lev1
-        enddo ! i=lon0-2,lon1+2
-      enddo ! lat=lat0,lat1
-!
-! Boundary longitudes for optm1_smooth1 were obtained after first
-! latitude scan above.
-      do lat=lat0,lat1
-        do i=lon0,lon1
-          do k=lev0,lev1
-            optm1_smooth(k,i,lat) = optm1_smooth1(k,i,lat)-
-     |        shapiro/nstep_sub*
-     |        (optm1_smooth1(k,i+2,lat)+optm1_smooth1(k,i-2,lat)-
-     |        4.*(optm1_smooth1(k,i+1,lat)+optm1_smooth1(k,i-1,lat))+
-     |        6.*optm1_smooth1(k,i,lat))
-          enddo ! k=lev0,lev1
-        enddo ! i=lon0,lon1
-      enddo ! lat=lat0,lat1
-!
-!     do lat=lat0,lat1
-!       call addfld('OPTM1',' ',' ',optm1(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('OPTM1_SM0' ,' ',' ',
-!    |    optm1_smooth1(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('OPTM1_SM1' ,' ',' ',
-!    |    optm1_smooth(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     enddo ! lat=lat0,lat1
-!
-      end subroutine smooth_oplus
-!-----------------------------------------------------------------------
       subroutine iterate_oplus(dvb,ubcrhs,lbcrhs,tp,dj,bdotu,
      |  optm1_smooth,op_prod,ui,vi,scht,p_coeff,q_coeff,r_coeff,
      |  op,opout,diffj,diffexp,vdotn_h,bdotdh_bvel,
@@ -921,7 +850,7 @@
      |    r_coeff(:,lon0:lon1,lat),
      |    explicit(:,lon0:lon1,lat),
      |    opout(:,lon0:lon1,lat),
-     |    lev0,lev1,lev0,lev1-1,lon0,lon1,nlonp4,lat,0)
+     |    lev0,lev1,lev0,lev1-1,lon0,lon1,nlonp4)
 !
 ! Upper boundary:
         do i=lon0,lon1

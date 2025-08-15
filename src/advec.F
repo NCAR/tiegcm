@@ -1,5 +1,5 @@
 !
-      subroutine advec(f,hadvec,lev0,lev1,lon0,lon1,lat)
+      subroutine advec(un,vn,f,hadvec,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -7,7 +7,6 @@
 !
 ! Horizontal advection for field f. Return advection in hadvec.
 !
-      use fields_module,only: un,vn,itp
       use cons_module,only: dlamda_2div3,dlamda_1div12,racs,
      |  dphi_1div12,dphi_2div3,re_inv
       use params_module,only: nlonp4,rp
@@ -15,19 +14,18 @@
       implicit none
 !
 ! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat-2:lat+2),
-     |  intent(in) :: f ! input field with ghost cells for finite differencing
-      real(rp),dimension(lev0:lev1,lon0:lon1),intent(out) :: hadvec
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
+      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
+     |  intent(in) :: un,vn,f ! input field with ghost cells for finite differencing
+      real(rp),dimension(lev0:lev1,lon0:lon1,lat0:lat1),intent(out) ::
+     |  hadvec
 !
 ! Local:
-      integer :: k,i,lonbeg,lonend
-      integer :: nk,nkm1
+      integer :: k,i,lat,lonbeg,lonend
       real(rp),dimension(lev0:lev1,lon0:lon1) ::
-     |  ubarl,d2x,d4x,wk,vbarp
+     |  ubarl,d2x,d4x,wk1,vbarp,wk2
 !
-      nk = lev1-lev0+1
-      nkm1 = nk-1
+      do lat=lat0,lat1
 
 !     call addfld('F_IN',' ',' ',f(lev0:lev1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -42,23 +40,23 @@
         do k=lev0,lev1-1
 !
 ! UBARL = (U(I+1)+U(I-1))/2
-          ubarl(k,i) = (un(k,i+1,lat,itp)+
-     |                  un(k,i-1,lat,itp))*0.5_rp
+          ubarl(k,i) = (un(k,i+1,lat)+
+     |                  un(k,i-1,lat))*0.5_rp
 !
 ! D2X = (dlamda_2div3*(X(I+1)-X(I-1)))*ubarl
           d2x(k,i) = ((f(k,i+1,lat)-f(k,i-1,lat))*dlamda_2div3)*
      |      ubarl(k,i)
 !
 ! UBARL = (U(I+2)+U(I-2))/2
-          ubarl(k,i) = (un(k,i+2,lat,itp)+
-     |                  un(k,i-2,lat,itp))*0.5_rp
+          ubarl(k,i) = (un(k,i+2,lat)+
+     |                  un(k,i-2,lat))*0.5_rp
 !
 ! D4X = (dlamda_1div12*(X(I+2)-X(I-2)))*ubarl
           d4x(k,i) = ((f(k,i+2,lat)-f(k,i-2,lat))*dlamda_1div12)*
      |      ubarl(k,i)
 !
 ! X = (D2X-D4X)*RACS
-          wk(k,i) = (d2x(k,i)-d4x(k,i))*racs(lat)
+          wk1(k,i) = (d2x(k,i)-d4x(k,i))*racs(lat)
         enddo ! k=lev0,lev1-1
       enddo ! i=lonbeg,lonend
 
@@ -68,7 +66,7 @@
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('D4X'  ,' ',' ',d4x(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('WK   ',' ',' ',wk (lev0:lev1-1,:),
+!     call addfld('WK   ',' ',' ',wk1(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 !
@@ -82,8 +80,8 @@
 !    in tgcm13,14,15, and tiegcm1 until this date.)
 !
 ! VBARP = (V(J+1)+V(J-1))/2
-          vbarp(k,i) = (vn(k,i,lat+1,itp)+
-     |                  vn(k,i,lat-1,itp))*0.5_rp
+          vbarp(k,i) = (vn(k,i,lat+1)+
+     |                  vn(k,i,lat-1))*0.5_rp
 !
 ! D2X = dphi_2div3*(X(J+1)-X(J-1))
           d2x(k,i) = ((f(k,i,lat+1)-f(k,i,lat-1))*dphi_2div3)*
@@ -92,18 +90,18 @@
 ! Fourth order finite difference in latitude (j+2,j-2):
 !
 ! VBARP = (V(J+2)+V(J-2))/2 
-          vbarp(k,i) = (vn(k,i,lat+2,itp)+
-     |                  vn(k,i,lat-2,itp))*0.5_rp
+          vbarp(k,i) = (vn(k,i,lat+2)+
+     |                  vn(k,i,lat-2))*0.5_rp
 !
 ! D4X = dphi_1div12*(X(J+2)-X(J-2))
           d4x(k,i) = ((f(k,i,lat+2)-f(k,i,lat-2))*dphi_1div12)*
      |      vbarp(k,i)
 !
-! D2X = (D2X-D4X)*re_inv
-          d2x(k,i) = (d2x(k,i)-d4x(k,i))*re_inv
+! Y = (D2X-D4X)*re_inv
+          wk2(k,i) = (d2x(k,i)-d4x(k,i))*re_inv
 !
-! S = X+D2X = ADVEC(X)
-          hadvec(k,i) = wk(k,i)+d2x(k,i)
+! S = X+Y = ADVEC(X,Y)
+          hadvec(k,i,lat) = wk1(k,i)+wk2(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lonbeg,lonend
 !
@@ -112,8 +110,8 @@
 !   the periodic points. (This output from advec becomes input and
 !   output in advecv, see dt.F).
 !
-      if (lon0==1) hadvec(:,lon0:lon0+1) = 0._rp
-      if (lon1==nlonp4) hadvec(:,lon1-1:lon1) = 0._rp
+      if (lon0==1) hadvec(:,lon0:lon0+1,lat) = 0._rp
+      if (lon1==nlonp4) hadvec(:,lon1-1:lon1,lat) = 0._rp
 
 !     call addfld('VBARP' ,' ',' ',vbarp(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
@@ -121,66 +119,9 @@
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('D2XJ'  ,' ',' ',d2x(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('HADVEC',' ',' ',hadvec(lev0:lev1-1,:),
+!     call addfld('HADVEC',' ',' ',hadvec(lev0:lev1-1,:,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+
+      enddo
 
       end subroutine advec
-!-----------------------------------------------------------------------
-      subroutine advecv(f,lbc,advecv_out,lev0,lev1,lon0,lon1,lat)
-!
-! Vertical advection for field f. Return advection in advecv_out.
-!
-      use params_module,only: dz,nlonp4,rp
-      use fields_module,only: w,itc
-      use addfld_module,only: addfld
-      implicit none
-!
-! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real(rp),dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
-     |  f ! input field with ghost cells for finite differencing
-      real(rp),dimension(lon0:lon1),intent(in) :: lbc ! lower boundary
-!
-      real(rp),dimension(lev0:lev1,lon0:lon1),intent(out) ::
-     |  advecv_out
-!
-! Local:
-      integer :: k,i,nk
-      real(rp) :: advec(lev0:lev1,lon0:lon1) ! s3
-      real(rp) :: dsig
-!
-      nk = lev1-lev0+1
-!
-! Lower boundary:
-      do i=lon0,lon1 
-        advec(1,i) = (f(1,i)-lbc(i))*w(1,i,lat,itc)*2.0_rp
-      enddo ! i=lon0,lon1 
-      dsig = .5_rp*(1.0_rp/dz)
-!
-! Upper boundary:
-      do i=lon0,lon1 
-        advec(lev1,i) = 0.0_rp
-!
-! Loop through column:
-        do k=lev0+1,lev1-1
-          advec(k,i) = (f(k,i)-f(k-1,i))*w(k,i,lat,itc)
-        enddo ! k=lev0,lev1
-        do k=lev0,lev1-1
-          advec(k,i) = (advec(k,i)+advec(k+1,i))*dsig
-        enddo ! k=lev0,lev1-1
-!
-! Return vertical advection.
-        do k=lev0,lev1-1
-          advecv_out(k,i) = advec(k,i)
-        enddo ! k=lev0,lev1-1
-      enddo ! i=lon0,lon1 
-!
-! Set periodic points to zero to avoid NaNS fpe in dt.F.
-! (earlier versions actually did periodic points here)
-      if (lon0==1) advecv_out(:,lon0:lon0+1) = 0._rp
-      if (lon1==nlonp4) advecv_out(:,lon1-1:lon1) = 0._rp
-
-!     call addfld('ADVECV',' ',' ',advecv_out(lev0:lev1-1,:),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-
-      end subroutine advecv

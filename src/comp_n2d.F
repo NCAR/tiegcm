@@ -92,25 +92,21 @@
 !
 ! Local:
       integer :: k,i
-      integer ::i0,i1,nk,nkm1
-!
-! For addfld:
-      i0 = lon0
-      i1 = lon1
-      nk = lev1-lev0+1
-      nkm1 = nk-1
+      real :: o2_cm3_lbc,o1_cm3_lbc,no_cm3_lbc,o2_cm3,o1_cm3,no_cm3
 !
       do i=lon0,lon1
+        o2_cm3_lbc = xnmbari(lev0,i)*o2(lev0,i)*rmassinv_o2
+        o1_cm3_lbc = xnmbari(lev0,i)*o1(lev0,i)*rmassinv_o1
+        no_cm3_lbc = xnmbari(lev0,i)*no(lev0,i)*rmassinv_no
 !
 ! Value at bottom given by photochemical equilibrium.
         n2d_lbc(i,1,lat) = 0.
         n2d_lbc(i,2,lat) = 1.
         n2d_lbc(i,3,lat) = -rmass_n2d/xnmbari(lev0,i)*
      |    qtef(lev0,i,lat)*brn2d/
-     |    (xnmbari(lev0,i)*
-     |    (beta2(lev0,i,lat)*o2(lev0,i)*rmassinv_o2+
-     |     beta4*o1(lev0,i)*rmassinv_o1+
-     |     beta6*no(lev0,i)*rmassinv_no)+
+     |    (beta2(lev0,i,lat)*o2_cm3_lbc+
+     |     beta4*o1_cm3_lbc+
+     |     beta6*no_cm3_lbc+
      |     beta7+beta5(lev0,i,lat)*ne(lev0,i))
 !
 ! Zero diffusive flux at top:
@@ -118,32 +114,35 @@
 !
 ! Sources:
         do k=lev0,lev1-1
+          o2_cm3 = xnmbar(k,i)*o2(k,i)*rmassinv_o2
+          o1_cm3 = xnmbar(k,i)*o1(k,i)*rmassinv_o1
+          no_cm3 = xnmbar(k,i)*no(k,i)*rmassinv_no
 !
 ! Total production of N2D:
           n2d_prod(k,i,lat) = .5*(qtef(k,i,lat)+qtef(k+1,i,lat))*brn2d+
-     |      rk3(k,i,lat)*n2p(k,i)*xnmbar(k,i)*o1(k,i)*rmassinv_o1+
-     |     (ra1(k,i,lat)*nop(k,i)*0.85+ra3(k,i,lat)*n2p(k,i)*0.9)*
+     |      rk3(k,i,lat)*n2p(k,i)*o1_cm3+
+     |     (ra1(k,i,lat)*nop(k,i)*0.8+ra3(k,i,lat)*n2p(k,i)*0.9)*
      |      sqrt(ne(k,i)*ne(k+1,i))
 !
 ! Total loss of N2D:
-          n2d_loss(k,i,lat) = -(xnmbar(k,i)*
-     |      (beta2(k,i,lat)*o2(k,i)*rmassinv_o2+
-     |       beta4*o1(k,i)*rmassinv_o1+
-     |       beta6*no(k,i)*rmassinv_no)+
+          n2d_loss(k,i,lat) =
+     |     -(beta2(k,i,lat)*o2_cm3+
+     |       beta4*o1_cm3+
+     |       beta6*no_cm3+
      |       beta7+beta5(k,i,lat)*sqrt(ne(k,i)*ne(k+1,i))+
      |       rk10*op(k,i))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
 !     call addfld('N2D_PROD' ,' ',' ',n2d_prod(lev0:lev1-1,:,lat),
-!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !     call addfld('N2D_LOSS' ,' ',' ',n2d_loss(lev0:lev1-1,:,lat),
-!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 
       end subroutine comp_n2d
 !-----------------------------------------------------------------------
-      subroutine minor_n2d(tn,o2,o1,he,mbar,barm,xnmbar,w,n2d,n2d_nm1,
-     |  n2d_out,n2d_nm1_out,lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine minor_n2d(tn,un,vn,o2,o1,he,mbar,barm,xnmbar,w,
+     |  n2d,n2d_nm1,n2d_out,n2d_nm1_out,lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_n2d
 !
 ! Input args:
@@ -151,6 +150,8 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) ::
      |  tn,      ! neutral temperature (deg K)
+     |  un,      ! zonal wind velocity
+     |  vn,      ! meridional wind velocity
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
      |  he,      ! helium (mmr)
@@ -172,7 +173,7 @@
 ! Minor returns n2d_out and n2d_nm1_out. Module data n2d_prod,
 ! n2d_loss, etc, were defined by comp_n2d.  
 !
-      call minor(tn,o2,o1,he,mbar,barm,xnmbar,w,n2d,n2d_nm1,
+      call minor(tn,un,vn,o2,o1,he,mbar,barm,xnmbar,w,n2d,n2d_nm1,
      |  n2d_out,n2d_nm1_out,n2d_loss,n2d_prod,n2d_lbc,n2d_ubc,
      |  rmass_n2d,phi_n2d,alfa_n2d,lev0,lev1,lon0,lon1,lat0,lat1,
      |  0,'N2D')

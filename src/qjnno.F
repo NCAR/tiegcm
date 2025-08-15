@@ -29,18 +29,27 @@
 !
 ! Local:
       integer :: k,i
-      real,dimension(lev0:lev1,lon0:lon1) :: deltaq,dq
+      real,dimension(lev0:lev1,lon0:lon1) :: deltaq,dq,
+     |  o2_cm3,o1_cm3,no_cm3,n4s_cm3,n2d_cm3
 !
       do i=lon0,lon1
         do k=lev0,lev1-1
+          o2_cm3(k,i) = xnmbar(k,i)*o2(k,i)*rmassinv_o2
+          o1_cm3(k,i) = xnmbar(k,i)*o1(k,i)*rmassinv_o1
+          no_cm3(k,i) = xnmbar(k,i)*no(k,i)*rmassinv_no
+          n4s_cm3(k,i) = xnmbar(k,i)*n4s(k,i)*rmassinv_n4s
+          n2d_cm3(k,i) = xnmbar(k,i)*n2d(k,i)*rmassinv_n2d
+!
           deltaq(k,i) = 
-     |      evergs*avo*xnmbar(k,i)*(n4s(k,i)*rmassinv_n4s*
-     |      (beta1(k,i,lat)*o2(k,i)*rmassinv_o2*1.4+
-     |       beta3(k,i,lat)*no(k,i)*rmassinv_no*2.68)+
-     |      n2d(k,i)*rmassinv_n2d*(beta2(k,i,lat)*o2(k,i)*rmassinv_o2*
-     |      1.84+beta4*o1(k,i)*rmassinv_o1*
-     |      2.38+beta5(k,i,lat)*.5*(ne(k,i)+ne(k+1,i))*2.38/
-     |      xnmbar(k,i)+beta6*no(k,i)*rmassinv_no*5.63))
+     |      evergs*avo/xnmbar(k,i)*
+     |      (n4s_cm3(k,i)*
+     |       (beta1(k,i,lat)*o2_cm3(k,i)*1.4+
+     |        beta3(k,i,lat)*no_cm3(k,i)*2.68)+
+     |       n2d_cm3(k,i)*
+     |       (beta2(k,i,lat)*o2_cm3(k,i)*1.84+
+     |        beta4*o1_cm3(k,i)*2.38+
+     |        beta5(k,i,lat)*.5*(ne(k,i)+ne(k+1,i))*2.38+
+     |        beta6*no_cm3(k,i)*5.63))
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 

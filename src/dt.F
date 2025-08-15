@@ -14,7 +14,7 @@
       use input_module,only: step
       use init_module,only: iday
       use cons_module,only: dtx2inv,expz,rmassinv_o1,tsurplus,p0,avo,
-     |  grav,gask,expzmid_inv,dift,dtsmooth,dtsmooth_div2
+     |  grav,gask,expzmid_inv,dift,dtsmooth,dtsmooth_div2,shapiro
       use lbc,only: t_lbc
       use qrj_module,only: qtotal ! qtotal(nlevp1,lon0:lon1,lat0:lat1)
       use chemrates_module,only: rkm12
@@ -54,62 +54,67 @@
 !
 ! Local:
       integer :: k,i,lonbeg,lonend,lat
-      integer :: nk,nkm1,nlevs
       real(rp) :: cpi,wi
-      real(rp) :: tnlbc(lon0:lon1,lat0:lat1) ! lower boundary condition
 !
 ! Local at 2d:
       real(rp),dimension(lev0:lev1,lon0:lon1) ::
      |  cptn,       ! cp*exp(-s)*(V.del(T(n))-1/(2*DT))*T(n-1) (k+1/2)
      |  qm,         ! heating due to molecular diffusion
      |  total_heat, ! total heating
+     |  dtdz,advecv,
      |  dudz,       ! du/dz(k)
      |  dvdz,       ! du/dz(k)
      |  g,          ! g*KT/(p0*H*Ds**2)
      |  f,          ! g*eps/(p0*2*H*Ds)
-     |  h,          ! scale height R*T/(M*g) (cm)
      |  rho,        ! density
      |  tni,        ! tn at interfaces
      |  p, q, r,    ! coefficients for tridiagonal solver
+     |  p1,r1,
      |  rhs,        ! right hand side of trsolv
      |  qpart,      ! part of q coeff
-     |  tnlbc_diag, ! tnlbc_diag is redundant in vertical
      |  qsolar,qrecomb,dtdt,dt_solar,dt_hordif,dt_recomb,
      |  dt_joule,dt_moldif,dt_cool,dt_adia,dt_conduct
 !
 ! Local at 3d (tnsmooth needs lat dimension only for sub smooth):
       real(rp),dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
      |  tnsmooth,   ! zonal and meridional smoothing of tn_nm
-     |  advec_tn,   ! horizontal advection (output of sub advec)
-     |  horadv_tn,veradv_tn
-!
-      nk = lev1-lev0+1
-      nkm1 = nk-1
-      nlevs = nk
-! 
-! First latitude scan for dt:
-      do lat=lat0,lat1
-!
-! Lower boundary t_lbc was calculated by sub tuvz_lbc (lbc.F)
-        tnlbc(:,lat) = t_lbc(lon0:lon1,lat)
-        do k=lev0,lev1
-          tnlbc_diag(k,:) = tnlbc(:,lat)
-        enddo
-!       call addfld('TNLBC1',' ',' ',tnlbc_diag,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+     |  horadv_tn,  ! horizontal advection (output of sub advec)
+     |  veradv_tn   ! vertical advection
 !
 ! Horizontal advection (pass k vs i slices at full task subdomain 
 ! longitudes, and the 5 latitudes centered over the current latitude).
 !
-        call advec(tn(:,:,lat-2:lat+2),horadv_tn(:,:,lat),
-     |    lev0,lev1,lon0,lon1,lat)
+      call advec(un,vn,tn,horadv_tn,lev0,lev1,lon0,lon1,lat0,lat1)
 
+! First latitude scan for dt:
+      do lat=lat0,lat1
+!
 !       call addfld('HADVECTN',' ',' ',horadv_tn(lev0:lev1-1,:,lat),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
 !
 ! Vertical advection.
-        call advecv(tn(:,:,lat),tnlbc(:,lat),veradv_tn(:,:,lat),
-     |    lev0,lev1,lon0,lon1,lat)
+        do i=lon0,lon1
+!
+! Lower boundary:
+          dtdz(lev0,i) = (tn(lev0,i,lat)-t_lbc(i,lat))*2/dz
+!
+! Upper boundary:
+          dtdz(lev1,i) = 0
+!
+! Loop through column:
+          do k=lev0+1,lev1-1
+            dtdz(k,i) = (tn(k,i,lat)-tn(k-1,i,lat))/dz
+          enddo ! k=lev0+1,lev1-1
+!
+          do k=lev0,lev1
+            advecv(k,i) = dtdz(k,i)*w_upd(k,i,lat)
+          enddo ! k=lev0,lev1
+!
+          do k=lev0,lev1-1
+            veradv_tn(k,i,lat) = (advecv(k,i)+advecv(k+1,i))/2
+          enddo ! k=lev0,lev1-1
+          veradv_tn(lev1,i,lat) = advecv(lev1,i)
+        enddo ! i=lon0,lon1
 
 !       call addfld('ADVEC_TN',' ',' ',veradv_tn(lev0:lev1-1,:,lat),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
@@ -117,35 +122,15 @@
 ! End first latitude scan:
       enddo ! lat=lat0,lat1
 !
-      advec_tn = horadv_tn+veradv_tn
-!
 ! Shapiro smoother for tn at time n-1:
-      call smooth(tn_nm,tnsmooth,lev0,lev1,lon0,lon1,lat0,lat1,0)
+      call smooth(tn_nm,tnsmooth,shapiro,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Begin second latitude scan:
       do lat=lat0,lat1
 !
-! Set cptn (k+1/2):
-! (Earlier versions apparently assumed zero periodic points for
-!  tnsmooth, since they were not set in smoothing. See sub smooth,
-!  where the periodic points are set to zero to avoid NaNS fpe
-!  in the following loop)
-!
-      do i=lon0,lon1
-        do k=lev0,lev1-1
-          cpi = .5_rp*(cp(k,i,lat)+cp(k+1,i,lat))
-          cptn(k,i) = expz(k)*cpi*
-     |      (advec_tn(k,i,lat)-dtx2inv*tnsmooth(k,i,lat))
-        enddo ! k=lev0,lev1-1
-      enddo ! i=lon0,lon1
-
 !     call addfld('CP'   ,' ',' ',cp(:,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('TNSMOOTH'   ,' ',' ',tnsmooth(:,:,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('ADVEC_TNa',' ',' ',advec_tn(lev0:lev1-1,:,lat),
-!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('CPTN0',' ',' ',cptn,
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('MBAR' ,' ',' ',mbar(lev0:lev1-1,lon0:lon1,lat),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
@@ -195,10 +180,17 @@
           total_heat(k,i) = qsolar(k,i)+hdt(k,i,lat)+
      |      qrecomb(k,i)+qji_tn(k,i,lat)+qm(k,i)
 !
-! Complete cptn:
+! Set cptn (k+1/2):
 ! -cp*exp(-s)*(T(k,n-1)/(2*Dt) - V.del(T(k,n)) +Q/cp)
+! (Earlier versions apparently assumed zero periodic points for
+!  tnsmooth, since they were not set in smoothing. See sub smooth,
+!  where the periodic points are set to zero to avoid NaNS fpe
+!  in the following loop)
 !
-          cptn(k,i) = cptn(k,i)-expz(k)*total_heat(k,i) ! s1
+          cpi = .5_rp*(cp(k,i,lat)+cp(k+1,i,lat))
+          cptn(k,i) = expz(k)*(cpi*
+     |      (horadv_tn(k,i,lat)+veradv_tn(k,i,lat)-
+     |       dtx2inv*tnsmooth(k,i,lat))-total_heat(k,i)) ! s1
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
@@ -217,31 +209,30 @@
       do i=lon0,lon1
         do k=lev0+1,lev1-1
           tni(k,i) = .5_rp*(tn(k-1,i,lat)+tn(k,i,lat))
-          h(k,i) = schti(k,i,lat)
-          rho(k,i) = p0*expzmid_inv*expz(k)/(h(k,i)*grav)
         enddo ! k=lev0+1,lev1-1
+        do k=lev0,lev1-1
+          rho(k,i) = p0*expzmid_inv*expz(k)/(schti(k,i,lat)*grav)
+        enddo ! k=lev0,lev1-1
 !
 ! Boundaries:
         tni(lev0,i) = tlbc(i,lat)         ! Lower boundary is in tlbc = tn(itp)
         tni(lev1,i) = tn(lev1-1,i,lat)
-        h(lev0,i) = schti(lev0,i,lat)
-        h(lev1,i) = schti(lev1,i,lat)
-        rho(lev0,i) = p0*expzmid_inv*expz(lev0)/(h(lev0,i)*grav)
-        rho(lev1,i) = p0*expzmid_inv*expz(lev1-1)/(h(lev1,i)*grav)
+        rho(lev1,i) = p0*expzmid_inv*expz(lev1-1)/
+     |    (schti(lev1,i,lat)*grav)
 !
 ! G = g*(kT + H**2*rho*cp*kE)/(p0*H*Ds**2) (s2)
 ! F = g*(kE*H**3*rho*g/T)/(p0*2*H*Ds)      (s3)
 !
         do k=lev0,lev1-1 
-          g(k,i) = grav*(kt(k,i,lat)+h(k,i)**2*rho(k,i)*cp(k,i,lat)*
-     |      dift(k,iday))/(p0*h(k,i)*dz**2)
-          f(k,i)=grav**2*dift(k,iday)*h(k,i)**2*rho(k,i)/(tni(k,i)*
-     |      p0*2.*dz)
+          g(k,i) = grav*(kt(k,i,lat)+
+     |      schti(k,i,lat)**2*rho(k,i)*cp(k,i,lat)*dift(k,iday))/
+     |      (p0*schti(k,i,lat)*dz**2)
+          f(k,i) = grav**2*dift(k,iday)*schti(k,i,lat)**2*rho(k,i)/
+     |      (tni(k,i)*p0*2.*dz)
         enddo ! k=lev0,lev1-1 
       enddo ! i=lon0,lon1
 
 !     call addfld('TNI',' ',' ',tni,'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('HG' ,' ',' ',h  ,'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('DEN','Neutral Density','g/cm3',rho,
 !    |  'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !     call addfld('G'  ,' ',' ',g(lev0:lev1-1,:),
@@ -252,35 +243,6 @@
 ! Save diagnostic density:
       call mkdiag_DEN('DEN',rho,lev0,lev1,lon0,lon1,lat)
 !
-! Coefficients for trsolv:
-! Levels 3/2 through K-3/2
-      do i=lon0,lon1
-        do k=lev0,lev1-2
-          p(k,i) = g(k,i)-f(k,i)
-          q(k,i) = -g(k,i)-g(k+1,i) - f(k,i)+f(k+1,i)
-          r(k,i) = g(k+1,i) + f(k+1,i)
-          rhs(k,i) = cptn(k,i)
-        enddo ! k=lev0,lev1-2
-! Level k-1/2
-        p(lev1-1,i) =  g(lev1-1,i)-f(lev1-1,i)
-        q(lev1-1,i) = -g(lev1-1,i)-f(lev1-1,i)
-        r(lev1-1,i) = 0._rp
-        rhs(lev1-1,i) = cptn(lev1-1,i)
-      enddo ! i=lon0,lon1
-
-!     call addfld('P_COEF0' ,' ',' ',p,
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('Q_COEF0' ,' ',' ',q,
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('R_COEF0' ,' ',' ',r,
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('RHS0'    ,' ',' ',rhs,
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('COOL_IMP',' ',' ',cool_imp(:,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('COOL_EXP',' ',' ',cool_exp(:,lon0:lon1,lat),
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!
 ! qpart = cp*(1/(2*Dt)+ai/cp+w*R/(cp*M))
       do i=lon0,lon1
         do k=lev0,lev1-1
@@ -288,29 +250,50 @@
           wi = .5_rp*(w_upd(k,i,lat)+w_upd(k+1,i,lat))
           qpart(k,i) = cpi*(dtx2inv+cool_imp(k,i,lat))+
      |      wi*gask/mbar(k,i,lat)
-          rhs(k,i) = rhs(k,i)+cool_exp(k,i,lat)
-          q(k,i) = q(k,i)-expz(k)*qpart(k,i)
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
 !     call addfld('QPART'  ,' ',' ',qpart(lev0:lev1-1,:),
 !    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-!     call addfld('Q_COEF1',' ',' ',q    ,
+!
+! Coefficients for trsolv:
+! Levels 3/2 through K-3/2
+      do i=lon0,lon1
+        do k=lev0,lev1-1
+          p (k,i) = g(k,i)-f(k,i)
+          r1(k,i) = g(k,i)+f(k,i)
+        enddo ! k=lev0,lev1-1
+        do k=lev0,lev1-2
+          p1(k,i) = p (k+1,i)
+          r (k,i) = r1(k+1,i)
+        enddo ! k=lev0,lev1-2
+! Level k-1/2
+        p1(lev1-1,i) = 2*p (lev1-1,i)-p (lev1-2,i)
+        r (lev1-1,i) = 2*r1(lev1-1,i)-r1(lev1-2,i)
+!
+        do k=lev0,lev1-1
+          q(k,i) = -p1(k,i)-r1(k,i) - expz(k)*qpart(k,i)
+          rhs(k,i) = cptn(k,i)+cool_exp(k,i,lat)
+        enddo ! k=lev0,lev1-1
+      enddo ! i=lon0,lon1
+
+!     call addfld('COOL_IMP',' ',' ',cool_imp(:,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     call addfld('RHS1'   ,' ',' ',rhs  ,
+!     call addfld('COOL_EXP',' ',' ',cool_exp(:,lon0:lon1,lat),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!     do k=lev0,lev1
-!       tnlbc_diag(k,:) = tnlbc(:,lat)
-!     enddo
-!     call addfld('TNLBC2',' ',' ',tnlbc_diag,
-!    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
+!
+! Upper boundary:
+      do i=lon0,lon1
+        q(lev1-1,i) = q(lev1-1,i)+r(lev1-1,i)
+        r(lev1-1,i) = 0
+      enddo ! i=lon0,lon1
 !
 ! Lower boundary:
       do i=lon0,lon1
         q(lev0,i) = q(lev0,i)-p(lev0,i)
 !
 ! Diffs in rhs lbc ??:
-        rhs(lev0,i) = rhs(lev0,i)-2._rp*p(lev0,i)*tnlbc(i,lat)
+        rhs(lev0,i) = rhs(lev0,i)-2._rp*p(lev0,i)*t_lbc(i,lat)
         p(lev0,i) = 0._rp
       enddo ! i=lon0,lon1
 
@@ -324,11 +307,10 @@
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Solve tridiagonal system for new tn:
-!     subroutine trsolv(a,b,c,f,x,lev0,lev1,k1,k2,lon0,lon1,lonmax,lat,
-!    |  idebug)
+!     subroutine trsolv(a,b,c,f,x,lev0,lev1,k1,k2,lon0,lon1,lonmax)
 !
       call trsolv(p,q,r,rhs,tn_upd(:,lon0:lon1,lat),lev0,lev1,
-     |  lev0,lev1-1,lon0,lon1,nlonp4,lat,0)
+     |  lev0,lev1-1,lon0,lon1,nlonp4)
 
 !     call addfld('TN_SOLV','Updated TN from trsolv','K',
 !    |  tn_upd(:,lon0:lon1,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -350,9 +332,9 @@
         do k=lev0+1,lev1-2
           cpi = .5_rp*(cp(k,i,lat)+cp(k+1,i,lat))
           dt_conduct(k,i) = 1/cpi/expz(k)*
-     |      ((g(k  ,i)-f(k  ,i)                  )*tn_upd(k-1,i,lat)-
-     |       (g(k+1,i)-f(k+1,i)+g(k  ,i)+f(k  ,i))*tn_upd(k  ,i,lat)+
-     |       (                  g(k+1,i)+f(k+1,i))*tn_upd(k+1,i,lat))
+     |      (p (k,i)         *tn_upd(k-1,i,lat)-
+     |      (p1(k,i)+r1(k,i))*tn_upd(k  ,i,lat)+
+     |               r (k,i) *tn_upd(k+1,i,lat))
         enddo
       enddo
       call addfld('DTDT','Temperature changing rate','K/s',
@@ -409,7 +391,7 @@
 !
 ! Lower boundary is saved in tlbc (fields.F):
         tlbc_nm(lon0:lon1,lat) = tlbc(lon0:lon1,lat)
-        tlbc(lon0:lon1,lat)    = tnlbc(:,lat)
+        tlbc(lon0:lon1,lat)    = t_lbc(:,lat)
 !
 ! Tn must be at least 100 deg:
         lonbeg = lon0-2
@@ -448,17 +430,13 @@
 #endif
 !
 ! Local:
-      integer :: i,j,nlevs,nlons,nlats,ier
+      integer :: i,j,ier
       real(rp) :: fik(nlonp4,lev0:lev1),fkij(lev0:lev1,nlonp4,lat0:lat1)
 !
 #ifdef VT
 !     code = 131 ; state = 'filter_tn' ; activity='Filtering'
       call vtbegin(131,ier)
 #endif
-!
-      nlevs = lev1-lev0+1
-      nlons = lon1-lon0+1
-      nlats = lat1-lat0+1
 !
 ! Define lons in fkij from current task:
       fkij = 0._rp

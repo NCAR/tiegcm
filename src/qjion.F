@@ -52,11 +52,9 @@
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  qtot,    ! total ionization rate                 (s1)
      |  qphoto,  ! photo-electron heating of neutral gas (s2)
-     |  qic      ! ion chemistry heating of neutral gas  (s3)
-      real,dimension(lev0:lev1) :: aureff
-!
-      aureff(:) = 0.05 ! this is local (not the aureff from aurora module).
-!
+     |  qic,     ! ion chemistry heating of neutral gas  (s3)
+     |  o2_cm3,o1_cm3,n2_cm3,n4s_cm3,n2d_cm3,no_cm3,qic1,qic2
+      real,parameter :: aureff = 0.05 ! this is local (not the aureff from aurora module).
 !
 !     call addfld('XNMBAR' ,' ',' ',xnmbar(:,lon0:lon1),
 !    |  'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -66,12 +64,11 @@
 ! qtot = total ionization rate = sum(Qxx) = 
 ! (QO2+) + (QO+) + (QN2+) + (QNO+) + (QN+) + (QO+(2D)) + (QO+(2P))
 !
-      qtot = 0. ! whole array init
       do i=lon0,lon1
         do k=lev0,lev1
-          qtot(k,i) = qtot(k,i)+(qo2p(k,i,lat)+qop(k,i,lat)+
+          qtot(k,i) = qo2p(k,i,lat)+qop(k,i,lat)+
      |      qn2p(k,i,lat)+qnop(k,i,lat)+qnp(k,i,lat)+qop2d(k,i,lat)+
-     |      qop2p(k,i,lat))
+     |      qop2p(k,i,lat)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 
@@ -80,33 +77,48 @@
 
       do i=lon0,lon1
         do k=lev0,lev1
-          qphoto(k,i) = qtot(k,i)*aureff(k)*35.*avo*evergs/xnmbari(k,i)
+          qphoto(k,i) = qtot(k,i)*aureff*35.*avo*evergs/xnmbari(k,i)
         enddo ! k=lev0,lev1
  
         do k=lev0,lev1-1
-          qic(k,i) = 
-     |      (avo*(o2(k,i)*rmassinv_o2*(rk1(k,i,lat)*op(k,i)*1.555+
-     |      (rk6*2.486+rk7*6.699)*nplus(k,i)+
-     |      rk9*n2p(k,i)*3.52)+
-     |      op(k,i)*(rk2(k,i,lat)*n2(k,i)*rmassinv_n2*1.0888+
-     |      rk10*n2d(k,i)*rmassinv_n2d*1.45)+
-     |      o1(k,i)*rmassinv_o1*(rk3(k,i,lat)*n2p(k,i)*0.70+
-     |      rk8*nplus(k,i)*0.98)+
-     |      o2p(k,i)*(rk4*n4s(k,i)*rmassinv_n4s*4.21+
-     |      rk5*no(k,i)*rmassinv_no*2.813))+
-     |      .5*(ne(k,i)+ne(k+1,i))*(ra1(k,i,lat)*nop(k,i)*0.854+
-     |       ra2(k,i,lat)*o2p(k,i)*5.2755+
-     |       ra3(k,i,lat)*n2p(k,i)*3.678)/xnmbar(k,i))*evergs+
+          o2_cm3(k,i) = xnmbar(k,i)*o2(k,i)*rmassinv_o2
+          o1_cm3(k,i) = xnmbar(k,i)*o1(k,i)*rmassinv_o1
+          n2_cm3(k,i) = xnmbar(k,i)*n2(k,i)*rmassinv_n2
+          n2d_cm3(k,i) = xnmbar(k,i)*n2d(k,i)*rmassinv_n2d
+          n4s_cm3(k,i) = xnmbar(k,i)*n4s(k,i)*rmassinv_n4s
+          no_cm3(k,i) = xnmbar(k,i)*no(k,i)*rmassinv_no
 !
-     |      (avo*(((rk16*3.02+rk17*0.7)*n2(k,i)*rmassinv_n2+
-     |       rk18*o1(k,i)*rmassinv_o1*5.0)*xiop2p(k,i)+
-     |      (rk23*n2(k,i)*rmassinv_n2*1.33+
-     |       rk24*o1(k,i)*rmassinv_o1*3.31+
-     |       rk26*4.87*o2(k,i)*rmassinv_o2)*xiop2d(k,i))+
-     |      (.5*(ne(k,i)+ne(k+1,i))*((rk19(k,i,lat)*5.0+
-     |       rk20(k,i,lat)*1.69)*xiop2p(k,i)+rk25(k,i,lat)*3.31*
-     |       xiop2d(k,i))-(rk21*5.02+rk22*1.69)*xiop2p(k,i)-
-     |       rk27*3.33*xiop2d(k,i))/xnmbar(k,i))*evergs
+          qic1(k,i) =
+     |      o2_cm3(k,i)*
+     |      (rk1(k,i,lat)*op(k,i)*1.555+
+     |       (rk6*2.486+rk7*6.699)*nplus(k,i)+
+     |       rk9*n2p(k,i)*3.52)+
+     |      op(k,i)*
+     |      (rk2(k,i,lat)*n2_cm3(k,i)*1.0888+
+     |       rk10*n2d_cm3(k,i)*1.45)+
+     |      o1_cm3(k,i)*
+     |      (rk3(k,i,lat)*n2p(k,i)*0.70+
+     |       rk8*nplus(k,i)*0.98)+
+     |      o2p(k,i)*
+     |      (rk4*n4s_cm3(k,i)*4.21+
+     |       rk5*no_cm3(k,i)*2.813)+
+     |      xiop2p(k,i)*
+     |      ((rk16*3.02+rk17*0.7)*n2_cm3(k,i)+
+     |       rk18*o1_cm3(k,i)*5.0)+
+     |      xiop2d(k,i)*
+     |      (rk23*n2_cm3(k,i)*1.33+
+     |       rk24*o1_cm3(k,i)*3.31+
+     |       rk26*4.87*o2_cm3(k,i))
+          qic2(k,i) =
+     |      .5*(ne(k,i)+ne(k+1,i))*
+     |      (ra1(k,i,lat)*nop(k,i)*0.854+
+     |       ra2(k,i,lat)*o2p(k,i)*5.2755+
+     |       ra3(k,i,lat)*n2p(k,i)*3.678+
+     |       (rk19(k,i,lat)*5.0+rk20(k,i,lat)*1.69)*xiop2p(k,i)+
+     |       rk25(k,i,lat)*3.31*xiop2d(k,i))-
+     |      (rk21*5.02+rk22*1.69)*xiop2p(k,i)-
+     |      rk27*3.33*xiop2d(k,i)
+          qic(k,i) = (avo*qic1(k,i)+qic2(k,i))/xnmbar(k,i)*evergs
 !
 ! Insure qic > 0:
           if (qic(k,i) < 1.e-20) qic(k,i) = 1.e-20

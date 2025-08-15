@@ -14,7 +14,6 @@
 !
       use params_module,only: nmlonp1,nmlat,nlat,nlonp4,nlatp2,nlonp2,
      |  nlon,nlonp1,nlevp1,nmlon,nlatp1
-      use addfld_module,only: addfld
       implicit none
 !
       real,dimension(nlonp1,0:nlatp1) ::

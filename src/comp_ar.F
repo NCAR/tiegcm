@@ -9,7 +9,6 @@
 ! minor contains 3d mpi calls and its own latitude loops. 
 !
       use params_module,only: nlevp1
-      use addfld_module,only: addfld
       implicit none
 !
 ! Boundary conditions and production and loss terms are allocated
@@ -50,7 +49,7 @@
 
       end subroutine comp_ar
 !-----------------------------------------------------------------------
-      subroutine minor_ar(tn,o2,o1,he,mbar,barm,xnmbar,w,ar,ar_nm,
+      subroutine minor_ar(tn,un,vn,o2,o1,he,mbar,barm,xnmbar,w,ar,ar_nm,
      |  ar_out,arnm_out,lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_ar
       implicit none
@@ -60,6 +59,8 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) ::
      |  tn,     ! neutral temperature (deg K)
+     |  un,     ! zonal wind velocity
+     |  vn,     ! meridional wind velocity
      |  o2,     ! molecular oxygen (mmr)
      |  o1,     ! oxygen family (mmr)
      |  he,     ! helium (mmr)
@@ -83,7 +84,7 @@
       real,parameter :: phi_ar(4) = (/1.042,1.509,0.732,1.176/) ! from tgcm24
       real,parameter :: alfa_ar   = 0.17    ! thermal diffusion coefficient (from tgcm24)
 !
-      call minor(tn,o2,o1,he,mbar,barm,xnmbar,w,ar,ar_nm,
+      call minor(tn,un,vn,o2,o1,he,mbar,barm,xnmbar,w,ar,ar_nm,
      |  ar_out,arnm_out,ar_loss,ar_prod,ar_lbc,ar_ubc,rmass_ar,
      |  phi_ar,alfa_ar,lev0,lev1,lon0,lon1,lat0,lat1,0,'AR')
 !

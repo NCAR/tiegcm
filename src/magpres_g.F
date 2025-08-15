@@ -77,7 +77,7 @@
      |    o2p   ! O2+  1/cm^3
 !
 ! Local:
-      integer :: i0,i1,nk,nkm1,i,k,lat,lonbeg,lonend
+      integer :: i,k,lat,lonbeg,lonend
       real :: rho,sumt,gne,fac,sumtm,sumtp,halfne,halfz,
      |  tk,tkp,gt,fac_horlon,fac_horlat,fac_hgt,oB2,
      |  horlon_ne,horlon_t,horlat_ne,horlat_t,
@@ -93,12 +93,6 @@
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==nlonp4) lonend = lon1-2
-!      
-! Convenience ints for addfsech calls:
-      i0 = lon0
-      i1 = lon1
-      nk = lev1-lev0+1
-      nkm1 = nk-1
 !      
       fac = 10.*grav*matm ! g*mass per atomic weight factor gauss,kg -> T,g
 

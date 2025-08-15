@@ -5,8 +5,6 @@
 ! Open Source Academic Research License Agreement contained in the file 
 ! tiegcmlicense.txt.
 !
-      use params_module,only: nlevp1,nlonp4,nlat
-      use addfld_module,only: addfld
       implicit none
 !
 ! Boundary conditions, production and loss for N4S are defined
@@ -14,12 +12,6 @@
 ! from a latitude loop in dynamics. After comp_n4s, dynamics calls
 ! minor_n4s, which passes this module data to sub minor. Sub 
 ! minor contains 3d mpi calls and its own latitude loops.
-!
-!     real,dimension(nlonp4,nlat)   :: n4s_ubc ! upper boundary
-!     real,dimension(nlonp4,3,nlat) :: n4s_lbc ! lower boundary
-!     real,dimension(nlevp1,nlonp4,nlat) ::
-!    |  n4s_prod,     ! production of n4s
-!    |  n4s_loss      ! loss of n4s
 !
 ! Boundary conditions and production and loss terms are allocated
 ! subdomains by sub alloc_n4s (called from allocdata.F).
@@ -42,6 +34,8 @@
 ! Allocate subdomains (without ghost cells) to module data for boundary 
 ! conditions and production and loss terms. This is called once per run 
 ! from sub allocdata (allocdata.F).
+!
+      use params_module,only: nlevp1
 !
 ! Args:
       integer,intent(in) :: lon0,lon1,lat0,lat1
@@ -80,6 +74,7 @@
      |  rmassinv_n2d,rmassinv_o2,rmassinv_o1,rmassinv_n2,rmassinv_no
       use chemrates_module,only: beta1,beta3,beta4,beta5,beta7,
      |  beta8,beta17,ra1,ra3,rk2,rk4,rk6,rk8
+      use addfld_module,only: addfld
 !
 ! Input args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
@@ -100,36 +95,35 @@
 !
 ! Local:
       integer :: k,i
-      integer ::i0,i1,nk,nkm1
-      real :: xnmbar_lbc
+      real :: o2_cm3_lbc,o1_cm3_lbc,n2_cm3_lbc,n2d_cm3_lbc,no_cm3_lbc,
+     |  o2_cm3,o1_cm3,n2_cm3,n2d_cm3,no_cm3
 !
 !     write(6,"('enter comp_n4s: lat=',i2)") lat
-      i0 = lon0
-      i1 = lon1
-      nk = lev1-lev0+1
-      nkm1 = nk-1
 !
 ! Lower boundary:
 ! n4s_lbc(:,1)=A, n4s_lbc(:,2)=B, n4s_lbc(:,3)=C define lower boundary 
 !   condition where A*DPSX/DZ + B*PSX + C = 0.
 !
       do i=lon0,lon1
-        xnmbar_lbc = xnmbari(lev0,i)
+        o2_cm3_lbc = xnmbari(lev0,i)*o2(lev0,i)*rmassinv_o2
+        o1_cm3_lbc = xnmbari(lev0,i)*o1(lev0,i)*rmassinv_o1
+        n2_cm3_lbc = xnmbari(lev0,i)*n2(lev0,i)*rmassinv_n2
+        n2d_cm3_lbc = xnmbari(lev0,i)*n2d(lev0,i)*rmassinv_n2d
+        no_cm3_lbc = xnmbari(lev0,i)*no(lev0,i)*rmassinv_no
 !
 ! Value at bottom given by photochemical equilibrium.
         n4s_lbc(i,1,lat) = 0.
         n4s_lbc(i,2,lat) = 1.
-        n4s_lbc(i,3,lat) = -rmass_n4s/xnmbar_lbc*
-     |   (qtef(lev0,i,lat)*(1.-brn2d)/xnmbar_lbc+
-     |    n2d(lev0,i)*rmassinv_n2d*
-     |    (beta4*xnmbar_lbc*o1(lev0,i)*rmassinv_o1+
+        n4s_lbc(i,3,lat) = -rmass_n4s/xnmbari(lev0,i)*
+     |   (qtef(lev0,i,lat)*(1.-brn2d)+
+     |    n2d_cm3_lbc*
+     |    (beta4*o1_cm3_lbc+
      |     beta5(lev0,i,lat)*ne(lev0,i)+beta7)+
-     |    beta8(lev0,i,lat)*no(lev0,i)*rmassinv_no)/
+     |    beta8(lev0,i,lat)*no_cm3_lbc)/
 !
-     |   (beta1(lev0,i,lat)*o2(lev0,i)*rmassinv_o2+
-     |    beta3(lev0,i,lat)*no(lev0,i)*rmassinv_no+
-     |    xnmbar_lbc*beta17(lev0,i,lat)*
-     |    o1(lev0,i)*rmassinv_o1*n2(lev0,i)*rmassinv_n2)
+     |   (beta1(lev0,i,lat)*o2_cm3_lbc+
+     |    beta3(lev0,i,lat)*no_cm3_lbc+
+     |    beta17(lev0,i,lat)*o1_cm3_lbc*n2_cm3_lbc)
 !
 ! Zero diffusive flux at top:
         n4s_ubc(i,lat) = 0.
@@ -138,37 +132,43 @@
 ! Sources:
       do i=lon0,lon1
         do k=lev0,lev1-1
+          o2_cm3 = xnmbar(k,i)*o2(k,i)*rmassinv_o2
+          o1_cm3 = xnmbar(k,i)*o1(k,i)*rmassinv_o1
+          n2_cm3 = xnmbar(k,i)*n2(k,i)*rmassinv_n2
+          n2d_cm3 = xnmbar(k,i)*n2d(k,i)*rmassinv_n2d
+          no_cm3 = xnmbar(k,i)*no(k,i)*rmassinv_no
 !
-          n4s_prod(k,i,lat) = (.5*(qtef(k,i,lat)+qtef(k+1,i,lat))*
-     |      (1.-brn2d))+xnmbar(k,i)*(n2d(k,i)*rmassinv_n2d*
-     |      (xnmbar(k,i)*beta4*o1(k,i)*rmassinv_o1+
+          n4s_prod(k,i,lat) =
+     |      .5*(qtef(k,i,lat)+qtef(k+1,i,lat))*(1.-brn2d)+
+     |      n2d_cm3*
+     |      (beta4*o1_cm3+
      |      beta5(k,i,lat)*.5*(ne(k,i)+ne(k+1,i))+beta7)+
-     |      .5*(beta8(k,i,lat)+beta8(k+1,i,lat))*no(k,i)*rmassinv_no)+
-     |      xnmbar(k,i)*(rk2(k,i,lat)*op(k,i)*n2(k,i)*rmassinv_n2+
-     |      rk6*nplus(k,i)*o2(k,i)*rmassinv_o2+
-     |      rk8*nplus(k,i)*o1(k,i)*rmassinv_o1)+
-     |      sqrt(ne(k,i)*ne(k+1,i))*(ra1(k,i,lat)*nop(k,i)*0.15+
-     |      ra3(k,i,lat)*n2p(k,i)*1.1)
+     |      .5*(beta8(k,i,lat)+beta8(k+1,i,lat))*no_cm3+
+     |      rk2(k,i,lat)*op(k,i)*n2_cm3+
+     |      rk6*nplus(k,i)*o2_cm3+
+     |      rk8*nplus(k,i)*o1_cm3+
+     |      sqrt(ne(k,i)*ne(k+1,i))*
+     |      (ra1(k,i,lat)*nop(k,i)*0.15+ra3(k,i,lat)*n2p(k,i)*1.1)
 !
-          n4s_loss(k,i,lat) = -xnmbar(k,i)*(beta1(k,i,lat)*o2(k,i)*
-     |      rmassinv_o2+beta3(k,i,lat)*no(k,i)*rmassinv_no+
-     |      xnmbar(k,i)*beta17(k,i,lat)*o1(k,i)*rmassinv_o1*
-     |      n2(k,i)*rmassinv_n2)-rk4*o2p(k,i)
+          n4s_loss(k,i,lat) = -(beta1(k,i,lat)*o2_cm3+
+     |      beta3(k,i,lat)*no_cm3+
+     |      beta17(k,i,lat)*o1_cm3*n2_cm3+
+     |      rk4*o2p(k,i))
 
         enddo ! k=lev0,lev1-1
       enddo ! i=lon0,lon1
 
-!     call addfld('MBAR_N4S'  ,' ',' ',xnmbar(lev0:lev1-1,i0:i1),
-!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
-!     call addfld('N4S_PROD',' ',' ',n4s_prod(lev0:lev1-1,i0:i1,lat),
-!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
-!     call addfld('N4S_LOSS',' ',' ',n4s_loss(lev0:lev1-1,i0:i1,lat),
-!    |  'lev',lev0,lev1-1,'lon',i0,i1,lat)
+!     call addfld('MBAR_N4S'  ,' ',' ',xnmbar(lev0:lev1-1,lon0:lon1),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('N4S_PROD',' ',' ',n4s_prod(lev0:lev1-1,:,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
+!     call addfld('N4S_LOSS',' ',' ',n4s_loss(lev0:lev1-1,:,lat),
+!    |  'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
  
       end subroutine comp_n4s
 !-----------------------------------------------------------------------
-      subroutine minor_n4s(tn,o2,o1,he,mbar,barm,xnmbar,w,n4s,n4s_nm1,
-     |  n4s_out,n4s_nm1_out,lev0,lev1,lon0,lon1,lat0,lat1)
+      subroutine minor_n4s(tn,un,vn,o2,o1,he,mbar,barm,xnmbar,w,
+     |  n4s,n4s_nm1,n4s_out,n4s_nm1_out,lev0,lev1,lon0,lon1,lat0,lat1)
       use cons_module,only: rmass_n4s
 !
 ! Input args:
@@ -176,6 +176,8 @@
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) ::
      |  tn,      ! neutral temperature (deg K)
+     |  un,      ! zonal wind velocity
+     |  vn,      ! meridional wind velocity
      |  o2,      ! molecular oxygen (mmr)
      |  o1,      ! atomic oxygen (mmr)
      |  he,      ! helium (mmr)
@@ -197,7 +199,7 @@
 ! Minor returns n4s_out and n4s_nm1_out. Module data n4s_prod,
 ! n4s_loss, etc, were defined by comp_n4s.  
 !
-      call minor(tn,o2,o1,he,mbar,barm,xnmbar,w,n4s,n4s_nm1,
+      call minor(tn,un,vn,o2,o1,he,mbar,barm,xnmbar,w,n4s,n4s_nm1,
      |  n4s_out,n4s_nm1_out,n4s_loss,n4s_prod,n4s_lbc,n4s_ubc,
      |  rmass_n4s,phi_n4s,alfa_n4s,lev0,lev1,lon0,lon1,lat0,lat1,
      |  0,'N4S')

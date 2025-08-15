@@ -55,7 +55,7 @@
 !             and mods to gpi.F. 
 ! 1/24/08 btf:Changed alfad,ed, alfac,ec as per Wenbin.
 !
-      use params_module,only: nlonp4,nlevp1,nlat
+      use params_module,only: nlonp4,nlat
       implicit none
 !
 ! VT vampir tracing:
@@ -205,7 +205,6 @@
       integer,intent(in) :: iprint
 !
 ! Local:
-      real,parameter :: convert=3.1211e+8
       real :: alfa_1,alfa_2,plevel,roth,rote,rcp,rhp
       real :: arad(2)
       real :: hp_amie,c25,c35
@@ -316,8 +315,8 @@
 ! (conversion between particle number density and characteristic
 !  energy and column energy input)
 !
-      fc = convert * ec / alfac
-      fd = convert * ed / alfad
+      fc = ec / (alfac*fac_p2e)
+      fd = ed / (alfad*fac_p2e)
 !
 ! Solar proton flux:
       flx_sp = e_sp/1.602e-6
@@ -490,9 +489,7 @@
      |  sinlat, coslat, ! sin,cos of dlat_aur (rlatm) magnetic latitude
      |  coslon, sinlon, ! sin,cos of dlon_aur+offset
      |  cusplon,        ! longitude of cusp
-     |  lamda,          ! angle from throat
-     |  coslamda,       ! cos(lamda)
-     |  aurmlt,         ! MLT of max width of aurora
+     |  coslamda,       ! cos(angle from throat)
      |  halfwidth,      ! oval 1/e-width
      |  dtheta,         ! latitudinal variation (Gaussian)
      |  aurspread,      ! Gaussian spread: exp(-(dtheta/halfwidth)**2)
@@ -532,15 +529,15 @@
           sinlon = sin(dlon_aur(i,lat)+aslona)
           coslon = cos(dlon_aur(i,lat)+aslona)
           colat(i,lat) = acos(cosofa*sinlat-sinofa*coslat*coslon)
-          alon(i,lat) = mod(atan2(sinlon*coslat,
+          alon(i,lat) = modulo(atan2(sinlon*coslat,
      |      sinlat*sinofa+cosofa*coslat*coslon)-
-     |      aslona+3.*pi,pi*2.)-pi
+     |      aslona,pi*2.)
 
 ! Make cusp:
 ! Calculate horizontal variation of polar cusp heating (was polht.F)
 !
-          cusplon = atan2(sin(alon(i,lat)-phid(ihem)),
-     |                    cos(alon(i,lat)-phid(ihem)))
+          cusplon = modulo(alon(i,lat)-phid(ihem),pi*2.)
+          if (cusplon > pi) cusplon = cusplon-pi*2.
           cusp(i,lat) = (exp(-((theta0(ihem)-colat(i,lat))/s5)**2)+
      |           exp(-((pi_cusp-theta0(ihem)-colat(i,lat))/s5)**2))*
      |           exp(-(cusplon/s20)**2)
@@ -556,14 +553,10 @@
 ! dtheta    = colat-theta0(ihem)
 ! alfa      = electron energy
 !
-          lamda = atan2(sin(alon(i,lat)-rrote),
-     |                  cos(alon(i,lat)-rrote))
-          coslamda = cos(lamda)
+          coslamda = cos(alon(i,lat)-rrote)
 !
 ! Auroral oval 1/e-width (equation (1) in Roble,1987):
-          aurmlt = atan2(sin(alon(i,lat)-rroth),
-     |                   cos(alon(i,lat)-rroth))
-          halfwidth = h0*(1.-rh*cos(aurmlt))
+          halfwidth = h0*(1.-rh*cos(alon(i,lat)-rroth))
           dtheta = colat(i,lat)-rrad(ihem)
           aurspread = exp(-(dtheta/halfwidth)**2)
 !
@@ -774,14 +767,9 @@
      |  qo2p_a, qop_a, qn2p_a
       real,dimension(lon0:lon1) ::
      |  falfa1, falfa2, fcusp, fdrizl, falfa_sp, falfa3
-      real :: qia(5) ! low energy proton source (not in use, 1/02)
-      real,dimension(lev0:lev1,lon0:lon1) :: qaurora,
+      real,dimension(lev0:lev1,lon0:lon1) :: qaurora,qsoft,q3,q_sp,
      |  o2_cm3,o1_cm3,he_cm3,n2_cm3
-! External:
-      logical,external :: time2print
       logical :: use_cion = .false.      ! switch between AION and CION
-!
-      qia(:) = 0.
 !
 !     write(6,"('aurora_ions: lat=',i2,' flux1=',/,(10e12.4))")
 !    |  lat,flux1
@@ -833,7 +821,6 @@
 ! High energy electrons:
       call aion(xalfa3, alfa3_ion,lev0,lev1,lon0,lon1)
 !
-      qaurora = 0.
       do i=lon0,lon1
         falfa1(i) = alfa1(i)*flux1(i)  ! s7
         falfa2(i) = alfa2(i)*flux2(i)  ! s8
@@ -841,25 +828,28 @@
         fcusp (i) = cusp(i)*alfac*fc   ! s9
         fdrizl(i) = drizl(i)*alfad*fd  ! s10
         falfa3(i) = alfa3(i)*flux3(i)  ! s13 (high energy electrons)
+        falfa_sp(i) = alfa_sp*flx_sp
 !
 ! Pressure column, bottom to top:
         do k=lev0,lev1-1
-          falfa_sp(i) = drizl(i)*flx_sp*1.e6/(scht(k,i)*35.)
-          qsum(k,i) = 
+          qaurora(k,i) =
      |      falfa1(i)*alfa1_ion(k,i)+  ! s7*s3
-     |      falfa2(i)*alfa2_ion(k,i)+  ! s8*s4
+     |      falfa2(i)*alfa2_ion(k,i)   ! s8*s4
+          qsoft(k,i) =
      |      fcusp (i)*cusp_ion (k,i)+  ! s9*s5
      |      fdrizl(i)*drizl_ion(k,i)   ! s10*s6
-          qaurora(k,i) = 1.e3/(scht(k,i)*35.)*
-     |                  (falfa1(i)*alfa1_ion(k,i)+
-     |                   falfa2(i)*alfa2_ion(k,i))
+          q3(k,i) = falfa3(i)*alfa3_ion(k,i)
+!         falfa_sp(i) = drizl(i)*flx_sp*1.e6/(scht(k,i)*35.)
+          q_sp(k,i) = falfa_sp(i)*alfasp_bion(k,i)
+!
+          qsum(k,i) = qaurora(k,i)+qsoft(k,i)
 !
 ! Include solar protons if add_sproton is set, and high energy electrons
 ! if add_helectron is set:
           if (add_helectron) 
-     |      qsum(k,i) = qsum(k,i) + falfa3(i)*alfa3_ion(k,i)
+     |      qsum(k,i) = qsum(k,i) + q3(k,i)
           if (add_sproton)
-     |      qsum(k,i) = qsum(k,i) + falfa_sp(i)*alfasp_bion(k,i)
+     |      qsum(k,i) = qsum(k,i) + q_sp(k,i)
 !
           qsum(k,i) = qsum(k,i)*1.e3/(scht(k,i)*35.) ! s1 = s1*s11
 !
@@ -873,17 +863,15 @@
      |      1.15 * n2_cm3(k,i)
 !
 ! Production of O2+ (equation (15) in Roble,1987):
-          qo2p_aur(k,i) = qsum(k,i)*o2_cm3(k,i)/denom(k,i)+
-     |      qia(2)
+          qo2p_aur(k,i) = qsum(k,i)*o2_cm3(k,i)/denom(k,i)
 !
 ! Production of O+ (equation (16) in Roble,1987):
           qop_aur(k,i) = qsum(k,i)*
      |      (0.5 *o2_cm3(k,i)+
-     |       0.56*o1_cm3(k,i))/denom(k,i) + qia(3)
+     |       0.56*o1_cm3(k,i))/denom(k,i)
 !
 ! Production of N2+ (equation (13) in Roble,1987)
-          qn2p_aur(k,i) = qsum(k,i)*0.7*n2_cm3(k,i)/denom(k,i)+
-     |      qia(1)
+          qn2p_aur(k,i) = qsum(k,i)*0.7*n2_cm3(k,i)/denom(k,i)
         enddo ! k=lev0,lev1
       enddo ! i=lon0,lon1
 

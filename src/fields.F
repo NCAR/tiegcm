@@ -13,8 +13,7 @@
 !   previous and current time steps. 3-d fields are the same as 4-d
 !   without the final time dimension. 
 !
-      use params_module,only: nlonp1,nlonp4,nlat,nlatp1,nlevp1,
-     |  mxfsech,spval,nmlat,nmlonp1,mlev0,mlev1
+      use params_module,only: mxfsech,nmlat,nmlonp1,mlev0,mlev1
       implicit none
       integer,parameter :: 
      |  nf4d          = 36, ! number of 4-d fields
@@ -197,6 +196,8 @@
 !
 ! Set names, units, indices and pointers for f4d and f3d field structures,
 ! and allocate 3d and 4d field arrays. Also make other data allocations.
+!
+      use params_module,only: nlevp1
 !
       implicit none
 !

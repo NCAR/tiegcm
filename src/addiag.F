@@ -7,7 +7,7 @@
 !
 ! Calculate needed terms vc, barm, xnmbar[i,m], and Z:
 !
-      use cons_module,only: cs,dz,dzgrav,
+      use cons_module,only: cs,dz,
      |  gask,grav,p0,boltz,expz,expzmid,expzmid_inv,
      |  rmassinv_o2,rmassinv_o1,rmassinv_he,rmassinv_n2
       use fields_module,only: tlbc
@@ -46,18 +46,15 @@
 #endif
 !
 ! Local:
-      integer :: k,i,j,nlevs,ier
+      integer :: k,i,j,ier
       real :: 
-     |  barm1(lon0:lon1),
      |  tni  (lev0:lev1,lon0:lon1), ! tn at interfaces
-     |  expzi(lev0:lev1,lon0:lon1), ! e(-z) at interfaces
-     |  w1   (lev0:lev1,lon0:lon1)
+     |  expzi(lev0:lev1)            ! e(-z) at interfaces
 !
 #ifdef VT
 !     code = 116 ; state = 'addiag' ; activity='ModelCode'
       call vtbegin(116,ier)
 #endif
-      nlevs = lev1-lev0+1
 !
 ! Save inputs:
 !     do j=lat0,lat1
@@ -68,6 +65,11 @@
 !       call addfld('diag_o1',' ',' ',o1(lev0:lev1-1,lon0:lon1,j),
 !    |    'lev',lev0,lev1-1,'lon',lon0,lon1,j)
 !     enddo
+!
+      do k=lev0,lev1-1
+        expzi(k) = expzmid_inv*expz(k)
+      enddo
+      expzi(lev1) = expzmid*expz(lev1-1)
 !
 ! Latitude scan:
       do j=lat0,lat1
@@ -114,7 +116,7 @@
 ! barm1 = mbar(k=0) (linear extrapolation)
 !
         do i=lon0,lon1
-          barm1(i) = 1.5*mbar(1,i,j)-0.5*mbar(2,i,j)
+          barm(lev0,i,j) = 1.5*mbar(1,i,j)-0.5*mbar(2,i,j)
         enddo
 !       call addfld('mbar',' ',' ',mbar(:,lon0:lon1,j),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
@@ -127,25 +129,16 @@
           enddo
         enddo
 !
-! barm(1) = barm1
-!
-        do i=lon0,lon1
-          barm(lev0,i,j) = barm1(i)
-        enddo
-!
 ! xnmbari = p0*e(-z)*barm/kT at interfaces (used by qrj and qinite):
         do i=lon0,lon1
 !         tni(1,i) = tn(lev1,i,j) ! tn bottom boundary is stored in top slot
           tni(lev0,i) = tlbc(i,j)    ! Lower boundary is in tlbc
-          expzi(1,i) = expzmid_inv*expz(1)
           do k=lev0+1,lev1-1
             tni(k,i) = .5*(tn(k-1,i,j)+tn(k,i,j))
-            expzi(k,i) = expzmid_inv*expz(k)
           enddo
           tni(lev1,i) = tn(lev1-1,i,j) ! nlevp1 <- nlev
-          expzi(lev1,i) = expzmid*expz(lev1-1)
           do k=lev0,lev1
-            xnmbari(k,i,j) = p0*expzi(k,i)*barm(k,i,j)/
+            xnmbari(k,i,j) = p0*expzi(k)*barm(k,i,j)/
      |        (boltz*tni(k,i))
           enddo
         enddo
@@ -172,37 +165,10 @@
 !
 ! Complete calculation of geopotential Z:
 !
-! w1 = mbar
-        do i=lon0,lon1
-          do k=lev0,lev1-1
-            w1(k,i) = mbar(k,i,j)
-          enddo
-        enddo
-!       call addfld('W1a',' ',' ',w1,'lev',lev0,lev1,'lon',lon0,lon1,j)
-!
-! w1 = tn/w1 (old model comment: s1=s2/s1=(t+t0)/m)
-        do i=lon0,lon1
-          do k=lev0,lev1-1
-            w1(k,i) = tn(k,i,j)/w1(k,i)
-          enddo
-        enddo
-!       call addfld('TNa',' ',' ',tn(:,lon0:lon1,j),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,j)
-!       call addfld('W1b',' ',' ',w1,'lev',lev0,lev1,'lon',lon0,lon1,j)
-!
-! w1=(ds*r/g)*w1
-!
-        do i=lon0,lon1
-          do k=lev0,lev1-1
-            w1(k,i) = (dz/dzgrav) * w1(k,i)
-          enddo
-        enddo
-!       call addfld('W1c',' ',' ',w1,'lev',lev0,lev1,'lon',lon0,lon1,j)
-!
 ! Extend Z upward:
         do i=lon0,lon1
           do k=lev0,lev1-1
-            z(k+1,i,j) = w1(k,i)+z(k,i,j)
+            z(k+1,i,j) = dz*scht(k,i,j)+z(k,i,j)
           enddo
         enddo
 !       call addfld('ADIAG_Z','Geopotential from addiag',
@@ -237,7 +203,7 @@
 ! ZG will be put on secondary histories, along with the regular Z.
 !
       use params_module,only: dz,glat
-      use cons_module,only: grav
+      use cons_module,only: grav,dtr
       use addfld_module,only: addfld
 !
 ! Args:
@@ -252,25 +218,22 @@
 ! Local:
       integer :: i,j,k
       real :: g0,r0,c2
-      real,dimension(lev0:lev1) :: g
-      real,parameter :: dgtr=1.74533E-2
 !
 ! Latitude scan:
 ! 1/20/10 btf: changed float(j) to glat(j) in cos of c2 calculation
       do j=lat0,lat1
-        c2 = cos(2.*dgtr*glat(j))
+        c2 = cos(2.*dtr*glat(j))
         g0 = 980.616*(1.-.0026373*c2)
         r0 = 2.*g0/(3.085462e-6 + 2.27e-9*c2) ! effective earth radius
 !
 ! Longitude scan:
         do i=lon0,lon1
-          g(1)=g0*(r0/(r0+0.5*(z(1,i,j)+z(2,i,j))))**2
 !
 ! Interface levels:
           zg(lev0,i,j) = z(lev0,i,j)
           do k=lev0+1,lev1-1
-            zg(k,i,j) = zg(k-1,i,j) + dz*scht(k-1,i,j)*grav/g(k-1)
-            g(k)=g0*(r0/(r0+0.5*(zg(k,i,j)+z(k+1,i,j))))**2
+            zg(k,i,j) = zg(k-1,i,j) + dz*scht(k-1,i,j)*grav/g0/
+     |        (r0/(r0+0.5*(zg(k-1,i,j)+z(k,i,j))))**2
           enddo ! k=lev0+1,lev1-1
           zg(lev1,i,j) = 2.0*zg(lev1-1,i,j)-zg(lev1-2,i,j)
         enddo ! i=lon0,lon1

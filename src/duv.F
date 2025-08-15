@@ -13,8 +13,8 @@
       use init_module,only: iday
       use lbc,only: u_lbc,v_lbc
       use cons_module,only: dtx2inv,expz,p0,grav,
-     |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth
-      use fields_module,only: ulbc,vlbc,tlbc_nm,ulbc_nm,vlbc_nm
+     |  xmue,cor,tanphi=>tn,re,dtsmooth_div2,dtsmooth,shapiro
+      use fields_module,only: ulbc,vlbc,ulbc_nm,vlbc_nm
       use addfld_module,only: addfld
       use mpi_module,only: mp_periodic_f3d,mp_periodic_f2d,
      |  mp_bndlons_f2d,mp_bndlats_f2d
@@ -57,15 +57,12 @@
      |  vnm_upd  ! updated meridional velocity at time n-1
 !
 ! Local:
-      integer :: k,kk,i,lat,lonbeg,lonend
-      integer :: nk,nkm1,nlevs
-      real :: wi,
-     |  unlbc(lon0:lon1), ! un lower boundary (t1)
-     |  vnlbc(lon0:lon1)  ! vn lower boundary (t2)
+      integer :: k,i,lat,lonbeg,lonend,m,n
+      real :: wi
       real,dimension(lev0:lev1,lon0:lon1) ::
-     |  g,           ! g**2*(kM+XMUE)*MBAR*/(P0*R*T*DS**2)
+     |  g,g1,        ! g**2*(kM+XMUE)*MBAR*/(P0*R*T*DS**2)
      |  dwdz,        ! exp(-s)*w(k+1/2)/(2.*Ds)
-     |  tni          ! tn at interfaces
+     |  cen
       real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
      |  advec_un,    ! zonal advection (output of sub advec)
      |  advec_vn,    ! meridional advection (output of sub advec)
@@ -73,58 +70,36 @@
      |  unm_smooth,  ! un at time n-1, smoothed
      |  vnm_smooth   ! vn at time n-1, smoothed
       real :: flbc(lon0-2:lon1+2,lat0-2:lat1+2,4) ! ulbc,vlbc,ulbc_nm,vlbc_n
-      real :: rtxmue(lev0:lev1) ! sqrt(xmue)
       real,dimension(lev0:lev1,lon0:lon1) ::
-     |  eddyvisc     ! eddy viscosity (?)
+     |  eddyvisc,eddyvisci     ! eddy viscosity (?)
 !
 ! For diagnostic, debug:
       real,dimension(lev0:lev1,lon0:lon1) ::
-     |  unlbc_diag,   ! un lbc redundant in vertical, for diagnostic
-     |  vnlbc_diag,   ! vn lbc redundant in vertical, for diagnostic
-     |  ss_un,ss_vn,  ! also for diagnostics
      |  dudt,dvdt,du_cor,dv_cor,du_cen,dv_cen,du_drag,dv_drag,
      |  un_drag_coef,vn_drag_coef,du_visc,dv_visc,du_veradv,dv_veradv
 !
 ! pp, qq, rr, beta AND gamma are (2 x 2) matrices defined for 
 !   k = 3/2, K-1/2, 1 and i = 3, IMAX+2, 1
       real,dimension(2,2,lev0:lev1,lon0:lon1) :: 
-     |  pp,qq,rr,beta,gamma 
+     |  pp,qq,rr
 !
 ! ss, xx and yy are two component vectors similarly defined.
       real,dimension(2,lev0:lev1,lon0:lon1) :: 
-     |  ss,xx,yy
-!
-! For addfld:
-      nk = lev1-lev0+1
-      nkm1 = nk-1
-      nlevs = nk
+     |  ss,xx
 !
       lonbeg = lon0
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==nlonp4) lonend = nlonp4-2
 !
-! First latitude scan:
-      do lat=lat0,lat1
-!
 ! Horizontal advection:
-!     subroutine advec(f,hadvec,lev0,lev1,lon0,lon1,lat)
-!     real,dimension(lev0:lev1,lon0-2:lon1+2,lat-2:lat+2),intent(in) :: 
-!    |  f ! input field with ghost cells for finite differencing
-!     real,dimension(lev0:lev1,lon0:lon1),intent(out) :: hadvec
+!     subroutine advec(un,vn,f,hadvec,lev0,lev1,lon0,lon1,lat0,lat1)
+!     real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in) :: 
+!    |  un,vn,f ! input field with ghost cells for finite differencing
+!     real,dimension(lev0:lev1,lon0:lon1,lat0:lat1),intent(out) :: hadvec
 !      
-        call advec(un(:,:,lat-2:lat+2),advec_un(:,:,lat), 
-     |    lev0,lev1,lon0,lon1,lat)
-        call advec(vn(:,:,lat-2:lat+2),advec_vn(:,:,lat), 
-     |    lev0,lev1,lon0,lon1,lat)
-
-!       call addfld('ADVEC_U0','ADVEC_U0',' ',advec_un(:,:,lat),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('ADVEC_V0','ADVEC_V0',' ',advec_vn(:,:,lat),
-!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-!
-! End first latitude scan:
-      enddo ! lat=lat0,lat1
+      call advec(un,vn,un,advec_un,lev0,lev1,lon0,lon1,lat0,lat1)
+      call advec(un,vn,vn,advec_vn,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Horizontal pressure forcing output of glp is in zl,zp. Pass full 
 ! subdomains for derivatives in lat and lon (see sub dldp, called by glp):
@@ -136,12 +111,18 @@
 ! Input un_nm,vn_nm at full subdomain.
 ! Output in unm_smooth,vnm_smooth at subdomain.
 !
-      call smooth(un_nm,unm_smooth,lev0,lev1,lon0,lon1,lat0,lat1,0)
-      call smooth(vn_nm,vnm_smooth,lev0,lev1,lon0,lon1,lat0,lat1,0)
+      call smooth(un_nm,unm_smooth,shapiro,
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      call smooth(vn_nm,vnm_smooth,shapiro,
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Start third latitude scan:
       do lat=lat0,lat1
 
+!       call addfld('ADVEC_U0','ADVEC_U0',' ',advec_un(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
+!       call addfld('ADVEC_V0','ADVEC_V0',' ',advec_vn(:,:,lat),
+!    |    'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('UNSMOOTH','UNSMOOTH',' ',unm_smooth(:,:,lat),
 !    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('VNSMOOTH','VNSMOOTH',' ',vnm_smooth(:,:,lat),
@@ -150,19 +131,6 @@
 !    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('VN_NM_DUV','VN_NM_DUV',' ',vn_nm(:,lon0:lon1,lat),
 !    |     'ilev',lev0,lev1,'lon',lon0,lon1,lat)
-!
-! Lower boundaries u_lbc,v_lbc were calculated by sub tuvz_lbc (lbc.F)
-        unlbc(:) = u_lbc(lon0:lon1,lat)
-        vnlbc(:) = v_lbc(lon0:lon1,lat)
-        do k=lev0,lev1
-          unlbc_diag(k,:) = unlbc(:)
-          vnlbc_diag(k,:) = vnlbc(:)
-        enddo
-!
-!       call addfld('UNLBC_DUV','UNLBC_DUV',' ',unlbc_diag,
-!    |    'lon',lon0,lon1,'lat',lat0,lat1,0)
-!       call addfld('VNLBC_DUV','VNLBC_DUV',' ',vnlbc_diag,
-!    |    'lon',lon0,lon1,'lat',lat0,lat1,0)
 
         do i=lon0,lon1
           do k=lev0,lev1-1
@@ -178,34 +146,8 @@
             ss(2,k,i) = expz(k)*(dtx2inv*vnm_smooth(k,i,lat)+
      |        hdv(k,i,lat)+vn_drag_coef(k,i)-
      |        advec_vn(k,i,lat)-zp(k,i,lat))
-            ss_un(k,i) = ss(1,k,i)
-            ss_vn(k,i) = ss(2,k,i)
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
-
-!       call addfld('SS_UN',' ',' ',ss_un,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('SS_VN',' ',' ',ss_vn,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-
-!
-! xmue = eddy viscosity (cons.F). rtxmue = sqrt(xmue)
-        do k=lev0+1,lev1-1          
-          rtxmue(k) = sqrt(xmue(k-1,iday)*xmue(k,iday))
-        enddo ! k=lev0+1,lev1-1          
-!
-! tni = tn at interfaces:
-        do i=lon0,lon1
-          do k=lev0+1,lev1-1          
-            tni(k,i) = .5*(tn(k-1,i,lat)+tn(k,i,lat))
-          enddo ! k=lev0+1,lev1-1          
-        enddo ! i=lon0,lon1
-!
-! Boundaries:
-        rtxmue(lev0) = sqrt(xmue(lev0,iday)**3/
-     |                      xmue(lev0+1,iday))
-        rtxmue(lev1) = sqrt(xmue(lev1-1,iday)**3/
-     |                      xmue(lev1-2,iday))
 !
         do i=lon0,lon1
           do k=lev0,lev1-1          
@@ -213,33 +155,31 @@
           enddo ! k=lev0+1,lev1-1          
 !
 ! Upper boundary:
-          eddyvisc(lev1,i) = sqrt(eddyvisc(lev1-1,i)**3/             ! s3 top
-     |                       eddyvisc(lev1-2,i))
+          eddyvisci(lev1,i) =
+     |      sqrt(eddyvisc(lev1-1,i)**3/eddyvisc(lev1-2,i))            ! s3 top
 !            
-! Loop from top down:
-          k = lev1+1
-          do kk=lev0+1,lev1
-            k = k-1 
-            eddyvisc(k,i) = sqrt(eddyvisc(k-1,i)*eddyvisc(k,i))      ! s3
-          enddo ! kk=lev0+1,lev1-1
+          do k=lev0+1,lev1-1
+            eddyvisci(k,i) = sqrt(eddyvisc(k-1,i)*eddyvisc(k,i))      ! s3
+          enddo ! k=lev0+1,lev1-1
 !
 ! Bottom boundary in tlbc (from t_lbc of lbc.F):
-          eddyvisc(lev0,i) = eddyvisc(lev0,i)**2/eddyvisc(lev0+1,i)  ! s3
+          eddyvisci(lev0,i) =
+     |      sqrt(eddyvisc(lev0,i)**3/eddyvisc(lev0+1,i))              ! s3 bottom
         enddo ! i=lon0,lon1
 !
         do i=lon0,lon1
-          tni(lev0,i) = tlbc_nm(i,lat)    ! Lower boundary is in tlbc_nm
-          tni(lev1,i) = tn(lev1-1,i,lat)
 
 ! G = g*KM/(P0*H*Ds**2) = g**2*(kM+XMUE)*MBAR*/(P0*R*T*DS**2)
           do k=lev0,lev1
-            g(k,i) = grav*(km(k,i,lat)+eddyvisc(k,i))/
+            g(k,i) = grav*(km(k,i,lat)+eddyvisci(k,i))/
      |        (p0*schti(k,i,lat)*dz**2)
           enddo ! k=lev0,lev1
+          do k=lev0,lev1-1
+            g1(k,i) = g(k+1,i)
+          enddo
+          g1(lev1,i) = 2*g(lev1,i)-g(lev1-1,i)
         enddo ! i=lon0,lon1
 
-!       call addfld('TNI'  ,' ',' ',tni,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('DUV_G',' ',' ',g  ,
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
@@ -268,7 +208,7 @@
         do i=lon0,lon1
           do k=lev0,lev1-1
             pp(1,1,k,i) = -(g(k  ,i)+dwdz(k,i))
-            rr(1,1,k,i) = -(g(k+1,i)-dwdz(k,i))
+            rr(1,1,k,i) = -(g1(k ,i)-dwdz(k,i))
             pp(2,2,k,i) = pp(1,1,k,i)
             rr(2,2,k,i) = rr(1,1,k,i)
             pp(1,2,k,i) = 0.
@@ -285,22 +225,19 @@
 !
         do i=lon0,lon1
           do k=lev0,lev1-1
-            qq(1,1,k,i) = g(k,i) + g(k+1,i)
-            qq(2,2,k,i) = qq(1,1,k,i)
-            qq(1,1,k,i) = qq(1,1,k,i) + 
+            qq(1,1,k,i) = g(k,i) + g1(k,i) + 
      |        expz(k)*(dtx2inv+.5*(lxx(k,i,lat)+lxx(k+1,i,lat)))
-            qq(2,2,k,i) = qq(2,2,k,i) +
+            qq(2,2,k,i) = g(k,i) + g1(k,i) +
      |        expz(k)*(dtx2inv+.5*(lyy(k,i,lat)+lyy(k+1,i,lat)))
 !
 !     Q(1,2) = -exp(-s) * (f+u/r*tan(theta)-lamxy)
 !      and 
 !     Q(2,1) = exp(-s) * (f+u/r*tan(theta)-lamyx)
 !
-            qq(1,2,k,i) = cor(lat)+un(k,i,lat)/re*tanphi(lat)
-            qq(2,1,k,i) = qq(1,2,k,i)
-            qq(1,2,k,i) = -expz(k)*(qq(1,2,k,i)-
+            cen(k,i) = un(k,i,lat)/re*tanphi(lat)
+            qq(1,2,k,i) = -expz(k)*(cor(lat)+cen(k,i)-
      |        .5*(lxy(k,i,lat)+lxy(k+1,i,lat)))
-            qq(2,1,k,i) =  expz(k)*(qq(2,1,k,i)-
+            qq(2,1,k,i) =  expz(k)*(cor(lat)+cen(k,i)-
      |        .5*(lyx(k,i,lat)+lyx(k+1,i,lat)))
           enddo ! k=lev0,lev1-1
 !
@@ -310,33 +247,35 @@
 !     S(3/2) = S(3/2) -2.*P(3/2)*Vb
 !     P(3/2) = 0.
 !
-          qq(1,1,lev0,i) = qq(1,1,lev0,i)-pp(1,1,lev0,i)
-          qq(1,2,lev0,i) = qq(1,2,lev0,i)-pp(1,2,lev0,i)
-          qq(2,1,lev0,i) = qq(2,1,lev0,i)-pp(2,1,lev0,i)
-          qq(2,2,lev0,i) = qq(2,2,lev0,i)-pp(2,2,lev0,i)
-          ss(1,lev0,i) = ss(1,lev0,i)-2.*(pp(1,1,lev0,i)*unlbc(i)+
-     |                                    pp(1,2,lev0,i)*vnlbc(i))
-          ss(2,lev0,i) = ss(2,lev0,i)-2.*(pp(2,1,lev0,i)*unlbc(i)+
-     |                                    pp(2,2,lev0,i)*vnlbc(i))
-          ss_un(lev0,i) = ss(1,lev0,i)
-          ss_vn(lev0,i) = ss(2,lev0,i)
-          pp(1,1,lev0,i) = 0.
-          pp(1,2,lev0,i) = 0.
-          pp(2,1,lev0,i) = 0.
-          pp(2,2,lev0,i) = 0.
+          do n=1,2
+            do m=1,2
+              qq(m,n,lev0,i) = qq(m,n,lev0,i)-pp(m,n,lev0,i)
+            enddo
+          enddo
+          do n=1,2
+            ss(n,lev0,i) = ss(n,lev0,i)-2.*(pp(n,1,lev0,i)*u_lbc(i,lat)+
+     |                                      pp(n,2,lev0,i)*v_lbc(i,lat))
+          enddo
+          do n=1,2
+            do m=1,2
+              pp(m,n,lev0,i) = 0.
+            enddo
+          enddo
 !
 ! Upper boundary:
 !     Q(K-1/2) = Q(K-1/2) + R(K-1/2)
 !     R(K-1/2) = 0.
 !
-          qq(1,1,lev1-1,i) = qq(1,1,lev1-1,i)+rr(1,1,lev1-1,i)
-          qq(1,2,lev1-1,i) = qq(1,2,lev1-1,i)+rr(1,2,lev1-1,i)
-          qq(2,1,lev1-1,i) = qq(2,1,lev1-1,i)+rr(2,1,lev1-1,i)
-          qq(2,2,lev1-1,i) = qq(2,2,lev1-1,i)+rr(2,2,lev1-1,i)
-          rr(1,1,lev1-1,i) = 0.
-          rr(1,2,lev1-1,i) = 0.
-          rr(2,1,lev1-1,i) = 0.
-          rr(2,2,lev1-1,i) = 0.
+          do n=1,2
+            do m=1,2
+              qq(m,n,lev1-1,i) = qq(m,n,lev1-1,i)+rr(m,n,lev1-1,i)
+            enddo
+          enddo
+          do n=1,2
+            do m=1,2
+              rr(m,n,lev1-1,i) = 0.
+            enddo
+          enddo
         enddo ! i=lon0,lon1
 
 !       call addfld('PP11',' ',' ',pp(1,1,:,:),
@@ -363,16 +302,12 @@
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !       call addfld('RR22',' ',' ',rr(2,2,:,:),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('SS_UN',' ',' ',ss_un,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('SS_VN',' ',' ',ss_vn,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! Invoke tridiagonal (2x2) block matrix solver for U and V: 
 ! pp,qq,rr,ss are input, beta,gamma,yy,xx are output.
 ! (final solution is in xx)
 !
-        call blktri(pp,qq,rr,ss, beta,gamma,yy,xx,lev0,lev1,lon0,lon1)
+        call blktri(pp,qq,rr,ss,xx,lev0,lev1,lon0,lon1)
 !
 ! Save updated U and V:
         do i=lonbeg,lonend 
@@ -388,14 +323,9 @@
 ! Lower boundary is in ulbc,vlbc (fields.F):
           ulbc_nm(i,lat) = ulbc(i,lat)  ! LB for un_nm(itc) = un(itp) 
           vlbc_nm(i,lat) = vlbc(i,lat)  ! LB for vn_nm(itc) = vn(itp) 
-          ulbc(i,lat) = unlbc(i)        ! LB for un(itc)
-          vlbc(i,lat) = vnlbc(i)        ! LB for vn(itc) 
+          ulbc(i,lat) = u_lbc(i,lat)    ! LB for un(itc)
+          vlbc(i,lat) = v_lbc(i,lat)    ! LB for vn(itc) 
         enddo ! i=lonbeg,lonend 
-
-!       call addfld('UNLBC',' ',' ',unlbc_diag,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('VNLBC',' ',' ',vnlbc_diag,
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 
 !       call addfld('UN_SOLV',' ',' ',un_upd(:,lon0:lon1,lat),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
@@ -408,8 +338,8 @@
             dvdt(k,i) = dtx2inv*(vn_upd(k,i,lat)-vnm_smooth(k,i,lat))
             du_cor(k,i) = cor(lat)*vn_upd(k,i,lat)
             dv_cor(k,i) = -cor(lat)*un_upd(k,i,lat)
-            du_cen(k,i) = un(k,i,lat)/re*tanphi(lat)*vn_upd(k,i,lat)
-            dv_cen(k,i) = -un(k,i,lat)/re*tanphi(lat)*un_upd(k,i,lat)
+            du_cen(k,i) = cen(k,i)*vn_upd(k,i,lat)
+            dv_cen(k,i) = -cen(k,i)*un_upd(k,i,lat)
             du_drag(k,i) = un_drag_coef(k,i)-
      |        .5*(lxx(k,i,lat)+lxx(k+1,i,lat))*un_upd(k,i,lat)-
      |        .5*(lxy(k,i,lat)+lxy(k+1,i,lat))*vn_upd(k,i,lat)
@@ -420,13 +350,13 @@
           do k=lev0+1,lev1-2
             wi = 0.5*(w_upd(k,i,lat)+w_upd(k+1,i,lat))
             du_visc(k,i) = 1/expz(k)*
-     |        (g(k  ,i)        *un_upd(k-1,i,lat)-
-     |        (g(k+1,i)+g(k,i))*un_upd(k  ,i,lat)+
-     |         g(k+1,i)        *un_upd(k+1,i,lat))
+     |        (g (k,i)        *un_upd(k-1,i,lat)-
+     |        (g1(k,i)+g(k,i))*un_upd(k  ,i,lat)+
+     |         g1(k,i)        *un_upd(k+1,i,lat))
             dv_visc(k,i) = 1/expz(k)*
-     |        (g(k  ,i)        *vn_upd(k-1,i,lat)-
-     |        (g(k+1,i)+g(k,i))*vn_upd(k  ,i,lat)+
-     |         g(k+1,i)        *vn_upd(k+1,i,lat))
+     |        (g (k,i)        *vn_upd(k-1,i,lat)-
+     |        (g1(k,i)+g(k,i))*vn_upd(k  ,i,lat)+
+     |         g1(k,i)        *vn_upd(k+1,i,lat))
             du_veradv(k,i) = wi/(2*dz)*
      |        (un_upd(k+1,i,lat)-un_upd(k-1,i,lat))
             dv_veradv(k,i) = wi/(2*dz)*
@@ -480,11 +410,6 @@
 !
 ! End third latitude scan:
       enddo ! lat=lat0,lat1
-
-!     call addfld('UNLBC_IJ','UNLBC_IJ','[cm/s]',unlbc_ij,
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
-!     call addfld('VNLBC_IJ','VNLBC_IJ','[cm/s]',vnlbc_ij,
-!    |  'lon',lon0,lon1,'lat',lat0,lat1,0)
 !
 ! Fourier smoothing of U and V:
       call filter_uv(un_upd(lev0:lev1-1,:,:),lev0,lev1-1,lon0,lon1,
@@ -568,9 +493,10 @@
 ! Horizontal pressure forcing for un,vn: 
 !
       use params_module,only: nlonp4
-      use cons_module,only: dz,dzgrav,grav,racs,re_inv
+      use cons_module,only: dz,gask,grav,racs,re_inv,dlamda,dphi
       use addfld_module,only: addfld
-      use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d
+      use mpi_module,only: mp_bndlons_f3d, mp_periodic_f3d,
+     |  mp_polelats_f3d,mp_bndlats_f3d
       implicit none
 !
 ! Args:
@@ -589,29 +515,28 @@
      |  zl,zp
 !
 ! Local:
-      integer :: k,i,nk,nkm1,nlevs,lat,lonbeg,lonend
+      integer :: k,i,nlevs,lat,lonbeg,lonend
       real,parameter :: wt=0.225
       real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
      |  ztmp
-      real,dimension(lev0:lev1,lon0-2:lon1+2) ::
-     |  tbar,barmi,dztbar
-      real :: ftmp(lev0:lev1,lon0:lon1,lat0:lat1,2)
+      real,dimension(lev0:lev1,lon0:lon1) :: tbar,scht
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) :: dzdx,dzdy,zli,zpi
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1,2) :: ftmp
 !
       lonbeg = lon0
       if (lon0==1) lonbeg = 3
       lonend = lon1
       if (lon1==nlonp4) lonend = nlonp4-2
 
-      nk = lev1-lev0+1 ; nkm1=nk-1 ; nlevs = nk ! for addfld
+      nlevs = lev1-lev0+1
 !
 ! Latitude scan:
 !
       do lat=lat0,lat1
         do i=lon0,lon1
           do k=lev0,lev1-1
-            tbar(k,i) = tn(k,i,lat)*(-2.)+tn_nm(k,i,lat)     ! s6
-            tbar(k,i) = (tbar(k,i)+tn_upd(k,i,lat))*wt
-            tbar(k,i) = tbar(k,i)+tn(k,i,lat)
+            tbar(k,i) = tn(k,i,lat)+wt*
+     |        (tn_nm(k,i,lat)+tn_upd(k,i,lat)-2.*tn(k,i,lat))
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
@@ -620,12 +545,11 @@
 
         do i=lon0,lon1
           do k=lev0,lev1-1
-            barmi(k,i) = mbar(k,i,lat)    ! s7
-            dztbar(k,i) = (dz/dzgrav) * (tbar(k,i)/barmi(k,i)) ! s7
+            scht(k,i) = gask*tbar(k,i)/(mbar(k,i,lat)*grav)
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
 
-!       call addfld('DZTBAR',' ',' ',dztbar(:,lon0:lon1),
+!       call addfld('SCHT_TBAR',' ',' ',scht(:,lon0:lon1),
 !    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
 !
 ! In earlier model versions, geopotential bottom boundary was recalculated
@@ -634,10 +558,10 @@
           ztmp(lev0,i,lat) = z(lev0,i,lat)
         enddo ! i=lon0,lon1
 !
-! This will differ from z(..[itp,itc]) because tn_upd is in dztbar.
+! This will differ from z(..[itp,itc]) because tn_upd is in tbar.
         do i=lon0,lon1
           do k=lev0,lev1-1
-            ztmp(k+1,i,lat) = dztbar(k,i)+ztmp(k,i,lat)
+            ztmp(k+1,i,lat) = dz*scht(k,i)+ztmp(k,i,lat)
           enddo ! k=lev0,lev1-1
         enddo ! i=lon0,lon1
       enddo
@@ -648,6 +572,9 @@
 !
       call mp_periodic_f3d(ztmp(:,lon0:lon1,lat0:lat1),
      |  lev0,lev1,lon0,lon1,lat0,lat1,1)
+      call mp_polelats_f3d(ztmp(:,lon0:lon1,:),
+     |  lev0,lev1,lon0,lon1,lat0,lat1,1,(/1./))
+      call mp_bndlats_f3d(ztmp,nlevs,lon0,lon1,lat0,lat1,1)
       call mp_bndlons_f3d(ztmp,nlevs,lon0,lon1,lat0,lat1,1,0)
 !
 !     do lat=lat0,lat1
@@ -658,18 +585,23 @@
 ! Calculate latitudinal and longitudinal derivatives in zl,zp:
 ! (dldp input ztmp is defined at full subdomain)
 !
-      call dldp(ztmp,z,zl,zp,lev0,lev1,lon0,lon1,lat0,lat1)
+      call divergence(ztmp,dzdx,-1,lev0,lev1,lon0,lon1,lat0,lat1)
+      call divergence(z   ,dzdy, 1,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Complete zl,zp at subdomain:
 !
       do lat=lat0,lat1
         do i=lonbeg,lonend
+          do k=lev0,lev1
+            zli(k,i,lat) = dzdx(k,i,lat)/dlamda*grav*racs(lat)
+            zpi(k,i,lat) = dzdy(k,i,lat)/dphi*grav*re_inv
+          enddo
           do k=lev0,lev1-1
-            zl(k,i,lat) = (zl(k,i,lat)+zl(k+1,i,lat))*
-     |        (.5*grav*racs(lat))
-            zp(k,i,lat) = (zp(k,i,lat)+zp(k+1,i,lat))*
-     |        (.5*grav*re_inv)
+            zl(k,i,lat) = (zli(k,i,lat)+zli(k+1,i,lat))*.5
+            zp(k,i,lat) = (zpi(k,i,lat)+zpi(k+1,i,lat))*.5
           enddo ! k=lev0,lev1-1
+          zl(lev1,i,lat) = zli(lev1,i,lat)
+          zp(lev1,i,lat) = zpi(lev1,i,lat)
         enddo ! i=lonbeg,lonend
 !
 ! Set periodic points zero to avoid NaNS fpe in duv.
@@ -703,107 +635,12 @@
 !
       end subroutine glp
 !-----------------------------------------------------------------------
-      subroutine dldp(zin,z,zl,zp,lev0,lev1,lon0,lon1,lat0,lat1)
-      use params_module,only: nlonp4
-      use cons_module,only: dlamda_1div12,dlamda_2div3,
-     |  dphi_2div3,dphi_1div12
-      use addfld_module,only: addfld
-      implicit none
-!
-! Args:
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
-!
-! Inputs at full subdomain:
-! (Note new Z with new temperatures from glp is available only at the
-!  current latitude, not adjacent latitudes. Therefore, the new Z 
-!  from glp is used in longitudinal derivatives, whereas the current
-!  Z (w/o updated temperature) is used in the latitudinal derivatives.
-!  See ztmp in glp.)
-!
-      real,dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),intent(in)::
-     |  zin,   ! new     Z (with updated temperature) from glp for zl
-     |  z      ! current Z (with current temperature) from glp for zp
-!
-! Output at subdomain:
-      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1),intent(out) :: 
-     |  zl,zp  ! output at subdomain
-!
-! Local:
-      integer :: lonbeg,lonend,k,i,lat,nk
-!
-      nk = lev1-lev0+1
-      lonbeg = lon0
-      if (lon0==1) lonbeg = 3
-      lonend = lon1
-      if (lon1==nlonp4) lonend = nlonp4-2
-!
-! Longitudinal derivatives:
-      do lat=lat0,lat1
-
-!       call addfld('DLDP_ZIN',' ',' ',zin(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-
-        do i=lonbeg,lonend
-          do k=lev0,lev1
-            zl(k,i,lat) = 
-     |        dlamda_2div3 *(zin(k,i+1,lat)-zin(k,i-1,lat))-
-     |        dlamda_1div12*(zin(k,i+2,lat)-zin(k,i-2,lat))
-          enddo ! k=lev0,lev1
-
-!         write(6,"('dldp zl: lat=',i2,' i=',i2,' lonbeg,end=',2i3)")
-!    |      lat,i,lonbeg,lonend
-!         write(6,"('zin(:,i+1,lat)=',/,(6e12.4))") zin(:,i+1,lat)
-!         write(6,"('zin(:,i-1,lat)=',/,(6e12.4))") zin(:,i-1,lat)
-!         write(6,"('zin(:,i+2,lat)=',/,(6e12.4))") zin(:,i+2,lat)
-!         write(6,"('zin(:,i-2,lat)=',/,(6e12.4))") zin(:,i-2,lat)
-!         write(6,"('zl(:,i,lat)=',/,(6e12.4))") zl(:,i,lat)
-
-        enddo ! i=lonbeg,lonend
-
-!
-! Latitudinal derivatives:
-        do i=lonbeg,lonend
-          do k=lev0,lev1
-            zp(k,i,lat) = 
-     |        dphi_2div3 *(z(k,i,lat+1)-z(k,i,lat-1))-
-     |        dphi_1div12*(z(k,i,lat+2)-z(k,i,lat-2))
-          enddo ! k=lev0,lev1
-
-!         write(6,"('dldp zp: lat=',i2,' i=',i2,' zin=',/,(6e12.4))") 
-!    |      lat,i,z(:,i,lat)
-!         write(6,"('dldp zp: lat=',i2,' i=',i2,' zin=',/,(6e12.4))") 
-!    |      lat,i,zin(:,i,lat)
-!         write(6,"('dldp zp: lat=',i2,' i=',i2)") lat,i
-!         write(6,"('zin(:,i,lat+1)=',/,(6e12.4))") zin(:,i,lat+1)
-!         write(6,"('zin(:,i,lat-1)=',/,(6e12.4))") zin(:,i,lat-1)
-!         write(6,"('zin(:,i,lat+2)=',/,(6e12.4))") zin(:,i,lat+2)
-!         write(6,"('zin(:,i,lat-2)=',/,(6e12.4))") zin(:,i,lat-2)
-!         write(6,"('zp(:,i,lat)=',/,(6e12.4))") zp(:,i,lat)
-
-        enddo ! i=lonbeg,lonend
-
-!       call addfld('Z_JM2',' ',' ',z(:,lon0:lon1,lat-2),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('Z_JM1',' ',' ',z(:,lon0:lon1,lat-1),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('Z_JP1',' ',' ',z(:,lon0:lon1,lat+1),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('Z_JP2',' ',' ',z(:,lon0:lon1,lat+2),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('DLDP_ZL',' ',' ',zl(:,:,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('DLDP_ZP',' ',' ',zp(:,:,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-
-      enddo ! lat=lat0,lat1
-      end subroutine dldp
-!-----------------------------------------------------------------------
-      subroutine blktri(a,b,c,f,beta,gamma,y,x,lev0,lev1,lon0,lon1)
+      subroutine blktri(a,b,c,f,x,lev0,lev1,lon0,lon1)
 !
 ! This procedure solves (I2-I1+1) tridiagonal block matrix
 ! systems in which all blocks are 2 x 2 matrices.
 !
-      use params_module,only: nlonp4 
+      use matutil_module,only: matinv2
       implicit none
 !
 ! Input args:
@@ -814,95 +651,52 @@
      |  f
 !
 ! Output args:
-      real,dimension(2,2,lev0:lev1,lon0:lon1),intent(out) ::
-     |  beta,gamma
       real,dimension(2,lev0:lev1,lon0:lon1),intent(out) ::
-     |  x,y
+     |  x
 !
 ! Local:
-      integer :: k,i,lonbeg,lonend
-!
-      lonbeg = lon0
-      if (lon0==1) lonbeg = 3
-      lonend = lon1
-      if (lon1==nlonp4) lonend = nlonp4-2
+      integer :: k,i
+      real,dimension(2,2,lev0:lev1,lon0:lon1) ::
+     |  beta,gama
+      real,dimension(2,lev0:lev1,lon0:lon1) :: y
 !
 ! Lower boundary:
-      do i=lonbeg,lonend
-!
-! Y(1,lev0,i) = determinant(B(lev0))
-        y(1,lev0,i) = b(1,1,lev0,i)*b(2,2,lev0,i)-
-     |                b(1,2,lev0,i)*b(2,1,lev0,i)
+      do i=lon0,lon1
 !
 ! BETA(K1) = B(K1)**(-1)
-        beta(1,1,lev0,i) =  b(2,2,lev0,i)/y(1,lev0,i)
-        beta(1,2,lev0,i) = -b(1,2,lev0,i)/y(1,lev0,i)
-        beta(2,1,lev0,i) = -b(2,1,lev0,i)/y(1,lev0,i)
-        beta(2,2,lev0,i) =  b(1,1,lev0,i)/y(1,lev0,i)
+        beta(:,:,lev0,i) = matinv2(b(:,:,lev0,i))
 !
 ! Y(K1) = BETA(K1)*F(K1)
-        y(1,lev0,i) = beta(1,1,lev0,i)*f(1,lev0,i)+
-     |                beta(1,2,lev0,i)*f(2,lev0,i)
-        y(2,lev0,i) = beta(2,1,lev0,i)*f(1,lev0,i)+
-     |                beta(2,2,lev0,i)*f(2,lev0,i)
+        y(:,lev0,i) = matmul(beta(:,:,lev0,i),f(:,lev0,i))
 !
 ! Now deal with levels (K1+1),K2,1
         do k=lev0+1,lev1-1
 !
 ! GAMMA(K-1) = BETA(K-1)*C(K-1)
-          gamma(1,1,k-1,i) = beta(1,1,k-1,i)*c(1,1,k-1,i)+
-     |                       beta(1,2,k-1,i)*c(2,1,k-1,i)          
-          gamma(1,2,k-1,i) = beta(1,1,k-1,i)*c(1,2,k-1,i)+
-     |                       beta(1,2,k-1,i)*c(2,2,k-1,i)          
-          gamma(2,1,k-1,i) = beta(2,1,k-1,i)*c(1,1,k-1,i)+
-     |                       beta(2,2,k-1,i)*c(2,1,k-1,i)          
-          gamma(2,2,k-1,i) = beta(2,1,k-1,i)*c(1,2,k-1,i)+
-     |                       beta(2,2,k-1,i)*c(2,2,k-1,i)          
+          gama(:,:,k-1,i) = matmul(beta(:,:,k-1,i),c(:,:,k-1,i))
 !
 ! GAMMA(K) = B(K) - A(K)*GAMMA(K-1)
-          gamma(1,1,k,i) = b(1,1,k,i)-a(1,1,k,i)*gamma(1,1,k-1,i)-
-     |                                a(1,2,k,i)*gamma(2,1,k-1,i)
-          gamma(1,2,k,i) = b(1,2,k,i)-a(1,1,k,i)*gamma(1,2,k-1,i)-
-     |                                a(1,2,k,i)*gamma(2,2,k-1,i)
-          gamma(2,1,k,i) = b(2,1,k,i)-a(2,1,k,i)*gamma(1,1,k-1,i)-
-     |                                a(2,2,k,i)*gamma(2,1,k-1,i)
-          gamma(2,2,k,i) = b(2,2,k,i)-a(2,1,k,i)*gamma(1,2,k-1,i)-
-     |                                a(2,2,k,i)*gamma(2,2,k-1,i)
-!
-! Y(1,k,i) = determinant(GAMMA(K))
-          y(1,k,i) = gamma(1,1,k,i)*gamma(2,2,k,i)-
-     |               gamma(1,2,k,i)*gamma(2,1,k,i)
+          gama(:,:,k,i) = b(:,:,k,i)-matmul(a(:,:,k,i),gama(:,:,k-1,i))
 !
 ! BETA(K) = GAMMA(K)**(-1)
-          beta(1,1,k,i) =  gamma(2,2,k,i)/y(1,k,i)
-          beta(1,2,k,i) = -gamma(1,2,k,i)/y(1,k,i)
-          beta(2,1,k,i) = -gamma(2,1,k,i)/y(1,k,i)
-          beta(2,2,k,i) =  gamma(1,1,k,i)/y(1,k,i)
+          beta(:,:,k,i) = matinv2(gama(:,:,k,i))
 !
 !  X(K) = F(K) - A(K)*Y(K-1)
-          x(1,k,i) = f(1,k,i)-a(1,1,k,i)*y(1,k-1,i)-
-     |                        a(1,2,k,i)*y(2,k-1,i)
-          x(2,k,i) = f(2,k,i)-a(2,1,k,i)*y(1,k-1,i)-
-     |                        a(2,2,k,i)*y(2,k-1,i)
+          x(:,k,i) = f(:,k,i)-matmul(a(:,:,k,i),y(:,k-1,i))
 !
 ! Y(K) = BETA(K)*X(K)
-          y(1,k,i) = beta(1,1,k,i)*x(1,k,i)+beta(1,2,k,i)*x(2,k,i)
-          y(2,k,i) = beta(2,1,k,i)*x(1,k,i)+beta(2,2,k,i)*x(2,k,i)
+          y(:,k,i) = matmul(beta(:,:,k,i),x(:,k,i))
         enddo ! k=lev0+1,lev1-1
-      enddo ! i=lonbeg,lonend
+      enddo ! i=lon0,lon1
 !
-      do i=lonbeg,lonend
+      do i=lon0,lon1
 !
 !  X(K2) = Y(K2)
-        x(1,lev1-1,i) = y(1,lev1-1,i)
-        x(2,lev1-1,i) = y(2,lev1-1,i)
+        x(:,lev1-1,i) = y(:,lev1-1,i)
 !
 ! Backward sweep to determine final solution, X(K) for k=k2,k1,-1
         do k=lev1-2,lev0,-1
-          x(1,k,i) = y(1,k,i)-gamma(1,1,k,i)*x(1,k+1,i)-
-     |                        gamma(1,2,k,i)*x(2,k+1,i)
-          x(2,k,i) = y(2,k,i)-gamma(2,1,k,i)*x(1,k+1,i)-
-     |                        gamma(2,2,k,i)*x(2,k+1,i)
+          x(:,k,i) = y(:,k,i)-matmul(gama(:,:,k,i),x(:,k+1,i))
         enddo ! k=lev1-2,lev1-1,-1
       enddo ! i=lon0,lon1
       end subroutine blktri
@@ -928,15 +722,13 @@
 #endif
 !
 ! Local:
-      integer :: i,j,nlevs,ier
+      integer :: i,j,ier
       real :: fik(nlonp4,lev0:lev1),fkij(lev0:lev1,nlonp4,lat0:lat1)
 !
 #ifdef VT
 !     code = 131 ; state = 'filter_uv' ; activity='Filtering'
       call vtbegin(131,ier)
 #endif
-!
-      nlevs = lev1-lev0+1
 !
 ! Save subdomain of current task in fkij:
       fkij = 0.

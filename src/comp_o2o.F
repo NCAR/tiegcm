@@ -8,7 +8,7 @@
 !
 ! Calculates fs array which gives sources and sinks for comp (o2,o,he). 
 !
-      use cons_module,only: rmassinv_o2,rmassinv_o1,
+      use cons_module,only:
      |  rmass_no,rmass_n4s,rmass_n2d,rmass_o2,rmass_o1
       use qrj_module,only: rj,qo2p,qop
       use chemrates_module,only: rk4,rk5,rk6,rk7,rk8,rk9,rk10,beta2,
@@ -35,8 +35,9 @@
      |  nop    ! NO+
 !
 ! Local:
-      integer :: k,i,nk
+      integer :: k,i
       real,dimension(lev0:lev1,lon0:lon1) ::
+     |  o1_cm3,n2d_cm3,n4s_cm3,no_cm3,
      |  rji,            ! RJ at interfaces (qrj module)
      |  qo2pi,          ! O2+ ionization at interfaces (qrj module)
      |  qopi,           ! O+ ionization at interfaces
@@ -45,8 +46,6 @@
      |  po21,po22,po23, ! O2 production terms
      |  lo21,lo22       ! O2 loss terms
 !
-      nk = lev1-lev0+1
-
 !     call addfld('O1_O2O',' ',' ',o1(:,lon0:lon1),'lev',lev0,lev1,
 !    |  'lon',lon0,lon1,lat)
 !     call addfld('MBAR_O2O',' ',' ',mbar(:,lon0:lon1),'lev',lev0,lev1,
@@ -75,6 +74,10 @@
 ! Loop over subdomain at current latitude:
       do i=lon0,lon1
         do k=lev0,lev1-1
+          o1_cm3(k,i) = xnmbar(k,i)*o1(k,i)/rmass_o1
+          n2d_cm3(k,i) = xnmbar(k,i)*n2d(k,i)/rmass_n2d
+          n4s_cm3(k,i) = xnmbar(k,i)*n4s(k,i)/rmass_n4s
+          no_cm3(k,i) = xnmbar(k,i)*no(k,i)/rmass_no
 !
 ! Qrj ionization rates at interfaces:
           rji  (k,i) = 0.5*(rj(k,i,lat)+rj(k+1,i,lat))
@@ -83,19 +86,18 @@
 !
 ! OX production:
 ! s1
-          pox1(k,i) = xnmbar(k,i)**2*
-     |      (beta3(k,i,lat)*n4s(k,i)/rmass_n4s*no(k,i)/rmass_no+
-     |      beta6*n2d(k,i)/rmass_n2d*no(k,i)/rmass_no)+
-     |      0.5*(beta8(k,i,lat)+beta8(k+1,i,lat))*
-     |      no(k,i)/rmass_no*xnmbar(k,i)+xnmbar(k,i)*
-     |      (rk4*o2p(k,i)*n4s(k,i)/rmass_n4s+
-     |      rk10*op(k,i)*n2d(k,i)/rmass_n2d)+
+          pox1(k,i) =
+     |      beta3(k,i,lat)*n4s_cm3(k,i)*no_cm3(k,i)+
+     |      beta6*n2d_cm3(k,i)*no_cm3(k,i)+
+     |      0.5*(beta8(k,i,lat)+beta8(k+1,i,lat))*no_cm3(k,i)+
+     |      rk4*o2p(k,i)*n4s_cm3(k,i)+
+     |      rk10*op(k,i)*n2d_cm3(k,i)+
      |      (ra1(k,i,lat)*nop(k,i)+2.*ra2(k,i,lat)*o2p(k,i))*
      |      sqrt(ne(k,i)*ne(k+1,i))
 ! s2
-          pox2(k,i) = xnmbar(k,i)*(beta1(k,i,lat)*n4s(k,i)/rmass_n4s+
-     |      beta2(k,i,lat)*n2d(k,i)/rmass_n2d)+rk1(k,i,lat)*op(k,i)+rk7*
-     |      nplus(k,i)+2.*rji(k,i)
+          pox2(k,i) = beta1(k,i,lat)*n4s_cm3(k,i)+
+     |      beta2(k,i,lat)*n2d_cm3(k,i)+rk1(k,i,lat)*op(k,i)+
+     |      rk7*nplus(k,i)+2.*rji(k,i)
 !
 ! OX loss:
           lox1(k,i) = 2.*rkm12(k,i,lat)*xnmbar(k,i)/mbar(k,i)
@@ -106,22 +108,20 @@
           po21(k,i) = rkm12(k,i,lat)*xnmbar(k,i)/mbar(k,i)
 !
           po22(k,i) = 0.
-          po23(k,i) = rk5*no(k,i)/rmass_no*o2p(k,i)*xnmbar(k,i)
+          po23(k,i) = rk5*no_cm3(k,i)*o2p(k,i)
 !
 ! O2 loss:
-          lo21(k,i) = xnmbar(k,i)*(beta1(k,i,lat)*n4s(k,i)/rmass_n4s+
-     |      beta2(k,i,lat)*n2d(k,i)/rmass_n2d)+rk1(k,i,lat)*op(k,i)+
+          lo21(k,i) = beta1(k,i,lat)*n4s_cm3(k,i)+
+     |      beta2(k,i,lat)*n2d_cm3(k,i)+rk1(k,i,lat)*op(k,i)+
      |      (rk6+rk7)*nplus(k,i)+rk9*n2p(k,i)+rji(k,i)
 !
           lo22(k,i) = qo2pi(k,i)
 !
 ! Matrix coefficients for O-O2-He-N2 solution:
           fs(i,k,1,1,lat) = -lo21(k,i)
-          fs(i,k,1,2,lat) = xnmbar(k,i)*po21(k,i)*o1(k,i)*rmassinv_o1*
-     |      rmass_o2*rmassinv_o1
-          fs(i,k,2,1,lat) = pox2(k,i)*rmass_o1*rmassinv_o2
-          fs(i,k,2,2,lat) = -lox2(k,i)-lox1(k,i)*o1(k,i)*rmassinv_o1*
-     |      xnmbar(k,i)
+          fs(i,k,1,2,lat) = po21(k,i)*o1_cm3(k,i)*rmass_o2/rmass_o1
+          fs(i,k,2,1,lat) = pox2(k,i)*rmass_o1/rmass_o2
+          fs(i,k,2,2,lat) = -lox2(k,i)-lox1(k,i)*o1_cm3(k,i)
           fs(i,k,1,0,lat) = (po23(k,i)-lo22(k,i))*rmass_o2/xnmbar(k,i)
           fs(i,k,2,0,lat) = (pox1(k,i)-lox3(k,i))*rmass_o1/xnmbar(k,i)
 ! Helium prod/loss set to zero for now

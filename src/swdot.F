@@ -7,7 +7,7 @@
 !
 ! Calculate omega for vertical velocity W (s.a., divrg.F):
 !
-      use cons_module,only: expzmid,dz
+      use cons_module,only: expzmid,dz,racs,dlamda,dphi
       use addfld_module,only: addfld
       use diags_module,only: mkdiag_WN
       use params_module,only: rp
@@ -25,6 +25,10 @@
 ! Local:
       integer :: k,i,lat
       real(rp) :: w_divrg(lev0:lev1,lon0:lon1)
+      real,dimension(lev0:lev1,lon0:lon1,lat0:lat1) :: dudx,dvcdy
+!
+      call divergence(un,dudx ,-1,lev0,lev1,lon0,lon1,lat0,lat1)
+      call divergence(vc,dvcdy, 1,lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! Latitude scan:
       do lat=lat0,lat1
@@ -35,8 +39,12 @@
 !
 ! W=DIVRG(V)
 !
-        call divrg(un(:,:,lat),vc,w_divrg,lon0,lon1,lev0,lev1,lat0,lat1,
-     |    lat)
+        do i=lon0,lon1
+          do k=lev0,lev1
+            w_divrg(k,i) = racs(lat)*
+     |        (dudx(k,i,lat)/dlamda+dvcdy(k,i,lat)/dphi)
+          enddo
+        enddo
 !
 ! nlevp1 <- 1:
         do i=lon0,lon1

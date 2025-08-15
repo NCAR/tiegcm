@@ -1,5 +1,5 @@
 !
-      subroutine smooth(fin,fout,k0,k1,i0,i1,j0,j1,isave)
+      subroutine smooth(fin,fout,shapiro,k0,k1,i0,i1,j0,j1)
 !
 ! This software is part of the NCAR TIE-GCM.  Use is governed by the 
 ! Open Source Academic Research License Agreement contained in the file 
@@ -12,12 +12,11 @@
 !   periodic points).
 !
       use params_module,only: nlonp4
-      use cons_module,only: shapiro
-      use addfld_module,only: addfld
       implicit none
 !
 ! Args:
-      integer,intent(in) :: k0,k1,i0,i1,j0,j1,isave
+      integer,intent(in) :: k0,k1,i0,i1,j0,j1
+      real,intent(in) :: shapiro
 !
 ! Input field at full subdomain (with halo):
       real,dimension(k0:k1,i0-2:i1+2,j0-2:j1+2),intent(in) :: fin
@@ -42,10 +41,6 @@
      |        4.*(fin(k,i,j+1)+fin(k,i,j-1))+6.*fin(k,i,j))
           enddo ! k=k0,k1
         enddo ! i=i0,i1
-
-        if (isave > 0)
-     |    call addfld('SMOO1',' ',' ',ftmp(:,i0:i1),
-     |      'lev',k0,k1,'lon',i0,i1,j)
 !
 ! Zonal smoothing (differences in longitude):
         do i=ibeg,iend
@@ -59,10 +54,6 @@
 ! (e.g., dt.F). This was apparently assumed in earlier versions.
         if (i0==1) fout(:,i0:i0+1,j) = 0.
         if (i1==nlonp4) fout(:,i1-1:i1,j) = 0.
-
-        if (isave > 0)
-     |    call addfld('SMOO2',' ',' ',fout(:,i0:i1,j),
-     |      'lev',k0,k1,'lon',i0,i1,j)
 
       enddo ! j=j0,j1
       end subroutine smooth
