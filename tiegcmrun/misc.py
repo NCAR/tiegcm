@@ -201,10 +201,22 @@ def select_resource_defaults(options, option_descriptions):
                     mpiprocs_default = 96
                 elif float(horires) == 0.625:
                     mpiprocs_default = 96
-    elif hpc_platform == "pleiades":
+    elif hpc_platform == "atiken":
         od=od["resource"]
         o=o["resource"]
-        if o["model"] == "bro":
+        if o["model"] == "mil_ait": 
+            max_ncpus = 128
+            mpiprocs_default = 128
+        elif o["model"] == "rom_ait":
+            max_ncpus = 128
+            mpiprocs_default = 128
+        elif o["model"] == "cas_ait":
+            max_ncpus = 40
+            mpiprocs_default = 36
+        elif o["model"] == "bro":
+            max_ncpus = 28
+            mpiprocs_default = 24
+        elif o["model"] == "bro":
             max_ncpus = 28
             mpiprocs_default = 24
         elif o["model"] == "has":

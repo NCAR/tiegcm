@@ -13,7 +13,7 @@
             "LEVEL": "BENCH",
             "prompt": "Name of HPC system",
             "default": "derecho",
-            "valids": ["derecho", "pleiades","linux"],
+            "valids": ["derecho", "atiken","linux"],
             "description": null,
             "warning": null
         }
@@ -122,7 +122,7 @@
                 "warning": null
             }
         },
-        "pleiades": {
+        "atiken": {
             "group_list": {
                 "LEVEL": "BASIC",
                 "prompt": "PBS group list",
@@ -140,8 +140,8 @@
                 "model": {
                     "LEVEL": "EXPERT",
                     "prompt": "System on PFE to use",
-                    "default": "bro",
-                    "valids": ["bro", "has", "ivy", "san","sky_ele","bro_ele"],
+                    "default": "mil_ait",
+                    "valids": ["mil_ait","rom_ait","cas_ait","bro", "has", "ivy", "san","sky_ele","bro_ele"],
                     "description": null,
                     "warning": null
                 },

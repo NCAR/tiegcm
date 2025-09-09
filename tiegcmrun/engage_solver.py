@@ -69,7 +69,7 @@ def engage_parser(engage_parameters):
     queue = o['queue']
     if hpc_system == "derecho":
         job_priority = o['job_priority']
-    elif hpc_system == 'pleiades':
+    elif hpc_system == 'atiken':
         group_list = o['group_list']
         node_type = o['other'].split('=')[1]
     walltime = o['walltime']
@@ -106,7 +106,7 @@ def engage_parser(engage_parameters):
 
     eo['account_name'] = account_name
     eo['project_code'] = account_name
-    if hpc_system == 'pleiades':
+    if hpc_system == 'atiken':
         eo['group_list'] = group_list
     else:
         eo['group_list'] = None
@@ -118,7 +118,7 @@ def engage_parser(engage_parameters):
     
     if hpc_system == "derecho":
         eo['job_priority'] = job_priority
-    elif hpc_system == 'pleiades':
+    elif hpc_system == 'atiken':
         eo['model'] = node_type
     
     eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','model','walltime']
@@ -185,7 +185,7 @@ def engage_options_updater(options, engage_options, option_descriptions):
         o['queue'] = engage_options['queue']
         o['job_priority'] = engage_options['job_priority']
         o['walltime'] = engage_options['walltime']
-    elif hpc_platform == "pleiades":
+    elif hpc_platform == "atiken":
         o['group_list'] = engage_options['group_list']
         if o.get("mpi_command") is None:
             o["mpi_command"] = "mpiexec_mpt"
@@ -200,7 +200,7 @@ def engage_options_updater(options, engage_options, option_descriptions):
             on["ncpus"] = ncpus_default
         if on.get("mpiprocs") is None:
             on["mpiprocs"] = mpiprocs_default
-    elif hpc_platform == "pleiades":
+    elif hpc_platform == "atiken":
         if on.get("model") is None:
             on["model"] = engage_options["model"]
         print(f"Using model type: {on['model']}")
@@ -212,11 +212,11 @@ def engage_options_updater(options, engage_options, option_descriptions):
         if on.get("mpiprocs") is None:
             on["mpiprocs"] = mpiprocs_default
         if on.get("moduledir") is None:
-            options["job"]["moduledir"] = option_descriptions["job"]["pleiades"]["moduledir"]["default"]
+            options["job"]["moduledir"] = option_descriptions["job"]["atiken"]["moduledir"]["default"]
         if on.get("local_modules") is None:
-            options["job"]["local_modules"] = option_descriptions["job"]["pleiades"]["local_modules"]["default"]
+            options["job"]["local_modules"] = option_descriptions["job"]["atiken"]["local_modules"]["default"]
         if on.get("other_job") is None:
-            options["job"]["other_job"] = option_descriptions["job"]["pleiades"]["other_job"]["default"]
+            options["job"]["other_job"] = option_descriptions["job"]["atiken"]["other_job"]["default"]
     
     o["nprocs"] = int(on["select"]) * int(on["mpiprocs"])
     o["modules"] = engage_options["modules"]

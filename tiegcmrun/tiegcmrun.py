@@ -541,8 +541,8 @@ def prompt_user_for_run_options(args):
         if engage != None:
             od["hpc_system"]["default"] = engage["hpc_system"]
         else:
-            if 'pfe' in system_name.lower():
-                od["hpc_system"]["default"]= "pleiades"
+            if 'afe' in system_name.lower():
+                od["hpc_system"]["default"]= "atiken"
             elif 'derecho' in system_name.lower():
                 od["hpc_system"]["default"] = "derecho"
             else:
@@ -604,7 +604,7 @@ def prompt_user_for_run_options(args):
     if od["make"]["default"] == None:
         if options["simulation"]["hpc_system"] == "derecho":
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_de')
-        elif options["simulation"]["hpc_system"] == "pleiades":
+        elif options["simulation"]["hpc_system"] == "atiken":
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_pf')
         elif options["simulation"]["hpc_system"] == "linux":
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_linux')
@@ -691,8 +691,8 @@ def prompt_user_for_run_options(args):
                         od[on]["default"] = oben[on]
                 
         od["LABEL"]["default"] = f"{options['simulation']['job_name']}_{options['model']['specification']['horires']}x{options['model']['specification']['vertres']}"
-        if options["simulation"]["hpc_system"] == "pleiades":
-            od["SECFLDS"]["warning"] = "Limit SECFLDS. File libraries on pleiades are built without big file support."
+        if options["simulation"]["hpc_system"] == "atiken":
+            od["SECFLDS"]["warning"] = "Limit SECFLDS. File libraries on atiken are built without big file support."
         #if engage != None:
         #    print(od["SECFLDS"]["default"])
         #    od["SECFLDS"]["default"] = '["TN","UN","VN","NE","TEC","POTEN","Z","ZG","O2","O1","N2","N4S","HE","NO","NO_COOL","WN"]'
@@ -888,7 +888,7 @@ def prompt_user_for_run_options(args):
                     od['queue']['default'] = engage['queue']
                     od['job_priority']['default'] = engage['job_priority']
                     od['walltime']['default'] = engage['walltime']
-        elif hpc_platform == "pleiades":
+        elif hpc_platform == "atiken":
             o["mpi_command"] = "mpiexec_mpt"
             if engage != None:
                 od['group_list']['default'] = engage['group_list']
@@ -905,7 +905,7 @@ def prompt_user_for_run_options(args):
                         odt["select"]["default"] = select_default
                         odt["ncpus"]["default"] = ncpus_default
                         odt["mpiprocs"]["default"] = mpiprocs_default
-                    elif hpc_platform == "pleiades":
+                    elif hpc_platform == "atiken":
                         if ont == "model":
                             ot[ont] = get_run_option(ont, odt[ont], mode, skip_parameters)
                             select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
