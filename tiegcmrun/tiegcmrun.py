@@ -605,7 +605,7 @@ def prompt_user_for_run_options(args):
         if options["simulation"]["hpc_system"] == "derecho":
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_de')
         elif options["simulation"]["hpc_system"] == "atiken":
-            od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_pf')
+            od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_at')
         elif options["simulation"]["hpc_system"] == "linux":
             od["make"]["default"] = os.path.join(options["model"]["data"]["modeldir"],'scripts/Make.intel_linux')
     o["make"] = get_run_option("make", od["make"], mode, skip_parameters)

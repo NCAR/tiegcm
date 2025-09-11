@@ -205,7 +205,7 @@
                 "LEVEL": "EXPERT",
                 "prompt": "Commands to add local module PATH",
                 "default": [
-                    "setenv PREFIX /u/nrao3/local3",
+                    "setenv PREFIX ${HOME}/local_atiken",
                     "setenv LIBRARY_PATH ${LIBRARY_PATH}:$PREFIX/lib",
                     "setenv LD_LIBRARY_PATH $LIBRARY_PATH",
                     "setenv CPATH $PREFIX/include",
