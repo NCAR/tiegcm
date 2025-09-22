@@ -30,11 +30,10 @@
 !
       use params_module,only: rp
       use input_module,only: nstep_sub
-      use mpi_module,only: mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
-     |   ,TIEGCM_WORLD
+      use mpi_module,only: TIEGCM_WORLD,handle_mpi_err,
+     |  mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
       use addfld_module,only: addfld
-
-      use mpi_f08
+      use mpi
 !
 ! Args:
       integer,intent(in) ::
@@ -65,7 +64,7 @@
      |  xiop2p,xiop2d,Fe,Fn
 !
 ! Local:
-      integer :: k,i,lat,nlevs,istep
+      integer :: k,i,lat,nlevs,istep,ierror
       real(rp),dimension(lon0-2:lon1+2,lat0-2:lat1+2) ::
      |  dvb,ubcrhs,lbcrhs
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
@@ -77,9 +76,6 @@
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,2) ::
      |  tmpf3d
       real(rp) :: delta
-      real(rp), dimension(lev0+1:lev1-1,lon0:lon1,lat0:lat1) ::
-     | op_prev
-      integer:: ierror
       real(rp), parameter :: eps = 100 ! cm-3
 !
 ! Number of pressure levels (this will equal nlevp1):
@@ -96,10 +92,7 @@
       op_sub = op
       optm1_sub = optm1
 !
-        istep = 1
-        delta = huge(delta)
-        do while(delta>eps)
-!
+      do istep=1,nstep_sub
         call smooth_oplus(optm1_sub,optm1_smooth,
      |    lev0,lev1,lon0,lon1,lat0,lat1)
 !
@@ -128,52 +121,38 @@
         call post_oplus(op_sub,optm1_sub,opout_sub,optm1out_sub,
      |    lev0,lev1,lon0,lon1,lat0,lat1)
 !
-
         tmpf3d(lev0:lev1,lon0:lon1,lat0:lat1,1) =
-     |   opout_sub(lev0:lev1,lon0:lon1,lat0:lat1)
+     |    opout_sub(lev0:lev1,lon0:lon1,lat0:lat1)
         tmpf3d(lev0:lev1,lon0:lon1,lat0:lat1,2) =
-     |   optm1out_sub(lev0:lev1,lon0:lon1,lat0:lat1)
-
+     |    optm1out_sub(lev0:lev1,lon0:lon1,lat0:lat1)
+!
         call mp_polelats_f3d(tmpf3d(:,lon0:lon1,:,:),
      |    lev0,lev1,lon0,lon1,lat0,lat1,2,(/1.,1./))
         call mp_bndlats_f3d(tmpf3d,nlevs,lon0,lon1,lat0,lat1,2)
         call mp_bndlons_f3d(tmpf3d,nlevs,lon0,lon1,lat0,lat1,2,0)
-
+!
         opout_sub = tmpf3d(:,:,:,1)
         optm1out_sub = tmpf3d(:,:,:,2)
-
-        if(istep>1)then
-          ! ignore lowest and uppermost layer
-          ! TODO also compute max for op_nm?
-          delta = maxval(abs(
-     |            opout_sub(lev0+1:lev1-1,lon0:lon1,lat0:lat1)-op_prev
-     |            ))
-
-        call MPI_Allreduce(delta, delta, 1, MPI_REAL8,
-     |                   MPI_Max, TIEGCM_WORLD, ierror)
-!           write(*,*) 'step: ', istep, ' delta: ', delta
-        end if
-
-        op_prev = opout_sub(lev0+1:lev1-1,lon0:lon1,lat0:lat1)
+!
+! ignore the uppermost layer since it is extrapolated
+        delta = maxval(abs(
+     |    opout_sub(lev0:lev1-1,lon0:lon1,lat0:lat1)-
+     |    op_sub   (lev0:lev1-1,lon0:lon1,lat0:lat1)))
+!
+        call MPI_Allreduce(MPI_IN_PLACE, delta, 1, MPI_REAL8,
+     |                     MPI_MAX, TIEGCM_WORLD, ierror)
+        if (ierror /= 0)
+     |    call handle_mpi_err(ierror,'oplus call MPI_Allreduce')
+!
+! exit loop if it already converges
+        if (delta < eps) exit
 !
         op_sub = opout_sub
         optm1_sub = optm1out_sub
-!
-        if (istep > nstep_sub ) then
-          write(*,*) "WARNING oplus maximum number of iteration ",
-     |               "reached and break condition is not satisifed ",
-     |               "maximal error is ", delta, " cm-3"
-
-        exit
-        end if
-        istep = istep + 1
-
-
       enddo ! istep=1,nstep_sub
-
+!
       opout = opout_sub
-      optm1out= optm1out_sub
-
+      optm1out = optm1out_sub
 !
       end subroutine oplus
 !-----------------------------------------------------------------------
