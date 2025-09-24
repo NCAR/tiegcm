@@ -227,14 +227,14 @@ def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir,
     pri_files_n = pri_files + number_of_files
     if pri_files == 0:
         if number_of_files == 1:
-                OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
+                OUTPUT = OUTPUT = f"'{histdir}/{run_name}_temp_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
         else:
             PRIM_0 = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc"
             PRIM_N = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files_n)}.nc"
             OUTPUT = f"'{PRIM_0}','to','{PRIM_N}','by','1'"
     else:
         if number_of_files == 1:
-            OUTPUT = OUTPUT = f"'{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
+            OUTPUT = OUTPUT = f"'{histdir}/{run_name}_temp_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
         else:
             PRIM_0 = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files)}.nc"
             PRIM_N = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files_n)}.nc"
@@ -278,8 +278,7 @@ def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir,
     number_of_files = ceil(total_seconds / data_per_file_seconds)
     sec_files_start = sec_files + 1  # Start numbering from next file
     sec_files_end = sec_files_start + number_of_files  # End numbering based on number of files
-
-    if number_of_files == 1:
+    if number_of_files == 1 or number_of_files == 0:
         # If only one file is being generated
         SECOUT = f"'{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files_start)}.nc'"
         sec_files_end = sec_files_start

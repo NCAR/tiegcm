@@ -16,9 +16,10 @@ import json
 import copy
 from datetime import datetime, timedelta
 
-from misc import seconds_to_dhms, resolution_solver, find_file, select_resource_defaults
+from misc import seconds_to_dhms, resolution_solver, find_file, select_resource_defaults, get_mtime, select_source_defaults
 from output_solver import segment_inp_pbs
 from interpolation import interpic
+from namelist_solver import inp_pri_date
 
 
 # Path to current tiegcm datafiles
@@ -68,16 +69,18 @@ def engage_parser(engage_parameters):
     queue = o['queue']
     if hpc_system == "derecho":
         job_priority = o['job_priority']
+    elif hpc_system == 'pleiades':
+        group_list = o['group_list']
     walltime = o['walltime']
     modules = o['modules']
 
     o = engage_parameters["coupling"]
     
-    gamera_spin_up_time = int(o['gamera_spin_up_time'])
+    gr_warm_up_time = int(o['gr_warm_up_time'])
     gcm_spin_up_time = int(o['gcm_spin_up_time'])
     conda_env = o['conda_env']
     
-    start_date = get_engage_start_time(coupled_start_date,gamera_spin_up_time+gcm_spin_up_time)
+    start_date = get_engage_start_time(coupled_start_date,gr_warm_up_time+gcm_spin_up_time)
     
     o = engage_parameters["voltron"]
     voltron_dtOut = int(float(o['output']['dtOut']))
@@ -102,6 +105,10 @@ def engage_parser(engage_parameters):
 
     eo['account_name'] = account_name
     eo['project_code'] = account_name
+    if hpc_system == 'pleiades':
+        eo['group_list'] = group_list
+    else:
+        eo['group_list'] = None
     eo['queue'] = queue
     
     eo['walltime'] = walltime
@@ -113,9 +120,108 @@ def engage_parser(engage_parameters):
     elif hpc_system == 'pleiades':
         eo["model"] = "bro"
     
-    eo['skip']= ['job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','model','walltime']
+    eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','model','walltime']
     
     return engage_options
+
+def engage_options_updater(options, engage_options, option_descriptions):
+    # General options for the simulation
+    o = options["simulation"] 
+    o["job_name"] = engage_options["job_name"]
+    run_name = o["job_name"]
+    o["hpc_system"] = engage_options["hpc_system"]
+    # Data Options
+     
+    o = options["model"]["data"]
+    o["parentdir"] = engage_options["parentdir"]
+    o["execdir"] = o["parentdir"]
+    o["workdir"] = o["parentdir"]
+    o["histdir"] = o["parentdir"]
+    # Specification Options
+    o = options["model"]["specification"]
+    o["horires"] = engage_options["horires"]
+    horires = o["horires"]
+    vertres, mres, nres_grid, STEP = resolution_solver(o["horires"])
+    if o.get("vertres") is None:
+        o["vertres"] = vertres
+    if o.get("mres") is None:
+        o["mres"] = mres
+    if o.get("nres_grid") is None:
+        o["nres_grid"] = nres_grid
+    zitop = o["zitop"]
+    # INP options
+    o = options["inp"]
+    if o.get("STEP") is None:
+        o["STEP"] = STEP
+    o["start_time"] = engage_options["start_time"]
+    o["stop_time"] = engage_options["stop_time"]
+    o["segment"] = " ".join(map(str, engage_options["segment"]))
+    options_temp = copy.deepcopy(options)
+    if o.get("SOURCE") is None:
+        print("No SOURCE file specified, creating a new one.")
+        o["SOURCE"] = select_source_defaults(options_temp, option_descriptions)  
+        """
+        if not os.path.isfile(f'{options["model"]["data"]["workdir"]}/tiegcm_standalone/{run_name}-tiegcm-standalone_temp.nc'):
+            in_prim = source
+            out_prim = f'{options["model"]["data"]["workdir"]}/tiegcm_standalone/{run_name}-tiegcm-standalone_temp.nc'
+            o["SOURCE"] = out_prim
+            interpic (in_prim,float(horires),float(vertres),float(zitop),out_prim)
+        """
+    if o.get("SOURCE_START") is None:
+        o["SOURCE_START"] =  " ".join(map(str, get_mtime(options["inp"]["SOURCE"])[0]))
+    START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_time"], o["stop_time"])
+    if o.get("START_YEAR") is None:
+        o["START_YEAR"] = START_YEAR
+    if o.get("START_DAY") is None:
+        o["START_DAY"] = START_DAY
+    # PBS options
+    o = options["job"]
+    o["account_name"] = engage_options["account_name"]
+    hpc_platform = options["simulation"]["hpc_system"]
+    if hpc_platform == "derecho":
+        if o.get("mpi_command") is None:
+            o["mpi_command"] = "mpirun"
+        o['queue'] = engage_options['queue']
+        o['job_priority'] = engage_options['job_priority']
+        o['walltime'] = engage_options['walltime']
+    elif hpc_platform == "pleiades":
+        o['group_list'] = engage_options['group_list']
+        if o.get("mpi_command") is None:
+            o["mpi_command"] = "mpiexec_mpt"
+        o['queue'] = engage_options['queue']
+        o['walltime'] = engage_options['walltime']
+    on = options["job"]["resource"] = {}
+    if hpc_platform == "derecho":
+        select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
+        if on.get("select") is None:
+            on["select"] = select_default
+        if on.get("ncpus") is None:
+            on["ncpus"] = ncpus_default
+        if on.get("mpiprocs") is None:
+            on["mpiprocs"] = mpiprocs_default
+    elif hpc_platform == "pleiades":
+        if on.get("model") is None:
+            on["model"] = "bro"
+        select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
+        if on.get("select") is None:
+            on["select"] = select_default
+        if on.get("ncpus") is None:
+            on["ncpus"] = ncpus_default
+        if on.get("mpiprocs") is None:
+            on["mpiprocs"] = mpiprocs_default
+        if on.get("moduledir") is None:
+            options["job"]["moduledir"] = option_descriptions["job"]["pleiades"]["moduledir"]["default"]
+        if on.get("local_modules") is None:
+            options["job"]["local_modules"] = option_descriptions["job"]["pleiades"]["local_modules"]["default"]
+        if on.get("other_job") is None:
+            options["job"]["other_job"] = option_descriptions["job"]["pleiades"]["other_job"]["default"]
+    
+    o["nprocs"] = int(on["select"]) * int(on["mpiprocs"])
+    o["modules"] = engage_options["modules"]
+    o["project_code"] = engage_options["project_code"]
+    
+    return options
+
 
 def get_engage_start_time(datetime_str, seconds):
     # Parse the input datetime string
@@ -139,6 +245,7 @@ def engage_run(options, debug, coupling, engage):
     #For standalone
     pbs=True
     options_standalone["simulation"]["job_name"] = f'{engage["job_name"]}-tiegcm-standalone'
+    horires_standalone = float(engage["horires"])
     options_standalone["inp"]["stop_time"] = engage["coupled_start_time"]
     options_standalone["inp"]["PRIHIST"] = '1 0 0 0'
     options_standalone["inp"]["MXHIST_PRIM"] = 1
@@ -154,6 +261,10 @@ def engage_run(options, debug, coupling, engage):
     options_standalone["inp"]["OPLATWIDTH"] = '20'
     options_standalone["inp"]["TE_CAP"] = '8000'
     options_standalone["inp"]["TI_CAP"] = '8000'
+    options_standalone["inp"]["GSWM_MI_DI_NCFILE"] = find_file(f'*gswm_diurn_{horires_standalone}d_99km*', TIEGCMDATA)
+    options_standalone["inp"]["GSWM_MI_SDI_NCFILE"] = find_file(f'*gswm_semi_{horires_standalone}d_99km*', TIEGCMDATA)
+    options_standalone["inp"]["GSWM_NM_DI_NCFILE"] = find_file(f'*gswm_nonmig_diurn_{horires_standalone}d_99km*', TIEGCMDATA)
+    options_standalone["inp"]["GSWM_NM_SDI_NCFILE"] = find_file(f'*gswm_nonmig_semi_{horires_standalone}d_99km*', TIEGCMDATA)
     options_standalone["model"]["data"]["workdir"] = os.path.join(engage["parentdir"],"tiegcm_standalone")
     if not os.path.exists(options_standalone["model"]["data"]["workdir"]):
         os.makedirs(options_standalone["model"]["data"]["workdir"])

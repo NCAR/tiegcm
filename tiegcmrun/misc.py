@@ -156,7 +156,7 @@ def select_source_defaults(options, option_descriptions):
     elif time_dhms[0] >= 173 and time_dhms[0] <265:
         source_default = find_file(f'junsol_f{f107}*',TIEGCMDATA)
     elif time_dhms[0] >= 265 and time_dhms[0] <356:
-        source_default = find_file(f'seqex_f{f107}*',TIEGCMDATA)
+        source_default = find_file(f'sepeqx_f{f107}*',TIEGCMDATA)
     elif time_dhms[0] >= 356:
         source_default = find_file(f'decsol_f{f107}*',TIEGCMDATA)       
     return source_default    
@@ -219,11 +219,11 @@ def select_resource_defaults(options, option_descriptions):
         for on in od:
             if on == "select":
                 if float(horires) == 2.5 or float(horires) == 5:
-                    select = 72/mpiprocs_default
+                    select = 1#4/mpiprocs_default
                 if float(horires) == 1.25:
-                    select = 144/mpiprocs_default
+                    select = 1#8/mpiprocs_default
                 if float(horires) == 0.625:
-                    select = 288/mpiprocs_default
+                    select = 1#12/mpiprocs_default
                 select_default = int(select)
             if on == "ncpus":
                 ncpus_default = max_ncpus
