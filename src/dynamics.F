@@ -19,6 +19,8 @@
 !          change call to qjoule_tn to include vertical velocity
 !
       use fields_module
+      use cons_module,only: rmassinv_o2,
+     |  rmassinv_o1,rmassinv_n2,rmassinv_n2d
       use mpi_module,only: lon0,lon1,lat0,lat1,distribute_1d,mp_close,
      |  mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
       use chemrates_module,only: chemrates_tdep
@@ -35,6 +37,7 @@
       use timing_module,only: timer,timing
       use addfld_module,only: addfld
       use qjoule,only: qjoule_tn,qjoule_ti
+      use emission_module,only: ver6300,ver5200
       use diags_module,only: mkdiag_CUSP,mkdiag_DRIZZLE,mkdiag_ALFA,
      |  mkdiag_NFLUX,mkdiag_EFLUX,mkdiag_TEC,mkdiag_HNMF2,
      |  mkdiag_QJOULE_INTEG,mkdiag_UI,mkdiag_VI,mkdiag_WI
@@ -52,7 +55,7 @@
 #endif
 !
 ! Local:
-      integer :: lat,ier
+      integer :: k,i,lat,ier
       integer :: i0,i1,nk,nkm1,nlats,k0,k1
       logical,parameter :: debug=.false.  ! add prints to stdout
 !
@@ -68,7 +71,9 @@
 !           'QJI_TN','TN_UPD','UN_UPD','VN_UPD','O2_UPD','O1_UPD'
 !
       logical,parameter :: diags=.true. ! put fields on sec hist
-      real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor
+      real :: time0,time1,time1_qrj,time1_cmpminor,time1_cmpmajor,
+     |  o2_cm3,o1_cm3,n2_cm3,n2d_cm3
+      real,dimension(nlevp1,lon0:lon1) :: emission6300,emission5200
       real,dimension(lon0:lon1,lat0:lat1) ::
      |  tec ! diagnostic total electron content
       logical,external :: time2print
@@ -991,6 +996,25 @@
      |      o1(:,i0:i1,lat,itc),'lev',k0,k1,'lon',i0,i1,lat)
         enddo
       endif
-
+!
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=1,nlevp1
+            o2_cm3 = xnmbar(k,i,lat,itp)*o2(k,i,lat,itp)*rmassinv_o2
+            o1_cm3 = xnmbar(k,i,lat,itp)*o1(k,i,lat,itp)*rmassinv_o1
+            n2_cm3 = xnmbar(k,i,lat,itp)*n2(k,i,lat)*rmassinv_n2
+            n2d_cm3 = xnmbar(k,i,lat,itp)*n2d(k,i,lat,itp)*rmassinv_n2d
+            emission6300(k,i) = ver6300(o1_cm3,n2_cm3,
+     |        ne(k,i,lat,itp),te(k,i,lat,itp))
+            emission5200(k,i) = ver5200(o2_cm3,n2d_cm3,
+     |        ne(k,i,lat,itp),te(k,i,lat,itp))
+          enddo
+        enddo
+        call addfld('EMISSION6300','Volume emission rate at 6300 A',
+     |    'cm^-3/s',emission6300,'lev',k0,k1,'lon',i0,i1,lat)
+        call addfld('EMISSION5200','Volume emission rate at 5200 A',
+     |    'cm^-3/s',emission5200,'lev',k0,k1,'lon',i0,i1,lat)
+      enddo
+!
       if (debug) write(6,"('dynamics returning')")
       end subroutine dynamics
