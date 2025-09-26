@@ -181,16 +181,21 @@
       real(rp) :: omega = 7.292E-5_rp, pi = 4.0_rp*ATAN(1.0_rp)
       integer :: m,k,j,js
       integer :: calday(ndays)         ! calenday day in a year
-      real(rp) :: coeff(9)
+!      real(rp) :: coeff(9)
+      real(rp) :: coeff(11)
       real(rp) :: theta(ndays)
 !
 ! Begin calculation of eddy diffusivity:
       if (eddy_dif > 0) then ! use DOY-dependent eddy diffusion
 !
 ! The 9 coefficient of the semiannual eddy diffusivity parameterization:
-        coeff(:)=(/4.06e-06_rp, -8.77e-07_rp, -2.28e-06_rp, 1.77e-06_rp,
-     |    2.15e-06_rp, -3.05e-07_rp, -2.66e-07_rp,  4.08e-07_rp,
-     |    1.59e-07_rp/)
+!        coeff(:)=(/4.06e-06_rp, -8.77e-07_rp, -2.28e-06_rp, 1.77e-06_rp,
+!     |    2.15e-06_rp, -3.05e-07_rp, -2.66e-07_rp,  4.08e-07_rp,
+!     |    1.59e-07_rp, 0.0_rp, 0.0_rp/)
+! The 11 coefficient of the semiannual eddy diffusivity parameterization:
+        coeff(:)=(/3.23e-06_rp, 2.16e-07_rp, -3.01e-07_rp, 1.29e-06_rp,
+     |   7.87e-07_rp, 5.61e-07_rp, 8.19e-09_rp, -2.31e-07_rp,
+     |   -1.09e-07_rp, 2.89e-09_rp, 2.00e-07_rp/)
 !
 ! set up calendar days
         do m=1,ndays
@@ -214,6 +219,8 @@
      |             + coeff(7)*cos(3.0_rp*theta(m))
      |             + coeff(8)*sin(4.0_rp*theta(m))
      |             + coeff(9)*cos(4.0_rp*theta(m))
+     |             + coeff(10)*sin(5.0_rp*theta(m))
+     |             + coeff(11)*cos(5.0_rp*theta(m))
            dift(1,m) = difk(1,m)/prndtl
            xmue(1,m) = difk(1,m)
         enddo
