@@ -3,6 +3,7 @@ module emission_module
 ! based on Rees, M. H., and Roble, R. G. (1975)
 ! Observations and theory of the formation of stable auroral red arcs
 ! Reviews of Geophysics, 13(1), 201–242, doi:10.1029/RG013i001p00201
+! Recent application in Lin et al. 2024GL109617.
 
   use params_module,only:rp
 
