@@ -55,7 +55,7 @@
 !             and mods to gpi.F. 
 ! 1/24/08 btf:Changed alfad,ed, alfac,ec as per Wenbin.
 !
-      use params_module,only: nlonp4,nlevp1,nlat
+      use params_module,only: nlonp4,nlevp1,nlat,rp
       implicit none
 !
 ! VT vampir tracing:
@@ -93,7 +93,7 @@
 !              and ec is set as function of hemispheric power in aurora_cons 
 !              (old tiegcm1.8 value for ec was 0.5)
 !
-      real,parameter :: alfac = 0.1
+      real :: alfac
       real :: ec ! set in sub aurora_cons (function of hem power)
 !
       real :: fc ! set in sub aurora_ions
@@ -178,7 +178,10 @@
      |  flux, flux2, flux3, ! particle flux
      |  drizl,cusp,         ! polar drizzle and cusp
      |  qteaur,             ! for electron temperature
-     |  eflux,eflux2,eflux3 ! energy flux
+     |  eflux,eflux2,eflux3,! energy flux
+     |  alfa4,flux4,eflux4, ! broadband electrons
+     |  alfa5,flux5,eflux5  ! direct entry cusp electrons
+
 !
 ! aureff = vertical profile for auroral heating efficiency (used by qjion)
 ! 
@@ -198,7 +201,8 @@
      |  ctpoten, ! cross-cap potential (kV)      (e.g., 45.)
      |  power,   ! hemispheric power   (GW)      (e.g., 16.)
      |  iamie,
-     |  potential_model  ! electric potential model used
+     |  potential_model,  ! electric potential model used
+     |  soft
       use amie_module,only: crad,phida,hpi_sh_amie,hpi_nh_amie
 !
 ! Args:
@@ -226,6 +230,15 @@
      |  2.04E-1,1.38E-1,8.74E-2,5.23E-2,3.01E-2,1.68E-2,9.27E-3,5.08E-3,
      |  2.79E-3,1.55E-3,8.62E-4,4.85E-4,2.76E-4,1.58E-4,9.11E-5,5.28E-5,
      |  3.08E-5,1.79E-5,1.04E-5,6.01E-6,3.49E-6/)
+
+!
+! Set cusp to negligible energy (turn off) if MAGE is providing soft precipitation
+!
+      if (soft) then
+        alfac = 0.00001_rp
+      else
+        alfac = 0.1_rp
+      endif
 !
 ! Add limits to byimf if use the Heelis convection pattern,this is to have 
 ! asymmetric dawn and dusk convection cells and By effect. --Wenbin Wang 12/02/2008
@@ -447,10 +460,13 @@
      |  sunlons,     ! sun's mag longitudes (see sub sunloc, magfield.F) 
      |  csdec,sndec
       use params_module,only: nlon,spval,glat
-      use input_module,only: iamie
+      use input_module,only: iamie,soft
       use cons_module,only: pi,dtr
       use amie_module,only: ekvg,efxg
-      use mage_coupling_module,only: geng,gflx     !MAGE
+      use mage_coupling_module,only: ! MAGE
+     | geng,gflx,
+     | geng_bbe,gflx_bbe,
+     | geng_cusp,gflx_cusp
 !
 ! Add SAPS ion drifts to regular ion drifts from dynamo and convection pattern
       use input_module,only: saps,kp
@@ -628,11 +644,25 @@
 ! zero, otherwise the model will blow up. Set to small values here. This
 ! will not change simulations.
 !                                                        Wenbin  wang
-!
+! Disable soft precipitation if GAMERA is off
+          alfa4(i,lat) = 1.e-5
+          flux4(i,lat) = 1.e-5
+          eflux4(i,lat) = flux4(i,lat)*fac_p2e*alfa4(i,lat)
+          alfa5(i,lat) = 1.e-5
+          flux5(i,lat) = 1.e-5
+          eflux5(i,lat) = flux5(i,lat)*fac_p2e*alfa5(i,lat)
 #ifdef GAMERA
           alfa(i,lat) = max(geng(i,lat),0.01)
           flux(i,lat) = max(gflx(i,lat),0.01)
           eflux(i,lat) = flux(i,lat)*fac_p2e*alfa(i,lat)
+          if (soft) then
+            alfa4(i,lat) = max(geng_bbe(i,lat),0.01)
+            flux4(i,lat) = max(gflx_bbe(i,lat),0.01)
+            eflux4(i,lat) = flux4(i,lat)*fac_p2e*alfa4(i,lat)
+            alfa5(i,lat) = max(geng_cusp(i,lat),0.01)
+            flux5(i,lat) = max(gflx_cusp(i,lat),0.01)
+            eflux5(i,lat) = flux5(i,lat)*fac_p2e*alfa5(i,lat)
+          endif
 #endif
 
 ! Sheng, 2017/07, Calculate SAPS ion drifts
@@ -710,8 +740,10 @@
      |      drizl(lon0:lon1,lat), cusp (lon0:lon1,lat),
      |      alfa (lon0:lon1,lat),
      |      alfa2(lon0:lon1,lat), alfa3(lon0:lon1,lat),
+     |      alfa4(lon0:lon1,lat), alfa5(lon0:lon1,lat),
      |      flux (lon0:lon1,lat),
      |      flux2(lon0:lon1,lat), flux3(lon0:lon1,lat),
+     |      flux4(lon0:lon1,lat), flux5(lon0:lon1,lat),
      |      o2(:,:,lat),o1(:,:,lat),he(:,:,lat),n2(:,:,lat),
      |      xnmbar(:,:,lat),scht(:,:,lat),lev0,lev1,lon0,lon1,lat)
         endif
@@ -727,7 +759,8 @@
       end module aurora_module
 !-----------------------------------------------------------------------
       subroutine aurora_ions (drizl,cusp,alfa1,alfa2,alfa3,
-     |  flux1,flux2,flux3,o2,o1,he,n2,xnmbar,scht,
+     |  alfa4,alfa5,flux1,flux2,flux3,flux4,flux5,
+     |  o2,o1,he,n2,xnmbar,scht,
      |  lev0,lev1,lon0,lon1,lat)
 !
 ! Calculate aroral additions to ionization rates.
@@ -752,12 +785,15 @@
 ! Auroral parameters:
       use aurora_module,only: alfac, alfad, alfa_sp, fc,fd,
      |  flx_sp, e30, add_sproton, add_helectron
+
+      use input_module,only: soft
       implicit none
 !
 ! Args:
       integer,intent(in) :: lev0,lev1,lon0,lon1,lat
       real,intent(in),dimension(lon0:lon1) :: drizl,cusp,
-     |  alfa1,alfa2,alfa3,flux1,flux2,flux3
+     |  alfa1,alfa2,alfa3,alfa4,alfa5,
+     |  flux1,flux2,flux3,flux4,flux5
       real,dimension(lev0:lev1,lon0-2:lon1+2),intent(in) ::
      |  o2,o1,he,n2,xnmbar,scht
 !
@@ -766,20 +802,24 @@
       real,dimension(lev0:lev1,lon0:lon1) :: 
      |  p0ez, xalfa1, xalfa2, xcusp, xdrizl,       ! input to sub aion
      |  xalfa_sp, xalfa3,
+     |  xalfa4, xalfa5,
      |  cusp_ion, drizl_ion,                       ! output from sub aion
      |  alfa1_ion, alfa2_ion, alfa3_ion,           ! output from sub aion
+     |  alfa4_ion, alfa5_ion,                      ! output from sub aion
      |  alfasp_bion,                               ! output from sub bion
      |  qsum, denom,
      |  qo2p_aur, qop_aur, qn2p_aur,! auroral ionization for O2+, O+, N2+
-     |  qo2p_a, qop_a, qn2p_a
+     |  qo2p_a, qop_a, qn2p_a,
+     |  tmp_alfa
       real,dimension(lon0:lon1) ::
-     |  falfa1, falfa2, fcusp, fdrizl, falfa_sp, falfa3
+     |  falfa1, falfa2, fcusp, fdrizl, falfa_sp, 
+     |  falfa3, falfa4, falfa5
       real :: qia(5) ! low energy proton source (not in use, 1/02)
       real,dimension(lev0:lev1,lon0:lon1) :: qaurora,
      |  o2_cm3,o1_cm3,he_cm3,n2_cm3
 ! External:
       logical,external :: time2print
-      logical :: use_cion = .false.      ! switch between AION and CION
+      logical :: use_cion = .true.      ! switch between AION and CION
 !
       qia(:) = 0.
 !
@@ -800,6 +840,8 @@
           xalfa1(k,i) = p0ez(k,i)/alfa1(i)
           xalfa2(k,i) = p0ez(k,i)/alfa2(i)
           xalfa3(k,i) = p0ez(k,i)/alfa3(i) ! alfa3(:)==alfa30
+          xalfa4(k,i) = p0ez(k,i)/alfa4(i) ! 
+          xalfa5(k,i) = p0ez(k,i)/alfa5(i) ! 
           xcusp (k,i) = p0ez(k,i)/alfac
           xdrizl(k,i) = p0ez(k,i)/alfad
 !
@@ -818,13 +860,19 @@
       if (.not.use_cion) then
         call aion(xalfa1,alfa1_ion,lev0,lev1,lon0,lon1)
         call aion(xalfa2,alfa2_ion,lev0,lev1,lon0,lon1)
+        call aion(xalfa4,alfa4_ion,lev0,lev1,lon0,lon1)
+        call aion(xalfa5,alfa5_ion,lev0,lev1,lon0,lon1)
         call aion(xcusp,cusp_ion,lev0,lev1,lon0,lon1)
         call aion(xdrizl,drizl_ion,lev0,lev1,lon0,lon1)
       else
         call cion(xalfa1,alfa1_ion,alfa1,lev0,lev1,lon0,lon1)
-        call cion(xalfa2,alfa2_ion,alfa1,lev0,lev1,lon0,lon1)
-        call cion(xcusp,cusp_ion,alfa1,lev0,lev1,lon0,lon1)
-        call cion(xdrizl,drizl_ion,alfa1,lev0,lev1,lon0,lon1)
+        call cion(xalfa2,alfa2_ion,alfa2,lev0,lev1,lon0,lon1)
+        call cion(xalfa4,alfa4_ion,alfa4,lev0,lev1,lon0,lon1)
+        call cion(xalfa5,alfa5_ion,alfa5,lev0,lev1,lon0,lon1)
+        tmp_alfa = alfac
+        call cion(xcusp,cusp_ion,tmp_alfa,lev0,lev1,lon0,lon1)
+        tmp_alfa = alfad
+        call cion(xdrizl,drizl_ion,tmp_alfa,lev0,lev1,lon0,lon1)
       endif
 !
 ! Solar protons:
@@ -837,6 +885,8 @@
       do i=lon0,lon1
         falfa1(i) = alfa1(i)*flux1(i)  ! s7
         falfa2(i) = alfa2(i)*flux2(i)  ! s8
+        falfa4(i) = alfa4(i)*flux4(i)  ! 
+        falfa5(i) = alfa5(i)*flux5(i)  ! 
 
         fcusp (i) = cusp(i)*alfac*fc   ! s9
         fdrizl(i) = drizl(i)*alfad*fd  ! s10
@@ -850,6 +900,7 @@
      |      falfa2(i)*alfa2_ion(k,i)+  ! s8*s4
      |      fcusp (i)*cusp_ion (k,i)+  ! s9*s5
      |      fdrizl(i)*drizl_ion(k,i)   ! s10*s6
+
           qaurora(k,i) = 1.e3/(scht(k,i)*35.)*
      |                  (falfa1(i)*alfa1_ion(k,i)+
      |                   falfa2(i)*alfa2_ion(k,i))
@@ -860,6 +911,10 @@
      |      qsum(k,i) = qsum(k,i) + falfa3(i)*alfa3_ion(k,i)
           if (add_sproton)
      |      qsum(k,i) = qsum(k,i) + falfa_sp(i)*alfasp_bion(k,i)
+          if (soft) 
+     |      qsum(k,i) = qsum(k,i) + 
+     |         falfa4(i)*alfa4_ion(k,i) + ! Broadband Electrons
+     |         falfa5(i)*alfa5_ion(k,i)   ! Direct Entry Cusp Electrons
 !
           qsum(k,i) = qsum(k,i)*1.e3/(scht(k,i)*35.) ! s1 = s1*s11
 !

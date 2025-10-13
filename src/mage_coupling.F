@@ -13,7 +13,7 @@
 !-----------------------------------------------------------------------
       use params_module,only: nlonp4,nlat,nlatp1,
      |  nmlatp1,nmlonp1,nmlat,nmlon,rp
-      use input_module,only: oneway
+      use input_module,only: oneway, soft
       !use pdynamo_module,only: phihm
 #ifdef GAMERA
       use mage_oneway
@@ -23,11 +23,11 @@
       real(rp),dimension(nlonp4,nlat) ::
      |  geng,        ! energy in geographic coordinates, periodic boundary
      |  gflx,        ! flux in geographic coordinates, periodic boundary
-     |  gpot         ! potential in geographic coordinates, periodic boundary
-!    |  gBbeAvgEng,  ! BBE Precip Average Eng-geo, periodic boundary
-!    |  gBbeNumFlux, ! BBE Precip Num flux-geo, periodic boundary
-!    |  gCuspAvgEng, ! Cusp Precip Average Eng-geo, periodic boundary
-!    |  gCuspNumFlux ! Cusp Precip Num flux-geo, periodic boundary
+     |  gpot,        ! potential in geographic coordinates, periodic boundary
+     |  geng_bbe,    ! BBE Precip Average Eng, periodic boundary
+     |  gflx_bbe,    ! BBE Precip Num flux, periodic boundary
+     |  geng_cusp,   ! Cusp Precip Average Eng, periodic boundary
+     |  gflx_cusp    ! Cusp Precip Num flux, periodic boundary
 
 ! Potential in geographic coordinates from M-I coupler
 ! Note: gpotm latitude dimension is defined to match mag2geo specifications
@@ -39,13 +39,14 @@
       real(rp) :: aurllbN,aurllbS ! all are co-lats in radians
 
 ! Change the following parameters if adding more variables
-      integer,parameter ::
+      integer,parameter, private ::
      |  nmixinapex = 2, ! APEX Potential, Flux (for auroral bc)
-     |  nmixingeo  = 2, ! GEO Flux, Energy
      |  nmixoutapex= 2, ! APEX Pedersen, Hall
      |  nmixoutgeo = 0, ! No GEO exports
      |  nhoutvar   = 9, ! TN, UN, VN, OMEGA, O2, O1, NO, Z, HE
      |  nhinvar    = 0  !
+
+      integer, private :: nmixingeo
 
       real(rp),dimension(nmlonp1,2) :: aurorabc1d
 
@@ -68,12 +69,22 @@
       real(rp),dimension(nlatp2) :: glatp2
       real(rp),dimension(nlonp1) :: glonp1
 
+      if (soft) then
+        nmixingeo = 6  ! GEO Flux, Energy, BBE Avg Eng, BBE Num Flux, Cusp Avg Eng, Cusp Num Flux
+      else
+        nmixingeo = 2  ! GEO Flux, Energy
+      end if
+
       !gpot = 0
       geng = 0.5_rp
       gflx = 0.0_rp
       gpotm = 0.0_rp
       apotm = 0.0_rp
       aflxm  = 0.0_rp
+      geng_bbe = 0.5_rp
+      gflx_bbe = 0.0_rp
+      geng_cusp = 0.5_rp
+      gflx_cusp = 0.0_rp
       !aurllbN = 10*dtr
       !aurllbS = 10*dtr
 
@@ -133,8 +144,13 @@
       use mpi
 
       integer :: ierr,i,j
-      real(rp),dimension(nlatp2,nlonp1,nmixingeo) :: gvar2d
-      real(rp),dimension(nmlat,nmlonp1,nmixinapex) :: avar2d
+      real(rp),dimension(:,:,:), allocatable :: gvar2d
+      real(rp),dimension(:,:,:), allocatable :: avar2d
+
+      if (.not. allocated(avar2d)) 
+     |  allocate(avar2d(nmlat,nmlonp1,nmixinapex))
+      if (.not. allocated(gvar2d)) 
+     |allocate(gvar2d(nlatp2,nlonp1,nmixingeo))
 
 !     write(6,"('TIEGCM (',i3,'): inside receive')") mytid
 
@@ -169,6 +185,12 @@
           !gpot(i+2,j) = var2d(j+1,i,1)
           geng(i+2,j) = gvar2d(j+1,i,1)
           gflx(i+2,j) = gvar2d(j+1,i,2)
+          if (soft) then
+            geng_bbe(i+2,j) = gvar2d(j+1,i,3)
+            gflx_bbe(i+2,j) = gvar2d(j+1,i,4)
+            geng_cusp(i+2,j) = gvar2d(j+1,i,5)
+            gflx_cusp(i+2,j) = gvar2d(j+1,i,6)
+          end if
           !gpotm(i+2,j) = var2d(j+1,i,1)
         enddo
         !gpotm(nlonp1+2,j) = var2d(j+1,nlonp1,1)
@@ -203,33 +225,6 @@
       real(rp) :: nfluxllb = 1.0e7_rp
       real(rp) :: potllb = 5000._rp ! 1 kV
       real(rp),dimension(nlon) :: aurllbj
-  
-
-! Dynamo solver requires pole values for gpotm
-! Linearly interpolate to add pole values
-
-! Southern Hemisphere: j=0
-      !polev1=0.
-      !polev2=0.
-      !do i=1,nlonp1
-      !  polev1=polev1+gpotm(i+2,1)
-      !  polev2=polev2+gpotm(i+2,2)
-      !enddo
-
-      !do i=1,nlonp1
-      !  gpotm(i+2,0)=(9.*polev1-polev2)/(8.*float(nlonp1))
-      !enddo
-
-! Northern Hemisphere: j=nlatp1
-      !polev1=0.
-      !polev2=0.
-      !do i=1,nlonp1
-      !  polev1=polev1+gpotm(i+2,nlat)
-      !  polev2=polev2+gpotm(i+2,nlat-1)
-      !enddo
-      !do i=1,nlonp1
-      !  gpotm(i+2,nlatp1)=(9.*polev1-polev2)/(8.*float(nlonp1))
-      !enddo
 
 ! Set periodic points
       do j = 1,nlat
@@ -243,43 +238,20 @@
           geng(nlonp2+i,j) = geng(i+2,j)
           gflx(nlonp2+i,j) = gflx(i+2,j)
           !gpotm(nlonp2+i,j) = gpotm(i+2,j)
+
+          if (soft) then
+            geng_bbe(i,j) = geng_bbe(nlon+i,j)
+            gflx_bbe(i,j) = gflx_bbe(nlon+i,j)
+            geng_cusp(i,j) = geng_cusp(nlon+i,j)
+            gflx_cusp(i,j) = gflx_cusp(nlon+i,j)
+
+            geng_bbe(nlonp2+i,j) = geng_bbe(i+2,j)
+            gflx_bbe(nlonp2+i,j) = gflx_bbe(i+2,j)
+            geng_cusp(nlonp2+i,j) = geng_cusp(i+2,j)
+            gflx_cusp(nlonp2+i,j) = gflx_cusp(i+2,j)
+          end if
         enddo
       enddo
-
-!!!  08/11:  FIXME: While merging TIEGCM 1.94.1 into LTR-2.1.4-beta, I found
-!!!          the following code segment.  Does CTPOTEN really need to be
-!!!          calculated here?  What does CTPOTEN do in the input namelist?
-!!!          Isn't CTPOTEN read from the GPI file?  Is MAGE ready for the 
-!!!          dynamic crit mods?  Commenting this code out for now.  Need
-!!!          to talk with Ben on this.  Compare to TIEGCM revisions r571
-!!!          and r575 (TIEGCM repository).
-!!!
-!!!!
-!!!! 01/11:  Find ctpoten (kV) or min/max average from both hemispheres (gpot in V)
-!!!!         ctpoten is NOT (yet) used to find theta0 in aurora_cons, where theta0
-!!!!         is used in colath for crit(1,2).  Set theta0=10 so crit1,2=15,30 deg (old).
-!!!!
-!!!      cpmaxsh = -1000000.
-!!!      cpmaxnh = -1000000.
-!!!      cpminsh =  1000000.
-!!!      cpminnh =  1000000.
-!!!
-!!!      do js=1,nlat/2
-!!!       jn=nlat/2+js
-!!!       do ii=1,nlonp1+1
-!!!	cpmaxsh = max(cpmaxsh,gpot(ii,js))
-!!!	cpminsh = min(cpminsh,gpot(ii,js))
-!!!	cpmaxnh = max(cpmaxnh,gpot(ii,jn))
-!!!	cpminnh = min(cpminnh,gpot(ii,jn))
-!!!       enddo
-!!!      enddo
-
-!!!      cpmaxsh = maxval(gpot(:,1:nlat/2))
-!!!      cpmaxnh = maxval(gpot(:,nlat/2+1:nlat))
-!!!      cpminsh = minval(gpot(:,1:nlat/2))
-!!!      cpminnh = minval(gpot(:,nlat/2+1:nlat))
-
-!!!      ctpoten = 0.5*(cpmaxsh-cpminsh+cpmaxnh-cpminnh)*0.001
 
       ! Find the lowest lat of all MLT where mixFlux drops to below certain threshold.
       ! Pass it into colath.F, replace crit(1) and 2.
@@ -311,56 +283,6 @@
         aurllbN = maxval(aurorabc1d(:,1))
         aurllbS = maxval(aurorabc1d(:,2))
         !write(*,*) "TGCMCPL: aurora: ",aurllbN,aurllbS
-
-!        ! Let's try a new method
-!        aurorabc1d = 0.0_rp
-!        grad_x = 0.0_rp
-!        grad_y = 0.0_rp
-!        grad_mag = 0.0_rp
-!
-!        ! dumb gradient
-!        do j = 2,nmlon
-!          do i=nmlat/2+2,nmlat-1
-!            grad_x(j,i) = (apotm(j+1,i) - apotm(j-1,i))/(2.0_rp)!*dlonm)
-!            grad_y(j,i) = (apotm(j,i+1) - apotm(j,i-1))/(2.0_rp)!*dlatm)
-!          end do
-!          do i=nmlat/2-1,2,-1
-!            grad_x(j,i) = (apotm(j+1,i) - apotm(j-1,i))/(2.0_rp)!*dlonm)
-!            grad_y(j,i) = (apotm(j,i-1) - apotm(j,i+1))/(2.0_rp)!*dlatm)
-!          end do
-!        end do
-!
-!        ! Compute the magnitude of the gradient
-!        do j = 2, nmlon
-!            do i = nmlat/2+2,nmlat-1
-!                grad_mag(i,j) = sqrt(grad_x(j,i)**2 + grad_y(j,i)**2)
-!            end do
-!        end do
-!
-!        ! Calculate gradient boundary
-!        do j=1,nmlonp1   ! NORTH
-!          do i=nmlat/2+1,nmlat
-!            if(grad_mag(j,i)>=potllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
-!          enddo
-!          i = min(i,nmlat)
-!          aurorabc1d(j,1) = max(90.0_rp-gmlat(i),15._rp) ! aurllbj is co-lat.
-!        enddo
-!!!!      aurllbN = maxval(aurllbj)
-!
-!        do j=1,nmlonp1   ! SOUTH
-!          do i=nmlat/2,1,-1
-!            if(grad_mag(j,i)>=potllb) exit ! Find the lowest lat where numflux is above 1e6/cm^2/s
-!          enddo
-!          i = max(i,1)
-!          aurorabc1d(j,2) = max(90._rp+gmlat(i),15._rp) ! aurllbj is co-lat from south pole! Backwards.
-!        enddo
-!
-!        ! Keep the higher latitude between auroral and pot boundary
-!        temp = maxval(aurorabc1d(:,1))
-!        aurllbN = min(temp,aurllbN)
-!        temp = maxval(aurorabc1d(:,2))
-!        aurllbS = min(temp,aurllbS)
-
 
 #endif
 
