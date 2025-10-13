@@ -69,11 +69,35 @@ def segment_time(start_time_str, stop_time_str, interval_array):
     # Generate the intervals
     intervals = []
     current = start
+    temp_delta = 0
     while current < stop:
-        next_time = min(current + delta, stop)
-        intervals.append([current.strftime('%Y-%m-%dT%H:%M:%S'), next_time.strftime('%Y-%m-%dT%H:%M:%S')])
-        current = next_time
-    
+        if temp_delta != 0:
+            next_time = min(current + temp_delta, stop)
+            temp_delta = 0
+        else:
+            next_time = min(current + delta, stop)
+        # Check if next_time crosses a year boundary and if next_time is not the start of the year
+        if current.year != next_time.year:
+            if next_time.month != 1 or next_time.day != 1 or next_time.hour != 0 or next_time.minute != 0 or next_time.second != 0:
+                year_boundary = datetime(current.year + 1, 1, 1, 0, 0, 0)
+                intervals.append([
+                    current.strftime('%Y-%m-%dT%H:%M:%S'),
+                    year_boundary.strftime('%Y-%m-%dT%H:%M:%S')
+                ])
+                current = year_boundary
+                temp_delta = next_time - year_boundary
+            else:
+                intervals.append([
+                current.strftime('%Y-%m-%dT%H:%M:%S'),
+                next_time.strftime('%Y-%m-%dT%H:%M:%S')
+                ])
+                current = next_time
+        else:
+            intervals.append([
+                current.strftime('%Y-%m-%dT%H:%M:%S'),
+                next_time.strftime('%Y-%m-%dT%H:%M:%S')
+            ])
+            current = next_time
     return intervals
 
 def valid_bench(value):
@@ -201,7 +225,7 @@ def select_resource_defaults(options, option_descriptions):
                     mpiprocs_default = 96
                 elif float(horires) == 0.625:
                     mpiprocs_default = 96
-    elif hpc_platform == "atiken":
+    elif hpc_platform == "aitken":
         od=od["resource"]
         o=o["resource"]
         if o["model"] == "mil_ait": 
@@ -292,3 +316,6 @@ def seconds_to_dhms(seconds):
     seconds %= 60
     
     return [days, hours, minutes, seconds]
+
+def dhms_to_seconds(dhms):
+    return dhms[0]*86400 + dhms[1]*3600 + dhms[2]*60 + dhms[3]

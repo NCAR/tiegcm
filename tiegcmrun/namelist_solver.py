@@ -45,7 +45,12 @@ def inp_pri_date(start_date_str, stop_date_str):
 
     # Format PRISTART and PRISTOP
     PRISTART = [start_time.timetuple().tm_yday, start_time.hour, start_time.minute, start_time.second]
-    PRISTOP = [stop_time.timetuple().tm_yday, stop_time.hour, stop_time.minute, stop_time.second]
+    
+    if stop_time.timetuple().tm_yday == 1 and stop_time.hour == 0 and stop_time.minute == 0 and stop_time.second == 0:
+        # If stop time is exactly at the start of a new year, set PRISTOP to the last of the previous year + 1 day 
+        PRISTOP = [start_time.timetuple().tm_yday+1, stop_time.hour, stop_time.minute, stop_time.second]
+    else:
+        PRISTOP = [stop_time.timetuple().tm_yday, stop_time.hour, stop_time.minute, stop_time.second]
 
     return START_YEAR, START_DAY, PRISTART, PRISTOP
 
@@ -315,6 +320,10 @@ def inp_sec_date(start_time, stop_time, SECHIST):
     sechist_delta = timedelta(days=SECHIST[0], hours=SECHIST[1], minutes=SECHIST[2], seconds=SECHIST[3])
     start = start + sechist_delta
     SECSTART = [start.timetuple().tm_yday,start.hour,start.minute,start.second]
-    SECSTOP = [stop.timetuple().tm_yday,stop.hour,stop.minute,stop.second]
+    if stop.timetuple().tm_yday == 1 and stop.hour == 0 and stop.minute == 0 and stop.second == 0:
+        # If stop time is exactly at the start of a new year, set SECSTOP to the last of the previous year + 1 day 
+        SECSTOP = [start.timetuple().tm_yday+1,stop.hour,stop.minute,stop.second]
+    else:
+        SECSTOP = [stop.timetuple().tm_yday,stop.hour,stop.minute,stop.second]
 
     return SECSTART, SECSTOP

@@ -13,7 +13,7 @@
             "LEVEL": "BENCH",
             "prompt": "Name of HPC system",
             "default": "derecho",
-            "valids": ["derecho", "atiken","linux"],
+            "valids": ["derecho", "aitken","linux"],
             "description": null,
             "warning": null
         }
@@ -122,7 +122,7 @@
                 "warning": null
             }
         },
-        "atiken": {
+        "aitken": {
             "group_list": {
                 "LEVEL": "BASIC",
                 "prompt": "PBS group list",
@@ -205,7 +205,7 @@
                 "LEVEL": "EXPERT",
                 "prompt": "Commands to add local module PATH",
                 "default": [
-                    "setenv PREFIX /u/nrao3/local_atiken",
+                    "setenv PREFIX /u/nrao3/local_aitken",
                     "setenv LIBRARY_PATH ${LIBRARY_PATH}:$PREFIX/lib",
                     "setenv LD_LIBRARY_PATH $LIBRARY_PATH",
                     "setenv CPATH $PREFIX/include",

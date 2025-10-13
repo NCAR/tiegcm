@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script automates the build process for ESMF, netcdf-c, and netcdf-fortran on the Atiken HPC system.
+# This script automates the build process for ESMF, netcdf-c, and netcdf-fortran on the aitken HPC system.
 
 purge_modules() {
   echo -e "\n\n\n\n\n\n\n\n\nPurging all loaded modules..."
@@ -28,8 +28,8 @@ set_compiler_env() {
 
 set_dirs() {
   echo -e "\n\n\n\n\n\n\n\n\nSetting PREFIX and WORK directories..."
-  export PREFIX=$HOME/local_atiken
-  export WORK=$HOME/build_atiken
+  export PREFIX=$HOME/local_aitken
+  export WORK=$HOME/build_aitken
 }
 
 ensure_dirs() {
@@ -165,7 +165,7 @@ build_esmf
 # export CC=mpicc
 # export CXX=mpicxx
 
-# export PREFIX=$HOME/local_atiken_test
+# export PREFIX=$HOME/local_aitken_test
 # export LIBRARY_PATH=${LIBRARY_PATH}:$PREFIX/lib
 # export LD_LIBRARY_PATH=$LIBRARY_PATH
 # export CPATH=$PREFIX/include

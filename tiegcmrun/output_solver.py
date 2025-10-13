@@ -14,9 +14,10 @@ Functions included:
 import os
 import json
 import copy
+from datetime import datetime, date
 from jinja2 import Template
 
-from misc import segment_time, resolution_solver
+from misc import segment_time, resolution_solver, dhms_to_seconds, seconds_to_dhms
 from namelist_solver import inp_pri_date, inp_pri_out, inp_sec_date, inp_sec_out
 
 
@@ -131,7 +132,16 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
             segment_options["inp"]["START_DAY"] = segment_START_DAY
             segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
             segment_options["inp"]["PRISTOP"] = ' '.join(map(str, segment_PRISTOP))
-            segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
+            PRIHIST_split = [int(i) for i in PRIHIST.split()]
+            segment_diff_sec = dhms_to_seconds(segment_PRISTOP) - dhms_to_seconds(segment_PRISTART)
+            segment_diff = seconds_to_dhms(segment_diff_sec)
+            PRIHIST_split_sec = dhms_to_seconds(PRIHIST_split)
+            if segment_diff_sec < PRIHIST_split_sec:
+                segment_PRIHIST = segment_diff
+            else:
+                segment_PRIHIST = [int(i) for i in PRIHIST.split()]
+            segment_options["inp"]["PRIHIST"] = ' '.join(map(str, segment_PRIHIST))
+            segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, segment_PRIHIST, MXHIST_PRIM, pri_files, histdir,run_name)
             segment_options["inp"]["OUTPUT"] = segment_OUTPUT
         else:
             segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
@@ -141,27 +151,38 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
             segment_options["inp"]["START_DAY"] = segment_START_DAY
             segment_options["inp"]["PRISTART"] = ' '.join(map(str, segment_PRISTART))
             segment_options["inp"]["PRISTOP"] = ' '.join(map(str, segment_PRISTOP))
+            PRIHIST_split = [int(i) for i in PRIHIST.split()]
+            segment_diff_sec = dhms_to_seconds(segment_PRISTOP) - dhms_to_seconds(segment_PRISTART)
+            segment_diff = seconds_to_dhms(segment_diff_sec)
+            PRIHIST_split_sec = dhms_to_seconds(PRIHIST_split)
+            if segment_diff_sec < PRIHIST_split_sec:
+                segment_PRIHIST = segment_diff
+            else:
+                segment_PRIHIST = [int(i) for i in PRIHIST.split()]
+
             if segment_number == last_segment_time and engage_options != None:
                 segment_START_YEAR, segment_START_DAY, segment_PRISTART, segment_PRISTOP = inp_pri_date(segment_start,segment_stop)
+                segment_PRISTART_day, segment_PRISTART_hour, segment_PRISTART_minute, segment_PRISTART_second = segment_PRISTART
                 segment_PRISTOP_day, segment_PRISTOP_hour, segment_PRISTOP_minute, segment_PRISTOP_second = segment_PRISTOP
                 if segment_PRISTOP_second != 0:
                     segment_PRIHIST = [0, 0, 0, 1]
-                    segment_MXHIST_PRIM = segment_PRISTOP_minute*60 + segment_PRISTOP_hour*60 + segment_PRISTOP_second
+                    segment_MXHIST_PRIM = segment_PRISTOP_minute*60 + segment_PRISTOP_hour*60 + segment_PRISTOP_second - segment_PRISTART_minute*60 - segment_PRISTART_hour*60 - segment_PRISTART_second    
                 elif segment_PRISTOP_minute != 0:
                     segment_PRIHIST = [0, 0, 1, 0]
-                    segment_MXHIST_PRIM = segment_PRISTOP_hour*60 + segment_PRISTOP_minute
+                    segment_MXHIST_PRIM = segment_PRISTOP_hour*60 + segment_PRISTOP_minute - segment_PRISTART_minute - segment_PRISTART_hour*60
                 elif segment_PRISTOP_hour != 0:
                     segment_PRIHIST = [0, 1, 0, 0]
-                    segment_MXHIST_PRIM = segment_PRISTOP_hour
-                else:
-                    segment_PRIHIST = [int(i) for i in PRIHIST.split()]
-                    segment_MXHIST_PRIM = MXHIST_PRIM
+                    segment_MXHIST_PRIM = segment_PRISTOP_hour - segment_PRISTART_hour
+                elif segment_PRIHIST == [1, 0, 0, 0]:
+                    segment_PRIHIST = segment_PRIHIST
+                    segment_MXHIST_PRIM = segment_PRISTOP_day - segment_PRISTART_day
                 segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, segment_PRIHIST, segment_MXHIST_PRIM, pri_files, histdir,run_name)
                 segment_options["inp"]["PRIHIST"] = ' '.join(map(str, segment_PRIHIST))
                 segment_options["inp"]["MXHIST_PRIM"] = segment_MXHIST_PRIM
                 segment_options["inp"]["OUTPUT"] = segment_OUTPUT
             else:
-                segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, [int(i) for i in PRIHIST.split()], MXHIST_PRIM, pri_files, histdir,run_name)
+                segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, segment_PRIHIST, MXHIST_PRIM, pri_files, histdir,run_name)
+                segment_options["inp"]["PRIHIST"] = ' '.join(map(str, segment_PRIHIST))
                 segment_options["inp"]["OUTPUT"] = segment_OUTPUT
         segment_SECSTART, segment_SECSTOP = inp_sec_date(segment_start, segment_stop, [int(i) for i in SECHIST.split()])
         segment_options["inp"]["SECSTART"] = ' '.join(map(str, segment_SECSTART))
@@ -189,7 +210,7 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
                         f.write(f"interpolation.interpic('{input_standalone}',{float(horires_coupled)},{float(vertres_coupled)},{float(segment_options['model']['specification']['zitop'])},'{SOURCE_coupling}')\n")
                         if options["simulation"]["hpc_system"] == "derecho":
                             interpolation_pbs = [f'conda activate {engage_options["conda_env"]}',f'python {interpolation_script}']
-                        elif options["simulation"]["hpc_system"] == "atiken":
+                        elif options["simulation"]["hpc_system"] == "aitken":
                             interpolation_pbs =  [f'source /swbuild/analytix/tools/miniconda3_220407/bin/activate.csh {engage_options["conda_env"]}',f'python {interpolation_script}']
                     segment_options["job"]["job_chain"] = interpolation_pbs
                 pbs_script = create_pbs_scripts(segment_options,run_name,segment_number)
