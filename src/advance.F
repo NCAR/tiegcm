@@ -24,7 +24,7 @@
      |  calendar_advance,gpi_ncfile,potential_model,wei05sc_ncfile,
      |  imf_ncfile,current_pg,current_kq,iamie,amie_ibkg,
      |  start_day,nudge_lbc,nudge_f4d,nudge_alpha,
-     |  doEclipse,eclipse_list
+     |  doEclipse,eclipse_list,mage
       use input_module,only: 
      |  power  ,power_time  ,ntimes_power, rd_power,
      |  ctpoten,ctpoten_time,ntimes_ctpoten, rd_ctpoten,
@@ -394,6 +394,7 @@
 !
 ! Receive aurora parameters from the M-I coupler for MAGE
 !
+      if (mage) then
       call import_mage
 !
 ! Send conductance and neutral wind current to M-I coupler for MAGE
@@ -403,6 +404,7 @@
 ! Process the imported data
 !
       call process_import
+      endif
 !
 ! Report to stdout:
       if (time2print(nstep,istep)) then

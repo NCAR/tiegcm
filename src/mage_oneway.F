@@ -1,5 +1,3 @@
-
-#ifdef GAMERA
       module mage_oneway
       use input_module,only: mixfile,mxlen_filename
       use params_module,only: nlat, nlon
@@ -7,32 +5,34 @@
       use dates
       use netcdf
 
-      real*8, allocatable,dimension(:,:,:,:) :: mix_interpolant
-      real*8, allocatable,dimension(:,:,:,:) :: tgcm_interpolant
-      real*8, allocatable,dimension(:,:) :: tlat, tlon,
-     |  tcolat,tlon2,tlat2
-      real*8, allocatable,dimension(:,:) :: xtgcm,ytgcm,ztgcm
-      real*8, allocatable,dimension(:,:) :: mixX,mixY,mixZ
-      real*8, allocatable,dimension(:,:) :: mixlat,mixlon,mixcolat
-      real*8, allocatable,dimension(:,:) :: mixPotN,mixEngN,
-     |  mixFluxN,mixBEngN
-      real*8, allocatable,dimension(:,:) :: mixBFluxN,mixCEngN,mixCFluxN
-      real*8, allocatable,dimension(:,:) :: mixPotS,mixEngS,
-     |  mixFluxS,mixBEngS
-      real*8, allocatable,dimension(:,:) :: mixBFluxS,mixCEngS,mixCFluxS
-      real*8, allocatable,dimension(:,:) :: tmpvar
-      real*8, allocatable,dimension(:,:) :: mixOutX,mixOutY,mixOutZ
-      real*8 :: LowLatBoundary
-      real*8, parameter :: TINY=1.e-8
-      real*8,dimension(:,:,:),allocatable :: ting_ped_interp,
-     |  ting_hall_interp
-      integer :: nmixlon,nmixlat
-      integer,parameter :: iSMtoGSM=1,iGSMtoSM=-1,
-     |  iGEOtoGSM=1,iGSMtoGEO=-1
-      real*8, allocatable, dimension(:) :: MJDs
-      integer :: s0, sE, nSteps,cStep
+      real*8, allocatable,dimension(:,:,:,:),private :: 
+     |  mix_interpolant, tgcm_interpolant
+      real*8, allocatable,dimension(:,:),private :: 
+     |  tlat, tlon,
+     |  tcolat,tlon2,tlat2,
+     |  xtgcm,ytgcm,ztgcm,
+     |  mixX,mixY,mixZ,
+     |  mixlat,mixlon,mixcolat,
+     |  mixPotN,mixEngN,
+     |  mixFluxN,mixBEngN,
+     |  mixBFluxN,mixCEngN,mixCFluxN,
+     |  mixPotS,mixEngS,
+     |  mixFluxS,mixBEngS,
+     |  mixBFluxS,mixCEngS,mixCFluxS,
+     |  tmpvar,
+     |  mixOutX,mixOutY,mixOutZ
 
-      real*8, dimension(:,:),allocatable ::
+      real*8, private :: LowLatBoundary
+      real*8, private, parameter :: TINY=1.e-8
+      real*8, private, dimension(:,:,:),allocatable :: 
+     |  ting_ped_interp, ting_hall_interp
+      integer, private :: nmixlon,nmixlat
+      integer, private, parameter :: iSMtoGSM=1,iGSMtoSM=-1,
+     |  iGEOtoGSM=1,iGSMtoGEO=-1
+      real*8, private, allocatable, dimension(:) :: MJDs
+      integer, private  :: s0, sE, nSteps,cStep
+
+      real*8, dimension(:,:),allocatable, private ::
      |  ting_pot_interp,  ! potential in geo coord from MIX
      |  ting_eng_interp,  ! energy in geo coord from MIX
      |  ting_flux_interp, ! flux in geo coord from MIX
@@ -41,12 +41,12 @@
      |  ting_cuspAvgEng_interp, ! Cusp Average Energy geo coord from MIX
      |  ting_cuspNumFlux_interp  ! Cusp Number flux geo coord from MIX
 
-      integer :: h5fId,inId,gId
+      integer, private :: h5fId,inId,gId
 
-      integer :: nlatp2,cplStep = 1
-      logical :: do_init = .true., firstread = .true.
-      logical :: step1140Fix = .true.
-      real*8, parameter :: pi = 4*atan(1.0d0)
+      integer, private :: nlatp2,cplStep = 1
+      logical, private :: do_init = .true., firstread = .true.
+      logical, private :: step1140Fix = .false.
+      real*8, private, parameter :: pi = 4*atan(1.0d0)
 
 
       contains
@@ -1349,11 +1349,3 @@
       end subroutine StepMJDs
 
       end module mage_oneway
-#else
-!-----------------------------------------------------------------------
-      ! Intel Fortran compiler chokes on empty source files.
-      ! This subroutine is empty so this file will have SOMETHING in it
-      subroutine oneway_null
-      end subroutine oneway_null
-!-----------------------------------------------------------------------
-#endif

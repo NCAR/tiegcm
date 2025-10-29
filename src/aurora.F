@@ -460,7 +460,7 @@
      |  sunlons,     ! sun's mag longitudes (see sub sunloc, magfield.F) 
      |  csdec,sndec
       use params_module,only: nlon,spval,glat
-      use input_module,only: iamie,soft
+      use input_module,only: iamie,soft,mage
       use cons_module,only: pi,dtr
       use amie_module,only: ekvg,efxg
       use mage_coupling_module,only: ! MAGE
@@ -651,7 +651,8 @@
           alfa5(i,lat) = 1.e-5
           flux5(i,lat) = 1.e-5
           eflux5(i,lat) = flux5(i,lat)*fac_p2e*alfa5(i,lat)
-#ifdef GAMERA
+
+          if (mage) then
           alfa(i,lat) = max(geng(i,lat),0.01)
           flux(i,lat) = max(gflx(i,lat),0.01)
           eflux(i,lat) = flux(i,lat)*fac_p2e*alfa(i,lat)
@@ -663,7 +664,7 @@
             flux5(i,lat) = max(gflx_cusp(i,lat),0.01)
             eflux5(i,lat) = flux5(i,lat)*fac_p2e*alfa5(i,lat)
           endif
-#endif
+          endif
 
 ! Sheng, 2017/07, Calculate SAPS ion drifts
           if (iamie > 0) then

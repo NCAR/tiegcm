@@ -107,7 +107,7 @@
 !
       use addfld_module,only: addfld
       use diags_module,only: mkdiag_QJOULE
-      use input_module,only: joulefac_input => joulefac
+      use input_module,only: joulefac_input => joulefac,mage
       implicit none
 !     
 ! Args:
@@ -126,18 +126,20 @@
       real,dimension(lev0:lev1,lon0:lon1) ::vel_zonal,vel_merid,vel_vert
       real :: joulefac
 !
-#ifdef GAMERA
+      if (mage) then
 !
 ! MAGE: When copled to the GAMERA, the currents are strong
 !       so we need to reduce joulefac from 1.5 to 1.0:
 !
-      joulefac = 1.0 ! joule heating multiplication factor
-#else
+            joulefac = 1.0 ! joule heating multiplication factor
+
+      else
 !
 ! Assign joulefac from value read from namelist (or its default):
 !
-      joulefac = joulefac_input
-#endif
+            joulefac = joulefac_input
+
+      endif
 ! 
 ! scheight: scale height H [cm] to convert omega [1/s] to vertical 
 ! neutral wind [cm/s] on half level	  

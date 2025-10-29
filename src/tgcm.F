@@ -10,7 +10,7 @@
 ! initial cvs import was tiegcm1
 !
       use input_module,only: input,dynamo,step,cwd,hpss_path,
-     |  potential_model,start_year,start_day
+     |  potential_model,start_year,start_day,mage
       use dispose_module,only: init_dispose
       use init_module,only: init
       use hist_module,only: nstep
@@ -130,7 +130,10 @@
 !
 ! Initialize code coupling communication framework (MPI)
 !
+      write(*,*) "IFMAGE: ", mytid, mage
+      if (mage) then
       call initialize_coupling
+      endif
 !
       call timer(time0_init,time1_init,'INIT',1,0) ! end init timing
 !

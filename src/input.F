@@ -104,7 +104,8 @@
      |  doEclipse,       ! logical to do eclipse mask or not
      |  oneway,          ! logical to use oneway mix reader
      |  duff,            ! logical to choose reaction rate for N(2D)+O2->NO+O
-     |  soft             ! logical to use BBE/cusp precipitation
+     |  soft,            ! logical to use BBE/cusp precipitation
+     |  mage             ! logical to use MAGE coupling
 !
 ! Parameters as read from namelist:
       real(rp) :: rd_power,rd_ctpoten,rd_f107,rd_f107a,rd_bximf,

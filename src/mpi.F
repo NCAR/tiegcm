@@ -17,7 +17,7 @@
       use mpi
       use hist_module,only: nfsech
       use input_module,only: ntask_lat,ntask_lon,
-     |  ntask_maglat,ntask_maglon
+     |  ntask_maglat,ntask_maglon,mage
       implicit none
 !
       integer ::
@@ -221,16 +221,6 @@
 
       call mp_coupling(mytid)
 
-!
-!@#ifdef GAMERA
-!@      if (doVoltCommSkip) then
-! gam2volt
-! WARNING THIS IS HARDCODED TO OCCUR ONCE. MAY CAUSE ISSUES WITH MULTIPLE COUPLINGS
-!@      call mpi_comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, 
-!@     |  mytid, tmpComm, ier)
-!@      endif
-!@#endif
-!
 ! Allocate array of tasks (user defined type(task)):
       allocate(tasks(0:ntask-1),stat=ier)
       if (ier /= 0) then
@@ -284,6 +274,7 @@
         else
     
     ! There is another process registered in CplComm (REMIX root)
+            mage = .true.
             call mpi_comm_rank(CplComm,CplRank,ier)
             if (ier /= 0) then
                 write(6,"('>>> Error from mpi_comm_rank: ier=',i4)") ier
@@ -331,6 +322,9 @@
         call MPI_BCAST(CplCommSize,1,MPI_INTEGER,0,TIEGCM_WORLD,ier)
         if (.not.allocated(IAm)) allocate(IAm(CplCommSize))
         call MPI_BCAST(IAm,CplCommSize,MPI_INTEGER,0,TIEGCM_WORLD,ier)
+        call MPI_BCAST(mage,CplCommSize,MPI_LOGICAL,0,TIEGCM_WORLD,ier)
+
+        write(*,*) "T Coupling: ", mytid, " mage: ", mage
 
       end subroutine mp_coupling
 !-----------------------------------------------------------------------
