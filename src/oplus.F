@@ -64,7 +64,7 @@
      |  xiop2p,xiop2d,Fe,Fn
 !
 ! Local:
-      integer :: k,i,lat,nlevs,istep,ierror
+      integer :: nlevs,istep,ierror
       real(rp),dimension(lon0-2:lon1+2,lat0-2:lat1+2) ::
      |  dvb,ubcrhs,lbcrhs
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
@@ -75,8 +75,9 @@
      |  diffj,diffexp,vdotn_h,bdotdh_bvel
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,2) ::
      |  tmpf3d
-      real(rp) :: delta
-      real(rp), parameter :: eps = 100 ! cm-3
+      real(rp),dimension(lev0:lev1-1,lon0:lon1,lat0:lat1) :: err
+      real(rp),dimension(2) :: delta
+      real(rp),dimension(2),parameter :: eps = (/100.0_rp,1e-2/) ! cm-3, %
 !
 ! Number of pressure levels (this will equal nlevp1):
       nlevs = lev1-lev0+1 ! for bndlons calls
@@ -135,17 +136,22 @@
         optm1out_sub = tmpf3d(:,:,:,2)
 !
 ! ignore the uppermost layer since it is extrapolated
-        delta = maxval(abs(
+        err = abs(
      |    opout_sub(lev0:lev1-1,lon0:lon1,lat0:lat1)-
-     |    op_sub   (lev0:lev1-1,lon0:lon1,lat0:lat1)))
+     |    op_sub   (lev0:lev1-1,lon0:lon1,lat0:lat1))
+        delta(1) = maxval(err)
 !
-        call MPI_Allreduce(MPI_IN_PLACE, delta, 1, MPI_REAL8,
+! put a floor on the denominator to avoid dividing by zero
+        delta(2) = maxval(err/
+     |    max(op_sub(lev0:lev1-1,lon0:lon1,lat0:lat1),1e-6_rp))
+!
+        call MPI_Allreduce(MPI_IN_PLACE, delta, 2, MPI_REAL8,
      |                     MPI_MAX, TIEGCM_WORLD, ierror)
         if (ierror /= 0)
      |    call handle_mpi_err(ierror,'oplus call MPI_Allreduce')
 !
 ! exit loop if it already converges
-        if (delta < eps) exit
+        if (all(delta < eps)) exit
 !
         op_sub = opout_sub
         optm1_sub = optm1out_sub
