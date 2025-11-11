@@ -102,8 +102,7 @@
      |    op_sub,opout_sub,diffj,diffexp,vdotn_h,bdotdh_bvel,
      |    lev0,lev1,lon0,lon1,lat0,lat1)
 !
-        if (istep == nstep_sub)
-     |    call calc_terms(xnmbar,diffj,Fe,Fn,
+        call calc_terms(xnmbar,diffj,Fe,Fn,
      |    opout_sub,optm1_smooth,op_prod,op_loss,
      |    diffexp,diffp,diffq,diffr,
      |    vdotn_h,driftp,driftq,driftr,
