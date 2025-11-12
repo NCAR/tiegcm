@@ -141,7 +141,7 @@
                     "LEVEL": "EXPERT",
                     "prompt": "System on PFE to use",
                     "default": "bro",
-                    "valids": ["bro", "has", "ivy", "san"],
+                    "valids": ["bro", "has", "ivy", "san","sky_ele","bro_ele"],
                     "description": null,
                     "warning": null
                 },

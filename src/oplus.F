@@ -11,12 +11,15 @@
 #include <VT.inc>
 #endif
 !
+      use params_module,only: rp
       implicit none
 !
 ! 2024/09 Haonan Wu: rewrite the whole oplus module
 ! to split calculations independent of O+ sub-cycling
 ! this will speed up the model a little
 ! when the number of O+ sub-cycling is large
+!
+      real(rp),parameter :: mp = 1.6726e-24 ! proton mass (g)
 !
       contains
 !-----------------------------------------------------------------------
@@ -28,7 +31,6 @@
 ! Outputs are opout, optm1out, xiop2p, xiop2d, Fe, and Fn,
 ! all other args are input.
 !
-      use params_module,only: rp
       use input_module,only: nstep_sub
       use mpi_module,only: TIEGCM_WORLD,handle_mpi_err,
      |  mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
@@ -171,7 +173,7 @@
 !
 ! Calculate terms that do not change with O+ sub-cycling
 !
-      use params_module,only: nlonp4,dz,zpmid,spval,rp
+      use params_module,only: nlonp4,dz,zpmid,spval
       use cons_module,only: rmass_op,gask,grav,re,cs,dphi,dlamda,
      |  boltz,dtx2inv,pi,dtr,rmassinv_o2,rmassinv_o1,
      |  rmassinv_he,rmassinv_n2,rmassinv_n2d
@@ -234,8 +236,7 @@
       real(rp),parameter ::
      |  phid =  2.0e8,
      |  phin = -2.0e8,
-     |  ppolar = 0.,
-     |  mp = 1.6726e-24 ! proton mass (g)
+     |  ppolar = 0.
       integer :: k,i,lat,lonbeg,lonend,nlevs
       real(rp) :: a,djmin,gmr
       real(rp),dimension(lon0:lon1,lat0:lat1) ::
@@ -636,7 +637,6 @@
 !
 ! Shapiro smoother for O+
 !
-      use params_module,only: rp
       use cons_module,only: shapiro
       use input_module,only: nstep_sub
       use addfld_module,only: addfld
@@ -712,7 +712,7 @@
 ! Outputs are opout, diffj, diffexp, vdotn_h, bdotdh_bvel,
 ! all other args are input.
 !
-      use params_module,only: nlonp4,dz,rp
+      use params_module,only: nlonp4,dz
       use cons_module,only: rmass_op,gask,grav,re,cs,dphi,dlamda,dtx2inv
       use input_module,only: nstep_sub
       use magfield_module,only: bz,bmod2 ! (nlonp4,-1:nlat+2)
@@ -964,7 +964,7 @@
 ! Post-processing time smoothing.
 ! This is called after filter_op
 !
-      use params_module,only: zpmid,spval,rp  ! for O+ minimum
+      use params_module,only: zpmid,spval  ! for O+ minimum
       use cons_module,only: rtd,dtsmooth,dtsmooth_div2
       use input_module,only: opfloor,oprate,oplev,oplatwidth
       use magfield_module,only: rlatm
@@ -1064,7 +1064,6 @@
 !-----------------------------------------------------------------------
       subroutine bdotdh(phij,ans,lev0,lev1,lon0,lon1,lat0,lat1)
 !
-      use params_module,only: rp
       use cons_module,only: re,dphi,dlamda,cs
       use magfield_module,only: bx,by
 !
@@ -1100,7 +1099,7 @@
 !
       end subroutine bdotdh
 !-----------------------------------------------------------------------
-      subroutine calc_terms(xnmbar,diffj,Fe,Fn,
+      subroutine calc_terms(xnmbar,dj,diffj,Fe,Fn,
      |  opout,optm1_smooth,op_prod,op_loss,
      |  diffexp,diffp,diffq,diffr,
      |  vdotn_h,driftp,driftq,driftr,
@@ -1110,8 +1109,7 @@
 ! Post-processing diagnostic term analysis.
 ! This is called only at the last sub-cycling step
 !
-      use params_module,only: rp
-      use cons_module,only: rmass_op,dtx2inv
+      use cons_module,only: boltz,dtx2inv
       use input_module,only: nstep_sub
       use magfield_module,only: dipmag,sndec,csdec
       use addfld_module,only: addfld
@@ -1125,7 +1123,9 @@
 ! Input fields (full 3d task subdomain):
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2),
      |  intent(in) ::
-     |  xnmbar,diffj,
+     |  xnmbar,
+     |  dj,           ! diffusion coefficients
+     |  diffj,        ! (D/(H*DZ)*2.*TP+M*G/R)*N(O+)
      |  opout,        ! O+ output for next timestep
      |  optm1_smooth, ! op at time n-1, with shapiro smoother (was s1)
      |  op_prod,op_loss,
@@ -1138,22 +1138,18 @@
 !
 ! Local:
       integer :: k,i,lat
-      real(rp),dimension(lon0:lon1,lat0:lat1) :: proj_e,proj_n
       real(rp),dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
-     |  wd,dopdt,op_loss_out,diffsum,driftsum,windsum
+     |  wd,Fa,dopdt,op_loss_out,diffsum,driftsum,windsum
 !
       do lat=lat0,lat1
         do i=lon0,lon1
-          proj_e(i,lat) =
-     |      sin(dipmag(i,lat))*cos(dipmag(i,lat))*sndec(i,lat)
-          proj_n(i,lat) =
-     |      sin(dipmag(i,lat))*cos(dipmag(i,lat))*csdec(i,lat)
-!
           do k=lev0,lev1
-            wd(k,i,lat) = 3.53*1.42E6*rmass_op/
-     |        xnmbar(k,i,lat)*diffj(k,i,lat)
-            Fe(k,i,lat) = wd(k,i,lat)*proj_e(i,lat)
-            Fn(k,i,lat) = wd(k,i,lat)*proj_n(i,lat)
+            wd(k,i,lat) = dj(k,i,lat)*diffj(k,i,lat)*sin(dipmag(i,lat))/
+     |        opout(k,i,lat)
+            Fa(k,i,lat) = 353*boltz*diffj(k,i,lat)*sin(dipmag(i,lat))/
+     |        (367*mp*xnmbar(k,i,lat))
+            Fe(k,i,lat) = Fa(k,i,lat)*cos(dipmag(i,lat))*sndec(i,lat)
+            Fn(k,i,lat) = Fa(k,i,lat)*cos(dipmag(i,lat))*csdec(i,lat)
 !
             dopdt(k,i,lat) = dtx2inv*nstep_sub*
      |        (opout(k,i,lat)-optm1_smooth(k,i,lat))
@@ -1176,10 +1172,12 @@
           enddo ! k=lev0+1,lev1-1
         enddo ! i=lon0,lon1
 !
-!       call addfld('PARDRAG_U','','',Fe(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
-!       call addfld('PARDRAG_V','','',Fn(:,lon0:lon1,lat),
-!    |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('PARVEL','','',wd(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('PARDRAG_U','','',Fe(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
+        call addfld('PARDRAG_V','','',Fn(:,lon0:lon1,lat),
+     |    'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('DOPDT','O+ changing rate','cm-3s-1',
      |    dopdt(:,:,lat),'lev',lev0,lev1,'lon',lon0,lon1,lat)
         call addfld('OP_PROD','O+ production','cm-3s-1',
@@ -1206,7 +1204,7 @@
 !
 ! Filter updated O+. This is called once per timestep.
 !
-      use params_module,only: nlonp4,rp
+      use params_module,only: nlonp4
       use mpi_module,only: mytidi,mp_gatherlons_f3d,mp_scatterlons_f3d
 !
 ! Args:
