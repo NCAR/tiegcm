@@ -77,7 +77,9 @@
      |  tmpf3d
       real(rp),dimension(lev0:lev1-1,lon0:lon1,lat0:lat1) :: err
       real(rp),dimension(2) :: delta
-      real(rp),dimension(2),parameter :: eps = (/100.0_rp,1e-2/) ! cm-3, %
+      real(rp),dimension(2),parameter :: eps = (/100.0_rp,0.01/) ! cm-3,- %
+      integer :: stop_at_iteration
+
 !
 ! Number of pressure levels (this will equal nlevp1):
       nlevs = lev1-lev0+1 ! for bndlons calls
@@ -93,6 +95,7 @@
       op_sub = op
       optm1_sub = optm1
 !
+      stop_at_iteration = nstep_sub
       do istep=1,nstep_sub
         call smooth_oplus(optm1_sub,optm1_smooth,
      |    lev0,lev1,lon0,lon1,lat0,lat1)
@@ -102,12 +105,14 @@
      |    op_sub,opout_sub,diffj,diffexp,vdotn_h,bdotdh_bvel,
      |    lev0,lev1,lon0,lon1,lat0,lat1)
 !
+      if(istep==stop_at_iteration) then
         call calc_terms(xnmbar,diffj,Fe,Fn,
      |    opout_sub,optm1_smooth,op_prod,op_loss,
      |    diffexp,diffp,diffq,diffr,
      |    vdotn_h,driftp,driftq,driftr,
      |    bdotdh_bvel,windp,windq,windr,
      |    lev0,lev1,lon0,lon1,lat0,lat1)
+      end if
 !
 ! Filter updated O+:
         call filter_op(opout_sub(:,lon0:lon1,lat0:lat1),
@@ -121,6 +126,7 @@
         call post_oplus(op_sub,optm1_sub,opout_sub,optm1out_sub,
      |    lev0,lev1,lon0,lon1,lat0,lat1)
 !
+! stack optm1out_sub and opout_sub for calling mp_* functions
         tmpf3d(lev0:lev1,lon0:lon1,lat0:lat1,1) =
      |    opout_sub(lev0:lev1,lon0:lon1,lat0:lat1)
         tmpf3d(lev0:lev1,lon0:lon1,lat0:lat1,2) =
@@ -134,23 +140,28 @@
         opout_sub = tmpf3d(:,:,:,1)
         optm1out_sub = tmpf3d(:,:,:,2)
 !
+! calculate abort criterion only every 25 iterations to reduce
+! costs introduced by additional communication
+        if(modulo(istep,25) == 0) then
 ! ignore the uppermost layer since it is extrapolated
-        err = abs(
-     |    opout_sub(lev0:lev1-1,lon0:lon1,lat0:lat1)-
-     |    op_sub   (lev0:lev1-1,lon0:lon1,lat0:lat1))
-        delta(1) = maxval(err)
+          err = abs(
+     |      opout_sub(lev0:lev1-1,lon0:lon1,lat0:lat1)-
+     |      op_sub   (lev0:lev1-1,lon0:lon1,lat0:lat1))
+          delta(1) = maxval(err)
 !
 ! put a floor on the denominator to avoid dividing by zero
-        delta(2) = maxval(err/
-     |    max(op_sub(lev0:lev1-1,lon0:lon1,lat0:lat1),1e-6_rp))
+          delta(2) = maxval(err/
+     |      max(op_sub(lev0:lev1-1,lon0:lon1,lat0:lat1),1e-6_rp))
 !
-        call MPI_Allreduce(MPI_IN_PLACE, delta, 2, MPI_REAL8,
-     |                     MPI_MAX, TIEGCM_WORLD, ierror)
-        if (ierror /= 0)
-     |    call handle_mpi_err(ierror,'oplus call MPI_Allreduce')
-!
-! exit loop if it already converges
-        if (all(delta < eps)) exit
+          call MPI_Allreduce(MPI_IN_PLACE, delta, 2, MPI_REAL8,
+     |                       MPI_MAX, TIEGCM_WORLD, ierror)
+          if (ierror /= 0)
+     |      call handle_mpi_err(ierror,'oplus call MPI_Allreduce')
+
+          if (all(delta < eps)) stop_at_iteration = istep+1
+        end if
+
+        if(istep==stop_at_iteration) exit
 !
         op_sub = opout_sub
         optm1_sub = optm1out_sub
