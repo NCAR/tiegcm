@@ -16,7 +16,7 @@ import json
 import copy
 from datetime import datetime, timedelta
 
-from misc import seconds_to_dhms, resolution_solver, find_file, select_resource_defaults, get_mtime, select_source_defaults
+from misc import seconds_to_dhms, resolution_solver, find_file, select_resource_defaults, get_mtime, select_source_defaults, segment_time, dhms_to_seconds
 from output_solver import segment_inp_pbs
 from interpolation import interpic
 from namelist_solver import inp_pri_date
@@ -69,7 +69,7 @@ def engage_parser(engage_parameters):
     queue = o['queue']
     if hpc_system == "derecho":
         job_priority = o['job_priority']
-    elif hpc_system == 'pleiades':
+    elif hpc_system == 'aitken':
         group_list = o['group_list']
         node_type = o['other'].split('=')[1]
     walltime = o['walltime']
@@ -106,7 +106,7 @@ def engage_parser(engage_parameters):
 
     eo['account_name'] = account_name
     eo['project_code'] = account_name
-    if hpc_system == 'pleiades':
+    if hpc_system == 'aitken':
         eo['group_list'] = group_list
     else:
         eo['group_list'] = None
@@ -118,7 +118,7 @@ def engage_parser(engage_parameters):
     
     if hpc_system == "derecho":
         eo['job_priority'] = job_priority
-    elif hpc_system == 'pleiades':
+    elif hpc_system == 'aitken':
         eo['model'] = node_type
     
     eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','account_name','project_code','queue','job_priority','model','walltime']
@@ -185,7 +185,7 @@ def engage_options_updater(options, engage_options, option_descriptions):
         o['queue'] = engage_options['queue']
         o['job_priority'] = engage_options['job_priority']
         o['walltime'] = engage_options['walltime']
-    elif hpc_platform == "pleiades":
+    elif hpc_platform == "aitken":
         o['group_list'] = engage_options['group_list']
         if o.get("mpi_command") is None:
             o["mpi_command"] = "mpiexec_mpt"
@@ -200,10 +200,9 @@ def engage_options_updater(options, engage_options, option_descriptions):
             on["ncpus"] = ncpus_default
         if on.get("mpiprocs") is None:
             on["mpiprocs"] = mpiprocs_default
-    elif hpc_platform == "pleiades":
+    elif hpc_platform == "aitken":
         if on.get("model") is None:
             on["model"] = engage_options["model"]
-        print(f"Using model type: {on['model']}")
         select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
         if on.get("select") is None:
             on["select"] = select_default
@@ -212,11 +211,11 @@ def engage_options_updater(options, engage_options, option_descriptions):
         if on.get("mpiprocs") is None:
             on["mpiprocs"] = mpiprocs_default
         if on.get("moduledir") is None:
-            options["job"]["moduledir"] = option_descriptions["job"]["pleiades"]["moduledir"]["default"]
+            options["job"]["moduledir"] = option_descriptions["job"]["aitken"]["moduledir"]["default"]
         if on.get("local_modules") is None:
-            options["job"]["local_modules"] = option_descriptions["job"]["pleiades"]["local_modules"]["default"]
+            options["job"]["local_modules"] = option_descriptions["job"]["aitken"]["local_modules"]["default"]
         if on.get("other_job") is None:
-            options["job"]["other_job"] = option_descriptions["job"]["pleiades"]["other_job"]["default"]
+            options["job"]["other_job"] = option_descriptions["job"]["aitken"]["other_job"]["default"]
     
     o["nprocs"] = int(on["select"]) * int(on["mpiprocs"])
     o["modules"] = engage_options["modules"]
@@ -249,11 +248,22 @@ def engage_run(options, debug, coupling, engage):
     options_standalone["simulation"]["job_name"] = f'{engage["job_name"]}-tiegcm-standalone'
     horires_standalone = float(engage["horires"])
     options_standalone["inp"]["stop_time"] = engage["coupled_start_time"]
-    options_standalone["inp"]["PRIHIST"] = '1 0 0 0'
-    options_standalone["inp"]["MXHIST_PRIM"] = 1
-    options_standalone["inp"]["SECHIST"] = '0 1 0 0'
-    options_standalone["inp"]["MXHIST_SECH"] = 24
-    options_standalone["inp"]["segment"] = '1 0 0 0'
+    if float(engage['horires']) <= 2.5:
+        standalone_segment_length_days = 7
+    else:
+        standalone_segment_length_days = 3
+    options_standalone["inp"]["segment"] = f'{standalone_segment_length_days} 0 0 0'
+    segment_times = segment_time(options_standalone["inp"]["start_time"], options_standalone["inp"]["stop_time"], [int(i) for i in options_standalone["inp"]["segment"].split()])
+    if float(engage['horires']) <= 2.5:
+        options_standalone["inp"]["PRIHIST"] = '1 0 0 0'
+        options_standalone["inp"]["MXHIST_PRIM"] = standalone_segment_length_days
+        options_standalone["inp"]["SECHIST"] = '0 1 0 0'
+        options_standalone["inp"]["MXHIST_SECH"] = 24*standalone_segment_length_days
+    else:
+        options_standalone["inp"]["PRIHIST"] = '3 0 0 0'
+        options_standalone["inp"]["MXHIST_PRIM"] = standalone_segment_length_days
+        options_standalone["inp"]["SECHIST"] = '0 1 0 0'
+        options_standalone["inp"]["MXHIST_SECH"] = 24*standalone_segment_length_days
     options_standalone["inp"]["OPDIFFCAP"] = '2e9'
     options_standalone["inp"]["OPDIFFRATE"] = '0.3'
     options_standalone["inp"]["OPDIFFLEV"] = '7'
@@ -292,7 +302,12 @@ def engage_run(options, debug, coupling, engage):
     options_coupling["inp"]["STEP"] = STEP_coupling
     SOURCE_coupling = os.path.join(options_coupling["model"]["data"]["workdir"],f'{engage["job_name"]}_prim.nc')
     options_coupling["inp"]["SOURCE"] = SOURCE_coupling #standalone_inp_files[-1]
-    options_coupling["inp"]["SOURCE_START"] = pristop_times[-1]
+    standalone_last_day = datetime(year=int(options_standalone["inp"]["START_YEAR"]), month=12, day=31).timetuple().tm_yday
+    last_pristop_arr = list(map(int, pristop_times[-1].split()))
+    if last_pristop_arr[0] == standalone_last_day+1:
+        options_coupling["inp"]["SOURCE_START"] = f"1 {last_pristop_arr[1]} {last_pristop_arr[2]} {last_pristop_arr[3]}"
+    else:
+        options_coupling["inp"]["SOURCE_START"] = pristop_times[-1]
     options_coupling["simulation"]["job_name"] = f'{engage["job_name"]}'
     options_coupling["inp"]["start_time"] = engage["coupled_start_time"]
     options_coupling["inp"]["PRIHIST"] = " ".join(str(i) for i in engage["segment"])
@@ -312,7 +327,7 @@ def engage_run(options, debug, coupling, engage):
     options_coupling["inp"]["GSWM_MI_SDI_NCFILE"] = find_file(f'*gswm_semi_{horires_coupling}d_99km*', TIEGCMDATA)
     options_coupling["inp"]["GSWM_NM_DI_NCFILE"] = find_file(f'*gswm_nonmig_diurn_{horires_coupling}d_99km*', TIEGCMDATA)
     options_coupling["inp"]["GSWM_NM_SDI_NCFILE"] = find_file(f'*gswm_nonmig_semi_{horires_coupling}d_99km*', TIEGCMDATA)
-    coupling_inp_files,coupling_pbs_files, coupling_log_files, pristart_times, pristop_times = segment_inp_pbs(options_coupling, options_coupling["simulation"]["job_name"],pbs)
+    coupling_inp_files,coupling_pbs_files, coupling_log_files, pristart_times, pristop_times = segment_inp_pbs(options_coupling, options_coupling["simulation"]["job_name"],pbs, engage)
     select_coupling,ncpus_coupling,mpiprocs_coupling=select_resource_defaults(options_coupling,option_descriptions)
     options_coupling["job"]["resource"]["select"] = select_coupling
     options_coupling["job"]["resource"]["ncpus"] = ncpus_coupling
