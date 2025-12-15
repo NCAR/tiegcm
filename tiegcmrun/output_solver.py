@@ -173,7 +173,7 @@ def segment_inp_pbs(options, run_name, pbs, engage_options=None):
                 elif segment_PRISTOP_hour != 0:
                     segment_PRIHIST = [0, 1, 0, 0]
                     segment_MXHIST_PRIM = segment_PRISTOP_hour - segment_PRISTART_hour
-                elif segment_PRIHIST == [1, 0, 0, 0]:
+                elif segment_PRISTOP_day != 0:
                     segment_PRIHIST = segment_PRIHIST
                     segment_MXHIST_PRIM = segment_PRISTOP_day - segment_PRISTART_day
                 segment_OUTPUT, pri_files = inp_pri_out(segment_start, segment_stop, segment_PRIHIST, segment_MXHIST_PRIM, pri_files, histdir,run_name)
