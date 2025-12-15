@@ -82,7 +82,7 @@
      |  unlbc_diag,   ! un lbc redundant in vertical, for diagnostic
      |  vnlbc_diag,   ! vn lbc redundant in vertical, for diagnostic
      |  ss_un,ss_vn,  ! also for diagnostics
-     |  dudt,dvdt,du_cor,dv_cor,du_cen,dv_cen,du_drag,dv_drag,
+     |  dudt,dvdt,du_cor,dv_cor,du_horadv,dv_horadv,du_drag,dv_drag,
      |  un_drag_coef,vn_drag_coef,du_visc,dv_visc,du_veradv,dv_veradv
 !
 ! pp, qq, rr, beta AND gamma are (2 x 2) matrices defined for 
@@ -408,8 +408,10 @@
             dvdt(k,i) = dtx2inv*(vn_upd(k,i,lat)-vnm_smooth(k,i,lat))
             du_cor(k,i) = cor(lat)*vn_upd(k,i,lat)
             dv_cor(k,i) = -cor(lat)*un_upd(k,i,lat)
-            du_cen(k,i) = un(k,i,lat)/re*tanphi(lat)*vn_upd(k,i,lat)
-            dv_cen(k,i) = -un(k,i,lat)/re*tanphi(lat)*un_upd(k,i,lat)
+            du_horadv(k,i) = -advec_un(k,i,lat)+
+     |        un(k,i,lat)/re*tanphi(lat)*vn_upd(k,i,lat)
+            dv_horadv(k,i) = -advec_vn(k,i,lat)-
+     |        un(k,i,lat)/re*tanphi(lat)*un_upd(k,i,lat)
             du_drag(k,i) = un_drag_coef(k,i)-
      |        .5*(lxx(k,i,lat)+lxx(k+1,i,lat))*un_upd(k,i,lat)-
      |        .5*(lxy(k,i,lat)+lxy(k+1,i,lat))*vn_upd(k,i,lat)
@@ -441,10 +443,6 @@
      |    du_cor(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
         call addfld('DV_CORIOLIS','V Coriolis force','cm/s2',
      |    dv_cor(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DU_CENTRIFUGAL','U centrifugal force','cm/s2',
-     |    du_cen(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
-        call addfld('DV_CENTRIFUGAL','V centrifugal force','cm/s2',
-     |    dv_cen(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
         call addfld('DU_IONDRAG','U ion drag','cm/s2',
      |    du_drag(lev0:lev1-1,:),'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
         call addfld('DV_IONDRAG','V ion drag','cm/s2',
@@ -466,10 +464,10 @@
      |    dv_visc(lev0+1:lev1-2,:),
      |    'lev',lev0+1,lev1-2,'lon',lon0,lon1,lat)
         call addfld('DU_HORADV','U horizontal advection','cm/s2',
-     |    -advec_un(lev0:lev1-1,:,lat),
+     |    du_horadv(lev0:lev1-1,:),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
         call addfld('DV_HORADV','V horizontal advection','cm/s2',
-     |    -advec_vn(lev0:lev1-1,:,lat),
+     |    dv_horadv(lev0:lev1-1,:),
      |    'lev',lev0,lev1-1,'lon',lon0,lon1,lat)
         call addfld('DU_VERADV','U vertical advection','cm/s2',
      |    -du_veradv(lev0+1:lev1-2,:),
