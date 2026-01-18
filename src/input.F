@@ -73,6 +73,9 @@
      |  opdiffcap,       ! Maximum O+ diffusion (see sub rrk in oplus.F)
      |  opdiffrate,      ! vertical decaying rate of O+ diffusion cap
      |  opdifflev,       ! transition altitude of O+ diffusion cap
+     |  opvelcap,        ! Maximum O+ velocity (see sub rrk in oplus.F)
+     |  opvelrate,       ! vertical decaying rate of O+ velocity cap
+     |  opvellev,        ! transition altitude of O+ velocity cap
      |  opfloor,         ! minimum O+
      |  oprate,          ! vertical decaying rate of O+ floor
      |  oplev,           ! transition altitude of O+ floor
@@ -207,7 +210,8 @@
      |  nudge_ncpre,nudge_ncfile,nudge_ncpost,nudge_flds,
      |  nudge_lbc,nudge_f4d,nudge_use_refdate,nudge_refdate,
      |  nudge_sponge,nudge_delta,nudge_power,nudge_alpha,
-     |  opdiffcap,opdiffrate,opdifflev,opfloor,oprate,oplev,oplatwidth,
+     |  opdiffcap,opdiffrate,opdifflev,opvelcap,opvelrate,opvellev,
+     |  opfloor,oprate,oplev,oplatwidth,
      |  te_cap,ti_cap
 !
 ! List of fields that are always written to secondary histories:
@@ -328,6 +332,9 @@
       opdiffcap = spval
       opdiffrate = spval
       opdifflev = spval
+      opvelcap = spval
+      opvelrate = spval
+      opvellev = spval
       opfloor = spval
       oprate = spval
       oplev = spval
@@ -649,6 +656,31 @@
       else
         write(6,"('Input: O+ diffusion capping level (opdifflev)='
      |    ,es12.4)") opdifflev
+      endif
+!
+! O+ velocity cap:
+      if (opvelcap==spval) then
+        opvelcap = 0. ! default is off
+        write(6,"('Input: default velocity maximum (opvelcap) is',
+     |    ' turned off by default.')")
+      else
+        write(6,"('Input: O+ velocity maximum (opvelcap)=',es12.4)")
+     |    opvelcap
+      endif
+      if (opvelrate==spval) then
+        opvelrate = 0. ! default is off
+        write(6,"('Input: default velocity decaying rate (opvelrate)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ velocity decaying rate (opvelrate)='
+     |    ,es12.4)") opvelrate
+      endif
+      if (opvellev==spval) then
+        write(6,"('Input: default velocity capping level (opvellev)',
+     |    ' is turned off by default.')")
+      else
+        write(6,"('Input: O+ velocity capping level (opvellev)='
+     |    ,es12.4)") opvellev
       endif
 !
 ! O+ floor:

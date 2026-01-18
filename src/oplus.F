@@ -80,7 +80,7 @@
       nlevs = lev1-lev0+1 ! for bndlons calls
 !
       call prep_oplus(tn,te,ti,
-     |  o2,o1,he,n2,n2d,ne,un,vn,w,wi,xnmbar,scht,
+     |  o2,o1,he,n2,n2d,ne,un,vn,w,wi,xnmbar,scht,op,
      |  dvb,ubcrhs,lbcrhs,tp,dj,bdotu,xiop2p,xiop2d,
      |  op_prod,op_loss,diffp,diffq,diffr,
      |  driftp,driftq,driftr,windp,windq,windr,
@@ -168,7 +168,7 @@
       end subroutine oplus
 !-----------------------------------------------------------------------
       subroutine prep_oplus(tn,te,ti,
-     |  o2,o1,he,n2,n2d,ne,un,vn,w,wi,xnmbar,scht,
+     |  o2,o1,he,n2,n2d,ne,un,vn,w,wi,xnmbar,scht,op,
      |  dvb,ubcrhs,lbcrhs,tp,dj,bdotu,xiop2p,xiop2d,
      |  op_prod,op_loss,diffp,diffq,diffr,
      |  driftp,driftq,driftr,windp,windq,windr,
@@ -182,7 +182,8 @@
      |  boltz,dtx2inv,pi,dtr,rmassinv_o2,rmassinv_o1,
      |  rmassinv_he,rmassinv_n2,rmassinv_n2d
       use input_module,only: nstep_sub,colfac,
-     |  opdiffcap,opdiffrate,opdifflev
+     |  opdiffcap,opdiffrate,opdifflev,
+     |  opvelcap,opvelrate,opvellev
       use chapman_module,only: chi     ! was t2 in old sub opflux
       use qrj_module,only:
      |  qop2p, ! O+(2p) ionization from qrj, used in xiop2p
@@ -192,7 +193,7 @@
      |  rk1 ,rk2 ,rk10,rk16,rk17,rk18,rk19,rk20,
      |  rk21,rk22,rk23,rk24,rk25,rk26,rk27
       use magfield_module,only: bx,by,bz,bmod2, ! (nlonp4,-1:nlat+2)
-     |  rlatm
+     |  rlatm,dipmag
       use mpi_module,only: mp_periodic_f2d,
      |  mp_polelats_f3d,mp_bndlats_f3d,mp_bndlons_f3d
       use addfld_module,only: addfld
@@ -215,7 +216,8 @@
      |  un,vn,w,    ! neutral wind velocities (zonal, meridional, omega)
      |  wi,         ! vertical ion velocities
      |  xnmbar,     ! p0*e(-z)*mbar/kT
-     |  scht        ! scale height
+     |  scht,       ! scale height
+     |  op
 !
 ! Output fields (full 2d task subdomain):
       real(rp),dimension(lon0-2:lon1+2,lat0-2:lat1+2),intent(out) ::
@@ -242,7 +244,7 @@
      |  phin = -2.0e8,
      |  ppolar = 0.
       integer :: k,i,lat,lonbeg,lonend,nlevs
-      real(rp) :: a,djmin,gmr
+      real(rp) :: a,djmin,gmr,mgr,wdmin
       real(rp),dimension(lon0:lon1,lat0:lat1) ::
      |  phi,   opflux, ! upward number flux of O+ (returned by sub oplus_flux) (t7)
      |  dbxdx, dbycdy, ! lon/lat derivatives of unit vector B
@@ -259,13 +261,13 @@
      |  hdzmbz,hdzpbz, ! were s10,s9
      |  djint_tphdz0,djint_tphdz1,
      |  djint_tphdz0_1,djint_tphdz1_1,
-     |  bdotu_m1,bdotu_p1,wii
+     |  bdotu_m1,bdotu_p1,wii,tpop,dtpopdz,diffj,wd
       real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2) ::
      |  tr,            ! Reduced temperature 0.5*(tn+ti)
      |  vni,           ! O+ collision frequency
      |  djbz,          ! D*BZ
      |  o2_cm3,o1_cm3,he_cm3,n2_cm3,n2d_cm3
-      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,2) ::
+      real(rp),dimension(lev0:lev1,lon0-2:lon1+2,lat0-2:lat1+2,3) ::
      |  tmpf3d
 !
 ! Number of pressure levels (this will equal nlevp1):
@@ -401,6 +403,46 @@
         enddo ! lat=lat0-2,lat1+2
       endif
 !
+      mgr = rmass_op*grav/gask
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1
+            tpop(k,i,lat) = tp(k,i,lat)*op(k,i,lat)
+          enddo
+          do k=lev0+1,lev1-1
+            dtpopdz(k,i,lat) = (tpop(k+1,i,lat)-tpop(k-1,i,lat))/(2.*dz)
+          enddo
+          dtpopdz(lev1,i,lat) = (tpop(lev1,i,lat)-tpop(lev1-1,i,lat))/dz
+          dtpopdz(lev0,i,lat) = (tpop(lev0+1,i,lat)-tpop(lev0,i,lat))/dz
+          do k=lev0,lev1
+            diffj(k,i,lat) = 2.*dtpopdz(k,i,lat)/scht(k,i,lat)+
+     |        mgr*op(k,i,lat)
+            wd(k,i,lat) = dj(k,i,lat)*diffj(k,i,lat)*sin(dipmag(i,lat))/
+     |        op(k,i,lat)
+          enddo
+        enddo
+      enddo
+      if (opvelcap/=0. .and.
+     |    opvelrate/=0. .and.
+     |    opvellev/=spval) then
+        do lat=lat0,lat1
+          do i=lon0,lon1
+            do k=lev0,lev1
+              wdmin = opvelcap/(1+exp(opvelrate*(zpmid(k)-opvellev)))
+              if (wd(k,i,lat) > wdmin) wd(k,i,lat) = wdmin
+            enddo
+          enddo
+        enddo
+      endif
+      do lat=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1
+            dj(k,i,lat) = wd(k,i,lat)*op(k,i,lat)/
+     |        (diffj(k,i,lat)*sin(dipmag(i,lat)))
+          enddo
+        enddo
+      enddo
+!
       do lat=lat0,lat1
         do i=lon0,lon1
 !
@@ -424,18 +466,20 @@
           do k=lev0,lev1
             tmpf3d(k,i,lat,1) = bdotu(k,i,lat)
             tmpf3d(k,i,lat,2) = djbz(k,i,lat)
+            tmpf3d(k,i,lat,3) = dj(k,i,lat)
           enddo ! k=lev0,lev1
         enddo ! i=lon0,lon1
       enddo ! lat=lat0,lat1
       call mp_polelats_f3d(tmpf3d(:,lon0:lon1,:,:),
-     |  lev0,lev1,lon0,lon1,lat0,lat1,2,(/1.,1./))
-      call mp_bndlats_f3d(tmpf3d,nlevs,lon0,lon1,lat0,lat1,2)
-      call mp_bndlons_f3d(tmpf3d,nlevs,lon0,lon1,lat0,lat1,2,0)
+     |  lev0,lev1,lon0,lon1,lat0,lat1,2,(/1.,1.,1./))
+      call mp_bndlats_f3d(tmpf3d,nlevs,lon0,lon1,lat0,lat1,3)
+      call mp_bndlons_f3d(tmpf3d,nlevs,lon0,lon1,lat0,lat1,3,0)
       do lat=lat0-2,lat1+2
         do i=lon0-2,lon1+2
           do k=lev0,lev1
             bdotu(k,i,lat) = tmpf3d(k,i,lat,1)
             djbz(k,i,lat) = tmpf3d(k,i,lat,2)
+            dj(k,i,lat) = tmpf3d(k,i,lat,3)
           enddo ! k=lev0,lev1
         enddo ! i=lon0-2,lon1+2
       enddo ! lat=lat0-2,lat1+2
