@@ -391,6 +391,17 @@
           enddo
         endif
       endif
+
+      
+!
+! Prepare neutral inputs for parallel dynamo:
+! Calculate vertical velocity wn:
+        call calc_wn(
+     |    w    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    scht (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    wn   (lev0:lev1,lon0:lon1,lat0:lat1),     ! output
+     |    1,nlevp1,lon0,lon1,lat0,lat1)
+     
 !
 ! Receive aurora parameters from the M-I coupler for MAGE
 !
@@ -631,14 +642,6 @@
      |      i4)") istep
           call timer(time0,time1,"MAGPRES_GRAV",1,0)
         endif ! current_pg > 0
-!
-! Prepare neutral inputs for parallel dynamo:
-! Calculate vertical velocity wn:
-        call calc_wn(
-     |    w    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
-     |    scht (lev0:lev1,lon0:lon1,lat0:lat1,itp),
-     |    wn   (lev0:lev1,lon0:lon1,lat0:lat1),     ! output
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
 
         call mpi_timer('dynamo_inputs',0,0)
         call dynamo_inputs(

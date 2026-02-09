@@ -39,6 +39,7 @@
      |  mkdiag_NFLUX,mkdiag_EFLUX,mkdiag_TEC,mkdiag_HNMF2,
      |  mkdiag_QJOULE_INTEG,mkdiag_UI,mkdiag_VI,mkdiag_WI
       use dyndiag_module,only: dyndiag
+      use mage_coupling_module,only: isSmite
 
       implicit none
 !
@@ -126,6 +127,7 @@
 !
 ! Calculate ExB ion drift velocities from electric field:
 !
+      if (.not. isSmite) then
       call ionvel(
      |  z (levd0,lond0,latd0,itc), ! geopotential input
      |  ui(levd0,lond0,latd0),     ! U ion velocity output
@@ -134,6 +136,7 @@
      |  Etot(levd0,lond0,latd0),   ! total eletric field
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after ionvel')")
+      endif
 !
 ! mkdiags_UI,VI,WI are called from ionvel.
 !     if (diags) then

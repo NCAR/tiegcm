@@ -1260,10 +1260,9 @@
       use mpi_module,only: mp_mag_halos
       use fields_module,only: gzigm1,gzigm2,gnsrhs
       use fields_module,only: azigm1,azigm2
-      use mage_coupling_module,only: mage_ucurrent
       use my_esmf,only: 
-     |  mag_zigm1, mag_zigm2, mag_nsrhs,
-     |  geo_zigm1, geo_zigm2, geo_nsrhs
+     |  mag_zigm1, mag_zigm2,
+     |  geo_zigm1, geo_zigm2
 
       implicit none
 !
@@ -1582,10 +1581,6 @@
 
       call mp_mag_halos(rim1,mlon0,mlon1,mlat0,mlat1,1,1)
       call mp_mag_halos(rim2,mlon0,mlon1,mlat0,mlat1,1,1) 
-
-      call mage_ucurrent(rim1,rim2,mlon0,mlon1,mlat0,mlat1,nsrhs)
-
-!     call mage_ucurrent
 !
 ! Transform height-integrated parameters from APEX coordinates to geographic
 ! coordinates to be passed to the M-I coupled in the MAGE
@@ -1599,8 +1594,6 @@
      |     gzigm1(lon0:lon1,lat0:lat1),mag_zigm1,geo_zigm1,'ZIGM1   ')
       call mag2geo_2d(zigm2(mlon0:mlon1,mlat0:mlat1),
      |     gzigm2(lon0:lon1,lat0:lat1),mag_zigm2,geo_zigm2,'ZIGM2   ')
-      call mag2geo_2d(nsrhs(mlon0:mlon1,mlat0:mlat1),
-     |     gnsrhs(lon0:lon1,lat0:lat1),mag_nsrhs,geo_nsrhs,'NSRHS   ')
 
 !
 ! Set coefficients for current density calculations.

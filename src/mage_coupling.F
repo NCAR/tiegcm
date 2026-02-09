@@ -39,15 +39,23 @@
       real(rp) :: aurllbN,aurllbS ! all are co-lats in radians
 
 ! Change the following parameters if adding more variables
-      integer,parameter ::
+      integer,parameter,private ::
      |  nmixinapex = 2, ! APEX Potential, Flux (for auroral bc)
      |  nmixingeo  = 2, ! GEO Flux, Energy
      |  nmixoutapex= 2, ! APEX Pedersen, Hall
      |  nmixoutgeo = 0, ! No GEO exports
      |  nhoutvar   = 9, ! TN, UN, VN, OMEGA, O2, O1, NO, Z, HE
-     |  nhinvar    = 0  !
+     |  nhinvar    = 0, !
+     |  nvingeo    = 3, ! UI, VI, WI ! Input on GEO grid
+     |  nvoutgeo   = 5, ! ped, hall, z, un, vn ! Sending out GEO grid
+     |  nvinapex  = 0,  ! No APEX input variables
+     |  nvoutapex = 0   ! No APEX output variables
 
       real(rp),dimension(nmlonp1,2) :: aurorabc1d
+
+      logical :: isSmite = .false.
+      integer,dimension(:),allocatable,private :: ivinlist
+      integer,dimension(:),allocatable,private :: ivoutlist
 
       contains 
 !-----------------------------------------------------------------------
@@ -117,10 +125,36 @@
               end select
       enddo
       write(*,*) "T Done Coupling Init"
+      if (isSmite) then
+        ! Initialize SMITE-specific variables
+        call load_smite_variables_list(ivinlist, ivoutlist)
+      endif
 #endif
 
       end subroutine initialize_coupling
 !-----------------------------------------------------------------------
+      subroutine load_smite_variables_list(ivinlist, ivoutlist)
+        use fields_module,only: i_z,i_tn,i_un,i_vn,i_w,i_o2,i_o1,i_no,
+     |  i_he, i_ui, i_vi, i_wi, i_ped, i_hall
+
+!
+        integer,dimension(:),allocatable :: ivinlist
+        integer,dimension(:),allocatable :: ivoutlist
+
+        if (.not. allocated(ivinlist)) allocate(ivinlist(nvingeo))
+        if (.not. allocated(ivoutlist)) allocate(ivoutlist(nvoutgeo))
+
+        ivinlist(1) = i_ui
+        ivinlist(2) = i_vi
+        ivinlist(3) = i_wi
+        ivoutlist(1) = i_ped
+        ivoutlist(2) = i_hall
+        ivoutlist(3) = i_z
+        ivoutlist(4) = i_un
+        ivoutlist(5) = i_vn
+
+      end subroutine load_smite_variables_list
+
       subroutine import_mage
 
 ! 1. Receive arrays (pot, eng, flx) from REMIX on process zero
@@ -128,24 +162,45 @@
 ! 3. Set periodic boundaries for gpot, geng, gflx, gpotm
 ! 4. Clean up pole values for the dynamo solver
 
-      use params_module,only: nlatp2,nlon,nlonp1,nlonp2
+      use params_module,only: nlatp2,nlon,nlonp1,nlonp2,nlevp1
+      use params_module,only: nlon
       use mpi_module,only: mytid,TIEGCM_WORLD,handle_mpi_err
+      use fields_module,only: f3d
+      use mpi_module,only: lon0,lon1, lat0,lat1
       use mpi
 
-      integer :: ierr,i,j
-      real(rp),dimension(nlatp2,nlonp1,nmixingeo) :: gvar2d
-      real(rp),dimension(nmlat,nmlonp1,nmixinapex) :: avar2d
+      integer :: ierr,i,j,v
+      real(rp),dimension(:,:,:), allocatable :: gvar2d
+      real(rp),dimension(:,:,:), allocatable :: avar2d
+      real(rp),dimension(:,:,:,:), allocatable :: gvar3d
+      real(rp),dimension(:,:,:,:), allocatable :: avar3d
+
 
 !     write(6,"('TIEGCM (',i3,'): inside receive')") mytid
 
+      if (.not. allocated(gvar2d) ) 
+     |  allocate(gvar2d(nlatp2,nlonp1,nmixingeo))
+      if (.not. allocated(avar2d) ) 
+     |  allocate(avar2d(nmlat,nmlonp1,nmixinapex))
       avar2d = 0.0_rp
       gvar2d = 0.0_rp
+
+      if (isSmite) then
+        if (.not. allocated(gvar3d) ) 
+     |    allocate(gvar3d(nlevp1,nlat,nlon,nvingeo))
+        gvar3d = 0.0_rp
+      endif
+
+      ! unused for now
+      !  if (.not. allocated(avar3d) ) allocate(avar3d(nlevp1,nlat,nlon,nvingeo))
+
+
 
 #ifdef GAMERA
       if (.not. oneway) then
       if (mytid == 0) then
 
-        call import_remix(avar2d,gvar2d)
+        call import_remix(avar2d,gvar2d,avar3d,gvar3d)
 ! Unit conversion
         avar2d(:,:,1) = avar2d(:,:,1)*1e3_rp ! potential: kV -> V
         gvar2d(:,:,1) = gvar2d(:,:,1)*0.5_rp ! mean energy -> characteristic energy
@@ -159,9 +214,9 @@
      |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
       if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
 
-!      call mpi_bcast(aurorabc1d, nmlonp1*2,
-!     |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
-!      if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
+      call mpi_bcast(gvar3d, nlevp1*nlat*nlon*nvingeo,
+     |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
+      if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
 
 ! Process the imported data
       do j = 1,nlat
@@ -180,6 +235,18 @@
           aflxm(i,j) = avar2d(j,i,2)
         enddo
       enddo
+      if (isSmite) then
+          do v=1,nvingeo
+            ! This is for out vars
+            ! f3d has ped and hall
+            ! f4d has un, vn, z
+            ! 
+            do i = lat0,lat1
+            f3d(ivinlist(v))%data(:,lon0:lon1,i) = 
+     |      gvar3d(:,i,lon0:lon1,v)
+            enddo
+          enddo
+      endif
       else
         call ca_receive(gpot,geng,gflx,gpotm)
       endif
@@ -245,41 +312,6 @@
           !gpotm(nlonp2+i,j) = gpotm(i+2,j)
         enddo
       enddo
-
-!!!  08/11:  FIXME: While merging TIEGCM 1.94.1 into LTR-2.1.4-beta, I found
-!!!          the following code segment.  Does CTPOTEN really need to be
-!!!          calculated here?  What does CTPOTEN do in the input namelist?
-!!!          Isn't CTPOTEN read from the GPI file?  Is MAGE ready for the 
-!!!          dynamic crit mods?  Commenting this code out for now.  Need
-!!!          to talk with Ben on this.  Compare to TIEGCM revisions r571
-!!!          and r575 (TIEGCM repository).
-!!!
-!!!!
-!!!! 01/11:  Find ctpoten (kV) or min/max average from both hemispheres (gpot in V)
-!!!!         ctpoten is NOT (yet) used to find theta0 in aurora_cons, where theta0
-!!!!         is used in colath for crit(1,2).  Set theta0=10 so crit1,2=15,30 deg (old).
-!!!!
-!!!      cpmaxsh = -1000000.
-!!!      cpmaxnh = -1000000.
-!!!      cpminsh =  1000000.
-!!!      cpminnh =  1000000.
-!!!
-!!!      do js=1,nlat/2
-!!!       jn=nlat/2+js
-!!!       do ii=1,nlonp1+1
-!!!	cpmaxsh = max(cpmaxsh,gpot(ii,js))
-!!!	cpminsh = min(cpminsh,gpot(ii,js))
-!!!	cpmaxnh = max(cpmaxnh,gpot(ii,jn))
-!!!	cpminnh = min(cpminnh,gpot(ii,jn))
-!!!       enddo
-!!!      enddo
-
-!!!      cpmaxsh = maxval(gpot(:,1:nlat/2))
-!!!      cpmaxnh = maxval(gpot(:,nlat/2+1:nlat))
-!!!      cpminsh = minval(gpot(:,1:nlat/2))
-!!!      cpminnh = minval(gpot(:,nlat/2+1:nlat))
-
-!!!      ctpoten = 0.5*(cpmaxsh-cpminsh+cpmaxnh-cpminnh)*0.001
 
       ! Find the lowest lat of all MLT where mixFlux drops to below certain threshold.
       ! Pass it into colath.F, replace crit(1) and 2.
@@ -378,6 +410,7 @@
 
       real(rp),dimension(:,:,:), allocatable :: mixgeoout,mixapexout
       real(rp),dimension(:,:,:,:), allocatable :: hidraout
+      real(rp),dimension(:,:,:,:), allocatable :: voltout,voutapex
 
       integer :: nreq,i
 #if defined (GAMERA) || defined (HIDRA)
@@ -392,6 +425,9 @@
             select case (IAm(i))
               case (voltId)
                 call prep_export_remix(modeltime,mixapexout,mixgeoout)
+                if (isSmite) then
+                  call prep_export_volt(modeltime,voltout)
+                endif
                 nreq = nreq + 1
               case (gamId)
                 !write(*,*) "T not coupling to Gam yet"
@@ -437,7 +473,7 @@
         ! Assign rank if match
         select case (IAm(i))
           case (voltId)
-            call export_remix(mixapexout,mixgeoout)
+            call export_remix(mixapexout,mixgeoout,voutapex,voltout)
           case (gamId)
             !write(*,*) "T not coupling to Gam yet"
           case (rcmId)
@@ -597,6 +633,58 @@
         endif
       end subroutine export_hidra
 
+      subroutine prep_export_volt(modeltime,volt_out)
+        use params_module,only: nlon,nlonp4,nlat,nlevp1
+        use fields_module,only: f4d,itp,itc,f3d
+        use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f3d,mytid,
+     |  ntask,handle_mpi_err
+
+        integer,dimension(4),intent(in) :: modeltime
+
+        real(rp),dimension(:,:,:,:),allocatable :: f3d_sub,f3d_glb,
+     |  volt_out
+
+        integer :: i,j,v,k,ierr
+
+        ! Prepare data for export
+      !write(*,*) "PREP HIDRA EXPORT STUFF: ",mytid
+      if (.not. allocated(f3d_sub))
+     |  allocate(f3d_sub(nlevp1,lon0:lon1,lat0:lat1,nvoutgeo))
+      if (.not. allocated(f3d_glb))
+     |  allocate(f3d_glb(nlevp1,nlonp4,nlat,nvoutgeo))
+
+      do v =3,nvoutgeo
+       f3d_sub(:,:,:,v) = 
+     | f4d(ivoutlist(v))%data(:,lon0:lon1,lat0:lat1,itp)
+      enddo
+      f3d_sub(:,:,:,1) = f3d(ivoutlist(1))%data(:,lon0:lon1,lat0:lat1)
+      f3d_sub(:,:,:,2) = f3d(ivoutlist(2))%data(:,lon0:lon1,lat0:lat1)
+
+      call mp_gather_f3d(f3d_sub,f3d_glb,
+     |  lon0,lon1,lat0,lat1,ntask,nvoutgeo)
+
+      if (mytid == 0) then
+        write(*,*) "TGCM: ALLOCATE"
+        if (.not. allocated(volt_out))
+     |    allocate(volt_out(nlevp1,nlon,nlat,nvoutgeo))
+        volt_out(:,:,:,:) = f3d_glb(:,3:nlon+2,:,:)
+        ! Check fidelity
+        do v=1,nvoutgeo
+          write(*,*) 'TGCM: max/min V:',maxval(volt_out(:,:,:,v)),
+     |      minval(volt_out(:,:,:,v))
+        enddo
+
+        if (mytid == 0) then
+        !write(6,"('TGCM: Sending to HIDRA at: ',4i4)") modeltime
+        write(6,"('GCM2VOLT: ',4i4)") modeltime
+        endif
+      endif
+
+      if (allocated(f3d_sub)) deallocate(f3d_sub)
+      if (allocated(f3d_glb)) deallocate(f3d_glb)
+
+      end subroutine prep_export_volt
+
 !-----------------------------------------------------------------------
       subroutine prep_export_remix(modeltime,avar2d,gvar2d)
 
@@ -710,13 +798,15 @@
 
 !-----------------------------------------------------------------------
 
-      subroutine export_remix(avar2d,gvar2d)
-        use params_module,only: nlatp2,nlonp1
+      subroutine export_remix(avar2d,gvar2d,avar3d,gvar3d)
+        use params_module,only: nlatp2,nlonp1,nlon,nlat,nlevp1
+        use params_module,only: nmlat,nmlon
         use mpi_module, only: CplComm,mixCplRank,handle_mpi_err,
      |   myAppId,voltId
         use mpi
 
         real(rp),dimension(:,:,:) :: avar2d,gvar2d
+        real(rp),dimension(:,:,:,:) :: avar3d,gvar3d
         integer :: ierr
 
 ! Export the data
@@ -730,6 +820,14 @@
      |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
           endif
 
+          if ( isSmite .and. nvoutgeo .ne. 0 ) then
+            call mpi_send(gvar3d, nlevp1*nlon*nlat*nvoutgeo,
+     |       MPI_DOUBLE_PRECISION, mixCplRank,
+     |       (myAppId+voltId)*100+1, CplComm, ierr)
+          if (ierr /= 0) 
+     | call handle_mpi_err(ierr, 'export: TIEGCM send to VOLTRON')
+          endif
+
           if ( nmixoutapex .ne. 0) then
           call mpi_send(avar2d, nmlat*nmlonp1*nmixoutapex,
      |       MPI_DOUBLE_PRECISION, mixCplRank,
@@ -738,17 +836,27 @@
      |        call handle_mpi_err(ierr, 'export: TIEGCM send to REMIX')
           endif
 
+          if ( isSmite .and. nvoutapex .ne. 0 ) then
+            call mpi_send(avar3d, nlevp1*nmlon*nmlat*nvoutapex,
+     |       MPI_DOUBLE_PRECISION, mixCplRank,
+     |       (myAppId+voltId)*100+1, CplComm, ierr)
+          if (ierr /= 0) 
+     | call handle_mpi_err(ierr, 'export: TIEGCM send to VOLTRON')
+          endif
+
         endif
 
       end subroutine export_remix
+
 !-------------------------------------------------------------------
 
       subroutine init_mpi_remix(glatp2,glonp1,gmlat,gmlon)
 
-      use params_module,only: nlatp2,nlonp1
+      use params_module,only: nlatp2,nlonp1,nlevp1
       use mpi_module,only: myAppId,voltId,CplComm,mixCplRank,
      |  handle_mpi_err
       use mpi
+      use input_module,only: dynamo
 
       integer :: ierr,i
       real(rp),dimension(nlatp2) :: glatp2
@@ -811,21 +919,36 @@
      |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
 
         write(*,*) "TGCM: Done init_mpi_remix"
+     
+        i = 0
+        call mpi_send(nlevp1, 1, MPI_INTEGER,
+     |    mixCplRank, (myAppId+voltId)*100+0, CplComm, ierr)
+        if (ierr /= 0)
+     |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
+
+        call mpi_recv(isSmite, 1, MPI_LOGICAL, mixCplRank, 
+     |    (myAppId+voltId)*100+0, CplComm, ierr)
+        write(*,*) "TGCM: Done figuring out Smite: ",isSmite
+        
+        if (isSmite) dynamo = 0
+
+
       endif
 
       end subroutine init_mpi_remix
 
 !-------------------------------------------------------------------
 
-      subroutine import_remix(avar2d,gvar2d)
+      subroutine import_remix(avar2d,gvar2d,avar3d,gvar3d)
 
-      use params_module,only: nlatp2,nlonp1
+      use params_module,only: nlatp2,nlonp1,nlevp1,nlat,nlon
       use mpi_module,only: myAppId,voltId,CplComm,mixCplRank,
      |  handle_mpi_err
       use mpi
 
         integer :: v,ierr,i,j
         real(rp),dimension(:,:,:) :: avar2d,gvar2d
+        real(rp),dimension(:,:,:,:) :: avar3d,gvar3d
 
         if (CplComm /= MPI_COMM_NULL) then
           !write(*,*) "GCMCPL: ", mixCplRank,(myAppId+voltId)*100
@@ -837,6 +960,14 @@
             if (ierr /= 0) call handle_mpi_err(ierr,
      |        'import: TIEGCM recv from REMIX')
           endif
+          if (nvingeo .ne. 0) then
+            call mpi_recv(gvar3d, nlevp1*nlat*nlon*nvingeo,
+     |        MPI_DOUBLE_PRECISION, mixCplRank,
+     |        (myAppId+voltId)*100+1, CplComm,
+     |        MPI_STATUS_IGNORE, ierr)
+            if (ierr /= 0) call handle_mpi_err(ierr,
+     |        'import: TIEGCM recv from VOLTRON')
+          endif
           if (nmixinapex .ne. 0) then
             call mpi_recv(avar2d, nmlat*nmlonp1*nmixinapex,
      |        MPI_DOUBLE_PRECISION, mixCplRank,
@@ -844,6 +975,14 @@
      |        MPI_STATUS_IGNORE, ierr)
             if (ierr /= 0) call handle_mpi_err(ierr,
      |        'import: TIEGCM recv from REMIX')
+          endif
+          if (nvinapex .ne. 0) then
+            call mpi_recv(avar3d, nlevp1*nmlat*nmlonp1*nvinapex,
+     |        MPI_DOUBLE_PRECISION, mixCplRank,
+     |        (myAppId+voltId)*100+1, CplComm,
+     |        MPI_STATUS_IGNORE, ierr)
+            if (ierr /= 0) call handle_mpi_err(ierr,
+     |        'import: TIEGCM recv from VOLTRON')
           endif
 
 !!!            call mpi_recv(aurorabc, nmlonp1*2,
@@ -931,182 +1070,5 @@
 
       end subroutine finalize_coupling
 !-----------------------------------------------------------------------
-      subroutine mage_ucurrent(rim1,rim2,mlon0,mlon1,mlat0,mlat1,nsrhs)
-!
-! 3/20/14 btf: This routine moved from old serial dynamo (where it was
-!   called after sub transf, and followed by 3 calls to mag2geo). 
-!   The call to this routine is now in pdynamo after sub complete_integrals, 
-!   however as of this date. 
-!
-! DESCRIPTION:
-!
-! This subroutine calculate height-integrated neutral wind generated
-! field-aligned current (dynamo) to be passed to the M-I coupler to
-! solve electric potential. This subroutine is based on the subroutine
-! 'nosocoef' in 'current.F' written by Astrid Maute.
-! The height-integrated neutral wind field-alined current is calculated in a
-! Quisi-Dipole Coordinate that is defined in detail in Richmond (1995). This
-! coordinate system removes the 1/|sinI_m| factor in the partial differential
-! equation for the electric potential in the Modified Apex Coordinate system.
-! 1/|sinI_m| is not defined at magnetic equator in the Modified Apex
-! Coordinate system, but is well defined in the Quisi-Dipole Coordinate system
-! (I still need to see how this works).
-! The neutral dynamo currents are already calculted in subroutine
-! 'fieldline-integrals' in the 'dynamo.F' as a global variable
-! 'rim(nmlonp1,nmlat,2)'. Subroutine 'rshpde' has the formula to calculate
-! height-integrated neutral wind current, but the current there is the sum
-! of two hemispheres. We want a global distribution of this current for the M-I
-! coupler. Thus the code here is an expanded version of that in "rhspde", but a
-! stripped version of "nosocoef". 'nosocoef' also calculates other
-! coefficients (lhs) for the potential equation to obtain total field-aligned currents
-! including both magnetosphere and thermosphere originated currents. We only need
-! thermospheric originated currents for the MAGE M-I coupler.
-!
-! This subroutine is called by subroutine 'dynamo' after 'call transfer'
-! in 'dynamo.F'
-!                                                  ---------- Wenbin Wang 09/20/05
-! USES
-!
-      use params_module,only: nmlon,nmlonp1,nmlat,nmlath
-      use cons_module,only: dlonm,dlatm,pi,r0
-      use mpi_module,only: mp_mag_periodic_f2d
-
-!
-! PARAMETERS:
-! RETURN VALUE: nsrhs(nmlonp1,nmlat)   ! defined as a global variable above
-!
-! !REVISION HISTORY:
-!
-! EOP
-!
-! Calculate height-integrated field-aligned neutral wind currents for both hemisphere
-!
-      integer,intent(in) :: mlon0,mlon1,mlat0,mlat1
-      real(rp),intent(in) :: rim1(mlon0-1:mlon1+1,mlat0-1:mlat1+1),
-     |                      rim2(mlon0-1:mlon1+1,mlat0-1:mlat1+1)
-      real(rp),intent(out) :: nsrhs(mlon0-1:mlon1+1,mlat0-1:mlat1+1)
-
-!
-! Local:
-!
-      real(rp),parameter :: unitvm(nmlon)=1.
-      real(rp) :: cs(mlat0-1:mlat1+1)
-      real(rp) :: dfac
-      real(rp) :: fmsub(mlon0:mlon1,mlat0:mlat1)
-      integer :: j,i
-      integer mlon00,mlon11,mlat00,mlat11
-      integer latstart, latend
-!
-! Externals:
-!
-      real,external :: sddot ! in util.F
-!
-! Set halos indexes
-!
-      mlon00=mlon0-1 ; mlon11=mlon1+1
-      mlat00=mlat0-1 ; mlat11=mlat1+1
-!
-! Calculate coefficients for dynamo pde for both hemisphere
-!
-!
-! Clear arrays
-!
-      nsrhs(:,:)    = 0.0
-!
-! Calculate magnetic latitude cosin array
-!
-      do j = mlat00,mlat11     
-        cs(j) = cos(-pi/2.+(j-1)*dlatm)
-      enddo
-!
-! Calculate right hand side of pde from rim1 and rim2
-!
-      latstart=mlat0
-      latend=mlat1
-      if (latstart==1) then 
-        latstart=2
-      endif
-      if (latend==nmlat) then 
-        latend=nmlat-1
-      endif
-      do j = latstart,latend  
-        if (j == nmlath) cycle  ! skip equator
-        !
-        ! Differentiate rim(1) w.r.t lamda
-        !
-        do i = mlon0,mlon1
-          if (i /= 1 .and. i /= nmlonp1) then  ! Skip longitudinal boundaries
-            nsrhs(i,j)  = 1.0/(dlonm*cs(j))*
-     |                      0.5*(rim1(i+1,j)-rim1(i-1,j))
-          else ! Values at longitudinal boundaries
-            if (i==1) then
-              nsrhs(1,j)  = 1.0/(dlonm*cs(j))*
-     |                      0.5*(rim1(2,j)-rim1(0,j))
-            else
-              nsrhs(nmlonp1,j)  = 1.0/(dlonm*cs(j))*
-     |                      0.5*(rim1(mlon0,j)-rim1(nmlonp1-1,j))
-            endif
-          endif
-        enddo
-      enddo  ! j loop
-!
-! Differentiate rim(2) w.r.t theta0
-!
-      do j = mlat0,mlat1  ! south pole to north pole
-        if (j==1) then ! Calculate south pole value
-           nsrhs(mlon0,1)     = -2./float(nmlon)*
-     |               sddot(nmlon,unitvm,rim2(mlon0,2))/cs(2)
-           ! Extend over longitude
-           nsrhs(:,1) = nsrhs(mlon0,1)
-        elseif (j==nmlat) then ! Calculate calculate north pole value 
-           nsrhs(mlon0,nmlat) = -2./float(nmlon)*
-     |               sddot(nmlon,unitvm,rim2(mlon0,nmlat-1))/cs(mlat0-1)
-           ! Extend over longitude
-           nsrhs(:,nmlat) = nsrhs(mlon0,nmlat)
-         elseif (j==nmlath) then ! Calculate equator values
-           do i=mlon0,mlon1
-             if (i==1) then
-               nsrhs(i,j) = 0.5/dlonm*(rim1(i+1,j)-rim1(i-1,j))
-               nsrhs(i,j) = nsrhs(i,j) + 1./dlatm*(cs(j)*
-     |                 rim2(i,j)+ cs(j+1)*rim2(i,j+1))
-             elseif (i==nmlonp1) then
-               nsrhs(i,j) = 0.5/dlonm*(rim1(nmlonp1+1,j)-rim1(i-1,j))
-               nsrhs(i,j) = nsrhs(i,j) + 1./dlatm*(cs(j)*
-     |                 rim2(i,j)+ cs(j+1)*rim2(i,j+1))
-             else
-               nsrhs(i,j) = 0.5/dlonm*(rim1(i+1,j)-rim1(i-1,j))
-               nsrhs(i,j) = nsrhs(i,j) + 1./dlatm*(cs(j)*
-     |                    rim2(i,j)+ cs(j+1)*rim2(i,j+1))
-             endif
-
-           enddo
-
-         elseif (j<nmlath) then !calculate south pole to equator
-           do i = mlon0,mlon1
-             nsrhs(i,j)  = nsrhs(i,j) - 1.0/(dlatm*cs(j))*0.5*
-     |               (rim2(i,j+1)*cs(j+1)-rim2(i,j-1)*cs(j-1))
-           enddo
-         else !calculate north pole to equator
-           do i = mlon0,mlon1
-             nsrhs(i,j) = nsrhs(i,j) + 1.0/(dlatm*cs(j))*0.5*
-     |               (rim2(i,j+1)*cs(j+1)-rim2(i,j-1)*cs(j-1))
-           enddo
-         endif
-      enddo
-!
-! Periodic points
-!
-      fmsub(:,:)=nsrhs(mlon0:mlon1,mlat0:mlat1)
-      call mp_mag_periodic_f2d(fmsub,mlon0,mlon1,mlat0,mlat1,1)
-
-      nsrhs(mlon0:mlon1,mlat0:mlat1) = fmsub(:,:)
-!
-! Scale rhs by refernce radius (R_E + H0) in meters dfac = r0*1e-2
-!
-      dfac = r0*1.0e-2
-      nsrhs(:,:) = -1.*nsrhs(:,:)/dfac
-!
-      end subroutine mage_ucurrent
-
 
       end module mage_coupling_module
