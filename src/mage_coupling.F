@@ -48,8 +48,130 @@
      |  nhinvar    = 0  !
 
       real(rp),dimension(nmlonp1,2) :: aurorabc1d
+      
+! O+ flux from txt file (number flux in ions/cm^2/s), jyh, 01/2026
+      real(rp),dimension(:,:),allocatable :: opflxN  ! North O+ flux
+      real(rp),dimension(:,:),allocatable :: opflxS  ! South O+ flux
+      character(len=256) :: opflx_dir = '../datas/hidra/' ! Directory for O+ flux files
+      character(len=256) :: last_opflx_file_n = ''  ! Last successfully read North file
+      character(len=256) :: last_opflx_file_s = ''  ! Last successfully read South file
+      logical :: opflx_files_read = .false.  ! Flag if any files have been read
 
       contains 
+!-----------------------------------------------------------------------
+      subroutine merge_opflux_hemispheres(opflx_geo, lon0, lon1, 
+     |                                     lat0, lat1, nlon, nlat)
+
+! This subroutine merges North and South O+ flux into a single
+! geographic grid array for use in oplus solver
+! INPUT:
+!   opflxN, opflxS: North/South hemisphere O+ fluxes (module variables)
+! OUTPUT:
+!   opflx_geo: merged flux on geographic grid (lon0:lon1, lat0:lat1)
+!
+! jyh, 01/2026, updated 02/2026
+
+      use mpi_module,only: mytid
+      
+      real(rp),dimension(lon0:lon1,lat0:lat1),intent(out) :: opflx_geo
+      integer,intent(in) :: lon0, lon1, lat0, lat1, nlon, nlat
+      integer :: i, j, i_shift
+      
+      if (.not. allocated(opflxN) .or. .not. allocated(opflxS)) then
+        if (mytid == 0) write(*,*) 
+     |    "WARNING: opflxN or opflxS not allocated"
+        opflx_geo = 0.0_rp
+        return
+      endif
+      
+      ! Southern hemisphere: geographic lat0:nlat/2 -> opflxS (direct copy)
+      ! Northern hemisphere: geographic nlat/2+1:nlat -> opflxN (direct copy)
+      do j = lat0, lat1
+        if (j <= nlat/2) then
+          do i = lon0, lon1
+            ! 180° longitude shift
+            if (i <= nlon/2) then
+              i_shift = i + nlon/2
+            else
+              i_shift = i - nlon/2
+            endif
+            opflx_geo(i, j) = opflxS(i_shift, nlat/2 + 1 - j)
+          enddo
+        else
+          do i = lon0, lon1
+            if (i <= nlon/2) then
+              i_shift = i + nlon/2
+            else
+              i_shift = i - nlon/2
+            endif
+            opflx_geo(i, j) = opflxN(i_shift, nlat + 1 - j)
+          enddo
+        endif
+      enddo
+
+!      do j = lat0, lat1
+!        if (j <= nlat/2) then
+!          ! Southern hemisphere - direct copy from opflxS
+!          do i = lon0, lon1
+!            opflx_geo(i, j) = opflxS(i, nlat/2 + 1 - j)
+!          enddo
+!        else
+!          ! Northern hemisphere - reversed order
+!          ! opflxN latitude index = j - nlat/2
+!          do i = lon0, lon1
+!            opflx_geo(i, j) = opflxN(i, nlat + 1 - j)
+!          enddo
+!        endif
+!      enddo
+      
+!      ! Apply 180° longitude rotation to entire merged array
+!      temp_geo = opflx_geo
+!      do j = lat0, lat1
+!        do i = lon0, lon1
+!          if (i <= nlon/2) then
+!            i_hidra = i + nlon/2
+!          else
+!            i_hidra = i - nlon/2
+!          endif
+!          opflx_geo(i, j) = temp_geo(i_hidra, j)
+!        enddo
+!      enddo
+      
+!      do j = lat0, lat1
+!        if (j <= nlat/2) then
+!          ! Southern hemisphere - reversed latitude
+!          j_hidra = nlat/2 + 1 - j
+!          do i = lon0, lon1
+!            ! 180° rotation: shift by half longitude
+!            if (i <= nlon/2) then
+!              i_hidra = i + nlon/2
+!            else
+!              i_hidra = i - nlon/2
+!            endif
+!            opflx_geo(i, j) = opflxS(i_hidra, j_hidra)
+!          enddo
+!        else
+!          ! Northern hemisphere - reversed latitude
+!          j_hidra = nlat + 1 - j
+!          do i = lon0, lon1
+!            ! 180° rotation: shift by half longitude
+!            if (i <= nlon/2) then
+!              i_hidra = i + nlon/2
+!            else
+!              i_hidra = i - nlon/2
+!            endif
+!            opflx_geo(i, j) = opflxN(i_hidra, j_hidra)
+!          enddo!
+!        endif
+!      enddo
+
+      if (mytid == 0) then
+!        write(*,*) "[O+ FLUX] Merged N/S hemispheres:"
+!        write(*,*) "[O+ FLUX]   min/max = ", 
+!     |            minval(opflx_geo), maxval(opflx_geo)
+      endif
+      
+      end subroutine merge_opflux_hemispheres
 !-----------------------------------------------------------------------
       subroutine initialize_coupling
 
@@ -121,7 +243,263 @@
 
       end subroutine initialize_coupling
 !-----------------------------------------------------------------------
+      subroutine read_opflux_from_file(filename_n, filename_s, 
+     |                                   lon_dim, lat_dim)
+
+! This subroutine reads O+ number flux from .dat files with format:
+! Line 1: T = YYYY-MM-DD HH:MM:SS
+! Line 2: glon    glat    opflx
+! Data lines: lon_value  lat_value  flux_value
+! INPUT:
+!   filename_n: path to North hemisphere O+ flux file
+!   filename_s: path to South hemisphere O+ flux file
+!   lon_dim: longitude dimension size
+!   lat_dim: latitude dimension size
+! OUTPUT:
+!   opflxN: allocated and filled with North O+ flux (ions/cm^2/s)
+!   opflxS: allocated and filled with South O+ flux (ions/cm^2/s)
+!   jyh, 01/2026
+
+      use mpi_module,only: mytid,TIEGCM_WORLD
+      use mpi
+      
+      character(len=*),intent(in) :: filename_n, filename_s
+      integer,intent(in) :: lon_dim, lat_dim
+      integer :: i, j, iunit, istat, npts, ierr
+      real(rp) :: glon_val, glat_val, flux_val
+      character(len=256) :: header_line
+      logical :: file_exists
+      
+      ! Allocate arrays on ALL tasks (not just mytid==0) (jyh, 01/2026)
+      if (.not. allocated(opflxN)) then
+        allocate(opflxN(lon_dim, lat_dim), stat=istat)
+        if (istat /= 0) then
+          write(*,*) "ERROR: Failed to allocate opflxN"
+          return
+        endif
+        opflxN = 0.0_rp
+      endif
+      
+      if (.not. allocated(opflxS)) then
+        allocate(opflxS(lon_dim, lat_dim), stat=istat)
+        if (istat /= 0) then
+          write(*,*) "ERROR: Failed to allocate opflxS"
+          return
+        endif
+        opflxS = 0.0_rp
+      endif
+      
+      ! Read North hemisphere O+ flux (only on task 0)
+      if (mytid == 0) then
+        inquire(file=trim(filename_n), exist=file_exists)
+        if (.not. file_exists) then
+          write(*,*) "WARNING: North O+ flux file not found: "
+          write(*,*) "  File: ", trim(filename_n)
+          if (len_trim(last_opflx_file_n) > 0) then
+            write(*,*) "  Using previous data from: "
+          endif
+          return
+        endif
+        
+        write(*,*) "Reading North O+ flux from: ", trim(filename_n)
+        open(unit=77, file=trim(filename_n), status='old', 
+     |       action='read', iostat=istat)
+        if (istat /= 0) then
+          write(*,*) "ERROR: Cannot open file ", trim(filename_n)
+          return
+        endif
+        
+        ! Skip header lines (timestamp and column names)
+        read(77, '(A)', iostat=istat) header_line
+        read(77, '(A)', iostat=istat) header_line
+        
+        ! Read data: glon, glat, opflx (column order)
+        ! Data is organized: all lons for lat1, then all lons for lat2, etc.
+        npts = 0
+        do j = 1, lat_dim
+          do i = 1, lon_dim
+            read(77, *, iostat=istat) glon_val, glat_val, flux_val
+            if (istat /= 0) then
+              write(*,*) "ERROR reading North flux at point ",npts+1,
+     |                   " (i,j=",i,j,")"
+              close(77)
+              return
+            endif
+            opflxN(i, j) = flux_val
+            npts = npts + 1
+          enddo
+        enddo
+        close(77)
+        
+        ! Scale HIDRA flux by k*10**8 (jyh, 01/2026)
+        opflxN = opflxN * 10.0d0**4  ! 2x10**8 = 10.0**8 as double precision
+        
+!        write(*,*) "North O+ flux: read ",npts," points"
+!        write(*,*) "  min/max: ", minval(opflxN), maxval(opflxN)
+        last_opflx_file_n = trim(filename_n)
+        opflx_files_read = .true.
+      endif
+      
+      ! Read South hemisphere O+ flux
+      if (mytid == 0) then
+        inquire(file=trim(filename_s), exist=file_exists)
+        if (.not. file_exists) then
+          write(*,*) "WARNING: South O+ flux file not found: "
+          write(*,*) "  File: ", trim(filename_s)
+          if (len_trim(last_opflx_file_s) > 0) then
+            write(*,*) "  Using previous data from: "
+          endif
+          return
+        endif
+        
+        write(*,*) "Reading South O+ flux from: ", trim(filename_s)
+        open(unit=78, file=trim(filename_s), status='old',
+     |       action='read', iostat=istat)
+        if (istat /= 0) then
+          write(*,*) "ERROR: Cannot open file ", trim(filename_s)
+          return
+        endif
+        
+        ! Skip header lines
+        read(78, '(A)', iostat=istat) header_line
+        read(78, '(A)', iostat=istat) header_line
+        
+        ! Read data
+        npts = 0
+        do j = 1, lat_dim
+          do i = 1, lon_dim
+            read(78, *, iostat=istat) glon_val, glat_val, flux_val
+            if (istat /= 0) then
+              write(*,*) "ERROR reading South flux at point ",npts+1,
+     |                   " (i,j=",i,j,")"
+              close(78)
+              return
+            endif
+            opflxS(i, j) = flux_val
+            npts = npts + 1
+          enddo
+        enddo
+        close(78)
+        
+        ! Scale HIDRA flux by k*10**8 (jyh, 01/2026)
+        opflxS = opflxS * 10.0d0**4  ! 2x10**8 = 10.0**8 as double precision
+        
+!        write(*,*) "South O+ flux: read ",npts," points"
+!        write(*,*) "  min/max: ", minval(opflxS), maxval(opflxS)
+        last_opflx_file_s = trim(filename_s)
+        opflx_files_read = .true.
+      endif
+      
+      ! Broadcast flag and data to all MPI tasks (jyh, 01/2026)
+      if (mytid == 0) then
+        write(*,*) "[O+ FLUX] Broadcasting data to all tasks..."
+      endif
+      
+      call mpi_bcast(opflx_files_read, 1, MPI_LOGICAL, 0, 
+     |               TIEGCM_WORLD, ierr)
+      if (ierr /= 0) then
+        write(*,*) "ERROR in mpi_bcast opflx_files_read, task=",mytid
+      endif
+      
+      if (allocated(opflxN)) then
+        call mpi_bcast(opflxN, size(opflxN), MPI_DOUBLE_PRECISION, 0,
+     |                 TIEGCM_WORLD, ierr)
+        if (ierr /= 0) then
+          write(*,*) "ERROR in mpi_bcast opflxN, task=",mytid
+        endif
+      endif
+      
+      if (allocated(opflxS)) then
+        call mpi_bcast(opflxS, size(opflxS), MPI_DOUBLE_PRECISION, 0,
+     |                 TIEGCM_WORLD, ierr)
+        if (ierr /= 0) then
+          write(*,*) "ERROR in mpi_bcast opflxS, task=",mytid
+        endif
+      endif
+      
+      if (mytid == 0) then
+!        write(*,*) "[O+ FLUX] Broadcast complete"
+      endif
+      
+      end subroutine read_opflux_from_file
+!-----------------------------------------------------------------------
+      subroutine read_opflux_at_time(modeltime, lon_dim, lat_dim)
+
+! This subroutine generates filenames from model time and reads O+ flux
+! INPUT:
+!   modeltime: array(4) = [year, day_of_year, hour, minute]
+!   lon_dim: longitude dimension size
+!   lat_dim: latitude dimension size
+! OUTPUT:
+!   opflxN, opflxS: updated with data from files
+!   jyh, 01/2026
+
+      use mpi_module,only: mytid
+      
+      integer,dimension(4),intent(in) :: modeltime
+      integer,intent(in) :: lon_dim, lat_dim
+      character(len=256) :: filename_n, filename_s
+      character(len=8) :: date_str
+      character(len=6) :: time_str
+      integer :: year, doy, hour, minute, month, day
+      integer :: days_in_month(12)
+      integer :: i, cumulative_days
+      
+      ! Extract time components from modeltime
+      ! Assuming modeltime = [year, day_of_year, hour, minute]
+      year = modeltime(1)
+      doy = modeltime(2)
+      hour = modeltime(3)
+      minute = modeltime(4)
+      
+      ! Convert day of year to month and day
+      days_in_month = (/31,28,31,30,31,30,31,31,30,31,30,31/)
+      
+      ! Check for leap year
+      if (mod(year,4)==0 .and. (mod(year,100)/=0 .or. mod(year,400)==0))
+     |  days_in_month(2) = 29
+      
+      cumulative_days = 0
+      do i = 1, 12
+        if (doy <= cumulative_days + days_in_month(i)) then
+          month = i
+          day = doy - cumulative_days
+          exit
+        endif
+        cumulative_days = cumulative_days + days_in_month(i)
+      enddo
+      
+      ! Format date and time strings
+      write(date_str, '(I4.4,I2.2,I2.2)') year, month, day
+      write(time_str, '(I2.2,I2.2,I2.2)') hour, minute, 0
+      
+      ! Construct filenames
+      filename_n = trim(opflx_dir) // 'opflx_N_t' // 
+     |             trim(date_str) // '_' // trim(time_str) // '.dat'
+      filename_s = trim(opflx_dir) // 'opflx_S_t' // 
+     |             trim(date_str) // '_' // trim(time_str) // '.dat'
+      
+      if (mytid == 0) then
+!        write(*,*) "================================================"
+!        write(*,*) "[O+ FLUX] Reading for time: ", year, month, day,
+!     |             hour, ":", minute
+!        write(*,*) "[O+ FLUX]   North file: ", trim(filename_n)
+!        write(*,*) "[O+ FLUX]   South file: ", trim(filename_s)
+      endif
+      
+      ! Read the files
+      call read_opflux_from_file(filename_n, filename_s, 
+     |                           lon_dim, lat_dim)
+      
+      if (mytid == 0) then
+!        write(*,*) "[O+ FLUX] Files read successfully"
+!        write(*,*) "================================================"
+      endif
+      
+      end subroutine read_opflux_at_time
+!-----------------------------------------------------------------------
       subroutine import_mage
+
 
 ! 1. Receive arrays (pot, eng, flx) from REMIX on process zero
 ! 2. Broadcast to all MPI tasks
