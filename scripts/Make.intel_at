@@ -1,0 +1,48 @@
+#
+# Included makefile for Intel ifort compiler on NASA Pleiades pfe:
+# Pleiades is using intel 2020.4.304
+#
+MPIF90 = mpif90
+MPIRUN = mpiexec_mpt
+FFLAGS = -r8 -DINTEL
+#
+# See https://www.nas.nasa.gov/hecc/support/kb/
+#FFLAGS += -mcmodel=medium
+#
+# DBGFLAGS are used by the Makefile only if the job script
+# has "set debug = true"
+#
+DBGFLAGS = -debug full,extended -traceback
+DBGFLAGS += -check all,noarg_temp_created -fp-stack-check
+DBGFLAGS += -warn all -nogen-interfaces
+#
+# -fpe-all=0 traps all floating point exceptions.
+# The model is not guaranteed not to crash if this option is set.
+#
+#DBGFLAGS += -fpe-all=0
+#
+# Makefile will use OPTIM = -g if set debug=TRUE in job script.
+OPTIM    = -O2
+HOST     = $(shell hostname)
+#
+# Library and Include file paths:
+#
+# ESMF lib on Pleiades:
+# export ESMFMKFILE=/home6/fvitt/esmf-8_2_0/lib/libO/Linux.intel.64.mpt.default/esmf.mk
+export ESMFMKFILE=/u/nrao3/local_aitken/esmf/lib/libO/Linux.intelgcc.64.mpt.default/esmf.mk
+#
+# Make machines.ini file for MPI execution:
+#
+prereq: machines.ini mpirun.command
+machines.ini: export HN=$(HOST)
+machines.ini: export NP=$(NPROC)
+machines.ini: FORCE
+	@echo "Making machines.ini.."
+	@echo `hostname` > machines.ini
+	@awk 'BEGIN{ for (i=2; i <= ENVIRON["NP"]; i++) print ENVIRON["HN"] }' >> machines.ini
+
+mpirun.command: FORCE
+	@echo "Making mpirun.command: MPIRUN=$(MPIRUN)"
+	@echo $(MPIRUN) > mpirun.command
+
+FORCE:
