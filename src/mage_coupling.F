@@ -172,7 +172,7 @@
       integer :: ierr,i,j,v
       real(rp),dimension(:,:,:), allocatable :: gvar2d
       real(rp),dimension(:,:,:), allocatable :: avar2d
-      real(rp),dimension(:,:,:,:), allocatable :: gvar3d
+      real(rp),dimension(:,:,:,:), allocatable :: gvar3d,gvar3dpass
       real(rp),dimension(:,:,:,:), allocatable :: avar3d
 
 
@@ -186,9 +186,9 @@
       gvar2d = 0.0_rp
 
       if (isSmite) then
-        if (.not. allocated(gvar3d) ) 
-     |    allocate(gvar3d(nlevp1,nlat,nlon,nvingeo))
-        gvar3d = 0.0_rp
+        if (.not. allocated(gvar3dpass) ) 
+     |    allocate(gvar3dpass(nlevp1,nlat,nlon+4,nvingeo))
+        gvar3dpass = 0.0_rp
       endif
 
       ! unused for now
@@ -200,10 +200,18 @@
       if (.not. oneway) then
       if (mytid == 0) then
 
+        if (.not. allocated(gvar3d) ) 
+     |    allocate(gvar3d(nlevp1,nlat,nlon,nvingeo))
+        gvar3d = 0.0_rp
+
         call import_remix(avar2d,gvar2d,avar3d,gvar3d)
 ! Unit conversion
         avar2d(:,:,1) = avar2d(:,:,1)*1e3_rp ! potential: kV -> V
         gvar2d(:,:,1) = gvar2d(:,:,1)*0.5_rp ! mean energy -> characteristic energy
+
+        gvar3dpass(:,:,3:nlon+2,: ) = gvar3d(:,:,:,:) ! UI, VI, W in 3D array for passing to SMITE
+        gvar3dpass(:,:,1:2,:) = gvar3d(:,:,nlon-1:nlon,:)
+        gvar3dpass(:,:,nlon+3:nlon+4,:) = gvar3d(:,:,1:2,:)
       endif
 
       call mpi_bcast(avar2d, nmlat*nmlonp1*nmixinapex,
@@ -214,7 +222,11 @@
      |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
       if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
 
-      call mpi_bcast(gvar3d, nlevp1*nlat*nlon*nvingeo,
+!      call mpi_bcast(gvar3d, nlevp1*nlat*nlon*nvingeo,
+!     |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
+!      if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
+
+      call mpi_bcast(gvar3dpass, nlevp1*nlat*(nlon+4)*nvingeo,
      |  MPI_REAL8, 0, TIEGCM_WORLD, ierr)
       if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
 
@@ -237,15 +249,17 @@
       enddo
       if (isSmite) then
           do v=1,nvingeo
-            ! This is for out vars
+            ! This is for in vars
             ! f3d has ped and hall
             ! f4d has un, vn, z
             ! 
             do i = lat0,lat1
             f3d(ivinlist(v))%data(:,lon0:lon1,i) = 
-     |      gvar3d(:,i,lon0:lon1,v)
+     |      gvar3dpass(:,i,lon0:lon1,v)
             enddo
           enddo
+
+          deallocate(gvar3dpass)
       endif
       else
         call ca_receive(gpot,geng,gflx,gpotm)
@@ -854,7 +868,7 @@
 
       use params_module,only: nlatp2,nlonp1,nlevp1
       use mpi_module,only: myAppId,voltId,CplComm,mixCplRank,
-     |  handle_mpi_err
+     |  handle_mpi_err, TIEGCM_WORLD
       use mpi
       use input_module,only: dynamo
 
@@ -921,19 +935,25 @@
         write(*,*) "TGCM: Done init_mpi_remix"
      
         i = 0
+        write(*,*) "TGCM: Sending nlev: ", nlevp1
         call mpi_send(nlevp1, 1, MPI_INTEGER,
      |    mixCplRank, (myAppId+voltId)*100+0, CplComm, ierr)
         if (ierr /= 0)
      |    call handle_mpi_err(ierr, 'initialize: TIEGCM send to REMIX')
 
         call mpi_recv(isSmite, 1, MPI_LOGICAL, mixCplRank, 
-     |    (myAppId+voltId)*100+0, CplComm, ierr)
+     |    (myAppId+voltId)*100+2, CplComm, MPI_STATUS_IGNORE, ierr)
         write(*,*) "TGCM: Done figuring out Smite: ",isSmite
         
         if (isSmite) dynamo = 0
 
 
       endif
+
+      
+      call mpi_bcast(isSmite, 1,
+     |  MPI_LOGICAL, 0, TIEGCM_WORLD, ierr)
+      if (ierr /= 0) call handle_mpi_err(ierr, 'import: TIEGCM bcast')
 
       end subroutine init_mpi_remix
 

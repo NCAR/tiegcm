@@ -458,9 +458,7 @@
       ncells = nj*ni   ! total number of grid cells for this task
 !
 ! Report my stats to stdout:
-      write(6,"(/,'mytid=',i3,' mytidi,j=',2i3,' lat0,1=',2i3,' (',i2,
-     |  ') lon0,1=',2i3,' (',i2,') ncells=',i4)") 
-     |  mytid,mytidi,mytidj,lat0,lat1,nj,lon0,lon1,ni,ncells
+
 !
 ! Define all task structures with current task values 
 ! (redundant for alltoall):

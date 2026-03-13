@@ -1688,7 +1688,7 @@
      |  write(6,"('  secflds (secondary history fields)',
      |    ' =',/,(4x,5a12))") (secflds(i),i=1,n)
       write(6,"('  Maximum number of histories per secondary file = ',
-     |  i3)") mxhist_sech
+     |  i4)") mxhist_sech
       write(6,"('  Number of bytes for values of fields on secondary',
      |  ' histories (sech_nbyte) = ',i3)") sech_nbyte
 
