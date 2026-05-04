@@ -441,8 +441,8 @@
      |    lxy (levd0,lond0,lat), ! LXY output
      |    lyx (levd0,lond0,lat), ! LYX output
      |    lam1(levd0,lond0,lat), ! LAM1 output
-     |    ped (levd0,lond0,lat), ! pedersen conductivity output
-     |    hall(levd0,lond0,lat), ! hall conductivity output
+     |    ped (levd0,lond0,lat,itp), ! pedersen conductivity output
+     |    hall(levd0,lond0,lat,itp), ! hall conductivity output
      |    Q1  (levd0,lond0,lat), ! electron ohmic heating output
      |    Q2  (levd0,lond0,lat), ! electrojet turbulent heating output
      |    1,nlevp1,lon0,lon1,lat)
@@ -459,9 +459,9 @@
           call addfld('LAM1','LAM1','1/s',lam1(:,i0:i1,lat),
      |      'lev',k0,k1,'lon',i0,i1,lat)
           call addfld('SIGMAPED','Pedersen Conductivity','S/m',
-     |      ped(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+     |      ped(:,i0:i1,lat,itp),'lev',k0,k1,'lon',i0,i1,lat)
           call addfld('SIGMAHAL','Hall Conductivity','S/m',
-     |      hall(:,i0:i1,lat),'lev',k0,k1,'lon',i0,i1,lat)
+     |      hall(:,i0:i1,lat,itp),'lev',k0,k1,'lon',i0,i1,lat)
         endif
       enddo ! lat=lat0,lat1
 !
@@ -839,8 +839,8 @@
       if (iamie > 0) then
         do lat=lat0,lat1
           call dyndiag(
-     |      ped (levd0,lond0,lat),     ! pedersen conductivity
-     |      hall(levd0,lond0,lat),     ! hall conductivity
+     |      ped (levd0,lond0,lat,itp), ! pedersen conductivity
+     |      hall(levd0,lond0,lat,itp), ! hall conductivity
      |      qji_tn(levd0,lond0,lat),   ! ion Joule heating for tn
      |      z   (levd0,lond0,lat,itc), ! updated Z from addiag
      |      un  (levd0,lond0,lat,itp), ! neutral zonal velocity
