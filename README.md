@@ -1,4 +1,5 @@
-# TIEGCM v3.0
+# TIEGCM v3,0
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20076375.svg)](https://doi.org/10.5281/zenodo.20076375)
 
 Documentation: [TIEGCM ReadtheDocs](https://tiegcm-docs.readthedocs.io/en/latest/) 
 
