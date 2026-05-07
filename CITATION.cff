@@ -1,0 +1,183 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software and the accompanying paper."
+title: "NCAR-TIEGCM: Thermosphere-Ionosphere-Electrodynamics General Circulation Model"
+version: "3.0.1"
+type: software
+license-url: "https://github.com/NCAR/TIEGCM/blob/master/LICENSE"
+repository-code: "https://github.com/NCAR/TIEGCM"
+authors:
+  - family-names: Wu
+    given-names: Haonan
+    orcid: "https://orcid.org/0000-0002-3272-8106"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Wang
+    given-names: Wenbin
+    orcid: "https://orcid.org/0000-0002-6287-4542"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Pham
+    given-names: Kevin H.
+    orcid: "https://orcid.org/0000-0001-5031-5519"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Lin
+    given-names: Dong
+    orcid: "https://orcid.org/0000-0003-2894-6677"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Rao
+    given-names: Nikhil
+    orcid: "https://orcid.org/0000-0003-2639-9892"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Wiltberger
+    given-names: Michael J.
+    orcid: "https://orcid.org/0000-0002-4844-3148"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Lu
+    given-names: Gang
+    orcid: "https://orcid.org/0000-0001-5350-2889"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Wu
+    given-names: Qian
+    orcid: "https://orcid.org/0000-0002-7508-3803"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Liu
+    given-names: Hanli
+    orcid: "https://orcid.org/0000-0002-6370-0704"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Qian
+    given-names: Liying
+    orcid: "https://orcid.org/0000-0003-2430-1388"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Hsu
+    given-names: Chih-Ting
+    orcid: "https://orcid.org/0000-0002-8789-1277"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Pedatella
+    given-names: Nicholas M.
+    orcid: "https://orcid.org/0000-0002-8878-5126"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Vila-Pérez
+    given-names: Jordi
+    orcid: "https://orcid.org/0000-0003-3164-0863"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: McInerney
+    given-names: Joseph M.
+    orcid: "https://orcid.org/0000-0002-6103-3311"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Richmond
+    given-names: Arthur D.
+    orcid: "https://orcid.org/0000-0002-6708-1023"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Burns
+    given-names: Alan G.
+    orcid: "https://orcid.org/0000-0001-6024-0020"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Solomon
+    given-names: Stanley C.
+    orcid: "https://orcid.org/0000-0002-5291-3034"
+    affiliation: "High Altitude Observatory, NSF National Center for Atmospheric Research, Boulder, CO, USA"
+  - family-names: Maute
+    given-names: Astrid
+    orcid: "https://orcid.org/0000-0003-3393-0987"
+    affiliation: "Cooperative Institute for Research in Environmental Sciences, University of Colorado at Boulder, Boulder, CO, USA"
+  - family-names: Sutton
+    given-names: Eric K.
+    orcid: "https://orcid.org/0000-0003-1424-7189"
+    affiliation: "Space Weather Technology Research and Education Center, University of Colorado Boulder, Boulder, CO, USA"
+  - family-names: Lu
+    given-names: Xian
+    orcid: "https://orcid.org/0000-0002-2535-8151"
+    affiliation: "Department of Physics and Astronomy, Clemson University, Clemson, SC, USA"
+  - family-names: Cai
+    given-names: Xuguang
+    orcid: "https://orcid.org/0000-0003-4632-1697"
+    affiliation: "Laboratory for Atmospheric and Space Physics, University of Colorado at Boulder, Boulder, CO, USA"
+  - family-names: Sheng
+    given-names: Cheng
+    orcid: "https://orcid.org/0000-0002-1282-8265"
+    affiliation: "Department of Physics, University of Texas at Arlington, Arlington, TX, USA"
+  - family-names: Wang
+    given-names: Jack C.
+    orcid: "https://orcid.org/0000-0003-2165-505X"
+    affiliation: "Community Coordinated Modeling Center, NASA Goddard Space Flight Center, Greenbelt, MD, USA"
+  - family-names: Yue
+    given-names: Jia
+    orcid: "https://orcid.org/0000-0003-0577-5289"
+    affiliation: "Community Coordinated Modeling Center, NASA Goddard Space Flight Center, Greenbelt, MD, USA"
+preferred-citation:
+  type: article
+  title: "The NCAR-TIEGCM Version 3.0"
+  doi: "10.1029/2025JA034219"
+  journal: "Journal of Geophysical Research: Space Physics"
+  year: 2025
+  authors:
+    - family-names: Wu
+      given-names: Haonan
+      orcid: "https://orcid.org/0000-0002-3272-8106"
+    - family-names: Wang
+      given-names: Wenbin
+      orcid: "https://orcid.org/0000-0002-6287-4542"
+    - family-names: Pham
+      given-names: Kevin H.
+      orcid: "https://orcid.org/0000-0001-5031-5519"
+    - family-names: Lin
+      given-names: Dong
+      orcid: "https://orcid.org/0000-0003-2894-6677"
+    - family-names: Rao
+      given-names: Nikhil
+      orcid: "https://orcid.org/0000-0003-2639-9892"
+    - family-names: Wiltberger
+      given-names: Michael J.
+      orcid: "https://orcid.org/0000-0002-4844-3148"
+    - family-names: Lu
+      given-names: Gang
+      orcid: "https://orcid.org/0000-0001-5350-2889"
+    - family-names: Wu
+      given-names: Qian
+      orcid: "https://orcid.org/0000-0002-7508-3803"
+    - family-names: Liu
+      given-names: Hanli
+      orcid: "https://orcid.org/0000-0002-6370-0704"
+    - family-names: Qian
+      given-names: Liying
+      orcid: "https://orcid.org/0000-0003-2430-1388"
+    - family-names: Hsu
+      given-names: Chih-Ting
+      orcid: "https://orcid.org/0000-0002-8789-1277"
+    - family-names: Pedatella
+      given-names: Nicholas M.
+      orcid: "https://orcid.org/0000-0002-8878-5126"
+    - family-names: Vila-Pérez
+      given-names: Jordi
+      orcid: "https://orcid.org/0000-0003-3164-0863"
+    - family-names: McInerney
+      given-names: Joseph M.
+      orcid: "https://orcid.org/0000-0002-6103-3311"
+    - family-names: Richmond
+      given-names: Arthur D.
+      orcid: "https://orcid.org/0000-0002-6708-1023"
+    - family-names: Burns
+      given-names: Alan G.
+      orcid: "https://orcid.org/0000-0001-6024-0020"
+    - family-names: Solomon
+      given-names: Stanley C.
+      orcid: "https://orcid.org/0000-0002-5291-3034"
+    - family-names: Maute
+      given-names: Astrid
+      orcid: "https://orcid.org/0000-0003-3393-0987"
+    - family-names: Sutton
+      given-names: Eric K.
+      orcid: "https://orcid.org/0000-0003-1424-7189"
+    - family-names: Lu
+      given-names: Xian
+      orcid: "https://orcid.org/0000-0002-2535-8151"
+    - family-names: Cai
+      given-names: Xuguang
+      orcid: "https://orcid.org/0000-0003-4632-1697"
+    - family-names: Sheng
+      given-names: Cheng
+      orcid: "https://orcid.org/0000-0002-1282-8265"
+    - family-names: Wang
+      given-names: Jack C.
+      orcid: "https://orcid.org/0000-0003-2165-505X"
+    - family-names: Yue
+      given-names: Jia
+      orcid: "https://orcid.org/0000-0003-0577-5289"
