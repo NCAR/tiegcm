@@ -1,7 +1,7 @@
 # TIEGCM v3.0
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20076374.svg)](https://doi.org/10.5281/zenodo.20076374)
-[![Docs](https://img.shields.io/badge/docs-readthedocs-blue)](https://tiegcm-docs.readthedocs.io/en/latest/)
+[![DOI](https://img.shields.io/badge/DOI-10.5281/zenodo.20076374-blue)](https://doi.org/10.5281/zenodo.20076374)
+[![Docs](https://img.shields.io/badge/Docs-readthedocs-blue)](https://tiegcm-docs.readthedocs.io/en/latest/)
 [![Paper](https://img.shields.io/badge/JGR%3A%20Space%20Physics-10.1029%2F2025JA034219-blue)](https://doi.org/10.1029/2025JA034219)
 
 The **NCAR Thermosphere–Ionosphere–Electrodynamics General Circulation Model (TIEGCM)** is a comprehensive, first-principles, three-dimensional, non-linear representation of the coupled thermosphere and ionosphere system that includes a self-consistent solution of the middle and low-latitude dynamo field.
