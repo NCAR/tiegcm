@@ -4,8 +4,9 @@
 [![Docs](https://img.shields.io/badge/docs-readthedocs-blue)](https://tiegcm-docs.readthedocs.io/en/latest/)
 [![Paper](https://img.shields.io/badge/JGR%3A%20Space%20Physics-10.1029%2F2025JA034219-blue)](https://doi.org/10.1029/2025JA034219)
 
-The **NCAR Thermosphere–Ionosphere–Electrodynamics General Circulation Model (TIEGCM)** is a community first-principles model of the Earth's upper atmosphere, developed and maintained at the [High Altitude Observatory](https://www2.hao.ucar.edu/) at NCAR. Version 3.0 is the first major release since 2.0 (March 2016) and accompanies the JGR: Space Physics paper *["The NCAR-TIEGCM Version 3.0"](https://doi.org/10.1029/2025JA034219)*.
+The **NCAR Thermosphere–Ionosphere–Electrodynamics General Circulation Model (TIEGCM)** is a comprehensive, first-principles, three-dimensional, non-linear representation of the coupled thermosphere and ionosphere system that includes a self-consistent solution of the middle and low-latitude dynamo field.
 
+It is developed and maintained by the [High Altitude Observatory](https://www2.hao.ucar.edu/) at NCAR.
 ## Contents
 
 - [Quick Start](#quick-start)
@@ -34,7 +35,7 @@ For a brief set of instructions to build the model and make a short default run,
 
 ## What's New in v3.0
 
-This is a summary of modifications made to TIEGCM since the release of v2.0 (March 2016).
+This is a summary of modifications made to TIEGCM since the release of v2.0.
 
 ### New Features and Functional Changes
 
