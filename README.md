@@ -18,6 +18,7 @@ It is developed and maintained by the [High Altitude Observatory](https://www2.h
 - [Utility Tools](#utility-tools)
 - [Documentation and Support](#documentation-and-support)
 - [Citation](#citation)
+- [License](#license)
 
 ## Quick Start
 
@@ -104,3 +105,8 @@ If you use TIEGCM in your work, please cite **both** the software and the accomp
 
 - **Software (this release):** [10.5281/zenodo.20076374](https://doi.org/10.5281/zenodo.20076374)
 - **Paper:** Wu, H., Wang, W., Pham, K. H., et al. (2025). *The NCAR-TIEGCM Version 3.0.* Journal of Geophysical Research: Space Physics. [10.1029/2025JA034219](https://doi.org/10.1029/2025JA034219)
+
+## License
+
+TIEGCM is distributed under the **NCAR TIE-GCM Open Source Academic Research License Agreement**. The full text is in [`LICENSE`](./LICENSE) and applies to v2, v3, and subsequent versions.
+  
