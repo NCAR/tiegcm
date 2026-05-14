@@ -39,7 +39,9 @@
      |  mkdiag_NFLUX,mkdiag_EFLUX,mkdiag_TEC,mkdiag_HNMF2,
      |  mkdiag_QJOULE_INTEG,mkdiag_UI,mkdiag_VI,mkdiag_WI
       use dyndiag_module,only: dyndiag
-      use mage_coupling_module,only: isSmite
+      use mage_coupling_module,only: isSmite,
+     |  import_mage,export_mage,process_import
+      use hist_module,only: modeltime
 
       implicit none
 !
@@ -137,6 +139,16 @@
      |  1,nlevp1,lon0,lon1,lat0,lat1)
       if (debug) write(6,"('dynamics after ionvel')")
       endif
+
+      call import_mage
+!
+! Send conductance and neutral wind current to M-I coupler for MAGE
+!
+      call export_mage(modeltime)
+!
+! Process the imported data
+!
+      call process_import
 !
 ! mkdiags_UI,VI,WI are called from ionvel.
 !     if (diags) then

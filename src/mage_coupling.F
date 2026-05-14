@@ -212,6 +212,8 @@
         gvar3dpass(:,:,3:nlon+2,: ) = gvar3d(:,:,:,:) ! UI, VI, W in 3D array for passing to SMITE
         gvar3dpass(:,:,1:2,:) = gvar3d(:,:,nlon-1:nlon,:)
         gvar3dpass(:,:,nlon+3:nlon+4,:) = gvar3d(:,:,1:2,:)
+
+        !gvar3dpass = 0.0_rp
       endif
 
       call mpi_bcast(avar2d, nmlat*nmlonp1*nmixinapex,
@@ -249,6 +251,17 @@
       enddo
       if (isSmite) then
           do v=1,nvingeo
+            if (mytid == 0) then
+            write(*,*) "T Check: ", v, 
+     |      maxval(gvar3dpass(:,:,:,v)), minval(gvar3dpass(:,:,:,v))
+            write(*,*) "T SHAPE: ", v, 
+     |      shape(gvar3dpass(:,:,:,v)), shape(f3d(ivinlist(v))%data)
+            endif
+            if ((maxval(gvar3dpass(:,:,:,v)) .eq. 0.0_rp) .and. 
+     | (minval(gvar3dpass(:,:,:,v)) .eq. 0.0_rp)) then
+              gvar3dpass(:,:,:,v) = 0.1_rp
+
+            endif
             ! This is for in vars
             ! f3d has ped and hall
             ! f4d has un, vn, z
@@ -479,6 +492,7 @@
 
       ! Allocate request array here
 
+      write(*,*) "T Starting Export Send"
 
       ! Send the export data
       do i=1,CplCommSize
@@ -509,6 +523,7 @@
      |              IAm(i)
               end select
       enddo
+      write(*,*) "T Done Export Sends"
 
       ! Deallocate arrays
       do i=1,CplCommSize
@@ -539,6 +554,11 @@
               end select
       enddo
 
+      if (mytid == 0) then
+
+      write(*,*) "T Done Export Clean Up"
+
+      endif
       ! Deallocate request array here
 #endif
       end subroutine export_mage
@@ -684,12 +704,12 @@
         volt_out(:,:,:,:) = f3d_glb(:,3:nlon+2,:,:)
         ! Check fidelity
         do v=1,nvoutgeo
-          write(*,*) 'TGCM: max/min V:',maxval(volt_out(:,:,:,v)),
-     |      minval(volt_out(:,:,:,v))
+          write(*,*) 'TGCM: max/min:',v,
+     |     maxval(volt_out(1:nlevp1-1,:,:,v)),
+     |      minval(volt_out(1:nlevp1-1,:,:,v))
         enddo
 
         if (mytid == 0) then
-        !write(6,"('TGCM: Sending to HIDRA at: ',4i4)") modeltime
         write(6,"('GCM2VOLT: ',4i4)") modeltime
         endif
       endif
@@ -787,8 +807,11 @@
                 gvar2d(j,i,v) = gglb(i+2,j-1,v)
               enddo
             enddo
-            gvar2d(1,:,1) = sum(gglb(3:nlonp2,1,v))/nlon
-            gvar2d(nlatp2,:,1) = sum(gglb(3:nlonp2,nlat,v))/nlon
+            gvar2d(1,:,v) = sum(gglb(3:nlonp2,1,v))/nlon
+            gvar2d(nlatp2,:,v) = sum(gglb(3:nlonp2,nlat,v))/nlon
+
+            write(*,*) "TGCM Export Check: ", v, maxval(gvar2d(:,:,v)), 
+     |   minval(gvar2d(:,:,v))
           enddo
 
         endif
@@ -827,6 +850,7 @@
         if (CplComm /= MPI_COMM_NULL) then
 
           if ( nmixoutgeo .ne. 0) then
+            write(*,*) "TIEGCM EXPORT TO REMIX GEO",shape(gvar2d)
           call mpi_send(gvar2d, nlatp2*nlonp1*nmixoutgeo,
      |       MPI_DOUBLE_PRECISION, mixCplRank,
      |       (myAppId+voltId)*100, CplComm, ierr)
@@ -835,6 +859,7 @@
           endif
 
           if ( isSmite .and. nvoutgeo .ne. 0 ) then
+            write(*,*) "TIEGCM EXPORT TO VOLT GEO",shape(gvar3d)
             call mpi_send(gvar3d, nlevp1*nlon*nlat*nvoutgeo,
      |       MPI_DOUBLE_PRECISION, mixCplRank,
      |       (myAppId+voltId)*100+1, CplComm, ierr)
@@ -843,6 +868,7 @@
           endif
 
           if ( nmixoutapex .ne. 0) then
+            write(*,*) "TIEGCM EXPORT TO REMIX APX", shape(avar2d)
           call mpi_send(avar2d, nmlat*nmlonp1*nmixoutapex,
      |       MPI_DOUBLE_PRECISION, mixCplRank,
      |       (myAppId+voltId)*100, CplComm, ierr)
@@ -851,6 +877,7 @@
           endif
 
           if ( isSmite .and. nvoutapex .ne. 0 ) then
+            write(*,*) "TIEGCM EXPORT TO VOLT APX", shape(avar3d)
             call mpi_send(avar3d, nlevp1*nmlon*nmlat*nvoutapex,
      |       MPI_DOUBLE_PRECISION, mixCplRank,
      |       (myAppId+voltId)*100+1, CplComm, ierr)
@@ -981,6 +1008,7 @@
      |        'import: TIEGCM recv from REMIX')
           endif
           if (nvingeo .ne. 0) then
+            write(*,*) "T Importing GEO 3D: ", shape(gvar3d)
             call mpi_recv(gvar3d, nlevp1*nlat*nlon*nvingeo,
      |        MPI_DOUBLE_PRECISION, mixCplRank,
      |        (myAppId+voltId)*100+1, CplComm,
@@ -1090,5 +1118,4 @@
 
       end subroutine finalize_coupling
 !-----------------------------------------------------------------------
-
       end module mage_coupling_module

@@ -83,6 +83,8 @@
      |  mlat0,mlat1,mlon0,mlon1,mp_scatter_phim,
      |  mp_bndlons,mp_polelats,mp_periodic_f4d,TIEGCM_WORLD
       use getapex_module,only: apxparm
+
+      use, intrinsic :: ieee_arithmetic
 !
       implicit none
 #ifdef VT
@@ -120,6 +122,8 @@
       logical,external :: wrhist,time2print
       real,external :: hp_from_bz_swvel,hp_from_kp,ctpoten_from_kp
       integer,external :: mtime_to_secs
+      integer :: lat, lonbeg5, lonend5
+      logical :: TNcheck =.false.
 !
 #ifdef VT
 !     code = 115 ; state = 'advance' ; activity='ModelCode'
@@ -210,6 +214,77 @@
 !
 ! Main time loop:
   100 continue
+
+        if (TNcheck) then
+          if (lon0 == 1) then
+          lonbeg5 = 3
+        else
+          lonbeg5 = lon0
+        endif
+        if (lon1 == nlonp4) then
+          lonend5 = nlonp2
+        else
+          lonend5 = lon1
+        endif
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING0: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING0: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+            if ( (un_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING0: UN NM ZERO: ", un_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+            if ( (un(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itp))) ) then
+              write(*,*) "WARNING0: UN ZERO: ", un(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+    !         if ( (tn(k,i,lat,itc) == 0.0) .or. 
+    !  |  (.not. ieee_is_finite(tn(k,i,lat,itc))) ) then
+    !           write(*,*) "WARNING0: TN ZERO: ", tn(k,i,lat,itc)
+    !           write(*,*) " at k,i,lat: ", k, i, lat
+    !           !stop
+    !         endif
+
+    !         if ( (tn_nm(k,i,lat,itc) == 0.0) .or. 
+    !  |  (.not. ieee_is_finite(tn_nm(k,i,lat,itc))) ) then
+    !           write(*,*) "WARNING0: TN NM ZERO: ", tn_nm(k,i,lat,itc)
+    !           write(*,*) " at k,i,lat: ", k, i, lat
+    !           !stop
+    !         endif
+    !         if ( (un_nm(k,i,lat,itc) == 0.0) .or. 
+    !  |  (.not. ieee_is_finite(un_nm(k,i,lat,itc))) ) then
+    !           write(*,*) "WARNING0: UN NM ZERO: ", un_nm(k,i,lat,itc)
+    !           write(*,*) " at k,i,lat: ", k, i, lat
+    !           !stop
+    !         endif
+    !         if ( (un(k,i,lat,itc) == 0.0) .or. 
+    !  |  (.not. ieee_is_finite(un(k,i,lat,itc))) ) then
+    !           write(*,*) "WARNING0: UN ZERO: ", un(k,i,lat,itc)
+    !           write(*,*) " at k,i,lat: ", k, i, lat
+    !           !stop
+    !         endif
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lonbeg:lonend
+      enddo ! lat
+      endif
+
 #ifdef VT
 !     code = 127 ; state = 'timestep' ; activity='ModelCode'
       call vtbegin(127,ier)
@@ -390,30 +465,146 @@
             endif
           enddo
         endif
+      endif     
+      
+            if (TNcheck) then
+              
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING1: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING1: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+            if ( (un_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING1: UN NM ZERO: ", un_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+            if ( (un(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itp))) ) then
+              write(*,*) "WARNING1: UN ZERO: ", un(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+            if ( (tn(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itc))) ) then
+              write(*,*) "WARNING1: TNC ZERO: ", tn(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING1: TNC NM ZERO: ", tn_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+            if ( (un_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING1: UNC NM ZERO: ", un_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+            if ( (un(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itc))) ) then
+              write(*,*) "WARNING1: UN ZERO: ", un(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              !stop
+            endif
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat
       endif
 
-      
-!
-! Prepare neutral inputs for parallel dynamo:
-! Calculate vertical velocity wn:
-        call calc_wn(
-     |    w    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
-     |    scht (lev0:lev1,lon0:lon1,lat0:lat1,itp),
-     |    wn   (lev0:lev1,lon0:lon1,lat0:lat1),     ! output
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
-     
+!       call calc_wn(
+!     |    w    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+!     |    scht (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+!     |    wn   (lev0:lev1,lon0:lon1,lat0:lat1),     ! output
+!     |    1,nlevp1,lon0,lon1,lat0,lat1)
+
+           if (TNcheck) then
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING6: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING2: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING2: UN NM ZERO: ", un_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itp))) ) then
+              write(*,*) "WARNING2: UN ZERO: ", un(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (tn(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itc))) ) then
+              write(*,*) "WARNING2: TN ZERO: ", tn(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING2: TN NM ZERO: ", tn_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING2: UN NM ZERO: ", un_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itc))) ) then
+              write(*,*) "WARNING2: UN ZERO: ", un(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat
+      endif
 !
 ! Receive aurora parameters from the M-I coupler for MAGE
 !
-      call import_mage
+!      call import_mage
 !
 ! Send conductance and neutral wind current to M-I coupler for MAGE
 !
-      call export_mage(cmodeltime)
+!      call export_mage(cmodeltime)
 !
 ! Process the imported data
 !
-      call process_import
+!      call process_import
 !
 ! Report to stdout:
       if (time2print(nstep,istep)) then
@@ -495,6 +686,31 @@
 ! Define boundary latitudes -1,0 across the south pole, and
 !   nlat+1,nlat+2 across the north pole:
 !
+      if (TNcheck) then
+            write(*,*) "TGCM: TCHECK2"
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING22: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING22: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING22: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat
+      endif
+
       if (ntask==1) then
         call mk_polelat( 0,1,itp)
         call mk_polelat(-1,2,itp)
@@ -512,6 +728,63 @@
         call mp_bndlats(f4d,nf4d,itp)
         call mp_bndlons(f4d,nf4d,itp)
       endif ! ntask==1
+
+      if (TNcheck) then
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING3: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING3: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING3: UN NM ZERO: ", un_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itp))) ) then
+              write(*,*) "WARNING3: UN ZERO: ", un(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (tn(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itc))) ) then
+              write(*,*) "WARNING3: TNC ZERO: ", tn(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING3: TNC NM ZERO: ", tn_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING3: UNC NM ZERO: ", un_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itc))) ) then
+              write(*,*) "WARNING3: UNC ZERO: ", un(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat
+      endif
 !
 ! For Z, itc==itp (itp was set by addiag):
       z(:,:,:,itc) = z(:,:,:,itp)
@@ -563,6 +836,62 @@
 ! Get high latitude (Heelis or Weimer) colatitudes, NH pfrac, and poten phihm.
 !  If Weimer is used, then theta0,phid etc is changed before use in aurora
 !   in dynamics.
+
+      if (TNcheck) then
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING33: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING33: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING33: UN NM ZERO: ", un_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itp))) ) then
+              write(*,*) "WARNING33: UN ZERO: ", un(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (tn(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itc))) ) then
+              write(*,*) "WARNING33: TNC ZERO: ", tn(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING33: TNC NM ZERO: ", tn_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING33: UNC NM ZERO: ", un_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itc))) ) then
+              write(*,*) "WARNING33: UNC ZERO: ", un(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat
+      endif
 !
       if (potential_model == 'WEIMER05'.or.
      |    potential_model == 'WEIMER') then
@@ -607,6 +936,63 @@
 ! Model dynamics. Sub dynamics calls physics, chemistry, and dynamics
 ! routines for current time step:
 !
+      
+      if (TNcheck) then
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING34: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING34: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING34: UN NM ZERO: ", un_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itp))) ) then
+              write(*,*) "WARNING34: UN ZERO: ", un(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (tn(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itc))) ) then
+              write(*,*) "WARNING34: TNC ZERO: ", tn(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING34: TNC NM ZERO: ", tn_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING34: UNC NM ZERO: ", un_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itc))) ) then
+              write(*,*) "WARNING34: UNC ZERO: ", un(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat
+      endif
+
       call timer(time0_dynamics,time1_dynamics,'DYNAMICS',0,0)
       call dynamics(nstep,istep)
       call timer(time0_dynamics,time1_dynamics,'DYNAMICS',1,0)
@@ -614,9 +1000,67 @@
       if (timing%level >= 2.and.time2print(nstep,istep))
      |  write(6,"('Time in DYNAMICS =     ',f12.2,
      |    ' Advance: step ',i5)") time1_dynamics,istep
+
+!            call process_import
 !
 ! Call dynamo if namelist idynamo > 0:
 !
+      if (TNcheck) then
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING5: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING5: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING5: UN NM ZERO: ", un_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itp))) ) then
+              write(*,*) "WARNING5: UN ZERO: ", un(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (tn(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itc))) ) then
+              write(*,*) "WARNING5: TNC ZERO: ", tn(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING5: TNC NM ZERO: ", tn_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING5: UNC NM ZERO: ", un_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itc))) ) then
+              write(*,*) "WARNING5: UNC ZERO: ", un(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat
+      endif
+
       if (idynamo > 0) then
         if (calendar_advance > 0) then
           if (adv) call apxparm(iyear+iday/366.)
@@ -642,6 +1086,15 @@
      |      i4)") istep
           call timer(time0,time1,"MAGPRES_GRAV",1,0)
         endif ! current_pg > 0
+
+        !
+! Prepare neutral inputs for parallel dynamo:
+! Calculate vertical velocity wn:
+        call calc_wn(
+     |    w    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    scht (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |    wn   (lev0:lev1,lon0:lon1,lat0:lat1),     ! output
+     |    1,nlevp1,lon0,lon1,lat0,lat1)
 
         call mpi_timer('dynamo_inputs',0,0)
         call dynamo_inputs(
@@ -690,6 +1143,63 @@
      |    write(6,"('Note: idynamo=',i3,' -> dynamo was not called')")
      |      idynamo
       endif ! idynamo
+
+      if (TNcheck) then
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING51: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING51: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING51: UN NM ZERO: ", un_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+            endif
+            if ( (un(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itp))) ) then
+              write(*,*) "WARNING51: UN ZERO: ", un(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (tn(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itc))) ) then
+              write(*,*) "WARNING51: TNC ZERO: ", tn(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING51: TNC NM ZERO: ", tn_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING51: UNC NM ZERO: ", un_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itc))) ) then
+              write(*,*) "WARNING51: UNC ZERO: ", un(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat
+      endif
+
 !
       if (any(nudge_f4d)) then
         if (latbeg<latend .and.
@@ -733,6 +1243,66 @@
             endif
           enddo
         endif
+      endif
+
+      if (TNcheck) then
+      do lat=lat0,lat1
+        do i=lonbeg5,lonend5
+          do k=lev0,lev1-1
+
+            if ( (tn(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itp))) ) then
+              write(*,*) "WARNING6: TN ZERO: ", tn(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING6: TN NM ZERO: ", tn_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un_nm(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itp))) ) then
+              write(*,*) "WARNING6: UN NM ZERO: ", un_nm(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un(k,i,lat,itp) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itp))) ) then
+              write(*,*) "WARNING6: UN ZERO: ", un(k,i,lat,itp)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (tn(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn(k,i,lat,itc))) ) then
+              write(*,*) "WARNING6: TN ZERO: ", tn(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+
+            if ( (tn_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(tn_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING6: TN NM ZERO: ", tn_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un_nm(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un_nm(k,i,lat,itc))) ) then
+              write(*,*) "WARNING6: UN NM ZERO: ", un_nm(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+            if ( (un(k,i,lat,itc) == 0.0) .or. 
+     |  (.not. ieee_is_finite(un(k,i,lat,itc))) ) then
+              write(*,*) "WARNING6: UN ZERO: ", un(k,i,lat,itc)
+              write(*,*) " at k,i,lat: ", k, i, lat
+              stop
+            endif
+          enddo ! k=lev0,lev1-1
+        enddo ! i=lon0-2,lon1+2
+      enddo ! lat
       endif
 !
 #ifdef VT
@@ -820,6 +1390,8 @@
 !
         if (debug) write(6,"('advance end iteration for step ',i4)")
      |    istep
+
+      write(*,*) "TGCM: END OF ADVANCE"
         goto 100
       endif
 !
