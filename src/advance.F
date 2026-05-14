@@ -110,6 +110,7 @@
      |  time0_init,     time1_init
       character(len=3) :: timing_type
       logical :: adv
+      real,dimension(nlevp1,lon0:lon1,lat0:lat1) :: z0,dzdt
       real,dimension(mlon0:mlon1,mlat0:mlat1) :: nscrrt
       real,dimension(:,:),allocatable :: wt,ext_fld,tmp_lbc
       real,dimension(:,:,:),allocatable :: tmp_f4d,nclbc
@@ -661,6 +662,15 @@
       if (debug) write(6,"('advance after pefield')")
       call mpi_timer('pefield',1,0)
 !
+! Save z for calculating dzdt
+      do j=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1
+            z0(k,i,j) = z(k,i,j,itp)
+          enddo
+        enddo
+      enddo
+!
 ! Calculate vc, barm, xnmbar, and z (tn,o2,o1,vn are input).
 !
       call addiag(
@@ -682,6 +692,17 @@
      |  lon0,lon1,1,nlevp1,lat0,lat1)
 !   
       if (debug) write(6,"('advance after addiag')")
+!
+! Calculate pressure surface motion
+      do j=lat0,lat1
+        do i=lon0,lon1
+          do k=lev0,lev1
+            dzdt(k,i,j) = (z(k,i,j,itp)-z0(k,i,j))/dt
+          enddo
+        enddo
+        call addfld('DZDT','Pressure surface motion','cm/s',
+     |    dzdt(:,:,j),'lev',lev0,lev1,'lon',lon0,lon1,j)
+      enddo
 !
 ! Define boundary latitudes -1,0 across the south pole, and
 !   nlat+1,nlat+2 across the north pole:
@@ -1003,6 +1024,24 @@
 
 !            call process_import
 !
+! Calculate vertical velocity wn:
+      call calc_wn(
+     |  w    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |  scht (lev0:lev1,lon0:lon1,lat0:lat1,itp),
+     |  wn   (lev0:lev1,lon0:lon1,lat0:lat1),     ! output
+     |  1,nlevp1,lon0,lon1,lat0,lat1)
+!
+! Calculate vertical velocity relative to constant altitude
+      do j=lat0,lat1
+        do i=lon0,lon1
+          do k=levd0,levd1
+            wnc(k,i,j) = wn(k,i,j)+dzdt(k,i,j)
+          enddo
+        enddo
+        call addfld('WNC','Vertical velocity','cm/s',
+     |    wnc(:,lon0:lon1,j),'lev',lev0,lev1,'lon',lon0,lon1,j)
+      enddo
+!
 ! Call dynamo if namelist idynamo > 0:
 !
       if (TNcheck) then
@@ -1089,21 +1128,15 @@
 
         !
 ! Prepare neutral inputs for parallel dynamo:
-! Calculate vertical velocity wn:
-        call calc_wn(
-     |    w    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
-     |    scht (lev0:lev1,lon0:lon1,lat0:lat1,itp),
-     |    wn   (lev0:lev1,lon0:lon1,lat0:lat1),     ! output
-     |    1,nlevp1,lon0,lon1,lat0,lat1)
-
+!
         call mpi_timer('dynamo_inputs',0,0)
         call dynamo_inputs(
      |    un   (lev0:lev1,lon0:lon1,lat0:lat1,itp),
      |    vn   (lev0:lev1,lon0:lon1,lat0:lat1,itp),
      |    wn   (lev0:lev1,lon0:lon1,lat0:lat1),
      |    z    (lev0:lev1,lon0:lon1,lat0:lat1,itp),
-     |    ped  (lev0:lev1,lon0:lon1,lat0:lat1),     ! from lamdas.F
-     |    hall (lev0:lev1,lon0:lon1,lat0:lat1),     ! from lamdas.F
+     |    ped  (lev0:lev1,lon0:lon1,lat0:lat1,itp),     ! from lamdas.F
+     |    hall (lev0:lev1,lon0:lon1,lat0:lat1,itp),     ! from lamdas.F
      |    1,nlevp1,lon0,lon1,lat0,lat1)
         call mpi_timer('dynamo_inputs',1,0)
         if (debug) write(6,"('advance after dynamo_inputs: istep=',

@@ -107,10 +107,20 @@ Support for eclipse solar EUV masking is added (Tong Dang, Jiuhou Lei).
 ### Lower Boundary Forcing by External Data
 Support for lower boundary forcing by external data (SD nudging) (Haonan Wu, Xian Lu).
 
+## Data Files
+
+The input and supporting data files required for TIEGCM v3.0 are available here:
+
+- [TIEGCM Data Files](https://bit.ly/4lddXZC)
+
+These files include the datasets needed to run the model and support various configuration options.
+
+> It is recommended to download and place these files in the appropriate location before building or running the model.
+
 ## Utility Tools
 
 ### TIEGCMrun
 Tiegcmrun is a Python tool (/tiegcmrun directory) that is used to compile and execute tiegcm in an automated fashion. Tiegcmrun can be executed interactively on the command line. See example of usage under [QuickStart](https://tiegcm-docs.readthedocs.io/en/latest/tiegcm/quickstart.html).
 
-### [TIEGCMpy](https://tiegcmpy.readthedocs.io/en/latest/)
-Tiegcmpy is a Python tool ([Tiegcmpy github](https://github.com/NCAR/tiegcmpy)) that is used for post processing and data visualization of TIEGCM outputs. Tiegcmpy can be executed interactively on the command line or as an API in a python script. See example of usage [TIEGCMpy Docs](https://tiegcmpy.readthedocs.io/en/latest/).
+### [GCMProcpy](https://gcmprocpy.readthedocs.io/en/latest/)
+Tiegcmpy is a Python tool ([GCMProcpy github](https://github.com/NCAR/gcmprocpy)) that is used for post processing and data visualization of TIEGCM outputs. Tiegcmpy can be executed interactively on the command line or as an API in a python script. See example of usage [GCMProcpy Docs](https://gcmprocpy.readthedocs.io/en/latest/).

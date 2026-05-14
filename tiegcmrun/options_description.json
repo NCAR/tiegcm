@@ -526,7 +526,7 @@
         "SECFLDS":{
             "LEVEL": "BASIC",
             "prompt": "Secondary Output Fields",
-            "default": ["TN","UN","VN","NE","TEC","POTEN","Z","ZG"],
+            "default": ["TN","UN","VN","O2","O1","HE","N2","N2D","N4S","NO","NE","Z","WN","DEN","TEC"],
             "description": "Names of history fields to be outputted. These may be either fields that are also saved on primary histories (so-called 'prognostic' fields), fields that have been requested via addfld calls in the source code, or fields available via the diagnostics module.",
             "warning": null
         },
