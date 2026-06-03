@@ -708,7 +708,6 @@
 !   nlat+1,nlat+2 across the north pole:
 !
       if (TNcheck) then
-            write(*,*) "TGCM: TCHECK2"
       do lat=lat0,lat1
         do i=lonbeg5,lonend5
           do k=lev0,lev1-1
@@ -1423,8 +1422,6 @@
 !
         if (debug) write(6,"('advance end iteration for step ',i4)")
      |    istep
-
-      write(*,*) "TGCM: END OF ADVANCE"
         goto 100
       endif
 !

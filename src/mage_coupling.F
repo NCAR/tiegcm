@@ -251,12 +251,12 @@
       enddo
       if (isSmite) then
           do v=1,nvingeo
-            if (mytid == 0) then
-            write(*,*) "T Check: ", v, 
-     |      maxval(gvar3dpass(:,:,:,v)), minval(gvar3dpass(:,:,:,v))
-            write(*,*) "T SHAPE: ", v, 
-     |      shape(gvar3dpass(:,:,:,v)), shape(f3d(ivinlist(v))%data)
-            endif
+    !         if (mytid == 0) then
+    !         write(*,*) "T Check: ", v, 
+    !  |      maxval(gvar3dpass(:,:,:,v)), minval(gvar3dpass(:,:,:,v))
+    !         write(*,*) "T SHAPE: ", v, 
+    !  |      shape(gvar3dpass(:,:,:,v)), shape(f3d(ivinlist(v))%data)
+    !         endif
             if ((maxval(gvar3dpass(:,:,:,v)) .eq. 0.0_rp) .and. 
      | (minval(gvar3dpass(:,:,:,v)) .eq. 0.0_rp)) then
               gvar3dpass(:,:,:,v) = 0.1_rp
@@ -266,6 +266,7 @@
             ! f3d has ped and hall
             ! f4d has un, vn, z
             ! 
+
             do i = lat0,lat1
             f3d(ivinlist(v))%data(:,lon0:lon1,i) = 
      |      gvar3dpass(:,i,lon0:lon1,v)
@@ -492,8 +493,6 @@
 
       ! Allocate request array here
 
-      write(*,*) "T Starting Export Send"
-
       ! Send the export data
       do i=1,CplCommSize
         ! Skip Self
@@ -523,7 +522,6 @@
      |              IAm(i)
               end select
       enddo
-      write(*,*) "T Done Export Sends"
 
       ! Deallocate arrays
       do i=1,CplCommSize
@@ -669,7 +667,7 @@
 
       subroutine prep_export_volt(modeltime,volt_out)
         use params_module,only: nlon,nlonp4,nlat,nlevp1
-        use fields_module,only: f4d,itp,itc,f3d
+        use fields_module,only: f4d,itp,itc
         use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f3d,mytid,
      |  ntask,handle_mpi_err
 
@@ -687,12 +685,12 @@
       if (.not. allocated(f3d_glb))
      |  allocate(f3d_glb(nlevp1,nlonp4,nlat,nvoutgeo))
 
-      do v =3,nvoutgeo
+      do v =1,nvoutgeo
        f3d_sub(:,:,:,v) = 
      | f4d(ivoutlist(v))%data(:,lon0:lon1,lat0:lat1,itp)
       enddo
-      f3d_sub(:,:,:,1) = f3d(ivoutlist(1))%data(:,lon0:lon1,lat0:lat1)
-      f3d_sub(:,:,:,2) = f3d(ivoutlist(2))%data(:,lon0:lon1,lat0:lat1)
+      !f3d_sub(:,:,:,1) = f3d(ivoutlist(1))%data(:,lon0:lon1,lat0:lat1)
+      !f3d_sub(:,:,:,2) = f3d(ivoutlist(2))%data(:,lon0:lon1,lat0:lat1)
 
       call mp_gather_f3d(f3d_sub,f3d_glb,
      |  lon0,lon1,lat0,lat1,ntask,nvoutgeo)
