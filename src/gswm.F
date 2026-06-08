@@ -109,8 +109,8 @@
 !
       dskfile = ' '
       call getfile(ncfile,dskfile)
-      write(6,"(/,72('-'))")
-      write(6,"('Reading GSWM data file ',a)") trim(ncfile)
+!      write(6,"(/,72('-'))")
+!      write(6,"('Reading GSWM data file ',a)") trim(ncfile)
 !
 ! Open netcdf file:
       istat = nf_open(dskfile,NF_NOWRITE,ncid)
@@ -271,8 +271,8 @@
 !
 ! Close the file:
       istat = nf_close(ncid)
-      write(6,"('Completed read from GSWM data file ',a)") trim(ncfile)
-      write(6,"(/,72('-'))")
+!      write(6,"('Completed read from GSWM data file ',a)") trim(ncfile)
+!      write(6,"(/,72('-'))")
       end subroutine rdgswm
 !-----------------------------------------------------------------------
       subroutine mkgswm(iday,isecs,type)
