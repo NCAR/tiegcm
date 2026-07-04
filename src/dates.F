@@ -1,4 +1,3 @@
-#ifdef GAMERA
 !Various simple routines for managing time/dates
         module dates
             implicit none
@@ -367,12 +366,3 @@
             end subroutine julian
 
         end module dates
-
-#else
-!-----------------------------------------------------------------------
-      ! Intel Fortran compiler chokes on empty source files.
-      ! This subroutine is empty so this file will have SOMETHING in it
-      subroutine dates_null
-      end subroutine dates_null
-!-----------------------------------------------------------------------
-#endif

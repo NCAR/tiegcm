@@ -15,9 +15,7 @@
      |  nmlatp1,nmlonp1,nmlat,nmlon,rp
       use input_module,only: oneway
       !use pdynamo_module,only: phihm
-#ifdef GAMERA
       use mage_oneway
-#endif
       implicit none
 
       real(rp),dimension(nlonp4,nlat) ::
@@ -141,7 +139,6 @@
       avar2d = 0.0_rp
       gvar2d = 0.0_rp
 
-#ifdef GAMERA
       if (.not. oneway) then
       if (mytid == 0) then
 
@@ -183,13 +180,11 @@
       else
         call ca_receive(gpot,geng,gflx,gpotm)
       endif
-#endif
       end subroutine import_mage
 !-----------------------------------------------------------------------
 
       subroutine process_import
 
-#ifdef GAMERA
       use params_module,only: nlatp2,nlon,nlonp1,nlonp2,gmlat,gmlon
       use input_module,only: ctpoten
       use cons_module,only: pi,dlatm,dlonm
@@ -360,9 +355,6 @@
 !        aurllbN = min(temp,aurllbN)
 !        temp = maxval(aurorabc1d(:,2))
 !        aurllbS = min(temp,aurllbS)
-
-
-#endif
 
       end subroutine process_import
 
@@ -924,9 +916,7 @@
       subroutine finalize_coupling
 
       if (oneway) then
-#ifdef GAMERA
         call ca_close
-#endif
       endif
 
       end subroutine finalize_coupling

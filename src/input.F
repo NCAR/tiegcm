@@ -61,7 +61,8 @@
      |  ntask_maglat,    ! number of tasks in mag latitude  dimension (not namelist)
      |  ntask_maglon,    ! number of tasks in mag longitude dimension (not namelist)
      |  calc_helium,     ! calculate helium if calc_helium=1, otherwise set he=0.
-     |  electron_heating
+     |  electron_heating,
+     |  coupling_mage    ! logical to couple to the MAGE model
       real(rp) ::
      |  tide(10),        ! semidiurnal tide amplitudes and phases
      |  tide2(2),        ! diurnal tide amplitude and phase
@@ -389,6 +390,8 @@
       nudge_delta = spval
       nudge_power = spval
       nudge_alpha = spval
+
+      coupling_mage = 0
 
       end subroutine inp_init
 !-------------------------------------------------------------------
@@ -1471,7 +1474,7 @@
         write(6,"(11x,'Total number of secondary histories this ',
      |    'run = ',i5)") nhists_total
         write(6,"(11x,'Maximum number of secondary histories per ',
-     |    'file = ',i3,/)") mxhist_sech
+     |    'file = ',i4,/)") mxhist_sech
         call shutdown('SECOUT')
       endif
 !
@@ -1500,7 +1503,7 @@
      |    'requested (SECFLDS).')")
         write(6,"('I will write the default minimum set of ',
      |    'fields to secondary histories:')")
-        write(6,"(4a12)") secflds_mandatory
+        write(6,"(4a16)") secflds_mandatory
         do i=1,size(secflds_mandatory)
           secflds(i) = secflds_mandatory(i)
         enddo
@@ -1686,9 +1689,9 @@
       n = (size(secflds)-count(len_trim(secflds)==0))
       if (n > 0)
      |  write(6,"('  secflds (secondary history fields)',
-     |    ' =',/,(4x,5a12))") (secflds(i),i=1,n)
+     |    ' =',/,(4x,5a16))") (secflds(i),i=1,n)
       write(6,"('  Maximum number of histories per secondary file = ',
-     |  i3)") mxhist_sech
+     |  i4)") mxhist_sech
       write(6,"('  Number of bytes for values of fields on secondary',
      |  ' histories (sech_nbyte) = ',i3)") sech_nbyte
 

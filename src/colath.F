@@ -15,6 +15,7 @@
       use pdynamo_module,only: nmlat0,pfrac ! pfrac is output
       use params_module,only: nmlonp1,rp
       use mage_coupling_module,only: aurllbN,aurllbS ! colat in degrees
+      use input_module,only: coupling_mage
       
       implicit none
 !
@@ -23,7 +24,7 @@
       real(rp) :: sinlat,coslat,aslonc,ofdc,cosofc,sinofc,crit1deg
       real(rp),dimension(nmlonp1,nmlat0) :: colatc
 
-#ifdef GAMERA
+      if (coupling_mage) then
 ! Lin, 09/2021: Use dynamic auroral boundary defined by the lowest lat where numflux<1e6
         !crit(1) = (max(aurllbN,aurllbS)+5._rp)/rtd
 ! Lin, 10/2021: using 5 deg wide merging zone tends to
@@ -50,14 +51,14 @@
 !            crit(1) = 45._rp/rtd
 !            crit(2) = crit(1) + (crit1deg*0.5_rp-12.5_rp)/rtd
 !        endif
-#else
+      else
 ! 01/11 bae:  Revise crit in rad so crit(1)=theta0(=crad in rad)+5deg, crit(2)=crit(1)+15deg
         crit1deg = max(15._rp,0.5_rp*(theta0(1)+theta0(2))*rtd + 5._rp)
         crit1deg = min(30._rp,crit1deg)
 ! To make the same as in cons.F, comment out next line
         crit(1) = crit1deg/rtd
         crit(2) = crit(1) + 15._rp/rtd
-#endif
+      endif
 !
 ! offc(2), dskofc(2) are for northern hemisphere aurora (see aurora.F)
 ! 01/11 bae:  Revised so that use average of both hemispheres instead of NH only
