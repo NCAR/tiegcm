@@ -1,7 +1,7 @@
 
 #ifdef GAMERA
       module mage_oneway
-      use input_module,only: mixfile,mxlen_filename
+      use input_module,only: mixfile,mxlen_filename,Abbe
       use params_module,only: nlat, nlon, rp
       use nchist_module,only:handle_ncerr
       use dates
@@ -15,6 +15,7 @@
       real*8, allocatable,dimension(:,:) :: mixX,mixY,mixZ
       real*8, allocatable,dimension(:,:) :: mixlat,mixlon,mixcolat
       real*8, allocatable,dimension(:,:) :: mixPotN,mixEngN,
+     |  mixSparN,mixSparS,
      |  mixFluxN,mixBEngN,mixBFluxN,mixCEngN,mixCFluxN,mixAurTypeN,
      |  mixDiffuseEngN,mixDiffuseFluxN,mixMonoEngN,mixMonoFluxN
       real*8, allocatable,dimension(:,:) :: mixPotS,mixEngS,
@@ -207,6 +208,9 @@
       if (.not.allocated(mixFluxN)) then
          allocate(mixFluxN(nmixlat,nmixlon))
       endif
+      if (.not.allocated(mixSparN)) then
+         allocate(mixSparN(nmixlat,nmixlon))
+      endif
       if (.not.allocated(mixBEngN)) then
          allocate(mixBEngN(nmixlat,nmixlon))
       endif
@@ -243,6 +247,9 @@
       endif
       if (.not.allocated(mixFluxS)) then
          allocate(mixFluxS(nmixlat,nmixlon))
+      endif
+      if (.not.allocated(mixSparS)) then
+         allocate(mixSparS(nmixlat,nmixlon))
       endif
       if (.not.allocated(mixBEngS)) then
          allocate(mixBEngS(nmixlat,nmixlon))
@@ -294,6 +301,7 @@
       mixPotN   = 0.0
       mixEngN   = 0.0
       mixFluxN  = 0.0
+      mixSparN  = 0.0
       mixBEngN  = 0.0
       mixBFluxN = 0.0
       mixCEngN  = 0.0
@@ -307,6 +315,7 @@
       mixPotS   = 0.0
       mixEngS   = 0.0
       mixFluxS  = 0.0
+      mixSparN  = 0.0
       mixBEngS  = 0.0
       mixBFluxS = 0.0
       mixCEngS  = 0.0
@@ -624,16 +633,30 @@
       call read2DVariable("Potential NORTH",mixPotN)
       call read2DVariable("Number flux NORTH",mixFluxN)
       call read2DVariable("Average energy NORTH",mixEngN)
-      call read2DVariable("BBE number flux NORTH",mixBFluxN)
-      call read2DVariable("BBE average energy NORTH",mixBEngN)
+!      call read2DVariable("BBE number flux NORTH",mixBFluxN)
+!      call read2DVariable("BBE average energy NORTH",mixBEngN)
+      call read2DVariable("HL Field-aligned Poynting flux NORTH",
+     |  mixSparN)
+!      ! Abbe = 2.5 ! start with the optimal value from Zhang+2015, Figure 6c.
+!      St%Vars(:,:,BBE_NFLX) = 3.D9*(aurora%Abbe*max(St%SVars(:,:,SSPAR)*signOfJ,0.D0))**0.47 ! [#/cm^2/s], eq (25).
+!      St%Vars(:,:,BBE_EAVG) = 0.41*(aurora%Abbe*max(St%SVars(:,:,SSPAR)*signOfJ,0.D0))**0.03 ! [keV], eq (26).
+      mixBFluxN = 3.D9*Abbe*max(mixSparN,0.D0)**0.47 ! [#/cm^2/s]
+      mixBEngN  = 0.41*Abbe*max(mixSparN,0.D0)**0.03 ! [keV]
       call read2DVariable("Auroral model type NORTH",mixAurTypeN)
 
       ! SOUTH
       call read2DVariable("Potential SOUTH",mixPotS)
       call read2DVariable("Number flux SOUTH",mixFluxS)
       call read2DVariable("Average energy SOUTH",mixEngS)
-      call read2DVariable("BBE number flux SOUTH",mixBFluxS)
-      call read2DVariable("BBE average energy SOUTH",mixBEngS)
+!      call read2DVariable("BBE number flux SOUTH",mixBFluxS)
+!      call read2DVariable("BBE average energy SOUTH",mixBEngS)
+      call read2DVariable("HL Field-aligned Poynting flux SOUTH",
+     |  mixSparS)
+!      ! Abbe = 2.5 ! start with the optimal value from Zhang+2015, Figure 6c.
+!      St%Vars(:,:,BBE_NFLX) = 3.D9*(aurora%Abbe*max(St%SVars(:,:,SSPAR)*signOfJ,0.D0))**0.47 ! [#/cm^2/s], eq (25).
+!      St%Vars(:,:,BBE_EAVG) = 0.41*(aurora%Abbe*max(St%SVars(:,:,SSPAR)*signOfJ,0.D0))**0.03 ! [keV], eq (26).
+      mixBFluxS = 3.D9*Abbe*max(-mixSparS,0.D0)**0.47 ! [#/cm^2/s]
+      mixBEngS  = 0.41*Abbe*max(-mixSparS,0.D0)**0.03 ! [keV]
       call read2DVariable("Auroral model type SOUTH",mixAurTypeS)
 
       if (mytid==0) then

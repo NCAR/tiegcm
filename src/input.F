@@ -70,6 +70,7 @@
      |  f107a,           ! 10.7 cm average (81-day) solar flux
      |  colfac,          ! collision factor
      |  joulefac,        ! joule heating factor (see sub qjoule_tn (qjoule.F))
+     |  Abbe,            ! coef in BBE parameterization from Spar
      |  opdiffcap,       ! Maximum O+ diffusion (see sub rrk in oplus.F)
      |  opdiffrate,      ! vertical decaying rate of O+ diffusion cap
      |  opdifflev,       ! transition altitude of O+ diffusion cap
@@ -194,7 +195,7 @@
      |  secout,secstart,secstop,sechist,secflds,
      |  potential_model,eddy_dif,dynamo,tide,tide2,tide3m3,
      |  f107,f107a,power,ctpoten,bximf,byimf,bzimf,swvel,swden,al,
-     |  kp,colfac,joulefac,aurora,gpi_ncfile,gswm_mi_di_ncfile,
+     |  kp,colfac,joulefac,Abbe,aurora,gpi_ncfile,gswm_mi_di_ncfile,
      |  gswm_mi_sdi_ncfile,gswm_nm_di_ncfile,gswm_nm_sdi_ncfile,
      |  mxhist_prim,mxhist_sech,ntask_lat,ntask_lon,
      |  start_day,start_year,calendar_advance,see_ncfile,
@@ -315,6 +316,7 @@
       ntask_lon = ispval
       colfac  = spval
       joulefac= spval
+      Abbe    = spval
       calc_helium = ispval
       te_cap = 10000._rp
       ti_cap = 10000._rp
@@ -625,6 +627,12 @@
       if (joulefac==spval) then
         joulefac = 1.5
         write(6,"('Input: Using default joulefac = ',f9.2)") joulefac
+      endif
+!
+! BBE parameter:
+      if (Abbe==spval) then
+        Abbe = 25.0
+        write(6,"('Input: Using default Abbe = ',f9.2)") Abbe
       endif
 !
 ! O+ diffusion cap:
@@ -1719,6 +1727,8 @@
       write(6,"('  colfac = ',f9.3,' (collision factor)')") colfac
       write(6,"('  joulefac = ',f9.3,' (joule heating factor)')") 
      |  joulefac
+      write(6,"('  Abbe = ',f9.3,' (BBE parameter)')") 
+     |  Abbe
       write(6,"('  diffcap  = ',es12.4,' (Maximum O+ diffusion)')") 
      |  opdiffcap
       write(6,"('  calc_helium = ',i4,' (0/1 flag for helium)')") 
