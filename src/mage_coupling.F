@@ -84,7 +84,6 @@
       glonp1(1:nlonp1-1) = glon
       glonp1(nlonp1) = glon(1)+360.0_rp
 
-#if defined (GAMERA) || defined (HIDRA)
       do i=1,CplCommSize
             ! Skip Self
             if (i == CplRank+1) continue
@@ -115,7 +114,6 @@
               end select
       enddo
       write(*,*) "T Done Coupling Init"
-#endif
 
       end subroutine initialize_coupling
 !-----------------------------------------------------------------------
@@ -372,7 +370,6 @@
       real(rp),dimension(:,:,:,:), allocatable :: hidraout
 
       integer :: nreq,i
-#if defined (GAMERA) || defined (HIDRA)
       ! Prepare the export data
       hidra_prep = .false.
       nreq = 0
@@ -482,7 +479,6 @@
       enddo
 
       ! Deallocate request array here
-#endif
       end subroutine export_mage
 !-----------------------------------------------------------------------
       subroutine prep_export_hidra(modeltime,hidra_out)
