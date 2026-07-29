@@ -221,16 +221,6 @@
 
       call mp_coupling(mytid)
 
-!
-!@#ifdef GAMERA
-!@      if (doVoltCommSkip) then
-! gam2volt
-! WARNING THIS IS HARDCODED TO OCCUR ONCE. MAY CAUSE ISSUES WITH MULTIPLE COUPLINGS
-!@      call mpi_comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, 
-!@     |  mytid, tmpComm, ier)
-!@      endif
-!@#endif
-!
 ! Allocate array of tasks (user defined type(task)):
       allocate(tasks(0:ntask-1),stat=ier)
       if (ier /= 0) then
@@ -241,6 +231,7 @@
       end subroutine mp_init
 !-----------------------------------------------------------------------
       subroutine mp_coupling(mytid)
+      use input_module,only: coupling_mage
       integer :: mytid
       integer :: ier,color,i
 
@@ -281,6 +272,7 @@
                 call shutdown('mpi_comm_free error')
             endif
             CplComm = MPI_COMM_NULL
+            coupling_mage = 0
         else
     
     ! There is another process registered in CplComm (REMIX root)
@@ -326,11 +318,14 @@
         endif
             write(*,'(A,I0,A,I0,A,I0,A)') "T COUPLING to ",CplCommSize,
      |       " Models on ",CplRank," Rank on ",CplComm," Comm"
+
+            coupling_mage = 1
         endif
     
         call MPI_BCAST(CplCommSize,1,MPI_INTEGER,0,TIEGCM_WORLD,ier)
         if (.not.allocated(IAm)) allocate(IAm(CplCommSize))
         call MPI_BCAST(IAm,CplCommSize,MPI_INTEGER,0,TIEGCM_WORLD,ier)
+        call MPI_BCAST(coupling_mage,1,MPI_INTEGER,0,TIEGCM_WORLD,ier)
 
       end subroutine mp_coupling
 !-----------------------------------------------------------------------

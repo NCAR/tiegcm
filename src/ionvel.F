@@ -16,6 +16,7 @@
       use magfield_module,only: rjac,xb,yb,zb,bmod
       use addfld_module,only: addfld
       use mpi_module,only: mp_periodic_f3d
+      use input_module,only: coupling_mage
       implicit none
 !
 ! Args:
@@ -101,13 +102,13 @@
             wi(k,i,lat) =  (eex(k,i)*xb(i-2,lat)-eey(k,i)*yb(i-2,lat))*
      |        1.e6/bmod(i-2,lat)**2
 
-#ifdef GAMERA
+            if (coupling_mage) then
             ! MAGE modification
             if (vi(k,i,lat) > 2000.0) vi(k,i,lat) = 2000.0
             if (ui(k,i,lat) > 2000.0) ui(k,i,lat) = 2000.0
             if (vi(k,i,lat) < -2000.0) vi(k,i,lat) = -2000.0
             if (ui(k,i,lat) < -2000.0) ui(k,i,lat) = -2000.0
-#endif
+            endif
 
           enddo ! i=lon0,lon1
         enddo ! k=lev0,lev1
