@@ -16,7 +16,7 @@
      |  mp_mag_periodic_f2d
       use heelis_module,only: phihm
       use init_module,only: istep
-      use input_module,only: current_pg,current_kq
+      use input_module,only: current_pg,current_kq, coupling_mage
       use fields_module,only: nsrhs
       implicit none
 !
@@ -220,12 +220,12 @@
 ! Pham, 2018
 ! This broadcast the new MIX phihm to all processors
 ! the MIX phihm was transformed only on root task
-#ifdef GAMERA
+      if (coupling_mage) then
       call mp_bcast_real(phihm,nmlonp1*nmlat,0)
       call addfld ('PHIHM','REMIX Electric Potential',
      |    'V',phihm(mlon0:mlon1,mlat0:mlat1),
      |    'mlon',mlon0,mlon1,'mlat',mlat0,mlat1,0)
-#endif
+      endif
 !
 ! rim1 after solver is needed for highlat_poten. rim_glb is distributed 
 ! to subdomains as rim1, and mag halos set. This will overwrite rim1 from 
@@ -3132,8 +3132,6 @@
         c0(i,nmlat0,10) = 1.
       enddo
 !
-#ifdef GAMERA
-!
 ! 3/20/14 btf: mage coupling not yet ready in pdynamo (however,
 !   this part will not have to be parallelized, since we are in
 !   global domain here anyway).
@@ -3142,15 +3140,9 @@
 !
       if (oneway) then
         call mage_pot2mag
-      else
+      elseif (coupling_mage) then
         call mage_mag2mag
       endif
-c      do jj=1,nmlat
-c       do i=1,nmlonp1
-c        write(6,*)phihm(i,jj),i,jj
-c       enddo
-c      enddo
-#endif
 !
 ! Modify stencils and RHS so that the NH high lat potential is inserted at
 !  high latitude.  The SH high lat potential will be added back later.

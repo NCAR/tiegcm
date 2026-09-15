@@ -1,4 +1,3 @@
-#ifdef GAMERA
         module geopack
 
         contains
@@ -2160,11 +2159,3 @@ C
 c
 
         end module geopack
-#else
-!-----------------------------------------------------------------------
-      ! Intel Fortran compiler chokes on empty source files.
-      ! This subroutine is empty so this file will have SOMETHING in it
-      subroutine geopack_null
-      end subroutine geopack_null
-!-----------------------------------------------------------------------
-#endif

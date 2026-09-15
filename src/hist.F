@@ -259,11 +259,7 @@
       h%tuv_lbc_intop = 0 ! this version writes "new" histories
       h%lbc = zibot
       h%ntask_mpi = 0
-#ifdef GAMERA
-      h%coupled_mage = 1
-#else
       h%coupled_mage = 0
-#endif
 !
 ! If istep==0, h%f107, etc were defined from source history: 
       if (istep > 0) then
