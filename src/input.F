@@ -391,8 +391,6 @@
       nudge_power = spval
       nudge_alpha = spval
 
-      coupling_mage = 0
-
       end subroutine inp_init
 !-------------------------------------------------------------------
       subroutine inp_model(ntask)
