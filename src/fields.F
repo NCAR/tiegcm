@@ -17,9 +17,9 @@
      |  mxfsech,spval,nmlat,nmlonp1,mlev0,mlev1
       implicit none
       integer,parameter :: 
-     |  nf4d          = 36, ! number of 4-d fields
-     |  nf4d_hist     = 29, ! number of 4-d fields on primary histories
-     |  nf3d          = 48  ! number of 3-d fields
+     |  nf4d          = 38, ! number of 4-d fields
+     |  nf4d_hist     = 31, ! number of 4-d fields on primary histories
+     |  nf3d          = 47  ! number of 3-d fields
       real,parameter ::
      |  field_initval = 0.  ! initialization value for fields data
       integer,parameter :: 
@@ -52,9 +52,9 @@
      |  i_ar     ,i_ti     ,i_te     ,i_ne     ,i_w      ,
      |  i_o2p    ,i_z      ,i_poten  ,i_tn_nm  ,i_un_nm  ,
      |  i_vn_nm  ,i_o2_nm  ,i_o1_nm  ,i_he_nm  ,i_op_nm  ,
-     |  i_n2d_nm ,i_n4s_nm ,i_no_nm  ,i_ar_nm  ,i_mbar   ,
-     |  i_barm   ,i_xnmbar ,i_xnmbari,i_scht   ,i_schti  ,
-     |  i_vc
+     |  i_n2d_nm ,i_n4s_nm ,i_no_nm  ,i_ar_nm  ,i_ped    ,
+     |  i_hall   ,i_mbar   ,i_barm   ,i_xnmbar ,i_xnmbari,
+     |  i_scht   ,i_schti  ,i_vc
 !
 ! Allocatable target arrays for 4-d fields:
 ! Allocation will be:   tn(levd0:levd1,lond0 :lond1 ,latd0 :latd1 ,2)
@@ -66,9 +66,9 @@
      |  ar       ,ti       ,te       ,ne       ,w        ,
      |  o2p      ,z        ,poten    ,tn_nm    ,un_nm    ,
      |  vn_nm    ,o2_nm    ,o1_nm    ,he_nm    ,op_nm    ,
-     |  n2d_nm   ,n4s_nm   ,no_nm    ,ar_nm    ,mbar     ,
-     |  barm     ,xnmbar   ,xnmbari  ,scht     ,schti    ,
-     |  vc
+     |  n2d_nm   ,n4s_nm   ,no_nm    ,ar_nm    ,ped      ,
+     |  hall     ,mbar     ,barm     ,xnmbar   ,xnmbari  ,
+     |  scht     ,schti    ,vc
 !
 ! 3-d fields structure type:
 ! Data pointers will point to allocatable target arrays.
@@ -98,7 +98,7 @@
      |  i_lxx    ,i_lyy    ,i_lxy    ,i_lyx    ,i_qji_ti ,i_qji_tn ,
      |  i_cool_implicit    ,i_cool_explicit    ,
      |  i_hdt    ,i_hdu    ,i_hdv    ,i_hdo2   ,i_hdo1   ,i_hdhe   ,
-     |  i_ped    ,i_hall   ,i_lam1   ,i_zg     ,i_n2     ,i_wn     ,
+     |  i_wnc    ,i_lam1   ,i_zg     ,i_n2     ,i_wn     ,
      |  i_Fe     ,i_Fn     ,i_Etot   ,i_Qa     ,i_Q2
 !
 ! Allocatable target arrays 3-d:
@@ -113,7 +113,7 @@
      |  lxx      ,lyy      ,lxy      ,lyx      ,qji_ti   ,qji_tn   ,
      |  cool_implicit      ,cool_explicit      ,
      |  hdt      ,hdu      ,hdv      ,hdo2     ,hdo1     ,hdhe     ,
-     |  ped      ,hall     ,lam1     ,zg       ,n2       ,wn       ,
+     |  wnc      ,lam1     ,zg       ,n2       ,wn       ,
      |  Fe       ,Fn       ,Etot     ,Q1       ,Q2
 !
 ! 2-d field type (used for 2d secondary history fields):
@@ -175,7 +175,7 @@
      |  tlbc,     ulbc,     vlbc,     ! subdomains (lond0:lond1,latd0:latd1)
      |  tlbc_nm,  ulbc_nm,  vlbc_nm,  ! subdomains (lond0:lond1,latd0:latd1)
      |  gzigm1,   gzigm2,   gnsrhs,
-     !  azigm1,    azigm2,    nsrhs
+     |  azigm1,   azigm2,   nsrhs
 !
 ! Full 3d grid with all primary history fields for writing to netcdf
 ! history files. This will be allocated only on the root task 
@@ -461,6 +461,20 @@
       f4d(n)%vcoord = "midpoints"
       f4d(n)%data => ar_nm
       i_ar_nm = n ; n = n+1
+!
+      allocate(ped(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('PEDERSEN CONDUCTIVITY')")
+      f4d(n)%short_name = "PED"
+      f4d(n)%units = "S/m"
+      f4d(n)%data => ped
+      i_ped = n ; n = n+1
+!
+      allocate(hall(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
+      write(f4d(n)%long_name,"('HALL CONDUCTIVITY')")
+      f4d(n)%short_name = "HALL"
+      f4d(n)%units = "S/m"
+      f4d(n)%data => hall
+      i_hall = n ; n = n+1
 !
       allocate(mbar(levd0:levd1,lond0:lond1,latd0:latd1,2),stat=istat)
       write(f4d(n)%long_name,"('MEAN MOLECULAR WEIGHT')")
@@ -853,19 +867,12 @@
       f3d(n)%data => hdhe
       i_hdhe = n ; n = n+1
 !
-      allocate(ped(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('PEDERSEN CONDUCTIVITY')")
-      f3d(n)%short_name = "ped"
-      f3d(n)%units = " "
-      f3d(n)%data => ped
-      i_ped = n ; n = n+1
-!
-      allocate(hall(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
-      write(f3d(n)%long_name,"('HALL CONDUCTIVITY')")
-      f3d(n)%short_name = "hall"
-      f3d(n)%units = " "
-      f3d(n)%data => hall
-      i_hall = n ; n = n+1
+      allocate(wnc(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
+      write(f3d(n)%long_name,"('VERTICAL VELOCITY')")
+      f3d(n)%short_name = "WNC"
+      f3d(n)%units = "cm/s"
+      f3d(n)%data => wnc
+      i_wnc = n ; n = n+1
 !
       allocate(lam1(levd0:levd1,lond0:lond1,latd0:latd1),stat=istat)
       write(f3d(n)%long_name,"('LAMDA ION DRAG 1')")
