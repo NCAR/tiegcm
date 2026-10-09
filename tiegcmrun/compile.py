@@ -4,26 +4,35 @@ import subprocess
 import filecmp
 import sys
 from textwrap import dedent
-import logging
+from misc import mres_to_nres_grid, default_make_file, git_state, svn_revision_stamp, tiegcm_env
+
+def _gmake_clean(execdir):
+    """`gmake clean` in execdir; exits on failure so stale objects are never linked."""
+    rc = subprocess.run(['gmake', 'clean'], cwd=execdir).returncode
+    if rc != 0:
+        print(f">>> Error return {rc} from gmake clean in {execdir}; not building on stale objects <<<")
+        sys.exit(1)
+
 
 def compile_tiegcm(options, debug, coupling = False, hidra = False):
-    """
-    Compiles the TIEGCM model with the given options.
+    """Build TIE-GCM, restoring the caller's working directory afterwards."""
+    cwd = os.getcwd()
+    try:
+        _compile_tiegcm(options, debug, coupling, hidra)
+    finally:
+        os.chdir(cwd)
 
-    Args:
-        options (dict): A dictionary containing the model options.
-        debug (bool): A boolean indicating whether to enable debug mode.
-        coupling (bool): A boolean indicating whether to enable coupling.
 
-    Returns:None
-    """
+def _compile_tiegcm(options, debug, coupling = False, hidra = False):
+    """Compile TIE-GCM; `debug` builds a Fortran debug executable."""
     o = options
-    modeldir  = o["model"]["data"]["modeldir"]
-    execdir   = o["model"]["data"]["execdir"]
-    workdir = o["model"]["data"]["workdir"]
-    outdir = o["model"]["data"]["histdir"]
+    # absolute, since the build chdirs
+    modeldir  = os.path.abspath(o["model"]["data"]["modeldir"])
+    execdir   = os.path.abspath(o["model"]["data"]["execdir"])
+    workdir = os.path.abspath(o["model"]["data"]["workdir"])
+    outdir = os.path.abspath(o["model"]["data"]["histdir"])
     tgcmdata  = o["model"]["data"]["tgcmdata"]
-    utildir   = os.path.join(o["model"]["data"]["modeldir"],"scripts")
+    utildir   = os.path.join(modeldir,"scripts")
     try:
         input     = o["model"]["data"]["input_file"]
     except:
@@ -36,19 +45,27 @@ def compile_tiegcm(options, debug, coupling = False, hidra = False):
     vertres   = float(o["model"]["specification"]["vertres"])
     zitop     = float(o["model"]["specification"]["zitop"])
     mres      = float(o["model"]["specification"]["mres"])
-    nres_grid = float(o["model"]["specification"]["nres_grid"])
-    make      = o["model"]["data"]["make"]
+    nres_grid = o["model"]["specification"].get("nres_grid")
+    nres_grid = float(nres_grid) if nres_grid is not None else float(mres_to_nres_grid(mres))
+    make      = o["model"]["data"].get("make") or default_make_file(
+        modeldir, o["simulation"]["hpc_system"])
+    if not make:
+        print(f">>> No Make fragment for hpc_system {o['simulation']['hpc_system']}: "
+              f"set model.data.make <<<")
+        sys.exit(1)
     coupling  = coupling
     hidra     = hidra
 
     if coupling == True:
         modelexe = os.path.basename(o["model"]["data"]["coupled_modelexe"])
-        model = o["model"]["data"]["coupled_modelexe"]
+        model = os.path.abspath(o["model"]["data"]["coupled_modelexe"])
     else:
         modelexe = os.path.basename(o["model"]["data"]["modelexe"])
-        model = o["model"]["data"]["modelexe"]
+        model = os.path.abspath(o["model"]["data"]["modelexe"])
     debug = debug
-    
+    input = os.path.abspath(input) if input else input
+    output = os.path.abspath(output) if output else output
+
     try:
         os.makedirs(workdir)
     except:
@@ -71,79 +88,58 @@ def compile_tiegcm(options, debug, coupling = False, hidra = False):
         print(f">>> Cannot find model directory {utildir} <<<")
         sys.exit(1)
 
-    # Set srcdir based on modeldir
     srcdir = os.path.join(modeldir, 'src')
 
-    # Check if srcdir exists
     if not os.path.isdir(srcdir):
         print(f">>> Cannot find model source directory {srcdir} <<<")
         sys.exit(1)
 
-    # Convert srcdir to an absolute path
     srcdir = os.path.abspath(srcdir)  
 
     if tgcmdata == "None":
-        tgcmdata = os.environ['TIEGCMDATA']
+        tgcmdata = tiegcm_env("TIEGCMDATA")
         print(f"Set tgcmdata = {tgcmdata}")
 
     if not os.path.isdir(tgcmdata):
         print(f">>> Cannot find data directory {tgcmdata}")
 
-    # Check horizontal resolution
     if horires not in [5, 2.5, 1.25, 0.625]:
         print(f">>> Unknown model horizontal resolution {horires} <<<")
         sys.exit(1)
-    
-    # Check vertical resolution
+
     if vertres not in [0.5, 0.25, 0.125, 0.0625]:
         print(f">>> Unknown model vertical resolution {vertres} <<<")
         sys.exit(1)
-    
-    if nres_grid == "None" or nres_grid == None:
-        if mres == 2:
-            nres_grid = 5
-        elif mres == 1:
-            nres_grid = 6
-        elif mres == 0.5:
-            nres_grid = 7
-        else:
-            print(f">>> Unsupported magnetic resolution {mres} <<<")
-            sys.exit(1)
 
-    # Copy make if it does not exist in execdir
-    if not os.path.isfile(os.path.join(execdir, os.path.basename(make))):
-        shutil.copy(os.path.join(utildir, os.path.basename(make)), execdir)
-    # Copy Makefile if it does not exist in execdir
+    # refresh execdir's copy of the Make fragment whenever the source changed
+    make_src = make if os.path.isfile(make) else os.path.join(utildir, os.path.basename(make))
+    make_copy = os.path.join(execdir, os.path.basename(make))
+    if os.path.isfile(make_src):
+        if not os.path.isfile(make_copy) or not filecmp.cmp(make_src, make_copy, shallow=False):
+            shutil.copy(make_src, make_copy)
+    elif not os.path.isfile(make_copy):
+        print(f">>> Cannot find Make fragment {make} <<<")
+        sys.exit(1)
     if not os.path.isfile(os.path.join(execdir, 'Makefile')):
         shutil.copy(os.path.join(utildir, 'Makefile'), execdir)
-    # Copy mkdepends if it does not exist in execdir
     if not os.path.isfile(os.path.join(execdir, 'mkdepends')):
         shutil.copy(os.path.join(utildir, 'mkdepends'), execdir)
     
-    if input == '' or output == '':
-        input = os.path.abspath(input)
-        output = os.path.abspath(output)
-        
     util = os.path.abspath(utildir)
 
 
+    # flag files in execdir record the last build's settings; a change forces gmake clean
     coupling_file_path = os.path.join(execdir, 'coupling')
 
-    # Check if the coupling file exists
     if os.path.isfile(coupling_file_path):
         with open(coupling_file_path, 'r') as file:
             lastcoupling = file.read().strip().lower() == 'true'
-        # Compare coupling values
         if lastcoupling != coupling:
             print(f"Clean execdir {execdir} because coupling flag switched from {lastcoupling} to {coupling}")
-            mycwd = os.getcwd()
-            os.chdir(execdir)
-            subprocess.run(['gmake', 'clean'])
-            os.chdir(mycwd)
+            _gmake_clean(execdir)
             with open(coupling_file_path, 'w') as file:
                 file.write(str(coupling))
     else:
-        # Create the coupling file and write the coupling value
         with open(coupling_file_path, 'w') as file:
             file.write(str(coupling))
         print(f"Created file coupling with coupling flag = {coupling}")
@@ -151,50 +147,37 @@ def compile_tiegcm(options, debug, coupling = False, hidra = False):
 
     hidra_file_path = os.path.join(execdir, 'hidra')
 
-    # Check if the hidra file exists
     if os.path.isfile(hidra_file_path):
         with open(hidra_file_path, 'r') as file:
             lasthidra = file.read().strip().lower() == 'true'
-        # Compare hidra values
         if lasthidra != hidra:
             print(f"Clean execdir {execdir} because hidra flag switched from {lasthidra} to {hidra}")
-            mycwd = os.getcwd()
-            os.chdir(execdir)
-            subprocess.run(['gmake', 'clean'])
-            os.chdir(mycwd)
+            _gmake_clean(execdir)
             with open(hidra_file_path, 'w') as file:
                 file.write(str(hidra))
     else:
-        # Create the hidra file and write the hidra value
         with open(hidra_file_path, 'w') as file:
             file.write(str(hidra))
         print(f"Created file hidra with hidra flag = {hidra}")
 
     debug_file_path = os.path.join(execdir, 'debug')
 
-    # Check if the debug file exists
     if os.path.isfile(debug_file_path):
         with open(debug_file_path, 'r') as file:
             lastdebug = file.read().strip().lower() == 'true'
 
-        # Compare debug values
         if lastdebug != debug:
             print(f"Clean execdir {execdir} because debug flag switched from {lastdebug} to {debug}")
-            mycwd = os.getcwd()
-            os.chdir(execdir)
-            subprocess.run(['gmake', 'clean'])
-            os.chdir(mycwd)
+            _gmake_clean(execdir)
 
             with open(debug_file_path, 'w') as file:
                 file.write(str(debug))
     else:
-        # Create the debug file and write the debug value
         with open(debug_file_path, 'w') as file:
             file.write(str(debug))
         print(f"Created file debug with debug flag = {debug}")
 
 
-    # Create the defs.h content
     defs_content = dedent(f"""\
     #define DLAT {horires}
     #define DLON {horires}
@@ -205,26 +188,19 @@ def compile_tiegcm(options, debug, coupling = False, hidra = False):
     #define NRES_GRID {nres_grid}
     """)
 
-    # Write to defs.h
     defs_path = 'defs.h'
     with open(defs_path, 'w') as file:
         file.write(defs_content)
 
-    # Check if defs.h exists in execdir and compare
     execdir_defs_path = os.path.join(execdir, 'defs.h')
     if os.path.isfile(execdir_defs_path):
         if not filecmp.cmp(defs_path, execdir_defs_path, shallow=False):
-            # Files differ, switch resolutions
             print(f"Switching defs.h for model resolution {horires} x {vertres}")
-            mycwd = os.getcwd()
-            os.chdir(execdir)
-            subprocess.run(['gmake', 'clean'])
-            os.chdir(mycwd)
+            _gmake_clean(execdir)
             shutil.copy(defs_path, execdir_defs_path)
         else:
             print(f"defs.h already set for model resolution {horires} x {vertres}")
     else:
-        # defs.h does not exist in execdir, copy the file
         print(f"Copying {defs_path} to {execdir_defs_path} for resolution {horires} x {vertres}")
         shutil.copy(defs_path, execdir_defs_path)
 
@@ -238,10 +214,12 @@ def compile_tiegcm(options, debug, coupling = False, hidra = False):
 
 
 
-    # Create Make.env file
+    # MAKE_MACHINE is the bare name of the execdir copy: `make veryclean` deletes $(MAKE_MACHINE).
+    # SVN_REVISION is the model's git short hash, stored in every history (16 chars).
+    tiegcm_git = git_state(modeldir)
     make_env_path = os.path.join(execdir, 'Make.env')
     with open(make_env_path, 'w') as file:
-        file.write(f"""MAKE_MACHINE  = {make}
+        file.write(f"""MAKE_MACHINE  = {os.path.basename(make)}
 DIRS          = . {srcdir}
 EXECNAME      = {model}
 NAMELIST      = {input}
@@ -249,13 +227,17 @@ OUTPUT        = {output}
 COUPLING      = {str(coupling).upper()}
 HIDRA         = {str(hidra).upper()}
 DEBUG         = {str(debug).upper()}
+SVN_REVISION  = {svn_revision_stamp(tiegcm_git)}
 """)
 
-    # Build the model
     try:
         subprocess.run(['gmake', '-j8', 'all'], check=True)
-        shutil.copy(model, workdir)
-        print(f"Executable copied from {model} to {workdir}")
     except subprocess.CalledProcessError:
         print(">>> Error return from gmake all")
         sys.exit(1)
+    dest = os.path.join(workdir, os.path.basename(model))
+    if os.path.exists(dest) and os.path.samefile(model, dest):
+        print(f"Executable {model} is already in {workdir}")
+    else:
+        shutil.copy(model, workdir)
+        print(f"Executable copied from {model} to {workdir}")
