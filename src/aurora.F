@@ -453,7 +453,7 @@
       use mage_coupling_module,only: geng,gflx     !MAGE
 !
 ! Add SAPS ion drifts to regular ion drifts from dynamo and convection pattern
-      use input_module,only: saps,kp
+      use input_module,only: saps,kp,coupling_mage
       use gpi_module,only: fkp
       use amie_module,only: amie_aurbound=>aurbound
       use subaur_module,only: subaur_drift
@@ -629,11 +629,11 @@
 ! will not change simulations.
 !                                                        Wenbin  wang
 !
-#ifdef GAMERA
+          if (coupling_mage) then
           alfa(i,lat) = max(geng(i,lat),0.01)
           flux(i,lat) = max(gflx(i,lat),0.01)
           eflux(i,lat) = flux(i,lat)*fac_p2e*alfa(i,lat)
-#endif
+          endif
 
 ! Sheng, 2017/07, Calculate SAPS ion drifts
           if (iamie > 0) then
