@@ -782,8 +782,10 @@ def seconds_to_dhms(seconds):
 def dhms_to_seconds(dhms):
     return dhms[0]*86400 + dhms[1]*3600 + dhms[2]*60 + dhms[3]
 
-# An executable's grid is read from the nm -S sizes of the params_module arrays (8-byte reals);
-# a coupled (-DGAMERA) build has mage_oneway_mp_* symbols.
+# An executable's grid is read from the nm -S sizes of the params_module arrays (8-byte reals).
+# Only a build of the model before 400c6af (automatic MAGE coupling detection) can lack the
+# mage_oneway_mp_* symbols: a -DGAMERA build had them, a standalone build did not. Since then
+# every build has them and couples only when voltron is in the job.
 ELF_MAGIC = b"\x7fELF"
 TIEGCM_ZIBOT = -7.0
 TIEGCM_ZITOP = 7.0
@@ -893,15 +895,12 @@ def exe_problems(identity, role, coupled, horires, vertres, nres_grid, zitop=Non
                 f"{_first_line(path)!r}): the job could not launch it as TIE-GCM"), []
     problems = []
     syms = identity.get("mage_oneway_syms")
-    if syms is not None:
-        if coupled and not syms:
-            problems.append(f"{role} {path} is a standalone build (no mage_oneway_mp_* symbols; built "
-                            f"without --coupling): as the coupled TIE-GCM it never exchanges with "
-                            f"voltron, which then waits until the job's walltime")
-        elif not coupled and syms:
-            problems.append(f"{role} {path} is a coupled build ({syms} mage_oneway_mp_* symbols; "
-                            f"built with --coupling): as a standalone TIE-GCM it waits for a voltron "
-                            f"that is not there")
+    # a build with the symbols runs standalone or coupled (decided at run time); one without them
+    # predates that and cannot couple
+    if syms is not None and coupled and not syms:
+        problems.append(f"{role} {path} is a standalone build of an older model (no mage_oneway_mp_* "
+                        f"symbols): as the coupled TIE-GCM it never exchanges with voltron, which "
+                        f"then waits until the job's walltime")
     def want(fn):
         try:
             return fn()
