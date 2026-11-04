@@ -217,7 +217,7 @@
                 "type": "path",
                 "prompt": "Root directory for all files for execution",
                 "default": null,
-                "description":  "The parent directory of all the run's files (default '.', the current directory; 'none' puts everything in one directory). Generated files refer to it with relative paths; each job cds to its working directory by absolute path, so after moving the directory replay the JSON from its new place (tiegcmrun --clobber -o <parentdir>/stdout/tiegcmrun_parameters.json).",
+                "description":  "The parent directory of all the run's files (default '.', the current directory; 'none' puts everything in one directory). Generated files refer to it with relative paths; each job cds to its working directory by absolute path, so after moving the directory replay the JSON from its new place (tiegcmrun --clobber -o <parentdir>/stdout/tiegcmrun_parameters.json). With --onlycompile it is the build directory (default <modeldir>/tiegcm_<res>; objects in exec/, the executable tiegcm.exe beside it).",
                 "warning": null
             },
             "execdir": {
@@ -281,7 +281,7 @@
                 "type": "path",
                 "prompt": "Standalone Executable",
                 "default": null,
-                "description": "An existing standalone executable, or the name to build it as (--compile). It must be a real executable, and its kind and grid are checked: a coupled build, or one built for another resolution, is a warning on a standalone run and is refused under engage.",
+                "description": "The TIE-GCM executable the jobs launch. One build per horizontal resolution serves standalone and coupled runs (the model decides at run time); build it with tiegcmrun.py -oc, which puts it in <modeldir>/tiegcm_<res>/tiegcm.exe. Default <execdir>/tiegcm.exe for a run, the resolution build when it exists under engage. It must be a real executable; one built for another resolution is a warning on a standalone run and is refused under engage, where it is the spin-up executable.",
                 "warning": null
             },
             "coupled_modelexe": {
@@ -289,7 +289,7 @@
                 "type": "path",
                 "prompt": "Coupled Executable",
                 "default": null,
-                "description": "An existing coupled executable (built with --coupling), or the name to build it as. engage refuses a standalone build (voltron would wait for it until walltime) or one built for another resolution than the coupled grid; tiegcmrun --coupling alone only warns. Under engage it usually sits in the run directory and the coupled jobs name it ./tiegcm.x.",
+                "description": "The executable of the coupled TIE-GCM jobs under engage, at the coupled grid of the GAMERA grid (D 2.5, Q 1.25, O 0.625 degrees): the tiegcm_<res> build of that resolution (tiegcmrun.py -oc); for D it is the spin-up executable itself. engage refuses one built for another resolution and an old build without the MAGE coupling symbols.",
                 "warning": null
             }
         },

@@ -2,6 +2,8 @@
 build/*
 stdout/*
 exec/*
+# tiegcmrun -oc: one build per horizontal resolution (tiegcm_2.5, tiegcm_1.25, ...)
+/tiegcm_*/
 
 
 ## Compiled Object files

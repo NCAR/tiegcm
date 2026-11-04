@@ -147,6 +147,34 @@ def in_execdir(execdir, exe):
     return os.path.join(execdir, exe)
 
 
+# One TIE-GCM build per horizontal resolution: every build couples with MAGE when engage launches it
+# (the model decides at run time), so only the compiled-in grid tells executables apart.
+def build_dir(modeldir, horires):
+    """<modeldir>/tiegcm_<res>, the build directory of one horizontal resolution (tiegcm_2.5, ...)."""
+    return os.path.join(modeldir, f"tiegcm_{float(horires):g}")
+
+
+def build_exe(modeldir, horires):
+    """The executable of a resolution's build: <modeldir>/tiegcm_<res>/tiegcm.exe."""
+    return os.path.join(build_dir(modeldir, horires), "tiegcm.exe")
+
+
+def build_command(horires):
+    """The tiegcmrun command that builds a resolution's executable."""
+    return f"tiegcmrun.py -oc  (Horizontal Resolution {float(horires):g})"
+
+
+def missing_exe_message(exe, horires):
+    """The warning for a run whose executable does not exist yet."""
+    try:
+        res = f"{float(horires):g}"
+    except (TypeError, ValueError):
+        res = str(horires)
+    return (f"{exe} not found — the model must be compiled before it runs: run 'tiegcmrun.py -oc' "
+            f"and answer Horizontal Resolution {res} (builds $TIEGCMHOME/tiegcm_{res}/tiegcm.exe), "
+            f"or re-run this command with --compile/-c.")
+
+
 def default_make_file(modeldir, hpc_system):
     """<modeldir>/scripts/Make.* for hpc_system, or None."""
     frag = MAKE_FRAGMENTS.get(str(hpc_system).strip().lower())
@@ -923,7 +951,8 @@ def exe_problems(identity, role, coupled, horires, vertres, nres_grid, zitop=Non
     if got:
         problems.append(f"{role} {path} was built for " + "; ".join(got)
                         + " - the model stops when its start-up history is on another grid; "
-                          "rebuild it for this grid (--compile / --onlycompile)")
+                          f"rebuild it for this grid: tiegcmrun.py -oc, Horizontal Resolution "
+                          f"{want(lambda: f'{float(horires):g}') or horires}")
     return None, problems
 
 

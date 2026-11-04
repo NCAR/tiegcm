@@ -56,12 +56,10 @@ def _compile_tiegcm(options, debug, coupling = False, hidra = False):
     coupling  = coupling
     hidra     = hidra
 
-    if coupling == True:
-        modelexe = os.path.basename(o["model"]["data"]["coupled_modelexe"])
-        model = os.path.abspath(o["model"]["data"]["coupled_modelexe"])
-    else:
-        modelexe = os.path.basename(o["model"]["data"]["modelexe"])
-        model = os.path.abspath(o["model"]["data"]["modelexe"])
+    # one build per resolution serves standalone and coupled runs (the model decides at run time):
+    # the executable is always modelexe; `coupling` only survives in the flag file and Make.env
+    modelexe = os.path.basename(o["model"]["data"]["modelexe"])
+    model = os.path.abspath(o["model"]["data"]["modelexe"])
     debug = debug
     input = os.path.abspath(input) if input else input
     output = os.path.abspath(output) if output else output
@@ -188,21 +186,23 @@ def _compile_tiegcm(options, debug, coupling = False, hidra = False):
     #define NRES_GRID {nres_grid}
     """)
 
-    defs_path = 'defs.h'
+    # staged in execdir (not the cwd): a build directory holds nothing but exec/ and the executable
+    execdir_defs_path = os.path.join(execdir, 'defs.h')
+    defs_path = execdir_defs_path + '.new'
     with open(defs_path, 'w') as file:
         file.write(defs_content)
 
-    execdir_defs_path = os.path.join(execdir, 'defs.h')
     if os.path.isfile(execdir_defs_path):
         if not filecmp.cmp(defs_path, execdir_defs_path, shallow=False):
             print(f"Switching defs.h for model resolution {horires} x {vertres}")
             _gmake_clean(execdir)
-            shutil.copy(defs_path, execdir_defs_path)
+            os.replace(defs_path, execdir_defs_path)
         else:
             print(f"defs.h already set for model resolution {horires} x {vertres}")
+            os.remove(defs_path)
     else:
-        print(f"Copying {defs_path} to {execdir_defs_path} for resolution {horires} x {vertres}")
-        shutil.copy(defs_path, execdir_defs_path)
+        print(f"Writing {execdir_defs_path} for resolution {horires} x {vertres}")
+        os.replace(defs_path, execdir_defs_path)
 
 
     try:
@@ -237,7 +237,7 @@ SVN_REVISION  = {svn_revision_stamp(tiegcm_git)}
         sys.exit(1)
     dest = os.path.join(workdir, os.path.basename(model))
     if os.path.exists(dest) and os.path.samefile(model, dest):
-        print(f"Executable {model} is already in {workdir}")
+        print(f"Executable built: {model}")
     else:
         shutil.copy(model, workdir)
         print(f"Executable copied from {model} to {workdir}")
