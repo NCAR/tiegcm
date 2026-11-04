@@ -18,7 +18,7 @@ from fractions import Fraction
 
 from compile import compile_tiegcm
 from interpolation import interpic
-from engage_solver import engage_parser, engage_run, engage_options_updater, apply_coupled_defaults, COUPLED_DEFAULT_KEYS, COUPLED_HISTORY_KEYS
+from engage_solver import engage_parser, engage_run, engage_options_updater, apply_coupled_defaults, COUPLED_DEFAULT_KEYS, COUPLED_HISTORY_KEYS, gamres_to_res
 from namelist_solver import inp_pri_date,inp_mxhist,inp_sechist,inp_prihist,inp_pri_out,inp_sec_out,inp_sec_date,parse_segment,forcing_missing,parse_run_datetime,cadence_step,hms_str,hms_differs,source_start_hms_error,source_time_of_day_error,resolve_source_start,forcing_refusal,date_order_problem,year_boundary,lbc_other_set
 from output_solver import create_inp_scripts, create_pbs_scripts, segment_jobs, write_segment_jobs, run_file, render_pbs, CONFIG_DIR, apply_system_config, linux_run_commands, queue_walltime_default
 from jobgen import JobGen, spell, cdpath_reset
@@ -82,7 +82,8 @@ def create_command_line_parser():
     )
     parser.add_argument(
         "--onlycompile","-oc", action="store_true",
-        help="Only Compile Tiegcm (default: %(default)s)."
+        help="Only build TIE-GCM: one executable per horizontal resolution in "
+             "<modeldir>/tiegcm_<res>/tiegcm.exe (default: %(default)s)."
     )
     parser.add_argument(
         "--debug", "-d", action="store_true",
@@ -106,7 +107,8 @@ def create_command_line_parser():
     )
     parser.add_argument(
         "--coupling","-co", action="store_true",
-        help="Enable coupling (default: %(default)s)."
+        help="Accepted for old command lines; it no longer changes the build or the run "
+             "(every build couples under engage)."
     )
     parser.add_argument(
         "--hidra", "-hi", action="store_true",
@@ -516,6 +518,56 @@ def _source_start_candidates(o, od, source_mtimes, pristart, skip_parameters, ru
         matching = [m for m in source_mtimes if list(m[1:4]) == list(pristart[1:4])]
     return matching
 
+def _ask_specification(options, option_descriptions, mode, skip_parameters, engage):
+    """Ask the model.specification block; returns (horires, the grid's default STEP)."""
+    options["model"]["specification"] = {}
+    o = options["model"]["specification"]
+
+    od = option_descriptions["model"]["specification"]
+
+    for on in od:
+        if engage != None:
+            od["horires"]["default"] = engage["horires"]
+        if on == "vertres":
+            od["vertres"]["default"] = vertres
+        elif on == "mres":
+            od["mres"]["default"] = mres
+        o[on] = get_run_option(on, od[on], mode, skip_parameters)
+        if on =="horires":
+            horires = float(o[on])
+            vertres, mres, nres_grid, STEP = resolution_solver(horires)
+
+    if o["nres_grid"] == None:
+        # follows the answered mres, not horires' default mres
+        o["nres_grid"] = mres_to_nres_grid(o["mres"]) if o.get("mres") is not None else nres_grid
+    return horires, STEP
+
+
+def _resolution_build(modeldir, horires, fallback):
+    """The resolution's build (tiegcmrun -oc) when it exists, else `fallback` (the run directory)."""
+    exe = misc.build_exe(modeldir, horires)
+    return exe if os.path.isfile(exe) else fallback
+
+
+def _resolve_exe(o, key, args, horires, missing):
+    """Anchor a missing executable in execdir; records it in `missing` unless this command builds it."""
+    if os.path.isfile(o[key]) == False:
+        o[key] = in_execdir(o["execdir"], o[key])
+        if args.compile == False and args.onlycompile == False:
+            missing.append((o[key], horires))
+
+
+def build_roles(horires):
+    """The engage GRT roles of a resolution's build: 'GAMERA D (spin-up and coupled) and Q (spin-up)'."""
+    parts = []
+    for grid in ("D", "Q", "O"):
+        spin, cpl = gamres_to_res(grid)
+        roles = [role for role, res in (("spin-up", spin), ("coupled", cpl)) if float(res) == float(horires)]
+        if roles:
+            parts.append(f"{grid} ({' and '.join(roles)})")
+    return "GAMERA " + " and ".join(parts) if parts else "standalone runs only"
+
+
 def prompt_user_for_run_options(args):
     """Prompt for the run options, group by group, and return the options dict."""
 
@@ -537,10 +589,8 @@ def prompt_user_for_run_options(args):
     if onlycompile == True:
         input_build_skip = True
         pbs_build_skip = True
-        # fields that do not affect the build
-        skip_parameters = ['input_file','log_file','job_name','modeldir','parentdir','tgcmdata','segmentation']
-        if coupling == True:
-            skip_parameters.append('modelexe')
+        # fields that do not affect the build; parentdir is asked as the build directory
+        skip_parameters = ['input_file','log_file','job_name','modeldir','tgcmdata','segmentation']
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = apply_system_config(json.load(f), socket.gethostname())
     with open(BENCHMARKS_FILE, "r", encoding="utf-8") as f:
@@ -561,6 +611,10 @@ def prompt_user_for_run_options(args):
 
     options["model"] = {}
 
+    if onlycompile == True:
+        # the resolution first: the build directory is named after it
+        horires, STEP = _ask_specification(options, option_descriptions, mode, skip_parameters, engage)
+
     options["model"]["data"] = {}
     o = options["model"]["data"]
     temp_mode = mode
@@ -576,7 +630,12 @@ def prompt_user_for_run_options(args):
         od["histdir"]["default"] = o["parentdir"]
         o["execdir"] = get_run_option("execdir", od["execdir"], mode, skip_parameters)
     else:
-        od["parentdir"]["default"] = "."
+        if onlycompile == True:
+            # one build per resolution: <modeldir>/tiegcm_<res>, objects in exec/, the executable beside it
+            od["parentdir"]["prompt"] = "Build directory"
+            od["parentdir"]["default"] = misc.build_dir(o["modeldir"], horires)
+        else:
+            od["parentdir"]["default"] = "."
         o["parentdir"] = get_run_option("parentdir", od["parentdir"], mode, skip_parameters)
         if o["parentdir"] == None:
             temp_mode = "INTERMEDIATE"
@@ -586,8 +645,12 @@ def prompt_user_for_run_options(args):
             od["histdir"]["default"] = o["execdir"]
         else:
             od["execdir"]["default"] = os.path.join(o["parentdir"],"exec")
-            od["workdir"]["default"] = os.path.join(o["parentdir"],"stdout")
-            od["histdir"]["default"] = os.path.join(o["parentdir"],"hist")
+            if onlycompile == True:
+                od["workdir"]["default"] = o["parentdir"]
+                od["histdir"]["default"] = o["parentdir"]
+            else:
+                od["workdir"]["default"] = os.path.join(o["parentdir"],"stdout")
+                od["histdir"]["default"] = os.path.join(o["parentdir"],"hist")
             o["execdir"] = get_run_option("execdir", od["execdir"], mode, skip_parameters)
 
     o["workdir"] = get_run_option("workdir", od["workdir"], temp_mode, skip_parameters)
@@ -615,48 +678,45 @@ def prompt_user_for_run_options(args):
         od["make"]["default"] = default_make_file(options["model"]["data"]["modeldir"],
                                                   options["simulation"]["hpc_system"])
     o["make"] = get_run_option("make", od["make"], mode, skip_parameters, run_dir=run_dir)
-    od["modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.exe")
-    o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
-    if os.path.isfile(o["modelexe"]) == False:
-        o["modelexe"] = in_execdir(o["execdir"], o["modelexe"])
-        if args.compile == False and args.onlycompile == False:
-            print(f'{YELLOW}Unable to find {o["modelexe"]}, model must be compiled. Use --compile/-c or --onlycompile/-oc {RESET}')
-    if args.coupling == True:
-        od["coupled_modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.x")
-        o["coupled_modelexe"] = get_run_option("coupled_modelexe", od["coupled_modelexe"], mode, skip_parameters,
-                                               run_dir=run_dir)
-        if os.path.isfile(o["coupled_modelexe"]) == False:
-            o["coupled_modelexe"] = in_execdir(o["execdir"], o["coupled_modelexe"])
-            if args.compile == False and args.onlycompile == False:
-                print(f'{YELLOW}Unable to find {o["coupled_modelexe"]}, model must be compiled. Use --compile/-c or --onlycompile/-oc {RESET}')
+    missing_exes = []                         # (exe, horires) warned once the grid is known
+    if onlycompile == True:
+        # the executable lands beside the build directory's exec/ (one build per resolution)
+        od["modelexe"]["prompt"] = "Executable to build"
+        od["modelexe"]["default"] = os.path.join(o["parentdir"] if o["parentdir"] != None else o["execdir"],
+                                                 "tiegcm.exe")
+        o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
+    elif engage != None:
+        # one executable per resolution the GAMERA grid needs: D asks once (both roles), Q and O twice
+        spin, cpl = float(engage["horires"]), float(engage["horires_coupled"])
+        same = spin == cpl
+        od["modelexe"]["prompt"] = f"TIE-GCM executable, {spin:g} deg ({'spin-up and coupled' if same else 'spin-up'})"
+        od["modelexe"]["default"] = _resolution_build(o["modeldir"], spin, os.path.join(o["execdir"], "tiegcm.exe"))
+        o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
+        _resolve_exe(o, "modelexe", args, spin, missing_exes)
+        if same:
+            o["coupled_modelexe"] = o["modelexe"]
+        else:
+            od["coupled_modelexe"]["prompt"] = f"TIE-GCM executable, {cpl:g} deg (coupled)"
+            od["coupled_modelexe"]["default"] = _resolution_build(o["modeldir"], cpl,
+                                                                  os.path.join(o["execdir"], "tiegcm.x"))
+            o["coupled_modelexe"] = get_run_option("coupled_modelexe", od["coupled_modelexe"], mode,
+                                                   skip_parameters, run_dir=run_dir)
+            _resolve_exe(o, "coupled_modelexe", args, cpl, missing_exes)
+    else:
+        od["modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.exe")
+        o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
+        _resolve_exe(o, "modelexe", args, None, missing_exes)
 
     # every later data-file lookup searches this directory
     if o["tgcmdata"]:
         os.environ["TIEGCMDATA"] = o["tgcmdata"]
 
-
-    options["model"]["specification"] = {}
+    if onlycompile == False:
+        horires, STEP = _ask_specification(options, option_descriptions, mode, skip_parameters, engage)
+    for exe, res in missing_exes:
+        print(f'{YELLOW}{misc.missing_exe_message(exe, horires if res is None else res)}{RESET}')
     o = options["model"]["specification"]
 
-    od = option_descriptions["model"]["specification"]
-                   
-    for on in od:
-        if engage != None:
-            od["horires"]["default"] = engage["horires"]
-        if on == "vertres":
-            od["vertres"]["default"] = vertres
-        elif on == "mres":
-            od["mres"]["default"] = mres
-        o[on] = get_run_option(on, od[on], mode, skip_parameters)
-        if on =="horires":
-            horires = float(o[on])
-            vertres, mres, nres_grid, STEP = resolution_solver(horires)
-
-    if o["nres_grid"] == None:
-        # follows the answered mres, not horires' default mres
-        o["nres_grid"] = mres_to_nres_grid(o["mres"]) if o.get("mres") is not None else nres_grid
-
-    
     if input_build_skip == True:
         o["segmentation"] = False
     if input_build_skip == False:        
@@ -1097,13 +1157,11 @@ def _exe_grids(options, args):
     """
     spec = options["model"]["specification"]
     grids = {"modelexe": (False, spec.get("horires"), spec.get("vertres"), spec.get("nres_grid"))}
-    if args.coupling:
-        if isinstance(args.engage, dict) and args.engage.get("horires_coupled") is not None:
-            h = float(args.engage["horires_coupled"])
-            v, _, n, _ = resolution_solver(h)
-            grids["coupled_modelexe"] = (True, h, v, n)
-        else:
-            grids["coupled_modelexe"] = (True, spec.get("horires"), spec.get("vertres"), spec.get("nres_grid"))
+    # only engage launches a coupled executable
+    if isinstance(args.engage, dict) and args.engage.get("horires_coupled") is not None:
+        h = float(args.engage["horires_coupled"])
+        v, _, n, _ = resolution_solver(h)
+        grids["coupled_modelexe"] = (True, h, v, n)
     return grids
 
 
@@ -1114,7 +1172,7 @@ def check_executables(options, args, invoke_dir):
     """
     if args.onlycompile:
         return []
-    building = ("coupled_modelexe" if args.coupling else "modelexe") if args.compile else None
+    building = "modelexe" if args.compile else None
     zitop = options["model"]["specification"].get("zitop")
     engage = args.engage is not None
     refused, warned = [], []
@@ -1136,8 +1194,8 @@ def check_executables(options, args, invoke_dir):
     if refused:
         raise ValueError(f"{RED}The TIE-GCM executable cannot run this "
                          f"{'coupled ' if engage else ''}run:\n  - " + "\n  - ".join(refused)
-                         + f"\nPoint the option at the right executable, or build it (--compile / "
-                           f"--onlycompile{' --coupling' if args.coupling else ''}).{RESET}")
+                         + f"\nPoint the option at the right executable, or build it: tiegcmrun.py -oc "
+                           f"at that resolution (one build per resolution, $TIEGCMHOME/tiegcm_<res>/).{RESET}")
     for w in warned:
         print(f"{YELLOW}WARNING: {w}.{RESET}")
     return warned
@@ -1207,6 +1265,10 @@ def tiegcmrun(args=None):
     if args.engage != None:
         print(f"Engage = True")
     print(f"\n") 
+    if coupling and args.engage is None:
+        print(f"{YELLOW}NOTE: --coupling/-co no longer changes the build: every TIE-GCM build couples with MAGE when\n"
+              f"engage launches it (the model decides at run time), so one build per resolution serves\n"
+              f"standalone and coupled runs. Building the standalone executable.{RESET}")
 
     if options_path:
         # relative paths in the JSON are relative to its own directory
@@ -1286,13 +1348,17 @@ def tiegcmrun(args=None):
     else:
         input_file_generatred = False
     if args.onlycompile == True:
-        compile_tiegcm(options, debug_build, coupling, hidra)
+        compile_tiegcm(options, debug_build, False, hidra)
+        exe = os.path.abspath(options["model"]["data"]["modelexe"])
+        horires = float(options["model"]["specification"]["horires"])
+        print(f"{YELLOW}Built {exe} ({horires:g} deg). engage GRT uses this resolution for: "
+              f"{build_roles(horires)}{RESET}")
     elif args.engage != None:
         options_coupling,standalone_pbs_files,coupling_inp_files = engage_run(options, debug, coupling, args.engage)
         return (options_coupling,standalone_pbs_files,coupling_inp_files)
     else:
         if args.compile == True:
-            compile_tiegcm(options, debug_build, coupling, hidra)
+            compile_tiegcm(options, debug_build, False, hidra)
         # segmentation follows inp.segment alone
         inp_options = options.get("inp")
         options["model"]["specification"]["segmentation"] = (
@@ -1356,12 +1422,8 @@ def tiegcmrun(args=None):
     if args.execute == True and args.onlycompile == False and options["simulation"]["hpc_system"] != "linux":
         jg = JobGen(CONFIG_DIR, machine=options["simulation"]["hpc_system"],
                     node_type=options["simulation"].get("node_type"))
-        # a --coupling build produces tiegcm.x, not the standalone modelexe
         if not os.path.exists(os.path.join(invoke_dir, options["model"]["data"]["modelexe"])):
             print(f'{RED}Unable to find executable {options["model"]["data"]["modelexe"]} in {execdir}{RESET}')
-            if args.coupling:
-                print(f'{YELLOW}--coupling builds the coupled executable, which a standalone job '
-                      f'cannot run; build without --coupling to submit a standalone run.{RESET}')
             exit(1)
         # submitted from the workdir so $PBS_O_WORKDIR is the job's directory
         submit_env = dict(os.environ, PWD=workdir_abs)

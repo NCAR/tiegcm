@@ -343,7 +343,8 @@ def _derive_registry():
     """Return {path: (fn(values) -> default, deps)}, built on tiegcmrun's own functions."""
     from misc import (resolution_solver, get_mtime, select_source_defaults, find_file,
                       select_latest_gpi, file_covers, mres_to_nres_grid, default_make_file,
-                      gswm_allowed, he_coefs_pattern, GSWM_PATTERNS, history_dir)
+                      gswm_allowed, he_coefs_pattern, GSWM_PATTERNS, history_dir, build_dir,
+                      build_exe)
     from namelist_solver import (inp_pri_date, inp_prihist, inp_sechist, inp_mxhist,
                                   inp_pri_out, inp_sec_out, inp_sec_date, cadence_step,
                                   lbc_other_set)
@@ -491,15 +492,51 @@ def _derive_registry():
         return found if found is not None else ""
 
     def _rundir(sub):
-        # <parentdir>/<sub>; no parentdir: one flat dir; coupled: everything in parentdir
+        # <parentdir>/<sub>; no parentdir: one flat dir; coupled: everything in parentdir;
+        # a build (-oc): the objects in <build dir>/exec, everything else beside them
         def fn(v):
             pd = v["model.data.parentdir"]
             if v.get("__engage"):
                 return pd
             if not _is_set(pd):
                 return "." if sub == "exec" else v["model.data.execdir"]
+            if v.get("__onlycompile") and sub != "exec":
+                return pd
             return os.path.join(str(pd), sub)
         return fn
+
+    def _modeldir(v):
+        return v.get("model.data.modeldir") or tiegcm_env("TIEGCMHOME") or ""
+
+    def _parentdir(v):
+        cfg = v.get("__engage_cfg") or {}
+        if cfg.get("parentdir"):
+            return cfg["parentdir"]
+        if v.get("__onlycompile"):
+            # one build per resolution: <modeldir>/tiegcm_<res>
+            return build_dir(_modeldir(v), v["model.specification.horires"])
+        return "."
+
+    def _modelexe(v):
+        cfg = v.get("__engage_cfg") or {}
+        if v.get("__onlycompile") and _is_set(v["model.data.parentdir"]):
+            return os.path.join(str(v["model.data.parentdir"]), "tiegcm.exe")
+        if v.get("__engage") and cfg.get("horires") is not None:
+            # the spin-up resolution's build when it exists, else the run directory
+            std = build_exe(_modeldir(v), cfg["horires"])
+            if os.path.isfile(std):
+                return std
+        return os.path.join(v["model.data.execdir"], "tiegcm.exe")
+
+    def _coupled_modelexe(v):
+        cfg = v.get("__engage_cfg") or {}
+        if v.get("__engage") and cfg.get("horires_coupled") is not None:
+            if _engage_same_grid(cfg):
+                return v["model.data.modelexe"]
+            std = build_exe(_modeldir(v), cfg["horires_coupled"])
+            if os.path.isfile(std):
+                return std
+        return os.path.join(v["model.data.execdir"], "tiegcm.x")
 
     def _histdir_job(v):
         return history_dir({"parentdir": v.get("model.data.parentdir"),
@@ -534,8 +571,7 @@ def _derive_registry():
                                           ["model.specification.mres"]),
         "inp.STEP":                      (res(3), ["model.specification.horires"]),
         "model.data.modeldir":  (lambda v: tiegcm_env("TIEGCMHOME") or "", []),
-        "model.data.parentdir": (lambda v: (v.get("__engage_cfg") or {}).get("parentdir")
-                                  or ".", []),
+        "model.data.parentdir": (_parentdir, ["model.specification.horires", "model.data.modeldir"]),
         "model.data.execdir":   (_rundir("exec"), ["model.data.parentdir"]),
         "model.data.workdir":   (_rundir("stdout"), ["model.data.parentdir", "model.data.execdir"]),
         "model.data.histdir":   (_rundir("hist"), ["model.data.parentdir", "model.data.execdir"]),
@@ -543,10 +579,10 @@ def _derive_registry():
         "model.data.log_file":  (lambda v: f'{v["model.data.workdir"]}/{v["simulation.job_name"]}.out',
                                  ["model.data.workdir", "simulation.job_name"]),
         "model.data.make":      (_make, ["model.data.modeldir", "simulation.hpc_system"]),
-        "model.data.modelexe":  (lambda v: os.path.join(v["model.data.execdir"], "tiegcm.exe"),
-                                 ["model.data.execdir"]),
-        "model.data.coupled_modelexe": (lambda v: os.path.join(v["model.data.execdir"], "tiegcm.x"),
-                                 ["model.data.execdir"]),
+        "model.data.modelexe":  (_modelexe, ["model.data.execdir", "model.data.parentdir",
+                                             "model.data.modeldir"]),
+        "model.data.coupled_modelexe": (_coupled_modelexe, ["model.data.execdir", "model.data.modelexe",
+                                                            "model.data.modeldir"]),
         "inp.LABEL": (lambda v: f'{v["simulation.job_name"]}_{v["model.specification.horires"]}'
                       f'x{v["model.specification.vertres"]}',
                       ["simulation.job_name", "model.specification.horires",
@@ -862,8 +898,11 @@ def _warn_registry():
             execdir = str(v.get("model.data.execdir", "") or "")
             if execdir and os.path.isfile(os.path.join(execdir, os.path.basename(exe))):
                 return None
-            return (f"{exe} not found — the model must be compiled before it runs. Re-run with "
-                    f"--compile/-c (build then run) or --onlycompile/-oc (build only).")
+            # the resolution to build: engage's per-role grid, else the run's
+            cfg = v.get("__engage_cfg") or {}
+            key = "horires_coupled" if path.endswith("coupled_modelexe") else "horires"
+            res = cfg.get(key, v.get("model.specification.horires"))
+            return _misc().missing_exe_message(exe, res)
         return fn
 
     derives = _derive_registry()
@@ -913,13 +952,21 @@ def _is_set(x):
     return s not in ("", "none", "null", "[null]", "[none]", "false", "0", "[]")
 
 
+def _engage_same_grid(cfg):
+    """True when engage's spin-up and coupled grids are one resolution (GAMERA D): one executable."""
+    cfg = cfg or {}
+    try:
+        return float(cfg["horires"]) == float(cfg.get("horires_coupled", cfg["horires"]))
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
 def _cond_registry():
     """Return cond(field, values) -> True to show; hides fields the run would ignore."""
     def cond(f, v):
         p = f.path
         hpc = str(v.get("simulation.hpc_system", "")).strip().lower()
         bench = bool(v.get("__benchmark"))
-        coupling = bool(v.get("__coupling"))
 
         if f.name in v.get("__engage_skip", ()):
             return False
@@ -927,19 +974,20 @@ def _cond_registry():
             return False
 
         if v.get("__onlycompile"):
+            # parentdir stays: it is the build directory
             if p.startswith("inp.") or p.startswith("job."):
                 return False
             if p in ("model.data.input_file", "model.data.log_file", "simulation.job_name",
-                     "model.data.modeldir", "model.data.parentdir", "model.data.tgcmdata",
+                     "model.data.modeldir", "model.data.tgcmdata",
                      "model.specification.segmentation"):
-                return False
-            if coupling and p == "model.data.modelexe":
                 return False
 
         # a custom input_file supplies the whole inp namelist
         if p.startswith("inp.") and _is_set(v.get("model.data.input_file")):
             return False
-        if p == "model.data.coupled_modelexe" and not coupling:
+        # only engage launches a coupled executable, and D's is the spin-up one
+        if p == "model.data.coupled_modelexe" and not (
+                v.get("__engage") and not _engage_same_grid(v.get("__engage_cfg"))):
             return False
         if p.startswith("job."):
             if hpc == "linux":
@@ -1007,6 +1055,24 @@ def build_state(args, mode="EXPERT"):
            "__coupling": getattr(args, "coupling", False),
            "__onlycompile": getattr(args, "onlycompile", False),
            "__compile": getattr(args, "compile", False)}
+    by_path = {f.path: f for f in fields}
+    if ctx["__onlycompile"]:
+        # the resolution first: the build directory default is named after it, and the derives
+        # are one forward pass in field order
+        spec = [f for f in fields if f.path.startswith("model.specification.")]
+        data = [f for f in fields if f.path.startswith("model.data.")]
+        first = fields.index(data[0])
+        fields = fields[:first] + spec + data + [f for f in fields[first:]
+                                                 if f not in spec and f not in data]
+        by_path["model.data.parentdir"].prompt = "Build directory"
+        by_path["model.data.modelexe"].prompt = "Executable to build"
+    elif eng is not None and eng.get("horires") is not None:
+        # one executable per resolution the GAMERA grid needs: D asks once, Q and O twice
+        spin = float(eng["horires"])
+        cpl = float(eng.get("horires_coupled", spin))
+        by_path["model.data.modelexe"].prompt = (
+            f"TIE-GCM executable, {spin:g} deg ({'spin-up and coupled' if spin == cpl else 'spin-up'})")
+        by_path["model.data.coupled_modelexe"].prompt = f"TIE-GCM executable, {cpl:g} deg (coupled)"
     if eng is not None:
         from engage_solver import COUPLED_DEFAULT_KEYS
         for f in fields:
@@ -1622,18 +1688,25 @@ def apply_accept_actions(options, args):
     misc.generate_pending(inp, data.get("workdir"))
 
     nocompile = not getattr(args, "compile", False) and not getattr(args, "onlycompile", False)
+    eng = getattr(args, "engage", None)
+    eng = eng if isinstance(eng, dict) else None
+    spec = options.get("model", {}).get("specification", {})
 
-    def _exe(key):
+    def _exe(key, horires):
         exe = data.get(key)
         if not exe or os.path.isfile(exe):
             return
         exe = misc.in_execdir(data.get("execdir", ""), exe)
         data[key] = exe
         if nocompile and not os.path.isfile(exe):
-            print(f"Warning: {exe} not found — the model must be compiled (--compile / --onlycompile).")
-    _exe("modelexe")
-    if getattr(args, "coupling", False):
-        _exe("coupled_modelexe")
+            print(f"Warning: {misc.missing_exe_message(exe, horires)}")
+    _exe("modelexe", eng["horires"] if eng else spec.get("horires"))
+    if eng is not None:
+        # only engage launches a coupled executable; D's is the spin-up one
+        if _engage_same_grid(eng):
+            data["coupled_modelexe"] = data.get("modelexe")
+        else:
+            _exe("coupled_modelexe", eng.get("horires_coupled"))
     return finalize_options(options, args)
 
 
@@ -1645,7 +1718,7 @@ def finalize_options(options, args):
         options.pop("inp", None)
     if data.get("modeldir"):
         data["utildir"] = os.path.join(data["modeldir"], "scripts")
-    if not getattr(args, "coupling", False):
+    if not isinstance(getattr(args, "engage", None), dict):
         data.pop("coupled_modelexe", None)
     # job = _common + the active machine's block
     job = options.get("job")

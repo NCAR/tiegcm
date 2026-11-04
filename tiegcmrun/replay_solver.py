@@ -9,7 +9,7 @@ import re
 
 import math
 
-from misc import (resolution_solver, mres_to_nres_grid, find_file, GSWM_PATTERNS, gswm_allowed,
+from misc import (resolution_solver, mres_to_nres_grid, find_file, GSWM_PATTERNS, gswm_allowed, build_exe,
                   he_coefs_pattern, unknown_other_input_keys, other_input_error, secflds_list,
                   get_mtime, select_resource_defaults, select_source_defaults, history_dir,
                   default_make_file, MAKE_FRAGMENTS, tiegcm_env, coerce, is_unset)
@@ -799,9 +799,17 @@ def fill_engage_omitted(options, option_descriptions, engage_owned=(), engage=No
     if engage is not None:
         data, spec = options["model"]["data"], options["model"]["specification"]
         parent = engage["parentdir"]
+        spin = float(engage["horires"])
+        cpl = float(engage.get("horires_coupled", spin))
+
+        def _build(horires, fallback):
+            # the resolution's build (tiegcmrun -oc) when it exists, else the run directory as before
+            exe = build_exe(data.get("modeldir") or tiegcm_env("TIEGCMHOME"), horires)
+            return exe if os.path.isfile(exe) else os.path.join(parent, fallback)
         for key, value in (("modeldir", lambda: tiegcm_env("TIEGCMHOME")),
-                           ("modelexe", lambda: os.path.join(parent, "tiegcm.exe")),
-                           ("coupled_modelexe", lambda: os.path.join(parent, "tiegcm.x"))):
+                           ("modelexe", lambda: _build(spin, "tiegcm.exe")),
+                           ("coupled_modelexe", lambda: data["modelexe"] if spin == cpl
+                            else _build(cpl, "tiegcm.x"))):
             if key not in data:
                 data[key] = value()
                 filled.append(f"model.data.{key}")
