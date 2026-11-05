@@ -18,7 +18,7 @@ from fractions import Fraction
 
 from compile import compile_tiegcm
 from interpolation import interpic
-from engage_solver import engage_parser, engage_run, engage_options_updater, apply_coupled_defaults, COUPLED_DEFAULT_KEYS, COUPLED_HISTORY_KEYS, gamres_to_res
+from engage_solver import engage_parser, engage_run, engage_options_updater, apply_coupled_defaults, COUPLED_DEFAULT_KEYS, COUPLED_HISTORY_KEYS, gamres_to_res, engage_exe_note
 from namelist_solver import inp_pri_date,inp_mxhist,inp_sechist,inp_prihist,inp_pri_out,inp_sec_out,inp_sec_date,parse_segment,forcing_missing,parse_run_datetime,cadence_step,hms_str,hms_differs,source_start_hms_error,source_time_of_day_error,resolve_source_start,forcing_refusal,date_order_problem,year_boundary,lbc_other_set
 from output_solver import create_inp_scripts, create_pbs_scripts, segment_jobs, write_segment_jobs, run_file, render_pbs, CONFIG_DIR, apply_system_config, linux_run_commands, queue_walltime_default
 from jobgen import JobGen, spell, cdpath_reset
@@ -106,7 +106,7 @@ def create_command_line_parser():
     )
     parser.add_argument(
         "--coupling","-co", action="store_true",
-        help="Kept for old command lines; it no longer changes the build."
+        help="Deprecated and ignored: every build couples when voltron is in the job."
     )
     parser.add_argument(
         "--hidra", "-hi", action="store_true",
@@ -541,12 +541,6 @@ def _ask_specification(options, option_descriptions, mode, skip_parameters, enga
     return horires, STEP
 
 
-def _resolution_build(modeldir, horires, fallback):
-    """The resolution's build (tiegcmrun -oc) when it exists, else `fallback` (the run directory)."""
-    exe = misc.build_exe(modeldir, horires)
-    return exe if os.path.isfile(exe) else fallback
-
-
 def _resolve_exe(o, key, args, horires, missing):
     """Anchor a missing executable in execdir; records it in `missing` unless this command builds it."""
     if os.path.isfile(o[key]) == False:
@@ -557,13 +551,14 @@ def _resolve_exe(o, key, args, horires, missing):
 
 def build_roles(horires):
     """The engage GRT roles of a resolution's build: 'GAMERA D (spin-up and coupled) and Q (spin-up)'."""
-    parts = []
-    for grid in ("D", "Q", "O"):
+    parts = {}                                # roles -> grids with those roles, in grid order
+    for grid in ("D", "Q", "O", "H"):
         spin, cpl = gamres_to_res(grid)
         roles = [role for role, res in (("spin-up", spin), ("coupled", cpl)) if float(res) == float(horires)]
         if roles:
-            parts.append(f"{grid} ({' and '.join(roles)})")
-    return "GAMERA " + " and ".join(parts) if parts else "standalone runs only"
+            parts.setdefault(" and ".join(roles), []).append(grid)
+    return ("GAMERA " + " and ".join(f"{'/'.join(g)} ({r})" for r, g in parts.items())
+            if parts else "standalone runs only")
 
 
 def prompt_user_for_run_options(args):
@@ -588,7 +583,7 @@ def prompt_user_for_run_options(args):
         input_build_skip = True
         pbs_build_skip = True
         # fields that do not affect the build; parentdir is asked as the build directory
-        skip_parameters = ['input_file','log_file','job_name','modeldir','tgcmdata','segmentation']
+        skip_parameters = ['input_file','log_file','job_name','modeldir','tgcmdata','segmentation','histdir']
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = apply_system_config(json.load(f), socket.gethostname())
     with open(BENCHMARKS_FILE, "r", encoding="utf-8") as f:
@@ -684,22 +679,12 @@ def prompt_user_for_run_options(args):
                                                  "tiegcm.exe")
         o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
     elif engage != None:
-        # one executable per resolution the GAMERA grid needs: D asks once (both roles), Q and O twice
-        spin, cpl = float(engage["horires"]), float(engage["horires_coupled"])
-        same = spin == cpl
-        od["modelexe"]["prompt"] = f"TIE-GCM executable, {spin:g} deg ({'spin-up and coupled' if same else 'spin-up'})"
-        od["modelexe"]["default"] = _resolution_build(o["modeldir"], spin, os.path.join(o["execdir"], "tiegcm.exe"))
-        o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
-        _resolve_exe(o, "modelexe", args, spin, missing_exes)
-        if same:
-            o["coupled_modelexe"] = o["modelexe"]
-        else:
-            od["coupled_modelexe"]["prompt"] = f"TIE-GCM executable, {cpl:g} deg (coupled)"
-            od["coupled_modelexe"]["default"] = _resolution_build(o["modeldir"], cpl,
-                                                                  os.path.join(o["execdir"], "tiegcm.x"))
-            o["coupled_modelexe"] = get_run_option("coupled_modelexe", od["coupled_modelexe"], mode,
-                                                   skip_parameters, run_dir=run_dir)
-            _resolve_exe(o, "coupled_modelexe", args, cpl, missing_exes)
+        # not asked: engage links the tiegcm_<res> builds into the run directory (engage_parser's paths)
+        for key in ("modelexe", "coupled_modelexe"):
+            od[key]["default"] = engage[key]
+            o[key] = get_run_option(key, od[key], mode, skip_parameters, run_dir=run_dir)
+        if not getattr(args, "tui", False):           # the wizard path printed it already
+            print(f"{YELLOW}{engage_exe_note(engage)}{RESET}")
     else:
         od["modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.exe")
         o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
@@ -1264,9 +1249,8 @@ def tiegcmrun(args=None):
         print(f"Engage = True")
     print(f"\n") 
     if coupling and args.engage is None:
-        print(f"{YELLOW}NOTE: --coupling/-co no longer changes the build: every TIE-GCM build couples with MAGE when\n"
-              f"engage launches it (the model decides at run time), so one build per resolution serves\n"
-              f"standalone and coupled runs. Building the standalone executable.{RESET}")
+        print(f"{YELLOW}DEPRECATED: --coupling/-co is ignored. Since tiegcm 400c6af every build couples with MAGE when voltron is in\n"
+              f"the job (the model decides at run time); build one executable per resolution with 'tiegcmrun.py -oc'.{RESET}")
 
     if options_path:
         # relative paths in the JSON are relative to its own directory
@@ -1295,6 +1279,9 @@ def tiegcmrun(args=None):
     else:
         options = None
         if getattr(args, "tui", False):
+            if args.engage is not None:
+                # the full-screen form has no executable field: say so before it opens
+                print(f"{YELLOW}{engage_exe_note(args.engage)}{RESET}")
             _tf = _import_own_tui_form()
             try:
                 options = _tf.run_tui_wizard(args)

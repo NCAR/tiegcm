@@ -159,9 +159,9 @@ def build_exe(modeldir, horires):
     return os.path.join(build_dir(modeldir, horires), "tiegcm.exe")
 
 
-def build_command(horires):
-    """The tiegcmrun command that builds a resolution's executable."""
-    return f"tiegcmrun.py -oc  (Horizontal Resolution {float(horires):g})"
+def exe_link(horires):
+    """The run directory's link to a resolution's build under engage: tiegcm_<res>.exe."""
+    return f"tiegcm_{float(horires):g}.exe"
 
 
 def missing_exe_message(exe, horires):

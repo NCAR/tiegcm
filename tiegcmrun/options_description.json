@@ -281,7 +281,7 @@
                 "type": "path",
                 "prompt": "Standalone Executable",
                 "default": null,
-                "description": "The TIE-GCM executable the jobs launch. One build per horizontal resolution serves standalone and coupled runs (the model decides at run time); build it with tiegcmrun.py -oc, which puts it in <modeldir>/tiegcm_<res>/tiegcm.exe. Default <execdir>/tiegcm.exe for a run, the resolution build when it exists under engage. It must be a real executable; one built for another resolution is a warning on a standalone run and is refused under engage, where it is the spin-up executable.",
+                "description": "The TIE-GCM executable the jobs launch. One build per horizontal resolution serves standalone and coupled runs (the model decides at run time); build it with tiegcmrun.py -oc, which puts it in <modeldir>/tiegcm_<res>/tiegcm.exe. Default <execdir>/tiegcm.exe. It must be a real executable; one built for another resolution is a warning on a standalone run. Under engage it is not asked: engage links $TIEGCMHOME/tiegcm_<res>/tiegcm.exe of the spin-up resolution into the run directory as tiegcm_<res>.exe and the jobs run the link.",
                 "warning": null
             },
             "coupled_modelexe": {
@@ -289,7 +289,7 @@
                 "type": "path",
                 "prompt": "Coupled Executable",
                 "default": null,
-                "description": "The executable of the coupled TIE-GCM jobs under engage, at the coupled grid of the GAMERA grid (D 2.5, Q 1.25, O 0.625 degrees): the tiegcm_<res> build of that resolution (tiegcmrun.py -oc); for D it is the spin-up executable itself. engage refuses one built for another resolution and an old build without the MAGE coupling symbols.",
+                "description": "The executable of the coupled TIE-GCM jobs under engage: the run directory's link tiegcm_<res>.exe to the tiegcm_<res> build ($TIEGCMHOME/tiegcm_<res>/tiegcm.exe) at the coupled grid of the GAMERA grid (D 2.5, Q 1.25, O 0.625 degrees); for D it is the spin-up link. Not asked: engage requires the build (tiegcmrun.py -oc) and refuses one built for another resolution or without the MAGE coupling symbols.",
                 "warning": null
             }
         },
