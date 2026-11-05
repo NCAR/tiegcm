@@ -285,13 +285,14 @@ def _fill_omitted(options, option_descriptions, segment, groups=(), account=None
         filled.append("model.data.parentdir")
     inp = options.get("inp")
     if isinstance(inp, dict) and inp:
-        window = (_set(inp.get("start_time")) and _set(inp.get("stop_time"))) \
-            or (_set(inp.get("PRISTART")) and _set(inp.get("PRISTOP")))
-    else:
-        window = _set(data.get("input_file"))
-    if not window:
-        raise ValueError(f"{RED}The options JSON has no value for inp.start_time, inp.stop_time: add "
-                         f"them to the JSON.{RESET}")
+        missing = [k for k in ("start_time", "stop_time") if not _set(inp.get(k))]
+        if missing and not (_set(inp.get("PRISTART")) and _set(inp.get("PRISTOP"))):
+            raise ValueError(f"{RED}The options JSON has no value for "
+                             f"{', '.join('inp.' + k for k in missing)} (or give inp.PRISTART and "
+                             f"inp.PRISTOP): add it to the JSON.{RESET}")
+    elif not _set(data.get("input_file")):
+        raise ValueError(f"{RED}The options JSON has no value for inp.start_time, inp.stop_time (or "
+                         f"model.data.input_file): add them to the JSON.{RESET}")
     hpc = sim["hpc_system"]
     vertres, mres, _, _ = resolution_solver(float(spec["horires"]))
     for key, value in (("vertres", vertres), ("mres", mres)):
@@ -305,7 +306,8 @@ def _fill_omitted(options, option_descriptions, segment, groups=(), account=None
         data["tgcmdata"] = machine_data_dir(hpc)
         if data["tgcmdata"] is None:
             data["tgcmdata"] = tiegcm_env("TIEGCMDATA")
-            _data_dir_note(hpc, data["tgcmdata"])
+            if hpc in _machines():
+                _data_dir_note(hpc, data["tgcmdata"])
         filled.append("model.data.tgcmdata")
     if "make" not in data and data.get("modeldir") and default_make_file(data["modeldir"], hpc):
         data["make"] = default_make_file(data["modeldir"], hpc)
@@ -597,6 +599,9 @@ def _default_job_block(options, option_descriptions, account=None, job=None):
             res = {k: copy.deepcopy(d.get("default")) for k, d in desc.items()}
             if _set((given.get("resource") or {}).get("model")):
                 res["model"] = given["resource"]["model"]
+            elif _set(options["simulation"].get("node_type")) and "model" in res:
+                from engage_solver import engage_node_model
+                res["model"] = engage_node_model(hpc, options["simulation"]["node_type"])
             queue = given.get("queue") if _set(given.get("queue")) else (od.get("queue") or {}).get("default")
             probe = dict(options, job={"resource": res, "queue": queue})
             select, ncpus, mpiprocs = select_resource_defaults(probe, option_descriptions)
@@ -809,7 +814,8 @@ def fill_engage_omitted(options, option_descriptions, engage_owned=(), engage=No
             data["tgcmdata"] = machine_data_dir(engage["hpc_system"])
             if data["tgcmdata"] is None:
                 data["tgcmdata"] = tiegcm_env("TIEGCMDATA")
-                _data_dir_note(engage["hpc_system"], data["tgcmdata"])
+                if engage["hpc_system"] in _machines():
+                    _data_dir_note(engage["hpc_system"], data["tgcmdata"])
             filled.append("model.data.tgcmdata")
     no_gpi = engage is not None and gpi_absent(inp)
     for key in od:
