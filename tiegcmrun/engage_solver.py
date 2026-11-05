@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 from misc import (seconds_to_dhms, resolution_solver, mres_to_nres_grid, find_file, select_resource_defaults,
                   get_mtime, select_source_defaults, segment_time, gswm_allowed, ntask_error, json_paths,
-                  tiegcm_env, is_unset, GSWM_PATTERNS)
+                  tiegcm_env, is_unset, GSWM_PATTERNS, exe_link)
 from output_solver import (segment_jobs, write_segment_jobs, segment_plan, coupled_handoff_regrids, CONFIG_DIR,
                            job_resource_problems, apply_system_config)
 from interpolation import interpic
@@ -103,6 +103,9 @@ def engage_parser(engage_parameters):
     eo['STEP'] = STEP
     eo["voltron_dtOut"] = voltron_dtOut
     eo['parentdir'] = root_directory
+    # engage links the tiegcm_<res> builds into the run directory; the jobs run the links
+    eo['modelexe'] = os.path.join(root_directory, exe_link(horires_standalone))
+    eo['coupled_modelexe'] = os.path.join(root_directory, exe_link(horires_coupled))
 
     eo['project_code'] = account_name
     if hpc_system == 'aitken':
@@ -120,7 +123,7 @@ def engage_parser(engage_parameters):
         eo['model'] = node_type
     
     eo["coupled_defaults"] = coupled_inp_defaults({}, horires_standalone)
-    eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','project_code','queue','job_priority','model','walltime','ONEWAY']
+    eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','project_code','queue','job_priority','model','walltime','ONEWAY','modelexe','coupled_modelexe']
     
     return engage_options
 
@@ -203,6 +206,8 @@ def engage_options_updater(options, engage_options, option_descriptions):
     o["execdir"] = o["parentdir"]
     o["workdir"] = o["parentdir"]
     o["histdir"] = o["parentdir"]
+    o["modelexe"] = engage_options["modelexe"]
+    o["coupled_modelexe"] = engage_options["coupled_modelexe"]
     if isinstance(o.get("log_file"), str) and o["log_file"].strip() not in ("", "None", "none", "null"):
         o["log_file"] = os.path.join(o["parentdir"], os.path.basename(o["log_file"]))
     o = options["model"]["specification"]
@@ -286,6 +291,7 @@ def engage_options_updater(options, engage_options, option_descriptions):
 # TIE-GCM options set by engage in a coupled run.
 ENGAGE_OWNED_KEYS = (("simulation", "job_name"), ("simulation", "hpc_system"),
                      ("model", "specification", "horires"), ("inp", "ONEWAY"),
+                     ("model", "data", "modelexe"), ("model", "data", "coupled_modelexe"),
                      ("inp", "start_time"), ("inp", "stop_time"),
                      ("inp", "secondary_start_time"), ("inp", "secondary_stop_time"), ("inp", "segment"),
                      ("job", "queue"), ("job", "walltime"), ("job", "job_priority"), ("job", "group_list"),
@@ -313,6 +319,20 @@ def note_engage_owned(saved, options):
               f"(change them in the engage options): "
               + ", ".join(f"{name} {old!r} -> {new!r}" for name, old, new in changed) + f".{RESET}")
     return [name for name, _, _ in changed]
+
+
+def engage_exe_note(engage):
+    """The prompt section's two lines on the TIE-GCM executables engage links (not asked)."""
+    spin, cpl = float(engage["horires"]), float(engage["horires_coupled"])
+    if spin == cpl:
+        first = (f"TIE-GCM executable (not asked): engage links $TIEGCMHOME/tiegcm_{spin:g}/tiegcm.exe into the "
+                 f"run directory as {exe_link(spin)} (spin-up and coupled); the jobs run the link.")
+    else:
+        first = (f"TIE-GCM executables (not asked): engage links $TIEGCMHOME/tiegcm_{spin:g}/tiegcm.exe (spin-up) "
+                 f"and $TIEGCMHOME/tiegcm_{cpl:g}/tiegcm.exe (coupled) into the run directory as "
+                 f"{exe_link(spin)} and {exe_link(cpl)}; the jobs run the links.")
+    return (first + "\nA missing build is refused before anything is written: make it with "
+            "'tiegcmrun.py -oc' at that resolution.")
 
 
 def get_engage_start_time(datetime_str, seconds):
