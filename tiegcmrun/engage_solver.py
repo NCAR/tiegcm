@@ -339,30 +339,46 @@ def replay_exes(data, engage):
     Omitted keys get the default builds $TIEGCMHOME/tiegcm_<res>/tiegcm.exe. A recorded path that is
     this run directory's own link tiegcm_<res>.exe (an engage JSON saved before tiegcmrun owned the
     executables records the link, not the build) is replaced by the default build, with one NOTE:
-    tiegcmrun never links a link to itself. Any other recorded path is kept (checked later)."""
+    tiegcmrun never links a link to itself. Any other recorded path is kept (checked later). A D run
+    has one executable: a recorded coupled_modelexe runs both roles (NOTE when modelexe differs)."""
     own = {os.path.normpath(os.path.join(engage["parentdir"], exe_link(h)))
            for h in (engage["horires"], engage["horires_coupled"])}
     home = tiegcm_env("TIEGCMHOME")
-    replaced = []
-    for key, horires, _ in engage_exes(engage):
+    spin, cpl = float(engage["horires"]), float(engage["horires_coupled"])
+    kept, replaced = {}, []
+    for key in ("modelexe", "coupled_modelexe"):
         value = data.get(key)
-        default = build_exe(home, horires)
         if is_unset(value):
-            data[key] = default
-        elif os.path.normpath(os.path.join(engage["parentdir"], str(value))) in own:
-            data[key] = default
-            replaced.append(f"model.data.{key} ./{os.path.basename(str(value))} -> {default}")
-    if float(engage["horires"]) == float(engage["horires_coupled"]):
-        data["coupled_modelexe"] = data["modelexe"]
+            continue
+        if os.path.normpath(os.path.join(engage["parentdir"], str(value))) in own:
+            replaced.append(key)
+        else:
+            kept[key] = value
+    notes = []
+    if spin == cpl:
+        chosen = kept.get("coupled_modelexe") or kept.get("modelexe") or build_exe(home, spin)
+        if len(kept) == 2 and os.path.normpath(str(kept["modelexe"])) != os.path.normpath(str(chosen)):
+            notes.append(f"NOTE: a GAMERA D run has one TIE-GCM executable (spin-up and coupled): "
+                         f"model.data.coupled_modelexe {chosen} runs both, model.data.modelexe "
+                         f"{kept['modelexe']} is not used.")
+        values = {"modelexe": chosen, "coupled_modelexe": chosen}
+    else:
+        values = {key: kept.get(key) or build_exe(home, h) for key, h in (("modelexe", spin),
+                                                                          ("coupled_modelexe", cpl))}
     if replaced:
-        print(f"{YELLOW}NOTE: the -to JSON records the run directory's own TIE-GCM links, not builds; "
-              f"using the default builds: {', '.join(replaced)}.{RESET}")
+        notes.insert(0, "NOTE: the -to JSON records the run directory's own TIE-GCM links, not builds; using "
+                        "the default builds: " + ", ".join(f"model.data.{key} ./{os.path.basename(str(data[key]))}"
+                                                           f" -> {values[key]}" for key in replaced) + ".")
+    data.update(values)
+    for note in notes:
+        print(f"{YELLOW}{note}{RESET}")
     return replaced
 
 
 def link_exes(options, engage):
-    """Symlink <run dir>/tiegcm_<res>.exe to each chosen executable (absolute target), one per
-    distinct resolution; an existing symlink is replaced, a regular file is left with a WARNING.
+    """Symlink <run dir>/tiegcm_<res>.exe to each chosen executable (absolute target; relative when the
+    executable is inside the run directory), one per distinct resolution; an existing symlink is replaced, a
+    regular file is left with a WARNING.
     Prints the 'TIE-GCM executables:' line of the links made and returns {horires: link path}."""
     data = options["model"]["data"]
     same = float(engage["horires"]) == float(engage["horires_coupled"])
@@ -378,7 +394,10 @@ def link_exes(options, engage):
         elif os.path.exists(link):
             print(f"WARNING: {link} is a regular file; left in place (engage would have linked {exe})")
             continue
-        os.symlink(exe, link)
+        # absolute target, except for an executable inside the run directory (kept relocatable)
+        run_dir = os.path.abspath(engage["parentdir"])
+        inside = os.path.commonpath([exe, run_dir]) == run_dir
+        os.symlink(os.path.relpath(exe, run_dir) if inside else exe, link)
         role = "spin-up and coupled" if same else ("spin-up" if key == "modelexe" else "coupled")
         made.append(f"./{exe_link(horires)} -> {exe} ({role})")
     if made:
