@@ -82,8 +82,7 @@ def create_command_line_parser():
     )
     parser.add_argument(
         "--onlycompile","-oc", action="store_true",
-        help="Only build TIE-GCM: one executable per horizontal resolution in "
-             "<modeldir>/tiegcm_<res>/tiegcm.exe (default: %(default)s)."
+        help="Only build TIE-GCM, one executable per resolution (default: %(default)s)."
     )
     parser.add_argument(
         "--debug", "-d", action="store_true",
@@ -107,8 +106,7 @@ def create_command_line_parser():
     )
     parser.add_argument(
         "--coupling","-co", action="store_true",
-        help="Accepted for old command lines; it no longer changes the build or the run "
-             "(every build couples under engage)."
+        help="Kept for old command lines; it no longer changes the build."
     )
     parser.add_argument(
         "--hidra", "-hi", action="store_true",
