@@ -164,15 +164,31 @@ def exe_link(horires):
     return f"tiegcm_{float(horires):g}.exe"
 
 
-def missing_exe_message(exe, horires):
-    """The warning for a run whose executable does not exist yet."""
+def missing_exe_message(exe, horires, engage=False):
+    """The warning for a run whose executable does not exist yet (engage: the prompt's re-ask text)."""
     try:
         res = f"{float(horires):g}"
     except (TypeError, ValueError):
         res = str(horires)
     return (f"{exe} not found — the model must be compiled before it runs: run 'tiegcmrun.py -oc' "
             f"and answer Horizontal Resolution {res} (builds $TIEGCMHOME/tiegcm_{res}/tiegcm.exe), "
-            f"or re-run this command with --compile/-c.")
+            + (f"or give the path of a {res} deg build." if engage else
+               "or re-run this command with --compile/-c."))
+
+
+def engage_exe_refusal(exe, key, coupled, horires, zitop=None):
+    """Why exe cannot be engage's TIE-GCM executable model.data.<key> at horires, or None.
+
+    coupled: the coupled jobs launch it. Missing, not ELF, an older standalone build as the coupled
+    executable and a build for another grid are refused (the prompts re-ask, a replay refuses)."""
+    if exe in (None, "") or is_unset(exe):
+        return f"model.data.{key}: an executable is required under engage"
+    if not os.path.isfile(exe):
+        return f"model.data.{key}: {missing_exe_message(exe, horires, engage=True)}"
+    vertres, _, nres_grid, _ = resolution_solver(horires)
+    not_elf, problems = exe_problems(exe_identity(exe, zitop), f"model.data.{key}", coupled,
+                                     horires, vertres, nres_grid, zitop)
+    return "; ".join(([not_elf] if not_elf else []) + problems) or None
 
 
 def default_make_file(modeldir, hpc_system):

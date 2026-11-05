@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 
 from misc import (seconds_to_dhms, resolution_solver, mres_to_nres_grid, find_file, select_resource_defaults,
                   get_mtime, select_source_defaults, segment_time, gswm_allowed, ntask_error, json_paths,
-                  tiegcm_env, is_unset, GSWM_PATTERNS, exe_link)
+                  tiegcm_env, is_unset, GSWM_PATTERNS, exe_link, build_exe)
 from output_solver import (segment_jobs, write_segment_jobs, segment_plan, coupled_handoff_regrids, CONFIG_DIR,
                            job_resource_problems, apply_system_config)
 from interpolation import interpic
@@ -103,9 +103,6 @@ def engage_parser(engage_parameters):
     eo['STEP'] = STEP
     eo["voltron_dtOut"] = voltron_dtOut
     eo['parentdir'] = root_directory
-    # engage links the tiegcm_<res> builds into the run directory; the jobs run the links
-    eo['modelexe'] = os.path.join(root_directory, exe_link(horires_standalone))
-    eo['coupled_modelexe'] = os.path.join(root_directory, exe_link(horires_coupled))
 
     eo['project_code'] = account_name
     if hpc_system == 'aitken':
@@ -123,7 +120,7 @@ def engage_parser(engage_parameters):
         eo['model'] = node_type
     
     eo["coupled_defaults"] = coupled_inp_defaults({}, horires_standalone)
-    eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','project_code','queue','job_priority','model','walltime','ONEWAY','modelexe','coupled_modelexe']
+    eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','project_code','queue','job_priority','model','walltime','ONEWAY']
     
     return engage_options
 
@@ -206,8 +203,7 @@ def engage_options_updater(options, engage_options, option_descriptions):
     o["execdir"] = o["parentdir"]
     o["workdir"] = o["parentdir"]
     o["histdir"] = o["parentdir"]
-    o["modelexe"] = engage_options["modelexe"]
-    o["coupled_modelexe"] = engage_options["coupled_modelexe"]
+    replay_exes(o, engage_options)
     if isinstance(o.get("log_file"), str) and o["log_file"].strip() not in ("", "None", "none", "null"):
         o["log_file"] = os.path.join(o["parentdir"], os.path.basename(o["log_file"]))
     o = options["model"]["specification"]
@@ -292,7 +288,6 @@ ENGAGE_OWNED_KEYS = (("simulation", "job_name"), ("simulation", "hpc_system"),
                      ("model", "specification", "horires"), ("model", "specification", "vertres"),
                      ("model", "specification", "mres"), ("model", "specification", "nres_grid"),
                      ("inp", "ONEWAY"),
-                     ("model", "data", "modelexe"), ("model", "data", "coupled_modelexe"),
                      ("inp", "start_time"), ("inp", "stop_time"),
                      ("inp", "secondary_start_time"), ("inp", "secondary_stop_time"), ("inp", "segment"),
                      ("job", "queue"), ("job", "walltime"), ("job", "job_priority"), ("job", "group_list"),
@@ -322,18 +317,73 @@ def note_engage_owned(saved, options):
     return [name for name, _, _ in changed]
 
 
-def engage_exe_note(engage):
-    """The prompt section's two lines on the TIE-GCM executables engage links (not asked)."""
+def engage_exe_prompt(spin, cpl, key):
+    """The engage prompt of model.data.<key>: 'TIE-GCM executable, 2.5 deg (spin-up and coupled)'."""
+    if key == "coupled_modelexe":
+        return f"TIE-GCM executable, {float(cpl):g} deg (coupled)"
+    return (f"TIE-GCM executable, {float(spin):g} deg "
+            f"({'spin-up and coupled' if float(spin) == float(cpl) else 'spin-up'})")
+
+
+def engage_exes(engage):
+    """[(key, horires, coupled)] of the TIE-GCM executables a coupled run asks: D one (both roles)."""
     spin, cpl = float(engage["horires"]), float(engage["horires_coupled"])
     if spin == cpl:
-        first = (f"TIE-GCM executable (not asked): engage links $TIEGCMHOME/tiegcm_{spin:g}/tiegcm.exe into the "
-                 f"run directory as {exe_link(spin)} (spin-up and coupled); the jobs run the link.")
-    else:
-        first = (f"TIE-GCM executables (not asked): engage links $TIEGCMHOME/tiegcm_{spin:g}/tiegcm.exe (spin-up) "
-                 f"and $TIEGCMHOME/tiegcm_{cpl:g}/tiegcm.exe (coupled) into the run directory as "
-                 f"{exe_link(spin)} and {exe_link(cpl)}; the jobs run the links.")
-    return (first + "\nA missing build is refused before anything is written: make it with "
-            "'tiegcmrun.py -oc' at that resolution.")
+        return [("modelexe", spin, True)]
+    return [("modelexe", spin, False), ("coupled_modelexe", cpl, True)]
+
+
+def replay_exes(data, engage):
+    """Fill or repair model.data.modelexe / coupled_modelexe of an engage -to replay (in place).
+
+    Omitted keys get the default builds $TIEGCMHOME/tiegcm_<res>/tiegcm.exe. A recorded path that is
+    this run directory's own link tiegcm_<res>.exe (an engage JSON saved before tiegcmrun owned the
+    executables records the link, not the build) is replaced by the default build, with one NOTE:
+    tiegcmrun never links a link to itself. Any other recorded path is kept (checked later)."""
+    own = {os.path.normpath(os.path.join(engage["parentdir"], exe_link(h)))
+           for h in (engage["horires"], engage["horires_coupled"])}
+    home = tiegcm_env("TIEGCMHOME")
+    replaced = []
+    for key, horires, _ in engage_exes(engage):
+        value = data.get(key)
+        default = build_exe(home, horires)
+        if is_unset(value):
+            data[key] = default
+        elif os.path.normpath(os.path.join(engage["parentdir"], str(value))) in own:
+            data[key] = default
+            replaced.append(f"model.data.{key} ./{os.path.basename(str(value))} -> {default}")
+    if float(engage["horires"]) == float(engage["horires_coupled"]):
+        data["coupled_modelexe"] = data["modelexe"]
+    if replaced:
+        print(f"{YELLOW}NOTE: the -to JSON records the run directory's own TIE-GCM links, not builds; "
+              f"using the default builds: {', '.join(replaced)}.{RESET}")
+    return replaced
+
+
+def link_exes(options, engage):
+    """Symlink <run dir>/tiegcm_<res>.exe to each chosen executable (absolute target), one per
+    distinct resolution; an existing symlink is replaced, a regular file is left with a WARNING.
+    Prints the 'TIE-GCM executables:' line of the links made and returns {horires: link path}."""
+    data = options["model"]["data"]
+    same = float(engage["horires"]) == float(engage["horires_coupled"])
+    links, made = {}, []
+    for key, horires, _ in engage_exes(engage):
+        exe = os.path.abspath(data[key])
+        link = os.path.join(engage["parentdir"], exe_link(horires))
+        links[horires] = link
+        if os.path.normpath(link) == os.path.normpath(exe):
+            continue                          # never a link to itself
+        if os.path.islink(link):
+            os.remove(link)
+        elif os.path.exists(link):
+            print(f"WARNING: {link} is a regular file; left in place (engage would have linked {exe})")
+            continue
+        os.symlink(exe, link)
+        role = "spin-up and coupled" if same else ("spin-up" if key == "modelexe" else "coupled")
+        made.append(f"./{exe_link(horires)} -> {exe} ({role})")
+    if made:
+        print("TIE-GCM executables: " + ", ".join(made))
+    return links
 
 
 def get_engage_start_time(datetime_str, seconds):
@@ -456,6 +506,12 @@ def engage_run(options, debug, engage):
     ensure_job_block(options, option_descriptions, engage)
     options_standalone = copy.deepcopy(options)
     options_coupling = copy.deepcopy(options)
+    # the jobs run the run directory's links tiegcm_<res>.exe (made by link_exes when the files are
+    # written); the replay JSON keeps the chosen executables
+    links = {float(h): os.path.join(engage["parentdir"], exe_link(h))
+             for h in (engage["horires"], engage["horires_coupled"])}
+    options_standalone["model"]["data"]["modelexe"] = links[float(engage["horires"])]
+    options_coupling["model"]["data"]["coupled_modelexe"] = links[float(engage["horires_coupled"])]
     options_standalone["simulation"]["job_name"] = f'{engage["job_name"]}-tiegcm-standalone'
     options_standalone["inp"]["stop_time"] = engage["coupled_start_time"]
     if float(engage['horires']) <= 2.5:
@@ -543,6 +599,7 @@ def engage_run(options, debug, engage):
     interpic (in_prim,float(horires_standalone),float(vertres_standalone),float(options_standalone['model']['specification']['zitop']),out_prim)
     standalone_inp_files,standalone_pbs_files, standalone_log_files,pristart_times, pristop_times, standalone_last_prim=write_segment_jobs(standalone_planned, options_standalone["simulation"]["job_name"])
     coupling_inp_files,coupling_pbs_files, coupling_log_files, pristart_times, pristop_times, _ = write_segment_jobs(coupling_planned, options_coupling["simulation"]["job_name"])
+    link_exes(options, engage)
 
     options_coupling = CoupledOptions(options_coupling)
     options_coupling.replay_options = json_paths(options_replay, engage["parentdir"])
