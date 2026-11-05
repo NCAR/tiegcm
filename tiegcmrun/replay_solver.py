@@ -802,7 +802,7 @@ def fill_engage_omitted(options, option_descriptions, engage_owned=(), engage=No
             | {"start_time", "stop_time", "segment"}) - set(derived)
     filled = []
     if engage is not None:
-        # modelexe / coupled_modelexe are engage's links, set by engage_options_updater
+        # modelexe / coupled_modelexe: engage_solver.replay_exes (default builds)
         data, spec = options["model"]["data"], options["model"]["specification"]
         if "modeldir" not in data:
             data["modeldir"] = tiegcm_env("TIEGCMHOME")

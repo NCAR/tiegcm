@@ -281,7 +281,7 @@
                 "type": "path",
                 "prompt": "Standalone Executable",
                 "default": null,
-                "description": "The TIE-GCM executable the jobs launch. One build per horizontal resolution serves standalone and coupled runs (the model decides at run time); build it with tiegcmrun.py -oc, which puts it in <modeldir>/tiegcm_<res>/tiegcm.exe. Default <execdir>/tiegcm.exe. It must be a real executable; one built for another resolution is a warning on a standalone run. Under engage it is not asked: engage links $TIEGCMHOME/tiegcm_<res>/tiegcm.exe of the spin-up resolution into the run directory as tiegcm_<res>.exe and the jobs run the link.",
+                "description": "The TIE-GCM executable the jobs launch. One build per horizontal resolution serves standalone and coupled runs (the model decides at run time); build it with tiegcmrun.py -oc, which puts it in <modeldir>/tiegcm_<res>/tiegcm.exe. Default <execdir>/tiegcm.exe. It must be a real executable; one built for another resolution is a warning on a standalone run. Under engage it is the spin-up resolution's build (D: spin-up and coupled), default $TIEGCMHOME/tiegcm_<res>/tiegcm.exe; a build kept elsewhere: answer its path (or ln -s <dir> $TIEGCMHOME/tiegcm_<res>). A missing build, a non-executable or one for another grid is re-asked; tiegcmrun links the answer into the run directory as tiegcm_<res>.exe and the jobs run the link.",
                 "warning": null
             },
             "coupled_modelexe": {
@@ -289,7 +289,7 @@
                 "type": "path",
                 "prompt": "Coupled Executable",
                 "default": null,
-                "description": "The executable of the coupled TIE-GCM jobs under engage: the run directory's link tiegcm_<res>.exe to the tiegcm_<res> build ($TIEGCMHOME/tiegcm_<res>/tiegcm.exe) at the coupled grid of the GAMERA grid (D 2.5, Q 1.25, O 0.625 degrees); for D it is the spin-up link. Not asked: engage requires the build (tiegcmrun.py -oc) and refuses one built for another resolution or without the MAGE coupling symbols.",
+                "description": "The executable of the coupled TIE-GCM jobs under engage: the tiegcm_<res> build at the coupled grid of the GAMERA grid (Q 1.25, O 0.625 degrees; D asks one executable for both), default $TIEGCMHOME/tiegcm_<res>/tiegcm.exe, built with tiegcmrun.py -oc at that resolution; a build kept elsewhere: answer its path (or ln -s <dir> $TIEGCMHOME/tiegcm_<res>). One built for another resolution or without the MAGE coupling symbols is re-asked. tiegcmrun links it into the run directory as tiegcm_<res>.exe and the coupled jobs run the link.",
                 "warning": null
             }
         },

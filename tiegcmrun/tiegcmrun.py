@@ -18,7 +18,7 @@ from fractions import Fraction
 
 from compile import compile_tiegcm
 from interpolation import interpic
-from engage_solver import engage_parser, engage_run, engage_options_updater, apply_coupled_defaults, COUPLED_DEFAULT_KEYS, COUPLED_HISTORY_KEYS, gamres_to_res, engage_exe_note, engage_node_model
+from engage_solver import engage_parser, engage_run, engage_options_updater, apply_coupled_defaults, COUPLED_DEFAULT_KEYS, COUPLED_HISTORY_KEYS, gamres_to_res, engage_node_model, engage_exe_prompt
 from namelist_solver import inp_pri_date,inp_mxhist,inp_sechist,inp_prihist,inp_pri_out,inp_sec_out,inp_sec_date,parse_segment,forcing_missing,parse_run_datetime,cadence_step,hms_str,hms_differs,source_start_hms_error,source_time_of_day_error,resolve_source_start,forcing_refusal,date_order_problem,year_boundary,lbc_other_set
 from output_solver import create_inp_scripts, create_pbs_scripts, segment_jobs, write_segment_jobs, run_file, render_pbs, CONFIG_DIR, apply_system_config, linux_run_commands, queue_walltime_default
 from jobgen import JobGen, spell, cdpath_reset
@@ -545,6 +545,16 @@ def _resolve_exe(o, key, args, horires, missing):
             missing.append((o[key], horires))
 
 
+def _ask_engage_exe(key, description, horires, coupled, zitop, mode, skip_parameters, run_dir):
+    """Ask an engage executable until misc.engage_exe_refusal accepts it (a missing default too)."""
+    while True:
+        exe = get_run_option(key, description, mode, skip_parameters, run_dir=run_dir)
+        refusal = misc.engage_exe_refusal(exe, key, coupled, horires, zitop)
+        if refusal is None or not _prompted(key, description, mode, skip_parameters):
+            return exe                       # not asked: check_executables refuses it
+        print(f"{RED}{refusal}{RESET}")
+
+
 def build_roles(horires):
     """The engage GRT roles of a resolution's build: 'GAMERA D (spin-up and coupled) and Q (spin-up)'."""
     parts = {}                                # roles -> grids with those roles, in grid order
@@ -674,12 +684,21 @@ def prompt_user_for_run_options(args):
                                                  "tiegcm.exe")
         o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
     elif engage != None:
-        # not asked: engage links the tiegcm_<res> builds into the run directory (engage_parser's paths)
-        for key in ("modelexe", "coupled_modelexe"):
-            od[key]["default"] = engage[key]
-            o[key] = get_run_option(key, od[key], mode, skip_parameters, run_dir=run_dir)
-        if not getattr(args, "tui", False):           # the wizard path printed it already
-            print(f"{YELLOW}{engage_exe_note(engage)}{RESET}")
+        # one executable per resolution the GAMERA grid needs: D asks once (both roles), Q and O twice;
+        # tiegcmrun links each into the run directory as tiegcm_<res>.exe when it writes the run
+        spin, cpl = float(engage["horires"]), float(engage["horires_coupled"])
+        zitop = option_descriptions["model"]["specification"]["zitop"].get("default")
+        od["modelexe"]["prompt"] = engage_exe_prompt(spin, cpl, "modelexe")
+        od["modelexe"]["default"] = misc.build_exe(tiegcm_env("TIEGCMHOME"), spin)
+        o["modelexe"] = _ask_engage_exe("modelexe", od["modelexe"], spin, spin == cpl, zitop, mode,
+                                        skip_parameters, run_dir)
+        if spin == cpl:
+            o["coupled_modelexe"] = o["modelexe"]
+        else:
+            od["coupled_modelexe"]["prompt"] = engage_exe_prompt(spin, cpl, "coupled_modelexe")
+            od["coupled_modelexe"]["default"] = misc.build_exe(tiegcm_env("TIEGCMHOME"), cpl)
+            o["coupled_modelexe"] = _ask_engage_exe("coupled_modelexe", od["coupled_modelexe"], cpl, True,
+                                                    zitop, mode, skip_parameters, run_dir)
     else:
         od["modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.exe")
         o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
@@ -1161,9 +1180,12 @@ def check_executables(options, args, invoke_dir):
         if role == building or path is None:
             continue
         if not os.path.exists(path):
-            missing = f"model.data.{role}: {misc.missing_exe_message(path, horires)}"
-            if not engage:              # engage prints its own warning for a missing spin-up exe
-                warned.append(missing)  # (as makeitso does for a missing voltron_mpi.x)
+            # under engage a missing build is refused (the prompts re-ask it); a standalone run
+            # only warns (decks may precede the build)
+            if engage:
+                refused.append(f"model.data.{role}: {misc.missing_exe_message(path, horires, engage=True)}")
+            else:
+                warned.append(f"model.data.{role}: {misc.missing_exe_message(path, horires)}")
             continue
         not_elf, problems = misc.exe_problems(misc.exe_identity(path, zitop), f"model.data.{role}",
                                               coupled, horires, vertres, nres_grid, zitop)
@@ -1277,9 +1299,6 @@ def tiegcmrun(args=None):
     else:
         options = None
         if getattr(args, "tui", False):
-            if args.engage is not None:
-                # the full-screen form has no executable field: say so before it opens
-                print(f"{YELLOW}{engage_exe_note(args.engage)}{RESET}")
             _tf = _import_own_tui_form()
             try:
                 options = _tf.run_tui_wizard(args)

@@ -343,7 +343,8 @@ def _derive_registry():
     """Return {path: (fn(values) -> default, deps)}, built on tiegcmrun's own functions."""
     from misc import (resolution_solver, get_mtime, select_source_defaults, find_file,
                       select_latest_gpi, file_covers, mres_to_nres_grid, default_make_file,
-                      gswm_allowed, he_coefs_pattern, GSWM_PATTERNS, history_dir, build_dir)
+                      gswm_allowed, he_coefs_pattern, GSWM_PATTERNS, history_dir, build_dir,
+                      build_exe)
     from namelist_solver import (inp_pri_date, inp_prihist, inp_sechist, inp_mxhist,
                                   inp_pri_out, inp_sec_out, inp_sec_date, cadence_step,
                                   lbc_other_set)
@@ -520,16 +521,18 @@ def _derive_registry():
         cfg = v.get("__engage_cfg") or {}
         if v.get("__onlycompile") and _is_set(v["model.data.parentdir"]):
             return os.path.join(str(v["model.data.parentdir"]), "tiegcm.exe")
-        if v.get("__engage") and cfg.get("modelexe"):
-            # not asked: engage's link to the spin-up resolution's build
-            return cfg["modelexe"]
+        if v.get("__engage") and cfg.get("horires") is not None:
+            # the spin-up resolution's build; tiegcmrun links it into the run directory
+            return build_exe(tiegcm_env("TIEGCMHOME") or "", cfg["horires"])
         return os.path.join(v["model.data.execdir"], "tiegcm.exe")
 
     def _coupled_modelexe(v):
         cfg = v.get("__engage_cfg") or {}
-        if v.get("__engage") and cfg.get("coupled_modelexe"):
-            # not asked: engage's link to the coupled resolution's build (D: the spin-up link)
-            return cfg["coupled_modelexe"]
+        if v.get("__engage") and cfg.get("horires_coupled") is not None:
+            # the coupled resolution's build (D: the one spin-up and coupled executable)
+            if _engage_same_grid(cfg):
+                return v["model.data.modelexe"]
+            return build_exe(tiegcm_env("TIEGCMHOME") or "", cfg["horires_coupled"])
         return os.path.join(v["model.data.execdir"], "tiegcm.x")
 
     def _histdir_job(v):
@@ -763,6 +766,10 @@ def _validate_registry():
         return other_input_error(unknown) if unknown else None
 
     reg = {
+        "model.data.modelexe": lambda v, val: (_engage_exe_refusal("model.data.modelexe", v)
+                                               if v.get("__engage") else None),
+        "model.data.coupled_modelexe": lambda v, val: (_engage_exe_refusal("model.data.coupled_modelexe", v)
+                                                       if v.get("__engage") else None),
         "inp.SECFLDS": secflds,
         "inp.other_input": other_input,
         "inp.start_time": iso,
@@ -882,7 +889,10 @@ def _warn_registry():
 
     def exe_warn(path):
         def fn(v):
-            if v.get("__compile") or v.get("__onlycompile") or v.get("__engage"):
+            if v.get("__engage"):
+                # the same text the Finish check (_validate_registry) blocks on
+                return _engage_exe_refusal(path, v, live=True)
+            if v.get("__compile") or v.get("__onlycompile"):
                 return None
             exe = str(v.get(path, "") or "").strip()
             if exe in ("", "None", "none", "[None]"):
@@ -944,6 +954,24 @@ def _is_set(x):
     """True unless x is blank, null, false or 0."""
     s = str(x).strip().lower()
     return s not in ("", "none", "null", "[null]", "[none]", "false", "0", "[]")
+
+
+def _engage_exe_refusal(path, v, live=False):
+    """Under engage: why the executable at `path` cannot run its role (misc.engage_exe_refusal), or None.
+
+    `live`: the value is the uncommitted input text, so a relative path is anchored to the run directory."""
+    cfg = v.get("__engage_cfg") or {}
+    coupled = path.endswith("coupled_modelexe")
+    try:
+        horires = float(cfg["horires_coupled"] if coupled else cfg["horires"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    exe = str(v.get(path, "") or "").strip()
+    if live and _is_set(exe) and not os.path.isabs(os.path.expanduser(exe)):
+        exe = _misc().anchor_path(exe, cfg.get("parentdir") or os.getcwd())
+    exe = os.path.expanduser(exe)
+    return _misc().engage_exe_refusal(exe, path.rsplit(".", 1)[1], coupled or _engage_same_grid(cfg),
+                                      horires, v.get("model.specification.zitop"))
 
 
 def _engage_same_grid(cfg):
@@ -1059,6 +1087,12 @@ def build_state(args, mode="EXPERT"):
                                                  if f not in spec and f not in data]
         by_path["model.data.parentdir"].prompt = "Build directory"
         by_path["model.data.modelexe"].prompt = "Executable to build"
+    elif eng is not None and eng.get("horires") is not None:
+        # one executable per resolution the GAMERA grid needs: D asks once, Q and O twice
+        from engage_solver import engage_exe_prompt
+        for key in ("modelexe", "coupled_modelexe"):
+            by_path[f"model.data.{key}"].prompt = engage_exe_prompt(
+                eng["horires"], eng.get("horires_coupled", eng["horires"]), key)
     if eng is not None:
         from engage_solver import COUPLED_DEFAULT_KEYS
         for f in fields:
@@ -1688,7 +1722,9 @@ def apply_accept_actions(options, args):
             print(f"Warning: {misc.missing_exe_message(exe, horires)}")
     if eng is None:
         _exe("modelexe", spec.get("horires"))
-    # under engage both keys are engage's links (engage_parser), not files to resolve
+    elif _engage_same_grid(eng):
+        # D: one executable, spin-up and coupled
+        data["coupled_modelexe"] = data.get("modelexe")
     return finalize_options(options, args)
 
 
