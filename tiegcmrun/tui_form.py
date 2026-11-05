@@ -62,7 +62,7 @@ class FormState:
         self.mode = mode
         self.cond = cond                        # cond(field, values) -> shown?
         self.warn = warn or {}                  # path -> fn(values) -> warning or None
-        self.context = context or {}            # __engage/__benchmark/__coupling flags
+        self.context = context or {}            # __engage/__benchmark flags
         self.values = {f.path: ("" if f.default is None else f.default) for f in fields}
         self.overridden = set()
         self.derive_errors = {}
@@ -1046,7 +1046,6 @@ def build_state(args, mode="EXPERT"):
            "__benchmark": bench is not None,
            "__benchmark_name": bench,
            "__bench_inp": bench_inp,
-           "__coupling": getattr(args, "coupling", False),
            "__onlycompile": getattr(args, "onlycompile", False),
            "__compile": getattr(args, "compile", False)}
     by_path = {f.path: f for f in fields}
