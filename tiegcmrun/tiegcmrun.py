@@ -105,10 +105,6 @@ def create_command_line_parser():
         help="The wizard (the default; kept for old command lines)."
     )
     parser.add_argument(
-        "--coupling","-co", action="store_true",
-        help="Deprecated and ignored: every build couples when voltron is in the job."
-    )
-    parser.add_argument(
         "--hidra", "-hi", action="store_true",
         help="Enable HIDRA (default: %(default)s)."
     )
@@ -571,7 +567,6 @@ def prompt_user_for_run_options(args):
     mode = args.mode
     benchmark = args.benchmark
     engage= args.engage
-    coupling = args.coupling
     if engage != None:
         skip_parameters = engage["skip"]
     if benchmark != None and mode == None:
@@ -1188,10 +1183,11 @@ def check_executables(options, args, invoke_dir):
 
 def tiegcmrun(args=None):
     parser = create_command_line_parser()
-    if args is not None:
-        args = parser.parse_args(args)
-    else:
-        args = parser.parse_args()
+    argv = sys.argv[1:] if args is None else list(args)
+    if "-co" in argv or "--coupling" in argv:
+        parser.error("--coupling/-co was removed: every build couples with MAGE at run time. "
+                     "Build one executable per resolution with 'tiegcmrun.py -oc'.")
+    args = parser.parse_args(argv)
     args.tui = use_tui(args.no_tui)
     rederive = ()
     if args.rederive is not None:
@@ -1207,13 +1203,10 @@ def tiegcmrun(args=None):
     _require_tiegcm_env()
     # relative paths in the options resolve against this, even after the chdir into workdir
     invoke_dir = os.getcwd()
-    if args.engage is not None:
-        args.coupling = True
     clobber = args.clobber
     debug = args.debug
     debug_build = args.debug_build
     options_path = args.options_path
-    coupling = args.coupling
     hidra = args.hidra
     compile = args.compile
     onlycompile = args.onlycompile
@@ -1246,13 +1239,9 @@ def tiegcmrun(args=None):
     print(f"User Mode = {mode}")
     print(f"Compile = {compile_flag}")
     print(f"Execute = {execute}")
-    print(f"Coupling = {coupling}")  
     if args.engage != None:
         print(f"Engage = True")
     print(f"\n") 
-    if coupling and args.engage is None:
-        print(f"{YELLOW}DEPRECATED: --coupling/-co is ignored. Since tiegcm 400c6af every build couples with MAGE when voltron is in\n"
-              f"the job (the model decides at run time); build one executable per resolution with 'tiegcmrun.py -oc'.{RESET}")
 
     if options_path:
         # relative paths in the JSON are relative to its own directory
@@ -1335,17 +1324,17 @@ def tiegcmrun(args=None):
     else:
         input_file_generatred = False
     if args.onlycompile == True:
-        compile_tiegcm(options, debug_build, False, hidra)
+        compile_tiegcm(options, debug_build, hidra)
         exe = os.path.abspath(options["model"]["data"]["modelexe"])
         horires = float(options["model"]["specification"]["horires"])
         print(f"{YELLOW}Built {exe} ({horires:g} deg). engage GRT uses this resolution for: "
               f"{build_roles(horires)}{RESET}")
     elif args.engage != None:
-        options_coupling,standalone_pbs_files,coupling_inp_files = engage_run(options, debug, coupling, args.engage)
+        options_coupling,standalone_pbs_files,coupling_inp_files = engage_run(options, debug, args.engage)
         return (options_coupling,standalone_pbs_files,coupling_inp_files)
     else:
         if args.compile == True:
-            compile_tiegcm(options, debug_build, False, hidra)
+            compile_tiegcm(options, debug_build, hidra)
         # segmentation follows inp.segment alone
         inp_options = options.get("inp")
         options["model"]["specification"]["segmentation"] = (

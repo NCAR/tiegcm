@@ -14,16 +14,16 @@ def _gmake_clean(execdir):
         sys.exit(1)
 
 
-def compile_tiegcm(options, debug, coupling = False, hidra = False):
+def compile_tiegcm(options, debug, hidra = False):
     """Build TIE-GCM, restoring the caller's working directory afterwards."""
     cwd = os.getcwd()
     try:
-        _compile_tiegcm(options, debug, coupling, hidra)
+        _compile_tiegcm(options, debug, hidra)
     finally:
         os.chdir(cwd)
 
 
-def _compile_tiegcm(options, debug, coupling = False, hidra = False):
+def _compile_tiegcm(options, debug, hidra = False):
     """Compile TIE-GCM; `debug` builds a Fortran debug executable."""
     o = options
     # absolute, since the build chdirs
@@ -53,11 +53,10 @@ def _compile_tiegcm(options, debug, coupling = False, hidra = False):
         print(f">>> No Make fragment for hpc_system {o['simulation']['hpc_system']}: "
               f"set model.data.make <<<")
         sys.exit(1)
-    coupling  = coupling
     hidra     = hidra
 
     # one build per resolution serves standalone and coupled runs (the model decides at run time):
-    # the executable is always modelexe; `coupling` only survives in the flag file and Make.env
+    # the executable is always modelexe
     modelexe = os.path.basename(o["model"]["data"]["modelexe"])
     model = os.path.abspath(o["model"]["data"]["modelexe"])
     debug = debug
@@ -127,22 +126,6 @@ def _compile_tiegcm(options, debug, coupling = False, hidra = False):
 
 
     # flag files in execdir record the last build's settings; a change forces gmake clean
-    coupling_file_path = os.path.join(execdir, 'coupling')
-
-    if os.path.isfile(coupling_file_path):
-        with open(coupling_file_path, 'r') as file:
-            lastcoupling = file.read().strip().lower() == 'true'
-        if lastcoupling != coupling:
-            print(f"Clean execdir {execdir} because coupling flag switched from {lastcoupling} to {coupling}")
-            _gmake_clean(execdir)
-            with open(coupling_file_path, 'w') as file:
-                file.write(str(coupling))
-    else:
-        with open(coupling_file_path, 'w') as file:
-            file.write(str(coupling))
-        print(f"Created file coupling with coupling flag = {coupling}")
-
-
     hidra_file_path = os.path.join(execdir, 'hidra')
 
     if os.path.isfile(hidra_file_path):
@@ -224,7 +207,6 @@ DIRS          = . {srcdir}
 EXECNAME      = {model}
 NAMELIST      = {input}
 OUTPUT        = {output}
-COUPLING      = {str(coupling).upper()}
 HIDRA         = {str(hidra).upper()}
 DEBUG         = {str(debug).upper()}
 SVN_REVISION  = {svn_revision_stamp(tiegcm_git)}

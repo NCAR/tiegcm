@@ -436,7 +436,7 @@ class CoupledOptions(dict):
     replay_options = None
 
 
-def engage_run(options, debug, coupling, engage):
+def engage_run(options, debug, engage):
     """Write the TIE-GCM spin-up jobs and coupled namelists. Returns (CoupledOptions, spin-up
     .pbs files, coupled .inp files), paths relative to the run directory."""
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
