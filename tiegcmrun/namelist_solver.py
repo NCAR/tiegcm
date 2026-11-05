@@ -169,7 +169,9 @@ def inp_mxhist(start_time, stop_time, x_hist, mxhist_warn, segment = None):
             mxhist_warn = mxhist_warn +  f"\nFor a Hourly output set MXHIST to {int(mxhist_hour)}"
         if mxhist_min >= 1:
             mxhist_warn = mxhist_warn + f"\nFor a Minutely output set MXHIST to {int(mxhist_min)}"
-        MXHIST = mxhist_day
+        # A window shorter than a day holds fewer histories than a day's worth: fit MXHIST to
+        # it, or the last history (the only one in the final OUTPUT file) is never written.
+        MXHIST = min(mxhist_day, total_seconds / step_seconds)
     else:
         segment_seconds = (segment[0] * 86400) + (segment[1] * 3600) + (segment[2] * 60) + segment[3]
         MXHIST = segment_seconds/step_seconds
@@ -244,9 +246,12 @@ def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir,
         OUTPUT = f"'{histdir}/{run_name}_temp_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
     else:
         # A continuation segment starts at pri_files + 1: prim_<pri_files> is its SOURCE and
-        # output.F opens OUTPUT(1) with 'REPLACE'.
+        # output.F opens OUTPUT(1) with 'REPLACE'. numfiles.F counts PRISTART..PRISTOP inclusive,
+        # so the window writes total/step + 1 histories; list exactly the files they fill (the
+        # job's post-check waits for the last one named).
         first = pri_files + 1 if pri_files > 0 else 0
-        pri_files_n = first + number_of_files
+        n_hist = int(total_seconds // step_seconds) + 1
+        pri_files_n = first + ceil(n_hist / int(MXHIST_PRIM)) - 1
         PRIM_0 = f"{histdir}/{run_name}_prim_{'{:02d}'.format(first)}.nc"
         PRIM_N = f"{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files_n)}.nc"
         _check_to_form("OUTPUT", PRIM_0, PRIM_N)

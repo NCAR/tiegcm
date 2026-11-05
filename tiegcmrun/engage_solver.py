@@ -212,13 +212,12 @@ def engage_options_updater(options, engage_options, option_descriptions):
         o["log_file"] = os.path.join(o["parentdir"], os.path.basename(o["log_file"]))
     o = options["model"]["specification"]
     o["horires"] = engage_options["horires"]
+    # the whole grid follows the GAMERA grid: a kept vertres/mres would label and exe-check the
+    # spin-up at a grid other than the one its SOURCE is interpolated to
     vertres, mres, nres_grid, STEP = resolution_solver(o["horires"])
-    if o.get("vertres") is None:
-        o["vertres"] = vertres
-    if o.get("mres") is None:
-        o["mres"] = mres
-    if o.get("nres_grid") is None:
-        o["nres_grid"] = mres_to_nres_grid(o["mres"])
+    o["vertres"] = vertres
+    o["mres"] = mres
+    o["nres_grid"] = mres_to_nres_grid(mres)
     fill_engage_omitted(options, option_descriptions, engage_options["skip"], engage_options)
     apply_coupled_defaults(options["inp"], engage_options["horires"],
                            engage_options.get("coupled_unset", ()))
@@ -290,7 +289,9 @@ def engage_options_updater(options, engage_options, option_descriptions):
 
 # TIE-GCM options set by engage in a coupled run.
 ENGAGE_OWNED_KEYS = (("simulation", "job_name"), ("simulation", "hpc_system"),
-                     ("model", "specification", "horires"), ("inp", "ONEWAY"),
+                     ("model", "specification", "horires"), ("model", "specification", "vertres"),
+                     ("model", "specification", "mres"), ("model", "specification", "nres_grid"),
+                     ("inp", "ONEWAY"),
                      ("model", "data", "modelexe"), ("model", "data", "coupled_modelexe"),
                      ("inp", "start_time"), ("inp", "stop_time"),
                      ("inp", "secondary_start_time"), ("inp", "secondary_stop_time"), ("inp", "segment"),

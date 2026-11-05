@@ -18,7 +18,7 @@ from fractions import Fraction
 
 from compile import compile_tiegcm
 from interpolation import interpic
-from engage_solver import engage_parser, engage_run, engage_options_updater, apply_coupled_defaults, COUPLED_DEFAULT_KEYS, COUPLED_HISTORY_KEYS, gamres_to_res, engage_exe_note
+from engage_solver import engage_parser, engage_run, engage_options_updater, apply_coupled_defaults, COUPLED_DEFAULT_KEYS, COUPLED_HISTORY_KEYS, gamres_to_res, engage_exe_note, engage_node_model
 from namelist_solver import inp_pri_date,inp_mxhist,inp_sechist,inp_prihist,inp_pri_out,inp_sec_out,inp_sec_date,parse_segment,forcing_missing,parse_run_datetime,cadence_step,hms_str,hms_differs,source_start_hms_error,source_time_of_day_error,resolve_source_start,forcing_refusal,date_order_problem,year_boundary,lbc_other_set
 from output_solver import create_inp_scripts, create_pbs_scripts, segment_jobs, write_segment_jobs, run_file, render_pbs, CONFIG_DIR, apply_system_config, linux_run_commands, queue_walltime_default
 from jobgen import JobGen, spell, cdpath_reset
@@ -1033,6 +1033,8 @@ def prompt_user_for_run_options(args):
                 ot = options["job"]["resource"]
                 if engage != None and engage.get("model") and "model" in odt:
                     odt["model"]["default"] = engage["model"]
+                elif options["simulation"].get("node_type") and "model" in odt:
+                    odt["model"]["default"] = engage_node_model(hpc_platform, options["simulation"]["node_type"])
                 for ont in odt:
                     if hpc_platform != "aitken":
                         select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
@@ -1157,6 +1159,11 @@ def check_executables(options, args, invoke_dir):
     for role, (coupled, horires, vertres, nres_grid) in _exe_grids(options, args).items():
         path = _exe_path(options, role, invoke_dir)
         if role == building or path is None:
+            continue
+        if not os.path.exists(path):
+            missing = f"model.data.{role}: {misc.missing_exe_message(path, horires)}"
+            if not engage:              # engage prints its own warning for a missing spin-up exe
+                warned.append(missing)  # (as makeitso does for a missing voltron_mpi.x)
             continue
         not_elf, problems = misc.exe_problems(misc.exe_identity(path, zitop), f"model.data.{role}",
                                               coupled, horires, vertres, nres_grid, zitop)
@@ -1310,8 +1317,15 @@ def tiegcmrun(args=None):
     execdir   = options["model"]["data"]["execdir"]
     workdir = options["model"]["data"]["workdir"]
     outdir = options["model"]["data"]["histdir"]
+    if options["simulation"]["hpc_system"] != "linux":
+        # the job's node type, checked before any directory is made
+        JobGen(CONFIG_DIR, machine=options["simulation"]["hpc_system"],
+               node_type=options["simulation"].get("node_type"))
     for d in (workdir, outdir, execdir):
-        os.makedirs(d, exist_ok=True)
+        try:
+            os.makedirs(d, exist_ok=True)
+        except OSError as e:
+            raise RuntimeError(f"cannot create {d} (model.data.parentdir / workdir / histdir / execdir): {e}") from e
     workdir_abs = os.path.abspath(workdir)
     json_path = f"{workdir}/{PARAMETERS_JSON}"
     # checked before anything is written; engage gates its own files
