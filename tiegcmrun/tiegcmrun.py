@@ -1177,8 +1177,10 @@ def check_executables(options, args, invoke_dir):
     if refused:
         raise ValueError(f"{RED}The TIE-GCM executable cannot run this "
                          f"{'coupled ' if engage else ''}run:\n  - " + "\n  - ".join(refused)
-                         + f"\nPoint the option at the right executable, or build it: tiegcmrun.py -oc "
-                           f"at that resolution (one build per resolution, $TIEGCMHOME/tiegcm_<res>/).{RESET}")
+                         + (f"\nRebuild it: tiegcmrun.py -oc at that resolution "
+                            f"($TIEGCMHOME/tiegcm_<res>/tiegcm.exe, which engage links).{RESET}" if engage else
+                            f"\nPoint the option at the right executable, or build it: tiegcmrun.py -oc "
+                            f"at that resolution (one build per resolution, $TIEGCMHOME/tiegcm_<res>/).{RESET}"))
     for w in warned:
         print(f"{YELLOW}WARNING: {w}.{RESET}")
     return warned
