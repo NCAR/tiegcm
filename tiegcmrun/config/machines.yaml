@@ -25,14 +25,19 @@ machines:
     env: {}
     conda_activate: ["module load conda", "conda activate {conda_env}"]
 
-  aitken:                              # NAS Aitken: several node types (:model=...); untested
+  aitken:                              # NAS Aitken: several node types (:model=...)
     nodename_regex: "pfe|aitken|^afe[0-9]|\\bnas\\b"
     scheduler: pbs
     shell: tcsh
     account_default: "$USER"           # -A <login name>, as the aitken jobs always carried
     queue_default: "normal"
     walltime_default: "08:00:00"
-    queues: [low, normal, long, debug, devel]    # no limits recorded
+    queues:                            # walltime caps from `qstat -Qf` (Oct 2026); NAS caps nodes per group, not ncpus
+      normal: { walltime_max: "08:00:00" }
+      long:   { walltime_max: "120:00:00" }
+      low:    { walltime_max: "04:00:00" }
+      debug:  { walltime_max: "02:00:00" }
+      devel:  { walltime_max: "02:00:00" }
     mpirun: "mpiexec_mpt -np {total_tasks}"   # NAS HPE-MPT launcher (module mpi-hpe/mpt)
     module_purge: "module --force purge"   # as the aitken TIE-GCM jobs always carried
     # netcdf and ESMF come from local_prefix
@@ -41,8 +46,9 @@ machines:
     conda_activate: ["source /swbuild/analytix/tools/miniconda3_220407/bin/activate.csh {conda_env}"]
     cores_per_node: 128                # fallback if no node type chosen
     node_type_default: milan           # same default as makeitso / engage
-    # where tiegcm/scripts/Build.netcdf_esmf_at.sh installs netcdf and ESMF
-    local_prefix: "$HOME/local_aitken"
+    # netcdf and ESMF built by nrao3 with tiegcm/scripts/Build.netcdf_esmf_at.sh, shared by every
+    # user (the fixed path the aitken jobs always carried; Make.intel_at names the same ESMF)
+    local_prefix: "/u/nrao3/local_aitken"
     node_types:                        # -> rendered as :model=<model> in the select chunk
       rome:    { model: rom_ait, cores_per_node: 128 }   # devel/normal/long/debug/low queues
       milan:   { model: mil_ait, cores_per_node: 128 }
@@ -67,6 +73,7 @@ machines:
     cores_per_node: 128
     account_default: null              # the NERSC project (mNNNN) is per user
     queue_default: "regular"
+    queues: [regular, debug, premium]  # as makeitso/engage name them (a saved queue of another machine is a NOTE)
     walltime_default: "12:00:00"
     mpirun: "srun -n {total_tasks}"
     module_purge: "module purge"
