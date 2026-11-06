@@ -129,7 +129,46 @@ def valid_bench(value):
 # Magnetic grid resolution (deg) -> defs.h NRES_GRID.
 MRES_TO_NRES_GRID = {2.0: 5, 1.0: 6, 0.5: 7}
 
-MAKE_FRAGMENTS = {"derecho": "Make.intel_de", "aitken": "Make.intel_at", "linux": "Make.intel_linux"}
+CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config")
+
+
+_MACHINES = {}
+
+
+def machines_config():
+    """{name: entry} of config/machines.yaml (no host resolution; re-read when the file changes)."""
+    import yaml
+    path = os.path.join(CONFIG_DIR, "machines.yaml")
+    stamp = os.stat(path).st_mtime_ns
+    if _MACHINES.get("stamp") != stamp:
+        with open(path, encoding="utf-8") as f:
+            _MACHINES.update(stamp=stamp, machines=yaml.safe_load(f)["machines"])
+    return copy.deepcopy(_MACHINES["machines"])
+
+
+def no_scheduler(machine):
+    """True for a machines.yaml machine without a batch scheduler (scheduler: none): it gets a
+    run script instead of job scripts."""
+    m = machines_config().get(str(machine))
+    return isinstance(m, dict) and m.get("scheduler", "none") == "none"
+
+
+def machine_option(machine, key, default=None):
+    """machines.<machine>.<key> of config/machines.yaml, or `default`."""
+    m = machines_config().get(str(machine)) or {}
+    return m.get(key, default)
+
+
+def grt_status(machine):
+    """machines.<machine>.stacks.grt.status: 'verified' or 'experimental' (the default)."""
+    stack = ((machine_option(machine, "stacks") or {}).get("grt") or {})
+    return "verified" if str(stack.get("status", "")).strip().lower() == "verified" else "experimental"
+
+
+def make_fragments():
+    """{machine: scripts/Make.* fragment} of every machines.yaml entry with a make_fragment."""
+    return {name: m["make_fragment"] for name, m in machines_config().items()
+            if isinstance(m, dict) and m.get("make_fragment")}
 
 
 def mres_to_nres_grid(mres):
@@ -193,7 +232,7 @@ def engage_exe_refusal(exe, key, coupled, horires, zitop=None):
 
 def default_make_file(modeldir, hpc_system):
     """<modeldir>/scripts/Make.* for hpc_system, or None."""
-    frag = MAKE_FRAGMENTS.get(str(hpc_system).strip().lower())
+    frag = make_fragments().get(str(hpc_system).strip().lower())
     return os.path.join(modeldir, "scripts", frag) if frag else None
 
 
@@ -330,12 +369,6 @@ def ntask_error(ntask, horires, nres_grid=None, where="job.nprocs"):
             f"Nearest task counts it accepts: {near} (select * mpiprocs).")
 
 
-# The aitken (NAS) node models: :model= tag -> (cores per node, default MPI ranks per node).
-AITKEN_NODE_MODELS = {"mil_ait": (128, 128), "rom_ait": (128, 128), "cas_ait": (40, 36),
-                      "bro": (28, 24), "has": (24, 24), "ivy": (20, 18), "san": (16, 12),
-                      "sky_ele": (40, 36), "bro_ele": (28, 24)}
-
-
 def _feasible_layout(select, mpiprocs, horires, nres_grid):
     """The largest (select, mpiprocs) not above the given one whose product TIE-GCM accepts."""
     for nodes in range(int(select), 0, -1):
@@ -352,20 +385,26 @@ def select_resource_defaults(options, option_descriptions, queue_sized=True):
     horires = spec["horires"]
     nres_grid = spec.get("nres_grid")
     hpc_platform = options["simulation"]["hpc_system"]
-    if hpc_platform == "derecho":
-        select_default, ncpus_default, mpiprocs_default = 3, 128, 96
-    elif hpc_platform == "aitken":
+    m = machines_config().get(str(hpc_platform))
+    if not isinstance(m, dict):
+        raise ValueError(f"simulation.hpc_system {hpc_platform!r} is not a machine of config/machines.yaml.")
+    node = {}
+    if m.get("node_types"):
+        # the job's node model (PBS :model=) picks the node type; unset: the run's / machine's default
+        by_model = {nt.get("model"): nt for nt in m["node_types"].values() if isinstance(nt, dict)}
         model = ((options.get("job") or {}).get("resource") or {}).get("model")
-        if model not in AITKEN_NODE_MODELS:
-            raise ValueError(f"job.resource.model {model!r} is not an aitken node model "
-                             f"({', '.join(AITKEN_NODE_MODELS)}).")
-        ncpus_default, mpiprocs_default = AITKEN_NODE_MODELS[model]
-        select_default = 1
-    else:
-        from jobgen import JobGen
-        cores = int(JobGen(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config"),
-                           machine=hpc_platform).m["cores_per_node"])
-        select_default, ncpus_default, mpiprocs_default = 3, cores, min(96, cores)
+        if not is_unset(model):
+            if model not in by_model:
+                raise ValueError(f"job.resource.model {model!r} is not a node model of {hpc_platform} "
+                                 f"in config/machines.yaml ({', '.join(str(k) for k in by_model)}).")
+            node = by_model[model]
+        else:
+            name = options["simulation"].get("node_type") or m.get("node_type_default")
+            node = m["node_types"].get(name) or next(iter(m["node_types"].values()))
+    cores = int(node.get("cores_per_node", m["cores_per_node"]))
+    pe = m.get("tiegcm_pe_default") or {}
+    select_default, ncpus_default = int(pe.get("select", 3)), cores
+    mpiprocs_default = int(node.get("mpiprocs_default") or min(int(pe.get("mpiprocs", 96)), cores))
     queue = (options.get("job") or {}).get("queue")
     if queue_sized and not is_unset(queue):
         from output_solver import queue_limits

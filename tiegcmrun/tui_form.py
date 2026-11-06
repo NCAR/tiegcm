@@ -550,7 +550,7 @@ def _derive_registry():
             try:
                 out = select_resource_defaults(probe, {})[index]
             except (ValueError, TypeError, KeyError):
-                return (1, 128, 128)[index]         # an aitken model the table does not know
+                return (1, 128, 128)[index]         # a node model config/machines.yaml does not know
             if index == 2:                          # no more ranks per node than cores
                 try:
                     out = min(int(out), int(v.get(f"job.{machine}.resource.ncpus")))
@@ -636,41 +636,27 @@ def _derive_registry():
            for key, pattern in GSWM_PATTERNS.items()},
         "inp.HE_COEFS_NCFILE": (_he_coefs, ["model.specification.horires"]),
         **{"inp." + key: (_coupled_cap(key), []) for key in COUPLED_CAPS},
-        "job.aitken.resource.model": (_eng_or_keep("model"), []),
-        "job.derecho.project_code": (_account("derecho"), []),
-        "job.derecho.queue":        (_eng_or_keep("queue"), []),
-        "job.derecho.job_priority": (_eng_or_keep("job_priority"), []),
-        "job.derecho.walltime":     (_walltime("derecho"), ["job.derecho.queue"]),
-        "job.aitken.project_code":  (_account("aitken"), []),
-        "job.aitken.queue":         (_eng_or_keep("queue"), []),
-        "job.aitken.walltime":      (_walltime("aitken"), ["job.aitken.queue"]),
-        "job.aitken.group_list":    (_eng_or_keep("group_list"), []),
-        "job.derecho.resource.select":   (_res("derecho", 0), ["model.specification.horires", "job.derecho.queue"]),
-        "job.derecho.resource.ncpus":    (_res("derecho", 1), ["model.specification.horires", "job.derecho.queue"]),
-        "job.derecho.resource.mpiprocs": (_res("derecho", 2), ["model.specification.horires", "job.derecho.queue",
-                                                               "job.derecho.resource.ncpus"]),
-        "job.derecho.nprocs": (lambda v: int(v["job.derecho.resource.select"]) * int(v["job.derecho.resource.mpiprocs"]),
-            ["job.derecho.resource.select", "job.derecho.resource.mpiprocs"]),
-        "job.aitken.resource.select":   (_res("aitken", 0), ["model.specification.horires", "job.aitken.resource.model", "job.aitken.queue"]),
-        "job.aitken.resource.ncpus":    (_res("aitken", 1), ["model.specification.horires", "job.aitken.resource.model", "job.aitken.queue"]),
-        "job.aitken.resource.mpiprocs": (_res("aitken", 2), ["model.specification.horires", "job.aitken.resource.model", "job.aitken.queue",
-                                                             "job.aitken.resource.ncpus"]),
-        "job.aitken.nprocs": (lambda v: int(v["job.aitken.resource.select"]) * int(v["job.aitken.resource.mpiprocs"]),
-            ["job.aitken.resource.select", "job.aitken.resource.mpiprocs"]),
     }
-    # any other scheduler machine in config/machines.yaml
-    from output_solver import CONFIG_DIR
-    from jobgen import JobGen
-    machines = JobGen(CONFIG_DIR, machine="derecho").machines
-    for name, m in machines.items():
-        if name in ("derecho", "aitken") or m.get("scheduler", "none") == "none":
+    # every scheduler machine of config/machines.yaml: job.<machine>.* (job._machine + its YAML)
+    from misc import machines_config
+    for name, m in machines_config().items():
+        if m.get("scheduler", "none") == "none":
             continue
         pre = f"job.{name}."
-        R[pre + "resource.select"] = (_res(name, 0), ["model.specification.horires", pre + "queue"])
-        R[pre + "resource.ncpus"] = (_res(name, 1), ["model.specification.horires", pre + "queue"])
-        R[pre + "resource.mpiprocs"] = (_res(name, 2), ["model.specification.horires", pre + "queue",
-                                                        pre + "resource.ncpus"])
+        extra = set(m.get("job_prompt_extra") or [])
+        model = [pre + "resource.model"] if "model" in extra else []
+        R[pre + "project_code"] = (_account(name), [])
+        R[pre + "queue"] = (_eng_or_keep("queue"), [])
+        for key in ("job_priority", "group_list"):
+            if key in extra:
+                R[pre + key] = (_eng_or_keep(key), [])
+        if model:
+            R[pre + "resource.model"] = (_eng_or_keep("model"), [])
         R[pre + "walltime"] = (_walltime(name), [pre + "queue"])
+        R[pre + "resource.select"] = (_res(name, 0), ["model.specification.horires"] + model + [pre + "queue"])
+        R[pre + "resource.ncpus"] = (_res(name, 1), ["model.specification.horires"] + model + [pre + "queue"])
+        R[pre + "resource.mpiprocs"] = (_res(name, 2), ["model.specification.horires"] + model + [pre + "queue",
+                                                        pre + "resource.ncpus"])
         R[pre + "nprocs"] = ((lambda v, p=pre: int(v[p + "resource.select"]) * int(v[p + "resource.mpiprocs"])),
                              [pre + "resource.select", pre + "resource.mpiprocs"])
     return R
@@ -797,9 +783,8 @@ def _validate_registry():
                 return None
             return f"required on {machine}: the PBS account (#PBS -A) the jobs are charged to"
         return check
-    from output_solver import CONFIG_DIR
-    from jobgen import JobGen
-    for name, m in JobGen(CONFIG_DIR, machine="derecho").machines.items():
+    from misc import machines_config
+    for name, m in machines_config().items():
         if m.get("scheduler", "none") != "none":
             reg[f"job.{name}.project_code"] = account(name)
     return reg
@@ -983,6 +968,12 @@ def _engage_same_grid(cfg):
         return False
 
 
+def _no_scheduler(hpc):
+    """True for a config/machines.yaml machine without a batch scheduler (no job fields)."""
+    from misc import no_scheduler
+    return no_scheduler(hpc)
+
+
 def _cond_registry():
     """Return cond(field, values) -> True to show; hides fields the run would ignore."""
     def cond(f, v):
@@ -1012,7 +1003,7 @@ def _cond_registry():
                 v.get("__engage") and not _engage_same_grid(v.get("__engage_cfg"))):
             return False
         if p.startswith("job."):
-            if hpc == "linux":
+            if _no_scheduler(hpc):
                 return False
             if p.split(".")[1] != hpc:
                 return False
@@ -1742,7 +1733,7 @@ def finalize_options(options, args):
     job = options.get("job")
     if isinstance(job, dict):
         hpc = str(options.get("simulation", {}).get("hpc_system", "")).strip()
-        if hpc == "linux" or onlycompile:
+        if _no_scheduler(hpc) or onlycompile:
             options.pop("job", None)
         else:
             flat = {}

@@ -25,7 +25,7 @@ from jobgen import JobGen, spell, cdpath_reset
 from misc import get_mtime, segment_time, valid_bench, find_file, resolution_solver, mres_to_nres_grid, default_make_file, select_resource_defaults, select_source_defaults, select_latest_gpi, file_covers, resolve_benchmark_file, generate_gpi_file, generate_imf_file, as_list, require_env, tiegcm_env, in_execdir, GSWM_PATTERNS, gswm_allowed, he_coefs_pattern, unknown_other_input_keys, other_input_error, secflds_list, ascii_quotes
 from replay_solver import (prepare_replay, parse_rederive, rederive_pop, rederive_groups_text,
                            old_format_problem, validate_options, read_options_json, section_problem,
-                           options_key_schema, unknown_keys_problem)
+                           options_key_schema, unknown_keys_problem, machine_keyed_job)
 import misc
 RED = '\033[31m'
 GREEN = '\033[32m'
@@ -755,8 +755,10 @@ def prompt_user_for_run_options(args):
             for on in COUPLED_DEFAULT_KEYS:
                 od[on]["LEVEL"] = "EXPERT"
                 od[on]["default"] = engage["coupled_defaults"][on]
-        if options["simulation"]["hpc_system"] == "aitken":
-            od["SECFLDS"]["warning"] = "Limit SECFLDS. File libraries on aitken are built without big file support."
+        # machine notes on namelist keys (config/machines.yaml warnings, e.g. a SECFLDS limit)
+        for key, text in (misc.machine_option(options["simulation"]["hpc_system"], "warnings") or {}).items():
+            if key in od:
+                od[key]["warning"] = text
              
         temp_mode = mode
         skip_inp = []
@@ -1033,7 +1035,7 @@ def prompt_user_for_run_options(args):
 
 
     hpc_platform = options["simulation"]["hpc_system"]
-    if hpc_platform == "linux":
+    if misc.no_scheduler(hpc_platform):
         pbs_build_skip = True
     if pbs_build_skip == False:
         options["job"] = {}
@@ -1055,7 +1057,7 @@ def prompt_user_for_run_options(args):
                 elif options["simulation"].get("node_type") and "model" in odt:
                     odt["model"]["default"] = engage_node_model(hpc_platform, options["simulation"]["node_type"])
                 for ont in odt:
-                    if hpc_platform != "aitken":
+                    if "model" not in odt:
                         select_default,ncpus_default,mpiprocs_default = select_resource_defaults(options,option_descriptions)
                         odt["select"]["default"] = select_default
                         odt["ncpus"]["default"] = ncpus_default
@@ -1080,7 +1082,7 @@ def prompt_user_for_run_options(args):
                         ot[ont] = get_run_option(ont, odt[ont], mode, skip_parameters)
                         mpiprocs = ot[ont]
                     elif ont != "model" or "model" not in ot:
-                        # aitken's model was asked above; the select/ncpus defaults derive from it
+                        # the node model was asked above; the select/ncpus defaults derive from it
                         ot[ont] = get_run_option(ont, odt[ont], mode, skip_parameters)
             elif on =="nprocs":
                 od[on]["default"] = int(nnodes) * int(mpiprocs)
@@ -1275,6 +1277,9 @@ def tiegcmrun(args=None):
     if options_path:
         # relative paths in the JSON are relative to its own directory
         options = read_options_json(options_path)
+        note = machine_keyed_job(options, (args.engage or {}).get("hpc_system"))
+        if note:
+            print(f"{YELLOW}{note}{RESET}")
         problem = options_file_problem(options)
         if problem:
             raise ValueError(f"{RED}{options_path}: {problem}{RESET}")
@@ -1336,7 +1341,7 @@ def tiegcmrun(args=None):
     execdir   = options["model"]["data"]["execdir"]
     workdir = options["model"]["data"]["workdir"]
     outdir = options["model"]["data"]["histdir"]
-    if options["simulation"]["hpc_system"] != "linux":
+    if not misc.no_scheduler(options["simulation"]["hpc_system"]):
         # the job's node type, checked before any directory is made
         JobGen(CONFIG_DIR, machine=options["simulation"]["hpc_system"],
                node_type=options["simulation"].get("node_type"))
@@ -1379,7 +1384,7 @@ def tiegcmrun(args=None):
                 options["model"]["data"]["input_file"] = run_file(workdir, run_name, None, "inp")
             if options["model"]["data"]["log_file"] == None:
                 options["model"]["data"]["log_file"] = os.path.join( options["model"]["data"]["workdir"], f"{run_name}.out")
-            pbs_text = render_pbs(options) if options["simulation"]["hpc_system"] != "linux" else None
+            pbs_text = render_pbs(options) if not misc.no_scheduler(options["simulation"]["hpc_system"]) else None
             if input_file_generatred == False:
                 # the saved options keep the user's inp.SOURCE
                 regrid(options, regridded)
@@ -1406,7 +1411,7 @@ def tiegcmrun(args=None):
             init_pbs = pbs_files[0]
             options["model"]["data"]["input_file"] = init_inp
 
-            if options["simulation"]["hpc_system"] == "linux":
+            if misc.no_scheduler(options["simulation"]["hpc_system"]):
                 linux_commands = linux_run_commands(options, inp_files, log_files, relative=True)
                 linux_hints = linux_run_commands(options, inp_files, log_files)
                 linux_run_script = os.path.join(workdir, f"{options['simulation']['job_name']}_run.sh")
@@ -1428,7 +1433,7 @@ def tiegcmrun(args=None):
                         jobids=f"{options['simulation']['job_name']}.jobids"))
                 os.chmod(submit_all_jobs_script, 0o755)
 
-    if args.execute == True and args.onlycompile == False and options["simulation"]["hpc_system"] != "linux":
+    if args.execute == True and args.onlycompile == False and not misc.no_scheduler(options["simulation"]["hpc_system"]):
         jg = JobGen(CONFIG_DIR, machine=options["simulation"]["hpc_system"],
                     node_type=options["simulation"].get("node_type"))
         if not os.path.exists(os.path.join(invoke_dir, options["model"]["data"]["modelexe"])):
@@ -1453,13 +1458,13 @@ def tiegcmrun(args=None):
             print(f"{YELLOW}Check the job script for errors{RESET}")
             print(f"To submit job use command {YELLOW}{_submit_hint(jg, pbs_script, submit_all_jobs_script, workdir_abs, invoke_dir)}{RESET}")
 
-    elif args.onlycompile == False and options["simulation"]["hpc_system"] != "linux":
+    elif args.onlycompile == False and not misc.no_scheduler(options["simulation"]["hpc_system"]):
         jg = JobGen(CONFIG_DIR, machine=options["simulation"]["hpc_system"],
                     node_type=options["simulation"].get("node_type"))
         print(f"{YELLOW}Execute is set to false{RESET}")
         print(f"To submit job use command {YELLOW}{_submit_hint(jg, pbs_script, submit_all_jobs_script, workdir_abs, invoke_dir)}{RESET}")
     elif args.onlycompile == False:
-        print(f"{YELLOW}HPC System is set to linux{RESET}")
+        print(f"{YELLOW}HPC System is set to {options['simulation']['hpc_system']}{RESET}")
         if linux_run_script:
             print(f"{YELLOW}To run every segment in order use command{RESET} {linux_run_script}")
             print(f"{YELLOW}or run the segments one at a time, in this order (from {workdir_abs}):{RESET}")
@@ -1477,6 +1482,8 @@ def options_file_problem(options, unknown=False):
     problem = section_problem(options) or old_format_problem(options)
     if problem or not unknown:
         return problem
+    options = copy.deepcopy(options)
+    machine_keyed_job(options)
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = apply_system_config(json.load(f), socket.gethostname())
     return unknown_keys_problem(options, options_key_schema(option_descriptions))
