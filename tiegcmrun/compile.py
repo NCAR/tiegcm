@@ -50,8 +50,8 @@ def _compile_tiegcm(options, debug, hidra = False):
     make      = o["model"]["data"].get("make") or default_make_file(
         modeldir, o["simulation"]["hpc_system"])
     if not make:
-        print(f">>> No Make fragment for hpc_system {o['simulation']['hpc_system']}: "
-              f"set model.data.make <<<")
+        print(f">>> No Make fragment for hpc_system {o['simulation']['hpc_system']} "
+              f"(config/machines.yaml make_fragment): set model.data.make <<<")
         sys.exit(1)
     hidra     = hidra
 

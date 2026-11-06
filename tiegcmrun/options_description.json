@@ -23,120 +23,49 @@
 
     "job": {
         "_common": {},
-        "derecho": {
+        "_machine": {
             "project_code": {
                 "LEVEL": "BENCH",
                 "type": "name",
                 "prompt": "Project Code",
                 "default": null,
-                "description": "The PBS account (#PBS -A) the jobs are charged to. Required; there is no shared default.",
-                "warning": null
-            },
-            "queue": {
-                "LEVEL": "INTERMEDIATE",
-                "type": "str",
-                "prompt": "PBS queue name",
-                "default": "main",
-                "valids": ["develop", "main"],
-                "description": null,
-                "warning": null
-            },
-            "job_priority": {
-                "LEVEL": "INTERMEDIATE",
-                "type": "str",
-                "prompt": "PBS job priority",
-                "default": "regular",
-                "valids": ["premium", "regular", "economy"],
-                "description": null,
-                "warning": null
-            },
-            "resource": {
-                "select": {
-                    "LEVEL": "EXPERT",
-                    "type": "int",
-                    "min": 1,
-                    "prompt": "Number of nodes to request",
-                    "default": null,
-                    "description": null,
-                    "warning": null
-                },
-                "ncpus": {
-                    "LEVEL": "EXPERT",
-                    "type": "int",
-                    "min": 1,
-                    "prompt": "Number of cores per node",
-                    "default": null,
-                    "description": null,
-                    "warning": null
-                },
-                "mpiprocs": {
-                    "LEVEL": "EXPERT",
-                    "type": "int",
-                    "min": 1,
-                    "prompt": "Number of MPI ranks per node",
-                    "default": null,
-                    "description": null,
-                    "warning": null
-                }               
-            },
-            "walltime": {
-                "LEVEL": "BASIC",
-                "type": "hms",
-                "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
-                "default": "12:00:00",
-                "description": null,
-                "warning": "Maximum walltime is 12:00:00."
-            },
-            "nprocs": {
-                "LEVEL": "EXPERT",
-                "type": "int",
-                "min": 1,
-                "prompt": "nprocs (nnodes * mpiprocs)",
-                "default": null,
-                "description": null,
-                "warning": null
-            },
-            "other_job": {
-                "LEVEL": "EXPERT",
-                "type": "lines",
-                "prompt": "Additional settings or env variables",
-                "default": [null],
-                "description": null,
-                "warning": null
-            }
-        },
-        "aitken": {
-            "project_code": {
-                "LEVEL": "BENCH",
-                "type": "name",
-                "prompt": "Project Code",
-                "default": null,
-                "description": "The PBS account (#PBS -A) the jobs are charged to. Defaults to your login name (config/machines.yaml account_default).",
+                "description": "The {scheduler} account ({account_directive}) the jobs are charged to.",
                 "warning": null
             },
             "group_list": {
                 "LEVEL": "BASIC",
                 "type": "name",
-                "prompt": "PBS group list",
-                "default": null
+                "prompt": "{scheduler} group list",
+                "default": null,
+                "description": "The group the jobs are charged to (-W group_list). Asked on a machine whose config/machines.yaml job_prompt_extra names group_list.",
+                "warning": null
             },
             "queue": {
-                "LEVEL": "BENCH",
+                "LEVEL": "INTERMEDIATE",
                 "type": "str",
-                "prompt": "PBS queue name",
-                "default": "normal",
-                "valids": ["low", "normal", "long", "debug", "devel"],
-                "description": null,
+                "prompt": "{scheduler} queue name",
+                "default": null,
+                "valids": null,
+                "description": "The machine's queues and default come from config/machines.yaml (queues, queue_default).",
+                "warning": null
+            },
+            "job_priority": {
+                "LEVEL": "INTERMEDIATE",
+                "type": "str",
+                "prompt": "{scheduler} job priority",
+                "default": null,
+                "valids": null,
+                "description": "Asked on a machine whose config/machines.yaml job_prompt_extra names job_priority (values: job_priorities, default: job_priority_default).",
                 "warning": null
             },
             "resource": {
                 "model": {
                     "LEVEL": "EXPERT",
                     "type": "str",
-                    "prompt": "System on PFE to use",
-                    "default": "mil_ait",
-                    "valids": ["mil_ait", "rom_ait", "cas_ait"],
-                    "description": null,
+                    "prompt": "Node model ({scheduler} :model=)",
+                    "default": null,
+                    "valids": null,
+                    "description": "The node type's model tag (config/machines.yaml node_types); asked on a machine whose job_prompt_extra names model. Under engage it follows simulation.node_type.",
                     "warning": null
                 },
                 "select": {
@@ -162,18 +91,18 @@
                     "type": "int",
                     "min": 1,
                     "prompt": "Number of MPI ranks per node",
-                    "default": "ncpus",
+                    "default": null,
                     "description": null,
                     "warning": null
                 }
             },
             "walltime": {
-                "LEVEL": "BENCH",
+                "LEVEL": "BASIC",
                 "type": "hms",
-                "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
-                "default": "08:00:00",
+                "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each {scheduler} job segment (HH:MM:SS)",
+                "default": null,
                 "description": null,
-                "warning": "Maximum walltime on the normal queue is 08:00:00."
+                "warning": null
             },
             "nprocs": {
                 "LEVEL": "EXPERT",
@@ -189,13 +118,13 @@
                 "type": "lines",
                 "prompt": "Commands to add local module PATH",
                 "default": [null],
-                "description": "Job lines that export a prefix of user-built libraries (PREFIX, LIBRARY_PATH, LD_LIBRARY_PATH, CPATH, PATH). The default comes from config/machines.yaml aitken local_prefix."
+                "description": "Job lines that export a prefix of user-built libraries (PREFIX, LIBRARY_PATH, LD_LIBRARY_PATH, CPATH, PATH). The default comes from config/machines.yaml local_prefix. Asked on a machine whose job_prompt_extra names local_modules."
             },
             "other_job": {
                 "LEVEL": "EXPERT",
                 "type": "lines",
                 "prompt": "Additional settings or env variables",
-                "default": ["setenv MPI_TYPE_DEPTH 32"],
+                "default": [null],
                 "description": null,
                 "warning": null
             }

@@ -1,5 +1,20 @@
 # Machines for tiegcmrun jobs, one entry per system (the scheduler is defined in batch.yaml).
-# queues: {<queue>: {ncpus_max, walltime_max, mem_per_chunk}} or a plain list of names.
+# The code names no machine: a new system is a new entry here (+ its scripts/Make.<x> fragment).
+# queues: {<queue>: {ncpus_max, walltime_max, mem_per_chunk}} or a plain list of names; the queue
+#   prompt offers them in this order.
+# make_fragment: the scripts/Make.* compiler fragment of a -c/-oc build (none: set model.data.make).
+# job_prompt_extra: optional job prompts the machine asks (job_priority, group_list, model,
+#   local_modules); the prompt set is options_description.json job._machine.
+# job_prompt_overrides: {<job field>: {LEVEL, prompt, ...}} replaces the template's text or level.
+# job_priority_default / other_job_default: defaults of those prompts.
+# tiegcm_pe_default: {select, mpiprocs} TIE-GCM job size before the queue and grid limits
+#   (default select 3, mpiprocs min(96, cores)); node_types.<n>.mpiprocs_default wins for a node.
+# warnings: {<inp key>: text} shown at that namelist prompt on this machine.
+# stacks.grt.status: verified | experimental (default) for a coupled engage GRT run. tiegcmrun
+#   jobs load the machine's own modules (stacks hold no tiegcm modules here).
+# setEnvironment.sh: module_purge/module_use/modules (+ local_prefix) and conda_activate
+#   (conda_activate_sh for a bash session when conda_activate is csh; conda_pkgs_dirs for
+#   conda create) of the host's entry.
 machines:
 
   derecho:
@@ -12,11 +27,15 @@ machines:
     queue_default: "main"
     walltime_default: "12:00:00"
     queues:                            # `qstat -Qf <queue>` resources_max.ncpus; NCAR wall-time policy
-      main:    { ncpus_max: 323712, walltime_max: "12:00:00" }
       # develop is shared with a 10gb default chunk memory; request a full node's or get OOM-killed
       develop: { ncpus_max: 256,    walltime_max: "06:00:00", mem_per_chunk: "235GB" }
+      main:    { ncpus_max: 323712, walltime_max: "12:00:00" }
     tgcmdata: "/glade/campaign/hao/itmodel/tiegcm3.0/new_data"
     job_priorities: [premium, regular, economy]   # the PBS job_priority values (not a queue)
+    job_priority_default: "regular"
+    job_prompt_extra: [job_priority]
+    tiegcm_pe_default: { select: 3, mpiprocs: 96 }
+    make_fragment: Make.intel_de
     mpirun: "mpirun -np {total_tasks}"
     module_purge: "module --force purge"
     modules: [ncarenv/23.09, craype/2.7.23, intel/2023.2.1, ncarcompilers/1.0.0,
@@ -24,6 +43,8 @@ machines:
               esmf/8.6.0]
     env: {}
     conda_activate: ["module load conda", "conda activate {conda_env}"]
+    stacks:
+      grt: { status: verified }        # coupled engage GRT runs (engage_solver warning)
 
   aitken:                              # NAS Aitken: several node types (:model=...)
     nodename_regex: "pfe|aitken|^afe[0-9]|\\bnas\\b"
@@ -33,9 +54,9 @@ machines:
     queue_default: "normal"
     walltime_default: "08:00:00"
     queues:                            # walltime caps from `qstat -Qf` (Oct 2026); NAS caps nodes per group, not ncpus
+      low:    { walltime_max: "04:00:00" }
       normal: { walltime_max: "08:00:00" }
       long:   { walltime_max: "120:00:00" }
-      low:    { walltime_max: "04:00:00" }
       debug:  { walltime_max: "02:00:00" }
       devel:  { walltime_max: "02:00:00" }
     mpirun: "mpiexec_mpt -np {total_tasks}"   # NAS HPE-MPT launcher (module mpi-hpe/mpt)
@@ -44,6 +65,8 @@ machines:
     module_use: ["/nasa/modulefiles/testing", "/swbuild/analytix/tools/modulefiles"]
     modules: [comp-intel/2020.4.304, "mpi-hpe/mpt.2.30", szip/2.1.1, hdf5/1.12.3_mpt, miniconda3/v4]
     conda_activate: ["source /swbuild/analytix/tools/miniconda3_220407/bin/activate.csh {conda_env}"]
+    conda_activate_sh: ["source activate {conda_env}"]   # bash: miniconda3/v4 (modules) puts activate on PATH
+    conda_pkgs_dirs: "/nobackup/$USER/.conda/pkgs"       # conda create (setEnvironment.sh)
     cores_per_node: 128                # fallback if no node type chosen
     node_type_default: milan           # same default as makeitso / engage
     # netcdf and ESMF built by nrao3 with tiegcm/scripts/Build.netcdf_esmf_at.sh, shared by every
@@ -52,7 +75,19 @@ machines:
     node_types:                        # -> rendered as :model=<model> in the select chunk
       rome:    { model: rom_ait, cores_per_node: 128 }   # devel/normal/long/debug/low queues
       milan:   { model: mil_ait, cores_per_node: 128 }
-      cascade: { model: cas_ait, cores_per_node: 40 }
+      cascade: { model: cas_ait, cores_per_node: 40, mpiprocs_default: 36 }
+    job_prompt_extra: [group_list, model, local_modules]
+    job_prompt_overrides:
+      queue:    { LEVEL: BENCH }
+      walltime: { LEVEL: BENCH }
+      model:    { prompt: "System on PFE to use" }
+    other_job_default: ["setenv MPI_TYPE_DEPTH 32"]
+    tiegcm_pe_default: { select: 1, mpiprocs: 128 }
+    make_fragment: Make.intel_at
+    warnings:
+      SECFLDS: "Limit SECFLDS. File libraries on aitken are built without big file support."
+    stacks:
+      grt: { status: verified }
 
   # plain host without a scheduler
   linux:
@@ -64,6 +99,7 @@ machines:
     module_purge: ""
     modules: []
     conda_activate: ['eval "$(conda shell.bash hook)"', "conda activate {conda_env}"]
+    make_fragment: Make.intel_linux
 
   # untested
   perlmutter:
@@ -79,3 +115,5 @@ machines:
     module_purge: "module purge"
     modules: [PrgEnv-intel, cray-hdf5-parallel, cray-netcdf-hdf5parallel, cray-mpich]
     conda_activate: ["module load conda", "conda activate {conda_env}"]
+    stacks:
+      grt: { status: experimental }

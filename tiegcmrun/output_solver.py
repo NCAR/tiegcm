@@ -9,11 +9,13 @@ import shlex
 from jinja2 import Template
 
 from misc import (segment_time, resolution_solver, dhms_to_seconds, as_list, NAMELIST_ARRAYS, namelist_array,
+                  machines_config, no_scheduler, machine_option, grt_status,
                   job_path, history_dir, job_inp)
 from namelist_solver import (inp_pri_date, inp_pri_out, inp_sec_date, inp_sec_out, parse_segment,
                              parse_run_datetime, fit_cadence, segment_mxhist, nc_wrhist_mtime,
                              RUN_DATETIME_FORMAT)
 from jobgen import JobGen, account_value, user_projects
+from machine_env import local_prefix_lines, machine_module_lines
 
 
 SUPPORT_FILES_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -23,23 +25,67 @@ INP_TEMPLATE = os.path.join(SUPPORT_FILES_DIRECTORY, "template.inp")
 CONFIG_DIR = os.path.join(SUPPORT_FILES_DIRECTORY, "config")
 
 
-def _generic_job_descriptions(machine):
-    """Job prompt descriptions for a machines.yaml machine options_description.json lacks."""
-    def field(level, prompt, kind, default=None, **rule):
-        return {"LEVEL": level, "type": kind, **rule, "prompt": prompt, "default": default,
-                "description": None, "warning": None}
-    return {
-        "project_code": field("BENCH", "Project Code", "name"),
-        "queue": field("INTERMEDIATE", f"{machine} queue name", "str"),
-        "resource": {
-            "select": field("EXPERT", "Number of nodes to request", "int", min=1),
-            "ncpus": field("EXPERT", "Number of cores per node", "int", min=1),
-            "mpiprocs": field("EXPERT", "Number of MPI ranks per node", "int", min=1),
-        },
-        "walltime": field("BASIC", "Requested wall time for each job segment (HH:MM:SS)", "hms"),
-        "nprocs": field("EXPERT", "nprocs (nnodes * mpiprocs)", "int", min=1),
-        "other_job": field("EXPERT", "Additional settings or env variables", "lines", [None]),
-    }
+# Job prompts a machine asks only when its machines.yaml job_prompt_extra names them.
+OPTIONAL_JOB_FIELDS = ("job_priority", "group_list", "model", "local_modules")
+
+
+def _scheduler_text(text, label, account_directive):
+    if not isinstance(text, str):
+        return text
+    return text.replace("{scheduler}", label).replace("{account_directive}", account_directive)
+
+
+def machine_job_descriptions(template, name, m, batch):
+    """A machine's job prompt block: options_description.json job._machine filled from its
+    config/machines.yaml entry (optional fields, overrides, defaults, valids)."""
+    job = copy.deepcopy(template)
+    extra = set(m.get("job_prompt_extra") or [])
+    for f in OPTIONAL_JOB_FIELDS:
+        if f not in extra:
+            job.pop(f, None)
+            (job.get("resource") or {}).pop(f, None)
+    label = str(m.get("scheduler", "")).upper()
+    acct = str((batch.get("directives") or {}).get("account") or "")
+    acct = (batch.get("directive_prefix", "") + " " + acct.replace("{v}", "")).strip()
+
+    def walk(node):
+        for desc in node.values():
+            if isinstance(desc, dict) and "LEVEL" in desc:
+                for k in ("prompt", "description", "warning"):
+                    if k in desc:
+                        desc[k] = _scheduler_text(desc[k], label, acct)
+            elif isinstance(desc, dict):
+                walk(desc)
+    walk(job)
+    for key, over in (m.get("job_prompt_overrides") or {}).items():
+        desc = job.get(key) if key in job else (job.get("resource") or {}).get(key)
+        if isinstance(desc, dict):
+            desc.update(copy.deepcopy(over))
+    if "project_code" in job:
+        acc = m.get("account_default")
+        tail = (" Required; there is no shared default." if acc is None else
+                " Defaults to your login name (config/machines.yaml account_default)."
+                if "USER" in str(acc) else
+                f" Defaults to {acc} (config/machines.yaml account_default).")
+        job["project_code"]["description"] = (job["project_code"].get("description") or "") + tail
+    if "queue" in job and m.get("queues"):
+        job["queue"]["valids"] = [str(q) for q in m["queues"]]
+    if "job_priority" in job:
+        if m.get("job_priority_default") is not None:
+            job["job_priority"]["default"] = m["job_priority_default"]
+        if m.get("job_priorities"):
+            job["job_priority"]["valids"] = list(m["job_priorities"])
+    if "other_job" in job and m.get("other_job_default"):
+        job["other_job"]["default"] = list(m["other_job_default"])
+    if "walltime" in job and job["walltime"].get("warning") is None:
+        wmax = None
+        qs = m.get("queues")
+        if isinstance(qs, dict) and m.get("queue_default"):
+            wmax = (qs.get(m["queue_default"]) or {}).get("walltime_max")
+        if wmax:
+            job["walltime"]["warning"] = (f"Maximum walltime on the {m['queue_default']} queue "
+                                          f"is {wmax}.")
+    return job
 
 
 def node_models(machine):
@@ -49,16 +95,19 @@ def node_models(machine):
 
 
 def apply_system_config(option_descriptions, hostname=None):
-    """Seed the machine and job prompt defaults and valids from config/machines.yaml, in place."""
+    """Seed the machine and job prompt defaults and valids from config/machines.yaml, in place:
+    job.<machine> for every scheduler machine, built from the job._machine template."""
     jg = JobGen(CONFIG_DIR, hostname=hostname)
     hpc = option_descriptions["simulation"]["hpc_system"]
     hpc["valids"] = list(jg.machines)
     hpc["default"] = jg.name
     jobs = option_descriptions.setdefault("job", {})
+    template = jobs.pop("_machine", None) or {}
     for name, m in jg.machines.items():
         if m.get("scheduler", "none") == "none":
             continue
-        job = jobs.setdefault(name, _generic_job_descriptions(name))
+        job = jobs.setdefault(name, machine_job_descriptions(
+            template, name, m, jg.batch_systems.get(m.get("scheduler"), {})))
         for key, yaml_key in (("project_code", "account_default"), ("queue", "queue_default"),
                               ("walltime", "walltime_default")):
             if key in job and m.get(yaml_key) is not None:
@@ -81,22 +130,6 @@ def apply_system_config(option_descriptions, hostname=None):
                 default_nt = m["node_types"].get(m.get("node_type_default")) or next(iter(m["node_types"].values()))
                 model["default"] = default_nt["model"]
     return option_descriptions
-
-
-def local_prefix_lines(prefix, shell="tcsh"):
-    """Job lines adding a machines.yaml local_prefix to the library, include and bin paths.
-
-    tcsh aborts on an unset ${VAR}, even in a one-line if, hence the multi-line if/else."""
-    if shell == "tcsh":
-        L = [f"setenv PREFIX {prefix}"]
-        for var, sub in (("LIBRARY_PATH", "lib"), ("LD_LIBRARY_PATH", "lib"), ("CPATH", "include")):
-            L += [f"if ($?{var}) then", f"    setenv {var} $PREFIX/{sub}:${{{var}}}", "else",
-                  f"    setenv {var} $PREFIX/{sub}", "endif"]
-        return L + ["setenv PATH ${PATH}:$PREFIX/bin"]
-    L = [f'export PREFIX="{prefix}"']
-    for var, sub in (("LIBRARY_PATH", "lib"), ("LD_LIBRARY_PATH", "lib"), ("CPATH", "include")):
-        L += [f'export {var}="$PREFIX/{sub}${{{var}:+:${var}}}"']
-    return L + ['export PATH="${PATH}:$PREFIX/bin"']
 
 
 def _hms_seconds(value):
@@ -282,7 +315,7 @@ def render_pbs(options):
     L += jg.env_lines(env)
     L += [ln for ln in as_list(job.get("other_job")) if ln is not None]
     L += ["", "# Load modules"]
-    L += jg.module_lines()
+    L += machine_module_lines(jg)
     L += [ln for ln in as_list(job.get("local_modules")) if ln is not None]
     L += ["", "# Execute tiegcm in its work directory (the paths below are relative to it)",
           f"cd {shlex.quote(os.path.abspath(data['workdir']))}"]
@@ -478,8 +511,8 @@ def segment_jobs(options, run_name, pbs, engage_options=None, first_source=None)
         data = segment_options["model"]["data"]
         data["input_file"] = run_file(data["workdir"], run_name, segment_number, "inp")
         pbs_text = handoff = None
-        # On linux only an engage spin-up gets job scripts; a standalone run gets one run script.
-        if pbs == True and (options["simulation"]["hpc_system"] != "linux" or engage_options is not None):
+        # Without a scheduler (linux) only an engage spin-up gets job scripts; a standalone run gets one run script.
+        if pbs == True and (not no_scheduler(options["simulation"]["hpc_system"]) or engage_options is not None):
             if segment_number == last_segment_time and engage_options != None and coupled_handoff_regrids(engage_options):
                 handoff = _handoff_script(segment_options, engage_options, last_prim_file)
                 segment_options["job"]["job_chain"] = handoff_job_lines(

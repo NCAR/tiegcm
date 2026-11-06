@@ -12,7 +12,7 @@ import math
 from misc import (resolution_solver, mres_to_nres_grid, find_file, GSWM_PATTERNS, gswm_allowed,
                   he_coefs_pattern, unknown_other_input_keys, other_input_error, secflds_list,
                   get_mtime, select_resource_defaults, select_source_defaults, history_dir,
-                  default_make_file, MAKE_FRAGMENTS, tiegcm_env, coerce, is_unset)
+                  default_make_file, make_fragments, machines_config, no_scheduler, tiegcm_env, coerce, is_unset)
 from namelist_solver import (inp_pri_date, inp_prihist, inp_sechist, inp_mxhist, inp_pri_out,
                              inp_sec_out, inp_sec_date, parse_segment, forcing_missing,
                              forcing_conflicts, forcing_refusal, source_time_of_day_error,
@@ -84,6 +84,29 @@ def old_format_problem(options):
         return None
     return (f"the options JSON was written by an older tiegcmrun: {'; '.join(old)}. Remove "
             f"{'it' if len(old) == 1 else 'them'} from the JSON, or generate a new one.")
+
+
+def machine_keyed_job(options, hpc=None):
+    """Map a job block kept per machine (job.<machine>: {...} for machines of config/machines.yaml,
+    plus job._common) onto the one job block of hpc (default simulation.hpc_system), in place.
+
+    Returns the NOTE to print, or None when the job block is not keyed by machine."""
+    job = options.get("job") if isinstance(options, dict) else None
+    if not isinstance(job, dict):
+        return None
+    machines = machines_config()
+    keyed = [k for k, v in job.items() if k in machines and isinstance(v, dict)]
+    if not keyed:
+        return None
+    hpc = hpc or (options.get("simulation") or {}).get("hpc_system")
+    flat = {k: v for k, v in job.items() if k not in keyed and k != "_common"}
+    flat.update(job.get("_common") or {})
+    flat.update(job.get(hpc) or {} if hpc in keyed else {})
+    options["job"] = flat
+    sections = ", ".join(f"job.{k}" for k in keyed)
+    used = (f"job.{hpc} is the job block" if hpc in keyed else
+            f"none is for {hpc}: its job settings are derived from config/machines.yaml")
+    return f"NOTE: the options JSON keeps job settings per machine ({sections}); {used}."
 
 
 def parse_rederive(value):
@@ -326,11 +349,11 @@ def _fill_omitted(options, option_descriptions, segment, groups=(), account=None
     if "log_file" not in data and _set(data.get("workdir")):
         data["log_file"] = os.path.join(data["workdir"], f"{options['simulation']['job_name']}.out")
         filled.append("model.data.log_file")
-    if options.get("job") is None and hpc != "linux":
+    if options.get("job") is None and not no_scheduler(hpc):
         options["job"] = derive_job_block(options, option_descriptions, account)
         print(f"{YELLOW}NOTE: the options JSON has no job block: derived for {hpc} from "
               f"config/machines.yaml.{RESET}")
-    elif isinstance(options.get("job"), dict) and hpc != "linux":
+    elif isinstance(options.get("job"), dict) and not no_scheduler(hpc):
         filled += _fill_job_keys(options, option_descriptions)
     inp = options.get("inp")
     if not inp:
@@ -438,9 +461,7 @@ def names_hint(options, label_only=False):
 
 
 def _machines():
-    from output_solver import CONFIG_DIR
-    from jobgen import JobGen
-    return JobGen(CONFIG_DIR, machine="linux").machines
+    return machines_config()
 
 
 def _queue_names(machine, option_descriptions):
@@ -461,8 +482,9 @@ def _machine_evidence(options, option_descriptions):
     evidence = []
     data = options.get("model", {}).get("data", {})
     make = data.get("make")
-    if (_set(make) and os.path.basename(make) in MAKE_FRAGMENTS.values()
-            and os.path.basename(make) != MAKE_FRAGMENTS.get(hpc)):
+    fragments = make_fragments()
+    if (_set(make) and os.path.basename(make) in fragments.values()
+            and os.path.basename(make) != fragments.get(hpc)):
         evidence.append(f"model.data.make is {os.path.basename(make)}")
     tgcmdata = data.get("tgcmdata")
     other_data = {m.get("tgcmdata") for name, m in machines.items() if name != hpc and m.get("tgcmdata")}
@@ -849,7 +871,7 @@ def _hints(options, option_descriptions):
     if stale:
         hints.append(f"NOTE: model.specification.horires is {options['model']['specification']['horires']} "
                      f"but {', '.join(stale)}: pass --rederive resolution to follow it.")
-    if options.get("job") is not None and options["simulation"]["hpc_system"] != "linux":
+    if options.get("job") is not None and not no_scheduler(options["simulation"]["hpc_system"]):
         hint = machine_hint(options, option_descriptions)
         if hint:
             hints.append(hint)
@@ -946,7 +968,7 @@ def other_cluster(machine):
     from output_solver import CONFIG_DIR
     from jobgen import JobGen
     import socket
-    if machine in (None, "", "linux"):
+    if machine in (None, "") or no_scheduler(machine):
         return False
     try:
         return JobGen(CONFIG_DIR, hostname=socket.gethostname()).name != machine
@@ -990,7 +1012,7 @@ def validate_options(options, option_descriptions, run_dir=None, generated=()):
             step = inp.get("STEP") if _set(inp.get("STEP")) else resolution_solver(spec["horires"])[3]
             return cadence_problems({k: v for k, v in inp.items() if f"inp.{k}" not in generated}, segment, step)
         problems += check(cadence)
-    if isinstance(options.get("job"), dict) and hpc != "linux":
+    if isinstance(options.get("job"), dict) and not no_scheduler(hpc):
         problems += [p for p in (account_problem(options, option_descriptions),
                                  _queue_problem(options, option_descriptions)) if p]
         if typed_ok:

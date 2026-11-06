@@ -12,7 +12,8 @@ from datetime import datetime, timedelta
 
 from misc import (seconds_to_dhms, resolution_solver, mres_to_nres_grid, find_file, select_resource_defaults,
                   get_mtime, select_source_defaults, segment_time, gswm_allowed, ntask_error, json_paths,
-                  tiegcm_env, is_unset, GSWM_PATTERNS, exe_link, build_exe)
+                  tiegcm_env, is_unset, GSWM_PATTERNS, exe_link, build_exe, machine_option,
+                  grt_status)
 from output_solver import (segment_jobs, write_segment_jobs, segment_plan, coupled_handoff_regrids, CONFIG_DIR,
                            job_resource_problems, apply_system_config)
 from interpolation import interpic
@@ -67,11 +68,11 @@ def engage_parser(engage_parameters):
     account_name = o.get('account_name')
     # machines without a scheduler have no queue / walltime
     queue = o.get('queue')
-    if hpc_system == "derecho":
-        job_priority = o['job_priority']
-    elif hpc_system == 'aitken':
-        group_list = o['group_list']
-        node_type = engage_node_model(hpc_system, engage_parameters["simulation"].get("node_type"))
+    # the optional job fields the machine asks (config/machines.yaml job_prompt_extra)
+    extra = machine_option(hpc_system, "job_prompt_extra") or []
+    pbs_extra = {key: o[key] for key in ("job_priority", "group_list") if key in extra}
+    if "model" in extra:
+        pbs_extra["model"] = engage_node_model(hpc_system, engage_parameters["simulation"].get("node_type"))
     walltime = o.get('walltime')
     run_directory = o.get('run_directory')
 
@@ -105,19 +106,15 @@ def engage_parser(engage_parameters):
     eo['parentdir'] = root_directory
 
     eo['project_code'] = account_name
-    if hpc_system == 'aitken':
-        eo['group_list'] = group_list
-    else:
-        eo['group_list'] = None
+    eo['group_list'] = pbs_extra.get('group_list')
     eo['queue'] = queue
     
     eo['walltime'] = walltime
     eo['conda_env'] = conda_env
     
-    if hpc_system == "derecho":
-        eo['job_priority'] = job_priority
-    elif hpc_system == 'aitken':
-        eo['model'] = node_type
+    for key in ('job_priority', 'model'):
+        if key in pbs_extra:
+            eo[key] = pbs_extra[key]
     
     eo["coupled_defaults"] = coupled_inp_defaults({}, horires_standalone)
     eo['skip']= ['group_list','job_name','hpc_system','horires','parentdir','vertres', 'mres', 'input_file', 'LABEL','start_time','stop_time','secondary_start_time','secondary_stop_time','segment' ,'SOURCE_START','PRIHIST','MXHIST_PRIM','SECHIST','MXHIST_SECH','project_code','queue','job_priority','model','walltime','ONEWAY']
@@ -261,16 +258,18 @@ def engage_options_updater(options, engage_options, option_descriptions):
             if engage_options.get(key) is not None:
                 o[key] = engage_options[key]
     on = options["job"].setdefault("resource", {})
-    if hpc_platform == "aitken":
+    od_job = option_descriptions["job"].get(hpc_platform, {})
+    if "model" in (od_job.get("resource") or {}):
         on["model"] = engage_options["model"]
     select_default, ncpus_default, mpiprocs_default = select_resource_defaults(options, option_descriptions)
     for key, value in (("select", select_default), ("ncpus", ncpus_default), ("mpiprocs", mpiprocs_default)):
         if on.get(key) is None:
             on[key] = value
-    if hpc_platform == "aitken":
-        for key in ("local_modules", "other_job"):
-            if options["job"].get(key) is None:
-                options["job"][key] = option_descriptions["job"]["aitken"][key]["default"]
+    # the machine's job lines (local library prefix, MPI settings) when the JSON has none
+    for key in ("local_modules", "other_job"):
+        default = (od_job.get(key) or {}).get("default")
+        if options["job"].get(key) is None and not is_unset(default):
+            options["job"][key] = default
     o["nprocs"] = int(on["select"]) * int(on["mpiprocs"])
     if "project_code" in option_descriptions["job"].get(hpc_platform, {}):
         o["project_code"] = engage_options["project_code"]
@@ -476,11 +475,9 @@ def _spinup_sechist(start_time, stop_time, preferred_sec_s, step_s):
     return sec
 
 
-VERIFIED_COUPLED_MACHINES = ("derecho", "aitken")
-
-
 def experimental_machine_warning(hpc_system):
-    if hpc_system in VERIFIED_COUPLED_MACHINES:
+    """The warning for a machine whose config/machines.yaml stacks.grt.status is not verified."""
+    if grt_status(hpc_system) == "verified":
         return None
     return (f"WARNING: a coupled (engage GRT) TIE-GCM run on {hpc_system} is EXPERIMENTAL: it has never "
             f"run there, and the job scripts (from config/machines.yaml) are unchecked on that machine.")
