@@ -48,8 +48,13 @@ at build time:
 One of these files, or the user's own, is specified by the job script 
 variable "make" in the :ref:`job script <jobscript>`. The specified 
 file is included in the main :download:`Makefile <../../scripts/Makefile>`.
-User's outside NCAR are encouraged to copy and rename one of these files, 
+User's outside NCAR are encouraged to copy and rename one of these files,
 and customize it for your own operating system and compiler.
+
+With tiegcmrun, ``source tiegcmrun/setEnvironment.sh`` detects the machine from the host name
+and loads that machine's modules and conda activation from ``tiegcmrun/config/machines.yaml``,
+the same entry the generated job scripts use (``--machine <name>`` picks another entry); the
+entry's ``make_fragment`` names the ``scripts/Make.*`` file of a ``tiegcmrun.py -oc`` build.
 
 .. _external_libs::
 
