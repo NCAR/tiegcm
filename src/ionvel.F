@@ -102,7 +102,7 @@
             wi(k,i,lat) =  (eex(k,i)*xb(i-2,lat)-eey(k,i)*yb(i-2,lat))*
      |        1.e6/bmod(i-2,lat)**2
 
-            if (coupling_mage) then
+            if (coupling_mage /= 0) then
             ! MAGE modification
             if (vi(k,i,lat) > 2000.0) vi(k,i,lat) = 2000.0
             if (ui(k,i,lat) > 2000.0) ui(k,i,lat) = 2000.0

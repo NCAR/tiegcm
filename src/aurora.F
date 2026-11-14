@@ -629,7 +629,7 @@
 ! will not change simulations.
 !                                                        Wenbin  wang
 !
-          if (coupling_mage) then
+          if (coupling_mage /= 0) then
           alfa(i,lat) = max(geng(i,lat),0.01)
           flux(i,lat) = max(gflx(i,lat),0.01)
           eflux(i,lat) = flux(i,lat)*fac_p2e*alfa(i,lat)
