@@ -89,6 +89,8 @@ Additional data may be available on the [HAO public FTP site](http://download.ha
 
 [TIEGCMrun](./tiegcmrun) is a Python tool used to compile and execute TIEGCM in an automated fashion. It can be run interactively on the command line. See [QuickStart](https://tiegcm-docs.readthedocs.io/en/latest/tiegcm/quickstart.html) for example usage.
 
+The questions can start from an earlier run's answers. If the current directory holds a `tiegcmrun_parameters.json` (or a `tiegcmrun_input.json`), TIEGCMrun asks `Found <file>: start the wizard from its values? [Y/n]` and, on Enter, offers each saved answer as the default. `--prefill PATH` names the file (or a directory holding one) and does not ask; `--no-prefill` never looks. Only answers are taken: values derived from them (vertres, mres, STEP, SOURCE, the history cadences and file names, the run directories, the executable, the model, data and make paths, the PE layout) are recomputed, and the run directory is not taken from the file. Unknown keys and values that fail their check are skipped with a NOTE. `--prefill` cannot be combined with `-o`, which replays a file as it is.
+
 ### GCMProcpy
 
 [GCMProcpy](https://github.com/NCAR/gcmprocpy) is a Python tool for post-processing and visualization of TIEGCM output. It can be used interactively on the command line or as an API in a Python script. See the [GCMProcpy docs](https://gcmprocpy.readthedocs.io/en/latest/) for examples.

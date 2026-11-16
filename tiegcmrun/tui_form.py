@@ -1091,8 +1091,28 @@ def build_state(args, mode="EXPERT"):
                 f.level = "EXPERT"
     state = FormState(fields, _derive_registry(), _validate_registry(), mode=mode,
                       context=ctx, cond=_cond_registry(), warn=_warn_registry())
+    seed = args.get("prefill_seed") if isinstance(args, dict) else getattr(args, "prefill_seed", None)
+    if seed:
+        # before the engage / benchmark pins, so those win
+        apply_prefill_seed(state, seed)
     _seed_benchmark_engage(state)
     return state
+
+
+def apply_prefill_seed(state, seed):
+    """Set the --prefill answers ({dotted path: value}) as the user's own; the derives of the
+    other fields then follow them. Returns the paths set."""
+    done = []
+    for path, value in seed.items():
+        f = state.by_path.get(path)
+        if f is None:
+            continue
+        if f.name in _FOURVAR_FIELDS and isinstance(value, (list, tuple)):
+            value = " ".join(map(str, value))     # [0,1,0,0] -> '0 1 0 0'
+        # the same path as a typed value (load_prefill already applied misc.coerce)
+        state.set(path, copy.deepcopy(value), normalize=False)
+        done.append(path)
+    return done
 
 
 def _seed_benchmark_engage(state):

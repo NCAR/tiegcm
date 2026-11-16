@@ -27,6 +27,7 @@ from replay_solver import (prepare_replay, parse_rederive, rederive_pop, rederiv
                            old_format_problem, validate_options, read_options_json, section_problem,
                            options_key_schema, unknown_keys_problem, machine_keyed_job)
 import misc
+from replay_solver import _DERIVED_KEYS, _REQUIRED_KEYS, _EXTRA_KEYS, _BOOKKEEPING_KEYS, _PREVIOUS_KEYS
 RED = '\033[31m'
 GREEN = '\033[32m'
 YELLOW = '\033[33m'
@@ -36,11 +37,14 @@ RESET = '\033[0m'
 DESCRIPTION = "Interactive script to prepare a TIEGCM model run."
 
 # engage refuses a tiegcmrun whose major version differs; bump the major on an incompatible change.
-API_VERSION = "2.1.0"
+API_VERSION = "2.2.0"
 
 JSON_INDENT = 4
 
 PARAMETERS_JSON = "tiegcmrun_parameters.json"
+
+# --prefill: the file names looked for in a directory, first match wins
+PREFILL_NAMES = (PARAMETERS_JSON, "tiegcmrun_input.json")
 
 SUPPORT_FILES_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
@@ -139,6 +143,17 @@ def create_command_line_parser():
     parser.add_argument(
         "--engage", default=None,
         help="Inline JSON string of engage options (default: %(default)s)."
+    )
+    prefill = parser.add_mutually_exclusive_group()
+    prefill.add_argument(
+        "--prefill", nargs="?", const="auto", default=None, metavar="PATH",
+        help=f"Start the prompts from a saved {PARAMETERS_JSON} or {PREFILL_NAMES[1]} (or a "
+             f"directory holding one). Without PATH: the one in the current directory. "
+             f"Not with -o."
+    )
+    prefill.add_argument(
+        "--no-prefill", action="store_true",
+        help=f"Do not look for a {PARAMETERS_JSON} / {PREFILL_NAMES[1]} in the current directory."
     )
     return parser
 
@@ -567,6 +582,182 @@ def build_roles(horires):
             if parts else "standalone runs only")
 
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_PREFILL_INP_DERIVED = _DERIVED_KEYS + _REQUIRED_KEYS
+
+# --prefill seeds only the answers; these follow from other answers, $TIEGCMHOME / $TIEGCMDATA or
+# config/machines.yaml and are derived again (the --rederive groups, the run directories, the
+# engage coupled defaults and the PE layout). parentdir is where this run goes: a saved one names
+# the old run, which the new run would be written into.
+PREFILL_DERIVED = frozenset(
+    tuple(f"model.data.{k}" for k in ("modeldir", "tgcmdata", "make", "utildir", "log_file", "parentdir", "execdir",
+                                      "workdir", "histdir", "modelexe", "coupled_modelexe"))
+    + tuple(f"model.specification.{k}" for k in ("vertres", "mres", "nres_grid", "segmentation"))
+    + tuple(f"inp.{k}" for k in _PREFILL_INP_DERIVED + COUPLED_DEFAULT_KEYS))
+PREFILL_DERIVED_JOB = ("resource.select", "resource.ncpus", "resource.mpiprocs", "nprocs")
+
+
+def prefill_file(source, cwd=None):
+    """The JSON file a --prefill source names: a file, or the first PREFILL_NAMES file in a directory
+    ('auto': the current one). None when 'auto' finds nothing; ValueError for a missing PATH."""
+    if source == "auto":
+        for name in PREFILL_NAMES:
+            path = os.path.join(cwd or os.getcwd(), name)
+            if os.path.isfile(path):
+                return name if cwd is None else path
+        return None
+    source = os.path.expanduser(str(source))
+    if os.path.isdir(source):
+        for name in PREFILL_NAMES:
+            if os.path.isfile(os.path.join(source, name)):
+                return os.path.join(source, name)
+        raise ValueError(f"--prefill {source}: no {' or '.join(PREFILL_NAMES)} in that directory")
+    if not os.path.isfile(source):
+        raise ValueError(f"--prefill {source} does not exist")
+    return source
+
+
+def _prefill_leaf(option_descriptions, path):
+    """The options_description.json entry of a dotted path, or None."""
+    node = option_descriptions
+    for key in path.split("."):
+        node = node.get(key) if isinstance(node, dict) else None
+    return node if isinstance(node, dict) and "LEVEL" in node else None
+
+
+def load_prefill(source, option_descriptions):
+    """Read the answers a saved options JSON gives for the asked options.
+
+    source: None, 'auto', a JSON file or directory (see prefill_file), or an options dict.
+    Returns (seed {dotted asked path: value}, info {'file', 'ignored', 'dropped'}): job keys land
+    under job.<the file's simulation.hpc_system>; derived keys are left out; unknown or obsolete
+    keys are listed in 'ignored'; values that fail the field's check are listed in 'dropped'.
+    """
+    info = {"file": None, "ignored": [], "dropped": []}
+    if source is None:
+        return {}, info
+    if isinstance(source, dict):
+        options = copy.deepcopy(source)
+    else:
+        path = prefill_file(source)
+        if path is None:
+            return {}, info
+        info["file"] = path
+        options = read_options_json(path)
+        # relative paths in the JSON are relative to its own directory, as with -o
+        misc.resolve_json_paths(options, os.path.dirname(os.path.abspath(path)))
+    schema = options_key_schema(option_descriptions)
+    silent = set(_EXTRA_KEYS) | set(_BOOKKEEPING_KEYS)
+    sim = options.get("simulation") if isinstance(options.get("simulation"), dict) else {}
+    hpc = sim.get("hpc_system")
+    hpc = hpc if isinstance(hpc, str) and isinstance(option_descriptions.get("job", {}).get(hpc), dict) else None
+    # a saved run names its generated deck in input_file; only a custom deck (no inp) is an answer
+    has_inp = isinstance(options.get("inp"), dict) and bool(options["inp"])
+    seed = {}
+
+    def walk(node, sch, prefix):
+        for key, value in node.items():
+            dotted = prefix + str(key)
+            if str(key).startswith("_") or dotted in silent:
+                continue
+            if not isinstance(sch, dict) or key not in sch or dotted in _PREVIOUS_KEYS:
+                info["ignored"].append(dotted)
+            elif isinstance(sch[key], dict):
+                if isinstance(value, dict):
+                    walk(value, sch[key], dotted + ".")
+            else:
+                leaf(dotted, value)
+
+    def leaf(dotted, value):
+        if dotted in PREFILL_DERIVED or (dotted == "model.data.input_file" and has_inp):
+            return
+        if dotted.startswith("job."):
+            rest = dotted[4:]
+            if rest in PREFILL_DERIVED_JOB:
+                return
+            if hpc is None:
+                info["ignored"].append(dotted)
+                return
+            dotted = f"job.{hpc}.{rest}"
+        desc = _prefill_leaf(option_descriptions, dotted)
+        if desc is None or desc.get("prompt") is None:
+            if desc is None:
+                info["ignored"].append(dotted)
+            return
+        if misc.is_unset(value):
+            return                              # unset keeps the default
+        try:
+            seed[dotted] = misc.coerce(dotted, value, desc)
+        except (ValueError, TypeError) as e:
+            info["dropped"].append(f"{dotted}: {_ANSI.sub('', str(e))}")
+
+    walk(options, schema, "")
+    return seed, info
+
+
+def prefill_pinned(seed, engage=None):
+    """The seed without the keys engage pins (its payload keys and skip list)."""
+    pinned = set()
+    if isinstance(engage, dict):
+        pinned = set(engage) | set(engage.get("skip") or ())
+    return {k: v for k, v in seed.items() if k.rsplit(".", 1)[-1] not in pinned}
+
+
+def apply_prefill_defaults(option_descriptions, seed):
+    """A deep copy of option_descriptions whose seeded leaves default to the seed (the prompts then
+    offer the saved value, and an option not asked at this mode takes it)."""
+    od = copy.deepcopy(option_descriptions)
+    for path, value in (seed or {}).items():
+        desc = _prefill_leaf(od, path)
+        if desc is None:
+            continue
+        if desc.get("type") == "dhms" and isinstance(value, str):
+            value = [int(x) for x in value.split()]  # get_run_option shows a dhms default as a list
+        desc["default"] = copy.deepcopy(value)
+        desc["_prefilled"] = True
+    return od
+
+
+def prefill_report(seed, info, verbose=False):
+    """Print the NOTE lines and the 'Prefilled N option(s)' banner."""
+    shown = info.get("file") or "the given options"
+    if info.get("ignored"):
+        print(f"{YELLOW}NOTE: ignored unknown or obsolete key(s) in {shown}: "
+              f"{', '.join(info['ignored'])}{RESET}")
+    for item in info.get("dropped") or ():
+        print(f"{YELLOW}NOTE: {shown}: {item}; the default is used.{RESET}")
+    print(f"Prefilled {len(seed)} option(s) from {shown}; derived values are recomputed.")
+    if verbose and seed:
+        print("  " + "\n  ".join(f"{k} = {v}" for k, v in seed.items()))
+
+
+def _prefill_seed(args):
+    """Resolve --prefill / --no-prefill for the interactive paths; returns the seed ({} for none)."""
+    source = args.prefill
+    if args.options_path or args.no_prefill:
+        return {}
+    if source is None or source == "auto":
+        found = prefill_file("auto")
+        if found is None:
+            if source == "auto":
+                print(f"{YELLOW}NOTE: --prefill: no {' or '.join(PREFILL_NAMES)} in the current "
+                      f"directory.{RESET}")
+            return {}
+        try:
+            answer = input(f"Found {found}: start the wizard from its values? [Y/n] ")
+        except EOFError:
+            answer = "n"
+        if answer.strip().lower() not in ("", "y", "yes"):
+            return {}
+        source = found
+    with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
+        option_descriptions = apply_system_config(json.load(f), socket.gethostname())
+    seed, info = load_prefill(source, option_descriptions)
+    seed = prefill_pinned(seed, args.engage)
+    prefill_report(seed, info, args.verbose)
+    return seed
+
+
 def prompt_user_for_run_options(args):
     """Prompt for the run options, group by group, and return the options dict."""
 
@@ -591,6 +782,9 @@ def prompt_user_for_run_options(args):
         skip_parameters = ['input_file','log_file','job_name','modeldir','tgcmdata','segmentation','histdir']
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = apply_system_config(json.load(f), socket.gethostname())
+    if getattr(args, "prefill_seed", None):
+        # --prefill: the saved answers are the defaults; engage / benchmark values set below win
+        option_descriptions = apply_prefill_defaults(option_descriptions, args.prefill_seed)
     with open(BENCHMARKS_FILE, "r", encoding="utf-8") as f:
         benchmarks_options = json.load(f)
     options = {}
@@ -1104,7 +1298,8 @@ def prompt_user_for_run_options(args):
                      f"the jobs are charged to" + (" (engage's pbs.account_name is not set)" if engage else "")))
             elif on not in skip_pbs:
                 o[on] = get_run_option(on, od[on], mode, skip_parameters)
-                if on == "queue" and engage is None and "walltime" in od and o[on]:
+                if (on == "queue" and engage is None and "walltime" in od and o[on]
+                        and not od["walltime"].get("_prefilled")):
                     od["walltime"]["default"] = (queue_walltime_default(hpc_platform, o[on])
                                                  or od["walltime"]["default"])
 
@@ -1226,6 +1421,9 @@ def tiegcmrun(args=None):
         parser.error("--coupling/-co was removed: every build couples with MAGE at run time. "
                      "Build one executable per resolution with 'tiegcmrun.py -oc'.")
     args = parser.parse_args(argv)
+    if args.prefill is not None and args.options_path:
+        raise ValueError("--prefill starts the prompts from a saved file; it cannot be combined with "
+                         "-o (replay the file with -o alone)")
     args.tui = use_tui(args.no_tui)
     rederive = ()
     if args.rederive is not None:
@@ -1280,6 +1478,9 @@ def tiegcmrun(args=None):
     if args.engage != None:
         print(f"Engage = True")
     print(f"\n") 
+
+    # the prompts / wizard start from a saved file's answers (--prefill, or one found here)
+    args.prefill_seed = _prefill_seed(args)
 
     if options_path:
         # relative paths in the JSON are relative to its own directory
