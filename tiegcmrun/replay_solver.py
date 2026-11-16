@@ -38,6 +38,7 @@ REDERIVE_GROUPS = {
 _GENERATED_OUTPUT = [
     re.compile(r"^'(.+)/([^/]+)_prim_\d+\.nc','to','\1/\2_prim_\d+\.nc','by','1'$"),
     re.compile(r"^'(.+)/([^/]+)_temp_\d+\.nc' , '\1/\2_prim_\d+\.nc'$"),
+    re.compile(r"^'(.+)/([^/]+)_temp_\d+\.nc'$"),
 ]
 _GENERATED_SECOUT = [
     re.compile(r"^'(.+)/([^/]+)_sech_\d+\.nc','to','\1/\2_sech_\d+\.nc','by','1'$"),

@@ -3,7 +3,6 @@ batch_systems:
 
   pbs:
     submit: "qsub"                     # submit command; prints jobid to stdout
-    jobid_regex: "^(\\d+)"             # extract jobid from submit stdout
     directive_prefix: "#PBS"
     directives:                        # logical name -> directive text (null = omit)
       job_name:   "-N {v}"
@@ -24,7 +23,6 @@ batch_systems:
 
   slurm:
     submit: "sbatch --parsable"             # --parsable -> bare numeric jobid (dependency chain)
-    jobid_regex: "(\\d+)\\s*$"
     directive_prefix: "#SBATCH"
     directives:
       job_name:   "--job-name={v}"
@@ -45,7 +43,6 @@ batch_systems:
 
   none:                                # linux / interactive — no scheduler
     submit: "bash"
-    jobid_regex: ""
     directive_prefix: ""
     directives: {}
     resource: { chunk: "", threads_part: "", join: "", directive: "" }
