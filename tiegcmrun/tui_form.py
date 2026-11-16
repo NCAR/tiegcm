@@ -1552,7 +1552,8 @@ def run_tui_wizard(args):
             raise _FormCancelled("cancelled")
         # A failed 'gen' or a refused check re-opens the wizard on the field it names.
         drop_segmented_derived(state)
-        failed = generate_pending(state)
+        # --check writes nothing: a 'gen' stays pending
+        failed = {} if getattr(args, "check", False) else generate_pending(state)
         if not failed:
             failed = accept_problems(state, args)
             if not failed:
@@ -1594,7 +1595,9 @@ def accept_problems(state, args):
         od = apply_system_config(json.load(f), socket.gethostname())
     probe = finalize_options(copy.deepcopy(state.options_dict()), args)
     with contextlib.redirect_stdout(io.StringIO()):     # NOTEs print again on the real run
-        problems = validate_options(probe, od)
+        pending = [f"inp.{k}" for k in ("GPI_NCFILE", "IMF_NCFILE") if getattr(args, "check", False)
+                   and str((probe.get("inp") or {}).get(k)).strip().lower() == "gen"]
+        problems = validate_options(probe, od, generated=pending)
     out = {}
     paths = [f.path for f in state.visible()]
     for problem in problems:
@@ -1696,7 +1699,8 @@ def apply_accept_actions(options, args):
     if tg:
         os.environ["TIEGCMDATA"] = tg
 
-    misc.generate_pending(inp, data.get("workdir"))
+    if not getattr(args, "check", False):
+        misc.generate_pending(inp, data.get("workdir"))
 
     nocompile = not getattr(args, "compile", False) and not getattr(args, "onlycompile", False)
     eng = getattr(args, "engage", None)

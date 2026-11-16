@@ -946,6 +946,8 @@ def prompt_user_for_run_options(args):
                 gpi_generated = False
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters, run_dir=run_dir)
                 while isinstance(o[on], str) and o[on].strip().lower() == "gen":
+                    if getattr(args, "check", False):
+                        break                      # --check writes nothing: 'gen' stays pending
                     try:
                         o[on] = generate_gpi_file(o["start_time"], o["stop_time"], options["model"]["data"]["workdir"])
                         gpi_generated = True
@@ -972,6 +974,8 @@ def prompt_user_for_run_options(args):
                 imf_generated = False
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters, run_dir=run_dir)
                 while isinstance(o[on], str) and o[on].strip().lower() == "gen":
+                    if getattr(args, "check", False):
+                        break                      # --check writes nothing: 'gen' stays pending
                     try:
                         o[on] = generate_imf_file(o["start_time"], o["stop_time"], options["model"]["data"]["workdir"])
                         imf_generated = True
@@ -1134,7 +1138,10 @@ def source_target(options, run_name):
     except (OSError, ValueError, KeyError, TypeError, RuntimeError):
         source_mtimes = None        # an unreadable SOURCE fails in interpic with its own error
     if source_mtimes is not None:
-        value, note = resolve_source_start(source, options["inp"].get("SOURCE_START"), source_mtimes)
+        inp = options["inp"]
+        pristart = (inp_pri_date(inp["start_time"], inp["stop_time"])[2]
+                    if inp.get("start_time") and inp.get("stop_time") else None)
+        value, note = resolve_source_start(source, inp.get("SOURCE_START"), source_mtimes, pristart=pristart)
         if note:
             print(f"{YELLOW}{note}{RESET}")
         options["inp"]["SOURCE_START"] = value
@@ -1325,6 +1332,9 @@ def tiegcmrun(args=None):
         inp = options.get("inp") if isinstance(options.get("inp"), dict) else {}
         pending = tuple(f"inp.{k}" for k in ("GPI_NCFILE", "IMF_NCFILE")
                         if isinstance(inp.get(k), str) and inp[k].strip().lower() == "gen")
+        for key in pending:
+            print(f"--check: {key} is 'gen': not generated now (nothing is written); a run "
+                  f"without --check generates the file into the work directory.")
         validate(options, generated=generated + pending)
         check_executables(options, args, invoke_dir)
         return (options, [], [])
@@ -1457,6 +1467,9 @@ def tiegcmrun(args=None):
             print(f'{YELLOW}Error submitting job: {e.stderr}{RESET}')
             print(f"{YELLOW}Check the job script for errors{RESET}")
             print(f"To submit job use command {YELLOW}{_submit_hint(jg, pbs_script, submit_all_jobs_script, workdir_abs, invoke_dir)}{RESET}")
+            failed = e.cmd if isinstance(e.cmd, str) else " ".join(map(str, e.cmd))
+            raise RuntimeError(f"submit failed: '{failed}' (run in {workdir_abs}) returned exit "
+                               f"status {e.returncode}.") from None
 
     elif args.onlycompile == False and not misc.no_scheduler(options["simulation"]["hpc_system"]):
         jg = JobGen(CONFIG_DIR, machine=options["simulation"]["hpc_system"],

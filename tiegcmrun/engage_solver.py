@@ -243,7 +243,8 @@ def engage_options_updater(options, engage_options, option_descriptions):
         o["SOURCE"] = select_source_defaults(copy.deepcopy(options), option_descriptions)
     try:
         o["SOURCE_START"], note = resolve_source_start(
-            o["SOURCE"], o.get("SOURCE_START"), get_mtime(options["inp"]["SOURCE"]))
+            o["SOURCE"], o.get("SOURCE_START"), get_mtime(options["inp"]["SOURCE"]),
+            pristart=inp_pri_date(o["start_time"], o["stop_time"])[2])
     except ValueError as e:
         raise ValueError(f"\033[31m{e}{RESET}") from None
     if note:

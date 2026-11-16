@@ -241,7 +241,12 @@ def inp_pri_out(start_time, stop_time, PRIHIST, MXHIST_PRIM, pri_files, histdir,
         raise ValueError(f"Cannot size primary-history files: PRIHIST step ({step_seconds}s) * MXHIST_PRIM ({MXHIST_PRIM}) is zero.")
 
     number_of_files = ceil(total_seconds / data_per_file_seconds)
-    if number_of_files == 1:
+    if number_of_files == 1 and total_seconds // step_seconds < int(MXHIST_PRIM):
+        # output.F opens the next file only once MXHIST_PRIM histories are on the current one:
+        # here every history of the window fits in the first file, the only one written.
+        pri_files_n = pri_files
+        OUTPUT = f"'{histdir}/{run_name}_temp_{'{:02d}'.format(pri_files)}.nc'"
+    elif number_of_files == 1:
         pri_files_n = pri_files + 1
         OUTPUT = f"'{histdir}/{run_name}_temp_{'{:02d}'.format(pri_files)}.nc' , '{histdir}/{run_name}_prim_{'{:02d}'.format(pri_files+1)}.nc'"
     else:
@@ -278,7 +283,8 @@ def inp_sec_out(start_time, stop_time, SECHIST, MXHIST_SECH, sec_files, histdir,
     # numfiles.F counts SECSTART..SECSTOP inclusive, so exactly MXHIST_SECH + 1 histories need 2 files.
     overflow = total_seconds // step_seconds + 1 > int(MXHIST_SECH)
     sec_files_start = sec_files + 1
-    sec_files_end = sec_files_start + number_of_files
+    # list exactly the files the window's histories fill
+    sec_files_end = sec_files_start + ceil((total_seconds // step_seconds + 1) / int(MXHIST_SECH)) - 1
     if (number_of_files == 1 or number_of_files == 0) and not overflow:
         SECOUT = f"'{histdir}/{run_name}_sech_{'{:02d}'.format(sec_files_start)}.nc'"
         sec_files_end = sec_files_start

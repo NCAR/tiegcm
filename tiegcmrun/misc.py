@@ -212,7 +212,8 @@ def missing_exe_message(exe, horires, engage=False):
     return (f"{exe} not found — the model must be compiled before it runs: run 'tiegcmrun.py -oc' "
             f"and answer Horizontal Resolution {res} (builds $TIEGCMHOME/tiegcm_{res}/tiegcm.exe), "
             + (f"or give the path of a {res} deg build." if engage else
-               "or re-run this command with --compile/-c."))
+               "then set model.data.modelexe to that file; or re-run this command with "
+               "--compile/-c, which builds the executable this run names."))
 
 
 def engage_exe_refusal(exe, key, coupled, horires, zitop=None):

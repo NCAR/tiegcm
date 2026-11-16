@@ -226,14 +226,54 @@ def linux_run_commands(options, inp_files, log_files, relative=False):
 _GENERATED_OUTPUT_FORMS = (re.compile(r"^\s*'([^']+)'\s*$"),
                            re.compile(r"^\s*'[^']+'\s*,\s*'([^']+)'\s*$"),
                            re.compile(r"^\s*'[^']+'\s*,\s*'to'\s*,\s*'([^']+)'\s*,\s*'by'\s*,\s*'1'\s*$"))
+# The 'to' form as the benchmarks also write it (to unquoted): first and last file named.
+_OUTPUT_TO_FORM = re.compile(r"^\s*'([^']+)'\s*,\s*(?:'to'|to)\s*,\s*'([^']+)'\s*,\s*'by'\s*,\s*'1'\s*$")
+_OUTPUT_PAIR_FORM = re.compile(r"^\s*'([^']+)'\s*,\s*'([^']+)'\s*$")
+_FILE_NUMBER = re.compile(r"^(.*?)(\d+)(\D*)$")
+
+
+def _primary_files_filled(inp):
+    """How many OUTPUT files the window in inp fills (numfiles.F: PRISTART..PRISTOP inclusive,
+    MXHIST_PRIM per file, an initial run from SOURCE), or None when inp does not give one window."""
+    from namelist_solver import mtime_ints
+    if any(inp.get(k) in (None, "") for k in ("SOURCE", "PRISTART", "PRISTOP", "PRIHIST", "MXHIST_PRIM")):
+        return None
+    try:
+        start, stop, hist = (mtime_ints(inp[k]) for k in ("PRISTART", "PRISTOP", "PRIHIST"))
+        if any(t is None or len(t) != 4 for t in (start, stop, hist)):
+            return None
+        mx = int(inp["MXHIST_PRIM"])
+        step = dhms_to_seconds(hist)
+        span = dhms_to_seconds(stop) - dhms_to_seconds(start)
+    except (TypeError, ValueError):
+        return None
+    if mx < 1 or step < 1 or span < 0:
+        return None
+    return math.ceil((span // step + 1) / mx)
 
 
 def last_primary_history(inp):
-    """The last primary history file of a generated OUTPUT, or None for a hand-written one."""
+    """The last primary history file the run fills, for a generated OUTPUT or a benchmark's 'to'
+    form, or None for another hand-written one.
+
+    When inp also gives the run window, a name the window does not reach is not returned."""
     if not isinstance(inp, dict) or not inp.get("OUTPUT"):
         return None
+    output = str(inp["OUTPUT"])
+    filled = _primary_files_filled(inp)
+    if filled is not None:
+        m = _OUTPUT_PAIR_FORM.match(output)
+        if m and filled == 1:
+            return m.group(1).strip()
+        m = _OUTPUT_TO_FORM.match(output)
+        a, b = (_FILE_NUMBER.match(m.group(i).strip()) for i in (1, 2)) if m else (None, None)
+        if a and b and (a.group(1), a.group(3)) == (b.group(1), b.group(3)):
+            n = int(a.group(2)) + filled - 1
+            if n < int(b.group(2)):
+                return f"{a.group(1)}{str(n).zfill(len(a.group(2)))}{a.group(3)}"
+            return m.group(2).strip()
     for form in _GENERATED_OUTPUT_FORMS:
-        m = form.match(str(inp["OUTPUT"]))
+        m = form.match(output)
         if m:
             return m.group(1).strip()
     return None
