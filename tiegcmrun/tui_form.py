@@ -768,6 +768,16 @@ def _validate_registry():
     for fld in ("PRISTART", "PRISTOP", "PRIHIST", "SECHIST", "SECSTART", "SECSTOP"):
         reg["inp." + fld] = fourvar
 
+    def covers(key):                                # a dated GPI/IMF file must span the run
+        def check(v, val):
+            if v.get("__benchmark"):
+                return None
+            return _misc().forcing_cover_problem(key, val, v.get("inp.start_time"),
+                                                 v.get("inp.stop_time"))
+        return check
+    for fld in ("GPI_NCFILE", "IMF_NCFILE"):
+        reg["inp." + fld] = covers(fld)
+
     def forcing(fld):                               # required by input.F without GPI
         def check(v, val):
             from namelist_solver import forcing_missing

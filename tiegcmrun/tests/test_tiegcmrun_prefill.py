@@ -85,7 +85,7 @@ ASKED = {
 
 def test_load_seeds_asked_answers_only(run, od):
     seed, info = tiegcmrun.load_prefill(str(run), od)
-    assert info == {"file": str(run), "ignored": [], "dropped": []}
+    assert info == {"file": str(run), "ignored": [], "dropped": [], "notes": []}
     for key, value in ASKED.items():
         assert seed[key] == value, key
     # relative to the JSON's directory, as with -o
@@ -206,6 +206,7 @@ def test_auto_finds_nothing_prints_nothing(tmp_path, monkeypatch, capsys):
 
 def test_auto_asks_first(run, monkeypatch, capsys):
     monkeypatch.chdir(run.parent)
+    monkeypatch.setattr(tiegcmrun, "stdin_is_tty", lambda: True)    # pytest's stdin is not a terminal
     asked = []
     monkeypatch.setattr(builtins, "input", lambda prompt="": asked.append(prompt) or "n")
     assert tiegcmrun._prefill_seed(_args()) == {}
@@ -260,6 +261,8 @@ def test_wizard_state_is_seeded(run, od):
     # nothing seeded: the state is as before
     plain = _state({})
     assert not plain.overridden & set(seed)
+    # a 'gen' answer is seeded as 'gen', not derived again
+    assert _state({**seed, "inp.GPI_NCFILE": "gen"}).values["inp.GPI_NCFILE"] == "gen"
 
 
 def test_wizard_engage_pins_win(run, od):
@@ -276,3 +279,177 @@ def test_build_state_accepts_a_dict():
     tf = tiegcmrun._import_own_tui_form()
     st = tf.build_state({"prefill_seed": {"inp.solar_flux_level": "medium"}}, mode="BASIC")
     assert st.values["inp.solar_flux_level"] == "medium"
+
+
+def test_auto_not_a_tty(run, monkeypatch, capsys):
+    monkeypatch.chdir(run.parent)
+    monkeypatch.setattr(tiegcmrun, "stdin_is_tty", lambda: False)
+    monkeypatch.setattr(builtins, "input", lambda prompt="": pytest.fail("asked"))
+    assert tiegcmrun._prefill_seed(_args()) == {}
+    out = capsys.readouterr().out
+    assert "not a terminal" in out and "tiegcmrun_parameters.json" in out
+    # a bare --prefill in a pipe is taken without asking
+    assert tiegcmrun._prefill_seed(_args(prefill="auto"))["inp.solar_flux_level"] == "high"
+    assert "Found" not in capsys.readouterr().out
+
+
+def test_engage_does_not_ask_about_the_cwd_file(run, monkeypatch):
+    monkeypatch.chdir(run.parent)
+    monkeypatch.setattr(tiegcmrun, "stdin_is_tty", lambda: True)
+    monkeypatch.setattr(builtins, "input", lambda prompt="": pytest.fail("asked"))
+    assert tiegcmrun._prefill_seed(_args(engage={"skip": []})) == {}
+    seed = tiegcmrun._prefill_seed(_args(prefill=str(run),
+                                          engage={"skip": ["start_time"], "hpc_system": "derecho"}))
+    assert seed["inp.solar_flux_level"] == "high" and "inp.start_time" not in seed
+
+
+def test_machine_keyed_job_block(od):
+    keyed = {"simulation": {"job_name": "x", "hpc_system": "aitken"},
+             "job": {"_common": {"walltime": "01:00:00", "other_job": ["x"]},
+                     "aitken": {"project_code": "s1234", "queue": "devel", "resource": {"model": "rom_ait"}},
+                     "derecho": {"queue": "main"}}}
+    flat = {"simulation": {"job_name": "x", "hpc_system": "aitken"},
+            "job": {"walltime": "01:00:00", "other_job": ["x"], "project_code": "s1234", "queue": "devel",
+                    "resource": {"model": "rom_ait"}}}
+    seed, info = tiegcmrun.load_prefill(keyed, od)
+    assert seed == tiegcmrun.load_prefill(flat, od)[0]
+    assert seed["job.aitken.queue"] == "devel"
+    assert info["ignored"] == []
+    assert any("job.aitken is the job block" in n for n in info["notes"])
+    assert tiegcmrun.load_prefill(keyed, od, hpc="derecho")[0]["job.derecho.queue"] == "main"
+
+
+def test_bare_data_filename(run, od, tmp_path):
+    data = tmp_path / "data"                       # the run fixture's $TIEGCMDATA
+    gpi = data / "gpi_1960001-2025340.nc"
+    gpi.write_text("")
+    t = tmp_path / "tiegcmrun_input.json"
+    t.write_text(json.dumps({"inp": {"GPI_NCFILE": "gpi_1960001-2025340.nc", "IMF_NCFILE": "imf_x.nc"}}))
+    seed, info = tiegcmrun.load_prefill(str(t), od)
+    assert seed["inp.GPI_NCFILE"] == str(gpi)
+    assert "imf_x.nc" in " ".join(info["dropped"]) and "inp.IMF_NCFILE" not in seed
+    (tmp_path / "imf_x.nc").write_text("")         # beside the JSON: relative to it, as with -o
+    seed, info = tiegcmrun.load_prefill(str(t), od)
+    assert seed["inp.IMF_NCFILE"] == str(tmp_path / "imf_x.nc")
+
+
+def test_generated_forcing_seeds_gen(run, od):
+    saved = json.loads(run.read_text())
+    external = saved["inp"]["GPI_NCFILE"]
+    gpi = run.parent / "gpi_2015075-2015078.nc"                       # in workdir
+    (run.parent.parent / "hist").mkdir()
+    imf = run.parent.parent / "hist" / "imf_2015075-2015078.nc"       # in parentdir
+    gpi.write_text("")
+    imf.write_text("")
+    saved["inp"]["GPI_NCFILE"], saved["inp"]["IMF_NCFILE"] = str(gpi), str(imf)
+    run.write_text(json.dumps(saved))
+    seed, info = tiegcmrun.load_prefill(str(run), od)
+    assert seed["inp.GPI_NCFILE"] == "gen" and seed["inp.IMF_NCFILE"] == "gen"
+    assert len([n for n in info["notes"] if "was generated into the saved run" in n]) == 2
+    # a file outside the saved run stays a path
+    saved["inp"]["GPI_NCFILE"] = external
+    run.write_text(json.dumps(saved))
+    seed, _ = tiegcmrun.load_prefill(str(run), od)
+    assert seed["inp.GPI_NCFILE"] == external
+
+
+def test_external_executables_are_answers(run, od):
+    saved = json.loads(run.read_text())
+    saved["model"]["data"]["modelexe"] = "/builds/tiegcm_2.5/tiegcm.exe"
+    saved["model"]["data"]["coupled_modelexe"] = "../exec/tiegcm.x"
+    run.write_text(json.dumps(saved))
+    seed, info = tiegcmrun.load_prefill(str(run), od)
+    assert seed["model.data.modelexe"] == "/builds/tiegcm_2.5/tiegcm.exe"
+    assert "model.data.coupled_modelexe" not in seed
+    assert info["notes"] == []
+
+
+def test_onlycompile_drops_the_executables(run, monkeypatch):
+    saved = json.loads(run.read_text())
+    saved["model"]["data"]["modelexe"] = "/builds/tiegcm_2.5/tiegcm.exe"
+    run.write_text(json.dumps(saved))
+    monkeypatch.setattr(builtins, "input", lambda prompt="": pytest.fail("asked"))
+    assert tiegcmrun._prefill_seed(_args(prefill=str(run)))["model.data.modelexe"] == "/builds/tiegcm_2.5/tiegcm.exe"
+    assert "model.data.modelexe" not in tiegcmrun._prefill_seed(_args(prefill=str(run), onlycompile=True))
+
+
+def test_prefill_walltime_default():
+    od = {"walltime": {"default": "24:00:00", "_prefilled": True}}
+    note = tiegcmrun.prefill_walltime_default(od, "devel", "aitken")
+    assert od["walltime"]["default"] == "02:00:00" and "_prefilled" not in od["walltime"]
+    assert "more than queue 'devel'" in note
+    od = {"walltime": {"default": "01:00:00", "_prefilled": True}}
+    assert tiegcmrun.prefill_walltime_default(od, "devel", "aitken") is None
+    assert od["walltime"]["default"] == "01:00:00"
+    od = {"walltime": {"default": "08:00:00"}}                       # no --prefill: as upstream
+    assert tiegcmrun.prefill_walltime_default(od, "devel", "aitken") is None
+    assert od["walltime"]["default"] == "02:00:00"
+
+
+def test_stale_forcing_default_dropped():
+    desc = {"default": "/x/gpi_2015070-2015080.nc", "_prefilled": True}
+    note = tiegcmrun.drop_stale_forcing_default(desc, "GPI_NCFILE", "2024-05-10T00:00:00", "2024-05-12T00:00:00")
+    assert desc["default"] is None and "_prefilled" not in desc and "gpi_2015070-2015080.nc" in note
+    desc = {"default": "/x/gpi_2015070-2015080.nc", "_prefilled": True}
+    assert tiegcmrun.drop_stale_forcing_default(desc, "GPI_NCFILE", "2015-03-16T00:00:00",
+                                                "2015-03-19T00:00:00") is None
+    assert desc["default"] == "/x/gpi_2015070-2015080.nc"
+    desc = {"default": "gen", "_prefilled": True}
+    assert tiegcmrun.drop_stale_forcing_default(desc, "IMF_NCFILE", "2024-05-10T00:00:00",
+                                                "2024-05-12T00:00:00") is None
+    assert desc["default"] == "gen"
+
+
+def test_forcing_cover_problem():
+    import misc
+    w = ("2024-05-10T00:00:00", "2024-05-12T00:00:00")
+    assert misc.forcing_cover_problem("GPI_NCFILE", "gen", *w) is None
+    assert misc.forcing_cover_problem("GPI_NCFILE", "/x/gpi_test.nc", *w) is None
+    assert "enter 'gen'" in misc.forcing_cover_problem("GPI_NCFILE", "/x/gpi_2015070-2015080.nc", *w)
+    assert misc.forcing_cover_problem("GPI_NCFILE", "/x/gpi_2024001-2024200.nc", *w) is None
+
+
+def test_wizard_flags_a_stale_forcing_file(run, od, tmp_path):
+    ext = tmp_path / "ext"
+    ext.mkdir()
+    gpi = ext / "gpi_2015070-2015080.nc"
+    gpi.write_text("")
+    saved = json.loads(run.read_text())
+    saved["inp"]["GPI_NCFILE"] = str(gpi)
+    run.write_text(json.dumps(saved))
+    seed, _ = tiegcmrun.load_prefill(str(run), od)
+    assert seed["inp.GPI_NCFILE"] == str(gpi)
+    st = _state(seed)
+    assert "inp.GPI_NCFILE" not in st.errors()               # the saved window is covered
+    st.set("inp.start_time", "2024-05-10T00:00:00")
+    st.set("inp.stop_time", "2024-05-12T00:00:00")
+    assert "covers 2015070..2015080" in st.errors()["inp.GPI_NCFILE"]
+    st.set("inp.GPI_NCFILE", "gen")
+    assert "inp.GPI_NCFILE" not in st.errors()
+    # any dated answer is checked, not only a prefilled one
+    plain = _state({})
+    plain.set("inp.start_time", "2024-05-10T00:00:00")
+    plain.set("inp.stop_time", "2024-05-12T00:00:00")
+    plain.set("inp.GPI_NCFILE", str(gpi))
+    assert "covers 2015070..2015080" in plain.errors()["inp.GPI_NCFILE"]
+
+
+def test_reprompt_while_re_asks_until_covered(monkeypatch, capsys):
+    desc = {"LEVEL": "BASIC", "prompt": "GPI file", "default": None}
+    asked = []
+    def fake(name, description, mode="BASIC", skip_parameters=[], run_dir=None):
+        asked.append((name, run_dir))
+        return "gen"
+    monkeypatch.setattr(tiegcmrun, "get_run_option", fake)
+    import misc
+    w = ("2024-05-10T00:00:00", "2024-05-12T00:00:00")
+    out = tiegcmrun._reprompt_while("GPI_NCFILE", desc, "BASIC", [], "/x/gpi_2015070-2015080.nc",
+                                    lambda v: misc.forcing_cover_problem("GPI_NCFILE", v, *w), run_dir="/r")
+    assert out == "gen" and asked == [("GPI_NCFILE", "/r")]
+    assert "covers 2015070..2015080" in capsys.readouterr().out
+    # not prompted at this mode: refused, not re-asked
+    with pytest.raises(ValueError, match="covers 2015070..2015080"):
+        tiegcmrun._reprompt_while("GPI_NCFILE", desc, "BASIC", ["GPI_NCFILE"],
+                                  "/x/gpi_2015070-2015080.nc",
+                                  lambda v: misc.forcing_cover_problem("GPI_NCFILE", v, *w))
+    assert len(asked) == 1

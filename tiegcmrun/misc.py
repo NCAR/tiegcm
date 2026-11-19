@@ -744,6 +744,23 @@ def file_covers(file_path, start_time, stop_time):
         return d.year * 1000 + d.timetuple().tm_yday
     return beg <= yd(start_time) and end >= yd(stop_time)
 
+def forcing_cover_problem(key, value, start_time, stop_time):
+    """Why a dated GPI/IMF file name (<prefix>_<YYYYDDD>-<YYYYDDD>.nc) does not cover
+    [start_time, stop_time], or None: unset, 'gen', $-values and undated names pass."""
+    if not _path_value(value):
+        return None
+    bounds = _file_yearday_bounds(str(value))
+    if bounds is None:
+        return None
+    try:
+        if file_covers(str(value), start_time, stop_time):
+            return None
+    except (ValueError, TypeError):
+        return None                     # dates not parseable yet (TUI mid-edit)
+    return (f"{key} {os.path.basename(str(value))} covers {bounds[0]}..{bounds[1]}, not this run "
+            f"({start_time}..{stop_time}): enter 'gen' to generate a file for these dates, or a file "
+            f"that covers them.")
+
 def benchmark_window(bench_inp):
     """(start_time, stop_time) ISO strings of a benchmarks.json 'inp' block."""
     year = int(bench_inp["START_YEAR"])

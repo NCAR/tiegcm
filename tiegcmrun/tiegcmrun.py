@@ -20,7 +20,7 @@ from compile import compile_tiegcm
 from interpolation import interpic
 from engage_solver import engage_parser, engage_run, engage_options_updater, apply_coupled_defaults, COUPLED_DEFAULT_KEYS, COUPLED_HISTORY_KEYS, gamres_to_res, engage_node_model, engage_exe_prompt
 from namelist_solver import inp_pri_date,inp_mxhist,inp_sechist,inp_prihist,inp_pri_out,inp_sec_out,inp_sec_date,parse_segment,forcing_missing,parse_run_datetime,cadence_step,hms_str,hms_differs,source_start_hms_error,source_time_of_day_error,resolve_source_start,forcing_refusal,date_order_problem,year_boundary,lbc_other_set
-from output_solver import create_inp_scripts, create_pbs_scripts, segment_jobs, write_segment_jobs, run_file, render_pbs, CONFIG_DIR, apply_system_config, linux_run_commands, queue_walltime_default
+from output_solver import create_inp_scripts, create_pbs_scripts, segment_jobs, write_segment_jobs, run_file, render_pbs, CONFIG_DIR, apply_system_config, linux_run_commands, queue_walltime_default, queue_limits, _hms_seconds
 from jobgen import JobGen, spell, cdpath_reset
 from misc import get_mtime, segment_time, valid_bench, find_file, resolution_solver, mres_to_nres_grid, default_make_file, select_resource_defaults, select_source_defaults, select_latest_gpi, file_covers, resolve_benchmark_file, generate_gpi_file, generate_imf_file, as_list, require_env, tiegcm_env, in_execdir, GSWM_PATTERNS, gswm_allowed, he_coefs_pattern, unknown_other_input_keys, other_input_error, secflds_list, ascii_quotes
 from replay_solver import (prepare_replay, parse_rederive, rederive_pop, rederive_groups_text,
@@ -75,6 +75,11 @@ def _import_own_tui_form():
 def use_tui(no_tui):
     """True unless --no-tui or stdin/stdout is not a terminal."""
     return not no_tui and sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def stdin_is_tty():
+    """True when stdin is a terminal: the prefill question is asked only then."""
+    return sys.stdin.isatty()
 
 
 def create_command_line_parser():
@@ -459,14 +464,14 @@ def _prompted(name, description, mode, skip_parameters):
     return True
 
 
-def _reprompt_while(name, description, mode, skip_parameters, value, problem):
+def _reprompt_while(name, description, mode, skip_parameters, value, problem, run_dir=None):
     """Re-ask `name` while problem(value) returns an error; raises if `name` is not prompted."""
     err = problem(value)
     while err:
         if not _prompted(name, description, mode, skip_parameters):
             raise ValueError(f"{RED}{err}{RESET}")
         print(f"{RED}{err}{RESET}")
-        value = get_run_option(name, description, mode, skip_parameters)
+        value = get_run_option(name, description, mode, skip_parameters, run_dir=run_dir)
         err = problem(value)
     return value
 
@@ -588,10 +593,12 @@ _PREFILL_INP_DERIVED = _DERIVED_KEYS + _REQUIRED_KEYS
 # --prefill seeds only the answers; these follow from other answers, $TIEGCMHOME / $TIEGCMDATA or
 # config/machines.yaml and are derived again (the --rederive groups, the run directories, the
 # engage coupled defaults and the PE layout). parentdir is where this run goes: a saved one names
-# the old run, which the new run would be written into.
+# the old run, which the new run would be written into. The executables are answers (tiegcmrun's
+# own BENCH answers); only a path inside the saved run (its own link or build) is derived, as
+# engage_solver.replay_exes does (PREFILL_RUN_FILES).
 PREFILL_DERIVED = frozenset(
     tuple(f"model.data.{k}" for k in ("modeldir", "tgcmdata", "make", "utildir", "log_file", "parentdir", "execdir",
-                                      "workdir", "histdir", "modelexe", "coupled_modelexe"))
+                                      "workdir", "histdir"))
     + tuple(f"model.specification.{k}" for k in ("vertres", "mres", "nres_grid", "segmentation"))
     + tuple(f"inp.{k}" for k in _PREFILL_INP_DERIVED + COUPLED_DEFAULT_KEYS))
 PREFILL_DERIVED_JOB = ("resource.select", "resource.ncpus", "resource.mpiprocs", "nprocs")
@@ -625,15 +632,29 @@ def _prefill_leaf(option_descriptions, path):
     return node if isinstance(node, dict) and "LEVEL" in node else None
 
 
-def load_prefill(source, option_descriptions):
+PREFILL_RUN_FILES = ("model.data.modelexe", "model.data.coupled_modelexe")  # kept unless inside the saved run
+PREFILL_GENERATED = ("inp.GPI_NCFILE", "inp.IMF_NCFILE")                   # inside the saved run: the answer was 'gen'
+
+
+def _in_run(root, path):
+    """True when path lies inside the saved run's root directory."""
+    try:
+        return os.path.commonpath([root, os.path.abspath(os.path.expanduser(str(path)))]) == root
+    except ValueError:
+        return False
+
+
+def load_prefill(source, option_descriptions, hpc=None):
     """Read the answers a saved options JSON gives for the asked options.
 
     source: None, 'auto', a JSON file or directory (see prefill_file), or an options dict.
-    Returns (seed {dotted asked path: value}, info {'file', 'ignored', 'dropped'}): job keys land
-    under job.<the file's simulation.hpc_system>; derived keys are left out; unknown or obsolete
-    keys are listed in 'ignored'; values that fail the field's check are listed in 'dropped'.
+    hpc: the machine engage pins (default: the file's simulation.hpc_system).
+    Returns (seed {dotted asked path: value}, info {'file', 'ignored', 'dropped', 'notes'}): job keys
+    land under job.<hpc>; a job block kept per machine is read as with -o; derived keys are left out;
+    unknown or obsolete keys are listed in 'ignored'; values that fail the field's check are listed
+    in 'dropped'; 'notes' are NOTE lines (per-machine job block, regenerated forcing file).
     """
-    info = {"file": None, "ignored": [], "dropped": []}
+    info = {"file": None, "ignored": [], "dropped": [], "notes": []}
     if source is None:
         return {}, info
     if isinstance(source, dict):
@@ -644,12 +665,24 @@ def load_prefill(source, option_descriptions):
             return {}, info
         info["file"] = path
         options = read_options_json(path)
-        # relative paths in the JSON are relative to its own directory, as with -o
+        inp = options.get("inp") if isinstance(options.get("inp"), dict) else {}
+        bare = {k: v for k, v in inp.items()
+                if k in misc.INP_FILE_KEYS and misc._path_value(v) and os.sep not in v.strip()}
+        # relative paths are relative to the JSON's directory, as with -o; a bare data file name not
+        # beside the JSON is looked up under $TIEGCMDATA, as at the prompt
         misc.resolve_json_paths(options, os.path.dirname(os.path.abspath(path)))
+        for k, raw in bare.items():
+            if not os.path.exists(inp[k]):
+                inp[k] = raw
+    note = machine_keyed_job(options, hpc)       # the -o normalisation; options is a fresh dict
+    if note:
+        info["notes"].append(note)
+    data = (options.get("model") or {}).get("data") if isinstance(options.get("model"), dict) else None
+    root = misc.run_root(data) if isinstance(data, dict) else None
     schema = options_key_schema(option_descriptions)
     silent = set(_EXTRA_KEYS) | set(_BOOKKEEPING_KEYS)
     sim = options.get("simulation") if isinstance(options.get("simulation"), dict) else {}
-    hpc = sim.get("hpc_system")
+    hpc = hpc or sim.get("hpc_system")
     hpc = hpc if isinstance(hpc, str) and isinstance(option_descriptions.get("job", {}).get(hpc), dict) else None
     # a saved run names its generated deck in input_file; only a custom deck (no inp) is an answer
     has_inp = isinstance(options.get("inp"), dict) and bool(options["inp"])
@@ -669,6 +702,13 @@ def load_prefill(source, option_descriptions):
                 leaf(dotted, value)
 
     def leaf(dotted, value):
+        if dotted in PREFILL_RUN_FILES and root and misc._path_value(value) and _in_run(root, value):
+            return                                   # the saved run's own link or build, not an answer
+        if dotted in PREFILL_GENERATED and root and misc._path_value(value) and _in_run(root, value):
+            seed[dotted] = "gen"
+            info["notes"].append(f"NOTE: {dotted} {os.path.basename(str(value))} was generated into the "
+                                 f"saved run; 'gen' (a file for this run's dates) is offered.")
+            return
         if dotted in PREFILL_DERIVED or (dotted == "model.data.input_file" and has_inp):
             return
         if dotted.startswith("job."):
@@ -718,6 +758,39 @@ def apply_prefill_defaults(option_descriptions, seed):
     return od
 
 
+def prefill_walltime_default(od, queue, hpc_platform):
+    """Set od['walltime']['default'] for the answered queue: the queue default as before, or, for a
+    --prefill walltime, the saved one while it fits queue_limits(...)['walltime_max']. Returns the
+    NOTE to print or None."""
+    wall = queue_walltime_default(hpc_platform, queue) or od["walltime"]["default"]
+    if not od["walltime"].get("_prefilled"):
+        od["walltime"]["default"] = wall
+        return None
+    cap = queue_limits(hpc_platform, queue).get("walltime_max")
+    have = _hms_seconds(od["walltime"]["default"])
+    if cap is None or have is None or _hms_seconds(cap) is None or have <= _hms_seconds(cap):
+        return None
+    saved = od["walltime"]["default"]
+    od["walltime"]["default"] = wall
+    od["walltime"].pop("_prefilled", None)
+    return (f"NOTE: the saved walltime {saved} is more than queue {queue!r} on {hpc_platform} allows "
+            f"({cap}, config/machines.yaml queues); {wall} is offered instead.")
+
+
+def drop_stale_forcing_default(desc, key, start_time, stop_time):
+    """Clear a --prefill GPI/IMF default that is a dated file not covering the run window; returns
+    the NOTE or None."""
+    if not desc.get("_prefilled"):
+        return None
+    problem = misc.forcing_cover_problem(key, desc.get("default"), start_time, stop_time)
+    if problem is None:
+        return None
+    saved = desc.get("default")
+    desc["default"] = None
+    desc.pop("_prefilled", None)
+    return f"NOTE: the saved {key} {os.path.basename(str(saved))} does not cover {start_time}..{stop_time}; it is not offered."
+
+
 def prefill_report(seed, info, verbose=False):
     """Print the NOTE lines and the 'Prefilled N option(s)' banner."""
     shown = info.get("file") or "the given options"
@@ -726,16 +799,25 @@ def prefill_report(seed, info, verbose=False):
               f"{', '.join(info['ignored'])}{RESET}")
     for item in info.get("dropped") or ():
         print(f"{YELLOW}NOTE: {shown}: {item}; the default is used.{RESET}")
+    for note in info.get("notes") or ():
+        print(f"{YELLOW}{note}{RESET}")
     print(f"Prefilled {len(seed)} option(s) from {shown}; derived values are recomputed.")
     if verbose and seed:
         print("  " + "\n  ".join(f"{k} = {v}" for k, v in seed.items()))
 
 
 def _prefill_seed(args):
-    """Resolve --prefill / --no-prefill for the interactive paths; returns the seed ({} for none)."""
+    """Resolve --prefill / --no-prefill for the interactive paths; returns the seed ({} for none).
+
+    Under --engage the driver owns the prefill decision (engage passes --prefill PATH or
+    --no-prefill): the current directory is not searched. The question about a file found in the
+    current directory is asked only at a terminal; without one the file is not used unless
+    --prefill is given."""
     source = args.prefill
     if args.options_path or args.no_prefill:
         return {}
+    if args.engage is not None and source is None:
+        return {}        # an older engage gets no extra question
     if source is None or source == "auto":
         found = prefill_file("auto")
         if found is None:
@@ -743,17 +825,28 @@ def _prefill_seed(args):
                 print(f"{YELLOW}NOTE: --prefill: no {' or '.join(PREFILL_NAMES)} in the current "
                       f"directory.{RESET}")
             return {}
-        try:
-            answer = input(f"Found {found}: start the wizard from its values? [Y/n] ")
-        except EOFError:
-            answer = "n"
-        if answer.strip().lower() not in ("", "y", "yes"):
-            return {}
+        if not stdin_is_tty():
+            if source is None:          # implicit lookup, no terminal: not used
+                print(f"{YELLOW}NOTE: {found} found in the current directory, but stdin is not a "
+                      f"terminal: not used. Pass --prefill to start from it, or --no-prefill to "
+                      f"silence this.{RESET}")
+                return {}
+            # bare --prefill in a pipe: taken without asking, like --prefill PATH
+        else:
+            try:
+                answer = input(f"Found {found}: start the wizard from its values? [Y/n] ")
+            except EOFError:
+                answer = "n"
+            if answer.strip().lower() not in ("", "y", "yes"):
+                return {}
         source = found
     with open(OPTION_DESCRIPTIONS_FILE, "r", encoding="utf-8") as f:
         option_descriptions = apply_system_config(json.load(f), socket.gethostname())
-    seed, info = load_prefill(source, option_descriptions)
+    seed, info = load_prefill(source, option_descriptions, (args.engage or {}).get("hpc_system"))
     seed = prefill_pinned(seed, args.engage)
+    if getattr(args, "onlycompile", False):
+        for k in PREFILL_RUN_FILES:
+            seed.pop(k, None)           # with -oc modelexe is 'Executable to build', a different question
     prefill_report(seed, info, args.verbose)
     return seed
 
@@ -883,18 +976,24 @@ def prompt_user_for_run_options(args):
         spin, cpl = float(engage["horires"]), float(engage["horires_coupled"])
         zitop = option_descriptions["model"]["specification"]["zitop"].get("default")
         od["modelexe"]["prompt"] = engage_exe_prompt(spin, cpl, "modelexe")
-        od["modelexe"]["default"] = misc.build_exe(tiegcm_env("TIEGCMHOME"), spin)
+        if spin == cpl and od["coupled_modelexe"].get("_prefilled"):
+            # a D run has one executable; the recorded coupled one ran both roles, as replay_exes
+            od["modelexe"]["default"], od["modelexe"]["_prefilled"] = od["coupled_modelexe"]["default"], True
+        if not od["modelexe"].get("_prefilled"):
+            od["modelexe"]["default"] = misc.build_exe(tiegcm_env("TIEGCMHOME"), spin)
         o["modelexe"] = _ask_engage_exe("modelexe", od["modelexe"], spin, spin == cpl, zitop, mode,
                                         skip_parameters, run_dir)
         if spin == cpl:
             o["coupled_modelexe"] = o["modelexe"]
         else:
             od["coupled_modelexe"]["prompt"] = engage_exe_prompt(spin, cpl, "coupled_modelexe")
-            od["coupled_modelexe"]["default"] = misc.build_exe(tiegcm_env("TIEGCMHOME"), cpl)
+            if not od["coupled_modelexe"].get("_prefilled"):
+                od["coupled_modelexe"]["default"] = misc.build_exe(tiegcm_env("TIEGCMHOME"), cpl)
             o["coupled_modelexe"] = _ask_engage_exe("coupled_modelexe", od["coupled_modelexe"], cpl, True,
                                                     zitop, mode, skip_parameters, run_dir)
     else:
-        od["modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.exe")
+        if not od["modelexe"].get("_prefilled"):
+            od["modelexe"]["default"] = os.path.join(o["execdir"],"tiegcm.exe")
         o["modelexe"] = get_run_option("modelexe", od["modelexe"], mode, skip_parameters, run_dir=run_dir)
         _resolve_exe(o, "modelexe", args, None, missing_exes)
 
@@ -1127,6 +1226,10 @@ def prompt_user_for_run_options(args):
             elif on == "ONEWAY":
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters, run_dir=run_dir)            
             elif on == "GPI_NCFILE" and on not in skip_inp:
+                if benchmark == None:
+                    note = drop_stale_forcing_default(od[on], on, o["start_time"], o["stop_time"])
+                    if note:
+                        print(f"{YELLOW}{note}{RESET}")
                 if benchmark == None and od["GPI_NCFILE"]["default"] is None:
                     # newest bundled GPI if it covers the run window, else generate one
                     latest = select_latest_gpi(tiegcm_env("TIEGCMDATA"))
@@ -1139,6 +1242,11 @@ def prompt_user_for_run_options(args):
                     od["GPI_NCFILE"]["warning"] = (od["GPI_NCFILE"]["warning"] + "\n" if od["GPI_NCFILE"].get("warning") else "") + gen_note
                 gpi_generated = False
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters, run_dir=run_dir)
+                if benchmark == None:
+                    # a dated file must cover the run; 'gen', undated and unset names pass
+                    o[on] = _reprompt_while(on, od[on], temp_mode, skip_parameters, o[on],
+                                            lambda v: misc.forcing_cover_problem(on, v, o["start_time"], o["stop_time"]),
+                                            run_dir=run_dir)
                 while isinstance(o[on], str) and o[on].strip().lower() == "gen":
                     if getattr(args, "check", False):
                         break                      # --check writes nothing: 'gen' stays pending
@@ -1162,11 +1270,20 @@ def prompt_user_for_run_options(args):
                     od["F107A"]["warning"] = "81-Day Average of F10.7 can be read by GPI File and can be skipped."
             elif on == "IMF_NCFILE" and on not in skip_inp:
                 if benchmark == None:
+                    note = drop_stale_forcing_default(od[on], on, o["start_time"], o["stop_time"])
+                    if note:
+                        print(f"{YELLOW}{note}{RESET}")
+                if benchmark == None:
                     gen_note = ("Enter 'gen' to generate an IMF file for this run's dates "
                                 "with gcmprocpy (OMNI solar wind).")
                     od["IMF_NCFILE"]["warning"] = (od["IMF_NCFILE"]["warning"] + "\n" if od["IMF_NCFILE"].get("warning") else "") + gen_note
                 imf_generated = False
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters, run_dir=run_dir)
+                if benchmark == None:
+                    # a dated file must cover the run; 'gen', undated and unset names pass
+                    o[on] = _reprompt_while(on, od[on], temp_mode, skip_parameters, o[on],
+                                            lambda v: misc.forcing_cover_problem(on, v, o["start_time"], o["stop_time"]),
+                                            run_dir=run_dir)
                 while isinstance(o[on], str) and o[on].strip().lower() == "gen":
                     if getattr(args, "check", False):
                         break                      # --check writes nothing: 'gen' stays pending
@@ -1298,10 +1415,10 @@ def prompt_user_for_run_options(args):
                      f"the jobs are charged to" + (" (engage's pbs.account_name is not set)" if engage else "")))
             elif on not in skip_pbs:
                 o[on] = get_run_option(on, od[on], mode, skip_parameters)
-                if (on == "queue" and engage is None and "walltime" in od and o[on]
-                        and not od["walltime"].get("_prefilled")):
-                    od["walltime"]["default"] = (queue_walltime_default(hpc_platform, o[on])
-                                                 or od["walltime"]["default"])
+                if on == "queue" and engage is None and "walltime" in od and o[on]:
+                    note = prefill_walltime_default(od, o[on], hpc_platform)
+                    if note:
+                        print(f"{YELLOW}{note}{RESET}")
 
     return options
 
