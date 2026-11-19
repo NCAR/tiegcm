@@ -219,9 +219,9 @@
 !
       n = n+1
       diags(n)%short_name = 'O_N2'
-      diags(n)%long_name  = 'O/N2 RATIO'
+      diags(n)%long_name  = 'Column-integrated O/N2 ratio'
       diags(n)%units      = 'none'
-      diags(n)%levels     = 'lev'
+      diags(n)%levels     = 'none'
       diags(n)%caller     = 'comp.F'
 !
       n = n+1
@@ -1208,17 +1208,26 @@
 
       end subroutine mkdiag_WN
 !-----------------------------------------------------------------------
-      subroutine mkdiag_O_N2(name,o1,n2,lev0,lev1,lon0,lon1,lat)
+      subroutine mkdiag_O_N2(name,z,xnmbar,o1,n2,
+     |  lev0,lev1,lon0,lon1,lat0,lat1)
+      use cons_module,only:rmassinv_o1,rmassinv_n2
+      use interp_module,only:interp1d
 !
 ! Calculate O/N2 ratio from o and n2 (mmr).
 !
 ! Args:
       character(len=*),intent(in) :: name
-      integer,intent(in) :: lev0,lev1,lon0,lon1,lat
-      real,intent(in),dimension(lev0:lev1,lon0:lon1) :: o1,n2
+      integer,intent(in) :: lev0,lev1,lon0,lon1,lat0,lat1
+      real,intent(in),dimension(lev0:lev1,lon0:lon1,lat0:lat1) ::
+     |  z,xnmbar,o1,n2
 !
 ! Local:
-      real,dimension(lev0:lev1,lon0:lon1) :: o_n2
+      real,parameter :: n2_cm2 = 1e17
+      integer :: k,i,lat
+      real :: dz
+      real,dimension(1) :: z0,o1_cm2
+      real,dimension(lev0:lev1) :: o1dz,n2dz,zmid
+      real,dimension(lon0:lon1,lat0:lat1) :: o_n2
       integer,save :: ix=0,firstcall=0
 
       firstcall = firstcall+1
@@ -1226,10 +1235,28 @@
       if (ix==0) return
 !
 ! O/N2 ratio:
-      o_n2 = o1/n2
+      do i=lon0,lon1
+        do lat=lat0,lat1
+          o1dz(lev1) = 0
+          n2dz(lev1) = 0
+          zmid(lev1) = (3*z(lev1,i,lat)-z(lev1-1,i,lat))/2
+          do k=lev1-1,lev0,-1
+            dz = z(k+1,i,lat)-z(k,i,lat)
+            o1dz(k) = o1dz(k+1)+dz*
+     |        xnmbar(k,i,lat)*o1(k,i,lat)*rmassinv_o1
+            n2dz(k) = n2dz(k+1)+dz*
+     |        xnmbar(k,i,lat)*n2(k,i,lat)*rmassinv_n2
+            zmid(k) = (z(k+1,i,lat)+z(k,i,lat))/2
+          enddo
+          z0 = interp1d((/n2_cm2/),
+     |      n2dz(lev1:lev0:-1),zmid(lev1:lev0:-1))
+          o1_cm2 = interp1d(z0,zmid,o1dz)
+          o_n2(i,lat) = o1_cm2(1)/n2_cm2
+        enddo
+      enddo
 
       call addfld(diags(ix)%short_name,diags(ix)%long_name,
-     |  diags(ix)%units,o_n2,'lev',lev0,lev1,'lon',lon0,lon1,lat)
+     |  diags(ix)%units,o_n2,'lon',lon0,lon1,'lat',lat0,lat1,0)
 
       end subroutine mkdiag_O_N2
 !-----------------------------------------------------------------------
