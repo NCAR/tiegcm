@@ -86,7 +86,7 @@
 
       do i=1,CplCommSize
             ! Skip Self
-            if (i == CplRank+1) continue
+            if (i == CplRank+1) cycle
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)
@@ -376,7 +376,7 @@
       !if (mytid == 0) write(*,*) "T Starting Export Prep"
       do i=1,CplCommSize
             ! Skip Self
-            if (i == CplRank+1) continue
+            if (i == CplRank+1) cycle
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)
@@ -422,7 +422,7 @@
       ! Send the export data
       do i=1,CplCommSize
         ! Skip Self
-        if (i == CplRank+1) continue
+        if (i == CplRank+1) cycle
         ! Assign rank if match
         select case (IAm(i))
           case (voltId)
@@ -452,7 +452,7 @@
       ! Deallocate arrays
       do i=1,CplCommSize
             ! Skip Self
-            if (i == CplRank+1) continue
+            if (i == CplRank+1) cycle
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)

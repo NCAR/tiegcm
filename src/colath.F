@@ -24,7 +24,7 @@
       real(rp) :: sinlat,coslat,aslonc,ofdc,cosofc,sinofc,crit1deg
       real(rp),dimension(nmlonp1,nmlat0) :: colatc
 
-      if (coupling_mage) then
+      if (coupling_mage /= 0) then
 ! Lin, 09/2021: Use dynamic auroral boundary defined by the lowest lat where numflux<1e6
         !crit(1) = (max(aurllbN,aurllbS)+5._rp)/rtd
 ! Lin, 10/2021: using 5 deg wide merging zone tends to

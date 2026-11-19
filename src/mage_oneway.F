@@ -858,7 +858,8 @@
       subroutine openMixFile(ncFile, gStr)
           character(len=*), intent(in) :: ncFile
           character(len=*), optional :: gStr
-          integer :: ierr, fExist
+          integer :: ierr
+          logical :: fExist
 
           ! Check if the file exists
           inquire(file=ncFile, exist=fExist)

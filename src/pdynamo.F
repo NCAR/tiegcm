@@ -220,7 +220,7 @@
 ! Pham, 2018
 ! This broadcast the new MIX phihm to all processors
 ! the MIX phihm was transformed only on root task
-      if (coupling_mage) then
+      if (coupling_mage /= 0) then
       call mp_bcast_real(phihm,nmlonp1*nmlat,0)
       call addfld ('PHIHM','REMIX Electric Potential',
      |    'V',phihm(mlon0:mlon1,mlat0:mlat1),
@@ -3140,7 +3140,7 @@
 !
       if (oneway) then
         call mage_pot2mag
-      elseif (coupling_mage) then
+      elseif (coupling_mage /= 0) then
         call mage_mag2mag
       endif
 !

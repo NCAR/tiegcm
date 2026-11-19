@@ -127,7 +127,7 @@
       real,dimension(lev0:lev1,lon0:lon1) ::vel_zonal,vel_merid,vel_vert
       real :: joulefac
 
-      if (coupling_mage) then
+      if (coupling_mage /= 0) then
 !
 !       MAGE: When copled to the GAMERA, the currents are strong
 !       so we need to reduce joulefac from 1.5 to 1.0:
