@@ -15,6 +15,10 @@
 # setEnvironment.sh: module_purge/module_use/modules (+ local_prefix) and conda_activate
 #   (conda_activate_sh for a bash session when conda_activate is csh; conda_pkgs_dirs for
 #   conda create) of the host's entry.
+# venv_activate: the job lines that activate a Python venv given by its path (coupling.conda_env
+#   names a directory holding bin/activate), in the job shell (activate.csh for tcsh, after
+#   setting the prompt variable a batch tcsh lacks: activate.csh reads $prompt);
+#   venv_activate_sh is the bash variant when the job shell is csh. A conda name uses conda_activate.
 machines:
 
   derecho:
@@ -43,6 +47,8 @@ machines:
               esmf/8.6.0]
     env: {}
     conda_activate: ["module load conda", "conda activate {conda_env}"]
+    venv_activate: ['if (! $?prompt) set prompt = ""', "source {conda_env}/bin/activate.csh"]
+    venv_activate_sh: ["source {conda_env}/bin/activate"]
     stacks:
       grt: { status: verified }        # coupled engage GRT runs (engage_solver warning)
 
@@ -66,9 +72,11 @@ machines:
     modules: [comp-intel/2020.4.304, "mpi-hpe/mpt.2.30", szip/2.1.1, hdf5/1.12.3_mpt, miniconda3/v4]
     conda_activate: ["source /swbuild/analytix/tools/miniconda3_220407/bin/activate.csh {conda_env}"]
     conda_activate_sh: ["source activate {conda_env}"]   # bash: miniconda3/v4 (modules) puts activate on PATH
+    venv_activate: ['if (! $?prompt) set prompt = ""', "source {conda_env}/bin/activate.csh"]
+    venv_activate_sh: ["source {conda_env}/bin/activate"]
     conda_pkgs_dirs: "/nobackup/$USER/.conda/pkgs"       # conda create (setEnvironment.sh)
     cores_per_node: 128                # fallback if no node type chosen
-    node_type_default: milan           # same default as makeitso / engage
+    node_type_default: rome            # same default as makeitso / engage
     # netcdf and ESMF built by nrao3 with tiegcm/scripts/Build.netcdf_esmf_at.sh, shared by every
     # user (the fixed path the aitken jobs always carried; Make.intel_at names the same ESMF)
     local_prefix: "/u/nrao3/local_aitken"
@@ -99,6 +107,7 @@ machines:
     module_purge: ""
     modules: []
     conda_activate: ['eval "$(conda shell.bash hook)"', "conda activate {conda_env}"]
+    venv_activate: ["source {conda_env}/bin/activate"]
     make_fragment: Make.intel_linux
 
   # untested
@@ -115,5 +124,6 @@ machines:
     module_purge: "module purge"
     modules: [PrgEnv-intel, cray-hdf5-parallel, cray-netcdf-hdf5parallel, cray-mpich]
     conda_activate: ["module load conda", "conda activate {conda_env}"]
+    venv_activate: ["source {conda_env}/bin/activate"]
     stacks:
       grt: { status: experimental }

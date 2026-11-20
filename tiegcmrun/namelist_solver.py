@@ -391,10 +391,16 @@ def forcing_conflicts(inp):
     """[(FIELD, reason)] for forcing values inp gives that input.F inp_solar refuses."""
     other = _other_input_text(inp)
     if _potential_model(inp).startswith("HEELIS"):
+        conflicts = []
         if _nl_value_set(inp.get("IMF_NCFILE")):
-            return [("IMF_NCFILE", "IMF_NCFILE is read only by a WEIMER run: set inp.IMF_NCFILE to "
-                                   "null for HEELIS")]
-        return []
+            conflicts.append(("IMF_NCFILE", "IMF_NCFILE is read only by a WEIMER run: set inp.IMF_NCFILE "
+                                            "to null for HEELIS"))
+        # input.F inp_solar: 'Cannot provide namelist KP and both POWER and CTPOTEN' (also with a GPI file)
+        if all(_given(inp, k, other) for k in ("KP", "POWER", "CTPOTEN")):
+            conflicts.append(("KP", "KP cannot be given together with both POWER and CTPOTEN (the model "
+                                    "stops: KP stands in for the one that is missing): set inp.KP, or one "
+                                    "of inp.POWER and inp.CTPOTEN, to null"))
+        return conflicts
     if not _potential_model(inp).startswith("WEIMER"):
         return []
     conflicts = []
@@ -407,9 +413,9 @@ def forcing_conflicts(inp):
         conflicts.append(("CTPOTEN", "CTPOTEN cannot be given for a WEIMER run (the Weimer model "
                                      "computes it): set inp.CTPOTEN to null"))
     if _nl_value_set(inp.get("IMF_NCFILE")) and all(_given(inp, n, other) for n in _IMF_PARAMS):
-        conflicts.append(("IMF_NCFILE", "an IMF run cannot also give all of BXIMF, BYIMF, BZIMF, "
-                                        "SWDEN and SWVEL (at least one must come from the IMF "
-                                        "file): set one of them to null"))
+        conflicts.append(("IMF_NCFILE", "IMF_NCFILE is set: an IMF run cannot also give all of BXIMF, "
+                                        "BYIMF, BZIMF, SWDEN and SWVEL (at least one must come from the "
+                                        "IMF file): set one of them to null"))
     return conflicts
 
 

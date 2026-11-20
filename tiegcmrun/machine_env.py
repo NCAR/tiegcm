@@ -8,6 +8,7 @@ Used by setEnvironment.sh (with the system python3: needs only PyYAML) and by th
   machine_env.py [--machine M] [--hostname H] modules          module purge/use/load lines (+ local_prefix, bash)
   machine_env.py [--machine M] [--hostname H] conda-setup      conda lines that need no environment name
   machine_env.py [--machine M] [--hostname H] conda ENV        the lines that activate conda environment ENV
+                                                               (a venv when ENV/bin/activate exists)
   machine_env.py [--machine M] [--hostname H] conda-pkgs-dirs  CONDA_PKGS_DIRS for conda create ('' if none)
 """
 import argparse
@@ -60,12 +61,17 @@ def conda_lines(jg):
     return list(jg.m.get("conda_activate_sh") or jg.m.get("conda_activate") or [])
 
 
+def venv_lines(jg):
+    """The machine's bash venv activation lines (venv_activate_sh, else venv_activate)."""
+    return list(jg.m.get("venv_activate_sh") or jg.m.get("venv_activate") or [])
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--machine", default=None, help="a config/machines.yaml machine name")
     p.add_argument("--hostname", default=None, help="the host name to resolve (default: this host)")
     p.add_argument("what", choices=("name", "modules", "conda-setup", "conda", "conda-pkgs-dirs"))
-    p.add_argument("env", nargs="?", default=None, help="conda: the environment name")
+    p.add_argument("env", nargs="?", default=None, help="conda: the environment name, or a venv path (a directory holding bin/activate)")
     a = p.parse_args(argv)
     try:
         jg = JobGen(CONFIG_DIR, machine=a.machine or None, hostname=a.hostname or socket.gethostname())
@@ -81,7 +87,13 @@ def main(argv=None):
     elif a.what == "conda":
         if not a.env:
             p.error("conda needs the environment name")
-        out = [ln.replace("{conda_env}", a.env) for ln in conda_lines(jg) if "{conda_env}" in ln]
+        venv = os.path.isfile(os.path.join(a.env, "bin", "activate"))
+        if venv and not venv_lines(jg):
+            print(f"machine_env.py: config/machines.yaml has no venv_activate lines for machine "
+                  f"{jg.name!r}: cannot activate {a.env}.", file=sys.stderr)
+            return 2
+        out = [ln.replace("{conda_env}", a.env) for ln in (venv_lines(jg) if venv else conda_lines(jg))
+               if "{conda_env}" in ln]
     else:
         out = [str(jg.m.get("conda_pkgs_dirs") or "")]
     print("\n".join(out))

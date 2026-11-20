@@ -744,10 +744,20 @@ def file_covers(file_path, start_time, stop_time):
         return d.year * 1000 + d.timetuple().tm_yday
     return beg <= yd(start_time) and end >= yd(stop_time)
 
-def forcing_cover_problem(key, value, start_time, stop_time):
+# absolute paths of the GPI / IMF files this process generated: their names carry the data's real
+# range, which may stop short of the run when the indices lag real time; the generation site already
+# warned, so the cover check passes them
+GENERATED_FORCING_FILES = set()
+
+def forcing_cover_problem(key, value, start_time, stop_time, fix=None):
     """Why a dated GPI/IMF file name (<prefix>_<YYYYDDD>-<YYYYDDD>.nc) does not cover
-    [start_time, stop_time], or None: unset, 'gen', $-values and undated names pass."""
+    [start_time, stop_time], or None: unset, 'gen', $-values, undated names and files this run
+    generated (GENERATED_FORCING_FILES) pass.
+
+    fix: the text after the colon (default: the prompts' wording)."""
     if not _path_value(value):
+        return None
+    if os.path.abspath(str(value)) in GENERATED_FORCING_FILES:
         return None
     bounds = _file_yearday_bounds(str(value))
     if bounds is None:
@@ -758,8 +768,8 @@ def forcing_cover_problem(key, value, start_time, stop_time):
     except (ValueError, TypeError):
         return None                     # dates not parseable yet (TUI mid-edit)
     return (f"{key} {os.path.basename(str(value))} covers {bounds[0]}..{bounds[1]}, not this run "
-            f"({start_time}..{stop_time}): enter 'gen' to generate a file for these dates, or a file "
-            f"that covers them.")
+            f"({start_time}..{stop_time}): "
+            + (fix or "enter 'gen' to generate a file for these dates, or a file that covers them."))
 
 def benchmark_window(bench_inp):
     """(start_time, stop_time) ISO strings of a benchmarks.json 'inp' block."""
@@ -797,16 +807,22 @@ def resolve_benchmark_file(field, benchmark, bench_inp, path):
                 f"{start}..{stop}.")
     return found
 
-def _import_gcmprocpy(kind):
+def gcmprocpy_problem(kind):
+    """Why a 'gen' GPI / IMF file cannot be generated in this environment, or None."""
     try:
-        import gcmprocpy
-        return gcmprocpy
+        import gcmprocpy  # noqa: F401
+        return None
     except ImportError as e:
-        raise RuntimeError(
-            f"{kind} generation needs the 'gcmprocpy' package (>=1.5) in the active "
-            f"environment. Install it (pip install gcmprocpy) or run tiegcmrun from a "
-            f"conda env that has it."
-        ) from e
+        return (f"{kind} generation needs the 'gcmprocpy' package (>=1.5) in the active environment "
+                f"(import failed: {e}). Install it (pip install gcmprocpy) or run tiegcmrun from a "
+                f"conda env that has it.")
+
+def _import_gcmprocpy(kind):
+    problem = gcmprocpy_problem(kind)
+    if problem:
+        raise RuntimeError(problem)
+    import gcmprocpy
+    return gcmprocpy
 
 def generate_gpi_file(start_time, stop_time, output_dir, verbose=True):
     """Write a GPI file for the window into output_dir and return its path.
@@ -821,6 +837,7 @@ def generate_gpi_file(start_time, stop_time, output_dir, verbose=True):
     ds = gcmprocpy.generate_gpi(start=start, end=stop, window=27, centered=False, verbose=verbose)
     path = gcmprocpy.save_gpi(ds, output_dir=output_dir)
     print(f"Generated GPI file: {path}")
+    GENERATED_FORCING_FILES.add(os.path.abspath(str(path)))
     return path
 
 def generate_imf_file(start_time, stop_time, output_dir, verbose=True):
@@ -834,6 +851,7 @@ def generate_imf_file(start_time, stop_time, output_dir, verbose=True):
     ds = gcmprocpy.generate_imf(start=start, end=stop, verbose=verbose)
     path = gcmprocpy.save_imf(ds, output_dir=output_dir)
     print(f"Generated IMF file: {path}")
+    GENERATED_FORCING_FILES.add(os.path.abspath(str(path)))
     return path
 
 def generate_pending(inp, workdir):
@@ -847,7 +865,7 @@ def generate_pending(inp, workdir):
         try:
             inp[key] = gen(start, stop, workdir)
         except Exception as e:
-            raise RuntimeError(f"{key}: generation failed: {e}. Provide a file path instead, or run "
+            raise RuntimeError(f"{key}: generation failed: {str(e).rstrip('.')}. Provide a file path instead, or run "
                                f"from an environment that has gcmprocpy (pip install gcmprocpy).") from e
         print(f"==> {key}: generated {inp[key]}")
         if not file_covers(inp[key], start, stop):
@@ -1016,8 +1034,15 @@ def exe_problems(identity, role, coupled, horires, vertres, nres_grid, zitop=Non
         got.append(f"horires {identity['horires']:g} deg (nlon {identity['nlon']}), the run needs "
                    f"{float(horires):g} deg (nlon {want_nlon})")
     if want_nlevp1 and identity.get("nlevp1") and identity["nlevp1"] != want_nlevp1:
-        got.append(f"vertres {identity['vertres']:g} (nlevp1 {identity['nlevp1']}), the run needs "
-                   f"{float(vertres):g} (nlevp1 {want_nlevp1})")
+        text = (f"vertres {identity['vertres']:g} (nlevp1 {identity['nlevp1']}), the run needs "
+                f"{float(vertres):g} (nlevp1 {want_nlevp1})")
+        if zitop not in (None, "", "None") and ztop is not None and ztop != TIEGCM_ZITOP:
+            # a zitop other than the build's shows up as a vertres mismatch: name the zitop that fits
+            text += (f" for zitop {ztop:g}; at vertres {float(vertres):g} this build's nlevp1 "
+                     f"{identity['nlevp1']} is zitop "
+                     f"{TIEGCM_ZIBOT + (identity['nlevp1'] - 1) * float(vertres):g}: set "
+                     f"model.specification.zitop to that, or rebuild")
+        got.append(text)
     if want_nmlat and identity.get("nmlat") and identity["nmlat"] != want_nmlat:
         got.append(f"nres_grid {identity['nres_grid']} (nmlat {identity['nmlat']}), the run needs "
                    f"{int(float(nres_grid))} (nmlat {want_nmlat})")
@@ -1145,11 +1170,19 @@ def resolve_json_paths(options, json_dir):
         for key in RUN_DIR_KEYS + RUN_FILE_KEYS:
             if key in data:
                 data[key] = fix(data[key])
+
+    def fix_data_file(p):
+        # a bare data file name not beside the JSON is left for coerce to look up under $TIEGCMDATA,
+        # as at the prompt
+        cand = fix(p)
+        if cand is not p and os.sep not in p.strip() and not os.path.exists(cand):
+            return p
+        return cand
     inp = options.get("inp")
     if isinstance(inp, dict):
         for key in INP_FILE_KEYS:
             if key in inp:
-                inp[key] = fix(inp[key])
+                inp[key] = fix_data_file(inp[key])
     return options
 
 

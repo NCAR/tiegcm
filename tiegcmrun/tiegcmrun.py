@@ -143,7 +143,8 @@ def create_command_line_parser():
     )
     parser.add_argument(
         "--check", action="store_true",
-        help="Validate the options and stop before anything is written."
+        help="Validate the options and stop before anything is written (a pending GPI/IMF 'gen' "
+             "needs gcmprocpy importable; nothing is generated)."
     )
     parser.add_argument(
         "--engage", default=None,
@@ -154,13 +155,28 @@ def create_command_line_parser():
         "--prefill", nargs="?", const="auto", default=None, metavar="PATH",
         help=f"Start the prompts from a saved {PARAMETERS_JSON} or {PREFILL_NAMES[1]} (or a "
              f"directory holding one). Without PATH: the one in the current directory. "
-             f"Not with -o."
+             f"Not with -o. Without a terminal, a saved value that fails its check is refused."
     )
     prefill.add_argument(
         "--no-prefill", action="store_true",
         help=f"Do not look for a {PARAMETERS_JSON} / {PREFILL_NAMES[1]} in the current directory."
     )
     return parser
+
+
+class InputEnded(EOFError, ValueError):
+    """The input ended at a prompt: the EOFError callers still catch it; main prints one ERROR."""
+
+
+def _input(prompt, name):
+    """input(prompt); at end of input raise InputEnded naming the option."""
+    try:
+        return input(prompt)
+    except EOFError:
+        raise InputEnded(f"input ended at the prompt for {name}: stdin is not a terminal or has no "
+                         f"more lines; answer the prompts at a terminal, pipe one answer per line, "
+                         f"or replay a saved options JSON (tiegcmrun.py -o; engage.py -to)") from None
+
 
 def get_run_option(name, description, mode="BASIC", skip_parameters=[], run_dir=None):
     """Prompt for one run option and return its value; options above `mode` return the default.
@@ -225,7 +241,7 @@ def get_run_option(name, description, mode="BASIC", skip_parameters=[], run_dir=
         if name in ("other_input", "other_pbs","other_job","job_chain"):
             prompt = og_prompt
             prompt += f" [{GREEN}{default}{RESET}]"
-            temp_value = input(f"{prompt} / ENTER to go next: ")
+            temp_value = _input(f"{prompt} / ENTER to go next: ", name)
             if temp_value == "?":
                 print(f'{YELLOW}{var_description}{RESET}')
             elif temp_value == 'none' or temp_value == 'None':
@@ -246,7 +262,7 @@ def get_run_option(name, description, mode="BASIC", skip_parameters=[], run_dir=
         elif name == "SECFLDS":
             prompt = og_prompt
             prompt += f" [{GREEN}{default}{RESET}]"
-            temp_value = input(f"{prompt} / ENTER to go next: ")
+            temp_value = _input(f"{prompt} / ENTER to go next: ", name)
             if temp_value == "?":
                 print(f'{YELLOW}{var_description}{RESET}')
             elif temp_value == 'none' or temp_value == 'None':
@@ -272,7 +288,7 @@ def get_run_option(name, description, mode="BASIC", skip_parameters=[], run_dir=
                 option_value = default
         elif name == "input_file":
             # The user's own deck: no TIEGCMDATA lookup.
-            option_value = input(f"{prompt}: ")
+            option_value = _input(f"{prompt}: ", name)
             if option_value == "?":
                 print(f'{YELLOW}{var_description}{RESET}')
                 continue
@@ -291,7 +307,7 @@ def get_run_option(name, description, mode="BASIC", skip_parameters=[], run_dir=
                 option_value = path
             ok = True
         elif name in file_variables:
-            option_value = input(f"{prompt}: ")
+            option_value = _input(f"{prompt}: ", name)
             if option_value == "":
                 option_value = default
                 if name == "SOURCE" and option_value == None:
@@ -339,7 +355,7 @@ def get_run_option(name, description, mode="BASIC", skip_parameters=[], run_dir=
             if default not in [None, [None]] :    
                 default_print = ' '.join(map(str, default))
                 prompt += f" [{GREEN}{default_print}{RESET}]"
-            temp_value = input(f"{prompt}: ")
+            temp_value = _input(f"{prompt}: ", name)
             temp_array = []
             if temp_value not in ["","?","none","None"]:
                 if "," in temp_value:
@@ -387,7 +403,7 @@ def get_run_option(name, description, mode="BASIC", skip_parameters=[], run_dir=
             elif temp_value == "?":
                 print(f'{YELLOW}{var_description}{RESET}')
         else:
-            option_value = input(f"{prompt}: ")
+            option_value = _input(f"{prompt}: ", name)
 
             # A list-valued option must stay a list: the .pbs renderer would iterate a str by character.
             if isinstance(default, list):
@@ -481,6 +497,31 @@ _date_order_problem = date_order_problem
 
 _FORCING_REPROMPTS = 3
 
+def skipped_forcing_value(name, desc, benchmark, unused):
+    """The value of a forcing key the chosen forcing skips: unset, as in the wizard (a benchmark keeps
+    its value). A prefilled value is appended to unused as 'inp.<name> <value>' for one NOTE."""
+    if benchmark is not None:
+        return desc["default"]
+    if desc.get("_prefilled") and desc.get("default") is not None:
+        unused.append(f"inp.{name} {desc['default']}")
+    return None
+
+
+def _forcing_source(o):
+    """Where a prompted run's forcing comes from, for the NOTE on unused prefilled forcing values."""
+    for key in ("GPI_NCFILE", "IMF_NCFILE"):
+        if o.get(key) is not None:
+            return f"{key} {os.path.basename(str(o[key]))}"
+    if o.get("KP") is not None:
+        return f"KP {o['KP']}"
+    return f"POTENTIAL_MODEL {o.get('POTENTIAL_MODEL')}"
+
+
+def unused_forcing_note(unused, o):
+    """The NOTE naming prefilled forcing values the chosen forcing (o) does not use."""
+    return f"NOTE: {', '.join(unused)} (prefilled) not used: the forcing comes from {_forcing_source(o)}."
+
+
 def _complete_forcing(o, od, mode, skip_parameters):
     """Re-prompt the solar/high-latitude forcing fields input.F requires; raise if still unset.
 
@@ -566,13 +607,22 @@ def _resolve_exe(o, key, args, horires, missing):
 
 
 def _ask_engage_exe(key, description, horires, coupled, zitop, mode, skip_parameters, run_dir):
-    """Ask an engage executable until misc.engage_exe_refusal accepts it (a missing default too)."""
-    while True:
-        exe = get_run_option(key, description, mode, skip_parameters, run_dir=run_dir)
+    """Ask an engage executable until misc.engage_exe_refusal accepts it (a missing default too).
+
+    Asked at most 1 + _FORCING_REPROMPTS times, as the forcing prompts; then, or at end of input,
+    raise ValueError with the refusal."""
+    refusal = None
+    for attempt in range(1 + _FORCING_REPROMPTS):
+        if attempt:
+            print(f"{RED}{refusal}{RESET}")
+        try:
+            exe = get_run_option(key, description, mode, skip_parameters, run_dir=run_dir)
+        except EOFError:
+            raise ValueError(f"{RED}{refusal or f'model.data.{key}: input ended at the prompt; an executable is required under engage'}{RESET}") from None
         refusal = misc.engage_exe_refusal(exe, key, coupled, horires, zitop)
         if refusal is None or not _prompted(key, description, mode, skip_parameters):
             return exe                       # not asked: check_executables refuses it
-        print(f"{RED}{refusal}{RESET}")
+    raise ValueError(f"{RED}{refusal}{RESET}")
 
 
 def build_roles(horires):
@@ -665,15 +715,9 @@ def load_prefill(source, option_descriptions, hpc=None):
             return {}, info
         info["file"] = path
         options = read_options_json(path)
-        inp = options.get("inp") if isinstance(options.get("inp"), dict) else {}
-        bare = {k: v for k, v in inp.items()
-                if k in misc.INP_FILE_KEYS and misc._path_value(v) and os.sep not in v.strip()}
-        # relative paths are relative to the JSON's directory, as with -o; a bare data file name not
-        # beside the JSON is looked up under $TIEGCMDATA, as at the prompt
+        # relative paths are relative to the JSON's directory and a bare data file name not beside
+        # the JSON is looked up under $TIEGCMDATA, as with -o
         misc.resolve_json_paths(options, os.path.dirname(os.path.abspath(path)))
-        for k, raw in bare.items():
-            if not os.path.exists(inp[k]):
-                inp[k] = raw
     note = machine_keyed_job(options, hpc)       # the -o normalisation; options is a fresh dict
     if note:
         info["notes"].append(note)
@@ -729,7 +773,8 @@ def load_prefill(source, option_descriptions, hpc=None):
         try:
             seed[dotted] = misc.coerce(dotted, value, desc)
         except (ValueError, TypeError) as e:
-            info["dropped"].append(f"{dotted}: {_ANSI.sub('', str(e))}")
+            text = _ANSI.sub('', str(e))       # misc.coerce usually names the key already
+            info["dropped"].append(text if text.startswith(dotted) else f"{dotted}: {text}")
 
     walk(options, schema, "")
     return seed, info
@@ -797,6 +842,12 @@ def prefill_report(seed, info, verbose=False):
     if info.get("ignored"):
         print(f"{YELLOW}NOTE: ignored unknown or obsolete key(s) in {shown}: "
               f"{', '.join(info['ignored'])}{RESET}")
+    dropped = info.get("dropped") or ()
+    if dropped and not stdin_is_tty():
+        # no one can be asked for a correction: a silently swapped default would change the run
+        raise ValueError(f"{shown}: {'; '.join(dropped)}: stdin is not a terminal, so --prefill cannot "
+                         f"offer the default and ask for a correction; fix the value"
+                         f"{'s' if len(dropped) > 1 else ''} in the file, or answer the prompts at a terminal")
     for item in info.get("dropped") or ():
         print(f"{YELLOW}NOTE: {shown}: {item}; the default is used.{RESET}")
     for note in info.get("notes") or ():
@@ -1055,6 +1106,7 @@ def prompt_user_for_run_options(args):
              
         temp_mode = mode
         skip_inp = []
+        unused_prefill = []                       # prefilled forcing values the chosen forcing replaces
         segment = None
         start_stop_set = 0
         crosses_year_boundary = False
@@ -1325,7 +1377,7 @@ def prompt_user_for_run_options(args):
             elif on not in skip_inp:
                 o[on] = get_run_option(on, od[on], temp_mode, skip_parameters, run_dir=run_dir)
             elif on in skip_inp:
-                o[on] = od[on]["default"]
+                o[on] = skipped_forcing_value(on, od[on], benchmark, unused_prefill)
             if engage is not None and on in COUPLED_DEFAULT_KEYS:
                 if str(o[on]) == str(od[on]["default"]):
                     o[on] = None                  # left to engage
@@ -1337,6 +1389,8 @@ def prompt_user_for_run_options(args):
                 segmented = engage is not None or bool(options["model"]["specification"].get("segmentation"))
                 if _derived_note(on, o[on], od[on]["default"], segmented):
                     o[on] = get_run_option(on, od[on], "BASIC")      # the derived value
+        if unused_prefill:
+            print(f"{YELLOW}{unused_forcing_note(unused_prefill, o)}{RESET}")
         _complete_forcing(o, od, "BASIC" if temp_mode == "BENCH" else temp_mode, skip_parameters)
         if engage is not None:
             engage["coupled_unset"] = coupled_unset
@@ -1500,6 +1554,13 @@ def check_executables(options, args, invoke_dir):
         path = _exe_path(options, role, invoke_dir)
         if role == building or path is None:
             continue
+        raw = options["model"]["data"].get(role)
+        if isinstance(raw, str) and "$" in raw:
+            # refused under engage, a warning otherwise, as a missing build is
+            (refused if engage else warned).append(
+                f"model.data.{role}: {raw} not found: environment variables are not expanded in the "
+                f"options JSON; give the path ({os.path.expandvars(raw)})")
+            continue
         if not os.path.exists(path):
             # under engage a missing build is refused (the prompts re-ask it); a standalone run
             # only warns (decks may precede the build)
@@ -1605,7 +1666,8 @@ def tiegcmrun(args=None):
         note = machine_keyed_job(options, (args.engage or {}).get("hpc_system"))
         if note:
             print(f"{YELLOW}{note}{RESET}")
-        problem = options_file_problem(options)
+        # engage settles a null inp / job itself only as an object: refuse null there
+        problem = options_file_problem(options, allow_null=engage is None)
         if problem:
             raise ValueError(f"{RED}{options_path}: {problem}{RESET}")
         misc.resolve_json_paths(options, os.path.dirname(os.path.abspath(options_path)))
@@ -1646,20 +1708,26 @@ def tiegcmrun(args=None):
         if options is None:
             options = prompt_user_for_run_options(args)
     generated = COUPLED_HISTORY_KEYS if engage is not None else ()
+    inp = options.get("inp") if isinstance(options.get("inp"), dict) else {}
+    pending = tuple(f"inp.{k}" for k in ("GPI_NCFILE", "IMF_NCFILE")
+                    if isinstance(inp.get(k), str) and inp[k].strip().lower() == "gen")
+    # every rule before any generation or write; a pending 'gen' counts as a set file
+    validate(options, generated=generated + pending)
+    for key in pending:
+        problem = misc.gcmprocpy_problem("GPI" if key.endswith("GPI_NCFILE") else "IMF")
+        if problem:
+            raise RuntimeError(f"{key} = 'gen': {problem} Nothing was written: install gcmprocpy, or set "
+                               f"{key} to a file that covers the run.")
     if args.check:
-        inp = options.get("inp") if isinstance(options.get("inp"), dict) else {}
-        pending = tuple(f"inp.{k}" for k in ("GPI_NCFILE", "IMF_NCFILE")
-                        if isinstance(inp.get(k), str) and inp[k].strip().lower() == "gen")
         for key in pending:
             print(f"--check: {key} is 'gen': not generated now (nothing is written); a run "
                   f"without --check generates the file into the work directory.")
-        validate(options, generated=generated + pending)
         check_executables(options, args, invoke_dir)
         return (options, [], [])
-    # a replayed GPI/IMF 'gen' is generated here
-    if options_path and isinstance(options.get("inp"), dict):
+    # a replayed GPI/IMF 'gen' is generated here, then checked as the file it is
+    if options_path and pending:
         misc.generate_pending(options["inp"], options["model"]["data"].get("workdir"))
-    validate(options, generated=generated)
+        validate(options, generated=generated)
     if debug:
         print(f"options = {options}")
 
@@ -1808,9 +1876,10 @@ def tiegcmrun(args=None):
             print(f"{YELLOW}To run the model use command{RESET} {command}")
 
 
-def options_file_problem(options, unknown=False):
-    """Return why a loaded options JSON is refused, or None; `unknown` also refuses unknown keys."""
-    problem = section_problem(options) or old_format_problem(options)
+def options_file_problem(options, unknown=False, allow_null=True):
+    """Return why a loaded options JSON is refused, or None; `unknown` also refuses unknown keys;
+    allow_null=False (engage -to) refuses a null inp / job / job.resource."""
+    problem = section_problem(options, allow_null) or old_format_problem(options)
     if problem or not unknown:
         return problem
     options = copy.deepcopy(options)
@@ -1850,7 +1919,7 @@ def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     try:
         tiegcmrun(argv)
-    except (ValueError, FileExistsError, RuntimeError) as e:
+    except (ValueError, FileExistsError, RuntimeError, OSError) as e:
         if "--debug" in argv or "-d" in argv:
             raise
         text = re.sub(r"\x1b\[[0-9;]*m", "", str(e))

@@ -12,7 +12,8 @@ import math
 from misc import (resolution_solver, mres_to_nres_grid, find_file, GSWM_PATTERNS, gswm_allowed,
                   he_coefs_pattern, unknown_other_input_keys, other_input_error, secflds_list,
                   get_mtime, select_resource_defaults, select_source_defaults, history_dir,
-                  default_make_file, make_fragments, machines_config, no_scheduler, tiegcm_env, coerce, is_unset)
+                  default_make_file, make_fragments, machines_config, no_scheduler, tiegcm_env, coerce, is_unset,
+                  forcing_cover_problem, INP_FILE_KEYS)
 from namelist_solver import (inp_pri_date, inp_prihist, inp_sechist, inp_mxhist, inp_pri_out,
                              inp_sec_out, inp_sec_date, parse_segment, forcing_missing,
                              forcing_conflicts, forcing_refusal, source_time_of_day_error,
@@ -476,9 +477,9 @@ def _queue_names(machine, option_descriptions):
 
 
 def _machine_evidence(options, option_descriptions):
-    """Saved values that belong to a machine other than simulation.hpc_system."""
+    """Saved model.data values that belong to a machine other than simulation.hpc_system (the job
+    block's foreign queue and fields are settle_machine_job's)."""
     hpc = options["simulation"]["hpc_system"]
-    od_job = option_descriptions.get("job", {})
     machines = _machines()
     evidence = []
     data = options.get("model", {}).get("data", {})
@@ -491,17 +492,32 @@ def _machine_evidence(options, option_descriptions):
     other_data = {m.get("tgcmdata") for name, m in machines.items() if name != hpc and m.get("tgcmdata")}
     if _set(tgcmdata) and tgcmdata in other_data and tgcmdata != machines.get(hpc, {}).get("tgcmdata"):
         evidence.append("model.data.tgcmdata is another machine's")
-    job = options.get("job")
-    if isinstance(job, dict) and hpc in od_job:
-        mine = set(od_job[hpc]) | set(od_job.get("_common", {}))
-        others = set().union(*[set(s) for m, s in od_job.items() if m not in ("_common", hpc)])
-        foreign = sorted(k for k in job if k in others - mine)
-        if foreign:
-            evidence.append(f"job has {', '.join(foreign)}")
-        queues = _queue_names(hpc, option_descriptions)
-        if queues and _set(job.get("queue")) and job["queue"] not in queues:
-            evidence.append(f"job.queue {job['queue']!r} is not one of {hpc}'s queues")
     return evidence
+
+
+def settle_machine_job(options, option_descriptions):
+    """The replay's (-o, engage -to) machine check of a saved job block, in place: a job.queue that is not a queue
+    of simulation.hpc_system is refused (ValueError); job keys that are another machine's PBS fields
+    are dropped with one NOTE each. Returns the NOTEs printed."""
+    job = options.get("job")
+    hpc = (options.get("simulation") or {}).get("hpc_system")
+    if hpc is None:
+        hpc = option_descriptions.get("simulation", {}).get("hpc_system", {}).get("default")
+    od_job = option_descriptions.get("job", {})
+    if not isinstance(job, dict) or hpc not in od_job or no_scheduler(hpc):
+        return []
+    queues = _queue_names(hpc, option_descriptions)
+    if queues and _set(job.get("queue")) and job["queue"] not in queues:
+        raise ValueError(f"{RED}job.queue={job['queue']!r} is not a queue of {hpc} (config/machines.yaml "
+                         f"queues: {'|'.join(queues)}): set job.queue to one of them, or pass --rederive "
+                         f"job to take the machine's default.{RESET}")
+    mine = set(od_job[hpc]) | set(od_job.get("_common", {}))
+    others = set().union(*[set(v) for m, v in od_job.items() if m not in ("_common", hpc) and isinstance(v, dict)])
+    notes = []
+    for key in sorted(k for k in job if k in others - mine):
+        notes.append(f"NOTE: job.{key}={job.pop(key)!r} dropped: not a job field of {hpc} (config/machines.yaml).")
+        print(f"{YELLOW}{notes[-1]}{RESET}")
+    return notes
 
 
 def machine_hint(options, option_descriptions):
@@ -561,10 +577,17 @@ def secflds_replay(options, where="inp.SECFLDS"):
     """Check and normalise inp.SECFLDS in place (misc.secflds_list); ValueError for bad names."""
     inp = options.get("inp") or {}
     value = inp.get("SECFLDS")
+    if isinstance(value, (list, tuple)) and len(value) == 0:
+        raise ValueError(f"{where} = []: an empty list writes no SECFLDS; give at least one "
+                         f"secondary-history field (the valid names are in tiegcmrun/secflds_fields.json), "
+                         f"or delete the key for the default list")
     if value is None or value == [None]:
         return
     names, notes = secflds_list(value, options.get("model", {}).get("data", {}).get("modeldir"),
                                 where=where, short=True)
+    if isinstance(value, str) and names != [None]:
+        notes.insert(0, f"{value.strip()!r} split into {', '.join(names)}" if len(names) > 1
+                     else f"{value.strip()!r} read as the list {names}")
     if names != [None] and names != list(value):
         inp["SECFLDS"] = names
         print(f"{YELLOW}NOTE: {where} normalised: {'; '.join(dict.fromkeys(notes))}.{RESET}")
@@ -578,6 +601,17 @@ def _forcing_problems(inp):
         problems.append(forcing_refusal(missing, "the missing values in the inp section of the options JSON"))
     problems += [f"inp.{why}" for _, why in forcing_conflicts(inp)]
     return problems
+
+
+_REPLAY_COVER_FIX = "set it to 'gen' (a file is generated for these dates) or to a file that covers them."
+
+
+def _cover_problems(inp, generated=()):
+    """Dated GPI / IMF files that do not cover the run window (misc.forcing_cover_problem): 'gen',
+    $-values, undated names, unset values and a benchmark JSON (no start/stop) pass."""
+    return [p for p in (forcing_cover_problem(f"inp.{k}", inp.get(k), inp.get("start_time"),
+                                              inp.get("stop_time"), fix=_REPLAY_COVER_FIX)
+                        for k in ("GPI_NCFILE", "IMF_NCFILE") if f"inp.{k}" not in generated) if p]
 
 
 def _source_problems(inp):
@@ -675,6 +709,16 @@ def ensure_sections(options):
     return options
 
 
+def _no_duplicate_keys(pairs):
+    """json object_pairs_hook: a key given twice in one object is refused."""
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError(f"duplicate key {key!r} (JSON would keep only the last value): keep one of them")
+        out[key] = value
+    return out
+
+
 def read_options_json(path, shown=None):
     """The JSON object in path; ValueError naming the file otherwise."""
     import json
@@ -689,21 +733,25 @@ def read_options_json(path, shown=None):
     except OSError as e:
         raise ValueError(f"{shown} cannot be read ({e.strerror or e})") from None
     try:
-        data = json.loads(text)
+        data = json.loads(text, object_pairs_hook=_no_duplicate_keys)
     except json.JSONDecodeError as e:
         raise ValueError(f"{shown} is not valid JSON (line {e.lineno} column {e.colno}: {e.msg})") from None
+    except ValueError as e:
+        raise ValueError(f"{shown}: {e}") from None
     if not isinstance(data, dict):
         raise ValueError(f"{shown} must be a JSON object")
     return data
 
 
-# Sections that must be objects when present; inp and job may also be null.
+# Sections that must be objects when present; inp and job may also be null (standalone -o only:
+# inp null is a custom deck, job null a derived job block).
 _OBJECT_SECTIONS = (("simulation",), ("model",), ("model", "data"), ("model", "specification"))
 _OBJECT_OR_NULL_SECTIONS = (("inp",), ("job",), ("job", "resource"))
 
 
-def section_problem(options):
-    """An error message for the first section that is present but not an object, else None."""
+def section_problem(options, allow_null=True):
+    """An error message for the first section that is present but not an object, else None.
+    allow_null=False (engage -to) also refuses a null inp / job / job.resource."""
     for path, nullable in ([(p, False) for p in _OBJECT_SECTIONS]
                            + [(p, True) for p in _OBJECT_OR_NULL_SECTIONS]):
         node = options
@@ -712,6 +760,9 @@ def section_problem(options):
         if not isinstance(node, dict) or path[-1] not in node:
             continue
         value = node[path[-1]]
+        if value is None and nullable and not allow_null:
+            return (f"{'.'.join(path)} is null: it must be a JSON object (delete the key, or give {{}}, "
+                    f"for the defaults)")
         if not isinstance(value, dict) and not (nullable and value is None):
             return f"{'.'.join(path)} must be a JSON object"
     return None
@@ -789,6 +840,7 @@ _MANUAL_FORCING = ("KP", "POWER", "CTPOTEN", "F107", "F107A")
 
 def gpi_absent(inp):
     """True when inp has no GPI_NCFILE key and no manual forcing value."""
+    inp = inp or {}
     return "GPI_NCFILE" not in inp and not any(_set(inp.get(k)) for k in _MANUAL_FORCING)
 
 
@@ -885,6 +937,7 @@ def prepare_replay(options, option_descriptions, rederive=()):
     options = copy.deepcopy(options)
     ensure_sections(options)
     account = rederive_pop(options, rederive)
+    settle_machine_job(options, option_descriptions)
     inp = options.get("inp")
     try:
         segment = parse_segment(inp.get("segment")) if inp else None
@@ -897,6 +950,12 @@ def prepare_replay(options, option_descriptions, rederive=()):
         hints = _hints(options, option_descriptions)
     except (ValueError, TypeError, KeyError):
         hints = []                            # a malformed value: validate_options names it
+    try:
+        warning = host_resolved_files_warning(options)
+    except (ValueError, TypeError, KeyError, AttributeError):
+        warning = None                        # a malformed value: validate_options names it
+    if warning:
+        hints.append(warning)
     for hint in hints:
         print(f"{YELLOW}{hint}{RESET}")
     return options
@@ -977,6 +1036,49 @@ def other_cluster(machine):
         return False
 
 
+def host_resolved_files_warning(options):
+    """WARNING text when simulation.hpc_system is another cluster and inp data files were resolved
+    on this host (or not found under that machine's tgcmdata), else None."""
+    from output_solver import CONFIG_DIR
+    from jobgen import JobGen
+    import socket
+    hpc = (options.get("simulation") or {}).get("hpc_system")
+    if not other_cluster(hpc):
+        return None
+    try:
+        host = JobGen(CONFIG_DIR, hostname=socket.gethostname()).name
+    except ValueError:
+        return None
+    inp = options.get("inp") or {}
+    if not isinstance(inp, dict):
+        return None
+    host_dir = tiegcm_env("TIEGCMDATA")
+    prefix = host_dir.rstrip("/") + "/" if host_dir else None
+    here = [f"inp.{k}" for k in INP_FILE_KEYS
+            if prefix and isinstance(inp.get(k), str) and inp[k].startswith(prefix)]
+    try:
+        horires = float(((options.get("model") or {}).get("specification") or {}).get("horires"))
+    except (TypeError, ValueError):
+        horires = None
+    wanted = ["HE_COEFS_NCFILE"]
+    if horires is not None and not lbc_other_set(inp):
+        wanted += [k for k in GSWM_PATTERNS if gswm_allowed(k, horires)]
+    missing = [f"inp.{k}" for k in wanted if k in inp and inp[k] is None]
+    if not here and not missing:
+        return None
+    data = (options.get("model") or {}).get("data") or {}
+    tgcm = (data.get("tgcmdata") if isinstance(data, dict) else None) or _machines().get(hpc, {}).get("tgcmdata")
+    text = f"WARNING: simulation.hpc_system is {hpc} but this host is {host}: "
+    if here:
+        text += f"{', '.join(here)} resolved under this host's TIEGCMDATA ({host_dir})"
+    if here and missing:
+        text += " and "
+    if missing:
+        text += f"{', '.join(missing)} not found under {hpc}'s tgcmdata ({tgcm})"
+    return (text + f"; the {hpc} jobs will not find them: set them to {hpc} paths in the tiegcmrun "
+            f"options JSON, or generate the run on {hpc}.")
+
+
 def validate_options(options, option_descriptions, run_dir=None, generated=()):
     """All problems with a run's options, checked before anything is written.
 
@@ -1003,6 +1105,7 @@ def validate_options(options, option_descriptions, run_dir=None, generated=()):
         except ValueError as e:
             problems.append(str(e))
         problems += check(_forcing_problems, inp)
+        problems += check(_cover_problems, inp, generated)
         if "inp.SOURCE" not in generated:
             problems += check(_source_problems, inp)
         problems += check(window_problems, inp)

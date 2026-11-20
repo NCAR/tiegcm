@@ -420,11 +420,13 @@ def coupled_handoff_regrids(engage_options):
 
 
 def handoff_job_lines(machine, conda_env, script):
-    """Job lines that activate conda_env (machines.yaml conda_activate) and run script; a batch
-    job does not initialise conda itself."""
-    activate = JobGen(CONFIG_DIR, machine=machine).m.get("conda_activate")
+    """Job lines that activate conda_env and run script; a batch job does not initialise conda
+    itself. conda_env is a venv path when <conda_env>/bin/activate exists (machines.yaml
+    venv_activate), else a conda environment (machines.yaml conda_activate)."""
+    key = "venv_activate" if os.path.isfile(os.path.join(conda_env, "bin", "activate")) else "conda_activate"
+    activate = JobGen(CONFIG_DIR, machine=machine).m.get(key)
     if not activate:
-        raise ValueError(f"config/machines.yaml has no conda_activate lines for machine {machine!r}: "
+        raise ValueError(f"config/machines.yaml has no {key} lines for machine {machine!r}: "
                          f"cannot write the job lines that run {script}.")
     return [line.format(conda_env=conda_env) for line in as_list(activate)] + [f"python {script}"]
 

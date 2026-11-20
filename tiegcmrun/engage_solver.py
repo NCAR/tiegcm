@@ -13,16 +13,17 @@ from datetime import datetime, timedelta
 from misc import (seconds_to_dhms, resolution_solver, mres_to_nres_grid, find_file, select_resource_defaults,
                   get_mtime, select_source_defaults, segment_time, gswm_allowed, ntask_error, json_paths,
                   tiegcm_env, is_unset, GSWM_PATTERNS, exe_link, build_exe, machine_option,
-                  grt_status)
+                  grt_status, coerce)
 from output_solver import (segment_jobs, write_segment_jobs, segment_plan, coupled_handoff_regrids, CONFIG_DIR,
                            job_resource_problems, apply_system_config)
 from interpolation import interpic
 from namelist_solver import (cadence_problems, inp_pri_date, nc_wrhist_mtime, parse_segment, parse_run_datetime, resolve_source_start,
                              lbc_other_set)
-from replay_solver import (fill_engage_omitted, secflds_replay, machine_hint, names_hint, validate_options,
-                           ensure_sections)
+from replay_solver import (fill_engage_omitted, secflds_replay, machine_hint, settle_machine_job, names_hint, validate_options,
+                           ensure_sections, host_resolved_files_warning)
 from jobgen import JobGen
 
+RED = '\033[31m'
 YELLOW = '\033[33m'
 RESET = '\033[0m'
 
@@ -180,6 +181,21 @@ def engage_node_model(hpc_system, node_type=None):
 COUPLED_HISTORY_KEYS = ("inp.PRIHIST", "inp.MXHIST_PRIM", "inp.SECHIST", "inp.MXHIST_SECH")
 
 
+def source_mtimes(inp, option_descriptions):
+    """The history times of inp.SOURCE, which is checked first (written back resolved): one ValueError
+    line for a SOURCE that is missing, a directory or not a history file; a bare name is looked up
+    under $TIEGCMDATA, as at the prompt."""
+    try:
+        inp["SOURCE"] = coerce("inp.SOURCE", inp["SOURCE"], option_descriptions["inp"]["SOURCE"])
+    except ValueError as e:
+        raise ValueError(f"{RED}{e}{RESET}") from None
+    try:
+        return get_mtime(inp["SOURCE"])
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as e:
+        raise ValueError(f"{RED}inp.SOURCE = {inp.get('SOURCE')!r} cannot be read as a TIE-GCM history "
+                         f"file ({e}){RESET}") from None
+
+
 def engage_options_updater(options, engage_options, option_descriptions):
     """Apply engage-owned values to a replayed TIE-GCM options JSON (engage -to) and fill omitted
     keys; returns the options."""
@@ -241,9 +257,10 @@ def engage_options_updater(options, engage_options, option_descriptions):
     if o.get("SOURCE") is None:
         print("No SOURCE file specified, creating a new one.")
         o["SOURCE"] = select_source_defaults(copy.deepcopy(options), option_descriptions)
+    mtimes = source_mtimes(o, option_descriptions)
     try:
         o["SOURCE_START"], note = resolve_source_start(
-            o["SOURCE"], o.get("SOURCE_START"), get_mtime(options["inp"]["SOURCE"]),
+            o["SOURCE"], o.get("SOURCE_START"), mtimes,
             pristart=inp_pri_date(o["start_time"], o["stop_time"])[2])
     except ValueError as e:
         raise ValueError(f"\033[31m{e}{RESET}") from None
@@ -252,13 +269,19 @@ def engage_options_updater(options, engage_options, option_descriptions):
     START_YEAR, START_DAY, PRISTART, PRISTOP = inp_pri_date(o["start_time"], o["stop_time"])
     o["START_YEAR"] = START_YEAR
     o["START_DAY"] = START_DAY
-    o = options.setdefault("job", {})
+    if options.get("job") is None:
+        options["job"] = {}
+    o = options["job"]
     hpc_platform = options["simulation"]["hpc_system"]
     for key in ("queue", "walltime", "job_priority", "group_list"):
         if key in option_descriptions["job"].get(hpc_platform, {"queue": 1, "walltime": 1}):
             if engage_options.get(key) is not None:
                 o[key] = engage_options[key]
-    on = options["job"].setdefault("resource", {})
+    # the -to job block's fields of another machine are dropped with a NOTE, as with -o
+    settle_machine_job(options, option_descriptions)
+    if options["job"].get("resource") is None:
+        options["job"]["resource"] = {}
+    on = options["job"]["resource"]
     od_job = option_descriptions["job"].get(hpc_platform, {})
     if "model" in (od_job.get("resource") or {}):
         on["model"] = engage_options["model"]
@@ -498,6 +521,34 @@ def ensure_job_block(options, option_descriptions, engage):
     return options
 
 
+# Keys the saved tiegcmrun_parameters.json leaves out: engage derives them again on every replay (per
+# segment, or from the run directory and the machine), so the -to and --prefill paths save the same file.
+REPLAY_DERIVED_INP = ("PRIHIST", "MXHIST_PRIM", "OUTPUT", "SECHIST", "MXHIST_SECH", "PRISTART", "PRISTOP",
+                      "SECSTART", "SECSTOP", "SECOUT")
+REPLAY_DERIVED_DATA = ("make", "utildir", "log_file", "input_file")
+REPLAY_SECTIONS = ("simulation", "model", "inp", "job")
+
+
+def replay_options_for_json(options):
+    """The options to save in tiegcmrun_parameters.json for an engage -to replay: a copy without the
+    derived keys, its sections in the order simulation, model, inp, job, then any others."""
+    out = copy.deepcopy(options)
+    inp = out.get("inp")
+    if isinstance(inp, dict):
+        for key in REPLAY_DERIVED_INP:
+            inp.pop(key, None)
+    model = out.get("model")
+    if isinstance(model, dict):
+        if isinstance(model.get("data"), dict):
+            for key in REPLAY_DERIVED_DATA:
+                model["data"].pop(key, None)
+        if isinstance(model.get("specification"), dict):
+            model["specification"].pop("segmentation", None)
+    ordered = {k: out[k] for k in REPLAY_SECTIONS if k in out}
+    ordered.update((k, v) for k, v in out.items() if k not in ordered)
+    return ordered
+
+
 class CoupledOptions(dict):
     """The coupled TIE-GCM options; .replay_options holds the input options to save for a -to
     replay (saving the coupled ones would make the replay regrid its own product)."""
@@ -518,6 +569,9 @@ def engage_run(options, debug, engage):
         # keys answered 'none' stay unset on replay
         options_replay["coupled_unset"] = unset
     warning = experimental_machine_warning(options["simulation"]["hpc_system"])
+    if warning:
+        print(f"{YELLOW}{warning}{RESET}")
+    warning = host_resolved_files_warning(options)
     if warning:
         print(f"{YELLOW}{warning}{RESET}")
     ensure_job_block(options, option_descriptions, engage)
@@ -619,7 +673,7 @@ def engage_run(options, debug, engage):
     link_exes(options, engage)
 
     options_coupling = CoupledOptions(options_coupling)
-    options_coupling.replay_options = json_paths(options_replay, engage["parentdir"])
+    options_coupling.replay_options = json_paths(replay_options_for_json(options_replay), engage["parentdir"])
     run_relative = lambda p: os.path.relpath(p, engage["parentdir"]) if p else p      # noqa: E731
     return (options_coupling, [run_relative(p) for p in standalone_pbs_files],
             [run_relative(p) for p in coupling_inp_files])

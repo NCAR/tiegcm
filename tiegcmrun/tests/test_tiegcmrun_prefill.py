@@ -453,3 +453,75 @@ def test_reprompt_while_re_asks_until_covered(monkeypatch, capsys):
                                   "/x/gpi_2015070-2015080.nc",
                                   lambda v: misc.forcing_cover_problem("GPI_NCFILE", v, *w))
     assert len(asked) == 1
+
+
+_DROPPED_INFO = {"file": "tiegcmrun_input.json", "ignored": ["inp.BOGUS"],
+                 "dropped": ["inp.solar_flux_level: inp.solar_flux_level = 'LOW' is not one of low | medium | high"],
+                 "notes": []}
+
+
+def test_prefill_report_refuses_dropped_without_tty(monkeypatch, capsys):
+    """Q7: without a terminal a value that fails its check is refused, not swapped for the default."""
+    monkeypatch.setattr(tiegcmrun, "stdin_is_tty", lambda: False)
+    with pytest.raises(ValueError) as e:
+        tiegcmrun.prefill_report({}, copy.deepcopy(_DROPPED_INFO))
+    assert "inp.solar_flux_level" in str(e.value) and "not a terminal" in str(e.value)
+    out = capsys.readouterr().out
+    assert "ignored unknown or obsolete key(s)" in out and "inp.BOGUS" in out
+    assert "Prefilled" not in out
+
+
+def test_prefill_report_notes_dropped_at_tty(monkeypatch, capsys):
+    monkeypatch.setattr(tiegcmrun, "stdin_is_tty", lambda: True)
+    tiegcmrun.prefill_report({}, copy.deepcopy(_DROPPED_INFO))
+    out = capsys.readouterr().out
+    assert "the default is used." in out and "Prefilled 0 option(s)" in out
+
+
+_EXE_DESC = {"LEVEL": "BASIC", "prompt": "Executable", "default": None}
+
+
+def test_ask_engage_exe_capped(monkeypatch, capsys):
+    """B11: a refused executable is asked 1 + _FORCING_REPROMPTS times, then refused."""
+    monkeypatch.setattr(tiegcmrun, "stdin_is_tty", lambda: False)
+    calls = []
+    monkeypatch.setattr(tiegcmrun, "get_run_option", lambda *a, **k: calls.append(1) or "/bad/exe")
+    monkeypatch.setattr(tiegcmrun.misc, "engage_exe_refusal", lambda *a, **k: "model.data.modelexe: bad")
+    with pytest.raises(ValueError, match="model.data.modelexe: bad"):
+        tiegcmrun._ask_engage_exe("modelexe", dict(_EXE_DESC), 1.25, True, 7, "BASIC", [], None)
+    assert len(calls) == tiegcmrun._FORCING_REPROMPTS + 1
+    assert capsys.readouterr().out.count("model.data.modelexe: bad") == tiegcmrun._FORCING_REPROMPTS
+
+
+def test_ask_engage_exe_eof(monkeypatch):
+    monkeypatch.setattr(tiegcmrun, "stdin_is_tty", lambda: False)
+
+    def eof(*a, **k):
+        raise EOFError
+    monkeypatch.setattr(tiegcmrun, "get_run_option", eof)
+    with pytest.raises(ValueError) as e:
+        tiegcmrun._ask_engage_exe("modelexe", dict(_EXE_DESC), 1.25, True, 7, "BASIC", [], None)
+    assert "model.data.modelexe" in str(e.value) and "input ended" in str(e.value)
+
+
+def test_ask_engage_exe_not_prompted_returns(monkeypatch):
+    """Not asked (skipped): the exe is returned and check_executables refuses it later."""
+    monkeypatch.setattr(tiegcmrun, "stdin_is_tty", lambda: False)
+    monkeypatch.setattr(tiegcmrun, "get_run_option", lambda *a, **k: "/bad/exe")
+    monkeypatch.setattr(tiegcmrun.misc, "engage_exe_refusal", lambda *a, **k: "model.data.modelexe: bad")
+    assert tiegcmrun._ask_engage_exe("modelexe", dict(_EXE_DESC), 1.25, True, 7, "BASIC",
+                                     ["modelexe"], None) == "/bad/exe"
+
+
+def test_input_ended_is_value_and_eof_error(monkeypatch):
+    """B05: end of input at any prompt is one InputEnded (an EOFError and a ValueError)."""
+    monkeypatch.setattr(tiegcmrun, "stdin_is_tty", lambda: False)
+    err = tiegcmrun.InputEnded("x")
+    assert isinstance(err, EOFError) and isinstance(err, ValueError)
+
+    def eof(prompt=""):
+        raise EOFError
+    monkeypatch.setattr(builtins, "input", eof)
+    desc = {"LEVEL": "BASIC", "prompt": "Solar flux level", "default": "low", "valids": ["low", "medium", "high"]}
+    with pytest.raises(tiegcmrun.InputEnded, match="input ended at the prompt for solar_flux_level"):
+        tiegcmrun.get_run_option("solar_flux_level", desc, "BASIC", [])
