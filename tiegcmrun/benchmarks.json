@@ -204,7 +204,7 @@
             "MXHIST_SECH": 24,
             "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
             "SECFLDS": ["TN", "UN", "VN", "WN", "O2","O1","NO","HE","NE","TE","TEC","TI","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","HMF2","NMF2", "Z"],            "POTENTIAL_MODEL": "HEELIS",
-            "GPI_NCFILE": "gpi_1960001-2015365.nc"
+            "GPI_NCFILE": "gpi_*.nc"
         }
     },
     "nov2003_weimer_imf": {
@@ -226,7 +226,7 @@
             "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_005.nc','by','1'",
             "POTENTIAL_MODEL": "WEIMER",
             "SECFLDS": ["TN", "UN", "VN", "WN", "O2","O1","NO","HE","NE","TE","TEC","TI","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","HMF2","NMF2", "Z"],
-            "GPI_NCFILE": "gpi_1960001-2015365.nc",
+            "GPI_NCFILE": "gpi_*.nc",
             "IMF_NCFILE": "imf_OMNI_2003001-2003365.nc"
         }
     },
@@ -249,7 +249,7 @@
             "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_032.nc','by','1'",
             "SECFLDS": ["TN", "UN", "VN", "WN", "O2","O1","NO","HE","NE","TE","TEC","TI","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","HMF2","NMF2", "Z"],
             "POTENTIAL_MODEL": "HEELIS",
-            "GPI_NCFILE": "gpi_1960001-2015365.nc"
+            "GPI_NCFILE": "gpi_*.nc"
         }
     },
     "dec2006_weimer_imf": {
@@ -271,7 +271,7 @@
             "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_032.nc','by','1'",
             "SECFLDS": ["TN", "UN", "VN", "WN", "O2","O1","NO","HE","NE","TE","TEC","TI","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","HMF2","NMF2", "Z"],
             "POTENTIAL_MODEL": "WEIMER",
-            "GPI_NCFILE": "gpi_1960001-2015365.nc",
+            "GPI_NCFILE": "gpi_*.nc",
             "IMF_NCFILE": "imf_OMNI_2006001-2006365.nc"
         }
     },
@@ -294,7 +294,7 @@
             "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_025.nc','by','1'",
             "SECFLDS": ["TN", "UN", "VN", "WN", "O2","O1","NO","HE","NE","TE","TEC","TI","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","HMF2","NMF2", "Z"],
             "POTENTIAL_MODEL": "HEELIS",
-            "GPI_NCFILE": "gpi_1960001-2015365.nc"
+            "GPI_NCFILE": "gpi_*.nc"
         }
     },
     "whi2008_weimer_imf": {
@@ -316,7 +316,7 @@
             "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_025.nc','by','1'",
             "SECFLDS": ["TN", "UN", "VN", "WN", "O2","O1","NO","HE","NE","TE","TEC","TI","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","HMF2","NMF2", "Z"],
             "POTENTIAL_MODEL": "WEIMER",
-            "GPI_NCFILE": "gpi_1960001-2015365.nc",
+            "GPI_NCFILE": "gpi_*.nc",
             "IMF_NCFILE": "imf_OMNI_2008001-2008366.nc"
         }
     },
@@ -339,7 +339,7 @@
             "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_025.nc','by','1'",
             "SECFLDS": ["TN", "UN", "VN", "WN", "O2","O1","NO","HE","NE","TE","TEC","TI","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","HMF2","NMF2", "Z"],
             "POTENTIAL_MODEL": "HEELIS",
-            "GPI_NCFILE": "gpi_1960001-2015365.nc"
+            "GPI_NCFILE": "gpi_*.nc"
         }
     },
     "jul2000_weimer_imf": {
@@ -361,7 +361,7 @@
             "SECOUT": "'+histdir+/+run_name+_sech_001.nc','to','+histdir+/+run_name+_sech_025.nc','by','1'",
             "SECFLDS": ["TN", "UN", "VN", "WN", "O2","O1","NO","HE","NE","TE","TEC","TI","OP","POTEN","UI_ExB","VI_ExB","WI_ExB","HMF2","NMF2", "Z"],
             "POTENTIAL_MODEL": "WEIMER",
-            "GPI_NCFILE": "gpi_1960001-2015365.nc",
+            "GPI_NCFILE": "gpi_*.nc",
             "IMF_NCFILE": "imf_OMNI_2000001-2000366.nc"
         }
     },

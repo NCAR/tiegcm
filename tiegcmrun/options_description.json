@@ -4,6 +4,7 @@
     "simulation": {
         "job_name": {
             "LEVEL": "BENCH",
+            "type": "name",
             "prompt": "Name to use for the job(s)",
             "default": "tiegcm",
             "description": null,
@@ -11,51 +12,49 @@
         },
         "hpc_system": {
             "LEVEL": "BENCH",
+            "type": "str",
             "prompt": "Name of HPC system",
             "default": "derecho",
-            "valids": ["derecho", "aitken","linux"],
-            "description": null,
+            "valids": ["derecho", "aitken", "linux", "perlmutter"],
+            "description": "The machine the job scripts are written for (config/machines.yaml).",
             "warning": null
         }
     },
 
     "job": {
-        "_common": {
-            "account_name": {
-                "LEVEL": "BENCH",
-                "prompt": "User account name",
-                "default": ".",
-                "description": null,
-                "warning": null
-            }
-        },
+        "_common": {},
         "derecho": {
             "project_code": {
                 "LEVEL": "BENCH",
+                "type": "name",
                 "prompt": "Project Code",
-                "default": "P28100036",
-                "description": null,
+                "default": null,
+                "description": "The PBS account (#PBS -A) the jobs are charged to. Required; there is no shared default.",
                 "warning": null
             },
             "queue": {
                 "LEVEL": "INTERMEDIATE",
+                "type": "str",
                 "prompt": "PBS queue name",
                 "default": "main",
-                "valids": ["develop", "main", "preempt"],
+                "valids": ["develop", "main"],
                 "description": null,
                 "warning": null
             },
             "job_priority": {
                 "LEVEL": "INTERMEDIATE",
+                "type": "str",
                 "prompt": "PBS job priority",
                 "default": "regular",
-                "valids": ["premium", "regular", "economy","preempt"],
+                "valids": ["premium", "regular", "economy"],
                 "description": null,
                 "warning": null
             },
             "resource": {
                 "select": {
                     "LEVEL": "EXPERT",
+                    "type": "int",
+                    "min": 1,
                     "prompt": "Number of nodes to request",
                     "default": null,
                     "description": null,
@@ -63,6 +62,8 @@
                 },
                 "ncpus": {
                     "LEVEL": "EXPERT",
+                    "type": "int",
+                    "min": 1,
                     "prompt": "Number of cores per node",
                     "default": null,
                     "description": null,
@@ -70,6 +71,8 @@
                 },
                 "mpiprocs": {
                     "LEVEL": "EXPERT",
+                    "type": "int",
+                    "min": 1,
                     "prompt": "Number of MPI ranks per node",
                     "default": null,
                     "description": null,
@@ -78,6 +81,7 @@
             },
             "walltime": {
                 "LEVEL": "BASIC",
+                "type": "hms",
                 "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
                 "default": "12:00:00",
                 "description": null,
@@ -85,37 +89,16 @@
             },
             "nprocs": {
                 "LEVEL": "EXPERT",
+                "type": "int",
+                "min": 1,
                 "prompt": "nprocs (nnodes * mpiprocs)",
                 "default": null,
                 "description": null,
                 "warning": null
             },
-            "module_list": {
-                "LEVEL": "EXPERT",
-                "prompt": "Saved Module List",
-                "default": null,
-                "description": null,
-                "warning": "Add a saved list or ENTER to add the invididual modules"
-            },
-            "modules": {
-                "LEVEL": "EXPERT",
-                "prompt": "Modules to load",
-                "default": [
-                    "ncarenv/23.09",
-                    "craype/2.7.23",
-                    "intel/2023.2.1",
-                    "ncarcompilers/1.0.0",
-                    "cray-mpich/8.1.27",
-                    "mkl/2023.2.0",
-                    "hdf5-mpi/1.12.2",
-                    "netcdf-mpi/4.9.2",
-                    "esmf/8.6.0"
-                ],
-                "description": null,
-                "warning": null
-            },
             "other_job": {
                 "LEVEL": "EXPERT",
+                "type": "lines",
                 "prompt": "Additional settings or env variables",
                 "default": [null],
                 "description": null,
@@ -123,13 +106,23 @@
             }
         },
         "aitken": {
+            "project_code": {
+                "LEVEL": "BENCH",
+                "type": "name",
+                "prompt": "Project Code",
+                "default": null,
+                "description": "The PBS account (#PBS -A) the jobs are charged to. Defaults to your login name (config/machines.yaml account_default).",
+                "warning": null
+            },
             "group_list": {
                 "LEVEL": "BASIC",
+                "type": "name",
                 "prompt": "PBS group list",
                 "default": null
             },
             "queue": {
                 "LEVEL": "BENCH",
+                "type": "str",
                 "prompt": "PBS queue name",
                 "default": "normal",
                 "valids": ["low", "normal", "long", "debug", "devel"],
@@ -139,14 +132,17 @@
             "resource": {
                 "model": {
                     "LEVEL": "EXPERT",
+                    "type": "str",
                     "prompt": "System on PFE to use",
                     "default": "mil_ait",
-                    "valids": ["mil_ait","rom_ait","cas_ait","bro", "has", "ivy", "san","sky_ele","bro_ele"],
+                    "valids": ["mil_ait", "rom_ait", "cas_ait"],
                     "description": null,
                     "warning": null
                 },
                 "select": {
                     "LEVEL": "EXPERT",
+                    "type": "int",
+                    "min": 1,
                     "prompt": "Number of nodes to request",
                     "default": null,
                     "description": null,
@@ -154,6 +150,8 @@
                 },
                 "ncpus": {
                     "LEVEL": "EXPERT",
+                    "type": "int",
+                    "min": 1,
                     "prompt": "Number of cores per node",
                     "default": null,
                     "description": null,
@@ -161,6 +159,8 @@
                 },
                 "mpiprocs": {
                     "LEVEL": "EXPERT",
+                    "type": "int",
+                    "min": 1,
                     "prompt": "Number of MPI ranks per node",
                     "default": "ncpus",
                     "description": null,
@@ -169,51 +169,31 @@
             },
             "walltime": {
                 "LEVEL": "BENCH",
+                "type": "hms",
                 "prompt": "WARNING: You are responsible for ensuring that the wall time is sufficient to run a segment of your simulation!\nRequested wall time for each PBS job segment (HH:MM:SS)",
-                "default": "12:00:00",
+                "default": "08:00:00",
                 "description": null,
-                "warning": "Maximum walltime on normal queue is 12:00:00."   
+                "warning": "Maximum walltime on the normal queue is 08:00:00."
             },
             "nprocs": {
                 "LEVEL": "EXPERT",
+                "type": "int",
+                "min": 1,
                 "prompt": "nprocs (nnodes * mpiprocs)",
                 "default": null,
                 "description": null,
                 "warning": null
             },
-            "modules": {
-                "LEVEL": "EXPERT",
-                "prompt": "Modules to load",
-                "default": [
-                    "comp-intel/2020.4.304",
-                    "mpi-hpe/mpt.2.30",
-                    "szip/2.1.1",
-                    "hdf5/1.12.3_mpt"
-                ],
-                "description": null,
-                "warning": null
-            },
-            "moduledir": {
-                "LEVEL": "EXPERT",
-                "prompt": "Module directory",
-                "default": [
-                    "/nasa/modulefiles/testing",
-                    "/swbuild/analytix/tools/modulefiles"
-                ]
-            },
             "local_modules": {
                 "LEVEL": "EXPERT",
+                "type": "lines",
                 "prompt": "Commands to add local module PATH",
-                "default": [
-                    "setenv PREFIX /u/nrao3/local_aitken",
-                    "setenv LIBRARY_PATH ${LIBRARY_PATH}:$PREFIX/lib",
-                    "setenv LD_LIBRARY_PATH $LIBRARY_PATH",
-                    "setenv CPATH $PREFIX/include",
-                    "setenv PATH ${PATH}:$PREFIX/bin"
-                ]
+                "default": [null],
+                "description": "Job lines that export a prefix of user-built libraries (PREFIX, LIBRARY_PATH, LD_LIBRARY_PATH, CPATH, PATH). The default comes from config/machines.yaml aitken local_prefix."
             },
             "other_job": {
                 "LEVEL": "EXPERT",
+                "type": "lines",
                 "prompt": "Additional settings or env variables",
                 "default": ["setenv MPI_TYPE_DEPTH 32"],
                 "description": null,
@@ -226,48 +206,55 @@
         "data": {
             "modeldir": {
                 "LEVEL": "BENCH",
+                "type": "dir",
                 "prompt": "Directory of model",
                 "default": null,
-                "description": "The root directory where src/ and scripts/ are located.",
+                "description": "The root directory where src/ and scripts/ are located. It lies outside the run directory, so it stays an absolute path.",
                 "warning": null
             },
             "parentdir": {
                 "LEVEL": "BENCH",
+                "type": "path",
                 "prompt": "Root directory for all files for execution",
                 "default": null,
-                "description":  "The parent directory where all the run files/subdirectories will be located.",
+                "description":  "The parent directory of all the run's files (default '.', the current directory; 'none' puts everything in one directory). Generated files refer to it with relative paths; each job cds to its working directory by absolute path, so after moving the directory replay the JSON from its new place (tiegcmrun --clobber -o <parentdir>/stdout/tiegcmrun_parameters.json).",
                 "warning": null
             },
             "execdir": {
                 "LEVEL": "INTERMEDIATE",
+                "type": "path",
                 "prompt": "Execution Directory",
-                "default": "os.getcwd()",
-                "description": "The directory where the executable will be located and the model will be run.",
+                "default": null,
+                "description": "Where the executable is built or found (default <parentdir>/exec). The jobs run in the working directory and name the executable relative to it (../exec/tiegcm.exe).",
                 "warning": null
             },
             "workdir": {
                 "LEVEL": "INTERMEDIATE",
+                "type": "path",
                 "prompt": "Working Directory",
-                "default": "os.getcwd()",
-                "description": "The directory where input files will be located.",
+                "default": null,
+                "description": "Where the namelists, job scripts, submit script, options JSON (tiegcmrun_parameters.json) and model log are written (default <parentdir>/stdout). Each job cds to this directory by its absolute path and names the run's other files relative to it.",
                 "warning": null
             },
             "histdir": {
                 "LEVEL": "INTERMEDIATE",
+                "type": "path",
                 "prompt": "Output Directory",
-                "default": "os.getcwd()",
-                "description": "The directory where output files will be located.",
+                "default": null,
+                "description": "Where the history files are written (default <parentdir>/hist). The namelists name them relative to the working directory (../hist/<run>_prim_01.nc).",
                 "warning": null
             },
             "tgcmdata": {
                 "LEVEL": "BENCH",
+                "type": "dir",
                 "prompt": "Directory of Tiegcm Data Files",
                 "default": null,
-                "description": "The directory where some required input data for the model are located.",
+                "description": "The directory of the model's input data files (GPI, GSWM, HE_COEFS, ...). They keep absolute paths in the namelists.",
                 "warning": null
             },
             "input_file": {
                 "LEVEL": "BASIC",
+                "type": "file",
                 "prompt": "Custom Input File / ENTER to build INP file",
                 "default": null,
                 "description": "A text file listing input parameters for the model.",
@@ -275,13 +262,15 @@
             },
             "log_file": {
                 "LEVEL": "INTERMEDIATE",
+                "type": "path",
                 "prompt": "Log File",
                 "default": null,
-                "description": "A text file which is generated during a model run with diagnostic information of the model.",
+                "description": "The model's log file (default <workdir>/<job>.out), named relative to the working directory.",
                 "warning": null
             },
             "make": {
                 "LEVEL": "EXPERT",
+                "type": "path",
                 "prompt": "Make File",
                 "default": null,
                 "description": "A text file used for building the model.",
@@ -289,22 +278,25 @@
             },
             "modelexe": {
                 "LEVEL": "BENCH",
+                "type": "path",
                 "prompt": "Standalone Executable",
                 "default": null,
-                "description": "The path of existing or name of the standalone executable.",
+                "description": "An existing standalone executable, or the name to build it as (--compile). It must be a real executable, and its kind and grid are checked: a coupled build, or one built for another resolution, is a warning on a standalone run and is refused under engage.",
                 "warning": null
             },
             "coupled_modelexe": {
                 "LEVEL": "BENCH",
+                "type": "path",
                 "prompt": "Coupled Executable",
                 "default": null,
-                "description": "The path of existing or name of the coupled executable.",
+                "description": "An existing coupled executable (built with --coupling), or the name to build it as. engage refuses a standalone build (voltron would wait for it until walltime) or one built for another resolution than the coupled grid; tiegcmrun --coupling alone only warns. Under engage it usually sits in the run directory and the coupled jobs name it ./tiegcm.x.",
                 "warning": null
             }
         },
         "specification": {
             "horires": {
                 "LEVEL": "BENCH",
+                "type": "float",
                 "prompt": "Horizontal Resolution (Deg)",
                 "default": 2.5,
                 "valids": [5.0, 2.5, 1.25, 0.625],
@@ -313,6 +305,7 @@
             },
             "vertres": {
                 "LEVEL": "BENCH",
+                "type": "float",
                 "prompt": "Vertical Resolution (Scale Height)",
                 "default": 0.25,
                 "valids": [0.5, 0.25, 0.125, 0.0625],
@@ -321,6 +314,7 @@
             },
             "zitop": {
                 "LEVEL": "INTERMEDIATE",
+                "type": "int",
                 "prompt": "Highest pressure level",
                 "default": 7,
                 "valids": [7, 8, 9, 10, 11],
@@ -329,6 +323,7 @@
             },
             "mres": {
                 "LEVEL": "BENCH",
+                "type": "float",
                 "prompt": "Magnetic grid resolution (Degree)",
                 "default": 2,
                 "valids": [2, 1, 0.5],
@@ -337,6 +332,8 @@
             },
             "nres_grid": {
                 "LEVEL": "EXPERT",
+                "type": "int",
+                "valids": [5, 6, 7],
                 "prompt": "nres_grid",
                 "default": null,
                 "description": "An advanced configuration parameter that is automatically determined based on other settings. Manual adjustment is not recommended, as it can impact the model's performance and results.",
@@ -344,6 +341,7 @@
             },
             "segmentation":{
                 "LEVEL": "EXPERT",
+                "type": "bool",
                 "prompt": "Segmentation",
                 "default": false,
                 "valids": [true, false],
@@ -355,6 +353,7 @@
     "inp": {
         "LABEL":{
             "LEVEL": "BASIC",
+            "type": "str",
             "prompt": "Run Label",
             "default": null,
             "description": "A text used to label this model run. It is written to output history files as a global file attribute. This parameter is purely a user convenience, and does not effect the model run in any way.",
@@ -362,6 +361,7 @@
         },
         "start_time": {
             "LEVEL": "BASIC",
+            "type": "iso",
             "prompt": "Start time for simulation (yyyy-mm-ddThh:mm:ss)",
             "default": null,
             "description": null,
@@ -369,6 +369,7 @@
         },
         "stop_time": {
             "LEVEL": "BASIC",
+            "type": "iso",
             "prompt": "Stop time for simulation (yyyy-mm-ddThh:mm:ss)",
             "default": null,
             "description": null,
@@ -376,6 +377,7 @@
         },
         "secondary_start_time": {
             "LEVEL": "BASIC",
+            "type": "iso",
             "prompt": "Start Time for Secondary History Output (yyyy-mm-ddThh:mm:ss)",
             "default": null,
             "description": null,
@@ -383,6 +385,7 @@
         },
         "secondary_stop_time": {
             "LEVEL": "BASIC",
+            "type": "iso",
             "prompt": "Stop Time for Secondary History Output (yyyy-mm-ddThh:mm:ss)",
             "default": null,
             "description": null,
@@ -390,6 +393,7 @@
         },
         "solar_flux_level": {
             "LEVEL": "BASIC",
+            "type": "str",
             "prompt": "F107 flux level for TIEGCM spin up",
             "default": "low",
             "valids": ["low", "medium", "high"],
@@ -398,13 +402,15 @@
         },
         "SOURCE":{
             "LEVEL": "BENCH",
+            "type": "file",
             "prompt": "SOURCE file location",
             "default": null,
-            "description": "The location of the startup file. It must be a TIEGCM history with the same grid resolution as the model being run. It does not need to be from the same model version as that being run.",
+            "description": "The location of the startup file. It must be a TIEGCM history with the same grid resolution as the model being run. It does not need to be from the same model version as that being run. The default is the seasonal file (mareqx, junsol, sepeqx or decsol) nearest the start day, at the solar flux level's F10.7 (70, 140 or 200).",
             "warning": null
         },
         "segment":{
             "LEVEL": "BASIC",
+            "type": "dhms",
             "prompt": "Segmentation, Model time per job (Day, Hour, Minute, Seccond)/ ENTER to skip",
             "default": [null],
             "description": "TIEGCMrun will split for multiple job runs. For a job every model day 1,0,0,0",
@@ -412,6 +418,7 @@
         },
         "SOURCE_START":{
             "LEVEL": "BASIC",
+            "type": "dhms",
             "prompt": "Selected date in source file",
             "default": null,
             "valids": null,
@@ -420,6 +427,7 @@
         },
         "START_YEAR":{
             "LEVEL": "INTERMEDIATE",
+            "type": "int",
             "prompt": "Source Start Year",
             "default": null,
             "description": "The year for this model run.",
@@ -427,6 +435,9 @@
         },
         "START_DAY":{
             "LEVEL": "EXPERT",
+            "type": "int",
+            "min": 1,
+            "max": 367,
             "prompt": "Start Day",
             "default": null,
             "description": "The starting day of year for this model run.",
@@ -434,6 +445,8 @@
         },
         "CALENDAR_ADVANCE":{
             "LEVEL": "EXPERT",
+            "type": "int",
+            "valids": [0, 1],
             "prompt": "Whether the model date changes across one day",
             "default": 1,
             "description": "1 for model runs with advancing dates (date changes across a model day).\n0 for model runs with constant dates (date doesn’t change across a model day).\nCALENDAR_ADVANCE=0 is usually used to prepare the startup file for a production run;\nCALENDAR_ADVANCE=1 is used in a production run.",
@@ -441,6 +454,7 @@
         },
         "PRISTART":{
             "LEVEL": "EXPERT",
+            "type": "dhms",
             "prompt": "Primary start date (Day,Hour,Min,Sec)",
             "default": null,
             "description": "The starting model time (Day of year, Hour, Minute, Second) of this model run.\nThe starting time always generates a primary history record.",
@@ -448,6 +462,7 @@
         },
         "PRISTOP":{
             "LEVEL": "EXPERT",
+            "type": "dhms",
             "prompt": "Primary stop date (Day,Hour,Min,Sec)",
             "default": null,
             "description": "The stopping model time (Day of year, Hour, Minute, Second) of this model run.\nThe stopping time always generates a primary history record.",
@@ -455,6 +470,7 @@
         },
         "PRIHIST":{
             "LEVEL": "BASIC",
+            "type": "dhms",
             "prompt": "Primary History (Day,Hour,Min,Sec)",
             "default": null,
             "description": "Model time indicating how long the model generates of two primary history records.",
@@ -462,6 +478,8 @@
         },
         "MXHIST_PRIM":{
             "LEVEL": "BASIC",
+            "type": "int",
+            "min": 1,
             "prompt": "Max Primary History per Output",
             "default": null,
             "description": "The maximum number of records in one primary history file. When this amount of histories have been written to the current OUTPUT file, the next OUTPUT file is created and it receives subsequent histories. This parameter can be adjusted to control the size of primary output files.",
@@ -469,13 +487,16 @@
         },
         "OUTPUT":{
             "LEVEL": "EXPERT",
+            "type": "str",
             "prompt": "Primary Output",
             "default": null,
-            "description": "The filenames of primary history files. Multiple files are supported.",
+            "description": "The filenames of primary history files. Multiple files are supported. A relative name is relative to the working directory (e.g. '../hist/<run>_prim_01.nc').",
             "warning": null
         },
         "STEP":{
             "LEVEL": "BASIC",
+            "type": "int",
+            "min": 1,
             "prompt": "STEP number",
             "default": null,
             "description": "The time step of the model in seconds. Default value is 60 seconds for 5-degree resolution, 30 seconds for 2.5-degree resolution, 10 seconds for 1.25-degree resolution, and 5 seconds for 0.625-degree resolution. During periods of quiet solar activity, the model can often be run at larger time steps. During periods of intense solar activity, the model may become numerically unstable. In this case, reducing the time step may be necessary for the model get through the rough period.",
@@ -483,6 +504,8 @@
         },
         "NSTEP_SUB":{
             "LEVEL": "BASIC",
+            "type": "int",
+            "min": 1,
             "prompt": "NSTEP_SUB number",
             "default": "10",
             "description": "The number of iterations in one model time step for the O+ solver, the actual O+ time step is STEP/NSTEP_SUB. In geomagnetic quiet time, this number can typically be set as 10, but in storm time, a larger number (20 or even 50) is usually required to overcome the numerical stability.",
@@ -490,6 +513,7 @@
         },
         "SECHIST":{
             "LEVEL": "BASIC",
+            "type": "dhms",
             "prompt": "Secondary History (Day,Hour,Min,Sec)",
             "default": null,
             "description": "Model time indicating how long the model generates of two secondary history records.",
@@ -497,6 +521,8 @@
         },
         "MXHIST_SECH":{
             "LEVEL": "BASIC",
+            "type": "int",
+            "min": 1,
             "prompt": "Max Secondary History per Output",
             "default": null,
             "description": "The maximum number of records in one secondary history file.",
@@ -504,6 +530,7 @@
         },
         "SECSTART":{
             "LEVEL": "EXPERT",
+            "type": "dhms",
             "prompt": "Secondary Start Date (Day,Hour,Min,Sec)",
             "default": null,
             "description": "The starting model time (Day of year, Hour, Minute, Second) to generate the first secondary history record.",
@@ -511,6 +538,7 @@
         },
         "SECSTOP":{
             "LEVEL": "EXPERT",
+            "type": "dhms",
             "prompt": "Secondary Stop Date (Day,Hour,Min,Sec)",
             "default": null,
             "description": "The stopping model time (Day of year, Hour, Minute, Second) to generate the last secondary history record.",
@@ -518,6 +546,7 @@
         },
         "SECOUT":{
             "LEVEL": "EXPERT",
+            "type": "str",
             "prompt": "Secondary Output",
             "default": null,
             "description": "The maximum number of records in one secondary history file. When this amount of histories have been written to the current SECOUT file, the next SECOUT file is created and it receives subsequent histories. This parameter can be adjusted to control the size of secondary output files.",
@@ -525,13 +554,15 @@
         },
         "SECFLDS":{
             "LEVEL": "BASIC",
+            "type": "str_list",
             "prompt": "Secondary Output Fields",
             "default": ["TN","UN","VN","O2","O1","HE","N2","N2D","N4S","NO","NE","Z","WN","DEN","TEC"],
-            "description": "Names of history fields to be outputted. These may be either fields that are also saved on primary histories (so-called 'prognostic' fields), fields that have been requested via addfld calls in the source code, or fields available via the diagnostics module.",
+            "description": "Names of history fields to be outputted. These may be either fields that are also saved on primary histories (so-called 'prognostic' fields), fields that have been requested via addfld calls in the source code, or fields available via the diagnostics module. Typed names replace this default list (further lines add to it). Names are checked against the model source; an unknown name is refused with the valid names listed.",
             "warning": null
         },
         "ELECTRON_HEATING":{
             "LEVEL": "EXPERT",
+            "type": "int",
             "prompt": "Thermal Electron Heating Scheme",
             "default": 6,
             "valids": [4, 6],
@@ -540,6 +571,7 @@
         },
         "POTENTIAL_MODEL":{
             "LEVEL": "BASIC",
+            "type": "str",
             "prompt": "High-latitude potential model that is going to be used",
             "default": "HEELIS",
             "valids": ["HEELIS", "WEIMER"],
@@ -548,6 +580,7 @@
         },
         "GPI_NCFILE":{
             "LEVEL": "BASIC",
+            "type": "file",
             "prompt": "GPI file",
             "default": null,
             "valids": null,
@@ -556,6 +589,7 @@
         },
         "IMF_NCFILE":{
             "LEVEL": "BASIC",
+            "type": "file",
             "prompt": "IMF file",
             "default": null,
             "description": "The location of the IMF file containing hourly BXIMF, BYIMF, BZIMF, SWDEN, SWVEL. The data will be used to drive the Weimer 2005 potential model.",
@@ -563,13 +597,15 @@
         },
         "KP":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "Kp index",
             "default": null,
-            "description": "If KP is specified and POWER and/or CTPOTEN are skipped, then the given KP will be used with empirical formulas to calculate POWER and/or CTPOTEN, which are used in auroral parameterization and Heelis model.",
+            "description": "If KP is specified and POWER and/or CTPOTEN are skipped, then the given KP will be used with empirical formulas to calculate POWER and/or CTPOTEN, which are used in auroral parameterization and Heelis model. KP cannot be used with POTENTIAL_MODEL WEIMER: it is not asked for a WEIMER run, and a replayed JSON with KP under WEIMER is refused.",
             "warning": "If KP is specified and POWER and/or CTPOTEN are skipped, then the given KP will be used to calculate POWER and/or CTPOTEN using empirical formulas, which are used in auroral parameterization and Heelis model."
         },  
         "POWER":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "POWER",
             "default": null,
             "description": "Used in auroral parameterization and Heelis model.",
@@ -577,6 +613,7 @@
         },
         "CTPOTEN":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "CTPOTEN",
             "default": null,
             "description": "Used the auroral parameterization and Heelis model.\nNote that if POTENTIAL_MODEL is WEIMER, then the user is not allowed to provide CTPOTEN because it will be calculated from the Weimer electric potential.",
@@ -584,41 +621,47 @@
         },
         "BXIMF":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "Inter-Magnetic Field Bx in nT",
             "default": null,
-            "description": null,
+            "description": "Needed for a WEIMER run without an IMF_NCFILE (all five of BXIMF, BYIMF, BZIMF, SWDEN and SWVEL); skipped with an IMF file.",
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "BYIMF":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "Inter-Magnetic Field By in nT",
             "default": null,
-            "description": null,
+            "description": "Needed for a WEIMER run without an IMF_NCFILE (all five of BXIMF, BYIMF, BZIMF, SWDEN and SWVEL); skipped with an IMF file.",
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "BZIMF":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "Inter-Magnetic Field Bz in nT",
             "default": null,
-            "description": null,
+            "description": "Needed for a WEIMER run without an IMF_NCFILE (all five of BXIMF, BYIMF, BZIMF, SWDEN and SWVEL); skipped with an IMF file.",
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "SWDEN":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "Solar Wind Density in cm-3",
             "default": null,
-            "description": null,
+            "description": "Needed for a WEIMER run without an IMF_NCFILE (all five of BXIMF, BYIMF, BZIMF, SWDEN and SWVEL); skipped with an IMF file.",
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         },
         "SWVEL":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "Solar Wind Velocity in km/s",
             "default": null,
-            "description": null,
+            "description": "Needed for a WEIMER run without an IMF_NCFILE (all five of BXIMF, BYIMF, BZIMF, SWDEN and SWVEL); skipped with an IMF file.",
             "warning": "Only used if POTENTIAL_MODEL is WEIMER"
         }, 
         "F107":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "F10.7",
             "default": null,
             "description": "Daily 10.7 cm solar flux.",
@@ -626,6 +669,7 @@
         },
         "F107A":{
             "LEVEL": "BASIC",
+            "type": "float",
             "prompt": "81-Day Average of F10.7",
             "default": null,
             "description": "81-day averaged 10.7 cm solar flux.",
@@ -633,6 +677,7 @@
         },
         "ONEWAY":{
             "LEVEL": "EXPERT",
+            "type": "bool",
             "prompt": "Enable One-way Coupling To Remix",
             "default": false,
             "valids": [true, false],
@@ -641,6 +686,7 @@
         },
         "AMIENH":{
             "LEVEL": "INTERMEDIATE",
+            "type": "file",
             "prompt": "AMIE Northern Hemisphere Data",
             "default": null,
             "description": "Data files containing output from the AMIE model to be imported into TIEGCM. AMIENH is northern hemisphere. Contact Gang Lu (ganglu@ucar.edu) for more information.",
@@ -648,6 +694,7 @@
         },  
         "AMIESH":{
             "LEVEL": "INTERMEDIATE",
+            "type": "file",
             "prompt": "AMIE Southern Hemisphere Data",
             "default": null,
             "description": "Data files containing output from the AMIE model to be imported into TIEGCM. AMIESH is southern hemisphere. Contact Gang Lu (ganglu@ucar.edu) for more information.",
@@ -655,6 +702,7 @@
         },  
         "AURORA":{
             "LEVEL": "EXPERT",
+            "type": "int",
             "prompt": "Flag for Auroral Parameterization",
             "default": null,
             "valids": [0, 1],
@@ -663,6 +711,7 @@
         },  
         "DYNAMO":{
             "LEVEL": "EXPERT",
+            "type": "int",
             "prompt": "Flag for Electrodynamo Calculation",
             "default": null,
             "valids": [0, 1],
@@ -671,6 +720,7 @@
         },
         "CALC_HELIUM":{
             "LEVEL": "EXPERT",
+            "type": "int",
             "prompt": "Flag for Helium Calculation",
             "default": null,
             "valids": [0, 1],
@@ -679,6 +729,7 @@
         },
         "EDDY_DIF":{
             "LEVEL": "EXPERT",
+            "type": "int",
             "prompt": "Flag for Day-of-Year Dependent Eddy Diffusion Coefficient",
             "default": null,
             "valids": [0, 1],
@@ -687,6 +738,7 @@
         },
         "JOULEFAC":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Joule Heating Factor",
             "default": null,
             "valids": null,
@@ -695,6 +747,7 @@
         },                 
         "COLFAC":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "O-O+ Collision Frequency Factor",
             "default": null,
             "valids": null,
@@ -703,6 +756,7 @@
         },
         "OPDIFFCAP":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Maximum O+ Ambipolar Diffusion coefficient",
             "default": null,
             "valids": null,
@@ -711,6 +765,7 @@
         },
         "OPDIFFRATE":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Altitude dependence of maximum O+ ambipolar diffusive flux (rate)",
             "default": null,
             "valids": null,
@@ -719,6 +774,7 @@
         },
         "OPDIFFLEV":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Altitude dependence of maximum O+ ambipolar diffusive flux (level)",
             "default": null,
             "valids": null,
@@ -727,6 +783,7 @@
         },
         "OPFLOOR":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Minimum O+ density",
             "default": null,
             "valids": null,
@@ -735,6 +792,7 @@
         },
         "OPRATE":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Altitude dependence of minimum O+ density (rate)",
             "default": null,
             "valids": null,
@@ -743,6 +801,7 @@
         },
         "OPLEV":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Altitude dependence of minimum O+ density (level)",
             "default": null,
             "valids": null,
@@ -751,6 +810,7 @@
         },
         "OPLATWIDTH":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Altitude dependence of minimum O+ density (latitude)",
             "default": null,
             "valids": null,
@@ -759,6 +819,7 @@
         },
         "TE_CAP":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Maximum electron temperature",
             "default": null,
             "valids": null,
@@ -767,6 +828,7 @@
         },  
         "TI_CAP":{
             "LEVEL": "EXPERT",
+            "type": "float",
             "prompt": "Maximum ion temperature",
             "default": null,
             "valids": null,
@@ -775,6 +837,7 @@
         },
         "CURRENT_PG": {
             "LEVEL": "EXPERT",
+            "type": "int",
             "prompt": "Flag for Pressure Gradient and Gravity Force in Electrodynamo",
             "default": null,
             "valids": [0, 1],
@@ -783,6 +846,7 @@
         },
         "CURRENT_KQ": {
             "LEVEL": "EXPERT",
+            "type": "int",
             "prompt": "Flag for Current Sheet Calculation in Electrodynamo",
             "default": null,
             "valids": [0, 1],
@@ -791,6 +855,7 @@
         },
         "ET": {
             "LEVEL": "EXPERT",
+            "type": "bool",
             "prompt": "Flag for Calculating Electrojet Turbulent Heating",
             "default": null,
             "valids": [true, false],
@@ -799,14 +864,25 @@
         },
         "SAPS": {
             "LEVEL": "EXPERT",
+            "type": "bool",
             "prompt": "Flag for Including Empirical SAPS",
             "default": null,
             "valids": [true, false],
             "description": "If SAPS is true, then an empirical sub-auroral polarization streams (SAPS) ion drift is added to UI, VI. Default is false.",
             "warning": null
         },
+        "DUFF": {
+            "LEVEL": "EXPERT",
+            "type": "bool",
+            "prompt": "Flag for the Duff (2003) N(2D)+O2 Reaction Rate",
+            "default": null,
+            "valids": [true, false],
+            "description": "If true, the N(2D)+O2->NO+O reaction rate of Duff et al. (2003) is used; otherwise the model's standard rate. Unset writes no DUFF line (model default: false).",
+            "warning": null
+        },
         "DOECLIPSE":{
             "LEVEL": "EXPERT",
+            "type": "bool",
             "prompt": "Apply Eclipse Mask",
             "default": null,
             "valids": [true, false],
@@ -815,6 +891,7 @@
         },
         "ECLIPSE_LIST": {
             "LEVEL": "EXPERT",
+            "type": "file",
             "prompt": "Data File for Eclipse List",
             "default": null,
             "valids": null,
@@ -823,6 +900,7 @@
         },                     
         "GSWM_MI_DI_NCFILE":{
             "LEVEL": "INTERMEDIATE",
+            "type": "file",
             "prompt": "GSWM diurnal migrating data file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing diurnal migrating tidal perturbations.",
@@ -830,6 +908,7 @@
         },
         "GSWM_MI_SDI_NCFILE":{
             "LEVEL": "INTERMEDIATE",
+            "type": "file",
             "prompt": "GSWM semidiurnal migrating data file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing semidiurnal migrating tidal perturbations.",
@@ -837,6 +916,7 @@
         },
         "GSWM_NM_DI_NCFILE":{
             "LEVEL": "INTERMEDIATE",
+            "type": "file",
             "prompt": "GSWM diurnal nonmigrating data file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing diurnal nonmigrating tidal perturbations.",
@@ -844,6 +924,7 @@
         },
         "GSWM_NM_SDI_NCFILE":{
             "LEVEL": "INTERMEDIATE",
+            "type": "file",
             "prompt": "GSWM semidiurnal nonmigrating file",
             "default": null,
             "description": "The location of Global Scale Wave Model files containing semidiurnal nonmigrating tidal perturbations.",
@@ -851,6 +932,7 @@
         },
         "HE_COEFS_NCFILE":{
             "LEVEL": "EXPERT",
+            "type": "file",
             "prompt": "HE Coefs file",
             "default": null,
             "description": "The location of HE Coefs file",
@@ -858,6 +940,7 @@
         },
         "BGRDDATA_NCFILE":{
             "LEVEL": "EXPERT",
+            "type": "file",
             "prompt": "Data File for Zonal Mean Climatology of T, U, V, Z",
             "default": null,
             "description": "Data file providing zonal mean climatology of T, U, V, and Z coming from either empirical models (e.g., MSIS, HWM) or reanalysis data (e.g., NOGAPS-ALPHA). If no input file is specified, a flat lower boundary (U = V = 0, T = 181K, Z = 96.4km) is employed by default.",
@@ -865,6 +948,7 @@
         },
         "CTMT_NCFILE":{
             "LEVEL": "EXPERT",
+            "type": "file",
             "prompt": "Data File for Tidal Perturbation of T, U, V, Z",
             "default": null,
             "description": "The location of Climatological Tidal Model of the Thermosphere files containing all tidal perturbations.",
@@ -872,6 +956,7 @@
         },
         "SABER_NCFILE":{
             "LEVEL": "EXPERT",
+            "type": "file",
             "prompt": "Data File for Tidal Perturbation of T, Z from SABER",
             "default": null,
             "description": "The location of SABER files containing tidal perturbations of temperature and geopotential height.",
@@ -879,6 +964,7 @@
         },
         "TIDI_NCFILE":{
             "LEVEL": "EXPERT",
+            "type": "file",
             "prompt": "Data File for Tidal Perturbation of U, V from TIDI",
             "default": null,
             "description": "The location of TIDI files containing tidal perturbations of zonal and meridional neutral winds.",
@@ -886,6 +972,7 @@
         },
         "TIDE":{
             "LEVEL": "EXPERT",
+            "type": "float_list",
             "prompt": "Hough Mode Amplitudes and Phases of Semi-Diurnal Tides",
             "default": null,
             "description": "TIDE should be specified only for experiments where amplitude and phases of the tides must be used. Default is [0, 0, 0, 0, 0, 0, 0, 0, 0, 0].",
@@ -893,6 +980,7 @@
         },
         "TIDE2":{
             "LEVEL": "EXPERT",
+            "type": "float_list",
             "prompt": "Hough Mode Amplitudes and Phases of Diurnal Tides",
             "default": null,
             "description": "TIDE should be specified only for experiments where amplitude and phases of the tides must be used. Default is [0, 0].",
@@ -900,6 +988,7 @@
         },
         "MIXFILE": {
             "LEVEL": "EXPERT",
+            "type": "file",
             "prompt": "Data File for Remix",
             "default": null,
             "valids": null,
@@ -908,6 +997,7 @@
         },
         "NUDGE_NCPRE": {
             "LEVEL": "EXPERT",
+            "type": "str",
             "prompt": "The Common Part of NUDGE_NCFILE Filenames (Prefix)",
             "default": null,
             "valids": null,
@@ -916,6 +1006,7 @@
         },
         "NUDGE_NCPOST": {
             "LEVEL": "EXPERT",
+            "type": "str",
             "prompt": "The Common Part of NUDGE_NCFILE Filenames (Postfix)",
             "default": null,
             "valids": null,
@@ -924,6 +1015,7 @@
         },
         "NUDGE_NCFILE": {
             "LEVEL": "EXPERT",
+            "type": "str_list",
             "prompt": "The Varying Part of NUDGE_NCFILE Filenames",
             "default": null,
             "valids": null,
@@ -932,6 +1024,7 @@
         },
         "NUDGE_FLDS": {
             "LEVEL": "EXPERT",
+            "type": "str_list",
             "prompt": "Names of the Fields to Be Nudged",
             "default": null,
             "valids": null,
@@ -940,6 +1033,7 @@
         },
         "NUDGE_LBC": {
             "LEVEL": "EXPERT",
+            "type": "bool_list",
             "prompt": "Flags for Lower Boundary Replacement",
             "default": null,
             "valids": [true, false],
@@ -948,6 +1042,7 @@
         },
         "NUDGE_F4D": {
             "LEVEL": "EXPERT",
+            "type": "bool_list",
             "prompt": "Flags for Internal Field Nudging",
             "default": null,
             "valids": [true, false],
@@ -956,6 +1051,7 @@
         },
         "NUDGE_USE_REFDATE": {
             "LEVEL": "EXPERT",
+            "type": "bool",
             "prompt": "Flags for Time Specification",
             "default": null,
             "valids": [true, false],
@@ -964,6 +1060,7 @@
         },
         "NUDGE_REFDATE": {
             "LEVEL": "EXPERT",
+            "type": "int_list",
             "prompt": "The Zero Point of the Time Variable in NUDGE_NCFILE",
             "default": null,
             "valids": null,
@@ -972,6 +1069,8 @@
         },
         "NUDGE_SPONGE": {
             "LEVEL": "EXPERT",
+            "type": "float_list",
+            "min": 0,
             "prompt": "TIEGCM Range to Nudge",
             "default": null,
             "valids": null,
@@ -980,6 +1079,9 @@
         },
         "NUDGE_DELTA": {
             "LEVEL": "EXPERT",
+            "type": "float_list",
+            "min": 0,
+            "exclusive_min": true,
             "prompt": "Exponential Decaying Factor for Relaxation",
             "default": null,
             "valids": null,
@@ -988,6 +1090,9 @@
         },
         "NUDGE_POWER": {
             "LEVEL": "EXPERT",
+            "type": "float_list",
+            "min": 0,
+            "exclusive_min": true,
             "prompt": "Decaying Power for Relaxation",
             "default": null,
             "valids": null,
@@ -996,6 +1101,8 @@
         },
         "NUDGE_ALPHA": {
             "LEVEL": "EXPERT",
+            "type": "float",
+            "min": 0,
             "prompt": "General Relaxation Factor",
             "default": null,
             "valids": null,
@@ -1004,6 +1111,7 @@
         },
         "other_input":{
             "LEVEL": "EXPERT",
+            "type": "lines",
             "prompt": "Other input parameters ",
             "default": [null],
             "description": null,

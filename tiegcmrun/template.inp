@@ -3,7 +3,7 @@
 ! Namelist input file for run {{inp.LABEL}}
 !
 {%- if inp.LABEL is not none %}
-LABEL = '{{inp.LABEL}}'{%- endif %}
+LABEL = '{{inp.LABEL|replace("'", "''")}}'{%- endif %}
 
 ! Source Information
 {%- if inp.SOURCE is not none %}
@@ -108,7 +108,7 @@ DOECLIPSE = .true.
 DOECLIPSE = .false.
 {%- endif %}
 {%- if inp.ECLIPSE_LIST is not none %}
-ECLIPSE_LIST = {{inp.ECLIPSE_LIST}}{%- endif %}
+ECLIPSE_LIST = '{{inp.ECLIPSE_LIST}}'{%- endif %}
 
 ! Flags
 {%- if inp.AURORA is not none %}
@@ -155,6 +155,11 @@ SAPS = .true.
 {%- elif inp.SAPS is false %}
 SAPS = .false.
 {%- endif %}
+{%- if inp.DUFF is true %}
+DUFF = .true.
+{%- elif inp.DUFF is false %}
+DUFF = .false.
+{%- endif %}
 
 ! GSWM Data
 {%- if inp.GSWM_MI_DI_NCFILE is not none %}
@@ -180,9 +185,9 @@ AMIESH = '{{inp.AMIESH}}'{%- endif %}
 {%- if inp.TIDI_NCFILE is not none %}
 TIDI_NCFILE = '{{inp.TIDI_NCFILE}}'{%- endif %}
 {%- if inp.TIDE is not none %}
-TIDE = '{{inp.TIDE}}'{%- endif %}
+TIDE = {{inp.TIDE|join(', ')}}{%- endif %}
 {%- if inp.TIDE2 is not none %}
-TIDE2 = '{{inp.TIDE2}}'{%- endif %}
+TIDE2 = {{inp.TIDE2|join(', ')}}{%- endif %}
 
 ! Support Files 
 {%- if inp.BGRDDATA_NCFILE is not none %}
@@ -192,7 +197,7 @@ CTMT_NCFILE = '{{inp.CTMT_NCFILE}}'{%- endif %}
 {%- if inp.SABER_NCFILE is not none %}
 SABER_NCFILE = '{{inp.SABER_NCFILE}}'{%- endif %}
 {%- if inp.MIXFILE is not none %}
-MIXFILE = {{inp.MIXFILE}}{%- endif %}
+MIXFILE = '{{inp.MIXFILE}}'{%- endif %}
 
 ! NUGE
 {%- if inp.NUDGE_NCPRE is not none %}
@@ -200,34 +205,30 @@ NUDGE_NCPRE = '{{inp.NUDGE_NCPRE}}'{%- endif %}
 {%- if inp.NUDGE_NCPOST is not none %}
 NUDGE_NCPOST = '{{inp.NUDGE_NCPOST}}'{%- endif %}
 {%- if inp.NUDGE_NCFILE is not none %}
-NUDGE_NCFILE = '{{inp.NUDGE_NCFILE}}'{%- endif %}
+NUDGE_NCFILE = {% for F in inp.NUDGE_NCFILE %}'{{F}}'{% if not loop.last %}, {% endif %}{% endfor %}
+{%- endif %}
 {%- if inp.NUDGE_FLDS is not none %}
-NUDGE_FLDS = '{{inp.NUDGE_FLDS}}'{%- endif %}
-{%- if inp.NUDGE_LBC is true %}
-NUDGE_LBC = .true.
-{%- elif inp.NUDGE_LBC is false %}
-NUDGE_LBC = .false.
+NUDGE_FLDS = {% for FLD in inp.NUDGE_FLDS %}'{{FLD}}'{% if not loop.last %}, {% endif %}{% endfor %}
 {%- endif %}
-{%- if inp.NUDGE_F4D is true %}
-NUDGE_F4D = .true.
-{%- elif inp.NUDGE_F4D is false %}
-NUDGE_F4D = .false.
-{%- endif %}
+{%- if inp.NUDGE_LBC is not none %}
+NUDGE_LBC = {{inp.NUDGE_LBC|join(', ')}}{%- endif %}
+{%- if inp.NUDGE_F4D is not none %}
+NUDGE_F4D = {{inp.NUDGE_F4D|join(', ')}}{%- endif %}
 {%- if inp.NUDGE_USE_REFDATE is true %}
 NUDGE_USE_REFDATE = .true.
 {%- elif inp.NUDGE_USE_REFDATE is false %}
 NUDGE_USE_REFDATE = .false.
 {%- endif %}
 {%- if inp.NUDGE_REFDATE is not none %}
-NUDGE_REFDATE = '{{inp.NUDGE_REFDATE}}'{%- endif %}
+NUDGE_REFDATE = {{inp.NUDGE_REFDATE|join(', ')}}{%- endif %}
 {%- if inp.NUDGE_SPONGE is not none %}
-NUDGE_SPONGE = '{{inp.NUDGE_SPONGE}}'{%- endif %}
+NUDGE_SPONGE = {{inp.NUDGE_SPONGE|join(', ')}}{%- endif %}
 {%- if inp.NUDGE_DELTA is not none %}
-NUDGE_DELTA = '{{inp.NUDGE_DELTA}}'{%- endif %}
+NUDGE_DELTA = {{inp.NUDGE_DELTA|join(', ')}}{%- endif %}
 {%- if inp.NUDGE_POWER is not none %}
-NUDGE_POWER = '{{inp.NUDGE_POWER}}'{%- endif %}
+NUDGE_POWER = {{inp.NUDGE_POWER|join(', ')}}{%- endif %}
 {%- if inp.NUDGE_ALPHA is not none %}
-NUDGE_ALPHA = '{{inp.NUDGE_ALPHA}}'{%- endif %}
+NUDGE_ALPHA = {{inp.NUDGE_ALPHA}}{%- endif %}
 
 ! Other Parameters
 {%- for data in inp.other_input %}

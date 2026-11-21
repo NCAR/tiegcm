@@ -1,0 +1,53 @@
+# Scheduler definitions, one block per scheduler.
+batch_systems:
+
+  pbs:
+    submit: "qsub"                     # submit command; prints jobid to stdout
+    jobid_regex: "^(\\d+)"             # extract jobid from submit stdout
+    directive_prefix: "#PBS"
+    directives:                        # logical name -> directive text (null = omit)
+      job_name:   "-N {v}"
+      account:    "-A {v}"
+      group_list: "-W group_list={v}"
+      queue:      "-q {v}"
+      join_out:   "-j oe"
+      priority:   "-l job_priority={v}"
+    resource:
+      chunk: "select={nodes}:ncpus={cpus_per_node}:mpiprocs={tasks_per_node}{threads_part}{node_sel}"
+      threads_part: ":ompthreads={threads}"   # appended only when threads > 1
+      node_selector: ":model={v}"             # node-type tag inside the chunk (NAS :model=)
+      mem_part: ":mem={v}"                    # appended to each chunk on a queue with mem_per_chunk
+      join: "+"
+      directive: "-l {chunks},walltime={walltime}"
+    dependency: "-W depend=afterok:{jobids}"
+    sched_env: { workdir_cd: "cd $PBS_O_WORKDIR", jobid: "$PBS_JOBID", jobname: "$PBS_JOBNAME" }
+
+  slurm:
+    submit: "sbatch --parsable"             # --parsable -> bare numeric jobid (dependency chain)
+    jobid_regex: "(\\d+)\\s*$"
+    directive_prefix: "#SBATCH"
+    directives:
+      job_name:   "--job-name={v}"
+      account:    "--account={v}"
+      group_list: null                 # n/a on slurm
+      # the machines.yaml queue is the SLURM QOS
+      queue:      "--qos={v}"
+      join_out:   null                 # slurm joins stdout/stderr by default
+      priority:   null
+    resource:
+      chunk: "--nodes={nodes} --ntasks-per-node={tasks_per_node} --cpus-per-task={threads}"
+      threads_part: ""
+      node_selector_directive: "--constraint={v}"   # node-type as a directive (SLURM)
+      join: "\n#SBATCH hetjob\n#SBATCH "    # >1 task group -> heterogeneous job
+      directive: "{chunks}\n#SBATCH --time={walltime}"
+    dependency: "--dependency=afterok:{jobids}"
+    sched_env: { workdir_cd: "cd $SLURM_SUBMIT_DIR", jobid: "$SLURM_JOB_ID", jobname: "$SLURM_JOB_NAME" }
+
+  none:                                # linux / interactive — no scheduler
+    submit: "bash"
+    jobid_regex: ""
+    directive_prefix: ""
+    directives: {}
+    resource: { chunk: "", threads_part: "", join: "", directive: "" }
+    dependency: null
+    sched_env: { workdir_cd: "", jobid: "$$", jobname: "{job_name}" }

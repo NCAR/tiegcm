@@ -333,7 +333,7 @@
      |  gswm_nm_sdi_ncfile,dynamo,source_start,pristart,
      |  gpi_ncfile,see_ncfile,ncep_ncfile,label,imf_ncfile,
      |  saber_ncfile,tidi_ncfile,joulefac,gpi_ncfile,bgrddata_ncfile,
-     |  ctmt_ncfile,amienh_ncfile,amiesh_ncfile
+     |  ctmt_ncfile,amienh_ncfile,amiesh_ncfile,coupling_mage
       use mpi_module,only: ntask
 
       use init_module,only: logname,host,system,iyear,iday,istep
@@ -541,5 +541,6 @@
       if (dynamo > 0) h%dynamo = .true.
       h%ntask_mpi = ntask
       h%joulefac = joulefac
+      h%coupled_mage = coupling_mage
       end subroutine define_hist
       end module output

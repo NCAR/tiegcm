@@ -1,0 +1,74 @@
+# Machines for tiegcmrun jobs, one entry per system (the scheduler is defined in batch.yaml).
+# queues: {<queue>: {ncpus_max, walltime_max, mem_per_chunk}} or a plain list of names.
+machines:
+
+  derecho:
+    nodename_regex: "derecho|^dec[0-9]"
+    scheduler: pbs
+    shell: tcsh                        # tiegcm job scripts are tcsh (setenv)
+    cores_per_node: 128
+    account_default: null              # per-user project account: no shared default
+    account_groups: true               # ... but the prompt offers the user's project codes
+    queue_default: "main"
+    walltime_default: "12:00:00"
+    queues:                            # `qstat -Qf <queue>` resources_max.ncpus; NCAR wall-time policy
+      main:    { ncpus_max: 323712, walltime_max: "12:00:00" }
+      # develop is shared with a 10gb default chunk memory; request a full node's or get OOM-killed
+      develop: { ncpus_max: 256,    walltime_max: "06:00:00", mem_per_chunk: "235GB" }
+    tgcmdata: "/glade/campaign/hao/itmodel/tiegcm3.0/new_data"
+    job_priorities: [premium, regular, economy]   # the PBS job_priority values (not a queue)
+    mpirun: "mpirun -np {total_tasks}"
+    module_purge: "module --force purge"
+    modules: [ncarenv/23.09, craype/2.7.23, intel/2023.2.1, ncarcompilers/1.0.0,
+              cray-mpich/8.1.27, mkl/2023.2.0, hdf5-mpi/1.12.2, netcdf-mpi/4.9.2,
+              esmf/8.6.0]
+    env: {}
+    conda_activate: ["module load conda", "conda activate {conda_env}"]
+
+  aitken:                              # NAS Aitken: several node types (:model=...); untested
+    nodename_regex: "pfe|aitken|^afe[0-9]|\\bnas\\b"
+    scheduler: pbs
+    shell: tcsh
+    account_default: "$USER"           # -A <login name>, as the aitken jobs always carried
+    queue_default: "normal"
+    walltime_default: "08:00:00"
+    queues: [low, normal, long, debug, devel]    # no limits recorded
+    mpirun: "mpiexec_mpt -np {total_tasks}"   # NAS HPE-MPT launcher (module mpi-hpe/mpt)
+    module_purge: "module --force purge"   # as the aitken TIE-GCM jobs always carried
+    # netcdf and ESMF come from local_prefix
+    module_use: ["/nasa/modulefiles/testing", "/swbuild/analytix/tools/modulefiles"]
+    modules: [comp-intel/2020.4.304, "mpi-hpe/mpt.2.30", szip/2.1.1, hdf5/1.12.3_mpt, miniconda3/v4]
+    conda_activate: ["source /swbuild/analytix/tools/miniconda3_220407/bin/activate.csh {conda_env}"]
+    cores_per_node: 128                # fallback if no node type chosen
+    node_type_default: milan           # same default as makeitso / engage
+    # where tiegcm/scripts/Build.netcdf_esmf_at.sh installs netcdf and ESMF
+    local_prefix: "$HOME/local_aitken"
+    node_types:                        # -> rendered as :model=<model> in the select chunk
+      rome:    { model: rom_ait, cores_per_node: 128 }   # devel/normal/long/debug/low queues
+      milan:   { model: mil_ait, cores_per_node: 128 }
+      cascade: { model: cas_ait, cores_per_node: 40 }
+
+  # plain host without a scheduler
+  linux:
+    nodename_regex: ".*"               # fallback (matches anything not matched above)
+    scheduler: none
+    shell: bash
+    cores_per_node: 8
+    mpirun: "mpirun -np {total_tasks}"
+    module_purge: ""
+    modules: []
+    conda_activate: ['eval "$(conda shell.bash hook)"', "conda activate {conda_env}"]
+
+  # untested
+  perlmutter:
+    nodename_regex: "^nid[0-9]|perlmutter|^login[0-9]"
+    scheduler: slurm
+    shell: bash
+    cores_per_node: 128
+    account_default: null              # the NERSC project (mNNNN) is per user
+    queue_default: "regular"
+    walltime_default: "12:00:00"
+    mpirun: "srun -n {total_tasks}"
+    module_purge: "module purge"
+    modules: [PrgEnv-intel, cray-hdf5-parallel, cray-netcdf-hdf5parallel, cray-mpich]
+    conda_activate: ["module load conda", "conda activate {conda_env}"]

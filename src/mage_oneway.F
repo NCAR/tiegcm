@@ -1,5 +1,3 @@
-
-#ifdef GAMERA
       module mage_oneway
       use input_module,only: mixfile,mxlen_filename
       use params_module,only: nlat, nlon
@@ -860,7 +858,8 @@
       subroutine openMixFile(ncFile, gStr)
           character(len=*), intent(in) :: ncFile
           character(len=*), optional :: gStr
-          integer :: ierr, fExist
+          integer :: ierr
+          logical :: fExist
 
           ! Check if the file exists
           inquire(file=ncFile, exist=fExist)
@@ -1349,11 +1348,3 @@
       end subroutine StepMJDs
 
       end module mage_oneway
-#else
-!-----------------------------------------------------------------------
-      ! Intel Fortran compiler chokes on empty source files.
-      ! This subroutine is empty so this file will have SOMETHING in it
-      subroutine oneway_null
-      end subroutine oneway_null
-!-----------------------------------------------------------------------
-#endif

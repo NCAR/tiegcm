@@ -83,8 +83,10 @@
 ! Provide diagnostics N2 and O/N2 (moved from comp.F):
 !
         call mkdiag_N2('N2',n2(:,lon0:lon1,j),lev0,lev1,lon0,lon1,j)
-        call mkdiag_O_N2('O_N2',o1(:,lon0:lon1,j),n2(:,lon0:lon1,j),
-     |    lev0,lev1,lon0,lon1,j)
+        call mkdiag_O_N2('O_N2',
+     |    z(:,lon0:lon1,lat0:lat1),xnmbar(:,lon0:lon1,lat0:lat1),
+     |    o1(:,lon0:lon1,lat0:lat1),n2(:,lon0:lon1,lat0:lat1),
+     |    lev0,lev1,lon0,lon1,lat0,lat1)
 !
 ! vc = cos(phi)*v
 !

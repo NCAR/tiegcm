@@ -385,7 +385,14 @@ c
       iparm(17) = itero
       if (tolmax.gt.0.0) then   ! check for convergence
 	fparm(6) = relmax
-	if (relmax.gt.tolmax) then
+	if (.not. (relmax<=tolmax)) then
+! 17 SEP 2026 Armin Corbin:
+! relmax was not checked for nan. An overflow in the line relaxation back
+! substitution (slxmd2cr/slymd2cr in mud.F, near-zero pivot) turns it into
+! Inf/Inf = NaN. A bare "relmax .gt. tolmax" test is FALSE for a NaN, which
+! would silently report convergence, leave ierror = 0, and thereby skip the
+! muh direct solver fallback in sub solver (pdynamo.F) while a garbage
+! potential is copied into pe.
 	
 !	   ierror = -1   ! flag convergenc failure
 	   write(6,*) "no convergence with mudmod"
@@ -395,7 +402,7 @@ c
            call mud2cr1(nx,ny,rhs,phi,work) !  solve with modified stencils
 	   
 	   fparm(6) = relmax
-	   if (relmax.gt.tolmax) then
+	   if (.not. (relmax<=tolmax)) then
 	     write(6,*) "no convergence with mud"
 	     ierror = -1   ! flag convergenc failure
 	   end if

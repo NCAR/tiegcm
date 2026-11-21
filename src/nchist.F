@@ -3815,7 +3815,7 @@
             start_3d(1) = lonbeg-2
             start_3d(2) = lat0
             start_3d(3) = itime
-            count_3d(2) = lonend-lonbeg+1
+            count_3d(1) = lonend-lonbeg+1
             count_3d(2) = lat1-lat0+1
             count_3d(3) = 1
 

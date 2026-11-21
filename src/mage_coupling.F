@@ -15,9 +15,7 @@
      |  nmlatp1,nmlonp1,nmlat,nmlon,rp
       use input_module,only: oneway
       !use pdynamo_module,only: phihm
-#ifdef GAMERA
       use mage_oneway
-#endif
       implicit none
 
       real(rp),dimension(nlonp4,nlat) ::
@@ -94,10 +92,9 @@
       glonp1(1:nlonp1-1) = glon
       glonp1(nlonp1) = glon(1)+360.0_rp
 
-#if defined (GAMERA) || defined (HIDRA)
       do i=1,CplCommSize
             ! Skip Self
-            if (i == CplRank+1) continue
+            if (i == CplRank+1) cycle
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)
@@ -129,7 +126,6 @@
         ! Initialize SMITE-specific variables
         call load_smite_variables_list(ivinlist, ivoutlist)
       endif
-#endif
 
       end subroutine initialize_coupling
 !-----------------------------------------------------------------------
@@ -194,9 +190,6 @@
       ! unused for now
       !  if (.not. allocated(avar3d) ) allocate(avar3d(nlevp1,nlat,nlon,nvingeo))
 
-
-
-#ifdef GAMERA
       if (.not. oneway) then
       if (mytid == 0) then
 
@@ -278,13 +271,11 @@
       else
         call ca_receive(gpot,geng,gflx,gpotm)
       endif
-#endif
       end subroutine import_mage
 !-----------------------------------------------------------------------
 
       subroutine process_import
 
-#ifdef GAMERA
       use params_module,only: nlatp2,nlon,nlonp1,nlonp2,gmlat,gmlon
       use input_module,only: ctpoten
       use cons_module,only: pi,dlatm,dlonm
@@ -421,9 +412,6 @@
 !        temp = maxval(aurorabc1d(:,2))
 !        aurllbS = min(temp,aurllbS)
 
-
-#endif
-
       end subroutine process_import
 
 !-----------------------------------------------------------------------
@@ -441,14 +429,13 @@
       real(rp),dimension(:,:,:,:), allocatable :: voltout,voutapex
 
       integer :: nreq,i
-#if defined (GAMERA) || defined (HIDRA)
       ! Prepare the export data
       hidra_prep = .false.
       nreq = 0
       !if (mytid == 0) write(*,*) "T Starting Export Prep"
       do i=1,CplCommSize
             ! Skip Self
-            if (i == CplRank+1) continue
+            if (i == CplRank+1) cycle
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)
@@ -496,7 +483,7 @@
       ! Send the export data
       do i=1,CplCommSize
         ! Skip Self
-        if (i == CplRank+1) continue
+        if (i == CplRank+1) cycle
         ! Assign rank if match
         select case (IAm(i))
           case (voltId)
@@ -526,7 +513,7 @@
       ! Deallocate arrays
       do i=1,CplCommSize
             ! Skip Self
-            if (i == CplRank+1) continue
+            if (i == CplRank+1) cycle
             ! Assign rank if match
             select case (IAm(i))
               case (voltId)
@@ -558,7 +545,6 @@
 
       endif
       ! Deallocate request array here
-#endif
       end subroutine export_mage
 !-----------------------------------------------------------------------
       subroutine prep_export_hidra(modeltime,hidra_out)
@@ -1109,9 +1095,7 @@
       subroutine finalize_coupling
 
       if (oneway) then
-#ifdef GAMERA
         call ca_close
-#endif
       endif
 
       end subroutine finalize_coupling
