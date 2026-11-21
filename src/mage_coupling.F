@@ -45,7 +45,7 @@
      |  nhoutvar   = 9, ! TN, UN, VN, OMEGA, O2, O1, NO, Z, HE
      |  nhinvar    = 0, !
      |  nvingeo    = 3, ! UI, VI, WI ! Input on GEO grid
-     |  nvoutgeo   = 5, ! ped, hall, z, un, vn ! Sending out GEO grid
+     |  nvoutgeo   = 6, ! ped, hall, z, un, vn, wnc ! Sending out GEO grid
      |  nvinapex  = 0,  ! No APEX input variables
      |  nvoutapex = 0   ! No APEX output variables
 
@@ -130,8 +130,8 @@
       end subroutine initialize_coupling
 !-----------------------------------------------------------------------
       subroutine load_smite_variables_list(ivinlist, ivoutlist)
-        use fields_module,only: i_z,i_tn,i_un,i_vn,i_w,i_o2,i_o1,i_no,
-     |  i_he, i_ui, i_vi, i_wi, i_ped, i_hall
+        use fields_module,only: i_ped,i_hall,i_z,i_un,i_vn,i_wnc,
+     |    i_ui,i_vi,i_wi
 
 !
         integer,dimension(:),allocatable :: ivinlist
@@ -148,6 +148,7 @@
         ivoutlist(3) = i_z
         ivoutlist(4) = i_un
         ivoutlist(5) = i_vn
+        ivoutlist(6) = i_wnc
 
       end subroutine load_smite_variables_list
 
@@ -652,8 +653,8 @@
       end subroutine export_hidra
 
       subroutine prep_export_volt(modeltime,volt_out)
-        use params_module,only: nlon,nlonp4,nlat,nlevp1
-        use fields_module,only: f4d,itp,itc
+        use params_module,only: nlon,nlonp4,nlat,nlevp1,nlev
+        use fields_module,only: z,f4d,itp,i_z
         use mpi_module,only: lon0,lon1,lat0,lat1,mp_gather_f3d,mytid,
      |  ntask,handle_mpi_err
 
@@ -672,9 +673,16 @@
      |  allocate(f3d_glb(nlevp1,nlonp4,nlat,nvoutgeo))
 
       do v =1,nvoutgeo
-       f3d_sub(:,:,:,v) = 
-     | f4d(ivoutlist(v))%data(:,lon0:lon1,lat0:lat1,itp)
+        if (ivoutlist(v) == i_z) then
+          do k=1,nlev
+            f3d_sub(k,:,:,v) = (z(k,:,:,itp)+z(k+1,:,:,itp))/2
+          enddo
+        else
+          f3d_sub(1:nlev,:,:,v) =
+     |      f4d(ivoutlist(v))%data(1:nlev,lon0:lon1,lat0:lat1,itp)
+        endif
       enddo
+      f3d_sub(nlevp1,:,:,:) = 0
       !f3d_sub(:,:,:,1) = f3d(ivoutlist(1))%data(:,lon0:lon1,lat0:lat1)
       !f3d_sub(:,:,:,2) = f3d(ivoutlist(2))%data(:,lon0:lon1,lat0:lat1)
 
