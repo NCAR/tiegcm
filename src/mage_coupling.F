@@ -692,8 +692,12 @@
       if (mytid == 0) then
         write(*,*) "TGCM: ALLOCATE"
         if (.not. allocated(volt_out))
-     |    allocate(volt_out(nlevp1,nlon,nlat,nvoutgeo))
-        volt_out(:,:,:,:) = f3d_glb(:,3:nlon+2,:,:)
+     |    allocate(volt_out(nlevp1,nlat,nlon,nvoutgeo))
+        do i=1,nlon
+          do j=1,nlat
+            volt_out(:,j,i,:) = f3d_glb(:,i+2,j,:)
+          enddo
+        enddo
         ! Check fidelity
         do v=1,nvoutgeo
           write(*,*) 'TGCM: max/min:',v,
@@ -852,7 +856,7 @@
 
           if ( isSmite .and. nvoutgeo .ne. 0 ) then
             write(*,*) "TIEGCM EXPORT TO VOLT GEO",shape(gvar3d)
-            call mpi_send(gvar3d, nlevp1*nlon*nlat*nvoutgeo,
+            call mpi_send(gvar3d, nlevp1*nlat*nlon*nvoutgeo,
      |       MPI_DOUBLE_PRECISION, mixCplRank,
      |       (myAppId+voltId)*100+1, CplComm, ierr)
           if (ierr /= 0) 
