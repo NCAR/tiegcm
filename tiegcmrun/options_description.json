@@ -485,7 +485,7 @@
             "LEVEL": "BASIC",
             "type": "str_list",
             "prompt": "Secondary Output Fields",
-            "default": ["TN","UN","VN","O2","O1","HE","N2","N2D","N4S","NO","NE","Z","WN","DEN","TEC"],
+            "default": ["TN","UN","VN","O2","O1","HE","N2","N2D","N4S","NO","NE","Z","WN","DEN","TEC","O_N2"],
             "description": "Names of history fields to be outputted. These may be either fields that are also saved on primary histories (so-called 'prognostic' fields), fields that have been requested via addfld calls in the source code, or fields available via the diagnostics module. Typed names replace this default list (further lines add to it). Names are checked against the model source; an unknown name is refused with the valid names listed.",
             "warning": null
         },
